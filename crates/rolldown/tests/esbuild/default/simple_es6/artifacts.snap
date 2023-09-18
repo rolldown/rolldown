@@ -1,0 +1,16 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/simple_es6
+---
+# main.js
+
+```js
+// foo.js
+function fn () {
+    return 123;
+}
+
+// main.js
+console.log(fn());
+```

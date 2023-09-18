@@ -1,0 +1,34 @@
+{
+  "[rust]": {
+    "editor.formatOnSave": true
+  },
+  "[toml]": {
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.formatOnSave": true
+  },
+  "[javascriptreact]": {
+    "editor.formatOnSave": true
+  },
+  "[typescript]": {
+    "editor.formatOnSave": true
+  },
+  "[typescriptreact]": {
+    "editor.formatOnSave": true
+  },
+  "[json]": {
+    "editor.formatOnSave": true
+  },
+  "files.associations": {
+    "*.snap": "markdown",
+    "*.snap.new": "markdown",
+  },
+  "cSpell.words": [
+    "Finalizer",
+    "importee",
+    "rolldown",
+    "rollup",
+    "rustc"
+  ],
+}

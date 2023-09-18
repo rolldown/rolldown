@@ -1,0 +1,26 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous_re_export
+---
+# main.js
+
+```js
+// bar.js
+const bar = 123;
+var bar_ns = {
+    get bar() {
+        return bar;
+    }
+};
+
+// foo.js
+var foo_ns = {
+    get bar_ns() {
+        return bar_ns;
+    }
+};
+
+// main.js
+console.log(foo_ns);
+```

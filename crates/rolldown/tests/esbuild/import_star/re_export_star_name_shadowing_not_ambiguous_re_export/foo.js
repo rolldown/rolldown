@@ -1,0 +1,1 @@
+export * as bar_ns from './bar'

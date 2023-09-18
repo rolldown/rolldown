@@ -1,0 +1,17 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous
+---
+# main.js
+
+```js
+// b.js
+let x$1 = 2;
+
+// a.js
+let x = 1;
+
+// main.js
+console.log(x);
+```

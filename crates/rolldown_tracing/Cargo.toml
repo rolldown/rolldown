@@ -1,0 +1,13 @@
+[package]
+description = "rolldown_tracing"
+edition = "2021"
+license = "Apache-2.0"
+name = "rolldown_tracing"
+version = "0.0.1"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tracing = { workspace = true }
+tracing-chrome = "0.7.0"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }

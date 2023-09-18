@@ -1,0 +1,38 @@
+[package]
+edition = "2021"
+name = "rolldown"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rolldown_common = { path = "../rolldown_common" }
+rolldown_tracing = { path = "../rolldown_tracing" }
+rolldown_utils = { path = "../rolldown_utils" }
+rolldown_resolver = { path = "../rolldown_resolver" }
+rolldown_error = { path = "../rolldown_error" }
+rolldown_oxc = { path = "../rolldown_oxc" }
+derivative = { workspace = true }
+sugar_path = { workspace = true }
+oxc = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = [
+    "fs",
+    "rt",
+    "macros",
+    "rt-multi-thread",
+    "sync",
+] }
+rustc-hash = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+index_vec = { workspace = true }
+futures = "0.3.25"
+rayon = "1.6.0"
+string_wizard = { workspace = true }
+
+[dev_dependencies]
+insta = { workspace = true }
+rolldown_testing = { path = "../rolldown_testing" }
+testing_macros = { workspace = true }

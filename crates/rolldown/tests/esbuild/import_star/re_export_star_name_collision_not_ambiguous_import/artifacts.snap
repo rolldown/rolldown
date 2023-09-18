@@ -1,0 +1,14 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_import
+---
+# main.js
+
+```js
+// c.js
+let x = 1, y = 2;
+
+// main.js
+console.log(x, y);
+```

@@ -1,0 +1,29 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_omit_ambiguous
+---
+# main.js
+
+```js
+// bar.js
+const y$1 = 3;
+const z = 4;
+
+// foo.js
+const x = 1;
+const y = 2;
+
+// common.js
+var common_ns = {
+    get x() {
+        return x;
+    },
+    get z() {
+        return z;
+    }
+};
+
+// main.js
+console.log(common_ns);
+```

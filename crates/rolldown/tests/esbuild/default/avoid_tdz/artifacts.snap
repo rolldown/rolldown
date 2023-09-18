@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/avoid_tdz
+---
+# main.js
+
+```js
+// main.js
+class Foo {
+    static foo = new Foo();
+}
+let foo = Foo.foo;
+console.log(foo);
+class Bar {
+}
+let bar = 123;
+
+export { Bar, bar };
+```

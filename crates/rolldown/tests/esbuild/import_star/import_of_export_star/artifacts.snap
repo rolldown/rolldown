@@ -1,0 +1,18 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/import_of_export_star
+---
+# main.js
+
+```js
+// bar.js
+statement();
+statement();
+statement();
+statement();
+const bar = 123;
+
+// main.js
+console.log(bar);
+```

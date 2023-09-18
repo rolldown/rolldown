@@ -1,0 +1,15 @@
+[package]
+description = "rolldown_resolver"
+edition = "2021"
+license = "Apache-2.0"
+name = "rolldown_resolver"
+version = "0.0.1"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+nodejs-resolver = "0.0.69"
+sugar_path = { workspace = true }
+anyhow = { workspace = true }
+rolldown_error = { path = "../rolldown_error" }
+rolldown_common = { path = "../rolldown_common" }

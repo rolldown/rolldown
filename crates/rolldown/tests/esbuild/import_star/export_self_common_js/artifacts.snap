@@ -1,0 +1,13 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/export_self_common_js
+---
+# main.js
+
+```js
+// main.js
+const foo = 123;
+
+export { foo };
+```

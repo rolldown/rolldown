@@ -1,0 +1,15 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/basic_re_export
+---
+# main.js
+
+```js
+// a.js
+const a = 'a.js';
+
+// main.js
+const a$1 = 'index.js';
+console.log(a$1, a);
+```

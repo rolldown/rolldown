@@ -1,0 +1,19 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/re_export_namespace_import_unused_missing_es6
+---
+# main.js
+
+```js
+// bar.js
+const x = 123;
+var bar_ns = {
+    get x() {
+        return x;
+    }
+};
+
+// main.js
+console.log(bar_ns.foo);
+```

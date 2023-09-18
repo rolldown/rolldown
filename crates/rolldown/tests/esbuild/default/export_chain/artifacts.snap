@@ -1,0 +1,13 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/export_chain
+---
+# main.js
+
+```js
+// bar.js
+const c = 123;
+
+export { c as a };
+```

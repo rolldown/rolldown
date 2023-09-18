@@ -1,0 +1,14 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/ambiguous_star_export
+---
+# main.js
+
+```js
+// c.js
+let x = 1;
+let y = 2;
+
+export { x, y };
+```

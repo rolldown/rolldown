@@ -1,0 +1,8 @@
+{
+    "input": {
+        "external": ["foo"]
+    },
+    "output": {
+        "format": "cjs"
+    }
+}

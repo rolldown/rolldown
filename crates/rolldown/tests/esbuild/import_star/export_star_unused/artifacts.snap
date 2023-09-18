@@ -1,0 +1,22 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/export_star_unused
+---
+# main.js
+
+```js
+// foo.js
+const foo$1 = 123;
+
+// bar.js
+var bar_ns = {
+    get foo() {
+        return foo$1;
+    }
+};
+
+// main.js
+let foo = 234;
+console.log(foo);
+```

@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TestConfig",
+  "type": "object",
+  "required": [
+    "expectError",
+    "input",
+    "output"
+  ],
+  "properties": {
+    "expectError": {
+      "type": "boolean"
+    },
+    "input": {
+      "$ref": "#/definitions/InputOptions"
+    },
+    "output": {
+      "$ref": "#/definitions/OutputOptions"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "InputItem": {
+      "type": "object",
+      "required": [
+        "import",
+        "name"
+      ],
+      "properties": {
+        "import": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "InputOptions": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/InputItem"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "OutputOptions": {
+      "type": "object",
+      "properties": {
+        "exportMode": {
+          "default": "auto",
+          "type": "string"
+        },
+        "format": {
+          "default": "esm",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

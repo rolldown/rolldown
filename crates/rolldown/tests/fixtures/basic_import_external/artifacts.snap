@@ -1,0 +1,14 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/basic_import_external
+---
+# main.js
+
+```js
+// external
+import "external"
+
+// main.js
+console.log(ext);
+```

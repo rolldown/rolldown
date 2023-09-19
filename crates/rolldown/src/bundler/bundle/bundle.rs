@@ -25,6 +25,7 @@ impl<'a> Bundle<'a> {
   }
 
   pub fn generate_chunks(graph: &Graph) -> ChunksVec {
+    let a = 1;
     let mut chunks = ChunksVec::with_capacity(graph.entries.len());
     let mut modules = graph.modules.iter().map(|m| m.id()).collect::<Vec<_>>();
     modules.sort_by_key(|id| graph.modules[*id].exec_order());

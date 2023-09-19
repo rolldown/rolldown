@@ -1,7 +1,5 @@
 [hooks]
-pre-commit = "echo commit hook start"
-pre-push = ["just fmt", "just lint"]
-post-commit = "echo commit hook end"
+pre-commit = "just fmt && just lint"
 
 [logging]
 verbose = true

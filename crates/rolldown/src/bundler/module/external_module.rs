@@ -4,7 +4,7 @@ use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ResourceId, Symbol
 use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
 
-use crate::bundler::{graph::symbols::Symbols, visitors::FinalizeContext};
+use crate::bundler::graph::symbols::Symbols;
 
 use super::{module::ModuleFinalizeContext, render::RenderModuleContext};
 
@@ -30,9 +30,9 @@ impl ExternalModule {
     }
   }
 
-  pub fn finalize(&mut self, ctx: ModuleFinalizeContext) {}
+  pub fn finalize(&mut self, _ctx: ModuleFinalizeContext) {}
 
-  pub fn render(&self, ctx: RenderModuleContext) -> Option<MagicString<'static>> {
+  pub fn render(&self, _ctx: RenderModuleContext) -> Option<MagicString<'static>> {
     let mut rendered = MagicString::new(format!("import \"{}\"", self.resource_id.as_ref()));
 
     rendered.prepend(format!("// {}\n", self.resource_id.prettify()));
@@ -40,6 +40,7 @@ impl ExternalModule {
     Some(rendered)
   }
 
+  #[allow(dead_code)]
   pub fn resolve_export(&mut self, symbols: &mut Symbols, exported: &Atom) -> SymbolRef {
     *self
       .symbols_imported_by_others

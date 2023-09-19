@@ -1,14 +1,13 @@
 use index_vec::IndexVec;
 use oxc::{
-  allocator::Box,
   ast::{
     ast::{
       ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
       ImportDeclaration, ModuleDeclaration,
     },
-    Visit, VisitMut,
+    VisitMut,
   },
-  semantic::{ScopeTree, Semantic, SymbolFlags, SymbolId, SymbolTable},
+  semantic::{ScopeTree, SymbolFlags, SymbolId, SymbolTable},
   span::Atom,
 };
 use rolldown_common::{
@@ -64,8 +63,7 @@ impl<'a> Scanner<'a> {
 
   fn add_import_record(&mut self, module_request: &Atom) -> ImportRecordId {
     let rec = ImportRecord::new(module_request.clone());
-    let idx = self.result.import_records.push(rec);
-    idx
+    self.result.import_records.push(rec)
   }
 
   fn add_named_import(&mut self, local: SymbolId, imported: &Atom, record_id: ImportRecordId) {

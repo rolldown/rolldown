@@ -110,6 +110,7 @@ impl Display for ErrorKind {
 }
 
 impl ErrorKind {
+  #[allow(dead_code)]
   pub fn code(&self) -> &'static str {
     match self {
       // Aligned with rollup

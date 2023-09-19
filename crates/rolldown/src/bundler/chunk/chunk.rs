@@ -23,6 +23,15 @@ pub struct Chunk {
 }
 
 impl Chunk {
+  pub fn new(name: Option<String>, is_entry: bool, modules: Vec<ModuleId>) -> Self {
+    Self {
+      name,
+      is_entry,
+      modules,
+      ..Default::default()
+    }
+  }
+
   pub fn render_file_name(&mut self, output_options: &NormalizedOutputOptions) {
     self.file_name = Some(
       output_options
@@ -34,7 +43,7 @@ impl Chunk {
   }
 
   /// - import symbols from other chunks and external modules
-  pub fn generate_cross_chunk_links(&mut self) {}
+  // pub fn generate_cross_chunk_links(&mut self) {}
 
   pub fn initialize_exports(&mut self, modules: &mut ModuleVec, symbols: &Symbols) {
     let entry = &mut modules[*self.modules.last().unwrap()];

@@ -50,6 +50,7 @@ impl ResourceId {
     &self.0.pretty
   }
 
+  #[allow(clippy::needless_return)]
   pub fn generate_unique_name(&self) -> String {
     let path = Path::new(self.0.path.as_str());
     let unique_name = path.file_stem().unwrap().to_str().unwrap();

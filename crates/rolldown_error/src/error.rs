@@ -9,6 +9,8 @@ use crate::error_kind::ErrorKind;
 
 type StaticStr = Cow<'static, str>;
 
+// TODO reduce struct size
+#[allow(unused)]
 #[derive(Debug)]
 pub struct Error {
   contexts: Vec<Cow<'static, str>>,

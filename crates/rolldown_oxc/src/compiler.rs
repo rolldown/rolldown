@@ -9,6 +9,7 @@ use oxc::{
 };
 pub struct OxcCompiler;
 
+#[allow(clippy::box_collection)]
 pub struct OxcProgram {
   program: ast::Program<'static>,
   source: Pin<Box<String>>,
@@ -45,24 +46,22 @@ impl OxcProgram {
     }
   }
 
-  pub fn program<'me>(&'me self) -> &'me ast::Program<'me> {
+  pub fn program(&self) -> &ast::Program<'_> {
     unsafe { std::mem::transmute(&self.program) }
   }
 
-  pub fn program_mut<'me>(&'me mut self) -> &'me mut ast::Program<'me> {
+  pub fn program_mut(&mut self) -> &mut ast::Program<'_> {
     unsafe { std::mem::transmute(&mut self.program) }
   }
 
-  pub fn program_mut_and_allocator<'me>(
-    &'me mut self,
-  ) -> (&'me mut ast::Program<'me>, &'me Allocator) {
+  pub fn program_mut_and_allocator(&mut self) -> (&mut ast::Program<'_>, &Allocator) {
     (
       unsafe { std::mem::transmute(&mut self.program) },
       &self.allocator,
     )
   }
 
-  pub fn make_semantic<'me>(&'me self, ty: SourceType) -> Semantic<'me> {
+  pub fn make_semantic(&self, ty: SourceType) -> Semantic<'_> {
     let semantic = SemanticBuilder::new(&self.source, ty)
       .build(self.program())
       .semantic;

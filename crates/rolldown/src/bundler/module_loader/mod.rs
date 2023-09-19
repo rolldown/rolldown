@@ -1,3 +1,4 @@
+#[allow(clippy::module_inception)]
 mod module_loader;
 mod module_task;
 mod task_result;

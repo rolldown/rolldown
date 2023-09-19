@@ -1,10 +1,10 @@
 use index_vec::IndexVec;
-use oxc::{semantic::SymbolId, span::Atom};
+use oxc::span::Atom;
 use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
 
-use crate::bundler::{graph::symbols::Symbols, visitors::FinalizeContext};
+use crate::bundler::graph::symbols::Symbols;
 
 use super::{external_module::ExternalModule, render::RenderModuleContext, NormalModule};
 

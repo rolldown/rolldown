@@ -4,6 +4,7 @@ pub struct FileNameTemplate {
 }
 
 impl FileNameTemplate {
+  #[allow(dead_code)]
   pub fn new(template: String) -> Self {
     Self { template }
   }

@@ -67,7 +67,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Finalizer<'ast> {
     let symbol_ref = (self.ctx.id, ident.expect_symbol_id()).into();
     let final_ref = self.ctx.symbols.par_get_canonical_ref(symbol_ref);
     if let Some(name) = self.ctx.final_names.get(&final_ref) {
-      if &ident.name != name {
+      if ident.name != name {
         ident.name = name.clone()
       }
     }
@@ -80,7 +80,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Finalizer<'ast> {
       let symbol_ref = (self.ctx.id, symbol_id).into();
       let final_ref = self.ctx.symbols.par_get_canonical_ref(symbol_ref);
       if let Some(name) = self.ctx.final_names.get(&final_ref) {
-        if &ident.name != name {
+        if ident.name != name {
           ident.name = name.clone()
         }
       }
@@ -92,59 +92,60 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Finalizer<'ast> {
     program
       .body
       .retain(|stmt| self.should_keep_this_top_level_stmt(stmt));
-    program.body.iter_mut().for_each(|stmt| match stmt {
-      Statement::ModuleDeclaration(decl) => match decl.0 {
-        oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
-          match &mut decl.declaration {
-            oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
-              let mut declarations = Vec::new_in(self.ctx.allocator);
-              declarations.push(VariableDeclarator {
-                span: Default::default(),
-                kind: oxc::ast::ast::VariableDeclarationKind::Var,
-                id: BindingPattern {
-                  kind: oxc::ast::ast::BindingPatternKind::BindingIdentifier(Box(
-                    self.ctx.allocator.alloc(BindingIdentifier {
-                      span: Default::default(),
-                      name: "".into(),
-                      symbol_id: Cell::new(self.ctx.default_export_symbol),
-                    }),
-                  )),
-                  type_annotation: None,
-                  optional: false,
-                },
-                init: Some(exp.take_in(self.ctx.allocator)),
-                definite: false,
-              });
-              *stmt = Statement::Declaration(Declaration::VariableDeclaration(Box(alloc.alloc(
-                VariableDeclaration {
+    program.body.iter_mut().for_each(|stmt| {
+      if let Statement::ModuleDeclaration(decl) = stmt {
+        match decl.0 {
+          oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
+            match &mut decl.declaration {
+              oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
+                let mut declarations = Vec::new_in(self.ctx.allocator);
+                declarations.push(VariableDeclarator {
                   span: Default::default(),
                   kind: oxc::ast::ast::VariableDeclarationKind::Var,
-                  declarations,
-                  modifiers: Default::default(),
-                },
-              ))))
+                  id: BindingPattern {
+                    kind: oxc::ast::ast::BindingPatternKind::BindingIdentifier(Box(
+                      self.ctx.allocator.alloc(BindingIdentifier {
+                        span: Default::default(),
+                        name: "".into(),
+                        symbol_id: Cell::new(self.ctx.default_export_symbol),
+                      }),
+                    )),
+                    type_annotation: None,
+                    optional: false,
+                  },
+                  init: Some(exp.take_in(self.ctx.allocator)),
+                  definite: false,
+                });
+                *stmt = Statement::Declaration(Declaration::VariableDeclaration(Box(alloc.alloc(
+                  VariableDeclaration {
+                    span: Default::default(),
+                    kind: oxc::ast::ast::VariableDeclarationKind::Var,
+                    declarations,
+                    modifiers: Default::default(),
+                  },
+                ))))
+              }
+              oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {
+                *stmt = Statement::Declaration(oxc::ast::ast::Declaration::FunctionDeclaration(
+                  decl.take_in(alloc),
+                ))
+              }
+              oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
+                *stmt = Statement::Declaration(oxc::ast::ast::Declaration::ClassDeclaration(
+                  decl.take_in(alloc),
+                ))
+              }
+              _ => {}
             }
-            oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {
-              *stmt = Statement::Declaration(oxc::ast::ast::Declaration::FunctionDeclaration(
-                decl.take_in(alloc),
-              ))
-            }
-            oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
-              *stmt = Statement::Declaration(oxc::ast::ast::Declaration::ClassDeclaration(
-                decl.take_in(alloc),
-              ))
-            }
-            _ => {}
           }
-        }
-        oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
-          if let Some(decl) = &mut named_decl.declaration {
-            *stmt = Statement::Declaration(decl.take_in(alloc))
+          oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
+            if let Some(decl) = &mut named_decl.declaration {
+              *stmt = Statement::Declaration(decl.take_in(alloc))
+            }
           }
+          _ => {}
         }
-        _ => {}
-      },
-      _ => {}
+      }
     });
 
     self.visit_statements(&mut program.body);

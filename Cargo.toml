@@ -19,6 +19,3 @@ testing_macros = "0.2.7"
 beef           = "0.5.2"
 scoped-tls     = "1.0"
 string_wizard  = { version = "0.0.3" }
-
-[workspace.dev-dependencies]
-rusty-hook = "^0.11.2"

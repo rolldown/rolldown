@@ -1,19 +1,19 @@
 [package]
 edition = "2021"
 license = "MIT"
-name = "rolldown_testing"
+name    = "rolldown_testing"
 version = "0.0.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
 bench = false
-name = "gen_test_config_schema"
-path = "./bin/gen_test_config_schema.rs"
-test = false
+name  = "gen_test_config_schema"
+path  = "./bin/gen_test_config_schema.rs"
+test  = false
 
 [dependencies]
 rolldown_error = { path = "../rolldown_error" }
-schemars = "0.8.11"
-serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
+schemars       = "0.8.11"
+serde          = { workspace = true, features = ["derive"] }
+serde_json     = { workspace = true }

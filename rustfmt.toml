@@ -1,4 +1,4 @@
 tab_spaces = 2
 
-group_imports     = "StdExternalCrate"
-unstable_features = true
+# group_imports     = "StdExternalCrate"
+# unstable_features = true

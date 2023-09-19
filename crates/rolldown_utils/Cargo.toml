@@ -1,5 +1,5 @@
 [package]
-name = "rolldown_utils"
+name    = "rolldown_utils"
 version = "0.1.0"
 edition = "2021"
 

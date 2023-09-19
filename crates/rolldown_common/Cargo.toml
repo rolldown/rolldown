@@ -1,5 +1,5 @@
 [package]
-name = "rolldown_common"
+name    = "rolldown_common"
 version = "0.0.1"
 edition = "2021"
 
@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 derivative = { workspace = true }
-oxc = { workspace = true }
+oxc        = { workspace = true }
 rustc-hash = { workspace = true }
-index_vec = { workspace = true }
+index_vec  = { workspace = true }
 sugar_path = { workspace = true }
 # sugar_path = { workspace = true }
 # serde = { workspace = true }

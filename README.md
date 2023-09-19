@@ -3,6 +3,10 @@
 
 Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.
 
+# Contribution
+
+See [Contributing Guide](CONTRIBUTING.md).
+
 # Credits
 
 The Rolldown project are standing upon the shoulders of these giants:

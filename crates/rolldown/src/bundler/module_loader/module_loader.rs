@@ -86,7 +86,7 @@ impl<'a> ModuleLoader<'a> {
           while tables.len() <= task_result.module_id.raw() as usize {
             tables.push(Default::default());
           }
-          intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
+          intermediate_modules[module_id] = Some(Module::Normal(Box::new(builder.build())));
 
           tables[task_result.module_id] = symbol_table
         }
@@ -151,7 +151,7 @@ impl<'a> ModuleLoader<'a> {
             id,
             ResourceId::new(info.path.clone(), &self.input_options.cwd),
           );
-          intermediate_modules[id] = Some(Module::External(ext));
+          intermediate_modules[id] = Some(Module::External(Box::new(ext)));
         } else {
           not_visited.insert(id);
 

@@ -10,8 +10,8 @@ use super::{external_module::ExternalModule, render::RenderModuleContext, Normal
 
 #[derive(Debug)]
 pub enum Module {
-  Normal(NormalModule),
-  External(ExternalModule),
+  Normal(Box<NormalModule>),
+  External(Box<ExternalModule>),
 }
 
 impl Module {

@@ -2,7 +2,7 @@ _default:
   just --list -u
 
 init:
-  cargo binstall taplo-cli cargo-insta cargo-nextest -y
+  cargo binstall rusty-hook taplo-cli cargo-insta cargo-nextest -y
 
 test:
   cargo nextest run

@@ -1,0 +1,5 @@
+[hooks]
+pre-commit = "just fmt && just lint"
+
+[logging]
+verbose = true

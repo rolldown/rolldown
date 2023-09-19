@@ -213,12 +213,12 @@ impl NormalModule {
   }
 
   // https://tc39.es/ecma262/#sec-resolveexport
-  pub fn resolve_export<'modules, 'symbols>(
+  pub fn resolve_export<'modules>(
     &'modules self,
     export_name: &'modules Atom,
     resolve_set: &mut Vec<(ModuleId, &'modules Atom)>,
     modules: &'modules ModuleVec,
-    symbols: &'symbols mut Symbols,
+    symbols: &mut Symbols,
   ) -> Resolution {
     let record = (self.id, export_name);
     if resolve_set.iter().rev().any(|prev| prev == &record) {

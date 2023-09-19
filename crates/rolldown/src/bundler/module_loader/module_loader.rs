@@ -1,5 +1,5 @@
 use index_vec::IndexVec;
-use rolldown_common::{ImportRecord, ModuleId, RawPath, ResourceId};
+use rolldown_common::{ModuleId, RawPath, ResourceId};
 use rolldown_resolver::Resolver;
 use rolldown_utils::block_on_spawn_all;
 use rustc_hash::FxHashMap;
@@ -11,7 +11,6 @@ use crate::bundler::graph::graph::Graph;
 use crate::bundler::graph::symbols::{SymbolMap, Symbols};
 use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::module::Module;
-use crate::bundler::module::NormalModule;
 use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
 use crate::bundler::resolve_id::{resolve_id, ResolvedRequestInfo};
 use crate::BuildError;
@@ -68,9 +67,8 @@ impl<'a> ModuleLoader<'a> {
             module_id,
             symbol_map: symbol_table,
             resolved_deps,
-            errors,
-            warnings,
             mut builder,
+            ..
           } = task_result;
 
           let import_records = builder.import_records.as_mut().unwrap();

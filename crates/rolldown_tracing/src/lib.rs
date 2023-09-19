@@ -37,9 +37,9 @@ impl ContextedTracer {
   }
 
   pub fn emit_trace(&self, info: String) {
-    for ctxt in &self.context {
-      // tracing::trace!("{}: {}", ansi_term::Color::Yellow.paint("context"), ctxt);
-    }
+    // for ctxt in &self.context {
+    // tracing::trace!("{}: {}", ansi_term::Color::Yellow.paint("context"), ctxt);
+    // }
     tracing::trace!(info)
   }
 }

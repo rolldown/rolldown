@@ -20,7 +20,7 @@ impl Graph {
     &mut self,
     input_options: &NormalizedInputOptions,
   ) -> anyhow::Result<()> {
-    ModuleLoader::new(&input_options, self)
+    ModuleLoader::new(input_options, self)
       .fetch_all_modules()
       .await?;
 

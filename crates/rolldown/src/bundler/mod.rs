@@ -4,6 +4,7 @@ mod module;
 pub mod options;
 mod visitors;
 
+#[allow(clippy::module_inception)]
 pub mod bundler;
 mod chunk;
 mod module_loader;

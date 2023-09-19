@@ -1,8 +1,5 @@
-use std::borrow::Cow;
-
 use oxc::ast::ast;
 use oxc::semantic::SymbolId;
-use oxc::span::Atom;
 pub trait BindingIdentifierExt {
   fn expect_symbol_id(&self) -> SymbolId;
 }

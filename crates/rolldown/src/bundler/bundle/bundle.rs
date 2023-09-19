@@ -26,13 +26,9 @@ impl<'a> Bundle<'a> {
 
   pub fn generate_chunks(graph: &Graph) -> ChunksVec {
     let mut chunks = ChunksVec::with_capacity(graph.entries.len());
-    let mut chunk = Chunk::default();
-    chunk.name = Some("main".to_string());
-    chunk.is_entry = true;
-    chunk.modules = graph.modules.iter().map(|m| m.id()).collect();
-    chunk
-      .modules
-      .sort_by_key(|id| graph.modules[*id].exec_order());
+    let mut modules = graph.modules.iter().map(|m| m.id()).collect::<Vec<_>>();
+    modules.sort_by_key(|id| graph.modules[*id].exec_order());
+    let chunk = Chunk::new(Some("main".to_string()), true, modules);
     chunks.push(chunk);
     chunks
   }
@@ -50,7 +46,7 @@ impl<'a> Bundle<'a> {
       .for_each(|chunk| chunk.render_file_name(self.output_options));
 
     chunks.iter_mut().par_bridge().for_each(|chunk| {
-      chunk.de_conflict(&self.graph);
+      chunk.de_conflict(self.graph);
     });
 
     chunks.iter_mut().for_each(|chunk| {
@@ -74,7 +70,7 @@ impl<'a> Bundle<'a> {
     let assets = chunks
       .iter()
       .map(|c| {
-        let content = c.render(&self.graph, input_options).unwrap();
+        let content = c.render(self.graph, input_options).unwrap();
 
         Asset {
           file_name: c.file_name.clone().unwrap(),

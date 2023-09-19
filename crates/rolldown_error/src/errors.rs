@@ -5,6 +5,7 @@ use crate::Error;
 /// A collection of rolldown [Error].
 ///
 /// Yeah, this is just a wrapper of `Vec<Error>` but with a few helpful methods:
+#[allow(unused)]
 #[derive(Debug, Default)]
 pub struct Errors {
   errors: Vec<Error>,

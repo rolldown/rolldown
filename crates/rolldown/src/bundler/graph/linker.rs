@@ -152,7 +152,9 @@ impl<'graph> Linker<'graph> {
           Module::External(_) => unreachable!(),
         };
       }
-      crate::bundler::module::module::Module::External(_) => {}
+      crate::bundler::module::module::Module::External(_) => {
+        // TODO: handle external module
+      }
     }
   }
   fn resolve_imports(&mut self, id: ModuleId) {

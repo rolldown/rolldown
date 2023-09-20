@@ -78,6 +78,11 @@ impl<'a> ModuleLoader<'a> {
             .for_each(|(import_record_idx, info)| {
               let id = self.try_spawn_new_task(&info, &mut intermediate_modules);
               import_records[import_record_idx].resolved_module = id;
+              if info.is_external {
+                builder
+                  .external_requests
+                  .insert(import_records[import_record_idx].module_request.clone());
+              }
               while tables.len() <= id.raw() as usize {
                 tables.push(Default::default());
               }

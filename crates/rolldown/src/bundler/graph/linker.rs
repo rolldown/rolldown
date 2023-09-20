@@ -186,7 +186,6 @@ impl<'graph> Linker<'graph> {
             Module::External(_) => {
               externals.push((
                 import_record.resolved_module,
-                info.is_imported_star,
                 info.imported.clone(),
                 info.imported_as,
               ));
@@ -201,12 +200,12 @@ impl<'graph> Linker<'graph> {
 
     externals
       .into_iter()
-      .for_each(|(importee, is_star, imported, imported_as)| {
+      .for_each(|(importee, imported, imported_as)| {
         let importee = &mut self.graph.modules[importee];
         match importee {
           Module::Normal(_) => {}
           Module::External(importee) => {
-            let resolved_ref = importee.resolve_export(&mut self.graph.symbols, imported, is_star);
+            let resolved_ref = importee.resolve_export(&mut self.graph.symbols, imported);
             self.graph.symbols.union(imported_as, resolved_ref);
           }
         }

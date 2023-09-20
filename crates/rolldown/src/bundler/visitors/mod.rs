@@ -16,7 +16,7 @@ use oxc::{
 };
 use rolldown_common::{ModuleId, SymbolRef};
 use rolldown_oxc::{BindingIdentifierExt, TakeIn};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::graph::symbols::Symbols;
 
@@ -27,6 +27,7 @@ pub struct FinalizeContext<'ast> {
   pub final_names: &'ast FxHashMap<SymbolRef, Atom>,
   pub default_export_symbol: Option<SymbolId>,
   pub id: ModuleId,
+  pub external_requests: &'ast FxHashSet<Atom>,
 }
 
 pub struct Finalizer<'ast> {
@@ -36,6 +37,11 @@ pub struct Finalizer<'ast> {
 impl<'ast> Finalizer<'ast> {
   pub fn new(ctx: FinalizeContext<'ast>) -> Self {
     Self { ctx }
+  }
+
+  #[inline]
+  pub fn is_external_request(&self, request: &Atom) -> bool {
+    self.ctx.external_requests.contains(request)
   }
 
   pub fn should_keep_this_top_level_stmt(&self, stmt: &Statement) -> bool {
@@ -51,10 +57,25 @@ impl<'ast> Finalizer<'ast> {
         }
         // FIXME: ugly hack
         oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(decl) if decl.span.size() != 0 => {
+          if let Some(source) = &decl.source {
+            if self.is_external_request(&source.value) {
+              return KEEP_THIS_STMT;
+            }
+          }
           REMOVE_THIS_STMT
         }
-        oxc::ast::ast::ModuleDeclaration::ImportDeclaration(_)
-        | oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(_) => REMOVE_THIS_STMT,
+        oxc::ast::ast::ModuleDeclaration::ImportDeclaration(decl) => {
+          if self.is_external_request(&decl.source.value) {
+            return KEEP_THIS_STMT;
+          }
+          REMOVE_THIS_STMT
+        }
+        oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(decl) => {
+          if self.is_external_request(&decl.source.value) {
+            return KEEP_THIS_STMT;
+          }
+          REMOVE_THIS_STMT
+        }
         _ => KEEP_THIS_STMT,
       },
       _ => KEEP_THIS_STMT,

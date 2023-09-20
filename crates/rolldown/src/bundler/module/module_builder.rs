@@ -8,7 +8,7 @@ use rolldown_common::{
   StmtInfoId, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::bundler::graph::symbols::SymbolMap;
 
@@ -23,6 +23,7 @@ pub struct ModuleBuilder {
   pub named_exports: Option<FxHashMap<Atom, LocalOrReExport>>,
   pub stmt_infos: Option<IndexVec<StmtInfoId, StmtInfo>>,
   pub import_records: Option<IndexVec<ImportRecordId, ImportRecord>>,
+  pub external_requests: FxHashSet<Atom>,
   pub star_exports: Option<Vec<ImportRecordId>>,
   pub scope: Option<ScopeTree>,
   pub default_export_symbol: Option<SymbolId>,
@@ -54,6 +55,7 @@ impl ModuleBuilder {
       default_export_symbol: self.default_export_symbol,
       namespace_symbol: self.namespace_symbol.unwrap(),
       is_symbol_for_namespace_referenced: false,
+      external_requests: self.external_requests,
     }
   }
 }

@@ -30,6 +30,7 @@ pub struct NormalModule {
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
+  pub external_requests: FxHashSet<Atom>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
   // resolved
@@ -57,6 +58,7 @@ impl NormalModule {
       id: self.id,
       default_export_symbol: self.default_export_symbol,
       final_names: ctx.canonical_names,
+      external_requests: &self.external_requests,
     });
     finalizer.visit_program(program);
   }

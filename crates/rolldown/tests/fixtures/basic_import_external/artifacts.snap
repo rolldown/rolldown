@@ -7,14 +7,20 @@ input_file: crates/rolldown/tests/fixtures/basic_import_external
 
 ```js
 // external
+import { b$1, a$1 } from "external"
+
+// external
 import * as ext$1 from "external"
 
 // c.js
-console.log(ext$1);
+console.log(ext$1, a$1, b$1);
+
+// external
+import { b, a } from "external"
 
 // external
 import * as ext from "external"
 
 // main.js
-console.log(ext);
+console.log(ext, a, b);
 ```

@@ -1,4 +1,3 @@
 import * as ext from 'external'
 import { a, b } from 'external'
-import './c'
 console.log(ext, a, b)

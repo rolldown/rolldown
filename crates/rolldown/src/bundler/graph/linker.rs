@@ -152,13 +152,12 @@ impl<'graph> Linker<'graph> {
           Module::External(_) => unreachable!(),
         };
       }
-      crate::bundler::module::module::Module::External(_) => {
-        // TODO: handle external module
-      }
+      crate::bundler::module::module::Module::External(_) => {}
     }
   }
   fn resolve_imports(&mut self, id: ModuleId) {
     let importer = &self.graph.modules[id];
+    let mut externals = vec![];
     match importer {
       Module::Normal(importer) => {
         importer.named_imports.iter().for_each(|(_id, info)| {
@@ -183,7 +182,12 @@ impl<'graph> Linker<'graph> {
               self.graph.symbols.union(info.imported_as, resolved_ref);
             }
             Module::External(_) => {
-              // handle external module
+              externals.push((
+                import_record.resolved_module,
+                info.is_imported_star,
+                info.imported.clone(),
+                info.imported_as,
+              ));
             }
           }
         });
@@ -192,5 +196,18 @@ impl<'graph> Linker<'graph> {
         // It's meaningless to be a importer for a external module.
       }
     }
+
+    externals
+      .into_iter()
+      .for_each(|(importee, is_star, imported, imported_as)| {
+        let importee = &mut self.graph.modules[importee];
+        match importee {
+          Module::Normal(_) => {}
+          Module::External(importee) => {
+            let resolved_ref = importee.resolve_export(&mut self.graph.symbols, imported, is_star);
+            self.graph.symbols.union(imported_as, resolved_ref);
+          }
+        }
+      });
   }
 }

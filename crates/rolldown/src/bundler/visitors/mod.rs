@@ -14,7 +14,7 @@ use oxc::{
   semantic::{ScopeTree, SymbolId},
   span::Atom,
 };
-use rolldown_common::{ModuleId, SymbolRef};
+use rolldown_common::{ModuleId, ResolvedExport, SymbolRef};
 use rolldown_oxc::{BindingIdentifierExt, TakeIn};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -28,6 +28,7 @@ pub struct FinalizeContext<'ast> {
   pub default_export_symbol: Option<SymbolId>,
   pub id: ModuleId,
   pub external_requests: &'ast FxHashSet<Atom>,
+  pub resolved_exports: &'ast FxHashMap<Atom, ResolvedExport>,
 }
 
 pub struct Finalizer<'ast> {
@@ -160,8 +161,96 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Finalizer<'ast> {
             }
           }
           oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
+            // external: export { a } from 'a' => import { a } from 'a'
+            if let Some(source) = &named_decl.source {
+              if self.is_external_request(&source.value) {
+                let import_decl = alloc.alloc(oxc::ast::ast::ImportDeclaration {
+                  span: Default::default(),
+                  source: source.clone(),
+                  assertions: None,
+                  import_kind: named_decl.export_kind,
+                  specifiers: Vec::from_iter_in(
+                    named_decl.specifiers.iter().map(|s| {
+                      oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(
+                        oxc::ast::ast::ImportSpecifier {
+                          span: Default::default(),
+                          imported: s.local.clone(),
+                          local: match s.exported {
+                            oxc::ast::ast::ModuleExportName::Identifier(ref exported) => {
+                              BindingIdentifier {
+                                span: Default::default(),
+                                name: exported.name.clone(),
+                                symbol_id: Cell::new(Some(
+                                  self
+                                    .ctx
+                                    .resolved_exports
+                                    .get(&exported.name)
+                                    .expect("should have symbol")
+                                    .local_symbol
+                                    .symbol,
+                                )),
+                              }
+                            }
+                            _ => {
+                              todo!()
+                            }
+                          },
+                        },
+                      )
+                    }),
+                    alloc,
+                  ),
+                });
+                *stmt = Statement::ModuleDeclaration(Box(self.ctx.allocator.alloc(
+                  oxc::ast::ast::ModuleDeclaration::ImportDeclaration(Box(import_decl)),
+                )));
+                return;
+              }
+            }
             if let Some(decl) = &mut named_decl.declaration {
               *stmt = Statement::Declaration(decl.take_in(alloc))
+            }
+          }
+          oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(decl) => {
+            // external: export * as a from 'a' => import * as a from 'a'
+            if self.is_external_request(&decl.source.value) {
+              if let Some(oxc::ast::ast::ModuleExportName::Identifier(ref exported)) =
+                &decl.exported
+              {
+                let import_decl = alloc.alloc(oxc::ast::ast::ImportDeclaration {
+                  span: Default::default(),
+                  source: decl.source.clone(),
+                  assertions: None,
+                  import_kind: decl.export_kind,
+                  specifiers: Vec::from_iter_in(
+                    vec![
+                      oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(
+                        oxc::ast::ast::ImportNamespaceSpecifier {
+                          span: Default::default(),
+                          local: BindingIdentifier {
+                            span: Default::default(),
+                            name: exported.name.clone(),
+                            symbol_id: Cell::new(Some(
+                              self
+                                .ctx
+                                .resolved_exports
+                                .get(&exported.name)
+                                .expect("should have symbol")
+                                .local_symbol
+                                .symbol,
+                            )),
+                          },
+                        },
+                      ),
+                    ]
+                    .into_iter(),
+                    alloc,
+                  ),
+                });
+                *stmt = Statement::ModuleDeclaration(Box(self.ctx.allocator.alloc(
+                  oxc::ast::ast::ModuleDeclaration::ImportDeclaration(Box(import_decl)),
+                )));
+              }
             }
           }
           _ => {}

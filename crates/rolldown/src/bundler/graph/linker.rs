@@ -1,5 +1,5 @@
 use oxc::{semantic::ReferenceId, span::Atom};
-use rolldown_common::{ModuleId, ResolvedExport, SymbolRef};
+use rolldown_common::{LocalOrReExport, ModuleId, ResolvedExport, SymbolRef};
 use rustc_hash::FxHashMap;
 
 use super::graph::Graph;
@@ -34,7 +34,7 @@ impl<'graph> Linker<'graph> {
       }
     }
 
-    Self::mark_whether_namespace_referenced(self.graph);
+    Self::mark_whether_namespace_referenced_and_mark_external_symbols(self.graph);
 
     self
       .graph
@@ -47,7 +47,7 @@ impl<'graph> Linker<'graph> {
       })
   }
 
-  fn mark_whether_namespace_referenced(graph: &mut Graph) {
+  fn mark_whether_namespace_referenced_and_mark_external_symbols(graph: &mut Graph) {
     for id in &graph.sorted_modules {
       let importer = &graph.modules[*id];
       let importee_list = importer
@@ -57,6 +57,53 @@ impl<'graph> Linker<'graph> {
           (rec.is_import_namespace && rec.resolved_module.is_valid()).then_some(rec.resolved_module)
         })
         .collect::<Vec<_>>();
+
+      // add external symbol
+      let mut external_symbols = vec![];
+      match importer {
+        Module::Normal(importer) => {
+          importer.named_imports.iter().for_each(|(_id, info)| {
+            let import_record = &importer.import_records[info.record_id];
+            let importee = &graph.modules[import_record.resolved_module];
+            if let Module::External(_) = importee {
+              external_symbols.push((
+                import_record.resolved_module,
+                info.imported.clone(),
+                info.is_imported_star,
+              ));
+            }
+          });
+          importer
+            .named_exports
+            .iter()
+            .for_each(|(_, export)| match &export {
+              LocalOrReExport::Local(_) => {}
+              LocalOrReExport::Re(re) => {
+                let import_record = &importer.import_records[re.record_id];
+                let importee = &graph.modules[import_record.resolved_module];
+                if let Module::External(_) = importee {
+                  external_symbols.push((
+                    import_record.resolved_module,
+                    re.imported.clone(),
+                    re.is_imported_star,
+                  ));
+                }
+              }
+            })
+        }
+        Module::External(_) => {}
+      }
+      external_symbols
+        .into_iter()
+        .for_each(|(importee, imported, is_imported_star)| {
+          let importee = &mut graph.modules[importee];
+          match importee {
+            Module::Normal(_) => {}
+            Module::External(importee) => {
+              importee.add_export_symbol(&mut graph.symbols, imported, is_imported_star);
+            }
+          }
+        });
 
       importee_list.into_iter().for_each(|importee| {
         graph.modules[importee].mark_symbol_for_namespace_referenced();
@@ -159,7 +206,6 @@ impl<'graph> Linker<'graph> {
   }
   fn resolve_imports(&mut self, id: ModuleId) {
     let importer = &self.graph.modules[id];
-    let mut externals = vec![];
     match importer {
       Module::Normal(importer) => {
         importer.named_imports.iter().for_each(|(_id, info)| {
@@ -183,12 +229,10 @@ impl<'graph> Linker<'graph> {
               };
               self.graph.symbols.union(info.imported_as, resolved_ref);
             }
-            Module::External(_) => {
-              externals.push((
-                import_record.resolved_module,
-                info.imported.clone(),
-                info.imported_as,
-              ));
+            Module::External(importee) => {
+              let resolved_ref =
+                importee.resolve_export(info.imported.clone(), info.is_imported_star);
+              self.graph.symbols.union(info.imported_as, resolved_ref);
             }
           }
         });
@@ -197,18 +241,5 @@ impl<'graph> Linker<'graph> {
         // It's meaningless to be a importer for a external module.
       }
     }
-
-    externals
-      .into_iter()
-      .for_each(|(importee, imported, imported_as)| {
-        let importee = &mut self.graph.modules[importee];
-        match importee {
-          Module::Normal(_) => {}
-          Module::External(importee) => {
-            let resolved_ref = importee.resolve_export(&mut self.graph.symbols, imported);
-            self.graph.symbols.union(imported_as, resolved_ref);
-          }
-        }
-      });
   }
 }

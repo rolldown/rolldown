@@ -78,12 +78,12 @@ impl<'a> Scanner<'a> {
     );
   }
 
-  fn add_star_import(&mut self, local: SymbolId, imported: &Atom, record_id: ImportRecordId) {
+  fn add_star_import(&mut self, local: SymbolId, record_id: ImportRecordId) {
     self.result.import_records[record_id].is_import_namespace = true;
     self.result.named_imports.insert(
       local,
       NamedImport {
-        imported: imported.clone(),
+        imported: Atom::new_inline("#STAR#"),
         imported_as: (self.idx, local).into(),
         record_id,
         is_imported_star: true,
@@ -245,7 +245,7 @@ impl<'a> Scanner<'a> {
         );
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
-        self.add_star_import(spec.local.expect_symbol_id(), &spec.local.name, id);
+        self.add_star_import(spec.local.expect_symbol_id(), id);
       }
     });
   }

@@ -59,6 +59,7 @@ impl NormalModule {
       default_export_symbol: self.default_export_symbol,
       final_names: ctx.canonical_names,
       external_requests: &self.external_requests,
+      resolved_exports: &self.resolved_exports,
     });
     finalizer.visit_program(program);
   }
@@ -200,10 +201,13 @@ impl NormalModule {
             Module::Normal(importee) => importee
               .get_exported_names(stack, modules)
               .into_iter()
-              .filter(|name| name.as_str() != "default"),
-            Module::External(_) => {
-              unimplemented!("handle external module")
-            }
+              .filter(|name| name.as_str() != "default")
+              .collect::<Vec<_>>(),
+            Module::External(importee) => importee
+              .symbols_imported_by_others
+              .keys()
+              .filter(|name| name.as_str() != "default")
+              .collect(),
           }
         })
         .chain(self.named_exports.keys())
@@ -246,8 +250,10 @@ impl NormalModule {
                 }
                 resolved
               }
-              Module::External(_) => {
-                unimplemented!("handle external module")
+              Module::External(importee) => {
+                let resolve = importee
+                  .resolve_export(named_import.imported.clone(), named_import.is_imported_star);
+                return Resolution::Found(resolve);
               }
             }
           } else {
@@ -265,8 +271,9 @@ impl NormalModule {
                 importee.resolve_export(&re.imported, resolve_set, modules, symbols)
               }
             }
-            Module::External(_) => {
-              unimplemented!("handle external module")
+            Module::External(importee) => {
+              let resolve = importee.resolve_export(re.imported.clone(), re.is_imported_star);
+              return Resolution::Found(resolve);
             }
           }
         }
@@ -298,7 +305,7 @@ impl NormalModule {
             }
           }
           Module::External(_) => {
-            unimplemented!("handle external module")
+            // unimplemented!("handle external module")
           }
         }
       }
@@ -337,7 +344,7 @@ impl NormalModule {
               .iter()
               .map(|rec_id| importee.import_records[*rec_id].resolved_module),
           ),
-          Module::External(_) => todo!(),
+          Module::External(_) => {}
         }
       }
     }

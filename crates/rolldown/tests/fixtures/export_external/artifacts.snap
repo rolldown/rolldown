@@ -1,15 +1,12 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/basic_import_external
+input_file: crates/rolldown/tests/fixtures/export_external
 ---
 # main.js
 
 ```js
-// c.js
-import * as external_ns$2 from 'external';
-import { a as a$2, b as b$2 } from 'external';
-console.log(external_ns$2, a$2, b$2);
+// foo.js
 import { a as a$1, b as b$1 } from 'external';
 import * as external_ns$1 from 'external';
 

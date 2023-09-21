@@ -45,6 +45,94 @@ impl<'ast> Finalizer<'ast> {
     self.ctx.external_requests.contains(request)
   }
 
+  pub fn namespace_export_decl_to_namespace_import_decl_stmt(
+    &self,
+    decl: &oxc::ast::ast::ExportAllDeclaration,
+  ) -> oxc::ast::ast::Statement<'ast> {
+    if let Some(oxc::ast::ast::ModuleExportName::Identifier(ref exported)) = &decl.exported {
+      let import_decl = self.ctx.allocator.alloc(oxc::ast::ast::ImportDeclaration {
+        span: Default::default(),
+        source: decl.source.clone(),
+        assertions: None,
+        import_kind: decl.export_kind,
+        specifiers: Vec::from_iter_in(
+          vec![
+            oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(
+              oxc::ast::ast::ImportNamespaceSpecifier {
+                span: Default::default(),
+                local: BindingIdentifier {
+                  span: Default::default(),
+                  name: exported.name.clone(),
+                  symbol_id: Cell::new(Some(
+                    self
+                      .ctx
+                      .resolved_exports
+                      .get(&exported.name)
+                      .expect("should have symbol")
+                      .local_symbol
+                      .symbol,
+                  )),
+                },
+              },
+            ),
+          ]
+          .into_iter(),
+          self.ctx.allocator,
+        ),
+      });
+      return oxc::ast::ast::Statement::ModuleDeclaration(Box(self.ctx.allocator.alloc(
+        oxc::ast::ast::ModuleDeclaration::ImportDeclaration(Box(import_decl)),
+      )));
+    } else {
+      unimplemented!("fail rewrite export namespace decl with ModuleExportName string")
+    }
+  }
+
+  pub fn named_export_decl_to_named_import_decl(
+    &self,
+    named_decl: &oxc::ast::ast::ExportNamedDeclaration,
+    source: &oxc::ast::ast::StringLiteral,
+  ) -> oxc::ast::ast::Statement<'ast> {
+    let import_decl = self.ctx.allocator.alloc(oxc::ast::ast::ImportDeclaration {
+      span: Default::default(),
+      source: source.clone(),
+      assertions: None,
+      import_kind: named_decl.export_kind,
+      specifiers: Vec::from_iter_in(
+        named_decl.specifiers.iter().map(|s| {
+          oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(
+            oxc::ast::ast::ImportSpecifier {
+              span: Default::default(),
+              imported: s.local.clone(),
+              local: match s.exported {
+                oxc::ast::ast::ModuleExportName::Identifier(ref exported) => BindingIdentifier {
+                  span: Default::default(),
+                  name: exported.name.clone(),
+                  symbol_id: Cell::new(Some(
+                    self
+                      .ctx
+                      .resolved_exports
+                      .get(&exported.name)
+                      .expect("should have symbol")
+                      .local_symbol
+                      .symbol,
+                  )),
+                },
+                _ => {
+                  unimplemented!("fail rewrite export named decl with ModuleExportName string")
+                }
+              },
+            },
+          )
+        }),
+        self.ctx.allocator,
+      ),
+    });
+    Statement::ModuleDeclaration(Box(self.ctx.allocator.alloc(
+      oxc::ast::ast::ModuleDeclaration::ImportDeclaration(Box(import_decl)),
+    )))
+  }
+
   pub fn should_keep_this_top_level_stmt(&self, stmt: &Statement) -> bool {
     const REMOVE_THIS_STMT: bool = false;
     const KEEP_THIS_STMT: bool = true;
@@ -164,46 +252,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Finalizer<'ast> {
             // external: export { a } from 'a' => import { a } from 'a'
             if let Some(source) = &named_decl.source {
               if self.is_external_request(&source.value) {
-                let import_decl = alloc.alloc(oxc::ast::ast::ImportDeclaration {
-                  span: Default::default(),
-                  source: source.clone(),
-                  assertions: None,
-                  import_kind: named_decl.export_kind,
-                  specifiers: Vec::from_iter_in(
-                    named_decl.specifiers.iter().map(|s| {
-                      oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(
-                        oxc::ast::ast::ImportSpecifier {
-                          span: Default::default(),
-                          imported: s.local.clone(),
-                          local: match s.exported {
-                            oxc::ast::ast::ModuleExportName::Identifier(ref exported) => {
-                              BindingIdentifier {
-                                span: Default::default(),
-                                name: exported.name.clone(),
-                                symbol_id: Cell::new(Some(
-                                  self
-                                    .ctx
-                                    .resolved_exports
-                                    .get(&exported.name)
-                                    .expect("should have symbol")
-                                    .local_symbol
-                                    .symbol,
-                                )),
-                              }
-                            }
-                            _ => {
-                              todo!()
-                            }
-                          },
-                        },
-                      )
-                    }),
-                    alloc,
-                  ),
-                });
-                *stmt = Statement::ModuleDeclaration(Box(self.ctx.allocator.alloc(
-                  oxc::ast::ast::ModuleDeclaration::ImportDeclaration(Box(import_decl)),
-                )));
+                *stmt = self.named_export_decl_to_named_import_decl(named_decl, source);
                 return;
               }
             }
@@ -214,43 +263,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Finalizer<'ast> {
           oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(decl) => {
             // external: export * as a from 'a' => import * as a from 'a'
             if self.is_external_request(&decl.source.value) {
-              if let Some(oxc::ast::ast::ModuleExportName::Identifier(ref exported)) =
-                &decl.exported
-              {
-                let import_decl = alloc.alloc(oxc::ast::ast::ImportDeclaration {
-                  span: Default::default(),
-                  source: decl.source.clone(),
-                  assertions: None,
-                  import_kind: decl.export_kind,
-                  specifiers: Vec::from_iter_in(
-                    vec![
-                      oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(
-                        oxc::ast::ast::ImportNamespaceSpecifier {
-                          span: Default::default(),
-                          local: BindingIdentifier {
-                            span: Default::default(),
-                            name: exported.name.clone(),
-                            symbol_id: Cell::new(Some(
-                              self
-                                .ctx
-                                .resolved_exports
-                                .get(&exported.name)
-                                .expect("should have symbol")
-                                .local_symbol
-                                .symbol,
-                            )),
-                          },
-                        },
-                      ),
-                    ]
-                    .into_iter(),
-                    alloc,
-                  ),
-                });
-                *stmt = Statement::ModuleDeclaration(Box(self.ctx.allocator.alloc(
-                  oxc::ast::ast::ModuleDeclaration::ImportDeclaration(Box(import_decl)),
-                )));
-              }
+              *stmt = self.namespace_export_decl_to_namespace_import_decl_stmt(decl);
             }
           }
           _ => {}

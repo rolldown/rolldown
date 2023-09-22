@@ -251,8 +251,8 @@ impl NormalModule {
                 resolved
               }
               Module::External(importee) => {
-                let resolve = importee
-                  .resolve_export(named_import.imported.clone(), named_import.is_imported_star);
+                let resolve =
+                  importee.resolve_export(&named_import.imported, named_import.is_imported_star);
                 return Resolution::Found(resolve);
               }
             }
@@ -272,7 +272,7 @@ impl NormalModule {
               }
             }
             Module::External(importee) => {
-              let resolve = importee.resolve_export(re.imported.clone(), re.is_imported_star);
+              let resolve = importee.resolve_export(&re.imported, re.is_imported_star);
               return Resolution::Found(resolve);
             }
           }

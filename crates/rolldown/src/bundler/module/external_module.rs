@@ -48,11 +48,11 @@ impl ExternalModule {
       });
   }
 
-  pub fn resolve_export(&self, exported: Atom, is_star: bool) -> SymbolRef {
+  pub fn resolve_export(&self, exported: &Atom, is_star: bool) -> SymbolRef {
     let symbol = if is_star {
       &self.namespace_name
     } else {
-      &exported
+      exported
     };
     *self
       .symbols_imported_by_others

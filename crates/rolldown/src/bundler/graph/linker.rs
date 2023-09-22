@@ -230,8 +230,7 @@ impl<'graph> Linker<'graph> {
               self.graph.symbols.union(info.imported_as, resolved_ref);
             }
             Module::External(importee) => {
-              let resolved_ref =
-                importee.resolve_export(info.imported.clone(), info.is_imported_star);
+              let resolved_ref = importee.resolve_export(&info.imported, info.is_imported_star);
               self.graph.symbols.union(info.imported_as, resolved_ref);
             }
           }

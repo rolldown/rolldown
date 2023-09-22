@@ -25,7 +25,7 @@ index_vec         = { workspace = true }
 futures           = "0.3.25"
 rayon             = "1.6.0"
 string_wizard     = { workspace = true }
-async-trait     = { workspace = true }
+async-trait       = { workspace = true }
 
 [dev_dependencies]
 insta            = { workspace = true }

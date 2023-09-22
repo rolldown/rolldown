@@ -8,6 +8,7 @@ use crate::bundler::{
   graph::symbols::Symbols, options::normalized_input_options::NormalizedInputOptions,
 };
 
+#[derive(Debug)]
 pub struct RenderModuleContext<'a> {
   pub symbols: &'a Symbols,
   pub final_names: &'a FxHashMap<SymbolRef, Atom>,

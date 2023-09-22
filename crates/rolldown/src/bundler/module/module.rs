@@ -60,7 +60,7 @@ impl Module {
   pub fn render(&self, ctx: RenderModuleContext) -> Option<MagicString<'static>> {
     match self {
       Module::Normal(m) => m.render(ctx),
-      Module::External(m) => m.render(ctx),
+      Module::External(_) => None,
     }
   }
 
@@ -74,7 +74,7 @@ impl Module {
   pub fn finalize(&mut self, ctx: ModuleFinalizeContext) {
     match self {
       Module::Normal(m) => m.finalize(ctx),
-      Module::External(m) => m.finalize(ctx),
+      Module::External(_) => {}
     }
   }
 }

@@ -30,6 +30,7 @@ pub struct NormalModule {
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
+  pub external_requests: FxHashSet<Atom>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
   // resolved
@@ -57,6 +58,8 @@ impl NormalModule {
       id: self.id,
       default_export_symbol: self.default_export_symbol,
       final_names: ctx.canonical_names,
+      external_requests: &self.external_requests,
+      resolved_exports: &self.resolved_exports,
     });
     finalizer.visit_program(program);
   }
@@ -198,10 +201,13 @@ impl NormalModule {
             Module::Normal(importee) => importee
               .get_exported_names(stack, modules)
               .into_iter()
-              .filter(|name| name.as_str() != "default"),
-            Module::External(_) => {
-              unimplemented!("handle external module")
-            }
+              .filter(|name| name.as_str() != "default")
+              .collect::<Vec<_>>(),
+            Module::External(importee) => importee
+              .symbols_imported_by_others
+              .keys()
+              .filter(|name| name.as_str() != "default")
+              .collect(),
           }
         })
         .chain(self.named_exports.keys())
@@ -244,8 +250,10 @@ impl NormalModule {
                 }
                 resolved
               }
-              Module::External(_) => {
-                unimplemented!("handle external module")
+              Module::External(importee) => {
+                let resolve =
+                  importee.resolve_export(&named_import.imported, named_import.is_imported_star);
+                return Resolution::Found(resolve);
               }
             }
           } else {
@@ -263,8 +271,9 @@ impl NormalModule {
                 importee.resolve_export(&re.imported, resolve_set, modules, symbols)
               }
             }
-            Module::External(_) => {
-              unimplemented!("handle external module")
+            Module::External(importee) => {
+              let resolve = importee.resolve_export(&re.imported, re.is_imported_star);
+              return Resolution::Found(resolve);
             }
           }
         }
@@ -296,7 +305,7 @@ impl NormalModule {
             }
           }
           Module::External(_) => {
-            unimplemented!("handle external module")
+            // unimplemented!("handle external module")
           }
         }
       }
@@ -335,7 +344,7 @@ impl NormalModule {
               .iter()
               .map(|rec_id| importee.import_records[*rec_id].resolved_module),
           ),
-          Module::External(_) => todo!(),
+          Module::External(_) => {}
         }
       }
     }

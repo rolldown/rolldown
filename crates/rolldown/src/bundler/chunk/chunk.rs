@@ -109,6 +109,7 @@ impl Chunk {
             );
           }
           if is_module_in_chunk {
+            // merge same module parts to one part, it will generate continuously module code
             if let Some(last_part) = parts.pop() {
               if part.module_id == last_part.module_id {
                 parts.push(Part::new(part.module_id, last_part.start, part.end, None));

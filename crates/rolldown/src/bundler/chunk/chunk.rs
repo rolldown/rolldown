@@ -163,23 +163,6 @@ impl Chunk {
       .for_each(|item| {
         joiner.append(item);
       });
-    // self
-    //   .modules
-    //   .par_iter()
-    //   .copied()
-    //   .map(|id| &graph.modules[id])
-    //   .filter_map(|m| {
-    //     m.render(RenderModuleContext {
-    //       symbols: &graph.symbols,
-    //       final_names: &self.canonical_names,
-    //       input_options,
-    //     })
-    //   })
-    //   .collect::<Vec<_>>()
-    //   .into_iter()
-    //   .for_each(|item| {
-    //     joiner.append(item);
-    //   });
     if let Some(exports) = self.exports_str.clone() {
       joiner.append_raw(exports);
     }

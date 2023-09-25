@@ -7,8 +7,8 @@ use oxc::{
   span::Atom,
 };
 use rolldown_common::{
-  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, NamedImport, ResolvedExport, ResourceId,
-  StmtInfo, StmtInfoId, SymbolRef,
+  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, NamedImport, Part, PartId,
+  ResolvedExport, ResourceId, StmtInfo, StmtInfoId, SymbolRef,
 };
 use rolldown_oxc::{DummyIn, IntoIn, OxcProgram};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -26,6 +26,7 @@ pub struct NormalModule {
   pub id: ModuleId,
   pub resource_id: ResourceId,
   pub ast: OxcProgram,
+  pub parts: IndexVec<PartId, Part>,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
@@ -169,6 +170,7 @@ impl NormalModule {
     ));
     let idx = program.body.len();
     program.body.push(stmt);
+    self.parts.push(Part::new(self.id, idx, idx + 1, None));
     self.stmt_infos.push(StmtInfo {
       stmt_idx: idx,
       declared_symbols: vec![self.namespace_symbol.0.symbol],

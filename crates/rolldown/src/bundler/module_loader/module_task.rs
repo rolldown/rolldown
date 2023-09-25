@@ -68,6 +68,7 @@ impl ModuleTask {
       import_records,
       star_exports,
       export_default_symbol_id,
+      parts,
     } = scan_result;
 
     builder.id = Some(self.module_id);
@@ -75,6 +76,7 @@ impl ModuleTask {
     builder.path = Some(self.path);
     builder.named_imports = Some(named_imports);
     builder.named_exports = Some(named_exports);
+    builder.parts = Some(parts);
     builder.stmt_infos = Some(stmt_infos);
     builder.import_records = Some(import_records);
     builder.star_exports = Some(star_exports);

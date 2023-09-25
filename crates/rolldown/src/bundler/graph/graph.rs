@@ -57,6 +57,8 @@ impl Graph {
       match action {
         Action::Enter => {
           if !entered_ids.contains(&id) {
+            *module.exec_order_mut() = next_exec_order;
+            next_exec_order += 1;
             entered_ids.insert(id);
             stack.push((Action::Exit, id));
             stack.extend(
@@ -74,8 +76,6 @@ impl Graph {
           }
         }
         Action::Exit => {
-          *module.exec_order_mut() = next_exec_order;
-          next_exec_order += 1;
           sorted_modules.push(id);
         }
       }

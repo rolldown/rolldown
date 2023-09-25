@@ -11,14 +11,15 @@ use oxc::{
   span::Atom,
 };
 use rolldown_common::{
-  ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId, NamedImport, ReExport,
-  StmtInfo, StmtInfoId,
+  ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId, NamedImport, Part, PartId,
+  ReExport, StmtInfo, StmtInfoId,
 };
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
 
 #[derive(Debug, Default)]
 pub struct ScanResult {
+  pub parts: IndexVec<PartId, Part>,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
@@ -32,6 +33,7 @@ pub struct Scanner<'a> {
   pub scope: &'a mut ScopeTree,
   pub symbol_table: &'a mut SymbolTable,
   pub current_stmt_info: StmtInfo,
+  pub current_part_start: usize,
   pub result: ScanResult,
   pub unique_name: &'a str,
 }
@@ -50,7 +52,26 @@ impl<'a> Scanner<'a> {
       current_stmt_info: Default::default(),
       result: Default::default(),
       unique_name,
+      current_part_start: 0,
     }
+  }
+
+  fn add_import_part(&mut self, import_record_id: ImportRecordId) {
+    if self.current_part_start < self.current_stmt_info.stmt_idx {
+      self.result.parts.push(Part::new(
+        self.idx,
+        self.current_part_start,
+        self.current_stmt_info.stmt_idx,
+        None,
+      ));
+    }
+    self.result.parts.push(Part::new(
+      self.idx,
+      self.current_stmt_info.stmt_idx,
+      self.current_stmt_info.stmt_idx + 1,
+      Some(import_record_id),
+    ));
+    self.current_part_start = self.current_stmt_info.stmt_idx + 1;
   }
 
   fn add_declared_id(&mut self, id: SymbolId) {
@@ -63,7 +84,9 @@ impl<'a> Scanner<'a> {
 
   fn add_import_record(&mut self, module_request: &Atom) -> ImportRecordId {
     let rec = ImportRecord::new(module_request.clone());
-    self.result.import_records.push(rec)
+    let id = self.result.import_records.push(rec);
+    self.add_import_part(id);
+    id
   }
 
   fn add_named_import(&mut self, local: SymbolId, imported: &Atom, record_id: ImportRecordId) {
@@ -278,6 +301,14 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
         .result
         .stmt_infos
         .push(std::mem::take(&mut self.current_stmt_info));
+    }
+    if self.current_part_start < program.body.len() {
+      self.result.parts.push(Part::new(
+        self.idx,
+        self.current_part_start,
+        program.body.len(),
+        None,
+      ));
     }
   }
 

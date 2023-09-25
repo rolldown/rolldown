@@ -6,14 +6,14 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_of_export_star_of_i
 # main.js
 
 ```js
-// baz.js
-const value = 123;
-
 // foo.js
 statement();
 statement();
 statement();
 statement();
+
+// baz.js
+const value = 123;
 
 // main.js
 console.log(value);

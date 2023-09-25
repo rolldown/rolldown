@@ -53,6 +53,7 @@ impl<'a> Bundle<'a> {
       if chunk.is_entry {
         chunk.initialize_exports(&mut self.graph.modules, &self.graph.symbols);
       }
+      chunk.collect_parts(self.graph);
     });
 
     self

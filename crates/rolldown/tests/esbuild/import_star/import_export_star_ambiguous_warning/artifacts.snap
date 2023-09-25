@@ -6,13 +6,13 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguo
 # main.js
 
 ```js
-// bar.js
-const y$1 = 3;
-const z = 4;
-
 // foo.js
 const x = 1;
 const y = 2;
+
+// bar.js
+const y$1 = 3;
+const z = 4;
 
 // common.js
 var common_ns = {

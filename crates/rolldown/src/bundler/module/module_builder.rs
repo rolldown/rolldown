@@ -4,8 +4,8 @@ use oxc::{
   span::Atom,
 };
 use rolldown_common::{
-  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, NamedImport, ResourceId, StmtInfo,
-  StmtInfoId, SymbolRef,
+  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, NamedImport, Part, PartId, ResourceId,
+  StmtInfo, StmtInfoId, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -19,6 +19,7 @@ pub struct ModuleBuilder {
   pub id: Option<ModuleId>,
   pub path: Option<ResourceId>,
   pub ast: Option<OxcProgram>,
+  pub parts: Option<IndexVec<PartId, Part>>,
   pub named_imports: Option<FxHashMap<SymbolId, NamedImport>>,
   pub named_exports: Option<FxHashMap<Atom, LocalOrReExport>>,
   pub stmt_infos: Option<IndexVec<StmtInfoId, StmtInfo>>,
@@ -56,6 +57,7 @@ impl ModuleBuilder {
       namespace_symbol: self.namespace_symbol.unwrap(),
       is_symbol_for_namespace_referenced: false,
       external_requests: self.external_requests,
+      parts: self.parts.unwrap(),
     }
   }
 }

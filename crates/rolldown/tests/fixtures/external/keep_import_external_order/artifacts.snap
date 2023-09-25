@@ -6,11 +6,13 @@ input_file: crates/rolldown/tests/fixtures/external/keep_import_external_order
 # main.js
 
 ```js
+// main.js
+import 'ext1';
+
 // foo.js
 const a = 'foo';
 
 // main.js
-import 'ext1';
 import 'ext2';
 console.log(a);
 ```

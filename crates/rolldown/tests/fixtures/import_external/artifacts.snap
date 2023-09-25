@@ -6,13 +6,15 @@ input_file: crates/rolldown/tests/fixtures/import_external
 # main.js
 
 ```js
-// foo.js
+// main.js
 import * as external_ns$1 from 'external';
 import { a as a$1, b as b$1 } from 'external';
-console.log(external_ns$1, a$1, b$1);
 
-// main.js
+// foo.js
 import * as external_ns from 'external';
 import { a, b } from 'external';
 console.log(external_ns, a, b);
+
+// main.js
+console.log(external_ns$1, a$1, b$1);
 ```

@@ -1,5 +1,5 @@
-use oxc::span::Atom;
-use rolldown_common::SymbolRef;
+use oxc::{formatter::Gen, span::Atom};
+use rolldown_common::{Part, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
 
@@ -10,15 +10,25 @@ use crate::bundler::{
 
 #[derive(Debug)]
 pub struct RenderModuleContext<'a> {
+  pub part: &'a Part,
   pub symbols: &'a Symbols,
   pub final_names: &'a FxHashMap<SymbolRef, Atom>,
   pub input_options: &'a NormalizedInputOptions,
 }
 
 impl NormalModule {
-  pub fn render(&self, _ctx: RenderModuleContext<'_>) -> Option<MagicString<'static>> {
-    let formatter = oxc::formatter::Formatter::new(0, Default::default());
-    let code = formatter.build(self.ast.program());
+  pub fn render(&self, ctx: RenderModuleContext<'_>) -> Option<MagicString<'static>> {
+    let mut formatter = oxc::formatter::Formatter::new(0, Default::default());
+    let mut i = ctx.part.start;
+    while i < ctx.part.end {
+      let stmt = &self.ast.program.body[i];
+      if !matches!(stmt, oxc::ast::ast::Statement::EmptyStatement(_)) {
+        stmt.gen(&mut formatter);
+      }
+      i += 1;
+    }
+    // let code = formatter.build(self.ast.program());
+    let code = formatter.into_code();
     if code.is_empty() {
       None
     } else {

@@ -7,11 +7,11 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_of_export_star
 
 ```js
 // c.js
-let x$1 = 2;
+let x = 2;
 
 // b.js
-let x = 1;
+let x$1 = 1;
 
 // main.js
-console.log(x);
+console.log(x$1);
 ```

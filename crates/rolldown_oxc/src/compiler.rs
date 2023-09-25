@@ -11,10 +11,10 @@ pub struct OxcCompiler;
 
 #[allow(clippy::box_collection)]
 pub struct OxcProgram {
-  pub program: ast::Program<'static>,
+  program: ast::Program<'static>,
   source: Pin<Box<String>>,
   // Order matters here, we need drop the program first, then drop the allocator. Otherwise, there will be a segmentation fault.
-  pub allocator: Pin<Box<Allocator>>,
+  allocator: Pin<Box<Allocator>>,
 }
 
 impl Debug for OxcProgram {

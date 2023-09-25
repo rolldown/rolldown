@@ -19,9 +19,10 @@ pub struct RenderModuleContext<'a> {
 impl NormalModule {
   pub fn render(&self, ctx: RenderModuleContext<'_>) -> Option<MagicString<'static>> {
     let mut formatter = oxc::formatter::Formatter::new(0, Default::default());
+    let program = self.ast.program();
     let mut i = ctx.part.start;
     while i < ctx.part.end {
-      let stmt = &self.ast.program.body[i];
+      let stmt = &program.body[i];
       if !matches!(stmt, oxc::ast::ast::Statement::EmptyStatement(_)) {
         stmt.gen(&mut formatter);
       }

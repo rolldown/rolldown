@@ -4,24 +4,17 @@ use rustc_hash::FxHashMap;
 pub enum ModuleSideEffects {
   Bool(bool),
   NoTreeShake,
-  Null,
 }
 
 #[derive(Debug)]
 pub enum SyntheticNamedExports {
   Bool(bool),
   String(String),
-  Null,
 }
 
 pub type Assertions = FxHashMap<String, String>;
 
-pub enum SourceResult {
-  String(String),
-  Object(Box<SourceDescription>),
-}
-
-pub struct SourceDescription {
+pub struct SourceResult {
   pub code: String,
   pub map: Option<SourceMapValue>,
   // ast

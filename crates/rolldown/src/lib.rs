@@ -1,5 +1,6 @@
 mod bundler;
-
+#[allow(dead_code)]
+pub mod plugin;
 use std::sync::Arc;
 
 use rolldown_resolver::Resolver;

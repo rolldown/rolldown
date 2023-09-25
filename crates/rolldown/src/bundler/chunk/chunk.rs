@@ -94,7 +94,7 @@ impl Chunk {
       if visited.contains(module_id) {
         return;
       }
-
+      visited.insert(*module_id);
       if let Module::Normal(module) = &graph.modules[*module_id] {
         let is_module_in_chunk = chunk_modules.contains(module_id);
         for part in module.parts.iter() {
@@ -123,8 +123,6 @@ impl Chunk {
           }
         }
       }
-
-      visited.insert(*module_id);
     }
 
     for module_id in self.modules.iter() {

@@ -24,6 +24,6 @@ pub async fn run_fixture(fixture_path: PathBuf) {
 }
 
 pub fn normalized_fixture_path(path: &str) -> PathBuf {
-  let project_root = PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap());
+  let project_root = std::env::current_dir().unwrap();
   project_root.join(path)
 }

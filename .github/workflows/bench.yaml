@@ -1,0 +1,39 @@
+name: Benchmark
+
+on:
+  issue_comment:
+    types: [created]
+    
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v4
+     
+      - name: Install Rust 
+        uses: ./.github/actions/rustup
+        
+      - name: Prepare Benchmark
+        run: |
+          git clone https://github.com/mrdoob/three.js.git --depth 1 ./temp/three.js  
+          for i in {1..10}; do cp -r ./temp/three.js/src ./temp/three.js/copy$i/; done
+
+      - name: Install codspeed
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-codspeed
+
+      - name: Build Benchmark
+        run: cargo codspeed build -p bench
+
+      - name: Run benchmark
+        uses: CodSpeedHQ/action@v1
+        with:
+          run: cargo codspeed run
+          token: ${{ secrets.CODSPEED_TOKEN }}

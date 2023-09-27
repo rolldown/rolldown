@@ -39,5 +39,5 @@ jobs:
       - name: Run benchmark
         uses: CodSpeedHQ/action@v1
         with:
-          run: cargo codspeed run
+          run: CI=1 && cargo codspeed run
           token: ${{ secrets.CODSPEED_TOKEN }}

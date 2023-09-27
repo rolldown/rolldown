@@ -24,6 +24,10 @@ pub async fn run_fixture(fixture_path: PathBuf) {
 }
 
 pub fn normalized_fixture_path(path: &str) -> PathBuf {
-  let project_root = std::env::current_dir().unwrap();
+  let project_root = if std::env::var("CI").is_ok() {
+    std::env::current_dir().unwrap().join("crates/bench")
+  } else {
+    std::env::current_dir().unwrap()
+  };
   project_root.join(path)
 }

@@ -1,0 +1,7 @@
+require('./commonjs')
+require('./c')
+require('./d')
+require('./e')
+require('./f')
+require('./g')
+require('./h')

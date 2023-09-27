@@ -30,11 +30,11 @@ jobs:
       - name: Run Bench on PR Branch
         run: cargo bench -p bench -- --save-baseline pr
 
-      # - name: Checkout Next Branch
-      #   uses: actions/checkout@v4
-      #   with:
-      #     clean: false
-      #     ref: main
+      - name: Checkout Next Branch
+        uses: actions/checkout@v4
+        with:
+          clean: false
+          ref: main
 
       - name: Run Bench on Main Branch
         run: cargo bench -p bench -- --save-baseline baseline  

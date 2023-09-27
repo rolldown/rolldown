@@ -28,16 +28,40 @@ jobs:
           git clone https://github.com/mrdoob/three.js.git --depth 1 ./temp/three.js  
           for i in {1..10}; do cp -r ./temp/three.js/src ./temp/three.js/copy$i/; done
 
-      - name: Install codspeed
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-codspeed
+      - name: Install critcmp
+        run: cargo install critcmp
 
-      - name: Build Benchmark
-        run: cargo codspeed build -p bench
+      - name: Run Bench on PR Branch
+        run: cargo bench -p bench main -- --save-baseline pr
 
-      - name: Run benchmark
-        uses: CodSpeedHQ/action@v1
+      - name: Checkout Next Branch
+        uses: actions/checkout@v4
         with:
-          run: CI=1 && cargo codspeed run
-          token: ${{ secrets.CODSPEED_TOKEN }}
+          clean: false
+          ref: main
+
+      - name: Run Bench on Main Branch
+        run: cargo bench -p bench main -- --save-baseline baseline  
+
+      - name: Compare Bench Results
+        id: bench_comparison
+        shell: bash
+        run: |
+          echo "### Benchmark Results" > output
+          echo "\`\`\`"  >> output
+          critcmp baseline pr >> output
+          echo "\`\`\`" >> output
+          cat output
+          comment="$(cat output)"
+          comment="${comment//'%'/%25}"
+          comment="${comment//$'\n'/%0A}"
+          comment="${comment//$'\r'/%0D}"
+          echo "::set-output name=comment::$comment"
+
+      - name: Write a new comment
+        uses: peter-evans/create-or-update-comment@v1.4.5
+        continue-on-error: true
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            ${{ steps.bench_comparison.outputs.comment }}

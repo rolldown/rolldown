@@ -9,9 +9,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  trigger:
+  bench:
+    name: Bench
     runs-on: ubuntu-latest
-    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '!bench')
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '!bench')
     steps:
       - name: Checkout Branch
         uses: actions/checkout@v4

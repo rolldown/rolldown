@@ -3,7 +3,7 @@ name: Benchmark
 on:
   issue_comment:
     types: [created]
-    
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true

@@ -1,5 +1,5 @@
 use bench::{normalized_fixture_path, run_fixture};
-use codspeed_criterion_compat::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 
 async fn threejs() {
   let fixture_path = normalized_fixture_path("cases/threejs");

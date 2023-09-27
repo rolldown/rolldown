@@ -9,6 +9,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  if: github.event.issue.pull_request && startsWith(github.event.comment.body, '!bench')
   benchmark:
     name: Benchmark
     runs-on: ubuntu-latest

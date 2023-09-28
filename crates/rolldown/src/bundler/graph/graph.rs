@@ -47,7 +47,7 @@ impl Graph {
     let mut sorted_modules = Vec::with_capacity(self.modules.len());
     let mut next_exec_order = 0;
     while let Some(action) = stack.pop() {
-      let module = &mut self.modules[action.get_module_id()];
+      let module = &mut self.modules[action.module_id()];
       match action {
         Action::Enter(id) => {
           if !entered_ids.contains(&id) {
@@ -98,7 +98,7 @@ enum Action {
 
 impl Action {
   #[inline]
-  fn get_module_id(&self) -> ModuleId {
+  fn module_id(&self) -> ModuleId {
     match self {
       Action::Enter(id) => *id,
       Action::Exit(id) => *id,

@@ -34,17 +34,11 @@ impl Graph {
   }
 
   pub fn sort_modules(&mut self) {
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
-    enum Action {
-      Enter,
-      Exit,
-    }
-
     let mut stack = self
       .entries
       .iter()
       .copied()
-      .map(|entry| (Action::Enter, entry))
+      .map(Action::Enter)
       .rev()
       .collect::<Vec<_>>();
 
@@ -52,13 +46,13 @@ impl Graph {
     entered_ids.shrink_to(self.modules.len());
     let mut sorted_modules = Vec::with_capacity(self.modules.len());
     let mut next_exec_order = 0;
-    while let Some((action, id)) = stack.pop() {
-      let module = &mut self.modules[id];
+    while let Some(action) = stack.pop() {
+      let module = &mut self.modules[action.get_module_id()];
       match action {
-        Action::Enter => {
+        Action::Enter(id) => {
           if !entered_ids.contains(&id) {
             entered_ids.insert(id);
-            stack.push((Action::Exit, id));
+            stack.push(Action::Exit(id));
             stack.extend(
               module
                 .import_records()
@@ -69,11 +63,11 @@ impl Graph {
                     .is_valid()
                     .then_some(rec.resolved_module)
                 })
-                .map(|id| (Action::Enter, id)),
+                .map(Action::Enter),
             );
           }
         }
-        Action::Exit => {
+        Action::Exit(id) => {
           *module.exec_order_mut() = next_exec_order;
           next_exec_order += 1;
           sorted_modules.push(id);
@@ -93,5 +87,21 @@ impl Graph {
       }
       crate::bundler::module::module::Module::External(_) => {}
     });
+  }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum Action {
+  Enter(ModuleId),
+  Exit(ModuleId),
+}
+
+impl Action {
+  #[inline]
+  fn get_module_id(&self) -> ModuleId {
+    match self {
+      Action::Enter(id) => *id,
+      Action::Exit(id) => *id,
+    }
   }
 }

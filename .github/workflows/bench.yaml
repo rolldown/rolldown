@@ -1,0 +1,64 @@
+name: Benchmark
+
+on:
+  issue_comment:
+    types: [created]
+    
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  bench:
+    name: Bench
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '!bench')
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v4
+     
+      - name: Install Rust 
+        uses: ./.github/actions/rustup
+        
+      - name: Prepare Benchmark
+        run: |
+          git clone https://github.com/mrdoob/three.js.git --depth 1 ./temp/three.js  
+          for i in {1..10}; do cp -r ./temp/three.js/src ./temp/three.js/copy$i/; done
+
+      - name: Install critcmp
+        run: cargo install critcmp
+
+      - name: Run Bench on PR Branch
+        run: cargo bench -p bench -- --save-baseline pr
+
+      - name: Checkout Next Branch
+        uses: actions/checkout@v4
+        with:
+          clean: false
+          ref: main
+
+      - name: Run Bench on Main Branch
+        run: cargo bench -p bench -- --save-baseline baseline  
+
+      - name: Compare Bench Results
+        id: bench_comparison
+        shell: bash
+        run: |
+          echo "### Benchmark Results" > output
+          echo "\`\`\`"  >> output
+          critcmp baseline pr >> output
+          echo "\`\`\`" >> output
+          cat output
+          comment="$(cat output)"
+          comment="${comment//'%'/%25}"
+          comment="${comment//$'\n'/%0A}"
+          comment="${comment//$'\r'/%0D}"
+          echo "::set-output name=comment::$comment"
+
+      - name: Write a new comment
+        uses: peter-evans/create-or-update-comment@v1.4.5
+        continue-on-error: true
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            ${{ steps.bench_comparison.outputs.comment }}

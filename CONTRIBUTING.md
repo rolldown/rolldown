@@ -31,4 +31,5 @@ just init   # Install project tools
 just test   # Run project test
 just lint   # Run lint
 just fmt    # Run format
+just bench-prepare && just bench # Run benchmarks
 ```

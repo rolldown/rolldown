@@ -8,8 +8,8 @@ use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 
 use super::{
-  graph::symbols::Symbols,
-  module::source_mutation::{get_reference_final_name, get_symbol_final_name, SourceMutation},
+  graph::symbols::{get_reference_final_name, get_symbol_final_name, Symbols},
+  module::source_mutation::SourceMutation,
 };
 
 pub struct FinalizeContext<'ast> {

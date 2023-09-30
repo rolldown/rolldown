@@ -1,9 +1,7 @@
-use super::{
-  source_mutation::{get_reference_final_name, get_symbol_final_name, SourceMutation},
-  NormalModule,
-};
+use super::{source_mutation::SourceMutation, NormalModule};
 use crate::bundler::{
-  graph::symbols::Symbols, options::normalized_input_options::NormalizedInputOptions,
+  graph::symbols::{get_reference_final_name, get_symbol_final_name, Symbols},
+  options::normalized_input_options::NormalizedInputOptions,
 };
 use oxc::span::Atom;
 use rolldown_common::SymbolRef;
@@ -45,34 +43,33 @@ impl NormalModule {
             );
           }
         }
-      }
-    }
-
-    if self.is_symbol_for_namespace_referenced {
-      if let Some(name) = get_symbol_final_name(
-        self.id,
-        self.namespace_symbol.0.symbol,
-        ctx.symbols,
-        ctx.final_names,
-      ) {
-        let exports = self
-          .resolved_exports
-          .iter()
-          .map(|(name, info)| {
-            format!(
-              "  get {name}() {{ return {} }}",
-              if let Some(name) =
-                get_reference_final_name(self.id, info.local_ref, ctx.symbols, ctx.final_names,)
-              {
-                name
-              } else {
-                name
-              }
-            )
-          })
-          .collect::<Vec<_>>()
-          .join(",\n");
-        s.append(format!("\nvar {name} = {{\n{exports}\n}};\n"));
+        SourceMutation::AddNamespaceExport() => {
+          if let Some(name) = get_symbol_final_name(
+            self.id,
+            self.namespace_symbol.0.symbol,
+            ctx.symbols,
+            ctx.final_names,
+          ) {
+            let exports = self
+              .resolved_exports
+              .iter()
+              .map(|(name, info)| {
+                format!(
+                  "  get {name}() {{ return {} }}",
+                  if let Some(name) =
+                    get_reference_final_name(self.id, info.local_ref, ctx.symbols, ctx.final_names,)
+                  {
+                    name
+                  } else {
+                    name
+                  }
+                )
+              })
+              .collect::<Vec<_>>()
+              .join(",\n");
+            s.append(format!("\nvar {name} = {{\n{exports}\n}};\n"));
+          }
+        }
       }
     }
 

@@ -58,6 +58,11 @@ impl NormalModule {
       source_mutations: &mut self.source_mutations,
     });
     finalizer.visit_program(program);
+    if self.is_symbol_for_namespace_referenced {
+      self
+        .source_mutations
+        .push(SourceMutation::AddNamespaceExport());
+    }
   }
 
   pub fn initialize_namespace(&mut self) {

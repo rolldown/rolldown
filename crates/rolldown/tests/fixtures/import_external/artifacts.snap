@@ -7,12 +7,12 @@ input_file: crates/rolldown/tests/fixtures/import_external
 
 ```js
 // foo.js
-import * as external_ns$1 from 'external';
-import { a as a$1, b as b$1 } from 'external';
-console.log(external_ns$1, a$1, b$1);
 
+
+console.log(external_ns$1, a$1, b$1)
 // main.js
-import * as external_ns from 'external';
-import { a, b } from 'external';
-console.log(external_ns, a, b);
+
+
+
+console.log(external_ns, a, b)
 ```

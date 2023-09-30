@@ -7,25 +7,25 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_es6
 
 ```js
 // b.js
-const xyz = null;
+const xyz = null
+
 var b_ns = {
-    get xyz() {
-        return xyz;
-    }
+  get xyz() { return xyz }
 };
 
 // a.js
-const abc = undefined;
+const abc = undefined
 
 // main.js
-var main_default = 123;
-var v = 234;
-let l = 234;
-const c = 234;
-function Fn () {
-}
-class Class {
-}
+var main_default = 123
+var v = 234
+let l = 234
+const c = 234
+
+function Fn() { }
+class Class { }
+
+
 
 export { Class, Fn, abc, b_ns as b, c, main_default as default, l, v };
 ```

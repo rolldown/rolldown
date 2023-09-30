@@ -46,6 +46,10 @@ impl OxcProgram {
     }
   }
 
+  pub fn source(&self) -> &str {
+    self.source.as_str()
+  }
+
   pub fn program(&self) -> &ast::Program<'_> {
     unsafe { std::mem::transmute(&self.program) }
   }

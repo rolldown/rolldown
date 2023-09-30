@@ -1,4 +1,4 @@
-use std::{cell::Cell, fmt::Debug};
+use std::fmt::Debug;
 
 use index_vec::IndexVec;
 use oxc::{
@@ -10,10 +10,10 @@ use rolldown_common::{
   ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, NamedImport, ResolvedExport, ResourceId,
   StmtInfo, StmtInfoId, SymbolRef,
 };
-use rolldown_oxc::{DummyIn, IntoIn, OxcProgram};
+use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use super::{module::ModuleFinalizeContext, module_id::ModuleVec};
+use super::{module::ModuleFinalizeContext, module_id::ModuleVec, source_mutation::SourceMutation};
 use crate::bundler::{
   graph::symbols::Symbols,
   module::module::Module,
@@ -26,11 +26,11 @@ pub struct NormalModule {
   pub id: ModuleId,
   pub resource_id: ResourceId,
   pub ast: OxcProgram,
+  pub source_mutations: Vec<SourceMutation>,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
-  pub external_requests: FxHashSet<Atom>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
   // resolved
@@ -50,127 +50,19 @@ pub enum Resolution {
 
 impl NormalModule {
   pub fn finalize(&mut self, ctx: ModuleFinalizeContext) {
-    let (program, allocator) = self.ast.program_mut_and_allocator();
+    let program = self.ast.program_mut();
     let mut finalizer = Finalizer::new(FinalizeContext {
-      allocator,
       symbols: ctx.symbols,
-      scope: &self.scope,
       id: self.id,
-      default_export_symbol: self.default_export_symbol,
       final_names: ctx.canonical_names,
-      external_requests: &self.external_requests,
-      resolved_exports: &self.resolved_exports,
+      source_mutations: &mut self.source_mutations,
     });
     finalizer.visit_program(program);
   }
 
   pub fn initialize_namespace(&mut self) {
-    use oxc::allocator::Vec;
-    use oxc::ast::ast;
-    let (program, alloc) = self.ast.program_mut_and_allocator();
-    let mut properties = Vec::new_in(alloc);
-    self
-      .resolved_exports
-      .iter()
-      .for_each(|(exported_name, info)| {
-        let mut statements = Vec::new_in(alloc);
-
-        statements.push(ast::Statement::ReturnStatement(
-          ast::ReturnStatement {
-            span: Default::default(),
-            argument: Some(ast::Expression::Identifier(
-              ast::IdentifierReference {
-                span: Default::default(),
-                name: Atom::new_inline("$REPLACE$"),
-                reference_id: Cell::new(Some(info.local_ref)),
-              }
-              .into_in(alloc),
-            )),
-          }
-          .into_in(alloc),
-        ));
-
-        properties.push(ast::ObjectPropertyKind::ObjectProperty(
-          ast::ObjectProperty {
-            span: Default::default(),
-            kind: ast::PropertyKind::Get,
-            key: ast::PropertyKey::Identifier(
-              ast::IdentifierName {
-                span: Default::default(),
-                name: exported_name.clone(),
-              }
-              .into_in(alloc),
-            ),
-            value: ast::Expression::FunctionExpression(
-              ast::Function {
-                r#type: ast::FunctionType::FunctionExpression,
-                span: Default::default(),
-                id: None,
-                expression: false,
-                generator: false,
-                r#async: false,
-                params: DummyIn::dummy_in(alloc),
-                body: Some(
-                  ast::FunctionBody {
-                    span: Default::default(),
-                    directives: DummyIn::dummy_in(alloc),
-                    statements,
-                  }
-                  .into_in(alloc),
-                ),
-                type_parameters: None,
-                return_type: None,
-                modifiers: Default::default(),
-              }
-              .into_in(alloc),
-            ),
-            init: None,
-            method: false,
-            shorthand: false,
-            computed: false,
-          }
-          .into_in(alloc),
-        ))
-      });
-    let exp = ast::Expression::ObjectExpression(
-      ast::ObjectExpression {
-        span: Default::default(),
-        properties,
-        trailing_comma: None,
-      }
-      .into_in(alloc),
-    );
-
-    let mut declarations = Vec::new_in(alloc);
-    declarations.push(ast::VariableDeclarator {
-      span: Default::default(),
-      kind: ast::VariableDeclarationKind::Var,
-      id: ast::BindingPattern {
-        kind: ast::BindingPatternKind::BindingIdentifier(
-          ast::BindingIdentifier {
-            span: Default::default(),
-            name: Atom::new_inline(""),
-            symbol_id: Cell::new(Some(self.namespace_symbol.0.symbol)),
-          }
-          .into_in(alloc),
-        ),
-        type_annotation: None,
-        optional: false,
-      },
-      init: Some(exp),
-      definite: false,
-    });
-    let stmt = ast::Statement::Declaration(ast::Declaration::VariableDeclaration(
-      ast::VariableDeclaration {
-        declarations,
-        ..DummyIn::dummy_in(alloc)
-      }
-      .into_in(alloc),
-    ));
-    let idx = program.body.len();
-    program.body.push(stmt);
     self.stmt_infos.push(StmtInfo {
-      stmt_idx: idx,
+      stmt_idx: self.ast.program().body.len(),
       declared_symbols: vec![self.namespace_symbol.0.symbol],
     });
   }

@@ -7,10 +7,11 @@ input_file: crates/rolldown/tests/esbuild/default/simple_es6
 
 ```js
 // foo.js
-function fn () {
-    return 123;
+function fn() {
+  return 123
 }
 
 // main.js
-console.log(fn());
+
+console.log(fn())
 ```

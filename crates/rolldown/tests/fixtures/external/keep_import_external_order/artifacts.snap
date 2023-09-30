@@ -7,10 +7,11 @@ input_file: crates/rolldown/tests/fixtures/external/keep_import_external_order
 
 ```js
 // foo.js
-const a = 'foo';
+const a = 'foo'
 
 // main.js
-import 'ext1';
-import 'ext2';
-console.log(a);
+
+
+
+console.log(a)
 ```

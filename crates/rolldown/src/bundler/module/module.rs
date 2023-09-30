@@ -57,7 +57,7 @@ impl Module {
     }
   }
 
-  pub fn render(&self, ctx: RenderModuleContext) -> Option<MagicString<'static>> {
+  pub fn render(&self, ctx: RenderModuleContext) -> Option<MagicString<'_>> {
     match self {
       Module::Normal(m) => m.render(ctx),
       Module::External(_) => None,
@@ -66,7 +66,12 @@ impl Module {
 
   pub fn mark_symbol_for_namespace_referenced(&mut self) {
     match self {
-      Module::Normal(m) => m.is_symbol_for_namespace_referenced = true,
+      Module::Normal(m) => {
+        if !m.is_symbol_for_namespace_referenced {
+          m.is_symbol_for_namespace_referenced = true;
+          m.initialize_namespace()
+        }
+      }
       Module::External(m) => m.is_symbol_for_namespace_referenced = true,
     }
   }

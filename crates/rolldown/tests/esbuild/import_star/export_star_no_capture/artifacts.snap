@@ -7,16 +7,15 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_star_no_capture
 
 ```js
 // foo.js
-const foo$1 = 123;
-
+const foo$1 = 123
 // bar.js
+
 var bar_ns = {
-    get foo() {
-        return foo$1;
-    }
+  get foo() { return foo$1 }
 };
 
 // main.js
-let foo = 234;
-console.log(bar_ns.foo, bar_ns.foo, foo);
+
+let foo = 234
+console.log(bar_ns.foo, bar_ns.foo, foo)
 ```

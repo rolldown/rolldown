@@ -7,12 +7,15 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_of_export_star
 
 ```js
 // bar.js
-statement();
-statement();
-statement();
-statement();
-const bar = 123;
+// Add some statements to increase the part index (this reproduced a crash)
+statement()
+statement()
+statement()
+statement()
+const bar = 123
+// foo.js
 
 // main.js
-console.log(bar);
+
+console.log(bar)
 ```

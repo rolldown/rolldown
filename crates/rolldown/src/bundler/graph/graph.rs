@@ -79,14 +79,6 @@ impl Graph {
 
   pub fn link(&mut self) {
     Linker::new(self).link();
-    self.modules.iter_mut().for_each(|module| match module {
-      crate::bundler::module::module::Module::Normal(module) => {
-        if module.is_symbol_for_namespace_referenced {
-          module.initialize_namespace();
-        }
-      }
-      crate::bundler::module::module::Module::External(_) => {}
-    });
   }
 }
 

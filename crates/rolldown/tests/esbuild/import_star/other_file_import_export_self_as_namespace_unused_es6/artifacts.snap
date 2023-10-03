@@ -7,15 +7,16 @@ input_file: crates/rolldown/tests/esbuild/import_star/other_file_import_export_s
 
 ```js
 // foo.js
-const foo = 123;
+const foo = 123
+
+
+
 var foo_ns = {
-    get ns() {
-        return foo_ns;
-    },
-    get foo() {
-        return foo;
-    }
+  get ns() { return foo_ns },
+  get foo() { return foo }
 };
+
+// main.js
 
 export { foo };
 ```

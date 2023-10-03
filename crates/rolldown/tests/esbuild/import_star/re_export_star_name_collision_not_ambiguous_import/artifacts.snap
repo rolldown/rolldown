@@ -7,8 +7,15 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_collis
 
 ```js
 // c.js
-let x = 1, y = 2;
+let x = 1, y = 2
+// b.js
+
+// a.js
+
+// common.js
+
 
 // main.js
-console.log(x, y);
+
+console.log(x, y)
 ```

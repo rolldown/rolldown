@@ -7,13 +7,14 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_namespace_import
 
 ```js
 // bar.js
-const x = 123;
+const x = 123
 var bar_ns = {
-    get x() {
-        return x;
-    }
+  get x() { return x }
 };
 
+// foo.js
+
 // main.js
-console.log(bar_ns, bar_ns.foo);
+
+console.log(bar_ns, bar_ns.foo)
 ```

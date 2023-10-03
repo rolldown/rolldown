@@ -1523,13 +1523,16 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "string_wizard"
-version = "0.0.3"
+version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7674a38b8eaf3e1201e48819b7845f274e35e762ccf95e2c745bf7487083d951"
+checksum = "56ea888fc79d4daee27ff0afc9930ebf86d15c1dc8519fbebe2c9db47d11c582"
 dependencies = [
+ "glob",
  "index_vec",
  "rustc-hash",
- "text-size",
+ "serde",
+ "serde_json",
+ "vlq",
 ]
 
 [[package]]
@@ -1617,12 +1620,6 @@ dependencies = [
  "relative-path",
  "syn 2.0.29",
 ]
-
-[[package]]
-name = "text-size"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f18aa187839b2bdb1ad2fa35ead8c4c2976b64e4363c386d45ac0f7ee85c9233"
 
 [[package]]
 name = "textwrap"
@@ -1813,6 +1810,12 @@ name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
+
+[[package]]
+name = "vlq"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65dd7eed29412da847b0f78bcec0ac98588165988a8cfe41d4ea1d429f8ccfff"
 
 [[package]]
 name = "walkdir"

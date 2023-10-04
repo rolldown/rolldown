@@ -1523,16 +1523,12 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "string_wizard"
-version = "0.0.6"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56ea888fc79d4daee27ff0afc9930ebf86d15c1dc8519fbebe2c9db47d11c582"
+checksum = "5f8f5d6b5a2136ef845764ced7ee0704cd6828f7274a573d44bcce43da72701f"
 dependencies = [
- "glob",
  "index_vec",
  "rustc-hash",
- "serde",
- "serde_json",
- "vlq",
 ]
 
 [[package]]
@@ -1810,12 +1806,6 @@ name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
-
-[[package]]
-name = "vlq"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65dd7eed29412da847b0f78bcec0ac98588165988a8cfe41d4ea1d429f8ccfff"
 
 [[package]]
 name = "walkdir"

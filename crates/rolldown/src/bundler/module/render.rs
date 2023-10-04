@@ -24,10 +24,10 @@ impl NormalModule {
     for mutation in &self.source_mutations {
       match mutation {
         SourceMutation::RenameSymbol(r) => {
-          s.update(r.0.start as usize, r.0.end as usize, r.1.as_str());
+          s.update(r.0.start, r.0.end, r.1.as_str());
         }
         SourceMutation::Remove(span) => {
-          s.remove(span.start as usize, span.end as usize);
+          s.remove(span.start, span.end);
         }
         SourceMutation::AddExportDefaultBindingIdentifier(span) => {
           if let Some(name) = get_symbol_final_name(
@@ -36,11 +36,7 @@ impl NormalModule {
             ctx.symbols,
             ctx.final_names,
           ) {
-            s.update(
-              span.start as usize,
-              span.end as usize,
-              format!("var {name} = "),
-            );
+            s.update(span.start, span.end, format!("var {name} = "));
           }
         }
         SourceMutation::AddNamespaceExport() => {

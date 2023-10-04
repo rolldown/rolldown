@@ -10,6 +10,7 @@ use rustc_hash::FxHashMap;
 use super::{
   graph::symbols::{get_reference_final_name, get_symbol_final_name, Symbols},
   module::source_mutation::SourceMutation,
+  source_mutations::rewrite_default_export::RewriteDefaultExport,
 };
 
 pub struct FinalizeContext<'ast> {
@@ -35,7 +36,7 @@ impl<'ast> Finalizer<'ast> {
       .push(SourceMutation::Remove(Box::new(span)));
   }
 
-  pub fn remove_symbol(&mut self, span: Span, name: Atom) {
+  pub fn rename_symbol(&mut self, span: Span, name: Atom) {
     self
       .ctx
       .source_mutations
@@ -52,7 +53,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Finalizer<'ast> {
       self.ctx.final_names,
     ) {
       if ident.name != name {
-        self.remove_symbol(ident.span, name.clone());
+        self.rename_symbol(ident.span, name.clone());
       }
     }
   }
@@ -65,7 +66,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Finalizer<'ast> {
       self.ctx.final_names,
     ) {
       if ident.name != name {
-        self.remove_symbol(ident.span, name.clone());
+        self.rename_symbol(ident.span, name.clone());
       }
     }
   }

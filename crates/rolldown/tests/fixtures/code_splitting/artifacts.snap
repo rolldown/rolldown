@@ -12,14 +12,14 @@ console.log('shared');
 # main1.js
 
 ```js
-import '2.js';
+import './2.js';
 
 // main1.js
 ```
 # main2.js
 
 ```js
-import '2.js';
+import './2.js';
 
 // main2.js
 ```

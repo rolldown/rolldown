@@ -5,7 +5,7 @@ use crate::bundler::{
     ChunksVec,
   },
   graph::graph::Graph,
-  module::module::ModuleFinalizeContext,
+  module::module::{Module, ModuleFinalizeContext},
   options::{
     normalized_input_options::NormalizedInputOptions,
     normalized_output_options::NormalizedOutputOptions,
@@ -40,11 +40,11 @@ impl<'a> Bundle<'a> {
       return;
     }
     modules_entry_bit[module_id].insert_range(index..index + 1);
-    self.graph.modules[module_id]
-      .expect_normal()
-      .import_records
-      .iter()
-      .for_each(|i| self.mark_modules_entry_bit(i.resolved_module, index, modules_entry_bit));
+    if let Module::Normal(m) = &self.graph.modules[module_id] {
+      m.import_records
+        .iter()
+        .for_each(|i| self.mark_modules_entry_bit(i.resolved_module, index, modules_entry_bit));
+    }
   }
 
   pub fn generate_chunks(&self) -> ChunksVec {
@@ -91,17 +91,15 @@ impl<'a> Bundle<'a> {
       }
     });
 
-    let chunks = chunk_map
-      .into_iter()
-      .map(|(_, mut chunk)| {
+    chunk_map
+      .into_values()
+      .map(|mut chunk| {
         chunk
           .modules
           .sort_by_key(|id| self.graph.modules[*id].exec_order());
         chunk
       })
-      .collect::<ChunksVec>();
-
-    chunks
+      .collect::<ChunksVec>()
   }
 
   pub fn generate_cross_chunks_meta(&mut self, chunks: &ChunksVec) -> CrossChunksMeta {

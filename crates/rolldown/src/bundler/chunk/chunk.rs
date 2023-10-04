@@ -1,4 +1,5 @@
 use fixedbitset::FixedBitSet;
+use index_vec::IndexVec;
 use oxc::span::Atom;
 use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
@@ -13,18 +14,7 @@ use crate::bundler::{
   },
 };
 
-use super::ChunkId;
-
-#[derive(Debug, Clone)]
-pub struct ImportChunkMeta {
-  pub chunk_id: ChunkId,
-  // pub symbols: usize,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct ChunksMeta {
-  pub imports: Vec<ImportChunkMeta>,
-}
+use super::{ChunkId, ChunksVec};
 
 #[derive(Debug, Default)]
 pub struct Chunk {
@@ -64,7 +54,17 @@ impl Chunk {
   }
 
   /// - import symbols from other chunks and external modules
-  // pub fn generate_cross_chunk_links(&mut self) {}
+  pub fn generate_cross_chunk_links(&self, meta: &ChunkMeta, chunks: &ChunksVec) -> String {
+    let imports = meta
+      .imports
+      .iter()
+      .map(|import| {
+        let chunk = &chunks[import.chunk_id];
+        format!("import './{}';\n", chunk.file_name.as_deref().unwrap())
+      })
+      .collect::<Vec<_>>();
+    imports.join("\n")
+  }
 
   pub fn initialize_exports(&mut self, modules: &mut ModuleVec, symbols: &Symbols) {
     let entry = &mut modules[*self.modules.last().unwrap()];
@@ -104,12 +104,16 @@ impl Chunk {
   pub fn render(
     &self,
     graph: &Graph,
+    chunk_imports: String,
     input_options: &NormalizedInputOptions,
   ) -> anyhow::Result<String> {
     use rayon::prelude::*;
     let mut joiner = Joiner::with_options(JoinerOptions {
       separator: Some("\n".to_string()),
     });
+    if !chunk_imports.is_empty() {
+      joiner.append_raw(chunk_imports);
+    }
     self
       .modules
       .par_iter()
@@ -134,3 +138,16 @@ impl Chunk {
     Ok(joiner.join())
   }
 }
+
+#[derive(Debug, Clone)]
+pub struct ImportChunkMeta {
+  pub chunk_id: ChunkId,
+  // pub symbols: usize,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ChunkMeta {
+  pub imports: Vec<ImportChunkMeta>,
+}
+
+pub type CrossChunksMeta = IndexVec<ChunkId, ChunkMeta>;

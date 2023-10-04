@@ -1,8 +1,8 @@
 use super::asset::Asset;
 use crate::bundler::{
   chunk::{
-    chunk::{Chunk, ChunksMeta, ImportChunkMeta},
-    ChunkId, ChunksVec,
+    chunk::{Chunk, ChunkMeta, CrossChunksMeta, ImportChunkMeta},
+    ChunksVec,
   },
   graph::graph::Graph,
   module::module::ModuleFinalizeContext,
@@ -104,12 +104,9 @@ impl<'a> Bundle<'a> {
     chunks
   }
 
-  pub fn generate_cross_chunks_meta(
-    &mut self,
-    chunks: &ChunksVec,
-  ) -> IndexVec<ChunkId, ChunksMeta> {
-    let mut chunks_meta: IndexVec<ChunkId, ChunksMeta> =
-      IndexVec::from_vec(vec![ChunksMeta::default(); chunks.len()]);
+  pub fn generate_cross_chunks_meta(&mut self, chunks: &ChunksVec) -> CrossChunksMeta {
+    let mut chunks_meta: CrossChunksMeta =
+      IndexVec::from_vec(vec![ChunkMeta::default(); chunks.len()]);
     chunks.iter().enumerate().for_each(|(chunk_id, chunk)| {
       if chunk.is_entry {
         chunks
@@ -133,7 +130,7 @@ impl<'a> Bundle<'a> {
   ) -> anyhow::Result<Vec<Asset>> {
     use rayon::prelude::*;
     let mut chunks = self.generate_chunks();
-    let _generate_cross_chunks_meta = self.generate_cross_chunks_meta(&chunks);
+    let generate_cross_chunks_meta = self.generate_cross_chunks_meta(&chunks);
     chunks
       .iter_mut()
       .par_bridge()
@@ -163,8 +160,10 @@ impl<'a> Bundle<'a> {
 
     let assets = chunks
       .iter()
-      .map(|c| {
-        let content = c.render(self.graph, input_options).unwrap();
+      .enumerate()
+      .map(|(chunk_id, c)| {
+        let imports = c.generate_cross_chunk_links(&generate_cross_chunks_meta[chunk_id], &chunks);
+        let content = c.render(self.graph, imports, input_options).unwrap();
 
         Asset {
           file_name: c.file_name.clone().unwrap(),

@@ -1,3 +1,4 @@
+use fixedbitset::FixedBitSet;
 use oxc::span::Atom;
 use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
@@ -12,6 +13,19 @@ use crate::bundler::{
   },
 };
 
+use super::ChunkId;
+
+#[derive(Debug, Clone)]
+pub struct ImportChunkMeta {
+  pub chunk_id: ChunkId,
+  // pub symbols: usize,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ChunksMeta {
+  pub imports: Vec<ImportChunkMeta>,
+}
+
 #[derive(Debug, Default)]
 pub struct Chunk {
   pub is_entry: bool,
@@ -20,13 +34,20 @@ pub struct Chunk {
   pub file_name: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Atom>,
   pub exports_str: Option<String>,
+  pub bits: FixedBitSet,
 }
 
 impl Chunk {
-  pub fn new(name: Option<String>, is_entry: bool, modules: Vec<ModuleId>) -> Self {
+  pub fn new(
+    name: Option<String>,
+    is_entry: bool,
+    bits: FixedBitSet,
+    modules: Vec<ModuleId>,
+  ) -> Self {
     Self {
       name,
       is_entry,
+      bits,
       modules,
       ..Default::default()
     }

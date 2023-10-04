@@ -1,0 +1,22 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 54
+expression: content
+input_file: crates/rolldown/tests/fixtures/code_splitting
+---
+# 2.js
+
+```js
+// share.js
+console.log('shared');
+```
+# main1.js
+
+```js
+
+```
+# main2.js
+
+```js
+
+```

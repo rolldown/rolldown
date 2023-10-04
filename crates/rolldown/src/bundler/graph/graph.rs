@@ -10,7 +10,7 @@ use crate::bundler::{
 #[derive(Default, Debug)]
 pub struct Graph {
   pub modules: ModuleVec,
-  pub entries: Vec<ModuleId>,
+  pub entries: Vec<(Option<String>, ModuleId)>,
   pub sorted_modules: Vec<ModuleId>,
   pub symbols: Symbols,
 }
@@ -37,8 +37,7 @@ impl Graph {
     let mut stack = self
       .entries
       .iter()
-      .copied()
-      .map(Action::Enter)
+      .map(|(_, m)| Action::Enter(*m))
       .rev()
       .collect::<Vec<_>>();
 

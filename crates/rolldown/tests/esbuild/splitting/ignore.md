@@ -1,0 +1,3 @@
+- TestSplittingMinifyIdentifiersCrashIssue437
+- TestSplittingPublicPathEntryName
+- TestSplittingChunkPathDirPlaceholderImplicitOutbase

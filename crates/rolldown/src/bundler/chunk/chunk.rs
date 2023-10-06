@@ -1,9 +1,11 @@
+use index_vec::IndexVec;
 use oxc::span::Atom;
 use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{Joiner, JoinerOptions};
 
 use crate::bundler::{
+  bitset::BitSet,
   graph::{graph::Graph, symbols::Symbols},
   module::{module_id::ModuleVec, render::RenderModuleContext},
   options::{
@@ -11,6 +13,8 @@ use crate::bundler::{
     normalized_output_options::NormalizedOutputOptions,
   },
 };
+
+use super::ChunkId;
 
 #[derive(Debug, Default)]
 pub struct Chunk {
@@ -20,13 +24,15 @@ pub struct Chunk {
   pub file_name: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Atom>,
   pub exports_str: Option<String>,
+  pub bits: BitSet,
 }
 
 impl Chunk {
-  pub fn new(name: Option<String>, is_entry: bool, modules: Vec<ModuleId>) -> Self {
+  pub fn new(name: Option<String>, is_entry: bool, bits: BitSet, modules: Vec<ModuleId>) -> Self {
     Self {
       name,
       is_entry,
+      bits,
       modules,
       ..Default::default()
     }
@@ -41,9 +47,6 @@ impl Chunk {
         }),
     )
   }
-
-  /// - import symbols from other chunks and external modules
-  // pub fn generate_cross_chunk_links(&mut self) {}
 
   pub fn initialize_exports(&mut self, modules: &mut ModuleVec, symbols: &Symbols) {
     let entry = &mut modules[*self.modules.last().unwrap()];
@@ -113,3 +116,16 @@ impl Chunk {
     Ok(joiner.join())
   }
 }
+
+#[derive(Debug, Clone)]
+pub struct ImportChunkMeta {
+  pub chunk_id: ChunkId,
+  // pub symbols: usize,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ChunkMeta {
+  pub imports: Vec<ImportChunkMeta>,
+}
+
+pub type CrossChunksMeta = IndexVec<ChunkId, ChunkMeta>;

@@ -1,3 +1,4 @@
+pub mod bitset;
 pub mod bundle;
 mod graph;
 mod module;

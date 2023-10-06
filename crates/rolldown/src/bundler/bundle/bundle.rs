@@ -1,15 +1,21 @@
-use anyhow::Ok;
-
 use super::asset::Asset;
 use crate::bundler::{
-  chunk::{chunk::Chunk, ChunksVec},
+  bitset::BitSet,
+  chunk::{
+    chunk::{Chunk, CrossChunksMeta},
+    ChunksVec,
+  },
   graph::graph::Graph,
-  module::module::ModuleFinalizeContext,
+  module::module::{Module, ModuleFinalizeContext},
   options::{
     normalized_input_options::NormalizedInputOptions,
     normalized_output_options::NormalizedOutputOptions,
   },
 };
+use anyhow::Ok;
+use index_vec::IndexVec;
+use rolldown_common::ModuleId;
+use rustc_hash::FxHashMap;
 
 pub struct Bundle<'a> {
   graph: &'a mut Graph,
@@ -24,13 +30,82 @@ impl<'a> Bundle<'a> {
     }
   }
 
-  pub fn generate_chunks(graph: &Graph) -> ChunksVec {
-    let mut chunks = ChunksVec::with_capacity(graph.entries.len());
-    let mut modules = graph.modules.iter().map(|m| m.id()).collect::<Vec<_>>();
-    modules.sort_by_key(|id| graph.modules[*id].exec_order());
-    let chunk = Chunk::new(Some("main".to_string()), true, modules);
-    chunks.push(chunk);
+  pub fn mark_modules_entry_bit(
+    &self,
+    module_id: ModuleId,
+    index: usize,
+    modules_entry_bit: &mut IndexVec<ModuleId, BitSet>,
+  ) {
+    if modules_entry_bit[module_id].has_bit(index as u32) {
+      return;
+    }
+    modules_entry_bit[module_id].set_bit(index as u32);
+    if let Module::Normal(m) = &self.graph.modules[module_id] {
+      m.import_records
+        .iter()
+        .for_each(|i| self.mark_modules_entry_bit(i.resolved_module, index, modules_entry_bit));
+    }
+  }
+
+  pub fn generate_chunks(&self) -> ChunksVec {
+    let mut module_to_bits = index_vec::index_vec![
+      BitSet::new(self.graph.entries.len().try_into().unwrap());
+      self.graph.modules.len()
+    ];
+
+    let mut chunks = FxHashMap::default();
+    chunks.shrink_to(self.graph.entries.len());
+
+    for (i, (name, _)) in self.graph.entries.iter().enumerate() {
+      let count: u32 = i as u32;
+      let mut entry_bits = BitSet::new(self.graph.entries.len() as u32);
+      entry_bits.set_bit(count);
+      let c = Chunk::new(name.clone(), true, entry_bits.clone(), vec![]);
+      chunks.insert(entry_bits, c);
+    }
+
+    self
+      .graph
+      .entries
+      .iter()
+      .enumerate()
+      .for_each(|(i, (_, entry))| {
+        self.mark_modules_entry_bit(*entry, i, &mut module_to_bits);
+      });
+
+    self.graph.modules.iter().for_each(|module| {
+      let bits = &module_to_bits[module.id()];
+      if let Some(chunk) = chunks.get_mut(bits) {
+        chunk.modules.push(module.id());
+      } else {
+        // TODO share chunk name
+        let len = chunks.len();
+        chunks.insert(
+          bits.clone(),
+          Chunk::new(
+            Some(len.to_string()),
+            false,
+            bits.clone(),
+            vec![module.id()],
+          ),
+        );
+      }
+    });
+
     chunks
+      .into_values()
+      .map(|mut chunk| {
+        chunk
+          .modules
+          .sort_by_key(|id| self.graph.modules[*id].exec_order());
+        chunk
+      })
+      .collect::<ChunksVec>()
+  }
+
+  pub fn generate_cross_chunks_meta(&mut self, _chunks: &ChunksVec) -> CrossChunksMeta {
+    // TODO: cross chunk imports
+    Default::default()
   }
 
   pub fn generate(
@@ -38,8 +113,8 @@ impl<'a> Bundle<'a> {
     input_options: &'a NormalizedInputOptions,
   ) -> anyhow::Result<Vec<Asset>> {
     use rayon::prelude::*;
-    let mut chunks = Self::generate_chunks(self.graph);
-
+    let mut chunks = self.generate_chunks();
+    let _generate_cross_chunks_meta = self.generate_cross_chunks_meta(&chunks);
     chunks
       .iter_mut()
       .par_bridge()
@@ -69,7 +144,8 @@ impl<'a> Bundle<'a> {
 
     let assets = chunks
       .iter()
-      .map(|c| {
+      .enumerate()
+      .map(|(_chunk_id, c)| {
         let content = c.render(self.graph, input_options).unwrap();
 
         Asset {

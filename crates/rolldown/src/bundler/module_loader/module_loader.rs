@@ -54,7 +54,12 @@ impl<'a> ModuleLoader<'a> {
 
     self.graph.entries = resolved_entries
       .into_iter()
-      .map(|p| self.try_spawn_new_task(&p, &mut intermediate_modules))
+      .map(|(name, info)| {
+        (
+          name,
+          self.try_spawn_new_task(&info, &mut intermediate_modules),
+        )
+      })
       .collect();
 
     let mut tables: IndexVec<ModuleId, SymbolMap> = Default::default();
@@ -101,7 +106,9 @@ impl<'a> ModuleLoader<'a> {
     Ok(())
   }
 
-  async fn resolve_entries(&mut self) -> anyhow::Result<Vec<ResolvedRequestInfo>> {
+  async fn resolve_entries(
+    &mut self,
+  ) -> anyhow::Result<Vec<(Option<String>, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
 
     let resolved_ids = block_on_spawn_all(self.input_options.input.iter().map(
@@ -117,7 +124,7 @@ impl<'a> ModuleLoader<'a> {
           return Err(BuildError::entry_cannot_be_external(info.path.as_str()));
         }
 
-        Ok(info)
+        Ok((input_item.name.clone(), info))
       },
     ));
 

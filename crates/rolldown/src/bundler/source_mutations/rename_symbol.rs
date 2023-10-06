@@ -2,6 +2,7 @@ use oxc::span::{Atom, Span};
 
 use super::SourceMutation;
 
+#[derive(Debug)]
 pub struct RenameSymbol {
   pub span: Span,
   pub name: Atom,

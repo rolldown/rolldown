@@ -5,5 +5,4 @@ pub mod module_builder;
 pub mod module_id;
 pub mod normal_module;
 pub mod render;
-pub mod source_mutation;
 pub use normal_module::NormalModule;

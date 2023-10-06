@@ -54,7 +54,7 @@ impl ModuleBuilder {
       default_export_symbol: self.default_export_symbol,
       namespace_symbol: self.namespace_symbol.unwrap(),
       is_symbol_for_namespace_referenced: false,
-      source_mutations: vec![],
+      source_mutations: Default::default(),
     }
   }
 }

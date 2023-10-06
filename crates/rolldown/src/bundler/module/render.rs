@@ -1,7 +1,7 @@
-use super::{source_mutation::SourceMutation, NormalModule};
+use super::NormalModule;
 use crate::bundler::{
-  graph::symbols::{get_reference_final_name, get_symbol_final_name, Symbols},
-  options::normalized_input_options::NormalizedInputOptions,
+  graph::symbols::Symbols, options::normalized_input_options::NormalizedInputOptions,
+  source_mutations,
 };
 use oxc::span::Atom;
 use rolldown_common::SymbolRef;
@@ -16,58 +16,14 @@ pub struct RenderModuleContext<'a> {
 }
 
 impl NormalModule {
-  pub fn render(&self, ctx: RenderModuleContext<'_>) -> Option<MagicString<'_>> {
+  pub fn render(&self, _ctx: RenderModuleContext<'_>) -> Option<MagicString<'_>> {
     let mut s = MagicString::new(self.ast.source());
 
-    s.prepend(format!("// {}\n", self.resource_id.prettify()));
+    self.source_mutations.iter().for_each(|mutation| {
+      mutation.apply(&source_mutations::Context {}, &mut s);
+    });
 
-    for mutation in &self.source_mutations {
-      match mutation {
-        SourceMutation::RenameSymbol(r) => {
-          s.update(r.0.start, r.0.end, r.1.as_str());
-        }
-        SourceMutation::Remove(span) => {
-          s.remove(span.start, span.end);
-        }
-        SourceMutation::AddExportDefaultBindingIdentifier(span) => {
-          if let Some(name) = get_symbol_final_name(
-            self.id,
-            self.default_export_symbol.unwrap(),
-            ctx.symbols,
-            ctx.final_names,
-          ) {
-            s.update(span.start, span.end, format!("var {name} = "));
-          }
-        }
-        SourceMutation::AddNamespaceExport() => {
-          if let Some(name) = get_symbol_final_name(
-            self.id,
-            self.namespace_symbol.0.symbol,
-            ctx.symbols,
-            ctx.final_names,
-          ) {
-            let exports = self
-              .resolved_exports
-              .iter()
-              .map(|(name, info)| {
-                format!(
-                  "  get {name}() {{ return {} }}",
-                  if let Some(name) =
-                    get_reference_final_name(self.id, info.local_ref, ctx.symbols, ctx.final_names,)
-                  {
-                    name
-                  } else {
-                    name
-                  }
-                )
-              })
-              .collect::<Vec<_>>()
-              .join(",\n");
-            s.append(format!("\nvar {name} = {{\n{exports}\n}};\n"));
-          }
-        }
-      }
-    }
+    s.prepend(format!("// {}\n", self.resource_id.prettify()));
 
     // TODO trim
     if s.len() == 0 {

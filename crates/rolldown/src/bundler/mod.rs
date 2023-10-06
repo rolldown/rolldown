@@ -2,6 +2,7 @@ pub mod bundle;
 mod graph;
 mod module;
 pub mod options;
+pub mod source_mutations;
 mod visitors;
 
 #[allow(clippy::module_inception)]

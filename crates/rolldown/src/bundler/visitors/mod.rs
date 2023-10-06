@@ -9,14 +9,18 @@ use rustc_hash::FxHashMap;
 
 use super::{
   graph::symbols::{get_reference_final_name, get_symbol_final_name, Symbols},
-  module::source_mutation::SourceMutation,
+  source_mutations::{
+    overwrite::Overwrite, remove_range::RemoveRange, rename_symbol::RenameSymbol,
+    BoxedSourceMutation,
+  },
 };
 
 pub struct FinalizeContext<'ast> {
   pub symbols: &'ast Symbols,
   pub final_names: &'ast FxHashMap<SymbolRef, Atom>,
   pub id: ModuleId,
-  pub source_mutations: &'ast mut Vec<SourceMutation>,
+  pub source_mutations: &'ast mut Vec<BoxedSourceMutation>,
+  pub default_export_symbol: Option<SymbolRef>,
 }
 
 pub struct Finalizer<'ast> {
@@ -32,14 +36,14 @@ impl<'ast> Finalizer<'ast> {
     self
       .ctx
       .source_mutations
-      .push(SourceMutation::Remove(Box::new(span)));
+      .push(Box::new(RemoveRange { span }))
   }
 
-  pub fn remove_symbol(&mut self, span: Span, name: Atom) {
+  pub fn rename_symbol(&mut self, span: Span, name: Atom) {
     self
       .ctx
       .source_mutations
-      .push(SourceMutation::RenameSymbol(Box::new((span, name))));
+      .push(Box::new(RenameSymbol { span, name }))
   }
 }
 
@@ -52,7 +56,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Finalizer<'ast> {
       self.ctx.final_names,
     ) {
       if ident.name != name {
-        self.remove_symbol(ident.span, name.clone());
+        self.rename_symbol(ident.span, name.clone());
       }
     }
   }
@@ -65,7 +69,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Finalizer<'ast> {
       self.ctx.final_names,
     ) {
       if ident.name != name {
-        self.remove_symbol(ident.span, name.clone());
+        self.rename_symbol(ident.span, name.clone());
       }
     }
   }
@@ -99,12 +103,15 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Finalizer<'ast> {
   ) {
     match &decl.declaration {
       oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
-        self
+        let canonical_ref = self
           .ctx
-          .source_mutations
-          .push(SourceMutation::AddExportDefaultBindingIdentifier(Box::new(
-            Span::new(decl.span.start, exp.span().start),
-          )));
+          .symbols
+          .par_get_canonical_ref(self.ctx.default_export_symbol.unwrap());
+        let canonical_name = self.ctx.final_names.get(&canonical_ref).unwrap().clone();
+        self.ctx.source_mutations.push(Box::new(Overwrite {
+          span: Span::new(decl.span.start, exp.span().start),
+          content: format!("var {canonical_name} = "),
+        }));
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {
         self.remove_node(Span::new(decl.span.start, decl.span.start));

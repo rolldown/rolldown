@@ -13,10 +13,11 @@ use rolldown_common::{
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use super::{module::ModuleFinalizeContext, module_id::ModuleVec, source_mutation::SourceMutation};
+use super::{module::ModuleFinalizeContext, module_id::ModuleVec};
 use crate::bundler::{
   graph::symbols::Symbols,
   module::module::Module,
+  source_mutations::{append::Append, BoxedSourceMutation},
   visitors::{FinalizeContext, Finalizer},
 };
 
@@ -26,7 +27,7 @@ pub struct NormalModule {
   pub id: ModuleId,
   pub resource_id: ResourceId,
   pub ast: OxcProgram,
-  pub source_mutations: Vec<SourceMutation>,
+  pub source_mutations: Vec<BoxedSourceMutation>,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
@@ -56,12 +57,25 @@ impl NormalModule {
       id: self.id,
       final_names: ctx.canonical_names,
       source_mutations: &mut self.source_mutations,
+      default_export_symbol: self.default_export_symbol.map(|id| (self.id, id).into()),
     });
     finalizer.visit_program(program);
     if self.is_symbol_for_namespace_referenced {
-      self
-        .source_mutations
-        .push(SourceMutation::AddNamespaceExport());
+      let ns_ref = ctx.symbols.par_get_canonical_ref(self.namespace_symbol.0);
+      let ns_name = ctx.canonical_names.get(&ns_ref).unwrap();
+      let exports: String = self
+        .resolved_exports
+        .iter()
+        .map(|(exported_name, info)| {
+          let canonical_ref = ctx.symbols.par_get_canonical_ref(info.local_symbol);
+          let canonical_name = ctx.canonical_names.get(&canonical_ref).unwrap();
+          format!("  get {exported_name}() {{ return {canonical_name} }}",)
+        })
+        .collect::<Vec<_>>()
+        .join(",\n");
+      self.source_mutations.push(Box::new(Append {
+        content: format!("\nvar {ns_name} = {{\n{exports}\n}};\n"),
+      }));
     }
   }
 

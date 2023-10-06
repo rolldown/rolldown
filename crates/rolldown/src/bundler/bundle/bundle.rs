@@ -1,7 +1,8 @@
 use super::asset::Asset;
 use crate::bundler::{
+  bitset::BitSet,
   chunk::{
-    chunk::{Chunk, ChunkMeta, CrossChunksMeta, ImportChunkMeta},
+    chunk::{Chunk, CrossChunksMeta},
     ChunksVec,
   },
   graph::graph::Graph,
@@ -12,7 +13,6 @@ use crate::bundler::{
   },
 };
 use anyhow::Ok;
-use fixedbitset::FixedBitSet;
 use index_vec::IndexVec;
 use rolldown_common::ModuleId;
 use rustc_hash::FxHashMap;
@@ -34,12 +34,12 @@ impl<'a> Bundle<'a> {
     &self,
     module_id: ModuleId,
     index: usize,
-    modules_entry_bit: &mut IndexVec<ModuleId, FixedBitSet>,
+    modules_entry_bit: &mut IndexVec<ModuleId, BitSet>,
   ) {
-    if modules_entry_bit[module_id].count_ones(index..index + 1) > 0 {
+    if modules_entry_bit[module_id].has_bit(index as u32) {
       return;
     }
-    modules_entry_bit[module_id].insert_range(index..index + 1);
+    modules_entry_bit[module_id].set_bit(index as u32);
     if let Module::Normal(m) = &self.graph.modules[module_id] {
       m.import_records
         .iter()
@@ -48,11 +48,21 @@ impl<'a> Bundle<'a> {
   }
 
   pub fn generate_chunks(&self) -> ChunksVec {
-    let mut modules_entry_bit =
-      IndexVec::from_vec(vec![
-        FixedBitSet::with_capacity(self.graph.entries.len());
-        self.graph.modules.len()
-      ]);
+    let mut module_to_bits = index_vec::index_vec![
+      BitSet::new(self.graph.entries.len().try_into().unwrap());
+      self.graph.modules.len()
+    ];
+
+    let mut chunks = FxHashMap::default();
+    chunks.shrink_to(self.graph.entries.len());
+
+    for (i, (name, _)) in self.graph.entries.iter().enumerate() {
+      let count: u32 = i as u32;
+      let mut entry_bits = BitSet::new(self.graph.entries.len() as u32);
+      entry_bits.set_bit(count);
+      let c = Chunk::new(name.clone(), true, entry_bits.clone(), vec![]);
+      chunks.insert(entry_bits, c);
+    }
 
     self
       .graph
@@ -60,38 +70,29 @@ impl<'a> Bundle<'a> {
       .iter()
       .enumerate()
       .for_each(|(i, (_, entry))| {
-        self.mark_modules_entry_bit(*entry, i, &mut modules_entry_bit);
+        self.mark_modules_entry_bit(*entry, i, &mut module_to_bits);
       });
 
-    let mut chunk_map = self
-      .graph
-      .entries
-      .iter()
-      .enumerate()
-      .map(|(i, (name, _))| {
-        let mut bits = FixedBitSet::with_capacity(self.graph.entries.len());
-        bits.insert_range(i..i + 1);
-        (bits.clone(), Chunk::new(name.clone(), true, bits, vec![]))
-      })
-      .collect::<FxHashMap<FixedBitSet, Chunk>>();
-
     self.graph.modules.iter().for_each(|module| {
-      let bit = &modules_entry_bit[module.id()];
-      if !bit.is_empty() {
-        if let Some(chunk) = chunk_map.get_mut(bit) {
-          chunk.modules.push(module.id());
-        } else {
-          // TODO share chunk name
-          let len = chunk_map.len();
-          chunk_map.insert(
-            bit.clone(),
-            Chunk::new(Some(len.to_string()), false, bit.clone(), vec![module.id()]),
-          );
-        }
+      let bits = &module_to_bits[module.id()];
+      if let Some(chunk) = chunks.get_mut(bits) {
+        chunk.modules.push(module.id());
+      } else {
+        // TODO share chunk name
+        let len = chunks.len();
+        chunks.insert(
+          bits.clone(),
+          Chunk::new(
+            Some(len.to_string()),
+            false,
+            bits.clone(),
+            vec![module.id()],
+          ),
+        );
       }
     });
 
-    chunk_map
+    chunks
       .into_values()
       .map(|mut chunk| {
         chunk
@@ -102,24 +103,9 @@ impl<'a> Bundle<'a> {
       .collect::<ChunksVec>()
   }
 
-  pub fn generate_cross_chunks_meta(&mut self, chunks: &ChunksVec) -> CrossChunksMeta {
-    let mut chunks_meta: CrossChunksMeta =
-      IndexVec::from_vec(vec![ChunkMeta::default(); chunks.len()]);
-    chunks.iter().enumerate().for_each(|(chunk_id, chunk)| {
-      if chunk.is_entry {
-        chunks
-          .iter()
-          .enumerate()
-          .for_each(|(other_chunk_id, other_chunk)| {
-            if other_chunk_id != chunk_id && other_chunk.bits.is_superset(&chunk.bits) {
-              chunks_meta[chunk_id].imports.push(ImportChunkMeta {
-                chunk_id: other_chunk_id.into(),
-              });
-            }
-          });
-      }
-    });
-    chunks_meta
+  pub fn generate_cross_chunks_meta(&mut self, _chunks: &ChunksVec) -> CrossChunksMeta {
+    // TODO: cross chunk imports
+    Default::default()
   }
 
   pub fn generate(
@@ -128,7 +114,7 @@ impl<'a> Bundle<'a> {
   ) -> anyhow::Result<Vec<Asset>> {
     use rayon::prelude::*;
     let mut chunks = self.generate_chunks();
-    let generate_cross_chunks_meta = self.generate_cross_chunks_meta(&chunks);
+    let _generate_cross_chunks_meta = self.generate_cross_chunks_meta(&chunks);
     chunks
       .iter_mut()
       .par_bridge()
@@ -159,9 +145,8 @@ impl<'a> Bundle<'a> {
     let assets = chunks
       .iter()
       .enumerate()
-      .map(|(chunk_id, c)| {
-        let imports = c.generate_cross_chunk_links(&generate_cross_chunks_meta[chunk_id], &chunks);
-        let content = c.render(self.graph, imports, input_options).unwrap();
+      .map(|(_chunk_id, c)| {
+        let content = c.render(self.graph, input_options).unwrap();
 
         Asset {
           file_name: c.file_name.clone().unwrap(),

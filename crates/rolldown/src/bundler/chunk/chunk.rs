@@ -1,4 +1,3 @@
-use fixedbitset::FixedBitSet;
 use index_vec::IndexVec;
 use oxc::span::Atom;
 use rolldown_common::{ModuleId, SymbolRef};
@@ -6,6 +5,7 @@ use rustc_hash::FxHashMap;
 use string_wizard::{Joiner, JoinerOptions};
 
 use crate::bundler::{
+  bitset::BitSet,
   graph::{graph::Graph, symbols::Symbols},
   module::{module_id::ModuleVec, render::RenderModuleContext},
   options::{
@@ -14,7 +14,7 @@ use crate::bundler::{
   },
 };
 
-use super::{ChunkId, ChunksVec};
+use super::ChunkId;
 
 #[derive(Debug, Default)]
 pub struct Chunk {
@@ -24,16 +24,11 @@ pub struct Chunk {
   pub file_name: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Atom>,
   pub exports_str: Option<String>,
-  pub bits: FixedBitSet,
+  pub bits: BitSet,
 }
 
 impl Chunk {
-  pub fn new(
-    name: Option<String>,
-    is_entry: bool,
-    bits: FixedBitSet,
-    modules: Vec<ModuleId>,
-  ) -> Self {
+  pub fn new(name: Option<String>, is_entry: bool, bits: BitSet, modules: Vec<ModuleId>) -> Self {
     Self {
       name,
       is_entry,
@@ -51,19 +46,6 @@ impl Chunk {
           name: self.name.as_deref(),
         }),
     )
-  }
-
-  /// - import symbols from other chunks and external modules
-  pub fn generate_cross_chunk_links(&self, meta: &ChunkMeta, chunks: &ChunksVec) -> String {
-    let imports = meta
-      .imports
-      .iter()
-      .map(|import| {
-        let chunk = &chunks[import.chunk_id];
-        format!("import './{}';\n", chunk.file_name.as_deref().unwrap())
-      })
-      .collect::<Vec<_>>();
-    imports.join("\n")
   }
 
   pub fn initialize_exports(&mut self, modules: &mut ModuleVec, symbols: &Symbols) {
@@ -104,16 +86,12 @@ impl Chunk {
   pub fn render(
     &self,
     graph: &Graph,
-    chunk_imports: String,
     input_options: &NormalizedInputOptions,
   ) -> anyhow::Result<String> {
     use rayon::prelude::*;
     let mut joiner = Joiner::with_options(JoinerOptions {
       separator: Some("\n".to_string()),
     });
-    if !chunk_imports.is_empty() {
-      joiner.append_raw(chunk_imports);
-    }
     self
       .modules
       .par_iter()

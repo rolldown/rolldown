@@ -6,7 +6,7 @@ use string_wizard::MagicString;
 
 use crate::bundler::graph::symbols::Symbols;
 
-use super::{external_module::ExternalModule, render::RenderModuleContext, NormalModule};
+use super::{external_module::ExternalModule, NormalModule};
 
 #[derive(Debug)]
 pub enum Module {
@@ -57,13 +57,6 @@ impl Module {
     }
   }
 
-  pub fn render(&self, ctx: RenderModuleContext) -> Option<MagicString<'_>> {
-    match self {
-      Module::Normal(m) => m.render(ctx),
-      Module::External(_) => None,
-    }
-  }
-
   pub fn mark_symbol_for_namespace_referenced(&mut self) {
     match self {
       Module::Normal(m) => {
@@ -76,15 +69,15 @@ impl Module {
     }
   }
 
-  pub fn finalize(&mut self, ctx: ModuleFinalizeContext) {
+  pub fn render(&self, ctx: ModuleRenderContext) -> Option<MagicString<'_>> {
     match self {
-      Module::Normal(m) => m.finalize(ctx),
-      Module::External(_) => {}
+      Module::Normal(m) => m.render(ctx),
+      Module::External(_) => None,
     }
   }
 }
 
-pub struct ModuleFinalizeContext<'a> {
+pub struct ModuleRenderContext<'a> {
   pub canonical_names: &'a FxHashMap<SymbolRef, Atom>,
   pub symbols: &'a Symbols,
 }

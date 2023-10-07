@@ -1,1 +1,2 @@
 import './share'
+import('./dynamic')

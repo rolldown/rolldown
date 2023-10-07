@@ -80,4 +80,5 @@ impl Module {
 pub struct ModuleRenderContext<'a> {
   pub canonical_names: &'a FxHashMap<SymbolRef, Atom>,
   pub symbols: &'a Symbols,
+  pub entries_chunk_final_names: &'a FxHashMap<ModuleId, String>,
 }

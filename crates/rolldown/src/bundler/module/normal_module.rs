@@ -33,6 +33,7 @@ pub struct NormalModule {
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
+  pub dynamic_import_request_to_import_record_id: FxHashMap<Atom, ImportRecordId>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
   // resolved

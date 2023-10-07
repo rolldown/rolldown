@@ -1,16 +1,16 @@
-use rolldown_common::ModuleId;
-use rustc_hash::FxHashSet;
-
 use super::{linker::Linker, symbols::Symbols};
 use crate::bundler::{
   module::module_id::ModuleVec, module_loader::ModuleLoader,
   options::normalized_input_options::NormalizedInputOptions,
 };
+use indexmap::IndexSet;
+use rolldown_common::ModuleId;
+use rustc_hash::FxHashSet;
 
 #[derive(Default, Debug)]
 pub struct Graph {
   pub modules: ModuleVec,
-  pub entries: Vec<(Option<String>, ModuleId)>,
+  pub entries: IndexSet<(Option<String>, ModuleId)>,
   pub sorted_modules: Vec<ModuleId>,
   pub symbols: Symbols,
 }

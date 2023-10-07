@@ -14,7 +14,7 @@ use crate::bundler::{
 };
 use anyhow::Ok;
 use index_vec::IndexVec;
-use rolldown_common::ModuleId;
+use rolldown_common::{ImportKind, ModuleId};
 use rustc_hash::FxHashMap;
 
 pub struct Bundle<'a> {
@@ -41,9 +41,12 @@ impl<'a> Bundle<'a> {
     }
     modules_entry_bit[module_id].set_bit(index as u32);
     if let Module::Normal(m) = &self.graph.modules[module_id] {
-      m.import_records
-        .iter()
-        .for_each(|i| self.mark_modules_entry_bit(i.resolved_module, index, modules_entry_bit));
+      m.import_records.iter().for_each(|i| {
+        // because dynamic import is already as entry, so here ignore it
+        if i.kind != ImportKind::DynamicImport {
+          self.mark_modules_entry_bit(i.resolved_module, index, modules_entry_bit)
+        }
+      });
     }
   }
 
@@ -56,11 +59,11 @@ impl<'a> Bundle<'a> {
     let mut chunks = FxHashMap::default();
     chunks.shrink_to(self.graph.entries.len());
 
-    for (i, (name, _)) in self.graph.entries.iter().enumerate() {
+    for (i, (name, module_id)) in self.graph.entries.iter().enumerate() {
       let count: u32 = i as u32;
       let mut entry_bits = BitSet::new(self.graph.entries.len() as u32);
       entry_bits.set_bit(count);
-      let c = Chunk::new(name.clone(), true, entry_bits.clone(), vec![]);
+      let c = Chunk::new(name.clone(), Some(*module_id), entry_bits.clone(), vec![]);
       chunks.insert(entry_bits, c);
     }
 
@@ -82,12 +85,7 @@ impl<'a> Bundle<'a> {
         let len = chunks.len();
         chunks.insert(
           bits.clone(),
-          Chunk::new(
-            Some(len.to_string()),
-            false,
-            bits.clone(),
-            vec![module.id()],
-          ),
+          Chunk::new(Some(len.to_string()), None, bits.clone(), vec![module.id()]),
         );
       }
     });
@@ -124,8 +122,12 @@ impl<'a> Bundle<'a> {
       chunk.de_conflict(self.graph);
     });
 
+    let mut entries_chunk_final_names = FxHashMap::default();
+    entries_chunk_final_names.shrink_to(self.graph.entries.len());
+
     chunks.iter_mut().for_each(|chunk| {
-      if chunk.is_entry {
+      if let Some(module_id) = chunk.entry_module {
+        entries_chunk_final_names.insert(module_id, chunk.file_name.clone().unwrap());
         chunk.initialize_exports(&mut self.graph.modules, &self.graph.symbols);
       }
     });
@@ -139,6 +141,7 @@ impl<'a> Bundle<'a> {
         module.render(ModuleRenderContext {
           canonical_names: &chunks[0].canonical_names,
           symbols: &self.graph.symbols,
+          entries_chunk_final_names: &entries_chunk_final_names,
         });
       });
 

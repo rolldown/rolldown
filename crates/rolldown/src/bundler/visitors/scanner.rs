@@ -11,8 +11,8 @@ use oxc::{
   span::Atom,
 };
 use rolldown_common::{
-  ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId, NamedImport, ReExport,
-  StmtInfo, StmtInfoId,
+  ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId, NamedImport,
+  ReExport, StmtInfo, StmtInfoId,
 };
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
@@ -25,6 +25,7 @@ pub struct ScanResult {
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
   pub star_exports: Vec<ImportRecordId>,
   pub export_default_symbol_id: Option<SymbolId>,
+  pub dynamic_import_request_to_import_record_id: FxHashMap<Atom, ImportRecordId>,
 }
 
 pub struct Scanner<'a> {
@@ -61,8 +62,8 @@ impl<'a> Scanner<'a> {
     self.scope.get_root_binding(name).expect("must have")
   }
 
-  fn add_import_record(&mut self, module_request: &Atom) -> ImportRecordId {
-    let rec = ImportRecord::new(module_request.clone());
+  fn add_import_record(&mut self, module_request: &Atom, kind: ImportKind) -> ImportRecordId {
+    let rec = ImportRecord::new(module_request.clone(), kind);
     self.result.import_records.push(rec)
   }
 
@@ -134,7 +135,7 @@ impl<'a> Scanner<'a> {
   }
 
   fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration) {
-    let id = self.add_import_record(&decl.source.value);
+    let id = self.add_import_record(&decl.source.value, ImportKind::Import);
     if let Some(exported) = &decl.exported {
       // export * as ns from '...'
       self.add_star_re_export(exported.name(), id)
@@ -146,7 +147,7 @@ impl<'a> Scanner<'a> {
 
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration) {
     if let Some(source) = &decl.source {
-      let record_id = self.add_import_record(&source.value);
+      let record_id = self.add_import_record(&source.value, ImportKind::Import);
       decl.specifiers.iter().for_each(|spec| {
         self.add_re_export(spec.exported.name(), spec.local.name(), record_id);
       })
@@ -231,7 +232,7 @@ impl<'a> Scanner<'a> {
   }
 
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
-    let id = self.add_import_record(&decl.source.value);
+    let id = self.add_import_record(&decl.source.value, ImportKind::Import);
     decl.specifiers.iter().for_each(|spec| match spec {
       oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
@@ -293,5 +294,15 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
       self.scan_module_decl(decl.0)
     }
     self.visit_statement_match(stmt)
+  }
+
+  fn visit_import_expression(&mut self, expr: &'p mut oxc::ast::ast::ImportExpression<'ast>) {
+    if let oxc::ast::ast::Expression::StringLiteral(request) = &mut expr.source {
+      let id = self.add_import_record(&request.value, ImportKind::DynamicImport);
+      self
+        .result
+        .dynamic_import_request_to_import_record_id
+        .insert(request.value.clone(), id);
+    }
   }
 }

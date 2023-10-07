@@ -18,7 +18,7 @@ use super::ChunkId;
 
 #[derive(Debug, Default)]
 pub struct Chunk {
-  pub is_entry: bool,
+  pub entry_module: Option<ModuleId>,
   pub modules: Vec<ModuleId>,
   pub name: Option<String>,
   pub file_name: Option<String>,
@@ -28,10 +28,15 @@ pub struct Chunk {
 }
 
 impl Chunk {
-  pub fn new(name: Option<String>, is_entry: bool, bits: BitSet, modules: Vec<ModuleId>) -> Self {
+  pub fn new(
+    name: Option<String>,
+    entry_module: Option<ModuleId>,
+    bits: BitSet,
+    modules: Vec<ModuleId>,
+  ) -> Self {
     Self {
       name,
-      is_entry,
+      entry_module,
       bits,
       modules,
       ..Default::default()

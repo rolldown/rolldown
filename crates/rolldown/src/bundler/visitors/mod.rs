@@ -1,10 +1,11 @@
 pub mod scanner;
 
+use index_vec::IndexVec;
 use oxc::{
   ast::Visit,
   span::{Atom, GetSpan, Span},
 };
-use rolldown_common::{ModuleId, SymbolRef};
+use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, UpdateOptions};
 
@@ -16,6 +17,9 @@ pub struct RendererContext<'ast> {
   pub id: ModuleId,
   pub default_export_symbol: Option<SymbolRef>,
   pub source: &'ast mut MagicString<'static>,
+  pub dynamic_import_request_to_import_record_id: &'ast FxHashMap<Atom, ImportRecordId>,
+  pub entries_chunk_final_names: &'ast FxHashMap<ModuleId, String>,
+  pub import_records: &'ast IndexVec<ImportRecordId, ImportRecord>,
 }
 
 pub struct SourceRenderer<'ast> {
@@ -122,6 +126,24 @@ impl<'ast> Visit<'ast> for SourceRenderer<'ast> {
         self.remove_node(Span::new(decl.span.start, decl.span.start));
       }
       _ => {}
+    }
+  }
+
+  fn visit_import_expression(&mut self, expr: &'p mut oxc::ast::ast::ImportExpression<'ast>) {
+    if let oxc::ast::ast::Expression::StringLiteral(str) = &mut expr.source {
+      if let Some(import_record_id) = self
+        .ctx
+        .dynamic_import_request_to_import_record_id
+        .get(&str.value)
+      {
+        let module_id = self.ctx.import_records[*import_record_id].resolved_module;
+        if let Some(name) = self.ctx.entries_chunk_final_names.get(&module_id) {
+          self.ctx.source_mutations.push(Box::new(Overwrite {
+            span: Span::new(str.span.start, str.span.end),
+            content: format!("'./{}'", name.clone()),
+          }));
+        }
+      }
     }
   }
 }

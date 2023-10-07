@@ -23,6 +23,7 @@ pub struct ModuleBuilder {
   pub named_exports: Option<FxHashMap<Atom, LocalOrReExport>>,
   pub stmt_infos: Option<IndexVec<StmtInfoId, StmtInfo>>,
   pub import_records: Option<IndexVec<ImportRecordId, ImportRecord>>,
+  pub dynamic_import_request_to_import_record_id: Option<FxHashMap<Atom, ImportRecordId>>,
   pub star_exports: Option<Vec<ImportRecordId>>,
   pub scope: Option<ScopeTree>,
   pub default_export_symbol: Option<SymbolId>,
@@ -47,6 +48,9 @@ impl ModuleBuilder {
       named_exports: self.named_exports.unwrap(),
       stmt_infos: self.stmt_infos.unwrap(),
       import_records: self.import_records.unwrap(),
+      dynamic_import_request_to_import_record_id: self
+        .dynamic_import_request_to_import_record_id
+        .unwrap(),
       star_exports: self.star_exports.unwrap(),
       resolved_exports: Default::default(),
       resolved_star_exports: Default::default(),

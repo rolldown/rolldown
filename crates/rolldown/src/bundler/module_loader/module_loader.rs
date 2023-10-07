@@ -1,5 +1,6 @@
 use index_vec::IndexVec;
-use rolldown_common::{ModuleId, RawPath, ResourceId};
+use indexmap::IndexSet;
+use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
 use rolldown_resolver::Resolver;
 use rolldown_utils::block_on_spawn_all;
 use rustc_hash::FxHashMap;
@@ -50,9 +51,9 @@ impl<'a> ModuleLoader<'a> {
     let resolved_entries = self.resolve_entries().await?;
 
     let mut intermediate_modules: IndexVec<ModuleId, Option<Module>> =
-      IndexVec::with_capacity(self.graph.entries.len());
+      IndexVec::with_capacity(resolved_entries.len());
 
-    self.graph.entries = resolved_entries
+    let mut entries = resolved_entries
       .into_iter()
       .map(|(name, info)| {
         (
@@ -60,7 +61,7 @@ impl<'a> ModuleLoader<'a> {
           self.try_spawn_new_task(&info, &mut intermediate_modules),
         )
       })
-      .collect();
+      .collect::<IndexSet<_>>();
 
     let mut tables: IndexVec<ModuleId, SymbolMap> = Default::default();
 
@@ -82,9 +83,14 @@ impl<'a> ModuleLoader<'a> {
             .into_iter()
             .for_each(|(import_record_idx, info)| {
               let id = self.try_spawn_new_task(&info, &mut intermediate_modules);
-              import_records[import_record_idx].resolved_module = id;
+              let import_record = &mut import_records[import_record_idx];
+              import_record.resolved_module = id;
               while tables.len() <= id.raw() as usize {
                 tables.push(Default::default());
+              }
+              // dynamic import as extra entries if enable code splitting
+              if import_record.kind == ImportKind::DynamicImport {
+                entries.insert((info.path.file_prefix(), id));
               }
             });
 
@@ -103,6 +109,7 @@ impl<'a> ModuleLoader<'a> {
       .into_iter()
       .map(|m| m.unwrap())
       .collect();
+    self.graph.entries = entries;
     Ok(())
   }
 

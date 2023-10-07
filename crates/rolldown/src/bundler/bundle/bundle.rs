@@ -6,7 +6,7 @@ use crate::bundler::{
     ChunksVec,
   },
   graph::graph::Graph,
-  module::module::{Module, ModuleFinalizeContext},
+  module::module::{Module, ModuleRenderContext},
   options::{
     normalized_input_options::NormalizedInputOptions,
     normalized_output_options::NormalizedOutputOptions,
@@ -136,7 +136,7 @@ impl<'a> Bundle<'a> {
       .iter_mut()
       .par_bridge()
       .for_each(|module| {
-        module.finalize(ModuleFinalizeContext {
+        module.render(ModuleRenderContext {
           canonical_names: &chunks[0].canonical_names,
           symbols: &self.graph.symbols,
         });

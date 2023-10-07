@@ -7,7 +7,7 @@ use string_wizard::{Joiner, JoinerOptions};
 use crate::bundler::{
   bitset::BitSet,
   graph::{graph::Graph, symbols::Symbols},
-  module::{module_id::ModuleVec, render::RenderModuleContext},
+  module::{module::ModuleRenderContext, module_id::ModuleVec},
   options::{
     file_name_template::FileNameRenderOptions, normalized_input_options::NormalizedInputOptions,
     normalized_output_options::NormalizedOutputOptions,
@@ -86,7 +86,7 @@ impl Chunk {
   pub fn render(
     &self,
     graph: &Graph,
-    input_options: &NormalizedInputOptions,
+    _input_options: &NormalizedInputOptions,
   ) -> anyhow::Result<String> {
     use rayon::prelude::*;
     let mut joiner = Joiner::with_options(JoinerOptions {
@@ -98,10 +98,9 @@ impl Chunk {
       .copied()
       .map(|id| &graph.modules[id])
       .filter_map(|m| {
-        m.render(RenderModuleContext {
+        m.render(ModuleRenderContext {
+          canonical_names: &self.canonical_names,
           symbols: &graph.symbols,
-          final_names: &self.canonical_names,
-          input_options,
         })
       })
       .collect::<Vec<_>>()

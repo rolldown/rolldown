@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use index_vec::IndexVec;
 use oxc::{
-  ast::VisitMut,
+  ast::Visit,
   semantic::{ReferenceId, ScopeTree, SymbolId},
   span::Atom,
 };
@@ -12,13 +12,14 @@ use rolldown_common::{
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
+use string_wizard::MagicString;
 
-use super::{module::ModuleFinalizeContext, module_id::ModuleVec};
+use super::{module::ModuleRenderContext, module_id::ModuleVec};
 use crate::bundler::{
   graph::symbols::Symbols,
   module::module::Module,
-  source_mutations::{append::Append, BoxedSourceMutation},
-  visitors::{FinalizeContext, Finalizer},
+  source_mutations::BoxedSourceMutation,
+  visitors::{RendererContext, SourceRenderer},
 };
 
 #[derive(Debug)]
@@ -50,16 +51,10 @@ pub enum Resolution {
 }
 
 impl NormalModule {
-  pub fn finalize(&mut self, ctx: ModuleFinalizeContext) {
-    let program = self.ast.program_mut();
-    let mut finalizer = Finalizer::new(FinalizeContext {
-      symbols: ctx.symbols,
-      id: self.id,
-      final_names: ctx.canonical_names,
-      source_mutations: &mut self.source_mutations,
-      default_export_symbol: self.default_export_symbol.map(|id| (self.id, id).into()),
-    });
-    finalizer.visit_program(program);
+  pub fn render(&self, ctx: ModuleRenderContext<'_>) -> Option<MagicString<'static>> {
+    // FIXME: should not clone
+    let mut source = MagicString::new(self.ast.source().to_string());
+
     if self.is_symbol_for_namespace_referenced {
       let ns_ref = ctx.symbols.par_get_canonical_ref(self.namespace_symbol.0);
       let ns_name = ctx.canonical_names.get(&ns_ref).unwrap();
@@ -73,9 +68,27 @@ impl NormalModule {
         })
         .collect::<Vec<_>>()
         .join(",\n");
-      self.source_mutations.push(Box::new(Append {
-        content: format!("\nvar {ns_name} = {{\n{exports}\n}};\n"),
-      }));
+      source.append(format!("\nvar {ns_name} = {{\n{exports}\n}};\n"));
+    }
+
+    let program = self.ast.program();
+
+    let mut renderer = SourceRenderer::new(RendererContext {
+      symbols: ctx.symbols,
+      id: self.id,
+      final_names: ctx.canonical_names,
+      default_export_symbol: self.default_export_symbol.map(|id| (self.id, id).into()),
+      source: &mut source,
+    });
+    renderer.visit_program(program);
+
+    source.prepend(format!("// {}\n", self.resource_id.prettify()));
+
+    // TODO trim
+    if source.len() == 0 {
+      None
+    } else {
+      Some(source)
     }
   }
 

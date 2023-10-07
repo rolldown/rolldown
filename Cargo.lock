@@ -298,12 +298,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "daachorse"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63b7ef7a4be509357f4804d0a22e830daddb48f19fd604e4ad32ddce04a94c36"
-
-[[package]]
 name = "dashmap"
 version = "5.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -536,6 +530,7 @@ checksum = "d5477fe2230a79769d8dc68e0eabf5437907c0457a5614a9e8dddb67f65eb65d"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.0",
+ "serde",
 ]
 
 [[package]]
@@ -599,15 +594,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5f195fe497f702db0f318b07fdd68edb16955aed830df8363d837542f8f935a"
 dependencies = [
  "wasm-bindgen",
-]
-
-[[package]]
-name = "jsonc-parser"
-version = "0.21.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b56a20e76235284255a09fcd1f45cf55d3c524ea657ebd3854735925c57743d"
-dependencies = [
- "serde_json",
 ]
 
 [[package]]
@@ -722,26 +708,6 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "nodejs-resolver"
-version = "0.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b48f51fc2f907f6781d71de0abecf456877d26a17ed7b4fa263dd52b60c4e46"
-dependencies = [
- "daachorse",
- "dashmap",
- "dunce",
- "indexmap 1.9.3",
- "jsonc-parser",
- "once_cell",
- "path-absolutize",
- "rustc-hash",
- "serde",
- "serde_json",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -929,6 +895,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_resolver"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9657cba6ac0894a8acf3aca5b9a4b7668ce8486042588cf2bf0f34eb5f37ebc6"
+dependencies = [
+ "dashmap",
+ "dunce",
+ "indexmap 2.0.0",
+ "once_cell",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
 name = "oxc_semantic"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -990,24 +973,6 @@ dependencies = [
  "redox_syscall",
  "smallvec",
  "windows-targets 0.48.5",
-]
-
-[[package]]
-name = "path-absolutize"
-version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43eb3595c63a214e1b37b44f44b0a84900ef7ae0b4c5efce59e123d246d7a0de"
-dependencies = [
- "path-dedot",
-]
-
-[[package]]
-name = "path-dedot"
-version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d55e486337acb9973cdea3ec5638c1b3bcb22e573b2b7b41969e0c744d5a15e"
-dependencies = [
- "once_cell",
 ]
 
 [[package]]
@@ -1297,7 +1262,7 @@ name = "rolldown_resolver"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "nodejs-resolver",
+ "oxc_resolver",
  "rolldown_common",
  "rolldown_error",
  "sugar_path",
@@ -1444,9 +1409,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.105"
+version = "1.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "693151e1ac27563d6dbcec9dee9fbd5da8539b20fa14ad3752b2e6d363ace360"
+checksum = "6b420ce6e3d8bd882e9b243c6eed35dbc9a6110c9769e74b584e0d68d1f20c65"
 dependencies = [
  "indexmap 2.0.0",
  "itoa",

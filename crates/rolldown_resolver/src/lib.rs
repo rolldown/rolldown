@@ -5,19 +5,19 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use nodejs_resolver::{Options, Resolver as EnhancedResolver};
+use oxc_resolver::{ResolveOptions, Resolver as OxcResolver};
 
 #[derive(Debug)]
 pub struct Resolver {
   cwd: PathBuf,
-  inner: EnhancedResolver,
+  inner: OxcResolver,
 }
 
 impl Resolver {
   pub fn with_cwd(cwd: PathBuf, preserve_symlinks: bool) -> Self {
     Self {
       cwd,
-      inner: EnhancedResolver::new(Options {
+      inner: OxcResolver::new(ResolveOptions {
         symlinks: !preserve_symlinks,
         extensions: vec![
           ".js".to_string(),
@@ -72,12 +72,9 @@ impl Resolver {
     let resolved = self.inner.resolve(context, &specifier.to_string_lossy());
 
     match resolved {
-      Ok(resolved) => match resolved {
-        nodejs_resolver::ResolveResult::Info(info) => Ok(ResolveRet {
-          resolved: info.path().to_string_lossy().to_string().into(),
-        }),
-        nodejs_resolver::ResolveResult::Ignored => unreachable!(),
-      },
+      Ok(info) => Ok(ResolveRet {
+        resolved: info.path().to_string_lossy().to_string().into(),
+      }),
       Err(_err) => {
         if let Some(importer) = importer {
           Err(Box::new(RError::unresolved_import(

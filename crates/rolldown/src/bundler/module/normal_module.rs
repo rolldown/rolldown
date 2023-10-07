@@ -73,14 +73,14 @@ impl NormalModule {
 
     let program = self.ast.program();
 
-    let mut finalizer = SourceRenderer::new(RendererContext {
+    let mut renderer = SourceRenderer::new(RendererContext {
       symbols: ctx.symbols,
       id: self.id,
       final_names: ctx.canonical_names,
       default_export_symbol: self.default_export_symbol.map(|id| (self.id, id).into()),
       source: &mut source,
     });
-    finalizer.visit_program(program);
+    renderer.visit_program(program);
 
     source.prepend(format!("// {}\n", self.resource_id.prettify()));
 

@@ -283,9 +283,10 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   }
 
   fn visit_binding_identifier(&mut self, ident: &'p mut oxc::ast::ast::BindingIdentifier) {
-    let symbol_id = ident.symbol_id.get().unwrap();
-    if self.scope.root_scope_id() == self.symbol_table.get_scope_id(symbol_id) {
-      self.add_declared_id(symbol_id)
+    if let Some(symbol_id) = ident.symbol_id.get() {
+      if self.scope.root_scope_id() == self.symbol_table.get_scope_id(symbol_id) {
+        self.add_declared_id(symbol_id)
+      }
     }
   }
 

@@ -12,6 +12,7 @@ pub struct Graph {
   pub entries: Vec<(Option<String>, ModuleId)>,
   pub sorted_modules: Vec<ModuleId>,
   pub symbols: Symbols,
+  pub runtime: ModuleId,
 }
 
 impl Graph {

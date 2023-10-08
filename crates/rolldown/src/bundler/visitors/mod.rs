@@ -58,14 +58,16 @@ impl<'ast> SourceRenderer<'ast> {
 
 impl<'ast> Visit<'ast> for SourceRenderer<'ast> {
   fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
-    if let Some(name) = get_symbol_final_name(
-      self.ctx.id,
-      ident.symbol_id.get().unwrap(),
-      self.ctx.symbols,
-      self.ctx.final_names,
-    ) {
-      if ident.name != name {
-        self.rename_symbol(ident.span, name.clone());
+    if let Some(symbol_id) = ident.symbol_id.get() {
+      if let Some(name) = get_symbol_final_name(
+        self.ctx.id,
+        symbol_id,
+        self.ctx.symbols,
+        self.ctx.final_names,
+      ) {
+        if ident.name != name {
+          self.rename_symbol(ident.span, name.clone());
+        }
       }
     }
   }

@@ -13,6 +13,7 @@ use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::module::Module;
 use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
 use crate::bundler::resolve_id::{resolve_id, ResolvedRequestInfo};
+use crate::bundler::runtime::RUNTIME_PATH;
 use crate::BuildError;
 use crate::SharedResolver;
 
@@ -50,7 +51,14 @@ impl<'a> ModuleLoader<'a> {
     let resolved_entries = self.resolve_entries().await?;
 
     let mut intermediate_modules: IndexVec<ModuleId, Option<Module>> =
-      IndexVec::with_capacity(resolved_entries.len());
+      IndexVec::with_capacity(resolved_entries.len() + 1 /* runtime */);
+    self.graph.runtime = self.try_spawn_new_task(
+      &ResolvedRequestInfo {
+        path: RUNTIME_PATH.to_string().into(),
+        is_external: false,
+      },
+      &mut intermediate_modules,
+    );
 
     let mut entries = resolved_entries
       .into_iter()

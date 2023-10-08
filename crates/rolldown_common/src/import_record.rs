@@ -12,6 +12,12 @@ pub enum ImportKind {
   DynamicImport,
 }
 
+impl ImportKind {
+  pub fn is_static(&self) -> bool {
+    matches!(self, Self::Import)
+  }
+}
+
 #[derive(Debug)]
 pub struct ImportRecord {
   // Module Request

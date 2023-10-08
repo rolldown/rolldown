@@ -9,7 +9,7 @@ mod stmt_info;
 mod symbol_ref;
 
 pub use crate::{
-  import_record::{ImportRecord, ImportRecordId},
+  import_record::{ImportKind, ImportRecord, ImportRecordId},
   module_id::ModuleId,
   module_path::ResourceId,
   named_export::{LocalExport, LocalOrReExport, ReExport},

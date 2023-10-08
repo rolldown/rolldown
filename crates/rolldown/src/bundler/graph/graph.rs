@@ -1,11 +1,10 @@
-use rolldown_common::ModuleId;
-use rustc_hash::FxHashSet;
-
 use super::{linker::Linker, symbols::Symbols};
 use crate::bundler::{
   module::module_id::ModuleVec, module_loader::ModuleLoader,
   options::normalized_input_options::NormalizedInputOptions,
 };
+use rolldown_common::ModuleId;
+use rustc_hash::FxHashSet;
 
 #[derive(Default, Debug)]
 pub struct Graph {
@@ -56,6 +55,7 @@ impl Graph {
               module
                 .import_records()
                 .iter()
+                .filter(|rec| rec.kind.is_static())
                 .filter_map(|rec| {
                   rec
                     .resolved_module

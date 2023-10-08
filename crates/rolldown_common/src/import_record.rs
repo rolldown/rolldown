@@ -6,6 +6,18 @@ index_vec::define_index_type! {
   pub struct ImportRecordId = u32;
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum ImportKind {
+  Import,
+  DynamicImport,
+}
+
+impl ImportKind {
+  pub fn is_static(&self) -> bool {
+    matches!(self, Self::Import)
+  }
+}
+
 #[derive(Debug)]
 pub struct ImportRecord {
   // Module Request
@@ -14,14 +26,16 @@ pub struct ImportRecord {
   // export * as ns from '...'
   // import * as ns from '...'
   pub is_import_namespace: bool,
+  pub kind: ImportKind,
 }
 
 impl ImportRecord {
-  pub fn new(specifier: Atom) -> Self {
+  pub fn new(specifier: Atom, kind: ImportKind) -> Self {
     Self {
       module_request: specifier,
       resolved_module: Default::default(),
       is_import_namespace: false,
+      kind,
     }
   }
 }

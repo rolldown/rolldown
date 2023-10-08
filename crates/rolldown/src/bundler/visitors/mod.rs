@@ -1,14 +1,18 @@
 pub mod scanner;
 
+use index_vec::IndexVec;
 use oxc::{
   ast::Visit,
   span::{Atom, GetSpan, Span},
 };
-use rolldown_common::{ModuleId, SymbolRef};
+use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, UpdateOptions};
 
-use super::graph::symbols::{get_reference_final_name, get_symbol_final_name, Symbols};
+use super::{
+  chunk::{chunk::Chunk, ChunkId},
+  graph::symbols::{get_reference_final_name, get_symbol_final_name, Symbols},
+};
 
 pub struct RendererContext<'ast> {
   pub symbols: &'ast Symbols,
@@ -16,6 +20,10 @@ pub struct RendererContext<'ast> {
   pub id: ModuleId,
   pub default_export_symbol: Option<SymbolRef>,
   pub source: &'ast mut MagicString<'static>,
+  pub dynamic_imports: &'ast FxHashMap<Span, ImportRecordId>,
+  pub import_records: &'ast IndexVec<ImportRecordId, ImportRecord>,
+  pub module_to_chunk: &'ast IndexVec<ModuleId, Option<ChunkId>>,
+  pub chunks: &'ast IndexVec<ChunkId, Chunk>,
 }
 
 pub struct SourceRenderer<'ast> {
@@ -122,6 +130,25 @@ impl<'ast> Visit<'ast> for SourceRenderer<'ast> {
         self.remove_node(Span::new(decl.span.start, decl.span.start));
       }
       _ => {}
+    }
+  }
+
+  fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
+    if let oxc::ast::ast::Expression::StringLiteral(str) = &expr.source {
+      let rec =
+        &self.ctx.import_records[self.ctx.dynamic_imports.get(&expr.span).copied().unwrap()];
+
+      if let Some(chunk_id) = self.ctx.module_to_chunk[rec.resolved_module] {
+        let chunk = &self.ctx.chunks[chunk_id];
+        self.overwrite(
+          str.span.start,
+          str.span.end,
+          // TODO: the path should be relative to the current importer chunk
+          format!("'./{}'", chunk.file_name.as_ref().unwrap()),
+        );
+      } else {
+        // external module doesn't belong to any chunk, just keep this as it is
+      }
     }
   }
 }

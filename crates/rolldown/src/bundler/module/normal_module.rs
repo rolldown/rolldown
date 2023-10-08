@@ -4,7 +4,7 @@ use index_vec::IndexVec;
 use oxc::{
   ast::Visit,
   semantic::{ReferenceId, ScopeTree, SymbolId},
-  span::Atom,
+  span::{Atom, Span},
 };
 use rolldown_common::{
   ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, NamedImport, ResolvedExport, ResourceId,
@@ -33,6 +33,7 @@ pub struct NormalModule {
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
+  pub dynamic_imports: FxHashMap<Span, ImportRecordId>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
   // resolved
@@ -79,6 +80,10 @@ impl NormalModule {
       final_names: ctx.canonical_names,
       default_export_symbol: self.default_export_symbol.map(|id| (self.id, id).into()),
       source: &mut source,
+      dynamic_imports: &self.dynamic_imports,
+      import_records: &self.import_records,
+      chunks: ctx.chunks,
+      module_to_chunk: ctx.module_to_chunk,
     });
     renderer.visit_program(program);
 

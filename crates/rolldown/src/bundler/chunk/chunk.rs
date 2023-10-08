@@ -9,16 +9,15 @@ use crate::bundler::{
   graph::{graph::Graph, symbols::Symbols},
   module::{module::ModuleRenderContext, module_id::ModuleVec},
   options::{
-    file_name_template::FileNameRenderOptions, normalized_input_options::NormalizedInputOptions,
-    normalized_output_options::NormalizedOutputOptions,
+    file_name_template::FileNameRenderOptions, normalized_output_options::NormalizedOutputOptions,
   },
 };
 
-use super::ChunkId;
+use super::{ChunkId, ChunksVec};
 
 #[derive(Debug, Default)]
 pub struct Chunk {
-  pub is_entry: bool,
+  pub entry_module: Option<ModuleId>,
   pub modules: Vec<ModuleId>,
   pub name: Option<String>,
   pub file_name: Option<String>,
@@ -28,10 +27,15 @@ pub struct Chunk {
 }
 
 impl Chunk {
-  pub fn new(name: Option<String>, is_entry: bool, bits: BitSet, modules: Vec<ModuleId>) -> Self {
+  pub fn new(
+    name: Option<String>,
+    entry_module: Option<ModuleId>,
+    bits: BitSet,
+    modules: Vec<ModuleId>,
+  ) -> Self {
     Self {
       name,
-      is_entry,
+      entry_module,
       bits,
       modules,
       ..Default::default()
@@ -86,7 +90,8 @@ impl Chunk {
   pub fn render(
     &self,
     graph: &Graph,
-    _input_options: &NormalizedInputOptions,
+    module_to_chunk: &IndexVec<ModuleId, Option<ChunkId>>,
+    chunks: &ChunksVec,
   ) -> anyhow::Result<String> {
     use rayon::prelude::*;
     let mut joiner = Joiner::with_options(JoinerOptions {
@@ -101,6 +106,8 @@ impl Chunk {
         m.render(ModuleRenderContext {
           canonical_names: &self.canonical_names,
           symbols: &graph.symbols,
+          module_to_chunk,
+          chunks,
         })
       })
       .collect::<Vec<_>>()

@@ -7,7 +7,7 @@ var __hasOwnProp = Object.prototype.hasOwnProperty
 // Wraps a CommonJS closure and returns a require() function. This has two
 // implementations, a compact one for minified code and a verbose one that
 // generates friendly names in V8's profiler and in stack traces.
-export var __commonJS = (cb, mod) => function __require() {
+export var __commonJS = (cb, mod) => function () {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = {exports: {}}).exports, mod), mod.exports
 }
 export var __commonJSMin = (cb, mod) => () => (mod || cb((mod = {exports: {}}).exports, mod), mod.exports)

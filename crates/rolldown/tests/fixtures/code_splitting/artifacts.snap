@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/fixtures/code_splitting
 // share.js
 console.log('shared');
 ```
-# dynamic.js
+# dynamic_js.js
 
 ```js
 // dynamic.js
@@ -20,7 +20,7 @@ console.log('dynamic')
 ```js
 // main1.js
 
-import('./dynamic.js')
+import('./dynamic_js.js')
 ```
 # main2.js
 

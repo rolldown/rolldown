@@ -1210,7 +1210,6 @@ dependencies = [
  "derivative",
  "futures",
  "index_vec",
- "indexmap 2.0.2",
  "insta",
  "oxc",
  "rayon",

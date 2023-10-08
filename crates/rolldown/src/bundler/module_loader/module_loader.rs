@@ -1,9 +1,8 @@
 use index_vec::IndexVec;
-use indexmap::IndexSet;
 use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
 use rolldown_resolver::Resolver;
 use rolldown_utils::block_on_spawn_all;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::module_task::ModuleTask;
 use super::task_result::TaskResult;
@@ -61,10 +60,11 @@ impl<'a> ModuleLoader<'a> {
           self.try_spawn_new_task(&info, &mut intermediate_modules),
         )
       })
-      .collect::<IndexSet<_>>();
+      .collect::<Vec<_>>();
+
+    let mut dynamic_entries = FxHashSet::default();
 
     let mut tables: IndexVec<ModuleId, SymbolMap> = Default::default();
-
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else { break };
       match msg {
@@ -90,7 +90,7 @@ impl<'a> ModuleLoader<'a> {
               }
               // dynamic import as extra entries if enable code splitting
               if import_record.kind == ImportKind::DynamicImport {
-                entries.insert((info.path.file_prefix(), id));
+                dynamic_entries.insert((Some(info.path.unique(&self.input_options.cwd)), id));
               }
             });
 
@@ -109,6 +109,10 @@ impl<'a> ModuleLoader<'a> {
       .into_iter()
       .map(|m| m.unwrap())
       .collect();
+
+    let mut dynamic_entries = Vec::from_iter(dynamic_entries);
+    dynamic_entries.sort_by(|(a, _), (b, _)| a.cmp(b));
+    entries.extend(dynamic_entries);
     self.graph.entries = entries;
     Ok(())
   }

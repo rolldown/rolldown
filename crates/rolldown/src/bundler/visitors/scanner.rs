@@ -8,7 +8,7 @@ use oxc::{
     VisitMut,
   },
   semantic::{ScopeTree, SymbolFlags, SymbolId, SymbolTable},
-  span::Atom,
+  span::{Atom, Span},
 };
 use rolldown_common::{
   ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId, NamedImport,
@@ -25,7 +25,7 @@ pub struct ScanResult {
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
   pub star_exports: Vec<ImportRecordId>,
   pub export_default_symbol_id: Option<SymbolId>,
-  pub dynamic_import_request_to_import_record_id: FxHashMap<Atom, ImportRecordId>,
+  pub dynamic_imports: FxHashMap<Span, ImportRecordId>,
 }
 
 pub struct Scanner<'a> {
@@ -299,10 +299,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   fn visit_import_expression(&mut self, expr: &'p mut oxc::ast::ast::ImportExpression<'ast>) {
     if let oxc::ast::ast::Expression::StringLiteral(request) = &mut expr.source {
       let id = self.add_import_record(&request.value, ImportKind::DynamicImport);
-      self
-        .result
-        .dynamic_import_request_to_import_record_id
-        .insert(request.value.clone(), id);
+      self.result.dynamic_imports.insert(expr.span, id);
     }
   }
 }

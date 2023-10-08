@@ -3,7 +3,7 @@ use crate::bundler::{
   bitset::BitSet,
   chunk::{
     chunk::{Chunk, CrossChunksMeta},
-    ChunksVec,
+    ChunkId, ChunksVec,
   },
   graph::graph::Graph,
   module::module::{Module, ModuleRenderContext},
@@ -50,7 +50,7 @@ impl<'a> Bundle<'a> {
     }
   }
 
-  pub fn generate_chunks(&self) -> ChunksVec {
+  pub fn generate_chunks(&self) -> (ChunksVec, IndexVec<ModuleId, Option<ChunkId>>) {
     let mut module_to_bits = index_vec::index_vec![
       BitSet::new(self.graph.entries.len().try_into().unwrap());
       self.graph.modules.len()
@@ -90,7 +90,7 @@ impl<'a> Bundle<'a> {
       }
     });
 
-    chunks
+    let chunks = chunks
       .into_values()
       .map(|mut chunk| {
         chunk
@@ -98,7 +98,21 @@ impl<'a> Bundle<'a> {
           .sort_by_key(|id| self.graph.modules[*id].exec_order());
         chunk
       })
-      .collect::<ChunksVec>()
+      .collect::<ChunksVec>();
+
+    let mut module_to_chunk: IndexVec<ModuleId, Option<ChunkId>> = index_vec::index_vec![
+      None;
+      self.graph.modules.len()
+    ];
+
+    // perf: this process could be done with computing chunks together
+    for (i, chunk) in chunks.iter_enumerated() {
+      for module_id in &chunk.modules {
+        module_to_chunk[*module_id] = Some(i);
+      }
+    }
+
+    (chunks, module_to_chunk)
   }
 
   pub fn generate_cross_chunks_meta(&mut self, _chunks: &ChunksVec) -> CrossChunksMeta {
@@ -108,11 +122,12 @@ impl<'a> Bundle<'a> {
 
   pub fn generate(
     &mut self,
-    input_options: &'a NormalizedInputOptions,
+    _input_options: &'a NormalizedInputOptions,
   ) -> anyhow::Result<Vec<Asset>> {
     use rayon::prelude::*;
-    let mut chunks = self.generate_chunks();
+    let (mut chunks, module_to_chunk) = self.generate_chunks();
     let _generate_cross_chunks_meta = self.generate_cross_chunks_meta(&chunks);
+
     chunks
       .iter_mut()
       .par_bridge()
@@ -141,7 +156,8 @@ impl<'a> Bundle<'a> {
         module.render(ModuleRenderContext {
           canonical_names: &chunks[0].canonical_names,
           symbols: &self.graph.symbols,
-          entries_chunk_final_names: &entries_chunk_final_names,
+          module_to_chunk: &module_to_chunk,
+          chunks: &chunks,
         });
       });
 
@@ -149,7 +165,7 @@ impl<'a> Bundle<'a> {
       .iter()
       .enumerate()
       .map(|(_chunk_id, c)| {
-        let content = c.render(self.graph, input_options).unwrap();
+        let content = c.render(self.graph, &module_to_chunk, &chunks).unwrap();
 
         Asset {
           file_name: c.file_name.clone().unwrap(),

@@ -4,7 +4,10 @@ use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
 
-use crate::bundler::graph::symbols::Symbols;
+use crate::bundler::{
+  chunk::{ChunkId, ChunksVec},
+  graph::symbols::Symbols,
+};
 
 use super::{external_module::ExternalModule, NormalModule};
 
@@ -80,5 +83,6 @@ impl Module {
 pub struct ModuleRenderContext<'a> {
   pub canonical_names: &'a FxHashMap<SymbolRef, Atom>,
   pub symbols: &'a Symbols,
-  pub entries_chunk_final_names: &'a FxHashMap<ModuleId, String>,
+  pub module_to_chunk: &'a IndexVec<ModuleId, Option<ChunkId>>,
+  pub chunks: &'a ChunksVec,
 }

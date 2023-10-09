@@ -4,8 +4,8 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, NamedImport, ResourceId, StmtInfo,
-  StmtInfoId, SymbolRef,
+  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleResolution, NamedImport,
+  ResourceId, StmtInfo, StmtInfoId, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::FxHashMap;
@@ -23,11 +23,12 @@ pub struct ModuleBuilder {
   pub named_exports: Option<FxHashMap<Atom, LocalOrReExport>>,
   pub stmt_infos: Option<IndexVec<StmtInfoId, StmtInfo>>,
   pub import_records: Option<IndexVec<ImportRecordId, ImportRecord>>,
-  pub dynamic_imports: Option<FxHashMap<Span, ImportRecordId>>,
+  pub imports: Option<FxHashMap<Span, ImportRecordId>>,
   pub star_exports: Option<Vec<ImportRecordId>>,
   pub scope: Option<ScopeTree>,
   pub default_export_symbol: Option<SymbolId>,
   pub namespace_symbol: Option<(SymbolRef, ReferenceId)>,
+  pub module_resolution: Option<ModuleResolution>,
 }
 
 impl ModuleBuilder {
@@ -48,7 +49,7 @@ impl ModuleBuilder {
       named_exports: self.named_exports.unwrap(),
       stmt_infos: self.stmt_infos.unwrap(),
       import_records: self.import_records.unwrap(),
-      dynamic_imports: self.dynamic_imports.unwrap(),
+      imports: self.imports.unwrap(),
       star_exports: self.star_exports.unwrap(),
       resolved_exports: Default::default(),
       resolved_star_exports: Default::default(),
@@ -57,6 +58,10 @@ impl ModuleBuilder {
       namespace_symbol: self.namespace_symbol.unwrap(),
       is_symbol_for_namespace_referenced: false,
       source_mutations: Default::default(),
+      module_resolution: self.module_resolution.unwrap_or(ModuleResolution::Esm),
+      wrap: false,
+      symbols_for_cjs: Default::default(),
+      symbol_for_cjs_wrap: None,
     }
   }
 }

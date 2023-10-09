@@ -3,15 +3,17 @@ pub mod scanner;
 use index_vec::IndexVec;
 use oxc::{
   ast::Visit,
+  semantic::{ReferenceId, SymbolId},
   span::{Atom, GetSpan, Span},
 };
-use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, SymbolRef};
+use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleResolution, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, UpdateOptions};
 
 use super::{
   chunk::{chunk::Chunk, ChunkId},
   graph::symbols::{get_reference_final_name, get_symbol_final_name, Symbols},
+  module::{module::Module, module_id::ModuleVec},
 };
 
 pub struct RendererContext<'ast> {
@@ -20,10 +22,16 @@ pub struct RendererContext<'ast> {
   pub id: ModuleId,
   pub default_export_symbol: Option<SymbolRef>,
   pub source: &'ast mut MagicString<'static>,
-  pub dynamic_imports: &'ast FxHashMap<Span, ImportRecordId>,
+  pub imports: &'ast FxHashMap<Span, ImportRecordId>,
   pub import_records: &'ast IndexVec<ImportRecordId, ImportRecord>,
   pub module_to_chunk: &'ast IndexVec<ModuleId, Option<ChunkId>>,
   pub chunks: &'ast IndexVec<ChunkId, Chunk>,
+  pub modules: &'ast ModuleVec,
+  pub wrap: bool,
+  pub module_resolution: &'ast ModuleResolution,
+  pub symbols_for_cjs: &'ast FxHashMap<Atom, SymbolRef>,
+  pub namespace_symbol: &'ast (SymbolRef, ReferenceId),
+  pub symbol_for_cjs_wrap: &'ast Option<SymbolId>,
 }
 
 pub struct SourceRenderer<'ast> {
@@ -85,6 +93,69 @@ impl<'ast> Visit<'ast> for SourceRenderer<'ast> {
 
   fn visit_import_declaration(&mut self, decl: &'ast oxc::ast::ast::ImportDeclaration<'ast>) {
     self.remove_node(decl.span);
+    let rec = &self.ctx.import_records[self.ctx.imports.get(&decl.span).copied().unwrap()];
+    let importee = &self.ctx.modules[rec.resolved_module];
+    if let Module::Normal(importee) = importee {
+      if importee.module_resolution == ModuleResolution::CommonJs {
+        println!("{:?}", self.ctx.final_names);
+        // add namespace binding
+        if let Some(namespace_name) = get_symbol_final_name(
+          importee.id,
+          importee.namespace_symbol.0.symbol,
+          self.ctx.symbols,
+          self.ctx.final_names,
+        ) {
+          decl.specifiers.iter().for_each(|s| match s {
+            oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
+              if let Some(name) = get_symbol_final_name(
+                importee.id,
+                importee
+                  .symbols_for_cjs
+                  .get(spec.imported.name())
+                  .unwrap()
+                  .symbol,
+                self.ctx.symbols,
+                self.ctx.final_names,
+              ) {
+                self.ctx.source.prepend_left(
+                  decl.span.start,
+                  format!("var {name} = {namespace_name}.{name};\n"),
+                );
+              }
+            }
+            oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
+              if let Some(name) = get_symbol_final_name(
+                importee.id,
+                importee
+                  .symbols_for_cjs
+                  .get(&Atom::new_inline("default"))
+                  .unwrap()
+                  .symbol,
+                self.ctx.symbols,
+                self.ctx.final_names,
+              ) {
+                self.ctx.source.prepend_left(
+                  decl.span.start,
+                  format!("var {name} = {namespace_name}.default;\n"),
+                );
+              }
+            }
+            oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
+          });
+          if let Some(cjs_fn_name) = get_symbol_final_name(
+            importee.id,
+            importee.symbol_for_cjs_wrap.unwrap(),
+            self.ctx.symbols,
+            self.ctx.final_names,
+          ) {
+            self.ctx.source.prepend_left(
+              decl.span.start,
+              format!("var {namespace_name} = __toESM({cjs_fn_name}());\n"),
+            );
+          }
+        }
+      }
+    }
   }
 
   fn visit_export_named_declaration(
@@ -135,8 +206,7 @@ impl<'ast> Visit<'ast> for SourceRenderer<'ast> {
 
   fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
     if let oxc::ast::ast::Expression::StringLiteral(str) = &expr.source {
-      let rec =
-        &self.ctx.import_records[self.ctx.dynamic_imports.get(&expr.span).copied().unwrap()];
+      let rec = &self.ctx.import_records[self.ctx.imports.get(&expr.span).copied().unwrap()];
 
       if let Some(chunk_id) = self.ctx.module_to_chunk[rec.resolved_module] {
         let chunk = &self.ctx.chunks[chunk_id];

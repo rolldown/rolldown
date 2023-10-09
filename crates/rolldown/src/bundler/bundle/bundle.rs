@@ -6,7 +6,7 @@ use crate::bundler::{
     ChunkId, ChunksVec,
   },
   graph::graph::Graph,
-  module::module::{Module, ModuleRenderContext},
+  module::module::Module,
   options::{
     normalized_input_options::NormalizedInputOptions,
     normalized_output_options::NormalizedOutputOptions,
@@ -153,20 +153,6 @@ impl<'a> Bundle<'a> {
         chunk.initialize_exports(&mut self.graph.modules, &self.graph.symbols);
       }
     });
-
-    self
-      .graph
-      .modules
-      .iter_mut()
-      .par_bridge()
-      .for_each(|module| {
-        module.render(ModuleRenderContext {
-          canonical_names: &chunks[0].canonical_names,
-          symbols: &self.graph.symbols,
-          module_to_chunk: &module_to_chunk,
-          chunks: &chunks,
-        });
-      });
 
     let assets = chunks
       .iter()

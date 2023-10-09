@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/basic_commonjs
+---
+# main.js
+
+```js
+// a.js
+var require_a = __commonJS({
+'a.js'(exports, module) {
+module.exports = 1;
+}
+});
+// main.js
+var a_ns = __toESM(require_a());
+var _default = a_ns.default;
+
+console.log(_default)
+```

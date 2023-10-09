@@ -11,8 +11,8 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId, NamedImport,
-  ReExport, StmtInfo, StmtInfoId,
+  ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId,
+  ModuleResolution, NamedImport, ReExport, StmtInfo, StmtInfoId,
 };
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
@@ -25,7 +25,8 @@ pub struct ScanResult {
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
   pub star_exports: Vec<ImportRecordId>,
   pub export_default_symbol_id: Option<SymbolId>,
-  pub dynamic_imports: FxHashMap<Span, ImportRecordId>,
+  pub imports: FxHashMap<Span, ImportRecordId>,
+  pub module_resolution: Option<ModuleResolution>,
 }
 
 pub struct Scanner<'a> {
@@ -51,6 +52,16 @@ impl<'a> Scanner<'a> {
       current_stmt_info: Default::default(),
       result: Default::default(),
       unique_name,
+    }
+  }
+
+  fn set_module_resolution(&mut self, module_resolution: ModuleResolution) {
+    if let Some(resolution) = &self.result.module_resolution {
+      if resolution != &module_resolution {
+        // TODO shouldn't mix esm syntax and cjs syntax
+      }
+    } else {
+      self.result.module_resolution = Some(module_resolution);
     }
   }
 
@@ -233,6 +244,7 @@ impl<'a> Scanner<'a> {
 
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
     let id = self.add_import_record(&decl.source.value, ImportKind::Import);
+    self.result.imports.insert(decl.span, id);
     decl.specifiers.iter().for_each(|spec| match spec {
       oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
@@ -289,9 +301,23 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
     }
   }
 
+  fn visit_identifier_reference(&mut self, ident: &'p mut IdentifierReference) {
+    if ident.name == "module" || ident.name == "exports" {
+      if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
+        if refs
+          .iter()
+          .any(|r| (*r).eq(&ident.reference_id.get().unwrap()))
+        {
+          self.set_module_resolution(ModuleResolution::CommonJs);
+        }
+      }
+    }
+  }
+
   fn visit_statement(&mut self, stmt: &'p mut oxc::ast::ast::Statement<'ast>) {
     if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
-      self.scan_module_decl(decl.0)
+      self.scan_module_decl(decl.0);
+      self.set_module_resolution(ModuleResolution::Esm);
     }
     self.visit_statement_match(stmt)
   }
@@ -299,7 +325,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   fn visit_import_expression(&mut self, expr: &'p mut oxc::ast::ast::ImportExpression<'ast>) {
     if let oxc::ast::ast::Expression::StringLiteral(request) = &mut expr.source {
       let id = self.add_import_record(&request.value, ImportKind::DynamicImport);
-      self.result.dynamic_imports.insert(expr.span, id);
+      self.result.imports.insert(expr.span, id);
     }
   }
 }

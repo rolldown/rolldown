@@ -9,7 +9,7 @@ use crate::bundler::{
   graph::symbols::Symbols,
 };
 
-use super::{external_module::ExternalModule, NormalModule};
+use super::{external_module::ExternalModule, module_id::ModuleVec, NormalModule};
 
 #[derive(Debug)]
 pub enum Module {
@@ -85,4 +85,5 @@ pub struct ModuleRenderContext<'a> {
   pub symbols: &'a Symbols,
   pub module_to_chunk: &'a IndexVec<ModuleId, Option<ChunkId>>,
   pub chunks: &'a ChunksVec,
+  pub modules: &'a ModuleVec,
 }

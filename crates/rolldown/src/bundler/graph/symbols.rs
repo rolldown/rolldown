@@ -4,6 +4,7 @@ use oxc::{
   span::Atom,
 };
 use rolldown_common::{ModuleId, SymbolRef};
+use rolldown_utils::reserved_word::is_reserved_word;
 use rustc_hash::FxHashMap;
 
 #[derive(Debug, Default)]
@@ -25,7 +26,11 @@ impl SymbolMap {
   }
 
   pub fn create_symbol(&mut self, name: Atom) -> SymbolId {
-    self.names.push(name)
+    if is_reserved_word(&name) {
+      self.names.push(format!("_{name}").into())
+    } else {
+      self.names.push(name)
+    }
   }
 
   pub fn create_reference(&mut self, id: Option<SymbolId>) -> ReferenceId {

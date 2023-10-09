@@ -7,8 +7,8 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, NamedImport, ResolvedExport, ResourceId,
-  StmtInfo, StmtInfoId, SymbolRef,
+  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleResolution, NamedImport,
+  ResolvedExport, ResourceId, StmtInfo, StmtInfoId, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -16,7 +16,7 @@ use string_wizard::MagicString;
 
 use super::{module::ModuleRenderContext, module_id::ModuleVec};
 use crate::bundler::{
-  graph::symbols::Symbols,
+  graph::symbols::{get_symbol_final_name, Symbols},
   module::module::Module,
   source_mutations::BoxedSourceMutation,
   visitors::{RendererContext, SourceRenderer},
@@ -33,16 +33,20 @@ pub struct NormalModule {
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
-  pub dynamic_imports: FxHashMap<Span, ImportRecordId>,
+  pub imports: FxHashMap<Span, ImportRecordId>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
+  pub module_resolution: ModuleResolution,
   // resolved
+  pub wrap: bool,
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
   pub resolved_star_exports: Vec<ModuleId>,
   pub scope: ScopeTree,
   pub default_export_symbol: Option<SymbolId>,
   pub namespace_symbol: (SymbolRef, ReferenceId),
   pub is_symbol_for_namespace_referenced: bool,
+  pub symbols_for_cjs: FxHashMap<Atom, SymbolRef>,
+  pub symbol_for_cjs_wrap: Option<SymbolId>,
 }
 
 pub enum Resolution {
@@ -80,14 +84,40 @@ impl NormalModule {
       final_names: ctx.canonical_names,
       default_export_symbol: self.default_export_symbol.map(|id| (self.id, id).into()),
       source: &mut source,
-      dynamic_imports: &self.dynamic_imports,
+      imports: &self.imports,
       import_records: &self.import_records,
       chunks: ctx.chunks,
       module_to_chunk: ctx.module_to_chunk,
+      modules: ctx.modules,
+      wrap: self.wrap,
+      module_resolution: &self.module_resolution,
+      symbols_for_cjs: &self.symbols_for_cjs,
+      namespace_symbol: &self.namespace_symbol,
+      symbol_for_cjs_wrap: &self.symbol_for_cjs_wrap,
     });
     renderer.visit_program(program);
 
-    source.prepend(format!("// {}\n", self.resource_id.prettify()));
+    let module_path = self.resource_id.prettify();
+    if self.wrap {
+      match self.module_resolution {
+        ModuleResolution::CommonJs => {
+          if let Some(name) = get_symbol_final_name(
+            self.id,
+            self.symbol_for_cjs_wrap.unwrap(),
+            ctx.symbols,
+            ctx.canonical_names,
+          ) {
+            source.prepend(format!(
+              "var {name} = __commonJS({{\n'{module_path}'(exports, module) {{\n",
+            ));
+            source.append("\n}\n});");
+          }
+        }
+        ModuleResolution::Esm => {}
+      }
+    }
+
+    source.prepend(format!("// {module_path}\n"));
 
     // TODO trim
     if source.len() == 0 {
@@ -279,5 +309,41 @@ impl NormalModule {
     }
 
     resolved
+  }
+
+  pub fn resolve_cjs_symbol(&self, export_name: &Atom, is_star: bool) -> SymbolRef {
+    if is_star {
+      self.namespace_symbol.0
+    } else {
+      *self.symbols_for_cjs.get(export_name).unwrap()
+    }
+  }
+
+  pub fn add_cjs_symbol(&mut self, symbols: &mut Symbols, exported: Atom, is_star: bool) {
+    if self.symbol_for_cjs_wrap.is_none() {
+      let name = format!("require_{}", self.resource_id.generate_unique_name()).into();
+      self.symbol_for_cjs_wrap = Some(symbols.tables[self.id].create_symbol(name));
+      self.stmt_infos.push(StmtInfo {
+        stmt_idx: self.ast.program().body.len(),
+        declared_symbols: vec![self.symbol_for_cjs_wrap.unwrap()],
+      });
+      self.stmt_infos.push(StmtInfo {
+        stmt_idx: self.ast.program().body.len() + 1,
+        declared_symbols: vec![self.namespace_symbol.0.symbol],
+      });
+    }
+    if !is_star {
+      self
+        .symbols_for_cjs
+        .entry(exported.clone())
+        .or_insert_with(|| {
+          let symbol = symbols.tables[self.id].create_symbol(exported.clone());
+          self.stmt_infos.push(StmtInfo {
+            stmt_idx: self.ast.program().body.len(),
+            declared_symbols: vec![symbol],
+          });
+          (self.id, symbol).into()
+        });
+    }
   }
 }

@@ -73,7 +73,8 @@ impl ModuleTask {
       import_records,
       star_exports,
       export_default_symbol_id,
-      dynamic_imports,
+      imports,
+      module_resolution,
     } = scan_result;
 
     builder.id = Some(self.module_id);
@@ -83,10 +84,11 @@ impl ModuleTask {
     builder.named_exports = Some(named_exports);
     builder.stmt_infos = Some(stmt_infos);
     builder.import_records = Some(import_records);
-    builder.dynamic_imports = Some(dynamic_imports);
+    builder.imports = Some(imports);
     builder.star_exports = Some(star_exports);
     builder.default_export_symbol = export_default_symbol_id;
     builder.scope = Some(scope);
+    builder.module_resolution = module_resolution;
     builder.initialize_namespace_binding(&mut symbol_map);
 
     self

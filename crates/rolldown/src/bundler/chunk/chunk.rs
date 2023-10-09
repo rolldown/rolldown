@@ -108,6 +108,7 @@ impl Chunk {
           symbols: &graph.symbols,
           module_to_chunk,
           chunks,
+          modules: &graph.modules,
         })
       })
       .collect::<Vec<_>>()

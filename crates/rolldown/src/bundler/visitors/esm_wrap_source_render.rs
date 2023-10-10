@@ -10,41 +10,50 @@ use super::RendererContext;
 
 pub struct EsmWrapSourceRender<'ast> {
   ctx: RendererContext<'ast>,
+  hoisted: Vec<Atom>,
 }
 
 impl<'ast> EsmWrapSourceRender<'ast> {
   pub fn new(ctx: RendererContext<'ast>) -> Self {
-    Self { ctx }
+    Self {
+      ctx,
+      hoisted: vec![],
+    }
   }
 
   pub fn apply(&mut self) {
     let program = self.ctx.module.ast.program();
     self.visit_program(program);
-    if let Some(wrap_symbol_name) = self.ctx.get_wrap_symbol_name() {
-      self.ctx.source.prepend(format!(
-        "var {wrap_symbol_name} = __esm({{\n'{}'() {{\n",
-        self.ctx.module.resource_id.prettify(),
-      ));
-      if let Some(namespace_name) = self.ctx.get_namespace_symbol_name() {
-        let exports: String = self
-          .ctx
-          .module
-          .resolved_exports
-          .iter()
-          .map(|(exported_name, info)| {
-            let canonical_ref = self.ctx.symbols.par_get_canonical_ref(info.local_symbol);
-            let canonical_name = self.ctx.final_names.get(&canonical_ref).unwrap();
-            format!("  get {exported_name}() {{ return {canonical_name} }}",)
-          })
-          .collect::<Vec<_>>()
-          .join(",\n");
-        self
-          .ctx
-          .source
-          .append(format!("\n{namespace_name} = {{\n{exports}\n}};\n",));
-      }
-      self.ctx.source.append("\n}\n});");
-    }
+    let namespace_name = self.ctx.namespace_symbol_name.unwrap();
+    let wrap_symbol_name = self.ctx.wrap_symbol_name.unwrap();
+
+    self.ctx.source.prepend(format!(
+      "var {wrap_symbol_name} = __esm({{\n'{}'() {{\n",
+      self.ctx.module.resource_id.prettify(),
+    ));
+    let exports: String = self
+      .ctx
+      .module
+      .resolved_exports
+      .iter()
+      .map(|(exported_name, info)| {
+        let canonical_ref = self.ctx.symbols.par_get_canonical_ref(info.local_symbol);
+        let canonical_name = self.ctx.final_names.get(&canonical_ref).unwrap();
+        format!("  get {exported_name}() {{ return {canonical_name} }}",)
+      })
+      .collect::<Vec<_>>()
+      .join(",\n");
+    self
+      .ctx
+      .source
+      .append(format!("\n{namespace_name} = {{\n{exports}\n}};\n",));
+    self.ctx.source.append("\n}\n});");
+
+    self.hoisted.push(namespace_name.clone());
+    self
+      .ctx
+      .source
+      .prepend(format!("var {}\n", self.hoisted.join(",")));
   }
 }
 
@@ -79,14 +88,18 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
     if let Module::Normal(importee) = importee {
       if importee.module_resolution == ModuleResolution::CommonJs {
         // add import cjs symbol binding
-        if let Some(namespace_name) = self.ctx.get_namespace_symbol_name() {
-          if let Some(wrap_symbol_name) = self.ctx.get_wrap_symbol_name() {
-            self.ctx.source.prepend_left(
-              decl.span.start,
-              format!("var {namespace_name} = __toESM({wrap_symbol_name}());\n"),
-            );
-          }
-        }
+        let namespace_name = self
+          .ctx
+          .get_symbol_final_name(importee.id, importee.namespace_symbol.0.symbol)
+          .unwrap();
+        let wrap_symbol_name = self
+          .ctx
+          .get_symbol_final_name(importee.id, importee.wrap_symbol.unwrap())
+          .unwrap();
+        self.ctx.source.prepend_left(
+          decl.span.start,
+          format!("var {namespace_name} = __toESM({wrap_symbol_name}());\n"),
+        );
         decl.specifiers.iter().for_each(|s| match s {
           oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
             if let Some(name) = self.ctx.get_symbol_final_name(
@@ -97,12 +110,10 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
                 .unwrap()
                 .symbol,
             ) {
-              if let Some(namespace_name) = self.ctx.get_namespace_symbol_name() {
-                self.ctx.source.prepend_left(
-                  decl.span.start,
-                  format!("var {name} = {namespace_name}.{name};\n"),
-                );
-              }
+              self.ctx.source.prepend_left(
+                decl.span.start,
+                format!("var {name} = {namespace_name}.{name};\n"),
+              );
             }
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
@@ -114,12 +125,10 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
                 .unwrap()
                 .symbol,
             ) {
-              if let Some(namespace_name) = self.ctx.get_namespace_symbol_name() {
-                self.ctx.source.prepend_left(
-                  decl.span.start,
-                  format!("var {name} = {namespace_name}.default;\n"),
-                );
-              }
+              self.ctx.source.prepend_left(
+                decl.span.start,
+                format!("var {name} = {namespace_name}.default;\n"),
+              );
             }
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
@@ -155,7 +164,7 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
   ) {
     match &decl.declaration {
       oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
-        if let Some(name) = self.ctx.get_default_symbol_name() {
+        if let Some(name) = self.ctx.default_symbol_name {
           self
             .ctx
             .overwrite(decl.span.start, exp.span().start, format!("var {name} = "));

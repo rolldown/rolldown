@@ -22,7 +22,7 @@ impl<'ast> EsmSourceRender<'ast> {
     let program = module.ast.program();
     self.visit_program(program);
 
-    if let Some(namespace_name) = self.ctx.get_namespace_symbol_name() {
+    if let Some(namespace_name) = self.ctx.namespace_symbol_name {
       let exports: String = module
         .resolved_exports
         .iter()
@@ -72,14 +72,18 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
     if let Module::Normal(importee) = importee {
       if importee.module_resolution == ModuleResolution::CommonJs {
         // add import cjs symbol binding
-        if let Some(namespace_name) = self.ctx.get_namespace_symbol_name() {
-          if let Some(wrap_symbol_name) = self.ctx.get_wrap_symbol_name() {
-            self.ctx.source.prepend_left(
-              decl.span.start,
-              format!("var {namespace_name} = __toESM({wrap_symbol_name}());\n"),
-            );
-          }
-        }
+        let namespace_name = self
+          .ctx
+          .get_symbol_final_name(importee.id, importee.namespace_symbol.0.symbol)
+          .unwrap();
+        let wrap_symbol_name = self
+          .ctx
+          .get_symbol_final_name(importee.id, importee.wrap_symbol.unwrap())
+          .unwrap();
+        self.ctx.source.prepend_left(
+          decl.span.start,
+          format!("var {namespace_name} = __toESM({wrap_symbol_name}());\n"),
+        );
         decl.specifiers.iter().for_each(|s| match s {
           oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
             if let Some(name) = self.ctx.get_symbol_final_name(
@@ -90,12 +94,10 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
                 .unwrap()
                 .symbol,
             ) {
-              if let Some(namespace_name) = self.ctx.get_namespace_symbol_name() {
-                self.ctx.source.prepend_left(
-                  decl.span.start,
-                  format!("var {name} = {namespace_name}.{name};\n"),
-                );
-              }
+              self.ctx.source.prepend_left(
+                decl.span.start,
+                format!("var {name} = {namespace_name}.{name};\n"),
+              );
             }
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
@@ -107,12 +109,10 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
                 .unwrap()
                 .symbol,
             ) {
-              if let Some(namespace_name) = self.ctx.get_namespace_symbol_name() {
-                self.ctx.source.prepend_left(
-                  decl.span.start,
-                  format!("var {name} = {namespace_name}.default;\n"),
-                );
-              }
+              self.ctx.source.prepend_left(
+                decl.span.start,
+                format!("var {name} = {namespace_name}.default;\n"),
+              );
             }
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
@@ -148,7 +148,7 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
   ) {
     match &decl.declaration {
       oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
-        if let Some(name) = self.ctx.get_default_symbol_name() {
+        if let Some(name) = self.ctx.default_symbol_name {
           self
             .ctx
             .overwrite(decl.span.start, exp.span().start, format!("var {name} = "));

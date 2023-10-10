@@ -61,15 +61,15 @@ impl NormalModule {
     // FIXME: should not clone
     let mut source = MagicString::new(self.ast.source().to_string());
 
-    let ctx = RendererContext {
-      symbols: ctx.symbols,
-      final_names: ctx.canonical_names,
-      source: &mut source,
-      chunks: ctx.chunks,
-      module_to_chunk: ctx.module_to_chunk,
-      modules: ctx.modules,
-      module: self,
-    };
+    let ctx = RendererContext::new(
+      ctx.symbols,
+      ctx.canonical_names,
+      &mut source,
+      ctx.module_to_chunk,
+      ctx.chunks,
+      ctx.modules,
+      self,
+    );
 
     if self.module_resolution == ModuleResolution::CommonJs {
       CommonJsSourceRender::new(ctx).apply();

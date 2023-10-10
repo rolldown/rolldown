@@ -7,6 +7,7 @@ input_file: crates/rolldown/tests/fixtures/basic_commonjs
 
 ```js
 // esm.js
+var esm_ns
 var init_esm = __esm({
 'esm.js'() {
 var esm_default = 1;
@@ -19,11 +20,13 @@ esm_ns = {
 // commonjs.js
 var require_commonjs = __commonJS({
 'commonjs.js'(exports, module) {
-var value = (require_commonjs(), __toCommonJS(commonjs_ns));
+var value = (init_esm(), __toCommonJS(esm_ns));
 module.exports = value;
 }
 });
 // main.js
+var _default = commonjs_ns.default;
+var commonjs_ns = __toESM(require_commonjs());
 
 
 console.log(_default, esm_default)

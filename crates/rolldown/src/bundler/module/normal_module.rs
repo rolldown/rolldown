@@ -38,7 +38,6 @@ pub struct NormalModule {
   pub star_exports: Vec<ImportRecordId>,
   pub module_resolution: ModuleResolution,
   // resolved
-  pub wrap: bool,
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
   pub resolved_star_exports: Vec<ModuleId>,
   pub scope: ScopeTree,
@@ -75,7 +74,11 @@ impl NormalModule {
         .join(",\n");
       source.append(format!(
         "\n{} {ns_name} = {{\n{exports}\n}};\n",
-        if self.wrap { "" } else { "var" }
+        if self.symbol_for_wrap.is_some() {
+          ""
+        } else {
+          "var"
+        }
       ));
     }
 
@@ -92,22 +95,18 @@ impl NormalModule {
       chunks: ctx.chunks,
       module_to_chunk: ctx.module_to_chunk,
       modules: ctx.modules,
-      wrap: self.wrap,
       module_resolution: &self.module_resolution,
       symbols_for_cjs: &self.symbols_for_cjs,
       namespace_symbol: &self.namespace_symbol,
-      symbol_for_cjs_wrap: &self.symbol_for_wrap,
+      symbol_for_wrap: &self.symbol_for_wrap,
     });
     renderer.visit_program(program);
 
     let module_path = self.resource_id.prettify();
-    if self.wrap {
-      if let Some(wrap_fn_name) = get_symbol_final_name(
-        self.id,
-        self.symbol_for_wrap.unwrap(),
-        ctx.symbols,
-        ctx.canonical_names,
-      ) {
+    if let Some(symbol_for_wrap) = self.symbol_for_wrap {
+      if let Some(wrap_fn_name) =
+        get_symbol_final_name(self.id, symbol_for_wrap, ctx.symbols, ctx.canonical_names)
+      {
         match self.module_resolution {
           ModuleResolution::CommonJs => {
             source.prepend(format!(

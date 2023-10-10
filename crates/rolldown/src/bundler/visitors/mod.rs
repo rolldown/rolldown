@@ -27,11 +27,10 @@ pub struct RendererContext<'ast> {
   pub module_to_chunk: &'ast IndexVec<ModuleId, Option<ChunkId>>,
   pub chunks: &'ast IndexVec<ChunkId, Chunk>,
   pub modules: &'ast ModuleVec,
-  pub wrap: bool,
   pub module_resolution: &'ast ModuleResolution,
   pub symbols_for_cjs: &'ast FxHashMap<Atom, SymbolRef>,
   pub namespace_symbol: &'ast (SymbolRef, ReferenceId),
-  pub symbol_for_cjs_wrap: &'ast Option<SymbolId>,
+  pub symbol_for_wrap: &'ast Option<SymbolId>,
 }
 
 pub struct SourceRenderer<'ast> {

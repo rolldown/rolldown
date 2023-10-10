@@ -1,2 +1,3 @@
-import a from './commonjs.js'
-console.log(a)
+import foo from './commonjs.js'
+import esm from './esm.js'
+console.log(foo, esm)

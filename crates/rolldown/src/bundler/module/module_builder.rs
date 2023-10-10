@@ -59,8 +59,8 @@ impl ModuleBuilder {
       is_symbol_for_namespace_referenced: false,
       source_mutations: Default::default(),
       module_resolution: self.module_resolution.unwrap_or(ModuleResolution::Esm),
-      symbols_for_cjs: Default::default(),
-      symbol_for_wrap: None,
+      cjs_symbols: Default::default(),
+      wrap_symbol: None,
     }
   }
 }

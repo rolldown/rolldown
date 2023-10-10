@@ -353,8 +353,5 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
       self.visit_argument(arg);
     }
     self.visit_expression(&mut expr.callee);
-    if let Some(parameters) = &mut expr.type_parameters {
-      self.visit_ts_type_parameter_instantiation(parameters);
-    }
   }
 }

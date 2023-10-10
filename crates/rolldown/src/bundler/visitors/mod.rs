@@ -1,49 +1,35 @@
+pub mod commonjs_source_render;
+pub mod esm_source_render;
+pub mod esm_wrap_source_render;
 pub mod scanner;
-
 use index_vec::IndexVec;
 use oxc::{
-  ast::Visit,
   semantic::{ReferenceId, SymbolId},
-  span::{Atom, GetSpan, Span},
+  span::{Atom, Span},
 };
-use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleResolution, SymbolRef};
+use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, UpdateOptions};
 
 use super::{
   chunk::{chunk::Chunk, ChunkId},
-  graph::symbols::{get_reference_final_name, get_symbol_final_name, Symbols},
-  module::{module::Module, module_id::ModuleVec},
+  graph::symbols::Symbols,
+  module::{module_id::ModuleVec, NormalModule},
 };
 
 pub struct RendererContext<'ast> {
   pub symbols: &'ast Symbols,
   pub final_names: &'ast FxHashMap<SymbolRef, Atom>,
-  pub id: ModuleId,
-  pub default_export_symbol: Option<SymbolRef>,
   pub source: &'ast mut MagicString<'static>,
-  pub imports: &'ast FxHashMap<Span, ImportRecordId>,
-  pub import_records: &'ast IndexVec<ImportRecordId, ImportRecord>,
   pub module_to_chunk: &'ast IndexVec<ModuleId, Option<ChunkId>>,
   pub chunks: &'ast IndexVec<ChunkId, Chunk>,
   pub modules: &'ast ModuleVec,
-  pub module_resolution: &'ast ModuleResolution,
-  pub symbols_for_cjs: &'ast FxHashMap<Atom, SymbolRef>,
-  pub namespace_symbol: &'ast (SymbolRef, ReferenceId),
-  pub symbol_for_wrap: &'ast Option<SymbolId>,
+  pub module: &'ast NormalModule,
 }
 
-pub struct SourceRenderer<'ast> {
-  ctx: RendererContext<'ast>,
-}
-
-impl<'ast> SourceRenderer<'ast> {
-  pub fn new(ctx: RendererContext<'ast>) -> Self {
-    Self { ctx }
-  }
-
-  fn overwrite(&mut self, start: u32, end: u32, content: String) {
-    self.ctx.source.update_with(
+impl<'ast> RendererContext<'ast> {
+  pub fn overwrite(&mut self, start: u32, end: u32, content: String) {
+    self.source.update_with(
       start,
       end,
       content,
@@ -55,210 +41,43 @@ impl<'ast> SourceRenderer<'ast> {
   }
 
   pub fn remove_node(&mut self, span: Span) {
-    self.ctx.source.remove(span.start, span.end);
+    self.source.remove(span.start, span.end);
   }
 
   pub fn rename_symbol(&mut self, span: Span, name: Atom) {
     self.overwrite(span.start, span.end, name.to_string());
   }
-}
 
-impl<'ast> Visit<'ast> for SourceRenderer<'ast> {
-  fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
-    if let Some(name) = get_symbol_final_name(
-      self.ctx.id,
-      ident.symbol_id.get().unwrap(),
-      self.ctx.symbols,
-      self.ctx.final_names,
-    ) {
-      if ident.name != name {
-        self.rename_symbol(ident.span, name.clone());
-      }
-    }
+  pub fn get_symbol_final_name(&self, module_id: ModuleId, symbol_id: SymbolId) -> Option<&Atom> {
+    let symbol_ref = (module_id, symbol_id).into();
+    let final_ref = self.symbols.par_get_canonical_ref(symbol_ref);
+    self.final_names.get(&final_ref)
   }
 
-  fn visit_identifier_reference(&mut self, ident: &'ast oxc::ast::ast::IdentifierReference) {
-    if let Some(name) = get_reference_final_name(
-      self.ctx.id,
-      ident.reference_id.get().unwrap(),
-      self.ctx.symbols,
-      self.ctx.final_names,
-    ) {
-      if ident.name != name {
-        self.rename_symbol(ident.span, name.clone());
-      }
-    }
+  pub fn get_reference_final_name(
+    &self,
+    module_id: ModuleId,
+    reference_id: ReferenceId,
+  ) -> Option<&Atom> {
+    self.symbols.tables[module_id].references[reference_id]
+      .and_then(|symbol| self.get_symbol_final_name(module_id, symbol))
   }
 
-  fn visit_import_declaration(&mut self, decl: &'ast oxc::ast::ast::ImportDeclaration<'ast>) {
-    self.remove_node(decl.span);
-    let rec = &self.ctx.import_records[self.ctx.imports.get(&decl.span).copied().unwrap()];
-    let importee = &self.ctx.modules[rec.resolved_module];
-    if let Module::Normal(importee) = importee {
-      if importee.module_resolution == ModuleResolution::CommonJs {
-        // add namespace binding
-        if let Some(namespace_name) = get_symbol_final_name(
-          importee.id,
-          importee.namespace_symbol.0.symbol,
-          self.ctx.symbols,
-          self.ctx.final_names,
-        ) {
-          decl.specifiers.iter().for_each(|s| match s {
-            oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
-              if let Some(name) = get_symbol_final_name(
-                importee.id,
-                importee
-                  .symbols_for_cjs
-                  .get(spec.imported.name())
-                  .unwrap()
-                  .symbol,
-                self.ctx.symbols,
-                self.ctx.final_names,
-              ) {
-                self.ctx.source.prepend_left(
-                  decl.span.start,
-                  format!("var {name} = {namespace_name}.{name};\n"),
-                );
-              }
-            }
-            oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
-              if let Some(name) = get_symbol_final_name(
-                importee.id,
-                importee
-                  .symbols_for_cjs
-                  .get(&Atom::new_inline("default"))
-                  .unwrap()
-                  .symbol,
-                self.ctx.symbols,
-                self.ctx.final_names,
-              ) {
-                self.ctx.source.prepend_left(
-                  decl.span.start,
-                  format!("var {name} = {namespace_name}.default;\n"),
-                );
-              }
-            }
-            oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
-          });
-          if let Some(wrap_fn_name) = get_symbol_final_name(
-            importee.id,
-            importee.symbol_for_wrap.unwrap(),
-            self.ctx.symbols,
-            self.ctx.final_names,
-          ) {
-            self.ctx.source.prepend_left(
-              decl.span.start,
-              format!("var {namespace_name} = __toESM({wrap_fn_name}());\n"),
-            );
-          }
-        }
-      }
-    }
+  pub fn get_wrap_symbol_name(&self) -> Option<&Atom> {
+    self
+      .module
+      .wrap_symbol
+      .and_then(|s| self.get_symbol_final_name(self.module.id, s))
   }
 
-  fn visit_export_named_declaration(
-    &mut self,
-    named_decl: &'ast oxc::ast::ast::ExportNamedDeclaration<'ast>,
-  ) {
-    if let Some(decl) = &named_decl.declaration {
-      self.remove_node(Span::new(named_decl.span.start, decl.span().start));
-      self.visit_declaration(decl);
-    } else {
-      self.remove_node(named_decl.span);
-    }
+  pub fn get_namespace_symbol_name(&self) -> Option<&Atom> {
+    self.get_symbol_final_name(self.module.id, self.module.namespace_symbol.0.symbol)
   }
 
-  fn visit_export_all_declaration(
-    &mut self,
-    decl: &'ast oxc::ast::ast::ExportAllDeclaration<'ast>,
-  ) {
-    self.remove_node(decl.span);
-  }
-
-  fn visit_export_default_declaration(
-    &mut self,
-    decl: &'ast oxc::ast::ast::ExportDefaultDeclaration<'ast>,
-  ) {
-    match &decl.declaration {
-      oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
-        let canonical_ref = self
-          .ctx
-          .symbols
-          .par_get_canonical_ref(self.ctx.default_export_symbol.unwrap());
-        let canonical_name = self.ctx.final_names.get(&canonical_ref).unwrap().clone();
-        self.overwrite(
-          decl.span.start,
-          exp.span().start,
-          format!("var {canonical_name} = "),
-        );
-      }
-      oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {
-        self.remove_node(Span::new(decl.span.start, decl.span.start));
-      }
-      oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
-        self.remove_node(Span::new(decl.span.start, decl.span.start));
-      }
-      _ => {}
-    }
-  }
-
-  fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
-    if let oxc::ast::ast::Expression::StringLiteral(str) = &expr.source {
-      let rec = &self.ctx.import_records[self.ctx.imports.get(&expr.span).copied().unwrap()];
-
-      if let Some(chunk_id) = self.ctx.module_to_chunk[rec.resolved_module] {
-        let chunk = &self.ctx.chunks[chunk_id];
-        self.overwrite(
-          str.span.start,
-          str.span.end,
-          // TODO: the path should be relative to the current importer chunk
-          format!("'./{}'", chunk.file_name.as_ref().unwrap()),
-        );
-      } else {
-        // external module doesn't belong to any chunk, just keep this as it is
-      }
-    }
-  }
-
-  fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
-    if let oxc::ast::ast::Expression::Identifier(ident) = &expr.callee {
-      if ident.name == "require" {
-        let rec = &self.ctx.import_records[self.ctx.imports.get(&expr.span).copied().unwrap()];
-        let importee = &self.ctx.modules[rec.resolved_module];
-        if let Module::Normal(importee) = importee {
-          if let Some(wrap_fn_name) = get_symbol_final_name(
-            importee.id,
-            importee.symbol_for_wrap.unwrap(),
-            self.ctx.symbols,
-            self.ctx.final_names,
-          ) {
-            if importee.module_resolution == ModuleResolution::CommonJs {
-              self
-                .ctx
-                .source
-                .update(expr.span.start, expr.span.end, format!("{wrap_fn_name}()"));
-            } else if let Some(namespace_name) = get_symbol_final_name(
-              importee.id,
-              importee.namespace_symbol.0.symbol,
-              self.ctx.symbols,
-              self.ctx.final_names,
-            ) {
-              self.ctx.source.update(
-                expr.span.start,
-                expr.span.end,
-                format!("({wrap_fn_name}(), __toCommonJS({namespace_name}))"),
-              );
-            }
-          }
-        }
-      }
-    }
-    for arg in expr.arguments.iter() {
-      self.visit_argument(arg);
-    }
-    self.visit_expression(&expr.callee);
-    if let Some(parameters) = &expr.type_parameters {
-      self.visit_ts_type_parameter_instantiation(parameters);
-    }
+  pub fn get_default_symbol_name(&self) -> Option<&Atom> {
+    self
+      .module
+      .default_export_symbol
+      .and_then(|s| self.get_symbol_final_name(self.module.id, s))
   }
 }

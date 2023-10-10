@@ -14,7 +14,7 @@ use crate::{
   bundler::{
     graph::symbols::SymbolMap,
     module::module_builder::ModuleBuilder,
-    module_loader::TaskResult,
+    module_loader::NormalModuleTaskResult,
     resolve_id::{resolve_id, ResolvedRequestInfo},
     runtime::RUNTIME_PATH,
     visitors::scanner::{self, ScanResult},
@@ -93,7 +93,7 @@ impl ModuleTask {
 
     self
       .tx
-      .send(Msg::Done(TaskResult {
+      .send(Msg::NormalModuleDone(NormalModuleTaskResult {
         resolved_deps: res,
         module_id: self.module_id,
         errors: self.errors,

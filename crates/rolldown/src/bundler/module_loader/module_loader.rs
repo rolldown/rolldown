@@ -4,8 +4,8 @@ use rolldown_resolver::Resolver;
 use rolldown_utils::block_on_spawn_all;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use super::module_task::ModuleTask;
-use super::task_result::TaskResult;
+use super::normal_module_task::ModuleTask;
+use super::task_result::NormalModuleTaskResult;
 use super::Msg;
 use crate::bundler::graph::graph::Graph;
 use crate::bundler::graph::symbols::{SymbolMap, Symbols};
@@ -76,8 +76,8 @@ impl<'a> ModuleLoader<'a> {
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else { break };
       match msg {
-        Msg::Done(task_result) => {
-          let TaskResult {
+        Msg::NormalModuleDone(task_result) => {
+          let NormalModuleTaskResult {
             module_id,
             symbol_map: symbol_table,
             resolved_deps,

@@ -241,28 +241,4 @@ impl<'graph> Linker<'graph> {
       }
     }
   }
-
-  #[allow(dead_code)]
-  fn resolve_runtime_symbol(&mut self, symbol: Atom, importer: ModuleId) {
-    let importer_symbol_ref = SymbolRef {
-      owner: importer,
-      symbol: self.graph.symbols.tables[importer].create_symbol(symbol.clone()),
-    };
-    match &self.graph.modules[self.graph.runtime] {
-      Module::Normal(runtime_module) => {
-        let resolved_ref = match runtime_module.resolve_export(
-          &symbol,
-          &mut Default::default(),
-          &self.graph.modules,
-          &mut self.graph.symbols,
-        ) {
-          Resolution::None => panic!(""),
-          Resolution::Ambiguous => panic!(""),
-          Resolution::Found(founded) => founded,
-        };
-        self.graph.symbols.union(importer_symbol_ref, resolved_ref);
-      }
-      Module::External(_) => unreachable!("runtime module shouldn't be a external module"),
-    }
-  }
 }

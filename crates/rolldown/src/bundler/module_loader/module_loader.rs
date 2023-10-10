@@ -52,7 +52,7 @@ impl<'a> ModuleLoader<'a> {
 
     let mut intermediate_modules: IndexVec<ModuleId, Option<Module>> =
       IndexVec::with_capacity(resolved_entries.len() + 1 /* runtime */);
-    self.graph.runtime = self.try_spawn_new_task(
+    self.graph.runtime.id = self.try_spawn_new_task(
       &ResolvedRequestInfo {
         path: RUNTIME_PATH.to_string().into(),
         is_external: false,
@@ -113,6 +113,12 @@ impl<'a> ModuleLoader<'a> {
       self.remaining -= 1;
     }
     self.graph.symbols = Symbols::new(tables);
+
+    self
+      .graph
+      .runtime
+      .init_symbols(&self.graph.symbols.tables[self.graph.runtime.id]);
+
     self.graph.modules = intermediate_modules
       .into_iter()
       .map(|m| m.unwrap())

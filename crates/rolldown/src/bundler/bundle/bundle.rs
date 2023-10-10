@@ -82,7 +82,7 @@ impl<'a> Bundle<'a> {
       .iter()
       .enumerate()
       // TODO avoid generate runtime module
-      .skip_while(|(module_id, _)| module_id.eq(&self.graph.runtime)) // TODO avoid generate runtime module
+      .skip_while(|(module_id, _)| module_id.eq(&self.graph.runtime.id)) // TODO avoid generate runtime module
       .for_each(|(_, module)| {
         let bits = &module_to_bits[module.id()];
         if let Some(chunk) = chunks.get_mut(bits) {

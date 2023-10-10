@@ -1,16 +1,16 @@
 use oxc::{
-  ast::Visit,
+  ast::{ast::Declaration, Visit},
+  formatter::{Formatter, FormatterOptions, Gen},
   span::{Atom, GetSpan, Span},
 };
-use rolldown_common::ModuleResolution;
-
-use crate::bundler::module::module::Module;
+use rolldown_oxc::BindingIdentifierExt;
 
 use super::RendererContext;
 
 pub struct EsmWrapSourceRender<'ast> {
   ctx: RendererContext<'ast>,
   hoisted: Vec<Atom>,
+  hoisted_functions: Vec<String>,
 }
 
 impl<'ast> EsmWrapSourceRender<'ast> {
@@ -18,6 +18,7 @@ impl<'ast> EsmWrapSourceRender<'ast> {
     Self {
       ctx,
       hoisted: vec![],
+      hoisted_functions: vec![],
     }
   }
 
@@ -43,98 +44,33 @@ impl<'ast> EsmWrapSourceRender<'ast> {
       })
       .collect::<Vec<_>>()
       .join(",\n");
-    self
-      .ctx
-      .source
-      .append(format!("\n{namespace_name} = {{\n{exports}\n}};\n",));
     self.ctx.source.append("\n}\n});");
-
-    self.hoisted.push(namespace_name.clone());
     self
       .ctx
       .source
-      .prepend(format!("var {}\n", self.hoisted.join(",")));
+      .prepend(format!("\nvar {namespace_name} = {{\n{exports}\n}};\n",));
+    self
+      .ctx
+      .source
+      .prepend(format!("var {};\n", self.hoisted.join(",")));
+    self
+      .ctx
+      .source
+      .prepend(format!("{}\n", self.hoisted_functions.join("\n")));
   }
 }
 
 impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
   fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
-    if let Some(name) = self
-      .ctx
-      .get_symbol_final_name(self.ctx.module.id, ident.symbol_id.get().unwrap())
-    {
-      if ident.name != name {
-        self.ctx.rename_symbol(ident.span, name.clone());
-      }
-    }
+    self.ctx.visit_binding_identifier(ident);
   }
 
   fn visit_identifier_reference(&mut self, ident: &'ast oxc::ast::ast::IdentifierReference) {
-    if let Some(name) = self
-      .ctx
-      .get_reference_final_name(self.ctx.module.id, ident.reference_id.get().unwrap())
-    {
-      if ident.name != name {
-        self.ctx.rename_symbol(ident.span, name.clone());
-      }
-    }
+    self.ctx.visit_identifier_reference(ident);
   }
 
   fn visit_import_declaration(&mut self, decl: &'ast oxc::ast::ast::ImportDeclaration<'ast>) {
-    self.ctx.remove_node(decl.span);
-    let rec =
-      &self.ctx.module.import_records[self.ctx.module.imports.get(&decl.span).copied().unwrap()];
-    let importee = &self.ctx.modules[rec.resolved_module];
-    if let Module::Normal(importee) = importee {
-      if importee.module_resolution == ModuleResolution::CommonJs {
-        // add import cjs symbol binding
-        let namespace_name = self
-          .ctx
-          .get_symbol_final_name(importee.id, importee.namespace_symbol.0.symbol)
-          .unwrap();
-        let wrap_symbol_name = self
-          .ctx
-          .get_symbol_final_name(importee.id, importee.wrap_symbol.unwrap())
-          .unwrap();
-        self.ctx.source.prepend_left(
-          decl.span.start,
-          format!("var {namespace_name} = __toESM({wrap_symbol_name}());\n"),
-        );
-        decl.specifiers.iter().for_each(|s| match s {
-          oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
-            if let Some(name) = self.ctx.get_symbol_final_name(
-              importee.id,
-              importee
-                .cjs_symbols
-                .get(spec.imported.name())
-                .unwrap()
-                .symbol,
-            ) {
-              self.ctx.source.prepend_left(
-                decl.span.start,
-                format!("var {name} = {namespace_name}.{name};\n"),
-              );
-            }
-          }
-          oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
-            if let Some(name) = self.ctx.get_symbol_final_name(
-              importee.id,
-              importee
-                .cjs_symbols
-                .get(&Atom::new_inline("default"))
-                .unwrap()
-                .symbol,
-            ) {
-              self.ctx.source.prepend_left(
-                decl.span.start,
-                format!("var {name} = {namespace_name}.default;\n"),
-              );
-            }
-          }
-          oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
-        });
-      }
-    }
+    self.ctx.visit_import_declaration(decl);
   }
 
   fn visit_export_named_declaration(
@@ -142,10 +78,54 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
     named_decl: &'ast oxc::ast::ast::ExportNamedDeclaration<'ast>,
   ) {
     if let Some(decl) = &named_decl.declaration {
-      self
-        .ctx
-        .remove_node(Span::new(named_decl.span.start, decl.span().start));
       self.visit_declaration(decl);
+      match decl {
+        Declaration::VariableDeclaration(var_decl) => {
+          let names = var_decl
+            .declarations
+            .iter()
+            .filter_map(|decl| match &decl.id.kind {
+              oxc::ast::ast::BindingPatternKind::BindingIdentifier(id) => self
+                .ctx
+                .get_symbol_final_name(self.ctx.module.id, id.symbol_id.get().unwrap()),
+              _ => unimplemented!(),
+            })
+            .cloned();
+          self.hoisted.extend(names);
+          self.ctx.remove_node(Span::new(
+            named_decl.span.start,
+            var_decl.declarations[0].span.start,
+          ));
+        }
+        Declaration::FunctionDeclaration(func) => {
+          // hoisted function declaration
+          // TODO update symbol name
+          self
+            .ctx
+            .remove_node(Span::new(named_decl.span.start, named_decl.span.end));
+          #[allow(clippy::eq_op)]
+          let mut formatter = Formatter::new(
+            (func.span.end - func.span.end) as usize,
+            FormatterOptions::default(),
+          );
+          func.gen(&mut formatter);
+          self.hoisted_functions.push(formatter.into_code());
+        }
+        Declaration::ClassDeclaration(class) => {
+          let id = class.id.as_ref().unwrap();
+          if let Some(name) = self
+            .ctx
+            .get_symbol_final_name(self.ctx.module.id, id.expect_symbol_id())
+          {
+            self.ctx.overwrite(
+              named_decl.span.start,
+              class.span.start,
+              format!("{name} = "),
+            );
+          }
+        }
+        _ => {}
+      }
     } else {
       self.ctx.remove_node(named_decl.span);
     }
@@ -155,7 +135,7 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
     &mut self,
     decl: &'ast oxc::ast::ast::ExportAllDeclaration<'ast>,
   ) {
-    self.ctx.remove_node(decl.span);
+    self.ctx.visit_export_all_declaration(decl);
   }
 
   fn visit_export_default_declaration(
@@ -167,7 +147,7 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
         if let Some(name) = self.ctx.default_symbol_name {
           self
             .ctx
-            .overwrite(decl.span.start, exp.span().start, format!("var {name} = "));
+            .overwrite(decl.span.start, exp.span().start, format!("{name} = "));
         }
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {
@@ -185,21 +165,6 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
   }
 
   fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
-    if let oxc::ast::ast::Expression::StringLiteral(str) = &expr.source {
-      let rec =
-        &self.ctx.module.import_records[self.ctx.module.imports.get(&expr.span).copied().unwrap()];
-
-      if let Some(chunk_id) = self.ctx.module_to_chunk[rec.resolved_module] {
-        let chunk = &self.ctx.chunks[chunk_id];
-        self.ctx.overwrite(
-          str.span.start,
-          str.span.end,
-          // TODO: the path should be relative to the current importer chunk
-          format!("'./{}'", chunk.file_name.as_ref().unwrap()),
-        );
-      } else {
-        // external module doesn't belong to any chunk, just keep this as it is
-      }
-    }
+    self.ctx.visit_import_expression(expr);
   }
 }

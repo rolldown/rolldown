@@ -76,19 +76,26 @@ impl<'a> Bundle<'a> {
         self.mark_modules_entry_bit(*entry, i, &mut module_to_bits);
       });
 
-    self.graph.modules.iter().for_each(|module| {
-      let bits = &module_to_bits[module.id()];
-      if let Some(chunk) = chunks.get_mut(bits) {
-        chunk.modules.push(module.id());
-      } else {
-        // TODO share chunk name
-        let len = chunks.len();
-        chunks.insert(
-          bits.clone(),
-          Chunk::new(Some(len.to_string()), None, bits.clone(), vec![module.id()]),
-        );
-      }
-    });
+    self
+      .graph
+      .modules
+      .iter()
+      .enumerate()
+      // TODO avoid generate runtime module
+      .skip_while(|(module_id, _)| module_id.eq(&self.graph.runtime.id)) // TODO avoid generate runtime module
+      .for_each(|(_, module)| {
+        let bits = &module_to_bits[module.id()];
+        if let Some(chunk) = chunks.get_mut(bits) {
+          chunk.modules.push(module.id());
+        } else {
+          // TODO share chunk name
+          let len = chunks.len();
+          chunks.insert(
+            bits.clone(),
+            Chunk::new(Some(len.to_string()), None, bits.clone(), vec![module.id()]),
+          );
+        }
+      });
 
     let chunks = chunks
       .into_values()

@@ -3,6 +3,7 @@ pub mod bundle;
 mod graph;
 mod module;
 pub mod options;
+mod runtime;
 pub mod source_mutations;
 mod visitors;
 

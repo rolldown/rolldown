@@ -10,11 +10,12 @@ index_vec::define_index_type! {
 pub enum ImportKind {
   Import,
   DynamicImport,
+  Require,
 }
 
 impl ImportKind {
   pub fn is_static(&self) -> bool {
-    matches!(self, Self::Import)
+    matches!(self, Self::Import | Self::Require)
   }
 }
 

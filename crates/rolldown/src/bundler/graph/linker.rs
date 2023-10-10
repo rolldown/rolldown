@@ -1,6 +1,8 @@
 use index_vec::IndexVec;
 use oxc::{semantic::ReferenceId, span::Atom};
-use rolldown_common::{LocalOrReExport, ModuleId, ModuleResolution, ResolvedExport, SymbolRef};
+use rolldown_common::{
+  ImportKind, LocalOrReExport, ModuleId, ModuleResolution, ResolvedExport, SymbolRef,
+};
 use rustc_hash::FxHashMap;
 
 use super::graph::Graph;
@@ -116,6 +118,11 @@ impl<'graph> Linker<'graph> {
       let mut extra_symbols = vec![];
       match importer {
         Module::Normal(importer) => {
+          importer.import_records.iter().for_each(|rec| {
+            if rec.kind == ImportKind::Require {
+              extra_symbols.push((rec.resolved_module, None, true));
+            }
+          });
           importer.named_imports.iter().for_each(|(_id, info)| {
             let import_record = &importer.import_records[info.record_id];
             let importee = &graph.modules[import_record.resolved_module];
@@ -124,7 +131,7 @@ impl<'graph> Linker<'graph> {
                 if importee.module_resolution == ModuleResolution::CommonJs {
                   extra_symbols.push((
                     import_record.resolved_module,
-                    info.imported.clone(),
+                    Some(info.imported.clone()),
                     info.is_imported_star,
                   ));
                 }
@@ -132,7 +139,7 @@ impl<'graph> Linker<'graph> {
               Module::External(_) => {
                 extra_symbols.push((
                   import_record.resolved_module,
-                  info.imported.clone(),
+                  Some(info.imported.clone()),
                   info.is_imported_star,
                 ));
               }
@@ -149,7 +156,7 @@ impl<'graph> Linker<'graph> {
                 if let Module::External(_) = importee {
                   extra_symbols.push((
                     import_record.resolved_module,
-                    re.imported.clone(),
+                    Some(re.imported.clone()),
                     re.is_imported_star,
                   ));
                 }
@@ -164,12 +171,19 @@ impl<'graph> Linker<'graph> {
           let importee = &mut graph.modules[importee];
           match importee {
             Module::Normal(importee) => {
+              if importee.wrap {
+                importee.add_wrap_symbol(&mut graph.symbols);
+              }
               if importee.module_resolution == ModuleResolution::CommonJs {
-                importee.add_cjs_symbol(&mut graph.symbols, imported, is_imported_star)
+                if let Some(imported) = imported {
+                  importee.add_cjs_symbol(&mut graph.symbols, imported, is_imported_star)
+                }
               }
             }
             Module::External(importee) => {
-              importee.add_export_symbol(&mut graph.symbols, imported, is_imported_star);
+              if let Some(imported) = imported {
+                importee.add_export_symbol(&mut graph.symbols, imported, is_imported_star);
+              }
             }
           }
         });

@@ -328,4 +328,33 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
       self.result.imports.insert(expr.span, id);
     }
   }
+
+  fn visit_call_expression(&mut self, expr: &'p mut oxc::ast::ast::CallExpression<'ast>) {
+    if let oxc::ast::ast::Expression::Identifier(ident) = &mut expr.callee {
+      if ident.name == "require" {
+        if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
+          if refs
+            .iter()
+            .any(|r| (*r).eq(&ident.reference_id.get().unwrap()))
+          {
+            self.set_module_resolution(ModuleResolution::CommonJs);
+            if let Some(oxc::ast::ast::Argument::Expression(
+              oxc::ast::ast::Expression::StringLiteral(request),
+            )) = &expr.arguments.get(0)
+            {
+              let id = self.add_import_record(&request.value, ImportKind::Require);
+              self.result.imports.insert(expr.span, id);
+            }
+          }
+        }
+      }
+    }
+    for arg in expr.arguments.iter_mut() {
+      self.visit_argument(arg);
+    }
+    self.visit_expression(&mut expr.callee);
+    if let Some(parameters) = &mut expr.type_parameters {
+      self.visit_ts_type_parameter_instantiation(parameters);
+    }
+  }
 }

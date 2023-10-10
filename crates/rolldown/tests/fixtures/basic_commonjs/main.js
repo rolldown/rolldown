@@ -1,2 +1,2 @@
-import a from './a.js'
+import a from './commonjs.js'
 console.log(a)

@@ -61,7 +61,7 @@ impl ModuleBuilder {
       module_resolution: self.module_resolution.unwrap_or(ModuleResolution::Esm),
       wrap: false,
       symbols_for_cjs: Default::default(),
-      symbol_for_cjs_wrap: None,
+      symbol_for_wrap: None,
     }
   }
 }

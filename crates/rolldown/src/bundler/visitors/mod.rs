@@ -97,7 +97,6 @@ impl<'ast> Visit<'ast> for SourceRenderer<'ast> {
     let importee = &self.ctx.modules[rec.resolved_module];
     if let Module::Normal(importee) = importee {
       if importee.module_resolution == ModuleResolution::CommonJs {
-        println!("{:?}", self.ctx.final_names);
         // add namespace binding
         if let Some(namespace_name) = get_symbol_final_name(
           importee.id,
@@ -142,15 +141,15 @@ impl<'ast> Visit<'ast> for SourceRenderer<'ast> {
             }
             oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
           });
-          if let Some(cjs_fn_name) = get_symbol_final_name(
+          if let Some(wrap_fn_name) = get_symbol_final_name(
             importee.id,
-            importee.symbol_for_cjs_wrap.unwrap(),
+            importee.symbol_for_wrap.unwrap(),
             self.ctx.symbols,
             self.ctx.final_names,
           ) {
             self.ctx.source.prepend_left(
               decl.span.start,
-              format!("var {namespace_name} = __toESM({cjs_fn_name}());\n"),
+              format!("var {namespace_name} = __toESM({wrap_fn_name}());\n"),
             );
           }
         }
@@ -219,6 +218,48 @@ impl<'ast> Visit<'ast> for SourceRenderer<'ast> {
       } else {
         // external module doesn't belong to any chunk, just keep this as it is
       }
+    }
+  }
+
+  fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
+    if let oxc::ast::ast::Expression::Identifier(ident) = &expr.callee {
+      if ident.name == "require" {
+        let rec = &self.ctx.import_records[self.ctx.imports.get(&expr.span).copied().unwrap()];
+        let importee = &self.ctx.modules[rec.resolved_module];
+        if let Module::Normal(importee) = importee {
+          if let Some(wrap_fn_name) = get_symbol_final_name(
+            importee.id,
+            importee.symbol_for_wrap.unwrap(),
+            self.ctx.symbols,
+            self.ctx.final_names,
+          ) {
+            if importee.module_resolution == ModuleResolution::CommonJs {
+              self
+                .ctx
+                .source
+                .update(expr.span.start, expr.span.end, format!("{wrap_fn_name}()"));
+            } else if let Some(namespace_name) = get_symbol_final_name(
+              importee.id,
+              importee.namespace_symbol.0.symbol,
+              self.ctx.symbols,
+              self.ctx.final_names,
+            ) {
+              self.ctx.source.update(
+                expr.span.start,
+                expr.span.end,
+                format!("({wrap_fn_name}(), __toCommonJS({namespace_name}))"),
+              );
+            }
+          }
+        }
+      }
+    }
+    for arg in expr.arguments.iter() {
+      self.visit_argument(arg);
+    }
+    self.visit_expression(&expr.callee);
+    if let Some(parameters) = &expr.type_parameters {
+      self.visit_ts_type_parameter_instantiation(parameters);
     }
   }
 }

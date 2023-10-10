@@ -62,12 +62,7 @@ impl Module {
 
   pub fn mark_symbol_for_namespace_referenced(&mut self) {
     match self {
-      Module::Normal(m) => {
-        if !m.is_symbol_for_namespace_referenced {
-          m.is_symbol_for_namespace_referenced = true;
-          m.initialize_namespace()
-        }
-      }
+      Module::Normal(m) => m.initialize_namespace(),
       Module::External(m) => m.is_symbol_for_namespace_referenced = true,
     }
   }

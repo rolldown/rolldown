@@ -46,7 +46,7 @@ pub struct NormalModule {
   pub namespace_symbol: (SymbolRef, ReferenceId),
   pub is_symbol_for_namespace_referenced: bool,
   pub symbols_for_cjs: FxHashMap<Atom, SymbolRef>,
-  pub symbol_for_cjs_wrap: Option<SymbolId>,
+  pub symbol_for_wrap: Option<SymbolId>,
 }
 
 pub enum Resolution {
@@ -60,7 +60,7 @@ impl NormalModule {
     // FIXME: should not clone
     let mut source = MagicString::new(self.ast.source().to_string());
 
-    if self.is_symbol_for_namespace_referenced {
+    if self.is_symbol_for_namespace_referenced && self.module_resolution == ModuleResolution::Esm {
       let ns_ref = ctx.symbols.par_get_canonical_ref(self.namespace_symbol.0);
       let ns_name = ctx.canonical_names.get(&ns_ref).unwrap();
       let exports: String = self
@@ -73,7 +73,10 @@ impl NormalModule {
         })
         .collect::<Vec<_>>()
         .join(",\n");
-      source.append(format!("\nvar {ns_name} = {{\n{exports}\n}};\n"));
+      source.append(format!(
+        "\n{} {ns_name} = {{\n{exports}\n}};\n",
+        if self.wrap { "" } else { "var" }
+      ));
     }
 
     let program = self.ast.program();
@@ -93,27 +96,37 @@ impl NormalModule {
       module_resolution: &self.module_resolution,
       symbols_for_cjs: &self.symbols_for_cjs,
       namespace_symbol: &self.namespace_symbol,
-      symbol_for_cjs_wrap: &self.symbol_for_cjs_wrap,
+      symbol_for_cjs_wrap: &self.symbol_for_wrap,
     });
     renderer.visit_program(program);
 
     let module_path = self.resource_id.prettify();
     if self.wrap {
-      match self.module_resolution {
-        ModuleResolution::CommonJs => {
-          if let Some(name) = get_symbol_final_name(
-            self.id,
-            self.symbol_for_cjs_wrap.unwrap(),
-            ctx.symbols,
-            ctx.canonical_names,
-          ) {
+      if let Some(wrap_fn_name) = get_symbol_final_name(
+        self.id,
+        self.symbol_for_wrap.unwrap(),
+        ctx.symbols,
+        ctx.canonical_names,
+      ) {
+        match self.module_resolution {
+          ModuleResolution::CommonJs => {
             source.prepend(format!(
-              "var {name} = __commonJS({{\n'{module_path}'(exports, module) {{\n",
+              "var {wrap_fn_name} = __commonJS({{\n'{module_path}'(exports, module) {{\n",
             ));
             source.append("\n}\n});");
           }
+          ModuleResolution::Esm => {
+            source.prepend(format!(
+              "var {wrap_fn_name} = __esm({{\n'{module_path}'() {{\n",
+            ));
+            source.append("\n}\n});");
+            if self.is_symbol_for_namespace_referenced {
+              let ns_ref = ctx.symbols.par_get_canonical_ref(self.namespace_symbol.0);
+              let ns_name = ctx.canonical_names.get(&ns_ref).unwrap();
+              source.prepend(format!("\nvar {ns_name};\n"));
+            }
+          }
         }
-        ModuleResolution::Esm => {}
       }
     }
 
@@ -128,10 +141,13 @@ impl NormalModule {
   }
 
   pub fn initialize_namespace(&mut self) {
-    self.stmt_infos.push(StmtInfo {
-      stmt_idx: self.ast.program().body.len(),
-      declared_symbols: vec![self.namespace_symbol.0.symbol],
-    });
+    if !self.is_symbol_for_namespace_referenced {
+      self.is_symbol_for_namespace_referenced = true;
+      self.stmt_infos.push(StmtInfo {
+        stmt_idx: self.ast.program().body.len(),
+        declared_symbols: vec![self.namespace_symbol.0.symbol],
+      });
+    }
   }
 
   // https://tc39.es/ecma262/#sec-getexportednames
@@ -320,18 +336,6 @@ impl NormalModule {
   }
 
   pub fn add_cjs_symbol(&mut self, symbols: &mut Symbols, exported: Atom, is_star: bool) {
-    if self.symbol_for_cjs_wrap.is_none() {
-      let name = format!("require_{}", self.resource_id.generate_unique_name()).into();
-      self.symbol_for_cjs_wrap = Some(symbols.tables[self.id].create_symbol(name));
-      self.stmt_infos.push(StmtInfo {
-        stmt_idx: self.ast.program().body.len(),
-        declared_symbols: vec![self.symbol_for_cjs_wrap.unwrap()],
-      });
-      self.stmt_infos.push(StmtInfo {
-        stmt_idx: self.ast.program().body.len() + 1,
-        declared_symbols: vec![self.namespace_symbol.0.symbol],
-      });
-    }
     if !is_star {
       self
         .symbols_for_cjs
@@ -344,6 +348,27 @@ impl NormalModule {
           });
           (self.id, symbol).into()
         });
+    }
+  }
+
+  pub fn add_wrap_symbol(&mut self, symbols: &mut Symbols) {
+    if self.symbol_for_wrap.is_none() {
+      let name = format!(
+        "{}_{}",
+        if self.module_resolution == ModuleResolution::CommonJs {
+          "require"
+        } else {
+          "init"
+        },
+        self.resource_id.generate_unique_name()
+      )
+      .into();
+      self.symbol_for_wrap = Some(symbols.tables[self.id].create_symbol(name));
+      self.stmt_infos.push(StmtInfo {
+        stmt_idx: self.ast.program().body.len(),
+        declared_symbols: vec![self.symbol_for_wrap.unwrap()],
+      });
+      self.initialize_namespace();
     }
   }
 }

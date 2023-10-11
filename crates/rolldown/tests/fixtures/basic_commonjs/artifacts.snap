@@ -7,19 +7,21 @@ input_file: crates/rolldown/tests/fixtures/basic_commonjs
 
 ```js
 // esm.js
+function esm_default_fn () {
+}
 function esm_named_fn () {
 }
 var esm_named_var;
 
 var esm_ns = {
   get esm_named_var() { return esm_named_var },
-  get default() { return esm_default },
+  get default() { return esm_default_fn },
   get esm_named_fn() { return esm_named_fn },
   get esm_named_class() { return esm_named_class }
 };
 var init_esm = __esm({
 'esm.js'() {
-esm_default = 1;
+
 esm_named_var = 1;
 
 esm_named_class = class esm_named_class {}
@@ -38,5 +40,5 @@ var commonjs_ns = __toESM(require_commonjs());
 
 init_esm();
 
-console.log(_default, esm_default, esm_named_var, esm_named_fn, esm_named_class)
+console.log(_default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class)
 ```

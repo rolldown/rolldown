@@ -2,13 +2,12 @@ use std::fmt::Debug;
 
 use index_vec::IndexVec;
 use oxc::{
-  ast::Visit,
   semantic::{ReferenceId, ScopeTree, SymbolId},
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, NamedImport, ResolvedExport, ResourceId,
-  StmtInfo, StmtInfoId, SymbolRef,
+  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleResolution, NamedImport,
+  ResolvedExport, ResourceId, StmtInfo, StmtInfoId, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -19,7 +18,10 @@ use crate::bundler::{
   graph::symbols::Symbols,
   module::module::Module,
   source_mutations::BoxedSourceMutation,
-  visitors::{RendererContext, SourceRenderer},
+  visitors::{
+    commonjs_source_render::CommonJsSourceRender, esm_source_render::EsmSourceRender,
+    esm_wrap_source_render::EsmWrapSourceRender, RendererContext,
+  },
 };
 
 #[derive(Debug)]
@@ -33,9 +35,10 @@ pub struct NormalModule {
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
-  pub dynamic_imports: FxHashMap<Span, ImportRecordId>,
+  pub imports: FxHashMap<Span, ImportRecordId>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
+  pub module_resolution: ModuleResolution,
   // resolved
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
   pub resolved_star_exports: Vec<ModuleId>,
@@ -43,6 +46,8 @@ pub struct NormalModule {
   pub default_export_symbol: Option<SymbolId>,
   pub namespace_symbol: (SymbolRef, ReferenceId),
   pub is_symbol_for_namespace_referenced: bool,
+  pub cjs_symbols: FxHashMap<Atom, SymbolRef>,
+  pub wrap_symbol: Option<SymbolId>,
 }
 
 pub enum Resolution {
@@ -56,36 +61,24 @@ impl NormalModule {
     // FIXME: should not clone
     let mut source = MagicString::new(self.ast.source().to_string());
 
-    if self.is_symbol_for_namespace_referenced {
-      let ns_ref = ctx.symbols.par_get_canonical_ref(self.namespace_symbol.0);
-      let ns_name = ctx.canonical_names.get(&ns_ref).unwrap();
-      let exports: String = self
-        .resolved_exports
-        .iter()
-        .map(|(exported_name, info)| {
-          let canonical_ref = ctx.symbols.par_get_canonical_ref(info.local_symbol);
-          let canonical_name = ctx.canonical_names.get(&canonical_ref).unwrap();
-          format!("  get {exported_name}() {{ return {canonical_name} }}",)
-        })
-        .collect::<Vec<_>>()
-        .join(",\n");
-      source.append(format!("\nvar {ns_name} = {{\n{exports}\n}};\n"));
+    let ctx = RendererContext::new(
+      ctx.symbols,
+      ctx.canonical_names,
+      &mut source,
+      ctx.module_to_chunk,
+      ctx.chunks,
+      ctx.modules,
+      self,
+      ctx.runtime,
+    );
+
+    if self.module_resolution == ModuleResolution::CommonJs {
+      CommonJsSourceRender::new(ctx).apply();
+    } else if self.wrap_symbol.is_some() {
+      EsmWrapSourceRender::new(ctx).apply();
+    } else {
+      EsmSourceRender::new(ctx).apply();
     }
-
-    let program = self.ast.program();
-
-    let mut renderer = SourceRenderer::new(RendererContext {
-      symbols: ctx.symbols,
-      id: self.id,
-      final_names: ctx.canonical_names,
-      default_export_symbol: self.default_export_symbol.map(|id| (self.id, id).into()),
-      source: &mut source,
-      dynamic_imports: &self.dynamic_imports,
-      import_records: &self.import_records,
-      chunks: ctx.chunks,
-      module_to_chunk: ctx.module_to_chunk,
-    });
-    renderer.visit_program(program);
 
     source.prepend(format!("// {}\n", self.resource_id.prettify()));
 
@@ -98,10 +91,13 @@ impl NormalModule {
   }
 
   pub fn initialize_namespace(&mut self) {
-    self.stmt_infos.push(StmtInfo {
-      stmt_idx: self.ast.program().body.len(),
-      declared_symbols: vec![self.namespace_symbol.0.symbol],
-    });
+    if !self.is_symbol_for_namespace_referenced {
+      self.is_symbol_for_namespace_referenced = true;
+      self.stmt_infos.push(StmtInfo {
+        stmt_idx: self.ast.program().body.len(),
+        declared_symbols: vec![self.namespace_symbol.0.symbol],
+      });
+    }
   }
 
   // https://tc39.es/ecma262/#sec-getexportednames
@@ -279,5 +275,47 @@ impl NormalModule {
     }
 
     resolved
+  }
+
+  pub fn resolve_cjs_symbol(&self, export_name: &Atom, is_star: bool) -> SymbolRef {
+    if is_star {
+      self.namespace_symbol.0
+    } else {
+      *self.cjs_symbols.get(export_name).unwrap()
+    }
+  }
+
+  pub fn add_cjs_symbol(&mut self, symbols: &mut Symbols, exported: Atom, is_star: bool) {
+    if !is_star {
+      self.cjs_symbols.entry(exported.clone()).or_insert_with(|| {
+        let symbol = symbols.tables[self.id].create_symbol(exported.clone());
+        self.stmt_infos.push(StmtInfo {
+          stmt_idx: self.ast.program().body.len(),
+          declared_symbols: vec![symbol],
+        });
+        (self.id, symbol).into()
+      });
+    }
+  }
+
+  pub fn add_wrap_symbol(&mut self, symbols: &mut Symbols) {
+    if self.wrap_symbol.is_none() {
+      let name = format!(
+        "{}_{}",
+        if self.module_resolution == ModuleResolution::CommonJs {
+          "require"
+        } else {
+          "init"
+        },
+        self.resource_id.generate_unique_name()
+      )
+      .into();
+      self.wrap_symbol = Some(symbols.tables[self.id].create_symbol(name));
+      self.stmt_infos.push(StmtInfo {
+        stmt_idx: self.ast.program().body.len(),
+        declared_symbols: vec![self.wrap_symbol.unwrap()],
+      });
+      self.initialize_namespace();
+    }
   }
 }

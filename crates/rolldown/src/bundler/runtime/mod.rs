@@ -24,7 +24,7 @@ impl Runtime {
       .collect()
   }
 
-  pub fn _resolve_symbol(&self, name: &Atom) -> SymbolRef {
+  pub fn resolve_symbol(&self, name: &Atom) -> SymbolRef {
     let symbol_id = self.name_to_symbol[name];
     (self.id, symbol_id).into()
   }

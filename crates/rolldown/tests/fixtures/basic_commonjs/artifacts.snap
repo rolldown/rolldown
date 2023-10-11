@@ -1,0 +1,44 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/basic_commonjs
+---
+# main.js
+
+```js
+// esm.js
+function esm_default_fn () {
+}
+function esm_named_fn () {
+}
+var esm_named_var,esm_named_class;
+
+var esm_ns = {
+  get esm_named_var() { return esm_named_var },
+  get default() { return esm_default_fn },
+  get esm_named_fn() { return esm_named_fn },
+  get esm_named_class() { return esm_named_class }
+};
+var init_esm = __esm({
+'esm.js'() {
+
+esm_named_var = 1;
+
+esm_named_class = class esm_named_class {}
+}
+});
+// commonjs.js
+var require_commonjs = __commonJS({
+'commonjs.js'(exports, module) {
+var value = (init_esm(), __toCommonJS(esm_ns));
+module.exports = value;
+}
+});
+// main.js
+var _default = commonjs_ns.default;
+var commonjs_ns = __toESM(require_commonjs());
+
+init_esm();
+
+console.log(_default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class)
+```

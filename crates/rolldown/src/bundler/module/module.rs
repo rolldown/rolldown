@@ -7,9 +7,10 @@ use string_wizard::MagicString;
 use crate::bundler::{
   chunk::{ChunkId, ChunksVec},
   graph::symbols::Symbols,
+  runtime::Runtime,
 };
 
-use super::{external_module::ExternalModule, NormalModule};
+use super::{external_module::ExternalModule, module_id::ModuleVec, NormalModule};
 
 #[derive(Debug)]
 pub enum Module {
@@ -62,12 +63,7 @@ impl Module {
 
   pub fn mark_symbol_for_namespace_referenced(&mut self) {
     match self {
-      Module::Normal(m) => {
-        if !m.is_symbol_for_namespace_referenced {
-          m.is_symbol_for_namespace_referenced = true;
-          m.initialize_namespace()
-        }
-      }
+      Module::Normal(m) => m.initialize_namespace(),
       Module::External(m) => m.is_symbol_for_namespace_referenced = true,
     }
   }
@@ -85,4 +81,6 @@ pub struct ModuleRenderContext<'a> {
   pub symbols: &'a Symbols,
   pub module_to_chunk: &'a IndexVec<ModuleId, Option<ChunkId>>,
   pub chunks: &'a ChunksVec,
+  pub modules: &'a ModuleVec,
+  pub runtime: &'a Runtime,
 }

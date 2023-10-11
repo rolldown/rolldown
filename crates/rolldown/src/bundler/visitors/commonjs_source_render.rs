@@ -37,7 +37,7 @@ impl<'ast> Visit<'ast> for CommonJsSourceRender<'ast> {
         if let Module::Normal(importee) = importee {
           let wrap_symbol_name = self
             .ctx
-            .get_symbol_final_name(importee.id, importee.wrap_symbol.unwrap())
+            .get_symbol_final_name((importee.id, importee.wrap_symbol.unwrap()).into())
             .unwrap();
           if importee.module_resolution == ModuleResolution::CommonJs {
             self.ctx.source.update(
@@ -48,7 +48,7 @@ impl<'ast> Visit<'ast> for CommonJsSourceRender<'ast> {
           } else {
             let namespace_name = self
               .ctx
-              .get_symbol_final_name(importee.id, importee.namespace_symbol.0.symbol)
+              .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
               .unwrap();
             let to_commonjs_runtime_symbol_name =
               self.ctx.get_runtime_symbol_final_name("__toCommonJS");

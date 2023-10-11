@@ -9,7 +9,7 @@ use super::RendererContext;
 
 pub struct EsmWrapSourceRender<'ast> {
   ctx: RendererContext<'ast>,
-  hoisted: Vec<Atom>,
+  hoisted_vars: Vec<Atom>,
   hoisted_functions: Vec<String>,
 }
 
@@ -17,7 +17,7 @@ impl<'ast> EsmWrapSourceRender<'ast> {
   pub fn new(ctx: RendererContext<'ast>) -> Self {
     Self {
       ctx,
-      hoisted: vec![],
+      hoisted_vars: vec![],
       hoisted_functions: vec![],
     }
   }
@@ -52,7 +52,7 @@ impl<'ast> EsmWrapSourceRender<'ast> {
     self
       .ctx
       .source
-      .prepend(format!("var {};\n", self.hoisted.join(",")));
+      .prepend(format!("var {};\n", self.hoisted_vars.join(",")));
     self
       .ctx
       .source
@@ -87,11 +87,11 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
             .filter_map(|decl| match &decl.id.kind {
               oxc::ast::ast::BindingPatternKind::BindingIdentifier(id) => self
                 .ctx
-                .get_symbol_final_name(self.ctx.module.id, id.symbol_id.get().unwrap()),
+                .get_symbol_final_name((self.ctx.module.id, id.symbol_id.get().unwrap()).into()),
               _ => unimplemented!(),
             })
             .cloned();
-          self.hoisted.extend(names);
+          self.hoisted_vars.extend(names);
           self.ctx.remove_node(Span::new(
             named_decl.span.start,
             var_decl.declarations[0].span.start,
@@ -115,8 +115,9 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
           let id = class.id.as_ref().unwrap();
           if let Some(name) = self
             .ctx
-            .get_symbol_final_name(self.ctx.module.id, id.expect_symbol_id())
+            .get_symbol_final_name((self.ctx.module.id, id.expect_symbol_id()).into())
           {
+            self.hoisted_vars.push(name.clone());
             self.ctx.overwrite(
               named_decl.span.start,
               class.span.start,
@@ -145,6 +146,7 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
     match &decl.declaration {
       oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
         let default_symbol_name = self.ctx.default_symbol_name.unwrap();
+        self.hoisted_vars.push(default_symbol_name.clone());
         self.ctx.overwrite(
           decl.span.start,
           exp.span().start,
@@ -165,6 +167,7 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
         let default_symbol_name = self.ctx.default_symbol_name.unwrap();
+        self.hoisted_vars.push(default_symbol_name.clone());
         self.ctx.overwrite(
           decl.span.start,
           class.span.start,

@@ -11,7 +11,7 @@ function esm_default_fn () {
 }
 function esm_named_fn () {
 }
-var esm_named_var;
+var esm_named_var,esm_named_class;
 
 var esm_ns = {
   get esm_named_var() { return esm_named_var },

@@ -4,7 +4,7 @@ pub mod esm_wrap_source_render;
 pub mod scanner;
 use index_vec::IndexVec;
 use oxc::{
-  semantic::{ReferenceId, SymbolId},
+  semantic::ReferenceId,
   span::{Atom, Span},
 };
 use rolldown_common::{ModuleId, ModuleResolution, SymbolRef};
@@ -46,16 +46,15 @@ impl<'ast> RendererContext<'ast> {
   ) -> Self {
     let wrap_symbol_name = module
       .wrap_symbol
-      .and_then(|s| get_symbol_final_name(module.id, s, symbols, final_names));
+      .and_then(|s| get_symbol_final_name((module.id, s).into(), symbols, final_names));
     let namespace_symbol_name = get_symbol_final_name(
-      module.id,
-      module.namespace_symbol.0.symbol,
+      (module.id, module.namespace_symbol.0.symbol).into(),
       symbols,
       final_names,
     );
     let default_symbol_name = module
       .default_export_symbol
-      .and_then(|s| get_symbol_final_name(module.id, s, symbols, final_names));
+      .and_then(|s| get_symbol_final_name((module.id, s).into(), symbols, final_names));
     Self {
       symbols,
       final_names,
@@ -91,12 +90,8 @@ impl<'ast> RendererContext<'ast> {
     self.overwrite(span.start, span.end, name.to_string());
   }
 
-  pub fn get_symbol_final_name(
-    &self,
-    module_id: ModuleId,
-    symbol_id: SymbolId,
-  ) -> Option<&'ast Atom> {
-    get_symbol_final_name(module_id, symbol_id, self.symbols, self.final_names)
+  pub fn get_symbol_final_name(&self, symbol: SymbolRef) -> Option<&'ast Atom> {
+    get_symbol_final_name(symbol, self.symbols, self.final_names)
   }
 
   pub fn get_reference_final_name(
@@ -110,14 +105,16 @@ impl<'ast> RendererContext<'ast> {
   pub fn get_runtime_symbol_final_name(&self, name: &str) -> Atom {
     let symbol = self.runtime.resolve_symbol(&name.into());
     self
-      .get_symbol_final_name(self.runtime.id, symbol)
+      .get_symbol_final_name(symbol)
       .cloned()
       .unwrap_or_else(|| name.into())
     // .expect(&format!("runtime symbol {name} not found"))
   }
 
   pub fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
-    if let Some(name) = self.get_symbol_final_name(self.module.id, ident.symbol_id.get().unwrap()) {
+    if let Some(name) =
+      self.get_symbol_final_name((self.module.id, ident.symbol_id.get().unwrap()).into())
+    {
       if ident.name != name {
         self.rename_symbol(ident.span, name.clone());
       }
@@ -167,10 +164,10 @@ impl<'ast> RendererContext<'ast> {
       if importee.module_resolution == ModuleResolution::CommonJs {
         // add import cjs symbol binding
         let namespace_name = self
-          .get_symbol_final_name(importee.id, importee.namespace_symbol.0.symbol)
+          .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
           .unwrap();
         let wrap_symbol_name = self
-          .get_symbol_final_name(importee.id, importee.wrap_symbol.unwrap())
+          .get_symbol_final_name((importee.id, importee.wrap_symbol.unwrap()).into())
           .unwrap();
         let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name("__toESM");
         self.source.prepend_left(
@@ -180,12 +177,15 @@ impl<'ast> RendererContext<'ast> {
         decl.specifiers.iter().for_each(|s| match s {
           oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
             if let Some(name) = self.get_symbol_final_name(
-              importee.id,
-              importee
-                .cjs_symbols
-                .get(spec.imported.name())
-                .unwrap()
-                .symbol,
+              (
+                importee.id,
+                importee
+                  .cjs_symbols
+                  .get(spec.imported.name())
+                  .unwrap()
+                  .symbol,
+              )
+                .into(),
             ) {
               self.source.prepend_left(
                 decl.span.start,
@@ -195,12 +195,15 @@ impl<'ast> RendererContext<'ast> {
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
             if let Some(name) = self.get_symbol_final_name(
-              importee.id,
-              importee
-                .cjs_symbols
-                .get(&Atom::new_inline("default"))
-                .unwrap()
-                .symbol,
+              (
+                importee.id,
+                importee
+                  .cjs_symbols
+                  .get(&Atom::new_inline("default"))
+                  .unwrap()
+                  .symbol,
+              )
+                .into(),
             ) {
               self.source.prepend_left(
                 decl.span.start,
@@ -213,7 +216,7 @@ impl<'ast> RendererContext<'ast> {
       } else if let Some(wrap_symbol) = importee.wrap_symbol {
         // init wrapped esm module
         let wrap_symbol_name = self
-          .get_symbol_final_name(importee.id, wrap_symbol)
+          .get_symbol_final_name((importee.id, wrap_symbol).into())
           .unwrap();
         self
           .source

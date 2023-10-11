@@ -1,5 +1,5 @@
 use oxc::{semantic::SymbolId, span::Atom};
-use rolldown_common::ModuleId;
+use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 
 use super::graph::symbols::SymbolMap;
@@ -24,7 +24,8 @@ impl Runtime {
       .collect()
   }
 
-  pub fn resolve_symbol(&self, name: &Atom) -> SymbolId {
-    self.name_to_symbol[name]
+  pub fn resolve_symbol(&self, name: &Atom) -> SymbolRef {
+    let symbol_id = self.name_to_symbol[name];
+    (self.id, symbol_id).into()
   }
 }

@@ -15,6 +15,7 @@ use super::{
   chunk::{chunk::Chunk, ChunkId},
   graph::symbols::{get_reference_final_name, get_symbol_final_name, Symbols},
   module::{module::Module, module_id::ModuleVec, NormalModule},
+  runtime::Runtime,
 };
 
 pub struct RendererContext<'ast> {
@@ -28,9 +29,11 @@ pub struct RendererContext<'ast> {
   wrap_symbol_name: Option<&'ast Atom>,
   namespace_symbol_name: Option<&'ast Atom>,
   default_symbol_name: Option<&'ast Atom>,
+  runtime: &'ast Runtime,
 }
 
 impl<'ast> RendererContext<'ast> {
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     symbols: &'ast Symbols,
     final_names: &'ast FxHashMap<SymbolRef, Atom>,
@@ -39,6 +42,7 @@ impl<'ast> RendererContext<'ast> {
     chunks: &'ast IndexVec<ChunkId, Chunk>,
     modules: &'ast ModuleVec,
     module: &'ast NormalModule,
+    runtime: &'ast Runtime,
   ) -> Self {
     let wrap_symbol_name = module
       .wrap_symbol
@@ -63,6 +67,7 @@ impl<'ast> RendererContext<'ast> {
       wrap_symbol_name,
       namespace_symbol_name,
       default_symbol_name,
+      runtime,
     }
   }
 
@@ -100,6 +105,15 @@ impl<'ast> RendererContext<'ast> {
     reference_id: ReferenceId,
   ) -> Option<&Atom> {
     get_reference_final_name(module_id, reference_id, self.symbols, self.final_names)
+  }
+
+  pub fn get_runtime_symbol_final_name(&self, name: &str) -> Atom {
+    let symbol = self.runtime.resolve_symbol(&name.into());
+    self
+      .get_symbol_final_name(self.runtime.id, symbol)
+      .cloned()
+      .unwrap_or_else(|| name.into())
+    // .expect(&format!("runtime symbol {name} not found"))
   }
 
   pub fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
@@ -158,9 +172,10 @@ impl<'ast> RendererContext<'ast> {
         let wrap_symbol_name = self
           .get_symbol_final_name(importee.id, importee.wrap_symbol.unwrap())
           .unwrap();
+        let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name("__toESM");
         self.source.prepend_left(
           decl.span.start,
-          format!("var {namespace_name} = __toESM({wrap_symbol_name}());\n"),
+          format!("var {namespace_name} = {to_esm_runtime_symbol_name}({wrap_symbol_name}());\n"),
         );
         decl.specifiers.iter().for_each(|s| match s {
           oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {

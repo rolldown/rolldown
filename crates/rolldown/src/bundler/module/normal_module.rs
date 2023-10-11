@@ -69,6 +69,7 @@ impl NormalModule {
       ctx.chunks,
       ctx.modules,
       self,
+      ctx.runtime,
     );
 
     if self.module_resolution == ModuleResolution::CommonJs {

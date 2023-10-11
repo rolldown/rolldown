@@ -1,9 +1,17 @@
+// Port from https://github.com/evanw/esbuild/blob/main/internal/runtime/runtime.go
 var __create = Object.create
 var __defProp = Object.defineProperty
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor // Note: can return "undefined" due to a Safari bug
 var __getOwnPropNames = Object.getOwnPropertyNames
 var __getProtoOf = Object.getPrototypeOf
 var __hasOwnProp = Object.prototype.hasOwnProperty
+// This is for lazily-initialized ESM code. This has two implementations, a
+// compact one for minified code and a verbose one that generates friendly
+// names in V8's profiler and in stack traces.
+var __esm = (fn, res) => function () {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res
+}
+var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res)
 // Wraps a CommonJS closure and returns a require() function. This has two
 // implementations, a compact one for minified code and a verbose one that
 // generates friendly names in V8's profiler and in stack traces.

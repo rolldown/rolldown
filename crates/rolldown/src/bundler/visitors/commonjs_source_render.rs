@@ -19,8 +19,9 @@ impl<'ast> CommonJsSourceRender<'ast> {
     self.visit_program(program);
     let wrap_symbol_name = self.ctx.wrap_symbol_name.unwrap();
     let module_path = self.ctx.module.resource_id.prettify();
+    let commonjs_runtime_symbol_name = self.ctx.get_runtime_symbol_final_name("__commonJS");
     self.ctx.source.prepend(format!(
-      "var {wrap_symbol_name} = __commonJS({{\n'{module_path}'(exports, module) {{\n",
+      "var {wrap_symbol_name} = {commonjs_runtime_symbol_name}({{\n'{module_path}'(exports, module) {{\n",
     ));
     self.ctx.source.append("\n}\n});");
   }
@@ -49,10 +50,14 @@ impl<'ast> Visit<'ast> for CommonJsSourceRender<'ast> {
               .ctx
               .get_symbol_final_name(importee.id, importee.namespace_symbol.0.symbol)
               .unwrap();
+            let to_commonjs_runtime_symbol_name =
+              self.ctx.get_runtime_symbol_final_name("__toCommonJS");
             self.ctx.source.update(
               expr.span.start,
               expr.span.end,
-              format!("({wrap_symbol_name}(), __toCommonJS({namespace_name}))"),
+              format!(
+                "({wrap_symbol_name}(), {to_commonjs_runtime_symbol_name}({namespace_name}))"
+              ),
             );
           }
         }

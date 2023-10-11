@@ -7,6 +7,7 @@ use string_wizard::MagicString;
 use crate::bundler::{
   chunk::{ChunkId, ChunksVec},
   graph::symbols::Symbols,
+  runtime::Runtime,
 };
 
 use super::{external_module::ExternalModule, module_id::ModuleVec, NormalModule};
@@ -81,4 +82,5 @@ pub struct ModuleRenderContext<'a> {
   pub module_to_chunk: &'a IndexVec<ModuleId, Option<ChunkId>>,
   pub chunks: &'a ChunksVec,
   pub modules: &'a ModuleVec,
+  pub runtime: &'a Runtime,
 }

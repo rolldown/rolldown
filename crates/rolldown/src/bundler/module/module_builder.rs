@@ -15,7 +15,7 @@ use crate::bundler::graph::symbols::SymbolMap;
 use super::NormalModule;
 
 #[derive(Debug, Default)]
-pub struct ModuleBuilder {
+pub struct NormalModuleBuilder {
   pub id: Option<ModuleId>,
   pub path: Option<ResourceId>,
   pub ast: Option<OxcProgram>,
@@ -31,7 +31,7 @@ pub struct ModuleBuilder {
   pub module_resolution: Option<ModuleResolution>,
 }
 
-impl ModuleBuilder {
+impl NormalModuleBuilder {
   pub fn initialize_namespace_binding(&mut self, symbol_table: &mut SymbolMap) {
     let name = format!("{}_ns", self.path.as_ref().unwrap().generate_unique_name());
     let symbol_ref: SymbolRef = (self.id.unwrap(), symbol_table.create_symbol(name.into())).into();

@@ -4,7 +4,8 @@ use rolldown_resolver::Resolver;
 use rolldown_utils::block_on_spawn_all;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use super::normal_module_task::ModuleTask;
+use super::normal_module_task::NormalModuleTask;
+use super::runtime_normal_module_task::RuntimeNormalModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
 use crate::bundler::graph::graph::Graph;
@@ -52,13 +53,7 @@ impl<'a> ModuleLoader<'a> {
 
     let mut intermediate_modules: IndexVec<ModuleId, Option<Module>> =
       IndexVec::with_capacity(resolved_entries.len() + 1 /* runtime */);
-    self.graph.runtime.id = self.try_spawn_new_task(
-      &ResolvedRequestInfo {
-        path: RUNTIME_PATH.to_string().into(),
-        is_external: false,
-      },
-      &mut intermediate_modules,
-    );
+    self.graph.runtime.id = self.try_spawn_runtime_normal_module_task(&mut intermediate_modules);
 
     let mut entries = resolved_entries
       .into_iter()
@@ -109,15 +104,26 @@ impl<'a> ModuleLoader<'a> {
 
           tables[task_result.module_id] = symbol_table
         }
+        Msg::RuntimeNormalModuleDone(task_result) => {
+          let NormalModuleTaskResult {
+            module_id,
+            symbol_map: symbol_table,
+            builder,
+            ..
+          } = task_result;
+          while tables.len() <= task_result.module_id.raw() as usize {
+            tables.push(Default::default());
+          }
+          let runtime_normal_module = builder.build();
+          self.graph.runtime.init_symbols(&runtime_normal_module);
+          intermediate_modules[module_id] = Some(Module::Normal(runtime_normal_module));
+
+          tables[task_result.module_id] = symbol_table
+        }
       }
       self.remaining -= 1;
     }
     self.graph.symbols = Symbols::new(tables);
-
-    self
-      .graph
-      .runtime
-      .init_symbols(&self.graph.symbols.tables[self.graph.runtime.id]);
 
     self.graph.modules = intermediate_modules
       .into_iter()
@@ -191,9 +197,26 @@ impl<'a> ModuleLoader<'a> {
 
           let module_path = ResourceId::new(info.path.clone(), &self.input_options.cwd);
 
-          let task = ModuleTask::new(id, self.resolver.clone(), module_path, self.tx.clone());
+          let task = NormalModuleTask::new(id, self.resolver.clone(), module_path, self.tx.clone());
           tokio::spawn(async move { task.run().await });
         }
+        id
+      }
+    }
+  }
+
+  fn try_spawn_runtime_normal_module_task(
+    &mut self,
+    intermediate_modules: &mut IndexVec<ModuleId, Option<Module>>,
+  ) -> ModuleId {
+    match self.visited.entry(RUNTIME_PATH.to_string().into()) {
+      std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
+      std::collections::hash_map::Entry::Vacant(not_visited) => {
+        let id = intermediate_modules.push(None);
+        not_visited.insert(id);
+        self.remaining += 1;
+        let task = RuntimeNormalModuleTask::new(id, self.resolver.clone(), self.tx.clone());
+        tokio::spawn(async move { task.run().await });
         id
       }
     }

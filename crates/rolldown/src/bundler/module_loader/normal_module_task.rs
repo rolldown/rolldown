@@ -13,7 +13,7 @@ use super::Msg;
 use crate::{
   bundler::{
     graph::symbols::SymbolMap,
-    module::module_builder::ModuleBuilder,
+    module::module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
     resolve_id::{resolve_id, ResolvedRequestInfo},
     runtime::RUNTIME_PATH,
@@ -21,7 +21,7 @@ use crate::{
   },
   BuildError, BuildResult, SharedResolver,
 };
-pub struct ModuleTask {
+pub struct NormalModuleTask {
   module_id: ModuleId,
   path: ResourceId,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
@@ -30,7 +30,7 @@ pub struct ModuleTask {
   resolver: SharedResolver,
 }
 
-impl ModuleTask {
+impl NormalModuleTask {
   pub fn new(
     id: ModuleId,
     resolver: SharedResolver,
@@ -48,7 +48,7 @@ impl ModuleTask {
   }
 
   pub async fn run(mut self) -> anyhow::Result<()> {
-    let mut builder = ModuleBuilder::default();
+    let mut builder = NormalModuleBuilder::default();
     tracing::trace!("process {:?}", self.path);
     // load
     let source = if RUNTIME_PATH == self.path.as_ref() {

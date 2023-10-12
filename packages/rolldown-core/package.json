@@ -1,0 +1,37 @@
+{
+  "name": "@rolldown/core",
+  "version": "0.1.4",
+  "description": "rolldown core binding",
+  "main": "./dist/index.js",
+  "module": "./lib/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./lib/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "lib"
+  ],
+  "scripts": {
+    "build": "cargo run --example build_rolldown_core"
+  },
+  "dependencies": {
+    "@rolldown/node-binding": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^18.14.0",
+    "rollup": "^3.17.2",
+    "type-fest": "^3.6.0"
+  }
+}

@@ -48,7 +48,7 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --all -- --deny warnings
 
-  test: 
+  test:
     name: Test
     runs-on: ubuntu-latest
     steps:
@@ -62,3 +62,41 @@ jobs:
 
       - name: Run Test
         run: cargo nextest run
+
+  node-test:
+    name: Node test
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          # - windows-latest
+          # - macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: ./.github/actions/rustup
+
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: yarn
+
+      - name: 'Install dependencies'
+        run: yarn install
+
+      - name: Format
+        run: yarn prettier
+
+      - name: Build
+        run: |
+          yarn build
+
+      - name: Test
+        run: |
+          yarn test

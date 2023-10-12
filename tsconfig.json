@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
+    "downlevelIteration": true,
+    "importHelpers": true,
+    "allowJs": true,
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "newLine": "LF",
+    "noEmitHelpers": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "preserveSymlinks": true,
+    "target": "ES2019",
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "stripInternal": true,
+    "resolveJsonModule": true,
+    "importsNotUsedAsValues": "remove",
+    "isolatedModules": true,
+    "outDir": "lib",
+    "lib": ["dom", "DOM.Iterable", "ES2019", "ES2020", "esnext"],
+    "baseUrl": "./packages",
+    "paths": {
+      "@rolldown/core": ["./core/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "target", "dist", "crates"]
+}

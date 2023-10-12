@@ -60,6 +60,7 @@ impl Fixture {
 
     let output = bundler
       .write(OutputOptions {
+        manual_chunks: test_config.output.manual_chunks,
         // dir: Some(fixture_path.join("dist").to_string_lossy().to_string()),
         // format: ModuleFormat::from_str(&tester.config.output.format).unwrap(),
         // export_mode: ExportMode::from_str(&tester.config.output.export_mode).unwrap(),

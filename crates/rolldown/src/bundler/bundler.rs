@@ -8,7 +8,10 @@ use super::{
     normalized_output_options::NormalizedOutputOptions,
   },
 };
-use crate::{bundler::bundle::bundle::Bundle, InputOptions};
+use crate::{
+  bundler::{bundle::bundle::Bundle, module_loader::ModuleLoader},
+  InputOptions,
+};
 
 pub struct Bundler {
   input_options: NormalizedInputOptions,
@@ -77,11 +80,11 @@ impl Bundler {
     tracing::trace!("NormalizedInputOptions {:#?}", self.input_options);
     tracing::trace!("NormalizedOutputOptions: {output_options:#?}",);
 
-    let mut graph = Graph::default();
-    graph.generate_module_graph(&self.input_options).await?;
+    let mut module_loader = ModuleLoader::new(&self.input_options);
+    let mut graph = Graph::generate_module_graph(&mut module_loader).await?;
 
-    let mut bundle = Bundle::new(&mut graph, &output_options);
-    let assets = bundle.generate(&self.input_options)?;
+    let mut bundle = Bundle::new(&mut graph, &mut module_loader, &output_options);
+    let assets = bundle.generate(&self.input_options).await?;
 
     Ok(assets)
   }

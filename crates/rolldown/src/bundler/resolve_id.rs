@@ -3,6 +3,7 @@ use rolldown_resolver::Resolver;
 
 use crate::BuildResult;
 
+#[derive(Debug)]
 pub struct ResolvedRequestInfo {
   pub path: RawPath,
   pub is_external: bool,

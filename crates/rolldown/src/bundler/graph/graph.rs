@@ -1,8 +1,5 @@
 use super::{linker::Linker, symbols::Symbols};
-use crate::bundler::{
-  module::module_id::ModuleVec, module_loader::ModuleLoader,
-  options::normalized_input_options::NormalizedInputOptions, runtime::Runtime,
-};
+use crate::bundler::{module::module_id::ModuleVec, module_loader::ModuleLoader, runtime::Runtime};
 use rolldown_common::ModuleId;
 use rustc_hash::FxHashSet;
 
@@ -17,20 +14,25 @@ pub struct Graph {
 
 impl Graph {
   pub async fn generate_module_graph(
-    &mut self,
-    input_options: &NormalizedInputOptions,
-  ) -> anyhow::Result<()> {
-    ModuleLoader::new(input_options, self)
-      .fetch_all_modules()
-      .await?;
+    module_loader: &mut ModuleLoader<'_>,
+  ) -> anyhow::Result<Graph> {
+    let (entries, modules, symbols, runtime) = module_loader.fetch_all_modules().await?;
 
-    tracing::trace!("{:#?}", self);
+    let mut graph = Graph {
+      modules,
+      entries,
+      symbols,
+      runtime,
+      ..Default::default()
+    };
 
-    self.sort_modules();
+    tracing::trace!("{:#?}", graph);
 
-    self.link();
+    graph.sort_modules();
 
-    Ok(())
+    graph.link();
+
+    Ok(graph)
   }
 
   pub fn sort_modules(&mut self) {

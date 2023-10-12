@@ -1,0 +1,25 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/code_splitting-manual-chunks
+---
+# 2.js
+
+```js
+// a.js
+console.log('a');
+```
+# main.js
+
+```js
+// main.js
+```
+# shared.js
+
+```js
+// foo.js
+console.log('foo');
+// bar.js
+
+console.log('bar');
+```

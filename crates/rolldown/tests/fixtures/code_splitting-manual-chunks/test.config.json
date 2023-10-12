@@ -1,0 +1,10 @@
+{
+    "output": {
+        "manualChunks": {
+            "shared": [
+                "bar.js",
+                "foo.js"
+            ]
+        }
+    }
+}

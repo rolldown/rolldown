@@ -7,19 +7,18 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use super::module_task::ModuleTask;
 use super::task_result::TaskResult;
 use super::Msg;
-use crate::bundler::graph::graph::Graph;
 use crate::bundler::graph::symbols::{SymbolMap, Symbols};
 use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::module::Module;
+use crate::bundler::module::module_id::ModuleVec;
 use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
 use crate::bundler::resolve_id::{resolve_id, ResolvedRequestInfo};
-use crate::bundler::runtime::RUNTIME_PATH;
+use crate::bundler::runtime::{Runtime, RUNTIME_PATH};
 use crate::BuildError;
 use crate::SharedResolver;
 
 pub struct ModuleLoader<'a> {
   input_options: &'a NormalizedInputOptions,
-  graph: &'a mut Graph,
   resolver: SharedResolver,
   visited: FxHashMap<RawPath, ModuleId>,
   remaining: u32,
@@ -28,7 +27,7 @@ pub struct ModuleLoader<'a> {
 }
 
 impl<'a> ModuleLoader<'a> {
-  pub fn new(input_options: &'a NormalizedInputOptions, graph: &'a mut Graph) -> Self {
+  pub fn new(input_options: &'a NormalizedInputOptions) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
     Self {
       tx,
@@ -37,11 +36,12 @@ impl<'a> ModuleLoader<'a> {
       resolver: Resolver::with_cwd(input_options.cwd.clone(), false).into(),
       visited: Default::default(),
       remaining: Default::default(),
-      graph,
     }
   }
 
-  pub async fn fetch_all_modules(&mut self) -> anyhow::Result<()> {
+  pub async fn fetch_all_modules(
+    &mut self,
+  ) -> anyhow::Result<(Vec<(Option<String>, ModuleId)>, ModuleVec, Symbols, Runtime)> {
     if self.input_options.input.is_empty() {
       return Err(anyhow::format_err!(
         "You must supply options.input to rolldown"
@@ -52,14 +52,13 @@ impl<'a> ModuleLoader<'a> {
 
     let mut intermediate_modules: IndexVec<ModuleId, Option<Module>> =
       IndexVec::with_capacity(resolved_entries.len() + 1 /* runtime */);
-    self.graph.runtime.id = self.try_spawn_new_task(
+    let mut runtime = Runtime::new(self.try_spawn_new_task(
       &ResolvedRequestInfo {
         path: RUNTIME_PATH.to_string().into(),
         is_external: false,
       },
       &mut intermediate_modules,
-    );
-
+    ));
     let mut entries = resolved_entries
       .into_iter()
       .map(|(name, info)| {
@@ -112,14 +111,11 @@ impl<'a> ModuleLoader<'a> {
       }
       self.remaining -= 1;
     }
-    self.graph.symbols = Symbols::new(tables);
+    let symbols = Symbols::new(tables);
 
-    self
-      .graph
-      .runtime
-      .init_symbols(&self.graph.symbols.tables[self.graph.runtime.id]);
+    runtime.init_symbols(&symbols.tables[runtime.id]);
 
-    self.graph.modules = intermediate_modules
+    let modules = intermediate_modules
       .into_iter()
       .map(|m| m.unwrap())
       .collect();
@@ -127,18 +123,38 @@ impl<'a> ModuleLoader<'a> {
     let mut dynamic_entries = Vec::from_iter(dynamic_entries);
     dynamic_entries.sort_by(|(a, _), (b, _)| a.cmp(b));
     entries.extend(dynamic_entries);
-    self.graph.entries = entries;
-    Ok(())
+    Ok((entries, modules, symbols, runtime))
   }
 
-  async fn resolve_entries(
-    &mut self,
-  ) -> anyhow::Result<Vec<(Option<String>, ResolvedRequestInfo)>> {
+  pub async fn resolve_manual_chunk_modules(
+    &self,
+    modules: &[String],
+  ) -> anyhow::Result<Vec<ModuleId>> {
+    let resolve_results = self
+      .resolve_dependencies(&modules.iter().collect::<Vec<_>>())
+      .await;
+
+    resolve_results.map(|results| {
+      results
+        .into_iter()
+        .map(|(i, r)| {
+          *self
+            .visited
+            .get(&r.path)
+            .unwrap_or_else(|| panic!("The manual chunk module {} isn't imported", modules[i]))
+        })
+        .collect::<Vec<_>>()
+    })
+  }
+
+  async fn resolve_dependencies(
+    &self,
+    deps: &[&String],
+  ) -> anyhow::Result<Vec<(usize, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
 
-    let resolved_ids = block_on_spawn_all(self.input_options.input.iter().map(
-      |input_item| async move {
-        let specifier = &input_item.import;
+    let resolved_ids = block_on_spawn_all(deps.iter().enumerate().map(
+      |(index, specifier)| async move {
         let resolve_id = resolve_id(resolver, specifier, None, false).await.unwrap();
 
         let Some(info) = resolve_id else {
@@ -149,7 +165,7 @@ impl<'a> ModuleLoader<'a> {
           return Err(BuildError::entry_cannot_be_external(info.path.as_str()));
         }
 
-        Ok((input_item.name.clone(), info))
+        Ok((index, info))
       },
     ));
 
@@ -167,6 +183,26 @@ impl<'a> ModuleLoader<'a> {
       .collect();
 
     Ok(ret)
+  }
+
+  async fn resolve_entries(
+    &mut self,
+  ) -> anyhow::Result<Vec<(Option<String>, ResolvedRequestInfo)>> {
+    let entry_modules = self
+      .input_options
+      .input
+      .iter()
+      .map(|i| &i.import)
+      .collect::<Vec<_>>();
+
+    let resolve_results = self.resolve_dependencies(&entry_modules).await;
+
+    resolve_results.map(|results| {
+      results
+        .into_iter()
+        .map(|(i, info)| (self.input_options.input[i].name.clone(), info))
+        .collect::<Vec<_>>()
+    })
   }
 
   fn try_spawn_new_task(

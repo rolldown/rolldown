@@ -1273,6 +1273,7 @@ name = "rolldown_testing"
 version = "0.0.1"
 dependencies = [
  "rolldown_error",
+ "rustc-hash",
  "schemars",
  "serde",
  "serde_json",

@@ -13,6 +13,13 @@ pub struct Runtime {
 }
 
 impl Runtime {
+  pub fn new(id: ModuleId) -> Self {
+    Self {
+      id,
+      name_to_symbol: Default::default(),
+    }
+  }
+
   pub fn init_symbols(&mut self, runtime_symbol_map: &SymbolMap) {
     // TODO: we should only storing top level symbols here.
     // But currently, I'm not sure how to get the scope info for the runtime module

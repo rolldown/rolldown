@@ -19,6 +19,11 @@ impl BitSet {
   pub fn set_bit(&mut self, bit: u32) {
     self.entries[bit as usize / 8] |= 1 << (bit & 7);
   }
+
+  pub fn clear(&mut self) {
+    let len = self.entries.len();
+    self.entries = vec![0; len];
+  }
 }
 
 impl Display for BitSet {

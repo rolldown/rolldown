@@ -1,0 +1,2 @@
+import './bar'
+import './foo'

@@ -1,4 +1,5 @@
 use derivative::Derivative;
+use rustc_hash::FxHashMap;
 
 use super::file_name_template::FileNameTemplate;
 use crate::OutputOptions;
@@ -8,6 +9,7 @@ use crate::OutputOptions;
 pub struct NormalizedOutputOptions {
   pub entry_file_names: FileNameTemplate,
   pub chunk_file_names: FileNameTemplate,
+  pub manual_chunks: Option<FxHashMap<String, Vec<String>>>,
 }
 
 impl NormalizedOutputOptions {
@@ -23,6 +25,7 @@ impl NormalizedOutputOptions {
           .chunk_file_names
           .unwrap_or_else(|| "[name]-[hash].js".to_string()),
       ),
+      manual_chunks: opts.manual_chunks,
     }
   }
 }

@@ -1,7 +1,7 @@
+use crate::impl_serde_default;
+use rustc_hash::FxHashMap;
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::impl_serde_default;
 
 fn esm_by_default() -> String {
   "esm".to_string()
@@ -18,6 +18,7 @@ pub struct OutputOptions {
   pub format: String,
   #[serde(default = "auto_by_default")]
   pub export_mode: String,
+  pub manual_chunks: Option<FxHashMap<String, Vec<String>>>,
 }
 
 impl_serde_default!(OutputOptions);

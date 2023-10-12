@@ -48,7 +48,7 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --all -- --deny warnings
 
-  test: 
+  test:
     name: Test
     runs-on: ubuntu-latest
     steps:
@@ -62,3 +62,45 @@ jobs:
 
       - name: Run Test
         run: cargo nextest run
+
+  node-test:
+    name: Node test
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - name: Cache cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            .cargo-cache
+            target/
+          key: node-test-${{ runner.os }}-${{ env.RUST_TOOLCHAIN }}
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: yarn
+      - name: 'Install dependencies'
+        run: yarn install
+      - name: Build
+        run: |
+          yarn build
+      - name: Test
+        run: |
+          yarn test

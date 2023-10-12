@@ -13,6 +13,7 @@ lint:
 fmt:
   cargo fmt
   taplo format
+  npm run prettier
 
 bench-prepare:
   git clone https://github.com/mrdoob/three.js.git --depth 1 ./temp/three.js  

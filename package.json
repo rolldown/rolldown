@@ -1,0 +1,41 @@
+{
+  "name": "rolldown",
+  "version": "0.0.0",
+  "description": "Rollup in Rust",
+  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "crates/rolldown_node_binding",
+    "packages/**"
+  ],
+  "scripts": {
+    "build": "run-s build:binding build:ts",
+    "build:ci:release": "run-s build:packages:ci build:ts build:binding:release",
+    "build:ts": "tsc -b tsconfig.project.json",
+    "build:binding": "yarn workspace @rolldown/node-binding run build",
+    "build:binding:release": "yarn workspace @rolldown/node-binding run build:release",
+    "test": "",
+    "test:core": "yarn workspace @rolldown/core-tests test",
+    "prettier": "prettier . '!**/*.{js||ts|json|md|yml|yaml}' -w"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "husky": "^8.0.3",
+    "lerna": "^6.5.1",
+    "lint-staged": "^13.1.2",
+    "lodash-es": "^4.17.21",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.8.4",
+    "rollup": "^3.17.3",
+    "typescript": "^5.0.0",
+    "zx": "^7.2.0"
+  },
+  "prettier": {
+    "printWidth": 80,
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "all",
+    "arrowParens": "always"
+  },
+  "packageManager": "yarn@3.4.1"
+}

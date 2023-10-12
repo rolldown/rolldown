@@ -3,7 +3,7 @@ name: Benchmark
 on:
   issue_comment:
     types: [created]
-    
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
@@ -16,10 +16,10 @@ jobs:
     steps:
       - name: Checkout Branch
         uses: actions/checkout@v4
-     
-      - name: Install Rust 
+
+      - name: Install Rust
         uses: ./.github/actions/rustup
-        
+
       - name: Prepare Benchmark
         run: |
           git clone https://github.com/mrdoob/three.js.git --depth 1 ./temp/three.js  
@@ -38,7 +38,7 @@ jobs:
           ref: main
 
       - name: Run Bench on Main Branch
-        run: cargo bench -p bench -- --save-baseline baseline  
+        run: cargo bench -p bench -- --save-baseline baseline
 
       - name: Compare Bench Results
         id: bench_comparison

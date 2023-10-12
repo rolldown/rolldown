@@ -1,0 +1,9 @@
+package/**/dist
+crates
+target
+temp
+.yarn
+
+**/.git
+**/node_modules
+

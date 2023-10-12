@@ -1,5 +1,5 @@
 packages/**/dist/*
-packages/rollup-tests/*
+packages/rollup-tests
 crates
 target
 temp

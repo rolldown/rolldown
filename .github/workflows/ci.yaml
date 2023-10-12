@@ -98,6 +98,8 @@ jobs:
           cache: yarn
       - name: 'Install dependencies'
         run: yarn install
+      - name: Format
+        run: yarn prettier
       - name: Build
         run: |
           yarn build

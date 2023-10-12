@@ -1,0 +1,15 @@
+import { f as fn$1 } from './generated-dep2.js';
+
+function fn () {
+  console.log('dep1 fn');
+}
+
+class Main1 {
+  constructor () {
+    fn();
+    fn$1();
+  }
+}
+
+export { Main1 as default };
+//# sourceMappingURL=main1.js.map

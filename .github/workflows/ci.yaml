@@ -94,9 +94,7 @@ jobs:
         run: yarn prettier
 
       - name: Build
-        run: |
-          yarn build
+        run: yarn build
 
       - name: Test
-        run: |
-          yarn test
+        run: yarn test

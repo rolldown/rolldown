@@ -1,0 +1,3 @@
+await operation();
+
+await retainedOperation();

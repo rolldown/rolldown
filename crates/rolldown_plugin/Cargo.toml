@@ -1,0 +1,15 @@
+[package]
+description = "rolldown_plugin"
+edition     = "2021"
+license     = "Apache-2.0"
+name        = "rolldown_plugin"
+version     = "0.0.1"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow          = { workspace = true }
+async-trait     = { workspace = true }
+rustc-hash      = { workspace = true }
+rolldown_common = { version = "0.0.1", path = "../rolldown_common" }
+rolldown_error  = { version = "0.0.1", path = "../rolldown_error" }

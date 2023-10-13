@@ -38,9 +38,9 @@ impl Bundler {
 impl Bundler {
   pub fn new_impl(env: Env, input_opts: InputOptions) -> napi::Result<Self> {
     NAPI_ENV.set(&env, || {
-      let input_opts = resolve_input_options(input_opts)?;
+      let (input_opts, plugins) = resolve_input_options(input_opts)?;
       Ok(Bundler {
-        inner: Mutex::new(NativeBundler::new(input_opts)),
+        inner: Mutex::new(NativeBundler::new(input_opts, plugins)),
       })
     })
   }

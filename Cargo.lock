@@ -1411,6 +1411,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_oxc",
+ "rolldown_plugin",
  "rolldown_resolver",
  "rolldown_testing",
  "rolldown_tracing",
@@ -1459,6 +1460,7 @@ dependencies = [
  "napi-derive",
  "rolldown",
  "rolldown_error",
+ "rolldown_plugin",
  "rolldown_tracing",
  "rustc-hash",
  "scoped-tls",
@@ -1472,6 +1474,17 @@ version = "0.1.0"
 dependencies = [
  "oxc",
  "rolldown_utils",
+]
+
+[[package]]
+name = "rolldown_plugin"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "rolldown_common",
+ "rolldown_error",
+ "rustc-hash",
 ]
 
 [[package]]

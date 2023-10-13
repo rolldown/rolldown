@@ -1,7 +1,12 @@
 use std::{collections::HashMap, path::PathBuf};
-
+mod plugin;
+mod plugin_adapter;
 use napi_derive::*;
 use serde::Deserialize;
+
+use crate::options::input_options::plugin_adapter::JsAdapterPlugin;
+
+use self::plugin::PluginOptions;
 
 #[napi(object)]
 #[derive(Deserialize, Debug, Default)]
@@ -27,7 +32,7 @@ pub struct InputOptions {
   // moduleContext?: ((id: string) => string | null | void) | { [id: string]: string };
   // onwarn?: WarningHandlerWithDefault;
   // perf?: boolean;
-  // pub plugins: Vec<BuildPluginOption>,
+  pub plugins: Vec<PluginOptions>,
   // preserveEntrySignatures?: PreserveEntrySignaturesOption;
   // /** @deprecated Use the "preserveModules" output option instead. */
   // preserveModules?: boolean;
@@ -42,21 +47,32 @@ pub struct InputOptions {
   // pub builtins: BuiltinsOptions,
 }
 
-pub fn resolve_input_options(opts: InputOptions) -> napi::Result<rolldown::InputOptions> {
+pub fn resolve_input_options(
+  opts: InputOptions,
+) -> napi::Result<(rolldown::InputOptions, Vec<rolldown_plugin::BoxPlugin>)> {
   let cwd = PathBuf::from(opts.cwd.clone());
   assert!(cwd != PathBuf::from("/"), "{:#?}", opts);
 
-  Ok(rolldown::InputOptions {
-    input: Some(
-      opts
-        .input
-        .into_iter()
-        .map(|(name, import)| rolldown::InputItem {
-          name: Some(name),
-          import,
-        })
-        .collect::<Vec<_>>(),
-    ),
-    cwd: Some(cwd),
-  })
+  let plugins = opts
+    .plugins
+    .into_iter()
+    .map(JsAdapterPlugin::new_boxed)
+    .collect::<napi::Result<Vec<_>>>()?;
+
+  Ok((
+    rolldown::InputOptions {
+      input: Some(
+        opts
+          .input
+          .into_iter()
+          .map(|(name, import)| rolldown::InputItem {
+            name: Some(name),
+            import,
+          })
+          .collect::<Vec<_>>(),
+      ),
+      cwd: Some(cwd),
+    },
+    plugins,
+  ))
 }

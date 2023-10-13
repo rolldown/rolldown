@@ -1,6 +1,8 @@
 import { InputOptions as RollupInputOptions } from '../rollup-types'
 import { InputOptions as BindingInputOptions } from '@rolldown/node-binding'
 import path from 'path'
+import { normalizePluginOption } from '../utils'
+import { createBuildPluginAdapter } from './create-build-plugin-adapter'
 
 export interface InputOptions extends RollupInputOptions {
   // --- NotGoingToSupports
@@ -119,7 +121,7 @@ export async function normalizeInputOptions(
     input,
     treeshake,
     // external,
-    // plugins,
+    plugins,
     cwd,
     preserveSymlinks,
     shimMissingExports,
@@ -129,10 +131,18 @@ export async function normalizeInputOptions(
     input: normalizeInput(input),
     treeshake: treeshake,
     // external: normalizeExternal(external),
-    // plugins: await normalizePlugins(plugins),
+    plugins: await normalizePlugins(plugins),
     cwd: cwd ?? process.cwd(),
     shimMissingExports: shimMissingExports ?? false,
     // builtins: {},
     preserveSymlinks: preserveSymlinks ?? false,
   }
+}
+
+async function normalizePlugins(
+  option: InputOptions['plugins'],
+): Promise<BindingInputOptions['plugins']> {
+  const plugins = await normalizePluginOption(option)
+  const adapters = plugins.map((plugin) => createBuildPluginAdapter(plugin))
+  return adapters
 }

@@ -1,3 +1,4 @@
+use rolldown_plugin::BoxPlugin;
 use sugar_path::AsPath;
 
 use super::{
@@ -12,14 +13,16 @@ use crate::{bundler::bundle::bundle::Bundle, InputOptions};
 
 pub struct Bundler {
   input_options: NormalizedInputOptions,
+  _plugins: Vec<BoxPlugin>,
 }
 
 impl Bundler {
-  pub fn new(input_options: InputOptions) -> Self {
+  pub fn new(input_options: InputOptions, plugins: Vec<BoxPlugin>) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
     Self {
       input_options: normalized,
+      _plugins: plugins,
     }
   }
 

@@ -7,10 +7,13 @@ use sugar_path::SugarPathBuf;
 async fn main() {
   let root = PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap());
   let cwd = root.join("./examples").into_normalize();
-  let mut bundler = Bundler::new(InputOptions {
-    input: Some(vec!["./index.js".to_string().into()]),
-    cwd: Some(cwd),
-  });
+  let mut bundler = Bundler::new(
+    InputOptions {
+      input: Some(vec!["./index.js".to_string().into()]),
+      cwd: Some(cwd),
+    },
+    vec![],
+  );
 
   bundler
     .generate(OutputOptions {

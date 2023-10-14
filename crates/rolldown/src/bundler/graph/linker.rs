@@ -22,7 +22,7 @@ impl<'graph> Linker<'graph> {
   }
 
   pub fn link(&mut self) {
-    self.create_module_wrap_symbol_and_reference();
+    self.create_module_wrap_symbol_and_runtime_symbol_reference();
 
     // propagate star exports
     for id in &self.graph.sorted_modules {
@@ -55,7 +55,7 @@ impl<'graph> Linker<'graph> {
       })
   }
 
-  fn create_module_wrap_symbol_and_reference(&mut self) {
+  fn create_module_wrap_symbol_and_runtime_symbol_reference(&mut self) {
     let mut modules_wrap = index_vec::index_vec![
       FxHashSet::default();
       self.graph.modules.len()

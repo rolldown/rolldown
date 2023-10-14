@@ -298,7 +298,7 @@ impl NormalModule {
     }
   }
 
-  pub fn add_wrap_symbol(&mut self, symbols: &mut Symbols) {
+  pub fn create_wrap_symbol(&mut self, symbols: &mut Symbols) {
     if self.wrap_symbol.is_none() {
       let name = format!(
         "{}_{}",

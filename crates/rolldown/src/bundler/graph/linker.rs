@@ -1,12 +1,15 @@
 use index_vec::IndexVec;
-use oxc::{semantic::ReferenceId, span::Atom};
+use oxc::{
+  semantic::{ReferenceId, SymbolId},
+  span::Atom,
+};
 use rolldown_common::{LocalOrReExport, ModuleId, ModuleResolution, ResolvedExport, SymbolRef};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::graph::Graph;
 use crate::bundler::{
   graph::symbols::Symbols,
-  module::{module::Module, normal_module::Resolution},
+  module::{module::Module, normal_module::Resolution, NormalModule},
 };
 
 pub struct Linker<'graph> {
@@ -19,8 +22,7 @@ impl<'graph> Linker<'graph> {
   }
 
   pub fn link(&mut self) {
-    // Create symbols for wrapped module
-    self.mark_modules_wrap();
+    self.create_module_wrap_symbol_and_reference();
 
     // propagate star exports
     for id in &self.graph.sorted_modules {
@@ -53,50 +55,119 @@ impl<'graph> Linker<'graph> {
       })
   }
 
-  fn mark_modules_wrap(&mut self) {
+  fn create_module_wrap_symbol_and_reference(&mut self) {
     let mut modules_wrap = index_vec::index_vec![
-      false;
+      FxHashSet::default();
       self.graph.modules.len()
     ];
-
-    for module_id in &self.graph.sorted_modules {
+    for (_, module_id) in &self.graph.entries {
       match &self.graph.modules[*module_id] {
-        Module::Normal(m) => {
-          if m.module_resolution == ModuleResolution::CommonJs {
-            mark_module_wrap(self.graph, *module_id, &mut modules_wrap);
-          }
+        Module::Normal(importer) => {
+          importer.import_records.iter().for_each(|r| {
+            let importee = &self.graph.modules[r.resolved_module];
+            if let Module::Normal(importee) = importee {
+              if importee.module_resolution == ModuleResolution::CommonJs {
+                mark_module_wrap_and_reference(
+                  self.graph,
+                  importer.id,
+                  r.resolved_module,
+                  &mut modules_wrap,
+                );
+              }
+            }
+          });
         }
         Module::External(_) => {}
       }
     }
 
-    for (module_id, wrap) in modules_wrap.into_iter_enumerated() {
-      if wrap {
+    let runtime_esm_symbol = self.graph.runtime.resolve_symbol_id(&"__esm".into());
+    let runtime_commonjs_symbol = self.graph.runtime.resolve_symbol_id(&"__commonJS".into());
+    let runtime_to_esm_symbol = self.graph.runtime.resolve_symbol_id(&"__toESM".into());
+    let runtime_to_commonjs_symbol = self.graph.runtime.resolve_symbol_id(&"__toCommonJS".into());
+
+    for (module_id, importers) in modules_wrap.into_iter_enumerated() {
+      if !importers.is_empty() {
         match &mut self.graph.modules[module_id] {
-          Module::Normal(m) => {
-            m.add_wrap_symbol(&mut self.graph.symbols);
+          Module::Normal(importee) => {
+            importee.create_wrap_symbol(&mut self.graph.symbols);
+
+            create_runtime_warp_symbol_reference(
+              importee,
+              &mut self.graph.symbols,
+              runtime_esm_symbol,
+              runtime_commonjs_symbol,
+            );
+          }
+          Module::External(_) => {}
+        }
+        match &self.graph.modules[module_id] {
+          Module::Normal(importee) => {
+            importers.into_iter().for_each(|id| {
+              self.graph.symbols.tables[id].create_reference(importee.wrap_symbol);
+
+              create_runtime_interop_symbol_reference(
+                self.graph.modules[id].expect_normal(),
+                importee,
+                &mut self.graph.symbols,
+                runtime_to_esm_symbol,
+                runtime_to_commonjs_symbol,
+              );
+            });
           }
           Module::External(_) => {}
         }
       }
     }
 
-    fn mark_module_wrap(
+    fn mark_module_wrap_and_reference(
       graph: &Graph,
-      module_id: ModuleId,
-      modules_wrap: &mut IndexVec<ModuleId, bool>,
+      importer: ModuleId,
+      importee: ModuleId,
+      modules_wrap: &mut IndexVec<ModuleId, FxHashSet<ModuleId>>,
     ) {
-      match &graph.modules[module_id] {
+      match &graph.modules[importee] {
         Module::Normal(module) => {
-          if modules_wrap[module_id] {
+          if modules_wrap[importee].contains(&importer) {
             return;
           }
-          modules_wrap[module_id] = true;
+          modules_wrap[importee].insert(importer);
           module.import_records.iter().for_each(|record| {
-            mark_module_wrap(graph, record.resolved_module, modules_wrap);
+            mark_module_wrap_and_reference(graph, importee, record.resolved_module, modules_wrap);
           });
         }
         Module::External(_) => {}
+      }
+    }
+
+    fn create_runtime_warp_symbol_reference(
+      module: &NormalModule,
+      symbols: &mut Symbols,
+      runtime_esm_symbol: SymbolId,
+      runtime_commonjs_symbol: SymbolId,
+    ) {
+      if module.module_resolution == ModuleResolution::CommonJs {
+        symbols.tables[module.id].create_reference(Some(runtime_commonjs_symbol));
+      } else {
+        symbols.tables[module.id].create_reference(Some(runtime_esm_symbol));
+      }
+    }
+
+    fn create_runtime_interop_symbol_reference(
+      importer: &NormalModule,
+      importee: &NormalModule,
+      symbols: &mut Symbols,
+      runtime_to_esm_symbol: SymbolId,
+      runtime_to_commonjs_symbol: SymbolId,
+    ) {
+      if importer.module_resolution == ModuleResolution::Esm
+        && importee.module_resolution == ModuleResolution::CommonJs
+      {
+        symbols.tables[importer.id].create_reference(Some(runtime_to_esm_symbol));
+      } else if importer.module_resolution == ModuleResolution::CommonJs
+        && importee.module_resolution == ModuleResolution::Esm
+      {
+        symbols.tables[importer.id].create_reference(Some(runtime_to_commonjs_symbol));
       }
     }
   }

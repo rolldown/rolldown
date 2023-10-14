@@ -41,21 +41,18 @@ impl Fixture {
       }])
     }
 
-    let mut bundler = Bundler::new(
-      InputOptions {
-        input: test_config.input.input.map(|items| {
-          items
-            .into_iter()
-            .map(|item| InputItem {
-              name: Some(item.name),
-              import: item.import,
-            })
-            .collect()
-        }),
-        cwd: Some(fixture_path.to_path_buf()),
-      },
-      vec![],
-    );
+    let mut bundler = Bundler::new(InputOptions {
+      input: test_config.input.input.map(|items| {
+        items
+          .into_iter()
+          .map(|item| InputItem {
+            name: Some(item.name),
+            import: item.import,
+          })
+          .collect()
+      }),
+      cwd: Some(fixture_path.to_path_buf()),
+    });
 
     if fixture_path.join("dist").is_dir() {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();

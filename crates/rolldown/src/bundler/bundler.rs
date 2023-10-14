@@ -17,7 +17,16 @@ pub struct Bundler {
 }
 
 impl Bundler {
-  pub fn new(input_options: InputOptions, plugins: Vec<BoxPlugin>) -> Self {
+  pub fn new(input_options: InputOptions) -> Self {
+    // rolldown_tracing::enable_tracing_on_demand();
+    let normalized = NormalizedInputOptions::from_input_options(input_options);
+    Self {
+      input_options: normalized,
+      _plugins: vec![],
+    }
+  }
+
+  pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
     Self {

@@ -40,7 +40,7 @@ impl Bundler {
     NAPI_ENV.set(&env, || {
       let (input_opts, plugins) = resolve_input_options(input_opts)?;
       Ok(Bundler {
-        inner: Mutex::new(NativeBundler::new(input_opts, plugins)),
+        inner: Mutex::new(NativeBundler::with_plugins(input_opts, plugins)),
       })
     })
   }

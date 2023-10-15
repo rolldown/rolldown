@@ -1,1 +1,7 @@
 
+[target.'cfg(all())']
+rustflags = [
+  # CLIPPY LINT SETTINGS
+  # We will ajust the exports of the crates, so the interal `crate::foo::foo` is aceptable.
+  "-Aclippy::module_inception",
+]

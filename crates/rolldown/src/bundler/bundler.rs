@@ -1,4 +1,3 @@
-use rolldown_plugin::BoxPlugin;
 use sugar_path::AsPath;
 
 use super::{
@@ -9,7 +8,7 @@ use super::{
     normalized_output_options::NormalizedOutputOptions,
   },
 };
-use crate::{bundler::bundle::bundle::Bundle, InputOptions};
+use crate::{bundler::bundle::bundle::Bundle, plugin::plugin::BoxPlugin, InputOptions};
 
 pub struct Bundler {
   input_options: NormalizedInputOptions,

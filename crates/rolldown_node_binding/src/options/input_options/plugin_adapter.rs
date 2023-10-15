@@ -1,7 +1,9 @@
+use std::borrow::Cow;
+
 use crate::utils::napi_error_ext::NapiErrorExt;
 use crate::utils::JsCallback;
 use derivative::Derivative;
-use rolldown_plugin::{BoxPlugin, Plugin, PluginName};
+use rolldown::Plugin;
 
 use super::plugin::{PluginOptions, ResolveIdResult, SourceResult};
 
@@ -46,22 +48,22 @@ impl JsAdapterPlugin {
     })
   }
 
-  pub fn new_boxed(option: PluginOptions) -> napi::Result<BoxPlugin> {
+  pub fn new_boxed(option: PluginOptions) -> napi::Result<Box<dyn Plugin>> {
     Ok(Box::new(Self::new(option)?))
   }
 }
 
 #[async_trait::async_trait]
 impl Plugin for JsAdapterPlugin {
-  fn name(&self) -> PluginName {
-    std::borrow::Cow::Borrowed(&self.name)
+  fn name(&self) -> Cow<'static, str> {
+    Cow::Owned(self.name.to_string())
   }
 
   async fn resolve_id(
     &self,
-    _ctx: &mut rolldown_plugin::Context,
-    args: &rolldown_plugin::ResolveIdArgs,
-  ) -> rolldown_plugin::ResolveIdReturn {
+    _ctx: &mut rolldown::PluginContext,
+    args: &rolldown::HookResolveIdArgs,
+  ) -> rolldown::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id_fn {
       let res = cb
         .call_async((
@@ -79,9 +81,9 @@ impl Plugin for JsAdapterPlugin {
 
   async fn load(
     &self,
-    _ctx: &mut rolldown_plugin::Context,
-    args: &rolldown_plugin::LoadArgs,
-  ) -> rolldown_plugin::LoadReturn {
+    _ctx: &mut rolldown::PluginContext,
+    args: &rolldown::HookLoadArgs,
+  ) -> rolldown::HookLoadReturn {
     if let Some(cb) = &self.load_fn {
       let res = cb
         .call_async((args.id.to_string(), None))
@@ -95,9 +97,9 @@ impl Plugin for JsAdapterPlugin {
 
   async fn transform(
     &self,
-    _ctx: &mut rolldown_plugin::Context,
-    args: &rolldown_plugin::TransformArgs,
-  ) -> rolldown_plugin::TransformReturn {
+    _ctx: &mut rolldown::PluginContext,
+    args: &rolldown::HookTransformArgs,
+  ) -> rolldown::HookTransformReturn {
     if let Some(cb) = &self.transform_fn {
       let res = cb
         .call_async((args.code.to_string(), args.id.to_string()))

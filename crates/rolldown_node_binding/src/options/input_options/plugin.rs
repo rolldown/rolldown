@@ -36,9 +36,9 @@ pub struct ResolveIdResult {
   pub external: Option<bool>,
 }
 
-impl From<ResolveIdResult> for rolldown_plugin::ResolveIdResult {
+impl From<ResolveIdResult> for rolldown::HookResolveIdOutput {
   fn from(value: ResolveIdResult) -> Self {
-    rolldown_plugin::ResolveIdResult {
+    rolldown::HookResolveIdOutput {
       id: value.id,
       external: value.external,
     }
@@ -53,8 +53,8 @@ pub struct SourceResult {
   pub code: String,
 }
 
-impl From<SourceResult> for rolldown_plugin::SourceResult {
+impl From<SourceResult> for rolldown::HookLoadOutput {
   fn from(value: SourceResult) -> Self {
-    rolldown_plugin::SourceResult { code: value.code }
+    rolldown::HookLoadOutput { code: value.code }
   }
 }

@@ -10,7 +10,6 @@ rolldown_common   = { path = "../rolldown_common" }
 rolldown_tracing  = { path = "../rolldown_tracing" }
 rolldown_utils    = { path = "../rolldown_utils" }
 rolldown_resolver = { path = "../rolldown_resolver" }
-rolldown_plugin   = { path = "../rolldown_plugin" }
 rolldown_error    = { path = "../rolldown_error" }
 rolldown_oxc      = { path = "../rolldown_oxc" }
 derivative        = { workspace = true }
@@ -26,6 +25,7 @@ index_vec         = { workspace = true }
 futures           = "0.3.25"
 rayon             = "1.6.0"
 string_wizard     = { workspace = true }
+async-trait       = { workspace = true }
 
 [dev_dependencies]
 insta            = { workspace = true }

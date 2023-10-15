@@ -17,7 +17,6 @@ itertools        = { workspace = true }
 napi             = { version = "2.11.1", features = ["full"] }
 napi-derive      = { version = "2.11.0" }
 rolldown         = { path = "../rolldown" }
-rolldown_plugin  = { path = "../rolldown_plugin" }
 rolldown_error   = { path = "../rolldown_error" }
 rolldown_tracing = { path = "../rolldown_tracing" }
 rustc-hash       = { workspace = true }

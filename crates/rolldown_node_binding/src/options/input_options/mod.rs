@@ -49,7 +49,7 @@ pub struct InputOptions {
 
 pub fn resolve_input_options(
   opts: InputOptions,
-) -> napi::Result<(rolldown::InputOptions, Vec<rolldown_plugin::BoxPlugin>)> {
+) -> napi::Result<(rolldown::InputOptions, Vec<Box<dyn rolldown::Plugin>>)> {
   let cwd = PathBuf::from(opts.cwd.clone());
   assert!(cwd != PathBuf::from("/"), "{:#?}", opts);
 

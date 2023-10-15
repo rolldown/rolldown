@@ -98,6 +98,5 @@ fn is_type_module(info: &Resolution) -> bool {
   if let Some(package_json) = info.package_json() {
     return package_json.raw_json().get("type").and_then(|v| v.as_str()) == Some("module");
   }
-
-  return false;
+  return false
 }

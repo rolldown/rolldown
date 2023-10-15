@@ -35,7 +35,7 @@ impl<Args: JsCallbackArgs + Debug, Ret: JsCallbackRet> JsCallback<Args, Ret> {
   }
 
   /// This method is already handle case return Promise<Ret>
-  pub(crate) async fn _call_async(&self, args: Args) -> napi::Result<Ret> {
+  pub(crate) async fn call_async(&self, args: Args) -> napi::Result<Ret> {
     let ret: Either<Ret, Promise<Ret>> = self.ts_fn.call_async(args).await?;
 
     match ret {

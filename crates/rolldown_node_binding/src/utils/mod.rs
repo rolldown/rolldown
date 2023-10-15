@@ -1,4 +1,4 @@
-mod napi_error_ext;
+pub mod napi_error_ext;
 use std::sync::atomic::AtomicBool;
 
 use napi::Env;

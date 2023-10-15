@@ -1,76 +1,95 @@
-// import type { Plugin } from '../rollup-types'
-// import type { BuildPluginOption } from '@rolldown/node-binding'
-// import { unimplemented } from '../utils'
+import type { Plugin } from '../rollup-types'
+import type {
+  PluginOptions,
+  SourceResult,
+  ResolveIdResult,
+} from '@rolldown/node-binding'
+import { unimplemented } from '../utils'
 
-// export function createBuildPluginAdapter(plugin: Plugin): BuildPluginOption {
-//   // TODO: Need to investigate how to pass context to plugin.
-//   const context: any = null
-//   return {
-//     name: plugin.name ?? 'unknown',
-//     transform: async (code, id) => {
-//       const transform = plugin.transform
-//       if (transform == null) {
-//         return null
-//       }
-//       const handler = (function () {
-//         if (typeof transform === 'function') {
-//           return transform
-//         } else {
-//           return transform.handler
-//         }
-//       })()
+export function createBuildPluginAdapter(plugin: Plugin): PluginOptions {
+  return {
+    name: plugin.name ?? 'unknown',
+    resolveId: resolveId(plugin.resolveId),
+    load: load(plugin.load),
+    transform: transform(plugin.transform),
+  }
+}
 
-//       const ret = await handler.call(context, code, id)
+function transform(hook: Plugin['transform']) {
+  if (hook) {
+    if (typeof hook !== 'function') {
+      return unimplemented()
+    }
+    return async (
+      code: string,
+      id: string,
+    ): Promise<undefined | SourceResult> => {
+      // TODO: Need to investigate how to pass context to plugin.
+      const value = await hook.call({} as any, code, id)
+      if (value === undefined || value === null) {
+        return
+      }
+      if (typeof value === 'string') {
+        return { code: value }
+      }
+      if (value.code === undefined) {
+        return
+      }
+      // TODO other filed
+      return { code: value.code }
+    }
+  }
+}
 
-//       if (typeof ret === 'string' || ret == null) {
-//         return ret ?? null
-//       }
+function resolveId(hook: Plugin['resolveId']) {
+  if (hook) {
+    if (typeof hook !== 'function') {
+      return unimplemented()
+    }
+    return async (
+      source: string,
+      importer?: string,
+      options?: any,
+    ): Promise<undefined | ResolveIdResult> => {
+      const value = await hook.call({} as any, source, importer, options)
+      if (value === undefined || value === null) {
+        return
+      }
+      if (typeof value === 'string') {
+        return { id: value }
+      }
+      if (value === false) {
+        return { id: source, external: true }
+      }
+      if (value.external === 'absolute' || value.external === 'relative') {
+        throw new Error(
+          `External module type {${value.external}} is not supported yet.`,
+        )
+      }
+      // TODO other filed
+      return value as ResolveIdResult
+    }
+  }
+}
 
-//       if ('code' in ret) {
-//         // TODO: we don't supports source map yet.
-//         return ret.code
-//       }
-//     },
-//     resolveId: !plugin.resolveId
-//       ? undefined
-//       : async (specifier, importer) => {
-//           const resolveId = plugin.resolveId
-//           if (resolveId == null) {
-//             return null
-//           }
-
-//           const handler = (function () {
-//             if (typeof resolveId === 'function') {
-//               return resolveId
-//             } else {
-//               return resolveId.handler
-//             }
-//           })()
-
-//           const ret = await handler.call(context, specifier, importer, {
-//             assertions: {},
-//             get isEntry() {
-//               return unimplemented()
-//             },
-//           })
-//           if (typeof ret === 'string') {
-//             return {
-//               id: ret,
-//               external: false,
-//             }
-//           } else if (!ret || ret == null) {
-//             return null
-//           } else {
-//             if (ret?.external === 'absolute' || ret?.external === 'relative') {
-//               throw new Error(
-//                 `External module type {${ret.external}} is not supported yet.`,
-//               )
-//             }
-//             return {
-//               id: ret.id,
-//               external: ret.external ?? false,
-//             }
-//           }
-//         },
-//   }
-// }
+function load(hook: Plugin['load']) {
+  if (hook) {
+    if (typeof hook !== 'function') {
+      return unimplemented()
+    }
+    return async (id: string): Promise<undefined | SourceResult> => {
+      const value = await hook.call({} as any, id)
+      if (value === undefined || value === null) {
+        return
+      }
+      if (typeof value === 'string') {
+        return { code: value }
+      }
+      if (value.code === undefined) {
+        return
+      }
+      // TODO other filed
+      return { code: value.code }
+    }
+  }
+}

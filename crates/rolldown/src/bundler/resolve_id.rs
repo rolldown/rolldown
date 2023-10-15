@@ -5,6 +5,7 @@ use crate::BuildResult;
 
 pub struct ResolvedRequestInfo {
   pub path: RawPath,
+  pub type_module: bool,
   pub is_external: bool,
 }
 
@@ -23,6 +24,10 @@ pub async fn resolve_id(
     Ok(None)
   } else {
     let resolved = resolver.resolve(importer, request)?;
-    Ok(Some(ResolvedRequestInfo { path: resolved.resolved, is_external: false }))
+    Ok(Some(ResolvedRequestInfo {
+      path: resolved.resolved,
+      type_module: resolved.type_module,
+      is_external: false,
+    }))
   }
 }

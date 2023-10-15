@@ -5,7 +5,7 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use oxc_resolver::{ResolveOptions, Resolver as OxcResolver};
+use oxc_resolver::{Resolution, ResolveOptions, Resolver as OxcResolver};
 
 #[derive(Debug)]
 pub struct Resolver {
@@ -42,8 +42,10 @@ impl Default for Resolver {
   }
 }
 
+#[derive(Debug)]
 pub struct ResolveRet {
   pub resolved: RawPath,
+  pub type_module: bool,
 }
 
 impl Resolver {
@@ -69,7 +71,10 @@ impl Resolver {
     let resolved = self.inner.resolve(context, &specifier.to_string_lossy());
 
     match resolved {
-      Ok(info) => Ok(ResolveRet { resolved: info.path().to_string_lossy().to_string().into() }),
+      Ok(info) => Ok(ResolveRet {
+        resolved: info.path().to_string_lossy().to_string().into(),
+        type_module: is_type_module(&info),
+      }),
       Err(_err) => {
         if let Some(importer) = importer {
           Err(Box::new(RError::unresolved_import(
@@ -82,4 +87,16 @@ impl Resolver {
       }
     }
   }
+}
+
+fn is_type_module(info: &Resolution) -> bool {
+  if let Some(extension) = info.path().extension() {
+    if extension == "mjs" {
+      return true;
+    }
+  }
+  if let Some(package_json) = info.package_json() {
+    return package_json.raw_json().get("type").and_then(|v| v.as_str()) == Some("module");
+  }
+  return false;
 }

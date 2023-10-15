@@ -29,6 +29,7 @@ pub struct NormalModuleBuilder {
   pub default_export_symbol: Option<SymbolId>,
   pub namespace_symbol: Option<(SymbolRef, ReferenceId)>,
   pub module_resolution: Option<ModuleResolution>,
+  pub type_module: bool,
 }
 
 impl NormalModuleBuilder {
@@ -61,6 +62,7 @@ impl NormalModuleBuilder {
       module_resolution: self.module_resolution.unwrap_or(ModuleResolution::Esm),
       cjs_symbols: FxHashMap::default(),
       wrap_symbol: None,
+      type_module: self.type_module,
     }
   }
 }

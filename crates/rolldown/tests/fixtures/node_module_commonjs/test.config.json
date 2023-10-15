@@ -1,0 +1,14 @@
+{
+    "input": {
+        "input": [
+            {
+                "name": "main",
+                "import": "main.mjs"
+            },
+            {
+                "name": "entry",
+                "import": "entry.js"
+            }
+        ]
+    }
+}

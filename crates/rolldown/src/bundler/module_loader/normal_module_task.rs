@@ -26,6 +26,7 @@ use crate::{
 pub struct NormalModuleTask {
   module_id: ModuleId,
   path: ResourceId,
+  type_module: bool,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   errors: Vec<BuildError>,
   warnings: Vec<BuildError>,
@@ -37,9 +38,18 @@ impl NormalModuleTask {
     id: ModuleId,
     resolver: SharedResolver,
     path: ResourceId,
+    type_module: bool,
     tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   ) -> Self {
-    Self { module_id: id, resolver, path, tx, errors: Vec::default(), warnings: Vec::default() }
+    Self {
+      module_id: id,
+      resolver,
+      path,
+      type_module,
+      tx,
+      errors: Default::default(),
+      warnings: Default::default(),
+    }
   }
 
   pub async fn run(mut self) -> anyhow::Result<()> {
@@ -83,6 +93,7 @@ impl NormalModuleTask {
     builder.scope = Some(scope);
     builder.module_resolution = module_resolution;
     builder.initialize_namespace_binding(&mut symbol_map);
+    builder.type_module = self.type_module;
 
     self
       .tx

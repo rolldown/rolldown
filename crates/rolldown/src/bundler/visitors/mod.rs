@@ -163,12 +163,15 @@ impl<'ast> RendererContext<'ast> {
         let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name(&"__toESM".into());
         self.source.prepend_left(
           decl.span.start,
-          format!("var {namespace_name} = {to_esm_runtime_symbol_name}({wrap_symbol_name}());\n"),
+          format!(
+            "var {namespace_name} = {to_esm_runtime_symbol_name}({wrap_symbol_name}(){});\n",
+            if self.module.type_module { ", 1" } else { "" }
+          ),
         );
         decl.specifiers.iter().for_each(|s| match s {
           oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
             if let Some(name) = self.get_symbol_final_name(
-              (importee.id, importee.cjs_symbols[spec.imported.name()].symbol).into(),
+              (importee.id, importee.cjs_symbols.get(spec.imported.name()).unwrap().symbol).into(),
             ) {
               self
                 .source
@@ -177,7 +180,8 @@ impl<'ast> RendererContext<'ast> {
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
             if let Some(name) = self.get_symbol_final_name(
-              (importee.id, importee.cjs_symbols[&Atom::new_inline("default")].symbol).into(),
+              (importee.id, importee.cjs_symbols.get(&Atom::new_inline("default")).unwrap().symbol)
+                .into(),
             ) {
               self
                 .source

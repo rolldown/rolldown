@@ -29,6 +29,8 @@ pub struct NormalModule {
   pub exec_order: u32,
   pub id: ModuleId,
   pub resource_id: ResourceId,
+  // The flag for ".mjs" or "type: module" in package.json
+  pub type_module: bool,
   pub ast: OxcProgram,
   pub source_mutations: Vec<BoxedSourceMutation>,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
@@ -60,7 +62,11 @@ impl NormalModule {
   #[allow(clippy::needless_pass_by_value)]
   pub fn render(&self, ctx: ModuleRenderContext<'_>) -> Option<MagicString<'static>> {
     // FIXME: should not clone
-    let mut source = MagicString::new(self.ast.source().to_string());
+    let source = self.ast.source();
+    if source.is_empty() {
+      return None;
+    }
+    let mut source = MagicString::new(source.to_string());
 
     let ctx = RendererContext::new(
       ctx.symbols,

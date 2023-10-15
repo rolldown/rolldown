@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-assertion_line: 54
 expression: content
 input_file: crates/rolldown/tests/fixtures/node_module_commonjs
 ---

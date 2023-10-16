@@ -19,7 +19,7 @@ impl<'ast> CommonJsSourceRender<'ast> {
     self.visit_program(program);
     let wrap_symbol_name = self.ctx.wrap_symbol_name.unwrap();
     let module_path = self.ctx.module.resource_id.prettify();
-    let commonjs_runtime_symbol_name = self.ctx.get_runtime_symbol_final_name("__commonJS");
+    let commonjs_runtime_symbol_name = self.ctx.get_runtime_symbol_final_name("__commonJS".into());
     self.ctx.source.prepend(format!(
       "var {wrap_symbol_name} = {commonjs_runtime_symbol_name}({{\n'{module_path}'(exports, module) {{\n",
     ));
@@ -37,8 +37,7 @@ impl<'ast> Visit<'ast> for CommonJsSourceRender<'ast> {
         if let Module::Normal(importee) = importee {
           let wrap_symbol_name = self
             .ctx
-            .get_symbol_final_name((importee.id, importee.wrap_symbol.unwrap()).into())
-            .unwrap();
+            .get_import_symbol_symbol_final_name(importee.wrap_symbol.unwrap());
           if importee.module_resolution == ModuleResolution::CommonJs {
             self.ctx.source.update(
               expr.span.start,
@@ -50,8 +49,9 @@ impl<'ast> Visit<'ast> for CommonJsSourceRender<'ast> {
               .ctx
               .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
               .unwrap();
-            let to_commonjs_runtime_symbol_name =
-              self.ctx.get_runtime_symbol_final_name("__toCommonJS");
+            let to_commonjs_runtime_symbol_name = self
+              .ctx
+              .get_runtime_symbol_final_name("__toCommonJS".into());
             self.ctx.source.update(
               expr.span.start,
               expr.span.end,

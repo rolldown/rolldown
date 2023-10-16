@@ -46,7 +46,7 @@ impl<'ast> RendererContext<'ast> {
   ) -> Self {
     let wrap_symbol_name = module
       .wrap_symbol
-      .and_then(|s| get_symbol_final_name((module.id, s).into(), symbols, final_names));
+      .and_then(|s| get_symbol_final_name(s, symbols, final_names));
     let namespace_symbol_name = get_symbol_final_name(
       (module.id, module.namespace_symbol.0.symbol).into(),
       symbols,
@@ -102,13 +102,9 @@ impl<'ast> RendererContext<'ast> {
     get_reference_final_name(module_id, reference_id, self.symbols, self.final_names)
   }
 
-  pub fn get_runtime_symbol_final_name(&self, name: &str) -> Atom {
-    let symbol = self.runtime.resolve_symbol(&name.into());
-    self
-      .get_symbol_final_name(symbol)
-      .cloned()
-      .unwrap_or_else(|| name.into())
-    // .expect(&format!("runtime symbol {name} not found"))
+  pub fn get_runtime_symbol_final_name(&self, name: Atom) -> &Atom {
+    let symbol = self.runtime.resolve_symbol(&name);
+    self.get_symbol_final_name(symbol).unwrap()
   }
 
   pub fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
@@ -167,9 +163,9 @@ impl<'ast> RendererContext<'ast> {
           .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
           .unwrap();
         let wrap_symbol_name = self
-          .get_symbol_final_name((importee.id, importee.wrap_symbol.unwrap()).into())
+          .get_symbol_final_name(importee.wrap_symbol.unwrap())
           .unwrap();
-        let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name("__toESM");
+        let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name("__toESM".into());
         self.source.prepend_left(
           decl.span.start,
           format!("var {namespace_name} = {to_esm_runtime_symbol_name}({wrap_symbol_name}());\n"),
@@ -214,10 +210,8 @@ impl<'ast> RendererContext<'ast> {
           oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
         });
       } else if let Some(wrap_symbol) = importee.wrap_symbol {
+        let wrap_symbol_name = self.get_symbol_final_name(wrap_symbol).unwrap();
         // init wrapped esm module
-        let wrap_symbol_name = self
-          .get_symbol_final_name((importee.id, wrap_symbol).into())
-          .unwrap();
         self
           .source
           .prepend_left(decl.span.start, format!("{wrap_symbol_name}();\n"));

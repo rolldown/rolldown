@@ -47,7 +47,7 @@ pub struct NormalModule {
   pub namespace_symbol: (SymbolRef, ReferenceId),
   pub is_symbol_for_namespace_referenced: bool,
   pub cjs_symbols: FxHashMap<Atom, SymbolRef>,
-  pub wrap_symbol: Option<SymbolId>,
+  pub wrap_symbol: Option<SymbolRef>,
 }
 
 pub enum Resolution {
@@ -298,7 +298,7 @@ impl NormalModule {
     }
   }
 
-  pub fn add_wrap_symbol(&mut self, symbols: &mut Symbols) {
+  pub fn create_wrap_symbol(&mut self, symbols: &mut Symbols) {
     if self.wrap_symbol.is_none() {
       let name = format!(
         "{}_{}",
@@ -310,12 +310,34 @@ impl NormalModule {
         self.resource_id.generate_unique_name()
       )
       .into();
-      self.wrap_symbol = Some(symbols.tables[self.id].create_symbol(name));
+      let symbol = symbols.tables[self.id].create_symbol(name);
+      self.wrap_symbol = Some((self.id, symbol).into());
       self.stmt_infos.push(StmtInfo {
         stmt_idx: self.ast.program().body.len(),
-        declared_symbols: vec![self.wrap_symbol.unwrap()],
+        declared_symbols: vec![symbol],
       });
       self.initialize_namespace();
     }
+  }
+
+  pub fn generate_symbol_import_and_use(
+    &mut self,
+    symbols: &mut Symbols,
+    symbol_ref_from_importee: SymbolRef,
+  ) {
+    debug_assert!(symbol_ref_from_importee.owner != self.id);
+    let name = symbols.get_original_name(symbol_ref_from_importee).clone();
+    let local_symbol = symbols.tables[self.id].create_symbol(name);
+    let local_symbol_ref = (self.id, local_symbol).into();
+    symbols.union(local_symbol_ref, symbol_ref_from_importee);
+    // TODO: we should add corresponding dependency info from the runtime module
+    // for the future tree shaking support
+    self.stmt_infos.push(StmtInfo {
+      stmt_idx: self.ast.program().body.len(),
+      // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
+      // The deconflict for runtime symbols would be handled in the deconflict on cross-chunk-imported
+      // symbols
+      declared_symbols: vec![local_symbol],
+    });
   }
 }

@@ -28,7 +28,7 @@ esm_named_class = class esm_named_class {}
 }
 });
 // commonjs.js
-var require_commonjs = __commonJS({
+var require_commonjs$1 = __commonJS({
 'commonjs.js'(exports, module) {
 var value = (init_esm(), __toCommonJS(esm_ns));
 module.exports = value;
@@ -36,9 +36,10 @@ module.exports = value;
 });
 // main.js
 var _default = commonjs_ns.default;
-var commonjs_ns = __toESM(require_commonjs());
+var commonjs_ns = __toESM(require_commonjs$1());
 
 init_esm();
 
 console.log(_default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class)
+const require_commonjs = () => {}
 ```

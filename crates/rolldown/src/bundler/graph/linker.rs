@@ -19,7 +19,7 @@ impl<'graph> Linker<'graph> {
   }
 
   pub fn link(&mut self) {
-    self.create_module_wrap_symbol_and_runtime_symbol_reference();
+    self.create_module_wrap_symbol_and_runtime_symbol();
 
     // propagate star exports
     for id in &self.graph.sorted_modules {
@@ -52,7 +52,7 @@ impl<'graph> Linker<'graph> {
       })
   }
 
-  fn create_module_wrap_symbol_and_runtime_symbol_reference(&mut self) {
+  fn create_module_wrap_symbol_and_runtime_symbol(&mut self) {
     let mut modules_wrap = index_vec::index_vec![
       false;
       self.graph.modules.len()
@@ -79,10 +79,7 @@ impl<'graph> Linker<'graph> {
               "__esm".into()
             };
             let runtime_symbol = self.graph.runtime.resolve_symbol(&name);
-            importee.create_import_symbol_and_union_and_reference(
-              &mut self.graph.symbols,
-              runtime_symbol,
-            );
+            importee.create_declared_symbol_and_union(&mut self.graph.symbols, runtime_symbol);
           }
           Module::External(_) => {}
         };
@@ -130,7 +127,7 @@ impl<'graph> Linker<'graph> {
       let importer = &mut self.graph.modules[module];
       match importer {
         Module::Normal(importer) => {
-          importer.create_import_symbol_and_union_and_reference(&mut self.graph.symbols, symbol);
+          importer.create_declared_symbol_and_union(&mut self.graph.symbols, symbol);
         }
         Module::External(_) => {}
       }

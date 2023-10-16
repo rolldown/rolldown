@@ -103,13 +103,7 @@ impl<'ast> RendererContext<'ast> {
   }
 
   pub fn get_runtime_symbol_final_name(&self, name: Atom) -> &Atom {
-    let runtime_symbol = self.runtime.resolve_symbol(&name);
-    let symbol = *self.module.import_symbols.get(&runtime_symbol).unwrap();
-    self.get_symbol_final_name(symbol).unwrap()
-  }
-
-  pub fn get_import_symbol_symbol_final_name(&self, symbol: SymbolRef) -> &Atom {
-    let symbol = *self.module.import_symbols.get(&symbol).unwrap();
+    let symbol = self.runtime.resolve_symbol(&name);
     self.get_symbol_final_name(symbol).unwrap()
   }
 
@@ -168,8 +162,9 @@ impl<'ast> RendererContext<'ast> {
         let namespace_name = self
           .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
           .unwrap();
-        let wrap_symbol_name =
-          self.get_import_symbol_symbol_final_name(importee.wrap_symbol.unwrap());
+        let wrap_symbol_name = self
+          .get_symbol_final_name(importee.wrap_symbol.unwrap())
+          .unwrap();
         let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name("__toESM".into());
         self.source.prepend_left(
           decl.span.start,
@@ -215,7 +210,7 @@ impl<'ast> RendererContext<'ast> {
           oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
         });
       } else if let Some(wrap_symbol) = importee.wrap_symbol {
-        let wrap_symbol_name = self.get_import_symbol_symbol_final_name(wrap_symbol);
+        let wrap_symbol_name = self.get_symbol_final_name(wrap_symbol).unwrap();
         // init wrapped esm module
         self
           .source

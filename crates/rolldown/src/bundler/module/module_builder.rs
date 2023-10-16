@@ -61,7 +61,6 @@ impl NormalModuleBuilder {
       module_resolution: self.module_resolution.unwrap_or(ModuleResolution::Esm),
       cjs_symbols: Default::default(),
       wrap_symbol: None,
-      import_symbols: Default::default(),
     }
   }
 }

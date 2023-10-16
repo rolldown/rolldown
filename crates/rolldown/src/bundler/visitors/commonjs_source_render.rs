@@ -37,7 +37,8 @@ impl<'ast> Visit<'ast> for CommonJsSourceRender<'ast> {
         if let Module::Normal(importee) = importee {
           let wrap_symbol_name = self
             .ctx
-            .get_import_symbol_symbol_final_name(importee.wrap_symbol.unwrap());
+            .get_symbol_final_name(importee.wrap_symbol.unwrap())
+            .unwrap();
           if importee.module_resolution == ModuleResolution::CommonJs {
             self.ctx.source.update(
               expr.span.start,

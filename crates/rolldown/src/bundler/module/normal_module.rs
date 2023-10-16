@@ -48,8 +48,6 @@ pub struct NormalModule {
   pub is_symbol_for_namespace_referenced: bool,
   pub cjs_symbols: FxHashMap<Atom, SymbolRef>,
   pub wrap_symbol: Option<SymbolRef>,
-  // Imported symbols that are used in the module, including runtime symbols, wrap symbols
-  pub import_symbols: FxHashMap<SymbolRef, SymbolRef>,
 }
 
 pub enum Resolution {
@@ -322,24 +320,16 @@ impl NormalModule {
     }
   }
 
-  pub fn create_import_symbol_and_union_and_reference(
-    &mut self,
-    symbols: &mut Symbols,
-    symbol_ref: SymbolRef,
-  ) {
-    self.import_symbols.entry(symbol_ref).or_insert_with(|| {
-      let name = symbols.tables[symbol_ref.owner]
-        .get_name(symbol_ref.symbol)
-        .clone();
-      let symbol = symbols.tables[self.id].create_symbol(name);
-      symbols.tables[self.id].create_reference(Some(symbol));
-      self.stmt_infos.push(StmtInfo {
-        stmt_idx: self.ast.program().body.len(),
-        declared_symbols: vec![symbol],
-      });
-      let local_symbol_ref = (self.id, symbol).into();
-      symbols.union(local_symbol_ref, symbol_ref);
-      local_symbol_ref
+  pub fn create_declared_symbol_and_union(&mut self, symbols: &mut Symbols, symbol_ref: SymbolRef) {
+    let name = symbols.tables[symbol_ref.owner]
+      .get_name(symbol_ref.symbol)
+      .clone();
+    let symbol = symbols.tables[self.id].create_symbol(name);
+    self.stmt_infos.push(StmtInfo {
+      stmt_idx: self.ast.program().body.len(),
+      declared_symbols: vec![symbol],
     });
+    let local_symbol_ref = (self.id, symbol).into();
+    symbols.union(local_symbol_ref, symbol_ref);
   }
 }

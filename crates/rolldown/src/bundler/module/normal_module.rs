@@ -48,6 +48,7 @@ pub struct NormalModule {
   pub is_symbol_for_namespace_referenced: bool,
   pub cjs_symbols: FxHashMap<Atom, SymbolRef>,
   pub wrap_symbol: Option<SymbolRef>,
+  // Imported symbols that are used in the module, including runtime symbols, wrap symbols
   pub import_symbols: FxHashMap<SymbolRef, SymbolRef>,
 }
 

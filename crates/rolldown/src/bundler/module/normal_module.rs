@@ -320,16 +320,24 @@ impl NormalModule {
     }
   }
 
-  pub fn create_declared_symbol_and_union(&mut self, symbols: &mut Symbols, symbol_ref: SymbolRef) {
-    let name = symbols.tables[symbol_ref.owner]
-      .get_name(symbol_ref.symbol)
-      .clone();
-    let symbol = symbols.tables[self.id].create_symbol(name);
+  pub fn generate_symbol_import_and_use(
+    &mut self,
+    symbols: &mut Symbols,
+    symbol_ref_from_importee: SymbolRef,
+  ) {
+    debug_assert!(symbol_ref_from_importee.owner != self.id);
+    let name = symbols.get_original_name(symbol_ref_from_importee).clone();
+    let local_symbol = symbols.tables[self.id].create_symbol(name);
+    let local_symbol_ref = (self.id, local_symbol).into();
+    symbols.union(local_symbol_ref, symbol_ref_from_importee);
+    // TODO: we should add corresponding dependency info from the runtime module
+    // for the future tree shaking support
     self.stmt_infos.push(StmtInfo {
       stmt_idx: self.ast.program().body.len(),
-      declared_symbols: vec![symbol],
+      // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
+      // The deconflict for runtime symbols would be handled in the deconflict on cross-chunk-imported
+      // symbols
+      declared_symbols: vec![local_symbol],
     });
-    let local_symbol_ref = (self.id, symbol).into();
-    symbols.union(local_symbol_ref, symbol_ref);
   }
 }

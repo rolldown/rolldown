@@ -61,7 +61,7 @@ impl<'graph> Linker<'graph> {
       match module {
         Module::Normal(module) => {
           if module.module_resolution == ModuleResolution::CommonJs {
-            mark_module_wrap_and_reference(self.graph, module.id, &mut modules_wrap);
+            mark_module_wrap(self.graph, module.id, &mut modules_wrap);
           }
         }
         Module::External(_) => {}
@@ -136,7 +136,7 @@ impl<'graph> Linker<'graph> {
       }
     }
 
-    fn mark_module_wrap_and_reference(
+    fn mark_module_wrap(
       graph: &Graph,
       module_id: ModuleId,
       modules_wrap: &mut IndexVec<ModuleId, bool>,
@@ -148,7 +148,7 @@ impl<'graph> Linker<'graph> {
           }
           modules_wrap[module_id] = true;
           module.import_records.iter().for_each(|record| {
-            mark_module_wrap_and_reference(graph, record.resolved_module, modules_wrap);
+            mark_module_wrap(graph, record.resolved_module, modules_wrap);
           });
         }
         Module::External(_) => {}

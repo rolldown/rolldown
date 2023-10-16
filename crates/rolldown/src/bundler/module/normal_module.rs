@@ -311,7 +311,7 @@ impl NormalModule {
         self.resource_id.generate_unique_name()
       )
       .into();
-      let symbol = symbols.tables[self.id].create_symbol(name).into();
+      let symbol = symbols.tables[self.id].create_symbol(name);
       self.wrap_symbol = Some((self.id, symbol).into());
       self.stmt_infos.push(StmtInfo {
         stmt_idx: self.ast.program().body.len(),

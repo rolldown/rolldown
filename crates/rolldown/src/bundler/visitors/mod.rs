@@ -105,16 +105,12 @@ impl<'ast> RendererContext<'ast> {
   pub fn get_runtime_symbol_final_name(&self, name: Atom) -> &Atom {
     let runtime_symbol = self.runtime.resolve_symbol(&name);
     let symbol = *self.module.import_symbols.get(&runtime_symbol).unwrap();
-    self
-      .get_symbol_final_name(symbol)
-      .expect(&format!("runtime symbol {name} not found"))
+    self.get_symbol_final_name(symbol).unwrap()
   }
 
   pub fn get_import_symbol_symbol_final_name(&self, symbol: SymbolRef) -> &Atom {
     let symbol = *self.module.import_symbols.get(&symbol).unwrap();
-    self
-      .get_symbol_final_name(symbol)
-      .expect(&format!("wrap symbol not found"))
+    self.get_symbol_final_name(symbol).unwrap()
   }
 
   pub fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {

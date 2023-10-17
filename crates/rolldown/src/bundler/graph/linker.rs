@@ -87,7 +87,9 @@ impl<'graph> Linker<'graph> {
         Module::Normal(importer) => {
           importer.import_records.iter().for_each(|r| {
             let importee = &self.graph.modules[r.resolved_module];
-            let Module::Normal(importee) = importee else { return };
+            let Module::Normal(importee) = importee else {
+              return;
+            };
 
             if let Some(importee_warp_symbol) = importee.wrap_symbol {
               imported_symbols.push((importer.id, importee_warp_symbol));

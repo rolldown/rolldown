@@ -49,7 +49,7 @@ impl<'a> ModuleLoader<'a> {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
 
-    let resolved_entries = self.resolve_entries().await?;
+    let resolved_entries = self.resolve_entries();
 
     let mut intermediate_modules: IndexVec<ModuleId, Option<Module>> =
       IndexVec::with_capacity(resolved_entries.len() + 1 /* runtime */);
@@ -64,7 +64,9 @@ impl<'a> ModuleLoader<'a> {
 
     let mut tables: IndexVec<ModuleId, SymbolMap> = IndexVec::default();
     while self.remaining > 0 {
-      let Some(msg) = self.rx.recv().await else { break };
+      let Some(msg) = self.rx.recv().await else {
+        break;
+      };
       match msg {
         Msg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
@@ -124,9 +126,7 @@ impl<'a> ModuleLoader<'a> {
   }
 
   #[allow(clippy::collection_is_never_read)]
-  async fn resolve_entries(
-    &mut self,
-  ) -> anyhow::Result<Vec<(Option<String>, ResolvedRequestInfo)>> {
+  fn resolve_entries(&mut self) -> Vec<(Option<String>, ResolvedRequestInfo)> {
     let resolver = &self.resolver;
 
     let resolved_ids =
@@ -135,7 +135,7 @@ impl<'a> ModuleLoader<'a> {
         let resolve_id = resolve_id(resolver, specifier, None, false).await.unwrap();
 
         let Some(info) = resolve_id else {
-          return Err(BuildError::unresolved_entry(specifier))
+          return Err(BuildError::unresolved_entry(specifier));
         };
 
         if info.is_external {
@@ -147,7 +147,7 @@ impl<'a> ModuleLoader<'a> {
 
     let mut errors = vec![];
 
-    let ret = resolved_ids
+    resolved_ids
       .into_iter()
       .filter_map(|handle| match handle {
         Ok(id) => Some(id),
@@ -156,9 +156,7 @@ impl<'a> ModuleLoader<'a> {
           None
         }
       })
-      .collect();
-
-    Ok(ret)
+      .collect()
   }
 
   fn try_spawn_new_task(

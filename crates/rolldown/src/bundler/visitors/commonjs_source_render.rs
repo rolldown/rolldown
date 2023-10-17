@@ -57,7 +57,7 @@ impl<'ast> Visit<'ast> for CommonJsSourceRender<'ast> {
         }
       }
     }
-    for arg in expr.arguments.iter() {
+    for arg in &expr.arguments {
       self.visit_argument(arg);
     }
     self.visit_expression(&expr.callee);

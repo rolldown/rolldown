@@ -102,5 +102,5 @@ fn calc_module_type(info: &Resolution) -> ModuleType {
       return ModuleType::EsmPackageJson;
     }
   }
-   ModuleType::Unknown
+  ModuleType::Unknown
 }

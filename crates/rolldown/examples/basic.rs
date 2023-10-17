@@ -12,8 +12,5 @@ async fn main() {
     cwd: Some(cwd),
   });
 
-  bundler
-    .generate(Default::default())
-    .await
-    .unwrap();
+  bundler.generate(Default::default()).await.unwrap();
 }

@@ -58,11 +58,6 @@ impl Fixture {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();
     }
 
-    
-
-    bundler
-      .write(Default::default())
-      .await
-      .unwrap()
+    bundler.write(Default::default()).await.unwrap()
   }
 }

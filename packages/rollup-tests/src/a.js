@@ -8,15 +8,12 @@ for (var key in stats) {
 }
 
 let svg = svgTable.generateTable(data, `
-table {
-    height: 100%;
-    width: 100%; 
-}
 td {
     padding-top: 4px;
     padding-left: 30px;
     padding-right: 40px;
     padding-bottom: 4px;
+    color: unset;
     border: 1px solid gray;
     border-collapse: collapse;
 }`)

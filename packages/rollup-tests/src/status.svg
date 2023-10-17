@@ -1,15 +1,12 @@
 <?xml version="1.0"?>
 <svg xmlns="http://www.w3.org/2000/svg">
   <style>
-table {
-    height: 100%;
-    width: 100%; 
-}
 td {
     padding-top: 4px;
     padding-left: 30px;
     padding-right: 40px;
     padding-bottom: 4px;
+    color: unset;
     border: 1px solid gray;
     border-collapse: collapse;
 }</style>

@@ -72,6 +72,15 @@ afterEach(function updateStatus() {
 after(function printStatus() {
   updateFailedTestsJson(alreadyFailedTests)
   fs.writeFileSync(path.join(__dirname, '../status.json'), JSON.stringify(status, null, 2))
+  writeTestStatusToMarkdown()
   // enforce exit process to avoid rust process is not exit.
   process.exit(0)
 })
+
+function writeTestStatusToMarkdown() {
+  let markdown = '|  | number |\n|----| ---- |\n'
+  for(var key in status) {
+    markdown += `| ${key} | ${status[key]}|\n`
+  }
+  fs.writeFileSync(path.join(__dirname, '../status.md'), markdown)
+}

@@ -22,7 +22,6 @@
     "locate-character": "^2.0.5",
     "magic-string": "^0.27.0",
     "mocha": "^10.2.0",
-    "pure-svg-table": "1.0.3",
     "terser": "^5.16.1"
   },
   "devDependencies": {

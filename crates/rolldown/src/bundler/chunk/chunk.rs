@@ -33,22 +33,12 @@ impl Chunk {
     bits: BitSet,
     modules: Vec<ModuleId>,
   ) -> Self {
-    Self {
-      entry_module,
-      modules,
-      name,
-      bits,
-      ..Self::default()
-    }
+    Self { entry_module, modules, name, bits, ..Self::default() }
   }
 
   pub fn render_file_name(&mut self, output_options: &NormalizedOutputOptions) {
     self.file_name = Some(
-      output_options
-        .entry_file_names
-        .render(&FileNameRenderOptions {
-          name: self.name.as_deref(),
-        }),
+      output_options.entry_file_names.render(&FileNameRenderOptions { name: self.name.as_deref() }),
     );
   }
 
@@ -57,11 +47,7 @@ impl Chunk {
 
     // export { };
     if !entry.expect_normal().resolved_exports.is_empty() {
-      let mut resolved_exports = entry
-        .expect_normal()
-        .resolved_exports
-        .iter()
-        .collect::<Vec<_>>();
+      let mut resolved_exports = entry.expect_normal().resolved_exports.iter().collect::<Vec<_>>();
       resolved_exports.sort_by_key(|(name, _)| name.as_str());
       let mut exports_str = "export { ".to_string();
       exports_str.push_str(
@@ -95,9 +81,7 @@ impl Chunk {
     chunks: &ChunksVec,
   ) -> anyhow::Result<String> {
     use rayon::prelude::*;
-    let mut joiner = Joiner::with_options(JoinerOptions {
-      separator: Some("\n".to_string()),
-    });
+    let mut joiner = Joiner::with_options(JoinerOptions { separator: Some("\n".to_string()) });
     self
       .modules
       .par_iter()

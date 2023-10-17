@@ -23,9 +23,6 @@ pub async fn resolve_id(
     Ok(None)
   } else {
     let resolved = resolver.resolve(importer, request)?;
-    Ok(Some(ResolvedRequestInfo {
-      path: resolved.resolved,
-      is_external: false,
-    }))
+    Ok(Some(ResolvedRequestInfo { path: resolved.resolved, is_external: false }))
   }
 }

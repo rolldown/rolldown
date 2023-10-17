@@ -38,10 +38,7 @@ pub struct ResolveIdResult {
 
 impl From<ResolveIdResult> for rolldown::HookResolveIdOutput {
   fn from(value: ResolveIdResult) -> Self {
-    Self {
-      id: value.id,
-      external: value.external,
-    }
+    Self { id: value.id, external: value.external }
   }
 }
 

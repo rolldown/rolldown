@@ -31,13 +31,7 @@ impl RuntimeNormalModuleTask {
     resolver: SharedResolver,
     tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   ) -> Self {
-    Self {
-      module_id: id,
-      resolver,
-      tx,
-      errors: Vec::default(),
-      warnings: Vec::default(),
-    }
+    Self { module_id: id, resolver, tx, errors: Vec::default(), warnings: Vec::default() }
   }
 
   pub fn run(self) {
@@ -62,10 +56,7 @@ impl RuntimeNormalModuleTask {
 
     builder.id = Some(self.module_id);
     builder.ast = Some(ast);
-    builder.path = Some(ResourceId::new(
-      RUNTIME_PATH.to_string().into(),
-      self.resolver.cwd(),
-    ));
+    builder.path = Some(ResourceId::new(RUNTIME_PATH.to_string().into(), self.resolver.cwd()));
     builder.named_imports = Some(named_imports);
     builder.named_exports = Some(named_exports);
     builder.stmt_infos = Some(stmt_infos);

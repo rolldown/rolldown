@@ -35,24 +35,17 @@ impl<'ast> Visit<'ast> for CommonJsSourceRender<'ast> {
           [self.ctx.module.imports.get(&expr.span).copied().unwrap()];
         let importee = &self.ctx.modules[rec.resolved_module];
         if let Module::Normal(importee) = importee {
-          let wrap_symbol_name = self
-            .ctx
-            .get_symbol_final_name(importee.wrap_symbol.unwrap())
-            .unwrap();
+          let wrap_symbol_name =
+            self.ctx.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
           if importee.module_resolution == ModuleResolution::CommonJs {
-            self.ctx.source.update(
-              expr.span.start,
-              expr.span.end,
-              format!("{wrap_symbol_name}()"),
-            );
+            self.ctx.source.update(expr.span.start, expr.span.end, format!("{wrap_symbol_name}()"));
           } else {
             let namespace_name = self
               .ctx
               .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
               .unwrap();
-            let to_commonjs_runtime_symbol_name = self
-              .ctx
-              .get_runtime_symbol_final_name(&"__toCommonJS".into());
+            let to_commonjs_runtime_symbol_name =
+              self.ctx.get_runtime_symbol_final_name(&"__toCommonJS".into());
             self.ctx.source.update(
               expr.span.start,
               expr.span.end,

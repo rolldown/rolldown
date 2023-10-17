@@ -44,9 +44,8 @@ impl<'ast> RendererContext<'ast> {
     module: &'ast NormalModule,
     runtime: &'ast Runtime,
   ) -> Self {
-    let wrap_symbol_name = module
-      .wrap_symbol
-      .and_then(|s| get_symbol_final_name(s, symbols, final_names));
+    let wrap_symbol_name =
+      module.wrap_symbol.and_then(|s| get_symbol_final_name(s, symbols, final_names));
     let namespace_symbol_name = get_symbol_final_name(
       (module.id, module.namespace_symbol.0.symbol).into(),
       symbols,
@@ -75,10 +74,7 @@ impl<'ast> RendererContext<'ast> {
       start,
       end,
       content,
-      UpdateOptions {
-        overwrite: true,
-        ..Default::default()
-      },
+      UpdateOptions { overwrite: true, ..Default::default() },
     );
   }
 
@@ -163,9 +159,7 @@ impl<'ast> RendererContext<'ast> {
         let namespace_name = self
           .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
           .unwrap();
-        let wrap_symbol_name = self
-          .get_symbol_final_name(importee.wrap_symbol.unwrap())
-          .unwrap();
+        let wrap_symbol_name = self.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
         let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name(&"__toESM".into());
         self.source.prepend_left(
           decl.span.start,
@@ -174,30 +168,20 @@ impl<'ast> RendererContext<'ast> {
         decl.specifiers.iter().for_each(|s| match s {
           oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
             if let Some(name) = self.get_symbol_final_name(
-              (
-                importee.id,
-                importee.cjs_symbols[spec.imported.name()].symbol,
-              )
-                .into(),
+              (importee.id, importee.cjs_symbols[spec.imported.name()].symbol).into(),
             ) {
-              self.source.prepend_left(
-                decl.span.start,
-                format!("var {name} = {namespace_name}.{name};\n"),
-              );
+              self
+                .source
+                .prepend_left(decl.span.start, format!("var {name} = {namespace_name}.{name};\n"));
             }
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
             if let Some(name) = self.get_symbol_final_name(
-              (
-                importee.id,
-                importee.cjs_symbols[&Atom::new_inline("default")].symbol,
-              )
-                .into(),
+              (importee.id, importee.cjs_symbols[&Atom::new_inline("default")].symbol).into(),
             ) {
-              self.source.prepend_left(
-                decl.span.start,
-                format!("var {name} = {namespace_name}.default;\n"),
-              );
+              self
+                .source
+                .prepend_left(decl.span.start, format!("var {name} = {namespace_name}.default;\n"));
             }
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
@@ -205,9 +189,7 @@ impl<'ast> RendererContext<'ast> {
       } else if let Some(wrap_symbol) = importee.wrap_symbol {
         let wrap_symbol_name = self.get_symbol_final_name(wrap_symbol).unwrap();
         // init wrapped esm module
-        self
-          .source
-          .prepend_left(decl.span.start, format!("{wrap_symbol_name}();\n"));
+        self.source.prepend_left(decl.span.start, format!("{wrap_symbol_name}();\n"));
       }
     }
   }

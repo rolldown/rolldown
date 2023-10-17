@@ -39,9 +39,7 @@ impl Bundler {
   pub fn new_impl(env: Env, input_opts: InputOptions) -> napi::Result<Self> {
     NAPI_ENV.set(&env, || {
       let (input_opts, plugins) = resolve_input_options(input_opts)?;
-      Ok(Self {
-        inner: Mutex::new(NativeBundler::with_plugins(input_opts, plugins)),
-      })
+      Ok(Self { inner: Mutex::new(NativeBundler::with_plugins(input_opts, plugins)) })
     })
   }
 
@@ -54,17 +52,11 @@ impl Bundler {
 
     let binding_opts = resolve_output_options(opts)?;
 
-    let outputs = bundler_core
-      .write(binding_opts)
-      .await
-      .map_err(|err| self.handle_errors(err))?;
+    let outputs = bundler_core.write(binding_opts).await.map_err(|err| self.handle_errors(err))?;
 
     let output_chunks = outputs
       .into_iter()
-      .map(|asset| OutputChunk {
-        code: asset.content,
-        file_name: asset.file_name,
-      })
+      .map(|asset| OutputChunk { code: asset.content, file_name: asset.file_name })
       .collect::<Vec<_>>();
     Ok(output_chunks)
   }
@@ -78,17 +70,12 @@ impl Bundler {
 
     let binding_opts = resolve_output_options(opts)?;
 
-    let outputs = bundler_core
-      .generate(binding_opts)
-      .await
-      .map_err(|err| self.handle_errors(err))?;
+    let outputs =
+      bundler_core.generate(binding_opts).await.map_err(|err| self.handle_errors(err))?;
 
     let output_chunks = outputs
       .into_iter()
-      .map(|asset| OutputChunk {
-        code: asset.content,
-        file_name: asset.file_name,
-      })
+      .map(|asset| OutputChunk { code: asset.content, file_name: asset.file_name })
       .collect::<Vec<_>>();
     Ok(output_chunks)
   }

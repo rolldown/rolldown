@@ -27,11 +27,7 @@ impl<Args: JsCallbackArgs + Debug, Ret: JsCallbackRet> JsCallback<Args, Ret> {
         ctx.value.into_js_unknown_vec(&ctx.env)
       })?;
     NAPI_ENV.with(|env| ts_fn.unref(env))?;
-    Ok(Self {
-      _args: PhantomData,
-      _ret: PhantomData,
-      ts_fn,
-    })
+    Ok(Self { _args: PhantomData, _ret: PhantomData, ts_fn })
   }
 
   /// This method is already handle case return Promise<Ret>
@@ -48,10 +44,6 @@ impl<Args: JsCallbackArgs + Debug, Ret: JsCallbackRet> JsCallback<Args, Ret> {
 
 impl<Args: JsCallbackArgs, Ret: JsCallbackRet> Clone for JsCallback<Args, Ret> {
   fn clone(&self) -> Self {
-    Self {
-      _args: PhantomData,
-      _ret: PhantomData,
-      ts_fn: self.ts_fn.clone(),
-    }
+    Self { _args: PhantomData, _ret: PhantomData, ts_fn: self.ts_fn.clone() }
   }
 }

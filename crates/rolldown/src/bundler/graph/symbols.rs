@@ -17,11 +17,7 @@ impl SymbolMap {
   pub fn from_symbol_table(table: SymbolTable) -> Self {
     Self {
       names: table.names,
-      references: table
-        .references
-        .iter()
-        .map(oxc::semantic::Reference::symbol_id)
-        .collect(),
+      references: table.references.iter().map(oxc::semantic::Reference::symbol_id).collect(),
     }
   }
 
@@ -51,10 +47,7 @@ pub struct Symbols {
 
 impl Symbols {
   pub fn new(tables: IndexVec<ModuleId, SymbolMap>) -> Self {
-    Self {
-      canonical_refs: tables.iter().map(|_table| FxHashMap::default()).collect(),
-      tables,
-    }
+    Self { canonical_refs: tables.iter().map(|_table| FxHashMap::default()).collect(), tables }
   }
 
   /// Make a point to b
@@ -74,10 +67,7 @@ impl Symbols {
 
   pub fn get_canonical_ref(&mut self, target: SymbolRef) -> SymbolRef {
     let mut canonical = target;
-    while let Some(founded) = self.canonical_refs[canonical.owner]
-      .get(&canonical.symbol)
-      .copied()
-    {
+    while let Some(founded) = self.canonical_refs[canonical.owner].get(&canonical.symbol).copied() {
       debug_assert!(founded != target);
       canonical = founded;
     }
@@ -89,10 +79,7 @@ impl Symbols {
 
   pub fn par_get_canonical_ref(&self, target: SymbolRef) -> SymbolRef {
     let mut canonical = target;
-    while let Some(founded) = self.canonical_refs[canonical.owner]
-      .get(&canonical.symbol)
-      .copied()
-    {
+    while let Some(founded) = self.canonical_refs[canonical.owner].get(&canonical.symbol).copied() {
       debug_assert!(founded != canonical);
       canonical = founded;
     }

@@ -37,10 +37,7 @@ impl Ord for Error {
 
 impl Error {
   fn with_kind(kind: ErrorKind) -> Self {
-    Self {
-      contexts: vec![],
-      kind,
-    }
+    Self { contexts: vec![], kind }
   }
 
   pub fn context(&mut self, context: impl Into<StaticStr>) -> &mut Self {
@@ -50,9 +47,7 @@ impl Error {
 
   // --- Aligned with rollup
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
-    Self::with_kind(ErrorKind::ExternalEntry {
-      id: unresolved_id.as_ref().to_path_buf(),
-    })
+    Self::with_kind(ErrorKind::ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })
   }
 
   pub fn ambiguous_external_namespaces(
@@ -113,17 +108,11 @@ impl Error {
   }
 
   pub fn shimmed_export(binding: impl Into<StaticStr>, exporter: PathBuf) -> Self {
-    Self::with_kind(ErrorKind::ShimmedExport {
-      binding: binding.into(),
-      exporter,
-    })
+    Self::with_kind(ErrorKind::ShimmedExport { binding: binding.into(), exporter })
   }
 
   pub fn circular_reexport(export_name: impl Into<StaticStr>, exporter: PathBuf) -> Self {
-    Self::with_kind(ErrorKind::CircularReexport {
-      exporter,
-      export_name: export_name.into(),
-    })
+    Self::with_kind(ErrorKind::CircularReexport { exporter, export_name: export_name.into() })
   }
 
   pub fn unresolved_import(specifier: impl Into<StaticStr>, importer: impl Into<PathBuf>) -> Self {

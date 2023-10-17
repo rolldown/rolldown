@@ -7,9 +7,6 @@ pub trait BindingIdentifierExt {
 impl BindingIdentifierExt for ast::BindingIdentifier {
   #[inline]
   fn expect_symbol_id(&self) -> SymbolId {
-    self
-      .symbol_id
-      .get()
-      .unwrap_or_else(|| panic!("fail get symbol id from {self:?}"))
+    self.symbol_id.get().unwrap_or_else(|| panic!("fail get symbol id from {self:?}"))
   }
 }

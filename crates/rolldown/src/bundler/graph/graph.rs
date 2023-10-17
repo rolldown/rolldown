@@ -20,9 +20,7 @@ impl Graph {
     &mut self,
     input_options: &NormalizedInputOptions,
   ) -> anyhow::Result<()> {
-    ModuleLoader::new(input_options, self)
-      .fetch_all_modules()
-      .await?;
+    ModuleLoader::new(input_options, self).fetch_all_modules().await?;
 
     tracing::trace!("{:#?}", self);
 
@@ -34,12 +32,7 @@ impl Graph {
   }
 
   pub fn sort_modules(&mut self) {
-    let mut stack = self
-      .entries
-      .iter()
-      .map(|(_, m)| Action::Enter(*m))
-      .rev()
-      .collect::<Vec<_>>();
+    let mut stack = self.entries.iter().map(|(_, m)| Action::Enter(*m)).rev().collect::<Vec<_>>();
 
     let mut entered_ids: FxHashSet<ModuleId> = FxHashSet::default();
     entered_ids.shrink_to(self.modules.len());
@@ -57,12 +50,7 @@ impl Graph {
                 .import_records()
                 .iter()
                 .filter(|rec| rec.kind.is_static())
-                .filter_map(|rec| {
-                  rec
-                    .resolved_module
-                    .is_valid()
-                    .then_some(rec.resolved_module)
-                })
+                .filter_map(|rec| rec.resolved_module.is_valid().then_some(rec.resolved_module))
                 .map(Action::Enter),
             );
           }

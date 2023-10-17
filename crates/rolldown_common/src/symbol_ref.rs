@@ -11,9 +11,6 @@ pub struct SymbolRef {
 
 impl From<(ModuleId, SymbolId)> for SymbolRef {
   fn from(value: (ModuleId, SymbolId)) -> Self {
-    Self {
-      owner: value.0,
-      symbol: value.1,
-    }
+    Self { owner: value.0, symbol: value.1 }
   }
 }

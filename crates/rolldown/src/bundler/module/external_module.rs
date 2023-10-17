@@ -32,32 +32,15 @@ impl ExternalModule {
 
   #[allow(clippy::needless_pass_by_value)]
   pub fn add_export_symbol(&mut self, symbols: &mut Symbols, exported: Atom, is_star: bool) {
-    let symbol = if is_star {
-      &self.namespace_name
-    } else {
-      &exported
-    };
+    let symbol = if is_star { &self.namespace_name } else { &exported };
     self
       .symbols_imported_by_others
       .entry(symbol.clone())
-      .or_insert_with(|| {
-        (
-          self.id,
-          symbols.tables[self.id].create_symbol(symbol.clone()),
-        )
-          .into()
-      });
+      .or_insert_with(|| (self.id, symbols.tables[self.id].create_symbol(symbol.clone())).into());
   }
 
   pub fn resolve_export(&self, exported: &Atom, is_star: bool) -> SymbolRef {
-    let symbol = if is_star {
-      &self.namespace_name
-    } else {
-      exported
-    };
-    *self
-      .symbols_imported_by_others
-      .get(symbol)
-      .expect("should have export symbol")
+    let symbol = if is_star { &self.namespace_name } else { exported };
+    *self.symbols_imported_by_others.get(symbol).expect("should have export symbol")
   }
 }

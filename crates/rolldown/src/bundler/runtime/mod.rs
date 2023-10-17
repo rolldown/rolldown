@@ -23,10 +23,8 @@ impl Runtime {
   }
 
   pub fn resolve_symbol(&self, name: &Atom) -> SymbolRef {
-    let symbol_id = self
-      .name_to_symbol
-      .get(name)
-      .unwrap_or_else(|| panic!("Failed to resolve symbol: {name}"));
+    let symbol_id =
+      self.name_to_symbol.get(name).unwrap_or_else(|| panic!("Failed to resolve symbol: {name}"));
     (self.id, *symbol_id).into()
   }
 }

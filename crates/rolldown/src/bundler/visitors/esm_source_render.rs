@@ -29,10 +29,7 @@ impl<'ast> EsmSourceRender<'ast> {
         })
         .collect::<Vec<_>>()
         .join(",\n");
-      self
-        .ctx
-        .source
-        .append(format!("\nvar {namespace_name} = {{\n{exports}\n}};\n",));
+      self.ctx.source.append(format!("\nvar {namespace_name} = {{\n{exports}\n}};\n",));
     }
   }
 }
@@ -55,9 +52,7 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
     named_decl: &'ast oxc::ast::ast::ExportNamedDeclaration<'ast>,
   ) {
     if let Some(decl) = &named_decl.declaration {
-      self
-        .ctx
-        .remove_node(Span::new(named_decl.span.start, decl.span().start));
+      self.ctx.remove_node(Span::new(named_decl.span.start, decl.span().start));
       self.visit_declaration(decl);
     } else {
       self.ctx.remove_node(named_decl.span);
@@ -78,20 +73,14 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
     match &decl.declaration {
       oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
         if let Some(name) = self.ctx.default_symbol_name {
-          self
-            .ctx
-            .overwrite(decl.span.start, exp.span().start, format!("var {name} = "));
+          self.ctx.overwrite(decl.span.start, exp.span().start, format!("var {name} = "));
         }
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {
-        self
-          .ctx
-          .remove_node(Span::new(decl.span.start, decl.span.start));
+        self.ctx.remove_node(Span::new(decl.span.start, decl.span.start));
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
-        self
-          .ctx
-          .remove_node(Span::new(decl.span.start, decl.span.start));
+        self.ctx.remove_node(Span::new(decl.span.start, decl.span.start));
       }
       _ => {}
     }

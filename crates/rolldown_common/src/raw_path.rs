@@ -26,11 +26,7 @@ impl RawPath {
   pub fn unique(&self, root: impl AsRef<Path>) -> String {
     let path = self.0.as_path();
     let mut relative = path.relative(root);
-    let ext = relative
-      .extension()
-      .and_then(OsStr::to_str)
-      .unwrap_or("")
-      .to_string();
+    let ext = relative.extension().and_then(OsStr::to_str).unwrap_or("").to_string();
     relative.set_extension("");
 
     let mut name = relative

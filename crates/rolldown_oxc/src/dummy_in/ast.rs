@@ -12,9 +12,7 @@ impl<'ast> DummyIn<'ast> for ast::VariableDeclarationKind {
 }
 impl<'ast> DummyIn<'ast> for ast::ThisExpression {
   fn dummy_in(alloc: &'ast Allocator) -> Self {
-    Self {
-      span: DummyIn::dummy_in(alloc),
-    }
+    Self { span: DummyIn::dummy_in(alloc) }
   }
 }
 
@@ -35,10 +33,7 @@ impl<'ast> DummyIn<'ast> for ast::Declaration<'ast> {
 }
 impl<'ast> DummyIn<'ast> for ast::ExpressionStatement<'ast> {
   fn dummy_in(alloc: &'ast Allocator) -> Self {
-    Self {
-      span: DummyIn::dummy_in(alloc),
-      expression: DummyIn::dummy_in(alloc),
-    }
+    Self { span: DummyIn::dummy_in(alloc), expression: DummyIn::dummy_in(alloc) }
   }
 }
 impl<'ast> DummyIn<'ast> for ast::FunctionType {
@@ -65,10 +60,7 @@ impl<'ast> DummyIn<'ast> for ast::FormalParameters<'ast> {
 }
 impl<'ast> DummyIn<'ast> for ast::ClassBody<'ast> {
   fn dummy_in(alloc: &'ast Allocator) -> Self {
-    Self {
-      span: DummyIn::dummy_in(alloc),
-      body: DummyIn::dummy_in(alloc),
-    }
+    Self { span: DummyIn::dummy_in(alloc), body: DummyIn::dummy_in(alloc) }
   }
 }
 impl<'ast> DummyIn<'ast> for ast::ClassType {

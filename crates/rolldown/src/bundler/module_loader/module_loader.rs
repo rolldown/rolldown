@@ -46,9 +46,7 @@ impl<'a> ModuleLoader<'a> {
 
   pub async fn fetch_all_modules(&mut self) -> anyhow::Result<()> {
     if self.input_options.input.is_empty() {
-      return Err(anyhow::format_err!(
-        "You must supply options.input to rolldown"
-      ));
+      return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
 
     let resolved_entries = self.resolve_entries().await?;
@@ -59,12 +57,7 @@ impl<'a> ModuleLoader<'a> {
 
     let mut entries = resolved_entries
       .into_iter()
-      .map(|(name, info)| {
-        (
-          name,
-          self.try_spawn_new_task(&info, &mut intermediate_modules),
-        )
-      })
+      .map(|(name, info)| (name, self.try_spawn_new_task(&info, &mut intermediate_modules)))
       .collect::<Vec<_>>();
 
     let mut dynamic_entries = FxHashSet::default();
@@ -84,20 +77,18 @@ impl<'a> ModuleLoader<'a> {
 
           let import_records = builder.import_records.as_mut().unwrap();
 
-          resolved_deps
-            .into_iter()
-            .for_each(|(import_record_idx, info)| {
-              let id = self.try_spawn_new_task(&info, &mut intermediate_modules);
-              let import_record = &mut import_records[import_record_idx];
-              import_record.resolved_module = id;
-              while tables.len() <= id.raw() as usize {
-                tables.push(SymbolMap::default());
-              }
-              // dynamic import as extra entries if enable code splitting
-              if import_record.kind == ImportKind::DynamicImport {
-                dynamic_entries.insert((Some(info.path.unique(&self.input_options.cwd)), id));
-              }
-            });
+          resolved_deps.into_iter().for_each(|(import_record_idx, info)| {
+            let id = self.try_spawn_new_task(&info, &mut intermediate_modules);
+            let import_record = &mut import_records[import_record_idx];
+            import_record.resolved_module = id;
+            while tables.len() <= id.raw() as usize {
+              tables.push(SymbolMap::default());
+            }
+            // dynamic import as extra entries if enable code splitting
+            if import_record.kind == ImportKind::DynamicImport {
+              dynamic_entries.insert((Some(info.path.unique(&self.input_options.cwd)), id));
+            }
+          });
 
           while tables.len() <= task_result.module_id.raw() as usize {
             tables.push(SymbolMap::default());
@@ -107,12 +98,8 @@ impl<'a> ModuleLoader<'a> {
           tables[task_result.module_id] = symbol_table;
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let NormalModuleTaskResult {
-            module_id,
-            symbol_map: symbol_table,
-            builder,
-            ..
-          } = task_result;
+          let NormalModuleTaskResult { module_id, symbol_map: symbol_table, builder, .. } =
+            task_result;
           while tables.len() <= task_result.module_id.raw() as usize {
             tables.push(SymbolMap::default());
           }
@@ -127,10 +114,7 @@ impl<'a> ModuleLoader<'a> {
     }
     self.graph.symbols = Symbols::new(tables);
 
-    self.graph.modules = intermediate_modules
-      .into_iter()
-      .map(Option::unwrap)
-      .collect();
+    self.graph.modules = intermediate_modules.into_iter().map(Option::unwrap).collect();
 
     let mut dynamic_entries = Vec::from_iter(dynamic_entries);
     dynamic_entries.sort_by(|(a, _), (b, _)| a.cmp(b));
@@ -145,8 +129,8 @@ impl<'a> ModuleLoader<'a> {
   ) -> anyhow::Result<Vec<(Option<String>, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
 
-    let resolved_ids = block_on_spawn_all(self.input_options.input.iter().map(
-      |input_item| async move {
+    let resolved_ids =
+      block_on_spawn_all(self.input_options.input.iter().map(|input_item| async move {
         let specifier = &input_item.import;
         let resolve_id = resolve_id(resolver, specifier, None, false).await.unwrap();
 
@@ -159,8 +143,7 @@ impl<'a> ModuleLoader<'a> {
         }
 
         Ok((input_item.name.clone(), info))
-      },
-    ));
+      }));
 
     let mut errors = vec![];
 
@@ -188,10 +171,8 @@ impl<'a> ModuleLoader<'a> {
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         let id = intermediate_modules.push(None);
         if info.is_external {
-          let ext = ExternalModule::new(
-            id,
-            ResourceId::new(info.path.clone(), &self.input_options.cwd),
-          );
+          let ext =
+            ExternalModule::new(id, ResourceId::new(info.path.clone(), &self.input_options.cwd));
           intermediate_modules[id] = Some(Module::External(ext));
         } else {
           not_visited.insert(id);

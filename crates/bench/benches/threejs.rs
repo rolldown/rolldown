@@ -20,11 +20,7 @@ fn criterion_benchmark(c: &mut Criterion) {
       b.iter(|| tokio::runtime::Runtime::new().unwrap().block_on(threejs()))
     })
     .bench_function("threejs10x", |b| {
-      b.iter(|| {
-        tokio::runtime::Runtime::new()
-          .unwrap()
-          .block_on(threejs10x())
-      })
+      b.iter(|| tokio::runtime::Runtime::new().unwrap().block_on(threejs10x()))
     });
 }
 

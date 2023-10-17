@@ -10,10 +10,7 @@ pub struct InputItem {
 
 impl From<String> for InputItem {
   fn from(value: String) -> Self {
-    Self {
-      name: None,
-      import: value,
-    }
+    Self { name: None, import: value }
   }
 }
 

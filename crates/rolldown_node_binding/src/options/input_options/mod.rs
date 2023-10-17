@@ -53,11 +53,8 @@ pub fn resolve_input_options(
   let cwd = PathBuf::from(opts.cwd.clone());
   assert!(cwd != PathBuf::from("/"), "{opts:#?}");
 
-  let plugins = opts
-    .plugins
-    .into_iter()
-    .map(JsAdapterPlugin::new_boxed)
-    .collect::<napi::Result<Vec<_>>>()?;
+  let plugins =
+    opts.plugins.into_iter().map(JsAdapterPlugin::new_boxed).collect::<napi::Result<Vec<_>>>()?;
 
   Ok((
     rolldown::InputOptions {
@@ -65,10 +62,7 @@ pub fn resolve_input_options(
         opts
           .input
           .into_iter()
-          .map(|(name, import)| rolldown::InputItem {
-            name: Some(name),
-            import,
-          })
+          .map(|(name, import)| rolldown::InputItem { name: Some(name), import })
           .collect::<Vec<_>>(),
       ),
       cwd: Some(cwd),

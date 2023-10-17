@@ -53,16 +53,11 @@ impl ResourceId {
   #[allow(clippy::needless_return)]
   pub fn generate_unique_name(&self) -> String {
     let path = Path::new(self.0.path.as_str());
-    let unique_name = path
-      .file_stem()
-      .expect("should have file_stem")
-      .to_str()
-      .expect("should be valid utf8");
+    let unique_name =
+      path.file_stem().expect("should have file_stem").to_str().expect("should be valid utf8");
     if unique_name == "index" {
-      if let Some(unique_name_of_parent_dir) = path
-        .parent()
-        .and_then(Path::file_stem)
-        .and_then(OsStr::to_str)
+      if let Some(unique_name_of_parent_dir) =
+        path.parent().and_then(Path::file_stem).and_then(OsStr::to_str)
       {
         return [unique_name_of_parent_dir, "_index"].concat();
       }

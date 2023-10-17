@@ -27,9 +27,7 @@ impl<'graph> Linker<'graph> {
       match importer {
         Module::Normal(importer) => {
           let resolved = importer.resolve_star_exports(&self.graph.modules);
-          self.graph.modules[*id]
-            .expect_normal_mut()
-            .resolved_star_exports = resolved;
+          self.graph.modules[*id].expect_normal_mut().resolved_star_exports = resolved;
         }
         Module::External(_) => {
           // meaningless
@@ -41,15 +39,10 @@ impl<'graph> Linker<'graph> {
     // Create symbols for import cjs module
     Self::mark_extra_symbols(self.graph);
 
-    self
-      .graph
-      .sorted_modules
-      .clone()
-      .into_iter()
-      .for_each(|id| {
-        self.resolve_exports(id);
-        self.resolve_imports(id);
-      });
+    self.graph.sorted_modules.clone().into_iter().for_each(|id| {
+      self.resolve_exports(id);
+      self.resolve_imports(id);
+    });
   }
 
   fn wrap_modules_if_needed(&mut self) {
@@ -102,16 +95,12 @@ impl<'graph> Linker<'graph> {
 
             match (importer.module_resolution, importee.module_resolution) {
               (ModuleResolution::Esm, ModuleResolution::CommonJs) => {
-                imported_symbols.push((
-                  importer.id,
-                  self.graph.runtime.resolve_symbol(&"__toESM".into()),
-                ));
+                imported_symbols
+                  .push((importer.id, self.graph.runtime.resolve_symbol(&"__toESM".into())));
               }
               (ModuleResolution::CommonJs, ModuleResolution::Esm) => {
-                imported_symbols.push((
-                  importer.id,
-                  self.graph.runtime.resolve_symbol(&"__toCommonJS".into()),
-                ));
+                imported_symbols
+                  .push((importer.id, self.graph.runtime.resolve_symbol(&"__toCommonJS".into())));
               }
               _ => {}
             }
@@ -192,41 +181,36 @@ impl<'graph> Linker<'graph> {
               }
             }
           });
-          importer
-            .named_exports
-            .iter()
-            .for_each(|(_, export)| match &export {
-              LocalOrReExport::Local(_) => {}
-              LocalOrReExport::Re(re) => {
-                let import_record = &importer.import_records[re.record_id];
-                let importee = &graph.modules[import_record.resolved_module];
-                if let Module::External(_) = importee {
-                  extra_symbols.push((
-                    import_record.resolved_module,
-                    re.imported.clone(),
-                    re.is_imported_star,
-                  ));
-                }
+          importer.named_exports.iter().for_each(|(_, export)| match &export {
+            LocalOrReExport::Local(_) => {}
+            LocalOrReExport::Re(re) => {
+              let import_record = &importer.import_records[re.record_id];
+              let importee = &graph.modules[import_record.resolved_module];
+              if let Module::External(_) = importee {
+                extra_symbols.push((
+                  import_record.resolved_module,
+                  re.imported.clone(),
+                  re.is_imported_star,
+                ));
               }
-            });
+            }
+          });
         }
         Module::External(_) => {}
       }
-      extra_symbols
-        .into_iter()
-        .for_each(|(importee, imported, is_imported_star)| {
-          let importee = &mut graph.modules[importee];
-          match importee {
-            Module::Normal(importee) => {
-              if importee.module_resolution == ModuleResolution::CommonJs {
-                importee.add_cjs_symbol(&mut graph.symbols, imported, is_imported_star);
-              }
-            }
-            Module::External(importee) => {
-              importee.add_export_symbol(&mut graph.symbols, imported, is_imported_star);
+      extra_symbols.into_iter().for_each(|(importee, imported, is_imported_star)| {
+        let importee = &mut graph.modules[importee];
+        match importee {
+          Module::Normal(importee) => {
+            if importee.module_resolution == ModuleResolution::CommonJs {
+              importee.add_cjs_symbol(&mut graph.symbols, imported, is_imported_star);
             }
           }
-        });
+          Module::External(importee) => {
+            importee.add_export_symbol(&mut graph.symbols, imported, is_imported_star);
+          }
+        }
+      });
 
       importee_list.into_iter().for_each(|importee| {
         graph.modules[importee].mark_symbol_for_namespace_referenced();
@@ -279,42 +263,31 @@ impl<'graph> Linker<'graph> {
         importer.named_exports.keys().for_each(|exported| {
           let res = resolutions.remove(exported).unwrap();
           match res {
-            Resolution::None => panic!(
-              "named export {exported:?} must be resolved for exporter: {:?}",
-              importer.resource_id
-            ),
+            Resolution::None => {
+              panic!(
+                "named export {exported:?} must be resolved for exporter: {:?}",
+                importer.resource_id
+              )
+            }
             Resolution::Ambiguous => panic!("named export must be resolved"),
             Resolution::Found(ext) => {
               let tmp =
                 create_local_symbol_and_reference(ext, importer.id, &mut self.graph.symbols);
-              exported_name_to_local_symbol.insert(
-                exported.clone(),
-                ResolvedExport {
-                  local_symbol: tmp.0,
-                  local_ref: tmp.1,
-                },
-              );
+              exported_name_to_local_symbol
+                .insert(exported.clone(), ResolvedExport { local_symbol: tmp.0, local_ref: tmp.1 });
             }
           }
         });
 
-        resolutions
-          .into_iter()
-          .for_each(|(exported, left)| match left {
-            Resolution::None => panic!("shouldn't has left which is None"),
-            Resolution::Found(ext) => {
-              let tmp =
-                create_local_symbol_and_reference(ext, importer.id, &mut self.graph.symbols);
-              exported_name_to_local_symbol.insert(
-                exported.clone(),
-                ResolvedExport {
-                  local_symbol: tmp.0,
-                  local_ref: tmp.1,
-                },
-              );
-            }
-            Resolution::Ambiguous => {}
-          });
+        resolutions.into_iter().for_each(|(exported, left)| match left {
+          Resolution::None => panic!("shouldn't has left which is None"),
+          Resolution::Found(ext) => {
+            let tmp = create_local_symbol_and_reference(ext, importer.id, &mut self.graph.symbols);
+            exported_name_to_local_symbol
+              .insert(exported.clone(), ResolvedExport { local_symbol: tmp.0, local_ref: tmp.1 });
+          }
+          Resolution::Ambiguous => {}
+        });
 
         match &mut self.graph.modules[id] {
           Module::Normal(importer) => {

@@ -299,20 +299,15 @@ impl NormalModule {
     if self.wrap_symbol.is_none() {
       let name = format!(
         "{}_{}",
-        if self.module_resolution == ModuleResolution::CommonJs {
-          "require"
-        } else {
-          "init"
-        },
+        if self.module_resolution == ModuleResolution::CommonJs { "require" } else { "init" },
         self.resource_id.generate_unique_name()
       )
       .into();
       let symbol = symbols.tables[self.id].create_symbol(name);
       self.wrap_symbol = Some((self.id, symbol).into());
-      self.stmt_infos.push(StmtInfo {
-        stmt_idx: self.ast.program().body.len(),
-        declared_symbols: vec![symbol],
-      });
+      self
+        .stmt_infos
+        .push(StmtInfo { stmt_idx: self.ast.program().body.len(), declared_symbols: vec![symbol] });
       self.initialize_namespace();
     }
   }

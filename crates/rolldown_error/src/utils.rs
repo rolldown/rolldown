@@ -4,10 +4,8 @@ pub fn format_quoted_strings_with_verbs(
 ) -> String {
   debug_assert!(!list.is_empty());
   let is_single_item = list.len() == 1;
-  let mut quoted_list = list
-    .iter()
-    .map(|item| format!("\"{}\"", item.as_ref()))
-    .collect::<Vec<_>>();
+  let mut quoted_list =
+    list.iter().map(|item| format!("\"{}\"", item.as_ref())).collect::<Vec<_>>();
   let mut output = if is_single_item {
     quoted_list.into_iter().next().unwrap()
   } else {

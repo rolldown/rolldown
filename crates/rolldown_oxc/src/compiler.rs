@@ -39,11 +39,7 @@ impl OxcProgram {
       Parser::new(alloc, source, ty).parse().program
     };
 
-    Self {
-      program,
-      source,
-      allocator,
-    }
+    Self { program, source, allocator }
   }
 
   pub fn source(&self) -> &str {
@@ -59,16 +55,11 @@ impl OxcProgram {
   }
 
   pub fn program_mut_and_allocator(&mut self) -> (&mut ast::Program<'_>, &Allocator) {
-    (
-      unsafe { std::mem::transmute(&mut self.program) },
-      &self.allocator,
-    )
+    (unsafe { std::mem::transmute(&mut self.program) }, &self.allocator)
   }
 
   pub fn make_semantic(&self, ty: SourceType) -> Semantic<'_> {
-    let semantic = SemanticBuilder::new(&self.source, ty)
-      .build(self.program())
-      .semantic;
+    let semantic = SemanticBuilder::new(&self.source, ty).build(self.program()).semantic;
     unsafe { std::mem::transmute(semantic) }
   }
 }
@@ -83,11 +74,7 @@ impl OxcCompiler {
       Parser::new(alloc, source, ty).parse().program
     };
 
-    OxcProgram {
-      program,
-      source,
-      allocator,
-    }
+    OxcProgram { program, source, allocator }
   }
 
   pub fn print() {}

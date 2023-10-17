@@ -14,10 +14,7 @@ pub struct Errors {
 
 impl Errors {
   pub fn new(err: Error) -> Self {
-    Self {
-      errors: vec![err],
-      cwd: None,
-    }
+    Self { errors: vec![err], cwd: None }
   }
 
   pub fn push(&mut self, error: Error) {

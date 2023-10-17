@@ -39,14 +39,7 @@ impl NormalModuleTask {
     path: ResourceId,
     tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   ) -> Self {
-    Self {
-      module_id: id,
-      resolver,
-      path,
-      tx,
-      errors: Vec::default(),
-      warnings: Vec::default(),
-    }
+    Self { module_id: id, resolver, path, tx, errors: Vec::default(), warnings: Vec::default() }
   }
 
   pub async fn run(mut self) -> anyhow::Result<()> {
@@ -62,9 +55,7 @@ impl NormalModuleTask {
 
     let (ast, scope, scan_result, symbol) = self.make_ast(source);
 
-    let res = self
-      .resolve_dependencies(&scan_result.import_records)
-      .await?;
+    let res = self.resolve_dependencies(&scan_result.import_records).await?;
 
     let mut symbol_map = SymbolMap::from_symbol_table(symbol);
 
@@ -139,10 +130,7 @@ impl NormalModuleTask {
     match resolved_id {
       Some(info) => Ok(info),
       None => {
-        Ok(ResolvedRequestInfo {
-          path: specifier.to_string().into(),
-          is_external: true,
-        })
+        Ok(ResolvedRequestInfo { path: specifier.to_string().into(), is_external: true })
         // // TODO: should emit warnings like https://rollupjs.org/guide/en#warning-treating-module-as-external-dependency
         // return Err(rolldown_error::Error::unresolved_import(
         //   specifier.to_string(),
@@ -164,9 +152,7 @@ impl NormalModuleTask {
       // let is_external = self.is_external.clone();
       // let on_warn = self.input_options.on_warn.clone();
       tokio::spawn(async move {
-        Self::resolve_id(&resolver, &importer, &specifier)
-          .await
-          .map(|id| (idx, id))
+        Self::resolve_id(&resolver, &importer, &specifier).await.map(|id| (idx, id))
       })
     });
 

@@ -25,27 +25,10 @@ pub struct JsAdapterPlugin {
 
 impl JsAdapterPlugin {
   pub fn new(option: PluginOptions) -> napi::Result<Self> {
-    let resolve_id_fn = option
-      .resolve_id
-      .as_ref()
-      .map(ResolveIdCallback::new)
-      .transpose()?;
-    let load_fn = option
-      .resolve_id
-      .as_ref()
-      .map(LoadCallback::new)
-      .transpose()?;
-    let transform_fn = option
-      .transform
-      .as_ref()
-      .map(TransformCallback::new)
-      .transpose()?;
-    Ok(Self {
-      name: option.name,
-      resolve_id_fn,
-      load_fn,
-      transform_fn,
-    })
+    let resolve_id_fn = option.resolve_id.as_ref().map(ResolveIdCallback::new).transpose()?;
+    let load_fn = option.resolve_id.as_ref().map(LoadCallback::new).transpose()?;
+    let transform_fn = option.transform.as_ref().map(TransformCallback::new).transpose()?;
+    Ok(Self { name: option.name, resolve_id_fn, load_fn, transform_fn })
   }
 
   pub fn new_boxed(option: PluginOptions) -> napi::Result<Box<dyn Plugin>> {
@@ -67,10 +50,7 @@ impl Plugin for JsAdapterPlugin {
   ) -> rolldown::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id_fn {
       let res = cb
-        .call_async((
-          args.source.to_string(),
-          args.importer.map(|s| s.to_string()),
-        ))
+        .call_async((args.source.to_string(), args.importer.map(|s| s.to_string())))
         .await
         .map_err(|e| e.into_bundle_error())?;
 
@@ -87,10 +67,8 @@ impl Plugin for JsAdapterPlugin {
     args: &rolldown::HookLoadArgs,
   ) -> rolldown::HookLoadReturn {
     if let Some(cb) = &self.load_fn {
-      let res = cb
-        .call_async((args.id.to_string(), None))
-        .await
-        .map_err(|e| e.into_bundle_error())?;
+      let res =
+        cb.call_async((args.id.to_string(), None)).await.map_err(|e| e.into_bundle_error())?;
       Ok(res.map(Into::into))
     } else {
       Ok(None)

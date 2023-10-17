@@ -10,15 +10,11 @@ pub struct Case {
 
 impl Case {
   pub fn new(path: impl AsRef<Path>) -> Self {
-    Self {
-      fixture: Fixture::new(path.as_ref().to_path_buf()),
-    }
+    Self { fixture: Fixture::new(path.as_ref().to_path_buf()) }
   }
 
   pub fn exec(self) {
-    tokio::runtime::Runtime::new()
-      .unwrap()
-      .block_on(self.exec_inner())
+    tokio::runtime::Runtime::new().unwrap().block_on(self.exec_inner())
   }
 
   pub async fn exec_inner(mut self) {

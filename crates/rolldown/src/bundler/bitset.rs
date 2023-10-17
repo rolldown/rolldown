@@ -7,9 +7,7 @@ pub struct BitSet {
 
 impl BitSet {
   pub fn new(max_bit_count: u32) -> Self {
-    Self {
-      entries: vec![0; ((max_bit_count + 7) / 8) as usize],
-    }
+    Self { entries: vec![0; ((max_bit_count + 7) / 8) as usize] }
   }
 
   pub fn has_bit(&self, bit: u32) -> bool {
@@ -23,24 +21,16 @@ impl BitSet {
 
 impl Display for BitSet {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let bit_string = self
-      .entries
-      .iter()
-      .map(|e| format!("{e:08b}"))
-      .collect::<Vec<String>>()
-      .join("_");
+    let bit_string =
+      self.entries.iter().map(|e| format!("{e:08b}")).collect::<Vec<String>>().join("_");
     f.write_str(&bit_string)
   }
 }
 
 impl Debug for BitSet {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let bit_string = self
-      .entries
-      .iter()
-      .map(|e| format!("{e:08b}"))
-      .collect::<Vec<String>>()
-      .join("_");
+    let bit_string =
+      self.entries.iter().map(|e| format!("{e:08b}")).collect::<Vec<String>>().join("_");
     f.debug_tuple("BitSet").field(&bit_string).finish()
   }
 }

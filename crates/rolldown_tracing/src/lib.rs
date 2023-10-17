@@ -13,11 +13,7 @@ pub fn enable_tracing_on_demand() -> Option<FlushGuard> {
       .with(
         tracing_subscriber::filter::Targets::new().with_targets(vec![("rolldown", Level::TRACE)]),
       )
-      .with(
-        EnvFilter::builder()
-          .with_default_directive(LevelFilter::TRACE.into())
-          .from_env_lossy(),
-      )
+      .with(EnvFilter::builder().with_default_directive(LevelFilter::TRACE.into()).from_env_lossy())
       .init();
   }
   None

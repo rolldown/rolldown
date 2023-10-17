@@ -21,10 +21,7 @@ pub struct Bundle<'a> {
 
 impl<'a> Bundle<'a> {
   pub fn new(graph: &'a mut Graph, output_options: &'a NormalizedOutputOptions) -> Self {
-    Self {
-      graph,
-      output_options,
-    }
+    Self { graph, output_options }
   }
 
   pub fn mark_modules_entry_bit(
@@ -64,14 +61,9 @@ impl<'a> Bundle<'a> {
       chunks.insert(entry_bits, c);
     }
 
-    self
-      .graph
-      .entries
-      .iter()
-      .enumerate()
-      .for_each(|(i, (_, entry))| {
-        self.mark_modules_entry_bit(*entry, i, &mut module_to_bits);
-      });
+    self.graph.entries.iter().enumerate().for_each(|(i, (_, entry))| {
+      self.mark_modules_entry_bit(*entry, i, &mut module_to_bits);
+    });
 
     self
       .graph
@@ -97,9 +89,7 @@ impl<'a> Bundle<'a> {
     let chunks = chunks
       .into_values()
       .map(|mut chunk| {
-        chunk
-          .modules
-          .sort_by_key(|id| self.graph.modules[*id].exec_order());
+        chunk.modules.sort_by_key(|id| self.graph.modules[*id].exec_order());
         chunk
       })
       .collect::<ChunksVec>();
@@ -126,10 +116,7 @@ impl<'a> Bundle<'a> {
     use rayon::prelude::*;
     let (mut chunks, module_to_chunk) = self.generate_chunks();
 
-    chunks
-      .iter_mut()
-      .par_bridge()
-      .for_each(|chunk| chunk.render_file_name(self.output_options));
+    chunks.iter_mut().par_bridge().for_each(|chunk| chunk.render_file_name(self.output_options));
 
     chunks.iter_mut().par_bridge().for_each(|chunk| {
       chunk.de_conflict(self.graph);
@@ -147,10 +134,7 @@ impl<'a> Bundle<'a> {
       .map(|(_chunk_id, c)| {
         let content = c.render(self.graph, &module_to_chunk, &chunks).unwrap();
 
-        Asset {
-          file_name: c.file_name.clone().unwrap(),
-          content,
-        }
+        Asset { file_name: c.file_name.clone().unwrap(), content }
       })
       .collect::<Vec<_>>();
 

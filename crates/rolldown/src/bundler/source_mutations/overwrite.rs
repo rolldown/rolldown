@@ -15,10 +15,7 @@ impl SourceMutation for Overwrite {
       self.span.start,
       self.span.end,
       &self.content,
-      UpdateOptions {
-        overwrite: true,
-        ..Default::default()
-      },
+      UpdateOptions { overwrite: true, ..Default::default() },
     );
   }
 }

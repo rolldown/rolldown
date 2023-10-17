@@ -45,10 +45,7 @@ impl Fixture {
       input: test_config.input.input.map(|items| {
         items
           .into_iter()
-          .map(|item| InputItem {
-            name: Some(item.name),
-            import: item.import,
-          })
+          .map(|item| InputItem { name: Some(item.name), import: item.import })
           .collect()
       }),
       cwd: Some(fixture_path.to_path_buf()),

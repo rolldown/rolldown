@@ -63,17 +63,13 @@ impl Resolver {
     };
 
     let context = importer.map_or(self.cwd.as_path(), |s| {
-      Path::new(s.as_ref())
-        .parent()
-        .expect("Should have a parent dir")
+      Path::new(s.as_ref()).parent().expect("Should have a parent dir")
     });
 
     let resolved = self.inner.resolve(context, &specifier.to_string_lossy());
 
     match resolved {
-      Ok(info) => Ok(ResolveRet {
-        resolved: info.path().to_string_lossy().to_string().into(),
-      }),
+      Ok(info) => Ok(ResolveRet { resolved: info.path().to_string_lossy().to_string().into() }),
       Err(_err) => {
         if let Some(importer) = importer {
           Err(Box::new(RError::unresolved_import(

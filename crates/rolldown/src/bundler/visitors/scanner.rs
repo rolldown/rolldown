@@ -106,9 +106,7 @@ impl<'a> Scanner<'a> {
   fn add_local_export(&mut self, export_name: &Atom, local: SymbolId) {
     self.result.named_exports.insert(
       export_name.clone(),
-      LocalOrReExport::Local(LocalExport {
-        referenced: (self.idx, local).into(),
-      }),
+      LocalOrReExport::Local(LocalExport { referenced: (self.idx, local).into() }),
     );
   }
 
@@ -116,9 +114,7 @@ impl<'a> Scanner<'a> {
     self.result.export_default_symbol_id = Some(local);
     self.result.named_exports.insert(
       Atom::new_inline("default"),
-      LocalOrReExport::Local(LocalExport {
-        referenced: (self.idx, local).into(),
-      }),
+      LocalOrReExport::Local(LocalExport { referenced: (self.idx, local).into() }),
     );
   }
 
@@ -168,28 +164,21 @@ impl<'a> Scanner<'a> {
       });
       if let Some(decl) = decl.declaration.as_ref() {
         match decl {
-          oxc::ast::ast::Declaration::VariableDeclaration(var_decl) => var_decl
-            .declarations
-            .iter()
-            .for_each(|decl| match &decl.id.kind {
+          oxc::ast::ast::Declaration::VariableDeclaration(var_decl) => {
+            var_decl.declarations.iter().for_each(|decl| match &decl.id.kind {
               oxc::ast::ast::BindingPatternKind::BindingIdentifier(id) => {
                 self.result.named_exports.insert(
                   id.name.clone(),
-                  LocalExport {
-                    referenced: (self.idx, id.expect_symbol_id()).into(),
-                  }
-                  .into(),
+                  LocalExport { referenced: (self.idx, id.expect_symbol_id()).into() }.into(),
                 );
               }
               _ => unimplemented!(),
-            }),
+            })
+          }
           oxc::ast::ast::Declaration::FunctionDeclaration(fn_decl) => {
             let id = fn_decl.id.as_ref().unwrap();
             // FIXME: remove this line after https://github.com/web-infra-dev/oxc/pull/843 being merged.
-            self
-              .current_stmt_info
-              .declared_symbols
-              .push(id.expect_symbol_id());
+            self.current_stmt_info.declared_symbols.push(id.expect_symbol_id());
             self.add_local_export(&id.name, id.expect_symbol_id());
           }
           oxc::ast::ast::Declaration::ClassDeclaration(cls_decl) => {
@@ -214,14 +203,12 @@ impl<'a> Scanner<'a> {
         }
         _ => None,
       },
-      oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => fn_decl
-        .id
-        .as_ref()
-        .map(rolldown_oxc::BindingIdentifierExt::expect_symbol_id),
-      oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => cls_decl
-        .id
-        .as_ref()
-        .map(rolldown_oxc::BindingIdentifierExt::expect_symbol_id),
+      oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
+        fn_decl.id.as_ref().map(rolldown_oxc::BindingIdentifierExt::expect_symbol_id)
+      }
+      oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => {
+        cls_decl.id.as_ref().map(rolldown_oxc::BindingIdentifierExt::expect_symbol_id)
+      }
       _ => unreachable!(),
     };
 
@@ -251,11 +238,7 @@ impl<'a> Scanner<'a> {
         self.add_named_import(sym, spec.imported.name(), id);
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
-        self.add_named_import(
-          spec.local.expect_symbol_id(),
-          &Atom::new_inline("default"),
-          id,
-        );
+        self.add_named_import(spec.local.expect_symbol_id(), &Atom::new_inline("default"), id);
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
         self.add_star_import(spec.local.expect_symbol_id(), id);
@@ -287,10 +270,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
     for (idx, stmt) in program.body.iter_mut().enumerate() {
       self.current_stmt_info.stmt_idx = idx;
       self.visit_statement(stmt);
-      self
-        .result
-        .stmt_infos
-        .push(std::mem::take(&mut self.current_stmt_info));
+      self.result.stmt_infos.push(std::mem::take(&mut self.current_stmt_info));
     }
   }
 
@@ -304,10 +284,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   fn visit_identifier_reference(&mut self, ident: &'p mut IdentifierReference) {
     if ident.name == "module" || ident.name == "exports" {
       if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
-        if refs
-          .iter()
-          .any(|r| (*r).eq(&ident.reference_id.get().unwrap()))
-        {
+        if refs.iter().any(|r| (*r).eq(&ident.reference_id.get().unwrap())) {
           self.set_module_resolution(ModuleResolution::CommonJs);
         }
       }
@@ -333,10 +310,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
     if let oxc::ast::ast::Expression::Identifier(ident) = &mut expr.callee {
       if ident.name == "require" {
         if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
-          if refs
-            .iter()
-            .any(|r| (*r).eq(&ident.reference_id.get().unwrap()))
-          {
+          if refs.iter().any(|r| (*r).eq(&ident.reference_id.get().unwrap())) {
             self.set_module_resolution(ModuleResolution::CommonJs);
             if let Some(oxc::ast::ast::Argument::Expression(
               oxc::ast::ast::Expression::StringLiteral(request),

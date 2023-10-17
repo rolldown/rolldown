@@ -19,19 +19,13 @@ impl Bundler {
   pub fn new(input_options: InputOptions) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self {
-      input_options: normalized,
-      _plugins: vec![],
-    }
+    Self { input_options: normalized, _plugins: vec![] }
   }
 
   pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self {
-      input_options: normalized,
-      _plugins: plugins,
-    }
+    Self { input_options: normalized, _plugins: plugins }
   }
 
   pub async fn write(
@@ -39,13 +33,7 @@ impl Bundler {
     output_options: crate::OutputOptions,
   ) -> anyhow::Result<Vec<Asset>> {
     let dir = output_options.dir.clone().unwrap_or_else(|| {
-      self
-        .input_options
-        .cwd
-        .as_path()
-        .join("dist")
-        .to_string_lossy()
-        .to_string()
+      self.input_options.cwd.as_path().join("dist").to_string_lossy().to_string()
     });
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
 
@@ -66,10 +54,7 @@ impl Bundler {
         }
       };
       std::fs::write(dest, &chunk.content).unwrap_or_else(|_| {
-        panic!(
-          "Failed to write file in {:?}",
-          dir.as_path().join(&chunk.file_name)
-        )
+        panic!("Failed to write file in {:?}", dir.as_path().join(&chunk.file_name))
       });
     }
 

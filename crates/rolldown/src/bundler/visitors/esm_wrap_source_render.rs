@@ -15,11 +15,7 @@ pub struct EsmWrapSourceRender<'ast> {
 
 impl<'ast> EsmWrapSourceRender<'ast> {
   pub fn new(ctx: RendererContext<'ast>) -> Self {
-    Self {
-      ctx,
-      hoisted_vars: vec![],
-      hoisted_functions: vec![],
-    }
+    Self { ctx, hoisted_vars: vec![], hoisted_functions: vec![] }
   }
 
   pub fn apply(&mut self) {
@@ -45,18 +41,9 @@ impl<'ast> EsmWrapSourceRender<'ast> {
       .collect::<Vec<_>>()
       .join(",\n");
     self.ctx.source.append("\n}\n});");
-    self
-      .ctx
-      .source
-      .prepend(format!("\nvar {namespace_name} = {{\n{exports}\n}};\n",));
-    self
-      .ctx
-      .source
-      .prepend(format!("var {};\n", self.hoisted_vars.join(",")));
-    self
-      .ctx
-      .source
-      .prepend(format!("{}\n", self.hoisted_functions.join("\n")));
+    self.ctx.source.prepend(format!("\nvar {namespace_name} = {{\n{exports}\n}};\n",));
+    self.ctx.source.prepend(format!("var {};\n", self.hoisted_vars.join(",")));
+    self.ctx.source.prepend(format!("{}\n", self.hoisted_functions.join("\n")));
   }
 }
 
@@ -92,37 +79,27 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
             })
             .cloned();
           self.hoisted_vars.extend(names);
-          self.ctx.remove_node(Span::new(
-            named_decl.span.start,
-            var_decl.declarations[0].span.start,
-          ));
+          self
+            .ctx
+            .remove_node(Span::new(named_decl.span.start, var_decl.declarations[0].span.start));
         }
         Declaration::FunctionDeclaration(func) => {
           // hoisted function declaration
           // TODO update symbol name with magic string move
-          self
-            .ctx
-            .remove_node(Span::new(named_decl.span.start, named_decl.span.end));
+          self.ctx.remove_node(Span::new(named_decl.span.start, named_decl.span.end));
           #[allow(clippy::eq_op)]
-          let mut formatter = Formatter::new(
-            (func.span.end - func.span.end) as usize,
-            FormatterOptions::default(),
-          );
+          let mut formatter =
+            Formatter::new((func.span.end - func.span.end) as usize, FormatterOptions::default());
           func.gen(&mut formatter);
           self.hoisted_functions.push(formatter.into_code());
         }
         Declaration::ClassDeclaration(class) => {
           let id = class.id.as_ref().unwrap();
-          if let Some(name) = self
-            .ctx
-            .get_symbol_final_name((self.ctx.module.id, id.expect_symbol_id()).into())
+          if let Some(name) =
+            self.ctx.get_symbol_final_name((self.ctx.module.id, id.expect_symbol_id()).into())
           {
             self.hoisted_vars.push(name.clone());
-            self.ctx.overwrite(
-              named_decl.span.start,
-              class.span.start,
-              format!("{name} = "),
-            );
+            self.ctx.overwrite(named_decl.span.start, class.span.start, format!("{name} = "));
           }
         }
         _ => {}
@@ -147,11 +124,7 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
       oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
         let default_symbol_name = self.ctx.default_symbol_name.unwrap();
         self.hoisted_vars.push(default_symbol_name.clone());
-        self.ctx.overwrite(
-          decl.span.start,
-          exp.span().start,
-          format!("{default_symbol_name} = "),
-        );
+        self.ctx.overwrite(decl.span.start, exp.span().start, format!("{default_symbol_name} = "));
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
         // hoisted function declaration
@@ -168,11 +141,7 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
         let default_symbol_name = self.ctx.default_symbol_name.unwrap();
         self.hoisted_vars.push(default_symbol_name.clone());
-        self.ctx.overwrite(
-          decl.span.start,
-          class.span.start,
-          format!("{default_symbol_name} = "),
-        );
+        self.ctx.overwrite(decl.span.start, class.span.start, format!("{default_symbol_name} = "));
       }
       _ => {}
     }

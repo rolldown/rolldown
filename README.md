@@ -4,7 +4,7 @@ Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.
 
 # Rollup test status
 
-See [Rollup test status](./packages/rollup-tests/src/status.md).
+See [rollup test status](./packages/rollup-tests/src/status.md).
 
 It is status for rollup function/file-hashes directory test cases.
 

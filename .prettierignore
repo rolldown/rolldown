@@ -1,9 +1,10 @@
 packages/**/dist/*
+packages/rollup-tests
 crates
 target
 temp
 .yarn
-
+rollup
 **/.git
 **/node_modules
 

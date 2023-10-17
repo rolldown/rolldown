@@ -76,7 +76,9 @@ jobs:
           # - macos-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          submodules: true # Pull submodules for additional files
 
       - name: Install Rust
         uses: ./.github/actions/rustup
@@ -94,9 +96,7 @@ jobs:
         run: yarn prettier
 
       - name: Build
-        run: |
-          yarn build
+        run: yarn build
 
       - name: Test
-        run: |
-          yarn test
+        run: yarn test

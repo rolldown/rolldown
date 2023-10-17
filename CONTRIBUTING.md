@@ -21,6 +21,12 @@ cargo install cargo-binstall
 cargo binstall just -y
 ```
 
+## Node Setup
+
+```bash
+yarn install
+```
+
 # Project Commands
 
 ```bash
@@ -30,4 +36,7 @@ just test   # Run project test
 just lint   # Run lint
 just fmt    # Run format
 just bench-prepare && just bench # Run benchmarks
+yarn build  # Build node workspace packages
+yarn test   # Run node test
+yarn test:update # Update node test snapshot
 ```

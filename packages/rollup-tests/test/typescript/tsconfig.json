@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"noEmit": true,
+		"strict": true,
+		"pretty": true,
+		"lib": ["es2015"],
+		"types": []
+	},
+	"include": ["./dist", "./typings"],
+	"files": ["./index.ts"]
+}

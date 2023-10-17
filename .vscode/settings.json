@@ -24,5 +24,6 @@
     "*.snap": "markdown",
     "*.snap.new": "markdown"
   },
-  "cSpell.words": ["Finalizer", "importee", "rolldown", "rollup", "rustc"]
+  "cSpell.words": ["Finalizer", "importee", "rolldown", "rollup", "rustc"],
+  "git.ignoreLimitWarning": true
 }

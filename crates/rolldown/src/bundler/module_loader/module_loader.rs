@@ -183,7 +183,7 @@ impl<'a> ModuleLoader<'a> {
             id,
             self.resolver.clone(),
             module_path,
-            info.type_module,
+            info.module_type,
             self.tx.clone(),
           );
           tokio::spawn(async move { task.run().await });

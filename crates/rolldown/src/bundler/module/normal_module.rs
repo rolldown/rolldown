@@ -6,7 +6,7 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleResolution, NamedImport,
+  ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
   ResolvedExport, ResourceId, StmtInfo, StmtInfoId, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
@@ -29,8 +29,7 @@ pub struct NormalModule {
   pub exec_order: u32,
   pub id: ModuleId,
   pub resource_id: ResourceId,
-  // The flag for ".mjs" or "type: module" in package.json
-  pub type_module: bool,
+  pub module_type: ModuleType,
   pub ast: OxcProgram,
   pub source_mutations: Vec<BoxedSourceMutation>,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
@@ -40,7 +39,7 @@ pub struct NormalModule {
   pub imports: FxHashMap<Span, ImportRecordId>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
-  pub module_resolution: ModuleResolution,
+  pub exports_kind: ExportsKind,
   // resolved
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
   pub resolved_star_exports: Vec<ModuleId>,
@@ -79,7 +78,7 @@ impl NormalModule {
       ctx.runtime,
     );
 
-    if self.module_resolution == ModuleResolution::CommonJs {
+    if self.exports_kind == ExportsKind::CommonJs {
       CommonJsSourceRender::new(ctx).apply();
     } else if self.wrap_symbol.is_some() {
       EsmWrapSourceRender::new(ctx).apply();
@@ -305,7 +304,7 @@ impl NormalModule {
     if self.wrap_symbol.is_none() {
       let name = format!(
         "{}_{}",
-        if self.module_resolution == ModuleResolution::CommonJs { "require" } else { "init" },
+        if self.exports_kind == ExportsKind::CommonJs { "require" } else { "init" },
         self.resource_id.generate_unique_name()
       )
       .into();

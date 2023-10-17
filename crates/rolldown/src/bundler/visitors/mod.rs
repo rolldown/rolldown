@@ -7,7 +7,7 @@ use oxc::{
   semantic::ReferenceId,
   span::{Atom, Span},
 };
-use rolldown_common::{ModuleId, ModuleResolution, SymbolRef};
+use rolldown_common::{ExportsKind, ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, UpdateOptions};
 
@@ -154,7 +154,7 @@ impl<'ast> RendererContext<'ast> {
     let rec = &self.module.import_records[self.module.imports.get(&decl.span).copied().unwrap()];
     let importee = &self.modules[rec.resolved_module];
     if let Module::Normal(importee) = importee {
-      if importee.module_resolution == ModuleResolution::CommonJs {
+      if importee.exports_kind == ExportsKind::CommonJs {
         // add import cjs symbol binding
         let namespace_name = self
           .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
@@ -165,7 +165,11 @@ impl<'ast> RendererContext<'ast> {
           decl.span.start,
           format!(
             "var {namespace_name} = {to_esm_runtime_symbol_name}({wrap_symbol_name}(){});\n",
-            if self.module.type_module { ", 1" } else { "" }
+            if self.module.module_type.is_esm() {
+              ", 1"
+            } else {
+              ""
+            }
           ),
         );
         decl.specifiers.iter().for_each(|s| match s {

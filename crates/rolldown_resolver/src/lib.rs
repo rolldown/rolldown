@@ -1,4 +1,4 @@
-use rolldown_common::{RawPath, ResourceId};
+use rolldown_common::{ModuleType, RawPath, ResourceId};
 use rolldown_error::Error as RError;
 use std::{
   borrow::Cow,
@@ -45,7 +45,7 @@ impl Default for Resolver {
 #[derive(Debug)]
 pub struct ResolveRet {
   pub resolved: RawPath,
-  pub type_module: bool,
+  pub module_type: ModuleType,
 }
 
 impl Resolver {
@@ -73,7 +73,7 @@ impl Resolver {
     match resolved {
       Ok(info) => Ok(ResolveRet {
         resolved: info.path().to_string_lossy().to_string().into(),
-        type_module: is_type_module(&info),
+        module_type: calc_module_type(&info),
       }),
       Err(_err) => {
         if let Some(importer) = importer {
@@ -89,14 +89,18 @@ impl Resolver {
   }
 }
 
-fn is_type_module(info: &Resolution) -> bool {
+fn calc_module_type(info: &Resolution) -> ModuleType {
   if let Some(extension) = info.path().extension() {
     if extension == "mjs" {
-      return true;
+      return ModuleType::EsmMjs;
+    } else if extension == "cjs" {
+      return ModuleType::CJS;
     }
   }
   if let Some(package_json) = info.package_json() {
-    return package_json.raw_json().get("type").and_then(|v| v.as_str()) == Some("module");
+    if package_json.raw_json().get("type").and_then(|v| v.as_str()) == Some("module") {
+      return ModuleType::EsmPackageJson;
+    }
   }
-  return false
+   ModuleType::Unknown
 }

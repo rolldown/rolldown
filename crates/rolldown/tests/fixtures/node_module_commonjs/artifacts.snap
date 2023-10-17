@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/node_module_commonjs
 ---
-# entry.js
+# 2.js
 
 ```js
 // commonjs.js
@@ -12,9 +12,22 @@ var require_commonjs = __commonJS({
 module.exports = 1;
 }
 });
+```
+# entry.js
+
+```js
 // entry.js
-var _default = commonjs_ns.default;
 var commonjs_ns = __toESM(require_commonjs(), 1);
+var _default = commonjs_ns.default;
+
+console.log(_default)
+```
+# main.js
+
+```js
+// main.mjs
+var commonjs_ns = __toESM(require_commonjs(), 1);
+var _default = commonjs_ns.default;
 
 console.log(_default)
 ```

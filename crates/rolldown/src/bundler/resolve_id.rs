@@ -1,11 +1,11 @@
-use rolldown_common::{RawPath, ResourceId};
+use rolldown_common::{ModuleType, RawPath, ResourceId};
 use rolldown_resolver::Resolver;
 
 use crate::BuildResult;
 
 pub struct ResolvedRequestInfo {
   pub path: RawPath,
-  pub type_module: bool,
+  pub module_type: ModuleType,
   pub is_external: bool,
 }
 
@@ -26,7 +26,7 @@ pub async fn resolve_id(
     let resolved = resolver.resolve(importer, request)?;
     Ok(Some(ResolvedRequestInfo {
       path: resolved.resolved,
-      type_module: resolved.type_module,
+      module_type: resolved.module_type,
       is_external: false,
     }))
   }

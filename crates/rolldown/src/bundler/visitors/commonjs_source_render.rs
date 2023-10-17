@@ -1,5 +1,5 @@
 use oxc::ast::Visit;
-use rolldown_common::ModuleResolution;
+use rolldown_common::ExportsKind;
 
 use crate::bundler::module::module::Module;
 
@@ -37,7 +37,7 @@ impl<'ast> Visit<'ast> for CommonJsSourceRender<'ast> {
         if let Module::Normal(importee) = importee {
           let wrap_symbol_name =
             self.ctx.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
-          if importee.module_resolution == ModuleResolution::CommonJs {
+          if importee.exports_kind == ExportsKind::CommonJs {
             self.ctx.source.update(expr.span.start, expr.span.end, format!("{wrap_symbol_name}()"));
           } else {
             let namespace_name = self

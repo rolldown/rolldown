@@ -4,7 +4,7 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleResolution, NamedImport,
+  ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
   ResourceId, StmtInfo, StmtInfoId, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
@@ -28,8 +28,8 @@ pub struct NormalModuleBuilder {
   pub scope: Option<ScopeTree>,
   pub default_export_symbol: Option<SymbolId>,
   pub namespace_symbol: Option<(SymbolRef, ReferenceId)>,
-  pub module_resolution: Option<ModuleResolution>,
-  pub type_module: bool,
+  pub exports_kind: Option<ExportsKind>,
+  pub module_type: ModuleType,
 }
 
 impl NormalModuleBuilder {
@@ -58,11 +58,11 @@ impl NormalModuleBuilder {
       default_export_symbol: self.default_export_symbol,
       namespace_symbol: self.namespace_symbol.unwrap(),
       is_symbol_for_namespace_referenced: false,
-      source_mutations: Vec::default(),
-      module_resolution: self.module_resolution.unwrap_or(ModuleResolution::Esm),
-      cjs_symbols: FxHashMap::default(),
+      source_mutations: Default::default(),
+      exports_kind: self.exports_kind.unwrap_or(ExportsKind::Esm),
+      cjs_symbols: Default::default(),
       wrap_symbol: None,
-      type_module: self.type_module,
+      module_type: self.module_type,
     }
   }
 }

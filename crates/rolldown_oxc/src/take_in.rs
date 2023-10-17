@@ -6,6 +6,7 @@ pub trait TakeIn<'ast> {
   /// A sugar function for using `std::mem::take` on `oxc_ast`.
   ///
   /// Replaces `self` with a [`Dummy`] value of `Self`, returning the previous value stored in `self`.
+  #[must_use]
   fn take_in(&mut self, alloc: &'ast Allocator) -> Self;
 }
 

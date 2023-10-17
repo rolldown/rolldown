@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
 mod plugin;
 mod plugin_adapter;
-use napi_derive::*;
+use napi_derive::napi;
 use serde::Deserialize;
 
 use crate::options::input_options::plugin_adapter::JsAdapterPlugin;
@@ -51,7 +51,7 @@ pub fn resolve_input_options(
   opts: InputOptions,
 ) -> napi::Result<(rolldown::InputOptions, Vec<Box<dyn rolldown::Plugin>>)> {
   let cwd = PathBuf::from(opts.cwd.clone());
-  assert!(cwd != PathBuf::from("/"), "{:#?}", opts);
+  assert!(cwd != PathBuf::from("/"), "{opts:#?}");
 
   let plugins = opts
     .plugins

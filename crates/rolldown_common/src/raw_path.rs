@@ -1,4 +1,7 @@
-use std::path::{Component, Path};
+use std::{
+  ffi::OsStr,
+  path::{Component, Path},
+};
 
 use sugar_path::{AsPath, SugarPath};
 
@@ -25,7 +28,7 @@ impl RawPath {
     let mut relative = path.relative(root);
     let ext = relative
       .extension()
-      .and_then(|ext| ext.to_str())
+      .and_then(OsStr::to_str)
       .unwrap_or("")
       .to_string();
     relative.set_extension("");

@@ -14,5 +14,5 @@ where
     async_scoped::Scope::scope_and_block(|scope: &mut TokioScope<'_, _>| {
       iter.into_iter().for_each(|fut| scope.spawn(fut));
     });
-  collections.into_iter().map(|item| item.unwrap()).collect()
+  collections.into_iter().map(Result::unwrap).collect()
 }

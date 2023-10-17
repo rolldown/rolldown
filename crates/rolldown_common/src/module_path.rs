@@ -1,4 +1,4 @@
-use std::{fmt::Debug, hash::Hash, path::Path, sync::Arc};
+use std::{ffi::OsStr, fmt::Debug, hash::Hash, path::Path, sync::Arc};
 
 use sugar_path::SugarPath;
 
@@ -38,7 +38,7 @@ impl ResourceId {
         .relative(cwd.as_ref())
         .into_os_string()
         .into_string()
-        .unwrap()
+        .expect("should be valid utf8")
     } else {
       path.to_string()
     };
@@ -53,12 +53,16 @@ impl ResourceId {
   #[allow(clippy::needless_return)]
   pub fn generate_unique_name(&self) -> String {
     let path = Path::new(self.0.path.as_str());
-    let unique_name = path.file_stem().unwrap().to_str().unwrap();
+    let unique_name = path
+      .file_stem()
+      .expect("should have file_stem")
+      .to_str()
+      .expect("should be valid utf8");
     if unique_name == "index" {
       if let Some(unique_name_of_parent_dir) = path
         .parent()
-        .and_then(|p| p.file_stem())
-        .and_then(|p| p.to_str())
+        .and_then(Path::file_stem)
+        .and_then(OsStr::to_str)
       {
         return [unique_name_of_parent_dir, "_index"].concat();
       }

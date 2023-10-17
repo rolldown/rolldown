@@ -47,6 +47,7 @@ pub struct ResolveRet {
 }
 
 impl Resolver {
+  #[allow(clippy::missing_errors_doc)]
   pub fn resolve(
     &self,
     importer: Option<&ResourceId>,
@@ -61,13 +62,11 @@ impl Resolver {
       Cow::Borrowed(Path::new(specifier))
     };
 
-    let context = importer
-      .map(|s| {
-        Path::new(s.as_ref())
-          .parent()
-          .expect("Should have a parent dir")
-      })
-      .unwrap_or(&self.cwd);
+    let context = importer.map_or(self.cwd.as_path(), |s| {
+      Path::new(s.as_ref())
+        .parent()
+        .expect("Should have a parent dir")
+    });
 
     let resolved = self.inner.resolve(context, &specifier.to_string_lossy());
 

@@ -73,15 +73,15 @@ impl Display for ErrorKind {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       // Aligned with rollup
-      ErrorKind::UnresolvedEntry { unresolved_id } => write!(f, "Could not resolve entry module \"{}\"", unresolved_id.pretty_display()),
-      ErrorKind::ExternalEntry { id } => write!(f, "Entry module \"{}\" cannot be external.", id.pretty_display()),
-      ErrorKind::MissingExport { missing_export, importee, importer } => write!(
+      Self::UnresolvedEntry { unresolved_id } => write!(f, "Could not resolve entry module \"{}\"", unresolved_id.pretty_display()),
+      Self::ExternalEntry { id } => write!(f, "Entry module \"{}\" cannot be external.", id.pretty_display()),
+      Self::MissingExport { missing_export, importee, importer } => write!(
         f,
         r#""{missing_export}" is not exported by "{}", imported by "{}"."#,
         importee.pretty_display(),
         importer.pretty_display(),
       ),
-      ErrorKind::AmbiguousExternalNamespaces {
+      Self::AmbiguousExternalNamespaces {
         binding,
         reexporting_module,
         used_module,
@@ -93,18 +93,18 @@ impl Display for ErrorKind {
         format_quoted_strings(&sources.iter().map(|p| p.pretty_display().to_string()).collect::<Vec<_>>()),
         used_module.pretty_display(),
       ),
-      ErrorKind::CircularDependency(path) => write!(f, "Circular dependency: {}", path.iter().map(|p| p.pretty_display().to_string()).collect::<Vec<_>>().join(" -> ")),
-      ErrorKind::InvalidExportOptionValue(value) =>  write!(f, r#""output.exports" must be "default", "named", "none", "auto", or left unspecified (defaults to "auto"), received "{value}"."#),
-      ErrorKind::IncompatibleExportOptionValue { option_value, exported_keys, entry_module } => {
+      Self::CircularDependency(path) => write!(f, "Circular dependency: {}", path.iter().map(|p| p.pretty_display().to_string()).collect::<Vec<_>>().join(" -> ")),
+      Self::InvalidExportOptionValue(value) =>  write!(f, r#""output.exports" must be "default", "named", "none", "auto", or left unspecified (defaults to "auto"), received "{value}"."#),
+      Self::IncompatibleExportOptionValue { option_value, exported_keys, entry_module } => {
         let mut exported_keys = exported_keys.iter().collect::<Vec<_>>();
         exported_keys.sort();
         write!(f, r#""{option_value}" was specified for "output.exports", but entry module "{}" has the following exports: {}"#, entry_module.pretty_display(), format_quoted_strings(&exported_keys))
       }
-      ErrorKind::ShimmedExport { binding, exporter } => write!(f, r#"Missing export "{binding}" has been shimmed in module "{}"."#, exporter.pretty_display()),
-      ErrorKind::CircularReexport { export_name, exporter } => write!(f, r#""{export_name}" cannot be exported from "{}" as it is a reexport that references itself."#, exporter.pretty_display()),
-      ErrorKind::UnresolvedImport { specifier, importer } => write!(f, r#"Could not resolve "{specifier}" from "{}""#, importer.pretty_display()),
-      ErrorKind::IoError(e) => e.fmt(f),
-      ErrorKind::Napi { status: _, reason: _ } => todo!()
+      Self::ShimmedExport { binding, exporter } => write!(f, r#"Missing export "{binding}" has been shimmed in module "{}"."#, exporter.pretty_display()),
+      Self::CircularReexport { export_name, exporter } => write!(f, r#""{export_name}" cannot be exported from "{}" as it is a reexport that references itself."#, exporter.pretty_display()),
+      Self::UnresolvedImport { specifier, importer } => write!(f, r#"Could not resolve "{specifier}" from "{}""#, importer.pretty_display()),
+      Self::IoError(e) => e.fmt(f),
+      Self::Napi { status: _, reason: _ } => unimplemented!()
     }
   }
 }
@@ -114,19 +114,19 @@ impl ErrorKind {
   pub fn code(&self) -> &'static str {
     match self {
       // Aligned with rollup
-      ErrorKind::UnresolvedEntry { .. } => error_code::UNRESOLVED_ENTRY,
-      ErrorKind::ExternalEntry { .. } => error_code::UNRESOLVED_ENTRY,
-      ErrorKind::MissingExport { .. } => error_code::MISSING_EXPORT,
-      ErrorKind::AmbiguousExternalNamespaces { .. } => error_code::AMBIGUOUS_EXTERNAL_NAMESPACES,
-      ErrorKind::CircularDependency(_) => error_code::CIRCULAR_DEPENDENCY,
-      ErrorKind::InvalidExportOptionValue(_) => error_code::INVALID_EXPORT_OPTION,
-      ErrorKind::IncompatibleExportOptionValue { .. } => error_code::INVALID_EXPORT_OPTION,
-      ErrorKind::ShimmedExport { .. } => error_code::SHIMMED_EXPORT,
-      ErrorKind::CircularReexport { .. } => error_code::CIRCULAR_REEXPORT,
-      ErrorKind::UnresolvedImport { .. } => error_code::UNRESOLVED_IMPORT,
+      Self::UnresolvedEntry { .. } | Self::ExternalEntry { .. } => error_code::UNRESOLVED_ENTRY,
+      Self::MissingExport { .. } => error_code::MISSING_EXPORT,
+      Self::AmbiguousExternalNamespaces { .. } => error_code::AMBIGUOUS_EXTERNAL_NAMESPACES,
+      Self::CircularDependency(_) => error_code::CIRCULAR_DEPENDENCY,
+      Self::IncompatibleExportOptionValue { .. } | Self::InvalidExportOptionValue(_) => {
+        error_code::INVALID_EXPORT_OPTION
+      }
+      Self::ShimmedExport { .. } => error_code::SHIMMED_EXPORT,
+      Self::CircularReexport { .. } => error_code::CIRCULAR_REEXPORT,
+      Self::UnresolvedImport { .. } => error_code::UNRESOLVED_IMPORT,
       // Rolldown specific
-      ErrorKind::IoError(_) => error_code::IO_ERROR,
-      ErrorKind::Napi { .. } => todo!(),
+      Self::IoError(_) => error_code::IO_ERROR,
+      Self::Napi { .. } => todo!(),
     }
   }
 }

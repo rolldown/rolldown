@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::{
@@ -42,8 +44,8 @@ impl NormalModuleTask {
       resolver,
       path,
       tx,
-      errors: Default::default(),
-      warnings: Default::default(),
+      errors: Vec::default(),
+      warnings: Vec::default(),
     }
   }
 
@@ -120,6 +122,7 @@ impl NormalModuleTask {
     (program, scope, scan_result, symbol_table)
   }
 
+  #[allow(clippy::option_if_let_else)]
   pub(crate) async fn resolve_id(
     resolver: &Resolver,
     importer: &ResourceId,
@@ -149,13 +152,14 @@ impl NormalModuleTask {
     }
   }
 
+  #[allow(clippy::collection_is_never_read)]
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordId, ImportRecord>,
   ) -> anyhow::Result<Vec<(ImportRecordId, ResolvedRequestInfo)>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
-      let resolver = self.resolver.clone();
+      let resolver = Arc::clone(&self.resolver);
       let importer = self.path.clone();
       // let is_external = self.is_external.clone();
       // let on_warn = self.input_options.on_warn.clone();

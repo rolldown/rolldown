@@ -37,7 +37,7 @@ pub struct ExpectedError {
 impl TestConfig {
   pub fn from_config_path(filepath: &Path) -> Self {
     let config_str = std::fs::read_to_string(filepath).expect("Failed to read test config file");
-    let test_config: TestConfig =
+    let test_config: Self =
       serde_json::from_str(&config_str).expect("Failed to parse test config file");
     test_config
   }

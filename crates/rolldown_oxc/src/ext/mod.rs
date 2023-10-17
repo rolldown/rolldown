@@ -10,6 +10,6 @@ impl BindingIdentifierExt for ast::BindingIdentifier {
     self
       .symbol_id
       .get()
-      .unwrap_or_else(|| panic!("fail get symbol id from {:?}", self))
+      .unwrap_or_else(|| panic!("fail get symbol id from {self:?}"))
   }
 }

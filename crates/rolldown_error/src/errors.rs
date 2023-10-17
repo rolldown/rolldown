@@ -31,6 +31,6 @@ impl Errors {
 
 impl Extend<Error> for Errors {
   fn extend<T: IntoIterator<Item = Error>>(&mut self, iter: T) {
-    self.errors.extend(iter)
+    self.errors.extend(iter);
   }
 }

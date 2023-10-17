@@ -2,7 +2,6 @@ use std::{
   borrow::Cow,
   fmt::Display,
   path::{Path, PathBuf},
-  sync::Arc,
 };
 
 use crate::error_kind::ErrorKind;
@@ -10,12 +9,10 @@ use crate::error_kind::ErrorKind;
 type StaticStr = Cow<'static, str>;
 
 // TODO reduce struct size
-#[allow(unused)]
 #[derive(Debug)]
 pub struct Error {
   contexts: Vec<Cow<'static, str>>,
   kind: ErrorKind,
-  cwd: Option<Arc<PathBuf>>,
 }
 
 impl PartialEq for Error {
@@ -43,11 +40,10 @@ impl Error {
     Self {
       contexts: vec![],
       kind,
-      cwd: None,
     }
   }
 
-  pub fn context(mut self, context: impl Into<StaticStr>) -> Self {
+  pub fn context(&mut self, context: impl Into<StaticStr>) -> &mut Self {
     self.contexts.push(context.into());
     self
   }
@@ -111,7 +107,7 @@ impl Error {
     let entry_module = entry_module.as_ref().to_path_buf();
     Self::with_kind(ErrorKind::IncompatibleExportOptionValue {
       option_value,
-      exported_keys: exported_keys.into_iter().map(|i| i.into()).collect(),
+      exported_keys: exported_keys.into_iter().map(Into::into).collect(),
       entry_module,
     })
   }

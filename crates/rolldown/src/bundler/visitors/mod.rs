@@ -86,6 +86,7 @@ impl<'ast> RendererContext<'ast> {
     self.source.remove(span.start, span.end);
   }
 
+  #[allow(clippy::needless_pass_by_value)]
   pub fn rename_symbol(&mut self, span: Span, name: Atom) {
     self.overwrite(span.start, span.end, name.to_string());
   }
@@ -102,8 +103,8 @@ impl<'ast> RendererContext<'ast> {
     get_reference_final_name(module_id, reference_id, self.symbols, self.final_names)
   }
 
-  pub fn get_runtime_symbol_final_name(&self, name: Atom) -> &Atom {
-    let symbol = self.runtime.resolve_symbol(&name);
+  pub fn get_runtime_symbol_final_name(&self, name: &Atom) -> &Atom {
+    let symbol = self.runtime.resolve_symbol(name);
     self.get_symbol_final_name(symbol).unwrap()
   }
 
@@ -165,7 +166,7 @@ impl<'ast> RendererContext<'ast> {
         let wrap_symbol_name = self
           .get_symbol_final_name(importee.wrap_symbol.unwrap())
           .unwrap();
-        let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name("__toESM".into());
+        let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name(&"__toESM".into());
         self.source.prepend_left(
           decl.span.start,
           format!("var {namespace_name} = {to_esm_runtime_symbol_name}({wrap_symbol_name}());\n"),
@@ -175,11 +176,7 @@ impl<'ast> RendererContext<'ast> {
             if let Some(name) = self.get_symbol_final_name(
               (
                 importee.id,
-                importee
-                  .cjs_symbols
-                  .get(spec.imported.name())
-                  .unwrap()
-                  .symbol,
+                importee.cjs_symbols[spec.imported.name()].symbol,
               )
                 .into(),
             ) {
@@ -193,11 +190,7 @@ impl<'ast> RendererContext<'ast> {
             if let Some(name) = self.get_symbol_final_name(
               (
                 importee.id,
-                importee
-                  .cjs_symbols
-                  .get(&Atom::new_inline("default"))
-                  .unwrap()
-                  .symbol,
+                importee.cjs_symbols[&Atom::new_inline("default")].symbol,
               )
                 .into(),
             ) {

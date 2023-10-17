@@ -23,13 +23,14 @@ impl ExternalModule {
       id,
       exec_order: u32::MAX,
       resource_id,
-      import_records: Default::default(),
+      import_records: IndexVec::default(),
       is_symbol_for_namespace_referenced: false,
-      symbols_imported_by_others: Default::default(),
+      symbols_imported_by_others: FxHashMap::default(),
       namespace_name,
     }
   }
 
+  #[allow(clippy::needless_pass_by_value)]
   pub fn add_export_symbol(&mut self, symbols: &mut Symbols, exported: Atom, is_star: bool) {
     let symbol = if is_star {
       &self.namespace_name

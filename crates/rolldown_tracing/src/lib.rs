@@ -1,4 +1,4 @@
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::atomic::AtomicBool;
 
 use tracing::{metadata::LevelFilter, Level};
 use tracing_chrome::FlushGuard;
@@ -19,27 +19,6 @@ pub fn enable_tracing_on_demand() -> Option<FlushGuard> {
           .from_env_lossy(),
       )
       .init();
-    None
-  } else {
-    None
   }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct ContextedTracer {
-  context: Vec<Arc<String>>,
-}
-
-impl ContextedTracer {
-  pub fn context(mut self, ctxt: String) -> Self {
-    self.context.push(ctxt.into());
-    self
-  }
-
-  pub fn emit_trace(&self, info: String) {
-    // for ctxt in &self.context {
-    // tracing::trace!("{}: {}", ansi_term::Color::Yellow.paint("context"), ctxt);
-    // }
-    tracing::trace!(info)
-  }
+  None
 }

@@ -1,4 +1,4 @@
-use napi_derive::*;
+use napi_derive::napi;
 use serde::Deserialize;
 
 #[napi(object)]

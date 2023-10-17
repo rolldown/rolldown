@@ -34,7 +34,7 @@ impl ImportRecord {
   pub fn new(specifier: Atom, kind: ImportKind) -> Self {
     Self {
       module_request: specifier,
-      resolved_module: Default::default(),
+      resolved_module: ModuleId::default(),
       is_import_namespace: false,
       kind,
     }

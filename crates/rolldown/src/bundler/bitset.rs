@@ -6,8 +6,8 @@ pub struct BitSet {
 }
 
 impl BitSet {
-  pub fn new(max_bit_count: u32) -> BitSet {
-    BitSet {
+  pub fn new(max_bit_count: u32) -> Self {
+    Self {
       entries: vec![0; ((max_bit_count + 7) / 8) as usize],
     }
   }
@@ -26,7 +26,7 @@ impl Display for BitSet {
     let bit_string = self
       .entries
       .iter()
-      .map(|e| format!("{:08b}", e))
+      .map(|e| format!("{e:08b}"))
       .collect::<Vec<String>>()
       .join("_");
     f.write_str(&bit_string)
@@ -38,7 +38,7 @@ impl Debug for BitSet {
     let bit_string = self
       .entries
       .iter()
-      .map(|e| format!("{:08b}", e))
+      .map(|e| format!("{e:08b}"))
       .collect::<Vec<String>>()
       .join("_");
     f.debug_tuple("BitSet").field(&bit_string).finish()

@@ -3,7 +3,7 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use rolldown::{Asset, Bundler, InputItem, InputOptions, OutputOptions};
+use rolldown::{Asset, Bundler, InputItem, InputOptions};
 use rolldown_testing::TestConfig;
 
 pub struct Fixture {
@@ -58,16 +58,6 @@ impl Fixture {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();
     }
 
-    let output = bundler
-      .write(OutputOptions {
-        // dir: Some(fixture_path.join("dist").to_string_lossy().to_string()),
-        // format: ModuleFormat::from_str(&tester.config.output.format).unwrap(),
-        // export_mode: ExportMode::from_str(&tester.config.output.export_mode).unwrap(),
-        ..Default::default()
-      })
-      .await
-      .unwrap();
-
-    output
+    bundler.write(Default::default()).await.unwrap()
   }
 }

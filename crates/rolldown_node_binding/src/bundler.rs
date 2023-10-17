@@ -1,5 +1,5 @@
 use napi::{tokio::sync::Mutex, Env};
-use napi_derive::*;
+use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
 use tracing::instrument;
 
@@ -39,13 +39,14 @@ impl Bundler {
   pub fn new_impl(env: Env, input_opts: InputOptions) -> napi::Result<Self> {
     NAPI_ENV.set(&env, || {
       let (input_opts, plugins) = resolve_input_options(input_opts)?;
-      Ok(Bundler {
+      Ok(Self {
         inner: Mutex::new(NativeBundler::with_plugins(input_opts, plugins)),
       })
     })
   }
 
   #[instrument(skip_all)]
+  #[allow(clippy::significant_drop_tightening)]
   pub async fn write_impl(&self, opts: OutputOptions) -> napi::Result<Vec<OutputChunk>> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
@@ -69,6 +70,7 @@ impl Bundler {
   }
 
   #[instrument(skip_all)]
+  #[allow(clippy::significant_drop_tightening)]
   pub async fn generate_impl(&self, opts: OutputOptions) -> napi::Result<Vec<OutputChunk>> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
@@ -91,8 +93,9 @@ impl Bundler {
     Ok(output_chunks)
   }
 
+  #[allow(clippy::needless_pass_by_value, clippy::unused_self)]
   fn handle_errors(&self, error: anyhow::Error) -> napi::Error {
-    eprintln!("{}", error);
+    eprintln!("{error}");
     napi::Error::from_reason("Build failed")
   }
 }

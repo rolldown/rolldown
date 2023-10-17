@@ -49,7 +49,7 @@ impl<'graph> Linker<'graph> {
       .for_each(|id| {
         self.resolve_exports(id);
         self.resolve_imports(id);
-      })
+      });
   }
 
   fn wrap_modules_if_needed(&mut self) {
@@ -121,7 +121,7 @@ impl<'graph> Linker<'graph> {
       }
     }
 
-    for (module, symbol) in imported_symbols.into_iter() {
+    for (module, symbol) in imported_symbols {
       let importer = &mut self.graph.modules[module];
       match importer {
         Module::Normal(importer) => {
@@ -131,6 +131,7 @@ impl<'graph> Linker<'graph> {
       }
     }
 
+    #[allow(clippy::items_after_statements)]
     fn wrap_module(
       graph: &Graph,
       target: ModuleId,
@@ -152,6 +153,7 @@ impl<'graph> Linker<'graph> {
     }
   }
 
+  #[allow(clippy::needless_collect)]
   fn mark_extra_symbols(graph: &mut Graph) {
     for id in &graph.sorted_modules {
       let importer = &graph.modules[*id];
@@ -206,7 +208,7 @@ impl<'graph> Linker<'graph> {
                   ));
                 }
               }
-            })
+            });
         }
         Module::External(_) => {}
       }
@@ -217,7 +219,7 @@ impl<'graph> Linker<'graph> {
           match importee {
             Module::Normal(importee) => {
               if importee.module_resolution == ModuleResolution::CommonJs {
-                importee.add_cjs_symbol(&mut graph.symbols, imported, is_imported_star)
+                importee.add_cjs_symbol(&mut graph.symbols, imported, is_imported_star);
               }
             }
             Module::External(importee) => {
@@ -236,8 +238,7 @@ impl<'graph> Linker<'graph> {
     let importer = &self.graph.modules[id];
     match importer {
       crate::bundler::module::module::Module::Normal(importer) => {
-        let exported_names =
-          importer.get_exported_names(&mut Default::default(), &self.graph.modules);
+        let exported_names = importer.get_exported_names(&mut Vec::default(), &self.graph.modules);
 
         let mut resolutions = exported_names
           .iter()
@@ -246,7 +247,7 @@ impl<'graph> Linker<'graph> {
               *exported,
               importer.resolve_export(
                 exported,
-                &mut Default::default(),
+                &mut Vec::default(),
                 &self.graph.modules,
                 &mut self.graph.symbols,
               ),
@@ -254,8 +255,10 @@ impl<'graph> Linker<'graph> {
           })
           .collect::<FxHashMap<_, _>>();
 
-        let mut exported_name_to_local_symbol: FxHashMap<Atom, ResolvedExport> = Default::default();
+        let mut exported_name_to_local_symbol: FxHashMap<Atom, ResolvedExport> =
+          FxHashMap::default();
 
+        #[allow(clippy::items_after_statements)]
         fn create_local_symbol_and_reference(
           symbol_ref: SymbolRef,
           exporter: ModuleId,
@@ -341,12 +344,11 @@ impl<'graph> Linker<'graph> {
               } else {
                 match importee.resolve_export(
                   &info.imported,
-                  &mut Default::default(),
+                  &mut Vec::default(),
                   &self.graph.modules,
                   &mut self.graph.symbols,
                 ) {
-                  Resolution::None => panic!(""),
-                  Resolution::Ambiguous => panic!(""),
+                  Resolution::Ambiguous | Resolution::None => panic!(""),
                   Resolution::Found(founded) => founded,
                 }
               };

@@ -49,8 +49,8 @@ impl<'a> Scanner<'a> {
       idx,
       scope,
       symbol_table,
-      current_stmt_info: Default::default(),
-      result: Default::default(),
+      current_stmt_info: StmtInfo::default(),
+      result: ScanResult::default(),
       unique_name,
     }
   }
@@ -149,7 +149,7 @@ impl<'a> Scanner<'a> {
     let id = self.add_import_record(&decl.source.value, ImportKind::Import);
     if let Some(exported) = &decl.exported {
       // export * as ns from '...'
-      self.add_star_re_export(exported.name(), id)
+      self.add_star_re_export(exported.name(), id);
     } else {
       // export * from '...'
       self.result.star_exports.push(id);
@@ -161,7 +161,7 @@ impl<'a> Scanner<'a> {
       let record_id = self.add_import_record(&source.value, ImportKind::Import);
       decl.specifiers.iter().for_each(|spec| {
         self.add_re_export(spec.exported.name(), spec.local.name(), record_id);
-      })
+      });
     } else {
       decl.specifiers.iter().for_each(|spec| {
         self.add_local_export(spec.local.name(), self.get_root_binding(spec.local.name()));
@@ -217,11 +217,11 @@ impl<'a> Scanner<'a> {
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => fn_decl
         .id
         .as_ref()
-        .map(|bind_id| bind_id.expect_symbol_id()),
+        .map(rolldown_oxc::BindingIdentifierExt::expect_symbol_id),
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => cls_decl
         .id
         .as_ref()
-        .map(|bind_id| bind_id.expect_symbol_id()),
+        .map(rolldown_oxc::BindingIdentifierExt::expect_symbol_id),
       _ => unreachable!(),
     };
 
@@ -230,7 +230,7 @@ impl<'a> Scanner<'a> {
       // a facade Symbol to represent it.
       // Notice: Patterns don't include `export default [identifier]`
       let sym_id = self.symbol_table.create_symbol(
-        Default::default(),
+        Span::default(),
         Atom::from([self.unique_name, "_default"].concat()),
         SymbolFlags::None,
         self.scope.root_scope_id(),
@@ -274,7 +274,7 @@ impl<'a> Scanner<'a> {
         self.scan_export_named_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
-        self.scan_export_default_decl(decl)
+        self.scan_export_default_decl(decl);
       }
       _ => {}
     }
@@ -297,7 +297,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   fn visit_binding_identifier(&mut self, ident: &'p mut oxc::ast::ast::BindingIdentifier) {
     let symbol_id = ident.symbol_id.get().unwrap();
     if self.scope.root_scope_id() == self.symbol_table.get_scope_id(symbol_id) {
-      self.add_declared_id(symbol_id)
+      self.add_declared_id(symbol_id);
     }
   }
 
@@ -319,7 +319,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
       self.scan_module_decl(decl.0);
       self.set_module_resolution(ModuleResolution::Esm);
     }
-    self.visit_statement_match(stmt)
+    self.visit_statement_match(stmt);
   }
 
   fn visit_import_expression(&mut self, expr: &'p mut oxc::ast::ast::ImportExpression<'ast>) {

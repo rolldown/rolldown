@@ -22,7 +22,7 @@ pub struct FileNameRenderOptions<'me> {
 }
 
 impl FileNameTemplate {
-  pub fn render(&self, options: FileNameRenderOptions) -> String {
+  pub fn render(&self, options: &FileNameRenderOptions) -> String {
     let mut tmp = self.template.clone();
     if let Some(name) = options.name {
       tmp = tmp.replace("[name]", name);

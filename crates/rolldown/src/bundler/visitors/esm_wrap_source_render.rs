@@ -27,7 +27,7 @@ impl<'ast> EsmWrapSourceRender<'ast> {
     self.visit_program(program);
     let namespace_name = self.ctx.namespace_symbol_name.unwrap();
     let wrap_symbol_name = self.ctx.wrap_symbol_name.unwrap();
-    let esm_runtime_symbol_name = self.ctx.get_runtime_symbol_final_name("__esm".into());
+    let esm_runtime_symbol_name = self.ctx.get_runtime_symbol_final_name(&"__esm".into());
     self.ctx.source.prepend(format!(
       "var {wrap_symbol_name} = {esm_runtime_symbol_name}({{\n'{}'() {{\n",
       self.ctx.module.resource_id.prettify(),

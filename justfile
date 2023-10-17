@@ -10,6 +10,11 @@ test:
 lint:
   cargo clippy --all -- --deny warnings
 
+# Update our local branch with the remote branch (this is for you to sync the submodules)
+update:
+  git pull
+  git submodule update --init
+
 fmt:
   cargo fmt
   taplo format

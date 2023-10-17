@@ -77,6 +77,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true # Pull submodules for additional files
 
       - name: Install Rust
         uses: ./.github/actions/rustup

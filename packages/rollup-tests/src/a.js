@@ -14,7 +14,7 @@ td {
     padding-right: 40px;
     padding-bottom: 4px;
     color: unset;
-    border: 1px solid gray;
+    border: 1px solid unset;
     border-collapse: collapse;
 }`)
 require('fs').writeFileSync('status.svg', svg)

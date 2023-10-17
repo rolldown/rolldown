@@ -173,7 +173,7 @@ impl<'a> Scanner<'a> {
                 );
               }
               _ => unimplemented!(),
-            })
+            });
           }
           oxc::ast::ast::Declaration::FunctionDeclaration(fn_decl) => {
             let id = fn_decl.id.as_ref().unwrap();

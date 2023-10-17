@@ -25,7 +25,7 @@ impl Eq for Error {}
 
 impl PartialOrd for Error {
   fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-    self.kind.to_string().partial_cmp(&other.kind.to_string())
+    Some(self.cmp(other))
   }
 }
 

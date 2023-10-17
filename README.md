@@ -4,8 +4,7 @@ Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.
 
 # Rollup test status
 
-<img src="./packages/rollup-tests/src/status.svg"/>
-
+<img src="./packages/rollup-tests/src/status.svg" height="200"/>
 
 It is status for rollup function/file-hashes directory test cases.
 

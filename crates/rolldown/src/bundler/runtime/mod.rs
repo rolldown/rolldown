@@ -26,7 +26,7 @@ impl Runtime {
     let symbol_id = self
       .name_to_symbol
       .get(name)
-      .unwrap_or_else(|| panic!("Failed to resolve symbol: {}", name));
+      .unwrap_or_else(|| panic!("Failed to resolve symbol: {name}"));
     (self.id, *symbol_id).into()
   }
 }

@@ -15,12 +15,7 @@ pub async fn run_fixture(fixture_path: PathBuf) {
     std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();
   }
 
-  bundler
-    .write(OutputOptions {
-      ..Default::default()
-    })
-    .await
-    .unwrap();
+  bundler.write(OutputOptions::default()).await.unwrap();
 }
 
 pub fn normalized_fixture_path(path: &str) -> PathBuf {

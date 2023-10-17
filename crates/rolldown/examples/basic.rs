@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use rolldown::{Bundler, InputOptions, OutputOptions};
+use rolldown::{Bundler, InputOptions};
 use sugar_path::SugarPathBuf;
 
 #[tokio::main]
@@ -13,9 +13,7 @@ async fn main() {
   });
 
   bundler
-    .generate(OutputOptions {
-      ..Default::default()
-    })
+    .generate(Default::default())
     .await
     .unwrap();
 }

@@ -40,7 +40,7 @@ impl JsAdapterPlugin {
       .as_ref()
       .map(TransformCallback::new)
       .transpose()?;
-    Ok(JsAdapterPlugin {
+    Ok(Self {
       name: option.name,
       resolve_id_fn,
       load_fn,
@@ -59,6 +59,7 @@ impl Plugin for JsAdapterPlugin {
     Cow::Owned(self.name.to_string())
   }
 
+  #[allow(clippy::redundant_closure_for_method_calls)]
   async fn resolve_id(
     &self,
     _ctx: &mut rolldown::PluginContext,
@@ -79,6 +80,7 @@ impl Plugin for JsAdapterPlugin {
     }
   }
 
+  #[allow(clippy::redundant_closure_for_method_calls)]
   async fn load(
     &self,
     _ctx: &mut rolldown::PluginContext,
@@ -95,6 +97,7 @@ impl Plugin for JsAdapterPlugin {
     }
   }
 
+  #[allow(clippy::redundant_closure_for_method_calls)]
   async fn transform(
     &self,
     _ctx: &mut rolldown::PluginContext,

@@ -9,7 +9,7 @@ use oxc::{
 };
 pub struct OxcCompiler;
 
-#[allow(clippy::box_collection)]
+#[allow(clippy::box_collection, clippy::non_send_fields_in_send_ty)]
 pub struct OxcProgram {
   program: ast::Program<'static>,
   source: Pin<Box<String>>,

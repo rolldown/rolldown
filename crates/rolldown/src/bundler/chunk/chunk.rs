@@ -34,11 +34,11 @@ impl Chunk {
     modules: Vec<ModuleId>,
   ) -> Self {
     Self {
-      name,
       entry_module,
-      bits,
       modules,
-      ..Default::default()
+      name,
+      bits,
+      ..Self::default()
     }
   }
 
@@ -46,10 +46,10 @@ impl Chunk {
     self.file_name = Some(
       output_options
         .entry_file_names
-        .render(FileNameRenderOptions {
+        .render(&FileNameRenderOptions {
           name: self.name.as_deref(),
         }),
-    )
+    );
   }
 
   pub fn initialize_exports(&mut self, modules: &mut ModuleVec, symbols: &Symbols) {
@@ -72,11 +72,11 @@ impl Chunk {
               .canonical_names
               .get(&symbols.par_get_canonical_ref(refer.local_symbol))
               .cloned()
-              .unwrap_or_else(|| panic!("not found {:?}", exported));
+              .unwrap_or_else(|| panic!("not found {exported:?}"));
             if final_name == exported {
-              format!("{}", final_name)
+              format!("{final_name}")
             } else {
-              format!("{} as {}", final_name, exported,)
+              format!("{final_name} as {exported}")
             }
           })
           .collect::<Vec<_>>()
@@ -87,6 +87,7 @@ impl Chunk {
     }
   }
 
+  #[allow(clippy::unnecessary_wraps)]
   pub fn render(
     &self,
     graph: &Graph,
@@ -135,5 +136,3 @@ pub struct ImportChunkMeta {
 pub struct ChunkMeta {
   pub imports: Vec<ImportChunkMeta>,
 }
-
-pub type CrossChunksMeta = IndexVec<ChunkId, ChunkMeta>;

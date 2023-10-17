@@ -35,12 +35,12 @@ impl RuntimeNormalModuleTask {
       module_id: id,
       resolver,
       tx,
-      errors: Default::default(),
-      warnings: Default::default(),
+      errors: Vec::default(),
+      warnings: Vec::default(),
     }
   }
 
-  pub async fn run(self) -> anyhow::Result<()> {
+  pub fn run(self) {
     let mut builder = NormalModuleBuilder::default();
     // load
     let source = include_str!("../runtime/index.js").to_string();
@@ -80,7 +80,7 @@ impl RuntimeNormalModuleTask {
     self
       .tx
       .send(Msg::RuntimeNormalModuleDone(NormalModuleTaskResult {
-        resolved_deps: Default::default(),
+        resolved_deps: Vec::default(),
         module_id: self.module_id,
         errors: self.errors,
         warnings: self.warnings,
@@ -88,7 +88,6 @@ impl RuntimeNormalModuleTask {
         builder,
       }))
       .unwrap();
-    Ok(())
   }
 
   fn make_ast(&self, source: String) -> (OxcProgram, ScopeTree, ScanResult, SymbolTable) {

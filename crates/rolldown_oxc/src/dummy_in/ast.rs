@@ -1,6 +1,6 @@
 use oxc::{
   allocator::{Allocator, Box},
-  ast::ast,
+  ast::ast::{self, Modifiers},
 };
 
 use crate::DummyIn;
@@ -12,7 +12,7 @@ impl<'ast> DummyIn<'ast> for ast::VariableDeclarationKind {
 }
 impl<'ast> DummyIn<'ast> for ast::ThisExpression {
   fn dummy_in(alloc: &'ast Allocator) -> Self {
-    ast::ThisExpression {
+    Self {
       span: DummyIn::dummy_in(alloc),
     }
   }
@@ -24,7 +24,7 @@ impl<'ast> DummyIn<'ast> for ast::VariableDeclaration<'ast> {
       span: DummyIn::dummy_in(alloc),
       kind: DummyIn::dummy_in(alloc),
       declarations: DummyIn::dummy_in(alloc),
-      modifiers: Default::default(),
+      modifiers: Modifiers::default(),
     }
   }
 }
@@ -110,7 +110,7 @@ impl<'ast> DummyIn<'ast> for ast::Function<'ast> {
       body: DummyIn::dummy_in(alloc),
       type_parameters: DummyIn::dummy_in(alloc),
       return_type: DummyIn::dummy_in(alloc),
-      modifiers: Default::default(),
+      modifiers: Modifiers::default(),
     }
   }
 }

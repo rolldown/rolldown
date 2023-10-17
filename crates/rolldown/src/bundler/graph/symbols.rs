@@ -20,7 +20,7 @@ impl SymbolMap {
       references: table
         .references
         .iter()
-        .map(|refer| refer.symbol_id())
+        .map(oxc::semantic::Reference::symbol_id)
         .collect(),
     }
   }

@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use string_wizard::MagicString;
 
 #[derive(Debug)]
-pub struct Context {}
+pub struct Context;
 
 pub trait SourceMutation: Debug + Sync + Send {
   #[allow(unused_variables)]

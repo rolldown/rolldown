@@ -92,8 +92,7 @@ impl Action {
   #[inline]
   fn module_id(&self) -> ModuleId {
     match self {
-      Action::Enter(id) => *id,
-      Action::Exit(id) => *id,
+      Self::Enter(id) | Self::Exit(id) => *id,
     }
   }
 }

@@ -8,6 +8,7 @@ pub struct ResolvedRequestInfo {
   pub is_external: bool,
 }
 
+#[allow(clippy::unused_async)]
 pub async fn resolve_id(
   resolver: &Resolver,
   request: &str,

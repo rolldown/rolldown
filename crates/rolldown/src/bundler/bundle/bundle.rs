@@ -1,10 +1,7 @@
 use super::asset::Asset;
 use crate::bundler::{
   bitset::BitSet,
-  chunk::{
-    chunk::{Chunk, CrossChunksMeta},
-    ChunkId, ChunksVec,
-  },
+  chunk::{chunk::Chunk, ChunkId, ChunksVec},
   graph::graph::Graph,
   module::module::Module,
   options::{
@@ -36,15 +33,15 @@ impl<'a> Bundle<'a> {
     index: usize,
     modules_entry_bit: &mut IndexVec<ModuleId, BitSet>,
   ) {
-    if modules_entry_bit[module_id].has_bit(index as u32) {
+    if modules_entry_bit[module_id].has_bit(index.try_into().unwrap()) {
       return;
     }
-    modules_entry_bit[module_id].set_bit(index as u32);
+    modules_entry_bit[module_id].set_bit(index.try_into().unwrap());
     if let Module::Normal(m) = &self.graph.modules[module_id] {
       m.import_records.iter().for_each(|i| {
         // because dynamic import is already as entry, so here ignore it
         if i.kind != ImportKind::DynamicImport {
-          self.mark_modules_entry_bit(i.resolved_module, index, modules_entry_bit)
+          self.mark_modules_entry_bit(i.resolved_module, index, modules_entry_bit);
         }
       });
     }
@@ -60,8 +57,8 @@ impl<'a> Bundle<'a> {
     chunks.shrink_to(self.graph.entries.len());
 
     for (i, (name, module_id)) in self.graph.entries.iter().enumerate() {
-      let count: u32 = i as u32;
-      let mut entry_bits = BitSet::new(self.graph.entries.len() as u32);
+      let count: u32 = u32::try_from(i).unwrap();
+      let mut entry_bits = BitSet::new(self.graph.entries.len().try_into().unwrap());
       entry_bits.set_bit(count);
       let c = Chunk::new(name.clone(), Some(*module_id), entry_bits.clone(), vec![]);
       chunks.insert(entry_bits, c);
@@ -122,18 +119,12 @@ impl<'a> Bundle<'a> {
     (chunks, module_to_chunk)
   }
 
-  pub fn generate_cross_chunks_meta(&mut self, _chunks: &ChunksVec) -> CrossChunksMeta {
-    // TODO: cross chunk imports
-    Default::default()
-  }
-
   pub fn generate(
     &mut self,
     _input_options: &'a NormalizedInputOptions,
   ) -> anyhow::Result<Vec<Asset>> {
     use rayon::prelude::*;
     let (mut chunks, module_to_chunk) = self.generate_chunks();
-    let _generate_cross_chunks_meta = self.generate_cross_chunks_meta(&chunks);
 
     chunks
       .iter_mut()
@@ -144,12 +135,8 @@ impl<'a> Bundle<'a> {
       chunk.de_conflict(self.graph);
     });
 
-    let mut entries_chunk_final_names = FxHashMap::default();
-    entries_chunk_final_names.shrink_to(self.graph.entries.len());
-
     chunks.iter_mut().for_each(|chunk| {
-      if let Some(module_id) = chunk.entry_module {
-        entries_chunk_final_names.insert(module_id, chunk.file_name.clone().unwrap());
+      if chunk.entry_module.is_some() {
         chunk.initialize_exports(&mut self.graph.modules, &self.graph.symbols);
       }
     });

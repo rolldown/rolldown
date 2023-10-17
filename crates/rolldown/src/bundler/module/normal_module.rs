@@ -57,6 +57,7 @@ pub enum Resolution {
 }
 
 impl NormalModule {
+  #[allow(clippy::needless_pass_by_value)]
   pub fn render(&self, ctx: ModuleRenderContext<'_>) -> Option<MagicString<'static>> {
     // FIXME: should not clone
     let mut source = MagicString::new(self.ast.source().to_string());
@@ -108,7 +109,7 @@ impl NormalModule {
   ) -> FxHashSet<&'modules Atom> {
     if stack.contains(&self.id) {
       // cycle
-      return Default::default();
+      return FxHashSet::default();
     }
 
     stack.push(self.id);
@@ -171,7 +172,7 @@ impl NormalModule {
                   importee.resolve_export(&named_import.imported, resolve_set, modules, symbols)
                 };
                 if let Resolution::Found(exist) = &resolved {
-                  symbols.union(local.referenced, *exist)
+                  symbols.union(local.referenced, *exist);
                 }
                 resolved
               }
@@ -192,9 +193,8 @@ impl NormalModule {
             Module::Normal(importee) => {
               if re.is_imported_star {
                 return Resolution::Found(importee.namespace_symbol.0);
-              } else {
-                importee.resolve_export(&re.imported, resolve_set, modules, symbols)
               }
+              importee.resolve_export(&re.imported, resolve_set, modules, symbols)
             }
             Module::External(importee) => {
               let resolve = importee.resolve_export(&re.imported, re.is_imported_star);
@@ -220,12 +220,10 @@ impl NormalModule {
                 if let Some(star_resolution) = star_resolution {
                   if star_resolution == exist {
                     continue;
-                  } else {
-                    return Resolution::Ambiguous;
                   }
-                } else {
-                  star_resolution = Some(exist)
+                  return Resolution::Ambiguous;
                 }
+                star_resolution = Some(exist);
               }
             }
           }
@@ -235,9 +233,7 @@ impl NormalModule {
         }
       }
 
-      star_resolution
-        .map(Resolution::Found)
-        .unwrap_or(Resolution::None)
+      star_resolution.map_or(Resolution::None, Resolution::Found)
     };
 
     resolve_set.pop();
@@ -281,10 +277,11 @@ impl NormalModule {
     if is_star {
       self.namespace_symbol.0
     } else {
-      *self.cjs_symbols.get(export_name).unwrap()
+      self.cjs_symbols[export_name]
     }
   }
 
+  #[allow(clippy::needless_pass_by_value)]
   pub fn add_cjs_symbol(&mut self, symbols: &mut Symbols, exported: Atom, is_star: bool) {
     if !is_star {
       self.cjs_symbols.entry(exported.clone()).or_insert_with(|| {

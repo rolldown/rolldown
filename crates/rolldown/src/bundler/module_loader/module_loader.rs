@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use index_vec::IndexVec;
 use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
 use rolldown_resolver::Resolver;
@@ -36,8 +38,8 @@ impl<'a> ModuleLoader<'a> {
       rx,
       input_options,
       resolver: Resolver::with_cwd(input_options.cwd.clone(), false).into(),
-      visited: Default::default(),
-      remaining: Default::default(),
+      visited: FxHashMap::default(),
+      remaining: u32::default(),
       graph,
     }
   }
@@ -67,7 +69,7 @@ impl<'a> ModuleLoader<'a> {
 
     let mut dynamic_entries = FxHashSet::default();
 
-    let mut tables: IndexVec<ModuleId, SymbolMap> = Default::default();
+    let mut tables: IndexVec<ModuleId, SymbolMap> = IndexVec::default();
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else { break };
       match msg {
@@ -89,7 +91,7 @@ impl<'a> ModuleLoader<'a> {
               let import_record = &mut import_records[import_record_idx];
               import_record.resolved_module = id;
               while tables.len() <= id.raw() as usize {
-                tables.push(Default::default());
+                tables.push(SymbolMap::default());
               }
               // dynamic import as extra entries if enable code splitting
               if import_record.kind == ImportKind::DynamicImport {
@@ -98,11 +100,11 @@ impl<'a> ModuleLoader<'a> {
             });
 
           while tables.len() <= task_result.module_id.raw() as usize {
-            tables.push(Default::default());
+            tables.push(SymbolMap::default());
           }
           intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
 
-          tables[task_result.module_id] = symbol_table
+          tables[task_result.module_id] = symbol_table;
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
@@ -112,13 +114,13 @@ impl<'a> ModuleLoader<'a> {
             ..
           } = task_result;
           while tables.len() <= task_result.module_id.raw() as usize {
-            tables.push(Default::default());
+            tables.push(SymbolMap::default());
           }
           let runtime_normal_module = builder.build();
           self.graph.runtime.init_symbols(&runtime_normal_module);
           intermediate_modules[module_id] = Some(Module::Normal(runtime_normal_module));
 
-          tables[task_result.module_id] = symbol_table
+          tables[task_result.module_id] = symbol_table;
         }
       }
       self.remaining -= 1;
@@ -127,7 +129,7 @@ impl<'a> ModuleLoader<'a> {
 
     self.graph.modules = intermediate_modules
       .into_iter()
-      .map(|m| m.unwrap())
+      .map(Option::unwrap)
       .collect();
 
     let mut dynamic_entries = Vec::from_iter(dynamic_entries);
@@ -137,6 +139,7 @@ impl<'a> ModuleLoader<'a> {
     Ok(())
   }
 
+  #[allow(clippy::collection_is_never_read)]
   async fn resolve_entries(
     &mut self,
   ) -> anyhow::Result<Vec<(Option<String>, ResolvedRequestInfo)>> {
@@ -197,7 +200,8 @@ impl<'a> ModuleLoader<'a> {
 
           let module_path = ResourceId::new(info.path.clone(), &self.input_options.cwd);
 
-          let task = NormalModuleTask::new(id, self.resolver.clone(), module_path, self.tx.clone());
+          let task =
+            NormalModuleTask::new(id, Arc::clone(&self.resolver), module_path, self.tx.clone());
           tokio::spawn(async move { task.run().await });
         }
         id
@@ -215,8 +219,8 @@ impl<'a> ModuleLoader<'a> {
         let id = intermediate_modules.push(None);
         not_visited.insert(id);
         self.remaining += 1;
-        let task = RuntimeNormalModuleTask::new(id, self.resolver.clone(), self.tx.clone());
-        tokio::spawn(async move { task.run().await });
+        let task = RuntimeNormalModuleTask::new(id, Arc::clone(&self.resolver), self.tx.clone());
+        tokio::spawn(async move { task.run() });
         id
       }
     }

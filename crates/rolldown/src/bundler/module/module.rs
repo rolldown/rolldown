@@ -21,57 +21,57 @@ pub enum Module {
 impl Module {
   pub fn id(&self) -> ModuleId {
     match self {
-      Module::Normal(m) => m.id,
-      Module::External(m) => m.id,
+      Self::Normal(m) => m.id,
+      Self::External(m) => m.id,
     }
   }
 
   pub fn exec_order(&self) -> u32 {
     match self {
-      Module::Normal(m) => m.exec_order,
-      Module::External(m) => m.exec_order,
+      Self::Normal(m) => m.exec_order,
+      Self::External(m) => m.exec_order,
     }
   }
 
   pub fn exec_order_mut(&mut self) -> &mut u32 {
     match self {
-      Module::Normal(m) => &mut m.exec_order,
-      Module::External(m) => &mut m.exec_order,
+      Self::Normal(m) => &mut m.exec_order,
+      Self::External(m) => &mut m.exec_order,
     }
   }
 
   pub fn expect_normal(&self) -> &NormalModule {
     match self {
-      Module::Normal(m) => m,
-      Module::External(_) => unreachable!(),
+      Self::Normal(m) => m,
+      Self::External(_) => unreachable!(),
     }
   }
 
   pub fn expect_normal_mut(&mut self) -> &mut NormalModule {
     match self {
-      Module::Normal(m) => m,
-      Module::External(_) => unreachable!(),
+      Self::Normal(m) => m,
+      Self::External(_) => unreachable!(),
     }
   }
 
   pub fn import_records(&self) -> &IndexVec<ImportRecordId, ImportRecord> {
     match self {
-      Module::Normal(m) => &m.import_records,
-      Module::External(m) => &m.import_records,
+      Self::Normal(m) => &m.import_records,
+      Self::External(m) => &m.import_records,
     }
   }
 
   pub fn mark_symbol_for_namespace_referenced(&mut self) {
     match self {
-      Module::Normal(m) => m.initialize_namespace(),
-      Module::External(m) => m.is_symbol_for_namespace_referenced = true,
+      Self::Normal(m) => m.initialize_namespace(),
+      Self::External(m) => m.is_symbol_for_namespace_referenced = true,
     }
   }
 
   pub fn render(&self, ctx: ModuleRenderContext) -> Option<MagicString<'_>> {
     match self {
-      Module::Normal(m) => m.render(ctx),
-      Module::External(_) => None,
+      Self::Normal(m) => m.render(ctx),
+      Self::External(_) => None,
     }
   }
 }

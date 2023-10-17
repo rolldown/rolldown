@@ -1,7 +1,10 @@
 <?xml version="1.0"?>
 <svg xmlns="http://www.w3.org/2000/svg">
-  <style>table,
-th,
+  <style>
+table {
+    height: 100%;
+    width: 100%; 
+}
 td {
     padding-top: 4px;
     padding-left: 30px;
@@ -9,9 +12,7 @@ td {
     padding-bottom: 4px;
     border: 1px solid gray;
     border-collapse: collapse;
-}
-
-</style>
+}</style>
   <foreignObject x="0" y="0" width="100%" height="100%">
     <body xmlns="http://www.w3.org/1999/xhtml">
       <div/>

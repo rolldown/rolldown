@@ -7,7 +7,12 @@ for (var key in stats) {
   data.push([key, stats[key]])
 }
 
-let svg = svgTable.generateTable(data, `td {
+let svg = svgTable.generateTable(data, `
+table {
+    height: 100%;
+    width: 100%; 
+}
+td {
     padding-top: 4px;
     padding-left: 30px;
     padding-right: 40px;

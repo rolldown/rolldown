@@ -1,1 +1,0 @@
-export default 'GREAT SUCCESS';

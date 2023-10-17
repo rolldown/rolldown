@@ -4,8 +4,8 @@
   "description": "",
   "private": true,
   "scripts": {
-    "test:update": "mocha --jobs 1 --file ./src/intercept/update-failed.js test/test.js",
-    "test": "mocha --file ./src/intercept/status.js test/test.js"
+    "test": "mocha --file ./src/intercept/status.js test/test.js",
+    "test:update": "mocha --jobs 1 --file ./src/intercept/update-failed.js test/test.js"
   },
   "keywords": [],
   "author": "",

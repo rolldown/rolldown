@@ -1,3 +1,11 @@
+/**
+ * @typedef {import('../src/rollup/types').RollupError} RollupError
+ * @typedef {import('../src/rollup/types').RollupLog} RollupLog
+ * @typedef {import('../src/rollup/types').LogLevel} LogLevel
+ * @typedef {import('../src/rollup/types').Plugin} Plugin
+ * @typedef {import('./types').TestConfigBase} TestConfigBase
+ */
+
 const assert = require('node:assert');
 const {
 	closeSync,
@@ -12,8 +20,18 @@ const {
 } = require('node:fs');
 const { basename, join } = require('node:path');
 const { platform, version } = require('node:process');
+const { Parser } = require('acorn');
+// const { importAssertions } = require('acorn-import-assertions');
 const fixturify = require('fixturify');
 
+if (!globalThis.defineTest) {
+	globalThis.defineTest = config => config;
+}
+
+/**
+ * @param {number} ms
+ * @returns {Promise<void>}
+ */
 exports.wait = function wait(ms) {
 	return new Promise(fulfil => {
 		setTimeout(fulfil, ms);
@@ -21,6 +39,9 @@ exports.wait = function wait(ms) {
 };
 
 function normaliseError(error) {
+	if (!error) {
+		throw new Error(`Expected an error but got ${JSON.stringify(error)}`);
+	}
 	const clone = { ...error, message: error.message };
 	delete clone.stack;
 	delete clone.toString;
@@ -36,6 +57,10 @@ function normaliseError(error) {
 	return clone;
 }
 
+/**
+ * @param {RollupError} actual
+ * @param {RollupError} expected
+ */
 exports.compareError = function compareError(actual, expected) {
 	actual = normaliseError(actual);
 	if (expected.frame) {
@@ -44,18 +69,42 @@ exports.compareError = function compareError(actual, expected) {
 	assert.deepEqual(actual, expected);
 };
 
-exports.compareWarnings = function compareWarnings(actual, expected) {
-	assert.deepEqual(
-		actual.map(normaliseError),
-		expected.map(warning => {
-			if (warning.frame) {
-				warning.frame = deindent(warning.frame);
-			}
-			return warning;
-		})
-	);
+/**
+ * @param {(RollupLog & {level: LogLevel})[]} actual
+ * @param {(RollupLog & {level: LogLevel})[]} expected
+ */
+exports.compareLogs = function compareLogs(actual, expected) {
+	const normalizedActual = actual.map(normaliseError);
+	const sortedActual = normalizedActual.sort(sortLogs);
+	try {
+		assert.deepEqual(
+			sortedActual,
+			expected
+				.map(warning => {
+					if (warning.frame) {
+						warning.frame = deindent(warning.frame);
+					}
+					return warning;
+				})
+				.sort(sortLogs)
+		);
+	} catch (error) {
+		console.log('Actual logs:', JSON.stringify(normalizedActual));
+		throw error;
+	}
 };
 
+/**
+ * @param {RollupLog} a
+ * @param {RollupLog} b
+ */
+function sortLogs(a, b) {
+	return a.message === b.message ? 0 : a.message < b.message ? -1 : 1;
+}
+
+/**
+ * @param {string} stringValue
+ */
 function deindent(stringValue) {
 	return stringValue.slice(1).replace(/^\t+/gm, '').replace(/\s+$/gm, '').trim();
 }
@@ -75,6 +124,10 @@ exports.executeBundle = async function executeBundle(bundle, require) {
 	return module.exports;
 };
 
+/**
+ * @param {Iterable<[string, any]>} entries
+ * @returns {Record<string, any>}
+ */
 exports.getObject = function getObject(entries) {
 	const object = {};
 	for (const [key, value] of entries) {
@@ -83,13 +136,17 @@ exports.getObject = function getObject(entries) {
 	return object;
 };
 
+/**
+ * @param {Record<string, string>} modules
+ * @returns {Plugin}
+ */
 exports.loader = function loader(modules) {
 	modules = Object.assign(Object.create(null), modules);
 	return {
+		name: 'test-plugin-loader',
 		resolveId(id) {
 			return id in modules ? id : null;
 		},
-
 		load(id) {
 			return modules[id];
 		}
@@ -100,21 +157,44 @@ exports.normaliseOutput = function normaliseOutput(code) {
 	return code.toString().trim().replace(/\r\n/g, '\n');
 };
 
+/**
+ * @template {TestConfigBase} C
+ * @param {string} suiteName
+ * @param {string} samplesDirectory
+ * @param {(directory: string, config: C) => void} runTest
+ * @param {() => void | Promise<void>} [onTeardown]
+ */
 function runTestSuiteWithSamples(suiteName, samplesDirectory, runTest, onTeardown) {
 	describe(suiteName, () => runSamples(samplesDirectory, runTest, onTeardown));
 }
 
 // You can run only or skip certain kinds of tests by appending .only or .skip
+/**
+ * @template {TestConfigBase} C
+ * @param {string} suiteName
+ * @param {string} samplesDirectory
+ * @param {(directory: string, config: C) => void} runTest
+ * @param {() => void | Promise<void>} onTeardown
+ */
 runTestSuiteWithSamples.only = function (suiteName, samplesDirectory, runTest, onTeardown) {
 	describe.only(suiteName, () => runSamples(samplesDirectory, runTest, onTeardown));
 };
 
+/**
+ * @param {string} suiteName
+ */
 runTestSuiteWithSamples.skip = function (suiteName) {
 	describe.skip(suiteName, () => {});
 };
 
 exports.runTestSuiteWithSamples = runTestSuiteWithSamples;
 
+/**
+ * @template {TestConfigBase} C
+ * @param {string} samplesDirectory
+ * @param {(directory: string, config: C) => void} runTest
+ * @param {Mocha.Func} onTeardown
+ */
 function runSamples(samplesDirectory, runTest, onTeardown) {
 	if (onTeardown) {
 		afterEach(onTeardown);
@@ -127,6 +207,11 @@ function runSamples(samplesDirectory, runTest, onTeardown) {
 	}
 }
 
+/**
+ * @template {TestConfigBase} C
+ * @param {string} directory
+ * @param {(directory: string, config: C) => void} runTest
+ */
 function runTestsInDirectory(directory, runTest) {
 	const fileNames = getFileNamesAndRemoveOutput(directory);
 	if (fileNames.includes('_config.js')) {
@@ -146,6 +231,9 @@ function runTestsInDirectory(directory, runTest) {
 	}
 }
 
+/**
+ * @param {string} directory
+ */
 function getFileNamesAndRemoveOutput(directory) {
 	try {
 		return readdirSync(directory).filter(fileName => {
@@ -174,6 +262,11 @@ function getFileNamesAndRemoveOutput(directory) {
 
 exports.getFileNamesAndRemoveOutput = getFileNamesAndRemoveOutput;
 
+/**
+ * @template {TestConfigBase} C
+ * @param {string} directory
+ * @param {(directory: string, config: C) => void} runTest
+ */
 function loadConfigAndRunTest(directory, runTest) {
 	const configFile = join(directory, '_config.js');
 	const config = require(configFile);
@@ -189,6 +282,10 @@ function loadConfigAndRunTest(directory, runTest) {
 	}
 }
 
+/**
+ * @param {string} actualDirectory
+ * @param {string} expectedDirectory
+ */
 exports.assertDirectoriesAreEqual = function assertDirectoriesAreEqual(
 	actualDirectory,
 	expectedDirectory
@@ -222,6 +319,10 @@ function assertFilesAreEqual(actualFiles, expectedFiles, directories = []) {
 
 exports.assertFilesAreEqual = assertFilesAreEqual;
 
+/**
+ * @param {string} actual
+ * @param {string} expected
+ */
 exports.assertIncludes = function assertIncludes(actual, expected) {
 	try {
 		assert.ok(
@@ -235,6 +336,10 @@ exports.assertIncludes = function assertIncludes(actual, expected) {
 	}
 };
 
+/**
+ * @param {string} actual
+ * @param {string} expected
+ */
 exports.assertDoesNotInclude = function assertDoesNotInclude(actual, expected) {
 	try {
 		assert.ok(
@@ -248,9 +353,14 @@ exports.assertDoesNotInclude = function assertDoesNotInclude(actual, expected) {
 	}
 };
 
-// Workaround a race condition in fs.writeFileSync that temporarily creates
-// an empty file for a brief moment which may be read by rollup watch - even
-// if the content being overwritten is identical.
+/**
+ * Workaround a race condition in fs.writeFileSync that temporarily creates
+ * an empty file for a brief moment which may be read by rollup watch - even
+ * if the content being overwritten is identical.
+ *
+ * @param {string} filePath
+ * @param {string} contents
+ */
 function atomicWriteFileSync(filePath, contents) {
 	const stagingPath = filePath + '_';
 	writeFileSync(stagingPath, contents);
@@ -259,7 +369,12 @@ function atomicWriteFileSync(filePath, contents) {
 
 exports.atomicWriteFileSync = atomicWriteFileSync;
 
-// It appears that on macOS, it sometimes takes long for the file system to update
+/**
+ * It appears that on macOS, it sometimes takes long for the file system to update
+ *
+ * @param {string} filePath
+ * @param {string} contents
+ */
 exports.writeAndSync = function writeAndSync(filePath, contents) {
 	const file = openSync(filePath, 'w');
 	writeSync(file, contents);
@@ -267,9 +382,14 @@ exports.writeAndSync = function writeAndSync(filePath, contents) {
 	closeSync(file);
 };
 
-// Sometimes, watchers on macOS do not seem to fire. In those cases, it helps
-// to write the same content again. This function returns a callback to stop
-// further updates.
+/**
+ * Sometimes, watchers on macOS do not seem to fire. In those cases, it helps
+ * to write the same content again. This function returns a callback to stop
+ * further updates.
+ *
+ * @param {string} filePath
+ * @param {string} contents
+ */
 exports.writeAndRetry = function writeAndRetry(filePath, contents) {
 	let retries = 0;
 	let updateRetryTimeout;
@@ -287,6 +407,10 @@ exports.writeAndRetry = function writeAndRetry(filePath, contents) {
 	return () => clearTimeout(updateRetryTimeout);
 };
 
+/**
+ * @param {any} object
+ * @param {any} replaced
+ */
 exports.replaceDirectoryInStringifiedObject = function replaceDirectoryInStringifiedObject(
 	object,
 	replaced
@@ -299,3 +423,60 @@ exports.replaceDirectoryInStringifiedObject = function replaceDirectoryInStringi
 		'**/'
 	);
 };
+
+// const acornParser = Parser.extend(importAssertions);
+
+// exports.verifyAstPlugin = {
+// 	name: 'verify-ast',
+// 	moduleParsed: ({ ast, code }) => {
+// 		const acornAst = acornParser.parse(code, { ecmaVersion: 'latest', sourceType: 'module' });
+// 		assert.deepStrictEqual(
+// 			JSON.parse(JSON.stringify(ast, replaceStringifyValues), reviveStringifyValues),
+// 			JSON.parse(JSON.stringify(acornAst, replaceStringifyValues), reviveStringifyValues)
+// 		);
+// 	}
+// };
+
+// const replaceStringifyValues = (key, value) => {
+// 	switch (value?.type) {
+// 		case 'ImportDeclaration':
+// 		case 'ExportNamedDeclaration':
+// 		case 'ExportAllDeclaration': {
+// 			const { attributes } = value;
+// 			if (attributes) {
+// 				delete value.attributes;
+// 				if (attributes.length > 0) {
+// 					value.assertions = attributes;
+// 				}
+// 			}
+// 			break;
+// 		}
+// 		case 'ImportExpression': {
+// 			const { options } = value;
+// 			delete value.options;
+// 			if (options) {
+// 				value.arguments = [options];
+// 			}
+// 		}
+// 	}
+
+// 	return key.startsWith('_')
+// 		? undefined
+// 		: typeof value == 'bigint'
+// 		? `~BigInt${value.toString()}`
+// 		: value instanceof RegExp
+// 		? `~RegExp${JSON.stringify({ flags: value.flags, source: value.source })}`
+// 		: value;
+// };
+
+// const reviveStringifyValues = (_, value) =>
+// 	typeof value === 'string'
+// 		? value.startsWith('~BigInt')
+// 			? BigInt(value.slice(7))
+// 			: value.startsWith('~RegExp')
+// 			? new RegExp(JSON.parse(value.slice(7)).source, JSON.parse(value.slice(7)).flags)
+// 			: value
+// 		: value;
+
+// Fake require test runner exports.
+require.cache[join(__dirname, '../../../rollup/test/utils.js')] = { exports };

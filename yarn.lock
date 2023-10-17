@@ -349,12 +349,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@my-scope/my-base-pkg@workspace:packages/rollup-tests/test/chunking-form/samples/preserve-modules-root/custom_modules/@my-scope/my-base-pkg":
-  version: 0.0.0-use.local
-  resolution: "@my-scope/my-base-pkg@workspace:packages/rollup-tests/test/chunking-form/samples/preserve-modules-root/custom_modules/@my-scope/my-base-pkg"
-  languageName: unknown
-  linkType: soft
-
 "@napi-rs/cli@npm:^2.13.2":
   version: 2.16.3
   resolution: "@napi-rs/cli@npm:2.16.3"
@@ -2036,12 +2030,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bar-f640b7@workspace:packages/rollup-tests/test/cli/node_modules_rename_me/bar":
-  version: 0.0.0-use.local
-  resolution: "bar-f640b7@workspace:packages/rollup-tests/test/cli/node_modules_rename_me/bar"
-  languageName: unknown
-  linkType: soft
-
 "base64-js@npm:^1.3.1":
   version: 1.5.1
   resolution: "base64-js@npm:1.5.1"
@@ -2432,24 +2420,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cjs-as-esm-7bfc3f@workspace:packages/rollup-tests/test/load-config-file/samples/cjs-as-esm":
-  version: 0.0.0-use.local
-  resolution: "cjs-as-esm-7bfc3f@workspace:packages/rollup-tests/test/load-config-file/samples/cjs-as-esm"
-  languageName: unknown
-  linkType: soft
-
-"cjs-via-ext-52346f@workspace:packages/rollup-tests/test/load-config-file/samples/cjs-via-ext":
-  version: 0.0.0-use.local
-  resolution: "cjs-via-ext-52346f@workspace:packages/rollup-tests/test/load-config-file/samples/cjs-via-ext"
-  languageName: unknown
-  linkType: soft
-
-"cjs-via-pkg-032185@workspace:packages/rollup-tests/test/load-config-file/samples/cjs-via-pkg":
-  version: 0.0.0-use.local
-  resolution: "cjs-via-pkg-032185@workspace:packages/rollup-tests/test/load-config-file/samples/cjs-via-pkg"
-  languageName: unknown
-  linkType: soft
-
 "clean-stack@npm:^2.0.0":
   version: 2.2.0
   resolution: "clean-stack@npm:2.2.0"
@@ -2757,12 +2727,6 @@ __metadata:
   checksum: a16332f87212b4015afcdfc95fe42b40b162e7f10b4f4370ab3239979b6e69a41b4e6fb34d7891aa028a557f2340da236f810df433b18dfa5c408b2eb8489bf7
   languageName: node
   linkType: hard
-
-"config-json-0f40aa@workspace:packages/rollup-tests/test/cli/samples/config-json":
-  version: 0.0.0-use.local
-  resolution: "config-json-0f40aa@workspace:packages/rollup-tests/test/cli/samples/config-json"
-  languageName: unknown
-  linkType: soft
 
 "console-control-strings@npm:^1.1.0":
   version: 1.1.0
@@ -3560,36 +3524,6 @@ __metadata:
   checksum: 214fa5d1fcb67af1b8992ce9584ccd85e1aa7a482f8b8ea5b96edc28fa838a18a3b69456db45fc1ed3ef95f1e9efa9714f737292dc681e572d471d02fda9649c
   languageName: node
   linkType: hard
-
-"esm-as-cjs-d60399@workspace:packages/rollup-tests/test/load-config-file/samples/esm-as-cjs":
-  version: 0.0.0-use.local
-  resolution: "esm-as-cjs-d60399@workspace:packages/rollup-tests/test/load-config-file/samples/esm-as-cjs"
-  languageName: unknown
-  linkType: soft
-
-"esm-dep-124363@workspace:packages/rollup-tests/test/cli/node_modules_rename_me/esm-dep":
-  version: 0.0.0-use.local
-  resolution: "esm-dep-124363@workspace:packages/rollup-tests/test/cli/node_modules_rename_me/esm-dep"
-  languageName: unknown
-  linkType: soft
-
-"esm-via-ext-698249@workspace:packages/rollup-tests/test/load-config-file/samples/esm-via-ext":
-  version: 0.0.0-use.local
-  resolution: "esm-via-ext-698249@workspace:packages/rollup-tests/test/load-config-file/samples/esm-via-ext"
-  languageName: unknown
-  linkType: soft
-
-"esm-via-pkg-867534@workspace:packages/rollup-tests/test/load-config-file/samples/esm-via-pkg":
-  version: 0.0.0-use.local
-  resolution: "esm-via-pkg-867534@workspace:packages/rollup-tests/test/load-config-file/samples/esm-via-pkg"
-  languageName: unknown
-  linkType: soft
-
-"esm-with-error-e9d7c9@workspace:packages/rollup-tests/test/load-config-file/samples/esm-with-error":
-  version: 0.0.0-use.local
-  resolution: "esm-with-error-e9d7c9@workspace:packages/rollup-tests/test/load-config-file/samples/esm-with-error"
-  languageName: unknown
-  linkType: soft
 
 "espree@npm:^9.6.0, espree@npm:^9.6.1":
   version: 9.6.1
@@ -8133,18 +8067,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"rollup-config-foo-ec8b6c@workspace:packages/rollup-tests/test/cli/node_modules_rename_me/rollup-config-foo":
-  version: 0.0.0-use.local
-  resolution: "rollup-config-foo-ec8b6c@workspace:packages/rollup-tests/test/cli/node_modules_rename_me/rollup-config-foo"
-  languageName: unknown
-  linkType: soft
-
-"rollup-plugin-esm-test-5e1e90@workspace:packages/rollup-tests/test/cli/node_modules_rename_me/rollup-plugin-esm-test":
-  version: 0.0.0-use.local
-  resolution: "rollup-plugin-esm-test-5e1e90@workspace:packages/rollup-tests/test/cli/node_modules_rename_me/rollup-plugin-esm-test"
-  languageName: unknown
-  linkType: soft
-
 "rollup-tests@workspace:packages/rollup-tests":
   version: 0.0.0-use.local
   resolution: "rollup-tests@workspace:packages/rollup-tests"
@@ -8786,12 +8708,6 @@ __metadata:
   checksum: abf9a4ac143118f26c3a0771b204b02f5cf4fa80384ae158f25e02bfbff761038accc44a7f65869ccd5a5995a7f2c16b1466b83149644ba6cecd3072a8927297
   languageName: node
   linkType: hard
-
-"sub-e5e186@workspace:packages/rollup-tests/test/cli/samples/config-type-module/sub":
-  version: 0.0.0-use.local
-  resolution: "sub-e5e186@workspace:packages/rollup-tests/test/cli/samples/config-type-module/sub"
-  languageName: unknown
-  linkType: soft
 
 "supertap@npm:^3.0.1":
   version: 3.0.1

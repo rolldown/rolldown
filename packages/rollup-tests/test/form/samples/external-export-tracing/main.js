@@ -1,1 +1,0 @@
-export { r as s } from './dep.js';

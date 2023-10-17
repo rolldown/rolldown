@@ -1,78 +1,114 @@
 const assert = require('node:assert');
 const { existsSync, readFileSync } = require('node:fs');
 const { basename, resolve } = require('node:path');
+/**
+ * @type {import('../../src/rollup/types')} Rollup
+ */
+// @ts-expect-error not included in types
 const { rollup } = require('../../dist/rollup');
-const { normaliseOutput, runTestSuiteWithSamples } = require('../utils.js');
+const {
+	compareLogs,
+	normaliseOutput,
+	runTestSuiteWithSamples,
+	verifyAstPlugin
+} = require('../utils.js');
 
 const FORMATS = ['amd', 'cjs', 'system', 'es', 'iife', 'umd'];
 
-runTestSuiteWithSamples('form', resolve(__dirname, 'samples'), (directory, config) => {
-	const isSingleFormatTest = existsSync(directory + '/_expected.js');
-	const itOrDescribe = isSingleFormatTest ? it : describe;
-	(config.skip ? itOrDescribe.skip : config.solo ? itOrDescribe.only : itOrDescribe)(
-		basename(directory) + ': ' + config.description,
-		() => {
-			let bundle;
-			const runRollupTest = async (inputFile, bundleFile, defaultFormat) => {
-				const warnings = [];
-				if (config.before) config.before();
-				try {
-					process.chdir(directory);
-					bundle =
-						bundle ||
-						(await rollup({
-							input: directory + '/main.js',
-							onwarn: warning => {
-								if (!(config.expectedWarnings && config.expectedWarnings.includes(warning.code))) {
-									warnings.push(warning);
-								}
-							},
-							strictDeprecations: true,
-							...config.options
-						}));
-					await generateAndTestBundle(
-						bundle,
-						{
-							exports: 'auto',
-							file: inputFile,
-							format: defaultFormat,
-							validate: true,
-							...(config.options || {}).output
-						},
-						bundleFile,
-						config
-					);
-				} finally {
-					if (config.after) config.after();
-				}
-				if (warnings.length > 0) {
-					const codes = new Set();
-					for (const { code } of warnings) {
-						codes.add(code);
+runTestSuiteWithSamples(
+	'form',
+	resolve(__dirname, '../../../../rollup/test/form/samples'),
+	/**
+	 * @param {import('../types').TestConfigForm} config
+	 */
+	(directory, config) => {
+		const isSingleFormatTest = existsSync(directory + '/_expected.js');
+		const itOrDescribe = isSingleFormatTest ? it : describe;
+		(config.skip ? itOrDescribe.skip : config.solo ? itOrDescribe.only : itOrDescribe)(
+			basename(directory) + ': ' + config.description,
+			() => {
+				let bundle;
+				const logs = [];
+
+				const runRollupTest = async (inputFile, bundleFile, defaultFormat) => {
+					const warnings = [];
+					if (config.before) {
+						await config.before();
 					}
-					throw new Error(
-						`Unexpected warnings (${[...codes].join(', ')}): \n${warnings
-							.map(({ message }) => `${message}\n\n`)
-							.join('')}` + 'If you expect warnings, list their codes in config.expectedWarnings'
+					try {
+						process.chdir(directory);
+						bundle =
+							bundle ||
+							(await rollup({
+								input: directory + '/main.js',
+								onLog: (level, log) => {
+									logs.push({ level, ...log });
+									if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
+										warnings.push(log);
+									}
+								},
+								strictDeprecations: true,
+								...config.options,
+								plugins: config.options?.plugins
+									// config.verifyAst === false
+									// 	? config.options?.plugins
+									// 	: config.options?.plugins === undefined
+									// 	? verifyAstPlugin
+									// 	: Array.isArray(config.options.plugins)
+									// 	? [...config.options.plugins, verifyAstPlugin]
+									// 	: config.options.plugins
+							}));
+						await generateAndTestBundle(
+							bundle,
+							{
+								exports: 'auto',
+								file: inputFile,
+								format: defaultFormat,
+								validate: true,
+								...(config.options || {}).output
+							},
+							bundleFile,
+							config
+						);
+					} finally {
+						if (config.after) {
+							await config.after();
+						}
+					}
+					if (warnings.length > 0) {
+						const codes = new Set();
+						for (const { code } of warnings) {
+							codes.add(code);
+						}
+						throw new Error(
+							`Unexpected warnings (${[...codes].join(', ')}): \n${warnings
+								.map(({ message }) => `${message}\n\n`)
+								.join('')}` + 'If you expect warnings, list their codes in config.expectedWarnings'
+						);
+					}
+				};
+
+				if (isSingleFormatTest) {
+					return runRollupTest(directory + '/_actual.js', directory + '/_expected.js', 'es').then(
+						() => config.logs && compareLogs(logs, config.logs)
 					);
 				}
-			};
 
-			if (isSingleFormatTest) {
-				return runRollupTest(directory + '/_actual.js', directory + '/_expected.js', 'es');
+				for (const format of config.formats || FORMATS) {
+					after(() => config.logs && compareLogs(logs, config.logs));
+
+					it('generates ' + format, () =>
+						runRollupTest(
+							directory + '/_actual/' + format + '.js',
+							directory + '/_expected/' + format + '.js',
+							format
+						)
+					);
+				}
 			}
-
-			for (const format of config.formats || FORMATS)
-				it('generates ' + format, () =>
-					runRollupTest(
-						directory + '/_actual/' + format + '.js',
-						directory + '/_expected/' + format + '.js',
-						format
-					)
-				);
-		}
-	);
-});
+		);
+	}
+);
 
 async function generateAndTestBundle(bundle, outputOptions, expectedFile, { show }) {
 	await bundle.write(outputOptions);

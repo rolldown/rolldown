@@ -15,7 +15,7 @@
     "build:binding": "yarn workspace @rolldown/node-binding run build",
     "build:binding:release": "yarn workspace @rolldown/node-binding run build:release",
     "test": "yarn workspaces foreach run test",
-    "test:update": "yarn workspaces foreach run test",
+    "test:update": "yarn workspaces foreach run test:update",
     "prettier": "prettier . '!**/*.{js||ts|json|md|yml|yaml}' -w"
   },
   "license": "MIT",

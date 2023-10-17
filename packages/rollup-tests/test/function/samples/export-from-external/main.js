@@ -1,1 +1,0 @@
-export { sep } from 'path';

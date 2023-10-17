@@ -1,1 +1,0 @@
-rollup.config.symlinked

@@ -1,6 +1,0 @@
-{
-  "name": "@my-scope/my-base-pkg",
-  "version": "1.0.0",
-  "main": "index.js",
-  "license": "MIT"
-}

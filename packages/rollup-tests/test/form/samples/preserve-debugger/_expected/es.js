@@ -1,3 +1,0 @@
-before();
-debugger;
-after();

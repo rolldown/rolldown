@@ -1,1 +1,0 @@
-export {bar as default} from './dep2.js';

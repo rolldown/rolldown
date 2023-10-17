@@ -1,1 +1,0 @@
-export { sharedValue } from './shared';

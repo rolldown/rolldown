@@ -21,6 +21,8 @@ const ignoreTests = [
 
   // blocked by supporting `output.preserveModules: true`
   'rollup@function@preserve-modules-default-mode-namespace: import namespace from chunks with default export mode when preserving modules',
+  // The test case import test.js from rollup package, it's dependencies can't be resolved.
+  "rollup@function@relative-outside-external: correctly resolves relative external imports from outside directories",
 ]
 
 module.exports = {

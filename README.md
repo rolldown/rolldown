@@ -2,6 +2,12 @@
 
 Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.
 
+# Rollup test status
+
+![status](https://github.com/rolldown/packages/rollup-tests/test/status.svg)
+
+It is status for rollup function/file-hashes directory test cases.
+
 # Contribution
 
 See [Contributing Guide](CONTRIBUTING.md).

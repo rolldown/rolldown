@@ -21,10 +21,10 @@ cargo install cargo-binstall
 cargo binstall just -y
 ```
 
-## Node Setup
+## Project Setup
 
 ```bash
-yarn install
+just init
 ```
 
 # Project Commands

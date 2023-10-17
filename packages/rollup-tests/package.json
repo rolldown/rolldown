@@ -4,8 +4,8 @@
   "description": "",
   "private": true,
   "scripts": {
-    "test": "mocha --file ./src/intercept/status.js test/test.js",
-    "test:update": "mocha --jobs 1 --file ./src/intercept/update-failed.js test/test.js"
+    "test": "mocha --file ./src/intercept/check.js test/test.js",
+    "test:update": "mocha --jobs 1 --file ./src/intercept/update-test-status.js test/test.js"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +22,7 @@
     "locate-character": "^2.0.5",
     "magic-string": "^0.27.0",
     "mocha": "^10.2.0",
+    "pure-svg-table": "1.0.3",
     "terser": "^5.16.1"
   },
   "devDependencies": {

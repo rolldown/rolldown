@@ -1,6 +1,5 @@
 use oxc::{
   ast::{ast::Declaration, Visit},
-  formatter::{Formatter, FormatterOptions, Gen},
   span::{Atom, GetSpan, Span},
 };
 use rolldown_oxc::BindingIdentifierExt;
@@ -10,7 +9,7 @@ use super::RendererContext;
 pub struct EsmWrapSourceRender<'ast> {
   ctx: RendererContext<'ast>,
   hoisted_vars: Vec<Atom>,
-  hoisted_functions: Vec<String>,
+  hoisted_functions: Vec<Span>,
 }
 
 impl<'ast> EsmWrapSourceRender<'ast> {
@@ -21,13 +20,14 @@ impl<'ast> EsmWrapSourceRender<'ast> {
   pub fn apply(&mut self) {
     let program = self.ctx.module.ast.program();
     self.visit_program(program);
+    self.hoisted_functions.iter().for_each(|f| {
+      // TODO: remove this hack
+      // here move end of function to the keep "\n"
+      self.ctx.source.relocate(f.start, f.end + 1, 0);
+    });
+    self.ctx.source.append_right(0, format!("var {};\n", self.hoisted_vars.join(",")));
+
     let namespace_name = self.ctx.namespace_symbol_name.unwrap();
-    let wrap_symbol_name = self.ctx.wrap_symbol_name.unwrap();
-    let esm_runtime_symbol_name = self.ctx.get_runtime_symbol_final_name(&"__esm".into());
-    self.ctx.source.prepend(format!(
-      "var {wrap_symbol_name} = {esm_runtime_symbol_name}({{\n'{}'() {{\n",
-      self.ctx.module.resource_id.prettify(),
-    ));
     let exports: String = self
       .ctx
       .module
@@ -40,10 +40,28 @@ impl<'ast> EsmWrapSourceRender<'ast> {
       })
       .collect::<Vec<_>>()
       .join(",\n");
+    self.ctx.source.append_right(0, format!("var {namespace_name} = {{\n{exports}\n}};\n",));
+
+    let wrap_symbol_name = self.ctx.wrap_symbol_name.unwrap();
+    let esm_runtime_symbol_name = self.ctx.get_runtime_symbol_final_name(&"__esm".into());
+    self.ctx.source.append_right(
+      0,
+      format!(
+        "var {wrap_symbol_name} = {esm_runtime_symbol_name}({{\n'{}'() {{\n",
+        self.ctx.module.resource_id.prettify(),
+      ),
+    );
     self.ctx.source.append("\n}\n});");
-    self.ctx.source.prepend(format!("\nvar {namespace_name} = {{\n{exports}\n}};\n",));
-    self.ctx.source.prepend(format!("var {};\n", self.hoisted_vars.join(",")));
-    self.ctx.source.prepend(format!("{}\n", self.hoisted_functions.join("\n")));
+  }
+
+  fn hoisted_function(&mut self, func: &'ast oxc::ast::ast::Function<'ast>) {
+    // deconflict function name
+    if let Some(id) = &func.id {
+      let name =
+        self.ctx.get_symbol_final_name((self.ctx.module.id, id.expect_symbol_id()).into()).unwrap();
+      self.ctx.overwrite(id.span.start, id.span.end, name.to_string());
+    }
+    self.hoisted_functions.push(func.span);
   }
 }
 
@@ -84,14 +102,8 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
             .remove_node(Span::new(named_decl.span.start, var_decl.declarations[0].span.start));
         }
         Declaration::FunctionDeclaration(func) => {
-          // hoisted function declaration
-          // TODO update symbol name with magic string move
-          self.ctx.remove_node(Span::new(named_decl.span.start, named_decl.span.end));
-          #[allow(clippy::eq_op)]
-          let mut formatter =
-            Formatter::new((func.span.end - func.span.end) as usize, FormatterOptions::default());
-          func.gen(&mut formatter);
-          self.hoisted_functions.push(formatter.into_code());
+          self.ctx.remove_node(Span::new(named_decl.span.start, func.span.start));
+          self.hoisted_function(func);
         }
         Declaration::ClassDeclaration(class) => {
           let id = class.id.as_ref().unwrap();
@@ -126,17 +138,9 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
         self.hoisted_vars.push(default_symbol_name.clone());
         self.ctx.overwrite(decl.span.start, exp.span().start, format!("{default_symbol_name} = "));
       }
-      oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
-        // hoisted function declaration
-        // TODO update symbol name with magic string move
-        self.ctx.remove_node(decl.span);
-        #[allow(clippy::eq_op)]
-        let mut formatter = Formatter::new(
-          (fn_decl.span.end - fn_decl.span.end) as usize,
-          FormatterOptions::default(),
-        );
-        fn_decl.gen(&mut formatter);
-        self.hoisted_functions.push(formatter.into_code());
+      oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
+        self.ctx.remove_node(Span::new(decl.span.start, func.span.start));
+        self.hoisted_function(func);
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
         let default_symbol_name = self.ctx.default_symbol_name.unwrap();

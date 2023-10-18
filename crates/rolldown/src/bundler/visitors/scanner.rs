@@ -190,17 +190,17 @@ impl<'a> Scanner<'a> {
       }
     }
   }
-  fn get_symbol_id_from_identifier_reference(&self, id_ref: &IdentifierReference) -> SymbolId {
-    let ref_id = id_ref.reference_id.get().unwrap();
+
+  // If the reference is a global variable, `None` will be returned.
+  fn resolve_symbol_from_reference(&self, id_ref: &IdentifierReference) -> Option<SymbolId> {
+    let ref_id = id_ref.reference_id.get().expect("must have reference id");
     let refer = self.symbol_table.get_reference(ref_id);
-    refer.symbol_id().unwrap()
+    refer.symbol_id()
   }
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     let local = match &decl.declaration {
       oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => match exp {
-        oxc::ast::ast::Expression::Identifier(id_ref) => {
-          Some(self.get_symbol_id_from_identifier_reference(id_ref))
-        }
+        oxc::ast::ast::Expression::Identifier(id_ref) => self.resolve_symbol_from_reference(id_ref),
         _ => None,
       },
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
@@ -262,6 +262,10 @@ impl<'a> Scanner<'a> {
       _ => {}
     }
   }
+
+  pub fn add_referenced_symbol(&mut self, id: SymbolId) {
+    self.current_stmt_info.referenced_symbols.push((self.idx, id).into());
+  }
 }
 
 impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
@@ -282,6 +286,15 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   }
 
   fn visit_identifier_reference(&mut self, ident: &'p mut IdentifierReference) {
+    let symbol_id = self.resolve_symbol_from_reference(ident);
+    match symbol_id {
+      Some(symbol_id)
+        if self.scope.root_scope_id() == self.symbol_table.get_scope_id(symbol_id) =>
+      {
+        self.add_referenced_symbol(symbol_id);
+      }
+      _ => {}
+    }
     if ident.name == "module" || ident.name == "exports" {
       if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
         if refs.iter().any(|r| (*r).eq(&ident.reference_id.get().unwrap())) {

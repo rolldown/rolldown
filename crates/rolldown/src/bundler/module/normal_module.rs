@@ -102,6 +102,7 @@ impl NormalModule {
       self.stmt_infos.push(StmtInfo {
         stmt_idx: self.ast.program().body.len(),
         declared_symbols: vec![self.namespace_symbol.0.symbol],
+        ..Default::default()
       });
     }
   }
@@ -294,6 +295,7 @@ impl NormalModule {
         self.stmt_infos.push(StmtInfo {
           stmt_idx: self.ast.program().body.len(),
           declared_symbols: vec![symbol],
+          ..Default::default()
         });
         (self.id, symbol).into()
       });
@@ -310,9 +312,11 @@ impl NormalModule {
       .into();
       let symbol = symbols.tables[self.id].create_symbol(name);
       self.wrap_symbol = Some((self.id, symbol).into());
-      self
-        .stmt_infos
-        .push(StmtInfo { stmt_idx: self.ast.program().body.len(), declared_symbols: vec![symbol] });
+      self.stmt_infos.push(StmtInfo {
+        stmt_idx: self.ast.program().body.len(),
+        declared_symbols: vec![symbol],
+        ..Default::default()
+      });
       self.initialize_namespace();
     }
   }
@@ -335,6 +339,7 @@ impl NormalModule {
       // The deconflict for runtime symbols would be handled in the deconflict on cross-chunk-imported
       // symbols
       declared_symbols: vec![local_symbol],
+      ..Default::default()
     });
   }
 }

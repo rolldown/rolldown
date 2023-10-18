@@ -35,8 +35,8 @@ module.exports = value;
 }
 });
 // main.js
-var _default = commonjs_ns.default;
 var commonjs_ns = __toESM(require_commonjs$1());
+var _default = commonjs_ns.default;
 
 init_esm();
 

@@ -11,8 +11,8 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId,
-  ModuleResolution, NamedImport, ReExport, StmtInfo, StmtInfoId,
+  ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId,
+  NamedImport, ReExport, StmtInfo, StmtInfoId,
 };
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
@@ -26,7 +26,7 @@ pub struct ScanResult {
   pub star_exports: Vec<ImportRecordId>,
   pub export_default_symbol_id: Option<SymbolId>,
   pub imports: FxHashMap<Span, ImportRecordId>,
-  pub module_resolution: Option<ModuleResolution>,
+  pub exports_kind: Option<ExportsKind>,
 }
 
 pub struct Scanner<'a> {
@@ -55,13 +55,13 @@ impl<'a> Scanner<'a> {
     }
   }
 
-  fn set_module_resolution(&mut self, module_resolution: ModuleResolution) {
-    if let Some(resolution) = &self.result.module_resolution {
-      if resolution != &module_resolution {
+  fn set_exports_kind(&mut self, exports_kind: ExportsKind) {
+    if let Some(resolution) = &self.result.exports_kind {
+      if resolution != &exports_kind {
         // TODO shouldn't mix esm syntax and cjs syntax
       }
     } else {
-      self.result.module_resolution = Some(module_resolution);
+      self.result.exports_kind = Some(exports_kind);
     }
   }
 
@@ -285,7 +285,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
     if ident.name == "module" || ident.name == "exports" {
       if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
         if refs.iter().any(|r| (*r).eq(&ident.reference_id.get().unwrap())) {
-          self.set_module_resolution(ModuleResolution::CommonJs);
+          self.set_exports_kind(ExportsKind::CommonJs);
         }
       }
     }
@@ -294,7 +294,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   fn visit_statement(&mut self, stmt: &'p mut oxc::ast::ast::Statement<'ast>) {
     if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
       self.scan_module_decl(decl.0);
-      self.set_module_resolution(ModuleResolution::Esm);
+      self.set_exports_kind(ExportsKind::Esm);
     }
     self.visit_statement_match(stmt);
   }
@@ -311,7 +311,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
       if ident.name == "require" {
         if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
           if refs.iter().any(|r| (*r).eq(&ident.reference_id.get().unwrap())) {
-            self.set_module_resolution(ModuleResolution::CommonJs);
+            self.set_exports_kind(ExportsKind::CommonJs);
             if let Some(oxc::ast::ast::Argument::Expression(
               oxc::ast::ast::Expression::StringLiteral(request),
             )) = &expr.arguments.get(0)

@@ -1,11 +1,11 @@
-use rolldown_common::{RawPath, ResourceId};
+use rolldown_common::{ModuleType, RawPath, ResourceId};
 use rolldown_error::Error as RError;
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
 };
 
-use oxc_resolver::{ResolveOptions, Resolver as OxcResolver};
+use oxc_resolver::{Resolution, ResolveOptions, Resolver as OxcResolver};
 
 #[derive(Debug)]
 pub struct Resolver {
@@ -42,8 +42,10 @@ impl Default for Resolver {
   }
 }
 
+#[derive(Debug)]
 pub struct ResolveRet {
   pub resolved: RawPath,
+  pub module_type: ModuleType,
 }
 
 impl Resolver {
@@ -69,7 +71,10 @@ impl Resolver {
     let resolved = self.inner.resolve(context, &specifier.to_string_lossy());
 
     match resolved {
-      Ok(info) => Ok(ResolveRet { resolved: info.path().to_string_lossy().to_string().into() }),
+      Ok(info) => Ok(ResolveRet {
+        resolved: info.path().to_string_lossy().to_string().into(),
+        module_type: calc_module_type(&info),
+      }),
       Err(_err) => {
         if let Some(importer) = importer {
           Err(Box::new(RError::unresolved_import(
@@ -82,4 +87,20 @@ impl Resolver {
       }
     }
   }
+}
+
+fn calc_module_type(info: &Resolution) -> ModuleType {
+  if let Some(extension) = info.path().extension() {
+    if extension == "mjs" {
+      return ModuleType::EsmMjs;
+    } else if extension == "cjs" {
+      return ModuleType::CJS;
+    }
+  }
+  if let Some(package_json) = info.package_json() {
+    if package_json.raw_json().get("type").and_then(|v| v.as_str()) == Some("module") {
+      return ModuleType::EsmPackageJson;
+    }
+  }
+  ModuleType::Unknown
 }

@@ -1,6 +1,6 @@
 use index_vec::IndexVec;
 use oxc::{semantic::ReferenceId, span::Atom};
-use rolldown_common::{LocalOrReExport, ModuleId, ModuleResolution, ResolvedExport, SymbolRef};
+use rolldown_common::{ExportsKind, LocalOrReExport, ModuleId, ResolvedExport, SymbolRef};
 use rustc_hash::FxHashMap;
 
 use super::graph::Graph;
@@ -46,6 +46,9 @@ impl<'graph> Linker<'graph> {
   }
 
   fn wrap_modules_if_needed(&mut self) {
+    // Detect module need wrapped, here has two cases:
+    // - Commonjs module, because cjs symbols can't static binding, it need to be wrapped and lazy evaluated.
+    // - Import esm module at commonjs module.
     let mut module_to_wrapped = index_vec::index_vec![
       false;
       self.graph.modules.len()
@@ -54,7 +57,7 @@ impl<'graph> Linker<'graph> {
     for module in &self.graph.modules {
       match module {
         Module::Normal(module) => {
-          if module.module_resolution == ModuleResolution::CommonJs {
+          if module.exports_kind == ExportsKind::CommonJs {
             wrap_module(self.graph, module.id, &mut module_to_wrapped);
           }
         }
@@ -62,12 +65,15 @@ impl<'graph> Linker<'graph> {
       }
     }
 
+    // Generate symbol for wrap module declaration
+    // Case commonjs, eg var require_a = __commonJS()
+    // Case esm, eg var init_a = __esm()
     for (module_id, wrapped) in module_to_wrapped.into_iter_enumerated() {
       if wrapped {
         match &mut self.graph.modules[module_id] {
           Module::Normal(module) => {
             module.create_wrap_symbol(&mut self.graph.symbols);
-            let name = if module.module_resolution == ModuleResolution::CommonJs {
+            let name = if module.exports_kind == ExportsKind::CommonJs {
               "__commonJS".into()
             } else {
               "__esm".into()
@@ -80,6 +86,9 @@ impl<'graph> Linker<'graph> {
       }
     }
 
+    // Generate symbol for import warp module
+    // Case esm import commonjs, eg var commonjs_ns = __toESM(require_a())
+    // Case commonjs require esm, eg (init_esm(), __toCommonJS(esm_ns))
     let mut imported_symbols = vec![];
 
     for module in &self.graph.modules {
@@ -93,14 +102,16 @@ impl<'graph> Linker<'graph> {
 
             if let Some(importee_warp_symbol) = importee.wrap_symbol {
               imported_symbols.push((importer.id, importee_warp_symbol));
+              imported_symbols.push((importer.id, importee.namespace_symbol.0));
             }
 
-            match (importer.module_resolution, importee.module_resolution) {
-              (ModuleResolution::Esm, ModuleResolution::CommonJs) => {
+            match (importer.exports_kind, importee.exports_kind) {
+              (ExportsKind::Esm, ExportsKind::CommonJs) => {
                 imported_symbols
                   .push((importer.id, self.graph.runtime.resolve_symbol(&"__toESM".into())));
+                imported_symbols.push((importer.id, importee.namespace_symbol.0));
               }
-              (ModuleResolution::CommonJs, ModuleResolution::Esm) => {
+              (ExportsKind::CommonJs, ExportsKind::Esm) => {
                 imported_symbols
                   .push((importer.id, self.graph.runtime.resolve_symbol(&"__toCommonJS".into())));
               }
@@ -166,7 +177,7 @@ impl<'graph> Linker<'graph> {
             let importee = &graph.modules[import_record.resolved_module];
             match importee {
               Module::Normal(importee) => {
-                if importee.module_resolution == ModuleResolution::CommonJs {
+                if importee.exports_kind == ExportsKind::CommonJs {
                   extra_symbols.push((
                     import_record.resolved_module,
                     info.imported.clone(),
@@ -204,7 +215,7 @@ impl<'graph> Linker<'graph> {
         let importee = &mut graph.modules[importee];
         match importee {
           Module::Normal(importee) => {
-            if importee.module_resolution == ModuleResolution::CommonJs {
+            if importee.exports_kind == ExportsKind::CommonJs {
               importee.add_cjs_symbol(&mut graph.symbols, imported, is_imported_star);
             }
           }
@@ -312,7 +323,7 @@ impl<'graph> Linker<'graph> {
           let importee = &self.graph.modules[import_record.resolved_module];
           match importee {
             Module::Normal(importee) => {
-              let resolved_ref = if importee.module_resolution == ModuleResolution::CommonJs {
+              let resolved_ref = if importee.exports_kind == ExportsKind::CommonJs {
                 importee.resolve_cjs_symbol(&info.imported, info.is_imported_star)
               } else if info.is_imported_star {
                 importee.namespace_symbol.0

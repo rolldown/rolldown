@@ -7,7 +7,7 @@ use oxc::{
   semantic::ReferenceId,
   span::{Atom, Span},
 };
-use rolldown_common::{ModuleId, ModuleResolution, SymbolRef};
+use rolldown_common::{ExportsKind, ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, UpdateOptions};
 
@@ -154,7 +154,7 @@ impl<'ast> RendererContext<'ast> {
     let rec = &self.module.import_records[self.module.imports.get(&decl.span).copied().unwrap()];
     let importee = &self.modules[rec.resolved_module];
     if let Module::Normal(importee) = importee {
-      if importee.module_resolution == ModuleResolution::CommonJs {
+      if importee.exports_kind == ExportsKind::CommonJs {
         // add import cjs symbol binding
         let namespace_name = self
           .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
@@ -163,7 +163,10 @@ impl<'ast> RendererContext<'ast> {
         let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name(&"__toESM".into());
         self.source.prepend_left(
           decl.span.start,
-          format!("var {namespace_name} = {to_esm_runtime_symbol_name}({wrap_symbol_name}());\n"),
+          format!(
+            "var {namespace_name} = {to_esm_runtime_symbol_name}({wrap_symbol_name}(){});\n",
+            if self.module.module_type.is_esm() { ", 1" } else { "" }
+          ),
         );
         decl.specifiers.iter().for_each(|s| match s {
           oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
@@ -172,16 +175,17 @@ impl<'ast> RendererContext<'ast> {
             ) {
               self
                 .source
-                .prepend_left(decl.span.start, format!("var {name} = {namespace_name}.{name};\n"));
+                .prepend_right(decl.span.start, format!("var {name} = {namespace_name}.{name};\n"));
             }
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
             if let Some(name) = self.get_symbol_final_name(
               (importee.id, importee.cjs_symbols[&Atom::new_inline("default")].symbol).into(),
             ) {
-              self
-                .source
-                .prepend_left(decl.span.start, format!("var {name} = {namespace_name}.default;\n"));
+              self.source.prepend_right(
+                decl.span.start,
+                format!("var {name} = {namespace_name}.default;\n"),
+              );
             }
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}

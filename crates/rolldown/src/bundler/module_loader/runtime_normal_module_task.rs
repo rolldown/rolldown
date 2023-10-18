@@ -51,7 +51,7 @@ impl RuntimeNormalModuleTask {
       star_exports,
       export_default_symbol_id,
       imports,
-      module_resolution,
+      exports_kind,
     } = scan_result;
 
     builder.id = Some(self.module_id);
@@ -65,7 +65,7 @@ impl RuntimeNormalModuleTask {
     builder.star_exports = Some(star_exports);
     builder.default_export_symbol = export_default_symbol_id;
     builder.scope = Some(scope);
-    builder.module_resolution = module_resolution;
+    builder.exports_kind = exports_kind;
     builder.initialize_namespace_binding(&mut symbol_map);
 
     self

@@ -179,8 +179,13 @@ impl<'a> ModuleLoader<'a> {
 
           let module_path = ResourceId::new(info.path.clone(), &self.input_options.cwd);
 
-          let task =
-            NormalModuleTask::new(id, Arc::clone(&self.resolver), module_path, self.tx.clone());
+          let task = NormalModuleTask::new(
+            id,
+            Arc::<rolldown_resolver::Resolver>::clone(&self.resolver),
+            module_path,
+            info.module_type,
+            self.tx.clone(),
+          );
           tokio::spawn(async move { task.run().await });
         }
         id

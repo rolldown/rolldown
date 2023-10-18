@@ -7,7 +7,7 @@ use oxc::{
   semantic::{ScopeTree, SymbolTable},
   span::SourceType,
 };
-use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ResourceId};
+use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId};
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 use rolldown_resolver::Resolver;
 
@@ -26,6 +26,7 @@ use crate::{
 pub struct NormalModuleTask {
   module_id: ModuleId,
   path: ResourceId,
+  module_type: ModuleType,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   errors: Vec<BuildError>,
   warnings: Vec<BuildError>,
@@ -37,9 +38,18 @@ impl NormalModuleTask {
     id: ModuleId,
     resolver: SharedResolver,
     path: ResourceId,
+    module_type: ModuleType,
     tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   ) -> Self {
-    Self { module_id: id, resolver, path, tx, errors: Vec::default(), warnings: Vec::default() }
+    Self {
+      module_id: id,
+      resolver,
+      path,
+      module_type,
+      tx,
+      errors: Vec::default(),
+      warnings: Vec::default(),
+    }
   }
 
   pub async fn run(mut self) -> anyhow::Result<()> {
@@ -67,7 +77,7 @@ impl NormalModuleTask {
       star_exports,
       export_default_symbol_id,
       imports,
-      module_resolution,
+      exports_kind,
     } = scan_result;
 
     builder.id = Some(self.module_id);
@@ -81,8 +91,9 @@ impl NormalModuleTask {
     builder.star_exports = Some(star_exports);
     builder.default_export_symbol = export_default_symbol_id;
     builder.scope = Some(scope);
-    builder.module_resolution = module_resolution;
+    builder.exports_kind = exports_kind;
     builder.initialize_namespace_binding(&mut symbol_map);
+    builder.module_type = self.module_type;
 
     self
       .tx
@@ -130,7 +141,11 @@ impl NormalModuleTask {
     match resolved_id {
       Some(info) => Ok(info),
       None => {
-        Ok(ResolvedRequestInfo { path: specifier.to_string().into(), is_external: true })
+        Ok(ResolvedRequestInfo {
+          path: specifier.to_string().into(),
+          module_type: ModuleType::Unknown,
+          is_external: true,
+        })
         // // TODO: should emit warnings like https://rollupjs.org/guide/en#warning-treating-module-as-external-dependency
         // return Err(rolldown_error::Error::unresolved_import(
         //   specifier.to_string(),

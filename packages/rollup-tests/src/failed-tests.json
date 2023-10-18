@@ -602,7 +602,6 @@
   "rollup@function@relative-external-include-once-two-external: includes a relative external module only once (two external deps)",
   "rollup@function@relative-external-include-once-up: includes a relative external module only once (from upper directory too)",
   "rollup@function@relative-external-include-once: includes a relative external module only once",
-  "rollup@function@relative-outside-external: correctly resolves relative external imports from outside directories",
   "rollup@function@removes-empty-exported-vars: removes empty exported var declarations",
   "rollup@function@rename-default-export: avoids SyntaxError with default token (#33)",
   "rollup@function@renamed-arguments: function arguments are renamed as appropriate (#32)",

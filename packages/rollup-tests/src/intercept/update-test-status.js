@@ -5,22 +5,40 @@ const {
   loadIgnoredTests,
   loadOnlyTests,
 } = require('./utils')
+const fs = require('fs')
+const path = require('path')
 
 const alreadyFailedTests = new Set(loadFailedTests())
 const onlyTests = loadOnlyTests()
 const ignoredTests = loadIgnoredTests()
+
+const status = {
+  total: 0,
+  failed: 0,
+  skipFailed: 0,
+  ignored: 0,
+  skipped: 0,
+  passed: 0,
+}
 
 beforeEach(function skipAlreadyFiledTests() {
   if (!this.currentTest) {
     throw new Error('No current test')
   }
   const id = calcTestId(this.currentTest)
+  status.total += 1
 
   // if (!onlyTests.has(id)) {
   //   this.currentTest?.skip()
   // }
 
-  if (ignoredTests.has(id) || alreadyFailedTests.has(id)) {
+  if (alreadyFailedTests.has(id)) {
+    status.skipFailed += 1
+    this.currentTest.skip()
+  }
+
+  if (ignoredTests.has(id)) {
+    status.ignored += 1
     this.currentTest?.skip()
   }
 
@@ -36,10 +54,6 @@ beforeEach(function skipAlreadyFiledTests() {
   }, 500)
 })
 
-/**
- * @type {Set<string>}
- */
-const passedTests = new Set()
 
 afterEach(function updateStatus() {
   if (!this.currentTest) {
@@ -48,15 +62,25 @@ afterEach(function updateStatus() {
   const testId = calcTestId(this.currentTest)
   const state = this.currentTest.state
   if (state === 'failed') {
+    status.failed += 1
     alreadyFailedTests.add(testId)
   } else if (state === 'passed') {
-    passedTests.add(testId)
+    status.passed += 1
   }
 })
 
 after(function printStatus() {
-  console.log('Passed tests:', passedTests)
   updateFailedTestsJson(alreadyFailedTests)
+  fs.writeFileSync(path.join(__dirname, '../status.json'), JSON.stringify(status, null, 2))
+  writeTestStatusToMarkdown()
   // enforce exit process to avoid rust process is not exit.
   process.exit(0)
 })
+
+function writeTestStatusToMarkdown() {
+  let markdown = '|  | number |\n|----| ---- |\n'
+  for(var key in status) {
+    markdown += `| ${key} | ${status[key]}|\n`
+  }
+  fs.writeFileSync(path.join(__dirname, '../status.md'), markdown)
+}

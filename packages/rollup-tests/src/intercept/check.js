@@ -1,5 +1,5 @@
 const { loadFailedTests, calcTestId, loadIgnoredTests } = require('./utils')
-
+const expectedStatus = require('../status.json');
 const alreadyFailedTests = new Set(loadFailedTests())
 
 const ignoreTests = loadIgnoredTests()
@@ -61,6 +61,13 @@ after(function printStatus() {
   const sorted = [...failedTests].sort()
   console.log('failures', JSON.stringify(sorted, null, 2))
   console.table(status)
-  // enforce exit process to avoid rust process is not exit.
-  process.exit(status.failed > 0 ? 1 : 0)
+  if (status.failed > 0) {
+    // enforce exit process to avoid rust process is not exit.
+    process.exit(1)
+  } else {
+    if (expectedStatus.total !== status.total || expectedStatus.ignored != status.ignored || expectedStatus.skipFailed !== status.skipFailed || expectedStatus.passed !== status.passed) {
+      throw new Error('The rollup test status file is not updated. Please run `yarn test:update` to update it.')
+    }
+    process.exit(0)
+  }
 })

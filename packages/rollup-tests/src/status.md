@@ -1,8 +1,8 @@
 |  | number |
 |----| ---- |
-| total | 900|
+| total | 901|
 | failed | 0|
 | skipFailed | 640|
 | ignored | 7|
 | skipped | 0|
-| passed | 253|
+| passed | 254|

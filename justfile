@@ -4,6 +4,7 @@ _default:
 init:
   cargo binstall rusty-hook taplo-cli cargo-insta cargo-nextest -y
   yarn install
+  git submodule update
 
 test:
   cargo nextest run

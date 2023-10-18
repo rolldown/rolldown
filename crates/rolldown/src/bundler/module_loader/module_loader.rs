@@ -181,7 +181,7 @@ impl<'a> ModuleLoader<'a> {
 
           let task = NormalModuleTask::new(
             id,
-            self.resolver.clone(),
+            Arc::<rolldown_resolver::Resolver>::clone(&self.resolver),
             module_path,
             info.module_type,
             self.tx.clone(),

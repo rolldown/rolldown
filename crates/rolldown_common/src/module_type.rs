@@ -12,6 +12,6 @@ pub enum ModuleType {
 
 impl ModuleType {
   pub fn is_esm(&self) -> bool {
-    matches!(self, ModuleType::EsmMjs | ModuleType::EsmPackageJson)
+    matches!(self, Self::EsmMjs | Self::EsmPackageJson)
   }
 }

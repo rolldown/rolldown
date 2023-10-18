@@ -107,17 +107,13 @@ impl<'graph> Linker<'graph> {
 
             match (importer.exports_kind, importee.exports_kind) {
               (ExportsKind::Esm, ExportsKind::CommonJs) => {
-                imported_symbols.push((
-                  importer.id,
-                  self.graph.runtime.resolve_symbol(&"__toESM".into()),
-                ));
+                imported_symbols
+                  .push((importer.id, self.graph.runtime.resolve_symbol(&"__toESM".into())));
                 imported_symbols.push((importer.id, importee.namespace_symbol.0));
               }
               (ExportsKind::CommonJs, ExportsKind::Esm) => {
-                imported_symbols.push((
-                  importer.id,
-                  self.graph.runtime.resolve_symbol(&"__toCommonJS".into()),
-                ));
+                imported_symbols
+                  .push((importer.id, self.graph.runtime.resolve_symbol(&"__toCommonJS".into())));
               }
               _ => {}
             }
@@ -215,18 +211,12 @@ impl<'graph> Linker<'graph> {
         }
         Module::External(_) => {}
       }
-      extra_symbols
-        .into_iter()
-        .for_each(|(importee, imported, is_imported_star)| {
-          let importee = &mut graph.modules[importee];
-          match importee {
-            Module::Normal(importee) => {
-              if importee.exports_kind == ExportsKind::CommonJs {
-                importee.add_cjs_symbol(&mut graph.symbols, imported, is_imported_star)
-              }
-            }
-            Module::External(importee) => {
-              importee.add_export_symbol(&mut graph.symbols, imported, is_imported_star);
+      extra_symbols.into_iter().for_each(|(importee, imported, is_imported_star)| {
+        let importee = &mut graph.modules[importee];
+        match importee {
+          Module::Normal(importee) => {
+            if importee.exports_kind == ExportsKind::CommonJs {
+              importee.add_cjs_symbol(&mut graph.symbols, imported, is_imported_star);
             }
           }
           Module::External(importee) => {

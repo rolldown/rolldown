@@ -58,9 +58,9 @@ impl NormalModuleBuilder {
       default_export_symbol: self.default_export_symbol,
       namespace_symbol: self.namespace_symbol.unwrap(),
       is_symbol_for_namespace_referenced: false,
-      source_mutations: Default::default(),
+      source_mutations: Vec::default(),
       exports_kind: self.exports_kind.unwrap_or(ExportsKind::Esm),
-      cjs_symbols: Default::default(),
+      cjs_symbols: FxHashMap::default(),
       wrap_symbol: None,
       module_type: self.module_type,
     }

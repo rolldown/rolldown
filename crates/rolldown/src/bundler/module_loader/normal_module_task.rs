@@ -47,8 +47,8 @@ impl NormalModuleTask {
       path,
       module_type,
       tx,
-      errors: Default::default(),
-      warnings: Default::default(),
+      errors: Vec::default(),
+      warnings: Vec::default(),
     }
   }
 

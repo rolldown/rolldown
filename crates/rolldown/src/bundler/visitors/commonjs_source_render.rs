@@ -36,4 +36,9 @@ impl<'ast> Visit<'ast> for CommonJsSourceRender<'ast> {
   fn visit_import_declaration(&mut self, decl: &'ast oxc::ast::ast::ImportDeclaration<'ast>) {
     self.ctx.visit_import_declaration(decl);
   }
+
+  fn visit_statement(&mut self, stmt: &'ast oxc::ast::ast::Statement<'ast>) {
+    self.ctx.visit_statement(stmt);
+    self.visit_statement_match(stmt);
+  }
 }

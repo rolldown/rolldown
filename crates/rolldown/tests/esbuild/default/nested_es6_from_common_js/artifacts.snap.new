@@ -1,0 +1,25 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 50
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/nested_es6_from_common_js
+---
+# main.js
+
+```js
+// foo.js
+var require_foo = __commonJS({
+'foo.js'(exports, module) {
+exports.fn = function() {
+  return 123
+}
+}
+});
+// main.js
+var foo_ns = __toESM(require_foo());
+var fn = foo_ns.fn;
+
+(() => {
+    console.log(fn())
+})()
+```

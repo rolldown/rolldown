@@ -116,8 +116,13 @@ impl NormalModuleTask {
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, mut scope) = semantic.into_symbol_table_and_scope_tree();
     let unique_name = self.path.generate_unique_name();
-    let mut scanner =
-      scanner::Scanner::new(self.module_id, &mut scope, &mut symbol_table, &unique_name);
+    let mut scanner = scanner::Scanner::new(
+      self.module_id,
+      &mut scope,
+      &mut symbol_table,
+      &unique_name,
+      self.module_type,
+    );
     scanner.visit_program(program.program_mut());
     let scan_result = scanner.result;
 

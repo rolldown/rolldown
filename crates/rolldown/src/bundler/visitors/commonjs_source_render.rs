@@ -1,7 +1,4 @@
 use oxc::ast::Visit;
-use rolldown_common::ExportsKind;
-
-use crate::bundler::module::module::Module;
 
 use super::RendererContext;
 
@@ -29,37 +26,14 @@ impl<'ast> CommonJsSourceRender<'ast> {
 
 impl<'ast> Visit<'ast> for CommonJsSourceRender<'ast> {
   fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
-    if let oxc::ast::ast::Expression::Identifier(ident) = &expr.callee {
-      if ident.name == "require" {
-        let rec = &self.ctx.module.import_records
-          [self.ctx.module.imports.get(&expr.span).copied().unwrap()];
-        let importee = &self.ctx.modules[rec.resolved_module];
-        if let Module::Normal(importee) = importee {
-          let wrap_symbol_name =
-            self.ctx.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
-          if importee.exports_kind == ExportsKind::CommonJs {
-            self.ctx.source.update(expr.span.start, expr.span.end, format!("{wrap_symbol_name}()"));
-          } else {
-            let namespace_name = self
-              .ctx
-              .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
-              .unwrap();
-            let to_commonjs_runtime_symbol_name =
-              self.ctx.get_runtime_symbol_final_name(&"__toCommonJS".into());
-            self.ctx.source.update(
-              expr.span.start,
-              expr.span.end,
-              format!(
-                "({wrap_symbol_name}(), {to_commonjs_runtime_symbol_name}({namespace_name}))"
-              ),
-            );
-          }
-        }
-      }
-    }
+    self.ctx.visit_call_expression(expr);
     for arg in &expr.arguments {
       self.visit_argument(arg);
     }
     self.visit_expression(&expr.callee);
+  }
+
+  fn visit_import_declaration(&mut self, decl: &'ast oxc::ast::ast::ImportDeclaration<'ast>) {
+    self.ctx.visit_import_declaration(decl);
   }
 }

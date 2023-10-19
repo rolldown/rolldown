@@ -3,7 +3,7 @@ use oxc::{
   semantic::{ScopeTree, SymbolTable},
   span::SourceType,
 };
-use rolldown_common::{ModuleId, ResourceId};
+use rolldown_common::{ModuleId, ModuleType, ResourceId};
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
 use super::Msg;
@@ -20,6 +20,7 @@ use crate::{
 pub struct RuntimeNormalModuleTask {
   module_id: ModuleId,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
+  module_type: ModuleType,
   errors: Vec<BuildError>,
   warnings: Vec<BuildError>,
   resolver: SharedResolver,
@@ -31,7 +32,14 @@ impl RuntimeNormalModuleTask {
     resolver: SharedResolver,
     tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   ) -> Self {
-    Self { module_id: id, resolver, tx, errors: Vec::default(), warnings: Vec::default() }
+    Self {
+      module_id: id,
+      module_type: ModuleType::EsmMjs,
+      resolver,
+      tx,
+      errors: Vec::default(),
+      warnings: Vec::default(),
+    }
   }
 
   pub fn run(self) {
@@ -92,6 +100,7 @@ impl RuntimeNormalModuleTask {
       &mut scope,
       &mut symbol_table,
       "should be unreachable for runtime module",
+      self.module_type,
     );
     scanner.visit_program(program.program_mut());
     let scan_result = scanner.result;

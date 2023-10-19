@@ -2,8 +2,10 @@
 pub enum ModuleType {
   #[default]
   Unknown,
-  // "c.js"
+  // ".cjs"
   CJS,
+  // "type: commonjs" in package.json
+  CjsPackageJson,
   // ".mjs"
   EsmMjs,
   // "type: module" in package.json
@@ -13,5 +15,9 @@ pub enum ModuleType {
 impl ModuleType {
   pub fn is_esm(&self) -> bool {
     matches!(self, Self::EsmMjs | Self::EsmPackageJson)
+  }
+
+  pub fn is_commonjs(&self) -> bool {
+    matches!(self, Self::CJS | Self::CjsPackageJson)
   }
 }

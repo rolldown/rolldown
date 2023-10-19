@@ -1,0 +1,2 @@
+import './foo'
+require('./foo')

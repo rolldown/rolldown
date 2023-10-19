@@ -1712,9 +1712,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "string_wizard"
-version = "0.0.8"
+version = "0.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a95d0beef4b5aa9a2e0219aa305c151cf09193d538936f283634fdcb21e61a02"
+checksum = "8bcb67795e5599aa8767ad24ae888d091169111d25e66dcbef39853b793197d7"
 dependencies = [
  "index_vec",
  "rustc-hash",

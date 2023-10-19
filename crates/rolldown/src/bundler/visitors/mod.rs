@@ -165,7 +165,7 @@ impl<'ast> RendererContext<'ast> {
           .unwrap();
         let wrap_symbol_name = self.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
         let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name(&"__toESM".into());
-        self.source.prepend_left(
+        self.source.append_right(
           start,
           format!(
             "var {namespace_name} = {to_esm_runtime_symbol_name}({wrap_symbol_name}(){});\n",
@@ -177,14 +177,14 @@ impl<'ast> RendererContext<'ast> {
             if let Some(name) = self.get_symbol_final_name(
               (importee.id, importee.cjs_symbols[spec.imported.name()].symbol).into(),
             ) {
-              self.source.prepend_right(start, format!("var {name} = {namespace_name}.{name};\n"));
+              self.source.append_right(start, format!("var {name} = {namespace_name}.{name};\n"));
             }
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
             if let Some(name) = self.get_symbol_final_name(
               (importee.id, importee.cjs_symbols[&Atom::new_inline("default")].symbol).into(),
             ) {
-              self.source.prepend_right(start, format!("var {name} = {namespace_name}.default;\n"));
+              self.source.append_right(start, format!("var {name} = {namespace_name}.default;\n"));
             }
           }
           oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
@@ -192,7 +192,7 @@ impl<'ast> RendererContext<'ast> {
       } else if let Some(wrap_symbol) = importee.wrap_symbol {
         let wrap_symbol_name = self.get_symbol_final_name(wrap_symbol).unwrap();
         // init wrapped esm module
-        self.source.prepend_left(start, format!("{wrap_symbol_name}();\n"));
+        self.source.append_right(start, format!("{wrap_symbol_name}();\n"));
       }
     }
   }

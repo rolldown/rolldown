@@ -23,10 +23,10 @@ exports.foo = function() {
 }
 });
 // main.js
-var bar_ns = __toESM(require_bar());
 var foo_ns = __toESM(require_foo());
-var bar = bar_ns.bar;
 var foo = foo_ns.foo;
+var bar_ns = __toESM(require_bar());
+var bar = bar_ns.bar;
 
 console.log(foo(), bar())
  // This should be hoisted

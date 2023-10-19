@@ -1,0 +1,18 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/new_expression_common_js
+---
+# main.js
+
+```js
+// foo.js
+var require_foo = __commonJS({
+'foo.js'(exports, module) {
+class Foo {}
+module.exports = {Foo};
+}
+});
+// main.js
+new (require_foo()).Foo();
+```

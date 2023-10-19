@@ -1,0 +1,17 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/require_parent_dir_common_js
+---
+# main.js
+
+```js
+// index.js
+var require_require_parent_dir_common_js_index = __commonJS({
+'index.js'(exports, module) {
+module.exports = 123
+}
+});
+// dir/entry.js
+console.log(require_require_parent_dir_common_js_index())
+```

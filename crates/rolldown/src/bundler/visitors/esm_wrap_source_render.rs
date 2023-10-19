@@ -55,16 +55,6 @@ impl<'ast> EsmWrapSourceRender<'ast> {
     );
     self.ctx.source.append("\n}\n});");
   }
-
-  fn hoisted_function(&mut self, func: &'ast oxc::ast::ast::Function<'ast>) {
-    // deconflict function name
-    if let Some(id) = &func.id {
-      let name =
-        self.ctx.get_symbol_final_name((self.ctx.module.id, id.expect_symbol_id()).into()).unwrap();
-      self.ctx.overwrite(id.span.start, id.span.end, name.to_string());
-    }
-    self.hoisted_functions.push(func.span);
-  }
 }
 
 impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
@@ -105,7 +95,15 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
         }
         Declaration::FunctionDeclaration(func) => {
           self.ctx.remove_node(Span::new(named_decl.span.start, func.span.start));
-          self.hoisted_function(func);
+          let id = func.id.as_ref().unwrap();
+          let name = self
+            .ctx
+            .get_symbol_final_name((self.ctx.module.id, id.expect_symbol_id()).into())
+            .unwrap();
+          if id.name != name {
+            self.ctx.overwrite(id.span.start, id.span.end, name.to_string());
+          }
+          self.hoisted_functions.push(func.span);
         }
         Declaration::ClassDeclaration(class) => {
           let id = class.id.as_ref().unwrap();
@@ -114,6 +112,9 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
           {
             self.hoisted_vars.push(name.clone());
             self.ctx.overwrite(named_decl.span.start, class.span.start, format!("{name} = "));
+            // avoid syntax error
+            // export class Foo {} Foo.prop = 123 => var Foo = class Foo {} \n Foo.prop = 123
+            self.ctx.source.append_right(class.span.end, "\n");
           }
         }
         _ => {}
@@ -142,12 +143,27 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
         self.ctx.remove_node(Span::new(decl.span.start, func.span.start));
-        self.hoisted_function(func);
+        if let Some(id) = &func.id {
+          let name = self
+            .ctx
+            .get_symbol_final_name((self.ctx.module.id, id.expect_symbol_id()).into())
+            .unwrap();
+          if id.name != name {
+            self.ctx.overwrite(id.span.start, id.span.end, name.to_string());
+          }
+        } else {
+          let default_symbol_name = self.ctx.default_symbol_name.unwrap();
+          self.ctx.source.append_right(func.params.span.start, format!(" {default_symbol_name}"));
+        }
+        self.hoisted_functions.push(func.span);
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
         let default_symbol_name = self.ctx.default_symbol_name.unwrap();
         self.hoisted_vars.push(default_symbol_name.clone());
         self.ctx.overwrite(decl.span.start, class.span.start, format!("{default_symbol_name} = "));
+        // avoid syntax error
+        // export default class Foo {} Foo.prop = 123 => var Foo = class Foo {} \n Foo.prop = 123
+        self.ctx.source.append_right(class.span.end, "\n");
       }
       _ => {}
     }

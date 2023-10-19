@@ -1,6 +1,8 @@
 use index_vec::IndexVec;
 use oxc::{semantic::ReferenceId, span::Atom};
-use rolldown_common::{ExportsKind, LocalOrReExport, ModuleId, ResolvedExport, SymbolRef};
+use rolldown_common::{
+  ExportsKind, ImportKind, LocalOrReExport, ModuleId, ResolvedExport, SymbolRef,
+};
 use rustc_hash::FxHashMap;
 
 use super::graph::Graph;
@@ -59,6 +61,13 @@ impl<'graph> Linker<'graph> {
         Module::Normal(module) => {
           if module.exports_kind == ExportsKind::CommonJs {
             wrap_module(self.graph, module.id, &mut module_to_wrapped);
+          } else {
+            // Should mark wrapped for require import module
+            module.import_records.iter().for_each(|record| {
+              if record.kind == ImportKind::Require {
+                wrap_module(self.graph, record.resolved_module, &mut module_to_wrapped);
+              }
+            });
           }
         }
         Module::External(_) => {}
@@ -103,19 +112,17 @@ impl<'graph> Linker<'graph> {
             if let Some(importee_warp_symbol) = importee.wrap_symbol {
               imported_symbols.push((importer.id, importee_warp_symbol));
               imported_symbols.push((importer.id, importee.namespace_symbol.0));
-            }
-
-            match (importer.exports_kind, importee.exports_kind) {
-              (ExportsKind::Esm, ExportsKind::CommonJs) => {
-                imported_symbols
-                  .push((importer.id, self.graph.runtime.resolve_symbol(&"__toESM".into())));
-                imported_symbols.push((importer.id, importee.namespace_symbol.0));
+              match (importer.exports_kind, importee.exports_kind) {
+                (ExportsKind::Esm, ExportsKind::CommonJs) => {
+                  imported_symbols
+                    .push((importer.id, self.graph.runtime.resolve_symbol(&"__toESM".into())));
+                }
+                (_, ExportsKind::Esm) => {
+                  imported_symbols
+                    .push((importer.id, self.graph.runtime.resolve_symbol(&"__toCommonJS".into())));
+                }
+                _ => {}
               }
-              (ExportsKind::CommonJs, ExportsKind::Esm) => {
-                imported_symbols
-                  .push((importer.id, self.graph.runtime.resolve_symbol(&"__toCommonJS".into())));
-              }
-              _ => {}
             }
           });
         }

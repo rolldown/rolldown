@@ -1,0 +1,37 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/common_js_from_es6
+---
+# main.js
+
+```js
+// bar.js
+function bar$1() {
+    return 'bar'
+}
+var bar_ns = {
+  get bar() { return bar$1 }
+};
+var init_bar = __esm({
+'bar.js'() {
+
+}
+});
+// foo.js
+function foo$1() {
+  return 'foo'
+}
+var foo_ns = {
+  get foo() { return foo$1 }
+};
+var init_foo = __esm({
+'foo.js'() {
+
+}
+});
+// main.js
+const {foo} = (init_foo(), __toCommonJS(foo_ns))
+console.log(foo(), bar())
+const {bar} = (init_bar(), __toCommonJS(bar_ns)) // This should not be hoisted
+```

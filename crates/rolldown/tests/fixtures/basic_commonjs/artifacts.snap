@@ -7,8 +7,8 @@ input_file: crates/rolldown/tests/fixtures/basic_commonjs
 
 ```js
 // esm.js
-function esm_default_fn() {}
-function esm_named_fn() {}
+function esm_default_fn() {}function esm_named_fn() {}
+
 var esm_named_var,esm_named_class;
 var esm_ns = {
   get esm_named_var() { return esm_named_var },
@@ -18,7 +18,9 @@ var esm_ns = {
 };
 var init_esm = __esm({
 'esm.js'() {
+
 esm_named_var = 1;
+
 esm_named_class = class esm_named_class {}
 }
 });

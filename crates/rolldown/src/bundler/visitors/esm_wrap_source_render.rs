@@ -21,9 +21,9 @@ impl<'ast> EsmWrapSourceRender<'ast> {
     let program = self.ctx.module.ast.program();
     self.visit_program(program);
     self.hoisted_functions.iter().for_each(|f| {
-      // TODO: remove this hack
-      // here move end of function to the keep "\n"
-      self.ctx.source.relocate(f.start, f.end + 1, 0);
+      // Improve: multiply functions should separate by "\n"
+      self.ctx.source.relocate(f.start, f.end, 0);
+      self.ctx.source.append_right(0, "\n");
     });
     if !self.hoisted_vars.is_empty() {
       self.ctx.source.append_right(0, format!("var {};\n", self.hoisted_vars.join(",")));

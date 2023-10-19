@@ -37,8 +37,8 @@ pub struct Scanner<'a> {
   pub current_stmt_info: StmtInfo,
   pub result: ScanResult,
   pub unique_name: &'a str,
-  pub esm_export_key_word: Option<Span>,
-  pub cjs_export_key_word: Option<Span>,
+  pub esm_export_keyword: Option<Span>,
+  pub cjs_export_keyword: Option<Span>,
 }
 
 impl<'a> Scanner<'a> {
@@ -56,28 +56,28 @@ impl<'a> Scanner<'a> {
       current_stmt_info: StmtInfo::default(),
       result: ScanResult::default(),
       unique_name,
-      esm_export_key_word: None,
-      cjs_export_key_word: None,
+      esm_export_keyword: None,
+      cjs_export_keyword: None,
       module_type,
     }
   }
 
-  fn set_esm_export_key_word(&mut self, span: Span) {
-    if self.esm_export_key_word.is_none() {
-      self.esm_export_key_word = Some(span);
+  fn set_esm_export_keyword(&mut self, span: Span) {
+    if self.esm_export_keyword.is_none() {
+      self.esm_export_keyword = Some(span);
     }
   }
 
-  fn set_cjs_export_key_word(&mut self, span: Span) {
-    if self.cjs_export_key_word.is_none() {
-      self.cjs_export_key_word = Some(span);
+  fn set_cjs_export_keyword(&mut self, span: Span) {
+    if self.cjs_export_keyword.is_none() {
+      self.cjs_export_keyword = Some(span);
     }
   }
 
   fn set_exports_kind(&mut self) {
-    if self.esm_export_key_word.is_some() {
+    if self.esm_export_keyword.is_some() {
       self.result.exports_kind = Some(ExportsKind::Esm);
-    } else if self.cjs_export_key_word.is_some() {
+    } else if self.cjs_export_keyword.is_some() {
       self.result.exports_kind = Some(ExportsKind::CommonJs);
     } else if self.module_type.is_esm() {
       self.result.exports_kind = Some(ExportsKind::Esm);
@@ -274,15 +274,15 @@ impl<'a> Scanner<'a> {
         self.scan_import_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(decl) => {
-        self.set_esm_export_key_word(decl.span);
+        self.set_esm_export_keyword(decl.span);
         self.scan_export_all_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
-        self.set_esm_export_key_word(decl.span);
+        self.set_esm_export_keyword(decl.span);
         self.scan_export_named_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
-        self.set_esm_export_key_word(decl.span);
+        self.set_esm_export_keyword(decl.span);
         self.scan_export_default_decl(decl);
       }
       _ => {}
@@ -325,7 +325,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
     if ident.name == "module" || ident.name == "exports" {
       if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
         if refs.iter().any(|r| (*r).eq(&ident.reference_id.get().unwrap())) {
-          self.set_cjs_export_key_word(ident.span);
+          self.set_cjs_export_keyword(ident.span);
         }
       }
     }

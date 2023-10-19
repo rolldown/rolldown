@@ -1,0 +1,10 @@
+{
+    "input": {
+        "input": [
+            {
+                "name": "main",
+                "import": "dir/entry.js"
+            }
+        ]
+    }
+}

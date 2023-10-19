@@ -22,6 +22,7 @@ var init_esm = __esm({
 esm_named_var = 1;
 
 esm_named_class = class esm_named_class {}
+
 }
 });
 // commonjs.js

@@ -1,0 +1,15 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/require_child_dir_es6
+---
+# main.js
+
+```js
+// dir/index.js
+var dir_index_default = 123
+
+// main.js
+
+console.log(dir_index_default)
+```

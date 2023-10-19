@@ -97,4 +97,9 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
     }
     self.visit_expression(&expr.callee);
   }
+
+  fn visit_statement(&mut self, stmt: &'ast oxc::ast::ast::Statement<'ast>) {
+    self.ctx.visit_statement(stmt);
+    self.visit_statement_match(stmt);
+  }
 }

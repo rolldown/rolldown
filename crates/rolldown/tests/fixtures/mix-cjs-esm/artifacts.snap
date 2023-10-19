@@ -7,7 +7,6 @@ input_file: crates/rolldown/tests/fixtures/mix-cjs-esm
 
 ```js
 // foo.js
-var ;
 var foo_ns = {
 
 };

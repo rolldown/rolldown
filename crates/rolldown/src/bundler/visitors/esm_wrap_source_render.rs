@@ -25,7 +25,9 @@ impl<'ast> EsmWrapSourceRender<'ast> {
       // here move end of function to the keep "\n"
       self.ctx.source.relocate(f.start, f.end + 1, 0);
     });
-    self.ctx.source.append_right(0, format!("var {};\n", self.hoisted_vars.join(",")));
+    if !self.hoisted_vars.is_empty() {
+      self.ctx.source.append_right(0, format!("var {};\n", self.hoisted_vars.join(",")));
+    }
 
     let namespace_name = self.ctx.namespace_symbol_name.unwrap();
     let exports: String = self

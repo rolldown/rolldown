@@ -7,27 +7,18 @@ input_file: crates/rolldown/tests/fixtures/code_splitting
 
 ```js
 // share.js
-var require_share = __commonJS({
-'share.js'(exports, module) {
 console.log('shared');
-}
-});
 ```
 # dynamic_js.js
 
 ```js
 // dynamic.js
-var require_dynamic = __commonJS({
-'dynamic.js'(exports, module) {
 console.log('dynamic')
-}
-});
 ```
 # main1.js
 
 ```js
 // main1.js
-var share_ns = __toESM(require_share());
 
 import('./dynamic_js.js')
 ```
@@ -35,5 +26,4 @@ import('./dynamic_js.js')
 
 ```js
 // main2.js
-var share_ns = __toESM(require_share());
 ```

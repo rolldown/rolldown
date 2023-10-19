@@ -7,25 +7,29 @@ input_file: crates/rolldown/tests/fixtures/mix-cjs-esm
 
 ```js
 // foo.js
-var require_foo = __commonJS({
-'foo.js'(exports, module) {
+var ;
+var foo_ns = {
+
+};
+var init_foo = __esm({
+'foo.js'() {
 console.log();
 }
 });
 // esm_import_cjs_require.js
-var foo_ns = __toESM(require_foo());
+init_foo();
 
-require_foo()
+(init_foo(), __toCommonJS(foo_ns))
 // esm_import_cjs_export.js
 var require_esm_import_cjs_export = __commonJS({
 'esm_import_cjs_export.js'(exports, module) {
-var foo_ns = __toESM(require_foo());
+init_foo();
 
 module.exports = 1
 }
 });
 // esm_export_cjs_require.js
-require_foo()
+(init_foo(), __toCommonJS(foo_ns))
 const value$1 = 1;
 // esm_export_cjs_export.js
 module.exports = 1;

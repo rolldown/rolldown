@@ -38,7 +38,6 @@ pub struct Scanner<'a> {
   pub result: ScanResult,
   pub unique_name: &'a str,
   pub esm_export_key_word: Option<Span>,
-  pub esm_import_key_word: bool,
   pub cjs_export_key_word: Option<Span>,
 }
 
@@ -59,7 +58,6 @@ impl<'a> Scanner<'a> {
       unique_name,
       esm_export_key_word: None,
       cjs_export_key_word: None,
-      esm_import_key_word: false,
       module_type,
     }
   }
@@ -85,10 +83,8 @@ impl<'a> Scanner<'a> {
       self.result.exports_kind = Some(ExportsKind::Esm);
     } else if self.module_type.is_commonjs() {
       self.result.exports_kind = Some(ExportsKind::CommonJs);
-    } else if self.esm_import_key_word {
-      self.result.exports_kind = Some(ExportsKind::Esm);
     } else {
-      self.result.exports_kind = Some(ExportsKind::CommonJs);
+      self.result.exports_kind = Some(ExportsKind::Esm);
     }
   }
 
@@ -275,9 +271,6 @@ impl<'a> Scanner<'a> {
   fn scan_module_decl(&mut self, decl: &ModuleDeclaration) {
     match decl {
       oxc::ast::ast::ModuleDeclaration::ImportDeclaration(decl) => {
-        if !self.esm_import_key_word {
-          self.esm_import_key_word = true;
-        }
         self.scan_import_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(decl) => {

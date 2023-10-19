@@ -25,7 +25,9 @@ impl<'ast> EsmWrapSourceRender<'ast> {
       // here move end of function to the keep "\n"
       self.ctx.source.relocate(f.start, f.end + 1, 0);
     });
-    self.ctx.source.append_right(0, format!("var {};\n", self.hoisted_vars.join(",")));
+    if !self.hoisted_vars.is_empty() {
+      self.ctx.source.append_right(0, format!("var {};\n", self.hoisted_vars.join(",")));
+    }
 
     let namespace_name = self.ctx.namespace_symbol_name.unwrap();
     let exports: String = self
@@ -153,5 +155,13 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
 
   fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
     self.ctx.visit_import_expression(expr);
+  }
+
+  fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
+    self.ctx.visit_call_expression(expr);
+    for arg in &expr.arguments {
+      self.visit_argument(arg);
+    }
+    self.visit_expression(&expr.callee);
   }
 }

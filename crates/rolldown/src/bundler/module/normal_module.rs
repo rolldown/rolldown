@@ -62,9 +62,6 @@ impl NormalModule {
   pub fn render(&self, ctx: ModuleRenderContext<'_>) -> Option<MagicString<'static>> {
     // FIXME: should not clone
     let source = self.ast.source();
-    if source.is_empty() {
-      return None;
-    }
     let mut source = MagicString::new(source.to_string());
 
     let ctx = RendererContext::new(

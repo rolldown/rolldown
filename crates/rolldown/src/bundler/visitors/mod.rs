@@ -197,4 +197,33 @@ impl<'ast> RendererContext<'ast> {
       }
     }
   }
+
+  pub fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
+    if let oxc::ast::ast::Expression::Identifier(ident) = &expr.callee {
+      if ident.name == "require" {
+        let rec =
+          &self.module.import_records[self.module.imports.get(&expr.span).copied().unwrap()];
+        let importee = &self.modules[rec.resolved_module];
+        if let Module::Normal(importee) = importee {
+          let wrap_symbol_name = self.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
+          if importee.exports_kind == ExportsKind::CommonJs {
+            self.source.update(expr.span.start, expr.span.end, format!("{wrap_symbol_name}()"));
+          } else {
+            let namespace_name = self
+              .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
+              .unwrap();
+            let to_commonjs_runtime_symbol_name =
+              self.get_runtime_symbol_final_name(&"__toCommonJS".into());
+            self.source.update(
+              expr.span.start,
+              expr.span.end,
+              format!(
+                "({wrap_symbol_name}(), {to_commonjs_runtime_symbol_name}({namespace_name}))"
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
 }

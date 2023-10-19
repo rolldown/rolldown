@@ -1,0 +1,40 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/mix-cjs-esm
+---
+# main.js
+
+```js
+// foo.js
+var foo_ns = {
+
+};
+var init_foo = __esm({
+'foo.js'() {
+
+}
+});
+// esm_import_cjs_require.js
+init_foo();
+
+(init_foo(), __toCommonJS(foo_ns))
+// esm_import_cjs_export.js
+var require_esm_import_cjs_export = __commonJS({
+'esm_import_cjs_export.js'(exports, module) {
+init_foo();
+
+module.exports = 1
+}
+});
+// esm_export_cjs_require.js
+(init_foo(), __toCommonJS(foo_ns))
+const value$1 = 1;
+// esm_export_cjs_export.js
+module.exports = 1;
+const value = 1;
+// main.js
+
+
+var esm_import_cjs_export_ns = __toESM(require_esm_import_cjs_export());
+```

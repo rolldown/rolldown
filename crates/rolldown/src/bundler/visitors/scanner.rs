@@ -12,7 +12,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId,
-  NamedImport, ReExport, StmtInfo, StmtInfoId,
+  ModuleType, NamedImport, ReExport, StmtInfo, StmtInfoId,
 };
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
@@ -31,11 +31,14 @@ pub struct ScanResult {
 
 pub struct Scanner<'a> {
   pub idx: ModuleId,
+  pub module_type: ModuleType,
   pub scope: &'a mut ScopeTree,
   pub symbol_table: &'a mut SymbolTable,
   pub current_stmt_info: StmtInfo,
   pub result: ScanResult,
   pub unique_name: &'a str,
+  pub esm_export_keyword: Option<Span>,
+  pub cjs_export_keyword: Option<Span>,
 }
 
 impl<'a> Scanner<'a> {
@@ -44,6 +47,7 @@ impl<'a> Scanner<'a> {
     scope: &'a mut ScopeTree,
     symbol_table: &'a mut SymbolTable,
     unique_name: &'a str,
+    module_type: ModuleType,
   ) -> Self {
     Self {
       idx,
@@ -52,16 +56,35 @@ impl<'a> Scanner<'a> {
       current_stmt_info: StmtInfo::default(),
       result: ScanResult::default(),
       unique_name,
+      esm_export_keyword: None,
+      cjs_export_keyword: None,
+      module_type,
     }
   }
 
-  fn set_exports_kind(&mut self, exports_kind: ExportsKind) {
-    if let Some(resolution) = &self.result.exports_kind {
-      if resolution != &exports_kind {
-        // TODO shouldn't mix esm syntax and cjs syntax
-      }
+  fn set_esm_export_keyword(&mut self, span: Span) {
+    if self.esm_export_keyword.is_none() {
+      self.esm_export_keyword = Some(span);
+    }
+  }
+
+  fn set_cjs_export_keyword(&mut self, span: Span) {
+    if self.cjs_export_keyword.is_none() {
+      self.cjs_export_keyword = Some(span);
+    }
+  }
+
+  fn set_exports_kind(&mut self) {
+    if self.esm_export_keyword.is_some() {
+      self.result.exports_kind = Some(ExportsKind::Esm);
+    } else if self.cjs_export_keyword.is_some() {
+      self.result.exports_kind = Some(ExportsKind::CommonJs);
+    } else if self.module_type.is_esm() {
+      self.result.exports_kind = Some(ExportsKind::Esm);
+    } else if self.module_type.is_commonjs() {
+      self.result.exports_kind = Some(ExportsKind::CommonJs);
     } else {
-      self.result.exports_kind = Some(exports_kind);
+      self.result.exports_kind = Some(ExportsKind::Esm);
     }
   }
 
@@ -251,12 +274,15 @@ impl<'a> Scanner<'a> {
         self.scan_import_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(decl) => {
+        self.set_esm_export_keyword(decl.span);
         self.scan_export_all_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
+        self.set_esm_export_keyword(decl.span);
         self.scan_export_named_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
+        self.set_esm_export_keyword(decl.span);
         self.scan_export_default_decl(decl);
       }
       _ => {}
@@ -276,6 +302,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
       self.visit_statement(stmt);
       self.result.stmt_infos.push(std::mem::take(&mut self.current_stmt_info));
     }
+    self.set_exports_kind();
   }
 
   fn visit_binding_identifier(&mut self, ident: &'p mut oxc::ast::ast::BindingIdentifier) {
@@ -298,7 +325,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
     if ident.name == "module" || ident.name == "exports" {
       if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
         if refs.iter().any(|r| (*r).eq(&ident.reference_id.get().unwrap())) {
-          self.set_exports_kind(ExportsKind::CommonJs);
+          self.set_cjs_export_keyword(ident.span);
         }
       }
     }
@@ -307,7 +334,6 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   fn visit_statement(&mut self, stmt: &'p mut oxc::ast::ast::Statement<'ast>) {
     if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
       self.scan_module_decl(decl.0);
-      self.set_exports_kind(ExportsKind::Esm);
     }
     self.visit_statement_match(stmt);
   }
@@ -324,7 +350,6 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
       if ident.name == "require" {
         if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
           if refs.iter().any(|r| (*r).eq(&ident.reference_id.get().unwrap())) {
-            self.set_exports_kind(ExportsKind::CommonJs);
             if let Some(oxc::ast::ast::Argument::Expression(
               oxc::ast::ast::Expression::StringLiteral(request),
             )) = &expr.arguments.get(0)

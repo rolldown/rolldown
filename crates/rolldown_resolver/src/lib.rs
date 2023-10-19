@@ -98,8 +98,11 @@ fn calc_module_type(info: &Resolution) -> ModuleType {
     }
   }
   if let Some(package_json) = info.package_json() {
-    if package_json.raw_json().get("type").and_then(|v| v.as_str()) == Some("module") {
+    let type_value = package_json.raw_json().get("type").and_then(|v| v.as_str());
+    if type_value == Some("module") {
       return ModuleType::EsmPackageJson;
+    } else if type_value == Some("commonjs") {
+      return ModuleType::CjsPackageJson;
     }
   }
   ModuleType::Unknown

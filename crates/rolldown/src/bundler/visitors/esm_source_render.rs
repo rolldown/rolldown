@@ -89,4 +89,12 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
   fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
     self.ctx.visit_import_expression(expr);
   }
+
+  fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
+    self.ctx.visit_call_expression(expr);
+    for arg in &expr.arguments {
+      self.visit_argument(arg);
+    }
+    self.visit_expression(&expr.callee);
+  }
 }

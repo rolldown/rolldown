@@ -19,7 +19,6 @@ module.exports = 1;
 var foo_ns = {
   get value() { return value }
 };
-
 __reExport(foo_ns, __toESM(require_commonjs()));
 
 // main.js

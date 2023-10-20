@@ -1,6 +1,6 @@
 
 # Enable highlight in GitHub for `.snap` files
-*.snap linguist-language=markdown
+# *.snap linguist-language=markdown
 
 # Ignore fxtures
 crates/rolldown/tests/**/*.{js,jsx,ts,tsx}  linguist-detectable=false

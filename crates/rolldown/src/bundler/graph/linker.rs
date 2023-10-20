@@ -21,8 +21,7 @@ impl<'graph> Linker<'graph> {
   }
 
   pub fn link(&mut self) {
-    self.wrap_modules_if_needed();
-
+    self.mark_module_wrapped();
     // propagate star exports
     for id in &self.graph.sorted_modules {
       let importer = &self.graph.modules[*id];
@@ -47,7 +46,8 @@ impl<'graph> Linker<'graph> {
     });
   }
 
-  fn wrap_modules_if_needed(&mut self) {
+  #[allow(clippy::too_many_lines)]
+  fn mark_module_wrapped(&mut self) {
     // Detect module need wrapped, here has two cases:
     // - Commonjs module, because cjs symbols can't static binding, it need to be wrapped and lazy evaluated.
     // - Import esm module at commonjs module.
@@ -98,6 +98,7 @@ impl<'graph> Linker<'graph> {
     // Generate symbol for import warp module
     // Case esm import commonjs, eg var commonjs_ns = __toESM(require_a())
     // Case commonjs require esm, eg (init_esm(), __toCommonJS(esm_ns))
+    // Case esm export star commonjs, eg __reExport(esm_ns, __toESM(require_a())
     let mut imported_symbols = vec![];
 
     for module in &self.graph.modules {
@@ -123,6 +124,18 @@ impl<'graph> Linker<'graph> {
                 }
                 _ => {}
               }
+            }
+          });
+          importer.star_exports.iter().for_each(|record_id| {
+            let rec = &importer.import_records[*record_id];
+            match &self.graph.modules[rec.resolved_module] {
+              Module::Normal(importee) => {
+                if importee.exports_kind == ExportsKind::CommonJs {
+                  imported_symbols
+                    .push((importer.id, self.graph.runtime.resolve_symbol(&"__reExport".into())));
+                }
+              }
+              Module::External(_) => {}
             }
           });
         }

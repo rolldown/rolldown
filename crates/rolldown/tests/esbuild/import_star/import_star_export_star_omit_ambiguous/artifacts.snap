@@ -16,12 +16,12 @@ const y = 2
 
 // common.js
 
-
-
 var common_ns = {
   get z() { return z },
   get x() { return x }
 };
+
+
 
 // main.js
 

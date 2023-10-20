@@ -173,6 +173,7 @@ impl<'a> Scanner<'a> {
       // export * from '...'
       self.result.star_exports.push(id);
     }
+    self.result.imports.insert(decl.span, id);
   }
 
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration) {

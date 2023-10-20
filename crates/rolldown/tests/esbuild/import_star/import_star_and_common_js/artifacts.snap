@@ -1,0 +1,25 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/import_star_and_common_js
+---
+# main.js
+
+```js
+// foo.js
+var foo;
+var foo_ns = {
+  get foo() { return foo }
+};
+var init_foo = __esm({
+'foo.js'() {
+foo = 123
+
+}
+});
+// entry.js
+init_foo();
+
+const ns2 = (init_foo(), __toCommonJS(foo_ns))
+console.log(foo_ns.foo, ns2.foo)
+```

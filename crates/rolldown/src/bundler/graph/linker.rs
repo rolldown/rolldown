@@ -8,7 +8,10 @@ use rustc_hash::FxHashMap;
 use super::graph::Graph;
 use crate::bundler::{
   graph::symbols::Symbols,
-  module::{module::Module, normal_module::Resolution},
+  module::{
+    module::Module,
+    normal_module::{Resolution, UnresolvedSymbols},
+  },
 };
 
 pub struct Linker<'graph> {
@@ -40,9 +43,23 @@ impl<'graph> Linker<'graph> {
     // Create symbols for import cjs module
     Self::mark_extra_symbols(self.graph);
 
+    let mut modules_unresolved_symbols = index_vec::index_vec![
+      FxHashMap::default();
+      self.graph.modules.len()
+    ];
     self.graph.sorted_modules.clone().into_iter().for_each(|id| {
-      self.resolve_exports(id);
-      self.resolve_imports(id);
+      self.resolve_exports(id, &mut modules_unresolved_symbols[id]);
+      self.resolve_imports(id, &mut modules_unresolved_symbols[id]);
+    });
+    self.graph.modules.iter_mut().for_each(|module| {
+      if !modules_unresolved_symbols[module.id()].is_empty() {
+        match module {
+          Module::Normal(module) => {
+            module.unresolved_symbols.extend(modules_unresolved_symbols[module.id].drain());
+          }
+          Module::External(_) => {}
+        }
+      }
     });
   }
 
@@ -251,7 +268,7 @@ impl<'graph> Linker<'graph> {
     }
   }
 
-  fn resolve_exports(&mut self, id: ModuleId) {
+  fn resolve_exports(&mut self, id: ModuleId, unresolved_symbols: &mut UnresolvedSymbols) {
     let importer = &self.graph.modules[id];
     match importer {
       crate::bundler::module::module::Module::Normal(importer) => {
@@ -293,7 +310,7 @@ impl<'graph> Linker<'graph> {
           (symbol_ref_of_local, ref_id)
         }
 
-        importer.named_exports.keys().for_each(|exported| {
+        importer.named_exports.iter().for_each(|(exported, r)| {
           let res = resolutions.remove(exported).unwrap();
           match res {
             Resolution::None => {
@@ -309,6 +326,10 @@ impl<'graph> Linker<'graph> {
               exported_name_to_local_symbol
                 .insert(exported.clone(), ResolvedExport { local_symbol: tmp.0, local_ref: tmp.1 });
             }
+            Resolution::Runtime => {
+              // if let LocalOrReExport::Re(e) = r {}
+              // unresolved_symbols.insert(*exported, importee.id);
+            }
           }
         });
 
@@ -320,6 +341,7 @@ impl<'graph> Linker<'graph> {
               .insert(exported.clone(), ResolvedExport { local_symbol: tmp.0, local_ref: tmp.1 });
           }
           Resolution::Ambiguous => {}
+          Resolution::Runtime => {}
         });
 
         match &mut self.graph.modules[id] {
@@ -334,7 +356,8 @@ impl<'graph> Linker<'graph> {
       }
     }
   }
-  fn resolve_imports(&mut self, id: ModuleId) {
+
+  fn resolve_imports(&mut self, id: ModuleId, unresolved_symbols: &mut UnresolvedSymbols) {
     let importer = &self.graph.modules[id];
     match importer {
       Module::Normal(importer) => {
@@ -356,6 +379,10 @@ impl<'graph> Linker<'graph> {
                 ) {
                   Resolution::Ambiguous | Resolution::None => panic!(""),
                   Resolution::Found(founded) => founded,
+                  Resolution::Runtime => {
+                    unresolved_symbols.insert(info.imported_as, importee.id);
+                    return;
+                  }
                 }
               };
               self.graph.symbols.union(info.imported_as, resolved_ref);

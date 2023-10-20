@@ -49,12 +49,18 @@ pub struct NormalModule {
   pub is_symbol_for_namespace_referenced: bool,
   pub cjs_symbols: FxHashMap<Atom, SymbolRef>,
   pub wrap_symbol: Option<SymbolRef>,
+  // The symbol maybe from `export * from 'cjs'` or `export { a } from 'cjs'`
+  pub unresolved_symbols: UnresolvedSymbols,
 }
+
+pub type UnresolvedSymbols = FxHashMap<SymbolRef, ModuleId>;
 
 pub enum Resolution {
   None,
   Ambiguous,
   Found(SymbolRef),
+  // Mark the symbol symbol maybe from `export * from 'cjs'`
+  Runtime,
 }
 
 impl NormalModule {
@@ -211,22 +217,31 @@ impl NormalModule {
         return Resolution::None;
       }
       let mut star_resolution: Option<SymbolRef> = None;
+      let mut runtime_star_resolution = false;
       for e in &self.star_exports {
         let rec = &self.import_records[*e];
         let importee = &modules[rec.resolved_module];
         match importee {
           Module::Normal(importee) => {
-            match importee.resolve_export(export_name, resolve_set, modules, symbols) {
-              Resolution::None => continue,
-              Resolution::Ambiguous => return Resolution::Ambiguous,
-              Resolution::Found(exist) => {
-                if let Some(star_resolution) = star_resolution {
-                  if star_resolution == exist {
-                    continue;
+            if importee.exports_kind == ExportsKind::CommonJs {
+              runtime_star_resolution = true;
+              continue;
+            } else {
+              match importee.resolve_export(export_name, resolve_set, modules, symbols) {
+                Resolution::None => continue,
+                Resolution::Ambiguous => return Resolution::Ambiguous,
+                Resolution::Found(exist) => {
+                  if let Some(star_resolution) = star_resolution {
+                    if star_resolution == exist {
+                      continue;
+                    }
+                    return Resolution::Ambiguous;
                   }
-                  return Resolution::Ambiguous;
+                  star_resolution = Some(exist);
                 }
-                star_resolution = Some(exist);
+                Resolution::Runtime => {
+                  return Resolution::Runtime;
+                }
               }
             }
           }
@@ -236,7 +251,10 @@ impl NormalModule {
         }
       }
 
-      star_resolution.map_or(Resolution::None, Resolution::Found)
+      star_resolution.map_or_else(
+        || if runtime_star_resolution { Resolution::Runtime } else { Resolution::None },
+        Resolution::Found,
+      )
     };
 
     resolve_set.pop();

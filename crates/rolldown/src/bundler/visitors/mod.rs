@@ -118,11 +118,25 @@ impl<'ast> RendererContext<'ast> {
   }
 
   pub fn visit_identifier_reference(&mut self, ident: &'ast oxc::ast::ast::IdentifierReference) {
-    if let Some(name) =
-      self.get_reference_final_name(self.module.id, ident.reference_id.get().unwrap())
+    if let Some(symbol_id) =
+      self.symbols.tables[self.module.id].references[ident.reference_id.get().unwrap()]
     {
-      if ident.name != name {
-        self.rename_symbol(ident.span, name.clone());
+      let symbol_ref = (self.module.id, symbol_id).into();
+      if let Some(id) = self.module.unresolved_symbols.get(&symbol_ref) {
+        let importee = &self.modules[*id].expect_normal();
+        let importee_namespace_symbol_name = get_symbol_final_name(
+          (importee.id, importee.namespace_symbol.0.symbol).into(),
+          self.symbols,
+          self.final_names,
+        )
+        .unwrap();
+        self.source.prepend_left(ident.span.start, format!("{importee_namespace_symbol_name}."));
+      } else {
+        if let Some(name) = self.get_symbol_final_name(symbol_ref) {
+          if ident.name != name {
+            self.rename_symbol(ident.span, name.clone());
+          }
+        }
       }
     }
   }

@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown/tests/common/case.rs
+assertion_line: 50
 expression: content
 input_file: crates/rolldown/tests/fixtures/star_export_commonjs
 ---
@@ -24,5 +25,5 @@ __reExport(foo_ns, __toESM(require_commonjs()));
 // main.js
 
 
-console.log(foo_ns, bar, value)
+console.log(foo_ns, foo_ns.bar, value)
 ```

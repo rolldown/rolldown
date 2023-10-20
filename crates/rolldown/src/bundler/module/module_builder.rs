@@ -63,6 +63,7 @@ impl NormalModuleBuilder {
       cjs_symbols: FxHashMap::default(),
       wrap_symbol: None,
       module_type: self.module_type,
+      unresolved_symbols: FxHashMap::default(),
     }
   }
 }

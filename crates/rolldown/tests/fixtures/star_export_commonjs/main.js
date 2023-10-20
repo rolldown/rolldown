@@ -1,2 +1,3 @@
 import * as ns from './foo'
-console.log(ns)
+import { bar, value } from './foo'
+console.log(ns, bar, value)

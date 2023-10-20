@@ -46,7 +46,55 @@ impl<'graph> Linker<'graph> {
     });
   }
 
-  fn create_symbols_for_wrapped_module_imported(&mut self) {
+  #[allow(clippy::too_many_lines)]
+  fn mark_module_wrapped(&mut self) {
+    // Detect module need wrapped, here has two cases:
+    // - Commonjs module, because cjs symbols can't static binding, it need to be wrapped and lazy evaluated.
+    // - Import esm module at commonjs module.
+    let mut module_to_wrapped = index_vec::index_vec![
+      false;
+      self.graph.modules.len()
+    ];
+
+    for module in &self.graph.modules {
+      match module {
+        Module::Normal(module) => {
+          if module.exports_kind == ExportsKind::CommonJs {
+            wrap_module(self.graph, module.id, &mut module_to_wrapped);
+          } else {
+            // Should mark wrapped for require import module
+            module.import_records.iter().for_each(|record| {
+              if record.kind == ImportKind::Require {
+                wrap_module(self.graph, record.resolved_module, &mut module_to_wrapped);
+              }
+            });
+          }
+        }
+        Module::External(_) => {}
+      }
+    }
+
+    // Generate symbol for wrap module declaration
+    // Case commonjs, eg var require_a = __commonJS()
+    // Case esm, eg var init_a = __esm()
+    for (module_id, wrapped) in module_to_wrapped.into_iter_enumerated() {
+      if wrapped {
+        match &mut self.graph.modules[module_id] {
+          Module::Normal(module) => {
+            module.create_wrap_symbol(&mut self.graph.symbols);
+            let name = if module.exports_kind == ExportsKind::CommonJs {
+              "__commonJS".into()
+            } else {
+              "__esm".into()
+            };
+            let runtime_symbol = self.graph.runtime.resolve_symbol(&name);
+            module.generate_symbol_import_and_use(&mut self.graph.symbols, runtime_symbol);
+          }
+          Module::External(_) => {}
+        };
+      }
+    }
+
     // Generate symbol for import warp module
     // Case esm import commonjs, eg var commonjs_ns = __toESM(require_a())
     // Case commonjs require esm, eg (init_esm(), __toCommonJS(esm_ns))
@@ -104,57 +152,6 @@ impl<'graph> Linker<'graph> {
         Module::External(_) => {}
       }
     }
-  }
-
-  fn mark_module_wrapped(&mut self) {
-    // Detect module need wrapped, here has two cases:
-    // - Commonjs module, because cjs symbols can't static binding, it need to be wrapped and lazy evaluated.
-    // - Import esm module at commonjs module.
-    let mut module_to_wrapped = index_vec::index_vec![
-      false;
-      self.graph.modules.len()
-    ];
-
-    for module in &self.graph.modules {
-      match module {
-        Module::Normal(module) => {
-          if module.exports_kind == ExportsKind::CommonJs {
-            wrap_module(self.graph, module.id, &mut module_to_wrapped);
-          } else {
-            // Should mark wrapped for require import module
-            module.import_records.iter().for_each(|record| {
-              if record.kind == ImportKind::Require {
-                wrap_module(self.graph, record.resolved_module, &mut module_to_wrapped);
-              }
-            });
-          }
-        }
-        Module::External(_) => {}
-      }
-    }
-
-    // Generate symbol for wrap module declaration
-    // Case commonjs, eg var require_a = __commonJS()
-    // Case esm, eg var init_a = __esm()
-    for (module_id, wrapped) in module_to_wrapped.into_iter_enumerated() {
-      if wrapped {
-        match &mut self.graph.modules[module_id] {
-          Module::Normal(module) => {
-            module.create_wrap_symbol(&mut self.graph.symbols);
-            let name = if module.exports_kind == ExportsKind::CommonJs {
-              "__commonJS".into()
-            } else {
-              "__esm".into()
-            };
-            let runtime_symbol = self.graph.runtime.resolve_symbol(&name);
-            module.generate_symbol_import_and_use(&mut self.graph.symbols, runtime_symbol);
-          }
-          Module::External(_) => {}
-        };
-      }
-    }
-
-    self.create_symbols_for_wrapped_module_imported();
 
     #[allow(clippy::items_after_statements)]
     fn wrap_module(

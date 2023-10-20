@@ -21,7 +21,7 @@ impl<'graph> Linker<'graph> {
   }
 
   pub fn link(&mut self) {
-    self.mark_module_wrap_and_create_symbols();
+    self.mark_module_wrapped();
     // propagate star exports
     for id in &self.graph.sorted_modules {
       let importer = &self.graph.modules[*id];
@@ -46,7 +46,7 @@ impl<'graph> Linker<'graph> {
     });
   }
 
-  fn create_symbols_for_import_wrapped_module(&mut self) {
+  fn create_symbols_for_wrapped_module_imported(&mut self) {
     // Generate symbol for import warp module
     // Case esm import commonjs, eg var commonjs_ns = __toESM(require_a())
     // Case commonjs require esm, eg (init_esm(), __toCommonJS(esm_ns))
@@ -106,7 +106,7 @@ impl<'graph> Linker<'graph> {
     }
   }
 
-  fn mark_module_wrap_and_create_symbols(&mut self) {
+  fn mark_module_wrapped(&mut self) {
     // Detect module need wrapped, here has two cases:
     // - Commonjs module, because cjs symbols can't static binding, it need to be wrapped and lazy evaluated.
     // - Import esm module at commonjs module.
@@ -154,7 +154,7 @@ impl<'graph> Linker<'graph> {
       }
     }
 
-    self.create_symbols_for_import_wrapped_module();
+    self.create_symbols_for_wrapped_module_imported();
 
     #[allow(clippy::items_after_statements)]
     fn wrap_module(

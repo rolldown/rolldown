@@ -25,9 +25,17 @@ console.log(_default)
 # main.js
 
 ```js
+// star_export.js
+
+var star_export_ns = {
+
+};
+__reExport(star_export_ns, __toESM(require_commonjs(), 1));
+
 // main.mjs
 var commonjs_ns = __toESM(require_commonjs(), 1);
 var _default = commonjs_ns.default;
 
-console.log(_default)
+
+console.log(_default, star_export_ns)
 ```

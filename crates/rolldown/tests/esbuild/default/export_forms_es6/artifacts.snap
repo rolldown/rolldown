@@ -7,11 +7,11 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_es6
 
 ```js
 // b.js
-const xyz = null
 
 var b_ns = {
   get xyz() { return xyz }
 };
+const xyz = null
 
 // a.js
 const abc = undefined

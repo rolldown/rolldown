@@ -132,6 +132,23 @@ impl<'ast> RendererContext<'ast> {
     decl: &'ast oxc::ast::ast::ExportAllDeclaration<'ast>,
   ) {
     self.remove_node(decl.span);
+    let rec = &self.module.import_records[self.module.imports.get(&decl.span).copied().unwrap()];
+    if let Module::Normal(importee) = &self.modules[rec.resolved_module] {
+      if importee.exports_kind == ExportsKind::CommonJs {
+        // __reExport(a_exports, __toESM(require_c()));
+        let namespace_name = self.namespace_symbol_name.unwrap();
+        let wrap_symbol_name = self.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
+        let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name(&"__toESM".into());
+        let re_export_runtime_symbol_name =
+          self.get_runtime_symbol_final_name(&"__reExport".into());
+        self.source.append(
+          format!(
+            "{re_export_runtime_symbol_name}({namespace_name}, {to_esm_runtime_symbol_name}({wrap_symbol_name}(){}));\n",
+            if self.module.module_type.is_esm() { ", 1" } else { "" }
+          ),
+        );
+      }
+    }
   }
 
   pub fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {

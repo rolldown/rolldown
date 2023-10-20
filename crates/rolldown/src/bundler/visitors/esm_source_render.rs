@@ -15,9 +15,6 @@ impl<'ast> EsmSourceRender<'ast> {
 
   pub fn apply(&mut self) {
     let module = self.ctx.module;
-    let program = module.ast.program();
-    self.visit_program(program);
-
     if let Some(namespace_name) = self.ctx.namespace_symbol_name {
       let exports: String = module
         .resolved_exports
@@ -29,8 +26,10 @@ impl<'ast> EsmSourceRender<'ast> {
         })
         .collect::<Vec<_>>()
         .join(",\n");
-      self.ctx.source.append(format!("\nvar {namespace_name} = {{\n{exports}\n}};\n",));
+      self.ctx.source.prepend(format!("\nvar {namespace_name} = {{\n{exports}\n}};\n",));
     }
+    let program = module.ast.program();
+    self.visit_program(program);
   }
 }
 

@@ -21,8 +21,7 @@ impl<'graph> Linker<'graph> {
   }
 
   pub fn link(&mut self) {
-    self.wrap_modules_if_needed();
-
+    self.mark_module_wrap_and_create_symbols();
     // propagate star exports
     for id in &self.graph.sorted_modules {
       let importer = &self.graph.modules[*id];
@@ -47,7 +46,67 @@ impl<'graph> Linker<'graph> {
     });
   }
 
-  fn wrap_modules_if_needed(&mut self) {
+  fn create_symbols_for_import_wrapped_module(&mut self) {
+    // Generate symbol for import warp module
+    // Case esm import commonjs, eg var commonjs_ns = __toESM(require_a())
+    // Case commonjs require esm, eg (init_esm(), __toCommonJS(esm_ns))
+    // Case esm export star commonjs, eg __reExport(esm_ns, __toESM(require_a())
+    let mut imported_symbols = vec![];
+
+    for module in &self.graph.modules {
+      match module {
+        Module::Normal(importer) => {
+          importer.import_records.iter().for_each(|r| {
+            let importee = &self.graph.modules[r.resolved_module];
+            let Module::Normal(importee) = importee else {
+              return;
+            };
+
+            if let Some(importee_warp_symbol) = importee.wrap_symbol {
+              imported_symbols.push((importer.id, importee_warp_symbol));
+              imported_symbols.push((importer.id, importee.namespace_symbol.0));
+              match (importer.exports_kind, importee.exports_kind) {
+                (ExportsKind::Esm, ExportsKind::CommonJs) => {
+                  imported_symbols
+                    .push((importer.id, self.graph.runtime.resolve_symbol(&"__toESM".into())));
+                }
+                (_, ExportsKind::Esm) => {
+                  imported_symbols
+                    .push((importer.id, self.graph.runtime.resolve_symbol(&"__toCommonJS".into())));
+                }
+                _ => {}
+              }
+            }
+          });
+          importer.star_exports.iter().for_each(|record_id| {
+            let rec = &importer.import_records[*record_id];
+            match &self.graph.modules[rec.resolved_module] {
+              Module::Normal(importee) => {
+                if importee.exports_kind == ExportsKind::CommonJs {
+                  imported_symbols
+                    .push((importer.id, self.graph.runtime.resolve_symbol(&"__reExport".into())));
+                }
+              }
+              Module::External(_) => {}
+            }
+          });
+        }
+        Module::External(_) => {}
+      }
+    }
+
+    for (module, symbol) in imported_symbols {
+      let importer = &mut self.graph.modules[module];
+      match importer {
+        Module::Normal(importer) => {
+          importer.generate_symbol_import_and_use(&mut self.graph.symbols, symbol);
+        }
+        Module::External(_) => {}
+      }
+    }
+  }
+
+  fn mark_module_wrap_and_create_symbols(&mut self) {
     // Detect module need wrapped, here has two cases:
     // - Commonjs module, because cjs symbols can't static binding, it need to be wrapped and lazy evaluated.
     // - Import esm module at commonjs module.
@@ -95,50 +154,7 @@ impl<'graph> Linker<'graph> {
       }
     }
 
-    // Generate symbol for import warp module
-    // Case esm import commonjs, eg var commonjs_ns = __toESM(require_a())
-    // Case commonjs require esm, eg (init_esm(), __toCommonJS(esm_ns))
-    let mut imported_symbols = vec![];
-
-    for module in &self.graph.modules {
-      match module {
-        Module::Normal(importer) => {
-          importer.import_records.iter().for_each(|r| {
-            let importee = &self.graph.modules[r.resolved_module];
-            let Module::Normal(importee) = importee else {
-              return;
-            };
-
-            if let Some(importee_warp_symbol) = importee.wrap_symbol {
-              imported_symbols.push((importer.id, importee_warp_symbol));
-              imported_symbols.push((importer.id, importee.namespace_symbol.0));
-              match (importer.exports_kind, importee.exports_kind) {
-                (ExportsKind::Esm, ExportsKind::CommonJs) => {
-                  imported_symbols
-                    .push((importer.id, self.graph.runtime.resolve_symbol(&"__toESM".into())));
-                }
-                (_, ExportsKind::Esm) => {
-                  imported_symbols
-                    .push((importer.id, self.graph.runtime.resolve_symbol(&"__toCommonJS".into())));
-                }
-                _ => {}
-              }
-            }
-          });
-        }
-        Module::External(_) => {}
-      }
-    }
-
-    for (module, symbol) in imported_symbols {
-      let importer = &mut self.graph.modules[module];
-      match importer {
-        Module::Normal(importer) => {
-          importer.generate_symbol_import_and_use(&mut self.graph.symbols, symbol);
-        }
-        Module::External(_) => {}
-      }
-    }
+    self.create_symbols_for_import_wrapped_module();
 
     #[allow(clippy::items_after_statements)]
     fn wrap_module(

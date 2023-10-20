@@ -7,11 +7,11 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_shadow
 
 ```js
 // bar.js
-const bar = 123
+
 var bar_ns = {
   get bar() { return bar }
 };
-
+const bar = 123
 // foo.js
 
 var foo_ns = {

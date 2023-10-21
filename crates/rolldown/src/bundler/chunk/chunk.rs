@@ -1,6 +1,6 @@
 use index_vec::IndexVec;
 use oxc::span::Atom;
-use rolldown_common::{ModuleId, SymbolRef};
+use rolldown_common::{ModuleId, ResolvedExport, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{Joiner, JoinerOptions};
 
@@ -53,16 +53,22 @@ impl Chunk {
       exports_str.push_str(
         &resolved_exports
           .into_iter()
-          .map(|(exported, refer)| {
-            let final_name = self
-              .canonical_names
-              .get(&symbols.par_get_canonical_ref(refer.local_symbol))
-              .cloned()
-              .unwrap_or_else(|| panic!("not found {exported:?}"));
-            if final_name == exported {
-              format!("{final_name}")
-            } else {
-              format!("{final_name} as {exported}")
+          .map(|(exported, refer)| match refer {
+            ResolvedExport::Symbol(symbol_ref) => {
+              let final_name = self
+                .canonical_names
+                .get(&symbols.par_get_canonical_ref(*symbol_ref))
+                .cloned()
+                .unwrap_or_else(|| panic!("not found {exported:?}"));
+              if final_name == exported {
+                format!("{final_name}")
+              } else {
+                format!("{final_name} as {exported}")
+              }
+            }
+            ResolvedExport::Runtime(_) => {
+              // TODO
+              String::new()
             }
           })
           .collect::<Vec<_>>()

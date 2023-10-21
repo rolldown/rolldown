@@ -7,7 +7,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_missing_e
 
 ```js
 // foo.js
-
 var foo_ns = {
   get x() { return x }
 };

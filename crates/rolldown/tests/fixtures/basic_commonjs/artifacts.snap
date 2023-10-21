@@ -34,11 +34,10 @@ module.exports = value;
 });
 // main.js
 var commonjs_ns = __toESM(require_commonjs$1());
-var _default = commonjs_ns.default;
 init_esm();
 
 
-console.log(_default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class)
+console.log(commonjs_ns.default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class)
 // test commonjs warp symbol deconflict
 const require_commonjs = () => {}
 // test esm export function symbol deconflict

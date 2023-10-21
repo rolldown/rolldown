@@ -47,20 +47,20 @@ pub struct NormalModule {
   pub default_export_symbol: Option<SymbolId>,
   pub namespace_symbol: (SymbolRef, ReferenceId),
   pub is_symbol_for_namespace_referenced: bool,
-  pub cjs_symbols: FxHashMap<Atom, SymbolRef>,
   pub wrap_symbol: Option<SymbolRef>,
   // The symbol maybe from `export * from 'cjs'` or `export { a } from 'cjs'`
   pub unresolved_symbols: UnresolvedSymbols,
 }
 
-pub type UnresolvedSymbols = FxHashMap<SymbolRef, ModuleId>;
+pub type UnresolvedSymbols = FxHashMap<SymbolRef, (SymbolRef, Option<Atom>)>;
 
+#[derive(Debug)]
 pub enum Resolution {
   None,
   Ambiguous,
   Found(SymbolRef),
   // Mark the symbol symbol maybe from `export * from 'cjs'`
-  Runtime,
+  Runtime(SymbolRef),
 }
 
 impl NormalModule {
@@ -154,6 +154,7 @@ impl NormalModule {
   }
 
   // https://tc39.es/ecma262/#sec-resolveexport
+  #[allow(clippy::too_many_lines)]
   pub fn resolve_export<'modules>(
     &'modules self,
     export_name: &'modules Atom,
@@ -166,6 +167,10 @@ impl NormalModule {
       unimplemented!("handle cycle")
     }
     resolve_set.push(record);
+
+    if self.exports_kind == ExportsKind::CommonJs {
+      return Resolution::Runtime(self.namespace_symbol.0);
+    }
 
     let ret = if let Some(info) = self.named_exports.get(export_name) {
       match info {
@@ -226,22 +231,21 @@ impl NormalModule {
             if importee.exports_kind == ExportsKind::CommonJs {
               runtime_star_resolution = true;
               continue;
-            } else {
-              match importee.resolve_export(export_name, resolve_set, modules, symbols) {
-                Resolution::None => continue,
-                Resolution::Ambiguous => return Resolution::Ambiguous,
-                Resolution::Found(exist) => {
-                  if let Some(star_resolution) = star_resolution {
-                    if star_resolution == exist {
-                      continue;
-                    }
-                    return Resolution::Ambiguous;
+            }
+            match importee.resolve_export(export_name, resolve_set, modules, symbols) {
+              Resolution::None => continue,
+              Resolution::Ambiguous => return Resolution::Ambiguous,
+              Resolution::Found(exist) => {
+                if let Some(star_resolution) = star_resolution {
+                  if star_resolution == exist {
+                    continue;
                   }
-                  star_resolution = Some(exist);
+                  return Resolution::Ambiguous;
                 }
-                Resolution::Runtime => {
-                  return Resolution::Runtime;
-                }
+                star_resolution = Some(exist);
+              }
+              Resolution::Runtime(symbol_ref) => {
+                return Resolution::Runtime(symbol_ref);
               }
             }
           }
@@ -252,7 +256,13 @@ impl NormalModule {
       }
 
       star_resolution.map_or_else(
-        || if runtime_star_resolution { Resolution::Runtime } else { Resolution::None },
+        || {
+          if runtime_star_resolution {
+            Resolution::Runtime(self.namespace_symbol.0)
+          } else {
+            Resolution::None
+          }
+        },
         Resolution::Found,
       )
     };
@@ -292,29 +302,6 @@ impl NormalModule {
     }
 
     resolved
-  }
-
-  pub fn resolve_cjs_symbol(&self, export_name: &Atom, is_star: bool) -> SymbolRef {
-    if is_star {
-      self.namespace_symbol.0
-    } else {
-      self.cjs_symbols[export_name]
-    }
-  }
-
-  #[allow(clippy::needless_pass_by_value)]
-  pub fn add_cjs_symbol(&mut self, symbols: &mut Symbols, exported: Atom, is_star: bool) {
-    if !is_star {
-      self.cjs_symbols.entry(exported.clone()).or_insert_with(|| {
-        let symbol = symbols.tables[self.id].create_symbol(exported.clone());
-        self.stmt_infos.push(StmtInfo {
-          stmt_idx: self.ast.program().body.len(),
-          declared_symbols: vec![symbol],
-          ..Default::default()
-        });
-        (self.id, symbol).into()
-      });
-    }
   }
 
   pub fn create_wrap_symbol(&mut self, symbols: &mut Symbols) {

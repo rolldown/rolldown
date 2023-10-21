@@ -7,7 +7,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_export_self_as_name
 
 ```js
 // main.js
-
 var main_ns = {
   get ns() { return main_ns },
   get foo() { return foo }

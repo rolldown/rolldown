@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_star_no_capture
 // foo.js
 const foo$1 = 123
 // bar.js
-
 var bar_ns = {
   get foo() { return foo$1 }
 };

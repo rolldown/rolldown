@@ -1,8 +1,11 @@
+use crate::bundler::module::module::Module;
+
 use super::RendererContext;
 use oxc::{
   ast::Visit,
   span::{GetSpan, Span},
 };
+use rolldown_common::ExportsKind;
 
 pub struct EsmSourceRender<'ast> {
   ctx: RendererContext<'ast>,
@@ -15,18 +18,8 @@ impl<'ast> EsmSourceRender<'ast> {
 
   pub fn apply(&mut self) {
     let module = self.ctx.module;
-    if let Some(namespace_name) = self.ctx.namespace_symbol_name {
-      let exports: String = module
-        .resolved_exports
-        .iter()
-        .map(|(exported_name, info)| {
-          let canonical_ref = self.ctx.symbols.par_get_canonical_ref(info.local_symbol);
-          let canonical_name = self.ctx.final_names.get(&canonical_ref).unwrap();
-          format!("  get {exported_name}() {{ return {canonical_name} }}",)
-        })
-        .collect::<Vec<_>>()
-        .join(",\n");
-      self.ctx.source.prepend(format!("\nvar {namespace_name} = {{\n{exports}\n}};\n",));
+    if let Some(s) = self.ctx.generate_namespace_variable_declaration() {
+      self.ctx.source.prepend(s);
     }
     let program = module.ast.program();
     self.visit_program(program);
@@ -53,6 +46,21 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
     if let Some(decl) = &named_decl.declaration {
       self.ctx.remove_node(Span::new(named_decl.span.start, decl.span().start));
       self.visit_declaration(decl);
+    } else if named_decl.source.is_some() {
+      match self.ctx.get_importee_by_span(named_decl.span) {
+        Module::Normal(importee) => {
+          if importee.exports_kind == ExportsKind::CommonJs {
+            self.ctx.overwrite(
+              named_decl.span.start,
+              named_decl.span.end,
+              self.ctx.generate_import_commonjs_module(importee, true),
+            );
+            return;
+          }
+        }
+        Module::External(_) => {} // TODO
+      }
+      self.ctx.remove_node(named_decl.span);
     } else {
       self.ctx.remove_node(named_decl.span);
     }

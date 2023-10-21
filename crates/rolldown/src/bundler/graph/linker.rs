@@ -48,7 +48,7 @@ impl<'graph> Linker<'graph> {
       self.graph.modules.len()
     ];
     self.graph.sorted_modules.clone().into_iter().for_each(|id| {
-      self.resolve_exports(id, &mut modules_unresolved_symbols[id]);
+      self.resolve_exports(id);
       self.resolve_imports(id, &mut modules_unresolved_symbols[id]);
     });
     self.graph.modules.iter_mut().for_each(|module| {
@@ -251,11 +251,7 @@ impl<'graph> Linker<'graph> {
       extra_symbols.into_iter().for_each(|(importee, imported, is_imported_star)| {
         let importee = &mut graph.modules[importee];
         match importee {
-          Module::Normal(importee) => {
-            if importee.exports_kind == ExportsKind::CommonJs {
-              importee.add_cjs_symbol(&mut graph.symbols, imported, is_imported_star);
-            }
-          }
+          Module::Normal(_) => {}
           Module::External(importee) => {
             importee.add_export_symbol(&mut graph.symbols, imported, is_imported_star);
           }
@@ -268,7 +264,7 @@ impl<'graph> Linker<'graph> {
     }
   }
 
-  fn resolve_exports(&mut self, id: ModuleId, unresolved_symbols: &mut UnresolvedSymbols) {
+  fn resolve_exports(&mut self, id: ModuleId) {
     let importer = &self.graph.modules[id];
     match importer {
       crate::bundler::module::module::Module::Normal(importer) => {
@@ -310,7 +306,7 @@ impl<'graph> Linker<'graph> {
           (symbol_ref_of_local, ref_id)
         }
 
-        importer.named_exports.iter().for_each(|(exported, r)| {
+        importer.named_exports.keys().for_each(|exported| {
           let res = resolutions.remove(exported).unwrap();
           match res {
             Resolution::None => {
@@ -323,12 +319,11 @@ impl<'graph> Linker<'graph> {
             Resolution::Found(ext) => {
               let tmp =
                 create_local_symbol_and_reference(ext, importer.id, &mut self.graph.symbols);
-              exported_name_to_local_symbol
-                .insert(exported.clone(), ResolvedExport { local_symbol: tmp.0, local_ref: tmp.1 });
+              exported_name_to_local_symbol.insert(exported.clone(), ResolvedExport::Symbol(tmp.0));
             }
-            Resolution::Runtime => {
-              // if let LocalOrReExport::Re(e) = r {}
-              // unresolved_symbols.insert(*exported, importee.id);
+            Resolution::Runtime(symbol_ref) => {
+              exported_name_to_local_symbol
+                .insert(exported.clone(), ResolvedExport::Runtime(symbol_ref));
             }
           }
         });
@@ -337,11 +332,13 @@ impl<'graph> Linker<'graph> {
           Resolution::None => panic!("shouldn't has left which is None"),
           Resolution::Found(ext) => {
             let tmp = create_local_symbol_and_reference(ext, importer.id, &mut self.graph.symbols);
-            exported_name_to_local_symbol
-              .insert(exported.clone(), ResolvedExport { local_symbol: tmp.0, local_ref: tmp.1 });
+            exported_name_to_local_symbol.insert(exported.clone(), ResolvedExport::Symbol(tmp.0));
           }
           Resolution::Ambiguous => {}
-          Resolution::Runtime => {}
+          Resolution::Runtime(symbol_ref) => {
+            exported_name_to_local_symbol
+              .insert(exported.clone(), ResolvedExport::Runtime(symbol_ref));
+          }
         });
 
         match &mut self.graph.modules[id] {
@@ -367,7 +364,11 @@ impl<'graph> Linker<'graph> {
           match importee {
             Module::Normal(importee) => {
               let resolved_ref = if importee.exports_kind == ExportsKind::CommonJs {
-                importee.resolve_cjs_symbol(&info.imported, info.is_imported_star)
+                let reference_name =
+                  if info.is_imported_star { None } else { Some(info.imported.clone()) };
+                unresolved_symbols
+                  .insert(info.imported_as, (importee.namespace_symbol.0, reference_name));
+                return;
               } else if info.is_imported_star {
                 importee.namespace_symbol.0
               } else {
@@ -379,8 +380,11 @@ impl<'graph> Linker<'graph> {
                 ) {
                   Resolution::Ambiguous | Resolution::None => panic!(""),
                   Resolution::Found(founded) => founded,
-                  Resolution::Runtime => {
-                    unresolved_symbols.insert(info.imported_as, importee.id);
+                  Resolution::Runtime(_) => {
+                    let reference_name =
+                      if info.is_imported_star { None } else { Some(info.imported.clone()) };
+                    unresolved_symbols
+                      .insert(info.imported_as, (importee.namespace_symbol.0, reference_name));
                     return;
                   }
                 }

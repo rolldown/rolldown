@@ -60,7 +60,6 @@ impl NormalModuleBuilder {
       is_symbol_for_namespace_referenced: false,
       source_mutations: Vec::default(),
       exports_kind: self.exports_kind.unwrap_or(ExportsKind::Esm),
-      cjs_symbols: FxHashMap::default(),
       wrap_symbol: None,
       module_type: self.module_type,
       unresolved_symbols: FxHashMap::default(),

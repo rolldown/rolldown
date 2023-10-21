@@ -15,14 +15,16 @@ module.exports = { bar: 1 };
 }
 });
 // foo.js
-
 var foo_ns = {
+  get bar() { return commonjs_ns.bar },
   get value() { return value }
 };
 __reExport(foo_ns, __toESM(require_commonjs()));
+var commonjs_ns = __toESM(require_commonjs());
+
 
 // main.js
 
 
-console.log(foo_ns, bar, value)
+console.log(foo_ns, foo_ns.bar, value, foo_ns.foo)
 ```

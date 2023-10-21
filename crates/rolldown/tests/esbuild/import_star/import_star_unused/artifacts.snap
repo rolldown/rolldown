@@ -7,7 +7,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_unused
 
 ```js
 // foo.js
-
 var foo_ns = {
   get foo() { return foo$1 }
 };

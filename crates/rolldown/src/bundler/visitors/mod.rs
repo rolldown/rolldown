@@ -7,7 +7,7 @@ use oxc::{
   semantic::ReferenceId,
   span::{Atom, GetSpan, Span},
 };
-use rolldown_common::{ExportsKind, ModuleId, SymbolRef};
+use rolldown_common::{ExportsKind, ModuleId, ResolvedExport, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, UpdateOptions};
 
@@ -94,7 +94,7 @@ impl<'ast> RendererContext<'ast> {
     get_symbol_final_name(symbol, self.symbols, self.final_names)
   }
 
-  pub fn get_reference_final_name(
+  pub fn _get_reference_final_name(
     &self,
     module_id: ModuleId,
     reference_id: ReferenceId,
@@ -105,6 +105,57 @@ impl<'ast> RendererContext<'ast> {
   pub fn get_runtime_symbol_final_name(&self, name: &Atom) -> &Atom {
     let symbol = self.runtime.resolve_symbol(name);
     self.get_symbol_final_name(symbol).unwrap()
+  }
+
+  pub fn generate_namespace_variable_declaration(&mut self) -> Option<String> {
+    if let Some(namespace_name) = self.namespace_symbol_name {
+      let exports: String = self
+        .module
+        .resolved_exports
+        .iter()
+        .map(|(exported_name, info)| match info {
+          ResolvedExport::Symbol(symbol_ref) => {
+            let canonical_ref = self.symbols.par_get_canonical_ref(*symbol_ref);
+            let canonical_name = self.final_names.get(&canonical_ref).unwrap();
+            format!("  get {exported_name}() {{ return {canonical_name} }}",)
+          }
+          ResolvedExport::Runtime(symbol_ref) => {
+            let importee_namespace_symbol_name =
+              get_symbol_final_name(*symbol_ref, self.symbols, self.final_names).unwrap();
+            format!("  get {exported_name}() {{ return {importee_namespace_symbol_name}.{exported_name} }}",)
+          }
+        })
+        .collect::<Vec<_>>()
+        .join(",\n");
+      Some(format!("var {namespace_name} = {{\n{exports}\n}};\n",))
+    } else {
+      None
+    }
+  }
+
+  pub fn generate_import_commonjs_module(
+    &self,
+    importee: &NormalModule,
+    with_namespace_init: bool,
+  ) -> String {
+    let wrap_symbol_name = self.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
+    let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name(&"__toESM".into());
+    let code = format!(
+      "{to_esm_runtime_symbol_name}({wrap_symbol_name}(){})",
+      if self.module.module_type.is_esm() { ", 1" } else { "" }
+    );
+    if with_namespace_init {
+      let namespace_name = self.get_symbol_final_name(importee.namespace_symbol.0).unwrap();
+      format!("var {namespace_name} = {code};\n")
+    } else {
+      code
+    }
+  }
+
+  pub fn get_importee_by_span(&self, span: Span) -> &Module {
+    let record_id = &self.module.imports[&span];
+    let rec = &self.module.import_records[*record_id];
+    &self.modules[rec.resolved_module]
   }
 
   pub fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
@@ -122,20 +173,20 @@ impl<'ast> RendererContext<'ast> {
       self.symbols.tables[self.module.id].references[ident.reference_id.get().unwrap()]
     {
       let symbol_ref = (self.module.id, symbol_id).into();
-      if let Some(id) = self.module.unresolved_symbols.get(&symbol_ref) {
-        let importee = &self.modules[*id].expect_normal();
-        let importee_namespace_symbol_name = get_symbol_final_name(
-          (importee.id, importee.namespace_symbol.0.symbol).into(),
-          self.symbols,
-          self.final_names,
-        )
-        .unwrap();
-        self.source.prepend_left(ident.span.start, format!("{importee_namespace_symbol_name}."));
-      } else {
-        if let Some(name) = self.get_symbol_final_name(symbol_ref) {
-          if ident.name != name {
-            self.rename_symbol(ident.span, name.clone());
-          }
+      if let Some((symbol_ref, reference_name)) = self.module.unresolved_symbols.get(&symbol_ref) {
+        let importee_namespace_symbol_name =
+          get_symbol_final_name(*symbol_ref, self.symbols, self.final_names).unwrap();
+        self.source.update(
+          ident.span.start,
+          ident.span.end,
+          format!(
+            "{importee_namespace_symbol_name}{}",
+            reference_name.as_ref().map_or_else(String::new, |name| format!(".{name}"))
+          ),
+        );
+      } else if let Some(name) = self.get_symbol_final_name(symbol_ref) {
+        if ident.name != name {
+          self.rename_symbol(ident.span, name.clone());
         }
       }
     }
@@ -145,21 +196,18 @@ impl<'ast> RendererContext<'ast> {
     &mut self,
     decl: &'ast oxc::ast::ast::ExportAllDeclaration<'ast>,
   ) {
-    let rec = &self.module.import_records[self.module.imports.get(&decl.span).copied().unwrap()];
-    if let Module::Normal(importee) = &self.modules[rec.resolved_module] {
+    if let Module::Normal(importee) = self.get_importee_by_span(decl.span) {
       if importee.exports_kind == ExportsKind::CommonJs {
         // __reExport(a_exports, __toESM(require_c()));
         let namespace_name = self.namespace_symbol_name.unwrap();
-        let wrap_symbol_name = self.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
-        let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name(&"__toESM".into());
         let re_export_runtime_symbol_name =
           self.get_runtime_symbol_final_name(&"__reExport".into());
         self.source.update(
           decl.span.start,
           decl.span.end,
           format!(
-            "{re_export_runtime_symbol_name}({namespace_name}, {to_esm_runtime_symbol_name}({wrap_symbol_name}(){}));",
-            if self.module.module_type.is_esm() { ", 1" } else { "" }
+            "{re_export_runtime_symbol_name}({namespace_name}, {});",
+            self.generate_import_commonjs_module(importee, false)
           ),
         );
         return;
@@ -193,36 +241,7 @@ impl<'ast> RendererContext<'ast> {
     let start = self.first_stmt_start.unwrap_or(decl.span.start);
     if let Module::Normal(importee) = importee {
       if importee.exports_kind == ExportsKind::CommonJs {
-        // add import cjs symbol binding
-        let namespace_name = self
-          .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
-          .unwrap();
-        let wrap_symbol_name = self.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
-        let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name(&"__toESM".into());
-        self.source.append_right(
-          start,
-          format!(
-            "var {namespace_name} = {to_esm_runtime_symbol_name}({wrap_symbol_name}(){});\n",
-            if self.module.module_type.is_esm() { ", 1" } else { "" }
-          ),
-        );
-        decl.specifiers.iter().for_each(|s| match s {
-          oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
-            if let Some(name) = self.get_symbol_final_name(
-              (importee.id, importee.cjs_symbols[spec.imported.name()].symbol).into(),
-            ) {
-              self.source.append_right(start, format!("var {name} = {namespace_name}.{name};\n"));
-            }
-          }
-          oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
-            if let Some(name) = self.get_symbol_final_name(
-              (importee.id, importee.cjs_symbols[&Atom::new_inline("default")].symbol).into(),
-            ) {
-              self.source.append_right(start, format!("var {name} = {namespace_name}.default;\n"));
-            }
-          }
-          oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
-        });
+        self.source.append_right(start, self.generate_import_commonjs_module(importee, true));
       } else if let Some(wrap_symbol) = importee.wrap_symbol {
         let wrap_symbol_name = self.get_symbol_final_name(wrap_symbol).unwrap();
         // init wrapped esm module
@@ -234,10 +253,7 @@ impl<'ast> RendererContext<'ast> {
   pub fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
     if let oxc::ast::ast::Expression::Identifier(ident) = &expr.callee {
       if ident.name == "require" {
-        let rec =
-          &self.module.import_records[self.module.imports.get(&expr.span).copied().unwrap()];
-        let importee = &self.modules[rec.resolved_module];
-        if let Module::Normal(importee) = importee {
+        if let Module::Normal(importee) = self.get_importee_by_span(expr.span) {
           let wrap_symbol_name = self.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
           if importee.exports_kind == ExportsKind::CommonJs {
             self.source.update(expr.span.start, expr.span.end, format!("{wrap_symbol_name}()"));

@@ -26,6 +26,13 @@ impl Module {
     }
   }
 
+  pub fn _is_entry(&self) -> bool {
+    match self {
+      Self::Normal(m) => m.is_entry,
+      Self::External(m) => m.is_entry,
+    }
+  }
+
   pub fn exec_order(&self) -> u32 {
     match self {
       Self::Normal(m) => m.exec_order,

@@ -8,6 +8,7 @@ use crate::bundler::graph::symbols::Symbols;
 #[derive(Debug)]
 pub struct ExternalModule {
   pub id: ModuleId,
+  pub is_entry: bool,
   pub exec_order: u32,
   pub resource_id: ResourceId,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
@@ -17,10 +18,11 @@ pub struct ExternalModule {
 }
 
 impl ExternalModule {
-  pub fn new(id: ModuleId, resource_id: ResourceId) -> Self {
+  pub fn new(id: ModuleId, is_entry: bool, resource_id: ResourceId) -> Self {
     let namespace_name = format!("{}_ns", resource_id.generate_unique_name()).into();
     Self {
       id,
+      is_entry,
       exec_order: u32::MAX,
       resource_id,
       import_records: IndexVec::default(),

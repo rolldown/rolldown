@@ -1,7 +1,8 @@
 use index_vec::IndexVec;
 use oxc::{semantic::ReferenceId, span::Atom};
 use rolldown_common::{
-  ExportsKind, ImportKind, LocalOrReExport, ModuleId, ResolvedExport, SymbolRef,
+  ExportsKind, ImportKind, LocalOrReExport, ModuleId, ResolvedExport, ResolvedExportRuntime,
+  SymbolRef,
 };
 use rustc_hash::FxHashMap;
 
@@ -322,8 +323,19 @@ impl<'graph> Linker<'graph> {
               exported_name_to_local_symbol.insert(exported.clone(), ResolvedExport::Symbol(tmp.0));
             }
             Resolution::Runtime(symbol_ref) => {
-              exported_name_to_local_symbol
-                .insert(exported.clone(), ResolvedExport::Runtime(symbol_ref));
+              exported_name_to_local_symbol.insert(
+                exported.clone(),
+                ResolvedExport::Runtime(ResolvedExportRuntime::new(
+                  symbol_ref,
+                  if importer.is_entry {
+                    Some(symbol_ref)
+                    // FIXME: this is wrong, should be generate local symbol for runtime symbol
+                    // Some(importer.generate_local_symbol(&mut self.graph.symbols, *exported))
+                  } else {
+                    None
+                  },
+                )),
+              );
             }
           }
         });
@@ -336,8 +348,19 @@ impl<'graph> Linker<'graph> {
           }
           Resolution::Ambiguous => {}
           Resolution::Runtime(symbol_ref) => {
-            exported_name_to_local_symbol
-              .insert(exported.clone(), ResolvedExport::Runtime(symbol_ref));
+            exported_name_to_local_symbol.insert(
+              exported.clone(),
+              ResolvedExport::Runtime(ResolvedExportRuntime::new(
+                symbol_ref,
+                if importer.is_entry {
+                  Some(symbol_ref)
+                  // FIXME: this is wrong, should be generate local symbol for runtime symbol
+                  // Some(importer.generate_local_symbol(&mut self.graph.symbols, *exported))
+                } else {
+                  None
+                },
+              )),
+            );
           }
         });
 

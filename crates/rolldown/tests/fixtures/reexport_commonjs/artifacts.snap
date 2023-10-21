@@ -1,19 +1,19 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/star_export_commonjs
+input_file: crates/rolldown/tests/fixtures/reexport_commonjs
 ---
 # main.js
 
 ```js
-// esm.js
-const value = 1
 // commonjs.js
 var require_commonjs = __commonJS({
 'commonjs.js'(exports, module) {
 module.exports = { bar: 1 };
 }
 });
+// esm.js
+const value = 1
 // foo.js
 var foo_ns = {
   get bar() { return commonjs_ns.bar },
@@ -27,4 +27,8 @@ var commonjs_ns = __toESM(require_commonjs());
 
 
 console.log(foo_ns, foo_ns.bar, value, foo_ns.foo)
+var commonjs_ns = __toESM(require_commonjs());
+
+var commonjs_ns = commonjs_ns.bar;
+export { commonjs_ns as bar };
 ```

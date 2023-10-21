@@ -119,9 +119,9 @@ impl<'ast> RendererContext<'ast> {
             let canonical_name = self.final_names.get(&canonical_ref).unwrap();
             format!("  get {exported_name}() {{ return {canonical_name} }}",)
           }
-          ResolvedExport::Runtime(symbol_ref) => {
+          ResolvedExport::Runtime(export) => {
             let importee_namespace_symbol_name =
-              get_symbol_final_name(*symbol_ref, self.symbols, self.final_names).unwrap();
+              get_symbol_final_name(export.symbol_ref, self.symbols, self.final_names).unwrap();
             format!("  get {exported_name}() {{ return {importee_namespace_symbol_name}.{exported_name} }}",)
           }
         })

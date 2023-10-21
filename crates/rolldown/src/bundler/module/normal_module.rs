@@ -28,6 +28,7 @@ use crate::bundler::{
 pub struct NormalModule {
   pub exec_order: u32,
   pub id: ModuleId,
+  pub is_entry: bool,
   pub resource_id: ResourceId,
   pub module_type: ModuleType,
   pub ast: OxcProgram,
@@ -335,11 +336,13 @@ impl NormalModule {
   ) {
     debug_assert!(symbol_ref_from_importee.owner != self.id);
     let name = symbols.get_original_name(symbol_ref_from_importee).clone();
+    let local_symbol_ref = self.generate_local_symbol(symbols, name);
+    symbols.union(local_symbol_ref, symbol_ref_from_importee);
+  }
+
+  pub fn generate_local_symbol(&mut self, symbols: &mut Symbols, name: Atom) -> SymbolRef {
     let local_symbol = symbols.tables[self.id].create_symbol(name);
     let local_symbol_ref = (self.id, local_symbol).into();
-    symbols.union(local_symbol_ref, symbol_ref_from_importee);
-    // TODO: we should add corresponding dependency info from the runtime module
-    // for the future tree shaking support
     self.stmt_infos.push(StmtInfo {
       stmt_idx: self.ast.program().body.len(),
       // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
@@ -348,5 +351,6 @@ impl NormalModule {
       declared_symbols: vec![local_symbol],
       ..Default::default()
     });
+    local_symbol_ref
   }
 }

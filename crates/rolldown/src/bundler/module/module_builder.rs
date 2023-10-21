@@ -30,6 +30,7 @@ pub struct NormalModuleBuilder {
   pub namespace_symbol: Option<(SymbolRef, ReferenceId)>,
   pub exports_kind: Option<ExportsKind>,
   pub module_type: ModuleType,
+  pub is_entry: bool,
 }
 
 impl NormalModuleBuilder {
@@ -63,6 +64,7 @@ impl NormalModuleBuilder {
       wrap_symbol: None,
       module_type: self.module_type,
       unresolved_symbols: FxHashMap::default(),
+      is_entry: self.is_entry,
     }
   }
 }

@@ -57,7 +57,7 @@ impl<'a> ModuleLoader<'a> {
 
     let mut entries = resolved_entries
       .into_iter()
-      .map(|(name, info)| (name, self.try_spawn_new_task(&info, &mut intermediate_modules)))
+      .map(|(name, info)| (name, self.try_spawn_new_task(&info, &mut intermediate_modules, true)))
       .collect::<Vec<_>>();
 
     let mut dynamic_entries = FxHashSet::default();
@@ -80,7 +80,7 @@ impl<'a> ModuleLoader<'a> {
           let import_records = builder.import_records.as_mut().unwrap();
 
           resolved_deps.into_iter().for_each(|(import_record_idx, info)| {
-            let id = self.try_spawn_new_task(&info, &mut intermediate_modules);
+            let id = self.try_spawn_new_task(&info, &mut intermediate_modules, false);
             let import_record = &mut import_records[import_record_idx];
             import_record.resolved_module = id;
             while tables.len() <= id.raw() as usize {
@@ -163,14 +163,18 @@ impl<'a> ModuleLoader<'a> {
     &mut self,
     info: &ResolvedRequestInfo,
     intermediate_modules: &mut IndexVec<ModuleId, Option<Module>>,
+    is_entry: bool,
   ) -> ModuleId {
     match self.visited.entry(info.path.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         let id = intermediate_modules.push(None);
         if info.is_external {
-          let ext =
-            ExternalModule::new(id, ResourceId::new(info.path.clone(), &self.input_options.cwd));
+          let ext = ExternalModule::new(
+            id,
+            is_entry,
+            ResourceId::new(info.path.clone(), &self.input_options.cwd),
+          );
           intermediate_modules[id] = Some(Module::External(ext));
         } else {
           not_visited.insert(id);
@@ -181,6 +185,7 @@ impl<'a> ModuleLoader<'a> {
 
           let task = NormalModuleTask::new(
             id,
+            is_entry,
             Arc::<rolldown_resolver::Resolver>::clone(&self.resolver),
             module_path,
             info.module_type,

@@ -48,18 +48,23 @@ pub struct NormalModule {
   pub namespace_symbol: (SymbolRef, ReferenceId),
   pub is_symbol_for_namespace_referenced: bool,
   pub wrap_symbol: Option<SymbolRef>,
-  // The symbol maybe from `export * from 'cjs'` or `export { a } from 'cjs'`
+  // Mark the symbol symbol maybe from commonjs
+  // - The importee has `export * from 'cjs'`
+  // - The importee is commonjs
   pub unresolved_symbols: UnresolvedSymbols,
 }
 
-pub type UnresolvedSymbols = FxHashMap<SymbolRef, (SymbolRef, Option<Atom>)>;
+pub type UnresolvedSymbols =
+  FxHashMap<SymbolRef, (SymbolRef /*importee namespace*/, Option<Atom> /* original name*/)>;
 
 #[derive(Debug)]
 pub enum Resolution {
   None,
   Ambiguous,
   Found(SymbolRef),
-  // Mark the symbol symbol maybe from `export * from 'cjs'`
+  // Mark the symbol symbol maybe from commonjs
+  // - The importee has `export * from 'cjs'`
+  // - The importee is commonjs
   Runtime(SymbolRef),
 }
 

@@ -173,15 +173,22 @@ impl<'ast> RendererContext<'ast> {
       self.symbols.tables[self.module.id].references[ident.reference_id.get().unwrap()]
     {
       let symbol_ref = (self.module.id, symbol_id).into();
-      if let Some((symbol_ref, reference_name)) = self.module.unresolved_symbols.get(&symbol_ref) {
-        let importee_namespace_symbol_name =
-          get_symbol_final_name(*symbol_ref, self.symbols, self.final_names).unwrap();
+      if let Some(unresolved_symbol) = self.module.unresolved_symbols.get(&symbol_ref) {
+        let importee_namespace_symbol_name = get_symbol_final_name(
+          unresolved_symbol.importee_namespace,
+          self.symbols,
+          self.final_names,
+        )
+        .unwrap();
         self.source.update(
           ident.span.start,
           ident.span.end,
           format!(
             "{importee_namespace_symbol_name}{}",
-            reference_name.as_ref().map_or_else(String::new, |name| format!(".{name}"))
+            unresolved_symbol
+              .reference_name
+              .as_ref()
+              .map_or_else(String::new, |name| format!(".{name}"))
           ),
         );
       } else if let Some(name) = self.get_symbol_final_name(symbol_ref) {

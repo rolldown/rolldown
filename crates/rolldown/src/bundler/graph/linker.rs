@@ -11,7 +11,7 @@ use crate::bundler::{
   graph::symbols::Symbols,
   module::{
     module::Module,
-    normal_module::{Resolution, UnresolvedSymbols},
+    normal_module::{Resolution, UnresolvedSymbol, UnresolvedSymbols},
   },
 };
 
@@ -389,8 +389,13 @@ impl<'graph> Linker<'graph> {
               let resolved_ref = if importee.exports_kind == ExportsKind::CommonJs {
                 let reference_name =
                   if info.is_imported_star { None } else { Some(info.imported.clone()) };
-                unresolved_symbols
-                  .insert(info.imported_as, (importee.namespace_symbol.0, reference_name));
+                unresolved_symbols.insert(
+                  info.imported_as,
+                  UnresolvedSymbol {
+                    importee_namespace: importee.namespace_symbol.0,
+                    reference_name,
+                  },
+                );
                 return;
               } else if info.is_imported_star {
                 importee.namespace_symbol.0
@@ -406,8 +411,13 @@ impl<'graph> Linker<'graph> {
                   Resolution::Runtime(_) => {
                     let reference_name =
                       if info.is_imported_star { None } else { Some(info.imported.clone()) };
-                    unresolved_symbols
-                      .insert(info.imported_as, (importee.namespace_symbol.0, reference_name));
+                    unresolved_symbols.insert(
+                      info.imported_as,
+                      UnresolvedSymbol {
+                        importee_namespace: importee.namespace_symbol.0,
+                        reference_name,
+                      },
+                    );
                     return;
                   }
                 }

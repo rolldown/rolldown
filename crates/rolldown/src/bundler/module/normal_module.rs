@@ -55,8 +55,15 @@ pub struct NormalModule {
   pub unresolved_symbols: UnresolvedSymbols,
 }
 
-pub type UnresolvedSymbols =
-  FxHashMap<SymbolRef, (SymbolRef /*importee namespace*/, Option<Atom> /* original name*/)>;
+#[derive(Debug, Clone)]
+pub struct UnresolvedSymbol {
+  // The unresolved symbol is from the importee namespace symbol
+  pub importee_namespace: SymbolRef,
+  // The unresolved symbol reference symbol name
+  pub reference_name: Option<Atom>,
+}
+
+pub type UnresolvedSymbols = FxHashMap<SymbolRef, UnresolvedSymbol>;
 
 #[derive(Debug)]
 pub enum Resolution {

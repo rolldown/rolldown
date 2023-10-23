@@ -56,6 +56,12 @@ impl<'graph> Linker<'graph> {
       if !modules_unresolved_symbols[module.id()].is_empty() {
         match module {
           Module::Normal(module) => {
+            modules_unresolved_symbols[module.id].values().for_each(|un_resolve_symbol| {
+              module.generate_symbol_import_and_use(
+                &mut self.graph.symbols,
+                un_resolve_symbol.importee_namespace,
+              );
+            });
             module.unresolved_symbols.extend(modules_unresolved_symbols[module.id].drain());
           }
           Module::External(_) => {}
@@ -276,7 +282,7 @@ impl<'graph> Linker<'graph> {
           .map(|exported| {
             (
               *exported,
-              importer.resolve_export(
+              importer.resolve_export_for_esm_and_cjs(
                 exported,
                 &mut Vec::default(),
                 &self.graph.modules,
@@ -386,21 +392,10 @@ impl<'graph> Linker<'graph> {
           let importee = &self.graph.modules[import_record.resolved_module];
           match importee {
             Module::Normal(importee) => {
-              let resolved_ref = if importee.exports_kind == ExportsKind::CommonJs {
-                let reference_name =
-                  if info.is_imported_star { None } else { Some(info.imported.clone()) };
-                unresolved_symbols.insert(
-                  info.imported_as,
-                  UnresolvedSymbol {
-                    importee_namespace: importee.namespace_symbol.0,
-                    reference_name,
-                  },
-                );
-                return;
-              } else if info.is_imported_star {
+              let resolved_ref = if info.is_imported_star {
                 importee.namespace_symbol.0
               } else {
-                match importee.resolve_export(
+                match importee.resolve_export_for_esm_and_cjs(
                   &info.imported,
                   &mut Vec::default(),
                   &self.graph.modules,

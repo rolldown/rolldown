@@ -181,10 +181,6 @@ impl NormalModule {
     }
     resolve_set.push(record);
 
-    if self.exports_kind == ExportsKind::CommonJs {
-      return Resolution::Runtime(self.namespace_symbol.0);
-    }
-
     let ret = if let Some(info) = self.named_exports.get(export_name) {
       match info {
         LocalOrReExport::Local(local) => {
@@ -235,16 +231,11 @@ impl NormalModule {
         return Resolution::None;
       }
       let mut star_resolution: Option<SymbolRef> = None;
-      let mut runtime_star_resolution = false;
       for e in &self.star_exports {
         let rec = &self.import_records[*e];
         let importee = &modules[rec.resolved_module];
         match importee {
           Module::Normal(importee) => {
-            if importee.exports_kind == ExportsKind::CommonJs {
-              runtime_star_resolution = true;
-              continue;
-            }
             match importee.resolve_export(export_name, resolve_set, modules, symbols) {
               Resolution::None => continue,
               Resolution::Ambiguous => return Resolution::Ambiguous,
@@ -257,8 +248,8 @@ impl NormalModule {
                 }
                 star_resolution = Some(exist);
               }
-              Resolution::Runtime(symbol_ref) => {
-                return Resolution::Runtime(symbol_ref);
+              Resolution::Runtime(_) => {
+                unreachable!("should not found symbol at runtime for esm")
               }
             }
           }
@@ -268,21 +259,71 @@ impl NormalModule {
         }
       }
 
-      star_resolution.map_or_else(
-        || {
-          if runtime_star_resolution {
-            Resolution::Runtime(self.namespace_symbol.0)
-          } else {
-            Resolution::None
-          }
-        },
-        Resolution::Found,
-      )
+      star_resolution.map_or(Resolution::None, Resolution::Found)
     };
 
     resolve_set.pop();
 
     ret
+  }
+
+  pub fn resolve_export_for_esm_and_cjs<'modules>(
+    &'modules self,
+    export_name: &'modules Atom,
+    resolve_set: &mut Vec<(ModuleId, &'modules Atom)>,
+    modules: &'modules ModuleVec,
+    symbols: &mut Symbols,
+  ) -> Resolution {
+    // First found symbol resolution for esm, if not found, then try to resolve for commonjs
+    let resolution = self.resolve_export(export_name, resolve_set, modules, symbols);
+    if matches!(resolution, Resolution::None) {
+      let has_cjs_star_resolution = self
+        .star_exports
+        .iter()
+        .map(|rec_id| {
+          let rec = &self.import_records[*rec_id];
+          let importee = &modules[rec.resolved_module];
+          match importee {
+            Module::Normal(importee) => importee.exports_kind == ExportsKind::CommonJs,
+            Module::External(_) => false,
+          }
+        })
+        .any(|is_cjs| is_cjs);
+      if let Some(info) = self.named_exports.get(export_name) {
+        match info {
+          LocalOrReExport::Local(local) => {
+            if let Some(named_import) = self.named_imports.get(&local.referenced.symbol) {
+              let record = &self.import_records[named_import.record_id];
+              let importee = &modules[record.resolved_module];
+              match importee {
+                Module::Normal(importee) => {
+                  if importee.exports_kind == ExportsKind::CommonJs {
+                    return Resolution::Runtime(importee.namespace_symbol.0);
+                  }
+                }
+                Module::External(_) => {}
+              }
+            }
+          }
+          LocalOrReExport::Re(re) => {
+            let record = &self.import_records[re.record_id];
+            let importee = &modules[record.resolved_module];
+            match importee {
+              Module::Normal(importee) => {
+                if importee.exports_kind == ExportsKind::CommonJs {
+                  return Resolution::Runtime(importee.namespace_symbol.0);
+                }
+              }
+              Module::External(_) => {}
+            }
+          }
+        }
+      } else if has_cjs_star_resolution || self.exports_kind == ExportsKind::CommonJs {
+        return Resolution::Runtime(self.namespace_symbol.0);
+      }
+      return Resolution::None;
+    }
+    resolution
   }
 
   pub fn resolve_star_exports(&self, modules: &ModuleVec) -> Vec<ModuleId> {

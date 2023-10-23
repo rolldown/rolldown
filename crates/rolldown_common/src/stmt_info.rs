@@ -16,3 +16,10 @@ pub struct StmtInfo {
   /// Top level symbols referenced by this statement.
   pub referenced_symbols: Vec<SymbolRef>,
 }
+
+// Because we want declare symbols at linker, it shouldn't mutate the original `StmtInfo`.
+#[derive(Default, Debug)]
+pub struct VirtualStmtInfo {
+  pub declared_symbols: Vec<SymbolId>,
+  pub referenced_symbols: Vec<SymbolRef>,
+}

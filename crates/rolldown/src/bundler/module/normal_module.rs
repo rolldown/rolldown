@@ -7,7 +7,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
-  ResolvedExport, ResourceId, StmtInfo, StmtInfoId, SymbolRef,
+  ResolvedExport, ResourceId, StmtInfo, StmtInfoId, SymbolRef, VirtualStmtInfo,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -42,6 +42,7 @@ pub struct NormalModule {
   pub star_exports: Vec<ImportRecordId>,
   pub exports_kind: ExportsKind,
   // resolved
+  pub virtual_stmt_infos: Vec<VirtualStmtInfo>,
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
   pub resolved_star_exports: Vec<ModuleId>,
   pub scope: ScopeTree,
@@ -115,8 +116,7 @@ impl NormalModule {
   pub fn initialize_namespace(&mut self) {
     if !self.is_symbol_for_namespace_referenced {
       self.is_symbol_for_namespace_referenced = true;
-      self.stmt_infos.push(StmtInfo {
-        stmt_idx: self.ast.program().body.len(),
+      self.virtual_stmt_infos.push(VirtualStmtInfo {
         declared_symbols: vec![self.namespace_symbol.0.symbol],
         ..Default::default()
       });
@@ -368,11 +368,9 @@ impl NormalModule {
       .into();
       let symbol = symbols.tables[self.id].create_symbol(name);
       self.wrap_symbol = Some((self.id, symbol).into());
-      self.stmt_infos.push(StmtInfo {
-        stmt_idx: self.ast.program().body.len(),
-        declared_symbols: vec![symbol],
-        ..Default::default()
-      });
+      self
+        .virtual_stmt_infos
+        .push(VirtualStmtInfo { declared_symbols: vec![symbol], ..Default::default() });
       self.initialize_namespace();
     }
   }
@@ -391,8 +389,7 @@ impl NormalModule {
   pub fn generate_local_symbol(&mut self, symbols: &mut Symbols, name: Atom) -> SymbolRef {
     let local_symbol = symbols.tables[self.id].create_symbol(name);
     let local_symbol_ref = (self.id, local_symbol).into();
-    self.stmt_infos.push(StmtInfo {
-      stmt_idx: self.ast.program().body.len(),
+    self.virtual_stmt_infos.push(VirtualStmtInfo {
       // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
       // The deconflict for runtime symbols would be handled in the deconflict on cross-chunk-imported
       // symbols

@@ -96,6 +96,7 @@ pub fn get_symbol_final_name<'a>(
   final_names.get(&final_ref)
 }
 
+#[allow(dead_code)]
 pub fn get_reference_final_name<'a>(
   module_id: ModuleId,
   reference_id: ReferenceId,

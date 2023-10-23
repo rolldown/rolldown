@@ -16,9 +16,8 @@ exports.fn = function() {
 });
 // main.js
 var foo_ns = __toESM(require_foo());
-var fn = foo_ns.fn;
 
 (() => {
-    console.log(fn())
+    console.log(foo_ns.fn())
 })()
 ```

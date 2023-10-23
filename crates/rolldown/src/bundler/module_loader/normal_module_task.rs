@@ -31,11 +31,13 @@ pub struct NormalModuleTask {
   errors: Vec<BuildError>,
   warnings: Vec<BuildError>,
   resolver: SharedResolver,
+  is_entry: bool,
 }
 
 impl NormalModuleTask {
   pub fn new(
     id: ModuleId,
+    is_entry: bool,
     resolver: SharedResolver,
     path: ResourceId,
     module_type: ModuleType,
@@ -43,6 +45,7 @@ impl NormalModuleTask {
   ) -> Self {
     Self {
       module_id: id,
+      is_entry,
       resolver,
       path,
       module_type,
@@ -94,7 +97,7 @@ impl NormalModuleTask {
     builder.exports_kind = exports_kind;
     builder.initialize_namespace_binding(&mut symbol_map);
     builder.module_type = self.module_type;
-
+    builder.is_entry = self.is_entry;
     self
       .tx
       .send(Msg::NormalModuleDone(NormalModuleTaskResult {

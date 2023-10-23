@@ -28,6 +28,7 @@ use crate::bundler::{
 pub struct NormalModule {
   pub exec_order: u32,
   pub id: ModuleId,
+  pub is_entry: bool,
   pub resource_id: ResourceId,
   pub module_type: ModuleType,
   pub ast: OxcProgram,
@@ -47,14 +48,32 @@ pub struct NormalModule {
   pub default_export_symbol: Option<SymbolId>,
   pub namespace_symbol: (SymbolRef, ReferenceId),
   pub is_symbol_for_namespace_referenced: bool,
-  pub cjs_symbols: FxHashMap<Atom, SymbolRef>,
   pub wrap_symbol: Option<SymbolRef>,
+  // Mark the symbol symbol maybe from commonjs
+  // - The importee has `export * from 'cjs'`
+  // - The importee is commonjs
+  pub unresolved_symbols: UnresolvedSymbols,
 }
 
+#[derive(Debug, Clone)]
+pub struct UnresolvedSymbol {
+  // The unresolved symbol is from the importee namespace symbol
+  pub importee_namespace: SymbolRef,
+  // The unresolved symbol reference symbol name
+  pub reference_name: Option<Atom>,
+}
+
+pub type UnresolvedSymbols = FxHashMap<SymbolRef, UnresolvedSymbol>;
+
+#[derive(Debug)]
 pub enum Resolution {
   None,
   Ambiguous,
   Found(SymbolRef),
+  // Mark the symbol symbol maybe from commonjs
+  // - The importee has `export * from 'cjs'`
+  // - The importee is commonjs
+  Runtime(SymbolRef),
 }
 
 impl NormalModule {
@@ -148,6 +167,7 @@ impl NormalModule {
   }
 
   // https://tc39.es/ecma262/#sec-resolveexport
+  #[allow(clippy::too_many_lines)]
   pub fn resolve_export<'modules>(
     &'modules self,
     export_name: &'modules Atom,
@@ -228,6 +248,9 @@ impl NormalModule {
                 }
                 star_resolution = Some(exist);
               }
+              Resolution::Runtime(_) => {
+                unreachable!("should not found symbol at runtime for esm")
+              }
             }
           }
           Module::External(_) => {
@@ -242,6 +265,65 @@ impl NormalModule {
     resolve_set.pop();
 
     ret
+  }
+
+  pub fn resolve_export_for_esm_and_cjs<'modules>(
+    &'modules self,
+    export_name: &'modules Atom,
+    resolve_set: &mut Vec<(ModuleId, &'modules Atom)>,
+    modules: &'modules ModuleVec,
+    symbols: &mut Symbols,
+  ) -> Resolution {
+    // First found symbol resolution for esm, if not found, then try to resolve for commonjs
+    let resolution = self.resolve_export(export_name, resolve_set, modules, symbols);
+    if matches!(resolution, Resolution::None) {
+      let has_cjs_star_resolution = self
+        .star_exports
+        .iter()
+        .map(|rec_id| {
+          let rec = &self.import_records[*rec_id];
+          let importee = &modules[rec.resolved_module];
+          match importee {
+            Module::Normal(importee) => importee.exports_kind == ExportsKind::CommonJs,
+            Module::External(_) => false,
+          }
+        })
+        .any(|is_cjs| is_cjs);
+      if let Some(info) = self.named_exports.get(export_name) {
+        match info {
+          LocalOrReExport::Local(local) => {
+            if let Some(named_import) = self.named_imports.get(&local.referenced.symbol) {
+              let record = &self.import_records[named_import.record_id];
+              let importee = &modules[record.resolved_module];
+              match importee {
+                Module::Normal(importee) => {
+                  if importee.exports_kind == ExportsKind::CommonJs {
+                    return Resolution::Runtime(importee.namespace_symbol.0);
+                  }
+                }
+                Module::External(_) => {}
+              }
+            }
+          }
+          LocalOrReExport::Re(re) => {
+            let record = &self.import_records[re.record_id];
+            let importee = &modules[record.resolved_module];
+            match importee {
+              Module::Normal(importee) => {
+                if importee.exports_kind == ExportsKind::CommonJs {
+                  return Resolution::Runtime(importee.namespace_symbol.0);
+                }
+              }
+              Module::External(_) => {}
+            }
+          }
+        }
+      } else if has_cjs_star_resolution || self.exports_kind == ExportsKind::CommonJs {
+        return Resolution::Runtime(self.namespace_symbol.0);
+      }
+      return Resolution::None;
+    }
+    resolution
   }
 
   pub fn resolve_star_exports(&self, modules: &ModuleVec) -> Vec<ModuleId> {
@@ -276,29 +358,6 @@ impl NormalModule {
     resolved
   }
 
-  pub fn resolve_cjs_symbol(&self, export_name: &Atom, is_star: bool) -> SymbolRef {
-    if is_star {
-      self.namespace_symbol.0
-    } else {
-      self.cjs_symbols[export_name]
-    }
-  }
-
-  #[allow(clippy::needless_pass_by_value)]
-  pub fn add_cjs_symbol(&mut self, symbols: &mut Symbols, exported: Atom, is_star: bool) {
-    if !is_star {
-      self.cjs_symbols.entry(exported.clone()).or_insert_with(|| {
-        let symbol = symbols.tables[self.id].create_symbol(exported.clone());
-        self.stmt_infos.push(StmtInfo {
-          stmt_idx: self.ast.program().body.len(),
-          declared_symbols: vec![symbol],
-          ..Default::default()
-        });
-        (self.id, symbol).into()
-      });
-    }
-  }
-
   pub fn create_wrap_symbol(&mut self, symbols: &mut Symbols) {
     if self.wrap_symbol.is_none() {
       let name = format!(
@@ -325,11 +384,13 @@ impl NormalModule {
   ) {
     debug_assert!(symbol_ref_from_importee.owner != self.id);
     let name = symbols.get_original_name(symbol_ref_from_importee).clone();
+    let local_symbol_ref = self.generate_local_symbol(symbols, name);
+    symbols.union(local_symbol_ref, symbol_ref_from_importee);
+  }
+
+  pub fn generate_local_symbol(&mut self, symbols: &mut Symbols, name: Atom) -> SymbolRef {
     let local_symbol = symbols.tables[self.id].create_symbol(name);
     let local_symbol_ref = (self.id, local_symbol).into();
-    symbols.union(local_symbol_ref, symbol_ref_from_importee);
-    // TODO: we should add corresponding dependency info from the runtime module
-    // for the future tree shaking support
     self.stmt_infos.push(StmtInfo {
       stmt_idx: self.ast.program().body.len(),
       // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
@@ -338,5 +399,6 @@ impl NormalModule {
       declared_symbols: vec![local_symbol],
       ..Default::default()
     });
+    local_symbol_ref
   }
 }

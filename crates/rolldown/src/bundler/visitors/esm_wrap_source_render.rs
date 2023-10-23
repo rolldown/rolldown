@@ -2,7 +2,10 @@ use oxc::{
   ast::{ast::Declaration, Visit},
   span::{Atom, GetSpan, Span},
 };
+use rolldown_common::ExportsKind;
 use rolldown_oxc::BindingIdentifierExt;
+
+use crate::bundler::module::module::Module;
 
 use super::RendererContext;
 
@@ -29,20 +32,9 @@ impl<'ast> EsmWrapSourceRender<'ast> {
       self.ctx.source.append_right(0, format!("var {};\n", self.hoisted_vars.join(",")));
     }
 
-    let namespace_name = self.ctx.namespace_symbol_name.unwrap();
-    let exports: String = self
-      .ctx
-      .module
-      .resolved_exports
-      .iter()
-      .map(|(exported_name, info)| {
-        let canonical_ref = self.ctx.symbols.par_get_canonical_ref(info.local_symbol);
-        let canonical_name = self.ctx.final_names.get(&canonical_ref).unwrap();
-        format!("  get {exported_name}() {{ return {canonical_name} }}",)
-      })
-      .collect::<Vec<_>>()
-      .join(",\n");
-    self.ctx.source.append_right(0, format!("var {namespace_name} = {{\n{exports}\n}};\n",));
+    if let Some(s) = self.ctx.generate_namespace_variable_declaration() {
+      self.ctx.source.append_right(0, s);
+    }
 
     let wrap_symbol_name = self.ctx.wrap_symbol_name.unwrap();
     let esm_runtime_symbol_name = self.ctx.get_runtime_symbol_final_name(&"__esm".into());
@@ -119,6 +111,21 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
         }
         _ => {}
       }
+    } else if named_decl.source.is_some() {
+      match self.ctx.get_importee_by_span(named_decl.span) {
+        Module::Normal(importee) => {
+          if importee.exports_kind == ExportsKind::CommonJs {
+            self.ctx.overwrite(
+              named_decl.span.start,
+              named_decl.span.end,
+              self.ctx.generate_import_commonjs_module(importee, true),
+            );
+            return;
+          }
+        }
+        Module::External(_) => {} // TODO
+      }
+      self.ctx.remove_node(named_decl.span);
     } else {
       self.ctx.remove_node(named_decl.span);
     }

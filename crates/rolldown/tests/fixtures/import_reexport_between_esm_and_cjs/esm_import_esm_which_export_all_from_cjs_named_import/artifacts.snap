@@ -1,0 +1,23 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_cjs_named_import
+---
+# main.js
+
+```js
+// commonjs.js
+var require_commonjs = __commonJS({
+'commonjs.js'(exports, module) {
+exports.a = 1
+}
+});
+// proxy.js
+var proxy_ns = {
+
+};
+__reExport(proxy_ns, __toESM(require_commonjs()));
+// main.js
+
+console.log(proxy_ns.a, 1)
+```

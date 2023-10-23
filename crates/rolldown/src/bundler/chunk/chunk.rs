@@ -1,12 +1,15 @@
 use index_vec::IndexVec;
 use oxc::span::Atom;
-use rolldown_common::{ModuleId, SymbolRef};
+use rolldown_common::{ModuleId, ResolvedExport, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{Joiner, JoinerOptions};
 
 use crate::bundler::{
   bitset::BitSet,
-  graph::{graph::Graph, symbols::Symbols},
+  graph::{
+    graph::Graph,
+    symbols::{get_symbol_final_name, Symbols},
+  },
   module::{module::ModuleRenderContext, module_id::ModuleVec},
   options::{
     file_name_template::FileNameRenderOptions, normalized_output_options::NormalizedOutputOptions,
@@ -49,14 +52,14 @@ impl Chunk {
     if !entry.expect_normal().resolved_exports.is_empty() {
       let mut resolved_exports = entry.expect_normal().resolved_exports.iter().collect::<Vec<_>>();
       resolved_exports.sort_by_key(|(name, _)| name.as_str());
-      let mut exports_str = "export { ".to_string();
-      exports_str.push_str(
-        &resolved_exports
-          .into_iter()
-          .map(|(exported, refer)| {
+      let mut vars = vec![];
+      let export_items = &resolved_exports
+        .into_iter()
+        .map(|(exported, refer)| match refer {
+          ResolvedExport::Symbol(symbol_ref) => {
             let final_name = self
               .canonical_names
-              .get(&symbols.par_get_canonical_ref(refer.local_symbol))
+              .get(&symbols.par_get_canonical_ref(*symbol_ref))
               .cloned()
               .unwrap_or_else(|| panic!("not found {exported:?}"));
             if final_name == exported {
@@ -64,12 +67,28 @@ impl Chunk {
             } else {
               format!("{final_name} as {exported}")
             }
-          })
-          .collect::<Vec<_>>()
-          .join(", "),
-      );
-      exports_str.push_str(" };");
-      self.exports_str = Some(exports_str);
+          }
+          ResolvedExport::Runtime(export) => {
+            let local_symbol_name =
+              get_symbol_final_name(export.symbol_ref, symbols, &self.canonical_names).unwrap();
+            let importee_namespace_symbol_name =
+              get_symbol_final_name(export.symbol_ref, symbols, &self.canonical_names).unwrap();
+            vars.push(format!(
+              "var {local_symbol_name} = {importee_namespace_symbol_name}.{exported};",
+            ));
+            if local_symbol_name == exported {
+              format!("{local_symbol_name}")
+            } else {
+              format!("{local_symbol_name} as {exported}")
+            }
+          }
+        })
+        .collect::<Vec<_>>();
+      self.exports_str = Some(format!(
+        "{}export {{ {} }};",
+        if vars.is_empty() { String::new() } else { format!("{}\n", vars.join("\n")) },
+        export_items.join(", ")
+      ));
     }
   }
 

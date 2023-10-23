@@ -181,6 +181,7 @@ impl<'a> Scanner<'a> {
       let record_id = self.add_import_record(&source.value, ImportKind::Import);
       decl.specifiers.iter().for_each(|spec| {
         self.add_re_export(spec.exported.name(), spec.local.name(), record_id);
+        self.result.imports.insert(decl.span, record_id);
       });
     } else {
       decl.specifiers.iter().for_each(|spec| {

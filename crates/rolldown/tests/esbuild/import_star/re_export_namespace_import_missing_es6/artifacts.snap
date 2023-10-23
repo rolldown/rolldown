@@ -7,7 +7,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_namespace_import
 
 ```js
 // bar.js
-
 var bar_ns = {
   get x() { return x }
 };

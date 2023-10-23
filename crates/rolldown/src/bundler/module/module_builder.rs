@@ -30,6 +30,7 @@ pub struct NormalModuleBuilder {
   pub namespace_symbol: Option<(SymbolRef, ReferenceId)>,
   pub exports_kind: Option<ExportsKind>,
   pub module_type: ModuleType,
+  pub is_entry: bool,
 }
 
 impl NormalModuleBuilder {
@@ -60,9 +61,10 @@ impl NormalModuleBuilder {
       is_symbol_for_namespace_referenced: false,
       source_mutations: Vec::default(),
       exports_kind: self.exports_kind.unwrap_or(ExportsKind::Esm),
-      cjs_symbols: FxHashMap::default(),
       wrap_symbol: None,
       module_type: self.module_type,
+      unresolved_symbols: FxHashMap::default(),
+      is_entry: self.is_entry,
     }
   }
 }

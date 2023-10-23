@@ -65,6 +65,7 @@ impl NormalModuleBuilder {
       module_type: self.module_type,
       unresolved_symbols: FxHashMap::default(),
       is_entry: self.is_entry,
+      virtual_stmt_infos: Vec::default(),
     }
   }
 }

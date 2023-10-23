@@ -33,8 +33,17 @@ impl Chunk {
       .map(|id| &graph.modules[id])
       .for_each(|module| match module {
         Module::Normal(module) => {
-          module.stmt_infos.iter().flat_map(|part| part.declared_symbols.iter().copied()).for_each(
-            |symbol_id| {
+          module
+            .stmt_infos
+            .iter()
+            .flat_map(|part| part.declared_symbols.iter().copied())
+            .chain(
+              module
+                .virtual_stmt_infos
+                .iter()
+                .flat_map(|part| part.declared_symbols.iter().copied()),
+            )
+            .for_each(|symbol_id| {
               let canonical_ref =
                 graph.symbols.par_get_canonical_ref((module.id, symbol_id).into());
 
@@ -52,8 +61,7 @@ impl Chunk {
                   *count += 1;
                 }
               }
-            },
-          );
+            });
         }
         Module::External(_) => {}
       });

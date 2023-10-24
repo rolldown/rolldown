@@ -8,9 +8,10 @@ use crate::bundler::{
   bitset::BitSet,
   graph::{
     graph::Graph,
+    linker::LinkerModuleVec,
     symbols::{get_symbol_final_name, Symbols},
   },
-  module::{module::ModuleRenderContext, module_id::ModuleVec},
+  module::module::ModuleRenderContext,
   options::{
     file_name_template::FileNameRenderOptions, normalized_output_options::NormalizedOutputOptions,
   },
@@ -45,12 +46,12 @@ impl Chunk {
     );
   }
 
-  pub fn initialize_exports(&mut self, modules: &mut ModuleVec, symbols: &Symbols) {
-    let entry = &mut modules[*self.modules.last().unwrap()];
+  pub fn initialize_exports(&mut self, linker_modules: &LinkerModuleVec, symbols: &Symbols) {
+    let entry = &linker_modules[*self.modules.last().unwrap()];
 
     // export { };
-    if !entry.expect_normal().resolved_exports.is_empty() {
-      let mut resolved_exports = entry.expect_normal().resolved_exports.iter().collect::<Vec<_>>();
+    if !entry.resolved_exports.is_empty() {
+      let mut resolved_exports = entry.resolved_exports.iter().collect::<Vec<_>>();
       resolved_exports.sort_by_key(|(name, _)| name.as_str());
       let mut vars = vec![];
       let export_items = &resolved_exports
@@ -70,7 +71,7 @@ impl Chunk {
           }
           ResolvedExport::Runtime(export) => {
             let local_symbol_name =
-              get_symbol_final_name(export.symbol_ref, symbols, &self.canonical_names).unwrap();
+              get_symbol_final_name(export.local.unwrap(), symbols, &self.canonical_names).unwrap();
             let importee_namespace_symbol_name =
               get_symbol_final_name(export.symbol_ref, symbols, &self.canonical_names).unwrap();
             vars.push(format!(
@@ -109,11 +110,9 @@ impl Chunk {
       .filter_map(|m| {
         m.render(ModuleRenderContext {
           canonical_names: &self.canonical_names,
-          symbols: &graph.symbols,
+          graph,
           module_to_chunk,
           chunks,
-          modules: &graph.modules,
-          runtime: &graph.runtime,
         })
       })
       .collect::<Vec<_>>()

@@ -6,11 +6,10 @@ use string_wizard::MagicString;
 
 use crate::bundler::{
   chunk::{ChunkId, ChunksVec},
-  graph::symbols::Symbols,
-  runtime::Runtime,
+  graph::{graph::Graph, linker::LinkerModule},
 };
 
-use super::{external_module::ExternalModule, module_id::ModuleVec, NormalModule};
+use super::{external_module::ExternalModule, NormalModule};
 
 #[derive(Debug)]
 pub enum Module {
@@ -40,14 +39,14 @@ impl Module {
     }
   }
 
-  pub fn expect_normal(&self) -> &NormalModule {
+  pub fn _expect_normal(&self) -> &NormalModule {
     match self {
       Self::Normal(m) => m,
       Self::External(_) => unreachable!(),
     }
   }
 
-  pub fn expect_normal_mut(&mut self) -> &mut NormalModule {
+  pub fn _expect_normal_mut(&mut self) -> &mut NormalModule {
     match self {
       Self::Normal(m) => m,
       Self::External(_) => unreachable!(),
@@ -61,10 +60,10 @@ impl Module {
     }
   }
 
-  pub fn mark_symbol_for_namespace_referenced(&mut self) {
+  pub fn mark_symbol_for_namespace_referenced(&self, linker_module: &mut LinkerModule) {
     match self {
-      Self::Normal(m) => m.initialize_namespace(),
-      Self::External(m) => m.is_symbol_for_namespace_referenced = true,
+      Self::Normal(m) => m.initialize_namespace(linker_module),
+      Self::External(_) => linker_module.is_symbol_for_namespace_referenced = true,
     }
   }
 
@@ -78,9 +77,7 @@ impl Module {
 
 pub struct ModuleRenderContext<'a> {
   pub canonical_names: &'a FxHashMap<SymbolRef, Atom>,
-  pub symbols: &'a Symbols,
+  pub graph: &'a Graph,
   pub module_to_chunk: &'a IndexVec<ModuleId, Option<ChunkId>>,
   pub chunks: &'a ChunksVec,
-  pub modules: &'a ModuleVec,
-  pub runtime: &'a Runtime,
 }

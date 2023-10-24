@@ -13,23 +13,25 @@ use string_wizard::{MagicString, UpdateOptions};
 
 use super::{
   chunk::{chunk::Chunk, ChunkId},
-  graph::symbols::{get_reference_final_name, get_symbol_final_name, Symbols},
-  module::{module::Module, module_id::ModuleVec, NormalModule},
-  runtime::Runtime,
+  graph::{
+    graph::Graph,
+    linker::LinkerModule,
+    symbols::{get_reference_final_name, get_symbol_final_name},
+  },
+  module::{module::Module, NormalModule},
 };
 
 pub struct RendererContext<'ast> {
-  symbols: &'ast Symbols,
+  graph: &'ast Graph,
   final_names: &'ast FxHashMap<SymbolRef, Atom>,
   source: &'ast mut MagicString<'static>,
   module_to_chunk: &'ast IndexVec<ModuleId, Option<ChunkId>>,
   chunks: &'ast IndexVec<ChunkId, Chunk>,
-  modules: &'ast ModuleVec,
   module: &'ast NormalModule,
+  linker_module: &'ast LinkerModule,
   wrap_symbol_name: Option<&'ast Atom>,
   namespace_symbol_name: Option<&'ast Atom>,
   default_symbol_name: Option<&'ast Atom>,
-  runtime: &'ast Runtime,
   // Used to hoisted import declaration before the first statement
   first_stmt_start: Option<u32>,
 }
@@ -37,37 +39,35 @@ pub struct RendererContext<'ast> {
 impl<'ast> RendererContext<'ast> {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
-    symbols: &'ast Symbols,
+    graph: &'ast Graph,
     final_names: &'ast FxHashMap<SymbolRef, Atom>,
     source: &'ast mut MagicString<'static>,
     module_to_chunk: &'ast IndexVec<ModuleId, Option<ChunkId>>,
     chunks: &'ast IndexVec<ChunkId, Chunk>,
-    modules: &'ast ModuleVec,
     module: &'ast NormalModule,
-    runtime: &'ast Runtime,
+    linker_module: &'ast LinkerModule,
   ) -> Self {
     let wrap_symbol_name =
-      module.wrap_symbol.and_then(|s| get_symbol_final_name(s, symbols, final_names));
+      linker_module.wrap_symbol.and_then(|s| get_symbol_final_name(s, &graph.symbols, final_names));
     let namespace_symbol_name = get_symbol_final_name(
       (module.id, module.namespace_symbol.0.symbol).into(),
-      symbols,
+      &graph.symbols,
       final_names,
     );
     let default_symbol_name = module
       .default_export_symbol
-      .and_then(|s| get_symbol_final_name((module.id, s).into(), symbols, final_names));
+      .and_then(|s| get_symbol_final_name((module.id, s).into(), &graph.symbols, final_names));
     Self {
-      symbols,
+      graph,
       final_names,
       source,
       module_to_chunk,
       chunks,
-      modules,
       module,
+      linker_module,
       wrap_symbol_name,
       namespace_symbol_name,
       default_symbol_name,
-      runtime,
       first_stmt_start: None,
     }
   }
@@ -91,7 +91,7 @@ impl<'ast> RendererContext<'ast> {
   }
 
   pub fn get_symbol_final_name(&self, symbol: SymbolRef) -> Option<&'ast Atom> {
-    get_symbol_final_name(symbol, self.symbols, self.final_names)
+    get_symbol_final_name(symbol, &self.graph.symbols, self.final_names)
   }
 
   pub fn _get_reference_final_name(
@@ -99,29 +99,29 @@ impl<'ast> RendererContext<'ast> {
     module_id: ModuleId,
     reference_id: ReferenceId,
   ) -> Option<&Atom> {
-    get_reference_final_name(module_id, reference_id, self.symbols, self.final_names)
+    get_reference_final_name(module_id, reference_id, &self.graph.symbols, self.final_names)
   }
 
   pub fn get_runtime_symbol_final_name(&self, name: &Atom) -> &Atom {
-    let symbol = self.runtime.resolve_symbol(name);
+    let symbol = self.graph.runtime.resolve_symbol(name);
     self.get_symbol_final_name(symbol).unwrap()
   }
 
   pub fn generate_namespace_variable_declaration(&mut self) -> Option<String> {
     if let Some(namespace_name) = self.namespace_symbol_name {
       let exports: String = self
-        .module
+        .linker_module
         .resolved_exports
         .iter()
         .map(|(exported_name, info)| match info {
           ResolvedExport::Symbol(symbol_ref) => {
-            let canonical_ref = self.symbols.par_get_canonical_ref(*symbol_ref);
+            let canonical_ref = self.graph.symbols.par_get_canonical_ref(*symbol_ref);
             let canonical_name = self.final_names.get(&canonical_ref).unwrap();
             format!("  get {exported_name}() {{ return {canonical_name} }}",)
           }
           ResolvedExport::Runtime(export) => {
             let importee_namespace_symbol_name =
-              get_symbol_final_name(export.symbol_ref, self.symbols, self.final_names).unwrap();
+              get_symbol_final_name(export.symbol_ref, &self.graph.symbols, self.final_names).unwrap();
             format!("  get {exported_name}() {{ return {importee_namespace_symbol_name}.{exported_name} }}",)
           }
         })
@@ -136,9 +136,11 @@ impl<'ast> RendererContext<'ast> {
   pub fn generate_import_commonjs_module(
     &self,
     importee: &NormalModule,
+    importee_linker_module: &LinkerModule,
     with_namespace_init: bool,
   ) -> String {
-    let wrap_symbol_name = self.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
+    let wrap_symbol_name =
+      self.get_symbol_final_name(importee_linker_module.wrap_symbol.unwrap()).unwrap();
     let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name(&"__toESM".into());
     let code = format!(
       "{to_esm_runtime_symbol_name}({wrap_symbol_name}(){})",
@@ -155,7 +157,7 @@ impl<'ast> RendererContext<'ast> {
   pub fn get_importee_by_span(&self, span: Span) -> &Module {
     let record_id = &self.module.imports[&span];
     let rec = &self.module.import_records[*record_id];
-    &self.modules[rec.resolved_module]
+    &self.graph.modules[rec.resolved_module]
   }
 
   pub fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
@@ -170,13 +172,13 @@ impl<'ast> RendererContext<'ast> {
 
   pub fn visit_identifier_reference(&mut self, ident: &'ast oxc::ast::ast::IdentifierReference) {
     if let Some(symbol_id) =
-      self.symbols.tables[self.module.id].references[ident.reference_id.get().unwrap()]
+      self.graph.symbols.tables[self.module.id].references[ident.reference_id.get().unwrap()]
     {
       let symbol_ref = (self.module.id, symbol_id).into();
-      if let Some(unresolved_symbol) = self.module.unresolved_symbols.get(&symbol_ref) {
+      if let Some(unresolved_symbol) = self.linker_module.unresolved_symbols.get(&symbol_ref) {
         let importee_namespace_symbol_name = get_symbol_final_name(
           unresolved_symbol.importee_namespace,
-          self.symbols,
+          &self.graph.symbols,
           self.final_names,
         )
         .unwrap();
@@ -214,7 +216,11 @@ impl<'ast> RendererContext<'ast> {
           decl.span.end,
           format!(
             "{re_export_runtime_symbol_name}({namespace_name}, {});",
-            self.generate_import_commonjs_module(importee, false)
+            self.generate_import_commonjs_module(
+              importee,
+              &self.graph.linker_modules[importee.id],
+              false
+            )
           ),
         );
         return;
@@ -244,12 +250,20 @@ impl<'ast> RendererContext<'ast> {
   pub fn visit_import_declaration(&mut self, decl: &'ast oxc::ast::ast::ImportDeclaration<'ast>) {
     self.remove_node(decl.span);
     let rec = &self.module.import_records[self.module.imports.get(&decl.span).copied().unwrap()];
-    let importee = &self.modules[rec.resolved_module];
+    let importee = &self.graph.modules[rec.resolved_module];
+    let importee_linker_module = &self.graph.linker_modules[rec.resolved_module];
     let start = self.first_stmt_start.unwrap_or(decl.span.start);
     if let Module::Normal(importee) = importee {
       if importee.exports_kind == ExportsKind::CommonJs {
-        self.source.append_right(start, self.generate_import_commonjs_module(importee, true));
-      } else if let Some(wrap_symbol) = importee.wrap_symbol {
+        self.source.append_right(
+          start,
+          self.generate_import_commonjs_module(
+            importee,
+            &self.graph.linker_modules[importee.id],
+            true,
+          ),
+        );
+      } else if let Some(wrap_symbol) = importee_linker_module.wrap_symbol {
         let wrap_symbol_name = self.get_symbol_final_name(wrap_symbol).unwrap();
         // init wrapped esm module
         self.source.append_right(start, format!("{wrap_symbol_name}();\n"));
@@ -261,7 +275,9 @@ impl<'ast> RendererContext<'ast> {
     if let oxc::ast::ast::Expression::Identifier(ident) = &expr.callee {
       if ident.name == "require" {
         if let Module::Normal(importee) = self.get_importee_by_span(expr.span) {
-          let wrap_symbol_name = self.get_symbol_final_name(importee.wrap_symbol.unwrap()).unwrap();
+          let importee_linker_module = &self.graph.linker_modules[importee.id];
+          let wrap_symbol_name =
+            self.get_symbol_final_name(importee_linker_module.wrap_symbol.unwrap()).unwrap();
           if importee.exports_kind == ExportsKind::CommonJs {
             self.source.update(expr.span.start, expr.span.end, format!("{wrap_symbol_name}()"));
           } else {

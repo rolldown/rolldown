@@ -118,7 +118,11 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
             self.ctx.overwrite(
               named_decl.span.start,
               named_decl.span.end,
-              self.ctx.generate_import_commonjs_module(importee, true),
+              self.ctx.generate_import_commonjs_module(
+                importee,
+                &self.ctx.graph.linker_modules[importee.id],
+                true,
+              ),
             );
             return;
           }

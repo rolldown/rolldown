@@ -2,7 +2,7 @@ use index_vec::IndexVec;
 use oxc::{semantic::ReferenceId, span::Atom};
 use rolldown_common::{
   ExportsKind, ImportKind, LocalOrReExport, ModuleId, ResolvedExport, ResolvedExportRuntime,
-  SymbolRef,
+  SymbolRef, VirtualStmtInfo,
 };
 use rustc_hash::FxHashMap;
 
@@ -15,6 +15,23 @@ use crate::bundler::{
   },
 };
 
+// Because the linker will add some symbols for each module, so here abstract `LinkerModule` to instead of `Module`, avoid mutate module and borrow module at same time.
+#[derive(Debug, Default)]
+pub struct LinkerModule {
+  // The symbol for wrapped module
+  pub wrap_symbol: Option<SymbolRef>,
+  pub virtual_stmt_infos: Vec<VirtualStmtInfo>,
+  pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
+  pub resolved_star_exports: Vec<ModuleId>,
+  pub is_symbol_for_namespace_referenced: bool,
+  // Mark the symbol symbol maybe from commonjs
+  // - The importee has `export * from 'cjs'`
+  // - The importee is commonjs
+  pub unresolved_symbols: UnresolvedSymbols,
+}
+
+pub type LinkerModuleVec = IndexVec<ModuleId, LinkerModule>;
+
 pub struct Linker<'graph> {
   graph: &'graph mut Graph,
 }
@@ -25,14 +42,21 @@ impl<'graph> Linker<'graph> {
   }
 
   pub fn link(&mut self) {
-    self.mark_module_wrapped();
+    // Here take the symbols to avoid borrow graph and mut borrow graph at same time
+    let mut symbols = std::mem::take(&mut self.graph.symbols);
+    // Here add linker module for each module to avoid borrow module and mut borrow module at same time
+    let mut linker_modules = IndexVec::from_vec(
+      self.graph.modules.iter().map(|_| LinkerModule::default()).collect::<Vec<_>>(),
+    );
+
+    self.mark_module_wrapped(&mut symbols, &mut linker_modules);
     // propagate star exports
     for id in &self.graph.sorted_modules {
       let importer = &self.graph.modules[*id];
       match importer {
         Module::Normal(importer) => {
           let resolved = importer.resolve_star_exports(&self.graph.modules);
-          self.graph.modules[*id].expect_normal_mut().resolved_star_exports = resolved;
+          linker_modules[*id].resolved_star_exports = resolved;
         }
         Module::External(_) => {
           // meaningless
@@ -41,55 +65,34 @@ impl<'graph> Linker<'graph> {
     }
     // Mark namespace symbol for namespace referenced
     // Create symbols for external module
-    // Create symbols for import cjs module
-    Self::mark_extra_symbols(self.graph);
+    self.mark_extra_symbols(&mut symbols, &mut linker_modules);
 
-    let mut modules_unresolved_symbols = index_vec::index_vec![
-      FxHashMap::default();
-      self.graph.modules.len()
-    ];
     self.graph.sorted_modules.clone().into_iter().for_each(|id| {
-      self.resolve_exports(id);
-      self.resolve_imports(id, &mut modules_unresolved_symbols[id]);
+      let linker_module = &mut linker_modules[id];
+      self.resolve_exports(id, &mut symbols, linker_module);
+      self.resolve_imports(id, &mut symbols, linker_module);
     });
-    self.graph.modules.iter_mut().for_each(|module| {
-      if !modules_unresolved_symbols[module.id()].is_empty() {
-        match module {
-          Module::Normal(module) => {
-            modules_unresolved_symbols[module.id].values().for_each(|un_resolve_symbol| {
-              module.generate_symbol_import_and_use(
-                &mut self.graph.symbols,
-                un_resolve_symbol.importee_namespace,
-              );
-            });
-            module.unresolved_symbols.extend(modules_unresolved_symbols[module.id].drain());
-          }
-          Module::External(_) => {}
-        }
-      }
-    });
+
+    // Set the symbols back and add linker modules to graph
+    self.graph.symbols = symbols;
+    self.graph.linker_modules = linker_modules;
   }
 
   #[allow(clippy::too_many_lines)]
-  fn mark_module_wrapped(&mut self) {
+  fn mark_module_wrapped(&self, symbols: &mut Symbols, linker_modules: &mut LinkerModuleVec) {
     // Detect module need wrapped, here has two cases:
     // - Commonjs module, because cjs symbols can't static binding, it need to be wrapped and lazy evaluated.
     // - Import esm module at commonjs module.
-    let mut module_to_wrapped = index_vec::index_vec![
-      false;
-      self.graph.modules.len()
-    ];
-
     for module in &self.graph.modules {
       match module {
         Module::Normal(module) => {
           if module.exports_kind == ExportsKind::CommonJs {
-            wrap_module(self.graph, module.id, &mut module_to_wrapped);
+            self.wrap_module(module.id, symbols, linker_modules);
           } else {
             // Should mark wrapped for require import module
             module.import_records.iter().for_each(|record| {
               if record.kind == ImportKind::Require {
-                wrap_module(self.graph, record.resolved_module, &mut module_to_wrapped);
+                self.wrap_module(record.resolved_module, symbols, linker_modules);
               }
             });
           }
@@ -98,53 +101,45 @@ impl<'graph> Linker<'graph> {
       }
     }
 
-    // Generate symbol for wrap module declaration
-    // Case commonjs, eg var require_a = __commonJS()
-    // Case esm, eg var init_a = __esm()
-    for (module_id, wrapped) in module_to_wrapped.into_iter_enumerated() {
-      if wrapped {
-        match &mut self.graph.modules[module_id] {
-          Module::Normal(module) => {
-            module.create_wrap_symbol(&mut self.graph.symbols);
-            let name = if module.exports_kind == ExportsKind::CommonJs {
-              "__commonJS".into()
-            } else {
-              "__esm".into()
-            };
-            let runtime_symbol = self.graph.runtime.resolve_symbol(&name);
-            module.generate_symbol_import_and_use(&mut self.graph.symbols, runtime_symbol);
-          }
-          Module::External(_) => {}
-        };
-      }
-    }
-
     // Generate symbol for import warp module
     // Case esm import commonjs, eg var commonjs_ns = __toESM(require_a())
     // Case commonjs require esm, eg (init_esm(), __toCommonJS(esm_ns))
     // Case esm export star commonjs, eg __reExport(esm_ns, __toESM(require_a())
-    let mut imported_symbols = vec![];
-
     for module in &self.graph.modules {
       match module {
         Module::Normal(importer) => {
           importer.import_records.iter().for_each(|r| {
+            let importee_linker_module = &linker_modules[r.resolved_module];
             let importee = &self.graph.modules[r.resolved_module];
             let Module::Normal(importee) = importee else {
               return;
             };
-
-            if let Some(importee_warp_symbol) = importee.wrap_symbol {
-              imported_symbols.push((importer.id, importee_warp_symbol));
-              imported_symbols.push((importer.id, importee.namespace_symbol.0));
+            if let Some(importee_warp_symbol) = importee_linker_module.wrap_symbol {
+              let importer_linker_module = &mut linker_modules[importer.id];
+              importer.generate_symbol_import_and_use(
+                importee_warp_symbol,
+                importer_linker_module,
+                symbols,
+              );
+              importer.generate_symbol_import_and_use(
+                importee.namespace_symbol.0,
+                importer_linker_module,
+                symbols,
+              );
               match (importer.exports_kind, importee.exports_kind) {
                 (ExportsKind::Esm, ExportsKind::CommonJs) => {
-                  imported_symbols
-                    .push((importer.id, self.graph.runtime.resolve_symbol(&"__toESM".into())));
+                  importer.generate_symbol_import_and_use(
+                    self.graph.runtime.resolve_symbol(&"__toESM".into()),
+                    importer_linker_module,
+                    symbols,
+                  );
                 }
                 (_, ExportsKind::Esm) => {
-                  imported_symbols
-                    .push((importer.id, self.graph.runtime.resolve_symbol(&"__toCommonJS".into())));
+                  importer.generate_symbol_import_and_use(
+                    self.graph.runtime.resolve_symbol(&"__toCommonJS".into()),
+                    importer_linker_module,
+                    symbols,
+                  );
                 }
                 _ => {}
               }
@@ -155,8 +150,11 @@ impl<'graph> Linker<'graph> {
             match &self.graph.modules[rec.resolved_module] {
               Module::Normal(importee) => {
                 if importee.exports_kind == ExportsKind::CommonJs {
-                  imported_symbols
-                    .push((importer.id, self.graph.runtime.resolve_symbol(&"__reExport".into())));
+                  importer.generate_symbol_import_and_use(
+                    self.graph.runtime.resolve_symbol(&"__reExport".into()),
+                    &mut linker_modules[importer.id],
+                    symbols,
+                  );
                 }
               }
               Module::External(_) => {}
@@ -166,83 +164,75 @@ impl<'graph> Linker<'graph> {
         Module::External(_) => {}
       }
     }
+  }
 
-    for (module, symbol) in imported_symbols {
-      let importer = &mut self.graph.modules[module];
-      match importer {
-        Module::Normal(importer) => {
-          importer.generate_symbol_import_and_use(&mut self.graph.symbols, symbol);
-        }
-        Module::External(_) => {}
-      }
+  fn wrap_module(
+    &self,
+    target: ModuleId,
+    symbols: &mut Symbols,
+    linker_modules: &mut LinkerModuleVec,
+  ) {
+    let linker_module = &mut linker_modules[target];
+    if linker_module.wrap_symbol.is_some() {
+      return;
     }
 
-    #[allow(clippy::items_after_statements)]
-    fn wrap_module(
-      graph: &Graph,
-      target: ModuleId,
-      module_to_wrapped: &mut IndexVec<ModuleId, bool>,
-    ) {
-      if module_to_wrapped[target] {
-        return;
+    // Generate symbol for wrap module declaration
+    // Case commonjs, eg var require_a = __commonJS()
+    // Case esm, eg var init_a = __esm()
+    match &self.graph.modules[target] {
+      Module::Normal(module) => {
+        module.create_wrap_symbol(linker_module, symbols);
+        let name = if module.exports_kind == ExportsKind::CommonJs {
+          "__commonJS".into()
+        } else {
+          "__esm".into()
+        };
+        let runtime_symbol = self.graph.runtime.resolve_symbol(&name);
+        module.generate_symbol_import_and_use(runtime_symbol, linker_module, symbols);
+        module.import_records.iter().for_each(|record| {
+          self.wrap_module(record.resolved_module, symbols, linker_modules);
+        });
       }
-
-      match &graph.modules[target] {
-        Module::Normal(module) => {
-          module_to_wrapped[target] = true;
-          module.import_records.iter().for_each(|record| {
-            wrap_module(graph, record.resolved_module, module_to_wrapped);
-          });
-        }
-        Module::External(_) => {}
-      }
+      Module::External(_) => {}
     }
   }
 
   #[allow(clippy::needless_collect)]
-  fn mark_extra_symbols(graph: &mut Graph) {
-    for id in &graph.sorted_modules {
-      let importer = &graph.modules[*id];
-      let importee_list = importer
+  fn mark_extra_symbols(&mut self, symbols: &mut Symbols, linker_modules: &mut LinkerModuleVec) {
+    for id in &self.graph.sorted_modules {
+      let importer = &self.graph.modules[*id];
+      importer
         .import_records()
         .iter()
         .filter_map(|rec| {
           (rec.is_import_namespace && rec.resolved_module.is_valid()).then_some(rec.resolved_module)
         })
-        .collect::<Vec<_>>();
+        .for_each(|importee| {
+          self.graph.modules[importee]
+            .mark_symbol_for_namespace_referenced(&mut linker_modules[importee]);
+        });
 
       // Create symbols for external module
-      // Create symbols for import cjs module
       let mut extra_symbols = vec![];
       match importer {
         Module::Normal(importer) => {
           importer.named_imports.iter().for_each(|(_id, info)| {
             let import_record = &importer.import_records[info.record_id];
-            let importee = &graph.modules[import_record.resolved_module];
-            match importee {
-              Module::Normal(importee) => {
-                if importee.exports_kind == ExportsKind::CommonJs {
-                  extra_symbols.push((
-                    import_record.resolved_module,
-                    info.imported.clone(),
-                    info.is_imported_star,
-                  ));
-                }
-              }
-              Module::External(_) => {
-                extra_symbols.push((
-                  import_record.resolved_module,
-                  info.imported.clone(),
-                  info.is_imported_star,
-                ));
-              }
+            let importee = &self.graph.modules[import_record.resolved_module];
+            if let Module::External(_) = importee {
+              extra_symbols.push((
+                import_record.resolved_module,
+                info.imported.clone(),
+                info.is_imported_star,
+              ));
             }
           });
           importer.named_exports.iter().for_each(|(_, export)| match &export {
             LocalOrReExport::Local(_) => {}
             LocalOrReExport::Re(re) => {
               let import_record = &importer.import_records[re.record_id];
-              let importee = &graph.modules[import_record.resolved_module];
+              let importee = &self.graph.modules[import_record.resolved_module];
               if let Module::External(_) = importee {
                 extra_symbols.push((
                   import_record.resolved_module,
@@ -256,22 +246,18 @@ impl<'graph> Linker<'graph> {
         Module::External(_) => {}
       }
       extra_symbols.into_iter().for_each(|(importee, imported, is_imported_star)| {
-        let importee = &mut graph.modules[importee];
+        let importee = &mut self.graph.modules[importee];
         match importee {
           Module::Normal(_) => {}
           Module::External(importee) => {
-            importee.add_export_symbol(&mut graph.symbols, imported, is_imported_star);
+            importee.add_export_symbol(symbols, imported, is_imported_star);
           }
         }
-      });
-
-      importee_list.into_iter().for_each(|importee| {
-        graph.modules[importee].mark_symbol_for_namespace_referenced();
       });
     }
   }
 
-  fn resolve_exports(&mut self, id: ModuleId) {
+  fn resolve_exports(&self, id: ModuleId, symbols: &mut Symbols, linker_module: &mut LinkerModule) {
     let importer = &self.graph.modules[id];
     match importer {
       crate::bundler::module::module::Module::Normal(importer) => {
@@ -286,14 +272,11 @@ impl<'graph> Linker<'graph> {
                 exported,
                 &mut Vec::default(),
                 &self.graph.modules,
-                &mut self.graph.symbols,
+                symbols,
               ),
             )
           })
           .collect::<FxHashMap<_, _>>();
-
-        let mut exported_name_to_local_symbol: FxHashMap<Atom, ResolvedExport> =
-          FxHashMap::default();
 
         #[allow(clippy::items_after_statements)]
         fn create_local_symbol_and_reference(
@@ -324,23 +307,20 @@ impl<'graph> Linker<'graph> {
             }
             Resolution::Ambiguous => panic!("named export must be resolved"),
             Resolution::Found(ext) => {
-              let tmp =
-                create_local_symbol_and_reference(ext, importer.id, &mut self.graph.symbols);
-              exported_name_to_local_symbol.insert(exported.clone(), ResolvedExport::Symbol(tmp.0));
+              let tmp = create_local_symbol_and_reference(ext, importer.id, symbols);
+              linker_module
+                .resolved_exports
+                .insert(exported.clone(), ResolvedExport::Symbol(tmp.0));
             }
             Resolution::Runtime(symbol_ref) => {
-              exported_name_to_local_symbol.insert(
+              let local_symbol_ref = if importer.is_entry {
+                Some(importer.generate_local_symbol(exported.clone(), linker_module, symbols))
+              } else {
+                None
+              };
+              linker_module.resolved_exports.insert(
                 exported.clone(),
-                ResolvedExport::Runtime(ResolvedExportRuntime::new(
-                  symbol_ref,
-                  if importer.is_entry {
-                    Some(symbol_ref)
-                    // FIXME: this is wrong, should be generate local symbol for runtime symbol
-                    // Some(importer.generate_local_symbol(&mut self.graph.symbols, *exported))
-                  } else {
-                    None
-                  },
-                )),
+                ResolvedExport::Runtime(ResolvedExportRuntime::new(symbol_ref, local_symbol_ref)),
               );
             }
           }
@@ -349,33 +329,22 @@ impl<'graph> Linker<'graph> {
         resolutions.into_iter().for_each(|(exported, left)| match left {
           Resolution::None => panic!("shouldn't has left which is None"),
           Resolution::Found(ext) => {
-            let tmp = create_local_symbol_and_reference(ext, importer.id, &mut self.graph.symbols);
-            exported_name_to_local_symbol.insert(exported.clone(), ResolvedExport::Symbol(tmp.0));
+            let tmp = create_local_symbol_and_reference(ext, importer.id, symbols);
+            linker_module.resolved_exports.insert(exported.clone(), ResolvedExport::Symbol(tmp.0));
           }
           Resolution::Ambiguous => {}
           Resolution::Runtime(symbol_ref) => {
-            exported_name_to_local_symbol.insert(
+            let local_symbol_ref = if importer.is_entry {
+              Some(importer.generate_local_symbol(exported.clone(), linker_module, symbols))
+            } else {
+              None
+            };
+            linker_module.resolved_exports.insert(
               exported.clone(),
-              ResolvedExport::Runtime(ResolvedExportRuntime::new(
-                symbol_ref,
-                if importer.is_entry {
-                  Some(symbol_ref)
-                  // FIXME: this is wrong, should be generate local symbol for runtime symbol
-                  // Some(importer.generate_local_symbol(&mut self.graph.symbols, *exported))
-                } else {
-                  None
-                },
-              )),
+              ResolvedExport::Runtime(ResolvedExportRuntime::new(symbol_ref, local_symbol_ref)),
             );
           }
         });
-
-        match &mut self.graph.modules[id] {
-          Module::Normal(importer) => {
-            importer.resolved_exports = exported_name_to_local_symbol;
-          }
-          Module::External(_) => unreachable!(),
-        };
       }
       crate::bundler::module::module::Module::External(_) => {
         // TODO: handle external module
@@ -383,7 +352,7 @@ impl<'graph> Linker<'graph> {
     }
   }
 
-  fn resolve_imports(&mut self, id: ModuleId, unresolved_symbols: &mut UnresolvedSymbols) {
+  fn resolve_imports(&self, id: ModuleId, symbols: &mut Symbols, linker_module: &mut LinkerModule) {
     let importer = &self.graph.modules[id];
     match importer {
       Module::Normal(importer) => {
@@ -399,29 +368,35 @@ impl<'graph> Linker<'graph> {
                   &info.imported,
                   &mut Vec::default(),
                   &self.graph.modules,
-                  &mut self.graph.symbols,
+                  symbols,
                 ) {
                   Resolution::Ambiguous | Resolution::None => panic!(""),
                   Resolution::Found(founded) => founded,
                   Resolution::Runtime(_) => {
                     let reference_name =
                       if info.is_imported_star { None } else { Some(info.imported.clone()) };
-                    unresolved_symbols.insert(
+                    linker_module.unresolved_symbols.insert(
                       info.imported_as,
                       UnresolvedSymbol {
                         importee_namespace: importee.namespace_symbol.0,
                         reference_name,
                       },
                     );
+                    importer.generate_symbol_import_and_use(
+                      importee.namespace_symbol.0,
+                      linker_module,
+                      symbols,
+                    );
+
                     return;
                   }
                 }
               };
-              self.graph.symbols.union(info.imported_as, resolved_ref);
+              symbols.union(info.imported_as, resolved_ref);
             }
             Module::External(importee) => {
               let resolved_ref = importee.resolve_export(&info.imported, info.is_imported_star);
-              self.graph.symbols.union(info.imported_as, resolved_ref);
+              symbols.union(info.imported_as, resolved_ref);
             }
           }
         });

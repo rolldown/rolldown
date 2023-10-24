@@ -7,7 +7,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
-  ResolvedExport, ResourceId, StmtInfo, StmtInfoId, SymbolRef, VirtualStmtInfo,
+  ResourceId, StmtInfo, StmtInfoId, SymbolRef, VirtualStmtInfo,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -15,7 +15,7 @@ use string_wizard::MagicString;
 
 use super::{module::ModuleRenderContext, module_id::ModuleVec};
 use crate::bundler::{
-  graph::symbols::Symbols,
+  graph::{linker::LinkerModule, symbols::Symbols},
   module::module::Module,
   source_mutations::BoxedSourceMutation,
   visitors::{
@@ -41,19 +41,9 @@ pub struct NormalModule {
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
   pub exports_kind: ExportsKind,
-  // resolved
-  pub virtual_stmt_infos: Vec<VirtualStmtInfo>,
-  pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
-  pub resolved_star_exports: Vec<ModuleId>,
   pub scope: ScopeTree,
-  pub default_export_symbol: Option<SymbolId>,
   pub namespace_symbol: (SymbolRef, ReferenceId),
-  pub is_symbol_for_namespace_referenced: bool,
-  pub wrap_symbol: Option<SymbolRef>,
-  // Mark the symbol symbol maybe from commonjs
-  // - The importee has `export * from 'cjs'`
-  // - The importee is commonjs
-  pub unresolved_symbols: UnresolvedSymbols,
+  pub default_export_symbol: Option<SymbolId>,
 }
 
 #[derive(Debug, Clone)]
@@ -83,21 +73,20 @@ impl NormalModule {
     // FIXME: should not clone
     let source = self.ast.source();
     let mut source = MagicString::new(source.to_string());
-
+    let self_linker_module = &ctx.graph.linker_modules[self.id];
     let ctx = RendererContext::new(
-      ctx.symbols,
+      ctx.graph,
       ctx.canonical_names,
       &mut source,
       ctx.module_to_chunk,
       ctx.chunks,
-      ctx.modules,
       self,
-      ctx.runtime,
+      self_linker_module,
     );
 
     if self.exports_kind == ExportsKind::CommonJs {
       CommonJsSourceRender::new(ctx).apply();
-    } else if self.wrap_symbol.is_some() {
+    } else if self_linker_module.wrap_symbol.is_some() {
       EsmWrapSourceRender::new(ctx).apply();
     } else {
       EsmSourceRender::new(ctx).apply();
@@ -113,10 +102,10 @@ impl NormalModule {
     }
   }
 
-  pub fn initialize_namespace(&mut self) {
-    if !self.is_symbol_for_namespace_referenced {
-      self.is_symbol_for_namespace_referenced = true;
-      self.virtual_stmt_infos.push(VirtualStmtInfo {
+  pub fn initialize_namespace(&self, self_linker_module: &mut LinkerModule) {
+    if !self_linker_module.is_symbol_for_namespace_referenced {
+      self_linker_module.is_symbol_for_namespace_referenced = true;
+      self_linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
         declared_symbols: vec![self.namespace_symbol.0.symbol],
         ..Default::default()
       });
@@ -358,8 +347,8 @@ impl NormalModule {
     resolved
   }
 
-  pub fn create_wrap_symbol(&mut self, symbols: &mut Symbols) {
-    if self.wrap_symbol.is_none() {
+  pub fn create_wrap_symbol(&self, self_linker_module: &mut LinkerModule, symbols: &mut Symbols) {
+    if self_linker_module.wrap_symbol.is_none() {
       let name = format!(
         "{}_{}",
         if self.exports_kind == ExportsKind::CommonJs { "require" } else { "init" },
@@ -367,29 +356,35 @@ impl NormalModule {
       )
       .into();
       let symbol = symbols.tables[self.id].create_symbol(name);
-      self.wrap_symbol = Some((self.id, symbol).into());
-      self
+      self_linker_module.wrap_symbol = Some((self.id, symbol).into());
+      self_linker_module
         .virtual_stmt_infos
         .push(VirtualStmtInfo { declared_symbols: vec![symbol], ..Default::default() });
-      self.initialize_namespace();
+      self.initialize_namespace(self_linker_module);
     }
   }
 
   pub fn generate_symbol_import_and_use(
-    &mut self,
-    symbols: &mut Symbols,
+    &self,
     symbol_ref_from_importee: SymbolRef,
+    self_linker_module: &mut LinkerModule,
+    symbols: &mut Symbols,
   ) {
     debug_assert!(symbol_ref_from_importee.owner != self.id);
     let name = symbols.get_original_name(symbol_ref_from_importee).clone();
-    let local_symbol_ref = self.generate_local_symbol(symbols, name);
+    let local_symbol_ref = self.generate_local_symbol(name, self_linker_module, symbols);
     symbols.union(local_symbol_ref, symbol_ref_from_importee);
   }
 
-  pub fn generate_local_symbol(&mut self, symbols: &mut Symbols, name: Atom) -> SymbolRef {
+  pub fn generate_local_symbol(
+    &self,
+    name: Atom,
+    self_linker_module: &mut LinkerModule,
+    symbols: &mut Symbols,
+  ) -> SymbolRef {
     let local_symbol = symbols.tables[self.id].create_symbol(name);
     let local_symbol_ref = (self.id, local_symbol).into();
-    self.virtual_stmt_infos.push(VirtualStmtInfo {
+    self_linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
       // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
       // The deconflict for runtime symbols would be handled in the deconflict on cross-chunk-imported
       // symbols

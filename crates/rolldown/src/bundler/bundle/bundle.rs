@@ -124,7 +124,7 @@ impl<'a> Bundle<'a> {
 
     chunks.iter_mut().for_each(|chunk| {
       if chunk.entry_module.is_some() {
-        chunk.initialize_exports(&mut self.graph.modules, &self.graph.symbols);
+        chunk.initialize_exports(&self.graph.linker_modules, &self.graph.symbols);
       }
     });
 

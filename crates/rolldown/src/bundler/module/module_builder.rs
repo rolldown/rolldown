@@ -53,19 +53,13 @@ impl NormalModuleBuilder {
       import_records: self.import_records.unwrap(),
       imports: self.imports.unwrap(),
       star_exports: self.star_exports.unwrap(),
-      resolved_exports: FxHashMap::default(),
-      resolved_star_exports: Vec::default(),
-      scope: self.scope.unwrap(),
       default_export_symbol: self.default_export_symbol,
+      scope: self.scope.unwrap(),
       namespace_symbol: self.namespace_symbol.unwrap(),
-      is_symbol_for_namespace_referenced: false,
       source_mutations: Vec::default(),
       exports_kind: self.exports_kind.unwrap_or(ExportsKind::Esm),
-      wrap_symbol: None,
       module_type: self.module_type,
-      unresolved_symbols: FxHashMap::default(),
       is_entry: self.is_entry,
-      virtual_stmt_infos: Vec::default(),
     }
   }
 }

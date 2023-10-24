@@ -11,7 +11,6 @@ pub struct ExternalModule {
   pub exec_order: u32,
   pub resource_id: ResourceId,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
-  pub is_symbol_for_namespace_referenced: bool,
   pub symbols_imported_by_others: FxHashMap<Atom, SymbolRef>,
   pub namespace_name: Atom,
 }
@@ -24,7 +23,6 @@ impl ExternalModule {
       exec_order: u32::MAX,
       resource_id,
       import_records: IndexVec::default(),
-      is_symbol_for_namespace_referenced: false,
       symbols_imported_by_others: FxHashMap::default(),
       namespace_name,
     }

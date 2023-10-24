@@ -15,6 +15,7 @@ use crate::bundler::{
   },
 };
 
+// Because the linker will add some symbols for each module, so here abstract `LinkerModule` to instead of `Module`, avoid mutate module and borrow module at same time.
 #[derive(Debug, Default)]
 pub struct LinkerModule {
   // The symbol for wrapped module

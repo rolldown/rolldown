@@ -73,7 +73,7 @@ impl NormalModule {
     // FIXME: should not clone
     let source = self.ast.source();
     let mut source = MagicString::new(source.to_string());
-    let linker_module = &ctx.graph.linker_modules[self.id];
+    let self_linker_module = &ctx.graph.linker_modules[self.id];
     let ctx = RendererContext::new(
       ctx.graph,
       ctx.canonical_names,
@@ -81,12 +81,12 @@ impl NormalModule {
       ctx.module_to_chunk,
       ctx.chunks,
       self,
-      linker_module,
+      self_linker_module,
     );
 
     if self.exports_kind == ExportsKind::CommonJs {
       CommonJsSourceRender::new(ctx).apply();
-    } else if linker_module.wrap_symbol.is_some() {
+    } else if self_linker_module.wrap_symbol.is_some() {
       EsmWrapSourceRender::new(ctx).apply();
     } else {
       EsmSourceRender::new(ctx).apply();
@@ -102,10 +102,10 @@ impl NormalModule {
     }
   }
 
-  pub fn initialize_namespace(&self, linker_module: &mut LinkerModule) {
-    if !linker_module.is_symbol_for_namespace_referenced {
-      linker_module.is_symbol_for_namespace_referenced = true;
-      linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
+  pub fn initialize_namespace(&self, self_linker_module: &mut LinkerModule) {
+    if !self_linker_module.is_symbol_for_namespace_referenced {
+      self_linker_module.is_symbol_for_namespace_referenced = true;
+      self_linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
         declared_symbols: vec![self.namespace_symbol.0.symbol],
         ..Default::default()
       });
@@ -347,8 +347,8 @@ impl NormalModule {
     resolved
   }
 
-  pub fn create_wrap_symbol(&self, linker_module: &mut LinkerModule, symbols: &mut Symbols) {
-    if linker_module.wrap_symbol.is_none() {
+  pub fn create_wrap_symbol(&self, self_linker_module: &mut LinkerModule, symbols: &mut Symbols) {
+    if self_linker_module.wrap_symbol.is_none() {
       let name = format!(
         "{}_{}",
         if self.exports_kind == ExportsKind::CommonJs { "require" } else { "init" },
@@ -356,35 +356,35 @@ impl NormalModule {
       )
       .into();
       let symbol = symbols.tables[self.id].create_symbol(name);
-      linker_module.wrap_symbol = Some((self.id, symbol).into());
-      linker_module
+      self_linker_module.wrap_symbol = Some((self.id, symbol).into());
+      self_linker_module
         .virtual_stmt_infos
         .push(VirtualStmtInfo { declared_symbols: vec![symbol], ..Default::default() });
-      self.initialize_namespace(linker_module);
+      self.initialize_namespace(self_linker_module);
     }
   }
 
   pub fn generate_symbol_import_and_use(
     &self,
     symbol_ref_from_importee: SymbolRef,
-    linker_module: &mut LinkerModule,
+    self_linker_module: &mut LinkerModule,
     symbols: &mut Symbols,
   ) {
     debug_assert!(symbol_ref_from_importee.owner != self.id);
     let name = symbols.get_original_name(symbol_ref_from_importee).clone();
-    let local_symbol_ref = self.generate_local_symbol(name, linker_module, symbols);
+    let local_symbol_ref = self.generate_local_symbol(name, self_linker_module, symbols);
     symbols.union(local_symbol_ref, symbol_ref_from_importee);
   }
 
   pub fn generate_local_symbol(
     &self,
     name: Atom,
-    linker_module: &mut LinkerModule,
+    self_linker_module: &mut LinkerModule,
     symbols: &mut Symbols,
   ) -> SymbolRef {
     let local_symbol = symbols.tables[self.id].create_symbol(name);
     let local_symbol_ref = (self.id, local_symbol).into();
-    linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
+    self_linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
       // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
       // The deconflict for runtime symbols would be handled in the deconflict on cross-chunk-imported
       // symbols

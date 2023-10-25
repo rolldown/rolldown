@@ -2,7 +2,6 @@ pub mod commonjs_source_render;
 pub mod esm_source_render;
 pub mod esm_wrap_source_render;
 pub mod scanner;
-use index_vec::IndexVec;
 use oxc::{
   semantic::ReferenceId,
   span::{Atom, GetSpan, Span},
@@ -12,7 +11,7 @@ use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, UpdateOptions};
 
 use super::{
-  chunk::{chunk::Chunk, ChunkId},
+  chunk::chunk_graph::ChunkGraph,
   graph::{
     graph::Graph,
     linker::LinkerModule,
@@ -25,8 +24,7 @@ pub struct RendererContext<'ast> {
   graph: &'ast Graph,
   final_names: &'ast FxHashMap<SymbolRef, Atom>,
   source: &'ast mut MagicString<'static>,
-  module_to_chunk: &'ast IndexVec<ModuleId, Option<ChunkId>>,
-  chunks: &'ast IndexVec<ChunkId, Chunk>,
+  chunk_graph: &'ast ChunkGraph,
   module: &'ast NormalModule,
   linker_module: &'ast LinkerModule,
   wrap_symbol_name: Option<&'ast Atom>,
@@ -42,8 +40,7 @@ impl<'ast> RendererContext<'ast> {
     graph: &'ast Graph,
     final_names: &'ast FxHashMap<SymbolRef, Atom>,
     source: &'ast mut MagicString<'static>,
-    module_to_chunk: &'ast IndexVec<ModuleId, Option<ChunkId>>,
-    chunks: &'ast IndexVec<ChunkId, Chunk>,
+    chunk_graph: &'ast ChunkGraph,
     module: &'ast NormalModule,
     linker_module: &'ast LinkerModule,
   ) -> Self {
@@ -61,8 +58,7 @@ impl<'ast> RendererContext<'ast> {
       graph,
       final_names,
       source,
-      module_to_chunk,
-      chunks,
+      chunk_graph,
       module,
       linker_module,
       wrap_symbol_name,
@@ -233,8 +229,8 @@ impl<'ast> RendererContext<'ast> {
     if let oxc::ast::ast::Expression::StringLiteral(str) = &expr.source {
       let rec = &self.module.import_records[self.module.imports.get(&expr.span).copied().unwrap()];
 
-      if let Some(chunk_id) = self.module_to_chunk[rec.resolved_module] {
-        let chunk = &self.chunks[chunk_id];
+      if let Some(chunk_id) = self.chunk_graph.module_to_chunk[rec.resolved_module] {
+        let chunk = &self.chunk_graph.chunks[chunk_id];
         self.overwrite(
           str.span.start,
           str.span.end,

@@ -1,4 +1,3 @@
-use index_vec::IndexVec;
 use oxc::span::Atom;
 use rolldown_common::{ModuleId, ResolvedExport, SymbolRef};
 use rustc_hash::FxHashMap;
@@ -17,7 +16,7 @@ use crate::bundler::{
   },
 };
 
-use super::{ChunkId, ChunksVec};
+use super::{chunk_graph::ChunkGraph, ChunkId};
 
 #[derive(Debug, Default)]
 pub struct Chunk {
@@ -94,12 +93,7 @@ impl Chunk {
   }
 
   #[allow(clippy::unnecessary_wraps)]
-  pub fn render(
-    &self,
-    graph: &Graph,
-    module_to_chunk: &IndexVec<ModuleId, Option<ChunkId>>,
-    chunks: &ChunksVec,
-  ) -> anyhow::Result<String> {
+  pub fn render(&self, graph: &Graph, chunk_graph: &ChunkGraph) -> anyhow::Result<String> {
     use rayon::prelude::*;
     let mut joiner = Joiner::with_options(JoinerOptions { separator: Some("\n".to_string()) });
     self
@@ -108,12 +102,7 @@ impl Chunk {
       .copied()
       .map(|id| &graph.modules[id])
       .filter_map(|m| {
-        m.render(ModuleRenderContext {
-          canonical_names: &self.canonical_names,
-          graph,
-          module_to_chunk,
-          chunks,
-        })
+        m.render(ModuleRenderContext { canonical_names: &self.canonical_names, graph, chunk_graph })
       })
       .collect::<Vec<_>>()
       .into_iter()

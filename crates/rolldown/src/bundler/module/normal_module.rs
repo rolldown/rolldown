@@ -78,8 +78,7 @@ impl NormalModule {
       ctx.graph,
       ctx.canonical_names,
       &mut source,
-      ctx.module_to_chunk,
-      ctx.chunks,
+      ctx.chunk_graph,
       self,
       self_linker_module,
     );

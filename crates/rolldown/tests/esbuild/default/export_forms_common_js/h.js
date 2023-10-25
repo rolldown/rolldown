@@ -1,0 +1,1 @@
+export default async function foo() {} foo.prop = 123

@@ -24,6 +24,7 @@ const list = [
 	"require_parent_dir_es6",
 	"simple_common_js",
 	"simple_es6",
+	"export_forms_common_js",
 ];
 const parser = new Parser();
 parser.setLanguage(Go);
@@ -54,9 +55,9 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 		testCaseName = changeCase.snakeCase(testCaseName);
 
 		console.log(testCaseName);
-    if (!list.includes(testCaseName)) {
-      continue;
-    }
+		if (!list.includes(testCaseName)) {
+			continue;
+		}
 		let bundle_field_list = query.captures(child).filter((item) => {
 			return item.name === "element_list";
 		});
@@ -83,9 +84,9 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 		// entry
 		const config = { input: {} };
 		const entryPaths = jsConfig["entryPaths"] ?? [];
-    if (!entryPaths.length) {
-      console.error(chalk.red(`No entryPaths found`))
-    }
+		if (!entryPaths.length) {
+			console.error(chalk.red(`No entryPaths found`));
+		}
 		let input = entryPaths.map((p) => {
 			let normalizedName = p.slice(prefix.length);
 			if (path.isAbsolute(normalizedName)) {
@@ -145,7 +146,7 @@ function processFiles(node) {
 		});
 		return fileList;
 	} catch (err) {
-    console.error(`Error occured when processFiles: ${chalk.red(err)}`)
+		console.error(`Error occured when processFiles: ${chalk.red(err)}`);
 		return [];
 	}
 }
@@ -165,9 +166,9 @@ function processEntryPath(node) {
 
 		return entryList;
 	} catch (err) {
-    console.error(`Error occured when processEntryPath: ${chalk.red(err)}`)
-    return []
-  }
+		console.error(`Error occured when processEntryPath: ${chalk.red(err)}`);
+		return [];
+	}
 }
 
 /**
@@ -195,4 +196,3 @@ function processKeyElement(node, obj) {
 			break;
 	}
 }
-

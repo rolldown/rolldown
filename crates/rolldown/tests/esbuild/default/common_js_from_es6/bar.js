@@ -1,3 +1,3 @@
 export function bar() {
-    return 'bar'
+	return 'bar'
 }

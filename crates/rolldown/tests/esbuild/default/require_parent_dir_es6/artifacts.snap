@@ -3,12 +3,11 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/require_parent_dir_es6
 ---
-# main.js
+# dir_entry_js.js
 
 ```js
 // index.js
 var require_parent_dir_es6_index_default = 123
-
 // dir/entry.js
 
 console.log(require_parent_dir_es6_index_default)

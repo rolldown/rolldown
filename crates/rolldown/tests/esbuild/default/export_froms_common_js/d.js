@@ -1,1 +1,0 @@
-export default class Foo {} Foo.prop = 123

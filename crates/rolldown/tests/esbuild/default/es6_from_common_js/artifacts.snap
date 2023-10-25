@@ -3,14 +3,14 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/es6_from_common_js
 ---
-# main.js
+# entry_js.js
 
 ```js
 // bar.js
 var require_bar = __commonJS({
 'bar.js'(exports, module) {
 exports.bar = function() {
-    return 'bar'
+	return 'bar'
 }
 }
 });
@@ -18,11 +18,11 @@ exports.bar = function() {
 var require_foo = __commonJS({
 'foo.js'(exports, module) {
 exports.foo = function() {
-  return 'foo'
+	return 'foo'
 }
 }
 });
-// main.js
+// entry.js
 var foo_ns = __toESM(require_foo());
 var bar_ns = __toESM(require_bar());
 

@@ -3,15 +3,14 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/simple_es6
 ---
-# main.js
+# entry_js.js
 
 ```js
 // foo.js
 function fn() {
-  return 123
+	return 123
 }
-
-// main.js
+// entry.js
 
 console.log(fn())
 ```

@@ -1,5 +1,5 @@
 class Foo {
-  static foo = new Foo
+	static foo = new Foo
 }
 let foo = Foo.foo
 console.log(foo)

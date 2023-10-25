@@ -3,17 +3,14 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/export_chain
 ---
-# main.js
+# entry_js.js
 
 ```js
 // bar.js
 const c = 123
-
 // foo.js
 
-
-// main.js
-
+// entry.js
 
 export { c as a };
 ```

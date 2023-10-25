@@ -43,9 +43,8 @@ impl Chunk {
                 .iter()
                 .flat_map(|part| part.declared_symbols.iter().copied()),
             )
-            .for_each(|symbol_id| {
-              let canonical_ref =
-                graph.symbols.par_get_canonical_ref((module.id, symbol_id).into());
+            .for_each(|symbol_ref| {
+              let canonical_ref = graph.symbols.par_get_canonical_ref(symbol_ref);
 
               let original_name = graph.symbols.get_original_name(canonical_ref);
 

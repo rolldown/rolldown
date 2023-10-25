@@ -1,5 +1,3 @@
-use oxc::semantic::SymbolId;
-
 use crate::SymbolRef;
 
 index_vec::define_index_type! {
@@ -10,7 +8,7 @@ index_vec::define_index_type! {
 pub struct StmtInfo {
   pub stmt_idx: usize,
   // currently, we only store top level symbols
-  pub declared_symbols: Vec<SymbolId>,
+  pub declared_symbols: Vec<SymbolRef>,
   // We will add symbols of other modules to `referenced_symbols`, so we need `SymbolRef`
   // here instead of `SymbolId`.
   /// Top level symbols referenced by this statement.
@@ -20,6 +18,6 @@ pub struct StmtInfo {
 // Because we want declare symbols at linker, it shouldn't mutate the original `StmtInfo`.
 #[derive(Default, Debug)]
 pub struct VirtualStmtInfo {
-  pub declared_symbols: Vec<SymbolId>,
+  pub declared_symbols: Vec<SymbolRef>,
   pub referenced_symbols: Vec<SymbolRef>,
 }

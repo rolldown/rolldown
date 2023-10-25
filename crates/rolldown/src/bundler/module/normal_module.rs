@@ -103,7 +103,7 @@ impl NormalModule {
     if !self_linker_module.is_symbol_for_namespace_referenced {
       self_linker_module.is_symbol_for_namespace_referenced = true;
       self_linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
-        declared_symbols: vec![self.namespace_symbol.symbol],
+        declared_symbols: vec![self.namespace_symbol],
         ..Default::default()
       });
     }
@@ -335,9 +335,10 @@ impl NormalModule {
       .into();
       let symbol = symbols.create_symbol(self.id, name).symbol;
       self_linker_module.wrap_symbol = Some((self.id, symbol).into());
-      self_linker_module
-        .virtual_stmt_infos
-        .push(VirtualStmtInfo { declared_symbols: vec![symbol], ..Default::default() });
+      self_linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
+        declared_symbols: vec![(self.id, symbol).into()],
+        ..Default::default()
+      });
       self.initialize_namespace(self_linker_module);
     }
   }
@@ -365,7 +366,7 @@ impl NormalModule {
       // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
       // The deconflict for runtime symbols would be handled in the deconflict on cross-chunk-imported
       // symbols
-      declared_symbols: vec![local_symbol_ref.symbol],
+      declared_symbols: vec![local_symbol_ref],
       ..Default::default()
     });
     local_symbol_ref

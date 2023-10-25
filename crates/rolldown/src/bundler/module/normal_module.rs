@@ -126,13 +126,9 @@ impl NormalModule {
 
     let ret: FxHashSet<&'modules Atom> = {
       self
-        .star_exports
-        .iter()
-        .copied()
-        .map(|id| &self.import_records[id])
-        .flat_map(|rec| {
-          debug_assert!(rec.resolved_module.is_valid());
-          let importee = &modules[rec.resolved_module];
+        .get_star_exports_modules()
+        .flat_map(|id| {
+          let importee = &modules[id];
           match importee {
             Module::Normal(importee) => importee
               .get_exported_names(stack, modules)
@@ -219,9 +215,8 @@ impl NormalModule {
         return Resolution::None;
       }
       let mut star_resolution: Option<SymbolRef> = None;
-      for e in &self.star_exports {
-        let rec = &self.import_records[*e];
-        let importee = &modules[rec.resolved_module];
+      for module_id in self.get_star_exports_modules() {
+        let importee = &modules[module_id];
         match importee {
           Module::Normal(importee) => {
             match importee.resolve_export(export_name, resolve_set, modules, symbols) {
@@ -266,11 +261,9 @@ impl NormalModule {
     let resolution = self.resolve_export(export_name, resolve_set, modules, symbols);
     if matches!(resolution, Resolution::None) {
       let has_cjs_star_resolution = self
-        .star_exports
-        .iter()
-        .map(|rec_id| {
-          let rec = &self.import_records[*rec_id];
-          let importee = &modules[rec.resolved_module];
+        .get_star_exports_modules()
+        .map(|id| {
+          let importee = &modules[id];
           match importee {
             Module::Normal(importee) => importee.exports_kind == ExportsKind::CommonJs,
             Module::External(_) => false,
@@ -317,14 +310,7 @@ impl NormalModule {
   pub fn resolve_star_exports(&self, modules: &ModuleVec) -> Vec<ModuleId> {
     let mut visited = FxHashSet::default();
     let mut resolved = vec![];
-    let mut queue = self
-      .star_exports
-      .iter()
-      .map(|rec_id| {
-        let rec = &self.import_records[*rec_id];
-        rec.resolved_module
-      })
-      .collect::<Vec<_>>();
+    let mut queue = self.get_star_exports_modules().collect::<Vec<_>>();
 
     while let Some(importee_id) = queue.pop() {
       if !visited.contains(&importee_id) {
@@ -332,12 +318,7 @@ impl NormalModule {
         resolved.push(importee_id);
         let importee = &modules[importee_id];
         match importee {
-          Module::Normal(importee) => queue.extend(
-            importee
-              .star_exports
-              .iter()
-              .map(|rec_id| importee.import_records[*rec_id].resolved_module),
-          ),
+          Module::Normal(importee) => queue.extend(importee.get_star_exports_modules()),
           Module::External(_) => {}
         }
       }
@@ -391,5 +372,17 @@ impl NormalModule {
       ..Default::default()
     });
     local_symbol_ref
+  }
+
+  pub fn get_star_exports_modules(&self) -> impl Iterator<Item = ModuleId> + '_ {
+    self.star_exports.iter().map(|rec_id| {
+      let rec = &self.import_records[*rec_id];
+      rec.resolved_module
+    })
+  }
+
+  pub fn get_import_module_by_span(&self, span: Span) -> ModuleId {
+    let record = &self.import_records[self.imports[&span]];
+    record.resolved_module
   }
 }

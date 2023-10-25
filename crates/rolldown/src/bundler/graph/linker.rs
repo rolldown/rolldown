@@ -146,20 +146,17 @@ impl<'graph> Linker<'graph> {
               }
             }
           });
-          importer.star_exports.iter().for_each(|record_id| {
-            let rec = &importer.import_records[*record_id];
-            match &self.graph.modules[rec.resolved_module] {
-              Module::Normal(importee) => {
-                if importee.exports_kind == ExportsKind::CommonJs {
-                  importer.generate_symbol_import_and_use(
-                    self.graph.runtime.resolve_symbol(&"__reExport".into()),
-                    &mut linker_modules[importer.id],
-                    symbols,
-                  );
-                }
+          importer.get_star_exports_modules().for_each(|id| match &self.graph.modules[id] {
+            Module::Normal(importee) => {
+              if importee.exports_kind == ExportsKind::CommonJs {
+                importer.generate_symbol_import_and_use(
+                  self.graph.runtime.resolve_symbol(&"__reExport".into()),
+                  &mut linker_modules[importer.id],
+                  symbols,
+                );
               }
-              Module::External(_) => {}
             }
+            Module::External(_) => {}
           });
         }
         Module::External(_) => {}

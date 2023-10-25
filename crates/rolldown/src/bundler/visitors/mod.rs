@@ -151,9 +151,7 @@ impl<'ast> RendererContext<'ast> {
   }
 
   pub fn get_importee_by_span(&self, span: Span) -> &Module {
-    let record_id = &self.module.imports[&span];
-    let rec = &self.module.import_records[*record_id];
-    &self.graph.modules[rec.resolved_module]
+    &self.graph.modules[self.module.get_import_module_by_span(&span)]
   }
 
   pub fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
@@ -227,9 +225,9 @@ impl<'ast> RendererContext<'ast> {
 
   pub fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
     if let oxc::ast::ast::Expression::StringLiteral(str) = &expr.source {
-      let rec = &self.module.import_records[self.module.imports.get(&expr.span).copied().unwrap()];
-
-      if let Some(chunk_id) = self.chunk_graph.module_to_chunk[rec.resolved_module] {
+      if let Some(chunk_id) =
+        self.chunk_graph.module_to_chunk[self.module.get_import_module_by_span(&expr.span)]
+      {
         let chunk = &self.chunk_graph.chunks[chunk_id];
         self.overwrite(
           str.span.start,
@@ -245,9 +243,9 @@ impl<'ast> RendererContext<'ast> {
 
   pub fn visit_import_declaration(&mut self, decl: &'ast oxc::ast::ast::ImportDeclaration<'ast>) {
     self.remove_node(decl.span);
-    let rec = &self.module.import_records[self.module.imports.get(&decl.span).copied().unwrap()];
-    let importee = &self.graph.modules[rec.resolved_module];
-    let importee_linker_module = &self.graph.linker_modules[rec.resolved_module];
+    let module_id = self.module.get_import_module_by_span(&decl.span);
+    let importee = &self.graph.modules[module_id];
+    let importee_linker_module = &self.graph.linker_modules[module_id];
     let start = self.first_stmt_start.unwrap_or(decl.span.start);
     if let Module::Normal(importee) = importee {
       if importee.exports_kind == ExportsKind::CommonJs {

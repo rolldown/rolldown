@@ -89,7 +89,7 @@ impl<'a> Scanner<'a> {
   }
 
   fn add_declared_id(&mut self, id: SymbolId) {
-    self.current_stmt_info.declared_symbols.push(id);
+    self.current_stmt_info.declared_symbols.push((self.idx, id).into());
   }
 
   fn get_root_binding(&self, name: &Atom) -> SymbolId {
@@ -203,7 +203,7 @@ impl<'a> Scanner<'a> {
           oxc::ast::ast::Declaration::FunctionDeclaration(fn_decl) => {
             let id = fn_decl.id.as_ref().unwrap();
             // FIXME: remove this line after https://github.com/web-infra-dev/oxc/pull/843 being merged.
-            self.current_stmt_info.declared_symbols.push(id.expect_symbol_id());
+            self.add_declared_id(id.expect_symbol_id());
             self.add_local_export(&id.name, id.expect_symbol_id());
           }
           oxc::ast::ast::Declaration::ClassDeclaration(cls_decl) => {
@@ -247,8 +247,7 @@ impl<'a> Scanner<'a> {
         SymbolFlags::None,
         self.scope.root_scope_id(),
       );
-
-      self.current_stmt_info.declared_symbols.push(sym_id);
+      self.add_declared_id(sym_id);
       sym_id
     });
     self.add_local_default_export(local);

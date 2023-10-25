@@ -34,7 +34,7 @@ impl ExternalModule {
     self
       .symbols_imported_by_others
       .entry(symbol.clone())
-      .or_insert_with(|| (self.id, symbols.tables[self.id].create_symbol(symbol.clone())).into());
+      .or_insert_with(|| symbols.create_symbol(self.id, symbol.clone()));
   }
 
   pub fn resolve_export(&self, exported: &Atom, is_star: bool) -> SymbolRef {

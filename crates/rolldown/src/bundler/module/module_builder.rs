@@ -1,6 +1,6 @@
 use index_vec::IndexVec;
 use oxc::{
-  semantic::{ReferenceId, ScopeTree, SymbolId},
+  semantic::{ScopeTree, SymbolId},
   span::{Atom, Span},
 };
 use rolldown_common::{
@@ -27,7 +27,7 @@ pub struct NormalModuleBuilder {
   pub star_exports: Option<Vec<ImportRecordId>>,
   pub scope: Option<ScopeTree>,
   pub default_export_symbol: Option<SymbolId>,
-  pub namespace_symbol: Option<(SymbolRef, ReferenceId)>,
+  pub namespace_symbol: Option<SymbolRef>,
   pub exports_kind: Option<ExportsKind>,
   pub module_type: ModuleType,
   pub is_entry: bool,
@@ -37,8 +37,7 @@ impl NormalModuleBuilder {
   pub fn initialize_namespace_binding(&mut self, symbol_table: &mut SymbolMap) {
     let name = format!("{}_ns", self.path.as_ref().unwrap().generate_unique_name());
     let symbol_ref: SymbolRef = (self.id.unwrap(), symbol_table.create_symbol(name.into())).into();
-    let refer = symbol_table.create_reference(Some(symbol_ref.symbol));
-    self.namespace_symbol = Some((symbol_ref, refer));
+    self.namespace_symbol = Some(symbol_ref);
   }
 
   pub fn build(self) -> NormalModule {

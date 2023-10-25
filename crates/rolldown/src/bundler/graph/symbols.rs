@@ -7,6 +7,13 @@ use rolldown_common::{ModuleId, SymbolRef};
 use rolldown_utils::reserved_word::is_reserved_word;
 use rustc_hash::FxHashMap;
 
+#[derive(Debug)]
+pub struct Symbol {
+  pub name: Atom,
+  /// The symbol that this symbol is linked to.
+  pub link: Option<SymbolRef>,
+}
+
 #[derive(Debug, Default)]
 pub struct SymbolMap {
   pub names: IndexVec<SymbolId, Atom>,
@@ -28,26 +35,32 @@ impl SymbolMap {
       self.names.push(name)
     }
   }
-
-  pub fn create_reference(&mut self, id: Option<SymbolId>) -> ReferenceId {
-    self.references.push(id)
-  }
-
-  pub fn get_name(&self, id: SymbolId) -> &Atom {
-    &self.names[id]
-  }
 }
 
 // Information about symbols for all modules
 #[derive(Debug, Default)]
 pub struct Symbols {
-  pub(crate) tables: IndexVec<ModuleId, SymbolMap>,
-  canonical_refs: IndexVec<ModuleId, FxHashMap<SymbolId, SymbolRef>>,
+  inner: IndexVec<ModuleId, IndexVec<SymbolId, Symbol>>,
+  pub(crate) references_table: IndexVec<ModuleId, IndexVec<ReferenceId, Option<SymbolId>>>,
 }
 
 impl Symbols {
   pub fn new(tables: IndexVec<ModuleId, SymbolMap>) -> Self {
-    Self { canonical_refs: tables.iter().map(|_table| FxHashMap::default()).collect(), tables }
+    let mut reference_table = IndexVec::with_capacity(tables.len());
+    let inner = tables
+      .into_iter()
+      .map(|table| {
+        reference_table.push(table.references);
+        table.names.into_iter().map(|name| Symbol { name, link: None }).collect()
+      })
+      .collect();
+
+    Self { inner, references_table: reference_table }
+  }
+
+  pub fn create_symbol(&mut self, owner: ModuleId, name: Atom) -> SymbolRef {
+    let symbol_id = self.inner[owner].push(Symbol { name, link: None });
+    SymbolRef { owner, symbol: symbol_id }
   }
 
   /// Make a point to b
@@ -58,29 +71,35 @@ impl Symbols {
     if root_a == root_b {
       return;
     }
-    self.canonical_refs[a.owner].insert(a.symbol, root_b);
+    self.get_mut(root_a).link = Some(root_b);
   }
 
   pub fn get_original_name(&self, refer: SymbolRef) -> &Atom {
-    self.tables[refer.owner].get_name(refer.symbol)
+    &self.get(refer).name
+  }
+
+  pub fn get(&self, refer: SymbolRef) -> &Symbol {
+    &self.inner[refer.owner][refer.symbol]
+  }
+
+  pub fn get_mut(&mut self, refer: SymbolRef) -> &mut Symbol {
+    &mut self.inner[refer.owner][refer.symbol]
   }
 
   pub fn get_canonical_ref(&mut self, target: SymbolRef) -> SymbolRef {
-    let mut canonical = target;
-    while let Some(founded) = self.canonical_refs[canonical.owner].get(&canonical.symbol).copied() {
-      debug_assert!(founded != target);
-      canonical = founded;
-    }
+    let canonical = self.par_get_canonical_ref(target);
     if target != canonical {
-      self.canonical_refs[target.owner].insert(target.symbol, canonical);
+      // update the link to the canonical so that the next time we can get the canonical directly
+      self.get_mut(target).link = Some(canonical);
     }
     canonical
   }
 
+  // Used for the situation where rust require `&self`
   pub fn par_get_canonical_ref(&self, target: SymbolRef) -> SymbolRef {
     let mut canonical = target;
-    while let Some(founded) = self.canonical_refs[canonical.owner].get(&canonical.symbol).copied() {
-      debug_assert!(founded != canonical);
+    while let Some(founded) = self.get(canonical).link {
+      debug_assert!(founded != target);
       canonical = founded;
     }
     canonical
@@ -94,15 +113,4 @@ pub fn get_symbol_final_name<'a>(
 ) -> Option<&'a Atom> {
   let final_ref = symbols.par_get_canonical_ref(symbol);
   final_names.get(&final_ref)
-}
-
-#[allow(dead_code)]
-pub fn get_reference_final_name<'a>(
-  module_id: ModuleId,
-  reference_id: ReferenceId,
-  symbols: &'a Symbols,
-  final_names: &'a FxHashMap<SymbolRef, Atom>,
-) -> Option<&'a Atom> {
-  symbols.tables[module_id].references[reference_id]
-    .and_then(|symbol| get_symbol_final_name((module_id, symbol).into(), symbols, final_names))
 }

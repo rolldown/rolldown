@@ -123,7 +123,7 @@ impl<'graph> Linker<'graph> {
                 symbols,
               );
               importer.generate_symbol_import_and_use(
-                importee.namespace_symbol.0,
+                importee.namespace_symbol,
                 importer_linker_module,
                 symbols,
               );
@@ -366,7 +366,7 @@ impl<'graph> Linker<'graph> {
           match importee {
             Module::Normal(importee) => {
               let resolved_ref = if info.is_imported_star {
-                importee.namespace_symbol.0
+                importee.namespace_symbol
               } else {
                 match importee.resolve_export_for_esm_and_cjs(
                   &info.imported,
@@ -382,12 +382,12 @@ impl<'graph> Linker<'graph> {
                     linker_module.unresolved_symbols.insert(
                       info.imported_as,
                       UnresolvedSymbol {
-                        importee_namespace: importee.namespace_symbol.0,
+                        importee_namespace: importee.namespace_symbol,
                         reference_name,
                       },
                     );
                     importer.generate_symbol_import_and_use(
-                      importee.namespace_symbol.0,
+                      importee.namespace_symbol,
                       linker_module,
                       symbols,
                     );

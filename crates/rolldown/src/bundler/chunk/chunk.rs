@@ -1,3 +1,4 @@
+use index_vec::IndexVec;
 use oxc::span::Atom;
 use rolldown_common::{ModuleId, ResolvedExport, SymbolRef};
 use rustc_hash::FxHashMap;
@@ -18,6 +19,12 @@ use crate::bundler::{
 
 use super::{chunk_graph::ChunkGraph, ChunkId};
 
+#[derive(Debug)]
+pub struct CrossChunkImportItem {
+  pub export_alias: Option<Atom>,
+  pub import_ref: SymbolRef,
+}
+
 #[derive(Debug, Default)]
 pub struct Chunk {
   pub entry_module: Option<ModuleId>,
@@ -27,6 +34,8 @@ pub struct Chunk {
   pub canonical_names: FxHashMap<SymbolRef, Atom>,
   pub exports_str: Option<String>,
   pub bits: BitSet,
+  pub imports_from_other_chunks: FxHashMap<ChunkId, Vec<CrossChunkImportItem>>,
+  pub exports_to_other_chunks: FxHashMap<SymbolRef, Atom>,
 }
 
 impl Chunk {
@@ -96,6 +105,31 @@ impl Chunk {
   pub fn render(&self, graph: &Graph, chunk_graph: &ChunkGraph) -> anyhow::Result<String> {
     use rayon::prelude::*;
     let mut joiner = Joiner::with_options(JoinerOptions { separator: Some("\n".to_string()) });
+    self.imports_from_other_chunks.iter().for_each(|(chunk_id, items)| {
+      let chunk = &chunk_graph.chunks[*chunk_id];
+      let mut import_items = items
+        .iter()
+        .map(|item| {
+          let imported = chunk
+            .canonical_names
+            .get(&graph.symbols.par_get_canonical_ref(item.import_ref))
+            .cloned()
+            .unwrap();
+          let alias = item.export_alias.as_ref().unwrap();
+          if imported == alias {
+            format!("{imported}")
+          } else {
+            format!("{imported} as {alias}")
+          }
+        })
+        .collect::<Vec<_>>();
+      import_items.sort();
+      joiner.append_raw(format!(
+        "import {{ {} }} from \"{}\";",
+        import_items.join(", "),
+        chunk.file_name.as_ref().unwrap()
+      ));
+    });
     self
       .modules
       .par_iter()
@@ -115,15 +149,4 @@ impl Chunk {
 
     Ok(joiner.join())
   }
-}
-
-#[derive(Debug, Clone)]
-pub struct ImportChunkMeta {
-  pub chunk_id: ChunkId,
-  // pub symbols: usize,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct ChunkMeta {
-  pub imports: Vec<ImportChunkMeta>,
 }

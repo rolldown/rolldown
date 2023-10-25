@@ -32,7 +32,7 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
   }
 
   fn visit_identifier_reference(&mut self, ident: &'ast oxc::ast::ast::IdentifierReference) {
-    self.ctx.visit_identifier_reference(ident);
+    self.ctx.visit_identifier_reference(ident, false);
   }
 
   fn visit_import_declaration(&mut self, decl: &'ast oxc::ast::ast::ImportDeclaration<'ast>) {
@@ -106,7 +106,11 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
     for arg in &expr.arguments {
       self.visit_argument(arg);
     }
-    self.visit_expression(&expr.callee);
+    if let oxc::ast::ast::Expression::Identifier(s) = &expr.callee {
+      self.ctx.visit_identifier_reference(s, true);
+    } else {
+      self.visit_expression(&expr.callee);
+    }
   }
 
   fn visit_statement(&mut self, stmt: &'ast oxc::ast::ast::Statement<'ast>) {

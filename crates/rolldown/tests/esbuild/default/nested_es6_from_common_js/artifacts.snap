@@ -18,6 +18,6 @@ exports.fn = function() {
 var foo_ns = __toESM(require_foo());
 
 (() => {
-    console.log(foo_ns.fn())
+    console.log((0, foo_ns.fn)())
 })()
 ```

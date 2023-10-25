@@ -15,10 +15,17 @@ var init_foo = __esm({
 
 }
 });
+// cjs.js
+var require_cjs = __commonJS({
+'cjs.js'(exports, module) {
+module.exports = 1;
+}
+});
 // esm_import_cjs_require.js
-init_foo();
+var cjs_ns = __toESM(require_cjs());
 
 (init_foo(), __toCommonJS(foo_ns))
+console.log(cjs_ns.a)
 // esm_import_cjs_export.js
 var require_esm_import_cjs_export = __commonJS({
 'esm_import_cjs_export.js'(exports, module) {

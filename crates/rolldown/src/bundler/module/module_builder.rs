@@ -55,7 +55,6 @@ impl NormalModuleBuilder {
       default_export_symbol: self.default_export_symbol,
       scope: self.scope.unwrap(),
       namespace_symbol: self.namespace_symbol.unwrap(),
-      source_mutations: Vec::default(),
       exports_kind: self.exports_kind.unwrap_or(ExportsKind::Esm),
       module_type: self.module_type,
       is_entry: self.is_entry,

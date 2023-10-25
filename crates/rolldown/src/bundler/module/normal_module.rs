@@ -17,7 +17,6 @@ use super::{module::ModuleRenderContext, module_id::ModuleVec};
 use crate::bundler::{
   graph::{linker::LinkerModule, symbols::Symbols},
   module::module::Module,
-  source_mutations::BoxedSourceMutation,
   visitors::{
     commonjs_source_render::CommonJsSourceRender, esm_source_render::EsmSourceRender,
     esm_wrap_source_render::EsmWrapSourceRender, RendererContext,
@@ -32,7 +31,6 @@ pub struct NormalModule {
   pub resource_id: ResourceId,
   pub module_type: ModuleType,
   pub ast: OxcProgram,
-  pub source_mutations: Vec<BoxedSourceMutation>,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,

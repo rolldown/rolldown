@@ -381,8 +381,8 @@ impl NormalModule {
     })
   }
 
-  pub fn get_import_module_by_span(&self, span: &Span) -> ModuleId {
-    let record = &self.import_records[self.imports[span]];
+  pub fn get_import_module_by_span(&self, span: Span) -> ModuleId {
+    let record = &self.import_records[self.imports[&span]];
     record.resolved_module
   }
 }

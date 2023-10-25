@@ -1,7 +1,9 @@
+use std::hash::BuildHasherDefault;
+
 use super::asset::Asset;
 use crate::bundler::{
   bitset::BitSet,
-  chunk::{chunk::Chunk, ChunkId, ChunksVec},
+  chunk::{chunk::Chunk, chunk_graph::ChunkGraph, ChunkId, ChunksVec},
   graph::graph::Graph,
   module::module::Module,
   options::{
@@ -24,89 +26,91 @@ impl<'a> Bundle<'a> {
     Self { graph, output_options }
   }
 
-  pub fn mark_modules_entry_bit(
+  fn determine_reachable_modules_for_entry(
     &self,
     module_id: ModuleId,
-    index: usize,
-    modules_entry_bit: &mut IndexVec<ModuleId, BitSet>,
+    entry_index: u32,
+    module_to_bits: &mut IndexVec<ModuleId, BitSet>,
   ) {
-    if modules_entry_bit[module_id].has_bit(index.try_into().unwrap()) {
+    if module_to_bits[module_id].has_bit(entry_index) {
       return;
     }
-    modules_entry_bit[module_id].set_bit(index.try_into().unwrap());
-    if let Module::Normal(m) = &self.graph.modules[module_id] {
-      m.import_records.iter().for_each(|i| {
-        // because dynamic import is already as entry, so here ignore it
-        if i.kind != ImportKind::DynamicImport {
-          self.mark_modules_entry_bit(i.resolved_module, index, modules_entry_bit);
-        }
-      });
-    }
+    module_to_bits[module_id].set_bit(entry_index);
+    let Module::Normal(module) = &self.graph.modules[module_id] else { return };
+    module.import_records.iter().for_each(|rec| {
+      // Module imported dynamically will be considered as a entry,
+      // so we don't need to include it in this chunk
+      if rec.kind != ImportKind::DynamicImport {
+        self.determine_reachable_modules_for_entry(
+          rec.resolved_module,
+          entry_index,
+          module_to_bits,
+        );
+      }
+    });
   }
 
-  pub fn generate_chunks(&self) -> (ChunksVec, IndexVec<ModuleId, Option<ChunkId>>) {
+  fn generate_chunks(&self) -> ChunkGraph {
+    let entries_len: u32 = self.graph.entries.len().try_into().unwrap();
+
     let mut module_to_bits = index_vec::index_vec![
-      BitSet::new(self.graph.entries.len().try_into().unwrap());
+      BitSet::new(entries_len);
       self.graph.modules.len()
     ];
+    let mut bits_to_chunk =
+      FxHashMap::with_capacity_and_hasher(self.graph.entries.len(), BuildHasherDefault::default());
+    let mut chunks = ChunksVec::with_capacity(self.graph.entries.len());
 
-    let mut chunks = FxHashMap::default();
-    chunks.shrink_to(self.graph.entries.len());
-
-    for (i, (name, module_id)) in self.graph.entries.iter().enumerate() {
-      let count: u32 = u32::try_from(i).unwrap();
-      let mut entry_bits = BitSet::new(self.graph.entries.len().try_into().unwrap());
-      entry_bits.set_bit(count);
-      let c = Chunk::new(name.clone(), Some(*module_id), entry_bits.clone(), vec![]);
-      chunks.insert(entry_bits, c);
+    // Create chunk for each static and dynamic entry
+    for (entry_index, (name, module_id)) in self.graph.entries.iter().enumerate() {
+      let count: u32 = u32::try_from(entry_index).unwrap();
+      let mut bits = BitSet::new(entries_len);
+      bits.set_bit(count);
+      let chunk = chunks.push(Chunk::new(name.clone(), Some(*module_id), bits.clone(), vec![]));
+      bits_to_chunk.insert(bits, chunk);
     }
 
+    // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     self.graph.entries.iter().enumerate().for_each(|(i, (_, entry))| {
-      self.mark_modules_entry_bit(*entry, i, &mut module_to_bits);
+      self.determine_reachable_modules_for_entry(
+        *entry,
+        i.try_into().unwrap(),
+        &mut module_to_bits,
+      );
     });
-
-    self
-      .graph
-      .modules
-      .iter()
-      .enumerate()
-      // TODO avoid generate runtime module
-      .skip_while(|(module_id, _)| module_id.eq(&self.graph.runtime.id)) // TODO avoid generate runtime module
-      .for_each(|(_, module)| {
-        let bits = &module_to_bits[module.id()];
-        if let Some(chunk) = chunks.get_mut(bits) {
-          chunk.modules.push(module.id());
-        } else {
-          // TODO share chunk name
-          let len = chunks.len();
-          chunks.insert(
-            bits.clone(),
-            Chunk::new(Some(len.to_string()), None, bits.clone(), vec![module.id()]),
-          );
-        }
-      });
-
-    let chunks = chunks
-      .into_values()
-      .map(|mut chunk| {
-        chunk.modules.sort_by_key(|id| self.graph.modules[*id].exec_order());
-        chunk
-      })
-      .collect::<ChunksVec>();
 
     let mut module_to_chunk: IndexVec<ModuleId, Option<ChunkId>> = index_vec::index_vec![
       None;
       self.graph.modules.len()
     ];
 
-    // perf: this process could be done with computing chunks together
-    for (i, chunk) in chunks.iter_enumerated() {
-      for module_id in &chunk.modules {
-        module_to_chunk[*module_id] = Some(i);
+    // 1. Assign modules to corresponding chunks
+    // 2. Create shared chunks to store modules that belong to multiple chunks.
+    for module in &self.graph.modules {
+      if module.id() == self.graph.runtime.id {
+        // TODO: render runtime module
+        continue;
+      }
+      let bits = &module_to_bits[module.id()];
+      if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
+        chunks[chunk_id].modules.push(module.id());
+        module_to_chunk[module.id()] = Some(chunk_id);
+      } else {
+        let len = bits_to_chunk.len();
+        // FIXME: https://github.com/rolldown-rs/rolldown/issues/49
+        let chunk = Chunk::new(Some(len.to_string()), None, bits.clone(), vec![module.id()]);
+        let chunk_id = chunks.push(chunk);
+        module_to_chunk[module.id()] = Some(chunk_id);
+        bits_to_chunk.insert(bits.clone(), chunk_id);
       }
     }
 
-    (chunks, module_to_chunk)
+    // Sort modules in each chunk by execution order
+    chunks.iter_mut().for_each(|chunk| {
+      chunk.modules.sort_by_key(|module_id| self.graph.modules[*module_id].exec_order());
+    });
+
+    ChunkGraph { chunks, module_to_chunk }
   }
 
   pub fn generate(
@@ -114,25 +118,30 @@ impl<'a> Bundle<'a> {
     _input_options: &'a NormalizedInputOptions,
   ) -> anyhow::Result<Vec<Asset>> {
     use rayon::prelude::*;
-    let (mut chunks, module_to_chunk) = self.generate_chunks();
+    let mut chunk_graph = self.generate_chunks();
 
-    chunks.iter_mut().par_bridge().for_each(|chunk| chunk.render_file_name(self.output_options));
+    chunk_graph
+      .chunks
+      .iter_mut()
+      .par_bridge()
+      .for_each(|chunk| chunk.render_file_name(self.output_options));
 
-    chunks.iter_mut().par_bridge().for_each(|chunk| {
+    chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
       chunk.de_conflict(self.graph);
     });
 
-    chunks.iter_mut().for_each(|chunk| {
+    chunk_graph.chunks.iter_mut().for_each(|chunk| {
       if chunk.entry_module.is_some() {
         chunk.initialize_exports(&self.graph.linker_modules, &self.graph.symbols);
       }
     });
 
-    let assets = chunks
+    let assets = chunk_graph
+      .chunks
       .iter()
       .enumerate()
       .map(|(_chunk_id, c)| {
-        let content = c.render(self.graph, &module_to_chunk, &chunks).unwrap();
+        let content = c.render(self.graph, &chunk_graph).unwrap();
 
         Asset { file_name: c.file_name.clone().unwrap(), content }
       })

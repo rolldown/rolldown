@@ -5,7 +5,7 @@ use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
 
 use crate::bundler::{
-  chunk::{ChunkId, ChunksVec},
+  chunk::chunk_graph::ChunkGraph,
   graph::{graph::Graph, linker::LinkerModule},
 };
 
@@ -78,6 +78,5 @@ impl Module {
 pub struct ModuleRenderContext<'a> {
   pub canonical_names: &'a FxHashMap<SymbolRef, Atom>,
   pub graph: &'a Graph,
-  pub module_to_chunk: &'a IndexVec<ModuleId, Option<ChunkId>>,
-  pub chunks: &'a ChunksVec,
+  pub chunk_graph: &'a ChunkGraph,
 }

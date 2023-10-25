@@ -2,21 +2,14 @@ pub mod commonjs_source_render;
 pub mod esm_source_render;
 pub mod esm_wrap_source_render;
 pub mod scanner;
-use oxc::{
-  semantic::ReferenceId,
-  span::{Atom, GetSpan, Span},
-};
-use rolldown_common::{ExportsKind, ModuleId, ResolvedExport, SymbolRef};
+use oxc::span::{Atom, GetSpan, Span};
+use rolldown_common::{ExportsKind, ResolvedExport, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, UpdateOptions};
 
 use super::{
   chunk::chunk_graph::ChunkGraph,
-  graph::{
-    graph::Graph,
-    linker::LinkerModule,
-    symbols::{get_reference_final_name, get_symbol_final_name},
-  },
+  graph::{graph::Graph, linker::LinkerModule, symbols::get_symbol_final_name},
   module::{module::Module, NormalModule},
 };
 
@@ -47,7 +40,7 @@ impl<'ast> RendererContext<'ast> {
     let wrap_symbol_name =
       linker_module.wrap_symbol.and_then(|s| get_symbol_final_name(s, &graph.symbols, final_names));
     let namespace_symbol_name = get_symbol_final_name(
-      (module.id, module.namespace_symbol.0.symbol).into(),
+      (module.id, module.namespace_symbol.symbol).into(),
       &graph.symbols,
       final_names,
     );
@@ -88,14 +81,6 @@ impl<'ast> RendererContext<'ast> {
 
   pub fn get_symbol_final_name(&self, symbol: SymbolRef) -> Option<&'ast Atom> {
     get_symbol_final_name(symbol, &self.graph.symbols, self.final_names)
-  }
-
-  pub fn _get_reference_final_name(
-    &self,
-    module_id: ModuleId,
-    reference_id: ReferenceId,
-  ) -> Option<&Atom> {
-    get_reference_final_name(module_id, reference_id, &self.graph.symbols, self.final_names)
   }
 
   pub fn get_runtime_symbol_final_name(&self, name: &Atom) -> &Atom {
@@ -143,7 +128,7 @@ impl<'ast> RendererContext<'ast> {
       if self.module.module_type.is_esm() { ", 1" } else { "" }
     );
     if with_namespace_init {
-      let namespace_name = self.get_symbol_final_name(importee.namespace_symbol.0).unwrap();
+      let namespace_name = self.get_symbol_final_name(importee.namespace_symbol).unwrap();
       format!("var {namespace_name} = {code};\n")
     } else {
       code
@@ -168,7 +153,7 @@ impl<'ast> RendererContext<'ast> {
 
   pub fn visit_identifier_reference(&mut self, ident: &'ast oxc::ast::ast::IdentifierReference) {
     if let Some(symbol_id) =
-      self.graph.symbols.tables[self.module.id].references[ident.reference_id.get().unwrap()]
+      self.graph.symbols.references_table[self.module.id][ident.reference_id.get().unwrap()]
     {
       let symbol_ref = (self.module.id, symbol_id).into();
       if let Some(unresolved_symbol) = self.linker_module.unresolved_symbols.get(&symbol_ref) {
@@ -278,7 +263,7 @@ impl<'ast> RendererContext<'ast> {
             self.source.update(expr.span.start, expr.span.end, format!("{wrap_symbol_name}()"));
           } else {
             let namespace_name = self
-              .get_symbol_final_name((importee.id, importee.namespace_symbol.0.symbol).into())
+              .get_symbol_final_name((importee.id, importee.namespace_symbol.symbol).into())
               .unwrap();
             let to_commonjs_runtime_symbol_name =
               self.get_runtime_symbol_final_name(&"__toCommonJS".into());

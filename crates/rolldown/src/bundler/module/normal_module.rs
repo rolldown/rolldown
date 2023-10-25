@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use index_vec::IndexVec;
 use oxc::{
-  semantic::{ReferenceId, ScopeTree, SymbolId},
+  semantic::{ScopeTree, SymbolId},
   span::{Atom, Span},
 };
 use rolldown_common::{
@@ -42,7 +42,7 @@ pub struct NormalModule {
   pub star_exports: Vec<ImportRecordId>,
   pub exports_kind: ExportsKind,
   pub scope: ScopeTree,
-  pub namespace_symbol: (SymbolRef, ReferenceId),
+  pub namespace_symbol: SymbolRef,
   pub default_export_symbol: Option<SymbolId>,
 }
 
@@ -105,7 +105,7 @@ impl NormalModule {
     if !self_linker_module.is_symbol_for_namespace_referenced {
       self_linker_module.is_symbol_for_namespace_referenced = true;
       self_linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
-        declared_symbols: vec![self.namespace_symbol.0.symbol],
+        declared_symbols: vec![self.namespace_symbol.symbol],
         ..Default::default()
       });
     }
@@ -178,7 +178,7 @@ impl NormalModule {
             match importee {
               Module::Normal(importee) => {
                 let resolved = if named_import.is_imported_star {
-                  Resolution::Found(importee.namespace_symbol.0)
+                  Resolution::Found(importee.namespace_symbol)
                 } else {
                   importee.resolve_export(&named_import.imported, resolve_set, modules, symbols)
                 };
@@ -203,7 +203,7 @@ impl NormalModule {
           match importee {
             Module::Normal(importee) => {
               if re.is_imported_star {
-                return Resolution::Found(importee.namespace_symbol.0);
+                return Resolution::Found(importee.namespace_symbol);
               }
               importee.resolve_export(&re.imported, resolve_set, modules, symbols)
             }
@@ -286,7 +286,7 @@ impl NormalModule {
               match importee {
                 Module::Normal(importee) => {
                   if importee.exports_kind == ExportsKind::CommonJs {
-                    return Resolution::Runtime(importee.namespace_symbol.0);
+                    return Resolution::Runtime(importee.namespace_symbol);
                   }
                 }
                 Module::External(_) => {}
@@ -299,7 +299,7 @@ impl NormalModule {
             match importee {
               Module::Normal(importee) => {
                 if importee.exports_kind == ExportsKind::CommonJs {
-                  return Resolution::Runtime(importee.namespace_symbol.0);
+                  return Resolution::Runtime(importee.namespace_symbol);
                 }
               }
               Module::External(_) => {}
@@ -307,7 +307,7 @@ impl NormalModule {
           }
         }
       } else if has_cjs_star_resolution || self.exports_kind == ExportsKind::CommonJs {
-        return Resolution::Runtime(self.namespace_symbol.0);
+        return Resolution::Runtime(self.namespace_symbol);
       }
       return Resolution::None;
     }
@@ -354,7 +354,7 @@ impl NormalModule {
         self.resource_id.generate_unique_name()
       )
       .into();
-      let symbol = symbols.tables[self.id].create_symbol(name);
+      let symbol = symbols.create_symbol(self.id, name).symbol;
       self_linker_module.wrap_symbol = Some((self.id, symbol).into());
       self_linker_module
         .virtual_stmt_infos
@@ -381,13 +381,12 @@ impl NormalModule {
     self_linker_module: &mut LinkerModule,
     symbols: &mut Symbols,
   ) -> SymbolRef {
-    let local_symbol = symbols.tables[self.id].create_symbol(name);
-    let local_symbol_ref = (self.id, local_symbol).into();
+    let local_symbol_ref = symbols.create_symbol(self.id, name);
     self_linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
       // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
       // The deconflict for runtime symbols would be handled in the deconflict on cross-chunk-imported
       // symbols
-      declared_symbols: vec![local_symbol],
+      declared_symbols: vec![local_symbol_ref.symbol],
       ..Default::default()
     });
     local_symbol_ref

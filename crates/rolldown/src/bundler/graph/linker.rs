@@ -1,5 +1,5 @@
 use index_vec::IndexVec;
-use oxc::{semantic::ReferenceId, span::Atom};
+use oxc::span::Atom;
 use rolldown_common::{
   ExportsKind, ImportKind, LocalOrReExport, ModuleId, ResolvedExport, ResolvedExportRuntime,
   SymbolRef, VirtualStmtInfo,
@@ -12,6 +12,7 @@ use crate::bundler::{
   module::{
     module::Module,
     normal_module::{Resolution, UnresolvedSymbol, UnresolvedSymbols},
+    NormalModule,
   },
 };
 
@@ -279,21 +280,23 @@ impl<'graph> Linker<'graph> {
           .collect::<FxHashMap<_, _>>();
 
         #[allow(clippy::items_after_statements)]
-        fn create_local_symbol_and_reference(
+        fn create_local_symbol_for_found_resolution(
           symbol_ref: SymbolRef,
-          exporter: ModuleId,
+          importer: &NormalModule,
+          importer_linker_module: &mut LinkerModule,
           symbols: &mut Symbols,
-        ) -> (SymbolRef, ReferenceId) {
-          let local_symbol = if symbol_ref.owner == exporter {
-            symbol_ref.symbol
+        ) -> SymbolRef {
+          if symbol_ref.owner == importer.id {
+            symbol_ref
           } else {
-            symbols.tables[exporter].create_symbol(Atom::from("#FACADE#"))
-          };
-          let symbol_ref_of_local: SymbolRef = (exporter, local_symbol).into();
-          symbols.union(symbol_ref_of_local, symbol_ref);
-          let ref_id = symbols.tables[exporter].create_reference(Some(local_symbol));
-
-          (symbol_ref_of_local, ref_id)
+            let local_symbol_ref = importer.generate_local_symbol(
+              Atom::from("#FACADE#"),
+              importer_linker_module,
+              symbols,
+            );
+            symbols.union(local_symbol_ref, symbol_ref);
+            local_symbol_ref
+          }
         }
 
         importer.named_exports.keys().for_each(|exported| {
@@ -307,10 +310,11 @@ impl<'graph> Linker<'graph> {
             }
             Resolution::Ambiguous => panic!("named export must be resolved"),
             Resolution::Found(ext) => {
-              let tmp = create_local_symbol_and_reference(ext, importer.id, symbols);
+              let local_symbol_ref =
+                create_local_symbol_for_found_resolution(ext, importer, linker_module, symbols);
               linker_module
                 .resolved_exports
-                .insert(exported.clone(), ResolvedExport::Symbol(tmp.0));
+                .insert(exported.clone(), ResolvedExport::Symbol(local_symbol_ref));
             }
             Resolution::Runtime(symbol_ref) => {
               let local_symbol_ref = if importer.is_entry {
@@ -329,8 +333,11 @@ impl<'graph> Linker<'graph> {
         resolutions.into_iter().for_each(|(exported, left)| match left {
           Resolution::None => panic!("shouldn't has left which is None"),
           Resolution::Found(ext) => {
-            let tmp = create_local_symbol_and_reference(ext, importer.id, symbols);
-            linker_module.resolved_exports.insert(exported.clone(), ResolvedExport::Symbol(tmp.0));
+            let local_symbol_ref =
+              create_local_symbol_for_found_resolution(ext, importer, linker_module, symbols);
+            linker_module
+              .resolved_exports
+              .insert(exported.clone(), ResolvedExport::Symbol(local_symbol_ref));
           }
           Resolution::Ambiguous => {}
           Resolution::Runtime(symbol_ref) => {

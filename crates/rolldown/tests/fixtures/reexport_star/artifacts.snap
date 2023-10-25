@@ -1,0 +1,30 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/reexport_star
+---
+# 2.js
+
+```js
+// a.js
+var a_ns = {
+  get abc() { return abc }
+};
+const abc = undefined
+```
+# entry.js
+
+```js
+// entry.js
+
+
+export { a_ns as a };
+```
+# main.js
+
+```js
+// main.js
+
+
+export { a_ns as a };
+```

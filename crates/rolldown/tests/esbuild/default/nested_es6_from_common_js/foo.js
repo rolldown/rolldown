@@ -1,3 +1,3 @@
 exports.fn = function() {
-  return 123
+	return 123
 }

@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/require_child_dir_common_js
 ---
-# main.js
+# entry_js.js
 
 ```js
 // dir/index.js
@@ -12,6 +12,6 @@ var require_dir_index = __commonJS({
 module.exports = 123
 }
 });
-// main.js
+// entry.js
 console.log(require_dir_index())
 ```

@@ -1,9 +1,9 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/esbuild/default/export_froms_common_js
+input_file: crates/rolldown/tests/esbuild/default/export_forms_common_js
 ---
-# main.js
+# entry_js.js
 
 ```js
 // h.js
@@ -115,7 +115,7 @@ Class = class Class {}
 
 }
 });
-// main.js
+// entry.js
 (init_commonjs(), __toCommonJS(commonjs_ns))
 (init_c(), __toCommonJS(c_ns))
 (init_d(), __toCommonJS(d_ns))

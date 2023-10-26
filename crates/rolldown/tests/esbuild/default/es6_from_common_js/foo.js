@@ -1,3 +1,3 @@
 exports.foo = function() {
-  return 'foo'
+	return 'foo'
 }

@@ -66,6 +66,8 @@ after(function printStatus() {
     process.exit(1)
   } else {
     if (expectedStatus.total !== status.total || expectedStatus.ignored != status.ignored || expectedStatus.skipFailed !== status.skipFailed || expectedStatus.passed !== status.passed) {
+      console.log('expected', expectedStatus)
+      console.log('actual', status)
       throw new Error('The rollup test status file is not updated. Please run `yarn test:update` to update it.')
     }
     process.exit(0)

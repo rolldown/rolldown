@@ -18,7 +18,6 @@ use crate::{
     module::module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
     resolve_id::{resolve_id, ResolvedRequestInfo},
-    runtime::RUNTIME_PATH,
     visitors::scanner::{self, ScanResult},
   },
   BuildError, BuildResult, SharedResolver,
@@ -59,11 +58,7 @@ impl NormalModuleTask {
     let mut builder = NormalModuleBuilder::default();
     tracing::trace!("process {:?}", self.path);
     // load
-    let source = if RUNTIME_PATH == self.path.as_ref() {
-      include_str!("../runtime/index.js").to_string()
-    } else {
-      tokio::fs::read_to_string(self.path.as_ref()).await?
-    };
+    let source = tokio::fs::read_to_string(self.path.as_ref()).await?;
     // TODO: transform
 
     let (ast, scope, scan_result, symbol) = self.make_ast(source);

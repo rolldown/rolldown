@@ -1,0 +1,26 @@
+{
+  "input": {
+    "input": [
+      {
+        "name": "array_js",
+        "import": "array.js"
+      },
+      {
+        "name": "assign_js",
+        "import": "assign.js"
+      },
+      {
+        "name": "dot_js",
+        "import": "dot.js"
+      },
+      {
+        "name": "ident_js",
+        "import": "ident.js"
+      },
+      {
+        "name": "index_js",
+        "import": "index.js"
+      }
+    ]
+  }
+}

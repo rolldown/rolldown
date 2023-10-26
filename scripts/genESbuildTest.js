@@ -7,31 +7,14 @@ const chalk = require("chalk");
 const dedent = require("dedent");
 // How to use this script
 // 1. Adding a test golang file under this dir or whereever you want, and modify the source path
-// 2. Modifying the includeList, this list control which test case you want to generate
-// 3. `let testDir = path.resolve(__dirname, "test", testCaseName);` Modify this testDir, by default, 
+// 2. `let testDir = path.resolve(__dirname, "test", testCaseName);` Modify this testDir, by default, 
 // The script will generate testCases under `${__dirname}/test`
-
+let cases = [{ name: "default", source: "./bundler_default_test.go"}, { name: "import_star", source: "./bundler_importstar_test.go"}];
+let currentCase = cases[0];
 let source = fs
-	.readFileSync(path.resolve(__dirname, "./bundler_default.go"))
+	.readFileSync(path.resolve(__dirname, currentCase.source))
 	.toString();
-const includeList = [
-	"avoid_tdz",
-	"common_js_from_es6",
-	"es6_from_common_js",
-	"export_chain",
-	"export_forms_es6",
-	"export_froms_common_js",
-	"nested_common_js",
-	"nested_es6_from_common_js",
-	"new_expression_common_js",
-	"require_child_dir_common_js",
-	"require_child_dir_es6",
-	"require_parent_dir_common_js",
-	"require_parent_dir_es6",
-	"simple_common_js",
-	"simple_es6",
-	"export_forms_common_js",
-];
+let ignoredTestName = ["ts", "txt", "json","jsx", "tsx", "no_bundle", "mangle", "minify", "minified", "comments", "fs", "alias", "node", "decorator", "iife", "abs_path", "inject", "metafile", "output_extension", "top_level_return_forbidden"];
 const parser = new Parser();
 parser.setLanguage(Go);
 
@@ -61,9 +44,16 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 		testCaseName = changeCase.snakeCase(testCaseName);
 
 		console.log(testCaseName);
-		if (!includeList.includes(testCaseName)) {
-      // TODO Add a `.` prefix instead of skipping rest of the code.
+		// Skip some test cases by ignoredTestName
+		if (ignoredTestName.some((name) => testCaseName.includes(name))) {
 			continue;
+		}
+		let testDir = path.resolve(__dirname, `../crates/rolldown/tests/esbuild/${currentCase.name}`, testCaseName);
+		let ignoredTestDir = path.resolve(__dirname, `../crates/rolldown/tests/esbuild/${currentCase.name}`, `.${testCaseName}`);
+		if (fs.existsSync(testDir) || fs.existsSync(ignoredTestDir)) {
+			continue;
+		} else {
+			fs.ensureDirSync(testDir);
 		}
 		let bundle_field_list = query.captures(child).filter((item) => {
 			return item.name === "element_list";
@@ -74,9 +64,11 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 		});
 
 		const fileList = jsConfig["files"];
+		// Skip jsx/ts/tsx files test case
+		if (fileList.some(file => file.name.endsWith("ts") || file.name.endsWith("tsx") || file.name.endsWith("jsx"))) {
+			continue;
+		}
 		let prefix = calculatePrefix(fileList.map((item) => item.name));
-		let testDir = path.resolve(__dirname, "test", testCaseName);
-		fs.ensureDirSync(testDir);
 		fileList.forEach((file) => {
 			let normalizedName = file.name.slice(prefix.length);
 			if (path.isAbsolute(normalizedName)) {
@@ -108,6 +100,12 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 		const configFilePath = path.resolve(testDir, "test.config.json");
 		fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2));
 		// TODO: options
+
+		let log = jsConfig["expectedCompileLog"];
+		if (log) {
+			const configFilePath = path.resolve(testDir, "compile-log.text");
+			fs.writeFileSync(configFilePath, log);
+		}
 	}
 }
 
@@ -178,6 +176,7 @@ function processEntryPath(node) {
 	}
 }
 
+// TODO only preserve mode ModeBundle test case
 /**
  * @param {import('tree-sitter').SyntaxNode} node
  */
@@ -197,6 +196,9 @@ function processKeyElement(node, obj) {
 			break;
 		case "options":
 			obj["options"] = processOptions(node.namedChild(1));
+			break;
+		case "expectedCompileLog":
+			obj["expectedCompileLog"] = node.namedChild(1).text.slice(1, -1);
 			break;
 		default:
 			console.log(chalk.yellow(`unknown filed ${keyValue}`));

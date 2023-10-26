@@ -1,0 +1,12 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/require_without_call
+---
+# entry_js.js
+
+```js
+// entry.js
+const req = require
+req('./entry')
+```

@@ -1,0 +1,1 @@
+import(x ? 'a' : y ? './import' : 'c')

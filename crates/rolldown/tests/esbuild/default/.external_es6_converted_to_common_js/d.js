@@ -1,0 +1,1 @@
+export {ns} from 'x'

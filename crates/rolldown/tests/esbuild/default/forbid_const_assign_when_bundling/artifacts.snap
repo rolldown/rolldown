@@ -1,0 +1,16 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/forbid_const_assign_when_bundling
+---
+# entry_js.js
+
+```js
+// entry.js
+const x = 1
+x = 2
+function foo() {
+	const y = 1
+	y = 2
+}
+```

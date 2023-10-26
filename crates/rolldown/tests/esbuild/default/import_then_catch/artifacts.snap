@@ -1,0 +1,13 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/import_then_catch
+---
+# entry_js.js
+
+```js
+// entry.js
+import(name).then(pass, fail)
+import(name).then(pass).catch(fail)
+import(name).catch(fail)
+```

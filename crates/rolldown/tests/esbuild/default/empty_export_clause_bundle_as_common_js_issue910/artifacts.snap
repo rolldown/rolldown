@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
+---
+# entry_js.js
+
+```js
+// types.mjs
+var types_ns = {
+
+};
+var init_types = __esm({
+'types.mjs'() {
+
+}
+});
+// entry.js
+console.log((init_types(), __toCommonJS(types_ns)))
+```

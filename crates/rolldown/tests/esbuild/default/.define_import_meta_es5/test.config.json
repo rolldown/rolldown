@@ -1,0 +1,18 @@
+{
+  "input": {
+    "input": [
+      {
+        "name": "replaced_js",
+        "import": "replaced.js"
+      },
+      {
+        "name": "kept_js",
+        "import": "kept.js"
+      },
+      {
+        "name": "dead-code_js",
+        "import": "dead-code.js"
+      }
+    ]
+  }
+}

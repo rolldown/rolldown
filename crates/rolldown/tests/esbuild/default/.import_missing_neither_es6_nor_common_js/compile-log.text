@@ -1,0 +1,4 @@
+named.js: WARNING: Import "x" will always be undefined because the file "foo.js" has no exports
+named.js: WARNING: Import "y" will always be undefined because the file "foo.js" has no exports
+star.js: WARNING: Import "x" will always be undefined because the file "foo.js" has no exports
+star.js: WARNING: Import "y" will always be undefined because the file "foo.js" has no exports

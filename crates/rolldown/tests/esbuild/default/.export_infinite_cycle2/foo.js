@@ -1,2 +1,2 @@
-export {b as c} from './main'
-export {d as a} from './main'
+export {b as c} from './entry'
+export {d as a} from './entry'

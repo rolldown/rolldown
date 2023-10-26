@@ -22,7 +22,7 @@ var no_side_effects_ns = {
 
 };
 console.log('js')
-export { no_side_effects_ns as no_side_effects_ns$2, no_side_effects_ns$1 as no_side_effects_ns, no_side_effects_ns$2 as no_side_effects_ns$1 };
+export { no_side_effects_ns$1 as no_side_effects_ns, no_side_effects_ns$2 as no_side_effects_ns$1, no_side_effects_ns as no_side_effects_ns$2 };
 ```
 # entry-default_js.js
 

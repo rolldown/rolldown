@@ -125,7 +125,7 @@ impl Chunk {
         .collect::<Vec<_>>();
       import_items.sort();
       joiner.append_raw(format!(
-        "import {{ {} }} from \"{}\";",
+        "import {{ {} }} from \"./{}\";",
         import_items.join(", "),
         chunk.file_name.as_ref().unwrap()
       ));

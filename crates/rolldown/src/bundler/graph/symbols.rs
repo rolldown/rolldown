@@ -10,7 +10,17 @@ use rustc_hash::FxHashMap;
 use crate::bundler::chunk::ChunkId;
 
 #[derive(Debug)]
+pub struct NamespaceAlias {
+  pub property_name: Atom,
+  pub namespace_ref: SymbolRef,
+}
+
+#[derive(Debug)]
 pub struct Symbol {
+  /// For case `import {a} from 'foo.cjs';console.log(a)`, the symbol `a` reference to `module.exports.a` of `foo.cjs`.
+  /// So we will transform the code into `console.log(foo_ns.a)`. `foo_ns` is the namespace symbol of `foo.cjs and `a` is the property name.
+  /// We use `namespace_alias` to represent this situation. If `namespace_alias` is not `None`, then this symbol must be rewritten to a property access.
+  pub namespace_alias: Option<NamespaceAlias>,
   pub name: Atom,
   /// The symbol that this symbol is linked to.
   pub link: Option<SymbolRef>,
@@ -55,7 +65,11 @@ impl Symbols {
       .into_iter()
       .map(|table| {
         reference_table.push(table.references);
-        table.names.into_iter().map(|name| Symbol { name, link: None, chunk_id: None }).collect()
+        table
+          .names
+          .into_iter()
+          .map(|name| Symbol { name, link: None, chunk_id: None, namespace_alias: None })
+          .collect()
       })
       .collect();
 
@@ -63,7 +77,8 @@ impl Symbols {
   }
 
   pub fn create_symbol(&mut self, owner: ModuleId, name: Atom) -> SymbolRef {
-    let symbol_id = self.inner[owner].push(Symbol { name, link: None, chunk_id: None });
+    let symbol_id =
+      self.inner[owner].push(Symbol { name, link: None, chunk_id: None, namespace_alias: None });
     SymbolRef { owner, symbol: symbol_id }
   }
 

@@ -154,42 +154,34 @@ impl<'ast> RendererContext<'ast> {
     ident: &'ast oxc::ast::ast::IdentifierReference,
     is_call: bool,
   ) {
-    if let Some(symbol_id) =
+    let Some(symbol_id) =
       self.graph.symbols.references_table[self.module.id][ident.reference_id.get().unwrap()]
-    {
+    else {
+      // This is global identifier references, eg `console.log`. We don't need to rewrite it.
+      return;
+    };
+    let symbol_ref = (self.module.id, symbol_id).into();
+    let symbol = self.graph.symbols.get(symbol_ref);
+    if let Some(ns_alias) = &symbol.namespace_alias {
       // If import symbol from commonjs, the reference of the symbol is not resolved,
       // Here need write it to property access. eg `import { a } from 'cjs'; console.log(a)` => `console.log(cjs_ns.a)`
       // Note: we should rewrite call expression to indirect call, eg `import { a } from 'cjs'; console.log(a())` => `console.log((0, cjs_ns.a)())`
-      let symbol_ref = (self.module.id, symbol_id).into();
-      if let Some(unresolved_symbol) = self.linker_module.unresolved_symbols.get(&symbol_ref) {
-        let importee_namespace_symbol_name = get_symbol_final_name(
-          unresolved_symbol.importee_namespace,
-          &self.graph.symbols,
-          self.final_names,
-        )
-        .unwrap();
-        if let Some(reference_name) = &unresolved_symbol.reference_name {
-          let property_access = format!("{importee_namespace_symbol_name}.{reference_name}",);
-          if is_call {
-            self.source.update(
-              ident.span.start,
-              ident.span.end,
-              format!("(0, {property_access})",),
-            );
-          } else {
-            self.source.update(ident.span.start, ident.span.end, property_access);
-          }
-        } else if ident.name != importee_namespace_symbol_name {
-          self.source.update(
-            ident.span.start,
-            ident.span.end,
-            importee_namespace_symbol_name.to_string(),
-          );
-        }
-      } else if let Some(name) = self.get_symbol_final_name(symbol_ref) {
-        if ident.name != name {
-          self.rename_symbol(ident.span, name.clone());
-        }
+      let canonical_ns_name =
+        get_symbol_final_name(ns_alias.namespace_ref, &self.graph.symbols, self.final_names)
+          .unwrap();
+      let property_name = &ns_alias.property_name;
+      self.source.update(
+        ident.span.start,
+        ident.span.end,
+        if is_call {
+          format!("(0, {canonical_ns_name}.{property_name})",)
+        } else {
+          format!("{canonical_ns_name}.{property_name}",)
+        },
+      );
+    } else if let Some(name) = self.get_symbol_final_name(symbol_ref) {
+      if ident.name != name {
+        self.rename_symbol(ident.span, name.clone());
       }
     }
   }

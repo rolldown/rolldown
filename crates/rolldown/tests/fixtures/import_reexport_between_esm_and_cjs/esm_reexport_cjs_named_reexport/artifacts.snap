@@ -15,6 +15,6 @@ exports.a = 1
 // main.js
 var commonjs_ns = __toESM(require_commonjs());
 
-var a = commonjs_ns.a
+var a = commonjs_ns.a;
 export { a };
 ```

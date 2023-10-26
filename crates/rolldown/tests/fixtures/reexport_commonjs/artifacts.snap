@@ -29,6 +29,6 @@ var commonjs_ns = __toESM(require_commonjs());
 console.log(foo_ns, foo_ns.bar, value, foo_ns.foo)
 var commonjs_ns = __toESM(require_commonjs());
 
-var bar$1 = commonjs_ns.bar
+var bar$1 = commonjs_ns.bar;
 export { bar$1 as bar };
 ```

@@ -34,7 +34,7 @@ impl Chunk {
         if let Some(ns_alias) = &symbol.namespace_alias {
           let canonical_ns_name = &self.canonical_names[&ns_alias.namespace_ref];
           s.append(format!(
-            "var {canonical_name} = {canonical_ns_name}.{}\n",
+            "var {canonical_name} = {canonical_ns_name}.{};\n",
             ns_alias.property_name
           ));
         }

@@ -18,7 +18,6 @@ use crate::{
     module::module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
     resolve_id::{resolve_id, ResolvedRequestInfo},
-    runtime::RUNTIME_PATH,
     visitors::scanner::{self, ScanResult},
   },
   BuildError, BuildResult, SharedResolver,

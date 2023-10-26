@@ -44,7 +44,7 @@ impl RuntimeNormalModuleTask {
 
   pub fn run(self) {
     let mut builder = NormalModuleBuilder::default();
-    // load
+
     let source = include_str!("../runtime/index.js").to_string();
 
     let (ast, scope, scan_result, symbol) = self.make_ast(source);

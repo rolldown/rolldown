@@ -5,9 +5,9 @@ use crate::bundler::{
   bitset::BitSet,
   chunk::{
     chunk::{Chunk, CrossChunkImportItem},
-    chunk_graph::ChunkGraph,
     ChunkId, ChunksVec,
   },
+  chunk_graph::ChunkGraph,
   graph::graph::Graph,
   module::module::Module,
   options::{

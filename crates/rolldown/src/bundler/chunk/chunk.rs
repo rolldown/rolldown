@@ -5,6 +5,7 @@ use string_wizard::{Joiner, JoinerOptions};
 
 use crate::bundler::{
   bitset::BitSet,
+  chunk_graph::ChunkGraph,
   graph::{
     graph::Graph,
     linker::LinkerModuleVec,
@@ -16,7 +17,7 @@ use crate::bundler::{
   },
 };
 
-use super::{chunk_graph::ChunkGraph, ChunkId};
+use super::ChunkId;
 
 #[derive(Debug)]
 pub struct CrossChunkImportItem {

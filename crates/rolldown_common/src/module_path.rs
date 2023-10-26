@@ -62,8 +62,7 @@ impl ResourceId {
         return [unique_name_of_parent_dir, "_index"].concat();
       }
     }
-    // TODO: ensure valid identifier
-    return unique_name.to_string();
+    return ensure_valid_identifier(unique_name);
   }
 }
 
@@ -71,4 +70,24 @@ impl AsRef<str> for ResourceId {
   fn as_ref(&self) -> &str {
     self.0.path.as_str()
   }
+}
+
+fn ensure_valid_identifier(s: &str) -> String {
+  let mut ident = String::new();
+  let mut need_gap = false;
+  for i in s.chars() {
+    if i.is_ascii_alphabetic() || (i.is_ascii_digit() && !ident.is_empty()) {
+      if need_gap {
+        ident.push('_');
+        need_gap = false;
+      }
+      ident.push(i);
+    } else if !ident.is_empty() {
+      need_gap = true;
+    }
+  }
+  if ident.is_empty() {
+    ident.push('_');
+  }
+  ident
 }

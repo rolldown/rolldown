@@ -1,9 +1,6 @@
 use index_vec::IndexVec;
 use oxc::span::Atom;
-use rolldown_common::{
-  ExportsKind, ImportKind, LocalOrReExport, ModuleId, ResolvedExport, ResolvedExportRuntime,
-  StmtInfo, SymbolRef,
-};
+use rolldown_common::{ExportsKind, ImportKind, LocalOrReExport, ModuleId, StmtInfo, SymbolRef};
 use rustc_hash::FxHashMap;
 
 use super::{graph::Graph, symbols::NamespaceAlias};
@@ -18,7 +15,7 @@ pub struct LinkerModule {
   // The symbol for wrapped module
   pub wrap_symbol: Option<SymbolRef>,
   pub facade_stmt_infos: Vec<StmtInfo>,
-  pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
+  pub resolved_exports: FxHashMap<Atom, SymbolRef>,
   pub resolved_star_exports: Vec<ModuleId>,
   pub is_symbol_for_namespace_referenced: bool,
 }
@@ -301,20 +298,20 @@ impl<'graph> Linker<'graph> {
             Resolution::Found(ext) => {
               let local_symbol_ref =
                 create_local_symbol_for_found_resolution(ext, importer, linker_module, symbols);
-              linker_module
-                .resolved_exports
-                .insert(exported.clone(), ResolvedExport::Symbol(local_symbol_ref));
+              linker_module.resolved_exports.insert(exported.clone(), local_symbol_ref);
             }
-            Resolution::Runtime(symbol_ref) => {
-              let local_symbol_ref = if importer.is_entry {
-                Some(importer.generate_local_symbol(exported.clone(), linker_module, symbols))
-              } else {
-                None
-              };
-              linker_module.resolved_exports.insert(
-                exported.clone(),
-                ResolvedExport::Runtime(ResolvedExportRuntime::new(symbol_ref, local_symbol_ref)),
-              );
+            Resolution::Runtime(ns_ref) => {
+              // export { a } from './foo.cjs' => `var a = foo.a; export { a }`
+              let local_binding_ref = symbols.create_symbol(importer.id, exported.clone());
+              let local_binding = symbols.get_mut(local_binding_ref);
+              local_binding.namespace_alias =
+                Some(NamespaceAlias { property_name: exported.clone(), namespace_ref: ns_ref });
+              linker_module.facade_stmt_infos.push(StmtInfo {
+                stmt_idx: None,
+                declared_symbols: vec![local_binding_ref],
+                referenced_symbols: vec![ns_ref],
+              });
+              linker_module.resolved_exports.insert(exported.clone(), local_binding_ref);
             }
           }
         });
@@ -324,21 +321,19 @@ impl<'graph> Linker<'graph> {
           Resolution::Found(ext) => {
             let local_symbol_ref =
               create_local_symbol_for_found_resolution(ext, importer, linker_module, symbols);
-            linker_module
-              .resolved_exports
-              .insert(exported.clone(), ResolvedExport::Symbol(local_symbol_ref));
+            linker_module.resolved_exports.insert(exported.clone(), local_symbol_ref);
           }
           Resolution::Ambiguous => {}
-          Resolution::Runtime(symbol_ref) => {
-            let local_symbol_ref = if importer.is_entry {
-              Some(importer.generate_local_symbol(exported.clone(), linker_module, symbols))
-            } else {
-              None
-            };
-            linker_module.resolved_exports.insert(
-              exported.clone(),
-              ResolvedExport::Runtime(ResolvedExportRuntime::new(symbol_ref, local_symbol_ref)),
-            );
+          Resolution::Runtime(ns_ref) => {
+            let local_binding_ref = symbols.create_symbol(importer.id, exported.clone());
+            let local_binding = symbols.get_mut(local_binding_ref);
+            local_binding.namespace_alias =
+              Some(NamespaceAlias { property_name: exported.clone(), namespace_ref: ns_ref });
+            linker_module.facade_stmt_infos.push(StmtInfo {
+              stmt_idx: None,
+              declared_symbols: vec![local_binding_ref],
+              referenced_symbols: vec![ns_ref],
+            });
           }
         });
       }

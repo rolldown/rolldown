@@ -84,6 +84,19 @@ impl<'a> Bundle<'a> {
           }
         }
       }
+
+      if let Some(entry_module) = chunk.entry_module {
+        let entry_module = &self.graph.modules[entry_module];
+        let entry_linking_info = &self.graph.linker_modules[entry_module.id()];
+        for export_ref in entry_linking_info.resolved_exports.values() {
+          let mut canonical_ref = self.graph.symbols.get_canonical_ref(*export_ref);
+          let symbol = self.graph.symbols.get(canonical_ref);
+          if let Some(ns_alias) = &symbol.namespace_alias {
+            canonical_ref = ns_alias.namespace_ref;
+          }
+          chunk_meta_imports.insert(canonical_ref);
+        }
+      }
     }
 
     for (chunk_id, chunk) in chunk_graph.chunks.iter_mut_enumerated() {
@@ -222,12 +235,6 @@ impl<'a> Bundle<'a> {
 
     chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
       chunk.de_conflict(self.graph);
-    });
-
-    chunk_graph.chunks.iter_mut().for_each(|chunk| {
-      if chunk.entry_module.is_some() {
-        chunk.initialize_exports(&self.graph.linker_modules, &self.graph.symbols);
-      }
     });
 
     self.compute_cross_chunk_links(&mut chunk_graph);

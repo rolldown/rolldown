@@ -52,8 +52,6 @@ pub struct UnresolvedSymbol {
   pub reference_name: Option<Atom>,
 }
 
-pub type UnresolvedSymbols = FxHashMap<SymbolRef, UnresolvedSymbol>;
-
 #[derive(Debug)]
 pub enum Resolution {
   None,

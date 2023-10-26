@@ -6,14 +6,10 @@ use rolldown_common::{
 };
 use rustc_hash::FxHashMap;
 
-use super::graph::Graph;
+use super::{graph::Graph, symbols::NamespaceAlias};
 use crate::bundler::{
   graph::symbols::Symbols,
-  module::{
-    module::Module,
-    normal_module::{Resolution, UnresolvedSymbol, UnresolvedSymbols},
-    NormalModule,
-  },
+  module::{module::Module, normal_module::Resolution, NormalModule},
 };
 
 // Because the linker will add some symbols for each module, so here abstract `LinkerModule` to instead of `Module`, avoid mutate module and borrow module at same time.
@@ -25,10 +21,6 @@ pub struct LinkerModule {
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
   pub resolved_star_exports: Vec<ModuleId>,
   pub is_symbol_for_namespace_referenced: bool,
-  // Mark the symbol symbol maybe from commonjs
-  // - The importee has `export * from 'cjs'`
-  // - The importee is commonjs
-  pub unresolved_symbols: UnresolvedSymbols,
 }
 
 pub type LinkerModuleVec = IndexVec<ModuleId, LinkerModule>;
@@ -377,15 +369,11 @@ impl<'graph> Linker<'graph> {
                   Resolution::Ambiguous | Resolution::None => panic!(""),
                   Resolution::Found(founded) => founded,
                   Resolution::Runtime(_) => {
-                    let reference_name =
-                      if info.is_imported_star { None } else { Some(info.imported.clone()) };
-                    linker_module.unresolved_symbols.insert(
-                      info.imported_as,
-                      UnresolvedSymbol {
-                        importee_namespace: importee.namespace_symbol,
-                        reference_name,
-                      },
-                    );
+                    symbols.get_mut(info.imported_as).namespace_alias = Some(NamespaceAlias {
+                      property_name: info.imported.clone(),
+                      namespace_ref: importee.namespace_symbol,
+                    });
+
                     importer.generate_symbol_import_and_use(
                       importee.namespace_symbol,
                       linker_module,

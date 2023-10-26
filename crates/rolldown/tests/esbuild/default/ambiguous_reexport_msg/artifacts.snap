@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg
+---
+# entry_js.js
+
+```js
+// c.js
+let c = 4, x$1 = 5
+// b.js
+let b = 3; 
+// a.js
+let a = 1, x = 2
+// entry.js
+
+
+
+export { a, b, c };
+```

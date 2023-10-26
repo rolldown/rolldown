@@ -1,0 +1,10 @@
+{
+  "input": {
+    "input": [
+      {
+        "name": "a_js",
+        "import": "a.js"
+      }
+    ]
+  }
+}

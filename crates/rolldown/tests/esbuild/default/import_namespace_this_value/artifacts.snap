@@ -1,0 +1,27 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/import_namespace_this_value
+---
+# a_js.js
+
+```js
+// a.js
+
+console.log(external_ns[foo](), new external_ns[foo]())
+```
+# b_js.js
+
+```js
+// b.js
+
+console.log(external_ns.foo(), new external_ns.foo())
+```
+# c_js.js
+
+```js
+// c.js
+
+console.log(default(), foo())
+console.log(new default(), new foo())
+```

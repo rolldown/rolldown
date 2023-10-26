@@ -1,0 +1,12 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/quoted_property
+---
+# entry_js.js
+
+```js
+// entry.js
+
+console.log(ext_ns.mustBeUnquoted, ext_ns['mustBeQuoted'])
+```

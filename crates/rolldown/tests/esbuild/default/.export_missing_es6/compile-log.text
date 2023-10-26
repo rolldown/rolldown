@@ -1,0 +1,2 @@
+foo.js: ERROR: No matching export in "bar.js" for import "buton"
+bar.js: NOTE: Did you mean to import "button" instead?

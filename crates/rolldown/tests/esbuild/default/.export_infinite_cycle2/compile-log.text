@@ -1,0 +1,4 @@
+entry.js: ERROR: Detected cycle while resolving import "a"
+entry.js: ERROR: Detected cycle while resolving import "c"
+foo.js: ERROR: Detected cycle while resolving import "b"
+foo.js: ERROR: Detected cycle while resolving import "d"

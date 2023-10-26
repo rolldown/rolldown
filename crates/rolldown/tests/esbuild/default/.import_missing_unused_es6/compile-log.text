@@ -1,0 +1,2 @@
+entry.js: ERROR: No matching export in "foo.js" for import "default"
+entry.js: ERROR: No matching export in "foo.js" for import "y"

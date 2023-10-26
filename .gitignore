@@ -155,3 +155,6 @@ dist
 # os
 .DS_Store
 lib
+
+# esbuild test
+*.go

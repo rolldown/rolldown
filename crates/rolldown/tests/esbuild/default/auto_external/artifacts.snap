@@ -1,0 +1,11 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/auto_external
+---
+# entry_js.js
+
+```js
+// entry.js
+// These URLs should be external automatically
+```

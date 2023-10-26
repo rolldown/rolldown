@@ -1,0 +1,15 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/re_export_default_external_es6
+---
+# entry_js.js
+
+```js
+// bar.js
+
+// entry.js
+
+
+export { default as bar, default$1 as foo };
+```

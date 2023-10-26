@@ -1,0 +1,14 @@
+{
+  "input": {
+    "input": [
+      {
+        "name": "read_js",
+        "import": "read.js"
+      },
+      {
+        "name": "write_js",
+        "import": "write.js"
+      }
+    ]
+  }
+}

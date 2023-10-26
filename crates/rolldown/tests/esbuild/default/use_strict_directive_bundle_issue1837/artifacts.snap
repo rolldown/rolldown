@@ -1,0 +1,18 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_issue1837
+---
+# entry_js.js
+
+```js
+// cjs.js
+var require_cjs = __commonJS({
+'cjs.js'(exports, module) {
+'use strict'
+exports.foo = process
+}
+});
+// entry.js
+console.log(require_cjs())
+```

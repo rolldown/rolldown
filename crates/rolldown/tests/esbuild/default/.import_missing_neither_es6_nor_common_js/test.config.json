@@ -1,0 +1,30 @@
+{
+  "input": {
+    "input": [
+      {
+        "name": "named_js",
+        "import": "named.js"
+      },
+      {
+        "name": "star_js",
+        "import": "star.js"
+      },
+      {
+        "name": "star-capture_js",
+        "import": "star-capture.js"
+      },
+      {
+        "name": "bare_js",
+        "import": "bare.js"
+      },
+      {
+        "name": "require_js",
+        "import": "require.js"
+      },
+      {
+        "name": "import_js",
+        "import": "import.js"
+      }
+    ]
+  }
+}

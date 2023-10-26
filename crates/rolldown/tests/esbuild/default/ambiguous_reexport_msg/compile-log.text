@@ -1,0 +1,3 @@
+DEBUG: Re-export of "x" in "entry.js" is ambiguous and has been removed
+a.js: NOTE: One definition of "x" comes from "a.js" here:
+b.js: NOTE: Another definition of "x" comes from "b.js" here:

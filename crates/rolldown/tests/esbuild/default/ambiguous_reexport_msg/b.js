@@ -1,0 +1,1 @@
+export let b = 3; export { b as x }

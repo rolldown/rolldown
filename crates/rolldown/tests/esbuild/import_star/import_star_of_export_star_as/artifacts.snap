@@ -3,17 +3,20 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/import_star_of_export_star_as
 ---
-# main.js
+# entry_js.js
 
 ```js
-// c.js
-let x$1 = 2
-// b.js
+// bar.js
+var bar_ns = {
+  get bar() { return bar }
+};
+const bar = 123
+// foo.js
+var foo_ns = {
+  get bar_ns() { return bar_ns }
+};
 
-let x = 1
-// a.js
+// entry.js
 
-// main.js
-
-console.log(x)
+console.log(foo_ns)
 ```

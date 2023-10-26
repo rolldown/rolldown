@@ -1,8 +1,10 @@
 {
-    "input": {
-        "external": ["foo"]
-    },
-    "output": {
-        "format": "cjs"
-    }
+  "input": {
+    "input": [
+      {
+        "name": "entry_js",
+        "import": "entry.js"
+      }
+    ]
+  }
 }

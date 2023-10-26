@@ -1,0 +1,56 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/import_namespace_undefined_property_side_effect_free_file
+---
+# 2.js
+
+```js
+// foo/no-side-effects.cjs
+var require_no-side-effects = __commonJS({
+'foo/no-side-effects.cjs'(exports, module) {
+console.log('cjs')
+}
+});
+// foo/no-side-effects.mjs
+var no-side-effects_ns$1 = {
+
+};
+console.log('mjs')
+// foo/no-side-effects.js
+var no-side-effects_ns = {
+
+};
+console.log('js')
+export { no-side-effects_ns as no-side-effects_ns$2, no-side-effects_ns$1 as no-side-effects_ns, no-side-effects_ns$2 as no-side-effects_ns$1 };
+```
+# entry-default_js.js
+
+```js
+import { no-side-effects_ns as no-side-effects_ns$2, no-side-effects_ns$1 as no-side-effects_ns, no-side-effects_ns$2 as no-side-effects_ns$1 } from "./2.js";
+// entry-default.js
+var no-side-effects_ns$2 = __toESM(require_no-side-effects());
+
+
+
+console.log(
+	no-side-effects_ns.default,
+	no-side-effects_ns$1.default,
+	no-side-effects_ns$2.default,
+)
+```
+# entry-nope_js.js
+
+```js
+import { no-side-effects_ns as no-side-effects_ns$2, no-side-effects_ns$1 as no-side-effects_ns, no-side-effects_ns$2 as no-side-effects_ns$1 } from "./2.js";
+// entry-nope.js
+var no-side-effects_ns$2 = __toESM(require_no-side-effects());
+
+
+
+console.log(
+	no-side-effects_ns.nope,
+	no-side-effects_ns$1.nope,
+	no-side-effects_ns$2.nope,
+)
+```

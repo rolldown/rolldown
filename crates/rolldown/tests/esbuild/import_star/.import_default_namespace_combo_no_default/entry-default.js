@@ -1,0 +1,1 @@
+import def from './foo'; console.log(def)

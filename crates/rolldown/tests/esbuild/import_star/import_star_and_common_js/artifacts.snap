@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/import_star_and_common_js
 ---
-# main.js
+# entry_js.js
 
 ```js
 // foo.js
@@ -14,7 +14,6 @@ var foo_ns = {
 var init_foo = __esm({
 'foo.js'() {
 foo = 123
-
 }
 });
 // entry.js

@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_namespace_import_unused_missing_es6
 ---
-# main.js
+# entry_js.js
 
 ```js
 // bar.js
@@ -13,7 +13,7 @@ var bar_ns = {
 const x = 123
 // foo.js
 
-// main.js
+// entry.js
 
 console.log(bar_ns.foo)
 ```

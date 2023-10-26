@@ -1,0 +1,2 @@
+foo.js: ERROR: No matching export in "bar.js" for import "foo"
+foo.js: ERROR: No matching export in "bar.js" for import "foo"

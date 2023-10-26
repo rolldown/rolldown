@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/import_of_export_star
 ---
-# main.js
+# entry_js.js
 
 ```js
 // bar.js
@@ -15,7 +15,7 @@ statement()
 const bar = 123
 // foo.js
 
-// main.js
+// entry.js
 
 console.log(bar)
 ```

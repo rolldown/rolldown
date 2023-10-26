@@ -7,50 +7,50 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_namespace_undefined
 
 ```js
 // foo/no-side-effects.cjs
-var require_no-side-effects = __commonJS({
+var require_no_side_effects = __commonJS({
 'foo/no-side-effects.cjs'(exports, module) {
 console.log('cjs')
 }
 });
 // foo/no-side-effects.mjs
-var no-side-effects_ns$1 = {
+var no_side_effects_ns$1 = {
 
 };
 console.log('mjs')
 // foo/no-side-effects.js
-var no-side-effects_ns = {
+var no_side_effects_ns = {
 
 };
 console.log('js')
-export { no-side-effects_ns as no-side-effects_ns$2, no-side-effects_ns$1 as no-side-effects_ns, no-side-effects_ns$2 as no-side-effects_ns$1 };
+export { no_side_effects_ns as no_side_effects_ns$2, no_side_effects_ns$1 as no_side_effects_ns, no_side_effects_ns$2 as no_side_effects_ns$1 };
 ```
 # entry-default_js.js
 
 ```js
-import { no-side-effects_ns as no-side-effects_ns$2, no-side-effects_ns$1 as no-side-effects_ns, no-side-effects_ns$2 as no-side-effects_ns$1 } from "./2.js";
+import { no_side_effects_ns as no_side_effects_ns$2, no_side_effects_ns$1 as no_side_effects_ns, no_side_effects_ns$2 as no_side_effects_ns$1 } from "./2.js";
 // entry-default.js
-var no-side-effects_ns$2 = __toESM(require_no-side-effects());
+var no_side_effects_ns$2 = __toESM(require_no_side_effects());
 
 
 
 console.log(
-	no-side-effects_ns.default,
-	no-side-effects_ns$1.default,
-	no-side-effects_ns$2.default,
+	no_side_effects_ns.default,
+	no_side_effects_ns$1.default,
+	no_side_effects_ns$2.default,
 )
 ```
 # entry-nope_js.js
 
 ```js
-import { no-side-effects_ns as no-side-effects_ns$2, no-side-effects_ns$1 as no-side-effects_ns, no-side-effects_ns$2 as no-side-effects_ns$1 } from "./2.js";
+import { no_side_effects_ns as no_side_effects_ns$2, no_side_effects_ns$1 as no_side_effects_ns, no_side_effects_ns$2 as no_side_effects_ns$1 } from "./2.js";
 // entry-nope.js
-var no-side-effects_ns$2 = __toESM(require_no-side-effects());
+var no_side_effects_ns$2 = __toESM(require_no_side_effects());
 
 
 
 console.log(
-	no-side-effects_ns.nope,
-	no-side-effects_ns$1.nope,
-	no-side-effects_ns$2.nope,
+	no_side_effects_ns.nope,
+	no_side_effects_ns$1.nope,
+	no_side_effects_ns$2.nope,
 )
 ```

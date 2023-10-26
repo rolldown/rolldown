@@ -19,6 +19,6 @@ pub use crate::{
   named_import::NamedImport,
   raw_path::RawPath,
   resolved_export::{ResolvedExport, ResolvedExportRuntime},
-  stmt_info::{StmtInfo, StmtInfoId, VirtualStmtInfo},
+  stmt_info::StmtInfo,
   symbol_ref::SymbolRef,
 };

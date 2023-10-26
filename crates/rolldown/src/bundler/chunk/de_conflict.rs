@@ -39,7 +39,7 @@ impl Chunk {
             .flat_map(|part| part.declared_symbols.iter().copied())
             .chain(
               graph.linker_modules[module.id]
-                .virtual_stmt_infos
+                .facade_stmt_infos
                 .iter()
                 .flat_map(|part| part.declared_symbols.iter().copied()),
             )

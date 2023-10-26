@@ -2,7 +2,7 @@ use index_vec::IndexVec;
 use oxc::span::Atom;
 use rolldown_common::{
   ExportsKind, ImportKind, LocalOrReExport, ModuleId, ResolvedExport, ResolvedExportRuntime,
-  SymbolRef, VirtualStmtInfo,
+  StmtInfo, SymbolRef,
 };
 use rustc_hash::FxHashMap;
 
@@ -21,7 +21,7 @@ use crate::bundler::{
 pub struct LinkerModule {
   // The symbol for wrapped module
   pub wrap_symbol: Option<SymbolRef>,
-  pub virtual_stmt_infos: Vec<VirtualStmtInfo>,
+  pub facade_stmt_infos: Vec<StmtInfo>,
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
   pub resolved_star_exports: Vec<ModuleId>,
   pub is_symbol_for_namespace_referenced: bool,

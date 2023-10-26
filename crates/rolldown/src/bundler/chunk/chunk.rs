@@ -28,7 +28,6 @@ pub struct Chunk {
   pub name: Option<String>,
   pub file_name: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Atom>,
-  pub exports_str: Option<String>,
   pub bits: BitSet,
   pub imports_from_other_chunks: FxHashMap<ChunkId, Vec<CrossChunkImportItem>>,
   // meaningless if the chunk is an entrypoint
@@ -72,9 +71,6 @@ impl Chunk {
 
     if let Some(exports) = self.render_exports_for_esm(graph) {
       joiner.append(exports);
-    }
-    if let Some(exports) = self.exports_str.clone() {
-      joiner.append_raw(exports);
     }
 
     Ok(joiner.join())

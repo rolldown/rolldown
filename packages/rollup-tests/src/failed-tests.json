@@ -692,5 +692,6 @@
   "rollup@function@warning-low-resolution-location: handles when a low resolution sourcemap is used to report an error",
   "rollup@function@warnings-to-string: provides a string conversion for warnings",
   "rollup@function@warns-for-invalid-options: warns for invalid options",
-  "rollup@function@wraps-object-expressions-as-statements: wraps object expressions that have become statements"
+  "rollup@function@wraps-object-expressions-as-statements: wraps object expressions that have become statements",
+  "rollup@function@handle-object-rest-spread-patterns: handles properties created by an object rest spread operator"
 ]

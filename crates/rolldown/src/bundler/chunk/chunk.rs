@@ -105,31 +105,7 @@ impl Chunk {
   pub fn render(&self, graph: &Graph, chunk_graph: &ChunkGraph) -> anyhow::Result<String> {
     use rayon::prelude::*;
     let mut joiner = Joiner::with_options(JoinerOptions { separator: Some("\n".to_string()) });
-    self.imports_from_other_chunks.iter().for_each(|(chunk_id, items)| {
-      let chunk = &chunk_graph.chunks[*chunk_id];
-      let mut import_items = items
-        .iter()
-        .map(|item| {
-          let imported = chunk
-            .canonical_names
-            .get(&graph.symbols.par_get_canonical_ref(item.import_ref))
-            .cloned()
-            .unwrap();
-          let alias = item.export_alias.as_ref().unwrap();
-          if imported == alias {
-            format!("{imported}")
-          } else {
-            format!("{imported} as {alias}")
-          }
-        })
-        .collect::<Vec<_>>();
-      import_items.sort();
-      joiner.append_raw(format!(
-        "import {{ {} }} from \"./{}\";",
-        import_items.join(", "),
-        chunk.file_name.as_ref().unwrap()
-      ));
-    });
+    joiner.append(self.render_imports_for_esm(graph, chunk_graph));
     self
       .modules
       .par_iter()
@@ -143,6 +119,7 @@ impl Chunk {
       .for_each(|item| {
         joiner.append(item);
       });
+
     if let Some(exports) = self.exports_str.clone() {
       joiner.append_raw(exports);
     }

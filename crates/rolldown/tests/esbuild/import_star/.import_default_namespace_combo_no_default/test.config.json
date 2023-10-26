@@ -1,0 +1,38 @@
+{
+  "input": {
+    "input": [
+      {
+        "name": "entry-default-ns-prop_js",
+        "import": "entry-default-ns-prop.js"
+      },
+      {
+        "name": "entry-default-ns_js",
+        "import": "entry-default-ns.js"
+      },
+      {
+        "name": "entry-default-prop_js",
+        "import": "entry-default-prop.js"
+      },
+      {
+        "name": "entry-default_js",
+        "import": "entry-default.js"
+      },
+      {
+        "name": "entry-prop_js",
+        "import": "entry-prop.js"
+      },
+      {
+        "name": "entry-dead_js",
+        "import": "entry-dead.js"
+      },
+      {
+        "name": "entry-typo_js",
+        "import": "entry-typo.js"
+      },
+      {
+        "name": "entry-typo-indirect_js",
+        "import": "entry-typo-indirect.js"
+      }
+    ]
+  }
+}

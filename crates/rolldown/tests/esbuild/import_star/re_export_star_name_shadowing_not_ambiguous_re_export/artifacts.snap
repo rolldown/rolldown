@@ -3,20 +3,17 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous_re_export
 ---
-# main.js
+# entry_js.js
 
 ```js
-// bar.js
-var bar_ns = {
-  get bar() { return bar }
-};
-const bar = 123
-// foo.js
-var foo_ns = {
-  get bar_ns() { return bar_ns }
-};
+// c.js
+let x$1 = 2
+// b.js
 
-// main.js
+let x = 1
+// a.js
 
-console.log(foo_ns)
+// entry.js
+
+console.log(x)
 ```

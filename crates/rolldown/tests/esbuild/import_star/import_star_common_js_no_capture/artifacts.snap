@@ -3,14 +3,13 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/import_star_common_js_no_capture
 ---
-# main.js
+# entry_js.js
 
 ```js
 // foo.js
 var require_foo = __commonJS({
 'foo.js'(exports, module) {
 exports.foo = 123
-
 }
 });
 // entry.js

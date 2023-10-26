@@ -1,0 +1,54 @@
+{
+  "input": {
+    "input": [
+      {
+        "name": "external-default2_js",
+        "import": "external-default2.js"
+      },
+      {
+        "name": "external-ns_js",
+        "import": "external-ns.js"
+      },
+      {
+        "name": "external-ns-default_js",
+        "import": "external-ns-default.js"
+      },
+      {
+        "name": "external-ns-def_js",
+        "import": "external-ns-def.js"
+      },
+      {
+        "name": "external-default_js",
+        "import": "external-default.js"
+      },
+      {
+        "name": "external-def_js",
+        "import": "external-def.js"
+      },
+      {
+        "name": "internal-default2_js",
+        "import": "internal-default2.js"
+      },
+      {
+        "name": "internal-ns_js",
+        "import": "internal-ns.js"
+      },
+      {
+        "name": "internal-ns-default_js",
+        "import": "internal-ns-default.js"
+      },
+      {
+        "name": "internal-ns-def_js",
+        "import": "internal-ns-def.js"
+      },
+      {
+        "name": "internal-default_js",
+        "import": "internal-default.js"
+      },
+      {
+        "name": "internal-def_js",
+        "import": "internal-def.js"
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/issue176
+---
+# entry_js.js
+
+```js
+// folders/child/foo.js
+const foo = () => 'hi there'
+// folders/child/index.js
+
+// folders/index.js
+var folders_index_ns = {
+  get foo() { return foo }
+};
+
+// entry.js
+
+console.log(JSON.stringify(folders_index_ns))
+```

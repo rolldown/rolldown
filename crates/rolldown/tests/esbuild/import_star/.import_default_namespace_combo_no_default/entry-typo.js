@@ -1,0 +1,1 @@
+import * as ns from './foo'; console.log(ns.buton)

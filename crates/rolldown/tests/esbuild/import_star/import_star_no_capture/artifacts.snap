@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/import_star_no_capture
 ---
-# main.js
+# entry_js.js
 
 ```js
 // foo.js
@@ -11,8 +11,7 @@ var foo_ns = {
   get foo() { return foo$1 }
 };
 const foo$1 = 123
-
-// main.js
+// entry.js
 
 let foo = 234
 console.log(foo_ns.foo, foo_ns.foo, foo)

@@ -1,0 +1,3 @@
+entry.js: WARNING: Import "y" will always be undefined because there are multiple matching exports
+foo.js: NOTE: One matching export is here:
+bar.js: NOTE: Another matching export is here:

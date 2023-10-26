@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguous_warning
 ---
-# main.js
+# entry_js.js
 
 ```js
 // bar.js
@@ -19,7 +19,7 @@ var common_ns = {
 };
 
 
-// main.js
+// entry.js
 
 console.log(common_ns.x, common_ns.y, common_ns.z)
 ```

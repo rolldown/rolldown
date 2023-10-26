@@ -1,0 +1,1 @@
+import * as ns from './foo'; 0 && console.log(ns.default)

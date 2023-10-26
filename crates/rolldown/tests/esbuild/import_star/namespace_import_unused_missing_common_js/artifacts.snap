@@ -1,0 +1,19 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_unused_missing_common_js
+---
+# entry_js.js
+
+```js
+// foo.js
+var require_foo = __commonJS({
+'foo.js'(exports, module) {
+exports.x = 123
+}
+});
+// entry.js
+var foo_ns = __toESM(require_foo());
+
+console.log(foo_ns.foo)
+```

@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_other_file_export_self_as_namespace_es6
 ---
-# main.js
+# entry_js.js
 
 ```js
 // foo.js
@@ -13,8 +13,7 @@ var foo_ns = {
 };
 const foo = 123
 
-
-// main.js
+// entry.js
 
 export { foo, foo_ns as ns };
 ```

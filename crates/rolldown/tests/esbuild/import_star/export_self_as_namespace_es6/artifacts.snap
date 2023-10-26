@@ -3,16 +3,15 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/export_self_as_namespace_es6
 ---
-# main.js
+# entry_js.js
 
 ```js
-// main.js
-var main_ns = {
-  get ns() { return main_ns },
+// entry.js
+var entry_ns = {
+  get ns() { return entry_ns },
   get foo() { return foo }
 };
 const foo = 123
 
-
-export { foo, main_ns as ns };
+export { foo, entry_ns as ns };
 ```

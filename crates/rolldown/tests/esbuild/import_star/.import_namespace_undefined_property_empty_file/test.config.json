@@ -1,0 +1,14 @@
+{
+  "input": {
+    "input": [
+      {
+        "name": "ntry-nope_js",
+        "import": "ntry-nope.js"
+      },
+      {
+        "name": "ntry-default_js",
+        "import": "ntry-default.js"
+      }
+    ]
+  }
+}

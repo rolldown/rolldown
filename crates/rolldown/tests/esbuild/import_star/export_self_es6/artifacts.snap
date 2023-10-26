@@ -3,12 +3,11 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/export_self_es6
 ---
-# main.js
+# entry_js.js
 
 ```js
-// main.js
+// entry.js
 const foo = 123
-
 
 export { foo };
 ```

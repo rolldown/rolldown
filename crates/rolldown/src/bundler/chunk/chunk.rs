@@ -1,4 +1,3 @@
-use index_vec::IndexVec;
 use oxc::span::Atom;
 use rolldown_common::{ModuleId, ResolvedExport, SymbolRef};
 use rustc_hash::FxHashMap;

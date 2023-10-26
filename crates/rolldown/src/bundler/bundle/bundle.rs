@@ -5,7 +5,7 @@ use crate::bundler::{
   bitset::BitSet,
   chunk::{
     chunk::{Chunk, CrossChunkImportItem},
-    chunk_graph::{ChunkGraph, ChunkMeta},
+    chunk_graph::ChunkGraph,
     ChunkId, ChunksVec,
   },
   graph::graph::Graph,
@@ -42,7 +42,7 @@ impl<'a> Bundle<'a> {
     module_to_bits[module_id].set_bit(entry_index);
     let Module::Normal(module) = &self.graph.modules[module_id] else { return };
     module.import_records.iter().for_each(|rec| {
-      // Module imported dynamically will be considered as a entry,
+      // Module imported dynamically will be considered as an entry,
       // so we don't need to include it in this chunk
       if rec.kind != ImportKind::DynamicImport {
         self.determine_reachable_modules_for_entry(
@@ -66,25 +66,18 @@ impl<'a> Bundle<'a> {
       for module_id in chunk.modules.iter().copied() {
         match &self.graph.modules[module_id] {
           Module::Normal(module) => {
-            module
-              .stmt_infos
-              .iter()
-              .flat_map(|info| info.declared_symbols.iter())
-              .copied()
-              .for_each(|symbol_ref| {
-                self.graph.symbols.get_mut(symbol_ref).chunk_id = Some(chunk_id)
-              });
+            let linking_info = &self.graph.linker_modules[module_id];
 
-            module
-              .stmt_infos
-              .iter()
-              .flat_map(|info| info.referenced_symbols.iter())
-              .copied()
-              .for_each(|symbol_ref| {
-                let _symbol = self.graph.symbols.get(symbol_ref);
-                let canonical_ref = self.graph.symbols.get_canonical_ref(symbol_ref);
+            for stmt_info in module.stmt_infos.iter().chain(linking_info.facade_stmt_infos.iter()) {
+              for declared in &stmt_info.declared_symbols {
+                self.graph.symbols.get_mut(*declared).chunk_id = Some(chunk_id);
+              }
+
+              for referenced in &stmt_info.referenced_symbols {
+                let canonical_ref = self.graph.symbols.get_canonical_ref(*referenced);
                 chunk_meta_imports.insert(canonical_ref);
-              });
+              }
+            }
           }
           Module::External(_) => {
             // TODO: process external module
@@ -115,9 +108,6 @@ impl<'a> Bundle<'a> {
       // these chunks are evaluated for their side effects too.
       // TODO: ensure chunks are evaluated for their side effects too.
     }
-    println!("chunk_meta_imports_vec {chunk_meta_imports_vec:?}");
-    println!("chunk_meta_exports_vec {chunk_meta_exports_vec:?}");
-
     // Generate cross-chunk exports. These must be computed before cross-chunk
     // imports because of export alias renaming, which must consider all export
     // aliases simultaneously to avoid collisions.
@@ -129,7 +119,7 @@ impl<'a> Bundle<'a> {
         let alias = if *count == 0 {
           original_name.clone()
         } else {
-          format!("{}${}", original_name, count).into()
+          format!("{original_name}${count}").into()
         };
         chunk.exports_to_other_chunks.insert(export, alias.clone());
         *count += 1;
@@ -137,15 +127,15 @@ impl<'a> Bundle<'a> {
     }
     for chunk_id in chunk_graph.chunks.indices() {
       for (importee_chunk_id, import_items) in
-        chunk_graph.chunks[chunk_id].imports_from_other_chunks.iter()
+        &chunk_graph.chunks[chunk_id].imports_from_other_chunks
       {
-        for item in import_items.iter() {
+        for item in import_items {
           if let Some(alias) =
             chunk_graph.chunks[*importee_chunk_id].exports_to_other_chunks.get(&item.import_ref)
           {
             // safety: no other mutable reference to `item` exists
             unsafe {
-              let item = item as *const CrossChunkImportItem as *mut CrossChunkImportItem;
+              let item = (item as *const CrossChunkImportItem).cast_mut();
               (*item).export_alias = Some(alias.clone());
             }
           }

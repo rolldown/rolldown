@@ -120,6 +120,9 @@ impl Chunk {
         joiner.append(item);
       });
 
+    if let Some(exports) = self.render_exports_for_esm(graph) {
+      joiner.append(exports);
+    }
     if let Some(exports) = self.exports_str.clone() {
       joiner.append_raw(exports);
     }

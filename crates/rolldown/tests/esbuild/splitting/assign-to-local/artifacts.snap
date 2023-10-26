@@ -11,6 +11,7 @@ let foo
 function setFoo(value) {
     foo = value
 }
+export { foo, setFoo };
 ```
 # a.js
 

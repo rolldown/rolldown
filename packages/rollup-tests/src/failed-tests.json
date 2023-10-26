@@ -332,6 +332,7 @@
   "rollup@function@function-use-strict-directive-removed: should delete use strict from function body",
   "rollup@function@functions-renamed-correctly: renames function expression IDs correctly",
   "rollup@function@handle-missing-export-source: does not fail if a pre-generated AST is omitting the source property of an unused named export (#3210)",
+  "rollup@function@handle-object-rest-spread-patterns: handles properties created by an object rest spread operator",
   "rollup@function@handle-statically-resolvable-if-statements: handles statically resolvable \"if\" statements (#2134)",
   "rollup@function@handles-empty-string-sourcemap-mappings: handles transforms that return sourcemap with empty mappings",
   "rollup@function@handles-stringified-sourcemaps: handles transforms that return stringified source maps (#377)",

@@ -1,9 +1,13 @@
-use std::hash::BuildHasherDefault;
+use std::{borrow::Cow, hash::BuildHasherDefault};
 
 use super::asset::Asset;
 use crate::bundler::{
   bitset::BitSet,
-  chunk::{chunk::Chunk, chunk_graph::ChunkGraph, ChunkId, ChunksVec},
+  chunk::{
+    chunk::{Chunk, CrossChunkImportItem},
+    ChunkId, ChunksVec,
+  },
+  chunk_graph::ChunkGraph,
   graph::graph::Graph,
   module::module::Module,
   options::{
@@ -12,9 +16,9 @@ use crate::bundler::{
   },
 };
 use anyhow::Ok;
-use index_vec::IndexVec;
-use rolldown_common::{ImportKind, ModuleId};
-use rustc_hash::FxHashMap;
+use index_vec::{index_vec, IndexVec};
+use rolldown_common::{ImportKind, ModuleId, SymbolRef};
+use rustc_hash::{FxHashMap, FxHashSet};
 
 pub struct Bundle<'a> {
   graph: &'a mut Graph,
@@ -38,7 +42,7 @@ impl<'a> Bundle<'a> {
     module_to_bits[module_id].set_bit(entry_index);
     let Module::Normal(module) = &self.graph.modules[module_id] else { return };
     module.import_records.iter().for_each(|rec| {
-      // Module imported dynamically will be considered as a entry,
+      // Module imported dynamically will be considered as an entry,
       // so we don't need to include it in this chunk
       if rec.kind != ImportKind::DynamicImport {
         self.determine_reachable_modules_for_entry(
@@ -48,6 +52,96 @@ impl<'a> Bundle<'a> {
         );
       }
     });
+  }
+
+  fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
+    // Determine which symbols belong to which chunk
+    let mut chunk_meta_imports_vec =
+      index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
+    let mut chunk_meta_exports_vec =
+      index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
+    for (chunk_id, chunk) in chunk_graph.chunks.iter_enumerated() {
+      let chunk_meta_imports = &mut chunk_meta_imports_vec[chunk_id];
+
+      for module_id in chunk.modules.iter().copied() {
+        match &self.graph.modules[module_id] {
+          Module::Normal(module) => {
+            let linking_info = &self.graph.linker_modules[module_id];
+
+            for stmt_info in module.stmt_infos.iter().chain(linking_info.facade_stmt_infos.iter()) {
+              for declared in &stmt_info.declared_symbols {
+                self.graph.symbols.get_mut(*declared).chunk_id = Some(chunk_id);
+              }
+
+              for referenced in &stmt_info.referenced_symbols {
+                let canonical_ref = self.graph.symbols.get_canonical_ref(*referenced);
+                chunk_meta_imports.insert(canonical_ref);
+              }
+            }
+          }
+          Module::External(_) => {
+            // TODO: process external module
+          }
+        }
+      }
+    }
+
+    for (chunk_id, chunk) in chunk_graph.chunks.iter_mut_enumerated() {
+      let chunk_meta_imports = &chunk_meta_imports_vec[chunk_id];
+      for import_ref in chunk_meta_imports.iter().copied() {
+        let importee_chunk_id = self.graph.symbols.get(import_ref).chunk_id.unwrap();
+        if chunk_id != importee_chunk_id {
+          chunk
+            .imports_from_other_chunks
+            .entry(importee_chunk_id)
+            .or_default()
+            .push(CrossChunkImportItem { import_ref, export_alias: None });
+          chunk_meta_exports_vec[importee_chunk_id].insert(import_ref);
+        }
+      }
+
+      if chunk.entry_module.is_none() {
+        continue;
+      }
+      // If this is an entry point, make sure we import all chunks belonging to
+      // this entry point, even if there are no imports. We need to make sure
+      // these chunks are evaluated for their side effects too.
+      // TODO: ensure chunks are evaluated for their side effects too.
+    }
+    // Generate cross-chunk exports. These must be computed before cross-chunk
+    // imports because of export alias renaming, which must consider all export
+    // aliases simultaneously to avoid collisions.
+    let mut name_count = FxHashMap::default();
+    for (chunk_id, chunk) in chunk_graph.chunks.iter_mut_enumerated() {
+      for export in chunk_meta_exports_vec[chunk_id].iter().copied() {
+        let original_name = self.graph.symbols.get_original_name(export);
+        let count = name_count.entry(Cow::Borrowed(original_name)).or_insert(0u32);
+        let alias = if *count == 0 {
+          original_name.clone()
+        } else {
+          format!("{original_name}${count}").into()
+        };
+        chunk.exports_to_other_chunks.insert(export, alias.clone());
+        *count += 1;
+      }
+    }
+    for chunk_id in chunk_graph.chunks.indices() {
+      for (importee_chunk_id, import_items) in
+        &chunk_graph.chunks[chunk_id].imports_from_other_chunks
+      {
+        for item in import_items {
+          if let Some(alias) =
+            chunk_graph.chunks[*importee_chunk_id].exports_to_other_chunks.get(&item.import_ref)
+          {
+            // safety: no other mutable reference to `item` exists
+            unsafe {
+              let item = (item as *const CrossChunkImportItem).cast_mut();
+              (*item).export_alias = Some(alias.clone());
+            }
+          }
+        }
+      }
+    }
   }
 
   fn generate_chunks(&self) -> ChunkGraph {
@@ -135,6 +229,8 @@ impl<'a> Bundle<'a> {
         chunk.initialize_exports(&self.graph.linker_modules, &self.graph.symbols);
       }
     });
+
+    self.compute_cross_chunk_links(&mut chunk_graph);
 
     let assets = chunk_graph
       .chunks

@@ -1,0 +1,32 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/assign-to-local
+---
+# 2.js
+
+```js
+// shared.js
+let foo
+function setFoo(value) {
+    foo = value
+}
+export { foo, setFoo };
+```
+# a.js
+
+```js
+import { foo, setFoo } from "./2.js";
+// a.js
+
+setFoo(123)
+console.log(foo)
+```
+# b.js
+
+```js
+import { foo } from "./2.js";
+// b.js
+
+console.log(foo)
+```

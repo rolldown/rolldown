@@ -1,5 +1,6 @@
 pub mod bitset;
 pub mod bundle;
+mod chunk_graph;
 mod graph;
 mod module;
 pub mod options;

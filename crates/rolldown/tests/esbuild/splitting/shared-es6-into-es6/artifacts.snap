@@ -1,0 +1,28 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/shared-es6-into-es6
+---
+# 2.js
+
+```js
+// shared.js
+let foo = 123
+export { foo };
+```
+# a.js
+
+```js
+import { foo } from "./2.js";
+// a.js
+
+console.log(foo)
+```
+# b.js
+
+```js
+import { foo } from "./2.js";
+// b.js
+
+console.log(foo)
+```

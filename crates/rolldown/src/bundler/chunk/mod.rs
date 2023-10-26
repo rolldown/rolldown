@@ -1,7 +1,8 @@
 #[allow(clippy::module_inception)]
 pub mod chunk;
-pub mod chunk_graph;
 mod de_conflict;
+mod render_chunk_exports;
+mod render_chunk_imports;
 
 use index_vec::IndexVec;
 

@@ -5,7 +5,7 @@ use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
 
 use crate::bundler::{
-  chunk::chunk_graph::ChunkGraph,
+  chunk_graph::ChunkGraph,
   graph::{graph::Graph, linker::LinkerModule},
 };
 

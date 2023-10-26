@@ -5,6 +5,7 @@ use string_wizard::{Joiner, JoinerOptions};
 
 use crate::bundler::{
   bitset::BitSet,
+  chunk_graph::ChunkGraph,
   graph::{
     graph::Graph,
     linker::LinkerModuleVec,
@@ -16,7 +17,13 @@ use crate::bundler::{
   },
 };
 
-use super::{chunk_graph::ChunkGraph, ChunkId};
+use super::ChunkId;
+
+#[derive(Debug)]
+pub struct CrossChunkImportItem {
+  pub export_alias: Option<Atom>,
+  pub import_ref: SymbolRef,
+}
 
 #[derive(Debug, Default)]
 pub struct Chunk {
@@ -27,6 +34,8 @@ pub struct Chunk {
   pub canonical_names: FxHashMap<SymbolRef, Atom>,
   pub exports_str: Option<String>,
   pub bits: BitSet,
+  pub imports_from_other_chunks: FxHashMap<ChunkId, Vec<CrossChunkImportItem>>,
+  pub exports_to_other_chunks: FxHashMap<SymbolRef, Atom>,
 }
 
 impl Chunk {
@@ -96,6 +105,7 @@ impl Chunk {
   pub fn render(&self, graph: &Graph, chunk_graph: &ChunkGraph) -> anyhow::Result<String> {
     use rayon::prelude::*;
     let mut joiner = Joiner::with_options(JoinerOptions { separator: Some("\n".to_string()) });
+    joiner.append(self.render_imports_for_esm(graph, chunk_graph));
     self
       .modules
       .par_iter()
@@ -109,21 +119,14 @@ impl Chunk {
       .for_each(|item| {
         joiner.append(item);
       });
+
+    if let Some(exports) = self.render_exports_for_esm(graph) {
+      joiner.append(exports);
+    }
     if let Some(exports) = self.exports_str.clone() {
       joiner.append_raw(exports);
     }
 
     Ok(joiner.join())
   }
-}
-
-#[derive(Debug, Clone)]
-pub struct ImportChunkMeta {
-  pub chunk_id: ChunkId,
-  // pub symbols: usize,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct ChunkMeta {
-  pub imports: Vec<ImportChunkMeta>,
 }

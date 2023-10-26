@@ -5,10 +5,16 @@ const path = require("path");
 const changeCase = require("change-case");
 const chalk = require("chalk");
 const dedent = require("dedent");
+// How to use this script
+// 1. Adding a test golang file under this dir or whereever you want, and modify the source path
+// 2. Modifying the includeList, this list control which test case you want to generate
+// 3. `let testDir = path.resolve(__dirname, "test", testCaseName);` Modify this testDir, by default, 
+// The script will generate testCases under `${__dirname}/test`
+
 let source = fs
 	.readFileSync(path.resolve(__dirname, "./bundler_default.go"))
 	.toString();
-const list = [
+const includeList = [
 	"avoid_tdz",
 	"common_js_from_es6",
 	"es6_from_common_js",
@@ -55,7 +61,8 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 		testCaseName = changeCase.snakeCase(testCaseName);
 
 		console.log(testCaseName);
-		if (!list.includes(testCaseName)) {
+		if (!includeList.includes(testCaseName)) {
+      // TODO Add a `.` prefix instead of skipping rest of the code.
 			continue;
 		}
 		let bundle_field_list = query.captures(child).filter((item) => {

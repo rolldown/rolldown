@@ -12,7 +12,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId,
-  ModuleType, NamedImport, ReExport, StmtInfo, StmtInfoId,
+  ModuleType, NamedImport, ReExport, StmtInfo,
 };
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
@@ -21,7 +21,7 @@ use rustc_hash::FxHashMap;
 pub struct ScanResult {
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
-  pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
+  pub stmt_infos: Vec<StmtInfo>,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
   pub star_exports: Vec<ImportRecordId>,
   pub export_default_symbol_id: Option<SymbolId>,
@@ -297,9 +297,9 @@ impl<'a> Scanner<'a> {
 
 impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   fn visit_program(&mut self, program: &'p mut oxc::ast::ast::Program<'ast>) {
-    self.result.stmt_infos = IndexVec::with_capacity(program.body.len());
+    self.result.stmt_infos = Vec::with_capacity(program.body.len());
     for (idx, stmt) in program.body.iter_mut().enumerate() {
-      self.current_stmt_info.stmt_idx = idx;
+      self.current_stmt_info.stmt_idx = Some(idx);
       self.visit_statement(stmt);
       self.result.stmt_infos.push(std::mem::take(&mut self.current_stmt_info));
     }

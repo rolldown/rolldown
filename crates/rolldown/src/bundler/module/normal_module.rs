@@ -7,7 +7,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
-  ResourceId, StmtInfo, StmtInfoId, SymbolRef, VirtualStmtInfo,
+  ResourceId, StmtInfo, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -33,7 +33,7 @@ pub struct NormalModule {
   pub ast: OxcProgram,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
-  pub stmt_infos: IndexVec<StmtInfoId, StmtInfo>,
+  pub stmt_infos: Vec<StmtInfo>,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
   pub imports: FxHashMap<Span, ImportRecordId>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
@@ -102,10 +102,9 @@ impl NormalModule {
   pub fn initialize_namespace(&self, self_linker_module: &mut LinkerModule) {
     if !self_linker_module.is_symbol_for_namespace_referenced {
       self_linker_module.is_symbol_for_namespace_referenced = true;
-      self_linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
-        declared_symbols: vec![self.namespace_symbol],
-        ..Default::default()
-      });
+      self_linker_module
+        .facade_stmt_infos
+        .push(StmtInfo { declared_symbols: vec![self.namespace_symbol], ..Default::default() });
     }
   }
 
@@ -335,10 +334,9 @@ impl NormalModule {
       .into();
       let symbol = symbols.create_symbol(self.id, name).symbol;
       self_linker_module.wrap_symbol = Some((self.id, symbol).into());
-      self_linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
-        declared_symbols: vec![(self.id, symbol).into()],
-        ..Default::default()
-      });
+      self_linker_module
+        .facade_stmt_infos
+        .push(StmtInfo { declared_symbols: vec![(self.id, symbol).into()], ..Default::default() });
       self.initialize_namespace(self_linker_module);
     }
   }
@@ -362,7 +360,7 @@ impl NormalModule {
     symbols: &mut Symbols,
   ) -> SymbolRef {
     let local_symbol_ref = symbols.create_symbol(self.id, name);
-    self_linker_module.virtual_stmt_infos.push(VirtualStmtInfo {
+    self_linker_module.facade_stmt_infos.push(StmtInfo {
       // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
       // The deconflict for runtime symbols would be handled in the deconflict on cross-chunk-imported
       // symbols

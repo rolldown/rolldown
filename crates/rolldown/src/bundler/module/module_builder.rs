@@ -5,7 +5,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
-  ResourceId, StmtInfo, StmtInfoId, SymbolRef,
+  ResourceId, StmtInfo, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::FxHashMap;
@@ -21,7 +21,7 @@ pub struct NormalModuleBuilder {
   pub ast: Option<OxcProgram>,
   pub named_imports: Option<FxHashMap<SymbolId, NamedImport>>,
   pub named_exports: Option<FxHashMap<Atom, LocalOrReExport>>,
-  pub stmt_infos: Option<IndexVec<StmtInfoId, StmtInfo>>,
+  pub stmt_infos: Option<Vec<StmtInfo>>,
   pub import_records: Option<IndexVec<ImportRecordId, ImportRecord>>,
   pub imports: Option<FxHashMap<Span, ImportRecordId>>,
   pub star_exports: Option<Vec<ImportRecordId>>,

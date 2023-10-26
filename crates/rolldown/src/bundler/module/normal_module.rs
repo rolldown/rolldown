@@ -44,14 +44,6 @@ pub struct NormalModule {
   pub default_export_symbol: Option<SymbolId>,
 }
 
-#[derive(Debug, Clone)]
-pub struct UnresolvedSymbol {
-  // The unresolved symbol is from the importee namespace symbol
-  pub importee_namespace: SymbolRef,
-  // The unresolved symbol reference symbol name
-  pub reference_name: Option<Atom>,
-}
-
 #[derive(Debug)]
 pub enum Resolution {
   None,

@@ -3,7 +3,7 @@ pub mod esm_source_render;
 pub mod esm_wrap_source_render;
 pub mod scanner;
 use oxc::span::{Atom, GetSpan, Span};
-use rolldown_common::{ExportsKind, ResolvedExport, SymbolRef};
+use rolldown_common::{ExportsKind, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, UpdateOptions};
 
@@ -94,17 +94,17 @@ impl<'ast> RendererContext<'ast> {
         .linker_module
         .resolved_exports
         .iter()
-        .map(|(exported_name, info)| match info {
-          ResolvedExport::Symbol(symbol_ref) => {
-            let canonical_ref = self.graph.symbols.par_get_canonical_ref(*symbol_ref);
+        .map(|(exported_name, symbol_ref)| {
+          let canonical_ref = self.graph.symbols.par_get_canonical_ref(*symbol_ref);
+          let symbol = self.graph.symbols.get(canonical_ref);
+          let return_expr = if let Some(ns_alias) = &symbol.namespace_alias {
+            let canonical_ns_name = &self.final_names[&ns_alias.namespace_ref];
+            format!("{canonical_ns_name}.{exported_name}",)
+          } else {
             let canonical_name = self.final_names.get(&canonical_ref).unwrap();
-            format!("  get {exported_name}() {{ return {canonical_name} }}",)
-          }
-          ResolvedExport::Runtime(export) => {
-            let importee_namespace_symbol_name =
-              get_symbol_final_name(export.symbol_ref, &self.graph.symbols, self.final_names).unwrap();
-            format!("  get {exported_name}() {{ return {importee_namespace_symbol_name}.{exported_name} }}",)
-          }
+            format!("{canonical_name}",)
+          };
+          format!("  get {exported_name}() {{ return {return_expr} }}",)
         })
         .collect::<Vec<_>>()
         .join(",\n");

@@ -6,7 +6,6 @@ mod module_type;
 mod named_export;
 mod named_import;
 mod raw_path;
-mod resolved_export;
 mod stmt_info;
 mod symbol_ref;
 pub use crate::{
@@ -18,7 +17,6 @@ pub use crate::{
   named_export::{LocalExport, LocalOrReExport, ReExport},
   named_import::NamedImport,
   raw_path::RawPath,
-  resolved_export::{ResolvedExport, ResolvedExportRuntime},
   stmt_info::StmtInfo,
   symbol_ref::SymbolRef,
 };

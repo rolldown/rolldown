@@ -11,10 +11,13 @@ var a_ns = {
   get abc() { return abc }
 };
 const abc = undefined
+
+export { a_ns };
 ```
 # entry.js
 
 ```js
+import { a_ns } from "./2.js";
 // entry.js
 
 
@@ -23,6 +26,7 @@ export { a_ns as a };
 # main.js
 
 ```js
+import { a_ns } from "./2.js";
 // main.js
 
 

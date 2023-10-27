@@ -5,7 +5,7 @@ use rolldown_common::SymbolRef;
 use rustc_hash::FxHashMap;
 
 use super::chunk::Chunk;
-use crate::bundler::{graph::graph::Graph, module::module::Module};
+use crate::bundler::{graph::graph::Graph, module::Module};
 
 impl Chunk {
   pub fn de_conflict(&mut self, graph: &Graph) {
@@ -38,7 +38,7 @@ impl Chunk {
             .iter()
             .flat_map(|part| part.declared_symbols.iter().copied())
             .chain(
-              graph.linker_modules[module.id]
+              graph.linking_infos[module.id]
                 .facade_stmt_infos
                 .iter()
                 .flat_map(|part| part.declared_symbols.iter().copied()),

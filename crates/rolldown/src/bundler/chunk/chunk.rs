@@ -7,7 +7,7 @@ use crate::bundler::{
   bitset::BitSet,
   chunk_graph::ChunkGraph,
   graph::graph::Graph,
-  module::module::ModuleRenderContext,
+  module::ModuleRenderContext,
   options::{
     file_name_template::FileNameRenderOptions, normalized_output_options::NormalizedOutputOptions,
   },

@@ -1,4 +1,4 @@
-use crate::bundler::module::module::Module;
+use crate::bundler::module::Module;
 
 use super::RendererContext;
 use oxc::{
@@ -55,7 +55,7 @@ impl<'ast> Visit<'ast> for EsmSourceRender<'ast> {
               named_decl.span.end,
               self.ctx.generate_import_commonjs_module(
                 importee,
-                &self.ctx.graph.linker_modules[importee.id],
+                &self.ctx.graph.linking_infos[importee.id],
                 true,
               ),
             );

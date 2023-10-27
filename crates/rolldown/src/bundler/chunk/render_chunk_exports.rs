@@ -15,7 +15,7 @@ impl Chunk {
           .collect::<Vec<_>>()
       },
       |entry_module_id| {
-        let linking_info = &graph.linker_modules[entry_module_id];
+        let linking_info = &graph.linking_infos[entry_module_id];
         linking_info.resolved_exports.iter().collect::<Vec<_>>()
       },
     );

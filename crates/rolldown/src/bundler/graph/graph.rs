@@ -1,9 +1,9 @@
 use super::{
-  linker::{Linker, LinkerModuleVec},
+  linker::{Linker, LinkingInfoVec},
   symbols::Symbols,
 };
 use crate::bundler::{
-  module::module_id::ModuleVec, module_loader::ModuleLoader,
+  module::ModuleVec, module_loader::ModuleLoader,
   options::normalized_input_options::NormalizedInputOptions, runtime::Runtime,
 };
 use rolldown_common::ModuleId;
@@ -12,7 +12,7 @@ use rustc_hash::FxHashSet;
 #[derive(Default, Debug)]
 pub struct Graph {
   pub modules: ModuleVec,
-  pub linker_modules: LinkerModuleVec,
+  pub linking_infos: LinkingInfoVec,
   pub entries: Vec<(Option<String>, ModuleId)>,
   pub sorted_modules: Vec<ModuleId>,
   pub symbols: Symbols,

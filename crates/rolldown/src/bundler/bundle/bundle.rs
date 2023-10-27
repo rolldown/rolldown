@@ -9,7 +9,7 @@ use crate::bundler::{
   },
   chunk_graph::ChunkGraph,
   graph::graph::Graph,
-  module::module::Module,
+  module::Module,
   options::{
     normalized_input_options::NormalizedInputOptions,
     normalized_output_options::NormalizedOutputOptions,
@@ -66,7 +66,7 @@ impl<'a> Bundle<'a> {
       for module_id in chunk.modules.iter().copied() {
         match &self.graph.modules[module_id] {
           Module::Normal(module) => {
-            let linking_info = &self.graph.linker_modules[module_id];
+            let linking_info = &self.graph.linking_infos[module_id];
 
             for stmt_info in module.stmt_infos.iter().chain(linking_info.facade_stmt_infos.iter()) {
               for declared in &stmt_info.declared_symbols {
@@ -87,7 +87,7 @@ impl<'a> Bundle<'a> {
 
       if let Some(entry_module) = chunk.entry_module {
         let entry_module = &self.graph.modules[entry_module];
-        let entry_linking_info = &self.graph.linker_modules[entry_module.id()];
+        let entry_linking_info = &self.graph.linking_infos[entry_module.id()];
         for export_ref in entry_linking_info.resolved_exports.values() {
           let mut canonical_ref = self.graph.symbols.get_canonical_ref(*export_ref);
           let symbol = self.graph.symbols.get(canonical_ref);

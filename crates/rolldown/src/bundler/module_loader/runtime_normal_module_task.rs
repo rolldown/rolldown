@@ -10,7 +10,7 @@ use super::Msg;
 use crate::{
   bundler::{
     graph::symbols::SymbolMap,
-    module::module_builder::NormalModuleBuilder,
+    module::normal_module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
     runtime::RUNTIME_PATH,
     visitors::scanner::{self, ScanResult},

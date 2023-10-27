@@ -5,7 +5,7 @@ use oxc::{
 use rolldown_common::ExportsKind;
 use rolldown_oxc::BindingIdentifierExt;
 
-use crate::bundler::module::module::Module;
+use crate::bundler::module::Module;
 
 use super::RendererContext;
 
@@ -120,7 +120,7 @@ impl<'ast> Visit<'ast> for EsmWrapSourceRender<'ast> {
               named_decl.span.end,
               self.ctx.generate_import_commonjs_module(
                 importee,
-                &self.ctx.graph.linker_modules[importee.id],
+                &self.ctx.graph.linking_infos[importee.id],
                 true,
               ),
             );

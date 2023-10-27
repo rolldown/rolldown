@@ -13,15 +13,15 @@ use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
 use string_wizard::MagicString;
 
-use super::{module::ModuleRenderContext, module_id::ModuleVec};
 use crate::bundler::{
-  graph::{linker::LinkerModule, symbols::Symbols},
-  module::module::Module,
+  graph::{linker::LinkingInfo, symbols::Symbols},
   visitors::{
     commonjs_source_render::CommonJsSourceRender, esm_source_render::EsmSourceRender,
     esm_wrap_source_render::EsmWrapSourceRender, RendererContext,
   },
 };
+
+use super::{Module, ModuleRenderContext, ModuleVec};
 
 #[derive(Debug)]
 pub struct NormalModule {
@@ -61,19 +61,19 @@ impl NormalModule {
     // FIXME: should not clone
     let source = self.ast.source();
     let mut source = MagicString::new(source.to_string());
-    let self_linker_module = &ctx.graph.linker_modules[self.id];
+    let self_linking_info = &ctx.graph.linking_infos[self.id];
     let ctx = RendererContext::new(
       ctx.graph,
       ctx.canonical_names,
       &mut source,
       ctx.chunk_graph,
       self,
-      self_linker_module,
+      self_linking_info,
     );
 
     if self.exports_kind == ExportsKind::CommonJs {
       CommonJsSourceRender::new(ctx).apply();
-    } else if self_linker_module.wrap_symbol.is_some() {
+    } else if self_linking_info.wrap_symbol.is_some() {
       EsmWrapSourceRender::new(ctx).apply();
     } else {
       EsmSourceRender::new(ctx).apply();
@@ -89,10 +89,10 @@ impl NormalModule {
     }
   }
 
-  pub fn initialize_namespace(&self, self_linker_module: &mut LinkerModule) {
-    if !self_linker_module.is_symbol_for_namespace_referenced {
-      self_linker_module.is_symbol_for_namespace_referenced = true;
-      self_linker_module
+  pub fn initialize_namespace(&self, self_linking_info: &mut LinkingInfo) {
+    if !self_linking_info.is_symbol_for_namespace_referenced {
+      self_linking_info.is_symbol_for_namespace_referenced = true;
+      self_linking_info
         .facade_stmt_infos
         .push(StmtInfo { declared_symbols: vec![self.namespace_symbol], ..Default::default() });
     }
@@ -314,8 +314,8 @@ impl NormalModule {
     resolved
   }
 
-  pub fn create_wrap_symbol(&self, self_linker_module: &mut LinkerModule, symbols: &mut Symbols) {
-    if self_linker_module.wrap_symbol.is_none() {
+  pub fn create_wrap_symbol(&self, self_linking_info: &mut LinkingInfo, symbols: &mut Symbols) {
+    if self_linking_info.wrap_symbol.is_none() {
       let name = format!(
         "{}_{}",
         if self.exports_kind == ExportsKind::CommonJs { "require" } else { "init" },
@@ -323,34 +323,34 @@ impl NormalModule {
       )
       .into();
       let symbol = symbols.create_symbol(self.id, name).symbol;
-      self_linker_module.wrap_symbol = Some((self.id, symbol).into());
-      self_linker_module
+      self_linking_info.wrap_symbol = Some((self.id, symbol).into());
+      self_linking_info
         .facade_stmt_infos
         .push(StmtInfo { declared_symbols: vec![(self.id, symbol).into()], ..Default::default() });
-      self.initialize_namespace(self_linker_module);
+      self.initialize_namespace(self_linking_info);
     }
   }
 
   pub fn generate_symbol_import_and_use(
     &self,
     symbol_ref_from_importee: SymbolRef,
-    self_linker_module: &mut LinkerModule,
+    self_linking_info: &mut LinkingInfo,
     symbols: &mut Symbols,
   ) {
     debug_assert!(symbol_ref_from_importee.owner != self.id);
     let name = symbols.get_original_name(symbol_ref_from_importee).clone();
-    let local_symbol_ref = self.generate_local_symbol(name, self_linker_module, symbols);
+    let local_symbol_ref = self.generate_local_symbol(name, self_linking_info, symbols);
     symbols.union(local_symbol_ref, symbol_ref_from_importee);
   }
 
   pub fn generate_local_symbol(
     &self,
     name: Atom,
-    self_linker_module: &mut LinkerModule,
+    self_linking_info: &mut LinkingInfo,
     symbols: &mut Symbols,
   ) -> SymbolRef {
     let local_symbol_ref = symbols.create_symbol(self.id, name);
-    self_linker_module.facade_stmt_infos.push(StmtInfo {
+    self_linking_info.facade_stmt_infos.push(StmtInfo {
       // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
       // The deconflict for runtime symbols would be handled in the deconflict on cross-chunk-imported
       // symbols

@@ -15,7 +15,7 @@ use super::Msg;
 use crate::{
   bundler::{
     graph::symbols::SymbolMap,
-    module::module_builder::NormalModuleBuilder,
+    module::normal_module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
     resolve_id::{resolve_id, ResolvedRequestInfo},
     visitors::scanner::{self, ScanResult},

@@ -9,8 +9,8 @@ use string_wizard::{MagicString, UpdateOptions};
 
 use super::{
   chunk_graph::ChunkGraph,
-  graph::{graph::Graph, linker::LinkerModule, symbols::get_symbol_final_name},
-  module::{module::Module, NormalModule},
+  graph::{graph::Graph, linker::LinkingInfo, symbols::get_symbol_final_name},
+  module::{Module, NormalModule},
 };
 
 pub struct RendererContext<'ast> {
@@ -19,7 +19,7 @@ pub struct RendererContext<'ast> {
   source: &'ast mut MagicString<'static>,
   chunk_graph: &'ast ChunkGraph,
   module: &'ast NormalModule,
-  linker_module: &'ast LinkerModule,
+  linking_info: &'ast LinkingInfo,
   wrap_symbol_name: Option<&'ast Atom>,
   namespace_symbol_name: Option<&'ast Atom>,
   default_symbol_name: Option<&'ast Atom>,
@@ -35,10 +35,10 @@ impl<'ast> RendererContext<'ast> {
     source: &'ast mut MagicString<'static>,
     chunk_graph: &'ast ChunkGraph,
     module: &'ast NormalModule,
-    linker_module: &'ast LinkerModule,
+    linking_info: &'ast LinkingInfo,
   ) -> Self {
     let wrap_symbol_name =
-      linker_module.wrap_symbol.and_then(|s| get_symbol_final_name(s, &graph.symbols, final_names));
+      linking_info.wrap_symbol.and_then(|s| get_symbol_final_name(s, &graph.symbols, final_names));
     let namespace_symbol_name = get_symbol_final_name(
       (module.id, module.namespace_symbol.symbol).into(),
       &graph.symbols,
@@ -53,7 +53,7 @@ impl<'ast> RendererContext<'ast> {
       source,
       chunk_graph,
       module,
-      linker_module,
+      linking_info,
       wrap_symbol_name,
       namespace_symbol_name,
       default_symbol_name,
@@ -91,7 +91,7 @@ impl<'ast> RendererContext<'ast> {
   pub fn generate_namespace_variable_declaration(&mut self) -> Option<String> {
     if let Some(namespace_name) = self.namespace_symbol_name {
       let exports: String = self
-        .linker_module
+        .linking_info
         .resolved_exports
         .iter()
         .map(|(exported_name, symbol_ref)| {
@@ -117,11 +117,11 @@ impl<'ast> RendererContext<'ast> {
   pub fn generate_import_commonjs_module(
     &self,
     importee: &NormalModule,
-    importee_linker_module: &LinkerModule,
+    importee_linking_info: &LinkingInfo,
     with_namespace_init: bool,
   ) -> String {
     let wrap_symbol_name =
-      self.get_symbol_final_name(importee_linker_module.wrap_symbol.unwrap()).unwrap();
+      self.get_symbol_final_name(importee_linking_info.wrap_symbol.unwrap()).unwrap();
     let to_esm_runtime_symbol_name = self.get_runtime_symbol_final_name(&"__toESM".into());
     let code = format!(
       "{to_esm_runtime_symbol_name}({wrap_symbol_name}(){})",
@@ -203,7 +203,7 @@ impl<'ast> RendererContext<'ast> {
             "{re_export_runtime_symbol_name}({namespace_name}, {});",
             self.generate_import_commonjs_module(
               importee,
-              &self.graph.linker_modules[importee.id],
+              &self.graph.linking_infos[importee.id],
               false
             )
           ),
@@ -236,7 +236,7 @@ impl<'ast> RendererContext<'ast> {
     self.remove_node(decl.span);
     let module_id = self.module.get_import_module_by_span(decl.span);
     let importee = &self.graph.modules[module_id];
-    let importee_linker_module = &self.graph.linker_modules[module_id];
+    let importee_linking_info = &self.graph.linking_infos[module_id];
     let start = self.first_stmt_start.unwrap_or(decl.span.start);
     if let Module::Normal(importee) = importee {
       if importee.exports_kind == ExportsKind::CommonJs {
@@ -244,11 +244,11 @@ impl<'ast> RendererContext<'ast> {
           start,
           self.generate_import_commonjs_module(
             importee,
-            &self.graph.linker_modules[importee.id],
+            &self.graph.linking_infos[importee.id],
             true,
           ),
         );
-      } else if let Some(wrap_symbol) = importee_linker_module.wrap_symbol {
+      } else if let Some(wrap_symbol) = importee_linking_info.wrap_symbol {
         let wrap_symbol_name = self.get_symbol_final_name(wrap_symbol).unwrap();
         // init wrapped esm module
         self.source.append_right(start, format!("{wrap_symbol_name}();\n"));
@@ -260,9 +260,9 @@ impl<'ast> RendererContext<'ast> {
     if let oxc::ast::ast::Expression::Identifier(ident) = &expr.callee {
       if ident.name == "require" {
         if let Module::Normal(importee) = self.get_importee_by_span(expr.span) {
-          let importee_linker_module = &self.graph.linker_modules[importee.id];
+          let importee_linking_info = &self.graph.linking_infos[importee.id];
           let wrap_symbol_name =
-            self.get_symbol_final_name(importee_linker_module.wrap_symbol.unwrap()).unwrap();
+            self.get_symbol_final_name(importee_linking_info.wrap_symbol.unwrap()).unwrap();
           if importee.exports_kind == ExportsKind::CommonJs {
             self.source.update(expr.span.start, expr.span.end, format!("{wrap_symbol_name}()"));
           } else {

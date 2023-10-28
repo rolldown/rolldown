@@ -7,14 +7,38 @@ const chalk = require("chalk");
 const dedent = require("dedent");
 // How to use this script
 // 1. Adding a test golang file under this dir or whereever you want, and modify the source path
-// 2. `let testDir = path.resolve(__dirname, "test", testCaseName);` Modify this testDir, by default, 
+// 2. `let testDir = path.resolve(__dirname, "test", testCaseName);` Modify this testDir, by default,
 // The script will generate testCases under `${__dirname}/test`
-let cases = [{ name: "default", source: "./bundler_default_test.go"}, { name: "import_star", source: "./bundler_importstar_test.go"}];
+let cases = [
+	{ name: "default", source: "./bundler_default_test.go" },
+	{ name: "import_star", source: "./bundler_importstar_test.go" },
+];
 let currentCase = cases[0];
 let source = fs
 	.readFileSync(path.resolve(__dirname, currentCase.source))
 	.toString();
-let ignoredTestName = ["ts", "txt", "json","jsx", "tsx", "no_bundle", "mangle", "minify", "minified", "comments", "fs", "alias", "node", "decorator", "iife", "abs_path", "inject", "metafile", "output_extension", "top_level_return_forbidden"];
+let ignoredTestName = [
+	"ts",
+	"txt",
+	"json",
+	"jsx",
+	"tsx",
+	"no_bundle",
+	"mangle",
+	"minify",
+	"minified",
+	"comments",
+	"fs",
+	"alias",
+	"node",
+	"decorator",
+	"iife",
+	"abs_path",
+	"inject",
+	"metafile",
+	"output_extension",
+	"top_level_return_forbidden",
+];
 const parser = new Parser();
 parser.setLanguage(Go);
 
@@ -34,7 +58,30 @@ let queryString = `
 )
 `;
 
+/**
+ * @param {import("tree-sitter").SyntaxNode} root
+ *
+ * */
+function getTopLevelBinding(root) {
+	const binding = {};
+	root.namedChildren.forEach((child) => {
+		if (child.type === "var_declaration") {
+			let var_spec = child.namedChildren[0];
+			let name = var_spec.namedChild(0).text;
+			let decl = var_spec.namedChild(1);
+			binding[name] = decl;
+		}
+	});
+	return binding;
+}
+
+let topLevelBindingMap = getTopLevelBinding(tree.rootNode);
 let query = new Parser.Query(parser.getLanguage(), queryString);
+
+function isDirEmptySync(dir) {
+	let list = fs.readdirSync(dir);
+	return list.length === 0;
+}
 
 for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 	let child = tree.rootNode.namedChild(i);
@@ -48,9 +95,22 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 		if (ignoredTestName.some((name) => testCaseName.includes(name))) {
 			continue;
 		}
-		let testDir = path.resolve(__dirname, `../crates/rolldown/tests/esbuild/${currentCase.name}`, testCaseName);
-		let ignoredTestDir = path.resolve(__dirname, `../crates/rolldown/tests/esbuild/${currentCase.name}`, `.${testCaseName}`);
-		if (fs.existsSync(testDir) || fs.existsSync(ignoredTestDir)) {
+		let testDir = path.resolve(
+			__dirname,
+			`../crates/rolldown/tests/esbuild/${currentCase.name}`,
+			testCaseName,
+		);
+		let ignoredTestDir = path.resolve(
+			__dirname,
+			`../crates/rolldown/tests/esbuild/${currentCase.name}`,
+			`.${testCaseName}`,
+		);
+
+		// Cause if you withdraw directory in git system, git will cleanup dir but leave the directory alone
+		if (
+			(fs.existsSync(testDir) && !isDirEmptySync(testDir)) ||
+			(fs.existsSync(ignoredTestDir) && !isDirEmptySync(ignoredTestDir))
+		) {
 			continue;
 		} else {
 			fs.ensureDirSync(testDir);
@@ -60,12 +120,19 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 		});
 		let jsConfig = Object.create(null);
 		bundle_field_list.forEach((cap) => {
-			processKeyElement(cap.node, jsConfig);
+			processKeyElement(cap.node, jsConfig, topLevelBindingMap);
 		});
 
 		const fileList = jsConfig["files"];
 		// Skip jsx/ts/tsx files test case
-		if (fileList.some(file => file.name.endsWith("ts") || file.name.endsWith("tsx") || file.name.endsWith("jsx"))) {
+		if (
+			fileList.some(
+				(file) =>
+					file.name.endsWith("ts") ||
+					file.name.endsWith("tsx") ||
+					file.name.endsWith("jsx"),
+			)
+		) {
 			continue;
 		}
 		let prefix = calculatePrefix(fileList.map((item) => item.name));
@@ -83,6 +150,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 		// entry
 		const config = { input: {} };
 		const entryPaths = jsConfig["entryPaths"] ?? [];
+		console.log(entryPaths);
 		if (!entryPaths.length) {
 			console.error(chalk.red(`No entryPaths found`));
 		}
@@ -131,8 +199,15 @@ function calculatePrefix(stringList) {
 
 /**
  * @param {import('tree-sitter').SyntaxNode} node
+ * @param {{[x: string]: import('tree-sitter').SyntaxNode} } binding
  */
-function processFiles(node) {
+function processFiles(node, binding) {
+	if (node.firstChild.type === "identifier") {
+		let name = node.firstChild.text;
+		if (binding[name]) {
+			node = binding[name];
+		}
+	}
 	let fileList = [];
 	let compositeLiteral = node.namedChild(0);
 	let body = compositeLiteral.namedChild(1);
@@ -158,8 +233,15 @@ function processFiles(node) {
 
 /**
  * @param {import('tree-sitter').SyntaxNode} node
+ * @param {{[x: string]: import('tree-sitter').SyntaxNode} binding
  */
-function processEntryPath(node) {
+function processEntryPath(node, binding) {
+if (node.firstChild.type === "identifier") {
+		let name = node.firstChild.text;
+		if (binding[name]) {
+			node = binding[name];
+		}
+	}
 	let entryList = [];
 	let compositeLiteral = node.namedChild(0);
 	let body = compositeLiteral.namedChild(1);
@@ -184,21 +266,24 @@ function processOptions(node) {}
 
 /**
  * @param {import('tree-sitter').SyntaxNode} node
+ * @param {*} config
+ * @param {{[x: string]: import('tree-sitter').SyntaxNode} } binding
+ *
  */
-function processKeyElement(node, obj) {
+function processKeyElement(node, config, binding) {
 	let keyValue = node.namedChild(0).text;
 	switch (keyValue) {
 		case "files":
-			obj["files"] = processFiles(node.namedChild(1));
+			config["files"] = processFiles(node.namedChild(1), binding);
 			break;
 		case "entryPaths":
-			obj["entryPaths"] = processEntryPath(node.namedChild(1));
+			config["entryPaths"] = processEntryPath(node.namedChild(1), binding);
 			break;
 		case "options":
-			obj["options"] = processOptions(node.namedChild(1));
+			config["options"] = processOptions(node.namedChild(1));
 			break;
 		case "expectedCompileLog":
-			obj["expectedCompileLog"] = node.namedChild(1).text.slice(1, -1);
+			config["expectedCompileLog"] = node.namedChild(1).text.slice(1, -1);
 			break;
 		default:
 			console.log(chalk.yellow(`unknown filed ${keyValue}`));

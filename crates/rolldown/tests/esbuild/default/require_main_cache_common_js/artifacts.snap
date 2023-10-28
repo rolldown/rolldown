@@ -1,0 +1,25 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/require_main_cache_common_js
+---
+# entry_js.js
+
+```js
+import { __commonJS } from "./_rolldown_runtime.js";
+
+// is-main.js
+var require_is_main = __commonJS({
+'is-main.js'(exports, module) {
+module.exports = require.main === module
+}
+});
+// entry.js
+var require_entry = __commonJS({
+'entry.js'(exports, module) {
+console.log('is main:', require.main === module)
+console.log(require_is_main())
+console.log('cache:', require.cache);
+}
+});
+```

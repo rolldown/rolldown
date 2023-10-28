@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552
+---
+# entry_js.js
+
+```js
+// entry.js
+function outer() {
+	{
+		function inner() {
+			return Math.random();
+		}
+		const x = inner();
+		console.log(x);
+	}
+}
+outer();
+export { outer };
+```

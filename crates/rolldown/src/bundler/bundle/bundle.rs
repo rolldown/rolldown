@@ -177,6 +177,7 @@ impl<'a> Bundle<'a> {
       FxHashMap::with_capacity_and_hasher(self.graph.entries.len(), BuildHasherDefault::default());
     let mut chunks = ChunksVec::with_capacity(self.graph.entries.len());
 
+    // FIXME: should only do this while `ROLLDOWN_TEST=1`
     let _runtime_chunk_id = chunks.push(Chunk::new(
       Some("_rolldown_runtime".to_string()),
       None,

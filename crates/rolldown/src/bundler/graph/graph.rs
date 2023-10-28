@@ -37,7 +37,8 @@ impl Graph {
 
   pub fn sort_modules(&mut self) {
     let mut stack = self.entries.iter().map(|(_, m)| Action::Enter(*m)).rev().collect::<Vec<_>>();
-
+    // The runtime module should always be the first module to be executed
+    stack.push(Action::Enter(self.runtime.id));
     let mut entered_ids: FxHashSet<ModuleId> = FxHashSet::default();
     entered_ids.shrink_to(self.modules.len());
     let mut sorted_modules = Vec::with_capacity(self.modules.len());
@@ -67,6 +68,11 @@ impl Graph {
       }
     }
     self.sorted_modules = sorted_modules;
+    debug_assert_eq!(
+      self.sorted_modules.first().copied(),
+      Some(self.runtime.id),
+      "runtime module should always be the first module in the sorted modules"
+    );
   }
 
   pub fn link(&mut self) {

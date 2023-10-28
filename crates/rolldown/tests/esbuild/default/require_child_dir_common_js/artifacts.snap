@@ -6,6 +6,8 @@ input_file: crates/rolldown/tests/esbuild/default/require_child_dir_common_js
 # entry_js.js
 
 ```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.js";
+
 // dir/index.js
 var require_dir_index = __commonJS({
 'dir/index.js'(exports, module) {

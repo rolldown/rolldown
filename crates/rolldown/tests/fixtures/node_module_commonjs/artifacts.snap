@@ -6,16 +6,22 @@ input_file: crates/rolldown/tests/fixtures/node_module_commonjs
 # 2.js
 
 ```js
+import { __commonJS } from "./_rolldown_runtime.js";
+
 // commonjs.js
 var require_commonjs = __commonJS({
 'commonjs.js'(exports, module) {
 module.exports = 1;
 }
 });
+export { commonjs_ns, require_commonjs };
 ```
 # entry.js
 
 ```js
+import { __toESM } from "./_rolldown_runtime.js";
+import { commonjs_ns, require_commonjs } from "./2.js";
+
 // entry.js
 var commonjs_ns = __toESM(require_commonjs(), 1);
 
@@ -24,6 +30,9 @@ console.log(commonjs_ns.default)
 # main.js
 
 ```js
+import { __reExport, __toESM } from "./_rolldown_runtime.js";
+import { commonjs_ns, require_commonjs } from "./2.js";
+
 // star_export.js
 var star_export_ns = {
 

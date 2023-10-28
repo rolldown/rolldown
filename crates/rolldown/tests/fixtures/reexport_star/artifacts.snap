@@ -18,6 +18,7 @@ export { a_ns };
 
 ```js
 import { a_ns } from "./2.js";
+
 // entry.js
 
 
@@ -27,6 +28,7 @@ export { a_ns as a };
 
 ```js
 import { a_ns } from "./2.js";
+
 // main.js
 
 

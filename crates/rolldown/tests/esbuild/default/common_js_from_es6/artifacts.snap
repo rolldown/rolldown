@@ -6,6 +6,8 @@ input_file: crates/rolldown/tests/esbuild/default/common_js_from_es6
 # entry_js.js
 
 ```js
+import { __esm, __toCommonJS } from "./_rolldown_runtime.js";
+
 // bar.js
 function bar$1() {
 	return 'bar'

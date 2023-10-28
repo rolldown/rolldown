@@ -6,6 +6,8 @@ input_file: crates/rolldown/tests/fixtures/reexport_commonjs
 # main.js
 
 ```js
+import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.js";
+
 // commonjs.js
 var require_commonjs = __commonJS({
 'commonjs.js'(exports, module) {

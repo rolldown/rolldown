@@ -6,6 +6,8 @@ input_file: crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_is
 # entry_js.js
 
 ```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.js";
+
 // cjs.js
 var require_cjs = __commonJS({
 'cjs.js'(exports, module) {

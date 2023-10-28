@@ -150,7 +150,6 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 		// entry
 		const config = { input: {} };
 		const entryPaths = jsConfig["entryPaths"] ?? [];
-		console.log(entryPaths);
 		if (!entryPaths.length) {
 			console.error(chalk.red(`No entryPaths found`));
 		}

@@ -160,6 +160,9 @@ impl<'graph> Linker<'graph> {
     linking_infos: &mut LinkingInfoVec,
   ) {
     let linking_info = &mut linking_infos[target];
+    if let Module::Normal(module) = &self.graph.modules[target] {
+      module.initialize_namespace(linking_info);
+    }
     if linking_info.wrap_symbol.is_some() {
       return;
     }
@@ -170,6 +173,7 @@ impl<'graph> Linker<'graph> {
     match &self.graph.modules[target] {
       Module::Normal(module) => {
         module.create_wrap_symbol(linking_info, symbols);
+
         let name = if module.exports_kind == ExportsKind::CommonJs {
           "__commonJS".into()
         } else {
@@ -187,13 +191,25 @@ impl<'graph> Linker<'graph> {
 
   #[allow(clippy::needless_collect)]
   fn mark_extra_symbols(&mut self, symbols: &mut Symbols, linking_infos: &mut LinkingInfoVec) {
-    for id in &self.graph.sorted_modules {
-      let importer = &self.graph.modules[*id];
+    // Determine if the namespace symbol need to be generated
+    for importer_id in &self.graph.sorted_modules {
+      let importer = &self.graph.modules[*importer_id];
+
+      if let Module::Normal(importer) = importer {
+        let has_reexport_all_from_cjs = importer.get_star_exports_modules().any(|importee| matches!(&self.graph.modules[importee], Module::Normal(m) if m.exports_kind == ExportsKind::CommonJs));
+        if has_reexport_all_from_cjs {
+          self.graph.modules[*importer_id]
+            .mark_symbol_for_namespace_referenced(&mut linking_infos[*importer_id]);
+        }
+      }
+
       importer
         .import_records()
         .iter()
         .filter_map(|rec| {
-          (rec.is_import_namespace && rec.resolved_module.is_valid()).then_some(rec.resolved_module)
+          ((rec.is_import_namespace || matches!(rec.kind, ImportKind::Require))
+            && rec.resolved_module.is_valid())
+          .then_some(rec.resolved_module)
         })
         .for_each(|importee| {
           self.graph.modules[importee]

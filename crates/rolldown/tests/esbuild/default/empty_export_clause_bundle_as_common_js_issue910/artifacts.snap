@@ -6,6 +6,8 @@ input_file: crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_
 # entry_js.js
 
 ```js
+import { __esm, __toCommonJS } from "./_rolldown_runtime.js";
+
 // types.mjs
 var types_ns = {
 

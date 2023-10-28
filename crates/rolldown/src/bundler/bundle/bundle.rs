@@ -70,6 +70,13 @@ impl<'a> Bundle<'a> {
 
             for stmt_info in module.stmt_infos.iter().chain(linking_info.facade_stmt_infos.iter()) {
               for declared in &stmt_info.declared_symbols {
+                // TODO: pass debug_assert!(self.graph.symbols.get(*declared).chunk_id.is_none());
+                // FIXME: I don't think this is correct, even though the assigned chunk_id is the same as the current chunk_id.
+                // A declared symbol should only be processed once.
+                debug_assert!(
+                  self.graph.symbols.get(*declared).chunk_id.unwrap_or(chunk_id) == chunk_id
+                );
+
                 self.graph.symbols.get_mut(*declared).chunk_id = Some(chunk_id);
               }
 
@@ -98,11 +105,13 @@ impl<'a> Bundle<'a> {
         }
       }
     }
-
     for (chunk_id, chunk) in chunk_graph.chunks.iter_mut_enumerated() {
       let chunk_meta_imports = &chunk_meta_imports_vec[chunk_id];
       for import_ref in chunk_meta_imports.iter().copied() {
-        let importee_chunk_id = self.graph.symbols.get(import_ref).chunk_id.unwrap();
+        let import_symbol = self.graph.symbols.get(import_ref);
+        let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
+          panic!("symbol {import_ref:?} {import_symbol:?} is not assigned to any chunk")
+        });
         if chunk_id != importee_chunk_id {
           chunk
             .imports_from_other_chunks
@@ -167,6 +176,13 @@ impl<'a> Bundle<'a> {
     let mut bits_to_chunk =
       FxHashMap::with_capacity_and_hasher(self.graph.entries.len(), BuildHasherDefault::default());
     let mut chunks = ChunksVec::with_capacity(self.graph.entries.len());
+
+    let _runtime_chunk_id = chunks.push(Chunk::new(
+      Some("_rolldown_runtime".to_string()),
+      None,
+      BitSet::new(0),
+      vec![self.graph.runtime.id],
+    ));
 
     // Create chunk for each static and dynamic entry
     for (entry_index, (name, module_id)) in self.graph.entries.iter().enumerate() {

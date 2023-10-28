@@ -31,7 +31,7 @@ impl Chunk {
         .collect::<Vec<_>>();
       import_items.sort();
       s.append(format!(
-        "import {{ {} }} from \"./{}\";",
+        "import {{ {} }} from \"./{}\";\n",
         import_items.join(", "),
         chunk.file_name.as_ref().unwrap()
       ));

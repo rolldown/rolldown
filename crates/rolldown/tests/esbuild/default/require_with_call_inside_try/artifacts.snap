@@ -6,6 +6,8 @@ input_file: crates/rolldown/tests/esbuild/default/require_with_call_inside_try
 # entry_js.js
 
 ```js
+import { __commonJS } from "./_rolldown_runtime.js";
+
 // entry.js
 var require_entry = __commonJS({
 'entry.js'(exports, module) {

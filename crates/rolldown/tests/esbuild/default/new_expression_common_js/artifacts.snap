@@ -6,6 +6,8 @@ input_file: crates/rolldown/tests/esbuild/default/new_expression_common_js
 # entry_js.js
 
 ```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.js";
+
 // foo.js
 var require_foo = __commonJS({
 'foo.js'(exports, module) {

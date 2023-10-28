@@ -333,14 +333,25 @@ impl NormalModule {
 
   pub fn generate_symbol_import_and_use(
     &self,
-    symbol_ref_from_importee: SymbolRef,
+    other_module_symbol_ref: SymbolRef,
     self_linking_info: &mut LinkingInfo,
     symbols: &mut Symbols,
   ) {
-    debug_assert!(symbol_ref_from_importee.owner != self.id);
-    let name = symbols.get_original_name(symbol_ref_from_importee).clone();
-    let local_symbol_ref = self.generate_local_symbol(name, self_linking_info, symbols);
-    symbols.union(local_symbol_ref, symbol_ref_from_importee);
+    debug_assert!(other_module_symbol_ref.owner != self.id);
+    // Create a facade symbol belongs to the self module.
+    let facade_ref = symbols.create_facade_symbol(self.id);
+    // The facade symbol is used to reference the symbol from the other module.
+    symbols.union(facade_ref, other_module_symbol_ref);
+
+    self_linking_info.facade_stmt_infos.push(StmtInfo {
+      // Since the facade symbol is created, it should be declared. This will be used to
+      // 1. de-conflict the symbol in the de-conflict pass
+      declared_symbols: vec![facade_ref],
+      // Since the facade symbol is used, it should be referenced. This will be used to
+      // create correct cross-chunk links
+      referenced_symbols: vec![facade_ref],
+      ..Default::default()
+    });
   }
 
   pub fn generate_local_symbol(

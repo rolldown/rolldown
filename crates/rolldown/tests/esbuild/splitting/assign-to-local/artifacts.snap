@@ -17,6 +17,7 @@ export { foo, setFoo };
 
 ```js
 import { foo, setFoo } from "./2.js";
+
 // a.js
 
 setFoo(123)
@@ -26,6 +27,7 @@ console.log(foo)
 
 ```js
 import { foo } from "./2.js";
+
 // b.js
 
 console.log(foo)

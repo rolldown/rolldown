@@ -1,0 +1,38 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/shared-commonjs-into-es6
+---
+# 2.js
+
+```js
+import { __commonJS } from "./_rolldown_runtime.js";
+
+// shared.js
+var require_shared = __commonJS({
+'shared.js'(exports, module) {
+exports.foo = 123
+}
+});
+export { require_shared, shared_ns };
+```
+# a.js
+
+```js
+import { __toESM } from "./_rolldown_runtime.js";
+import { require_shared, shared_ns } from "./2.js";
+
+// a.js
+const {foo} = require_shared()
+console.log(foo)
+```
+# b.js
+
+```js
+import { __toESM } from "./_rolldown_runtime.js";
+import { require_shared, shared_ns } from "./2.js";
+
+// b.js
+const {foo} = require_shared()
+console.log(foo)
+```

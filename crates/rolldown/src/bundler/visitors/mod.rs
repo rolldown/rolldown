@@ -39,11 +39,8 @@ impl<'ast> RendererContext<'ast> {
   ) -> Self {
     let wrap_symbol_name =
       linking_info.wrap_symbol.and_then(|s| get_symbol_final_name(s, &graph.symbols, final_names));
-    let namespace_symbol_name = get_symbol_final_name(
-      (module.id, module.namespace_symbol.symbol).into(),
-      &graph.symbols,
-      final_names,
-    );
+    let namespace_symbol_name =
+      get_symbol_final_name(module.namespace_symbol, &graph.symbols, final_names);
     let default_symbol_name = module
       .default_export_symbol
       .and_then(|s| get_symbol_final_name((module.id, s).into(), &graph.symbols, final_names));
@@ -266,9 +263,7 @@ impl<'ast> RendererContext<'ast> {
           if importee.exports_kind == ExportsKind::CommonJs {
             self.source.update(expr.span.start, expr.span.end, format!("{wrap_symbol_name}()"));
           } else {
-            let namespace_name = self
-              .get_symbol_final_name((importee.id, importee.namespace_symbol.symbol).into())
-              .unwrap();
+            let namespace_name = self.get_symbol_final_name(importee.namespace_symbol).unwrap();
             let to_commonjs_runtime_symbol_name =
               self.get_runtime_symbol_final_name(&"__toCommonJS".into());
             self.source.update(

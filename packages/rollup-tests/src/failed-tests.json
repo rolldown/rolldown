@@ -448,6 +448,7 @@
   "rollup@function@max-parallel-file-operations@infinity: maxParallelFileOps set to infinity",
   "rollup@function@max-parallel-file-operations@set: maxParallelFileOps set to 3",
   "rollup@function@max-parallel-file-operations@with-plugin: maxParallelFileOps with plugin",
+  "rollup@function@member-expression-assignment-in-function: detect side effect in member expression assignment when not top level",
   "rollup@function@merged-namespace-live-bindings: respects getters when accessing properties of an instance",
   "rollup@function@method-call-mutates-this: method calls are assumed to mutate the owner",
   "rollup@function@missing-export-preserve-modules: supports shimming missing exports when preserving modules",

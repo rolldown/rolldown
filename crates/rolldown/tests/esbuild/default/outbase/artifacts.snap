@@ -3,13 +3,13 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/outbase
 ---
-# c_js.js
+# c_js.mjs
 
 ```js
 // c.js
 console.log('c')
 ```
-# d_js.js
+# d_js.mjs
 
 ```js
 // d.js

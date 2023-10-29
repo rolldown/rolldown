@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/external/keep_import_external_order
 ---
-# main.js
+# main.mjs
 
 ```js
 // foo.js

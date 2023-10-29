@@ -3,26 +3,26 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/code_splitting
 ---
-# 3.js
+# 3.mjs
 
 ```js
 // share.js
 console.log('shared');
 ```
-# dynamic_js.js
+# dynamic_js.mjs
 
 ```js
 // dynamic.js
 console.log('dynamic')
 ```
-# main1.js
+# main1.mjs
 
 ```js
 // main1.js
 
-import('./dynamic_js.js')
+import('./dynamic_js.mjs')
 ```
-# main2.js
+# main2.mjs
 
 ```js
 // main2.js

@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/dynamic_import_with_template_iife
 ---
-# a_js.js
+# a_js.mjs
 
 ```js
 // a.js

@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/relative_entry_point_error
 ---
-# entry.js
+# entry.mjs
 
 ```js
 // entry.js

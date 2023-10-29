@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/require_without_call
 ---
-# entry_js.js
+# entry_js.mjs
 
 ```js
 // entry.js

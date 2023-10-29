@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_re_export_star_unused_missing_es6
 ---
-# entry_js.js
+# entry_js.mjs
 
 ```js
 // bar.js

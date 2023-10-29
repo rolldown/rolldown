@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_import
 ---
-# entry_js.js
+# entry_js.mjs
 
 ```js
 // c.js

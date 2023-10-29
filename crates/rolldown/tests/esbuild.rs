@@ -7,5 +7,5 @@ use testing_macros::fixture;
 
 #[fixture("./tests/esbuild/**/test.config.json")]
 fn test(path: PathBuf) {
-  Case::new(path.parent().unwrap()).exec();
+  Case::new(path.parent().unwrap()).run();
 }

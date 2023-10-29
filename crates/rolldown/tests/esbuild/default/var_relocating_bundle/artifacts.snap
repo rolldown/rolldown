@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/var_relocating_bundle
 ---
-# function-nested_js.js
+# function-nested_js.mjs
 
 ```js
 // function-nested.js
@@ -22,7 +22,7 @@ function x() {
 }
 x()
 ```
-# function_js.js
+# function_js.mjs
 
 ```js
 // function.js
@@ -39,7 +39,7 @@ function x() {
 }
 x()
 ```
-# let_js.js
+# let_js.mjs
 
 ```js
 // let.js
@@ -54,7 +54,7 @@ if (true) {
 	for (let { j, x: [k] } in {});
 }
 ```
-# nested_js.js
+# nested_js.mjs
 
 ```js
 // nested.js
@@ -70,7 +70,7 @@ if (true) {
 	function l() {}
 }
 ```
-# top-level_js.js
+# top-level_js.mjs
 
 ```js
 // top-level.js

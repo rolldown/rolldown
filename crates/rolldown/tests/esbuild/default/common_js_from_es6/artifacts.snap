@@ -3,10 +3,10 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/common_js_from_es6
 ---
-# entry_js.js
+# entry_js.mjs
 
 ```js
-import { __esm, __toCommonJS } from "./_rolldown_runtime.js";
+import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // bar.js
 function bar$1() {

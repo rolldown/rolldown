@@ -3,7 +3,7 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use rolldown::{Asset, Bundler, InputItem, InputOptions};
+use rolldown::{Asset, Bundler, InputItem, InputOptions, OutputOptions};
 use rolldown_testing::TestConfig;
 
 pub struct Fixture {
@@ -55,6 +55,13 @@ impl Fixture {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();
     }
 
-    bundler.write(Default::default()).await.unwrap()
+    bundler
+      .write(OutputOptions {
+        entry_file_names: Some("[name].mjs".to_string()),
+        chunk_file_names: Some("[name].mjs".to_string()),
+        ..Default::default()
+      })
+      .await
+      .unwrap()
   }
 }

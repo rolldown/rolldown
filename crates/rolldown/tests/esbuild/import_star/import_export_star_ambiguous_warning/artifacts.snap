@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguous_warning
 ---
-# entry_js.js
+# entry_js.mjs
 
 ```js
 // bar.js

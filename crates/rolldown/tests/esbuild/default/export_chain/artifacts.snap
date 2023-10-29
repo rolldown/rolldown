@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/export_chain
 ---
-# entry_js.js
+# entry_js.mjs
 
 ```js
 // bar.js

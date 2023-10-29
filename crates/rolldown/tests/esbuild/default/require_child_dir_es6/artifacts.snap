@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/require_child_dir_es6
 ---
-# entry_js.js
+# entry_js.mjs
 
 ```js
 // dir/index.js

@@ -45,9 +45,12 @@ impl Chunk {
   }
 
   pub fn render_file_name(&mut self, output_options: &NormalizedOutputOptions) {
-    self.file_name = Some(
-      output_options.entry_file_names.render(&FileNameRenderOptions { name: self.name.as_deref() }),
-    );
+    let pat = if self.entry_module.is_some() {
+      &output_options.entry_file_names
+    } else {
+      &output_options.chunk_file_names
+    };
+    self.file_name = Some(pat.render(&FileNameRenderOptions { name: self.name.as_deref() }));
   }
 
   #[allow(clippy::unnecessary_wraps)]

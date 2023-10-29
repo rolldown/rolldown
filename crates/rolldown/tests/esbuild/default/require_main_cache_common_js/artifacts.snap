@@ -3,10 +3,10 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/require_main_cache_common_js
 ---
-# entry_js.js
+# entry_js.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.js";
+import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // is-main.js
 var require_is_main = __commonJS({

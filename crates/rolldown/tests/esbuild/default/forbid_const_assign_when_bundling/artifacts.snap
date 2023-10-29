@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/forbid_const_assign_when_bundling
 ---
-# entry_js.js
+# entry_js.mjs
 
 ```js
 // entry.js

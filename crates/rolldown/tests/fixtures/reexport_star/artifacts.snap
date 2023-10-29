@@ -3,7 +3,7 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/reexport_star
 ---
-# 2.js
+# 2.mjs
 
 ```js
 // a.js
@@ -14,20 +14,20 @@ const abc = undefined
 
 export { a_ns };
 ```
-# entry.js
+# entry.mjs
 
 ```js
-import { a_ns } from "./2.js";
+import { a_ns } from "./2.mjs";
 
 // entry.js
 
 
 export { a_ns as a };
 ```
-# main.js
+# main.mjs
 
 ```js
-import { a_ns } from "./2.js";
+import { a_ns } from "./2.mjs";
 
 // main.js
 

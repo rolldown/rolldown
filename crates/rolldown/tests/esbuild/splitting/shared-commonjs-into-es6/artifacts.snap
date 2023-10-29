@@ -3,10 +3,10 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/shared-commonjs-into-es6
 ---
-# 2.js
+# 2.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.js";
+import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // shared.js
 var require_shared = __commonJS({
@@ -16,21 +16,21 @@ exports.foo = 123
 });
 export { require_shared, shared_ns };
 ```
-# a.js
+# a.mjs
 
 ```js
-import { __toESM } from "./_rolldown_runtime.js";
-import { require_shared, shared_ns } from "./2.js";
+import { __toESM } from "./_rolldown_runtime.mjs";
+import { require_shared, shared_ns } from "./2.mjs";
 
 // a.js
 const {foo} = require_shared()
 console.log(foo)
 ```
-# b.js
+# b.mjs
 
 ```js
-import { __toESM } from "./_rolldown_runtime.js";
-import { require_shared, shared_ns } from "./2.js";
+import { __toESM } from "./_rolldown_runtime.mjs";
+import { require_shared, shared_ns } from "./2.mjs";
 
 // b.js
 const {foo} = require_shared()

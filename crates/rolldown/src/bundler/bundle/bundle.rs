@@ -177,14 +177,6 @@ impl<'a> Bundle<'a> {
       FxHashMap::with_capacity_and_hasher(self.graph.entries.len(), BuildHasherDefault::default());
     let mut chunks = ChunksVec::with_capacity(self.graph.entries.len());
 
-    // FIXME: should only do this while `ROLLDOWN_TEST=1`
-    let _runtime_chunk_id = chunks.push(Chunk::new(
-      Some("_rolldown_runtime".to_string()),
-      None,
-      BitSet::new(0),
-      vec![self.graph.runtime.id],
-    ));
-
     // Create chunk for each static and dynamic entry
     for (entry_index, (name, module_id)) in self.graph.entries.iter().enumerate() {
       let count: u32 = u32::try_from(entry_index).unwrap();
@@ -196,6 +188,16 @@ impl<'a> Bundle<'a> {
 
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     self.graph.entries.iter().enumerate().for_each(|(i, (_, entry))| {
+      // runtime module are shared by all chunks, so we mark it as reachable for all entries.
+      // FIXME: But this solution is not perfect. If we have two entries, one of them relies on runtime module, the other one doesn't.
+      // In this case, we only need to generate two chunks, but currently we will generate three chunks. We need to analyze the usage of runtime module
+      // to make sure only necessary chunks mark runtime module as reachable.
+      self.determine_reachable_modules_for_entry(
+        self.graph.runtime.id,
+        i.try_into().unwrap(),
+        &mut module_to_bits,
+      );
+
       self.determine_reachable_modules_for_entry(
         *entry,
         i.try_into().unwrap(),
@@ -208,11 +210,23 @@ impl<'a> Bundle<'a> {
       self.graph.modules.len()
     ];
 
+    // FIXME: should remove this when tree shaking is supported
+    let is_rolldown_test = std::env::var("ROLLDOWN_TEST").is_ok();
+    if is_rolldown_test {
+      let runtime_chunk_id = chunks.push(Chunk::new(
+        Some("_rolldown_runtime".to_string()),
+        None,
+        BitSet::new(0),
+        vec![self.graph.runtime.id],
+      ));
+      module_to_chunk[self.graph.runtime.id] = Some(runtime_chunk_id);
+    }
+
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for module in &self.graph.modules {
-      if module.id() == self.graph.runtime.id {
-        // TODO: render runtime module
+      // FIXME: should remove this when tree shaking is supported
+      if is_rolldown_test && module.id() == self.graph.runtime.id {
         continue;
       }
       let bits = &module_to_bits[module.id()];

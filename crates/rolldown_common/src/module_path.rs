@@ -42,6 +42,8 @@ impl ResourceId {
     } else {
       path.to_string()
     };
+    // remove \0
+    let pretty = pretty.replace('\0', "");
 
     Self(Inner { path, pretty }.into())
   }

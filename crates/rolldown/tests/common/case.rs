@@ -14,6 +14,7 @@ impl Case {
   }
 
   pub fn exec(self) {
+    std::env::set_var("ROLLDOWN_TEST", "1");
     tokio::runtime::Runtime::new().unwrap().block_on(self.exec_inner())
   }
 

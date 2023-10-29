@@ -13,15 +13,16 @@ impl Case {
     Self { fixture: Fixture::new(path.as_ref().to_path_buf()) }
   }
 
-  pub fn exec(self) {
+  pub fn run(self) {
     std::env::set_var("ROLLDOWN_TEST", "1");
-    tokio::runtime::Runtime::new().unwrap().block_on(self.exec_inner())
+    tokio::runtime::Runtime::new().unwrap().block_on(self.run_inner())
   }
 
-  pub async fn exec_inner(mut self) {
+  pub async fn run_inner(mut self) {
     let assets = self.fixture.compile().await;
     let snapshot = Self::convert_assets_to_snapshot(assets);
     self.take_snapshot(&snapshot);
+    self.fixture.exec();
   }
 
   fn convert_assets_to_snapshot(mut assets: Vec<Asset>) -> String {

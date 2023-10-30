@@ -240,7 +240,7 @@ impl<'graph> Linker<'graph> {
               }
             }
           });
-          importer.get_star_exports_modules().for_each(|id| match &self.graph.modules[id] {
+          importer.star_export_modules().for_each(|id| match &self.graph.modules[id] {
             Module::Normal(importee) => {
               if importee.exports_kind == ExportsKind::CommonJs {
                 importer.reference_symbol_in_facade_stmt_infos(

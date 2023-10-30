@@ -70,7 +70,7 @@ impl<'ast> RendererBase<'ast> {
   }
 
   pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'ast Atom {
-    &self.graph.symbols.canonical_name_for(symbol, &self.canonical_names)
+    self.graph.symbols.canonical_name_for(symbol, self.canonical_names)
   }
 
   pub fn canonical_name_for_runtime(&self, name: &Atom) -> &Atom {

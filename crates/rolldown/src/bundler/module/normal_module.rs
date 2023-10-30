@@ -63,11 +63,11 @@ impl NormalModule {
 
   #[allow(clippy::needless_pass_by_value)]
   pub fn render(&self, ctx: ModuleRenderContext<'_>) -> Option<MagicString<'static>> {
-    // FIXME: should not clone
     let source = self.ast.source();
+    // FIXME: should not clone here
     let mut source = MagicString::new(source.to_string());
     let self_linking_info = &ctx.graph.linking_infos[self.id];
-    let ctx = RendererBase::new(
+    let base = RendererBase::new(
       ctx.graph,
       ctx.canonical_names,
       &mut source,
@@ -77,9 +77,9 @@ impl NormalModule {
     );
 
     match &self_linking_info.wrap_kind {
-      WrapKind::None => EsmRenderer::new(ctx).apply(),
-      WrapKind::CJS => CjsRenderer::new(ctx).apply(),
-      WrapKind::ESM => WrappedEsmRenderer::new(ctx).apply(),
+      WrapKind::None => EsmRenderer::new(base).apply(),
+      WrapKind::CJS => CjsRenderer::new(base).apply(),
+      WrapKind::ESM => WrappedEsmRenderer::new(base).apply(),
     }
 
     source.prepend(format!("// {}\n", self.resource_id.prettify()));
@@ -107,7 +107,7 @@ impl NormalModule {
 
     let ret: FxHashSet<&'modules Atom> = {
       self
-        .get_star_exports_modules()
+        .star_export_modules()
         .flat_map(|id| {
           let importee = &modules[id];
           match importee {
@@ -196,7 +196,7 @@ impl NormalModule {
         return Resolution::None;
       }
       let mut star_resolution: Option<SymbolRef> = None;
-      for module_id in self.get_star_exports_modules() {
+      for module_id in self.star_export_modules() {
         let importee = &modules[module_id];
         match importee {
           Module::Normal(importee) => {
@@ -242,7 +242,7 @@ impl NormalModule {
     let resolution = self.resolve_export(export_name, resolve_set, modules, symbols);
     if matches!(resolution, Resolution::None) {
       let has_cjs_star_resolution = self
-        .get_star_exports_modules()
+        .star_export_modules()
         .map(|id| {
           let importee = &modules[id];
           match importee {
@@ -291,7 +291,7 @@ impl NormalModule {
   pub fn resolve_star_exports(&self, modules: &ModuleVec) -> Vec<ModuleId> {
     let mut visited = FxHashSet::default();
     let mut resolved = vec![];
-    let mut queue = self.get_star_exports_modules().collect::<Vec<_>>();
+    let mut queue = self.star_export_modules().collect::<Vec<_>>();
 
     while let Some(importee_id) = queue.pop() {
       if !visited.contains(&importee_id) {
@@ -299,7 +299,7 @@ impl NormalModule {
         resolved.push(importee_id);
         let importee = &modules[importee_id];
         match importee {
-          Module::Normal(importee) => queue.extend(importee.get_star_exports_modules()),
+          Module::Normal(importee) => queue.extend(importee.star_export_modules()),
           Module::External(_) => {}
         }
       }
@@ -341,7 +341,7 @@ impl NormalModule {
     });
   }
 
-  pub fn get_star_exports_modules(&self) -> impl Iterator<Item = ModuleId> + '_ {
+  pub fn star_export_modules(&self) -> impl Iterator<Item = ModuleId> + '_ {
     self.star_exports.iter().map(|rec_id| {
       let rec = &self.import_records[*rec_id];
       rec.resolved_module

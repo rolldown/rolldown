@@ -17,7 +17,7 @@ use crate::{
     graph::symbols::SymbolMap,
     module::normal_module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
-    utils::resolve_id::{self, resolve_id, ResolvedRequestInfo},
+    utils::resolve_id::{resolve_id, ResolvedRequestInfo},
     visitors::scanner::{self, ScanResult},
   },
   BuildError, BuildResult, SharedResolver,

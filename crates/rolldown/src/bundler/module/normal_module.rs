@@ -4,17 +4,21 @@ use index_vec::IndexVec;
 use oxc::{
   semantic::{ScopeTree, SymbolId},
   span::{Atom, Span},
+  syntax::symbol,
 };
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
-  ResourceId, StmtInfo, StmtInfos, SymbolRef, WrapKind,
+  ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef, WrapKind,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
 use string_wizard::MagicString;
 
 use crate::bundler::{
-  graph::{linker::LinkingInfo, symbols::Symbols},
+  graph::{
+    linker::{LinkingInfo, LinkingInfoVec},
+    symbols::Symbols,
+  },
   visitors::{
     cjs_renderer::CjsRenderer, esm_renderer::EsmRenderer, wrapped_esm_renderer::WrappedEsmRenderer,
     RendererBase,
@@ -90,6 +94,109 @@ impl NormalModule {
     } else {
       Some(source)
     }
+  }
+
+  pub fn add_initial_resolved_exports(
+    &self,
+    self_linking_info: &mut LinkingInfo,
+    symbols: &mut Symbols,
+  ) {
+    self.named_exports.iter().for_each(|(name, local_or_re_export)| {
+      let resolved_export = match local_or_re_export {
+        LocalOrReExport::Local(local) => {
+          ResolvedExport { symbol_ref: local.referenced, export_from: None }
+        }
+        LocalOrReExport::Re(re) => {
+          let symbol_ref = self.generate_local_symbol(name.clone(), self_linking_info, symbols);
+          self_linking_info.export_from_map.insert(
+            name.clone(),
+            NamedImport {
+              imported: re.imported.clone(),
+              is_imported_star: re.is_imported_star,
+              imported_as: symbol_ref,
+              record_id: re.record_id,
+            },
+          );
+          let rec = &self.import_records[re.record_id];
+          ResolvedExport { symbol_ref, export_from: Some(rec.resolved_module) }
+        }
+      };
+      self_linking_info.resolved_exports.insert(name.clone(), resolved_export);
+    });
+  }
+
+  pub fn add_resolved_exports_for_export_star(
+    &self,
+    id: ModuleId,
+    linking_infos: &mut LinkingInfoVec,
+    modules: &ModuleVec,
+    module_stack: &mut Vec<ModuleId>,
+  ) {
+    if module_stack.contains(&self.id) {
+      return;
+    }
+    module_stack.push(self.id);
+
+    for module_id in self.get_star_exports_modules() {
+      let importee = &modules[module_id];
+      match importee {
+        Module::Normal(importee) => {
+          // Export star from commonjs will be resolved at runtime
+          if importee.exports_kind == ExportsKind::CommonJs {
+            continue;
+          }
+
+          importee.named_exports.iter().for_each(|(name, _)| {
+            // ES6 export star ignore default export
+            if name.as_str() == "default" {
+              return;
+            }
+
+            // This export star is shadowed if any file in the stack has a matching real named export
+            for id in module_stack.iter() {
+              let module = &modules[*id];
+              match module {
+                Module::Normal(module) => {
+                  if module.named_exports.contains_key(name) {
+                    return;
+                  }
+                }
+                Module::External(_) => {}
+              }
+            }
+
+            let resolved_export = *linking_infos[importee.id].resolved_exports.get(name).unwrap();
+
+            let linking_info = &mut linking_infos[id];
+
+            match linking_info.resolved_exports.entry(name.clone()) {
+              std::collections::hash_map::Entry::Occupied(entry) => {
+                if entry.get().symbol_ref != resolved_export.symbol_ref {
+                  // potentially ambiguous export
+                  match linking_info.potentially_ambiguous_exports.entry(name.clone()) {
+                    std::collections::hash_map::Entry::Occupied(entry) => {
+                      entry.into_mut().push(resolved_export.symbol_ref);
+                    }
+                    std::collections::hash_map::Entry::Vacant(ambiguous_exports_entry) => {
+                      ambiguous_exports_entry.insert(vec![resolved_export.symbol_ref]);
+                    }
+                  }
+                }
+              }
+              std::collections::hash_map::Entry::Vacant(entry) => {
+                entry.insert(resolved_export);
+              }
+            }
+          });
+
+          importee.add_resolved_exports_for_export_star(id, linking_infos, modules, module_stack);
+        }
+        Module::External(_) => {
+          // unimplemented!("handle external module")
+        }
+      }
+    }
+    module_stack.remove(module_stack.len() - 1);
   }
 
   // https://tc39.es/ecma262/#sec-getexportednames

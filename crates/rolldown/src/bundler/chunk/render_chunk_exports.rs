@@ -1,6 +1,7 @@
+use oxc::span::Atom;
 use string_wizard::MagicString;
 
-use crate::bundler::graph::graph::Graph;
+use crate::bundler::graph::{graph::Graph, linker::is_ambiguous_export};
 
 use super::chunk::Chunk;
 
@@ -11,16 +12,19 @@ impl Chunk {
         self
           .exports_to_other_chunks
           .iter()
-          .map(|(export_ref, alias)| (alias, export_ref))
+          .map(|(export_ref, alias)| (alias, *export_ref))
           .collect::<Vec<_>>()
       },
       |entry_module_id| {
         let linking_info = &graph.linking_infos[entry_module_id];
-        linking_info.resolved_exports.iter().collect::<Vec<_>>()
+        linking_info
+          .exclude_ambiguous_resolved_exports
+          .iter()
+          .map(|name| (name, linking_info.resolved_exports.get(name).unwrap().symbol_ref))
+          .collect::<Vec<_>>()
       },
     );
 
-    export_items.sort_by_key(|(exported_name, _)| exported_name.as_str());
     if export_items.is_empty() {
       return None;
     }
@@ -28,7 +32,7 @@ impl Chunk {
     let rendered_items = export_items
       .into_iter()
       .map(|(exported_name, export_ref)| {
-        let canonical_ref = graph.symbols.par_canonical_ref_for(*export_ref);
+        let canonical_ref = graph.symbols.par_canonical_ref_for(export_ref);
         let symbol = graph.symbols.get(canonical_ref);
         let canonical_name = &self.canonical_names[&canonical_ref];
         if let Some(ns_alias) = &symbol.namespace_alias {

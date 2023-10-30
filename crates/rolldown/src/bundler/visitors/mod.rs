@@ -82,11 +82,6 @@ impl<'ast> RendererContext<'ast> {
   }
 
   pub fn generate_namespace_variable_declaration(&mut self) -> Option<String> {
-    println!(
-      "module {:?} self.module.is_namespace_referenced() {:?}",
-      self.module.id,
-      self.module.is_namespace_referenced()
-    );
     if self.module.is_namespace_referenced() {
       let namespace_name = &self.final_names[&self.module.namespace_symbol];
       let exports: String = self

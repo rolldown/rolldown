@@ -15,8 +15,8 @@ use crate::bundler::graph::symbols::{SymbolMap, Symbols};
 use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::Module;
 use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
-use crate::bundler::resolve_id::{resolve_id, ResolvedRequestInfo};
 use crate::bundler::runtime::RUNTIME_PATH;
+use crate::bundler::utils::resolve_id::{resolve_id, ResolvedRequestInfo};
 use crate::BuildError;
 use crate::SharedResolver;
 

@@ -2,7 +2,6 @@ use std::{borrow::Cow, hash::BuildHasherDefault};
 
 use super::asset::Asset;
 use crate::bundler::{
-  bitset::BitSet,
   chunk::{
     chunk::{Chunk, CrossChunkImportItem},
     ChunkId, ChunksVec,
@@ -14,6 +13,7 @@ use crate::bundler::{
     normalized_input_options::NormalizedInputOptions,
     normalized_output_options::NormalizedOutputOptions,
   },
+  utils::bitset::BitSet,
 };
 use anyhow::Ok;
 use index_vec::{index_vec, IndexVec};
@@ -83,7 +83,7 @@ impl<'a> Bundle<'a> {
               }
 
               for referenced in &stmt_info.referenced_symbols {
-                let canonical_ref = self.graph.symbols.get_canonical_ref(*referenced);
+                let canonical_ref = self.graph.symbols.canonical_ref_for(*referenced);
                 chunk_meta_imports.insert(canonical_ref);
               }
             }
@@ -98,7 +98,7 @@ impl<'a> Bundle<'a> {
         let entry_module = &self.graph.modules[entry_module];
         let entry_linking_info = &self.graph.linking_infos[entry_module.id()];
         for export_ref in entry_linking_info.resolved_exports.values() {
-          let mut canonical_ref = self.graph.symbols.get_canonical_ref(*export_ref);
+          let mut canonical_ref = self.graph.symbols.canonical_ref_for(*export_ref);
           let symbol = self.graph.symbols.get(canonical_ref);
           if let Some(ns_alias) = &symbol.namespace_alias {
             canonical_ref = ns_alias.namespace_ref;

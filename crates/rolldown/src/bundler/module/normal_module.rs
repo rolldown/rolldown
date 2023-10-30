@@ -16,8 +16,8 @@ use string_wizard::MagicString;
 use crate::bundler::{
   graph::{linker::LinkingInfo, symbols::Symbols},
   visitors::{
-    commonjs_source_render::CommonJsSourceRender, esm_source_render::EsmSourceRender,
-    esm_wrap_source_render::EsmWrapSourceRender, RendererContext,
+    cjs_renderer::CjsRenderer, esm_renderer::EsmRenderer, wrapped_esm_renderer::WrappedEsmRenderer,
+    RendererBase,
   },
 };
 
@@ -67,7 +67,7 @@ impl NormalModule {
     let source = self.ast.source();
     let mut source = MagicString::new(source.to_string());
     let self_linking_info = &ctx.graph.linking_infos[self.id];
-    let ctx = RendererContext::new(
+    let ctx = RendererBase::new(
       ctx.graph,
       ctx.canonical_names,
       &mut source,
@@ -77,9 +77,9 @@ impl NormalModule {
     );
 
     match &self_linking_info.wrap_kind {
-      WrapKind::None => EsmSourceRender::new(ctx).apply(),
-      WrapKind::CJS => CommonJsSourceRender::new(ctx).apply(),
-      WrapKind::ESM => EsmWrapSourceRender::new(ctx).apply(),
+      WrapKind::None => EsmRenderer::new(ctx).apply(),
+      WrapKind::CJS => CjsRenderer::new(ctx).apply(),
+      WrapKind::ESM => WrappedEsmRenderer::new(ctx).apply(),
     }
 
     source.prepend(format!("// {}\n", self.resource_id.prettify()));

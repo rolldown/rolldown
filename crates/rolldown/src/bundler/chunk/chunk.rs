@@ -4,13 +4,13 @@ use rustc_hash::FxHashMap;
 use string_wizard::{Joiner, JoinerOptions};
 
 use crate::bundler::{
-  bitset::BitSet,
   chunk_graph::ChunkGraph,
   graph::graph::Graph,
   module::ModuleRenderContext,
   options::{
     file_name_template::FileNameRenderOptions, normalized_output_options::NormalizedOutputOptions,
   },
+  utils::bitset::BitSet,
 };
 
 use super::ChunkId;

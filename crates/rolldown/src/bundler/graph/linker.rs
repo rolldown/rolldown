@@ -41,7 +41,7 @@ impl<'graph> Linker<'graph> {
     }
 
     fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
-      let mut canonical_ref = ctx.graph.symbols.par_get_canonical_ref(symbol_ref);
+      let mut canonical_ref = ctx.graph.symbols.par_canonical_ref_for(symbol_ref);
       let canonical_ref_module = &ctx.graph.modules[canonical_ref.owner];
       let canonical_ref_symbol = ctx.graph.symbols.get(canonical_ref);
       if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {

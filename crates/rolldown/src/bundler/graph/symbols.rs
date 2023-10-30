@@ -85,8 +85,8 @@ impl Symbols {
   /// Make a point to b
   pub fn union(&mut self, a: SymbolRef, b: SymbolRef) {
     // a link to b
-    let root_a = self.get_canonical_ref(a);
-    let root_b = self.get_canonical_ref(b);
+    let root_a = self.canonical_ref_for(a);
+    let root_b = self.canonical_ref_for(b);
     if root_a == root_b {
       return;
     }
@@ -97,6 +97,15 @@ impl Symbols {
     &self.get(refer).name
   }
 
+  pub fn canonical_name_for<'name>(
+    &self,
+    refer: SymbolRef,
+    canonical_names: &'name FxHashMap<SymbolRef, Atom>,
+  ) -> &'name Atom {
+    let canonical_ref = self.par_canonical_ref_for(refer);
+    &canonical_names[&canonical_ref]
+  }
+
   pub fn get(&self, refer: SymbolRef) -> &Symbol {
     &self.inner[refer.owner][refer.symbol]
   }
@@ -105,8 +114,8 @@ impl Symbols {
     &mut self.inner[refer.owner][refer.symbol]
   }
 
-  pub fn get_canonical_ref(&mut self, target: SymbolRef) -> SymbolRef {
-    let canonical = self.par_get_canonical_ref(target);
+  pub fn canonical_ref_for(&mut self, target: SymbolRef) -> SymbolRef {
+    let canonical = self.par_canonical_ref_for(target);
     if target != canonical {
       // update the link to the canonical so that the next time we can get the canonical directly
       self.get_mut(target).link = Some(canonical);
@@ -115,7 +124,7 @@ impl Symbols {
   }
 
   // Used for the situation where rust require `&self`
-  pub fn par_get_canonical_ref(&self, target: SymbolRef) -> SymbolRef {
+  pub fn par_canonical_ref_for(&self, target: SymbolRef) -> SymbolRef {
     let mut canonical = target;
     while let Some(founded) = self.get(canonical).link {
       debug_assert!(founded != target);
@@ -123,13 +132,4 @@ impl Symbols {
     }
     canonical
   }
-}
-
-pub fn get_symbol_final_name<'a>(
-  symbol: SymbolRef,
-  symbols: &'a Symbols,
-  final_names: &'a FxHashMap<SymbolRef, Atom>,
-) -> Option<&'a Atom> {
-  let final_ref = symbols.par_get_canonical_ref(symbol);
-  final_names.get(&final_ref)
 }

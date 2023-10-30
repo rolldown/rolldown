@@ -5,7 +5,7 @@ use crate::SymbolRef;
 
 #[derive(Debug, Default)]
 pub struct StmtInfos {
-  pub infos: IndexVec<StmtInfoId, StmtInfo>,
+  infos: IndexVec<StmtInfoId, StmtInfo>,
   // only for top level symbols
   symbol_ref_to_declared_stmt_idx: FxHashMap<SymbolRef, Vec<StmtInfoId>>,
 }

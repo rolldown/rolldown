@@ -63,11 +63,9 @@ impl<'a> Scanner<'a> {
     )
       .into();
     // The first StmtInfo is to represent the namespace binding.
-    result.stmt_infos.add_stmt_info(StmtInfo {
-      // FIXME: should place the namespace SymbolRef here
-      declared_symbols: vec![namespace_ref],
-      ..Default::default()
-    });
+    result
+      .stmt_infos
+      .add_stmt_info(StmtInfo { declared_symbols: vec![namespace_ref], ..Default::default() });
     Self {
       idx,
       scope,

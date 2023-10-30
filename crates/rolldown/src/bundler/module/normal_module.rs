@@ -329,44 +329,21 @@ impl NormalModule {
     }
   }
 
-  pub fn generate_symbol_import_and_use(
+  pub fn reference_symbol_in_facade_stmt_infos(
     &self,
     other_module_symbol_ref: SymbolRef,
     self_linking_info: &mut LinkingInfo,
-    symbols: &mut Symbols,
+    _symbols: &mut Symbols,
   ) {
     debug_assert!(other_module_symbol_ref.owner != self.id);
-    // Create a facade symbol belongs to the self module.
-    let facade_ref = symbols.create_facade_symbol(self.id);
-    // The facade symbol is used to reference the symbol from the other module.
-    symbols.union(facade_ref, other_module_symbol_ref);
 
     self_linking_info.facade_stmt_infos.push(StmtInfo {
-      // Since the facade symbol is created, it should be declared. This will be used to
-      // 1. de-conflict the symbol in the de-conflict pass
-      declared_symbols: vec![facade_ref],
+      declared_symbols: vec![],
       // Since the facade symbol is used, it should be referenced. This will be used to
       // create correct cross-chunk links
-      referenced_symbols: vec![facade_ref],
+      referenced_symbols: vec![other_module_symbol_ref],
       ..Default::default()
     });
-  }
-
-  pub fn generate_local_symbol(
-    &self,
-    name: Atom,
-    self_linking_info: &mut LinkingInfo,
-    symbols: &mut Symbols,
-  ) -> SymbolRef {
-    let local_symbol_ref = symbols.create_symbol(self.id, name);
-    self_linking_info.facade_stmt_infos.push(StmtInfo {
-      // FIXME: should store the symbol in `used_symbols` instead of `declared_symbols`.
-      // The deconflict for runtime symbols would be handled in the deconflict on cross-chunk-imported
-      // symbols
-      declared_symbols: vec![local_symbol_ref],
-      ..Default::default()
-    });
-    local_symbol_ref
   }
 
   pub fn get_star_exports_modules(&self) -> impl Iterator<Item = ModuleId> + '_ {

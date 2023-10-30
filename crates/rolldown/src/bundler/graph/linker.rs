@@ -8,7 +8,7 @@ use rustc_hash::FxHashMap;
 use super::{graph::Graph, symbols::NamespaceAlias};
 use crate::bundler::{
   graph::symbols::Symbols,
-  module::{normal_module::Resolution, Module, NormalModule},
+  module::{normal_module::Resolution, Module},
 };
 
 /// Store the linking info for module
@@ -109,26 +109,26 @@ impl<'graph> Linker<'graph> {
             };
             if let Some(importee_warp_symbol) = importee_linking_info.wrap_symbol {
               let importer_linking_info = &mut linking_infos[importer.id];
-              importer.generate_symbol_import_and_use(
+              importer.reference_symbol_in_facade_stmt_infos(
                 importee_warp_symbol,
                 importer_linking_info,
                 symbols,
               );
-              importer.generate_symbol_import_and_use(
+              importer.reference_symbol_in_facade_stmt_infos(
                 importee.namespace_symbol,
                 importer_linking_info,
                 symbols,
               );
               match (importer.exports_kind, importee.exports_kind) {
                 (ExportsKind::Esm, ExportsKind::CommonJs) => {
-                  importer.generate_symbol_import_and_use(
+                  importer.reference_symbol_in_facade_stmt_infos(
                     self.graph.runtime.resolve_symbol(&"__toESM".into()),
                     importer_linking_info,
                     symbols,
                   );
                 }
                 (_, ExportsKind::Esm) => {
-                  importer.generate_symbol_import_and_use(
+                  importer.reference_symbol_in_facade_stmt_infos(
                     self.graph.runtime.resolve_symbol(&"__toCommonJS".into()),
                     importer_linking_info,
                     symbols,
@@ -141,7 +141,7 @@ impl<'graph> Linker<'graph> {
           importer.get_star_exports_modules().for_each(|id| match &self.graph.modules[id] {
             Module::Normal(importee) => {
               if importee.exports_kind == ExportsKind::CommonJs {
-                importer.generate_symbol_import_and_use(
+                importer.reference_symbol_in_facade_stmt_infos(
                   self.graph.runtime.resolve_symbol(&"__reExport".into()),
                   &mut linking_infos[importer.id],
                   symbols,
@@ -185,7 +185,7 @@ impl<'graph> Linker<'graph> {
           "__esm".into()
         };
         let runtime_symbol = self.graph.runtime.resolve_symbol(&name);
-        module.generate_symbol_import_and_use(runtime_symbol, linking_info, symbols);
+        module.reference_symbol_in_facade_stmt_infos(runtime_symbol, linking_info, symbols);
         module.import_records.iter().for_each(|record| {
           self.wrap_module(record.resolved_module, symbols, linking_infos);
         });
@@ -286,26 +286,6 @@ impl<'graph> Linker<'graph> {
           })
           .collect::<FxHashMap<_, _>>();
 
-        #[allow(clippy::items_after_statements)]
-        fn create_local_symbol_for_found_resolution(
-          symbol_ref: SymbolRef,
-          importer: &NormalModule,
-          importer_linking_info: &mut LinkingInfo,
-          symbols: &mut Symbols,
-        ) -> SymbolRef {
-          if symbol_ref.owner == importer.id {
-            symbol_ref
-          } else {
-            let local_symbol_ref = importer.generate_local_symbol(
-              Atom::from("#FACADE#"),
-              importer_linking_info,
-              symbols,
-            );
-            symbols.union(local_symbol_ref, symbol_ref);
-            local_symbol_ref
-          }
-        }
-
         importer.named_exports.keys().for_each(|exported| {
           let res = resolutions.remove(exported).unwrap();
           match res {
@@ -317,9 +297,7 @@ impl<'graph> Linker<'graph> {
             }
             Resolution::Ambiguous => panic!("named export must be resolved"),
             Resolution::Found(ext) => {
-              let local_symbol_ref =
-                create_local_symbol_for_found_resolution(ext, importer, linking_info, symbols);
-              linking_info.resolved_exports.insert(exported.clone(), local_symbol_ref);
+              linking_info.resolved_exports.insert(exported.clone(), ext);
             }
             Resolution::Runtime(ns_ref) => {
               // export { a } from './foo.cjs' => `var a = foo.a; export { a }`
@@ -340,9 +318,7 @@ impl<'graph> Linker<'graph> {
         resolutions.into_iter().for_each(|(exported, left)| match left {
           Resolution::None => panic!("shouldn't has left which is None"),
           Resolution::Found(ext) => {
-            let local_symbol_ref =
-              create_local_symbol_for_found_resolution(ext, importer, linking_info, symbols);
-            linking_info.resolved_exports.insert(exported.clone(), local_symbol_ref);
+            linking_info.resolved_exports.insert(exported.clone(), ext);
           }
           Resolution::Ambiguous => {}
           Resolution::Runtime(ns_ref) => {
@@ -390,7 +366,7 @@ impl<'graph> Linker<'graph> {
                       namespace_ref: importee.namespace_symbol,
                     });
 
-                    importer.generate_symbol_import_and_use(
+                    importer.reference_symbol_in_facade_stmt_infos(
                       importee.namespace_symbol,
                       linking_info,
                       symbols,

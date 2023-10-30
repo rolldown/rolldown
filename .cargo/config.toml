@@ -15,6 +15,7 @@ rustflags = [
   # restriction
 
   "-Wclippy::dbg_macro",
+  "-Wclippy::print_stdout",
 
   # I like the explicitness of this rule as it removes confusion around `clone`.
   # This increases readability, avoids `clone` mindlessly and heap allocating on accident.

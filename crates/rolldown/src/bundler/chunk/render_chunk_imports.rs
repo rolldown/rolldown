@@ -18,7 +18,7 @@ impl Chunk {
         .map(|item| {
           let imported = chunk
             .canonical_names
-            .get(&graph.symbols.par_get_canonical_ref(item.import_ref))
+            .get(&graph.symbols.par_canonical_ref_for(item.import_ref))
             .cloned()
             .unwrap();
           let alias = item.export_alias.as_ref().unwrap();

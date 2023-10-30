@@ -28,7 +28,7 @@ impl Chunk {
     let rendered_items = export_items
       .into_iter()
       .map(|(exported_name, export_ref)| {
-        let canonical_ref = graph.symbols.par_get_canonical_ref(*export_ref);
+        let canonical_ref = graph.symbols.par_canonical_ref_for(*export_ref);
         let symbol = graph.symbols.get(canonical_ref);
         let canonical_name = &self.canonical_names[&canonical_ref];
         if let Some(ns_alias) = &symbol.namespace_alias {

@@ -23,7 +23,7 @@ impl<'name> Renamer<'name> {
   }
 
   pub fn add_top_level_symbol(&mut self, symbol_ref: SymbolRef) {
-    let canonical_ref = self.symbols.par_get_canonical_ref(symbol_ref);
+    let canonical_ref = self.symbols.par_canonical_ref_for(symbol_ref);
     let original_name = self.symbols.get_original_name(canonical_ref);
 
     match self.canonical_names.entry(canonical_ref) {

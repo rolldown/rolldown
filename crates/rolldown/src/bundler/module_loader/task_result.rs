@@ -2,7 +2,7 @@ use rolldown_common::{ImportRecordId, ModuleId};
 
 use crate::bundler::graph::symbols::SymbolMap;
 use crate::bundler::module::normal_module_builder::NormalModuleBuilder;
-use crate::bundler::resolve_id::ResolvedRequestInfo;
+use crate::bundler::utils::resolve_id::ResolvedRequestInfo;
 use crate::BuildError;
 
 pub struct NormalModuleTaskResult {

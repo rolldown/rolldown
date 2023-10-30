@@ -1,4 +1,3 @@
-pub mod bitset;
 pub mod bundle;
 mod chunk_graph;
 mod graph;
@@ -12,4 +11,3 @@ mod visitors;
 pub mod bundler;
 mod chunk;
 mod module_loader;
-mod resolve_id;

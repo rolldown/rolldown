@@ -10,10 +10,7 @@ use string_wizard::MagicString;
 
 use self::external_module::ExternalModule;
 
-use super::{
-  chunk_graph::ChunkGraph,
-  graph::{graph::Graph, linker::LinkingInfo},
-};
+use super::{chunk_graph::ChunkGraph, graph::graph::Graph};
 
 pub type ModuleVec = IndexVec<ModuleId, Module>;
 
@@ -63,13 +60,6 @@ impl Module {
     match self {
       Self::Normal(m) => &m.import_records,
       Self::External(m) => &m.import_records,
-    }
-  }
-
-  pub fn mark_symbol_for_namespace_referenced(&self, linking_info: &mut LinkingInfo) {
-    match self {
-      Self::Normal(m) => m.initialize_namespace(linking_info),
-      Self::External(_) => linking_info.is_symbol_for_namespace_referenced = true,
     }
   }
 

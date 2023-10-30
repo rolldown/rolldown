@@ -7,7 +7,7 @@ use oxc::{
   semantic::{ScopeTree, SymbolTable},
   span::SourceType,
 };
-use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId};
+use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 use rolldown_resolver::Resolver;
 
@@ -61,11 +61,11 @@ impl NormalModuleTask {
     let source = tokio::fs::read_to_string(self.path.as_ref()).await?;
     // TODO: transform
 
-    let (ast, scope, scan_result, symbol) = self.make_ast(source);
+    let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(source);
 
     let res = self.resolve_dependencies(&scan_result.import_records).await?;
 
-    let mut symbol_map = SymbolMap::from_symbol_table(symbol);
+    let symbol_map = SymbolMap::from_symbol_table(symbol);
 
     let ScanResult {
       named_imports,
@@ -90,7 +90,7 @@ impl NormalModuleTask {
     builder.default_export_symbol = export_default_symbol_id;
     builder.scope = Some(scope);
     builder.exports_kind = exports_kind;
-    builder.initialize_namespace_binding(&mut symbol_map);
+    builder.namespace_symbol = Some(namespace_symbol);
     builder.module_type = self.module_type;
     builder.is_entry = self.is_entry;
     self
@@ -107,7 +107,10 @@ impl NormalModuleTask {
     Ok(())
   }
 
-  fn make_ast(&self, source: String) -> (OxcProgram, ScopeTree, ScanResult, SymbolTable) {
+  fn make_ast(
+    &self,
+    source: String,
+  ) -> (OxcProgram, ScopeTree, ScanResult, SymbolTable, SymbolRef) {
     let source_type = SourceType::from_path(self.path.as_ref()).unwrap();
     let mut program = OxcCompiler::parse(source, source_type);
 
@@ -123,8 +126,8 @@ impl NormalModuleTask {
     );
     scanner.visit_program(program.program_mut());
     let scan_result = scanner.result;
-
-    (program, scope, scan_result, symbol_table)
+    let namespace_symbol = scanner.namespace_symbol;
+    (program, scope, scan_result, symbol_table, namespace_symbol)
   }
 
   #[allow(clippy::option_if_let_else)]

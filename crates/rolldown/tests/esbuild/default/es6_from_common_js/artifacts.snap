@@ -9,6 +9,9 @@ input_file: crates/rolldown/tests/esbuild/default/es6_from_common_js
 import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // bar.js
+var bar_ns = {
+
+};
 var require_bar = __commonJS({
 'bar.js'(exports, module) {
 exports.bar = function() {
@@ -17,6 +20,9 @@ exports.bar = function() {
 }
 });
 // foo.js
+var foo_ns = {
+
+};
 var require_foo = __commonJS({
 'foo.js'(exports, module) {
 exports.foo = function() {

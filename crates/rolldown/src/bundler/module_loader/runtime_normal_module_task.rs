@@ -3,7 +3,7 @@ use oxc::{
   semantic::{ScopeTree, SymbolTable},
   span::SourceType,
 };
-use rolldown_common::{ModuleId, ModuleType, ResourceId};
+use rolldown_common::{ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
 use super::Msg;
@@ -47,9 +47,9 @@ impl RuntimeNormalModuleTask {
 
     let source = include_str!("../runtime/index.js").to_string();
 
-    let (ast, scope, scan_result, symbol) = self.make_ast(source);
+    let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(source);
 
-    let mut symbol_map = SymbolMap::from_symbol_table(symbol);
+    let symbol_map = SymbolMap::from_symbol_table(symbol);
 
     let ScanResult {
       named_imports,
@@ -74,7 +74,7 @@ impl RuntimeNormalModuleTask {
     builder.default_export_symbol = export_default_symbol_id;
     builder.scope = Some(scope);
     builder.exports_kind = exports_kind;
-    builder.initialize_namespace_binding(&mut symbol_map);
+    builder.namespace_symbol = Some(namespace_symbol);
 
     self
       .tx
@@ -89,7 +89,10 @@ impl RuntimeNormalModuleTask {
       .unwrap();
   }
 
-  fn make_ast(&self, source: String) -> (OxcProgram, ScopeTree, ScanResult, SymbolTable) {
+  fn make_ast(
+    &self,
+    source: String,
+  ) -> (OxcProgram, ScopeTree, ScanResult, SymbolTable, SymbolRef) {
     let source_type = SourceType::default();
     let mut program = OxcCompiler::parse(source, source_type);
 
@@ -102,9 +105,10 @@ impl RuntimeNormalModuleTask {
       "should be unreachable for runtime module",
       self.module_type,
     );
+    let namespace_symbol = scanner.namespace_symbol;
     scanner.visit_program(program.program_mut());
     let scan_result = scanner.result;
 
-    (program, scope, scan_result, symbol_table)
+    (program, scope, scan_result, symbol_table, namespace_symbol)
   }
 }

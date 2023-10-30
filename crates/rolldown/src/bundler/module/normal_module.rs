@@ -7,7 +7,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
-  ResourceId, StmtInfo, SymbolRef, WrapKind,
+  ResourceId, StmtInfo, StmtInfos, SymbolRef, WrapKind,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -30,17 +30,18 @@ pub struct NormalModule {
   pub is_entry: bool,
   pub resource_id: ResourceId,
   pub module_type: ModuleType,
+  pub namespace_symbol: SymbolRef,
   pub ast: OxcProgram,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
-  pub stmt_infos: Vec<StmtInfo>,
+  /// `stmt_infos[0]` represents the namespace binding statement
+  pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
   pub imports: FxHashMap<Span, ImportRecordId>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
   pub exports_kind: ExportsKind,
   pub scope: ScopeTree,
-  pub namespace_symbol: SymbolRef,
   pub default_export_symbol: Option<SymbolId>,
 }
 
@@ -56,6 +57,10 @@ pub enum Resolution {
 }
 
 impl NormalModule {
+  pub fn is_namespace_referenced(&self) -> bool {
+    self.stmt_infos.get(0.into()).is_included
+  }
+
   #[allow(clippy::needless_pass_by_value)]
   pub fn render(&self, ctx: ModuleRenderContext<'_>) -> Option<MagicString<'static>> {
     // FIXME: should not clone
@@ -84,15 +89,6 @@ impl NormalModule {
       None
     } else {
       Some(source)
-    }
-  }
-
-  pub fn initialize_namespace(&self, self_linking_info: &mut LinkingInfo) {
-    if !self_linking_info.is_symbol_for_namespace_referenced {
-      self_linking_info.is_symbol_for_namespace_referenced = true;
-      self_linking_info
-        .facade_stmt_infos
-        .push(StmtInfo { declared_symbols: vec![self.namespace_symbol], ..Default::default() });
     }
   }
 
@@ -325,7 +321,6 @@ impl NormalModule {
       self_linking_info
         .facade_stmt_infos
         .push(StmtInfo { declared_symbols: vec![(self.id, symbol).into()], ..Default::default() });
-      self.initialize_namespace(self_linking_info);
     }
   }
 

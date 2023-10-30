@@ -1,6 +1,8 @@
 use index_vec::IndexVec;
 use oxc::span::Atom;
-use rolldown_common::{ExportsKind, ImportKind, LocalOrReExport, ModuleId, StmtInfo, SymbolRef};
+use rolldown_common::{
+  ExportsKind, ImportKind, LocalOrReExport, ModuleId, StmtInfo, SymbolRef, WrapKind,
+};
 use rustc_hash::FxHashMap;
 
 use super::{graph::Graph, symbols::NamespaceAlias};
@@ -14,6 +16,7 @@ use crate::bundler::{
 pub struct LinkingInfo {
   // The symbol for wrapped module
   pub wrap_symbol: Option<SymbolRef>,
+  pub wrap_kind: WrapKind,
   pub facade_stmt_infos: Vec<StmtInfo>,
   pub resolved_exports: FxHashMap<Atom, SymbolRef>,
   pub resolved_star_exports: Vec<ModuleId>,
@@ -172,6 +175,8 @@ impl<'graph> Linker<'graph> {
     // Case esm, eg var init_a = __esm()
     match &self.graph.modules[target] {
       Module::Normal(module) => {
+        linking_info.wrap_kind =
+          if module.exports_kind == ExportsKind::CommonJs { WrapKind::CJS } else { WrapKind::ESM };
         module.create_wrap_symbol(linking_info, symbols);
 
         let name = if module.exports_kind == ExportsKind::CommonJs {

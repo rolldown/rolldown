@@ -7,7 +7,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
-  ResourceId, StmtInfo, SymbolRef,
+  ResourceId, StmtInfo, SymbolRef, WrapKind,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -71,12 +71,10 @@ impl NormalModule {
       self_linking_info,
     );
 
-    if self.exports_kind == ExportsKind::CommonJs {
-      CommonJsSourceRender::new(ctx).apply();
-    } else if self_linking_info.wrap_symbol.is_some() {
-      EsmWrapSourceRender::new(ctx).apply();
-    } else {
-      EsmSourceRender::new(ctx).apply();
+    match &self_linking_info.wrap_kind {
+      WrapKind::None => EsmSourceRender::new(ctx).apply(),
+      WrapKind::CJS => CommonJsSourceRender::new(ctx).apply(),
+      WrapKind::ESM => EsmWrapSourceRender::new(ctx).apply(),
     }
 
     source.prepend(format!("// {}\n", self.resource_id.prettify()));

@@ -66,9 +66,7 @@ impl<'a> Bundle<'a> {
       for module_id in chunk.modules.iter().copied() {
         match &self.graph.modules[module_id] {
           Module::Normal(module) => {
-            let linking_info = &self.graph.linking_infos[module_id];
-
-            for stmt_info in module.stmt_infos.iter().chain(linking_info.facade_stmt_infos.iter()) {
+            for stmt_info in module.stmt_infos.iter() {
               for declared in &stmt_info.declared_symbols {
                 // TODO: pass debug_assert!(self.graph.symbols.get(*declared).chunk_id.is_none());
                 // FIXME: I don't think this is correct, even though the assigned chunk_id is the same as the current chunk_id.
@@ -78,6 +76,10 @@ impl<'a> Bundle<'a> {
                 );
 
                 self.graph.symbols.get_mut(*declared).chunk_id = Some(chunk_id);
+              }
+
+              if !stmt_info.is_included {
+                continue;
               }
 
               for referenced in &stmt_info.referenced_symbols {
@@ -105,6 +107,7 @@ impl<'a> Bundle<'a> {
         }
       }
     }
+
     for (chunk_id, chunk) in chunk_graph.chunks.iter_mut_enumerated() {
       let chunk_meta_imports = &chunk_meta_imports_vec[chunk_id];
       for import_ref in chunk_meta_imports.iter().copied() {

@@ -12,7 +12,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId,
-  ModuleType, NamedImport, ReExport, StmtInfo,
+  ModuleType, NamedImport, ReExport, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
@@ -21,7 +21,7 @@ use rustc_hash::FxHashMap;
 pub struct ScanResult {
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
-  pub stmt_infos: Vec<StmtInfo>,
+  pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
   pub star_exports: Vec<ImportRecordId>,
   pub export_default_symbol_id: Option<SymbolId>,
@@ -39,6 +39,7 @@ pub struct Scanner<'a> {
   pub unique_name: &'a str,
   pub esm_export_keyword: Option<Span>,
   pub cjs_export_keyword: Option<Span>,
+  pub namespace_symbol: SymbolRef,
 }
 
 impl<'a> Scanner<'a> {
@@ -49,16 +50,33 @@ impl<'a> Scanner<'a> {
     unique_name: &'a str,
     module_type: ModuleType,
   ) -> Self {
+    let mut result = ScanResult::default();
+    let name = format!("{unique_name}_ns");
+    let namespace_ref: SymbolRef = (
+      idx,
+      symbol_table.create_symbol(
+        Span::default(),
+        name.into(),
+        SymbolFlags::None,
+        scope.root_scope_id(),
+      ),
+    )
+      .into();
+    // The first StmtInfo is to represent the namespace binding.
+    result
+      .stmt_infos
+      .add_stmt_info(StmtInfo { declared_symbols: vec![namespace_ref], ..Default::default() });
     Self {
       idx,
       scope,
       symbol_table,
       current_stmt_info: StmtInfo::default(),
-      result: ScanResult::default(),
+      result,
       unique_name,
       esm_export_keyword: None,
       cjs_export_keyword: None,
       module_type,
+      namespace_symbol: namespace_ref,
     }
   }
 
@@ -297,11 +315,10 @@ impl<'a> Scanner<'a> {
 
 impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   fn visit_program(&mut self, program: &'p mut oxc::ast::ast::Program<'ast>) {
-    self.result.stmt_infos = Vec::with_capacity(program.body.len());
     for (idx, stmt) in program.body.iter_mut().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.visit_statement(stmt);
-      self.result.stmt_infos.push(std::mem::take(&mut self.current_stmt_info));
+      self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }
     self.set_exports_kind();
   }

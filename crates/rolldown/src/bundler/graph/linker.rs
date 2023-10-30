@@ -1,14 +1,14 @@
 use index_vec::IndexVec;
 use oxc::span::Atom;
 use rolldown_common::{
-  ExportsKind, ImportKind, LocalOrReExport, ModuleId, StmtInfo, SymbolRef, WrapKind,
+  ExportsKind, ImportKind, LocalOrReExport, ModuleId, StmtInfo, StmtInfoId, SymbolRef, WrapKind,
 };
 use rustc_hash::FxHashMap;
 
 use super::{graph::Graph, symbols::NamespaceAlias};
 use crate::bundler::{
   graph::symbols::Symbols,
-  module::{normal_module::Resolution, Module},
+  module::{normal_module::Resolution, Module, NormalModule},
 };
 
 /// Store the linking info for module
@@ -20,7 +20,6 @@ pub struct LinkingInfo {
   pub facade_stmt_infos: Vec<StmtInfo>,
   pub resolved_exports: FxHashMap<Atom, SymbolRef>,
   pub resolved_star_exports: Vec<ModuleId>,
-  pub is_symbol_for_namespace_referenced: bool,
 }
 
 pub type LinkingInfoVec = IndexVec<ModuleId, LinkingInfo>;
@@ -32,6 +31,97 @@ pub struct Linker<'graph> {
 impl<'graph> Linker<'graph> {
   pub fn new(graph: &'graph mut Graph) -> Self {
     Self { graph }
+  }
+
+  fn include_statements(&mut self) {
+    use rayon::prelude::*;
+    struct Context<'a> {
+      graph: &'a Graph,
+      is_included_vec: &'a mut IndexVec<ModuleId, IndexVec<StmtInfoId, bool>>,
+    }
+
+    fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
+      let mut canonical_ref = ctx.graph.symbols.par_get_canonical_ref(symbol_ref);
+      let canonical_ref_module = &ctx.graph.modules[canonical_ref.owner];
+      let canonical_ref_symbol = ctx.graph.symbols.get(canonical_ref);
+      if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
+        canonical_ref = namespace_alias.namespace_ref;
+      }
+      let Module::Normal(canonical_ref_module) = canonical_ref_module else {
+        return;
+      };
+      canonical_ref_module
+        .stmt_infos
+        .declared_stmts_by_symbol(&canonical_ref)
+        .iter()
+        .copied()
+        .for_each(|stmt_info_id| {
+          include_statement(ctx, canonical_ref_module, stmt_info_id);
+        });
+    }
+
+    fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoId) {
+      let is_included = &mut ctx.is_included_vec[module.id][stmt_info_id];
+      if *is_included {
+        return;
+      }
+
+      // include the statement itself
+      *is_included = true;
+
+      let stmt_info = module.stmt_infos.get(stmt_info_id);
+
+      // include statements that are referenced by this statement
+      stmt_info.declared_symbols.iter().chain(stmt_info.referenced_symbols.iter()).for_each(
+        |symbol_ref| {
+          include_symbol(ctx, *symbol_ref);
+        },
+      );
+    }
+
+    let mut is_included_vec: IndexVec<ModuleId, IndexVec<StmtInfoId, bool>> = self
+      .graph
+      .modules
+      .iter()
+      .map(|m| match m {
+        Module::Normal(m) => {
+          m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoId, _>>()
+        }
+        Module::External(_) => IndexVec::default(),
+      })
+      .collect::<IndexVec<ModuleId, _>>();
+
+    let context = &mut Context { graph: self.graph, is_included_vec: &mut is_included_vec };
+
+    for module in &self.graph.modules {
+      match module {
+        Module::Normal(module) => {
+          let mut stmt_infos = module.stmt_infos.iter_enumerated();
+          // Skip the first one, because it's the namespace variable declaration.
+          // We want to include it on demand.
+          stmt_infos.next();
+          // Since we won't implement tree shaking, we just include all statements.
+          stmt_infos.for_each(|(stmt_info_id, _)| {
+            include_statement(context, module, stmt_info_id);
+          });
+          if module.is_entry {
+            let linking_info = &self.graph.linking_infos[module.id];
+            linking_info.resolved_exports.values().for_each(|symbol_ref| {
+              include_symbol(context, *symbol_ref);
+            });
+          }
+        }
+        Module::External(_) => {}
+      }
+    }
+    self.graph.modules.iter_mut().par_bridge().for_each(|module| {
+      let Module::Normal(module) = module else {
+        return;
+      };
+      is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
+        module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
+      });
+    });
   }
 
   pub fn link(&mut self) {
@@ -68,7 +158,19 @@ impl<'graph> Linker<'graph> {
 
     // Set the symbols back and add linker modules to graph
     self.graph.symbols = symbols;
+
+    // FIXME: should move `linking_info.facade_stmt_infos` into a separate field
+    for (id, linking_info) in linking_infos.iter_mut_enumerated() {
+      std::mem::take(&mut linking_info.facade_stmt_infos).into_iter().for_each(|info| {
+        if let Module::Normal(module) = &mut self.graph.modules[id] {
+          module.stmt_infos.add_stmt_info(info);
+        }
+      });
+    }
+
     self.graph.linking_infos = linking_infos;
+
+    self.include_statements();
   }
 
   #[allow(clippy::too_many_lines)]
@@ -163,9 +265,6 @@ impl<'graph> Linker<'graph> {
     linking_infos: &mut LinkingInfoVec,
   ) {
     let linking_info = &mut linking_infos[target];
-    if let Module::Normal(module) = &self.graph.modules[target] {
-      module.initialize_namespace(linking_info);
-    }
     if linking_info.wrap_symbol.is_some() {
       return;
     }
@@ -195,31 +294,9 @@ impl<'graph> Linker<'graph> {
   }
 
   #[allow(clippy::needless_collect)]
-  fn mark_extra_symbols(&mut self, symbols: &mut Symbols, linking_infos: &mut LinkingInfoVec) {
-    // Determine if the namespace symbol need to be generated
+  fn mark_extra_symbols(&mut self, symbols: &mut Symbols, _linking_infos: &mut LinkingInfoVec) {
     for importer_id in &self.graph.sorted_modules {
       let importer = &self.graph.modules[*importer_id];
-
-      if let Module::Normal(importer) = importer {
-        let has_reexport_all_from_cjs = importer.get_star_exports_modules().any(|importee| matches!(&self.graph.modules[importee], Module::Normal(m) if m.exports_kind == ExportsKind::CommonJs));
-        if has_reexport_all_from_cjs {
-          self.graph.modules[*importer_id]
-            .mark_symbol_for_namespace_referenced(&mut linking_infos[*importer_id]);
-        }
-      }
-
-      importer
-        .import_records()
-        .iter()
-        .filter_map(|rec| {
-          ((rec.is_import_namespace || matches!(rec.kind, ImportKind::Require))
-            && rec.resolved_module.is_valid())
-          .then_some(rec.resolved_module)
-        })
-        .for_each(|importee| {
-          self.graph.modules[importee]
-            .mark_symbol_for_namespace_referenced(&mut linking_infos[importee]);
-        });
 
       // Create symbols for external module
       let mut extra_symbols = vec![];
@@ -306,9 +383,9 @@ impl<'graph> Linker<'graph> {
               local_binding.namespace_alias =
                 Some(NamespaceAlias { property_name: exported.clone(), namespace_ref: ns_ref });
               linking_info.facade_stmt_infos.push(StmtInfo {
-                stmt_idx: None,
                 declared_symbols: vec![local_binding_ref],
                 referenced_symbols: vec![ns_ref],
+                ..Default::default()
               });
               linking_info.resolved_exports.insert(exported.clone(), local_binding_ref);
             }
@@ -327,9 +404,9 @@ impl<'graph> Linker<'graph> {
             local_binding.namespace_alias =
               Some(NamespaceAlias { property_name: exported.clone(), namespace_ref: ns_ref });
             linking_info.facade_stmt_infos.push(StmtInfo {
-              stmt_idx: None,
               declared_symbols: vec![local_binding_ref],
               referenced_symbols: vec![ns_ref],
+              ..Default::default()
             });
           }
         });

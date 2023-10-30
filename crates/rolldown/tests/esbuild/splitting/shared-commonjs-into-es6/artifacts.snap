@@ -9,6 +9,9 @@ input_file: crates/rolldown/tests/esbuild/splitting/shared-commonjs-into-es6
 import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // shared.js
+var shared_ns = {
+
+};
 var require_shared = __commonJS({
 'shared.js'(exports, module) {
 exports.foo = 123

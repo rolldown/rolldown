@@ -21,7 +21,6 @@ pub struct RendererContext<'ast> {
   module: &'ast NormalModule,
   linking_info: &'ast LinkingInfo,
   wrap_symbol_name: Option<&'ast Atom>,
-  namespace_symbol_name: Option<&'ast Atom>,
   default_symbol_name: Option<&'ast Atom>,
   // Used to hoisted import declaration before the first statement
   first_stmt_start: Option<u32>,
@@ -39,8 +38,6 @@ impl<'ast> RendererContext<'ast> {
   ) -> Self {
     let wrap_symbol_name =
       linking_info.wrap_symbol.and_then(|s| get_symbol_final_name(s, &graph.symbols, final_names));
-    let namespace_symbol_name =
-      get_symbol_final_name(module.namespace_symbol, &graph.symbols, final_names);
     let default_symbol_name = module
       .default_export_symbol
       .and_then(|s| get_symbol_final_name((module.id, s).into(), &graph.symbols, final_names));
@@ -52,7 +49,6 @@ impl<'ast> RendererContext<'ast> {
       module,
       linking_info,
       wrap_symbol_name,
-      namespace_symbol_name,
       default_symbol_name,
       first_stmt_start: None,
     }
@@ -86,7 +82,13 @@ impl<'ast> RendererContext<'ast> {
   }
 
   pub fn generate_namespace_variable_declaration(&mut self) -> Option<String> {
-    if let Some(namespace_name) = self.namespace_symbol_name {
+    println!(
+      "module {:?} self.module.is_namespace_referenced() {:?}",
+      self.module.id,
+      self.module.is_namespace_referenced()
+    );
+    if self.module.is_namespace_referenced() {
+      let namespace_name = &self.final_names[&self.module.namespace_symbol];
       let exports: String = self
         .linking_info
         .resolved_exports
@@ -190,7 +192,7 @@ impl<'ast> RendererContext<'ast> {
     if let Module::Normal(importee) = self.get_importee_by_span(decl.span) {
       if importee.exports_kind == ExportsKind::CommonJs {
         // __reExport(a_exports, __toESM(require_c()));
-        let namespace_name = self.namespace_symbol_name.unwrap();
+        let namespace_name = &self.final_names[&importee.namespace_symbol];
         let re_export_runtime_symbol_name =
           self.get_runtime_symbol_final_name(&"__reExport".into());
         self.source.update(

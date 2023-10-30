@@ -5,12 +5,10 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
-  ResourceId, StmtInfo, SymbolRef,
+  ResourceId, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::FxHashMap;
-
-use crate::bundler::graph::symbols::SymbolMap;
 
 use super::NormalModule;
 
@@ -21,7 +19,7 @@ pub struct NormalModuleBuilder {
   pub ast: Option<OxcProgram>,
   pub named_imports: Option<FxHashMap<SymbolId, NamedImport>>,
   pub named_exports: Option<FxHashMap<Atom, LocalOrReExport>>,
-  pub stmt_infos: Option<Vec<StmtInfo>>,
+  pub stmt_infos: Option<StmtInfos>,
   pub import_records: Option<IndexVec<ImportRecordId, ImportRecord>>,
   pub imports: Option<FxHashMap<Span, ImportRecordId>>,
   pub star_exports: Option<Vec<ImportRecordId>>,
@@ -34,12 +32,6 @@ pub struct NormalModuleBuilder {
 }
 
 impl NormalModuleBuilder {
-  pub fn initialize_namespace_binding(&mut self, symbol_table: &mut SymbolMap) {
-    let name = format!("{}_ns", self.path.as_ref().unwrap().generate_unique_name());
-    let symbol_ref: SymbolRef = (self.id.unwrap(), symbol_table.create_symbol(name.into())).into();
-    self.namespace_symbol = Some(symbol_ref);
-  }
-
   pub fn build(self) -> NormalModule {
     NormalModule {
       exec_order: u32::MAX,

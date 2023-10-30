@@ -21,6 +21,9 @@ impl<'ast> CommonJsSourceRender<'ast> {
       "var {wrap_symbol_name} = {commonjs_runtime_symbol_name}({{\n'{module_path}'(exports, module) {{\n",
     ));
     self.ctx.source.append("\n}\n});");
+    if let Some(s) = self.ctx.generate_namespace_variable_declaration() {
+      self.ctx.source.prepend(s);
+    }
   }
 }
 

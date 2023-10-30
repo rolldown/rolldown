@@ -18,7 +18,7 @@ pub use crate::{
   named_export::{LocalExport, LocalOrReExport, ReExport},
   named_import::NamedImport,
   raw_path::RawPath,
-  stmt_info::StmtInfo,
+  stmt_info::{StmtInfo, StmtInfoId, StmtInfos},
   symbol_ref::SymbolRef,
   wrap_kind::WrapKind,
 };

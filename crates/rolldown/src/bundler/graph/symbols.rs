@@ -42,7 +42,7 @@ impl SymbolMap {
     }
   }
 
-  pub fn create_symbol(&mut self, name: Atom) -> SymbolId {
+  pub fn _create_symbol(&mut self, name: Atom) -> SymbolId {
     if is_reserved_word(&name) {
       self.names.push(format!("_{name}").into())
     } else {

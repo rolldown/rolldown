@@ -76,19 +76,6 @@ impl Symbols {
     Self { inner, references_table: reference_table }
   }
 
-  pub fn create_facade_symbol(&mut self, owner: ModuleId) -> SymbolRef {
-    let symbol_id = self.inner[owner].push(Symbol {
-      // name is meaningless for facade symbols
-      name: Atom::new_inline("#FACADE#"),
-      link: None,
-      chunk_id: None,
-      namespace_alias: None,
-    });
-    let symbol_ref = SymbolRef { owner, symbol: symbol_id };
-    self.references_table[owner].push(Some(symbol_id));
-    symbol_ref
-  }
-
   pub fn create_symbol(&mut self, owner: ModuleId, name: Atom) -> SymbolRef {
     let symbol_id =
       self.inner[owner].push(Symbol { name, link: None, chunk_id: None, namespace_alias: None });

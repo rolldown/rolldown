@@ -48,6 +48,10 @@ impl Chunk {
         Module::External(_) => {}
       });
 
+    self.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
+      renamer.add_top_level_symbol(item.import_ref);
+    });
+
     self.canonical_names = renamer.into_canonical_names();
   }
 }

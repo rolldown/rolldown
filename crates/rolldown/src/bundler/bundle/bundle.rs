@@ -264,11 +264,11 @@ impl<'a> Bundle<'a> {
       .par_bridge()
       .for_each(|chunk| chunk.render_file_name(self.output_options));
 
+    self.compute_cross_chunk_links(&mut chunk_graph);
+
     chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
       chunk.de_conflict(self.graph);
     });
-
-    self.compute_cross_chunk_links(&mut chunk_graph);
 
     let assets = chunk_graph
       .chunks

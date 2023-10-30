@@ -8,6 +8,7 @@ mod named_import;
 mod raw_path;
 mod stmt_info;
 mod symbol_ref;
+mod wrap_kind;
 pub use crate::{
   exports_kind::ExportsKind,
   import_record::{ImportKind, ImportRecord, ImportRecordId},
@@ -19,4 +20,5 @@ pub use crate::{
   raw_path::RawPath,
   stmt_info::StmtInfo,
   symbol_ref::SymbolRef,
+  wrap_kind::WrapKind,
 };

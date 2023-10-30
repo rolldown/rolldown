@@ -1,15 +1,13 @@
 use std::borrow::Cow;
 
-use oxc::span::Atom;
-use rolldown_common::SymbolRef;
-use rustc_hash::FxHashMap;
-
 use super::chunk::Chunk;
-use crate::bundler::{graph::graph::Graph, module::Module};
+use crate::bundler::{graph::graph::Graph, module::Module, utils::renamer::Renamer};
 
 impl Chunk {
   pub fn de_conflict(&mut self, graph: &Graph) {
-    let mut name_to_count = self
+    let mut renamer = Renamer::new(&graph.symbols);
+
+    self
       .modules
       .iter()
       .copied()
@@ -19,10 +17,10 @@ impl Chunk {
         Module::External(_) => None,
       })
       .flatten()
-      .map(|name| (name, 1u32))
-      .collect::<FxHashMap<_, _>>();
-
-    let mut canonical_names: FxHashMap<SymbolRef, Atom> = FxHashMap::default();
+      .for_each(|name| {
+        // global names should be reserved
+        renamer.inc(name);
+      });
 
     self
       .modules
@@ -44,27 +42,12 @@ impl Chunk {
                 .flat_map(|part| part.declared_symbols.iter().copied()),
             )
             .for_each(|symbol_ref| {
-              let canonical_ref = graph.symbols.par_get_canonical_ref(symbol_ref);
-
-              let original_name = graph.symbols.get_original_name(canonical_ref);
-
-              match canonical_names.entry(canonical_ref) {
-                std::collections::hash_map::Entry::Occupied(_) => {}
-                std::collections::hash_map::Entry::Vacant(vacant) => {
-                  let count = name_to_count.entry(Cow::Borrowed(original_name)).or_default();
-                  if *count == 0 {
-                    vacant.insert(original_name.clone());
-                  } else {
-                    vacant.insert(format!("{}${}", original_name, *count).into());
-                  }
-                  *count += 1;
-                }
-              }
+              renamer.add_top_level_symbol(symbol_ref);
             });
         }
         Module::External(_) => {}
       });
 
-    self.canonical_names = canonical_names;
+    self.canonical_names = renamer.into_canonical_names();
   }
 }

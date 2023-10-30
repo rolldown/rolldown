@@ -28,6 +28,7 @@
     "Finalizer",
     "hasher",
     "importee",
+    "Renamer",
     "rolldown",
     "rollup",
     "rustc"

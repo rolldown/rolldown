@@ -1,0 +1,59 @@
+name: codspeed-benchmarks
+
+on:
+  push:
+    branches:
+      - "main" # or "master"
+    paths:
+      - '**/*.rs'
+      - '**/*.toml'
+      - 'Cargo.lock'
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - '**/*.rs'
+      - '**/*.toml'
+      - 'Cargo.lock'
+  # `workflow_dispatch` allows CodSpeed to trigger backtest
+  # performance analysis in order to generate initial data.
+  workflow_dispatch:
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+    cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+jobs:
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v4
+        with:
+          # Whether Pull submodules for additional files
+          submodules: false 
+
+      - name: Clone three.js
+        run: |
+            git clone https://github.com/mrdoob/three.js.git --depth 1 ./temp/three.js  
+            for i in {1..10}; do cp -r ./temp/three.js/src ./temp/three.js/copy$i/; done
+
+      - name: Install Rust Toolchain
+        uses: ./.github/actions/rustup
+        with:
+          shared-key: benchmark
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - name: Install codspeed
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-codspeed
+
+      - name: Build the benchmark target(s)
+        run: cargo codspeed build -p bench
+
+      - name: Run the benchmarks
+        uses: CodSpeedHQ/action@v1
+        with:
+          run: cargo codspeed run
+          token: ${{ secrets.CODSPEED_TOKEN }}

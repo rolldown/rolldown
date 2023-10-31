@@ -112,8 +112,8 @@ impl<'graph> Linker<'graph> {
           });
           if module.is_entry {
             let linking_info = &self.graph.linking_infos[module.id];
-            linking_info.resolved_exports.values().for_each(|symbol_ref| {
-              include_symbol(context, *symbol_ref);
+            linking_info.resolved_exports.values().for_each(|resolved_export| {
+              include_symbol(context, resolved_export.symbol_ref);
             });
           }
         }
@@ -508,29 +508,31 @@ impl<'graph> Linker<'graph> {
                   symbols,
                 ) {
                   MatchImportKind::NotFound | MatchImportKind::Ambiguous => panic!(""),
+                  MatchImportKind::Found(symbol_ref) => {
+                    symbols.union(info.imported_as, symbol_ref);
+                  }
                   MatchImportKind::NameSpace => {
                     symbols.get_mut(info.imported_as).namespace_alias = Some(NamespaceAlias {
                       property_name: info.imported.clone(),
                       namespace_ref: importee.namespace_symbol,
                     });
-
-                    importer.generate_symbol_import_and_use(
-                      importee.namespace_symbol,
-                      linking_info,
-                      symbols,
-                    );
-
-                    return;
+                    local_symbols.push(importee.namespace_symbol);
                   }
                 }
-              };
-              symbols.union(info.imported_as, resolved_ref);
+              }
+              Module::External(importee) => {
+                let resolved_ref = importee.resolve_export(&info.imported, info.is_imported_star);
+                symbols.union(info.imported_as, resolved_ref);
+              }
             }
-            Module::External(importee) => {
-              let resolved_ref = importee.resolve_export(&info.imported, info.is_imported_star);
-              symbols.union(info.imported_as, resolved_ref);
-            }
-          }
+          });
+
+        local_symbols.into_iter().for_each(|symbol_ref| {
+          importer.reference_symbol_in_facade_stmt_infos(
+            symbol_ref,
+            &mut linking_infos[importer.id],
+            symbols,
+          );
         });
       }
       Module::External(_) => {
@@ -579,7 +581,7 @@ impl<'graph> Linker<'graph> {
     }
 
     if importee
-      .get_star_exports_modules()
+      .star_export_modules()
       .map(|id| {
         let importee = &modules[id];
         match importee {
@@ -602,7 +604,7 @@ pub fn is_ambiguous_export(
   symbols: &Symbols,
 ) -> bool {
   for export in potentially_ambiguous_export {
-    if symbol_ref != symbols.par_get_canonical_ref(*export) {
+    if symbol_ref != symbols.par_canonical_ref_for(*export) {
       return true;
     }
   }

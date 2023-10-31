@@ -1,13 +1,12 @@
-use oxc::span::Atom;
 use string_wizard::MagicString;
 
-use crate::bundler::graph::{graph::Graph, linker::is_ambiguous_export};
+use crate::bundler::graph::graph::Graph;
 
 use super::chunk::Chunk;
 
 impl Chunk {
   pub fn render_exports_for_esm(&self, graph: &Graph) -> Option<MagicString<'static>> {
-    let mut export_items = self.entry_module.map_or_else(
+    let export_items = self.entry_module.map_or_else(
       || {
         self
           .exports_to_other_chunks

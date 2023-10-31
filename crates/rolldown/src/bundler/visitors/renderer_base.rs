@@ -90,8 +90,8 @@ impl<'ast> RendererBase<'ast> {
         .linking_info
         .resolved_exports
         .iter()
-        .map(|(exported_name, symbol_ref)| {
-          let canonical_ref = self.graph.symbols.par_canonical_ref_for(*symbol_ref);
+        .map(|(exported_name, resolved_export)| {
+          let canonical_ref = self.graph.symbols.par_canonical_ref_for(resolved_export.symbol_ref);
           let symbol = self.graph.symbols.get(canonical_ref);
           let return_expr = if let Some(ns_alias) = &symbol.namespace_alias {
             let canonical_ns_name = &self.canonical_names[&ns_alias.namespace_ref];

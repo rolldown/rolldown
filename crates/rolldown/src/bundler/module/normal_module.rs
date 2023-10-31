@@ -4,7 +4,6 @@ use index_vec::IndexVec;
 use oxc::{
   semantic::{ScopeTree, SymbolId},
   span::{Atom, Span},
-  syntax::symbol,
 };
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
@@ -47,17 +46,6 @@ pub struct NormalModule {
   pub exports_kind: ExportsKind,
   pub scope: ScopeTree,
   pub default_export_symbol: Option<SymbolId>,
-}
-
-#[derive(Debug)]
-pub enum Resolution {
-  None,
-  Ambiguous,
-  Found(SymbolRef),
-  // Mark the symbol symbol maybe from commonjs
-  // - The importee has `export * from 'cjs'`
-  // - The importee is commonjs
-  Runtime(SymbolRef),
 }
 
 impl NormalModule {
@@ -107,7 +95,7 @@ impl NormalModule {
           ResolvedExport { symbol_ref: local.referenced, export_from: None }
         }
         LocalOrReExport::Re(re) => {
-          let symbol_ref = self.generate_local_symbol(name.clone(), self_linking_info, symbols);
+          let symbol_ref = self.create_local_symbol(name.clone(), self_linking_info, symbols);
           self_linking_info.export_from_map.insert(
             name.clone(),
             NamedImport {
@@ -137,7 +125,7 @@ impl NormalModule {
     }
     module_stack.push(self.id);
 
-    for module_id in self.get_star_exports_modules() {
+    for module_id in self.star_export_modules() {
       let importee = &modules[module_id];
       match importee {
         Module::Normal(importee) => {
@@ -199,202 +187,6 @@ impl NormalModule {
     module_stack.remove(module_stack.len() - 1);
   }
 
-  // https://tc39.es/ecma262/#sec-getexportednames
-  pub fn get_exported_names<'modules>(
-    &'modules self,
-    stack: &mut Vec<ModuleId>,
-    modules: &'modules ModuleVec,
-  ) -> FxHashSet<&'modules Atom> {
-    if stack.contains(&self.id) {
-      // cycle
-      return FxHashSet::default();
-    }
-
-    stack.push(self.id);
-
-    let ret: FxHashSet<&'modules Atom> = {
-      self
-        .star_export_modules()
-        .flat_map(|id| {
-          let importee = &modules[id];
-          match importee {
-            Module::Normal(importee) => importee
-              .get_exported_names(stack, modules)
-              .into_iter()
-              .filter(|name| name.as_str() != "default")
-              .collect::<Vec<_>>(),
-            Module::External(importee) => importee
-              .symbols_imported_by_others
-              .keys()
-              .filter(|name| name.as_str() != "default")
-              .collect(),
-          }
-        })
-        .chain(self.named_exports.keys())
-        .collect()
-    };
-
-    stack.pop();
-    ret
-  }
-
-  // https://tc39.es/ecma262/#sec-resolveexport
-  #[allow(clippy::too_many_lines)]
-  pub fn resolve_export<'modules>(
-    &'modules self,
-    export_name: &'modules Atom,
-    resolve_set: &mut Vec<(ModuleId, &'modules Atom)>,
-    modules: &'modules ModuleVec,
-    symbols: &mut Symbols,
-  ) -> Resolution {
-    let record = (self.id, export_name);
-    if resolve_set.iter().rev().any(|prev| prev == &record) {
-      unimplemented!("handle cycle")
-    }
-    resolve_set.push(record);
-
-    let ret = if let Some(info) = self.named_exports.get(export_name) {
-      match info {
-        LocalOrReExport::Local(local) => {
-          if let Some(named_import) = self.named_imports.get(&local.referenced.symbol) {
-            let record = &self.import_records[named_import.record_id];
-            let importee = &modules[record.resolved_module];
-            match importee {
-              Module::Normal(importee) => {
-                let resolved = if named_import.is_imported_star {
-                  Resolution::Found(importee.namespace_symbol)
-                } else {
-                  importee.resolve_export(&named_import.imported, resolve_set, modules, symbols)
-                };
-                if let Resolution::Found(exist) = &resolved {
-                  symbols.union(local.referenced, *exist);
-                }
-                resolved
-              }
-              Module::External(importee) => {
-                let resolve =
-                  importee.resolve_export(&named_import.imported, named_import.is_imported_star);
-                return Resolution::Found(resolve);
-              }
-            }
-          } else {
-            Resolution::Found(local.referenced)
-          }
-        }
-        LocalOrReExport::Re(re) => {
-          let record = &self.import_records[re.record_id];
-          let importee = &modules[record.resolved_module];
-          match importee {
-            Module::Normal(importee) => {
-              if re.is_imported_star {
-                return Resolution::Found(importee.namespace_symbol);
-              }
-              importee.resolve_export(&re.imported, resolve_set, modules, symbols)
-            }
-            Module::External(importee) => {
-              let resolve = importee.resolve_export(&re.imported, re.is_imported_star);
-              return Resolution::Found(resolve);
-            }
-          }
-        }
-      }
-    } else {
-      if export_name.as_str() == "default" {
-        return Resolution::None;
-      }
-      let mut star_resolution: Option<SymbolRef> = None;
-      for module_id in self.star_export_modules() {
-        let importee = &modules[module_id];
-        match importee {
-          Module::Normal(importee) => {
-            match importee.resolve_export(export_name, resolve_set, modules, symbols) {
-              Resolution::None => continue,
-              Resolution::Ambiguous => return Resolution::Ambiguous,
-              Resolution::Found(exist) => {
-                if let Some(star_resolution) = star_resolution {
-                  if star_resolution == exist {
-                    continue;
-                  }
-                  return Resolution::Ambiguous;
-                }
-                star_resolution = Some(exist);
-              }
-              Resolution::Runtime(_) => {
-                unreachable!("should not found symbol at runtime for esm")
-              }
-            }
-          }
-          Module::External(_) => {
-            // unimplemented!("handle external module")
-          }
-        }
-      }
-
-      star_resolution.map_or(Resolution::None, Resolution::Found)
-    };
-
-    resolve_set.pop();
-
-    ret
-  }
-
-  pub fn resolve_export_for_esm_and_cjs<'modules>(
-    &'modules self,
-    export_name: &'modules Atom,
-    resolve_set: &mut Vec<(ModuleId, &'modules Atom)>,
-    modules: &'modules ModuleVec,
-    symbols: &mut Symbols,
-  ) -> Resolution {
-    // First found symbol resolution for esm, if not found, then try to resolve for commonjs
-    let resolution = self.resolve_export(export_name, resolve_set, modules, symbols);
-    if matches!(resolution, Resolution::None) {
-      let has_cjs_star_resolution = self
-        .star_export_modules()
-        .map(|id| {
-          let importee = &modules[id];
-          match importee {
-            Module::Normal(importee) => importee.exports_kind == ExportsKind::CommonJs,
-            Module::External(_) => false,
-          }
-        })
-        .any(|is_cjs| is_cjs);
-      if let Some(info) = self.named_exports.get(export_name) {
-        match info {
-          LocalOrReExport::Local(local) => {
-            if let Some(named_import) = self.named_imports.get(&local.referenced.symbol) {
-              let record = &self.import_records[named_import.record_id];
-              let importee = &modules[record.resolved_module];
-              match importee {
-                Module::Normal(importee) => {
-                  if importee.exports_kind == ExportsKind::CommonJs {
-                    return Resolution::Runtime(importee.namespace_symbol);
-                  }
-                }
-                Module::External(_) => {}
-              }
-            }
-          }
-          LocalOrReExport::Re(re) => {
-            let record = &self.import_records[re.record_id];
-            let importee = &modules[record.resolved_module];
-            match importee {
-              Module::Normal(importee) => {
-                if importee.exports_kind == ExportsKind::CommonJs {
-                  return Resolution::Runtime(importee.namespace_symbol);
-                }
-              }
-              Module::External(_) => {}
-            }
-          }
-        }
-      } else if has_cjs_star_resolution || self.exports_kind == ExportsKind::CommonJs {
-        return Resolution::Runtime(self.namespace_symbol);
-      }
-      return Resolution::None;
-    }
-    resolution
-  }
-
   pub fn resolve_star_exports(&self, modules: &ModuleVec) -> Vec<ModuleId> {
     let mut visited = FxHashSet::default();
     let mut resolved = vec![];
@@ -423,12 +215,22 @@ impl NormalModule {
         self.resource_id.generate_unique_name()
       )
       .into();
-      let symbol = symbols.create_symbol(self.id, name).symbol;
-      self_linking_info.wrap_symbol = Some((self.id, symbol).into());
-      self_linking_info
-        .facade_stmt_infos
-        .push(StmtInfo { declared_symbols: vec![(self.id, symbol).into()], ..Default::default() });
+      let symbol_ref = self.create_local_symbol(name, self_linking_info, symbols);
+      self_linking_info.wrap_symbol = Some(symbol_ref);
     }
+  }
+
+  pub fn create_local_symbol(
+    &self,
+    name: Atom,
+    self_linking_info: &mut LinkingInfo,
+    symbols: &mut Symbols,
+  ) -> SymbolRef {
+    let symbol_ref = symbols.create_symbol(self.id, name);
+    self_linking_info
+      .facade_stmt_infos
+      .push(StmtInfo { declared_symbols: vec![symbol_ref], ..Default::default() });
+    symbol_ref
   }
 
   pub fn reference_symbol_in_facade_stmt_infos(

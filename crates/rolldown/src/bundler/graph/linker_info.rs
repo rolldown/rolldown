@@ -19,7 +19,7 @@ pub struct LinkingInfo {
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
   // Store the names of exclude ambiguous resolved exports.
   // It will be used to generate chunk exports and module namespace binding.
-  pub exclude_ambiguous_resolved_exports: Vec<Atom>,
+  pub exclude_ambiguous_sorted_resolved_exports: Vec<Atom>,
   pub resolved_star_exports: Vec<ModuleId>,
   // If a esm module has export star from commonjs, it will be marked as ESMWithDynamicFallback at linker.
   // The unknown export name will be resolved at runtime.
@@ -29,7 +29,10 @@ pub struct LinkingInfo {
 
 impl LinkingInfo {
   pub fn exports(&self) -> impl Iterator<Item = (&Atom, &ResolvedExport)> {
-    self.exclude_ambiguous_resolved_exports.iter().map(|name| (name, &self.resolved_exports[name]))
+    self
+      .exclude_ambiguous_sorted_resolved_exports
+      .iter()
+      .map(|name| (name, &self.resolved_exports[name]))
   }
 
   pub fn create_exclude_ambiguous_resolved_exports(&mut self, symbols: &Symbols) {
@@ -46,7 +49,7 @@ impl LinkingInfo {
       })
       .collect::<Vec<_>>();
     export_names.sort_unstable_by(|a, b| a.cmp(b));
-    self.exclude_ambiguous_resolved_exports = export_names;
+    self.exclude_ambiguous_sorted_resolved_exports = export_names;
   }
 }
 

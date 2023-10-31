@@ -23,7 +23,6 @@ pub struct LinkingInfo {
   // It is used to prepare resolved exports generation.
   pub export_from_map: FxHashMap<Atom, NamedImport>,
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
-  pub potentially_ambiguous_exports: FxHashMap<Atom, Vec<SymbolRef>>,
   pub exclude_ambiguous_resolved_exports: Vec<Atom>,
   pub resolved_star_exports: Vec<ModuleId>,
 }
@@ -166,7 +165,7 @@ impl<'graph> Linker<'graph> {
             importer.id,
             &mut linking_infos,
             &self.graph.modules,
-            &mut Default::default(),
+            &mut Vec::default(),
           );
         }
         Module::External(_) => {}
@@ -183,7 +182,7 @@ impl<'graph> Linker<'graph> {
         .resolved_exports
         .iter()
         .filter_map(|(name, resolved_export)| {
-          if let Some(v) = linking_info.potentially_ambiguous_exports.get(name) {
+          if let Some(v) = &resolved_export.potentially_ambiguous_symbol_refs {
             if is_ambiguous_export(resolved_export.symbol_ref, v, &symbols) {
               return None;
             }
@@ -381,105 +380,6 @@ impl<'graph> Linker<'graph> {
     }
   }
 
-  // fn resolve_exports(&self, id: ModuleId, symbols: &mut Symbols, linking_info: &mut LinkingInfo) {
-  //   let importer = &self.graph.modules[id];
-  //   match importer {
-  //     Module::Normal(importer) => {
-  //       let exported_names = importer.get_exported_names(&mut Vec::default(), &self.graph.modules);
-
-  //       let mut resolutions = exported_names
-  //         .iter()
-  //         .map(|exported| {
-  //           (
-  //             *exported,
-  //             importer.resolve_export_for_esm_and_cjs(
-  //               exported,
-  //               &mut Vec::default(),
-  //               &self.graph.modules,
-  //               symbols,
-  //             ),
-  //           )
-  //         })
-  //         .collect::<FxHashMap<_, _>>();
-
-  //       #[allow(clippy::items_after_statements)]
-  //       fn create_local_symbol_for_found_resolution(
-  //         symbol_ref: SymbolRef,
-  //         importer: &NormalModule,
-  //         importer_linking_info: &mut LinkingInfo,
-  //         symbols: &mut Symbols,
-  //       ) -> SymbolRef {
-  //         if symbol_ref.owner == importer.id {
-  //           symbol_ref
-  //         } else {
-  //           let local_symbol_ref = importer.generate_local_symbol(
-  //             Atom::from("#FACADE#"),
-  //             importer_linking_info,
-  //             symbols,
-  //           );
-  //           symbols.union(local_symbol_ref, symbol_ref);
-  //           local_symbol_ref
-  //         }
-  //       }
-
-  //       importer.named_exports.keys().for_each(|exported| {
-  //         let res = resolutions.remove(exported).unwrap();
-  //         match res {
-  //           Resolution::None => {
-  //             panic!(
-  //               "named export {exported:?} must be resolved for exporter: {:?}",
-  //               importer.resource_id
-  //             )
-  //           }
-  //           Resolution::Ambiguous => panic!("named export must be resolved"),
-  //           Resolution::Found(ext) => {
-  //             let local_symbol_ref =
-  //               create_local_symbol_for_found_resolution(ext, importer, linking_info, symbols);
-  //             linking_info.resolved_exports.insert(exported.clone(), local_symbol_ref);
-  //           }
-  //           Resolution::Runtime(ns_ref) => {
-  //             // export { a } from './foo.cjs' => `var a = foo.a; export { a }`
-  //             let local_binding_ref = symbols.create_symbol(importer.id, exported.clone());
-  //             let local_binding = symbols.get_mut(local_binding_ref);
-  //             local_binding.namespace_alias =
-  //               Some(NamespaceAlias { property_name: exported.clone(), namespace_ref: ns_ref });
-  //             linking_info.facade_stmt_infos.push(StmtInfo {
-  //               stmt_idx: None,
-  //               declared_symbols: vec![local_binding_ref],
-  //               referenced_symbols: vec![ns_ref],
-  //             });
-  //             linking_info.resolved_exports.insert(exported.clone(), local_binding_ref);
-  //           }
-  //         }
-  //       });
-
-  //       resolutions.into_iter().for_each(|(exported, left)| match left {
-  //         Resolution::None => panic!("shouldn't has left which is None"),
-  //         Resolution::Found(ext) => {
-  //           let local_symbol_ref =
-  //             create_local_symbol_for_found_resolution(ext, importer, linking_info, symbols);
-  //           linking_info.resolved_exports.insert(exported.clone(), local_symbol_ref);
-  //         }
-  //         Resolution::Ambiguous => {}
-  //         Resolution::Runtime(ns_ref) => {
-  //           let local_binding_ref = symbols.create_symbol(importer.id, exported.clone());
-  //           let local_binding = symbols.get_mut(local_binding_ref);
-  //           local_binding.namespace_alias =
-  //             Some(NamespaceAlias { property_name: exported.clone(), namespace_ref: ns_ref });
-  //           linking_info.facade_stmt_infos.push(StmtInfo {
-  //             stmt_idx: None,
-  //             declared_symbols: vec![local_binding_ref],
-  //             referenced_symbols: vec![ns_ref],
-  //           });
-  //         }
-  //       });
-  //     }
-  //     Module::External(_) => {
-  //       // TODO: handle external module
-  //     }
-  //   }
-  // }
-
   fn match_imports_with_exports(
     &self,
     id: ModuleId,
@@ -556,16 +456,13 @@ impl<'graph> Linker<'graph> {
       return MatchImportKind::NameSpace;
     }
 
-    if let Some(potentially_ambiguous_export) =
-      importee_linking_info.potentially_ambiguous_exports.get(&info.imported)
-    {
-      let resolved_export = *importee_linking_info.resolved_exports.get(&info.imported).unwrap();
-      if is_ambiguous_export(resolved_export.symbol_ref, potentially_ambiguous_export, symbols) {
-        return MatchImportKind::Ambiguous;
-      }
-    }
-
     if let Some(resolved_export) = importee_linking_info.resolved_exports.get(&info.imported) {
+      if let Some(potentially_ambiguous_export) = &resolved_export.potentially_ambiguous_symbol_refs
+      {
+        if is_ambiguous_export(resolved_export.symbol_ref, potentially_ambiguous_export, symbols) {
+          return MatchImportKind::Ambiguous;
+        }
+      }
       if let Some(id) = resolved_export.export_from {
         let module = &modules[id];
         match module {

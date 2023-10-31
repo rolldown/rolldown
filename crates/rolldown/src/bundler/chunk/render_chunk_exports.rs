@@ -19,7 +19,7 @@ impl Chunk {
         linking_info
           .exclude_ambiguous_resolved_exports
           .iter()
-          .map(|name| (name, linking_info.resolved_exports.get(name).unwrap().symbol_ref))
+          .map(|name| (name, linking_info.resolved_exports[name].symbol_ref))
           .collect::<Vec<_>>()
       },
     );

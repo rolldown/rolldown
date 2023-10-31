@@ -5,6 +5,7 @@ use oxc::{
   semantic::{ScopeTree, SymbolId},
   span::{Atom, Span},
 };
+use rayon::vec;
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
   ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef, WrapKind,
@@ -91,9 +92,11 @@ impl NormalModule {
   ) {
     self.named_exports.iter().for_each(|(name, local_or_re_export)| {
       let resolved_export = match local_or_re_export {
-        LocalOrReExport::Local(local) => {
-          ResolvedExport { symbol_ref: local.referenced, export_from: None }
-        }
+        LocalOrReExport::Local(local) => ResolvedExport {
+          symbol_ref: local.referenced,
+          export_from: None,
+          potentially_ambiguous_symbol_refs: None,
+        },
         LocalOrReExport::Re(re) => {
           let symbol_ref = self.create_local_symbol(name.clone(), self_linking_info, symbols);
           self_linking_info.export_from_map.insert(
@@ -106,7 +109,11 @@ impl NormalModule {
             },
           );
           let rec = &self.import_records[re.record_id];
-          ResolvedExport { symbol_ref, export_from: Some(rec.resolved_module) }
+          ResolvedExport {
+            symbol_ref,
+            export_from: Some(rec.resolved_module),
+            potentially_ambiguous_symbol_refs: None,
+          }
         }
       };
       self_linking_info.resolved_exports.insert(name.clone(), resolved_export);
@@ -141,7 +148,7 @@ impl NormalModule {
             }
 
             // This export star is shadowed if any file in the stack has a matching real named export
-            for id in module_stack.iter() {
+            for id in &*module_stack {
               let module = &modules[*id];
               match module {
                 Module::Normal(module) => {
@@ -153,28 +160,27 @@ impl NormalModule {
               }
             }
 
-            let resolved_export = *linking_infos[importee.id].resolved_exports.get(name).unwrap();
+            let resolved_export = linking_infos[importee.id].resolved_exports[name];
 
             let linking_info = &mut linking_infos[id];
 
-            match linking_info.resolved_exports.entry(name.clone()) {
-              std::collections::hash_map::Entry::Occupied(entry) => {
-                if entry.get().symbol_ref != resolved_export.symbol_ref {
+            linking_info
+              .resolved_exports
+              .entry(name.clone())
+              .and_modify(|export| {
+                if export.symbol_ref != resolved_export.symbol_ref {
                   // potentially ambiguous export
-                  match linking_info.potentially_ambiguous_exports.entry(name.clone()) {
-                    std::collections::hash_map::Entry::Occupied(entry) => {
-                      entry.into_mut().push(resolved_export.symbol_ref);
-                    }
-                    std::collections::hash_map::Entry::Vacant(ambiguous_exports_entry) => {
-                      ambiguous_exports_entry.insert(vec![resolved_export.symbol_ref]);
-                    }
+                  if let Some(potentially_ambiguous_symbol_refs) =
+                    &mut export.potentially_ambiguous_symbol_refs
+                  {
+                    potentially_ambiguous_symbol_refs.push(resolved_export.symbol_ref);
+                  } else {
+                    export.potentially_ambiguous_symbol_refs =
+                      Some(vec![resolved_export.symbol_ref]);
                   }
                 }
-              }
-              std::collections::hash_map::Entry::Vacant(entry) => {
-                entry.insert(resolved_export);
-              }
-            }
+              })
+              .or_insert(resolved_export);
           });
 
           importee.add_resolved_exports_for_export_star(id, linking_infos, modules, module_stack);

@@ -1,0 +1,38 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/cross_chunk_assignment_dependencies
+---
+# 2.mjs
+
+```js
+// shared.js
+var observer;
+var value;
+function setObserver(cb) {
+    observer = cb;
+}
+function getValue() {
+    return value;
+}
+function setValue(next) {
+    value = next;
+    if (observer) observer();
+}
+sideEffects(getValue);
+export { setValue };
+```
+# a.mjs
+
+```js
+import { setValue } from "./2.mjs";
+
+// a.js
+
+setValue(123)
+```
+# b.mjs
+
+```js
+// b.js
+```

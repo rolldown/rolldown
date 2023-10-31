@@ -6,7 +6,7 @@ use rustc_hash::FxHashSet;
 
 use super::{
   graph::Graph,
-  linker_info::{is_ambiguous_export, LinkingInfo, LinkingInfoVec},
+  linker_info::{LinkingInfo, LinkingInfoVec},
   symbols::NamespaceAlias,
 };
 use crate::bundler::{
@@ -364,6 +364,7 @@ impl<'graph> Linker<'graph> {
     }
   }
 
+  #[allow(clippy::too_many_lines, clippy::manual_assert)]
   fn match_imports_with_exports(
     &self,
     id: ModuleId,
@@ -389,9 +390,68 @@ impl<'graph> Linker<'graph> {
                   importee,
                   &linking_infos[importee.id],
                   info,
-                  symbols,
                 ) {
-                  MatchImportKind::NotFound | MatchImportKind::Ambiguous => panic!(""),
+                  MatchImportKind::NotFound => panic!(""),
+                  MatchImportKind::PotentiallyAmbiguous(
+                    symbol_ref,
+                    mut potentially_ambiguous_symbol_refs,
+                  ) => {
+                    let mut results = vec![];
+                    // Iterate all potentially ambiguous symbol refs, If all results not be same, it's a ambiguous export
+                    potentially_ambiguous_symbol_refs.push(symbol_ref);
+
+                    for symbol_ref in potentially_ambiguous_symbol_refs {
+                      match &modules[symbol_ref.owner] {
+                        Module::Normal(module) => {
+                          let module_linking_info = &linking_infos[module.id];
+                          if let Some(info) = module.named_imports.get(&symbol_ref.symbol) {
+                            let importee_id = module.import_records[info.record_id].resolved_module;
+                            match &modules[importee_id] {
+                              Module::Normal(importee) => {
+                                results.push(Self::match_import_with_export(
+                                  modules,
+                                  importee,
+                                  &linking_infos[importee_id],
+                                  info,
+                                ));
+                              }
+                              Module::External(_) => {}
+                            }
+                          } else if let Some(info) =
+                            module_linking_info.export_from_map.get(&symbol_ref.symbol)
+                          {
+                            let importee_id = module.import_records[info.record_id].resolved_module;
+                            match &modules[importee_id] {
+                              Module::Normal(importee) => {
+                                results.push(Self::match_import_with_export(
+                                  modules,
+                                  importee,
+                                  &linking_infos[importee_id],
+                                  info,
+                                ));
+                              }
+                              Module::External(_) => {}
+                            }
+                          } else {
+                            results.push(MatchImportKind::Found(symbol_ref));
+                          }
+                        }
+                        Module::External(_) => continue,
+                      }
+                    }
+                    let current_result = results.remove(results.len() - 1);
+                    if let MatchImportKind::Found(symbol_ref) = current_result {
+                      for result in results {
+                        if let MatchImportKind::Found(result_symbol_ref) = result {
+                          if result_symbol_ref != symbol_ref {
+                            // ambiguous export
+                            panic!("");
+                          }
+                        }
+                      }
+                      symbols.union(info.imported_as, symbol_ref);
+                    }
+                  }
                   MatchImportKind::Found(symbol_ref) => {
                     symbols.union(info.imported_as, symbol_ref);
                   }
@@ -430,7 +490,6 @@ impl<'graph> Linker<'graph> {
     importee: &NormalModule,
     importee_linking_info: &LinkingInfo,
     info: &NamedImport,
-    symbols: &Symbols,
   ) -> MatchImportKind {
     if info.is_imported_star {
       return MatchImportKind::Found(importee.namespace_symbol);
@@ -444,9 +503,10 @@ impl<'graph> Linker<'graph> {
     if let Some(resolved_export) = importee_linking_info.resolved_exports.get(&info.imported) {
       if let Some(potentially_ambiguous_export) = &resolved_export.potentially_ambiguous_symbol_refs
       {
-        if is_ambiguous_export(resolved_export.symbol_ref, potentially_ambiguous_export, symbols) {
-          return MatchImportKind::Ambiguous;
-        }
+        return MatchImportKind::PotentiallyAmbiguous(
+          resolved_export.symbol_ref,
+          potentially_ambiguous_export.clone(),
+        );
       }
       if let Some(id) = resolved_export.export_from {
         let module = &modules[id];
@@ -501,11 +561,12 @@ impl<'graph> Linker<'graph> {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum MatchImportKind {
   NotFound,
   // The import symbol will generate property access to namespace symbol
   NameSpace,
-  Ambiguous,
+  // External,
+  PotentiallyAmbiguous(SymbolRef, Vec<SymbolRef>),
   Found(SymbolRef),
 }

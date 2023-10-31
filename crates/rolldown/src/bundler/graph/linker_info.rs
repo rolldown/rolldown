@@ -1,5 +1,5 @@
 use index_vec::IndexVec;
-use oxc::span::Atom;
+use oxc::{semantic::SymbolId, span::Atom};
 use rolldown_common::{ModuleId, NamedImport, ResolvedExport, StmtInfo, SymbolRef, WrapKind};
 use rustc_hash::FxHashMap;
 
@@ -14,7 +14,7 @@ pub struct LinkingInfo {
   pub facade_stmt_infos: Vec<StmtInfo>,
   // Convert `export { v } from "./a"` to `import { v } from "./a"; export { v }`.
   // It is used to prepare resolved exports generation.
-  pub export_from_map: FxHashMap<Atom, NamedImport>,
+  pub export_from_map: FxHashMap<SymbolId, NamedImport>,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
   // Store the names of exclude ambiguous resolved exports.

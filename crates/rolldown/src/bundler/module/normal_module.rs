@@ -99,7 +99,7 @@ impl NormalModule {
         LocalOrReExport::Re(re) => {
           let symbol_ref = self.create_local_symbol(name.clone(), self_linking_info, symbols);
           self_linking_info.export_from_map.insert(
-            name.clone(),
+            symbol_ref.symbol,
             NamedImport {
               imported: re.imported.clone(),
               is_imported_star: re.is_imported_star,

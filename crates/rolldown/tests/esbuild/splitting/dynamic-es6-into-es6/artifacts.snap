@@ -1,0 +1,18 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/dynamic-es6-into-es6
+---
+# foo_js.mjs
+
+```js
+// foo.js
+let bar = 123
+export { bar };
+```
+# main.mjs
+
+```js
+// main.js
+import('./foo_js.mjs').then(({bar}) => console.log(bar))
+```

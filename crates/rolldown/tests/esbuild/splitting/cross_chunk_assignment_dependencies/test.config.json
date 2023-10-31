@@ -10,5 +10,7 @@
         "import": "./b.js"
       }
     ]
-  }
+  },
+  "_comment": "`sideEffects` in `shared.js` is not define, so the input is invalid in the first place.",
+  "expectExecuted": false
 }

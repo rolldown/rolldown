@@ -1,0 +1,32 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/side_effects_without_dependencies
+---
+# 2.mjs
+
+```js
+// shared.js
+let a = 1
+let b = 2
+console.log('side effect')
+export { a, b };
+```
+# a.mjs
+
+```js
+import { a } from "./2.mjs";
+
+// a.js
+
+console.log(a)
+```
+# b.mjs
+
+```js
+import { b } from "./2.mjs";
+
+// b.js
+
+console.log(b)
+```

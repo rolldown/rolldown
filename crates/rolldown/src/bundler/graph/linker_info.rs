@@ -13,7 +13,10 @@ pub struct LinkingInfo {
   // Convert `export { v } from "./a"` to `import { v } from "./a"; export { v }`.
   // It is used to prepare resolved exports generation.
   pub export_from_map: FxHashMap<Atom, NamedImport>,
+  // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
+  // Store the names of exclude ambiguous resolved exports.
+  // It will be used to generate chunk exports and module namespace binding.
   pub exclude_ambiguous_resolved_exports: Vec<Atom>,
   pub resolved_star_exports: Vec<ModuleId>,
 }

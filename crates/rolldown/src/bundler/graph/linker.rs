@@ -122,7 +122,13 @@ impl<'graph> Linker<'graph> {
     );
 
     self.mark_module_wrapped(&mut symbols, &mut linking_infos);
-    // propagate star exports
+
+    // Mark namespace symbol for namespace referenced
+    // Create symbols for external module
+    self.mark_extra_symbols(&mut symbols, &mut linking_infos);
+
+    // Propagate star exports
+    // Create resolved exports for named export declarations
     for id in &self.graph.sorted_modules {
       let importer = &self.graph.modules[*id];
       match importer {
@@ -137,10 +143,8 @@ impl<'graph> Linker<'graph> {
         }
       }
     }
-    // Mark namespace symbol for namespace referenced
-    // Create symbols for external module
-    self.mark_extra_symbols(&mut symbols, &mut linking_infos);
 
+    // Create resolved exports for export star
     self.graph.sorted_modules.clone().into_iter().for_each(|id| {
       let importer = &self.graph.modules[id];
       match importer {
@@ -156,10 +160,12 @@ impl<'graph> Linker<'graph> {
       }
     });
 
+    // Linking the module imports to resolved exports
     self.graph.sorted_modules.clone().into_iter().for_each(|id| {
       self.match_imports_with_exports(id, &mut symbols, &mut linking_infos, &self.graph.modules);
     });
 
+    // Exclude ambiguous from resolved exports
     self.graph.sorted_modules.clone().into_iter().for_each(|id| {
       let linking_info = &mut linking_infos[id];
       let mut export_names = linking_info
@@ -174,7 +180,7 @@ impl<'graph> Linker<'graph> {
           Some(name.clone())
         })
         .collect::<Vec<_>>();
-      export_names.sort_unstable_by_key(|s| s.to_string());
+      export_names.sort_unstable_by(|a, b| a.cmp(b));
       linking_info.exclude_ambiguous_resolved_exports = export_names;
     });
 

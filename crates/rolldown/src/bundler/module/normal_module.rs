@@ -5,7 +5,6 @@ use oxc::{
   semantic::{ScopeTree, SymbolId},
   span::{Atom, Span},
 };
-use rayon::vec;
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
   ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef, WrapKind,
@@ -16,7 +15,7 @@ use string_wizard::MagicString;
 
 use crate::bundler::{
   graph::{
-    linker::{LinkingInfo, LinkingInfoVec},
+    linker_info::{LinkingInfo, LinkingInfoVec},
     symbols::Symbols,
   },
   visitors::{
@@ -85,7 +84,7 @@ impl NormalModule {
     }
   }
 
-  pub fn add_initial_resolved_exports(
+  pub fn create_initial_resolved_exports(
     &self,
     self_linking_info: &mut LinkingInfo,
     symbols: &mut Symbols,
@@ -120,7 +119,7 @@ impl NormalModule {
     });
   }
 
-  pub fn add_resolved_exports_for_export_star(
+  pub fn create_resolved_exports_for_export_star(
     &self,
     id: ModuleId,
     linking_infos: &mut LinkingInfoVec,
@@ -160,7 +159,7 @@ impl NormalModule {
               }
             }
 
-            let resolved_export = linking_infos[importee.id].resolved_exports[name];
+            let resolved_export = linking_infos[importee.id].resolved_exports[name].clone();
 
             let linking_info = &mut linking_infos[id];
 
@@ -183,7 +182,12 @@ impl NormalModule {
               .or_insert(resolved_export);
           });
 
-          importee.add_resolved_exports_for_export_star(id, linking_infos, modules, module_stack);
+          importee.create_resolved_exports_for_export_star(
+            id,
+            linking_infos,
+            modules,
+            module_stack,
+          );
         }
         Module::External(_) => {
           // unimplemented!("handle external module")

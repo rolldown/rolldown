@@ -13,10 +13,10 @@ function esm_default_fn() {}function esm_named_fn() {}
 
 var esm_named_var,esm_named_class;
 var esm_ns = {
-  get esm_named_var() { return esm_named_var },
   get default() { return esm_default_fn },
+  get esm_named_class() { return esm_named_class },
   get esm_named_fn() { return esm_named_fn },
-  get esm_named_class() { return esm_named_class }
+  get esm_named_var() { return esm_named_var }
 };
 var init_esm = __esm({
 'esm.js'() {

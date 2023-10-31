@@ -1,33 +1,17 @@
 use index_vec::IndexVec;
-use oxc::span::Atom;
 use rolldown_common::{
-  ExportsKind, ImportKind, LocalOrReExport, ModuleId, NamedImport, ResolvedExport, StmtInfo,
-  StmtInfoId, SymbolRef, WrapKind,
+  ExportsKind, ImportKind, LocalOrReExport, ModuleId, NamedImport, StmtInfoId, SymbolRef, WrapKind,
 };
-use rustc_hash::FxHashMap;
 
-use super::{graph::Graph, symbols::NamespaceAlias};
+use super::{
+  graph::Graph,
+  linker_info::{LinkingInfo, LinkingInfoVec},
+  symbols::NamespaceAlias,
+};
 use crate::bundler::{
   graph::symbols::Symbols,
   module::{Module, ModuleVec, NormalModule},
 };
-
-/// Store the linking info for module
-#[derive(Debug, Default)]
-pub struct LinkingInfo {
-  // The symbol for wrapped module
-  pub wrap_symbol: Option<SymbolRef>,
-  pub wrap_kind: WrapKind,
-  pub facade_stmt_infos: Vec<StmtInfo>,
-  // Convert `export { v } from "./a"` to `import { v } from "./a"; export { v }`.
-  // It is used to prepare resolved exports generation.
-  pub export_from_map: FxHashMap<Atom, NamedImport>,
-  pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
-  pub exclude_ambiguous_resolved_exports: Vec<Atom>,
-  pub resolved_star_exports: Vec<ModuleId>,
-}
-
-pub type LinkingInfoVec = IndexVec<ModuleId, LinkingInfo>;
 
 pub struct Linker<'graph> {
   graph: &'graph mut Graph,
@@ -144,7 +128,7 @@ impl<'graph> Linker<'graph> {
       match importer {
         Module::Normal(importer) => {
           let importer_linking_info = &mut linking_infos[*id];
-          importer.add_initial_resolved_exports(importer_linking_info, &mut symbols);
+          importer.create_initial_resolved_exports(importer_linking_info, &mut symbols);
           let resolved = importer.resolve_star_exports(&self.graph.modules);
           importer_linking_info.resolved_star_exports = resolved;
         }
@@ -161,7 +145,7 @@ impl<'graph> Linker<'graph> {
       let importer = &self.graph.modules[id];
       match importer {
         Module::Normal(importer) => {
-          importer.add_resolved_exports_for_export_star(
+          importer.create_resolved_exports_for_export_star(
             importer.id,
             &mut linking_infos,
             &self.graph.modules,

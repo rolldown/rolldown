@@ -8,8 +8,8 @@ input_file: crates/rolldown/tests/esbuild/import_star/other_file_import_export_s
 ```js
 // foo.js
 var foo_ns = {
-  get ns() { return foo_ns },
-  get foo() { return foo }
+  get foo() { return foo },
+  get ns() { return foo_ns }
 };
 const foo = 123
 

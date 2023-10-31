@@ -15,8 +15,7 @@ const y = 2
 // common.js
 var common_ns = {
   get x() { return x },
-  get z() { return z },
-  get y() { return y }
+  get z() { return z }
 };
 
 

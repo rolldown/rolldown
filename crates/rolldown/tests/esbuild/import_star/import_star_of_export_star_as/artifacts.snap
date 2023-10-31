@@ -7,6 +7,9 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_of_export_star
 
 ```js
 // bar.js
+var bar_ns = {
+  get bar() { return bar }
+};
 const bar = 123
 // foo.js
 var foo_ns = {

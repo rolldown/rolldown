@@ -1,7 +1,4 @@
-use super::{
-  linker::{Linker, LinkingInfoVec},
-  symbols::Symbols,
-};
+use super::{linker::Linker, linker_info::LinkingInfoVec, symbols::Symbols};
 use crate::bundler::{
   module::ModuleVec, module_loader::ModuleLoader,
   options::normalized_input_options::NormalizedInputOptions, runtime::Runtime,

@@ -98,7 +98,7 @@ impl<'a> Bundle<'a> {
         let entry_module = &self.graph.modules[entry_module];
         let entry_linking_info = &self.graph.linking_infos[entry_module.id()];
         for export_ref in entry_linking_info.resolved_exports.values() {
-          let mut canonical_ref = self.graph.symbols.canonical_ref_for(*export_ref);
+          let mut canonical_ref = self.graph.symbols.canonical_ref_for(export_ref.symbol_ref);
           let symbol = self.graph.symbols.get(canonical_ref);
           if let Some(ns_alias) = &symbol.namespace_alias {
             canonical_ref = ns_alias.namespace_ref;

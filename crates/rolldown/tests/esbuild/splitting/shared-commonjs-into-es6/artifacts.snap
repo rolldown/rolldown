@@ -17,7 +17,7 @@ var require_shared = __commonJS({
 exports.foo = 123
 }
 });
-export { require_shared, shared_ns };
+export { shared_ns, require_shared };
 ```
 # a.mjs
 

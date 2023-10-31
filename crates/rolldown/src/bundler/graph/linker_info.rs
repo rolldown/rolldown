@@ -40,9 +40,14 @@ impl LinkingInfo {
       .resolved_exports
       .iter()
       .filter_map(|(name, resolved_export)| {
-        if let Some(v) = &resolved_export.potentially_ambiguous_symbol_refs {
-          if is_ambiguous_export(resolved_export.symbol_ref, v, symbols) {
-            return None;
+        if let Some(potentially_ambiguous_symbol_refs) =
+          &resolved_export.potentially_ambiguous_symbol_refs
+        {
+          // because the un-ambiguous export is already union at linking imports, so here use symbols to check
+          for export in potentially_ambiguous_symbol_refs {
+            if resolved_export.symbol_ref != symbols.par_canonical_ref_for(*export) {
+              return None;
+            }
           }
         }
         Some(name.clone())
@@ -51,19 +56,6 @@ impl LinkingInfo {
     export_names.sort_unstable_by(|a, b| a.cmp(b));
     self.exclude_ambiguous_sorted_resolved_exports = export_names;
   }
-}
-
-pub fn is_ambiguous_export(
-  symbol_ref: SymbolRef,
-  potentially_ambiguous_export: &Vec<SymbolRef>,
-  symbols: &Symbols,
-) -> bool {
-  for export in potentially_ambiguous_export {
-    if symbol_ref != symbols.par_canonical_ref_for(*export) {
-      return true;
-    }
-  }
-  false
 }
 
 pub type LinkingInfoVec = IndexVec<ModuleId, LinkingInfo>;

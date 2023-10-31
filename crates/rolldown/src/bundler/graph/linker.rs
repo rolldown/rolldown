@@ -2,10 +2,11 @@ use index_vec::IndexVec;
 use rolldown_common::{
   ExportsKind, ImportKind, LocalOrReExport, ModuleId, NamedImport, StmtInfoId, SymbolRef, WrapKind,
 };
+use rustc_hash::FxHashSet;
 
 use super::{
   graph::Graph,
-  linker_info::{LinkingInfo, LinkingInfoVec},
+  linker_info::{is_ambiguous_export, LinkingInfo, LinkingInfoVec},
   symbols::NamespaceAlias,
 };
 use crate::bundler::{
@@ -129,10 +130,16 @@ impl<'graph> Linker<'graph> {
 
     // Propagate star exports
     // Create resolved exports for named export declarations
+    // Mark dynamic exports due to export star
     for id in &self.graph.sorted_modules {
       let importer = &self.graph.modules[*id];
       match importer {
         Module::Normal(importer) => {
+          self.mark_dynamic_exports_due_to_export_star(
+            *id,
+            &mut linking_infos,
+            &mut FxHashSet::default(),
+          );
           let importer_linking_info = &mut linking_infos[*id];
           importer.create_initial_resolved_exports(importer_linking_info, &mut symbols);
           let resolved = importer.resolve_star_exports(&self.graph.modules);
@@ -168,20 +175,7 @@ impl<'graph> Linker<'graph> {
     // Exclude ambiguous from resolved exports
     self.graph.sorted_modules.clone().into_iter().for_each(|id| {
       let linking_info = &mut linking_infos[id];
-      let mut export_names = linking_info
-        .resolved_exports
-        .iter()
-        .filter_map(|(name, resolved_export)| {
-          if let Some(v) = &resolved_export.potentially_ambiguous_symbol_refs {
-            if is_ambiguous_export(resolved_export.symbol_ref, v, &symbols) {
-              return None;
-            }
-          }
-          Some(name.clone())
-        })
-        .collect::<Vec<_>>();
-      export_names.sort_unstable_by(|a, b| a.cmp(b));
-      linking_info.exclude_ambiguous_resolved_exports = export_names;
+      linking_info.create_exclude_ambiguous_resolved_exports(&symbols);
     });
 
     // Set the symbols back and add linker modules to graph
@@ -442,6 +436,7 @@ impl<'graph> Linker<'graph> {
       return MatchImportKind::Found(importee.namespace_symbol);
     }
 
+    // If importee module is commonjs module, it will generate property access to namespace symbol
     if importee.exports_kind == ExportsKind::CommonJs {
       return MatchImportKind::NameSpace;
     }
@@ -467,35 +462,43 @@ impl<'graph> Linker<'graph> {
       return MatchImportKind::Found(resolved_export.symbol_ref);
     }
 
-    if importee
-      .star_export_modules()
-      .map(|id| {
-        let importee = &modules[id];
-        match importee {
-          Module::Normal(importee) => importee.exports_kind == ExportsKind::CommonJs,
-          Module::External(_) => false,
-        }
-      })
-      .any(|is_cjs| is_cjs)
-    {
+    // If the module has dynamic exports, the unknown export name will be resolved at runtime.
+    if importee_linking_info.has_dynamic_exports {
       return MatchImportKind::NameSpace;
     }
 
     MatchImportKind::NotFound
   }
-}
 
-pub fn is_ambiguous_export(
-  symbol_ref: SymbolRef,
-  potentially_ambiguous_export: &Vec<SymbolRef>,
-  symbols: &Symbols,
-) -> bool {
-  for export in potentially_ambiguous_export {
-    if symbol_ref != symbols.par_canonical_ref_for(*export) {
-      return true;
+  pub fn mark_dynamic_exports_due_to_export_star(
+    &self,
+    target: ModuleId,
+    linking_infos: &mut LinkingInfoVec,
+    visited_modules: &mut FxHashSet<ModuleId>,
+  ) -> bool {
+    if visited_modules.contains(&target) {
+      return false;
     }
+    visited_modules.insert(target);
+
+    let module = &self.graph.modules[target];
+    match module {
+      Module::Normal(module) => {
+        if module.exports_kind == ExportsKind::CommonJs || linking_infos[target].has_dynamic_exports
+        {
+          return true;
+        }
+        for id in module.star_export_modules() {
+          if self.mark_dynamic_exports_due_to_export_star(id, linking_infos, visited_modules) {
+            linking_infos[target].has_dynamic_exports = true;
+            return true;
+          }
+        }
+      }
+      Module::External(_) => {}
+    }
+    false
   }
-  false
 }
 
 #[derive(Debug)]

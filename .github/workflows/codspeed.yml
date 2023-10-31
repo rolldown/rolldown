@@ -2,23 +2,20 @@ name: codspeed-benchmarks
 
 on:
   issue_comment:
-    types: [created]
-  # ----- FIXME: Uncomment the following lines to enable automatic benchmarking when the repo becomes public
-  # push:
-  #   branches:
-  #     - "main" # or "master"
-  #   paths:
-  #     - '**/*.rs'
-  #     - '**/*.toml'
-  #     - 'Cargo.lock'
-  # pull_request:
-  #   types: [opened, synchronize]
-  #   paths:
-  #     - '**/*.rs'
-  #     - '**/*.toml'
-  #     - 'Cargo.lock'
-  # workflow_dispatch:
-  # -----
+  push:
+    branches:
+      - "main" # or "master"
+    paths:
+      - '**/*.rs'
+      - '**/*.toml'
+      - 'Cargo.lock'
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - '**/*.rs'
+      - '**/*.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}

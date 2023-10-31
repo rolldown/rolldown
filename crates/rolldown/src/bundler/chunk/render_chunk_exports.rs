@@ -16,7 +16,10 @@ impl Chunk {
       },
       |entry_module_id| {
         let linking_info = &graph.linking_infos[entry_module_id];
-        linking_info.exports().map(|(name, export)| (name, export.symbol_ref)).collect::<Vec<_>>()
+        linking_info
+          .sorted_exports()
+          .map(|(name, export)| (name, export.symbol_ref))
+          .collect::<Vec<_>>()
       },
     );
 

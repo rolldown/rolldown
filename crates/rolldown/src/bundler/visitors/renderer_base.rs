@@ -90,7 +90,7 @@ impl<'ast> RendererBase<'ast> {
       let namespace_name = self.canonical_name_for(self.module.namespace_symbol);
       let exports: String = self
         .linking_info
-        .exports()
+        .sorted_exports()
         .map(|(exported_name, resolved_export)| {
           let canonical_ref = self.graph.symbols.par_canonical_ref_for(resolved_export.symbol_ref);
           let symbol = self.graph.symbols.get(canonical_ref);

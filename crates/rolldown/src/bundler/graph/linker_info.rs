@@ -28,7 +28,7 @@ pub struct LinkingInfo {
 }
 
 impl LinkingInfo {
-  pub fn exports(&self) -> impl Iterator<Item = (&Atom, &ResolvedExport)> {
+  pub fn sorted_exports(&self) -> impl Iterator<Item = (&Atom, &ResolvedExport)> {
     self
       .exclude_ambiguous_sorted_resolved_exports
       .iter()

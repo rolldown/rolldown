@@ -39,10 +39,14 @@ impl Fixture {
   }
 
   pub fn exec(&self) {
+    let test_config = self.test_config();
+
+    if !test_config.expect_executed {
+      return;
+    }
+
     let dist_folder = self.dir_path().join("dist");
     let test_script = self.dir_path().join("_test.mjs");
-
-    let test_config = self.test_config();
 
     let compiled_entries = test_config
       .input

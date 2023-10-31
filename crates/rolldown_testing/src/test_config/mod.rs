@@ -16,6 +16,10 @@ macro_rules! impl_serde_default {
   };
 }
 
+fn true_by_default() -> bool {
+  true
+}
+
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TestConfig {
@@ -23,8 +27,12 @@ pub struct TestConfig {
   pub input: input_options::InputOptions,
   #[serde(default)]
   pub output: output_options::OutputOptions,
-  #[serde(default)]
-  pub expect_error: bool,
+  #[serde(default = "true_by_default")]
+  /// If `false`, the compiled artifacts won't be executed.
+  pub expect_executed: bool,
+  #[serde(default, rename = "_comment")]
+  /// An workaround for writing comments in JSON.
+  pub _comment: String,
 }
 
 #[derive(Deserialize, JsonSchema)]

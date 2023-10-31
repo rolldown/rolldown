@@ -2,13 +2,15 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "TestConfig",
   "type": "object",
-  "required": [
-    "expectError",
-    "input",
-    "output"
-  ],
   "properties": {
-    "expectError": {
+    "_comment": {
+      "description": "An workaround for writing comments in JSON.",
+      "default": "",
+      "type": "string"
+    },
+    "expectExecuted": {
+      "description": "If `false`, the compiled artifacts won't be executed.",
+      "default": true,
       "type": "boolean"
     },
     "input": {

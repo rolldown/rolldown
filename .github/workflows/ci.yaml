@@ -36,7 +36,7 @@ jobs:
 
   lint:
     name: Clippy
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -50,7 +50,7 @@ jobs:
 
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -65,7 +65,7 @@ jobs:
 
   node-test:
     name: Node test
-    runs-on: 'ubuntu-latest'
+    runs-on: self-hosted
     timeout-minutes: 30
     strategy:
       fail-fast: false

@@ -16,3 +16,6 @@ harness = false
 
 [lib]
 bench = false
+
+[dev-dependencies]
+codspeed-criterion-compat = "2.3.1"

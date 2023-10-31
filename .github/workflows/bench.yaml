@@ -11,7 +11,7 @@ concurrency:
 jobs:
   bench:
     name: Bench
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.event.issue.pull_request && contains(github.event.comment.body, '!bench')
     steps:
       - name: Checkout Branch

@@ -33,5 +33,11 @@
     "rollup",
     "rustc"
   ],
-  "git.ignoreLimitWarning": true
+  "git.ignoreLimitWarning": true,
+  "json.schemas": [
+    {
+      "fileMatch": ["test.config.json"],
+      "url": "./crates/rolldown_testing/test.config.scheme.json"
+    }
+  ]
 }

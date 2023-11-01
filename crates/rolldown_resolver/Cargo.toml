@@ -1,10 +1,12 @@
 [package]
 description = "rolldown_resolver"
-edition     = "2021"
-license     = "Apache-2.0"
 name        = "rolldown_resolver"
 version     = "0.0.1"
 
+homepage.workspace   = true
+license.workspace    = true
+edition.workspace    = true
+repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

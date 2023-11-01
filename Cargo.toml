@@ -2,6 +2,13 @@
 members  = ["./crates/*"]
 resolver = "2"
 
+
+[workspace.package]
+edition      = "2021"
+homepage     = "https://github.com/rolldown-rs/rolldown"
+license      = "MIT"
+repository   = "https://github.com/rolldown-rs/rolldown"
+
 [workspace.dependencies]
 oxc            = { version = "0.1.3", features = ["semantic", "formatter"] }
 sugar_path     = "0.0.12"

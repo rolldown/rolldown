@@ -1,11 +1,16 @@
 [package]
-edition = "2021"
-name    = "rolldown"
-version = "0.1.0"
+name                 = "rolldown"
+version              = "0.1.0"
+license.workspace    = true
+homepage.workspace   = true
+edition.workspace    = true
+repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+
 [dependencies]
+
 rolldown_common   = { path = "../rolldown_common" }
 rolldown_tracing  = { path = "../rolldown_tracing" }
 rolldown_utils    = { path = "../rolldown_utils" }

@@ -33,7 +33,25 @@ jobs:
 
       - name: Run Format
         run: cargo fmt --all -- --check
+  deny:
+    name: Cargo Deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            src:
+              - 'Cargo.lock'
+
+      - name: Install cargo-deny
+        if: steps.filter.outputs.src == 'true'
+        uses: taiki-e/install-action@cargo-deny
+
+      - if: steps.filter.outputs.src == 'true'
+        run: cargo deny check
   lint:
     name: Clippy
     runs-on: self-hosted

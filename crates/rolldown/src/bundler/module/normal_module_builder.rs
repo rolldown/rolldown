@@ -15,6 +15,7 @@ use super::NormalModule;
 #[derive(Debug, Default)]
 pub struct NormalModuleBuilder {
   pub id: Option<ModuleId>,
+  pub unique_name: Option<String>,
   pub path: Option<ResourceId>,
   pub ast: Option<OxcProgram>,
   pub named_imports: Option<FxHashMap<SymbolId, NamedImport>>,
@@ -36,6 +37,7 @@ impl NormalModuleBuilder {
     NormalModule {
       exec_order: u32::MAX,
       id: self.id.unwrap(),
+      unique_name: self.unique_name.unwrap(),
       resource_id: self.path.unwrap(),
       ast: self.ast.unwrap(),
       named_imports: self.named_imports.unwrap(),

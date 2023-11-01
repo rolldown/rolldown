@@ -9,9 +9,6 @@ input_file: crates/rolldown/tests/esbuild/default/require_main_cache_common_js
 import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // is-main.js
-var is_main_ns = {
-
-};
 var require_is_main = __commonJS({
 'is-main.js'(exports, module) {
 module.exports = require.main === module

@@ -9,16 +9,13 @@ input_file: crates/rolldown/tests/fixtures/import_reexport_between_esm_and_cjs/e
 import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // commonjs.js
-var commonjs_ns = {
-
-};
 var require_commonjs = __commonJS({
 'commonjs.js'(exports, module) {
 exports.a = 1
 }
 });
 // main.js
-var commonjs_ns = __toESM(require_commonjs());
+var import_commonjs = __toESM(require_commonjs());
 
-console.log(commonjs_ns)
+console.log(import_commonjs)
 ```

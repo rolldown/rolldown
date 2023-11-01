@@ -28,9 +28,6 @@ esm_named_class = class esm_named_class {}
 }
 });
 // commonjs.js
-var commonjs_ns = {
-
-};
 var require_commonjs$1 = __commonJS({
 'commonjs.js'(exports, module) {
 var value = (init_esm(), __toCommonJS(esm_ns));
@@ -38,11 +35,11 @@ module.exports = value;
 }
 });
 // main.js
-var commonjs_ns = __toESM(require_commonjs$1());
+var import_commonjs = __toESM(require_commonjs$1());
+
 init_esm();
 
-
-console.log(commonjs_ns.default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class)
+console.log(import_commonjs.default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class)
 // test commonjs warp symbol deconflict
 const require_commonjs = () => {}
 // test esm export function symbol deconflict

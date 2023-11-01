@@ -113,16 +113,14 @@ impl<'ast> Visit<'ast> for WrappedEsmRenderer<'ast> {
       match self.base.get_importee_by_span(named_decl.span) {
         Module::Normal(importee) => {
           if importee.exports_kind == ExportsKind::CommonJs {
-            self.base.overwrite(
+            self.base.hoisted_module_declaration(
               named_decl.span.start,
-              named_decl.span.end,
               self.base.generate_import_commonjs_module(
                 importee,
                 &self.base.graph.linking_infos[importee.id],
                 true,
               ),
             );
-            return;
           }
         }
         Module::External(_) => {} // TODO

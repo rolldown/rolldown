@@ -22,7 +22,7 @@ pub struct RendererBase<'ast> {
   pub chunk_graph: &'ast ChunkGraph,
   pub wrap_symbol_name: Option<&'ast Atom>,
   pub default_symbol_name: Option<&'ast Atom>,
-  // Used to hoisted import declaration before the first statement
+  // Used to hoisted declaration for import module, including import declaration and export declaration which has source imported
   pub first_stmt_start: Option<u32>,
 }
 
@@ -115,7 +115,7 @@ impl<'ast> RendererBase<'ast> {
     &self,
     importee: &NormalModule,
     importee_linking_info: &LinkingInfo,
-    with_namespace_init: bool,
+    with_declaration: bool,
   ) -> String {
     let wrap_symbol_name = self.canonical_name_for(importee_linking_info.wrap_symbol.unwrap());
     let to_esm_runtime_symbol_name = self.canonical_name_for_runtime(&"__toESM".into());
@@ -123,9 +123,10 @@ impl<'ast> RendererBase<'ast> {
       "{to_esm_runtime_symbol_name}({wrap_symbol_name}(){})",
       if self.module.module_type.is_esm() { ", 1" } else { "" }
     );
-    if with_namespace_init {
-      let namespace_name = self.canonical_name_for(importee.namespace_symbol);
-      format!("var {namespace_name} = {code};\n")
+    if with_declaration {
+      let symbol_ref = self.linking_info.local_symbol_for_import_cjs[&importee.id];
+      let final_name = self.canonical_name_for(symbol_ref);
+      format!("var {final_name} = {code};\n")
     } else {
       code
     }
@@ -133,6 +134,11 @@ impl<'ast> RendererBase<'ast> {
 
   pub fn get_importee_by_span(&self, span: Span) -> &Module {
     &self.graph.modules[self.module.get_import_module_by_span(span)]
+  }
+
+  pub fn hoisted_module_declaration(&mut self, decl_start: u32, content: String) {
+    let start = self.first_stmt_start.unwrap_or(decl_start);
+    self.source.append_left(start, content);
   }
 
   pub fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
@@ -161,18 +167,14 @@ impl<'ast> RendererBase<'ast> {
     let symbol = self.graph.symbols.get(symbol_ref);
     if let Some(ns_alias) = &symbol.namespace_alias {
       // If import symbol from commonjs, the reference of the symbol is not resolved,
-      // Here need write it to property access. eg `import { a } from 'cjs'; console.log(a)` => `console.log(cjs_ns.a)`
-      // Note: we should rewrite call expression to indirect call, eg `import { a } from 'cjs'; console.log(a())` => `console.log((0, cjs_ns.a)())`
+      // Here need write it to property access. eg `import { a } from 'cjs'; console.log(a)` => `console.log(import_a.a)`
+      // Note: we should rewrite call expression to indirect call, eg `import { a } from 'cjs'; console.log(a())` => `console.log((0, import_a.a)())`
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
-      let property_name = &ns_alias.property_name;
+      let content = format!("{canonical_ns_name}.{}", ns_alias.property_name);
       self.source.update(
         ident.span.start,
         ident.span.end,
-        if is_call {
-          format!("(0, {canonical_ns_name}.{property_name})",)
-        } else {
-          format!("{canonical_ns_name}.{property_name}",)
-        },
+        if is_call { format!("(0, {content})",) } else { content },
       );
     } else if let Some(name) = self.need_to_rename(symbol_ref) {
       if ident.name != name {
@@ -188,11 +190,10 @@ impl<'ast> RendererBase<'ast> {
     if let Module::Normal(importee) = self.get_importee_by_span(decl.span) {
       if importee.exports_kind == ExportsKind::CommonJs {
         // __reExport(a_exports, __toESM(require_c()));
-        let namespace_name = &self.canonical_names[&importee.namespace_symbol];
+        let namespace_name = &self.canonical_names[&self.module.namespace_symbol];
         let re_export_runtime_symbol_name = self.canonical_name_for_runtime(&"__reExport".into());
-        self.source.update(
+        self.hoisted_module_declaration(
           decl.span.start,
-          decl.span.end,
           format!(
             "{re_export_runtime_symbol_name}({namespace_name}, {});",
             self.generate_import_commonjs_module(
@@ -202,7 +203,6 @@ impl<'ast> RendererBase<'ast> {
             )
           ),
         );
-        return;
       }
     }
     self.remove_node(decl.span);
@@ -231,11 +231,10 @@ impl<'ast> RendererBase<'ast> {
     let module_id = self.module.get_import_module_by_span(decl.span);
     let importee = &self.graph.modules[module_id];
     let importee_linking_info = &self.graph.linking_infos[module_id];
-    let start = self.first_stmt_start.unwrap_or(decl.span.start);
     if let Module::Normal(importee) = importee {
       if importee.exports_kind == ExportsKind::CommonJs {
-        self.source.append_right(
-          start,
+        self.hoisted_module_declaration(
+          decl.span.start,
           self.generate_import_commonjs_module(
             importee,
             &self.graph.linking_infos[importee.id],
@@ -245,7 +244,7 @@ impl<'ast> RendererBase<'ast> {
       } else if let Some(wrap_symbol) = importee_linking_info.wrap_symbol {
         let wrap_symbol_name = self.canonical_name_for(wrap_symbol);
         // init wrapped esm module
-        self.source.append_right(start, format!("{wrap_symbol_name}();\n"));
+        self.hoisted_module_declaration(decl.span.start, format!("{wrap_symbol_name}();\n"));
       }
     }
   }
@@ -277,9 +276,20 @@ impl<'ast> RendererBase<'ast> {
   }
 
   pub fn visit_statement(&mut self, stmt: &'ast oxc::ast::ast::Statement<'ast>) {
-    if !matches!(stmt, oxc::ast::ast::Statement::Declaration(_)) && self.first_stmt_start.is_none()
-    {
-      self.first_stmt_start = Some(stmt.span().start);
+    if self.first_stmt_start.is_none() {
+      let hoisted_decl = if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
+        match &decl.0 {
+          oxc::ast::ast::ModuleDeclaration::ImportDeclaration(_)
+          | oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(_) => true,
+          oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(decl) => decl.source.is_some(),
+          _ => false,
+        }
+      } else {
+        false
+      };
+      if !hoisted_decl {
+        self.first_stmt_start = Some(stmt.span().start);
+      }
     }
   }
 }

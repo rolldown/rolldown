@@ -9,16 +9,13 @@ input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_unused_mi
 import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // foo.js
-var foo_ns = {
-
-};
 var require_foo = __commonJS({
 'foo.js'(exports, module) {
 exports.x = 123
 }
 });
 // entry.js
-var foo_ns = __toESM(require_foo());
+var import_foo = __toESM(require_foo());
 
-console.log(foo_ns.foo)
+console.log(import_foo.foo)
 ```

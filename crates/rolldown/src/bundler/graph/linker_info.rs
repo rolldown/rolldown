@@ -25,6 +25,8 @@ pub struct LinkingInfo {
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
   pub has_dynamic_exports: bool,
+  // Store the local symbol for esm import cjs. eg. `var import_ns = __toESM(require_cjs())`
+  pub local_symbol_for_import_cjs: FxHashMap<ModuleId, SymbolRef>,
 }
 
 impl LinkingInfo {
@@ -55,6 +57,16 @@ impl LinkingInfo {
       .collect::<Vec<_>>();
     export_names.sort_unstable_by(|a, b| a.cmp(b));
     self.exclude_ambiguous_sorted_resolved_exports = export_names;
+  }
+
+  pub fn reference_symbol_in_facade_stmt_infos(&mut self, symbol_ref: SymbolRef) {
+    self.facade_stmt_infos.push(StmtInfo {
+      declared_symbols: vec![],
+      // Since the facade symbol is used, it should be referenced. This will be used to
+      // create correct cross-chunk links
+      referenced_symbols: vec![symbol_ref],
+      ..Default::default()
+    });
   }
 }
 

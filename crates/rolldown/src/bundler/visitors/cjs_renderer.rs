@@ -21,9 +21,7 @@ impl<'ast> CjsRenderer<'ast> {
       "var {wrap_symbol_name} = {commonjs_runtime_symbol_name}({{\n'{module_path}'(exports, module) {{\n",
     ));
     self.base.source.append("\n}\n});");
-    if let Some(s) = self.base.generate_namespace_variable_declaration() {
-      self.base.source.prepend(s);
-    }
+    assert!(!self.base.module.is_namespace_referenced());
   }
 }
 

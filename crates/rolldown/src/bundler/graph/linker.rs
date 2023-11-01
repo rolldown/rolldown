@@ -169,7 +169,7 @@ impl<'graph> Linker<'graph> {
 
     // Linking the module imports to resolved exports
     self.graph.sorted_modules.clone().into_iter().for_each(|id| {
-      self.match_imports_with_exports(id, &mut symbols, &mut linking_infos, &self.graph.modules);
+      self.match_imports_with_exports(id, &mut symbols, &linking_infos, &self.graph.modules);
     });
 
     // Exclude ambiguous from resolved exports
@@ -233,29 +233,23 @@ impl<'graph> Linker<'graph> {
             };
             if let Some(importee_warp_symbol) = importee_linking_info.wrap_symbol {
               let importer_linking_info = &mut linking_infos[importer.id];
-              importer.reference_symbol_in_facade_stmt_infos(
-                importee_warp_symbol,
-                importer_linking_info,
-                symbols,
-              );
-              importer.reference_symbol_in_facade_stmt_infos(
-                importee.namespace_symbol,
-                importer_linking_info,
-                symbols,
-              );
+              importer_linking_info.reference_symbol_in_facade_stmt_infos(importee_warp_symbol);
               match (importer.exports_kind, importee.exports_kind) {
                 (ExportsKind::Esm, ExportsKind::CommonJs) => {
-                  importer.reference_symbol_in_facade_stmt_infos(
-                    self.graph.runtime.resolve_symbol(&"__toESM".into()),
+                  importer.create_local_symbol_for_import_cjs(
+                    importee,
                     importer_linking_info,
                     symbols,
                   );
+                  importer_linking_info.reference_symbol_in_facade_stmt_infos(
+                    self.graph.runtime.resolve_symbol(&"__toESM".into()),
+                  );
                 }
                 (_, ExportsKind::Esm) => {
-                  importer.reference_symbol_in_facade_stmt_infos(
+                  importer_linking_info
+                    .reference_symbol_in_facade_stmt_infos(importee.namespace_symbol);
+                  importer_linking_info.reference_symbol_in_facade_stmt_infos(
                     self.graph.runtime.resolve_symbol(&"__toCommonJS".into()),
-                    importer_linking_info,
-                    symbols,
                   );
                 }
                 _ => {}
@@ -265,10 +259,9 @@ impl<'graph> Linker<'graph> {
           importer.star_export_modules().for_each(|id| match &self.graph.modules[id] {
             Module::Normal(importee) => {
               if importee.exports_kind == ExportsKind::CommonJs {
-                importer.reference_symbol_in_facade_stmt_infos(
+                let importee_linking_info = &mut linking_infos[importer.id];
+                importee_linking_info.reference_symbol_in_facade_stmt_infos(
                   self.graph.runtime.resolve_symbol(&"__reExport".into()),
-                  &mut linking_infos[importer.id],
-                  symbols,
                 );
               }
             }
@@ -306,7 +299,7 @@ impl<'graph> Linker<'graph> {
           "__esm".into()
         };
         let runtime_symbol = self.graph.runtime.resolve_symbol(&name);
-        module.reference_symbol_in_facade_stmt_infos(runtime_symbol, linking_info, symbols);
+        linking_info.reference_symbol_in_facade_stmt_infos(runtime_symbol);
         module.import_records.iter().for_each(|record| {
           self.wrap_module(record.resolved_module, symbols, linking_infos);
         });
@@ -369,13 +362,12 @@ impl<'graph> Linker<'graph> {
     &self,
     id: ModuleId,
     symbols: &mut Symbols,
-    linking_infos: &mut LinkingInfoVec,
+    linking_infos: &LinkingInfoVec,
     modules: &ModuleVec,
   ) {
     let importer = &self.graph.modules[id];
     match importer {
       Module::Normal(importer) => {
-        let mut local_symbols = vec![];
         importer
           .named_imports
           .values()
@@ -389,6 +381,7 @@ impl<'graph> Linker<'graph> {
                   modules,
                   importee,
                   &linking_infos[importee.id],
+                  &linking_infos[importer.id],
                   info,
                 ) {
                   MatchImportKind::NotFound => panic!(""),
@@ -408,12 +401,15 @@ impl<'graph> Linker<'graph> {
                   MatchImportKind::Found(symbol_ref) => {
                     symbols.union(info.imported_as, symbol_ref);
                   }
-                  MatchImportKind::NameSpace => {
-                    symbols.get_mut(info.imported_as).namespace_alias = Some(NamespaceAlias {
-                      property_name: info.imported.clone(),
-                      namespace_ref: importee.namespace_symbol,
-                    });
-                    local_symbols.push(importee.namespace_symbol);
+                  MatchImportKind::NameSpace(symbol_ref) => {
+                    if info.is_imported_star {
+                      symbols.union(info.imported_as, symbol_ref);
+                    } else {
+                      symbols.get_mut(info.imported_as).namespace_alias = Some(NamespaceAlias {
+                        property_name: info.imported.clone(),
+                        namespace_ref: symbol_ref,
+                      });
+                    }
                   }
                 }
               }
@@ -423,14 +419,6 @@ impl<'graph> Linker<'graph> {
               }
             }
           });
-
-        local_symbols.into_iter().for_each(|symbol_ref| {
-          importer.reference_symbol_in_facade_stmt_infos(
-            symbol_ref,
-            &mut linking_infos[importer.id],
-            symbols,
-          );
-        });
       }
       Module::External(_) => {
         // It's meaningless to be a importer for a external module.
@@ -459,6 +447,7 @@ impl<'graph> Linker<'graph> {
                   modules,
                   importee,
                   &linking_infos[importee_id],
+                  module_linking_info,
                   info,
                 ));
               }
@@ -472,6 +461,7 @@ impl<'graph> Linker<'graph> {
                   modules,
                   importee,
                   &linking_infos[importee_id],
+                  module_linking_info,
                   info,
                 ));
               }
@@ -502,15 +492,19 @@ impl<'graph> Linker<'graph> {
     modules: &ModuleVec,
     importee: &NormalModule,
     importee_linking_info: &LinkingInfo,
+    importer_linking_info: &LinkingInfo,
     info: &NamedImport,
   ) -> MatchImportKind {
-    if info.is_imported_star {
-      return MatchImportKind::Found(importee.namespace_symbol);
+    // If importee module is commonjs module, it will generate property access to namespace symbol
+    // The namespace symbols should be importer created local symbol.
+    if importee.exports_kind == ExportsKind::CommonJs {
+      return MatchImportKind::NameSpace(
+        importer_linking_info.local_symbol_for_import_cjs[&importee.id],
+      );
     }
 
-    // If importee module is commonjs module, it will generate property access to namespace symbol
-    if importee.exports_kind == ExportsKind::CommonJs {
-      return MatchImportKind::NameSpace;
+    if info.is_imported_star {
+      return MatchImportKind::Found(importee.namespace_symbol);
     }
 
     if let Some(resolved_export) = importee_linking_info.resolved_exports.get(&info.imported) {
@@ -526,7 +520,9 @@ impl<'graph> Linker<'graph> {
         match module {
           Module::Normal(module) => {
             if module.exports_kind == ExportsKind::CommonJs {
-              return MatchImportKind::NameSpace;
+              return MatchImportKind::NameSpace(
+                importer_linking_info.local_symbol_for_import_cjs[&module.id],
+              );
             }
           }
           Module::External(_) => {}
@@ -536,8 +532,9 @@ impl<'graph> Linker<'graph> {
     }
 
     // If the module has dynamic exports, the unknown export name will be resolved at runtime.
+    // The namespace symbol should be importee namespace symbol.
     if importee_linking_info.has_dynamic_exports {
-      return MatchImportKind::NameSpace;
+      return MatchImportKind::NameSpace(importee.namespace_symbol);
     }
 
     MatchImportKind::NotFound
@@ -563,7 +560,10 @@ impl<'graph> Linker<'graph> {
         }
         for id in module.star_export_modules() {
           if self.mark_dynamic_exports_due_to_export_star(id, linking_infos, visited_modules) {
-            linking_infos[target].has_dynamic_exports = true;
+            let module_linking_info = &mut linking_infos[target];
+            module_linking_info.has_dynamic_exports = true;
+            // Dynamic exports will generate `__reExport(ns, xx)`, here should reference self namespace symbol
+            module_linking_info.reference_symbol_in_facade_stmt_infos(module.namespace_symbol);
             return true;
           }
         }
@@ -578,7 +578,7 @@ impl<'graph> Linker<'graph> {
 pub enum MatchImportKind {
   NotFound,
   // The import symbol will generate property access to namespace symbol
-  NameSpace,
+  NameSpace(SymbolRef),
   // External,
   PotentiallyAmbiguous(SymbolRef, Vec<SymbolRef>),
   Found(SymbolRef),

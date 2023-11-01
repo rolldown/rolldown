@@ -60,10 +60,12 @@ impl RuntimeNormalModuleTask {
       export_default_symbol_id,
       imports,
       exports_kind,
+      unique_name,
     } = scan_result;
 
     builder.id = Some(self.module_id);
     builder.ast = Some(ast);
+    builder.unique_name = Some(unique_name);
     builder.path = Some(ResourceId::new(RUNTIME_PATH.to_string().into(), self.resolver.cwd()));
     builder.named_imports = Some(named_imports);
     builder.named_exports = Some(named_exports);
@@ -102,7 +104,7 @@ impl RuntimeNormalModuleTask {
       self.module_id,
       &mut scope,
       &mut symbol_table,
-      "should be unreachable for runtime module",
+      RUNTIME_PATH.to_string(),
       self.module_type,
     );
     let namespace_symbol = scanner.namespace_symbol;

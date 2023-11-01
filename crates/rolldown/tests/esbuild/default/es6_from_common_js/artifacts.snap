@@ -9,9 +9,6 @@ input_file: crates/rolldown/tests/esbuild/default/es6_from_common_js
 import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // bar.js
-var bar_ns = {
-
-};
 var require_bar = __commonJS({
 'bar.js'(exports, module) {
 exports.bar = function() {
@@ -20,9 +17,6 @@ exports.bar = function() {
 }
 });
 // foo.js
-var foo_ns = {
-
-};
 var require_foo = __commonJS({
 'foo.js'(exports, module) {
 exports.foo = function() {
@@ -31,9 +25,9 @@ exports.foo = function() {
 }
 });
 // entry.js
-var foo_ns = __toESM(require_foo());
-var bar_ns = __toESM(require_bar());
+var import_foo = __toESM(require_foo());
 
-console.log((0, foo_ns.foo)(), (0, bar_ns.bar)())
+var import_bar = __toESM(require_bar());
+console.log((0, import_foo.foo)(), (0, import_bar.bar)())
  // This should be hoisted
 ```

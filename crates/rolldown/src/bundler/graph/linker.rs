@@ -496,6 +496,7 @@ impl<'graph> Linker<'graph> {
     info: &NamedImport,
   ) -> MatchImportKind {
     // If importee module is commonjs module, it will generate property access to namespace symbol
+    // The namespace symbols should be importer created local symbol.
     if importee.exports_kind == ExportsKind::CommonJs {
       return MatchImportKind::NameSpace(
         importer_linking_info.local_symbol_for_import_cjs[&importee.id],
@@ -531,6 +532,7 @@ impl<'graph> Linker<'graph> {
     }
 
     // If the module has dynamic exports, the unknown export name will be resolved at runtime.
+    // The namespace symbol should be importee namespace symbol.
     if importee_linking_info.has_dynamic_exports {
       return MatchImportKind::NameSpace(importee.namespace_symbol);
     }

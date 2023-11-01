@@ -19,6 +19,7 @@ use rustc_hash::FxHashMap;
 
 #[derive(Debug, Default)]
 pub struct ScanResult {
+  pub unique_name: String,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: StmtInfos,
@@ -36,7 +37,6 @@ pub struct Scanner<'a> {
   pub symbol_table: &'a mut SymbolTable,
   pub current_stmt_info: StmtInfo,
   pub result: ScanResult,
-  pub unique_name: &'a str,
   pub esm_export_keyword: Option<Span>,
   pub cjs_export_keyword: Option<Span>,
   pub namespace_symbol: SymbolRef,
@@ -47,7 +47,7 @@ impl<'a> Scanner<'a> {
     idx: ModuleId,
     scope: &'a mut ScopeTree,
     symbol_table: &'a mut SymbolTable,
-    unique_name: &'a str,
+    unique_name: String,
     module_type: ModuleType,
   ) -> Self {
     let mut result = ScanResult::default();
@@ -62,6 +62,7 @@ impl<'a> Scanner<'a> {
       ),
     )
       .into();
+    result.unique_name = unique_name;
     // The first StmtInfo is to represent the namespace binding.
     result
       .stmt_infos
@@ -72,7 +73,6 @@ impl<'a> Scanner<'a> {
       symbol_table,
       current_stmt_info: StmtInfo::default(),
       result,
-      unique_name,
       esm_export_keyword: None,
       cjs_export_keyword: None,
       module_type,
@@ -261,7 +261,7 @@ impl<'a> Scanner<'a> {
       // Notice: Patterns don't include `export default [identifier]`
       let sym_id = self.symbol_table.create_symbol(
         Span::default(),
-        Atom::from([self.unique_name, "_default"].concat()),
+        Atom::from(format!("{}_default", self.result.unique_name)),
         SymbolFlags::None,
         self.scope.root_scope_id(),
       );

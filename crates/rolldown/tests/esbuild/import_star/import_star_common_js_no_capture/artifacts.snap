@@ -9,17 +9,14 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_common_js_no_c
 import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // foo.js
-var foo_ns = {
-
-};
 var require_foo = __commonJS({
 'foo.js'(exports, module) {
 exports.foo = 123
 }
 });
 // entry.js
-var foo_ns = __toESM(require_foo());
+var import_foo = __toESM(require_foo());
 
 let foo = 234
-console.log(foo_ns.foo, foo_ns.foo, foo)
+console.log(import_foo.foo, import_foo.foo, foo)
 ```

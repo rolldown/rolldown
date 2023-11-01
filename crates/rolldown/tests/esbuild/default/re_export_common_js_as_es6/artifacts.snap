@@ -9,17 +9,14 @@ input_file: crates/rolldown/tests/esbuild/default/re_export_common_js_as_es6
 import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // foo.js
-var foo_ns = {
-
-};
 var require_foo = __commonJS({
 'foo.js'(exports, module) {
 exports.bar = 123
 }
 });
 // entry.js
-var foo_ns = __toESM(require_foo());
+var import_foo = __toESM(require_foo());
 
-var bar = foo_ns.bar;
+var bar = import_foo.bar;
 export { bar };
 ```

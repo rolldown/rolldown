@@ -32,6 +32,7 @@ pub struct NormalModule {
   pub id: ModuleId,
   pub is_entry: bool,
   pub resource_id: ResourceId,
+  pub unique_name: String,
   pub module_type: ModuleType,
   pub namespace_symbol: SymbolRef,
   pub ast: OxcProgram,
@@ -222,7 +223,7 @@ impl NormalModule {
       let name = format!(
         "{}_{}",
         if self.exports_kind == ExportsKind::CommonJs { "require" } else { "init" },
-        self.resource_id.generate_unique_name()
+        self.unique_name
       )
       .into();
       let symbol_ref = self.create_local_symbol(name, self_linking_info, symbols);
@@ -243,21 +244,18 @@ impl NormalModule {
     symbol_ref
   }
 
-  pub fn reference_symbol_in_facade_stmt_infos(
+  #[allow(clippy::map_entry, clippy::use_self)]
+  pub fn create_local_symbol_for_import_cjs(
     &self,
-    other_module_symbol_ref: SymbolRef,
+    importee: &NormalModule,
     self_linking_info: &mut LinkingInfo,
-    _symbols: &mut Symbols,
+    symbols: &mut Symbols,
   ) {
-    debug_assert!(other_module_symbol_ref.owner != self.id);
-
-    self_linking_info.facade_stmt_infos.push(StmtInfo {
-      declared_symbols: vec![],
-      // Since the facade symbol is used, it should be referenced. This will be used to
-      // create correct cross-chunk links
-      referenced_symbols: vec![other_module_symbol_ref],
-      ..Default::default()
-    });
+    if !self_linking_info.local_symbol_for_import_cjs.contains_key(&importee.id) {
+      let name = format!("import_{}", importee.unique_name).into();
+      let symbol_ref = self.create_local_symbol(name, self_linking_info, symbols);
+      self_linking_info.local_symbol_for_import_cjs.insert(importee.id, symbol_ref);
+    }
   }
 
   pub fn star_export_modules(&self) -> impl Iterator<Item = ModuleId> + '_ {

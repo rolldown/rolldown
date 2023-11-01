@@ -76,10 +76,12 @@ impl NormalModuleTask {
       export_default_symbol_id,
       imports,
       exports_kind,
+      unique_name,
     } = scan_result;
 
     builder.id = Some(self.module_id);
     builder.ast = Some(ast);
+    builder.unique_name = Some(unique_name);
     builder.path = Some(self.path);
     builder.named_imports = Some(named_imports);
     builder.named_exports = Some(named_exports);
@@ -121,7 +123,7 @@ impl NormalModuleTask {
       self.module_id,
       &mut scope,
       &mut symbol_table,
-      &unique_name,
+      unique_name,
       self.module_type,
     );
     scanner.visit_program(program.program_mut());

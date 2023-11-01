@@ -170,10 +170,7 @@ impl<'ast> RendererBase<'ast> {
       // Here need write it to property access. eg `import { a } from 'cjs'; console.log(a)` => `console.log(import_a.a)`
       // Note: we should rewrite call expression to indirect call, eg `import { a } from 'cjs'; console.log(a())` => `console.log((0, import_a.a)())`
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
-      let content = ns_alias.property_name.as_ref().map_or_else(
-        || format!("{canonical_ns_name}",),
-        |property_name| format!("{canonical_ns_name}.{property_name}",),
-      );
+      let content = format!("{canonical_ns_name}.{}", ns_alias.property_name);
       self.source.update(
         ident.span.start,
         ident.span.end,

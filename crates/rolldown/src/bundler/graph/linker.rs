@@ -402,14 +402,14 @@ impl<'graph> Linker<'graph> {
                     symbols.union(info.imported_as, symbol_ref);
                   }
                   MatchImportKind::NameSpace(symbol_ref) => {
-                    symbols.get_mut(info.imported_as).namespace_alias = Some(NamespaceAlias {
-                      property_name: if info.is_imported_star {
-                        None
-                      } else {
-                        Some(info.imported.clone())
-                      },
-                      namespace_ref: symbol_ref,
-                    });
+                    if info.is_imported_star {
+                      symbols.union(info.imported_as, symbol_ref);
+                    } else {
+                      symbols.get_mut(info.imported_as).namespace_alias = Some(NamespaceAlias {
+                        property_name: info.imported.clone(),
+                        namespace_ref: symbol_ref,
+                      });
+                    }
                   }
                 }
               }

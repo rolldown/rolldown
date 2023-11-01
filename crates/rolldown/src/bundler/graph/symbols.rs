@@ -11,7 +11,7 @@ use crate::bundler::chunk::ChunkId;
 
 #[derive(Debug)]
 pub struct NamespaceAlias {
-  pub property_name: Option<Atom>,
+  pub property_name: Atom,
   pub namespace_ref: SymbolRef,
 }
 

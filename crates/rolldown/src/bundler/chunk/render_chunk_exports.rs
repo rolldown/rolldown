@@ -34,10 +34,9 @@ impl Chunk {
         let symbol = graph.symbols.get(canonical_ref);
         let canonical_name = &self.canonical_names[&canonical_ref];
         if let Some(ns_alias) = &symbol.namespace_alias {
-          if let Some(property_name) = &ns_alias.property_name {
-            let canonical_ns_name = &self.canonical_names[&ns_alias.namespace_ref];
-            s.append(format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
-          }
+          let canonical_ns_name = &self.canonical_names[&ns_alias.namespace_ref];
+          let property_name = &ns_alias.property_name;
+          s.append(format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
         }
         if canonical_name == exported_name {
           format!("{canonical_name}")

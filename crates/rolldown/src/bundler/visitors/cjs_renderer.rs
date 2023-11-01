@@ -21,7 +21,7 @@ impl<'ast> CjsRenderer<'ast> {
       "var {wrap_symbol_name} = {commonjs_runtime_symbol_name}({{\n'{module_path}'(exports, module) {{\n",
     ));
     self.base.source.append("\n}\n});");
-    assert!(!self.base.module.is_namespace_referenced())
+    assert!(!self.base.module.is_namespace_referenced());
   }
 }
 

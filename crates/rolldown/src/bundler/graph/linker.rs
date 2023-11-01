@@ -141,7 +141,11 @@ impl<'graph> Linker<'graph> {
             &mut FxHashSet::default(),
           );
           let importer_linking_info = &mut linking_infos[*id];
-          importer.create_initial_resolved_exports(importer_linking_info, &mut symbols);
+          importer.create_initial_resolved_exports(
+            &self.graph.modules,
+            importer_linking_info,
+            &mut symbols,
+          );
           let resolved = importer.resolve_star_exports(&self.graph.modules);
           importer_linking_info.resolved_star_exports = resolved;
         }

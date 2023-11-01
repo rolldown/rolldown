@@ -11,14 +11,14 @@ impl Chunk {
         self
           .exports_to_other_chunks
           .iter()
-          .map(|(export_ref, alias)| (alias, *export_ref))
+          .map(|(export_ref, alias)| (alias, *export_ref, None))
           .collect::<Vec<_>>()
       },
       |entry_module_id| {
         let linking_info = &graph.linking_infos[entry_module_id];
         linking_info
           .sorted_exports()
-          .map(|(name, export)| (name, export.symbol_ref))
+          .map(|(name, export)| (name, export.symbol_ref, Some(entry_module_id)))
           .collect::<Vec<_>>()
       },
     );
@@ -29,15 +29,21 @@ impl Chunk {
     let mut s = MagicString::new("");
     let rendered_items = export_items
       .into_iter()
-      .map(|(exported_name, export_ref)| {
+      .map(|(exported_name, export_ref, entry_module_id)| {
         let canonical_ref = graph.symbols.par_canonical_ref_for(export_ref);
         let symbol = graph.symbols.get(canonical_ref);
-        let canonical_name = &self.canonical_names[&canonical_ref];
-        if let Some(ns_alias) = &symbol.namespace_alias {
-          let canonical_ns_name = &self.canonical_names[&ns_alias.namespace_ref];
-          let property_name = &ns_alias.property_name;
-          s.append(format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
-        }
+        let canonical_name = symbol.namespace_alias.as_ref().map_or_else(
+          || &self.canonical_names[&canonical_ref],
+          |ns_alias| {
+            let canonical_ns_name = &self.canonical_names[&ns_alias.namespace_ref];
+            let property_name = &ns_alias.property_name;
+            let local_symbol_ref =
+              &graph.linking_infos[entry_module_id.unwrap()].cjs_export_symbols[property_name];
+            let local_symbol_name = &self.canonical_names[local_symbol_ref];
+            s.append(format!("var {local_symbol_name} = {canonical_ns_name}.{property_name};\n"));
+            local_symbol_name
+          },
+        );
         if canonical_name == exported_name {
           format!("{canonical_name}")
         } else {

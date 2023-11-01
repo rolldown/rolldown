@@ -15,6 +15,8 @@ pub struct LinkingInfo {
   // Convert `export { v } from "./a"` to `import { v } from "./a"; export { v }`.
   // It is used to prepare resolved exports generation.
   pub export_from_map: FxHashMap<SymbolId, NamedImport>,
+  // Store the local symbol for esm export cjs at entry. eg. `export { value } from 'cjs'` => `let value = import_cjs.value; export { value };`
+  pub cjs_export_symbols: FxHashMap<Atom, SymbolRef>,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
   // Store the names of exclude ambiguous resolved exports.

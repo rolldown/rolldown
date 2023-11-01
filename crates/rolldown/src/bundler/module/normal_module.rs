@@ -87,6 +87,7 @@ impl NormalModule {
 
   pub fn create_initial_resolved_exports(
     &self,
+    modules: &ModuleVec,
     self_linking_info: &mut LinkingInfo,
     symbols: &mut Symbols,
   ) {
@@ -109,6 +110,16 @@ impl NormalModule {
             },
           );
           let rec = &self.import_records[re.record_id];
+
+          // Create symbols for re-exports CommonJS symbols for entry.
+          if self.is_entry {
+            if let Module::Normal(importee) = &modules[rec.resolved_module] {
+              if importee.exports_kind == ExportsKind::CommonJs {
+                self_linking_info.cjs_export_symbols.entry(name.clone()).or_insert(symbol_ref);
+              }
+            }
+          }
+
           ResolvedExport {
             symbol_ref,
             export_from: Some(rec.resolved_module),

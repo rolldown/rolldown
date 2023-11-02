@@ -1,15 +1,17 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: content
+expression: self.snapshot.to_string()
 input_file: crates/rolldown/tests/esbuild/default/outbase
 ---
-# c_js.mjs
+# Artifacts
+
+## c_js.mjs
 
 ```js
 // c.js
 console.log('c')
 ```
-# d_js.mjs
+## d_js.mjs
 
 ```js
 // d.js

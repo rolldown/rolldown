@@ -1,9 +1,11 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: content
+expression: self.snapshot.to_string()
 input_file: crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_issue1837
 ---
-# entry_js.mjs
+# Artifacts
+
+## entry_js.mjs
 
 ```js
 import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";

@@ -1,16 +1,18 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: content
+expression: self.snapshot.to_string()
 input_file: crates/rolldown/tests/esbuild/splitting/dynamic-es6-into-es6
 ---
-# foo_js.mjs
+# Artifacts
+
+## foo_js.mjs
 
 ```js
 // foo.js
 let bar = 123
 export { bar };
 ```
-# main.mjs
+## main.mjs
 
 ```js
 // main.js

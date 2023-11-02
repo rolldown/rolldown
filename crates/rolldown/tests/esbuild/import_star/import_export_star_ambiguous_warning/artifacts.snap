@@ -1,9 +1,11 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: content
+expression: self.snapshot.to_string()
 input_file: crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguous_warning
 ---
-# entry_js.mjs
+# Artifacts
+
+## entry_js.mjs
 
 ```js
 // bar.js

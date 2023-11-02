@@ -1,9 +1,11 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: content
+expression: self.snapshot.to_string()
 input_file: crates/rolldown/tests/esbuild/default/export_forms_common_js
 ---
-# entry_js.mjs
+# Artifacts
+
+## entry_js.mjs
 
 ```js
 import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";

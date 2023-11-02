@@ -1,9 +1,11 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: content
+expression: self.snapshot.to_string()
 input_file: crates/rolldown/tests/esbuild/default/require_with_call_inside_try
 ---
-# entry_js.mjs
+# Artifacts
+
+## entry_js.mjs
 
 ```js
 import { __commonJS } from "./_rolldown_runtime.mjs";

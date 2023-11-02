@@ -1,9 +1,11 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: content
+expression: self.snapshot.to_string()
 input_file: crates/rolldown/tests/fixtures/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_cjs_named_import
 ---
-# main.mjs
+# Artifacts
+
+## main.mjs
 
 ```js
 import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.mjs";

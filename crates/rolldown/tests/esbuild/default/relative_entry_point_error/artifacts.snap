@@ -1,9 +1,11 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: content
+expression: self.snapshot.to_string()
 input_file: crates/rolldown/tests/esbuild/default/relative_entry_point_error
 ---
-# entry.mjs
+# Artifacts
+
+## entry.mjs
 
 ```js
 // entry.js

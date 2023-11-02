@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/require_parent_dir_es6
 ---
-# dir_entry_js.mjs
+# Assets
+
+## dir_entry_js.mjs
 
 ```js
 // index.js

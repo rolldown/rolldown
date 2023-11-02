@@ -3,21 +3,23 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/re_export_issue273
 ---
-# 2.mjs
+# Assets
+
+## 2.mjs
 
 ```js
 // a.js
 const a = 1
 export { a };
 ```
-# a.mjs
+## a.mjs
 
 ```js
 import { a } from "./2.mjs";
 
 export { a };
 ```
-# b.mjs
+## b.mjs
 
 ```js
 import { a } from "./2.mjs";

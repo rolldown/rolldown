@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg
 ---
-# entry_js.mjs
+# Assets
+
+## entry_js.mjs
 
 ```js
 // c.js

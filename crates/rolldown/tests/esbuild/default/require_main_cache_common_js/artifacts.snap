@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/require_main_cache_common_js
 ---
-# entry_js.mjs
+# Assets
+
+## entry_js.mjs
 
 ```js
 import { __commonJS } from "./_rolldown_runtime.mjs";

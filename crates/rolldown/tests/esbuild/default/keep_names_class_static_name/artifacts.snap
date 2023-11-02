@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/keep_names_class_static_name
 ---
-# entry_js.mjs
+# Assets
+
+## entry_js.mjs
 
 ```js
 // entry.js

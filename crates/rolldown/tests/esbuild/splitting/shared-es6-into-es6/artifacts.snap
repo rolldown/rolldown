@@ -3,14 +3,16 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/shared-es6-into-es6
 ---
-# 2.mjs
+# Assets
+
+## 2.mjs
 
 ```js
 // shared.js
 let foo = 123
 export { foo };
 ```
-# a.mjs
+## a.mjs
 
 ```js
 import { foo } from "./2.mjs";
@@ -19,7 +21,7 @@ import { foo } from "./2.mjs";
 
 console.log(foo)
 ```
-# b.mjs
+## b.mjs
 
 ```js
 import { foo } from "./2.mjs";

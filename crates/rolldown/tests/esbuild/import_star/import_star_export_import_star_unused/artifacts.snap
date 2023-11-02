@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_import_star_unused
 ---
-# entry_js.mjs
+# Assets
+
+## entry_js.mjs
 
 ```js
 // foo.js

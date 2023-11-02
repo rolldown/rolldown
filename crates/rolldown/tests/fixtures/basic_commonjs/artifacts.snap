@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/basic_commonjs
 ---
-# main.mjs
+# Assets
+
+## main.mjs
 
 ```js
 import { __commonJS, __esm, __toCommonJS, __toESM } from "./_rolldown_runtime.mjs";

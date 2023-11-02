@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
 ---
-# entry_js.mjs
+# Assets
+
+## entry_js.mjs
 
 ```js
 import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";

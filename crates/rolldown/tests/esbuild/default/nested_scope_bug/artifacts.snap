@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/nested_scope_bug
 ---
-# entry_js.mjs
+# Assets
+
+## entry_js.mjs
 
 ```js
 // entry.js

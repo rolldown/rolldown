@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/basic_re_export
 ---
-# main.mjs
+# Assets
+
+## main.mjs
 
 ```js
 // a.js

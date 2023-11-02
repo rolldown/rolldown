@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/nested_es6_from_common_js
 ---
-# entry_js.mjs
+# Assets
+
+## entry_js.mjs
 
 ```js
 import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";

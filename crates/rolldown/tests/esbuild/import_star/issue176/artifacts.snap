@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/issue176
 ---
-# entry_js.mjs
+# Assets
+
+## entry_js.mjs
 
 ```js
 // folders/child/foo.js

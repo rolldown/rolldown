@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/assign-to-local
 ---
-# 2.mjs
+# Assets
+
+## 2.mjs
 
 ```js
 // shared.js
@@ -13,7 +15,7 @@ function setFoo(value) {
 }
 export { foo, setFoo };
 ```
-# a.mjs
+## a.mjs
 
 ```js
 import { foo, setFoo } from "./2.mjs";
@@ -23,7 +25,7 @@ import { foo, setFoo } from "./2.mjs";
 setFoo(123)
 console.log(foo)
 ```
-# b.mjs
+## b.mjs
 
 ```js
 import { foo } from "./2.mjs";

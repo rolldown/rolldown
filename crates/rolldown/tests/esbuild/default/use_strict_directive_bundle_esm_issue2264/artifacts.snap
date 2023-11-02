@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_esm_issue2264
 ---
-# entry_js.mjs
+# Assets
+
+## entry_js.mjs
 
 ```js
 // entry.js

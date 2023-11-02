@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/side_effects_without_dependencies
 ---
-# 2.mjs
+# Assets
+
+## 2.mjs
 
 ```js
 // shared.js
@@ -12,7 +14,7 @@ let b = 2
 console.log('side effect')
 export { a, b };
 ```
-# a.mjs
+## a.mjs
 
 ```js
 import { a } from "./2.mjs";
@@ -21,7 +23,7 @@ import { a } from "./2.mjs";
 
 console.log(a)
 ```
-# b.mjs
+## b.mjs
 
 ```js
 import { b } from "./2.mjs";

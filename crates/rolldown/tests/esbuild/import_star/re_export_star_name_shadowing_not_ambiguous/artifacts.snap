@@ -3,7 +3,9 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous
 ---
-# entry_js.mjs
+# Assets
+
+## entry_js.mjs
 
 ```js
 // b.js

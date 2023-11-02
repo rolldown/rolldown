@@ -1,16 +1,18 @@
 use std::{borrow::Cow, path::Path};
 
 use rolldown::Asset;
+use string_wizard::MagicString;
 
 use super::fixture::Fixture;
 
 pub struct Case {
   fixture: Fixture,
+  snapshot: MagicString<'static>,
 }
 
 impl Case {
   pub fn new(path: impl AsRef<Path>) -> Self {
-    Self { fixture: Fixture::new(path.as_ref().to_path_buf()) }
+    Self { fixture: Fixture::new(path.as_ref().to_path_buf()), snapshot: MagicString::new("") }
   }
 
   pub fn run(self) {
@@ -20,33 +22,36 @@ impl Case {
 
   pub async fn run_inner(mut self) {
     let assets = self.fixture.compile().await;
-    let snapshot = Self::convert_assets_to_snapshot(assets);
-    self.take_snapshot(&snapshot);
+    let snapshot = self.convert_assets_to_snapshot(assets);
+    self.make_snapshot();
     self.fixture.exec();
   }
 
-  fn convert_assets_to_snapshot(mut assets: Vec<Asset>) -> String {
+  fn convert_assets_to_snapshot(&mut self, mut assets: Vec<Asset>) {
+    self.snapshot.append("# Assets\n\n");
     assets.sort_by_key(|c| c.file_name.clone());
-    assets
+    let artifacts = assets
       .iter()
       // FIXME: should render the runtime module while tree shaking being supported
       .filter(|asset| !asset.file_name.contains("rolldown_runtime"))
       .flat_map(|asset| {
         [
-          Cow::Owned(format!("# {}\n", asset.file_name)),
+          Cow::Owned(format!("## {}\n", asset.file_name)),
           "```js".into(),
           Cow::Borrowed(asset.content.trim()),
           "```".into(),
         ]
       })
       .collect::<Vec<_>>()
-      .join("\n")
+      .join("\n");
+    self.snapshot.append(artifacts);
   }
 
-  fn take_snapshot(&self, content: &str) {
+  fn make_snapshot(&self) {
     // Configure insta to use the fixture path as the snapshot path
     let fixture_folder = self.fixture.dir_path();
     let mut settings = insta::Settings::clone_current();
+    let content = self.snapshot.to_string();
     settings.set_snapshot_path(fixture_folder);
     settings.set_prepend_module_to_snapshot(false);
     settings.set_input_file(fixture_folder);

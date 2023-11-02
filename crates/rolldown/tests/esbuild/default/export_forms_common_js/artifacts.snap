@@ -94,14 +94,14 @@ abc = undefined
 function Fn() {}
 var commonjs_default,v,l,c,Class;
 var commonjs_ns = {
-  get Fn() { return Fn },
   get Class() { return Class },
+  get Fn() { return Fn },
   get abc() { return abc },
-  get v() { return v },
-  get default() { return commonjs_default },
-  get c() { return c },
   get b() { return b_ns },
-  get l() { return l }
+  get c() { return c },
+  get default() { return commonjs_default },
+  get l() { return l },
+  get v() { return v }
 };
 var init_commonjs = __esm({
 'commonjs.js'() {
@@ -118,11 +118,11 @@ Class = class Class {}
 }
 });
 // entry.js
-(init_commonjs(), __toCommonJS(commonjs_ns))
-(init_c(), __toCommonJS(c_ns))
-(init_d(), __toCommonJS(d_ns))
-(init_e(), __toCommonJS(e_ns))
-(init_f(), __toCommonJS(f_ns))
-(init_g(), __toCommonJS(g_ns))
-(init_h(), __toCommonJS(h_ns))
+init_commonjs()
+init_c()
+init_d()
+init_e()
+init_f()
+init_g()
+init_h()
 ```

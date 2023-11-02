@@ -4,6 +4,7 @@ use oxc::{
   span::SourceType,
 };
 use rolldown_common::{ModuleId, ModuleType, ResourceId, SymbolRef};
+use rolldown_error::BuildError;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
 use super::Msg;
@@ -15,7 +16,7 @@ use crate::{
     runtime::RUNTIME_PATH,
     visitors::scanner::{self, ScanResult},
   },
-  BuildError, SharedResolver,
+  SharedResolver,
 };
 pub struct RuntimeNormalModuleTask {
   module_id: ModuleId,

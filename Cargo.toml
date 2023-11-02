@@ -21,3 +21,4 @@ string_wizard  = { version = "0.0.9" }
 async-trait    = "0.1.62"
 futures        = "0.3.25"
 itertools      = "0.10.5"
+thiserror      = "1.0.50"

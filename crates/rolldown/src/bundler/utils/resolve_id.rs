@@ -1,7 +1,6 @@
 use rolldown_common::{ModuleType, RawPath, ResourceId};
+use rolldown_error::BuildError;
 use rolldown_resolver::Resolver;
-
-use crate::BuildResult;
 
 pub struct ResolvedRequestInfo {
   pub path: RawPath,
@@ -15,7 +14,7 @@ pub async fn resolve_id(
   request: &str,
   importer: Option<&ResourceId>,
   _preserve_symlinks: bool,
-) -> BuildResult<Option<ResolvedRequestInfo>> {
+) -> Result<Option<ResolvedRequestInfo>, BuildError> {
   // TODO: resolve with plugins
 
   // external modules (non-entry modules that start with neither '.' or '/')

@@ -9,3 +9,4 @@ version     = "0.0.1"
 [dependencies]
 sugar_path = { workspace = true }
 scoped-tls = { workspace = true }
+thiserror  = { workspace = true }

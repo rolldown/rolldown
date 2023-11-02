@@ -1,7 +1,6 @@
 mod error;
-mod error_kind;
-mod errors;
+mod error_code;
 mod utils;
-pub use crate::{error::Error, errors::Errors};
+pub use crate::error::BuildError;
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type BuildResult<T> = Result<T, BuildError>;

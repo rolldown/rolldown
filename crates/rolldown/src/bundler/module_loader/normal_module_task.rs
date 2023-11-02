@@ -8,6 +8,7 @@ use oxc::{
   span::SourceType,
 };
 use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId, SymbolRef};
+use rolldown_error::BuildError;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 use rolldown_resolver::Resolver;
 
@@ -20,7 +21,7 @@ use crate::{
     utils::resolve_id::{resolve_id, ResolvedRequestInfo},
     visitors::scanner::{self, ScanResult},
   },
-  BuildError, BuildResult, SharedResolver,
+  SharedResolver,
 };
 pub struct NormalModuleTask {
   module_id: ModuleId,
@@ -135,7 +136,7 @@ impl NormalModuleTask {
     resolver: &Resolver,
     importer: &ResourceId,
     specifier: &str,
-  ) -> BuildResult<ResolvedRequestInfo> {
+  ) -> Result<ResolvedRequestInfo, BuildError> {
     // let is_marked_as_external = is_external(specifier, Some(importer.id()), false).await?;
 
     // if is_marked_as_external {

@@ -1,4 +1,4 @@
-use rolldown_error::Error as BuildError;
+use rolldown_error::BuildError;
 
 pub(crate) trait NapiErrorExt {
   fn into_bundle_error(self) -> BuildError;

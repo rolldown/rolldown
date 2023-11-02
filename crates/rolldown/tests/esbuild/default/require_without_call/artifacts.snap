@@ -7,6 +7,8 @@ input_file: crates/rolldown/tests/esbuild/default/require_without_call
 
 ```js
 // entry.js
-const req = require
-req('./entry')
+if (false) { // the test case is error case, so we don't need to run it
+    const req = require
+    req('./entry')
+}
 ```

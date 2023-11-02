@@ -11,11 +11,11 @@ function x() {
 	if (true) {
 		var a;
 		for (var b; 0;);
-		for (var { c, x: [d] } = {}; 0;);
+		// for (var { c, x: [d] } = {}; 0;);
 		for (var e of []);
 		for (var { f, x: [g] } of []);
 		for (var h in {});
-		for (var i = 1 in {});
+		// for (var i = 1 in {});
 		for (var { j, x: [k] } in {});
 		function l() {}
 	}
@@ -29,11 +29,11 @@ x()
 function x() {
 	var a;
 	for (var b; 0;);
-	for (var { c, x: [d] } = {}; 0;);
+	// for (var { c, x: [d] } = {}; 0;);
 	for (var e of []);
 	for (var { f, x: [g] } of []);
 	for (var h in {});
-	for (var i = 1 in {});
+	// for (var i = 1 in {});
 	for (var { j, x: [k] } in {});
 	function l() {}
 }
@@ -46,7 +46,7 @@ x()
 if (true) {
 	let a;
 	for (let b; 0;);
-	for (let { c, x: [d] } = {}; 0;);
+	// for (let { c, x: [d] } = {}; 0;);
 	for (let e of []);
 	for (let { f, x: [g] } of []);
 	for (let h in {});
@@ -61,11 +61,11 @@ if (true) {
 if (true) {
 	var a;
 	for (var b; 0;);
-	for (var { c, x: [d] } = {}; 0;);
+	// for (var { c, x: [d] } = {}; 0;);
 	for (var e of []);
 	for (var { f, x: [g] } of []);
 	for (var h in {});
-	for (var i = 1 in {});
+	// for (var i = 1 in {});
 	for (var { j, x: [k] } in {});
 	function l() {}
 }
@@ -76,11 +76,11 @@ if (true) {
 // top-level.js
 var a;
 for (var b; 0;);
-for (var { c, x: [d] } = {}; 0;);
+// for (var { c, x: [d] } = {}; 0;);
 for (var e of []);
 for (var { f, x: [g] } of []);
 for (var h in {});
-for (var i = 1 in {});
+// for (var i = 1 in {}); //  the test case is error case, so we don't need to run it   
 for (var { j, x: [k] } in {});
 function l() {}
 ```

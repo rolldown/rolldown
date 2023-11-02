@@ -8,12 +8,12 @@ input_file: crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg
 ## entry_js.mjs
 
 ```js
-// c.js
-let c = 4, x$1 = 5
+// a.js
+let a = 1, x$1 = 2
 // b.js
 let b = 3; 
-// a.js
-let a = 1, x = 2
+// c.js
+let c = 4, x = 5
 // entry.js
 
 

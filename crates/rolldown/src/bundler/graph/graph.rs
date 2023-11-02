@@ -53,6 +53,7 @@ impl Graph {
                 .iter()
                 .filter(|rec| rec.kind.is_static())
                 .filter_map(|rec| rec.resolved_module.is_valid().then_some(rec.resolved_module))
+                .rev()
                 .map(Action::Enter),
             );
           }

@@ -8,13 +8,13 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_es6
 ## entry_js.mjs
 
 ```js
+// a.js
+const abc = undefined
 // b.js
 var b_ns = {
   get xyz() { return xyz }
 };
 const xyz = null
-// a.js
-const abc = undefined
 // entry.js
 var entry_default = 123
 var v = 234

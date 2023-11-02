@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use index_vec::IndexVec;
 use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
+use rolldown_error::BuildError;
 use rolldown_resolver::Resolver;
 use rolldown_utils::block_on_spawn_all;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -17,7 +18,6 @@ use crate::bundler::module::Module;
 use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
 use crate::bundler::runtime::RUNTIME_PATH;
 use crate::bundler::utils::resolve_id::{resolve_id, ResolvedRequestInfo};
-use crate::BuildError;
 use crate::SharedResolver;
 
 pub struct ModuleLoader<'a> {

@@ -6,9 +6,9 @@ use super::{
   output::{HookLoadOutput, HookResolveIdOutput},
 };
 
-pub type HookResolveIdReturn = rolldown_error::Result<Option<HookResolveIdOutput>>;
-pub type HookTransformReturn = rolldown_error::Result<Option<HookLoadOutput>>;
-pub type HookLoadReturn = rolldown_error::Result<Option<HookLoadOutput>>;
+pub type HookResolveIdReturn = rolldown_error::BuildResult<Option<HookResolveIdOutput>>;
+pub type HookTransformReturn = rolldown_error::BuildResult<Option<HookLoadOutput>>;
+pub type HookLoadReturn = rolldown_error::BuildResult<Option<HookLoadOutput>>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Debug + Send + Sync {

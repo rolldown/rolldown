@@ -1,4 +1,4 @@
-pub fn format_quoted_strings_with_verbs(
+pub fn _format_quoted_strings_with_verbs(
   list: &[impl AsRef<str>],
   verb: Option<(&str, &str)>,
 ) -> String {
@@ -18,6 +18,6 @@ pub fn format_quoted_strings_with_verbs(
   output
 }
 
-pub fn format_quoted_strings(list: &[impl AsRef<str>]) -> String {
-  format_quoted_strings_with_verbs(list, None)
+pub fn _format_quoted_strings(list: &[impl AsRef<str>]) -> String {
+  _format_quoted_strings_with_verbs(list, None)
 }

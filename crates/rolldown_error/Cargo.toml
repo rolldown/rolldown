@@ -13,3 +13,4 @@ repository.workspace = true
 [dependencies]
 sugar_path = { workspace = true }
 scoped-tls = { workspace = true }
+thiserror  = { workspace = true }

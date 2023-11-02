@@ -1,5 +1,5 @@
 use rolldown_common::{ModuleType, RawPath, ResourceId};
-use rolldown_error::Error as RError;
+use rolldown_error::BuildError;
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
@@ -54,7 +54,7 @@ impl Resolver {
     &self,
     importer: Option<&ResourceId>,
     specifier: &str,
-  ) -> Result<ResolveRet, Box<RError>> {
+  ) -> Result<ResolveRet, BuildError> {
     // If the importer is `None`, it means that the specifier is the entry file.
     // In this case, we couldn't simply use the CWD as the importer.
     // Instead, we should concat the CWD with the specifier. This aligns with https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56.
@@ -77,12 +77,12 @@ impl Resolver {
       }),
       Err(_err) => {
         if let Some(importer) = importer {
-          Err(Box::new(RError::unresolved_import(
+          Err(BuildError::unresolved_import(
             specifier.to_string_lossy().to_string(),
             importer.prettify(),
-          )))
+          ))
         } else {
-          Err(Box::new(RError::unresolved_entry(specifier)))
+          Err(BuildError::unresolved_entry(specifier))
         }
       }
     }

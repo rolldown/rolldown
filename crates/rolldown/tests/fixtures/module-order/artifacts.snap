@@ -1,20 +1,14 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/ambiguous_star_export
+input_file: crates/rolldown/tests/fixtures/module-order
 ---
 # main.mjs
 
 ```js
-// c.js
-let x = 1;
-let y = 2;
 // a.js
-
+console.log(1)
 // b.js
-
+console.log(1)
 // main.js
-
-
-export { x, y };
 ```

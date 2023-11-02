@@ -6,10 +6,10 @@ input_file: crates/rolldown/tests/esbuild/default/re_export_default_internal
 # entry_js.mjs
 
 ```js
-// bar.js
-var bar_default = 'bar'
 // foo.js
 var foo_default = 'foo'
+// bar.js
+var bar_default = 'bar'
 // entry.js
 
 

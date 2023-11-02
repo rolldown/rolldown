@@ -8,6 +8,9 @@ input_file: crates/rolldown/tests/fixtures/mix-cjs-esm
 ```js
 import { __commonJS, __esm, __toCommonJS, __toESM } from "./_rolldown_runtime.mjs";
 
+// esm_export_cjs_export.js
+module.exports = 1;
+const value$1 = 1;
 // foo.js
 var foo_ns = {
 
@@ -15,6 +18,17 @@ var foo_ns = {
 var init_foo = __esm({
 'foo.js'() {
 
+}
+});
+// esm_export_cjs_require.js
+init_foo()
+const value = 1;
+// esm_import_cjs_export.js
+var require_esm_import_cjs_export = __commonJS({
+'esm_import_cjs_export.js'(exports, module) {
+init_foo();
+
+module.exports = 1
 }
 });
 // cjs.js
@@ -28,20 +42,6 @@ var import_cjs = __toESM(require_cjs());
 
 init_foo()
 console.log(import_cjs.a)
-// esm_import_cjs_export.js
-var require_esm_import_cjs_export = __commonJS({
-'esm_import_cjs_export.js'(exports, module) {
-init_foo();
-
-module.exports = 1
-}
-});
-// esm_export_cjs_require.js
-init_foo()
-const value$1 = 1;
-// esm_export_cjs_export.js
-module.exports = 1;
-const value = 1;
 // main.js
 
 

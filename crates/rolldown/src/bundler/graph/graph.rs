@@ -32,62 +32,65 @@ impl Graph {
     Ok(())
   }
 
+  #[allow(clippy::items_after_statements)]
   pub fn sort_modules(&mut self) {
-    let mut stack = self.entries.iter().map(|(_, m)| Action::Enter(*m)).rev().collect::<Vec<_>>();
-    // The runtime module should always be the first module to be executed
-    stack.push(Action::Enter(self.runtime.id));
-    let mut entered_ids: FxHashSet<ModuleId> = FxHashSet::default();
-    entered_ids.shrink_to(self.modules.len());
     let mut sorted_modules = Vec::with_capacity(self.modules.len());
     let mut next_exec_order = 0;
-    while let Some(action) = stack.pop() {
-      let module = &mut self.modules[action.module_id()];
-      match action {
-        Action::Enter(id) => {
-          if !entered_ids.contains(&id) {
-            entered_ids.insert(id);
-            stack.push(Action::Exit(id));
-            stack.extend(
-              module
-                .import_records()
-                .iter()
-                .filter(|rec| rec.kind.is_static())
-                .filter_map(|rec| rec.resolved_module.is_valid().then_some(rec.resolved_module))
-                .map(Action::Enter),
-            );
-          }
-        }
-        Action::Exit(id) => {
-          *module.exec_order_mut() = next_exec_order;
-          next_exec_order += 1;
-          sorted_modules.push(id);
-        }
-      }
+    let mut visited_modules = FxHashSet::default();
+
+    // The runtime module should always be the first module to be executed
+    enter_module(
+      &mut self.modules,
+      self.runtime.id,
+      &mut visited_modules,
+      &mut next_exec_order,
+      &mut sorted_modules,
+    );
+
+    for (_, id) in &self.entries {
+      enter_module(
+        &mut self.modules,
+        *id,
+        &mut visited_modules,
+        &mut next_exec_order,
+        &mut sorted_modules,
+      );
     }
+
     self.sorted_modules = sorted_modules;
     debug_assert_eq!(
       self.sorted_modules.first().copied(),
       Some(self.runtime.id),
       "runtime module should always be the first module in the sorted modules"
     );
+
+    fn enter_module(
+      modules: &mut ModuleVec,
+      id: ModuleId,
+      visited_modules: &mut FxHashSet<ModuleId>,
+      next_exec_order: &mut u32,
+      sorted_modules: &mut Vec<ModuleId>,
+    ) {
+      if !visited_modules.contains(&id) {
+        visited_modules.insert(id);
+        let child_module_ids = modules[id]
+          .import_records()
+          .iter()
+          .filter_map(|rec| {
+            (rec.kind.is_static() && rec.resolved_module.is_valid()).then_some(rec.resolved_module)
+          })
+          .collect::<Vec<_>>();
+        for child_module_id in child_module_ids {
+          enter_module(modules, child_module_id, visited_modules, next_exec_order, sorted_modules);
+        }
+        *modules[id].exec_order_mut() = *next_exec_order;
+        sorted_modules.push(id);
+        *next_exec_order += 1;
+      }
+    }
   }
 
   pub fn link(&mut self) {
     Linker::new(self).link();
-  }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
-enum Action {
-  Enter(ModuleId),
-  Exit(ModuleId),
-}
-
-impl Action {
-  #[inline]
-  fn module_id(&self) -> ModuleId {
-    match self {
-      Self::Enter(id) | Self::Exit(id) => *id,
-    }
   }
 }

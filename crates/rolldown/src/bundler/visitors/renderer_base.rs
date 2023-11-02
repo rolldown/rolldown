@@ -24,6 +24,8 @@ pub struct RendererBase<'ast> {
   pub default_symbol_name: Option<&'ast Atom>,
   // Used to hoisted declaration for import module, including import declaration and export declaration which has source imported
   pub first_stmt_start: Option<u32>,
+  // Used to determine whether the call result is used.
+  pub call_result_un_used: bool,
 }
 
 impl<'ast> RendererBase<'ast> {
@@ -51,6 +53,7 @@ impl<'ast> RendererBase<'ast> {
       wrap_symbol_name,
       default_symbol_name,
       first_stmt_start: None,
+      call_result_un_used: false,
     }
   }
 
@@ -262,20 +265,27 @@ impl<'ast> RendererBase<'ast> {
             let namespace_name = self.canonical_name_for(importee.namespace_symbol);
             let to_commonjs_runtime_symbol_name =
               self.canonical_name_for_runtime(&"__toCommonJS".into());
-            self.source.update(
-              expr.span.start,
-              expr.span.end,
-              format!(
-                "({wrap_symbol_name}(), {to_commonjs_runtime_symbol_name}({namespace_name}))"
-              ),
-            );
+
+            if self.call_result_un_used {
+              self.source.update(expr.span.start, expr.span.end, format!("{wrap_symbol_name}()"));
+            } else {
+              self.source.update(
+                expr.span.start,
+                expr.span.end,
+                format!(
+                  "({wrap_symbol_name}(), {to_commonjs_runtime_symbol_name}({namespace_name}))"
+                ),
+              );
+            }
           }
         }
       }
     }
+    self.call_result_un_used = false;
   }
 
   pub fn visit_statement(&mut self, stmt: &'ast oxc::ast::ast::Statement<'ast>) {
+    // Mark the start position for place hoisted module declarations.
     if self.first_stmt_start.is_none() {
       let hoisted_decl = if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
         match &decl.0 {
@@ -289,6 +299,13 @@ impl<'ast> RendererBase<'ast> {
       };
       if !hoisted_decl {
         self.first_stmt_start = Some(stmt.span().start);
+      }
+    }
+
+    // only direct call is result unused eg `init()`
+    if let oxc::ast::ast::Statement::ExpressionStatement(expr) = stmt {
+      if let oxc::ast::ast::Expression::CallExpression(_) = &expr.expression {
+        self.call_result_un_used = true;
       }
     }
   }

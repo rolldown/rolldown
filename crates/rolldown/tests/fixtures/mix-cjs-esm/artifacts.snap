@@ -26,7 +26,7 @@ module.exports = 1;
 // esm_import_cjs_require.js
 var import_cjs = __toESM(require_cjs());
 
-(init_foo(), __toCommonJS(foo_ns))
+init_foo()
 console.log(import_cjs.a)
 // esm_import_cjs_export.js
 var require_esm_import_cjs_export = __commonJS({
@@ -37,7 +37,7 @@ module.exports = 1
 }
 });
 // esm_export_cjs_require.js
-(init_foo(), __toCommonJS(foo_ns))
+init_foo()
 const value$1 = 1;
 // esm_export_cjs_export.js
 module.exports = 1;

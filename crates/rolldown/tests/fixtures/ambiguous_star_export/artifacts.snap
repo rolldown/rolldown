@@ -11,9 +11,9 @@ input_file: crates/rolldown/tests/fixtures/ambiguous_star_export
 // c.js
 let x = 1;
 let y = 2;
-// b.js
-
 // a.js
+
+// b.js
 
 // main.js
 

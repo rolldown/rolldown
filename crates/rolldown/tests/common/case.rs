@@ -28,7 +28,7 @@ impl Case {
   }
 
   fn convert_assets_to_snapshot(&mut self, mut assets: Vec<Asset>) {
-    self.snapshot.append("# Artifacts\n\n");
+    self.snapshot.append("# Assets\n\n");
     assets.sort_by_key(|c| c.file_name.clone());
     let artifacts = assets
       .iter()
@@ -51,11 +51,12 @@ impl Case {
     // Configure insta to use the fixture path as the snapshot path
     let fixture_folder = self.fixture.dir_path();
     let mut settings = insta::Settings::clone_current();
+    let content = self.snapshot.to_string();
     settings.set_snapshot_path(fixture_folder);
     settings.set_prepend_module_to_snapshot(false);
     settings.set_input_file(fixture_folder);
     settings.bind(|| {
-      insta::assert_snapshot!("artifacts", self.snapshot.to_string());
+      insta::assert_snapshot!("artifacts", content);
     });
   }
 }

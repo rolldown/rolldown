@@ -1,9 +1,9 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: self.snapshot.to_string()
+expression: content
 input_file: crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
 ---
-# Artifacts
+# Assets
 
 ## entry_js.mjs
 

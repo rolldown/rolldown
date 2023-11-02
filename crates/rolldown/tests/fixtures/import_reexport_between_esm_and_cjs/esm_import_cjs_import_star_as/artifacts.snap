@@ -1,9 +1,9 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: self.snapshot.to_string()
+expression: content
 input_file: crates/rolldown/tests/fixtures/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
 ---
-# Artifacts
+# Assets
 
 ## main.mjs
 

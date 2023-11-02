@@ -1,9 +1,9 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: self.snapshot.to_string()
+expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/shared-commonjs-into-es6
 ---
-# Artifacts
+# Assets
 
 ## 2.mjs
 

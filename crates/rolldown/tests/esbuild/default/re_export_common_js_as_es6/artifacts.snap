@@ -1,9 +1,9 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: self.snapshot.to_string()
+expression: content
 input_file: crates/rolldown/tests/esbuild/default/re_export_common_js_as_es6
 ---
-# Artifacts
+# Assets
 
 ## entry_js.mjs
 

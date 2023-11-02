@@ -1,9 +1,9 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-expression: self.snapshot.to_string()
+expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_import
 ---
-# Artifacts
+# Assets
 
 ## entry_js.mjs
 

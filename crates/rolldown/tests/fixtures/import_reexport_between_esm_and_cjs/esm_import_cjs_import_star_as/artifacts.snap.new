@@ -1,0 +1,24 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 91
+expression: content
+input_file: crates/rolldown/tests/fixtures/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
+---
+# Assets
+
+## main.mjs
+
+```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+
+// commonjs.js
+var require_commonjs = __commonJS({
+	'commonjs.js'(exports, module) {
+exports.a = 1
+	}
+});
+// main.js
+var import_commonjs = __toESM(require_commonjs());
+
+console.log(import_commonjs)
+```

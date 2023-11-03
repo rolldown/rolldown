@@ -1,0 +1,25 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 91
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/simple_common_js
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+
+// foo.js
+var require_foo = __commonJS({
+	'foo.js'(exports, module) {
+module.exports = function() {
+	return 123
+}
+	}
+});
+// entry.js
+const fn = require_foo()
+console.log(fn())
+```

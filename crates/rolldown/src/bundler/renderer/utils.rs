@@ -20,8 +20,8 @@ impl<'r> AstRenderContext<'r> {
     self.canonical_names.get(&canonical_ref)
   }
 
-  pub fn canonical_name_for_runtime(&self, name: &Atom) -> &Atom {
-    let symbol = self.graph.runtime.resolve_symbol(name);
+  pub fn canonical_name_for_runtime(&self, name: &str) -> &Atom {
+    let symbol = self.graph.runtime.resolve_symbol(&Atom::new_inline(name));
     self.canonical_name_for(symbol)
   }
 
@@ -80,7 +80,7 @@ impl<'r> AstRenderContext<'r> {
     with_declaration: bool,
   ) -> String {
     let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_symbol.unwrap());
-    let to_esm_ref_name = self.canonical_name_for_runtime(&"__toESM".into());
+    let to_esm_ref_name = self.canonical_name_for_runtime("__toESM");
     let code = format!(
       "{to_esm_ref_name}({wrap_ref_name}(){})",
       if self.module.module_type.is_esm() { ", 1" } else { "" }

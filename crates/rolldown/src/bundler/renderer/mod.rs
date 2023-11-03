@@ -121,25 +121,24 @@ impl<'r> AstRenderer<'r> {
           self.ctx.source.append_right(0, s);
         }
 
-        let wrap_symbol_name = self.ctx.wrap_symbol_name.unwrap();
-        let esm_runtime_symbol_name = self.ctx.canonical_name_for_runtime(&"__esm".into());
+        let wrap_ref_name = self.ctx.wrap_symbol_name.unwrap();
+        let esm_ref_name = self.ctx.canonical_name_for_runtime("__esm");
         self.ctx.source.append_right(
           0,
           format!(
-            "var {wrap_symbol_name} = {esm_runtime_symbol_name}({{\n'{}'() {{\n",
+            "var {wrap_ref_name} = {esm_ref_name}({{\n'{}'() {{\n",
             self.ctx.module.resource_id.prettify(),
           ),
         );
         self.ctx.source.append("\n}\n});");
       }
       RenderKind::Cjs => {
-        let wrap_symbol_name = self.ctx.wrap_symbol_name.unwrap();
-        let module_path = self.ctx.module.resource_id.prettify();
-        let commonjs_runtime_symbol_name =
-          self.ctx.canonical_name_for_runtime(&"__commonJS".into());
+        let wrap_ref_name = self.ctx.wrap_symbol_name.unwrap();
+        let prettify_id = self.ctx.module.resource_id.prettify();
+        let commonjs_ref_name = self.ctx.canonical_name_for_runtime("__commonJS");
         self.ctx.source.prepend(format!(
-      "var {wrap_symbol_name} = {commonjs_runtime_symbol_name}({{\n'{module_path}'(exports, module) {{\n",
-    ));
+          "var {wrap_ref_name} = {commonjs_ref_name}({{\n'{prettify_id}'(exports, module) {{\n",
+        ));
         self.ctx.source.append("\n}\n});");
         assert!(!self.ctx.module.is_namespace_referenced());
       }

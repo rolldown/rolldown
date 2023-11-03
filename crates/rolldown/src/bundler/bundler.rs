@@ -1,3 +1,4 @@
+use rolldown_error::BuildError;
 use sugar_path::AsPath;
 
 use super::{
@@ -9,6 +10,8 @@ use super::{
   },
 };
 use crate::{bundler::bundle::bundle::Bundle, plugin::plugin::BoxPlugin, InputOptions};
+
+type BuildResult<T> = Result<T, Vec<BuildError>>;
 
 pub struct Bundler {
   input_options: NormalizedInputOptions,
@@ -28,10 +31,7 @@ impl Bundler {
     Self { input_options: normalized, _plugins: plugins }
   }
 
-  pub async fn write(
-    &mut self,
-    output_options: crate::OutputOptions,
-  ) -> anyhow::Result<Vec<Asset>> {
+  pub async fn write(&mut self, output_options: crate::OutputOptions) -> BuildResult<Vec<Asset>> {
     let dir = output_options.dir.clone().unwrap_or_else(|| {
       self.input_options.cwd.as_path().join("dist").to_string_lossy().to_string()
     });
@@ -50,7 +50,7 @@ impl Bundler {
       let dest = dir.as_path().join(&chunk.file_name);
       if let Some(p) = dest.parent() {
         if !p.exists() {
-          std::fs::create_dir_all(p)?;
+          std::fs::create_dir_all(p).unwrap();
         }
       };
       std::fs::write(dest, &chunk.content).unwrap_or_else(|_| {
@@ -64,12 +64,12 @@ impl Bundler {
   pub async fn generate(
     &mut self,
     output_options: crate::OutputOptions,
-  ) -> anyhow::Result<Vec<Asset>> {
+  ) -> BuildResult<Vec<Asset>> {
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
     self.build(normalized).await
   }
 
-  async fn build(&mut self, output_options: NormalizedOutputOptions) -> anyhow::Result<Vec<Asset>> {
+  async fn build(&mut self, output_options: NormalizedOutputOptions) -> BuildResult<Vec<Asset>> {
     tracing::trace!("NormalizedInputOptions {:#?}", self.input_options);
     tracing::trace!("NormalizedOutputOptions: {output_options:#?}",);
 
@@ -77,7 +77,7 @@ impl Bundler {
     graph.generate_module_graph(&self.input_options).await?;
 
     let mut bundle = Bundle::new(&mut graph, &output_options);
-    let assets = bundle.generate(&self.input_options)?;
+    let assets = bundle.generate(&self.input_options);
 
     Ok(assets)
   }

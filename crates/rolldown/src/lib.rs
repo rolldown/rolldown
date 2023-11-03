@@ -1,4 +1,5 @@
 mod bundler;
+mod error;
 mod plugin;
 
 use std::sync::Arc;

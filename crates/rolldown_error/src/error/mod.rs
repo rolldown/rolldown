@@ -26,7 +26,6 @@ pub enum BuildError {
   ExternalEntry(Box<ExternalEntry>),
   #[error(transparent)]
   UnresolvedImport(Box<UnresolvedImport>),
-
   // TODO: probably should remove this error
   #[error("Napi error: {status}: {reason}")]
   Napi { status: String, reason: String },

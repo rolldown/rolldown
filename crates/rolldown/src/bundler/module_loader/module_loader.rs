@@ -18,6 +18,7 @@ use crate::bundler::module::Module;
 use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
 use crate::bundler::runtime::RUNTIME_PATH;
 use crate::bundler::utils::resolve_id::{resolve_id, ResolvedRequestInfo};
+use crate::error::{BatchedErrors, BatchedResult};
 use crate::SharedResolver;
 
 pub struct ModuleLoader<'a> {
@@ -44,12 +45,10 @@ impl<'a> ModuleLoader<'a> {
     }
   }
 
-  pub async fn fetch_all_modules(&mut self) -> anyhow::Result<()> {
-    if self.input_options.input.is_empty() {
-      return Err(anyhow::format_err!("You must supply options.input to rolldown"));
-    }
+  pub async fn fetch_all_modules(&mut self) -> BatchedResult<()> {
+    assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
-    let resolved_entries = self.resolve_entries();
+    let resolved_entries = self.resolve_entries()?;
 
     let mut intermediate_modules: IndexVec<ModuleId, Option<Module>> =
       IndexVec::with_capacity(resolved_entries.len() + 1 /* runtime */);
@@ -126,13 +125,13 @@ impl<'a> ModuleLoader<'a> {
   }
 
   #[allow(clippy::collection_is_never_read)]
-  fn resolve_entries(&mut self) -> Vec<(Option<String>, ResolvedRequestInfo)> {
+  fn resolve_entries(&mut self) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
 
     let resolved_ids =
       block_on_spawn_all(self.input_options.input.iter().map(|input_item| async move {
         let specifier = &input_item.import;
-        let resolve_id = resolve_id(resolver, specifier, None, false).await.unwrap();
+        let resolve_id = resolve_id(resolver, specifier, None, false).await?;
 
         let Some(info) = resolve_id else {
           return Err(BuildError::unresolved_entry(specifier));
@@ -145,18 +144,16 @@ impl<'a> ModuleLoader<'a> {
         Ok((input_item.name.clone(), info))
       }));
 
-    let mut errors = vec![];
+    let mut errors = BatchedErrors::default();
 
-    resolved_ids
-      .into_iter()
-      .filter_map(|handle| match handle {
-        Ok(id) => Some(id),
-        Err(e) => {
-          errors.push(e);
-          None
-        }
-      })
-      .collect()
+    let collected =
+      resolved_ids.into_iter().filter_map(|item| errors.take_err_from(item)).collect();
+
+    if errors.is_empty() {
+      Ok(collected)
+    } else {
+      Err(errors)
+    }
   }
 
   fn try_spawn_new_task(

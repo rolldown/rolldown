@@ -1,6 +1,7 @@
 use std::{borrow::Cow, path::Path};
 
 use rolldown::Asset;
+use rolldown_error::BuildError;
 use string_wizard::MagicString;
 
 use super::fixture::Fixture;
@@ -21,13 +22,26 @@ impl Case {
   }
 
   pub async fn run_inner(mut self) {
-    let assets = self.fixture.compile().await;
-    let snapshot = self.convert_assets_to_snapshot(assets);
+    let build_output = self.fixture.compile().await;
+    match build_output {
+      Ok(assets) => {
+        if self.fixture.test_config().expect_error {
+          panic!("expected error, but got success")
+        }
+        self.render_assets_to_snapshot(assets);
+      }
+      Err(errs) => {
+        if !self.fixture.test_config().expect_error {
+          panic!("expected success, but got errors: {:?}", errs)
+        }
+        self.render_errors_to_snapshot(errs);
+      }
+    }
     self.make_snapshot();
     self.fixture.exec();
   }
 
-  fn convert_assets_to_snapshot(&mut self, mut assets: Vec<Asset>) {
+  fn render_assets_to_snapshot(&mut self, mut assets: Vec<Asset>) {
     self.snapshot.append("# Assets\n\n");
     assets.sort_by_key(|c| c.file_name.clone());
     let artifacts = assets
@@ -45,6 +59,24 @@ impl Case {
       .collect::<Vec<_>>()
       .join("\n");
     self.snapshot.append(artifacts);
+  }
+
+  fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildError>) {
+    self.snapshot.append("# Errors\n\n");
+    errors.sort_by_key(|e| e.code());
+    let rendered = errors
+      .iter()
+      .flat_map(|error| {
+        [
+          Cow::Owned(format!("## {}\n", error.code())),
+          "```text".into(),
+          Cow::Owned(error.to_string()),
+          "```".into(),
+        ]
+      })
+      .collect::<Vec<_>>()
+      .join("\n");
+    self.snapshot.append(rendered);
   }
 
   fn make_snapshot(&self) {

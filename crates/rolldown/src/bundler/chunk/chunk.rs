@@ -3,14 +3,17 @@ use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{Joiner, JoinerOptions};
 
-use crate::bundler::{
-  chunk_graph::ChunkGraph,
-  graph::graph::Graph,
-  module::ModuleRenderContext,
-  options::{
-    file_name_template::FileNameRenderOptions, normalized_output_options::NormalizedOutputOptions,
+use crate::{
+  bundler::{
+    chunk_graph::ChunkGraph,
+    graph::graph::Graph,
+    module::ModuleRenderContext,
+    options::{
+      file_name_template::FileNameRenderOptions, normalized_output_options::NormalizedOutputOptions,
+    },
+    utils::bitset::BitSet,
   },
-  utils::bitset::BitSet,
+  error::BatchedResult,
 };
 
 use super::ChunkId;
@@ -54,7 +57,7 @@ impl Chunk {
   }
 
   #[allow(clippy::unnecessary_wraps)]
-  pub fn render(&self, graph: &Graph, chunk_graph: &ChunkGraph) -> anyhow::Result<String> {
+  pub fn render(&self, graph: &Graph, chunk_graph: &ChunkGraph) -> BatchedResult<String> {
     use rayon::prelude::*;
     let mut joiner = Joiner::with_options(JoinerOptions { separator: Some("\n".to_string()) });
     joiner.append(self.render_imports_for_esm(graph, chunk_graph));

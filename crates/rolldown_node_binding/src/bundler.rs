@@ -52,7 +52,18 @@ impl Bundler {
 
     let binding_opts = resolve_output_options(opts)?;
 
-    let outputs = bundler_core.write(binding_opts).await.map_err(|err| self.handle_errors(err))?;
+    let maybe_outputs = bundler_core.write(binding_opts).await;
+
+    let outputs = match maybe_outputs {
+      Ok(outputs) => outputs,
+      Err(err) => {
+        // TODO: better handing errors
+        for err in err {
+          eprintln!("{err:?}");
+        }
+        return Err(napi::Error::from_reason("Build failed"));
+      }
+    };
 
     let output_chunks = outputs
       .into_iter()
@@ -70,19 +81,23 @@ impl Bundler {
 
     let binding_opts = resolve_output_options(opts)?;
 
-    let outputs =
-      bundler_core.generate(binding_opts).await.map_err(|err| self.handle_errors(err))?;
+    let maybe_outputs = bundler_core.generate(binding_opts).await;
+
+    let outputs = match maybe_outputs {
+      Ok(outputs) => outputs,
+      Err(err) => {
+        // TODO: better handing errors
+        for err in err {
+          eprintln!("{err:?}");
+        }
+        return Err(napi::Error::from_reason("Build failed"));
+      }
+    };
 
     let output_chunks = outputs
       .into_iter()
       .map(|asset| OutputChunk { code: asset.content, file_name: asset.file_name })
       .collect::<Vec<_>>();
     Ok(output_chunks)
-  }
-
-  #[allow(clippy::needless_pass_by_value, clippy::unused_self)]
-  fn handle_errors(&self, error: anyhow::Error) -> napi::Error {
-    eprintln!("{error}");
-    napi::Error::from_reason("Build failed")
   }
 }

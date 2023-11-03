@@ -1,0 +1,12 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/errors/unresolved_entry
+---
+# Errors
+
+## UNRESOLVED_ENTRY
+
+```text
+Could not resolve entry module "tests/fixtures/errors/unresolved_entry/main.js"
+```

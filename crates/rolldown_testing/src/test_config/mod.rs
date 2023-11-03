@@ -30,6 +30,9 @@ pub struct TestConfig {
   #[serde(default = "true_by_default")]
   /// If `false`, the compiled artifacts won't be executed.
   pub expect_executed: bool,
+  #[serde(default)]
+  /// If `true`, the fixture are expected to fail to compile/build.
+  pub expect_error: bool,
   #[serde(default, rename = "_comment")]
   /// An workaround for writing comments in JSON.
   pub _comment: String,

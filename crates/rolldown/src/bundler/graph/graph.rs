@@ -1,7 +1,10 @@
 use super::{linker::Linker, linker_info::LinkingInfoVec, symbols::Symbols};
-use crate::bundler::{
-  module::ModuleVec, module_loader::ModuleLoader,
-  options::normalized_input_options::NormalizedInputOptions, runtime::Runtime,
+use crate::{
+  bundler::{
+    module::ModuleVec, module_loader::ModuleLoader,
+    options::normalized_input_options::NormalizedInputOptions, runtime::Runtime,
+  },
+  error::BatchedResult,
 };
 use rolldown_common::ModuleId;
 use rustc_hash::FxHashSet;
@@ -20,7 +23,7 @@ impl Graph {
   pub async fn generate_module_graph(
     &mut self,
     input_options: &NormalizedInputOptions,
-  ) -> anyhow::Result<()> {
+  ) -> BatchedResult<()> {
     ModuleLoader::new(input_options, self).fetch_all_modules().await?;
 
     tracing::trace!("{:#?}", self);

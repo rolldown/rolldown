@@ -5,6 +5,7 @@ use std::{
 };
 
 use rolldown::{Asset, Bundler, InputOptions, OutputOptions};
+use rolldown_error::BuildError;
 use rolldown_testing::TestConfig;
 
 fn default_test_input_item() -> rolldown_testing::InputItem {
@@ -34,14 +35,14 @@ impl Fixture {
     &self.fixture_path
   }
 
-  fn test_config(&self) -> TestConfig {
+  pub fn test_config(&self) -> TestConfig {
     TestConfig::from_config_path(&self.config_path())
   }
 
   pub fn exec(&self) {
     let test_config = self.test_config();
 
-    if !test_config.expect_executed {
+    if !test_config.expect_executed || test_config.expect_error {
       return;
     }
 
@@ -79,7 +80,7 @@ impl Fixture {
     }
   }
 
-  pub async fn compile(&mut self) -> Vec<Asset> {
+  pub async fn compile(&mut self) -> Result<Vec<Asset>, Vec<BuildError>> {
     let fixture_path = self.dir_path();
 
     let mut test_config = self.test_config();
@@ -109,6 +110,5 @@ impl Fixture {
         ..Default::default()
       })
       .await
-      .unwrap()
   }
 }

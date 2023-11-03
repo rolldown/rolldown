@@ -1,14 +1,16 @@
 use std::{borrow::Cow, fmt::Debug};
 
+use crate::error::BatchedResult;
+
 use super::{
   args::{HookLoadArgs, HookResolveIdArgs, HookTransformArgs},
   context::PluginContext,
   output::{HookLoadOutput, HookResolveIdOutput},
 };
 
-pub type HookResolveIdReturn = rolldown_error::BuildResult<Option<HookResolveIdOutput>>;
-pub type HookTransformReturn = rolldown_error::BuildResult<Option<HookLoadOutput>>;
-pub type HookLoadReturn = rolldown_error::BuildResult<Option<HookLoadOutput>>;
+pub type HookResolveIdReturn = BatchedResult<Option<HookResolveIdOutput>>;
+pub type HookTransformReturn = BatchedResult<Option<HookLoadOutput>>;
+pub type HookLoadReturn = BatchedResult<Option<HookLoadOutput>>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Debug + Send + Sync {

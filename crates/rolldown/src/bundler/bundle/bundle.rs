@@ -15,7 +15,6 @@ use crate::bundler::{
   },
   utils::bitset::BitSet,
 };
-use anyhow::Ok;
 use index_vec::{index_vec, IndexVec};
 use rolldown_common::{ImportKind, ModuleId, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -254,10 +253,7 @@ impl<'a> Bundle<'a> {
     ChunkGraph { chunks, module_to_chunk }
   }
 
-  pub fn generate(
-    &mut self,
-    _input_options: &'a NormalizedInputOptions,
-  ) -> anyhow::Result<Vec<Asset>> {
+  pub fn generate(&mut self, _input_options: &'a NormalizedInputOptions) -> Vec<Asset> {
     use rayon::prelude::*;
     let mut chunk_graph = self.generate_chunks();
 
@@ -284,6 +280,6 @@ impl<'a> Bundle<'a> {
       })
       .collect::<Vec<_>>();
 
-    Ok(assets)
+    assets
   }
 }

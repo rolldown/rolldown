@@ -8,6 +8,11 @@
       "default": "",
       "type": "string"
     },
+    "expectError": {
+      "description": "If `true`, the fixture are expected to fail to compile/build.",
+      "default": false,
+      "type": "boolean"
+    },
     "expectExecuted": {
       "description": "If `false`, the compiled artifacts won't be executed.",
       "default": true,

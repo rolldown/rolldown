@@ -4,6 +4,7 @@ use std::{
   borrow::Cow,
   path::{Path, PathBuf},
 };
+use sugar_path::SugarPathBuf;
 
 use oxc_resolver::{Resolution, ResolveOptions, Resolver as OxcResolver};
 
@@ -59,7 +60,7 @@ impl Resolver {
     // In this case, we couldn't simply use the CWD as the importer.
     // Instead, we should concat the CWD with the specifier. This aligns with https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56.
     let specifier = if importer.is_none() {
-      Cow::Owned(self.cwd.join(specifier))
+      Cow::Owned(self.cwd.join(specifier).into_normalize())
     } else {
       Cow::Borrowed(Path::new(specifier))
     };
@@ -75,16 +76,15 @@ impl Resolver {
         resolved: info.path().to_string_lossy().to_string().into(),
         module_type: calc_module_type(&info),
       }),
-      Err(_err) => {
-        if let Some(importer) = importer {
+      Err(_err) => importer.map_or_else(
+        || Err(BuildError::unresolved_entry(specifier.to_str().unwrap())),
+        |importer| {
           Err(BuildError::unresolved_import(
             specifier.to_string_lossy().to_string(),
             importer.prettify(),
           ))
-        } else {
-          Err(BuildError::unresolved_entry(specifier))
-        }
-      }
+        },
+      ),
     }
   }
 }

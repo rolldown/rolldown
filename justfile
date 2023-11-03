@@ -7,7 +7,7 @@ init:
   git submodule update
 
 test:
-  cargo nextest run
+  cargo nextest run --no-fail-fast
 
 lint:
   cargo clippy --all -- --deny warnings

@@ -1,0 +1,23 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 91
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_issue1837
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+
+// cjs.js
+var require_cjs = __commonJS({
+	'cjs.js'(exports, module) {
+'use strict'
+exports.foo = process
+	}
+});
+// entry.js
+console.log(require_cjs())
+```

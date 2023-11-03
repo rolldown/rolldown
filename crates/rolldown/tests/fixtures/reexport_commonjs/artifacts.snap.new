@@ -1,0 +1,39 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 91
+expression: content
+input_file: crates/rolldown/tests/fixtures/reexport_commonjs
+---
+# Assets
+
+## main.mjs
+
+```js
+import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.mjs";
+
+// commonjs.js
+var require_commonjs = __commonJS({
+	'commonjs.js'(exports, module) {
+module.exports = { bar: 1 };
+	}
+});
+// esm.js
+const value = 1
+// foo.js
+var foo_ns = {
+  get bar() { return import_commonjs$1.bar },
+  get value() { return value }
+};
+__reExport(foo_ns, __toESM(require_commonjs()));
+var import_commonjs$1 = __toESM(require_commonjs());
+
+
+// main.js
+
+
+var import_commonjs = __toESM(require_commonjs());
+console.log(foo_ns, import_commonjs.bar, value, foo_ns.foo)
+
+var bar$1 = import_commonjs.bar;
+export { bar$1 as bar };
+```

@@ -1,0 +1,36 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 91
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/es6_from_common_js
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+
+// foo.js
+var require_foo = __commonJS({
+	'foo.js'(exports, module) {
+exports.foo = function() {
+	return 'foo'
+}
+	}
+});
+// bar.js
+var require_bar = __commonJS({
+	'bar.js'(exports, module) {
+exports.bar = function() {
+	return 'bar'
+}
+	}
+});
+// entry.js
+var import_foo = __toESM(require_foo());
+
+var import_bar = __toESM(require_bar());
+console.log((0, import_foo.foo)(), (0, import_bar.bar)())
+ // This should be hoisted
+```

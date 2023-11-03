@@ -1,0 +1,25 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 91
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/re_export_common_js_as_es6
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+
+// foo.js
+var require_foo = __commonJS({
+	'foo.js'(exports, module) {
+exports.bar = 123
+	}
+});
+// entry.js
+var import_foo = __toESM(require_foo());
+
+var bar = import_foo.bar;
+export { bar };
+```

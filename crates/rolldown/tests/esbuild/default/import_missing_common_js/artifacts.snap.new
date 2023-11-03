@@ -1,0 +1,26 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 91
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/import_missing_common_js
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+
+// foo.js
+var require_foo = __commonJS({
+	'foo.js'(exports, module) {
+exports.x = 123
+	}
+});
+// entry.js
+var import_foo = __toESM(require_foo());
+
+if (false) {  // the test case is error case, so we don't need to run it
+    console.log((0, import_foo.default)(import_foo.x, import_foo.y))
+}
+```

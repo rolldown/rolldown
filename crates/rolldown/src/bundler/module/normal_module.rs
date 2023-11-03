@@ -7,7 +7,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
-  ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef, WrapKind,
+  ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -18,10 +18,7 @@ use crate::bundler::{
     linker_info::{LinkingInfo, LinkingInfoVec},
     symbols::Symbols,
   },
-  visitors::{
-    cjs_renderer::CjsRenderer, esm_renderer::EsmRenderer, wrapped_esm_renderer::WrappedEsmRenderer,
-    RendererBase,
-  },
+  renderer::{AstRenderContext, AstRenderer, RenderKind},
 };
 
 use super::{Module, ModuleRenderContext, ModuleVec};
@@ -60,7 +57,7 @@ impl NormalModule {
     // FIXME: should not clone here
     let mut source = MagicString::new(source.to_string());
     let self_linking_info = &ctx.graph.linking_infos[self.id];
-    let base = RendererBase::new(
+    let base = AstRenderContext::new(
       ctx.graph,
       ctx.canonical_names,
       &mut source,
@@ -69,11 +66,9 @@ impl NormalModule {
       self_linking_info,
     );
 
-    match &self_linking_info.wrap_kind {
-      WrapKind::None => EsmRenderer::new(base).apply(),
-      WrapKind::CJS => CjsRenderer::new(base).apply(),
-      WrapKind::ESM => WrappedEsmRenderer::new(base).apply(),
-    }
+    let render_kind = RenderKind::from_wrap_kind(&self_linking_info.wrap_kind);
+    let mut renderer = AstRenderer::new(base, render_kind);
+    renderer.render();
 
     source.prepend(format!("// {}\n", self.resource_id.prettify()));
 

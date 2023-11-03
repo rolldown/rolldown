@@ -12,15 +12,15 @@ import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.mjs";
 
 // commonjs.js
 var require_commonjs = __commonJS({
-'commonjs.js'(exports, module) {
+	'commonjs.js'(exports, module) {
 exports.a = 1
-}
+	}
 });
 // commonjs2.js
 var require_commonjs2 = __commonJS({
-'commonjs2.js'(exports, module) {
+	'commonjs2.js'(exports, module) {
 exports.a = 2
-}
+	}
 });
 // proxy.js
 var proxy_ns = {

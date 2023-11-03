@@ -12,9 +12,9 @@ import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.mjs";
 
 // commonjs.js
 var require_commonjs = __commonJS({
-'commonjs.js'(exports, module) {
+	'commonjs.js'(exports, module) {
 module.exports = { bar: 1 };
-}
+	}
 });
 // esm.js
 const value = 1

@@ -93,11 +93,12 @@ impl RenderKind {
 pub struct AstRenderer<'r> {
   ctx: AstRenderContext<'r>,
   kind: RenderKind,
+  indentor: String,
 }
 
 impl<'r> AstRenderer<'r> {
   pub fn new(ctx: AstRenderContext<'r>, kind: RenderKind) -> Self {
-    Self { ctx, kind }
+    Self { kind, indentor: ctx.source.guessed_indentor().to_string(), ctx }
   }
 }
 
@@ -137,9 +138,10 @@ impl<'r> AstRenderer<'r> {
         let prettify_id = self.ctx.module.resource_id.prettify();
         let commonjs_ref_name = self.ctx.canonical_name_for_runtime("__commonJS");
         self.ctx.source.prepend(format!(
-          "var {wrap_ref_name} = {commonjs_ref_name}({{\n'{prettify_id}'(exports, module) {{\n",
+          "var {wrap_ref_name} = {commonjs_ref_name}({{\n{}'{prettify_id}'(exports, module) {{\n",
+          self.indentor,
         ));
-        self.ctx.source.append("\n}\n});");
+        self.ctx.source.append(format!("\n{}}}\n}});", self.indentor));
         assert!(!self.ctx.module.is_namespace_referenced());
       }
       RenderKind::Esm => {

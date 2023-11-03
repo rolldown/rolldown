@@ -3,6 +3,7 @@ mod chunk_graph;
 mod graph;
 mod module;
 pub mod options;
+mod renderer;
 mod runtime;
 pub mod utils;
 mod visitors;

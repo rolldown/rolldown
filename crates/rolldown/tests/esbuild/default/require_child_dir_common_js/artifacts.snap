@@ -12,9 +12,9 @@ import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // dir/index.js
 var require_dir_index = __commonJS({
-'dir/index.js'(exports, module) {
+	'dir/index.js'(exports, module) {
 module.exports = 123
-}
+	}
 });
 // entry.js
 console.log(require_dir_index())

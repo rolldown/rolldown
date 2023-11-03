@@ -12,9 +12,9 @@ import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // shared.js
 var require_shared = __commonJS({
-'shared.js'(exports, module) {
+	'shared.js'(exports, module) {
 exports.foo = 123
-}
+	}
 });
 export { require_shared };
 ```

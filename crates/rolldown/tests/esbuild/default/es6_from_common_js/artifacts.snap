@@ -12,19 +12,19 @@ import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // foo.js
 var require_foo = __commonJS({
-'foo.js'(exports, module) {
+	'foo.js'(exports, module) {
 exports.foo = function() {
 	return 'foo'
 }
-}
+	}
 });
 // bar.js
 var require_bar = __commonJS({
-'bar.js'(exports, module) {
+	'bar.js'(exports, module) {
 exports.bar = function() {
 	return 'bar'
 }
-}
+	}
 });
 // entry.js
 var import_foo = __toESM(require_foo());

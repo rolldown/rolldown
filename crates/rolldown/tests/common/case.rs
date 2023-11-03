@@ -66,7 +66,6 @@ impl Case {
     errors.sort_by_key(|e| e.code());
     let rendered = errors
       .iter()
-      // FIXME: should render the runtime module while tree shaking being supported
       .flat_map(|error| {
         [
           Cow::Owned(format!("## {}\n", error.code())),

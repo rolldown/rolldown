@@ -231,7 +231,7 @@ impl<'graph> Linker<'graph> {
             let Module::Normal(importee) = importee else {
               return;
             };
-            if let Some(importee_warp_symbol) = importee_linking_info.wrap_symbol {
+            if let Some(importee_warp_symbol) = importee_linking_info.wrap_ref {
               let importer_linking_info = &mut linking_infos[importer.id];
               importer_linking_info.reference_symbol_in_facade_stmt_infos(importee_warp_symbol);
               match (importer.exports_kind, importee.exports_kind) {
@@ -280,7 +280,7 @@ impl<'graph> Linker<'graph> {
     linking_infos: &mut LinkingInfoVec,
   ) {
     let linking_info = &mut linking_infos[target];
-    if linking_info.wrap_symbol.is_some() {
+    if linking_info.wrap_ref.is_some() {
       return;
     }
 
@@ -290,7 +290,7 @@ impl<'graph> Linker<'graph> {
     match &self.graph.modules[target] {
       Module::Normal(module) => {
         linking_info.wrap_kind =
-          if module.exports_kind == ExportsKind::CommonJs { WrapKind::CJS } else { WrapKind::ESM };
+          if module.exports_kind == ExportsKind::CommonJs { WrapKind::Cjs } else { WrapKind::Esm };
         module.create_wrap_symbol(linking_info, symbols);
 
         let name = if module.exports_kind == ExportsKind::CommonJs {
@@ -401,7 +401,7 @@ impl<'graph> Linker<'graph> {
                   MatchImportKind::Found(symbol_ref) => {
                     symbols.union(info.imported_as, symbol_ref);
                   }
-                  MatchImportKind::NameSpace(symbol_ref) => {
+                  MatchImportKind::Namespace(symbol_ref) => {
                     if info.is_imported_star {
                       symbols.union(info.imported_as, symbol_ref);
                     } else {
@@ -498,7 +498,7 @@ impl<'graph> Linker<'graph> {
     // If importee module is commonjs module, it will generate property access to namespace symbol
     // The namespace symbols should be importer created local symbol.
     if importee.exports_kind == ExportsKind::CommonJs {
-      return MatchImportKind::NameSpace(
+      return MatchImportKind::Namespace(
         importer_linking_info.local_symbol_for_import_cjs[&importee.id],
       );
     }
@@ -520,7 +520,7 @@ impl<'graph> Linker<'graph> {
         match module {
           Module::Normal(module) => {
             if module.exports_kind == ExportsKind::CommonJs {
-              return MatchImportKind::NameSpace(
+              return MatchImportKind::Namespace(
                 importer_linking_info.local_symbol_for_import_cjs[&module.id],
               );
             }
@@ -534,7 +534,7 @@ impl<'graph> Linker<'graph> {
     // If the module has dynamic exports, the unknown export name will be resolved at runtime.
     // The namespace symbol should be importee namespace symbol.
     if importee_linking_info.has_dynamic_exports {
-      return MatchImportKind::NameSpace(importee.namespace_symbol);
+      return MatchImportKind::Namespace(importee.namespace_symbol);
     }
 
     MatchImportKind::NotFound
@@ -578,7 +578,7 @@ impl<'graph> Linker<'graph> {
 pub enum MatchImportKind {
   NotFound,
   // The import symbol will generate property access to namespace symbol
-  NameSpace(SymbolRef),
+  Namespace(SymbolRef),
   // External,
   PotentiallyAmbiguous(SymbolRef, Vec<SymbolRef>),
   Found(SymbolRef),

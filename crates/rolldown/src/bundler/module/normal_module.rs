@@ -214,7 +214,7 @@ impl NormalModule {
   }
 
   pub fn create_wrap_symbol(&self, self_linking_info: &mut LinkingInfo, symbols: &mut Symbols) {
-    if self_linking_info.wrap_symbol.is_none() {
+    if self_linking_info.wrap_ref.is_none() {
       let name = format!(
         "{}_{}",
         if self.exports_kind == ExportsKind::CommonJs { "require" } else { "init" },
@@ -222,7 +222,7 @@ impl NormalModule {
       )
       .into();
       let symbol_ref = self.create_local_symbol(name, self_linking_info, symbols);
-      self_linking_info.wrap_symbol = Some(symbol_ref);
+      self_linking_info.wrap_ref = Some(symbol_ref);
     }
   }
 

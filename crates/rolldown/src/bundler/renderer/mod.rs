@@ -9,10 +9,11 @@ use oxc::{
   ast::Visit,
   span::{Atom, GetSpan, Span},
 };
-use rolldown_common::{SymbolRef, WrapKind};
+use rolldown_common::{ExportsKind, SymbolRef, WrapKind};
 use rolldown_oxc::BindingIdentifierExt;
+use rolldown_utils::MagicStringExt;
 use rustc_hash::FxHashMap;
-use string_wizard::{IndentOptions, MagicString};
+use string_wizard::MagicString;
 
 use super::{
   chunk_graph::ChunkGraph,
@@ -28,12 +29,10 @@ pub struct AstRenderContext<'r> {
   pub canonical_names: &'r FxHashMap<SymbolRef, Atom>,
   pub source: &'r mut MagicString<'static>,
   pub chunk_graph: &'r ChunkGraph,
-  pub wrap_symbol_name: Option<&'r Atom>,
-  pub default_symbol_name: Option<&'r Atom>,
+  pub wrap_ref_name: Option<&'r Atom>,
+  pub default_ref_name: Option<&'r Atom>,
   // Used to hoisted declaration for import module, including import declaration and export declaration which has source imported
   pub first_stmt_start: Option<u32>,
-  // Used to determine whether the call result is used.
-  pub call_result_un_used: bool,
 }
 
 impl<'r> AstRenderContext<'r> {
@@ -47,7 +46,7 @@ impl<'r> AstRenderContext<'r> {
     linking_info: &'r LinkingInfo,
   ) -> Self {
     let wrap_symbol_name =
-      linking_info.wrap_symbol.map(|s| graph.symbols.canonical_name_for(s, canonical_names));
+      linking_info.wrap_ref.map(|s| graph.symbols.canonical_name_for(s, canonical_names));
     let default_symbol_name = module
       .default_export_symbol
       .map(|s| graph.symbols.canonical_name_for((module.id, s).into(), canonical_names));
@@ -58,23 +57,22 @@ impl<'r> AstRenderContext<'r> {
       chunk_graph,
       module,
       linking_info,
-      wrap_symbol_name,
-      default_symbol_name,
+      wrap_ref_name: wrap_symbol_name,
+      default_ref_name: default_symbol_name,
       first_stmt_start: None,
-      call_result_un_used: false,
     }
   }
 }
 
 #[derive(Debug, Default)]
-pub struct RenderKindWrappedEsm {
+pub struct WrappedEsmCtx {
   pub hoisted_vars: Vec<Atom>,
   pub hoisted_functions: Vec<Span>,
 }
 
 #[derive(Debug)]
 pub enum RenderKind {
-  WrappedEsm(Box<RenderKindWrappedEsm>),
+  WrappedEsm,
   Cjs,
   Esm,
 }
@@ -83,8 +81,8 @@ impl RenderKind {
   pub fn from_wrap_kind(kind: &WrapKind) -> Self {
     match kind {
       WrapKind::None => Self::Esm,
-      WrapKind::CJS => Self::Cjs,
-      WrapKind::ESM => Self::WrappedEsm(Box::default()),
+      WrapKind::Cjs => Self::Cjs,
+      WrapKind::Esm => Self::WrappedEsm,
     }
   }
 }
@@ -92,13 +90,19 @@ impl RenderKind {
 #[derive(Debug)]
 pub struct AstRenderer<'r> {
   ctx: AstRenderContext<'r>,
+  wrapped_esm_ctx: WrappedEsmCtx,
   kind: RenderKind,
   indentor: String,
 }
 
 impl<'r> AstRenderer<'r> {
   pub fn new(ctx: AstRenderContext<'r>, kind: RenderKind) -> Self {
-    Self { kind, indentor: ctx.source.guessed_indentor().to_string(), ctx }
+    Self {
+      kind,
+      indentor: ctx.source.guessed_indentor().to_string(),
+      ctx,
+      wrapped_esm_ctx: WrappedEsmCtx::default(),
+    }
   }
 }
 
@@ -108,26 +112,26 @@ impl<'r> AstRenderer<'r> {
     self.visit_program(program);
 
     match &mut self.kind {
-      RenderKind::WrappedEsm(info) => {
-        let mut exclude_indent = vec![];
-        info.hoisted_functions.iter().for_each(|f| {
+      RenderKind::WrappedEsm => {
+        let mut indent_excludes = vec![];
+        self.wrapped_esm_ctx.hoisted_functions.iter().for_each(|f| {
           self.ctx.source.relocate(f.start, f.end, 0);
           self.ctx.source.append_left(f.end, "\n");
-          exclude_indent.push([f.start, f.end]);
+          indent_excludes.push([f.start, f.end]);
         });
-        self.ctx.source.indent_with(IndentOptions {
-          exclude: exclude_indent,
-          indentor: Some(&self.indentor.repeat(2)),
-        });
-        if !info.hoisted_vars.is_empty() {
-          self.ctx.source.append_right(0, format!("var {};\n", info.hoisted_vars.join(",")));
+        self.ctx.source.indent2(&self.indentor, indent_excludes);
+        if !self.wrapped_esm_ctx.hoisted_vars.is_empty() {
+          self
+            .ctx
+            .source
+            .append_right(0, format!("var {};\n", self.wrapped_esm_ctx.hoisted_vars.join(",")));
         }
 
         if let Some(s) = self.generate_namespace_variable_declaration() {
           self.ctx.source.append_right(0, s);
         }
 
-        let wrap_ref_name = self.ctx.wrap_symbol_name.unwrap();
+        let wrap_ref_name = self.ctx.wrap_ref_name.unwrap();
         let esm_ref_name = self.ctx.canonical_name_for_runtime("__esm");
         self.ctx.source.append_right(
           0,
@@ -140,12 +144,9 @@ impl<'r> AstRenderer<'r> {
         self.ctx.source.append(format!("\n{}}}\n}});", self.indentor));
       }
       RenderKind::Cjs => {
-        let wrap_ref_name = self.ctx.wrap_symbol_name.unwrap();
+        let wrap_ref_name = self.ctx.wrap_ref_name.unwrap();
         let prettify_id = self.ctx.module.resource_id.prettify();
-        self.ctx.source.indent_with(IndentOptions {
-          indentor: Some(&self.indentor.repeat(2)),
-          ..Default::default()
-        });
+        self.ctx.source.indent2(&self.indentor, Vec::default());
         let commonjs_ref_name = self.ctx.canonical_name_for_runtime("__commonJS");
         self.ctx.source.prepend(format!(
           "var {wrap_ref_name} = {commonjs_ref_name}({{\n{}'{prettify_id}'(exports, module) {{\n",
@@ -168,9 +169,12 @@ impl<'r> AstRenderer<'r> {
   ) -> RenderControl {
     match &decl.declaration {
       oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
-        if let Some(name) = self.ctx.default_symbol_name {
-          self.ctx.overwrite(decl.span.start, exp.span().start, format!("var {name} = "));
-        }
+        let default_ref_name = self.ctx.default_ref_name.expect("Should generated a name");
+        self.ctx.source.overwrite(
+          decl.span.start,
+          exp.span().start,
+          format!("var {default_ref_name} = "),
+        );
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {
         self.ctx.remove_node(Span::new(decl.span.start, decl.span.start));
@@ -183,6 +187,26 @@ impl<'r> AstRenderer<'r> {
     RenderControl::Skip
   }
 
+  fn render_require_expr(&mut self, expr: &oxc::ast::ast::CallExpression) {
+    let Module::Normal(importee) = self.get_importee_by_span(expr.span) else {
+      return;
+    };
+    let importee_linking_info = &self.ctx.graph.linking_infos[importee.id];
+    let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_ref.unwrap());
+    if importee.exports_kind == ExportsKind::CommonJs {
+      self.ctx.source.overwrite(expr.span.start, expr.span.end, format!("{wrap_ref_name}()"));
+    } else {
+      let ns_name = self.canonical_name_for(importee.namespace_symbol);
+      let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
+      self.ctx.source.overwrite(
+        expr.span.start,
+        expr.span.end,
+        format!("({wrap_ref_name}(), {to_commonjs_ref_name}({ns_name}))"),
+      );
+    }
+  }
+
+  // TODO(hyf): need to investigate this logic again. https://github.com/rolldown-rs/rolldown/pull/144
   /// Rewrite statement `require('./foo.js')` to `init_foo()`
   fn try_render_require_statement(&mut self, stmt: &oxc::ast::ast::Statement) -> RenderControl {
     // only direct call is result unused eg `init()`
@@ -198,8 +222,12 @@ impl<'r> AstRenderer<'r> {
           return RenderControl::Continue;
         };
         let importee_linking_info = &self.ctx.graph.linking_infos[importee.id];
-        let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_symbol.unwrap());
-        self.ctx.source.update(expr.span.start, expr.span.end, format!("{wrap_ref_name}()"));
+        let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_ref.unwrap());
+        self.ctx.source.update(
+          call_exp.span.start,
+          call_exp.span.end,
+          format!("{wrap_ref_name}()"),
+        );
         RenderControl::Skip
       }
       _ => RenderControl::Continue,

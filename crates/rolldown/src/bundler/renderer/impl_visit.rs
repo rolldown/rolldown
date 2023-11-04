@@ -15,28 +15,10 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
 
   fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
     match &expr.callee {
-      oxc::ast::ast::Expression::Identifier(callee_ident) if callee_ident.name == "require" => {
-        let Module::Normal(importee) = self.get_importee_by_span(expr.span) else {
-          return;
-        };
-        let importee_linking_info = &self.ctx.graph.linking_infos[importee.id];
-        let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_symbol.unwrap());
-        if importee.exports_kind == ExportsKind::CommonJs {
-          self.ctx.source.update(expr.span.start, expr.span.end, format!("{wrap_ref_name}()"));
-        } else {
-          let ns_name = self.canonical_name_for(importee.namespace_symbol);
-          let to_commonjs_ref_name = self.canonical_name_for_runtime(&"__toCommonJS".into());
-          if self.ctx.call_result_un_used {
-            self.ctx.source.update(expr.span.start, expr.span.end, format!("{wrap_ref_name}()"));
-          } else {
-            self.ctx.source.update(
-              expr.span.start,
-              expr.span.end,
-              format!("({wrap_ref_name}(), {to_commonjs_ref_name}({ns_name}))"),
-            );
-          }
-        }
-        self.ctx.call_result_un_used = false;
+      oxc::ast::ast::Expression::Identifier(callee_ident)
+        if callee_ident.name == "require" || callee_ident.reference_id.get().is_none() =>
+      {
+        self.render_require_expr(expr);
         return;
       }
       _ => {}
@@ -47,6 +29,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
       self.visit_argument(arg);
     }
 
+    // `IdentifierReference` in callee position need to be handled specially
     if let oxc::ast::ast::Expression::Identifier(s) = &expr.callee {
       self.render_identifier_reference(s, true);
     } else {
@@ -78,7 +61,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
           true,
         ),
       );
-    } else if let Some(wrap_ref) = importee_linking_info.wrap_symbol {
+    } else if let Some(wrap_ref) = importee_linking_info.wrap_ref {
       let wrap_ref_name = self.canonical_name_for(wrap_ref);
       // init wrapped esm module
       self.hoisted_module_declaration(decl.span.start, format!("{wrap_ref_name}();\n"));
@@ -93,7 +76,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
       if importee.exports_kind == ExportsKind::CommonJs {
         // __reExport(a_exports, __toESM(require_c()));
         let namespace_name = &self.ctx.canonical_names[&self.ctx.module.namespace_symbol];
-        let re_export_runtime_symbol_name = self.canonical_name_for_runtime(&"__reExport".into());
+        let re_export_runtime_symbol_name = self.canonical_name_for_runtime("__reExport");
         self.hoisted_module_declaration(
           decl.span.start,
           format!(
@@ -159,9 +142,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     decl: &'ast oxc::ast::ast::ExportNamedDeclaration<'ast>,
   ) {
     let control = match &mut self.kind {
-      super::RenderKind::WrappedEsm(_) => {
-        self.render_export_named_declaration_for_wrapped_esm(decl)
-      }
+      super::RenderKind::WrappedEsm => self.render_export_named_declaration_for_wrapped_esm(decl),
       super::RenderKind::Cjs => RenderControl::Continue,
       super::RenderKind::Esm => self.render_export_named_declaration_for_esm(decl),
     };
@@ -180,9 +161,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     decl: &'ast oxc::ast::ast::ExportDefaultDeclaration<'ast>,
   ) {
     let control = match &mut self.kind {
-      super::RenderKind::WrappedEsm(_) => {
-        self.render_export_default_declaration_for_wrapped_esm(decl)
-      }
+      super::RenderKind::WrappedEsm => self.render_export_default_declaration_for_wrapped_esm(decl),
       super::RenderKind::Cjs | super::RenderKind::Esm => self.strip_export_keyword(decl),
     };
 

@@ -33,15 +33,6 @@ impl<'r> AstRenderContext<'r> {
     self.source.remove(span.start, span.end);
   }
 
-  pub fn overwrite(&mut self, start: u32, end: u32, content: String) {
-    self.source.update_with(
-      start,
-      end,
-      content,
-      UpdateOptions { overwrite: true, ..Default::default() },
-    );
-  }
-
   pub fn hoisted_module_declaration(&mut self, decl_start: u32, content: String) {
     let start = self.first_stmt_start.unwrap_or(decl_start);
     self.source.append_left(start, content);
@@ -53,7 +44,7 @@ impl<'r> AstRenderContext<'r> {
     importee_linking_info: &LinkingInfo,
     with_declaration: bool,
   ) -> String {
-    let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_symbol.unwrap());
+    let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_ref.unwrap());
     let to_esm_ref_name = self.canonical_name_for_runtime("__toESM");
     let code = format!(
       "{to_esm_ref_name}({wrap_ref_name}(){})",
@@ -146,8 +137,8 @@ impl<'r> AstRenderer<'r> {
     self.ctx.graph.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
   }
 
-  pub fn canonical_name_for_runtime(&self, name: &Atom) -> &Atom {
-    let symbol = self.ctx.graph.runtime.resolve_symbol(name);
+  pub fn canonical_name_for_runtime(&self, name: &str) -> &Atom {
+    let symbol = self.ctx.graph.runtime.resolve_symbol(&Atom::new_inline(name));
     self.canonical_name_for(symbol)
   }
 

@@ -13,12 +13,12 @@ import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 // foo.js
 var foo;
 var foo_ns = {
-  get foo() { return foo }
+	get foo() { return foo }
 };
 var init_foo = __esm({
-'foo.js'() {
-foo = 123
-}
+	'foo.js'() {
+		foo = 123
+	}
 });
 // entry.js
 init_foo();

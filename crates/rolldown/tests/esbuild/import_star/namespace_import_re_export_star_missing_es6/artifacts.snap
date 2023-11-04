@@ -12,7 +12,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_re_export
 const x = 123
 // foo.js
 var foo_ns = {
-  get x() { return x }
+	get x() { return x }
 };
 
 // entry.js

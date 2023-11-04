@@ -24,7 +24,7 @@ serde_json     = "1.0.87"
 insta          = "1.21.0"
 testing_macros = "0.2.7"
 scoped-tls     = "1.0.1"
-string_wizard  = { version = "0.0.12" }
+string_wizard  = { version = "0.0.14" }
 async-trait    = "0.1.62"
 futures        = "0.3.25"
 itertools      = "0.10.5"

@@ -28,15 +28,15 @@ const value = 1;
 // esm_import_cjs_export.js
 var require_esm_import_cjs_export = __commonJS({
 	'esm_import_cjs_export.js'(exports, module) {
-init_foo();
+		init_foo();
 
-module.exports = 1
+		module.exports = 1
 	}
 });
 // cjs.js
 var require_cjs = __commonJS({
 	'cjs.js'(exports, module) {
-module.exports = 1;
+		module.exports = 1;
 	}
 });
 // esm_import_cjs_require.js

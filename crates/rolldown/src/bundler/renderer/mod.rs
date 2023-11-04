@@ -12,7 +12,7 @@ use oxc::{
 use rolldown_common::{SymbolRef, WrapKind};
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
-use string_wizard::MagicString;
+use string_wizard::{IndentOptions, MagicString};
 
 use super::{
   chunk_graph::ChunkGraph,
@@ -136,6 +136,10 @@ impl<'r> AstRenderer<'r> {
       RenderKind::Cjs => {
         let wrap_ref_name = self.ctx.wrap_symbol_name.unwrap();
         let prettify_id = self.ctx.module.resource_id.prettify();
+        self.ctx.source.indent_with(IndentOptions {
+          indentor: Some(&self.indentor.repeat(2)),
+          ..Default::default()
+        });
         let commonjs_ref_name = self.ctx.canonical_name_for_runtime("__commonJS");
         self.ctx.source.prepend(format!(
           "var {wrap_ref_name} = {commonjs_ref_name}({{\n{}'{prettify_id}'(exports, module) {{\n",

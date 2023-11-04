@@ -13,13 +13,13 @@ import { __commonJS } from "./_rolldown_runtime.mjs";
 // entry.js
 var require_entry = __commonJS({
 	'entry.js'(exports, module) {
-try {
-	const supportsColor = require('supports-color');
-	if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
-		exports.colors = [];
-	}
-} catch (error) {
-}
+		try {
+			const supportsColor = require('supports-color');
+			if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
+				exports.colors = [];
+			}
+		} catch (error) {
+		}
 	}
 });
 ```

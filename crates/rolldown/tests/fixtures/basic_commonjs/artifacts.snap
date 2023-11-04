@@ -32,8 +32,8 @@ esm_named_class = class esm_named_class {}
 // commonjs.js
 var require_commonjs$1 = __commonJS({
 	'commonjs.js'(exports, module) {
-var value = (init_esm(), __toCommonJS(esm_ns));
-module.exports = value;
+		var value = (init_esm(), __toCommonJS(esm_ns));
+		module.exports = value;
 	}
 });
 // main.js

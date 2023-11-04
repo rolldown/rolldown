@@ -14,3 +14,4 @@ repository.workspace = true
 sugar_path = { workspace = true }
 scoped-tls = { workspace = true }
 thiserror  = { workspace = true }
+ariadne    = { workspace = true }

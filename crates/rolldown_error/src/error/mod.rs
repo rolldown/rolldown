@@ -4,6 +4,7 @@ use std::{
 };
 
 pub mod external_entry;
+pub mod impl_to_diagnostic;
 pub mod unresolved_entry;
 pub mod unresolved_import;
 

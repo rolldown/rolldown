@@ -13,7 +13,7 @@ import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 // foo.js
 var require_foo = __commonJS({
 	'foo.js'(exports, module) {
-exports.x = 123
+		exports.x = 123
 	}
 });
 // entry.js

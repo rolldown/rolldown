@@ -16,8 +16,8 @@ const y = 3
 const z = 4
 // common.js
 var common_ns = {
-  get x() { return x },
-  get z() { return z }
+	get x() { return x },
+	get z() { return z }
 };
 
 

@@ -13,111 +13,111 @@ import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 // a.js
 var abc;
 var a_ns = {
-  get abc() { return abc }
+	get abc() { return abc }
 };
 var init_a = __esm({
-'a.js'() {
-abc = undefined
-}
+	'a.js'() {
+		abc = undefined
+	}
 });
 // b.js
 var xyz;
 var b_ns = {
-  get xyz() { return xyz }
+	get xyz() { return xyz }
 };
 var init_b = __esm({
-'b.js'() {
-xyz = null
-}
+	'b.js'() {
+		xyz = null
+	}
 });
 // commonjs.js
 function Fn() {}
 var commonjs_default,v,l,c,Class;
 var commonjs_ns = {
-  get Class() { return Class },
-  get Fn() { return Fn },
-  get abc() { return abc },
-  get b() { return b_ns },
-  get c() { return c },
-  get default() { return commonjs_default },
-  get l() { return l },
-  get v() { return v }
+	get Class() { return Class },
+	get Fn() { return Fn },
+	get abc() { return abc },
+	get b() { return b_ns },
+	get c() { return c },
+	get default() { return commonjs_default },
+	get l() { return l },
+	get v() { return v }
 };
 var init_commonjs = __esm({
-'commonjs.js'() {
-commonjs_default = 123
-v = 234
-l = 234
-c = 234
+	'commonjs.js'() {
+		commonjs_default = 123
+		v = 234
+		l = 234
+		c = 234
 
 
-Class = class Class {}
+		Class = class Class {}
 
 
 
-}
+	}
 });
 // c.js
 var c_default;
 var c_ns = {
-  get default() { return c_default }
+	get default() { return c_default }
 };
 var init_c = __esm({
-'c.js'() {
-c_default = class {}
+	'c.js'() {
+		c_default = class {}
 
-}
+	}
 });
 // d.js
 var Foo;
 var d_ns = {
-  get default() { return Foo }
+	get default() { return Foo }
 };
 var init_d = __esm({
-'d.js'() {
-Foo = class Foo {}
+	'd.js'() {
+		Foo = class Foo {}
  Foo.prop = 123
-}
+	}
 });
 // e.js
 function e_default() {}
 var e_ns = {
-  get default() { return e_default }
+	get default() { return e_default }
 };
 var init_e = __esm({
-'e.js'() {
+	'e.js'() {
 
-}
+	}
 });
 // f.js
 function foo$1() {}
 var f_ns = {
-  get default() { return foo$1 }
+	get default() { return foo$1 }
 };
 var init_f = __esm({
-'f.js'() {
- foo$1.prop = 123
-}
+	'f.js'() {
+		 foo$1.prop = 123
+	}
 });
 // g.js
 async function g_default() {}
 var g_ns = {
-  get default() { return g_default }
+	get default() { return g_default }
 };
 var init_g = __esm({
-'g.js'() {
+	'g.js'() {
 
-}
+	}
 });
 // h.js
 async function foo() {}
 var h_ns = {
-  get default() { return foo }
+	get default() { return foo }
 };
 var init_h = __esm({
-'h.js'() {
- foo.prop = 123
-}
+	'h.js'() {
+		 foo.prop = 123
+	}
 });
 // entry.js
 init_commonjs()

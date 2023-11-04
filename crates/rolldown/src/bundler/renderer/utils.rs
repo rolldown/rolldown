@@ -47,32 +47,6 @@ impl<'r> AstRenderContext<'r> {
     self.source.append_left(start, content);
   }
 
-  pub fn generate_namespace_variable_declaration(&mut self) -> Option<String> {
-    if self.module.is_namespace_referenced() {
-      let ns_name = self.canonical_name_for(self.module.namespace_symbol);
-      let exports: String = self
-        .linking_info
-        .sorted_exports()
-        .map(|(exported_name, resolved_export)| {
-          let canonical_ref = self.graph.symbols.par_canonical_ref_for(resolved_export.symbol_ref);
-          let symbol = self.graph.symbols.get(canonical_ref);
-          let return_expr = if let Some(ns_alias) = &symbol.namespace_alias {
-            let canonical_ns_name = &self.canonical_names[&ns_alias.namespace_ref];
-            format!("{canonical_ns_name}.{exported_name}",)
-          } else {
-            let canonical_name = self.canonical_names.get(&canonical_ref).unwrap();
-            format!("{canonical_name}",)
-          };
-          format!("  get {exported_name}() {{ return {return_expr} }}",)
-        })
-        .collect::<Vec<_>>()
-        .join(",\n");
-      Some(format!("var {ns_name} = {{\n{exports}\n}};\n",))
-    } else {
-      None
-    }
-  }
-
   pub fn generate_import_commonjs_module(
     &self,
     importee: &NormalModule,
@@ -103,6 +77,34 @@ impl<'r> AstRenderer<'r> {
       content,
       UpdateOptions { overwrite: true, ..Default::default() },
     );
+  }
+
+  pub fn generate_namespace_variable_declaration(&mut self) -> Option<String> {
+    if self.ctx.module.is_namespace_referenced() {
+      let ns_name = self.ctx.canonical_name_for(self.ctx.module.namespace_symbol);
+      let exports: String = self
+        .ctx
+        .linking_info
+        .sorted_exports()
+        .map(|(exported_name, resolved_export)| {
+          let canonical_ref =
+            self.ctx.graph.symbols.par_canonical_ref_for(resolved_export.symbol_ref);
+          let symbol = self.ctx.graph.symbols.get(canonical_ref);
+          let return_expr = if let Some(ns_alias) = &symbol.namespace_alias {
+            let canonical_ns_name = &self.ctx.canonical_names[&ns_alias.namespace_ref];
+            format!("{canonical_ns_name}.{exported_name}",)
+          } else {
+            let canonical_name = self.ctx.canonical_names.get(&canonical_ref).unwrap();
+            format!("{canonical_name}",)
+          };
+          format!("{}get {exported_name}() {{ return {return_expr} }}", self.indentor)
+        })
+        .collect::<Vec<_>>()
+        .join(",\n");
+      Some(format!("var {ns_name} = {{\n{exports}\n}};\n",))
+    } else {
+      None
+    }
   }
 
   pub fn remove_node(&mut self, span: Span) {

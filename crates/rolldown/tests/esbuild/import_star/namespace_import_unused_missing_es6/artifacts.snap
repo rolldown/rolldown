@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_unused_mi
 ```js
 // foo.js
 var foo_ns = {
-  get x() { return x }
+	get x() { return x }
 };
 const x = 123
 // entry.js

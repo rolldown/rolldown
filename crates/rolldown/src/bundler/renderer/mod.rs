@@ -12,7 +12,7 @@ use oxc::{
 use rolldown_common::{SymbolRef, WrapKind};
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
-use string_wizard::MagicString;
+use string_wizard::{IndentOptions, MagicString};
 
 use super::{
   chunk_graph::ChunkGraph,
@@ -109,16 +109,21 @@ impl<'r> AstRenderer<'r> {
 
     match &mut self.kind {
       RenderKind::WrappedEsm(info) => {
+        let mut exclude_indent = vec![];
         info.hoisted_functions.iter().for_each(|f| {
-          // Improve: multiply functions should separate by "\n"
           self.ctx.source.relocate(f.start, f.end, 0);
-          self.ctx.source.append_right(0, "\n");
+          self.ctx.source.append_left(f.end, "\n");
+          exclude_indent.push([f.start, f.end]);
+        });
+        self.ctx.source.indent_with(IndentOptions {
+          exclude: exclude_indent,
+          indentor: Some(&self.indentor.repeat(2)),
         });
         if !info.hoisted_vars.is_empty() {
           self.ctx.source.append_right(0, format!("var {};\n", info.hoisted_vars.join(",")));
         }
 
-        if let Some(s) = self.ctx.generate_namespace_variable_declaration() {
+        if let Some(s) = self.generate_namespace_variable_declaration() {
           self.ctx.source.append_right(0, s);
         }
 
@@ -127,15 +132,20 @@ impl<'r> AstRenderer<'r> {
         self.ctx.source.append_right(
           0,
           format!(
-            "var {wrap_ref_name} = {esm_ref_name}({{\n'{}'() {{\n",
+            "var {wrap_ref_name} = {esm_ref_name}({{\n{}'{}'() {{\n",
+            self.indentor,
             self.ctx.module.resource_id.prettify(),
           ),
         );
-        self.ctx.source.append("\n}\n});");
+        self.ctx.source.append(format!("\n{}}}\n}});", self.indentor));
       }
       RenderKind::Cjs => {
         let wrap_ref_name = self.ctx.wrap_symbol_name.unwrap();
         let prettify_id = self.ctx.module.resource_id.prettify();
+        self.ctx.source.indent_with(IndentOptions {
+          indentor: Some(&self.indentor.repeat(2)),
+          ..Default::default()
+        });
         let commonjs_ref_name = self.ctx.canonical_name_for_runtime("__commonJS");
         self.ctx.source.prepend(format!(
           "var {wrap_ref_name} = {commonjs_ref_name}({{\n{}'{prettify_id}'(exports, module) {{\n",
@@ -145,7 +155,7 @@ impl<'r> AstRenderer<'r> {
         assert!(!self.ctx.module.is_namespace_referenced());
       }
       RenderKind::Esm => {
-        if let Some(s) = self.ctx.generate_namespace_variable_declaration() {
+        if let Some(s) = self.generate_namespace_variable_declaration() {
           self.ctx.source.prepend(s);
         }
       }

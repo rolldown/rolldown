@@ -14,7 +14,7 @@ const foo = () => 'hi there'
 
 // folders/index.js
 var folders_index_ns = {
-  get foo() { return foo }
+	get foo() { return foo }
 };
 
 // entry.js

@@ -1,5 +1,3 @@
-use oxc::span::Atom;
-
 use super::import_record::ImportRecordId;
 use crate::{symbol_ref::SymbolRef, Specifier};
 

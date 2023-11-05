@@ -52,7 +52,7 @@ impl Chunk {
                   "import * as {alias} from \"{}\";\n",
                   module.resource_id.as_ref()
                 ));
-                return None;
+                None
               }
               Specifier::Literal(imported) => Some(if imported == alias {
                 format!("{imported}")

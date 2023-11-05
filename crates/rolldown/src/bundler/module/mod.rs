@@ -56,6 +56,13 @@ impl Module {
     }
   }
 
+  pub fn expect_external(&self) -> &ExternalModule {
+    match self {
+      Self::Normal(_) => unreachable!(),
+      Self::External(m) => m,
+    }
+  }
+
   pub fn import_records(&self) -> &IndexVec<ImportRecordId, ImportRecord> {
     match self {
       Self::Normal(m) => &m.import_records,

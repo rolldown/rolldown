@@ -124,7 +124,6 @@ impl<'graph> Linker<'graph> {
 
     self.mark_module_wrapped(&mut symbols, &mut linking_infos);
 
-    // Mark namespace symbol for namespace referenced
     // Create symbols for external module
     self.mark_extra_symbols(&mut symbols, &mut linking_infos);
 

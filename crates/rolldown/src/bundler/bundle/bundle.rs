@@ -3,7 +3,7 @@ use std::{borrow::Cow, hash::BuildHasherDefault};
 use super::asset::Asset;
 use crate::bundler::{
   chunk::{
-    chunk::{Chunk, CrossChunkImportItem},
+    chunk::{Chunk, ChunkSymbolExporter, CrossChunkImportItem},
     ChunkId, ChunksVec,
   },
   chunk_graph::ChunkGraph,
@@ -53,6 +53,8 @@ impl<'a> Bundle<'a> {
     });
   }
 
+  // TODO(hyf0): refactor this function
+  #[allow(clippy::too_many_lines)]
   fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
     // Determine which symbols belong to which chunk
     let mut chunk_meta_imports_vec =
@@ -111,16 +113,36 @@ impl<'a> Bundle<'a> {
       let chunk_meta_imports = &chunk_meta_imports_vec[chunk_id];
       for import_ref in chunk_meta_imports.iter().copied() {
         let import_symbol = self.graph.symbols.get(import_ref);
-        let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
-          panic!("symbol {import_ref:?} {import_symbol:?} is not assigned to any chunk")
-        });
-        if chunk_id != importee_chunk_id {
+        // Find out the import_ref whether comes from the chunk or external module.
+
+        if let Some(importee_chunk_id) = import_symbol.chunk_id {
+          if chunk_id != importee_chunk_id {
+            chunk
+              .imports_from_other_chunks
+              .entry(ChunkSymbolExporter::Chunk(importee_chunk_id))
+              .or_default()
+              .push(CrossChunkImportItem {
+                import_ref,
+                export_alias: None,
+                export_alias_is_star: false,
+              });
+            chunk_meta_exports_vec[importee_chunk_id].insert(import_ref);
+          }
+        } else {
+          // The symbol is from an external module.
+          let canonical_ref = self.graph.symbols.canonical_ref_for(import_ref);
+          let symbol = self.graph.symbols.get(canonical_ref);
+          // The module must be an external module.
+          let importee = self.graph.modules[canonical_ref.owner].expect_external();
           chunk
             .imports_from_other_chunks
-            .entry(importee_chunk_id)
+            .entry(ChunkSymbolExporter::ExternalModule(importee.id))
             .or_default()
-            .push(CrossChunkImportItem { import_ref, export_alias: None });
-          chunk_meta_exports_vec[importee_chunk_id].insert(import_ref);
+            .push(CrossChunkImportItem {
+              import_ref,
+              export_alias: symbol.exported_as.clone(),
+              export_alias_is_star: symbol.exported_as_star,
+            });
         }
       }
 
@@ -150,9 +172,9 @@ impl<'a> Bundle<'a> {
       }
     }
     for chunk_id in chunk_graph.chunks.indices() {
-      for (importee_chunk_id, import_items) in
-        &chunk_graph.chunks[chunk_id].imports_from_other_chunks
+      for (symbol_exporter, import_items) in &chunk_graph.chunks[chunk_id].imports_from_other_chunks
       {
+        let ChunkSymbolExporter::Chunk(importee_chunk_id) = symbol_exporter else { return };
         for item in import_items {
           if let Some(alias) =
             chunk_graph.chunks[*importee_chunk_id].exports_to_other_chunks.get(&item.import_ref)

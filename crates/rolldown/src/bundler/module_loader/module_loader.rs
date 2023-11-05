@@ -166,13 +166,12 @@ impl<'a> ModuleLoader<'a> {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         let id = intermediate_modules.push(None);
+        not_visited.insert(id);
         if info.is_external {
           let ext =
             ExternalModule::new(id, ResourceId::new(info.path.clone(), &self.input_options.cwd));
           intermediate_modules[id] = Some(Module::External(ext));
         } else {
-          not_visited.insert(id);
-
           self.remaining += 1;
 
           let module_path = ResourceId::new(info.path.clone(), &self.input_options.cwd);

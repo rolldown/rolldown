@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/external/implicit_import_external
+---
+# Assets
+
+## main.mjs
+
+```js
+import * as node_assert_ns from "node:assert";
+import { default as node_assert_default, equal } from "node:assert";
+
+// main.js
+
+
+
+node_assert_default.equal(1, 1)
+node_assert_ns.equal(1, 1)
+equal(1, 1)
+```

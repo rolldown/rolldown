@@ -2,6 +2,6 @@
 pub enum WrapKind {
   #[default]
   None,
-  CJS,
-  ESM,
+  Cjs,
+  Esm,
 }

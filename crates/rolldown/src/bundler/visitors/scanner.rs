@@ -12,7 +12,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId,
-  ModuleType, NamedImport, ReExport, StmtInfo, StmtInfos, SymbolRef,
+  ModuleType, NamedImport, ReExport, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
@@ -123,10 +123,9 @@ impl<'a> Scanner<'a> {
     self.result.named_imports.insert(
       local,
       NamedImport {
-        imported: imported.clone(),
+        imported: imported.clone().into(),
         imported_as: (self.idx, local).into(),
         record_id,
-        is_imported_star: false,
       },
     );
   }
@@ -135,12 +134,7 @@ impl<'a> Scanner<'a> {
     self.result.import_records[record_id].is_import_namespace = true;
     self.result.named_imports.insert(
       local,
-      NamedImport {
-        imported: Atom::new_inline("#STAR#"),
-        imported_as: (self.idx, local).into(),
-        record_id,
-        is_imported_star: true,
-      },
+      NamedImport { imported: Specifier::Star, imported_as: (self.idx, local).into(), record_id },
     );
   }
 
@@ -163,7 +157,7 @@ impl<'a> Scanner<'a> {
     self.result.named_exports.insert(
       export_name.clone(),
       LocalOrReExport::Re(ReExport {
-        imported: imported.clone(),
+        imported: imported.clone().into(),
         record_id,
         is_imported_star: false,
       }),
@@ -175,7 +169,7 @@ impl<'a> Scanner<'a> {
     self.result.named_exports.insert(
       export_name.clone(),
       LocalOrReExport::Re(ReExport {
-        imported: Atom::new_inline("#STAR#"),
+        imported: Specifier::Star,
         record_id,
         is_imported_star: true,
       }),

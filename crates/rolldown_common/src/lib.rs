@@ -17,7 +17,7 @@ pub use crate::{
   module_path::ResourceId,
   module_type::ModuleType,
   named_export::{LocalExport, LocalOrReExport, ReExport},
-  named_import::NamedImport,
+  named_import::{NamedImport, Specifier},
   raw_path::RawPath,
   resolved_export::ResolvedExport,
   stmt_info::{StmtInfo, StmtInfoId, StmtInfos},

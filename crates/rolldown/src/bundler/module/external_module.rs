@@ -1,6 +1,6 @@
 use index_vec::IndexVec;
 use oxc::span::Atom;
-use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ResourceId, SymbolRef};
+use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ResourceId, Specifier, SymbolRef};
 use rustc_hash::FxHashMap;
 
 use crate::bundler::graph::symbols::Symbols;
@@ -29,35 +29,38 @@ impl ExternalModule {
   }
 
   #[allow(clippy::needless_pass_by_value)]
-  pub fn add_export_symbol(&mut self, symbols: &mut Symbols, exported: Atom, is_star: bool) {
+  pub fn add_export_symbol(&mut self, symbols: &mut Symbols, exported: Specifier) {
     // Don't worry about the user happen to use the same name as the name we generated for `default export` or `namespace export`.
     // Since they have different `SymbolId`, so in de-conflict phase, they will be renamed to different names.
-    let symbol_ref = if is_star && self.namespace_ref.is_none() {
-      self.namespace_ref = Some(symbols.create_symbol(
-        self.id,
-        Atom::from(format!("{}_ns", self.resource_id.generate_unique_name())),
-      ));
-      self.namespace_ref.unwrap()
-    } else {
-      *self.exported_name_to_binding_ref.entry(exported.clone()).or_insert_with_key(|exported| {
-        let declared_name = if exported.as_ref() == "default" {
-          Atom::from(format!("{}_default", self.resource_id.generate_unique_name()))
-        } else {
-          exported.clone()
-        };
-        symbols.create_symbol(self.id, declared_name)
-      })
+    let symbol_ref = match &exported {
+      Specifier::Star => {
+        self.namespace_ref = Some(symbols.create_symbol(
+          self.id,
+          Atom::from(format!("{}_ns", self.resource_id.generate_unique_name())),
+        ));
+        self.namespace_ref.unwrap()
+      }
+      Specifier::Literal(exported) => {
+        *self.exported_name_to_binding_ref.entry(exported.clone()).or_insert_with_key(|exported| {
+          let declared_name = if exported.as_ref() == "default" {
+            Atom::from(format!("{}_default", self.resource_id.generate_unique_name()))
+          } else {
+            exported.clone()
+          };
+          symbols.create_symbol(self.id, declared_name)
+        })
+      }
     };
     let symbol = symbols.get_mut(symbol_ref);
     symbol.exported_as = Some(exported);
-    symbol.exported_as_star = is_star;
   }
 
-  pub fn resolve_export(&self, exported: &Atom, is_star: bool) -> SymbolRef {
-    if is_star {
-      self.namespace_ref.expect("should have namespace ref")
-    } else {
-      *self.exported_name_to_binding_ref.get(exported).expect("should have export symbol")
+  pub fn resolve_export(&self, exported: &Specifier) -> SymbolRef {
+    match exported {
+      Specifier::Star => self.namespace_ref.expect("should have namespace ref"),
+      Specifier::Literal(exported) => {
+        *self.exported_name_to_binding_ref.get(exported).expect("should have export symbol")
+      }
     }
   }
 }

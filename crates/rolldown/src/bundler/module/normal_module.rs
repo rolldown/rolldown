@@ -100,7 +100,6 @@ impl NormalModule {
             symbol_ref.symbol,
             NamedImport {
               imported: re.imported.clone(),
-              is_imported_star: re.is_imported_star,
               imported_as: symbol_ref,
               record_id: re.record_id,
             },

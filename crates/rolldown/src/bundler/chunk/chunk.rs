@@ -1,5 +1,5 @@
 use oxc::span::Atom;
-use rolldown_common::{ModuleId, SymbolRef};
+use rolldown_common::{ModuleId, Specifier, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{Joiner, JoinerOptions};
 
@@ -26,8 +26,7 @@ pub enum ChunkSymbolExporter {
 
 #[derive(Debug)]
 pub struct CrossChunkImportItem {
-  pub export_alias: Option<Atom>,
-  pub export_alias_is_star: bool,
+  pub export_alias: Option<Specifier>,
   pub import_ref: SymbolRef,
 }
 

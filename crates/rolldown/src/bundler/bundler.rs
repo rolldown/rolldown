@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystem;
+use rolldown_fs::FileSystemExt;
 use sugar_path::AsPath;
 
 use super::{
@@ -19,11 +19,11 @@ type BuildResult<T> = Result<T, Vec<BuildError>>;
 pub struct Bundler {
   input_options: NormalizedInputOptions,
   _plugins: Vec<BoxPlugin>,
-  fs: Arc<dyn FileSystem>,
+  fs: Arc<dyn FileSystemExt>,
 }
 
 impl Bundler {
-  pub fn new(input_options: InputOptions, fs: Arc<dyn FileSystem>) -> Self {
+  pub fn new(input_options: InputOptions, fs: Arc<dyn FileSystemExt>) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
     Self { input_options: normalized, _plugins: vec![], fs }
@@ -32,7 +32,7 @@ impl Bundler {
   pub fn with_plugins(
     input_options: InputOptions,
     plugins: Vec<BoxPlugin>,
-    fs: Arc<dyn FileSystem>,
+    fs: Arc<dyn FileSystemExt>,
   ) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
@@ -46,9 +46,9 @@ impl Bundler {
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
 
     let assets =
-      self.build(normalized, Arc::<dyn rolldown_fs::FileSystem>::clone(&self.fs)).await?;
+      self.build(normalized, Arc::<dyn rolldown_fs::FileSystemExt>::clone(&self.fs)).await?;
 
-    self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
+    self.fs.create_dir_all_ext(dir.as_path()).unwrap_or_else(|_| {
       panic!(
         "Could not create directory for output chunks: {:?} \ncwd: {}",
         dir.as_path(),
@@ -59,10 +59,10 @@ impl Bundler {
       let dest = dir.as_path().join(&chunk.file_name);
       if let Some(p) = dest.parent() {
         if !p.exists() {
-          self.fs.create_dir_all(p).unwrap();
+          self.fs.create_dir_all_ext(p).unwrap();
         }
       };
-      self.fs.write(dest.as_path(), chunk.content.as_bytes()).unwrap_or_else(|_| {
+      self.fs.write_ext(dest.as_path(), chunk.content.as_bytes()).unwrap_or_else(|_| {
         panic!("Failed to write file in {:?}", dir.as_path().join(&chunk.file_name))
       });
     }
@@ -75,13 +75,13 @@ impl Bundler {
     output_options: crate::OutputOptions,
   ) -> BuildResult<Vec<Asset>> {
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
-    self.build(normalized, Arc::<dyn rolldown_fs::FileSystem>::clone(&self.fs)).await
+    self.build(normalized, Arc::<dyn rolldown_fs::FileSystemExt>::clone(&self.fs)).await
   }
 
   async fn build(
     &mut self,
     output_options: NormalizedOutputOptions,
-    fs: Arc<dyn FileSystem>,
+    fs: Arc<dyn FileSystemExt>,
   ) -> BuildResult<Vec<Asset>> {
     tracing::trace!("NormalizedInputOptions {:#?}", self.input_options);
     tracing::trace!("NormalizedOutputOptions: {output_options:#?}",);

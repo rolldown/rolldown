@@ -3,7 +3,7 @@ use std::sync::Arc;
 use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
-use rolldown_fs::FileSystemOs;
+use rolldown_fs::{FileSystemExt, FileSystemOs};
 use tracing::instrument;
 
 use crate::{

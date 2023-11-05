@@ -3,7 +3,7 @@ use std::sync::Arc;
 use index_vec::IndexVec;
 use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystem;
+use rolldown_fs::FileSystemExt;
 use rolldown_resolver::Resolver;
 use rolldown_utils::block_on_spawn_all;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -30,14 +30,14 @@ pub struct ModuleLoader<'a> {
   remaining: u32,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
-  fs: Arc<dyn rolldown_fs::FileSystem>,
+  fs: Arc<dyn rolldown_fs::FileSystemExt>,
 }
 
 impl<'a> ModuleLoader<'a> {
   pub fn new(
     input_options: &'a NormalizedInputOptions,
     graph: &'a mut Graph,
-    fs: Arc<dyn FileSystem>,
+    fs: Arc<dyn FileSystemExt>,
   ) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
     Self {
@@ -191,7 +191,7 @@ impl<'a> ModuleLoader<'a> {
             module_path,
             info.module_type,
             self.tx.clone(),
-            Arc::<dyn rolldown_fs::FileSystem>::clone(&self.fs),
+            Arc::<dyn rolldown_fs::FileSystemExt>::clone(&self.fs),
           );
           tokio::spawn(async move { task.run().await });
         }

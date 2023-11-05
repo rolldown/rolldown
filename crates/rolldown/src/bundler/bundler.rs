@@ -1,4 +1,5 @@
 use rolldown_error::BuildError;
+use rolldown_fs::FileSystem;
 use sugar_path::AsPath;
 
 use super::{

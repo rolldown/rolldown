@@ -131,6 +131,7 @@ dependencies = [
  "codspeed-criterion-compat",
  "criterion 0.4.0",
  "rolldown",
+ "rolldown_fs",
  "tokio",
 ]
 
@@ -1514,6 +1515,7 @@ dependencies = [
  "rayon",
  "rolldown_common",
  "rolldown_error",
+ "rolldown_fs",
  "rolldown_oxc",
  "rolldown_resolver",
  "rolldown_testing",
@@ -1552,6 +1554,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_fs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "vfs",
+]
+
+[[package]]
 name = "rolldown_node_binding"
 version = "0.0.1"
 dependencies = [
@@ -1565,6 +1575,7 @@ dependencies = [
  "napi-derive",
  "rolldown",
  "rolldown_error",
+ "rolldown_fs",
  "rolldown_tracing",
  "rustc-hash",
  "scoped-tls",
@@ -2107,6 +2118,12 @@ name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
+
+[[package]]
+name = "vfs"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e4fe92cfc1bad19c19925d5eee4b30584dbbdee4ff10183b261acccbef74e2d"
 
 [[package]]
 name = "walkdir"

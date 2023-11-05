@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use rolldown::{Bundler, InputItem, InputOptions};
+use rolldown_fs::FileSystemOs;
 use sugar_path::SugarPathBuf;
 
 #[tokio::main]
@@ -13,6 +14,7 @@ async fn main() {
       import: "./index.js".to_string(),
     }]),
     cwd: Some(cwd),
+    fs: Box::new(FileSystemOs),
   });
 
   let outputs = bundler.write(Default::default()).await.unwrap();

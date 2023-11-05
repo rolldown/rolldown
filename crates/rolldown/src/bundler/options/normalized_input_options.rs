@@ -1,6 +1,7 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use derivative::Derivative;
+use rolldown_fs::FileSystem;
 
 use super::input_options::InputItem;
 use crate::InputOptions;
@@ -10,6 +11,9 @@ use crate::InputOptions;
 pub struct NormalizedInputOptions {
   pub input: Vec<InputItem>,
   pub cwd: PathBuf,
+
+  #[derivative(Debug = "ignore")]
+  pub fs: Arc<dyn FileSystem>,
 }
 
 impl NormalizedInputOptions {
@@ -17,6 +21,7 @@ impl NormalizedInputOptions {
     Self {
       input: opts.input.unwrap_or_default(),
       cwd: opts.cwd.unwrap_or_else(|| std::env::current_dir().unwrap()),
+      fs: opts.fs,
     }
   }
 }

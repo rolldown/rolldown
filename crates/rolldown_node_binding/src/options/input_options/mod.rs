@@ -1,7 +1,8 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 mod plugin;
 mod plugin_adapter;
 use napi_derive::napi;
+use rolldown_fs::FileSystemOs;
 use serde::Deserialize;
 
 use crate::options::input_options::plugin_adapter::JsAdapterPlugin;
@@ -66,6 +67,7 @@ pub fn resolve_input_options(
           .collect::<Vec<_>>(),
       ),
       cwd: Some(cwd),
+      fs: Arc::new(FileSystemOs),
     },
     plugins,
   ))

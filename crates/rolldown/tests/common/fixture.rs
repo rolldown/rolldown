@@ -2,10 +2,12 @@ use std::{
   borrow::Cow,
   path::{Path, PathBuf},
   process::Command,
+  sync::Arc,
 };
 
 use rolldown::{Asset, Bundler, InputOptions, OutputOptions};
 use rolldown_error::BuildError;
+use rolldown_fs::{FileSystem, FileSystemOs};
 use rolldown_testing::TestConfig;
 
 fn default_test_input_item() -> rolldown_testing::InputItem {
@@ -97,6 +99,7 @@ impl Fixture {
           .collect()
       }),
       cwd: Some(fixture_path.to_path_buf()),
+      fs: Arc::new(FileSystemOs),
     });
 
     if fixture_path.join("dist").is_dir() {

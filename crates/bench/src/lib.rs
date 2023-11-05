@@ -1,6 +1,7 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
+use rolldown_fs::FileSystemOs;
 
 pub async fn run_fixture(fixture_path: PathBuf) {
   let mut bundler = Bundler::new(InputOptions {
@@ -9,6 +10,7 @@ pub async fn run_fixture(fixture_path: PathBuf) {
       import: "./main.js".to_string(),
     }]),
     cwd: Some(fixture_path.clone()),
+    fs: Arc::new(FileSystemOs),
   });
 
   if fixture_path.join("dist").is_dir() {

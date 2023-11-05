@@ -6,8 +6,8 @@ use sugar_path::SugarPathBuf;
 
 #[tokio::main(flavor = "current_thread")]
 #[wasm_bindgen]
-pub async fn greet(name: &str) {
-  let root = PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap());
+pub async fn greet(root: &str) {
+  let root = PathBuf::from(root);
   let cwd = root.join("./examples").into_normalize();
   let mut bundler = Bundler::new(InputOptions {
     input: Some(vec![InputItem {

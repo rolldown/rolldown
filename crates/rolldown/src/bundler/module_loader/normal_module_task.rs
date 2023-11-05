@@ -50,9 +50,6 @@ impl<'task> NormalModuleTask<'task> {
   }
 
   pub async fn read_source(&self) -> anyhow::Result<String> {
-    #[cfg(not(target_arch = "wasm32"))]
-    let source = tokio::fs::read_to_string(self.path.as_ref()).await?;
-    #[cfg(target_arch = "wasm32")]
     let source = std::fs::read_to_string(self.path.as_ref())?;
     Ok(source)
   }

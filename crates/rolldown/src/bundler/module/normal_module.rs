@@ -38,6 +38,8 @@ pub struct NormalModule {
   /// `stmt_infos[0]` represents the namespace binding statement
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
+  /// The key is the `Span` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`
+  /// and `CallExpression`(only when the callee is `require`).
   pub imports: FxHashMap<Span, ImportRecordId>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
@@ -260,7 +262,7 @@ impl NormalModule {
     })
   }
 
-  pub fn get_import_module_by_span(&self, span: Span) -> ModuleId {
+  pub fn importee_id_by_span(&self, span: Span) -> ModuleId {
     let record = &self.import_records[self.imports[&span]];
     record.resolved_module
   }

@@ -182,13 +182,13 @@ impl<'r> AstRenderer<'r> {
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
         self.ctx.remove_node(Span::new(decl.span.start, decl.span.start));
       }
-      _ => {}
+      _ => unreachable!("TypeScript code should be preprocessed"),
     }
     RenderControl::Skip
   }
 
   fn render_require_expr(&mut self, expr: &oxc::ast::ast::CallExpression) {
-    let Module::Normal(importee) = self.get_importee_by_span(expr.span) else {
+    let Module::Normal(importee) = self.ctx.importee_by_span(expr.span) else {
       return;
     };
     let importee_linking_info = &self.ctx.graph.linking_infos[importee.id];
@@ -218,7 +218,7 @@ impl<'r> AstRenderer<'r> {
     };
     match call_exp.callee {
       oxc::ast::ast::Expression::Identifier(ref ident) if ident.name == "require" => {
-        let Module::Normal(importee) = self.get_importee_by_span(call_exp.span) else {
+        let Module::Normal(importee) = self.ctx.importee_by_span(call_exp.span) else {
           return RenderControl::Continue;
         };
         let importee_linking_info = &self.ctx.graph.linking_infos[importee.id];

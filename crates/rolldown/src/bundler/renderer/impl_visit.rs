@@ -47,9 +47,9 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
 
   fn visit_import_declaration(&mut self, decl: &'ast oxc::ast::ast::ImportDeclaration<'ast>) {
     self.remove_node(decl.span);
-    let module_id = self.ctx.module.get_import_module_by_span(decl.span);
-    let importee = &self.ctx.graph.modules[module_id];
-    let importee_linking_info = &self.ctx.graph.linking_infos[module_id];
+    let importee_id = self.ctx.module.importee_id_by_span(decl.span);
+    let importee = &self.ctx.graph.modules[importee_id];
+    let importee_linking_info = &self.ctx.graph.linking_infos[importee_id];
     let Module::Normal(importee) = importee else { return };
 
     if importee.exports_kind == ExportsKind::CommonJs {
@@ -72,7 +72,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     &mut self,
     decl: &'ast oxc::ast::ast::ExportAllDeclaration<'ast>,
   ) {
-    if let Module::Normal(importee) = self.get_importee_by_span(decl.span) {
+    if let Module::Normal(importee) = self.ctx.importee_by_span(decl.span) {
       if importee.exports_kind == ExportsKind::CommonJs {
         // __reExport(a_exports, __toESM(require_c()));
         let namespace_name = &self.ctx.canonical_names[&self.ctx.module.namespace_symbol];
@@ -96,7 +96,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
   fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
     if let oxc::ast::ast::Expression::StringLiteral(str) = &expr.source {
       if let Some(chunk_id) =
-        self.ctx.chunk_graph.module_to_chunk[self.ctx.module.get_import_module_by_span(expr.span)]
+        self.ctx.chunk_graph.module_to_chunk[self.ctx.module.importee_id_by_span(expr.span)]
       {
         let chunk = &self.ctx.chunk_graph.chunks[chunk_id];
         self.overwrite(

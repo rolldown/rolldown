@@ -25,8 +25,8 @@ impl<'r> AstRenderContext<'r> {
     self.canonical_name_for(symbol)
   }
 
-  pub fn get_importee_by_span(&self, span: Span) -> &Module {
-    &self.graph.modules[self.module.get_import_module_by_span(span)]
+  pub fn importee_by_span(&self, span: Span) -> &Module {
+    &self.graph.modules[self.module.importee_id_by_span(span)]
   }
 
   pub fn remove_node(&mut self, span: Span) {
@@ -145,10 +145,6 @@ impl<'r> AstRenderer<'r> {
   pub fn need_to_rename(&self, symbol: SymbolRef) -> Option<&Atom> {
     let canonical_ref = self.ctx.graph.symbols.par_canonical_ref_for(symbol);
     self.ctx.canonical_names.get(&canonical_ref)
-  }
-
-  pub fn get_importee_by_span(&self, span: Span) -> &Module {
-    &self.ctx.graph.modules[self.ctx.module.get_import_module_by_span(span)]
   }
 
   pub fn hoisted_module_declaration(&mut self, decl_start: u32, content: String) {

@@ -26,6 +26,10 @@ pub struct Symbol {
   pub link: Option<SymbolRef>,
   /// The chunk that this symbol is defined in.
   pub chunk_id: Option<ChunkId>,
+  // FIXME: should not place those fields here
+  // Only for external modules
+  pub exported_as: Option<Atom>,
+  pub exported_as_star: bool,
 }
 
 #[derive(Debug, Default)]
@@ -68,7 +72,14 @@ impl Symbols {
         table
           .names
           .into_iter()
-          .map(|name| Symbol { name, link: None, chunk_id: None, namespace_alias: None })
+          .map(|name| Symbol {
+            name,
+            link: None,
+            chunk_id: None,
+            namespace_alias: None,
+            exported_as: None,
+            exported_as_star: false,
+          })
           .collect()
       })
       .collect();
@@ -77,8 +88,14 @@ impl Symbols {
   }
 
   pub fn create_symbol(&mut self, owner: ModuleId, name: Atom) -> SymbolRef {
-    let symbol_id =
-      self.inner[owner].push(Symbol { name, link: None, chunk_id: None, namespace_alias: None });
+    let symbol_id = self.inner[owner].push(Symbol {
+      name,
+      link: None,
+      chunk_id: None,
+      namespace_alias: None,
+      exported_as: None,
+      exported_as_star: false,
+    });
     SymbolRef { owner, symbol: symbol_id }
   }
 

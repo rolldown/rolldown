@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 use std::path::PathBuf;
-use std::sync::Arc;
+
 
 use derivative::Derivative;
-use rolldown_fs::FileSystem;
+
 
 #[derive(Debug)]
 pub struct InputItem {

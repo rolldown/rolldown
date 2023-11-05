@@ -1,7 +1,7 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{path::PathBuf};
 
 use derivative::Derivative;
-use rolldown_fs::FileSystem;
+
 
 use super::input_options::InputItem;
 use crate::InputOptions;

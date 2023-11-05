@@ -17,10 +17,10 @@ fn criterion_benchmark(c: &mut Criterion) {
   group
     .sample_size(20)
     .bench_function("threejs", |b| {
-      b.iter(|| tokio::runtime::Runtime::new().unwrap().block_on(threejs()))
+      b.iter(|| tokio::runtime::Runtime::new().unwrap().block_on(threejs()));
     })
     .bench_function("threejs10x", |b| {
-      b.iter(|| tokio::runtime::Runtime::new().unwrap().block_on(threejs10x()))
+      b.iter(|| tokio::runtime::Runtime::new().unwrap().block_on(threejs10x()));
     });
 }
 

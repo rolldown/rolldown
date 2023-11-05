@@ -1,5 +1,3 @@
 {
-    "recommendations": [
-        "editorconfig.editorconfig"
-    ]
+  "recommendations": ["editorconfig.editorconfig"]
 }

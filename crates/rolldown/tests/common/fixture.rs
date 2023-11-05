@@ -88,7 +88,7 @@ impl Fixture {
     let mut test_config = self.test_config();
 
     if test_config.input.input.is_none() {
-      test_config.input.input = Some(vec![default_test_input_item()])
+      test_config.input.input = Some(vec![default_test_input_item()]);
     }
 
     let mut bundler = Bundler::new(

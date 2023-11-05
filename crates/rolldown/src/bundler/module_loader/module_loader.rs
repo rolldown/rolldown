@@ -191,7 +191,7 @@ impl<'a> ModuleLoader<'a> {
             module_path,
             info.module_type,
             self.tx.clone(),
-            self.fs.clone(),
+            Arc::<dyn rolldown_fs::FileSystem>::clone(&self.fs),
           );
           tokio::spawn(async move { task.run().await });
         }

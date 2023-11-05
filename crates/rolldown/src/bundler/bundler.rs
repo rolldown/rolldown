@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
@@ -45,7 +45,8 @@ impl Bundler {
     });
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
 
-    let assets = self.build(normalized, self.fs.clone()).await?;
+    let assets =
+      self.build(normalized, Arc::<dyn rolldown_fs::FileSystem>::clone(&self.fs)).await?;
 
     self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
@@ -61,7 +62,7 @@ impl Bundler {
           self.fs.create_dir_all(p).unwrap();
         }
       };
-      self.fs::write(dest, &chunk.content).unwrap_or_else(|_| {
+      self.fs.write(dest.as_path(), chunk.content.as_bytes()).unwrap_or_else(|_| {
         panic!("Failed to write file in {:?}", dir.as_path().join(&chunk.file_name))
       });
     }
@@ -74,7 +75,7 @@ impl Bundler {
     output_options: crate::OutputOptions,
   ) -> BuildResult<Vec<Asset>> {
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
-    self.build(normalized, self.fs.clone()).await
+    self.build(normalized, Arc::<dyn rolldown_fs::FileSystem>::clone(&self.fs)).await
   }
 
   async fn build(

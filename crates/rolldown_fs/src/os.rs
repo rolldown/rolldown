@@ -1,8 +1,5 @@
 use crate::FileSystem;
-use std::{
-  fs,
-  path::{Path, PathBuf},
-};
+use std::{fs, path::Path};
 
 /// Operating System
 pub struct FileSystemOs;

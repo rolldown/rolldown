@@ -14,7 +14,7 @@ impl<'r> AstRenderer<'r> {
       self.ctx.remove_node(Span::new(named_decl.span.start, decl.span().start));
       RenderControl::Continue
     } else if named_decl.source.is_some() {
-      match self.ctx.get_importee_by_span(named_decl.span) {
+      match self.ctx.importee_by_span(named_decl.span) {
         Module::Normal(importee) => {
           if importee.exports_kind == ExportsKind::CommonJs {
             self.ctx.hoisted_module_declaration(

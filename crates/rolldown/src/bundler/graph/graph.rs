@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::{linker::Linker, linker_info::LinkingInfoVec, symbols::Symbols};
 use crate::{
   bundler::{
@@ -23,8 +25,9 @@ impl Graph {
   pub async fn generate_module_graph(
     &mut self,
     input_options: &NormalizedInputOptions,
+    fs: Arc<dyn rolldown_fs::FileSystem>,
   ) -> BatchedResult<()> {
-    ModuleLoader::new(input_options, self).fetch_all_modules().await?;
+    ModuleLoader::new(input_options, self, fs).fetch_all_modules().await?;
 
     tracing::trace!("{:#?}", self);
 

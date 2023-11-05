@@ -45,7 +45,7 @@ impl Bundler {
     });
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
 
-    let assets = self.build(normalized).await?;
+    let assets = self.build(normalized, self.fs.clone()).await?;
 
     self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
@@ -61,7 +61,7 @@ impl Bundler {
           self.fs.create_dir_all(p).unwrap();
         }
       };
-      std::fs::write(dest, &chunk.content).unwrap_or_else(|_| {
+      self.fs::write(dest, &chunk.content).unwrap_or_else(|_| {
         panic!("Failed to write file in {:?}", dir.as_path().join(&chunk.file_name))
       });
     }
@@ -74,15 +74,19 @@ impl Bundler {
     output_options: crate::OutputOptions,
   ) -> BuildResult<Vec<Asset>> {
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
-    self.build(normalized).await
+    self.build(normalized, self.fs.clone()).await
   }
 
-  async fn build(&mut self, output_options: NormalizedOutputOptions) -> BuildResult<Vec<Asset>> {
+  async fn build(
+    &mut self,
+    output_options: NormalizedOutputOptions,
+    fs: Arc<dyn FileSystem>,
+  ) -> BuildResult<Vec<Asset>> {
     tracing::trace!("NormalizedInputOptions {:#?}", self.input_options);
     tracing::trace!("NormalizedOutputOptions: {output_options:#?}",);
 
     let mut graph = Graph::default();
-    graph.generate_module_graph(&self.input_options).await?;
+    graph.generate_module_graph(&self.input_options, fs).await?;
 
     let mut bundle = Bundle::new(&mut graph, &output_options);
     let assets = bundle.generate(&self.input_options);

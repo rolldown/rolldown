@@ -49,7 +49,7 @@ impl ExternalModule {
       })
     };
     let symbol = symbols.get_mut(symbol_ref);
-    symbol.exported_as = Some(exported.clone());
+    symbol.exported_as = Some(exported);
     symbol.exported_as_star = is_star;
   }
 

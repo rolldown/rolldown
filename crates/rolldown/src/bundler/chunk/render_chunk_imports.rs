@@ -39,7 +39,6 @@ impl Chunk {
       }
       super::chunk::ChunkSymbolExporter::ExternalModule(exporter_id) => {
         let module = graph.modules[*exporter_id].expect_external();
-        println!("module: {:?}", module);
         let mut import_items = items
           .iter()
           .filter_map(|item| {

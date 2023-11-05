@@ -53,6 +53,8 @@ impl<'a> Bundle<'a> {
     });
   }
 
+  // TODO(hyf0): refactor this function
+  #[allow(clippy::too_many_lines)]
   fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
     // Determine which symbols belong to which chunk
     let mut chunk_meta_imports_vec =
@@ -140,7 +142,7 @@ impl<'a> Bundle<'a> {
               import_ref,
               export_alias: symbol.exported_as.clone(),
               export_alias_is_star: symbol.exported_as_star,
-            })
+            });
         }
       }
 

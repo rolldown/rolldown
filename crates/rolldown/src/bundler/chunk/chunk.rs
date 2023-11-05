@@ -1,4 +1,3 @@
-use either::Either;
 use oxc::span::Atom;
 use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;

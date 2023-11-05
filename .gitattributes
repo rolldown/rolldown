@@ -3,4 +3,7 @@
 # *.snap linguist-language=markdown
 
 # Ignore fxtures
-crates/rolldown/tests/**/*.{js,jsx,ts,tsx}  linguist-detectable=false
+crates/rolldown/tests/**/*.js -linguist-detectable
+crates/rolldown/tests/**/*.jsx -linguist-detectable
+crates/rolldown/tests/**/*.ts -linguist-detectable
+crates/rolldown/tests/**/*.tsx -linguist-detectable

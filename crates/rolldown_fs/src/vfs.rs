@@ -28,4 +28,10 @@ impl FileSystem for FileSystemVfs {
     cur_path.create_dir_all()?;
     Ok(())
   }
+
+  fn write(&self, path: &Path, content: &[u8]) -> anyhow::Result<()> {
+    let cur_path = self.root.join(path.to_string_lossy())?;
+    cur_path.create_file()?.write(content)?;
+    Ok(())
+  }
 }

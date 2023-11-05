@@ -22,6 +22,4 @@ impl From<String> for InputItem {
 pub struct InputOptions {
   pub input: Option<Vec<InputItem>>,
   pub cwd: Option<PathBuf>,
-  #[derivative(Debug = "ignore")]
-  pub fs: Arc<dyn FileSystem>,
 }

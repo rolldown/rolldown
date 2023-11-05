@@ -19,4 +19,8 @@ impl FileSystem for FileSystemOs {
   fn create_dir_all(&self, path: &Path) -> anyhow::Result<()> {
     std::fs::create_dir_all(path).map_err(|err| anyhow::anyhow!(err))
   }
+
+  fn write(&self, path: &Path, content: &[u8]) -> anyhow::Result<()> {
+    std::fs::write(path, content).map_err(|err| anyhow::anyhow!(err))
+  }
 }

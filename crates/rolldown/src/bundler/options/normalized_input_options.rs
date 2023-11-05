@@ -11,9 +11,6 @@ use crate::InputOptions;
 pub struct NormalizedInputOptions {
   pub input: Vec<InputItem>,
   pub cwd: PathBuf,
-
-  #[derivative(Debug = "ignore")]
-  pub fs: Arc<dyn FileSystem>,
 }
 
 impl NormalizedInputOptions {
@@ -21,7 +18,6 @@ impl NormalizedInputOptions {
     Self {
       input: opts.input.unwrap_or_default(),
       cwd: opts.cwd.unwrap_or_else(|| std::env::current_dir().unwrap()),
-      fs: opts.fs,
     }
   }
 }

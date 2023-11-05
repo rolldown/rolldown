@@ -67,7 +67,6 @@ pub fn resolve_input_options(
           .collect::<Vec<_>>(),
       ),
       cwd: Some(cwd),
-      fs: Arc::new(FileSystemOs),
     },
     plugins,
   ))

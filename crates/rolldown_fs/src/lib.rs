@@ -20,4 +20,9 @@ pub trait FileSystem: Send + Sync {
   ///
   /// * See [std::fs::create_dir_all]
   fn create_dir_all(&self, path: &Path) -> anyhow::Result<()>;
+
+  /// # Errors
+  ///
+  /// * See [std::fs::write]
+  fn write(&self, path: &Path, content: &[u8]) -> anyhow::Result<()>;
 }

@@ -1,3 +1,5 @@
+use std::{path::Path, sync::Arc};
+
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use sugar_path::AsPath;
@@ -17,19 +19,24 @@ type BuildResult<T> = Result<T, Vec<BuildError>>;
 pub struct Bundler {
   input_options: NormalizedInputOptions,
   _plugins: Vec<BoxPlugin>,
+  fs: Arc<dyn FileSystem>,
 }
 
 impl Bundler {
-  pub fn new(input_options: InputOptions) -> Self {
+  pub fn new(input_options: InputOptions, fs: Arc<dyn FileSystem>) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self { input_options: normalized, _plugins: vec![] }
+    Self { input_options: normalized, _plugins: vec![], fs }
   }
 
-  pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>) -> Self {
+  pub fn with_plugins(
+    input_options: InputOptions,
+    plugins: Vec<BoxPlugin>,
+    fs: Arc<dyn FileSystem>,
+  ) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self { input_options: normalized, _plugins: plugins }
+    Self { input_options: normalized, _plugins: plugins, fs }
   }
 
   pub async fn write(&mut self, output_options: crate::OutputOptions) -> BuildResult<Vec<Asset>> {
@@ -40,7 +47,7 @@ impl Bundler {
 
     let assets = self.build(normalized).await?;
 
-    std::fs::create_dir_all(&dir).unwrap_or_else(|_| {
+    self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
         "Could not create directory for output chunks: {:?} \ncwd: {}",
         dir.as_path(),
@@ -51,7 +58,7 @@ impl Bundler {
       let dest = dir.as_path().join(&chunk.file_name);
       if let Some(p) = dest.parent() {
         if !p.exists() {
-          std::fs::create_dir_all(p).unwrap();
+          self.fs.create_dir_all(p).unwrap();
         }
       };
       std::fs::write(dest, &chunk.content).unwrap_or_else(|_| {

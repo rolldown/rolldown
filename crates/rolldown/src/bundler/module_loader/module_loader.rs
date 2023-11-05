@@ -5,7 +5,6 @@ use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystemExt;
 use rolldown_resolver::Resolver;
-use rolldown_utils::block_on_spawn_all;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::normal_module_task::NormalModuleTask;
@@ -117,7 +116,7 @@ impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
   pub async fn fetch_all_modules(mut self) -> BatchedResult<()> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
-    let resolved_entries = self.resolve_entries()?;
+    let resolved_entries = self.resolve_entries().await?;
 
     self.ctx.intermediate_modules.reserve(resolved_entries.len() + 1 /* runtime */);
 
@@ -188,11 +187,11 @@ impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
   }
 
   #[allow(clippy::collection_is_never_read)]
-  fn resolve_entries(&mut self) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {
+  async fn resolve_entries(&mut self) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
 
     let resolved_ids =
-      block_on_spawn_all(self.input_options.input.iter().map(|input_item| async move {
+      futures::future::join_all(self.input_options.input.iter().map(|input_item| async move {
         let specifier = &input_item.import;
         let resolve_id = resolve_id(resolver, specifier, None, false).await?;
 
@@ -205,7 +204,8 @@ impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
         }
 
         Ok((input_item.name.clone(), info))
-      }));
+      }))
+      .await;
 
     let mut errors = BatchedErrors::default();
 

@@ -3,7 +3,7 @@ use oxc::{
   semantic::{ReferenceId, SymbolId, SymbolTable},
   span::Atom,
 };
-use rolldown_common::{ModuleId, SymbolRef};
+use rolldown_common::{ModuleId, Specifier, SymbolRef};
 use rolldown_utils::reserved_word::is_reserved_word;
 use rustc_hash::FxHashMap;
 
@@ -28,8 +28,7 @@ pub struct Symbol {
   pub chunk_id: Option<ChunkId>,
   // FIXME: should not place those fields here
   // Only for external modules
-  pub exported_as: Option<Atom>,
-  pub exported_as_star: bool,
+  pub exported_as: Option<Specifier>,
 }
 
 #[derive(Debug, Default)]
@@ -78,7 +77,6 @@ impl Symbols {
             chunk_id: None,
             namespace_alias: None,
             exported_as: None,
-            exported_as_star: false,
           })
           .collect()
       })
@@ -94,7 +92,6 @@ impl Symbols {
       chunk_id: None,
       namespace_alias: None,
       exported_as: None,
-      exported_as_star: false,
     });
     SymbolRef { owner, symbol: symbol_id }
   }

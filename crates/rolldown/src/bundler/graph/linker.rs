@@ -1,6 +1,7 @@
 use index_vec::IndexVec;
 use rolldown_common::{
-  ExportsKind, ImportKind, LocalOrReExport, ModuleId, NamedImport, StmtInfoId, SymbolRef, WrapKind,
+  ExportsKind, ImportKind, LocalOrReExport, ModuleId, NamedImport, Specifier, StmtInfoId,
+  SymbolRef, WrapKind,
 };
 use rustc_hash::FxHashSet;
 
@@ -320,11 +321,7 @@ impl<'graph> Linker<'graph> {
             let import_record = &importer.import_records[info.record_id];
             let importee = &self.graph.modules[import_record.resolved_module];
             if let Module::External(_) = importee {
-              extra_symbols.push((
-                import_record.resolved_module,
-                info.imported.clone(),
-                info.is_imported_star,
-              ));
+              extra_symbols.push((import_record.resolved_module, info.imported.clone()));
             }
           });
           importer.named_exports.iter().for_each(|(_, export)| match &export {
@@ -333,23 +330,19 @@ impl<'graph> Linker<'graph> {
               let import_record = &importer.import_records[re.record_id];
               let importee = &self.graph.modules[import_record.resolved_module];
               if let Module::External(_) = importee {
-                extra_symbols.push((
-                  import_record.resolved_module,
-                  re.imported.clone(),
-                  re.is_imported_star,
-                ));
+                extra_symbols.push((import_record.resolved_module, re.imported.clone()));
               }
             }
           });
         }
         Module::External(_) => {}
       }
-      extra_symbols.into_iter().for_each(|(importee, imported, is_imported_star)| {
+      extra_symbols.into_iter().for_each(|(importee, imported)| {
         let importee = &mut self.graph.modules[importee];
         match importee {
           Module::Normal(_) => {}
           Module::External(importee) => {
-            importee.add_export_symbol(symbols, imported, is_imported_star);
+            importee.add_export_symbol(symbols, imported);
           }
         }
       });
@@ -400,20 +393,21 @@ impl<'graph> Linker<'graph> {
                   MatchImportKind::Found(symbol_ref) => {
                     symbols.union(info.imported_as, symbol_ref);
                   }
-                  MatchImportKind::Namespace(symbol_ref) => {
-                    if info.is_imported_star {
-                      symbols.union(info.imported_as, symbol_ref);
-                    } else {
+                  MatchImportKind::Namespace(ns_ref) => match &info.imported {
+                    Specifier::Star => {
+                      symbols.union(info.imported_as, ns_ref);
+                    }
+                    Specifier::Literal(imported) => {
                       symbols.get_mut(info.imported_as).namespace_alias = Some(NamespaceAlias {
-                        property_name: info.imported.clone(),
-                        namespace_ref: symbol_ref,
+                        property_name: imported.clone(),
+                        namespace_ref: ns_ref,
                       });
                     }
-                  }
+                  },
                 }
               }
               Module::External(importee) => {
-                let resolved_ref = importee.resolve_export(&info.imported, info.is_imported_star);
+                let resolved_ref = importee.resolve_export(&info.imported);
                 symbols.union(info.imported_as, resolved_ref);
               }
             }
@@ -502,32 +496,36 @@ impl<'graph> Linker<'graph> {
       );
     }
 
-    if info.is_imported_star {
-      return MatchImportKind::Found(importee.namespace_symbol);
-    }
-
-    if let Some(resolved_export) = importee_linking_info.resolved_exports.get(&info.imported) {
-      if let Some(potentially_ambiguous_export) = &resolved_export.potentially_ambiguous_symbol_refs
-      {
-        return MatchImportKind::PotentiallyAmbiguous(
-          resolved_export.symbol_ref,
-          potentially_ambiguous_export.clone(),
-        );
+    match &info.imported {
+      Specifier::Star => {
+        return MatchImportKind::Found(importee.namespace_symbol);
       }
-      if let Some(id) = resolved_export.export_from {
-        let module = &modules[id];
-        match module {
-          Module::Normal(module) => {
-            if module.exports_kind == ExportsKind::CommonJs {
-              return MatchImportKind::Namespace(
-                importer_linking_info.local_symbol_for_import_cjs[&module.id],
-              );
+      Specifier::Literal(imported) => {
+        if let Some(resolved_export) = importee_linking_info.resolved_exports.get(imported) {
+          if let Some(potentially_ambiguous_export) =
+            &resolved_export.potentially_ambiguous_symbol_refs
+          {
+            return MatchImportKind::PotentiallyAmbiguous(
+              resolved_export.symbol_ref,
+              potentially_ambiguous_export.clone(),
+            );
+          }
+          if let Some(id) = resolved_export.export_from {
+            let module = &modules[id];
+            match module {
+              Module::Normal(module) => {
+                if module.exports_kind == ExportsKind::CommonJs {
+                  return MatchImportKind::Namespace(
+                    importer_linking_info.local_symbol_for_import_cjs[&module.id],
+                  );
+                }
+              }
+              Module::External(_) => {}
             }
           }
-          Module::External(_) => {}
+          return MatchImportKind::Found(resolved_export.symbol_ref);
         }
       }
-      return MatchImportKind::Found(resolved_export.symbol_ref);
     }
 
     // If the module has dynamic exports, the unknown export name will be resolved at runtime.

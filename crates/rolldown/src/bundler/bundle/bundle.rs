@@ -121,11 +121,7 @@ impl<'a> Bundle<'a> {
               .imports_from_other_chunks
               .entry(ChunkSymbolExporter::Chunk(importee_chunk_id))
               .or_default()
-              .push(CrossChunkImportItem {
-                import_ref,
-                export_alias: None,
-                export_alias_is_star: false,
-              });
+              .push(CrossChunkImportItem { import_ref, export_alias: None });
             chunk_meta_exports_vec[importee_chunk_id].insert(import_ref);
           }
         } else {
@@ -138,11 +134,7 @@ impl<'a> Bundle<'a> {
             .imports_from_other_chunks
             .entry(ChunkSymbolExporter::ExternalModule(importee.id))
             .or_default()
-            .push(CrossChunkImportItem {
-              import_ref,
-              export_alias: symbol.exported_as.clone(),
-              export_alias_is_star: symbol.exported_as_star,
-            });
+            .push(CrossChunkImportItem { import_ref, export_alias: symbol.exported_as.clone() });
         }
       }
 
@@ -182,7 +174,7 @@ impl<'a> Bundle<'a> {
             // safety: no other mutable reference to `item` exists
             unsafe {
               let item = (item as *const CrossChunkImportItem).cast_mut();
-              (*item).export_alias = Some(alias.clone());
+              (*item).export_alias = Some(alias.clone().into());
             }
           }
         }

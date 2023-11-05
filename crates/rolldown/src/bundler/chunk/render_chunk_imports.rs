@@ -1,3 +1,4 @@
+use rolldown_common::Specifier;
 use string_wizard::MagicString;
 
 use crate::bundler::{chunk_graph::ChunkGraph, graph::graph::Graph};
@@ -22,7 +23,9 @@ impl Chunk {
               .get(&graph.symbols.par_canonical_ref_for(item.import_ref))
               .cloned()
               .unwrap();
-            let alias = item.export_alias.as_ref().unwrap();
+            let Specifier::Literal(alias) = item.export_alias.as_ref().unwrap() else {
+              panic!("should not be star import from other chunks")
+            };
             if imported == alias {
               format!("{imported}")
             } else {
@@ -43,16 +46,20 @@ impl Chunk {
           .iter()
           .filter_map(|item| {
             let alias = graph.symbols.get_original_name(item.import_ref);
-            if item.export_alias_is_star {
-              s.append(format!("import * as {alias} from \"{}\";\n", module.resource_id.as_ref()));
-              return None;
+            match item.export_alias.as_ref().unwrap() {
+              Specifier::Star => {
+                s.append(format!(
+                  "import * as {alias} from \"{}\";\n",
+                  module.resource_id.as_ref()
+                ));
+                return None;
+              }
+              Specifier::Literal(imported) => Some(if imported == alias {
+                format!("{imported}")
+              } else {
+                format!("{imported} as {alias}")
+              }),
             }
-            let imported = item.export_alias.as_ref().unwrap();
-            Some(if imported == alias {
-              format!("{imported}")
-            } else {
-              format!("{imported} as {alias}")
-            })
           })
           .collect::<Vec<_>>();
         import_items.sort();

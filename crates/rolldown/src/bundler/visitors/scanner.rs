@@ -7,7 +7,7 @@ use oxc::{
     },
     VisitMut,
   },
-  semantic::{ScopeTree, SymbolFlags, SymbolId, SymbolTable},
+  semantic::SymbolId,
   span::{Atom, Span},
 };
 use rolldown_common::{
@@ -16,6 +16,8 @@ use rolldown_common::{
 };
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
+
+use crate::bundler::{graph::symbols::AstSymbol, utils::ast_scope::AstScope};
 
 #[derive(Debug, Default)]
 pub struct ScanResult {
@@ -33,8 +35,8 @@ pub struct ScanResult {
 pub struct Scanner<'a> {
   pub idx: ModuleId,
   pub module_type: ModuleType,
-  pub scope: &'a mut ScopeTree,
-  pub symbol_table: &'a mut SymbolTable,
+  pub scope: &'a AstScope,
+  pub symbol_table: &'a mut AstSymbol,
   pub current_stmt_info: StmtInfo,
   pub result: ScanResult,
   pub esm_export_keyword: Option<Span>,
@@ -45,23 +47,15 @@ pub struct Scanner<'a> {
 impl<'a> Scanner<'a> {
   pub fn new(
     idx: ModuleId,
-    scope: &'a mut ScopeTree,
-    symbol_table: &'a mut SymbolTable,
+    scope: &'a AstScope,
+    symbol_table: &'a mut AstSymbol,
     unique_name: String,
     module_type: ModuleType,
   ) -> Self {
     let mut result = ScanResult::default();
     let name = format!("{unique_name}_ns");
-    let namespace_ref: SymbolRef = (
-      idx,
-      symbol_table.create_symbol(
-        Span::default(),
-        name.into(),
-        SymbolFlags::None,
-        scope.root_scope_id(),
-      ),
-    )
-      .into();
+    let namespace_ref: SymbolRef =
+      (idx, symbol_table.create_symbol(name.into(), scope.root_scope_id())).into();
     result.unique_name = unique_name;
     // The first StmtInfo is to represent the namespace binding.
     result
@@ -84,6 +78,10 @@ impl<'a> Scanner<'a> {
     if self.esm_export_keyword.is_none() {
       self.esm_export_keyword = Some(span);
     }
+  }
+
+  fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
+    self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
   }
 
   fn set_cjs_export_keyword(&mut self, span: Span) {
@@ -223,8 +221,7 @@ impl<'a> Scanner<'a> {
   // If the reference is a global variable, `None` will be returned.
   fn resolve_symbol_from_reference(&self, id_ref: &IdentifierReference) -> Option<SymbolId> {
     let ref_id = id_ref.reference_id.get().expect("must have reference id");
-    let refer = self.symbol_table.get_reference(ref_id);
-    refer.symbol_id()
+    self.scope.symbol_id_for(ref_id)
   }
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     let local = match &decl.declaration {
@@ -246,9 +243,7 @@ impl<'a> Scanner<'a> {
       // a facade Symbol to represent it.
       // Notice: Patterns don't include `export default [identifier]`
       let sym_id = self.symbol_table.create_symbol(
-        Span::default(),
         Atom::from(format!("{}_default", self.result.unique_name)),
-        SymbolFlags::None,
         self.scope.root_scope_id(),
       );
       self.add_declared_id(sym_id);
@@ -297,6 +292,10 @@ impl<'a> Scanner<'a> {
   pub fn add_referenced_symbol(&mut self, id: SymbolId) {
     self.current_stmt_info.referenced_symbols.push((self.idx, id).into());
   }
+
+  fn is_top_level(&self, symbol_id: SymbolId) -> bool {
+    self.scope.root_scope_id() == self.symbol_table.scope_id_for(symbol_id)
+  }
 }
 
 impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
@@ -311,7 +310,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
 
   fn visit_binding_identifier(&mut self, ident: &'p mut oxc::ast::ast::BindingIdentifier) {
     let symbol_id = ident.symbol_id.get().unwrap();
-    if self.scope.root_scope_id() == self.symbol_table.get_scope_id(symbol_id) {
+    if self.is_top_level(symbol_id) {
       self.add_declared_id(symbol_id);
     }
   }
@@ -319,9 +318,7 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   fn visit_identifier_reference(&mut self, ident: &'p mut IdentifierReference) {
     let symbol_id = self.resolve_symbol_from_reference(ident);
     match symbol_id {
-      Some(symbol_id)
-        if self.scope.root_scope_id() == self.symbol_table.get_scope_id(symbol_id) =>
-      {
+      Some(symbol_id) if self.is_top_level(symbol_id) => {
         self.add_referenced_symbol(symbol_id);
       }
       _ => {}
@@ -350,20 +347,19 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
   }
 
   fn visit_call_expression(&mut self, expr: &'p mut oxc::ast::ast::CallExpression<'ast>) {
-    if let oxc::ast::ast::Expression::Identifier(ident) = &mut expr.callee {
-      if ident.name == "require" {
-        if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
-          if refs.iter().any(|r| (*r).eq(&ident.reference_id.get().unwrap())) {
-            if let Some(oxc::ast::ast::Argument::Expression(
-              oxc::ast::ast::Expression::StringLiteral(request),
-            )) = &expr.arguments.get(0)
-            {
-              let id = self.add_import_record(&request.value, ImportKind::Require);
-              self.result.imports.insert(expr.span, id);
-            }
-          }
+    match &expr.callee {
+      oxc::ast::ast::Expression::Identifier(ident)
+        if ident.name == "require" && self.is_unresolved_reference(ident) =>
+      {
+        if let Some(oxc::ast::ast::Argument::Expression(
+          oxc::ast::ast::Expression::StringLiteral(request),
+        )) = &expr.arguments.get(0)
+        {
+          let id = self.add_import_record(&request.value, ImportKind::Require);
+          self.result.imports.insert(expr.span, id);
         }
       }
+      _ => {}
     }
     for arg in expr.arguments.iter_mut() {
       self.visit_argument(arg);

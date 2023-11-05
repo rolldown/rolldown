@@ -2,11 +2,7 @@ use std::sync::Arc;
 
 use futures::future::join_all;
 use index_vec::IndexVec;
-use oxc::{
-  ast::VisitMut,
-  semantic::{ScopeTree, SymbolTable},
-  span::SourceType,
-};
+use oxc::{ast::VisitMut, span::SourceType};
 use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
@@ -15,10 +11,13 @@ use rolldown_resolver::Resolver;
 use super::Msg;
 use crate::{
   bundler::{
-    graph::symbols::SymbolMap,
+    graph::symbols::AstSymbol,
     module::normal_module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
-    utils::resolve_id::{resolve_id, ResolvedRequestInfo},
+    utils::{
+      ast_scope::AstScope,
+      resolve_id::{resolve_id, ResolvedRequestInfo},
+    },
     visitors::scanner::{self, ScanResult},
   },
   SharedResolver,
@@ -66,8 +65,6 @@ impl NormalModuleTask {
 
     let res = self.resolve_dependencies(&scan_result.import_records).await?;
 
-    let symbol_map = SymbolMap::from_symbol_table(symbol);
-
     let ScanResult {
       named_imports,
       named_exports,
@@ -103,34 +100,33 @@ impl NormalModuleTask {
         module_id: self.module_id,
         errors: self.errors,
         warnings: self.warnings,
-        symbol_map,
+        ast_symbol: symbol,
         builder,
       }))
       .unwrap();
     Ok(())
   }
 
-  fn make_ast(
-    &self,
-    source: String,
-  ) -> (OxcProgram, ScopeTree, ScanResult, SymbolTable, SymbolRef) {
+  fn make_ast(&self, source: String) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
     let source_type = SourceType::from_path(self.path.as_ref()).unwrap();
     let mut program = OxcCompiler::parse(source, source_type);
 
     let semantic = program.make_semantic(source_type);
-    let (mut symbol_table, mut scope) = semantic.into_symbol_table_and_scope_tree();
+    let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
+    let ast_scope = AstScope::new(scope, std::mem::take(&mut symbol_table.references));
+    let mut symbol_for_module = AstSymbol::from_symbol_table(symbol_table);
     let unique_name = self.path.generate_unique_name();
     let mut scanner = scanner::Scanner::new(
       self.module_id,
-      &mut scope,
-      &mut symbol_table,
+      &ast_scope,
+      &mut symbol_for_module,
       unique_name,
       self.module_type,
     );
     scanner.visit_program(program.program_mut());
     let scan_result = scanner.result;
     let namespace_symbol = scanner.namespace_symbol;
-    (program, scope, scan_result, symbol_table, namespace_symbol)
+    (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }
 
   #[allow(clippy::option_if_let_else)]

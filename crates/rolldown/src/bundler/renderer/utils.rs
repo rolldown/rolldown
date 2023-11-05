@@ -61,6 +61,13 @@ impl<'r> AstRenderContext<'r> {
 }
 
 impl<'r> AstRenderer<'r> {
+  pub fn is_global_require(&self, callee: &oxc::ast::ast::Expression<'_>) -> bool {
+    matches!(callee, oxc::ast::ast::Expression::Identifier(ident) if
+      ident.name == "require"
+      && self.ctx.module.scope.is_unresolved(ident.reference_id.get().unwrap())
+    )
+  }
+
   pub fn overwrite(&mut self, start: u32, end: u32, content: String) {
     self.ctx.source.update_with(
       start,

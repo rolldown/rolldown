@@ -1,10 +1,9 @@
 use index_vec::IndexVec;
 use oxc::{
-  semantic::{ReferenceId, SymbolId, SymbolTable},
+  semantic::{ScopeId, SymbolId, SymbolTable},
   span::Atom,
 };
 use rolldown_common::{ModuleId, Specifier, SymbolRef};
-use rolldown_utils::reserved_word::is_reserved_word;
 use rustc_hash::FxHashMap;
 
 use crate::bundler::chunk::ChunkId;
@@ -32,25 +31,24 @@ pub struct Symbol {
 }
 
 #[derive(Debug, Default)]
-pub struct SymbolMap {
+pub struct AstSymbol {
   pub names: IndexVec<SymbolId, Atom>,
-  pub references: IndexVec<ReferenceId, Option<SymbolId>>,
+  pub scope_ids: IndexVec<SymbolId, ScopeId>,
 }
 
-impl SymbolMap {
+impl AstSymbol {
   pub fn from_symbol_table(table: SymbolTable) -> Self {
-    Self {
-      names: table.names,
-      references: table.references.iter().map(oxc::semantic::Reference::symbol_id).collect(),
-    }
+    debug_assert!(table.references.is_empty());
+    Self { names: table.names, scope_ids: table.scope_ids }
   }
 
-  pub fn _create_symbol(&mut self, name: Atom) -> SymbolId {
-    if is_reserved_word(&name) {
-      self.names.push(format!("_{name}").into())
-    } else {
-      self.names.push(name)
-    }
+  pub fn create_symbol(&mut self, name: Atom, scope_id: ScopeId) -> SymbolId {
+    self.scope_ids.push(scope_id);
+    self.names.push(name)
+  }
+
+  pub fn scope_id_for(&self, symbol_id: SymbolId) -> ScopeId {
+    self.scope_ids[symbol_id]
   }
 }
 
@@ -58,16 +56,13 @@ impl SymbolMap {
 #[derive(Debug, Default)]
 pub struct Symbols {
   inner: IndexVec<ModuleId, IndexVec<SymbolId, Symbol>>,
-  pub(crate) references_table: IndexVec<ModuleId, IndexVec<ReferenceId, Option<SymbolId>>>,
 }
 
 impl Symbols {
-  pub fn new(tables: IndexVec<ModuleId, SymbolMap>) -> Self {
-    let mut reference_table = IndexVec::with_capacity(tables.len());
+  pub fn new(tables: IndexVec<ModuleId, AstSymbol>) -> Self {
     let inner = tables
       .into_iter()
       .map(|table| {
-        reference_table.push(table.references);
         table
           .names
           .into_iter()
@@ -82,7 +77,7 @@ impl Symbols {
       })
       .collect();
 
-    Self { inner, references_table: reference_table }
+    Self { inner }
   }
 
   pub fn create_symbol(&mut self, owner: ModuleId, name: Atom) -> SymbolRef {

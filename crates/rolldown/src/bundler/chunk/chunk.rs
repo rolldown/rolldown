@@ -27,7 +27,6 @@ pub enum ChunkSymbolExporter {
 
 #[derive(Debug)]
 pub struct CrossChunkImportItem {
-  // If the `CrossChunkImportItem` is for external module, the `export_alias ` is expected to be `None`.
   pub export_alias: Option<Atom>,
   pub export_alias_is_star: bool,
   pub import_ref: SymbolRef,

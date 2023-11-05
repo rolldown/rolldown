@@ -1,6 +1,6 @@
 use index_vec::IndexVec;
 use oxc::{
-  semantic::{ScopeTree, SymbolId},
+  semantic::SymbolId,
   span::{Atom, Span},
 };
 use rolldown_common::{
@@ -9,6 +9,8 @@ use rolldown_common::{
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::FxHashMap;
+
+use crate::bundler::utils::ast_scope::AstScope;
 
 use super::NormalModule;
 
@@ -24,7 +26,7 @@ pub struct NormalModuleBuilder {
   pub import_records: Option<IndexVec<ImportRecordId, ImportRecord>>,
   pub imports: Option<FxHashMap<Span, ImportRecordId>>,
   pub star_exports: Option<Vec<ImportRecordId>>,
-  pub scope: Option<ScopeTree>,
+  pub scope: Option<AstScope>,
   pub default_export_symbol: Option<SymbolId>,
   pub namespace_symbol: Option<SymbolRef>,
   pub exports_kind: Option<ExportsKind>,

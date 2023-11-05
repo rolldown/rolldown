@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use index_vec::IndexVec;
 use oxc::{
-  semantic::{ScopeTree, SymbolId},
+  semantic::SymbolId,
   span::{Atom, Span},
 };
 use rolldown_common::{
@@ -19,6 +19,7 @@ use crate::bundler::{
     symbols::Symbols,
   },
   renderer::{AstRenderContext, AstRenderer, RenderKind},
+  utils::ast_scope::AstScope,
 };
 
 use super::{Module, ModuleRenderContext, ModuleVec};
@@ -44,7 +45,7 @@ pub struct NormalModule {
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
   pub exports_kind: ExportsKind,
-  pub scope: ScopeTree,
+  pub scope: AstScope,
   pub default_export_symbol: Option<SymbolId>,
 }
 

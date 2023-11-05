@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/require/create_require
+---
+# Assets
+
+## main.mjs
+
+```js
+import { createRequire } from "node:module";
+
+// main.js
+
+
+const require = createRequire(import.meta.url)
+
+const assert = require('node:assert')
+
+assert.equal(1, 1)
+```

@@ -12,7 +12,7 @@ use super::runtime_normal_module_task::RuntimeNormalModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
 use crate::bundler::graph::graph::Graph;
-use crate::bundler::graph::symbols::{SymbolMap, Symbols};
+use crate::bundler::graph::symbols::{AstSymbol, Symbols};
 use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::Module;
 use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
@@ -61,7 +61,7 @@ impl<'a> ModuleLoader<'a> {
 
     let mut dynamic_entries = FxHashSet::default();
 
-    let mut tables: IndexVec<ModuleId, SymbolMap> = IndexVec::default();
+    let mut tables: IndexVec<ModuleId, AstSymbol> = IndexVec::default();
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;
@@ -70,7 +70,7 @@ impl<'a> ModuleLoader<'a> {
         Msg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
             module_id,
-            symbol_map: symbol_table,
+            ast_symbol: symbol_table,
             resolved_deps,
             mut builder,
             ..
@@ -83,7 +83,7 @@ impl<'a> ModuleLoader<'a> {
             let import_record = &mut import_records[import_record_idx];
             import_record.resolved_module = id;
             while tables.len() <= id.raw() as usize {
-              tables.push(SymbolMap::default());
+              tables.push(AstSymbol::default());
             }
             // dynamic import as extra entries if enable code splitting
             if import_record.kind == ImportKind::DynamicImport {
@@ -92,17 +92,17 @@ impl<'a> ModuleLoader<'a> {
           });
 
           while tables.len() <= task_result.module_id.raw() as usize {
-            tables.push(SymbolMap::default());
+            tables.push(AstSymbol::default());
           }
           intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
 
           tables[task_result.module_id] = symbol_table;
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let NormalModuleTaskResult { module_id, symbol_map: symbol_table, builder, .. } =
+          let NormalModuleTaskResult { module_id, ast_symbol: symbol_table, builder, .. } =
             task_result;
           while tables.len() <= task_result.module_id.raw() as usize {
-            tables.push(SymbolMap::default());
+            tables.push(AstSymbol::default());
           }
           let runtime_normal_module = builder.build();
           self.graph.runtime.init_symbols(&runtime_normal_module);

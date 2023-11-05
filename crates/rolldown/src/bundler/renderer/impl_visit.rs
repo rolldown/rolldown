@@ -14,14 +14,9 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
   }
 
   fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
-    match &expr.callee {
-      oxc::ast::ast::Expression::Identifier(callee_ident)
-        if callee_ident.name == "require" || callee_ident.reference_id.get().is_none() =>
-      {
-        self.render_require_expr(expr);
-        return;
-      }
-      _ => {}
+    if self.is_global_require(&expr.callee) {
+      self.render_require_expr(expr);
+      return;
     }
 
     // visit children

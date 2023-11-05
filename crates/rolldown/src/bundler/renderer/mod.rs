@@ -216,21 +216,16 @@ impl<'r> AstRenderer<'r> {
     let oxc::ast::ast::Expression::CallExpression(call_exp) = &expr.expression else {
       return RenderControl::Continue;
     };
-    match call_exp.callee {
-      oxc::ast::ast::Expression::Identifier(ref ident) if ident.name == "require" => {
-        let Module::Normal(importee) = self.ctx.importee_by_span(call_exp.span) else {
-          return RenderControl::Continue;
-        };
-        let importee_linking_info = &self.ctx.graph.linking_infos[importee.id];
-        let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_ref.unwrap());
-        self.ctx.source.update(
-          call_exp.span.start,
-          call_exp.span.end,
-          format!("{wrap_ref_name}()"),
-        );
-        RenderControl::Skip
-      }
-      _ => RenderControl::Continue,
+    if self.is_global_require(&call_exp.callee) {
+      let Module::Normal(importee) = self.ctx.importee_by_span(call_exp.span) else {
+        return RenderControl::Continue;
+      };
+      let importee_linking_info = &self.ctx.graph.linking_infos[importee.id];
+      let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_ref.unwrap());
+      self.ctx.source.update(call_exp.span.start, call_exp.span.end, format!("{wrap_ref_name}()"));
+      RenderControl::Skip
+    } else {
+      RenderControl::Continue
     }
   }
 
@@ -248,8 +243,7 @@ impl<'r> AstRenderer<'r> {
     ident: &'_ oxc::ast::ast::IdentifierReference,
     is_callee: bool,
   ) {
-    let Some(symbol_id) = self.ctx.graph.symbols.references_table[self.ctx.module.id]
-      [ident.reference_id.get().unwrap()]
+    let Some(symbol_id) = self.ctx.module.scope.symbol_id_for(ident.reference_id.get().unwrap())
     else {
       // This is global identifier references, eg `console.log`. We don't need to rewrite it.
       return;

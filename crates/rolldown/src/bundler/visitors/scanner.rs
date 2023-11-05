@@ -156,11 +156,7 @@ impl<'a> Scanner<'a> {
   fn add_re_export(&mut self, export_name: &Atom, imported: &Atom, record_id: ImportRecordId) {
     self.result.named_exports.insert(
       export_name.clone(),
-      LocalOrReExport::Re(ReExport {
-        imported: imported.clone().into(),
-        record_id,
-        is_imported_star: false,
-      }),
+      LocalOrReExport::Re(ReExport { imported: imported.clone().into(), record_id }),
     );
   }
 
@@ -168,11 +164,7 @@ impl<'a> Scanner<'a> {
     self.result.import_records[record_id].is_import_namespace = true;
     self.result.named_exports.insert(
       export_name.clone(),
-      LocalOrReExport::Re(ReExport {
-        imported: Specifier::Star,
-        record_id,
-        is_imported_star: true,
-      }),
+      LocalOrReExport::Re(ReExport { imported: Specifier::Star, record_id }),
     );
   }
 

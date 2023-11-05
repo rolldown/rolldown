@@ -23,11 +23,9 @@ impl From<LocalExport> for LocalOrReExport {
 #[derive(Debug)]
 pub struct ReExport {
   /// For case A, the `imported` is `foo`.
-  /// For case B, the `imported` is meaningless.
+  /// For case B, the `imported` is `Specifier::Star`.
   /// For case C, the `imported` is `foo`.
   pub imported: Specifier,
-  /// This will only be `true` for case B.
-  pub is_imported_star: bool,
   pub record_id: ImportRecordId,
 }
 

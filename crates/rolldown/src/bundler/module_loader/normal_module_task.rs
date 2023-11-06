@@ -5,57 +5,47 @@ use index_vec::IndexVec;
 use oxc::{ast::Visit, span::SourceType};
 use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystemExt;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
-use super::Msg;
-use crate::{
-  bundler::{
-    module::normal_module_builder::NormalModuleBuilder,
-    module_loader::NormalModuleTaskResult,
-    utils::{
-      ast_scope::AstScope,
-      ast_symbol::AstSymbol,
-      resolve_id::{resolve_id, ResolvedRequestInfo},
-    },
-    visitors::scanner::{self, ScanResult},
+use super::{module_task_context::ModuleTaskContext, Msg};
+use crate::bundler::{
+  module::normal_module_builder::NormalModuleBuilder,
+  module_loader::NormalModuleTaskResult,
+  utils::{
+    ast_scope::AstScope,
+    ast_symbol::AstSymbol,
+    resolve_id::{resolve_id, ResolvedRequestInfo},
   },
-  SharedResolver,
+  visitors::scanner::{self, ScanResult},
 };
-pub struct NormalModuleTask<T> {
+pub struct NormalModuleTask<'task> {
+  ctx: &'task ModuleTaskContext<'task>,
   module_id: ModuleId,
   path: ResourceId,
   module_type: ModuleType,
-  tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   errors: Vec<BuildError>,
   warnings: Vec<BuildError>,
-  resolver: SharedResolver,
   is_entry: bool,
-  fs: Arc<T>,
 }
 
-impl<T: FileSystemExt> NormalModuleTask<T> {
+impl<'task> NormalModuleTask<'task> {
   pub fn new(
+    ctx: &'task ModuleTaskContext<'task>,
     id: ModuleId,
     is_entry: bool,
-    resolver: SharedResolver,
     path: ResourceId,
     module_type: ModuleType,
-    tx: tokio::sync::mpsc::UnboundedSender<Msg>,
-    fs: Arc<T>,
   ) -> Self {
     Self {
+      ctx,
       module_id: id,
       is_entry,
-      resolver,
       path,
       module_type,
-      tx,
       errors: Vec::default(),
       warnings: Vec::default(),
-      fs,
     }
   }
 
@@ -63,7 +53,7 @@ impl<T: FileSystemExt> NormalModuleTask<T> {
     let mut builder = NormalModuleBuilder::default();
     tracing::trace!("process {:?}", self.path);
     // load
-    let source = self.fs.read_to_string(self.path.as_path())?;
+    let source = self.ctx.fs.read_to_string(self.path.as_path())?;
     // TODO: transform
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(source);
@@ -99,6 +89,7 @@ impl<T: FileSystemExt> NormalModuleTask<T> {
     builder.module_type = self.module_type;
     builder.is_entry = self.is_entry;
     self
+      .ctx
       .tx
       .send(Msg::NormalModuleDone(NormalModuleTaskResult {
         resolved_deps: res,
@@ -194,7 +185,8 @@ impl<T: FileSystemExt> NormalModuleTask<T> {
   ) -> anyhow::Result<Vec<(ImportRecordId, ResolvedRequestInfo)>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
-      let resolver = Arc::clone(&self.resolver);
+      // FIXME(hyf0): should not use `Arc<Resolver>` here
+      let resolver = Arc::clone(self.ctx.resolver);
       let importer = self.path.clone();
       // let is_external = self.is_external.clone();
       // let on_warn = self.input_options.on_warn.clone();

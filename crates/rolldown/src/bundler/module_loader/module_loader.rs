@@ -15,6 +15,7 @@ use super::Msg;
 use crate::bundler::graph::graph::Graph;
 use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::Module;
+use crate::bundler::module_loader::module_task_context::ModuleTaskContext;
 use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
 use crate::bundler::runtime::RUNTIME_PATH;
 use crate::bundler::utils::ast_symbol::AstSymbol;
@@ -23,14 +24,80 @@ use crate::error::{BatchedErrors, BatchedResult};
 use crate::SharedResolver;
 
 pub struct ModuleLoader<'a, T> {
+  ctx: ModuleLoaderContext,
   input_options: &'a NormalizedInputOptions,
   graph: &'a mut Graph,
   resolver: SharedResolver,
-  visited: FxHashMap<RawPath, ModuleId>,
-  remaining: u32,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
   fs: Arc<T>,
+}
+
+#[derive(Debug, Default)]
+pub struct ModuleLoaderContext {
+  visited: FxHashMap<RawPath, ModuleId>,
+  remaining: u32,
+  intermediate_modules: IndexVec<ModuleId, Option<Module>>,
+}
+
+impl ModuleLoaderContext {
+  fn try_spawn_runtime_normal_module_task(&mut self, task_context: &ModuleTaskContext) -> ModuleId {
+    match self.visited.entry(RUNTIME_PATH.to_string().into()) {
+      std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
+      std::collections::hash_map::Entry::Vacant(not_visited) => {
+        let id = self.intermediate_modules.push(None);
+        not_visited.insert(id);
+        self.remaining += 1;
+        let task = RuntimeNormalModuleTask::new(
+          // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
+          unsafe { task_context.assume_static() },
+          id,
+        );
+        tokio::spawn(async move { task.run() });
+        id
+      }
+    }
+  }
+
+  fn try_spawn_new_task(
+    &mut self,
+    module_task_context: &ModuleTaskContext,
+    info: &ResolvedRequestInfo,
+    is_entry: bool,
+    graph: &mut Graph,
+  ) -> ModuleId {
+    match self.visited.entry(info.path.clone()) {
+      std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
+      std::collections::hash_map::Entry::Vacant(not_visited) => {
+        let id = self.intermediate_modules.push(None);
+        graph.symbols.add_ast_symbol(id, AstSymbol::default());
+        not_visited.insert(id);
+        if info.is_external {
+          let ext = ExternalModule::new(
+            id,
+            ResourceId::new(info.path.clone(), &module_task_context.input_options.cwd),
+          );
+          self.intermediate_modules[id] = Some(Module::External(ext));
+        } else {
+          self.remaining += 1;
+
+          let module_path =
+            ResourceId::new(info.path.clone(), &module_task_context.input_options.cwd);
+
+          let task = NormalModuleTask::new(
+            // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
+            unsafe { module_task_context.assume_static() },
+            id,
+            is_entry,
+            module_path,
+            info.module_type,
+          );
+          tokio::spawn(async move { task.run().await });
+        }
+        id
+      }
+    }
+  }
 }
 
 impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
@@ -41,30 +108,38 @@ impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
       rx,
       input_options,
       resolver: Resolver::with_cwd(input_options.cwd.clone(), false).into(),
-      visited: FxHashMap::default(),
-      remaining: u32::default(),
       graph,
       fs,
+      ctx: ModuleLoaderContext::default(),
     }
   }
 
-  pub async fn fetch_all_modules(&mut self) -> BatchedResult<()> {
+  pub async fn fetch_all_modules(mut self) -> BatchedResult<()> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
     let resolved_entries = self.resolve_entries()?;
 
-    let mut intermediate_modules: IndexVec<ModuleId, Option<Module>> =
-      IndexVec::with_capacity(resolved_entries.len() + 1 /* runtime */);
-    self.graph.runtime.id = self.try_spawn_runtime_normal_module_task(&mut intermediate_modules);
+    self.ctx.intermediate_modules.reserve(resolved_entries.len() + 1 /* runtime */);
+
+    let shared_task_context = ModuleTaskContext {
+      input_options: self.input_options,
+      tx: &self.tx,
+      resolver: &self.resolver,
+      fs: &*self.fs,
+    };
+
+    self.graph.runtime.id = self.ctx.try_spawn_runtime_normal_module_task(&shared_task_context);
 
     let mut entries = resolved_entries
       .into_iter()
-      .map(|(name, info)| (name, self.try_spawn_new_task(&info, &mut intermediate_modules, true)))
+      .map(|(name, info)| {
+        (name, self.ctx.try_spawn_new_task(&shared_task_context, &info, true, self.graph))
+      })
       .collect::<Vec<_>>();
 
     let mut dynamic_entries = FxHashSet::default();
 
-    while self.remaining > 0 {
+    while self.ctx.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;
       };
@@ -76,7 +151,7 @@ impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
           let import_records = builder.import_records.as_mut().unwrap();
 
           resolved_deps.into_iter().for_each(|(import_record_idx, info)| {
-            let id = self.try_spawn_new_task(&info, &mut intermediate_modules, false);
+            let id = self.ctx.try_spawn_new_task(&shared_task_context, &info, false, self.graph);
             let import_record = &mut import_records[import_record_idx];
             import_record.resolved_module = id;
 
@@ -86,7 +161,7 @@ impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
             }
           });
 
-          intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
+          self.ctx.intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
 
           self.graph.symbols.add_ast_symbol(module_id, ast_symbol);
         }
@@ -95,15 +170,15 @@ impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
 
           let runtime_normal_module = builder.build();
           self.graph.runtime.init_symbols(&runtime_normal_module);
-          intermediate_modules[module_id] = Some(Module::Normal(runtime_normal_module));
+          self.ctx.intermediate_modules[module_id] = Some(Module::Normal(runtime_normal_module));
 
           self.graph.symbols.add_ast_symbol(module_id, ast_symbol);
         }
       }
-      self.remaining -= 1;
+      self.ctx.remaining -= 1;
     }
 
-    self.graph.modules = intermediate_modules.into_iter().map(Option::unwrap).collect();
+    self.graph.modules = self.ctx.intermediate_modules.into_iter().map(Option::unwrap).collect();
 
     let mut dynamic_entries = Vec::from_iter(dynamic_entries);
     dynamic_entries.sort_by(|(a, _), (b, _)| a.cmp(b));
@@ -141,60 +216,6 @@ impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
       Ok(collected)
     } else {
       Err(errors)
-    }
-  }
-
-  fn try_spawn_new_task(
-    &mut self,
-    info: &ResolvedRequestInfo,
-    intermediate_modules: &mut IndexVec<ModuleId, Option<Module>>,
-    is_entry: bool,
-  ) -> ModuleId {
-    match self.visited.entry(info.path.clone()) {
-      std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
-      std::collections::hash_map::Entry::Vacant(not_visited) => {
-        let id = intermediate_modules.push(None);
-        self.graph.symbols.add_ast_symbol(id, AstSymbol::default());
-        not_visited.insert(id);
-        if info.is_external {
-          let ext =
-            ExternalModule::new(id, ResourceId::new(info.path.clone(), &self.input_options.cwd));
-          intermediate_modules[id] = Some(Module::External(ext));
-        } else {
-          self.remaining += 1;
-
-          let module_path = ResourceId::new(info.path.clone(), &self.input_options.cwd);
-
-          let task = NormalModuleTask::new(
-            id,
-            is_entry,
-            Arc::<rolldown_resolver::Resolver>::clone(&self.resolver),
-            module_path,
-            info.module_type,
-            self.tx.clone(),
-            Arc::clone(&self.fs),
-          );
-          tokio::spawn(async move { task.run().await });
-        }
-        id
-      }
-    }
-  }
-
-  fn try_spawn_runtime_normal_module_task(
-    &mut self,
-    intermediate_modules: &mut IndexVec<ModuleId, Option<Module>>,
-  ) -> ModuleId {
-    match self.visited.entry(RUNTIME_PATH.to_string().into()) {
-      std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
-      std::collections::hash_map::Entry::Vacant(not_visited) => {
-        let id = intermediate_modules.push(None);
-        not_visited.insert(id);
-        self.remaining += 1;
-        let task = RuntimeNormalModuleTask::new(id, Arc::clone(&self.resolver), self.tx.clone());
-        tokio::spawn(async move { task.run() });
-        id
-      }
     }
   }
 }

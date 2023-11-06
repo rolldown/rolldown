@@ -1214,9 +1214,8 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0276e9ef76098428bedc2fcc93bb5c4cc6169c459eafcbb40c2df471fffa28ee"
 dependencies = [
- "bitflags 2.4.0",
+ "bitflags 2.4.1",
  "indexmap 2.1.0",
->>>>>>> 0ac69fe (pass fs into oxc_resolver)
  "itertools 0.11.0",
  "oxc_ast",
  "oxc_diagnostics",

@@ -3,7 +3,6 @@ use rolldown_error::BuildError;
 use rolldown_fs::{FileSystemExt, FileSystemOs};
 use std::{
   borrow::Cow,
-  os::unix::prelude::FileTypeExt,
   path::{Path, PathBuf},
   sync::Arc,
 };

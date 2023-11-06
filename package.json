@@ -6,7 +6,8 @@
   "private": true,
   "workspaces": [
     "crates/rolldown_node_binding",
-    "packages/**"
+    "packages/**",
+    "web/**"
   ],
   "scripts": {
     "build": "run-s build:binding build:ts",

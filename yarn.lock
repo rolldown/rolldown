@@ -11230,8 +11230,8 @@ __metadata:
 
 "rolldown-wasm@file:../wasm::locator=create-wasm-app%40workspace%3Aweb%2Fplayground":
   version: 0.1.0
-  resolution: "rolldown-wasm@file:../wasm#../wasm::hash=69d802&locator=create-wasm-app%40workspace%3Aweb%2Fplayground"
-  checksum: 5ee18d34ec725ea1bdc695bf391590cc0530c3129413e0e213870d8a8a52535bdd713f726cb9b2825267069fb2970711c14f1966cd97310d1204bc7794bb8c7a
+  resolution: "rolldown-wasm@file:../wasm#../wasm::hash=f3bacc&locator=create-wasm-app%40workspace%3Aweb%2Fplayground"
+  checksum: b86c477a5573b06044d71dd7922007700a97ec400a21c452bb7edf9b1d212501c74f764a7f927a92c1a1ca102770b58cce3d14552cd18e0a1551bb45347059a7
   languageName: node
   linkType: hard
 

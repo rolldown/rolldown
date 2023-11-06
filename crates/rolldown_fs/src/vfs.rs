@@ -25,7 +25,7 @@ impl FileSystemVfs {
   ///
   /// * Fails to create directory
   /// * Fails to write file
-  pub fn new(data: &[(&'static str, &'static str)]) -> Self {
+  pub fn new(data: &[(&String, &String)]) -> Self {
     let mut fs = Self { fs: vfs::MemoryFS::default() };
     for (path, content) in data {
       fs.add_file(Path::new(path), content);

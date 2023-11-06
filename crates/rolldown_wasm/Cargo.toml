@@ -18,5 +18,4 @@ rolldown_fs  = { path = "../rolldown_fs" }
 tokio        = { workspace = true, default-features = false, features = ["rt", "macros", "sync"] }
 
 sugar_path               = { workspace = true }
-wasm-bindgen-futures     = "0.4.38"
 console_error_panic_hook = "0.1.7"

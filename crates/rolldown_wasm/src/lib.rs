@@ -4,13 +4,48 @@ use std::panic;
 use wasm_bindgen::prelude::*;
 
 use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
+#[wasm_bindgen]
+pub struct FileItem {
+  path: String,
+  content: String,
+}
 
 #[wasm_bindgen]
-pub fn greet(_name: &str) -> String {
+impl FileItem {
+  #[wasm_bindgen(constructor)]
+  pub fn new(path: String, content: String) -> Self {
+    Self { path, content }
+  }
+}
+
+#[wasm_bindgen]
+pub struct AssetItem {
+  name: String,
+  content: String,
+}
+
+#[wasm_bindgen]
+impl AssetItem {
+  #[wasm_bindgen(getter)]
+  pub fn name(&self) -> String {
+    self.name.clone()
+  }
+
+  #[wasm_bindgen(getter)]
+  pub fn content(&self) -> String {
+    self.content.clone()
+  }
+}
+
+#[allow(clippy::needless_pass_by_value)]
+#[wasm_bindgen]
+pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
   panic::set_hook(Box::new(console_error_panic_hook::hook));
-  let res =
+  let result =
     tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-      let memory_fs = FileSystemVfs::new(&[("/index.js", "const a = 3000000")]);
+      let memory_fs = FileSystemVfs::new(
+        &file_list.iter().map(|item| (&item.path, &item.content)).collect::<Vec<_>>(),
+      );
       let mut bundler = Bundler::new(
         InputOptions {
           input: Some(vec![InputItem {
@@ -23,13 +58,14 @@ pub fn greet(_name: &str) -> String {
       );
 
       match bundler.write(OutputOptions::default()).await {
-        Ok(data) => {
-          format!("{data:?}")
-        }
+        Ok(assets) => assets
+          .into_iter()
+          .map(|item| AssetItem { name: item.file_name, content: item.content })
+          .collect::<Vec<_>>(),
         Err(err) => {
-          format!("{err:?}")
+          panic!("{err:?}",);
         }
       }
     });
-  res
+  result
 }

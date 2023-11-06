@@ -1,8 +1,8 @@
 use rolldown_common::{ImportRecordId, ModuleId};
 use rolldown_error::BuildError;
 
-use crate::bundler::graph::symbols::AstSymbol;
 use crate::bundler::module::normal_module_builder::NormalModuleBuilder;
+use crate::bundler::utils::ast_symbol::AstSymbol;
 use crate::bundler::utils::resolve_id::ResolvedRequestInfo;
 
 pub struct NormalModuleTaskResult {

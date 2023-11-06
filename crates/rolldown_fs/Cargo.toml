@@ -11,5 +11,5 @@ repository.workspace = true
 [dependencies]
 anyhow       = { workspace = true }
 vfs          = "0.10.0"
-oxc_resolver = "0.2.0"
+oxc_resolver = { workspace = true }
 dunce        = "1.0.4"              # Normalize Windows paths to the most compatible format, avoiding UNC where possible

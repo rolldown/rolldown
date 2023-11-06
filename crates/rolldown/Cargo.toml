@@ -33,7 +33,7 @@ rayon             = "1.6.0"
 string_wizard     = { workspace = true }
 async-trait       = { workspace = true }
 smallvec          = { workspace = true }
-oxc_resolver      = "0.2.0"
+oxc_resolver      = { workspace = true }
 
 
 [dev_dependencies]

@@ -9,7 +9,7 @@ use std::{
 pub use vfs::*;
 
 /// File System abstraction used for `ResolverGeneric`.
-pub trait FileSystemExt: Send + Sync {
+pub trait FileSystemExt: Send + Sync + FileSystem {
   /// # Errors
   ///
   /// * See [std::fs::read_to_string]

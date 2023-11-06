@@ -12,7 +12,7 @@ pub struct FileSystemOs;
 
 impl FileSystemExt for FileSystemOs {
   fn read_to_string_ext(&self, path: &Path) -> io::Result<String> {
-    fs::read_to_string(path)
+    self.read_to_string(path)
   }
 
   fn remove_dir_all_ext(&self, path: &Path) -> io::Result<()> {
@@ -41,19 +41,19 @@ impl FileSystemExt for FileSystemOs {
 }
 
 impl FileSystem for FileSystemOs {
-  fn read_to_string<P: AsRef<Path>>(&self, path: P) -> io::Result<String> {
+  fn read_to_string(&self, path: &Path) -> io::Result<String> {
     self.read_to_string_ext(path.as_ref())
   }
 
-  fn metadata<P: AsRef<Path>>(&self, path: P) -> io::Result<FileMetadata> {
+  fn metadata(&self, path: &Path) -> io::Result<FileMetadata> {
     self.metadata_ext(path.as_ref())
   }
 
-  fn symlink_metadata<P: AsRef<Path>>(&self, path: P) -> io::Result<FileMetadata> {
+  fn symlink_metadata(&self, path: &Path) -> io::Result<FileMetadata> {
     self.symlink_metadata_ext(path.as_ref())
   }
 
-  fn canonicalize<P: AsRef<Path>>(&self, path: P) -> io::Result<PathBuf> {
+  fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
     self.canonicalize_ext(path.as_ref())
   }
 }

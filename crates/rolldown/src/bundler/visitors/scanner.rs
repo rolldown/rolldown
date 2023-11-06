@@ -17,7 +17,7 @@ use rolldown_common::{
 use rolldown_oxc::BindingIdentifierExt;
 use rustc_hash::FxHashMap;
 
-use crate::bundler::{graph::symbols::AstSymbol, utils::ast_scope::AstScope};
+use crate::bundler::utils::{ast_scope::AstScope, ast_symbol::AstSymbol};
 
 #[derive(Debug, Default)]
 pub struct ScanResult {

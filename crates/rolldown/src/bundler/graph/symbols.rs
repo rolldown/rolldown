@@ -1,12 +1,9 @@
 use index_vec::IndexVec;
-use oxc::{
-  semantic::{ScopeId, SymbolId, SymbolTable},
-  span::Atom,
-};
+use oxc::{semantic::SymbolId, span::Atom};
 use rolldown_common::{ModuleId, Specifier, SymbolRef};
 use rustc_hash::FxHashMap;
 
-use crate::bundler::chunk::ChunkId;
+use crate::bundler::{chunk::ChunkId, utils::ast_symbol::AstSymbol};
 
 #[derive(Debug)]
 pub struct NamespaceAlias {
@@ -30,28 +27,6 @@ pub struct Symbol {
   pub exported_as: Option<Specifier>,
 }
 
-#[derive(Debug, Default)]
-pub struct AstSymbol {
-  pub names: IndexVec<SymbolId, Atom>,
-  pub scope_ids: IndexVec<SymbolId, ScopeId>,
-}
-
-impl AstSymbol {
-  pub fn from_symbol_table(table: SymbolTable) -> Self {
-    debug_assert!(table.references.is_empty());
-    Self { names: table.names, scope_ids: table.scope_ids }
-  }
-
-  pub fn create_symbol(&mut self, name: Atom, scope_id: ScopeId) -> SymbolId {
-    self.scope_ids.push(scope_id);
-    self.names.push(name)
-  }
-
-  pub fn scope_id_for(&self, symbol_id: SymbolId) -> ScopeId {
-    self.scope_ids[symbol_id]
-  }
-}
-
 // Information about symbols for all modules
 #[derive(Debug, Default)]
 pub struct Symbols {
@@ -59,25 +34,23 @@ pub struct Symbols {
 }
 
 impl Symbols {
-  pub fn new(tables: IndexVec<ModuleId, AstSymbol>) -> Self {
-    let inner = tables
+  pub fn add_ast_symbol(&mut self, module_id: ModuleId, ast_symbol: AstSymbol) {
+    debug_assert!(module_id.is_valid());
+    let module_count = module_id.raw() as usize;
+    if self.inner.len() <= module_count {
+      self.inner.resize_with(module_count + 1, IndexVec::default);
+    }
+    self.inner[module_id] = ast_symbol
+      .names
       .into_iter()
-      .map(|table| {
-        table
-          .names
-          .into_iter()
-          .map(|name| Symbol {
-            name,
-            link: None,
-            chunk_id: None,
-            namespace_alias: None,
-            exported_as: None,
-          })
-          .collect()
+      .map(|name| Symbol {
+        name,
+        link: None,
+        chunk_id: None,
+        namespace_alias: None,
+        exported_as: None,
       })
       .collect();
-
-    Self { inner }
   }
 
   pub fn create_symbol(&mut self, owner: ModuleId, name: Atom) -> SymbolRef {

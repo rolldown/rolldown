@@ -39,12 +39,6 @@ impl<F: FileSystemExt + Default> Resolver<F> {
   }
 }
 
-// impl<F: FileSystemExt + Default> Default for Resolver<F> {
-//   fn default() -> Self {
-//     Self::with_cwd_and_fs(std::env::current_dir().unwrap(), true, Arc::new(F::default()))
-//   }
-// }
-
 #[derive(Debug)]
 pub struct ResolveRet {
   pub resolved: RawPath,

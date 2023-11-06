@@ -10,7 +10,7 @@ license    = "MIT"
 repository = "https://github.com/rolldown-rs/rolldown"
 
 [workspace.dependencies]
-oxc            = { version = "0.3.0", features = ["semantic", "codegen"] }
+oxc            = { version = "0.3.0", features = ["semantic"] }
 oxc_resolver   = { version = "0.5.1" }
 sugar_path     = "0.0.12"
 tokio          = { version = "1.33.0", default-features = false }

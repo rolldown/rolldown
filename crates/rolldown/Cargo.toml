@@ -23,7 +23,7 @@ sugar_path        = { workspace = true }
 oxc               = { workspace = true }
 serde             = { workspace = true }
 serde_json        = { workspace = true }
-tokio             = { workspace = true, features = ["fs", "rt", "macros", "rt-multi-thread", "sync"] }
+tokio             = { workspace = true, features = ["rt", "macros", "sync"] }
 rustc-hash        = { workspace = true }
 tracing           = { workspace = true }
 anyhow            = { workspace = true }

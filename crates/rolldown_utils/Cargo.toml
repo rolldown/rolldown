@@ -11,4 +11,3 @@ repository.workspace = true
 
 [dependencies]
 string_wizard = { workspace = true }
-tokio         = { workspace = true, default-features = false, features = ["rt", "macros", "sync"] }

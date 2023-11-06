@@ -53,7 +53,7 @@ impl<T: FileSystemExt + Default + 'static> Bundler<T> {
     for chunk in &assets {
       let dest = dir.as_path().join(&chunk.file_name);
       if let Some(p) = dest.parent() {
-        if !p.exists() {
+        if !self.fs.exists(p) {
           self.fs.create_dir_all(p).unwrap();
         }
       };

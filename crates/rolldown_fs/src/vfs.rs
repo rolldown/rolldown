@@ -4,7 +4,7 @@ use std::{
 };
 
 use oxc_resolver::{FileMetadata, FileSystem};
-use vfs::MemoryFS;
+use vfs::{FileSystem as _, MemoryFS};
 
 use crate::FileSystemExt;
 
@@ -34,7 +34,6 @@ impl FileSystemVfs {
   }
 
   pub fn add_file(&mut self, path: &Path, content: &str) {
-    use vfs::FileSystem;
     let fs = &mut self.fs;
     // Create all parent directories
     for path in path.ancestors().collect::<Vec<_>>().iter().rev() {
@@ -51,7 +50,6 @@ impl FileSystemVfs {
 
 impl FileSystemExt for FileSystemVfs {
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
-    use vfs::FileSystem;
     self
       .fs
       .remove_dir(&path.to_string_lossy())
@@ -60,7 +58,6 @@ impl FileSystemExt for FileSystemVfs {
   }
 
   fn create_dir_all(&self, path: &Path) -> io::Result<()> {
-    use vfs::FileSystem;
     self
       .fs
       .create_dir(&path.to_string_lossy())
@@ -69,7 +66,6 @@ impl FileSystemExt for FileSystemVfs {
   }
 
   fn write(&self, path: &Path, content: &[u8]) -> io::Result<()> {
-    use vfs::FileSystem;
     _ = self
       .fs
       .create_file(&path.to_string_lossy())
@@ -78,11 +74,14 @@ impl FileSystemExt for FileSystemVfs {
       .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
     Ok(())
   }
+
+  fn exists(&self, path: &Path) -> bool {
+    self.fs.exists(path.to_string_lossy().as_ref()).is_ok()
+  }
 }
 
 impl FileSystem for FileSystemVfs {
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
-    use vfs::FileSystem;
     let mut buf = String::new();
     self
       .fs
@@ -93,7 +92,6 @@ impl FileSystem for FileSystemVfs {
   }
 
   fn metadata(&self, path: &Path) -> io::Result<FileMetadata> {
-    use vfs::FileSystem;
     let metadata = self
       .fs
       .metadata(path.to_string_lossy().as_ref())
@@ -104,7 +102,6 @@ impl FileSystem for FileSystemVfs {
   }
 
   fn symlink_metadata(&self, path: &Path) -> io::Result<FileMetadata> {
-    use vfs::FileSystem;
     self
       .fs
       .metadata(path.to_string_lossy().as_ref())

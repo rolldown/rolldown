@@ -23,6 +23,11 @@ pub trait FileSystemExt: Send + Sync + FileSystem {
   ///
   /// * See [std::fs::write]
   fn write(&self, path: &Path, content: &[u8]) -> io::Result<()>;
+
+  /// # Errors
+  ///
+  /// * See [std::fs::write]
+  fn exists(&self, path: &Path) -> bool;
 }
 
 impl<T> FileSystemExt for Arc<T>
@@ -39,5 +44,9 @@ where
 
   fn write(&self, path: &Path, content: &[u8]) -> io::Result<()> {
     self.deref().write(path, content)
+  }
+
+  fn exists(&self, path: &Path) -> bool {
+    self.deref().exists(path)
   }
 }

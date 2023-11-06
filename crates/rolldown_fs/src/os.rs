@@ -22,6 +22,10 @@ impl FileSystemExt for FileSystemOs {
   fn write(&self, path: &Path, content: &[u8]) -> io::Result<()> {
     std::fs::write(path, content)
   }
+
+  fn exists(&self, path: &Path) -> bool {
+    path.exists()
+  }
 }
 
 impl FileSystem for FileSystemOs {

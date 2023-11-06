@@ -2,7 +2,7 @@ use std::{path::Path, sync::Arc};
 
 use futures::future::join_all;
 use index_vec::IndexVec;
-use oxc::{ast::VisitMut, span::SourceType};
+use oxc::{ast::Visit, span::SourceType};
 use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystemExt;
@@ -136,7 +136,7 @@ impl<T: FileSystemExt> NormalModuleTask<T> {
     }
 
     let source_type = determine_oxc_source_type(self.path.as_path(), self.module_type);
-    let mut program = OxcCompiler::parse(source, source_type);
+    let program = OxcCompiler::parse(source, source_type);
 
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
@@ -150,7 +150,7 @@ impl<T: FileSystemExt> NormalModuleTask<T> {
       unique_name,
       self.module_type,
     );
-    scanner.visit_program(program.program_mut());
+    scanner.visit_program(program.program());
     let scan_result = scanner.result;
     let namespace_symbol = scanner.namespace_symbol;
     (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)

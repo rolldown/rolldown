@@ -5,7 +5,7 @@ use oxc::{
       ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
       ImportDeclaration, ModuleDeclaration,
     },
-    VisitMut,
+    Visit,
   },
   semantic::SymbolId,
   span::{Atom, Span},
@@ -298,9 +298,9 @@ impl<'a> Scanner<'a> {
   }
 }
 
-impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
-  fn visit_program(&mut self, program: &'p mut oxc::ast::ast::Program<'ast>) {
-    for (idx, stmt) in program.body.iter_mut().enumerate() {
+impl<'ast> Visit<'ast> for Scanner<'ast> {
+  fn visit_program(&mut self, program: &'ast oxc::ast::ast::Program<'ast>) {
+    for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.visit_statement(stmt);
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
@@ -308,14 +308,14 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
     self.set_exports_kind();
   }
 
-  fn visit_binding_identifier(&mut self, ident: &'p mut oxc::ast::ast::BindingIdentifier) {
+  fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
     let symbol_id = ident.symbol_id.get().unwrap();
     if self.is_top_level(symbol_id) {
       self.add_declared_id(symbol_id);
     }
   }
 
-  fn visit_identifier_reference(&mut self, ident: &'p mut IdentifierReference) {
+  fn visit_identifier_reference(&mut self, ident: &'ast IdentifierReference) {
     let symbol_id = self.resolve_symbol_from_reference(ident);
     match symbol_id {
       Some(symbol_id) if self.is_top_level(symbol_id) => {
@@ -332,21 +332,21 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
     }
   }
 
-  fn visit_statement(&mut self, stmt: &'p mut oxc::ast::ast::Statement<'ast>) {
+  fn visit_statement(&mut self, stmt: &'ast oxc::ast::ast::Statement<'ast>) {
     if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
       self.scan_module_decl(decl.0);
     }
     self.visit_statement_match(stmt);
   }
 
-  fn visit_import_expression(&mut self, expr: &'p mut oxc::ast::ast::ImportExpression<'ast>) {
-    if let oxc::ast::ast::Expression::StringLiteral(request) = &mut expr.source {
+  fn visit_import_expression(&mut self, expr: &'ast oxc::ast::ast::ImportExpression<'ast>) {
+    if let oxc::ast::ast::Expression::StringLiteral(request) = &expr.source {
       let id = self.add_import_record(&request.value, ImportKind::DynamicImport);
       self.result.imports.insert(expr.span, id);
     }
   }
 
-  fn visit_call_expression(&mut self, expr: &'p mut oxc::ast::ast::CallExpression<'ast>) {
+  fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
     match &expr.callee {
       oxc::ast::ast::Expression::Identifier(ident)
         if ident.name == "require" && self.is_unresolved_reference(ident) =>
@@ -361,9 +361,9 @@ impl<'ast, 'p> VisitMut<'ast, 'p> for Scanner<'ast> {
       }
       _ => {}
     }
-    for arg in expr.arguments.iter_mut() {
+    for arg in &expr.arguments {
       self.visit_argument(arg);
     }
-    self.visit_expression(&mut expr.callee);
+    self.visit_expression(&expr.callee);
   }
 }

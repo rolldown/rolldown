@@ -1,10 +1,9 @@
-use rolldown_fs::{FileSystemVfs};
+use rolldown_fs::FileSystemVfs;
 use std::panic;
 
 use wasm_bindgen::prelude::*;
 
 use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
-
 
 #[wasm_bindgen]
 pub fn greet(_name: &str) -> String {
@@ -22,8 +21,7 @@ pub fn greet(_name: &str) -> String {
         },
         memory_fs,
       );
-      //
-      
+
       match bundler.write(OutputOptions::default()).await {
         Ok(data) => {
           format!("{data:?}")

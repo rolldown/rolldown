@@ -1516,19 +1516,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown-wasm"
-version = "0.1.0"
-dependencies = [
- "console_error_panic_hook",
- "rolldown",
- "rolldown_fs",
- "sugar_path",
- "tokio",
- "wasm-bindgen",
- "wasm-bindgen-futures",
-]
-
-[[package]]
 name = "rolldown_common"
 version = "0.0.1"
 dependencies = [
@@ -1626,6 +1613,19 @@ version = "0.1.0"
 dependencies = [
  "string_wizard",
  "tokio",
+]
+
+[[package]]
+name = "rolldown_wasm"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "rolldown",
+ "rolldown_fs",
+ "sugar_path",
+ "tokio",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]

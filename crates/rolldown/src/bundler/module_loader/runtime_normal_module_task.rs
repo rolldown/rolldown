@@ -3,37 +3,28 @@ use rolldown_common::{ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
-use super::Msg;
-use crate::{
-  bundler::{
-    module::normal_module_builder::NormalModuleBuilder,
-    module_loader::NormalModuleTaskResult,
-    runtime::RUNTIME_PATH,
-    utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
-    visitors::scanner::{self, ScanResult},
-  },
-  SharedResolver,
+use super::{module_task_context::ModuleTaskContext, Msg};
+use crate::bundler::{
+  module::normal_module_builder::NormalModuleBuilder,
+  module_loader::NormalModuleTaskResult,
+  runtime::RUNTIME_PATH,
+  utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
+  visitors::scanner::{self, ScanResult},
 };
-pub struct RuntimeNormalModuleTask {
+pub struct RuntimeNormalModuleTask<'task> {
+  ctx: &'task ModuleTaskContext<'task>,
   module_id: ModuleId,
-  tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   module_type: ModuleType,
   errors: Vec<BuildError>,
   warnings: Vec<BuildError>,
-  resolver: SharedResolver,
 }
 
-impl RuntimeNormalModuleTask {
-  pub fn new(
-    id: ModuleId,
-    resolver: SharedResolver,
-    tx: tokio::sync::mpsc::UnboundedSender<Msg>,
-  ) -> Self {
+impl<'task> RuntimeNormalModuleTask<'task> {
+  pub fn new(ctx: &'task ModuleTaskContext<'task>, id: ModuleId) -> Self {
     Self {
+      ctx,
       module_id: id,
       module_type: ModuleType::EsmMjs,
-      resolver,
-      tx,
       errors: Vec::default(),
       warnings: Vec::default(),
     }
@@ -61,7 +52,7 @@ impl RuntimeNormalModuleTask {
     builder.id = Some(self.module_id);
     builder.ast = Some(ast);
     builder.unique_name = Some(unique_name);
-    builder.path = Some(ResourceId::new(RUNTIME_PATH.to_string().into(), self.resolver.cwd()));
+    builder.path = Some(ResourceId::new(RUNTIME_PATH.to_string().into(), self.ctx.resolver.cwd()));
     builder.named_imports = Some(named_imports);
     builder.named_exports = Some(named_exports);
     builder.stmt_infos = Some(stmt_infos);
@@ -74,6 +65,7 @@ impl RuntimeNormalModuleTask {
     builder.namespace_symbol = Some(namespace_symbol);
 
     self
+      .ctx
       .tx
       .send(Msg::RuntimeNormalModuleDone(NormalModuleTaskResult {
         resolved_deps: Vec::default(),

@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
 use rolldown_fs::FileSystemOs;
@@ -12,7 +12,7 @@ pub async fn run_fixture(fixture_path: PathBuf) {
       }]),
       cwd: Some(fixture_path.clone()),
     },
-    Arc::new(FileSystemOs),
+    FileSystemOs,
   );
 
   if fixture_path.join("dist").is_dir() {

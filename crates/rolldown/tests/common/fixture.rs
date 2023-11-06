@@ -101,7 +101,7 @@ impl Fixture {
         }),
         cwd: Some(fixture_path.to_path_buf()),
       },
-      Arc::new(FileSystemOs),
+      FileSystemOs,
     );
 
     if fixture_path.join("dist").is_dir() {

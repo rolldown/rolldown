@@ -16,27 +16,23 @@ use crate::{bundler::bundle::bundle::Bundle, plugin::plugin::BoxPlugin, InputOpt
 
 type BuildResult<T> = Result<T, Vec<BuildError>>;
 
-pub struct Bundler {
+pub struct Bundler<T: FileSystemExt> {
   input_options: NormalizedInputOptions,
   _plugins: Vec<BoxPlugin>,
-  fs: Arc<dyn FileSystemExt>,
+  fs: Arc<T>,
 }
 
-impl Bundler {
-  pub fn new(input_options: InputOptions, fs: Arc<dyn FileSystemExt>) -> Self {
+impl<T: FileSystemExt + 'static> Bundler<T> {
+  pub fn new(input_options: InputOptions, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self { input_options: normalized, _plugins: vec![], fs }
+    Self { input_options: normalized, _plugins: vec![], fs: Arc::new(fs) }
   }
 
-  pub fn with_plugins(
-    input_options: InputOptions,
-    plugins: Vec<BoxPlugin>,
-    fs: Arc<dyn FileSystemExt>,
-  ) -> Self {
+  pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self { input_options: normalized, _plugins: plugins, fs }
+    Self { input_options: normalized, _plugins: plugins, fs: Arc::new(fs) }
   }
 
   pub async fn write(&mut self, output_options: crate::OutputOptions) -> BuildResult<Vec<Asset>> {
@@ -45,8 +41,7 @@ impl Bundler {
     });
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
 
-    let assets =
-      self.build(normalized, Arc::<dyn rolldown_fs::FileSystemExt>::clone(&self.fs)).await?;
+    let assets = self.build(normalized, Arc::clone(&self.fs)).await?;
 
     self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
@@ -75,13 +70,13 @@ impl Bundler {
     output_options: crate::OutputOptions,
   ) -> BuildResult<Vec<Asset>> {
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
-    self.build(normalized, Arc::<dyn rolldown_fs::FileSystemExt>::clone(&self.fs)).await
+    self.build(normalized, Arc::clone(&self.fs)).await
   }
 
   async fn build(
     &mut self,
     output_options: NormalizedOutputOptions,
-    fs: Arc<dyn FileSystemExt>,
+    fs: Arc<T>,
   ) -> BuildResult<Vec<Asset>> {
     tracing::trace!("NormalizedInputOptions {:#?}", self.input_options);
     tracing::trace!("NormalizedOutputOptions: {output_options:#?}",);

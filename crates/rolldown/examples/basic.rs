@@ -16,7 +16,7 @@ async fn main() {
       }]),
       cwd: Some(cwd),
     },
-    Arc::new(FileSystemOs),
+    FileSystemOs,
   );
 
   let outputs = bundler.write(Default::default()).await.unwrap();

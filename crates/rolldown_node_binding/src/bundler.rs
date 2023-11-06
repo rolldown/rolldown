@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
@@ -16,7 +14,7 @@ use crate::{
 
 #[napi]
 pub struct Bundler {
-  inner: Mutex<NativeBundler>,
+  inner: Mutex<NativeBundler<FileSystemOs>>,
 }
 
 #[napi]
@@ -43,7 +41,11 @@ impl Bundler {
     NAPI_ENV.set(&env, || {
       let (input_opts, plugins) = resolve_input_options(input_opts)?;
       Ok(Self {
-        inner: Mutex::new(NativeBundler::with_plugins(input_opts, plugins, Arc::new(FileSystemOs))),
+        inner: Mutex::new(NativeBundler::<FileSystemOs>::with_plugins(
+          input_opts,
+          plugins,
+          FileSystemOs,
+        )),
       })
     })
   }

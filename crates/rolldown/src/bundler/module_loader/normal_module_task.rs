@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use futures::future::join_all;
 use index_vec::IndexVec;
@@ -66,7 +66,7 @@ impl<T: FileSystemExt> NormalModuleTask<T> {
     let source = self.fs.read_to_string(self.path.as_path())?;
     // TODO: transform
 
-    let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(source);
+    let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(source);
 
     let res = self.resolve_dependencies(&scan_result.import_records).await?;
 
@@ -105,15 +105,37 @@ impl<T: FileSystemExt> NormalModuleTask<T> {
         module_id: self.module_id,
         errors: self.errors,
         warnings: self.warnings,
-        ast_symbol: symbol,
+        ast_symbol,
         builder,
       }))
       .unwrap();
     Ok(())
   }
 
-  fn make_ast(&self, source: String) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
-    let source_type = SourceType::from_path(self.path.as_ref()).unwrap();
+  fn scan(&self, source: String) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
+    fn determine_oxc_source_type(path: impl AsRef<Path>, ty: ModuleType) -> SourceType {
+      // Determine oxc source type for parsing
+      let mut default = SourceType::default().with_module(true);
+      // Rolldown considers module as esm by default.
+      debug_assert!(default.is_module());
+      debug_assert!(default.is_javascript());
+      debug_assert!(!default.is_jsx());
+      let extension = path.as_ref().extension().and_then(std::ffi::OsStr::to_str);
+      default = match ty {
+        ModuleType::CJS | ModuleType::CjsPackageJson => default.with_script(true),
+        _ => default,
+      };
+      if let Some(ext) = extension {
+        default = match ext {
+          "cjs" => default.with_script(true),
+          "jsx" => default.with_jsx(true),
+          _ => default,
+        };
+      };
+      default
+    }
+
+    let source_type = determine_oxc_source_type(self.path.as_path(), self.module_type);
     let mut program = OxcCompiler::parse(source, source_type);
 
     let semantic = program.make_semantic(source_type);

@@ -26,18 +26,6 @@ unsafe impl Send for OxcProgram {}
 unsafe impl Sync for OxcProgram {}
 
 impl OxcProgram {
-  pub fn from_source(source: String, ty: SourceType) -> Self {
-    let source = Box::pin(source);
-    let allocator = Box::pin(oxc::allocator::Allocator::default());
-    let program = unsafe {
-      let source = std::mem::transmute::<_, &'static String>(source.as_ref());
-      let alloc = std::mem::transmute::<_, &'static Allocator>(allocator.as_ref());
-      Parser::new(alloc, source, ty).parse().program
-    };
-
-    Self { program, source, allocator }
-  }
-
   pub fn source(&self) -> &str {
     self.source.as_str()
   }

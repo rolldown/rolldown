@@ -29,7 +29,10 @@ impl Case {
         self.render_assets_to_snapshot(assets);
       }
       Err(errs) => {
-        assert!(self.fixture.test_config().expect_error, "expected success, but got errors: {errs:?}");
+        assert!(
+          self.fixture.test_config().expect_error,
+          "expected success, but got errors: {errs:?}"
+        );
         self.render_errors_to_snapshot(errs);
       }
     }

@@ -1,9 +1,7 @@
 use std::fmt::Debug;
 use std::path::PathBuf;
 
-
 use derivative::Derivative;
-
 
 #[derive(Debug)]
 pub struct InputItem {

@@ -1,7 +1,6 @@
-use std::{path::PathBuf};
+use std::path::PathBuf;
 
 use derivative::Derivative;
-
 
 use super::input_options::InputItem;
 use crate::InputOptions;

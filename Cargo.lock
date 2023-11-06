@@ -1105,7 +1105,6 @@ dependencies = [
  "oxc_allocator",
  "oxc_ast",
  "oxc_diagnostics",
- "oxc_formatter",
  "oxc_index",
  "oxc_parser",
  "oxc_semantic",
@@ -1150,18 +1149,6 @@ dependencies = [
  "textwrap 0.15.0",
  "thiserror",
  "unicode-width",
-]
-
-[[package]]
-name = "oxc_formatter"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e93873466a024e44cee25b7bba99782e550a533a6fbeb9f222139c745bee52f"
-dependencies = [
- "oxc_allocator",
- "oxc_ast",
- "oxc_span",
- "oxc_syntax",
 ]
 
 [[package]]

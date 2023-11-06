@@ -22,7 +22,7 @@ pub struct Bundler<T: FileSystemExt> {
   fs: Arc<T>,
 }
 
-impl<T: FileSystemExt + 'static> Bundler<T> {
+impl<T: FileSystemExt + Default + 'static> Bundler<T> {
   pub fn new(input_options: InputOptions, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
@@ -53,7 +53,7 @@ impl<T: FileSystemExt + 'static> Bundler<T> {
     for chunk in &assets {
       let dest = dir.as_path().join(&chunk.file_name);
       if let Some(p) = dest.parent() {
-        if !p.exists() {
+        if !self.fs.exists(p) {
           self.fs.create_dir_all(p).unwrap();
         }
       };

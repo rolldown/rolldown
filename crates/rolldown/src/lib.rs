@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use rolldown_resolver::Resolver;
 
-pub(crate) type SharedResolver = Arc<Resolver>;
+pub(crate) type SharedResolver<T> = Arc<Resolver<T>>;
 
 pub use crate::{
   bundler::{

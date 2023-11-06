@@ -1,5 +1,6 @@
 use rolldown_common::{ModuleType, RawPath, ResourceId};
 use rolldown_error::BuildError;
+use rolldown_fs::FileSystemExt;
 use rolldown_resolver::Resolver;
 
 pub struct ResolvedRequestInfo {
@@ -9,8 +10,8 @@ pub struct ResolvedRequestInfo {
 }
 
 #[allow(clippy::unused_async)]
-pub async fn resolve_id(
-  resolver: &Resolver,
+pub async fn resolve_id<T: FileSystemExt + Default>(
+  resolver: &Resolver<T>,
   request: &str,
   importer: Option<&ResourceId>,
   _preserve_symlinks: bool,

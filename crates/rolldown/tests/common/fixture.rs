@@ -2,12 +2,11 @@ use std::{
   borrow::Cow,
   path::{Path, PathBuf},
   process::Command,
-  sync::Arc,
 };
 
 use rolldown::{Asset, Bundler, InputOptions, OutputOptions};
 use rolldown_error::BuildError;
-use rolldown_fs::{FileSystemExt, FileSystemOs};
+use rolldown_fs::FileSystemOs;
 use rolldown_testing::TestConfig;
 
 fn default_test_input_item() -> rolldown_testing::InputItem {

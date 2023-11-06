@@ -5,7 +5,6 @@ use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystemExt;
 use rolldown_resolver::Resolver;
-use rolldown_utils::block_on_spawn_all;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::normal_module_task::NormalModuleTask;
@@ -23,11 +22,11 @@ use crate::bundler::utils::resolve_id::{resolve_id, ResolvedRequestInfo};
 use crate::error::{BatchedErrors, BatchedResult};
 use crate::SharedResolver;
 
-pub struct ModuleLoader<'a, T> {
+pub struct ModuleLoader<'a, T: FileSystemExt + Default> {
   ctx: ModuleLoaderContext,
   input_options: &'a NormalizedInputOptions,
   graph: &'a mut Graph,
-  resolver: SharedResolver,
+  resolver: SharedResolver<T>,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
   fs: Arc<T>,
@@ -41,7 +40,10 @@ pub struct ModuleLoaderContext {
 }
 
 impl ModuleLoaderContext {
-  fn try_spawn_runtime_normal_module_task(&mut self, task_context: &ModuleTaskContext) -> ModuleId {
+  fn try_spawn_runtime_normal_module_task<T: FileSystemExt + Default + 'static>(
+    &mut self,
+    task_context: &ModuleTaskContext<T>,
+  ) -> ModuleId {
     match self.visited.entry(RUNTIME_PATH.to_string().into()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
@@ -59,9 +61,9 @@ impl ModuleLoaderContext {
     }
   }
 
-  fn try_spawn_new_task(
+  fn try_spawn_new_task<T: FileSystemExt + Default + 'static>(
     &mut self,
-    module_task_context: &ModuleTaskContext,
+    module_task_context: &ModuleTaskContext<T>,
     info: &ResolvedRequestInfo,
     is_entry: bool,
     graph: &mut Graph,
@@ -100,14 +102,14 @@ impl ModuleLoaderContext {
   }
 }
 
-impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
+impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
   pub fn new(input_options: &'a NormalizedInputOptions, graph: &'a mut Graph, fs: Arc<T>) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
     Self {
       tx,
       rx,
       input_options,
-      resolver: Resolver::with_cwd(input_options.cwd.clone(), false).into(),
+      resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, Arc::clone(&fs)).into(),
       graph,
       fs,
       ctx: ModuleLoaderContext::default(),
@@ -117,7 +119,7 @@ impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
   pub async fn fetch_all_modules(mut self) -> BatchedResult<()> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
-    let resolved_entries = self.resolve_entries()?;
+    let resolved_entries = self.resolve_entries().await?;
 
     self.ctx.intermediate_modules.reserve(resolved_entries.len() + 1 /* runtime */);
 
@@ -188,11 +190,11 @@ impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
   }
 
   #[allow(clippy::collection_is_never_read)]
-  fn resolve_entries(&mut self) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {
+  async fn resolve_entries(&mut self) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
 
     let resolved_ids =
-      block_on_spawn_all(self.input_options.input.iter().map(|input_item| async move {
+      futures::future::join_all(self.input_options.input.iter().map(|input_item| async move {
         let specifier = &input_item.import;
         let resolve_id = resolve_id(resolver, specifier, None, false).await?;
 
@@ -205,7 +207,8 @@ impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
         }
 
         Ok((input_item.name.clone(), info))
-      }));
+      }))
+      .await;
 
     let mut errors = BatchedErrors::default();
 

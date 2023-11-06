@@ -28,3 +28,8 @@ bench-prepare:
   
 bench:
   cargo bench -p bench
+
+wasm-build:
+  cd crates/rolldown_wasm && wasm-pack build
+  rm -r ./web/wasm
+  mv crates/rolldown_wasm/pkg ./web/wasm

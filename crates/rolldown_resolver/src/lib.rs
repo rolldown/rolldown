@@ -1,45 +1,41 @@
 use rolldown_common::{ModuleType, RawPath, ResourceId};
 use rolldown_error::BuildError;
+use rolldown_fs::FileSystemExt;
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
+  sync::Arc,
 };
 use sugar_path::SugarPathBuf;
 
-use oxc_resolver::{Resolution, ResolveOptions, Resolver as OxcResolver};
+use oxc_resolver::{Resolution, ResolveOptions, ResolverGeneric};
 
 #[derive(Debug)]
-pub struct Resolver {
+pub struct Resolver<T: FileSystemExt + Default> {
   cwd: PathBuf,
-  inner: OxcResolver,
+  inner: ResolverGeneric<Arc<T>>,
 }
 
-impl Resolver {
-  pub fn with_cwd(cwd: PathBuf, preserve_symlinks: bool) -> Self {
-    Self {
-      cwd,
-      inner: OxcResolver::new(ResolveOptions {
-        symlinks: !preserve_symlinks,
-        extensions: vec![
-          ".js".to_string(),
-          ".jsx".to_string(),
-          ".ts".to_string(),
-          ".tsx".to_string(),
-        ],
-        prefer_relative: false,
-        ..Default::default()
-      }),
-    }
+impl<F: FileSystemExt + Default> Resolver<F> {
+  pub fn with_cwd_and_fs(cwd: PathBuf, preserve_symlinks: bool, fs: Arc<F>) -> Self {
+    let resolve_options = ResolveOptions {
+      symlinks: !preserve_symlinks,
+      extensions: vec![
+        ".js".to_string(),
+        ".jsx".to_string(),
+        ".ts".to_string(),
+        ".tsx".to_string(),
+      ],
+      prefer_relative: false,
+      ..Default::default()
+    };
+
+    let inner_resolver = ResolverGeneric::new_with_file_system(fs, resolve_options);
+    Self { cwd, inner: inner_resolver }
   }
 
   pub fn cwd(&self) -> &PathBuf {
     &self.cwd
-  }
-}
-
-impl Default for Resolver {
-  fn default() -> Self {
-    Self::with_cwd(std::env::current_dir().unwrap(), true)
   }
 }
 
@@ -49,7 +45,7 @@ pub struct ResolveRet {
   pub module_type: ModuleType,
 }
 
-impl Resolver {
+impl<F: FileSystemExt + Default> Resolver<F> {
   #[allow(clippy::missing_errors_doc)]
   pub fn resolve(
     &self,

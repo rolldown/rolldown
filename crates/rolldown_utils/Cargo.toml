@@ -10,5 +10,4 @@ edition.workspace    = true
 repository.workspace = true
 
 [dependencies]
-async-scoped  = { workspace = true, features = ["use-tokio"] }
 string_wizard = { workspace = true }

@@ -9,11 +9,11 @@ use crate::bundler::{module::Module, renderer::RenderControl};
 use super::AstRenderer;
 
 impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
-  fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
+  fn visit_binding_identifier(&mut self, ident: &oxc::ast::ast::BindingIdentifier) {
     self.render_binding_identifier(ident);
   }
 
-  fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
+  fn visit_call_expression(&mut self, expr: &oxc::ast::ast::CallExpression<'ast>) {
     if self.is_global_require(&expr.callee) {
       self.render_require_expr(expr);
       return;
@@ -36,11 +36,11 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     }
   }
 
-  fn visit_identifier_reference(&mut self, ident: &'ast oxc::ast::ast::IdentifierReference) {
+  fn visit_identifier_reference(&mut self, ident: &oxc::ast::ast::IdentifierReference) {
     self.render_identifier_reference(ident, false);
   }
 
-  fn visit_import_declaration(&mut self, decl: &'ast oxc::ast::ast::ImportDeclaration<'ast>) {
+  fn visit_import_declaration(&mut self, decl: &oxc::ast::ast::ImportDeclaration<'ast>) {
     self.remove_node(decl.span);
     let importee_id = self.ctx.module.importee_id_by_span(decl.span);
     let importee = &self.ctx.graph.modules[importee_id];
@@ -63,10 +63,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     }
   }
 
-  fn visit_export_all_declaration(
-    &mut self,
-    decl: &'ast oxc::ast::ast::ExportAllDeclaration<'ast>,
-  ) {
+  fn visit_export_all_declaration(&mut self, decl: &oxc::ast::ast::ExportAllDeclaration<'ast>) {
     if let Module::Normal(importee) = self.ctx.importee_by_span(decl.span) {
       if importee.exports_kind == ExportsKind::CommonJs {
         // __reExport(a_exports, __toESM(require_c()));
@@ -106,7 +103,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     }
   }
 
-  fn visit_statement(&mut self, stmt: &'ast oxc::ast::ast::Statement<'ast>) {
+  fn visit_statement(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {
     // Mark the start position for place hoisted module declarations.
     if self.ctx.first_stmt_start.is_none() {
       let hoisted_decl = if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
@@ -132,10 +129,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     self.visit_statement_match(stmt);
   }
 
-  fn visit_export_named_declaration(
-    &mut self,
-    decl: &'ast oxc::ast::ast::ExportNamedDeclaration<'ast>,
-  ) {
+  fn visit_export_named_declaration(&mut self, decl: &oxc::ast::ast::ExportNamedDeclaration<'ast>) {
     let control = match &mut self.kind {
       super::RenderKind::WrappedEsm => self.render_export_named_declaration_for_wrapped_esm(decl),
       super::RenderKind::Cjs => RenderControl::Continue,
@@ -153,7 +147,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
 
   fn visit_export_default_declaration(
     &mut self,
-    decl: &'ast oxc::ast::ast::ExportDefaultDeclaration<'ast>,
+    decl: &oxc::ast::ast::ExportDefaultDeclaration<'ast>,
   ) {
     let control = match &mut self.kind {
       super::RenderKind::WrappedEsm => self.render_export_default_declaration_for_wrapped_esm(decl),
@@ -169,7 +163,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     match &decl.declaration {
       ExportDefaultDeclarationKind::Expression(expr) => self.visit_expression(expr),
       ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
-        self.visit_function(func);
+        self.visit_function(func, None);
       }
       ExportDefaultDeclarationKind::ClassDeclaration(class) => self.visit_class(class),
       _ => {}

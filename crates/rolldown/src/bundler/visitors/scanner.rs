@@ -255,7 +255,8 @@ impl<'a> Scanner<'a> {
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
     let id = self.add_import_record(&decl.source.value, ImportKind::Import);
     self.result.imports.insert(decl.span, id);
-    decl.specifiers.iter().for_each(|spec| match spec {
+    let Some(specifiers) = &decl.specifiers else { return };
+    specifiers.iter().for_each(|spec| match spec {
       oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
         self.add_named_import(sym, spec.imported.name(), id);
@@ -299,7 +300,7 @@ impl<'a> Scanner<'a> {
 }
 
 impl<'ast> Visit<'ast> for Scanner<'ast> {
-  fn visit_program(&mut self, program: &'ast oxc::ast::ast::Program<'ast>) {
+  fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.visit_statement(stmt);
@@ -308,14 +309,14 @@ impl<'ast> Visit<'ast> for Scanner<'ast> {
     self.set_exports_kind();
   }
 
-  fn visit_binding_identifier(&mut self, ident: &'ast oxc::ast::ast::BindingIdentifier) {
+  fn visit_binding_identifier(&mut self, ident: &oxc::ast::ast::BindingIdentifier) {
     let symbol_id = ident.symbol_id.get().unwrap();
     if self.is_top_level(symbol_id) {
       self.add_declared_id(symbol_id);
     }
   }
 
-  fn visit_identifier_reference(&mut self, ident: &'ast IdentifierReference) {
+  fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {
     let symbol_id = self.resolve_symbol_from_reference(ident);
     match symbol_id {
       Some(symbol_id) if self.is_top_level(symbol_id) => {
@@ -332,21 +333,21 @@ impl<'ast> Visit<'ast> for Scanner<'ast> {
     }
   }
 
-  fn visit_statement(&mut self, stmt: &'ast oxc::ast::ast::Statement<'ast>) {
+  fn visit_statement(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {
     if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
       self.scan_module_decl(decl.0);
     }
     self.visit_statement_match(stmt);
   }
 
-  fn visit_import_expression(&mut self, expr: &'ast oxc::ast::ast::ImportExpression<'ast>) {
+  fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
     if let oxc::ast::ast::Expression::StringLiteral(request) = &expr.source {
       let id = self.add_import_record(&request.value, ImportKind::DynamicImport);
       self.result.imports.insert(expr.span, id);
     }
   }
 
-  fn visit_call_expression(&mut self, expr: &'ast oxc::ast::ast::CallExpression<'ast>) {
+  fn visit_call_expression(&mut self, expr: &oxc::ast::ast::CallExpression<'ast>) {
     match &expr.callee {
       oxc::ast::ast::Expression::Identifier(ident)
         if ident.name == "require" && self.is_unresolved_reference(ident) =>

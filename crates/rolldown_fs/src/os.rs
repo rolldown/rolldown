@@ -2,7 +2,7 @@ use oxc_resolver::{FileMetadata, FileSystem};
 
 use crate::FileSystemExt;
 use std::{
-  fs, io,
+  io,
   path::{Path, PathBuf},
 };
 
@@ -11,49 +11,33 @@ use std::{
 pub struct FileSystemOs;
 
 impl FileSystemExt for FileSystemOs {
-  fn read_to_string_ext(&self, path: &Path) -> io::Result<String> {
-    self.read_to_string(path)
-  }
-
-  fn remove_dir_all_ext(&self, path: &Path) -> io::Result<()> {
+  fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     std::fs::remove_dir_all(path)
   }
 
-  fn create_dir_all_ext(&self, path: &Path) -> io::Result<()> {
+  fn create_dir_all(&self, path: &Path) -> io::Result<()> {
     std::fs::create_dir_all(path)
   }
 
-  fn write_ext(&self, path: &Path, content: &[u8]) -> io::Result<()> {
+  fn write(&self, path: &Path, content: &[u8]) -> io::Result<()> {
     std::fs::write(path, content)
-  }
-
-  fn metadata_ext(&self, path: &Path) -> io::Result<FileMetadata> {
-    std::fs::metadata(path).map(FileMetadata::from)
-  }
-
-  fn symlink_metadata_ext(&self, path: &Path) -> io::Result<FileMetadata> {
-    std::fs::symlink_metadata(path).map(FileMetadata::from)
-  }
-
-  fn canonicalize_ext(&self, path: &Path) -> io::Result<PathBuf> {
-    dunce::canonicalize(path)
   }
 }
 
 impl FileSystem for FileSystemOs {
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
-    self.read_to_string_ext(path.as_ref())
+    std::fs::read_to_string(path)
   }
 
   fn metadata(&self, path: &Path) -> io::Result<FileMetadata> {
-    self.metadata_ext(path.as_ref())
+    std::fs::metadata(path).map(FileMetadata::from)
   }
 
   fn symlink_metadata(&self, path: &Path) -> io::Result<FileMetadata> {
-    self.symlink_metadata_ext(path.as_ref())
+    std::fs::symlink_metadata(path).map(FileMetadata::from)
   }
 
   fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
-    self.canonicalize_ext(path.as_ref())
+    dunce::canonicalize(path)
   }
 }

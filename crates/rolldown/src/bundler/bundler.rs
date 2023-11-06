@@ -48,7 +48,7 @@ impl Bundler {
     let assets =
       self.build(normalized, Arc::<dyn rolldown_fs::FileSystemExt>::clone(&self.fs)).await?;
 
-    self.fs.create_dir_all_ext(dir.as_path()).unwrap_or_else(|_| {
+    self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
         "Could not create directory for output chunks: {:?} \ncwd: {}",
         dir.as_path(),
@@ -59,10 +59,10 @@ impl Bundler {
       let dest = dir.as_path().join(&chunk.file_name);
       if let Some(p) = dest.parent() {
         if !p.exists() {
-          self.fs.create_dir_all_ext(p).unwrap();
+          self.fs.create_dir_all(p).unwrap();
         }
       };
-      self.fs.write_ext(dest.as_path(), chunk.content.as_bytes()).unwrap_or_else(|_| {
+      self.fs.write(dest.as_path(), chunk.content.as_bytes()).unwrap_or_else(|_| {
         panic!("Failed to write file in {:?}", dir.as_path().join(&chunk.file_name))
       });
     }

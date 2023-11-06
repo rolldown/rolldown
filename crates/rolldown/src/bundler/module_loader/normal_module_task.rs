@@ -63,7 +63,7 @@ impl NormalModuleTask {
     let mut builder = NormalModuleBuilder::default();
     tracing::trace!("process {:?}", self.path);
     // load
-    let source = self.fs.read_to_string_ext(self.path.as_path())?;
+    let source = self.fs.read_to_string(self.path.as_path())?;
     // TODO: transform
 
     let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(source);

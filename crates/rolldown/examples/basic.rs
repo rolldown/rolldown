@@ -1,8 +1,5 @@
-
-
 use rolldown::{Bundler, InputItem, InputOptions};
-use rolldown_fs::{FileSystemVfs};
-
+use rolldown_fs::FileSystemVfs;
 
 #[tokio::main]
 async fn main() {

@@ -1,4 +1,4 @@
-use oxc::{ast::VisitMut, span::SourceType};
+use oxc::{ast::Visit, span::SourceType};
 use rolldown_common::{ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
@@ -88,7 +88,7 @@ impl RuntimeNormalModuleTask {
 
   fn make_ast(&self, source: String) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
     let source_type = SourceType::default();
-    let mut program = OxcCompiler::parse(source, source_type);
+    let program = OxcCompiler::parse(source, source_type);
 
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
@@ -102,7 +102,7 @@ impl RuntimeNormalModuleTask {
       self.module_type,
     );
     let namespace_symbol = scanner.namespace_symbol;
-    scanner.visit_program(program.program_mut());
+    scanner.visit_program(program.program());
     let scan_result = scanner.result;
 
     (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)

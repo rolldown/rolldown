@@ -12,11 +12,11 @@ use super::runtime_normal_module_task::RuntimeNormalModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
 use crate::bundler::graph::graph::Graph;
-use crate::bundler::graph::symbols::{AstSymbol, Symbols};
 use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::Module;
 use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
 use crate::bundler::runtime::RUNTIME_PATH;
+use crate::bundler::utils::ast_symbol::AstSymbol;
 use crate::bundler::utils::resolve_id::{resolve_id, ResolvedRequestInfo};
 use crate::error::{BatchedErrors, BatchedResult};
 use crate::SharedResolver;
@@ -61,20 +61,14 @@ impl<'a> ModuleLoader<'a> {
 
     let mut dynamic_entries = FxHashSet::default();
 
-    let mut tables: IndexVec<ModuleId, AstSymbol> = IndexVec::default();
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;
       };
       match msg {
         Msg::NormalModuleDone(task_result) => {
-          let NormalModuleTaskResult {
-            module_id,
-            ast_symbol: symbol_table,
-            resolved_deps,
-            mut builder,
-            ..
-          } = task_result;
+          let NormalModuleTaskResult { module_id, ast_symbol, resolved_deps, mut builder, .. } =
+            task_result;
 
           let import_records = builder.import_records.as_mut().unwrap();
 
@@ -82,38 +76,29 @@ impl<'a> ModuleLoader<'a> {
             let id = self.try_spawn_new_task(&info, &mut intermediate_modules, false);
             let import_record = &mut import_records[import_record_idx];
             import_record.resolved_module = id;
-            while tables.len() <= id.raw() as usize {
-              tables.push(AstSymbol::default());
-            }
+
             // dynamic import as extra entries if enable code splitting
             if import_record.kind == ImportKind::DynamicImport {
               dynamic_entries.insert((Some(info.path.unique(&self.input_options.cwd)), id));
             }
           });
 
-          while tables.len() <= task_result.module_id.raw() as usize {
-            tables.push(AstSymbol::default());
-          }
           intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
 
-          tables[task_result.module_id] = symbol_table;
+          self.graph.symbols.add_ast_symbol(module_id, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let NormalModuleTaskResult { module_id, ast_symbol: symbol_table, builder, .. } =
-            task_result;
-          while tables.len() <= task_result.module_id.raw() as usize {
-            tables.push(AstSymbol::default());
-          }
+          let NormalModuleTaskResult { module_id, ast_symbol, builder, .. } = task_result;
+
           let runtime_normal_module = builder.build();
           self.graph.runtime.init_symbols(&runtime_normal_module);
           intermediate_modules[module_id] = Some(Module::Normal(runtime_normal_module));
 
-          tables[task_result.module_id] = symbol_table;
+          self.graph.symbols.add_ast_symbol(module_id, ast_symbol);
         }
       }
       self.remaining -= 1;
     }
-    self.graph.symbols = Symbols::new(tables);
 
     self.graph.modules = intermediate_modules.into_iter().map(Option::unwrap).collect();
 
@@ -166,6 +151,7 @@ impl<'a> ModuleLoader<'a> {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         let id = intermediate_modules.push(None);
+        self.graph.symbols.add_ast_symbol(id, AstSymbol::default());
         not_visited.insert(id);
         if info.is_external {
           let ext =

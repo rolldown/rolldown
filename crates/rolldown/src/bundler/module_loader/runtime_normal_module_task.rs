@@ -6,11 +6,10 @@ use rolldown_oxc::{OxcCompiler, OxcProgram};
 use super::Msg;
 use crate::{
   bundler::{
-    graph::symbols::AstSymbol,
     module::normal_module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
     runtime::RUNTIME_PATH,
-    utils::ast_scope::AstScope,
+    utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
     visitors::scanner::{self, ScanResult},
   },
   SharedResolver,

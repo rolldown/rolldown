@@ -11,11 +11,11 @@ use rolldown_resolver::Resolver;
 use super::Msg;
 use crate::{
   bundler::{
-    graph::symbols::AstSymbol,
     module::normal_module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
     utils::{
       ast_scope::AstScope,
+      ast_symbol::AstSymbol,
       resolve_id::{resolve_id, ResolvedRequestInfo},
     },
     visitors::scanner::{self, ScanResult},

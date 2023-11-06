@@ -5,6 +5,7 @@ use index_vec::IndexVec;
 use oxc::{ast::Visit, span::SourceType};
 use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
+use rolldown_fs::FileSystemExt;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
@@ -20,8 +21,8 @@ use crate::bundler::{
   },
   visitors::scanner::{self, ScanResult},
 };
-pub struct NormalModuleTask<'task> {
-  ctx: &'task ModuleTaskContext<'task>,
+pub struct NormalModuleTask<'task, T: FileSystemExt + Default> {
+  ctx: &'task ModuleTaskContext<'task, T>,
   module_id: ModuleId,
   path: ResourceId,
   module_type: ModuleType,
@@ -30,9 +31,9 @@ pub struct NormalModuleTask<'task> {
   is_entry: bool,
 }
 
-impl<'task> NormalModuleTask<'task> {
+impl<'task, T: FileSystemExt + Default + 'static> NormalModuleTask<'task, T> {
   pub fn new(
-    ctx: &'task ModuleTaskContext<'task>,
+    ctx: &'task ModuleTaskContext<'task, T>,
     id: ModuleId,
     is_entry: bool,
     path: ResourceId,

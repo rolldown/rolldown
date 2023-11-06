@@ -12,16 +12,16 @@ use crate::bundler::{
   utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
   visitors::scanner::{self, ScanResult},
 };
-pub struct RuntimeNormalModuleTask<'task> {
-  ctx: &'task ModuleTaskContext<'task>,
+pub struct RuntimeNormalModuleTask<'task, T: FileSystemExt + Default> {
+  ctx: &'task ModuleTaskContext<'task, T>,
   module_id: ModuleId,
   module_type: ModuleType,
   errors: Vec<BuildError>,
   warnings: Vec<BuildError>,
 }
 
-impl<'task> RuntimeNormalModuleTask<'task> {
-  pub fn new(ctx: &'task ModuleTaskContext<'task>, id: ModuleId) -> Self {
+impl<'task, T: FileSystemExt + Default> RuntimeNormalModuleTask<'task, T> {
+  pub fn new(ctx: &'task ModuleTaskContext<'task, T>, id: ModuleId) -> Self {
     Self {
       ctx,
       module_id: id,

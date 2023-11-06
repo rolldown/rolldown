@@ -22,11 +22,11 @@ use crate::bundler::utils::resolve_id::{resolve_id, ResolvedRequestInfo};
 use crate::error::{BatchedErrors, BatchedResult};
 use crate::SharedResolver;
 
-pub struct ModuleLoader<'a, T> {
+pub struct ModuleLoader<'a, T: FileSystemExt + Default> {
   ctx: ModuleLoaderContext,
   input_options: &'a NormalizedInputOptions,
   graph: &'a mut Graph,
-  resolver: SharedResolver,
+  resolver: SharedResolver<T>,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
   fs: Arc<T>,
@@ -40,74 +40,10 @@ pub struct ModuleLoaderContext {
 }
 
 impl ModuleLoaderContext {
-  fn try_spawn_runtime_normal_module_task(&mut self, task_context: &ModuleTaskContext) -> ModuleId {
-    match self.visited.entry(RUNTIME_PATH.to_string().into()) {
-      std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
-      std::collections::hash_map::Entry::Vacant(not_visited) => {
-        let id = self.intermediate_modules.push(None);
-        not_visited.insert(id);
-        self.remaining += 1;
-        let task = RuntimeNormalModuleTask::new(
-          // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
-          unsafe { task_context.assume_static() },
-          id,
-        );
-        tokio::spawn(async move { task.run() });
-        id
-      }
-    }
-  }
-
-  fn try_spawn_new_task(
+  fn try_spawn_runtime_normal_module_task<T: FileSystemExt + Default + 'static>(
     &mut self,
-    module_task_context: &ModuleTaskContext,
-    info: &ResolvedRequestInfo,
-    is_entry: bool,
-    graph: &mut Graph,
+    task_context: &ModuleTaskContext<T>,
   ) -> ModuleId {
-    match self.visited.entry(info.path.clone()) {
-      std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
-      std::collections::hash_map::Entry::Vacant(not_visited) => {
-        let id = self.intermediate_modules.push(None);
-        graph.symbols.add_ast_symbol(id, AstSymbol::default());
-        not_visited.insert(id);
-        if info.is_external {
-          let ext = ExternalModule::new(
-            id,
-            ResourceId::new(info.path.clone(), &module_task_context.input_options.cwd),
-          );
-          self.intermediate_modules[id] = Some(Module::External(ext));
-        } else {
-          self.remaining += 1;
-
-          let module_path =
-            ResourceId::new(info.path.clone(), &module_task_context.input_options.cwd);
-
-          let task = NormalModuleTask::new(
-            // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
-            unsafe { module_task_context.assume_static() },
-            id,
-            is_entry,
-            module_path,
-            info.module_type,
-          );
-          tokio::spawn(async move { task.run().await });
-        }
-        id
-      }
-    }
-  }
-}
-
-#[derive(Debug, Default)]
-pub struct ModuleLoaderContext {
-  visited: FxHashMap<RawPath, ModuleId>,
-  remaining: u32,
-  intermediate_modules: IndexVec<ModuleId, Option<Module>>,
-}
-
-impl ModuleLoaderContext {
-  fn try_spawn_runtime_normal_module_task(&mut self, task_context: &ModuleTaskContext) -> ModuleId {
     match self.visited.entry(RUNTIME_PATH.to_string().into()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
@@ -125,9 +61,9 @@ impl ModuleLoaderContext {
     }
   }
 
-  fn try_spawn_new_task(
+  fn try_spawn_new_task<T: FileSystemExt + Default + 'static>(
     &mut self,
-    module_task_context: &ModuleTaskContext,
+    module_task_context: &ModuleTaskContext<T>,
     info: &ResolvedRequestInfo,
     is_entry: bool,
     graph: &mut Graph,
@@ -174,9 +110,6 @@ impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
       rx,
       input_options,
       resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, Arc::clone(&fs)).into(),
-      visited: FxHashMap::default(),
-      remaining: u32::default(),
-      resolver: Resolver::with_cwd(input_options.cwd.clone(), false).into(),
       graph,
       fs,
       ctx: ModuleLoaderContext::default(),

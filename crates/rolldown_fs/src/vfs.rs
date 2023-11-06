@@ -20,6 +20,35 @@ impl Default for FileSystemVfs {
   }
 }
 
+impl FileSystemVfs {
+  /// # Panics
+  ///
+  /// * Fails to create directory
+  /// * Fails to write file
+  pub fn new(data: &[(&'static str, &'static str)]) -> Self {
+    let mut fs = Self { fs: vfs::MemoryFS::default() };
+    for (path, content) in data {
+      fs.add_file(Path::new(path), content);
+    }
+    fs
+  }
+
+  pub fn add_file(&mut self, path: &Path, content: &str) {
+    use vfs::FileSystem;
+    let fs = &mut self.fs;
+    // Create all parent directories
+    for path in path.ancestors().collect::<Vec<_>>().iter().rev() {
+      let path = path.to_string_lossy();
+      if !fs.exists(path.as_ref()).unwrap() {
+        fs.create_dir(path.as_ref()).unwrap();
+      }
+    }
+    // Create file
+    let mut file = fs.create_file(path.to_string_lossy().as_ref()).unwrap();
+    file.write_all(content.as_bytes()).unwrap();
+  }
+}
+
 impl FileSystemExt for FileSystemVfs {
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     use vfs::FileSystem;

@@ -1,3 +1,4 @@
+use rolldown_fs::{FileSystemOs, FileSystemVfs};
 use std::path::PathBuf;
 use wasm_bindgen::prelude::*;
 
@@ -9,13 +10,16 @@ use sugar_path::SugarPathBuf;
 pub async fn greet(name: &str) {
   let root = PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap());
   let cwd = root.join("./examples").into_normalize();
-  let mut bundler = Bundler::new(InputOptions {
-    input: Some(vec![InputItem {
-      name: Some("basic".to_string()),
-      import: "./index.js".to_string(),
-    }]),
-    cwd: Some(cwd),
-  });
+  let mut bundler = Bundler::new(
+    InputOptions {
+      input: Some(vec![InputItem {
+        name: Some("basic".to_string()),
+        import: "./index.js".to_string(),
+      }]),
+      cwd: Some(cwd),
+    },
+    FileSystemVfs::default(),
+  );
 
   let outputs = bundler.write(Default::default()).await.unwrap();
   println!("{outputs:#?}");

@@ -1169,8 +1169,6 @@ dependencies = [
 [[package]]
 name = "oxc_resolver"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e69e03b0281c645ccb0f2d6b646b83b2729fc6931d18f7e267e6a95d3af50921"
 dependencies = [
  "dashmap",
  "dunce",
@@ -1189,8 +1187,16 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0276e9ef76098428bedc2fcc93bb5c4cc6169c459eafcbb40c2df471fffa28ee"
 dependencies = [
+<<<<<<< HEAD
  "bitflags 2.4.1",
  "indexmap 2.1.0",
+||||||| parent of 0ac69fe (pass fs into oxc_resolver)
+ "bitflags 2.4.0",
+ "indexmap 2.0.2",
+=======
+ "bitflags 2.4.0",
+ "indexmap 2.1.0",
+>>>>>>> 0ac69fe (pass fs into oxc_resolver)
  "itertools 0.11.0",
  "oxc_ast",
  "oxc_diagnostics",
@@ -1494,6 +1500,7 @@ name = "rolldown-wasm"
 version = "0.1.0"
 dependencies = [
  "rolldown",
+ "rolldown_fs",
  "sugar_path",
  "tokio",
  "wasm-bindgen",
@@ -1568,6 +1575,7 @@ dependencies = [
  "oxc_resolver",
  "rolldown_common",
  "rolldown_error",
+ "rolldown_fs",
  "sugar_path",
 ]
 

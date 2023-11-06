@@ -22,7 +22,7 @@ pub struct Bundler<T: FileSystemExt> {
   fs: Arc<T>,
 }
 
-impl<T: FileSystemExt + 'static> Bundler<T> {
+impl<T: FileSystemExt + Default + 'static> Bundler<T> {
   pub fn new(input_options: InputOptions, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);

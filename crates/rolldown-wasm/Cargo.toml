@@ -14,7 +14,7 @@ crate-type = ["cdylib"]
 [dependencies]
 wasm-bindgen = "0.2.74"
 rolldown     = { path = "../rolldown/" }
-
-tokio = { workspace = true, default-features = false, features = ["rt", "macros", "sync"] }
+rolldown_fs  = { path = "../rolldown_fs" }
+tokio        = { workspace = true, default-features = false, features = ["rt", "macros", "sync"] }
 
 sugar_path = { workspace = true }

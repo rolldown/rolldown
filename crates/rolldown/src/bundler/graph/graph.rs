@@ -23,7 +23,7 @@ pub struct Graph {
 }
 
 impl Graph {
-  pub async fn generate_module_graph<T: FileSystemExt + 'static>(
+  pub async fn generate_module_graph<T: FileSystemExt + Default + 'static>(
     &mut self,
     input_options: &NormalizedInputOptions,
     fs: Arc<T>,

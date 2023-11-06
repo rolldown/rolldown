@@ -1,6 +1,7 @@
 use oxc::{ast::Visit, span::SourceType};
 use rolldown_common::{ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
+use rolldown_fs::FileSystemExt;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
 use super::{module_task_context::ModuleTaskContext, Msg};

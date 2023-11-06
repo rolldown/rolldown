@@ -152,8 +152,8 @@ impl<'task> NormalModuleTask<'task> {
   }
 
   #[allow(clippy::option_if_let_else)]
-  pub(crate) async fn resolve_id(
-    resolver: &Resolver,
+  pub(crate) async fn resolve_id<F: FileSystemExt + Default>(
+    resolver: &Resolver<F>,
     importer: &ResourceId,
     specifier: &str,
   ) -> Result<ResolvedRequestInfo, BuildError> {

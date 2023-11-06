@@ -1102,6 +1102,7 @@ checksum = "2a72360715a0bac81660a30a00c402448706ccc09abe102b625f0d4bb66cc526"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
+ "oxc_codegen",
  "oxc_diagnostics",
  "oxc_index",
  "oxc_parser",
@@ -1131,6 +1132,20 @@ dependencies = [
  "num-traits",
  "oxc_allocator",
  "oxc_index",
+ "oxc_span",
+ "oxc_syntax",
+]
+
+[[package]]
+name = "oxc_codegen"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adb50b264de61b89db6cded131bf33fd71246a6da3679ed1295c8f05a2486de4"
+dependencies = [
+ "bitflags 2.4.1",
+ "num-bigint",
+ "oxc_allocator",
+ "oxc_ast",
  "oxc_span",
  "oxc_syntax",
 ]
@@ -1178,7 +1193,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "0.5.0"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad0c43ffe3273f741029d1f94eb767c152e9b4db3cd0c46d30bc1148ce7b6359"
 dependencies = [
  "dashmap",
  "dunce",
@@ -1197,13 +1214,6 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0276e9ef76098428bedc2fcc93bb5c4cc6169c459eafcbb40c2df471fffa28ee"
 dependencies = [
-<<<<<<< HEAD
- "bitflags 2.4.1",
- "indexmap 2.1.0",
-||||||| parent of 0ac69fe (pass fs into oxc_resolver)
- "bitflags 2.4.0",
- "indexmap 2.0.2",
-=======
  "bitflags 2.4.0",
  "indexmap 2.1.0",
 >>>>>>> 0ac69fe (pass fs into oxc_resolver)

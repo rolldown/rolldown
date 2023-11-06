@@ -1,8 +1,8 @@
-use std::{path::PathBuf, sync::Arc};
+
 
 use rolldown::{Bundler, InputItem, InputOptions};
-use rolldown_fs::{FileSystemOs, FileSystemVfs};
-use sugar_path::SugarPathBuf;
+use rolldown_fs::{FileSystemVfs};
+
 
 #[tokio::main]
 async fn main() {
@@ -20,5 +20,5 @@ async fn main() {
     fs,
   );
 
-  let outputs = bundler.write(Default::default()).await.unwrap();
+  let _outputs = bundler.write(Default::default()).await.unwrap();
 }

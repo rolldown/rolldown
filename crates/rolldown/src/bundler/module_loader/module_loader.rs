@@ -173,7 +173,7 @@ impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
       tx,
       rx,
       input_options,
-      resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, fs.clone()).into(),
+      resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, Arc::clone(&fs)).into(),
       visited: FxHashMap::default(),
       remaining: u32::default(),
       resolver: Resolver::with_cwd(input_options.cwd.clone(), false).into(),

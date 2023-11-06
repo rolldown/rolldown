@@ -1,6 +1,6 @@
 use rolldown_common::{ModuleType, RawPath, ResourceId};
 use rolldown_error::BuildError;
-use rolldown_fs::{FileSystemExt, FileSystemOs};
+use rolldown_fs::FileSystemExt;
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
@@ -8,7 +8,7 @@ use std::{
 };
 use sugar_path::SugarPathBuf;
 
-use oxc_resolver::{Resolution, ResolveOptions, Resolver as OxcResolver, ResolverGeneric};
+use oxc_resolver::{Resolution, ResolveOptions, ResolverGeneric};
 
 #[derive(Debug)]
 pub struct Resolver<T: FileSystemExt + Default> {

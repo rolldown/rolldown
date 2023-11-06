@@ -4,7 +4,6 @@ mod plugin;
 
 use std::sync::Arc;
 
-use rolldown_fs::FileSystemExt;
 use rolldown_resolver::Resolver;
 
 pub(crate) type SharedResolver<T> = Arc<Resolver<T>>;

@@ -49,10 +49,6 @@ impl<'task> NormalModuleTask<'task> {
     }
   }
 
-  pub async fn read_source(&self) -> anyhow::Result<String> {
-    let source = std::fs::read_to_string(self.path.as_ref())?;
-    Ok(source)
-  }
   pub async fn run(mut self) -> anyhow::Result<()> {
     let mut builder = NormalModuleBuilder::default();
     tracing::trace!("process {:?}", self.path);

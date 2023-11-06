@@ -2,7 +2,6 @@ use std::{
   borrow::Cow,
   path::{Path, PathBuf},
   process::Command,
-  sync::Arc,
 };
 
 use rolldown::{Asset, Bundler, InputOptions, OutputOptions};

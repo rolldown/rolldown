@@ -9,6 +9,7 @@ use crate::{
   error::BatchedResult,
 };
 use rolldown_common::ModuleId;
+use rolldown_fs::FileSystemExt;
 use rustc_hash::FxHashSet;
 
 #[derive(Default, Debug)]
@@ -22,10 +23,10 @@ pub struct Graph {
 }
 
 impl Graph {
-  pub async fn generate_module_graph(
+  pub async fn generate_module_graph<T: FileSystemExt + 'static>(
     &mut self,
     input_options: &NormalizedInputOptions,
-    fs: Arc<dyn rolldown_fs::FileSystemExt>,
+    fs: Arc<T>,
   ) -> BatchedResult<()> {
     ModuleLoader::new(input_options, self, fs).fetch_all_modules().await?;
 

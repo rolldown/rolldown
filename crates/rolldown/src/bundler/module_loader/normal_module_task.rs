@@ -9,6 +9,7 @@ use oxc::{
 };
 use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
+use rolldown_fs::FileSystemExt;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
@@ -24,7 +25,7 @@ use crate::{
   },
   SharedResolver,
 };
-pub struct NormalModuleTask {
+pub struct NormalModuleTask<T> {
   module_id: ModuleId,
   path: ResourceId,
   module_type: ModuleType,
@@ -33,10 +34,10 @@ pub struct NormalModuleTask {
   warnings: Vec<BuildError>,
   resolver: SharedResolver,
   is_entry: bool,
-  fs: Arc<dyn rolldown_fs::FileSystemExt>,
+  fs: Arc<T>,
 }
 
-impl NormalModuleTask {
+impl<T: FileSystemExt> NormalModuleTask<T> {
   pub fn new(
     id: ModuleId,
     is_entry: bool,
@@ -44,7 +45,7 @@ impl NormalModuleTask {
     path: ResourceId,
     module_type: ModuleType,
     tx: tokio::sync::mpsc::UnboundedSender<Msg>,
-    fs: Arc<dyn rolldown_fs::FileSystemExt>,
+    fs: Arc<T>,
   ) -> Self {
     Self {
       module_id: id,

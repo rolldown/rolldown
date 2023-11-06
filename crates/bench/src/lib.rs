@@ -1,15 +1,19 @@
 use std::path::PathBuf;
 
 use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
+use rolldown_fs::FileSystemOs;
 
 pub async fn run_fixture(fixture_path: PathBuf) {
-  let mut bundler = Bundler::new(InputOptions {
-    input: Some(vec![InputItem {
-      name: Some("main".to_string()),
-      import: "./main.js".to_string(),
-    }]),
-    cwd: Some(fixture_path.clone()),
-  });
+  let mut bundler = Bundler::new(
+    InputOptions {
+      input: Some(vec![InputItem {
+        name: Some("main".to_string()),
+        import: "./main.js".to_string(),
+      }]),
+      cwd: Some(fixture_path.clone()),
+    },
+    FileSystemOs,
+  );
 
   if fixture_path.join("dist").is_dir() {
     std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();

@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::path::PathBuf;
 
 use derivative::Derivative;
@@ -14,7 +15,7 @@ impl From<String> for InputItem {
   }
 }
 
-#[derive(Derivative, Default)]
+#[derive(Derivative)]
 #[derivative(Debug)]
 pub struct InputOptions {
   pub input: Option<Vec<InputItem>>,

@@ -10,7 +10,7 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-oxc_resolver    = "0.2.0"
+oxc_resolver    = { workspace = true }
 sugar_path      = { workspace = true }
 anyhow          = { workspace = true }
 rolldown_error  = { path = "../rolldown_error" }

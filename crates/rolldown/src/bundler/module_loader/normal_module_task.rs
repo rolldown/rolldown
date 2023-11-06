@@ -5,8 +5,10 @@ use index_vec::IndexVec;
 use oxc::{ast::VisitMut, span::SourceType};
 use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
+use rolldown_fs::FileSystemExt;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 use rolldown_resolver::Resolver;
+use sugar_path::AsPath;
 
 use super::Msg;
 use crate::{
@@ -22,7 +24,7 @@ use crate::{
   },
   SharedResolver,
 };
-pub struct NormalModuleTask {
+pub struct NormalModuleTask<T> {
   module_id: ModuleId,
   path: ResourceId,
   module_type: ModuleType,
@@ -31,9 +33,10 @@ pub struct NormalModuleTask {
   warnings: Vec<BuildError>,
   resolver: SharedResolver,
   is_entry: bool,
+  fs: Arc<T>,
 }
 
-impl NormalModuleTask {
+impl<T: FileSystemExt> NormalModuleTask<T> {
   pub fn new(
     id: ModuleId,
     is_entry: bool,
@@ -41,6 +44,7 @@ impl NormalModuleTask {
     path: ResourceId,
     module_type: ModuleType,
     tx: tokio::sync::mpsc::UnboundedSender<Msg>,
+    fs: Arc<T>,
   ) -> Self {
     Self {
       module_id: id,
@@ -51,6 +55,7 @@ impl NormalModuleTask {
       tx,
       errors: Vec::default(),
       warnings: Vec::default(),
+      fs,
     }
   }
 
@@ -58,7 +63,7 @@ impl NormalModuleTask {
     let mut builder = NormalModuleBuilder::default();
     tracing::trace!("process {:?}", self.path);
     // load
-    let source = tokio::fs::read_to_string(self.path.as_ref()).await?;
+    let source = self.fs.read_to_string(self.path.as_path())?;
     // TODO: transform
 
     let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(source);

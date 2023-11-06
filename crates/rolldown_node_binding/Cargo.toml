@@ -21,6 +21,7 @@ napi-derive      = { version = "2.11.0" }
 rolldown         = { path = "../rolldown" }
 rolldown_error   = { path = "../rolldown_error" }
 rolldown_tracing = { path = "../rolldown_tracing" }
+rolldown_fs      = { path = "../rolldown_fs" }
 rustc-hash       = { workspace = true }
 scoped-tls       = { workspace = true }
 serde            = { workspace = true }

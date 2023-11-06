@@ -3,6 +3,7 @@ use std::sync::Arc;
 use index_vec::IndexVec;
 use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
 use rolldown_error::BuildError;
+use rolldown_fs::FileSystemExt;
 use rolldown_resolver::Resolver;
 use rolldown_utils::block_on_spawn_all;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -21,7 +22,7 @@ use crate::bundler::utils::resolve_id::{resolve_id, ResolvedRequestInfo};
 use crate::error::{BatchedErrors, BatchedResult};
 use crate::SharedResolver;
 
-pub struct ModuleLoader<'a> {
+pub struct ModuleLoader<'a, T> {
   input_options: &'a NormalizedInputOptions,
   graph: &'a mut Graph,
   resolver: SharedResolver,
@@ -29,10 +30,11 @@ pub struct ModuleLoader<'a> {
   remaining: u32,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
+  fs: Arc<T>,
 }
 
-impl<'a> ModuleLoader<'a> {
-  pub fn new(input_options: &'a NormalizedInputOptions, graph: &'a mut Graph) -> Self {
+impl<'a, T: FileSystemExt + 'static> ModuleLoader<'a, T> {
+  pub fn new(input_options: &'a NormalizedInputOptions, graph: &'a mut Graph, fs: Arc<T>) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
     Self {
       tx,
@@ -42,6 +44,7 @@ impl<'a> ModuleLoader<'a> {
       visited: FxHashMap::default(),
       remaining: u32::default(),
       graph,
+      fs,
     }
   }
 
@@ -169,6 +172,7 @@ impl<'a> ModuleLoader<'a> {
             module_path,
             info.module_type,
             self.tx.clone(),
+            Arc::clone(&self.fs),
           );
           tokio::spawn(async move { task.run().await });
         }

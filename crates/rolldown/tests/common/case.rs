@@ -18,22 +18,21 @@ impl Case {
 
   pub fn run(self) {
     std::env::set_var("ROLLDOWN_TEST", "1");
-    tokio::runtime::Runtime::new().unwrap().block_on(self.run_inner())
+    tokio::runtime::Runtime::new().unwrap().block_on(self.run_inner());
   }
 
   pub async fn run_inner(mut self) {
     let build_output = self.fixture.compile().await;
     match build_output {
       Ok(assets) => {
-        if self.fixture.test_config().expect_error {
-          panic!("expected error, but got success")
-        }
+        assert!(!self.fixture.test_config().expect_error, "expected error, but got success");
         self.render_assets_to_snapshot(assets);
       }
       Err(errs) => {
-        if !self.fixture.test_config().expect_error {
-          panic!("expected success, but got errors: {:?}", errs)
-        }
+        assert!(
+          self.fixture.test_config().expect_error,
+          "expected success, but got errors: {errs:?}"
+        );
         self.render_errors_to_snapshot(errs);
       }
     }
@@ -63,14 +62,14 @@ impl Case {
 
   fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildError>) {
     self.snapshot.append("# Errors\n\n");
-    errors.sort_by_key(|e| e.code());
+    errors.sort_by_key(rolldown_error::BuildError::code);
     let rendered = errors
       .iter()
       .flat_map(|error| {
         [
           Cow::Owned(format!("## {}\n", error.code())),
           "```text".into(),
-          Cow::Owned(format!("{}", error.to_diagnostic().print_to_string())),
+          Cow::Owned(error.to_diagnostic().print_to_string()),
           "```".into(),
         ]
       })

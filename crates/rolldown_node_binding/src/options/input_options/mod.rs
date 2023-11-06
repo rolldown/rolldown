@@ -2,6 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 mod plugin;
 mod plugin_adapter;
 use napi_derive::napi;
+
 use serde::Deserialize;
 
 use crate::options::input_options::plugin_adapter::JsAdapterPlugin;

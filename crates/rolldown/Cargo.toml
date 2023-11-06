@@ -17,6 +17,7 @@ rolldown_utils    = { path = "../rolldown_utils" }
 rolldown_resolver = { path = "../rolldown_resolver" }
 rolldown_error    = { path = "../rolldown_error" }
 rolldown_oxc      = { path = "../rolldown_oxc" }
+rolldown_fs       = { path = "../rolldown_fs" }
 derivative        = { workspace = true }
 sugar_path        = { workspace = true }
 oxc               = { workspace = true }
@@ -32,6 +33,8 @@ rayon             = "1.6.0"
 string_wizard     = { workspace = true }
 async-trait       = { workspace = true }
 smallvec          = { workspace = true }
+oxc_resolver      = { workspace = true }
+
 
 [dev_dependencies]
 insta            = { workspace = true }

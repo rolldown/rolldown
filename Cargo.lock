@@ -131,6 +131,7 @@ dependencies = [
  "codspeed-criterion-compat",
  "criterion 0.4.0",
  "rolldown",
+ "rolldown_fs",
  "tokio",
 ]
 
@@ -1192,9 +1193,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "0.2.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9657cba6ac0894a8acf3aca5b9a4b7668ce8486042588cf2bf0f34eb5f37ebc6"
+checksum = "e69e03b0281c645ccb0f2d6b646b83b2729fc6931d18f7e267e6a95d3af50921"
 dependencies = [
  "dashmap",
  "dunce",
@@ -1511,9 +1512,11 @@ dependencies = [
  "index_vec",
  "insta",
  "oxc",
+ "oxc_resolver",
  "rayon",
  "rolldown_common",
  "rolldown_error",
+ "rolldown_fs",
  "rolldown_oxc",
  "rolldown_resolver",
  "rolldown_testing",
@@ -1552,6 +1555,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_fs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dunce",
+ "oxc_resolver",
+ "vfs",
+]
+
+[[package]]
 name = "rolldown_node_binding"
 version = "0.0.1"
 dependencies = [
@@ -1565,6 +1578,7 @@ dependencies = [
  "napi-derive",
  "rolldown",
  "rolldown_error",
+ "rolldown_fs",
  "rolldown_tracing",
  "rustc-hash",
  "scoped-tls",
@@ -2107,6 +2121,12 @@ name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
+
+[[package]]
+name = "vfs"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e4fe92cfc1bad19c19925d5eee4b30584dbbdee4ff10183b261acccbef74e2d"
 
 [[package]]
 name = "walkdir"

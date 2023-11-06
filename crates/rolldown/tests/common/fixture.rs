@@ -2,10 +2,12 @@ use std::{
   borrow::Cow,
   path::{Path, PathBuf},
   process::Command,
+  sync::Arc,
 };
 
 use rolldown::{Asset, Bundler, InputOptions, OutputOptions};
 use rolldown_error::BuildError;
+use rolldown_fs::{FileSystemExt, FileSystemOs};
 use rolldown_testing::TestConfig;
 
 fn default_test_input_item() -> rolldown_testing::InputItem {
@@ -86,18 +88,21 @@ impl Fixture {
     let mut test_config = self.test_config();
 
     if test_config.input.input.is_none() {
-      test_config.input.input = Some(vec![default_test_input_item()])
+      test_config.input.input = Some(vec![default_test_input_item()]);
     }
 
-    let mut bundler = Bundler::new(InputOptions {
-      input: test_config.input.input.map(|items| {
-        items
-          .into_iter()
-          .map(|item| rolldown::InputItem { name: Some(item.name), import: item.import })
-          .collect()
-      }),
-      cwd: Some(fixture_path.to_path_buf()),
-    });
+    let mut bundler = Bundler::new(
+      InputOptions {
+        input: test_config.input.input.map(|items| {
+          items
+            .into_iter()
+            .map(|item| rolldown::InputItem { name: Some(item.name), import: item.import })
+            .collect()
+        }),
+        cwd: Some(fixture_path.to_path_buf()),
+      },
+      FileSystemOs,
+    );
 
     if fixture_path.join("dist").is_dir() {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();

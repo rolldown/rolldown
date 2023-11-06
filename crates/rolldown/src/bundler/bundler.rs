@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use rolldown_error::BuildError;
+use rolldown_fs::FileSystemExt;
 use sugar_path::AsPath;
 
 use super::{
@@ -13,22 +16,23 @@ use crate::{bundler::bundle::bundle::Bundle, plugin::plugin::BoxPlugin, InputOpt
 
 type BuildResult<T> = Result<T, Vec<BuildError>>;
 
-pub struct Bundler {
+pub struct Bundler<T: FileSystemExt> {
   input_options: NormalizedInputOptions,
   _plugins: Vec<BoxPlugin>,
+  fs: Arc<T>,
 }
 
-impl Bundler {
-  pub fn new(input_options: InputOptions) -> Self {
+impl<T: FileSystemExt + 'static> Bundler<T> {
+  pub fn new(input_options: InputOptions, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self { input_options: normalized, _plugins: vec![] }
+    Self { input_options: normalized, _plugins: vec![], fs: Arc::new(fs) }
   }
 
-  pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>) -> Self {
+  pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self { input_options: normalized, _plugins: plugins }
+    Self { input_options: normalized, _plugins: plugins, fs: Arc::new(fs) }
   }
 
   pub async fn write(&mut self, output_options: crate::OutputOptions) -> BuildResult<Vec<Asset>> {
@@ -37,9 +41,9 @@ impl Bundler {
     });
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
 
-    let assets = self.build(normalized).await?;
+    let assets = self.build(normalized, Arc::clone(&self.fs)).await?;
 
-    std::fs::create_dir_all(&dir).unwrap_or_else(|_| {
+    self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
         "Could not create directory for output chunks: {:?} \ncwd: {}",
         dir.as_path(),
@@ -50,10 +54,10 @@ impl Bundler {
       let dest = dir.as_path().join(&chunk.file_name);
       if let Some(p) = dest.parent() {
         if !p.exists() {
-          std::fs::create_dir_all(p).unwrap();
+          self.fs.create_dir_all(p).unwrap();
         }
       };
-      std::fs::write(dest, &chunk.content).unwrap_or_else(|_| {
+      self.fs.write(dest.as_path(), chunk.content.as_bytes()).unwrap_or_else(|_| {
         panic!("Failed to write file in {:?}", dir.as_path().join(&chunk.file_name))
       });
     }
@@ -66,15 +70,19 @@ impl Bundler {
     output_options: crate::OutputOptions,
   ) -> BuildResult<Vec<Asset>> {
     let normalized = NormalizedOutputOptions::from_output_options(output_options);
-    self.build(normalized).await
+    self.build(normalized, Arc::clone(&self.fs)).await
   }
 
-  async fn build(&mut self, output_options: NormalizedOutputOptions) -> BuildResult<Vec<Asset>> {
+  async fn build(
+    &mut self,
+    output_options: NormalizedOutputOptions,
+    fs: Arc<T>,
+  ) -> BuildResult<Vec<Asset>> {
     tracing::trace!("NormalizedInputOptions {:#?}", self.input_options);
     tracing::trace!("NormalizedOutputOptions: {output_options:#?}",);
 
     let mut graph = Graph::default();
-    graph.generate_module_graph(&self.input_options).await?;
+    graph.generate_module_graph(&self.input_options, fs).await?;
 
     let mut bundle = Bundle::new(&mut graph, &output_options);
     let assets = bundle.generate(&self.input_options);

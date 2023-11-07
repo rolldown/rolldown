@@ -1,0 +1,24 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/deconflict/basic
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert_default } from "assert";
+
+// a.js
+const a = 'a.js'
+
+
+
+// main.js
+
+
+const a$1 = 'main.js'
+assert_default.equal(a$1, 'main.js')
+assert_default.equal(a, 'a.js')
+```

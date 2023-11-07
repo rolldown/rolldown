@@ -1,22 +1,16 @@
 {
-  "name": "create-wasm-app",
+  "name": "rolldown-playground",
   "version": "0.1.0",
   "description": "create an app to consume rust-generated wasm packages",
   "main": "index.js",
-  "bin": ".bin/create-wasm-app.js",
   "scripts": {
-    "build": "webpack --config webpack.config.js",
-    "start": "webpack-dev-server"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/rustwasm/create-wasm-app.git"
+    "build": "vite build",
+    "start": "vite --open"
   },
   "keywords": [
     "webassembly",
     "wasm",
-    "rust",
-    "webpack"
+    "rust"
   ],
   "author": "Ashley Williams <ashley666ashley@gmail.com>",
   "license": "(MIT OR Apache-2.0)",
@@ -25,10 +19,7 @@
   },
   "homepage": "https://github.com/rustwasm/create-wasm-app#readme",
   "devDependencies": {
-    "copy-webpack-plugin": "^5.0.0",
-    "rolldown-wasm": "0.1.0",
-    "webpack": "^4.29.3",
-    "webpack-cli": "^3.1.0",
-    "webpack-dev-server": "^3.1.5"
+    "vite": "^4.5.0",
+    "vite-plugin-top-level-await": "^1.3.1"
   }
 }

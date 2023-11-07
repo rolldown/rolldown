@@ -158,3 +158,5 @@ lib
 
 # esbuild test
 *.go
+
+pkg/

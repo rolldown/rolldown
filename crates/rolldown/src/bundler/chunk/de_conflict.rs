@@ -5,7 +5,7 @@ use crate::bundler::{graph::graph::Graph, module::Module, utils::renamer::Rename
 
 impl Chunk {
   pub fn de_conflict(&mut self, graph: &Graph) {
-    let mut renamer = Renamer::new(&graph.symbols);
+    let mut renamer = Renamer::new(&graph.symbols, graph.modules.len());
 
     self
       .modules
@@ -50,6 +50,22 @@ impl Chunk {
 
     self.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
       renamer.add_top_level_symbol(item.import_ref);
+    });
+
+    // rename non-top-level names
+
+    self.modules.iter().copied().for_each(|module| {
+      let Module::Normal(module) = &graph.modules[module] else { return };
+      module.scope.descendants().for_each(|scope_id| {
+        if scope_id == module.scope.root_scope_id() {
+          // Top level symbol are already processed above
+          return;
+        }
+        let bindings = module.scope.get_bindings(scope_id);
+        bindings.iter().for_each(|(_binding_name, symbol_id)| {
+          renamer.add_non_top_level_symbol(module.id, (module.id, *symbol_id).into());
+        });
+      });
     });
 
     self.canonical_names = renamer.into_canonical_names();

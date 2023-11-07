@@ -31,10 +31,6 @@ impl<'name> Renamer<'name> {
     *self.top_level_name_to_count.entry(name).or_default() += 1;
   }
 
-  pub fn is_used_for(&self, name: &Atom) -> bool {
-    self.top_level_name_to_count.get(name).copied().unwrap_or_default() == 0
-  }
-
   pub fn add_top_level_symbol(&mut self, symbol_ref: SymbolRef) {
     let canonical_ref = self.symbols.par_canonical_ref_for(symbol_ref);
     let original_name = Cow::Borrowed(self.symbols.get_original_name(canonical_ref));

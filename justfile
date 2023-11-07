@@ -29,7 +29,9 @@ bench-prepare:
 bench:
   cargo bench -p bench
 
-wasm-build:
-  cd crates/rolldown_wasm && wasm-pack build
-  rm -r ./web/wasm
+# build wasm of rolldown and move the output `pkg/` under `web` directory
+# Use `just wasm-build release` for better performance but also it will cost more time.
+wasm-build mode="dev":
+  cd crates/rolldown_wasm && wasm-pack build --{{mode}} --target web
+  -rm -r ./web/wasm
   mv crates/rolldown_wasm/pkg ./web/wasm

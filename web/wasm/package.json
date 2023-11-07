@@ -1,5 +1,5 @@
 {
-  "name": "rolldown-wasm",
+  "name": "rolldown_wasm",
   "version": "0.1.0",
   "license": "MIT",
   "repository": {
@@ -9,14 +9,12 @@
   "files": [
     "rolldown_wasm_bg.wasm",
     "rolldown_wasm.js",
-    "rolldown_wasm_bg.js",
     "rolldown_wasm.d.ts"
   ],
   "module": "rolldown_wasm.js",
   "homepage": "https://github.com/rolldown-rs/rolldown",
   "types": "rolldown_wasm.d.ts",
   "sideEffects": [
-    "./rolldown_wasm.js",
     "./snippets/*"
   ]
 }

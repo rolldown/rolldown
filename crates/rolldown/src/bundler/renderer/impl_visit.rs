@@ -226,30 +226,4 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     self.visit_binding_pattern(&pat.left);
     self.visit_expression(&pat.right);
   }
-
-  // fn visit_array_pattern(&mut self, pat: &oxc::ast::ast::ArrayPattern<'ast>) {
-  //   // visit children
-  //   for pat in pat.elements.iter().flatten() {
-  //     match &pat.kind {
-  //       oxc::ast::ast::BindingPatternKind::BindingIdentifier(ident) => {
-  //         match self.need_to_rename((self.ctx.module.id, ident.expect_symbol_id()).into()) {
-  //           Some(new_name) if new_name != &ident.name => {
-  //             self.ctx.source.overwrite(
-  //               ident.span.start,
-  //               ident.span.end,
-  //               format!("{}: {new_name}", ident.name),
-  //             );
-  //           }
-  //           _ => {}
-  //         }
-  //       }
-  //       _ => {
-  //         self.visit_binding_pattern(pat);
-  //       }
-  //     }
-  //   }
-  //   if let Some(rest) = &pat.rest {
-  //     self.visit_rest_element(rest);
-  //   }
-  // }
 }

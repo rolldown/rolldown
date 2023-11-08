@@ -1,10 +1,12 @@
 import assert from 'assert'
 import { a as a2, b as b2, c as c2, d as d2, e as e2 } from './names.js'
-const [a] = ['a1']
-const { b } = { b: 'b1' }
-const { b: c } = { b: 'c1' }
+export const [a] = ['a1']
+export const { b } = { b: 'b1' }
+export const { b: c } = { b: 'c1' }
 export const { d = '' } = { d: 'd1' }
 export const { d: e = '' } = { d: 'e1' }
+export { a2, b2, c2, d2, e2 }
+
 assert.equal(a, 'a1')
 assert.equal(a2, 'a2')
 assert.equal(b, 'b1')

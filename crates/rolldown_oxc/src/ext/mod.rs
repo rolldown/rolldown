@@ -24,7 +24,7 @@ impl BindingPatternExt for ast::BindingPattern<'_> {
     while let Some(binding_kind) = queue.pop() {
       match binding_kind {
         ast::BindingPatternKind::BindingIdentifier(id) => {
-          ret.push(&*id);
+          ret.push(id);
         }
         ast::BindingPatternKind::ArrayPattern(arr_pat) => {
           queue.extend(arr_pat.elements.iter().flatten().map(|pat| &pat.kind).rev());

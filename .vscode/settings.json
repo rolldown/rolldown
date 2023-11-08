@@ -31,7 +31,8 @@
     "Renamer",
     "rolldown",
     "rollup",
-    "rustc"
+    "rustc",
+    "smallvec"
   ],
   "git.ignoreLimitWarning": true,
   "json.schemas": [

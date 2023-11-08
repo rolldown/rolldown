@@ -376,7 +376,7 @@ impl<'graph> Linker<'graph> {
                   &linking_infos[importer.id],
                   info,
                 ) {
-                  MatchImportKind::NotFound => panic!(""),
+                  MatchImportKind::NotFound => panic!("info {info:#?}"),
                   MatchImportKind::PotentiallyAmbiguous(
                     symbol_ref,
                     mut potentially_ambiguous_symbol_refs,

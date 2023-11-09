@@ -1634,7 +1634,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_wasm"
+name = "rolldown_wasm_binding"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",

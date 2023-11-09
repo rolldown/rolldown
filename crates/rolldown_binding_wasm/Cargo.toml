@@ -1,5 +1,5 @@
 [package]
-name                 = "rolldown_wasm"
+name                 = "rolldown_wasm_binding"
 version              = "0.1.0"
 edition.workspace    = true
 homepage.workspace   = true

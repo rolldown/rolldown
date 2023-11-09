@@ -16,7 +16,7 @@ use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::Module;
 use crate::bundler::module_loader::module_task_context::ModuleTaskContext;
 use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
-use crate::bundler::plugin_driver::{PluginDriver, SharedPluginDriver};
+use crate::bundler::plugin_driver::SharedPluginDriver;
 use crate::bundler::runtime::RUNTIME_PATH;
 use crate::bundler::utils::ast_symbol::AstSymbol;
 use crate::bundler::utils::resolve_id::{resolve_id, ResolvedRequestInfo};

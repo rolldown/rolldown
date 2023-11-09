@@ -8,23 +8,21 @@ use crate::{
 pub type SharedPluginDriver = Arc<PluginDriver>;
 
 pub struct PluginDriver {
-  plugins: Vec<BoxPlugin>,
+  _plugins: Vec<BoxPlugin>,
 }
 
 impl PluginDriver {
   pub fn new(plugins: Vec<BoxPlugin>) -> Self {
-    Self { plugins }
+    Self { _plugins: plugins }
   }
 
-  pub async fn resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
-    for plugin in &self.plugins {
+  pub async fn _resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
+    for plugin in &self._plugins {
       match plugin.resolve_id(&mut PluginContext::new(), args).await {
         Err(e) => return Err(e),
         Ok(r) => {
           if let Some(r) = r {
             return Ok(Some(r));
-          } else {
-            continue;
           }
         }
       }
@@ -32,15 +30,13 @@ impl PluginDriver {
     Ok(None)
   }
 
-  pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    for plugin in &self.plugins {
+  pub async fn _load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+    for plugin in &self._plugins {
       match plugin.load(&mut PluginContext::new(), args).await {
         Err(e) => return Err(e),
         Ok(r) => {
           if let Some(r) = r {
             return Ok(Some(r));
-          } else {
-            continue;
           }
         }
       }
@@ -48,15 +44,13 @@ impl PluginDriver {
     Ok(None)
   }
 
-  pub async fn transform(&self, args: &HookTransformArgs<'_>) -> HookTransformReturn {
-    for plugin in &self.plugins {
+  pub async fn _transform(&self, args: &HookTransformArgs<'_>) -> HookTransformReturn {
+    for plugin in &self._plugins {
       match plugin.transform(&mut PluginContext::new(), args).await {
         Err(e) => return Err(e),
         Ok(r) => {
           if let Some(r) = r {
             return Ok(Some(r));
-          } else {
-            continue;
           }
         }
       }

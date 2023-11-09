@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 use rolldown::{Bundler, InputItem, InputOptions};
 use rolldown_fs::FileSystemOs;

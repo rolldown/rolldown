@@ -91,7 +91,7 @@ impl<T: FileSystemExt + Default + 'static> Bundler<T> {
     tracing::trace!("NormalizedOutputOptions: {output_options:#?}",);
 
     let mut graph = Graph::default();
-    graph.generate_module_graph(&self.input_options, self.plugin_driver.clone(), fs).await?;
+    graph.generate_module_graph(&self.input_options, Arc::clone(&self.plugin_driver), fs).await?;
 
     let mut bundle = Bundle::new(&mut graph, &output_options);
     let assets = bundle.generate(&self.input_options);

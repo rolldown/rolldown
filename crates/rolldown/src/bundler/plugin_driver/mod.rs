@@ -34,7 +34,7 @@ impl PluginDriver {
     Ok(None)
   }
 
-  pub async fn _transform(&self, args: &HookTransformArgs<'_>) -> HookTransformReturn {
+  pub async fn transform(&self, args: &HookTransformArgs<'_>) -> HookTransformReturn {
     for plugin in &self.plugins {
       if let Some(r) = plugin.transform(&mut PluginContext::new(), args).await? {
         return Ok(Some(r));

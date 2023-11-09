@@ -5,12 +5,16 @@ use rolldown_fs::FileSystemExt;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
 use super::{module_task_context::ModuleTaskContext, Msg};
-use crate::bundler::{
-  module::normal_module_builder::NormalModuleBuilder,
-  module_loader::NormalModuleTaskResult,
-  runtime::RUNTIME_PATH,
-  utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
-  visitors::scanner::{self, ScanResult},
+use crate::{
+  bundler::{
+    module::normal_module_builder::NormalModuleBuilder,
+    module_loader::NormalModuleTaskResult,
+    runtime::RUNTIME_PATH,
+    utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
+    visitors::scanner::{self, ScanResult},
+  },
+  error::BatchedResult,
+  HookTransformArgs,
 };
 pub struct RuntimeNormalModuleTask<'task, T: FileSystemExt + Default> {
   ctx: &'task ModuleTaskContext<'task, T>,
@@ -31,10 +35,20 @@ impl<'task, T: FileSystemExt + Default> RuntimeNormalModuleTask<'task, T> {
     }
   }
 
-  pub fn run(self) {
+  pub async fn run(self) -> BatchedResult<()> {
     let mut builder = NormalModuleBuilder::default();
 
-    let source = include_str!("../runtime/index.js").to_string();
+    let mut source = include_str!("../runtime/index.js").to_string();
+
+    // Run plugin transform.
+    if let Some(r) = self
+      .ctx
+      .plugin_driver
+      .transform(&HookTransformArgs { id: RUNTIME_PATH, code: &source })
+      .await?
+    {
+      source = r.code;
+    }
 
     let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(source);
 
@@ -77,6 +91,7 @@ impl<'task, T: FileSystemExt + Default> RuntimeNormalModuleTask<'task, T> {
         builder,
       }))
       .unwrap();
+    Ok(())
   }
 
   fn make_ast(&self, source: String) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {

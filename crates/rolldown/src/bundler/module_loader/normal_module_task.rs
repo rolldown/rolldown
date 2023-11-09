@@ -11,15 +11,19 @@ use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
 use super::{module_task_context::ModuleTaskContext, Msg};
-use crate::bundler::{
-  module::normal_module_builder::NormalModuleBuilder,
-  module_loader::NormalModuleTaskResult,
-  utils::{
-    ast_scope::AstScope,
-    ast_symbol::AstSymbol,
-    resolve_id::{resolve_id, ResolvedRequestInfo},
+use crate::{
+  bundler::{
+    module::normal_module_builder::NormalModuleBuilder,
+    module_loader::NormalModuleTaskResult,
+    utils::{
+      ast_scope::AstScope,
+      ast_symbol::AstSymbol,
+      resolve_id::{resolve_id, ResolvedRequestInfo},
+    },
+    visitors::scanner::{self, ScanResult},
   },
-  visitors::scanner::{self, ScanResult},
+  error::BatchedResult,
+  HookLoadArgs,
 };
 pub struct NormalModuleTask<'task, T: FileSystemExt + Default> {
   ctx: &'task ModuleTaskContext<'task, T>,
@@ -50,11 +54,18 @@ impl<'task, T: FileSystemExt + Default + 'static> NormalModuleTask<'task, T> {
     }
   }
 
-  pub async fn run(mut self) -> anyhow::Result<()> {
+  pub async fn run(mut self) -> BatchedResult<()> {
     let mut builder = NormalModuleBuilder::default();
     tracing::trace!("process {:?}", self.path);
-    // load
-    let source = self.ctx.fs.read_to_string(self.path.as_path())?;
+
+    // Run plugin load to get content first, if it is None using read fs as fallback.
+    let source = if let Some(r) =
+      self.ctx.plugin_driver.load(&HookLoadArgs { id: self.path.as_ref() }).await?
+    {
+      r.code
+    } else {
+      self.ctx.fs.read_to_string(self.path.as_path())?
+    };
     // TODO: transform
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(source);
@@ -183,7 +194,7 @@ impl<'task, T: FileSystemExt + Default + 'static> NormalModuleTask<'task, T> {
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordId, ImportRecord>,
-  ) -> anyhow::Result<Vec<(ImportRecordId, ResolvedRequestInfo)>> {
+  ) -> BatchedResult<Vec<(ImportRecordId, ResolvedRequestInfo)>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       // FIXME(hyf0): should not use `Arc<Resolver>` here

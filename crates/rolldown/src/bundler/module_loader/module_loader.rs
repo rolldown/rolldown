@@ -201,21 +201,25 @@ impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
   #[allow(clippy::collection_is_never_read)]
   async fn resolve_entries(&mut self) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
+    let plugin_driver = &self.plugin_driver;
 
     let resolved_ids =
       futures::future::join_all(self.input_options.input.iter().map(|input_item| async move {
         let specifier = &input_item.import;
-        let resolve_id = resolve_id(resolver, specifier, None, false).await?;
+        match resolve_id(resolver, plugin_driver, specifier, None, false).await {
+          Ok(r) => {
+            let Some(info) = r else {
+              return Err(BuildError::unresolved_entry(specifier));
+            };
 
-        let Some(info) = resolve_id else {
-          return Err(BuildError::unresolved_entry(specifier));
-        };
+            if info.is_external {
+              return Err(BuildError::entry_cannot_be_external(info.path.as_str()));
+            }
 
-        if info.is_external {
-          return Err(BuildError::entry_cannot_be_external(info.path.as_str()));
+            Ok((input_item.name.clone(), info))
+          }
+          Err(e) => Err(e),
         }
-
-        Ok((input_item.name.clone(), info))
       }))
       .await;
 

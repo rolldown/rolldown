@@ -16,7 +16,7 @@ impl PluginDriver {
     Self { plugins }
   }
 
-  pub async fn _resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
+  pub async fn resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
     for plugin in &self.plugins {
       if let Some(r) = plugin.resolve_id(&mut PluginContext::new(), args).await? {
         return Ok(Some(r));

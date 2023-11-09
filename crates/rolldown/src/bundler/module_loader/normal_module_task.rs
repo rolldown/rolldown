@@ -15,6 +15,7 @@ use crate::{
   bundler::{
     module::normal_module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
+    plugin_driver::SharedPluginDriver,
     utils::{
       ast_scope::AstScope,
       ast_symbol::AstSymbol,
@@ -171,16 +172,17 @@ impl<'task, T: FileSystemExt + Default + 'static> NormalModuleTask<'task, T> {
   #[allow(clippy::option_if_let_else)]
   pub(crate) async fn resolve_id<F: FileSystemExt + Default>(
     resolver: &Resolver<F>,
+    plugin_driver: &SharedPluginDriver,
     importer: &ResourceId,
     specifier: &str,
-  ) -> Result<ResolvedRequestInfo, BuildError> {
+  ) -> BatchedResult<ResolvedRequestInfo> {
     // let is_marked_as_external = is_external(specifier, Some(importer.id()), false).await?;
 
     // if is_marked_as_external {
     //     return Ok(ModuleId::new(specifier, true));
     // }
 
-    let resolved_id = resolve_id(resolver, specifier, Some(importer), false).await?;
+    let resolved_id = resolve_id(resolver, plugin_driver, specifier, Some(importer), false).await?;
 
     match resolved_id {
       Some(info) => Ok(info),
@@ -208,11 +210,12 @@ impl<'task, T: FileSystemExt + Default + 'static> NormalModuleTask<'task, T> {
       let specifier = item.module_request.clone();
       // FIXME(hyf0): should not use `Arc<Resolver>` here
       let resolver = Arc::clone(self.ctx.resolver);
+      let plugin_driver = Arc::clone(self.ctx.plugin_driver);
       let importer = self.path.clone();
       // let is_external = self.is_external.clone();
       // let on_warn = self.input_options.on_warn.clone();
       tokio::spawn(async move {
-        Self::resolve_id(&resolver, &importer, &specifier).await.map(|id| (idx, id))
+        Self::resolve_id(&resolver, &plugin_driver, &importer, &specifier).await.map(|id| (idx, id))
       })
     });
 

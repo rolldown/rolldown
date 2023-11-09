@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   format:
-    name: Format
+    name: Cargo Format
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +111,7 @@ jobs:
         run: yarn install
 
       - name: Format
-        run: yarn prettier
+        run: yarn prettier:ci
 
       - name: Build
         run: yarn build

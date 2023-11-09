@@ -57,7 +57,7 @@ impl ModuleLoaderContext {
           unsafe { task_context.assume_static() },
           id,
         );
-        tokio::spawn(async move { task.run().await });
+        tokio::spawn(async move { task.run() });
         id
       }
     }

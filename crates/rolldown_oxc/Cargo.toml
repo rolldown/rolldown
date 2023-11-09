@@ -11,4 +11,5 @@ repository.workspace = true
 
 [dependencies]
 oxc            = { workspace = true }
+smallvec       = { workspace = true }
 rolldown_utils = { path = "../rolldown_utils" }

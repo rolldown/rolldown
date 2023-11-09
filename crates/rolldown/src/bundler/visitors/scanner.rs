@@ -14,7 +14,7 @@ use rolldown_common::{
   ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId,
   ModuleType, NamedImport, ReExport, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
-use rolldown_oxc::BindingIdentifierExt;
+use rolldown_oxc::{BindingIdentifierExt, BindingPatternExt};
 use rustc_hash::FxHashMap;
 
 use crate::bundler::utils::{ast_scope::AstScope, ast_symbol::AstSymbol};
@@ -192,14 +192,13 @@ impl<'a> Scanner<'a> {
       if let Some(decl) = decl.declaration.as_ref() {
         match decl {
           oxc::ast::ast::Declaration::VariableDeclaration(var_decl) => {
-            var_decl.declarations.iter().for_each(|decl| match &decl.id.kind {
-              oxc::ast::ast::BindingPatternKind::BindingIdentifier(id) => {
+            var_decl.declarations.iter().for_each(|decl| {
+              decl.id.binding_identifiers().into_iter().for_each(|id| {
                 self.result.named_exports.insert(
                   id.name.clone(),
                   LocalExport { referenced: (self.idx, id.expect_symbol_id()).into() }.into(),
                 );
-              }
-              _ => unimplemented!(),
+              });
             });
           }
           oxc::ast::ast::Declaration::FunctionDeclaration(fn_decl) => {

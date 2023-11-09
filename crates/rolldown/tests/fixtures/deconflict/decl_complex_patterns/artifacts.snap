@@ -1,0 +1,44 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/deconflict/decl_complex_patterns
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert_default } from "assert";
+
+// names.js
+const [a] = ['a2']
+const { b } = { b: 'b2' }
+const { b: c } = { b: 'c2' }
+const { d = '' } = { d: 'd2' }
+const { d: e = '' } = { d: 'e2' }
+
+
+// main.js
+
+
+const [a$1] = ['a1']
+const { b: b$1 } = { b: 'b1' }
+const { b: c$1 } = { b: 'c1' }
+const { d: d$1 = '' } = { d: 'd1' }
+const { d: e$1 = '' } = { d: 'e1' }
+
+
+assert_default.equal(a$1, 'a1')
+assert_default.equal(a, 'a2')
+assert_default.equal(b$1, 'b1')
+assert_default.equal(b, 'b2')
+assert_default.equal(c$1, 'c1')
+assert_default.equal(c, 'c2')
+assert_default.equal(d$1, 'd1')
+assert_default.equal(d, 'd2')
+assert_default.equal(e$1, 'e1')
+assert_default.equal(e, 'e2')
+
+
+export { a$1 as a, a as a2, b$1 as b, b as b2, c$1 as c, c as c2, d$1 as d, d as d2, e$1 as e, e as e2 };
+```

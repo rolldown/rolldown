@@ -1,8 +1,10 @@
 use oxc::{
-  ast::{ast::ExportDefaultDeclarationKind, Visit},
+  ast::{ast, ast::ExportDefaultDeclarationKind, Visit},
   span::GetSpan,
 };
 use rolldown_common::ExportsKind;
+use rolldown_oxc::BindingIdentifierExt;
+use rolldown_utils::MagicStringExt;
 
 use crate::bundler::{module::Module, renderer::RenderControl};
 
@@ -168,5 +170,60 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
       ExportDefaultDeclarationKind::ClassDeclaration(class) => self.visit_class(class),
       _ => {}
     }
+  }
+
+  fn visit_object_pattern(&mut self, pat: &ast::ObjectPattern) {
+    // visit children
+    for prop in &pat.properties {
+      match &prop.value.kind {
+        // Rewrite `const { a } = obj;`` to `const { a: a$1 } = obj;`
+        ast::BindingPatternKind::BindingIdentifier(ident) if prop.shorthand => {
+          self.visit_property_key(&prop.key);
+
+          match self.need_to_rename((self.ctx.module.id, ident.expect_symbol_id()).into()) {
+            Some(new_name) if new_name != &ident.name => {
+              self.ctx.source.overwrite(
+                ident.span.start,
+                ident.span.end,
+                format!("{}: {new_name}", ident.name),
+              );
+            }
+            _ => {}
+          }
+        }
+        // Rewrite `const { a = 1 } = obj;`` to `const { a: a$1 = 1 } = obj;`
+        ast::BindingPatternKind::AssignmentPattern(assign_pat)
+          if prop.shorthand
+            && matches!(assign_pat.left.kind, ast::BindingPatternKind::BindingIdentifier(_)) =>
+        {
+          let ast::BindingPatternKind::BindingIdentifier(ident) = &assign_pat.left.kind else {
+            unreachable!()
+          };
+          match self.need_to_rename((self.ctx.module.id, ident.expect_symbol_id()).into()) {
+            Some(new_name) if new_name != &ident.name => {
+              self.ctx.source.overwrite(
+                ident.span.start,
+                ident.span.end,
+                format!("{}: {new_name}", ident.name),
+              );
+            }
+            _ => {}
+          }
+          self.visit_expression(&assign_pat.right);
+        }
+        _ => {
+          self.visit_binding_property(prop);
+        }
+      }
+    }
+    if let Some(rest) = &pat.rest {
+      self.visit_rest_element(rest);
+    }
+  }
+
+  fn visit_assignment_pattern(&mut self, pat: &ast::AssignmentPattern) {
+    // Visit children
+    self.visit_binding_pattern(&pat.left);
+    self.visit_expression(&pat.right);
   }
 }

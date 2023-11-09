@@ -2,7 +2,7 @@
 |----| ---- |
 | total | 901|
 | failed | 0|
-| skipFailed | 644|
+| skipFailed | 647|
 | ignored | 7|
 | skipped | 0|
-| passed | 250|
+| passed | 247|

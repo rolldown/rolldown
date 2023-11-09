@@ -70,4 +70,4 @@ pub const UNRESOLVED_IMPORT: &str = "UNRESOLVED_IMPORT";
 // // Rolldown error codes
 
 // pub const PANIC: &str = "PANIC";
-// pub const IO_ERROR: &str = "IO_ERROR";
+pub const IO_ERROR: &str = "IO_ERROR";

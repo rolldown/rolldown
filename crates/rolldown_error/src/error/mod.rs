@@ -27,6 +27,8 @@ pub enum BuildError {
   ExternalEntry(Box<ExternalEntry>),
   #[error(transparent)]
   UnresolvedImport(Box<UnresolvedImport>),
+  #[error(transparent)]
+  Io(Box<std::io::Error>),
   // TODO: probably should remove this error
   #[error("Napi error: {status}: {reason}")]
   Napi { status: String, reason: String },
@@ -37,6 +39,7 @@ impl BuildError {
     match self {
       Self::UnresolvedEntry(_) | Self::ExternalEntry(_) => error_code::UNRESOLVED_ENTRY,
       Self::UnresolvedImport(_) => error_code::UNRESOLVED_IMPORT,
+      Self::Io(_) => error_code::IO_ERROR,
       Self::Napi { .. } => todo!(),
     }
   }
@@ -61,5 +64,11 @@ impl BuildError {
   // --- rolldown specific
   pub fn napi_error(status: String, reason: String) -> Self {
     Self::Napi { status, reason }
+  }
+}
+
+impl From<std::io::Error> for BuildError {
+  fn from(e: std::io::Error) -> Self {
+    Self::Io(Box::new(e))
   }
 }

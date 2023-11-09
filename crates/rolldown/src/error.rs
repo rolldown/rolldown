@@ -37,6 +37,12 @@ impl From<BuildError> for BatchedErrors {
   }
 }
 
+impl From<std::io::Error> for BatchedErrors {
+  fn from(err: std::io::Error) -> Self {
+    Self::with_error(err.into())
+  }
+}
+
 impl From<BatchedErrors> for Vec<BuildError> {
   fn from(errs: BatchedErrors) -> Self {
     errs.0.into_vec()

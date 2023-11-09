@@ -14,6 +14,7 @@ impl BuildError {
       Self::UnresolvedImport(err) => {
         Diagnostic { code, summary: err.to_string(), ..Default::default() }
       }
+      Self::Io(err) => Diagnostic { code, summary: err.to_string(), ..Default::default() },
       Self::Napi { status, reason } => Diagnostic {
         code,
         summary: format!("Napi error: {status}: {reason}"),

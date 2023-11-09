@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
-import * as path from "path";
+import { defineConfig } from 'vite'
+import * as path from 'path'
 
-export default defineConfig({});
+export default defineConfig({})

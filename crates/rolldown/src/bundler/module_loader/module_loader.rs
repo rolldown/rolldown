@@ -16,6 +16,7 @@ use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::Module;
 use crate::bundler::module_loader::module_task_context::ModuleTaskContext;
 use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
+use crate::bundler::plugin_driver::SharedPluginDriver;
 use crate::bundler::runtime::RUNTIME_PATH;
 use crate::bundler::utils::ast_symbol::AstSymbol;
 use crate::bundler::utils::resolve_id::{resolve_id, ResolvedRequestInfo};
@@ -30,6 +31,7 @@ pub struct ModuleLoader<'a, T: FileSystemExt + Default> {
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
   fs: Arc<T>,
+  plugin_driver: SharedPluginDriver,
 }
 
 #[derive(Debug, Default)]
@@ -103,7 +105,12 @@ impl ModuleLoaderContext {
 }
 
 impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
-  pub fn new(input_options: &'a NormalizedInputOptions, graph: &'a mut Graph, fs: Arc<T>) -> Self {
+  pub fn new(
+    input_options: &'a NormalizedInputOptions,
+    plugin_driver: SharedPluginDriver,
+    graph: &'a mut Graph,
+    fs: Arc<T>,
+  ) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
     Self {
       tx,
@@ -113,6 +120,7 @@ impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
       graph,
       fs,
       ctx: ModuleLoaderContext::default(),
+      plugin_driver,
     }
   }
 
@@ -128,6 +136,7 @@ impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
       tx: &self.tx,
       resolver: &self.resolver,
       fs: &*self.fs,
+      plugin_driver: &self.plugin_driver,
     };
 
     self.graph.runtime.id = self.ctx.try_spawn_runtime_normal_module_task(&shared_task_context);

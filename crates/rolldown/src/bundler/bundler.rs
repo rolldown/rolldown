@@ -11,6 +11,7 @@ use super::{
     normalized_input_options::NormalizedInputOptions,
     normalized_output_options::NormalizedOutputOptions,
   },
+  plugin_driver::{PluginDriver, SharedPluginDriver},
 };
 use crate::{bundler::bundle::bundle::Bundle, plugin::plugin::BoxPlugin, InputOptions};
 
@@ -18,7 +19,7 @@ type BuildResult<T> = Result<T, Vec<BuildError>>;
 
 pub struct Bundler<T: FileSystemExt> {
   input_options: NormalizedInputOptions,
-  _plugins: Vec<BoxPlugin>,
+  plugin_driver: SharedPluginDriver,
   fs: Arc<T>,
 }
 
@@ -26,13 +27,21 @@ impl<T: FileSystemExt + Default + 'static> Bundler<T> {
   pub fn new(input_options: InputOptions, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self { input_options: normalized, _plugins: vec![], fs: Arc::new(fs) }
+    Self {
+      input_options: normalized,
+      plugin_driver: Arc::new(PluginDriver::new(vec![])),
+      fs: Arc::new(fs),
+    }
   }
 
   pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self { input_options: normalized, _plugins: plugins, fs: Arc::new(fs) }
+    Self {
+      input_options: normalized,
+      plugin_driver: Arc::new(PluginDriver::new(plugins)),
+      fs: Arc::new(fs),
+    }
   }
 
   pub async fn write(&mut self, output_options: crate::OutputOptions) -> BuildResult<Vec<Asset>> {
@@ -82,7 +91,7 @@ impl<T: FileSystemExt + Default + 'static> Bundler<T> {
     tracing::trace!("NormalizedOutputOptions: {output_options:#?}",);
 
     let mut graph = Graph::default();
-    graph.generate_module_graph(&self.input_options, fs).await?;
+    graph.generate_module_graph(&self.input_options, Arc::clone(&self.plugin_driver), fs).await?;
 
     let mut bundle = Bundle::new(&mut graph, &output_options);
     let assets = bundle.generate(&self.input_options);

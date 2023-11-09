@@ -8,7 +8,7 @@ pub struct HookResolveIdArgs<'a> {
 
 #[derive(Debug)]
 pub struct HookTransformArgs<'a> {
-  pub id: &'a RawPath,
+  pub id: &'a str,
   pub code: &'a String,
 }
 

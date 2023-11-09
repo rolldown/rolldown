@@ -23,7 +23,7 @@ use crate::{
     visitors::scanner::{self, ScanResult},
   },
   error::BatchedResult,
-  HookLoadArgs,
+  HookLoadArgs, HookTransformArgs,
 };
 pub struct NormalModuleTask<'task, T: FileSystemExt + Default> {
   ctx: &'task ModuleTaskContext<'task, T>,
@@ -59,14 +59,23 @@ impl<'task, T: FileSystemExt + Default + 'static> NormalModuleTask<'task, T> {
     tracing::trace!("process {:?}", self.path);
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let source = if let Some(r) =
+    let mut source = if let Some(r) =
       self.ctx.plugin_driver.load(&HookLoadArgs { id: self.path.as_ref() }).await?
     {
       r.code
     } else {
       self.ctx.fs.read_to_string(self.path.as_path())?
     };
-    // TODO: transform
+
+    // Run plugin transform.
+    if let Some(r) = self
+      .ctx
+      .plugin_driver
+      .transform(&HookTransformArgs { id: self.path.as_ref(), code: &source })
+      .await?
+    {
+      source = r.code;
+    }
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(source);
 

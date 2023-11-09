@@ -165,22 +165,22 @@ impl<'r> AstRenderer<'r> {
 
   fn strip_export_keyword(
     &mut self,
-    decl: &oxc::ast::ast::ExportDefaultDeclaration,
+    default_decl: &oxc::ast::ast::ExportDefaultDeclaration,
   ) -> RenderControl {
-    match &decl.declaration {
+    match &default_decl.declaration {
       oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
         let default_ref_name = self.ctx.default_ref_name.expect("Should generated a name");
         self.ctx.source.overwrite(
-          decl.span.start,
+          default_decl.span.start,
           exp.span().start,
           format!("var {default_ref_name} = "),
         );
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {
-        self.ctx.remove_node(Span::new(decl.span.start, decl.span.start));
+        self.ctx.remove_node(Span::new(default_decl.span.start, decl.span.start));
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
-        self.ctx.remove_node(Span::new(decl.span.start, decl.span.start));
+        self.ctx.remove_node(Span::new(default_decl.span.start, decl.span.start));
       }
       _ => unreachable!("TypeScript code should be preprocessed"),
     }

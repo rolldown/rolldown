@@ -1,12 +1,8 @@
 use rolldown_common::{ModuleType, RawPath, ResourceId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystemExt;
-use std::{
-  borrow::Cow,
-  path::{Path, PathBuf},
-  sync::Arc,
-};
-use sugar_path::SugarPathBuf;
+use std::{path::PathBuf, sync::Arc};
+use sugar_path::{AsPath, SugarPathBuf};
 
 use oxc_resolver::{Resolution, ResolveOptions, ResolverGeneric};
 
@@ -46,26 +42,36 @@ pub struct ResolveRet {
 }
 
 impl<F: FileSystemExt + Default> Resolver<F> {
-  #[allow(clippy::missing_errors_doc)]
+  // clippy::option_if_let_else: I think the current code is more readable.
+  #[allow(clippy::missing_errors_doc, clippy::option_if_let_else)]
   pub fn resolve(
     &self,
     importer: Option<&ResourceId>,
     specifier: &str,
   ) -> Result<ResolveRet, BuildError> {
-    // If the importer is `None`, it means that the specifier is the entry file.
-    // In this case, we couldn't simply use the CWD as the importer.
-    // Instead, we should concat the CWD with the specifier. This aligns with https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56.
-    let specifier = if importer.is_none() {
-      Cow::Owned(self.cwd.join(specifier).into_normalize())
+    let resolved = if let Some(importer) = importer {
+      let context = importer.as_path().parent().expect("Should have a parent dir");
+      self.inner.resolve(context, specifier)
     } else {
-      Cow::Borrowed(Path::new(specifier))
+      // If the importer is `None`, it means that the specifier is provided by the user in `input`. In this case, we can't call `resolver.resolve` with
+      // `{ context: cwd, specifier: specifier }` due to rollup's default resolve behavior. For specifier `main`, rollup will try to resolve it as
+      // `{ context: cwd, specifier: cwd.join(main) }`, which will resolve to `<cwd>/main.{js,mjs}`. To align with this behavior, we should also
+      // concat the CWD with the specifier.
+      // Related rollup code: https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56.
+      let joined_specifier = self.cwd.join(specifier).into_normalize();
+
+      let is_path_like = specifier.starts_with('.') || specifier.starts_with('/');
+
+      let resolved = self.inner.resolve(&self.cwd, joined_specifier.to_str().unwrap());
+      if resolved.is_ok() {
+        resolved
+      } else if !is_path_like {
+        // If the specifier is not path-like, we should try to resolve it as a bare specifier. This allows us to resolve modules from node_modules.
+        self.inner.resolve(&self.cwd, specifier)
+      } else {
+        resolved
+      }
     };
-
-    let context = importer.map_or(self.cwd.as_path(), |s| {
-      Path::new(s.as_ref()).parent().expect("Should have a parent dir")
-    });
-
-    let resolved = self.inner.resolve(context, &specifier.to_string_lossy());
 
     match resolved {
       Ok(info) => Ok(ResolveRet {
@@ -73,13 +79,8 @@ impl<F: FileSystemExt + Default> Resolver<F> {
         module_type: calc_module_type(&info),
       }),
       Err(_err) => importer.map_or_else(
-        || Err(BuildError::unresolved_entry(specifier.to_str().unwrap())),
-        |importer| {
-          Err(BuildError::unresolved_import(
-            specifier.to_string_lossy().to_string(),
-            importer.prettify(),
-          ))
-        },
+        || Err(BuildError::unresolved_entry(specifier)),
+        |importer| Err(BuildError::unresolved_import(specifier.to_string(), importer.prettify())),
       ),
     }
   }

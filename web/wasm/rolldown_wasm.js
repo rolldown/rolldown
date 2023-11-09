@@ -390,14 +390,14 @@ async function __wbg_load(module, imports) {
 function __wbg_get_imports() {
     const imports = {};
     imports.wbg = {};
+    imports.wbg.__wbg_assetitem_new = function() { return logError(function (arg0) {
+        const ret = AssetItem.__wrap(arg0);
+        return addHeapObject(ret);
+    }, arguments) };
     imports.wbg.__wbg_fileitem_unwrap = function() { return logError(function (arg0) {
         const ret = FileItem.__unwrap(takeObject(arg0));
         _assertNum(ret);
         return ret;
-    }, arguments) };
-    imports.wbg.__wbg_assetitem_new = function() { return logError(function (arg0) {
-        const ret = AssetItem.__wrap(arg0);
-        return addHeapObject(ret);
     }, arguments) };
     imports.wbg.__wbg_error_f851667af71bcfc6 = function() { return logError(function (arg0, arg1) {
         let deferred0_0;

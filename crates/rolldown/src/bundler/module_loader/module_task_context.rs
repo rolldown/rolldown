@@ -1,6 +1,11 @@
 use rolldown_fs::FileSystemExt;
 
-use crate::{bundler::options::normalized_input_options::NormalizedInputOptions, SharedResolver};
+use crate::{
+  bundler::{
+    options::normalized_input_options::NormalizedInputOptions, plugin_driver::SharedPluginDriver,
+  },
+  SharedResolver,
+};
 
 use super::Msg;
 
@@ -10,6 +15,7 @@ pub struct ModuleTaskContext<'task, T: FileSystemExt + Default> {
   pub tx: &'task tokio::sync::mpsc::UnboundedSender<Msg>,
   pub resolver: &'task SharedResolver<T>,
   pub fs: &'task dyn FileSystemExt,
+  pub plugin_driver: &'task SharedPluginDriver,
 }
 
 impl<'task, T: FileSystemExt + Default> ModuleTaskContext<'task, T> {

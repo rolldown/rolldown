@@ -26,7 +26,7 @@ pub struct JsAdapterPlugin {
 impl JsAdapterPlugin {
   pub fn new(option: PluginOptions) -> napi::Result<Self> {
     let resolve_id_fn = option.resolve_id.as_ref().map(ResolveIdCallback::new).transpose()?;
-    let load_fn = option.resolve_id.as_ref().map(LoadCallback::new).transpose()?;
+    let load_fn = option.load.as_ref().map(LoadCallback::new).transpose()?;
     let transform_fn = option.transform.as_ref().map(TransformCallback::new).transpose()?;
     Ok(Self { name: option.name, resolve_id_fn, load_fn, transform_fn })
   }

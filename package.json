@@ -6,7 +6,6 @@
   "private": true,
   "workspaces": [
     "crates/rolldown_node_binding",
-    "crates/rolldown/tests/fixtures/packages/**",
     "packages/**",
     "web/**"
   ],

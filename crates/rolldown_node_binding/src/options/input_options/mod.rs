@@ -37,10 +37,10 @@ pub struct InputOptions {
   // preserveEntrySignatures?: PreserveEntrySignaturesOption;
   // /** @deprecated Use the "preserveModules" output option instead. */
   // preserveModules?: boolean;
-  pub preserve_symlinks: bool,
-  pub shim_missing_exports: bool,
+  // pub preserve_symlinks: bool,
+  // pub shim_missing_exports: bool,
   // strictDeprecations?: boolean;
-  pub treeshake: Option<bool>,
+  // pub treeshake: Option<bool>,
   // watch?: WatcherOptions | false;
 
   // extra

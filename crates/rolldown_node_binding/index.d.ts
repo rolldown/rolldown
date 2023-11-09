@@ -22,9 +22,6 @@ export interface SourceResult {
 export interface InputOptions {
   input: Record<string, string>
   plugins: Array<PluginOptions>
-  preserveSymlinks: boolean
-  shimMissingExports: boolean
-  treeshake?: boolean
   cwd: string
 }
 export interface OutputOptions {

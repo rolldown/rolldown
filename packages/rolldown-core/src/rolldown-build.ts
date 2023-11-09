@@ -1,7 +1,4 @@
-import {
-  Bundler,
-  type InputOptions as BindingInputOptions,
-} from '@rolldown/node-binding'
+import { Bundler } from '@rolldown/node-binding'
 import { InputOptions, normalizeInputOptions } from './options/input-options'
 import { normalizeOutputOptions, OutputOptions } from './options/output-options'
 import type {
@@ -10,6 +7,7 @@ import type {
   SerializedTimings,
 } from './rollup-types'
 import { transformToRollupOutput, unimplemented } from './utils'
+import { createInputOptionsAdapter } from './options/input-options-adapter'
 
 export class RolldownBuild implements RollupBuild {
   #bundler: Bundler
@@ -20,10 +18,13 @@ export class RolldownBuild implements RollupBuild {
   static async fromInputOptions(
     inputOptions: InputOptions,
   ): Promise<RolldownBuild> {
-    const bindingOptions: BindingInputOptions = await normalizeInputOptions(
-      inputOptions,
+    // Convert `InputOptions` to `NormalizedInputOptions`.
+    const normalizedInputOptions = await normalizeInputOptions(inputOptions)
+    // Convert `NormalizedInputOptions` to `BindingInputOptions`
+    const bindingInputOptions = createInputOptionsAdapter(
+      normalizedInputOptions,
     )
-    const bundler = new Bundler(bindingOptions)
+    const bundler = new Bundler(bindingInputOptions)
     return new RolldownBuild(bundler)
   }
 

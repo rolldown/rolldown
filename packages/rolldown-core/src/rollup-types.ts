@@ -7,4 +7,5 @@ export type {
   Plugin,
   OutputPlugin,
   OutputChunk,
+  NormalizedInputOptions,
 } from 'rollup'

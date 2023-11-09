@@ -3,6 +3,8 @@ use rolldown_error::BuildError;
 use rolldown_fs::FileSystemExt;
 use rolldown_resolver::Resolver;
 
+use crate::{bundler::plugin_driver::SharedPluginDriver, HookResolveIdArgs};
+
 pub struct ResolvedRequestInfo {
   pub path: RawPath,
   pub module_type: ModuleType,
@@ -12,11 +14,25 @@ pub struct ResolvedRequestInfo {
 #[allow(clippy::unused_async)]
 pub async fn resolve_id<T: FileSystemExt + Default>(
   resolver: &Resolver<T>,
+  plugin_driver: &SharedPluginDriver,
   request: &str,
   importer: Option<&ResourceId>,
   _preserve_symlinks: bool,
 ) -> Result<Option<ResolvedRequestInfo>, BuildError> {
-  // TODO: resolve with plugins
+  // Run plugin resolve_id first, if it is None use internal resolver as fallback
+  if let Some(r) = plugin_driver
+    .resolve_id(&HookResolveIdArgs {
+      importer: importer.map(std::convert::AsRef::as_ref),
+      source: request,
+    })
+    .await?
+  {
+    return Ok(Some(ResolvedRequestInfo {
+      path: r.id.into(),
+      module_type: ModuleType::Unknown,
+      is_external: matches!(r.external, Some(true)),
+    }));
+  }
 
   // external modules (non-entry modules that start with neither '.' or '/')
   // are skipped at this stage.

@@ -1,8 +1,6 @@
-use rolldown_common::RawPath;
-
 #[derive(Debug)]
 pub struct HookResolveIdArgs<'a> {
-  pub importer: Option<&'a RawPath>,
+  pub importer: Option<&'a str>,
   pub source: &'a str,
 }
 

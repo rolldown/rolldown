@@ -11,6 +11,11 @@ pub struct PluginOptions {
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
+  #[napi(ts_type = "() => Promise<void>")]
+  pub build_start: Option<JsFunction>,
+
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(specifier: string, importer?: string) => Promise<undefined | ResolveIdResult>"
   )]
@@ -25,6 +30,11 @@ pub struct PluginOptions {
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(id: string, code: string) => Promise<undefined | SourceResult>")]
   pub transform: Option<JsFunction>,
+
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(error: string) => Promise<void>")]
+  pub build_end: Option<JsFunction>,
 }
 
 #[napi_derive::napi(object)]

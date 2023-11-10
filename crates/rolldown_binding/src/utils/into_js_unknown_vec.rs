@@ -42,3 +42,9 @@ impl_tuple_to_vec!(A, B, C, D, E, F, G);
 impl_tuple_to_vec!(A, B, C, D, E, F, G, H);
 impl_tuple_to_vec!(A, B, C, D, E, F, G, H, I);
 impl_tuple_to_vec!(A, B, C, D, E, F, G, H, I, J);
+
+impl IntoJsUnknownVec for () {
+  fn into_js_unknown_vec(self, _env: &Env) -> napi::Result<Vec<JsUnknown>> {
+    Ok(vec![])
+  }
+}

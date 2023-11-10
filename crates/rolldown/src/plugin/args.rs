@@ -1,5 +1,3 @@
-use rolldown_error::BuildError;
-
 #[derive(Debug)]
 pub struct HookResolveIdArgs<'a> {
   pub importer: Option<&'a str>,

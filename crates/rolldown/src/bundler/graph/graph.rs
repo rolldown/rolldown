@@ -7,7 +7,7 @@ use crate::{
     options::normalized_input_options::NormalizedInputOptions, plugin_driver::SharedPluginDriver,
     runtime::Runtime,
   },
-  error::{BatchedErrors, BatchedResult},
+  error::BatchedResult,
   plugin::args::HookBuildEndArgs,
 };
 use rolldown_common::ModuleId;

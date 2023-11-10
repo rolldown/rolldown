@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "lint": "oxlint --ignore-path=./.oxlintignore --import-plugin",
-    "lint-filename": "yarn ls-lint",
+    "lint-filename": "ls-lint",
     "build": "run-s build:binding build:ts",
     "build:ci:release": "run-s build:packages:ci build:ts build:binding:release",
     "build:ts": "tsc -b tsconfig.project.json",

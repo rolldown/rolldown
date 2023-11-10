@@ -13,4 +13,4 @@ export function unimplemented(info?: string): never {
   throw new Error('unimplemented')
 }
 
-export function noop(..._args: any[]) { }
+export function noop(..._args: any[]) {}

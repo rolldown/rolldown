@@ -175,6 +175,7 @@ impl<'r> AstRenderer<'r> {
           exp.span().start,
           format!("var {default_ref_name} = "),
         );
+        self.visit_expression(exp);
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {
         self.ctx.remove_node(Span::new(default_decl.span.start, decl.span.start));

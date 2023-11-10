@@ -6,8 +6,8 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
-  ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
+  ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType,
+  NamedImport, ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -52,6 +52,13 @@ pub struct NormalModule {
 impl NormalModule {
   pub fn is_namespace_referenced(&self) -> bool {
     self.stmt_infos.get(0.into()).is_included
+  }
+
+  pub fn static_imports(&self) -> impl Iterator<Item = &ImportRecord> {
+    self
+      .import_records
+      .iter()
+      .filter(|rec| matches!(rec.kind, ImportKind::Import | ImportKind::Require))
   }
 
   #[allow(clippy::needless_pass_by_value)]

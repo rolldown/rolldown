@@ -225,7 +225,7 @@ impl<'graph> Linker<'graph> {
     for module in &self.graph.modules {
       match module {
         Module::Normal(importer) => {
-          importer.import_records.iter().for_each(|r| {
+          importer.static_imports().for_each(|r| {
             let importee_linking_info = &linking_infos[r.resolved_module];
             let importee = &self.graph.modules[r.resolved_module];
             let Module::Normal(importee) = importee else {

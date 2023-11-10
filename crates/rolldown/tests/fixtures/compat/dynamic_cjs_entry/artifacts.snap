@@ -1,0 +1,27 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/compat/dynamic_cjs_entry
+---
+# Assets
+
+## cjs_js.mjs
+
+```js
+import { __commonJS } from "./_rolldown_runtime.mjs";
+
+// cjs.js
+var require_cjs = __commonJS({
+	'cjs.js'(exports, module) {
+		module.exports = 'cjs'
+	}
+});
+export default require_cjs();
+```
+## main.mjs
+
+```js
+// main.js
+var main_default = import('./cjs_js.mjs')
+export { main_default as default };
+```

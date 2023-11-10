@@ -1,4 +1,4 @@
-import type { Plugin,NormalizedInputOptions } from '../rollup-types'
+import type { Plugin, NormalizedInputOptions } from '../rollup-types'
 import type {
   PluginOptions,
   SourceResult,
@@ -6,18 +6,24 @@ import type {
 } from '@rolldown/node-binding'
 import { unimplemented } from '../utils'
 
-export function createBuildPluginAdapter(plugin: Plugin,  options: NormalizedInputOptions): PluginOptions {
+export function createBuildPluginAdapter(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
+): PluginOptions {
   return {
     name: plugin.name ?? 'unknown',
     buildStart: buildStart(plugin.buildStart, options),
     resolveId: resolveId(plugin.resolveId),
     load: load(plugin.load),
     transform: transform(plugin.transform),
-    buildEnd: buildEnd(plugin.buildEnd)
+    buildEnd: buildEnd(plugin.buildEnd),
   }
 }
 
-function buildStart(hook: Plugin['buildStart'], options: NormalizedInputOptions) {
+function buildStart(
+  hook: Plugin['buildStart'],
+  options: NormalizedInputOptions,
+) {
   if (hook) {
     if (typeof hook !== 'function') {
       return unimplemented()
@@ -39,7 +45,6 @@ function buildEnd(hook: Plugin['buildEnd']) {
     }
   }
 }
-
 
 function transform(hook: Plugin['transform']) {
   if (hook) {

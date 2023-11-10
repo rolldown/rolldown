@@ -109,10 +109,10 @@ jobs:
 
       - name: Install dependencies
         run: yarn install
-        
+
       - name: Oxc Lint
         run: yarn lint
-        
+
       - name: Run Prettier
         run: yarn prettier:ci
 

@@ -110,6 +110,10 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      
+      - name: Lint Filename
+        run: lint-filename
+
       - name: Oxc Lint
         run: yarn lint
 

@@ -81,8 +81,8 @@ jobs:
       - name: Run Test
         run: cargo nextest run
 
-  node-test:
-    name: Node Test
+  node-validation-test:
+    name: Node Validation/Test
     runs-on: self-hosted
     timeout-minutes: 30
     strategy:
@@ -107,10 +107,13 @@ jobs:
           node-version: 18
           cache: yarn
 
-      - name: 'Install dependencies'
+      - name: Install dependencies
         run: yarn install
 
-      - name: Format
+      - name: Oxc Lint
+        run: yarn lint
+
+      - name: Run Prettier
         run: yarn prettier:ci
 
       - name: Build

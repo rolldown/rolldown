@@ -28,6 +28,8 @@
     "Finalizer",
     "hasher",
     "importee",
+    "oxlint",
+    "oxlintignore",
     "Renamer",
     "rolldown",
     "rollup",

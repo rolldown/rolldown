@@ -112,7 +112,7 @@ jobs:
 
       
       - name: Lint Filename
-        run: lint-filename
+        run: yarn lint-filename
 
       - name: Oxc Lint
         run: yarn lint

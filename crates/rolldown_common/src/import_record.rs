@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use oxc::span::Atom;
 
 use crate::module_id::ModuleId;
@@ -6,7 +8,7 @@ index_vec::define_index_type! {
   pub struct ImportRecordId = u32;
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ImportKind {
   Import,
   DynamicImport,
@@ -16,6 +18,16 @@ pub enum ImportKind {
 impl ImportKind {
   pub fn is_static(&self) -> bool {
     matches!(self, Self::Import | Self::Require)
+  }
+}
+
+impl Display for ImportKind {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Import => write!(f, "import-statement"),
+      Self::DynamicImport => write!(f, "dynamic-import"),
+      Self::Require => write!(f, "require-call"),
+    }
   }
 }
 

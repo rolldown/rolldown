@@ -18,7 +18,10 @@ pub use crate::{
     },
   },
   plugin::{
-    args::{HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookTransformArgs},
+    args::{
+      HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookResolveIdArgsOptions,
+      HookTransformArgs,
+    },
     context::PluginContext,
     output::{HookLoadOutput, HookResolveIdOutput},
     plugin::{HookLoadReturn, HookNoopReturn, HookResolveIdReturn, HookTransformReturn, Plugin},

@@ -17,7 +17,7 @@ pub struct PluginOptions {
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(specifier: string, importer?: string) => Promise<undefined | ResolveIdResult>"
+    ts_type = "(specifier: string, importer?: string, options?: HookResolveIdArgsOptions) => Promise<undefined | ResolveIdResult>"
   )]
   pub resolve_id: Option<JsFunction>,
 
@@ -35,6 +35,21 @@ pub struct PluginOptions {
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(error: string) => Promise<void>")]
   pub build_end: Option<JsFunction>,
+}
+
+#[napi_derive::napi(object)]
+#[derive(Deserialize, Default, Derivative)]
+#[serde(rename_all = "camelCase")]
+#[derivative(Debug)]
+pub struct HookResolveIdArgsOptions {
+  pub is_entry: bool,
+  pub kind: String,
+}
+
+impl From<rolldown::HookResolveIdArgsOptions> for HookResolveIdArgsOptions {
+  fn from(value: rolldown::HookResolveIdArgsOptions) -> Self {
+    Self { is_entry: value.is_entry, kind: value.kind.to_string() }
+  }
 }
 
 #[napi_derive::napi(object)]

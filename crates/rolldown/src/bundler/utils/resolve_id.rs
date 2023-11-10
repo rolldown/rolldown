@@ -3,7 +3,9 @@ use rolldown_error::BuildError;
 use rolldown_fs::FileSystemExt;
 use rolldown_resolver::Resolver;
 
-use crate::{bundler::plugin_driver::SharedPluginDriver, HookResolveIdArgs};
+use crate::{
+  bundler::plugin_driver::SharedPluginDriver, HookResolveIdArgs, HookResolveIdArgsOptions,
+};
 
 #[derive(Debug)]
 pub struct ResolvedRequestInfo {
@@ -18,6 +20,7 @@ pub async fn resolve_id<T: FileSystemExt + Default>(
   plugin_driver: &SharedPluginDriver,
   request: &str,
   importer: Option<&ResourceId>,
+  options: HookResolveIdArgsOptions,
   _preserve_symlinks: bool,
 ) -> Result<Option<ResolvedRequestInfo>, BuildError> {
   // Run plugin resolve_id first, if it is None use internal resolver as fallback
@@ -25,6 +28,7 @@ pub async fn resolve_id<T: FileSystemExt + Default>(
     .resolve_id(&HookResolveIdArgs {
       importer: importer.map(std::convert::AsRef::as_ref),
       source: request,
+      options,
     })
     .await?
   {

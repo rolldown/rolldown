@@ -5,6 +5,7 @@ use rolldown_resolver::Resolver;
 
 use crate::{bundler::plugin_driver::SharedPluginDriver, HookResolveIdArgs};
 
+#[derive(Debug)]
 pub struct ResolvedRequestInfo {
   pub path: RawPath,
   pub module_type: ModuleType,

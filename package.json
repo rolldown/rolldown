@@ -10,6 +10,7 @@
     "web/**"
   ],
   "scripts": {
+    "lint": "oxlint --ignore-path=./.oxlintignore --import-plugin",
     "build": "run-s build:binding build:ts",
     "build:ci:release": "run-s build:packages:ci build:ts build:binding:release",
     "build:ts": "tsc -b tsconfig.project.json",
@@ -31,6 +32,7 @@
     "lint-staged": "^13.1.2",
     "lodash-es": "^4.17.21",
     "npm-run-all": "^4.1.5",
+    "oxlint": "^0.0.17",
     "prettier": "^2.8.4",
     "rollup": "^3.17.3",
     "tree-sitter": "^0.20.6",

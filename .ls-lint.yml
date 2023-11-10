@@ -1,0 +1,15 @@
+ls:
+  .rs: snake_case
+  .ts: kebab-case
+  .js: kebab-case
+  .d.ts: kebab-case
+
+ignore:
+  - node_modules
+  - temp
+  - rollup # rollup submodule
+  - '**/dist'
+  - packages/rollup-tests/test # Copied from rollup repo
+  # FIXME: should not ignore following folders
+  - web
+  - crates

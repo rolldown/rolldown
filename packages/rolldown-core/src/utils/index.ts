@@ -1,6 +1,6 @@
 export * from './async-flatten'
-export * from './transformToRollupOutput'
-export * from './normalizePluginOption'
+export * from './transform-to-rollup-output'
+export * from './normalize-plugin-option'
 
 export function arraify<T>(value: T | T[]): T[] {
   return Array.isArray(value) ? value : [value]

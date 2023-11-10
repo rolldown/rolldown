@@ -23,12 +23,12 @@ function normalizeInput(
       const name = path.parse(src).name
       return {
         name,
-        import: src
+        import: src,
       }
-    });
+    })
   } else {
     return Object.entries(input).map((value) => {
-      return {name: value[0], import: value[1]}
+      return { name: value[0], import: value[1] }
     })
   }
 }

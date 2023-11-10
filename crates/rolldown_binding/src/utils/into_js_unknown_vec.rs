@@ -32,7 +32,7 @@ macro_rules! impl_tuple_to_vec {
     };
   }
 
-juimpl_tuple_to_vec!(A);
+impl_tuple_to_vec!(A);
 impl_tuple_to_vec!(A, B);
 impl_tuple_to_vec!(A, B, C);
 impl_tuple_to_vec!(A, B, C, D);

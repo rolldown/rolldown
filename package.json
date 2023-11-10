@@ -5,7 +5,7 @@
   "main": "index.js",
   "private": true,
   "workspaces": [
-    "crates/rolldown_node_binding",
+    "crates/rolldown_binding",
     "packages/**",
     "web/**"
   ],

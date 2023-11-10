@@ -1532,6 +1532,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_binding"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "derivative",
+ "futures",
+ "mimalloc-rust",
+ "napi",
+ "napi-build",
+ "napi-derive",
+ "rolldown",
+ "rolldown_error",
+ "rolldown_fs",
+ "rolldown_tracing",
+ "rustc-hash",
+ "scoped-tls",
+ "serde",
+ "tracing",
+]
+
+[[package]]
 name = "rolldown_common"
 version = "0.0.1"
 dependencies = [
@@ -1560,28 +1582,6 @@ dependencies = [
  "dunce",
  "oxc_resolver",
  "vfs",
-]
-
-[[package]]
-name = "rolldown_node_binding"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "async-trait",
- "derivative",
- "futures",
- "mimalloc-rust",
- "napi",
- "napi-build",
- "napi-derive",
- "rolldown",
- "rolldown_error",
- "rolldown_fs",
- "rolldown_tracing",
- "rustc-hash",
- "scoped-tls",
- "serde",
- "tracing",
 ]
 
 [[package]]

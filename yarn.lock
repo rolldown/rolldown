@@ -1059,9 +1059,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rolldown/node-binding@workspace:*, @rolldown/node-binding@workspace:crates/rolldown_node_binding":
+"@rolldown/node-binding@workspace:*, @rolldown/node-binding@workspace:crates/rolldown_binding":
   version: 0.0.0-use.local
-  resolution: "@rolldown/node-binding@workspace:crates/rolldown_node_binding"
+  resolution: "@rolldown/node-binding@workspace:crates/rolldown_binding"
   dependencies:
     "@napi-rs/cli": ^2.13.2
     "@swc-node/register": ^1.5.4

@@ -5,10 +5,11 @@ use crate::utils::JsCallback;
 use derivative::Derivative;
 use rolldown::Plugin;
 
-use super::plugin::{PluginOptions, ResolveIdResult, SourceResult};
+use super::plugin::{HookResolveIdArgsOptions, PluginOptions, ResolveIdResult, SourceResult};
 
 pub type BuildStartCallback = JsCallback<(), ()>;
-pub type ResolveIdCallback = JsCallback<(String, Option<String>), Option<ResolveIdResult>>;
+pub type ResolveIdCallback =
+  JsCallback<(String, Option<String>, HookResolveIdArgsOptions), Option<ResolveIdResult>>;
 pub type LoadCallback = JsCallback<(String,), Option<SourceResult>>;
 pub type TransformCallback = JsCallback<(String, String), Option<SourceResult>>;
 pub type BuildEndCallback = JsCallback<(Option<String>,), ()>;
@@ -73,7 +74,11 @@ impl Plugin for JsAdapterPlugin {
   ) -> rolldown::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id_fn {
       let res = cb
-        .call_async((args.source.to_string(), args.importer.map(|s| s.to_string())))
+        .call_async((
+          args.source.to_string(),
+          args.importer.map(|s| s.to_string()),
+          args.options.clone().into(),
+        ))
         .await
         .map_err(|e| e.into_bundle_error())?;
 

@@ -24,7 +24,7 @@ use crate::{
     visitors::scanner::{self, ScanResult},
   },
   error::BatchedResult,
-  HookLoadArgs, HookTransformArgs,
+  HookLoadArgs, HookResolveIdArgsOptions, HookTransformArgs,
 };
 pub struct NormalModuleTask<'task, T: FileSystemExt + Default> {
   ctx: &'task ModuleTaskContext<'task, T>,
@@ -175,6 +175,7 @@ impl<'task, T: FileSystemExt + Default + 'static> NormalModuleTask<'task, T> {
     plugin_driver: &SharedPluginDriver,
     importer: &ResourceId,
     specifier: &str,
+    options: HookResolveIdArgsOptions,
   ) -> BatchedResult<ResolvedRequestInfo> {
     // let is_marked_as_external = is_external(specifier, Some(importer.id()), false).await?;
 
@@ -182,7 +183,8 @@ impl<'task, T: FileSystemExt + Default + 'static> NormalModuleTask<'task, T> {
     //     return Ok(ModuleId::new(specifier, true));
     // }
 
-    let resolved_id = resolve_id(resolver, plugin_driver, specifier, Some(importer), false).await?;
+    let resolved_id =
+      resolve_id(resolver, plugin_driver, specifier, Some(importer), options, false).await?;
 
     match resolved_id {
       Some(info) => Ok(info),
@@ -212,10 +214,19 @@ impl<'task, T: FileSystemExt + Default + 'static> NormalModuleTask<'task, T> {
       let resolver = Arc::clone(self.ctx.resolver);
       let plugin_driver = Arc::clone(self.ctx.plugin_driver);
       let importer = self.path.clone();
+      let kind = item.kind;
       // let is_external = self.is_external.clone();
       // let on_warn = self.input_options.on_warn.clone();
       tokio::spawn(async move {
-        Self::resolve_id(&resolver, &plugin_driver, &importer, &specifier).await.map(|id| (idx, id))
+        Self::resolve_id(
+          &resolver,
+          &plugin_driver,
+          &importer,
+          &specifier,
+          HookResolveIdArgsOptions { is_entry: false, kind },
+        )
+        .await
+        .map(|id| (idx, id))
       })
     });
 

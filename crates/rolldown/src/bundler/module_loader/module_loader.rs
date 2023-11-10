@@ -22,7 +22,7 @@ use crate::bundler::runtime::RUNTIME_PATH;
 use crate::bundler::utils::ast_symbol::AstSymbol;
 use crate::bundler::utils::resolve_id::{resolve_id, ResolvedRequestInfo};
 use crate::error::{BatchedErrors, BatchedResult};
-use crate::SharedResolver;
+use crate::{HookResolveIdArgsOptions, SharedResolver};
 
 pub struct ModuleLoader<'a, T: FileSystemExt + Default> {
   ctx: ModuleLoaderContext,
@@ -207,7 +207,16 @@ impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
     let resolved_ids =
       block_on_spawn_all(self.input_options.input.iter().map(|input_item| async move {
         let specifier = &input_item.import;
-        match resolve_id(resolver, plugin_driver, specifier, None, false).await {
+        match resolve_id(
+          resolver,
+          plugin_driver,
+          specifier,
+          None,
+          HookResolveIdArgsOptions { is_entry: true, kind: ImportKind::Import },
+          false,
+        )
+        .await
+        {
           Ok(r) => {
             let Some(info) = r else {
               return Err(BuildError::unresolved_entry(specifier));

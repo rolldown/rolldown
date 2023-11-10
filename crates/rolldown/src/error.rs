@@ -17,6 +17,10 @@ impl BatchedErrors {
     self.0.push(err);
   }
 
+  pub fn get(&self) -> Option<&BuildError> {
+    self.0.get(0)
+  }
+
   /// Try to take the Err() of the given result and return Some(T) if it's Ok(T).
   pub fn take_err_from<T>(&mut self, res: Result<T, rolldown_error::BuildError>) -> Option<T> {
     match res {

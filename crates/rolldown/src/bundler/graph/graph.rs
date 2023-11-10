@@ -8,6 +8,7 @@ use crate::{
     runtime::Runtime,
   },
   error::BatchedResult,
+  plugin::args::HookBuildEndArgs,
 };
 use rolldown_common::ModuleId;
 use rolldown_fs::FileSystemExt;
@@ -24,6 +25,34 @@ pub struct Graph {
 }
 
 impl Graph {
+  pub async fn build<T: FileSystemExt + Default + 'static>(
+    &mut self,
+    input_options: &NormalizedInputOptions,
+    plugin_driver: SharedPluginDriver,
+    fs: Arc<T>,
+  ) -> BatchedResult<()> {
+    plugin_driver.build_start().await?;
+
+    if let Err(e) = self.generate_module_graph(input_options, Arc::clone(&plugin_driver), fs).await
+    {
+      let error = e.get().expect("should have a error");
+      plugin_driver
+        .build_end(Some(&HookBuildEndArgs {
+          error: format!("{:?}\n{:?}", error.code(), error.to_diagnostic().print_to_string()),
+        }))
+        .await?;
+      return Err(e);
+    }
+
+    self.sort_modules();
+
+    self.link();
+
+    plugin_driver.build_end(None).await?;
+
+    Ok(())
+  }
+
   pub async fn generate_module_graph<T: FileSystemExt + Default + 'static>(
     &mut self,
     input_options: &NormalizedInputOptions,
@@ -33,10 +62,6 @@ impl Graph {
     ModuleLoader::new(input_options, plugin_driver, self, fs).fetch_all_modules().await?;
 
     tracing::trace!("{:#?}", self);
-
-    self.sort_modules();
-
-    self.link();
 
     Ok(())
   }

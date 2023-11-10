@@ -8,7 +8,9 @@ export function createInputOptionsAdapter(
 ): BindingInputOptions {
   return {
     input: normalizeInput(options.input),
-    plugins: options.plugins.map((plugin) => createBuildPluginAdapter(plugin)),
+    plugins: options.plugins.map((plugin) =>
+      createBuildPluginAdapter(plugin, options),
+    ),
     cwd: process.cwd(),
   }
 }

@@ -14,3 +14,8 @@ pub struct HookTransformArgs<'a> {
 pub struct HookLoadArgs<'a> {
   pub id: &'a str,
 }
+
+#[derive(Debug, Default)]
+pub struct HookBuildEndArgs {
+  pub error: String,
+}

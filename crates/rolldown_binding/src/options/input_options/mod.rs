@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 mod plugin;
 mod plugin_adapter;
 use napi_derive::napi;
@@ -8,6 +8,20 @@ use serde::Deserialize;
 use crate::options::input_options::plugin_adapter::JsAdapterPlugin;
 
 use self::plugin::PluginOptions;
+
+#[napi(object)]
+#[derive(Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct InputItem {
+  pub name: Option<String>,
+  pub import: String,
+}
+
+impl From<InputItem> for rolldown::InputItem {
+  fn from(value: InputItem) -> Self {
+    Self { name: value.name, import: value.import }
+  }
+}
 
 #[napi(object)]
 #[derive(Deserialize, Debug, Default)]
@@ -23,7 +37,7 @@ pub struct InputOptions {
   // context?: string;sssssssssss
   // experimentalCacheExpiry?: number;
   // pub external: ExternalOption,
-  pub input: HashMap<String, String>,
+  pub input: Vec<InputItem>,
   // makeAbsoluteExternalsRelative?: boolean | 'ifRelativeSource';
   // /** @deprecated Use the "manualChunks" output option instead. */
   // manualChunks?: ManualChunksOption;
@@ -59,13 +73,7 @@ pub fn resolve_input_options(
 
   Ok((
     rolldown::InputOptions {
-      input: Some(
-        opts
-          .input
-          .into_iter()
-          .map(|(name, import)| rolldown::InputItem { name: Some(name), import })
-          .collect::<Vec<_>>(),
-      ),
+      input: Some(opts.input.into_iter().map(Into::into).collect::<Vec<_>>()),
       cwd: Some(cwd),
     },
     plugins,

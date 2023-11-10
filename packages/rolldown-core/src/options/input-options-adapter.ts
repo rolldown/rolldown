@@ -19,13 +19,16 @@ function normalizeInput(
   input: NormalizedInputOptions['input'],
 ): BindingInputOptions['input'] {
   if (Array.isArray(input)) {
-    return Object.fromEntries(
-      input.map((src) => {
-        const name = path.parse(src).name
-        return [name, src]
-      }),
-    )
+    return input.map((src) => {
+      const name = path.parse(src).name
+      return {
+        name,
+        import: src
+      }
+    });
   } else {
-    return input
+    return Object.entries(input).map((value) => {
+      return {name: value[0], import: value[1]}
+    })
   }
 }

@@ -1,5 +1,6 @@
 use std::{
   borrow::Cow,
+  fmt::Display,
   path::{Path, PathBuf},
 };
 

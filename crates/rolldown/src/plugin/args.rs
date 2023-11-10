@@ -1,3 +1,5 @@
+use rolldown_error::BuildError;
+
 #[derive(Debug)]
 pub struct HookResolveIdArgs<'a> {
   pub importer: Option<&'a str>,
@@ -13,4 +15,9 @@ pub struct HookTransformArgs<'a> {
 #[derive(Debug)]
 pub struct HookLoadArgs<'a> {
   pub id: &'a str,
+}
+
+#[derive(Debug, Default)]
+pub struct HookBuildEndArgs {
+  pub error: String,
 }

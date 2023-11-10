@@ -1,8 +1,12 @@
 use std::sync::Arc;
 
 use crate::{
-  plugin::plugin::BoxPlugin, HookLoadArgs, HookLoadReturn, HookResolveIdArgs, HookResolveIdReturn,
-  HookTransformArgs, HookTransformReturn, PluginContext,
+  plugin::{
+    args::HookBuildEndArgs,
+    plugin::{BoxPlugin, HookNoopReturn},
+  },
+  HookLoadArgs, HookLoadReturn, HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs,
+  HookTransformReturn, PluginContext,
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
@@ -14,6 +18,13 @@ pub struct PluginDriver {
 impl PluginDriver {
   pub fn new(plugins: Vec<BoxPlugin>) -> Self {
     Self { plugins }
+  }
+
+  pub async fn build_start(&self) -> HookNoopReturn {
+    for plugin in &self.plugins {
+      plugin.build_start(&mut PluginContext::new()).await?;
+    }
+    Ok(())
   }
 
   pub async fn resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
@@ -41,5 +52,12 @@ impl PluginDriver {
       }
     }
     Ok(None)
+  }
+
+  pub async fn build_end(&self, _args: Option<&HookBuildEndArgs>) -> HookNoopReturn {
+    for plugin in &self.plugins {
+      plugin.build_end(&mut PluginContext::new(), _args).await?;
+    }
+    Ok(())
   }
 }

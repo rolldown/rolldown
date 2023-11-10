@@ -9,9 +9,21 @@ import { unimplemented } from '../utils'
 export function createBuildPluginAdapter(plugin: Plugin): PluginOptions {
   return {
     name: plugin.name ?? 'unknown',
+    buildStart: buildStart(plugin.buildStart),
     resolveId: resolveId(plugin.resolveId),
     load: load(plugin.load),
     transform: transform(plugin.transform),
+  }
+}
+
+function buildStart(hook: Plugin['buildStart']) {
+  if (hook) {
+    if (typeof hook !== 'function') {
+      return unimplemented()
+    }
+    return async () => {
+      await hook.call({} as any, )
+    }
   }
 }
 

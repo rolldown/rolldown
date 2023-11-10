@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  format:
+  cargo-format:
     name: Cargo Format
     runs-on: self-hosted
     steps:
@@ -33,7 +33,7 @@ jobs:
 
       - name: Run Format
         run: cargo fmt --all -- --check
-  deny:
+  cargo-deny:
     name: Cargo Deny
     runs-on: self-hosted
     steps:
@@ -52,8 +52,8 @@ jobs:
 
       - if: steps.filter.outputs.src == 'true'
         run: cargo deny check
-  lint:
-    name: Clippy
+  cargo-clippy:
+    name: Cargo Clippy
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -66,8 +66,8 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --all -- --deny warnings
 
-  test:
-    name: Test
+  cargo-nextest:
+    name: Cargo Nextest
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -82,7 +82,7 @@ jobs:
         run: cargo nextest run
 
   node-test:
-    name: Node test
+    name: Node Test
     runs-on: self-hosted
     timeout-minutes: 30
     strategy:

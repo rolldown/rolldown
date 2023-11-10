@@ -24,4 +24,5 @@ var require_entry = __commonJS({
 		console.log('cache:', require.cache);
 	}
 });
+export default require_entry();
 ```

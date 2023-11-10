@@ -63,7 +63,12 @@ impl Chunk {
   }
 
   #[allow(clippy::unnecessary_wraps)]
-  pub fn render(&self, graph: &Graph, chunk_graph: &ChunkGraph) -> BatchedResult<String> {
+  pub fn render(
+    &self,
+    graph: &Graph,
+    chunk_graph: &ChunkGraph,
+    output_options: &NormalizedOutputOptions,
+  ) -> BatchedResult<String> {
     use rayon::prelude::*;
     let mut joiner = Joiner::with_options(JoinerOptions { separator: Some("\n".to_string()) });
     joiner.append(self.render_imports_for_esm(graph, chunk_graph));
@@ -81,7 +86,7 @@ impl Chunk {
         joiner.append(item);
       });
 
-    if let Some(exports) = self.render_exports_for_esm(graph) {
+    if let Some(exports) = self.render_exports(graph, output_options) {
       joiner.append(exports);
     }
 

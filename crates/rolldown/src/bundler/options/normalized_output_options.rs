@@ -1,6 +1,6 @@
 use derivative::Derivative;
 
-use super::file_name_template::FileNameTemplate;
+use super::{file_name_template::FileNameTemplate, output_options::OutputFormat};
 use crate::OutputOptions;
 
 #[derive(Derivative)]
@@ -8,6 +8,7 @@ use crate::OutputOptions;
 pub struct NormalizedOutputOptions {
   pub entry_file_names: FileNameTemplate,
   pub chunk_file_names: FileNameTemplate,
+  pub format: OutputFormat,
 }
 
 impl NormalizedOutputOptions {
@@ -19,6 +20,7 @@ impl NormalizedOutputOptions {
       chunk_file_names: FileNameTemplate::from(
         opts.chunk_file_names.unwrap_or_else(|| "[name]-[hash].js".to_string()),
       ),
+      format: opts.format.unwrap_or(OutputFormat::Esm),
     }
   }
 }

@@ -21,8 +21,12 @@ export interface ResolveIdResult {
 export interface SourceResult {
   code: string
 }
+export interface InputItem {
+  name?: string
+  import: string
+}
 export interface InputOptions {
-  input: Record<string, string>
+  input: Array<InputItem>
   plugins: Array<PluginOptions>
   cwd: string
 }

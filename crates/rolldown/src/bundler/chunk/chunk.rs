@@ -65,7 +65,7 @@ impl Chunk {
     &self,
     graph: &Graph,
     chunk_graph: &ChunkGraph,
-    output_options: &NormalizedOutputOptions,
+    output_options: &OutputOptions,
   ) -> BatchedResult<String> {
     use rayon::prelude::*;
     let mut joiner = Joiner::with_options(JoinerOptions { separator: Some("\n".to_string()) });

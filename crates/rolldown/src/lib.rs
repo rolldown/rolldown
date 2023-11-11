@@ -15,7 +15,7 @@ pub use crate::{
     options::{
       file_name_template::FileNameTemplate,
       input_options::{InputItem, InputOptions},
-      output_options::OutputOptions,
+      output_options::{OutputFormat, OutputOptions},
     },
   },
   plugin::{

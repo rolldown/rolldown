@@ -67,6 +67,7 @@ impl From<OutputOptions> for rolldown::OutputOptions {
         value.chunk_file_names.unwrap_or_else(|| "[name]-[hash].js".to_string()),
       ),
       dir: value.dir.unwrap_or_else(|| "dist".to_string()),
+      format: rolldown::OutputFormat::Esm,
     }
   }
 }

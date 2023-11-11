@@ -1,10 +1,7 @@
 use rolldown_common::WrapKind;
 use string_wizard::MagicString;
 
-use crate::bundler::{
-  graph::graph::Graph,
-  options::{normalized_output_options::NormalizedOutputOptions, output_options},
-};
+use crate::{bundler::graph::graph::Graph, OutputFormat, OutputOptions};
 
 use super::chunk::Chunk;
 
@@ -12,13 +9,13 @@ impl Chunk {
   pub fn render_exports(
     &self,
     graph: &Graph,
-    output_options: &NormalizedOutputOptions,
+    output_options: &OutputOptions,
   ) -> Option<MagicString<'static>> {
     if let Some(entry) = self.entry_module {
       let linking_info = &graph.linking_infos[entry];
       if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
         match output_options.format {
-          output_options::OutputFormat::Esm => {
+          OutputFormat::Esm => {
             let wrap_ref_name = &self.canonical_names[&linking_info.wrap_ref.unwrap()];
             return Some(MagicString::new(format!("export default {wrap_ref_name}();\n")));
           }

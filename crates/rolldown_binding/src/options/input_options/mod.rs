@@ -62,20 +62,17 @@ pub struct InputOptions {
   // pub builtins: BuiltinsOptions,
 }
 
-pub fn resolve_input_options(
-  opts: InputOptions,
-) -> napi::Result<(rolldown::InputOptions, Vec<Box<dyn rolldown::Plugin>>)> {
-  let cwd = PathBuf::from(opts.cwd.clone());
-  assert!(cwd != PathBuf::from("/"), "{opts:#?}");
+impl From<InputOptions> for (rolldown::InputOptions, napi::Result<Vec<rolldown::BoxPlugin>>) {
+  fn from(value: InputOptions) -> Self {
+    let cwd = PathBuf::from(value.cwd.clone());
+    assert!(cwd != PathBuf::from("/"), "{value:#?}");
 
-  let plugins =
-    opts.plugins.into_iter().map(JsAdapterPlugin::new_boxed).collect::<napi::Result<Vec<_>>>()?;
-
-  Ok((
-    rolldown::InputOptions {
-      input: Some(opts.input.into_iter().map(Into::into).collect::<Vec<_>>()),
-      cwd: Some(cwd),
-    },
-    plugins,
-  ))
+    (
+      rolldown::InputOptions {
+        input: value.input.into_iter().map(Into::into).collect::<Vec<_>>(),
+        cwd,
+      },
+      value.plugins.into_iter().map(JsAdapterPlugin::new_boxed).collect::<napi::Result<Vec<_>>>(),
+    )
+  }
 }

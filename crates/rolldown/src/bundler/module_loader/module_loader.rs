@@ -16,7 +16,7 @@ use crate::bundler::graph::graph::Graph;
 use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::Module;
 use crate::bundler::module_loader::module_task_context::ModuleTaskContext;
-use crate::bundler::options::normalized_input_options::NormalizedInputOptions;
+use crate::bundler::options::input_options::InputOptions;
 use crate::bundler::plugin_driver::SharedPluginDriver;
 use crate::bundler::runtime::RUNTIME_PATH;
 use crate::bundler::utils::ast_symbol::AstSymbol;
@@ -26,7 +26,7 @@ use crate::{HookResolveIdArgsOptions, SharedResolver};
 
 pub struct ModuleLoader<'a, T: FileSystemExt + Default> {
   ctx: ModuleLoaderContext,
-  input_options: &'a NormalizedInputOptions,
+  input_options: &'a InputOptions,
   graph: &'a mut Graph,
   resolver: SharedResolver<T>,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
@@ -107,7 +107,7 @@ impl ModuleLoaderContext {
 
 impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
   pub fn new(
-    input_options: &'a NormalizedInputOptions,
+    input_options: &'a InputOptions,
     plugin_driver: SharedPluginDriver,
     graph: &'a mut Graph,
     fs: Arc<T>,

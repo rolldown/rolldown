@@ -13,6 +13,7 @@ pub use crate::{
     bundle::asset::Asset,
     bundler::Bundler,
     options::{
+      file_name_template::FileNameTemplate,
       input_options::{InputItem, InputOptions},
       output_options::OutputOptions,
     },
@@ -24,6 +25,8 @@ pub use crate::{
     },
     context::PluginContext,
     output::{HookLoadOutput, HookResolveIdOutput},
-    plugin::{HookLoadReturn, HookNoopReturn, HookResolveIdReturn, HookTransformReturn, Plugin},
+    plugin::{
+      BoxPlugin, HookLoadReturn, HookNoopReturn, HookResolveIdReturn, HookTransformReturn, Plugin,
+    },
   },
 };

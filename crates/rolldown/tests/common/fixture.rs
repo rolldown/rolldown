@@ -4,7 +4,7 @@ use std::{
   process::Command,
 };
 
-use rolldown::{Asset, Bundler, InputOptions, OutputOptions};
+use rolldown::{Asset, Bundler, FileNameTemplate, InputOptions, OutputOptions};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystemOs;
 use rolldown_testing::TestConfig;
@@ -92,13 +92,17 @@ impl Fixture {
 
     let mut bundler = Bundler::new(
       InputOptions {
-        input: test_config.input.input.map(|items| {
-          items
-            .into_iter()
-            .map(|item| rolldown::InputItem { name: Some(item.name), import: item.import })
-            .collect()
-        }),
-        cwd: Some(fixture_path.to_path_buf()),
+        input: test_config
+          .input
+          .input
+          .map(|items| {
+            items
+              .into_iter()
+              .map(|item| rolldown::InputItem { name: Some(item.name), import: item.import })
+              .collect()
+          })
+          .unwrap(),
+        cwd: fixture_path.to_path_buf(),
       },
       FileSystemOs,
     );
@@ -109,8 +113,8 @@ impl Fixture {
 
     bundler
       .write(OutputOptions {
-        entry_file_names: Some("[name].mjs".to_string()),
-        chunk_file_names: Some("[name].mjs".to_string()),
+        entry_file_names: FileNameTemplate::from("[name].mjs".to_string()),
+        chunk_file_names: FileNameTemplate::from("[name].mjs".to_string()),
         ..Default::default()
       })
       .await

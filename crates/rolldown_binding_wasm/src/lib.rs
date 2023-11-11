@@ -48,11 +48,11 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
       );
       let mut bundler = Bundler::new(
         InputOptions {
-          input: Some(vec![InputItem {
+          input: vec![InputItem {
             name: Some("basic".to_string()),
             import: "./index.js".to_string(),
-          }]),
-          cwd: Some("/".into()),
+          }],
+          cwd: "/".into(),
         },
         memory_fs,
       );

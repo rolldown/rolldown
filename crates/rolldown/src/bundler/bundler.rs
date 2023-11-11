@@ -7,18 +7,16 @@ use sugar_path::AsPath;
 use super::{
   bundle::asset::Asset,
   graph::graph::Graph,
-  options::{
-    normalized_input_options::NormalizedInputOptions,
-    normalized_output_options::NormalizedOutputOptions,
-  },
   plugin_driver::{PluginDriver, SharedPluginDriver},
 };
-use crate::{bundler::bundle::bundle::Bundle, plugin::plugin::BoxPlugin, InputOptions};
+use crate::{
+  bundler::bundle::bundle::Bundle, plugin::plugin::BoxPlugin, InputOptions, OutputOptions,
+};
 
 type BuildResult<T> = Result<T, Vec<BuildError>>;
 
 pub struct Bundler<T: FileSystemExt> {
-  input_options: NormalizedInputOptions,
+  input_options: InputOptions,
   plugin_driver: SharedPluginDriver,
   fs: Arc<T>,
 }
@@ -26,31 +24,19 @@ pub struct Bundler<T: FileSystemExt> {
 impl<T: FileSystemExt + Default + 'static> Bundler<T> {
   pub fn new(input_options: InputOptions, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
-    let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self {
-      input_options: normalized,
-      plugin_driver: Arc::new(PluginDriver::new(vec![])),
-      fs: Arc::new(fs),
-    }
+    Self { input_options, plugin_driver: Arc::new(PluginDriver::new(vec![])), fs: Arc::new(fs) }
   }
 
   pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
-    let normalized = NormalizedInputOptions::from_input_options(input_options);
-    Self {
-      input_options: normalized,
-      plugin_driver: Arc::new(PluginDriver::new(plugins)),
-      fs: Arc::new(fs),
-    }
+    Self { input_options, plugin_driver: Arc::new(PluginDriver::new(plugins)), fs: Arc::new(fs) }
   }
 
-  pub async fn write(&mut self, output_options: crate::OutputOptions) -> BuildResult<Vec<Asset>> {
-    let dir = output_options.dir.clone().unwrap_or_else(|| {
-      self.input_options.cwd.as_path().join("dist").to_string_lossy().to_string()
-    });
-    let normalized = NormalizedOutputOptions::from_output_options(output_options);
+  pub async fn write(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Asset>> {
+    let dir =
+      self.input_options.cwd.as_path().join(&output_options.dir).to_string_lossy().to_string();
 
-    let assets = self.build(normalized, Arc::clone(&self.fs)).await?;
+    let assets = self.build(output_options, Arc::clone(&self.fs)).await?;
 
     self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
@@ -74,21 +60,13 @@ impl<T: FileSystemExt + Default + 'static> Bundler<T> {
     Ok(assets)
   }
 
-  pub async fn generate(
-    &mut self,
-    output_options: crate::OutputOptions,
-  ) -> BuildResult<Vec<Asset>> {
-    let normalized = NormalizedOutputOptions::from_output_options(output_options);
-    self.build(normalized, Arc::clone(&self.fs)).await
+  pub async fn generate(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Asset>> {
+    self.build(output_options, Arc::clone(&self.fs)).await
   }
 
-  async fn build(
-    &mut self,
-    output_options: NormalizedOutputOptions,
-    fs: Arc<T>,
-  ) -> BuildResult<Vec<Asset>> {
-    tracing::trace!("NormalizedInputOptions {:#?}", self.input_options);
-    tracing::trace!("NormalizedOutputOptions: {output_options:#?}",);
+  async fn build(&mut self, output_options: OutputOptions, fs: Arc<T>) -> BuildResult<Vec<Asset>> {
+    tracing::trace!("InputOptions {:#?}", self.input_options);
+    tracing::trace!("OutputOptions: {output_options:#?}",);
 
     let mut graph = Graph::default();
     graph.build(&self.input_options, Arc::clone(&self.plugin_driver), fs).await?;

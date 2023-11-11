@@ -8,9 +8,7 @@ use crate::{
     chunk_graph::ChunkGraph,
     graph::graph::Graph,
     module::ModuleRenderContext,
-    options::{
-      file_name_template::FileNameRenderOptions, normalized_output_options::NormalizedOutputOptions,
-    },
+    options::{file_name_template::FileNameRenderOptions, output_options::OutputOptions},
     utils::bitset::BitSet,
   },
   error::BatchedResult,
@@ -53,7 +51,7 @@ impl Chunk {
     Self { entry_module, modules, name, bits, ..Self::default() }
   }
 
-  pub fn render_file_name(&mut self, output_options: &NormalizedOutputOptions) {
+  pub fn render_file_name(&mut self, output_options: &OutputOptions) {
     let pat = if self.entry_module.is_some() {
       &output_options.entry_file_names
     } else {

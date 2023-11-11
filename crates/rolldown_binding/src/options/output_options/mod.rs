@@ -59,15 +59,20 @@ pub struct OutputOptions {
 
 impl From<OutputOptions> for rolldown::OutputOptions {
   fn from(value: OutputOptions) -> Self {
-    Self {
-      entry_file_names: rolldown::FileNameTemplate::from(
-        value.entry_file_names.unwrap_or_else(|| "[name].js".to_string()),
-      ),
-      chunk_file_names: rolldown::FileNameTemplate::from(
-        value.chunk_file_names.unwrap_or_else(|| "[name]-[hash].js".to_string()),
-      ),
-      dir: value.dir.unwrap_or_else(|| "dist".to_string()),
-      format: rolldown::OutputFormat::Esm,
+    let mut options = Self::default();
+
+    if let Some(entry_file_names) = value.entry_file_names {
+      options.entry_file_names = rolldown::FileNameTemplate::from(entry_file_names);
     }
+
+    if let Some(chunk_file_names) = value.chunk_file_names {
+      options.chunk_file_names = rolldown::FileNameTemplate::from(chunk_file_names);
+    }
+
+    if let Some(dir) = value.dir {
+      options.dir = dir;
+    }
+
+    options
   }
 }

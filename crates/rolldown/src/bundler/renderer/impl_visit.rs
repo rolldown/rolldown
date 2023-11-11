@@ -89,18 +89,23 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
 
   fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
     if let oxc::ast::ast::Expression::StringLiteral(str) = &expr.source {
-      if let Some(chunk_id) =
-        self.ctx.chunk_graph.module_to_chunk[self.ctx.module.importee_id_by_span(expr.span)]
-      {
-        let chunk = &self.ctx.chunk_graph.chunks[chunk_id];
-        self.overwrite(
-          str.span.start,
-          str.span.end,
-          // TODO: the path should be relative to the current importer chunk
-          format!("'./{}'", chunk.file_name.as_ref().unwrap()),
-        );
-      } else {
-        // external module doesn't belong to any chunk, just keep this as it is
+      let importee = self.ctx.module.importee_id_by_span(expr.span);
+      match self.ctx.graph.modules[importee] {
+        Module::Normal(_) => {
+          debug_assert!(matches!(self.ctx.graph.modules[importee], Module::Normal(_)));
+          let chunk_id = self.ctx.chunk_graph.module_to_chunk[importee]
+            .expect("Normal module should belong to a chunk");
+          let chunk = &self.ctx.chunk_graph.chunks[chunk_id];
+          self.overwrite(
+            str.span.start,
+            str.span.end,
+            // TODO: the path should be relative to the current importer chunk
+            format!("'./{}'", chunk.file_name.as_ref().unwrap()),
+          );
+        }
+        Module::External(_) => {
+          // external module doesn't belong to any chunk, just keep this as it is
+        }
       }
     }
   }

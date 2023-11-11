@@ -288,7 +288,7 @@ impl<'a> Bundle<'a> {
       .iter()
       .enumerate()
       .map(|(_chunk_id, c)| {
-        let content = c.render(self.graph, &chunk_graph).unwrap();
+        let content = c.render(self.graph, &chunk_graph, self.output_options).unwrap();
 
         Asset { file_name: c.file_name.clone().unwrap(), content }
       })

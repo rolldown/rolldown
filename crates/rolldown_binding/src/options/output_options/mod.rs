@@ -62,5 +62,6 @@ pub fn resolve_output_options(opts: OutputOptions) -> napi::Result<rolldown::Out
     entry_file_names: opts.entry_file_names,
     chunk_file_names: opts.chunk_file_names,
     dir: opts.dir,
+    format: None,
   })
 }

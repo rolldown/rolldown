@@ -22,4 +22,5 @@ var require_entry = __commonJS({
 		}
 	}
 });
+export default require_entry();
 ```

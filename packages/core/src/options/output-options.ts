@@ -133,7 +133,7 @@ export interface OutputOptions extends RollupOutputOptions {
 function normalizeFormat(
   format: OutputOptions['format'],
 ): BindingOutputOptions['format'] {
-  if (format === 'esm' || format === 'cjs') {
+  if (format == null || format === 'esm' || format === 'cjs') {
     return format
   } else {
     return unimplemented(`output.format: ${format}`)

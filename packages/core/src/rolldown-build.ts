@@ -31,14 +31,14 @@ export class RolldownBuild implements RollupBuild {
   closed = false
 
   // @ts-expect-error 2416
-  async generate(outputOptions: OutputOptions): Promise<RollupOutput> {
+  async generate(outputOptions: OutputOptions = {}): Promise<RollupOutput> {
     const bindingOptions = normalizeOutputOptions(outputOptions)
     const output = await this.#bundler.write(bindingOptions)
     return transformToRollupOutput(output)
   }
 
   // @ts-expect-error 2416
-  async write(outputOptions: OutputOptions): Promise<RollupOutput> {
+  async write(outputOptions?: OutputOptions = {}): Promise<RollupOutput> {
     const bindingOptions = normalizeOutputOptions(outputOptions)
     const output = await this.#bundler.write(bindingOptions)
     return transformToRollupOutput(output)

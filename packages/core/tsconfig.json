@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "composite": true,
+    // "composite": true,
     "target": "ES2018",
     "module": "CommonJS",
     "outDir": "dist",

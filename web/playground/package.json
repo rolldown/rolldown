@@ -4,7 +4,7 @@
   "description": "create an app to consume rust-generated wasm packages",
   "main": "index.js",
   "scripts": {
-    "build": "vite build",
+    "build:bak": "vite build",
     "start": "vite --open"
   },
   "keywords": [

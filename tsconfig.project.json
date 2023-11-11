@@ -4,5 +4,5 @@
     "noEmit": true
   },
   "include": [],
-  "references": [{ "path": "./packages/rolldown-core" }]
+  "references": [{ "path": "./packages/core" }]
 }

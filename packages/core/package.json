@@ -2,14 +2,13 @@
   "name": "@rolldown/core",
   "version": "0.1.4",
   "description": "rolldown core binding",
-  "main": "./dist/index.js",
-  "module": "./lib/index.mjs",
+  "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
-      "import": "./lib/index.mjs",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.mts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
     }
   },
   "keywords": [],
@@ -20,11 +19,10 @@
     "access": "public"
   },
   "files": [
-    "dist",
-    "lib"
+    "dist"
   ],
   "scripts": {
-    "build": "cargo run --example build_rolldown_core"
+    "build": "unbuild"
   },
   "dependencies": {
     "@rolldown/node-binding": "workspace:*"
@@ -32,6 +30,8 @@
   "devDependencies": {
     "@types/node": "^18.14.0",
     "rollup": "^3.17.2",
-    "type-fest": "^3.6.0"
+    "type-fest": "^3.6.0",
+    "typescript": "^5.0.0",
+    "unbuild": "^2.0.0"
   }
 }

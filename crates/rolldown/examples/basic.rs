@@ -10,11 +10,8 @@ async fn main() {
   let cwd = root.join("./examples").into_normalize();
   let mut bundler = Bundler::new(
     InputOptions {
-      input: Some(vec![InputItem {
-        name: Some("basic".to_string()),
-        import: "./index.js".to_string(),
-      }]),
-      cwd: Some(cwd),
+      input: vec![InputItem { name: Some("basic".to_string()), import: "./index.js".to_string() }],
+      cwd,
     },
     FileSystemOs,
   );

@@ -9,10 +9,7 @@ use crate::bundler::{
   chunk_graph::ChunkGraph,
   graph::graph::Graph,
   module::Module,
-  options::{
-    normalized_input_options::NormalizedInputOptions,
-    normalized_output_options::NormalizedOutputOptions,
-  },
+  options::{input_options::InputOptions, output_options::OutputOptions},
   utils::bitset::BitSet,
 };
 use index_vec::{index_vec, IndexVec};
@@ -21,11 +18,11 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 pub struct Bundle<'a> {
   graph: &'a mut Graph,
-  output_options: &'a NormalizedOutputOptions,
+  output_options: &'a OutputOptions,
 }
 
 impl<'a> Bundle<'a> {
-  pub fn new(graph: &'a mut Graph, output_options: &'a NormalizedOutputOptions) -> Self {
+  pub fn new(graph: &'a mut Graph, output_options: &'a OutputOptions) -> Self {
     Self { graph, output_options }
   }
 
@@ -267,7 +264,7 @@ impl<'a> Bundle<'a> {
     ChunkGraph { chunks, module_to_chunk }
   }
 
-  pub fn generate(&mut self, _input_options: &'a NormalizedInputOptions) -> Vec<Asset> {
+  pub fn generate(&mut self, _input_options: &'a InputOptions) -> Vec<Asset> {
     use rayon::prelude::*;
     let mut chunk_graph = self.generate_chunks();
 

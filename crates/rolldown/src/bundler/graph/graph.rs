@@ -3,9 +3,8 @@ use std::sync::Arc;
 use super::{linker::Linker, linker_info::LinkingInfoVec, symbols::Symbols};
 use crate::{
   bundler::{
-    module::ModuleVec, module_loader::ModuleLoader,
-    options::normalized_input_options::NormalizedInputOptions, plugin_driver::SharedPluginDriver,
-    runtime::Runtime,
+    module::ModuleVec, module_loader::ModuleLoader, options::input_options::InputOptions,
+    plugin_driver::SharedPluginDriver, runtime::Runtime,
   },
   error::BatchedResult,
   plugin::args::HookBuildEndArgs,
@@ -27,7 +26,7 @@ pub struct Graph {
 impl Graph {
   pub async fn build<T: FileSystemExt + Default + 'static>(
     &mut self,
-    input_options: &NormalizedInputOptions,
+    input_options: &InputOptions,
     plugin_driver: SharedPluginDriver,
     fs: Arc<T>,
   ) -> BatchedResult<()> {
@@ -55,7 +54,7 @@ impl Graph {
 
   pub async fn generate_module_graph<T: FileSystemExt + Default + 'static>(
     &mut self,
-    input_options: &NormalizedInputOptions,
+    input_options: &InputOptions,
     plugin_driver: SharedPluginDriver,
     fs: Arc<T>,
   ) -> BatchedResult<()> {

@@ -5,11 +5,8 @@ use rolldown_fs::FileSystemOs;
 use tracing::instrument;
 
 use crate::{
-  options::InputOptions,
-  options::{resolve_input_options, resolve_output_options, OutputOptions},
-  output_chunk::OutputChunk,
-  utils::init_custom_trace_subscriber,
-  NAPI_ENV,
+  options::InputOptions, options::OutputOptions, output_chunk::OutputChunk,
+  utils::init_custom_trace_subscriber, NAPI_ENV,
 };
 
 #[napi]
@@ -39,11 +36,12 @@ impl Bundler {
 impl Bundler {
   pub fn new_impl(env: Env, input_opts: InputOptions) -> napi::Result<Self> {
     NAPI_ENV.set(&env, || {
-      let (input_opts, plugins) = resolve_input_options(input_opts)?;
+      let (opts, plugins) = input_opts.into();
+
       Ok(Self {
         inner: Mutex::new(NativeBundler::<FileSystemOs>::with_plugins(
-          input_opts,
-          plugins,
+          opts,
+          plugins?,
           FileSystemOs,
         )),
       })
@@ -52,14 +50,12 @@ impl Bundler {
 
   #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn write_impl(&self, opts: OutputOptions) -> napi::Result<Vec<OutputChunk>> {
+  pub async fn write_impl(&self, output_opts: OutputOptions) -> napi::Result<Vec<OutputChunk>> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let binding_opts = resolve_output_options(opts)?;
-
-    let maybe_outputs = bundler_core.write(binding_opts).await;
+    let maybe_outputs = bundler_core.write(output_opts.into()).await;
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,
@@ -81,14 +77,12 @@ impl Bundler {
 
   #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn generate_impl(&self, opts: OutputOptions) -> napi::Result<Vec<OutputChunk>> {
+  pub async fn generate_impl(&self, output_opts: OutputOptions) -> napi::Result<Vec<OutputChunk>> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let binding_opts = resolve_output_options(opts)?;
-
-    let maybe_outputs = bundler_core.generate(binding_opts).await;
+    let maybe_outputs = bundler_core.generate(output_opts.into()).await;
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,

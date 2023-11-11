@@ -18,6 +18,12 @@ impl From<String> for InputItem {
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct InputOptions {
-  pub input: Option<Vec<InputItem>>,
-  pub cwd: Option<PathBuf>,
+  pub input: Vec<InputItem>,
+  pub cwd: PathBuf,
+}
+
+impl Default for InputOptions {
+  fn default() -> Self {
+    Self { input: vec![], cwd: std::env::current_dir().unwrap() }
+  }
 }

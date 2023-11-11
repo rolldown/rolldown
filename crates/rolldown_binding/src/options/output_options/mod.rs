@@ -57,11 +57,22 @@ pub struct OutputOptions {
   // pub minify: bool,
 }
 
-pub fn resolve_output_options(opts: OutputOptions) -> napi::Result<rolldown::OutputOptions> {
-  Ok(rolldown::OutputOptions {
-    entry_file_names: opts.entry_file_names,
-    chunk_file_names: opts.chunk_file_names,
-    dir: opts.dir,
-    format: None,
-  })
+impl From<OutputOptions> for rolldown::OutputOptions {
+  fn from(value: OutputOptions) -> Self {
+    let mut options = Self::default();
+
+    if let Some(entry_file_names) = value.entry_file_names {
+      options.entry_file_names = rolldown::FileNameTemplate::from(entry_file_names);
+    }
+
+    if let Some(chunk_file_names) = value.chunk_file_names {
+      options.chunk_file_names = rolldown::FileNameTemplate::from(chunk_file_names);
+    }
+
+    if let Some(dir) = value.dir {
+      options.dir = dir;
+    }
+
+    options
+  }
 }

@@ -12,15 +12,16 @@
   "scripts": {
     "lint": "oxlint --ignore-path=./.oxlintignore --import-plugin",
     "lint-filename": "ls-lint",
-    "build": "run-s build:binding build:ts",
-    "build:ci:release": "run-s build:packages:ci build:ts build:binding:release",
-    "build:ts": "tsc -b tsconfig.project.json",
+    "build": "yarn workspaces foreach --topological-dev run build",
     "build:binding": "yarn workspace @rolldown/node-binding run build",
     "build:binding:release": "yarn workspace @rolldown/node-binding run build:release",
     "test": "yarn workspaces foreach run test",
     "test:update": "yarn workspaces foreach run test:update",
     "prettier": "prettier . '!**/*.{js||ts|json|md|yml|yaml}' -w",
-    "prettier:ci": "prettier . '!**/*.{js||ts|json|md|yml|yaml}' -c"
+    "prettier:ci": "prettier . '!**/*.{js||ts|json|md|yml|yaml}' -c",
+    "TODO(hyf0): #need to investigate following commands": "_",
+    "build:ci:release": "run-s build:packages:ci build:ts build:binding:release",
+    "build:ts": "tsc -b tsconfig.project.json"
   },
   "license": "MIT",
   "devDependencies": {

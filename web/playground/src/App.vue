@@ -1,37 +1,64 @@
 <script setup lang="ts" >
-import { ref } from 'vue';
+import { ref, onMounted, Ref } from 'vue';
 import ModuleBlock from './components/ModuleBlock.vue';
+import init, { bundle } from '../../wasm'
+import { convertAssetListToModuleList, normalizeModules, uniqueModulePath } from './utils/index'
+import type { ModuleInfo } from './utils/index'
 
-const moduleList = ref([
-  { title: "main.js", code: `console.log("hello world")` }
+const moduleList: Ref<ModuleInfo[]> = ref([
+  { title: "index.js", code: `console.log("hello world")` }
 ])
 
-setTimeout(() => {
-  console.log(moduleList.value)
-}, 2000)
+const outputs: Ref<ModuleInfo[]> = ref([])
+
+const wasmLoadFinished = ref(false)
+
+onMounted(() => {
+  init().then(_ => {
+    wasmLoadFinished.value = true;
+  })
+})
+
+
+const handleBuild = () => {
+  const fileList = normalizeModules(moduleList.value)
+  let res = bundle(fileList)
+  outputs.value = convertAssetListToModuleList(res)
+}
+
+const handleAddModule = () => {
+  const title = uniqueModulePath(moduleList.value)
+  moduleList.value.push({
+    title,
+    code: `console.log("hello world")`
+  })
+}
 
 </script>
 
 <template>
-  <div>
-    <ModuleBlock v-for="item in moduleList" :code="item.code" :title="item.title" @code="item.code = $event"
-      @title="item.title = $event.target.innerText" />
+  <div class="container">
+    <!-- module declaration block -->
+    <div class="module-list column">
+      <ModuleBlock v-for="item in moduleList" :code="item.code" :title="item.title" @code="item.code = $event"
+        @title="item.title = $event.target.innerText" />
+      <button @click="handleAddModule">Add module</button>
+    </div>
+    <!-- output block -->
+    <div class="output column">
+      <button @click="handleBuild" :disabled="!wasmLoadFinished">build</button>
+      <ModuleBlock v-for="item in outputs" :code="item.code" :title="item.title" @code="item.code = $event"
+        @title="item.title = $event.target.innerText" />
+    </div>
   </div>
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+.container {
+  display: flex;
 }
 
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+.column {
+  flex: 1;
 }
 </style>

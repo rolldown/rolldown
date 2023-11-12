@@ -50,7 +50,7 @@ const handleCodeChange = (e: string) => {
 const log = console.log;
 </script>
 <template>
-  <codemirror :model-value="code"  placeholder="Code goes here..." :style="{ height: '400px' }" :autofocus="true"
+  <codemirror :model-value="code" placeholder="Code goes here..." :style="{ height: '400px' }" :autofocus="false"
     :indent-with-tab="true" :tab-size="2" :extensions="extensions" @ready="handleReady" @change="handleCodeChange"
     @focus="log('focus', $event)" @blur="console.log('blur', $event)" />
 </template>

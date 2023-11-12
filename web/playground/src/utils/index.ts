@@ -22,15 +22,17 @@ export function convertAssetListToModuleList(assetList: AssetItem[]): ModuleInfo
 
 
 /**
- * convert relative path into absolute path in memory fs   
+ * convert relative path into absolute path in memory fs
  *
  * */
 function normalizeModule(module: ModuleInfo): FileItem {
-  let isAbsolute = path.isAbsolute(module.title)
+  let title = module.title
+  let code = module.code
+  let isAbsolute = path.isAbsolute(title)
   if (!isAbsolute) {
-    module.title = path.join("/", module.title)
+    title = path.join("/", title)
   }
-  return new FileItem(module.title, module.code)
+  return new FileItem(title, code)
 }
 
 

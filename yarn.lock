@@ -2131,6 +2131,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/path-browserify@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "@types/path-browserify@npm:1.0.2"
+  checksum: 7b26df1a32827f7e588009386f62e0f900e8d349722b1b8b8c100cd2c4cc1e95c64099f5ec879cd131e69869088f336998a3ddb17085b68312414431a4eace01
+  languageName: node
+  linkType: hard
+
 "@types/ps-tree@npm:^1.1.2":
   version: 1.1.4
   resolution: "@types/ps-tree@npm:1.1.4"
@@ -8938,6 +8945,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"path-browserify@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "path-browserify@npm:1.0.1"
+  checksum: c6d7fa376423fe35b95b2d67990060c3ee304fc815ff0a2dc1c6c3cfaff2bd0d572ee67e18f19d0ea3bbe32e8add2a05021132ac40509416459fffee35200699
+  languageName: node
+  linkType: hard
+
 "path-case@npm:^3.0.4":
   version: 3.0.4
   resolution: "path-case@npm:3.0.4"
@@ -9787,8 +9801,10 @@ __metadata:
   dependencies:
     "@codemirror/lang-javascript": ^6.2.1
     "@codemirror/theme-one-dark": ^6.1.2
+    "@types/path-browserify": ^1.0.2
     "@vitejs/plugin-vue": ^4.4.1
     codemirror: ^6.0.1
+    path-browserify: ^1.0.1
     vite: ^4.5.0
     vite-plugin-top-level-await: ^1.3.1
     vue: ^3.3.8

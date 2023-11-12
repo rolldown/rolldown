@@ -30,8 +30,9 @@ const handleAddModule = () => {
   const title = uniqueModulePath(moduleList.value)
   moduleList.value.push({
     title,
-    code: `console.log("hello world")`
-  })
+    code: `console.log("hello world")`,
+    // autofucos: true
+  });
 }
 
 </script>

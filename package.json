@@ -7,7 +7,8 @@
   "workspaces": [
     "crates/rolldown_binding",
     "packages/**",
-    "web/**"
+    "web/**",
+    "bench"
   ],
   "scripts": {
     "lint": "oxlint --ignore-path=./.oxlintignore --import-plugin",

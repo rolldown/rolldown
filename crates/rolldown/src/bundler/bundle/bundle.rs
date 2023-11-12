@@ -1,7 +1,8 @@
 use std::{borrow::Cow, hash::BuildHasherDefault};
 
-use super::asset::OutputChunk;
+use super::output::Output;
 use crate::bundler::{
+  bundle::output::OutputChunk,
   chunk::{
     chunk::{Chunk, ChunkSymbolExporter, CrossChunkImportItem},
     ChunkId, ChunksVec,
@@ -264,7 +265,7 @@ impl<'a> Bundle<'a> {
     ChunkGraph { chunks, module_to_chunk }
   }
 
-  pub fn generate(&mut self, _input_options: &'a InputOptions) -> Vec<OutputChunk> {
+  pub fn generate(&mut self, _input_options: &'a InputOptions) -> Vec<Output> {
     use rayon::prelude::*;
     let mut chunk_graph = self.generate_chunks();
 
@@ -287,14 +288,14 @@ impl<'a> Bundle<'a> {
       .map(|(_chunk_id, c)| {
         let content = c.render(self.graph, &chunk_graph, self.output_options).unwrap();
 
-        OutputChunk {
+        Output::Chunk(Box::new(OutputChunk {
           file_name: c.file_name.clone().unwrap(),
           code: content,
           is_entry: c.entry_module.is_some(),
           facade_module_id: c
             .entry_module
             .map(|id| self.graph.modules[id].expect_normal().resource_id.prettify().to_string()),
-        }
+        }))
       })
       .collect::<Vec<_>>();
 

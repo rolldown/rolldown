@@ -1,6 +1,6 @@
 use std::{borrow::Cow, path::Path};
 
-use rolldown::OutputChunk;
+use rolldown::Output;
 use rolldown_error::BuildError;
 use string_wizard::MagicString;
 
@@ -40,7 +40,7 @@ impl Case {
     self.fixture.exec();
   }
 
-  fn render_assets_to_snapshot(&mut self, mut assets: Vec<OutputChunk>) {
+  fn render_assets_to_snapshot(&mut self, mut assets: Vec<Output>) {
     self.snapshot.append("# Assets\n\n");
     assets.sort_by_key(|c| c.file_name.clone());
     let artifacts = assets

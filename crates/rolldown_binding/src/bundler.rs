@@ -5,7 +5,7 @@ use rolldown_fs::FileSystemOs;
 use tracing::instrument;
 
 use crate::{
-  options::InputOptions, options::OutputOptions, output_chunk::OutputChunk,
+  options::InputOptions, options::OutputOptions, output::Outputs,
   utils::init_custom_trace_subscriber, NAPI_ENV,
 };
 
@@ -23,12 +23,12 @@ impl Bundler {
   }
 
   #[napi]
-  pub async fn write(&self, opts: OutputOptions) -> napi::Result<Vec<OutputChunk>> {
+  pub async fn write(&self, opts: OutputOptions) -> napi::Result<Outputs> {
     self.write_impl(opts).await
   }
 
   #[napi]
-  pub async fn generate(&self, opts: OutputOptions) -> napi::Result<Vec<OutputChunk>> {
+  pub async fn generate(&self, opts: OutputOptions) -> napi::Result<Outputs> {
     self.generate_impl(opts).await
   }
 }
@@ -50,7 +50,7 @@ impl Bundler {
 
   #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn write_impl(&self, output_opts: OutputOptions) -> napi::Result<Vec<OutputChunk>> {
+  pub async fn write_impl(&self, output_opts: OutputOptions) -> napi::Result<Outputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
@@ -68,13 +68,12 @@ impl Bundler {
       }
     };
 
-    let output_chunks = outputs.into_iter().map(Into::into).collect::<Vec<_>>();
-    Ok(output_chunks)
+    Ok(outputs.into())
   }
 
   #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn generate_impl(&self, output_opts: OutputOptions) -> napi::Result<Vec<OutputChunk>> {
+  pub async fn generate_impl(&self, output_opts: OutputOptions) -> napi::Result<Outputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
@@ -92,7 +91,6 @@ impl Bundler {
       }
     };
 
-    let output_chunks = outputs.into_iter().map(Into::into).collect::<Vec<_>>();
-    Ok(output_chunks)
+    Ok(outputs.into())
   }
 }

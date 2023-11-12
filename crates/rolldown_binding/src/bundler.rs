@@ -70,7 +70,7 @@ impl Bundler {
 
     let output_chunks = outputs
       .into_iter()
-      .map(|asset| OutputChunk { code: asset.content, file_name: asset.file_name })
+      .map(|asset| OutputChunk { code: asset.code, file_name: asset.file_name })
       .collect::<Vec<_>>();
     Ok(output_chunks)
   }
@@ -97,7 +97,7 @@ impl Bundler {
 
     let output_chunks = outputs
       .into_iter()
-      .map(|asset| OutputChunk { code: asset.content, file_name: asset.file_name })
+      .map(|asset| OutputChunk { code: asset.code, file_name: asset.file_name })
       .collect::<Vec<_>>();
     Ok(output_chunks)
   }

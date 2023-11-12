@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub struct Asset {
+pub struct OutputChunk {
   pub file_name: String,
-  pub content: String,
+  pub code: String,
 }

@@ -20,22 +20,21 @@ const props = defineProps({
 const input = ref(null)
 
 onMounted(() => {
-  const [basename, _] = props.title.split('.')
-  // if (props.autoFocus && input.value) {
-  //   
-  //   const target = input.value as any;
-  //   target.contentEditable = true;
-  //   var range = document.createRange();
-  //   
-  //   // Select the text nodes within the div (startNode, startOffset, endNode, endOffset)
-  //   range.setStart(target.childNodes[0], 0);
-  //   range.setEnd(target.childNodes[0], basename.length);
-  //   getSelection()?.removeAllRanges();
-  //
-  //   // Add the new range to the selection
-  //   getSelection()?.addRange(range);
-  //   target.focus();
-  // }
+  if (props.autoFocus && input.value) {
+
+    const [basename, _] = props.title.split('.')
+    const target = input.value as any;
+    var range = document.createRange();
+
+    // Select the text nodes within the div (startNode, startOffset, endNode, endOffset)
+    range.setStart(target.childNodes[0], 0);
+    range.setEnd(target.childNodes[0], basename.length);
+    getSelection()?.removeAllRanges();
+
+    // Add the new range to the selection
+    getSelection()?.addRange(range);
+    target.focus();
+  }
 })
 
 </script>

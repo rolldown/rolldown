@@ -31,7 +31,7 @@ const handleAddModule = () => {
   moduleList.value.push({
     title,
     code: `console.log("hello world")`,
-    // autofucos: true
+    autofocus: true
   });
 }
 
@@ -42,7 +42,7 @@ const handleAddModule = () => {
     <!-- module declaration block -->
     <div class="module-list column">
       <ModuleBlock v-for="item in moduleList" :code="item.code" :title="item.title" @code="item.code = $event"
-        @title="item.title = $event.target.innerText" />
+        @title="item.title = $event.target.innerText" :auto-focus="item.autofocus" />
       <button @click="handleAddModule">Add module</button>
     </div>
     <!-- output block -->

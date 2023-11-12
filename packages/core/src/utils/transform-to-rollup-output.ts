@@ -63,7 +63,7 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RollupOutputChunk {
   }
 }
 
-function transformToRollupOutputAsset(asset: OutputAsset) : RollupOutputAsset {
+function transformToRollupOutputAsset(asset: OutputAsset): RollupOutputAsset {
   return {
     type: 'asset',
     fileName: asset.fileName,
@@ -73,14 +73,14 @@ function transformToRollupOutputAsset(asset: OutputAsset) : RollupOutputAsset {
     },
     get needsCodeReference() {
       return unimplemented()
-    }
+    },
   }
 }
 
 export function transformToRollupOutput(
   output: AsyncReturnType<Bundler['write']>,
 ): RollupOutput {
-  const { chunks, assets } = output;
+  const { chunks, assets } = output
 
   return {
     // @ts-expect-error here chunks.length > 0

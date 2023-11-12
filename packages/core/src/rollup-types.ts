@@ -8,5 +8,5 @@ export type {
   OutputPlugin,
   OutputChunk,
   NormalizedInputOptions,
-  OutputAsset
+  OutputAsset,
 } from 'rollup'

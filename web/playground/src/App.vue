@@ -61,5 +61,11 @@ const handleAddModule = () => {
 
 .column {
   flex: 1;
+  padding: 0 10px;
+}
+
+.module-list {
+  margin-top: 40px;
+
 }
 </style>

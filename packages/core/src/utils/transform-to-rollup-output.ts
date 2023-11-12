@@ -36,13 +36,13 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RollupOutputChunk {
       return unimplemented()
     },
     get facadeModuleId() {
-      return unimplemented()
+      return chunk.facadeModuleId || null
     },
     get isDynamicEntry() {
       return unimplemented()
     },
     get isEntry() {
-      return unimplemented()
+      return chunk.isEntry
     },
     get isImplicitEntry() {
       return unimplemented()

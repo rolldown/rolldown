@@ -68,10 +68,7 @@ impl Bundler {
       }
     };
 
-    let output_chunks = outputs
-      .into_iter()
-      .map(|asset| OutputChunk { code: asset.code, file_name: asset.file_name })
-      .collect::<Vec<_>>();
+    let output_chunks = outputs.into_iter().map(Into::into).collect::<Vec<_>>();
     Ok(output_chunks)
   }
 
@@ -95,10 +92,7 @@ impl Bundler {
       }
     };
 
-    let output_chunks = outputs
-      .into_iter()
-      .map(|asset| OutputChunk { code: asset.code, file_name: asset.file_name })
-      .collect::<Vec<_>>();
+    let output_chunks = outputs.into_iter().map(Into::into).collect::<Vec<_>>();
     Ok(output_chunks)
   }
 }

@@ -1,18 +1,12 @@
-use std::sync::Arc;
-
 use super::{linker::Linker, linker_info::LinkingInfoVec, symbols::Symbols};
 use crate::{
-  bundler::{
-    module::ModuleVec, module_loader::ModuleLoader, options::input_options::InputOptions,
-    plugin_driver::SharedPluginDriver, runtime::Runtime,
-  },
+  bundler::{module::ModuleVec, runtime::Runtime, stages::build_stage::BuildInfo},
   error::BatchedResult,
-  plugin::args::HookBuildEndArgs,
 };
 use rolldown_common::ModuleId;
-use rolldown_fs::FileSystemExt;
 use rustc_hash::FxHashSet;
 
+// TODO(hyf0): Rename this to a more meaningful name, `Graph` is too generic now.
 #[derive(Default, Debug)]
 pub struct Graph {
   pub modules: ModuleVec,
@@ -24,44 +18,17 @@ pub struct Graph {
 }
 
 impl Graph {
-  pub async fn build<T: FileSystemExt + Default + 'static>(
-    &mut self,
-    input_options: &InputOptions,
-    plugin_driver: SharedPluginDriver,
-    fs: Arc<T>,
-  ) -> BatchedResult<()> {
-    plugin_driver.build_start().await?;
-
-    if let Err(e) = self.generate_module_graph(input_options, Arc::clone(&plugin_driver), fs).await
-    {
-      let error = e.get().expect("should have a error");
-      plugin_driver
-        .build_end(Some(&HookBuildEndArgs {
-          error: format!("{:?}\n{:?}", error.code(), error.to_diagnostic().print_to_string()),
-        }))
-        .await?;
-      return Err(e);
-    }
-
-    self.sort_modules();
-
-    self.link();
-
-    plugin_driver.build_end(None).await?;
-
-    Ok(())
+  pub fn new(build_info: BuildInfo) -> Self {
+    let BuildInfo { modules, entries, symbols, runtime } = build_info;
+    Self { modules, entries, symbols, runtime, ..Default::default() }
   }
 
-  pub async fn generate_module_graph<T: FileSystemExt + Default + 'static>(
-    &mut self,
-    input_options: &InputOptions,
-    plugin_driver: SharedPluginDriver,
-    fs: Arc<T>,
-  ) -> BatchedResult<()> {
-    ModuleLoader::new(input_options, plugin_driver, self, fs).fetch_all_modules().await?;
+  // unnecessary_wraps(hyf0): we will add errors later in `link_inner`
+  #[allow(clippy::unnecessary_wraps)]
+  pub fn link(&mut self) -> BatchedResult<()> {
+    self.sort_modules();
 
-    tracing::trace!("{:#?}", self);
-
+    self.link_inner();
     Ok(())
   }
 
@@ -106,7 +73,7 @@ impl Graph {
     );
   }
 
-  pub fn link(&mut self) {
+  pub fn link_inner(&mut self) {
     Linker::new(self).link();
   }
 }

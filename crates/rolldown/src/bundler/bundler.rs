@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystemExt;
+use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
 use super::{
@@ -10,7 +11,9 @@ use super::{
   plugin_driver::{PluginDriver, SharedPluginDriver},
 };
 use crate::{
-  bundler::bundle::bundle::Bundle, plugin::plugin::BoxPlugin, InputOptions, OutputOptions,
+  bundler::{bundle::bundle::Bundle, stages::build_stage::BuildStage},
+  plugin::plugin::BoxPlugin,
+  InputOptions, OutputOptions,
 };
 
 type BuildResult<T> = Result<T, Vec<BuildError>>;
@@ -24,19 +27,20 @@ pub struct Bundler<T: FileSystemExt> {
 impl<T: FileSystemExt + Default + 'static> Bundler<T> {
   pub fn new(input_options: InputOptions, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
-    Self { input_options, plugin_driver: Arc::new(PluginDriver::new(vec![])), fs: Arc::new(fs) }
+    Self::with_plugins(input_options, vec![], fs)
   }
 
   pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
-    Self { input_options, plugin_driver: Arc::new(PluginDriver::new(plugins)), fs: Arc::new(fs) }
+    let fs = Arc::new(fs);
+    Self { input_options, plugin_driver: Arc::new(PluginDriver::new(plugins)), fs }
   }
 
   pub async fn write(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
     let dir =
       self.input_options.cwd.as_path().join(&output_options.dir).to_string_lossy().to_string();
 
-    let assets = self.bundle_up(output_options, Arc::clone(&self.fs)).await?;
+    let assets = self.bundle_up(output_options).await?;
 
     self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
@@ -61,19 +65,26 @@ impl<T: FileSystemExt + Default + 'static> Bundler<T> {
   }
 
   pub async fn generate(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
-    self.bundle_up(output_options, Arc::clone(&self.fs)).await
+    self.bundle_up(output_options).await
   }
 
-  async fn bundle_up(
-    &mut self,
-    output_options: OutputOptions,
-    fs: Arc<T>,
-  ) -> BuildResult<Vec<Output>> {
+  async fn bundle_up(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
 
-    let mut graph = Graph::default();
-    graph.build(&self.input_options, Arc::clone(&self.plugin_driver), fs).await?;
+    let resolver = Arc::new(Resolver::with_cwd_and_fs(
+      self.input_options.cwd.clone(),
+      false,
+      Arc::clone(&self.fs),
+    ));
+
+    let build_info =
+      BuildStage::new(&self.input_options, Arc::clone(&self.plugin_driver), Arc::clone(&resolver))
+        .build(Arc::clone(&self.fs))
+        .await?;
+
+    let mut graph = Graph::new(build_info);
+    graph.link()?;
 
     let mut bundle = Bundle::new(&mut graph, &output_options);
     let assets = bundle.generate(&self.input_options);

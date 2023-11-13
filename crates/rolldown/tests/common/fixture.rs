@@ -4,7 +4,7 @@ use std::{
   process::Command,
 };
 
-use rolldown::{Asset, Bundler, FileNameTemplate, InputOptions, OutputOptions};
+use rolldown::{Bundler, FileNameTemplate, InputOptions, OutputChunk, OutputOptions};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystemOs;
 use rolldown_testing::TestConfig;
@@ -81,7 +81,7 @@ impl Fixture {
     }
   }
 
-  pub async fn compile(&mut self) -> Result<Vec<Asset>, Vec<BuildError>> {
+  pub async fn compile(&mut self) -> Result<Vec<OutputChunk>, Vec<BuildError>> {
     let fixture_path = self.dir_path();
 
     let mut test_config = self.test_config();

@@ -1,6 +1,6 @@
 use std::{borrow::Cow, path::Path};
 
-use rolldown::Asset;
+use rolldown::OutputChunk;
 use rolldown_error::BuildError;
 use string_wizard::MagicString;
 
@@ -40,7 +40,7 @@ impl Case {
     self.fixture.exec();
   }
 
-  fn render_assets_to_snapshot(&mut self, mut assets: Vec<Asset>) {
+  fn render_assets_to_snapshot(&mut self, mut assets: Vec<OutputChunk>) {
     self.snapshot.append("# Assets\n\n");
     assets.sort_by_key(|c| c.file_name.clone());
     let artifacts = assets
@@ -51,7 +51,7 @@ impl Case {
         [
           Cow::Owned(format!("## {}\n", asset.file_name)),
           "```js".into(),
-          Cow::Borrowed(asset.content.trim()),
+          Cow::Borrowed(asset.code.trim()),
           "```".into(),
         ]
       })

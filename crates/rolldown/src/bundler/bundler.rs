@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystem;
+use rolldown_fs::{FileSystem, FileSystemOs};
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
@@ -24,13 +24,18 @@ pub struct Bundler<T: FileSystem> {
   fs: Arc<T>,
 }
 
-impl<T: FileSystem + Default + 'static> Bundler<T> {
-  pub fn new(input_options: InputOptions, fs: T) -> Self {
-    // rolldown_tracing::enable_tracing_on_demand();
-    Self::with_plugins(input_options, vec![], fs)
+impl Bundler<FileSystemOs> {
+  pub fn new(input_options: InputOptions) -> Self {
+    Self::with_plugins(input_options, vec![])
   }
 
-  pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>, fs: T) -> Self {
+  pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>) -> Self {
+    Self::with_plugins_and_fs(input_options, plugins, FileSystemOs)
+  }
+}
+
+impl<T: FileSystem + Default + 'static> Bundler<T> {
+  pub fn with_plugins_and_fs(input_options: InputOptions, plugins: Vec<BoxPlugin>, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     let fs = Arc::new(fs);
     Self { input_options, plugin_driver: Arc::new(PluginDriver::new(plugins)), fs }

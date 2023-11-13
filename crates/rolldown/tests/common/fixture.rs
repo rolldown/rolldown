@@ -6,7 +6,6 @@ use std::{
 
 use rolldown::{Bundler, FileNameTemplate, InputOptions, Output, OutputOptions};
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystemOs;
 use rolldown_testing::TestConfig;
 
 fn default_test_input_item() -> rolldown_testing::InputItem {
@@ -90,22 +89,19 @@ impl Fixture {
       test_config.input.input = Some(vec![default_test_input_item()]);
     }
 
-    let mut bundler = Bundler::new(
-      InputOptions {
-        input: test_config
-          .input
-          .input
-          .map(|items| {
-            items
-              .into_iter()
-              .map(|item| rolldown::InputItem { name: Some(item.name), import: item.import })
-              .collect()
-          })
-          .unwrap(),
-        cwd: fixture_path.to_path_buf(),
-      },
-      FileSystemOs,
-    );
+    let mut bundler = Bundler::new(InputOptions {
+      input: test_config
+        .input
+        .input
+        .map(|items| {
+          items
+            .into_iter()
+            .map(|item| rolldown::InputItem { name: Some(item.name), import: item.import })
+            .collect()
+        })
+        .unwrap(),
+      cwd: fixture_path.to_path_buf(),
+    });
 
     if fixture_path.join("dist").is_dir() {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();

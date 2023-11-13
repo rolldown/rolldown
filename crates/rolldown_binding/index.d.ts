@@ -42,11 +42,19 @@ export interface OutputOptions {
   exports?: 'default' | 'named' | 'none' | 'auto'
   format?: 'esm' | 'cjs'
 }
+export interface RenderedModule {
+  code?: string | null
+  removedExports: Array<string>
+  renderedExports: Array<string>
+  originalLength: number
+  renderedLength: number
+}
 export interface OutputChunk {
   code: string
   fileName: string
   isEntry: boolean
   facadeModuleId?: string
+  modules: Record<string, RenderedModule>
 }
 export interface OutputAsset {
   fileName: string

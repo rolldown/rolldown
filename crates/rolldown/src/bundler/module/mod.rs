@@ -4,7 +4,7 @@ pub mod normal_module_builder;
 use index_vec::IndexVec;
 pub use normal_module::NormalModule;
 use oxc::span::Atom;
-use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, SymbolRef};
+use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ResourceId, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
 
@@ -74,6 +74,21 @@ impl Module {
     match self {
       Self::Normal(m) => m.render(ctx),
       Self::External(_) => None,
+    }
+  }
+
+  #[allow(clippy::cast_possible_truncation)]
+  pub fn original_length(&self) -> u32 {
+    match self {
+      Self::Normal(m) => m.ast.source().len() as u32,
+      Self::External(_) => 0,
+    }
+  }
+
+  pub fn resource_id(&self) -> &ResourceId {
+    match self {
+      Self::Normal(m) => &m.resource_id,
+      Self::External(m) => &m.resource_id,
     }
   }
 }

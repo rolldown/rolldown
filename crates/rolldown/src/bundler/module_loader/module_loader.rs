@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use index_vec::IndexVec;
 use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
 use rolldown_fs::FileSystem;
@@ -28,7 +26,7 @@ pub struct ModuleLoader<'a, T: FileSystem + Default> {
   resolver: SharedResolver<T>,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
-  fs: Arc<T>,
+  fs: T,
   plugin_driver: SharedPluginDriver,
   symbols: Symbols,
   runtime: Runtime,
@@ -105,17 +103,13 @@ impl ModuleLoaderContext {
 }
 
 impl<'a, T: FileSystem + 'static + Default> ModuleLoader<'a, T> {
-  pub fn new(
-    input_options: &'a InputOptions,
-    plugin_driver: SharedPluginDriver,
-    fs: Arc<T>,
-  ) -> Self {
+  pub fn new(input_options: &'a InputOptions, plugin_driver: SharedPluginDriver, fs: T) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
     Self {
       tx,
       rx,
       input_options,
-      resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, Arc::clone(&fs)).into(),
+      resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, fs.share()).into(),
       fs,
       ctx: ModuleLoaderContext::default(),
       plugin_driver,
@@ -136,7 +130,7 @@ impl<'a, T: FileSystem + 'static + Default> ModuleLoader<'a, T> {
       input_options: self.input_options,
       tx: &self.tx,
       resolver: &self.resolver,
-      fs: &*self.fs,
+      fs: &self.fs,
       plugin_driver: &self.plugin_driver,
     };
 

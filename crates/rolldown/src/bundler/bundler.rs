@@ -22,7 +22,7 @@ type BuildResult<T> = Result<T, Vec<BuildError>>;
 pub struct Bundler<T: FileSystem> {
   input_options: InputOptions,
   plugin_driver: SharedPluginDriver,
-  fs: Arc<T>,
+  fs: T,
 }
 
 impl Bundler<OsFileSystem> {
@@ -38,7 +38,6 @@ impl Bundler<OsFileSystem> {
 impl<T: FileSystem + Default + 'static> Bundler<T> {
   pub fn with_plugins_and_fs(input_options: InputOptions, plugins: Vec<BoxPlugin>, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
-    let fs = Arc::new(fs);
     Self { input_options, plugin_driver: Arc::new(PluginDriver::new(plugins)), fs }
   }
 
@@ -97,15 +96,12 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
 
   async fn build_inner(&mut self) -> BatchedResult<Graph> {
     // TODO: should use a unified resolver
-    let resolver = Arc::new(Resolver::with_cwd_and_fs(
-      self.input_options.cwd.clone(),
-      false,
-      Arc::clone(&self.fs),
-    ));
+    let resolver =
+      Arc::new(Resolver::with_cwd_and_fs(self.input_options.cwd.clone(), false, self.fs.share()));
 
     let build_info =
       ScanStage::new(&self.input_options, Arc::clone(&self.plugin_driver), Arc::clone(&resolver))
-        .scan(Arc::clone(&self.fs))
+        .scan(self.fs.share())
         .await?;
 
     let mut graph = Graph::new(build_info);

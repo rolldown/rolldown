@@ -1,6 +1,7 @@
 use std::{
   io,
   path::{Path, PathBuf},
+  sync::Arc,
 };
 
 use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem};
@@ -8,16 +9,10 @@ use vfs::{FileSystem as _, MemoryFS};
 
 use crate::file_system::FileSystem;
 
+#[derive(Default)]
 pub struct MemoryFileSystem {
   // root path
-  fs: MemoryFS,
-}
-
-impl Default for MemoryFileSystem {
-  fn default() -> Self {
-    let fs = vfs::MemoryFS::new();
-    Self { fs }
-  }
+  fs: Arc<MemoryFS>,
 }
 
 impl MemoryFileSystem {
@@ -26,7 +21,7 @@ impl MemoryFileSystem {
   /// * Fails to create directory
   /// * Fails to write file
   pub fn new(data: &[(&String, &String)]) -> Self {
-    let mut fs = Self { fs: vfs::MemoryFS::default() };
+    let mut fs = Self::default();
     for (path, content) in data {
       fs.add_file(Path::new(path), content);
     }
@@ -49,6 +44,10 @@ impl MemoryFileSystem {
 }
 
 impl FileSystem for MemoryFileSystem {
+  fn share(&self) -> Self {
+    Self { fs: Arc::clone(&self.fs) }
+  }
+
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     self
       .fs

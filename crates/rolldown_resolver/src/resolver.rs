@@ -1,7 +1,7 @@
 use rolldown_common::{ModuleType, RawPath, ResourceId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 use sugar_path::{AsPath, SugarPathBuf};
 
 use oxc_resolver::{Resolution, ResolveOptions, ResolverGeneric};
@@ -9,11 +9,11 @@ use oxc_resolver::{Resolution, ResolveOptions, ResolverGeneric};
 #[derive(Debug)]
 pub struct Resolver<T: FileSystem + Default> {
   cwd: PathBuf,
-  inner: ResolverGeneric<Arc<T>>,
+  inner: ResolverGeneric<T>,
 }
 
 impl<F: FileSystem + Default> Resolver<F> {
-  pub fn with_cwd_and_fs(cwd: PathBuf, preserve_symlinks: bool, fs: Arc<F>) -> Self {
+  pub fn with_cwd_and_fs(cwd: PathBuf, preserve_symlinks: bool, fs: F) -> Self {
     let resolve_options = ResolveOptions {
       symlinks: !preserve_symlinks,
       extensions: vec![

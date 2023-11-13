@@ -86,7 +86,7 @@ impl<'me, T: FileSystem + Default> ScanStage<'me, T> {
 
   pub async fn scan<Fs: FileSystem + Default + 'static>(
     &self,
-    fs: Arc<Fs>,
+    fs: Fs,
   ) -> BatchedResult<ScanStageOutput> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 

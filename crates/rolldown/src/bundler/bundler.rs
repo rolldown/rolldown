@@ -11,9 +11,10 @@ use super::{
   plugin_driver::{PluginDriver, SharedPluginDriver},
 };
 use crate::{
-  bundler::{bundle::bundle::Bundle, stages::build_stage::BuildStage},
+  bundler::{bundle::bundle::Bundle, stages::scan_stage::ScanStage},
+  error::BatchedResult,
   plugin::plugin::BoxPlugin,
-  InputOptions, OutputOptions,
+  HookBuildEndArgs, InputOptions, OutputOptions,
 };
 
 type BuildResult<T> = Result<T, Vec<BuildError>>;
@@ -73,10 +74,29 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     self.bundle_up(output_options).await
   }
 
-  async fn bundle_up(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
-    tracing::trace!("InputOptions {:#?}", self.input_options);
-    tracing::trace!("OutputOptions: {output_options:#?}",);
+  async fn build(&mut self) -> BatchedResult<Graph> {
+    self.plugin_driver.build_start().await?;
 
+    let build_ret = self.build_inner().await;
+
+    if let Err(e) = build_ret {
+      let error = e.get().expect("should have a error");
+      self
+        .plugin_driver
+        .build_end(Some(&HookBuildEndArgs {
+          // TODO(hyf0): 1.Need a better way to expose the error
+          error: format!("{:?}\n{:?}", error.code(), error.to_diagnostic().print_to_string()),
+        }))
+        .await?;
+      return Err(e);
+    }
+
+    self.plugin_driver.build_end(None).await?;
+    build_ret
+  }
+
+  async fn build_inner(&mut self) -> BatchedResult<Graph> {
+    // TODO: should use a unified resolver
     let resolver = Arc::new(Resolver::with_cwd_and_fs(
       self.input_options.cwd.clone(),
       false,
@@ -84,13 +104,19 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     ));
 
     let build_info =
-      BuildStage::new(&self.input_options, Arc::clone(&self.plugin_driver), Arc::clone(&resolver))
-        .build(Arc::clone(&self.fs))
+      ScanStage::new(&self.input_options, Arc::clone(&self.plugin_driver), Arc::clone(&resolver))
+        .scan(Arc::clone(&self.fs))
         .await?;
 
     let mut graph = Graph::new(build_info);
     graph.link()?;
+    Ok(graph)
+  }
 
+  async fn bundle_up(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
+    tracing::trace!("InputOptions {:#?}", self.input_options);
+    tracing::trace!("OutputOptions: {output_options:#?}",);
+    let mut graph = self.build().await?;
     let mut bundle = Bundle::new(&mut graph, &output_options);
     let assets = bundle.generate(&self.input_options);
 

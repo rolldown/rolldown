@@ -43,7 +43,7 @@ export interface OutputOptions {
   format?: 'esm' | 'cjs'
 }
 export interface RenderedModule {
-  code?: string | null
+  code?: string
   removedExports: Array<string>
   renderedExports: Array<string>
   originalLength: number
@@ -55,6 +55,7 @@ export interface OutputChunk {
   isEntry: boolean
   facadeModuleId?: string
   modules: Record<string, RenderedModule>
+  exports: Array<string>
 }
 export interface OutputAsset {
   fileName: string

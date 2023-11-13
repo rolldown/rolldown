@@ -14,6 +14,7 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RollupOutputChunk {
     fileName: chunk.fileName,
     // @ts-expect-error undefined can't assign to null
     modules: chunk.modules,
+    exports: chunk.exports,
     get dynamicImports() {
       return unimplemented()
     },
@@ -30,9 +31,6 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RollupOutputChunk {
       return unimplemented()
     },
     get map() {
-      return unimplemented()
-    },
-    get exports() {
       return unimplemented()
     },
     get facadeModuleId() {

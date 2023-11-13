@@ -297,6 +297,7 @@ impl<'a> Bundle<'a> {
             .entry_module
             .map(|id| self.graph.modules[id].expect_normal().resource_id.prettify().to_string()),
           modules: rendered_modules,
+          exports: c.get_export_names(self.graph, self.output_options),
         }))
       })
       .collect::<Vec<_>>();

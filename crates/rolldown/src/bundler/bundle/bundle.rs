@@ -286,7 +286,8 @@ impl<'a> Bundle<'a> {
       .iter()
       .enumerate()
       .map(|(_chunk_id, c)| {
-        let content = c.render(self.graph, &chunk_graph, self.output_options).unwrap();
+        let (content, rendered_modules) =
+          c.render(self.graph, &chunk_graph, self.output_options).unwrap();
 
         Output::Chunk(Box::new(OutputChunk {
           file_name: c.file_name.clone().unwrap(),
@@ -295,6 +296,7 @@ impl<'a> Bundle<'a> {
           facade_module_id: c
             .entry_module
             .map(|id| self.graph.modules[id].expect_normal().resource_id.prettify().to_string()),
+          modules: rendered_modules,
         }))
       })
       .collect::<Vec<_>>();

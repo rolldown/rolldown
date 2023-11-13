@@ -17,12 +17,12 @@ const props = defineProps({
   },
   isEntry: {
     type: Boolean,
-    required: false
+    required: false,
   },
   canModifyEntry: {
     type: Boolean,
-    required: false
-  }
+    required: false,
+  },
 })
 
 const input = ref(null)
@@ -48,11 +48,22 @@ onMounted(() => {
 <template>
   <div>
     <div class="title-container">
-      <div class="title" :class="{ 'is-entry': !!isEntry }" ref="input" contenteditable @input="$emit('title', $event)"
-        >
+      <div
+        class="title"
+        :class="{ 'is-entry': !!isEntry }"
+        ref="input"
+        contenteditable
+        @input="$emit('title', $event)"
+      >
         {{ title }}
       </div>
-      <button class="entry-flag" v-show="canModifyEntry" @click="$emit('isEntry')">entry</button>
+      <button
+        class="entry-flag"
+        v-show="canModifyEntry"
+        @click="$emit('isEntry')"
+      >
+        entry
+      </button>
     </div>
 
     <CodeBlock :code="code" @code="$emit('code', $event)" />
@@ -76,6 +87,5 @@ onMounted(() => {
 .entry-flag {
   outline: none;
   border: none;
-
 }
 </style>

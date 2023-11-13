@@ -28,10 +28,6 @@ bench-prepare:
     git clone https://github.com/mrdoob/three.js.git --depth 1 ./temp/three.js  
     for i in {1..10}; do cp -r ./temp/three.js/src ./temp/three.js/copy$i/; done
 
-# build node binding
-build-binding mode="debug":
-    yarn workspace @rolldown/node-binding run {{ if mode == "release" { "build:release" } else { "build" } }} 
-
 bench:
     cargo bench -p bench
 

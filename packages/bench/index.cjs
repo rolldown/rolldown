@@ -1,7 +1,7 @@
 const b = require('benny')
 const chalk = require('chalk')
-const { rolldownBundle } = require('./rolldown')
-const { esbuildBundle } = require('./esbuild')
+const { rolldownBundle } = require('./rolldown.cjs')
+const { esbuildBundle } = require('./esbuild.cjs')
 
 const sleep = function () {
   return new Promise((resolve) => {

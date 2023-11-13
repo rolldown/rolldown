@@ -1,4 +1,6 @@
 {
+  "private": true,
+  "type": "module",
   "devDependencies": {
     "@rolldown/node": "workspace:*",
     "benchmark": "^2.1.4",

@@ -1,14 +1,14 @@
 mod os;
 mod vfs;
 pub use os::*;
-use oxc_resolver::FileSystem;
+use oxc_resolver::FileSystem as OxcResolverFileSystem;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::{io, path::Path};
 pub use vfs::*;
 
 /// File System abstraction used for `ResolverGeneric`.
-pub trait FileSystemExt: Send + Sync + FileSystem {
+pub trait FileSystem: Send + Sync + OxcResolverFileSystem {
   /// # Errors
   ///
   /// * See [std::fs::remove_dir_all]
@@ -30,9 +30,9 @@ pub trait FileSystemExt: Send + Sync + FileSystem {
   fn exists(&self, path: &Path) -> bool;
 }
 
-impl<T> FileSystemExt for Arc<T>
+impl<T> FileSystem for Arc<T>
 where
-  T: FileSystemExt + FileSystem,
+  T: FileSystem + OxcResolverFileSystem,
 {
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     self.deref().remove_dir_all(path)

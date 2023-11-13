@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use rolldown_common::{ImportKind, ModuleId};
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystemExt;
+use rolldown_fs::FileSystem;
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
@@ -18,7 +18,7 @@ use crate::{
   HookBuildEndArgs, HookResolveIdArgsOptions, InputOptions, SharedResolver,
 };
 
-pub struct BuildStage<'me, T: FileSystemExt + Default> {
+pub struct BuildStage<'me, T: FileSystem + Default> {
   input_options: &'me InputOptions,
   plugin_driver: SharedPluginDriver,
   resolver: SharedResolver<T>,
@@ -31,7 +31,7 @@ pub struct BuildInfo {
   pub runtime: Runtime,
 }
 
-impl<'me, T: FileSystemExt + Default> BuildStage<'me, T> {
+impl<'me, T: FileSystem + Default> BuildStage<'me, T> {
   pub fn new(
     input_options: &'me InputOptions,
     plugin_driver: SharedPluginDriver,
@@ -84,7 +84,7 @@ impl<'me, T: FileSystemExt + Default> BuildStage<'me, T> {
     }
   }
 
-  pub async fn build<Fs: FileSystemExt + Default + 'static>(
+  pub async fn build<Fs: FileSystem + Default + 'static>(
     self,
     fs: Arc<Fs>,
   ) -> BatchedResult<BuildInfo> {
@@ -99,7 +99,7 @@ impl<'me, T: FileSystemExt + Default> BuildStage<'me, T> {
       self
         .plugin_driver
         .build_end(Some(&HookBuildEndArgs {
-          // TODO(hyf0): 1.Need a better way to expose the error, 2.How to handle multiple errors
+          // TODO(hyf0): 1.Need a better way to expose the error
           error: format!("{:?}\n{:?}", error.code(), error.to_diagnostic().print_to_string()),
         }))
         .await?;
@@ -109,13 +109,11 @@ impl<'me, T: FileSystemExt + Default> BuildStage<'me, T> {
     self.plugin_driver.build_end(None).await?;
     build_info
   }
-  async fn build_inner<Fs: FileSystemExt + Default + 'static>(
+  async fn build_inner<Fs: FileSystem + Default + 'static>(
     &self,
     fs: Arc<Fs>,
   ) -> BatchedResult<BuildInfo> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
-
-    self.plugin_driver.build_start().await?;
 
     let resolved_entries = self.resolve_entries()?;
 

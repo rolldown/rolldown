@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use index_vec::IndexVec;
 use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
-use rolldown_fs::FileSystemExt;
+use rolldown_fs::FileSystem;
 use rolldown_resolver::Resolver;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -22,7 +22,7 @@ use crate::bundler::utils::resolve_id::ResolvedRequestInfo;
 use crate::error::BatchedResult;
 use crate::SharedResolver;
 
-pub struct ModuleLoader<'a, T: FileSystemExt + Default> {
+pub struct ModuleLoader<'a, T: FileSystem + Default> {
   ctx: ModuleLoaderContext,
   input_options: &'a InputOptions,
   resolver: SharedResolver<T>,
@@ -42,7 +42,7 @@ pub struct ModuleLoaderContext {
 }
 
 impl ModuleLoaderContext {
-  fn try_spawn_runtime_normal_module_task<T: FileSystemExt + Default + 'static>(
+  fn try_spawn_runtime_normal_module_task<T: FileSystem + Default + 'static>(
     &mut self,
     task_context: &ModuleTaskContext<T>,
   ) -> ModuleId {
@@ -63,7 +63,7 @@ impl ModuleLoaderContext {
     }
   }
 
-  fn try_spawn_new_task<T: FileSystemExt + Default + 'static>(
+  fn try_spawn_new_task<T: FileSystem + Default + 'static>(
     &mut self,
     module_task_context: &ModuleTaskContext<T>,
     info: &ResolvedRequestInfo,
@@ -104,7 +104,7 @@ impl ModuleLoaderContext {
   }
 }
 
-impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
+impl<'a, T: FileSystem + 'static + Default> ModuleLoader<'a, T> {
   pub fn new(
     input_options: &'a InputOptions,
     plugin_driver: SharedPluginDriver,

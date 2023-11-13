@@ -4,7 +4,7 @@ import { basicSetup } from 'codemirror'
 import VueCodemirror from 'vue-codemirror'
 import App from './App.vue'
 
-let app = createApp(App);
+let app = createApp(App)
 app.use(VueCodemirror, {
   // optional default global options
   autofocus: true,
@@ -12,12 +12,7 @@ app.use(VueCodemirror, {
   indentWithTab: true,
   tabSize: 2,
   placeholder: 'Code goes here...',
-  extensions: [basicSetup]
+  extensions: [basicSetup],
   // ...
 })
 app.mount('#app')
-
-
-
-
-

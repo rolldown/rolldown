@@ -7,13 +7,13 @@ import { EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 
 type Payload = {
-  state: EditorState,
-  view: EditorView,
+  state: EditorState
+  view: EditorView
   container: HTMLElement
 }
 
 defineProps({
-  code: String
+  code: String,
 })
 
 const emit = defineEmits(['code'])
@@ -45,14 +45,22 @@ const handleReady = (payload: Payload) => {
 // }
 
 const handleCodeChange = (e: string) => {
-  emit("code", e)
+  emit('code', e)
 }
-const log = console.log;
+const log = console.log
 </script>
 <template>
-  <codemirror :model-value="code" placeholder="Code goes here..." :style="{ height: '400px' }" :autofocus="false"
-    :indent-with-tab="true" :tab-size="2" :extensions="extensions" @ready="handleReady" @change="handleCodeChange"
-    @focus="log('focus', $event)" @blur="console.log('blur', $event)" />
+  <codemirror
+    :model-value="code"
+    placeholder="Code goes here..."
+    :style="{ height: '400px' }"
+    :autofocus="false"
+    :indent-with-tab="true"
+    :tab-size="2"
+    :extensions="extensions"
+    @ready="handleReady"
+    @change="handleCodeChange"
+    @focus="log('focus', $event)"
+    @blur="console.log('blur', $event)"
+  />
 </template>
-
-

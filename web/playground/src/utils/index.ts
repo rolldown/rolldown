@@ -5,12 +5,15 @@ export type ModuleInfo = {
   title: string
   code: string
   autofocus?: boolean
+  isEntry: boolean
+  canModifyEntry?: boolean
 }
 
 export function normalizeModules(modules: ModuleInfo[]): FileItem[] {
   return modules.map(normalizeModule)
 }
 
+// Only used when generate output
 export function convertAssetListToModuleList(
   assetList: AssetItem[],
 ): ModuleInfo[] {
@@ -18,6 +21,8 @@ export function convertAssetListToModuleList(
     return {
       title: item.name,
       code: item.content,
+      isEntry: false,
+      canModifyEntry: false,
     }
   })
 }
@@ -29,11 +34,12 @@ export function convertAssetListToModuleList(
 function normalizeModule(module: ModuleInfo): FileItem {
   let title = module.title
   let code = module.code
+  let isEntry = module.isEntry
   let isAbsolute = path.isAbsolute(title)
   if (!isAbsolute) {
     title = path.join('/', title)
   }
-  return new FileItem(title, code)
+  return new FileItem(title, code, isEntry)
 }
 
 let moduleId = 1

@@ -10,7 +10,12 @@ import {
 import type { ModuleInfo } from './utils/index'
 
 const moduleList: Ref<ModuleInfo[]> = ref([
-  { title: 'index.js', code: `console.log("hello world")` },
+  {
+    title: 'index.js',
+    code: `console.log("hello world")`,
+    isEntry: true,
+    canModifyEntry: false,
+  },
 ])
 
 const outputs: Ref<ModuleInfo[]> = ref([])
@@ -35,7 +40,17 @@ const handleAddModule = () => {
     title,
     code: `console.log("hello world")`,
     autofocus: true,
+    isEntry: false,
+    canModifyEntry: true,
   })
+}
+
+const handleToggleIsEntry = (item: any) => {
+  if (!item.canModifyEntry) {
+    return
+  }
+  item.isEntry = !item.isEntry
+  console.log(item)
 }
 </script>
 
@@ -47,14 +62,17 @@ const handleAddModule = () => {
         v-for="item in moduleList"
         :code="item.code"
         :title="item.title"
+        :is-entry="item.isEntry"
         @code="item.code = $event"
-        @title="item.title = $event.target.innerText"
         :auto-focus="item.autofocus"
+        @isEntry="handleToggleIsEntry(item)"
+        :can-modify-entry="item.canModifyEntry"
+        @title="item.title = $event.target.innerText"
       />
       <button @click="handleAddModule">Add module</button>
     </div>
     <!-- output block -->
-    <div class="output column">
+    <div class="outputs column">
       <button @click="handleBuild" :disabled="!wasmLoadFinished">build</button>
       <ModuleBlock
         v-for="item in outputs"

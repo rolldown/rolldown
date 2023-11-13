@@ -1,5 +1,5 @@
 {
-  "name": "rolldown_wasm",
+  "name": "rolldown_wasm_binding",
   "version": "0.1.0",
   "license": "MIT",
   "repository": {
@@ -7,13 +7,13 @@
     "url": "https://github.com/rolldown-rs/rolldown"
   },
   "files": [
-    "rolldown_wasm_bg.wasm",
-    "rolldown_wasm.js",
-    "rolldown_wasm.d.ts"
+    "rolldown_wasm_binding_bg.wasm",
+    "rolldown_wasm_binding.js",
+    "rolldown_wasm_binding.d.ts"
   ],
-  "module": "rolldown_wasm.js",
+  "module": "rolldown_wasm_binding.js",
   "homepage": "https://github.com/rolldown-rs/rolldown",
-  "types": "rolldown_wasm.d.ts",
+  "types": "rolldown_wasm_binding.d.ts",
   "sideEffects": [
     "./snippets/*"
   ]

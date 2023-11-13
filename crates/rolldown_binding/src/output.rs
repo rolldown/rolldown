@@ -39,6 +39,7 @@ pub struct OutputChunk {
   pub is_entry: bool,
   pub facade_module_id: Option<String>,
   pub modules: HashMap<String, RenderedModule>,
+  pub exports: Vec<String>,
 }
 
 impl From<Box<rolldown::OutputChunk>> for OutputChunk {
@@ -49,6 +50,7 @@ impl From<Box<rolldown::OutputChunk>> for OutputChunk {
       is_entry: chunk.is_entry,
       facade_module_id: chunk.facade_module_id,
       modules: chunk.modules.into_iter().map(|(key, value)| (key, value.into())).collect(),
+      exports: chunk.exports,
     }
   }
 }

@@ -1,4 +1,5 @@
-use rolldown_common::WrapKind;
+use oxc::span::Atom;
+use rolldown_common::{SymbolRef, WrapKind};
 use string_wizard::MagicString;
 
 use crate::{bundler::graph::graph::Graph, OutputFormat, OutputOptions};
@@ -23,22 +24,7 @@ impl Chunk {
       }
     }
 
-    let export_items = self.entry_module.map_or_else(
-      || {
-        self
-          .exports_to_other_chunks
-          .iter()
-          .map(|(export_ref, alias)| (alias, *export_ref))
-          .collect::<Vec<_>>()
-      },
-      |entry_module_id| {
-        let linking_info = &graph.linking_infos[entry_module_id];
-        linking_info
-          .sorted_exports()
-          .map(|(name, export)| (name, export.symbol_ref))
-          .collect::<Vec<_>>()
-      },
-    );
+    let export_items = self.get_export_items(graph);
 
     if export_items.is_empty() {
       return None;
@@ -55,7 +41,7 @@ impl Chunk {
           let property_name = &ns_alias.property_name;
           s.append(format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
         }
-        if canonical_name == exported_name {
+        if canonical_name == &exported_name {
           format!("{canonical_name}")
         } else {
           format!("{canonical_name} as {exported_name}")
@@ -64,5 +50,43 @@ impl Chunk {
       .collect::<Vec<_>>();
     s.append(format!("export {{ {} }};", rendered_items.join(", "),));
     Some(s)
+  }
+
+  fn get_export_items(&self, graph: &Graph) -> Vec<(Atom, SymbolRef)> {
+    self.entry_module.map_or_else(
+      || {
+        self
+          .exports_to_other_chunks
+          .iter()
+          .map(|(export_ref, alias)| (alias.clone(), *export_ref))
+          .collect::<Vec<_>>()
+      },
+      |entry_module_id| {
+        let linking_info = &graph.linking_infos[entry_module_id];
+        linking_info
+          .sorted_exports()
+          .map(|(name, export)| (name.clone(), export.symbol_ref))
+          .collect::<Vec<_>>()
+      },
+    )
+  }
+
+  pub fn get_export_names(&self, graph: &Graph, output_options: &OutputOptions) -> Vec<String> {
+    if let Some(entry) = self.entry_module {
+      let linking_info = &graph.linking_infos[entry];
+      if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
+        match output_options.format {
+          OutputFormat::Esm => {
+            return vec!["default".to_string()];
+          }
+        }
+      }
+    }
+
+    self
+      .get_export_items(graph)
+      .into_iter()
+      .map(|(exported_name, _)| exported_name.to_string())
+      .collect::<Vec<_>>()
   }
 }

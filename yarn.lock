@@ -9836,9 +9836,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"rolldown_wasm@workspace:web/wasm":
+"rolldown_wasm_binding@workspace:web/wasm":
   version: 0.0.0-use.local
-  resolution: "rolldown_wasm@workspace:web/wasm"
+  resolution: "rolldown_wasm_binding@workspace:web/wasm"
   languageName: unknown
   linkType: soft
 

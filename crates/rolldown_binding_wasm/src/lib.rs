@@ -60,7 +60,10 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
       match bundler.write(OutputOptions::default()).await {
         Ok(assets) => assets
           .into_iter()
-          .map(|item| AssetItem { name: item.file_name, content: item.code })
+          .map(|item| AssetItem {
+            name: item.file_name().to_string(),
+            content: item.content().to_owned(),
+          })
           .collect::<Vec<_>>(),
         Err(err) => {
           panic!("{err:?}",);

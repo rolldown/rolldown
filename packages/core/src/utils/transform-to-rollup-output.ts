@@ -1,8 +1,9 @@
 import type { AsyncReturnType } from 'type-fest'
-import { Bundler, OutputChunk } from '@rolldown/node-binding'
+import { Bundler, OutputAsset, OutputChunk } from '@rolldown/node-binding'
 import type {
   RollupOutput,
   OutputChunk as RollupOutputChunk,
+  OutputAsset as RollupOutputAsset,
 } from '../rollup-types'
 import { unimplemented } from '.'
 
@@ -62,14 +63,30 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RollupOutputChunk {
   }
 }
 
+function transformToRollupOutputAsset(asset: OutputAsset): RollupOutputAsset {
+  return {
+    type: 'asset',
+    fileName: asset.fileName,
+    source: asset.source,
+    get name() {
+      return unimplemented()
+    },
+    get needsCodeReference() {
+      return unimplemented()
+    },
+  }
+}
+
 export function transformToRollupOutput(
   output: AsyncReturnType<Bundler['write']>,
 ): RollupOutput {
-  const [first, ...rest] = output
+  const { chunks, assets } = output
+
   return {
+    // @ts-expect-error here chunks.length > 0
     output: [
-      transformToRollupOutputChunk(first),
-      ...rest.map(transformToRollupOutputChunk),
+      ...chunks.map(transformToRollupOutputChunk),
+      ...assets.map(transformToRollupOutputAsset),
     ],
   }
 }

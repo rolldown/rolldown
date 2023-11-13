@@ -10,7 +10,7 @@ pub(crate) type SharedResolver<T> = Arc<Resolver<T>>;
 
 pub use crate::{
   bundler::{
-    bundle::asset::OutputChunk,
+    bundle::output::{Output, OutputAsset, OutputChunk},
     bundler::Bundler,
     options::{
       file_name_template::FileNameTemplate,

@@ -48,8 +48,16 @@ export interface OutputChunk {
   isEntry: boolean
   facadeModuleId?: string
 }
+export interface OutputAsset {
+  fileName: string
+  source: string
+}
+export interface Outputs {
+  chunks: Array<OutputChunk>
+  assets: Array<OutputAsset>
+}
 export class Bundler {
   constructor(inputOpts: InputOptions)
-  write(opts: OutputOptions): Promise<Array<OutputChunk>>
-  generate(opts: OutputOptions): Promise<Array<OutputChunk>>
+  write(opts: OutputOptions): Promise<Outputs>
+  generate(opts: OutputOptions): Promise<Outputs>
 }

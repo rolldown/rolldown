@@ -1,6 +1,6 @@
 use std::{borrow::Cow, path::Path};
 
-use rolldown::OutputChunk;
+use rolldown::Output;
 use rolldown_error::BuildError;
 use string_wizard::MagicString;
 
@@ -40,18 +40,18 @@ impl Case {
     self.fixture.exec();
   }
 
-  fn render_assets_to_snapshot(&mut self, mut assets: Vec<OutputChunk>) {
+  fn render_assets_to_snapshot(&mut self, mut assets: Vec<Output>) {
     self.snapshot.append("# Assets\n\n");
-    assets.sort_by_key(|c| c.file_name.clone());
+    assets.sort_by_key(|c| c.file_name().to_string());
     let artifacts = assets
       .iter()
       // FIXME: should render the runtime module while tree shaking being supported
-      .filter(|asset| !asset.file_name.contains("rolldown_runtime"))
+      .filter(|asset| !asset.file_name().contains("rolldown_runtime"))
       .flat_map(|asset| {
         [
-          Cow::Owned(format!("## {}\n", asset.file_name)),
+          Cow::Owned(format!("## {}\n", asset.file_name())),
           "```js".into(),
-          Cow::Borrowed(asset.code.trim()),
+          Cow::Borrowed(asset.content().trim()),
           "```".into(),
         ]
       })

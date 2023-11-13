@@ -5,7 +5,7 @@ use rolldown_fs::FileSystemExt;
 use sugar_path::AsPath;
 
 use super::{
-  bundle::asset::OutputChunk,
+  bundle::output::Output,
   graph::graph::Graph,
   plugin_driver::{PluginDriver, SharedPluginDriver},
 };
@@ -32,7 +32,7 @@ impl<T: FileSystemExt + Default + 'static> Bundler<T> {
     Self { input_options, plugin_driver: Arc::new(PluginDriver::new(plugins)), fs: Arc::new(fs) }
   }
 
-  pub async fn write(&mut self, output_options: OutputOptions) -> BuildResult<Vec<OutputChunk>> {
+  pub async fn write(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
     let dir =
       self.input_options.cwd.as_path().join(&output_options.dir).to_string_lossy().to_string();
 
@@ -46,29 +46,25 @@ impl<T: FileSystemExt + Default + 'static> Bundler<T> {
       )
     });
     for chunk in &assets {
-      let dest = dir.as_path().join(&chunk.file_name);
+      let dest = dir.as_path().join(chunk.file_name());
       if let Some(p) = dest.parent() {
         if !self.fs.exists(p) {
           self.fs.create_dir_all(p).unwrap();
         }
       };
-      self.fs.write(dest.as_path(), chunk.code.as_bytes()).unwrap_or_else(|_| {
-        panic!("Failed to write file in {:?}", dir.as_path().join(&chunk.file_name))
+      self.fs.write(dest.as_path(), chunk.content().as_bytes()).unwrap_or_else(|_| {
+        panic!("Failed to write file in {:?}", dir.as_path().join(chunk.file_name()))
       });
     }
 
     Ok(assets)
   }
 
-  pub async fn generate(&mut self, output_options: OutputOptions) -> BuildResult<Vec<OutputChunk>> {
+  pub async fn generate(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
     self.build(output_options, Arc::clone(&self.fs)).await
   }
 
-  async fn build(
-    &mut self,
-    output_options: OutputOptions,
-    fs: Arc<T>,
-  ) -> BuildResult<Vec<OutputChunk>> {
+  async fn build(&mut self, output_options: OutputOptions, fs: Arc<T>) -> BuildResult<Vec<Output>> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
 

@@ -1,6 +1,6 @@
 use super::{linker::Linker, linker_info::LinkingInfoVec, symbols::Symbols};
 use crate::{
-  bundler::{module::ModuleVec, runtime::Runtime, stages::build_stage::BuildInfo},
+  bundler::{module::ModuleVec, runtime::Runtime, stages::scan_stage::ScanStageOutput},
   error::BatchedResult,
 };
 use rolldown_common::ModuleId;
@@ -18,8 +18,8 @@ pub struct Graph {
 }
 
 impl Graph {
-  pub fn new(build_info: BuildInfo) -> Self {
-    let BuildInfo { modules, entries, symbols, runtime } = build_info;
+  pub fn new(build_info: ScanStageOutput) -> Self {
+    let ScanStageOutput { modules, entries, symbols, runtime } = build_info;
     Self { modules, entries, symbols, runtime, ..Default::default() }
   }
 

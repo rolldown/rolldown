@@ -15,23 +15,23 @@ use crate::{
     utils::resolve_id::{resolve_id, ResolvedRequestInfo},
   },
   error::{BatchedErrors, BatchedResult},
-  HookBuildEndArgs, HookResolveIdArgsOptions, InputOptions, SharedResolver,
+  HookResolveIdArgsOptions, InputOptions, SharedResolver,
 };
 
-pub struct BuildStage<'me, T: FileSystem + Default> {
+pub struct ScanStage<'me, T: FileSystem + Default> {
   input_options: &'me InputOptions,
   plugin_driver: SharedPluginDriver,
   resolver: SharedResolver<T>,
 }
 
-pub struct BuildInfo {
+pub struct ScanStageOutput {
   pub modules: ModuleVec,
   pub entries: Vec<(Option<String>, ModuleId)>,
   pub symbols: Symbols,
   pub runtime: Runtime,
 }
 
-impl<'me, T: FileSystem + Default> BuildStage<'me, T> {
+impl<'me, T: FileSystem + Default> ScanStage<'me, T> {
   pub fn new(
     input_options: &'me InputOptions,
     plugin_driver: SharedPluginDriver,
@@ -84,35 +84,10 @@ impl<'me, T: FileSystem + Default> BuildStage<'me, T> {
     }
   }
 
-  pub async fn build<Fs: FileSystem + Default + 'static>(
-    self,
-    fs: Arc<Fs>,
-  ) -> BatchedResult<BuildInfo> {
-    assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
-
-    self.plugin_driver.build_start().await?;
-
-    let build_info = self.build_inner(fs).await;
-
-    if let Err(e) = build_info {
-      let error = e.get().expect("should have a error");
-      self
-        .plugin_driver
-        .build_end(Some(&HookBuildEndArgs {
-          // TODO(hyf0): 1.Need a better way to expose the error
-          error: format!("{:?}\n{:?}", error.code(), error.to_diagnostic().print_to_string()),
-        }))
-        .await?;
-      return Err(e);
-    }
-
-    self.plugin_driver.build_end(None).await?;
-    build_info
-  }
-  async fn build_inner<Fs: FileSystem + Default + 'static>(
+  pub async fn scan<Fs: FileSystem + Default + 'static>(
     &self,
     fs: Arc<Fs>,
-  ) -> BatchedResult<BuildInfo> {
+  ) -> BatchedResult<ScanStageOutput> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
     let resolved_entries = self.resolve_entries()?;
@@ -122,6 +97,6 @@ impl<'me, T: FileSystem + Default> BuildStage<'me, T> {
         .fetch_all_modules(&resolved_entries)
         .await?;
 
-    Ok(BuildInfo { modules, entries, symbols, runtime })
+    Ok(ScanStageOutput { modules, entries, symbols, runtime })
   }
 }

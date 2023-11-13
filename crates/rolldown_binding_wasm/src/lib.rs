@@ -46,7 +46,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
       let memory_fs = FileSystemVfs::new(
         &file_list.iter().map(|item| (&item.path, &item.content)).collect::<Vec<_>>(),
       );
-      let mut bundler = Bundler::new(
+      let mut bundler = Bundler::with_plugins_and_fs(
         InputOptions {
           input: vec![InputItem {
             name: Some("basic".to_string()),
@@ -54,6 +54,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
           }],
           cwd: "/".into(),
         },
+        vec![],
         memory_fs,
       );
 

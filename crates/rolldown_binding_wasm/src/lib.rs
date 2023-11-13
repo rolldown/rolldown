@@ -1,6 +1,5 @@
 use rolldown_fs::FileSystemVfs;
 use std::panic;
-use std::path;
 use std::path::Path;
 
 use wasm_bindgen::prelude::*;
@@ -54,8 +53,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
         .filter_map(|item| {
           if item.is_entry {
             let p = Path::new(&item.path);
-            let name =
-              p.file_stem().map(|stem| stem.to_string_lossy().replace(".", "_").to_string());
+            let name = p.file_stem().map(|stem| stem.to_string_lossy().replace('.', "_"));
             Some(InputItem { name, import: item.path })
           } else {
             None

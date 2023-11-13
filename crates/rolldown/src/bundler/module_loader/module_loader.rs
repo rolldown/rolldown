@@ -2,37 +2,36 @@ use std::sync::Arc;
 
 use index_vec::IndexVec;
 use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
-use rolldown_error::BuildError;
 use rolldown_fs::FileSystemExt;
 use rolldown_resolver::Resolver;
-use rolldown_utils::block_on_spawn_all;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
-use crate::bundler::graph::graph::Graph;
+use crate::bundler::graph::symbols::Symbols;
 use crate::bundler::module::external_module::ExternalModule;
-use crate::bundler::module::Module;
+use crate::bundler::module::{Module, ModuleVec};
 use crate::bundler::module_loader::module_task_context::ModuleTaskContext;
 use crate::bundler::options::input_options::InputOptions;
 use crate::bundler::plugin_driver::SharedPluginDriver;
-use crate::bundler::runtime::RUNTIME_PATH;
+use crate::bundler::runtime::{Runtime, RUNTIME_PATH};
 use crate::bundler::utils::ast_symbol::AstSymbol;
-use crate::bundler::utils::resolve_id::{resolve_id, ResolvedRequestInfo};
-use crate::error::{BatchedErrors, BatchedResult};
-use crate::{HookResolveIdArgsOptions, SharedResolver};
+use crate::bundler::utils::resolve_id::ResolvedRequestInfo;
+use crate::error::BatchedResult;
+use crate::SharedResolver;
 
 pub struct ModuleLoader<'a, T: FileSystemExt + Default> {
   ctx: ModuleLoaderContext,
   input_options: &'a InputOptions,
-  graph: &'a mut Graph,
   resolver: SharedResolver<T>,
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
   fs: Arc<T>,
   plugin_driver: SharedPluginDriver,
+  symbols: Symbols,
+  runtime: Runtime,
 }
 
 #[derive(Debug, Default)]
@@ -69,13 +68,13 @@ impl ModuleLoaderContext {
     module_task_context: &ModuleTaskContext<T>,
     info: &ResolvedRequestInfo,
     is_entry: bool,
-    graph: &mut Graph,
+    symbols: &mut Symbols,
   ) -> ModuleId {
     match self.visited.entry(info.path.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         let id = self.intermediate_modules.push(None);
-        graph.symbols.add_ast_symbol(id, AstSymbol::default());
+        symbols.add_ast_symbol(id, AstSymbol::default());
         not_visited.insert(id);
         if info.is_external {
           let ext = ExternalModule::new(
@@ -109,7 +108,6 @@ impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
   pub fn new(
     input_options: &'a InputOptions,
     plugin_driver: SharedPluginDriver,
-    graph: &'a mut Graph,
     fs: Arc<T>,
   ) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
@@ -118,17 +116,19 @@ impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
       rx,
       input_options,
       resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, Arc::clone(&fs)).into(),
-      graph,
       fs,
       ctx: ModuleLoaderContext::default(),
       plugin_driver,
+      symbols: Symbols::default(),
+      runtime: Runtime::default(),
     }
   }
 
-  pub async fn fetch_all_modules(mut self) -> BatchedResult<()> {
+  pub async fn fetch_all_modules(
+    mut self,
+    resolved_entries: &[(Option<String>, ResolvedRequestInfo)],
+  ) -> BatchedResult<(ModuleVec, Runtime, Symbols, Vec<(Option<String>, ModuleId)>)> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
-
-    let resolved_entries = self.resolve_entries()?;
 
     self.ctx.intermediate_modules.reserve(resolved_entries.len() + 1 /* runtime */);
 
@@ -140,12 +140,15 @@ impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
       plugin_driver: &self.plugin_driver,
     };
 
-    self.graph.runtime.id = self.ctx.try_spawn_runtime_normal_module_task(&shared_task_context);
+    self.runtime.id = self.ctx.try_spawn_runtime_normal_module_task(&shared_task_context);
 
-    let mut entries = resolved_entries
-      .into_iter()
+    let mut entries: Vec<(Option<String>, ModuleId)> = resolved_entries
+      .iter()
       .map(|(name, info)| {
-        (name, self.ctx.try_spawn_new_task(&shared_task_context, &info, true, self.graph))
+        (
+          name.clone(),
+          self.ctx.try_spawn_new_task(&shared_task_context, info, true, &mut self.symbols),
+        )
       })
       .collect::<Vec<_>>();
 
@@ -163,7 +166,8 @@ impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
           let import_records = builder.import_records.as_mut().unwrap();
 
           resolved_deps.into_iter().for_each(|(import_record_idx, info)| {
-            let id = self.ctx.try_spawn_new_task(&shared_task_context, &info, false, self.graph);
+            let id =
+              self.ctx.try_spawn_new_task(&shared_task_context, &info, false, &mut self.symbols);
             let import_record = &mut import_records[import_record_idx];
             import_record.resolved_module = id;
 
@@ -175,72 +179,26 @@ impl<'a, T: FileSystemExt + 'static + Default> ModuleLoader<'a, T> {
 
           self.ctx.intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
 
-          self.graph.symbols.add_ast_symbol(module_id, ast_symbol);
+          self.symbols.add_ast_symbol(module_id, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
           let NormalModuleTaskResult { module_id, ast_symbol, builder, .. } = task_result;
 
           let runtime_normal_module = builder.build();
-          self.graph.runtime.init_symbols(&runtime_normal_module);
+          self.runtime.init_symbols(&runtime_normal_module);
           self.ctx.intermediate_modules[module_id] = Some(Module::Normal(runtime_normal_module));
 
-          self.graph.symbols.add_ast_symbol(module_id, ast_symbol);
+          self.symbols.add_ast_symbol(module_id, ast_symbol);
         }
       }
       self.ctx.remaining -= 1;
     }
 
-    self.graph.modules = self.ctx.intermediate_modules.into_iter().map(Option::unwrap).collect();
+    let modules = self.ctx.intermediate_modules.into_iter().map(Option::unwrap).collect();
 
     let mut dynamic_entries = Vec::from_iter(dynamic_entries);
     dynamic_entries.sort_by(|(a, _), (b, _)| a.cmp(b));
     entries.extend(dynamic_entries);
-    self.graph.entries = entries;
-    Ok(())
-  }
-
-  #[allow(clippy::collection_is_never_read)]
-  fn resolve_entries(&mut self) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {
-    let resolver = &self.resolver;
-    let plugin_driver = &self.plugin_driver;
-
-    let resolved_ids =
-      block_on_spawn_all(self.input_options.input.iter().map(|input_item| async move {
-        let specifier = &input_item.import;
-        match resolve_id(
-          resolver,
-          plugin_driver,
-          specifier,
-          None,
-          HookResolveIdArgsOptions { is_entry: true, kind: ImportKind::Import },
-          false,
-        )
-        .await
-        {
-          Ok(r) => {
-            let Some(info) = r else {
-              return Err(BuildError::unresolved_entry(specifier));
-            };
-
-            if info.is_external {
-              return Err(BuildError::entry_cannot_be_external(info.path.as_str()));
-            }
-
-            Ok((input_item.name.clone(), info))
-          }
-          Err(e) => Err(e),
-        }
-      }));
-
-    let mut errors = BatchedErrors::default();
-
-    let collected =
-      resolved_ids.into_iter().filter_map(|item| errors.take_err_from(item)).collect();
-
-    if errors.is_empty() {
-      Ok(collected)
-    } else {
-      Err(errors)
-    }
+    Ok((modules, self.runtime, self.symbols, entries))
   }
 }

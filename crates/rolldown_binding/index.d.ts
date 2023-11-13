@@ -45,6 +45,8 @@ export interface OutputOptions {
 export interface OutputChunk {
   code: string
   fileName: string
+  isEntry: boolean
+  facadeModuleId?: string
 }
 export class Bundler {
   constructor(inputOpts: InputOptions)

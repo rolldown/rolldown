@@ -287,7 +287,14 @@ impl<'a> Bundle<'a> {
       .map(|(_chunk_id, c)| {
         let content = c.render(self.graph, &chunk_graph, self.output_options).unwrap();
 
-        OutputChunk { file_name: c.file_name.clone().unwrap(), code: content }
+        OutputChunk {
+          file_name: c.file_name.clone().unwrap(),
+          code: content,
+          is_entry: c.entry_module.is_some(),
+          facade_module_id: c
+            .entry_module
+            .map(|id| self.graph.modules[id].expect_normal().resource_id.prettify().to_string()),
+        }
       })
       .collect::<Vec<_>>();
 

@@ -7,7 +7,7 @@ use rolldown_common::ModuleId;
 use rustc_hash::FxHashSet;
 
 // TODO(hyf0): Rename this to a more meaningful name, `Graph` is too generic now.
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Graph {
   pub modules: ModuleVec,
   pub linking_infos: LinkingInfoVec,
@@ -20,7 +20,14 @@ pub struct Graph {
 impl Graph {
   pub fn new(build_info: ScanStageOutput) -> Self {
     let ScanStageOutput { modules, entries, symbols, runtime } = build_info;
-    Self { modules, entries, symbols, runtime, ..Default::default() }
+    Self {
+      modules,
+      entries,
+      symbols,
+      runtime,
+      linking_infos: LinkingInfoVec::default(),
+      sorted_modules: Vec::new(),
+    }
   }
 
   // unnecessary_wraps(hyf0): we will add errors later in `link_inner`
@@ -35,7 +42,7 @@ impl Graph {
   pub fn sort_modules(&mut self) {
     let mut stack = self.entries.iter().map(|(_, m)| Action::Enter(*m)).rev().collect::<Vec<_>>();
     // The runtime module should always be the first module to be executed
-    stack.push(Action::Enter(self.runtime.id));
+    stack.push(Action::Enter(self.runtime.id()));
     let mut entered_ids: FxHashSet<ModuleId> = FxHashSet::default();
     entered_ids.shrink_to(self.modules.len());
     let mut sorted_modules = Vec::with_capacity(self.modules.len());
@@ -68,7 +75,7 @@ impl Graph {
     self.sorted_modules = sorted_modules;
     debug_assert_eq!(
       self.sorted_modules.first().copied(),
-      Some(self.runtime.id),
+      Some(self.runtime.id()),
       "runtime module should always be the first module in the sorted modules"
     );
   }

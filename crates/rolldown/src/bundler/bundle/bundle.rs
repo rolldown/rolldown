@@ -207,7 +207,7 @@ impl<'a> Bundle<'a> {
       // In this case, we only need to generate two chunks, but currently we will generate three chunks. We need to analyze the usage of runtime module
       // to make sure only necessary chunks mark runtime module as reachable.
       self.determine_reachable_modules_for_entry(
-        self.graph.runtime.id,
+        self.graph.runtime.id(),
         i.try_into().unwrap(),
         &mut module_to_bits,
       );
@@ -231,16 +231,16 @@ impl<'a> Bundle<'a> {
         Some("_rolldown_runtime".to_string()),
         None,
         BitSet::new(0),
-        vec![self.graph.runtime.id],
+        vec![self.graph.runtime.id()],
       ));
-      module_to_chunk[self.graph.runtime.id] = Some(runtime_chunk_id);
+      module_to_chunk[self.graph.runtime.id()] = Some(runtime_chunk_id);
     }
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for module in &self.graph.modules {
       // FIXME: should remove this when tree shaking is supported
-      if is_rolldown_test && module.id() == self.graph.runtime.id {
+      if is_rolldown_test && module.id() == self.graph.runtime.id() {
         continue;
       }
       let bits = &module_to_bits[module.id()];

@@ -5,6 +5,7 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct InputOptions {
   pub input: Option<Vec<InputItem>>,
+  pub external: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, JsonSchema)]

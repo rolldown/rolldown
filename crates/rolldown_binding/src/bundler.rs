@@ -38,7 +38,13 @@ impl Bundler {
     NAPI_ENV.set(&env, || {
       let (opts, plugins) = input_opts.into();
 
-      Ok(Self { inner: Mutex::new(NativeBundler::<OsFileSystem>::with_plugins(opts, plugins?)) })
+      Ok(Self {
+        inner: Mutex::new(NativeBundler::<FileSystemOs>::with_plugins(
+          opts?,
+          plugins?,
+          FileSystemOs,
+        )),
+      })
     })
   }
 

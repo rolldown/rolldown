@@ -23,7 +23,7 @@ export class RolldownBuild implements RollupBuild {
     // Convert `NormalizedInputOptions` to `BindingInputOptions`
     const bindingInputOptions = createInputOptionsAdapter(
       normalizedInputOptions,
-      inputOptions
+      inputOptions,
     )
     const bundler = new Bundler(bindingInputOptions)
     return new RolldownBuild(bundler)

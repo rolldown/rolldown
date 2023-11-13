@@ -2,20 +2,30 @@ use std::fmt::Debug;
 use std::path::PathBuf;
 
 use derivative::Derivative;
+use futures::Future;
+use rolldown_error::BuildError;
 
-pub type ExternalFn = dyn Fn(String, Option<String>, bool) -> bool;
+pub type ExternalFn = dyn Fn(String, Option<String>, bool) -> Box<dyn Future<Output = Result<bool, BuildError>>>
+  + Send
+  + Sync;
 
 pub enum External {
-  String(String),
+  ArrayString(Vec<String>),
   Fn(Box<ExternalFn>),
 }
 
 impl Debug for External {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      External::String(value) => write!(f, "External::String({:?})", value),
-      External::Fn(_) => write!(f, "External::Fn(...)"),
+      Self::ArrayString(value) => write!(f, "External::ArrayString({value:?})"),
+      Self::Fn(_) => write!(f, "External::Fn(...)"),
     }
+  }
+}
+
+impl Default for External {
+  fn default() -> Self {
+    Self::ArrayString(vec![])
   }
 }
 
@@ -36,11 +46,11 @@ impl From<String> for InputItem {
 pub struct InputOptions {
   pub input: Vec<InputItem>,
   pub cwd: PathBuf,
-  pub external: Vec<External>,
+  pub external: External,
 }
 
 impl Default for InputOptions {
   fn default() -> Self {
-    Self { input: vec![], cwd: std::env::current_dir().unwrap(), external: vec![] }
+    Self { input: vec![], cwd: std::env::current_dir().unwrap(), external: External::default() }
   }
 }

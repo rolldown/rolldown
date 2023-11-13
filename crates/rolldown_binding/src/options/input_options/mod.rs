@@ -1,6 +1,9 @@
-use std::path::PathBuf;
+use std::{fmt::Debug, path::PathBuf, sync::Arc};
 mod plugin;
 mod plugin_adapter;
+use crate::utils::{napi_error_ext::NapiErrorExt, JsCallback};
+use derivative::Derivative;
+use napi::JsFunction;
 use napi_derive::napi;
 
 use serde::Deserialize;
@@ -23,9 +26,12 @@ impl From<InputItem> for rolldown::InputItem {
   }
 }
 
+pub type ExternalFn = JsCallback<(String, Option<String>, bool), bool>;
+
 #[napi(object)]
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Default, Derivative)]
 #[serde(rename_all = "camelCase")]
+#[derivative(Debug)]
 pub struct InputOptions {
   // Not going to be supported
   // @deprecated Use the "inlineDynamicImports" output option instead.
@@ -36,7 +42,10 @@ pub struct InputOptions {
   // cache?: false | RollupCache;
   // context?: string;sssssssssss
   // experimentalCacheExpiry?: number;
-  // pub external: ExternalOption,
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(source: string, importer?: string, isResolved: boolean) => boolean")]
+  pub external: Option<JsFunction>,
   pub input: Vec<InputItem>,
   // makeAbsoluteExternalsRelative?: boolean | 'ifRelativeSource';
   // /** @deprecated Use the "manualChunks" output option instead. */
@@ -62,16 +71,40 @@ pub struct InputOptions {
   // pub builtins: BuiltinsOptions,
 }
 
-impl From<InputOptions> for (rolldown::InputOptions, napi::Result<Vec<rolldown::BoxPlugin>>) {
+#[allow(clippy::redundant_closure_for_method_calls)]
+impl From<InputOptions>
+  for (napi::Result<rolldown::InputOptions>, napi::Result<Vec<rolldown::BoxPlugin>>)
+{
   fn from(value: InputOptions) -> Self {
     let cwd = PathBuf::from(value.cwd.clone());
     assert!(cwd != PathBuf::from("/"), "{value:#?}");
 
+    let external = if let Some(js_fn) = value.external {
+      match ExternalFn::new(&js_fn) {
+        Err(e) => return (Err(e), Ok(vec![])),
+        Ok(external_fn) => {
+          let cb = Arc::new(external_fn);
+          rolldown::External::Fn(Box::new(move |source, importer, is_resolved| {
+            let ts_fn = Arc::clone(&cb);
+            Box::new(async move {
+              ts_fn
+                .call_async((source, importer, is_resolved))
+                .await
+                .map_err(|e| e.into_bundle_error())
+            })
+          }))
+        }
+      }
+    } else {
+      rolldown::External::default()
+    };
+
     (
-      rolldown::InputOptions {
+      Ok(rolldown::InputOptions {
         input: value.input.into_iter().map(Into::into).collect::<Vec<_>>(),
         cwd,
-      },
+        external,
+      }),
       value.plugins.into_iter().map(JsAdapterPlugin::new_boxed).collect::<napi::Result<Vec<_>>>(),
     )
   }

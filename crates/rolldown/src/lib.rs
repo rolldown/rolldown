@@ -14,7 +14,7 @@ pub use crate::{
     bundler::Bundler,
     options::{
       file_name_template::FileNameTemplate,
-      input_options::{InputItem, InputOptions},
+      input_options::{External, InputItem, InputOptions},
       output_options::{OutputFormat, OutputOptions},
     },
   },

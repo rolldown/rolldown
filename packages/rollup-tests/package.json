@@ -12,7 +12,7 @@
   "license": "MIT",
   "dependencies": {
     "@jridgewell/sourcemap-codec": "^1.4.14",
-    "@rolldown/core": "workspace:*",
+    "@rolldown/node": "workspace:*",
     "@rollup/plugin-commonjs": "^24.0.1",
     "@rollup/plugin-json": "^6.0.0",
     "@rollup/plugin-node-resolve": "^15.0.1",

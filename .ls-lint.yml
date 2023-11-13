@@ -11,6 +11,6 @@ ignore:
   - '**/dist'
   - packages/rollup-tests/test # Copied from rollup repo
   - 'crates/rolldown/tests/fixtures/**/_test.js' # `_test.js` is a special file, which will be treat as the entry file while executing the build output of fixture.
-  - packages/core/build.config.ts # convention name for using unbuild
+  - packages/node/build.config.ts # convention name for using unbuild
   # FIXME: should not ignore following folders
   - web

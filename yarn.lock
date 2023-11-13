@@ -1468,7 +1468,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rolldown/core@workspace:*, @rolldown/core@workspace:packages/core":
+"@rolldown/core@0.1.4, @rolldown/core@workspace:*, @rolldown/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@rolldown/core@workspace:packages/core"
   dependencies:
@@ -2710,6 +2710,18 @@ __metadata:
   checksum: a1a2430976d9bdab4cd89cb50d27fa86b19e2b41812bf1315923b0cba03371ebca99449809226425dd3bcef20e010db61abdaff549278e111d6480034bebae87
   languageName: node
   linkType: hard
+
+"bench-67b55d@workspace:bench":
+  version: 0.0.0-use.local
+  resolution: "bench-67b55d@workspace:bench"
+  dependencies:
+    "@rolldown/core": 0.1.4
+    benchmark: ^2.1.4
+    benny: ^3.7.1
+    chalk: ^4
+    esbuild: ^0.19.5
+  languageName: unknown
+  linkType: soft
 
 "benchmark@npm:^2.1.4":
   version: 2.1.4
@@ -4267,7 +4279,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"esbuild@npm:^0.19.2":
+"esbuild@npm:^0.19.2, esbuild@npm:^0.19.5":
   version: 0.19.5
   resolution: "esbuild@npm:0.19.5"
   dependencies:

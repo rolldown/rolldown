@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "@rolldown/core": "0.1.4",
+    "benchmark": "^2.1.4",
+    "benny": "^3.7.1",
+    "chalk": "^4",
+    "esbuild": "^0.19.5"
+  }
+}

@@ -10,7 +10,7 @@ use rolldown_oxc::{OxcCompiler, OxcProgram};
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
-use super::{module_task_context::ModuleTaskContext, Msg};
+use super::{module_task_context::ModuleTaskCommonData, Msg};
 use crate::{
   bundler::{
     module::normal_module_builder::NormalModuleBuilder,
@@ -27,7 +27,7 @@ use crate::{
   HookLoadArgs, HookResolveIdArgsOptions, HookTransformArgs,
 };
 pub struct NormalModuleTask<'task, T: FileSystem + Default> {
-  ctx: &'task ModuleTaskContext<'task, T>,
+  ctx: &'task ModuleTaskCommonData<'task, T>,
   module_id: ModuleId,
   path: ResourceId,
   module_type: ModuleType,
@@ -38,7 +38,7 @@ pub struct NormalModuleTask<'task, T: FileSystem + Default> {
 
 impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   pub fn new(
-    ctx: &'task ModuleTaskContext<'task, T>,
+    ctx: &'task ModuleTaskCommonData<'task, T>,
     id: ModuleId,
     is_entry: bool,
     path: ResourceId,
@@ -211,8 +211,8 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       // FIXME(hyf0): should not use `Arc<Resolver>` here
-      let resolver = Arc::clone(self.ctx.resolver);
-      let plugin_driver = Arc::clone(self.ctx.plugin_driver);
+      let resolver = Arc::clone(&self.ctx.resolver);
+      let plugin_driver = Arc::clone(&self.ctx.plugin_driver);
       let importer = self.path.clone();
       let kind = item.kind;
       // let is_external = self.is_external.clone();

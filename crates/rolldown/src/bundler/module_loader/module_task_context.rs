@@ -8,16 +8,16 @@ use crate::{
 use super::Msg;
 
 /// Used to store common data shared between all tasks.
-pub struct ModuleTaskContext<'task, T: FileSystem + Default> {
+pub struct ModuleTaskCommonData<'task, T: FileSystem + Default> {
   pub input_options: &'task InputOptions,
-  pub tx: &'task tokio::sync::mpsc::UnboundedSender<Msg>,
-  pub resolver: &'task SharedResolver<T>,
-  pub fs: &'task dyn FileSystem,
-  pub plugin_driver: &'task SharedPluginDriver,
+  pub tx: tokio::sync::mpsc::UnboundedSender<Msg>,
+  pub resolver: SharedResolver<T>,
+  pub fs: T,
+  pub plugin_driver: SharedPluginDriver,
 }
 
-impl<'task, T: FileSystem + Default> ModuleTaskContext<'task, T> {
-  pub unsafe fn assume_static(&self) -> &'static ModuleTaskContext<'static, T> {
+impl<'task, T: FileSystem + Default> ModuleTaskCommonData<'task, T> {
+  pub unsafe fn assume_static(&self) -> &'static ModuleTaskCommonData<'static, T> {
     std::mem::transmute(self)
   }
 }

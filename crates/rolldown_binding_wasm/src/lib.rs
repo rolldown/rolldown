@@ -1,4 +1,4 @@
-use rolldown_fs::FileSystemVfs;
+use rolldown_fs::MemoryFileSystem;
 use std::panic;
 use std::path::Path;
 
@@ -45,7 +45,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
   panic::set_hook(Box::new(console_error_panic_hook::hook));
   let result =
     tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-      let memory_fs = FileSystemVfs::new(
+      let memory_fs = MemoryFileSystem::new(
         &file_list.iter().map(|item| (&item.path, &item.content)).collect::<Vec<_>>(),
       );
       let input = file_list

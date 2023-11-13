@@ -3,10 +3,10 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use oxc_resolver::{FileMetadata, FileSystem};
+use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem};
 use vfs::{FileSystem as _, MemoryFS};
 
-use crate::FileSystemExt;
+use crate::FileSystem;
 
 pub struct FileSystemVfs {
   // root path
@@ -48,7 +48,7 @@ impl FileSystemVfs {
   }
 }
 
-impl FileSystemExt for FileSystemVfs {
+impl FileSystem for FileSystemVfs {
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     self
       .fs
@@ -80,7 +80,7 @@ impl FileSystemExt for FileSystemVfs {
   }
 }
 
-impl FileSystem for FileSystemVfs {
+impl OxcResolverFileSystem for FileSystemVfs {
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
     let mut buf = String::new();
     self

@@ -1,4 +1,4 @@
-use rolldown_fs::FileSystemExt;
+use rolldown_fs::FileSystem;
 
 use crate::{
   bundler::{options::input_options::InputOptions, plugin_driver::SharedPluginDriver},
@@ -8,15 +8,15 @@ use crate::{
 use super::Msg;
 
 /// Used to store common data shared between all tasks.
-pub struct ModuleTaskContext<'task, T: FileSystemExt + Default> {
+pub struct ModuleTaskContext<'task, T: FileSystem + Default> {
   pub input_options: &'task InputOptions,
   pub tx: &'task tokio::sync::mpsc::UnboundedSender<Msg>,
   pub resolver: &'task SharedResolver<T>,
-  pub fs: &'task dyn FileSystemExt,
+  pub fs: &'task dyn FileSystem,
   pub plugin_driver: &'task SharedPluginDriver,
 }
 
-impl<'task, T: FileSystemExt + Default> ModuleTaskContext<'task, T> {
+impl<'task, T: FileSystem + Default> ModuleTaskContext<'task, T> {
   pub unsafe fn assume_static(&self) -> &'static ModuleTaskContext<'static, T> {
     std::mem::transmute(self)
   }

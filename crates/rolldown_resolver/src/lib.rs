@@ -1,18 +1,18 @@
 use rolldown_common::{ModuleType, RawPath, ResourceId};
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystemExt;
+use rolldown_fs::FileSystem;
 use std::{path::PathBuf, sync::Arc};
 use sugar_path::{AsPath, SugarPathBuf};
 
 use oxc_resolver::{Resolution, ResolveOptions, ResolverGeneric};
 
 #[derive(Debug)]
-pub struct Resolver<T: FileSystemExt + Default> {
+pub struct Resolver<T: FileSystem + Default> {
   cwd: PathBuf,
   inner: ResolverGeneric<Arc<T>>,
 }
 
-impl<F: FileSystemExt + Default> Resolver<F> {
+impl<F: FileSystem + Default> Resolver<F> {
   pub fn with_cwd_and_fs(cwd: PathBuf, preserve_symlinks: bool, fs: Arc<F>) -> Self {
     let resolve_options = ResolveOptions {
       symlinks: !preserve_symlinks,
@@ -41,7 +41,7 @@ pub struct ResolveRet {
   pub module_type: ModuleType,
 }
 
-impl<F: FileSystemExt + Default> Resolver<F> {
+impl<F: FileSystem + Default> Resolver<F> {
   // clippy::option_if_let_else: I think the current code is more readable.
   #[allow(clippy::missing_errors_doc, clippy::option_if_let_else)]
   pub fn resolve(

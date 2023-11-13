@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystemExt;
+use rolldown_fs::FileSystem;
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
@@ -18,13 +18,13 @@ use crate::{
 
 type BuildResult<T> = Result<T, Vec<BuildError>>;
 
-pub struct Bundler<T: FileSystemExt> {
+pub struct Bundler<T: FileSystem> {
   input_options: InputOptions,
   plugin_driver: SharedPluginDriver,
   fs: Arc<T>,
 }
 
-impl<T: FileSystemExt + Default + 'static> Bundler<T> {
+impl<T: FileSystem + Default + 'static> Bundler<T> {
   pub fn new(input_options: InputOptions, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
     Self::with_plugins(input_options, vec![], fs)

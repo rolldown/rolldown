@@ -1,6 +1,6 @@
 use rolldown_common::{ModuleType, RawPath, ResourceId};
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystemExt;
+use rolldown_fs::FileSystem;
 use rolldown_resolver::Resolver;
 
 use crate::{
@@ -15,7 +15,7 @@ pub struct ResolvedRequestInfo {
 }
 
 #[allow(clippy::unused_async)]
-pub async fn resolve_id<T: FileSystemExt + Default>(
+pub async fn resolve_id<T: FileSystem + Default>(
   resolver: &Resolver<T>,
   plugin_driver: &SharedPluginDriver,
   request: &str,

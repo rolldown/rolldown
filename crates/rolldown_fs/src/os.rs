@@ -1,6 +1,6 @@
-use oxc_resolver::{FileMetadata, FileSystem};
+use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem};
 
-use crate::FileSystemExt;
+use crate::FileSystem;
 use std::{
   io,
   path::{Path, PathBuf},
@@ -10,7 +10,7 @@ use std::{
 #[derive(Default)]
 pub struct FileSystemOs;
 
-impl FileSystemExt for FileSystemOs {
+impl FileSystem for FileSystemOs {
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     std::fs::remove_dir_all(path)
   }
@@ -28,7 +28,7 @@ impl FileSystemExt for FileSystemOs {
   }
 }
 
-impl FileSystem for FileSystemOs {
+impl OxcResolverFileSystem for FileSystemOs {
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
     std::fs::read_to_string(path)
   }

@@ -1,7 +1,7 @@
 use oxc::{ast::Visit, span::SourceType};
 use rolldown_common::{ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystemExt;
+use rolldown_fs::FileSystem;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
 use super::{module_task_context::ModuleTaskContext, Msg};
@@ -12,7 +12,7 @@ use crate::bundler::{
   utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
   visitors::scanner::{self, ScanResult},
 };
-pub struct RuntimeNormalModuleTask<'task, T: FileSystemExt + Default> {
+pub struct RuntimeNormalModuleTask<'task, T: FileSystem + Default> {
   ctx: &'task ModuleTaskContext<'task, T>,
   module_id: ModuleId,
   module_type: ModuleType,
@@ -20,7 +20,7 @@ pub struct RuntimeNormalModuleTask<'task, T: FileSystemExt + Default> {
   warnings: Vec<BuildError>,
 }
 
-impl<'task, T: FileSystemExt + Default> RuntimeNormalModuleTask<'task, T> {
+impl<'task, T: FileSystem + Default> RuntimeNormalModuleTask<'task, T> {
   pub fn new(ctx: &'task ModuleTaskContext<'task, T>, id: ModuleId) -> Self {
     Self {
       ctx,

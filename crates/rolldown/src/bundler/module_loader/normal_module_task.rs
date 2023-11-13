@@ -5,7 +5,7 @@ use index_vec::IndexVec;
 use oxc::{ast::Visit, span::SourceType};
 use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystemExt;
+use rolldown_fs::FileSystem;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
@@ -26,7 +26,7 @@ use crate::{
   error::BatchedResult,
   HookLoadArgs, HookResolveIdArgsOptions, HookTransformArgs,
 };
-pub struct NormalModuleTask<'task, T: FileSystemExt + Default> {
+pub struct NormalModuleTask<'task, T: FileSystem + Default> {
   ctx: &'task ModuleTaskContext<'task, T>,
   module_id: ModuleId,
   path: ResourceId,
@@ -36,7 +36,7 @@ pub struct NormalModuleTask<'task, T: FileSystemExt + Default> {
   is_entry: bool,
 }
 
-impl<'task, T: FileSystemExt + Default + 'static> NormalModuleTask<'task, T> {
+impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   pub fn new(
     ctx: &'task ModuleTaskContext<'task, T>,
     id: ModuleId,
@@ -170,7 +170,7 @@ impl<'task, T: FileSystemExt + Default + 'static> NormalModuleTask<'task, T> {
   }
 
   #[allow(clippy::option_if_let_else)]
-  pub(crate) async fn resolve_id<F: FileSystemExt + Default>(
+  pub(crate) async fn resolve_id<F: FileSystem + Default>(
     resolver: &Resolver<F>,
     plugin_driver: &SharedPluginDriver,
     importer: &ResourceId,

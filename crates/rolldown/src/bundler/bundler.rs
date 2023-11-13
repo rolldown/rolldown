@@ -36,7 +36,7 @@ impl<T: FileSystemExt + Default + 'static> Bundler<T> {
     let dir =
       self.input_options.cwd.as_path().join(&output_options.dir).to_string_lossy().to_string();
 
-    let assets = self.build(output_options, Arc::clone(&self.fs)).await?;
+    let assets = self.bundle_up(output_options, Arc::clone(&self.fs)).await?;
 
     self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
@@ -61,10 +61,14 @@ impl<T: FileSystemExt + Default + 'static> Bundler<T> {
   }
 
   pub async fn generate(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
-    self.build(output_options, Arc::clone(&self.fs)).await
+    self.bundle_up(output_options, Arc::clone(&self.fs)).await
   }
 
-  async fn build(&mut self, output_options: OutputOptions, fs: Arc<T>) -> BuildResult<Vec<Output>> {
+  async fn bundle_up(
+    &mut self,
+    output_options: OutputOptions,
+    fs: Arc<T>,
+  ) -> BuildResult<Vec<Output>> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
 

@@ -35,6 +35,6 @@ bench:
 
 # Use `just wasm-build release` for better performance but also it will cost more time.
 wasm-build mode="dev":
-    cd crates/rolldown_wasm && wasm-pack build --{{ mode }} --target web
+    cd crates/rolldown_binding_wasm && wasm-pack build --{{ mode }} --target web
     -rm -r ./web/wasm
-    mv crates/rolldown_wasm/pkg ./web/wasm
+    mv crates/rolldown_binding_wasm/pkg ./web/wasm

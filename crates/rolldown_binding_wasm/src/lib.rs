@@ -1,5 +1,7 @@
 use rolldown_fs::FileSystemVfs;
 use std::panic;
+use std::path;
+use std::path::Path;
 
 use wasm_bindgen::prelude::*;
 
@@ -8,13 +10,14 @@ use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
 pub struct FileItem {
   path: String,
   content: String,
+  is_entry: bool,
 }
 
 #[wasm_bindgen]
 impl FileItem {
   #[wasm_bindgen(constructor)]
-  pub fn new(path: String, content: String) -> Self {
-    Self { path, content }
+  pub fn new(path: String, content: String, is_entry: bool) -> Self {
+    Self { path, content, is_entry }
   }
 }
 
@@ -46,17 +49,21 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
       let memory_fs = FileSystemVfs::new(
         &file_list.iter().map(|item| (&item.path, &item.content)).collect::<Vec<_>>(),
       );
-      let mut bundler = Bundler::with_plugins_and_fs(
-        InputOptions {
-          input: vec![InputItem {
-            name: Some("basic".to_string()),
-            import: "./index.js".to_string(),
-          }],
-          cwd: "/".into(),
-        },
-        vec![],
-        memory_fs,
-      );
+      let input = file_list
+        .into_iter()
+        .filter_map(|item| {
+          if item.is_entry {
+            let p = Path::new(&item.path);
+            let name =
+              p.file_stem().map(|stem| stem.to_string_lossy().replace(".", "_").to_string());
+            Some(InputItem { name, import: item.path })
+          } else {
+            None
+          }
+        })
+        .collect::<Vec<_>>();
+      let mut bundler =
+        Bundler::with_plugins_and_fs(InputOptions { input, cwd: "/".into() }, vec![], memory_fs);
 
       match bundler.write(OutputOptions::default()).await {
         Ok(assets) => assets

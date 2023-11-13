@@ -27,7 +27,7 @@
     "lib": ["dom", "DOM.Iterable", "ES2019", "ES2020", "esnext"],
     "baseUrl": "./packages",
     "paths": {
-      "@rolldown/core": ["./core/src/index.ts"]
+      "@rolldown/node": ["./node/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "target", "dist", "crates"]

@@ -1,4 +1,4 @@
-const rolldown = require('@rolldown/core')
+const rolldown = require('@rolldown/node')
 
 async function rolldownBundle(input) {
   const bundler = await rolldown.rolldown({

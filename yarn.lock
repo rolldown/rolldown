@@ -1468,19 +1468,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rolldown/core@0.1.4, @rolldown/core@workspace:*, @rolldown/core@workspace:packages/core":
-  version: 0.0.0-use.local
-  resolution: "@rolldown/core@workspace:packages/core"
-  dependencies:
-    "@rolldown/node-binding": "workspace:*"
-    "@types/node": ^18.14.0
-    rollup: ^3.17.2
-    type-fest: ^3.6.0
-    typescript: ^5.0.0
-    unbuild: ^2.0.0
-  languageName: unknown
-  linkType: soft
-
 "@rolldown/node-binding@workspace:*, @rolldown/node-binding@workspace:crates/rolldown_binding":
   version: 0.0.0-use.local
   resolution: "@rolldown/node-binding@workspace:crates/rolldown_binding"
@@ -1502,6 +1489,19 @@ __metadata:
     npm-run-all: ^4.1.5
     prettier: ^2.8.1
     typescript: ^5.0.0
+  languageName: unknown
+  linkType: soft
+
+"@rolldown/node@workspace:*, @rolldown/node@workspace:packages/node":
+  version: 0.0.0-use.local
+  resolution: "@rolldown/node@workspace:packages/node"
+  dependencies:
+    "@rolldown/node-binding": "workspace:*"
+    "@types/node": ^18.14.0
+    rollup: ^3.17.2
+    type-fest: ^3.6.0
+    typescript: ^5.0.0
+    unbuild: ^2.0.0
   languageName: unknown
   linkType: soft
 
@@ -2715,7 +2715,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "bench-67b55d@workspace:bench"
   dependencies:
-    "@rolldown/core": 0.1.4
+    "@rolldown/node": "workspace:*"
     benchmark: ^2.1.4
     benny: ^3.7.1
     chalk: ^4
@@ -9545,7 +9545,7 @@ __metadata:
   resolution: "rollup-tests@workspace:packages/rollup-tests"
   dependencies:
     "@jridgewell/sourcemap-codec": ^1.4.14
-    "@rolldown/core": "workspace:*"
+    "@rolldown/node": "workspace:*"
     "@rollup/plugin-commonjs": ^24.0.1
     "@rollup/plugin-json": ^6.0.0
     "@rollup/plugin-node-resolve": ^15.0.1

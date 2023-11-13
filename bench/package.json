@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "@rolldown/core": "0.1.4",
+    "@rolldown/node": "workspace:*",
     "benchmark": "^2.1.4",
     "benny": "^3.7.1",
     "chalk": "^4",

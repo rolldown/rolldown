@@ -1,1 +1,1 @@
-import '../../../../temp/three.js/src/Three.js'
+export * as Three from '../../../../temp/three.js/src/Three.js'

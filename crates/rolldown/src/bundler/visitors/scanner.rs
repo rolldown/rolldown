@@ -11,8 +11,8 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalExport, LocalOrReExport, ModuleId,
-  ModuleType, NamedImport, ReExport, Specifier, StmtInfo, StmtInfos, SymbolRef,
+  ExportsKind, ImportKind, ImportRecordId, LocalExport, LocalOrReExport, ModuleId, ModuleType,
+  NamedImport, RawImportRecord, ReExport, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::{BindingIdentifierExt, BindingPatternExt};
 use rustc_hash::FxHashMap;
@@ -25,7 +25,7 @@ pub struct ScanResult {
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: StmtInfos,
-  pub import_records: IndexVec<ImportRecordId, ImportRecord>,
+  pub import_records: IndexVec<ImportRecordId, RawImportRecord>,
   pub star_exports: Vec<ImportRecordId>,
   pub export_default_symbol_id: Option<SymbolId>,
   pub imports: FxHashMap<Span, ImportRecordId>,
@@ -113,7 +113,7 @@ impl<'a> Scanner<'a> {
   }
 
   fn add_import_record(&mut self, module_request: &Atom, kind: ImportKind) -> ImportRecordId {
-    let rec = ImportRecord::new(module_request.clone(), kind);
+    let rec = RawImportRecord::new(module_request.clone(), kind);
     self.result.import_records.push(rec)
   }
 

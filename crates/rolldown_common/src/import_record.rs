@@ -32,6 +32,31 @@ impl Display for ImportKind {
 }
 
 #[derive(Debug)]
+pub struct RawImportRecord {
+  // Module Request
+  pub module_request: Atom,
+  // export * as ns from '...'
+  // import * as ns from '...'
+  pub is_import_namespace: bool,
+  pub kind: ImportKind,
+}
+
+impl RawImportRecord {
+  pub fn new(specifier: Atom, kind: ImportKind) -> Self {
+    Self { module_request: specifier, is_import_namespace: false, kind }
+  }
+
+  pub fn into_import_record(self, resolved_module: ModuleId) -> ImportRecord {
+    ImportRecord {
+      module_request: self.module_request,
+      resolved_module,
+      is_import_namespace: self.is_import_namespace,
+      kind: self.kind,
+    }
+  }
+}
+
+#[derive(Debug)]
 pub struct ImportRecord {
   // Module Request
   pub module_request: Atom,
@@ -40,15 +65,4 @@ pub struct ImportRecord {
   // import * as ns from '...'
   pub is_import_namespace: bool,
   pub kind: ImportKind,
-}
-
-impl ImportRecord {
-  pub fn new(specifier: Atom, kind: ImportKind) -> Self {
-    Self {
-      module_request: specifier,
-      resolved_module: ModuleId::default(),
-      is_import_namespace: false,
-      kind,
-    }
-  }
 }

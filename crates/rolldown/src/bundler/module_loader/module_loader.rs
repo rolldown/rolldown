@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
+use rolldown_common::{ImportKind, ImportRecordId, ModuleId, RawPath, ResourceId};
 use rolldown_fs::FileSystem;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -135,22 +135,28 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
       };
       match msg {
         Msg::NormalModuleDone(task_result) => {
-          let NormalModuleTaskResult { module_id, ast_symbol, resolved_deps, mut builder, .. } =
-            task_result;
+          let NormalModuleTaskResult {
+            module_id,
+            ast_symbol,
+            resolved_deps,
+            mut builder,
+            raw_import_records,
+            ..
+          } = task_result;
 
-          let import_records = builder.import_records.as_mut().unwrap();
-
-          resolved_deps.into_iter_enumerated().for_each(|(import_record_idx, info)| {
-            let id = self.try_spawn_new_task(&info, false, &mut symbols);
-            let import_record = &mut import_records[import_record_idx];
-            import_record.resolved_module = id;
-
-            // dynamic import as extra entries if enable code splitting
-            if import_record.kind == ImportKind::DynamicImport {
-              dynamic_entries.insert((Some(info.path.unique(&self.input_options.cwd)), id));
-            }
-          });
-
+          let import_records = raw_import_records
+            .into_iter()
+            .zip(resolved_deps.into_iter())
+            .map(|(raw_rec, info)| {
+              let id = self.try_spawn_new_task(&info, false, &mut symbols);
+              // dynamic import as extra entries if enable code splitting
+              if raw_rec.kind == ImportKind::DynamicImport {
+                dynamic_entries.insert((Some(info.path.unique(&self.input_options.cwd)), id));
+              }
+              raw_rec.into_import_record(id)
+            })
+            .collect::<IndexVec<ImportRecordId, _>>();
+          builder.import_records = Some(import_records);
           self.ctx.intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
 
           symbols.add_ast_symbol(module_id, ast_symbol);

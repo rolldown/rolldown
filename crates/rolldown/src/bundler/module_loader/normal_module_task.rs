@@ -3,7 +3,9 @@ use std::{path::Path, sync::Arc};
 use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::{ast::Visit, span::SourceType};
-use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ModuleType, ResourceId, SymbolRef};
+use rolldown_common::{
+  ImportRecordId, ModuleId, ModuleType, RawImportRecord, ResourceId, SymbolRef,
+};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
@@ -102,7 +104,6 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     builder.named_imports = Some(named_imports);
     builder.named_exports = Some(named_exports);
     builder.stmt_infos = Some(stmt_infos);
-    builder.import_records = Some(import_records);
     builder.imports = Some(imports);
     builder.star_exports = Some(star_exports);
     builder.default_export_symbol = export_default_symbol_id;
@@ -121,6 +122,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
         warnings: self.warnings,
         ast_symbol,
         builder,
+        raw_import_records: import_records,
       }))
       .unwrap();
     Ok(())
@@ -223,7 +225,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
 
   async fn resolve_dependencies(
     &mut self,
-    dependencies: &IndexVec<ImportRecordId, ImportRecord>,
+    dependencies: &IndexVec<ImportRecordId, RawImportRecord>,
   ) -> BatchedResult<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();

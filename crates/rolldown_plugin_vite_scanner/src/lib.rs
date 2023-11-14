@@ -1,11 +1,13 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rolldown::{
-  HookLoadArgs, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn,
-  Plugin, PluginContext,
+  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
+  HookResolveIdReturn, Plugin, PluginContext,
 };
-use std::borrow::Cow;
-
+use rolldown_fs::FileSystem;
+use std::{borrow::Cow, fmt::Debug, path::PathBuf};
+use util::extract_html_module_scripts;
+mod util;
 static HTTP_URL_REGEX: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^(https?:)?\/\/").expect("Init HTTP_URL_REGEX failed"));
 static DATA_URL_REGEX: Lazy<Regex> =
@@ -29,15 +31,19 @@ static HTML_TYPE_REGEX: Lazy<Regex> = Lazy::new(|| {
   Regex::new(r"\.(html|vue|svelte|astro|imba)$").expect("Init HTML_TYPE_REGEX failed")
 });
 
-#[derive(Debug)]
-pub struct ViteScannerPlugin {
+pub struct ViteScannerPlugin<T: FileSystem + Default> {
   pub entries: Vec<String>,
+  pub fs: T,
 }
 
-impl ViteScannerPlugin {}
+impl<T: FileSystem + 'static + Default> Debug for ViteScannerPlugin<T> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("ViteScannerPlugin").field("entries", &self.entries).finish()
+  }
+}
 
 #[async_trait::async_trait]
-impl Plugin for ViteScannerPlugin {
+impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
   fn name(&self) -> Cow<'static, str> {
     "rolldown_plugin_vite_scanner".into()
   }
@@ -95,7 +101,11 @@ impl Plugin for ViteScannerPlugin {
 
     // extract scripts inside HTML-like files and treat it as a js module
     if HTML_TYPE_REGEX.is_match(id) {
-      // TODO
+      let path = PathBuf::from(id);
+      let content = self.fs.read_to_string(&path)?;
+      // TODO store scripts
+      let (content, _) = extract_html_module_scripts(content, path);
+      return Ok(Some(HookLoadOutput { code: content }));
     }
 
     Ok(None)

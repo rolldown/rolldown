@@ -1596,6 +1596,8 @@ dependencies = [
  "regex",
  "rolldown",
  "rolldown_error",
+ "rolldown_fs",
+ "rustc-hash",
 ]
 
 [[package]]

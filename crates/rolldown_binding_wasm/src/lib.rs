@@ -60,8 +60,11 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
           }
         })
         .collect::<Vec<_>>();
-      let mut bundler =
-        Bundler::with_plugins_and_fs(InputOptions { input, cwd: "/".into() }, vec![], memory_fs);
+      let mut bundler = Bundler::with_plugins_and_fs(
+        InputOptions { input, cwd: "/".into(), ..Default::default() },
+        vec![],
+        memory_fs,
+      );
 
       match bundler.write(OutputOptions::default()).await {
         Ok(assets) => assets

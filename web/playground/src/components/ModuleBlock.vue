@@ -70,7 +70,11 @@ onMounted(() => {
       </button>
     </div>
 
-    <CodeBlock :code="code" @code="$emit('code', $event)" :readonly="readonly" />
+    <CodeBlock
+      :code="code"
+      @code="$emit('code', $event)"
+      :readonly="readonly"
+    />
   </div>
 </template>
 

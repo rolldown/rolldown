@@ -16,8 +16,8 @@ let props = defineProps({
   code: String,
   readonly: {
     type: Boolean,
-    required: false
-  }
+    required: false,
+  },
 })
 
 const extensions = [javascript(), oneDark]
@@ -50,6 +50,15 @@ const handleReady = (payload: Payload) => {
 // }
 </script>
 <template>
-  <codemirror :model-value="code" placeholder="Code goes here..." :style="{ height: '400px' }" :autofocus="false"
-    :indent-with-tab="true" :tab-size="2" :extensions="extensions" @ready="handleReady" @change="$emit('code', $event)" />
+  <codemirror
+    :model-value="code"
+    placeholder="Code goes here..."
+    :style="{ height: '400px' }"
+    :autofocus="false"
+    :indent-with-tab="true"
+    :tab-size="2"
+    :extensions="extensions"
+    @ready="handleReady"
+    @change="$emit('code', $event)"
+  />
 </template>

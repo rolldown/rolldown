@@ -12,6 +12,10 @@ use crate::file_system::FileSystem;
 pub struct OsFileSystem;
 
 impl FileSystem for OsFileSystem {
+  fn share(&self) -> Self {
+    Self
+  }
+
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     std::fs::remove_dir_all(path)
   }

@@ -31,6 +31,7 @@ export interface InputItem {
   import: string
 }
 export interface InputOptions {
+  external?: (source: string, importer?: string, isResolved: boolean) => boolean
   input: Array<InputItem>
   plugins: Array<PluginOptions>
   cwd: string

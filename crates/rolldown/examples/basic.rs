@@ -10,6 +10,7 @@ async fn main() {
   let mut bundler = Bundler::new(InputOptions {
     input: vec![InputItem { name: Some("basic".to_string()), import: "./index.js".to_string() }],
     cwd,
+    ..Default::default()
   });
 
   let outputs = bundler.write(Default::default()).await.unwrap();

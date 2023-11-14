@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use index_vec::IndexVec;
 use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
 use rolldown_fs::FileSystem;
@@ -10,7 +12,7 @@ use super::Msg;
 use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::{Module, ModuleVec};
 use crate::bundler::module_loader::module_task_context::ModuleTaskCommonData;
-use crate::bundler::options::input_options::InputOptions;
+use crate::bundler::options::input_options::SharedInputOptions;
 use crate::bundler::plugin_driver::SharedPluginDriver;
 use crate::bundler::runtime::{Runtime, RUNTIME_PATH};
 use crate::bundler::utils::ast_symbol::AstSymbol;
@@ -19,10 +21,10 @@ use crate::bundler::utils::symbols::Symbols;
 use crate::error::BatchedResult;
 use crate::SharedResolver;
 
-pub struct ModuleLoader<'a, T: FileSystem + Default> {
+pub struct ModuleLoader<T: FileSystem + Default> {
   ctx: ModuleLoaderContext,
-  input_options: &'a InputOptions,
-  common_data: ModuleTaskCommonData<'a, T>,
+  input_options: SharedInputOptions,
+  common_data: ModuleTaskCommonData<T>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
 }
 
@@ -33,16 +35,22 @@ pub struct ModuleLoaderContext {
   intermediate_modules: IndexVec<ModuleId, Option<Module>>,
 }
 
-impl<'a, T: FileSystem + 'static + Default> ModuleLoader<'a, T> {
+impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
   pub fn new(
-    input_options: &'a InputOptions,
+    input_options: SharedInputOptions,
     plugin_driver: SharedPluginDriver,
     fs: T,
     resolver: SharedResolver<T>,
   ) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
 
-    let common_data = ModuleTaskCommonData { input_options, tx, resolver, fs, plugin_driver };
+    let common_data = ModuleTaskCommonData {
+      input_options: Arc::clone(&input_options),
+      tx,
+      resolver,
+      fs,
+      plugin_driver,
+    };
 
     Self { common_data, rx, input_options, ctx: ModuleLoaderContext::default() }
   }

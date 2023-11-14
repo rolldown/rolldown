@@ -15,6 +15,7 @@ use crate::{
   bundler::{
     module::normal_module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
+    options::input_options::SharedInputOptions,
     plugin_driver::SharedPluginDriver,
     utils::{
       ast_scope::AstScope,
@@ -27,7 +28,7 @@ use crate::{
   HookLoadArgs, HookResolveIdArgsOptions, HookTransformArgs,
 };
 pub struct NormalModuleTask<'task, T: FileSystem + Default> {
-  ctx: &'task ModuleTaskCommonData<'task, T>,
+  ctx: &'task ModuleTaskCommonData<T>,
   module_id: ModuleId,
   path: ResourceId,
   module_type: ModuleType,
@@ -38,7 +39,7 @@ pub struct NormalModuleTask<'task, T: FileSystem + Default> {
 
 impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   pub fn new(
-    ctx: &'task ModuleTaskCommonData<'task, T>,
+    ctx: &'task ModuleTaskCommonData<T>,
     id: ModuleId,
     is_entry: bool,
     path: ResourceId,
@@ -171,23 +172,40 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
 
   #[allow(clippy::option_if_let_else)]
   pub(crate) async fn resolve_id<F: FileSystem + Default>(
+    input_options: &SharedInputOptions,
     resolver: &Resolver<F>,
     plugin_driver: &SharedPluginDriver,
     importer: &ResourceId,
     specifier: &str,
     options: HookResolveIdArgsOptions,
   ) -> BatchedResult<ResolvedRequestInfo> {
-    // let is_marked_as_external = is_external(specifier, Some(importer.id()), false).await?;
-
-    // if is_marked_as_external {
-    //     return Ok(ModuleId::new(specifier, true));
-    // }
+    // Check external with unresolved path
+    if input_options
+      .external
+      .call(specifier.to_string(), Some(importer.prettify().to_string()), false)
+      .await?
+    {
+      return Ok(ResolvedRequestInfo {
+        path: specifier.to_string().into(),
+        module_type: ModuleType::Unknown,
+        is_external: true,
+      });
+    }
 
     let resolved_id =
       resolve_id(resolver, plugin_driver, specifier, Some(importer), options, false).await?;
 
     match resolved_id {
-      Some(info) => Ok(info),
+      Some(mut info) => {
+        if !info.is_external {
+          // Check external with resolved path
+          info.is_external = input_options
+            .external
+            .call(specifier.to_string(), Some(importer.prettify().to_string()), true)
+            .await?;
+        }
+        Ok(info)
+      }
       None => {
         Ok(ResolvedRequestInfo {
           path: specifier.to_string().into(),
@@ -210,15 +228,16 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   ) -> BatchedResult<Vec<(ImportRecordId, ResolvedRequestInfo)>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
+      let input_options = Arc::clone(&self.ctx.input_options);
       // FIXME(hyf0): should not use `Arc<Resolver>` here
       let resolver = Arc::clone(&self.ctx.resolver);
       let plugin_driver = Arc::clone(&self.ctx.plugin_driver);
       let importer = self.path.clone();
       let kind = item.kind;
-      // let is_external = self.is_external.clone();
       // let on_warn = self.input_options.on_warn.clone();
       tokio::spawn(async move {
         Self::resolve_id(
+          &input_options,
           &resolver,
           &plugin_driver,
           &importer,

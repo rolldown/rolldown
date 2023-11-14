@@ -4,7 +4,7 @@ use std::{
   process::Command,
 };
 
-use rolldown::{Bundler, FileNameTemplate, InputOptions, Output, OutputOptions};
+use rolldown::{Bundler, External, FileNameTemplate, InputOptions, Output, OutputOptions};
 use rolldown_error::BuildError;
 use rolldown_testing::TestConfig;
 
@@ -101,6 +101,7 @@ impl Fixture {
         })
         .unwrap(),
       cwd: fixture_path.to_path_buf(),
+      external: test_config.input.external.map(|e| External::ArrayString(e)).unwrap_or_default(),
     });
 
     if fixture_path.join("dist").is_dir() {

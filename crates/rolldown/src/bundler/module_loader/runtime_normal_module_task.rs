@@ -13,15 +13,15 @@ use crate::bundler::{
   visitors::scanner::{self, ScanResult},
 };
 pub struct RuntimeNormalModuleTask<'task, T: FileSystem + Default> {
-  common_data: &'task ModuleTaskCommonData<'task, T>,
+  common_data: &'task ModuleTaskCommonData<T>,
   module_id: ModuleId,
   module_type: ModuleType,
   errors: Vec<BuildError>,
   warnings: Vec<BuildError>,
 }
 
-impl<'task, T: FileSystem + Default> RuntimeNormalModuleTask<'task, T> {
-  pub fn new(common_data: &'task ModuleTaskCommonData<'task, T>, id: ModuleId) -> Self {
+impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T> {
+  pub fn new(common_data: &'task ModuleTaskCommonData<T>, id: ModuleId) -> Self {
     Self {
       common_data,
       module_id: id,

@@ -1628,6 +1628,10 @@ dependencies = [
 [[package]]
 name = "rolldown_vite_scanner_plugin"
 version = "0.1.0"
+dependencies = [
+ "rolldown",
+ "rolldown_error",
+]
 
 [[package]]
 name = "rolldown_wasm_binding"

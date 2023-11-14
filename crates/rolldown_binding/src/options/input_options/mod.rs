@@ -1,4 +1,4 @@
-use std::{fmt::Debug, path::PathBuf, sync::Arc};
+use std::{fmt::Debug, path::PathBuf};
 mod plugin;
 mod plugin_adapter;
 use crate::utils::{napi_error_ext::NapiErrorExt, JsCallback};
@@ -83,10 +83,10 @@ impl From<InputOptions>
       match ExternalFn::new(&js_fn) {
         Err(e) => return (Err(e), Ok(vec![])),
         Ok(external_fn) => {
-          let cb = Arc::new(external_fn);
+          let cb = Box::new(external_fn);
           rolldown::External::Fn(Box::new(move |source, importer, is_resolved| {
-            let ts_fn = Arc::clone(&cb);
-            Box::new(async move {
+            let ts_fn = Box::clone(&cb);
+            Box::pin(async move {
               ts_fn
                 .call_async((source, importer, is_resolved))
                 .await

@@ -7,6 +7,7 @@ use sugar_path::AsPath;
 
 use super::{
   bundle::output::Output,
+  options::input_options::SharedInputOptions,
   plugin_driver::{PluginDriver, SharedPluginDriver},
   stages::link_stage::{LinkStage, LinkStageOutput},
 };
@@ -20,7 +21,7 @@ use crate::{
 type BuildResult<T> = Result<T, Vec<BuildError>>;
 
 pub struct Bundler<T: FileSystem + Default> {
-  input_options: InputOptions,
+  input_options: SharedInputOptions,
   plugin_driver: SharedPluginDriver,
   fs: T,
   resolver: SharedResolver<T>,
@@ -42,7 +43,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     Self {
       resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, fs.share()).into(),
       plugin_driver: Arc::new(PluginDriver::new(plugins)),
-      input_options,
+      input_options: Arc::new(input_options),
       fs,
     }
   }
@@ -102,7 +103,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
 
   async fn build_inner(&mut self) -> BatchedResult<LinkStageOutput> {
     let build_info = ScanStage::new(
-      &self.input_options,
+      Arc::clone(&self.input_options),
       Arc::clone(&self.plugin_driver),
       self.fs.share(),
       Arc::clone(&self.resolver),

@@ -9,6 +9,7 @@ use crate::{
   bundler::{
     module::ModuleVec,
     module_loader::ModuleLoader,
+    options::input_options::SharedInputOptions,
     plugin_driver::SharedPluginDriver,
     runtime::Runtime,
     utils::{
@@ -17,11 +18,11 @@ use crate::{
     },
   },
   error::{BatchedErrors, BatchedResult},
-  HookResolveIdArgsOptions, InputOptions, SharedResolver,
+  HookResolveIdArgsOptions, SharedResolver,
 };
 
-pub struct ScanStage<'me, Fs: FileSystem + Default> {
-  input_options: &'me InputOptions,
+pub struct ScanStage<Fs: FileSystem + Default> {
+  input_options: SharedInputOptions,
   plugin_driver: SharedPluginDriver,
   fs: Fs,
   resolver: SharedResolver<Fs>,
@@ -35,9 +36,9 @@ pub struct ScanStageOutput {
   pub runtime: Runtime,
 }
 
-impl<'me, Fs: FileSystem + Default + 'static> ScanStage<'me, Fs> {
+impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
   pub fn new(
-    input_options: &'me InputOptions,
+    input_options: SharedInputOptions,
     plugin_driver: SharedPluginDriver,
     fs: Fs,
     resolver: SharedResolver<Fs>,
@@ -93,7 +94,7 @@ impl<'me, Fs: FileSystem + Default + 'static> ScanStage<'me, Fs> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
     let mut module_loader = ModuleLoader::new(
-      self.input_options,
+      Arc::clone(&self.input_options),
       Arc::clone(&self.plugin_driver),
       self.fs.share(),
       Arc::clone(&self.resolver),

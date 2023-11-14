@@ -6,21 +6,21 @@ use std::{
 use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem};
 use vfs::{FileSystem as _, MemoryFS};
 
-use crate::FileSystem;
+use crate::file_system::FileSystem;
 
-pub struct FileSystemVfs {
+pub struct MemoryFileSystem {
   // root path
   fs: MemoryFS,
 }
 
-impl Default for FileSystemVfs {
+impl Default for MemoryFileSystem {
   fn default() -> Self {
     let fs = vfs::MemoryFS::new();
     Self { fs }
   }
 }
 
-impl FileSystemVfs {
+impl MemoryFileSystem {
   /// # Panics
   ///
   /// * Fails to create directory
@@ -48,7 +48,7 @@ impl FileSystemVfs {
   }
 }
 
-impl FileSystem for FileSystemVfs {
+impl FileSystem for MemoryFileSystem {
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     self
       .fs
@@ -80,7 +80,7 @@ impl FileSystem for FileSystemVfs {
   }
 }
 
-impl OxcResolverFileSystem for FileSystemVfs {
+impl OxcResolverFileSystem for MemoryFileSystem {
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
     let mut buf = String::new();
     self

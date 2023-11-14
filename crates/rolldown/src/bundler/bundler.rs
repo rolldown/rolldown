@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_error::BuildError;
-use rolldown_fs::{FileSystem, FileSystemOs};
+use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
@@ -25,13 +25,13 @@ pub struct Bundler<T: FileSystem> {
   fs: Arc<T>,
 }
 
-impl Bundler<FileSystemOs> {
+impl Bundler<OsFileSystem> {
   pub fn new(input_options: InputOptions) -> Self {
     Self::with_plugins(input_options, vec![])
   }
 
   pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>) -> Self {
-    Self::with_plugins_and_fs(input_options, plugins, FileSystemOs)
+    Self::with_plugins_and_fs(input_options, plugins, OsFileSystem)
   }
 }
 

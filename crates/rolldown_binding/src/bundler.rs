@@ -1,7 +1,7 @@
 use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
-use rolldown_fs::FileSystemOs;
+use rolldown_fs::OsFileSystem;
 use tracing::instrument;
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
 
 #[napi]
 pub struct Bundler {
-  inner: Mutex<NativeBundler<FileSystemOs>>,
+  inner: Mutex<NativeBundler<OsFileSystem>>,
 }
 
 #[napi]
@@ -38,7 +38,7 @@ impl Bundler {
     NAPI_ENV.set(&env, || {
       let (opts, plugins) = input_opts.into();
 
-      Ok(Self { inner: Mutex::new(NativeBundler::<FileSystemOs>::with_plugins(opts, plugins?)) })
+      Ok(Self { inner: Mutex::new(NativeBundler::<OsFileSystem>::with_plugins(opts, plugins?)) })
     })
   }
 

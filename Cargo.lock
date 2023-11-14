@@ -1578,7 +1578,6 @@ dependencies = [
 name = "rolldown_fs"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "dunce",
  "oxc_resolver",
  "vfs",

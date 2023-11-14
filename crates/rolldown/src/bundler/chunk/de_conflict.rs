@@ -1,10 +1,12 @@
 use std::borrow::Cow;
 
 use super::chunk::Chunk;
-use crate::bundler::{graph::graph::Graph, module::Module, utils::renamer::Renamer};
+use crate::bundler::{
+  module::Module, stages::link_stage::LinkStageOutput, utils::renamer::Renamer,
+};
 
 impl Chunk {
-  pub fn de_conflict(&mut self, graph: &Graph) {
+  pub fn de_conflict(&mut self, graph: &LinkStageOutput) {
     let mut renamer = Renamer::new(&graph.symbols, graph.modules.len());
 
     self

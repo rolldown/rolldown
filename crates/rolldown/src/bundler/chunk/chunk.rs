@@ -7,9 +7,9 @@ use crate::{
   bundler::{
     bundle::output::RenderedModule,
     chunk_graph::ChunkGraph,
-    graph::graph::Graph,
     module::ModuleRenderContext,
     options::{file_name_template::FileNameRenderOptions, output_options::OutputOptions},
+    stages::link_stage::LinkStageOutput,
     utils::bitset::BitSet,
   },
   error::BatchedResult,
@@ -64,7 +64,7 @@ impl Chunk {
   #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
   pub fn render(
     &self,
-    graph: &Graph,
+    graph: &LinkStageOutput,
     chunk_graph: &ChunkGraph,
     output_options: &OutputOptions,
   ) -> BatchedResult<(String, FxHashMap<String, RenderedModule>)> {

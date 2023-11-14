@@ -2,14 +2,14 @@ use oxc::span::Atom;
 use rolldown_common::{SymbolRef, WrapKind};
 use string_wizard::MagicString;
 
-use crate::{bundler::graph::graph::Graph, OutputFormat, OutputOptions};
+use crate::{bundler::stages::link_stage::LinkStageOutput, OutputFormat, OutputOptions};
 
 use super::chunk::Chunk;
 
 impl Chunk {
   pub fn render_exports(
     &self,
-    graph: &Graph,
+    graph: &LinkStageOutput,
     output_options: &OutputOptions,
   ) -> Option<MagicString<'static>> {
     if let Some(entry) = self.entry_module {
@@ -52,7 +52,7 @@ impl Chunk {
     Some(s)
   }
 
-  fn get_export_items(&self, graph: &Graph) -> Vec<(Atom, SymbolRef)> {
+  fn get_export_items(&self, graph: &LinkStageOutput) -> Vec<(Atom, SymbolRef)> {
     self.entry_module.map_or_else(
       || {
         self
@@ -71,7 +71,11 @@ impl Chunk {
     )
   }
 
-  pub fn get_export_names(&self, graph: &Graph, output_options: &OutputOptions) -> Vec<String> {
+  pub fn get_export_names(
+    &self,
+    graph: &LinkStageOutput,
+    output_options: &OutputOptions,
+  ) -> Vec<String> {
     if let Some(entry) = self.entry_module {
       let linking_info = &graph.linking_infos[entry];
       if matches!(linking_info.wrap_kind, WrapKind::Cjs) {

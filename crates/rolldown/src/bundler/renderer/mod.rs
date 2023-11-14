@@ -17,13 +17,14 @@ use string_wizard::MagicString;
 
 use super::{
   chunk_graph::ChunkGraph,
-  graph::{graph::Graph, linker_info::LinkingInfo},
+  linker::linker_info::LinkingInfo,
   module::{Module, NormalModule},
+  stages::link_stage::LinkStageOutput,
 };
 
 #[derive(Debug)]
 pub struct AstRenderContext<'r> {
-  pub graph: &'r Graph,
+  pub graph: &'r LinkStageOutput,
   pub module: &'r NormalModule,
   pub linking_info: &'r LinkingInfo,
   pub canonical_names: &'r FxHashMap<SymbolRef, Atom>,
@@ -38,7 +39,7 @@ pub struct AstRenderContext<'r> {
 impl<'r> AstRenderContext<'r> {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
-    graph: &'r Graph,
+    graph: &'r LinkStageOutput,
     canonical_names: &'r FxHashMap<SymbolRef, Atom>,
     source: &'r mut MagicString<'static>,
     chunk_graph: &'r ChunkGraph,

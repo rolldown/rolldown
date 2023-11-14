@@ -14,12 +14,9 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use string_wizard::MagicString;
 
 use crate::bundler::{
-  graph::{
-    linker_info::{LinkingInfo, LinkingInfoVec},
-    symbols::Symbols,
-  },
+  linker::linker_info::{LinkingInfo, LinkingInfoVec},
   renderer::{AstRenderContext, AstRenderer, RenderKind},
-  utils::ast_scope::AstScope,
+  utils::{ast_scope::AstScope, symbols::Symbols},
 };
 
 use super::{Module, ModuleRenderContext, ModuleVec};

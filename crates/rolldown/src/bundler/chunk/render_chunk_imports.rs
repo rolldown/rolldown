@@ -1,14 +1,14 @@
 use rolldown_common::Specifier;
 use string_wizard::MagicString;
 
-use crate::bundler::{chunk_graph::ChunkGraph, graph::graph::Graph};
+use crate::bundler::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
 use super::chunk::Chunk;
 
 impl Chunk {
   pub fn render_imports_for_esm(
     &self,
-    graph: &Graph,
+    graph: &LinkStageOutput,
     chunk_graph: &ChunkGraph,
   ) -> MagicString<'static> {
     let mut s = MagicString::new("");

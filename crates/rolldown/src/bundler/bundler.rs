@@ -7,8 +7,8 @@ use sugar_path::AsPath;
 
 use super::{
   bundle::output::Output,
-  graph::graph::Graph,
   plugin_driver::{PluginDriver, SharedPluginDriver},
+  stages::link_stage::{LinkStage, LinkStageOutput},
 };
 use crate::{
   bundler::{bundle::bundle::Bundle, stages::scan_stage::ScanStage},
@@ -79,7 +79,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     self.bundle_up(output_options).await
   }
 
-  async fn build(&mut self) -> BatchedResult<Graph> {
+  async fn build(&mut self) -> BatchedResult<LinkStageOutput> {
     self.plugin_driver.build_start().await?;
 
     let build_ret = self.build_inner().await;
@@ -100,7 +100,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     build_ret
   }
 
-  async fn build_inner(&mut self) -> BatchedResult<Graph> {
+  async fn build_inner(&mut self) -> BatchedResult<LinkStageOutput> {
     let build_info = ScanStage::new(
       &self.input_options,
       Arc::clone(&self.plugin_driver),
@@ -110,9 +110,9 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     .scan()
     .await?;
 
-    let mut graph = Graph::new(build_info);
-    graph.link()?;
-    Ok(graph)
+    let link_stage = LinkStage::new(build_info);
+
+    Ok(link_stage.link())
   }
 
   async fn bundle_up(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {

@@ -1,12 +1,14 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    // "composite": true,
-    "target": "ES2018",
-    "module": "CommonJS",
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
     "outDir": "dist",
-    "rootDir": "./src",
-    "declaration": true
+    "strict": true,
+    "declaration": true,
+    "isolatedModules": true
   },
-  "include": ["./src"]
+  "include": ["src"]
 }

@@ -3,9 +3,11 @@
   "type": "module",
   "devDependencies": {
     "@rolldown/node": "workspace:*",
-    "benchmark": "^2.1.4",
-    "benny": "^3.7.1",
-    "chalk": "^4",
     "esbuild": "^0.19.5"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tinybench": "^2.5.1"
   }
 }

@@ -3,7 +3,7 @@ pub mod bundle;
 pub mod bundler;
 mod chunk;
 mod chunk_graph;
-mod graph;
+mod linker;
 mod module;
 mod module_loader;
 pub mod options;

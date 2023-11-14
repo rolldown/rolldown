@@ -5,7 +5,7 @@ use oxc::span::Atom;
 use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::bundler::graph::symbols::Symbols;
+use super::symbols::Symbols;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {

@@ -3,7 +3,7 @@ use oxc::span::Atom;
 use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ResourceId, Specifier, SymbolRef};
 use rustc_hash::FxHashMap;
 
-use crate::bundler::graph::symbols::Symbols;
+use crate::bundler::utils::symbols::Symbols;
 
 #[derive(Debug)]
 pub struct ExternalModule {

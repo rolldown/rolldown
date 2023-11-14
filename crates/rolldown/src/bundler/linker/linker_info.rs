@@ -3,7 +3,7 @@ use oxc::{semantic::SymbolId, span::Atom};
 use rolldown_common::{ModuleId, NamedImport, ResolvedExport, StmtInfo, SymbolRef, WrapKind};
 use rustc_hash::FxHashMap;
 
-use super::symbols::Symbols;
+use crate::bundler::utils::symbols::Symbols;
 
 /// Store the linking info for module
 #[derive(Debug, Default)]

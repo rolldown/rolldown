@@ -10,7 +10,7 @@ use string_wizard::MagicString;
 
 use self::external_module::ExternalModule;
 
-use super::{chunk_graph::ChunkGraph, graph::graph::Graph};
+use super::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
 pub type ModuleVec = IndexVec<ModuleId, Module>;
 
@@ -95,6 +95,6 @@ impl Module {
 
 pub struct ModuleRenderContext<'a> {
   pub canonical_names: &'a FxHashMap<SymbolRef, Atom>,
-  pub graph: &'a Graph,
+  pub graph: &'a LinkStageOutput,
   pub chunk_graph: &'a ChunkGraph,
 }

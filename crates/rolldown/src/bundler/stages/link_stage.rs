@@ -1,42 +1,59 @@
-use super::{linker::Linker, linker_info::LinkingInfoVec, symbols::Symbols};
-use crate::{
-  bundler::{module::ModuleVec, runtime::Runtime, stages::scan_stage::ScanStageOutput},
-  error::BatchedResult,
-};
 use rolldown_common::ModuleId;
 use rustc_hash::FxHashSet;
 
-// TODO(hyf0): Rename this to a more meaningful name, `Graph` is too generic now.
+use crate::bundler::{
+  linker::{linker::Linker, linker_info::LinkingInfoVec},
+  module::ModuleVec,
+  runtime::Runtime,
+  utils::symbols::Symbols,
+};
+
+use super::scan_stage::ScanStageOutput;
+
 #[derive(Debug)]
-pub struct Graph {
+pub struct LinkStageOutput {
   pub modules: ModuleVec,
-  pub linking_infos: LinkingInfoVec,
   pub entries: Vec<(Option<String>, ModuleId)>,
   pub sorted_modules: Vec<ModuleId>,
+  pub linking_infos: LinkingInfoVec,
   pub symbols: Symbols,
   pub runtime: Runtime,
 }
 
-impl Graph {
-  pub fn new(build_info: ScanStageOutput) -> Self {
-    let ScanStageOutput { modules, entries, symbols, runtime } = build_info;
+#[derive(Debug)]
+pub struct LinkStage {
+  pub modules: ModuleVec,
+  pub entries: Vec<(Option<String>, ModuleId)>,
+  pub symbols: Symbols,
+  pub runtime: Runtime,
+  pub sorted_modules: Vec<ModuleId>,
+  pub linking_infos: LinkingInfoVec,
+}
+
+impl LinkStage {
+  pub fn new(scan_stage_output: ScanStageOutput) -> Self {
     Self {
-      modules,
-      entries,
-      symbols,
-      runtime,
-      linking_infos: LinkingInfoVec::default(),
       sorted_modules: Vec::new(),
+      linking_infos: LinkingInfoVec::default(),
+      modules: scan_stage_output.modules,
+      entries: scan_stage_output.entries,
+      symbols: scan_stage_output.symbols,
+      runtime: scan_stage_output.runtime,
     }
   }
 
-  // unnecessary_wraps(hyf0): we will add errors later in `link_inner`
-  #[allow(clippy::unnecessary_wraps)]
-  pub fn link(&mut self) -> BatchedResult<()> {
+  pub fn link(mut self) -> LinkStageOutput {
     self.sort_modules();
+    Linker::new(&mut self).link();
 
-    self.link_inner();
-    Ok(())
+    LinkStageOutput {
+      modules: self.modules,
+      entries: self.entries,
+      sorted_modules: self.sorted_modules,
+      linking_infos: self.linking_infos,
+      symbols: self.symbols,
+      runtime: self.runtime,
+    }
   }
 
   pub fn sort_modules(&mut self) {
@@ -78,10 +95,6 @@ impl Graph {
       Some(self.runtime.id()),
       "runtime module should always be the first module in the sorted modules"
     );
-  }
-
-  pub fn link_inner(&mut self) {
-    Linker::new(self).link();
   }
 }
 

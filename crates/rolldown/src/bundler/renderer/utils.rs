@@ -5,7 +5,7 @@ use rolldown_common::SymbolRef;
 use string_wizard::UpdateOptions;
 
 use crate::bundler::{
-  graph::linker_info::LinkingInfo,
+  linker::linker_info::LinkingInfo,
   module::{Module, NormalModule},
 };
 

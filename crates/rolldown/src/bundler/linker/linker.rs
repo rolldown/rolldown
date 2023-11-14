@@ -5,29 +5,26 @@ use rolldown_common::{
 };
 use rustc_hash::FxHashSet;
 
-use super::{
-  graph::Graph,
-  linker_info::{LinkingInfo, LinkingInfoVec},
-  symbols::NamespaceAlias,
-};
+use super::linker_info::{LinkingInfo, LinkingInfoVec};
 use crate::bundler::{
-  graph::symbols::Symbols,
   module::{Module, ModuleVec, NormalModule},
+  stages::link_stage::LinkStage as LinkStageOutput,
+  utils::symbols::{NamespaceAlias, Symbols},
 };
 
 pub struct Linker<'graph> {
-  graph: &'graph mut Graph,
+  graph: &'graph mut LinkStageOutput,
 }
 
 impl<'graph> Linker<'graph> {
-  pub fn new(graph: &'graph mut Graph) -> Self {
+  pub fn new(graph: &'graph mut LinkStageOutput) -> Self {
     Self { graph }
   }
 
   fn include_statements(&mut self) {
     use rayon::prelude::*;
     struct Context<'a> {
-      graph: &'a Graph,
+      graph: &'a LinkStageOutput,
       is_included_vec: &'a mut IndexVec<ModuleId, IndexVec<StmtInfoId, bool>>,
     }
 

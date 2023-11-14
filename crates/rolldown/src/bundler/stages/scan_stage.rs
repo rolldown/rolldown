@@ -7,12 +7,14 @@ use rolldown_utils::block_on_spawn_all;
 
 use crate::{
   bundler::{
-    graph::symbols::Symbols,
     module::ModuleVec,
     module_loader::ModuleLoader,
     plugin_driver::SharedPluginDriver,
     runtime::Runtime,
-    utils::resolve_id::{resolve_id, ResolvedRequestInfo},
+    utils::{
+      resolve_id::{resolve_id, ResolvedRequestInfo},
+      symbols::Symbols,
+    },
   },
   error::{BatchedErrors, BatchedResult},
   HookResolveIdArgsOptions, InputOptions, SharedResolver,
@@ -25,6 +27,7 @@ pub struct ScanStage<'me, Fs: FileSystem + Default> {
   resolver: SharedResolver<Fs>,
 }
 
+#[derive(Debug)]
 pub struct ScanStageOutput {
   pub modules: ModuleVec,
   pub entries: Vec<(Option<String>, ModuleId)>,

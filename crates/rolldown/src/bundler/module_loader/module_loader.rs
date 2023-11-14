@@ -7,7 +7,6 @@ use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
-use crate::bundler::graph::symbols::Symbols;
 use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::{Module, ModuleVec};
 use crate::bundler::module_loader::module_task_context::ModuleTaskCommonData;
@@ -16,6 +15,7 @@ use crate::bundler::plugin_driver::SharedPluginDriver;
 use crate::bundler::runtime::{Runtime, RUNTIME_PATH};
 use crate::bundler::utils::ast_symbol::AstSymbol;
 use crate::bundler::utils::resolve_id::ResolvedRequestInfo;
+use crate::bundler::utils::symbols::Symbols;
 use crate::error::BatchedResult;
 use crate::SharedResolver;
 

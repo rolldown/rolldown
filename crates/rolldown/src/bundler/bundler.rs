@@ -12,7 +12,7 @@ use super::{
   stages::link_stage::{LinkStage, LinkStageOutput},
 };
 use crate::{
-  bundler::{bundle::bundle::Bundle, stages::scan_stage::ScanStage},
+  bundler::stages::{bundle_stage::BundleStage, scan_stage::ScanStage},
   error::BatchedResult,
   plugin::plugin::BoxPlugin,
   HookBuildEndArgs, InputOptions, OutputOptions, SharedResolver,
@@ -120,8 +120,8 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
     let mut graph = self.build().await?;
-    let mut bundle = Bundle::new(&mut graph, &output_options);
-    let assets = bundle.generate(&self.input_options);
+    let mut bundle_stage = BundleStage::new(&mut graph, &output_options);
+    let assets = bundle_stage.bundle();
 
     Ok(assets)
   }

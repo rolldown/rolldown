@@ -1,4 +1,4 @@
-use rolldown_common::{ModuleType, RawPath, ResourceId};
+use rolldown_common::{FilePath, ModuleType, ResourceId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use std::path::PathBuf;
@@ -37,7 +37,7 @@ impl<F: FileSystem + Default> Resolver<F> {
 
 #[derive(Debug)]
 pub struct ResolveRet {
-  pub resolved: RawPath,
+  pub resolved: FilePath,
   pub module_type: ModuleType,
 }
 

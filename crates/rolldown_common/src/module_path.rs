@@ -2,10 +2,10 @@ use std::{ffi::OsStr, fmt::Debug, hash::Hash, path::Path, sync::Arc};
 
 use sugar_path::SugarPath;
 
-use crate::RawPath;
+use crate::FilePath;
 
 struct Inner {
-  path: RawPath,
+  path: FilePath,
   pretty: String,
 }
 
@@ -32,7 +32,7 @@ impl Debug for ResourceId {
 }
 
 impl ResourceId {
-  pub fn new(path: RawPath, cwd: impl AsRef<Path>) -> Self {
+  pub fn new(path: FilePath, cwd: impl AsRef<Path>) -> Self {
     let pretty = if Path::new(path.as_str()).is_absolute() {
       Path::new(path.as_str())
         .relative(cwd.as_ref())

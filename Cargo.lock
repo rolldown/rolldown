@@ -1588,6 +1588,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_plugin_hello"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "rolldown",
+]
+
+[[package]]
 name = "rolldown_plugin_vite_scanner"
 version = "0.1.0"
 dependencies = [

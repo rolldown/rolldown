@@ -9,7 +9,6 @@ use super::{module_task_context::ModuleTaskCommonData, Msg};
 use crate::bundler::{
   module::normal_module_builder::NormalModuleBuilder,
   module_loader::NormalModuleTaskResult,
-  runtime::RUNTIME_PATH,
   utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
   visitors::scanner::{self, ScanResult},
 };
@@ -54,7 +53,9 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
     builder.id = Some(self.module_id);
     builder.ast = Some(ast);
     builder.unique_name = Some(unique_name);
-    builder.path = Some(ResourceId::new(RUNTIME_PATH.to_string().into()));
+    builder.path = Some(ResourceId::new(
+      "TODO: Runtime module should not have FilePath as source id".to_string().into(),
+    ));
     builder.named_imports = Some(named_imports);
     builder.named_exports = Some(named_exports);
     builder.stmt_infos = Some(stmt_infos);
@@ -65,7 +66,7 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
     builder.scope = Some(scope);
     builder.exports_kind = exports_kind;
     builder.namespace_symbol = Some(namespace_symbol);
-    builder.pretty_path = Some("rolldown-runtime.js".to_string());
+    builder.pretty_path = Some("<runtime>".to_string());
 
     self
       .common_data

@@ -1,7 +1,6 @@
 use index_vec::IndexVec;
 use rolldown_common::{ImportKind, ModuleId, RawPath, ResourceId};
 use rolldown_fs::FileSystem;
-use rolldown_resolver::Resolver;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::normal_module_task::NormalModuleTask;
@@ -103,13 +102,18 @@ impl ModuleLoaderContext {
 }
 
 impl<'a, T: FileSystem + 'static + Default> ModuleLoader<'a, T> {
-  pub fn new(input_options: &'a InputOptions, plugin_driver: SharedPluginDriver, fs: T) -> Self {
+  pub fn new(
+    input_options: &'a InputOptions,
+    plugin_driver: SharedPluginDriver,
+    fs: T,
+    resolver: SharedResolver<T>,
+  ) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
     Self {
       tx,
       rx,
       input_options,
-      resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, fs.share()).into(),
+      resolver,
       fs,
       ctx: ModuleLoaderContext::default(),
       plugin_driver,

@@ -18,10 +18,11 @@ use crate::{
   HookResolveIdArgsOptions, InputOptions, SharedResolver,
 };
 
-pub struct ScanStage<'me, T: FileSystem + Default> {
+pub struct ScanStage<'me, Fs: FileSystem + Default> {
   input_options: &'me InputOptions,
   plugin_driver: SharedPluginDriver,
-  resolver: SharedResolver<T>,
+  fs: Fs,
+  resolver: SharedResolver<Fs>,
 }
 
 pub struct ScanStageOutput {
@@ -31,13 +32,14 @@ pub struct ScanStageOutput {
   pub runtime: Runtime,
 }
 
-impl<'me, T: FileSystem + Default> ScanStage<'me, T> {
+impl<'me, Fs: FileSystem + Default + 'static> ScanStage<'me, Fs> {
   pub fn new(
     input_options: &'me InputOptions,
     plugin_driver: SharedPluginDriver,
-    resolver: SharedResolver<T>,
+    fs: Fs,
+    resolver: SharedResolver<Fs>,
   ) -> Self {
-    Self { input_options, plugin_driver, resolver }
+    Self { input_options, plugin_driver, fs, resolver }
   }
 
   fn resolve_entries(&self) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {
@@ -84,18 +86,19 @@ impl<'me, T: FileSystem + Default> ScanStage<'me, T> {
     }
   }
 
-  pub async fn scan<Fs: FileSystem + Default + 'static>(
-    &self,
-    fs: Fs,
-  ) -> BatchedResult<ScanStageOutput> {
+  pub async fn scan(&self) -> BatchedResult<ScanStageOutput> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
     let resolved_entries = self.resolve_entries()?;
 
-    let (modules, runtime, symbols, entries) =
-      ModuleLoader::new(self.input_options, Arc::clone(&self.plugin_driver), fs)
-        .fetch_all_modules(&resolved_entries)
-        .await?;
+    let (modules, runtime, symbols, entries) = ModuleLoader::new(
+      self.input_options,
+      Arc::clone(&self.plugin_driver),
+      self.fs.share(),
+      Arc::clone(&self.resolver),
+    )
+    .fetch_all_modules(&resolved_entries)
+    .await?;
 
     Ok(ScanStageOutput { modules, entries, symbols, runtime })
   }

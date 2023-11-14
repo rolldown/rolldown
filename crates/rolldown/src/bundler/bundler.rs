@@ -14,15 +14,16 @@ use crate::{
   bundler::{bundle::bundle::Bundle, stages::scan_stage::ScanStage},
   error::BatchedResult,
   plugin::plugin::BoxPlugin,
-  HookBuildEndArgs, InputOptions, OutputOptions,
+  HookBuildEndArgs, InputOptions, OutputOptions, SharedResolver,
 };
 
 type BuildResult<T> = Result<T, Vec<BuildError>>;
 
-pub struct Bundler<T: FileSystem> {
+pub struct Bundler<T: FileSystem + Default> {
   input_options: InputOptions,
   plugin_driver: SharedPluginDriver,
   fs: T,
+  resolver: SharedResolver<T>,
 }
 
 impl Bundler<OsFileSystem> {
@@ -38,7 +39,12 @@ impl Bundler<OsFileSystem> {
 impl<T: FileSystem + Default + 'static> Bundler<T> {
   pub fn with_plugins_and_fs(input_options: InputOptions, plugins: Vec<BoxPlugin>, fs: T) -> Self {
     // rolldown_tracing::enable_tracing_on_demand();
-    Self { input_options, plugin_driver: Arc::new(PluginDriver::new(plugins)), fs }
+    Self {
+      resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, fs.share()).into(),
+      plugin_driver: Arc::new(PluginDriver::new(plugins)),
+      input_options,
+      fs,
+    }
   }
 
   pub async fn write(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
@@ -95,14 +101,14 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
   }
 
   async fn build_inner(&mut self) -> BatchedResult<Graph> {
-    // TODO: should use a unified resolver
-    let resolver =
-      Arc::new(Resolver::with_cwd_and_fs(self.input_options.cwd.clone(), false, self.fs.share()));
-
-    let build_info =
-      ScanStage::new(&self.input_options, Arc::clone(&self.plugin_driver), Arc::clone(&resolver))
-        .scan(self.fs.share())
-        .await?;
+    let build_info = ScanStage::new(
+      &self.input_options,
+      Arc::clone(&self.plugin_driver),
+      self.fs.share(),
+      Arc::clone(&self.resolver),
+    )
+    .scan()
+    .await?;
 
     let mut graph = Graph::new(build_info);
     graph.link()?;

@@ -1,5 +1,5 @@
 [package]
-name                 = "rolldown_vite_scanner_plugin"
+name                 = "rolldown_plugin_vite_scanner"
 version              = "0.1.0"
 edition.workspace    = true
 homepage.workspace   = true
@@ -11,3 +11,6 @@ repository.workspace = true
 [dependencies]
 rolldown       = { path = "../rolldown" }
 rolldown_error = { path = "../rolldown_error" }
+async-trait    = { workspace = true }
+regex          = { workspace = true }
+once_cell      = { workspace = true }

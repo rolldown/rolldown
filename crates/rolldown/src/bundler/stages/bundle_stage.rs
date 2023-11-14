@@ -1,30 +1,72 @@
 use std::{borrow::Cow, hash::BuildHasherDefault};
 
-use super::output::Output;
-use crate::bundler::{
-  bundle::output::OutputChunk,
-  chunk::{
-    chunk::{Chunk, ChunkSymbolExporter, CrossChunkImportItem},
-    ChunkId, ChunksVec,
+use crate::{
+  bundler::{
+    bundle::output::OutputChunk,
+    chunk::{
+      chunk::{Chunk, ChunkSymbolExporter, CrossChunkImportItem},
+      ChunkId, ChunksVec,
+    },
+    chunk_graph::ChunkGraph,
+    module::Module,
+    options::output_options::OutputOptions,
+    stages::link_stage::LinkStageOutput,
+    utils::bitset::BitSet,
   },
-  chunk_graph::ChunkGraph,
-  module::Module,
-  options::{input_options::InputOptions, output_options::OutputOptions},
-  stages::link_stage::LinkStageOutput,
-  utils::bitset::BitSet,
+  Output,
 };
 use index_vec::{index_vec, IndexVec};
 use rolldown_common::{ImportKind, ModuleId, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-pub struct Bundle<'a> {
+pub struct BundleStage<'a> {
   link_output: &'a mut LinkStageOutput,
   output_options: &'a OutputOptions,
 }
 
-impl<'a> Bundle<'a> {
+impl<'a> BundleStage<'a> {
   pub fn new(link_output: &'a mut LinkStageOutput, output_options: &'a OutputOptions) -> Self {
     Self { link_output, output_options }
+  }
+
+  pub fn bundle(&mut self) -> Vec<Output> {
+    use rayon::prelude::*;
+    let mut chunk_graph = self.generate_chunks();
+
+    chunk_graph
+      .chunks
+      .iter_mut()
+      .par_bridge()
+      .for_each(|chunk| chunk.render_file_name(self.output_options));
+
+    self.compute_cross_chunk_links(&mut chunk_graph);
+
+    chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
+      chunk.de_conflict(self.link_output);
+    });
+
+    let assets = chunk_graph
+      .chunks
+      .iter()
+      .enumerate()
+      .map(|(_chunk_id, c)| {
+        let (content, rendered_modules) =
+          c.render(self.link_output, &chunk_graph, self.output_options).unwrap();
+
+        Output::Chunk(Box::new(OutputChunk {
+          file_name: c.file_name.clone().unwrap(),
+          code: content,
+          is_entry: c.entry_module.is_some(),
+          facade_module_id: c.entry_module.map(|id| {
+            self.link_output.modules[id].expect_normal().resource_id.prettify().to_string()
+          }),
+          modules: rendered_modules,
+          exports: c.get_export_names(self.link_output, self.output_options),
+        }))
+      })
+      .collect::<Vec<_>>();
+
+    assets
   }
 
   fn determine_reachable_modules_for_entry(
@@ -265,45 +307,5 @@ impl<'a> Bundle<'a> {
     });
 
     ChunkGraph { chunks, module_to_chunk }
-  }
-
-  pub fn generate(&mut self, _input_options: &'a InputOptions) -> Vec<Output> {
-    use rayon::prelude::*;
-    let mut chunk_graph = self.generate_chunks();
-
-    chunk_graph
-      .chunks
-      .iter_mut()
-      .par_bridge()
-      .for_each(|chunk| chunk.render_file_name(self.output_options));
-
-    self.compute_cross_chunk_links(&mut chunk_graph);
-
-    chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
-      chunk.de_conflict(self.link_output);
-    });
-
-    let assets = chunk_graph
-      .chunks
-      .iter()
-      .enumerate()
-      .map(|(_chunk_id, c)| {
-        let (content, rendered_modules) =
-          c.render(self.link_output, &chunk_graph, self.output_options).unwrap();
-
-        Output::Chunk(Box::new(OutputChunk {
-          file_name: c.file_name.clone().unwrap(),
-          code: content,
-          is_entry: c.entry_module.is_some(),
-          facade_module_id: c.entry_module.map(|id| {
-            self.link_output.modules[id].expect_normal().resource_id.prettify().to_string()
-          }),
-          modules: rendered_modules,
-          exports: c.get_export_names(self.link_output, self.output_options),
-        }))
-      })
-      .collect::<Vec<_>>();
-
-    assets
   }
 }

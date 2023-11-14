@@ -1,6 +1,6 @@
 use rolldown_fs::MemoryFileSystem;
+use std::panic;
 use std::path::Path;
-use std::{panic, vec};
 
 use wasm_bindgen::prelude::*;
 

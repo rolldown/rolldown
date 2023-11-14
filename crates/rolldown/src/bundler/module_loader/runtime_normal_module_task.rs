@@ -65,7 +65,7 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
     builder.scope = Some(scope);
     builder.exports_kind = exports_kind;
     builder.namespace_symbol = Some(namespace_symbol);
-    builder.pretty_path = Some(RUNTIME_PATH.to_string());
+    builder.pretty_path = Some("rolldown-runtime.js".to_string());
 
     self
       .common_data

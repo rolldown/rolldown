@@ -68,15 +68,12 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
         symbols.add_ast_symbol(id, AstSymbol::default());
         not_visited.insert(id);
         if info.is_external {
-          let ext = ExternalModule::new(
-            id,
-            ResourceId::new(info.path.clone(), &self.common_data.input_options.cwd),
-          );
+          let ext = ExternalModule::new(id, ResourceId::new(info.path.clone()));
           self.ctx.intermediate_modules[id] = Some(Module::External(ext));
         } else {
           self.ctx.remaining += 1;
 
-          let module_path = ResourceId::new(info.path.clone(), &self.common_data.input_options.cwd);
+          let module_path = info.path.clone();
 
           let task = NormalModuleTask::new(
             // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
@@ -157,6 +154,8 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
             })
             .collect::<IndexVec<ImportRecordId, _>>();
           builder.import_records = Some(import_records);
+          builder.pretty_path =
+            Some(builder.path.as_ref().unwrap().prettify(&self.input_options.cwd));
           self.ctx.intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
 
           symbols.add_ast_symbol(module_id, ast_symbol);

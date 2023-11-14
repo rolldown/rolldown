@@ -4,7 +4,7 @@ use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::{ast::Visit, span::SourceType};
 use rolldown_common::{
-  ImportRecordId, ModuleId, ModuleType, RawImportRecord, ResourceId, SymbolRef,
+  FilePath, ImportRecordId, ModuleId, ModuleType, RawImportRecord, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
@@ -32,7 +32,7 @@ use crate::{
 pub struct NormalModuleTask<'task, T: FileSystem + Default> {
   ctx: &'task ModuleTaskCommonData<T>,
   module_id: ModuleId,
-  path: ResourceId,
+  path: FilePath,
   module_type: ModuleType,
   errors: Vec<BuildError>,
   warnings: Vec<BuildError>,
@@ -44,7 +44,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     ctx: &'task ModuleTaskCommonData<T>,
     id: ModuleId,
     is_entry: bool,
-    path: ResourceId,
+    path: FilePath,
     module_type: ModuleType,
   ) -> Self {
     Self {
@@ -100,7 +100,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     builder.id = Some(self.module_id);
     builder.ast = Some(ast);
     builder.unique_name = Some(unique_name);
-    builder.path = Some(self.path);
+    builder.path = Some(ResourceId::new(self.path));
     builder.named_imports = Some(named_imports);
     builder.named_exports = Some(named_exports);
     builder.stmt_infos = Some(stmt_infos);
@@ -177,15 +177,12 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     input_options: &SharedInputOptions,
     resolver: &Resolver<F>,
     plugin_driver: &SharedPluginDriver,
-    importer: &ResourceId,
+    importer: &FilePath,
     specifier: &str,
     options: HookResolveIdArgsOptions,
   ) -> BatchedResult<ResolvedRequestInfo> {
     // Check external with unresolved path
-    if input_options
-      .external
-      .call(specifier.to_string(), Some(importer.prettify().to_string()), false)
-      .await?
+    if input_options.external.call(specifier.to_string(), Some(importer.to_string()), false).await?
     {
       return Ok(ResolvedRequestInfo {
         path: specifier.to_string().into(),
@@ -203,7 +200,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
           // Check external with resolved path
           info.is_external = input_options
             .external
-            .call(specifier.to_string(), Some(importer.prettify().to_string()), true)
+            .call(specifier.to_string(), Some(importer.to_string()), true)
             .await?;
         }
         Ok(info)

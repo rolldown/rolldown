@@ -126,7 +126,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
     let mut graph = self.build_inner().await?;
-    let mut bundle_stage = BundleStage::new(&mut graph, &output_options);
+    let mut bundle_stage = BundleStage::new(&mut graph, &self.input_options, &output_options);
     let assets = bundle_stage.bundle();
 
     Ok(assets)

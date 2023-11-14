@@ -19,6 +19,12 @@ impl FilePath {
   }
 }
 
+impl AsRef<str> for FilePath {
+  fn as_ref(&self) -> &str {
+    &self.0
+  }
+}
+
 impl std::ops::Deref for FilePath {
   type Target = str;
 
@@ -54,6 +60,40 @@ impl FilePath {
     }
     name
   }
+
+  pub fn generate_unique_name(&self) -> String {
+    let path = Path::new(self.0.as_ref());
+    let unique_name =
+      path.file_stem().expect("should have file_stem").to_str().expect("should be valid utf8");
+    if unique_name == "index" {
+      if let Some(unique_name_of_parent_dir) =
+        path.parent().and_then(Path::file_stem).and_then(OsStr::to_str)
+      {
+        return [unique_name_of_parent_dir, "_index"].concat();
+      }
+    }
+    ensure_valid_identifier(unique_name)
+  }
+}
+
+fn ensure_valid_identifier(s: &str) -> String {
+  let mut ident = String::new();
+  let mut need_gap = false;
+  for i in s.chars() {
+    if i.is_ascii_alphabetic() || (i.is_ascii_digit() && !ident.is_empty()) {
+      if need_gap {
+        ident.push('_');
+        need_gap = false;
+      }
+      ident.push(i);
+    } else if !ident.is_empty() {
+      need_gap = true;
+    }
+  }
+  if ident.is_empty() {
+    ident.push('_');
+  }
+  ident
 }
 
 #[test]

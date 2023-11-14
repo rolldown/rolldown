@@ -13,7 +13,7 @@ use crate::{
     stages::link_stage::LinkStageOutput,
     utils::bitset::BitSet,
   },
-  Output,
+  InputOptions, Output,
 };
 use index_vec::{index_vec, IndexVec};
 use rolldown_common::{ImportKind, ModuleId, SymbolRef};
@@ -22,11 +22,16 @@ use rustc_hash::{FxHashMap, FxHashSet};
 pub struct BundleStage<'a> {
   link_output: &'a mut LinkStageOutput,
   output_options: &'a OutputOptions,
+  input_options: &'a InputOptions,
 }
 
 impl<'a> BundleStage<'a> {
-  pub fn new(link_output: &'a mut LinkStageOutput, output_options: &'a OutputOptions) -> Self {
-    Self { link_output, output_options }
+  pub fn new(
+    link_output: &'a mut LinkStageOutput,
+    input_options: &'a InputOptions,
+    output_options: &'a OutputOptions,
+  ) -> Self {
+    Self { link_output, output_options, input_options }
   }
 
   pub fn bundle(&mut self) -> Vec<Output> {
@@ -50,16 +55,17 @@ impl<'a> BundleStage<'a> {
       .iter()
       .enumerate()
       .map(|(_chunk_id, c)| {
-        let (content, rendered_modules) =
-          c.render(self.link_output, &chunk_graph, self.output_options).unwrap();
+        let (content, rendered_modules) = c
+          .render(self.input_options, self.link_output, &chunk_graph, self.output_options)
+          .unwrap();
 
         Output::Chunk(Box::new(OutputChunk {
           file_name: c.file_name.clone().unwrap(),
           code: content,
           is_entry: c.entry_module.is_some(),
-          facade_module_id: c.entry_module.map(|id| {
-            self.link_output.modules[id].expect_normal().resource_id.prettify().to_string()
-          }),
+          facade_module_id: c
+            .entry_module
+            .map(|id| self.link_output.modules[id].expect_normal().pretty_path.to_string()),
           modules: rendered_modules,
           exports: c.get_export_names(self.link_output, self.output_options),
         }))

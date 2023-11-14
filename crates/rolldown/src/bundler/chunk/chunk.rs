@@ -13,6 +13,7 @@ use crate::{
     utils::bitset::BitSet,
   },
   error::BatchedResult,
+  InputOptions,
 };
 
 use super::ChunkId;
@@ -64,6 +65,7 @@ impl Chunk {
   #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
   pub fn render(
     &self,
+    input_options: &InputOptions,
     graph: &LinkStageOutput,
     chunk_graph: &ChunkGraph,
     output_options: &OutputOptions,
@@ -82,9 +84,10 @@ impl Chunk {
           canonical_names: &self.canonical_names,
           graph,
           chunk_graph,
+          input_options,
         });
         (
-          m.resource_id().prettify().to_string(),
+          m.resource_id().expect_file().to_string(),
           RenderedModule {
             original_length: m.original_length(),
             rendered_length: rendered_content.as_ref().map(|c| c.len() as u32).unwrap_or_default(),

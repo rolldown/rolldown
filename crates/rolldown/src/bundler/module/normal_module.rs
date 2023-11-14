@@ -27,6 +27,7 @@ pub struct NormalModule {
   pub id: ModuleId,
   pub is_entry: bool,
   pub resource_id: ResourceId,
+  pub pretty_path: String,
   pub unique_name: String,
   pub module_type: ModuleType,
   pub namespace_symbol: SymbolRef,
@@ -77,7 +78,7 @@ impl NormalModule {
     let mut renderer = AstRenderer::new(base, render_kind);
     renderer.render();
 
-    source.prepend(format!("// {}\n", self.resource_id.prettify()));
+    source.prepend(format!("// {}\n", self.pretty_path));
 
     // TODO trim
     if source.len() == 0 {

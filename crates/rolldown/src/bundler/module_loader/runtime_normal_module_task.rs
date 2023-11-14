@@ -54,8 +54,7 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
     builder.id = Some(self.module_id);
     builder.ast = Some(ast);
     builder.unique_name = Some(unique_name);
-    builder.path =
-      Some(ResourceId::new(RUNTIME_PATH.to_string().into(), self.common_data.resolver.cwd()));
+    builder.path = Some(ResourceId::new(RUNTIME_PATH.to_string().into()));
     builder.named_imports = Some(named_imports);
     builder.named_exports = Some(named_exports);
     builder.stmt_infos = Some(stmt_infos);
@@ -66,6 +65,7 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
     builder.scope = Some(scope);
     builder.exports_kind = exports_kind;
     builder.namespace_symbol = Some(namespace_symbol);
+    builder.pretty_path = Some(RUNTIME_PATH.to_string());
 
     self
       .common_data

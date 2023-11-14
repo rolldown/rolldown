@@ -32,6 +32,7 @@ pub struct NormalModuleBuilder {
   pub exports_kind: Option<ExportsKind>,
   pub module_type: ModuleType,
   pub is_entry: bool,
+  pub pretty_path: Option<String>,
 }
 
 impl NormalModuleBuilder {
@@ -54,6 +55,7 @@ impl NormalModuleBuilder {
       exports_kind: self.exports_kind.unwrap_or(ExportsKind::Esm),
       module_type: self.module_type,
       is_entry: self.is_entry,
+      pretty_path: self.pretty_path.unwrap(),
     }
   }
 }

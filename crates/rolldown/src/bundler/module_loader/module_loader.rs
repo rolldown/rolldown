@@ -28,7 +28,6 @@ pub struct ModuleLoader<'a, T: FileSystem + Default> {
   fs: T,
   plugin_driver: SharedPluginDriver,
   symbols: Symbols,
-  runtime: Runtime,
 }
 
 #[derive(Debug, Default)]
@@ -118,7 +117,6 @@ impl<'a, T: FileSystem + 'static + Default> ModuleLoader<'a, T> {
       ctx: ModuleLoaderContext::default(),
       plugin_driver,
       symbols: Symbols::default(),
-      runtime: Runtime::default(),
     }
   }
 
@@ -138,7 +136,8 @@ impl<'a, T: FileSystem + 'static + Default> ModuleLoader<'a, T> {
       plugin_driver: &self.plugin_driver,
     };
 
-    self.runtime.id = self.ctx.try_spawn_runtime_normal_module_task(&shared_task_context);
+    let mut runtime =
+      Runtime::new(self.ctx.try_spawn_runtime_normal_module_task(&shared_task_context));
 
     let mut entries: Vec<(Option<String>, ModuleId)> = resolved_entries
       .iter()
@@ -183,7 +182,7 @@ impl<'a, T: FileSystem + 'static + Default> ModuleLoader<'a, T> {
           let NormalModuleTaskResult { module_id, ast_symbol, builder, .. } = task_result;
 
           let runtime_normal_module = builder.build();
-          self.runtime.init_symbols(&runtime_normal_module);
+          runtime.init_symbols(&runtime_normal_module);
           self.ctx.intermediate_modules[module_id] = Some(Module::Normal(runtime_normal_module));
 
           self.symbols.add_ast_symbol(module_id, ast_symbol);
@@ -197,6 +196,6 @@ impl<'a, T: FileSystem + 'static + Default> ModuleLoader<'a, T> {
     let mut dynamic_entries = Vec::from_iter(dynamic_entries);
     dynamic_entries.sort_by(|(a, _), (b, _)| a.cmp(b));
     entries.extend(dynamic_entries);
-    Ok((modules, self.runtime, self.symbols, entries))
+    Ok((modules, runtime, self.symbols, entries))
   }
 }

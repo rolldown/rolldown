@@ -6,13 +6,20 @@ use super::module::NormalModule;
 
 pub static RUNTIME_PATH: &str = "\0rolldown-runtime.js";
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Runtime {
-  pub id: ModuleId,
-  pub name_to_symbol: FxHashMap<Atom, SymbolId>,
+  id: ModuleId,
+  name_to_symbol: FxHashMap<Atom, SymbolId>,
 }
 
 impl Runtime {
+  pub fn new(id: ModuleId) -> Self {
+    Self { id, name_to_symbol: FxHashMap::default() }
+  }
+
+  pub fn id(&self) -> ModuleId {
+    self.id
+  }
   pub fn init_symbols(&mut self, runtime_module: &NormalModule) {
     self.name_to_symbol = runtime_module
       .scope

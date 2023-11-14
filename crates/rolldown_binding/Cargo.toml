@@ -26,7 +26,6 @@ rustc-hash       = { workspace = true }
 scoped-tls       = { workspace = true }
 serde            = { workspace = true }
 tracing          = { workspace = true }
-anyhow           = { workspace = true }
 
 [target.'cfg(not(target_os = "linux"))'.dependencies]
 mimalloc-rust = "0.2"

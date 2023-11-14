@@ -12,7 +12,6 @@ repository.workspace = true
 [dependencies]
 oxc_resolver    = { workspace = true }
 sugar_path      = { workspace = true }
-anyhow          = { workspace = true }
 rolldown_error  = { path = "../rolldown_error" }
 rolldown_common = { path = "../rolldown_common" }
 rolldown_fs     = { path = "../rolldown_fs" }

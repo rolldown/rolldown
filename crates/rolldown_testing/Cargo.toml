@@ -15,7 +15,6 @@ path  = "./bin/gen_test_config_schema.rs"
 test  = false
 
 [dependencies]
-rolldown_error = { path = "../rolldown_error" }
-schemars       = "0.8.11"
-serde          = { workspace = true, features = ["derive"] }
-serde_json     = { workspace = true }
+schemars   = "0.8.11"
+serde      = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }

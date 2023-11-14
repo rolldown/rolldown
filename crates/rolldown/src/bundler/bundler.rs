@@ -18,6 +18,7 @@ use crate::{
   HookBuildEndArgs, InputOptions, OutputOptions, SharedResolver,
 };
 
+// Rolldown use this alias for outside users.
 type BuildResult<T> = Result<T, Vec<BuildError>>;
 
 pub struct Bundler<T: FileSystem + Default> {
@@ -80,10 +81,15 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     self.bundle_up(output_options).await
   }
 
-  async fn build(&mut self) -> BatchedResult<LinkStageOutput> {
+  pub async fn build(&mut self) -> BuildResult<()> {
+    self.build_inner().await?;
+    Ok(())
+  }
+
+  async fn build_inner(&mut self) -> BatchedResult<LinkStageOutput> {
     self.plugin_driver.build_start().await?;
 
-    let build_ret = self.build_inner().await;
+    let build_ret = self.try_build().await;
 
     if let Err(e) = build_ret {
       let error = e.get().expect("should have a error");
@@ -101,7 +107,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     build_ret
   }
 
-  async fn build_inner(&mut self) -> BatchedResult<LinkStageOutput> {
+  async fn try_build(&mut self) -> BatchedResult<LinkStageOutput> {
     let build_info = ScanStage::new(
       Arc::clone(&self.input_options),
       Arc::clone(&self.plugin_driver),
@@ -119,7 +125,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
   async fn bundle_up(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
-    let mut graph = self.build().await?;
+    let mut graph = self.build_inner().await?;
     let mut bundle_stage = BundleStage::new(&mut graph, &output_options);
     let assets = bundle_stage.bundle();
 

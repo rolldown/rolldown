@@ -78,6 +78,7 @@ const handleToggleIsEntry = (item: any) => {
         v-for="item in outputs"
         :code="item.code"
         :title="item.title"
+        :readonly="true"
         @code="item.code = $event"
         @title="item.title = $event.target.innerText"
       />

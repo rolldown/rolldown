@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ShallowRef, defineComponent, ref, shallowRef } from 'vue'
+import { ShallowRef, shallowRef } from 'vue'
 import { Codemirror } from 'vue-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
 import { oneDark } from '@codemirror/theme-one-dark'
@@ -12,14 +12,19 @@ type Payload = {
   container: HTMLElement
 }
 
-defineProps({
+let props = defineProps({
   code: String,
+  readonly: {
+    type: Boolean,
+    required: false,
+  },
 })
-
-const emit = defineEmits(['code'])
 
 const extensions = [javascript(), oneDark]
 
+if (props.readonly) {
+  extensions.push(EditorView.editable.of(false))
+}
 // Codemirror EditorView instance ref
 const view = <ShallowRef<EditorView>>shallowRef()
 const handleReady = (payload: Payload) => {
@@ -43,11 +48,6 @@ const handleReady = (payload: Payload) => {
 //     lines
 //   }
 // }
-
-const handleCodeChange = (e: string) => {
-  emit('code', e)
-}
-const log = console.log
 </script>
 <template>
   <codemirror
@@ -59,8 +59,6 @@ const log = console.log
     :tab-size="2"
     :extensions="extensions"
     @ready="handleReady"
-    @change="handleCodeChange"
-    @focus="log('focus', $event)"
-    @blur="console.log('blur', $event)"
+    @change="$emit('code', $event)"
   />
 </template>

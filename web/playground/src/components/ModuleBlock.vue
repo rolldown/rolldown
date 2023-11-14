@@ -23,6 +23,10 @@ const props = defineProps({
     type: Boolean,
     required: false,
   },
+  readonly: {
+    type: Boolean,
+    required: false,
+  },
 })
 
 const input = ref(null)
@@ -66,7 +70,11 @@ onMounted(() => {
       </button>
     </div>
 
-    <CodeBlock :code="code" @code="$emit('code', $event)" />
+    <CodeBlock
+      :code="code"
+      @code="$emit('code', $event)"
+      :readonly="readonly"
+    />
   </div>
 </template>
 

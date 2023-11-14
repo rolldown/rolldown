@@ -26,7 +26,6 @@ serde_json        = { workspace = true }
 tokio             = { workspace = true, features = ["rt", "macros", "sync"] }
 rustc-hash        = { workspace = true }
 tracing           = { workspace = true }
-anyhow            = { workspace = true }
 index_vec         = { workspace = true }
 futures           = { workspace = true }
 rayon             = "1.6.0"

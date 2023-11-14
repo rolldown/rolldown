@@ -14,7 +14,6 @@ oxc            = { version = "0.3.0", features = ["semantic"] }
 oxc_resolver   = { version = "0.5.1" }
 sugar_path     = "0.0.12"
 tokio          = { version = "1.33.0", default-features = false }
-hashbrown      = { version = "0.14.2", features = ["rayon"] }
 derivative     = "2.2.0"
 rustc-hash     = "1.1.0"
 tracing        = "0.1.40"

@@ -1503,7 +1503,6 @@ checksum = "c707298afce11da2efef2f600116fa93ffa7a032b5d7b628aa17711ec81383ca"
 name = "rolldown"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-trait",
  "derivative",
  "futures",
@@ -1535,7 +1534,6 @@ dependencies = [
 name = "rolldown_binding"
 version = "0.0.1"
 dependencies = [
- "anyhow",
  "async-trait",
  "derivative",
  "futures",
@@ -1557,7 +1555,6 @@ dependencies = [
 name = "rolldown_common"
 version = "0.0.1"
 dependencies = [
- "derivative",
  "index_vec",
  "oxc",
  "rustc-hash",
@@ -1569,7 +1566,6 @@ name = "rolldown_error"
 version = "0.0.1"
 dependencies = [
  "ariadne",
- "scoped-tls",
  "sugar_path",
  "thiserror",
 ]
@@ -1588,7 +1584,6 @@ name = "rolldown_oxc"
 version = "0.1.0"
 dependencies = [
  "oxc",
- "rolldown_utils",
  "smallvec",
 ]
 
@@ -1596,7 +1591,6 @@ dependencies = [
 name = "rolldown_resolver"
 version = "0.0.1"
 dependencies = [
- "anyhow",
  "oxc_resolver",
  "rolldown_common",
  "rolldown_error",
@@ -1608,7 +1602,6 @@ dependencies = [
 name = "rolldown_testing"
 version = "0.0.1"
 dependencies = [
- "rolldown_error",
  "schemars",
  "serde",
  "serde_json",

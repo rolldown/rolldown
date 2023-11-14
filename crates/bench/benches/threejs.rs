@@ -1,27 +1,57 @@
-use bench::{normalized_fixture_path, run_fixture};
+use std::path::PathBuf;
+
+use bench::join_by_repo_root;
 use criterion::{criterion_group, criterion_main, Criterion};
+use rolldown::InputOptions;
 
-async fn threejs() {
-  let fixture_path = normalized_fixture_path("cases/threejs");
-  run_fixture(fixture_path).await;
-}
-
-async fn threejs10x() {
-  let fixture_path = normalized_fixture_path("cases/threejs10x");
-  run_fixture(fixture_path).await;
+#[derive(Debug)]
+struct BenchItem {
+  name: &'static str,
+  entry_path: PathBuf,
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
   let mut group = c.benchmark_group("rolldown benchmark");
 
-  group
-    .sample_size(20)
-    .bench_function("threejs", |b| {
-      b.iter(|| tokio::runtime::Runtime::new().unwrap().block_on(threejs()));
-    })
-    .bench_function("threejs10x", |b| {
-      b.iter(|| tokio::runtime::Runtime::new().unwrap().block_on(threejs10x()));
+  let items = vec![
+    BenchItem { name: "threejs", entry_path: join_by_repo_root("temp/three/entry.js") },
+    BenchItem { name: "threejs10x", entry_path: join_by_repo_root("temp/three10x/entry.js") },
+  ];
+  group.sample_size(20);
+  items.into_iter().for_each(|item| {
+    let bundle_id = format!("{}-bundle", item.name);
+    let build_id = format!("{}-build", item.name);
+    group.bench_function(bundle_id, |b| {
+      b.iter(|| {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+          let mut rolldown_bundler = rolldown::Bundler::new(InputOptions {
+            input: vec![rolldown::InputItem {
+              name: Some(item.name.to_string()),
+              import: item.entry_path.to_string_lossy().to_string(),
+            }],
+            cwd: join_by_repo_root("crates/bench"),
+            ..Default::default()
+          });
+          rolldown_bundler.write(Default::default()).await.unwrap();
+        })
+      });
     });
+    group.bench_function(build_id, |b| {
+      b.iter(|| {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+          let mut rolldown_bundler = rolldown::Bundler::new(InputOptions {
+            input: vec![rolldown::InputItem {
+              name: Some(item.name.to_string()),
+              import: item.entry_path.to_string_lossy().to_string(),
+            }],
+            cwd: join_by_repo_root("crates/benches"),
+            ..Default::default()
+          });
+          rolldown_bundler.build().await.unwrap();
+        })
+      });
+    });
+  });
 }
 
 criterion_group!(benches, criterion_benchmark);

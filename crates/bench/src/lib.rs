@@ -2,6 +2,11 @@ use std::path::PathBuf;
 
 use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
 
+pub fn repo_root() -> PathBuf {
+  let project_root = PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap());
+  project_root.parent().unwrap().parent().unwrap().to_path_buf()
+}
+
 pub async fn run_fixture(fixture_path: PathBuf) {
   let mut bundler = Bundler::new(InputOptions {
     input: vec![InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }],
@@ -16,7 +21,6 @@ pub async fn run_fixture(fixture_path: PathBuf) {
   bundler.write(OutputOptions::default()).await.unwrap();
 }
 
-pub fn normalized_fixture_path(path: &str) -> PathBuf {
-  let project_root = std::env::current_dir().unwrap();
-  project_root.join(path)
+pub fn join_by_repo_root(path: &str) -> PathBuf {
+  repo_root().join(path)
 }

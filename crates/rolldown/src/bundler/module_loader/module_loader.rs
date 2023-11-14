@@ -140,7 +140,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
 
           let import_records = builder.import_records.as_mut().unwrap();
 
-          resolved_deps.into_iter().for_each(|(import_record_idx, info)| {
+          resolved_deps.into_iter_enumerated().for_each(|(import_record_idx, info)| {
             let id = self.try_spawn_new_task(&info, false, &mut symbols);
             let import_record = &mut import_records[import_record_idx];
             import_record.resolved_module = id;

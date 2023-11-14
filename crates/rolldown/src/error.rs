@@ -5,6 +5,11 @@ use smallvec::SmallVec;
 pub struct BatchedErrors(SmallVec<[BuildError; 1]>);
 
 impl BatchedErrors {
+  // TODO(hyf): using `trait Extend` would be more proper.
+  pub fn merge(&mut self, mut other: Self) {
+    self.0.append(&mut other.0);
+  }
+
   pub fn with_error(err: BuildError) -> Self {
     Self(smallvec::smallvec![err])
   }

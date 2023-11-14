@@ -24,7 +24,7 @@ use crate::{
     },
     visitors::scanner::{self, ScanResult},
   },
-  error::BatchedResult,
+  error::{BatchedErrors, BatchedResult},
   HookLoadArgs, HookResolveIdArgsOptions, HookTransformArgs,
 };
 pub struct NormalModuleTask<'task, T: FileSystem + Default> {
@@ -221,11 +221,10 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     }
   }
 
-  #[allow(clippy::collection_is_never_read)]
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordId, ImportRecord>,
-  ) -> BatchedResult<Vec<(ImportRecordId, ResolvedRequestInfo)>> {
+  ) -> BatchedResult<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let input_options = Arc::clone(&self.ctx.input_options);
@@ -251,18 +250,17 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
 
     let resolved_ids = join_all(jobs).await;
 
-    let mut errors = vec![];
-
-    let ret = resolved_ids
-      .into_iter()
-      .filter_map(|handle| match handle.unwrap() {
-        Ok(item) => Some(item),
-        Err(e) => {
-          errors.push(e);
-          None
-        }
-      })
-      .collect();
+    let mut errors = BatchedErrors::default();
+    let mut ret = IndexVec::with_capacity(dependencies.len());
+    resolved_ids.into_iter().for_each(|handle| match handle.expect("Assuming no task panics") {
+      Ok((_idx, item)) => {
+        ret.push(item);
+      }
+      Err(e) => {
+        errors.merge(e);
+      }
+    });
+    debug_assert!(errors.is_empty() && ret.len() == dependencies.len());
 
     Ok(ret)
   }

@@ -29,7 +29,6 @@ static HTML_TYPE_REGEX: Lazy<Regex> = Lazy::new(|| {
   Regex::new(r"\.(html|vue|svelte|astro|imba)$").expect("Init HTML_TYPE_REGEX failed")
 });
 
-#[allow(clippy::empty_structs_with_brackets)]
 #[derive(Debug)]
 pub struct ViteScannerPlugin {
   pub entries: Vec<String>,

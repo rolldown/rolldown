@@ -50,7 +50,7 @@ impl Chunk {
               Specifier::Star => {
                 s.append(format!(
                   "import * as {alias} from \"{}\";\n",
-                  module.resource_id.as_ref()
+                  module.resource_id.expect_file().as_str()
                 ));
                 None
               }
@@ -67,7 +67,7 @@ impl Chunk {
           s.append(format!(
             "import {{ {} }} from \"{}\";\n",
             import_items.join(", "),
-            module.resource_id.as_ref()
+            module.resource_id.expect_file().as_str()
           ));
         }
       }

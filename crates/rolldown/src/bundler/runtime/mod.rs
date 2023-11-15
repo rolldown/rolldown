@@ -4,7 +4,7 @@ use rustc_hash::FxHashMap;
 
 use super::module::NormalModule;
 
-pub static RUNTIME_PATH: &str = "\0rolldown-runtime.js";
+pub static RUNTIME_PATH: &str = "rolldown-runtime.js";
 
 #[derive(Debug)]
 pub struct Runtime {

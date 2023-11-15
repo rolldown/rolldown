@@ -1,4 +1,4 @@
-use rolldown_common::{FilePath, ModuleType, ResourceId};
+use rolldown_common::{FilePath, ModuleType};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use std::path::PathBuf;
@@ -46,7 +46,7 @@ impl<F: FileSystem + Default> Resolver<F> {
   #[allow(clippy::missing_errors_doc, clippy::option_if_let_else)]
   pub fn resolve(
     &self,
-    importer: Option<&ResourceId>,
+    importer: Option<&FilePath>,
     specifier: &str,
   ) -> Result<ResolveRet, BuildError> {
     let resolved = if let Some(importer) = importer {
@@ -80,7 +80,7 @@ impl<F: FileSystem + Default> Resolver<F> {
       }),
       Err(_err) => importer.map_or_else(
         || Err(BuildError::unresolved_entry(specifier)),
-        |importer| Err(BuildError::unresolved_import(specifier.to_string(), importer.prettify())),
+        |importer| Err(BuildError::unresolved_import(specifier.to_string(), importer.as_path())),
       ),
     }
   }

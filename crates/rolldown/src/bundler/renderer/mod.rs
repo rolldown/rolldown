@@ -138,15 +138,14 @@ impl<'r> AstRenderer<'r> {
           0,
           format!(
             "var {wrap_ref_name} = {esm_ref_name}({{\n{}'{}'() {{\n",
-            self.indentor,
-            self.ctx.module.resource_id.prettify(),
+            self.indentor, self.ctx.module.pretty_path,
           ),
         );
         self.ctx.source.append(format!("\n{}}}\n}});", self.indentor));
       }
       RenderKind::Cjs => {
         let wrap_ref_name = self.ctx.wrap_ref_name.unwrap();
-        let prettify_id = self.ctx.module.resource_id.prettify();
+        let prettify_id = &self.ctx.module.pretty_path;
         self.ctx.source.indent2(&self.indentor, Vec::default());
         let commonjs_ref_name = self.ctx.canonical_name_for_runtime("__commonJS");
         self.ctx.source.prepend(format!(

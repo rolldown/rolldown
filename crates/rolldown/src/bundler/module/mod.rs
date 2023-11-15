@@ -8,6 +8,8 @@ use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ResourceId, Symbol
 use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
 
+use crate::InputOptions;
+
 use self::external_module::ExternalModule;
 
 use super::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
@@ -94,6 +96,7 @@ impl Module {
 }
 
 pub struct ModuleRenderContext<'a> {
+  pub input_options: &'a InputOptions,
   pub canonical_names: &'a FxHashMap<SymbolRef, Atom>,
   pub graph: &'a LinkStageOutput,
   pub chunk_graph: &'a ChunkGraph,

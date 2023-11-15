@@ -1,4 +1,4 @@
-use rolldown_common::{FilePath, ModuleType, ResourceId};
+use rolldown_common::{FilePath, ModuleType};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_resolver::Resolver;
@@ -19,7 +19,7 @@ pub async fn resolve_id<T: FileSystem + Default>(
   resolver: &Resolver<T>,
   plugin_driver: &SharedPluginDriver,
   request: &str,
-  importer: Option<&ResourceId>,
+  importer: Option<&FilePath>,
   options: HookResolveIdArgsOptions,
   _preserve_symlinks: bool,
 ) -> Result<Option<ResolvedRequestInfo>, BuildError> {

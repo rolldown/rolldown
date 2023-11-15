@@ -1,3 +1,4 @@
+use index_vec::IndexVec;
 use oxc::{ast::Visit, span::SourceType};
 use rolldown_common::{ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
@@ -70,7 +71,7 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
       .common_data
       .tx
       .send(Msg::RuntimeNormalModuleDone(NormalModuleTaskResult {
-        resolved_deps: Vec::default(),
+        resolved_deps: IndexVec::default(),
         module_id: self.module_id,
         errors: self.errors,
         warnings: self.warnings,

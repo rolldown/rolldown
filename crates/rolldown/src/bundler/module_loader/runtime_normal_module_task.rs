@@ -43,7 +43,7 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
       named_imports,
       named_exports,
       stmt_infos,
-      import_records,
+      import_records: _,
       star_exports,
       export_default_symbol_id,
       imports,
@@ -59,10 +59,10 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
     builder.named_imports = Some(named_imports);
     builder.named_exports = Some(named_exports);
     builder.stmt_infos = Some(stmt_infos);
-    builder.import_records = Some(import_records);
     builder.imports = Some(imports);
     builder.star_exports = Some(star_exports);
     builder.default_export_symbol = export_default_symbol_id;
+    builder.import_records = Some(IndexVec::default());
     builder.scope = Some(scope);
     builder.exports_kind = exports_kind;
     builder.namespace_symbol = Some(namespace_symbol);
@@ -77,6 +77,7 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
         warnings: self.warnings,
         ast_symbol: symbol,
         builder,
+        raw_import_records: IndexVec::default(),
       }))
       .unwrap();
   }

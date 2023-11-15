@@ -1,5 +1,5 @@
 use index_vec::IndexVec;
-use rolldown_common::{ImportRecordId, ModuleId};
+use rolldown_common::{ImportRecordId, ModuleId, RawImportRecord};
 use rolldown_error::BuildError;
 
 use crate::bundler::module::normal_module_builder::NormalModuleBuilder;
@@ -10,6 +10,7 @@ pub struct NormalModuleTaskResult {
   pub module_id: ModuleId,
   pub ast_symbol: AstSymbol,
   pub resolved_deps: IndexVec<ImportRecordId, ResolvedRequestInfo>,
+  pub raw_import_records: IndexVec<ImportRecordId, RawImportRecord>,
   pub errors: Vec<BuildError>,
   pub warnings: Vec<BuildError>,
   pub builder: NormalModuleBuilder,

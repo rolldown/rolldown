@@ -12,7 +12,7 @@ mod symbol_ref;
 mod wrap_kind;
 pub use crate::{
   exports_kind::ExportsKind,
-  import_record::{ImportKind, ImportRecord, ImportRecordId},
+  import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},
   module_id::ModuleId,
   module_path::ResourceId,
   module_type::ModuleType,

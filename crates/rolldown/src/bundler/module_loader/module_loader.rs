@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use rolldown_common::{ImportKind, ImportRecordId, ModuleId, RawPath, ResourceId};
+use rolldown_common::{FilePath, ImportKind, ImportRecordId, ModuleId, ResourceId};
 use rolldown_fs::FileSystem;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -30,7 +30,7 @@ pub struct ModuleLoader<T: FileSystem + Default> {
 
 #[derive(Debug, Default)]
 pub struct ModuleLoaderContext {
-  visited: FxHashMap<RawPath, ModuleId>,
+  visited: FxHashMap<FilePath, ModuleId>,
   remaining: u32,
   intermediate_modules: IndexVec<ModuleId, Option<Module>>,
 }

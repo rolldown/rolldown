@@ -94,7 +94,7 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
       self.module_id,
       &ast_scope,
       &mut symbol_for_module,
-      RUNTIME_PATH.to_string(),
+      "runtime".to_string(),
       self.module_type,
     );
     let namespace_symbol = scanner.namespace_symbol;

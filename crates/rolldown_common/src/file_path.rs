@@ -1,28 +1,39 @@
 use std::{
   ffi::OsStr,
   path::{Component, Path},
+  sync::Arc,
 };
 
 use sugar_path::{AsPath, SugarPath};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct RawPath(String);
+pub struct FilePath(Arc<str>);
 
-impl std::ops::Deref for RawPath {
-  type Target = String;
+impl FilePath {
+  pub fn new(value: impl Into<String>) -> Self {
+    Self(value.into().into())
+  }
+
+  pub fn as_str(&self) -> &str {
+    &self.0
+  }
+}
+
+impl std::ops::Deref for FilePath {
+  type Target = str;
 
   fn deref(&self) -> &Self::Target {
     &self.0
   }
 }
 
-impl From<String> for RawPath {
+impl From<String> for FilePath {
   fn from(value: String) -> Self {
-    Self(value)
+    Self::new(value)
   }
 }
 
-impl RawPath {
+impl FilePath {
   pub fn unique(&self, root: impl AsRef<Path>) -> String {
     let path = self.0.as_path();
     let mut relative = path.relative(root);
@@ -48,13 +59,13 @@ impl RawPath {
 #[test]
 fn test() {
   let cwd = "/projects/foo".to_string();
-  let p = RawPath("/projects/foo/src/index.ts".to_string());
+  let p = FilePath::new("/projects/foo/src/index.ts".to_string());
   assert_eq!(p.unique(&cwd), "src_index_ts");
-  let p = RawPath("/projects/foo/src/index.module.css".to_string());
+  let p = FilePath::new("/projects/foo/src/index.module.css".to_string());
   assert_eq!(p.unique(&cwd), "src_index_module_css");
   // FIXME: "/projects/bar.ts" should not have the same result with "/bar.ts"
-  let p = RawPath("/projects/bar.ts".to_string());
+  let p = FilePath::new("/projects/bar.ts".to_string());
   assert_eq!(p.unique(&cwd), "bar_ts");
-  let p = RawPath("/bar.ts".to_string());
+  let p = FilePath::new("/bar.ts".to_string());
   assert_eq!(p.unique(&cwd), "bar_ts");
 }

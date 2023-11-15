@@ -1,4 +1,4 @@
-use rolldown_common::{ModuleType, RawPath, ResourceId};
+use rolldown_common::{FilePath, ModuleType, ResourceId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_resolver::Resolver;
@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct ResolvedRequestInfo {
-  pub path: RawPath,
+  pub path: FilePath,
   pub module_type: ModuleType,
   pub is_external: bool,
 }

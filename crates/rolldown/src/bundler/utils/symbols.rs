@@ -34,11 +34,10 @@ pub struct Symbols {
 }
 
 impl Symbols {
+  pub fn alloc_one(&mut self) {
+    self.inner.push(IndexVec::default());
+  }
   pub fn add_ast_symbol(&mut self, module_id: ModuleId, ast_symbol: AstSymbol) {
-    let module_count = module_id.raw() as usize;
-    if self.inner.len() <= module_count {
-      self.inner.resize_with(module_count + 1, IndexVec::default);
-    }
     self.inner[module_id] = ast_symbol
       .names
       .into_iter()

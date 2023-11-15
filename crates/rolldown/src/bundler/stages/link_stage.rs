@@ -4,7 +4,7 @@ use rustc_hash::FxHashSet;
 use crate::bundler::{
   linker::{linker::Linker, linker_info::LinkingInfoVec},
   module::ModuleVec,
-  runtime::Runtime,
+  runtime::RuntimeModuleBrief,
   utils::symbols::Symbols,
 };
 
@@ -17,7 +17,7 @@ pub struct LinkStageOutput {
   pub sorted_modules: Vec<ModuleId>,
   pub linking_infos: LinkingInfoVec,
   pub symbols: Symbols,
-  pub runtime: Runtime,
+  pub runtime: RuntimeModuleBrief,
 }
 
 #[derive(Debug)]
@@ -25,7 +25,7 @@ pub struct LinkStage {
   pub modules: ModuleVec,
   pub entries: Vec<(Option<String>, ModuleId)>,
   pub symbols: Symbols,
-  pub runtime: Runtime,
+  pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleId>,
   pub linking_infos: LinkingInfoVec,
 }

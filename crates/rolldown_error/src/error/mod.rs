@@ -32,25 +32,17 @@ pub enum BuildError {
   #[error(transparent)]
   UnresolvedImport(Box<UnresolvedImport>),
 
+  #[diagnostic(code = "IO_ERROR")]
   #[error(transparent)]
   Io(Box<std::io::Error>),
 
   // TODO: probably should remove this error
+  #[diagnostic(code = "NAPI_ERROR")]
   #[error("Napi error: {status}: {reason}")]
   Napi { status: String, reason: String },
 }
 
 impl BuildError {
-  pub fn code(&self) -> String {
-    match self {
-      Self::ExternalEntry(e) => e.code().unwrap().to_string(),
-      Self::UnresolvedEntry(e) => e.code().unwrap().to_string(),
-      Self::UnresolvedImport(e) => e.code().unwrap().to_string(),
-      Self::Io(_) => "IO_ERROR".into(),
-      Self::Napi { .. } => "NAPI_ERROR".into(),
-    }
-  }
-
   // --- Aligned with rollup
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
     Self::ExternalEntry(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() }.into())

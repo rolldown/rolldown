@@ -1,10 +1,10 @@
 use std::{borrow::Cow, path::Path};
 
+use super::fixture::Fixture;
+use miette::{Diagnostic, GraphicalReportHandler, GraphicalTheme};
 use rolldown::Output;
 use rolldown_error::BuildError;
 use string_wizard::MagicString;
-
-use super::fixture::Fixture;
 
 pub struct Case {
   fixture: Fixture,
@@ -62,14 +62,21 @@ impl Case {
 
   fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildError>) {
     self.snapshot.append("# Errors\n\n");
-    errors.sort_by_key(rolldown_error::BuildError::code);
+    errors.sort_by_key(|e| e.code().unwrap().to_string());
+
+    // Render with miette's diagnostic theme (without colors)
+    let reporter = GraphicalReportHandler::new_themed(GraphicalTheme::unicode_nocolor());
+
     let rendered = errors
       .iter()
       .flat_map(|error| {
+        let mut out = String::new();
+        reporter.render_report(&mut out, error).unwrap();
+
         [
-          Cow::Owned(format!("## {}\n", error.code())),
+          Cow::Owned(format!("## {}\n", error.code().unwrap().to_string())),
           "```text".into(),
-          Cow::Owned(error.to_string()),
+          Cow::Owned(out),
           "```".into(),
         ]
       })

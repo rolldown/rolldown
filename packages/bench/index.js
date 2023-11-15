@@ -22,11 +22,11 @@ const repoRoot = path.join(dirname, '../../')
 const suites = [
   {
     title: 'threejs',
-    inputs: [path.join(repoRoot, './crates/bench/cases/threejs/main.js')],
+    inputs: [path.join(repoRoot, './temp/three/entry.js')],
   },
   {
     title: 'threejs10x',
-    inputs: [path.join(repoRoot, './crates/bench/cases/threejs10x/main.js')],
+    inputs: [path.join(repoRoot, './temp/three10x/entry.js')],
   },
   {
     title: 'react_and_react_dom',

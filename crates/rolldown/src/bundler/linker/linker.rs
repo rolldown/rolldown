@@ -223,7 +223,10 @@ impl<'graph> Linker<'graph> {
       match module {
         Module::Normal(importer) => {
           importer.static_imports().for_each(|r| {
-            let importee_linking_info = &linking_infos[r.resolved_module];
+            let importee_linking_info =
+              &linking_infos.get(r.resolved_module).unwrap_or_else(|| {
+                panic!("importer: {:?}, importee_linking_info {:#?}", importer.resource_id, r,)
+              });
             let importee = &self.graph.modules[r.resolved_module];
             let Module::Normal(importee) = importee else {
               return;

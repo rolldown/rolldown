@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 #[derive(Error, Debug, Diagnostic)]
-#[error("Cannot resolve entry module {:?}", unresolved_id.relative_display())]
+#[diagnostic(code = "UNRESOLVED_ENTRY")]
+#[error("Cannot resolve entry module {}.", unresolved_id.relative_display())]
 pub struct UnresolvedEntry {
   pub(crate) unresolved_id: PathBuf,
 }

@@ -97,7 +97,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
         .plugin_driver
         .build_end(Some(&HookBuildEndArgs {
           // TODO(hyf0): 1.Need a better way to expose the error
-          error: format!("{:?}\n{:?}", error.code(), error.to_string()),
+          error: error.to_string(),
         }))
         .await?;
       return Err(e);

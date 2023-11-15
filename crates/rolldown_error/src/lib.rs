@@ -1,6 +1,5 @@
-// mod diagnostic;
 mod error;
-mod error_code;
+// mod error_code;
 mod utils;
 
 use std::path::Path;

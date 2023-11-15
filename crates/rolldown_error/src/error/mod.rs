@@ -11,8 +11,6 @@ pub mod unresolved_import;
 use miette::Diagnostic;
 use thiserror::Error;
 
-use crate::error_code;
-
 use self::{
   external_entry::ExternalEntry, unresolved_entry::UnresolvedEntry,
   unresolved_import::UnresolvedImport,
@@ -43,12 +41,13 @@ pub enum BuildError {
 }
 
 impl BuildError {
-  pub fn code(&self) -> &'static str {
+  pub fn code(&self) -> String {
     match self {
-      Self::UnresolvedEntry(_) | Self::ExternalEntry(_) => error_code::UNRESOLVED_ENTRY,
-      Self::UnresolvedImport(_) => error_code::UNRESOLVED_IMPORT,
-      Self::Io(_) => error_code::IO_ERROR,
-      Self::Napi { .. } => todo!(),
+      Self::ExternalEntry(e) => e.code().unwrap().to_string(),
+      Self::UnresolvedEntry(e) => e.code().unwrap().to_string(),
+      Self::UnresolvedImport(e) => e.code().unwrap().to_string(),
+      Self::Io(_) => "IO_ERROR".into(),
+      Self::Napi { .. } => "NAPI_ERROR".into(),
     }
   }
 

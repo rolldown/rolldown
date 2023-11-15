@@ -69,7 +69,7 @@ impl Case {
         [
           Cow::Owned(format!("## {}\n", error.code())),
           "```text".into(),
-          Cow::Owned(error.to_diagnostic().print_to_string()),
+          Cow::Owned(error.to_string()),
           "```".into(),
         ]
       })

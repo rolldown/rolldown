@@ -14,7 +14,7 @@ use crate::bundler::module::{Module, ModuleVec};
 use crate::bundler::module_loader::module_task_context::ModuleTaskCommonData;
 use crate::bundler::options::input_options::SharedInputOptions;
 use crate::bundler::plugin_driver::SharedPluginDriver;
-use crate::bundler::runtime::{Runtime, RUNTIME_PATH};
+use crate::bundler::runtime::Runtime;
 use crate::bundler::utils::ast_symbol::AstSymbol;
 use crate::bundler::utils::resolve_id::ResolvedRequestInfo;
 use crate::bundler::utils::symbols::Symbols;
@@ -31,6 +31,7 @@ pub struct ModuleLoader<T: FileSystem + Default> {
 #[derive(Debug, Default)]
 pub struct ModuleLoaderContext {
   visited: FxHashMap<FilePath, ModuleId>,
+  runtime_id: Option<ModuleId>,
   remaining: u32,
   intermediate_modules: IndexVec<ModuleId, Option<Module>>,
 }
@@ -91,21 +92,17 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
   }
 
   pub fn try_spawn_runtime_module_task(&mut self) -> ModuleId {
-    match self.ctx.visited.entry(RUNTIME_PATH.to_string().into()) {
-      std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
-      std::collections::hash_map::Entry::Vacant(not_visited) => {
-        let id = self.ctx.intermediate_modules.push(None);
-        not_visited.insert(id);
-        self.ctx.remaining += 1;
-        let task = RuntimeNormalModuleTask::new(
-          // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
-          unsafe { self.common_data.assume_static() },
-          id,
-        );
-        tokio::spawn(async move { task.run() });
-        id
-      }
-    }
+    *self.ctx.runtime_id.get_or_insert_with(|| {
+      let id = self.ctx.intermediate_modules.push(None);
+      self.ctx.remaining += 1;
+      let task = RuntimeNormalModuleTask::new(
+        // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
+        unsafe { self.common_data.assume_static() },
+        id,
+      );
+      tokio::spawn(async move { task.run() });
+      id
+    })
   }
 
   pub async fn fetch_all_modules(

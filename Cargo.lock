@@ -60,16 +60,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 
 [[package]]
-name = "ariadne"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72fe02fc62033df9ba41cba57ee19acf5e742511a140c7dbc3a873e19a19a1bd"
-dependencies = [
- "unicode-width",
- "yansi",
-]
-
-[[package]]
 name = "async-scoped"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1523,6 +1513,7 @@ dependencies = [
  "futures",
  "index_vec",
  "insta",
+ "miette",
  "oxc",
  "oxc_resolver",
  "rayon",
@@ -1580,7 +1571,7 @@ dependencies = [
 name = "rolldown_error"
 version = "0.0.1"
 dependencies = [
- "ariadne",
+ "miette",
  "sugar_path",
  "thiserror",
 ]
@@ -2431,9 +2422,3 @@ checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
 dependencies = [
  "linked-hash-map",
 ]
-
-[[package]]
-name = "yansi"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09041cd90cf85f7f8b2df60c646f853b7f535ce68f85244eb6731cf89fa498ec"

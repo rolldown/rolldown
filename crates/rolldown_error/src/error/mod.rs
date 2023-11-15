@@ -4,10 +4,11 @@ use std::{
 };
 
 pub mod external_entry;
-pub mod impl_to_diagnostic;
+// pub mod impl_to_diagnostic;
 pub mod unresolved_entry;
 pub mod unresolved_import;
 
+use miette::Diagnostic;
 use thiserror::Error;
 
 use crate::error_code;
@@ -19,16 +20,23 @@ use self::{
 
 type StaticStr = Cow<'static, str>;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Diagnostic)]
 pub enum BuildError {
+  #[diagnostic(transparent)]
   #[error(transparent)]
   UnresolvedEntry(Box<UnresolvedEntry>),
+
+  #[diagnostic(transparent)]
   #[error(transparent)]
   ExternalEntry(Box<ExternalEntry>),
+
+  #[diagnostic(transparent)]
   #[error(transparent)]
   UnresolvedImport(Box<UnresolvedImport>),
+
   #[error(transparent)]
   Io(Box<std::io::Error>),
+
   // TODO: probably should remove this error
   #[error("Napi error: {status}: {reason}")]
   Napi { status: String, reason: String },

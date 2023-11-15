@@ -29,7 +29,6 @@ async-trait    = "0.1.74"
 futures        = "0.3.29"
 thiserror      = "1.0.50"
 smallvec       = "1.11.1"
-ariadne        = "0.3.0"
 async-scoped   = { version = "0.7.1" }
 regex          = "1.10.2"
 once_cell      = "1.18.0"

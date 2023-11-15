@@ -46,6 +46,28 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
     Self { input_options, plugin_driver, fs, resolver }
   }
 
+  pub async fn scan(&self) -> BatchedResult<ScanStageOutput> {
+    assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
+
+    let mut module_loader = ModuleLoader::new(
+      Arc::clone(&self.input_options),
+      Arc::clone(&self.plugin_driver),
+      self.fs.share(),
+      Arc::clone(&self.resolver),
+    );
+
+    module_loader.try_spawn_runtime_module_task();
+
+    let resolved_entries = self.resolve_entries()?;
+
+    let mut runtime = Runtime::new(module_loader.try_spawn_runtime_module_task());
+
+    let (modules, symbols, entries) =
+      module_loader.fetch_all_modules(&resolved_entries, &mut runtime).await?;
+
+    Ok(ScanStageOutput { modules, entries, symbols, runtime })
+  }
+
   fn resolve_entries(&self) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
@@ -88,25 +110,5 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
     } else {
       Err(errors)
     }
-  }
-
-  pub async fn scan(&self) -> BatchedResult<ScanStageOutput> {
-    assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
-
-    let mut module_loader = ModuleLoader::new(
-      Arc::clone(&self.input_options),
-      Arc::clone(&self.plugin_driver),
-      self.fs.share(),
-      Arc::clone(&self.resolver),
-    );
-
-    let resolved_entries = self.resolve_entries()?;
-
-    let mut runtime = Runtime::new(module_loader.try_spawn_runtime_module_task());
-
-    let (modules, symbols, entries) =
-      module_loader.fetch_all_modules(&resolved_entries, &mut runtime).await?;
-
-    Ok(ScanStageOutput { modules, entries, symbols, runtime })
   }
 }

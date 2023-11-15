@@ -16,3 +16,4 @@ async-trait    = { workspace = true }
 regex          = { workspace = true }
 once_cell      = { workspace = true }
 rustc-hash     = { workspace = true }
+dashmap        = { workspace = true }

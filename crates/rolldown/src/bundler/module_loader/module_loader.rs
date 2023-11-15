@@ -31,6 +31,14 @@ pub struct ModuleLoader<T: FileSystem + Default> {
   symbols: Symbols,
 }
 
+pub struct ModuleLoaderOutput {
+  // Stored all modules
+  pub modules: ModuleVec,
+  pub symbols: Symbols,
+  // Entries that user defined + dynamic import entries
+  pub entries: Vec<(Option<String>, ModuleId)>,
+}
+
 impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
   pub fn new(
     input_options: SharedInputOptions,
@@ -112,7 +120,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     mut self,
     user_defined_entries: &[(Option<String>, ResolvedRequestInfo)],
     runtime: &mut Runtime,
-  ) -> BatchedResult<(ModuleVec, Symbols, Vec<(Option<String>, ModuleId)>)> {
+  ) -> BatchedResult<ModuleLoaderOutput> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
     self.intermediate_modules.reserve(user_defined_entries.len() + 1 /* runtime */);
@@ -176,6 +184,6 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     let mut dynamic_entries = Vec::from_iter(dynamic_entries);
     dynamic_entries.sort_by(|(a, _), (b, _)| a.cmp(b));
     entries.extend(dynamic_entries);
-    Ok((modules, self.symbols, entries))
+    Ok(ModuleLoaderOutput { modules, symbols: self.symbols, entries })
   }
 }

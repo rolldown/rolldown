@@ -95,11 +95,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     *self.ctx.runtime_id.get_or_insert_with(|| {
       let id = self.ctx.intermediate_modules.push(None);
       self.ctx.remaining += 1;
-      let task = RuntimeNormalModuleTask::new(
-        // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
-        unsafe { self.common_data.assume_static() },
-        id,
-      );
+      let task = RuntimeNormalModuleTask::new(id, self.common_data.tx.clone());
       tokio::spawn(async move { task.run() });
       id
     })

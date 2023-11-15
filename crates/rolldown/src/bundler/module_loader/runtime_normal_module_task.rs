@@ -2,33 +2,25 @@ use index_vec::IndexVec;
 use oxc::{ast::Visit, span::SourceType};
 use rolldown_common::{ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystem;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
-use super::{module_task_context::ModuleTaskCommonData, Msg};
+use super::Msg;
 use crate::bundler::{
   module::normal_module_builder::NormalModuleBuilder,
   module_loader::NormalModuleTaskResult,
   utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
   visitors::scanner::{self, ScanResult},
 };
-pub struct RuntimeNormalModuleTask<'task, T: FileSystem + Default> {
-  common_data: &'task ModuleTaskCommonData<T>,
+pub struct RuntimeNormalModuleTask {
+  tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   module_id: ModuleId,
-  module_type: ModuleType,
   errors: Vec<BuildError>,
   warnings: Vec<BuildError>,
 }
 
-impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T> {
-  pub fn new(common_data: &'task ModuleTaskCommonData<T>, id: ModuleId) -> Self {
-    Self {
-      common_data,
-      module_id: id,
-      module_type: ModuleType::EsmMjs,
-      errors: Vec::default(),
-      warnings: Vec::default(),
-    }
+impl RuntimeNormalModuleTask {
+  pub fn new(id: ModuleId, tx: tokio::sync::mpsc::UnboundedSender<Msg>) -> Self {
+    Self { module_id: id, tx, errors: Vec::default(), warnings: Vec::default() }
   }
 
   pub fn run(self) {
@@ -69,7 +61,6 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
     builder.pretty_path = Some("<runtime>".to_string());
 
     self
-      .common_data
       .tx
       .send(Msg::RuntimeNormalModuleDone(NormalModuleTaskResult {
         resolved_deps: IndexVec::default(),
@@ -96,7 +87,7 @@ impl<'task, T: FileSystem + Default + 'static> RuntimeNormalModuleTask<'task, T>
       &ast_scope,
       &mut symbol_for_module,
       "runtime".to_string(),
-      self.module_type,
+      ModuleType::EsmMjs,
     );
     let namespace_symbol = scanner.namespace_symbol;
     scanner.visit_program(program.program());

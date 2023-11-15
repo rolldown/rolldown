@@ -3,8 +3,8 @@ import type { OutputOptions } from './options/output-options'
 export { rolldown } from './rolldown'
 
 interface RollupOptions extends InputOptions {
-	// This is included for compatibility with config files but ignored by rollup.rollup
-	output?: OutputOptions | OutputOptions[];
+  // This is included for compatibility with config files but ignored by rollup.rollup
+  output?: OutputOptions | OutputOptions[]
 }
 
 // export types from rolldown

@@ -42,7 +42,11 @@ pub struct ViteScannerPlugin<T: FileSystem + Default> {
 
 impl<T: FileSystem + 'static + Default> Debug for ViteScannerPlugin<T> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("ViteScannerPlugin").field("entries", &self.entries).field("fs", &"").finish()
+    f.debug_struct("ViteScannerPlugin")
+      .field("entries", &self.entries)
+      .field("fs", &"")
+      .field("scripts", &self.scripts)
+      .finish()
   }
 }
 

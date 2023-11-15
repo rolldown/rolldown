@@ -1,6 +1,9 @@
 {
   "private": true,
   "type": "module",
+  "scripts": {
+    "bench": "node ./index.js"
+  },
   "devDependencies": {
     "@rolldown/node": "workspace:*",
     "esbuild": "^0.19.5"

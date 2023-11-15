@@ -1588,6 +1588,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_plugin_vite_scanner"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "once_cell",
+ "regex",
+ "rolldown",
+ "rolldown_error",
+]
+
+[[package]]
 name = "rolldown_resolver"
 version = "0.0.1"
 dependencies = [

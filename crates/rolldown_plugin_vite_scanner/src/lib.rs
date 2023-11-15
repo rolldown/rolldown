@@ -1,3 +1,4 @@
+use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rolldown::{
@@ -6,7 +7,7 @@ use rolldown::{
 };
 use rolldown_fs::FileSystem;
 use std::{borrow::Cow, fmt::Debug, path::PathBuf};
-use util::extract_html_module_scripts;
+use util::{extract_html_module_scripts, VIRTUAL_MODULE_PREFIX};
 mod util;
 static HTTP_URL_REGEX: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^(https?:)?\/\/").expect("Init HTTP_URL_REGEX failed"));
@@ -34,11 +35,18 @@ static HTML_TYPE_REGEX: Lazy<Regex> = Lazy::new(|| {
 pub struct ViteScannerPlugin<T: FileSystem + Default> {
   pub entries: Vec<String>,
   pub fs: T,
+  // Store the scripts extracted from HTML-like files
+  // Using `DashMap` because resolve_id is called in parallel
+  pub scripts: DashMap<String, String>,
 }
 
 impl<T: FileSystem + 'static + Default> Debug for ViteScannerPlugin<T> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("ViteScannerPlugin").field("entries", &self.entries).field("fs", &"").finish()
+    f.debug_struct("ViteScannerPlugin")
+      .field("entries", &self.entries)
+      .field("fs", &"")
+      .field("scripts", &self.scripts)
+      .finish()
   }
 }
 
@@ -60,13 +68,9 @@ impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
       return Ok(Some(HookResolveIdOutput { id: (*source).to_string(), external: Some(true) }));
     }
 
-    // local scripts (`<script>` in Svelte and `<script setup>` in Vue)
+    // resolve local scripts (`<script>` in Svelte and `<script setup>` in Vue)
     if VIRTUAL_MODULE_REGEX.is_match(source) {
-      return Ok(Some(HookResolveIdOutput {
-        // strip prefix to get valid filesystem path so bundler can resolve imports in the file
-        id: source.replace("virtual-module:", ""),
-        external: None,
-      }));
+      return Ok(Some(HookResolveIdOutput { id: (*source).to_string(), external: None }));
     }
 
     // TODO bare imports: record and externalize
@@ -103,9 +107,19 @@ impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
     if HTML_TYPE_REGEX.is_match(id) {
       let path = PathBuf::from(id);
       let content = self.fs.read_to_string(&path)?;
-      // TODO store scripts
-      let (content, _) = extract_html_module_scripts(&content, &path);
+      let (content, scripts) = extract_html_module_scripts(&content, &path);
+      scripts.into_iter().for_each(|(key, value)| {
+        self.scripts.insert(key, value);
+      });
       return Ok(Some(HookLoadOutput { code: content }));
+    }
+
+    // load local scripts (`<script>` in Svelte and `<script setup>` in Vue)
+    if VIRTUAL_MODULE_REGEX.is_match(id) {
+      let key = id.replace(VIRTUAL_MODULE_PREFIX, "");
+      if let Some(content) = self.scripts.get(&key) {
+        return Ok(Some(HookLoadOutput { code: content.to_string() }));
+      }
     }
 
     Ok(None)

@@ -35,7 +35,7 @@ static IMPORTS_FROM_BLOCK_REGEX: Lazy<Regex> = Lazy::new(|| {
   Regex::new(r#"import([\w*{}\n\r\t, ]+from)?\s*([\w\d"'\.\/]*)"#)
     .expect("Init IMPORTS_FROM_BLOCK_REGEX failed")
 });
-static VIRTUAL_MODULE_PREFIX: &str = "virtual-module:";
+pub static VIRTUAL_MODULE_PREFIX: &str = "virtual-module:";
 
 pub fn extract_html_module_scripts(
   content: &str,

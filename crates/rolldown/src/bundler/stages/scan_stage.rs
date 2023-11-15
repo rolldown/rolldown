@@ -11,7 +11,7 @@ use crate::{
     module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
     options::input_options::SharedInputOptions,
     plugin_driver::SharedPluginDriver,
-    runtime::Runtime,
+    runtime::RuntimeModuleBrief,
     utils::{
       resolve_id::{resolve_id, ResolvedRequestInfo},
       symbols::Symbols,
@@ -33,7 +33,7 @@ pub struct ScanStageOutput {
   pub modules: ModuleVec,
   pub entries: Vec<(Option<String>, ModuleId)>,
   pub symbols: Symbols,
-  pub runtime: Runtime,
+  pub runtime: RuntimeModuleBrief,
 }
 
 impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
@@ -60,10 +60,8 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
 
     let user_entries = self.resolve_user_defined_entries()?;
 
-    let mut runtime = Runtime::new(module_loader.try_spawn_runtime_module_task());
-
-    let ModuleLoaderOutput { modules, entries, symbols } =
-      module_loader.fetch_all_modules(&user_entries, &mut runtime).await?;
+    let ModuleLoaderOutput { modules, entries, symbols, runtime } =
+      module_loader.fetch_all_modules(&user_entries).await?;
 
     Ok(ScanStageOutput { modules, entries, symbols, runtime })
   }

@@ -7,20 +7,26 @@ use rolldown_oxc::{OxcCompiler, OxcProgram};
 use super::Msg;
 use crate::bundler::{
   module::normal_module_builder::NormalModuleBuilder,
-  module_loader::NormalModuleTaskResult,
+  runtime::RuntimeModuleBrief,
   utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
   visitors::scanner::{self, ScanResult},
 };
 pub struct RuntimeNormalModuleTask {
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   module_id: ModuleId,
-  errors: Vec<BuildError>,
   warnings: Vec<BuildError>,
+}
+
+pub struct RuntimeNormalModuleTaskResult {
+  pub runtime: RuntimeModuleBrief,
+  pub ast_symbol: AstSymbol,
+  pub warnings: Vec<BuildError>,
+  pub builder: NormalModuleBuilder,
 }
 
 impl RuntimeNormalModuleTask {
   pub fn new(id: ModuleId, tx: tokio::sync::mpsc::UnboundedSender<Msg>) -> Self {
-    Self { module_id: id, tx, errors: Vec::default(), warnings: Vec::default() }
+    Self { module_id: id, tx, warnings: Vec::default() }
   }
 
   pub fn run(self) {
@@ -29,6 +35,8 @@ impl RuntimeNormalModuleTask {
     let source = include_str!("../runtime/index.js").to_string();
 
     let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(source);
+
+    let runtime = RuntimeModuleBrief::new(self.module_id, &scope);
 
     let ScanResult {
       named_imports,
@@ -62,14 +70,11 @@ impl RuntimeNormalModuleTask {
 
     self
       .tx
-      .send(Msg::RuntimeNormalModuleDone(NormalModuleTaskResult {
-        resolved_deps: IndexVec::default(),
-        module_id: self.module_id,
-        errors: self.errors,
+      .send(Msg::RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult {
         warnings: self.warnings,
         ast_symbol: symbol,
         builder,
-        raw_import_records: IndexVec::default(),
+        runtime,
       }))
       .unwrap();
   }

@@ -12,9 +12,10 @@ use super::Msg;
 use crate::bundler::module::external_module::ExternalModule;
 use crate::bundler::module::{Module, ModuleVec};
 use crate::bundler::module_loader::module_task_context::ModuleTaskCommonData;
+use crate::bundler::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
 use crate::bundler::options::input_options::SharedInputOptions;
 use crate::bundler::plugin_driver::SharedPluginDriver;
-use crate::bundler::runtime::Runtime;
+use crate::bundler::runtime::RuntimeModuleBrief;
 use crate::bundler::utils::resolve_id::ResolvedRequestInfo;
 use crate::bundler::utils::symbols::Symbols;
 use crate::error::BatchedResult;
@@ -37,6 +38,7 @@ pub struct ModuleLoaderOutput {
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
   pub entries: Vec<(Option<String>, ModuleId)>,
+  pub runtime: RuntimeModuleBrief,
 }
 
 impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
@@ -119,7 +121,6 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: &[(Option<String>, ResolvedRequestInfo)],
-    runtime: &mut Runtime,
   ) -> BatchedResult<ModuleLoaderOutput> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
@@ -131,6 +132,8 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
       .collect::<Vec<_>>();
 
     let mut dynamic_entries = FxHashSet::default();
+
+    let mut runtime_brief: Option<RuntimeModuleBrief> = None;
 
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
@@ -167,13 +170,12 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
           self.symbols.add_ast_symbol(module_id, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let NormalModuleTaskResult { module_id, ast_symbol, builder, .. } = task_result;
+          let RuntimeNormalModuleTaskResult { ast_symbol, builder, runtime, warnings: _ } =
+            task_result;
 
-          let runtime_normal_module = builder.build();
-          runtime.init_symbols(&runtime_normal_module);
-          self.intermediate_modules[module_id] = Some(Module::Normal(runtime_normal_module));
-
-          self.symbols.add_ast_symbol(module_id, ast_symbol);
+          self.intermediate_modules[runtime.id()] = Some(Module::Normal(builder.build()));
+          self.symbols.add_ast_symbol(runtime.id(), ast_symbol);
+          runtime_brief = Some(runtime);
         }
       }
       self.remaining -= 1;
@@ -184,6 +186,11 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     let mut dynamic_entries = Vec::from_iter(dynamic_entries);
     dynamic_entries.sort_by(|(a, _), (b, _)| a.cmp(b));
     entries.extend(dynamic_entries);
-    Ok(ModuleLoaderOutput { modules, symbols: self.symbols, entries })
+    Ok(ModuleLoaderOutput {
+      modules,
+      symbols: self.symbols,
+      entries,
+      runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
+    })
   }
 }

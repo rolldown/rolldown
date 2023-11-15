@@ -2,29 +2,24 @@ use oxc::{semantic::SymbolId, span::Atom};
 use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 
-use super::module::NormalModule;
+use super::utils::ast_scope::AstScope;
 
 #[derive(Debug)]
-pub struct Runtime {
+pub struct RuntimeModuleBrief {
   id: ModuleId,
   name_to_symbol: FxHashMap<Atom, SymbolId>,
 }
 
-impl Runtime {
-  pub fn new(id: ModuleId) -> Self {
-    Self { id, name_to_symbol: FxHashMap::default() }
+impl RuntimeModuleBrief {
+  pub fn new(id: ModuleId, scope: &AstScope) -> Self {
+    Self {
+      id,
+      name_to_symbol: scope.get_bindings(scope.root_scope_id()).clone().into_iter().collect(),
+    }
   }
 
   pub fn id(&self) -> ModuleId {
     self.id
-  }
-  pub fn init_symbols(&mut self, runtime_module: &NormalModule) {
-    self.name_to_symbol = runtime_module
-      .scope
-      .get_bindings(runtime_module.scope.root_scope_id())
-      .clone()
-      .into_iter()
-      .collect();
   }
 
   pub fn resolve_symbol(&self, name: &Atom) -> SymbolRef {

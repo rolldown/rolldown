@@ -7,8 +7,10 @@ mod task_result;
 
 pub use module_loader::ModuleLoader;
 
-use self::task_result::NormalModuleTaskResult;
+use self::{
+  runtime_normal_module_task::RuntimeNormalModuleTaskResult, task_result::NormalModuleTaskResult,
+};
 pub enum Msg {
   NormalModuleDone(NormalModuleTaskResult),
-  RuntimeNormalModuleDone(NormalModuleTaskResult),
+  RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult),
 }

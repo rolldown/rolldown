@@ -1,1 +1,8 @@
-{}
+{
+    "input": {
+        "external": [
+            "node:module",
+            "node:assert"
+        ]
+    }
+}

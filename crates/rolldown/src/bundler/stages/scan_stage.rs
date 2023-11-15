@@ -8,7 +8,7 @@ use rolldown_utils::block_on_spawn_all;
 use crate::{
   bundler::{
     module::ModuleVec,
-    module_loader::ModuleLoader,
+    module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
     options::input_options::SharedInputOptions,
     plugin_driver::SharedPluginDriver,
     runtime::Runtime,
@@ -62,7 +62,7 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
 
     let mut runtime = Runtime::new(module_loader.try_spawn_runtime_module_task());
 
-    let (modules, symbols, entries) =
+    let ModuleLoaderOutput { modules, entries, symbols } =
       module_loader.fetch_all_modules(&user_entries, &mut runtime).await?;
 
     Ok(ScanStageOutput { modules, entries, symbols, runtime })

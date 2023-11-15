@@ -1114,6 +1114,7 @@ checksum = "2a72360715a0bac81660a30a00c402448706ccc09abe102b625f0d4bb66cc526"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
+ "oxc_codegen",
  "oxc_diagnostics",
  "oxc_index",
  "oxc_parser",
@@ -1143,6 +1144,20 @@ dependencies = [
  "num-traits",
  "oxc_allocator",
  "oxc_index",
+ "oxc_span",
+ "oxc_syntax",
+]
+
+[[package]]
+name = "oxc_codegen"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adb50b264de61b89db6cded131bf33fd71246a6da3679ed1295c8f05a2486de4"
+dependencies = [
+ "bitflags 2.4.1",
+ "num-bigint",
+ "oxc_allocator",
+ "oxc_ast",
  "oxc_span",
  "oxc_syntax",
 ]

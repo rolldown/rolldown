@@ -10,5 +10,6 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-oxc      = { workspace = true }
+oxc = { workspace = true, features = ["semantic", "codegen"] }
+
 smallvec = { workspace = true }

@@ -3,6 +3,7 @@ use std::{fmt::Debug, pin::Pin};
 use oxc::{
   allocator::Allocator,
   ast::ast,
+  codegen::{Codegen, CodegenOptions},
   parser::Parser,
   semantic::{Semantic, SemanticBuilder},
   span::SourceType,
@@ -54,5 +55,15 @@ impl OxcCompiler {
     OxcProgram { program, source, allocator }
   }
 
-  pub fn print() {}
+  pub fn print(ast: &OxcProgram) -> String {
+    let codegen = Codegen::<false>::new(ast.source().len(), CodegenOptions);
+    codegen.build(&ast.program)
+  }
+}
+
+#[test]
+fn basic_test() {
+  let ast = OxcCompiler::parse("const a = 1;".to_string(), SourceType::default());
+  let code = OxcCompiler::print(&ast);
+  assert_eq!(code, "const a = 1;\n");
 }

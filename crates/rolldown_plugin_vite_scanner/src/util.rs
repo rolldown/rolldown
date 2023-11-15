@@ -1,4 +1,4 @@
-use std::{borrow::Cow, path::PathBuf};
+use std::{borrow::Cow, path::Path};
 
 use once_cell::sync::Lazy;
 use regex::{NoExpand, Regex};
@@ -23,10 +23,10 @@ static CONTEXT_REGEX: Lazy<Regex> = Lazy::new(|| {
     .expect("Init CONTEXT_REGEX failed")
 });
 static MULTILINE_COMMENT_REGEX: Lazy<Regex> = Lazy::new(|| {
-  Regex::new(r#"\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\/"#).expect("Init MULTILINE_COMMENT_REGEX failed")
+  Regex::new(r"\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\/").expect("Init MULTILINE_COMMENT_REGEX failed")
 });
 static SINGLE_COMMENT_REGEX: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r#"\/\/.*"#).expect("Init MULTILINE_COMMENT_REGEX failed"));
+  Lazy::new(|| Regex::new(r"\/\/.*").expect("Init MULTILINE_COMMENT_REGEX failed"));
 // A simple regex to detect import sources. This is only used on
 // <script lang="ts"> blocks in vue (setup only) or svelte files, since
 // seemingly unused imports are dropped by bundler when transpiling TS which
@@ -38,8 +38,8 @@ static IMPORTS_FROM_BLOCK_REGEX: Lazy<Regex> = Lazy::new(|| {
 static VIRTUAL_MODULE_PREFIX: &str = "virtual-module:";
 
 pub fn extract_html_module_scripts(
-  content: String,
-  path: PathBuf,
+  content: &str,
+  path: &Path,
 ) -> (String, FxHashMap<String, String>) {
   let mut scripts = FxHashMap::default();
   let mut result = String::new();
@@ -47,7 +47,7 @@ pub fn extract_html_module_scripts(
   let is_html = extension == "html";
   let is_astro = extension == "astro";
   let is_svelte = extension == "svelte";
-  let raw = COMMENT_REGEX.replace(&content, NoExpand("<!---->"));
+  let raw = COMMENT_REGEX.replace(content, NoExpand("<!---->"));
 
   for (index, c) in SCRIPT_REGEX.captures_iter(&raw).enumerate() {
     let (_, [open_tag, content]) = c.extract();
@@ -86,13 +86,8 @@ pub fn extract_html_module_scripts(
         contents.push_str(&extract_import_paths(content));
       }
 
-      let loader: Cow<'_, str> = if let Some(script_lang) = script_lang {
-        script_lang.into()
-      } else if is_astro {
-        "ts".into()
-      } else {
-        "js".into()
-      };
+      let loader: Cow<'_, str> =
+        script_lang.map_or_else(|| if is_astro { "ts".into() } else { "js".into() }, Into::into);
       // Here append loader to query, it can be used to transform the script content at vite.
       let key = format!("{}?id={index}&loader={loader}", path.to_string_lossy());
       // Glob Import need transform, so legacy the logic to vite.
@@ -125,12 +120,14 @@ pub fn extract_html_module_scripts(
 
 fn match_open_tag_attr<'a>(open_tag: &'a str, regex: &Lazy<Regex>) -> Option<&'a str> {
   regex.captures(open_tag).map(|caps| {
-    caps.get(1).map(|m| m.as_str()).unwrap_or_else(|| {
-      caps
-        .get(2)
-        .map(|m| m.as_str())
-        .unwrap_or_else(|| caps.get(3).map(|m| m.as_str()).unwrap_or_default())
-    })
+    caps.get(1).map_or_else(
+      || {
+        caps
+          .get(2)
+          .map_or_else(|| caps.get(3).map(|m| m.as_str()).unwrap_or_default(), |m| m.as_str())
+      },
+      |m| m.as_str(),
+    )
   })
 }
 
@@ -168,30 +165,30 @@ fn test_extract_import_paths() {
 fn test_extract_html_module_scripts() {
   // skip non type module script
   assert_eq!(
-    extract_html_module_scripts("<script></script>".to_string(), PathBuf::from("a.html")),
+    extract_html_module_scripts("<script></script>", &PathBuf::from("a.html")),
     ("\nexport default {}".to_string(), FxHashMap::default())
   );
   // skip type="application/ld+json" and other non-JS types
   assert_eq!(
     extract_html_module_scripts(
-      r#"<script type="application/ld+json"></script>"#.to_string(),
-      PathBuf::from("a.vue")
+      r#"<script type="application/ld+json"></script>"#,
+      &PathBuf::from("a.vue")
     ),
     ("\nexport default {}".to_string(), FxHashMap::default())
   );
   // src script
   assert_eq!(
     extract_html_module_scripts(
-      r#"<script type="module" src="a.js"></script>"#.to_string(),
-      PathBuf::from("a.html")
+      r#"<script type="module" src="a.js"></script>"#,
+      &PathBuf::from("a.html")
     ),
     ("import 'a.js';\n\nexport default {}".to_string(), FxHashMap::default())
   );
   // content script
   assert_eq!(
     extract_html_module_scripts(
-      r#"<script type="module">console.log(1)</script>"#.to_string(),
-      PathBuf::from("a.html")
+      r#"<script type="module">console.log(1)</script>"#,
+      &PathBuf::from("a.html")
     ),
     (
       "export * from 'virtual-module:a.html?id=0&loader=js'\n\nexport default {}".to_string(),
@@ -204,8 +201,8 @@ fn test_extract_html_module_scripts() {
   // ts content script
   assert_eq!(
     extract_html_module_scripts(
-      r#"<script type="module" lang="ts">import "./a";\nconsole.log(1)</script>"#.to_string(),
-      PathBuf::from("a.html")
+      r#"<script type="module" lang="ts">import "./a";\nconsole.log(1)</script>"#,
+      &PathBuf::from("a.html")
     ),
     (
       "export * from 'virtual-module:a.html?id=0&loader=ts'\n\nexport default {}".to_string(),
@@ -218,8 +215,8 @@ fn test_extract_html_module_scripts() {
   // svelte <script context="module">
   assert_eq!(
     extract_html_module_scripts(
-      r#"<script type="module" context="module">console.log(1)</script>"#.to_string(),
-      PathBuf::from("a.svelte")
+      r#"<script type="module" context="module">console.log(1)</script>"#,
+      &PathBuf::from("a.svelte")
     ),
     (
       "export * from 'virtual-module:a.svelte?id=0&loader=js'\n\nexport default {}".to_string(),
@@ -232,8 +229,8 @@ fn test_extract_html_module_scripts() {
   // svelte <script context="non-module">
   assert_eq!(
     extract_html_module_scripts(
-      r#"<script type="module" context="non-module">console.log(1)</script>"#.to_string(),
-      PathBuf::from("a.svelte")
+      r#"<script type="module" context="non-module">console.log(1)</script>"#,
+      &PathBuf::from("a.svelte")
     ),
     (
       "import 'virtual-module:a.svelte?id=0&loader=js'\n\nexport default {}".to_string(),
@@ -246,8 +243,8 @@ fn test_extract_html_module_scripts() {
   // astro
   assert_eq!(
     extract_html_module_scripts(
-      r#"<script type="module">import "./a";\nconsole.log(1)</script>"#.to_string(),
-      PathBuf::from("a.astro")
+      r#"<script type="module">import "./a";\nconsole.log(1)</script>"#,
+      &PathBuf::from("a.astro")
     ),
     (
       "export * from 'virtual-module:a.astro?id=0&loader=ts'\n\nexport default {}".to_string(),

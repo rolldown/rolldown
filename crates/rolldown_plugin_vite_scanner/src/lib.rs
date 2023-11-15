@@ -38,7 +38,7 @@ pub struct ViteScannerPlugin<T: FileSystem + Default> {
 
 impl<T: FileSystem + 'static + Default> Debug for ViteScannerPlugin<T> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("ViteScannerPlugin").field("entries", &self.entries).finish()
+    f.debug_struct("ViteScannerPlugin").field("entries", &self.entries).field("fs", &"").finish()
   }
 }
 
@@ -104,7 +104,7 @@ impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
       let path = PathBuf::from(id);
       let content = self.fs.read_to_string(&path)?;
       // TODO store scripts
-      let (content, _) = extract_html_module_scripts(content, path);
+      let (content, _) = extract_html_module_scripts(&content, &path);
       return Ok(Some(HookLoadOutput { code: content }));
     }
 

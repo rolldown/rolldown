@@ -15,25 +15,20 @@ use crate::bundler::module_loader::module_task_context::ModuleTaskCommonData;
 use crate::bundler::options::input_options::SharedInputOptions;
 use crate::bundler::plugin_driver::SharedPluginDriver;
 use crate::bundler::runtime::Runtime;
-use crate::bundler::utils::ast_symbol::AstSymbol;
 use crate::bundler::utils::resolve_id::ResolvedRequestInfo;
 use crate::bundler::utils::symbols::Symbols;
 use crate::error::BatchedResult;
 use crate::SharedResolver;
 
 pub struct ModuleLoader<T: FileSystem + Default> {
-  ctx: ModuleLoaderContext,
   input_options: SharedInputOptions,
   common_data: ModuleTaskCommonData<T>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
-}
-
-#[derive(Debug, Default)]
-pub struct ModuleLoaderContext {
   visited: FxHashMap<FilePath, ModuleId>,
   runtime_id: Option<ModuleId>,
   remaining: u32,
   intermediate_modules: IndexVec<ModuleId, Option<Module>>,
+  symbols: Symbols,
 }
 
 impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
@@ -53,26 +48,38 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
       plugin_driver,
     };
 
-    Self { common_data, rx, input_options, ctx: ModuleLoaderContext::default() }
+    Self {
+      common_data,
+      rx,
+      input_options,
+      visited: FxHashMap::default(),
+      runtime_id: None,
+      remaining: 0,
+      intermediate_modules: IndexVec::new(),
+      symbols: Symbols::default(),
+    }
   }
 
-  fn try_spawn_new_task(
-    &mut self,
-    info: &ResolvedRequestInfo,
-    is_entry: bool,
+  fn alloc_module_id(
+    intermediate_modules: &mut IndexVec<ModuleId, Option<Module>>,
     symbols: &mut Symbols,
   ) -> ModuleId {
-    match self.ctx.visited.entry(info.path.clone()) {
+    let id = intermediate_modules.push(None);
+    symbols.alloc_one();
+    id
+  }
+
+  fn try_spawn_new_task(&mut self, info: &ResolvedRequestInfo, is_entry: bool) -> ModuleId {
+    match self.visited.entry(info.path.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
-        let id = self.ctx.intermediate_modules.push(None);
-        symbols.add_ast_symbol(id, AstSymbol::default());
+        let id = Self::alloc_module_id(&mut self.intermediate_modules, &mut self.symbols);
         not_visited.insert(id);
         if info.is_external {
           let ext = ExternalModule::new(id, ResourceId::new(info.path.clone()));
-          self.ctx.intermediate_modules[id] = Some(Module::External(ext));
+          self.intermediate_modules[id] = Some(Module::External(ext));
         } else {
-          self.ctx.remaining += 1;
+          self.remaining += 1;
 
           let module_path = info.path.clone();
 
@@ -92,9 +99,9 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
   }
 
   pub fn try_spawn_runtime_module_task(&mut self) -> ModuleId {
-    *self.ctx.runtime_id.get_or_insert_with(|| {
-      let id = self.ctx.intermediate_modules.push(None);
-      self.ctx.remaining += 1;
+    *self.runtime_id.get_or_insert_with(|| {
+      let id = Self::alloc_module_id(&mut self.intermediate_modules, &mut self.symbols);
+      self.remaining += 1;
       let task = RuntimeNormalModuleTask::new(id, self.common_data.tx.clone());
       tokio::spawn(async move { task.run() });
       id
@@ -103,23 +110,21 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
 
   pub async fn fetch_all_modules(
     mut self,
-    resolved_entries: &[(Option<String>, ResolvedRequestInfo)],
+    user_defined_entries: &[(Option<String>, ResolvedRequestInfo)],
     runtime: &mut Runtime,
   ) -> BatchedResult<(ModuleVec, Symbols, Vec<(Option<String>, ModuleId)>)> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
-    self.ctx.intermediate_modules.reserve(resolved_entries.len() + 1 /* runtime */);
+    self.intermediate_modules.reserve(user_defined_entries.len() + 1 /* runtime */);
 
-    let mut symbols = Symbols::default();
-
-    let mut entries: Vec<(Option<String>, ModuleId)> = resolved_entries
+    let mut entries: Vec<(Option<String>, ModuleId)> = user_defined_entries
       .iter()
-      .map(|(name, info)| (name.clone(), self.try_spawn_new_task(info, true, &mut symbols)))
+      .map(|(name, info)| (name.clone(), self.try_spawn_new_task(info, true)))
       .collect::<Vec<_>>();
 
     let mut dynamic_entries = FxHashSet::default();
 
-    while self.ctx.remaining > 0 {
+    while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;
       };
@@ -136,9 +141,9 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
 
           let import_records = raw_import_records
             .into_iter()
-            .zip(resolved_deps.into_iter())
+            .zip(resolved_deps)
             .map(|(raw_rec, info)| {
-              let id = self.try_spawn_new_task(&info, false, &mut symbols);
+              let id = self.try_spawn_new_task(&info, false);
               // dynamic import as extra entries if enable code splitting
               if raw_rec.kind == ImportKind::DynamicImport {
                 dynamic_entries.insert((Some(info.path.unique(&self.input_options.cwd)), id));
@@ -149,28 +154,28 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
           builder.import_records = Some(import_records);
           builder.pretty_path =
             Some(builder.path.as_ref().unwrap().prettify(&self.input_options.cwd));
-          self.ctx.intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
+          self.intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
 
-          symbols.add_ast_symbol(module_id, ast_symbol);
+          self.symbols.add_ast_symbol(module_id, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
           let NormalModuleTaskResult { module_id, ast_symbol, builder, .. } = task_result;
 
           let runtime_normal_module = builder.build();
           runtime.init_symbols(&runtime_normal_module);
-          self.ctx.intermediate_modules[module_id] = Some(Module::Normal(runtime_normal_module));
+          self.intermediate_modules[module_id] = Some(Module::Normal(runtime_normal_module));
 
-          symbols.add_ast_symbol(module_id, ast_symbol);
+          self.symbols.add_ast_symbol(module_id, ast_symbol);
         }
       }
-      self.ctx.remaining -= 1;
+      self.remaining -= 1;
     }
 
-    let modules = self.ctx.intermediate_modules.into_iter().map(Option::unwrap).collect();
+    let modules = self.intermediate_modules.into_iter().map(Option::unwrap).collect();
 
     let mut dynamic_entries = Vec::from_iter(dynamic_entries);
     dynamic_entries.sort_by(|(a, _), (b, _)| a.cmp(b));
     entries.extend(dynamic_entries);
-    Ok((modules, symbols, entries))
+    Ok((modules, self.symbols, entries))
   }
 }

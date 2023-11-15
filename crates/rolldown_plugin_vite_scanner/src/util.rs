@@ -165,14 +165,14 @@ fn test_extract_import_paths() {
 fn test_extract_html_module_scripts() {
   // skip non type module script
   assert_eq!(
-    extract_html_module_scripts("<script></script>", &PathBuf::from("a.html")),
+    extract_html_module_scripts("<script></script>", &Path::new("a.html")),
     ("\nexport default {}".to_string(), FxHashMap::default())
   );
   // skip type="application/ld+json" and other non-JS types
   assert_eq!(
     extract_html_module_scripts(
       r#"<script type="application/ld+json"></script>"#,
-      &PathBuf::from("a.vue")
+      &Path::new("a.vue")
     ),
     ("\nexport default {}".to_string(), FxHashMap::default())
   );
@@ -180,15 +180,23 @@ fn test_extract_html_module_scripts() {
   assert_eq!(
     extract_html_module_scripts(
       r#"<script type="module" src="a.js"></script>"#,
-      &PathBuf::from("a.html")
+      &Path::new("a.html")
     ),
     ("import 'a.js';\n\nexport default {}".to_string(), FxHashMap::default())
+  );
+  // multiply script
+  assert_eq!(
+    extract_html_module_scripts(
+      r#"<script type="module" src="a.js"></script><script type="module" src="b.js"></script>"#,
+      &Path::new("a.html")
+    ),
+    ("import 'a.js';\nimport 'b.js';\n\nexport default {}".to_string(), FxHashMap::default())
   );
   // content script
   assert_eq!(
     extract_html_module_scripts(
       r#"<script type="module">console.log(1)</script>"#,
-      &PathBuf::from("a.html")
+      &Path::new("a.html")
     ),
     (
       "export * from 'virtual-module:a.html?id=0&loader=js'\n\nexport default {}".to_string(),
@@ -202,7 +210,7 @@ fn test_extract_html_module_scripts() {
   assert_eq!(
     extract_html_module_scripts(
       r#"<script type="module" lang="ts">import "./a";\nconsole.log(1)</script>"#,
-      &PathBuf::from("a.html")
+      &Path::new("a.html")
     ),
     (
       "export * from 'virtual-module:a.html?id=0&loader=ts'\n\nexport default {}".to_string(),
@@ -216,7 +224,7 @@ fn test_extract_html_module_scripts() {
   assert_eq!(
     extract_html_module_scripts(
       r#"<script type="module" context="module">console.log(1)</script>"#,
-      &PathBuf::from("a.svelte")
+      &Path::new("a.svelte")
     ),
     (
       "export * from 'virtual-module:a.svelte?id=0&loader=js'\n\nexport default {}".to_string(),
@@ -230,7 +238,7 @@ fn test_extract_html_module_scripts() {
   assert_eq!(
     extract_html_module_scripts(
       r#"<script type="module" context="non-module">console.log(1)</script>"#,
-      &PathBuf::from("a.svelte")
+      &Path::new("a.svelte")
     ),
     (
       "import 'virtual-module:a.svelte?id=0&loader=js'\n\nexport default {}".to_string(),
@@ -244,7 +252,7 @@ fn test_extract_html_module_scripts() {
   assert_eq!(
     extract_html_module_scripts(
       r#"<script type="module">import "./a";\nconsole.log(1)</script>"#,
-      &PathBuf::from("a.astro")
+      &Path::new("a.astro")
     ),
     (
       "export * from 'virtual-module:a.astro?id=0&loader=ts'\n\nexport default {}".to_string(),

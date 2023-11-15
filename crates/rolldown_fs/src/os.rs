@@ -1,3 +1,4 @@
+use miette::IntoDiagnostic;
 use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem};
 
 use std::{
@@ -16,16 +17,16 @@ impl FileSystem for OsFileSystem {
     Self
   }
 
-  fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
-    std::fs::remove_dir_all(path)
+  fn remove_dir_all(&self, path: &Path) -> miette::Result<()> {
+    std::fs::remove_dir_all(path).into_diagnostic()
   }
 
-  fn create_dir_all(&self, path: &Path) -> io::Result<()> {
-    std::fs::create_dir_all(path)
+  fn create_dir_all(&self, path: &Path) -> miette::Result<()> {
+    std::fs::create_dir_all(path).into_diagnostic()
   }
 
-  fn write(&self, path: &Path, content: &[u8]) -> io::Result<()> {
-    std::fs::write(path, content)
+  fn write(&self, path: &Path, content: &[u8]) -> miette::Result<()> {
+    std::fs::write(path, content).into_diagnostic()
   }
 
   fn exists(&self, path: &Path) -> bool {

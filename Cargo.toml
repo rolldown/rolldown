@@ -34,3 +34,4 @@ async-scoped   = { version = "0.7.1" }
 regex          = "1.10.2"
 once_cell      = "1.18.0"
 dashmap        = "5.5.3"
+miette         = "5.10.0"

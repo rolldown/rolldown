@@ -2,12 +2,69 @@
 members  = ["./crates/*"]
 resolver = "2"
 
-
 [workspace.package]
 edition    = "2021"
 homepage   = "https://github.com/rolldown-rs/rolldown"
 license    = "MIT"
 repository = "https://github.com/rolldown-rs/rolldown"
+
+[workspace.lints.rust]
+
+[workspace.lints.clippy]
+# Guidelines
+# - We should only disable rules globally if they are either false positives, chaotic, or does not make sense.
+# - Group are enabled with priority -1, so we could easily override some specific rules.
+#   - https://doc.rust-lang.org/stable/cargo/reference/manifest.html#the-lints-section
+
+# --- restriction https://doc.rust-lang.org/clippy/usage.html#clippyrestriction
+dbg_macro    = "deny"
+print_stdout = "deny"
+
+# I like the explicitness of this rule as it removes confusion around `clone`.
+# This increases readability, avoids `clone` mindlessly and heap allocating on accident.
+clone_on_ref_ptr                = "deny"
+empty_drop                      = "deny"
+exit                            = "deny"
+filetype_is_file                = "deny"
+get_unwrap                      = "deny"
+rc_buffer                       = "deny"
+rc_mutex                        = "deny"
+rest_pat_in_fully_bound_structs = "deny"
+unnecessary_safety_comment      = "deny"
+
+# --- nursery #https://doc.rust-lang.org/clippy/usage.html#clippypedantic
+# To write the best rust code, nursery group is enabled by default. 
+nursery = { level = "deny", priority = -1 }
+
+# --- pedantic #https://doc.rust-lang.org/clippy/usage.html#clippypedantic
+# To write the best rust code, pedantic group is enabled by default. 
+pedantic = { level = "deny", priority = -1 }
+
+# Wizards, naming is too hard.
+module_name_repetitions = "allow"
+module_inception        = "allow"
+similar_names           = "allow"
+
+# Forwarding `Result` is a common pattern, this rule is too pedantic.
+missing_errors_doc = "allow"
+
+# #[must_use] is creating too much noise for this codebase, it does not add much value execept nagging
+# the programmer to add a #[must_use] after clippy has been run.
+# Having #[must_use] every where also hinders readability.
+must_use_candidate = "allow"
+
+# Generated from the `index_vec` crate.
+# this error originates in the macro `$crate::__define_index_type_inner` which comes from the expansion of the macro `define_index_type`
+# FIXME(hyf0): This should not be allowed, since it make variable starting with `_` meaningless.
+used_underscore_binding = "allow"
+
+
+doc_markdown         = "allow"
+new_without_default  = "allow"
+needless_for_each    = "allow"
+missing_const_for_fn = "allow"
+# TODO: should reveiw this rule.
+missing_panics_doc = "allow"
 
 [workspace.dependencies]
 oxc            = { version = "0.3.0" }

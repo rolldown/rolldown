@@ -10,6 +10,9 @@ license.workspace    = true
 edition.workspace    = true
 repository.workspace = true
 
+[lints]
+workspace = true
+
 [lib]
 bench   = false
 test    = false

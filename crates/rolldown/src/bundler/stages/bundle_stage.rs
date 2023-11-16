@@ -34,6 +34,7 @@ impl<'a> BundleStage<'a> {
     Self { link_output, output_options, input_options }
   }
 
+  #[tracing::instrument(skip_all)]
   pub fn bundle(&mut self) -> Vec<Output> {
     use rayon::prelude::*;
     let mut chunk_graph = self.generate_chunks();

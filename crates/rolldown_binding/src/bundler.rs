@@ -6,7 +6,7 @@ use tracing::instrument;
 
 use crate::{
   options::InputOptions, options::OutputOptions, output::Outputs,
-  utils::init_custom_trace_subscriber, NAPI_ENV,
+  utils::try_init_custom_trace_subscriber, NAPI_ENV,
 };
 
 #[napi]
@@ -18,7 +18,7 @@ pub struct Bundler {
 impl Bundler {
   #[napi(constructor)]
   pub fn new(env: Env, input_opts: InputOptions) -> napi::Result<Self> {
-    init_custom_trace_subscriber(env);
+    try_init_custom_trace_subscriber(env);
     Self::new_impl(env, input_opts)
   }
 

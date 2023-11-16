@@ -26,13 +26,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: ./.github/actions/rustup
+        uses: moonrepo/setup-rust@v1
         with:
-          fmt: true
-          restore-cache: false
+          cache: false
+          components: rustfmt
 
       - name: Run Format
         run: cargo fmt --all -- --check
+
   cargo-deny:
     name: Cargo Deny
     runs-on: self-hosted
@@ -52,6 +53,7 @@ jobs:
 
       - if: steps.filter.outputs.src == 'true'
         run: cargo deny check
+
   cargo-clippy:
     name: Cargo Clippy
     runs-on: self-hosted
@@ -59,9 +61,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: ./.github/actions/rustup
+        uses: moonrepo/setup-rust@v1
         with:
-          clippy: true
+          components: clippy
 
       - name: Run Clippy
         run: cargo clippy --all -- --deny warnings
@@ -73,7 +75,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: ./.github/actions/rustup
+        uses: moonrepo/setup-rust@v1
 
       - name: Build
         run: cargo test --no-run
@@ -99,7 +101,7 @@ jobs:
           submodules: true # Pull submodules for additional files
 
       - name: Install Rust
-        uses: ./.github/actions/rustup
+        uses: moonrepo/setup-rust@v1
 
       - name: Install node
         uses: actions/setup-node@v3

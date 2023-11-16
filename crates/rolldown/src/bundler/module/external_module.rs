@@ -36,14 +36,14 @@ impl ExternalModule {
       Specifier::Star => {
         self.namespace_ref = Some(symbols.create_symbol(
           self.id,
-          Atom::from(format!("{}_ns", self.resource_id.expect_file().generate_unique_name())),
+          Atom::from(format!("{}_ns", self.resource_id.expect_file().representative_name())),
         ));
         self.namespace_ref.unwrap()
       }
       Specifier::Literal(exported) => {
         *self.exported_name_to_binding_ref.entry(exported.clone()).or_insert_with_key(|exported| {
           let declared_name = if exported.as_ref() == "default" {
-            Atom::from(format!("{}_default", self.resource_id.expect_file().generate_unique_name()))
+            Atom::from(format!("{}_default", self.resource_id.expect_file().representative_name()))
           } else {
             exported.clone()
           };

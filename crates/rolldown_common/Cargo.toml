@@ -11,7 +11,9 @@ repository.workspace = true
 
 
 [dependencies]
-oxc        = { workspace = true }
+oxc        = { workspace = true, features = ["semantic"] }
 rustc-hash = { workspace = true }
 index_vec  = { workspace = true }
 sugar_path = { workspace = true }
+regex      = { workspace = true }
+once_cell  = { workspace = true }

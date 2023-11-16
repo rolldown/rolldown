@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/misc/generate_valid_name_for_kebab_case_files
+---
+# Assets
+
+## main.mjs
+
+```js
+import { __commonJS } from "./_rolldown_runtime.mjs";
+
+// react-dom.js
+var require_react_dom = __commonJS({
+	'react-dom.js'(exports, module) {
+		module.exports = 'react-dom'
+
+	}
+});
+export default require_react_dom();
+```

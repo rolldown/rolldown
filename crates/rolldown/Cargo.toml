@@ -33,7 +33,7 @@ string_wizard     = { workspace = true }
 async-trait       = { workspace = true }
 smallvec          = { workspace = true }
 oxc_resolver      = { workspace = true }
-
+miette            = { workspace = true }
 
 [dev_dependencies]
 insta            = { workspace = true }

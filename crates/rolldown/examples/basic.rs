@@ -1,10 +1,10 @@
-use std::path::PathBuf;
-
+use miette::Result;
 use rolldown::{Bundler, InputItem, InputOptions};
+use std::path::PathBuf;
 use sugar_path::SugarPathBuf;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
   let root = PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap());
   let repo_root = root.parent().unwrap().parent().unwrap();
   let cwd = root.join("./examples").into_normalize();
@@ -23,4 +23,6 @@ async fn main() {
 
   let outputs = bundler.write(Default::default()).await.unwrap();
   println!("{outputs:#?}");
+
+  Ok(())
 }

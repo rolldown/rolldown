@@ -1,13 +1,13 @@
-mod diagnostic;
 mod error;
-mod error_code;
+// mod error_code;
 mod utils;
 
 use std::path::Path;
 
 use sugar_path::SugarPath;
 
-pub use crate::{diagnostic::Diagnostic, error::BuildError};
+// pub use crate::{diagnostic::Diagnostic, error::BuildError};
+pub use crate::error::BuildError;
 
 trait PathExt {
   fn relative_display(&self) -> String;

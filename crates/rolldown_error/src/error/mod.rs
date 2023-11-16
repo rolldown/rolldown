@@ -4,13 +4,12 @@ use std::{
 };
 
 pub mod external_entry;
-pub mod impl_to_diagnostic;
+// pub mod impl_to_diagnostic;
 pub mod unresolved_entry;
 pub mod unresolved_import;
 
+use miette::Diagnostic;
 use thiserror::Error;
-
-use crate::error_code;
 
 use self::{
   external_entry::ExternalEntry, unresolved_entry::UnresolvedEntry,
@@ -19,31 +18,31 @@ use self::{
 
 type StaticStr = Cow<'static, str>;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Diagnostic)]
 pub enum BuildError {
+  #[diagnostic(transparent)]
   #[error(transparent)]
   UnresolvedEntry(Box<UnresolvedEntry>),
+
+  #[diagnostic(transparent)]
   #[error(transparent)]
   ExternalEntry(Box<ExternalEntry>),
+
+  #[diagnostic(transparent)]
   #[error(transparent)]
   UnresolvedImport(Box<UnresolvedImport>),
+
+  #[diagnostic(code = "IO_ERROR")]
   #[error(transparent)]
   Io(Box<std::io::Error>),
+
   // TODO: probably should remove this error
+  #[diagnostic(code = "NAPI_ERROR")]
   #[error("Napi error: {status}: {reason}")]
   Napi { status: String, reason: String },
 }
 
 impl BuildError {
-  pub fn code(&self) -> &'static str {
-    match self {
-      Self::UnresolvedEntry(_) | Self::ExternalEntry(_) => error_code::UNRESOLVED_ENTRY,
-      Self::UnresolvedImport(_) => error_code::UNRESOLVED_IMPORT,
-      Self::Io(_) => error_code::IO_ERROR,
-      Self::Napi { .. } => todo!(),
-    }
-  }
-
   // --- Aligned with rollup
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
     Self::ExternalEntry(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() }.into())

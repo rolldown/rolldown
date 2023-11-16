@@ -5,7 +5,7 @@ use regex::{NoExpand, Regex};
 use rustc_hash::FxHashMap;
 
 static COMMENT_REGEX: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r#"<!--.*?-->"#).expect("Init COMMENT_REGEX failed"));
+  Lazy::new(|| Regex::new(r"<!--.*?-->").expect("Init COMMENT_REGEX failed"));
 static SCRIPT_REGEX: Lazy<Regex> = Lazy::new(|| {
   Regex::new(r#"(<script(?:\s+[a-z_:][-\w:]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^"'<>=\s]+))?)*\s*>)(.*?)<\/script>"#).expect("Init SCRIPT_REGEX failed")
 });

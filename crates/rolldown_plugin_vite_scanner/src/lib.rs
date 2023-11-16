@@ -11,7 +11,7 @@ use util::{extract_html_module_scripts, VIRTUAL_MODULE_PREFIX};
 mod util;
 
 static VIRTUAL_MODULE_REGEX: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r#"^virtual-module:.*"#).expect("Init VIRTUAL_MODULE_REGEX failed"));
+  Lazy::new(|| Regex::new(r"^virtual-module:.*").expect("Init VIRTUAL_MODULE_REGEX failed"));
 static VITE_SPECIAL_QUERY_REGEX: Lazy<Regex> = Lazy::new(|| {
   Regex::new(r"[?&](?:worker|sharedworker|raw|url)\b")
     .expect("Init VITE_SPECIAL_QUERY_REGEX failed")

@@ -1,1 +1,8 @@
-{}
+{
+    "input": {
+        "external": [
+            "ext1",
+            "ext2"
+        ]
+    }
+}

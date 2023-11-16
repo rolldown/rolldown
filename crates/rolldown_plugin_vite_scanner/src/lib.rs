@@ -9,10 +9,7 @@ use rolldown_fs::FileSystem;
 use std::{borrow::Cow, fmt::Debug, path::PathBuf};
 use util::{extract_html_module_scripts, VIRTUAL_MODULE_PREFIX};
 mod util;
-static HTTP_URL_REGEX: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^(https?:)?\/\/").expect("Init HTTP_URL_REGEX failed"));
-static DATA_URL_REGEX: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^\s*data:").expect("Init DATA_URL_REGEX failed"));
+
 static VIRTUAL_MODULE_REGEX: Lazy<Regex> =
   Lazy::new(|| Regex::new(r#"^virtual-module:.*"#).expect("Init VIRTUAL_MODULE_REGEX failed"));
 static VITE_SPECIAL_QUERY_REGEX: Lazy<Regex> = Lazy::new(|| {
@@ -63,10 +60,7 @@ impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
   ) -> HookResolveIdReturn {
     let HookResolveIdArgs { source, .. } = args;
 
-    // External http url or data url
-    if HTTP_URL_REGEX.is_match(source) || DATA_URL_REGEX.is_match(source) {
-      return Ok(Some(HookResolveIdOutput { id: (*source).to_string(), external: Some(true) }));
-    }
+    // http url or data url is already external at rolldown resolver
 
     // resolve local scripts (`<script>` in Svelte and `<script setup>` in Vue)
     if VIRTUAL_MODULE_REGEX.is_match(source) {

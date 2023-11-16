@@ -86,15 +86,10 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
         )
         .await
         {
-          Ok(r) => {
-            let Some(info) = r else {
-              return Err(BuildError::unresolved_entry(specifier));
-            };
-
+          Ok(info) => {
             if info.is_external {
               return Err(BuildError::entry_cannot_be_external(info.path.as_str()));
             }
-
             Ok((input_item.name.clone(), info))
           }
           Err(e) => Err(e),

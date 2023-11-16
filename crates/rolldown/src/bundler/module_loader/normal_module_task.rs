@@ -191,33 +191,17 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       });
     }
 
-    let resolved_id =
+    let mut info =
       resolve_id(resolver, plugin_driver, specifier, Some(importer), options, false).await?;
 
-    match resolved_id {
-      Some(mut info) => {
-        if !info.is_external {
-          // Check external with resolved path
-          info.is_external = input_options
-            .external
-            .call(specifier.to_string(), Some(importer.to_string()), true)
-            .await?;
-        }
-        Ok(info)
-      }
-      None => {
-        Ok(ResolvedRequestInfo {
-          path: specifier.to_string().into(),
-          module_type: ModuleType::Unknown,
-          is_external: true,
-        })
-        // // TODO: should emit warnings like https://rollupjs.org/guide/en#warning-treating-module-as-external-dependency
-        // return Err(rolldown_error::Error::unresolved_import(
-        //   specifier.to_string(),
-        //   importer.prettify(),
-        // ));
-      }
+    if !info.is_external {
+      // Check external with resolved path
+      info.is_external = input_options
+        .external
+        .call(specifier.to_string(), Some(importer.to_string()), true)
+        .await?;
     }
+    Ok(info)
   }
 
   async fn resolve_dependencies(

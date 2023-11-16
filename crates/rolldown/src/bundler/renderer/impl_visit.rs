@@ -11,6 +11,14 @@ use crate::bundler::{module::Module, renderer::RenderControl};
 use super::AstRenderer;
 
 impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
+  #[tracing::instrument]
+  fn visit_program(&mut self, program: &ast::Program<'ast>) {
+    for directive in &program.directives {
+      self.visit_directive(directive);
+    }
+    self.visit_statements(&program.body);
+  }
+
   fn visit_binding_identifier(&mut self, ident: &oxc::ast::ast::BindingIdentifier) {
     self.render_binding_identifier(ident);
   }

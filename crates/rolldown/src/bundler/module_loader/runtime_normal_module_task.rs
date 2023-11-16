@@ -29,6 +29,7 @@ impl RuntimeNormalModuleTask {
     Self { module_id: id, tx, warnings: Vec::default() }
   }
 
+  #[tracing::instrument(skip_all)]
   pub fn run(self) {
     let mut builder = NormalModuleBuilder::default();
 

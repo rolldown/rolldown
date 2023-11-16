@@ -2915,9 +2915,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bench-f64382@workspace:packages/bench":
+"bench@workspace:packages/bench":
   version: 0.0.0-use.local
-  resolution: "bench-f64382@workspace:packages/bench"
+  resolution: "bench@workspace:packages/bench"
   dependencies:
     "@rolldown/node": "workspace:*"
     esbuild: "npm:^0.19.5"

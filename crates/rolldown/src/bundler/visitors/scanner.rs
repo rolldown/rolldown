@@ -187,7 +187,7 @@ impl<'a> Scanner<'a> {
       });
     } else {
       decl.specifiers.iter().for_each(|spec| {
-        self.add_local_export(spec.local.name(), self.get_root_binding(spec.local.name()));
+        self.add_local_export(spec.exported.name(), self.get_root_binding(spec.local.name()));
       });
       if let Some(decl) = decl.declaration.as_ref() {
         match decl {

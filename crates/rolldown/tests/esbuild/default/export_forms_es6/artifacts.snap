@@ -25,5 +25,5 @@ function Fn() {}
 class Class {}
 
 
-export { Class, Fn, abc, b_ns as b, c, entry_default as default, l, v };
+export { Class as C, Class, Fn, abc, b_ns as b, c, entry_default as default, l, v };
 ```

@@ -1,0 +1,19 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/reexport_star_from_named_export
+---
+# Assets
+
+## main.mjs
+
+```js
+// foo.js
+const value = 1;
+
+
+// main.js
+
+
+export { value as foo };
+```

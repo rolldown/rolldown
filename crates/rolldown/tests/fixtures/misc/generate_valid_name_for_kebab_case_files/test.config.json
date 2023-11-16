@@ -1,0 +1,10 @@
+{
+  "input": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./react-dom.js"
+      }
+    ]
+  }
+}

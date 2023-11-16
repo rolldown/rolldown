@@ -1564,7 +1564,9 @@ name = "rolldown_common"
 version = "0.0.1"
 dependencies = [
  "index_vec",
+ "once_cell",
  "oxc",
+ "regex",
  "rustc-hash",
  "sugar_path",
 ]

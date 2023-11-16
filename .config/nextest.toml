@@ -1,5 +1,0 @@
-[profile.default]
-# https://nexte.st/book/leaky-tests.html
-leak-timeout = "1s"
-# https://nexte.st/book/slow-tests.html
-slow-timeout = { period = "5s", terminate-after = 1 }

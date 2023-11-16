@@ -66,8 +66,8 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --all -- --deny warnings
 
-  cargo-nextest:
-    name: Cargo Nextest
+  cargo-test:
+    name: Cargo Test
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -75,11 +75,11 @@ jobs:
       - name: Install Rust
         uses: ./.github/actions/rustup
 
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@cargo-nextest
+      - name: Build
+        run: cargo test --no-run
 
       - name: Run Test
-        run: cargo nextest run
+        run: cargo test
 
   node-validation-test:
     name: Node Validation/Test

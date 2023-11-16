@@ -9,7 +9,9 @@ edition.workspace    = true
 repository.workspace = true
 
 [lib]
-bench = false
+bench   = false
+test    = false
+doctest = false
 
 [dependencies]
 criterion   = "0.4.0"

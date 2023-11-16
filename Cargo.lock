@@ -1868,9 +1868,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "string_wizard"
-version = "0.0.14"
+version = "0.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac05a8bbc67011670b5d1b3c2d40c1810af3dd66e28e917b43a767f1a6fc07d9"
+checksum = "536dc441575c8eede9a29055262ee76e7c8663935941f35a791f79a1ad219426"
 dependencies = [
  "index_vec",
  "once_cell",

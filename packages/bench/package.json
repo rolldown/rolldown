@@ -1,4 +1,5 @@
 {
+  "name": "bench",
   "private": true,
   "type": "module",
   "scripts": {

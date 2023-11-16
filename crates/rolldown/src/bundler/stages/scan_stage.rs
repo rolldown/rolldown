@@ -68,6 +68,7 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
   }
 
   /// Resolve `InputOptions.input`
+  #[tracing::instrument(skip_all)]
   fn resolve_user_defined_entries(
     &self,
   ) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {

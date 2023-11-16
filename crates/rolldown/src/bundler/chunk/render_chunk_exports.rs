@@ -17,7 +17,14 @@ impl Chunk {
       if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
         match output_options.format {
           OutputFormat::Esm => {
-            let wrap_ref_name = &self.canonical_names[&linking_info.wrap_ref.unwrap()];
+            let wrap_ref_name =
+              &self.canonical_names.get(&linking_info.wrap_ref.unwrap()).unwrap_or_else(|| {
+                panic!(
+                  "Cannot find canonical name for wrap ref {:?} of {:?}",
+                  linking_info.wrap_ref.unwrap(),
+                  graph.modules[entry].resource_id()
+                )
+              });
             return Some(MagicString::new(format!("export default {wrap_ref_name}();\n")));
           }
         }

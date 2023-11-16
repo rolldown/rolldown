@@ -58,6 +58,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     }
   }
 
+  #[tracing::instrument(skip_all)]
   pub async fn run(mut self) -> BatchedResult<()> {
     let mut builder = NormalModuleBuilder::default();
     tracing::trace!("process {:?}", self.path);
@@ -204,6 +205,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     Ok(info)
   }
 
+  #[tracing::instrument(skip_all)]
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordId, RawImportRecord>,

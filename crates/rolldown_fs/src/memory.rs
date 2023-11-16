@@ -4,7 +4,6 @@ use std::{
   sync::Arc,
 };
 
-use miette::IntoDiagnostic;
 use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem};
 use vfs::{FileSystem as _, MemoryFS};
 
@@ -49,33 +48,29 @@ impl FileSystem for MemoryFileSystem {
     Self { fs: Arc::clone(&self.fs) }
   }
 
-  fn remove_dir_all(&self, path: &Path) -> miette::Result<()> {
+  fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     self
       .fs
       .remove_dir(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
-      .into_diagnostic()?;
+      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
     Ok(())
   }
 
-  fn create_dir_all(&self, path: &Path) -> miette::Result<()> {
+  fn create_dir_all(&self, path: &Path) -> io::Result<()> {
     self
       .fs
       .create_dir(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
-      .into_diagnostic()?;
+      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
     Ok(())
   }
 
-  fn write(&self, path: &Path, content: &[u8]) -> miette::Result<()> {
+  fn write(&self, path: &Path, content: &[u8]) -> io::Result<()> {
     _ = self
       .fs
       .create_file(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
-      .into_diagnostic()?
+      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?
       .write(content)
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
-      .into_diagnostic()?;
+      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
     Ok(())
   }
 

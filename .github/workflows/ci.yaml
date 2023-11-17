@@ -83,8 +83,8 @@ jobs:
       - name: Run Test
         run: cargo test
 
-  node-validation-test:
-    name: Node Validation/Test
+  node-test:
+    name: Node Test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -112,6 +112,36 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      - name: Build @rolldown/node
+        run: yarn build:node
+
+      - name: Test
+        run: yarn test
+
+  node-validation:
+    name: Node Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true # Pull submodules for additional files
+
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install
+
       - name: Lint Filename
         run: yarn lint-filename
 
@@ -120,9 +150,3 @@ jobs:
 
       - name: Run Prettier
         run: yarn prettier:ci
-
-      - name: Build @rolldown/node
-        run: yarn build:node
-
-      - name: Test
-        run: yarn test

@@ -28,7 +28,7 @@ Rolldown will bundle the input into `/dist`, and using the same `node` instance 
 
 ### Rolldown Testing
 
-The rolldown testing is located at `packages/node/test`. It is used to test rolldown exported node api, also including options. If you add a options from rollup, please make sure corresponding test case for it.
+The rolldown testing is located at `packages/node/test`. It is used to test rolldown exported node api, also including options. If you add a options from rollup, please add corresponding test case for it.
 
 ### Rollup Testing
 

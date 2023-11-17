@@ -28,7 +28,8 @@ pub struct NormalModule {
   pub is_entry: bool,
   pub resource_id: ResourceId,
   pub pretty_path: String,
-  pub unique_name: String,
+  /// Representative name of `FilePath`, which is created by `FilePath#representative_name` belong to `resource_id`
+  pub repr_name: String,
   pub module_type: ModuleType,
   pub namespace_symbol: SymbolRef,
   pub ast: OxcProgram,
@@ -225,7 +226,7 @@ impl NormalModule {
       let name = format!(
         "{}_{}",
         if self.exports_kind == ExportsKind::CommonJs { "require" } else { "init" },
-        self.unique_name
+        self.repr_name
       )
       .into();
       let symbol_ref = self.create_local_symbol(name, self_linking_info, symbols);
@@ -254,7 +255,7 @@ impl NormalModule {
     symbols: &mut Symbols,
   ) {
     if !self_linking_info.local_symbol_for_import_cjs.contains_key(&importee.id) {
-      let name = format!("import_{}", importee.unique_name).into();
+      let name = format!("import_{}", importee.repr_name).into();
       let symbol_ref = self.create_local_symbol(name, self_linking_info, symbols);
       self_linking_info.local_symbol_for_import_cjs.insert(importee.id, symbol_ref);
     }

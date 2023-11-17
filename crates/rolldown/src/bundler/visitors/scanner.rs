@@ -3,7 +3,7 @@ use oxc::{
   ast::{
     ast::{
       ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
-      ImportDeclaration, ModuleDeclaration,
+      ImportDeclaration, ModuleDeclaration, Program,
     },
     Visit,
   },
@@ -21,7 +21,7 @@ use crate::bundler::utils::{ast_scope::AstScope, ast_symbol::AstSymbol};
 
 #[derive(Debug, Default)]
 pub struct ScanResult {
-  pub unique_name: String,
+  pub repr_name: String,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: StmtInfos,
@@ -33,30 +33,30 @@ pub struct ScanResult {
 }
 
 pub struct Scanner<'a> {
-  pub idx: ModuleId,
-  pub module_type: ModuleType,
-  pub scope: &'a AstScope,
-  pub symbol_table: &'a mut AstSymbol,
-  pub current_stmt_info: StmtInfo,
-  pub result: ScanResult,
-  pub esm_export_keyword: Option<Span>,
-  pub cjs_export_keyword: Option<Span>,
+  idx: ModuleId,
+  module_type: ModuleType,
+  scope: &'a AstScope,
+  symbol_table: &'a mut AstSymbol,
+  current_stmt_info: StmtInfo,
+  result: ScanResult,
+  esm_export_keyword: Option<Span>,
+  cjs_export_keyword: Option<Span>,
   pub namespace_symbol: SymbolRef,
 }
 
-impl<'a> Scanner<'a> {
+impl<'ast> Scanner<'ast> {
   pub fn new(
     idx: ModuleId,
-    scope: &'a AstScope,
-    symbol_table: &'a mut AstSymbol,
-    unique_name: String,
+    scope: &'ast AstScope,
+    symbol_table: &'ast mut AstSymbol,
+    repr_name: String,
     module_type: ModuleType,
   ) -> Self {
     let mut result = ScanResult::default();
-    let name = format!("{unique_name}_ns");
+    let name = format!("{repr_name}_ns");
     let namespace_ref: SymbolRef =
       (idx, symbol_table.create_symbol(name.into(), scope.root_scope_id())).into();
-    result.unique_name = unique_name;
+    result.repr_name = repr_name;
     // The first StmtInfo is to represent the namespace binding.
     result
       .stmt_infos
@@ -72,6 +72,11 @@ impl<'a> Scanner<'a> {
       module_type,
       namespace_symbol: namespace_ref,
     }
+  }
+
+  pub fn scan(mut self, program: &Program<'ast>) -> ScanResult {
+    self.visit_program(program);
+    self.result
   }
 
   fn set_esm_export_keyword(&mut self, span: Span) {
@@ -242,7 +247,7 @@ impl<'a> Scanner<'a> {
       // a facade Symbol to represent it.
       // Notice: Patterns don't include `export default [identifier]`
       let sym_id = self.symbol_table.create_symbol(
-        Atom::from(format!("{}_default", self.result.unique_name)),
+        Atom::from(format!("{}_default", self.result.repr_name)),
         self.scope.root_scope_id(),
       );
       self.add_declared_id(sym_id);

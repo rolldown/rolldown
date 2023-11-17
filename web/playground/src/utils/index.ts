@@ -1,5 +1,5 @@
 import * as path from 'path-browserify'
-import { AssetItem, FileItem } from '../../../wasm'
+import { AssetItem, FileItem } from '@rolldown/wasm-binding'
 
 export type ModuleInfo = {
   title: string

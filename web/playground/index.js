@@ -1,4 +1,4 @@
-import init, { bundle, FileItem, AssetItem } from '../wasm'
+import init, { bundle, FileItem, AssetItem } from '@rolldown/wasm-binding'
 await init()
 let res = bundle([new FileItem('/index.js', 'const a = 3')])
 let normalizedRes = res.map((item) => {

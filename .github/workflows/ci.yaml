@@ -123,8 +123,8 @@ jobs:
 
       - name: Build @rolldown/node
         run: |
-        yarn workspace @rolldown/node-binding run build
-        yarn workspace @rolldown/node run build
+          yarn workspace @rolldown/node-binding run build
+          yarn workspace @rolldown/node run build
 
       - name: Test
         run: yarn test

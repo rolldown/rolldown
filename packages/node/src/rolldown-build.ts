@@ -26,6 +26,7 @@ export class RolldownBuild implements RollupBuild {
       inputOptions,
     )
     const bundler = new Bundler(bindingInputOptions)
+    await bundler.build()
     return new RolldownBuild(bundler)
   }
 

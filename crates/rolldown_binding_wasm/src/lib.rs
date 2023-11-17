@@ -66,6 +66,10 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
         memory_fs,
       );
 
+      if let Err(e) = bundler.build().await {
+        panic!("{e:?}",);
+      }
+
       match bundler.write(OutputOptions::default()).await {
         Ok(assets) => assets
           .into_iter()

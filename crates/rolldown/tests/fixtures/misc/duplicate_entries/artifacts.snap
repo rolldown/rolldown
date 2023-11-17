@@ -1,0 +1,31 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/misc/duplicate_entry
+---
+# Assets
+
+## 2.mjs
+
+```js
+// main.js
+// Purpose: Test that duplicate entries are handled correctly.
+// Use object to ensure the reference equality.
+var main_default = {}
+
+export { main_default };
+```
+## main.mjs
+
+```js
+import { main_default } from "./2.mjs";
+
+export { main_default as default };
+```
+## main2.mjs
+
+```js
+import { main_default } from "./2.mjs";
+
+export { main_default as default };
+```

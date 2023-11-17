@@ -62,11 +62,15 @@ impl Chunk {
   fn get_export_items(&self, graph: &LinkStageOutput) -> Vec<(Atom, SymbolRef)> {
     self.entry_module.map_or_else(
       || {
-        self
+        let mut tmp = self
           .exports_to_other_chunks
           .iter()
           .map(|(export_ref, alias)| (alias.clone(), *export_ref))
-          .collect::<Vec<_>>()
+          .collect::<Vec<_>>();
+
+        tmp.sort_unstable_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
+
+        tmp
       },
       |entry_module_id| {
         let linking_info = &graph.linking_infos[entry_module_id];

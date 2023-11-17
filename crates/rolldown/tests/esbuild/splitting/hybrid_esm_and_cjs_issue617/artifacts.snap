@@ -20,7 +20,7 @@ var init_a = __esm({
 		foo
 	}
 });
-export { init_a, foo, a_ns };
+export { a_ns, foo, init_a };
 ```
 ## a.mjs
 

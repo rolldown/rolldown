@@ -122,9 +122,7 @@ jobs:
         run: yarn prettier:ci
 
       - name: Build @rolldown/node
-        run: |
-          yarn workspace @rolldown/node-binding run build
-          yarn workspace @rolldown/node run build
+        run: yarn build:node
 
       - name: Test
         run: yarn test

@@ -1,6 +1,4 @@
-use std::{fmt::Debug, path::Path};
-
-use sugar_path::SugarPath;
+use std::fmt::Debug;
 
 use crate::FilePath;
 
@@ -12,21 +10,8 @@ impl ResourceId {
     Self(path)
   }
 
+  // We may change `ResourceId` to enum in the future, so we have this method to make it easier to change.
   pub fn expect_file(&self) -> &FilePath {
     &self.0
-  }
-
-  pub fn prettify(&self, cwd: impl AsRef<Path>) -> String {
-    let pretty = if Path::new(self.0.as_str()).is_absolute() {
-      Path::new(self.0.as_str())
-        .relative(cwd.as_ref())
-        .into_os_string()
-        .into_string()
-        .expect("should be valid utf8")
-    } else {
-      self.0.to_string()
-    };
-    // remove \0
-    pretty.replace('\0', "")
   }
 }

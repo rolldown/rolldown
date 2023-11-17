@@ -6,7 +6,6 @@ use oxc::{ast::Visit, span::SourceType};
 use rolldown_common::{
   FilePath, ImportRecordId, ModuleId, ModuleType, RawImportRecord, ResourceId, SymbolRef,
 };
-use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 use rolldown_resolver::Resolver;
@@ -34,8 +33,6 @@ pub struct NormalModuleTask<'task, T: FileSystem + Default> {
   module_id: ModuleId,
   path: FilePath,
   module_type: ModuleType,
-  errors: Vec<BuildError>,
-  warnings: Vec<BuildError>,
   is_entry: bool,
 }
 
@@ -47,21 +44,18 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     path: FilePath,
     module_type: ModuleType,
   ) -> Self {
-    Self {
-      ctx,
-      module_id: id,
-      is_entry,
-      path,
-      module_type,
-      errors: Vec::default(),
-      warnings: Vec::default(),
+    Self { ctx, module_id: id, is_entry, path, module_type }
+  }
+  pub async fn run(mut self) {
+    if let Err(errs) = self.run_inner().await {
+      self.ctx.tx.send(Msg::Errors(errs)).expect("Send should not fail");
     }
   }
 
-  #[tracing::instrument(skip_all)]
-  pub async fn run(mut self) -> BatchedResult<()> {
-    let mut builder = NormalModuleBuilder::default();
+  async fn run_inner(&mut self) -> BatchedResult<()> {
     tracing::trace!("process {:?}", self.path);
+
+    let warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
     let mut source = if let Some(r) =
@@ -98,34 +92,38 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       unique_name,
     } = scan_result;
 
-    builder.id = Some(self.module_id);
-    builder.ast = Some(ast);
-    builder.unique_name = Some(unique_name);
-    builder.path = Some(ResourceId::new(self.path));
-    builder.named_imports = Some(named_imports);
-    builder.named_exports = Some(named_exports);
-    builder.stmt_infos = Some(stmt_infos);
-    builder.imports = Some(imports);
-    builder.star_exports = Some(star_exports);
-    builder.default_export_symbol = export_default_symbol_id;
-    builder.scope = Some(scope);
-    builder.exports_kind = exports_kind;
-    builder.namespace_symbol = Some(namespace_symbol);
-    builder.module_type = self.module_type;
-    builder.is_entry = self.is_entry;
+    let builder = NormalModuleBuilder {
+      id: Some(self.module_id),
+      ast: Some(ast),
+      unique_name: Some(unique_name),
+      path: Some(ResourceId::new(self.path.clone())),
+      named_imports: Some(named_imports),
+      named_exports: Some(named_exports),
+      stmt_infos: Some(stmt_infos),
+      imports: Some(imports),
+      star_exports: Some(star_exports),
+      default_export_symbol: export_default_symbol_id,
+      scope: Some(scope),
+      exports_kind,
+      namespace_symbol: Some(namespace_symbol),
+      module_type: self.module_type,
+      is_entry: self.is_entry,
+      pretty_path: Some(self.path.prettify(&self.ctx.input_options.cwd)),
+      ..Default::default()
+    };
+
     self
       .ctx
       .tx
       .send(Msg::NormalModuleDone(NormalModuleTaskResult {
         resolved_deps: res,
         module_id: self.module_id,
-        errors: self.errors,
-        warnings: self.warnings,
+        warnings,
         ast_symbol,
         builder,
         raw_import_records: import_records,
       }))
-      .unwrap();
+      .expect("Send should not fail");
     Ok(())
   }
 
@@ -245,7 +243,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
         errors.merge(e);
       }
     });
-    debug_assert!(errors.is_empty() && ret.len() == dependencies.len(), "{:#?}", dependencies);
+    debug_assert!(errors.is_empty() && ret.len() == dependencies.len(), "{dependencies:#?}");
 
     Ok(ret)
   }

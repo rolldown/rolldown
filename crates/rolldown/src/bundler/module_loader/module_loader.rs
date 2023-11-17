@@ -18,7 +18,7 @@ use crate::bundler::plugin_driver::SharedPluginDriver;
 use crate::bundler::runtime::RuntimeModuleBrief;
 use crate::bundler::utils::resolve_id::ResolvedRequestInfo;
 use crate::bundler::utils::symbols::Symbols;
-use crate::error::BatchedResult;
+use crate::error::{BatchedErrors, BatchedResult};
 use crate::SharedResolver;
 
 pub struct ModuleLoader<T: FileSystem + Default> {
@@ -124,6 +124,8 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
   ) -> BatchedResult<ModuleLoaderOutput> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
+    let mut errors = BatchedErrors::default();
+
     self.intermediate_modules.reserve(user_defined_entries.len() + 1 /* runtime */);
 
     let mut entries: Vec<(Option<String>, ModuleId)> = user_defined_entries
@@ -163,8 +165,6 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
             })
             .collect::<IndexVec<ImportRecordId, _>>();
           builder.import_records = Some(import_records);
-          builder.pretty_path =
-            Some(builder.path.as_ref().unwrap().prettify(&self.input_options.cwd));
           self.intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
 
           self.symbols.add_ast_symbol(module_id, ast_symbol);
@@ -177,8 +177,15 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
           self.symbols.add_ast_symbol(runtime.id(), ast_symbol);
           runtime_brief = Some(runtime);
         }
+        Msg::Errors(errs) => {
+          errors.merge(errs);
+        }
       }
       self.remaining -= 1;
+    }
+
+    if !errors.is_empty() {
+      return Err(errors);
     }
 
     let modules = self.intermediate_modules.into_iter().map(Option::unwrap).collect();

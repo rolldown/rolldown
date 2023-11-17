@@ -1,0 +1,16 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/quoted_property
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import * as ext_ns from "ext";
+
+// entry.js
+
+console.log(ext_ns.mustBeUnquoted, ext_ns['mustBeQuoted'])
+```

@@ -70,7 +70,7 @@ jobs:
 
   cargo-test:
     name: Cargo Test
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -85,7 +85,7 @@ jobs:
 
   node-validation-test:
     name: Node Validation/Test
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false

@@ -8,15 +8,12 @@ input_file: crates/rolldown/tests/fixtures/mix-cjs-esm
 ## main.mjs
 
 ```js
-import { __commonJS, __esm, __toCommonJS, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJS, __esm, __toESM } from "./_rolldown_runtime.mjs";
 
 // esm-export-cjs-export.js
 module.exports = 1;
 const value$1 = 1;
 // foo.js
-var foo_ns = {
-
-};
 var init_foo = __esm({
 	'foo.js'() {
 

@@ -23,7 +23,8 @@
   ],
   "scripts": {
     "build": "unbuild",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:update": "vitest run -u"
   },
   "dependencies": {
     "@rolldown/node-binding": "workspace:*"

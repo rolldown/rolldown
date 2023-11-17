@@ -54,9 +54,9 @@ impl PluginDriver {
     Ok(None)
   }
 
-  pub async fn build_end(&self, _args: Option<&HookBuildEndArgs>) -> HookNoopReturn {
+  pub async fn build_end(&self, args: Option<&HookBuildEndArgs>) -> HookNoopReturn {
     for plugin in &self.plugins {
-      plugin.build_end(&mut PluginContext::new(), _args).await?;
+      plugin.build_end(&mut PluginContext::new(), args).await?;
     }
     Ok(())
   }

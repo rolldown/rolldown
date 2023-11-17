@@ -53,12 +53,6 @@ missing_errors_doc = "allow"
 # Having #[must_use] every where also hinders readability.
 must_use_candidate = "allow"
 
-# Generated from the `index_vec` crate.
-# this error originates in the macro `$crate::__define_index_type_inner` which comes from the expansion of the macro `define_index_type`
-# FIXME(hyf0): This should not be allowed, since it make variable starting with `_` meaningless.
-used_underscore_binding = "allow"
-
-
 doc_markdown         = "allow"
 new_without_default  = "allow"
 needless_for_each    = "allow"

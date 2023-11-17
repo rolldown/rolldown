@@ -1,5 +1,5 @@
 {
-  "name": "rolldown",
+  "name": "monorepo",
   "version": "0.0.0",
   "description": "Rollup in Rust",
   "main": "index.js",
@@ -14,6 +14,7 @@
     "lint": "oxlint --ignore-path=./.oxlintignore --import-plugin",
     "lint-filename": "ls-lint",
     "build": "yarn workspaces foreach --all --topological-dev run build",
+    "build:node": "yarn workspaces foreach -R --topological-dev --from '@rolldown/node' run build",
     "build:binding": "yarn workspace @rolldown/node-binding run build",
     "build:binding:release": "yarn workspace @rolldown/node-binding run build:release",
     "build:wasm": "yarn workspace @rolldown/wasm-binding run build",

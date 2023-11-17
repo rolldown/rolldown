@@ -58,6 +58,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     }
   }
 
+  #[tracing::instrument(skip_all)]
   pub async fn run(mut self) -> BatchedResult<()> {
     let mut builder = NormalModuleBuilder::default();
     tracing::trace!("process {:?}", self.path);
@@ -158,12 +159,12 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(scope, std::mem::take(&mut symbol_table.references));
     let mut symbol_for_module = AstSymbol::from_symbol_table(symbol_table);
-    let unique_name = self.path.generate_unique_name();
+    let unique_name = self.path.representative_name();
     let mut scanner = scanner::Scanner::new(
       self.module_id,
       &ast_scope,
       &mut symbol_for_module,
-      unique_name,
+      unique_name.into_owned(),
       self.module_type,
     );
     scanner.visit_program(program.program());
@@ -204,6 +205,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     Ok(info)
   }
 
+  #[tracing::instrument(skip_all)]
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordId, RawImportRecord>,

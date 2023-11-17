@@ -1,9 +1,11 @@
 use std::{
+  borrow::Cow,
   ffi::OsStr,
   path::{Component, Path},
   sync::Arc,
 };
 
+use regex::Regex;
 use sugar_path::{AsPath, SugarPath};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -61,39 +63,40 @@ impl FilePath {
     name
   }
 
-  pub fn generate_unique_name(&self) -> String {
+  // This doesn't ensure uniqueness, but should be valid as a JS identifier.
+  pub fn representative_name(&self) -> Cow<str> {
     let path = Path::new(self.0.as_ref());
-    let unique_name =
-      path.file_stem().expect("should have file_stem").to_str().expect("should be valid utf8");
+    let mut unique_name = Cow::Borrowed(
+      path.file_stem().expect("should have file_stem").to_str().expect("should be valid utf8"),
+    );
+
     if unique_name == "index" {
       if let Some(unique_name_of_parent_dir) =
         path.parent().and_then(Path::file_stem).and_then(OsStr::to_str)
       {
-        return [unique_name_of_parent_dir, "_index"].concat();
+        unique_name = Cow::Owned([unique_name_of_parent_dir, "_index"].concat());
       }
     }
+
     ensure_valid_identifier(unique_name)
   }
 }
 
-fn ensure_valid_identifier(s: &str) -> String {
-  let mut ident = String::new();
-  let mut need_gap = false;
-  for i in s.chars() {
-    if i.is_ascii_alphabetic() || (i.is_ascii_digit() && !ident.is_empty()) {
-      if need_gap {
-        ident.push('_');
-        need_gap = false;
-      }
-      ident.push(i);
-    } else if !ident.is_empty() {
-      need_gap = true;
-    }
+static VALID_RE: once_cell::sync::Lazy<Regex> =
+  once_cell::sync::Lazy::new(|| Regex::new(r"[^a-zA-Z0-9_$]").unwrap());
+
+fn ensure_valid_identifier(s: Cow<str>) -> Cow<str> {
+  match s {
+    Cow::Borrowed(str) => VALID_RE.replace_all(str, "_"),
+    Cow::Owned(owned_str) => VALID_RE.replace_all(&owned_str, "_").into_owned().into(),
   }
-  if ident.is_empty() {
-    ident.push('_');
-  }
-  ident
+}
+
+#[test]
+fn test_ensure_valid_identifier() {
+  assert_eq!(ensure_valid_identifier("foo".into()), "foo");
+  assert_eq!(ensure_valid_identifier("$foo$".into()), "$foo$");
+  assert_eq!(ensure_valid_identifier("react-dom".into()), "react_dom");
 }
 
 #[test]

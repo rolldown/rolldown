@@ -118,9 +118,9 @@ impl<'r> AstRenderer<'r> {
         self.wrapped_esm_ctx.hoisted_functions.iter().for_each(|f| {
           self.ctx.source.relocate(f.start, f.end, 0);
           self.ctx.source.append_left(f.end, "\n");
-          indent_excludes.push([f.start, f.end]);
+          indent_excludes.push((f.start, f.end));
         });
-        self.ctx.source.indent2(&self.indentor, indent_excludes);
+        self.ctx.source.indent2(&self.indentor, &indent_excludes);
         if !self.wrapped_esm_ctx.hoisted_vars.is_empty() {
           self
             .ctx
@@ -146,7 +146,7 @@ impl<'r> AstRenderer<'r> {
       RenderKind::Cjs => {
         let wrap_ref_name = self.ctx.wrap_ref_name.unwrap();
         let prettify_id = &self.ctx.module.pretty_path;
-        self.ctx.source.indent2(&self.indentor, Vec::default());
+        self.ctx.source.indent2(&self.indentor, &[]);
         let commonjs_ref_name = self.ctx.canonical_name_for_runtime("__commonJS");
         self.ctx.source.prepend(format!(
           "var {wrap_ref_name} = {commonjs_ref_name}({{\n{}'{prettify_id}'(exports, module) {{\n",

@@ -299,6 +299,7 @@ impl<'a> Scanner<'a> {
 }
 
 impl<'ast> Visit<'ast> for Scanner<'ast> {
+  #[tracing::instrument(skip_all)]
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);

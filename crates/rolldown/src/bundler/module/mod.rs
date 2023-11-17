@@ -72,6 +72,7 @@ impl Module {
     }
   }
 
+  #[tracing::instrument(skip_all)]
   pub fn render(&self, ctx: ModuleRenderContext) -> Option<MagicString<'_>> {
     match self {
       Self::Normal(m) => m.render(ctx),

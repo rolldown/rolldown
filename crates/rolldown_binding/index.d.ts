@@ -70,4 +70,5 @@ export class Bundler {
   constructor(inputOpts: InputOptions)
   write(opts: OutputOptions): Promise<Outputs>
   generate(opts: OutputOptions): Promise<Outputs>
+  build(): Promise<void>
 }

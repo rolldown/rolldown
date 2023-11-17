@@ -26,6 +26,8 @@ pub struct Bundler<T: FileSystem + Default> {
   plugin_driver: SharedPluginDriver,
   fs: T,
   resolver: SharedResolver<T>,
+  // Store the build result, using for generate/write.
+  build_result: Option<LinkStageOutput>,
 }
 
 impl Bundler<OsFileSystem> {
@@ -46,6 +48,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
       plugin_driver: Arc::new(PluginDriver::new(plugins)),
       input_options: Arc::new(input_options),
       fs,
+      build_result: None,
     }
   }
 
@@ -86,7 +89,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     Ok(())
   }
 
-  async fn build_inner(&mut self) -> BatchedResult<LinkStageOutput> {
+  async fn build_inner(&mut self) -> BatchedResult<()> {
     self.plugin_driver.build_start().await?;
 
     let build_ret = self.try_build().await;
@@ -104,7 +107,8 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     }
 
     self.plugin_driver.build_end(None).await?;
-    build_ret
+    self.build_result = build_ret.ok();
+    Ok(())
   }
 
   #[tracing::instrument(skip_all)]
@@ -127,8 +131,8 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
   async fn bundle_up(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
-    let mut graph = self.build_inner().await?;
-    let mut bundle_stage = BundleStage::new(&mut graph, &self.input_options, &output_options);
+    let graph = self.build_result.as_mut().expect("Build should success");
+    let mut bundle_stage = BundleStage::new(graph, &self.input_options, &output_options);
     let assets = bundle_stage.bundle();
 
     Ok(assets)

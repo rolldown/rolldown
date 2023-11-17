@@ -6,6 +6,7 @@
   "private": true,
   "workspaces": [
     "crates/rolldown_binding",
+    "crates/rolldown_binding_wasm",
     "packages/**",
     "web/**"
   ],
@@ -15,6 +16,8 @@
     "build": "yarn workspaces foreach --all --topological-dev run build",
     "build:binding": "yarn workspace @rolldown/node-binding run build",
     "build:binding:release": "yarn workspace @rolldown/node-binding run build:release",
+    "build:wasm": "yarn workspace @rolldown/wasm-binding run build",
+    "build:wasm:release": "yarn workspace @rolldown/wasm-binding run build:release",
     "test": "yarn workspaces foreach --all --parallel run test",
     "test:update-rollup": "yarn workspace rollup-tests run test:update",
     "prettier": "prettier . '!**/*.{js||ts|json|md|yml|yaml}' -w",

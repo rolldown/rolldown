@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, Ref } from 'vue'
 import ModuleBlock from './components/ModuleBlock.vue'
-import init, { bundle } from '../../wasm'
+import init, { bundle } from '@rolldown/wasm-binding'
 import {
   convertAssetListToModuleList,
   normalizeModules,

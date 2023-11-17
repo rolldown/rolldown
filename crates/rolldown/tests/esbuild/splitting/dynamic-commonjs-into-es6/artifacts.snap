@@ -1,0 +1,26 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/dynamic-commonjs-into-es6
+---
+# Assets
+
+## foo_js.mjs
+
+```js
+import { __commonJS } from "./_rolldown_runtime.mjs";
+
+// foo.js
+var require_foo = __commonJS({
+	'foo.js'(exports, module) {
+		exports.bar = 123
+	}
+});
+export default require_foo();
+```
+## main.mjs
+
+```js
+// main.js
+import('./foo_js.mjs').then(({bar}) => console.log(bar))
+```

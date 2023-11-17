@@ -1,0 +1,41 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
+---
+# Assets
+
+## 2.mjs
+
+```js
+import { __esm } from "./_rolldown_runtime.mjs";
+
+// a.js
+var foo;
+var a_ns = {
+	get foo() { return foo }
+};
+var init_a = __esm({
+	'a.js'() {
+		foo
+	}
+});
+export { init_a, foo, a_ns };
+```
+## a.mjs
+
+```js
+import { foo } from "./2.mjs";
+
+export { foo };
+```
+## b.mjs
+
+```js
+import { __toCommonJS } from "./_rolldown_runtime.mjs";
+import { a_ns, init_a } from "./2.mjs";
+
+// b.js
+let bar = (init_a(), __toCommonJS(a_ns))
+export { bar };
+```

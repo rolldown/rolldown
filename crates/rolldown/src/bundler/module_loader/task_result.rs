@@ -11,7 +11,6 @@ pub struct NormalModuleTaskResult {
   pub ast_symbol: AstSymbol,
   pub resolved_deps: IndexVec<ImportRecordId, ResolvedRequestInfo>,
   pub raw_import_records: IndexVec<ImportRecordId, RawImportRecord>,
-  pub errors: Vec<BuildError>,
   pub warnings: Vec<BuildError>,
   pub builder: NormalModuleBuilder,
 }

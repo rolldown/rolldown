@@ -18,15 +18,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: ./.github/actions/rustup
+        uses: moonrepo/setup-rust@v1
+        with:
+          bins: critcmp
 
       - name: Prepare Benchmark
         run: |
-          git clone https://github.com/mrdoob/three.js.git --depth 1 ./temp/three.js  
+          git clone https://github.com/mrdoob/three.js.git --depth 1 ./temp/three.js
           for i in {1..10}; do cp -r ./temp/three.js/src ./temp/three.js/copy$i/; done
-
-      - name: Install critcmp
-        run: cargo install critcmp
 
       - name: Run Bench on PR Branch
         run: cargo bench -p bench -- --save-baseline pr

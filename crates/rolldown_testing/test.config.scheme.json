@@ -46,6 +46,15 @@
     "InputOptions": {
       "type": "object",
       "properties": {
+        "external": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
         "input": {
           "type": [
             "array",

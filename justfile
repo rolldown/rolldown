@@ -36,4 +36,3 @@ setup-bench:
 bench:
     cargo bench -p bench
 
-# build wasm of rolldown and move the output `pkg/` under `web` directory

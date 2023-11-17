@@ -160,3 +160,6 @@ lib
 *.go
 
 pkg/
+
+# justfile
+justfilee*

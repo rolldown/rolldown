@@ -46,6 +46,7 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
     Self { input_options, plugin_driver, fs, resolver }
   }
 
+  #[tracing::instrument(skip_all)]
   pub async fn scan(&self) -> BatchedResult<ScanStageOutput> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 

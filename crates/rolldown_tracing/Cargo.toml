@@ -10,7 +10,12 @@ license.workspace    = true
 edition.workspace    = true
 repository.workspace = true
 
+[lib]
+bench   = false
+test    = false
+doctest = false
+
 [dependencies]
 tracing            = { workspace = true }
-tracing-chrome     = "0.7.0"
+tracing-chrome     = "0.7.1"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }

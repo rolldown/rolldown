@@ -40,7 +40,7 @@ impl Bundler<OsFileSystem> {
 
 impl<T: FileSystem + Default + 'static> Bundler<T> {
   pub fn with_plugins_and_fs(input_options: InputOptions, plugins: Vec<BoxPlugin>, fs: T) -> Self {
-    // rolldown_tracing::enable_tracing_on_demand();
+    rolldown_tracing::try_init_tracing();
     Self {
       resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, fs.share()).into(),
       plugin_driver: Arc::new(PluginDriver::new(plugins)),
@@ -107,6 +107,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     build_ret
   }
 
+  #[tracing::instrument(skip_all)]
   async fn try_build(&mut self) -> BatchedResult<LinkStageOutput> {
     let build_info = ScanStage::new(
       Arc::clone(&self.input_options),
@@ -122,6 +123,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     Ok(link_stage.link())
   }
 
+  #[tracing::instrument(skip_all)]
   async fn bundle_up(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);

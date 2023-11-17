@@ -28,6 +28,7 @@
     "Finalizer",
     "hasher",
     "importee",
+    "napi",
     "oxlint",
     "oxlintignore",
     "Renamer",

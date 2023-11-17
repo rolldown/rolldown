@@ -42,6 +42,7 @@ impl LinkStage {
     }
   }
 
+  #[tracing::instrument(skip_all)]
   pub fn link(mut self) -> LinkStageOutput {
     self.sort_modules();
     Linker::new(&mut self).link();

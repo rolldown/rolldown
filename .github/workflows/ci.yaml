@@ -56,7 +56,7 @@ jobs:
 
   cargo-clippy:
     name: Cargo Clippy
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 

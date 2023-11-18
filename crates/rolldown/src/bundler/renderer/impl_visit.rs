@@ -56,14 +56,12 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     let importee = &self.ctx.graph.modules[importee_id];
     let importee_linking_info = &self.ctx.graph.linking_infos[importee_id];
     let Module::Normal(importee) = importee else { return };
-
     if importee.exports_kind == ExportsKind::CommonJs {
       self.hoisted_module_declaration(
         decl.span.start,
         self.ctx.generate_import_commonjs_module(
-          importee,
           &self.ctx.graph.linking_infos[importee.id],
-          true,
+          Some(decl.span),
         ),
       );
     } else if let Some(wrap_ref) = importee_linking_info.wrapper_ref {
@@ -83,11 +81,9 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
           decl.span.start,
           format!(
             "{re_export_runtime_symbol_name}({namespace_name}, {});",
-            self.ctx.generate_import_commonjs_module(
-              importee,
-              &self.ctx.graph.linking_infos[importee.id],
-              false
-            )
+            self
+              .ctx
+              .generate_import_commonjs_module(&self.ctx.graph.linking_infos[importee.id], None)
           ),
         );
       }

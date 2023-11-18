@@ -20,7 +20,7 @@ var require_cjs = __commonJS({
 // main.js
 var import_cjs = __toESM(require_cjs());
 
-var import_cjs = __toESM(require_cjs());
+var import_cjs$1 = __toESM(require_cjs());
 
-console.log(import_cjs.a, import_cjs.a)
+console.log(import_cjs.a, import_cjs$1.a)
 ```

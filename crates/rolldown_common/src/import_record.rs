@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use oxc::span::Atom;
 
-use crate::module_id::ModuleId;
+use crate::{module_id::ModuleId, SymbolRef};
 
 index_vec::define_index_type! {
   pub struct ImportRecordId = u32;
@@ -39,11 +39,12 @@ pub struct RawImportRecord {
   // import * as ns from '...'
   pub is_import_namespace: bool,
   pub kind: ImportKind,
+  pub namespace_ref: SymbolRef,
 }
 
 impl RawImportRecord {
-  pub fn new(specifier: Atom, kind: ImportKind) -> Self {
-    Self { module_request: specifier, is_import_namespace: false, kind }
+  pub fn new(specifier: Atom, kind: ImportKind, namespace_ref: SymbolRef) -> Self {
+    Self { module_request: specifier, is_import_namespace: false, kind, namespace_ref }
   }
 
   pub fn into_import_record(self, resolved_module: ModuleId) -> ImportRecord {
@@ -52,6 +53,7 @@ impl RawImportRecord {
       resolved_module,
       is_import_namespace: self.is_import_namespace,
       kind: self.kind,
+      namespace_ref: self.namespace_ref,
     }
   }
 }
@@ -65,4 +67,5 @@ pub struct ImportRecord {
   // import * as ns from '...'
   pub is_import_namespace: bool,
   pub kind: ImportKind,
+  pub namespace_ref: SymbolRef,
 }

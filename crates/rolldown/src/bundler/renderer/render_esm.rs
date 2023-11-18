@@ -20,9 +20,8 @@ impl<'r> AstRenderer<'r> {
             self.ctx.hoisted_module_declaration(
               named_decl.span.start,
               self.ctx.generate_import_commonjs_module(
-                importee,
                 &self.ctx.graph.linking_infos[importee.id],
-                true,
+                Some(named_decl.span),
               ),
             );
           }

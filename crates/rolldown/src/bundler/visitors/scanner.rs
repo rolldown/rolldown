@@ -11,8 +11,8 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ExportsKind, ImportKind, ImportRecordId, LocalExport, LocalOrReExport, ModuleId, ModuleType,
-  NamedImport, RawImportRecord, ReExport, Specifier, StmtInfo, StmtInfos, SymbolRef,
+  representative_name, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleId, ModuleType,
+  NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::{BindingIdentifierExt, BindingPatternExt};
 use rustc_hash::FxHashMap;
@@ -23,7 +23,7 @@ use crate::bundler::utils::{ast_scope::AstScope, ast_symbol::AstSymbol};
 pub struct ScanResult {
   pub repr_name: String,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
-  pub named_exports: FxHashMap<Atom, LocalOrReExport>,
+  pub named_exports: FxHashMap<Atom, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordId, RawImportRecord>,
   pub star_exports: Vec<ImportRecordId>,
@@ -124,7 +124,16 @@ impl<'ast> Scanner<'ast> {
   }
 
   fn add_import_record(&mut self, module_request: &Atom, kind: ImportKind) -> ImportRecordId {
-    let rec = RawImportRecord::new(module_request.clone(), kind);
+    let importee_repr = representative_name(module_request);
+    let namespace_ref: SymbolRef = (
+      self.idx,
+      self
+        .symbol_table
+        .create_symbol(format!("import_{importee_repr}").into(), self.scope.root_scope_id()),
+    )
+      .into();
+    self.add_declared_id(namespace_ref.symbol);
+    let rec = RawImportRecord::new(module_request.clone(), kind, namespace_ref);
     self.result.import_records.push(rec)
   }
 
@@ -148,33 +157,52 @@ impl<'ast> Scanner<'ast> {
   }
 
   fn add_local_export(&mut self, export_name: &Atom, local: SymbolId) {
-    self.result.named_exports.insert(
-      export_name.clone(),
-      LocalOrReExport::Local(LocalExport { referenced: (self.idx, local).into() }),
-    );
+    self
+      .result
+      .named_exports
+      .insert(export_name.clone(), LocalExport { referenced: (self.idx, local).into() });
   }
 
   fn add_local_default_export(&mut self, local: SymbolId) {
     self.result.export_default_symbol_id = Some(local);
-    self.result.named_exports.insert(
-      Atom::new_inline("default"),
-      LocalOrReExport::Local(LocalExport { referenced: (self.idx, local).into() }),
-    );
+    self
+      .result
+      .named_exports
+      .insert(Atom::new_inline("default"), LocalExport { referenced: (self.idx, local).into() });
   }
 
   fn add_re_export(&mut self, export_name: &Atom, imported: &Atom, record_id: ImportRecordId) {
-    self.result.named_exports.insert(
-      export_name.clone(),
-      LocalOrReExport::Re(ReExport { imported: imported.clone().into(), record_id }),
-    );
+    // TODO: `export_name` might be `default`
+    // TODO: How to do for conflict name?
+    let generated_imported_as_ref =
+      (self.idx, self.symbol_table.create_symbol(export_name.clone(), self.scope.root_scope_id()))
+        .into();
+    self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
+    let name_import = NamedImport {
+      imported: imported.clone().into(),
+      imported_as: generated_imported_as_ref,
+      record_id,
+    };
+    self.result.named_imports.insert(generated_imported_as_ref.symbol, name_import);
+    self
+      .result
+      .named_exports
+      .insert(export_name.clone(), LocalExport { referenced: generated_imported_as_ref });
   }
 
   fn add_star_re_export(&mut self, export_name: &Atom, record_id: ImportRecordId) {
+    let generated_imported_as_ref =
+      (self.idx, self.symbol_table.create_symbol(export_name.clone(), self.scope.root_scope_id()))
+        .into();
+    self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
+    let name_import =
+      NamedImport { imported: Specifier::Star, imported_as: generated_imported_as_ref, record_id };
+    self.result.named_imports.insert(generated_imported_as_ref.symbol, name_import);
     self.result.import_records[record_id].is_import_namespace = true;
-    self.result.named_exports.insert(
-      export_name.clone(),
-      LocalOrReExport::Re(ReExport { imported: Specifier::Star, record_id }),
-    );
+    self
+      .result
+      .named_exports
+      .insert(export_name.clone(), LocalExport { referenced: generated_imported_as_ref });
   }
 
   fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration) {
@@ -207,7 +235,7 @@ impl<'ast> Scanner<'ast> {
               decl.id.binding_identifiers().into_iter().for_each(|id| {
                 self.result.named_exports.insert(
                   id.name.clone(),
-                  LocalExport { referenced: (self.idx, id.expect_symbol_id()).into() }.into(),
+                  LocalExport { referenced: (self.idx, id.expect_symbol_id()).into() },
                 );
               });
             });

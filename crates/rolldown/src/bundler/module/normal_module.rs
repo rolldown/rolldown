@@ -6,7 +6,7 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType,
+  ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalExport, ModuleId, ModuleType,
   NamedImport, ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
@@ -34,7 +34,7 @@ pub struct NormalModule {
   pub namespace_symbol: SymbolRef,
   pub ast: OxcProgram,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
-  pub named_exports: FxHashMap<Atom, LocalOrReExport>,
+  pub named_exports: FxHashMap<Atom, LocalExport>,
   /// `stmt_infos[0]` represents the namespace binding statement
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
@@ -89,36 +89,10 @@ impl NormalModule {
     }
   }
 
-  pub fn create_initial_resolved_exports(
-    &self,
-    self_linking_info: &mut LinkingInfo,
-    symbols: &mut Symbols,
-  ) {
-    self.named_exports.iter().for_each(|(name, local_or_re_export)| {
-      let resolved_export = match local_or_re_export {
-        LocalOrReExport::Local(local) => ResolvedExport {
-          symbol_ref: local.referenced,
-          export_from: None,
-          potentially_ambiguous_symbol_refs: None,
-        },
-        LocalOrReExport::Re(re) => {
-          let symbol_ref = self.declare_symbol(name.clone(), self_linking_info, symbols);
-          self_linking_info.export_from_map.insert(
-            symbol_ref.symbol,
-            NamedImport {
-              imported: re.imported.clone(),
-              imported_as: symbol_ref,
-              record_id: re.record_id,
-            },
-          );
-          let rec = &self.import_records[re.record_id];
-          ResolvedExport {
-            symbol_ref,
-            export_from: Some(rec.resolved_module),
-            potentially_ambiguous_symbol_refs: None,
-          }
-        }
-      };
+  pub fn create_initial_resolved_exports(&self, self_linking_info: &mut LinkingInfo) {
+    self.named_exports.iter().for_each(|(name, local)| {
+      let resolved_export =
+        ResolvedExport { symbol_ref: local.referenced, potentially_ambiguous_symbol_refs: None };
       self_linking_info.resolved_exports.insert(name.clone(), resolved_export);
     });
   }
@@ -232,20 +206,6 @@ impl NormalModule {
       .facade_stmt_infos
       .push(StmtInfo { declared_symbols: vec![symbol_ref], ..Default::default() });
     symbol_ref
-  }
-
-  #[allow(clippy::map_entry, clippy::use_self)]
-  pub fn create_local_symbol_for_import_cjs(
-    &self,
-    importee: &NormalModule,
-    self_linking_info: &mut LinkingInfo,
-    symbols: &mut Symbols,
-  ) {
-    if !self_linking_info.local_symbol_for_import_cjs.contains_key(&importee.id) {
-      let name = format!("import_{}", importee.repr_name).into();
-      let symbol_ref = self.declare_symbol(name, self_linking_info, symbols);
-      self_linking_info.local_symbol_for_import_cjs.insert(importee.id, symbol_ref);
-    }
   }
 
   pub fn star_export_modules(&self) -> impl Iterator<Item = ModuleId> + '_ {

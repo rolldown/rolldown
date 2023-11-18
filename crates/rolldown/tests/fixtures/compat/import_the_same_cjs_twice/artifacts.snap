@@ -1,0 +1,26 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/compat/import_the_same_cjs_twice
+---
+# Assets
+
+## main.mjs
+
+```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+
+// cjs.js
+var require_cjs = __commonJS({
+	'cjs.js'(exports, module) {
+		module.exports.a = 1
+
+	}
+});
+// main.js
+var import_cjs = __toESM(require_cjs());
+
+var import_cjs = __toESM(require_cjs());
+
+console.log(import_cjs.a, import_cjs.a)
+```

@@ -18,10 +18,10 @@ impl Chunk {
         match output_options.format {
           OutputFormat::Esm => {
             let wrap_ref_name =
-              &self.canonical_names.get(&linking_info.wrap_ref.unwrap()).unwrap_or_else(|| {
+              &self.canonical_names.get(&linking_info.wrapper_ref.unwrap()).unwrap_or_else(|| {
                 panic!(
                   "Cannot find canonical name for wrap ref {:?} of {:?}",
-                  linking_info.wrap_ref.unwrap(),
+                  linking_info.wrapper_ref.unwrap(),
                   graph.modules[entry].resource_id()
                 )
               });

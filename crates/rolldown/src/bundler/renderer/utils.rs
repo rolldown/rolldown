@@ -44,7 +44,7 @@ impl<'r> AstRenderContext<'r> {
     importee_linking_info: &LinkingInfo,
     with_declaration: bool,
   ) -> String {
-    let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_ref.unwrap());
+    let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
     let to_esm_ref_name = self.canonical_name_for_runtime("__toESM");
     let code = format!(
       "{to_esm_ref_name}({wrap_ref_name}(){})",

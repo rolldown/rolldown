@@ -1,6 +1,4 @@
-use rolldown_common::{
-  ExportsKind, LocalOrReExport, ModuleId, NamedImport, Specifier, SymbolRef, WrapKind,
-};
+use rolldown_common::{ExportsKind, LocalOrReExport, ModuleId, NamedImport, Specifier, SymbolRef};
 use rustc_hash::FxHashSet;
 
 use super::linker_info::{LinkingInfo, LinkingInfoVec};
@@ -93,25 +91,6 @@ impl<'graph> Linker<'graph> {
 
   // TODO: should move this to a separate stage
   fn mark_module_wrapped(&self, symbols: &mut Symbols, linking_infos: &mut LinkingInfoVec) {
-    for importer_id in &self.graph.sorted_modules {
-      let linking_info = &mut linking_infos[*importer_id];
-      match &self.graph.modules[*importer_id] {
-        Module::Normal(module) => match linking_info.wrap_kind {
-          WrapKind::None => {}
-          WrapKind::Cjs => {
-            module.create_wrap_symbol(linking_info, symbols);
-            let runtime_symbol = self.graph.runtime.resolve_symbol("__commonJS");
-            linking_info.reference_symbol_in_facade_stmt_infos(runtime_symbol);
-          }
-          WrapKind::Esm => {
-            module.create_wrap_symbol(linking_info, symbols);
-            let runtime_symbol = self.graph.runtime.resolve_symbol("__esm");
-            linking_info.reference_symbol_in_facade_stmt_infos(runtime_symbol);
-          }
-        },
-        Module::External(_) => {}
-      }
-    }
     // Generate symbol for import warp module
     // Case esm import commonjs, eg var commonjs_ns = __toESM(require_a())
     // Case commonjs require esm, eg (init_esm(), __toCommonJS(esm_ns))
@@ -128,7 +107,7 @@ impl<'graph> Linker<'graph> {
             let Module::Normal(importee) = importee else {
               return;
             };
-            if let Some(importee_warp_symbol) = importee_linking_info.wrap_ref {
+            if let Some(importee_warp_symbol) = importee_linking_info.wrapper_ref {
               let importer_linking_info = &mut linking_infos[importer.id];
               importer_linking_info.reference_symbol_in_facade_stmt_infos(importee_warp_symbol);
               match (importer.exports_kind, importee.exports_kind) {

@@ -172,11 +172,20 @@ impl<'ast> Scanner<'ast> {
   }
 
   fn add_re_export(&mut self, export_name: &Atom, imported: &Atom, record_id: ImportRecordId) {
-    // TODO: `export_name` might be `default`
-    // TODO: How to do for conflict name?
-    let generated_imported_as_ref =
-      (self.idx, self.symbol_table.create_symbol(export_name.clone(), self.scope.root_scope_id()))
-        .into();
+    let generated_imported_as_ref = (
+      self.idx,
+      self.symbol_table.create_symbol(
+        if export_name.as_str() == "default" {
+          let importee_repr =
+            representative_name(&self.result.import_records[record_id].module_request);
+          format!("{importee_repr}_default").into()
+        } else {
+          export_name.clone()
+        },
+        self.scope.root_scope_id(),
+      ),
+    )
+      .into();
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import = NamedImport {
       imported: imported.clone().into(),

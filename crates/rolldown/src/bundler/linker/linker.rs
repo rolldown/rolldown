@@ -339,8 +339,6 @@ impl<'graph> Linker<'graph> {
       let rec = &importer.import_records[info.record_id];
       match info.imported {
         Specifier::Star => {
-          // TODO(hyf0): what happen if the `info.imported` is `Specifier::Star`?
-          // Is this correct?
           return MatchImportKind::Found(rec.namespace_ref);
         }
         Specifier::Literal(_) => {

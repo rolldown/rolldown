@@ -63,7 +63,7 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
-          cache: false
+          cache-base: main
           components: clippy
 
       - name: Run Clippy

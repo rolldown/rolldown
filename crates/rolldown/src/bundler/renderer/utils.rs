@@ -51,7 +51,15 @@ impl<'r> AstRenderContext<'r> {
       if self.module.module_type.is_esm() { ", 1" } else { "" }
     );
     if with_declaration {
-      let symbol_ref = self.linking_info.local_symbol_for_import_cjs[&importee.id];
+      let symbol_ref =
+        self.linking_info.local_symbol_for_import_cjs.get(&importee.id).copied().unwrap_or_else(
+          || {
+            panic!(
+              "Cannot find local symbol for importee: {:?} with importer {:?} {:?}",
+              importee.resource_id, self.module.resource_id, self.module.exports_kind
+            )
+          },
+        );
       let final_name = self.canonical_name_for(symbol_ref);
       format!("var {final_name} = {code};\n")
     } else {

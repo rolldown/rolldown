@@ -29,7 +29,7 @@ pub struct ScanResult {
   pub star_exports: Vec<ImportRecordId>,
   pub export_default_symbol_id: Option<SymbolId>,
   pub imports: FxHashMap<Span, ImportRecordId>,
-  pub exports_kind: Option<ExportsKind>,
+  pub exports_kind: ExportsKind,
 }
 
 pub struct Scanner<'a> {
@@ -92,15 +92,15 @@ impl<'a> Scanner<'a> {
 
   fn set_exports_kind(&mut self) {
     if self.esm_export_keyword.is_some() {
-      self.result.exports_kind = Some(ExportsKind::Esm);
+      self.result.exports_kind = ExportsKind::Esm;
     } else if self.cjs_export_keyword.is_some() {
-      self.result.exports_kind = Some(ExportsKind::CommonJs);
+      self.result.exports_kind = ExportsKind::CommonJs;
     } else if self.module_type.is_esm() {
-      self.result.exports_kind = Some(ExportsKind::Esm);
+      self.result.exports_kind = ExportsKind::Esm;
     } else if self.module_type.is_commonjs() {
-      self.result.exports_kind = Some(ExportsKind::CommonJs);
+      self.result.exports_kind = ExportsKind::CommonJs;
     } else {
-      self.result.exports_kind = Some(ExportsKind::Esm);
+      self.result.exports_kind = ExportsKind::Esm;
     }
   }
 

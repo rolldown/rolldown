@@ -1,6 +1,6 @@
 use index_vec::IndexVec;
 use oxc::{ast::Visit, span::SourceType};
-use rolldown_common::{ModuleId, ModuleType, ResourceId, SymbolRef};
+use rolldown_common::{ExportsKind, ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
@@ -43,12 +43,12 @@ impl RuntimeNormalModuleTask {
       named_imports,
       named_exports,
       stmt_infos,
-      import_records: _,
       star_exports,
       export_default_symbol_id,
       imports,
-      exports_kind,
       unique_name,
+      import_records: _,
+      exports_kind: _,
     } = scan_result;
 
     builder.id = Some(self.module_id);
@@ -65,7 +65,7 @@ impl RuntimeNormalModuleTask {
     builder.default_export_symbol = export_default_symbol_id;
     builder.import_records = Some(IndexVec::default());
     builder.scope = Some(scope);
-    builder.exports_kind = exports_kind;
+    builder.exports_kind = Some(ExportsKind::Esm);
     builder.namespace_symbol = Some(namespace_symbol);
     builder.pretty_path = Some("<runtime>".to_string());
 

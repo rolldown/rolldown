@@ -104,7 +104,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       star_exports: Some(star_exports),
       default_export_symbol: export_default_symbol_id,
       scope: Some(scope),
-      exports_kind,
+      exports_kind: Some(exports_kind),
       namespace_symbol: Some(namespace_symbol),
       module_type: self.module_type,
       is_entry: self.is_entry,

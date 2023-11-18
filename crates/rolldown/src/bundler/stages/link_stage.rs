@@ -57,7 +57,7 @@ impl LinkStage {
     }
   }
 
-  pub fn sort_modules(&mut self) {
+  fn sort_modules(&mut self) {
     let mut stack = self.entries.iter().map(|(_, m)| Action::Enter(*m)).rev().collect::<Vec<_>>();
     // The runtime module should always be the first module to be executed
     stack.push(Action::Enter(self.runtime.id()));

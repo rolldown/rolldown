@@ -155,40 +155,6 @@ impl LinkStage {
   }
 
   fn wrap_modules(&mut self) {
-    struct Context<'a> {
-      pub processed_modules: &'a mut IndexVec<ModuleId, bool>,
-      pub linking_infos: &'a mut LinkingInfoVec,
-      pub modules: &'a ModuleVec,
-      pub runtime_id: ModuleId,
-    }
-    fn wrap_module(ctx: &mut Context, target: ModuleId) {
-      let is_processed = &mut ctx.processed_modules[target];
-      if *is_processed {
-        return;
-      }
-      *is_processed = true;
-
-      if target == ctx.runtime_id {
-        return;
-      }
-
-      let Module::Normal(module) = &ctx.modules[target] else {
-        return;
-      };
-
-      if matches!(ctx.linking_infos[target].wrap_kind, WrapKind::None) {
-        ctx.linking_infos[target].wrap_kind = match module.exports_kind {
-          ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
-          ExportsKind::CommonJs => WrapKind::Cjs,
-        }
-      }
-
-      module.import_records.iter().for_each(|rec| {
-        wrap_module(ctx, rec.resolved_module);
-        if rec.kind.is_static() {}
-      });
-    }
-
     let mut processed_modules = index_vec::index_vec![false; self.modules.len()];
     self.sorted_modules.iter().copied().for_each(|module_id| {
       let linking_info = &self.linking_infos[module_id];
@@ -199,11 +165,12 @@ impl LinkStage {
       match linking_info.wrap_kind {
         WrapKind::Cjs | WrapKind::Esm => {
           wrap_module(
-            &mut Context {
+            &mut WrappingContext {
               processed_modules: &mut processed_modules,
               linking_infos: &mut self.linking_infos,
               modules: &self.modules,
-              runtime_id: self.runtime.id(),
+              runtime: &self.runtime,
+              symbols: &mut self.symbols,
             },
             module_id,
           );
@@ -218,16 +185,31 @@ impl LinkStage {
         };
         if matches!(importee.exports_kind, ExportsKind::CommonJs) {
           wrap_module(
-            &mut Context {
+            &mut WrappingContext {
               processed_modules: &mut processed_modules,
               linking_infos: &mut self.linking_infos,
               modules: &self.modules,
-              runtime_id: self.runtime.id(),
+              runtime: &self.runtime,
+              symbols: &mut self.symbols,
             },
             importee.id,
           );
         }
       });
+    });
+
+    // TODO(hyf0): should merge this loop with the other one
+    self.sorted_modules.iter().copied().for_each(|module_id| {
+      create_wrapper(
+        &mut WrappingContext {
+          processed_modules: &mut processed_modules,
+          linking_infos: &mut self.linking_infos,
+          modules: &self.modules,
+          runtime: &self.runtime,
+          symbols: &mut self.symbols,
+        },
+        module_id,
+      );
     });
   }
 
@@ -339,5 +321,82 @@ impl Action {
     match self {
       Self::Enter(id) | Self::Exit(id) => *id,
     }
+  }
+}
+
+struct WrappingContext<'a> {
+  pub processed_modules: &'a mut IndexVec<ModuleId, bool>,
+  pub linking_infos: &'a mut LinkingInfoVec,
+  pub modules: &'a ModuleVec,
+  pub runtime: &'a RuntimeModuleBrief,
+  pub symbols: &'a mut Symbols,
+}
+fn wrap_module(ctx: &mut WrappingContext, target: ModuleId) {
+  let is_processed = &mut ctx.processed_modules[target];
+  if *is_processed {
+    return;
+  }
+  *is_processed = true;
+
+  if target == ctx.runtime.id() {
+    return;
+  }
+
+  let Module::Normal(module) = &ctx.modules[target] else {
+    return;
+  };
+
+  if matches!(ctx.linking_infos[target].wrap_kind, WrapKind::None) {
+    ctx.linking_infos[target].wrap_kind = match module.exports_kind {
+      ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
+      ExportsKind::CommonJs => WrapKind::Cjs,
+    }
+  }
+
+  module.import_records.iter().for_each(|rec| {
+    wrap_module(ctx, rec.resolved_module);
+    if rec.kind.is_static() {}
+  });
+}
+
+fn create_wrapper(ctx: &mut WrappingContext, target: ModuleId) {
+  let linking_info = &mut ctx.linking_infos[target];
+  let Module::Normal(module) = &ctx.modules[target] else {
+    return;
+  };
+  match linking_info.wrap_kind {
+    // If this is a CommonJS file, we're going to need to generate a wrapper
+    // for the CommonJS closure. That will end up looking something like this:
+    //
+    //   var require_foo = __commonJS((exports, module) => {
+    //     ...
+    //   });
+    //
+    WrapKind::Cjs => {
+      linking_info.reference_symbol_in_facade_stmt_infos(ctx.runtime.resolve_symbol("__commonJS"));
+
+      linking_info.wrapper_ref = Some(module.declare_symbol(
+        format!("require_{}", &module.repr_name).into(),
+        linking_info,
+        ctx.symbols,
+      ));
+    }
+    // If this is a lazily-initialized ESM file, we're going to need to
+    // generate a wrapper for the ESM closure. That will end up looking
+    // something like this:
+    //
+    //   var init_foo = __esm(() => {
+    //     ...
+    //   });
+    //
+    WrapKind::Esm => {
+      linking_info.reference_symbol_in_facade_stmt_infos(ctx.runtime.resolve_symbol("__esm"));
+      linking_info.wrapper_ref = Some(module.declare_symbol(
+        format!("init_{}", &module.repr_name).into(),
+        linking_info,
+        ctx.symbols,
+      ));
+    }
+    WrapKind::None => {}
   }
 }

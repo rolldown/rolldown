@@ -102,7 +102,7 @@ impl NormalModule {
           potentially_ambiguous_symbol_refs: None,
         },
         LocalOrReExport::Re(re) => {
-          let symbol_ref = self.create_local_symbol(name.clone(), self_linking_info, symbols);
+          let symbol_ref = self.declare_symbol(name.clone(), self_linking_info, symbols);
           self_linking_info.export_from_map.insert(
             symbol_ref.symbol,
             NamedImport {
@@ -221,20 +221,7 @@ impl NormalModule {
     resolved
   }
 
-  pub fn create_wrap_symbol(&self, self_linking_info: &mut LinkingInfo, symbols: &mut Symbols) {
-    if self_linking_info.wrap_ref.is_none() {
-      let name = format!(
-        "{}_{}",
-        if self.exports_kind == ExportsKind::CommonJs { "require" } else { "init" },
-        self.repr_name
-      )
-      .into();
-      let symbol_ref = self.create_local_symbol(name, self_linking_info, symbols);
-      self_linking_info.wrap_ref = Some(symbol_ref);
-    }
-  }
-
-  pub fn create_local_symbol(
+  pub fn declare_symbol(
     &self,
     name: Atom,
     self_linking_info: &mut LinkingInfo,
@@ -256,7 +243,7 @@ impl NormalModule {
   ) {
     if !self_linking_info.local_symbol_for_import_cjs.contains_key(&importee.id) {
       let name = format!("import_{}", importee.repr_name).into();
-      let symbol_ref = self.create_local_symbol(name, self_linking_info, symbols);
+      let symbol_ref = self.declare_symbol(name, self_linking_info, symbols);
       self_linking_info.local_symbol_for_import_cjs.insert(importee.id, symbol_ref);
     }
   }

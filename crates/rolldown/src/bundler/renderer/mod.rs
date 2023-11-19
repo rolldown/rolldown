@@ -47,7 +47,7 @@ impl<'r> AstRenderContext<'r> {
     linking_info: &'r LinkingInfo,
   ) -> Self {
     let wrap_symbol_name =
-      linking_info.wrap_ref.map(|s| graph.symbols.canonical_name_for(s, canonical_names));
+      linking_info.wrapper_ref.map(|s| graph.symbols.canonical_name_for(s, canonical_names));
     let default_symbol_name = module
       .default_export_symbol
       .map(|s| graph.symbols.canonical_name_for((module.id, s).into(), canonical_names));
@@ -193,7 +193,7 @@ impl<'r> AstRenderer<'r> {
       return;
     };
     let importee_linking_info = &self.ctx.graph.linking_infos[importee.id];
-    let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_ref.unwrap());
+    let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
     if importee.exports_kind == ExportsKind::CommonJs {
       self.ctx.source.overwrite(expr.span.start, expr.span.end, format!("{wrap_ref_name}()"));
     } else {
@@ -222,7 +222,7 @@ impl<'r> AstRenderer<'r> {
         return RenderControl::Continue;
       };
       let importee_linking_info = &self.ctx.graph.linking_infos[importee.id];
-      let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_ref.unwrap());
+      let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
       self.ctx.source.update(call_exp.span.start, call_exp.span.end, format!("{wrap_ref_name}()"));
       RenderControl::Skip
     } else {

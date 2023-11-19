@@ -24,12 +24,8 @@ function runCases() {
         const config = await getCaseConfig(caseRoot)
 
         test(subCaseName, async () => {
-          try {
-            await runCaseBundle(caseRoot, config)
-            expect(true)
-          } catch (error) {
-            throw error
-          }
+          await runCaseBundle(caseRoot, config)
+          expect(true)
         })
       }
     })

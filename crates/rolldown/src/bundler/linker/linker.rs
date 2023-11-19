@@ -21,10 +21,8 @@ impl<'graph> Linker<'graph> {
     // Here take the symbols to avoid borrow graph and mut borrow graph at same time
     let mut symbols = std::mem::take(&mut self.graph.symbols);
 
-    self.mark_module_wrapped(&symbols, linking_infos);
-
     // Create symbols for external module
-    self.mark_extra_symbols(&mut symbols);
+    self.initialize_symbols_for_external_modules(&mut symbols);
 
     // Propagate star exports
     // Create resolved exports for named export declarations
@@ -78,79 +76,10 @@ impl<'graph> Linker<'graph> {
 
     // Set the symbols back and add linker modules to graph
     self.graph.symbols = symbols;
-
-    // FIXME: should move `linking_info.facade_stmt_infos` into a separate field
-    for (id, linking_info) in linking_infos.iter_mut_enumerated() {
-      std::mem::take(&mut linking_info.facade_stmt_infos).into_iter().for_each(|info| {
-        if let Module::Normal(module) = &mut self.graph.modules[id] {
-          module.stmt_infos.add_stmt_info(info);
-        }
-      });
-    }
   }
 
-  // TODO: should move this to a separate stage
-  fn mark_module_wrapped(&self, _symbols: &Symbols, linking_infos: &mut LinkingInfoVec) {
-    // Generate symbol for import warp module
-    // Case esm import commonjs, eg var commonjs_ns = __toESM(require_a())
-    // Case commonjs require esm, eg (init_esm(), __toCommonJS(esm_ns))
-    // Case esm export star commonjs, eg __reExport(esm_ns, __toESM(require_a())
-    for module in &self.graph.modules {
-      match module {
-        Module::Normal(importer) => {
-          importer.static_imports().for_each(|r| {
-            let importee_linking_info =
-              &linking_infos.get(r.resolved_module).unwrap_or_else(|| {
-                panic!("importer: {:?}, importee_linking_info {:#?}", importer.resource_id, r,)
-              });
-            let importee = &self.graph.modules[r.resolved_module];
-            let Module::Normal(importee) = importee else {
-              return;
-            };
-            if let Some(importee_warp_symbol) = importee_linking_info.wrapper_ref {
-              let importer_linking_info = &mut linking_infos[importer.id];
-              importer_linking_info.reference_symbol_in_facade_stmt_infos(importee_warp_symbol);
-              match (importer.exports_kind, importee.exports_kind) {
-                (ExportsKind::Esm | ExportsKind::CommonJs, ExportsKind::CommonJs) => {
-                  // importer.create_local_symbol_for_import_cjs(
-                  //   importee,
-                  //   importer_linking_info,
-                  //   symbols,
-                  // );
-                  importer_linking_info.reference_symbol_in_facade_stmt_infos(
-                    self.graph.runtime.resolve_symbol("__toESM"),
-                  );
-                }
-                (_, ExportsKind::Esm) => {
-                  importer_linking_info
-                    .reference_symbol_in_facade_stmt_infos(importee.namespace_symbol);
-                  importer_linking_info.reference_symbol_in_facade_stmt_infos(
-                    self.graph.runtime.resolve_symbol("__toCommonJS"),
-                  );
-                }
-                _ => {}
-              }
-            }
-          });
-          importer.star_export_modules().for_each(|id| match &self.graph.modules[id] {
-            Module::Normal(importee) => {
-              if importee.exports_kind == ExportsKind::CommonJs {
-                let importee_linking_info = &mut linking_infos[importer.id];
-                importee_linking_info.reference_symbol_in_facade_stmt_infos(
-                  self.graph.runtime.resolve_symbol("__reExport"),
-                );
-              }
-            }
-            Module::External(_) => {}
-          });
-        }
-        Module::External(_) => {}
-      }
-    }
-  }
-
-  #[allow(clippy::needless_collect)]
-  fn mark_extra_symbols(&mut self, symbols: &mut Symbols) {
+  // TODO(hyf0): Probably should take a look when improving supporting external modules
+  fn initialize_symbols_for_external_modules(&mut self, symbols: &mut Symbols) {
     for importer_id in &self.graph.sorted_modules {
       let importer = &self.graph.modules[*importer_id];
 
@@ -165,16 +94,6 @@ impl<'graph> Linker<'graph> {
               extra_symbols.push((import_record.resolved_module, info.imported.clone()));
             }
           });
-          // importer.named_exports.iter().for_each(|(_, export)| match &export {
-          //   LocalOrReExport::Local(_) => {}
-          //   LocalOrReExport::Re(re) => {
-          //     let import_record = &importer.import_records[re.record_id];
-          //     let importee = &self.graph.modules[import_record.resolved_module];
-          //     if let Module::External(_) = importee {
-          //       extra_symbols.push((import_record.resolved_module, re.imported.clone()));
-          //     }
-          //   }
-          // });
         }
         Module::External(_) => {}
       }

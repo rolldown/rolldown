@@ -149,7 +149,6 @@ impl<'ast> Scanner<'ast> {
   }
 
   fn add_star_import(&mut self, local: SymbolId, record_id: ImportRecordId) {
-    self.result.import_records[record_id].is_import_namespace = true;
     self.result.named_imports.insert(
       local,
       NamedImport { imported: Specifier::Star, imported_as: (self.idx, local).into(), record_id },
@@ -207,7 +206,6 @@ impl<'ast> Scanner<'ast> {
     let name_import =
       NamedImport { imported: Specifier::Star, imported_as: generated_imported_as_ref, record_id };
     self.result.named_imports.insert(generated_imported_as_ref.symbol, name_import);
-    self.result.import_records[record_id].is_import_namespace = true;
     self
       .result
       .named_exports

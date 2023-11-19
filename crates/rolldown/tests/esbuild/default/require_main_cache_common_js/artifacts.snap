@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/require_main_cache_common_js
 ## entry_js.mjs
 
 ```js
-import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // is-main.js
 var require_is_main = __commonJS({

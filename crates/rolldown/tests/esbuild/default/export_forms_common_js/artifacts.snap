@@ -12,9 +12,6 @@ import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // a.js
 var abc;
-var a_ns = {
-	get abc() { return abc }
-};
 var init_a = __esm({
 	'a.js'() {
 		abc = undefined

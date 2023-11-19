@@ -62,7 +62,15 @@ impl LinkStage {
     Linker::new(&mut self).link(&mut linking_infos);
     self.linking_infos = linking_infos;
     tracing::debug!("linking modules {:#?}", self.linking_infos);
-
+    self.reference_needed_symbols();
+    // FIXME: should move `linking_info.facade_stmt_infos` into a separate field
+    for (id, linking_info) in self.linking_infos.iter_mut_enumerated() {
+      std::mem::take(&mut linking_info.facade_stmt_infos).into_iter().for_each(|info| {
+        if let Module::Normal(module) = &mut self.modules[id] {
+          module.stmt_infos.add_stmt_info(info);
+        }
+      });
+    }
     self.include_statements();
     LinkStageOutput {
       modules: self.modules,
@@ -304,6 +312,57 @@ impl LinkStage {
       };
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
+      });
+    });
+  }
+
+  fn reference_needed_symbols(&mut self) {
+    self.modules.iter().for_each(|importer| {
+      let Module::Normal(importer) = importer else {
+        return;
+      };
+
+      importer.static_imports().for_each(|rec| {
+        let Module::Normal(importee) = &self.modules[rec.resolved_module] else {
+          return;
+        };
+        // Reference runtime symbols in importers of wrapped modules
+        match self.linking_infos[importee.id].wrap_kind {
+          WrapKind::Cjs | WrapKind::Esm => {
+            let importee_wrapper_ref =
+              self.linking_infos[importee.id].wrapper_ref.expect("Should have wrapper ref");
+            self.linking_infos[importer.id]
+              .reference_symbol_in_facade_stmt_infos(importee_wrapper_ref);
+
+            match (rec.kind, importee.exports_kind) {
+              (ImportKind::Import, ExportsKind::CommonJs) => {
+                self.linking_infos[importer.id]
+                  .reference_symbol_in_facade_stmt_infos(self.runtime.resolve_symbol("__toESM"));
+              }
+              (ImportKind::Require, ExportsKind::Esm) => {
+                self.linking_infos[importer.id]
+                  .reference_symbol_in_facade_stmt_infos(importee.namespace_symbol);
+                self.linking_infos[importer.id].reference_symbol_in_facade_stmt_infos(
+                  self.runtime.resolve_symbol("__toCommonJS"),
+                );
+              }
+              _ => {}
+            }
+          }
+          WrapKind::None => {}
+        }
+      });
+
+      importer.star_export_modules().for_each(|importee_id| {
+        let Module::Normal(importee) = &self.modules[importee_id] else {
+          return;
+        };
+        if importee.exports_kind == ExportsKind::CommonJs {
+          self.linking_infos[importer.id]
+            .reference_symbol_in_facade_stmt_infos(self.runtime.resolve_symbol("__reExport"));
+          self.linking_infos[importer.id]
+            .reference_symbol_in_facade_stmt_infos(self.runtime.resolve_symbol("__toESM"));
+        }
       });
     });
   }

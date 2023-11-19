@@ -14,6 +14,7 @@ type StaticStr = Cow<'static, str>;
 #[derive(Debug)]
 pub struct BuildError {
   inner: Box<dyn BuildErrorLike>,
+  source: Option<Box<dyn std::error::Error + 'static + Send + Sync>>,
 }
 
 fn _assert_build_error_send_sync() {
@@ -27,15 +28,33 @@ impl Display for BuildError {
   }
 }
 
+impl std::error::Error for BuildError {
+  // clippy::option_map_or_none: Cool. Finally, catch a error of clippy. Clippy suggest using `self.source.as_ref().map(|source| source.as_ref())`
+  // which will cause type mismatch error.
+  #[allow(clippy::option_map_or_none)]
+  fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    self.source.as_ref().map_or(None, |source| Some(source.as_ref()))
+  }
+}
+
 impl BuildError {
   pub fn code(&self) -> &'static str {
     self.inner.code()
   }
 
+  #[must_use]
+  pub fn with_source(
+    mut self,
+    source: impl Into<Box<dyn std::error::Error + 'static + Send + Sync>>,
+  ) -> Self {
+    self.source = Some(source.into());
+    self
+  }
+
   // --- private
 
   fn new_inner(inner: impl Into<Box<dyn BuildErrorLike>>) -> Self {
-    Self { inner: inner.into() }
+    Self { inner: inner.into(), source: None }
   }
 
   // --- Aligned with rollup

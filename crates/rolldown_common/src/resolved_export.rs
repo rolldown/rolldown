@@ -1,4 +1,4 @@
-use crate::{ModuleId, SymbolRef};
+use crate::SymbolRef;
 
 #[derive(Debug, Clone)]
 pub struct ResolvedExport {
@@ -24,5 +24,4 @@ pub struct ResolvedExport {
   // deferred to linking imports.
   pub potentially_ambiguous_symbol_refs: Option<Vec<SymbolRef>>,
   pub symbol_ref: SymbolRef,
-  pub export_from: Option<ModuleId>,
 }

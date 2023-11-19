@@ -4,10 +4,7 @@ use oxc::span::{Atom, Span};
 use rolldown_common::SymbolRef;
 use string_wizard::UpdateOptions;
 
-use crate::bundler::{
-  linker::linker_info::LinkingInfo,
-  module::{Module, NormalModule},
-};
+use crate::bundler::{linker::linker_info::LinkingInfo, module::Module};
 
 use super::{AstRenderContext, AstRenderer};
 impl<'r> AstRenderContext<'r> {
@@ -40,9 +37,8 @@ impl<'r> AstRenderContext<'r> {
 
   pub fn generate_import_commonjs_module(
     &self,
-    importee: &NormalModule,
     importee_linking_info: &LinkingInfo,
-    with_declaration: bool,
+    with_declaration: Option<Span>,
   ) -> String {
     let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
     let to_esm_ref_name = self.canonical_name_for_runtime("__toESM");
@@ -50,17 +46,9 @@ impl<'r> AstRenderContext<'r> {
       "{to_esm_ref_name}({wrap_ref_name}(){})",
       if self.module.module_type.is_esm() { ", 1" } else { "" }
     );
-    if with_declaration {
-      let symbol_ref =
-        self.linking_info.local_symbol_for_import_cjs.get(&importee.id).copied().unwrap_or_else(
-          || {
-            panic!(
-              "Cannot find local symbol for importee: {:?} with importer {:?} {:?}",
-              importee.resource_id, self.module.resource_id, self.module.exports_kind
-            )
-          },
-        );
-      let final_name = self.canonical_name_for(symbol_ref);
+    if let Some(span) = with_declaration {
+      let rec = &self.module.import_records[self.module.imports[&span]];
+      let final_name = self.canonical_name_for(rec.namespace_ref);
       format!("var {final_name} = {code};\n")
     } else {
       code

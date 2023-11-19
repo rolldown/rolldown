@@ -12,12 +12,12 @@ mod symbol_ref;
 mod wrap_kind;
 pub use crate::{
   exports_kind::ExportsKind,
-  file_path::FilePath,
+  file_path::{representative_name, FilePath},
   import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},
   module_id::ModuleId,
   module_path::ResourceId,
   module_type::ModuleType,
-  named_export::{LocalExport, LocalOrReExport, ReExport},
+  named_export::LocalExport,
   named_import::{NamedImport, Specifier},
   resolved_export::ResolvedExport,
   stmt_info::{StmtInfo, StmtInfoId, StmtInfos},

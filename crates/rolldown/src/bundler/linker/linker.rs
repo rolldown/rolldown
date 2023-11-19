@@ -1,4 +1,4 @@
-use rolldown_common::{ExportsKind, LocalOrReExport, ModuleId, NamedImport, Specifier, SymbolRef};
+use rolldown_common::{ExportsKind, ModuleId, NamedImport, Specifier, SymbolRef};
 use rustc_hash::FxHashSet;
 
 use super::linker_info::{LinkingInfo, LinkingInfoVec};
@@ -21,7 +21,7 @@ impl<'graph> Linker<'graph> {
     // Here take the symbols to avoid borrow graph and mut borrow graph at same time
     let mut symbols = std::mem::take(&mut self.graph.symbols);
 
-    self.mark_module_wrapped(&mut symbols, linking_infos);
+    self.mark_module_wrapped(&symbols, linking_infos);
 
     // Create symbols for external module
     self.mark_extra_symbols(&mut symbols);
@@ -39,7 +39,7 @@ impl<'graph> Linker<'graph> {
             &mut FxHashSet::default(),
           );
           let importer_linking_info = &mut linking_infos[*id];
-          importer.create_initial_resolved_exports(importer_linking_info, &mut symbols);
+          importer.create_initial_resolved_exports(importer_linking_info);
           let resolved = importer.resolve_star_exports(&self.graph.modules);
           importer_linking_info.resolved_star_exports = resolved;
         }
@@ -90,7 +90,7 @@ impl<'graph> Linker<'graph> {
   }
 
   // TODO: should move this to a separate stage
-  fn mark_module_wrapped(&self, symbols: &mut Symbols, linking_infos: &mut LinkingInfoVec) {
+  fn mark_module_wrapped(&self, _symbols: &Symbols, linking_infos: &mut LinkingInfoVec) {
     // Generate symbol for import warp module
     // Case esm import commonjs, eg var commonjs_ns = __toESM(require_a())
     // Case commonjs require esm, eg (init_esm(), __toCommonJS(esm_ns))
@@ -112,11 +112,11 @@ impl<'graph> Linker<'graph> {
               importer_linking_info.reference_symbol_in_facade_stmt_infos(importee_warp_symbol);
               match (importer.exports_kind, importee.exports_kind) {
                 (ExportsKind::Esm | ExportsKind::CommonJs, ExportsKind::CommonJs) => {
-                  importer.create_local_symbol_for_import_cjs(
-                    importee,
-                    importer_linking_info,
-                    symbols,
-                  );
+                  // importer.create_local_symbol_for_import_cjs(
+                  //   importee,
+                  //   importer_linking_info,
+                  //   symbols,
+                  // );
                   importer_linking_info.reference_symbol_in_facade_stmt_infos(
                     self.graph.runtime.resolve_symbol("__toESM"),
                   );
@@ -165,16 +165,16 @@ impl<'graph> Linker<'graph> {
               extra_symbols.push((import_record.resolved_module, info.imported.clone()));
             }
           });
-          importer.named_exports.iter().for_each(|(_, export)| match &export {
-            LocalOrReExport::Local(_) => {}
-            LocalOrReExport::Re(re) => {
-              let import_record = &importer.import_records[re.record_id];
-              let importee = &self.graph.modules[import_record.resolved_module];
-              if let Module::External(_) = importee {
-                extra_symbols.push((import_record.resolved_module, re.imported.clone()));
-              }
-            }
-          });
+          // importer.named_exports.iter().for_each(|(_, export)| match &export {
+          //   LocalOrReExport::Local(_) => {}
+          //   LocalOrReExport::Re(re) => {
+          //     let import_record = &importer.import_records[re.record_id];
+          //     let importee = &self.graph.modules[import_record.resolved_module];
+          //     if let Module::External(_) = importee {
+          //       extra_symbols.push((import_record.resolved_module, re.imported.clone()));
+          //     }
+          //   }
+          // });
         }
         Module::External(_) => {}
       }
@@ -212,6 +212,7 @@ impl<'graph> Linker<'graph> {
               Module::Normal(importee) => {
                 match Self::match_import_with_export(
                   modules,
+                  importer,
                   importee,
                   &linking_infos[importee.id],
                   &linking_infos[importer.id],
@@ -271,14 +272,15 @@ impl<'graph> Linker<'graph> {
 
     for symbol_ref in potentially_ambiguous_symbol_refs {
       match &modules[symbol_ref.owner] {
-        Module::Normal(module) => {
-          let module_linking_info = &linking_infos[module.id];
-          if let Some(info) = module.named_imports.get(&symbol_ref.symbol) {
-            let importee_id = module.import_records[info.record_id].resolved_module;
+        Module::Normal(importer) => {
+          let module_linking_info = &linking_infos[importer.id];
+          if let Some(info) = importer.named_imports.get(&symbol_ref.symbol) {
+            let importee_id = importer.import_records[info.record_id].resolved_module;
             match &modules[importee_id] {
               Module::Normal(importee) => {
                 results.push(Self::match_import_with_export(
                   modules,
+                  importer,
                   importee,
                   &linking_infos[importee_id],
                   module_linking_info,
@@ -288,11 +290,12 @@ impl<'graph> Linker<'graph> {
               Module::External(_) => {}
             }
           } else if let Some(info) = module_linking_info.export_from_map.get(&symbol_ref.symbol) {
-            let importee_id = module.import_records[info.record_id].resolved_module;
+            let importee_id = importer.import_records[info.record_id].resolved_module;
             match &modules[importee_id] {
               Module::Normal(importee) => {
                 results.push(Self::match_import_with_export(
                   modules,
+                  importer,
                   importee,
                   &linking_infos[importee_id],
                   module_linking_info,
@@ -323,18 +326,25 @@ impl<'graph> Linker<'graph> {
   }
 
   pub fn match_import_with_export(
-    modules: &ModuleVec,
+    _modules: &ModuleVec,
+    importer: &NormalModule,
     importee: &NormalModule,
     importee_linking_info: &LinkingInfo,
-    importer_linking_info: &LinkingInfo,
+    _importer_linking_info: &LinkingInfo,
     info: &NamedImport,
   ) -> MatchImportKind {
     // If importee module is commonjs module, it will generate property access to namespace symbol
     // The namespace symbols should be importer created local symbol.
     if importee.exports_kind == ExportsKind::CommonJs {
-      return MatchImportKind::Namespace(
-        importer_linking_info.local_symbol_for_import_cjs[&importee.id],
-      );
+      let rec = &importer.import_records[info.record_id];
+      match info.imported {
+        Specifier::Star => {
+          return MatchImportKind::Found(rec.namespace_ref);
+        }
+        Specifier::Literal(_) => {
+          return MatchImportKind::Namespace(rec.namespace_ref);
+        }
+      }
     }
 
     match &info.imported {
@@ -350,19 +360,6 @@ impl<'graph> Linker<'graph> {
               resolved_export.symbol_ref,
               potentially_ambiguous_export.clone(),
             );
-          }
-          if let Some(id) = resolved_export.export_from {
-            let module = &modules[id];
-            match module {
-              Module::Normal(module) => {
-                if module.exports_kind == ExportsKind::CommonJs {
-                  return MatchImportKind::Namespace(
-                    importer_linking_info.local_symbol_for_import_cjs[&module.id],
-                  );
-                }
-              }
-              Module::External(_) => {}
-            }
           }
           return MatchImportKind::Found(resolved_export.symbol_ref);
         }

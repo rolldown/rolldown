@@ -77,22 +77,8 @@ impl FilePath {
     pretty.replace('\0', "")
   }
 
-  // This doesn't ensure uniqueness, but should be valid as a JS identifier.
   pub fn representative_name(&self) -> Cow<str> {
-    let path = Path::new(self.0.as_ref());
-    let mut unique_name = Cow::Borrowed(
-      path.file_stem().expect("should have file_stem").to_str().expect("should be valid utf8"),
-    );
-
-    if unique_name == "index" {
-      if let Some(unique_name_of_parent_dir) =
-        path.parent().and_then(Path::file_stem).and_then(OsStr::to_str)
-      {
-        unique_name = Cow::Owned([unique_name_of_parent_dir, "_index"].concat());
-      }
-    }
-
-    ensure_valid_identifier(unique_name)
+    representative_name(&self.0)
   }
 }
 
@@ -104,6 +90,23 @@ fn ensure_valid_identifier(s: Cow<str>) -> Cow<str> {
     Cow::Borrowed(str) => VALID_RE.replace_all(str, "_"),
     Cow::Owned(owned_str) => VALID_RE.replace_all(&owned_str, "_").into_owned().into(),
   }
+}
+
+// This doesn't ensure uniqueness, but should be valid as a JS identifier.
+pub fn representative_name(str: &str) -> Cow<str> {
+  let path = Path::new(str);
+  let mut unique_name =
+    path.file_stem().map_or_else(|| Cow::Borrowed(str), |stem| stem.to_string_lossy());
+
+  if unique_name == "index" {
+    if let Some(unique_name_of_parent_dir) =
+      path.parent().and_then(Path::file_stem).and_then(OsStr::to_str)
+    {
+      unique_name = Cow::Owned([unique_name_of_parent_dir, "_index"].concat());
+    }
+  }
+
+  ensure_valid_identifier(unique_name)
 }
 
 #[test]

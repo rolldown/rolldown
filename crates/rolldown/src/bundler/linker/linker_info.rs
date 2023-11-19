@@ -48,8 +48,6 @@ pub struct LinkingInfo {
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
   pub has_dynamic_exports: bool,
-  // Store the local symbol for esm import cjs. eg. `var import_ns = __toESM(require_cjs())`
-  pub local_symbol_for_import_cjs: FxHashMap<ModuleId, SymbolRef>,
 }
 
 impl LinkingInfo {

@@ -4,7 +4,7 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ExportsKind, ImportRecord, ImportRecordId, LocalOrReExport, ModuleId, ModuleType, NamedImport,
+  ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleId, ModuleType, NamedImport,
   ResourceId, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::OxcProgram;
@@ -21,7 +21,7 @@ pub struct NormalModuleBuilder {
   pub path: Option<ResourceId>,
   pub ast: Option<OxcProgram>,
   pub named_imports: Option<FxHashMap<SymbolId, NamedImport>>,
-  pub named_exports: Option<FxHashMap<Atom, LocalOrReExport>>,
+  pub named_exports: Option<FxHashMap<Atom, LocalExport>>,
   pub stmt_infos: Option<StmtInfos>,
   pub import_records: Option<IndexVec<ImportRecordId, ImportRecord>>,
   pub imports: Option<FxHashMap<Span, ImportRecordId>>,

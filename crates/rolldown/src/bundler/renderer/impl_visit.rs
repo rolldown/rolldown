@@ -11,7 +11,7 @@ use crate::bundler::{module::Module, renderer::RenderControl};
 use super::AstRenderer;
 
 impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
-  #[tracing::instrument]
+  #[tracing::instrument(skip_all)]
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
     for directive in &program.directives {
       self.visit_directive(directive);

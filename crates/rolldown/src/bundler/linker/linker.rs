@@ -1,7 +1,5 @@
-use index_vec::IndexVec;
 use rolldown_common::{
-  ExportsKind, ImportKind, LocalOrReExport, ModuleId, NamedImport, Specifier, StmtInfoId,
-  SymbolRef, WrapKind,
+  ExportsKind, LocalOrReExport, ModuleId, NamedImport, Specifier, SymbolRef, WrapKind,
 };
 use rustc_hash::FxHashSet;
 
@@ -21,109 +19,14 @@ impl<'graph> Linker<'graph> {
     Self { graph }
   }
 
-  fn include_statements(&mut self) {
-    use rayon::prelude::*;
-    struct Context<'a> {
-      graph: &'a LinkStageOutput,
-      is_included_vec: &'a mut IndexVec<ModuleId, IndexVec<StmtInfoId, bool>>,
-    }
-
-    fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
-      let mut canonical_ref = ctx.graph.symbols.par_canonical_ref_for(symbol_ref);
-      let canonical_ref_module = &ctx.graph.modules[canonical_ref.owner];
-      let canonical_ref_symbol = ctx.graph.symbols.get(canonical_ref);
-      if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
-        canonical_ref = namespace_alias.namespace_ref;
-      }
-      let Module::Normal(canonical_ref_module) = canonical_ref_module else {
-        return;
-      };
-      canonical_ref_module
-        .stmt_infos
-        .declared_stmts_by_symbol(&canonical_ref)
-        .iter()
-        .copied()
-        .for_each(|stmt_info_id| {
-          include_statement(ctx, canonical_ref_module, stmt_info_id);
-        });
-    }
-
-    fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoId) {
-      let is_included = &mut ctx.is_included_vec[module.id][stmt_info_id];
-      if *is_included {
-        return;
-      }
-
-      // include the statement itself
-      *is_included = true;
-
-      let stmt_info = module.stmt_infos.get(stmt_info_id);
-
-      // include statements that are referenced by this statement
-      stmt_info.declared_symbols.iter().chain(stmt_info.referenced_symbols.iter()).for_each(
-        |symbol_ref| {
-          include_symbol(ctx, *symbol_ref);
-        },
-      );
-    }
-
-    let mut is_included_vec: IndexVec<ModuleId, IndexVec<StmtInfoId, bool>> = self
-      .graph
-      .modules
-      .iter()
-      .map(|m| match m {
-        Module::Normal(m) => {
-          m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoId, _>>()
-        }
-        Module::External(_) => IndexVec::default(),
-      })
-      .collect::<IndexVec<ModuleId, _>>();
-
-    let context = &mut Context { graph: self.graph, is_included_vec: &mut is_included_vec };
-
-    for module in &self.graph.modules {
-      match module {
-        Module::Normal(module) => {
-          let mut stmt_infos = module.stmt_infos.iter_enumerated();
-          // Skip the first one, because it's the namespace variable declaration.
-          // We want to include it on demand.
-          stmt_infos.next();
-          // Since we won't implement tree shaking, we just include all statements.
-          stmt_infos.for_each(|(stmt_info_id, _)| {
-            include_statement(context, module, stmt_info_id);
-          });
-          if module.is_entry {
-            let linking_info = &self.graph.linking_infos[module.id];
-            linking_info.resolved_exports.values().for_each(|resolved_export| {
-              include_symbol(context, resolved_export.symbol_ref);
-            });
-          }
-        }
-        Module::External(_) => {}
-      }
-    }
-    self.graph.modules.iter_mut().par_bridge().for_each(|module| {
-      let Module::Normal(module) = module else {
-        return;
-      };
-      is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
-        module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
-      });
-    });
-  }
-
-  pub fn link(&mut self) {
+  pub fn link(&mut self, linking_infos: &mut LinkingInfoVec) {
     // Here take the symbols to avoid borrow graph and mut borrow graph at same time
     let mut symbols = std::mem::take(&mut self.graph.symbols);
-    // Here add linker module for each module to avoid borrow module and mut borrow module at same time
-    let mut linking_infos = IndexVec::from_vec(
-      self.graph.modules.iter().map(|_| LinkingInfo::default()).collect::<Vec<_>>(),
-    );
 
-    self.mark_module_wrapped(&mut symbols, &mut linking_infos);
+    self.mark_module_wrapped(&mut symbols, linking_infos);
 
     // Create symbols for external module
-    self.mark_extra_symbols(&mut symbols, &mut linking_infos);
+    self.mark_extra_symbols(&mut symbols);
 
     // Propagate star exports
     // Create resolved exports for named export declarations
@@ -134,7 +37,7 @@ impl<'graph> Linker<'graph> {
         Module::Normal(importer) => {
           self.mark_dynamic_exports_due_to_export_star(
             *id,
-            &mut linking_infos,
+            linking_infos,
             &mut FxHashSet::default(),
           );
           let importer_linking_info = &mut linking_infos[*id];
@@ -155,7 +58,7 @@ impl<'graph> Linker<'graph> {
         Module::Normal(importer) => {
           importer.create_resolved_exports_for_export_star(
             importer.id,
-            &mut linking_infos,
+            linking_infos,
             &self.graph.modules,
             &mut Vec::default(),
           );
@@ -166,7 +69,7 @@ impl<'graph> Linker<'graph> {
 
     // Linking the module imports to resolved exports
     self.graph.sorted_modules.clone().into_iter().for_each(|id| {
-      self.match_imports_with_exports(id, &mut symbols, &linking_infos, &self.graph.modules);
+      self.match_imports_with_exports(id, &mut symbols, linking_infos, &self.graph.modules);
     });
 
     // Exclude ambiguous from resolved exports
@@ -186,35 +89,29 @@ impl<'graph> Linker<'graph> {
         }
       });
     }
-
-    self.graph.linking_infos = linking_infos;
-
-    self.include_statements();
   }
 
-  #[allow(clippy::too_many_lines)]
+  // TODO: should move this to a separate stage
   fn mark_module_wrapped(&self, symbols: &mut Symbols, linking_infos: &mut LinkingInfoVec) {
-    // Detect module need wrapped, here has two cases:
-    // - Commonjs module, because cjs symbols can't static binding, it need to be wrapped and lazy evaluated.
-    // - Import esm module at commonjs module.
-    for module in &self.graph.modules {
-      match module {
-        Module::Normal(module) => {
-          if module.exports_kind == ExportsKind::CommonJs {
-            self.wrap_module(module.id, symbols, linking_infos);
-          } else {
-            // Should mark wrapped for require import module
-            module.import_records.iter().for_each(|record| {
-              if record.kind == ImportKind::Require {
-                self.wrap_module(record.resolved_module, symbols, linking_infos);
-              }
-            });
+    for importer_id in &self.graph.sorted_modules {
+      let linking_info = &mut linking_infos[*importer_id];
+      match &self.graph.modules[*importer_id] {
+        Module::Normal(module) => match linking_info.wrap_kind {
+          WrapKind::None => {}
+          WrapKind::Cjs => {
+            module.create_wrap_symbol(linking_info, symbols);
+            let runtime_symbol = self.graph.runtime.resolve_symbol(&"__commonJS".into());
+            linking_info.reference_symbol_in_facade_stmt_infos(runtime_symbol);
           }
-        }
+          WrapKind::Esm => {
+            module.create_wrap_symbol(linking_info, symbols);
+            let runtime_symbol = self.graph.runtime.resolve_symbol(&"__esm".into());
+            linking_info.reference_symbol_in_facade_stmt_infos(runtime_symbol);
+          }
+        },
         Module::External(_) => {}
       }
     }
-
     // Generate symbol for import warp module
     // Case esm import commonjs, eg var commonjs_ns = __toESM(require_a())
     // Case commonjs require esm, eg (init_esm(), __toCommonJS(esm_ns))
@@ -235,7 +132,7 @@ impl<'graph> Linker<'graph> {
               let importer_linking_info = &mut linking_infos[importer.id];
               importer_linking_info.reference_symbol_in_facade_stmt_infos(importee_warp_symbol);
               match (importer.exports_kind, importee.exports_kind) {
-                (ExportsKind::Esm, ExportsKind::CommonJs) => {
+                (ExportsKind::Esm | ExportsKind::CommonJs, ExportsKind::CommonJs) => {
                   importer.create_local_symbol_for_import_cjs(
                     importee,
                     importer_linking_info,
@@ -273,43 +170,8 @@ impl<'graph> Linker<'graph> {
     }
   }
 
-  fn wrap_module(
-    &self,
-    target: ModuleId,
-    symbols: &mut Symbols,
-    linking_infos: &mut LinkingInfoVec,
-  ) {
-    let linking_info = &mut linking_infos[target];
-    if linking_info.wrap_ref.is_some() {
-      return;
-    }
-
-    // Generate symbol for wrap module declaration
-    // Case commonjs, eg var require_a = __commonJS()
-    // Case esm, eg var init_a = __esm()
-    match &self.graph.modules[target] {
-      Module::Normal(module) => {
-        linking_info.wrap_kind =
-          if module.exports_kind == ExportsKind::CommonJs { WrapKind::Cjs } else { WrapKind::Esm };
-        module.create_wrap_symbol(linking_info, symbols);
-
-        let name = if module.exports_kind == ExportsKind::CommonJs {
-          "__commonJS".into()
-        } else {
-          "__esm".into()
-        };
-        let runtime_symbol = self.graph.runtime.resolve_symbol(&name);
-        linking_info.reference_symbol_in_facade_stmt_infos(runtime_symbol);
-        module.import_records.iter().for_each(|record| {
-          self.wrap_module(record.resolved_module, symbols, linking_infos);
-        });
-      }
-      Module::External(_) => {}
-    }
-  }
-
   #[allow(clippy::needless_collect)]
-  fn mark_extra_symbols(&mut self, symbols: &mut Symbols, _linking_infos: &mut LinkingInfoVec) {
+  fn mark_extra_symbols(&mut self, symbols: &mut Symbols) {
     for importer_id in &self.graph.sorted_modules {
       let importer = &self.graph.modules[*importer_id];
 

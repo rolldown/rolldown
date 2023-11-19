@@ -120,59 +120,55 @@ impl<'graph> Linker<'graph> {
     let importer = &self.graph.modules[id];
     match importer {
       Module::Normal(importer) => {
-        importer
-          .named_imports
-          .values()
-          .chain(linking_infos[importer.id].export_from_map.values())
-          .for_each(|info| {
-            let import_record = &importer.import_records[info.record_id];
-            let importee = &self.graph.modules[import_record.resolved_module];
-            match importee {
-              Module::Normal(importee) => {
-                match Self::match_import_with_export(
-                  modules,
-                  importer,
-                  importee,
-                  &linking_infos[importee.id],
-                  &linking_infos[importer.id],
-                  info,
-                ) {
-                  MatchImportKind::NotFound => panic!("info {info:#?}"),
-                  MatchImportKind::PotentiallyAmbiguous(
-                    symbol_ref,
-                    mut potentially_ambiguous_symbol_refs,
-                  ) => {
-                    potentially_ambiguous_symbol_refs.push(symbol_ref);
-                    if self
-                      .determine_ambiguous_export(potentially_ambiguous_symbol_refs, linking_infos)
-                    {
-                      // ambiguous export
-                      panic!("");
-                    }
-                    symbols.union(info.imported_as, symbol_ref);
+        importer.named_imports.values().for_each(|info| {
+          let import_record = &importer.import_records[info.record_id];
+          let importee = &self.graph.modules[import_record.resolved_module];
+          match importee {
+            Module::Normal(importee) => {
+              match Self::match_import_with_export(
+                modules,
+                importer,
+                importee,
+                &linking_infos[importee.id],
+                &linking_infos[importer.id],
+                info,
+              ) {
+                MatchImportKind::NotFound => panic!("info {info:#?}"),
+                MatchImportKind::PotentiallyAmbiguous(
+                  symbol_ref,
+                  mut potentially_ambiguous_symbol_refs,
+                ) => {
+                  potentially_ambiguous_symbol_refs.push(symbol_ref);
+                  if self
+                    .determine_ambiguous_export(potentially_ambiguous_symbol_refs, linking_infos)
+                  {
+                    // ambiguous export
+                    panic!("");
                   }
-                  MatchImportKind::Found(symbol_ref) => {
-                    symbols.union(info.imported_as, symbol_ref);
-                  }
-                  MatchImportKind::Namespace(ns_ref) => match &info.imported {
-                    Specifier::Star => {
-                      symbols.union(info.imported_as, ns_ref);
-                    }
-                    Specifier::Literal(imported) => {
-                      symbols.get_mut(info.imported_as).namespace_alias = Some(NamespaceAlias {
-                        property_name: imported.clone(),
-                        namespace_ref: ns_ref,
-                      });
-                    }
-                  },
+                  symbols.union(info.imported_as, symbol_ref);
                 }
-              }
-              Module::External(importee) => {
-                let resolved_ref = importee.resolve_export(&info.imported);
-                symbols.union(info.imported_as, resolved_ref);
+                MatchImportKind::Found(symbol_ref) => {
+                  symbols.union(info.imported_as, symbol_ref);
+                }
+                MatchImportKind::Namespace(ns_ref) => match &info.imported {
+                  Specifier::Star => {
+                    symbols.union(info.imported_as, ns_ref);
+                  }
+                  Specifier::Literal(imported) => {
+                    symbols.get_mut(info.imported_as).namespace_alias = Some(NamespaceAlias {
+                      property_name: imported.clone(),
+                      namespace_ref: ns_ref,
+                    });
+                  }
+                },
               }
             }
-          });
+            Module::External(importee) => {
+              let resolved_ref = importee.resolve_export(&info.imported);
+              symbols.union(info.imported_as, resolved_ref);
+            }
+          }
+        });
       }
       Module::External(_) => {
         // It's meaningless to be a importer for a external module.
@@ -194,21 +190,6 @@ impl<'graph> Linker<'graph> {
         Module::Normal(importer) => {
           let module_linking_info = &linking_infos[importer.id];
           if let Some(info) = importer.named_imports.get(&symbol_ref.symbol) {
-            let importee_id = importer.import_records[info.record_id].resolved_module;
-            match &modules[importee_id] {
-              Module::Normal(importee) => {
-                results.push(Self::match_import_with_export(
-                  modules,
-                  importer,
-                  importee,
-                  &linking_infos[importee_id],
-                  module_linking_info,
-                  info,
-                ));
-              }
-              Module::External(_) => {}
-            }
-          } else if let Some(info) = module_linking_info.export_from_map.get(&symbol_ref.symbol) {
             let importee_id = importer.import_records[info.record_id].resolved_module;
             match &modules[importee_id] {
               Module::Normal(importee) => {

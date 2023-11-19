@@ -78,10 +78,16 @@ impl<F: FileSystem + Default> Resolver<F> {
         resolved: info.path().to_string_lossy().to_string().into(),
         module_type: calc_module_type(&info),
       }),
-      Err(_err) => importer.map_or_else(
-        || Err(BuildError::unresolved_entry(specifier)),
-        |importer| Err(BuildError::unresolved_import(specifier.to_string(), importer.as_path())),
-      ),
+      Err(err) => {
+        if let Some(importer) = importer {
+          Err(
+            BuildError::unresolved_import(specifier.to_string(), importer.as_path())
+              .with_source(err),
+          )
+        } else {
+          Err(BuildError::unresolved_entry(specifier).with_source(err))
+        }
+      }
     }
   }
 }

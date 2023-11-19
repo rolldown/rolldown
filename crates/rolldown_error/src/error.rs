@@ -2,13 +2,17 @@ use std::{
   borrow::Cow,
   fmt::Display,
   path::{Path, PathBuf},
+  sync::Arc,
 };
+
+use oxc::span::Span;
 
 use crate::{
   diagnostic::Diagnostic,
   error_kind::{
     external_entry::ExternalEntry, unresolved_entry::UnresolvedEntry,
-    unresolved_import::UnresolvedImport, BuildErrorLike, NapiError,
+    unresolved_import::UnresolvedImport, unsupported_eval::UnsupportedEval, BuildErrorLike,
+    NapiError,
   },
 };
 
@@ -62,7 +66,7 @@ impl BuildError {
   }
 
   #[must_use]
-  pub fn with_warning(mut self) -> Self {
+  pub fn with_severity_warning(mut self) -> Self {
     self.severity = Severity::Warning;
     self
   }
@@ -95,6 +99,10 @@ impl BuildError {
   // --- rolldown specific
   pub fn napi_error(status: String, reason: String) -> Self {
     Self::new_inner(NapiError { status, reason })
+  }
+
+  pub fn unsupported_eval(filename: String, source: Arc<str>, span: Span) -> Self {
+    Self::new_inner(UnsupportedEval { filename, eval_span: span, source })
   }
 }
 

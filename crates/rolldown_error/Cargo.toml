@@ -16,5 +16,5 @@ workspace = true
 [dependencies]
 sugar_path = { workspace = true }
 thiserror  = { workspace = true }
-miette     = { workspace = true }
 ariadne    = { workspace = true }
+oxc        = { workspace = true }

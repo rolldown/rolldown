@@ -55,7 +55,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   async fn run_inner(&mut self) -> BatchedResult<()> {
     tracing::trace!("process {:?}", self.path);
 
-    let warnings = vec![];
+    let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
     let mut source = if let Some(r) =
@@ -90,7 +90,9 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       imports,
       exports_kind,
       repr_name,
+      warnings: scan_warnings,
     } = scan_result;
+    warnings.extend(scan_warnings);
 
     let builder = NormalModuleBuilder {
       id: Some(self.module_id),
@@ -149,9 +151,10 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       };
       default
     }
+    let source: Arc<str> = source.into();
 
     let source_type = determine_oxc_source_type(self.path.as_path(), self.module_type);
-    let program = OxcCompiler::parse(source, source_type);
+    let program = OxcCompiler::parse(Arc::clone(&source), source_type);
 
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
@@ -164,6 +167,8 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       &mut symbol_for_module,
       repr_name.into_owned(),
       self.module_type,
+      &source,
+      &self.path,
     );
     let namespace_symbol = scanner.namespace_symbol;
     let scan_result = scanner.scan(program.program());

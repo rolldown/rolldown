@@ -21,4 +21,3 @@ memory  = []
 vfs          = "0.10.0"
 oxc_resolver = { workspace = true }
 dunce        = "1.0.4"              # Normalize Windows paths to the most compatible format, avoiding UNC where possible
-miette       = { workspace = true }

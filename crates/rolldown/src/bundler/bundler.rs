@@ -21,6 +21,11 @@ use crate::{
 // Rolldown use this alias for outside users.
 type BuildResult<T> = Result<T, Vec<BuildError>>;
 
+pub struct RolldownOutput {
+  pub warnings: Vec<BuildError>,
+  pub assets: Vec<Output>,
+}
+
 pub struct Bundler<T: FileSystem + Default> {
   input_options: SharedInputOptions,
   plugin_driver: SharedPluginDriver,
@@ -52,11 +57,11 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     }
   }
 
-  pub async fn write(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
+  pub async fn write(&mut self, output_options: OutputOptions) -> BuildResult<RolldownOutput> {
     let dir =
       self.input_options.cwd.as_path().join(&output_options.dir).to_string_lossy().to_string();
 
-    let assets = self.bundle_up(output_options).await?;
+    let output = self.bundle_up(output_options).await?;
 
     self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
@@ -65,7 +70,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
         self.input_options.cwd.display()
       )
     });
-    for chunk in &assets {
+    for chunk in &output.assets {
       let dest = dir.as_path().join(chunk.file_name());
       if let Some(p) = dest.parent() {
         if !self.fs.exists(p) {
@@ -77,10 +82,10 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
       });
     }
 
-    Ok(assets)
+    Ok(output)
   }
 
-  pub async fn generate(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
+  pub async fn generate(&mut self, output_options: OutputOptions) -> BuildResult<RolldownOutput> {
     self.bundle_up(output_options).await
   }
 
@@ -128,13 +133,13 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
   }
 
   #[tracing::instrument(skip_all)]
-  async fn bundle_up(&mut self, output_options: OutputOptions) -> BuildResult<Vec<Output>> {
+  async fn bundle_up(&mut self, output_options: OutputOptions) -> BuildResult<RolldownOutput> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
     let graph = self.build_result.as_mut().expect("Build should success");
     let mut bundle_stage = BundleStage::new(graph, &self.input_options, &output_options);
     let assets = bundle_stage.bundle();
 
-    Ok(assets)
+    Ok(RolldownOutput { warnings: std::mem::take(&mut graph.warnings), assets })
   }
 }

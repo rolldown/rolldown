@@ -11,7 +11,7 @@ pub(crate) type SharedResolver<T> = Arc<Resolver<T>>;
 pub use crate::{
   bundler::{
     bundle::output::{Output, OutputAsset, OutputChunk, RenderedModule},
-    bundler::Bundler,
+    bundler::{Bundler, RolldownOutput},
     options::{
       file_name_template::FileNameTemplate,
       input_options::{External, InputItem, InputOptions},

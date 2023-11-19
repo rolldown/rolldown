@@ -1,4 +1,4 @@
-use std::{fmt::Debug, pin::Pin};
+use std::{fmt::Debug, pin::Pin, sync::Arc};
 
 use oxc::{
   allocator::Allocator,
@@ -13,7 +13,7 @@ pub struct OxcCompiler;
 #[allow(clippy::box_collection, clippy::non_send_fields_in_send_ty, unused)]
 pub struct OxcProgram {
   program: ast::Program<'static>,
-  source: Pin<Box<String>>,
+  source: Pin<Arc<str>>,
   // Order matters here, we need drop the program first, then drop the allocator. Otherwise, there will be a segmentation fault.
   // The `program` is allocated on the `allocator`. Clippy think it's not used, but it's used.
   allocator: Pin<Box<Allocator>>,
@@ -29,7 +29,7 @@ unsafe impl Sync for OxcProgram {}
 
 impl OxcProgram {
   pub fn source(&self) -> &str {
-    self.source.as_str()
+    &self.source
   }
 
   pub fn program(&self) -> &ast::Program<'_> {
@@ -43,11 +43,11 @@ impl OxcProgram {
 }
 
 impl OxcCompiler {
-  pub fn parse(source: String, ty: SourceType) -> OxcProgram {
-    let source = Box::pin(source);
+  pub fn parse(source: impl Into<Arc<str>>, ty: SourceType) -> OxcProgram {
+    let source = Pin::new(source.into());
     let allocator = Box::pin(oxc::allocator::Allocator::default());
     let program = unsafe {
-      let source = std::mem::transmute::<_, &'static String>(source.as_ref());
+      let source = std::mem::transmute::<_, &'static str>(&*source);
       let alloc = std::mem::transmute::<_, &'static Allocator>(allocator.as_ref());
       Parser::new(alloc, source, ty).parse().program
     };

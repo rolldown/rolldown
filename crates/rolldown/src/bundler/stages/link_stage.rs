@@ -2,6 +2,7 @@ use std::ptr::addr_of;
 
 use index_vec::IndexVec;
 use rolldown_common::{ExportsKind, ImportKind, ModuleId, StmtInfoId, SymbolRef, WrapKind};
+use rolldown_error::BuildError;
 use rustc_hash::FxHashSet;
 
 use crate::bundler::{
@@ -24,6 +25,7 @@ pub struct LinkStageOutput {
   pub linking_infos: LinkingInfoVec,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
+  pub warnings: Vec<BuildError>,
 }
 
 #[derive(Debug)]
@@ -34,6 +36,7 @@ pub struct LinkStage {
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleId>,
   pub linking_infos: LinkingInfoVec,
+  pub warnings: Vec<BuildError>,
 }
 
 impl LinkStage {
@@ -49,6 +52,7 @@ impl LinkStage {
       entries: scan_stage_output.entries,
       symbols: scan_stage_output.symbols,
       runtime: scan_stage_output.runtime,
+      warnings: scan_stage_output.warnings,
     }
   }
 
@@ -79,6 +83,7 @@ impl LinkStage {
       linking_infos: self.linking_infos,
       symbols: self.symbols,
       runtime: self.runtime,
+      warnings: self.warnings,
     }
   }
 

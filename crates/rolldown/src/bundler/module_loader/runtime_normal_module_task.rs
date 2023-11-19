@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use index_vec::IndexVec;
 use oxc::span::SourceType;
-use rolldown_common::{ExportsKind, ModuleId, ModuleType, ResourceId, SymbolRef};
+use rolldown_common::{ExportsKind, FilePath, ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
@@ -49,6 +51,7 @@ impl RuntimeNormalModuleTask {
       repr_name,
       import_records: _,
       exports_kind: _,
+      warnings: _,
     } = scan_result;
 
     builder.id = Some(self.module_id);
@@ -81,19 +84,23 @@ impl RuntimeNormalModuleTask {
   }
 
   fn make_ast(&self, source: String) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
+    let source: Arc<str> = source.into();
     let source_type = SourceType::default();
-    let program = OxcCompiler::parse(source, source_type);
+    let program = OxcCompiler::parse(Arc::clone(&source), source_type);
 
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(scope, std::mem::take(&mut symbol_table.references));
     let mut symbol_for_module = AstSymbol::from_symbol_table(symbol_table);
+    let facade_path = FilePath::new("runtime");
     let scanner = scanner::Scanner::new(
       self.module_id,
       &ast_scope,
       &mut symbol_for_module,
       "runtime".to_string(),
       ModuleType::EsmMjs,
+      &source,
+      &facade_path,
     );
     let namespace_symbol = scanner.namespace_symbol;
     let scan_result = scanner.scan(program.program());

@@ -8,5 +8,12 @@ input_file: crates/rolldown/tests/fixtures/errors/unresolved_entry
 ## UNRESOLVED_ENTRY
 
 ```text
-Cannot resolve entry module ./main.js.
+[UNRESOLVED_ENTRY] Error: Unresolved entry module
+   ╭─[Output:1:1]
+   │
+ 1 │ ./main.js
+   │ ────┬────  
+   │     ╰────── Module Specifier
+───╯
+
 ```

@@ -1,12 +1,8 @@
 use super::BuildErrorLike;
 use crate::{PathExt, StaticStr};
-use miette::Diagnostic;
 use std::path::PathBuf;
-use thiserror::Error;
 
-#[derive(Error, Debug, Diagnostic)]
-#[diagnostic(code = "UNRESOLVED_IMPORT")]
-#[error("Could not resolve {} from {}.", specifier, importer.relative_display())]
+#[derive(Debug)]
 pub struct UnresolvedImport {
   pub(crate) specifier: StaticStr,
   pub(crate) importer: PathBuf,

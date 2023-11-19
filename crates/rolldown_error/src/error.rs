@@ -4,17 +4,27 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use crate::error_kind::{
-  external_entry::ExternalEntry, unresolved_entry::UnresolvedEntry,
-  unresolved_import::UnresolvedImport, BuildErrorLike, NapiError,
+use crate::{
+  diagnostic::Diagnostic,
+  error_kind::{
+    external_entry::ExternalEntry, unresolved_entry::UnresolvedEntry,
+    unresolved_import::UnresolvedImport, BuildErrorLike, NapiError,
+  },
 };
 
 type StaticStr = Cow<'static, str>;
+
+#[derive(Debug, Clone)]
+pub enum Severity {
+  Error,
+  Warning,
+}
 
 #[derive(Debug)]
 pub struct BuildError {
   inner: Box<dyn BuildErrorLike>,
   source: Option<Box<dyn std::error::Error + 'static + Send + Sync>>,
+  severity: Severity,
 }
 
 fn _assert_build_error_send_sync() {
@@ -51,10 +61,22 @@ impl BuildError {
     self
   }
 
+  #[must_use]
+  pub fn with_warning(mut self) -> Self {
+    self.severity = Severity::Warning;
+    self
+  }
+
+  pub fn into_diagnostic(self) -> Diagnostic {
+    let mut builder = self.inner.diagnostic_builder();
+    builder.severity = Some(self.severity);
+    builder.build()
+  }
+
   // --- private
 
   fn new_inner(inner: impl Into<Box<dyn BuildErrorLike>>) -> Self {
-    Self { inner: inner.into(), source: None }
+    Self { inner: inner.into(), source: None, severity: Severity::Error }
   }
 
   // --- Aligned with rollup

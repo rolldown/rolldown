@@ -1,0 +1,26 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/compat/esm_require_cjs
+---
+# Assets
+
+## main.mjs
+
+```js
+import { __commonJS } from "./_rolldown_runtime.mjs";
+
+// cjs.js
+var require_cjs = __commonJS({
+	'cjs.js'(exports, module) {
+		module.exports = 'cjs'
+
+	}
+});
+// main.js
+const cjs = require_cjs()
+
+
+
+export { cjs };
+```

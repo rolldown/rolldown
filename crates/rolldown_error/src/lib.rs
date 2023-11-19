@@ -2,9 +2,11 @@ mod error;
 mod error_kind;
 mod utils;
 
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use sugar_path::SugarPath;
+
+pub(crate) type StaticStr = Cow<'static, str>;
 
 // pub use crate::{diagnostic::Diagnostic, error::BuildError};
 pub use crate::error::BuildError;

@@ -1,5 +1,5 @@
-use super::StaticStr;
-use crate::PathExt;
+use super::BuildErrorLike;
+use crate::{PathExt, StaticStr};
 use miette::Diagnostic;
 use std::path::PathBuf;
 use thiserror::Error;
@@ -10,4 +10,14 @@ use thiserror::Error;
 pub struct UnresolvedImport {
   pub(crate) specifier: StaticStr,
   pub(crate) importer: PathBuf,
+}
+
+impl BuildErrorLike for UnresolvedImport {
+  fn code(&self) -> &'static str {
+    "UNRESOLVED_IMPORT"
+  }
+
+  fn message(&self) -> String {
+    format!("Could not resolve {} from {}.", self.specifier, self.importer.relative_display())
+  }
 }

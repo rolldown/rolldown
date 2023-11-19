@@ -100,12 +100,12 @@ impl<'graph> Linker<'graph> {
           WrapKind::None => {}
           WrapKind::Cjs => {
             module.create_wrap_symbol(linking_info, symbols);
-            let runtime_symbol = self.graph.runtime.resolve_symbol(&"__commonJS".into());
+            let runtime_symbol = self.graph.runtime.resolve_symbol("__commonJS");
             linking_info.reference_symbol_in_facade_stmt_infos(runtime_symbol);
           }
           WrapKind::Esm => {
             module.create_wrap_symbol(linking_info, symbols);
-            let runtime_symbol = self.graph.runtime.resolve_symbol(&"__esm".into());
+            let runtime_symbol = self.graph.runtime.resolve_symbol("__esm");
             linking_info.reference_symbol_in_facade_stmt_infos(runtime_symbol);
           }
         },
@@ -139,14 +139,14 @@ impl<'graph> Linker<'graph> {
                     symbols,
                   );
                   importer_linking_info.reference_symbol_in_facade_stmt_infos(
-                    self.graph.runtime.resolve_symbol(&"__toESM".into()),
+                    self.graph.runtime.resolve_symbol("__toESM"),
                   );
                 }
                 (_, ExportsKind::Esm) => {
                   importer_linking_info
                     .reference_symbol_in_facade_stmt_infos(importee.namespace_symbol);
                   importer_linking_info.reference_symbol_in_facade_stmt_infos(
-                    self.graph.runtime.resolve_symbol(&"__toCommonJS".into()),
+                    self.graph.runtime.resolve_symbol("__toCommonJS"),
                   );
                 }
                 _ => {}
@@ -158,7 +158,7 @@ impl<'graph> Linker<'graph> {
               if importee.exports_kind == ExportsKind::CommonJs {
                 let importee_linking_info = &mut linking_infos[importer.id];
                 importee_linking_info.reference_symbol_in_facade_stmt_infos(
-                  self.graph.runtime.resolve_symbol(&"__reExport".into()),
+                  self.graph.runtime.resolve_symbol("__reExport"),
                 );
               }
             }

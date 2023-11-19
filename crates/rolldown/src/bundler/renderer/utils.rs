@@ -21,7 +21,7 @@ impl<'r> AstRenderContext<'r> {
   }
 
   pub fn canonical_name_for_runtime(&self, name: &str) -> &Atom {
-    let symbol = self.graph.runtime.resolve_symbol(&Atom::new_inline(name));
+    let symbol = self.graph.runtime.resolve_symbol(name);
     self.canonical_name_for(symbol)
   }
 

@@ -21,7 +21,6 @@ export { require_shared };
 ## a.mjs
 
 ```js
-import { __toESM } from "./_rolldown_runtime.mjs";
 import { require_shared } from "./2.mjs";
 
 // a.js
@@ -31,7 +30,6 @@ console.log(foo)
 ## b.mjs
 
 ```js
-import { __toESM } from "./_rolldown_runtime.mjs";
 import { require_shared } from "./2.mjs";
 
 // b.js

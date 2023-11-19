@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "lint": "oxlint --ignore-path=./.oxlintignore --import-plugin",
+    "lint:ci": "oxlint --ignore-path=./.oxlintignore --import-plugin --max-warnings=0",
     "lint-filename": "ls-lint",
     "build": "yarn workspaces foreach --all --topological-dev run build",
     "build:node": "yarn workspaces foreach -R --topological-dev --from '@rolldown/node' run build",

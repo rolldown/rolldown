@@ -63,6 +63,7 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
+          cache-base: main
           components: clippy
 
       - name: Run Clippy
@@ -76,6 +77,8 @@ jobs:
 
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
+        with:
+          cache-base: main
 
       - name: Build
         run: cargo test --no-run
@@ -102,6 +105,8 @@ jobs:
 
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
+        with:
+          cache-base: main
 
       - name: Install node
         uses: actions/setup-node@v3
@@ -146,7 +151,11 @@ jobs:
         run: yarn lint-filename
 
       - name: Oxc Lint
-        run: yarn lint
+        # Run `yarn lint` to get display for warnings
+        # Run `yarn lint:ci` to get exit code 1 for warnings
+        run: |
+          yarn lint
+          yarn lint:ci
 
       - name: Run Prettier
         run: yarn prettier:ci

@@ -1,6 +1,6 @@
 use index_vec::IndexVec;
-use oxc::{ast::Visit, span::SourceType};
-use rolldown_common::{ModuleId, ModuleType, ResourceId, SymbolRef};
+use oxc::span::SourceType;
+use rolldown_common::{ExportsKind, ModuleId, ModuleType, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
@@ -43,17 +43,17 @@ impl RuntimeNormalModuleTask {
       named_imports,
       named_exports,
       stmt_infos,
-      import_records: _,
       star_exports,
       export_default_symbol_id,
       imports,
-      exports_kind,
-      unique_name,
+      repr_name,
+      import_records: _,
+      exports_kind: _,
     } = scan_result;
 
     builder.id = Some(self.module_id);
     builder.ast = Some(ast);
-    builder.unique_name = Some(unique_name);
+    builder.repr_name = Some(repr_name);
     builder.path = Some(ResourceId::new(
       "TODO: Runtime module should not have FilePath as source id".to_string().into(),
     ));
@@ -65,7 +65,7 @@ impl RuntimeNormalModuleTask {
     builder.default_export_symbol = export_default_symbol_id;
     builder.import_records = Some(IndexVec::default());
     builder.scope = Some(scope);
-    builder.exports_kind = exports_kind;
+    builder.exports_kind = Some(ExportsKind::Esm);
     builder.namespace_symbol = Some(namespace_symbol);
     builder.pretty_path = Some("<runtime>".to_string());
 
@@ -88,7 +88,7 @@ impl RuntimeNormalModuleTask {
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(scope, std::mem::take(&mut symbol_table.references));
     let mut symbol_for_module = AstSymbol::from_symbol_table(symbol_table);
-    let mut scanner = scanner::Scanner::new(
+    let scanner = scanner::Scanner::new(
       self.module_id,
       &ast_scope,
       &mut symbol_for_module,
@@ -96,8 +96,7 @@ impl RuntimeNormalModuleTask {
       ModuleType::EsmMjs,
     );
     let namespace_symbol = scanner.namespace_symbol;
-    scanner.visit_program(program.program());
-    let scan_result = scanner.result;
+    let scan_result = scanner.scan(program.program());
 
     (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }

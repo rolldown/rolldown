@@ -11,7 +11,7 @@ use crate::bundler::{module::Module, renderer::RenderControl};
 use super::AstRenderer;
 
 impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
-  #[tracing::instrument]
+  #[tracing::instrument(skip_all)]
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
     for directive in &program.directives {
       self.visit_directive(directive);
@@ -66,7 +66,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
           true,
         ),
       );
-    } else if let Some(wrap_ref) = importee_linking_info.wrap_ref {
+    } else if let Some(wrap_ref) = importee_linking_info.wrapper_ref {
       let wrap_ref_name = self.canonical_name_for(wrap_ref);
       // init wrapped esm module
       self.hoisted_module_declaration(decl.span.start, format!("{wrap_ref_name}();\n"));

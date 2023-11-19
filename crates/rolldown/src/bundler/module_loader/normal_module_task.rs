@@ -2,7 +2,7 @@ use std::{path::Path, sync::Arc};
 
 use futures::future::join_all;
 use index_vec::IndexVec;
-use oxc::{ast::Visit, span::SourceType};
+use oxc::span::SourceType;
 use rolldown_common::{
   FilePath, ImportRecordId, ModuleId, ModuleType, RawImportRecord, ResourceId, SymbolRef,
 };
@@ -89,13 +89,13 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       export_default_symbol_id,
       imports,
       exports_kind,
-      unique_name,
+      repr_name,
     } = scan_result;
 
     let builder = NormalModuleBuilder {
       id: Some(self.module_id),
       ast: Some(ast),
-      unique_name: Some(unique_name),
+      repr_name: Some(repr_name),
       path: Some(ResourceId::new(self.path.clone())),
       named_imports: Some(named_imports),
       named_exports: Some(named_exports),
@@ -104,7 +104,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       star_exports: Some(star_exports),
       default_export_symbol: export_default_symbol_id,
       scope: Some(scope),
-      exports_kind,
+      exports_kind: Some(exports_kind),
       namespace_symbol: Some(namespace_symbol),
       module_type: self.module_type,
       is_entry: self.is_entry,
@@ -157,17 +157,16 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(scope, std::mem::take(&mut symbol_table.references));
     let mut symbol_for_module = AstSymbol::from_symbol_table(symbol_table);
-    let unique_name = self.path.representative_name();
-    let mut scanner = scanner::Scanner::new(
+    let repr_name = self.path.representative_name();
+    let scanner = scanner::Scanner::new(
       self.module_id,
       &ast_scope,
       &mut symbol_for_module,
-      unique_name.into_owned(),
+      repr_name.into_owned(),
       self.module_type,
     );
-    scanner.visit_program(program.program());
-    let scan_result = scanner.result;
     let namespace_symbol = scanner.namespace_symbol;
+    let scan_result = scanner.scan(program.program());
     (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }
 

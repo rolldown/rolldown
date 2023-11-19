@@ -3,7 +3,7 @@ use oxc::{
   ast::{
     ast::{
       ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
-      ImportDeclaration, ModuleDeclaration,
+      ImportDeclaration, ModuleDeclaration, Program,
     },
     Visit,
   },
@@ -21,7 +21,7 @@ use crate::bundler::utils::{ast_scope::AstScope, ast_symbol::AstSymbol};
 
 #[derive(Debug, Default)]
 pub struct ScanResult {
-  pub unique_name: String,
+  pub repr_name: String,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalOrReExport>,
   pub stmt_infos: StmtInfos,
@@ -29,34 +29,36 @@ pub struct ScanResult {
   pub star_exports: Vec<ImportRecordId>,
   pub export_default_symbol_id: Option<SymbolId>,
   pub imports: FxHashMap<Span, ImportRecordId>,
-  pub exports_kind: Option<ExportsKind>,
+  pub exports_kind: ExportsKind,
 }
 
 pub struct Scanner<'a> {
-  pub idx: ModuleId,
-  pub module_type: ModuleType,
-  pub scope: &'a AstScope,
-  pub symbol_table: &'a mut AstSymbol,
-  pub current_stmt_info: StmtInfo,
-  pub result: ScanResult,
-  pub esm_export_keyword: Option<Span>,
-  pub cjs_export_keyword: Option<Span>,
+  idx: ModuleId,
+  module_type: ModuleType,
+  scope: &'a AstScope,
+  symbol_table: &'a mut AstSymbol,
+  current_stmt_info: StmtInfo,
+  result: ScanResult,
+  esm_export_keyword: Option<Span>,
+  esm_import_keyword: Option<Span>,
   pub namespace_symbol: SymbolRef,
+  used_exports_ref: bool,
+  used_module_ref: bool,
 }
 
-impl<'a> Scanner<'a> {
+impl<'ast> Scanner<'ast> {
   pub fn new(
     idx: ModuleId,
-    scope: &'a AstScope,
-    symbol_table: &'a mut AstSymbol,
-    unique_name: String,
+    scope: &'ast AstScope,
+    symbol_table: &'ast mut AstSymbol,
+    repr_name: String,
     module_type: ModuleType,
   ) -> Self {
     let mut result = ScanResult::default();
-    let name = format!("{unique_name}_ns");
+    let name = format!("{repr_name}_ns");
     let namespace_ref: SymbolRef =
       (idx, symbol_table.create_symbol(name.into(), scope.root_scope_id())).into();
-    result.unique_name = unique_name;
+    result.repr_name = repr_name;
     // The first StmtInfo is to represent the namespace binding.
     result
       .stmt_infos
@@ -68,40 +70,49 @@ impl<'a> Scanner<'a> {
       current_stmt_info: StmtInfo::default(),
       result,
       esm_export_keyword: None,
-      cjs_export_keyword: None,
+      esm_import_keyword: None,
       module_type,
       namespace_symbol: namespace_ref,
+      used_exports_ref: false,
+      used_module_ref: false,
     }
   }
 
-  fn set_esm_export_keyword(&mut self, span: Span) {
-    if self.esm_export_keyword.is_none() {
-      self.esm_export_keyword = Some(span);
+  pub fn scan(mut self, program: &Program<'ast>) -> ScanResult {
+    self.visit_program(program);
+    let mut exports_kind = ExportsKind::None;
+
+    if self.esm_export_keyword.is_some() {
+      exports_kind = ExportsKind::Esm;
+    } else if self.used_exports_ref || self.used_module_ref {
+      exports_kind = ExportsKind::CommonJs;
+    } else {
+      // TODO(hyf0): need review this. Why `ModuleType` doesn't have higher priority?
+      match self.module_type {
+        ModuleType::CJS | ModuleType::CjsPackageJson => {
+          exports_kind = ExportsKind::CommonJs;
+        }
+        ModuleType::EsmMjs | ModuleType::EsmPackageJson => {
+          exports_kind = ExportsKind::Esm;
+        }
+        ModuleType::Unknown => {
+          if self.esm_import_keyword.is_some() {
+            exports_kind = ExportsKind::Esm;
+          }
+        }
+      }
     }
+
+    self.result.exports_kind = exports_kind;
+    self.result
   }
 
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
     self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
   }
 
-  fn set_cjs_export_keyword(&mut self, span: Span) {
-    if self.cjs_export_keyword.is_none() {
-      self.cjs_export_keyword = Some(span);
-    }
-  }
-
-  fn set_exports_kind(&mut self) {
-    if self.esm_export_keyword.is_some() {
-      self.result.exports_kind = Some(ExportsKind::Esm);
-    } else if self.cjs_export_keyword.is_some() {
-      self.result.exports_kind = Some(ExportsKind::CommonJs);
-    } else if self.module_type.is_esm() {
-      self.result.exports_kind = Some(ExportsKind::Esm);
-    } else if self.module_type.is_commonjs() {
-      self.result.exports_kind = Some(ExportsKind::CommonJs);
-    } else {
-      self.result.exports_kind = Some(ExportsKind::Esm);
-    }
+  fn set_esm_export_keyword(&mut self, span: Span) {
+    self.esm_export_keyword.get_or_insert(span);
   }
 
   fn add_declared_id(&mut self, id: SymbolId) {
@@ -242,7 +253,7 @@ impl<'a> Scanner<'a> {
       // a facade Symbol to represent it.
       // Notice: Patterns don't include `export default [identifier]`
       let sym_id = self.symbol_table.create_symbol(
-        Atom::from(format!("{}_default", self.result.unique_name)),
+        Atom::from(format!("{}_default", self.result.repr_name)),
         self.scope.root_scope_id(),
       );
       self.add_declared_id(sym_id);
@@ -271,6 +282,8 @@ impl<'a> Scanner<'a> {
   fn scan_module_decl(&mut self, decl: &ModuleDeclaration) {
     match decl {
       oxc::ast::ast::ModuleDeclaration::ImportDeclaration(decl) => {
+        // TODO: this should be the span of `import` keyword, while now it is the span of the whole import declaration.
+        self.esm_import_keyword.get_or_insert(decl.span);
         self.scan_import_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(decl) => {
@@ -306,7 +319,6 @@ impl<'ast> Visit<'ast> for Scanner<'ast> {
       self.visit_statement(stmt);
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }
-    self.set_exports_kind();
   }
 
   fn visit_binding_identifier(&mut self, ident: &oxc::ast::ast::BindingIdentifier) {
@@ -322,14 +334,15 @@ impl<'ast> Visit<'ast> for Scanner<'ast> {
       Some(symbol_id) if self.is_top_level(symbol_id) => {
         self.add_referenced_symbol(symbol_id);
       }
-      _ => {}
-    }
-    if ident.name == "module" || ident.name == "exports" {
-      if let Some(refs) = self.scope.root_unresolved_references().get(&ident.name) {
-        if refs.iter().any(|r| (*r).eq(&ident.reference_id.get().unwrap())) {
-          self.set_cjs_export_keyword(ident.span);
+      None => {
+        if ident.name == "module" {
+          self.used_module_ref = true;
+        }
+        if ident.name == "exports" {
+          self.used_exports_ref = true;
         }
       }
+      _ => {}
     }
   }
 

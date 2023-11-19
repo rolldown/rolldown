@@ -21,7 +21,7 @@ impl<'r> AstRenderContext<'r> {
   }
 
   pub fn canonical_name_for_runtime(&self, name: &str) -> &Atom {
-    let symbol = self.graph.runtime.resolve_symbol(&Atom::new_inline(name));
+    let symbol = self.graph.runtime.resolve_symbol(name);
     self.canonical_name_for(symbol)
   }
 
@@ -44,14 +44,22 @@ impl<'r> AstRenderContext<'r> {
     importee_linking_info: &LinkingInfo,
     with_declaration: bool,
   ) -> String {
-    let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrap_ref.unwrap());
+    let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
     let to_esm_ref_name = self.canonical_name_for_runtime("__toESM");
     let code = format!(
       "{to_esm_ref_name}({wrap_ref_name}(){})",
       if self.module.module_type.is_esm() { ", 1" } else { "" }
     );
     if with_declaration {
-      let symbol_ref = self.linking_info.local_symbol_for_import_cjs[&importee.id];
+      let symbol_ref =
+        self.linking_info.local_symbol_for_import_cjs.get(&importee.id).copied().unwrap_or_else(
+          || {
+            panic!(
+              "Cannot find local symbol for importee: {:?} with importer {:?} {:?}",
+              importee.resource_id, self.module.resource_id, self.module.exports_kind
+            )
+          },
+        );
       let final_name = self.canonical_name_for(symbol_ref);
       format!("var {final_name} = {code};\n")
     } else {

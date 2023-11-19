@@ -64,6 +64,8 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
     let ModuleLoaderOutput { modules, entries, symbols, runtime } =
       module_loader.fetch_all_modules(&user_entries).await?;
 
+    tracing::debug!("Scan stage finished {modules:#?}");
+
     Ok(ScanStageOutput { modules, entries, symbols, runtime })
   }
 

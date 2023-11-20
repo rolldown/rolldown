@@ -1,6 +1,5 @@
-import type { InputOptions } from './options/input-options'
+import type { InputOptions, RolldownPlugin } from './options/input-options'
 import type { OutputOptions } from './options/output-options'
-import type { PluginOptions } from '@rolldown/node-binding'
 import { RolldownOutput } from './utils'
 
 export { rolldown } from './rolldown'
@@ -15,6 +14,6 @@ export type {
   RollupOptions,
   InputOptions,
   OutputOptions,
-  PluginOptions as Plugin,
+  RolldownPlugin as Plugin,
   RolldownOutput as RollupOutput,
 }

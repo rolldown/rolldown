@@ -41,7 +41,7 @@ function buildEnd(hook: Plugin['buildEnd']) {
       return unimplemented()
     }
     return async (e: string) => {
-      await hook.call({} as any, new Error(e))
+      await hook.call({} as any, e ? new Error(e) : undefined)
     }
   }
 }
@@ -82,7 +82,12 @@ function resolveId(hook: Plugin['resolveId']) {
       importer?: string,
       options?: any,
     ): Promise<undefined | ResolveIdResult> => {
-      const value = await hook.call({} as any, source, importer, options)
+      const value = await hook.call(
+        {} as any,
+        source,
+        importer ? importer : undefined,
+        options,
+      )
       if (value === undefined || value === null) {
         return
       }

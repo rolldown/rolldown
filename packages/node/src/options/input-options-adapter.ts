@@ -1,7 +1,8 @@
-import { NormalizedInputOptions, InputOptions } from '../rollup-types'
+import { NormalizedInputOptions } from '../rollup-types'
 import { InputOptions as BindingInputOptions } from '@rolldown/node-binding'
 import path from 'path'
 import { createBuildPluginAdapter } from './create-build-plugin-adapter'
+import { InputOptions } from './input-options'
 
 export function createInputOptionsAdapter(
   options: NormalizedInputOptions,

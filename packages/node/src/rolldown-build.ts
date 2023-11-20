@@ -11,9 +11,7 @@ export class RolldownBuild implements RollupBuild {
     this.#bundler = bundler
   }
 
-  static async fromInputOptions(
-    inputOptions: InputOptions,
-  ): Promise<RolldownBuild> {
+  static async createBundler(inputOptions: InputOptions): Promise<Bundler> {
     // Convert `InputOptions` to `NormalizedInputOptions`.
     const normalizedInputOptions = await normalizeInputOptions(inputOptions)
     // Convert `NormalizedInputOptions` to `BindingInputOptions`
@@ -21,7 +19,20 @@ export class RolldownBuild implements RollupBuild {
       normalizedInputOptions,
       inputOptions,
     )
-    const bundler = new Bundler(bindingInputOptions)
+    return new Bundler(bindingInputOptions)
+  }
+
+  static async fromInputOptionsForScanStage(
+    inputOptions: InputOptions,
+  ): Promise<void> {
+    const bundler = await RolldownBuild.createBundler(inputOptions)
+    await bundler.scan()
+  }
+
+  static async fromInputOptions(
+    inputOptions: InputOptions,
+  ): Promise<RolldownBuild> {
+    const bundler = await RolldownBuild.createBundler(inputOptions)
     await bundler.build()
     return new RolldownBuild(bundler)
   }

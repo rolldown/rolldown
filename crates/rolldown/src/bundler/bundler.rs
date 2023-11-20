@@ -9,11 +9,14 @@ use super::{
   bundle::output::Output,
   options::input_options::SharedInputOptions,
   plugin_driver::{PluginDriver, SharedPluginDriver},
-  stages::link_stage::{LinkStage, LinkStageOutput},
+  stages::{
+    link_stage::{LinkStage, LinkStageOutput},
+    scan_stage::ScanStageOutput,
+  },
 };
 use crate::{
   bundler::stages::{bundle_stage::BundleStage, scan_stage::ScanStage},
-  error::BatchedResult,
+  error::{BatchedErrors, BatchedResult},
   plugin::plugin::BoxPlugin,
   HookBuildEndArgs, InputOptions, OutputOptions, SharedResolver,
 };
@@ -94,12 +97,35 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     Ok(())
   }
 
+  pub async fn scan(&mut self) -> BatchedResult<()> {
+    self.plugin_driver.build_start().await?;
+
+    let ret = self.scan_inner().await;
+
+    self.call_build_end_hook(ret.err()).await?;
+
+    Ok(())
+  }
+
   async fn build_inner(&mut self) -> BatchedResult<()> {
     self.plugin_driver.build_start().await?;
 
-    let build_ret = self.try_build().await;
+    let ret = self.try_build().await;
 
-    if let Err(e) = build_ret {
+    let (err, value) = match ret {
+      Err(e) => (Some(e), None),
+      Ok(value) => (None, Some(value)),
+    };
+
+    self.call_build_end_hook(err).await?;
+
+    self.build_result = value;
+
+    Ok(())
+  }
+
+  async fn call_build_end_hook(&mut self, ret: Option<BatchedErrors>) -> BatchedResult<()> {
+    if let Some(e) = ret {
       let error = e.get().expect("should have a error");
       self
         .plugin_driver
@@ -112,20 +138,24 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     }
 
     self.plugin_driver.build_end(None).await?;
-    self.build_result = build_ret.ok();
+
     Ok(())
   }
 
-  #[tracing::instrument(skip_all)]
-  async fn try_build(&mut self) -> BatchedResult<LinkStageOutput> {
-    let build_info = ScanStage::new(
+  async fn scan_inner(&mut self) -> BatchedResult<ScanStageOutput> {
+    ScanStage::new(
       Arc::clone(&self.input_options),
       Arc::clone(&self.plugin_driver),
       self.fs.share(),
       Arc::clone(&self.resolver),
     )
     .scan()
-    .await?;
+    .await
+  }
+
+  #[tracing::instrument(skip_all)]
+  async fn try_build(&mut self) -> BatchedResult<LinkStageOutput> {
+    let build_info = self.scan_inner().await?;
 
     let link_stage = LinkStage::new(build_info);
 

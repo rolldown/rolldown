@@ -1523,7 +1523,6 @@ dependencies = [
  "futures",
  "index_vec",
  "insta",
- "miette",
  "once_cell",
  "oxc",
  "oxc_resolver",
@@ -1586,7 +1585,7 @@ name = "rolldown_error"
 version = "0.0.1"
 dependencies = [
  "ariadne",
- "miette",
+ "oxc",
  "sugar_path",
  "thiserror",
 ]
@@ -1596,7 +1595,6 @@ name = "rolldown_fs"
 version = "0.1.0"
 dependencies = [
  "dunce",
- "miette",
  "oxc_resolver",
  "vfs",
 ]

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use index_vec::IndexVec;
 use oxc::{
   ast::{
@@ -11,9 +13,10 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  representative_name, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleId, ModuleType,
-  NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
+  representative_name, ExportsKind, FilePath, ImportKind, ImportRecordId, LocalExport, ModuleId,
+  ModuleType, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
+use rolldown_error::BuildError;
 use rolldown_oxc::{BindingIdentifierExt, BindingPatternExt};
 use rustc_hash::FxHashMap;
 
@@ -30,11 +33,14 @@ pub struct ScanResult {
   pub export_default_symbol_id: Option<SymbolId>,
   pub imports: FxHashMap<Span, ImportRecordId>,
   pub exports_kind: ExportsKind,
+  pub warnings: Vec<BuildError>,
 }
 
 pub struct Scanner<'a> {
   idx: ModuleId,
+  source: &'a Arc<str>,
   module_type: ModuleType,
+  file_path: &'a FilePath,
   scope: &'a AstScope,
   symbol_table: &'a mut AstSymbol,
   current_stmt_info: StmtInfo,
@@ -53,6 +59,8 @@ impl<'ast> Scanner<'ast> {
     symbol_table: &'ast mut AstSymbol,
     repr_name: String,
     module_type: ModuleType,
+    source: &'ast Arc<str>,
+    file_path: &'ast FilePath,
   ) -> Self {
     let mut result = ScanResult::default();
     let name = format!("{repr_name}_ns");
@@ -75,6 +83,8 @@ impl<'ast> Scanner<'ast> {
       namespace_symbol: namespace_ref,
       used_exports_ref: false,
       used_module_ref: false,
+      source,
+      file_path,
     }
   }
 
@@ -375,6 +385,16 @@ impl<'ast> Visit<'ast> for Scanner<'ast> {
         }
         if ident.name == "exports" {
           self.used_exports_ref = true;
+        }
+        if ident.name == "eval" {
+          self.result.warnings.push(
+            BuildError::unsupported_eval(
+              self.file_path.to_string(),
+              Arc::clone(self.source),
+              ident.span,
+            )
+            .with_severity_warning(),
+          );
         }
       }
       _ => {}

@@ -87,7 +87,7 @@ impl Bundler {
       }
     };
 
-    Ok(outputs.into())
+    Ok(outputs.assets.into())
   }
 
   #[instrument(skip_all)]
@@ -110,6 +110,6 @@ impl Bundler {
       }
     };
 
-    Ok(outputs.into())
+    Ok(outputs.assets.into())
   }
 }

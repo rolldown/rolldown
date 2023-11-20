@@ -72,6 +72,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
 
       match bundler.write(OutputOptions::default()).await {
         Ok(assets) => assets
+          .assets
           .into_iter()
           .map(|item| AssetItem {
             name: item.file_name().to_string(),

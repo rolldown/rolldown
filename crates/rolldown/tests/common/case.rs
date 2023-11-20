@@ -1,7 +1,7 @@
 use std::{borrow::Cow, path::Path};
 
 use super::fixture::Fixture;
-use rolldown::Output;
+use rolldown::RolldownOutput;
 use rolldown_error::BuildError;
 use string_wizard::MagicString;
 
@@ -39,7 +39,28 @@ impl Case {
     self.fixture.exec();
   }
 
-  fn render_assets_to_snapshot(&mut self, mut assets: Vec<Output>) {
+  fn render_assets_to_snapshot(&mut self, outputs: RolldownOutput) {
+    let mut assets = outputs.assets;
+    let warnings = outputs.warnings;
+
+    if !warnings.is_empty() {
+      self.snapshot.append("# warnings\n\n");
+      let diagnostics = warnings.into_iter().map(|e| (e.code(), e.into_diagnostic()));
+      let rendered = diagnostics
+        .flat_map(|(code, diagnostic)| {
+          [
+            Cow::Owned(format!("## {}\n", code)),
+            "```text".into(),
+            Cow::Owned(diagnostic.to_string()),
+            "```".into(),
+          ]
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+      self.snapshot.append(rendered);
+      self.snapshot.append("\n");
+    }
+
     self.snapshot.append("# Assets\n\n");
     assets.sort_by_key(|c| c.file_name().to_string());
     let artifacts = assets
@@ -63,8 +84,6 @@ impl Case {
     self.snapshot.append("# Errors\n\n");
     errors.sort_by_key(|e| e.code());
     let diagnostics = errors.into_iter().map(|e| (e.code(), e.into_diagnostic()));
-
-    // Render with miette's diagnostic theme (without colors)
 
     let rendered = diagnostics
       .flat_map(|(code, diagnostic)| {

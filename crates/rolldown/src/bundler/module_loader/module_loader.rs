@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use index_vec::IndexVec;
 use rolldown_common::{FilePath, ImportKind, ImportRecordId, ModuleId, ResourceId};
+use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -39,6 +40,7 @@ pub struct ModuleLoaderOutput {
   // Entries that user defined + dynamic import entries
   pub entries: Vec<(Option<String>, ModuleId)>,
   pub runtime: RuntimeModuleBrief,
+  pub warnings: Vec<BuildError>,
 }
 
 impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
@@ -125,6 +127,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
     let mut errors = BatchedErrors::default();
+    let mut all_warnings: Vec<BuildError> = Vec::new();
 
     self.intermediate_modules.reserve(user_defined_entries.len() + 1 /* runtime */);
 
@@ -149,9 +152,9 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
             resolved_deps,
             mut builder,
             raw_import_records,
-            ..
+            warnings,
           } = task_result;
-
+          all_warnings.extend(warnings);
           let import_records = raw_import_records
             .into_iter()
             .zip(resolved_deps)
@@ -198,6 +201,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
       symbols: self.symbols,
       entries,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
+      warnings: all_warnings,
     })
   }
 }

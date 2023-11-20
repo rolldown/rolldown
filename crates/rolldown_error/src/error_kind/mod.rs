@@ -5,6 +5,7 @@ use crate::diagnostic::DiagnosticBuilder;
 pub mod external_entry;
 pub mod unresolved_entry;
 pub mod unresolved_import;
+pub mod unsupported_eval;
 
 // TODO(hyf0): Not a good name, probably should rename to `BuildError`
 pub trait BuildErrorLike: Debug + Sync + Send {

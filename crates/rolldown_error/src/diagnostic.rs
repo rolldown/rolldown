@@ -26,7 +26,6 @@ impl DiagnosticBuilder {
   }
 }
 
-#[allow(unused)]
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
   pub(crate) code: &'static str,
@@ -38,9 +37,16 @@ pub struct Diagnostic {
 
 impl Diagnostic {
   fn init_report_builder(&mut self) -> ReportBuilder<'static, (String, Range<usize>)> {
-    let mut builder = Report::<(String, Range<usize>)>::build(ReportKind::Error, "", 0)
-      .with_code(self.code)
-      .with_message(self.summary.clone());
+    let mut builder = Report::<(String, Range<usize>)>::build(
+      match self.severity {
+        Severity::Error => ReportKind::Error,
+        Severity::Warning => ReportKind::Warning,
+      },
+      "",
+      0,
+    )
+    .with_code(self.code)
+    .with_message(self.summary.clone());
 
     for label in self.labels.clone() {
       builder = builder.with_label(label);

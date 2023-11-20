@@ -1,0 +1,27 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/warnings/basic
+---
+# warnings
+
+## UNSUPPORTED_EVAL
+
+```text
+[UNSUPPORTED_EVAL] Warning: Rolldown does not support `eval` function currently.
+   ╭─[tests/fixtures/warnings/basic/main.js:1:13]
+   │
+ 1 │ console.log(eval)
+   │             ──┬─  
+   │               ╰─── Used `eval` function here.
+───╯
+
+```
+# Assets
+
+## main.mjs
+
+```js
+// main.js
+console.log(eval)
+```

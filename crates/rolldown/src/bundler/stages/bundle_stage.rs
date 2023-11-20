@@ -116,11 +116,13 @@ impl<'a> BundleStage<'a> {
           Module::Normal(module) => {
             for stmt_info in module.stmt_infos.iter() {
               for declared in &stmt_info.declared_symbols {
-                // TODO: pass debug_assert!(self.graph.symbols.get(*declared).chunk_id.is_none());
-                // FIXME: I don't think this is correct, even though the assigned chunk_id is the same as the current chunk_id.
-                // A declared symbol should only be processed once.
+                let symbol = self.link_output.symbols.get_mut(*declared);
                 debug_assert!(
-                  self.link_output.symbols.get(*declared).chunk_id.unwrap_or(chunk_id) == chunk_id
+                  symbol.chunk_id.unwrap_or(chunk_id) == chunk_id,
+                  "Symbol: {:?}, {:?} in {:?} should only be declared in one chunk",
+                  symbol.name,
+                  declared,
+                  module.resource_id,
                 );
 
                 self.link_output.symbols.get_mut(*declared).chunk_id = Some(chunk_id);

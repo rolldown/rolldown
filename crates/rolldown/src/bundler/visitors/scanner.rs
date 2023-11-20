@@ -259,8 +259,6 @@ impl<'ast> Scanner<'ast> {
           }
           oxc::ast::ast::Declaration::FunctionDeclaration(fn_decl) => {
             let id = fn_decl.id.as_ref().unwrap();
-            // FIXME: remove this line after https://github.com/web-infra-dev/oxc/pull/843 being merged.
-            self.add_declared_id(id.expect_symbol_id());
             self.add_local_export(&id.name, id.expect_symbol_id());
           }
           oxc::ast::ast::Declaration::ClassDeclaration(cls_decl) => {

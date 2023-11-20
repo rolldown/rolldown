@@ -26,6 +26,7 @@
     "./snippets/*"
   ],
   "devDependencies": {
-    "npm-run-all": "^4.1.5"
+    "npm-run-all": "^4.1.5",
+    "wasm-pack": "^0.12.1"
   }
 }

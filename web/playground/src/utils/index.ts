@@ -1,4 +1,4 @@
-import * as path from 'path-browserify'
+import { isAbsolute, join } from 'pathe'
 import { AssetItem, FileItem } from '@rolldown/wasm-binding'
 
 export type ModuleInfo = {
@@ -35,9 +35,9 @@ function normalizeModule(module: ModuleInfo): FileItem {
   let title = module.title
   let code = module.code
   let isEntry = module.isEntry
-  let isAbsolute = path.isAbsolute(title)
-  if (!isAbsolute) {
-    title = path.join('/', title)
+  let absolute = isAbsolute(title)
+  if (!absolute) {
+    title = join('/', title)
   }
   return new FileItem(title, code, isEntry)
 }

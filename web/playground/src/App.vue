@@ -23,7 +23,7 @@ const outputs: Ref<ModuleInfo[]> = ref([])
 const wasmLoadFinished = ref(false)
 
 onMounted(() => {
-  init().then((_) => {
+  init().then(() => {
     wasmLoadFinished.value = true
   })
 })

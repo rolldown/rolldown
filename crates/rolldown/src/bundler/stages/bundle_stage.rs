@@ -118,8 +118,8 @@ impl<'a> BundleStage<'a> {
               for declared in &stmt_info.declared_symbols {
                 let symbol = self.link_output.symbols.get_mut(*declared);
                 debug_assert!(
-                  symbol.chunk_id.is_none(),
-                  "Symbol: {:?}, {:?} should not be declared twice in {:?}",
+                  symbol.chunk_id.unwrap_or(chunk_id) == chunk_id,
+                  "Symbol: {:?}, {:?} in {:?} should only be declared in one chunk",
                   symbol.name,
                   declared,
                   module.resource_id,

@@ -4,7 +4,7 @@ _default:
     just --list -u
 
 init:
-    cargo binstall rusty-hook taplo-cli cargo-insta wasm-pack -y
+    cargo binstall rusty-hook taplo-cli cargo-insta -y
     yarn install
     git submodule update
 

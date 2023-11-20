@@ -33,9 +33,12 @@
   "license": "MIT",
   "devDependencies": {
     "@ls-lint/ls-lint": "^2.2.2",
+    "@parcel/watcher": "^2.3.0",
     "chalk": "^4",
     "change-case": "^4",
+    "debug": "^4.3.4",
     "dedent": "^1.5.1",
+    "execa": "^8.0.1",
     "fs-extra": "^11.1.1",
     "husky": "^8.0.3",
     "lerna": "^6.5.1",

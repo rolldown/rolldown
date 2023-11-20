@@ -2,10 +2,12 @@
   "name": "rolldown-playground",
   "version": "0.1.0",
   "description": "create an app to consume rust-generated wasm packages",
-  "main": "index.js",
+  "type": "module",
+  "private": true,
   "scripts": {
+    "dev": "vite --open",
     "build": "vite build",
-    "start": "vite --open"
+    "preview": "vite preview"
   },
   "keywords": [
     "webassembly",
@@ -17,8 +19,7 @@
   "devDependencies": {
     "@types/path-browserify": "^1.0.2",
     "@vitejs/plugin-vue": "^4.4.1",
-    "vite": "^5",
-    "vite-plugin-top-level-await": "^1.3.1"
+    "vite": "^5.0.0"
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.1",

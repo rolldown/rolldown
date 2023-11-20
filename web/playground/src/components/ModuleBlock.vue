@@ -2,34 +2,16 @@
 import CodeBlock from './CodeBlock.vue'
 import { onMounted, ref } from 'vue'
 
-const props = defineProps({
-  title: {
-    type: String,
-    required: true,
-  },
-  code: {
-    type: String,
-    required: true,
-  },
-  autoFocus: {
-    type: Boolean,
-    required: false,
-  },
-  isEntry: {
-    type: Boolean,
-    required: false,
-  },
-  canModifyEntry: {
-    type: Boolean,
-    required: false,
-  },
-  readonly: {
-    type: Boolean,
-    required: false,
-  },
-})
+const props = defineProps<{
+  title: string
+  code: string
+  autoFocus?: boolean
+  isEntry?: boolean
+  canModifyEntry?: boolean
+  readonly?: boolean
+}>()
 
-const input = ref(null)
+const input = ref<HTMLDivElement>()
 
 onMounted(() => {
   if (props.autoFocus && input.value) {
@@ -78,7 +60,7 @@ onMounted(() => {
   </div>
 </template>
 
-<style>
+<style scoped>
 .title-container {
   display: flex;
   justify-content: space-between;

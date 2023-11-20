@@ -13,10 +13,10 @@ use crate::{
     stages::link_stage::LinkStageOutput,
     utils::bitset::BitSet,
   },
-  InputOptions, Output,
+  InputOptions, Output, OutputFormat,
 };
 use index_vec::{index_vec, IndexVec};
-use rolldown_common::{ImportKind, ModuleId, SymbolRef};
+use rolldown_common::{ExportsKind, ImportKind, ModuleId, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 pub struct BundleStage<'a> {
@@ -101,7 +101,7 @@ impl<'a> BundleStage<'a> {
   }
 
   // TODO(hyf0): refactor this function
-  #[allow(clippy::too_many_lines)]
+  #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
   fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
     // Determine which symbols belong to which chunk
     let mut chunk_meta_imports_vec =
@@ -144,7 +144,16 @@ impl<'a> BundleStage<'a> {
 
       if let Some(entry_module) = chunk.entry_module {
         let entry_module = &self.link_output.modules[entry_module];
-        let entry_linking_info = &self.link_output.linking_infos[entry_module.id()];
+        let Module::Normal(entry_module) = entry_module else {
+          return;
+        };
+        let entry_linking_info = &self.link_output.linking_infos[entry_module.id];
+        if matches!(entry_module.exports_kind, ExportsKind::CommonJs)
+          && matches!(self.output_options.format, OutputFormat::Esm)
+        {
+          chunk_meta_imports
+            .insert(entry_linking_info.wrapper_ref.expect("cjs should be wrapped in esm output"));
+        }
         for export_ref in entry_linking_info.resolved_exports.values() {
           let mut canonical_ref = self.link_output.symbols.canonical_ref_for(export_ref.symbol_ref);
           let symbol = self.link_output.symbols.get(canonical_ref);

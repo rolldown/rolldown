@@ -1,0 +1,46 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/misc/cjs_entry_as_dependency
+---
+# Assets
+
+## 2.mjs
+
+```js
+import { __commonJS } from "./_rolldown_runtime.mjs";
+
+// main2.js
+var require_main2 = __commonJS({
+	'main2.js'(exports, module) {
+		module.exports = {}
+
+	}
+});
+export { require_main2 };
+```
+## main.mjs
+
+```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+import { require_main2 } from "./2.mjs";
+
+// main.js
+var require_main = __commonJS({
+	'main.js'(exports, module) {
+		var import_main2 = __toESM(require_main2());
+
+		module.exports = import_main2.default
+
+
+	}
+});
+export default require_main();
+```
+## main2.mjs
+
+```js
+import { require_main2 } from "./2.mjs";
+
+export default require_main2();
+```

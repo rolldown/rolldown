@@ -419,7 +419,6 @@ fn wrap_module(ctx: &mut WrappingContext, target: ModuleId) {
 
   module.import_records.iter().for_each(|rec| {
     wrap_module(ctx, rec.resolved_module);
-    if rec.kind.is_static() {}
   });
 }
 

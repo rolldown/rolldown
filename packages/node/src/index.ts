@@ -2,7 +2,7 @@ import type { InputOptions, RolldownPlugin } from './options/input-options'
 import type { OutputOptions } from './options/output-options'
 import { RolldownOutput } from './utils'
 
-export { rolldown } from './rolldown'
+export { rolldown, scan } from './rolldown'
 
 interface RollupOptions extends InputOptions {
   // This is included for compatibility with config files but ignored by rollup.rollup

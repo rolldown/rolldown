@@ -36,6 +36,11 @@ impl Bundler {
   pub async fn build(&self) -> napi::Result<()> {
     self.build_impl().await
   }
+
+  #[napi]
+  pub async fn scan(&self) -> napi::Result<()> {
+    self.scan_impl().await
+  }
 }
 
 impl Bundler {
@@ -45,6 +50,24 @@ impl Bundler {
 
       Ok(Self { inner: Mutex::new(NativeBundler::with_plugins(opts?, plugins?)) })
     })
+  }
+
+  #[instrument(skip_all)]
+  #[allow(clippy::significant_drop_tightening)]
+  pub async fn scan_impl(&self) -> napi::Result<()> {
+    let mut bundler_core = self.inner.try_lock().map_err(|_| {
+      napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
+    })?;
+
+    let result = bundler_core.scan().await;
+
+    if let Err(err) = result {
+      // TODO: better handing errors
+      eprintln!("{err:?}");
+      return Err(napi::Error::from_reason("Build failed"));
+    }
+
+    Ok(())
   }
 
   #[instrument(skip_all)]

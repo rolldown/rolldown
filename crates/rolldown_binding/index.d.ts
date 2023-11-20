@@ -71,4 +71,5 @@ export class Bundler {
   write(opts: OutputOptions): Promise<Outputs>
   generate(opts: OutputOptions): Promise<Outputs>
   build(): Promise<void>
+  scan(): Promise<void>
 }

@@ -21,11 +21,13 @@ function runCases() {
 
       for (const subCaseName of subCases) {
         const caseRoot = path.join(subCasesRoot, subCaseName)
-        const config = await getCaseConfig(caseRoot)
+        const { config, afterTest } = await getCaseConfig(caseRoot)
 
         test(subCaseName, async () => {
-          await runCaseBundle(caseRoot, config)
-          expect(true)
+          const output = await runCaseBundle(caseRoot, config)
+          if (afterTest) {
+            afterTest(output)
+          }
         })
       }
     })
@@ -35,7 +37,7 @@ function runCases() {
 async function runCaseBundle(caseRoot: string, config?: RollupOptions) {
   config = normalizedOptions(caseRoot, config)
   const build = await rolldown(config as InputOptions)
-  await build.write(config.output as OutputOptions)
+  return await build.write(config.output as OutputOptions)
 }
 
 function normalizedOptions(caseRoot: string, config?: RollupOptions) {

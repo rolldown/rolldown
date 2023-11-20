@@ -1,3 +1,4 @@
 crates/**
 packages/rollup-tests/**
+packages/node/test/cases/**
 rollup/**

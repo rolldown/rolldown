@@ -1,13 +1,9 @@
 use crate::PathExt;
-use miette::Diagnostic;
 use std::path::PathBuf;
-use thiserror::Error;
 
 use super::BuildErrorLike;
 
-#[derive(Error, Debug, Diagnostic)]
-#[diagnostic(code = "UNRESOLVED_ENTRY")]
-#[error("Entry module {} cannot be external.", id.relative_display())]
+#[derive(Debug)]
 pub struct ExternalEntry {
   pub(crate) id: PathBuf,
 }

@@ -17,3 +17,4 @@ workspace = true
 sugar_path = { workspace = true }
 thiserror  = { workspace = true }
 miette     = { workspace = true }
+ariadne    = { workspace = true }

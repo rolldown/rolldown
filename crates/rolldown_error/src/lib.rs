@@ -1,3 +1,4 @@
+mod diagnostic;
 mod error;
 mod error_kind;
 mod utils;

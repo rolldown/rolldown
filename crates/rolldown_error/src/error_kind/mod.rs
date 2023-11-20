@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use crate::diagnostic::DiagnosticBuilder;
+
 pub mod external_entry;
 pub mod unresolved_entry;
 pub mod unresolved_import;
@@ -9,9 +11,20 @@ pub trait BuildErrorLike: Debug + Sync + Send {
   fn code(&self) -> &'static str;
 
   fn message(&self) -> String;
+
+  fn diagnostic_builder(&self) -> DiagnosticBuilder {
+    DiagnosticBuilder {
+      code: Some(self.code()),
+      summary: Some(self.message()),
+      ..Default::default()
+    }
+  }
 }
 
-impl<T: BuildErrorLike + 'static> From<T> for Box<dyn BuildErrorLike> {
+impl<T: BuildErrorLike + 'static> From<T> for Box<dyn BuildErrorLike>
+where
+  Self: Sized,
+{
   fn from(e: T) -> Self {
     Box::new(e)
   }

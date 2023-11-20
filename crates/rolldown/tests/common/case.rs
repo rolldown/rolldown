@@ -62,16 +62,16 @@ impl Case {
   fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildError>) {
     self.snapshot.append("# Errors\n\n");
     errors.sort_by_key(|e| e.code());
+    let diagnostics = errors.into_iter().map(|e| (e.code(), e.into_diagnostic()));
 
     // Render with miette's diagnostic theme (without colors)
 
-    let rendered = errors
-      .iter()
-      .flat_map(|error| {
+    let rendered = diagnostics
+      .flat_map(|(code, diagnostic)| {
         [
-          Cow::Owned(format!("## {}\n", error.code())),
+          Cow::Owned(format!("## {}\n", code)),
           "```text".into(),
-          Cow::Owned(error.to_string()),
+          Cow::Owned(diagnostic.to_string()),
           "```".into(),
         ]
       })

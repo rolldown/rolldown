@@ -1,5 +1,8 @@
 import type { InputOptions } from './options/input-options'
 import type { OutputOptions } from './options/output-options'
+import type { PluginOptions } from '@rolldown/node-binding'
+import { RolldownOutput } from './utils'
+
 export { rolldown } from './rolldown'
 
 interface RollupOptions extends InputOptions {
@@ -8,7 +11,10 @@ interface RollupOptions extends InputOptions {
 }
 
 // export types from rolldown
-export type { RollupOptions, InputOptions, OutputOptions }
-
-// export types from rollup
-export type { RollupOutput, Plugin } from 'rollup'
+export type {
+  RollupOptions,
+  InputOptions,
+  OutputOptions,
+  PluginOptions as Plugin,
+  RolldownOutput as RollupOutput,
+}

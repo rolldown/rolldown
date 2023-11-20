@@ -1,7 +1,5 @@
-import type { AsyncReturnType } from 'type-fest'
-import { Bundler, OutputAsset, OutputChunk } from '@rolldown/node-binding'
+import { OutputAsset, OutputChunk, Outputs } from '@rolldown/node-binding'
 import type {
-  RollupOutput,
   OutputChunk as RollupOutputChunk,
   OutputAsset as RollupOutputAsset,
 } from '../rollup-types'
@@ -15,6 +13,8 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RollupOutputChunk {
     // @ts-expect-error undefined can't assign to null
     modules: chunk.modules,
     exports: chunk.exports,
+    isEntry: chunk.isEntry,
+    facadeModuleId: chunk.facadeModuleId || null,
     get dynamicImports() {
       return unimplemented()
     },
@@ -33,14 +33,8 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RollupOutputChunk {
     get map() {
       return unimplemented()
     },
-    get facadeModuleId() {
-      return chunk.facadeModuleId || null
-    },
     get isDynamicEntry() {
       return unimplemented()
-    },
-    get isEntry() {
-      return chunk.isEntry
     },
     get isImplicitEntry() {
       return unimplemented()
@@ -74,9 +68,7 @@ function transformToRollupOutputAsset(asset: OutputAsset): RollupOutputAsset {
   }
 }
 
-export function transformToRollupOutput(
-  output: AsyncReturnType<Bundler['write']>,
-): RollupOutput {
+export function transformToRollupOutput(output: Outputs): RolldownOutput {
   const { chunks, assets } = output
 
   return {
@@ -86,4 +78,13 @@ export function transformToRollupOutput(
       ...assets.map(transformToRollupOutputAsset),
     ],
   }
+}
+
+type RolldownOutputChunk = OutputChunk & { type: 'chunk' }
+type RolldownOutputAsset = OutputAsset & { type: 'asset' }
+export interface RolldownOutput {
+  output: [
+    RolldownOutputChunk,
+    ...(RolldownOutputChunk | RolldownOutputAsset)[],
+  ]
 }

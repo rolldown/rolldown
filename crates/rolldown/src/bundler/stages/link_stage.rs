@@ -7,7 +7,7 @@ use rustc_hash::FxHashSet;
 
 use crate::bundler::{
   linker::{
-    linker::Linker,
+    linker::ImportExportLinker,
     linker_info::{LinkingInfo, LinkingInfoVec},
   },
   module::{Module, ModuleVec, NormalModule},
@@ -63,7 +63,7 @@ impl LinkStage {
     self.determine_module_exports_kind();
     self.wrap_modules();
     let mut linking_infos = std::mem::take(&mut self.linking_infos);
-    Linker::new(&mut self).link(&mut linking_infos);
+    ImportExportLinker::new(&mut self).link(&mut linking_infos);
     self.linking_infos = linking_infos;
     tracing::debug!("linking modules {:#?}", self.linking_infos);
     self.reference_needed_symbols();

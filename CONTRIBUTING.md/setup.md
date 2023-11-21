@@ -36,7 +36,8 @@ just test   # Run project test
 just lint   # Run lint
 just fmt    # Run format
 just bench-prepare && just bench # Run benchmarks
-yarn build  # Build node workspace packages
+
+yarn build  # Build node workspace packages and bindings
 yarn test   # Run node test
 yarn test:update # Update node test snapshot
 ```

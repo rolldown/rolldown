@@ -22,6 +22,7 @@
     "build:wasm": "yarn workspace @rolldown/wasm-binding run build",
     "build:wasm:release": "yarn workspace @rolldown/wasm-binding run build:release",
     "test": "yarn workspaces foreach --all --parallel run test",
+    "test:update": "yarn workspaces foreach --all --parallel run test:update",
     "test:update-rolldown": "yarn workspace @rolldown/node run test:update",
     "test:update-rollup": "yarn workspace rollup-tests run test:update",
     "prettier": "prettier . '!**/*.{js||ts|json|md|yml|yaml}' -w",

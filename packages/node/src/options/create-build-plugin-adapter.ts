@@ -6,6 +6,7 @@ import type {
 } from '@rolldown/node-binding'
 import { unimplemented } from '../utils'
 
+// Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function createBuildPluginAdapter(
   plugin: Plugin,
   options: NormalizedInputOptions,
@@ -29,8 +30,13 @@ function buildStart(
       return unimplemented()
     }
     return async () => {
-      // Here use `Object.freeze` to prevent plugin from modifying the options.
-      await hook.call({} as any, Object.freeze(options))
+      try {
+        // Here use `Object.freeze` to prevent plugin from modifying the options.
+        await hook.call({} as any, Object.freeze(options))
+      } catch (error) {
+        console.error(error)
+        throw error
+      }
     }
   }
 }
@@ -41,7 +47,12 @@ function buildEnd(hook: Plugin['buildEnd']) {
       return unimplemented()
     }
     return async (e: string) => {
-      await hook.call({} as any, e ? new Error(e) : undefined)
+      try {
+        await hook.call({} as any, e ? new Error(e) : undefined)
+      } catch (error) {
+        console.error(error)
+        throw error
+      }
     }
   }
 }
@@ -55,19 +66,24 @@ function transform(hook: Plugin['transform']) {
       code: string,
       id: string,
     ): Promise<undefined | SourceResult> => {
-      // TODO: Need to investigate how to pass context to plugin.
-      const value = await hook.call({} as any, code, id)
-      if (value === undefined || value === null) {
-        return
+      try {
+        // TODO: Need to investigate how to pass context to plugin.
+        const value = await hook.call({} as any, code, id)
+        if (value === undefined || value === null) {
+          return
+        }
+        if (typeof value === 'string') {
+          return { code: value }
+        }
+        if (value.code === undefined) {
+          return
+        }
+        // TODO other filed
+        return { code: value.code }
+      } catch (error) {
+        console.error(error)
+        throw error
       }
-      if (typeof value === 'string') {
-        return { code: value }
-      }
-      if (value.code === undefined) {
-        return
-      }
-      // TODO other filed
-      return { code: value.code }
     }
   }
 }
@@ -82,28 +98,33 @@ function resolveId(hook: Plugin['resolveId']) {
       importer?: string,
       options?: any,
     ): Promise<undefined | ResolveIdResult> => {
-      const value = await hook.call(
-        {} as any,
-        source,
-        importer ? importer : undefined,
-        options,
-      )
-      if (value === undefined || value === null) {
-        return
-      }
-      if (typeof value === 'string') {
-        return { id: value }
-      }
-      if (value === false) {
-        return { id: source, external: true }
-      }
-      if (value.external === 'absolute' || value.external === 'relative') {
-        throw new Error(
-          `External module type {${value.external}} is not supported yet.`,
+      try {
+        const value = await hook.call(
+          {} as any,
+          source,
+          importer ? importer : undefined,
+          options,
         )
+        if (value === undefined || value === null) {
+          return
+        }
+        if (typeof value === 'string') {
+          return { id: value }
+        }
+        if (value === false) {
+          return { id: source, external: true }
+        }
+        if (value.external === 'absolute' || value.external === 'relative') {
+          throw new Error(
+            `External module type {${value.external}} is not supported yet.`,
+          )
+        }
+        // TODO other filed
+        return value as ResolveIdResult
+      } catch (error) {
+        console.error(error)
+        throw error
       }
-      // TODO other filed
-      return value as ResolveIdResult
     }
   }
 }
@@ -114,18 +135,23 @@ function load(hook: Plugin['load']) {
       return unimplemented()
     }
     return async (id: string): Promise<undefined | SourceResult> => {
-      const value = await hook.call({} as any, id)
-      if (value === undefined || value === null) {
-        return
+      try {
+        const value = await hook.call({} as any, id)
+        if (value === undefined || value === null) {
+          return
+        }
+        if (typeof value === 'string') {
+          return { code: value }
+        }
+        if (value.code === undefined) {
+          return
+        }
+        // TODO other filed
+        return { code: value.code }
+      } catch (error) {
+        console.error(error)
+        throw error
       }
-      if (typeof value === 'string') {
-        return { code: value }
-      }
-      if (value.code === undefined) {
-        return
-      }
-      // TODO other filed
-      return { code: value.code }
     }
   }
 }

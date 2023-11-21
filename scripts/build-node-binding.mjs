@@ -153,7 +153,7 @@ async function buildWithDebounce(pkgName, changedFile, loadFiles) {
 }
 
 async function buildRolldownPackage(changedFile) {
-  buildWithDebounce('@rolldown/node', changedFile, async () => {
+  return buildWithDebounce('@rolldown/node', changedFile, async () => {
     const files = await getDirFiles('packages/node/src')
     files.push(
       'packages/node/build.config.ts',
@@ -165,7 +165,7 @@ async function buildRolldownPackage(changedFile) {
 }
 
 async function buildNodeBindingCrate(changedFile) {
-  buildWithDebounce('@rolldown/node-binding', changedFile, async () => {
+  return buildWithDebounce('@rolldown/node-binding', changedFile, async () => {
     const files = await getDirFiles('crates/rolldown_binding/src')
     files.push(
       'crates/rolldown_binding/build.rs',
@@ -181,7 +181,7 @@ async function buildWasmBindingCrate(changedFile) {
     return
   }
 
-  buildWithDebounce('@rolldown/wasm-binding', changedFile, async () => {
+  return buildWithDebounce('@rolldown/wasm-binding', changedFile, async () => {
     const files = await getDirFiles('crates/rolldown_binding_wasm/src')
     files.push(
       'crates/rolldown_binding_wasm/Cargo.toml',

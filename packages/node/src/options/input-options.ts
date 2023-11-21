@@ -1,15 +1,16 @@
 import {
   NormalizedInputOptions,
   InputOptions as RollupInputOptions,
+  Plugin,
 } from '../rollup-types'
 import { ensureArray, normalizePluginOption } from '../utils'
-import type { PluginOptions } from '@rolldown/node-binding'
 
-export type RolldownPlugin = PluginOptions
+// TODO export compat plugin type
+export type RolldownPlugin = Plugin
 export interface InputOptions {
   input?: RollupInputOptions['input']
-  plugins: RolldownPlugin[]
-  external: RollupInputOptions['external']
+  plugins?: RolldownPlugin[]
+  external?: RollupInputOptions['external']
 }
 
 export async function normalizeInputOptions(

@@ -14,11 +14,12 @@ if (!process.env.DEBUG) {
   debug.enable('rolldown')
 }
 
-const ROOT_DIR = path.join(
+const ROOT_DIR = path.normalize(
   path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
 )
 const CACHE_DIR = path.join(ROOT_DIR, 'node_modules/.rolldown')
 const NO_WASM = process.argv.includes('--no-wasm')
+const IS_RELEASE = process.argv.includes('--release')
 
 fs.mkdirSync(CACHE_DIR, { recursive: true })
 
@@ -47,15 +48,13 @@ async function hashFiles(files) {
     input: files.join('\n'),
   })
 
-  return result.stdout.split('\n').filter(Boolean)
+  return result.stdout
 }
 
 async function generateBuildHash(files) {
   const hasher = crypto.createHash('sha256')
 
-  for (const hash of await hashFiles(files)) {
-    hasher.update(hash)
-  }
+  hasher.update(await hashFiles(files))
 
   return hasher.digest('hex')
 }
@@ -80,11 +79,9 @@ async function isStaleOrUnbuilt(key, files) {
 }
 
 async function runYarnBuild(pkgName, log) {
-  const isRelease = process.argv.includes('--release')
-
   const result = execa(
     'yarn',
-    ['workspace', pkgName, 'run', isRelease ? 'build:release' : 'build'],
+    ['workspace', pkgName, 'run', IS_RELEASE ? 'build:release' : 'build'],
     {
       cwd: ROOT_DIR,
       env: { CARGO_TERM_COLOR: 'always', FORCE_COLOR: 'true' },
@@ -210,11 +207,11 @@ async function watchForChanges() {
 
       log(chalk.gray(`${event.type}: ${changedFile}`))
 
-      if (event.path.includes('crates/rolldown_binding/')) {
+      if (changedFile.includes('crates/rolldown_binding/')) {
         buildNodeBindingCrate(changedFile)
-      } else if (event.path.includes('crates/rolldown_binding_wasm/')) {
+      } else if (changedFile.includes('crates/rolldown_binding_wasm/')) {
         buildWasmBindingCrate(changedFile)
-      } else if (event.path.includes('packages/node/')) {
+      } else if (changedFile.includes('packages/node/')) {
         buildRolldownPackage(changedFile)
       }
     })

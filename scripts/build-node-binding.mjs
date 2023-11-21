@@ -7,12 +7,16 @@ import crypto from 'crypto'
 import fs from 'fs'
 import fsp from 'fs/promises'
 import debug from 'debug'
+import chalk from 'chalk'
+import { fileURLToPath } from 'url'
 
 if (!process.env.DEBUG) {
   debug.enable('rolldown')
 }
 
-const ROOT_DIR = path.join(path.basename(import.meta.url), '..')
+const ROOT_DIR = path.join(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
+)
 const CACHE_DIR = path.join(ROOT_DIR, 'node_modules/.rolldown')
 
 fs.mkdirSync(CACHE_DIR, { recursive: true })
@@ -75,43 +79,157 @@ async function isStaleOrUnbuilt(key, files) {
 }
 
 async function runYarnBuild(pkgName, log) {
-  let result = execa('yarn', ['workspace', pkgName, 'run', 'build'], {
-    cwd: ROOT_DIR,
-    env: { FORCE_COLOR: 'true' },
-    stdio: 'pipe',
-  })
+  const isRelease = process.argv.includes('--release')
 
-  result.stdout?.on('data', (data) => {
+  const result = execa(
+    'yarn',
+    ['workspace', pkgName, 'run', isRelease ? 'build:release' : 'build'],
+    {
+      cwd: ROOT_DIR,
+      env: { CARGO_TERM_COLOR: 'always', FORCE_COLOR: 'true' },
+      stdio: 'pipe',
+    },
+  )
+
+  const onData = (data) => {
     String(data)
       .trim()
       .split('\n')
       .forEach((line) => {
-        log(`  ${line}`)
+        if (line) {
+          log(`  ${line.trim()}`)
+        }
       })
-  })
+  }
+
+  result.stderr?.on('data', onData)
+  result.stdout?.on('data', onData)
 
   await result
 }
 
-async function buildRolldownPackage() {
-  const log = debug('rolldown:node')
+const BUILD_TIMERS = {}
 
-  log('Checking for changes to @rolldown/node')
+async function build(pkgName, changedFile, loadFiles) {
+  const name = pkgName.split('/')[1]
+  const log = debug(`rolldown:${name}`)
 
-  const files = await getDirFiles('packages/node/src')
-  files.push(
-    'packages/node/build.config.ts',
-    'packages/node/package.json',
-    'packages/node/tsconfig.json',
-  )
+  if (!changedFile) {
+    log(`Checking for changes to ${pkgName}`)
+  }
 
-  if (await isStaleOrUnbuilt('node', files)) {
+  const files = await loadFiles()
+
+  // Exit early for files we dont care about
+  if (changedFile && !files.some((file) => file === changedFile)) {
+    return false
+  }
+
+  if (await isStaleOrUnbuilt(name, files)) {
     log('Detected changes, building...')
 
-    await runYarnBuild('@rolldown/node', log)
-  } else {
-    log('No changes since last build')
+    await runYarnBuild(pkgName, log)
+
+    return true
   }
+
+  log('No changes since last build')
+
+  return false
 }
 
-buildRolldownPackage()
+async function buildWithDebounce(pkgName, changedFile, loadFiles) {
+  if (BUILD_TIMERS[pkgName]) {
+    const [resolve, timer] = BUILD_TIMERS[pkgName]
+    clearTimeout(timer)
+    resolve()
+    delete BUILD_TIMERS[pkgName]
+  }
+
+  return new Promise((resolve) => {
+    BUILD_TIMERS[pkgName] = [
+      resolve,
+      setTimeout(() => resolve(build(pkgName, changedFile, loadFiles)), 125),
+    ]
+  })
+}
+
+async function buildRolldownPackage(changedFile) {
+  buildWithDebounce('@rolldown/node', changedFile, async () => {
+    const files = await getDirFiles('packages/node/src')
+    files.push(
+      'packages/node/build.config.ts',
+      'packages/node/package.json',
+      'packages/node/tsconfig.json',
+    )
+    return files
+  })
+}
+
+async function buildNodeBindingCrate(changedFile) {
+  buildWithDebounce('@rolldown/node-binding', changedFile, async () => {
+    const files = await getDirFiles('crates/rolldown_binding/src')
+    files.push(
+      'crates/rolldown_binding/build.rs',
+      'crates/rolldown_binding/Cargo.toml',
+      'crates/rolldown_binding/package.json',
+    )
+    return files
+  })
+}
+
+async function buildWasmBindingCrate(changedFile) {
+  buildWithDebounce('@rolldown/wasm-binding', changedFile, async () => {
+    const files = await getDirFiles('crates/rolldown_binding_wasm/src')
+    files.push(
+      'crates/rolldown_binding_wasm/Cargo.toml',
+      'crates/rolldown_binding_wasm/package.json',
+    )
+    return files
+  })
+}
+
+async function watchForChanges() {
+  const log = debug('rolldown:watcher')
+
+  log('Watching for changes...')
+
+  const onChange = (error, events) => {
+    if (error) {
+      console.error(error)
+      process.exit(1)
+    }
+
+    events.forEach((event) => {
+      const changedFile = event.path.replace(ROOT_DIR, '').slice(1)
+
+      log(chalk.gray(`${event.type}: ${changedFile}`))
+
+      if (event.path.includes('crates/rolldown_binding/')) {
+        buildNodeBindingCrate(changedFile)
+      } else if (event.path.includes('crates/rolldown_binding_wasm/')) {
+        buildWasmBindingCrate(changedFile)
+      } else if (event.path.includes('packages/node/')) {
+        buildRolldownPackage(changedFile)
+      }
+    })
+  }
+
+  await Promise.all([
+    watcher.subscribe(path.join(ROOT_DIR, 'packages/node'), onChange),
+    watcher.subscribe(path.join(ROOT_DIR, 'crates/rolldown_binding'), onChange),
+    watcher.subscribe(
+      path.join(ROOT_DIR, 'crates/rolldown_binding_wasm'),
+      onChange,
+    ),
+  ])
+}
+
+await Promise.all([
+  buildNodeBindingCrate().then(() => buildRolldownPackage()),
+  buildWasmBindingCrate(),
+])
+
+if (process.argv.includes('--watch')) {
+  await watchForChanges()
+}

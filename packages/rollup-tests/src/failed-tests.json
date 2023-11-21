@@ -365,6 +365,7 @@
   "rollup@function@import-default-class: imports a default class",
   "rollup@function@import-default-from-external: imports default from external module",
   "rollup@function@import-default-function: imports a default function",
+  "rollup@function@import-empty-from-external: imports external module for side effects",
   "rollup@function@import-meta-url-b: Access document.currentScript at the top level",
   "rollup@function@import-meta-url: resolves import.meta.url",
   "rollup@function@import-named-from-external: imports names from an external module",

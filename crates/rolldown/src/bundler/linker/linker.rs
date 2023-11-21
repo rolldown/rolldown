@@ -21,9 +21,6 @@ impl<'graph> Linker<'graph> {
     // Here take the symbols to avoid borrow graph and mut borrow graph at same time
     let mut symbols = std::mem::take(&mut self.graph.symbols);
 
-    // Create symbols for external module
-    self.initialize_symbols_for_external_modules(&mut symbols);
-
     // Propagate star exports
     // Create resolved exports for named export declarations
     // Mark dynamic exports due to export star
@@ -76,37 +73,6 @@ impl<'graph> Linker<'graph> {
 
     // Set the symbols back and add linker modules to graph
     self.graph.symbols = symbols;
-  }
-
-  // TODO(hyf0): Probably should take a look when improving supporting external modules
-  fn initialize_symbols_for_external_modules(&mut self, symbols: &mut Symbols) {
-    for importer_id in &self.graph.sorted_modules {
-      let importer = &self.graph.modules[*importer_id];
-
-      // Create symbols for external module
-      let mut extra_symbols = vec![];
-      match importer {
-        Module::Normal(importer) => {
-          importer.named_imports.iter().for_each(|(_id, info)| {
-            let import_record = &importer.import_records[info.record_id];
-            let importee = &self.graph.modules[import_record.resolved_module];
-            if let Module::External(_) = importee {
-              extra_symbols.push((import_record.resolved_module, info.imported.clone()));
-            }
-          });
-        }
-        Module::External(_) => {}
-      }
-      extra_symbols.into_iter().for_each(|(importee, imported)| {
-        let importee = &mut self.graph.modules[importee];
-        match importee {
-          Module::Normal(_) => {}
-          Module::External(importee) => {
-            importee.add_export_symbol(symbols, imported);
-          }
-        }
-      });
-    }
   }
 
   #[allow(clippy::too_many_lines, clippy::manual_assert)]
@@ -163,10 +129,7 @@ impl<'graph> Linker<'graph> {
                 },
               }
             }
-            Module::External(importee) => {
-              let resolved_ref = importee.resolve_export(&info.imported);
-              symbols.union(info.imported_as, resolved_ref);
-            }
+            Module::External(_) => {}
           }
         });
       }

@@ -8,6 +8,9 @@ input_file: crates/rolldown/tests/fixtures/external/keep_import_external_order
 ## main.mjs
 
 ```js
+import "ext1";
+import "ext2";
+
 // foo.js
 const a = 'foo'
 

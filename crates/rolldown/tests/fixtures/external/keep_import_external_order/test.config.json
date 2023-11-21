@@ -1,8 +1,10 @@
 {
-    "input": {
-        "external": [
-            "ext1",
-            "ext2"
-        ]
-    }
+  "input": {
+    "external": [
+      "ext1",
+      "ext2"
+    ]
+  },
+  "_comment": "The original input import external modules which is not exist in test environment",
+  "expectExecuted": false
 }

@@ -1,5 +1,5 @@
 use oxc::span::Atom;
-use rolldown_common::{ModuleId, Specifier, SymbolRef};
+use rolldown_common::{ModuleId, NamedImport, Specifier, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{Joiner, JoinerOptions};
 
@@ -39,6 +39,7 @@ pub struct Chunk {
   pub canonical_names: FxHashMap<SymbolRef, Atom>,
   pub bits: BitSet,
   pub imports_from_other_chunks: FxHashMap<ChunkSymbolExporter, Vec<CrossChunkImportItem>>,
+  pub imports_from_external_modules: FxHashMap<ModuleId, Vec<NamedImport>>,
   // meaningless if the chunk is an entrypoint
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Atom>,
 }

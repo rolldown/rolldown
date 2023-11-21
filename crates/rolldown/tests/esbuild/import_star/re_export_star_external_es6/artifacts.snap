@@ -8,5 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_external_es
 ## entry_js.mjs
 
 ```js
+import "foo";
+
 // entry.js
 ```

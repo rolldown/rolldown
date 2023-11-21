@@ -7,7 +7,7 @@ use crate::symbol_ref::SymbolRef;
 /// - Case A: `import { foo } from 'foo'`
 /// - Case B: `import * as fooNs from 'foo'`
 /// - Case C: `import { foo as foo2 } from 'foo'`
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NamedImport {
   /// For case A, the `imported` is `foo`.
   /// For case B, the `imported` is meaningless.

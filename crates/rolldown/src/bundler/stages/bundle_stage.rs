@@ -224,7 +224,9 @@ impl<'a> BundleStage<'a> {
     for chunk_id in chunk_graph.chunks.indices() {
       for (symbol_exporter, import_items) in &chunk_graph.chunks[chunk_id].imports_from_other_chunks
       {
-        let ChunkSymbolExporter::Chunk(importee_chunk_id) = symbol_exporter else { return };
+        let ChunkSymbolExporter::Chunk(importee_chunk_id) = symbol_exporter else {
+          continue;
+        };
         for item in import_items {
           if let Some(alias) =
             chunk_graph.chunks[*importee_chunk_id].exports_to_other_chunks.get(&item.import_ref)

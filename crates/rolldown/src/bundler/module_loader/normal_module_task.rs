@@ -21,12 +21,14 @@ use crate::{
     utils::{
       ast_scope::AstScope,
       ast_symbol::AstSymbol,
+      load_source::load_source,
       resolve_id::{resolve_id, ResolvedRequestInfo},
+      transform_source::transform_source,
     },
     visitors::scanner::{self, ScanResult},
   },
   error::{BatchedErrors, BatchedResult},
-  HookLoadArgs, HookResolveIdArgsOptions, HookTransformArgs,
+  HookResolveIdArgsOptions,
 };
 pub struct NormalModuleTask<'task, T: FileSystem + Default> {
   ctx: &'task ModuleTaskCommonData<T>,
@@ -58,23 +60,10 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let mut source = if let Some(r) =
-      self.ctx.plugin_driver.load(&HookLoadArgs { id: self.path.as_ref() }).await?
-    {
-      r.code
-    } else {
-      self.ctx.fs.read_to_string(self.path.as_path())?
-    };
+    let source = load_source(&self.ctx.plugin_driver, &self.path, &self.ctx.fs).await?;
 
     // Run plugin transform.
-    if let Some(r) = self
-      .ctx
-      .plugin_driver
-      .transform(&HookTransformArgs { id: self.path.as_ref(), code: &source })
-      .await?
-    {
-      source = r.code;
-    }
+    let source = transform_source(&self.ctx.plugin_driver, source).await?;
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(source);
 

@@ -18,6 +18,7 @@ const ROOT_DIR = path.join(
   path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
 )
 const CACHE_DIR = path.join(ROOT_DIR, 'node_modules/.rolldown')
+const NO_WASM = process.argv.includes('--no-wasm')
 
 fs.mkdirSync(CACHE_DIR, { recursive: true })
 
@@ -179,6 +180,10 @@ async function buildNodeBindingCrate(changedFile) {
 }
 
 async function buildWasmBindingCrate(changedFile) {
+  if (NO_WASM) {
+    return
+  }
+
   buildWithDebounce('@rolldown/wasm-binding', changedFile, async () => {
     const files = await getDirFiles('crates/rolldown_binding_wasm/src')
     files.push(
@@ -215,14 +220,21 @@ async function watchForChanges() {
     })
   }
 
-  await Promise.all([
+  const promises = [
     watcher.subscribe(path.join(ROOT_DIR, 'packages/node'), onChange),
     watcher.subscribe(path.join(ROOT_DIR, 'crates/rolldown_binding'), onChange),
-    watcher.subscribe(
-      path.join(ROOT_DIR, 'crates/rolldown_binding_wasm'),
-      onChange,
-    ),
-  ])
+  ]
+
+  if (!NO_WASM) {
+    promises.push(
+      watcher.subscribe(
+        path.join(ROOT_DIR, 'crates/rolldown_binding_wasm'),
+        onChange,
+      ),
+    )
+  }
+
+  await Promise.all(promises)
 }
 
 await Promise.all([

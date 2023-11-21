@@ -118,7 +118,7 @@ jobs:
         run: yarn install
 
       - name: Build @rolldown/node
-        run: yarn build:node
+        run: yarn build --no-wasm
 
       - name: Test
         run: yarn test

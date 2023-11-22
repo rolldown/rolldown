@@ -133,6 +133,8 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
 
     self.intermediate_modules.reserve(user_defined_entries.len() + 1 /* runtime */);
 
+    // Store the already consider as entry module
+    let mut entry_module_set = FxHashSet::default();
     let mut entries = user_defined_entries
       .iter()
       .map(|(name, info)| EntryPoint {
@@ -140,9 +142,12 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
         module_id: self.try_spawn_new_task(info, true),
         kind: EntryPointKind::UserSpecified,
       })
+      .inspect(|e| {
+        entry_module_set.insert(e.module_id);
+      })
       .collect::<Vec<_>>();
 
-    let mut dynamic_entries = FxHashSet::default();
+    let mut dynamic_entries = vec![];
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
 
@@ -167,8 +172,8 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
             .map(|(raw_rec, info)| {
               let id = self.try_spawn_new_task(&info, false);
               // dynamic import as extra entries if enable code splitting
-              if raw_rec.kind == ImportKind::DynamicImport {
-                dynamic_entries.insert(EntryPoint {
+              if raw_rec.kind == ImportKind::DynamicImport && !entry_module_set.contains(&id) {
+                dynamic_entries.push(EntryPoint {
                   name: Some(info.path.unique(&self.input_options.cwd)),
                   module_id: id,
                   kind: EntryPointKind::DynamicImport,
@@ -203,7 +208,6 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
 
     let modules = self.intermediate_modules.into_iter().map(Option::unwrap).collect();
 
-    let mut dynamic_entries = Vec::from_iter(dynamic_entries);
     dynamic_entries.sort_unstable_by(|a, b| a.name.cmp(&b.name));
     entries.extend(dynamic_entries);
     Ok(ModuleLoaderOutput {

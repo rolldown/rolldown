@@ -32,7 +32,7 @@ import('./dynamic_js.mjs')
 
 ## Output Stats
 
-- 3.mjs, is_entry false, facade_module_id None, exports []
-- dynamic_js.mjs, is_entry false, facade_module_id Some("dynamic.js"), exports []
-- main1.mjs, is_entry true, facade_module_id Some("main1.js"), exports []
-- main2.mjs, is_entry true, facade_module_id Some("main2.js"), exports []
+- 3.mjs, is_entry false, facade_module_id None, exports [], modules: ["share.js"]
+- dynamic_js.mjs, is_entry false, facade_module_id Some("dynamic.js"), exports [], modules: ["dynamic.js"]
+- main1.mjs, is_entry true, facade_module_id Some("main1.js"), exports [], modules: ["main1.js"]
+- main2.mjs, is_entry true, facade_module_id Some("main2.js"), exports [], modules: ["main2.js"]

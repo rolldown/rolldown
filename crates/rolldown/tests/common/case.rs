@@ -93,8 +93,12 @@ impl Case {
       .flat_map(|asset| match asset {
         Output::Chunk(chunk) => {
           vec![Cow::Owned(format!(
-            "- {}, is_entry {}, facade_module_id {:?}, exports {:?}",
-            chunk.file_name, chunk.is_entry, chunk.facade_module_id, chunk.exports
+            "- {}, is_entry {}, facade_module_id {:?}, exports {:?}, modules: {:? }",
+            chunk.file_name,
+            chunk.is_entry,
+            chunk.facade_module_id,
+            chunk.exports,
+            chunk.modules.keys()
           ))]
         }
         Output::Asset(_) => vec![],

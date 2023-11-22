@@ -82,7 +82,7 @@ impl Chunk {
           input_options,
         });
         (
-          m.resource_id().expect_file().to_string(),
+          m.pretty_path().to_string(),
           RenderedModule {
             original_length: m.original_length(),
             rendered_length: rendered_content.as_ref().map(|c| c.len() as u32).unwrap_or_default(),

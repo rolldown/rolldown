@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/deconflict/decl_complex_patterns
 ## main.mjs
 
 ```js
-import { default as assert_default } from "assert";
+import { default as assert } from "assert";
 
 // names.js
 const [a] = ['a2']
@@ -28,16 +28,16 @@ const { d: d$1 = '' } = { d: 'd1' }
 const { d: e$1 = '' } = { d: 'e1' }
 
 
-assert_default.equal(a$1, 'a1')
-assert_default.equal(a, 'a2')
-assert_default.equal(b$1, 'b1')
-assert_default.equal(b, 'b2')
-assert_default.equal(c$1, 'c1')
-assert_default.equal(c, 'c2')
-assert_default.equal(d$1, 'd1')
-assert_default.equal(d, 'd2')
-assert_default.equal(e$1, 'e1')
-assert_default.equal(e, 'e2')
+assert.equal(a$1, 'a1')
+assert.equal(a, 'a2')
+assert.equal(b$1, 'b1')
+assert.equal(b, 'b2')
+assert.equal(c$1, 'c1')
+assert.equal(c, 'c2')
+assert.equal(d$1, 'd1')
+assert.equal(d, 'd2')
+assert.equal(e$1, 'e1')
+assert.equal(e, 'e2')
 
 
 export { a$1 as a, a as a2, b$1 as b, b as b2, c$1 as c, c as c2, d$1 as d, d as d2, e$1 as e, e as e2 };

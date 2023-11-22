@@ -6,5 +6,7 @@
         "import": "entry.js"
       }
     ]
-  }
+  },
+  "_comment": "The original input import external modules which is not exist in test environment",
+  "expectExecuted": false
 }

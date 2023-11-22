@@ -16,7 +16,7 @@ use crate::{
   InputOptions, Output, OutputFormat,
 };
 use index_vec::{index_vec, IndexVec};
-use rolldown_common::{ExportsKind, ImportKind, ModuleId, SymbolRef};
+use rolldown_common::{ExportsKind, ImportKind, ModuleId, NamedImport, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 pub struct BundleStage<'a> {
@@ -108,12 +108,31 @@ impl<'a> BundleStage<'a> {
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
     let mut chunk_meta_exports_vec =
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
+    let mut chunk_meta_imports_from_external_modules_vec =
+      index_vec![FxHashMap::<ModuleId, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
     for (chunk_id, chunk) in chunk_graph.chunks.iter_enumerated() {
       let chunk_meta_imports = &mut chunk_meta_imports_vec[chunk_id];
+      let imports_from_external_modules =
+        &mut chunk_meta_imports_from_external_modules_vec[chunk_id];
 
       for module_id in chunk.modules.iter().copied() {
         match &self.link_output.modules[module_id] {
           Module::Normal(module) => {
+            module.import_records.iter().for_each(|rec| {
+              match &self.link_output.modules[rec.resolved_module] {
+                Module::External(importee) if matches!(rec.kind, ImportKind::Import) => {
+                  // Make sure the side effects of external module are evaluated.
+                  imports_from_external_modules.entry(importee.id).or_default();
+                }
+                _ => {}
+              }
+            });
+            module.named_imports.iter().for_each(|(_, import)| {
+              let rec = &module.import_records[import.record_id];
+              if let Module::External(importee) = &self.link_output.modules[rec.resolved_module] {
+                imports_from_external_modules.entry(importee.id).or_default().push(import.clone());
+              }
+            });
             for stmt_info in module.stmt_infos.iter() {
               for declared in &stmt_info.declared_symbols {
                 let symbol = self.link_output.symbols.get_mut(*declared);
@@ -238,6 +257,12 @@ impl<'a> BundleStage<'a> {
         }
       }
     }
+
+    chunk_meta_imports_from_external_modules_vec.into_iter_enumerated().for_each(
+      |(chunk_id, imports_from_external_modules)| {
+        chunk_graph.chunks[chunk_id].imports_from_external_modules = imports_from_external_modules;
+      },
+    );
   }
 
   fn generate_chunks(&self) -> ChunkGraph {

@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/deconflict/basic_scoped
 ## main.mjs
 
 ```js
-import { default as assert_default } from "assert";
+import { default as assert } from "assert";
 
 // a.js
 const a = 'a.js'
@@ -25,5 +25,5 @@ function foo(a$1$1) {
   return [a$1$1, a$1, a]
 }
 
-assert_default.deepEqual(foo('foo'), ['foo', 'main.js', 'a.js'])
+assert.deepEqual(foo('foo'), ['foo', 'main.js', 'a.js'])
 ```

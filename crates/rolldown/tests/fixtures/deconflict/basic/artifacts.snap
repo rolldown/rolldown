@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/deconflict/basic
 ## main.mjs
 
 ```js
-import { default as assert_default } from "assert";
+import { default as assert } from "assert";
 
 // a.js
 const a = 'a.js'
@@ -19,6 +19,6 @@ const a = 'a.js'
 
 
 const a$1 = 'main.js'
-assert_default.equal(a$1, 'main.js')
-assert_default.equal(a, 'a.js')
+assert.equal(a$1, 'main.js')
+assert.equal(a, 'a.js')
 ```

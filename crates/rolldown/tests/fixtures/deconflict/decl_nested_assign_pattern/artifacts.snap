@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/deconflict/decl_nested_assign_pattern
 ## main.mjs
 
 ```js
-import { default as assert_default } from "assert";
+import { default as assert } from "assert";
 
 // names.js
 const { foo: { bar: { baz = '' } = {} } = {} } = { foo: { bar: { baz: 'baz2' } } }
@@ -18,8 +18,8 @@ const { foo: { bar: { baz = '' } = {} } = {} } = { foo: { bar: { baz: 'baz2' } }
 
 
 const { foo: { bar: { baz: baz$1 = '' } = {} } = {} } = { foo: { bar: { baz: 'baz' } } }
-assert_default.strictEqual(baz$1, 'baz')
-assert_default.strictEqual(baz, 'baz2')
+assert.strictEqual(baz$1, 'baz')
+assert.strictEqual(baz, 'baz2')
 
 
 

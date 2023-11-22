@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/deconflict/complex_params_patterns
 ## main.mjs
 
 ```js
-import { default as assert_default } from "assert";
+import { default as assert } from "assert";
 
 // names.js
 const [a, b, c, d, e] = ['a2', 'b2', 'c2', 'd2', 'e2']
@@ -28,8 +28,8 @@ function foo(a$1$1, { b$1: b$1$1 }, { c$1: c$1$1 = 'c$1' }, { d$1: d$1$1 } = { d
 }
 
 const ret = foo('a$1', { b$1: 'b$1' }, {}, undefined, undefined)
-assert_default.deepStrictEqual(ret.main, ['a', 'b', 'c', 'd', 'e'])
-assert_default.deepStrictEqual(ret.names, ['a2', 'b2', 'c2', 'd2', 'e2'])
-assert_default.deepStrictEqual(ret.params, ['a$1', 'b$1', 'c$1', 'd$1', 'e$1'])
+assert.deepStrictEqual(ret.main, ['a', 'b', 'c', 'd', 'e'])
+assert.deepStrictEqual(ret.names, ['a2', 'b2', 'c2', 'd2', 'e2'])
+assert.deepStrictEqual(ret.params, ['a$1', 'b$1', 'c$1', 'd$1', 'e$1'])
 export { a$1 as a, b$1 as b, c$1 as c, d$1 as d, e$1 as e };
 ```

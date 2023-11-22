@@ -36,6 +36,9 @@ pub struct TestConfig {
   #[serde(default, rename = "_comment")]
   /// An workaround for writing comments in JSON.
   pub _comment: String,
+  #[serde(default)]
+  /// If `true`, the fixture output stats will be snapshot.
+  pub snapshot_output_stats: bool,
 }
 
 #[derive(Deserialize, JsonSchema)]

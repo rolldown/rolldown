@@ -1,7 +1,7 @@
 use std::{borrow::Cow, path::Path};
 
 use super::fixture::Fixture;
-use rolldown::RolldownOutput;
+use rolldown::{Output, RolldownOutput};
 use rolldown_error::BuildError;
 use string_wizard::MagicString;
 
@@ -78,6 +78,30 @@ impl Case {
       .collect::<Vec<_>>()
       .join("\n");
     self.snapshot.append(artifacts);
+
+    if self.fixture.test_config().snapshot_output_stats {
+      self.render_stats_to_snapshot(assets);
+    }
+  }
+
+  fn render_stats_to_snapshot(&mut self, assets: Vec<Output>) {
+    self.snapshot.append("\n\n## Output Stats\n\n");
+    let stats = assets
+      .iter()
+      // FIXME: should render the runtime module while tree shaking being supported
+      .filter(|asset| !asset.file_name().contains("rolldown_runtime"))
+      .flat_map(|asset| match asset {
+        Output::Chunk(chunk) => {
+          vec![Cow::Owned(format!(
+            "- {}, is_entry {}, facade_module_id {:?}, exports {:?}",
+            chunk.file_name, chunk.is_entry, chunk.facade_module_id, chunk.exports
+          ))]
+        }
+        Output::Asset(_) => vec![],
+      })
+      .collect::<Vec<_>>()
+      .join("\n");
+    self.snapshot.append(stats);
   }
 
   fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildError>) {

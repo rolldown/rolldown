@@ -30,10 +30,11 @@ var init_esm = __esm({
 	}
 });
 // commonjs.js
-var require_commonjs$1 = __commonJS({
+var require_commonjs$1 = __commonJS$1({
 	'commonjs.js'(exports, module) {
 		var value = (init_esm(), __toCommonJS(esm_ns));
 		module.exports = value;
+		const __commonJS = 1
 	}
 });
 // main.js

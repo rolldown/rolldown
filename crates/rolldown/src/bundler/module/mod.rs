@@ -98,7 +98,7 @@ impl Module {
   pub fn pretty_path(&self) -> &str {
     match self {
       Self::Normal(m) => &m.pretty_path,
-      Self::External(m) => &m.resource_id.expect_file().as_str(),
+      Self::External(m) => m.resource_id.expect_file().as_str(),
     }
   }
 }

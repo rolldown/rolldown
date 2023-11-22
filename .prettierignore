@@ -7,5 +7,4 @@ temp
 rollup
 **/.git
 **/node_modules
-scripts
 web/wasm/*

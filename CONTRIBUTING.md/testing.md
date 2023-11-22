@@ -5,7 +5,7 @@ In general, we have two main test suites for rust and node.js.
 ## Summary
 
 - `just test` for running all rust tests.
-- `yarn run -T test` for running all node tests.
+- `yarn test` for running all node tests.
 
 ## Rust Testing
 
@@ -25,6 +25,12 @@ A test case is a folder that contains `test.config.json`.
 Rolldown will bundle the input into `/dist`, and using the same `node` instance to execute every entry file in `/dist` orderly. If `_test.mjs` is found in test case folder, it will be executed after all entry points are executed. Otherwise, we just execute the entry file in `/dist`.
 
 ## Node Testing
+
+### Building Bindings
+
+For the NAPI-RS based packages to work, and for tests to run, they must be built first. This is done by running `yarn build` in the root directory. This will spin up a process that builds the Node/WASM binding crates (with Cargo), and then builds the rolldown npm package. The `yarn build` script is also smart enough to only re-build if it detects changes since the last time it was ran.
+
+Further, the `yarn watch` script can be ran that will watch the file system for changes, and re-build the bindings and npm package when changes are detected (using the same process as `yarn build`). This is useful for development when you're constantly making changes and re-running tests.
 
 ### Rolldown Testing
 

@@ -24,6 +24,10 @@ impl Chunk {
         renamer.inc(name);
       });
 
+    self.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
+      renamer.add_top_level_symbol(item.import_ref);
+    });
+
     self
       .modules
       .iter()
@@ -49,10 +53,6 @@ impl Chunk {
         }
         Module::External(_) => {}
       });
-
-    self.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
-      renamer.add_top_level_symbol(item.import_ref);
-    });
 
     // rename non-top-level names
 

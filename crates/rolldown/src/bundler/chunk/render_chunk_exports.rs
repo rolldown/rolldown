@@ -12,8 +12,8 @@ impl Chunk {
     graph: &LinkStageOutput,
     output_options: &OutputOptions,
   ) -> Option<MagicString<'static>> {
-    if let Some(entry) = self.entry_module {
-      let linking_info = &graph.linking_infos[entry];
+    if let Some(entry) = &self.entry_point {
+      let linking_info = &graph.linking_infos[entry.module_id];
       if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
         match output_options.format {
           OutputFormat::Esm => {
@@ -22,7 +22,7 @@ impl Chunk {
                 panic!(
                   "Cannot find canonical name for wrap ref {:?} of {:?}",
                   linking_info.wrapper_ref.unwrap(),
-                  graph.modules[entry].resource_id()
+                  graph.modules[entry.module_id].resource_id()
                 )
               });
             return Some(MagicString::new(format!("export default {wrap_ref_name}();\n")));
@@ -60,7 +60,7 @@ impl Chunk {
   }
 
   fn get_export_items(&self, graph: &LinkStageOutput) -> Vec<(Atom, SymbolRef)> {
-    self.entry_module.map_or_else(
+    self.entry_point.as_ref().map_or_else(
       || {
         let mut tmp = self
           .exports_to_other_chunks
@@ -72,8 +72,8 @@ impl Chunk {
 
         tmp
       },
-      |entry_module_id| {
-        let linking_info = &graph.linking_infos[entry_module_id];
+      |entry_point| {
+        let linking_info = &graph.linking_infos[entry_point.module_id];
         linking_info
           .sorted_exports()
           .map(|(name, export)| (name.clone(), export.symbol_ref))
@@ -87,8 +87,8 @@ impl Chunk {
     graph: &LinkStageOutput,
     output_options: &OutputOptions,
   ) -> Vec<String> {
-    if let Some(entry) = self.entry_module {
-      let linking_info = &graph.linking_infos[entry];
+    if let Some(entry_point) = &self.entry_point {
+      let linking_info = &graph.linking_infos[entry_point.module_id];
       if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
         match output_options.format {
           OutputFormat::Esm => {

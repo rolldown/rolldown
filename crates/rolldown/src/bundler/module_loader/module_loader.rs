@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use rolldown_common::{EntryPoint, FilePath, ImportKind, ImportRecordId, ModuleId, ResourceId};
+use rolldown_common::{
+  EntryPoint, EntryPointKind, FilePath, ImportKind, ImportRecordId, ModuleId, ResourceId,
+};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -136,6 +138,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
       .map(|(name, info)| EntryPoint {
         name: name.clone(),
         module_id: self.try_spawn_new_task(info, true),
+        kind: EntryPointKind::UserSpecified,
       })
       .collect::<Vec<_>>();
 
@@ -168,6 +171,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
                 dynamic_entries.insert(EntryPoint {
                   name: Some(info.path.unique(&self.input_options.cwd)),
                   module_id: id,
+                  kind: EntryPointKind::DynamicImport,
                 });
               }
               raw_rec.into_import_record(id)

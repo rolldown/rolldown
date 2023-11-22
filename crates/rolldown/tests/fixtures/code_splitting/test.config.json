@@ -10,5 +10,6 @@
                 "import": "main2.js"
             }
         ]
-    }
+    },
+    "snapshotOutputStats": true
 }

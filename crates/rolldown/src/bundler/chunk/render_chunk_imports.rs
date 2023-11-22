@@ -25,7 +25,8 @@ impl Chunk {
       let mut import_items = named_imports
         .iter()
         .filter_map(|item| {
-          let alias = graph.symbols.get_original_name(item.imported_as);
+          let canonical_ref = graph.symbols.par_canonical_ref_for(item.imported_as);
+          let alias = &self.canonical_names[&canonical_ref];
           match &item.imported {
             Specifier::Star => {
               is_importee_imported = true;
@@ -63,18 +64,15 @@ impl Chunk {
       let mut import_items = items
         .iter()
         .map(|item| {
-          let imported = importee_chunk
-            .canonical_names
-            .get(&graph.symbols.par_canonical_ref_for(item.import_ref))
-            .cloned()
-            .unwrap();
-          let Specifier::Literal(alias) = item.export_alias.as_ref().unwrap() else {
+          let canonical_ref = graph.symbols.par_canonical_ref_for(item.import_ref);
+          let local_binding = &self.canonical_names[&canonical_ref];
+          let Specifier::Literal(export_alias) = item.export_alias.as_ref().unwrap() else {
             panic!("should not be star import from other chunks")
           };
-          if imported == alias {
-            format!("{imported}")
+          if export_alias == local_binding {
+            format!("{export_alias}")
           } else {
-            format!("{imported} as {alias}")
+            format!("{export_alias} as {local_binding}")
           }
         })
         .collect::<Vec<_>>();

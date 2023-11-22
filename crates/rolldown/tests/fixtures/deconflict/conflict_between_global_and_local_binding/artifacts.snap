@@ -1,0 +1,26 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/deconflict/conflict_between_global_and_local_binding
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+import { __commonJS as __commonJS$1 } from "./_rolldown_runtime.mjs";
+
+// main.js
+var require_main = __commonJS$1({
+	'main.js'(exports, module) {
+
+		module.exports = 'main';
+		globalThis.__commonJS = 0
+		__commonJS = 1
+		assert.equal(__commonJS, 1)
+
+	}
+});
+export default require_main();
+```

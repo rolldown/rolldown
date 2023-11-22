@@ -9,7 +9,8 @@ use super::symbols::Symbols;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
-  top_level_name_to_count: FxHashMap<Cow<'name, Atom>, u32>,
+  /// The usage count of top level names
+  top_level_name_counts: FxHashMap<Cow<'name, Atom>, u32>,
   used_canonical_names: FxHashSet<Cow<'name, Atom>>,
   module_to_used_canonical_name_count: IndexVec<ModuleId, FxHashMap<Cow<'name, Atom>, u32>>,
   canonical_names: FxHashMap<SymbolRef, Atom>,
@@ -19,7 +20,7 @@ pub struct Renamer<'name> {
 impl<'name> Renamer<'name> {
   pub fn new(symbols: &'name Symbols, modules_len: usize) -> Self {
     Self {
-      top_level_name_to_count: FxHashMap::default(),
+      top_level_name_counts: FxHashMap::default(),
       canonical_names: FxHashMap::default(),
       symbols,
       used_canonical_names: FxHashSet::default(),
@@ -27,8 +28,10 @@ impl<'name> Renamer<'name> {
     }
   }
 
-  pub fn inc(&mut self, name: Cow<'name, Atom>) {
-    *self.top_level_name_to_count.entry(name).or_default() += 1;
+  pub fn reserve(&mut self, name: Cow<'name, Atom>) {
+    let count = self.top_level_name_counts.entry(name).or_default();
+    debug_assert!(*count <= 1, "It's unnecessary to reserve a global name twice");
+    *count = 1;
   }
 
   pub fn add_top_level_symbol(&mut self, symbol_ref: SymbolRef) {
@@ -36,11 +39,8 @@ impl<'name> Renamer<'name> {
     let original_name = Cow::Borrowed(self.symbols.get_original_name(canonical_ref));
 
     match self.canonical_names.entry(canonical_ref) {
-      std::collections::hash_map::Entry::Occupied(_) => {
-        // The symbol is already renamed
-      }
       std::collections::hash_map::Entry::Vacant(vacant) => {
-        let count = self.top_level_name_to_count.entry(original_name.clone()).or_default();
+        let count = self.top_level_name_counts.entry(original_name.clone()).or_default();
         let canonical_name = if *count == 0 {
           original_name
         } else {
@@ -49,6 +49,9 @@ impl<'name> Renamer<'name> {
         self.used_canonical_names.insert(canonical_name.clone());
         vacant.insert(canonical_name.into_owned());
         *count += 1;
+      }
+      std::collections::hash_map::Entry::Occupied(_) => {
+        // The symbol is already renamed
       }
     }
   }

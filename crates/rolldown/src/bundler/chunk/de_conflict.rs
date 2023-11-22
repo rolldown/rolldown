@@ -21,7 +21,7 @@ impl Chunk {
       .flatten()
       .for_each(|name| {
         // global names should be reserved
-        renamer.inc(name);
+        renamer.reserve(name);
       });
 
     self.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {

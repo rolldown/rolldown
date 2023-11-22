@@ -1,7 +1,9 @@
 use std::ptr::addr_of;
 
 use index_vec::IndexVec;
-use rolldown_common::{ExportsKind, ImportKind, ModuleId, StmtInfoId, SymbolRef, WrapKind};
+use rolldown_common::{
+  EntryPoint, ExportsKind, ImportKind, ModuleId, StmtInfoId, SymbolRef, WrapKind,
+};
 use rolldown_error::BuildError;
 use rustc_hash::FxHashSet;
 
@@ -20,7 +22,7 @@ use super::scan_stage::ScanStageOutput;
 #[derive(Debug)]
 pub struct LinkStageOutput {
   pub modules: ModuleVec,
-  pub entries: Vec<(Option<String>, ModuleId)>,
+  pub entries: Vec<EntryPoint>,
   pub sorted_modules: Vec<ModuleId>,
   pub linking_infos: LinkingInfoVec,
   pub symbols: Symbols,
@@ -31,7 +33,7 @@ pub struct LinkStageOutput {
 #[derive(Debug)]
 pub struct LinkStage {
   pub modules: ModuleVec,
-  pub entries: Vec<(Option<String>, ModuleId)>,
+  pub entries: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleId>,
@@ -88,7 +90,12 @@ impl LinkStage {
   }
 
   fn sort_modules(&mut self) {
-    let mut stack = self.entries.iter().map(|(_, m)| Action::Enter(*m)).rev().collect::<Vec<_>>();
+    let mut stack = self
+      .entries
+      .iter()
+      .map(|entry_point| Action::Enter(entry_point.module_id))
+      .rev()
+      .collect::<Vec<_>>();
     // The runtime module should always be the first module to be executed
     stack.push(Action::Enter(self.runtime.id()));
     let mut entered_ids: FxHashSet<ModuleId> = FxHashSet::default();

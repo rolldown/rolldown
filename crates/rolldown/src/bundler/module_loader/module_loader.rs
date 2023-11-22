@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use rolldown_common::{FilePath, ImportKind, ImportRecordId, ModuleId, ResourceId};
+use rolldown_common::{EntryPoint, FilePath, ImportKind, ImportRecordId, ModuleId, ResourceId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -38,7 +38,7 @@ pub struct ModuleLoaderOutput {
   pub modules: ModuleVec,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
-  pub entries: Vec<(Option<String>, ModuleId)>,
+  pub entries: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
 }
@@ -131,9 +131,12 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
 
     self.intermediate_modules.reserve(user_defined_entries.len() + 1 /* runtime */);
 
-    let mut entries: Vec<(Option<String>, ModuleId)> = user_defined_entries
+    let mut entries = user_defined_entries
       .iter()
-      .map(|(name, info)| (name.clone(), self.try_spawn_new_task(info, true)))
+      .map(|(name, info)| EntryPoint {
+        name: name.clone(),
+        module_id: self.try_spawn_new_task(info, true),
+      })
       .collect::<Vec<_>>();
 
     let mut dynamic_entries = FxHashSet::default();
@@ -162,7 +165,10 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
               let id = self.try_spawn_new_task(&info, false);
               // dynamic import as extra entries if enable code splitting
               if raw_rec.kind == ImportKind::DynamicImport {
-                dynamic_entries.insert((Some(info.path.unique(&self.input_options.cwd)), id));
+                dynamic_entries.insert(EntryPoint {
+                  name: Some(info.path.unique(&self.input_options.cwd)),
+                  module_id: id,
+                });
               }
               raw_rec.into_import_record(id)
             })
@@ -194,7 +200,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     let modules = self.intermediate_modules.into_iter().map(Option::unwrap).collect();
 
     let mut dynamic_entries = Vec::from_iter(dynamic_entries);
-    dynamic_entries.sort_by(|(a, _), (b, _)| a.cmp(b));
+    dynamic_entries.sort_unstable_by(|a, b| a.name.cmp(&b.name));
     entries.extend(dynamic_entries);
     Ok(ModuleLoaderOutput {
       modules,

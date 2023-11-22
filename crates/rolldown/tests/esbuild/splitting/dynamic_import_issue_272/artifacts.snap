@@ -5,30 +5,16 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_import_issue_272
 ---
 # Assets
 
-## 3.mjs
-
-```js
-// b.js
-var b_default = 1
-export { b_default };
-```
 ## a.mjs
 
 ```js
 // a.js
-import('./3.mjs')
+import('./b.mjs')
 ```
 ## b.mjs
 
 ```js
-import { b_default } from "./3.mjs";
-
-export { b_default as default };
-```
-## b_js.mjs
-
-```js
-import { b_default } from "./3.mjs";
-
+// b.js
+var b_default = 1
 export { b_default as default };
 ```

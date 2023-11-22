@@ -12,7 +12,7 @@ mod stmt_info;
 mod symbol_ref;
 mod wrap_kind;
 pub use crate::{
-  entry_point::EntryPoint,
+  entry_point::{EntryPoint, EntryPointKind},
   exports_kind::ExportsKind,
   file_path::{representative_name, FilePath},
   import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},

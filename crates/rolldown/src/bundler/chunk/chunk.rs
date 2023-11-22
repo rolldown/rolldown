@@ -1,5 +1,5 @@
 use oxc::span::Atom;
-use rolldown_common::{ModuleId, NamedImport, Specifier, SymbolRef};
+use rolldown_common::{EntryPoint, ModuleId, NamedImport, Specifier, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{Joiner, JoinerOptions};
 
@@ -26,7 +26,7 @@ pub struct CrossChunkImportItem {
 
 #[derive(Debug, Default)]
 pub struct Chunk {
-  pub entry_module: Option<ModuleId>,
+  pub entry_point: Option<EntryPoint>,
   pub modules: Vec<ModuleId>,
   pub name: Option<String>,
   pub file_name: Option<String>,
@@ -41,15 +41,15 @@ pub struct Chunk {
 impl Chunk {
   pub fn new(
     name: Option<String>,
-    entry_module: Option<ModuleId>,
+    entry_point: Option<EntryPoint>,
     bits: BitSet,
     modules: Vec<ModuleId>,
   ) -> Self {
-    Self { entry_module, modules, name, bits, ..Self::default() }
+    Self { entry_point, modules, name, bits, ..Self::default() }
   }
 
   pub fn render_file_name(&mut self, output_options: &OutputOptions) {
-    let pat = if self.entry_module.is_some() {
+    let pat = if self.entry_point.is_some() {
       &output_options.entry_file_names
     } else {
       &output_options.chunk_file_names

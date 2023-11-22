@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rolldown_common::{ImportKind, ModuleId};
+use rolldown_common::{EntryPoint, ImportKind};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_utils::block_on_spawn_all;
@@ -31,7 +31,7 @@ pub struct ScanStage<Fs: FileSystem + Default> {
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub modules: ModuleVec,
-  pub entries: Vec<(Option<String>, ModuleId)>,
+  pub entries: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,

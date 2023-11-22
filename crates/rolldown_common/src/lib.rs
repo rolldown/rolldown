@@ -1,3 +1,4 @@
+mod entry_point;
 mod exports_kind;
 mod file_path;
 mod import_record;
@@ -11,6 +12,7 @@ mod stmt_info;
 mod symbol_ref;
 mod wrap_kind;
 pub use crate::{
+  entry_point::EntryPoint,
   exports_kind::ExportsKind,
   file_path::{representative_name, FilePath},
   import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},

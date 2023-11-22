@@ -267,16 +267,21 @@ impl<'a> BundleStage<'a> {
     let mut chunks = ChunksVec::with_capacity(self.link_output.entries.len());
 
     // Create chunk for each static and dynamic entry
-    for (entry_index, (name, module_id)) in self.link_output.entries.iter().enumerate() {
+    for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
       let count: u32 = u32::try_from(entry_index).unwrap();
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
-      let chunk = chunks.push(Chunk::new(name.clone(), Some(*module_id), bits.clone(), vec![]));
+      let chunk = chunks.push(Chunk::new(
+        entry_point.name.clone(),
+        Some(entry_point.module_id),
+        bits.clone(),
+        vec![],
+      ));
       bits_to_chunk.insert(bits, chunk);
     }
 
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
-    self.link_output.entries.iter().enumerate().for_each(|(i, (_, entry))| {
+    self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
       // runtime module are shared by all chunks, so we mark it as reachable for all entries.
       // FIXME: But this solution is not perfect. If we have two entries, one of them relies on runtime module, the other one doesn't.
       // In this case, we only need to generate two chunks, but currently we will generate three chunks. We need to analyze the usage of runtime module
@@ -288,7 +293,7 @@ impl<'a> BundleStage<'a> {
       );
 
       self.determine_reachable_modules_for_entry(
-        *entry,
+        entry_point.module_id,
         i.try_into().unwrap(),
         &mut module_to_bits,
       );

@@ -27,6 +27,9 @@ impl Chunk {
               });
             return Some(MagicString::new(format!("export default {wrap_ref_name}();\n")));
           }
+          OutputFormat::Cjs => {
+            unreachable!("entry CJS should not be wrapped in `OutputFormat::Cjs`")
+          }
         }
       }
     }
@@ -93,6 +96,9 @@ impl Chunk {
         match output_options.format {
           OutputFormat::Esm => {
             return vec!["default".to_string()];
+          }
+          OutputFormat::Cjs => {
+            unreachable!("entry CJS should not be wrapped in `OutputFormat::Cjs`")
           }
         }
       }

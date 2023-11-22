@@ -4,7 +4,7 @@ use crate::{
   bundler::{
     bundle::output::OutputChunk,
     chunk::{
-      chunk::{Chunk, ChunkSymbolExporter, CrossChunkImportItem},
+      chunk::{Chunk, CrossChunkImportItem},
       ChunkId, ChunksVec,
     },
     chunk_graph::ChunkGraph,
@@ -190,28 +190,16 @@ impl<'a> BundleStage<'a> {
       let chunk_meta_imports = &chunk_meta_imports_vec[chunk_id];
       for import_ref in chunk_meta_imports.iter().copied() {
         let import_symbol = self.link_output.symbols.get(import_ref);
+        let importee_chunk_id =
+          import_symbol.chunk_id.expect("Symbol should be declared in a chunk");
         // Find out the import_ref whether comes from the chunk or external module.
-
-        if let Some(importee_chunk_id) = import_symbol.chunk_id {
-          if chunk_id != importee_chunk_id {
-            chunk
-              .imports_from_other_chunks
-              .entry(ChunkSymbolExporter::Chunk(importee_chunk_id))
-              .or_default()
-              .push(CrossChunkImportItem { import_ref, export_alias: None });
-            chunk_meta_exports_vec[importee_chunk_id].insert(import_ref);
-          }
-        } else {
-          // The symbol is from an external module.
-          let canonical_ref = self.link_output.symbols.canonical_ref_for(import_ref);
-          let symbol = self.link_output.symbols.get(canonical_ref);
-          // The module must be an external module.
-          let importee = self.link_output.modules[canonical_ref.owner].expect_external();
+        if chunk_id != importee_chunk_id {
           chunk
             .imports_from_other_chunks
-            .entry(ChunkSymbolExporter::ExternalModule(importee.id))
+            .entry(importee_chunk_id)
             .or_default()
-            .push(CrossChunkImportItem { import_ref, export_alias: symbol.exported_as.clone() });
+            .push(CrossChunkImportItem { import_ref, export_alias: None });
+          chunk_meta_exports_vec[importee_chunk_id].insert(import_ref);
         }
       }
 
@@ -241,9 +229,9 @@ impl<'a> BundleStage<'a> {
       }
     }
     for chunk_id in chunk_graph.chunks.indices() {
-      for (symbol_exporter, import_items) in &chunk_graph.chunks[chunk_id].imports_from_other_chunks
+      for (importee_chunk_id, import_items) in
+        &chunk_graph.chunks[chunk_id].imports_from_other_chunks
       {
-        let ChunkSymbolExporter::Chunk(importee_chunk_id) = symbol_exporter else { return };
         for item in import_items {
           if let Some(alias) =
             chunk_graph.chunks[*importee_chunk_id].exports_to_other_chunks.get(&item.import_ref)

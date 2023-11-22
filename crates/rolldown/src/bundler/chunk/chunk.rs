@@ -18,12 +18,6 @@ use crate::{
 
 use super::ChunkId;
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
-pub enum ChunkSymbolExporter {
-  Chunk(ChunkId),
-  ExternalModule(ModuleId),
-}
-
 #[derive(Debug)]
 pub struct CrossChunkImportItem {
   pub export_alias: Option<Specifier>,
@@ -38,7 +32,7 @@ pub struct Chunk {
   pub file_name: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Atom>,
   pub bits: BitSet,
-  pub imports_from_other_chunks: FxHashMap<ChunkSymbolExporter, Vec<CrossChunkImportItem>>,
+  pub imports_from_other_chunks: FxHashMap<ChunkId, Vec<CrossChunkImportItem>>,
   pub imports_from_external_modules: FxHashMap<ModuleId, Vec<NamedImport>>,
   // meaningless if the chunk is an entrypoint
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Atom>,

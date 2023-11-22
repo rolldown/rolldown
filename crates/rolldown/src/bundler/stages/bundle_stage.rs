@@ -16,7 +16,7 @@ use crate::{
   InputOptions, Output, OutputFormat,
 };
 use index_vec::{index_vec, IndexVec};
-use rolldown_common::{ExportsKind, ImportKind, ModuleId, NamedImport, SymbolRef};
+use rolldown_common::{EntryPointKind, ExportsKind, ImportKind, ModuleId, NamedImport, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 pub struct BundleStage<'a> {
@@ -63,10 +63,10 @@ impl<'a> BundleStage<'a> {
         Output::Chunk(Box::new(OutputChunk {
           file_name: c.file_name.clone().unwrap(),
           code: content,
-          is_entry: c.entry_module.is_some(),
-          facade_module_id: c
-            .entry_module
-            .map(|id| self.link_output.modules[id].expect_normal().pretty_path.to_string()),
+          is_entry: matches!(&c.entry_point, Some(e) if e.kind == EntryPointKind::UserSpecified),
+          facade_module_id: c.entry_point.as_ref().map(|entry_point| {
+            self.link_output.modules[entry_point.module_id].expect_normal().pretty_path.to_string()
+          }),
           modules: rendered_modules,
           exports: c.get_export_names(self.link_output, self.output_options),
         }))
@@ -163,8 +163,8 @@ impl<'a> BundleStage<'a> {
         }
       }
 
-      if let Some(entry_module) = chunk.entry_module {
-        let entry_module = &self.link_output.modules[entry_module];
+      if let Some(entry_point) = &chunk.entry_point {
+        let entry_module = &self.link_output.modules[entry_point.module_id];
         let Module::Normal(entry_module) = entry_module else {
           return;
         };
@@ -203,7 +203,7 @@ impl<'a> BundleStage<'a> {
         }
       }
 
-      if chunk.entry_module.is_none() {
+      if chunk.entry_point.is_none() {
         continue;
       }
       // If this is an entry point, make sure we import all chunks belonging to
@@ -273,7 +273,7 @@ impl<'a> BundleStage<'a> {
       bits.set_bit(count);
       let chunk = chunks.push(Chunk::new(
         entry_point.name.clone(),
-        Some(entry_point.module_id),
+        Some(entry_point.clone()),
         bits.clone(),
         vec![],
       ));

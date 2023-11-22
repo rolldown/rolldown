@@ -1,4 +1,4 @@
-import external from "external"
+import assert from "assert"
 import { value } from "./share"
 
-console.log(value, external)
+assert(value === 1)

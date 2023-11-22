@@ -25,12 +25,12 @@ console.log(value)
 ## main.mjs
 
 ```js
-import { default as external_default } from "external";
+import { default as assert_default } from "assert";
 import { value } from "./2.mjs";
 
 // main.js
 
 
 
-console.log(value, external_default)
+(0, assert_default)(value === 1)
 ```

@@ -5,6 +5,7 @@ use super::file_name_template::FileNameTemplate;
 #[derive(Debug)]
 pub enum OutputFormat {
   Esm,
+  Cjs,
 }
 
 #[derive(Derivative)]

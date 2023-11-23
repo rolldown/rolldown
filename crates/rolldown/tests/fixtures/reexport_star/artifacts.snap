@@ -5,21 +5,10 @@ input_file: crates/rolldown/tests/fixtures/reexport_star
 ---
 # Assets
 
-## 2.mjs
-
-```js
-// a.js
-var a_ns = {
-	get abc() { return abc }
-};
-const abc = undefined
-
-export { a_ns };
-```
 ## entry.mjs
 
 ```js
-import { a_ns } from "./2.mjs";
+import { a_ns } from "./runtime.mjs";
 
 // entry.js
 
@@ -29,10 +18,21 @@ export { a_ns as a };
 ## main.mjs
 
 ```js
-import { a_ns } from "./2.mjs";
+import { a_ns } from "./runtime.mjs";
 
 // main.js
 
 
 export { a_ns as a };
+```
+## runtime.mjs
+
+```js
+// a.js
+var a_ns = {
+	get abc() { return abc }
+};
+const abc = undefined
+
+export { a_ns };
 ```

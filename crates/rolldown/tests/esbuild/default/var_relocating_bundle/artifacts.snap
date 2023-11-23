@@ -5,11 +5,6 @@ input_file: crates/rolldown/tests/esbuild/default/var_relocating_bundle
 ---
 # Assets
 
-## 5.mjs
-
-```js
-
-```
 ## function-nested_js.mjs
 
 ```js
@@ -76,6 +71,11 @@ if (true) {
 	for (var { j, x: [k] } in {});
 	function l() {}
 }
+```
+## runtime.mjs
+
+```js
+
 ```
 ## top-level_js.mjs
 

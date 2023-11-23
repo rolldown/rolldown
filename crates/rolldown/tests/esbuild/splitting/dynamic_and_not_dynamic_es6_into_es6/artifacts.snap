@@ -5,26 +5,26 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_and_not_dynamic_es6_
 ---
 # Assets
 
-## 2.mjs
-
-```js
-// foo.js
-let bar = 123
-export { bar };
-```
 ## foo_js.mjs
 
 ```js
-import { bar } from "./2.mjs";
+import { bar } from "./runtime.mjs";
 
 export { bar };
 ```
 ## main.mjs
 
 ```js
-import { bar } from "./2.mjs";
+import { bar } from "./runtime.mjs";
 
 // main.js
 
-import('./2.mjs').then(({bar: b}) => console.log(bar, b))
+import('./runtime.mjs').then(({bar: b}) => console.log(bar, b))
+```
+## runtime.mjs
+
+```js
+// foo.js
+let bar = 123
+export { bar };
 ```

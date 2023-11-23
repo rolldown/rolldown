@@ -5,22 +5,10 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic-commonjs-into-es6
 ---
 # Assets
 
-## 2.mjs
-
-```js
-// <runtime>
-
-var __getOwnPropNames = Object.getOwnPropertyNames
-var __commonJS = (cb, mod) => function () {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
-}
-
-export { __commonJS };
-```
 ## foo_js.mjs
 
 ```js
-import { __commonJS } from "./2.mjs";
+import { __commonJS } from "./runtime.mjs";
 
 // foo.js
 var require_foo = __commonJS({
@@ -35,4 +23,16 @@ export default require_foo();
 ```js
 // main.js
 import('./foo_js.mjs').then(({bar}) => console.log(bar))
+```
+## runtime.mjs
+
+```js
+// <runtime>
+
+var __getOwnPropNames = Object.getOwnPropertyNames
+var __commonJS = (cb, mod) => function () {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
+}
+
+export { __commonJS };
 ```

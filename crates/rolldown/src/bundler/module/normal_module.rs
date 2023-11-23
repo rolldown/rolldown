@@ -23,6 +23,7 @@ use super::{Module, ModuleRenderContext, ModuleVec};
 
 #[derive(Debug)]
 pub struct NormalModule {
+  pub is_included: bool,
   pub exec_order: u32,
   pub id: ModuleId,
   pub is_user_defined_entry: bool,
@@ -62,8 +63,7 @@ impl NormalModule {
 
   #[allow(clippy::needless_pass_by_value)]
   pub fn render(&self, ctx: ModuleRenderContext<'_>) -> Option<MagicString<'static>> {
-    // FIXME: Remove this when we support removing module that rendered nothing
-    if self.id == ctx.graph.runtime.id() && self.stmt_infos.iter().all(|info| !info.is_included) {
+    if !self.is_included {
       return None;
     }
 

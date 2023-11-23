@@ -5,6 +5,11 @@ input_file: crates/rolldown/tests/esbuild/default/outbase
 ---
 # Assets
 
+## 2.mjs
+
+```js
+
+```
 ## c_js.mjs
 
 ```js

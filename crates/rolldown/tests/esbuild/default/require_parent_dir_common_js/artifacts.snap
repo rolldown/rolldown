@@ -8,7 +8,12 @@ input_file: crates/rolldown/tests/esbuild/default/require_parent_dir_common_js
 ## dir_entry_js.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.mjs";
+// <runtime>
+
+var __getOwnPropNames = Object.getOwnPropertyNames
+var __commonJS = (cb, mod) => function () {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
+}
 
 // index.js
 var require_require_parent_dir_common_js_index = __commonJS({

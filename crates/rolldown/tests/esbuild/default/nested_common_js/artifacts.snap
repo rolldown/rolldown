@@ -8,7 +8,12 @@ input_file: crates/rolldown/tests/esbuild/default/nested_common_js
 ## entry_js.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.mjs";
+// <runtime>
+
+var __getOwnPropNames = Object.getOwnPropertyNames
+var __commonJS = (cb, mod) => function () {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
+}
 
 // foo.js
 var require_foo = __commonJS({

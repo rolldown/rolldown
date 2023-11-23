@@ -305,25 +305,9 @@ impl<'a> BundleStage<'a> {
       self.link_output.modules.len()
     ];
 
-    // FIXME: should remove this when tree shaking is supported
-    let is_rolldown_test = std::env::var("ROLLDOWN_TEST").is_ok();
-    if is_rolldown_test {
-      let runtime_chunk_id = chunks.push(Chunk::new(
-        Some("_rolldown_runtime".to_string()),
-        None,
-        BitSet::new(0),
-        vec![self.link_output.runtime.id()],
-      ));
-      module_to_chunk[self.link_output.runtime.id()] = Some(runtime_chunk_id);
-    }
-
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for module in &self.link_output.modules {
-      // FIXME: should remove this when tree shaking is supported
-      if is_rolldown_test && module.id() == self.link_output.runtime.id() {
-        continue;
-      }
       let bits = &module_to_bits[module.id()];
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunks[chunk_id].modules.push(module.id());

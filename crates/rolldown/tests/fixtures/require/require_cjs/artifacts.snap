@@ -8,7 +8,12 @@ input_file: crates/rolldown/tests/fixtures/require/require_cjs
 ## main.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.mjs";
+// <runtime>
+
+var __getOwnPropNames = Object.getOwnPropertyNames
+var __commonJS = (cb, mod) => function () {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
+}
 
 // cjs.js
 var require_cjs = __commonJS({

@@ -5,10 +5,22 @@ input_file: crates/rolldown/tests/fixtures/compat/dynamic_cjs_entry
 ---
 # Assets
 
+## 2.mjs
+
+```js
+// <runtime>
+
+var __getOwnPropNames = Object.getOwnPropertyNames
+var __commonJS = (cb, mod) => function () {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
+}
+
+export { __commonJS };
+```
 ## cjs_js.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.mjs";
+import { __commonJS } from "./2.mjs";
 
 // cjs.js
 var require_cjs = __commonJS({

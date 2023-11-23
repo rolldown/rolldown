@@ -5,6 +5,11 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic-es6-into-es6
 ---
 # Assets
 
+## 2.mjs
+
+```js
+
+```
 ## foo_js.mjs
 
 ```js

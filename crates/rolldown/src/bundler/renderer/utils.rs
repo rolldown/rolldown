@@ -30,6 +30,16 @@ impl<'r> AstRenderContext<'r> {
     self.source.remove(span.start, span.end);
   }
 
+  pub fn remove_stmt(&mut self, span: Span) {
+    let end = span.end as usize;
+    let should_delete_line_ending = self.module.ast.source().get(end..end + 1) == Some("\n");
+    if should_delete_line_ending {
+      self.source.remove(span.start, span.end + 1);
+    } else {
+      self.source.remove(span.start, span.end);
+    }
+  }
+
   pub fn hoisted_module_declaration(&mut self, decl_start: u32, content: String) {
     let start = self.first_stmt_start.unwrap_or(decl_start);
     self.source.append_left(start, content);

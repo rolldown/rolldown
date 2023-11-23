@@ -189,6 +189,8 @@ impl<'r> AstRenderer<'r> {
     }
   }
 
+  // hyf0: clippy::single_match_else: using match statement is more readable
+  #[allow(clippy::single_match_else)]
   fn strip_export_keyword(
     &mut self,
     default_decl: &oxc::ast::ast::ExportDefaultDeclaration,

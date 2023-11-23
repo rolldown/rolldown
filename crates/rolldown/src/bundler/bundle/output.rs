@@ -12,6 +12,7 @@ pub struct OutputChunk {
   pub file_name: String,
   pub code: String,
   pub is_entry: bool,
+  pub is_dynamic_entry: bool,
   pub facade_module_id: Option<String>,
   pub modules: FxHashMap<String, RenderedModule>,
   pub exports: Vec<String>,

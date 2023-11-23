@@ -64,6 +64,7 @@ impl<'a> BundleStage<'a> {
           file_name: c.file_name.clone().unwrap(),
           code: content,
           is_entry: matches!(&c.entry_point, Some(e) if e.kind == EntryPointKind::UserSpecified),
+          is_dynamic_entry: matches!(&c.entry_point, Some(e) if e.kind == EntryPointKind::DynamicImport),
           facade_module_id: c.entry_point.as_ref().map(|entry_point| {
             self.link_output.modules[entry_point.module_id].expect_normal().pretty_path.to_string()
           }),

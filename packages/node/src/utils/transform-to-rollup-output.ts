@@ -15,6 +15,7 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RollupOutputChunk {
     exports: chunk.exports,
     isEntry: chunk.isEntry,
     facadeModuleId: chunk.facadeModuleId || null,
+    isDynamicEntry: chunk.isDynamicEntry,
     get dynamicImports() {
       return unimplemented()
     },
@@ -31,9 +32,6 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RollupOutputChunk {
       return unimplemented()
     },
     get map() {
-      return unimplemented()
-    },
-    get isDynamicEntry() {
       return unimplemented()
     },
     get isImplicitEntry() {

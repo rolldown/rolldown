@@ -79,11 +79,14 @@ impl<'a> BundleStage<'a> {
     entry_index: u32,
     module_to_bits: &mut IndexVec<ModuleId, BitSet>,
   ) {
+    let Module::Normal(module) = &self.link_output.modules[module_id] else { return };
+    if !module.is_included {
+      return;
+    }
     if module_to_bits[module_id].has_bit(entry_index) {
       return;
     }
     module_to_bits[module_id].set_bit(entry_index);
-    let Module::Normal(module) = &self.link_output.modules[module_id] else { return };
     module.import_records.iter().for_each(|rec| {
       // Module imported dynamically will be considered as an entry,
       // so we don't need to include it in this chunk
@@ -304,6 +307,12 @@ impl<'a> BundleStage<'a> {
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for module in &self.link_output.modules {
+      let Module::Normal(normal_module) = module else {
+        continue;
+      };
+      if !normal_module.is_included {
+        continue;
+      }
       let bits = &module_to_bits[module.id()];
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunks[chunk_id].modules.push(module.id());
@@ -325,6 +334,7 @@ impl<'a> BundleStage<'a> {
   }
 
   fn generate_chunk_filenames(&self, chunk_graph: &mut ChunkGraph) {
+    let mut used_chunk_names = FxHashSet::default();
     chunk_graph.chunks.iter_mut().for_each(|chunk| {
       let file_name_tmp = chunk.file_name_template(self.output_options);
       let chunk_name = chunk.name.clone().unwrap_or_else(|| {
@@ -342,6 +352,12 @@ impl<'a> BundleStage<'a> {
         let module = &self.link_output.modules[module_id];
         module.resource_id().expect_file().unique(&self.input_options.cwd)
       });
+
+      let mut chunk_name = chunk_name;
+      while used_chunk_names.contains(&chunk_name) {
+        chunk_name = format!("{}-{}", chunk_name, used_chunk_names.len());
+      }
+      used_chunk_names.insert(chunk_name.clone());
 
       chunk.file_name =
         Some(file_name_tmp.render(&FileNameRenderOptions { name: Some(&chunk_name) }));

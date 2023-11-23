@@ -21,6 +21,11 @@ console.log(123)
 ```js
 // b.js
 ```
+## c.mjs
+
+```js
+
+```
 ## cd_js.mjs
 
 ```js
@@ -29,16 +34,6 @@ console.log(123)
 // d.js
 ```
 ## d.mjs
-
-```js
-
-```
-## d.mjs
-
-```js
-
-```
-## runtime.mjs
 
 ```js
 

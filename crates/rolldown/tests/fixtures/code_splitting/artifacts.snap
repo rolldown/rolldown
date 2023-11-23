@@ -29,3 +29,10 @@ import('./dynamic_js.mjs')
 ```js
 // main2.js
 ```
+
+## Output Stats
+
+- 3.mjs, is_entry false, facade_module_id None, exports []
+- dynamic_js.mjs, is_entry false, facade_module_id Some("dynamic.js"), exports []
+- main1.mjs, is_entry true, facade_module_id Some("main1.js"), exports []
+- main2.mjs, is_entry true, facade_module_id Some("main2.js"), exports []

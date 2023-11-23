@@ -68,6 +68,12 @@
           "items": {
             "$ref": "#/definitions/InputItem"
           }
+        },
+        "treeshake": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

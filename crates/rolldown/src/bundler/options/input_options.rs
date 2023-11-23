@@ -70,11 +70,17 @@ pub struct InputOptions {
   pub input: Vec<InputItem>,
   pub cwd: PathBuf,
   pub external: External,
+  pub treeshake: bool,
 }
 
 impl Default for InputOptions {
   fn default() -> Self {
-    Self { input: vec![], cwd: std::env::current_dir().unwrap(), external: External::default() }
+    Self {
+      input: vec![],
+      cwd: std::env::current_dir().unwrap(),
+      external: External::default(),
+      treeshake: true,
+    }
   }
 }
 

@@ -160,7 +160,17 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       &self.path,
     );
     let namespace_symbol = scanner.namespace_symbol;
-    let scan_result = scanner.scan(program.program());
+    let mut scan_result = scanner.scan(program.program());
+    if !self.ctx.input_options.treeshake {
+      // FIXME(hyf0): should move this to scanner
+      let mut stmt_infos = scan_result.stmt_infos.iter_mut();
+      // Skip the facade namespace declaration
+      stmt_infos.next();
+      for stmt_info in stmt_infos {
+        stmt_info.side_effect = true;
+        stmt_info.is_included = true;
+      }
+    }
     (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }
 

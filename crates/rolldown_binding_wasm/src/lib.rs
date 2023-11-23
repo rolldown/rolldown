@@ -61,7 +61,12 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
         })
         .collect::<Vec<_>>();
       let mut bundler = Bundler::with_plugins_and_fs(
-        InputOptions { input, cwd: "/".into(), external: External::ArrayString(vec![]) },
+        InputOptions {
+          input,
+          cwd: "/".into(),
+          external: External::ArrayString(vec![]),
+          treeshake: true,
+        },
         vec![],
         memory_fs,
       );

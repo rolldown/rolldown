@@ -6,6 +6,7 @@ use serde::Deserialize;
 pub struct InputOptions {
   pub input: Option<Vec<InputItem>>,
   pub external: Option<Vec<String>>,
+  pub treeshake: Option<bool>,
 }
 
 #[derive(Deserialize, JsonSchema)]

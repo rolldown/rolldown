@@ -36,7 +36,8 @@
     "rolldown",
     "rollup",
     "rustc",
-    "smallvec"
+    "smallvec",
+    "treeshake"
   ],
   "git.ignoreLimitWarning": true,
   "json.schemas": [

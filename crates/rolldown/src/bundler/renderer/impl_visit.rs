@@ -28,7 +28,11 @@ impl<'ast, 'r> AstRenderer<'r> {
         self.ctx.first_stmt_start = Some(stmt.span().start);
       }
     }
-    self.visit_statement(stmt);
+    if self.current_stmt_info.get().is_included {
+      self.visit_statement(stmt);
+    } else {
+      self.remove_node(stmt.span());
+    }
   }
 }
 

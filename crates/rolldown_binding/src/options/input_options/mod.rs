@@ -104,6 +104,7 @@ impl From<InputOptions>
         input: value.input.into_iter().map(Into::into).collect::<Vec<_>>(),
         cwd,
         external,
+        treeshake: false,
       }),
       value.plugins.into_iter().map(JsAdapterPlugin::new_boxed).collect::<napi::Result<Vec<_>>>(),
     )

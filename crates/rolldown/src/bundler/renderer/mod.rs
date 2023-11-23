@@ -6,7 +6,7 @@ mod utils;
 use std::fmt::Debug;
 
 use oxc::{
-  ast::Visit,
+  ast::{ast::Expression, Visit},
   span::{Atom, GetSpan, Span},
 };
 use rolldown_common::{ExportsKind, StmtInfo, StmtInfoId, StmtInfos, SymbolRef, WrapKind};
@@ -194,15 +194,20 @@ impl<'r> AstRenderer<'r> {
     default_decl: &oxc::ast::ast::ExportDefaultDeclaration,
   ) -> RenderControl {
     match &default_decl.declaration {
-      oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => {
-        let default_ref_name = self.ctx.default_ref_name.expect("Should generated a name");
-        self.ctx.source.overwrite(
-          default_decl.span.start,
-          exp.span().start,
-          format!("var {default_ref_name} = "),
-        );
-        self.visit_expression(exp);
-      }
+      oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => match exp {
+        Expression::Identifier(_) => {
+          self.ctx.remove_node(default_decl.span);
+        }
+        _ => {
+          let default_ref_name = self.ctx.default_ref_name.expect("Should generated a name");
+          self.ctx.source.overwrite(
+            default_decl.span.start,
+            exp.span().start,
+            format!("var {default_ref_name} = "),
+          );
+          self.visit_expression(exp);
+        }
+      },
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {
         self.ctx.remove_node(Span::new(default_decl.span.start, decl.span.start));
       }

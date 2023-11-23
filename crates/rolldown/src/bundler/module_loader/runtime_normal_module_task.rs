@@ -35,7 +35,7 @@ impl RuntimeNormalModuleTask {
   pub fn run(self) {
     let mut builder = NormalModuleBuilder::default();
 
-    let source = include_str!("../runtime/runtime-without-comments.js").to_string();
+    let source = include_str!("../runtime/runtime_without_comments.js").to_string();
 
     let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(source);
 

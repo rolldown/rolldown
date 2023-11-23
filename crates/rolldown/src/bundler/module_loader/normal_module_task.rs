@@ -14,6 +14,7 @@ use sugar_path::AsPath;
 use super::{module_task_context::ModuleTaskCommonData, Msg};
 use crate::{
   bundler::{
+    ast_scanner::scanner::{self, ScanResult},
     module::normal_module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
     options::input_options::SharedInputOptions,
@@ -25,7 +26,6 @@ use crate::{
       resolve_id::{resolve_id, ResolvedRequestInfo},
       transform_source::transform_source,
     },
-    visitors::scanner::{self, ScanResult},
   },
   error::{BatchedErrors, BatchedResult},
   HookResolveIdArgsOptions,
@@ -150,7 +150,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     let ast_scope = AstScope::new(scope, std::mem::take(&mut symbol_table.references));
     let mut symbol_for_module = AstSymbol::from_symbol_table(symbol_table);
     let repr_name = self.path.representative_name();
-    let scanner = scanner::Scanner::new(
+    let scanner = scanner::AstScanner::new(
       self.module_id,
       &ast_scope,
       &mut symbol_for_module,

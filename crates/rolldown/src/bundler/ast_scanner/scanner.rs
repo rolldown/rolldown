@@ -65,7 +65,7 @@ pub struct ScanResult {
   pub warnings: Vec<BuildError>,
 }
 
-pub struct Scanner<'a> {
+pub struct AstScanner<'a> {
   idx: ModuleId,
   source: &'a Arc<str>,
   module_type: ModuleType,
@@ -81,7 +81,7 @@ pub struct Scanner<'a> {
   used_module_ref: bool,
 }
 
-impl<'ast> Scanner<'ast> {
+impl<'ast> AstScanner<'ast> {
   pub fn new(
     idx: ModuleId,
     scope: &'ast AstScope,
@@ -383,7 +383,7 @@ impl<'ast> Scanner<'ast> {
   }
 }
 
-impl<'ast> Scanner<'ast> {
+impl<'ast> AstScanner<'ast> {
   fn visit_top_level_stmt(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {
     self.current_stmt_info.side_effect =
       SideEffectDetector { scope: self.scope }.detect_side_effect_of_stmt(stmt);
@@ -391,7 +391,7 @@ impl<'ast> Scanner<'ast> {
   }
 }
 
-impl<'ast> Visit<'ast> for Scanner<'ast> {
+impl<'ast> Visit<'ast> for AstScanner<'ast> {
   #[tracing::instrument(skip_all)]
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {

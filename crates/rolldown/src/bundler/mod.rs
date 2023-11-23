@@ -1,3 +1,4 @@
+mod ast_scanner;
 pub mod bundle;
 #[allow(clippy::module_inception)]
 pub mod bundler;
@@ -12,4 +13,3 @@ mod renderer;
 mod runtime;
 pub mod stages;
 pub mod utils;
-mod visitors;

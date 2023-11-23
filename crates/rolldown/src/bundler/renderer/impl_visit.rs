@@ -10,6 +10,28 @@ use crate::bundler::{module::Module, renderer::RenderControl};
 
 use super::AstRenderer;
 
+impl<'ast, 'r> AstRenderer<'r> {
+  fn visit_top_level_stmt(&mut self, stmt: &ast::Statement<'ast>) {
+    // Mark the start position for place hoisted module declarations.
+    if self.ctx.first_stmt_start.is_none() {
+      let hoisted_decl = if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
+        match &decl.0 {
+          oxc::ast::ast::ModuleDeclaration::ImportDeclaration(_)
+          | oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(_) => true,
+          oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(decl) => decl.source.is_some(),
+          _ => false,
+        }
+      } else {
+        false
+      };
+      if !hoisted_decl {
+        self.ctx.first_stmt_start = Some(stmt.span().start);
+      }
+    }
+    self.visit_statement(stmt);
+  }
+}
+
 impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
   #[tracing::instrument(skip_all)]
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
@@ -19,7 +41,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     for (stmt_idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.next();
       debug_assert!(self.current_stmt_info.get().stmt_idx == Some(stmt_idx));
-      self.visit_statement(stmt);
+      self.visit_top_level_stmt(stmt);
     }
   }
 
@@ -119,23 +141,6 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
   }
 
   fn visit_statement(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {
-    // Mark the start position for place hoisted module declarations.
-    if self.ctx.first_stmt_start.is_none() {
-      let hoisted_decl = if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
-        match &decl.0 {
-          oxc::ast::ast::ModuleDeclaration::ImportDeclaration(_)
-          | oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(_) => true,
-          oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(decl) => decl.source.is_some(),
-          _ => false,
-        }
-      } else {
-        false
-      };
-      if !hoisted_decl {
-        self.ctx.first_stmt_start = Some(stmt.span().start);
-      }
-    }
-
     if self.try_render_require_statement(stmt).is_skip() {
       return;
     }

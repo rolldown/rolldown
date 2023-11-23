@@ -54,6 +54,7 @@ export interface OutputChunk {
   code: string
   fileName: string
   isEntry: boolean
+  isDynamicEntry: boolean
   facadeModuleId?: string
   modules: Record<string, RenderedModule>
   exports: Array<string>

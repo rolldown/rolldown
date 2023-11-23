@@ -25,7 +25,7 @@ use super::{Module, ModuleRenderContext, ModuleVec};
 pub struct NormalModule {
   pub exec_order: u32,
   pub id: ModuleId,
-  pub is_entry: bool,
+  pub is_user_defined_entry: bool,
   pub resource_id: ResourceId,
   pub pretty_path: String,
   /// Representative name of `FilePath`, which is created by `FilePath#representative_name` belong to `resource_id`

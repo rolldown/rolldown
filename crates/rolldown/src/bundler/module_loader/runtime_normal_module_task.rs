@@ -71,6 +71,7 @@ impl RuntimeNormalModuleTask {
     builder.exports_kind = Some(ExportsKind::Esm);
     builder.namespace_symbol = Some(namespace_symbol);
     builder.pretty_path = Some("<runtime>".to_string());
+    builder.is_user_defined_entry = Some(false);
 
     self
       .tx

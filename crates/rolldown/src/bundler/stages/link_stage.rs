@@ -51,7 +51,7 @@ impl LinkStage {
         .map(|_| LinkingInfo::default())
         .collect::<IndexVec<ModuleId, _>>(),
       modules: scan_stage_output.modules,
-      entries: scan_stage_output.entries,
+      entries: scan_stage_output.entry_points,
       symbols: scan_stage_output.symbols,
       runtime: scan_stage_output.runtime,
       warnings: scan_stage_output.warnings,
@@ -93,7 +93,7 @@ impl LinkStage {
     let mut stack = self
       .entries
       .iter()
-      .map(|entry_point| Action::Enter(entry_point.module_id))
+      .map(|entry_point| Action::Enter(entry_point.id))
       .rev()
       .collect::<Vec<_>>();
     // The runtime module should always be the first module to be executed
@@ -309,7 +309,7 @@ impl LinkStage {
               include_statement(context, module, stmt_info_id);
             }
           });
-          if module.is_entry {
+          if module.is_user_defined_entry {
             let linking_info = &self.linking_infos[module.id];
             linking_info.resolved_exports.values().for_each(|resolved_export| {
               include_symbol(context, resolved_export.symbol_ref);

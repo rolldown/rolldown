@@ -40,7 +40,7 @@ pub struct ModuleLoaderOutput {
   pub modules: ModuleVec,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
-  pub entries: Vec<EntryPoint>,
+  pub entry_points: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
 }
@@ -83,14 +83,14 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     id
   }
 
-  fn try_spawn_new_task(&mut self, info: &ResolvedRequestInfo, is_entry: bool) -> ModuleId {
+  fn try_spawn_new_task(&mut self, info: ResolvedRequestInfo) -> ModuleId {
     match self.visited.entry(info.path.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         let id = Self::alloc_module_id(&mut self.intermediate_modules, &mut self.symbols);
         not_visited.insert(id);
         if info.is_external {
-          let ext = ExternalModule::new(id, ResourceId::new(info.path.clone()));
+          let ext = ExternalModule::new(id, ResourceId::new(info.path));
           self.intermediate_modules[id] = Some(Module::External(ext));
         } else {
           self.remaining += 1;
@@ -101,7 +101,6 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
             // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
             unsafe { self.common_data.assume_static() },
             id,
-            is_entry,
             module_path,
             info.module_type,
           );
@@ -124,7 +123,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
 
   pub async fn fetch_all_modules(
     mut self,
-    user_defined_entries: &[(Option<String>, ResolvedRequestInfo)],
+    user_defined_entries: Vec<(Option<String>, ResolvedRequestInfo)>,
   ) -> BatchedResult<ModuleLoaderOutput> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
@@ -134,20 +133,25 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     self.intermediate_modules.reserve(user_defined_entries.len() + 1 /* runtime */);
 
     // Store the already consider as entry module
-    let mut entry_module_set = FxHashSet::default();
-    let mut entries = user_defined_entries
-      .iter()
+    let mut user_defined_entry_ids = {
+      let mut tmp = FxHashSet::default();
+      tmp.reserve(user_defined_entries.len());
+      tmp
+    };
+
+    let mut entry_points = user_defined_entries
+      .into_iter()
       .map(|(name, info)| EntryPoint {
-        name: name.clone(),
-        module_id: self.try_spawn_new_task(info, true),
-        kind: EntryPointKind::UserSpecified,
+        name,
+        id: self.try_spawn_new_task(info),
+        kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
-        entry_module_set.insert(e.module_id);
+        user_defined_entry_ids.insert(e.id);
       })
       .collect::<Vec<_>>();
 
-    let mut dynamic_entries = vec![];
+    let mut dynamic_import_entry_ids = FxHashSet::default();
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
 
@@ -170,19 +174,18 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
             .into_iter()
             .zip(resolved_deps)
             .map(|(raw_rec, info)| {
-              let id = self.try_spawn_new_task(&info, false);
-              // dynamic import as extra entries if enable code splitting
-              if raw_rec.kind == ImportKind::DynamicImport && !entry_module_set.contains(&id) {
-                dynamic_entries.push(EntryPoint {
-                  name: Some(info.path.unique(&self.input_options.cwd)),
-                  module_id: id,
-                  kind: EntryPointKind::DynamicImport,
-                });
+              let id = self.try_spawn_new_task(info);
+              // Dynamic imported module will be considered as an entry
+              if matches!(raw_rec.kind, ImportKind::DynamicImport)
+                && !user_defined_entry_ids.contains(&id)
+              {
+                dynamic_import_entry_ids.insert(id);
               }
               raw_rec.into_import_record(id)
             })
             .collect::<IndexVec<ImportRecordId, _>>();
           builder.import_records = Some(import_records);
+          builder.is_user_defined_entry = Some(user_defined_entry_ids.contains(&module_id));
           self.intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
 
           self.symbols.add_ast_symbol(module_id, ast_symbol);
@@ -206,14 +209,22 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
       return Err(errors);
     }
 
-    let modules = self.intermediate_modules.into_iter().map(Option::unwrap).collect();
+    let modules: IndexVec<ModuleId, Module> =
+      self.intermediate_modules.into_iter().map(Option::unwrap).collect();
 
-    dynamic_entries.sort_unstable_by(|a, b| a.name.cmp(&b.name));
-    entries.extend(dynamic_entries);
+    let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
+    dynamic_import_entry_ids.sort_by_key(|id| modules[*id].resource_id());
+
+    entry_points.extend(dynamic_import_entry_ids.into_iter().map(|id| EntryPoint {
+      name: None,
+      id,
+      kind: EntryPointKind::DynamicImport,
+    }));
+
     Ok(ModuleLoaderOutput {
       modules,
       symbols: self.symbols,
-      entries,
+      entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
     })

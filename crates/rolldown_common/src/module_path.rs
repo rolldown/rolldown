@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::FilePath;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ResourceId(FilePath);
 
 impl ResourceId {

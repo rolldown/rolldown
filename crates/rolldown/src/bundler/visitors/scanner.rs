@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::Deref, sync::Arc};
+use std::{borrow::Cow, sync::Arc};
 
 use index_vec::IndexVec;
 use oxc::{
@@ -38,10 +38,12 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_2: once_cell::sync::Lazy<
   .collect()
 });
 
+// hyf0: clippy::type_complexity: This is only a temporary solution.
+#[allow(clippy::type_complexity)]
 static SIDE_EFFECT_FREE_MEMBER_EXPR_3: once_cell::sync::Lazy<
   FxHashSet<(Cow<'static, Atom>, Cow<'static, Atom>, Cow<'static, Atom>)>,
 > = once_cell::sync::Lazy::new(|| {
-  [("Object", "prototype", "hasOwnProperty")]
+  [("Object", "prototype", "hasOwnProperty"), ("Object", "prototype", "constructor")]
     .into_iter()
     .map(|(obj, obj_mid, prop)| {
       (Cow::Owned(obj.into()), Cow::Owned(obj_mid.into()), Cow::Owned(prop.into()))
@@ -506,7 +508,7 @@ impl<'a> SideEffectDetector<'a> {
     })
   }
 
-  fn detect_side_effect_of_member_expr(&self, expr: &oxc::ast::ast::MemberExpression) -> bool {
+  fn detect_side_effect_of_member_expr(expr: &oxc::ast::ast::MemberExpression) -> bool {
     // MemberExpression is considered having side effect by default, unless it's some builtin global variable.
     let MemberExpression::StaticMemberExpression(expr) = expr else {
       return true;
@@ -519,7 +521,7 @@ impl<'a> SideEffectDetector<'a> {
           .contains(&(Cow::Borrowed(object_ident), Cow::Borrowed(prop)))
       }
       oxc::ast::ast::Expression::MemberExpression(mem_expr) => {
-        let MemberExpression::StaticMemberExpression(mem_expr) = mem_expr.deref() else {
+        let MemberExpression::StaticMemberExpression(mem_expr) = &**mem_expr else {
           return true;
         };
         let mid_prop = &mem_expr.property.name;
@@ -547,7 +549,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::FunctionExpression(_)
       | Expression::ArrowExpression(_)
       | Expression::StringLiteral(_) => false,
-      Expression::MemberExpression(mem_expr) => self.detect_side_effect_of_member_expr(mem_expr),
+      Expression::MemberExpression(mem_expr) => Self::detect_side_effect_of_member_expr(mem_expr),
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.is_unresolved_reference(ident),

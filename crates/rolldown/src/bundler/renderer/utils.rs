@@ -32,7 +32,7 @@ impl<'r> AstRenderContext<'r> {
 
   pub fn remove_stmt(&mut self, span: Span) {
     let end = span.end as usize;
-    let should_delete_line_ending = self.module.ast.source().get(end..end + 1) == Some("\n");
+    let should_delete_line_ending = self.module.ast.source().get(end..=end) == Some("\n");
     if should_delete_line_ending {
       self.source.remove(span.start, span.end + 1);
     } else {

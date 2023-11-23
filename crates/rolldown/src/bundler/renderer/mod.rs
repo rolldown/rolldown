@@ -9,7 +9,7 @@ use oxc::{
   ast::Visit,
   span::{Atom, GetSpan, Span},
 };
-use rolldown_common::{ExportsKind, SymbolRef, WrapKind};
+use rolldown_common::{ExportsKind, StmtInfo, StmtInfoId, StmtInfos, SymbolRef, WrapKind};
 use rolldown_oxc::BindingIdentifierExt;
 use rolldown_utils::MagicStringExt;
 use rustc_hash::FxHashMap;
@@ -89,20 +89,46 @@ impl RenderKind {
 }
 
 #[derive(Debug)]
+struct CurrentStmtInfo<'a> {
+  stmts_infos: &'a StmtInfos,
+  current_idx: StmtInfoId,
+}
+
+impl<'a> CurrentStmtInfo<'a> {
+  pub fn new(stmts_infos: &'a StmtInfos) -> Self {
+    Self { stmts_infos, current_idx: StmtInfoId::from_raw(0) }
+  }
+
+  pub fn get(&self) -> &StmtInfo {
+    // 0 represents the facade namespace declaration statement, so it should not be used here.
+    debug_assert!(self.current_idx.raw() != 0);
+    let stmt_info = &self.stmts_infos[self.current_idx];
+    debug_assert!(stmt_info.stmt_idx.is_some(), "Facade statement should not be used here");
+    stmt_info
+  }
+
+  pub fn next(&mut self) {
+    self.current_idx = StmtInfoId::from_raw(self.current_idx.raw() + 1);
+  }
+}
+
+#[derive(Debug)]
 pub struct AstRenderer<'r> {
   ctx: AstRenderContext<'r>,
   wrapped_esm_ctx: WrappedEsmCtx,
   kind: RenderKind,
   indentor: String,
+  current_stmt_info: CurrentStmtInfo<'r>,
 }
 
 impl<'r> AstRenderer<'r> {
-  pub fn new(ctx: AstRenderContext<'r>, kind: RenderKind) -> Self {
+  pub fn new(ctx: AstRenderContext<'r>, stmts_infos: &'r StmtInfos, kind: RenderKind) -> Self {
     Self {
       kind,
       indentor: ctx.source.guessed_indentor().to_string(),
       ctx,
       wrapped_esm_ctx: WrappedEsmCtx::default(),
+      current_stmt_info: CurrentStmtInfo::new(stmts_infos),
     }
   }
 }

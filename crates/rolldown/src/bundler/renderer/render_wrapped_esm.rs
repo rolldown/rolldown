@@ -3,7 +3,7 @@ use crate::bundler::module::Module;
 use super::{AstRenderer, RenderControl};
 use oxc::{
   ast::ast::Declaration,
-  span::{GetSpan, Span},
+  span::{Atom, GetSpan, Span},
 };
 use rolldown_common::ExportsKind;
 use rolldown_oxc::BindingIdentifierExt;
@@ -25,25 +25,16 @@ impl<'r> AstRenderer<'r> {
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
         self.ctx.remove_node(Span::new(decl.span.start, func.span.start));
-        if let Some(ident) = &func.id {
-          self.render_binding_identifier(ident);
-        } else {
+        if func.id.is_none() {
           let default_symbol_name = self.ctx.default_ref_name.unwrap();
           self.ctx.source.append_right(func.params.span.start, format!(" {default_symbol_name}"));
         }
-        self.wrapped_esm_ctx.hoisted_functions.push(func.span);
+        self.hoisted_function_declaration(func);
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+        self.ctx.remove_node(Span::new(decl.span.start, class.span.start));
         let default_symbol_name = self.ctx.default_ref_name.unwrap();
-        self.wrapped_esm_ctx.hoisted_vars.push(default_symbol_name.clone());
-        self.ctx.source.overwrite(
-          decl.span.start,
-          class.span.start,
-          format!("{default_symbol_name} = "),
-        );
-        // avoid syntax error
-        // export default class Foo {} Foo.prop = 123 => var Foo = class Foo {} \n Foo.prop = 123
-        self.ctx.source.append_right(class.span.end, "\n");
+        self.hoisted_class_declaration(class, default_symbol_name);
       }
       _ => {}
     }
@@ -57,46 +48,18 @@ impl<'r> AstRenderer<'r> {
     if let Some(decl) = &named_decl.declaration {
       match decl {
         Declaration::VariableDeclaration(var_decl) => {
-          let names = var_decl
-            .declarations
-            .iter()
-            .map(|decl| match &decl.id.kind {
-              oxc::ast::ast::BindingPatternKind::BindingIdentifier(id) => self
-                .ctx
-                .canonical_name_for((self.ctx.module.id, id.symbol_id.get().unwrap()).into()),
-              _ => unimplemented!(),
-            })
-            .cloned();
-          self.wrapped_esm_ctx.hoisted_vars.extend(names);
-          self
-            .ctx
-            .remove_node(Span::new(named_decl.span.start, var_decl.declarations[0].span.start));
+          self.hoisted_variable_declaration(&var_decl.declarations, named_decl.span.start);
         }
         Declaration::FunctionDeclaration(func) => {
           self.ctx.remove_node(Span::new(named_decl.span.start, func.span.start));
-          let id = func.id.as_ref().unwrap();
-          let name =
-            self.ctx.canonical_name_for((self.ctx.module.id, id.expect_symbol_id()).into());
-          if id.name != name {
-            self.ctx.source.overwrite(id.span.start, id.span.end, name.to_string());
-          }
-          self.wrapped_esm_ctx.hoisted_functions.push(func.span);
+          self.hoisted_function_declaration(func);
         }
         Declaration::ClassDeclaration(class) => {
+          self.ctx.remove_node(Span::new(named_decl.span.start, class.span.start));
           let id = class.id.as_ref().unwrap();
-          if let Some(name) =
-            self.ctx.need_to_rename((self.ctx.module.id, id.expect_symbol_id()).into())
-          {
-            self.wrapped_esm_ctx.hoisted_vars.push(name.clone());
-            self.ctx.source.overwrite(
-              named_decl.span.start,
-              class.span.start,
-              format!("{name} = "),
-            );
-            // avoid syntax error
-            // export class Foo {} Foo.prop = 123 => var Foo = class Foo {} \n Foo.prop = 123
-            self.ctx.source.append_right(class.span.end, "\n");
-          }
+          let name =
+            self.ctx.canonical_name_for((self.ctx.module.id, id.expect_symbol_id()).into());
+          self.hoisted_class_declaration(class, name);
         }
         _ => {}
       }
@@ -121,5 +84,58 @@ impl<'r> AstRenderer<'r> {
       self.ctx.remove_node(named_decl.span);
     }
     RenderControl::Skip
+  }
+
+  pub fn render_top_level_declaration_for_wrapped_esm(
+    &mut self,
+    decl: &oxc::ast::ast::Declaration,
+  ) {
+    match &decl {
+      oxc::ast::ast::Declaration::VariableDeclaration(var_decl) => {
+        self.hoisted_variable_declaration(&var_decl.declarations, decl.span().start);
+      }
+      oxc::ast::ast::Declaration::FunctionDeclaration(func) => {
+        self.hoisted_function_declaration(func);
+      }
+      oxc::ast::ast::Declaration::ClassDeclaration(class) => {
+        if let Some(id) = &class.id {
+          let name =
+            self.ctx.canonical_name_for((self.ctx.module.id, id.expect_symbol_id()).into());
+          self.hoisted_class_declaration(class, name);
+        }
+      }
+      _ => {}
+    }
+  }
+
+  fn hoisted_variable_declaration<'a>(
+    &mut self,
+    declarations: &oxc::allocator::Vec<'a, oxc::ast::ast::VariableDeclarator<'a>>,
+    decl_start: u32,
+  ) {
+    let names = declarations
+      .iter()
+      .map(|decl| match &decl.id.kind {
+        oxc::ast::ast::BindingPatternKind::BindingIdentifier(id) => {
+          self.ctx.canonical_name_for((self.ctx.module.id, id.symbol_id.get().unwrap()).into())
+        }
+        _ => unimplemented!(),
+      })
+      .cloned();
+    self.wrapped_esm_ctx.hoisted_vars.extend(names);
+    self.ctx.remove_node(Span::new(decl_start, declarations[0].span.start));
+  }
+
+  fn hoisted_function_declaration(&mut self, func: &oxc::ast::ast::Function) {
+    // binding_identifier will rename at visit children
+    self.wrapped_esm_ctx.hoisted_functions.push(func.span);
+  }
+
+  fn hoisted_class_declaration(&mut self, class: &oxc::ast::ast::Class, name: &Atom) {
+    self.wrapped_esm_ctx.hoisted_vars.push(name.clone());
+    self.ctx.source.append_left(class.span.start, format!("{name} = "));
+    // avoid syntax error
+    // export class Foo {} Foo.prop = 123 => var Foo = class Foo {} \n Foo.prop = 123
+    self.ctx.source.append_right(class.span.end, "\n");
   }
 }

@@ -8,7 +8,7 @@ use rolldown_utils::MagicStringExt;
 
 use crate::bundler::{module::Module, renderer::RenderControl};
 
-use super::AstRenderer;
+use super::{AstRenderer, RenderKind};
 
 impl<'ast, 'r> AstRenderer<'r> {
   fn visit_top_level_stmt(&mut self, stmt: &ast::Statement<'ast>) {
@@ -47,6 +47,12 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
       debug_assert!(self.current_stmt_info.get().stmt_idx == Some(stmt_idx));
       self.visit_top_level_stmt(stmt);
     }
+  fn enter_scope(&mut self, flags: oxc::semantic::ScopeFlags) {
+    self.scope_stack.push(flags);
+  }
+
+  fn leave_scope(&mut self) {
+    self.scope_stack.pop();
   }
 
   fn visit_binding_identifier(&mut self, ident: &oxc::ast::ast::BindingIdentifier) {
@@ -149,15 +155,21 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
       return;
     }
 
+    if matches!(self.kind, RenderKind::WrappedEsm) && self.is_top_level_scope() {
+      if let oxc::ast::ast::Statement::Declaration(decl) = stmt {
+        self.render_top_level_declaration_for_wrapped_esm(decl);
+      }
+    }
+
     // visit children
     self.visit_statement_match(stmt);
   }
 
   fn visit_export_named_declaration(&mut self, decl: &oxc::ast::ast::ExportNamedDeclaration<'ast>) {
     let control = match &mut self.kind {
-      super::RenderKind::WrappedEsm => self.render_export_named_declaration_for_wrapped_esm(decl),
-      super::RenderKind::Cjs => RenderControl::Continue,
-      super::RenderKind::Esm => self.render_export_named_declaration_for_esm(decl),
+      RenderKind::WrappedEsm => self.render_export_named_declaration_for_wrapped_esm(decl),
+      RenderKind::Cjs => RenderControl::Continue,
+      RenderKind::Esm => self.render_export_named_declaration_for_esm(decl),
     };
 
     if control.is_skip() {
@@ -174,8 +186,8 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     decl: &oxc::ast::ast::ExportDefaultDeclaration<'ast>,
   ) {
     let control = match &mut self.kind {
-      super::RenderKind::WrappedEsm => self.render_export_default_declaration_for_wrapped_esm(decl),
-      super::RenderKind::Cjs | super::RenderKind::Esm => self.strip_export_keyword(decl),
+      RenderKind::WrappedEsm => self.render_export_default_declaration_for_wrapped_esm(decl),
+      RenderKind::Cjs | RenderKind::Esm => self.strip_export_keyword(decl),
     };
 
     if control.is_skip() {

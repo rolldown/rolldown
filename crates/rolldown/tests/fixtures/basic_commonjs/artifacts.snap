@@ -44,7 +44,8 @@ var __toCommonJS = mod => __copyProps(__defProp({}, '__esModule', { value: true 
 // esm.js
 function esm_default_fn() {}
 function esm_named_fn() {}
-var esm_named_var,esm_named_class;
+function hoisted_fn() {}
+var esm_named_var,esm_named_class,hoisted_var,hoisted_class;
 var esm_ns = {
 	get default() { return esm_default_fn },
 	get esm_named_class() { return esm_named_class },
@@ -56,7 +57,12 @@ var init_esm = __esm({
 
 		esm_named_var = 1;
 
-		esm_named_class = class esm_named_class {}
+esm_named_class = 		class esm_named_class {}
+
+
+		hoisted_var = 1;
+
+hoisted_class = 		class hoisted_class {}
 
 	}
 });

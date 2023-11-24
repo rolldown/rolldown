@@ -34,12 +34,13 @@ var __toCommonJS = mod => __copyProps(__defProp({}, '__esModule', { value: true 
 function foo$1(a$1$1) {
     console.log(a$1$1, a$1)
 }
-        var foo_ns = {
+var a$1;
+var foo_ns = {
     get foo() { return foo$1 }
 };
 var init_foo = __esm({
     'foo.js'() {
-const a$1 = 1;
+        a$1 = 1;
 
 
     }

@@ -201,7 +201,6 @@ impl<'r> AstRenderer<'r> {
           exp.span().start,
           format!("var {default_ref_name} = "),
         );
-        self.visit_expression(exp);
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {
         self.ctx.remove_node(Span::new(default_decl.span.start, decl.span.start));
@@ -211,7 +210,7 @@ impl<'r> AstRenderer<'r> {
       }
       _ => unreachable!("TypeScript code should be preprocessed"),
     }
-    RenderControl::Skip
+    RenderControl::Continue
   }
 
   fn render_require_expr(&mut self, expr: &oxc::ast::ast::CallExpression) {

@@ -12,7 +12,7 @@ impl<'r> AstRenderContext<'r> {
     self.graph.symbols.canonical_name_for(symbol, self.canonical_names)
   }
 
-  pub fn need_to_rename(&self, symbol: SymbolRef) -> Option<&Atom> {
+  pub fn _need_to_rename(&self, symbol: SymbolRef) -> Option<&Atom> {
     let canonical_ref = self.graph.symbols.par_canonical_ref_for(symbol);
     self.canonical_names.get(&canonical_ref)
   }

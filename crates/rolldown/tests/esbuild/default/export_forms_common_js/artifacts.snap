@@ -49,7 +49,7 @@ var init_commonjs = __esm({
 		c = 234
 
 
-		Class = class Class {}
+Class = 		class Class {}
 
 
 
@@ -62,7 +62,7 @@ var c_ns = {
 };
 var init_c = __esm({
 	'c.js'() {
-		c_default = class {}
+c_default = 		class {}
 
 	}
 });
@@ -73,7 +73,7 @@ var d_ns = {
 };
 var init_d = __esm({
 	'd.js'() {
-		Foo = class Foo {}
+Foo = 		class Foo {}
  Foo.prop = 123
 	}
 });

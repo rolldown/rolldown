@@ -66,7 +66,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
 
     // `IdentifierReference` in callee position need to be handled specially
     if let oxc::ast::ast::Expression::Identifier(s) = &expr.callee {
-      self.render_identifier_reference(s, true);
+      self.render_identifier_reference(s, true, false);
     } else {
       self.visit_expression(&expr.callee);
     }
@@ -77,7 +77,7 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
   }
 
   fn visit_identifier_reference(&mut self, ident: &oxc::ast::ast::IdentifierReference) {
-    self.render_identifier_reference(ident, false);
+    self.render_identifier_reference(ident, false, false);
   }
 
   fn visit_import_declaration(&mut self, decl: &oxc::ast::ast::ImportDeclaration<'ast>) {
@@ -247,5 +247,20 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     // Visit children
     self.visit_binding_pattern(&pat.left);
     self.visit_expression(&pat.right);
+  }
+
+  fn visit_object_property(&mut self, prop: &ast::ObjectProperty) {
+    // rewrite `const val = { a };` to `const val = { a: a.xxx }`
+    if let (ast::PropertyKey::Identifier(ident), ast::Expression::Identifier(reference)) =
+      (&prop.key, &prop.value)
+    {
+      // Here compare name and span of ident and reference to distinguish shorthand property
+      if ident.name == reference.name && ident.span == reference.span {
+        self.render_identifier_reference(reference, false, true);
+        return;
+      }
+    }
+    self.visit_property_key(&prop.key);
+    self.visit_expression(&prop.value);
   }
 }

@@ -269,6 +269,7 @@ impl<'r> AstRenderer<'r> {
       &ident.name,
       ident.span,
       false,
+      false,
     );
   }
 
@@ -276,13 +277,20 @@ impl<'r> AstRenderer<'r> {
     &mut self,
     ident: &'_ oxc::ast::ast::IdentifierReference,
     is_callee: bool,
+    shorthand: bool,
   ) {
     let Some(symbol_id) = self.ctx.module.scope.symbol_id_for(ident.reference_id.get().unwrap())
     else {
       // This is global identifier references, eg `console.log`. We don't need to rewrite it.
       return;
     };
-    self.rewrite_symbol((self.ctx.module.id, symbol_id).into(), &ident.name, ident.span, is_callee);
+    self.rewrite_symbol(
+      (self.ctx.module.id, symbol_id).into(),
+      &ident.name,
+      ident.span,
+      is_callee,
+      shorthand,
+    );
   }
 }
 

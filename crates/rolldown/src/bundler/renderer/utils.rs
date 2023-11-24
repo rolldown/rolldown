@@ -121,6 +121,7 @@ impl<'r> AstRenderer<'r> {
     original_name: &Atom,
     pos: Span,
     is_callee: bool,
+    shorthand: bool,
   ) {
     let canonical_ref = self.ctx.graph.symbols.par_canonical_ref_for(symbol_ref);
     let symbol = self.ctx.graph.symbols.get(canonical_ref);
@@ -138,11 +139,15 @@ impl<'r> AstRenderer<'r> {
     };
 
     if original_name != &rendered_symbol {
-      self.ctx.source.update(
-        pos.start,
-        pos.end,
-        if is_callee { format!("(0, {rendered_symbol})",) } else { rendered_symbol.into_owned() },
-      );
+      if shorthand {
+        self.ctx.source.update(pos.start, pos.end, format!("{original_name}: {rendered_symbol}"));
+      } else {
+        self.ctx.source.update(
+          pos.start,
+          pos.end,
+          if is_callee { format!("(0, {rendered_symbol})",) } else { rendered_symbol.into_owned() },
+        );
+      }
     }
   }
 

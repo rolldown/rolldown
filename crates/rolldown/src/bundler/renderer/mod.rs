@@ -218,7 +218,7 @@ impl<'r> AstRenderer<'r> {
       }
       _ => unreachable!("TypeScript code should be preprocessed"),
     }
-    RenderControl::Skip
+    RenderControl::Continue
   }
 
   fn render_require_expr(&mut self, expr: &oxc::ast::ast::CallExpression) {

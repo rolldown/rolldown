@@ -4,5 +4,7 @@ export function esm_named_fn() {}
 export class esm_named_class {}
 
 const hoisted_var = 1;
-function hoisted_fn() {}
+function hoisted_fn() {
+    const bar = 1 // shouldn't hoisted
+}
 class hoisted_class {}

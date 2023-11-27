@@ -4,7 +4,7 @@ import path from 'path'
 const config: RollupOptions = {
   resolve: {
     alias: {
-      '@': path.dirname(__dirname),
+      '@': __dirname,
     },
   },
 }

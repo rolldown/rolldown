@@ -49,10 +49,19 @@ impl Bundler<OsFileSystem> {
 }
 
 impl<T: FileSystem + Default + 'static> Bundler<T> {
-  pub fn with_plugins_and_fs(input_options: InputOptions, plugins: Vec<BoxPlugin>, fs: T) -> Self {
+  pub fn with_plugins_and_fs(
+    mut input_options: InputOptions,
+    plugins: Vec<BoxPlugin>,
+    fs: T,
+  ) -> Self {
     rolldown_tracing::try_init_tracing();
     Self {
-      resolver: Resolver::with_cwd_and_fs(input_options.cwd.clone(), false, fs.share()).into(),
+      resolver: Resolver::with_cwd_and_fs(
+        input_options.cwd.clone(),
+        std::mem::take(&mut input_options.resolve),
+        fs.share(),
+      )
+      .into(),
       plugin_driver: Arc::new(PluginDriver::new(plugins)),
       input_options: Arc::new(input_options),
       fs,

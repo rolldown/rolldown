@@ -10075,6 +10075,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"rolldown_wasm@workspace:web/wasm":
+  version: 0.0.0-use.local
+  resolution: "rolldown_wasm@workspace:web/wasm"
+  languageName: unknown
+  linkType: soft
+
 "rollup-plugin-dts@npm:^6.0.0":
   version: 6.1.0
   resolution: "rollup-plugin-dts@npm:6.1.0"

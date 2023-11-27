@@ -1561,6 +1561,7 @@ dependencies = [
  "rolldown",
  "rolldown_error",
  "rolldown_fs",
+ "rolldown_resolver",
  "rolldown_tracing",
  "rustc-hash",
  "scoped-tls",

@@ -1,4 +1,4 @@
-use std::{fmt::Debug, path::PathBuf};
+use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 mod plugin;
 mod plugin_adapter;
 use crate::utils::{napi_error_ext::NapiErrorExt, JsCallback};
@@ -29,6 +29,37 @@ impl From<InputItem> for rolldown::InputItem {
 pub type ExternalFn = JsCallback<(String, Option<String>, bool), bool>;
 
 #[napi(object)]
+#[derive(Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolveOptions {
+  pub alias: HashMap<String, Vec<String>>,
+  pub alias_fields: Vec<Vec<String>>,
+  pub condition_names: Vec<String>,
+  pub exports_fields: Vec<Vec<String>>,
+  pub extensions: Vec<String>,
+  pub main_fields: Vec<String>,
+  pub main_files: Vec<String>,
+  pub modules: Vec<String>,
+  pub symlinks: bool,
+}
+
+impl From<ResolveOptions> for rolldown_resolver::ResolverOptions {
+  fn from(value: ResolveOptions) -> Self {
+    Self {
+      alias: value.alias.into_iter().map(|(key, value)| (key, value)).collect::<Vec<_>>(),
+      alias_fields: value.alias_fields,
+      condition_names: value.condition_names,
+      exports_fields: value.exports_fields,
+      extensions: value.extensions,
+      main_fields: value.main_fields,
+      main_files: value.main_files,
+      modules: value.modules,
+      symlinks: value.symlinks,
+    }
+  }
+}
+
+#[napi(object)]
 #[derive(Deserialize, Default, Derivative)]
 #[serde(rename_all = "camelCase")]
 #[derivative(Debug)]
@@ -57,6 +88,7 @@ pub struct InputOptions {
   // onwarn?: WarningHandlerWithDefault;
   // perf?: boolean;
   pub plugins: Vec<PluginOptions>,
+  pub resolve: Option<ResolveOptions>,
   // preserveEntrySignatures?: PreserveEntrySignaturesOption;
   // /** @deprecated Use the "preserveModules" output option instead. */
   // preserveModules?: boolean;
@@ -105,6 +137,7 @@ impl From<InputOptions>
         cwd,
         external,
         treeshake: false,
+        resolve: value.resolve.map(Into::into),
       }),
       value.plugins.into_iter().map(JsAdapterPlugin::new_boxed).collect::<napi::Result<Vec<_>>>(),
     )

@@ -4,6 +4,7 @@ import {
   Plugin,
 } from '../rollup-types'
 import { ensureArray, normalizePluginOption } from '../utils'
+import { ResolveOptions } from '@rolldown/node-binding'
 
 // TODO export compat plugin type
 export type RolldownPlugin = Plugin
@@ -11,16 +12,22 @@ export interface InputOptions {
   input?: RollupInputOptions['input']
   plugins?: RolldownPlugin[]
   external?: RollupInputOptions['external']
+  resolve?: ResolveOptions
+}
+
+export type RolldownNormalizedInputOptions = NormalizedInputOptions & {
+  resolve?: ResolveOptions
 }
 
 export async function normalizeInputOptions(
   config: InputOptions,
-): Promise<NormalizedInputOptions> {
+): Promise<RolldownNormalizedInputOptions> {
   // @ts-expect-error
   return {
     input: getInput(config),
     plugins: await normalizePluginOption(config.plugins),
     external: getIdMatcher(config.external),
+    resolve: config.resolve,
   }
 }
 

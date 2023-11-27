@@ -16,7 +16,11 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     for directive in &program.directives {
       self.visit_directive(directive);
     }
-    self.visit_statements(&program.body);
+    for (stmt_idx, stmt) in program.body.iter().enumerate() {
+      self.current_stmt_info.next();
+      debug_assert!(self.current_stmt_info.get().stmt_idx == Some(stmt_idx));
+      self.visit_statement(stmt);
+    }
   }
 
   fn visit_binding_identifier(&mut self, ident: &oxc::ast::ast::BindingIdentifier) {

@@ -76,7 +76,7 @@ impl NormalModule {
     );
 
     let render_kind = RenderKind::from_wrap_kind(&self_linking_info.wrap_kind);
-    let mut renderer = AstRenderer::new(base, render_kind);
+    let mut renderer = AstRenderer::new(base, &self.stmt_infos, render_kind);
     renderer.render();
 
     source.prepend(format!("// {}\n", self.pretty_path));

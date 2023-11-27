@@ -158,9 +158,7 @@ impl<'a> BundleStage<'a> {
               }
             }
           }
-          Module::External(_) => {
-            // TODO: process external module
-          }
+          Module::External(_) => {}
         }
       }
 

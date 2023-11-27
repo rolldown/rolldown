@@ -83,6 +83,7 @@ impl LinkingInfo {
       // Since the facade symbol is used, it should be referenced. This will be used to
       // create correct cross-chunk links
       referenced_symbols: vec![symbol_ref],
+      side_effect: true,
       ..Default::default()
     });
   }

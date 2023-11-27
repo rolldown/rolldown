@@ -354,12 +354,20 @@ impl<'ast> Scanner<'ast> {
   }
 }
 
+impl<'ast> Scanner<'ast> {
+  fn visit_top_level_stmt(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {
+    self.current_stmt_info.side_effect =
+      SideEffectDetector { scope: self.scope }.detect_side_effect_of_stmt(stmt);
+    self.visit_statement(stmt);
+  }
+}
+
 impl<'ast> Visit<'ast> for Scanner<'ast> {
   #[tracing::instrument(skip_all)]
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
-      self.visit_statement(stmt);
+      self.visit_top_level_stmt(stmt);
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }
   }
@@ -432,5 +440,99 @@ impl<'ast> Visit<'ast> for Scanner<'ast> {
       self.visit_argument(arg);
     }
     self.visit_expression(&expr.callee);
+  }
+}
+
+struct SideEffectDetector<'a> {
+  scope: &'a AstScope,
+}
+
+impl<'a> SideEffectDetector<'a> {
+  fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
+    self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
+  }
+
+  fn detect_side_effect_of_class(&self, cls: &oxc::ast::ast::Class) -> bool {
+    use oxc::ast::ast::ClassElement;
+    cls.body.body.iter().any(|elm| match elm {
+      ClassElement::StaticBlock(static_block) => {
+        static_block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
+      }
+      ClassElement::MethodDefinition(_) => false,
+      ClassElement::PropertyDefinition(def) => {
+        (match &def.key {
+          oxc::ast::ast::PropertyKey::Identifier(_)
+          | oxc::ast::ast::PropertyKey::PrivateIdentifier(_) => false,
+          oxc::ast::ast::PropertyKey::Expression(expr) => self.detect_side_effect_of_expr(expr),
+        } || def.value.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init)))
+      }
+      ClassElement::AccessorProperty(def) => {
+        (match &def.key {
+          oxc::ast::ast::PropertyKey::Identifier(_)
+          | oxc::ast::ast::PropertyKey::PrivateIdentifier(_) => false,
+          oxc::ast::ast::PropertyKey::Expression(expr) => self.detect_side_effect_of_expr(expr),
+        } || def.value.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init)))
+      }
+      ClassElement::TSAbstractMethodDefinition(_)
+      | ClassElement::TSAbstractPropertyDefinition(_)
+      | ClassElement::TSIndexSignature(_) => unreachable!("ts should be transpiled"),
+    })
+  }
+
+  fn detect_side_effect_of_expr(&self, expr: &oxc::ast::ast::Expression) -> bool {
+    use oxc::ast::ast::Expression;
+    match expr {
+      Expression::BooleanLiteral(_)
+      | Expression::NullLiteral(_)
+      | Expression::NumberLiteral(_)
+      | Expression::BigintLiteral(_)
+      | Expression::RegExpLiteral(_)
+      | Expression::FunctionExpression(_)
+      | Expression::ArrowExpression(_)
+      | Expression::StringLiteral(_) => false,
+      Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
+      // Accessing global variables considered as side effect.
+      Expression::Identifier(ident) => self.is_unresolved_reference(ident),
+      _ => true,
+    }
+  }
+
+  pub fn detect_side_effect_of_stmt(&self, stmt: &oxc::ast::ast::Statement) -> bool {
+    use oxc::ast::ast::{Declaration, Statement};
+    match stmt {
+      Statement::Declaration(decl) => match decl {
+        Declaration::VariableDeclaration(var_decl) => var_decl
+          .declarations
+          .iter()
+          .any(|decl| decl.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))),
+        Declaration::FunctionDeclaration(_) => false,
+        Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
+        Declaration::UsingDeclaration(_) => todo!(),
+        Declaration::TSTypeAliasDeclaration(_)
+        | Declaration::TSInterfaceDeclaration(_)
+        | Declaration::TSEnumDeclaration(_)
+        | Declaration::TSModuleDeclaration(_)
+        | Declaration::TSImportEqualsDeclaration(_) => unreachable!("ts should be transpiled"),
+      },
+      Statement::ExpressionStatement(expr) => self.detect_side_effect_of_expr(&expr.expression),
+      Statement::BlockStatement(_)
+      | Statement::BreakStatement(_)
+      | Statement::DebuggerStatement(_)
+      | Statement::DoWhileStatement(_)
+      | Statement::EmptyStatement(_)
+      | Statement::ForInStatement(_)
+      | Statement::ForOfStatement(_)
+      | Statement::ForStatement(_)
+      | Statement::IfStatement(_)
+      | Statement::LabeledStatement(_)
+      | Statement::ReturnStatement(_)
+      | Statement::SwitchStatement(_)
+      | Statement::ThrowStatement(_)
+      | Statement::TryStatement(_)
+      | Statement::WhileStatement(_)
+      | Statement::WithStatement(_)
+      | Statement::ModuleDeclaration(_)
+      | Statement::ContinueStatement(_) => true,
+    }
   }
 }

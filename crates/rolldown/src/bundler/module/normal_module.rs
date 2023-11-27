@@ -202,9 +202,11 @@ impl NormalModule {
     symbols: &mut Symbols,
   ) -> SymbolRef {
     let symbol_ref = symbols.create_symbol(self.id, name);
-    self_linking_info
-      .facade_stmt_infos
-      .push(StmtInfo { declared_symbols: vec![symbol_ref], ..Default::default() });
+    self_linking_info.facade_stmt_infos.push(StmtInfo {
+      declared_symbols: vec![symbol_ref],
+      side_effect: true,
+      ..Default::default()
+    });
     symbol_ref
   }
 

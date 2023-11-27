@@ -40,6 +40,12 @@ impl std::ops::Deref for StmtInfos {
   }
 }
 
+impl std::ops::DerefMut for StmtInfos {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.infos
+  }
+}
+
 index_vec::define_index_type! {
   pub struct StmtInfoId = u32;
 }
@@ -59,4 +65,5 @@ pub struct StmtInfo {
   // here instead of `SymbolId`.
   /// Top level symbols referenced by this statement.
   pub referenced_symbols: Vec<SymbolRef>,
+  pub side_effect: bool,
 }

@@ -304,9 +304,10 @@ impl LinkStage {
           // Skip the first one, because it's the namespace variable declaration.
           // We want to include it on demand.
           stmt_infos.next();
-          // Since we won't implement tree shaking, we just include all statements.
-          stmt_infos.for_each(|(stmt_info_id, _)| {
-            include_statement(context, module, stmt_info_id);
+          stmt_infos.for_each(|(stmt_info_id, stmt_info)| {
+            if stmt_info.side_effect {
+              include_statement(context, module, stmt_info_id);
+            }
           });
           if module.is_entry {
             let linking_info = &self.linking_infos[module.id];

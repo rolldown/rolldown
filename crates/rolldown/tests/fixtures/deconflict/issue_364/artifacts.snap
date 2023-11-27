@@ -1,0 +1,26 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/deconflict/issue_364
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+// shared.js
+const a = 'shared.js'
+
+
+// main.js
+
+
+const a$1 = 'a'
+const a$1$1 = 'a$1'
+
+assert.equal(a, 'shared.js')
+assert.equal(a$1, 'a')
+assert.equal(a$1$1, 'a$1')
+```

@@ -41,11 +41,15 @@ impl<'name> Renamer<'name> {
     match self.canonical_names.entry(canonical_ref) {
       std::collections::hash_map::Entry::Vacant(vacant) => {
         let count = self.top_level_name_counts.entry(original_name.clone()).or_default();
-        let canonical_name = if *count == 0 {
-          original_name
+        let mut canonical_name = if *count == 0 {
+          original_name.clone()
         } else {
           Cow::Owned(format!("{}${}", original_name, *count).into())
         };
+        while self.used_canonical_names.contains(&canonical_name) {
+          *count += 1;
+          canonical_name = Cow::Owned(format!("{}${}", original_name, *count).into());
+        }
         self.used_canonical_names.insert(canonical_name.clone());
         vacant.insert(canonical_name.into_owned());
         *count += 1;

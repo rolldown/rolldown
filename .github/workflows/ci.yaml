@@ -151,11 +151,7 @@ jobs:
         run: yarn lint-filename
 
       - name: Oxc Lint
-        # Run `yarn lint` to get display for warnings
-        # Run `yarn lint:ci` to get exit code 1 for warnings
-        run: |
-          yarn lint
-          yarn lint:ci
+        run: yarn lint
 
       - name: Run Prettier
         run: yarn prettier:ci

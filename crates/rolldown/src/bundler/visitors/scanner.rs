@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
 use index_vec::IndexVec;
 use oxc::{
   ast::{
     ast::{
       ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
-      ImportDeclaration, ModuleDeclaration, Program,
+      ImportDeclaration, MemberExpression, ModuleDeclaration, Program,
     },
     Visit,
   },
@@ -18,9 +18,38 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_oxc::{BindingIdentifierExt, BindingPatternExt};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::bundler::utils::{ast_scope::AstScope, ast_symbol::AstSymbol};
+
+// Probably we should generate this using macros.
+static SIDE_EFFECT_FREE_MEMBER_EXPR_2: once_cell::sync::Lazy<
+  FxHashSet<(Cow<'static, Atom>, Cow<'static, Atom>)>,
+> = once_cell::sync::Lazy::new(|| {
+  [
+    ("Object", "create"),
+    ("Object", "defineProperty"),
+    ("Object", "getOwnPropertyDescriptor"),
+    ("Object", "getPrototypeOf"),
+    ("Object", "getOwnPropertyNames"),
+  ]
+  .into_iter()
+  .map(|(obj, prop)| (Cow::Owned(obj.into()), Cow::Owned(prop.into())))
+  .collect()
+});
+
+// hyf0: clippy::type_complexity: This is only a temporary solution.
+#[allow(clippy::type_complexity)]
+static SIDE_EFFECT_FREE_MEMBER_EXPR_3: once_cell::sync::Lazy<
+  FxHashSet<(Cow<'static, Atom>, Cow<'static, Atom>, Cow<'static, Atom>)>,
+> = once_cell::sync::Lazy::new(|| {
+  [("Object", "prototype", "hasOwnProperty"), ("Object", "prototype", "constructor")]
+    .into_iter()
+    .map(|(obj, obj_mid, prop)| {
+      (Cow::Owned(obj.into()), Cow::Owned(obj_mid.into()), Cow::Owned(prop.into()))
+    })
+    .collect()
+});
 
 #[derive(Debug, Default)]
 pub struct ScanResult {
@@ -479,6 +508,36 @@ impl<'a> SideEffectDetector<'a> {
     })
   }
 
+  fn detect_side_effect_of_member_expr(expr: &oxc::ast::ast::MemberExpression) -> bool {
+    // MemberExpression is considered having side effect by default, unless it's some builtin global variable.
+    let MemberExpression::StaticMemberExpression(expr) = expr else {
+      return true;
+    };
+    let prop = &expr.property.name;
+    match &expr.object {
+      oxc::ast::ast::Expression::Identifier(ident) => {
+        let object_ident = &ident.name;
+        !SIDE_EFFECT_FREE_MEMBER_EXPR_2
+          .contains(&(Cow::Borrowed(object_ident), Cow::Borrowed(prop)))
+      }
+      oxc::ast::ast::Expression::MemberExpression(mem_expr) => {
+        let MemberExpression::StaticMemberExpression(mem_expr) = &**mem_expr else {
+          return true;
+        };
+        let mid_prop = &mem_expr.property.name;
+        let oxc::ast::ast::Expression::Identifier(obj_ident) = &mem_expr.object else {
+          return true;
+        };
+        !SIDE_EFFECT_FREE_MEMBER_EXPR_3.contains(&(
+          Cow::Borrowed(&obj_ident.name),
+          Cow::Borrowed(mid_prop),
+          Cow::Borrowed(prop),
+        ))
+      }
+      _ => true,
+    }
+  }
+
   fn detect_side_effect_of_expr(&self, expr: &oxc::ast::ast::Expression) -> bool {
     use oxc::ast::ast::Expression;
     match expr {
@@ -490,6 +549,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::FunctionExpression(_)
       | Expression::ArrowExpression(_)
       | Expression::StringLiteral(_) => false,
+      Expression::MemberExpression(mem_expr) => Self::detect_side_effect_of_member_expr(mem_expr),
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.is_unresolved_reference(ident),

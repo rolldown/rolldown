@@ -2,6 +2,7 @@
     "input": {
         "external": [
             "assert"
-        ]
+        ],
+        "treeshake": false
     }
 }

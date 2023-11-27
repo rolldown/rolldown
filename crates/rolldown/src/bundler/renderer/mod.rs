@@ -7,7 +7,6 @@ use std::fmt::Debug;
 
 use oxc::{
   ast::Visit,
-  semantic::ScopeFlags,
   span::{Atom, GetSpan, Span},
 };
 use rolldown_common::{ExportsKind, StmtInfo, StmtInfoId, StmtInfos, SymbolRef, WrapKind};
@@ -120,7 +119,6 @@ pub struct AstRenderer<'r> {
   kind: RenderKind,
   indentor: String,
   current_stmt_info: CurrentStmtInfo<'r>,
-  scope_stack: Vec<ScopeFlags>,
 }
 
 impl<'r> AstRenderer<'r> {
@@ -131,7 +129,6 @@ impl<'r> AstRenderer<'r> {
       ctx,
       wrapped_esm_ctx: WrappedEsmCtx::default(),
       current_stmt_info: CurrentStmtInfo::new(stmts_infos),
-      scope_stack: vec![],
     }
   }
 }
@@ -286,10 +283,6 @@ impl<'r> AstRenderer<'r> {
       is_callee,
       shorthand,
     );
-  }
-
-  fn is_top_level_scope(&self) -> bool {
-    self.scope_stack.last().unwrap().contains(ScopeFlags::Top)
   }
 }
 

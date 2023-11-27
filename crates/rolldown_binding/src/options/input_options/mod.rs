@@ -32,21 +32,23 @@ pub type ExternalFn = JsCallback<(String, Option<String>, bool), bool>;
 #[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolveOptions {
-  pub alias: HashMap<String, Vec<String>>,
-  pub alias_fields: Vec<Vec<String>>,
-  pub condition_names: Vec<String>,
-  pub exports_fields: Vec<Vec<String>>,
-  pub extensions: Vec<String>,
-  pub main_fields: Vec<String>,
-  pub main_files: Vec<String>,
-  pub modules: Vec<String>,
-  pub symlinks: bool,
+  pub alias: Option<HashMap<String, Vec<String>>>,
+  pub alias_fields: Option<Vec<Vec<String>>>,
+  pub condition_names: Option<Vec<String>>,
+  pub exports_fields: Option<Vec<Vec<String>>>,
+  pub extensions: Option<Vec<String>>,
+  pub main_fields: Option<Vec<String>>,
+  pub main_files: Option<Vec<String>>,
+  pub modules: Option<Vec<String>>,
+  pub symlinks: Option<bool>,
 }
 
 impl From<ResolveOptions> for rolldown_resolver::ResolverOptions {
   fn from(value: ResolveOptions) -> Self {
     Self {
-      alias: value.alias.into_iter().map(|(key, value)| (key, value)).collect::<Vec<_>>(),
+      alias: value
+        .alias
+        .map(|alias| alias.into_iter().map(|(key, value)| (key, value)).collect::<Vec<_>>()),
       alias_fields: value.alias_fields,
       condition_names: value.condition_names,
       exports_fields: value.exports_fields,

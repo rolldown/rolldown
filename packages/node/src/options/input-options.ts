@@ -12,7 +12,11 @@ export interface InputOptions {
   input?: RollupInputOptions['input']
   plugins?: RolldownPlugin[]
   external?: RollupInputOptions['external']
-  resolve?: ResolveOptions
+  resolve?: RolldownResolveOptions
+}
+
+export type RolldownResolveOptions = Omit<ResolveOptions, 'alias'> & {
+  alias: Record<string, string>
 }
 
 export type RolldownNormalizedInputOptions = NormalizedInputOptions & {
@@ -27,7 +31,7 @@ export async function normalizeInputOptions(
     input: getInput(config),
     plugins: await normalizePluginOption(config.plugins),
     external: getIdMatcher(config.external),
-    resolve: config.resolve,
+    resolve: getResolve(config.resolve),
   }
 }
 
@@ -71,4 +75,19 @@ const getIdMatcher = <T extends Array<any>>(
   }
   // Rollup here convert `undefined` to function, it is bad for performance. So it will convert to `undefined` at adapter.
   return () => false
+}
+
+function getResolve(
+  resolve?: RolldownResolveOptions,
+): RolldownNormalizedInputOptions['resolve'] {
+  if (resolve) {
+    return {
+      ...resolve,
+      alias: resolve.alias
+        ? Object.fromEntries(
+            Object.entries(resolve.alias).map(([key, value]) => [key, [value]]),
+          )
+        : undefined,
+    }
+  }
 }

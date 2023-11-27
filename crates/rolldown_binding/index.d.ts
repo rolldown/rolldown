@@ -6,7 +6,11 @@
 export interface PluginOptions {
   name: string
   buildStart?: () => Promise<void>
-  resolveId?: (specifier: string, importer?: string, options?: HookResolveIdArgsOptions) => Promise<undefined | ResolveIdResult>
+  resolveId?: (
+    specifier: string,
+    importer?: string,
+    options?: HookResolveIdArgsOptions,
+  ) => Promise<undefined | ResolveIdResult>
   load?: (id: string) => Promise<undefined | SourceResult>
   transform?: (id: string, code: string) => Promise<undefined | SourceResult>
   buildEnd?: (error: string) => Promise<void>
@@ -27,15 +31,15 @@ export interface InputItem {
   import: string
 }
 export interface ResolveOptions {
-  alias: Record<string, Array<string>>
-  aliasFields: Array<Array<string>>
-  conditionNames: Array<string>
-  exportsFields: Array<Array<string>>
-  extensions: Array<string>
-  mainFields: Array<string>
-  mainFiles: Array<string>
-  modules: Array<string>
-  symlinks: boolean
+  alias?: Record<string, Array<string>>
+  aliasFields?: Array<Array<string>>
+  conditionNames?: Array<string>
+  exportsFields?: Array<Array<string>>
+  extensions?: Array<string>
+  mainFields?: Array<string>
+  mainFiles?: Array<string>
+  modules?: Array<string>
+  symlinks?: boolean
 }
 export interface InputOptions {
   external?: (source: string, importer?: string, isResolved: boolean) => boolean

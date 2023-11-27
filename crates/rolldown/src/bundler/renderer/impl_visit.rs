@@ -29,6 +29,11 @@ impl<'ast, 'r> AstRenderer<'r> {
       }
     }
     if self.current_stmt_info.get().is_included {
+      if matches!(self.kind, RenderKind::WrappedEsm) {
+        if let oxc::ast::ast::Statement::Declaration(decl) = stmt {
+          self.render_top_level_declaration_for_wrapped_esm(decl);
+        }
+      }
       self.visit_statement(stmt);
     } else {
       self.ctx.remove_stmt(stmt.span());
@@ -47,12 +52,6 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
       debug_assert!(self.current_stmt_info.get().stmt_idx == Some(stmt_idx));
       self.visit_top_level_stmt(stmt);
     }
-  fn enter_scope(&mut self, flags: oxc::semantic::ScopeFlags) {
-    self.scope_stack.push(flags);
-  }
-
-  fn leave_scope(&mut self) {
-    self.scope_stack.pop();
   }
 
   fn visit_binding_identifier(&mut self, ident: &oxc::ast::ast::BindingIdentifier) {
@@ -153,12 +152,6 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
   fn visit_statement(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {
     if self.try_render_require_statement(stmt).is_skip() {
       return;
-    }
-
-    if matches!(self.kind, RenderKind::WrappedEsm) && self.is_top_level_scope() {
-      if let oxc::ast::ast::Statement::Declaration(decl) = stmt {
-        self.render_top_level_declaration_for_wrapped_esm(decl);
-      }
     }
 
     // visit children

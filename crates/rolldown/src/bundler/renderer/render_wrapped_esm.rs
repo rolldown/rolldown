@@ -92,7 +92,7 @@ impl<'r> AstRenderer<'r> {
   ) {
     match &decl {
       oxc::ast::ast::Declaration::VariableDeclaration(var_decl) => {
-        self.hoisted_variable_declaration(&var_decl.declarations, decl.span().start);
+        self.hoisted_variable_declaration(&var_decl.declarations, var_decl.span.start);
       }
       oxc::ast::ast::Declaration::FunctionDeclaration(func) => {
         self.hoisted_function_declaration(func);

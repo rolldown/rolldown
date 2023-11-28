@@ -53,8 +53,6 @@ pub struct ResolverOptions {
 
 impl From<ResolverOptions> for oxc_resolver::ResolveOptions {
   fn from(value: ResolverOptions) -> Self {
-    let options = Self::default();
-
     Self {
       alias: value
         .alias
@@ -66,16 +64,27 @@ impl From<ResolverOptions> for oxc_resolver::ResolveOptions {
             })
             .collect::<Vec<_>>()
         })
-        .unwrap_or(options.alias),
-      alias_fields: value.alias_fields.unwrap_or(options.alias_fields),
-      condition_names: value.condition_names.unwrap_or(options.condition_names),
-      exports_fields: value.exports_fields.unwrap_or(options.exports_fields),
-      extensions: value.extensions.unwrap_or(options.extensions),
-      main_fields: value.main_fields.unwrap_or(options.main_fields),
-      main_files: value.main_files.unwrap_or(options.main_files),
-      modules: value.modules.unwrap_or(options.modules),
-      symlinks: value.symlinks.unwrap_or(options.symlinks),
-      ..options
+        .unwrap_or(vec![]),
+      alias_fields: value.alias_fields.unwrap_or(vec![]),
+      condition_names: value.condition_names.unwrap_or(vec![]),
+      exports_fields: value.exports_fields.unwrap_or(vec![vec!["exports".into()]]),
+      extensions: value.extensions.unwrap_or(vec![".js".into(), ".json".into(), ".node".into()]),
+      main_fields: value.main_fields.unwrap_or(vec!["main".into()]),
+      main_files: value.main_files.unwrap_or(vec!["index".into()]),
+      modules: value.modules.unwrap_or(vec!["node_modules".into()]),
+      symlinks: value.symlinks.unwrap_or(true),
+      tsconfig: None,
+      description_files: vec!["package.json".into()],
+      enforce_extension: oxc_resolver::EnforceExtension::Auto,
+      extension_alias: vec![],
+      fallback: vec![],
+      fully_specified: false,
+      resolve_to_context: false,
+      prefer_relative: false,
+      prefer_absolute: false,
+      restrictions: vec![],
+      roots: vec![],
+      builtin_modules: false,
     }
   }
 }

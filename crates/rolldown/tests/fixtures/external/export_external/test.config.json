@@ -4,5 +4,6 @@
             "external"
         ],
         "treeshake": false
-    }
+    },
+    "expectExecuted": false
 }

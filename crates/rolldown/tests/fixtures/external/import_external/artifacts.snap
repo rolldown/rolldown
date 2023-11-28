@@ -1,0 +1,24 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/external/import_external
+---
+# Assets
+
+## main.mjs
+
+```js
+import * as ext$1 from "external";
+import * as ext from "external";
+import { a, a as a$1, b, b as b$1 } from "external";
+
+// foo.js
+
+
+console.log(ext$1, a$1, b$1)
+// main.js
+
+
+
+console.log(ext, a, b)
+```

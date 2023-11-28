@@ -5,6 +5,11 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_import_issue_272
 ---
 # Assets
 
+## 2.mjs
+
+```js
+
+```
 ## a.mjs
 
 ```js

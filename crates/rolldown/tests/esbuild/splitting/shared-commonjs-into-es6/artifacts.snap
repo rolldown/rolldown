@@ -8,7 +8,12 @@ input_file: crates/rolldown/tests/esbuild/splitting/shared-commonjs-into-es6
 ## 2.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.mjs";
+// <runtime>
+
+var __getOwnPropNames = Object.getOwnPropertyNames
+var __commonJS = (cb, mod) => function () {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
+}
 
 // shared.js
 var require_shared = __commonJS({

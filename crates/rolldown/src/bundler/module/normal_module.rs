@@ -62,6 +62,11 @@ impl NormalModule {
 
   #[allow(clippy::needless_pass_by_value)]
   pub fn render(&self, ctx: ModuleRenderContext<'_>) -> Option<MagicString<'static>> {
+    // FIXME: Remove this when we support removing module that rendered nothing
+    if self.id == ctx.graph.runtime.id() && self.stmt_infos.iter().all(|info| !info.is_included) {
+      return None;
+    }
+
     let source = self.ast.source();
     // FIXME: should not clone here
     let mut source = MagicString::new(source.to_string());

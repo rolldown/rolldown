@@ -8,11 +8,16 @@ input_file: crates/rolldown/tests/esbuild/splitting/duplicate_chunk_collision
 ## 4.mjs
 
 ```js
+
+```
+## 5.mjs
+
+```js
 // cd.js
 console.log(123)
 // d.js
 ```
-## 5.mjs
+## 6.mjs
 
 ```js
 // ab.js

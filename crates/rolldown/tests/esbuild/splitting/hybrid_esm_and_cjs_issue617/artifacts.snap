@@ -8,7 +8,25 @@ input_file: crates/rolldown/tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
 ## 2.mjs
 
 ```js
-import { __esm } from "./_rolldown_runtime.mjs";
+// <runtime>
+
+var __defProp = Object.defineProperty
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor
+var __getOwnPropNames = Object.getOwnPropertyNames
+var __hasOwnProp = Object.prototype.hasOwnProperty
+var __esm = (fn, res) => function () {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res
+}
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === 'object' || typeof from === 'function')
+    for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+      key = keys[i]
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: (k => from[k]).bind(null, key), enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable })
+    }
+  return to
+}
+var __toCommonJS = mod => __copyProps(__defProp({}, '__esModule', { value: true }), mod)
 
 // a.js
 var foo;
@@ -20,7 +38,7 @@ var init_a = __esm({
 		foo
 	}
 });
-export { a_ns, foo, init_a };
+export { __toCommonJS, a_ns, foo, init_a };
 ```
 ## a.mjs
 
@@ -32,8 +50,7 @@ export { foo };
 ## b.mjs
 
 ```js
-import { __toCommonJS } from "./_rolldown_runtime.mjs";
-import { a_ns, init_a } from "./2.mjs";
+import { __toCommonJS, a_ns, init_a } from "./2.mjs";
 
 // b.js
 let bar = (init_a(), __toCommonJS(a_ns))

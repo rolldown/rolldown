@@ -31,7 +31,7 @@ impl<'ast, 'r> AstRenderer<'r> {
     if self.current_stmt_info.get().is_included {
       self.visit_statement(stmt);
     } else {
-      self.remove_node(stmt.span());
+      self.ctx.remove_stmt(stmt.span());
     }
   }
 }

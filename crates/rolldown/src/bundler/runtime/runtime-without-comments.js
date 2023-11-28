@@ -1,14 +1,3 @@
----
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
----
-# Assets
-
-## main.mjs
-
-```js
-// <runtime>
 
 var __create = Object.create
 var __defProp = Object.defineProperty
@@ -16,8 +5,17 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor
 var __getOwnPropNames = Object.getOwnPropertyNames
 var __getProtoOf = Object.getPrototypeOf
 var __hasOwnProp = Object.prototype.hasOwnProperty
+var __esm = (fn, res) => function () {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res
+}
+var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res)
 var __commonJS = (cb, mod) => function () {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
+}
+var __commonJSMin = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports)
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true })
 }
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === 'object' || typeof from === 'function')
@@ -28,6 +26,10 @@ var __copyProps = (to, from, except, desc) => {
     }
   return to
 }
+var __reExport = (target, mod, secondTarget) => (
+  __copyProps(target, mod, 'default'),
+  secondTarget && __copyProps(secondTarget, mod, 'default')
+)
 var __toESM = (mod, isNodeMode, target) => (
   target = mod != null ? __create(__getProtoOf(mod)) : {},
   __copyProps(
@@ -36,15 +38,4 @@ var __toESM = (mod, isNodeMode, target) => (
       : target,
     mod)
 )
-
-// commonjs.js
-var require_commonjs = __commonJS({
-	'commonjs.js'(exports, module) {
-		exports.a = 1
-	}
-});
-// main.js
-var import_commonjs = __toESM(require_commonjs());
-
-console.log(import_commonjs)
-```
+var __toCommonJS = mod => __copyProps(__defProp({}, '__esModule', { value: true }), mod)

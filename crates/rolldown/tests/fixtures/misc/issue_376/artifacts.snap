@@ -1,0 +1,17 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/misc/issue_376
+---
+# Assets
+
+## main.mjs
+
+```js
+// main.js
+const test = 'hello world'
+
+
+
+export { test as default };
+```

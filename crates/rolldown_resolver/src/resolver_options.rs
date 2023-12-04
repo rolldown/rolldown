@@ -64,14 +64,16 @@ impl From<ResolverOptions> for oxc_resolver::ResolveOptions {
             })
             .collect::<Vec<_>>()
         })
-        .unwrap_or(vec![]),
-      alias_fields: value.alias_fields.unwrap_or(vec![]),
-      condition_names: value.condition_names.unwrap_or(vec![]),
-      exports_fields: value.exports_fields.unwrap_or(vec![vec!["exports".into()]]),
-      extensions: value.extensions.unwrap_or(vec![".js".into(), ".json".into(), ".node".into()]),
-      main_fields: value.main_fields.unwrap_or(vec!["main".into()]),
-      main_files: value.main_files.unwrap_or(vec!["index".into()]),
-      modules: value.modules.unwrap_or(vec!["node_modules".into()]),
+        .unwrap_or_default(),
+      alias_fields: value.alias_fields.unwrap_or_default(),
+      condition_names: value.condition_names.unwrap_or_default(),
+      exports_fields: value.exports_fields.unwrap_or_else(|| vec![vec!["exports".into()]]),
+      extensions: value
+        .extensions
+        .unwrap_or_else(|| vec![".js".into(), ".json".into(), ".node".into()]),
+      main_fields: value.main_fields.unwrap_or_else(|| vec!["main".into()]),
+      main_files: value.main_files.unwrap_or_else(|| vec!["index".into()]),
+      modules: value.modules.unwrap_or_else(|| vec!["node_modules".into()]),
       symlinks: value.symlinks.unwrap_or(true),
       tsconfig: None,
       description_files: vec!["package.json".into()],

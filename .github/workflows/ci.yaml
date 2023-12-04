@@ -77,6 +77,8 @@ jobs:
 
       - name: Install node
         uses: actions/setup-node@v3
+        with:
+          node-version: 18.18.0
 
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
@@ -114,6 +116,7 @@ jobs:
       - name: Install node
         uses: actions/setup-node@v3
         with:
+          node-version: 18.18.0
           cache: yarn
 
       - name: Install dependencies
@@ -143,6 +146,7 @@ jobs:
       - name: Install node
         uses: actions/setup-node@v3
         with:
+          node-version: 18.18.0
           cache: yarn
 
       - name: Install dependencies

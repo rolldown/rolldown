@@ -199,6 +199,7 @@ impl<'r> AstRenderer<'r> {
       oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => match exp {
         Expression::Identifier(_) => {
           self.ctx.remove_node(default_decl.span);
+          return RenderControl::Skip;
         }
         _ => {
           let default_ref_name = self.ctx.default_ref_name.expect("Should generated a name");
@@ -207,7 +208,6 @@ impl<'r> AstRenderer<'r> {
             exp.span().start,
             format!("var {default_ref_name} = "),
           );
-          self.visit_expression(exp);
         }
       },
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(decl) => {

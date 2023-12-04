@@ -239,6 +239,7 @@ impl LinkStage {
       modules: &'a ModuleVec,
       symbols: &'a Symbols,
       is_included_vec: &'a mut IndexVec<ModuleId, IndexVec<StmtInfoId, bool>>,
+      is_module_included_vec: &'a mut IndexVec<ModuleId, bool>,
     }
 
     fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
@@ -262,6 +263,7 @@ impl LinkStage {
     }
 
     fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoId) {
+      ctx.is_module_included_vec[module.id] = true;
       let is_included = &mut ctx.is_included_vec[module.id][stmt_info_id];
       if *is_included {
         return;
@@ -290,11 +292,13 @@ impl LinkStage {
         Module::External(_) => IndexVec::default(),
       })
       .collect::<IndexVec<ModuleId, _>>();
+    let mut is_module_included_vec = index_vec::index_vec![false; self.modules.len()];
 
     let context = &mut Context {
       modules: &self.modules,
       symbols: &self.symbols,
       is_included_vec: &mut is_included_vec,
+      is_module_included_vec: &mut is_module_included_vec,
     };
 
     for module in &self.modules {
@@ -323,6 +327,7 @@ impl LinkStage {
       let Module::Normal(module) = module else {
         return;
       };
+      module.is_included = is_module_included_vec[module.id];
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });

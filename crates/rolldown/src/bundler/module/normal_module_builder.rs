@@ -56,6 +56,7 @@ impl NormalModuleBuilder {
       module_type: self.module_type,
       is_user_defined_entry: self.is_user_defined_entry.unwrap(),
       pretty_path: self.pretty_path.unwrap(),
+      is_included: false,
     }
   }
 }

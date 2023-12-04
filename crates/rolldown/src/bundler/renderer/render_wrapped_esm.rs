@@ -47,7 +47,7 @@ impl<'r> AstRenderer<'r> {
       }
       _ => {}
     }
-    RenderControl::Skip
+    RenderControl::Continue
   }
 
   pub fn render_export_named_declaration_for_wrapped_esm(

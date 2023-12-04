@@ -31,7 +31,7 @@ pub struct NormalModuleBuilder {
   pub namespace_symbol: Option<SymbolRef>,
   pub exports_kind: Option<ExportsKind>,
   pub module_type: ModuleType,
-  pub is_entry: bool,
+  pub is_user_defined_entry: Option<bool>,
   pub pretty_path: Option<String>,
 }
 
@@ -54,7 +54,7 @@ impl NormalModuleBuilder {
       namespace_symbol: self.namespace_symbol.unwrap(),
       exports_kind: self.exports_kind.unwrap_or(ExportsKind::Esm),
       module_type: self.module_type,
-      is_entry: self.is_entry,
+      is_user_defined_entry: self.is_user_defined_entry.unwrap(),
       pretty_path: self.pretty_path.unwrap(),
     }
   }

@@ -9,7 +9,7 @@ use crate::{
     },
     chunk_graph::ChunkGraph,
     module::Module,
-    options::output_options::OutputOptions,
+    options::{file_name_template::FileNameRenderOptions, output_options::OutputOptions},
     stages::link_stage::LinkStageOutput,
     utils::bitset::BitSet,
   },
@@ -39,11 +39,7 @@ impl<'a> BundleStage<'a> {
     use rayon::prelude::*;
     let mut chunk_graph = self.generate_chunks();
 
-    chunk_graph
-      .chunks
-      .iter_mut()
-      .par_bridge()
-      .for_each(|chunk| chunk.render_file_name(self.output_options));
+    self.generate_chunk_filenames(&mut chunk_graph);
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 
@@ -63,10 +59,10 @@ impl<'a> BundleStage<'a> {
         Output::Chunk(Box::new(OutputChunk {
           file_name: c.file_name.clone().unwrap(),
           code: content,
-          is_entry: matches!(&c.entry_point, Some(e) if e.kind == EntryPointKind::UserSpecified),
+          is_entry: matches!(&c.entry_point, Some(e) if e.kind == EntryPointKind::UserDefined),
           is_dynamic_entry: matches!(&c.entry_point, Some(e) if e.kind == EntryPointKind::DynamicImport),
           facade_module_id: c.entry_point.as_ref().map(|entry_point| {
-            self.link_output.modules[entry_point.module_id].expect_normal().pretty_path.to_string()
+            self.link_output.modules[entry_point.id].expect_normal().pretty_path.to_string()
           }),
           modules: rendered_modules,
           exports: c.get_export_names(self.link_output, self.output_options),
@@ -165,7 +161,7 @@ impl<'a> BundleStage<'a> {
       }
 
       if let Some(entry_point) = &chunk.entry_point {
-        let entry_module = &self.link_output.modules[entry_point.module_id];
+        let entry_module = &self.link_output.modules[entry_point.id];
         let Module::Normal(entry_module) = entry_module else {
           return;
         };
@@ -294,7 +290,7 @@ impl<'a> BundleStage<'a> {
       );
 
       self.determine_reachable_modules_for_entry(
-        entry_point.module_id,
+        entry_point.id,
         i.try_into().unwrap(),
         &mut module_to_bits,
       );
@@ -328,5 +324,29 @@ impl<'a> BundleStage<'a> {
     });
 
     ChunkGraph { chunks, module_to_chunk }
+  }
+
+  fn generate_chunk_filenames(&self, chunk_graph: &mut ChunkGraph) {
+    chunk_graph.chunks.iter_mut().for_each(|chunk| {
+      let file_name_tmp = chunk.file_name_template(self.output_options);
+      let chunk_name = chunk.name.clone().unwrap_or_else(|| {
+        let module_id = if let Some(entry_point) = &chunk.entry_point {
+          debug_assert!(
+            matches!(entry_point.kind, EntryPointKind::DynamicImport),
+            "User-defined entry point should always have a name"
+          );
+          entry_point.id
+        } else {
+          // TODO: we currently use the first executed module to calculate the chunk name for common chunks
+          // This is not perfect, should investigate more to find a better solution
+          chunk.modules.first().copied().unwrap()
+        };
+        let module = &self.link_output.modules[module_id];
+        module.resource_id().expect_file().unique(&self.input_options.cwd)
+      });
+
+      chunk.file_name =
+        Some(file_name_tmp.render(&FileNameRenderOptions { name: Some(&chunk_name) }));
+    });
   }
 }

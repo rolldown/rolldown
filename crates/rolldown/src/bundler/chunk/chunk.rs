@@ -1,19 +1,16 @@
 use oxc::span::Atom;
-use rolldown_common::{EntryPoint, ModuleId, NamedImport, Specifier, SymbolRef};
+use rolldown_common::{EntryPoint, EntryPointKind, ModuleId, NamedImport, Specifier, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{Joiner, JoinerOptions};
 
 use crate::{
   bundler::{
-    bundle::output::RenderedModule,
-    chunk_graph::ChunkGraph,
-    module::ModuleRenderContext,
-    options::{file_name_template::FileNameRenderOptions, output_options::OutputOptions},
-    stages::link_stage::LinkStageOutput,
+    bundle::output::RenderedModule, chunk_graph::ChunkGraph, module::ModuleRenderContext,
+    options::output_options::OutputOptions, stages::link_stage::LinkStageOutput,
     utils::bitset::BitSet,
   },
   error::BatchedResult,
-  InputOptions,
+  FileNameTemplate, InputOptions,
 };
 
 use super::ChunkId;
@@ -48,13 +45,15 @@ impl Chunk {
     Self { entry_point, modules, name, bits, ..Self::default() }
   }
 
-  pub fn render_file_name(&mut self, output_options: &OutputOptions) {
-    let pat = if self.entry_point.is_some() {
+  pub fn file_name_template<'a>(
+    &mut self,
+    output_options: &'a OutputOptions,
+  ) -> &'a FileNameTemplate {
+    if matches!(self.entry_point, Some(EntryPoint { kind: EntryPointKind::UserDefined, .. })) {
       &output_options.entry_file_names
     } else {
       &output_options.chunk_file_names
-    };
-    self.file_name = Some(pat.render(&FileNameRenderOptions { name: self.name.as_deref() }));
+    }
   }
 
   #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]

@@ -35,18 +35,16 @@ pub struct NormalModuleTask<'task, T: FileSystem + Default> {
   module_id: ModuleId,
   path: FilePath,
   module_type: ModuleType,
-  is_entry: bool,
 }
 
 impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   pub fn new(
     ctx: &'task ModuleTaskCommonData<T>,
     id: ModuleId,
-    is_entry: bool,
     path: FilePath,
     module_type: ModuleType,
   ) -> Self {
-    Self { ctx, module_id: id, is_entry, path, module_type }
+    Self { ctx, module_id: id, path, module_type }
   }
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
@@ -98,7 +96,6 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       exports_kind: Some(exports_kind),
       namespace_symbol: Some(namespace_symbol),
       module_type: self.module_type,
-      is_entry: self.is_entry,
       pretty_path: Some(self.path.prettify(&self.ctx.input_options.cwd)),
       ..Default::default()
     };

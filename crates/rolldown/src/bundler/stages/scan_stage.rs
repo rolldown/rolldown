@@ -31,7 +31,7 @@ pub struct ScanStage<Fs: FileSystem + Default> {
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub modules: ModuleVec,
-  pub entries: Vec<EntryPoint>,
+  pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
@@ -62,12 +62,12 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
 
     let user_entries = self.resolve_user_defined_entries()?;
 
-    let ModuleLoaderOutput { modules, entries, symbols, runtime, warnings } =
-      module_loader.fetch_all_modules(&user_entries).await?;
+    let ModuleLoaderOutput { modules, entry_points, symbols, runtime, warnings } =
+      module_loader.fetch_all_modules(user_entries).await?;
 
     tracing::debug!("Scan stage finished {modules:#?}");
 
-    Ok(ScanStageOutput { modules, entries, symbols, runtime, warnings })
+    Ok(ScanStageOutput { modules, entry_points, symbols, runtime, warnings })
   }
 
   /// Resolve `InputOptions.input`

@@ -66,6 +66,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
           cwd: "/".into(),
           external: External::ArrayString(vec![]),
           treeshake: true,
+          resolve: None,
         },
         vec![],
         memory_fs,

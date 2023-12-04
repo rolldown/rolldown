@@ -4,7 +4,9 @@ use rolldown_fs::FileSystem;
 use std::path::PathBuf;
 use sugar_path::{AsPath, SugarPathBuf};
 
-use oxc_resolver::{Resolution, ResolveOptions, ResolverGeneric};
+use oxc_resolver::{Resolution, ResolverGeneric};
+
+use crate::ResolverOptions;
 
 #[derive(Debug)]
 pub struct Resolver<T: FileSystem + Default> {
@@ -13,20 +15,9 @@ pub struct Resolver<T: FileSystem + Default> {
 }
 
 impl<F: FileSystem + Default> Resolver<F> {
-  pub fn with_cwd_and_fs(cwd: PathBuf, preserve_symlinks: bool, fs: F) -> Self {
-    let resolve_options = ResolveOptions {
-      symlinks: !preserve_symlinks,
-      extensions: vec![
-        ".js".to_string(),
-        ".jsx".to_string(),
-        ".ts".to_string(),
-        ".tsx".to_string(),
-      ],
-      prefer_relative: false,
-      ..Default::default()
-    };
-
-    let inner_resolver = ResolverGeneric::new_with_file_system(fs, resolve_options);
+  pub fn with_cwd_and_fs(cwd: PathBuf, resolver_options: Option<ResolverOptions>, fs: F) -> Self {
+    let option = resolver_options.map_or_else(oxc_resolver::ResolveOptions::default, Into::into);
+    let inner_resolver = ResolverGeneric::new_with_file_system(fs, option);
     Self { cwd, inner: inner_resolver }
   }
 

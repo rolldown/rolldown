@@ -103,6 +103,7 @@ impl Fixture {
       cwd: fixture_path.to_path_buf(),
       external: test_config.input.external.map(|e| External::ArrayString(e)).unwrap_or_default(),
       treeshake: test_config.input.treeshake.unwrap_or(true),
+      resolve: None,
     });
 
     if fixture_path.join("dist").is_dir() {

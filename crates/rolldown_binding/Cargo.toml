@@ -14,19 +14,20 @@ workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
-async-trait      = { workspace = true }
-derivative       = { workspace = true }
-futures          = { workspace = true }
-napi             = { version = "2.11.1", features = ["full"] }
-napi-derive      = { version = "2.11.0" }
-rolldown         = { path = "../rolldown" }
-rolldown_error   = { path = "../rolldown_error" }
-rolldown_tracing = { path = "../rolldown_tracing" }
-rolldown_fs      = { path = "../rolldown_fs" }
-rustc-hash       = { workspace = true }
-scoped-tls       = { workspace = true }
-serde            = { workspace = true }
-tracing          = { workspace = true }
+async-trait       = { workspace = true }
+derivative        = { workspace = true }
+futures           = { workspace = true }
+napi              = { version = "2.11.1", features = ["full"] }
+napi-derive       = { version = "2.11.0" }
+rolldown          = { path = "../rolldown" }
+rolldown_error    = { path = "../rolldown_error" }
+rolldown_tracing  = { path = "../rolldown_tracing" }
+rolldown_fs       = { path = "../rolldown_fs" }
+rolldown_resolver = { path = "../rolldown_resolver" }
+rustc-hash        = { workspace = true }
+scoped-tls        = { workspace = true }
+serde             = { workspace = true }
+tracing           = { workspace = true }
 
 [target.'cfg(not(target_os = "linux"))'.dependencies]
 mimalloc-rust = "0.2"

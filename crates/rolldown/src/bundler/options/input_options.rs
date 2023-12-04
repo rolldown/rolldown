@@ -71,6 +71,7 @@ pub struct InputOptions {
   pub cwd: PathBuf,
   pub external: External,
   pub treeshake: bool,
+  pub resolve: Option<rolldown_resolver::ResolverOptions>,
 }
 
 impl Default for InputOptions {
@@ -80,6 +81,7 @@ impl Default for InputOptions {
       cwd: std::env::current_dir().unwrap(),
       external: External::default(),
       treeshake: true,
+      resolve: None,
     }
   }
 }

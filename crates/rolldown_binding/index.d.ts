@@ -30,10 +30,22 @@ export interface InputItem {
   name?: string
   import: string
 }
+export interface ResolveOptions {
+  alias?: Record<string, Array<string>>
+  aliasFields?: Array<Array<string>>
+  conditionNames?: Array<string>
+  exportsFields?: Array<Array<string>>
+  extensions?: Array<string>
+  mainFields?: Array<string>
+  mainFiles?: Array<string>
+  modules?: Array<string>
+  symlinks?: boolean
+}
 export interface InputOptions {
   external?: (source: string, importer?: string, isResolved: boolean) => boolean
   input: Array<InputItem>
   plugins: Array<PluginOptions>
+  resolve?: ResolveOptions
   cwd: string
 }
 export interface OutputOptions {

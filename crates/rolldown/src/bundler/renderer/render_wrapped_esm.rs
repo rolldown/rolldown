@@ -100,6 +100,7 @@ impl<'r> AstRenderer<'r> {
         }
         _ => {}
       }
+      return RenderControl::Continue;
     } else if named_decl.source.is_some() {
       match self.ctx.importee_by_span(named_decl.span) {
         Module::Normal(importee) => {

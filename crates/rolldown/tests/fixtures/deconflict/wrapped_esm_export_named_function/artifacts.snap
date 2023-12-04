@@ -54,7 +54,7 @@ var bar_default = { foo: foo$1 }
 
 
 
- // make foo `a` conflict
+const a = 2; // make foo `a` conflict
 
 const { foo } = bar_default
 

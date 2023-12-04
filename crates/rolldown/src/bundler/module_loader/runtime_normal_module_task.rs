@@ -8,7 +8,7 @@ use rolldown_oxc::{OxcCompiler, OxcProgram};
 
 use super::Msg;
 use crate::bundler::{
-  ast_scanner::scanner::{self, ScanResult},
+  ast_scanner::{AstScanner, ScanResult},
   module::normal_module_builder::NormalModuleBuilder,
   runtime::RuntimeModuleBrief,
   utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
@@ -93,7 +93,7 @@ impl RuntimeNormalModuleTask {
     let ast_scope = AstScope::new(scope, std::mem::take(&mut symbol_table.references));
     let mut symbol_for_module = AstSymbol::from_symbol_table(symbol_table);
     let facade_path = FilePath::new("runtime");
-    let scanner = scanner::AstScanner::new(
+    let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,
       &mut symbol_for_module,

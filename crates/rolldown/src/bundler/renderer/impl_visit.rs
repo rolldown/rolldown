@@ -8,7 +8,7 @@ use rolldown_utils::MagicStringExt;
 
 use crate::bundler::{module::Module, renderer::RenderControl};
 
-use super::AstRenderer;
+use super::{AstRenderer, RenderKind};
 
 impl<'ast, 'r> AstRenderer<'r> {
   fn visit_top_level_stmt(&mut self, stmt: &ast::Statement<'ast>) {
@@ -29,6 +29,11 @@ impl<'ast, 'r> AstRenderer<'r> {
       }
     }
     if self.current_stmt_info.get().is_included {
+      if matches!(self.kind, RenderKind::WrappedEsm) {
+        if let oxc::ast::ast::Statement::Declaration(decl) = stmt {
+          self.render_top_level_declaration_for_wrapped_esm(decl);
+        }
+      }
       self.visit_statement(stmt);
     } else {
       self.ctx.remove_stmt(stmt.span());
@@ -155,9 +160,9 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
 
   fn visit_export_named_declaration(&mut self, decl: &oxc::ast::ast::ExportNamedDeclaration<'ast>) {
     let control = match &mut self.kind {
-      super::RenderKind::WrappedEsm => self.render_export_named_declaration_for_wrapped_esm(decl),
-      super::RenderKind::Cjs => RenderControl::Continue,
-      super::RenderKind::Esm => self.render_export_named_declaration_for_esm(decl),
+      RenderKind::WrappedEsm => self.render_export_named_declaration_for_wrapped_esm(decl),
+      RenderKind::Cjs => RenderControl::Continue,
+      RenderKind::Esm => self.render_export_named_declaration_for_esm(decl),
     };
 
     if control.is_skip() {
@@ -174,8 +179,8 @@ impl<'ast, 'r> Visit<'ast> for AstRenderer<'r> {
     decl: &oxc::ast::ast::ExportDefaultDeclaration<'ast>,
   ) {
     let control = match &mut self.kind {
-      super::RenderKind::WrappedEsm => self.render_export_default_declaration_for_wrapped_esm(decl),
-      super::RenderKind::Cjs | super::RenderKind::Esm => self.strip_export_keyword(decl),
+      RenderKind::WrappedEsm => self.render_export_default_declaration_for_wrapped_esm(decl),
+      RenderKind::Cjs | RenderKind::Esm => self.strip_export_keyword(decl),
     };
 
     if control.is_skip() {

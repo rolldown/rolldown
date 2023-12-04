@@ -57,9 +57,8 @@ impl RuntimeNormalModuleTask {
     builder.id = Some(self.module_id);
     builder.ast = Some(ast);
     builder.repr_name = Some(repr_name);
-    builder.path = Some(ResourceId::new(
-      "TODO: Runtime module should not have FilePath as source id".to_string().into(),
-    ));
+    // TODO: Runtime module should not have FilePath as source id
+    builder.path = Some(ResourceId::new("runtime".to_string().into()));
     builder.named_imports = Some(named_imports);
     builder.named_exports = Some(named_exports);
     builder.stmt_infos = Some(stmt_infos);

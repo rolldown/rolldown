@@ -5,7 +5,21 @@ input_file: crates/rolldown/tests/esbuild/splitting/cross_chunk_assignment_depen
 ---
 # Assets
 
-## 2.mjs
+## a.mjs
+
+```js
+import { setValue } from "./runtime.mjs";
+
+// a.js
+
+setValue(123)
+```
+## b.mjs
+
+```js
+// b.js
+```
+## runtime.mjs
 
 ```js
 // shared.js
@@ -23,18 +37,4 @@ function setValue(next) {
 }
 sideEffects(getValue);
 export { setValue };
-```
-## a.mjs
-
-```js
-import { setValue } from "./2.mjs";
-
-// a.js
-
-setValue(123)
-```
-## b.mjs
-
-```js
-// b.js
 ```

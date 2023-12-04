@@ -5,19 +5,10 @@ input_file: crates/rolldown/tests/esbuild/splitting/side_effects_without_depende
 ---
 # Assets
 
-## 2.mjs
-
-```js
-// shared.js
-let a = 1
-let b = 2
-console.log('side effect')
-export { a, b };
-```
 ## a.mjs
 
 ```js
-import { a } from "./2.mjs";
+import { a } from "./runtime.mjs";
 
 // a.js
 
@@ -26,9 +17,18 @@ console.log(a)
 ## b.mjs
 
 ```js
-import { b } from "./2.mjs";
+import { b } from "./runtime.mjs";
 
 // b.js
 
 console.log(b)
+```
+## runtime.mjs
+
+```js
+// shared.js
+let a = 1
+let b = 2
+console.log('side effect')
+export { a, b };
 ```

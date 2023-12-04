@@ -5,20 +5,10 @@ input_file: crates/rolldown/tests/esbuild/splitting/assign-to-local
 ---
 # Assets
 
-## 2.mjs
-
-```js
-// shared.js
-let foo
-function setFoo(value) {
-    foo = value
-}
-export { foo, setFoo };
-```
 ## a.mjs
 
 ```js
-import { foo, setFoo } from "./2.mjs";
+import { foo, setFoo } from "./runtime.mjs";
 
 // a.js
 
@@ -28,9 +18,19 @@ console.log(foo)
 ## b.mjs
 
 ```js
-import { foo } from "./2.mjs";
+import { foo } from "./runtime.mjs";
 
 // b.js
 
 console.log(foo)
+```
+## runtime.mjs
+
+```js
+// shared.js
+let foo
+function setFoo(value) {
+    foo = value
+}
+export { foo, setFoo };
 ```

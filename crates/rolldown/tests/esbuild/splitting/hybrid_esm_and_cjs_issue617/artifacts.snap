@@ -5,7 +5,23 @@ input_file: crates/rolldown/tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
 ---
 # Assets
 
-## 2.mjs
+## a.mjs
+
+```js
+import { foo } from "./runtime.mjs";
+
+export { foo };
+```
+## b.mjs
+
+```js
+import { __toCommonJS, a_ns, init_a } from "./runtime.mjs";
+
+// b.js
+let bar = (init_a(), __toCommonJS(a_ns))
+export { bar };
+```
+## runtime.mjs
 
 ```js
 // <runtime>
@@ -39,20 +55,4 @@ var init_a = __esm({
 	}
 });
 export { __toCommonJS, a_ns, foo, init_a };
-```
-## a.mjs
-
-```js
-import { foo } from "./2.mjs";
-
-export { foo };
-```
-## b.mjs
-
-```js
-import { __toCommonJS, a_ns, init_a } from "./2.mjs";
-
-// b.js
-let bar = (init_a(), __toCommonJS(a_ns))
-export { bar };
 ```

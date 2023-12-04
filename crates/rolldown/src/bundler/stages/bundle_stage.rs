@@ -309,9 +309,7 @@ impl<'a> BundleStage<'a> {
         chunks[chunk_id].modules.push(module.id());
         module_to_chunk[module.id()] = Some(chunk_id);
       } else {
-        let len = bits_to_chunk.len();
-        // FIXME: https://github.com/rolldown-rs/rolldown/issues/49
-        let chunk = Chunk::new(Some(len.to_string()), None, bits.clone(), vec![module.id()]);
+        let chunk = Chunk::new(None, None, bits.clone(), vec![module.id()]);
         let chunk_id = chunks.push(chunk);
         module_to_chunk[module.id()] = Some(chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);

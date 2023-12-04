@@ -1,11 +1,25 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/misc/duplicate_entry
+input_file: crates/rolldown/tests/fixtures/misc/duplicate_entries
 ---
 # Assets
 
-## 2.mjs
+## main.mjs
+
+```js
+import { main_default } from "./runtime.mjs";
+
+export { main_default as default };
+```
+## main2.mjs
+
+```js
+import { main_default } from "./runtime.mjs";
+
+export { main_default as default };
+```
+## runtime.mjs
 
 ```js
 // main.js
@@ -14,18 +28,4 @@ input_file: crates/rolldown/tests/fixtures/misc/duplicate_entry
 var main_default = {}
 
 export { main_default };
-```
-## main.mjs
-
-```js
-import { main_default } from "./2.mjs";
-
-export { main_default as default };
-```
-## main2.mjs
-
-```js
-import { main_default } from "./2.mjs";
-
-export { main_default as default };
 ```

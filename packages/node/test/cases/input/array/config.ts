@@ -12,9 +12,9 @@ export default {
   afterTest: function (output: RollupOutput) {
     expect(getOutputChunkNames(output)).toMatchInlineSnapshot(`
       [
-        "2-[hash].js",
         "entry.js",
         "main.js",
+        "runtime-[hash].js",
       ]
     `)
   },

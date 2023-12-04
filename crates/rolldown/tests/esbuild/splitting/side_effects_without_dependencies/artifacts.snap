@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/side_effects_without_depende
 ## a.mjs
 
 ```js
-import { a } from "./runtime.mjs";
+import { a } from "./shared_js.mjs";
 
 // a.js
 
@@ -17,13 +17,13 @@ console.log(a)
 ## b.mjs
 
 ```js
-import { b } from "./runtime.mjs";
+import { b } from "./shared_js.mjs";
 
 // b.js
 
 console.log(b)
 ```
-## runtime.mjs
+## shared_js.mjs
 
 ```js
 // shared.js

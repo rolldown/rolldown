@@ -17,7 +17,6 @@ export default {
       [
         "entry.js",
         "main.js",
-        "runtime-[hash].js",
       ]
     `)
   },

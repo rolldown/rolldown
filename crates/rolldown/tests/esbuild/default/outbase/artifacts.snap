@@ -17,8 +17,3 @@ console.log('c')
 // d.js
 console.log('d')
 ```
-## runtime.mjs
-
-```js
-
-```

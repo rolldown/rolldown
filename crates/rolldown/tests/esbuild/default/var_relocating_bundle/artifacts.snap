@@ -72,11 +72,6 @@ if (true) {
 	function l() {}
 }
 ```
-## runtime.mjs
-
-```js
-
-```
 ## top-level_js.mjs
 
 ```js

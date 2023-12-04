@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/shared-es6-into-es6
 ## a.mjs
 
 ```js
-import { foo } from "./runtime.mjs";
+import { foo } from "./shared_js.mjs";
 
 // a.js
 
@@ -17,13 +17,13 @@ console.log(foo)
 ## b.mjs
 
 ```js
-import { foo } from "./runtime.mjs";
+import { foo } from "./shared_js.mjs";
 
 // b.js
 
 console.log(foo)
 ```
-## runtime.mjs
+## shared_js.mjs
 
 ```js
 // shared.js

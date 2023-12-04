@@ -8,18 +8,18 @@ input_file: crates/rolldown/tests/fixtures/misc/duplicate_entries
 ## main.mjs
 
 ```js
-import { main_default } from "./runtime.mjs";
+import { main_default } from "./main_js.mjs";
 
 export { main_default as default };
 ```
 ## main2.mjs
 
 ```js
-import { main_default } from "./runtime.mjs";
+import { main_default } from "./main_js.mjs";
 
 export { main_default as default };
 ```
-## runtime.mjs
+## main_js.mjs
 
 ```js
 // main.js

@@ -10,13 +10,14 @@
         "import": "./b.js"
       },
       {
-        "name": "d",
+        "name": "c",
         "import": "./d.js"
       },
       {
         "name": "d",
         "import": "./d.js"
       }
-    ]
+    ],
+    "treeshake": false
   }
 }

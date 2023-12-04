@@ -18,8 +18,3 @@ export { bar };
 // main.js
 import('./foo_js.mjs').then(({bar}) => console.log(bar))
 ```
-## runtime.mjs
-
-```js
-
-```

@@ -9,7 +9,7 @@ on:
 jobs:
   lint-pr-title:
     name: Validating PR title
-    runs-on: ubuntu-latest
+    runs-on: buildjet-2vcpu-ubuntu-2204
     steps:
       # https://github.com/amannn/action-semantic-pull-request
       - uses: amannn/action-semantic-pull-request@v5

@@ -77,7 +77,7 @@ impl<'r> AstRenderer<'r> {
             );
           }
         }
-        Module::External(_) => {} // TODO
+        Module::External(_) => {}
       }
       self.ctx.remove_node(named_decl.span);
     } else {

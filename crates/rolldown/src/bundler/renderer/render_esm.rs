@@ -26,7 +26,7 @@ impl<'r> AstRenderer<'r> {
             );
           }
         }
-        Module::External(_) => unreachable!(), // TODO
+        Module::External(_) => {}
       }
       self.ctx.remove_node(named_decl.span);
       RenderControl::Skip

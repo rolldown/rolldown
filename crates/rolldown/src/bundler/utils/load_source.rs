@@ -10,6 +10,8 @@ pub async fn load_source(
 ) -> Result<String, BatchedErrors> {
   let source = if let Some(r) = plugin_driver.load(&HookLoadArgs { id: path.as_ref() }).await? {
     r.code
+  } else if path.is_ignored() {
+    String::new()
   } else {
     fs.read_to_string(path.as_path())?
   };

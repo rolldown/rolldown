@@ -4,7 +4,7 @@ use rolldown_fs::FileSystem;
 use std::path::PathBuf;
 use sugar_path::{AsPath, SugarPathBuf};
 
-use oxc_resolver::{Resolution, ResolverGeneric};
+use oxc_resolver::{Resolution, ResolveError, ResolverGeneric};
 
 use crate::ResolverOptions;
 
@@ -70,7 +70,12 @@ impl<F: FileSystem + Default> Resolver<F> {
         module_type: calc_module_type(&info),
       }),
       Err(err) => {
-        if let Some(importer) = importer {
+        if let ResolveError::Ignored(path) = err {
+          Ok(ResolveRet {
+            resolved: FilePath::with_ignored(path.to_string_lossy().to_string()),
+            module_type: ModuleType::CJS,
+          })
+        } else if let Some(importer) = importer {
           Err(
             BuildError::unresolved_import(specifier.to_string(), importer.as_path())
               .with_source(err),

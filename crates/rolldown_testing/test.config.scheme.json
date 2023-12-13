@@ -69,6 +69,16 @@
             "$ref": "#/definitions/InputItem"
           }
         },
+        "resolve": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ResolveOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "treeshake": {
           "type": [
             "boolean",
@@ -88,6 +98,99 @@
         "format": {
           "default": "esm",
           "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ResolveOptions": {
+      "type": "object",
+      "properties": {
+        "alias": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "aliasFields": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "conditionNames": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "exportsFields": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "extensions": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "mainFields": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "mainFiles": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "modules": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "symlinks": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

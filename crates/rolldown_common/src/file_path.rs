@@ -9,21 +9,29 @@ use regex::Regex;
 use sugar_path::{AsPath, SugarPath};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct FilePath(Arc<str>);
+pub struct FilePath((Arc<str>, bool /* ignored (used to browser filed "false" value) */));
 
 impl FilePath {
   pub fn new(value: impl Into<String>) -> Self {
-    Self(value.into().into())
+    Self((value.into().into(), false))
+  }
+
+  pub fn with_ignored(value: impl Into<String>) -> Self {
+    Self((value.into().into(), true))
   }
 
   pub fn as_str(&self) -> &str {
-    &self.0
+    &self.0 .0
+  }
+
+  pub fn is_ignored(&self) -> bool {
+    self.0 .1
   }
 }
 
 impl AsRef<str> for FilePath {
   fn as_ref(&self) -> &str {
-    &self.0
+    &self.0 .0
   }
 }
 
@@ -31,7 +39,7 @@ impl std::ops::Deref for FilePath {
   type Target = str;
 
   fn deref(&self) -> &Self::Target {
-    &self.0
+    &self.0 .0
   }
 }
 
@@ -43,7 +51,7 @@ impl From<String> for FilePath {
 
 impl FilePath {
   pub fn unique(&self, root: impl AsRef<Path>) -> String {
-    let path = self.0.as_path();
+    let path = self.0 .0.as_path();
     let mut relative = path.relative(root);
     let ext = relative.extension().and_then(OsStr::to_str).unwrap_or("").to_string();
     relative.set_extension("");
@@ -64,21 +72,27 @@ impl FilePath {
   }
 
   pub fn prettify(&self, cwd: impl AsRef<Path>) -> String {
-    let pretty = if Path::new(self.0.as_ref()).is_absolute() {
-      Path::new(self.0.as_ref())
+    let pretty = if Path::new(self.0 .0.as_ref()).is_absolute() {
+      Path::new(self.0 .0.as_ref())
         .relative(cwd.as_ref())
         .into_os_string()
         .into_string()
         .expect("should be valid utf8")
     } else {
-      self.0.to_string()
+      self.0 .0.to_string()
     };
     // remove \0
-    pretty.replace('\0', "")
+    let pretty = pretty.replace('\0', "");
+
+    if self.0 .1 {
+      format!("(ignored) {pretty}")
+    } else {
+      pretty
+    }
   }
 
   pub fn representative_name(&self) -> Cow<str> {
-    representative_name(&self.0)
+    representative_name(&self.0 .0)
   }
 }
 

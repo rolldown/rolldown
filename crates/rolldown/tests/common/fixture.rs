@@ -106,7 +106,19 @@ impl Fixture {
       cwd: fixture_path.to_path_buf(),
       external: test_config.input.external.map(External::ArrayString).unwrap_or_default(),
       treeshake: test_config.input.treeshake.unwrap_or(true),
-      resolve: None,
+      resolve: test_config.input.resolve.map(|value| rolldown_resolver::ResolverOptions {
+        alias: value
+          .alias
+          .map(|alias| alias.into_iter().map(|(key, value)| (key, value)).collect::<Vec<_>>()),
+        alias_fields: value.alias_fields,
+        condition_names: value.condition_names,
+        exports_fields: value.exports_fields,
+        extensions: value.extensions,
+        main_fields: value.main_fields,
+        main_files: value.main_files,
+        modules: value.modules,
+        symlinks: value.symlinks,
+      }),
     });
 
     if fixture_path.join("dist").is_dir() {

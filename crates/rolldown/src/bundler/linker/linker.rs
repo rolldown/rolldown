@@ -201,7 +201,7 @@ impl<'graph> ImportExportLinker<'graph> {
               Module::External(_) => {}
             }
           } else {
-            results.push(MatchImportKind::Found(symbol_ref.clone()));
+            results.push(MatchImportKind::Found(*symbol_ref));
           }
         }
         Module::External(_) => {}

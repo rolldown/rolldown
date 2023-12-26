@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/fixtures/warnings/ambiguous_export
 
 ```text
 [NAMESPACE_CONFLICT] Error: Found ambiguous export.
-   ╭─[foo.js:1:10]
+   ╭─[main.js:1:10]
    │
  1 │ import { value } from "./foo";
    │          ──┬──  

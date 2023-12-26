@@ -138,6 +138,7 @@ impl<'graph> ImportExportLinker<'graph> {
                       warnings.push(BuildError::ambiguous_export(
                         importee.pretty_path.to_string(),
                         sources,
+                        importer.pretty_path.to_string(),
                         importer.ast.source().into(),
                         imported.name.to_string(),
                         imported.span,

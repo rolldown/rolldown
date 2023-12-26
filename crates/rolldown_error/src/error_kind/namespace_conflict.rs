@@ -11,7 +11,8 @@ use super::BuildErrorLike;
 pub struct NamespaceConflict {
   pub reexport_module: String,
   pub sources: Vec<String>,
-  pub reexport_module_source: Arc<str>,
+  pub importer: String,
+  pub importer_source: Arc<str>,
   pub symbol: String,
   pub symbol_span: Span,
 }
@@ -34,12 +35,9 @@ impl BuildErrorLike for NamespaceConflict {
     DiagnosticBuilder {
       code: Some(self.code()),
       summary: Some("Found ambiguous export.".to_string()),
-      files: Some(vec![(
-        self.reexport_module.to_string(),
-        self.reexport_module_source.to_string(),
-      )]),
+      files: Some(vec![(self.importer.to_string(), self.importer_source.to_string())]),
       labels: Some(vec![Label::new((
-        self.reexport_module.to_string(),
+        self.importer.to_string(),
         (self.symbol_span.start as usize..self.symbol_span.end as usize),
       ))
       .with_message(self.message())]),

@@ -119,14 +119,16 @@ impl BuildError {
   pub fn ambiguous_export(
     reexport_module: String,
     sources: Vec<String>,
-    reexport_module_source: Arc<str>,
+    importer: String,
+    importer_source: Arc<str>,
     symbol: String,
     symbol_span: Span,
   ) -> Self {
     Self::new_inner(NamespaceConflict {
       reexport_module,
       sources,
-      reexport_module_source,
+      importer,
+      importer_source,
       symbol,
       symbol_span,
     })

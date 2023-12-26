@@ -1,4 +1,4 @@
-use rolldown_common::Specifier;
+use rolldown_common::{Specifier, SpecifierLiteral};
 use string_wizard::MagicString;
 
 use crate::bundler::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
@@ -36,11 +36,13 @@ impl Chunk {
               ));
               None
             }
-            Specifier::Literal(imported) => Some(if imported == alias {
-              format!("{imported}")
-            } else {
-              format!("{imported} as {alias}")
-            }),
+            Specifier::Literal(SpecifierLiteral { name: imported, .. }) => {
+              Some(if imported == alias {
+                format!("{imported}")
+              } else {
+                format!("{imported} as {alias}")
+              })
+            }
           }
         })
         .collect::<Vec<_>>();
@@ -66,9 +68,7 @@ impl Chunk {
         .map(|item| {
           let canonical_ref = graph.symbols.par_canonical_ref_for(item.import_ref);
           let local_binding = &self.canonical_names[&canonical_ref];
-          let Specifier::Literal(export_alias) = item.export_alias.as_ref().unwrap() else {
-            panic!("should not be star import from other chunks")
-          };
+          let export_alias = item.export_alias.as_ref().unwrap();
           if export_alias == local_binding {
             format!("{export_alias}")
           } else {

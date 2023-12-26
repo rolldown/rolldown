@@ -1,4 +1,4 @@
-use oxc::span::Atom;
+use oxc::span::{Atom, Span};
 
 use super::import_record::ImportRecordId;
 use crate::symbol_ref::SymbolRef;
@@ -23,7 +23,7 @@ pub struct NamedImport {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Specifier {
   Star,
-  Literal(Atom),
+  Literal(SpecifierLiteral),
 }
 
 impl Specifier {
@@ -32,8 +32,14 @@ impl Specifier {
   }
 }
 
-impl From<Atom> for Specifier {
-  fn from(atom: Atom) -> Self {
-    Self::Literal(atom)
+impl From<SpecifierLiteral> for Specifier {
+  fn from(value: SpecifierLiteral) -> Self {
+    Self::Literal(value)
   }
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct SpecifierLiteral {
+  pub span: Span,
+  pub name: Atom,
 }

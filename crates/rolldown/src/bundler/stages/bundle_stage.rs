@@ -237,7 +237,7 @@ impl<'a> BundleStage<'a> {
             // safety: no other mutable reference to `item` exists
             unsafe {
               let item = (item as *const CrossChunkImportItem).cast_mut();
-              (*item).export_alias = Some(alias.clone().into());
+              (*item).export_alias = Some(alias.clone());
             }
           }
         }

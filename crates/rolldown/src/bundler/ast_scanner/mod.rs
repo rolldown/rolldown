@@ -15,7 +15,8 @@ use oxc::{
 };
 use rolldown_common::{
   representative_name, ExportsKind, FilePath, ImportKind, ImportRecordId, LocalExport, ModuleId,
-  ModuleType, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
+  ModuleType, NamedImport, RawImportRecord, Specifier, SpecifierLiteral, StmtInfo, StmtInfos,
+  SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc::{BindingIdentifierExt, BindingPatternExt};
@@ -149,14 +150,15 @@ impl<'ast> AstScanner<'ast> {
     self.result.import_records.push(rec)
   }
 
-  fn add_named_import(&mut self, local: SymbolId, imported: &Atom, record_id: ImportRecordId) {
+  fn add_named_import(
+    &mut self,
+    local: SymbolId,
+    imported: SpecifierLiteral,
+    record_id: ImportRecordId,
+  ) {
     self.result.named_imports.insert(
       local,
-      NamedImport {
-        imported: imported.clone().into(),
-        imported_as: (self.idx, local).into(),
-        record_id,
-      },
+      NamedImport { imported: imported.into(), imported_as: (self.idx, local).into(), record_id },
     );
   }
 
@@ -182,7 +184,12 @@ impl<'ast> AstScanner<'ast> {
       .insert(Atom::new_inline("default"), LocalExport { referenced: (self.idx, local).into() });
   }
 
-  fn add_re_export(&mut self, export_name: &Atom, imported: &Atom, record_id: ImportRecordId) {
+  fn add_re_export(
+    &mut self,
+    export_name: &Atom,
+    imported: SpecifierLiteral,
+    record_id: ImportRecordId,
+  ) {
     let generated_imported_as_ref = (
       self.idx,
       self.symbol_table.create_symbol(
@@ -198,11 +205,8 @@ impl<'ast> AstScanner<'ast> {
     )
       .into();
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
-    let name_import = NamedImport {
-      imported: imported.clone().into(),
-      imported_as: generated_imported_as_ref,
-      record_id,
-    };
+    let name_import =
+      NamedImport { imported: imported.into(), imported_as: generated_imported_as_ref, record_id };
     self.result.named_imports.insert(generated_imported_as_ref.symbol, name_import);
     self
       .result
@@ -240,7 +244,11 @@ impl<'ast> AstScanner<'ast> {
     if let Some(source) = &decl.source {
       let record_id = self.add_import_record(&source.value, ImportKind::Import);
       decl.specifiers.iter().for_each(|spec| {
-        self.add_re_export(spec.exported.name(), spec.local.name(), record_id);
+        self.add_re_export(
+          spec.exported.name(),
+          SpecifierLiteral { span: spec.span, name: spec.local.name().clone() },
+          record_id,
+        );
         self.result.imports.insert(decl.span, record_id);
       });
     } else {
@@ -314,10 +322,18 @@ impl<'ast> AstScanner<'ast> {
     specifiers.iter().for_each(|spec| match spec {
       oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
-        self.add_named_import(sym, spec.imported.name(), id);
+        self.add_named_import(
+          sym,
+          SpecifierLiteral { span: spec.span, name: spec.imported.name().clone() },
+          id,
+        );
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
-        self.add_named_import(spec.local.expect_symbol_id(), &Atom::new_inline("default"), id);
+        self.add_named_import(
+          spec.local.expect_symbol_id(),
+          SpecifierLiteral { span: spec.span, name: Atom::new_inline("default") },
+          id,
+        );
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
         self.add_star_import(spec.local.expect_symbol_id(), id);

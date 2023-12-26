@@ -1,5 +1,5 @@
 use oxc::span::Atom;
-use rolldown_common::{EntryPoint, EntryPointKind, ModuleId, NamedImport, Specifier, SymbolRef};
+use rolldown_common::{EntryPoint, EntryPointKind, ModuleId, NamedImport, SymbolRef};
 use rustc_hash::FxHashMap;
 use string_wizard::{Joiner, JoinerOptions};
 
@@ -17,7 +17,7 @@ use super::ChunkId;
 
 #[derive(Debug)]
 pub struct CrossChunkImportItem {
-  pub export_alias: Option<Specifier>,
+  pub export_alias: Option<Atom>,
   pub import_ref: SymbolRef,
 }
 

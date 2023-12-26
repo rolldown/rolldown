@@ -10,9 +10,9 @@ use oxc::span::Span;
 use crate::{
   diagnostic::Diagnostic,
   error_kind::{
-    external_entry::ExternalEntry, unresolved_entry::UnresolvedEntry,
-    unresolved_import::UnresolvedImport, unsupported_eval::UnsupportedEval, BuildErrorLike,
-    NapiError,
+    external_entry::ExternalEntry, missing_export::MissingExport,
+    unresolved_entry::UnresolvedEntry, unresolved_import::UnresolvedImport,
+    unsupported_eval::UnsupportedEval, BuildErrorLike, NapiError,
   },
 };
 
@@ -103,6 +103,16 @@ impl BuildError {
 
   pub fn unsupported_eval(filename: String, source: Arc<str>, span: Span) -> Self {
     Self::new_inner(UnsupportedEval { filename, eval_span: span, source })
+  }
+
+  pub fn missing_export(
+    importer: String,
+    importee: String,
+    importer_source: Arc<str>,
+    symbol: String,
+    symbol_span: Span,
+  ) -> Self {
+    Self::new_inner(MissingExport { importer, importee, importer_source, symbol, symbol_span })
   }
 }
 

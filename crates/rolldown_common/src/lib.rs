@@ -20,7 +20,7 @@ pub use crate::{
   module_path::ResourceId,
   module_type::ModuleType,
   named_export::LocalExport,
-  named_import::{NamedImport, Specifier},
+  named_import::{NamedImport, Specifier, SpecifierLiteral},
   resolved_export::ResolvedExport,
   stmt_info::{StmtInfo, StmtInfoId, StmtInfos},
   symbol_ref::SymbolRef,

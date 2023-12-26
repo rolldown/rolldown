@@ -1,4 +1,5 @@
 use rolldown_common::{ExportsKind, ModuleId, NamedImport, Specifier, SymbolRef};
+use rolldown_error::BuildError;
 use rustc_hash::FxHashSet;
 
 use super::linker_info::{LinkingInfo, LinkingInfoVec};
@@ -20,6 +21,7 @@ impl<'graph> ImportExportLinker<'graph> {
   pub fn link(&mut self, linking_infos: &mut LinkingInfoVec) {
     // Here take the symbols to avoid borrow graph and mut borrow graph at same time
     let mut symbols = std::mem::take(&mut self.graph.symbols);
+    let mut warnings = vec![];
 
     // Propagate star exports
     // Create resolved exports for named export declarations
@@ -62,7 +64,13 @@ impl<'graph> ImportExportLinker<'graph> {
 
     // Linking the module imports to resolved exports
     self.graph.sorted_modules.clone().into_iter().for_each(|id| {
-      self.match_imports_with_exports(id, &mut symbols, linking_infos, &self.graph.modules);
+      self.match_imports_with_exports(
+        id,
+        &mut symbols,
+        linking_infos,
+        &self.graph.modules,
+        &mut warnings,
+      );
     });
 
     // Exclude ambiguous from resolved exports
@@ -73,6 +81,7 @@ impl<'graph> ImportExportLinker<'graph> {
 
     // Set the symbols back and add linker modules to graph
     self.graph.symbols = symbols;
+    self.graph.warnings.extend(warnings);
   }
 
   #[allow(clippy::too_many_lines, clippy::manual_assert)]
@@ -82,6 +91,7 @@ impl<'graph> ImportExportLinker<'graph> {
     symbols: &mut Symbols,
     linking_infos: &LinkingInfoVec,
     modules: &ModuleVec,
+    warnings: &mut Vec<BuildError>,
   ) {
     let importer = &self.graph.modules[id];
     match importer {
@@ -99,7 +109,17 @@ impl<'graph> ImportExportLinker<'graph> {
                 &linking_infos[importer.id],
                 info,
               ) {
-                MatchImportKind::NotFound => panic!("info {info:#?}"),
+                MatchImportKind::NotFound => {
+                  if let Specifier::Literal(imported) = &info.imported {
+                    warnings.push(BuildError::missing_export(
+                      importer.pretty_path.to_string(),
+                      importee.pretty_path.to_string(),
+                      importer.ast.source().into(),
+                      imported.name.to_string(),
+                      imported.span,
+                    ));
+                  }
+                }
                 MatchImportKind::PotentiallyAmbiguous(
                   symbol_ref,
                   mut potentially_ambiguous_symbol_refs,
@@ -122,7 +142,7 @@ impl<'graph> ImportExportLinker<'graph> {
                   }
                   Specifier::Literal(imported) => {
                     symbols.get_mut(info.imported_as).namespace_alias = Some(NamespaceAlias {
-                      property_name: imported.clone(),
+                      property_name: imported.name.clone(),
                       namespace_ref: ns_ref,
                     });
                   }
@@ -215,7 +235,7 @@ impl<'graph> ImportExportLinker<'graph> {
         return MatchImportKind::Found(importee.namespace_symbol);
       }
       Specifier::Literal(imported) => {
-        if let Some(resolved_export) = importee_linking_info.resolved_exports.get(imported) {
+        if let Some(resolved_export) = importee_linking_info.resolved_exports.get(&imported.name) {
           if let Some(potentially_ambiguous_export) =
             &resolved_export.potentially_ambiguous_symbol_refs
           {

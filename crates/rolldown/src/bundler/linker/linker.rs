@@ -144,8 +144,9 @@ impl<'graph> ImportExportLinker<'graph> {
                         imported.span,
                       ));
                     }
+                  } else {
+                    symbols.union(info.imported_as, symbol_ref);
                   }
-                  symbols.union(info.imported_as, symbol_ref);
                 }
                 MatchImportKind::Found(symbol_ref) => {
                   symbols.union(info.imported_as, symbol_ref);

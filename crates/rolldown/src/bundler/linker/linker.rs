@@ -126,10 +126,23 @@ impl<'graph> ImportExportLinker<'graph> {
                 ) => {
                   potentially_ambiguous_symbol_refs.push(symbol_ref);
                   if self
-                    .determine_ambiguous_export(potentially_ambiguous_symbol_refs, linking_infos)
+                    .determine_ambiguous_export(&potentially_ambiguous_symbol_refs, linking_infos)
                   {
-                    // ambiguous export
-                    panic!("");
+                    let sources = potentially_ambiguous_symbol_refs
+                      .iter()
+                      .map(|symbol_ref| {
+                        self.graph.modules[symbol_ref.owner].expect_normal().pretty_path.to_string()
+                      })
+                      .collect::<Vec<_>>();
+                    if let Specifier::Literal(imported) = &info.imported {
+                      warnings.push(BuildError::ambiguous_export(
+                        importee.pretty_path.to_string(),
+                        sources,
+                        importer.ast.source().into(),
+                        imported.name.to_string(),
+                        imported.span,
+                      ));
+                    }
                   }
                   symbols.union(info.imported_as, symbol_ref);
                 }
@@ -162,7 +175,7 @@ impl<'graph> ImportExportLinker<'graph> {
   // Iterate all potentially ambiguous symbol refs, If all results not be same, it's a ambiguous export
   pub fn determine_ambiguous_export(
     &self,
-    potentially_ambiguous_symbol_refs: Vec<SymbolRef>,
+    potentially_ambiguous_symbol_refs: &Vec<SymbolRef>,
     linking_infos: &LinkingInfoVec,
   ) -> bool {
     let modules = &self.graph.modules;
@@ -188,7 +201,7 @@ impl<'graph> ImportExportLinker<'graph> {
               Module::External(_) => {}
             }
           } else {
-            results.push(MatchImportKind::Found(symbol_ref));
+            results.push(MatchImportKind::Found(symbol_ref.clone()));
           }
         }
         Module::External(_) => {}

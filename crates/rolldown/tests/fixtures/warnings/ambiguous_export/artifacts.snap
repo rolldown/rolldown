@@ -1,0 +1,33 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/warnings/ambiguous_export
+---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Error: Found ambiguous export.
+   ╭─[foo.js:1:10]
+   │
+ 1 │ import { value } from "./foo";
+   │          ──┬──  
+   │            ╰──── "foo.js" re-exports "value" from one of the modules "b.js" and "a.js" (will be ignored).
+───╯
+
+```
+# Assets
+
+## main.mjs
+
+```js
+// a.js
+const value = 1
+// b.js
+const value$1 = 1
+// foo.js
+
+
+// main.js
+```

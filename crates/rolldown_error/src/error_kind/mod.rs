@@ -4,6 +4,7 @@ use crate::diagnostic::DiagnosticBuilder;
 
 pub mod external_entry;
 pub mod missing_export;
+pub mod namespace_conflict;
 pub mod unresolved_entry;
 pub mod unresolved_import;
 pub mod unsupported_eval;

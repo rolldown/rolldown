@@ -11,8 +11,9 @@ use crate::{
   diagnostic::Diagnostic,
   error_kind::{
     external_entry::ExternalEntry, missing_export::MissingExport,
-    unresolved_entry::UnresolvedEntry, unresolved_import::UnresolvedImport,
-    unsupported_eval::UnsupportedEval, BuildErrorLike, NapiError,
+    namespace_conflict::NamespaceConflict, unresolved_entry::UnresolvedEntry,
+    unresolved_import::UnresolvedImport, unsupported_eval::UnsupportedEval, BuildErrorLike,
+    NapiError,
   },
 };
 
@@ -113,6 +114,22 @@ impl BuildError {
     symbol_span: Span,
   ) -> Self {
     Self::new_inner(MissingExport { importer, importee, importer_source, symbol, symbol_span })
+  }
+
+  pub fn ambiguous_export(
+    reexport_module: String,
+    sources: Vec<String>,
+    reexport_module_source: Arc<str>,
+    symbol: String,
+    symbol_span: Span,
+  ) -> Self {
+    Self::new_inner(NamespaceConflict {
+      reexport_module,
+      sources,
+      reexport_module_source,
+      symbol,
+      symbol_span,
+    })
   }
 }
 

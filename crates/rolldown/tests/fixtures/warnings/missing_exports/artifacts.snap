@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/warnings/missing_exports
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: Found missing export.
+[MISSING_EXPORT] Warning: Found missing export.
    ╭─[main.js:1:10]
    │
  1 │ import { value } from "./foo";

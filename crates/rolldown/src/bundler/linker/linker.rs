@@ -135,14 +135,17 @@ impl<'graph> ImportExportLinker<'graph> {
                       })
                       .collect::<Vec<_>>();
                     if let Specifier::Literal(imported) = &info.imported {
-                      warnings.push(BuildError::ambiguous_export(
-                        importee.pretty_path.to_string(),
-                        sources,
-                        importer.pretty_path.to_string(),
-                        importer.ast.source().into(),
-                        imported.name.to_string(),
-                        imported.span,
-                      ));
+                      warnings.push(
+                        BuildError::ambiguous_export(
+                          importee.pretty_path.to_string(),
+                          sources,
+                          importer.pretty_path.to_string(),
+                          importer.ast.source().into(),
+                          imported.name.to_string(),
+                          imported.span,
+                        )
+                        .with_severity_warning(),
+                      );
                     }
                   } else {
                     symbols.union(info.imported_as, symbol_ref);

@@ -10,10 +10,10 @@ use oxc::span::Span;
 use crate::{
   diagnostic::Diagnostic,
   error_kind::{
-    external_entry::ExternalEntry, missing_export::MissingExport,
-    namespace_conflict::NamespaceConflict, unresolved_entry::UnresolvedEntry,
-    unresolved_import::UnresolvedImport, unsupported_eval::UnsupportedEval, BuildErrorLike,
-    NapiError,
+    circular_dependency::CircularDependency, external_entry::ExternalEntry,
+    missing_export::MissingExport, namespace_conflict::NamespaceConflict,
+    unresolved_entry::UnresolvedEntry, unresolved_import::UnresolvedImport,
+    unsupported_eval::UnsupportedEval, BuildErrorLike, NapiError,
   },
 };
 
@@ -132,6 +132,10 @@ impl BuildError {
       symbol,
       symbol_span,
     })
+  }
+
+  pub fn circular_dependency(paths: Vec<String>) -> Self {
+    Self::new_inner(CircularDependency { paths })
   }
 }
 

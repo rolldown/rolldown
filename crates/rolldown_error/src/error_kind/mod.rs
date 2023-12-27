@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use crate::diagnostic::DiagnosticBuilder;
 
+pub mod circular_dependency;
 pub mod external_entry;
 pub mod missing_export;
 pub mod namespace_conflict;

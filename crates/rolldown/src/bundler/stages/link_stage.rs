@@ -5,7 +5,7 @@ use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, StmtInfoId, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildError;
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::bundler::{
   linker::{
@@ -61,7 +61,7 @@ impl LinkStage {
   #[tracing::instrument(skip_all)]
   pub fn link(mut self) -> LinkStageOutput {
     self.sort_modules();
-
+    self.determine_circular_dependency();
     self.determine_module_exports_kind();
     self.wrap_modules();
     let mut linking_infos = std::mem::take(&mut self.linking_infos);
@@ -133,6 +133,75 @@ impl LinkStage {
       Some(self.runtime.id()),
       "runtime module should always be the first module in the sorted modules"
     );
+  }
+
+  // Port from https://github.com/rollup/rollup/blob/master/src/utils/executionOrder.ts#L31
+  fn determine_circular_dependency(&mut self) {
+    fn enter_module(
+      module: ModuleId,
+      modules: &ModuleVec,
+      parents: &mut FxHashMap<ModuleId, Option<ModuleId>>,
+      cycle_paths: &mut Vec<Vec<ModuleId>>,
+      visited_modules: &mut FxHashSet<ModuleId>,
+    ) {
+      modules[module]
+        .import_records()
+        .iter()
+        .filter(|rec| rec.kind.is_static())
+        .map(|rec| rec.resolved_module)
+        .for_each(|dependency| {
+          if parents.contains_key(&dependency) {
+            if !visited_modules.contains(&dependency) {
+              cycle_paths.push(find_cycle_path(dependency, module, parents));
+            }
+            return;
+          }
+          parents.insert(dependency, Some(module));
+          enter_module(dependency, modules, parents, cycle_paths, visited_modules);
+        });
+      visited_modules.insert(module);
+    }
+
+    fn find_cycle_path(
+      module: ModuleId,
+      mut parent: ModuleId,
+      parents: &FxHashMap<ModuleId, Option<ModuleId>>,
+    ) -> Vec<ModuleId> {
+      let mut paths = vec![module];
+      while parent != module {
+        paths.push(parent);
+        if let Some(value) = parents.get(&parent).expect("should have parent") {
+          parent = *value;
+        } else {
+          break;
+        }
+      }
+      paths.push(module);
+      paths.reverse();
+      paths
+    }
+
+    let mut parents = FxHashMap::default();
+    let mut cycle_paths = vec![];
+    let mut visited_modules = FxHashSet::default();
+
+    self.entries.iter().for_each(|entry| {
+      if let std::collections::hash_map::Entry::Vacant(e) = parents.entry(entry.id) {
+        e.insert(None);
+        enter_module(entry.id, &self.modules, &mut parents, &mut cycle_paths, &mut visited_modules);
+      }
+    });
+
+    if !cycle_paths.is_empty() {
+      self.warnings.extend(cycle_paths.iter().map(|path| {
+        BuildError::circular_dependency(
+          path
+            .iter()
+            .map(|id| self.modules[*id].expect_normal().pretty_path.to_string())
+            .collect::<Vec<_>>(),
+        )
+      }));
+    }
   }
 
   fn determine_module_exports_kind(&mut self) {

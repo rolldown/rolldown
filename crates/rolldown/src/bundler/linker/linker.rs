@@ -111,13 +111,16 @@ impl<'graph> ImportExportLinker<'graph> {
               ) {
                 MatchImportKind::NotFound => {
                   if let Specifier::Literal(imported) = &info.imported {
-                    warnings.push(BuildError::missing_export(
-                      importer.pretty_path.to_string(),
-                      importee.pretty_path.to_string(),
-                      importer.ast.source().into(),
-                      imported.name.to_string(),
-                      imported.span,
-                    ));
+                    warnings.push(
+                      BuildError::missing_export(
+                        importer.pretty_path.to_string(),
+                        importee.pretty_path.to_string(),
+                        importer.ast.source().into(),
+                        imported.name.to_string(),
+                        imported.span,
+                      )
+                      .with_severity_warning(),
+                    );
                   }
                 }
                 MatchImportKind::PotentiallyAmbiguous(

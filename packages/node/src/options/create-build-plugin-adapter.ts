@@ -1,8 +1,9 @@
-import type { Plugin, NormalizedInputOptions } from '../rollup-types'
+import { Plugin, NormalizedInputOptions, PluginContext, RollupError, CustomPluginOptions, PartialNull, ModuleOptions, TransformPluginContext } from '../rollup-types'
 import type {
   PluginOptions,
   SourceResult,
   ResolveIdResult,
+  PluginContext as RolldownPluginContext,
 } from '@rolldown/node-binding'
 import { unimplemented } from '../utils'
 
@@ -29,10 +30,10 @@ function buildStart(
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-    return async () => {
+    return async (ctx: RolldownPluginContext) => {
       try {
         // Here use `Object.freeze` to prevent plugin from modifying the options.
-        await hook.call({} as any, Object.freeze(options))
+        await hook.call(normalizePluginContext(ctx), Object.freeze(options))
       } catch (error) {
         console.error(error)
         throw error
@@ -46,9 +47,9 @@ function buildEnd(hook: Plugin['buildEnd']) {
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-    return async (e: string) => {
+    return async (ctx: RolldownPluginContext, e: string) => {
       try {
-        await hook.call({} as any, e ? new Error(e) : undefined)
+        await hook.call(normalizePluginContext(ctx), e ? new Error(e) : undefined)
       } catch (error) {
         console.error(error)
         throw error
@@ -63,12 +64,13 @@ function transform(hook: Plugin['transform']) {
       return unimplemented()
     }
     return async (
+      ctx: RolldownPluginContext,
       code: string,
       id: string,
     ): Promise<undefined | SourceResult> => {
       try {
         // TODO: Need to investigate how to pass context to plugin.
-        const value = await hook.call({} as any, code, id)
+        const value = await hook.call(normalizeTransformPluginContext(ctx), code, id)
         if (value === undefined || value === null) {
           return
         }
@@ -94,13 +96,14 @@ function resolveId(hook: Plugin['resolveId']) {
       return unimplemented()
     }
     return async (
+      ctx: RolldownPluginContext,
       source: string,
       importer?: string,
       options?: any,
     ): Promise<undefined | ResolveIdResult> => {
       try {
         const value = await hook.call(
-          {} as any,
+          normalizePluginContext(ctx),
           source,
           importer ? importer : undefined,
           options,
@@ -134,7 +137,7 @@ function load(hook: Plugin['load']) {
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-    return async (id: string): Promise<undefined | SourceResult> => {
+    return async (ctx: RolldownPluginContext, id: string): Promise<undefined | SourceResult> => {
       try {
         const value = await hook.call({} as any, id)
         if (value === undefined || value === null) {
@@ -152,6 +155,83 @@ function load(hook: Plugin['load']) {
         console.error(error)
         throw error
       }
+    }
+  }
+}
+
+function normalizePluginContext(ctx: RolldownPluginContext): PluginContext  {
+  return {
+    get meta() {
+      return unimplemented()
+    },
+    addWatchFile: (id: string) => {
+      unimplemented()
+    },
+    get cache() {
+      return unimplemented()
+    },
+    debug: () => {
+      unimplemented()
+    },
+    emitFile: () => {
+      unimplemented()
+    },
+    error: (error: RollupError | string) => {
+      unimplemented()
+    },
+    getFileName: (fileReferenceId: string) => {
+      unimplemented()
+    },
+    getModuleIds: () => {
+      unimplemented()
+    },
+    getModuleInfo: (moduleId: string) => {
+      unimplemented()
+    },
+    getWatchFiles: () => {
+      unimplemented()
+    },
+    info: () => {
+      unimplemented()
+    },
+    load: (
+      options: { id: string; resolveDependencies?: boolean } & Partial<PartialNull<ModuleOptions>>
+    ) => {
+      unimplemented()
+    },
+    /** @deprecated Use `this.getModuleIds` instead */
+    get moduleIds() {
+      return unimplemented()
+    },
+    parse: (input: string, options?: any) => {
+      unimplemented()
+    },
+    resolve: (
+      source: string,
+      importer?: string,
+      options?: {
+        assertions?: Record<string, string>;
+        custom?: CustomPluginOptions;
+        isEntry?: boolean;
+        skipSelf?: boolean;
+      }
+    ) => {
+      unimplemented()
+    },
+    setAssetSource: (assetReferenceId: string, source: string | Uint8Array) => {
+      unimplemented()
+    },
+    warn: () => {
+      unimplemented()
+    },
+  }
+}
+
+function normalizeTransformPluginContext(ctx: RolldownPluginContext): TransformPluginContext {
+  return {
+    ...normalizePluginContext(ctx),
+    getCombinedSourcemap: () => {
+      unimplemented()
     }
   }
 }

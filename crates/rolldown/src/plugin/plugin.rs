@@ -19,25 +19,25 @@ pub trait Plugin: Debug + Send + Sync {
 
   // The `option` hook consider call at node side.
 
-  async fn build_start(&self, _ctx: &mut PluginContext) -> HookNoopReturn {
+  async fn build_start(&self, _ctx: &PluginContext) -> HookNoopReturn {
     Ok(())
   }
 
   async fn resolve_id(
     &self,
-    _ctx: &mut PluginContext,
+    _ctx: &PluginContext,
     _args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn {
     Ok(None)
   }
 
-  async fn load(&self, _ctx: &mut PluginContext, _args: &HookLoadArgs) -> HookLoadReturn {
+  async fn load(&self, _ctx: &PluginContext, _args: &HookLoadArgs) -> HookLoadReturn {
     Ok(None)
   }
 
   async fn transform(
     &self,
-    _ctx: &mut PluginContext,
+    _ctx: &PluginContext,
     _args: &HookTransformArgs,
   ) -> HookTransformReturn {
     Ok(None)
@@ -45,7 +45,7 @@ pub trait Plugin: Debug + Send + Sync {
 
   async fn build_end(
     &self,
-    _ctx: &mut PluginContext,
+    _ctx: &PluginContext,
     _args: Option<&HookBuildEndArgs>,
   ) -> HookNoopReturn {
     Ok(())

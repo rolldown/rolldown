@@ -5,14 +5,19 @@ use crate::utils::JsCallback;
 use derivative::Derivative;
 use rolldown::Plugin;
 
-use super::plugin::{HookResolveIdArgsOptions, PluginOptions, ResolveIdResult, SourceResult};
+use super::{
+  plugin::{HookResolveIdArgsOptions, PluginOptions, ResolveIdResult, SourceResult},
+  plugin_context::PluginContext,
+};
 
-pub type BuildStartCallback = JsCallback<(), ()>;
-pub type ResolveIdCallback =
-  JsCallback<(String, Option<String>, HookResolveIdArgsOptions), Option<ResolveIdResult>>;
-pub type LoadCallback = JsCallback<(String,), Option<SourceResult>>;
-pub type TransformCallback = JsCallback<(String, String), Option<SourceResult>>;
-pub type BuildEndCallback = JsCallback<(Option<String>,), ()>;
+pub type BuildStartCallback = JsCallback<(PluginContext,), ()>;
+pub type ResolveIdCallback = JsCallback<
+  (PluginContext, String, Option<String>, HookResolveIdArgsOptions),
+  Option<ResolveIdResult>,
+>;
+pub type LoadCallback = JsCallback<(PluginContext, String), Option<SourceResult>>;
+pub type TransformCallback = JsCallback<(PluginContext, String, String), Option<SourceResult>>;
+pub type BuildEndCallback = JsCallback<(PluginContext, Option<String>), ()>;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -59,9 +64,9 @@ impl Plugin for JsAdapterPlugin {
   }
 
   #[allow(clippy::redundant_closure_for_method_calls)]
-  async fn build_start(&self, _ctx: &mut rolldown::PluginContext) -> rolldown::HookNoopReturn {
+  async fn build_start(&self, ctx: &rolldown::PluginContext) -> rolldown::HookNoopReturn {
     if let Some(cb) = &self.build_start_fn {
-      cb.call_async(()).await.map_err(|e| e.into_bundle_error())?;
+      cb.call_async((ctx.into(),)).await.map_err(|e| e.into_bundle_error())?;
     }
     Ok(())
   }
@@ -69,12 +74,13 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn resolve_id(
     &self,
-    _ctx: &mut rolldown::PluginContext,
+    ctx: &rolldown::PluginContext,
     args: &rolldown::HookResolveIdArgs,
   ) -> rolldown::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id_fn {
       let res = cb
         .call_async((
+          ctx.into(),
           args.source.to_string(),
           args.importer.map(|s| s.to_string()),
           args.options.clone().into(),
@@ -91,11 +97,14 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn load(
     &self,
-    _ctx: &mut rolldown::PluginContext,
+    ctx: &rolldown::PluginContext,
     args: &rolldown::HookLoadArgs,
   ) -> rolldown::HookLoadReturn {
     if let Some(cb) = &self.load_fn {
-      let res = cb.call_async((args.id.to_string(),)).await.map_err(|e| e.into_bundle_error())?;
+      let res = cb
+        .call_async((ctx.into(), args.id.to_string()))
+        .await
+        .map_err(|e| e.into_bundle_error())?;
       Ok(res.map(Into::into))
     } else {
       Ok(None)
@@ -105,12 +114,12 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn transform(
     &self,
-    _ctx: &mut rolldown::PluginContext,
+    ctx: &rolldown::PluginContext,
     args: &rolldown::HookTransformArgs,
   ) -> rolldown::HookTransformReturn {
     if let Some(cb) = &self.transform_fn {
       let res = cb
-        .call_async((args.code.to_string(), args.id.to_string()))
+        .call_async((ctx.into(), args.code.to_string(), args.id.to_string()))
         .await
         .map_err(|e| e.into_bundle_error())?;
       Ok(res.map(Into::into))
@@ -122,11 +131,11 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn build_end(
     &self,
-    _ctx: &mut rolldown::PluginContext,
+    ctx: &rolldown::PluginContext,
     args: Option<&rolldown::HookBuildEndArgs>,
   ) -> rolldown::HookNoopReturn {
     if let Some(cb) = &self.build_end_fn {
-      cb.call_async((args.map(|a| a.error.to_string()),))
+      cb.call_async((ctx.into(), args.map(|a| a.error.to_string())))
         .await
         .map_err(|e| e.into_bundle_error())?;
     }

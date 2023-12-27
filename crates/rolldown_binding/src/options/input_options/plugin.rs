@@ -11,29 +11,31 @@ pub struct PluginOptions {
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "() => Promise<void>")]
+  #[napi(ts_type = "(ctx: PluginContext) => Promise<void>")]
   pub build_start: Option<JsFunction>,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(specifier: string, importer?: string, options?: HookResolveIdArgsOptions) => Promise<undefined | ResolveIdResult>"
+    ts_type = "(ctx: PluginContext, specifier: string, importer?: string, options?: HookResolveIdArgsOptions) => Promise<undefined | ResolveIdResult>"
   )]
   pub resolve_id: Option<JsFunction>,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(id: string) => Promise<undefined | SourceResult>")]
+  #[napi(ts_type = "(ctx: PluginContext, id: string) => Promise<undefined | SourceResult>")]
   pub load: Option<JsFunction>,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(id: string, code: string) => Promise<undefined | SourceResult>")]
+  #[napi(
+    ts_type = "(ctx: PluginContext, id: string, code: string) => Promise<undefined | SourceResult>"
+  )]
   pub transform: Option<JsFunction>,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(error: string) => Promise<void>")]
+  #[napi(ts_type = "(ctx: PluginContext, error: string) => Promise<void>")]
   pub build_end: Option<JsFunction>,
 }
 

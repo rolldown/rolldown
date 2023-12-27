@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 mod plugin;
 mod plugin_adapter;
+mod plugin_context;
 use crate::utils::{napi_error_ext::NapiErrorExt, JsCallback};
 use derivative::Derivative;
 use napi::JsFunction;

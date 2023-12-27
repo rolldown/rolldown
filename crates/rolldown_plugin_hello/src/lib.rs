@@ -12,7 +12,7 @@ impl Plugin for HelloPlugin {
   }
 
   #[allow(clippy::print_stdout)]
-  async fn build_start(&self, _ctx: &mut PluginContext) -> HookNoopReturn {
+  async fn build_start(&self, _ctx: &PluginContext) -> HookNoopReturn {
     println!("hello");
     Ok(())
   }

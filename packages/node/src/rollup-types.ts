@@ -9,4 +9,9 @@ export type {
   OutputChunk,
   NormalizedInputOptions,
   OutputAsset,
+  PluginContext,
+  RollupError,
+  CustomPluginOptions,
+  PartialNull, ModuleOptions,
+  TransformPluginContext
 } from 'rollup'

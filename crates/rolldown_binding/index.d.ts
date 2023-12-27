@@ -5,15 +5,20 @@
 
 export interface PluginOptions {
   name: string
-  buildStart?: () => Promise<void>
+  buildStart?: (ctx: PluginContext) => Promise<void>
   resolveId?: (
+    ctx: PluginContext,
     specifier: string,
     importer?: string,
     options?: HookResolveIdArgsOptions,
   ) => Promise<undefined | ResolveIdResult>
-  load?: (id: string) => Promise<undefined | SourceResult>
-  transform?: (id: string, code: string) => Promise<undefined | SourceResult>
-  buildEnd?: (error: string) => Promise<void>
+  load?: (ctx: PluginContext, id: string) => Promise<undefined | SourceResult>
+  transform?: (
+    ctx: PluginContext,
+    id: string,
+    code: string,
+  ) => Promise<undefined | SourceResult>
+  buildEnd?: (ctx: PluginContext, error: string) => Promise<void>
 }
 export interface HookResolveIdArgsOptions {
   isEntry: boolean
@@ -85,4 +90,7 @@ export class Bundler {
   generate(opts: OutputOptions): Promise<Outputs>
   build(): Promise<void>
   scan(): Promise<void>
+}
+export class PluginContext {
+  load(): Promise<void>
 }

@@ -200,6 +200,7 @@ impl LinkStage {
             .map(|id| self.modules[*id].expect_normal().pretty_path.to_string())
             .collect::<Vec<_>>(),
         )
+        .with_severity_warning()
       }));
     }
   }

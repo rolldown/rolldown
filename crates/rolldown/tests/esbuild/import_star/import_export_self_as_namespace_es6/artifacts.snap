@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_export_self_as_name
 ## CIRCULAR_DEPENDENCY
 
 ```text
-[CIRCULAR_DEPENDENCY] Error: Circular dependency: entry.js -> entry.js.
+[CIRCULAR_DEPENDENCY] Warning: Circular dependency: entry.js -> entry.js.
 
 ```
 # Assets

@@ -8,13 +8,13 @@ input_file: crates/rolldown/tests/fixtures/warnings/circular_dependency
 ## CIRCULAR_DEPENDENCY
 
 ```text
-[CIRCULAR_DEPENDENCY] Error: Circular dependency: foo.js -> main.js -> foo.js.
+[CIRCULAR_DEPENDENCY] Warning: Circular dependency: foo.js -> main.js -> foo.js.
 
 ```
 ## CIRCULAR_DEPENDENCY
 
 ```text
-[CIRCULAR_DEPENDENCY] Error: Circular dependency: entry.js -> foo.js -> entry.js.
+[CIRCULAR_DEPENDENCY] Warning: Circular dependency: entry.js -> foo.js -> entry.js.
 
 ```
 # Assets

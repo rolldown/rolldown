@@ -147,8 +147,7 @@ impl LinkStage {
       modules[module]
         .import_records()
         .iter()
-        .filter(|rec| rec.kind.is_static())
-        .map(|rec| rec.resolved_module)
+        .filter_map(|rec| rec.kind.is_static().then_some(rec.resolved_module))
         .for_each(|dependency| {
           if parents.contains_key(&dependency) {
             if !visited_modules.contains(&dependency) {

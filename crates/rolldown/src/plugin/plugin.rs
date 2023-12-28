@@ -4,7 +4,7 @@ use rolldown_error::BuildError;
 
 use super::{
   args::{HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookTransformArgs},
-  context::PluginContext,
+  context::{PluginContext, TransformPluginContext},
   output::{HookLoadOutput, HookResolveIdOutput},
 };
 
@@ -37,7 +37,7 @@ pub trait Plugin: Debug + Send + Sync {
 
   async fn transform(
     &self,
-    _ctx: &PluginContext,
+    _ctx: &TransformPluginContext<'_>,
     _args: &HookTransformArgs,
   ) -> HookTransformReturn {
     Ok(None)

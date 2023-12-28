@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::{
   plugin::{
     args::HookBuildEndArgs,
+    context::TransformPluginContext,
     plugin::{BoxPlugin, HookNoopReturn},
   },
   HookLoadArgs, HookLoadReturn, HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs,
@@ -49,7 +50,8 @@ impl PluginDriver {
 
   pub async fn transform(&self, args: &HookTransformArgs<'_>) -> HookTransformReturn {
     for (plugin, ctx) in &self.plugins {
-      if let Some(r) = plugin.transform(ctx, args).await? {
+      let context = TransformPluginContext::new(ctx);
+      if let Some(r) = plugin.transform(&context, args).await? {
         return Ok(Some(r));
       }
     }

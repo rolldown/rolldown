@@ -12,6 +12,7 @@ export type {
   PluginContext,
   RollupError,
   CustomPluginOptions,
-  PartialNull, ModuleOptions,
-  TransformPluginContext
+  PartialNull,
+  ModuleOptions,
+  TransformPluginContext,
 } from 'rollup'

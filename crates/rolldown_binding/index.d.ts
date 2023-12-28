@@ -14,7 +14,7 @@ export interface PluginOptions {
   ) => Promise<undefined | ResolveIdResult>
   load?: (ctx: PluginContext, id: string) => Promise<undefined | SourceResult>
   transform?: (
-    ctx: PluginContext,
+    ctx: TransformPluginContext,
     id: string,
     code: string,
   ) => Promise<undefined | SourceResult>
@@ -93,4 +93,7 @@ export class Bundler {
 }
 export class PluginContext {
   load(): Promise<void>
+}
+export class TransformPluginContext {
+  getCtx(): PluginContext
 }

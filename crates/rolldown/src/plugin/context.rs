@@ -1,4 +1,4 @@
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct PluginContext {}
 
 impl PluginContext {
@@ -7,4 +7,15 @@ impl PluginContext {
   }
 
   pub fn load(&self) {}
+}
+
+#[derive(Debug)]
+pub struct TransformPluginContext<'a> {
+  pub inner: &'a PluginContext,
+}
+
+impl<'a> TransformPluginContext<'a> {
+  pub fn new(inner: &'a PluginContext) -> Self {
+    Self { inner }
+  }
 }

@@ -29,7 +29,7 @@ pub struct PluginOptions {
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx: PluginContext, id: string, code: string) => Promise<undefined | SourceResult>"
+    ts_type = "(ctx: TransformPluginContext, id: string, code: string) => Promise<undefined | SourceResult>"
   )]
   pub transform: Option<JsFunction>,
 

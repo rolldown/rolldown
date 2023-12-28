@@ -263,7 +263,8 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { Bundler, PluginContext } = nativeBinding
+const { Bundler, PluginContext, TransformPluginContext } = nativeBinding
 
 module.exports.Bundler = Bundler
 module.exports.PluginContext = PluginContext
+module.exports.TransformPluginContext = TransformPluginContext

@@ -1,9 +1,19 @@
-import { Plugin, NormalizedInputOptions, PluginContext, RollupError, CustomPluginOptions, PartialNull, ModuleOptions, TransformPluginContext } from '../rollup-types'
+import {
+  Plugin,
+  NormalizedInputOptions,
+  PluginContext,
+  RollupError,
+  CustomPluginOptions,
+  PartialNull,
+  ModuleOptions,
+  TransformPluginContext,
+} from '../rollup-types'
 import type {
   PluginOptions,
   SourceResult,
   ResolveIdResult,
   PluginContext as RolldownPluginContext,
+  TransformPluginContext as RolldownTransformPluginContext,
 } from '@rolldown/node-binding'
 import { unimplemented } from '../utils'
 
@@ -49,7 +59,10 @@ function buildEnd(hook: Plugin['buildEnd']) {
     }
     return async (ctx: RolldownPluginContext, e: string) => {
       try {
-        await hook.call(normalizePluginContext(ctx), e ? new Error(e) : undefined)
+        await hook.call(
+          normalizePluginContext(ctx),
+          e ? new Error(e) : undefined,
+        )
       } catch (error) {
         console.error(error)
         throw error
@@ -64,13 +77,17 @@ function transform(hook: Plugin['transform']) {
       return unimplemented()
     }
     return async (
-      ctx: RolldownPluginContext,
+      ctx: RolldownTransformPluginContext,
       code: string,
       id: string,
     ): Promise<undefined | SourceResult> => {
       try {
         // TODO: Need to investigate how to pass context to plugin.
-        const value = await hook.call(normalizeTransformPluginContext(ctx), code, id)
+        const value = await hook.call(
+          normalizeTransformPluginContext(ctx),
+          code,
+          id,
+        )
         if (value === undefined || value === null) {
           return
         }
@@ -137,7 +154,10 @@ function load(hook: Plugin['load']) {
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-    return async (ctx: RolldownPluginContext, id: string): Promise<undefined | SourceResult> => {
+    return async (
+      ctx: RolldownPluginContext,
+      id: string,
+    ): Promise<undefined | SourceResult> => {
       try {
         const value = await hook.call({} as any, id)
         if (value === undefined || value === null) {
@@ -159,7 +179,7 @@ function load(hook: Plugin['load']) {
   }
 }
 
-function normalizePluginContext(ctx: RolldownPluginContext): PluginContext  {
+function normalizePluginContext(ctx: RolldownPluginContext): PluginContext {
   return {
     get meta() {
       return unimplemented()
@@ -195,7 +215,9 @@ function normalizePluginContext(ctx: RolldownPluginContext): PluginContext  {
       unimplemented()
     },
     load: (
-      options: { id: string; resolveDependencies?: boolean } & Partial<PartialNull<ModuleOptions>>
+      options: { id: string; resolveDependencies?: boolean } & Partial<
+        PartialNull<ModuleOptions>
+      >,
     ) => {
       unimplemented()
     },
@@ -210,11 +232,11 @@ function normalizePluginContext(ctx: RolldownPluginContext): PluginContext  {
       source: string,
       importer?: string,
       options?: {
-        assertions?: Record<string, string>;
-        custom?: CustomPluginOptions;
-        isEntry?: boolean;
-        skipSelf?: boolean;
-      }
+        assertions?: Record<string, string>
+        custom?: CustomPluginOptions
+        isEntry?: boolean
+        skipSelf?: boolean
+      },
     ) => {
       unimplemented()
     },
@@ -227,11 +249,13 @@ function normalizePluginContext(ctx: RolldownPluginContext): PluginContext  {
   }
 }
 
-function normalizeTransformPluginContext(ctx: RolldownPluginContext): TransformPluginContext {
+function normalizeTransformPluginContext(
+  ctx: RolldownTransformPluginContext,
+): TransformPluginContext {
   return {
-    ...normalizePluginContext(ctx),
+    ...normalizePluginContext(ctx.getCtx()),
     getCombinedSourcemap: () => {
       unimplemented()
-    }
+    },
   }
 }

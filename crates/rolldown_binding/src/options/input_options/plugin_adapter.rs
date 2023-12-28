@@ -7,7 +7,7 @@ use rolldown::Plugin;
 
 use super::{
   plugin::{HookResolveIdArgsOptions, PluginOptions, ResolveIdResult, SourceResult},
-  plugin_context::PluginContext,
+  plugin_context::{PluginContext, TransformPluginContext},
 };
 
 pub type BuildStartCallback = JsCallback<(PluginContext,), ()>;
@@ -16,7 +16,8 @@ pub type ResolveIdCallback = JsCallback<
   Option<ResolveIdResult>,
 >;
 pub type LoadCallback = JsCallback<(PluginContext, String), Option<SourceResult>>;
-pub type TransformCallback = JsCallback<(PluginContext, String, String), Option<SourceResult>>;
+pub type TransformCallback =
+  JsCallback<(TransformPluginContext, String, String), Option<SourceResult>>;
 pub type BuildEndCallback = JsCallback<(PluginContext, Option<String>), ()>;
 
 #[derive(Derivative)]
@@ -114,7 +115,7 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn transform(
     &self,
-    ctx: &rolldown::PluginContext,
+    ctx: &rolldown::TransformPluginContext<'_>,
     args: &rolldown::HookTransformArgs,
   ) -> rolldown::HookTransformReturn {
     if let Some(cb) = &self.transform_fn {

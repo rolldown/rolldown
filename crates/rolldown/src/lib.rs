@@ -23,7 +23,7 @@ pub use crate::{
       HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookResolveIdArgsOptions,
       HookTransformArgs,
     },
-    context::PluginContext,
+    context::{PluginContext, TransformPluginContext},
     output::{HookLoadOutput, HookResolveIdOutput},
     plugin::{
       BoxPlugin, HookLoadReturn, HookNoopReturn, HookResolveIdReturn, HookTransformReturn, Plugin,

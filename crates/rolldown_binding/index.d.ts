@@ -92,7 +92,7 @@ export class Bundler {
   scan(): Promise<void>
 }
 export class PluginContext {
-  load(): Promise<void>
+  load(): void
 }
 export class TransformPluginContext {
   getCtx(): PluginContext

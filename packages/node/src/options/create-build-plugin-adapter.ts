@@ -252,10 +252,10 @@ function normalizePluginContext(ctx: RolldownPluginContext): PluginContext {
 function normalizeTransformPluginContext(
   ctx: RolldownTransformPluginContext,
 ): TransformPluginContext {
-  return {
-    ...normalizePluginContext(ctx.getCtx()),
+  const inner = normalizePluginContext(ctx.getCtx())
+  return Object.assign(inner, {
     getCombinedSourcemap: () => {
       unimplemented()
     },
-  }
+  })
 }

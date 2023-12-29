@@ -7,6 +7,7 @@ use derivative::Derivative;
 use napi::JsFunction;
 use napi_derive::napi;
 
+use rolldown_fs::OsFileSystem;
 use serde::Deserialize;
 
 use crate::options::input_options::plugin_adapter::JsAdapterPlugin;
@@ -106,7 +107,7 @@ pub struct InputOptions {
 
 #[allow(clippy::redundant_closure_for_method_calls)]
 impl From<InputOptions>
-  for (napi::Result<rolldown::InputOptions>, napi::Result<Vec<rolldown::BoxPlugin>>)
+  for (napi::Result<rolldown::InputOptions>, napi::Result<Vec<rolldown::BoxPlugin<OsFileSystem>>>)
 {
   fn from(value: InputOptions) -> Self {
     let cwd = PathBuf::from(value.cwd.clone());

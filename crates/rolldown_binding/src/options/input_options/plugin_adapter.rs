@@ -4,6 +4,7 @@ use crate::utils::napi_error_ext::NapiErrorExt;
 use crate::utils::JsCallback;
 use derivative::Derivative;
 use rolldown::Plugin;
+use rolldown_fs::OsFileSystem;
 
 use super::{
   plugin::{HookResolveIdArgsOptions, PluginOptions, ResolveIdResult, SourceResult},
@@ -53,19 +54,22 @@ impl JsAdapterPlugin {
     })
   }
 
-  pub fn new_boxed(option: PluginOptions) -> napi::Result<Box<dyn Plugin>> {
+  pub fn new_boxed(option: PluginOptions) -> napi::Result<Box<dyn Plugin<OsFileSystem>>> {
     Ok(Box::new(Self::new(option)?))
   }
 }
 
 #[async_trait::async_trait]
-impl Plugin for JsAdapterPlugin {
+impl Plugin<OsFileSystem> for JsAdapterPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Owned(self.name.to_string())
   }
 
   #[allow(clippy::redundant_closure_for_method_calls)]
-  async fn build_start(&self, ctx: &rolldown::PluginContext) -> rolldown::HookNoopReturn {
+  async fn build_start(
+    &self,
+    ctx: &rolldown::PluginContext<OsFileSystem>,
+  ) -> rolldown::HookNoopReturn {
     if let Some(cb) = &self.build_start_fn {
       cb.call_async((ctx.into(),)).await.map_err(|e| e.into_bundle_error())?;
     }
@@ -75,7 +79,7 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn resolve_id(
     &self,
-    ctx: &rolldown::PluginContext,
+    ctx: &rolldown::PluginContext<OsFileSystem>,
     args: &rolldown::HookResolveIdArgs,
   ) -> rolldown::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id_fn {
@@ -98,7 +102,7 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn load(
     &self,
-    ctx: &rolldown::PluginContext,
+    ctx: &rolldown::PluginContext<OsFileSystem>,
     args: &rolldown::HookLoadArgs,
   ) -> rolldown::HookLoadReturn {
     if let Some(cb) = &self.load_fn {
@@ -115,7 +119,7 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn transform(
     &self,
-    ctx: &rolldown::TransformPluginContext<'_>,
+    ctx: &rolldown::TransformPluginContext<'_, OsFileSystem>,
     args: &rolldown::HookTransformArgs,
   ) -> rolldown::HookTransformReturn {
     if let Some(cb) = &self.transform_fn {
@@ -132,7 +136,7 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn build_end(
     &self,
-    ctx: &rolldown::PluginContext,
+    ctx: &rolldown::PluginContext<OsFileSystem>,
     args: Option<&rolldown::HookBuildEndArgs>,
   ) -> rolldown::HookNoopReturn {
     if let Some(cb) = &self.build_end_fn {

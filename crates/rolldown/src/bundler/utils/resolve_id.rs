@@ -6,7 +6,9 @@ use rolldown_fs::FileSystem;
 use rolldown_resolver::Resolver;
 
 use crate::{
-  bundler::plugin_driver::SharedPluginDriver, HookResolveIdArgs, HookResolveIdArgsOptions,
+  bundler::{options::input_options::SharedInputOptions, plugin_driver::SharedPluginDriver},
+  error::BatchedResult,
+  HookResolveIdArgs, HookResolveIdArgsOptions,
 };
 
 static HTTP_URL_REGEX: Lazy<Regex> =
@@ -22,9 +24,9 @@ pub struct ResolvedRequestInfo {
 }
 
 #[allow(clippy::unused_async)]
-pub async fn resolve_id<T: FileSystem + Default>(
+pub async fn resolve_id<T: FileSystem + Default + 'static>(
   resolver: &Resolver<T>,
-  plugin_driver: &SharedPluginDriver,
+  plugin_driver: &SharedPluginDriver<T>,
   request: &str,
   importer: Option<&FilePath>,
   options: HookResolveIdArgsOptions,
@@ -64,4 +66,39 @@ pub async fn resolve_id<T: FileSystem + Default>(
     module_type: resolved.module_type,
     is_external: false,
   })
+}
+
+#[allow(clippy::option_if_let_else)]
+pub async fn resolve_id_without_defaults<T: FileSystem + Default + 'static>(
+  input_options: &SharedInputOptions,
+  resolver: &Resolver<T>,
+  plugin_driver: &SharedPluginDriver<T>,
+  importer: Option<FilePath>,
+  specifier: &str,
+  options: HookResolveIdArgsOptions,
+) -> BatchedResult<ResolvedRequestInfo> {
+  // Check external with unresolved path
+  if input_options
+    .external
+    .call(specifier.to_string(), importer.as_ref().map(|v| v.to_string()), false)
+    .await?
+  {
+    return Ok(ResolvedRequestInfo {
+      path: specifier.to_string().into(),
+      module_type: ModuleType::Unknown,
+      is_external: true,
+    });
+  }
+
+  let mut info =
+    resolve_id(resolver, plugin_driver, specifier, importer.as_ref(), options, false).await?;
+
+  if !info.is_external {
+    // Check external with resolved path
+    info.is_external = input_options
+      .external
+      .call(specifier.to_string(), importer.map(|v| v.to_string()), true)
+      .await?;
+  }
+  Ok(info)
 }

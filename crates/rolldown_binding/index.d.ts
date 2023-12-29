@@ -31,6 +31,10 @@ export interface ResolveIdResult {
 export interface SourceResult {
   code: string
 }
+export interface ResolveId {
+  external: boolean
+  id: string
+}
 export interface InputItem {
   name?: string
   import: string
@@ -93,6 +97,10 @@ export class Bundler {
 }
 export class PluginContext {
   load(): void
+  resolve(
+    source: string,
+    importer?: string | undefined | null,
+  ): Promise<ResolveId>
 }
 export class TransformPluginContext {
   getCtx(): PluginContext

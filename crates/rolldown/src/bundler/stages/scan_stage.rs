@@ -23,7 +23,7 @@ use crate::{
 
 pub struct ScanStage<Fs: FileSystem + Default> {
   input_options: SharedInputOptions,
-  plugin_driver: SharedPluginDriver,
+  plugin_driver: SharedPluginDriver<Fs>,
   fs: Fs,
   resolver: SharedResolver<Fs>,
 }
@@ -40,7 +40,7 @@ pub struct ScanStageOutput {
 impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
   pub fn new(
     input_options: SharedInputOptions,
-    plugin_driver: SharedPluginDriver,
+    plugin_driver: SharedPluginDriver<Fs>,
     fs: Fs,
     resolver: SharedResolver<Fs>,
   ) -> Self {

@@ -48,14 +48,14 @@ impl<T: FileSystem + 'static + Default> Debug for ViteScannerPlugin<T> {
 }
 
 #[async_trait::async_trait]
-impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
+impl<T: FileSystem + 'static + Default> Plugin<T> for ViteScannerPlugin<T> {
   fn name(&self) -> Cow<'static, str> {
     "rolldown_plugin_vite_scanner".into()
   }
 
   async fn resolve_id(
     &self,
-    _ctx: &PluginContext,
+    _ctx: &PluginContext<T>,
     args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn {
     let HookResolveIdArgs { source, .. } = args;
@@ -94,7 +94,7 @@ impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
     Ok(None)
   }
 
-  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs) -> HookLoadReturn {
+  async fn load(&self, _ctx: &PluginContext<T>, args: &HookLoadArgs) -> HookLoadReturn {
     let HookLoadArgs { id } = args;
 
     // extract scripts inside HTML-like files and treat it as a js module

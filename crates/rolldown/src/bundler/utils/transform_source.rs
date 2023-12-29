@@ -1,7 +1,9 @@
+use rolldown_fs::FileSystem;
+
 use crate::{bundler::plugin_driver::PluginDriver, error::BatchedErrors, HookTransformArgs};
 
-pub async fn transform_source(
-  plugin_driver: &PluginDriver,
+pub async fn transform_source<T: FileSystem + Default + 'static>(
+  plugin_driver: &PluginDriver<T>,
   mut source: String,
 ) -> Result<String, BatchedErrors> {
   if let Some(r) =

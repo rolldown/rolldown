@@ -48,7 +48,7 @@ pub struct ModuleLoaderOutput {
 impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
   pub fn new(
     input_options: SharedInputOptions,
-    plugin_driver: SharedPluginDriver,
+    plugin_driver: SharedPluginDriver<T>,
     fs: T,
     resolver: SharedResolver<T>,
   ) -> Self {

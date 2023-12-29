@@ -1,4 +1,6 @@
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
+
+use rolldown_fs::FileSystem;
 
 use crate::{
   plugin::{
@@ -7,20 +9,35 @@ use crate::{
     plugin::{BoxPlugin, HookNoopReturn},
   },
   HookLoadArgs, HookLoadReturn, HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs,
-  HookTransformReturn, PluginContext,
+  HookTransformReturn, PluginContext, SharedResolver,
 };
 
-pub type SharedPluginDriver = Arc<PluginDriver>;
+use super::options::input_options::SharedInputOptions;
 
-pub struct PluginDriver {
-  plugins: Vec<(BoxPlugin, PluginContext)>,
+pub type SharedPluginDriver<T> = Arc<PluginDriver<T>>;
+
+#[derive(Debug)]
+pub struct PluginDriver<T: FileSystem + Default> {
+  plugins: Vec<(BoxPlugin<T>, PluginContext<T>)>,
 }
 
-impl PluginDriver {
-  pub fn new(plugins: Vec<BoxPlugin>) -> Self {
-    Self {
-      plugins: plugins.into_iter().map(|plugin| (plugin, PluginContext::new())).collect::<Vec<_>>(),
-    }
+impl<T: FileSystem + Default + 'static> PluginDriver<T> {
+  pub fn with_shared(
+    plugins: Vec<BoxPlugin<T>>,
+    input_options: &SharedInputOptions,
+    resolver: &SharedResolver<T>,
+  ) -> Arc<Self> {
+    Arc::new_cyclic(|v| Self {
+      plugins: plugins
+        .into_iter()
+        .map(|plugin| {
+          (
+            plugin,
+            PluginContext::new(Weak::clone(v), Arc::clone(input_options), Arc::clone(resolver)),
+          )
+        })
+        .collect::<Vec<_>>(),
+    })
   }
 
   pub async fn build_start(&self) -> HookNoopReturn {

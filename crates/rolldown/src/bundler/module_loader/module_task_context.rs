@@ -13,7 +13,7 @@ pub struct ModuleTaskCommonData<T: FileSystem + Default> {
   pub tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   pub resolver: SharedResolver<T>,
   pub fs: T,
-  pub plugin_driver: SharedPluginDriver,
+  pub plugin_driver: SharedPluginDriver<T>,
 }
 
 impl<T: FileSystem + Default> ModuleTaskCommonData<T> {

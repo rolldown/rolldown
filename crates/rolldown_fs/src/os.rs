@@ -8,7 +8,7 @@ use std::{
 use crate::file_system::FileSystem;
 
 /// Operating System
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct OsFileSystem;
 
 impl FileSystem for OsFileSystem {

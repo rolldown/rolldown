@@ -8,7 +8,6 @@ use rolldown_common::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
-use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
 use super::{module_task_context::ModuleTaskCommonData, Msg};
@@ -17,13 +16,11 @@ use crate::{
     ast_scanner::{AstScanner, ScanResult},
     module::normal_module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
-    options::input_options::SharedInputOptions,
-    plugin_driver::SharedPluginDriver,
     utils::{
       ast_scope::AstScope,
       ast_symbol::AstSymbol,
       load_source::load_source,
-      resolve_id::{resolve_id, ResolvedRequestInfo},
+      resolve_id::{resolve_id_without_defaults, ResolvedRequestInfo},
       transform_source::transform_source,
     },
   },
@@ -171,38 +168,6 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }
 
-  #[allow(clippy::option_if_let_else)]
-  pub(crate) async fn resolve_id<F: FileSystem + Default>(
-    input_options: &SharedInputOptions,
-    resolver: &Resolver<F>,
-    plugin_driver: &SharedPluginDriver,
-    importer: &FilePath,
-    specifier: &str,
-    options: HookResolveIdArgsOptions,
-  ) -> BatchedResult<ResolvedRequestInfo> {
-    // Check external with unresolved path
-    if input_options.external.call(specifier.to_string(), Some(importer.to_string()), false).await?
-    {
-      return Ok(ResolvedRequestInfo {
-        path: specifier.to_string().into(),
-        module_type: ModuleType::Unknown,
-        is_external: true,
-      });
-    }
-
-    let mut info =
-      resolve_id(resolver, plugin_driver, specifier, Some(importer), options, false).await?;
-
-    if !info.is_external {
-      // Check external with resolved path
-      info.is_external = input_options
-        .external
-        .call(specifier.to_string(), Some(importer.to_string()), true)
-        .await?;
-    }
-    Ok(info)
-  }
-
   #[tracing::instrument(skip_all)]
   async fn resolve_dependencies(
     &mut self,
@@ -218,11 +183,11 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       let kind = item.kind;
       // let on_warn = self.input_options.on_warn.clone();
       tokio::spawn(async move {
-        Self::resolve_id(
+        resolve_id_without_defaults(
           &input_options,
           &resolver,
           &plugin_driver,
-          &importer,
+          Some(importer),
           &specifier,
           HookResolveIdArgsOptions { is_entry: false, kind },
         )

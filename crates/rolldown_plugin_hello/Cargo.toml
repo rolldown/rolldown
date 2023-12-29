@@ -13,4 +13,5 @@ workspace = true
 
 [dependencies]
 rolldown    = { path = "../rolldown" }
+rolldown_fs = { path = "../rolldown_fs" }
 async-trait = { workspace = true }

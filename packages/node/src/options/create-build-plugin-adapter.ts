@@ -228,7 +228,7 @@ function normalizePluginContext(ctx: RolldownPluginContext): PluginContext {
     parse: (input: string, options?: any) => {
       unimplemented()
     },
-    resolve: (
+    resolve: async (
       source: string,
       importer?: string,
       options?: {
@@ -238,7 +238,29 @@ function normalizePluginContext(ctx: RolldownPluginContext): PluginContext {
         skipSelf?: boolean
       },
     ) => {
-      unimplemented()
+      if (options) {
+        unimplemented()
+      }
+      let result = await ctx.resolve(source, importer)
+      return {
+        external: result.external,
+        id: result.id,
+        get resolvedBy() {
+          return unimplemented()
+        },
+        get assertions() {
+          return unimplemented()
+        },
+        get meta() {
+          return unimplemented()
+        },
+        get moduleSideEffects() {
+          return unimplemented()
+        },
+        get syntheticNamedExports() {
+          return unimplemented()
+        },
+      }
     },
     setAssetSource: (assetReferenceId: string, source: string | Uint8Array) => {
       unimplemented()

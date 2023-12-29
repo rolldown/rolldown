@@ -31,7 +31,7 @@ pub struct RolldownOutput {
 
 pub struct Bundler<T: FileSystem + Default> {
   input_options: SharedInputOptions,
-  plugin_driver: SharedPluginDriver,
+  plugin_driver: SharedPluginDriver<T>,
   fs: T,
   resolver: SharedResolver<T>,
   // Store the build result, using for generate/write.
@@ -43,7 +43,7 @@ impl Bundler<OsFileSystem> {
     Self::with_plugins(input_options, vec![])
   }
 
-  pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>) -> Self {
+  pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin<OsFileSystem>>) -> Self {
     Self::with_plugins_and_fs(input_options, plugins, OsFileSystem)
   }
 }
@@ -51,19 +51,20 @@ impl Bundler<OsFileSystem> {
 impl<T: FileSystem + Default + 'static> Bundler<T> {
   pub fn with_plugins_and_fs(
     mut input_options: InputOptions,
-    plugins: Vec<BoxPlugin>,
+    plugins: Vec<BoxPlugin<T>>,
     fs: T,
   ) -> Self {
     rolldown_tracing::try_init_tracing();
+    let resolver = Arc::new(Resolver::with_cwd_and_fs(
+      input_options.cwd.clone(),
+      std::mem::take(&mut input_options.resolve),
+      fs.share(),
+    ));
+    let input_options = Arc::new(input_options);
     Self {
-      resolver: Resolver::with_cwd_and_fs(
-        input_options.cwd.clone(),
-        std::mem::take(&mut input_options.resolve),
-        fs.share(),
-      )
-      .into(),
-      plugin_driver: Arc::new(PluginDriver::new(plugins)),
-      input_options: Arc::new(input_options),
+      plugin_driver: PluginDriver::with_shared(plugins, &input_options, &resolver),
+      resolver,
+      input_options,
       fs,
       build_result: None,
     }

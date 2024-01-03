@@ -29,3 +29,8 @@ pub struct HookLoadArgs<'a> {
 pub struct HookBuildEndArgs {
   pub error: String,
 }
+
+#[derive(Debug)]
+pub struct RenderChunkArgs {
+  pub code: String,
+}

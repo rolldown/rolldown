@@ -38,6 +38,18 @@ impl BatchedErrors {
   }
 }
 
+pub fn collect_errors<T>(value: Vec<Result<T, BuildError>>) -> BatchedResult<Vec<T>> {
+  let mut errors = BatchedErrors::default();
+
+  let collected = value.into_iter().filter_map(|item| errors.take_err_from(item)).collect();
+
+  if errors.is_empty() {
+    Ok(collected)
+  } else {
+    Err(errors)
+  }
+}
+
 pub type BatchedResult<T> = Result<T, BatchedErrors>;
 
 impl From<BuildError> for BatchedErrors {

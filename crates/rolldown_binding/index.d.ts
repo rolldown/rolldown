@@ -11,6 +11,7 @@ export interface PluginOptions {
     importer?: string,
     options?: HookResolveIdArgsOptions,
   ) => Promise<undefined | ResolveIdResult>
+<<<<<<< HEAD
   load?: (id: string) => Promise<undefined | SourceResult>
   transform?: (id: string, code: string) => Promise<undefined | SourceResult>
   buildEnd?: (error: string) => Promise<void>
@@ -30,25 +31,6 @@ export interface ResolveIdResult {
 }
 export interface SourceResult {
   code: string
-}
-export interface HookRenderChunkOutput {
-  code: string
-}
-export interface PreRenderedChunk {
-  isEntry: boolean
-  isDynamicEntry: boolean
-  facadeModuleId?: string
-  moduleIds: Array<string>
-  exports: Array<string>
-}
-export interface RenderedChunk {
-  isEntry: boolean
-  isDynamicEntry: boolean
-  facadeModuleId?: string
-  moduleIds: Array<string>
-  exports: Array<string>
-  fileName: string
-  modules: Record<string, RenderedModule>
 }
 export interface InputItem {
   name?: string

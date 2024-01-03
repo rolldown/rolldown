@@ -3,6 +3,9 @@ import type {
   PluginOptions,
   SourceResult,
   ResolveIdResult,
+  PluginContext as RolldownPluginContext,
+  TransformPluginContext as RolldownTransformPluginContext,
+  RenderedChunk,
 } from '@rolldown/node-binding'
 import { unimplemented } from '../utils'
 
@@ -18,6 +21,84 @@ export function createBuildPluginAdapter(
     load: load(plugin.load),
     transform: transform(plugin.transform),
     buildEnd: buildEnd(plugin.buildEnd),
+    renderChunk: renderChunk(plugin.renderChunk),
+  }
+}
+
+function renderChunk(hook: Plugin['renderChunk']) {
+  if (hook) {
+    if (typeof hook !== 'function') {
+      return unimplemented()
+    }
+    return async (
+      ctx: RolldownPluginContext,
+      code: string,
+      chunk: RenderedChunk,
+    ): Promise<undefined | SourceResult> => {
+      try {
+        let renderedChunk = Object.assign(chunk, {
+          get name() {
+            return unimplemented()
+          },
+          get dynamicImports() {
+            return unimplemented()
+          },
+          get imports() {
+            return unimplemented()
+          },
+          get implicitlyLoadedBefore() {
+            return unimplemented()
+          },
+          get importedBindings() {
+            return unimplemented()
+          },
+          get isImplicitEntry() {
+            return unimplemented()
+          },
+          get referencedFiles() {
+            return unimplemented()
+          },
+          type: 'chunk' as const,
+          get modules() {
+            return Object.fromEntries(
+              Object.entries(chunk.modules).map(([key, value]) => [
+                key,
+                {
+                  ...value,
+                  get code() {
+                    return unimplemented()
+                  },
+                },
+              ]),
+            )
+          },
+          get facadeModuleId() {
+            return chunk.facadeModuleId || null
+          },
+        })
+        // TODO options and meta
+        const value = await hook.call(
+          normalizePluginContext(ctx),
+          code,
+          renderedChunk,
+          {} as any,
+          {} as any,
+        )
+        if (value === undefined || value === null) {
+          return
+        }
+        if (typeof value === 'string') {
+          return { code: value }
+        }
+        if (typeof value === 'object') {
+          // TODO other filed
+          return { code: value.code }
+        }
+      } catch (error) {
+        console.error(error)
+        throw error
+      }
+    }
   }
 }
 

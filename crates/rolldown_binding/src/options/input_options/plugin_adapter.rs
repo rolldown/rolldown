@@ -5,14 +5,25 @@ use crate::utils::JsCallback;
 use derivative::Derivative;
 use rolldown::Plugin;
 
-use super::plugin::{HookResolveIdArgsOptions, PluginOptions, ResolveIdResult, SourceResult};
+use super::{
+  plugin::{
+    HookRenderChunkOutput, HookResolveIdArgsOptions, PluginOptions, RenderedChunk, ResolveIdResult,
+    SourceResult,
+  },
+  plugin_context::{PluginContext, TransformPluginContext},
+};
 
-pub type BuildStartCallback = JsCallback<(), ()>;
-pub type ResolveIdCallback =
-  JsCallback<(String, Option<String>, HookResolveIdArgsOptions), Option<ResolveIdResult>>;
-pub type LoadCallback = JsCallback<(String,), Option<SourceResult>>;
-pub type TransformCallback = JsCallback<(String, String), Option<SourceResult>>;
-pub type BuildEndCallback = JsCallback<(Option<String>,), ()>;
+pub type BuildStartCallback = JsCallback<(PluginContext,), ()>;
+pub type ResolveIdCallback = JsCallback<
+  (PluginContext, String, Option<String>, HookResolveIdArgsOptions),
+  Option<ResolveIdResult>,
+>;
+pub type LoadCallback = JsCallback<(PluginContext, String), Option<SourceResult>>;
+pub type TransformCallback =
+  JsCallback<(TransformPluginContext, String, String), Option<SourceResult>>;
+pub type BuildEndCallback = JsCallback<(PluginContext, Option<String>), ()>;
+pub type RenderChunkCallback =
+  JsCallback<(PluginContext, String, RenderedChunk), Option<HookRenderChunkOutput>>;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -28,6 +39,8 @@ pub struct JsAdapterPlugin {
   transform_fn: Option<TransformCallback>,
   #[derivative(Debug = "ignore")]
   build_end_fn: Option<BuildEndCallback>,
+  #[derivative(Debug = "ignore")]
+  render_chunk_fn: Option<RenderChunkCallback>,
 }
 
 impl JsAdapterPlugin {
@@ -37,6 +50,7 @@ impl JsAdapterPlugin {
     let load_fn = option.load.as_ref().map(LoadCallback::new).transpose()?;
     let transform_fn = option.transform.as_ref().map(TransformCallback::new).transpose()?;
     let build_end_fn = option.build_end.as_ref().map(BuildEndCallback::new).transpose()?;
+    let render_chunk_fn = option.render_chunk.as_ref().map(RenderChunkCallback::new).transpose()?;
     Ok(Self {
       name: option.name,
       build_start_fn,
@@ -44,6 +58,7 @@ impl JsAdapterPlugin {
       load_fn,
       transform_fn,
       build_end_fn,
+      render_chunk_fn,
     })
   }
 
@@ -131,5 +146,21 @@ impl Plugin for JsAdapterPlugin {
         .map_err(|e| e.into_bundle_error())?;
     }
     Ok(())
+  }
+
+  #[allow(clippy::redundant_closure_for_method_calls)]
+  async fn render_chunk(
+    &self,
+    ctx: &rolldown::PluginContext<OsFileSystem>,
+    args: &rolldown::RenderChunkArgs,
+  ) -> rolldown::HookRenderChunkReturn {
+    if let Some(cb) = &self.render_chunk_fn {
+      let res = cb
+        .call_async((ctx.into(), args.code.to_string(), args.chunk.clone().into()))
+        .await
+        .map_err(|e| e.into_bundle_error())?;
+      return Ok(res.map(Into::into));
+    }
+    Ok(None)
   }
 }

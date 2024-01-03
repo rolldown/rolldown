@@ -12,6 +12,7 @@ pub use crate::{
   bundler::{
     bundle::output::{Output, OutputAsset, OutputChunk, RenderedModule},
     bundler::{Bundler, RolldownOutput},
+    chunk::render_chunk::{PreRenderedChunk, RenderedChunk},
     options::{
       file_name_template::FileNameTemplate,
       input_options::{External, InputItem, InputOptions},
@@ -21,7 +22,7 @@ pub use crate::{
   plugin::{
     args::{
       HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookResolveIdArgsOptions,
-      HookTransformArgs,
+      HookTransformArgs, RenderChunkArgs,
     },
     context::PluginContext,
     output::{HookLoadOutput, HookRenderChunkOutput, HookResolveIdOutput},

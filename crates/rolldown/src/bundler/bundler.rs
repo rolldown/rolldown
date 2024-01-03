@@ -176,8 +176,9 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
     let graph = self.build_result.as_mut().expect("Build should success");
-    let mut bundle_stage = BundleStage::new(graph, &self.input_options, &output_options);
-    let assets = bundle_stage.bundle();
+    let mut bundle_stage =
+      BundleStage::new(graph, &self.input_options, &output_options, &self.plugin_driver);
+    let assets = bundle_stage.bundle().await?;
 
     Ok(RolldownOutput { warnings: std::mem::take(&mut graph.warnings), assets })
   }

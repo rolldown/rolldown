@@ -3,4 +3,4 @@
 | failed | 0|
 | skipFailed | 655|
 | skipped | 0|
-| passed | 237|
+| passed | 235|

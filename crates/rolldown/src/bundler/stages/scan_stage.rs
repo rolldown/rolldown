@@ -17,7 +17,7 @@ use crate::{
       symbols::Symbols,
     },
   },
-  error::{collect_errors, BatchedResult},
+  error::{collect_result_and_errors, BatchedResult},
   HookResolveIdArgsOptions, SharedResolver,
 };
 
@@ -101,6 +101,6 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
         }
       }));
 
-    collect_errors(resolved_ids)
+    collect_result_and_errors(resolved_ids)
   }
 }

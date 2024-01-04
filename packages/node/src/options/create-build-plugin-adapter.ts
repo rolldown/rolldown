@@ -43,6 +43,7 @@ function generateBundle(hook: Plugin['generateBundle']) {
         ]),
       )
       try {
+        // TODO outputOptions
         await hook.call(normalizePluginContext(ctx), {} as any, bundle, isWrite)
       } catch (error) {
         console.error(error)

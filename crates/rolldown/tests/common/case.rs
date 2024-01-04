@@ -95,7 +95,10 @@ impl Case {
             chunk.file_name,
             chunk.is_entry,
             chunk.is_dynamic_entry,
-            chunk.facade_module_id,
+            chunk
+              .facade_module_id
+              .clone()
+              .map(|v| v.replace(self.fixture.dir_path().to_str().unwrap(), "$DIR$")),
             chunk.exports
           ))]
         }

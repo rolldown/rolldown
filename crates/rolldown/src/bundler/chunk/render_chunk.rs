@@ -40,11 +40,11 @@ impl Chunk {
       facade_module_id: self
         .entry_point
         .as_ref()
-        .map(|entry_point| graph.modules[entry_point.id].expect_normal().pretty_path.to_string()),
+        .map(|entry_point| graph.modules[entry_point.id].resource_id().expect_file().to_string()),
       module_ids: self
         .modules
         .iter()
-        .map(|id| graph.modules[*id].expect_normal().pretty_path.to_string())
+        .map(|id| graph.modules[*id].resource_id().expect_file().to_string())
         .collect(),
       exports: self.get_export_names(graph, output_options),
     }

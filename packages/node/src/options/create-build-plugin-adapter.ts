@@ -6,6 +6,7 @@ import type {
   PluginContext as RolldownPluginContext,
   TransformPluginContext as RolldownTransformPluginContext,
   RenderedChunk,
+  HookRenderChunkOutput,
 } from '@rolldown/node-binding'
 import { unimplemented } from '../utils'
 
@@ -34,48 +35,55 @@ function renderChunk(hook: Plugin['renderChunk']) {
       ctx: RolldownPluginContext,
       code: string,
       chunk: RenderedChunk,
-    ): Promise<undefined | SourceResult> => {
+    ): Promise<undefined | HookRenderChunkOutput> => {
       try {
-        let renderedChunk = Object.assign(chunk, {
-          get name() {
-            return unimplemented()
+        let renderedChunk = Object.assign(
+          {
+            get name() {
+              return unimplemented()
+            },
+            get dynamicImports() {
+              return unimplemented()
+            },
+            get imports() {
+              return unimplemented()
+            },
+            get implicitlyLoadedBefore() {
+              return unimplemented()
+            },
+            get importedBindings() {
+              return unimplemented()
+            },
+            get isImplicitEntry() {
+              return unimplemented()
+            },
+            get referencedFiles() {
+              return unimplemented()
+            },
+            type: 'chunk' as const,
           },
-          get dynamicImports() {
-            return unimplemented()
+          chunk,
+          {
+            get modules() {
+              return Object.fromEntries(
+                Object.entries(chunk.modules).map(([key, value]) => [
+                  key,
+                  Object.assign(
+                    {
+                      get code() {
+                        return unimplemented()
+                      },
+                    },
+                    value,
+                  ),
+                ]),
+              )
+            },
+            get facadeModuleId() {
+              return chunk.facadeModuleId || null
+            },
           },
-          get imports() {
-            return unimplemented()
-          },
-          get implicitlyLoadedBefore() {
-            return unimplemented()
-          },
-          get importedBindings() {
-            return unimplemented()
-          },
-          get isImplicitEntry() {
-            return unimplemented()
-          },
-          get referencedFiles() {
-            return unimplemented()
-          },
-          type: 'chunk' as const,
-          get modules() {
-            return Object.fromEntries(
-              Object.entries(chunk.modules).map(([key, value]) => [
-                key,
-                {
-                  ...value,
-                  get code() {
-                    return unimplemented()
-                  },
-                },
-              ]),
-            )
-          },
-          get facadeModuleId() {
-            return chunk.facadeModuleId || null
-          },
-        })
+        )
         // TODO options and meta
         const value = await hook.call(
           normalizePluginContext(ctx),

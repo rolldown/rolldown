@@ -44,7 +44,7 @@ impl Module {
     }
   }
 
-  pub fn expect_normal(&self) -> &NormalModule {
+  pub fn _expect_normal(&self) -> &NormalModule {
     match self {
       Self::Normal(m) => m,
       Self::External(_) => unreachable!(),

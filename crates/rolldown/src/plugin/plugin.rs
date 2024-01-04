@@ -2,6 +2,8 @@ use std::{borrow::Cow, fmt::Debug};
 
 use rolldown_error::BuildError;
 
+use crate::Output;
+
 use super::{
   args::{HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookTransformArgs, RenderChunkArgs},
   context::PluginContext,
@@ -58,6 +60,16 @@ pub trait Plugin: Debug + Send + Sync {
     _args: &RenderChunkArgs,
   ) -> HookRenderChunkReturn {
     Ok(None)
+  }
+
+  #[allow(clippy::ptr_arg)]
+  async fn generate_bundle(
+    &self,
+    _ctx: &PluginContext<T>,
+    _bundle: &Vec<Output>,
+    _is_write: bool,
+  ) -> HookNoopReturn {
+    Ok(())
   }
 }
 

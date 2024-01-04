@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-use crate::utils::napi_error_ext::NapiErrorExt;
 use crate::utils::JsCallback;
+use crate::{output::Outputs, utils::napi_error_ext::NapiErrorExt};
 use derivative::Derivative;
 use rolldown::Plugin;
 
@@ -34,6 +34,8 @@ pub struct JsAdapterPlugin {
   build_end_fn: Option<BuildEndCallback>,
   #[derivative(Debug = "ignore")]
   render_chunk_fn: Option<RenderChunkCallback>,
+  #[derivative(Debug = "ignore")]
+  generate_bundle_fn: Option<GenerateBundleCallback>,
 }
 
 impl JsAdapterPlugin {
@@ -44,6 +46,8 @@ impl JsAdapterPlugin {
     let transform_fn = option.transform.as_ref().map(TransformCallback::new).transpose()?;
     let build_end_fn = option.build_end.as_ref().map(BuildEndCallback::new).transpose()?;
     let render_chunk_fn = option.render_chunk.as_ref().map(RenderChunkCallback::new).transpose()?;
+    let generate_bundle_fn =
+      option.generate_bundle.as_ref().map(GenerateBundleCallback::new).transpose()?;
     Ok(Self {
       name: option.name,
       build_start_fn,
@@ -52,6 +56,7 @@ impl JsAdapterPlugin {
       transform_fn,
       build_end_fn,
       render_chunk_fn,
+      generate_bundle_fn,
     })
   }
 
@@ -155,5 +160,20 @@ impl Plugin for JsAdapterPlugin {
       return Ok(res.map(Into::into));
     }
     Ok(None)
+  }
+
+  #[allow(clippy::redundant_closure_for_method_calls)]
+  async fn generate_bundle(
+    &self,
+    ctx: &rolldown::PluginContext<OsFileSystem>,
+    bundle: &Vec<rolldown::Output>,
+    is_write: bool,
+  ) -> rolldown::HookNoopReturn {
+    if let Some(cb) = &self.generate_bundle_fn {
+      cb.call_async((ctx.into(), bundle.clone().into(), is_write))
+        .await
+        .map_err(|e| e.into_bundle_error())?;
+    }
+    Ok(())
   }
 }

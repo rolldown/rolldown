@@ -18,6 +18,18 @@ export interface PluginOptions {
     code: string,
     chunk: RenderedChunk,
   ) => Promise<undefined | HookRenderChunkOutput>
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> c751110 (feat: render chunk hook binding)
+=======
+  generateBundle?: (
+    ctx: PluginContext,
+    bundle: Outputs,
+    isWrite: boolean,
+  ) => Promise<void>
+>>>>>>> 0d49215 (feat: add `generateBundle` hook)
+>>>>>>> 73878a0 (feat: add `generateBundle` hook)
 }
 export interface HookResolveIdArgsOptions {
   isEntry: boolean
@@ -90,13 +102,14 @@ export interface RenderedModule {
   renderedLength: number
 }
 export interface OutputChunk {
-  code: string
-  fileName: string
   isEntry: boolean
   isDynamicEntry: boolean
   facadeModuleId?: string
-  modules: Record<string, RenderedModule>
+  moduleIds: Array<string>
   exports: Array<string>
+  fileName: string
+  modules: Record<string, RenderedModule>
+  code: string
 }
 export interface OutputAsset {
   fileName: string

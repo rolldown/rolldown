@@ -71,4 +71,11 @@ impl PluginDriver {
     }
     Ok(args.code)
   }
+
+  pub async fn generate_bundle(&self, bundle: &Vec<Output>, is_write: bool) -> HookNoopReturn {
+    for (plugin, ctx) in &self.plugins {
+      plugin.generate_bundle(ctx, bundle, is_write).await?;
+    }
+    Ok(())
+  }
 }

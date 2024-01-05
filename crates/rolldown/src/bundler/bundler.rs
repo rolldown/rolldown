@@ -75,6 +75,8 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
 
     let output = self.bundle_up(output_options, true).await?;
 
+    self.plugin_driver.write_bundle(&output.assets).await?;
+
     self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
         "Could not create directory for output chunks: {:?} \ncwd: {}",

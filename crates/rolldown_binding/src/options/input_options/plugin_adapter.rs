@@ -37,6 +37,8 @@ pub struct JsAdapterPlugin {
   render_chunk_fn: Option<RenderChunkCallback>,
   #[derivative(Debug = "ignore")]
   generate_bundle_fn: Option<GenerateBundleCallback>,
+  #[derivative(Debug = "ignore")]
+  write_bundle_fn: Option<WriteBundleCallback>,
 }
 
 impl JsAdapterPlugin {
@@ -49,6 +51,7 @@ impl JsAdapterPlugin {
     let render_chunk_fn = option.render_chunk.as_ref().map(RenderChunkCallback::new).transpose()?;
     let generate_bundle_fn =
       option.generate_bundle.as_ref().map(GenerateBundleCallback::new).transpose()?;
+    let write_bundle_fn = option.write_bundle.as_ref().map(WriteBundleCallback::new).transpose()?;
     Ok(Self {
       name: option.name,
       build_start_fn,
@@ -58,6 +61,7 @@ impl JsAdapterPlugin {
       build_end_fn,
       render_chunk_fn,
       generate_bundle_fn,
+      write_bundle_fn,
     })
   }
 
@@ -172,6 +176,20 @@ impl Plugin for JsAdapterPlugin {
   ) -> rolldown::HookNoopReturn {
     if let Some(cb) = &self.generate_bundle_fn {
       cb.call_async((bundle.clone().into(), is_write)).await.map_err(|e| e.into_bundle_error())?;
+    }
+    Ok(())
+  }
+
+  #[allow(clippy::redundant_closure_for_method_calls)]
+  async fn write_bundle(
+    &self,
+    ctx: &rolldown::PluginContext<OsFileSystem>,
+    bundle: &Vec<rolldown::Output>,
+  ) -> rolldown::HookNoopReturn {
+    if let Some(cb) = &self.write_bundle_fn {
+      cb.call_async((ctx.into(), bundle.clone().into()))
+        .await
+        .map_err(|e| e.into_bundle_error())?;
     }
     Ok(())
   }

@@ -46,9 +46,7 @@ pub struct ResolveOptions {
 impl From<ResolveOptions> for rolldown_resolver::ResolverOptions {
   fn from(value: ResolveOptions) -> Self {
     Self {
-      alias: value
-        .alias
-        .map(|alias| alias.into_iter().map(|(key, value)| (key, value)).collect::<Vec<_>>()),
+      alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),
       alias_fields: value.alias_fields,
       condition_names: value.condition_names,
       exports_fields: value.exports_fields,

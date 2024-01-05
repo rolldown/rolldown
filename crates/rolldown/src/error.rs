@@ -23,7 +23,7 @@ impl BatchedErrors {
   }
 
   pub fn get(&self) -> Option<&BuildError> {
-    self.0.get(0)
+    self.0.first()
   }
 
   /// Try to take the Err() of the given result and return Some(T) if it's Ok(T).

@@ -80,7 +80,7 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
       {
         if let Some(oxc::ast::ast::Argument::Expression(
           oxc::ast::ast::Expression::StringLiteral(request),
-        )) = &expr.arguments.get(0)
+        )) = &expr.arguments.first()
         {
           let id = self.add_import_record(&request.value, ImportKind::Require);
           self.result.imports.insert(expr.span, id);

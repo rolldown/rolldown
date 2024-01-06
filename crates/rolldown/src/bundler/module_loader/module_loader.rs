@@ -84,13 +84,13 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
   }
 
   fn try_spawn_new_task(&mut self, info: ResolvedRequestInfo) -> ModuleId {
-    match self.visited.entry(info.path.clone()) {
+    match self.visited.entry(info.path.path.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         let id = Self::alloc_module_id(&mut self.intermediate_modules, &mut self.symbols);
         not_visited.insert(id);
         if info.is_external {
-          let ext = ExternalModule::new(id, ResourceId::new(info.path));
+          let ext = ExternalModule::new(id, ResourceId::new(info.path.path));
           self.intermediate_modules[id] = Some(Module::External(ext));
         } else {
           self.remaining += 1;

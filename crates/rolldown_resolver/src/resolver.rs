@@ -1,4 +1,4 @@
-use rolldown_common::{FilePath, ModuleType};
+use rolldown_common::{FilePath, ModuleType, ResolvedPath};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use std::path::PathBuf;
@@ -28,7 +28,7 @@ impl<F: FileSystem + Default> Resolver<F> {
 
 #[derive(Debug)]
 pub struct ResolveRet {
-  pub resolved: FilePath,
+  pub resolved: ResolvedPath,
   pub module_type: ModuleType,
 }
 
@@ -66,13 +66,19 @@ impl<F: FileSystem + Default> Resolver<F> {
 
     match resolved {
       Ok(info) => Ok(ResolveRet {
-        resolved: info.path().to_string_lossy().to_string().into(),
+        resolved: ResolvedPath {
+          path: info.path().to_string_lossy().to_string().into(),
+          ignored: false,
+        },
         module_type: calc_module_type(&info),
       }),
       Err(err) => {
         if let ResolveError::Ignored(path) = err {
           Ok(ResolveRet {
-            resolved: FilePath::with_ignored(path.to_string_lossy().to_string()),
+            resolved: ResolvedPath {
+              path: path.to_string_lossy().to_string().into(),
+              ignored: true,
+            },
             module_type: ModuleType::CJS,
           })
         } else if let Some(importer) = importer {

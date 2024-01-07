@@ -9,10 +9,16 @@ init:
     git submodule update
 
 test:
+    # TODO: add test for node
     cargo test --no-fail-fast
 
 lint:
+    yarn lint-filename
+    yarn lint
+    # yarn prettier:ci TODO(hyf0): Too slow
     cargo clippy --all -- --deny warnings
+    cargo fmt --all -- --check
+    taplo format
 
 # Update our local branch with the remote branch (this is for you to sync the submodules)
 update:
@@ -36,3 +42,9 @@ setup-bench:
 bench:
     cargo bench -p bench
 
+# This command will try to run checks similar to ci locally
+check:
+  # git diff --exit-code --quiet
+  just lint
+  just test
+  git status

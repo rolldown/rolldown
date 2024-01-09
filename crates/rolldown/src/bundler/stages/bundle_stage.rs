@@ -19,17 +19,16 @@ use crate::{
 };
 use index_vec::{index_vec, IndexVec};
 use rolldown_common::{EntryPointKind, ExportsKind, ImportKind, ModuleId, NamedImport, SymbolRef};
-use rolldown_fs::FileSystem;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-pub struct BundleStage<'a, T: FileSystem + Default> {
+pub struct BundleStage<'a> {
   link_output: &'a mut LinkStageOutput,
   output_options: &'a OutputOptions,
   input_options: &'a InputOptions,
   plugin_driver: &'a SharedPluginDriver,
 }
 
-impl<'a, T: FileSystem + Default + 'static> BundleStage<'a, T> {
+impl<'a> BundleStage<'a> {
   pub fn new(
     link_output: &'a mut LinkStageOutput,
     input_options: &'a InputOptions,

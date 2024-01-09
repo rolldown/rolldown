@@ -1,4 +1,3 @@
-use rolldown_fs::FileSystem;
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
@@ -8,8 +7,8 @@ use crate::{
 };
 
 #[allow(clippy::unused_async)]
-pub async fn _render_chunks<'a, T: FileSystem + Default + 'static>(
-  plugin_driver: &PluginDriver<T>,
+pub async fn _render_chunks<'a>(
+  plugin_driver: &PluginDriver,
   chunks: Vec<(ChunkId, String)>,
 ) -> Result<Vec<(ChunkId, String)>, BatchedErrors> {
   let result = block_on_spawn_all(chunks.iter().map(|(chunk, content)| async move {

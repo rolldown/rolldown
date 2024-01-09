@@ -9,4 +9,5 @@ export type {
   OutputChunk,
   NormalizedInputOptions,
   OutputAsset,
+  OutputBundle,
 } from 'rollup'

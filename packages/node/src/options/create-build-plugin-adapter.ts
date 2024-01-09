@@ -32,14 +32,10 @@ function writeBundle(hook: Plugin['writeBundle']) {
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-    return async (ctx: RolldownPluginContext, outputs: Outputs) => {
+    return async (outputs: Outputs) => {
       try {
         // TODO outputOptions
-        await hook.call(
-          normalizePluginContext(ctx),
-          {} as any,
-          transformToOutputBundle(outputs),
-        )
+        await hook.call({} as any, {} as any, transformToOutputBundle(outputs))
       } catch (error) {
         console.error(error)
         throw error
@@ -53,32 +49,15 @@ function generateBundle(hook: Plugin['generateBundle']) {
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-<<<<<<< HEAD
     return async (outputs: Outputs, isWrite: boolean) => {
-      const bundle = Object.fromEntries(
-        transformToRollupOutput(outputs).output.map((item) => [
-          item.fileName,
-          item,
-        ]),
-      )
-      try {
-        // TODO outputOptions
-        await hook.call({} as any, {} as any, bundle, isWrite)
-=======
-    return async (
-      ctx: RolldownPluginContext,
-      outputs: Outputs,
-      isWrite: boolean,
-    ) => {
       try {
         // TODO outputOptions
         await hook.call(
-          normalizePluginContext(ctx),
+          {} as any,
           {} as any,
           transformToOutputBundle(outputs),
           isWrite,
         )
->>>>>>> 511802d (feat: add writeBundle hook)
       } catch (error) {
         console.error(error)
         throw error

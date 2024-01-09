@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_error::BuildError;
+use rolldown_utils::block_on_spawn_all;
 
 use crate::{
   plugin::{
@@ -81,8 +82,8 @@ impl PluginDriver {
 
   #[allow(clippy::unused_async)]
   pub async fn write_bundle(&self, bundle: &Vec<Output>) -> HookNoopReturn {
-    let result = block_on_spawn_all(self.plugins.iter().map(|(plugin, ctx)| async move {
-      match plugin.write_bundle(ctx, bundle).await {
+    let result = block_on_spawn_all(self.plugins.iter().map(|plugin| async move {
+      match plugin.write_bundle(&PluginContext::new(), bundle).await {
         Ok(()) => Ok(()),
         Err(e) => Err(e),
       }

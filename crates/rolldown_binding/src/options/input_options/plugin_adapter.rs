@@ -18,6 +18,7 @@ pub type TransformCallback = JsCallback<(String, String), Option<SourceResult>>;
 pub type BuildEndCallback = JsCallback<(Option<String>,), ()>;
 pub type RenderChunkCallback = JsCallback<(String, RenderedChunk), Option<HookRenderChunkOutput>>;
 pub type GenerateBundleCallback = JsCallback<(Outputs, bool), Option<HookRenderChunkOutput>>;
+pub type WriteBundleCallback = JsCallback<(Outputs,), ()>;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -183,13 +184,11 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn write_bundle(
     &self,
-    ctx: &rolldown::PluginContext<OsFileSystem>,
+    _ctx: &rolldown::PluginContext,
     bundle: &Vec<rolldown::Output>,
   ) -> rolldown::HookNoopReturn {
     if let Some(cb) = &self.write_bundle_fn {
-      cb.call_async((ctx.into(), bundle.clone().into()))
-        .await
-        .map_err(|e| e.into_bundle_error())?;
+      cb.call_async((bundle.clone().into(),)).await.map_err(|e| e.into_bundle_error())?;
     }
     Ok(())
   }

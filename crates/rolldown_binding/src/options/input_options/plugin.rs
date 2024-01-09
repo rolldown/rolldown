@@ -52,7 +52,7 @@ pub struct PluginOptions {
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(ctx: PluginContext, bundle: Outputs) => Promise<void>")]
+  #[napi(ts_type = "(bundle: Outputs) => Promise<void>")]
   pub write_bundle: Option<JsFunction>,
 }
 

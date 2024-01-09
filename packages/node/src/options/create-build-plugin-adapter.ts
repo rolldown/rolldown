@@ -31,11 +31,7 @@ function generateBundle(hook: Plugin['generateBundle']) {
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-    return async (
-      ctx: RolldownPluginContext,
-      outputs: Outputs,
-      isWrite: boolean,
-    ) => {
+    return async (outputs: Outputs, isWrite: boolean) => {
       const bundle = Object.fromEntries(
         transformToRollupOutput(outputs).output.map((item) => [
           item.fileName,
@@ -44,7 +40,7 @@ function generateBundle(hook: Plugin['generateBundle']) {
       )
       try {
         // TODO outputOptions
-        await hook.call(normalizePluginContext(ctx), {} as any, bundle, isWrite)
+        await hook.call({} as any, {} as any, bundle, isWrite)
       } catch (error) {
         console.error(error)
         throw error

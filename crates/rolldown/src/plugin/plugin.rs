@@ -65,7 +65,7 @@ pub trait Plugin: Debug + Send + Sync {
   #[allow(clippy::ptr_arg)]
   async fn generate_bundle(
     &self,
-    _ctx: &PluginContext<T>,
+    _ctx: &PluginContext,
     _bundle: &Vec<Output>,
     _is_write: bool,
   ) -> HookNoopReturn {

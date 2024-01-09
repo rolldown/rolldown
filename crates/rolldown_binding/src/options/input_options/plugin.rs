@@ -47,7 +47,7 @@ pub struct PluginOptions {
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(ctx: PluginContext, bundle: Outputs, isWrite: boolean) => Promise<void>")]
+  #[napi(ts_type = "(bundle: Outputs, isWrite: boolean) => Promise<void>")]
   pub generate_bundle: Option<JsFunction>,
 }
 

@@ -5,25 +5,18 @@ use crate::utils::JsCallback;
 use derivative::Derivative;
 use rolldown::Plugin;
 
-use super::{
-  plugin::{
-    HookRenderChunkOutput, HookResolveIdArgsOptions, PluginOptions, RenderedChunk, ResolveIdResult,
-    SourceResult,
-  },
-  plugin_context::{PluginContext, TransformPluginContext},
+use super::plugin::{
+  HookRenderChunkOutput, HookResolveIdArgsOptions, PluginOptions, RenderedChunk, ResolveIdResult,
+  SourceResult,
 };
 
-pub type BuildStartCallback = JsCallback<(PluginContext,), ()>;
-pub type ResolveIdCallback = JsCallback<
-  (PluginContext, String, Option<String>, HookResolveIdArgsOptions),
-  Option<ResolveIdResult>,
->;
-pub type LoadCallback = JsCallback<(PluginContext, String), Option<SourceResult>>;
-pub type TransformCallback =
-  JsCallback<(TransformPluginContext, String, String), Option<SourceResult>>;
-pub type BuildEndCallback = JsCallback<(PluginContext, Option<String>), ()>;
-pub type RenderChunkCallback =
-  JsCallback<(PluginContext, String, RenderedChunk), Option<HookRenderChunkOutput>>;
+pub type BuildStartCallback = JsCallback<(), ()>;
+pub type ResolveIdCallback =
+  JsCallback<(String, Option<String>, HookResolveIdArgsOptions), Option<ResolveIdResult>>;
+pub type LoadCallback = JsCallback<(String,), Option<SourceResult>>;
+pub type TransformCallback = JsCallback<(String, String), Option<SourceResult>>;
+pub type BuildEndCallback = JsCallback<(Option<String>,), ()>;
+pub type RenderChunkCallback = JsCallback<(String, RenderedChunk), Option<HookRenderChunkOutput>>;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -151,12 +144,12 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn render_chunk(
     &self,
-    ctx: &rolldown::PluginContext<OsFileSystem>,
+    _ctx: &rolldown::PluginContext,
     args: &rolldown::RenderChunkArgs,
   ) -> rolldown::HookRenderChunkReturn {
     if let Some(cb) = &self.render_chunk_fn {
       let res = cb
-        .call_async((ctx.into(), args.code.to_string(), args.chunk.clone().into()))
+        .call_async((args.code.to_string(), args.chunk.clone().into()))
         .await
         .map_err(|e| e.into_bundle_error())?;
       return Ok(res.map(Into::into));

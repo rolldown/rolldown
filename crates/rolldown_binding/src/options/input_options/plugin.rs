@@ -41,7 +41,7 @@ pub struct PluginOptions {
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx: PluginContext, code: string, chunk: RenderedChunk) => Promise<undefined | HookRenderChunkOutput>"
+    ts_type = "(code: string, chunk: RenderedChunk) => Promise<undefined | HookRenderChunkOutput>"
   )]
   pub render_chunk: Option<JsFunction>,
 }

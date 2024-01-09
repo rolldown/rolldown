@@ -7,8 +7,8 @@ use crate::{
 };
 
 #[allow(clippy::future_not_send)]
-pub async fn render_chunks<'a, T: FileSystem + Default + 'static>(
-  plugin_driver: &SharedPluginDriver<T>,
+pub async fn render_chunks<'a>(
+  plugin_driver: &SharedPluginDriver,
   chunks: impl Iterator<Item = (String, RenderedChunk)>,
 ) -> Result<Vec<(String, RenderedChunk)>, BatchedErrors> {
   let result = block_on_spawn_all(chunks.map(|(content, rendered_chunk)| async move {

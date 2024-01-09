@@ -11,24 +11,13 @@ export interface PluginOptions {
     importer?: string,
     options?: HookResolveIdArgsOptions,
   ) => Promise<undefined | ResolveIdResult>
-<<<<<<< HEAD
   load?: (id: string) => Promise<undefined | SourceResult>
   transform?: (id: string, code: string) => Promise<undefined | SourceResult>
   buildEnd?: (error: string) => Promise<void>
-=======
-  load?: (ctx: PluginContext, id: string) => Promise<undefined | SourceResult>
-  transform?: (
-    ctx: TransformPluginContext,
-    id: string,
-    code: string,
-  ) => Promise<undefined | SourceResult>
-  buildEnd?: (ctx: PluginContext, error: string) => Promise<void>
   renderChunk?: (
-    ctx: PluginContext,
     code: string,
     chunk: RenderedChunk,
   ) => Promise<undefined | HookRenderChunkOutput>
->>>>>>> c751110 (feat: render chunk hook binding)
 }
 export interface HookResolveIdArgsOptions {
   isEntry: boolean
@@ -41,8 +30,6 @@ export interface ResolveIdResult {
 export interface SourceResult {
   code: string
 }
-<<<<<<< HEAD
-=======
 export interface HookRenderChunkOutput {
   code: string
 }
@@ -62,11 +49,6 @@ export interface RenderedChunk {
   fileName: string
   modules: Record<string, RenderedModule>
 }
-export interface ResolveId {
-  external: boolean
-  id: string
-}
->>>>>>> c751110 (feat: render chunk hook binding)
 export interface InputItem {
   name?: string
   import: string

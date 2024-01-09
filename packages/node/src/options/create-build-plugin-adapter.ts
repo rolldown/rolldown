@@ -3,8 +3,6 @@ import type {
   PluginOptions,
   SourceResult,
   ResolveIdResult,
-  PluginContext as RolldownPluginContext,
-  TransformPluginContext as RolldownTransformPluginContext,
   RenderedChunk,
   HookRenderChunkOutput,
 } from '@rolldown/node-binding'
@@ -32,7 +30,6 @@ function renderChunk(hook: Plugin['renderChunk']) {
       return unimplemented()
     }
     return async (
-      ctx: RolldownPluginContext,
       code: string,
       chunk: RenderedChunk,
     ): Promise<undefined | HookRenderChunkOutput> => {
@@ -86,7 +83,7 @@ function renderChunk(hook: Plugin['renderChunk']) {
         )
         // TODO options and meta
         const value = await hook.call(
-          normalizePluginContext(ctx),
+          {} as any,
           code,
           renderedChunk,
           {} as any,

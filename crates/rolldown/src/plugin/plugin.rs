@@ -6,7 +6,7 @@ use crate::Output;
 
 use super::{
   args::{HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookTransformArgs, RenderChunkArgs},
-  context::{PluginContext, TransformPluginContext},
+  context::PluginContext,
   output::{HookLoadOutput, HookRenderChunkOutput, HookResolveIdOutput},
 };
 
@@ -56,7 +56,7 @@ pub trait Plugin: Debug + Send + Sync {
 
   async fn render_chunk(
     &self,
-    _ctx: &PluginContext<T>,
+    _ctx: &PluginContext,
     _args: &RenderChunkArgs,
   ) -> HookRenderChunkReturn {
     Ok(None)

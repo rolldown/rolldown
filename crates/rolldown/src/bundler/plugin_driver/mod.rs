@@ -1,14 +1,12 @@
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystem;
 
 use rolldown_error::BuildError;
 
 use crate::{
   plugin::{
     args::{HookBuildEndArgs, RenderChunkArgs},
-    context::TransformPluginContext,
     plugin::{BoxPlugin, HookNoopReturn},
   },
   HookLoadArgs, HookLoadReturn, HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs,

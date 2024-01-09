@@ -1,4 +1,3 @@
-use rolldown_fs::FileSystem;
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{

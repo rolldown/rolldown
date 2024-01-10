@@ -94,3 +94,10 @@ pub struct FilterIdResult {
   pub include: Vec<String>,
   pub exclude: Vec<String>,
 }
+
+// We can't use generics above, so had to duplicate this shape
+#[derive(Debug)]
+pub struct FilterIdResultGlobs {
+  pub include: Option<wax::Any<'static>>,
+  pub exclude: Option<wax::Any<'static>>,
+}

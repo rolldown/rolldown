@@ -1,13 +1,16 @@
 use std::borrow::Cow;
 
+use crate::utils::globs::{create_glob_with_star_prefix, create_globset};
 use crate::utils::napi_error_ext::NapiErrorExt;
 use crate::utils::JsCallback;
 use derivative::Derivative;
 use once_cell::sync::OnceCell;
 use rolldown::Plugin;
+use wax::Pattern;
 
 use super::plugin::{
-  FilterIdResult, HookResolveIdArgsOptions, PluginOptions, ResolveIdResult, SourceResult,
+  FilterIdResult, FilterIdResultGlobs, HookResolveIdArgsOptions, PluginOptions, ResolveIdResult,
+  SourceResult,
 };
 
 pub type BuildStartCallback = JsCallback<(), ()>;
@@ -35,7 +38,7 @@ pub struct JsAdapterPlugin {
   #[derivative(Debug = "ignore")]
   build_end_fn: Option<BuildEndCallback>,
 
-  filters_cache: OnceCell<FilterIdResult>,
+  filters_cache: OnceCell<FilterIdResultGlobs>,
 }
 
 impl JsAdapterPlugin {
@@ -63,16 +66,35 @@ impl JsAdapterPlugin {
     Ok(Box::new(Self::new(option)?))
   }
 
-  pub async fn load_filters(&self) -> napi::Result<&FilterIdResult> {
-    if self.filters_cache.get().is_none() {
-      let result = if let Some(cb) = &self.filter_id_fn {
-        cb.call_async(()).await?
-      } else {
-        FilterIdResult::default()
-      };
-
-      self.filters_cache.set(result).unwrap();
+  pub async fn load_filters(&self) -> napi::Result<&FilterIdResultGlobs> {
+    if let Some(filters) = self.filters_cache.get() {
+      return Ok(filters);
     }
+
+    let result = if let Some(cb) = &self.filter_id_fn {
+      cb.call_async(()).await?
+    } else {
+      FilterIdResult::default()
+    };
+
+    let mut include = vec![];
+    let mut exclude = vec![];
+
+    for pattern in result.include {
+      include.push(create_glob_with_star_prefix(&pattern).unwrap());
+    }
+
+    for pattern in result.exclude {
+      exclude.push(create_glob_with_star_prefix(&pattern).unwrap());
+    }
+
+    self
+      .filters_cache
+      .set(FilterIdResultGlobs {
+        include: if include.is_empty() { None } else { Some(create_globset(include).unwrap()) },
+        exclude: if exclude.is_empty() { None } else { Some(create_globset(exclude).unwrap()) },
+      })
+      .unwrap();
 
     Ok(self.filters_cache.get().unwrap())
   }
@@ -84,10 +106,18 @@ impl Plugin for JsAdapterPlugin {
     Cow::Owned(self.name.to_string())
   }
 
+  // Returns true if the ID matches the list of filters (or if there are no filters).
+  // TODO: apply to shouldTransformCachedModule, moduleParsed, watchChange
   async fn is_id_filtered(&self, id: &str) -> rolldown::HookBoolReturn {
     let filters = self.load_filters().await.map_err(|e| e.into_bundle_error())?;
 
-    Ok(false)
+    if let Some(exclude) = &filters.exclude {
+      if exclude.is_match(id) {
+        return Ok(false);
+      }
+    }
+
+    Ok(filters.include.as_ref().map_or(true, |include| include.is_match(id)))
   }
 
   #[allow(clippy::redundant_closure_for_method_calls)]
@@ -126,7 +156,7 @@ impl Plugin for JsAdapterPlugin {
     _ctx: &mut rolldown::PluginContext,
     args: &rolldown::HookLoadArgs,
   ) -> rolldown::HookLoadReturn {
-    if self.is_id_filtered(args.id).await? {
+    if !self.is_id_filtered(args.id).await? {
       return Ok(None);
     }
 
@@ -144,7 +174,7 @@ impl Plugin for JsAdapterPlugin {
     _ctx: &mut rolldown::PluginContext,
     args: &rolldown::HookTransformArgs,
   ) -> rolldown::HookTransformReturn {
-    if self.is_id_filtered(args.id).await? {
+    if !self.is_id_filtered(args.id).await? {
       return Ok(None);
     }
 

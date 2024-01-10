@@ -4,10 +4,14 @@ import {
   Plugin,
 } from '../rollup-types'
 import { ensureArray, normalizePluginOption } from '../utils'
-import { ResolveOptions } from '@rolldown/node-binding'
+import { ResolveOptions, FilterIdResult } from '@rolldown/node-binding'
 
 // TODO export compat plugin type
-export type RolldownPlugin = Plugin
+export interface RolldownPlugin extends Plugin {
+  // rolldown specific hooks
+  filterId?: () => Promise<string[] | FilterIdResult>
+}
+
 export interface InputOptions {
   input?: RollupInputOptions['input']
   plugins?: RolldownPlugin[]

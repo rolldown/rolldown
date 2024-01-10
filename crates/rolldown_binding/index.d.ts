@@ -11,6 +11,7 @@ export interface PluginOptions {
     importer?: string,
     options?: HookResolveIdArgsOptions,
   ) => Promise<undefined | ResolveIdResult>
+  filterId?: () => Promise<string[] | FilterIdResult>
   load?: (id: string) => Promise<undefined | SourceResult>
   transform?: (id: string, code: string) => Promise<undefined | SourceResult>
   buildEnd?: (error: string) => Promise<void>
@@ -25,6 +26,10 @@ export interface ResolveIdResult {
 }
 export interface SourceResult {
   code: string
+}
+export interface FilterIdResult {
+  include: Array<string>
+  exclude: Array<string>
 }
 export interface InputItem {
   name?: string

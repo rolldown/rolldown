@@ -3,18 +3,21 @@ import type {
   PluginOptions,
   SourceResult,
   ResolveIdResult,
+  FilterIdResult,
 } from '@rolldown/node-binding'
 import { unimplemented } from '../utils'
+import { RolldownPlugin } from './input-options'
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function createBuildPluginAdapter(
-  plugin: Plugin,
+  plugin: RolldownPlugin,
   options: NormalizedInputOptions,
 ): PluginOptions {
   return {
     name: plugin.name ?? 'unknown',
     buildStart: buildStart(plugin.buildStart, options),
     resolveId: resolveId(plugin.resolveId),
+    filterId: filterId(plugin.filterId),
     load: load(plugin.load),
     transform: transform(plugin.transform),
     buildEnd: buildEnd(plugin.buildEnd),
@@ -148,6 +151,22 @@ function load(hook: Plugin['load']) {
         }
         // TODO other filed
         return { code: value.code }
+      } catch (error) {
+        console.error(error)
+        throw error
+      }
+    }
+  }
+}
+
+function filterId(hook: PluginOptions['filterId']) {
+  if (hook) {
+    if (typeof hook !== 'function') {
+      return unimplemented()
+    }
+    return async (): Promise<string[] | FilterIdResult> => {
+      try {
+        return await hook.call({} as any)
       } catch (error) {
         console.error(error)
         throw error

@@ -108,7 +108,7 @@ impl Plugin for JsAdapterPlugin {
 
   // Returns true if the ID matches the list of filters (or if there are no filters).
   // TODO: apply to shouldTransformCachedModule, moduleParsed, watchChange
-  async fn is_id_filtered(&self, id: &str) -> rolldown::HookBoolReturn {
+  async fn is_id_allowed(&self, id: &str) -> rolldown::HookBoolReturn {
     let filters = self.load_filters().await.map_err(|e| e.into_bundle_error())?;
 
     if let Some(exclude) = &filters.exclude {
@@ -156,7 +156,7 @@ impl Plugin for JsAdapterPlugin {
     _ctx: &mut rolldown::PluginContext,
     args: &rolldown::HookLoadArgs,
   ) -> rolldown::HookLoadReturn {
-    if !self.is_id_filtered(args.id).await? {
+    if !self.is_id_allowed(args.id).await? {
       return Ok(None);
     }
 
@@ -174,7 +174,7 @@ impl Plugin for JsAdapterPlugin {
     _ctx: &mut rolldown::PluginContext,
     args: &rolldown::HookTransformArgs,
   ) -> rolldown::HookTransformReturn {
-    if !self.is_id_filtered(args.id).await? {
+    if !self.is_id_allowed(args.id).await? {
       return Ok(None);
     }
 

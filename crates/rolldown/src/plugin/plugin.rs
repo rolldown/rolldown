@@ -18,8 +18,8 @@ pub type HookNoopReturn = Result<(), BuildError>;
 pub trait Plugin: Debug + Send + Sync {
   fn name(&self) -> Cow<'static, str>;
 
-  async fn is_id_filtered(&self, _id: &str) -> HookBoolReturn {
-    Ok(false)
+  async fn is_id_allowed(&self, _id: &str) -> HookBoolReturn {
+    Ok(true)
   }
 
   // The `option` hook consider call at node side.

@@ -9,7 +9,7 @@ import { ResolveOptions, FilterIdResult } from '@rolldown/node-binding'
 // TODO export compat plugin type
 export interface RolldownPlugin extends Plugin {
   // rolldown specific hooks
-  filterId?: () => Promise<string[] | FilterIdResult>
+  filterId?: () => string[] | FilterIdResult
 }
 
 export interface InputOptions {

@@ -164,9 +164,9 @@ function filterId(hook: PluginOptions['filterId']) {
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-    return async (): Promise<FilterIdResult> => {
+    return (): FilterIdResult => {
       try {
-        const value = await hook.call({} as any)
+        const value = hook.call({} as any)
 
         // We must do the conversion here since napi does not support
         // unions (enums) on the Rust side.

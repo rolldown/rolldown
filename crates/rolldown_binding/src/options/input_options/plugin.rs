@@ -23,7 +23,7 @@ pub struct PluginOptions {
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "() => Promise<string[] | FilterIdResult>")]
+  #[napi(ts_type = "() => (string[] | FilterIdResult)")]
   pub filter_id: Option<JsFunction>,
 
   #[derivative(Debug = "ignore")]

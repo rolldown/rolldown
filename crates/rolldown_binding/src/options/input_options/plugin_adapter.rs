@@ -3,13 +3,17 @@ use std::borrow::Cow;
 use crate::utils::napi_error_ext::NapiErrorExt;
 use crate::utils::JsCallback;
 use derivative::Derivative;
+use once_cell::sync::OnceCell;
 use rolldown::Plugin;
 
-use super::plugin::{HookResolveIdArgsOptions, PluginOptions, ResolveIdResult, SourceResult};
+use super::plugin::{
+  FilterIdResult, HookResolveIdArgsOptions, PluginOptions, ResolveIdResult, SourceResult,
+};
 
 pub type BuildStartCallback = JsCallback<(), ()>;
 pub type ResolveIdCallback =
   JsCallback<(String, Option<String>, HookResolveIdArgsOptions), Option<ResolveIdResult>>;
+pub type FilterIdCallback = JsCallback<(), FilterIdResult>;
 pub type LoadCallback = JsCallback<(String,), Option<SourceResult>>;
 pub type TransformCallback = JsCallback<(String, String), Option<SourceResult>>;
 pub type BuildEndCallback = JsCallback<(Option<String>,), ()>;
@@ -23,32 +27,54 @@ pub struct JsAdapterPlugin {
   #[derivative(Debug = "ignore")]
   resolve_id_fn: Option<ResolveIdCallback>,
   #[derivative(Debug = "ignore")]
+  filter_id_fn: Option<FilterIdCallback>,
+  #[derivative(Debug = "ignore")]
   load_fn: Option<LoadCallback>,
   #[derivative(Debug = "ignore")]
   transform_fn: Option<TransformCallback>,
   #[derivative(Debug = "ignore")]
   build_end_fn: Option<BuildEndCallback>,
+
+  filters_cache: OnceCell<FilterIdResult>,
 }
 
 impl JsAdapterPlugin {
   pub fn new(option: PluginOptions) -> napi::Result<Self> {
     let build_start_fn = option.build_start.as_ref().map(BuildStartCallback::new).transpose()?;
     let resolve_id_fn = option.resolve_id.as_ref().map(ResolveIdCallback::new).transpose()?;
+    let filter_id_fn = option.filter_id.as_ref().map(FilterIdCallback::new).transpose()?;
     let load_fn = option.load.as_ref().map(LoadCallback::new).transpose()?;
     let transform_fn = option.transform.as_ref().map(TransformCallback::new).transpose()?;
     let build_end_fn = option.build_end.as_ref().map(BuildEndCallback::new).transpose()?;
+
     Ok(Self {
       name: option.name,
       build_start_fn,
       resolve_id_fn,
+      filter_id_fn,
       load_fn,
       transform_fn,
       build_end_fn,
+      filters_cache: OnceCell::new(),
     })
   }
 
   pub fn new_boxed(option: PluginOptions) -> napi::Result<Box<dyn Plugin>> {
     Ok(Box::new(Self::new(option)?))
+  }
+
+  pub async fn load_filters(&self) -> napi::Result<&FilterIdResult> {
+    if self.filters_cache.get().is_none() {
+      let result = if let Some(cb) = &self.filter_id_fn {
+        cb.call_async(()).await?
+      } else {
+        FilterIdResult::default()
+      };
+
+      self.filters_cache.set(result).unwrap();
+    }
+
+    Ok(self.filters_cache.get().unwrap())
   }
 }
 
@@ -56,6 +82,12 @@ impl JsAdapterPlugin {
 impl Plugin for JsAdapterPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Owned(self.name.to_string())
+  }
+
+  async fn is_id_filtered(&self, id: &str) -> rolldown::HookBoolReturn {
+    let filters = self.load_filters().await.map_err(|e| e.into_bundle_error())?;
+
+    Ok(false)
   }
 
   #[allow(clippy::redundant_closure_for_method_calls)]
@@ -94,6 +126,10 @@ impl Plugin for JsAdapterPlugin {
     _ctx: &mut rolldown::PluginContext,
     args: &rolldown::HookLoadArgs,
   ) -> rolldown::HookLoadReturn {
+    if self.is_id_filtered(args.id).await? {
+      return Ok(None);
+    }
+
     if let Some(cb) = &self.load_fn {
       let res = cb.call_async((args.id.to_string(),)).await.map_err(|e| e.into_bundle_error())?;
       Ok(res.map(Into::into))
@@ -108,6 +144,10 @@ impl Plugin for JsAdapterPlugin {
     _ctx: &mut rolldown::PluginContext,
     args: &rolldown::HookTransformArgs,
   ) -> rolldown::HookTransformReturn {
+    if self.is_id_filtered(args.id).await? {
+      return Ok(None);
+    }
+
     if let Some(cb) = &self.transform_fn {
       let res = cb
         .call_async((args.code.to_string(), args.id.to_string()))

@@ -11,11 +11,16 @@ use super::{
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>, BuildError>;
 pub type HookTransformReturn = Result<Option<HookLoadOutput>, BuildError>;
 pub type HookLoadReturn = Result<Option<HookLoadOutput>, BuildError>;
+pub type HookBoolReturn = Result<bool, BuildError>;
 pub type HookNoopReturn = Result<(), BuildError>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Debug + Send + Sync {
   fn name(&self) -> Cow<'static, str>;
+
+  async fn is_id_filtered(&self, _id: &str) -> HookBoolReturn {
+    Ok(false)
+  }
 
   // The `option` hook consider call at node side.
 

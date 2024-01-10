@@ -164,9 +164,30 @@ function filterId(hook: PluginOptions['filterId']) {
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-    return async (): Promise<string[] | FilterIdResult> => {
+    return async (): Promise<FilterIdResult> => {
       try {
-        return await hook.call({} as any)
+        const value = await hook.call({} as any)
+
+        // We must do the conversion here since napi does not support
+        // unions (enums) on the Rust side.
+        if (Array.isArray(value)) {
+          const result: FilterIdResult = {
+            include: [],
+            exclude: [],
+          }
+
+          for (const item of value) {
+            if (item.startsWith('!')) {
+              result.exclude.push(item.slice(1))
+            } else {
+              result.include.push(item)
+            }
+          }
+
+          return result
+        }
+
+        return value
       } catch (error) {
         console.error(error)
         throw error

@@ -1558,6 +1558,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "once_cell",
  "rolldown",
  "rolldown_error",
  "rolldown_fs",

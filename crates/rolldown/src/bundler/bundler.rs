@@ -69,11 +69,15 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     }
   }
 
-  pub async fn write(&mut self, output_options: OutputOptions) -> BuildResult<RolldownOutput> {
+  pub async fn write(
+    &mut self,
+    output_options: OutputOptions,
+    plugins: Vec<BoxPlugin>,
+  ) -> BuildResult<RolldownOutput> {
     let dir =
       self.input_options.cwd.as_path().join(&output_options.dir).to_string_lossy().to_string();
 
-    let output = self.bundle_up(output_options).await?;
+    let output = self.bundle_up(output_options, plugins).await?;
 
     self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
@@ -97,8 +101,12 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     Ok(output)
   }
 
-  pub async fn generate(&mut self, output_options: OutputOptions) -> BuildResult<RolldownOutput> {
-    self.bundle_up(output_options).await
+  pub async fn generate(
+    &mut self,
+    output_options: OutputOptions,
+    plugins: Vec<BoxPlugin>,
+  ) -> BuildResult<RolldownOutput> {
+    self.bundle_up(output_options, plugins).await
   }
 
   pub async fn build(&mut self) -> BuildResult<()> {
@@ -172,9 +180,15 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
   }
 
   #[tracing::instrument(skip_all)]
-  async fn bundle_up(&mut self, output_options: OutputOptions) -> BuildResult<RolldownOutput> {
+  async fn bundle_up(
+    &mut self,
+    output_options: OutputOptions,
+    plugins: Vec<BoxPlugin>,
+  ) -> BuildResult<RolldownOutput> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
+    self.plugin_driver =
+      Arc::new(PluginDriver::create_output_plugin_driver(plugins, Arc::clone(&self.plugin_driver)));
     let graph = self.build_result.as_mut().expect("Build should success");
     let mut bundle_stage = BundleStage::new(graph, &self.input_options, &output_options);
     let assets = bundle_stage.bundle();

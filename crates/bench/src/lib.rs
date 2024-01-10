@@ -18,7 +18,7 @@ pub async fn run_fixture(fixture_path: PathBuf) {
     std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();
   }
 
-  bundler.write(OutputOptions::default()).await.unwrap();
+  bundler.write(OutputOptions::default(), vec![]).await.unwrap();
 }
 
 pub fn join_by_repo_root(path: &str) -> PathBuf {

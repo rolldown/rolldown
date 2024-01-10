@@ -13,22 +13,39 @@ pub type SharedPluginDriver = Arc<PluginDriver>;
 
 pub struct PluginDriver {
   plugins: Vec<BoxPlugin>,
+  base: Option<SharedPluginDriver>,
 }
 
 impl PluginDriver {
   pub fn new(plugins: Vec<BoxPlugin>) -> Self {
-    Self { plugins }
+    Self { plugins, base: None }
+  }
+
+  pub fn create_output_plugin_driver(
+    plugins: Vec<BoxPlugin>,
+    base_plugin_driver: SharedPluginDriver,
+  ) -> Self {
+    Self { plugins, base: Some(base_plugin_driver) }
+  }
+
+  pub fn plugins(&self) -> impl Iterator<Item = &BoxPlugin> {
+    // if let Some(base) = &self.base {
+    //   base.plugins().chain(self.plugins.iter())
+    // } else {
+    //   unreachable!()
+    // }
+    self.plugins.iter()
   }
 
   pub async fn build_start(&self) -> HookNoopReturn {
-    for plugin in &self.plugins {
+    for plugin in self.plugins() {
       plugin.build_start(&mut PluginContext::new()).await?;
     }
     Ok(())
   }
 
   pub async fn resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
-    for plugin in &self.plugins {
+    for plugin in self.plugins() {
       if let Some(r) = plugin.resolve_id(&mut PluginContext::new(), args).await? {
         return Ok(Some(r));
       }
@@ -37,7 +54,7 @@ impl PluginDriver {
   }
 
   pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    for plugin in &self.plugins {
+    for plugin in self.plugins() {
       if let Some(r) = plugin.load(&mut PluginContext::new(), args).await? {
         return Ok(Some(r));
       }
@@ -46,7 +63,7 @@ impl PluginDriver {
   }
 
   pub async fn transform(&self, args: &HookTransformArgs<'_>) -> HookTransformReturn {
-    for plugin in &self.plugins {
+    for plugin in self.plugins() {
       if let Some(r) = plugin.transform(&mut PluginContext::new(), args).await? {
         return Ok(Some(r));
       }
@@ -55,7 +72,7 @@ impl PluginDriver {
   }
 
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs>) -> HookNoopReturn {
-    for plugin in &self.plugins {
+    for plugin in self.plugins() {
       plugin.build_end(&mut PluginContext::new(), args).await?;
     }
     Ok(())

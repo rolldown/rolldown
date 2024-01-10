@@ -97,7 +97,9 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let maybe_outputs = bundler_core.write(output_opts.into()).await;
+    let (opts, plugins) = output_opts.into();
+
+    let maybe_outputs = bundler_core.write(opts, plugins?).await;
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,
@@ -120,7 +122,9 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let maybe_outputs = bundler_core.generate(output_opts.into()).await;
+    let (opts, plugins) = output_opts.into();
+
+    let maybe_outputs = bundler_core.generate(opts, plugins?).await;
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,

@@ -6,6 +6,7 @@ use crate::utils::JsCallback;
 use derivative::Derivative;
 use once_cell::sync::OnceCell;
 use rolldown::Plugin;
+use rolldown_error::BuildError;
 use wax::Pattern;
 
 use super::plugin::{
@@ -66,13 +67,14 @@ impl JsAdapterPlugin {
     Ok(Box::new(Self::new(option)?))
   }
 
-  pub async fn load_filters(&self) -> napi::Result<&FilterIdResultGlobs> {
+  #[allow(clippy::redundant_closure_for_method_calls)]
+  pub async fn load_filters(&self) -> Result<&FilterIdResultGlobs, BuildError> {
     if let Some(filters) = self.filters_cache.get() {
       return Ok(filters);
     }
 
     let result = if let Some(cb) = &self.filter_id_fn {
-      cb.call_async(()).await?
+      cb.call_async(()).await.map_err(|e| e.into_bundle_error())?
     } else {
       FilterIdResult::default()
     };
@@ -81,18 +83,32 @@ impl JsAdapterPlugin {
     let mut exclude = vec![];
 
     for pattern in result.include {
-      include.push(create_glob_with_star_prefix(&pattern).unwrap());
+      include.push(
+        create_glob_with_star_prefix(&pattern)
+          .map_err(|error| BuildError::invalid_glob(pattern, error))?,
+      );
     }
 
     for pattern in result.exclude {
-      exclude.push(create_glob_with_star_prefix(&pattern).unwrap());
+      exclude.push(
+        create_glob_with_star_prefix(&pattern)
+          .map_err(|error| BuildError::invalid_glob(pattern, error))?,
+      );
     }
 
     self
       .filters_cache
       .set(FilterIdResultGlobs {
-        include: if include.is_empty() { None } else { Some(create_globset(include).unwrap()) },
-        exclude: if exclude.is_empty() { None } else { Some(create_globset(exclude).unwrap()) },
+        include: if include.is_empty() {
+          None
+        } else {
+          Some(create_globset(include).map_err(BuildError::invalid_globset)?)
+        },
+        exclude: if exclude.is_empty() {
+          None
+        } else {
+          Some(create_globset(exclude).map_err(BuildError::invalid_globset)?)
+        },
       })
       .unwrap();
 
@@ -109,7 +125,7 @@ impl Plugin for JsAdapterPlugin {
   // Returns true if the ID matches the list of filters (or if there are no filters).
   // TODO: apply to shouldTransformCachedModule, moduleParsed, watchChange
   async fn is_id_allowed(&self, id: &str) -> rolldown::HookBoolReturn {
-    let filters = self.load_filters().await.map_err(|e| e.into_bundle_error())?;
+    let filters = self.load_filters().await?;
 
     if let Some(exclude) = &filters.exclude {
       if exclude.is_match(id) {

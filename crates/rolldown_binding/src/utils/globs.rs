@@ -1,7 +1,7 @@
 use wax::{Any, BuildError, Glob};
 
 pub fn create_glob(pattern: &str) -> Result<Glob<'static>, BuildError> {
-  Glob::new(pattern).map(|glob| glob.into_owned())
+  Glob::new(pattern).map(Glob::into_owned)
 }
 
 pub fn create_glob_with_star_prefix(pattern: &str) -> Result<Glob<'static>, BuildError> {

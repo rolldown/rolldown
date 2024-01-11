@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use crate::diagnostic::DiagnosticBuilder;
 
 pub mod external_entry;
+pub mod invalid_glob;
 pub mod unresolved_entry;
 pub mod unresolved_import;
 pub mod unsupported_eval;

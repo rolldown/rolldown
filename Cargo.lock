@@ -1636,6 +1636,7 @@ dependencies = [
  "oxc",
  "sugar_path",
  "thiserror",
+ "wax",
 ]
 
 [[package]]

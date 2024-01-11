@@ -140,7 +140,9 @@ confidence-threshold = 0.8
 exceptions = [
     # Each entry is the crate and version constraint, and its specific allow
     # list
-    #{ allow = ["Zlib"], name = "adler32", version = "*" },
+    # Dependency of wax
+    { allow = ["Zlib"], name = "const_format", version = "*" },
+    { allow = ["Zlib"], name = "const_format_proc_macros", version = "*" },
 ]
 
 # Some crates don't have (easily) machine readable licensing information,

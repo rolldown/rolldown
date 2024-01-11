@@ -20,6 +20,7 @@ futures           = { workspace = true }
 napi              = { version = "2.11.1", features = ["full"] }
 napi-derive       = { version = "2.11.0" }
 once_cell         = { workspace = true }
+regex             = { workspace = true }
 rolldown          = { path = "../rolldown" }
 rolldown_error    = { path = "../rolldown_error" }
 rolldown_tracing  = { path = "../rolldown_tracing" }

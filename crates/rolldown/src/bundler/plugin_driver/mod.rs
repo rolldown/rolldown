@@ -28,13 +28,11 @@ impl PluginDriver {
     Self { plugins, base: Some(base_plugin_driver) }
   }
 
-  pub fn plugins(&self) -> impl Iterator<Item = &BoxPlugin> {
-    // if let Some(base) = &self.base {
-    //   base.plugins().chain(self.plugins.iter())
-    // } else {
-    //   unreachable!()
-    // }
-    self.plugins.iter()
+  pub fn plugins(&self) -> Vec<&BoxPlugin> {
+    self.base.as_ref().map_or_else(
+      || self.plugins.iter().collect::<Vec<_>>(),
+      |base| base.plugins().into_iter().chain(self.plugins.iter()).collect::<Vec<_>>(),
+    )
   }
 
   pub async fn build_start(&self) -> HookNoopReturn {

@@ -1,11 +1,14 @@
-import { OutputOptions as RollupOutputOptions, OutputPlugin } from '../rollup-types'
+import {
+  OutputOptions as RollupOutputOptions,
+  OutputPlugin,
+} from '../rollup-types'
 import { OutputOptions as BindingOutputOptions } from '@rolldown/node-binding'
 import { normalizePluginOption, unimplemented } from '../utils'
 
 export interface OutputOptions {
   dir?: RollupOutputOptions['dir']
   format?: 'esm'
-  exports?: RollupOutputOptions['exports'],
+  exports?: RollupOutputOptions['exports']
   plugins: RollupOutputOptions['plugins']
 }
 
@@ -27,6 +30,5 @@ export function normalizeOutputOptions(
     dir: dir,
     format: normalizeFormat(format),
     exports,
-    plugins: normalizePluginOption(opts.plugins)
   }
 }

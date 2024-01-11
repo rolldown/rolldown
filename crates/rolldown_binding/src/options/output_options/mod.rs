@@ -1,8 +1,6 @@
 use napi_derive::napi;
 use serde::Deserialize;
 
-use super::plugin::{JsAdapterPlugin, PluginOptions};
-
 #[napi(object)]
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -43,7 +41,6 @@ pub struct OutputOptions {
   // noConflict: boolean;
   // outro: () => string | Promise<string>;
   // paths: OptionsPaths;
-  pub plugins: Vec<PluginOptions>,
   // preferConst: boolean;
   // preserveModules: boolean;
   // preserveModulesRoot: string | undefined;
@@ -59,9 +56,9 @@ pub struct OutputOptions {
   // pub minify: bool,
 }
 
-impl From<OutputOptions> for (rolldown::OutputOptions, napi::Result<Vec<rolldown::BoxPlugin>>) {
+impl From<OutputOptions> for rolldown::OutputOptions {
   fn from(value: OutputOptions) -> Self {
-    let mut options = rolldown::OutputOptions::default();
+    let mut options = Self::default();
 
     if let Some(entry_file_names) = value.entry_file_names {
       options.entry_file_names = rolldown::FileNameTemplate::from(entry_file_names);
@@ -75,9 +72,6 @@ impl From<OutputOptions> for (rolldown::OutputOptions, napi::Result<Vec<rolldown
       options.dir = dir;
     }
 
-    (
-      options,
-      value.plugins.into_iter().map(JsAdapterPlugin::new_boxed).collect::<napi::Result<Vec<_>>>(),
-    )
+    options
   }
 }

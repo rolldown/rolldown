@@ -5,8 +5,11 @@ use rolldown_fs::OsFileSystem;
 use tracing::instrument;
 
 use crate::{
-  options::InputOptions, options::OutputOptions, output::Outputs,
-  utils::try_init_custom_trace_subscriber, NAPI_ENV,
+  options::InputOptions,
+  options::{JsAdapterPlugin, OutputOptions, PluginOptions},
+  output::Outputs,
+  utils::try_init_custom_trace_subscriber,
+  NAPI_ENV,
 };
 
 #[napi]
@@ -20,6 +23,11 @@ impl Bundler {
   pub fn new(env: Env, input_opts: InputOptions) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
     Self::new_impl(env, input_opts)
+  }
+
+  #[napi]
+  pub fn set_output_plugins(&mut self, env: Env, plugins: Vec<PluginOptions>) -> napi::Result<()> {
+    self.set_output_plugins_impl(env, plugins)
   }
 
   #[napi]
@@ -49,6 +57,21 @@ impl Bundler {
       let (opts, plugins) = input_opts.into();
 
       Ok(Self { inner: Mutex::new(NativeBundler::with_plugins(opts?, plugins?)) })
+    })
+  }
+
+  pub fn set_output_plugins_impl(
+    &mut self,
+    env: Env,
+    plugins: Vec<PluginOptions>,
+  ) -> napi::Result<()> {
+    NAPI_ENV.set(&env, || {
+      let plugins =
+        plugins.into_iter().map(JsAdapterPlugin::new_boxed).collect::<napi::Result<Vec<_>>>()?;
+
+      self.inner.get_mut().set_output_plugins(plugins);
+
+      Ok(())
     })
   }
 
@@ -97,9 +120,7 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let (opts, plugins) = output_opts.into();
-
-    let maybe_outputs = bundler_core.write(opts, plugins?).await;
+    let maybe_outputs = bundler_core.write(output_opts.into(), vec![]).await;
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,
@@ -122,9 +143,7 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let (opts, plugins) = output_opts.into();
-
-    let maybe_outputs = bundler_core.generate(opts, plugins?).await;
+    let maybe_outputs = bundler_core.generate(output_opts.into(), vec![]).await;
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,

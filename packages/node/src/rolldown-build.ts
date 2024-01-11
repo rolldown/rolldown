@@ -1,7 +1,13 @@
 import { Bundler } from '@rolldown/node-binding'
 import { normalizeOutputOptions, OutputOptions } from './options/output-options'
 import type { RollupBuild, SerializedTimings } from './rollup-types'
-import { transformToRollupOutput, RolldownOutput, unimplemented } from './utils'
+import {
+  transformToRollupOutput,
+  RolldownOutput,
+  unimplemented,
+  normalizePluginOption,
+} from './utils'
+import { createBuildPluginAdapter } from './options/create-build-plugin-adapter'
 
 export class RolldownBuild implements RollupBuild {
   #bundler: Bundler
@@ -11,9 +17,19 @@ export class RolldownBuild implements RollupBuild {
 
   closed = false
 
+  async setOutputPlugins(outputOptions: OutputOptions) {
+    if (outputOptions.plugins) {
+      const outputPlugins = (
+        await normalizePluginOption(outputOptions.plugins)
+      ).map((plugin) => createBuildPluginAdapter(plugin))
+      this.#bundler.setOutputPlugins(outputPlugins)
+    }
+  }
+
   // @ts-expect-error 2416
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     const bindingOptions = normalizeOutputOptions(outputOptions)
+    this.setOutputPlugins(outputOptions)
     const output = await this.#bundler.write(bindingOptions)
     return transformToRollupOutput(output)
   }
@@ -21,6 +37,7 @@ export class RolldownBuild implements RollupBuild {
   // @ts-expect-error 2416
   async write(outputOptions?: OutputOptions = {}): Promise<RolldownOutput> {
     const bindingOptions = normalizeOutputOptions(outputOptions)
+    this.setOutputPlugins(outputOptions)
     const output = await this.#bundler.write(bindingOptions)
     return transformToRollupOutput(output)
   }

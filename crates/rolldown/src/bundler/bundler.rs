@@ -69,18 +69,6 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     }
   }
 
-  // It used for binding, because the `PluginOptions` is not `Send`, it can't be placed at `write` or `generate` function arguments at binding.
-  pub fn set_output_plugins(&mut self, plugins: Vec<BoxPlugin>) {
-    if !plugins.is_empty() {
-      // Here overwrite the plugin driver, because the plugin driver is shared, we need to create a new one.
-      // We also need to make sure the `bundle` stage using the new plugin driver.
-      self.plugin_driver = Arc::new(PluginDriver::create_output_plugin_driver(
-        plugins,
-        Arc::clone(&self.plugin_driver),
-      ));
-    }
-  }
-
   pub async fn write(
     &mut self,
     output_options: OutputOptions,
@@ -199,7 +187,15 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
   ) -> BuildResult<RolldownOutput> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
-    self.set_output_plugins(plugins);
+
+    let _output_plugin_driver = if plugins.is_empty() {
+      Arc::clone(&self.plugin_driver)
+    } else {
+      // because the plugin driver is shared, we need to create a new one.
+      // We also need to make sure the `bundle` stage using the new plugin driver.
+      Arc::new(PluginDriver::create_output_plugin_driver(plugins, Arc::clone(&self.plugin_driver)))
+    };
+
     let graph = self.build_result.as_mut().expect("Build should success");
     let mut bundle_stage = BundleStage::new(graph, &self.input_options, &output_options);
     let assets = bundle_stage.bundle();

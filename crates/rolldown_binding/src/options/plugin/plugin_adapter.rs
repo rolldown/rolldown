@@ -5,7 +5,10 @@ use crate::utils::JsCallback;
 use derivative::Derivative;
 use rolldown::Plugin;
 
-use super::plugin::{HookResolveIdArgsOptions, PluginOptions, ResolveIdResult, SourceResult};
+use super::{
+  plugin::{HookResolveIdArgsOptions, PluginOptions, ResolveIdResult, SourceResult},
+  OutputPluginOptions,
+};
 
 pub type BuildStartCallback = JsCallback<(), ()>;
 pub type ResolveIdCallback =
@@ -49,6 +52,25 @@ impl JsAdapterPlugin {
 
   pub fn new_boxed(option: PluginOptions) -> napi::Result<Box<dyn Plugin>> {
     Ok(Box::new(Self::new(option)?))
+  }
+
+  pub fn with_output_plugin_options(option: OutputPluginOptions) -> napi::Result<Self> {
+    let build_start_fn = option.1.map(BuildStartCallback::with_threadsafe_function).transpose()?;
+
+    Ok(Self {
+      name: option.0,
+      build_start_fn,
+      resolve_id_fn: None,
+      load_fn: None,
+      transform_fn: None,
+      build_end_fn: None,
+    })
+  }
+
+  pub fn new_boxed_with_output_plugin_options(
+    option: OutputPluginOptions,
+  ) -> napi::Result<Box<dyn Plugin>> {
+    Ok(Box::new(Self::with_output_plugin_options(option)?))
   }
 }
 

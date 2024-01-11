@@ -6,7 +6,7 @@ use tracing::instrument;
 
 use crate::{
   options::InputOptions,
-  options::{JsAdapterPlugin, OutputOptions, PluginOptions},
+  options::{JsAdapterPlugin, OutputOptions, OutputPluginOptions},
   output::Outputs,
   utils::try_init_custom_trace_subscriber,
   NAPI_ENV,
@@ -26,18 +26,37 @@ impl Bundler {
   }
 
   #[napi]
-  pub fn set_output_plugins(&mut self, env: Env, plugins: Vec<PluginOptions>) -> napi::Result<()> {
-    self.set_output_plugins_impl(env, plugins)
+  pub async fn write(
+    &self,
+    opts: OutputOptions,
+    plugins: Vec<OutputPluginOptions>,
+  ) -> napi::Result<Outputs> {
+    self
+      .write_impl(
+        opts,
+        plugins
+          .into_iter()
+          .map(JsAdapterPlugin::new_boxed_with_output_plugin_options)
+          .collect::<napi::Result<Vec<_>>>()?,
+      )
+      .await
   }
 
   #[napi]
-  pub async fn write(&self, opts: OutputOptions) -> napi::Result<Outputs> {
-    self.write_impl(opts).await
-  }
-
-  #[napi]
-  pub async fn generate(&self, opts: OutputOptions) -> napi::Result<Outputs> {
-    self.generate_impl(opts).await
+  pub async fn generate(
+    &self,
+    opts: OutputOptions,
+    plugins: Vec<OutputPluginOptions>,
+  ) -> napi::Result<Outputs> {
+    self
+      .generate_impl(
+        opts,
+        plugins
+          .into_iter()
+          .map(JsAdapterPlugin::new_boxed_with_output_plugin_options)
+          .collect::<napi::Result<Vec<_>>>()?,
+      )
+      .await
   }
 
   #[napi]
@@ -57,21 +76,6 @@ impl Bundler {
       let (opts, plugins) = input_opts.into();
 
       Ok(Self { inner: Mutex::new(NativeBundler::with_plugins(opts?, plugins?)) })
-    })
-  }
-
-  pub fn set_output_plugins_impl(
-    &mut self,
-    env: Env,
-    plugins: Vec<PluginOptions>,
-  ) -> napi::Result<()> {
-    NAPI_ENV.set(&env, || {
-      let plugins =
-        plugins.into_iter().map(JsAdapterPlugin::new_boxed).collect::<napi::Result<Vec<_>>>()?;
-
-      self.inner.get_mut().set_output_plugins(plugins);
-
-      Ok(())
     })
   }
 
@@ -115,12 +119,16 @@ impl Bundler {
 
   #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn write_impl(&self, output_opts: OutputOptions) -> napi::Result<Outputs> {
+  pub async fn write_impl(
+    &self,
+    output_opts: OutputOptions,
+    plugins: Vec<rolldown::BoxPlugin>,
+  ) -> napi::Result<Outputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let maybe_outputs = bundler_core.write(output_opts.into(), vec![]).await;
+    let maybe_outputs = bundler_core.write(output_opts.into(), plugins).await;
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,
@@ -138,12 +146,16 @@ impl Bundler {
 
   #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn generate_impl(&self, output_opts: OutputOptions) -> napi::Result<Outputs> {
+  pub async fn generate_impl(
+    &self,
+    output_opts: OutputOptions,
+    plugins: Vec<rolldown::BoxPlugin>,
+  ) -> napi::Result<Outputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let maybe_outputs = bundler_core.generate(output_opts.into(), vec![]).await;
+    let maybe_outputs = bundler_core.generate(output_opts.into(), plugins).await;
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,

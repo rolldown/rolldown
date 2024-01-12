@@ -3,12 +3,11 @@ use regex::{Captures, Regex};
 use rolldown_error::BuildError;
 use wax::{Any, Glob};
 
+// Convert ?(pattern) groups to <pattern:#,#> alternatives
 pub static EXT_GROUPS: Lazy<Regex> =
   Lazy::new(|| Regex::new("(@|\\*|\\+|\\?|!)\\(([^)]+)\\)").unwrap());
 
-pub static BRACE_RANGE: Lazy<Regex> =
-  Lazy::new(|| Regex::new("\\{([^}.]+)\\.\\.([^}.]+)\\}").unwrap());
-
+// Convert POSIX expressions to char classes
 pub static POSIX_EXPRS: Lazy<Vec<(String, String)>> = Lazy::new(|| {
   vec![
     ("[:alnum:]".into(), "[a-zA-Z0-9]".into()),
@@ -41,7 +40,7 @@ fn convert_js_to_rust(base_pattern: &str) -> Result<String, BuildError> {
         "<{}:{}>",
         caps.get(2).unwrap().as_str(),
         match caps.get(1).unwrap().as_str() {
-          "!" => "0,0",
+          "!" => "0,0", // Not allowed, error below!
           "@" => "1,1",
           "+" => "1,",
           "?" => "0,1",

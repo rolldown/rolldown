@@ -1,6 +1,7 @@
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
-use wax::{Any, BuildError, Glob};
+use rolldown_error::BuildError;
+use wax::{Any, Glob};
 
 pub static EXT_GROUPS: Lazy<Regex> =
   Lazy::new(|| Regex::new("(@|\\*|\\+|\\?|!)\\(([^)]+)\\)").unwrap());
@@ -29,9 +30,9 @@ pub static POSIX_EXPRS: Lazy<Vec<(String, String)>> = Lazy::new(|| {
 
 // JS uses picomatch: https://github.com/micromatch/picomatch
 // Rust uses wax: https://docs.rs/wax/0.6.0/wax/
-fn convert_js_to_rust(pattern: &str) -> String {
+fn convert_js_to_rust(base_pattern: &str) -> Result<String, BuildError> {
   // Always use Unix separators
-  let mut pattern = pattern.replace('\\', "/");
+  let mut pattern = base_pattern.replace('\\', "/");
 
   // Convert ext groups: https://github.com/micromatch/picomatch#advanced-globbing
   pattern = EXT_GROUPS
@@ -40,15 +41,23 @@ fn convert_js_to_rust(pattern: &str) -> String {
         "<{}:{}>",
         caps.get(2).unwrap().as_str(),
         match caps.get(1).unwrap().as_str() {
+          "!" => "0,0",
           "@" => "1,1",
           "+" => "1,",
           "?" => "0,1",
-          "!" => "0,0", // TODO
           _ => "0,",
         }
       )
     })
     .to_string();
+
+  // This is not supported in wax: https://github.com/olson-sean-k/wax/issues/55
+  if pattern.contains(":0,0") {
+    return Err(BuildError::invalid_glob_custom(
+      base_pattern.to_owned(),
+      "the `!(pattern)` extglob group is not supported".into(),
+    ));
+  }
 
   // Convert posix: https://github.com/micromatch/picomatch#posix-brackets
   for (find, replace) in POSIX_EXPRS.iter() {
@@ -57,13 +66,15 @@ fn convert_js_to_rust(pattern: &str) -> String {
     }
   }
 
-  pattern
+  Ok(pattern)
 }
 
 pub fn create_glob(pattern: &str) -> Result<Glob<'static>, BuildError> {
-  let pattern = convert_js_to_rust(pattern);
+  let pattern = convert_js_to_rust(pattern)?;
 
-  Glob::new(&pattern).map(Glob::into_owned)
+  Glob::new(&pattern)
+    .map(Glob::into_owned)
+    .map_err(|error| BuildError::invalid_glob(pattern, error))
 }
 
 pub fn create_glob_with_star_prefix(pattern: &str) -> Result<Glob<'static>, BuildError> {
@@ -74,7 +85,7 @@ pub fn create_glob_with_star_prefix(pattern: &str) -> Result<Glob<'static>, Buil
 }
 
 pub fn create_globset(globs: Vec<Glob>) -> Result<Any, BuildError> {
-  wax::any(globs)
+  wax::any(globs).map_err(BuildError::invalid_globset)
 }
 
 #[cfg(test)]
@@ -83,19 +94,24 @@ mod tests {
 
   #[test]
   fn converts_groups() {
-    assert_eq!(convert_js_to_rust("a*(z)"), "a<z:0,>");
-    assert_eq!(convert_js_to_rust("a+(z)"), "a<z:1,>");
-    assert_eq!(convert_js_to_rust("a!(z)"), "a<z:0,0>");
-    assert_eq!(convert_js_to_rust("a?(z)"), "a<z:0,1>");
-    assert_eq!(convert_js_to_rust("a@(z)"), "a<z:1,1>");
+    assert_eq!(convert_js_to_rust("a*(z)").unwrap(), "a<z:0,>");
+    assert_eq!(convert_js_to_rust("a+(z)").unwrap(), "a<z:1,>");
+    assert_eq!(convert_js_to_rust("a?(z)").unwrap(), "a<z:0,1>");
+    assert_eq!(convert_js_to_rust("a@(z)").unwrap(), "a<z:1,1>");
 
     // multiple
-    assert_eq!(convert_js_to_rust("!(foo).!(bar)"), "<foo:0,0>.<bar:0,0>");
+    assert_eq!(convert_js_to_rust("?(foo).?(bar)").unwrap(), "<foo:0,1>.<bar:0,1>");
+  }
+
+  #[test]
+  #[should_panic(expected = "the `!(pattern)` extglob group is not supported")]
+  fn errors_for_negated_group() {
+    convert_js_to_rust("a!(z)").unwrap();
   }
 
   #[test]
   fn converts_posix() {
-    assert_eq!(convert_js_to_rust("*/[:alpha:]"), "*/[a-zA-Z]");
-    assert_eq!(convert_js_to_rust("**/[:space:]+"), "**/[ \\t\\r\\n\\v\\f]+");
+    assert_eq!(convert_js_to_rust("*/[:alpha:]").unwrap(), "*/[a-zA-Z]");
+    assert_eq!(convert_js_to_rust("**/[:space:]+").unwrap(), "**/[ \\t\\r\\n\\v\\f]+");
   }
 }

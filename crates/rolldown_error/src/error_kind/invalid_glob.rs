@@ -1,11 +1,36 @@
 use super::BuildErrorLike;
-use crate::diagnostic::DiagnosticBuilder;
+use crate::diagnostic::{DiagnosticBuilder, SpanLabel};
 use ariadne::Label;
 
 #[derive(Debug)]
 pub struct InvalidGlob {
   pub(crate) pattern: Option<String>,
-  pub(crate) error: wax::BuildError,
+  pub(crate) error: String,
+  pub(crate) locations: Option<Vec<SpanLabel>>,
+}
+
+impl From<wax::BuildError> for InvalidGlob {
+  fn from(value: wax::BuildError) -> Self {
+    Self {
+      pattern: None,
+      error: value.to_string(),
+      locations: Some(
+        value
+          .locations()
+          .map(|loc| {
+            let span = loc.span();
+            Label::new(("Invalid".to_owned(), span.0..span.1))
+          })
+          .collect::<Vec<_>>(),
+      ),
+    }
+  }
+}
+
+impl InvalidGlob {
+  pub fn new(pattern: String, error: String) -> Self {
+    Self { pattern: Some(pattern), error, locations: None }
+  }
 }
 
 impl BuildErrorLike for InvalidGlob {
@@ -23,17 +48,8 @@ impl BuildErrorLike for InvalidGlob {
   fn diagnostic_builder(&self) -> crate::diagnostic::DiagnosticBuilder {
     DiagnosticBuilder {
       code: Some(self.code()),
-      summary: Some(self.error.to_string()),
-      labels: Some(
-        self
-          .error
-          .locations()
-          .map(|loc| {
-            let span = loc.span();
-            Label::new(("Invalid".to_owned(), span.0..span.1))
-          })
-          .collect::<Vec<_>>(),
-      ),
+      summary: Some(self.error.clone()),
+      labels: self.locations.clone(),
       ..Default::default()
     }
   }

@@ -4,13 +4,15 @@ use ariadne::{sources, Config, Label, Report, ReportBuilder, ReportKind};
 
 use crate::error::Severity;
 
+pub type SpanLabel = Label<(String, Range<usize>)>;
+
 #[allow(clippy::type_complexity)]
 #[derive(Debug, Default)]
 pub struct DiagnosticBuilder {
   pub code: Option<&'static str>,
   pub summary: Option<String>,
   pub files: Option<Vec<(String, String)>>,
-  pub labels: Option<Vec<Label<(String, Range<usize>)>>>,
+  pub labels: Option<Vec<SpanLabel>>,
   pub severity: Option<Severity>,
 }
 

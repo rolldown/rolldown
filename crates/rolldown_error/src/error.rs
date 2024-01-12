@@ -97,12 +97,20 @@ impl BuildError {
   }
 
   // --- rolldown specific
+
+  pub fn invalid_glob_custom(pattern: String, error: String) -> Self {
+    Self::new_inner(InvalidGlob::new(pattern, error))
+  }
+
   pub fn invalid_glob(pattern: String, error: wax::BuildError) -> Self {
-    Self::new_inner(InvalidGlob { pattern: Some(pattern), error })
+    let mut error = InvalidGlob::from(error);
+    error.pattern = Some(pattern);
+
+    Self::new_inner(error)
   }
 
   pub fn invalid_globset(error: wax::BuildError) -> Self {
-    Self::new_inner(InvalidGlob { pattern: None, error })
+    Self::new_inner(InvalidGlob::from(error))
   }
 
   pub fn napi_error(status: String, reason: String) -> Self {

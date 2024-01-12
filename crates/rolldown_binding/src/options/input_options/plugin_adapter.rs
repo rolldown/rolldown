@@ -83,32 +83,18 @@ impl JsAdapterPlugin {
     let mut exclude = vec![];
 
     for pattern in result.include {
-      include.push(
-        create_glob_with_star_prefix(&pattern)
-          .map_err(|error| BuildError::invalid_glob(pattern, error))?,
-      );
+      include.push(create_glob_with_star_prefix(&pattern)?);
     }
 
     for pattern in result.exclude {
-      exclude.push(
-        create_glob_with_star_prefix(&pattern)
-          .map_err(|error| BuildError::invalid_glob(pattern, error))?,
-      );
+      exclude.push(create_glob_with_star_prefix(&pattern)?);
     }
 
     self
       .filters_cache
       .set(FilterIdResultGlobs {
-        include: if include.is_empty() {
-          None
-        } else {
-          Some(create_globset(include).map_err(BuildError::invalid_globset)?)
-        },
-        exclude: if exclude.is_empty() {
-          None
-        } else {
-          Some(create_globset(exclude).map_err(BuildError::invalid_globset)?)
-        },
+        include: if include.is_empty() { None } else { Some(create_globset(include)?) },
+        exclude: if exclude.is_empty() { None } else { Some(create_globset(exclude)?) },
       })
       .unwrap();
 

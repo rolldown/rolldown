@@ -9,11 +9,11 @@ import { unimplemented } from '../utils'
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function createBuildPluginAdapter(
   plugin: Plugin,
-  options: NormalizedInputOptions,
+  options?: NormalizedInputOptions,
 ): PluginOptions {
   return {
     name: plugin.name ?? 'unknown',
-    buildStart: buildStart(plugin.buildStart, options),
+    buildStart: buildStart(plugin.buildStart, options!),
     resolveId: resolveId(plugin.resolveId),
     load: load(plugin.load),
     transform: transform(plugin.transform),

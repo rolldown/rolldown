@@ -76,7 +76,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
         panic!("{e:?}",);
       }
 
-      match bundler.write(OutputOptions::default()).await {
+      match bundler.write(OutputOptions::default(), vec![]).await {
         Ok(assets) => assets
           .assets
           .into_iter()

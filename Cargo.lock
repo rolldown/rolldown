@@ -1552,6 +1552,7 @@ name = "rolldown_binding"
 version = "0.0.1"
 dependencies = [
  "async-trait",
+ "dashmap",
  "derivative",
  "futures",
  "mimalloc-rust",

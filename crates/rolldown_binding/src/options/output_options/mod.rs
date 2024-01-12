@@ -41,7 +41,6 @@ pub struct OutputOptions {
   // noConflict: boolean;
   // outro: () => string | Promise<string>;
   // paths: OptionsPaths;
-  // plugins: OutputPlugin[];
   // preferConst: boolean;
   // preserveModules: boolean;
   // preserveModulesRoot: string | undefined;

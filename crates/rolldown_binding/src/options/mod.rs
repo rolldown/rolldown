@@ -3,3 +3,4 @@ pub use input_options::*;
 mod output_options;
 pub use output_options::*;
 mod plugin;
+pub use plugin::*;

@@ -13,6 +13,6 @@ async fn main() {
     ..Default::default()
   });
 
-  let _outputs = bundler.write(Default::default()).await.unwrap();
+  let _outputs = bundler.write(Default::default(), vec![]).await.unwrap();
   // println!("{outputs:#?}");
 }

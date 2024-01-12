@@ -17,29 +17,14 @@ export class RolldownBuild implements RollupBuild {
 
   closed = false
 
-  async setOutputPlugins(outputOptions: OutputOptions) {
-    if (outputOptions.plugins) {
-      const outputPlugins = (
-        await normalizePluginOption(outputOptions.plugins)
-      ).map((plugin) => createBuildPluginAdapter(plugin))
-      this.#bundler.setOutputPlugins(outputPlugins)
-    }
-  }
-
   // @ts-expect-error 2416
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    const bindingOptions = normalizeOutputOptions(outputOptions)
-    this.setOutputPlugins(outputOptions)
-    const output = await this.#bundler.write(bindingOptions)
-    return transformToRollupOutput(output)
+    return await bundle(this.#bundler, outputOptions, false)
   }
 
   // @ts-expect-error 2416
   async write(outputOptions?: OutputOptions = {}): Promise<RolldownOutput> {
-    const bindingOptions = normalizeOutputOptions(outputOptions)
-    this.setOutputPlugins(outputOptions)
-    const output = await this.#bundler.write(bindingOptions)
-    return transformToRollupOutput(output)
+    return await bundle(this.#bundler, outputOptions, true)
   }
 
   async close() {
@@ -59,5 +44,33 @@ export class RolldownBuild implements RollupBuild {
   get getTimings(): () => SerializedTimings {
     throw unimplemented()
     return unimplemented()
+  }
+}
+
+let buildIndex = 0
+
+async function bundle(
+  bundler: Bundler,
+  outputOptions: OutputOptions,
+  write: boolean,
+) {
+  const index = buildIndex
+  buildIndex++
+
+  const bindingOptions = normalizeOutputOptions(outputOptions)
+
+  if (outputOptions.plugins) {
+    const outputPlugins = (
+      await normalizePluginOption(outputOptions.plugins)
+    ).map((plugin) => createBuildPluginAdapter(plugin))
+    bundler.setOutputPlugins(index, outputPlugins)
+  }
+
+  if (write) {
+    const output = await bundler.write(index, bindingOptions)
+    return transformToRollupOutput(output)
+  } else {
+    const output = await bundler.generate(index, bindingOptions)
+    return transformToRollupOutput(output)
   }
 }

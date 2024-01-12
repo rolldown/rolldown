@@ -9,7 +9,7 @@ export interface OutputOptions {
   dir?: RollupOutputOptions['dir']
   format?: 'esm'
   exports?: RollupOutputOptions['exports']
-  plugins: RollupOutputOptions['plugins']
+  plugins?: RollupOutputOptions['plugins']
 }
 
 function normalizeFormat(

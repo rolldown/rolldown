@@ -30,13 +30,6 @@ impl<Args: JsCallbackArgs + Debug, Ret: JsCallbackRet> JsCallback<Args, Ret> {
     Ok(Self { _args: PhantomData, _ret: PhantomData, ts_fn })
   }
 
-  pub fn with_threadsafe_function(
-    mut ts_fn: ThreadsafeFunction<Args, ErrorStrategy::Fatal>,
-  ) -> napi::Result<Self> {
-    NAPI_ENV.with(|env| ts_fn.unref(env))?;
-    Ok(Self { _args: PhantomData, _ret: PhantomData, ts_fn })
-  }
-
   /// This method is already handle case return Promise<Ret>
   #[allow(clippy::future_not_send)]
   pub(crate) async fn call_async(&self, args: Args) -> napi::Result<Ret> {

@@ -81,14 +81,9 @@ export interface Outputs {
 }
 export class Bundler {
   constructor(inputOpts: InputOptions)
-  write(
-    opts: OutputOptions,
-    plugins: Array<OutputPluginOptions>,
-  ): Promise<Outputs>
-  generate(
-    opts: OutputOptions,
-    plugins: Array<OutputPluginOptions>,
-  ): Promise<Outputs>
+  setOutputPlugins(index: number, plugins: Array<PluginOptions>): void
+  write(index: number, opts: OutputOptions): Promise<Outputs>
+  generate(index: number, opts: OutputOptions): Promise<Outputs>
   build(): Promise<void>
   scan(): Promise<void>
 }

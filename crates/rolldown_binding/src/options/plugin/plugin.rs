@@ -1,8 +1,5 @@
 use derivative::Derivative;
-use napi::{
-  threadsafe_function::{ErrorStrategy, ThreadsafeFunction},
-  JsFunction,
-};
+use napi::JsFunction;
 use serde::Deserialize;
 
 #[napi_derive::napi(object)]
@@ -38,11 +35,6 @@ pub struct PluginOptions {
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(error: string) => Promise<void>")]
   pub build_end: Option<JsFunction>,
-}
-
-pub struct OutputPluginOptions {
-  pub name: String,
-  pub generate: Option<ThreadsafeFunction<(), ErrorStrategy::Fatal>>,
 }
 
 #[napi_derive::napi(object)]

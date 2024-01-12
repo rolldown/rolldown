@@ -46,13 +46,13 @@ impl Bundler {
 
   #[napi]
   pub async fn write(&self, index: u32, opts: OutputOptions) -> napi::Result<Outputs> {
-    let (_, plugins) = self.output_plugins_map.remove(&index).expect("should have output");
+    let (_, plugins) = self.output_plugins_map.remove(&index).unwrap_or_default();
     self.write_impl(opts, plugins).await
   }
 
   #[napi]
   pub async fn generate(&self, index: u32, opts: OutputOptions) -> napi::Result<Outputs> {
-    let (_, plugins) = self.output_plugins_map.remove(&index).expect("should have output");
+    let (_, plugins) = self.output_plugins_map.remove(&index).unwrap_or_default();
     self.generate_impl(opts, plugins).await
   }
 

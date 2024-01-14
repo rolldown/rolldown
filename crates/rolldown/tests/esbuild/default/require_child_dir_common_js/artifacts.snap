@@ -8,19 +8,11 @@ input_file: crates/rolldown/tests/esbuild/default/require_child_dir_common_js
 ## entry_js.mjs
 
 ```js
-// <runtime>
-
-var __getOwnPropNames = Object.getOwnPropertyNames
-var __commonJS = (cb, mod) => function () {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
-}
+import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // dir/index.js
-var require_dir_index = __commonJS({
-	'dir/index.js'(exports, module) {
-		module.exports = 123
-	}
-});
+module.exports = 123;
+
 // entry.js
-console.log(require_dir_index())
+console.log(require('./dir'));
 ```

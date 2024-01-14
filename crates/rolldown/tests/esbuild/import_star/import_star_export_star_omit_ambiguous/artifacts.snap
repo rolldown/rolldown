@@ -9,19 +9,18 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_om
 
 ```js
 // foo.js
-const x = 1
-const y$1 = 2
-// bar.js
-const y = 3
-const z = 4
-// common.js
-var common_ns = {
-	get x() { return x },
-	get z() { return z }
-};
+export const x = 1;
+export const y$1 = 2;
 
+// bar.js
+export const y = 3;
+export const z = 4;
+
+// common.js
+export* from'./foo';
+export* from'./bar';
 
 // entry.js
-
-console.log(common_ns)
+import * as ns from './common';
+console.log(common_ns);
 ```

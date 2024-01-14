@@ -9,15 +9,13 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_import_
 
 ```js
 // foo.js
-var foo_ns = {
-	get foo() { return foo$1 }
-};
-const foo$1 = 123
+export const foo$1 = 123;
+
 // bar.js
-
-
+import * as ns from './foo';
+export { ns };
 // entry.js
-
-let foo = 234
-console.log(foo_ns.foo, foo_ns.foo, foo)
+import {ns} from './bar';
+let foo = 234;
+console.log(foo_ns.foo, foo_ns.foo, foo);
 ```

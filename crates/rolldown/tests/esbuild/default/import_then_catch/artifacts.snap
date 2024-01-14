@@ -9,9 +9,9 @@ input_file: crates/rolldown/tests/esbuild/default/import_then_catch
 
 ```js
 // entry.js
-if (false) { // the test case is error case, so we don't need to run it
-    import(name).then(pass, fail)
-    import(name).then(pass).catch(fail)
-    import(name).catch(fail)
+if (false) {
+	import(name).then(pass, fail);
+	import(name).then(pass).catch(fail);
+	import(name).catch(fail);
 }
 ```

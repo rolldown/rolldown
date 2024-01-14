@@ -8,20 +8,11 @@ input_file: crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_is
 ## entry_js.mjs
 
 ```js
-// <runtime>
-
-var __getOwnPropNames = Object.getOwnPropertyNames
-var __commonJS = (cb, mod) => function () {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
-}
+import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // cjs.js
-var require_cjs = __commonJS({
-	'cjs.js'(exports, module) {
-		'use strict'
-		exports.foo = process
-	}
-});
+'use strict';exports.foo = process;
+
 // entry.js
-console.log(require_cjs())
+console.log(require('./cjs'));
 ```

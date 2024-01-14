@@ -154,10 +154,6 @@ impl<'r> AstRenderer<'r> {
             .append_right(0, format!("var {};\n", self.wrapped_esm_ctx.hoisted_vars.join(",")));
         }
 
-        if let Some(s) = self.generate_namespace_variable_declaration() {
-          self.ctx.source.append_right(0, s);
-        }
-
         let wrap_ref_name = self.ctx.wrap_ref_name.unwrap();
         let esm_ref_name = self.ctx.canonical_name_for_runtime("__esm");
         self.ctx.source.append_right(
@@ -179,13 +175,8 @@ impl<'r> AstRenderer<'r> {
           self.indentor,
         ));
         self.ctx.source.append(format!("\n{}}}\n}});", self.indentor));
-        assert!(!self.ctx.module.is_namespace_referenced());
       }
-      RenderKind::Esm => {
-        if let Some(s) = self.generate_namespace_variable_declaration() {
-          self.ctx.source.prepend(s);
-        }
-      }
+      RenderKind::Esm => {}
     }
   }
 

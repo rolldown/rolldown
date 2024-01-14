@@ -9,17 +9,18 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_of_export_star_of_i
 
 ```js
 // baz.js
-const value = 123
-// bar.js
+export const value = 123;
 
+// bar.js
+export { value as bar } from './baz';
 // foo.js
-// Add some statements to increase the part index (this reproduced a crash)
-statement()
-statement()
-statement()
-statement()
+statement();
+statement();
+statement();
+statement();
+export* from'./bar';
 
 // entry.js
-
-console.log(value)
+import {bar} from './foo';
+console.log(value);
 ```

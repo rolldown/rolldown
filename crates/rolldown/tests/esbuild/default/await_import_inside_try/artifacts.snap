@@ -10,10 +10,9 @@ input_file: crates/rolldown/tests/esbuild/default/await_import_inside_try
 ```js
 // entry.js
 async function main(name) {
-	try {
-		return await import(name)
-	} catch {
-	}
-}
-main('fs')
+	try{
+		return await import(name);
+	}catch{
+	}}
+main('fs');
 ```

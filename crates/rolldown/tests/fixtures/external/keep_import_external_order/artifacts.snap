@@ -12,11 +12,11 @@ import "ext1";
 import "ext2";
 
 // foo.js
-const a = 'foo'
+export const a = 'foo';
 
 // main.js
-
-
-
-console.log(a)
+import 'ext1';
+import {a} from './foo';
+import 'ext2';
+console.log(a);
 ```

@@ -11,11 +11,12 @@ input_file: crates/rolldown/tests/esbuild/default/nested_scope_bug
 // entry.js
 (() => {
 	function a() {
-		b()
+		b();
 	}
 	{
-		var b = () => {}
+		var b = () => {
+		};
 	}
-	a()
-})()
+	a();
+})();
 ```

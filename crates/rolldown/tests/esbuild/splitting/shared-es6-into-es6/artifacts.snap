@@ -11,8 +11,8 @@ input_file: crates/rolldown/tests/esbuild/splitting/shared-es6-into-es6
 import { foo } from "./shared_js.mjs";
 
 // a.js
-
-console.log(foo)
+import {foo} from './shared.js';
+console.log(foo);
 ```
 ## b.mjs
 
@@ -20,13 +20,14 @@ console.log(foo)
 import { foo } from "./shared_js.mjs";
 
 // b.js
-
-console.log(foo)
+import {foo} from './shared.js';
+console.log(foo);
 ```
 ## shared_js.mjs
 
 ```js
 // shared.js
-let foo = 123
+export let foo = 123;
+
 export { foo };
 ```

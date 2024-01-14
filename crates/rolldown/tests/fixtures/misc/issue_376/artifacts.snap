@@ -9,9 +9,8 @@ input_file: crates/rolldown/tests/fixtures/misc/issue_376
 
 ```js
 // main.js
-const test = 'hello world'
-
-
+const test = 'hello world';
+export default test;
 
 export { test as default };
 ```

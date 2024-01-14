@@ -9,11 +9,11 @@ input_file: crates/rolldown/tests/esbuild/default/outbase
 
 ```js
 // c.js
-console.log('c')
+console.log('c');
 ```
 ## d_js.mjs
 
 ```js
 // d.js
-console.log('d')
+console.log('d');
 ```

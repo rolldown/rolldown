@@ -8,62 +8,25 @@ input_file: crates/rolldown/tests/fixtures/reexport_commonjs
 ## main.mjs
 
 ```js
-// <runtime>
-
-var __create = Object.create
-var __defProp = Object.defineProperty
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor
-var __getOwnPropNames = Object.getOwnPropertyNames
-var __getProtoOf = Object.getPrototypeOf
-var __hasOwnProp = Object.prototype.hasOwnProperty
-var __commonJS = (cb, mod) => function () {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
-}
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === 'object' || typeof from === 'function')
-    for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
-      key = keys[i]
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: (k => from[k]).bind(null, key), enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable })
-    }
-  return to
-}
-var __reExport = (target, mod, secondTarget) => (
-  __copyProps(target, mod, 'default'),
-  secondTarget && __copyProps(secondTarget, mod, 'default')
-)
-var __toESM = (mod, isNodeMode, target) => (
-  target = mod != null ? __create(__getProtoOf(mod)) : {},
-  __copyProps(
-    isNodeMode || !mod || !mod.__esModule
-      ? __defProp(target, 'default', { value: mod, enumerable: true })
-      : target,
-    mod)
-)
+import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.mjs";
 
 // commonjs.js
-var require_commonjs = __commonJS({
-	'commonjs.js'(exports, module) {
-		module.exports = { bar: 1 };
-	}
-});
-// esm.js
-const value = 1
-// foo.js
-var foo_ns = {
-	get bar() { return import_commonjs$2.bar },
-	get value() { return value }
+module.exports = {
+	bar:1
 };
-__reExport(foo_ns, __toESM(require_commonjs()));
-var import_commonjs$2 = __toESM(require_commonjs());
 
+// esm.js
+export const value = 1;
+
+// foo.js
+export* from'./commonjs';
+export { bar } from './commonjs';export* from'./esm';
 
 // main.js
-
-
-var import_commonjs = __toESM(require_commonjs());
-console.log(foo_ns, import_commonjs$2.bar, value, foo_ns.foo)
-
+import * as ns from './foo';
+import {bar,value,foo} from './foo';
+console.log(foo_ns, import_commonjs$2.bar, value, foo_ns.foo);
+export { bar } from './commonjs';
 var bar$1 = import_commonjs.bar;
 export { bar$1 as bar };
 ```

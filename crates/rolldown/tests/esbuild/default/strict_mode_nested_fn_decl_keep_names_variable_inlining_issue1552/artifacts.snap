@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_kee
 
 ```js
 // entry.js
-function outer() {
+export function outer() {
 	{
 		function inner() {
 			return Math.random();
@@ -19,5 +19,6 @@ function outer() {
 	}
 }
 outer();
+
 export { outer };
 ```

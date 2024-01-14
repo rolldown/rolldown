@@ -9,21 +9,22 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_es6
 
 ```js
 // a.js
-const abc = undefined
+export const abc = undefined;
+
 // b.js
-var b_ns = {
-	get xyz() { return xyz }
-};
-const xyz = null
+export const xyz = null;
+
 // entry.js
-var entry_default = 123
-var v = 234
-let l = 234
-const c = 234
-
-function Fn() {}
-class Class {}
-
+export default 123;
+export var v = 234;
+export let l = 234;
+export const c = 234;
+export { Class as C };export function Fn() {
+}
+export class Class {
+}
+export* from'./a';
+export*as b from'./b';
 
 export { Class as C, Class, Fn, abc, b_ns as b, c, entry_default as default, l, v };
 ```

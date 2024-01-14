@@ -23,9 +23,7 @@ export { main_default as default };
 
 ```js
 // main.js
-// Purpose: Test that duplicate entries are handled correctly.
-// Use object to ensure the reference equality.
-var main_default = {}
+export default {};
 
 export { main_default };
 ```

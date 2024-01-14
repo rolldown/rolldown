@@ -9,12 +9,13 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_import_issue_272
 
 ```js
 // a.js
-import('./b.mjs')
+import('./b');
 ```
 ## b.mjs
 
 ```js
 // b.js
-var b_default = 1
+export default 1;
+
 export { b_default as default };
 ```

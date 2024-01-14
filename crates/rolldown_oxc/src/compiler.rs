@@ -33,12 +33,24 @@ impl OxcProgram {
   }
 
   pub fn program(&self) -> &ast::Program<'_> {
+    // SAFETY: `&'a ast::Program<'a>` can't outlive the `&'a ast::Program<'static>`.
     unsafe { std::mem::transmute(&self.program) }
+  }
+
+  pub fn program_mut(&mut self) -> &mut ast::Program<'_> {
+    // SAFETY: `&'a mut ast::Program<'a>` can't outlive the `&'a mut ast::Program<'static>`.
+    unsafe { std::mem::transmute(&mut self.program) }
+  }
+
+  pub fn program_mut_and_allocator(&mut self) -> (&mut ast::Program<'_>, &Allocator) {
+    // SAFETY: `&'a mut ast::Program<'a>` can't outlive the `&'a mut ast::Program<'static>`.
+    let program = unsafe { std::mem::transmute(&mut self.program) };
+    (program, &self.allocator)
   }
 
   pub fn make_semantic(&self, ty: SourceType) -> Semantic<'_> {
     let semantic = SemanticBuilder::new(&self.source, ty).build(self.program()).semantic;
-    unsafe { std::mem::transmute(semantic) }
+    semantic
   }
 }
 

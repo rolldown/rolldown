@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/deconflict/object_shorthand_property
+input_file: crates/rolldown/tests/fixtures/object_shorthand_property
 ---
 # Assets
 
@@ -11,12 +11,13 @@ input_file: crates/rolldown/tests/fixtures/deconflict/object_shorthand_property
 import { default as assert } from "assert";
 
 // foo.js
-var foo_default = 'foo'
+export default 'foo';
+
 // main.js
-
-
-
-const value = { foo: foo_default }
-
-assert.strictEqual(value.foo, 'foo')
+import foo from './foo';
+import assert from 'assert';
+const value = {
+	foo:foo_default
+};
+assert.strictEqual(value.foo, 'foo');
 ```

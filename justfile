@@ -16,6 +16,11 @@ init:
     just init-node
     git submodule update
 
+# Update our local branch with the remote branch (this is for you to sync the submodules)
+update:
+    git pull
+    git submodule update --init
+
 # CHECKING
 
 check-rust:
@@ -30,9 +35,15 @@ check:
 
 # TESTING
 
-test:
-    # TODO: add test for node
+test-rust:
     cargo test --no-fail-fast
+
+test-node:
+    yarn test
+
+test:
+    just test-rust
+    just test-node
 
 # FORMATTING
 
@@ -63,10 +74,6 @@ lint:
     just lint-rust
     just lint-node
 
-# Update our local branch with the remote branch (this is for you to sync the submodules)
-update:
-    git pull
-    git submodule update --init
 
 
 

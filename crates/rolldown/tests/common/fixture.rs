@@ -52,7 +52,7 @@ impl Fixture {
     let compiled_entries = test_config
       .input
       .input
-      .unwrap_or(vec![default_test_input_item()])
+      .unwrap_or_else(|| vec![default_test_input_item()])
       .iter()
       .map(|item| format!("{}.mjs", item.name))
       .map(|name| dist_folder.join(name))
@@ -72,9 +72,12 @@ impl Fixture {
     }
 
     let output = command.output().unwrap();
+
+    #[allow(clippy::print_stdout)]
     if !output.status.success() {
       let stdout_utf8 = std::str::from_utf8(&output.stdout).unwrap();
       let stderr_utf8 = std::str::from_utf8(&output.stderr).unwrap();
+
       println!("⬇️⬇️ Failed to execute command ⬇️⬇️\n{command:?}\n⬆️⬆️ end  ⬆️⬆️");
       panic!("⬇️⬇️ stderr ⬇️⬇️\n{stderr_utf8}\n⬇️⬇️ stdout ⬇️⬇️\n{stdout_utf8}\n⬆️⬆️ end  ⬆️⬆️",);
     }
@@ -101,7 +104,7 @@ impl Fixture {
         })
         .unwrap(),
       cwd: fixture_path.to_path_buf(),
-      external: test_config.input.external.map(|e| External::ArrayString(e)).unwrap_or_default(),
+      external: test_config.input.external.map(External::ArrayString).unwrap_or_default(),
       treeshake: test_config.input.treeshake.unwrap_or(true),
       resolve: None,
     });

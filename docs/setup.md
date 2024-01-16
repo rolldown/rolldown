@@ -1,26 +1,5 @@
 # Setup Project
 
-## Install Rust
-
-```bash
-# https://rustup.rs/
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-## Install binstall
-
-```bash
-# https://github.com/cargo-bins/cargo-binstall
-cargo install cargo-binstall
-```
-
-## Install just
-
-```bash
-# https://github.com/casey/just
-cargo binstall just -y
-```
-
 ## Project Setup
 
 ```bash

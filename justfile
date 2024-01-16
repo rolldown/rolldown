@@ -3,22 +3,41 @@ set shell := ["bash", "-cu"]
 _default:
     just --list -u
 
-init:
-    cargo binstall rusty-hook taplo-cli cargo-insta -y
+# INITIALIZE
+
+init-rust:
+    cargo binstall rusty-hook taplo-cli cargo-insta cargo-deny -y
+
+init-node:
     yarn install
+
+init:
+    just init-rust
+    just init-node
     git submodule update
+
+# CHECKING
+
+# TESTING
 
 test:
     # TODO: add test for node
     cargo test --no-fail-fast
 
-lint:
-    yarn lint-filename
-    yarn lint
-    # yarn prettier:ci TODO(hyf0): Too slow
-    cargo clippy --all -- --deny warnings
+# LINTING
+
+lint-rust:
+    cargo clippy --workspace --all-targets -- --deny warnings
     cargo fmt --all -- --check
     taplo format
+
+lint-node:
+    yarn lint-filename
+    yarn lint
+
+lint:
+    just lint-rust
+    just lint-node
 
 # Update our local branch with the remote branch (this is for you to sync the submodules)
 update:

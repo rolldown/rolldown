@@ -49,7 +49,7 @@ impl Case {
       let rendered = diagnostics
         .flat_map(|(code, diagnostic)| {
           [
-            Cow::Owned(format!("## {}\n", code)),
+            Cow::Owned(format!("## {code}\n")),
             "```text".into(),
             Cow::Owned(diagnostic.to_string()),
             "```".into(),
@@ -85,7 +85,7 @@ impl Case {
   fn render_stats_to_snapshot(&mut self, assets: Vec<Output>) {
     self.snapshot.append("\n\n## Output Stats\n\n");
     let stats = assets
-      .iter()
+      .into_iter()
       .flat_map(|asset| match asset {
         Output::Chunk(chunk) => {
           vec![Cow::Owned(format!(
@@ -106,13 +106,13 @@ impl Case {
 
   fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildError>) {
     self.snapshot.append("# Errors\n\n");
-    errors.sort_by_key(|e| e.code());
+    errors.sort_by_key(BuildError::code);
     let diagnostics = errors.into_iter().map(|e| (e.code(), e.into_diagnostic()));
 
     let rendered = diagnostics
       .flat_map(|(code, diagnostic)| {
         [
-          Cow::Owned(format!("## {}\n", code)),
+          Cow::Owned(format!("## {code}\n")),
           "```text".into(),
           Cow::Owned(diagnostic.to_string()),
           "```".into(),

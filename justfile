@@ -50,7 +50,6 @@ test:
 
 fmt-rust:
     cargo fmt --all -- --emit=files
-    taplo format
 
 fmt-lint:
     yarn prettier
@@ -58,13 +57,13 @@ fmt-lint:
 fmt:
     just fmt-rust
     just fmt-lint
+    taplo format
 
 # LINTING
 
 lint-rust:
     cargo clippy --workspace --all-targets -- --deny warnings
     cargo fmt --all -- --check
-    taplo format
 
 lint-node:
     yarn lint-filename
@@ -74,6 +73,7 @@ lint-node:
 lint:
     just lint-rust
     just lint-node
+    taplo format
 
 # BENCHING
 

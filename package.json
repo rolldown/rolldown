@@ -28,7 +28,7 @@
     "prettier:ci": "prettier . '!**/*.{js||ts|json|md|yml|yaml}' -c",
     "bench": "yarn workspace bench run bench",
     "TODO(hyf0): #need to investigate following commands": "_",
-    "build:ci:release": "run-s build:packages:ci build:ts build:binding:release",
+    "build:ci:release": "yarn workspaces foreach -R --topological-dev --from '@rolldown/node' run build",
     "build:ts": "tsc -b tsconfig.project.json"
   },
   "license": "MIT",

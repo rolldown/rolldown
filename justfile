@@ -18,11 +18,34 @@ init:
 
 # CHECKING
 
+check-rust:
+    cargo check --workspace
+
+check-node:
+    yarn typecheck
+
+check:
+    just check-rust
+    just check-node
+
 # TESTING
 
 test:
     # TODO: add test for node
     cargo test --no-fail-fast
+
+# FORMATTING
+
+fmt-rust:
+    cargo fmt --all -- --emit=files
+    taplo format
+
+fmt-lint:
+    yarn prettier
+
+fmt:
+    just fmt-rust
+    just fmt-lint
 
 # LINTING
 
@@ -34,6 +57,7 @@ lint-rust:
 lint-node:
     yarn lint-filename
     yarn lint
+    yarn prettier:ci
 
 lint:
     just lint-rust
@@ -44,10 +68,6 @@ update:
     git pull
     git submodule update --init
 
-fmt:
-    cargo fmt
-    taplo format
-    npm run prettier
 
 
 setup-bench:
@@ -62,8 +82,8 @@ bench:
     cargo bench -p bench
 
 # This command will try to run checks similar to ci locally
-check:
-  # git diff --exit-code --quiet
-  just lint
-  just test
-  git status
+# check:
+#   # git diff --exit-code --quiet
+#   just lint
+#   just test
+#   git status

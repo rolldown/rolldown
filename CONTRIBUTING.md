@@ -61,6 +61,17 @@ Once installed, run the following to install dependencies.
 just init-node
 ```
 
+## Workflow
+
+The following commands are available and should be used in your standard development workflow.
+
+- `just init` - Install required tools and dependencies.
+- `just check` - Runs the typechecker.
+- `just lint` - Lints code.
+- `just fmt` - Formats code.
+
+> Every command will run both Rust and Node.js scripts. To only target one, append `-rust` or `-node` to the just command. For example, `just lint-rust` or `just fmt-node`.
+
 ## How to
 
 ### Open development
@@ -97,13 +108,4 @@ Be sure to be as descriptive as possible and to include all applicable labels.
 ### Submitting a pull request
 
 We accept pull requests for all bugs, fixes, improvements, and new features. Before submitting a
-pull request, be sure your build passes locally using the development workflow below.
-
-## Development workflow
-
-The following commands are available and should be used in your standard development workflow.
-
-> Every command will run both Rust and Node.js scripts. To only target one, append `-rust` or `-node` to the just command.
-
-- `just init` - Install required tools and dependencies.
--
+pull request, be sure your build passes locally using the development workflow above.

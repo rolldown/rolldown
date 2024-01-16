@@ -19,21 +19,6 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  cargo-format:
-    name: Cargo Format
-    runs-on: buildjet-2vcpu-ubuntu-2204
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
-        with:
-          cache: false
-          components: rustfmt
-
-      - name: Run Format
-        run: cargo fmt --all -- --check
-
   cargo-deny:
     name: Cargo Deny
     runs-on: buildjet-2vcpu-ubuntu-2204
@@ -54,8 +39,8 @@ jobs:
       - if: steps.filter.outputs.src == 'true'
         run: cargo deny check
 
-  cargo-clippy:
-    name: Cargo Clippy
+  cargo-lint:
+    name: Cargo Lint
     runs-on: buildjet-2vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@v4
@@ -63,11 +48,12 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
+          bins: just
           cache-base: main
-          components: clippy
+          components: clippy, rustfmt
 
-      - name: Run Clippy
-        run: cargo clippy --all -- --deny warnings
+      - name: Lint
+        run: just lint-rust
 
   cargo-test:
     name: Cargo Test
@@ -83,13 +69,14 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
+          bins: just
           cache-base: main
 
       - name: Build
         run: cargo test --no-run
 
       - name: Run Test
-        run: cargo test
+        run: just test-rust
 
   node-test:
     name: Node Test
@@ -111,6 +98,7 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
+          bins: just
           cache-base: main
 
       - name: Install node
@@ -122,11 +110,8 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Build @rolldown/node
-        run: yarn build --no-wasm
-
       - name: Test
-        run: yarn test
+        run: just test-node
 
   node-validation:
     name: Node Validation

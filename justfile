@@ -39,6 +39,7 @@ test-rust:
     cargo test --no-fail-fast
 
 test-node:
+    yarn build --no-wasm
     yarn test
 
 test:
@@ -74,8 +75,7 @@ lint:
     just lint-rust
     just lint-node
 
-
-
+# BENCHING
 
 setup-bench:
     git clone --branch r108 --depth 1 https://github.com/mrdoob/three.js.git ./temp/three
@@ -87,10 +87,3 @@ setup-bench:
 
 bench:
     cargo bench -p bench
-
-# This command will try to run checks similar to ci locally
-# check:
-#   # git diff --exit-code --quiet
-#   just lint
-#   just test
-#   git status

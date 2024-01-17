@@ -3,6 +3,14 @@ set shell := ["bash", "-cu"]
 _default:
     just --list -u
 
+ready:
+  git diff --exit-code --quiet
+  just fmt
+  just check
+  just test
+  just lint
+  git status
+
 # INITIALIZE
 
 init-rust:

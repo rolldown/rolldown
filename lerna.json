@@ -1,0 +1,11 @@
+{
+  "packages": ["crates/rolldown_binding", "packages/*"],
+  "version": "independent",
+  "useWorkspaces": true,
+  "npmClient": "yarn",
+  "command": {
+    "version": {
+      "message": "chore(release): publish"
+    }
+  }
+}

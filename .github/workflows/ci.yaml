@@ -65,7 +65,7 @@ jobs:
         with:
           bins: just
           cache-base: main
-          components: clippy
+          components: clippy,rustfmt
 
       - name: Lint
         run: just lint-rust

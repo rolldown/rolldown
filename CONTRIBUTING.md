@@ -83,13 +83,11 @@ send pull requests which go through the same review process.
 ### Branch organization
 
 Submit all pull requests directly to the `main` branch. We only use separate branches for upcoming
-releases / breaking changes, otherwise, everything points to master.
+releases / breaking changes, otherwise, everything points to main.
 
 Code that lands in main must be compatible with the latest stable release. It may contain
 additional features, but no breaking changes. We should be able to release a new minor version from
 the tip of main at any time.
-
-> Developers use (or may use) [Graphite](https://graphite.dev/) for better branch management.
 
 ### Reporting a bug
 

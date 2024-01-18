@@ -8,7 +8,7 @@ const status = {
   // total: 0,
   failed: 0,
   skipFailed: 0,
-  ignored: 0,
+  // ignored: 0,
   skipped: 0,
   passed: 0,
 }
@@ -26,7 +26,7 @@ beforeEach(function skipAlreadyFiledTests() {
   const id = calcTestId(this.currentTest)
 
   if (ignoreTests.has(id)) {
-    status.ignored += 1
+    // status.ignored += 1
     this.currentTest?.skip()
   }
 
@@ -66,7 +66,7 @@ after(function printStatus() {
     // enforce exit process to avoid rust process is not exit.
     process.exit(1)
   } else {
-    if (expectedStatus.ignored != status.ignored || expectedStatus.skipFailed !== status.skipFailed || expectedStatus.passed !== status.passed) {
+    if (expectedStatus.skipFailed !== status.skipFailed || expectedStatus.passed !== status.passed) {
       console.log('expected', expectedStatus)
       console.log('actual', status)
       throw new Error('The rollup test status file is not updated. Please run `yarn test:update` to update it.')

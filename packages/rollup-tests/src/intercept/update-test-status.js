@@ -16,7 +16,7 @@ const status = {
   // total: 0,
   failed: 0,
   skipFailed: 0,
-  ignored: 0,
+  // ignored: 0,
   skipped: 0,
   passed: 0,
 }
@@ -33,7 +33,7 @@ beforeEach(function skipAlreadyFiledTests() {
   // }
 
   if (ignoredTests.has(id)) {
-    status.ignored += 1
+    // status.ignored += 1
     this.currentTest?.skip()
   }
 

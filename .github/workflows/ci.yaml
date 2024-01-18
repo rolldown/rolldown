@@ -99,6 +99,11 @@ jobs:
     timeout-minutes: 30
     strategy:
       fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          # - windows-latest
+          # - macos-latest
     steps:
       - uses: actions/checkout@v4
         with:

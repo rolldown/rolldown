@@ -1,4 +1,4 @@
-use rolldown::{Bundler, InputItem, InputOptions};
+use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
 use std::path::PathBuf;
 use sugar_path::SugarPathBuf;
 
@@ -13,6 +13,6 @@ async fn main() {
     ..Default::default()
   });
 
-  let _outputs = bundler.write(Default::default()).await.unwrap();
+  let _outputs = bundler.write(OutputOptions::default()).await.unwrap();
   // println!("{outputs:#?}");
 }

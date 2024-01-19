@@ -4,8 +4,8 @@ In general, we have two main test suites for rust and node.js.
 
 ## Summary
 
-- `just test` for running all rust tests.
-- `yarn test` for running all node tests.
+- `just test-rust` for running all rust tests.
+- `just test-node` for running all node tests.
 
 ## Rust Testing
 

@@ -23,8 +23,10 @@
   ],
   "scripts": {
     "build": "unbuild",
+    "build:release": "unbuild",
     "test": "vitest run",
-    "test:update": "vitest run -u"
+    "test:update": "vitest run -u",
+    "typecheck": "unbuild && tsc -p tsconfig.check.json"
   },
   "dependencies": {
     "@rolldown/node-binding": "workspace:*"

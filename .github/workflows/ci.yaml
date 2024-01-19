@@ -63,11 +63,12 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
+          bins: just
           cache-base: main
-          components: clippy
+          components: clippy,rustfmt
 
-      - name: Run Clippy
-        run: cargo clippy --all -- --deny warnings
+      - name: Lint
+        run: just lint-rust
 
   cargo-test:
     name: Cargo Test
@@ -83,13 +84,14 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
+          bins: just
           cache-base: main
 
       - name: Build
         run: cargo test --no-run
 
       - name: Run Test
-        run: cargo test
+        run: just test-rust
 
   node-test:
     name: Node Test
@@ -102,7 +104,6 @@ jobs:
           - ubuntu-latest
           # - windows-latest
           # - macos-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -111,6 +112,7 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
+          bins: just
           cache-base: main
 
       - name: Install node
@@ -122,26 +124,35 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Build @rolldown/node
-        run: yarn build --no-wasm
-
       - name: Test
-        run: yarn test
+        run: just test-node
 
-  node-validation:
-    name: Node Validation
+  node-format:
+    name: Node Format
+    runs-on: buildjet-2vcpu-ubuntu-2204
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.18.0
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Run Prettier
+        run: yarn prettier:ci
+
+  node-lint:
+    name: Node Lint
     runs-on: buildjet-2vcpu-ubuntu-2204
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true # Pull submodules for additional files
 
       - name: Install node
         uses: actions/setup-node@v3
@@ -157,6 +168,3 @@ jobs:
 
       - name: Oxc Lint
         run: yarn lint
-
-      - name: Run Prettier
-        run: yarn prettier:ci

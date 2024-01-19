@@ -3,33 +3,87 @@ set shell := ["bash", "-cu"]
 _default:
     just --list -u
 
-init:
-    cargo binstall rusty-hook taplo-cli cargo-insta -y
+ready:
+  git diff --exit-code --quiet
+  just fmt
+  just check
+  just test
+  just lint
+  git status
+
+# INITIALIZE
+
+init-rust:
+    cargo binstall rusty-hook taplo-cli cargo-insta cargo-deny -y
+
+init-node:
     yarn install
+
+init:
+    just init-rust
+    just init-node
     git submodule update
-
-test:
-    # TODO: add test for node
-    cargo test --no-fail-fast
-
-lint:
-    yarn lint-filename
-    yarn lint
-    # yarn prettier:ci TODO(hyf0): Too slow
-    cargo clippy --all -- --deny warnings
-    cargo fmt --all -- --check
-    taplo format
 
 # Update our local branch with the remote branch (this is for you to sync the submodules)
 update:
     git pull
     git submodule update --init
 
-fmt:
-    cargo fmt
-    taplo format
-    npm run prettier
+# CHECKING
 
+check-rust:
+    cargo check --workspace
+
+check-node:
+    yarn typecheck
+
+check:
+    just check-rust
+    just check-node
+
+# TESTING
+
+test-rust:
+    cargo test --no-fail-fast
+
+test-node:
+    yarn build --no-wasm
+    yarn test
+
+test:
+    just test-rust
+    just test-node
+
+# FORMATTING
+
+fmt-rust:
+    cargo fmt --all -- --emit=files
+
+fmt-lint:
+    yarn prettier
+
+fmt:
+    just fmt-rust
+    just fmt-lint
+    taplo format
+
+# LINTING
+
+lint-rust:
+    cargo clippy --workspace --all-targets -- --deny warnings
+    cargo fmt --all -- --check
+
+lint-node:
+    yarn lint-filename
+    yarn lint
+    yarn prettier:ci
+
+lint:
+    just lint-rust
+    just lint-node
+    taplo format
+
+# BENCHING
 
 setup-bench:
     git clone --branch r108 --depth 1 https://github.com/mrdoob/three.js.git ./temp/three
@@ -41,10 +95,3 @@ setup-bench:
 
 bench:
     cargo bench -p bench
-
-# This command will try to run checks similar to ci locally
-check:
-  # git diff --exit-code --quiet
-  just lint
-  just test
-  git status

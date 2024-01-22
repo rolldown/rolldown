@@ -1,9 +1,11 @@
-pub mod napi_error_ext;
-use napi::Env;
+pub mod globs;
 mod into_js_unknown_vec;
-pub use into_js_unknown_vec::*;
 mod js_callback;
+pub mod napi_error_ext;
+
+pub use into_js_unknown_vec::*;
 pub use js_callback::*;
+use napi::Env;
 use rolldown_tracing::try_init_tracing_with_chrome_layer;
 
 pub fn try_init_custom_trace_subscriber(mut napi_env: Env) {

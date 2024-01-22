@@ -18,3 +18,4 @@ sugar_path = { workspace = true }
 thiserror  = { workspace = true }
 ariadne    = { workspace = true }
 oxc        = { workspace = true }
+wax        = { workspace = true }

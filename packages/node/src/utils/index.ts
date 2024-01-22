@@ -4,7 +4,7 @@ export * from './normalize-plugin-option'
 export * from './ensure-array'
 export * from './create-bundler'
 
-export function arraify<T>(value: T | T[]): T[] {
+export function arrayify<T>(value: T | T[]): T[] {
   return Array.isArray(value) ? value : [value]
 }
 

@@ -13,10 +13,10 @@ const onlyTests = loadOnlyTests()
 const ignoredTests = loadIgnoredTests()
 
 const status = {
-  total: 0,
+  // total: 0,
   failed: 0,
   skipFailed: 0,
-  ignored: 0,
+  // ignored: 0,
   skipped: 0,
   passed: 0,
 }
@@ -26,20 +26,20 @@ beforeEach(function skipAlreadyFiledTests() {
     throw new Error('No current test')
   }
   const id = calcTestId(this.currentTest)
-  status.total += 1
+  // status.total += 1
 
   // if (!onlyTests.has(id)) {
   //   this.currentTest?.skip()
   // }
 
+  if (ignoredTests.has(id)) {
+    // status.ignored += 1
+    this.currentTest?.skip()
+  }
+
   if (alreadyFailedTests.has(id)) {
     status.skipFailed += 1
     this.currentTest.skip()
-  }
-
-  if (ignoredTests.has(id)) {
-    status.ignored += 1
-    this.currentTest?.skip()
   }
 
   // Easy way to find the test id in the logs

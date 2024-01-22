@@ -9,9 +9,10 @@ input_file: crates/rolldown/tests/esbuild/default/reserve_props
 
 ```js
 // entry.js
-var entry_default = {
-	foo_: 0,
-	_bar_: 1,
-}
+export default {
+	foo_:0,
+	_bar_:1
+};
+
 export { entry_default as default };
 ```

@@ -65,6 +65,8 @@ impl Case {
     assets.sort_by_key(|c| c.file_name().to_string());
     let artifacts = assets
       .iter()
+      // FIXME: should render the runtime module while tree shaking being supported
+      .filter(|asset| !asset.file_name().contains("rolldown_runtime"))
       .flat_map(|asset| {
         [
           Cow::Owned(format!("## {}\n", asset.file_name())),

@@ -8,82 +8,33 @@ input_file: crates/rolldown/tests/fixtures/basic_commonjs
 ## main.mjs
 
 ```js
-// <runtime>
-
-var __create = Object.create
-var __defProp = Object.defineProperty
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor
-var __getOwnPropNames = Object.getOwnPropertyNames
-var __getProtoOf = Object.getPrototypeOf
-var __hasOwnProp = Object.prototype.hasOwnProperty
-var __esm = (fn, res) => function () {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res
-}
-var __commonJS = (cb, mod) => function () {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
-}
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === 'object' || typeof from === 'function')
-    for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
-      key = keys[i]
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: (k => from[k]).bind(null, key), enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable })
-    }
-  return to
-}
-var __toESM = (mod, isNodeMode, target) => (
-  target = mod != null ? __create(__getProtoOf(mod)) : {},
-  __copyProps(
-    isNodeMode || !mod || !mod.__esModule
-      ? __defProp(target, 'default', { value: mod, enumerable: true })
-      : target,
-    mod)
-)
-var __toCommonJS = mod => __copyProps(__defProp({}, '__esModule', { value: true }), mod)
+import { __commonJS, __esm, __toCommonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // esm.js
-function esm_default_fn() {}
-function esm_named_fn() {}
-function hoisted_fn() {
-    const bar = 1 // shouldn't hoisted
+export default function esm_default_fn() {
+}export const esm_named_var = 1;
+export function esm_named_fn() {
 }
-var esm_named_var,esm_named_class,hoisted_var,hoisted_class;
-var esm_ns = {
-    get default() { return esm_default_fn },
-    get esm_named_class() { return esm_named_class },
-    get esm_named_fn() { return esm_named_fn },
-    get esm_named_var() { return esm_named_var }
-};
-var init_esm = __esm({
-    'esm.js'() {
+export class esm_named_class {
+}
+const hoisted_var = 1;
+function hoisted_fn() {
+	const bar = 1;
+}
+class hoisted_class {
+}
 
-        esm_named_var = 1;
-
-esm_named_class =         class esm_named_class {}
-
-
-        hoisted_var = 1;
-
-hoisted_class =         class hoisted_class {}
-
-    }
-});
 // commonjs.js
-var require_commonjs$1 = __commonJS({
-	'commonjs.js'(exports, module) {
-		var value = (init_esm(), __toCommonJS(esm_ns));
-		module.exports = value;
-	}
-});
+var value = require('./esm.js');
+module.exports = value;
+
 // main.js
-var import_commonjs = __toESM(require_commonjs$1());
-
-init_esm();
-
-console.log(import_commonjs.default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class)
-// test commonjs warp symbol deconflict
-const require_commonjs = () => { }
-// test esm export function symbol deconflict
-function esm_default_fn$1() { }
-console.log(require_commonjs, esm_default_fn$1)
+import foo from './commonjs.js';
+import esm,{esm_named_var,esm_named_fn,esm_named_class} from './esm.js';
+console.log(import_commonjs.default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class);
+const require_commonjs = () => {
+};
+function esm_default_fn$1() {
+}
+console.log(require_commonjs, esm_default_fn$1);
 ```

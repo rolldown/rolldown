@@ -58,7 +58,7 @@ impl Chunk {
 
     self.modules.iter().copied().for_each(|module| {
       let Module::Normal(module) = &graph.modules[module] else { return };
-      module.scope.descendants().for_each(|scope_id| {
+      module.scope.iter_bindings().map(|(scope_id, _, _)| scope_id).for_each(|scope_id| {
         if scope_id == module.scope.root_scope_id() {
           // Top level symbol are already processed above
           return;

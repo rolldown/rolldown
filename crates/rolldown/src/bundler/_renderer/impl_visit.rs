@@ -28,16 +28,12 @@ impl<'ast, 'r> AstRenderer<'r> {
         self.ctx.first_stmt_start = Some(stmt.span().start);
       }
     }
-    if self.current_stmt_info.get().is_included {
-      if matches!(self.kind, RenderKind::WrappedEsm) {
-        if let oxc::ast::ast::Statement::Declaration(decl) = stmt {
-          self.render_top_level_declaration_for_wrapped_esm(decl);
-        }
+    if matches!(self.kind, RenderKind::WrappedEsm) {
+      if let oxc::ast::ast::Statement::Declaration(decl) = stmt {
+        self.render_top_level_declaration_for_wrapped_esm(decl);
       }
-      self.visit_statement(stmt);
-    } else {
-      self.ctx.remove_stmt(stmt.span());
     }
+    self.visit_statement(stmt);
   }
 }
 

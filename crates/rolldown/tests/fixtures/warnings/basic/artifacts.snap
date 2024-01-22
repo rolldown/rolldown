@@ -23,5 +23,5 @@ input_file: crates/rolldown/tests/fixtures/warnings/basic
 
 ```js
 // main.js
-console.log(eval)
+console.log(eval);
 ```

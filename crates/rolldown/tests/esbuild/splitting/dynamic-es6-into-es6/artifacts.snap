@@ -9,12 +9,13 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic-es6-into-es6
 
 ```js
 // foo.js
-let bar = 123
+export let bar = 123;
+
 export { bar };
 ```
 ## main.mjs
 
 ```js
 // main.js
-import('./foo_js.mjs').then(({bar}) => console.log(bar))
+import('./foo.js').then(({bar:bar}) => console.log(bar));
 ```

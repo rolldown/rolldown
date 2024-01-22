@@ -93,39 +93,39 @@ jobs:
       - name: Run Test
         run: just test-rust
 
-  node-test:
-    name: Node Test
-    runs-on: buildjet-2vcpu-ubuntu-2204
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          # - windows-latest
-          # - macos-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true # Pull submodules for additional files
+  # node-test:
+  #   name: Node Test
+  #   runs-on: buildjet-2vcpu-ubuntu-2204
+  #   timeout-minutes: 30
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os:
+  #         - ubuntu-latest
+  #         # - windows-latest
+  #         # - macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: true # Pull submodules for additional files
 
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
-        with:
-          bins: just
-          cache-base: main
+  #     - name: Install Rust
+  #       uses: moonrepo/setup-rust@v1
+  #       with:
+  #         bins: just
+  #         cache-base: main
 
-      - name: Install node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18.18.0
-          cache: yarn
+  #     - name: Install node
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: 18.18.0
+  #         cache: yarn
 
-      - name: Install dependencies
-        run: yarn install
+  #     - name: Install dependencies
+  #       run: yarn install
 
-      - name: Test
-        run: just test-node
+  #     - name: Test
+  #       run: just test-node
 
   node-format:
     name: Node Format

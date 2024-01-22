@@ -9,56 +9,24 @@ input_file: crates/rolldown/tests/fixtures/deconflict/wrapped_esm_default_functi
 
 ```js
 import { default as assert } from "assert";
-
-// <runtime>
-
-var __defProp = Object.defineProperty
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor
-var __getOwnPropNames = Object.getOwnPropertyNames
-var __hasOwnProp = Object.prototype.hasOwnProperty
-var __esm = (fn, res) => function () {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res
-}
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === 'object' || typeof from === 'function')
-    for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
-      key = keys[i]
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: (k => from[k]).bind(null, key), enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable })
-    }
-  return to
-}
-var __toCommonJS = mod => __copyProps(__defProp({}, '__esModule', { value: true }), mod)
+import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // foo.js
-function foo$1(a$1$1) {
-    console.log(a$1$1, a$1)
+const a$1 = 1;
+export default function foo$1(a$1$1) {
+	console.log(a$1$1, a$1);
 }
-var a$1;
-var foo_ns = {
-    get default() { return foo$1 }
-};
-var init_foo = __esm({
-    'foo.js'() {
-        a$1 = 1;
-
-
-    }
-});
 // bar.js
-init_foo();
+import foo from './foo';
+export default {
+	foo:foo$1
+};
 
-
-var bar_default = { foo: foo$1 }
 // main.js
-
-
-
-const a = 2; // make foo `a` conflict
-
-const { foo } = bar_default
-
-assert.strictEqual(typeof foo, 'function')
-
-init_foo()
+import assert from 'assert';
+import bar from './bar';
+const a = 2;
+const {foo:foo} = bar_default;
+assert.strictEqual(typeof foo, 'function');
+require('./foo');
 ```

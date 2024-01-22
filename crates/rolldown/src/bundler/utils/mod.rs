@@ -1,6 +1,7 @@
 pub mod ast_scope;
 pub mod ast_symbol;
 pub mod bitset;
+pub mod finalizer;
 pub mod load_source;
 pub mod renamer;
 pub mod resolve_id;

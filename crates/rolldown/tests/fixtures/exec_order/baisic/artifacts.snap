@@ -9,16 +9,20 @@ input_file: crates/rolldown/tests/fixtures/exec_order/baisic
 
 ```js
 // init.js
-globalThis.order = ''
+globalThis.order = '';
 
 // a.js
-globalThis.order += 'a'
+globalThis.order += 'a';
 
 // b.js
-globalThis.order += 'b'
+globalThis.order += 'b';
 
 // c.js
-globalThis.order += 'c'
+globalThis.order += 'c';
 
 // main.js
+import './init.js';
+import './a.js';
+import './b.js';
+import './c.js';
 ```

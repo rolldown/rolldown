@@ -52,7 +52,6 @@ index_vec::define_index_type! {
 
 #[derive(Default, Debug)]
 pub struct StmtInfo {
-  pub is_included: bool,
   /// The index of this statement in the module body.
   ///
   /// We will create some facade statements while bundling, and the facade statements

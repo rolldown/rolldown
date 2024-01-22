@@ -8,24 +8,15 @@ input_file: crates/rolldown/tests/esbuild/default/require_with_call_inside_try
 ## entry_js.mjs
 
 ```js
-// <runtime>
-
-var __getOwnPropNames = Object.getOwnPropertyNames
-var __commonJS = (cb, mod) => function () {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
-}
+import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // entry.js
-var require_entry = __commonJS({
-	'entry.js'(exports, module) {
-		try {
-			const supportsColor = require('supports-color');
-			if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
-				exports.colors = [];
-			}
-		} catch (error) {
-		}
+try{
+	const supportsColor = require('supports-color');
+	if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
+		exports.colors = [];
 	}
-});
+}catch(error){
+}
 export default require_entry();
 ```

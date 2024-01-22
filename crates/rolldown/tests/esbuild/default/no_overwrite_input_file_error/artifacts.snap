@@ -9,5 +9,5 @@ input_file: crates/rolldown/tests/esbuild/default/no_overwrite_input_file_error
 
 ```js
 // entry.js
-console.log(123)
+console.log(123);
 ```

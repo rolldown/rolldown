@@ -81,9 +81,9 @@ impl Symbols {
     &self,
     refer: SymbolRef,
     canonical_names: &'name FxHashMap<SymbolRef, Atom>,
-  ) -> &'name Atom {
+  ) -> Option<&'name Atom> {
     let canonical_ref = self.par_canonical_ref_for(refer);
-    &canonical_names[&canonical_ref]
+    canonical_names.get(&canonical_ref)
   }
 
   pub fn get(&self, refer: SymbolRef) -> &Symbol {

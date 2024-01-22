@@ -9,24 +9,14 @@ input_file: crates/rolldown/tests/fixtures/deconflict/conflict_between_global_an
 
 ```js
 import { default as assert } from "node:assert";
-
-// <runtime>
-
-var __getOwnPropNames = Object.getOwnPropertyNames
-var __commonJS$1 = (cb, mod) => function () {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
-}
+import { __commonJS as __commonJS$1 } from "./_rolldown_runtime.mjs";
 
 // main.js
-var require_main = __commonJS$1({
-	'main.js'(exports, module) {
+import assert from 'node:assert';
+module.exports = 'main';
+globalThis.__commonJS = 0;
+__commonJS = 1;
+assert.equal(__commonJS, 1);
 
-		module.exports = 'main';
-		globalThis.__commonJS = 0
-		__commonJS = 1
-		assert.equal(__commonJS, 1)
-
-	}
-});
 export default require_main();
 ```

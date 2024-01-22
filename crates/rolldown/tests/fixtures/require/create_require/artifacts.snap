@@ -11,11 +11,8 @@ input_file: crates/rolldown/tests/fixtures/require/create_require
 import { createRequire } from "node:module";
 
 // main.js
-
-
-const require = createRequire(import.meta.url)
-
-const assert = require('node:assert')
-
-assert.equal(1, 1)
+import {createRequire} from 'node:module';
+const require = createRequire(import.meta.url);
+const assert = require('node:assert');
+assert.equal(1, 1);
 ```

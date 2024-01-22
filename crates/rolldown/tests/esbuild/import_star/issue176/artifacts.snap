@@ -9,15 +9,14 @@ input_file: crates/rolldown/tests/esbuild/import_star/issue176
 
 ```js
 // folders/child/foo.js
-const foo = () => 'hi there'
-// folders/child/index.js
+export const foo = () => 'hi there';
 
+// folders/child/index.js
+export { foo } from './foo';
 // folders/index.js
-var folders_index_ns = {
-	get foo() { return foo }
-};
+export* from'./child';
 
 // entry.js
-
-console.log(JSON.stringify(folders_index_ns))
+import * as things from './folders';
+console.log(JSON.stringify(folders_index_ns));
 ```

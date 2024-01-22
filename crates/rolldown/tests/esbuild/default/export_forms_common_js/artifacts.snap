@@ -8,139 +8,55 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## entry_js.mjs
 
 ```js
-// <runtime>
-
-var __defProp = Object.defineProperty
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor
-var __getOwnPropNames = Object.getOwnPropertyNames
-var __hasOwnProp = Object.prototype.hasOwnProperty
-var __esm = (fn, res) => function () {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res
-}
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === 'object' || typeof from === 'function')
-    for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
-      key = keys[i]
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: (k => from[k]).bind(null, key), enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable })
-    }
-  return to
-}
-var __toCommonJS = mod => __copyProps(__defProp({}, '__esModule', { value: true }), mod)
+import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // a.js
-var abc;
-var init_a = __esm({
-	'a.js'() {
-		abc = undefined
-	}
-});
+export const abc = undefined;
+
 // b.js
-var xyz;
-var b_ns = {
-	get xyz() { return xyz }
-};
-var init_b = __esm({
-	'b.js'() {
-		xyz = null
-	}
-});
+export const xyz = null;
+
 // commonjs.js
-function Fn() {}
-var commonjs_default,v,l,c,Class;
-var commonjs_ns = {
-	get C() { return Class },
-	get Class() { return Class },
-	get Fn() { return Fn },
-	get abc() { return abc },
-	get b() { return b_ns },
-	get c() { return c },
-	get default() { return commonjs_default },
-	get l() { return l },
-	get v() { return v }
-};
-var init_commonjs = __esm({
-	'commonjs.js'() {
-		commonjs_default = 123
-		v = 234
-		l = 234
-		c = 234
+export default 123;
+export var v = 234;
+export let l = 234;
+export const c = 234;
+export { Class as C };export function Fn() {
+}
+export class Class {
+}
+export* from'./a';
+export*as b from'./b';
 
-
-Class = 		class Class {}
-
-
-
-	}
-});
 // c.js
-var c_default;
-var c_ns = {
-	get default() { return c_default }
-};
-var init_c = __esm({
-	'c.js'() {
-c_default = 		class {}
+export default class {
+}
 
-	}
-});
 // d.js
-var Foo;
-var d_ns = {
-	get default() { return Foo }
-};
-var init_d = __esm({
-	'd.js'() {
-Foo = 		class Foo {}
- Foo.prop = 123
-	}
-});
+export default class Foo {
+}
+Foo.prop = 123;
+
 // e.js
-function e_default() {}
-var e_ns = {
-	get default() { return e_default }
-};
-var init_e = __esm({
-	'e.js'() {
-
-	}
-});
+export default function() {
+}
 // f.js
-function foo$1() {}
-var f_ns = {
-	get default() { return foo$1 }
-};
-var init_f = __esm({
-	'f.js'() {
-		 foo$1.prop = 123
-	}
-});
-// g.js
-async function g_default() {}
-var g_ns = {
-	get default() { return g_default }
-};
-var init_g = __esm({
-	'g.js'() {
+export default function foo$1() {
+}foo$1.prop = 123;
 
-	}
-});
+// g.js
+export default async function() {
+}
 // h.js
-async function foo() {}
-var h_ns = {
-	get default() { return foo }
-};
-var init_h = __esm({
-	'h.js'() {
-		 foo.prop = 123
-	}
-});
+export default async function foo() {
+}foo.prop = 123;
+
 // entry.js
-init_commonjs()
-init_c()
-init_d()
-init_e()
-init_f()
-init_g()
-init_h()
+require('./commonjs');
+require('./c');
+require('./d');
+require('./e');
+require('./f');
+require('./g');
+require('./h');
 ```

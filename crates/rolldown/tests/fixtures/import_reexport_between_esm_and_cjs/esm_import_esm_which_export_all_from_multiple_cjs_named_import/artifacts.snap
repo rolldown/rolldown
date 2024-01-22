@@ -8,58 +8,19 @@ input_file: crates/rolldown/tests/fixtures/import_reexport_between_esm_and_cjs/e
 ## main.mjs
 
 ```js
-// <runtime>
-
-var __create = Object.create
-var __defProp = Object.defineProperty
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor
-var __getOwnPropNames = Object.getOwnPropertyNames
-var __getProtoOf = Object.getPrototypeOf
-var __hasOwnProp = Object.prototype.hasOwnProperty
-var __commonJS = (cb, mod) => function () {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
-}
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === 'object' || typeof from === 'function')
-    for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
-      key = keys[i]
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: (k => from[k]).bind(null, key), enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable })
-    }
-  return to
-}
-var __reExport = (target, mod, secondTarget) => (
-  __copyProps(target, mod, 'default'),
-  secondTarget && __copyProps(secondTarget, mod, 'default')
-)
-var __toESM = (mod, isNodeMode, target) => (
-  target = mod != null ? __create(__getProtoOf(mod)) : {},
-  __copyProps(
-    isNodeMode || !mod || !mod.__esModule
-      ? __defProp(target, 'default', { value: mod, enumerable: true })
-      : target,
-    mod)
-)
+import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.mjs";
 
 // commonjs.js
-var require_commonjs = __commonJS({
-	'commonjs.js'(exports, module) {
-		exports.a = 1
-	}
-});
+exports.a = 1;
+
 // commonjs2.js
-var require_commonjs2 = __commonJS({
-	'commonjs2.js'(exports, module) {
-		exports.a = 2
-	}
-});
+exports.a = 2;
+
 // proxy.js
-var proxy_ns = {
+export* from'./commonjs.js';
+export* from'./commonjs2.js';
 
-};
-__reExport(proxy_ns, __toESM(require_commonjs()));
-__reExport(proxy_ns, __toESM(require_commonjs2()));
 // main.js
-
-console.log(proxy_ns.a, 1)
+import {a} from './proxy.js';
+console.log(proxy_ns.a, 1);
 ```

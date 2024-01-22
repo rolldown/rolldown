@@ -8,26 +8,15 @@ input_file: crates/rolldown/tests/esbuild/default/require_main_cache_common_js
 ## entry_js.mjs
 
 ```js
-// <runtime>
-
-var __getOwnPropNames = Object.getOwnPropertyNames
-var __commonJS = (cb, mod) => function () {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports
-}
+import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // is-main.js
-var require_is_main = __commonJS({
-	'is-main.js'(exports, module) {
-		module.exports = require.main === module
-	}
-});
+module.exports = require.main === module;
+
 // entry.js
-var require_entry = __commonJS({
-	'entry.js'(exports, module) {
-		console.log('is main:', require.main === module)
-		console.log(require_is_main())
-		console.log('cache:', require.cache);
-	}
-});
+console.log('is main:', require.main === module);
+console.log(require('./is-main'));
+console.log('cache:', require.cache);
+
 export default require_entry();
 ```

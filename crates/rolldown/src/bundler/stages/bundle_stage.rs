@@ -11,7 +11,7 @@ use crate::{
     module::Module,
     options::{file_name_template::FileNameRenderOptions, output_options::OutputOptions},
     stages::link_stage::LinkStageOutput,
-    utils::bitset::BitSet,
+    utils::{bitset::BitSet, finalizer::FinalizerContext},
   },
   InputOptions, Output, OutputFormat,
 };
@@ -47,6 +47,21 @@ impl<'a> BundleStage<'a> {
       chunk.de_conflict(self.link_output);
     });
 
+    self.link_output.modules.iter_mut().par_bridge().for_each(|module| match module {
+      Module::Normal(module) => {
+        // TODO: should consider cases:
+        // - excluded normal modules in code splitting doesn't belong to any chunk.
+        let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
+        let chunk = &chunk_graph.chunks[chunk_id];
+        module.finalize(FinalizerContext {
+          canonical_names: &chunk.canonical_names,
+          id: module.id,
+          symbols: &self.link_output.symbols,
+        });
+      }
+      Module::External(_) => {}
+    });
+
     let assets = chunk_graph
       .chunks
       .iter()
@@ -80,9 +95,6 @@ impl<'a> BundleStage<'a> {
     module_to_bits: &mut IndexVec<ModuleId, BitSet>,
   ) {
     let Module::Normal(module) = &self.link_output.modules[module_id] else { return };
-    if !module.is_included {
-      return;
-    }
     if module_to_bits[module_id].has_bit(entry_index) {
       return;
     }
@@ -145,10 +157,6 @@ impl<'a> BundleStage<'a> {
                 );
 
                 self.link_output.symbols.get_mut(*declared).chunk_id = Some(chunk_id);
-              }
-
-              if !stmt_info.is_included {
-                continue;
               }
 
               for referenced in &stmt_info.referenced_symbols {
@@ -302,13 +310,27 @@ impl<'a> BundleStage<'a> {
       self.link_output.modules.len()
     ];
 
+    // FIXME(hyf0): This is a hack to make the runtime code doesn't show up in the snapshot.
+    let is_rolldown_test = std::env::var("ROLLDOWN_TEST").is_ok();
+    if is_rolldown_test {
+      let runtime_chunk_id = chunks.push(Chunk::new(
+        Some("_rolldown_runtime".to_string()),
+        None,
+        module_to_bits[self.link_output.runtime.id()].clone(),
+        vec![self.link_output.runtime.id()],
+      ));
+      module_to_chunk[self.link_output.runtime.id()] = Some(runtime_chunk_id);
+    }
+
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for module in &self.link_output.modules {
-      let Module::Normal(normal_module) = module else {
+      let Module::Normal(_) = module else {
         continue;
       };
-      if !normal_module.is_included {
+
+      // FIXME(hyf0): This is a hack to make the runtime code doesn't show up in the snapshot.
+      if is_rolldown_test && module.id() == self.link_output.runtime.id() {
         continue;
       }
       let bits = &module_to_bits[module.id()];

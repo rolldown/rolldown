@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use index_vec::IndexVec;
 use oxc::{
+  ast::VisitMut,
   semantic::SymbolId,
   span::{Atom, Span},
 };
@@ -9,21 +10,23 @@ use rolldown_common::{
   ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalExport, ModuleId, ModuleType,
   NamedImport, ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
-use rolldown_oxc::OxcProgram;
+use rolldown_oxc::{AstSnippet, OxcCompiler, OxcProgram};
 use rustc_hash::{FxHashMap, FxHashSet};
 use string_wizard::MagicString;
 
 use crate::bundler::{
   linker::linker_info::{LinkingInfo, LinkingInfoVec},
-  renderer::{AstRenderContext, AstRenderer, RenderKind},
-  utils::{ast_scope::AstScope, symbols::Symbols},
+  utils::{
+    ast_scope::AstScope,
+    finalizer::{Finalizer, FinalizerContext},
+    symbols::Symbols,
+  },
 };
 
 use super::{Module, ModuleRenderContext, ModuleVec};
 
 #[derive(Debug)]
 pub struct NormalModule {
-  pub is_included: bool,
   pub exec_order: u32,
   pub id: ModuleId,
   pub is_user_defined_entry: bool,
@@ -50,10 +53,6 @@ pub struct NormalModule {
 }
 
 impl NormalModule {
-  pub fn is_namespace_referenced(&self) -> bool {
-    self.stmt_infos.get(0.into()).is_included
-  }
-
   pub fn static_imports(&self) -> impl Iterator<Item = &ImportRecord> {
     self
       .import_records
@@ -61,37 +60,23 @@ impl NormalModule {
       .filter(|rec| matches!(rec.kind, ImportKind::Import | ImportKind::Require))
   }
 
-  #[allow(clippy::needless_pass_by_value)]
-  pub fn render(&self, ctx: ModuleRenderContext<'_>) -> Option<MagicString<'static>> {
-    if !self.is_included {
-      return None;
-    }
+  pub fn finalize(&mut self, ctx: FinalizerContext<'_>) {
+    let (oxc_program, alloc) = self.ast.program_mut_and_allocator();
 
-    let source = self.ast.source();
-    // FIXME: should not clone here
-    let mut source = MagicString::new(source.to_string());
-    let self_linking_info = &ctx.graph.linking_infos[self.id];
-    let base = AstRenderContext::new(
-      ctx.graph,
-      ctx.canonical_names,
-      &mut source,
-      ctx.chunk_graph,
-      self,
-      self_linking_info,
-    );
+    let mut finalizer =
+      Finalizer { alloc, ctx, scope: &self.scope, snippet: &AstSnippet::new(alloc) };
 
-    let render_kind = RenderKind::from_wrap_kind(&self_linking_info.wrap_kind);
-    let mut renderer = AstRenderer::new(base, &self.stmt_infos, render_kind);
-    renderer.render();
+    finalizer.visit_program(oxc_program);
+  }
+
+  #[allow(clippy::unnecessary_wraps)]
+  pub fn render(&self, _ctx: &ModuleRenderContext<'_>) -> Option<MagicString<'static>> {
+    let generated_code = OxcCompiler::print(&self.ast);
+    let mut source = MagicString::new(generated_code);
 
     source.prepend(format!("// {}\n", self.pretty_path));
 
-    // TODO trim
-    if source.len() == 0 {
-      None
-    } else {
-      Some(source)
-    }
+    Some(source)
   }
 
   pub fn create_initial_resolved_exports(&self, self_linking_info: &mut LinkingInfo) {
@@ -222,7 +207,7 @@ impl NormalModule {
     })
   }
 
-  pub fn importee_id_by_span(&self, span: Span) -> ModuleId {
+  pub fn _importee_id_by_span(&self, span: Span) -> ModuleId {
     let record = &self.import_records[self.imports[&span]];
     record.resolved_module
   }

@@ -9,13 +9,12 @@ input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_re_export
 
 ```js
 // bar.js
-const x = 123
+export const x = 123;
+
 // foo.js
-var foo_ns = {
-	get x() { return x }
-};
+export* from'./bar';
 
 // entry.js
-
-console.log(foo_ns, foo_ns.foo)
+import * as ns from './foo';
+console.log(foo_ns, foo_ns.foo);
 ```

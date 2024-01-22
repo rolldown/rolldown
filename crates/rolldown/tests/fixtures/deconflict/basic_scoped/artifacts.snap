@@ -11,19 +11,14 @@ input_file: crates/rolldown/tests/fixtures/deconflict/basic_scoped
 import { default as assert } from "assert";
 
 // a.js
-const a = 'a.js'
-
-
-
+const a = 'a.js';
+export { a };
 // main.js
-
-
-const a$1 = 'main.js'
-
-
+import assert from 'assert';
+import {a as aJs} from './a';
+const a$1 = 'main.js';
 function foo(a$1$1) {
-  return [a$1$1, a$1, a]
+	return [a$1$1, a$1, a];
 }
-
-assert.deepEqual(foo('foo'), ['foo', 'main.js', 'a.js'])
+assert.deepEqual(foo('foo'), ['foo', 'main.js', 'a.js']);
 ```

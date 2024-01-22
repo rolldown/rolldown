@@ -9,11 +9,9 @@ input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_missing_e
 
 ```js
 // foo.js
-var foo_ns = {
-	get x() { return x }
-};
-const x = 123
-// entry.js
+export const x = 123;
 
-console.log(foo_ns, foo_ns.foo)
+// entry.js
+import * as ns from './foo';
+console.log(foo_ns, foo_ns.foo);
 ```

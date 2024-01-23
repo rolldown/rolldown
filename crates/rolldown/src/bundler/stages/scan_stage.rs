@@ -17,7 +17,7 @@ use crate::{
       symbols::Symbols,
     },
   },
-  error::{BatchedErrors, BatchedResult},
+  error::{collect_errors, BatchedResult},
   HookResolveIdArgsOptions, SharedResolver,
 };
 
@@ -101,15 +101,6 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
         }
       }));
 
-    let mut errors = BatchedErrors::default();
-
-    let collected =
-      resolved_ids.into_iter().filter_map(|item| errors.take_err_from(item)).collect();
-
-    if errors.is_empty() {
-      Ok(collected)
-    } else {
-      Err(errors)
-    }
+    collect_errors(resolved_ids)
   }
 }

@@ -3,15 +3,16 @@ use std::{borrow::Cow, fmt::Debug};
 use rolldown_error::BuildError;
 
 use super::{
-  args::{HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookTransformArgs},
+  args::{HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookTransformArgs, RenderChunkArgs},
   context::PluginContext,
-  output::{HookLoadOutput, HookResolveIdOutput},
+  output::{HookLoadOutput, HookRenderChunkOutput, HookResolveIdOutput},
 };
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>, BuildError>;
 pub type HookTransformReturn = Result<Option<HookLoadOutput>, BuildError>;
 pub type HookLoadReturn = Result<Option<HookLoadOutput>, BuildError>;
 pub type HookNoopReturn = Result<(), BuildError>;
+pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>, BuildError>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Debug + Send + Sync {
@@ -49,6 +50,14 @@ pub trait Plugin: Debug + Send + Sync {
     _args: Option<&HookBuildEndArgs>,
   ) -> HookNoopReturn {
     Ok(())
+  }
+
+  async fn render_chunk(
+    &self,
+    _ctx: &PluginContext,
+    _args: &RenderChunkArgs,
+  ) -> HookRenderChunkReturn {
+    Ok(None)
   }
 }
 

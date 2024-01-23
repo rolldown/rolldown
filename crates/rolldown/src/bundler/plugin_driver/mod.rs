@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
+use rolldown_error::BuildError;
+
 use crate::{
   plugin::{
-    args::HookBuildEndArgs,
+    args::{HookBuildEndArgs, RenderChunkArgs},
     plugin::{BoxPlugin, HookNoopReturn},
   },
   HookLoadArgs, HookLoadReturn, HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs,
@@ -59,5 +61,15 @@ impl PluginDriver {
       plugin.build_end(&mut PluginContext::new(), args).await?;
     }
     Ok(())
+  }
+
+  #[allow(dead_code)]
+  pub async fn render_chunk(&self, mut args: RenderChunkArgs) -> Result<String, BuildError> {
+    for plugin in &self.plugins {
+      if let Some(r) = plugin.render_chunk(&PluginContext::new(), &args).await? {
+        args.code = r.code;
+      }
+    }
+    Ok(args.code)
   }
 }

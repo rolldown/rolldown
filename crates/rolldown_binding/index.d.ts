@@ -19,6 +19,7 @@ export interface PluginOptions {
     chunk: RenderedChunk,
   ) => Promise<undefined | HookRenderChunkOutput>
   generateBundle?: (bundle: Outputs, isWrite: boolean) => Promise<void>
+  writeBundle?: (bundle: Outputs) => Promise<void>
 }
 export interface HookResolveIdArgsOptions {
   isEntry: boolean

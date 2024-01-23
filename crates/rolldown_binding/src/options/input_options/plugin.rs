@@ -49,6 +49,11 @@ pub struct PluginOptions {
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(bundle: Outputs, isWrite: boolean) => Promise<void>")]
   pub generate_bundle: Option<JsFunction>,
+
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(bundle: Outputs) => Promise<void>")]
+  pub write_bundle: Option<JsFunction>,
 }
 
 #[napi_derive::napi(object)]

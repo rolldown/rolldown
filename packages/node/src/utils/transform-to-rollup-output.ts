@@ -3,6 +3,7 @@ import type {
   RollupOutput,
   OutputChunk as RollupOutputChunk,
   OutputAsset as RollupOutputAsset,
+  OutputBundle,
 } from '../rollup-types'
 import { unimplemented } from '.'
 
@@ -84,4 +85,10 @@ export interface RolldownOutput {
     RolldownOutputChunk,
     ...(RolldownOutputChunk | RolldownOutputAsset)[],
   ]
+}
+
+export function transformToOutputBundle(output: Outputs): OutputBundle {
+  return Object.fromEntries(
+    transformToRollupOutput(output).output.map((item) => [item.fileName, item]),
+  )
 }

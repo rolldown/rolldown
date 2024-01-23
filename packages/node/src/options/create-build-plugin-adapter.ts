@@ -7,7 +7,7 @@ import type {
   HookRenderChunkOutput,
   Outputs,
 } from '@rolldown/node-binding'
-import { transformToRollupOutput, unimplemented } from '../utils'
+import { transformToOutputBundle, unimplemented } from '../utils'
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function createBuildPluginAdapter(
@@ -23,6 +23,24 @@ export function createBuildPluginAdapter(
     buildEnd: buildEnd(plugin.buildEnd),
     renderChunk: renderChunk(plugin.renderChunk),
     generateBundle: generateBundle(plugin.generateBundle),
+    writeBundle: writeBundle(plugin.writeBundle),
+  }
+}
+
+function writeBundle(hook: Plugin['writeBundle']) {
+  if (hook) {
+    if (typeof hook !== 'function') {
+      return unimplemented()
+    }
+    return async (outputs: Outputs) => {
+      try {
+        // TODO outputOptions
+        await hook.call({} as any, {} as any, transformToOutputBundle(outputs))
+      } catch (error) {
+        console.error(error)
+        throw error
+      }
+    }
   }
 }
 
@@ -32,15 +50,14 @@ function generateBundle(hook: Plugin['generateBundle']) {
       return unimplemented()
     }
     return async (outputs: Outputs, isWrite: boolean) => {
-      const bundle = Object.fromEntries(
-        transformToRollupOutput(outputs).output.map((item) => [
-          item.fileName,
-          item,
-        ]),
-      )
       try {
         // TODO outputOptions
-        await hook.call({} as any, {} as any, bundle, isWrite)
+        await hook.call(
+          {} as any,
+          {} as any,
+          transformToOutputBundle(outputs),
+          isWrite,
+        )
       } catch (error) {
         console.error(error)
         throw error

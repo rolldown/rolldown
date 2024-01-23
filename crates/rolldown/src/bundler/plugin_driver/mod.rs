@@ -2,8 +2,6 @@ use std::sync::Arc;
 
 use rolldown_error::BuildError;
 
-use rolldown_error::BuildError;
-
 use crate::{
   plugin::{
     args::{HookBuildEndArgs, RenderChunkArgs},

@@ -114,12 +114,13 @@ impl Fixture {
     }
 
     bundler.build().await?;
-    bundler
+    let value = bundler
       .write(OutputOptions {
         entry_file_names: FileNameTemplate::from("[name].mjs".to_string()),
         chunk_file_names: FileNameTemplate::from("[name].mjs".to_string()),
         ..Default::default()
       })
-      .await
+      .await?;
+    Ok(value)
   }
 }

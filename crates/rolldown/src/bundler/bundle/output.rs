@@ -7,24 +7,28 @@ pub struct RenderedModule {
   pub rendered_length: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OutputChunk {
-  pub file_name: String,
-  pub code: String,
+  // PreRenderedChunk
   pub is_entry: bool,
   pub is_dynamic_entry: bool,
   pub facade_module_id: Option<String>,
-  pub modules: FxHashMap<String, RenderedModule>,
+  pub module_ids: Vec<String>,
   pub exports: Vec<String>,
+  // RenderedChunk
+  pub file_name: String,
+  pub modules: FxHashMap<String, RenderedModule>,
+  // OutputChunk
+  pub code: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OutputAsset {
   pub file_name: String,
   pub source: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Output {
   Chunk(Box<OutputChunk>),
   Asset(Box<OutputAsset>),

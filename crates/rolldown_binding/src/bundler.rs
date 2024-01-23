@@ -103,9 +103,7 @@ impl Bundler {
       Ok(outputs) => outputs,
       Err(err) => {
         // TODO: better handing errors
-        for err in err {
-          eprintln!("{err:?}");
-        }
+        eprintln!("{err:?}");
         return Err(napi::Error::from_reason("Build failed"));
       }
     };
@@ -126,9 +124,7 @@ impl Bundler {
       Ok(outputs) => outputs,
       Err(err) => {
         // TODO: better handing errors
-        for err in err {
-          eprintln!("{err:?}");
-        }
+        eprintln!("{err:?}");
         return Err(napi::Error::from_reason("Build failed"));
       }
     };

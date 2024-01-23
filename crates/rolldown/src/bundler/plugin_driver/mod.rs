@@ -8,7 +8,7 @@ use crate::{
     plugin::{BoxPlugin, HookNoopReturn},
   },
   HookLoadArgs, HookLoadReturn, HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs,
-  HookTransformReturn, PluginContext,
+  HookTransformReturn, Output, PluginContext,
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
@@ -70,5 +70,12 @@ impl PluginDriver {
       }
     }
     Ok(args.code)
+  }
+
+  pub async fn generate_bundle(&self, bundle: &Vec<Output>, is_write: bool) -> HookNoopReturn {
+    for plugin in &self.plugins {
+      plugin.generate_bundle(&PluginContext::new(), bundle, is_write).await?;
+    }
+    Ok(())
   }
 }

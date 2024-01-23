@@ -84,6 +84,7 @@ impl<'a> BundleStage<'a> {
           facade_module_id: rendered_chunk.facade_module_id,
           modules: rendered_chunk.modules,
           exports: rendered_chunk.exports,
+          module_ids: rendered_chunk.module_ids,
         }))
       })
       .collect::<Vec<_>>();

@@ -69,11 +69,11 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     }
   }
 
-  pub async fn write(&mut self, output_options: OutputOptions) -> BuildResult<RolldownOutput> {
+  pub async fn write(&mut self, output_options: OutputOptions) -> BatchedResult<RolldownOutput> {
     let dir =
       self.input_options.cwd.as_path().join(&output_options.dir).to_string_lossy().to_string();
 
-    let output = self.bundle_up(output_options).await?;
+    let output = self.bundle_up(output_options, true).await?;
 
     self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
       panic!(
@@ -97,8 +97,8 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     Ok(output)
   }
 
-  pub async fn generate(&mut self, output_options: OutputOptions) -> BuildResult<RolldownOutput> {
-    self.bundle_up(output_options).await
+  pub async fn generate(&mut self, output_options: OutputOptions) -> BatchedResult<RolldownOutput> {
+    self.bundle_up(output_options, false).await
   }
 
   pub async fn build(&mut self) -> BuildResult<()> {
@@ -172,13 +172,19 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
   }
 
   #[tracing::instrument(skip_all)]
-  async fn bundle_up(&mut self, output_options: OutputOptions) -> BuildResult<RolldownOutput> {
+  async fn bundle_up(
+    &mut self,
+    output_options: OutputOptions,
+    is_write: bool,
+  ) -> BatchedResult<RolldownOutput> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
     let graph = self.build_result.as_mut().expect("Build should success");
     let mut bundle_stage =
       BundleStage::new(graph, &self.input_options, &output_options, &self.plugin_driver);
     let assets = bundle_stage.bundle().await?;
+
+    self.plugin_driver.generate_bundle(&assets, is_write).await?;
 
     Ok(RolldownOutput { warnings: std::mem::take(&mut graph.warnings), assets })
   }

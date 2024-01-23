@@ -18,6 +18,7 @@ export interface PluginOptions {
     code: string,
     chunk: RenderedChunk,
   ) => Promise<undefined | HookRenderChunkOutput>
+  generateBundle?: (bundle: Outputs, isWrite: boolean) => Promise<void>
 }
 export interface HookResolveIdArgsOptions {
   isEntry: boolean
@@ -90,13 +91,14 @@ export interface RenderedModule {
   renderedLength: number
 }
 export interface OutputChunk {
-  code: string
-  fileName: string
   isEntry: boolean
   isDynamicEntry: boolean
   facadeModuleId?: string
-  modules: Record<string, RenderedModule>
+  moduleIds: Array<string>
   exports: Array<string>
+  fileName: string
+  modules: Record<string, RenderedModule>
+  code: string
 }
 export interface OutputAsset {
   fileName: string

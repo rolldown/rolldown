@@ -44,6 +44,11 @@ pub struct PluginOptions {
     ts_type = "(code: string, chunk: RenderedChunk) => Promise<undefined | HookRenderChunkOutput>"
   )]
   pub render_chunk: Option<JsFunction>,
+
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(bundle: Outputs, isWrite: boolean) => Promise<void>")]
+  pub generate_bundle: Option<JsFunction>,
 }
 
 #[napi_derive::napi(object)]

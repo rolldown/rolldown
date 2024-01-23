@@ -1,5 +1,6 @@
 import { OutputAsset, OutputChunk, Outputs } from '@rolldown/node-binding'
 import type {
+  RollupOutput,
   OutputChunk as RollupOutputChunk,
   OutputAsset as RollupOutputAsset,
 } from '../rollup-types'
@@ -16,6 +17,7 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RollupOutputChunk {
     isEntry: chunk.isEntry,
     facadeModuleId: chunk.facadeModuleId || null,
     isDynamicEntry: chunk.isDynamicEntry,
+    moduleIds: chunk.moduleIds,
     get dynamicImports() {
       return unimplemented()
     },
@@ -35,9 +37,6 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RollupOutputChunk {
       return unimplemented()
     },
     get isImplicitEntry() {
-      return unimplemented()
-    },
-    get moduleIds() {
       return unimplemented()
     },
     get name() {
@@ -66,7 +65,7 @@ function transformToRollupOutputAsset(asset: OutputAsset): RollupOutputAsset {
   }
 }
 
-export function transformToRollupOutput(output: Outputs): RolldownOutput {
+export function transformToRollupOutput(output: Outputs): RollupOutput {
   const { chunks, assets } = output
 
   return {

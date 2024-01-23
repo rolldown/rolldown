@@ -34,13 +34,17 @@ impl From<rolldown::RenderedModule> for RenderedModule {
 #[serde(rename_all = "camelCase")]
 #[derivative(Debug)]
 pub struct OutputChunk {
-  pub code: String,
-  pub file_name: String,
+  // PreRenderedChunk
   pub is_entry: bool,
   pub is_dynamic_entry: bool,
   pub facade_module_id: Option<String>,
-  pub modules: HashMap<String, RenderedModule>,
+  pub module_ids: Vec<String>,
   pub exports: Vec<String>,
+  // RenderedChunk
+  pub file_name: String,
+  pub modules: HashMap<String, RenderedModule>,
+  // OutputChunk
+  pub code: String,
 }
 
 impl From<Box<rolldown::OutputChunk>> for OutputChunk {
@@ -53,6 +57,7 @@ impl From<Box<rolldown::OutputChunk>> for OutputChunk {
       facade_module_id: chunk.facade_module_id,
       modules: chunk.modules.into_iter().map(|(key, value)| (key, value.into())).collect(),
       exports: chunk.exports,
+      module_ids: chunk.module_ids,
     }
   }
 }

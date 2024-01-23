@@ -19,24 +19,7 @@ export interface PluginOptions {
     chunk: RenderedChunk,
   ) => Promise<undefined | HookRenderChunkOutput>
   generateBundle?: (bundle: Outputs, isWrite: boolean) => Promise<void>
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> c751110 (feat: render chunk hook binding)
-=======
-  generateBundle?: (
-    ctx: PluginContext,
-    bundle: Outputs,
-    isWrite: boolean,
-  ) => Promise<void>
->>>>>>> 0d49215 (feat: add `generateBundle` hook)
->>>>>>> 73878a0 (feat: add `generateBundle` hook)
->>>>>>> 88f0751 (feat: add `generateBundle` hook)
-=======
   writeBundle?: (bundle: Outputs) => Promise<void>
->>>>>>> 0e92188 (chore: rebase to main)
 }
 export interface HookResolveIdArgsOptions {
   isEntry: boolean

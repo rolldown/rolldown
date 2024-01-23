@@ -1,22 +1,28 @@
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
-  bundler::{chunk::ChunkId, plugin_driver::PluginDriver},
-  error::{collect_errors, BatchedErrors},
+  bundler::{chunk::render_chunk::RenderedChunk, plugin_driver::SharedPluginDriver},
+  error::{into_batched_result, BatchedErrors},
   plugin::args::RenderChunkArgs,
 };
 
-#[allow(clippy::unused_async)]
-pub async fn _render_chunks<'a>(
-  plugin_driver: &PluginDriver,
-  chunks: Vec<(ChunkId, String)>,
-) -> Result<Vec<(ChunkId, String)>, BatchedErrors> {
-  let result = block_on_spawn_all(chunks.iter().map(|(chunk, content)| async move {
-    match plugin_driver.render_chunk(RenderChunkArgs { code: content.to_string() }).await {
-      Ok(value) => Ok((*chunk, value)),
+#[allow(clippy::future_not_send)]
+pub async fn render_chunks<'a>(
+  plugin_driver: &SharedPluginDriver,
+  chunks: impl Iterator<Item = (String, RenderedChunk)>,
+) -> Result<Vec<(String, RenderedChunk)>, BatchedErrors> {
+  let result = block_on_spawn_all(chunks.map(|(content, rendered_chunk)| async move {
+    match plugin_driver
+      .render_chunk(RenderChunkArgs {
+        code: content,
+        chunk: unsafe { std::mem::transmute(&rendered_chunk) },
+      })
+      .await
+    {
+      Ok(value) => Ok((value, rendered_chunk)),
       Err(e) => Err(e),
     }
   }));
 
-  collect_errors(result)
+  into_batched_result(result)
 }

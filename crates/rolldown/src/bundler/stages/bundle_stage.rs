@@ -10,9 +10,11 @@ use crate::{
     chunk_graph::ChunkGraph,
     module::Module,
     options::{file_name_template::FileNameRenderOptions, output_options::OutputOptions},
+    plugin_driver::SharedPluginDriver,
     stages::link_stage::LinkStageOutput,
-    utils::{bitset::BitSet, finalizer::FinalizerContext},
+    utils::{bitset::BitSet, finalizer::FinalizerContext, render_chunks::render_chunks},
   },
+  error::BatchedResult,
   InputOptions, Output, OutputFormat,
 };
 use index_vec::{index_vec, IndexVec};
@@ -23,6 +25,7 @@ pub struct BundleStage<'a> {
   link_output: &'a mut LinkStageOutput,
   output_options: &'a OutputOptions,
   input_options: &'a InputOptions,
+  plugin_driver: &'a SharedPluginDriver,
 }
 
 impl<'a> BundleStage<'a> {
@@ -30,12 +33,13 @@ impl<'a> BundleStage<'a> {
     link_output: &'a mut LinkStageOutput,
     input_options: &'a InputOptions,
     output_options: &'a OutputOptions,
+    plugin_driver: &'a SharedPluginDriver,
   ) -> Self {
-    Self { link_output, output_options, input_options }
+    Self { link_output, output_options, input_options, plugin_driver }
   }
 
   #[tracing::instrument(skip_all)]
-  pub fn bundle(&mut self) -> Vec<Output> {
+  pub async fn bundle(&mut self) -> BatchedResult<Vec<Output>> {
     use rayon::prelude::*;
     let mut chunk_graph = self.generate_chunks();
 
@@ -62,30 +66,29 @@ impl<'a> BundleStage<'a> {
       Module::External(_) => {}
     });
 
-    let assets = chunk_graph
-      .chunks
-      .iter()
-      .enumerate()
-      .map(|(_chunk_id, c)| {
-        let (content, rendered_modules) = c
-          .render(self.input_options, self.link_output, &chunk_graph, self.output_options)
-          .unwrap();
+    let chunks = chunk_graph.chunks.iter().map(|c| {
+      let (content, rendered_modules) =
+        c.render(self.input_options, self.link_output, &chunk_graph, self.output_options).unwrap();
+      (content, c.get_rendered_chunk_info(self.link_output, self.output_options, rendered_modules))
+    });
 
+    let assets = render_chunks(self.plugin_driver, chunks)
+      .await?
+      .into_iter()
+      .map(|(content, rendered_chunk)| {
         Output::Chunk(Box::new(OutputChunk {
-          file_name: c.file_name.clone().unwrap(),
+          file_name: rendered_chunk.file_name,
           code: content,
-          is_entry: matches!(&c.entry_point, Some(e) if e.kind == EntryPointKind::UserDefined),
-          is_dynamic_entry: matches!(&c.entry_point, Some(e) if e.kind == EntryPointKind::DynamicImport),
-          facade_module_id: c.entry_point.as_ref().map(|entry_point| {
-            self.link_output.modules[entry_point.id].expect_normal().pretty_path.to_string()
-          }),
-          modules: rendered_modules,
-          exports: c.get_export_names(self.link_output, self.output_options),
+          is_entry: rendered_chunk.is_entry,
+          is_dynamic_entry: rendered_chunk.is_dynamic_entry,
+          facade_module_id: rendered_chunk.facade_module_id,
+          modules: rendered_chunk.modules,
+          exports: rendered_chunk.exports,
         }))
       })
       .collect::<Vec<_>>();
 
-    assets
+    Ok(assets)
   }
 
   fn determine_reachable_modules_for_entry(

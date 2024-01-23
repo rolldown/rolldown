@@ -63,8 +63,7 @@ impl PluginDriver {
     Ok(())
   }
 
-  #[allow(dead_code)]
-  pub async fn render_chunk(&self, mut args: RenderChunkArgs) -> Result<String, BuildError> {
+  pub async fn render_chunk(&self, mut args: RenderChunkArgs<'_>) -> Result<String, BuildError> {
     for plugin in &self.plugins {
       if let Some(r) = plugin.render_chunk(&PluginContext::new(), &args).await? {
         args.code = r.code;

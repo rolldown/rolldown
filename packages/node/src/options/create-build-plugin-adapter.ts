@@ -3,6 +3,8 @@ import type {
   PluginOptions,
   SourceResult,
   ResolveIdResult,
+  RenderedChunk,
+  HookRenderChunkOutput,
 } from '@rolldown/node-binding'
 import { unimplemented } from '../utils'
 
@@ -18,6 +20,90 @@ export function createBuildPluginAdapter(
     load: load(plugin.load),
     transform: transform(plugin.transform),
     buildEnd: buildEnd(plugin.buildEnd),
+    renderChunk: renderChunk(plugin.renderChunk),
+  }
+}
+
+function renderChunk(hook: Plugin['renderChunk']) {
+  if (hook) {
+    if (typeof hook !== 'function') {
+      return unimplemented()
+    }
+    return async (
+      code: string,
+      chunk: RenderedChunk,
+    ): Promise<undefined | HookRenderChunkOutput> => {
+      try {
+        let renderedChunk = Object.assign(
+          {
+            get name() {
+              return unimplemented()
+            },
+            get dynamicImports() {
+              return unimplemented()
+            },
+            get imports() {
+              return unimplemented()
+            },
+            get implicitlyLoadedBefore() {
+              return unimplemented()
+            },
+            get importedBindings() {
+              return unimplemented()
+            },
+            get isImplicitEntry() {
+              return unimplemented()
+            },
+            get referencedFiles() {
+              return unimplemented()
+            },
+            type: 'chunk' as const,
+          },
+          chunk,
+          {
+            get modules() {
+              return Object.fromEntries(
+                Object.entries(chunk.modules).map(([key, value]) => [
+                  key,
+                  Object.assign(
+                    {
+                      get code() {
+                        return unimplemented()
+                      },
+                    },
+                    value,
+                  ),
+                ]),
+              )
+            },
+            get facadeModuleId() {
+              return chunk.facadeModuleId || null
+            },
+          },
+        )
+        // TODO options and meta
+        const value = await hook.call(
+          {} as any,
+          code,
+          renderedChunk,
+          {} as any,
+          {} as any,
+        )
+        if (value === undefined || value === null) {
+          return
+        }
+        if (typeof value === 'string') {
+          return { code: value }
+        }
+        if (typeof value === 'object') {
+          // TODO other filed
+          return { code: value.code }
+        }
+      } catch (error) {
+        console.error(error)
+        throw error
+      }
+    }
   }
 }
 

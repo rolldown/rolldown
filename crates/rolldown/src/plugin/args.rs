@@ -1,3 +1,4 @@
+use crate::bundler::chunk::render_chunk::RenderedChunk;
 use rolldown_common::ImportKind;
 
 #[derive(Debug)]
@@ -31,6 +32,7 @@ pub struct HookBuildEndArgs {
 }
 
 #[derive(Debug)]
-pub struct RenderChunkArgs {
+pub struct RenderChunkArgs<'a> {
   pub code: String,
+  pub chunk: &'a RenderedChunk,
 }

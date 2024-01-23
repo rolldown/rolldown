@@ -2,7 +2,7 @@ mod ast_scanner;
 pub mod bundle;
 #[allow(clippy::module_inception)]
 pub mod bundler;
-mod chunk;
+pub mod chunk;
 mod chunk_graph;
 mod linker;
 mod module;

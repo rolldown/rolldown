@@ -14,6 +14,10 @@ export interface PluginOptions {
   load?: (id: string) => Promise<undefined | SourceResult>
   transform?: (id: string, code: string) => Promise<undefined | SourceResult>
   buildEnd?: (error: string) => Promise<void>
+  renderChunk?: (
+    code: string,
+    chunk: RenderedChunk,
+  ) => Promise<undefined | HookRenderChunkOutput>
 }
 export interface HookResolveIdArgsOptions {
   isEntry: boolean
@@ -25,6 +29,25 @@ export interface ResolveIdResult {
 }
 export interface SourceResult {
   code: string
+}
+export interface HookRenderChunkOutput {
+  code: string
+}
+export interface PreRenderedChunk {
+  isEntry: boolean
+  isDynamicEntry: boolean
+  facadeModuleId?: string
+  moduleIds: Array<string>
+  exports: Array<string>
+}
+export interface RenderedChunk {
+  isEntry: boolean
+  isDynamicEntry: boolean
+  facadeModuleId?: string
+  moduleIds: Array<string>
+  exports: Array<string>
+  fileName: string
+  modules: Record<string, RenderedModule>
 }
 export interface InputItem {
   name?: string

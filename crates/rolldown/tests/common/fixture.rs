@@ -107,9 +107,7 @@ impl Fixture {
       external: test_config.input.external.map(External::ArrayString).unwrap_or_default(),
       treeshake: test_config.input.treeshake.unwrap_or(true),
       resolve: test_config.input.resolve.map(|value| rolldown_resolver::ResolverOptions {
-        alias: value
-          .alias
-          .map(|alias| alias.into_iter().map(|(key, value)| (key, value)).collect::<Vec<_>>()),
+        alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),
         alias_fields: value.alias_fields,
         condition_names: value.condition_names,
         exports_fields: value.exports_fields,

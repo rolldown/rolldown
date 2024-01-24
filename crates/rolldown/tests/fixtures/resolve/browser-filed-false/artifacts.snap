@@ -1,0 +1,18 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/resolve/browser-filed-false
+---
+# Assets
+
+## package.mjs
+
+```js
+import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+
+// (ignored) node_modules/package/util.js
+
+// node_modules/package/index.js
+import value from './util.js';
+console.log(import_util.default);
+```

@@ -93,7 +93,7 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
         {
           Ok(info) => {
             if info.is_external {
-              return Err(BuildError::entry_cannot_be_external(info.path.as_str()));
+              return Err(BuildError::entry_cannot_be_external(info.path.path.as_str()));
             }
             Ok((input_item.name.clone(), info))
           }

@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
-use rolldown_common::{FilePath, ModuleType};
+use rolldown_common::{FilePath, ModuleType, ResolvedPath};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_resolver::Resolver;
@@ -16,7 +16,7 @@ static DATA_URL_REGEX: Lazy<Regex> =
 
 #[derive(Debug)]
 pub struct ResolvedRequestInfo {
-  pub path: FilePath,
+  pub path: ResolvedPath,
   pub module_type: ModuleType,
   pub is_external: bool,
 }

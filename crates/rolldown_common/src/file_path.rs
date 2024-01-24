@@ -63,20 +63,6 @@ impl FilePath {
     name
   }
 
-  pub fn prettify(&self, cwd: impl AsRef<Path>) -> String {
-    let pretty = if Path::new(self.0.as_ref()).is_absolute() {
-      Path::new(self.0.as_ref())
-        .relative(cwd.as_ref())
-        .into_os_string()
-        .into_string()
-        .expect("should be valid utf8")
-    } else {
-      self.0.to_string()
-    };
-    // remove \0
-    pretty.replace('\0', "")
-  }
-
   pub fn representative_name(&self) -> Cow<str> {
     representative_name(&self.0)
   }

@@ -4,7 +4,8 @@ use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  FilePath, ImportRecordId, ModuleId, ModuleType, RawImportRecord, ResourceId, SymbolRef,
+  FilePath, ImportRecordId, ModuleId, ModuleType, RawImportRecord, ResolvedPath, ResourceId,
+  SymbolRef,
 };
 use rolldown_fs::FileSystem;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
@@ -33,7 +34,7 @@ use crate::{
 pub struct NormalModuleTask<'task, T: FileSystem + Default> {
   ctx: &'task ModuleTaskCommonData<T>,
   module_id: ModuleId,
-  path: FilePath,
+  resolved_path: ResolvedPath,
   module_type: ModuleType,
 }
 
@@ -41,10 +42,10 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   pub fn new(
     ctx: &'task ModuleTaskCommonData<T>,
     id: ModuleId,
-    path: FilePath,
+    path: ResolvedPath,
     module_type: ModuleType,
   ) -> Self {
-    Self { ctx, module_id: id, path, module_type }
+    Self { ctx, module_id: id, resolved_path: path, module_type }
   }
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
@@ -53,12 +54,12 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   }
 
   async fn run_inner(&mut self) -> BatchedResult<()> {
-    tracing::trace!("process {:?}", self.path);
+    tracing::trace!("process {:?}", self.resolved_path);
 
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let source = load_source(&self.ctx.plugin_driver, &self.path, &self.ctx.fs).await?;
+    let source = load_source(&self.ctx.plugin_driver, &self.resolved_path, &self.ctx.fs).await?;
 
     // Run plugin transform.
     let source = transform_source(&self.ctx.plugin_driver, source).await?;
@@ -85,7 +86,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       id: Some(self.module_id),
       ast: Some(ast),
       repr_name: Some(repr_name),
-      path: Some(ResourceId::new(self.path.clone())),
+      path: Some(ResourceId::new(self.resolved_path.path.clone())),
       named_imports: Some(named_imports),
       named_exports: Some(named_exports),
       stmt_infos: Some(stmt_infos),
@@ -96,7 +97,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       exports_kind: Some(exports_kind),
       namespace_symbol: Some(namespace_symbol),
       module_type: self.module_type,
-      pretty_path: Some(self.path.prettify(&self.ctx.input_options.cwd)),
+      pretty_path: Some(self.resolved_path.prettify(&self.ctx.input_options.cwd)),
       ..Default::default()
     };
 
@@ -139,14 +140,15 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     }
     let source: Arc<str> = source.into();
 
-    let source_type = determine_oxc_source_type(self.path.as_path(), self.module_type);
+    let source_type =
+      determine_oxc_source_type(self.resolved_path.path.as_path(), self.module_type);
     let program = OxcCompiler::parse(Arc::clone(&source), source_type);
 
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(scope, std::mem::take(&mut symbol_table.references));
     let mut symbol_for_module = AstSymbol::from_symbol_table(symbol_table);
-    let repr_name = self.path.representative_name();
+    let repr_name = self.resolved_path.path.representative_name();
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,
@@ -154,7 +156,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       repr_name.into_owned(),
       self.module_type,
       &source,
-      &self.path,
+      &self.resolved_path.path,
     );
     let namespace_symbol = scanner.namespace_symbol;
     let scan_result = scanner.scan(program.program());
@@ -207,7 +209,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       // FIXME(hyf0): should not use `Arc<Resolver>` here
       let resolver = Arc::clone(&self.ctx.resolver);
       let plugin_driver = Arc::clone(&self.ctx.plugin_driver);
-      let importer = self.path.clone();
+      let importer = self.resolved_path.clone();
       let kind = item.kind;
       // let on_warn = self.input_options.on_warn.clone();
       tokio::spawn(async move {
@@ -215,7 +217,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
           &input_options,
           &resolver,
           &plugin_driver,
-          &importer,
+          &importer.path,
           &specifier,
           HookResolveIdArgsOptions { is_entry: false, kind },
         )

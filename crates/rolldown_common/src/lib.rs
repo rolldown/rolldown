@@ -8,6 +8,7 @@ mod module_type;
 mod named_export;
 mod named_import;
 mod resolved_export;
+mod resolved_path;
 mod stmt_info;
 mod symbol_ref;
 mod wrap_kind;
@@ -22,6 +23,7 @@ pub use crate::{
   named_export::LocalExport,
   named_import::{NamedImport, Specifier},
   resolved_export::ResolvedExport,
+  resolved_path::ResolvedPath,
   stmt_info::{StmtInfo, StmtInfoId, StmtInfos},
   symbol_ref::SymbolRef,
   wrap_kind::WrapKind,

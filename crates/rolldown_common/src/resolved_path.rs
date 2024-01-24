@@ -16,6 +16,9 @@ impl From<String> for ResolvedPath {
 }
 
 impl ResolvedPath {
+  /// Created a pretty string representation of the path. The path
+  /// 1. doesn't guarantee to be unique
+  /// 2. relative to the cwd, so it could show stable path across different machines
   pub fn prettify(&self, cwd: impl AsRef<Path>) -> String {
     let pretty = if Path::new(self.path.as_ref()).is_absolute() {
       Path::new(self.path.as_ref())

@@ -8,6 +8,8 @@ use oxc::{
   semantic::{Semantic, SemanticBuilder},
   span::SourceType,
 };
+
+use crate::Dummy;
 pub struct OxcCompiler;
 
 #[allow(clippy::box_collection, clippy::non_send_fields_in_send_ty, unused)]
@@ -21,6 +23,19 @@ pub struct OxcProgram {
 impl Debug for OxcProgram {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("Ast").field("source", &self.source).finish_non_exhaustive()
+  }
+}
+
+impl Default for OxcProgram {
+  fn default() -> Self {
+    let source = Pin::new(String::default().into());
+    let allocator = Box::pin(oxc::allocator::Allocator::default());
+
+    let program = unsafe {
+      let alloc = std::mem::transmute::<_, &'static Allocator>(allocator.as_ref());
+      ast::Program::dummy(alloc)
+    };
+    Self { program, source, allocator }
   }
 }
 

@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 
 use index_vec::IndexVec;
 use oxc::{
@@ -28,6 +28,7 @@ use super::{Module, ModuleRenderContext, ModuleVec};
 #[derive(Debug)]
 pub struct NormalModule {
   pub exec_order: u32,
+  pub source: Arc<str>,
   pub id: ModuleId,
   pub is_user_defined_entry: bool,
   pub resource_id: ResourceId,

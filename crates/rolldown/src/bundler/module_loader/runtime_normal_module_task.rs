@@ -35,9 +35,10 @@ impl RuntimeNormalModuleTask {
   pub fn run(self) {
     let mut builder = NormalModuleBuilder::default();
 
-    let source = include_str!("../runtime/runtime-without-comments.js").to_string();
+    let source: Arc<str> =
+      include_str!("../runtime/runtime-without-comments.js").to_string().into();
 
-    let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(source);
+    let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(source.clone());
 
     let runtime = RuntimeModuleBrief::new(self.module_id, &scope);
 
@@ -54,6 +55,7 @@ impl RuntimeNormalModuleTask {
       warnings: _,
     } = scan_result;
 
+    builder.source = Some(source);
     builder.id = Some(self.module_id);
     builder.ast = Some(ast);
     builder.repr_name = Some(repr_name);
@@ -83,8 +85,7 @@ impl RuntimeNormalModuleTask {
       .unwrap();
   }
 
-  fn make_ast(&self, source: String) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
-    let source: Arc<str> = source.into();
+  fn make_ast(&self, source: Arc<str>) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
     let source_type = SourceType::default();
     let program = OxcCompiler::parse(Arc::clone(&source), source_type);
 

@@ -83,7 +83,7 @@ impl Module {
   #[allow(clippy::cast_possible_truncation)]
   pub fn original_length(&self) -> u32 {
     match self {
-      Self::Normal(m) => m.ast.source().len() as u32,
+      Self::Normal(m) => m.source.len() as u32,
       Self::External(_) => 0,
     }
   }

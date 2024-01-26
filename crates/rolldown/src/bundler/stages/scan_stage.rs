@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
-use rolldown_common::{EntryPoint, ImportKind};
+use index_vec::IndexVec;
+use rolldown_common::{EntryPoint, ImportKind, ModuleId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
+use rolldown_oxc::OxcProgram;
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
@@ -31,6 +33,7 @@ pub struct ScanStage<Fs: FileSystem + Default> {
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub modules: ModuleVec,
+  pub ast_table: IndexVec<ModuleId, OxcProgram>,
   pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
@@ -62,12 +65,12 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
 
     let user_entries = self.resolve_user_defined_entries()?;
 
-    let ModuleLoaderOutput { modules, entry_points, symbols, runtime, warnings } =
+    let ModuleLoaderOutput { modules, entry_points, symbols, runtime, warnings, ast_table } =
       module_loader.fetch_all_modules(user_entries).await?;
 
     tracing::debug!("Scan stage finished {modules:#?}");
 
-    Ok(ScanStageOutput { modules, entry_points, symbols, runtime, warnings })
+    Ok(ScanStageOutput { modules, entry_points, symbols, runtime, warnings, ast_table })
   }
 
   /// Resolve `InputOptions.input`

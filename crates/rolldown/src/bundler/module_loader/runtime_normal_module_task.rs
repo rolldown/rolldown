@@ -22,6 +22,7 @@ pub struct RuntimeNormalModuleTask {
 pub struct RuntimeNormalModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
   pub ast_symbol: AstSymbol,
+  pub ast: OxcProgram,
   pub warnings: Vec<BuildError>,
   pub builder: NormalModuleBuilder,
 }
@@ -33,6 +34,7 @@ impl RuntimeNormalModuleTask {
 
   #[tracing::instrument(skip_all)]
   pub fn run(self) {
+    tracing::trace!("process <runtime>");
     let mut builder = NormalModuleBuilder::default();
 
     let source: Arc<str> =
@@ -57,7 +59,6 @@ impl RuntimeNormalModuleTask {
 
     builder.source = Some(source);
     builder.id = Some(self.module_id);
-    builder.ast = Some(ast);
     builder.repr_name = Some(repr_name);
     // TODO: Runtime module should not have FilePath as source id
     builder.path = Some(ResourceId::new("runtime".to_string().into()));
@@ -81,6 +82,7 @@ impl RuntimeNormalModuleTask {
         ast_symbol: symbol,
         builder,
         runtime,
+        ast,
       }))
       .unwrap();
   }

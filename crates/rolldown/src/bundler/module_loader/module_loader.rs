@@ -6,6 +6,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
+use rolldown_oxc::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::normal_module_task::NormalModuleTask;
@@ -32,12 +33,14 @@ pub struct ModuleLoader<T: FileSystem + Default> {
   runtime_id: Option<ModuleId>,
   remaining: u32,
   intermediate_modules: IndexVec<ModuleId, Option<Module>>,
+  intermediate_ast_table: IndexVec<ModuleId, Option<OxcProgram>>,
   symbols: Symbols,
 }
 
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub modules: ModuleVec,
+  pub ast_table: IndexVec<ModuleId, OxcProgram>,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -70,15 +73,18 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
       runtime_id: None,
       remaining: 0,
       intermediate_modules: IndexVec::new(),
+      intermediate_ast_table: IndexVec::new(),
       symbols: Symbols::default(),
     }
   }
 
   fn alloc_module_id(
     intermediate_modules: &mut IndexVec<ModuleId, Option<Module>>,
+    intermediate_ast_table: &mut IndexVec<ModuleId, Option<OxcProgram>>,
     symbols: &mut Symbols,
   ) -> ModuleId {
     let id = intermediate_modules.push(None);
+    intermediate_ast_table.push(None);
     symbols.alloc_one();
     id
   }
@@ -87,11 +93,16 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     match self.visited.entry(info.path.path.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
-        let id = Self::alloc_module_id(&mut self.intermediate_modules, &mut self.symbols);
+        let id = Self::alloc_module_id(
+          &mut self.intermediate_modules,
+          &mut self.intermediate_ast_table,
+          &mut self.symbols,
+        );
         not_visited.insert(id);
         if info.is_external {
           let ext = ExternalModule::new(id, ResourceId::new(info.path.path));
           self.intermediate_modules[id] = Some(Module::External(ext));
+          self.intermediate_ast_table[id] = Some(OxcProgram::default());
         } else {
           self.remaining += 1;
 
@@ -113,7 +124,11 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
 
   pub fn try_spawn_runtime_module_task(&mut self) -> ModuleId {
     *self.runtime_id.get_or_insert_with(|| {
-      let id = Self::alloc_module_id(&mut self.intermediate_modules, &mut self.symbols);
+      let id = Self::alloc_module_id(
+        &mut self.intermediate_modules,
+        &mut self.intermediate_ast_table,
+        &mut self.symbols,
+      );
       self.remaining += 1;
       let task = RuntimeNormalModuleTask::new(id, self.common_data.tx.clone());
       tokio::spawn(async move { task.run() });
@@ -131,6 +146,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     let mut all_warnings: Vec<BuildError> = Vec::new();
 
     self.intermediate_modules.reserve(user_defined_entries.len() + 1 /* runtime */);
+    self.intermediate_ast_table.reserve(user_defined_entries.len() + 1 /* runtime */);
 
     // Store the already consider as entry module
     let mut user_defined_entry_ids = {
@@ -168,6 +184,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
             mut builder,
             raw_import_records,
             warnings,
+            ast,
           } = task_result;
           all_warnings.extend(warnings);
           let import_records = raw_import_records
@@ -187,14 +204,17 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
           builder.import_records = Some(import_records);
           builder.is_user_defined_entry = Some(user_defined_entry_ids.contains(&module_id));
           self.intermediate_modules[module_id] = Some(Module::Normal(builder.build()));
+          self.intermediate_ast_table[module_id] = Some(ast);
 
           self.symbols.add_ast_symbol(module_id, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeNormalModuleTaskResult { ast_symbol, builder, runtime, warnings: _ } =
+          let RuntimeNormalModuleTaskResult { ast_symbol, builder, runtime, warnings: _, ast } =
             task_result;
 
           self.intermediate_modules[runtime.id()] = Some(Module::Normal(builder.build()));
+          self.intermediate_ast_table[runtime.id()] = Some(ast);
+
           self.symbols.add_ast_symbol(runtime.id(), ast_symbol);
           runtime_brief = Some(runtime);
         }
@@ -212,6 +232,9 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     let modules: IndexVec<ModuleId, Module> =
       self.intermediate_modules.into_iter().map(Option::unwrap).collect();
 
+    let ast_table: IndexVec<ModuleId, OxcProgram> =
+      self.intermediate_ast_table.into_iter().map(Option::unwrap).collect();
+
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
     dynamic_import_entry_ids.sort_by_key(|id| modules[*id].resource_id());
 
@@ -224,6 +247,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     Ok(ModuleLoaderOutput {
       modules,
       symbols: self.symbols,
+      ast_table,
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,

@@ -65,6 +65,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     let source: Arc<str> = transform_source(&self.ctx.plugin_driver, source).await?.into();
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(source.clone());
+    tracing::trace!("scan {:?}", self.resolved_path);
 
     let res = self.resolve_dependencies(&scan_result.import_records).await?;
 
@@ -85,7 +86,6 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     let builder = NormalModuleBuilder {
       source: Some(source),
       id: Some(self.module_id),
-      ast: Some(ast),
       repr_name: Some(repr_name),
       path: Some(ResourceId::new(self.resolved_path.path.clone())),
       named_imports: Some(named_imports),
@@ -112,8 +112,10 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
         ast_symbol,
         builder,
         raw_import_records: import_records,
+        ast,
       }))
       .expect("Send should not fail");
+    tracing::trace!("end process {:?}", self.resolved_path);
     Ok(())
   }
 
@@ -139,7 +141,6 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       };
       default
     }
-    let source: Arc<str> = source.into();
 
     let source_type =
       determine_oxc_source_type(self.resolved_path.path.as_path(), self.module_type);

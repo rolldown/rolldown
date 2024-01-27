@@ -15,6 +15,5 @@ export const x = 123;
 export*as ns from'./bar';
 
 // entry.js
-import {ns} from './foo';
 console.log(bar_ns, bar_ns.foo);
 ```

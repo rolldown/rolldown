@@ -11,7 +11,6 @@ input_file: crates/rolldown/tests/esbuild/splitting/assign-to-local
 import { foo, setFoo } from "./shared_js.mjs";
 
 // a.js
-import {foo,setFoo} from './shared.js';
 setFoo(123);
 console.log(foo);
 ```
@@ -21,7 +20,6 @@ console.log(foo);
 import { foo } from "./shared_js.mjs";
 
 // b.js
-import {foo} from './shared.js';
 console.log(foo);
 ```
 ## shared_js.mjs

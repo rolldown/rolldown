@@ -12,6 +12,5 @@ input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_unused_mi
 export const x = 123;
 
 // entry.js
-import * as ns from './foo';
 console.log(foo_ns.foo);
 ```

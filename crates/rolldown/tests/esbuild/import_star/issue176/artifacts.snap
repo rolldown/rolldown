@@ -17,6 +17,5 @@ export { foo } from './foo';
 export* from'./child';
 
 // entry.js
-import * as things from './folders';
 console.log(JSON.stringify(folders_index_ns));
 ```

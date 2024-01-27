@@ -15,14 +15,12 @@ console.log('dynamic');
 
 ```js
 // main1.js
-import './share';
 import('./dynamic');
 ```
 ## main2.mjs
 
 ```js
 // main2.js
-import './share';
 ```
 ## share_js.mjs
 

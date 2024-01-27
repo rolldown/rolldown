@@ -21,6 +21,5 @@ export* from'./foo';
 export* from'./bar';
 
 // entry.js
-import * as ns from './common';
 console.log(common_ns);
 ```

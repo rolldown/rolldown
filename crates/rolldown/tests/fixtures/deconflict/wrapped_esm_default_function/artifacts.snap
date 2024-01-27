@@ -17,14 +17,11 @@ export default function foo$1(a$1$1) {
 	console.log(a$1$1, a$1);
 }
 // bar.js
-import foo from './foo';
 export default {
 	foo:foo$1
 };
 
 // main.js
-import assert from 'assert';
-import bar from './bar';
 const a = 2;
 const {foo:foo} = bar_default;
 assert.strictEqual(typeof foo, 'function');

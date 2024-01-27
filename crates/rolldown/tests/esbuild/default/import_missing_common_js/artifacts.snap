@@ -14,7 +14,6 @@ import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 exports.x = 123;
 
 // entry.js
-import fn,{x as a,y as b} from './foo';
 if (false) {
 	console.log(import_foo.default(import_foo.x, import_foo.y));
 }

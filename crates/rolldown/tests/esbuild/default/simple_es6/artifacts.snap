@@ -14,6 +14,5 @@ export function fn() {
 }
 
 // entry.js
-import {fn} from './foo';
 console.log(fn());
 ```

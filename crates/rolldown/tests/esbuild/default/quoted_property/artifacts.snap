@@ -11,6 +11,5 @@ input_file: crates/rolldown/tests/esbuild/default/quoted_property
 import * as ns from "ext";
 
 // entry.js
-import * as ns from 'ext';
 console.log(ns.mustBeUnquoted, ns['mustBeQuoted']);
 ```

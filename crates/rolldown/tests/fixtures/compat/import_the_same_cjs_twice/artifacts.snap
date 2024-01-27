@@ -14,8 +14,6 @@ import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 module.exports.a = {};
 
 // main.js
-import {a} from './cjs.js';
-import {a as a2} from './cjs.js';
 export { a, a2 };
 var a = import_cjs.a;
 var a2 = import_cjs$1.a;

@@ -14,7 +14,6 @@ import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 export const foo = 123;
 
 // entry.js
-import * as ns from './foo';
 const ns2 = require('./foo');
 console.log(foo_ns.foo, ns2.foo);
 ```

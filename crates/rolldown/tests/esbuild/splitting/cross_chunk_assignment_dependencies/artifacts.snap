@@ -11,14 +11,12 @@ input_file: crates/rolldown/tests/esbuild/splitting/cross_chunk_assignment_depen
 import { setValue } from "./shared_js.mjs";
 
 // a.js
-import {setValue} from './shared';
 setValue(123);
 ```
 ## b.mjs
 
 ```js
 // b.js
-import './shared';
 ```
 ## shared_js.mjs
 

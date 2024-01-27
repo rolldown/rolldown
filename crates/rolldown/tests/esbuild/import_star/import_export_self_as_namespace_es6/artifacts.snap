@@ -10,7 +10,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_export_self_as_name
 ```js
 // entry.js
 export const foo = 123;
-import * as ns from './entry';
 export { ns };
 export { foo, entry_ns as ns };
 ```

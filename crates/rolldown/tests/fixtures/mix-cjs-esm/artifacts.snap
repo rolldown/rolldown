@@ -28,13 +28,8 @@ module.exports = 1;
 module.exports = 1;
 
 // esm-import-cjs-require.js
-import {a} from './cjs';
 require('./foo');
 console.log(import_cjs.a);
 
 // main.js
-import './esm-export-cjs-export';
-import './esm-export-cjs-require';
-import './esm-import-cjs-export';
-import './esm-import-cjs-require';
 ```

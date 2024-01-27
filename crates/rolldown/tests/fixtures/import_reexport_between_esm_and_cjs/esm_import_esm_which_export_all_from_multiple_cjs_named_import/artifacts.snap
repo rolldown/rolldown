@@ -21,6 +21,5 @@ export* from'./commonjs.js';
 export* from'./commonjs2.js';
 
 // main.js
-import {a} from './proxy.js';
 console.log(proxy_ns.a, 1);
 ```

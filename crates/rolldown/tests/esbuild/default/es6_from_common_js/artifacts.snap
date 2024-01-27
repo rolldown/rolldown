@@ -21,7 +21,5 @@ exports.bar = function() {
 };
 
 // entry.js
-import {foo} from './foo';
 console.log(import_foo.foo(), import_bar.bar());
-import {bar} from './bar';
 ```

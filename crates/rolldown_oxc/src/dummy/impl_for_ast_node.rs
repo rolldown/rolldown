@@ -4,7 +4,7 @@ use oxc::{
   allocator::{Allocator, Box},
   ast::ast::{self, Modifiers},
   semantic::ReferenceFlag,
-  span::Atom,
+  span::{Atom, SourceType},
 };
 
 use crate::Dummy as DummyIn;
@@ -141,6 +141,18 @@ impl<'ast> DummyIn<'ast> for ast::IdentifierReference {
       name: Atom::new_inline(""),
       reference_id: Cell::default(),
       reference_flag: ReferenceFlag::default(),
+    }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::Program<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      source_type: SourceType::default(),
+      directives: DummyIn::dummy(alloc),
+      hashbang: DummyIn::dummy(alloc),
+      body: DummyIn::dummy(alloc),
     }
   }
 }

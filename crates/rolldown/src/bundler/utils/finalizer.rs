@@ -1,20 +1,25 @@
 use oxc::{
-  allocator::{Allocator, Vec},
+  allocator::Allocator,
   ast::{ast, VisitMut},
   span::Atom,
 };
-use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
+use rolldown_common::{ModuleId, SymbolRef, WrapKind};
 use rolldown_oxc::{AstSnippet, BindingIdentifierExt, IntoIn, StatementExt, TakeIn};
 use rustc_hash::FxHashMap;
 
-use crate::bundler::{linker::linker_info::LinkingInfo, module::NormalModule};
+use crate::bundler::{
+  linker::linker_info::{LinkingInfo, LinkingInfoVec},
+  module::{ModuleVec, NormalModule},
+};
 
 use super::{ast_scope::AstScope, symbols::Symbols};
 
 pub struct FinalizerContext<'me> {
   pub id: ModuleId,
   pub module: &'me NormalModule,
+  pub modules: &'me ModuleVec,
   pub linking_info: &'me LinkingInfo,
+  pub linking_infos: &'me LinkingInfoVec,
   pub symbols: &'me Symbols,
   pub canonical_names: &'me FxHashMap<SymbolRef, Atom>,
 }
@@ -58,11 +63,16 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me> {
     let old_body = program.body.take_in(self.alloc);
 
     old_body.into_iter().for_each(|top_stmt| {
-      if top_stmt.is_import_declaration() {
-        if matches!(self.ctx.linking_info.wrap_kind, WrapKind::None) {
-          // Remove this statement by ignoring it
-        } else {
-          program.body.push(top_stmt);
+      if let Some(import_decl) = top_stmt.as_import_declaration() {
+        let importee_id = self.ctx.module.importee_id_by_span(import_decl.span);
+        let importee_linking_info = &self.ctx.linking_infos[importee_id];
+        match importee_linking_info.wrap_kind {
+          WrapKind::None => {
+            // Remove this statement by ignoring it
+            return;
+          }
+          WrapKind::Cjs => {}
+          WrapKind::Esm => {}
         }
       } else {
         program.body.push(top_stmt);

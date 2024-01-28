@@ -12,7 +12,6 @@ import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 import { require_main2 } from "./main2_js.mjs";
 
 // main.js
-import main2 from './main2.js';
 module.exports = import_main2.default;
 
 export default require_main();

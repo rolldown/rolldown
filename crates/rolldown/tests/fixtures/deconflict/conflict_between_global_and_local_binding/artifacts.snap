@@ -12,7 +12,6 @@ import { default as assert } from "node:assert";
 import { __commonJS as __commonJS$1 } from "./_rolldown_runtime.mjs";
 
 // main.js
-import assert from 'node:assert';
 module.exports = 'main';
 globalThis.__commonJS = 0;
 __commonJS = 1;

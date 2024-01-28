@@ -19,6 +19,5 @@ export const bar = 123;
 export* from'./bar';
 
 // entry.js
-import {bar} from './foo';
 console.log(bar);
 ```

@@ -26,6 +26,5 @@ export { bar };
 import { bar } from "./foo_js-3.mjs";
 
 // main.js
-import {bar as a} from './foo.js';
 import('./foo.js').then(({bar:b}) => console.log(bar, b));
 ```

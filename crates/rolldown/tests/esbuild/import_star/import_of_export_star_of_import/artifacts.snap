@@ -21,6 +21,5 @@ statement();
 export* from'./bar';
 
 // entry.js
-import {bar} from './foo';
 console.log(value);
 ```

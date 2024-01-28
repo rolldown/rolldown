@@ -16,7 +16,6 @@ exports.fn = function() {
 };
 
 // entry.js
-import {fn} from './foo';
 (() => {
 	console.log(import_foo.fn());
 })();

@@ -41,3 +41,17 @@ impl BindingPatternExt for ast::BindingPattern<'_> {
     ret
   }
 }
+
+pub trait StatementExt {
+  fn is_import_declaration(&self) -> bool;
+}
+
+impl StatementExt for ast::Statement<'_> {
+  fn is_import_declaration(&self) -> bool {
+    matches!(
+      self,
+      ast::Statement::ModuleDeclaration(module_decl)
+        if matches!(module_decl.0, ast::ModuleDeclaration::ImportDeclaration(_))
+    )
+  }
+}

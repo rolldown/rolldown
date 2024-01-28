@@ -18,9 +18,6 @@ const a1$1 = 1;
 console.log(a1$1);
 
 // main.js
-import * as ext from 'external';
-import {a,b} from 'external';
-import {a1,b1,ext1} from './foo';
 console.log(ext, a1, b1, ext1, a, b);
 export { a, b } from 'external';
 export { a$1 as a, b$1 as b };

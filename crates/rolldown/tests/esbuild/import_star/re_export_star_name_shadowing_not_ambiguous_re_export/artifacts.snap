@@ -19,6 +19,5 @@ export let x = 1;
 export* from'./b';
 
 // entry.js
-import {x} from './a';
 console.log(x);
 ```

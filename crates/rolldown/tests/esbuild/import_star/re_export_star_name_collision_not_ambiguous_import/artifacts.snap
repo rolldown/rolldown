@@ -21,6 +21,5 @@ export* from'./a';
 export* from'./b';
 
 // entry.js
-import {x,y} from './common';
 console.log(x, y);
 ```

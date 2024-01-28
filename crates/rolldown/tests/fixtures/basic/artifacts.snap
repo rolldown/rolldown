@@ -12,7 +12,6 @@ input_file: crates/rolldown/tests/fixtures/basic
 const a = 'shared.js';
 export { a };
 // main.js
-import {a as a2} from './shared';
 const a$1 = 'index.js';
 console.log(a$1, a);
 ```

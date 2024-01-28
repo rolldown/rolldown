@@ -12,6 +12,5 @@ input_file: crates/rolldown/tests/esbuild/default/require_parent_dir_es6
 export default 123;
 
 // dir/entry.js
-import value from '..';
 console.log(require_parent_dir_es6_index_default);
 ```

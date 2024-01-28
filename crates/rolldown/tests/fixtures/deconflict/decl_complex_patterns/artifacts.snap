@@ -26,8 +26,6 @@ export const {d:e=''} = {
 };
 
 // main.js
-import assert from 'assert';
-import {a as a2,b as b2,c as c2,d as d2,e as e2} from './names.js';
 export const [a$1] = ['a1'];
 export const {b:b$1} = {
 	b:'b1'

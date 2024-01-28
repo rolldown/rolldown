@@ -14,8 +14,6 @@ import { default as assert } from "assert";
 export const [a,b,c,d,e] = ['a2', 'b2', 'c2', 'd2', 'e2'];
 
 // main.js
-import assert from 'assert';
-import {a as a2,b as b2,c as c2,d as d2,e as e2} from './names.js';
 export const [a$1,b$1,c$1,d$1,e$1] = ['a', 'b', 'c', 'd', 'e'];
 function foo(a$1$1, {b$1:b$1$1}, {c$1:c$1$1='c$1'}, {d$1:d$1$1}={
 	d$1:'d$1'

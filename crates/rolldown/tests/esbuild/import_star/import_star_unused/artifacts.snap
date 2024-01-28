@@ -12,7 +12,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_unused
 export const foo$1 = 123;
 
 // entry.js
-import * as ns from './foo';
 let foo = 234;
 console.log(foo);
 ```

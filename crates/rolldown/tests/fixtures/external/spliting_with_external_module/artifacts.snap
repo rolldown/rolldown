@@ -11,7 +11,6 @@ input_file: crates/rolldown/tests/fixtures/external/spliting_with_external_modul
 import { value } from "./share_js.mjs";
 
 // entry.js
-import {value} from './share';
 console.log(value);
 ```
 ## main.mjs
@@ -21,8 +20,6 @@ import { default as assert } from "assert";
 import { value } from "./share_js.mjs";
 
 // main.js
-import assert from 'assert';
-import {value} from './share';
 assert(value === 1);
 ```
 ## share_js.mjs

@@ -14,8 +14,6 @@ import { default as assert } from "assert";
 const a = 'a.js';
 export { a };
 // main.js
-import assert from 'assert';
-import {a as a2} from './a';
 const a$1 = 'main.js';
 assert.equal(a$1, 'main.js');
 assert.equal(a, 'a.js');

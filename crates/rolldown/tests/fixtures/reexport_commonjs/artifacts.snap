@@ -23,8 +23,6 @@ export* from'./commonjs';
 export { bar } from './commonjs';export* from'./esm';
 
 // main.js
-import * as ns from './foo';
-import {bar,value,foo} from './foo';
 console.log(foo_ns, import_commonjs$2.bar, value, foo_ns.foo);
 export { bar } from './commonjs';
 var bar$1 = import_commonjs.bar;

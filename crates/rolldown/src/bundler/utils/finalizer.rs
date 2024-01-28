@@ -1,16 +1,20 @@
 use oxc::{
-  allocator::Allocator,
+  allocator::{Allocator, Vec},
   ast::{ast, VisitMut},
   span::Atom,
 };
-use rolldown_common::{ModuleId, SymbolRef};
-use rolldown_oxc::{AstSnippet, BindingIdentifierExt, IntoIn};
+use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
+use rolldown_oxc::{AstSnippet, BindingIdentifierExt, IntoIn, StatementExt, TakeIn};
 use rustc_hash::FxHashMap;
+
+use crate::bundler::{linker::linker_info::LinkingInfo, module::NormalModule};
 
 use super::{ast_scope::AstScope, symbols::Symbols};
 
 pub struct FinalizerContext<'me> {
   pub id: ModuleId,
+  pub module: &'me NormalModule,
+  pub linking_info: &'me LinkingInfo,
   pub symbols: &'me Symbols,
   pub canonical_names: &'me FxHashMap<SymbolRef, Atom>,
 }
@@ -37,10 +41,8 @@ impl<'me> Finalizer<'me> {
 impl<'ast, 'me: 'ast> Finalizer<'me> {
   fn visit_top_level_statement_mut(&mut self, stmt: &mut ast::Statement<'ast>) {
     // FIXME: this is a hack to avoid renaming import statements
-    if let ast::Statement::ModuleDeclaration(module_decl) = stmt {
-      if matches!(module_decl.0, ast::ModuleDeclaration::ImportDeclaration(_)) {
-        return;
-      }
+    if stmt.is_import_declaration() {
+      return;
     }
 
     self.visit_statement(stmt);
@@ -52,6 +54,21 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me> {
     for directive in program.directives.iter_mut() {
       self.visit_directive(directive);
     }
+
+    let old_body = program.body.take_in(self.alloc);
+
+    old_body.into_iter().for_each(|top_stmt| {
+      if top_stmt.is_import_declaration() {
+        if matches!(self.ctx.linking_info.wrap_kind, WrapKind::None) {
+          // Remove this statement by ignoring it
+        } else {
+          program.body.push(top_stmt);
+        }
+      } else {
+        program.body.push(top_stmt);
+      }
+    });
+
     for stmt in program.body.iter_mut() {
       self.visit_top_level_statement_mut(stmt);
     }

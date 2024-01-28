@@ -14,8 +14,6 @@ import { default as assert } from "assert";
 export default 'foo';
 
 // main.js
-import foo from './foo';
-import assert from 'assert';
 const value = {
 	foo:foo_default
 };

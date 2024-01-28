@@ -11,7 +11,6 @@ input_file: crates/rolldown/tests/esbuild/splitting/nested_directories
 import { shared_default } from "./shared_js.mjs";
 
 // src/a.js
-import x from '../shared.js';
 console.log(shared_default);
 ```
 ## b.mjs
@@ -20,7 +19,6 @@ console.log(shared_default);
 import { shared_default } from "./shared_js.mjs";
 
 // src/b.js
-import x from '../shared.js';
 console.log( -shared_default);
 ```
 ## shared_js.mjs

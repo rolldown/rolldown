@@ -20,8 +20,6 @@ export const {foo:{bar:{baz:baz=''}={}}={}} = {
 };
 
 // main.js
-import assert from 'assert';
-import {baz as baz2} from './names.js';
 export const {foo:{bar:{baz:baz$1=''}={}}={}} = {
 	foo:{
 		bar:{

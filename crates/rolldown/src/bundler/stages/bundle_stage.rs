@@ -41,6 +41,7 @@ impl<'a> BundleStage<'a> {
   #[tracing::instrument(skip_all)]
   pub async fn bundle(&mut self) -> BatchedResult<Vec<Output>> {
     use rayon::prelude::*;
+    tracing::debug!("Start bundle stage");
     let mut chunk_graph = self.generate_chunks();
 
     self.generate_chunk_filenames(&mut chunk_graph);
@@ -51,17 +52,23 @@ impl<'a> BundleStage<'a> {
       chunk.de_conflict(self.link_output);
     });
 
-    self.link_output.modules.iter_mut().par_bridge().for_each(|module| match module {
+    self.link_output.ast_table.iter_mut_enumerated().par_bridge().for_each(|(id, ast)| match &self
+      .link_output
+      .modules[id]
+    {
       Module::Normal(module) => {
         // TODO: should consider cases:
         // - excluded normal modules in code splitting doesn't belong to any chunk.
         let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
         let chunk = &chunk_graph.chunks[chunk_id];
-        module.finalize(FinalizerContext {
-          canonical_names: &chunk.canonical_names,
-          id: module.id,
-          symbols: &self.link_output.symbols,
-        });
+        module.finalize(
+          FinalizerContext {
+            canonical_names: &chunk.canonical_names,
+            id: module.id,
+            symbols: &self.link_output.symbols,
+          },
+          ast,
+        );
       }
       Module::External(_) => {}
     });

@@ -6,7 +6,6 @@ pub use normal_module::NormalModule;
 use oxc::span::Atom;
 use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ResourceId, SymbolRef};
 use rustc_hash::FxHashMap;
-use string_wizard::MagicString;
 
 use crate::InputOptions;
 
@@ -72,16 +71,8 @@ impl Module {
     }
   }
 
-  #[tracing::instrument(skip_all)]
-  pub fn render(&self, ctx: ModuleRenderContext) -> Option<MagicString<'_>> {
-    match self {
-      Self::Normal(m) => m.render(&ctx),
-      Self::External(_) => None,
-    }
-  }
-
   #[allow(clippy::cast_possible_truncation)]
-  pub fn original_length(&self) -> u32 {
+  pub fn _original_length(&self) -> u32 {
     match self {
       Self::Normal(m) => m.source.len() as u32,
       Self::External(_) => 0,

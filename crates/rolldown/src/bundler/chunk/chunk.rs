@@ -73,21 +73,30 @@ impl Chunk {
       .par_iter()
       .copied()
       .map(|id| &graph.modules[id])
-      .map(|m| {
-        let rendered_content = m.render(ModuleRenderContext {
-          canonical_names: &self.canonical_names,
-          graph,
-          chunk_graph,
-          input_options,
-        });
-        (
-          m.resource_id().expect_file().to_string(),
-          RenderedModule {
-            original_length: m.original_length(),
-            rendered_length: rendered_content.as_ref().map(|c| c.len() as u32).unwrap_or_default(),
-          },
-          rendered_content,
-        )
+      .filter_map(|m| match m {
+        crate::bundler::module::Module::Normal(m) => {
+          let rendered_content = m.render(
+            &ModuleRenderContext {
+              canonical_names: &self.canonical_names,
+              graph,
+              chunk_graph,
+              input_options,
+            },
+            &graph.ast_table[m.id],
+          );
+          Some((
+            m.resource_id.expect_file().to_string(),
+            RenderedModule {
+              original_length: m.source.len().try_into().unwrap(),
+              rendered_length: rendered_content
+                .as_ref()
+                .map(|c| c.len() as u32)
+                .unwrap_or_default(),
+            },
+            rendered_content,
+          ))
+        }
+        crate::bundler::module::Module::External(_) => None,
       })
       .collect::<Vec<_>>()
       .into_iter()

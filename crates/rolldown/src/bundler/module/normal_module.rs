@@ -37,7 +37,6 @@ pub struct NormalModule {
   pub repr_name: String,
   pub module_type: ModuleType,
   pub namespace_symbol: SymbolRef,
-  pub ast: OxcProgram,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
   pub named_exports: FxHashMap<Atom, LocalExport>,
   /// `stmt_infos[0]` represents the namespace binding statement
@@ -61,8 +60,8 @@ impl NormalModule {
       .filter(|rec| matches!(rec.kind, ImportKind::Import | ImportKind::Require))
   }
 
-  pub fn finalize(&mut self, ctx: FinalizerContext<'_>) {
-    let (oxc_program, alloc) = self.ast.program_mut_and_allocator();
+  pub fn finalize(&self, ctx: FinalizerContext<'_>, ast: &mut OxcProgram) {
+    let (oxc_program, alloc) = ast.program_mut_and_allocator();
 
     let mut finalizer =
       Finalizer { alloc, ctx, scope: &self.scope, snippet: &AstSnippet::new(alloc) };
@@ -71,8 +70,12 @@ impl NormalModule {
   }
 
   #[allow(clippy::unnecessary_wraps)]
-  pub fn render(&self, _ctx: &ModuleRenderContext<'_>) -> Option<MagicString<'static>> {
-    let generated_code = OxcCompiler::print(&self.ast);
+  pub fn render(
+    &self,
+    _ctx: &ModuleRenderContext<'_>,
+    ast: &OxcProgram,
+  ) -> Option<MagicString<'static>> {
+    let generated_code = OxcCompiler::print(ast);
     let mut source = MagicString::new(generated_code);
 
     source.prepend(format!("// {}\n", self.pretty_path));

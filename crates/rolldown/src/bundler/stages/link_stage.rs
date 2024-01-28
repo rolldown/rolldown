@@ -3,6 +3,7 @@ use std::ptr::addr_of;
 use index_vec::IndexVec;
 use rolldown_common::{EntryPoint, ExportsKind, ImportKind, ModuleId, WrapKind};
 use rolldown_error::BuildError;
+use rolldown_oxc::OxcProgram;
 use rustc_hash::FxHashSet;
 
 use crate::bundler::{
@@ -21,6 +22,7 @@ use super::scan_stage::ScanStageOutput;
 pub struct LinkStageOutput {
   pub modules: ModuleVec,
   pub entries: Vec<EntryPoint>,
+  pub ast_table: IndexVec<ModuleId, OxcProgram>,
   pub sorted_modules: Vec<ModuleId>,
   pub linking_infos: LinkingInfoVec,
   pub symbols: Symbols,
@@ -37,6 +39,7 @@ pub struct LinkStage {
   pub sorted_modules: Vec<ModuleId>,
   pub linking_infos: LinkingInfoVec,
   pub warnings: Vec<BuildError>,
+  pub ast_table: IndexVec<ModuleId, OxcProgram>,
 }
 
 impl LinkStage {
@@ -53,6 +56,7 @@ impl LinkStage {
       symbols: scan_stage_output.symbols,
       runtime: scan_stage_output.runtime,
       warnings: scan_stage_output.warnings,
+      ast_table: scan_stage_output.ast_table,
     }
   }
 
@@ -83,6 +87,7 @@ impl LinkStage {
       symbols: self.symbols,
       runtime: self.runtime,
       warnings: self.warnings,
+      ast_table: self.ast_table,
     }
   }
 

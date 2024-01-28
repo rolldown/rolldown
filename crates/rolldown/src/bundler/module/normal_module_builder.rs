@@ -9,7 +9,6 @@ use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleId, ModuleType, NamedImport,
   ResourceId, StmtInfos, SymbolRef,
 };
-use rolldown_oxc::OxcProgram;
 use rustc_hash::FxHashMap;
 
 use crate::bundler::utils::ast_scope::AstScope;
@@ -22,7 +21,6 @@ pub struct NormalModuleBuilder {
   pub source: Option<Arc<str>>,
   pub repr_name: Option<String>,
   pub path: Option<ResourceId>,
-  pub ast: Option<OxcProgram>,
   pub named_imports: Option<FxHashMap<SymbolId, NamedImport>>,
   pub named_exports: Option<FxHashMap<Atom, LocalExport>>,
   pub stmt_infos: Option<StmtInfos>,
@@ -46,7 +44,6 @@ impl NormalModuleBuilder {
       source: self.source.unwrap(),
       repr_name: self.repr_name.unwrap(),
       resource_id: self.path.unwrap(),
-      ast: self.ast.unwrap(),
       named_imports: self.named_imports.unwrap(),
       named_exports: self.named_exports.unwrap(),
       stmt_infos: self.stmt_infos.unwrap(),

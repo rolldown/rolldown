@@ -21,7 +21,6 @@ require('./foo');
 export const value = 1;
 
 // esm-import-cjs-export.js
-import './foo';
 module.exports = 1;
 
 // cjs.js

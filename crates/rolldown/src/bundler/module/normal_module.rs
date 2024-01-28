@@ -211,7 +211,7 @@ impl NormalModule {
     })
   }
 
-  pub fn _importee_id_by_span(&self, span: Span) -> ModuleId {
+  pub fn importee_id_by_span(&self, span: Span) -> ModuleId {
     let record = &self.import_records[self.imports[&span]];
     record.resolved_module
   }

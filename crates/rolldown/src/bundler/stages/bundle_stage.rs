@@ -69,6 +69,8 @@ impl<'a> BundleStage<'a> {
             symbols: &self.link_output.symbols,
             linking_info,
             module,
+            modules: &self.link_output.modules,
+            linking_infos: &self.link_output.linking_infos,
           },
           ast,
         );

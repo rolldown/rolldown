@@ -14,5 +14,6 @@ import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 exports.x = 123;
 
 // entry.js
+var import_foo = require_foo();
 console.log(import_foo.foo);
 ```

@@ -4,7 +4,7 @@ use oxc::{
   span::Atom,
 };
 use rolldown_common::{ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc::{AstSnippet, BindingIdentifierExt, IntoIn, StatementExt, TakeIn};
+use rolldown_oxc::{AstSnippet, IntoIn, StatementExt, TakeIn};
 use rustc_hash::FxHashMap;
 
 use crate::bundler::{
@@ -66,12 +66,22 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me> {
       if let Some(import_decl) = top_stmt.as_import_declaration() {
         let importee_id = self.ctx.module.importee_id_by_span(import_decl.span);
         let importee_linking_info = &self.ctx.linking_infos[importee_id];
+        let rec = &self.ctx.module.import_records[self.ctx.module.imports[&import_decl.span]];
         match importee_linking_info.wrap_kind {
           WrapKind::None => {
             // Remove this statement by ignoring it
             return;
           }
-          WrapKind::Cjs => {}
+          WrapKind::Cjs => {
+            let wrapper_ref_name =
+              self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap()).unwrap();
+            let binding_name_for_wrapper_call_ret =
+              self.canonical_name_for(rec.namespace_ref).unwrap();
+            program.body.push(self.snippet.var_decl_stmt(
+              binding_name_for_wrapper_call_ret.clone(),
+              self.snippet.call_expr_expr(wrapper_ref_name.clone()),
+            ))
+          }
           WrapKind::Esm => {}
         }
       } else {
@@ -85,49 +95,59 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me> {
   }
 
   fn visit_binding_identifier(&mut self, ident: &mut ast::BindingIdentifier) {
-    let symbol_ref: SymbolRef = (self.ctx.id, ident.expect_symbol_id()).into();
+    if let Some(symbol_id) = ident.symbol_id.get() {
+      let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
 
-    let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
-    let symbol = self.ctx.symbols.get(canonical_ref);
-    assert!(symbol.namespace_alias.is_none());
-    if let Some(canonical_name) = self.canonical_name_for(symbol_ref) {
-      if ident.name != canonical_name {
-        ident.name = canonical_name.clone();
+      let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
+      let symbol = self.ctx.symbols.get(canonical_ref);
+      assert!(symbol.namespace_alias.is_none());
+      if let Some(canonical_name) = self.canonical_name_for(symbol_ref) {
+        if ident.name != canonical_name {
+          ident.name = canonical_name.clone();
+        }
+      } else {
+        // FIXME: all bindings should have a canonical name
       }
     } else {
-      // FIXME: all bindings should have a canonical name
+      // Some `BindingIdentifier`s constructed by bundler don't have `SymbolId` and we just ignore them.
     }
   }
 
   #[allow(clippy::collapsible_else_if)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     if let ast::Expression::Identifier(id_ref) = expr {
-      if let Some(symbol_id) = self.scope.symbol_id_for(id_ref.reference_id.get().unwrap()) {
-        let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-        let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
-        let symbol = self.ctx.symbols.get(canonical_ref);
+      if let Some(reference_id) = id_ref.reference_id.get() {
+        if let Some(symbol_id) = self.scope.symbol_id_for(reference_id) {
+          let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+          let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
+          let symbol = self.ctx.symbols.get(canonical_ref);
 
-        if let Some(ns_alias) = &symbol.namespace_alias {
-          let canonical_ns_name = self
-            .canonical_name_for(ns_alias.namespace_ref)
-            .expect("namespace alias should have a canonical name");
-          let prop_name = &ns_alias.property_name;
-          *expr = ast::Expression::MemberExpression(
-            self
-              .snippet
-              .identifier_member_expression(canonical_ns_name.clone(), prop_name.clone())
-              .into_in(self.alloc),
-          );
-        } else {
-          if let Some(canonical_name) = self.canonical_name_for(canonical_ref) {
-            if id_ref.name != canonical_name {
-              id_ref.name = canonical_name.clone();
-            }
+          if let Some(ns_alias) = &symbol.namespace_alias {
+            let canonical_ns_name = self
+              .canonical_name_for(ns_alias.namespace_ref)
+              .expect("namespace alias should have a canonical name");
+            let prop_name = &ns_alias.property_name;
+            *expr = ast::Expression::MemberExpression(
+              self
+                .snippet
+                .identifier_member_expression(canonical_ns_name.clone(), prop_name.clone())
+                .into_in(self.alloc),
+            );
           } else {
-            // FIXME: all bindings should have a canonical name
+            if let Some(canonical_name) = self.canonical_name_for(canonical_ref) {
+              if id_ref.name != canonical_name {
+                id_ref.name = canonical_name.clone();
+              }
+            } else {
+              // FIXME: all bindings should have a canonical name
+            }
           }
-        }
-      };
+        } else {
+          // we will hit this branch if the reference is for a global variable
+        };
+      } else {
+        // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
+      }
     } else {
       self.visit_expression_match(expr);
     }

@@ -13,5 +13,6 @@ import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 // (ignored) node_modules/package/util.js
 
 // node_modules/package/index.js
+var import_util = require_util();
 console.log(import_util.default);
 ```

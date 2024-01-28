@@ -21,5 +21,7 @@ exports.bar = function() {
 };
 
 // entry.js
+var import_foo = require_foo();
 console.log(import_foo.foo(), import_bar.bar());
+var import_bar = require_bar();
 ```

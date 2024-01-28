@@ -21,14 +21,17 @@ require('./foo');
 export const value = 1;
 
 // esm-import-cjs-export.js
+var import_foo$1 = require_foo();
 module.exports = 1;
 
 // cjs.js
 module.exports = 1;
 
 // esm-import-cjs-require.js
+var import_cjs = require_cjs();
 require('./foo');
 console.log(import_cjs.a);
 
 // main.js
+var import_esm_import_cjs_export = require_esm_import_cjs_export();
 ```

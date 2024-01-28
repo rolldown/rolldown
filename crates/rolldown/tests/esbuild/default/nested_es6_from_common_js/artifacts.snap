@@ -16,6 +16,7 @@ exports.fn = function() {
 };
 
 // entry.js
+var import_foo = require_foo();
 (() => {
 	console.log(import_foo.fn());
 })();

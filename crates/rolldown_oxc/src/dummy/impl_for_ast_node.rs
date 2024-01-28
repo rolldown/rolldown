@@ -156,3 +156,55 @@ impl<'ast> DummyIn<'ast> for ast::Program<'ast> {
     }
   }
 }
+
+impl<'ast> DummyIn<'ast> for ast::VariableDeclarator<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      kind: DummyIn::dummy(alloc),
+      id: DummyIn::dummy(alloc),
+      init: DummyIn::dummy(alloc),
+      definite: DummyIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::BindingPattern<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      kind: DummyIn::dummy(alloc),
+      type_annotation: DummyIn::dummy(alloc),
+      optional: DummyIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::BindingPatternKind<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self::BindingIdentifier(DummyIn::dummy(alloc))
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::BindingIdentifier {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self { span: DummyIn::dummy(alloc), name: DummyIn::dummy(alloc), symbol_id: Cell::default() }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for Atom {
+  fn dummy(_alloc: &'ast Allocator) -> Self {
+    Atom::new_inline("")
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::CallExpression<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      callee: DummyIn::dummy(alloc),
+      arguments: DummyIn::dummy(alloc),
+      optional: DummyIn::dummy(alloc),
+      type_parameters: DummyIn::dummy(alloc),
+    }
+  }
+}

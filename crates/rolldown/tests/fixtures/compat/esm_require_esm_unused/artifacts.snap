@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/fixtures/compat/esm_require_esm_unused
 import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // esm.js
-export default 'esm';
+var esm_default = 'esm';
 
 // main.js
 require('./esm');

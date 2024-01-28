@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/fixtures/object_shorthand_property
 import { default as assert } from "assert";
 
 // foo.js
-export default 'foo';
+var foo_default = 'foo';
 
 // main.js
 const value = {

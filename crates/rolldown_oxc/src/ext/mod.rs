@@ -42,12 +42,15 @@ impl BindingPatternExt for ast::BindingPattern<'_> {
   }
 }
 
-pub trait StatementExt {
+pub trait StatementExt<'me, 'ast> {
   fn is_import_declaration(&self) -> bool;
-  fn as_import_declaration(&self) -> Option<&ast::ImportDeclaration<'_>>;
+  fn as_import_declaration(&'me self) -> Option<&'me ast::ImportDeclaration<'ast>>;
+  fn as_export_default_declaration_mut(
+    &'me mut self,
+  ) -> Option<&'me mut ast::ExportDefaultDeclaration<'ast>>;
 }
 
-impl StatementExt for ast::Statement<'_> {
+impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
   fn is_import_declaration(&self) -> bool {
     matches!(
       self,
@@ -56,10 +59,23 @@ impl StatementExt for ast::Statement<'_> {
     )
   }
 
-  fn as_import_declaration(&self) -> Option<&ast::ImportDeclaration<'_>> {
+  fn as_import_declaration(&self) -> Option<&ast::ImportDeclaration<'ast>> {
     if let ast::Statement::ModuleDeclaration(module_decl) = self {
       if let ast::ModuleDeclaration::ImportDeclaration(import_decl) = &module_decl.0 {
         return Some(import_decl);
+      }
+    }
+    None
+  }
+
+  fn as_export_default_declaration_mut(
+    &mut self,
+  ) -> Option<&mut ast::ExportDefaultDeclaration<'ast>> {
+    if let ast::Statement::ModuleDeclaration(export_default_decl) = self {
+      if let ast::ModuleDeclaration::ExportDefaultDeclaration(export_default_decl) =
+        &mut export_default_decl.0
+      {
+        return Some(export_default_decl);
       }
     }
     None

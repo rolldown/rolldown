@@ -13,12 +13,10 @@ import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // foo.js
 const a$1 = 1;
-export default function foo$1(a$1$1) {
-	console.log(a$1$1, a$1);
-}
+
 // bar.js
 init_foo();
-export default {
+var bar_default = {
 	foo:foo$1
 };
 

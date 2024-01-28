@@ -17,7 +17,7 @@ export const abc = undefined;
 export const xyz = null;
 
 // commonjs.js
-export default 123;
+var commonjs_default = 123;
 export var v = 234;
 export let l = 234;
 export const c = 234;
@@ -29,27 +29,19 @@ export* from'./a';
 export*as b from'./b';
 
 // c.js
-export default class {
-}
 
 // d.js
-export default class Foo {
-}
 Foo.prop = 123;
 
 // e.js
-export default function() {
-}
+
 // f.js
-export default function foo$1() {
-}foo$1.prop = 123;
+foo$1.prop = 123;
 
 // g.js
-export default async function() {
-}
+
 // h.js
-export default async function foo() {
-}foo.prop = 123;
+foo.prop = 123;
 
 // entry.js
 require('./commonjs');

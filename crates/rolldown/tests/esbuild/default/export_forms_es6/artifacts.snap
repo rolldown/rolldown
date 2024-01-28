@@ -15,7 +15,7 @@ export const abc = undefined;
 export const xyz = null;
 
 // entry.js
-export default 123;
+var entry_default = 123;
 export var v = 234;
 export let l = 234;
 export const c = 234;

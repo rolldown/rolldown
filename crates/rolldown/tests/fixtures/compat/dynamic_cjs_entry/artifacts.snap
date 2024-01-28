@@ -19,7 +19,7 @@ export default require_cjs();
 
 ```js
 // main.js
-export default import('./cjs.js');
+var main_default = import('./cjs.js');
 
 export { main_default as default };
 ```

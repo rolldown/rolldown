@@ -23,7 +23,7 @@ export { main_default as default };
 
 ```js
 // main.js
-export default {};
+var main_default = {};
 
 export { main_default };
 ```

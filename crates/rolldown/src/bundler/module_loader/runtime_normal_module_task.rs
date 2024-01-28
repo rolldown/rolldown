@@ -40,7 +40,7 @@ impl RuntimeNormalModuleTask {
     let source: Arc<str> =
       include_str!("../runtime/runtime-without-comments.js").to_string().into();
 
-    let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(source.clone());
+    let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(&source);
 
     let runtime = RuntimeModuleBrief::new(self.module_id, &scope);
 
@@ -87,9 +87,12 @@ impl RuntimeNormalModuleTask {
       .unwrap();
   }
 
-  fn make_ast(&self, source: Arc<str>) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
+  fn make_ast(
+    &self,
+    source: &Arc<str>,
+  ) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
     let source_type = SourceType::default();
-    let program = OxcCompiler::parse(Arc::clone(&source), source_type);
+    let program = OxcCompiler::parse(Arc::clone(source), source_type);
 
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
@@ -102,7 +105,7 @@ impl RuntimeNormalModuleTask {
       &mut symbol_for_module,
       "runtime".to_string(),
       ModuleType::EsmMjs,
-      &source,
+      source,
       &facade_path,
     );
     let namespace_symbol = scanner.namespace_symbol;

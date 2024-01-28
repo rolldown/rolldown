@@ -64,7 +64,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     // Run plugin transform.
     let source: Arc<str> = transform_source(&self.ctx.plugin_driver, source).await?.into();
 
-    let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(source.clone());
+    let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
     tracing::trace!("scan {:?}", self.resolved_path);
 
     let res = self.resolve_dependencies(&scan_result.import_records).await?;
@@ -119,7 +119,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     Ok(())
   }
 
-  fn scan(&self, source: Arc<str>) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
+  fn scan(&self, source: &Arc<str>) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
     fn determine_oxc_source_type(path: impl AsRef<Path>, ty: ModuleType) -> SourceType {
       // Determine oxc source type for parsing
       let mut default = SourceType::default().with_module(true);
@@ -144,7 +144,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
 
     let source_type =
       determine_oxc_source_type(self.resolved_path.path.as_path(), self.module_type);
-    let program = OxcCompiler::parse(Arc::clone(&source), source_type);
+    let program = OxcCompiler::parse(Arc::clone(source), source_type);
 
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
@@ -157,7 +157,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       &mut symbol_for_module,
       repr_name.into_owned(),
       self.module_type,
-      &source,
+      source,
       &self.resolved_path.path,
     );
     let namespace_symbol = scanner.namespace_symbol;

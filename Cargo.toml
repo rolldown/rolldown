@@ -60,6 +60,9 @@ missing_const_for_fn = "allow"
 # TODO: should reveiw this rule.
 missing_panics_doc = "allow"
 
+# Order doesn't really matter https://rust-lang.github.io/rust-clippy/master/index.html#/inconsistent_struct_constructor
+inconsistent_struct_constructor = "allow"
+
 [workspace.dependencies]
 oxc            = { version = "0.5.0" }
 oxc_resolver   = { version = "1.2.0" }

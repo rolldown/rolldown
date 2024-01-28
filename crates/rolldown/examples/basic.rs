@@ -4,7 +4,7 @@ use sugar_path::SugarPathBuf;
 
 #[tokio::main]
 async fn main() {
-  let _guard = rolldown_tracing::try_init_tracing();
+  rolldown_tracing::try_init_tracing();
   let root = PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap());
   let cwd = root.join("./examples").into_normalize();
   let mut bundler = Bundler::new(InputOptions {

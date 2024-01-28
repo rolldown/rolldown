@@ -131,6 +131,19 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             ));
             program.body.push(stmt);
           }
+          ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+            // "export default class {}" => "class default {}"
+            // "export default class Foo {}" => "class Foo {}"
+            if class.id.is_none() {
+              let canonical_name_for_default_export_ref =
+                self.canonical_name_for(self.ctx.module.default_export_ref).unwrap();
+              class.id = Some(self.snippet.binding(canonical_name_for_default_export_ref.clone()));
+            }
+            let stmt = ast::Statement::Declaration(ast::Declaration::ClassDeclaration(
+              class.take_in(self.alloc),
+            ));
+            program.body.push(stmt);
+          }
           _ => {}
         }
       } else {

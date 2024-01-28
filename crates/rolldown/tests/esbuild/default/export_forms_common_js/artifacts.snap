@@ -29,8 +29,12 @@ export* from'./a';
 export*as b from'./b';
 
 // c.js
+class c_default {
+}
 
 // d.js
+class Foo {
+}
 Foo.prop = 123;
 
 // e.js

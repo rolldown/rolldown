@@ -9,13 +9,13 @@ input_file: crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg
 
 ```js
 // a.js
-export let a = 1, x$1 = 2;
+let a = 1, x$1 = 2;
 
 // b.js
-export let b = 3;
-export { b as x };
+let b = 3;
+
 // c.js
-export let c = 4, x = 5;
+let c = 4, x = 5;
 
 // entry.js
 

@@ -25,7 +25,7 @@ console.log(foo);
 
 ```js
 // shared.js
-export let foo = 123;
+let foo = 123;
 
 export { foo };
 ```

@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_missing_e
 
 ```js
 // foo.js
-export const x = 123;
+const x = 123;
 
 // entry.js
 console.log(foo_ns, foo_ns.foo);

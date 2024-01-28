@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_and_not_dynamic_es6_
 
 ```js
 // foo.js
-export let bar = 123;
+let bar = 123;
 
 export { bar };
 ```

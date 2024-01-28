@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/default/simple_es6
 
 ```js
 // foo.js
-export function fn() {
+function fn() {
 	return 123;
 }
 

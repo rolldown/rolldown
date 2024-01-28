@@ -9,12 +9,12 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_om
 
 ```js
 // foo.js
-export const x = 1;
-export const y$1 = 2;
+const x = 1;
+const y$1 = 2;
 
 // bar.js
-export const y = 3;
-export const z = 4;
+const y = 3;
+const z = 4;
 
 // common.js
 

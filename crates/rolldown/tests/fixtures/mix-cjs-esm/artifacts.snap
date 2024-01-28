@@ -12,13 +12,13 @@ import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // esm-export-cjs-export.js
 module.exports = 1;
-export const value$1 = 1;
+const value$1 = 1;
 
 // foo.js
 
 // esm-export-cjs-require.js
 require('./foo');
-export const value = 1;
+const value = 1;
 
 // esm-import-cjs-export.js
 var import_foo$1 = require_foo();

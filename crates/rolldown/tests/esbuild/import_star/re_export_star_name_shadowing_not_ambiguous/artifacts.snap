@@ -9,10 +9,10 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_shadow
 
 ```js
 // b.js
-export let x$1 = 2;
+let x$1 = 2;
 
 // a.js
-export let x = 1;
+let x = 1;
 
 // entry.js
 console.log(x);

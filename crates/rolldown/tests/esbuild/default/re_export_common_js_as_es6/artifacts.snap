@@ -14,7 +14,8 @@ import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 exports.bar = 123;
 
 // entry.js
-export { bar } from './foo';
+var import_foo = require_foo();
+
 var bar = import_foo.bar;
 export { bar };
 ```

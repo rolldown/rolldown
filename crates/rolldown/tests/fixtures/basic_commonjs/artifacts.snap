@@ -13,10 +13,10 @@ import { __commonJS, __esm, __toCommonJS, __toESM } from "./_rolldown_runtime.mj
 // esm.js
 function esm_default_fn() {
 }
-export const esm_named_var = 1;
-export function esm_named_fn() {
+const esm_named_var = 1;
+function esm_named_fn() {
 }
-export class esm_named_class {
+class esm_named_class {
 }
 const hoisted_var = 1;
 function hoisted_fn() {

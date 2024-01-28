@@ -10,9 +10,9 @@ input_file: crates/rolldown/tests/fixtures/basic_re_export
 ```js
 // a.js
 const a = 'a.js';
-export { a };
+
 // proxy.js
-export { a } from './a';
+
 // main.js
 const a$1 = 'index.js';
 console.log(a$1, a);

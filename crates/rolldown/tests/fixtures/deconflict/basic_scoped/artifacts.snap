@@ -12,7 +12,7 @@ import { default as assert } from "assert";
 
 // a.js
 const a = 'a.js';
-export { a };
+
 // main.js
 const a$1 = 'main.js';
 function foo(a$1$1) {

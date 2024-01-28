@@ -15,6 +15,6 @@ var foo_default = 'foo';
 var bar_default = 'bar';
 
 // entry.js
-export { default as foo } from './foo';export { default as bar } from './bar';
+
 export { bar_default as bar, foo_default as foo };
 ```

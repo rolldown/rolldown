@@ -9,11 +9,11 @@ input_file: crates/rolldown/tests/esbuild/default/export_chain
 
 ```js
 // bar.js
-export const c = 123;
+const c = 123;
 
 // foo.js
-export { c as b } from './bar';
+
 // entry.js
-export { b as a } from './foo';
+
 export { c as a };
 ```

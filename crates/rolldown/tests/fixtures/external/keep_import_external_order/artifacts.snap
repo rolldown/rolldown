@@ -12,7 +12,7 @@ import "ext1";
 import "ext2";
 
 // foo.js
-export const a = 'foo';
+const a = 'foo';
 
 // main.js
 console.log(a);

@@ -15,9 +15,9 @@ class Foo {
 }
 let foo = Foo.foo;
 console.log(foo);
-export class Bar {
+class Bar {
 }
-export let bar = 123;
+let bar = 123;
 
 export { Bar, bar };
 ```

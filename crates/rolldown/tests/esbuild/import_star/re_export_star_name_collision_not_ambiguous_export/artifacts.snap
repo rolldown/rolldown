@@ -9,12 +9,12 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_collis
 
 ```js
 // c.js
-export let x = 1, y = 2;
+let x = 1, y = 2;
 
 // a.js
 
 // b.js
-export { x } from './c';
+
 // entry.js
 
 export { x, y };

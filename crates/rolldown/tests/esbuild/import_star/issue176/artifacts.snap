@@ -9,10 +9,10 @@ input_file: crates/rolldown/tests/esbuild/import_star/issue176
 
 ```js
 // folders/child/foo.js
-export const foo = () => 'hi there';
+const foo = () => 'hi there';
 
 // folders/child/index.js
-export { foo } from './foo';
+
 // folders/index.js
 
 // entry.js

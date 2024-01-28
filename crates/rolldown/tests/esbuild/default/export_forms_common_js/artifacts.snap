@@ -11,19 +11,19 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_common_js
 import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // a.js
-export const abc = undefined;
+const abc = undefined;
 
 // b.js
-export const xyz = null;
+const xyz = null;
 
 // commonjs.js
 var commonjs_default = 123;
-export var v = 234;
-export let l = 234;
-export const c = 234;
-export { Class as C };export function Fn() {
+var v = 234;
+let l = 234;
+const c = 234;
+function Fn() {
 }
-export class Class {
+class Class {
 }
 init_b();
 

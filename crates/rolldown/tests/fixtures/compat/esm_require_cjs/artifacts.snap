@@ -15,6 +15,6 @@ module.exports = 'cjs';
 
 // main.js
 const cjs = require('./cjs');
-export { cjs };
+
 export { cjs };
 ```

@@ -11,35 +11,35 @@ input_file: crates/rolldown/tests/fixtures/deconflict/decl_complex_patterns
 import { default as assert } from "assert";
 
 // names.js
-export const [a] = ['a2'];
-export const {b:b} = {
+const [a] = ['a2'];
+const {b:b} = {
 	b:'b2'
 };
-export const {b:c} = {
+const {b:c} = {
 	b:'c2'
 };
-export const {d:d=''} = {
+const {d:d=''} = {
 	d:'d2'
 };
-export const {d:e=''} = {
+const {d:e=''} = {
 	d:'e2'
 };
 
 // main.js
-export const [a$1] = ['a1'];
-export const {b:b$1} = {
+const [a$1] = ['a1'];
+const {b:b$1} = {
 	b:'b1'
 };
-export const {b:c$1} = {
+const {b:c$1} = {
 	b:'c1'
 };
-export const {d:d$1=''} = {
+const {d:d$1=''} = {
 	d:'d1'
 };
-export const {d:e$1=''} = {
+const {d:e$1=''} = {
 	d:'e1'
 };
-export { a2, b2, c2, d2, e2 };assert.equal(a$1, 'a1');
+assert.equal(a$1, 'a1');
 assert.equal(a, 'a2');
 assert.equal(b$1, 'b1');
 assert.equal(b, 'b2');

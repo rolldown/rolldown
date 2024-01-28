@@ -13,11 +13,11 @@ import * as ext from "external";
 import { a, a as a$1, a as a1, b, b as b$1, b as b1 } from "external";
 
 // foo.js
-export { a as a1, b as b1 } from 'external';const a1$1 = 1;
+const a1$1 = 1;
 console.log(a1$1);
 
 // main.js
 console.log(ext, a1, b1, ext1, a, b);
-export { a, b } from 'external';
+
 export { a$1 as a, b$1 as b };
 ```

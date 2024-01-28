@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/fixtures/reexport_star
 
 ```js
 // a.js
-export const abc = undefined;
+const abc = undefined;
 
 export { a_ns };
 ```

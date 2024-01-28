@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/fixtures/require/require_esm
 import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // esm.js
-export {};
+
 // main.js
 require('./esm.js');
 var esm = require('./esm.js');

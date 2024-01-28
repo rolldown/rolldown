@@ -9,13 +9,13 @@ input_file: crates/rolldown/tests/fixtures/ambiguous_star_export
 
 ```js
 // c.js
-export let x = 1;
-export let y = 2;
+let x = 1;
+let y = 2;
 
 // a.js
 
 // b.js
-export { x } from './c';
+
 // main.js
 
 export { x, y };

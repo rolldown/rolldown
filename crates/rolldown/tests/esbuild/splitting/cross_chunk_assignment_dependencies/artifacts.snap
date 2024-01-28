@@ -24,13 +24,13 @@ setValue(123);
 // shared.js
 var observer;
 var value;
-export function setObserver(cb) {
+function setObserver(cb) {
 	observer = cb;
 }
-export function getValue() {
+function getValue() {
 	return value;
 }
-export function setValue(next) {
+function setValue(next) {
 	value = next;
 	if (observer) 	observer();
 

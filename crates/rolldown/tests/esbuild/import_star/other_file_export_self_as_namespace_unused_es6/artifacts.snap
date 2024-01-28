@@ -9,9 +9,9 @@ input_file: crates/rolldown/tests/esbuild/import_star/other_file_export_self_as_
 
 ```js
 // foo.js
-export const foo = 123;
+const foo = 123;
 
 // entry.js
-export { foo } from './foo';
+
 export { foo };
 ```

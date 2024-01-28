@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_and_common_js
 import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // foo.js
-export const foo = 123;
+const foo = 123;
 
 // entry.js
 init_foo();

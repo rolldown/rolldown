@@ -9,10 +9,10 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_of_export_star_of_i
 
 ```js
 // baz.js
-export const value = 123;
+const value = 123;
 
 // bar.js
-export { value as bar } from './baz';
+
 // foo.js
 statement();
 statement();

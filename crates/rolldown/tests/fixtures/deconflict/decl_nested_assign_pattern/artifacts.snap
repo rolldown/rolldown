@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/fixtures/deconflict/decl_nested_assign_pattern
 import { default as assert } from "assert";
 
 // names.js
-export const {foo:{bar:{baz:baz=''}={}}={}} = {
+const {foo:{bar:{baz:baz=''}={}}={}} = {
 	foo:{
 		bar:{
 			baz:'baz2'
@@ -20,7 +20,7 @@ export const {foo:{bar:{baz:baz=''}={}}={}} = {
 };
 
 // main.js
-export const {foo:{bar:{baz:baz$1=''}={}}={}} = {
+const {foo:{bar:{baz:baz$1=''}={}}={}} = {
 	foo:{
 		bar:{
 			baz:'baz'
@@ -29,6 +29,6 @@ export const {foo:{bar:{baz:baz$1=''}={}}={}} = {
 };
 assert.strictEqual(baz$1, 'baz');
 assert.strictEqual(baz, 'baz2');
-export { baz, baz2 };
+
 export { baz$1 as baz, baz as baz2 };
 ```

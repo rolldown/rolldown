@@ -16,7 +16,7 @@ export { a };
 
 ```js
 // a.js
-export const a = 1;
+const a = 1;
 
 export { a };
 ```
@@ -26,6 +26,6 @@ export { a };
 import { a } from "./a_js.mjs";
 
 // b.js
-export { a } from './a';
+
 export { a };
 ```

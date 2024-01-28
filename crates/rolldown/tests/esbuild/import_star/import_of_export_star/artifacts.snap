@@ -13,7 +13,7 @@ statement();
 statement();
 statement();
 statement();
-export const bar = 123;
+const bar = 123;
 
 // foo.js
 

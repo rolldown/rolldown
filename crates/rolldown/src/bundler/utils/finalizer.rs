@@ -158,6 +158,26 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
           }
           _ => {}
         }
+      } else if let Some(named_decl) = top_stmt.as_export_named_declaration_mut() {
+        if named_decl.source.is_none() {
+          if let Some(decl) = &mut named_decl.declaration {
+            // `export var foo = 1` => `var foo = 1`
+            // `export function foo() {}` => `function foo() {}`
+            // `export class Foo {}` => `class Foo {}`
+            program.body.push(ast::Statement::Declaration(decl.take_in(self.alloc)));
+          } else {
+            // `export { foo }`
+            // Remove this statement by ignoring it
+          }
+        } else {
+          // `export { foo } from 'path'`
+          let rec_id = self.ctx.module.imports[&named_decl.span];
+          if let Some(stmt) = self.finalize_import_export_stmt(&top_stmt, rec_id) {
+            program.body.push(stmt);
+          } else {
+            return;
+          }
+        }
       } else {
         program.body.push(top_stmt);
       }

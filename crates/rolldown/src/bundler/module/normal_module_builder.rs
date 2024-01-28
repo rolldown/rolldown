@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use index_vec::IndexVec;
 use oxc::{
   semantic::SymbolId,
@@ -17,6 +19,7 @@ use super::NormalModule;
 #[derive(Debug, Default)]
 pub struct NormalModuleBuilder {
   pub id: Option<ModuleId>,
+  pub source: Option<Arc<str>>,
   pub repr_name: Option<String>,
   pub path: Option<ResourceId>,
   pub ast: Option<OxcProgram>,
@@ -40,6 +43,7 @@ impl NormalModuleBuilder {
     NormalModule {
       exec_order: u32::MAX,
       id: self.id.unwrap(),
+      source: self.source.unwrap(),
       repr_name: self.repr_name.unwrap(),
       resource_id: self.path.unwrap(),
       ast: self.ast.unwrap(),

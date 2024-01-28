@@ -62,9 +62,9 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     let source = load_source(&self.ctx.plugin_driver, &self.resolved_path, &self.ctx.fs).await?;
 
     // Run plugin transform.
-    let source = transform_source(&self.ctx.plugin_driver, source).await?;
+    let source: Arc<str> = transform_source(&self.ctx.plugin_driver, source).await?.into();
 
-    let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(source);
+    let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(source.clone());
 
     let res = self.resolve_dependencies(&scan_result.import_records).await?;
 
@@ -83,6 +83,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     warnings.extend(scan_warnings);
 
     let builder = NormalModuleBuilder {
+      source: Some(source),
       id: Some(self.module_id),
       ast: Some(ast),
       repr_name: Some(repr_name),
@@ -116,7 +117,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     Ok(())
   }
 
-  fn scan(&self, source: String) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
+  fn scan(&self, source: Arc<str>) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
     fn determine_oxc_source_type(path: impl AsRef<Path>, ty: ModuleType) -> SourceType {
       // Determine oxc source type for parsing
       let mut default = SourceType::default().with_module(true);

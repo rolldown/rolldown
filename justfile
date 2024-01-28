@@ -83,6 +83,13 @@ lint:
     just lint-node
     taplo format
 
+# smoke commands allow you to run checks locally without pushing branches to the remote
+smoke-rust:
+    just test-rust
+    just check-rust
+    just lint-rust
+
+
 # BENCHING
 
 setup-bench:

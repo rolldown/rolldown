@@ -12,5 +12,5 @@ input_file: crates/rolldown/tests/fixtures/misc/issue_376
 const test = 'hello world';
 export default test;
 
-export { test as default };
+export { main_default as default };
 ```

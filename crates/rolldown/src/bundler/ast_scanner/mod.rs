@@ -32,7 +32,7 @@ pub struct ScanResult {
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordId, RawImportRecord>,
   pub star_exports: Vec<ImportRecordId>,
-  pub export_default_symbol_id: Option<SymbolId>,
+  pub default_export_ref: Option<SymbolRef>,
   pub imports: FxHashMap<Span, ImportRecordId>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildError>,
@@ -65,6 +65,12 @@ impl<'ast> AstScanner<'ast> {
     file_path: &'ast FilePath,
   ) -> Self {
     let mut result = ScanResult::default();
+
+    // This is used for converting "export default foo;" => "var default_symbol = foo;"
+    let symbol_id_for_default_export_ref =
+      symbol_table.create_symbol(Atom::from(format!("{repr_name}_default")), scope.root_scope_id());
+    result.default_export_ref = Some((idx, symbol_id_for_default_export_ref).into());
+
     let name = format!("{repr_name}_ns");
     let namespace_ref: SymbolRef =
       (idx, symbol_table.create_symbol(name.into(), scope.root_scope_id())).into();
@@ -175,7 +181,6 @@ impl<'ast> AstScanner<'ast> {
   }
 
   fn add_local_default_export(&mut self, local: SymbolId) {
-    self.result.export_default_symbol_id = Some(local);
     self
       .result
       .named_exports
@@ -279,11 +284,11 @@ impl<'ast> AstScanner<'ast> {
     self.scope.symbol_id_for(ref_id)
   }
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
-    let local = match &decl.declaration {
-      oxc::ast::ast::ExportDefaultDeclarationKind::Expression(exp) => match exp {
-        oxc::ast::ast::Expression::Identifier(id_ref) => self.resolve_symbol_from_reference(id_ref),
-        _ => None,
-      },
+    let local_binding_for_default_export = match &decl.declaration {
+      oxc::ast::ast::ExportDefaultDeclarationKind::Expression(_exp) => {
+        // `export default [expression]` pattern
+        None
+      }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
         fn_decl.id.as_ref().map(rolldown_oxc::BindingIdentifierExt::expect_symbol_id)
       }
@@ -293,18 +298,11 @@ impl<'ast> AstScanner<'ast> {
       _ => unreachable!(),
     };
 
-    let local = local.unwrap_or_else(|| {
-      // For patterns like `export default [expression]`, we need to create
-      // a facade Symbol to represent it.
-      // Notice: Patterns don't include `export default [identifier]`
-      let sym_id = self.symbol_table.create_symbol(
-        Atom::from(format!("{}_default", self.result.repr_name)),
-        self.scope.root_scope_id(),
-      );
-      self.add_declared_id(sym_id);
-      sym_id
-    });
-    self.add_local_default_export(local);
+    let final_binding = local_binding_for_default_export
+      .unwrap_or_else(|| self.result.default_export_ref.unwrap().symbol);
+
+    self.add_declared_id(final_binding);
+    self.add_local_default_export(final_binding);
   }
 
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {

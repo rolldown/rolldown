@@ -49,7 +49,7 @@ pub struct NormalModule {
   pub star_exports: Vec<ImportRecordId>,
   pub exports_kind: ExportsKind,
   pub scope: AstScope,
-  pub default_export_symbol: Option<SymbolId>,
+  pub default_export_ref: SymbolRef,
 }
 
 impl NormalModule {

@@ -49,7 +49,7 @@ impl RuntimeNormalModuleTask {
       named_exports,
       stmt_infos,
       star_exports,
-      export_default_symbol_id,
+      default_export_ref,
       imports,
       repr_name,
       import_records: _,
@@ -67,7 +67,7 @@ impl RuntimeNormalModuleTask {
     builder.stmt_infos = Some(stmt_infos);
     builder.imports = Some(imports);
     builder.star_exports = Some(star_exports);
-    builder.default_export_symbol = export_default_symbol_id;
+    builder.default_export_ref = Some(default_export_ref.expect("should exist"));
     builder.import_records = Some(IndexVec::default());
     builder.scope = Some(scope);
     builder.exports_kind = Some(ExportsKind::Esm);

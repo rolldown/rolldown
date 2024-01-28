@@ -12,7 +12,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_of_export_star
 export const bar = 123;
 
 // foo.js
-export*as bar_ns from'./bar';
 
 // entry.js
 console.log(foo_ns);

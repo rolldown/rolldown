@@ -48,6 +48,8 @@ pub trait StatementExt<'me, 'ast> {
   fn as_export_default_declaration_mut(
     &'me mut self,
   ) -> Option<&'me mut ast::ExportDefaultDeclaration<'ast>>;
+  fn as_export_all_declaration(&self) -> Option<&ast::ExportAllDeclaration<'ast>>;
+  fn as_export_named_declaration(&self) -> Option<&ast::ExportNamedDeclaration<'ast>>;
 }
 
 impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
@@ -76,6 +78,26 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
         &mut export_default_decl.0
       {
         return Some(export_default_decl);
+      }
+    }
+    None
+  }
+
+  fn as_export_all_declaration(&self) -> Option<&ast::ExportAllDeclaration<'ast>> {
+    if let ast::Statement::ModuleDeclaration(export_all_decl) = self {
+      if let ast::ModuleDeclaration::ExportAllDeclaration(export_all_decl) = &export_all_decl.0 {
+        return Some(export_all_decl);
+      }
+    }
+    None
+  }
+
+  fn as_export_named_declaration(&self) -> Option<&ast::ExportNamedDeclaration<'ast>> {
+    if let ast::Statement::ModuleDeclaration(export_named_decl) = self {
+      if let ast::ModuleDeclaration::ExportNamedDeclaration(export_named_decl) =
+        &export_named_decl.0
+      {
+        return Some(export_named_decl);
       }
     }
     None

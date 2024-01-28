@@ -16,7 +16,6 @@ statement();
 export const bar = 123;
 
 // foo.js
-export* from'./bar';
 
 // entry.js
 console.log(bar);

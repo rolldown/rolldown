@@ -19,7 +19,6 @@ export { a_ns };
 import { a_ns } from "./a_js.mjs";
 
 // entry.js
-export*as a from'./a';
 
 export { a_ns as a };
 ```
@@ -29,7 +28,6 @@ export { a_ns as a };
 import { a_ns } from "./a_js.mjs";
 
 // main.js
-export*as a from'./a';
 
 export { a_ns as a };
 ```

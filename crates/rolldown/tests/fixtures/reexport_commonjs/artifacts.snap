@@ -19,9 +19,7 @@ module.exports = {
 export const value = 1;
 
 // foo.js
-export* from'./commonjs';
-export { bar } from './commonjs';export* from'./esm';
-
+export { bar } from './commonjs';
 // main.js
 console.log(foo_ns, import_commonjs$2.bar, value, foo_ns.foo);
 export { bar } from './commonjs';

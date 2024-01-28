@@ -25,8 +25,7 @@ export { Class as C };export function Fn() {
 }
 export class Class {
 }
-export* from'./a';
-export*as b from'./b';
+init_b();
 
 // c.js
 class c_default {

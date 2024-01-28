@@ -18,9 +18,6 @@ export { b as x };
 export let c = 4, x = 5;
 
 // entry.js
-export* from'./a';
-export* from'./b';
-export* from'./c';
 
 export { a, b, c };
 ```

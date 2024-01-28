@@ -47,10 +47,9 @@ where
   //   self.canonical_name_for(symbol)
   // }
 
-  #[allow(clippy::needless_pass_by_value)]
   fn finalize_import_export_stmt(
     &self,
-    _stmt: Statement<'ast>,
+    _stmt: &Statement<'ast>,
     rec_id: ImportRecordId,
   ) -> Option<Statement<'ast>> {
     let rec = &self.ctx.module.import_records[rec_id];
@@ -104,8 +103,21 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     old_body.into_iter().for_each(|mut top_stmt| {
       if let Some(import_decl) = top_stmt.as_import_declaration() {
         let rec_id = self.ctx.module.imports[&import_decl.span];
-        if let Some(stmt) = self.finalize_import_export_stmt(top_stmt, rec_id) {
+        if let Some(stmt) = self.finalize_import_export_stmt(&top_stmt, rec_id) {
           program.body.push(stmt);
+        }
+      } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
+        let rec_id = self.ctx.module.imports[&export_all_decl.span];
+        // "export * as ns from 'path'"
+        if let Some(_alias) = &export_all_decl.exported {
+          if let Some(stmt) = self.finalize_import_export_stmt(&top_stmt, rec_id) {
+            program.body.push(stmt);
+          } else {
+            return;
+          }
+        } else {
+          // "export * from 'path'"
+          // TODO handle this
         }
       } else if let Some(default_decl) = top_stmt.as_export_default_declaration_mut() {
         match &mut default_decl.declaration {

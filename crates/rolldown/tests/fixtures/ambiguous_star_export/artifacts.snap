@@ -13,13 +13,10 @@ export let x = 1;
 export let y = 2;
 
 // a.js
-export* from'./c';
 
 // b.js
 export { x } from './c';
 // main.js
-export* from'./a';
-export* from'./b';
 
 export { x, y };
 ```

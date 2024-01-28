@@ -12,11 +12,9 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_shadow
 export let x$1 = 2;
 
 // b.js
-export* from'./c';
 export let x = 1;
 
 // a.js
-export* from'./b';
 
 // entry.js
 console.log(x);

@@ -17,8 +17,6 @@ export const y = 3;
 export const z = 4;
 
 // common.js
-export* from'./foo';
-export* from'./bar';
 
 // entry.js
 console.log(common_ns.x, common_ns.y, common_ns.z);

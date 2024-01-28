@@ -14,7 +14,6 @@ import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.mjs";
 exports.a = 1;
 
 // proxy.js
-export* from'./commonjs.js';
 
 // main.js
 console.log(proxy_ns.a, 1);

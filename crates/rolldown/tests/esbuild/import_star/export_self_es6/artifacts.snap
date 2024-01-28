@@ -10,7 +10,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_self_es6
 ```js
 // entry.js
 export const foo = 123;
-export* from'./entry';
 
 export { foo };
 ```

@@ -17,8 +17,6 @@ exports.a = 1;
 exports.a = 2;
 
 // proxy.js
-export* from'./commonjs.js';
-export* from'./commonjs2.js';
 
 // main.js
 console.log(proxy_ns.a, 1);

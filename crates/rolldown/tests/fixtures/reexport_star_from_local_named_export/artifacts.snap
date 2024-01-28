@@ -12,7 +12,6 @@ input_file: crates/rolldown/tests/fixtures/reexport_star_from_local_named_export
 const value = 1;
 export { value as foo };
 // main.js
-export* from'./foo';
 
 export { value as foo };
 ```

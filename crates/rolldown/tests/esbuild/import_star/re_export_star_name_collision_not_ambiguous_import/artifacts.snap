@@ -12,13 +12,10 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_collis
 export let x = 1, y = 2;
 
 // a.js
-export* from'./c';
 
 // b.js
 export { x } from './c';
 // common.js
-export* from'./a';
-export* from'./b';
 
 // entry.js
 console.log(x, y);

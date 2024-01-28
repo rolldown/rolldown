@@ -18,7 +18,6 @@ statement();
 statement();
 statement();
 statement();
-export* from'./bar';
 
 // entry.js
 console.log(value);

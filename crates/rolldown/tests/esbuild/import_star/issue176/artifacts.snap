@@ -14,7 +14,6 @@ export const foo = () => 'hi there';
 // folders/child/index.js
 export { foo } from './foo';
 // folders/index.js
-export* from'./child';
 
 // entry.js
 console.log(JSON.stringify(folders_index_ns));

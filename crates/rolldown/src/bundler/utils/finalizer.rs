@@ -72,6 +72,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me> {
             // Remove this statement by ignoring it
           }
           WrapKind::Cjs => {
+            // Replace the statement with something like `var import_foo = require_foo()`
             let wrapper_ref_name =
               self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap()).unwrap();
             let binding_name_for_wrapper_call_ret =
@@ -81,6 +82,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me> {
               self.snippet.call_expr_expr(wrapper_ref_name.clone()),
             ));
           }
+          // Replace the statement with something like `init_foo()`
           WrapKind::Esm => {
             let wrapper_ref_name =
               self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap()).unwrap();

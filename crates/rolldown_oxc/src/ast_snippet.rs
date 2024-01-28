@@ -47,6 +47,17 @@ impl<'ast> AstSnippet<'ast> {
     ast::Expression::CallExpression(self.call_expr(name).into_in(self.alloc))
   }
 
+  /// `name()`
+  pub fn call_expr_stmt(&self, name: Atom) -> ast::Statement<'_> {
+    ast::Statement::ExpressionStatement(
+      ast::ExpressionStatement {
+        expression: self.call_expr_expr(name),
+        ..Dummy::dummy(self.alloc)
+      }
+      .into_in(self.alloc),
+    )
+  }
+
   /// `var [name] = [init]`
   pub fn var_decl_stmt(&self, name: Atom, init: ast::Expression<'ast>) -> ast::Statement<'ast> {
     ast::Statement::Declaration(self.var_decl(name, init))

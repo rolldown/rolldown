@@ -70,7 +70,6 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me> {
         match importee_linking_info.wrap_kind {
           WrapKind::None => {
             // Remove this statement by ignoring it
-            return;
           }
           WrapKind::Cjs => {
             let wrapper_ref_name =
@@ -80,9 +79,13 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me> {
             program.body.push(self.snippet.var_decl_stmt(
               binding_name_for_wrapper_call_ret.clone(),
               self.snippet.call_expr_expr(wrapper_ref_name.clone()),
-            ))
+            ));
           }
-          WrapKind::Esm => {}
+          WrapKind::Esm => {
+            let wrapper_ref_name =
+              self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap()).unwrap();
+            program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name.clone()));
+          }
         }
       } else {
         program.body.push(top_stmt);

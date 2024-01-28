@@ -16,7 +16,11 @@ impl<'ast> AstSnippet<'ast> {
     Self { alloc }
   }
 
-  fn identifier_reference(&self, name: Atom) -> ast::IdentifierReference {
+  pub fn binding(&self, name: Atom) -> ast::BindingIdentifier {
+    ast::BindingIdentifier { name, ..Dummy::dummy(self.alloc) }
+  }
+
+  fn binding_reference(&self, name: Atom) -> ast::IdentifierReference {
     ast::IdentifierReference { name, ..Dummy::dummy(self.alloc) }
   }
 
@@ -27,7 +31,7 @@ impl<'ast> AstSnippet<'ast> {
     property: Atom,
   ) -> ast::MemberExpression<'_> {
     ast::MemberExpression::StaticMemberExpression(ast::StaticMemberExpression {
-      object: ast::Expression::Identifier(self.identifier_reference(object).into_in(self.alloc)),
+      object: ast::Expression::Identifier(self.binding_reference(object).into_in(self.alloc)),
       property: ast::IdentifierName { name: property, ..Dummy::dummy(self.alloc) },
       ..Dummy::dummy(self.alloc)
     })
@@ -36,7 +40,7 @@ impl<'ast> AstSnippet<'ast> {
   /// `name()`
   pub fn call_expr(&self, name: Atom) -> ast::CallExpression<'_> {
     ast::CallExpression {
-      callee: ast::Expression::Identifier(self.identifier_reference(name).into_in(self.alloc)),
+      callee: ast::Expression::Identifier(self.binding_reference(name).into_in(self.alloc)),
       arguments: allocator::Vec::new_in(self.alloc),
       ..Dummy::dummy(self.alloc)
     }

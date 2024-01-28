@@ -11,6 +11,8 @@ input_file: crates/rolldown/tests/fixtures/basic_commonjs
 import { __commonJS, __esm, __toCommonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // esm.js
+function esm_default_fn() {
+}
 export const esm_named_var = 1;
 export function esm_named_fn() {
 }

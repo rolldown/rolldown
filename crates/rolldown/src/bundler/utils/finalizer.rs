@@ -47,7 +47,7 @@ where
   //   self.canonical_name_for(symbol)
   // }
 
-  ///
+  #[allow(clippy::needless_pass_by_value)]
   fn finalize_import_export_stmt(
     &self,
     _stmt: Statement<'ast>,
@@ -117,6 +117,19 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               canonical_name_for_default_export_ref.clone(),
               expr.take_in(self.alloc),
             ));
+          }
+          ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
+            // "export default function() {}" => "function default() {}"
+            // "export default function foo() {}" => "function foo() {}"
+            if func.id.is_none() {
+              let canonical_name_for_default_export_ref =
+                self.canonical_name_for(self.ctx.module.default_export_ref).unwrap();
+              func.id = Some(self.snippet.binding(canonical_name_for_default_export_ref.clone()));
+            }
+            let stmt = ast::Statement::Declaration(ast::Declaration::FunctionDeclaration(
+              func.take_in(self.alloc),
+            ));
+            program.body.push(stmt);
           }
           _ => {}
         }

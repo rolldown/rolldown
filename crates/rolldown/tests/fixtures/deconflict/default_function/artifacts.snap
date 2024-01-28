@@ -12,6 +12,9 @@ import { default as assert } from "assert";
 
 // foo.js
 const a$1 = 1;
+function foo$1(a$1$1) {
+	console.log(a$1$1, a$1);
+}
 
 // bar.js
 var bar_default = {

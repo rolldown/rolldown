@@ -34,13 +34,21 @@ export*as b from'./b';
 Foo.prop = 123;
 
 // e.js
+function e_default() {
+}
 
 // f.js
+function foo$1() {
+}
 foo$1.prop = 123;
 
 // g.js
+async function g_default() {
+}
 
 // h.js
+async function foo() {
+}
 foo.prop = 123;
 
 // entry.js

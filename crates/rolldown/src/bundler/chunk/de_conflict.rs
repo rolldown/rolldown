@@ -9,6 +9,8 @@ impl Chunk {
   pub fn de_conflict(&mut self, graph: &LinkStageOutput) {
     let mut renamer = Renamer::new(&graph.symbols, graph.modules.len());
 
+    // TODO: reserve names for keywords in both non-strict and strict mode
+
     self
       .modules
       .iter()
@@ -55,20 +57,7 @@ impl Chunk {
       });
 
     // rename non-top-level names
-
-    self.modules.iter().copied().for_each(|module| {
-      let Module::Normal(module) = &graph.modules[module] else { return };
-      module.scope.iter_bindings().map(|(scope_id, _, _)| scope_id).for_each(|scope_id| {
-        if scope_id == module.scope.root_scope_id() {
-          // Top level symbol are already processed above
-          return;
-        }
-        let bindings = module.scope.get_bindings(scope_id);
-        bindings.iter().for_each(|(_binding_name, symbol_id)| {
-          renamer.add_non_top_level_symbol(module.id, (module.id, *symbol_id).into());
-        });
-      });
-    });
+    renamer.rename_non_top_level_symbol(&self.modules, &graph.modules);
 
     self.canonical_names = renamer.into_canonical_names();
   }

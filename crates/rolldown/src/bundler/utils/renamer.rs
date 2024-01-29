@@ -1,37 +1,31 @@
 use std::borrow::Cow;
 
-use index_vec::IndexVec;
-use oxc::span::Atom;
+use oxc::{semantic::ScopeId, span::Atom};
 use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
+
+use crate::bundler::module::{ModuleVec, NormalModule};
 
 use super::symbols::Symbols;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
-  /// The usage count of top level names
-  top_level_name_counts: FxHashMap<Cow<'name, Atom>, u32>,
   used_canonical_names: FxHashSet<Cow<'name, Atom>>,
-  module_to_used_canonical_name_count: IndexVec<ModuleId, FxHashMap<Cow<'name, Atom>, u32>>,
   canonical_names: FxHashMap<SymbolRef, Atom>,
   symbols: &'name Symbols,
 }
 
 impl<'name> Renamer<'name> {
-  pub fn new(symbols: &'name Symbols, modules_len: usize) -> Self {
+  pub fn new(symbols: &'name Symbols, _modules_len: usize) -> Self {
     Self {
-      top_level_name_counts: FxHashMap::default(),
       canonical_names: FxHashMap::default(),
       symbols,
       used_canonical_names: FxHashSet::default(),
-      module_to_used_canonical_name_count: index_vec::index_vec![FxHashMap::default(); modules_len],
     }
   }
 
   pub fn reserve(&mut self, name: Cow<'name, Atom>) {
-    let count = self.top_level_name_counts.entry(name).or_default();
-    debug_assert!(*count <= 1, "It's unnecessary to reserve a global name twice");
-    *count = 1;
+    self.used_canonical_names.insert(name);
   }
 
   pub fn add_top_level_symbol(&mut self, symbol_ref: SymbolRef) {
@@ -40,19 +34,14 @@ impl<'name> Renamer<'name> {
 
     match self.canonical_names.entry(canonical_ref) {
       std::collections::hash_map::Entry::Vacant(vacant) => {
-        let count = self.top_level_name_counts.entry(original_name.clone()).or_default();
-        let mut canonical_name = if *count == 0 {
-          original_name.clone()
-        } else {
-          Cow::Owned(format!("{}${}", original_name, *count).into())
-        };
-        while self.used_canonical_names.contains(&canonical_name) {
-          *count += 1;
-          canonical_name = Cow::Owned(format!("{}${}", original_name, *count).into());
+        let mut count = 0;
+        let mut candidate_name = original_name.clone();
+        while self.used_canonical_names.contains(&candidate_name) {
+          count += 1;
+          candidate_name = Cow::Owned(format!("{original_name}${count}").into());
         }
-        self.used_canonical_names.insert(canonical_name.clone());
-        vacant.insert(canonical_name.into_owned());
-        *count += 1;
+        self.used_canonical_names.insert(candidate_name.clone());
+        vacant.insert(candidate_name.into_owned());
       }
       std::collections::hash_map::Entry::Occupied(_) => {
         // The symbol is already renamed
@@ -61,25 +50,77 @@ impl<'name> Renamer<'name> {
   }
 
   // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
-  pub fn add_non_top_level_symbol(&mut self, module_id: ModuleId, canonical_ref: SymbolRef) {
-    let original_name = Cow::Borrowed(self.symbols.get_original_name(canonical_ref));
+  pub fn rename_non_top_level_symbol(
+    &mut self,
+    modules_in_chunk: &[ModuleId],
+    modules: &ModuleVec,
+  ) {
+    use rayon::prelude::*;
 
-    match self.canonical_names.entry(canonical_ref) {
-      std::collections::hash_map::Entry::Occupied(_) => {
-        // The symbol is already renamed
-      }
-      std::collections::hash_map::Entry::Vacant(vacant) => {
-        let might_shadowed = self.used_canonical_names.contains(&original_name);
-        if might_shadowed {
-          let used_canonical_name_count = &mut self.module_to_used_canonical_name_count[module_id];
-          // The name is already used in top level, so the default count is 1
-          let count = used_canonical_name_count.entry(original_name.clone()).or_insert(1);
-          let canonical_name = format!("{}${}", original_name, *count);
-          vacant.insert(canonical_name.into());
-          *count += 1;
+    fn rename_symbols_of_nested_scopes<'name>(
+      module: &'name NormalModule,
+      scope_id: ScopeId,
+      stack: &mut Vec<Cow<FxHashSet<Cow<'name, Atom>>>>,
+      canonical_names: &mut FxHashMap<SymbolRef, Atom>,
+    ) {
+      let bindings = module.scope.get_bindings(scope_id);
+      let mut used_canonical_names_for_this_scope = FxHashSet::default();
+      used_canonical_names_for_this_scope.shrink_to(bindings.len());
+      bindings.iter().for_each(|(binding_name, symbol_id)| {
+        used_canonical_names_for_this_scope.insert(Cow::Borrowed(binding_name));
+        let binding_ref: SymbolRef = (module.id, *symbol_id).into();
+
+        let mut count = 1;
+        let mut candidate_name = Cow::Borrowed(binding_name);
+        loop {
+          let is_shadowed =
+            stack.iter().any(|used_canonical_names| used_canonical_names.contains(&candidate_name));
+
+          if is_shadowed {
+            candidate_name = Cow::Owned(format!("{binding_name}${count}").into());
+            count += 1;
+          } else {
+            used_canonical_names_for_this_scope.insert(candidate_name.clone());
+            canonical_names.insert(binding_ref, candidate_name.into_owned());
+            break;
+          }
         }
-      }
+      });
+
+      stack.push(Cow::Owned(used_canonical_names_for_this_scope));
+      let child_scopes = module.scope.get_child_ids(scope_id).cloned().unwrap_or_default();
+      child_scopes.into_iter().for_each(|scope_id| {
+        rename_symbols_of_nested_scopes(module, scope_id, stack, canonical_names);
+      });
+      stack.pop();
     }
+
+    let canonical_names_of_nested_scopes = modules_in_chunk
+      .par_iter()
+      .copied()
+      .filter_map(|id| modules[id].as_normal())
+      .flat_map(|module| {
+        let child_scopes: &[ScopeId] =
+          module.scope.get_child_ids(module.scope.root_scope_id()).map_or(&[], Vec::as_slice);
+
+        child_scopes.into_par_iter().map(|child_scope_id| {
+          let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];
+          let mut canonical_names = FxHashMap::default();
+          rename_symbols_of_nested_scopes(
+            module,
+            *child_scope_id,
+            &mut stack,
+            &mut canonical_names,
+          );
+          canonical_names
+        })
+      })
+      .reduce(FxHashMap::default, |mut acc, canonical_names| {
+        acc.extend(canonical_names);
+        acc
+      });
+
+    self.canonical_names.extend(canonical_names_of_nested_scopes);
   }
 
   pub fn into_canonical_names(self) -> FxHashMap<SymbolRef, Atom> {

@@ -12,11 +12,11 @@ import { default as assert } from "assert";
 import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // foo.js
+function foo$1(a$1$1) {
+	console.log(a$1$1, a$1);
+}
 var init_foo = __esm(() => {
 	const a$1 = 1;
-	function foo$1(a$1$1) {
-		console.log(a$1$1, a$1);
-	}
 });
 
 // bar.js

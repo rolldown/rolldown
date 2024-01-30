@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::Allocator,
+  allocator::{self, Allocator},
   ast::{
     ast::{self, Statement},
     VisitMut,
@@ -95,6 +95,7 @@ impl<'ast, 'me: 'ast> Finalizer<'me, 'ast> {
 }
 
 impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
+  #[allow(clippy::too_many_lines)]
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     for directive in program.directives.iter_mut() {
       self.visit_directive(directive);
@@ -209,10 +210,22 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
         let esm_ref_name = self.canonical_name_for_runtime("__esm");
         let old_body = program.body.take_in(self.alloc);
 
+        let mut fn_stmts = allocator::Vec::new_in(self.alloc);
+        let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
+
+        // Hoist all top-level "var" and "function" declarations out of the closure
+        old_body.into_iter().for_each(|stmt| {
+          if stmt.is_function_declaration() {
+            fn_stmts.push(stmt);
+          } else {
+            stmts_inside_closure.push(stmt);
+          }
+        });
+        program.body.extend(fn_stmts);
         program.body.push(self.snippet.esm_wrapper_stmt(
           wrap_ref_name.clone(),
           esm_ref_name.clone(),
-          old_body,
+          stmts_inside_closure,
         ));
       }
       WrapKind::None => {}

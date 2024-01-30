@@ -51,6 +51,9 @@ pub trait StatementExt<'me, 'ast> {
   fn as_export_all_declaration(&self) -> Option<&ast::ExportAllDeclaration<'ast>>;
   fn as_export_named_declaration(&self) -> Option<&ast::ExportNamedDeclaration<'ast>>;
   fn as_export_named_declaration_mut(&mut self) -> Option<&mut ast::ExportNamedDeclaration<'ast>>;
+
+  fn is_function_declaration(&self) -> bool;
+  fn as_function_declaration(&self) -> Option<&ast::Function<'ast>>;
 }
 
 impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
@@ -113,5 +116,17 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
       }
     }
     None
+  }
+
+  fn as_function_declaration(&self) -> Option<&ast::Function<'ast>> {
+    if let ast::Statement::Declaration(ast::Declaration::FunctionDeclaration(func_decl)) = self {
+      Some(func_decl)
+    } else {
+      None
+    }
+  }
+
+  fn is_function_declaration(&self) -> bool {
+    self.as_function_declaration().is_some()
   }
 }

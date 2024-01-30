@@ -11,7 +11,9 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic-commonjs-into-es6
 import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // foo.js
-exports.bar = 123;
+var require_foo = __commonJS((exports, module) => {
+	exports.bar = 123;
+});
 
 export default require_foo();
 ```

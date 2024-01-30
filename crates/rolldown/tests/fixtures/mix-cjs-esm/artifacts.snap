@@ -15,17 +15,23 @@ module.exports = 1;
 const value$1 = 1;
 
 // foo.js
+var require_foo = __commonJS((exports, module) => {
+});
 
 // esm-export-cjs-require.js
 require('./foo');
 const value = 1;
 
 // esm-import-cjs-export.js
-var import_foo$1 = require_foo();
-module.exports = 1;
+var require_esm_import_cjs_export = __commonJS((exports, module) => {
+	var import_foo$1 = require_foo();
+	module.exports = 1;
+});
 
 // cjs.js
-module.exports = 1;
+var require_cjs = __commonJS((exports, module) => {
+	module.exports = 1;
+});
 
 // esm-import-cjs-require.js
 var import_cjs = require_cjs();

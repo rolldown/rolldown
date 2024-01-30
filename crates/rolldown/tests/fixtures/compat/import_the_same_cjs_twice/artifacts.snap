@@ -11,7 +11,9 @@ input_file: crates/rolldown/tests/fixtures/compat/import_the_same_cjs_twice
 import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // cjs.js
-module.exports.a = {};
+var require_cjs = __commonJS((exports, module) => {
+	module.exports.a = {};
+});
 
 // main.js
 var import_cjs = require_cjs();

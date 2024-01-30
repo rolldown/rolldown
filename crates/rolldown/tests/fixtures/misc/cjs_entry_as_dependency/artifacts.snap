@@ -12,8 +12,10 @@ import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 import { require_main2 } from "./main2_js.mjs";
 
 // main.js
-var import_main2 = require_main2();
-module.exports = import_main2.default;
+var require_main = __commonJS((exports, module) => {
+	var import_main2 = require_main2();
+	module.exports = import_main2.default;
+});
 
 export default require_main();
 ```
@@ -30,7 +32,9 @@ export default require_main2();
 import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // main2.js
-module.exports = {};
+var require_main2 = __commonJS((exports, module) => {
+	module.exports = {};
+});
 
 export { require_main2 };
 ```

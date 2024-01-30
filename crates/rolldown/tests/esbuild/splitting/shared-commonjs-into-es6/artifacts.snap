@@ -29,7 +29,9 @@ console.log(foo);
 import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // shared.js
-exports.foo = 123;
+var require_shared = __commonJS((exports, module) => {
+	exports.foo = 123;
+});
 
 export { require_shared };
 ```

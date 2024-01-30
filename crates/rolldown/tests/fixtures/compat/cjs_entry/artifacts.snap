@@ -11,7 +11,9 @@ input_file: crates/rolldown/tests/fixtures/compat/cjs_entry
 import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // main.js
-module.exports = 'main';
+var require_main = __commonJS((exports, module) => {
+	module.exports = 'main';
+});
 
 export default require_main();
 ```

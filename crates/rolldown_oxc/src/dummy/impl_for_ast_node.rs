@@ -208,3 +208,40 @@ impl<'ast> DummyIn<'ast> for ast::CallExpression<'ast> {
     }
   }
 }
+
+impl<'ast> DummyIn<'ast> for ast::ArrowExpression<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      expression: DummyIn::dummy(alloc),
+      generator: DummyIn::dummy(alloc),
+      r#async: DummyIn::dummy(alloc),
+      params: DummyIn::dummy(alloc),
+      body: DummyIn::dummy(alloc),
+      type_parameters: DummyIn::dummy(alloc),
+      return_type: DummyIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::FunctionBody<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      directives: DummyIn::dummy(alloc),
+      statements: DummyIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::FormalParameter<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      pattern: DummyIn::dummy(alloc),
+      accessibility: DummyIn::dummy(alloc),
+      readonly: DummyIn::dummy(alloc),
+      decorators: DummyIn::dummy(alloc),
+    }
+  }
+}

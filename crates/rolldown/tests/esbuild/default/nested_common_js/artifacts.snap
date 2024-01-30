@@ -11,9 +11,11 @@ input_file: crates/rolldown/tests/esbuild/default/nested_common_js
 import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // foo.js
-module.exports = function() {
-	return 123;
-};
+var require_foo = __commonJS((exports, module) => {
+	module.exports = function() {
+		return 123;
+	};
+});
 
 // entry.js
 function nestedScope() {

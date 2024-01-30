@@ -71,6 +71,7 @@ impl<'a> BundleStage<'a> {
             module,
             modules: &self.link_output.modules,
             linking_infos: &self.link_output.linking_infos,
+            runtime: &self.link_output.runtime,
           },
           ast,
         );

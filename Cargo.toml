@@ -63,6 +63,10 @@ missing_panics_doc = "allow"
 # Order doesn't really matter https://rust-lang.github.io/rust-clippy/master/index.html#/inconsistent_struct_constructor
 inconsistent_struct_constructor = "allow"
 
+# Single match is equally readable as if/else. https://rust-lang.github.io/rust-clippy/master/index.html#/single_match
+single_match = "allow"
+
+
 [workspace.dependencies]
 oxc            = { version = "0.5.0" }
 oxc_resolver   = { version = "1.2.0" }

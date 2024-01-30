@@ -11,9 +11,11 @@ input_file: crates/rolldown/tests/fixtures/reexport_commonjs
 import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.mjs";
 
 // commonjs.js
-module.exports = {
-	bar:1
-};
+var require_commonjs = __commonJS((exports, module) => {
+	module.exports = {
+		bar:1
+	};
+});
 
 // esm.js
 const value = 1;

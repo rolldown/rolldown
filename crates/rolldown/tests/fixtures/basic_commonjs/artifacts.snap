@@ -26,8 +26,10 @@ class hoisted_class {
 }
 
 // commonjs.js
-var value = require('./esm.js');
-module.exports = value;
+var require_commonjs$1 = __commonJS((exports, module) => {
+	var value = require('./esm.js');
+	module.exports = value;
+});
 
 // main.js
 var import_commonjs = require_commonjs$1();

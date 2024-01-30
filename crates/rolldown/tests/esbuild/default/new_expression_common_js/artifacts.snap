@@ -11,11 +11,13 @@ input_file: crates/rolldown/tests/esbuild/default/new_expression_common_js
 import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // foo.js
-class Foo {
-}
-module.exports = {
-	Foo:Foo
-};
+var require_foo = __commonJS((exports, module) => {
+	class Foo {
+	}
+	module.exports = {
+		Foo:Foo
+	};
+});
 
 // entry.js
 new require('./foo.js').Foo();

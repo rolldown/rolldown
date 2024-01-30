@@ -13,6 +13,7 @@ use rustc_hash::FxHashMap;
 use crate::bundler::{
   linker::linker_info::{LinkingInfo, LinkingInfoVec},
   module::{ModuleVec, NormalModule},
+  runtime::RuntimeModuleBrief,
 };
 
 use super::{ast_scope::AstScope, symbols::Symbols};
@@ -25,6 +26,7 @@ pub struct FinalizerContext<'me> {
   pub linking_infos: &'me LinkingInfoVec,
   pub symbols: &'me Symbols,
   pub canonical_names: &'me FxHashMap<SymbolRef, Atom>,
+  pub runtime: &'me RuntimeModuleBrief,
 }
 
 pub struct Finalizer<'me, 'ast> {
@@ -42,10 +44,10 @@ where
     self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
   }
 
-  // pub fn canonical_name_for_runtime(&self, name: &str) -> &Atom {
-  //   let symbol = self.ctx.graph.runtime.resolve_symbol(&Atom::new_inline(name));
-  //   self.canonical_name_for(symbol)
-  // }
+  pub fn canonical_name_for_runtime(&self, name: &str) -> &Atom {
+    let symbol = self.ctx.runtime.resolve_symbol(name);
+    self.canonical_name_for(symbol).unwrap()
+  }
 
   fn finalize_import_export_stmt(
     &self,
@@ -186,6 +188,29 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     for stmt in program.body.iter_mut() {
       self.visit_top_level_statement_mut(stmt);
     }
+
+    // check if we need to add wrapper
+    match self.ctx.linking_info.wrap_kind {
+      WrapKind::Cjs => {
+        let wrap_ref_name =
+          self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap()).unwrap();
+        let commonjs_ref_name = self.canonical_name_for_runtime("__commonJS");
+        let old_body = program.body.take_in(self.alloc);
+
+        program.body.push(self.snippet.commonjs_wrapper_stmt(
+          wrap_ref_name.clone(),
+          commonjs_ref_name.clone(),
+          old_body,
+        ));
+      }
+      _ => {}
+    }
+    // self.ctx.source.indent2(&self.indentor, &[]);
+    // let commonjs_ref_name = self.ctx.canonical_name_for_runtime("__commonJS");
+    // self.ctx.source.prepend(format!(
+    //   "var {wrap_ref_name} = {commonjs_ref_name}({{\n{}'{prettify_id}'(exports, module) {{\n",
+    //   self.indentor,
+    // ));
   }
 
   fn visit_binding_identifier(&mut self, ident: &mut ast::BindingIdentifier) {

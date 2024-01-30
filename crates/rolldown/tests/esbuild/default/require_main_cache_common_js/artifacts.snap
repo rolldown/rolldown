@@ -11,12 +11,16 @@ input_file: crates/rolldown/tests/esbuild/default/require_main_cache_common_js
 import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // is-main.js
-module.exports = require.main === module;
+var require_is_main = __commonJS((exports, module) => {
+	module.exports = require.main === module;
+});
 
 // entry.js
-console.log('is main:', require.main === module);
-console.log(require('./is-main'));
-console.log('cache:', require.cache);
+var require_entry = __commonJS((exports, module) => {
+	console.log('is main:', require.main === module);
+	console.log(require('./is-main'));
+	console.log('cache:', require.cache);
+});
 
 export default require_entry();
 ```

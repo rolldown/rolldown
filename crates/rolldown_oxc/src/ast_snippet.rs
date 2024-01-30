@@ -1,6 +1,6 @@
 use oxc::{
   allocator::{self, Allocator},
-  ast::ast,
+  ast::ast::{self, Statement},
   span::Atom,
 };
 
@@ -88,5 +88,56 @@ impl<'ast> AstSnippet<'ast> {
       }
       .into_in(self.alloc),
     )
+  }
+
+  /// ```js
+  ///  var require_foo = __commonJS((exports, module) => {
+  ///    ...
+  ///  });
+  /// ```
+  pub fn commonjs_wrapper_stmt(
+    &'ast self,
+    binding_name: Atom,
+    commonjs_name: Atom,
+    body: allocator::Vec<'ast, Statement<'ast>>,
+  ) -> ast::Statement<'ast> {
+    // (exports, module) => {}
+    let mut arrow_expr = ast::ArrowExpression {
+      body: ast::FunctionBody { statements: body, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
+      ..Dummy::dummy(self.alloc)
+    };
+    arrow_expr.params.items.push(ast::FormalParameter {
+      pattern: ast::BindingPattern {
+        kind: ast::BindingPatternKind::BindingIdentifier(
+          self.binding("exports".into()).into_in(self.alloc),
+        ),
+        ..Dummy::dummy(self.alloc)
+      },
+      ..Dummy::dummy(self.alloc)
+    });
+    arrow_expr.params.items.push(ast::FormalParameter {
+      pattern: ast::BindingPattern {
+        kind: ast::BindingPatternKind::BindingIdentifier(
+          self.binding("module".into()).into_in(self.alloc),
+        ),
+        ..Dummy::dummy(self.alloc)
+      },
+      ..Dummy::dummy(self.alloc)
+    });
+
+    //  __commonJS(...)
+    let mut commonjs_call_expr = self.call_expr(commonjs_name);
+    commonjs_call_expr.arguments.push(ast::Argument::Expression(ast::Expression::ArrowExpression(
+      arrow_expr.into_in(self.alloc),
+    )));
+
+    // var require_foo = ...
+
+    let var_decl_stmt = self.var_decl_stmt(
+      binding_name,
+      ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc)),
+    );
+
+    var_decl_stmt
   }
 }

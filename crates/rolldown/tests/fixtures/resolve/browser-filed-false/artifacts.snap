@@ -11,6 +11,8 @@ input_file: crates/rolldown/tests/fixtures/resolve/browser-filed-false
 import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // (ignored) node_modules/package/util.js
+var require_util = __commonJS((exports, module) => {
+});
 
 // node_modules/package/index.js
 var import_util = require_util();

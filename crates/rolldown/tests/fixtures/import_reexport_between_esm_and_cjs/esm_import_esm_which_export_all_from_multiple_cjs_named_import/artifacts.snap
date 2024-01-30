@@ -11,10 +11,14 @@ input_file: crates/rolldown/tests/fixtures/import_reexport_between_esm_and_cjs/e
 import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.mjs";
 
 // commonjs.js
-exports.a = 1;
+var require_commonjs = __commonJS((exports, module) => {
+	exports.a = 1;
+});
 
 // commonjs2.js
-exports.a = 2;
+var require_commonjs2 = __commonJS((exports, module) => {
+	exports.a = 2;
+});
 
 // proxy.js
 

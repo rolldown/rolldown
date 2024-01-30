@@ -11,7 +11,9 @@ input_file: crates/rolldown/tests/esbuild/default/require_parent_dir_common_js
 import { __commonJS } from "./_rolldown_runtime.mjs";
 
 // index.js
-module.exports = 123;
+var require_require_parent_dir_common_js_index = __commonJS((exports, module) => {
+	module.exports = 123;
+});
 
 // dir/entry.js
 console.log(require('..'));

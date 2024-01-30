@@ -11,9 +11,11 @@ input_file: crates/rolldown/tests/esbuild/default/nested_es6_from_common_js
 import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // foo.js
-exports.fn = function() {
-	return 123;
-};
+var require_foo = __commonJS((exports, module) => {
+	exports.fn = function() {
+		return 123;
+	};
+});
 
 // entry.js
 var import_foo = require_foo();

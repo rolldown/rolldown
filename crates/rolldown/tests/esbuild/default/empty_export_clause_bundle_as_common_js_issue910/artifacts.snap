@@ -11,6 +11,8 @@ input_file: crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_
 import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // types.mjs
+var init_types = __esm(() => {
+});
 
 // entry.js
 console.log(require('./types.mjs'));

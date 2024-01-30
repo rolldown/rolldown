@@ -11,14 +11,18 @@ input_file: crates/rolldown/tests/esbuild/default/common_js_from_es6
 import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // foo.js
-function foo$1() {
-	return 'foo';
-}
+var init_foo = __esm(() => {
+	function foo$1() {
+		return 'foo';
+	}
+});
 
 // bar.js
-function bar$1() {
-	return 'bar';
-}
+var init_bar = __esm(() => {
+	function bar$1() {
+		return 'bar';
+	}
+});
 
 // entry.js
 const {foo:foo} = require('./foo');

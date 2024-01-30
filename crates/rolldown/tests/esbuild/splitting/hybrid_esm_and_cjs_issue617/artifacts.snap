@@ -18,7 +18,9 @@ export { foo };
 import { __esm } from "./_rolldown_runtime.mjs";
 
 // a.js
-let foo;
+var init_a = __esm(() => {
+	let foo;
+});
 
 export { a_ns, foo, init_a };
 ```

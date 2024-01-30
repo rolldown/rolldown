@@ -11,48 +11,66 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_common_js
 import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // a.js
-const abc = undefined;
+var init_a = __esm(() => {
+	const abc = undefined;
+});
 
 // b.js
-const xyz = null;
+var init_b = __esm(() => {
+	const xyz = null;
+});
 
 // commonjs.js
-var commonjs_default = 123;
-var v = 234;
-let l = 234;
-const c = 234;
-function Fn() {
-}
-class Class {
-}
-init_b();
+var init_commonjs = __esm(() => {
+	var commonjs_default = 123;
+	var v = 234;
+	let l = 234;
+	const c = 234;
+	function Fn() {
+	}
+	class Class {
+	}
+	init_b();
+});
 
 // c.js
-class c_default {
-}
+var init_c = __esm(() => {
+	class c_default {
+	}
+});
 
 // d.js
-class Foo {
-}
-Foo.prop = 123;
+var init_d = __esm(() => {
+	class Foo {
+	}
+	Foo.prop = 123;
+});
 
 // e.js
-function e_default() {
-}
+var init_e = __esm(() => {
+	function e_default() {
+	}
+});
 
 // f.js
-function foo$1() {
-}
-foo$1.prop = 123;
+var init_f = __esm(() => {
+	function foo$1() {
+	}
+	foo$1.prop = 123;
+});
 
 // g.js
-async function g_default() {
-}
+var init_g = __esm(() => {
+	async function g_default() {
+	}
+});
 
 // h.js
-async function foo() {
-}
-foo.prop = 123;
+var init_h = __esm(() => {
+	async function foo() {
+	}
+	foo.prop = 123;
+});
 
 // entry.js
 require('./commonjs');

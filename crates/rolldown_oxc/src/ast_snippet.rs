@@ -140,4 +140,33 @@ impl<'ast> AstSnippet<'ast> {
 
     var_decl_stmt
   }
+
+  /// ```js
+  /// var init_foo = __esm(() => { ... });
+  /// ```
+  pub fn esm_wrapper_stmt(
+    &'ast self,
+    binding_name: Atom,
+    esm_fn_name: Atom,
+    body: allocator::Vec<'ast, Statement<'ast>>,
+  ) -> ast::Statement<'ast> {
+    // () => { ... }
+    let arrow_expr = ast::ArrowExpression {
+      body: ast::FunctionBody { statements: body, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
+      ..Dummy::dummy(self.alloc)
+    };
+
+    //  __esm(...)
+    let mut commonjs_call_expr = self.call_expr(esm_fn_name);
+    commonjs_call_expr.arguments.push(ast::Argument::Expression(ast::Expression::ArrowExpression(
+      arrow_expr.into_in(self.alloc),
+    )));
+
+    // var init_foo = ...
+
+    self.var_decl_stmt(
+      binding_name,
+      ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc)),
+    )
+  }
 }

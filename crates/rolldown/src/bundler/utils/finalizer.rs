@@ -203,14 +203,20 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
           old_body,
         ));
       }
-      _ => {}
+      WrapKind::Esm => {
+        let wrap_ref_name =
+          self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap()).unwrap();
+        let esm_ref_name = self.canonical_name_for_runtime("__esm");
+        let old_body = program.body.take_in(self.alloc);
+
+        program.body.push(self.snippet.esm_wrapper_stmt(
+          wrap_ref_name.clone(),
+          esm_ref_name.clone(),
+          old_body,
+        ));
+      }
+      WrapKind::None => {}
     }
-    // self.ctx.source.indent2(&self.indentor, &[]);
-    // let commonjs_ref_name = self.ctx.canonical_name_for_runtime("__commonJS");
-    // self.ctx.source.prepend(format!(
-    //   "var {wrap_ref_name} = {commonjs_ref_name}({{\n{}'{prettify_id}'(exports, module) {{\n",
-    //   self.indentor,
-    // ));
   }
 
   fn visit_binding_identifier(&mut self, ident: &mut ast::BindingIdentifier) {

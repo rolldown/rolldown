@@ -11,19 +11,21 @@ input_file: crates/rolldown/tests/fixtures/basic_commonjs
 import { __commonJS, __esm, __toCommonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // esm.js
-function esm_default_fn() {
-}
-const esm_named_var = 1;
-function esm_named_fn() {
-}
-class esm_named_class {
-}
-const hoisted_var = 1;
-function hoisted_fn() {
-	const bar = 1;
-}
-class hoisted_class {
-}
+var init_esm = __esm(() => {
+	function esm_default_fn() {
+	}
+	const esm_named_var = 1;
+	function esm_named_fn() {
+	}
+	class esm_named_class {
+	}
+	const hoisted_var = 1;
+	function hoisted_fn() {
+		const bar = 1;
+	}
+	class hoisted_class {
+	}
+});
 
 // commonjs.js
 var require_commonjs$1 = __commonJS((exports, module) => {

@@ -1,0 +1,25 @@
+[package]
+name    = "rolldown_sourcemap"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+homepage.workspace   = true
+license.workspace    = true
+edition.workspace    = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+bench   = false
+test    = false
+doctest = false
+
+[dependencies]
+parcel_sourcemap = { version = "2.1.1", features = ["json"] }
+rolldown_error   = { path = "../rolldown_error" }
+
+[dev_dependencies]
+serde_json = { workspace = true }

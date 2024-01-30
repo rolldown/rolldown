@@ -72,17 +72,23 @@ impl<'name> Renamer<'name> {
 
         let mut count = 1;
         let mut candidate_name = Cow::Borrowed(binding_name);
-        loop {
-          let is_shadowed =
-            stack.iter().any(|used_canonical_names| used_canonical_names.contains(&candidate_name));
+        match canonical_names.entry(binding_ref) {
+          std::collections::hash_map::Entry::Vacant(slot) => loop {
+            let is_shadowed = stack
+              .iter()
+              .any(|used_canonical_names| used_canonical_names.contains(&candidate_name));
 
-          if is_shadowed {
-            candidate_name = Cow::Owned(format!("{binding_name}${count}").into());
-            count += 1;
-          } else {
-            used_canonical_names_for_this_scope.insert(candidate_name.clone());
-            canonical_names.insert(binding_ref, candidate_name.into_owned());
-            break;
+            if is_shadowed {
+              candidate_name = Cow::Owned(format!("{binding_name}${count}").into());
+              count += 1;
+            } else {
+              used_canonical_names_for_this_scope.insert(candidate_name.clone());
+              slot.insert(candidate_name.into_owned());
+              break;
+            }
+          },
+          std::collections::hash_map::Entry::Occupied(_) => {
+            // The symbol is already renamed
           }
         }
       });

@@ -11,8 +11,8 @@ input_file: crates/rolldown/tests/esbuild/default/var_relocating_bundle
 // function-nested.js
 function x() {
 	if (true) {
-		var a$1;
-		for (var b$1; 0; )		;		for (var e$1 of  []) 		;		for (var {f:f$1, x:[g$1]} of  []) 		;		for (var h$1 in {}) 		;		for (var {j:j$1, x:[k$1]} in {}) 		;		function l() {
+		var a;
+		for (var b; 0; )		;		for (var e of  []) 		;		for (var {f:f, x:[g]} of  []) 		;		for (var h in {}) 		;		for (var {j:j, x:[k]} in {}) 		;		function l() {
 		}
 	}
 }

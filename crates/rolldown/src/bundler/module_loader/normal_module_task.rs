@@ -60,16 +60,12 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let load_result =
-      load_source(&self.ctx.plugin_driver, &self.resolved_path, &self.ctx.fs).await?;
-
-    if let Some(map) = load_result.map {
-      sourcemap_chain.push(map);
-    }
+    let source =
+      load_source(&self.ctx.plugin_driver, &self.resolved_path, &self.ctx.fs, &mut sourcemap_chain)
+        .await?;
 
     // Run plugin transform.
-    let source: Arc<str> =
-      transform_source(&self.ctx.plugin_driver, load_result.code).await?.into();
+    let source: Arc<str> = transform_source(&self.ctx.plugin_driver, source).await?.into();
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
     tracing::trace!("scan {:?}", self.resolved_path);

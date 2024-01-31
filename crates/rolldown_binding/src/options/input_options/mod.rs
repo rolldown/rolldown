@@ -1,16 +1,16 @@
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
-mod plugin;
-mod plugin_adapter;
-use crate::utils::{napi_error_ext::NapiErrorExt, JsCallback};
+
+use crate::{
+  options::plugin::JsAdapterPlugin,
+  utils::{napi_error_ext::NapiErrorExt, JsCallback},
+};
 use derivative::Derivative;
 use napi::JsFunction;
 use napi_derive::napi;
 
 use serde::Deserialize;
 
-use crate::options::input_options::plugin_adapter::JsAdapterPlugin;
-
-use self::plugin::PluginOptions;
+use super::plugin::PluginOptions;
 
 #[napi(object)]
 #[derive(Deserialize, Debug, Default)]

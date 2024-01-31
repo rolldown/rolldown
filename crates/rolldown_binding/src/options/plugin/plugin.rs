@@ -99,7 +99,7 @@ pub struct SourceResult {
 
 impl From<SourceResult> for rolldown::HookLoadOutput {
   fn from(value: SourceResult) -> Self {
-    Self { code: value.code, map: value.map.map(|value| value.into()) }
+    Self { code: value.code, map: value.map.map(Into::into) }
   }
 }
 

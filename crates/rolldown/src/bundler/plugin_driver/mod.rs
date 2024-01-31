@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_error::BuildError;
+use rolldown_sourcemap::SourceMap;
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
@@ -8,8 +9,8 @@ use crate::{
     args::{HookBuildEndArgs, RenderChunkArgs},
     plugin::{BoxPlugin, HookNoopReturn},
   },
-  HookLoadArgs, HookLoadReturn, HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs,
-  HookTransformReturn, Output, PluginContext,
+  HookLoadArgs, HookLoadReturn, HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, Output,
+  PluginContext,
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
@@ -48,13 +49,24 @@ impl PluginDriver {
     Ok(None)
   }
 
-  pub async fn transform(&self, args: &HookTransformArgs<'_>) -> HookTransformReturn {
+  pub async fn transform(
+    &self,
+    args: &HookTransformArgs<'_>,
+  ) -> Result<(String, Vec<SourceMap>), BuildError> {
+    let mut sourcemap_chain = vec![];
+    let mut code = args.code.to_string();
     for plugin in &self.plugins {
-      if let Some(r) = plugin.transform(&mut PluginContext::new(), args).await? {
-        return Ok(Some(r));
+      if let Some(r) = plugin
+        .transform(&mut PluginContext::new(), &HookTransformArgs { id: args.id, code: &code })
+        .await?
+      {
+        code = r.code;
+        if let Some(map) = r.map {
+          sourcemap_chain.push(map);
+        }
       }
     }
-    Ok(None)
+    Ok((code, sourcemap_chain))
   }
 
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs>) -> HookNoopReturn {

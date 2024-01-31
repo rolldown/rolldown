@@ -245,3 +245,9 @@ impl<'ast> DummyIn<'ast> for ast::FormalParameter<'ast> {
     }
   }
 }
+
+impl<'ast> DummyIn<'ast> for ast::SequenceExpression<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self { span: DummyIn::dummy(alloc), expressions: DummyIn::dummy(alloc) }
+  }
+}

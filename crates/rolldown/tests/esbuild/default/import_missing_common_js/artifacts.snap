@@ -18,6 +18,6 @@ var require_foo = __commonJS((exports, module) => {
 // entry.js
 var import_foo = require_foo();
 if (false) {
-	console.log(import_foo.default(import_foo.x, import_foo.y));
+	console.log((0,import_foo.default)(import_foo.x, import_foo.y));
 }
 ```

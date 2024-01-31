@@ -169,4 +169,35 @@ impl<'ast> AstSnippet<'ast> {
       ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc)),
     )
   }
+
+  /// ```js
+  /// (a, b)
+  /// ```
+  pub fn seq_expr2(
+    &self,
+    a: ast::Expression<'ast>,
+    b: ast::Expression<'ast>,
+  ) -> ast::Expression<'ast> {
+    let mut expressions = allocator::Vec::new_in(self.alloc);
+    expressions.push(a);
+    expressions.push(b);
+    ast::Expression::SequenceExpression(
+      ast::SequenceExpression { expressions, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
+    )
+  }
+
+  /// ```js
+  /// 42
+  /// ```
+  pub fn number_expr(&self, value: f64) -> ast::Expression<'ast> {
+    ast::Expression::NumberLiteral(
+      ast::NumberLiteral {
+        span: Dummy::dummy(self.alloc),
+        value,
+        raw: self.alloc.alloc(value.to_string()),
+        base: oxc::syntax::NumberBase::Decimal,
+      }
+      .into_in(self.alloc),
+    )
+  }
 }

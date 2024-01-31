@@ -80,6 +80,57 @@ where
     }
     None
   }
+
+  fn finalize_identifier_reference(&self, expr: &mut ast::Expression<'ast>, is_callee: bool) {
+    let ast::Expression::Identifier(id_ref) = expr else {
+      return;
+    };
+    let Some(reference_id) = id_ref.reference_id.get() else {
+      // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
+      return;
+    };
+
+    let Some(symbol_id) = self.scope.symbol_id_for(reference_id) else {
+      // we will hit this branch if the reference is for a global variable
+      return;
+    };
+
+    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+    let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
+    let symbol = self.ctx.symbols.get(canonical_ref);
+
+    if let Some(ns_alias) = &symbol.namespace_alias {
+      let canonical_ns_name = self
+        .canonical_name_for(ns_alias.namespace_ref)
+        .expect("namespace alias should have a canonical name");
+      let prop_name = &ns_alias.property_name;
+      if is_callee {
+        let callee = ast::Expression::MemberExpression(
+          self
+            .snippet
+            .identifier_member_expression(canonical_ns_name.clone(), prop_name.clone())
+            .into_in(self.alloc),
+        );
+        let wrapped_callee = self.snippet.seq_expr2(self.snippet.number_expr(0.0), callee);
+        *expr = wrapped_callee;
+      } else {
+        *expr = ast::Expression::MemberExpression(
+          self
+            .snippet
+            .identifier_member_expression(canonical_ns_name.clone(), prop_name.clone())
+            .into_in(self.alloc),
+        );
+      }
+    } else {
+      if let Some(canonical_name) = self.canonical_name_for(canonical_ref) {
+        if id_ref.name != canonical_name {
+          id_ref.name = canonical_name.clone();
+        }
+      } else {
+        // FIXME: all bindings should have a canonical name
+      }
+    }
+  }
 }
 // visit
 
@@ -253,41 +304,14 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
 
   #[allow(clippy::collapsible_else_if)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
-    if let ast::Expression::Identifier(id_ref) = expr {
-      if let Some(reference_id) = id_ref.reference_id.get() {
-        if let Some(symbol_id) = self.scope.symbol_id_for(reference_id) {
-          let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-          let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
-          let symbol = self.ctx.symbols.get(canonical_ref);
-
-          if let Some(ns_alias) = &symbol.namespace_alias {
-            let canonical_ns_name = self
-              .canonical_name_for(ns_alias.namespace_ref)
-              .expect("namespace alias should have a canonical name");
-            let prop_name = &ns_alias.property_name;
-            *expr = ast::Expression::MemberExpression(
-              self
-                .snippet
-                .identifier_member_expression(canonical_ns_name.clone(), prop_name.clone())
-                .into_in(self.alloc),
-            );
-          } else {
-            if let Some(canonical_name) = self.canonical_name_for(canonical_ref) {
-              if id_ref.name != canonical_name {
-                id_ref.name = canonical_name.clone();
-              }
-            } else {
-              // FIXME: all bindings should have a canonical name
-            }
-          }
-        } else {
-          // we will hit this branch if the reference is for a global variable
-        };
-      } else {
-        // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
+    if let ast::Expression::CallExpression(call_exp) = expr {
+      if let ast::Expression::Identifier(_) = &mut call_exp.callee {
+        self.finalize_identifier_reference(&mut call_exp.callee, true);
       }
-    } else {
-      self.visit_expression_match(expr);
     }
+
+    self.finalize_identifier_reference(expr, false);
+
+    self.visit_expression_match(expr);
   }
 }

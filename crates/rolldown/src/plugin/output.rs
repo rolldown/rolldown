@@ -1,3 +1,4 @@
+use rolldown_sourcemap::SourceMap;
 #[derive(Debug)]
 pub struct HookResolveIdOutput {
   pub id: String,
@@ -7,6 +8,7 @@ pub struct HookResolveIdOutput {
 #[derive(Debug)]
 pub struct HookLoadOutput {
   pub code: String,
+  pub map: Option<SourceMap>,
 }
 
 #[derive(Debug)]

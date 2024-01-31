@@ -34,6 +34,7 @@ pub struct NormalModuleBuilder {
   pub module_type: ModuleType,
   pub is_user_defined_entry: Option<bool>,
   pub pretty_path: Option<String>,
+  pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
 }
 
 impl NormalModuleBuilder {
@@ -57,6 +58,7 @@ impl NormalModuleBuilder {
       module_type: self.module_type,
       is_user_defined_entry: self.is_user_defined_entry.unwrap(),
       pretty_path: self.pretty_path.unwrap(),
+      sourcemap_chain: self.sourcemap_chain,
     }
   }
 }

@@ -4,6 +4,8 @@ use derivative::Derivative;
 use napi::JsFunction;
 use serde::Deserialize;
 
+use crate::options::sourcemap::SourceMap;
+
 #[napi_derive::napi(object)]
 #[derive(Deserialize, Default, Derivative)]
 #[serde(rename_all = "camelCase")]
@@ -92,11 +94,12 @@ impl From<ResolveIdResult> for rolldown::HookResolveIdOutput {
 #[derivative(Debug)]
 pub struct SourceResult {
   pub code: String,
+  pub map: Option<SourceMap>,
 }
 
 impl From<SourceResult> for rolldown::HookLoadOutput {
   fn from(value: SourceResult) -> Self {
-    Self { code: value.code }
+    Self { code: value.code, map: value.map.map(|value| value.into()) }
   }
 }
 

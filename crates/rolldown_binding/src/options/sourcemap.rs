@@ -17,19 +17,8 @@ pub struct SourceMap {
   // pub x_google_ignore_list: Option<Vec<u32>>,
 }
 
-impl From<SourceMap> for napi::Result<rolldown_sourcemap::SourceMap> {
+impl From<SourceMap> for rolldown_sourcemap::SourceMap {
   fn from(value: SourceMap) -> Self {
-    let mut map = rolldown_sourcemap::SourceMap::new(value.source_root.as_deref().unwrap_or(""));
-    if let Err(e) = map.add_vlq_map(
-      value.mappings.as_bytes(),
-      value.sources,
-      value.sources_content,
-      value.names,
-      0,
-      0,
-    ) {
-      return Err(napi::Error::from_reason(format!("{e}")));
-    }
-    Ok(map)
+    Self::new(value.mappings, value.names, value.source_root, value.sources, value.sources_content)
   }
 }

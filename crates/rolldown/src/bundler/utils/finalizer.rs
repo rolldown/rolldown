@@ -40,13 +40,13 @@ impl<'me, 'ast> Finalizer<'me, 'ast>
 where
   'me: 'ast,
 {
-  pub fn canonical_name_for(&self, symbol: SymbolRef) -> Option<&'me Atom> {
+  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Atom {
     self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
   }
 
   pub fn canonical_name_for_runtime(&self, name: &str) -> &Atom {
     let symbol = self.ctx.runtime.resolve_symbol(name);
-    self.canonical_name_for(symbol).unwrap()
+    self.canonical_name_for(symbol)
   }
 
   fn finalize_import_export_stmt(
@@ -63,9 +63,8 @@ where
       }
       WrapKind::Cjs => {
         // Replace the statement with something like `var import_foo = require_foo()`
-        let wrapper_ref_name =
-          self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap()).unwrap();
-        let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref).unwrap();
+        let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+        let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
         return Some(self.snippet.var_decl_stmt(
           binding_name_for_wrapper_call_ret.clone(),
           self.snippet.call_expr_expr(wrapper_ref_name.clone()),
@@ -73,8 +72,7 @@ where
       }
       // Replace the statement with something like `init_foo()`
       WrapKind::Esm => {
-        let wrapper_ref_name =
-          self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap()).unwrap();
+        let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
         return Some(self.snippet.call_expr_stmt(wrapper_ref_name.clone()));
       }
     }
@@ -100,9 +98,7 @@ where
     let symbol = self.ctx.symbols.get(canonical_ref);
 
     if let Some(ns_alias) = &symbol.namespace_alias {
-      let canonical_ns_name = self
-        .canonical_name_for(ns_alias.namespace_ref)
-        .expect("namespace alias should have a canonical name");
+      let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
       if is_callee {
         let callee = ast::Expression::MemberExpression(
@@ -122,12 +118,9 @@ where
         );
       }
     } else {
-      if let Some(canonical_name) = self.canonical_name_for(canonical_ref) {
-        if id_ref.name != canonical_name {
-          id_ref.name = canonical_name.clone();
-        }
-      } else {
-        // FIXME: all bindings should have a canonical name
+      let canonical_name = self.canonical_name_for(canonical_ref);
+      if id_ref.name != canonical_name {
+        id_ref.name = canonical_name.clone();
       }
     }
   }
@@ -136,11 +129,6 @@ where
 
 impl<'ast, 'me: 'ast> Finalizer<'me, 'ast> {
   fn visit_top_level_statement_mut(&mut self, stmt: &mut ast::Statement<'ast>) {
-    // FIXME: this is a hack to avoid renaming import statements
-    if stmt.is_import_declaration() {
-      return;
-    }
-
     self.visit_statement(stmt);
   }
 }
@@ -178,7 +166,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
           ast::ExportDefaultDeclarationKind::Expression(expr) => {
             // "export default foo;" => "var default = foo;"
             let canonical_name_for_default_export_ref =
-              self.canonical_name_for(self.ctx.module.default_export_ref).unwrap();
+              self.canonical_name_for(self.ctx.module.default_export_ref);
             program.body.push(self.snippet.var_decl_stmt(
               canonical_name_for_default_export_ref.clone(),
               expr.take_in(self.alloc),
@@ -189,7 +177,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             // "export default function foo() {}" => "function foo() {}"
             if func.id.is_none() {
               let canonical_name_for_default_export_ref =
-                self.canonical_name_for(self.ctx.module.default_export_ref).unwrap();
+                self.canonical_name_for(self.ctx.module.default_export_ref);
               func.id = Some(self.snippet.binding(canonical_name_for_default_export_ref.clone()));
             }
             let stmt = ast::Statement::Declaration(ast::Declaration::FunctionDeclaration(
@@ -202,7 +190,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             // "export default class Foo {}" => "class Foo {}"
             if class.id.is_none() {
               let canonical_name_for_default_export_ref =
-                self.canonical_name_for(self.ctx.module.default_export_ref).unwrap();
+                self.canonical_name_for(self.ctx.module.default_export_ref);
               class.id = Some(self.snippet.binding(canonical_name_for_default_export_ref.clone()));
             }
             let stmt = ast::Statement::Declaration(ast::Declaration::ClassDeclaration(
@@ -244,8 +232,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     // check if we need to add wrapper
     match self.ctx.linking_info.wrap_kind {
       WrapKind::Cjs => {
-        let wrap_ref_name =
-          self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap()).unwrap();
+        let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
         let commonjs_ref_name = self.canonical_name_for_runtime("__commonJS");
         let old_body = program.body.take_in(self.alloc);
 
@@ -256,8 +243,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
         ));
       }
       WrapKind::Esm => {
-        let wrap_ref_name =
-          self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap()).unwrap();
+        let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
         let esm_ref_name = self.canonical_name_for_runtime("__esm");
         let old_body = program.body.take_in(self.alloc);
 
@@ -290,12 +276,9 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
       let symbol = self.ctx.symbols.get(canonical_ref);
       assert!(symbol.namespace_alias.is_none());
-      if let Some(canonical_name) = self.canonical_name_for(symbol_ref) {
-        if ident.name != canonical_name {
-          ident.name = canonical_name.clone();
-        }
-      } else {
-        // FIXME: all bindings should have a canonical name
+      let canonical_name = self.canonical_name_for(symbol_ref);
+      if ident.name != canonical_name {
+        ident.name = canonical_name.clone();
       }
     } else {
       // Some `BindingIdentifier`s constructed by bundler don't have `SymbolId` and we just ignore them.

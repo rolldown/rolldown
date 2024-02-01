@@ -73,11 +73,11 @@ var init_h = __esm(() => {
 });
 
 // entry.js
-require('./commonjs');
-require('./c');
-require('./d');
-require('./e');
-require('./f');
-require('./g');
-require('./h');
+init_commonjs(),__toCommonJS(commonjs_ns);
+init_c(),__toCommonJS(c_ns);
+init_d(),__toCommonJS(d_ns);
+init_e(),__toCommonJS(e_ns);
+init_f(),__toCommonJS(f_ns);
+init_g(),__toCommonJS(g_ns);
+init_h(),__toCommonJS(h_ns);
 ```

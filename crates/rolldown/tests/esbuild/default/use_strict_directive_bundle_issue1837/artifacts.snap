@@ -16,5 +16,5 @@ import { __commonJS } from "./_rolldown_runtime.mjs";
 });
 
 // entry.js
-console.log(require('./cjs'));
+console.log(require_cjs());
 ```

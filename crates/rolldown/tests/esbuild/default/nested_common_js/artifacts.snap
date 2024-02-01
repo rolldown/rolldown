@@ -19,7 +19,7 @@ var require_foo = __commonJS((exports, module) => {
 
 // entry.js
 function nestedScope() {
-	const fn = require('./foo');
+	const fn = require_foo();
 	console.log(fn());
 }
 nestedScope();

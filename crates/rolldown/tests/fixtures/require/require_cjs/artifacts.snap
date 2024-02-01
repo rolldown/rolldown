@@ -16,6 +16,6 @@ var require_cjs = __commonJS((exports, module) => {
 });
 
 // main.js
-require('./cjs.js');
-var cjs = require('./cjs.js');
+require_cjs();
+var cjs = require_cjs();
 ```

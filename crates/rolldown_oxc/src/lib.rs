@@ -10,4 +10,4 @@ pub use crate::{
   ast_snippet::AstSnippet, dummy::Dummy, from_in::FromIn, into_in::IntoIn, take_in::TakeIn,
 };
 pub use compiler::{OxcCompiler, OxcProgram};
-pub use ext::{BindingIdentifierExt, BindingPatternExt, StatementExt};
+pub use ext::{BindingIdentifierExt, BindingPatternExt, ExpressionExt, StatementExt};

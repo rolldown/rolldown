@@ -29,7 +29,7 @@ var init_esm = __esm(() => {
 
 // commonjs.js
 var require_commonjs$1 = __commonJS((exports, module) => {
-	var value = require('./esm.js');
+	var value = (init_esm(),__toCommonJS(esm_ns));
 	module.exports = value;
 });
 

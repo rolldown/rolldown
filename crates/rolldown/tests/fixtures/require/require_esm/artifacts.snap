@@ -15,6 +15,6 @@ var init_esm = __esm(() => {
 });
 
 // main.js
-require('./esm.js');
-var esm = require('./esm.js');
+init_esm(),__toCommonJS(esm_ns);
+var esm = (init_esm(),__toCommonJS(esm_ns));
 ```

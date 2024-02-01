@@ -25,7 +25,7 @@ var init_bar = __esm(() => {
 });
 
 // entry.js
-const {foo:foo} = require('./foo');
+const {foo:foo} = (init_foo(),__toCommonJS(foo_ns));
 console.log(foo(), bar());
-const {bar:bar} = require('./bar');
+const {bar:bar} = (init_bar(),__toCommonJS(bar_ns));
 ```

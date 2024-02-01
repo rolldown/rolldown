@@ -15,5 +15,5 @@ var init_types = __esm(() => {
 });
 
 // entry.js
-console.log(require('./types.mjs'));
+console.log((init_types(),__toCommonJS(types_ns)));
 ```

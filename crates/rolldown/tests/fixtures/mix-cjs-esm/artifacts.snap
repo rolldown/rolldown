@@ -19,7 +19,7 @@ var require_foo = __commonJS((exports, module) => {
 });
 
 // esm-export-cjs-require.js
-require('./foo');
+require_foo();
 const value = 1;
 
 // esm-import-cjs-export.js
@@ -35,7 +35,7 @@ var require_cjs = __commonJS((exports, module) => {
 
 // esm-import-cjs-require.js
 var import_cjs = require_cjs();
-require('./foo');
+require_foo();
 console.log(import_cjs.a);
 
 // main.js

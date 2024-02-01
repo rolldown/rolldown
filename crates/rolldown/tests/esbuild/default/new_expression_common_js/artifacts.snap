@@ -20,5 +20,5 @@ var require_foo = __commonJS((exports, module) => {
 });
 
 // entry.js
-new require('./foo.js').Foo();
+new require_foo().Foo();
 ```

@@ -16,5 +16,5 @@ var require_require_parent_dir_common_js_index = __commonJS((exports, module) =>
 });
 
 // dir/entry.js
-console.log(require('..'));
+console.log(require_require_parent_dir_common_js_index());
 ```

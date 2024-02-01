@@ -29,5 +29,5 @@ var bar_default = {
 const a = 2;
 const {foo:foo} = bar_default;
 assert.strictEqual(typeof foo, 'function');
-require('./foo');
+init_foo(),__toCommonJS(foo_ns);
 ```

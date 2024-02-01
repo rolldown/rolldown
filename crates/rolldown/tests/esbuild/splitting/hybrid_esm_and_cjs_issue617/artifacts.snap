@@ -31,7 +31,7 @@ import { __toCommonJS } from "./_rolldown_runtime.mjs";
 import { a_ns, init_a } from "./a_js.mjs";
 
 // b.js
-let bar = require('./a');
+let bar = (init_a(),__toCommonJS(a_ns));
 
 export { bar };
 ```

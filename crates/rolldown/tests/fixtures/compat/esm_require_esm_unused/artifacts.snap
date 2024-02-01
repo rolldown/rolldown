@@ -16,5 +16,5 @@ var init_esm = __esm(() => {
 });
 
 // main.js
-require('./esm');
+init_esm(),__toCommonJS(esm_ns);
 ```

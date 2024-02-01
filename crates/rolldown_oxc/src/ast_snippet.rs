@@ -51,6 +51,16 @@ impl<'ast> AstSnippet<'ast> {
     ast::Expression::CallExpression(self.call_expr(name).into_in(self.alloc))
   }
 
+  /// `name(arg)`
+  pub fn call_expr_with_arg_expr(&self, name: Atom, arg: Atom) -> ast::Expression<'_> {
+    let arg = ast::Argument::Expression(ast::Expression::Identifier(
+      self.binding_reference(arg).into_in(self.alloc),
+    ));
+    let mut call_expr = self.call_expr(name);
+    call_expr.arguments.push(arg);
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+  }
+
   /// `name()`
   pub fn call_expr_stmt(&self, name: Atom) -> ast::Statement<'_> {
     ast::Statement::ExpressionStatement(
@@ -173,7 +183,7 @@ impl<'ast> AstSnippet<'ast> {
   /// ```js
   /// (a, b)
   /// ```
-  pub fn seq_expr2(
+  pub fn seq2_in_paren_expr(
     &self,
     a: ast::Expression<'ast>,
     b: ast::Expression<'ast>,

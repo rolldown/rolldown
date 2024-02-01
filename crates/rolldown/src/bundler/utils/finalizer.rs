@@ -1,18 +1,18 @@
 use oxc::{
   allocator::{self, Allocator},
   ast::{
-    ast::{self, Statement},
+    ast::{self, IdentifierReference, Statement},
     VisitMut,
   },
   span::Atom,
 };
-use rolldown_common::{ImportRecordId, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc::{AstSnippet, IntoIn, StatementExt, TakeIn};
+use rolldown_common::{ExportsKind, ImportRecordId, ModuleId, SymbolRef, WrapKind};
+use rolldown_oxc::{AstSnippet, ExpressionExt, IntoIn, StatementExt, TakeIn};
 use rustc_hash::FxHashMap;
 
 use crate::bundler::{
   linker::linker_info::{LinkingInfo, LinkingInfoVec},
-  module::{ModuleVec, NormalModule},
+  module::{Module, ModuleVec, NormalModule},
   runtime::RuntimeModuleBrief,
 };
 
@@ -40,6 +40,15 @@ impl<'me, 'ast> Finalizer<'me, 'ast>
 where
   'me: 'ast,
 {
+  pub fn is_global_identifier_reference(&self, id_ref: &IdentifierReference) -> bool {
+    let Some(reference_id) = id_ref.reference_id.get() else {
+      // Some `IdentifierReference`s constructed by bundler don't have a `ReferenceId`. They might be global variables.
+      // But we don't care about them in this method. This method is only used to check if a `IdentifierReference` from user code is a global variable.
+      return false;
+    };
+    self.scope.is_unresolved(reference_id)
+  }
+
   pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Atom {
     self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
   }
@@ -107,7 +116,7 @@ where
             .identifier_member_expression(canonical_ns_name.clone(), prop_name.clone())
             .into_in(self.alloc),
         );
-        let wrapped_callee = self.snippet.seq_expr2(self.snippet.number_expr(0.0), callee);
+        let wrapped_callee = self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0), callee);
         *expr = wrapped_callee;
       } else {
         *expr = ast::Expression::MemberExpression(
@@ -285,16 +294,47 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     }
   }
 
+  fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
+    if let ast::Expression::Identifier(_) = &mut expr.callee {
+      self.finalize_identifier_reference(&mut expr.callee, true);
+    }
+
+    // visit children
+    for arg in expr.arguments.iter_mut() {
+      self.visit_argument(arg);
+    }
+    self.visit_expression(&mut expr.callee);
+    if let Some(parameters) = &mut expr.type_parameters {
+      self.visit_ts_type_parameter_instantiation(parameters);
+    }
+  }
+
   #[allow(clippy::collapsible_else_if)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
-    if let ast::Expression::CallExpression(call_exp) = expr {
-      if let ast::Expression::Identifier(_) = &mut call_exp.callee {
-        self.finalize_identifier_reference(&mut call_exp.callee, true);
+    if let Some(call_expr) = expr.as_call_expression() {
+      if let ast::Expression::Identifier(callee) = &call_expr.callee {
+        if callee.name == "require" && self.is_global_identifier_reference(callee) {
+          let rec_id = self.ctx.module.imports[&call_expr.span];
+          let rec = &self.ctx.module.import_records[rec_id];
+          if let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] {
+            let importee_linking_info = &self.ctx.linking_infos[importee.id];
+            let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+            if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+              *expr = self.snippet.call_expr_expr(wrap_ref_name.clone());
+            } else {
+              let ns_name = self.canonical_name_for(importee.namespace_symbol);
+              let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
+              *expr = self.snippet.seq2_in_paren_expr(
+                self.snippet.call_expr_expr(wrap_ref_name.clone()),
+                self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name.clone(), ns_name.clone()),
+              );
+            }
+          }
+        }
       }
     }
 
     self.finalize_identifier_reference(expr, false);
-
     self.visit_expression_match(expr);
   }
 }

@@ -16,5 +16,5 @@ var require_dir_index = __commonJS((exports, module) => {
 });
 
 // entry.js
-console.log(require('./dir'));
+console.log(require_dir_index());
 ```

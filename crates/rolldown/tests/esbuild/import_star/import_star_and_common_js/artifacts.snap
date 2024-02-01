@@ -17,6 +17,6 @@ var init_foo = __esm(() => {
 
 // entry.js
 init_foo();
-const ns2 = require('./foo');
+const ns2 = (init_foo(),__toCommonJS(foo_ns));
 console.log(foo_ns.foo, ns2.foo);
 ```

@@ -18,7 +18,7 @@ var require_is_main = __commonJS((exports, module) => {
 // entry.js
 var require_entry = __commonJS((exports, module) => {
 	console.log('is main:', require.main === module);
-	console.log(require('./is-main'));
+	console.log(require_is_main());
 	console.log('cache:', require.cache);
 });
 

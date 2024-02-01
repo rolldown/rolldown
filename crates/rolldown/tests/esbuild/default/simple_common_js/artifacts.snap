@@ -18,6 +18,6 @@ var require_foo = __commonJS((exports, module) => {
 });
 
 // entry.js
-const fn = require('./foo');
+const fn = require_foo();
 console.log(fn());
 ```

@@ -251,3 +251,9 @@ impl<'ast> DummyIn<'ast> for ast::SequenceExpression<'ast> {
     Self { span: DummyIn::dummy(alloc), expressions: DummyIn::dummy(alloc) }
   }
 }
+
+impl<'ast> DummyIn<'ast> for ast::ParenthesizedExpression<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self { span: DummyIn::dummy(alloc), expression: DummyIn::dummy(alloc) }
+  }
+}

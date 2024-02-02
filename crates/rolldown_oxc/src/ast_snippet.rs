@@ -16,31 +16,46 @@ impl<'ast> AstSnippet<'ast> {
     Self { alloc }
   }
 
-  pub fn binding(&self, name: Atom) -> ast::BindingIdentifier {
+  pub fn id(&self, name: Atom) -> ast::BindingIdentifier {
     ast::BindingIdentifier { name, ..Dummy::dummy(self.alloc) }
   }
 
-  fn binding_reference(&self, name: Atom) -> ast::IdentifierReference {
+  pub fn id_ref(&self, name: Atom) -> ast::IdentifierReference {
     ast::IdentifierReference { name, ..Dummy::dummy(self.alloc) }
   }
 
+  pub fn id_ref_expr(&self, name: Atom) -> ast::Expression<'_> {
+    ast::Expression::Identifier(self.id_ref(name).into_in(self.alloc))
+  }
+
   /// `[object].[property]`
-  pub fn identifier_member_expression(
+  pub fn literal_prop_access_member_expr(
     &self,
     object: Atom,
     property: Atom,
   ) -> ast::MemberExpression<'_> {
     ast::MemberExpression::StaticMemberExpression(ast::StaticMemberExpression {
-      object: ast::Expression::Identifier(self.binding_reference(object).into_in(self.alloc)),
+      object: ast::Expression::Identifier(self.id_ref(object).into_in(self.alloc)),
       property: ast::IdentifierName { name: property, ..Dummy::dummy(self.alloc) },
       ..Dummy::dummy(self.alloc)
     })
   }
 
+  /// `[object].[property]`
+  pub fn literal_prop_access_member_expr_expr(
+    &self,
+    object: Atom,
+    property: Atom,
+  ) -> ast::Expression<'_> {
+    ast::Expression::MemberExpression(
+      self.literal_prop_access_member_expr(object, property).into_in(self.alloc),
+    )
+  }
+
   /// `name()`
   pub fn call_expr(&self, name: Atom) -> ast::CallExpression<'_> {
     ast::CallExpression {
-      callee: ast::Expression::Identifier(self.binding_reference(name).into_in(self.alloc)),
+      callee: ast::Expression::Identifier(self.id_ref(name).into_in(self.alloc)),
       arguments: allocator::Vec::new_in(self.alloc),
       ..Dummy::dummy(self.alloc)
     }
@@ -53,9 +68,8 @@ impl<'ast> AstSnippet<'ast> {
 
   /// `name(arg)`
   pub fn call_expr_with_arg_expr(&self, name: Atom, arg: Atom) -> ast::Expression<'_> {
-    let arg = ast::Argument::Expression(ast::Expression::Identifier(
-      self.binding_reference(arg).into_in(self.alloc),
-    ));
+    let arg =
+      ast::Argument::Expression(ast::Expression::Identifier(self.id_ref(arg).into_in(self.alloc)));
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg);
     ast::Expression::CallExpression(call_expr.into_in(self.alloc))
@@ -119,7 +133,7 @@ impl<'ast> AstSnippet<'ast> {
     arrow_expr.params.items.push(ast::FormalParameter {
       pattern: ast::BindingPattern {
         kind: ast::BindingPatternKind::BindingIdentifier(
-          self.binding("exports".into()).into_in(self.alloc),
+          self.id("exports".into()).into_in(self.alloc),
         ),
         ..Dummy::dummy(self.alloc)
       },
@@ -128,7 +142,7 @@ impl<'ast> AstSnippet<'ast> {
     arrow_expr.params.items.push(ast::FormalParameter {
       pattern: ast::BindingPattern {
         kind: ast::BindingPatternKind::BindingIdentifier(
-          self.binding("module".into()).into_in(self.alloc),
+          self.id("module".into()).into_in(self.alloc),
         ),
         ..Dummy::dummy(self.alloc)
       },
@@ -191,8 +205,12 @@ impl<'ast> AstSnippet<'ast> {
     let mut expressions = allocator::Vec::new_in(self.alloc);
     expressions.push(a);
     expressions.push(b);
-    ast::Expression::SequenceExpression(
+    let seq_expr = ast::Expression::SequenceExpression(
       ast::SequenceExpression { expressions, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
+    );
+    ast::Expression::ParenthesizedExpression(
+      ast::ParenthesizedExpression { expression: seq_expr, ..Dummy::dummy(self.alloc) }
+        .into_in(self.alloc),
     )
   }
 

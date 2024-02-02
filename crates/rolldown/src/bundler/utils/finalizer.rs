@@ -7,7 +7,7 @@ use oxc::{
   span::Atom,
 };
 use rolldown_common::{ExportsKind, ImportRecordId, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc::{AstSnippet, ExpressionExt, IntoIn, StatementExt, TakeIn};
+use rolldown_oxc::{AstSnippet, ExpressionExt, StatementExt, TakeIn};
 use rustc_hash::FxHashMap;
 
 use crate::bundler::{
@@ -88,19 +88,20 @@ where
     None
   }
 
-  fn finalize_identifier_reference(&self, expr: &mut ast::Expression<'ast>, is_callee: bool) {
-    let ast::Expression::Identifier(id_ref) = expr else {
-      return;
-    };
-    let Some(reference_id) = id_ref.reference_id.get() else {
-      // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
-      return;
-    };
+  /// return `None` if
+  /// - the reference is for a global variable/the reference doesn't have a `SymbolId`
+  /// - the reference doesn't have a `ReferenceId`
+  /// - the canonical name is the same as the original name
+  fn generate_finalized_expr_for_reference(
+    &self,
+    id_ref: &IdentifierReference,
+    is_callee: bool,
+  ) -> Option<ast::Expression<'ast>> {
+    // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
+    let reference_id = id_ref.reference_id.get()?;
 
-    let Some(symbol_id) = self.scope.symbol_id_for(reference_id) else {
-      // we will hit this branch if the reference is for a global variable
-      return;
-    };
+    // we will hit this branch if the reference is for a global variable
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
     let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
@@ -109,29 +110,25 @@ where
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      if is_callee {
-        let callee = ast::Expression::MemberExpression(
-          self
-            .snippet
-            .identifier_member_expression(canonical_ns_name.clone(), prop_name.clone())
-            .into_in(self.alloc),
-        );
-        let wrapped_callee = self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0), callee);
-        *expr = wrapped_callee;
+      let access_expr = self
+        .snippet
+        .literal_prop_access_member_expr_expr(canonical_ns_name.clone(), prop_name.clone());
+
+      return Some(if is_callee {
+        let wrapped_callee =
+          self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0), access_expr);
+        wrapped_callee
       } else {
-        *expr = ast::Expression::MemberExpression(
-          self
-            .snippet
-            .identifier_member_expression(canonical_ns_name.clone(), prop_name.clone())
-            .into_in(self.alloc),
-        );
-      }
-    } else {
-      let canonical_name = self.canonical_name_for(canonical_ref);
-      if id_ref.name != canonical_name {
-        id_ref.name = canonical_name.clone();
-      }
+        access_expr
+      });
     }
+
+    let canonical_name = self.canonical_name_for(canonical_ref);
+    if id_ref.name != canonical_name {
+      return Some(self.snippet.id_ref_expr(canonical_name.clone()));
+    }
+
+    None
   }
 }
 // visit
@@ -187,7 +184,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             if func.id.is_none() {
               let canonical_name_for_default_export_ref =
                 self.canonical_name_for(self.ctx.module.default_export_ref);
-              func.id = Some(self.snippet.binding(canonical_name_for_default_export_ref.clone()));
+              func.id = Some(self.snippet.id(canonical_name_for_default_export_ref.clone()));
             }
             let stmt = ast::Statement::Declaration(ast::Declaration::FunctionDeclaration(
               func.take_in(self.alloc),
@@ -200,7 +197,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             if class.id.is_none() {
               let canonical_name_for_default_export_ref =
                 self.canonical_name_for(self.ctx.module.default_export_ref);
-              class.id = Some(self.snippet.binding(canonical_name_for_default_export_ref.clone()));
+              class.id = Some(self.snippet.id(canonical_name_for_default_export_ref.clone()));
             }
             let stmt = ast::Statement::Declaration(ast::Declaration::ClassDeclaration(
               class.take_in(self.alloc),
@@ -295,8 +292,10 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
   }
 
   fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
-    if let ast::Expression::Identifier(_) = &mut expr.callee {
-      self.finalize_identifier_reference(&mut expr.callee, true);
+    if let ast::Expression::Identifier(id_ref) = &mut expr.callee {
+      if let Some(new_name) = self.generate_finalized_expr_for_reference(id_ref, true) {
+        expr.callee = new_name;
+      }
     }
 
     // visit children
@@ -334,7 +333,76 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       }
     }
 
-    self.finalize_identifier_reference(expr, false);
+    if let Some(id_ref) = expr.as_identifier() {
+      if let Some(new_expr) = self.generate_finalized_expr_for_reference(id_ref, false) {
+        *expr = new_expr;
+      }
+    }
+
+    // visit children
     self.visit_expression_match(expr);
+  }
+
+  fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {
+    // rewrite `const val = { a };` to `const val = { a: a.xxx }`
+    match prop.value {
+      ast::Expression::Identifier(ref id_ref) if prop.shorthand => {
+        if let Some(expr) = self.generate_finalized_expr_for_reference(id_ref, true) {
+          prop.value = expr;
+          prop.shorthand = false;
+        }
+      }
+      _ => {}
+    }
+
+    // visit children
+    self.visit_property_key(&mut prop.key);
+    self.visit_expression(&mut prop.value);
+    if let Some(init) = &mut prop.init {
+      self.visit_expression(init);
+    }
+  }
+
+  fn visit_object_pattern(&mut self, pat: &mut ast::ObjectPattern<'ast>) {
+    // visit children
+    for prop in pat.properties.iter_mut() {
+      match &mut prop.value.kind {
+        // Rewrite `const { a } = obj;`` to `const { a: a$1 } = obj;`
+        ast::BindingPatternKind::BindingIdentifier(ident) if prop.shorthand => {
+          if let Some(symbol_id) = ident.symbol_id.get() {
+            let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
+            if ident.name != canonical_name {
+              ident.name = canonical_name.clone();
+              prop.shorthand = false;
+            }
+          }
+        }
+        // Rewrite `const { a = 1 } = obj;`` to `const { a: a$1 = 1 } = obj;`
+        ast::BindingPatternKind::AssignmentPattern(assign_pat)
+          if prop.shorthand
+            && matches!(assign_pat.left.kind, ast::BindingPatternKind::BindingIdentifier(_)) =>
+        {
+          let ast::BindingPatternKind::BindingIdentifier(ident) = &mut assign_pat.left.kind else {
+            unreachable!()
+          };
+          if let Some(symbol_id) = ident.symbol_id.get() {
+            let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
+            if ident.name != canonical_name {
+              ident.name = canonical_name.clone();
+              prop.shorthand = false;
+            }
+          }
+        }
+        _ => {}
+      }
+    }
+
+    // visit children
+    for prop in pat.properties.iter_mut() {
+      self.visit_binding_property(prop);
+    }
+    if let Some(rest) = &mut pat.rest {
+      self.visit_rest_element(rest);
+    }
   }
 }

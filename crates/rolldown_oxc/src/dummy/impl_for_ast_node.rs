@@ -5,6 +5,7 @@ use oxc::{
   ast::ast::{self, Modifiers},
   semantic::ReferenceFlag,
   span::{Atom, SourceType},
+  syntax,
 };
 
 use crate::Dummy as DummyIn;
@@ -253,5 +254,34 @@ impl<'ast> DummyIn<'ast> for ast::SequenceExpression<'ast> {
 impl<'ast> DummyIn<'ast> for ast::ParenthesizedExpression<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
     Self { span: DummyIn::dummy(alloc), expression: DummyIn::dummy(alloc) }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::AssignmentExpression<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      operator: DummyIn::dummy(alloc),
+      left: DummyIn::dummy(alloc),
+      right: DummyIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for syntax::operator::AssignmentOperator {
+  fn dummy(_alloc: &'ast Allocator) -> Self {
+    Self::Assign
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::AssignmentTarget<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self::SimpleAssignmentTarget(DummyIn::dummy(alloc))
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::SimpleAssignmentTarget<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self::AssignmentTargetIdentifier(DummyIn::dummy(alloc))
   }
 }

@@ -7,7 +7,9 @@ use oxc::{
   span::Atom,
 };
 use rolldown_common::{ExportsKind, ImportRecordId, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc::{AstSnippet, ExpressionExt, StatementExt, TakeIn};
+use rolldown_oxc::{
+  AstSnippet, BindingPatternExt, Dummy, ExpressionExt, IntoIn, StatementExt, TakeIn,
+};
 use rustc_hash::FxHashMap;
 
 use crate::bundler::{
@@ -251,10 +253,137 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
         let old_body = program.body.take_in(self.alloc);
 
         let mut fn_stmts = allocator::Vec::new_in(self.alloc);
+        let mut hoisted_names = vec![];
         let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
 
         // Hoist all top-level "var" and "function" declarations out of the closure
-        old_body.into_iter().for_each(|stmt| {
+        old_body.into_iter().for_each(|mut stmt| {
+          match &mut stmt {
+            ast::Statement::Declaration(decl) => match decl {
+              ast::Declaration::VariableDeclaration(var_decl) => {
+                var_decl.declarations.iter_mut().for_each(|var_decl| {
+                  var_decl.id.binding_identifiers().iter().for_each(|id| {
+                    hoisted_names.push(id.name.clone());
+                  });
+                  if let Some(init_expr) = &mut var_decl.init {
+                    let left = match &var_decl.id.kind {
+                      ast::BindingPatternKind::BindingIdentifier(id) => {
+                        self.snippet.simple_id_assignment_target(id.name.clone())
+                      }
+                      ast::BindingPatternKind::ObjectPattern(_obj_pat) => todo!(),
+                      ast::BindingPatternKind::ArrayPattern(_) => todo!(),
+                      ast::BindingPatternKind::AssignmentPattern(_) => todo!(),
+                    };
+                    stmts_inside_closure.push(ast::Statement::ExpressionStatement(
+                      ast::ExpressionStatement {
+                        expression: ast::Expression::AssignmentExpression(
+                          ast::AssignmentExpression {
+                            left,
+                            right: init_expr.take_in(self.alloc),
+                            ..Dummy::dummy(self.alloc)
+                          }
+                          .into_in(self.alloc),
+                        ),
+                        ..Dummy::dummy(self.alloc)
+                      }
+                      .into_in(self.alloc),
+                    ));
+                  }
+                });
+                return;
+              }
+              ast::Declaration::ClassDeclaration(cls_decl) => {
+                let cls_name = cls_decl.id.take().expect("should have a name at this point").name;
+                hoisted_names.push(cls_name.clone());
+                stmts_inside_closure.push(ast::Statement::ExpressionStatement(
+                  ast::ExpressionStatement {
+                    expression: ast::Expression::AssignmentExpression(
+                      ast::AssignmentExpression {
+                        left: self.snippet.simple_id_assignment_target(cls_name),
+                        right: ast::Expression::ClassExpression(cls_decl.take_in(self.alloc)),
+                        ..Dummy::dummy(self.alloc)
+                      }
+                      .into_in(self.alloc),
+                    ),
+                    ..Dummy::dummy(self.alloc)
+                  }
+                  .into_in(self.alloc),
+                ));
+                return;
+              }
+              ast::Declaration::FunctionDeclaration(_) => {
+                // handled above
+              }
+              ast::Declaration::UsingDeclaration(_) => unimplemented!(),
+              _ => {}
+            },
+            ast::Statement::ModuleDeclaration(module_decl) => match module_decl.0 {
+              ast::ModuleDeclaration::ExportNamedDeclaration(named_export) => {
+                if let Some(decl) = &mut named_export.declaration {
+                  match decl {
+                    ast::Declaration::VariableDeclaration(var_decl) => {
+                      var_decl.declarations.iter_mut().for_each(|var_decl| {
+                        var_decl.id.binding_identifiers().iter().for_each(|id| {
+                          hoisted_names.push(id.name.clone());
+                        });
+                        if let Some(init_expr) = &mut var_decl.init {
+                          let left = match &var_decl.id.kind {
+                            ast::BindingPatternKind::BindingIdentifier(id) => {
+                              self.snippet.simple_id_assignment_target(id.name.clone())
+                            }
+                            ast::BindingPatternKind::ObjectPattern(_obj_pat) => todo!(),
+                            ast::BindingPatternKind::ArrayPattern(_) => todo!(),
+                            ast::BindingPatternKind::AssignmentPattern(_) => todo!(),
+                          };
+                          stmts_inside_closure.push(ast::Statement::ExpressionStatement(
+                            ast::ExpressionStatement {
+                              expression: ast::Expression::AssignmentExpression(
+                                ast::AssignmentExpression {
+                                  left,
+                                  right: init_expr.take_in(self.alloc),
+                                  ..Dummy::dummy(self.alloc)
+                                }
+                                .into_in(self.alloc),
+                              ),
+                              ..Dummy::dummy(self.alloc)
+                            }
+                            .into_in(self.alloc),
+                          ));
+                        }
+                      });
+                    }
+                    ast::Declaration::ClassDeclaration(cls_decl) => {
+                      let cls_name =
+                        cls_decl.id.take().expect("should have a name at this point").name;
+                      hoisted_names.push(cls_name.clone());
+                      stmts_inside_closure.push(ast::Statement::ExpressionStatement(
+                        ast::ExpressionStatement {
+                          expression: ast::Expression::AssignmentExpression(
+                            ast::AssignmentExpression {
+                              left: self.snippet.simple_id_assignment_target(cls_name),
+                              right: ast::Expression::ClassExpression(cls_decl.take_in(self.alloc)),
+                              ..Dummy::dummy(self.alloc)
+                            }
+                            .into_in(self.alloc),
+                          ),
+                          ..Dummy::dummy(self.alloc)
+                        }
+                        .into_in(self.alloc),
+                      ));
+                      return;
+                    }
+                    ast::Declaration::FunctionDeclaration(_) => {
+                      // handled above
+                    }
+                    ast::Declaration::UsingDeclaration(_) => unimplemented!(),
+                    _ => {}
+                  }
+                }
+              }
+              _ => {}
+            },
+            _ => {}
+          }
           if stmt.is_function_declaration() {
             fn_stmts.push(stmt);
           } else {
@@ -262,6 +391,30 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
           }
         });
         program.body.extend(fn_stmts);
+        if !hoisted_names.is_empty() {
+          let mut declarators = allocator::Vec::new_in(self.alloc);
+          declarators.reserve_exact(hoisted_names.len());
+          hoisted_names.into_iter().for_each(|var_name| {
+            declarators.push(ast::VariableDeclarator {
+              id: ast::BindingPattern {
+                kind: ast::BindingPatternKind::BindingIdentifier(
+                  self.snippet.id(var_name).into_in(self.alloc),
+                ),
+                ..Dummy::dummy(self.alloc)
+              },
+              kind: ast::VariableDeclarationKind::Var,
+              ..Dummy::dummy(self.alloc)
+            });
+          });
+          program.body.push(ast::Statement::Declaration(ast::Declaration::VariableDeclaration(
+            ast::VariableDeclaration {
+              declarations: declarators,
+              kind: ast::VariableDeclarationKind::Var,
+              ..Dummy::dummy(self.alloc)
+            }
+            .into_in(self.alloc),
+          )));
+        }
         program.body.push(self.snippet.esm_wrapper_stmt(
           wrap_ref_name.clone(),
           esm_ref_name.clone(),

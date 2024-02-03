@@ -11,38 +11,43 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_common_js
 import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // a.js
+var abc;
 var init_a = __esm(() => {
-	const abc = undefined;
+	abc = undefined;
 });
 
 // b.js
+var xyz;
 var init_b = __esm(() => {
-	const xyz = null;
+	xyz = null;
 });
 
 // commonjs.js
 function Fn() {
 }
+var commonjs_default, v, l, c, Class;
 var init_commonjs = __esm(() => {
 	init_b();
-	var commonjs_default = 123;
-	var v = 234;
-	let l = 234;
-	const c = 234;
-	class Class {
-	}
+	commonjs_default = 123;
+	v = 234;
+	l = 234;
+	c = 234;
+	Class = class {
+	};
 });
 
 // c.js
+var c_default;
 var init_c = __esm(() => {
-	class c_default {
-	}
+	c_default = class {
+	};
 });
 
 // d.js
+var Foo;
 var init_d = __esm(() => {
-	class Foo {
-	}
+	Foo = class {
+	};
 	Foo.prop = 123;
 });
 

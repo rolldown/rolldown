@@ -18,13 +18,14 @@ function esm_named_fn() {
 function hoisted_fn() {
 	const bar = 1;
 }
+var esm_named_var, esm_named_class, hoisted_var, hoisted_class;
 var init_esm = __esm(() => {
-	const esm_named_var = 1;
-	class esm_named_class {
-	}
-	const hoisted_var = 1;
-	class hoisted_class {
-	}
+	esm_named_var = 1;
+	esm_named_class = class {
+	};
+	hoisted_var = 1;
+	hoisted_class = class {
+	};
 });
 
 // commonjs.js

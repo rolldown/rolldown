@@ -169,3 +169,9 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
     }
   }
 }
+
+pub trait De<'ast> {
+  fn as_call_expression(&self) -> Option<&ast::CallExpression<'ast>>;
+
+  fn as_identifier(&self) -> Option<&ast::IdentifierReference>;
+}

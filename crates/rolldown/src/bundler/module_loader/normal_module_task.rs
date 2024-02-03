@@ -144,7 +144,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
 
     let source_type =
       determine_oxc_source_type(self.resolved_path.path.as_path(), self.module_type);
-    let program = OxcCompiler::parse(Arc::clone(source), source_type);
+    let mut program = OxcCompiler::parse(Arc::clone(source), source_type);
 
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
@@ -161,6 +161,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       &self.resolved_path.path,
     );
     let namespace_symbol = scanner.namespace_symbol;
+    program.hoist_import_export_from_stmts();
     let scan_result = scanner.scan(program.program());
     if !self.ctx.input_options.treeshake {
       // TODO: tree shaking is not supported yet

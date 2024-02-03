@@ -54,6 +54,9 @@ pub trait StatementExt<'me, 'ast> {
 
   fn is_function_declaration(&self) -> bool;
   fn as_function_declaration(&self) -> Option<&ast::Function<'ast>>;
+
+  fn as_module_declaration(&self) -> Option<&ast::ModuleDeclaration<'ast>>;
+  fn is_module_declaration_with_source(&self) -> bool;
 }
 
 impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
@@ -128,6 +131,18 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
 
   fn is_function_declaration(&self) -> bool {
     self.as_function_declaration().is_some()
+  }
+
+  fn as_module_declaration(&self) -> Option<&ast::ModuleDeclaration<'ast>> {
+    if let ast::Statement::ModuleDeclaration(module_decl) = self {
+      Some(module_decl)
+    } else {
+      None
+    }
+  }
+
+  fn is_module_declaration_with_source(&self) -> bool {
+    matches!(self.as_module_declaration(), Some(decl) if decl.source().is_some())
   }
 }
 

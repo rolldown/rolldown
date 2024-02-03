@@ -92,7 +92,7 @@ impl RuntimeNormalModuleTask {
     source: &Arc<str>,
   ) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
     let source_type = SourceType::default();
-    let program = OxcCompiler::parse(Arc::clone(source), source_type);
+    let mut program = OxcCompiler::parse(Arc::clone(source), source_type);
 
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
@@ -109,6 +109,7 @@ impl RuntimeNormalModuleTask {
       &facade_path,
     );
     let namespace_symbol = scanner.namespace_symbol;
+    program.hoist_import_export_from_stmts();
     let scan_result = scanner.scan(program.program());
 
     (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)

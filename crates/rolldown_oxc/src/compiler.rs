@@ -9,7 +9,7 @@ use oxc::{
   span::SourceType,
 };
 
-use crate::Dummy;
+use crate::{Dummy, StatementExt, TakeIn};
 pub struct OxcCompiler;
 
 #[allow(clippy::box_collection, clippy::non_send_fields_in_send_ty, unused)]
@@ -66,6 +66,23 @@ impl OxcProgram {
   pub fn make_semantic(&self, ty: SourceType) -> Semantic<'_> {
     let semantic = SemanticBuilder::new(&self.source, ty).build(self.program()).semantic;
     semantic
+  }
+
+  // TODO: should move this to `rolldown` crate
+  pub fn hoist_import_export_from_stmts(&mut self) {
+    let (program, allocator) = self.program_mut_and_allocator();
+    let old_body = program.body.take_in(allocator);
+    program.body.reserve_exact(old_body.len());
+    let mut non_hoisted = oxc::allocator::Vec::new_in(allocator);
+
+    old_body.into_iter().for_each(|top_stmt| {
+      if top_stmt.is_module_declaration_with_source() {
+        program.body.push(top_stmt);
+      } else {
+        non_hoisted.push(top_stmt);
+      }
+    });
+    program.body.extend(non_hoisted);
   }
 }
 

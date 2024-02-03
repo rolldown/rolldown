@@ -24,13 +24,13 @@ var init_b = __esm(() => {
 function Fn() {
 }
 var init_commonjs = __esm(() => {
+	init_b();
 	var commonjs_default = 123;
 	var v = 234;
 	let l = 234;
 	const c = 234;
 	class Class {
 	}
-	init_b();
 });
 
 // c.js

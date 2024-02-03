@@ -26,6 +26,6 @@ var require_bar = __commonJS((exports, module) => {
 
 // entry.js
 var import_foo = require_foo();
-console.log((0,import_foo.foo)(), (0,import_bar.bar)());
 var import_bar = require_bar();
+console.log((0,import_foo.foo)(), (0,import_bar.bar)());
 ```

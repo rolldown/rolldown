@@ -24,8 +24,8 @@ const value = 1;
 var import_commonjs$2 = require_commonjs();
 
 // main.js
-console.log(foo_ns, import_commonjs$2.bar, value, foo_ns.foo);
 var import_commonjs = require_commonjs();
+console.log(foo_ns, import_commonjs$2.bar, value, foo_ns.foo);
 
 var bar$1 = import_commonjs.bar;
 export { bar$1 as bar };

@@ -25,7 +25,7 @@ var init_bar = __esm(() => {
 });
 
 // entry.js
-const {foo:foo} = (init_foo(),__toCommonJS(foo_ns));
+const {foo} = (init_foo(),__toCommonJS(foo_ns));
 console.log(foo(), bar());
-const {bar:bar} = (init_bar(),__toCommonJS(bar_ns));
+const {bar} = (init_bar(),__toCommonJS(bar_ns));
 ```

@@ -15,7 +15,7 @@ var require_foo = __commonJS((exports, module) => {
 	class Foo {
 	}
 	module.exports = {
-		Foo:Foo
+		Foo
 	};
 });
 

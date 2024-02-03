@@ -99,7 +99,6 @@ impl<'ast> DummyIn<'ast> for ast::Function<'ast> {
       r#type: DummyIn::dummy(alloc),
       span: DummyIn::dummy(alloc),
       id: DummyIn::dummy(alloc),
-      expression: DummyIn::dummy(alloc),
       generator: DummyIn::dummy(alloc),
       r#async: DummyIn::dummy(alloc),
       params: DummyIn::dummy(alloc),
@@ -214,7 +213,6 @@ impl<'ast> DummyIn<'ast> for ast::ArrowExpression<'ast> {
     Self {
       span: DummyIn::dummy(alloc),
       expression: DummyIn::dummy(alloc),
-      generator: DummyIn::dummy(alloc),
       r#async: DummyIn::dummy(alloc),
       params: DummyIn::dummy(alloc),
       body: DummyIn::dummy(alloc),

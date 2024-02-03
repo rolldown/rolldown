@@ -27,7 +27,7 @@ var bar_default = {
 
 // main.js
 const a = 2;
-const {foo:foo} = bar_default;
+const {foo} = bar_default;
 assert.strictEqual(typeof foo, 'function');
 init_foo(),__toCommonJS(foo_ns);
 ```

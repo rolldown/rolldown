@@ -17,5 +17,5 @@ export { bar };
 
 ```js
 // main.js
-import('./foo.js').then(({bar:bar}) => console.log(bar));
+import('./foo.js').then(({bar}) => console.log(bar));
 ```

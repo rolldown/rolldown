@@ -12,13 +12,13 @@ import { default as assert } from "assert";
 
 // names.js
 const [a] = ['a2'];
-const {b:b} = {
+const {b} = {
 	b:'b2'
 };
 const {b:c} = {
 	b:'c2'
 };
-const {d:d=''} = {
+const {d=''} = {
 	d:'d2'
 };
 const {d:e=''} = {

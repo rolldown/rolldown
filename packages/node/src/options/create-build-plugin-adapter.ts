@@ -207,7 +207,7 @@ function transform(hook: Plugin['transform']) {
           return
         }
         // TODO other filed
-        return { code: value.code }
+        return { code: value.code, map: transformSourcemap(value.map) }
       } catch (error) {
         console.error(error)
         throw error

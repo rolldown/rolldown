@@ -65,7 +65,8 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
         .await?;
 
     // Run plugin transform.
-    let source: Arc<str> = transform_source(&self.ctx.plugin_driver, source).await?.into();
+    let source: Arc<str> =
+      transform_source(&self.ctx.plugin_driver, source, &mut sourcemap_chain).await?.into();
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
     tracing::trace!("scan {:?}", self.resolved_path);

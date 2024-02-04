@@ -13,6 +13,7 @@ const config: RollupOptions = {
           expect(code).toStrictEqual('')
           return {
             code: `console.log('foo')`,
+            map: { mappings: "" }
           }
         }
       },

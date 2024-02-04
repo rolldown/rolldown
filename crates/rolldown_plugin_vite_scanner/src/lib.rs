@@ -105,14 +105,14 @@ impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
       scripts.into_iter().for_each(|(key, value)| {
         self.scripts.insert(key, value);
       });
-      return Ok(Some(HookLoadOutput { code: content }));
+      return Ok(Some(HookLoadOutput { code: content, map: None }));
     }
 
     // load local scripts (`<script>` in Svelte and `<script setup>` in Vue)
     if VIRTUAL_MODULE_REGEX.is_match(id) {
       let key = id.replace(VIRTUAL_MODULE_PREFIX, "");
       if let Some(content) = self.scripts.get(&key) {
-        return Ok(Some(HookLoadOutput { code: content.to_string() }));
+        return Ok(Some(HookLoadOutput { code: content.to_string(), map: None }));
       }
     }
 

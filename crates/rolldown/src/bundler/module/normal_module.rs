@@ -50,6 +50,7 @@ pub struct NormalModule {
   pub exports_kind: ExportsKind,
   pub scope: AstScope,
   pub default_export_ref: SymbolRef,
+  pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
 }
 
 impl NormalModule {

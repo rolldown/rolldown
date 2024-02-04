@@ -1730,6 +1730,7 @@ dependencies = [
  "rolldown_fs",
  "rolldown_oxc",
  "rolldown_resolver",
+ "rolldown_sourcemap",
  "rolldown_testing",
  "rolldown_tracing",
  "rolldown_utils",

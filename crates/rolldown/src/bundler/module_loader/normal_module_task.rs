@@ -56,10 +56,13 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   async fn run_inner(&mut self) -> BatchedResult<()> {
     tracing::trace!("process {:?}", self.resolved_path);
 
+    let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let source = load_source(&self.ctx.plugin_driver, &self.resolved_path, &self.ctx.fs).await?;
+    let source =
+      load_source(&self.ctx.plugin_driver, &self.resolved_path, &self.ctx.fs, &mut sourcemap_chain)
+        .await?;
 
     // Run plugin transform.
     let source: Arc<str> = transform_source(&self.ctx.plugin_driver, source).await?.into();
@@ -99,6 +102,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
       namespace_symbol: Some(namespace_symbol),
       module_type: self.module_type,
       pretty_path: Some(self.resolved_path.prettify(&self.ctx.input_options.cwd)),
+      sourcemap_chain,
       ..Default::default()
     };
 

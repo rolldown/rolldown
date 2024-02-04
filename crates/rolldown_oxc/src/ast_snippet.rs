@@ -229,6 +229,10 @@ impl<'ast> AstSnippet<'ast> {
     )
   }
 
+  /// ```js
+  ///  id = ...
+  /// ￣￣ AssignmentTarget
+  /// ```
   pub fn simple_id_assignment_target(&self, id: Atom) -> ast::AssignmentTarget<'ast> {
     ast::AssignmentTarget::SimpleAssignmentTarget(
       ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(self.id_ref(id).into_in(self.alloc)),

@@ -1,141 +1,16 @@
 use oxc::{
-  allocator::{self, Allocator},
+  allocator::{self},
   ast::{
-    ast::{self, IdentifierReference, Statement},
+    ast::{self},
     VisitMut,
   },
-  span::Atom,
 };
-use rolldown_common::{ExportsKind, ImportRecordId, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc::{
-  AstSnippet, BindingPatternExt, Dummy, ExpressionExt, IntoIn, StatementExt, TakeIn,
-};
-use rustc_hash::FxHashMap;
+use rolldown_common::{ExportsKind, SymbolRef, WrapKind};
+use rolldown_oxc::{Dummy, ExpressionExt, IntoIn, StatementExt, TakeIn};
 
-use crate::bundler::{
-  linker::linker_info::{LinkingInfo, LinkingInfoVec},
-  module::{Module, ModuleVec, NormalModule},
-  runtime::RuntimeModuleBrief,
-};
+use crate::bundler::module::Module;
 
-use super::{ast_scope::AstScope, symbols::Symbols};
-
-pub struct FinalizerContext<'me> {
-  pub id: ModuleId,
-  pub module: &'me NormalModule,
-  pub modules: &'me ModuleVec,
-  pub linking_info: &'me LinkingInfo,
-  pub linking_infos: &'me LinkingInfoVec,
-  pub symbols: &'me Symbols,
-  pub canonical_names: &'me FxHashMap<SymbolRef, Atom>,
-  pub runtime: &'me RuntimeModuleBrief,
-}
-
-pub struct Finalizer<'me, 'ast> {
-  pub alloc: &'ast Allocator,
-  pub ctx: FinalizerContext<'me>,
-  pub scope: &'me AstScope,
-  pub snippet: &'me AstSnippet<'ast>,
-}
-
-impl<'me, 'ast> Finalizer<'me, 'ast>
-where
-  'me: 'ast,
-{
-  pub fn is_global_identifier_reference(&self, id_ref: &IdentifierReference) -> bool {
-    let Some(reference_id) = id_ref.reference_id.get() else {
-      // Some `IdentifierReference`s constructed by bundler don't have a `ReferenceId`. They might be global variables.
-      // But we don't care about them in this method. This method is only used to check if a `IdentifierReference` from user code is a global variable.
-      return false;
-    };
-    self.scope.is_unresolved(reference_id)
-  }
-
-  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Atom {
-    self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
-  }
-
-  pub fn canonical_name_for_runtime(&self, name: &str) -> &Atom {
-    let symbol = self.ctx.runtime.resolve_symbol(name);
-    self.canonical_name_for(symbol)
-  }
-
-  fn should_remove_import_export_stmt(
-    &self,
-    stmt: &mut Statement<'ast>,
-    rec_id: ImportRecordId,
-  ) -> bool {
-    let rec = &self.ctx.module.import_records[rec_id];
-    let importee_id = rec.resolved_module;
-    let importee_linking_info = &self.ctx.linking_infos[importee_id];
-    match importee_linking_info.wrap_kind {
-      WrapKind::None => {
-        // Remove this statement by ignoring it
-      }
-      WrapKind::Cjs => {
-        // Replace the statement with something like `var import_foo = require_foo()`
-        let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-        let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
-        *stmt = self.snippet.var_decl_stmt(
-          binding_name_for_wrapper_call_ret.clone(),
-          self.snippet.call_expr_expr(wrapper_ref_name.clone()),
-        );
-        return false;
-      }
-      // Replace the statement with something like `init_foo()`
-      WrapKind::Esm => {
-        let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-        *stmt = self.snippet.call_expr_stmt(wrapper_ref_name.clone());
-        return false;
-      }
-    }
-    true
-  }
-
-  /// return `None` if
-  /// - the reference is for a global variable/the reference doesn't have a `SymbolId`
-  /// - the reference doesn't have a `ReferenceId`
-  /// - the canonical name is the same as the original name
-  fn generate_finalized_expr_for_reference(
-    &self,
-    id_ref: &IdentifierReference,
-    is_callee: bool,
-  ) -> Option<ast::Expression<'ast>> {
-    // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
-    let reference_id = id_ref.reference_id.get()?;
-
-    // we will hit this branch if the reference is for a global variable
-    let symbol_id = self.scope.symbol_id_for(reference_id)?;
-
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-    let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
-    let symbol = self.ctx.symbols.get(canonical_ref);
-
-    if let Some(ns_alias) = &symbol.namespace_alias {
-      let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
-      let prop_name = &ns_alias.property_name;
-      let access_expr = self
-        .snippet
-        .literal_prop_access_member_expr_expr(canonical_ns_name.clone(), prop_name.clone());
-
-      return Some(if is_callee {
-        let wrapped_callee =
-          self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0), access_expr);
-        wrapped_callee
-      } else {
-        access_expr
-      });
-    }
-
-    let canonical_name = self.canonical_name_for(canonical_ref);
-    if id_ref.name != canonical_name {
-      return Some(self.snippet.id_ref_expr(canonical_name.clone()));
-    }
-
-    None
-  }
-}
-// visit
+use super::Finalizer;
 
 impl<'ast, 'me: 'ast> Finalizer<'me, 'ast> {
   fn visit_top_level_statement_mut(&mut self, stmt: &mut ast::Statement<'ast>) {
@@ -257,136 +132,23 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
         let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
 
         // Hoist all top-level "var" and "function" declarations out of the closure
-        old_body.into_iter().for_each(|mut stmt| {
-          match &mut stmt {
-            ast::Statement::Declaration(decl) => match decl {
-              ast::Declaration::VariableDeclaration(var_decl) => {
-                var_decl.declarations.iter_mut().for_each(|var_decl| {
-                  var_decl.id.binding_identifiers().iter().for_each(|id| {
-                    hoisted_names.push(id.name.clone());
-                  });
-                  if let Some(init_expr) = &mut var_decl.init {
-                    let left = match &var_decl.id.kind {
-                      ast::BindingPatternKind::BindingIdentifier(id) => {
-                        self.snippet.simple_id_assignment_target(id.name.clone())
-                      }
-                      ast::BindingPatternKind::ObjectPattern(_obj_pat) => todo!(),
-                      ast::BindingPatternKind::ArrayPattern(_) => todo!(),
-                      ast::BindingPatternKind::AssignmentPattern(_) => todo!(),
-                    };
-                    stmts_inside_closure.push(ast::Statement::ExpressionStatement(
-                      ast::ExpressionStatement {
-                        expression: ast::Expression::AssignmentExpression(
-                          ast::AssignmentExpression {
-                            left,
-                            right: init_expr.take_in(self.alloc),
-                            ..Dummy::dummy(self.alloc)
-                          }
-                          .into_in(self.alloc),
-                        ),
-                        ..Dummy::dummy(self.alloc)
-                      }
-                      .into_in(self.alloc),
-                    ));
-                  }
-                });
-                return;
+        old_body.into_iter().for_each(|mut stmt| match &mut stmt {
+          ast::Statement::Declaration(decl) => match decl {
+            ast::Declaration::VariableDeclaration(_) | ast::Declaration::ClassDeclaration(_) => {
+              if let Some(converted) = self.convert_decl_to_assignment(decl, &mut hoisted_names) {
+                stmts_inside_closure.push(converted);
               }
-              ast::Declaration::ClassDeclaration(cls_decl) => {
-                let cls_name = cls_decl.id.take().expect("should have a name at this point").name;
-                hoisted_names.push(cls_name.clone());
-                stmts_inside_closure.push(ast::Statement::ExpressionStatement(
-                  ast::ExpressionStatement {
-                    expression: ast::Expression::AssignmentExpression(
-                      ast::AssignmentExpression {
-                        left: self.snippet.simple_id_assignment_target(cls_name),
-                        right: ast::Expression::ClassExpression(cls_decl.take_in(self.alloc)),
-                        ..Dummy::dummy(self.alloc)
-                      }
-                      .into_in(self.alloc),
-                    ),
-                    ..Dummy::dummy(self.alloc)
-                  }
-                  .into_in(self.alloc),
-                ));
-                return;
-              }
-              ast::Declaration::FunctionDeclaration(_) => {
-                // handled above
-              }
-              ast::Declaration::UsingDeclaration(_) => unimplemented!(),
-              _ => {}
-            },
-            ast::Statement::ModuleDeclaration(module_decl) => match module_decl.0 {
-              ast::ModuleDeclaration::ExportNamedDeclaration(named_export) => {
-                if let Some(decl) = &mut named_export.declaration {
-                  match decl {
-                    ast::Declaration::VariableDeclaration(var_decl) => {
-                      var_decl.declarations.iter_mut().for_each(|var_decl| {
-                        var_decl.id.binding_identifiers().iter().for_each(|id| {
-                          hoisted_names.push(id.name.clone());
-                        });
-                        if let Some(init_expr) = &mut var_decl.init {
-                          let left = match &var_decl.id.kind {
-                            ast::BindingPatternKind::BindingIdentifier(id) => {
-                              self.snippet.simple_id_assignment_target(id.name.clone())
-                            }
-                            ast::BindingPatternKind::ObjectPattern(_obj_pat) => todo!(),
-                            ast::BindingPatternKind::ArrayPattern(_) => todo!(),
-                            ast::BindingPatternKind::AssignmentPattern(_) => todo!(),
-                          };
-                          stmts_inside_closure.push(ast::Statement::ExpressionStatement(
-                            ast::ExpressionStatement {
-                              expression: ast::Expression::AssignmentExpression(
-                                ast::AssignmentExpression {
-                                  left,
-                                  right: init_expr.take_in(self.alloc),
-                                  ..Dummy::dummy(self.alloc)
-                                }
-                                .into_in(self.alloc),
-                              ),
-                              ..Dummy::dummy(self.alloc)
-                            }
-                            .into_in(self.alloc),
-                          ));
-                        }
-                      });
-                    }
-                    ast::Declaration::ClassDeclaration(cls_decl) => {
-                      let cls_name =
-                        cls_decl.id.take().expect("should have a name at this point").name;
-                      hoisted_names.push(cls_name.clone());
-                      stmts_inside_closure.push(ast::Statement::ExpressionStatement(
-                        ast::ExpressionStatement {
-                          expression: ast::Expression::AssignmentExpression(
-                            ast::AssignmentExpression {
-                              left: self.snippet.simple_id_assignment_target(cls_name),
-                              right: ast::Expression::ClassExpression(cls_decl.take_in(self.alloc)),
-                              ..Dummy::dummy(self.alloc)
-                            }
-                            .into_in(self.alloc),
-                          ),
-                          ..Dummy::dummy(self.alloc)
-                        }
-                        .into_in(self.alloc),
-                      ));
-                      return;
-                    }
-                    ast::Declaration::FunctionDeclaration(_) => {
-                      // handled above
-                    }
-                    ast::Declaration::UsingDeclaration(_) => unimplemented!(),
-                    _ => {}
-                  }
-                }
-              }
-              _ => {}
-            },
+            }
+            ast::Declaration::FunctionDeclaration(_) => {
+              fn_stmts.push(stmt);
+            }
+            ast::Declaration::UsingDeclaration(_) => unimplemented!(),
             _ => {}
-          }
-          if stmt.is_function_declaration() {
-            fn_stmts.push(stmt);
-          } else {
+          },
+          ast::Statement::ModuleDeclaration(_) => unreachable!(
+            "At this point, all module declarations should have been removed or transformed"
+          ),
+          _ => {
             stmts_inside_closure.push(stmt);
           }
         });

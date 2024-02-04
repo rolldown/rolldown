@@ -1,0 +1,27 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/wrapped_esm
+---
+# Assets
+
+## main.mjs
+
+```js
+import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
+
+// foo.js
+function foo() {
+}
+var a, b, c, bar, baz;
+var init_foo = __esm(() => {
+	[b] = [],[c=1] = [];
+	bar = class {
+	};
+	baz = class {
+	};
+});
+
+// main.js
+init_foo(),__toCommonJS(foo_ns);
+```

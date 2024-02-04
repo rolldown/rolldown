@@ -4,6 +4,7 @@ pub mod bundle;
 pub mod bundler;
 pub mod chunk;
 mod chunk_graph;
+mod finalizer;
 mod linker;
 mod module;
 mod module_loader;

@@ -1,7 +1,9 @@
-use oxc::allocator::Box;
+use oxc::allocator::{Allocator, Box};
 use oxc::ast::ast;
 use oxc::semantic::SymbolId;
 use smallvec::SmallVec;
+
+use crate::{AstSnippet, Dummy, IntoIn, TakeIn};
 pub trait BindingIdentifierExt {
   fn expect_symbol_id(&self) -> SymbolId;
 }
@@ -13,11 +15,13 @@ impl BindingIdentifierExt for ast::BindingIdentifier {
   }
 }
 
-pub trait BindingPatternExt {
+pub trait BindingPatternExt<'ast> {
   fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<ast::BindingIdentifier>; 1]>;
+
+  fn into_assignment_target(self, alloc: &'ast Allocator) -> ast::AssignmentTarget<'ast>;
 }
 
-impl BindingPatternExt for ast::BindingPattern<'_> {
+impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
   fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<ast::BindingIdentifier>; 1]> {
     let mut queue = vec![&self.kind];
     let mut ret = SmallVec::default();
@@ -39,6 +43,51 @@ impl BindingPatternExt for ast::BindingPattern<'_> {
       };
     }
     ret
+  }
+
+  fn into_assignment_target(mut self, alloc: &'ast Allocator) -> ast::AssignmentTarget<'ast> {
+    let left = match &mut self.kind {
+      // Turn `var a = 1` into `a = 1`
+      ast::BindingPatternKind::BindingIdentifier(id) => {
+        AstSnippet::new(alloc).simple_id_assignment_target(id.name.clone())
+      }
+      // Turn `var { a, b = 2 } = ...` to `{a, b = 2} = ...`
+      ast::BindingPatternKind::ObjectPattern(_obj_pat) => {
+        todo!("This should make a good first issue for contributors");
+      }
+      // Turn `var [a, ,c = 1] = ...` to `[a, ,c = 1] = ...`
+      ast::BindingPatternKind::ArrayPattern(arr_pat) => {
+        let mut arr_target = ast::ArrayAssignmentTarget {
+          rest: arr_pat.rest.take().map(|rest| rest.unbox().argument.into_assignment_target(alloc)),
+          ..Dummy::dummy(alloc)
+        };
+        arr_pat.elements.take_in(alloc).into_iter().for_each(|binding_pat| {
+          arr_target.elements.push(binding_pat.map(|binding_pat| match binding_pat.kind {
+            ast::BindingPatternKind::AssignmentPattern(assign_pat) => {
+              let assign_pat = assign_pat.unbox();
+              ast::AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
+                ast::AssignmentTargetWithDefault {
+                  binding: assign_pat.left.into_assignment_target(alloc),
+                  init: assign_pat.right,
+                  ..Dummy::dummy(alloc)
+                }
+                .into_in(alloc),
+              )
+            }
+            _ => ast::AssignmentTargetMaybeDefault::AssignmentTarget(
+              binding_pat.into_assignment_target(alloc),
+            ),
+          }));
+        });
+        ast::AssignmentTarget::AssignmentTargetPattern(
+          ast::AssignmentTargetPattern::ArrayAssignmentTarget(arr_target.into_in(alloc)),
+        )
+      }
+      ast::BindingPatternKind::AssignmentPattern(_) => {
+        unreachable!("`BindingPatternKind::AssignmentPattern` should be pre-handled in above")
+      }
+    };
+    left
   }
 }
 

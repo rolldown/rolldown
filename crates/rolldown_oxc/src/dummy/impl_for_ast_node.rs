@@ -285,3 +285,34 @@ impl<'ast> DummyIn<'ast> for ast::SimpleAssignmentTarget<'ast> {
     Self::AssignmentTargetIdentifier(DummyIn::dummy(alloc))
   }
 }
+
+impl<'ast> DummyIn<'ast> for ast::ArrayAssignmentTarget<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      elements: DummyIn::dummy(alloc),
+      rest: DummyIn::dummy(alloc),
+      trailing_comma: DummyIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::ObjectAssignmentTarget<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      properties: DummyIn::dummy(alloc),
+      rest: DummyIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::AssignmentTargetWithDefault<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      binding: DummyIn::dummy(alloc),
+      init: DummyIn::dummy(alloc),
+    }
+  }
+}

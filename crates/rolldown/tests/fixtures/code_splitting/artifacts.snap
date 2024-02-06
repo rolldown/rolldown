@@ -21,7 +21,7 @@ import { __export } from "./_rolldown_runtime.mjs";
 // main1.js
 var main1_ns = {};
 __export(main1_ns, {});
-import('./dynamic');
+import("'./dynamic_js.mjs'");
 ```
 ## main2.mjs
 

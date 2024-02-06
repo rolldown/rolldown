@@ -35,5 +35,5 @@ import { bar } from "./foo_js-3.mjs";
 // main.js
 var main_ns = {};
 __export(main_ns, {});
-import('./foo.js').then(({bar:b}) => console.log(bar, b));
+import("'./foo_js-3.mjs'").then(({bar:b}) => console.log(bar, b));
 ```

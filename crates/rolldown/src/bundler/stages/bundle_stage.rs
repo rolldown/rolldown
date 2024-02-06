@@ -73,6 +73,7 @@ impl<'a> BundleStage<'a> {
             modules: &self.link_output.modules,
             linking_infos: &self.link_output.linking_infos,
             runtime: &self.link_output.runtime,
+            chunk_graph: &chunk_graph,
           },
           ast,
         );

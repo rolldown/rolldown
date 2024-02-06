@@ -322,4 +322,23 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       self.visit_rest_element(rest);
     }
   }
+
+  fn visit_import_expression(&mut self, expr: &mut ast::ImportExpression<'ast>) {
+    if let oxc::ast::ast::Expression::StringLiteral(str) = &mut expr.source {
+      let rec_id = self.ctx.module.imports[&expr.span];
+      let rec = &self.ctx.module.import_records[rec_id];
+      let importee_id = rec.resolved_module;
+      match self.ctx.modules[importee_id] {
+        Module::Normal(_) => {
+          let chunk_id = self.ctx.chunk_graph.module_to_chunk[importee_id]
+            .expect("Normal module should belong to a chunk");
+          let chunk = &self.ctx.chunk_graph.chunks[chunk_id];
+          str.value = format!("'./{}'", chunk.file_name.as_ref().unwrap()).into();
+        }
+        Module::External(_) => {
+          // external module doesn't belong to any chunk, just keep this as it is
+        }
+      }
+    }
+  }
 }

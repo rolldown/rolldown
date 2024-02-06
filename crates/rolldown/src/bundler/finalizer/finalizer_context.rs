@@ -4,6 +4,7 @@ use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 
 use crate::bundler::{
+  chunk_graph::ChunkGraph,
   linker::linker_info::{LinkingInfo, LinkingInfoVec},
   module::{ModuleVec, NormalModule},
   runtime::RuntimeModuleBrief,
@@ -19,4 +20,5 @@ pub struct FinalizerContext<'me> {
   pub symbols: &'me Symbols,
   pub canonical_names: &'me FxHashMap<SymbolRef, Atom>,
   pub runtime: &'me RuntimeModuleBrief,
+  pub chunk_graph: &'me ChunkGraph,
 }

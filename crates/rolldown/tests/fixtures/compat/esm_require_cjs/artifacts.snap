@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/compat/esm_require_cjs
 ## main.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.mjs";
+import { __commonJS, __export } from "./_rolldown_runtime.mjs";
 
 // cjs.js
 var require_cjs = __commonJS((exports, module) => {
@@ -16,6 +16,10 @@ var require_cjs = __commonJS((exports, module) => {
 });
 
 // main.js
+var main_ns = {};
+__export(main_ns, {
+	cjs:() => cjs
+});
 const cjs = require_cjs();
 
 export { cjs };

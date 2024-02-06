@@ -8,16 +8,39 @@ input_file: crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg
 ## entry_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // a.js
+var a_ns = {};
+__export(a_ns, {
+	a:() => a,
+	x:() => x$1
+});
 let a = 1, x$1 = 2;
 
 // b.js
+var b_ns = {};
+__export(b_ns, {
+	b:() => b,
+	x:() => b
+});
 let b = 3;
 
 // c.js
+var c_ns = {};
+__export(c_ns, {
+	c:() => c,
+	x:() => x
+});
 let c = 4, x = 5;
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {
+	a:() => a,
+	b:() => b,
+	c:() => c
+});
 
 export { a, b, c };
 ```

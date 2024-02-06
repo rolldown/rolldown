@@ -15,7 +15,13 @@ export { a };
 ## a_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // a.js
+var a_ns = {};
+__export(a_ns, {
+	a:() => a
+});
 const a = 1;
 
 export { a };
@@ -23,9 +29,14 @@ export { a };
 ## b.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
 import { a } from "./a_js.mjs";
 
 // b.js
+var b_ns = {};
+__export(b_ns, {
+	a:() => a
+});
 
 export { a };
 ```

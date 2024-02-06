@@ -8,24 +8,37 @@ input_file: crates/rolldown/tests/esbuild/splitting/assign-to-local
 ## a.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
 import { foo, setFoo } from "./shared_js.mjs";
 
 // a.js
+var a_ns = {};
+__export(a_ns, {});
 setFoo(123);
 console.log(foo);
 ```
 ## b.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
 import { foo } from "./shared_js.mjs";
 
 // b.js
+var b_ns = {};
+__export(b_ns, {});
 console.log(foo);
 ```
 ## shared_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // shared.js
+var shared_ns = {};
+__export(shared_ns, {
+	foo:() => foo,
+	setFoo:() => setFoo
+});
 let foo;
 function setFoo(value) {
 	foo = value;

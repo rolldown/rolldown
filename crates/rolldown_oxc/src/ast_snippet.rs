@@ -24,6 +24,10 @@ impl<'ast> AstSnippet<'ast> {
     ast::IdentifierReference { name, ..Dummy::dummy(self.alloc) }
   }
 
+  pub fn id_name(&self, name: Atom) -> ast::IdentifierName {
+    ast::IdentifierName { name, ..Dummy::dummy(self.alloc) }
+  }
+
   pub fn id_ref_expr(&self, name: Atom) -> ast::Expression<'_> {
     ast::Expression::Identifier(self.id_ref(name).into_in(self.alloc))
   }
@@ -236,6 +240,23 @@ impl<'ast> AstSnippet<'ast> {
   pub fn simple_id_assignment_target(&self, id: Atom) -> ast::AssignmentTarget<'ast> {
     ast::AssignmentTarget::SimpleAssignmentTarget(
       ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(self.id_ref(id).into_in(self.alloc)),
+    )
+  }
+
+  // `() => xx`
+  pub fn only_return_arrow_expr(&self, expr: ast::Expression<'ast>) -> ast::Expression<'ast> {
+    let mut statements = allocator::Vec::new_in(self.alloc);
+    statements.reserve_exact(1);
+    statements.push(ast::Statement::ExpressionStatement(
+      ast::ExpressionStatement { expression: expr, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
+    ));
+    ast::Expression::ArrowExpression(
+      ast::ArrowExpression {
+        expression: true,
+        body: ast::FunctionBody { statements, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
+        ..Dummy::dummy(self.alloc)
+      }
+      .into_in(self.alloc),
     )
   }
 }

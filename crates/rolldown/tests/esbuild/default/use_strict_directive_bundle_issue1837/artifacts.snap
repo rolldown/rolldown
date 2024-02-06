@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_is
 ## entry_js.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.mjs";
+import { __commonJS, __export } from "./_rolldown_runtime.mjs";
 
 // cjs.js
 'use strict';var require_cjs = __commonJS((exports, module) => {

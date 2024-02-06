@@ -8,12 +8,24 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_ca
 ## entry_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // foo.js
+var foo_ns = {};
+__export(foo_ns, {
+	foo:() => foo$1
+});
 const foo$1 = 123;
 
 // bar.js
+var bar_ns = {};
+__export(bar_ns, {
+	foo:() => foo$1
+});
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {});
 let foo = 234;
 console.log(bar_ns, bar_ns.foo, foo);
 ```

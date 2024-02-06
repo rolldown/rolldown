@@ -8,15 +8,38 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_collis
 ## entry_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // c.js
+var c_ns = {};
+__export(c_ns, {
+	x:() => x,
+	y:() => y
+});
 let x = 1, y = 2;
 
 // a.js
+var a_ns = {};
+__export(a_ns, {
+	x:() => x,
+	y:() => y
+});
 
 // b.js
+var b_ns = {};
+__export(b_ns, {
+	x:() => x
+});
 
 // common.js
+var common_ns = {};
+__export(common_ns, {
+	x:() => x,
+	y:() => y
+});
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {});
 console.log(x, y);
 ```

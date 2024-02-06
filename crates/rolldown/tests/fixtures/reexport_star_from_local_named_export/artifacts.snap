@@ -8,10 +8,20 @@ input_file: crates/rolldown/tests/fixtures/reexport_star_from_local_named_export
 ## main.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // foo.js
+var foo_ns = {};
+__export(foo_ns, {
+	foo:() => value
+});
 const value = 1;
 
 // main.js
+var main_ns = {};
+__export(main_ns, {
+	foo:() => value
+});
 
 export { value as foo };
 ```

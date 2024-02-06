@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/compat/import_the_same_cjs_twice
 ## main.mjs
 
 ```js
-import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJS, __export, __toESM } from "./_rolldown_runtime.mjs";
 
 // cjs.js
 var require_cjs = __commonJS((exports, module) => {
@@ -16,6 +16,11 @@ var require_cjs = __commonJS((exports, module) => {
 });
 
 // main.js
+var main_ns = {};
+__export(main_ns, {
+	a:() => import_cjs.a,
+	a2:() => import_cjs$1.a
+});
 var import_cjs = require_cjs();
 var import_cjs$1 = require_cjs();
 

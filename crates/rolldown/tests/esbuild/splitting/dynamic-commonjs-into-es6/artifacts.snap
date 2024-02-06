@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic-commonjs-into-es6
 ## foo_js.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.mjs";
+import { __commonJS, __export } from "./_rolldown_runtime.mjs";
 
 // foo.js
 var require_foo = __commonJS((exports, module) => {
@@ -20,6 +20,8 @@ export default require_foo();
 ## main.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // main.js
 import('./foo.js').then(({bar}) => console.log(bar));
 ```

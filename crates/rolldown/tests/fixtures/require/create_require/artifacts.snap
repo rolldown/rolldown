@@ -9,8 +9,11 @@ input_file: crates/rolldown/tests/fixtures/require/create_require
 
 ```js
 import { createRequire } from "node:module";
+import { __export } from "./_rolldown_runtime.mjs";
 
 // main.js
+var main_ns = {};
+__export(main_ns, {});
 const require = createRequire(import.meta.url);
 const assert = require('node:assert');
 assert.equal(1, 1);

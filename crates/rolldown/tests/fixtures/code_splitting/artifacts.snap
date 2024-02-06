@@ -8,30 +8,42 @@ input_file: crates/rolldown/tests/fixtures/code_splitting
 ## dynamic_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // dynamic.js
 console.log('dynamic');
 ```
 ## main1.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // main1.js
+var main1_ns = {};
+__export(main1_ns, {});
 import('./dynamic');
 ```
 ## main2.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // main2.js
+var main2_ns = {};
+__export(main2_ns, {});
 ```
 ## share_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // share.js
 console.log('shared');
 ```
 
 ## Output Stats
 
-- _rolldown_runtime.mjs, is_entry false, is_dynamic_entry false, facade_module_id None, exports []
+- _rolldown_runtime.mjs, is_entry false, is_dynamic_entry false, facade_module_id None, exports ["__export"]
 - dynamic_js.mjs, is_entry false, is_dynamic_entry true, facade_module_id Some("$DIR$/dynamic.js"), exports []
 - main1.mjs, is_entry true, is_dynamic_entry false, facade_module_id Some("$DIR$/main1.js"), exports []
 - main2.mjs, is_entry true, is_dynamic_entry false, facade_module_id Some("$DIR$/main2.js"), exports []

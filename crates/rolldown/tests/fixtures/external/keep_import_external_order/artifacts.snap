@@ -10,10 +10,17 @@ input_file: crates/rolldown/tests/fixtures/external/keep_import_external_order
 ```js
 import "ext1";
 import "ext2";
+import { __export } from "./_rolldown_runtime.mjs";
 
 // foo.js
+var foo_ns = {};
+__export(foo_ns, {
+	a:() => a
+});
 const a = 'foo';
 
 // main.js
+var main_ns = {};
+__export(main_ns, {});
 console.log(a);
 ```

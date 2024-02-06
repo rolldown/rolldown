@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/shared-commonjs-into-es6
 ## a.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
 import { require_shared } from "./shared_js.mjs";
 
 // a.js
@@ -17,6 +18,7 @@ console.log(foo);
 ## b.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
 import { require_shared } from "./shared_js.mjs";
 
 // b.js
@@ -26,7 +28,7 @@ console.log(foo);
 ## shared_js.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.mjs";
+import { __commonJS, __export } from "./_rolldown_runtime.mjs";
 
 // shared.js
 var require_shared = __commonJS((exports, module) => {

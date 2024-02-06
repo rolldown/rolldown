@@ -15,11 +15,15 @@ export { foo };
 ## a_js.mjs
 
 ```js
-import { __esm } from "./_rolldown_runtime.mjs";
+import { __esm, __export } from "./_rolldown_runtime.mjs";
 
 // a.js
-var foo;
+var a_ns, foo;
 var init_a = __esm(() => {
+	a_ns = {};
+	__export(a_ns, {
+		foo:() => foo
+	});
 });
 
 export { a_ns, foo, init_a };
@@ -27,10 +31,14 @@ export { a_ns, foo, init_a };
 ## b.mjs
 
 ```js
-import { __toCommonJS } from "./_rolldown_runtime.mjs";
+import { __export, __toCommonJS } from "./_rolldown_runtime.mjs";
 import { a_ns, init_a } from "./a_js.mjs";
 
 // b.js
+var b_ns = {};
+__export(b_ns, {
+	bar:() => bar
+});
 let bar = (init_a(),__toCommonJS(a_ns));
 
 export { bar };

@@ -8,20 +8,35 @@ input_file: crates/rolldown/tests/esbuild/splitting/cross_chunk_assignment_depen
 ## a.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
 import { setValue } from "./shared_js.mjs";
 
 // a.js
+var a_ns = {};
+__export(a_ns, {});
 setValue(123);
 ```
 ## b.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // b.js
+var b_ns = {};
+__export(b_ns, {});
 ```
 ## shared_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // shared.js
+var shared_ns = {};
+__export(shared_ns, {
+	getValue:() => getValue,
+	setObserver:() => setObserver,
+	setValue:() => setValue
+});
 var observer;
 var value;
 function setObserver(cb) {

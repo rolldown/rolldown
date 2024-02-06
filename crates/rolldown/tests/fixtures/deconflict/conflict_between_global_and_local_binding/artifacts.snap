@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/fixtures/deconflict/conflict_between_global_an
 
 ```js
 import { default as assert } from "node:assert";
-import { __commonJS as __commonJS$1 } from "./_rolldown_runtime.mjs";
+import { __commonJS as __commonJS$1, __export } from "./_rolldown_runtime.mjs";
 
 // main.js
 var require_main = __commonJS$1((exports, module) => {

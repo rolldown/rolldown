@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/compat/dynamic_cjs_entry
 ## cjs_js.mjs
 
 ```js
-import { __commonJS } from "./_rolldown_runtime.mjs";
+import { __commonJS, __export } from "./_rolldown_runtime.mjs";
 
 // cjs.js
 var require_cjs = __commonJS((exports, module) => {
@@ -20,7 +20,13 @@ export default require_cjs();
 ## main.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // main.js
+var main_ns = {};
+__export(main_ns, {
+	default:() => main_default
+});
 var main_default = import('./cjs.js');
 
 export { main_default as default };

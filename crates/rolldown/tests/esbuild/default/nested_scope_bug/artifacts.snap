@@ -8,6 +8,8 @@ input_file: crates/rolldown/tests/esbuild/default/nested_scope_bug
 ## entry_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // entry.js
 (() => {
 	function a() {

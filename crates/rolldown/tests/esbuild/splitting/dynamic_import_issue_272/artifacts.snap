@@ -8,13 +8,21 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_import_issue_272
 ## a.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // a.js
 import('./b');
 ```
 ## b.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // b.js
+var b_ns = {};
+__export(b_ns, {
+	default:() => b_default
+});
 var b_default = 1;
 
 export { b_default as default };

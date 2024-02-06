@@ -8,24 +8,36 @@ input_file: crates/rolldown/tests/fixtures/external/spliting_with_external_modul
 ## entry.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
 import { value } from "./share_js.mjs";
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {});
 console.log(value);
 ```
 ## main.mjs
 
 ```js
 import { default as assert } from "assert";
+import { __export } from "./_rolldown_runtime.mjs";
 import { value } from "./share_js.mjs";
 
 // main.js
+var main_ns = {};
+__export(main_ns, {});
 assert(value === 1);
 ```
 ## share_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // share.js
+var share_ns = {};
+__export(share_ns, {
+	value:() => value
+});
 const value = 1;
 
 export { value };

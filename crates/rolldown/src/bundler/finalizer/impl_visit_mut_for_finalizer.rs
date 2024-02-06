@@ -27,6 +27,10 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
 
     let old_body = program.body.take_in(self.alloc);
 
+    if matches!(self.ctx.module.exports_kind, ExportsKind::Esm) {
+      program.body.extend(self.generate_namespace_variable_declaration());
+    }
+
     old_body.into_iter().for_each(|mut top_stmt| {
       if let Some(import_decl) = top_stmt.as_import_declaration() {
         let rec_id = self.ctx.module.imports[&import_decl.span];

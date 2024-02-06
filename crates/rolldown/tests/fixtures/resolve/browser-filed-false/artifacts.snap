@@ -8,13 +8,15 @@ input_file: crates/rolldown/tests/fixtures/resolve/browser-filed-false
 ## package.mjs
 
 ```js
-import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJS, __export, __toESM } from "./_rolldown_runtime.mjs";
 
 // (ignored) node_modules/package/util.js
 var require_util = __commonJS((exports, module) => {
 });
 
 // node_modules/package/index.js
+var package_index_ns = {};
+__export(package_index_ns, {});
 var import_util = require_util();
 console.log(import_util.default);
 ```

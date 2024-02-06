@@ -22,7 +22,13 @@ export { main_default as default };
 ## main_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // main.js
+var main_ns = {};
+__export(main_ns, {
+	default:() => main_default
+});
 var main_default = {};
 
 export { main_default };

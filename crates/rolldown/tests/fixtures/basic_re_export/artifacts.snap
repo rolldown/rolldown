@@ -8,12 +8,24 @@ input_file: crates/rolldown/tests/fixtures/basic_re_export
 ## main.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // a.js
+var a_ns = {};
+__export(a_ns, {
+	a:() => a
+});
 const a = 'a.js';
 
 // proxy.js
+var proxy_ns = {};
+__export(proxy_ns, {
+	a:() => a
+});
 
 // main.js
+var main_ns = {};
+__export(main_ns, {});
 const a$1 = 'index.js';
 console.log(a$1, a);
 ```

@@ -8,23 +8,36 @@ input_file: crates/rolldown/tests/esbuild/splitting/side_effects_without_depende
 ## a.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
 import { a } from "./shared_js.mjs";
 
 // a.js
+var a_ns = {};
+__export(a_ns, {});
 console.log(a);
 ```
 ## b.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
 import { b } from "./shared_js.mjs";
 
 // b.js
+var b_ns = {};
+__export(b_ns, {});
 console.log(b);
 ```
 ## shared_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // shared.js
+var shared_ns = {};
+__export(shared_ns, {
+	a:() => a,
+	b:() => b
+});
 let a = 1;
 let b = 2;
 console.log('side effect');

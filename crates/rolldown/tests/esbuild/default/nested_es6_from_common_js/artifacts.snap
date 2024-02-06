@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/nested_es6_from_common_js
 ## entry_js.mjs
 
 ```js
-import { __commonJS, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJS, __export, __toESM } from "./_rolldown_runtime.mjs";
 
 // foo.js
 var require_foo = __commonJS((exports, module) => {
@@ -18,6 +18,8 @@ var require_foo = __commonJS((exports, module) => {
 });
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {});
 var import_foo = require_foo();
 (() => {
 	console.log((0,import_foo.fn)());

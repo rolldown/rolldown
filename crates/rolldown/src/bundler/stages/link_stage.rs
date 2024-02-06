@@ -1,7 +1,7 @@
 use std::ptr::addr_of;
 
 use index_vec::IndexVec;
-use rolldown_common::{EntryPoint, ExportsKind, ImportKind, ModuleId, WrapKind};
+use rolldown_common::{EntryPoint, ExportsKind, ImportKind, ModuleId, StmtInfo, WrapKind};
 use rolldown_error::BuildError;
 use rolldown_oxc::OxcProgram;
 use rustc_hash::FxHashSet;
@@ -60,6 +60,28 @@ impl LinkStage {
     }
   }
 
+  fn create_exports_for_modules(&mut self) {
+    self.modules.iter_mut().for_each(|module| {
+      let Module::Normal(module) = module else {
+        return;
+      };
+
+      // Create a StmtInfo for the namespace statement
+      let namespace_stmt_info = StmtInfo {
+        stmt_idx: None,
+        declared_symbols: vec![module.namespace_symbol],
+        referenced_symbols: vec![self.runtime.resolve_symbol("__export")],
+        side_effect: false,
+        ..Default::default()
+      };
+
+      let _namespace_stmt_id = module.stmt_infos.add_stmt_info(namespace_stmt_info);
+
+      // We don't create actual ast nodes for the namespace statement here. It will be deferred
+      // to the finalize stage.
+    });
+  }
+
   #[tracing::instrument(skip_all)]
   pub fn link(mut self) -> LinkStageOutput {
     self.sort_modules();
@@ -70,6 +92,7 @@ impl LinkStage {
     ImportExportLinker::new(&mut self).link(&mut linking_infos);
     self.linking_infos = linking_infos;
     tracing::debug!("linking modules {:#?}", self.linking_infos);
+    self.create_exports_for_modules();
     self.reference_needed_symbols();
     // FIXME: should move `linking_info.facade_stmt_infos` into a separate field
     for (id, linking_info) in self.linking_infos.iter_mut_enumerated() {

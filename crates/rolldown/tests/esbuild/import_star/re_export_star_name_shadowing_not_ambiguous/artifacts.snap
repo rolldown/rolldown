@@ -8,12 +8,24 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_shadow
 ## entry_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // b.js
+var b_ns = {};
+__export(b_ns, {
+	x:() => x$1
+});
 let x$1 = 2;
 
 // a.js
+var a_ns = {};
+__export(a_ns, {
+	x:() => x
+});
 let x = 1;
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {});
 console.log(x);
 ```

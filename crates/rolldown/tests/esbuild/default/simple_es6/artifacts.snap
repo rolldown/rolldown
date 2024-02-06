@@ -8,11 +8,19 @@ input_file: crates/rolldown/tests/esbuild/default/simple_es6
 ## entry_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // foo.js
+var foo_ns = {};
+__export(foo_ns, {
+	fn:() => fn
+});
 function fn() {
 	return 123;
 }
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {});
 console.log(fn());
 ```

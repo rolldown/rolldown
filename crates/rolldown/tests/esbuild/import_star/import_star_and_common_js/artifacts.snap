@@ -8,15 +8,21 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_and_common_js
 ## entry_js.mjs
 
 ```js
-import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
+import { __esm, __export, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // foo.js
-var foo;
+var foo_ns, foo;
 var init_foo = __esm(() => {
+	foo_ns = {};
+	__export(foo_ns, {
+		foo:() => foo
+	});
 	foo = 123;
 });
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {});
 init_foo();
 const ns2 = (init_foo(),__toCommonJS(foo_ns));
 console.log(foo_ns.foo, ns2.foo);

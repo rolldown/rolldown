@@ -8,25 +8,45 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## entry_js.mjs
 
 ```js
-import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
+import { __esm, __export, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // a.js
-var abc;
+var a_ns, abc;
 var init_a = __esm(() => {
+	a_ns = {};
+	__export(a_ns, {
+		abc:() => abc
+	});
 	abc = undefined;
 });
 
 // b.js
-var xyz;
+var b_ns, xyz;
 var init_b = __esm(() => {
+	b_ns = {};
+	__export(b_ns, {
+		xyz:() => xyz
+	});
 	xyz = null;
 });
 
 // commonjs.js
 function Fn() {
 }
-var commonjs_default, v, l, c, Class;
+var commonjs_ns, commonjs_default, v, l, c, Class;
 var init_commonjs = __esm(() => {
+	commonjs_ns = {};
+	__export(commonjs_ns, {
+		C:() => Class,
+		Class:() => Class,
+		Fn:() => Fn,
+		abc:() => abc,
+		b:() => b_ns,
+		c:() => c,
+		default:() => commonjs_default,
+		l:() => l,
+		v:() => v
+	});
 	init_b();
 	commonjs_default = 123;
 	v = 234;
@@ -37,15 +57,23 @@ var init_commonjs = __esm(() => {
 });
 
 // c.js
-var c_default;
+var c_ns, c_default;
 var init_c = __esm(() => {
+	c_ns = {};
+	__export(c_ns, {
+		default:() => c_default
+	});
 	c_default = class {
 	};
 });
 
 // d.js
-var Foo;
+var d_ns, Foo;
 var init_d = __esm(() => {
+	d_ns = {};
+	__export(d_ns, {
+		default:() => Foo
+	});
 	Foo = class {
 	};
 	Foo.prop = 123;
@@ -54,26 +82,46 @@ var init_d = __esm(() => {
 // e.js
 function e_default() {
 }
+var e_ns;
 var init_e = __esm(() => {
+	e_ns = {};
+	__export(e_ns, {
+		default:() => e_default
+	});
 });
 
 // f.js
 function foo$1() {
 }
+var f_ns;
 var init_f = __esm(() => {
+	f_ns = {};
+	__export(f_ns, {
+		default:() => foo$1
+	});
 	foo$1.prop = 123;
 });
 
 // g.js
 async function g_default() {
 }
+var g_ns;
 var init_g = __esm(() => {
+	g_ns = {};
+	__export(g_ns, {
+		default:() => g_default
+	});
 });
 
 // h.js
 async function foo() {
 }
+var h_ns;
 var init_h = __esm(() => {
+	h_ns = {};
+	__export(h_ns, {
+		default:() => foo
+	});
 	foo.prop = 123;
 });
 

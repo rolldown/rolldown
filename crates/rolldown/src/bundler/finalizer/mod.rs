@@ -117,6 +117,24 @@ where
     None
   }
 
+  fn generate_finalized_expr_for_symbol_ref(&self, symbol_ref: SymbolRef) -> ast::Expression<'ast> {
+    let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
+    let symbol = self.ctx.symbols.get(canonical_ref);
+
+    if let Some(ns_alias) = &symbol.namespace_alias {
+      let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
+      let prop_name = &ns_alias.property_name;
+      let access_expr = self
+        .snippet
+        .literal_prop_access_member_expr_expr(canonical_ns_name.clone(), prop_name.clone());
+
+      access_expr
+    } else {
+      let canonical_name = self.canonical_name_for(canonical_ref);
+      self.snippet.id_ref_expr(canonical_name.clone())
+    }
+  }
+
   fn convert_decl_to_assignment(
     &self,
     decl: &mut ast::Declaration<'ast>,
@@ -182,5 +200,51 @@ where
       }
       _ => unreachable!("TypeScript code should be preprocessed"),
     }
+  }
+
+  fn generate_namespace_variable_declaration(&self) -> [ast::Statement<'ast>; 2] {
+    let ns_name = self.canonical_name_for(self.ctx.module.namespace_symbol);
+    // construct `var ns_name = {}`
+    let namespace_decl_stmt = self
+      .snippet
+      .var_decl_stmt(ns_name.clone(), ast::Expression::ObjectExpression(Dummy::dummy(self.alloc)));
+
+    // construct `__export(ns_name, { prop_name: () => returned, ... })`
+    let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
+    arg_obj_expr
+      .properties
+      .reserve(self.ctx.linking_info.exclude_ambiguous_sorted_resolved_exports.len());
+    self.ctx.linking_info.sorted_exports().for_each(|(export, resolved_export)| {
+      // prop_name: () => returned
+      let prop_name = export;
+      let returned = self.generate_finalized_expr_for_symbol_ref(resolved_export.symbol_ref);
+      arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
+        ast::ObjectProperty {
+          key: ast::PropertyKey::Identifier(
+            self.snippet.id_name(prop_name.clone()).into_in(self.alloc),
+          ),
+          value: self.snippet.only_return_arrow_expr(returned),
+          ..Dummy::dummy(self.alloc)
+        }
+        .into_in(self.alloc),
+      ));
+    });
+    let mut export_call_expr =
+      self.snippet.call_expr(self.canonical_name_for_runtime("__export").clone());
+    export_call_expr
+      .arguments
+      .push(ast::Argument::Expression(self.snippet.id_ref_expr(ns_name.clone())));
+    export_call_expr.arguments.push(ast::Argument::Expression(ast::Expression::ObjectExpression(
+      arg_obj_expr.into_in(self.alloc),
+    )));
+    let export_call_stmt = ast::Statement::ExpressionStatement(
+      ast::ExpressionStatement {
+        expression: ast::Expression::CallExpression(export_call_expr.into_in(self.alloc)),
+        ..Dummy::dummy(self.alloc)
+      }
+      .into_in(self.alloc),
+    );
+
+    [namespace_decl_stmt, export_call_stmt]
   }
 }

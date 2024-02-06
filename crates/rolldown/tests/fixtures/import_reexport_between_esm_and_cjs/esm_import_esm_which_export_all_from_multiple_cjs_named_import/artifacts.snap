@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/import_reexport_between_esm_and_cjs/e
 ## main.mjs
 
 ```js
-import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJS, __export, __reExport, __toESM } from "./_rolldown_runtime.mjs";
 
 // commonjs.js
 var require_commonjs = __commonJS((exports, module) => {
@@ -21,7 +21,11 @@ var require_commonjs2 = __commonJS((exports, module) => {
 });
 
 // proxy.js
+var proxy_ns = {};
+__export(proxy_ns, {});
 
 // main.js
+var main_ns = {};
+__export(main_ns, {});
 console.log(proxy_ns.a, 1);
 ```

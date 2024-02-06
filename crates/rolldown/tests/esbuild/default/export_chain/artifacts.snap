@@ -8,12 +8,26 @@ input_file: crates/rolldown/tests/esbuild/default/export_chain
 ## entry_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // bar.js
+var bar_ns = {};
+__export(bar_ns, {
+	c:() => c
+});
 const c = 123;
 
 // foo.js
+var foo_ns = {};
+__export(foo_ns, {
+	b:() => c
+});
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {
+	a:() => c
+});
 
 export { c as a };
 ```

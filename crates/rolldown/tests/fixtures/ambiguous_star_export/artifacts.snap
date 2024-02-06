@@ -8,15 +8,36 @@ input_file: crates/rolldown/tests/fixtures/ambiguous_star_export
 ## main.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // c.js
+var c_ns = {};
+__export(c_ns, {
+	x:() => x,
+	y:() => y
+});
 let x = 1;
 let y = 2;
 
 // a.js
+var a_ns = {};
+__export(a_ns, {
+	x:() => x,
+	y:() => y
+});
 
 // b.js
+var b_ns = {};
+__export(b_ns, {
+	x:() => x
+});
 
 // main.js
+var main_ns = {};
+__export(main_ns, {
+	x:() => x,
+	y:() => y
+});
 
 export { x, y };
 ```

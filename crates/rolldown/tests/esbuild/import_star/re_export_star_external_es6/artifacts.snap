@@ -9,6 +9,9 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_external_es
 
 ```js
 import "foo";
+import { __export } from "./_rolldown_runtime.mjs";
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {});
 ```

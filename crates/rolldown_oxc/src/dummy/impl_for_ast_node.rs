@@ -316,3 +316,46 @@ impl<'ast> DummyIn<'ast> for ast::AssignmentTargetWithDefault<'ast> {
     }
   }
 }
+
+impl<'ast> DummyIn<'ast> for ast::ObjectExpression<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      properties: DummyIn::dummy(alloc),
+      trailing_comma: DummyIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::ObjectProperty<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      kind: DummyIn::dummy(alloc),
+      key: DummyIn::dummy(alloc),
+      value: DummyIn::dummy(alloc),
+      init: DummyIn::dummy(alloc),
+      method: DummyIn::dummy(alloc),
+      shorthand: DummyIn::dummy(alloc),
+      computed: DummyIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::ObjectPropertyKind<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self::ObjectProperty(DummyIn::dummy(alloc))
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::PropertyKind {
+  fn dummy(_alloc: &'ast Allocator) -> Self {
+    Self::Init
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::PropertyKey<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self::Identifier(DummyIn::dummy(alloc))
+  }
+}

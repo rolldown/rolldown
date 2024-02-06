@@ -8,20 +8,30 @@ input_file: crates/rolldown/tests/esbuild/default/common_js_from_es6
 ## entry_js.mjs
 
 ```js
-import { __esm, __toCommonJS } from "./_rolldown_runtime.mjs";
+import { __esm, __export, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // foo.js
 function foo$1() {
 	return 'foo';
 }
+var foo_ns;
 var init_foo = __esm(() => {
+	foo_ns = {};
+	__export(foo_ns, {
+		foo:() => foo$1
+	});
 });
 
 // bar.js
 function bar$1() {
 	return 'bar';
 }
+var bar_ns;
 var init_bar = __esm(() => {
+	bar_ns = {};
+	__export(bar_ns, {
+		bar:() => bar$1
+	});
 });
 
 // entry.js

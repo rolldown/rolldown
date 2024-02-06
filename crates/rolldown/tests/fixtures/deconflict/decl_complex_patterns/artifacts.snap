@@ -9,8 +9,17 @@ input_file: crates/rolldown/tests/fixtures/deconflict/decl_complex_patterns
 
 ```js
 import { default as assert } from "assert";
+import { __export } from "./_rolldown_runtime.mjs";
 
 // names.js
+var names_ns = {};
+__export(names_ns, {
+	a:() => a,
+	b:() => b,
+	c:() => c,
+	d:() => d,
+	e:() => e
+});
 const [a] = ['a2'];
 const {b} = {
 	b:'b2'
@@ -26,6 +35,19 @@ const {d:e=''} = {
 };
 
 // main.js
+var main_ns = {};
+__export(main_ns, {
+	a:() => a$1,
+	a2:() => a,
+	b:() => b$1,
+	b2:() => b,
+	c:() => c$1,
+	c2:() => c,
+	d:() => d$1,
+	d2:() => d,
+	e:() => e$1,
+	e2:() => e
+});
 const [a$1] = ['a1'];
 const {b:b$1} = {
 	b:'b1'

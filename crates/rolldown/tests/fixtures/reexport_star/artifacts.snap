@@ -8,7 +8,13 @@ input_file: crates/rolldown/tests/fixtures/reexport_star
 ## a_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // a.js
+var a_ns = {};
+__export(a_ns, {
+	abc:() => abc
+});
 const abc = undefined;
 
 export { a_ns };
@@ -16,18 +22,28 @@ export { a_ns };
 ## entry.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
 import { a_ns } from "./a_js.mjs";
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {
+	a:() => a_ns
+});
 
 export { a_ns as a };
 ```
 ## main.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
 import { a_ns } from "./a_js.mjs";
 
 // main.js
+var main_ns = {};
+__export(main_ns, {
+	a:() => a_ns
+});
 
 export { a_ns as a };
 ```

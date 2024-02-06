@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/reexport_commonjs
 ## main.mjs
 
 ```js
-import { __commonJS, __reExport, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJS, __export, __reExport, __toESM } from "./_rolldown_runtime.mjs";
 
 // commonjs.js
 var require_commonjs = __commonJS((exports, module) => {
@@ -18,12 +18,25 @@ var require_commonjs = __commonJS((exports, module) => {
 });
 
 // esm.js
+var esm_ns = {};
+__export(esm_ns, {
+	value:() => value
+});
 const value = 1;
 
 // foo.js
+var foo_ns = {};
+__export(foo_ns, {
+	bar:() => import_commonjs$2.bar,
+	value:() => value
+});
 var import_commonjs$2 = require_commonjs();
 
 // main.js
+var main_ns = {};
+__export(main_ns, {
+	bar:() => import_commonjs.bar
+});
 var import_commonjs = require_commonjs();
 console.log(foo_ns, import_commonjs$2.bar, value, foo_ns.foo);
 

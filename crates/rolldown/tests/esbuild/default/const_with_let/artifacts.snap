@@ -8,6 +8,8 @@ input_file: crates/rolldown/tests/esbuild/default/const_with_let
 ## entry_js.mjs
 
 ```js
+import { __export } from "./_rolldown_runtime.mjs";
+
 // entry.js
 const a = 1;
 console.log(a);

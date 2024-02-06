@@ -75,10 +75,10 @@ impl<'ast> AstScanner<'ast> {
     let namespace_ref: SymbolRef =
       (idx, symbol_table.create_symbol(name.into(), scope.root_scope_id())).into();
     result.repr_name = repr_name;
-    // The first StmtInfo is to represent the namespace binding.
-    result
-      .stmt_infos
-      .add_stmt_info(StmtInfo { declared_symbols: vec![namespace_ref], ..Default::default() });
+
+    // The first `StmtInfo` is used to represent the namespace binding statement
+    result.stmt_infos.push(StmtInfo::default());
+
     Self {
       idx,
       scope,

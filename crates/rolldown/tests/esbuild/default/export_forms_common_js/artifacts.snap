@@ -47,6 +47,7 @@ var init_commonjs = __esmMin(() => {
 		l:() => l,
 		v:() => v
 	});
+	init_a();
 	init_b();
 	commonjs_default = 123;
 	v = 234;

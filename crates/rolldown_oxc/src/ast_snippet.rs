@@ -57,7 +57,7 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// `name()`
-  pub fn call_expr(&self, name: Atom) -> ast::CallExpression<'_> {
+  pub fn call_expr(&self, name: Atom) -> ast::CallExpression<'ast> {
     ast::CallExpression {
       callee: ast::Expression::Identifier(self.id_ref(name).into_in(self.alloc)),
       arguments: allocator::Vec::new_in(self.alloc),
@@ -76,6 +76,50 @@ impl<'ast> AstSnippet<'ast> {
       ast::Argument::Expression(ast::Expression::Identifier(self.id_ref(arg).into_in(self.alloc)));
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg);
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+  }
+
+  /// `name(arg)`
+  pub fn call_expr_with_arg_expr_expr(
+    &self,
+    name: Atom,
+    arg: ast::Expression<'ast>,
+  ) -> ast::Expression<'ast> {
+    let arg = ast::Argument::Expression(arg);
+    let mut call_expr = self.call_expr(name);
+    call_expr.arguments.push(arg);
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+  }
+
+  /// `name(arg1, arg2)`
+  pub fn call_expr_with_2arg_expr(
+    &self,
+    name: Atom,
+    arg1: Atom,
+    arg2: Atom,
+  ) -> ast::Expression<'_> {
+    let arg1 =
+      ast::Argument::Expression(ast::Expression::Identifier(self.id_ref(arg1).into_in(self.alloc)));
+    let arg2 =
+      ast::Argument::Expression(ast::Expression::Identifier(self.id_ref(arg2).into_in(self.alloc)));
+    let mut call_expr = self.call_expr(name);
+    call_expr.arguments.push(arg1);
+    call_expr.arguments.push(arg2);
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc))
+  }
+
+  /// `name(arg1, arg2)`
+  pub fn call_expr_with_2arg_expr_expr(
+    &self,
+    name: Atom,
+    arg1: ast::Expression<'ast>,
+    arg2: ast::Expression<'ast>,
+  ) -> ast::Expression<'ast> {
+    let arg1 = ast::Argument::Expression(arg1);
+    let arg2 = ast::Argument::Expression(arg2);
+    let mut call_expr = self.call_expr(name);
+    call_expr.arguments.push(arg1);
+    call_expr.arguments.push(arg2);
     ast::Expression::CallExpression(call_expr.into_in(self.alloc))
   }
 

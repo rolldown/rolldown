@@ -18,6 +18,7 @@ var require_commonjs = __commonJSMin((exports, module) => {
 // proxy.js
 var proxy_ns = {};
 __export(proxy_ns, {});
+__reExport(proxy_ns, __toESM(require_commonjs()));
 
 // main.js
 var main_ns = {};

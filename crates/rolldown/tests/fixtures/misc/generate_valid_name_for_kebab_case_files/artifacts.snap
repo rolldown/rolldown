@@ -8,10 +8,10 @@ input_file: crates/rolldown/tests/fixtures/misc/generate_valid_name_for_kebab_ca
 ## main.mjs
 
 ```js
-import { __commonJS, __export } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __export } from "./_rolldown_runtime.mjs";
 
 // react-dom.js
-var require_react_dom = __commonJS((exports, module) => {
+var require_react_dom = __commonJSMin((exports, module) => {
 	module.exports = 'react-dom';
 });
 

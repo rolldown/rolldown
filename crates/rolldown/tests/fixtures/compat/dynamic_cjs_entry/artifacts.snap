@@ -8,10 +8,10 @@ input_file: crates/rolldown/tests/fixtures/compat/dynamic_cjs_entry
 ## cjs_js.mjs
 
 ```js
-import { __commonJS, __export } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __export } from "./_rolldown_runtime.mjs";
 
 // cjs.js
-var require_cjs = __commonJS((exports, module) => {
+var require_cjs = __commonJSMin((exports, module) => {
 	module.exports = 'cjs';
 });
 

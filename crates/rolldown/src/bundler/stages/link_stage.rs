@@ -373,7 +373,8 @@ fn create_wrapper(ctx: &mut WrappingContext, target: ModuleId) {
     //   });
     //
     WrapKind::Cjs => {
-      linking_info.reference_symbol_in_facade_stmt_infos(ctx.runtime.resolve_symbol("__commonJS"));
+      linking_info
+        .reference_symbol_in_facade_stmt_infos(ctx.runtime.resolve_symbol("__commonJSMin"));
 
       linking_info.wrapper_ref = Some(module.declare_symbol(
         format!("require_{}", &module.repr_name).into(),
@@ -390,7 +391,7 @@ fn create_wrapper(ctx: &mut WrappingContext, target: ModuleId) {
     //   });
     //
     WrapKind::Esm => {
-      linking_info.reference_symbol_in_facade_stmt_infos(ctx.runtime.resolve_symbol("__esm"));
+      linking_info.reference_symbol_in_facade_stmt_infos(ctx.runtime.resolve_symbol("__esmMin"));
       linking_info.wrapper_ref = Some(module.declare_symbol(
         format!("init_{}", &module.repr_name).into(),
         linking_info,

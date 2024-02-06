@@ -8,11 +8,11 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_and_common_js
 ## entry_js.mjs
 
 ```js
-import { __esm, __export, __toCommonJS } from "./_rolldown_runtime.mjs";
+import { __esmMin, __export, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // foo.js
 var foo_ns, foo;
-var init_foo = __esm(() => {
+var init_foo = __esmMin(() => {
 	foo_ns = {};
 	__export(foo_ns, {
 		foo:() => foo

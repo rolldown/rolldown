@@ -28,10 +28,10 @@ console.log(foo);
 ## shared_js.mjs
 
 ```js
-import { __commonJS, __export } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __export } from "./_rolldown_runtime.mjs";
 
 // shared.js
-var require_shared = __commonJS((exports, module) => {
+var require_shared = __commonJSMin((exports, module) => {
 	exports.foo = 123;
 });
 

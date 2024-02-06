@@ -169,7 +169,7 @@ impl<'r> AstRenderer<'r> {
         let wrap_ref_name = self.ctx.wrap_ref_name.unwrap();
         let prettify_id = &self.ctx.module.pretty_path;
         self.ctx.source.indent2(&self.indentor, &[]);
-        let commonjs_ref_name = self.ctx.canonical_name_for_runtime("__commonJS");
+        let commonjs_ref_name = self.ctx.canonical_name_for_runtime("__commonJSMin");
         self.ctx.source.prepend(format!(
           "var {wrap_ref_name} = {commonjs_ref_name}({{\n{}'{prettify_id}'(exports, module) {{\n",
           self.indentor,

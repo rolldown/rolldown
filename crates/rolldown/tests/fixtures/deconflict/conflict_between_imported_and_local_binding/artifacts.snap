@@ -9,13 +9,13 @@ input_file: crates/rolldown/tests/fixtures/deconflict/conflict_between_imported_
 
 ```js
 import { default as assert } from "node:assert";
-import { __commonJS, __export } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __export } from "./_rolldown_runtime.mjs";
 
 // main.js
-var require_main = __commonJS((exports, module) => {
+var require_main = __commonJSMin((exports, module) => {
 	module.exports = 'main';
-	const __commonJS$1 = 1;
-	assert.equal(__commonJS$1, 1);
+	const __commonJS = 1;
+	assert.equal(__commonJS, 1);
 });
 
 export default require_main();

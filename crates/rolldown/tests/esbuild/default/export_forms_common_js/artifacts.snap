@@ -8,11 +8,11 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## entry_js.mjs
 
 ```js
-import { __esm, __export, __toCommonJS } from "./_rolldown_runtime.mjs";
+import { __esmMin, __export, __toCommonJS } from "./_rolldown_runtime.mjs";
 
 // a.js
 var a_ns, abc;
-var init_a = __esm(() => {
+var init_a = __esmMin(() => {
 	a_ns = {};
 	__export(a_ns, {
 		abc:() => abc
@@ -22,7 +22,7 @@ var init_a = __esm(() => {
 
 // b.js
 var b_ns, xyz;
-var init_b = __esm(() => {
+var init_b = __esmMin(() => {
 	b_ns = {};
 	__export(b_ns, {
 		xyz:() => xyz
@@ -34,7 +34,7 @@ var init_b = __esm(() => {
 function Fn() {
 }
 var commonjs_ns, commonjs_default, v, l, c, Class;
-var init_commonjs = __esm(() => {
+var init_commonjs = __esmMin(() => {
 	commonjs_ns = {};
 	__export(commonjs_ns, {
 		C:() => Class,
@@ -58,7 +58,7 @@ var init_commonjs = __esm(() => {
 
 // c.js
 var c_ns, c_default;
-var init_c = __esm(() => {
+var init_c = __esmMin(() => {
 	c_ns = {};
 	__export(c_ns, {
 		default:() => c_default
@@ -69,7 +69,7 @@ var init_c = __esm(() => {
 
 // d.js
 var d_ns, Foo;
-var init_d = __esm(() => {
+var init_d = __esmMin(() => {
 	d_ns = {};
 	__export(d_ns, {
 		default:() => Foo
@@ -83,7 +83,7 @@ var init_d = __esm(() => {
 function e_default() {
 }
 var e_ns;
-var init_e = __esm(() => {
+var init_e = __esmMin(() => {
 	e_ns = {};
 	__export(e_ns, {
 		default:() => e_default
@@ -94,7 +94,7 @@ var init_e = __esm(() => {
 function foo$1() {
 }
 var f_ns;
-var init_f = __esm(() => {
+var init_f = __esmMin(() => {
 	f_ns = {};
 	__export(f_ns, {
 		default:() => foo$1
@@ -106,7 +106,7 @@ var init_f = __esm(() => {
 async function g_default() {
 }
 var g_ns;
-var init_g = __esm(() => {
+var init_g = __esmMin(() => {
 	g_ns = {};
 	__export(g_ns, {
 		default:() => g_default
@@ -117,7 +117,7 @@ var init_g = __esm(() => {
 async function foo() {
 }
 var h_ns;
-var init_h = __esm(() => {
+var init_h = __esmMin(() => {
 	h_ns = {};
 	__export(h_ns, {
 		default:() => foo

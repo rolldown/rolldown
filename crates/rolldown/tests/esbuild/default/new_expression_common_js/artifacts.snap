@@ -8,10 +8,10 @@ input_file: crates/rolldown/tests/esbuild/default/new_expression_common_js
 ## entry_js.mjs
 
 ```js
-import { __commonJS, __export } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __export } from "./_rolldown_runtime.mjs";
 
 // foo.js
-var require_foo = __commonJS((exports, module) => {
+var require_foo = __commonJSMin((exports, module) => {
 	class Foo {
 	}
 	module.exports = {

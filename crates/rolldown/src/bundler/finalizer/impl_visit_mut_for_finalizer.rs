@@ -26,8 +26,9 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     }
 
     let old_body = program.body.take_in(self.alloc);
-
-    if matches!(self.ctx.module.exports_kind, ExportsKind::Esm) {
+    let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
+      && self.ctx.module.id != self.ctx.runtime.id();
+    if is_namespace_referenced {
       program.body.extend(self.generate_namespace_variable_declaration());
     }
 
@@ -117,7 +118,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     match self.ctx.linking_info.wrap_kind {
       WrapKind::Cjs => {
         let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
-        let commonjs_ref_name = self.canonical_name_for_runtime("__commonJS");
+        let commonjs_ref_name = self.canonical_name_for_runtime("__commonJSMin");
         let old_body = program.body.take_in(self.alloc);
 
         program.body.push(self.snippet.commonjs_wrapper_stmt(
@@ -128,7 +129,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       }
       WrapKind::Esm => {
         let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
-        let esm_ref_name = self.canonical_name_for_runtime("__esm");
+        let esm_ref_name = self.canonical_name_for_runtime("__esmMin");
         let old_body = program.body.take_in(self.alloc);
 
         let mut fn_stmts = allocator::Vec::new_in(self.alloc);

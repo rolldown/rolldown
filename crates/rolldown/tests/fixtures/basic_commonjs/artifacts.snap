@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/basic_commonjs
 ## main.mjs
 
 ```js
-import { __commonJS, __esm, __export, __toCommonJS, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __esmMin, __export, __toCommonJS, __toESM } from "./_rolldown_runtime.mjs";
 
 // esm.js
 function esm_default_fn() {
@@ -19,7 +19,7 @@ function hoisted_fn() {
 	const bar = 1;
 }
 var esm_ns, esm_named_var, esm_named_class, hoisted_var, hoisted_class;
-var init_esm = __esm(() => {
+var init_esm = __esmMin(() => {
 	esm_ns = {};
 	__export(esm_ns, {
 		default:() => esm_default_fn,
@@ -36,7 +36,7 @@ var init_esm = __esm(() => {
 });
 
 // commonjs.js
-var require_commonjs$1 = __commonJS((exports, module) => {
+var require_commonjs$1 = __commonJSMin((exports, module) => {
 	var value = (init_esm(),__toCommonJS(esm_ns));
 	module.exports = value;
 });

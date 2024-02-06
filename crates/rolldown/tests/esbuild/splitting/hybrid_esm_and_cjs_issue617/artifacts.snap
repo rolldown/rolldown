@@ -15,11 +15,11 @@ export { foo };
 ## a_js.mjs
 
 ```js
-import { __esm, __export } from "./_rolldown_runtime.mjs";
+import { __esmMin, __export } from "./_rolldown_runtime.mjs";
 
 // a.js
 var a_ns, foo;
-var init_a = __esm(() => {
+var init_a = __esmMin(() => {
 	a_ns = {};
 	__export(a_ns, {
 		foo:() => foo

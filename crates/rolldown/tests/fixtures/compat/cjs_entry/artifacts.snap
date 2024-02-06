@@ -8,10 +8,10 @@ input_file: crates/rolldown/tests/fixtures/compat/cjs_entry
 ## main.mjs
 
 ```js
-import { __commonJS, __export } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __export } from "./_rolldown_runtime.mjs";
 
 // main.js
-var require_main = __commonJS((exports, module) => {
+var require_main = __commonJSMin((exports, module) => {
 	module.exports = 'main';
 });
 

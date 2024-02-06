@@ -6,5 +6,7 @@
         "import": "entry.js"
       }
     ]
-  }
+  },
+  "_comment": "https://github.com/oxc-project/oxc/issues/2328",
+  "expectExecuted": false
 }

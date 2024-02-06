@@ -8,10 +8,10 @@ input_file: crates/rolldown/tests/esbuild/default/require_child_dir_common_js
 ## entry_js.mjs
 
 ```js
-import { __commonJS, __export } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __export } from "./_rolldown_runtime.mjs";
 
 // dir/index.js
-var require_dir_index = __commonJS((exports, module) => {
+var require_dir_index = __commonJSMin((exports, module) => {
 	module.exports = 123;
 });
 

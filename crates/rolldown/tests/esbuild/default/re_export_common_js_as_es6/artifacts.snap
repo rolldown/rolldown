@@ -8,10 +8,10 @@ input_file: crates/rolldown/tests/esbuild/default/re_export_common_js_as_es6
 ## entry_js.mjs
 
 ```js
-import { __commonJS, __export, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __export, __toESM } from "./_rolldown_runtime.mjs";
 
 // foo.js
-var require_foo = __commonJS((exports, module) => {
+var require_foo = __commonJSMin((exports, module) => {
 	exports.bar = 123;
 });
 

@@ -27,7 +27,7 @@ var main_ns = {};
 __export(main_ns, {
 	default:() => main_default
 });
-var main_default = import("'./cjs_js.mjs'");
+var main_default = import('./cjs_js.mjs');
 
 export { main_default as default };
 ```

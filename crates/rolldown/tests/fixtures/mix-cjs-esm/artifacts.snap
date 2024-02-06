@@ -32,7 +32,7 @@ const value = 1;
 
 // esm-import-cjs-export.js
 var require_esm_import_cjs_export = __commonJSMin((exports, module) => {
-	var import_foo$1 = require_foo();
+	var import_foo$1 = __toESM(require_foo());
 	module.exports = 1;
 });
 
@@ -43,13 +43,11 @@ var require_cjs = __commonJSMin((exports, module) => {
 
 // esm-import-cjs-require.js
 var esm_import_cjs_require_ns = {};
-__export(esm_import_cjs_require_ns, {});
-var import_cjs = require_cjs();
+var import_cjs = __toESM(require_cjs());
 require_foo();
 console.log(import_cjs.a);
 
 // main.js
 var main_ns = {};
-__export(main_ns, {});
-var import_esm_import_cjs_export = require_esm_import_cjs_export();
+var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
 ```

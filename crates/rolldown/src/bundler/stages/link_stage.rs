@@ -72,7 +72,6 @@ impl LinkStage {
         declared_symbols: vec![module.namespace_symbol],
         referenced_symbols: vec![self.runtime.resolve_symbol("__export")],
         side_effect: false,
-        ..Default::default()
       };
 
       let _namespace_stmt_id = module.stmt_infos.add_stmt_info(namespace_stmt_info);

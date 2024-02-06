@@ -31,6 +31,5 @@ __export(folders_index_ns, {
 
 // entry.js
 var entry_ns = {};
-__export(entry_ns, {});
 console.log(JSON.stringify(folders_index_ns));
 ```

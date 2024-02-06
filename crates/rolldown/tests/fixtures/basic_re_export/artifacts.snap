@@ -25,7 +25,6 @@ __export(proxy_ns, {
 
 // main.js
 var main_ns = {};
-__export(main_ns, {});
 const a$1 = 'index.js';
 console.log(a$1, a);
 ```

@@ -31,14 +31,14 @@ __export(foo_ns, {
 	value:() => value
 });
 __reExport(foo_ns, __toESM(require_commonjs()));
-var import_commonjs$2 = require_commonjs();
+var import_commonjs$2 = __toESM(require_commonjs());
 
 // main.js
 var main_ns = {};
 __export(main_ns, {
 	bar:() => import_commonjs.bar
 });
-var import_commonjs = require_commonjs();
+var import_commonjs = __toESM(require_commonjs());
 console.log(foo_ns, import_commonjs$2.bar, value, foo_ns.foo);
 
 var bar$1 = import_commonjs.bar;

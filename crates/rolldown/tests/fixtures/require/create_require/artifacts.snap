@@ -13,7 +13,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 
 // main.js
 var main_ns = {};
-__export(main_ns, {});
 const require = createRequire(import.meta.url);
 const assert = require('node:assert');
 assert.equal(1, 1);

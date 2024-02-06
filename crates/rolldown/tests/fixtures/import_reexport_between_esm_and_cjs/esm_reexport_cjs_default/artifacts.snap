@@ -20,7 +20,7 @@ var main_ns = {};
 __export(main_ns, {
 	default:() => import_commonjs.default
 });
-var import_commonjs = require_commonjs();
+var import_commonjs = __toESM(require_commonjs());
 
 var commonjs_default = import_commonjs.default;
 export { commonjs_default as default };

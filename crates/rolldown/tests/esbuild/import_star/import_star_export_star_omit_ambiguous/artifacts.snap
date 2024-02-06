@@ -37,6 +37,5 @@ __export(common_ns, {
 
 // entry.js
 var entry_ns = {};
-__export(entry_ns, {});
 console.log(common_ns);
 ```

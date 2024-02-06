@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_import_issue_272
 import { __export } from "./_rolldown_runtime.mjs";
 
 // a.js
-import("'./b.mjs'");
+import('./b.mjs');
 ```
 ## b.mjs
 

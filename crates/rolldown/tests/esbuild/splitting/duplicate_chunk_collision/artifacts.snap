@@ -12,7 +12,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 
 // a.js
 var a_ns = {};
-__export(a_ns, {});
 ```
 ## ab_js.mjs
 
@@ -29,7 +28,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 
 // b.js
 var b_ns = {};
-__export(b_ns, {});
 ```
 ## c.mjs
 
@@ -46,7 +44,6 @@ console.log(123);
 
 // d.js
 var d_ns = {};
-__export(d_ns, {});
 ```
 ## d.mjs
 

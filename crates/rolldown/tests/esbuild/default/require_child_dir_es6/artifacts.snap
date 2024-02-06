@@ -19,6 +19,5 @@ var dir_index_default = 123;
 
 // entry.js
 var entry_ns = {};
-__export(entry_ns, {});
 console.log(dir_index_default);
 ```

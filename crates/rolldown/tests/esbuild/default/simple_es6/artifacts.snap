@@ -21,6 +21,5 @@ function fn() {
 
 // entry.js
 var entry_ns = {};
-__export(entry_ns, {});
 console.log(fn());
 ```

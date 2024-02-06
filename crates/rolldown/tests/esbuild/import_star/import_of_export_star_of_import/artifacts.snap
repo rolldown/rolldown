@@ -35,6 +35,5 @@ statement();
 
 // entry.js
 var entry_ns = {};
-__export(entry_ns, {});
 console.log(value);
 ```

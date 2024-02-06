@@ -13,7 +13,6 @@ import { setValue } from "./shared_js.mjs";
 
 // a.js
 var a_ns = {};
-__export(a_ns, {});
 setValue(123);
 ```
 ## b.mjs
@@ -23,7 +22,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 
 // b.js
 var b_ns = {};
-__export(b_ns, {});
 ```
 ## shared_js.mjs
 

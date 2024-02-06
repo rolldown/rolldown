@@ -54,12 +54,16 @@ where
         // Remove this statement by ignoring it
       }
       WrapKind::Cjs => {
-        // Replace the statement with something like `var import_foo = require_foo()`
+        // Replace the statement with something like `var import_foo = __toESM(require_foo())`
+        let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
         let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
         *stmt = self.snippet.var_decl_stmt(
           binding_name_for_wrapper_call_ret.clone(),
-          self.snippet.call_expr_expr(wrapper_ref_name.clone()),
+          self.snippet.call_expr_with_arg_expr_expr(
+            to_esm_fn_name.clone(),
+            self.snippet.call_expr_expr(wrapper_ref_name.clone()),
+          ),
         );
         return false;
       }
@@ -202,18 +206,23 @@ where
     }
   }
 
-  fn generate_namespace_variable_declaration(&self) -> [ast::Statement<'ast>; 2] {
+  fn generate_namespace_variable_declaration(&self) -> Vec<ast::Statement<'ast>> {
     let ns_name = self.canonical_name_for(self.ctx.module.namespace_symbol);
     // construct `var ns_name = {}`
     let namespace_decl_stmt = self
       .snippet
       .var_decl_stmt(ns_name.clone(), ast::Expression::ObjectExpression(Dummy::dummy(self.alloc)));
 
-    // construct `__export(ns_name, { prop_name: () => returned, ... })`
+    let exports_len = self.ctx.linking_info.exclude_ambiguous_sorted_resolved_exports.len();
+
+    if exports_len == 0 {
+      return vec![namespace_decl_stmt];
+    }
+
+    // construct `{ prop_name: () => returned, ... }`
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
-    arg_obj_expr
-      .properties
-      .reserve(self.ctx.linking_info.exclude_ambiguous_sorted_resolved_exports.len());
+    arg_obj_expr.properties.reserve_exact(exports_len);
+
     self.ctx.linking_info.sorted_exports().for_each(|(export, resolved_export)| {
       // prop_name: () => returned
       let prop_name = export;
@@ -229,6 +238,8 @@ where
         .into_in(self.alloc),
       ));
     });
+
+    // construct `__export(ns_name, { prop_name: () => returned, ... })`
     let mut export_call_expr =
       self.snippet.call_expr(self.canonical_name_for_runtime("__export").clone());
     export_call_expr
@@ -245,6 +256,6 @@ where
       .into_in(self.alloc),
     );
 
-    [namespace_decl_stmt, export_call_stmt]
+    vec![namespace_decl_stmt, export_call_stmt]
   }
 }

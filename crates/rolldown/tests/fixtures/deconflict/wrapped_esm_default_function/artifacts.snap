@@ -36,7 +36,6 @@ var bar_default = {
 
 // main.js
 var main_ns = {};
-__export(main_ns, {});
 const a = 2;
 const {foo} = bar_default;
 assert.strictEqual(typeof foo, 'function');

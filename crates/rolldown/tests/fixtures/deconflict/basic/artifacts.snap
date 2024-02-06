@@ -20,7 +20,6 @@ const a = 'a.js';
 
 // main.js
 var main_ns = {};
-__export(main_ns, {});
 const a$1 = 'main.js';
 assert.equal(a$1, 'main.js');
 assert.equal(a, 'a.js');

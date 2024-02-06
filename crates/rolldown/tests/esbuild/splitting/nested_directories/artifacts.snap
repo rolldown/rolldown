@@ -13,7 +13,6 @@ import { shared_default } from "./shared_js.mjs";
 
 // src/a.js
 var a_ns = {};
-__export(a_ns, {});
 console.log(shared_default);
 ```
 ## b.mjs
@@ -24,7 +23,6 @@ import { shared_default } from "./shared_js.mjs";
 
 // src/b.js
 var b_ns = {};
-__export(b_ns, {});
 console.log( -shared_default);
 ```
 ## shared_js.mjs

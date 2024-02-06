@@ -19,7 +19,6 @@ const foo$1 = 123;
 
 // entry.js
 var entry_ns = {};
-__export(entry_ns, {});
 let foo = 234;
 console.log(foo);
 ```

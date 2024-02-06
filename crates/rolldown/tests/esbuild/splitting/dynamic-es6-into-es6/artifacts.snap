@@ -25,5 +25,5 @@ export { bar };
 import { __export } from "./_rolldown_runtime.mjs";
 
 // main.js
-import("'./foo_js.mjs'").then(({bar}) => console.log(bar));
+import('./foo_js.mjs').then(({bar}) => console.log(bar));
 ```

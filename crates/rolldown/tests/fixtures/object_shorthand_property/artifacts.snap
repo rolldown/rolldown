@@ -20,7 +20,6 @@ var foo_default = 'foo';
 
 // main.js
 var main_ns = {};
-__export(main_ns, {});
 const value = {
 	foo:foo_default
 };

@@ -25,6 +25,5 @@ __export(foo_ns, {
 
 // entry.js
 var entry_ns = {};
-__export(entry_ns, {});
 console.log(foo_ns, foo_ns.foo);
 ```

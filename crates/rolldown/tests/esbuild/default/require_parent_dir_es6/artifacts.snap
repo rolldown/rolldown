@@ -19,6 +19,5 @@ var require_parent_dir_es6_index_default = 123;
 
 // dir/entry.js
 var entry_ns = {};
-__export(entry_ns, {});
 console.log(require_parent_dir_es6_index_default);
 ```

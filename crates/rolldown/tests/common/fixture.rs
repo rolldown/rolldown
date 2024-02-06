@@ -40,9 +40,6 @@ impl Fixture {
   }
 
   pub fn exec(&self) {
-    // TODO: disable this feature temporarily
-    return;
-
     let test_config = self.test_config();
 
     if !test_config.expect_executed || test_config.expect_error {

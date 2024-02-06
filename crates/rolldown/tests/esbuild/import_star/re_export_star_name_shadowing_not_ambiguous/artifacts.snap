@@ -26,6 +26,5 @@ let x = 1;
 
 // entry.js
 var entry_ns = {};
-__export(entry_ns, {});
 console.log(x);
 ```

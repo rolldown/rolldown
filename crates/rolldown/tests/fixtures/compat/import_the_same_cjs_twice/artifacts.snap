@@ -21,8 +21,8 @@ __export(main_ns, {
 	a:() => import_cjs.a,
 	a2:() => import_cjs$1.a
 });
-var import_cjs = require_cjs();
-var import_cjs$1 = require_cjs();
+var import_cjs = __toESM(require_cjs());
+var import_cjs$1 = __toESM(require_cjs());
 
 var a = import_cjs.a;
 var a2 = import_cjs$1.a;

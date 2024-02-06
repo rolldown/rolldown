@@ -13,7 +13,6 @@ import { value } from "./share_js.mjs";
 
 // entry.js
 var entry_ns = {};
-__export(entry_ns, {});
 console.log(value);
 ```
 ## main.mjs
@@ -25,7 +24,6 @@ import { value } from "./share_js.mjs";
 
 // main.js
 var main_ns = {};
-__export(main_ns, {});
 assert(value === 1);
 ```
 ## share_js.mjs

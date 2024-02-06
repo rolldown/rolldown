@@ -13,7 +13,6 @@ import { foo, setFoo } from "./shared_js.mjs";
 
 // a.js
 var a_ns = {};
-__export(a_ns, {});
 setFoo(123);
 console.log(foo);
 ```
@@ -25,7 +24,6 @@ import { foo } from "./shared_js.mjs";
 
 // b.js
 var b_ns = {};
-__export(b_ns, {});
 console.log(foo);
 ```
 ## shared_js.mjs

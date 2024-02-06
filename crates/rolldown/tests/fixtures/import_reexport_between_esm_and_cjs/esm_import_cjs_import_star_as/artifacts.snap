@@ -17,7 +17,6 @@ var require_commonjs = __commonJSMin((exports, module) => {
 
 // main.js
 var main_ns = {};
-__export(main_ns, {});
-var import_commonjs = require_commonjs();
+var import_commonjs = __toESM(require_commonjs());
 console.log(import_commonjs);
 ```

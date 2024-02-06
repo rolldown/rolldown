@@ -20,7 +20,6 @@ const a = 'shared.js';
 
 // main.js
 var main_ns = {};
-__export(main_ns, {});
 const a$1 = 'a';
 const a$1$1 = 'a$1';
 assert.equal(a, 'shared.js');

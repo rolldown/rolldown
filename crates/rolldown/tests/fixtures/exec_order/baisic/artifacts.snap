@@ -24,5 +24,4 @@ globalThis.order += 'c';
 
 // main.js
 var main_ns = {};
-__export(main_ns, {});
 ```

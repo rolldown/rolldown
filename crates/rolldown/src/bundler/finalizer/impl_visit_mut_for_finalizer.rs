@@ -283,6 +283,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
   #[allow(clippy::collapsible_else_if)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     if let Some(call_expr) = expr.as_call_expression() {
+      // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
       if let ast::Expression::Identifier(callee) = &call_expr.callee {
         if callee.name == "require" && self.is_global_identifier_reference(callee) {
           let rec_id = self.ctx.module.imports[&call_expr.span];
@@ -316,7 +317,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
   }
 
   fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {
-    // rewrite `const val = { a };` to `const val = { a: a.xxx }`
+    // Ensure `{ a }` would be rewritten to `{ a: a$1 }` instead of `{ a$1 }`
     match prop.value {
       ast::Expression::Identifier(ref id_ref) if prop.shorthand => {
         if let Some(expr) = self.generate_finalized_expr_for_reference(id_ref, true) {
@@ -336,10 +337,10 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
   }
 
   fn visit_object_pattern(&mut self, pat: &mut ast::ObjectPattern<'ast>) {
-    // visit children
     for prop in pat.properties.iter_mut() {
       match &mut prop.value.kind {
-        // Rewrite `const { a } = obj;`` to `const { a: a$1 } = obj;`
+        // Ensure `const { a } = ...;` will be rewritten to `const { a: a$1 } = ...` instead of `const { a$1 } = ...`
+        // Ensure `function foo({ a }) {}` will be rewritten to `function foo({ a: a$1 }) {}` instead of `function foo({ a$1 }) {}`
         ast::BindingPatternKind::BindingIdentifier(ident) if prop.shorthand => {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
@@ -349,7 +350,8 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             }
           }
         }
-        // Rewrite `const { a = 1 } = obj;`` to `const { a: a$1 = 1 } = obj;`
+        // Ensure `const { a = 1 } = ...;` will be rewritten to `const { a: a$1 = 1 } = ...` instead of `const { a$1 = 1 } = ...`
+        // Ensure `function foo({ a = 1 }) {}` will be rewritten to `function foo({ a: a$1 = 1 }) {}` instead of `function foo({ a$1 = 1 }) {}`
         ast::BindingPatternKind::AssignmentPattern(assign_pat)
           if prop.shorthand
             && matches!(assign_pat.left.kind, ast::BindingPatternKind::BindingIdentifier(_)) =>
@@ -365,7 +367,13 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             }
           }
         }
-        _ => {}
+        _ => {
+          // For other patterns:
+          // - `const [a] = ...` or `function foo([a]) {}`
+          // - `const { a: b } = ...` or `function foo({ a: b }) {}`
+          // - `const { a: b = 1 } = ...` or `function foo({ a: b = 1 }) {}`
+          // They could keep correct semantics after renaming, so we don't need to do anything special.
+        }
       }
     }
 

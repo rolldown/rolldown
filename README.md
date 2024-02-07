@@ -18,6 +18,7 @@ The Rolldown project are standing upon the shoulders of these giants:
 
 - [rollup](https://github.com/rollup/rollup), created by [Rich-Harris](https://github.com/Rich-Harris) and maintained by [lukastaegert](https://github.com/lukastaegert).
 - [esbuild](https://github.com/evanw/esbuild), created by [evanw](https://github.com/evanw).
+- [parcel_sourcemap](https://github.com/parcel-bundler/source-map).
 
 # Licenses
 

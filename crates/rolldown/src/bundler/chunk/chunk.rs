@@ -1,7 +1,8 @@
 use oxc::span::Atom;
 use rolldown_common::{EntryPoint, EntryPointKind, ModuleId, NamedImport, Specifier, SymbolRef};
+use rolldown_error::BuildError;
+use rolldown_sourcemap::{collapse_sourcemaps, concat_sourcemaps, SourceMap};
 use rustc_hash::FxHashMap;
-use string_wizard::{Joiner, JoinerOptions};
 
 use crate::{
   bundler::{
@@ -56,18 +57,21 @@ impl Chunk {
     }
   }
 
-  #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
+  #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation, clippy::type_complexity)]
   pub fn render(
     &self,
     input_options: &InputOptions,
     graph: &LinkStageOutput,
     chunk_graph: &ChunkGraph,
     output_options: &OutputOptions,
-  ) -> BatchedResult<(String, FxHashMap<String, RenderedModule>)> {
+  ) -> BatchedResult<((String, Option<SourceMap>), FxHashMap<String, RenderedModule>)> {
     use rayon::prelude::*;
     let mut rendered_modules = FxHashMap::default();
-    let mut joiner = Joiner::with_options(JoinerOptions { separator: Some("\n".to_string()) });
-    joiner.append(self.render_imports_for_esm(graph, chunk_graph));
+    let mut content_and_sourcemaps = vec![];
+
+    content_and_sourcemaps
+      .push((self.render_imports_for_esm(graph, chunk_graph).to_string(), None));
+
     self
       .modules
       .par_iter()
@@ -94,23 +98,40 @@ impl Chunk {
                 .unwrap_or_default(),
             },
             rendered_content,
+            if output_options.sourcemap.is_hidden() {
+              None
+            } else {
+              // TODO add oxc codegen sourcemap to sourcemap chain
+              Some(collapse_sourcemaps(m.sourcemap_chain.clone()))
+            },
           ))
         }
         crate::bundler::module::Module::External(_) => None,
       })
       .collect::<Vec<_>>()
       .into_iter()
-      .for_each(|(module_path, rendered_module, rendered_content)| {
-        if let Some(rendered_content) = rendered_content {
-          joiner.append(rendered_content);
-        }
-        rendered_modules.insert(module_path, rendered_module);
-      });
+      .try_for_each(
+        |(module_path, rendered_module, rendered_content, map)| -> Result<(), BuildError> {
+          if let (Some(rendered_content), Some(map)) = (rendered_content, map) {
+            content_and_sourcemaps.push((rendered_content.to_string(), map?));
+          }
+          rendered_modules.insert(module_path, rendered_module);
+          Ok(())
+        },
+      )?;
 
     if let Some(exports) = self.render_exports(graph, output_options) {
-      joiner.append(exports);
+      content_and_sourcemaps.push((exports.to_string(), None));
     }
 
-    Ok((joiner.join(), rendered_modules))
+    if output_options.sourcemap.is_hidden() {
+      return Ok((
+        (content_and_sourcemaps.into_iter().map(|(c, _)| c).collect::<Vec<_>>().join("\n"), None),
+        rendered_modules,
+      ));
+    }
+
+    let (content, map) = concat_sourcemaps(&content_and_sourcemaps)?;
+    Ok(((content, Some(map)), rendered_modules))
   }
 }

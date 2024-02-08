@@ -2,6 +2,7 @@ use parcel_sourcemap::SourceMap as ParcelSourcemap;
 mod concat_sourcemap;
 
 pub use concat_sourcemap::concat_sourcemaps;
+use rolldown_error::BuildError;
 #[derive(Debug, Default, Clone)]
 pub struct SourceMap {
   pub mappings: String,
@@ -23,12 +24,18 @@ impl SourceMap {
     Self { mappings, names, source_root, sources, sources_content, inner: None }
   }
 
-  pub fn to_json(&mut self) -> String {
-    self.inner.as_mut().expect("should have inner").to_json(None).expect("should success")
+  pub fn to_json(&mut self) -> Option<Result<String, BuildError>> {
+    self
+      .inner
+      .as_mut()
+      .map(|i| i.to_json(None).map_err(|e| BuildError::sourcemap_error(e.to_string())))
   }
 
-  pub fn to_data_url(&mut self) -> String {
-    self.inner.as_mut().expect("should have inner").to_data_url(None).expect("should success")
+  pub fn to_data_url(&mut self) -> Option<Result<String, BuildError>> {
+    self
+      .inner
+      .as_mut()
+      .map(|i| i.to_data_url(None).map_err(|e| BuildError::sourcemap_error(e.to_string())))
   }
 
   pub fn get_inner(&self) -> Option<&ParcelSourcemap> {
@@ -42,7 +49,9 @@ impl From<ParcelSourcemap> for SourceMap {
   }
 }
 
-pub fn collapse_sourcemaps(sourcemap_chain: Vec<SourceMap>) -> Result<Option<SourceMap>, String> {
+pub fn collapse_sourcemaps(
+  sourcemap_chain: Vec<SourceMap>,
+) -> Result<Option<SourceMap>, BuildError> {
   let mut parcel_sourcemap_chain = sourcemap_chain
     .into_iter()
     .map(|sourcemap| {
@@ -56,16 +65,16 @@ pub fn collapse_sourcemaps(sourcemap_chain: Vec<SourceMap>) -> Result<Option<Sou
           0,
           0,
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
       Ok(map)
     })
     .rev()
-    .collect::<Result<Vec<_>, String>>()?;
+    .collect::<Result<Vec<_>, BuildError>>()?;
 
   let Some(mut result) = parcel_sourcemap_chain.pop() else { return Ok(None) };
 
   for mut sourcemap in parcel_sourcemap_chain.into_iter().rev() {
-    sourcemap.extends(&mut result).map_err(|e| e.to_string())?;
+    sourcemap.extends(&mut result).map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
     result = sourcemap;
   }
 

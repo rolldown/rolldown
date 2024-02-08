@@ -1,10 +1,11 @@
 use parcel_sourcemap::SourceMap as ParcelSourcemap;
+use rolldown_error::BuildError;
 
 use crate::SourceMap;
 
 pub fn concat_sourcemaps(
-  content_and_sourcemaps: &[(String, Option<&SourceMap>)],
-) -> Result<(String, SourceMap), String> {
+  content_and_sourcemaps: &[(String, Option<SourceMap>)],
+) -> Result<(String, SourceMap), BuildError> {
   let mut s = String::new();
   let mut map = ParcelSourcemap::new("");
   let mut line_offset = 0;
@@ -18,12 +19,15 @@ pub fn concat_sourcemaps(
     if let Some(sourcemap) = sourcemap {
       map
         .add_sourcemap(
-          &mut sourcemap.get_inner().cloned().ok_or("concat sourcemap not inner sourcemap")?,
+          &mut sourcemap.get_inner().cloned().ok_or(BuildError::sourcemap_error(
+            "concat sourcemap not inner sourcemap".to_string(),
+          ))?,
           line_offset.into(),
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
     }
-    line_offset += u32::try_from(content.lines().count() + 1).map_err(|e| e.to_string())?;
+    line_offset += u32::try_from(content.lines().count() + 1)
+      .map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
   }
 
   Ok((s, map.into()))
@@ -51,7 +55,7 @@ mod tests {
       ("\nconsole.log()".to_string(), None),
       (
         "function sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n".to_string(),
-        Some(&map),
+        Some(map),
       ),
     ];
 

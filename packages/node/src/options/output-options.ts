@@ -5,7 +5,8 @@ import { unimplemented } from '../utils'
 export interface OutputOptions {
   dir?: RollupOutputOptions['dir']
   format?: 'esm'
-  exports?: RollupOutputOptions['exports']
+  exports?: RollupOutputOptions['exports'],
+  sourcemap?: RollupOutputOptions['sourcemap'],
 }
 
 function normalizeFormat(
@@ -18,13 +19,31 @@ function normalizeFormat(
   }
 }
 
+function normalizeSourcemap(sourcemap: OutputOptions['sourcemap']): BindingOutputOptions['sourcemap'] {
+  switch (sourcemap) {
+    case true:
+      return "file"
+  
+    case "inline":
+      return "inline"
+
+    case false:
+    case "hidden":
+      return "hidden"
+
+    default:
+      throw new Error(`unknown sourcemap: ${sourcemap}`);
+  }
+}
+
 export function normalizeOutputOptions(
   opts: OutputOptions,
 ): BindingOutputOptions {
-  const { dir, format, exports } = opts
+  const { dir, format, exports, sourcemap } = opts
   return {
     dir: dir,
     format: normalizeFormat(format),
     exports,
+    sourcemap: normalizeSourcemap(sourcemap)
   }
 }

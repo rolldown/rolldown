@@ -46,7 +46,8 @@ pub struct OutputOptions {
   // preserveModules: boolean;
   // preserveModulesRoot: string | undefined;
   // sanitizeFileName: (fileName: string) => string;
-  // sourcemap: boolean | 'inline' | 'hidden';
+  #[napi(ts_type = "'file' | 'inline' | 'hidden'")]
+  pub sourcemap: Option<String>,
   // sourcemapExcludeSources: boolean;
   // sourcemapFile: string | undefined;
   // sourcemapPathTransform: SourcemapPathTransformOption | undefined;
@@ -71,6 +72,10 @@ impl From<OutputOptions> for rolldown::OutputOptions {
 
     if let Some(dir) = value.dir {
       options.dir = dir;
+    }
+
+    if let Some(sourcemap) = value.sourcemap {
+      options.sourcemap = sourcemap.into();
     }
 
     options

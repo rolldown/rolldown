@@ -65,4 +65,5 @@ pub struct StmtInfo {
   /// Top level symbols referenced by this statement.
   pub referenced_symbols: Vec<SymbolRef>,
   pub side_effect: bool,
+  pub is_included: bool,
 }

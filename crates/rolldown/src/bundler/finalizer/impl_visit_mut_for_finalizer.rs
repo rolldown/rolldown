@@ -407,5 +407,11 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       }
       _ => {}
     }
+
+    // visit children
+    self.visit_expression(&mut expr.source);
+    for arg in expr.arguments.iter_mut() {
+      self.visit_expression(arg);
+    }
   }
 }

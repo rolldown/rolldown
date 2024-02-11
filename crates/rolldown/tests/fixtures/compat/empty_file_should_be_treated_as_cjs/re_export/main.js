@@ -1,2 +1,2 @@
-export * as staImport from './star_empty'
-export { default as defaultImport } from './default_empty'
+export * as staImport from './star-empty'
+export { default as defaultImport } from './default-empty'

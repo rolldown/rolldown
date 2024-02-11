@@ -161,6 +161,9 @@ impl LinkStage {
   }
 
   fn determine_module_exports_kind(&mut self) {
+    // Maximize the compatibility with commonjs
+    let compat_mode = true;
+
     self.sorted_modules.iter().copied().for_each(|importer_id| {
       let Module::Normal(importer) = &self.modules[importer_id] else {
         return;
@@ -172,23 +175,55 @@ impl LinkStage {
         };
 
         match rec.kind {
-          ImportKind::Import | ImportKind::DynamicImport => {
-            // We currently don't need to do anything here.
+          ImportKind::Import => {
+            if matches!(importee.exports_kind, ExportsKind::None) {
+              if compat_mode {
+                // See https://github.com/evanw/esbuild/issues/447
+                if (rec.contains_import_default || rec.contains_import_star)
+                  && matches!(importee.exports_kind, ExportsKind::None)
+                {
+                  self.linking_infos[importee.id].wrap_kind = WrapKind::Cjs;
+                  // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
+                  unsafe {
+                    let importee_mut = addr_of!(*importee).cast_mut();
+                    (*importee_mut).exports_kind = ExportsKind::CommonJs;
+                  }
+                }
+              } else {
+                self.linking_infos[importee.id].wrap_kind = WrapKind::Esm;
+                unsafe {
+                  let importee_mut = addr_of!(*importee).cast_mut();
+                  (*importee_mut).exports_kind = ExportsKind::Esm;
+                }
+              }
+            }
           }
           ImportKind::Require => match importee.exports_kind {
             ExportsKind::Esm => {
               self.linking_infos[importee.id].wrap_kind = WrapKind::Esm;
             }
-            ExportsKind::CommonJs | ExportsKind::None => {
+            ExportsKind::CommonJs => {
               self.linking_infos[importee.id].wrap_kind = WrapKind::Cjs;
-              // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-              // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
-              unsafe {
-                let importee_mut = addr_of!(*importee).cast_mut();
-                (*importee_mut).exports_kind = ExportsKind::CommonJs;
+            }
+            ExportsKind::None => {
+              if compat_mode {
+                self.linking_infos[importee.id].wrap_kind = WrapKind::Cjs;
+                // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
+                // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
+                unsafe {
+                  let importee_mut = addr_of!(*importee).cast_mut();
+                  (*importee_mut).exports_kind = ExportsKind::CommonJs;
+                }
+              } else {
+                self.linking_infos[importee.id].wrap_kind = WrapKind::Esm;
+                unsafe {
+                  let importee_mut = addr_of!(*importee).cast_mut();
+                  (*importee_mut).exports_kind = ExportsKind::Esm;
+                }
               }
             }
           },
+          ImportKind::DynamicImport => {}
         }
       });
 

@@ -208,6 +208,9 @@ impl<'ast> AstScanner<'ast> {
       imported_as: generated_imported_as_ref,
       record_id,
     };
+    if name_import.imported.is_default() {
+      self.result.import_records[record_id].contains_import_default = true;
+    }
     self.result.named_imports.insert(generated_imported_as_ref.symbol, name_import);
     self
       .result
@@ -223,6 +226,7 @@ impl<'ast> AstScanner<'ast> {
     let name_import =
       NamedImport { imported: Specifier::Star, imported_as: generated_imported_as_ref, record_id };
     self.result.named_imports.insert(generated_imported_as_ref.symbol, name_import);
+    self.result.import_records[record_id].contains_import_star = true;
     self
       .result
       .named_exports
@@ -312,13 +316,22 @@ impl<'ast> AstScanner<'ast> {
     specifiers.iter().for_each(|spec| match spec {
       oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
+        let imported = spec.imported.name();
+        if imported == &"default" {
+          self.add_named_import(sym, imported, id);
+          self.result.import_records[id].contains_import_default = true;
+        } else {
+          self.add_named_import(sym, imported, id);
+        }
         self.add_named_import(sym, spec.imported.name(), id);
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
         self.add_named_import(spec.local.expect_symbol_id(), &Atom::new_inline("default"), id);
+        self.result.import_records[id].contains_import_default = true;
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
         self.add_star_import(spec.local.expect_symbol_id(), id);
+        self.result.import_records[id].contains_import_star = true;
       }
     });
   }

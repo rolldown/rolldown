@@ -1,0 +1,32 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/compat/imported_empty_file_should_be_treated_as_cjs
+---
+# Assets
+
+## main.mjs
+
+```js
+import { __commonJSMin, __export, __toESM } from "./_rolldown_runtime.mjs";
+
+// star_empty.js
+var require_star_empty = __commonJSMin((exports, module) => {
+});
+
+// default_empty.js
+var require_default_empty = __commonJSMin((exports, module) => {
+});
+
+// main.js
+var main_ns = {};
+__export(main_ns, {
+	defaultImport:() => import_default_empty.default,
+	staImport:() => import_star_empty
+});
+var import_star_empty = __toESM(require_star_empty());
+var import_default_empty = __toESM(require_default_empty());
+
+var defaultImport = import_default_empty.default;
+export { defaultImport, import_star_empty as staImport };
+```

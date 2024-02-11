@@ -37,11 +37,19 @@ pub struct RawImportRecord {
   pub module_request: Atom,
   pub kind: ImportKind,
   pub namespace_ref: SymbolRef,
+  pub contains_import_star: bool,
+  pub contains_import_default: bool,
 }
 
 impl RawImportRecord {
   pub fn new(specifier: Atom, kind: ImportKind, namespace_ref: SymbolRef) -> Self {
-    Self { module_request: specifier, kind, namespace_ref }
+    Self {
+      module_request: specifier,
+      kind,
+      namespace_ref,
+      contains_import_default: false,
+      contains_import_star: false,
+    }
   }
 
   pub fn into_import_record(self, resolved_module: ModuleId) -> ImportRecord {
@@ -50,6 +58,8 @@ impl RawImportRecord {
       resolved_module,
       kind: self.kind,
       namespace_ref: self.namespace_ref,
+      contains_import_star: self.contains_import_star,
+      contains_import_default: self.contains_import_default,
     }
   }
 }
@@ -61,4 +71,6 @@ pub struct ImportRecord {
   pub resolved_module: ModuleId,
   pub kind: ImportKind,
   pub namespace_ref: SymbolRef,
+  pub contains_import_star: bool,
+  pub contains_import_default: bool,
 }

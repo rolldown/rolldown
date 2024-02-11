@@ -30,6 +30,10 @@ impl Specifier {
   pub fn is_star(&self) -> bool {
     matches!(self, Self::Star)
   }
+
+  pub fn is_default(&self) -> bool {
+    matches!(self, Self::Literal(atom) if atom == &"default")
+  }
 }
 
 impl From<Atom> for Specifier {

@@ -236,6 +236,9 @@ impl LinkStage {
 
   fn wrap_modules(&mut self) {
     let mut processed_modules = index_vec::index_vec![false; self.modules.len()];
+
+    let mut visited_modules_for_dynamic_exports = index_vec::index_vec![false; self.modules.len()];
+
     self.sorted_modules.iter().copied().for_each(|module_id| {
       let linking_info = &self.linking_infos[module_id];
       let Module::Normal(module) = &self.modules[module_id] else {
@@ -244,7 +247,7 @@ impl LinkStage {
 
       match linking_info.wrap_kind {
         WrapKind::Cjs | WrapKind::Esm => {
-          wrap_module(
+          wrap_module_recursively(
             &mut WrappingContext {
               processed_modules: &mut processed_modules,
               linking_infos: &mut self.linking_infos,
@@ -258,13 +261,22 @@ impl LinkStage {
         WrapKind::None => {}
       }
 
+      if !module.star_exports.is_empty() {
+        has_dynamic_exports_due_to_export_star(
+          module_id,
+          &self.modules,
+          &mut self.linking_infos,
+          &mut visited_modules_for_dynamic_exports,
+        );
+      }
+
       module.import_records.iter().for_each(|rec| {
         let importee = &self.modules[rec.resolved_module];
         let Module::Normal(importee) = importee else {
           return;
         };
         if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-          wrap_module(
+          wrap_module_recursively(
             &mut WrappingContext {
               processed_modules: &mut processed_modules,
               linking_infos: &mut self.linking_infos,
@@ -367,16 +379,12 @@ struct WrappingContext<'a> {
   pub runtime: &'a RuntimeModuleBrief,
   pub symbols: &'a mut Symbols,
 }
-fn wrap_module(ctx: &mut WrappingContext, target: ModuleId) {
+fn wrap_module_recursively(ctx: &mut WrappingContext, target: ModuleId) {
   let is_processed = &mut ctx.processed_modules[target];
   if *is_processed {
     return;
   }
   *is_processed = true;
-
-  if target == ctx.runtime.id() {
-    return;
-  }
 
   let Module::Normal(module) = &ctx.modules[target] else {
     return;
@@ -390,7 +398,7 @@ fn wrap_module(ctx: &mut WrappingContext, target: ModuleId) {
   }
 
   module.import_records.iter().for_each(|rec| {
-    wrap_module(ctx, rec.resolved_module);
+    wrap_module_recursively(ctx, rec.resolved_module);
   });
 }
 
@@ -435,4 +443,43 @@ fn create_wrapper(ctx: &mut WrappingContext, target: ModuleId) {
     }
     WrapKind::None => {}
   }
+}
+
+fn has_dynamic_exports_due_to_export_star(
+  target: ModuleId,
+  modules: &ModuleVec,
+  linking_infos: &mut LinkingInfoVec,
+  visited_modules: &mut IndexVec<ModuleId, bool>,
+) -> bool {
+  if visited_modules[target] {
+    return linking_infos[target].has_dynamic_exports;
+  }
+  visited_modules[target] = true;
+
+  let Module::Normal(module) = &modules[target] else {
+    return false;
+  };
+
+  if matches!(module.exports_kind, ExportsKind::CommonJs) {
+    linking_infos[target].has_dynamic_exports = true;
+    return true;
+  }
+
+  let has_dynamic_exports =
+    module.star_export_modules().any(|importee_id| match &modules[importee_id] {
+      Module::Normal(_) => {
+        target != importee_id
+          && has_dynamic_exports_due_to_export_star(
+            importee_id,
+            modules,
+            linking_infos,
+            visited_modules,
+          )
+      }
+      Module::External(_) => true,
+    });
+  if has_dynamic_exports {
+    linking_infos[target].has_dynamic_exports = true;
+  }
+  linking_infos[target].has_dynamic_exports
 }

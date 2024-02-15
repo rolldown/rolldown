@@ -21,10 +21,6 @@ impl<'ast, 'me: 'ast> Finalizer<'me, 'ast> {
 impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
   #[allow(clippy::too_many_lines, clippy::match_same_arms)]
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
-    for directive in program.directives.iter_mut() {
-      self.visit_directive(directive);
-    }
-
     let old_body = program.body.take_in(self.alloc);
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.id != self.ctx.runtime.id();
@@ -162,9 +158,14 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
           }
         }
       }
+
       program.body.push(top_stmt);
     });
 
+    // visit children
+    for directive in program.directives.iter_mut() {
+      self.visit_directive(directive);
+    }
     for stmt in program.body.iter_mut() {
       self.visit_top_level_statement_mut(stmt);
     }

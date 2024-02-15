@@ -1,5 +1,4 @@
 use rolldown_common::{ExportsKind, ModuleId, NamedImport, Specifier, SymbolRef};
-use rustc_hash::FxHashSet;
 
 use super::linker_info::{LinkingInfo, LinkingInfoVec};
 use crate::bundler::{
@@ -28,11 +27,6 @@ impl<'graph> ImportExportLinker<'graph> {
       let importer = &self.graph.modules[*id];
       match importer {
         Module::Normal(importer) => {
-          self.mark_dynamic_exports_due_to_export_star(
-            *id,
-            linking_infos,
-            &mut FxHashSet::default(),
-          );
           let importer_linking_info = &mut linking_infos[*id];
           importer.create_initial_resolved_exports(importer_linking_info);
           let resolved = importer.resolve_star_exports(&self.graph.modules);
@@ -236,39 +230,6 @@ impl<'graph> ImportExportLinker<'graph> {
     }
 
     MatchImportKind::NotFound
-  }
-
-  pub fn mark_dynamic_exports_due_to_export_star(
-    &self,
-    target: ModuleId,
-    linking_infos: &mut LinkingInfoVec,
-    visited_modules: &mut FxHashSet<ModuleId>,
-  ) -> bool {
-    if visited_modules.contains(&target) {
-      return false;
-    }
-    visited_modules.insert(target);
-
-    let module = &self.graph.modules[target];
-    match module {
-      Module::Normal(module) => {
-        if module.exports_kind == ExportsKind::CommonJs || linking_infos[target].has_dynamic_exports
-        {
-          return true;
-        }
-        for id in module.star_export_modules() {
-          if self.mark_dynamic_exports_due_to_export_star(id, linking_infos, visited_modules) {
-            let module_linking_info = &mut linking_infos[target];
-            module_linking_info.has_dynamic_exports = true;
-            // Dynamic exports will generate `__reExport(ns, xx)`, here should reference self namespace symbol
-            module_linking_info.reference_symbol_in_facade_stmt_infos(module.namespace_symbol);
-            return true;
-          }
-        }
-      }
-      Module::External(_) => {}
-    }
-    false
   }
 }
 

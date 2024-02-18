@@ -49,7 +49,7 @@ pub struct AstScanner<'a> {
   result: ScanResult,
   esm_export_keyword: Option<Span>,
   esm_import_keyword: Option<Span>,
-  pub namespace_symbol: SymbolRef,
+  pub namespace_ref: SymbolRef,
   used_exports_ref: bool,
   used_module_ref: bool,
 }
@@ -88,7 +88,7 @@ impl<'ast> AstScanner<'ast> {
       esm_export_keyword: None,
       esm_import_keyword: None,
       module_type,
-      namespace_symbol: namespace_ref,
+      namespace_ref,
       used_exports_ref: false,
       used_module_ref: false,
       source,

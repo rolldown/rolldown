@@ -108,7 +108,7 @@ impl RuntimeNormalModuleTask {
       source,
       &facade_path,
     );
-    let namespace_symbol = scanner.namespace_symbol;
+    let namespace_symbol = scanner.namespace_ref;
     program.hoist_import_export_from_stmts();
     let scan_result = scanner.scan(program.program());
 

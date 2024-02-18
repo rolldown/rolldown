@@ -22,8 +22,6 @@ input_file: crates/rolldown/tests/fixtures/warnings/basic
 ## main.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // main.js
 console.log(eval);
 ```

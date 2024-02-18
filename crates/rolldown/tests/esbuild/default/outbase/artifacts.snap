@@ -8,16 +8,12 @@ input_file: crates/rolldown/tests/esbuild/default/outbase
 ## c_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // c.js
 console.log('c');
 ```
 ## d_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // d.js
 console.log('d');
 ```

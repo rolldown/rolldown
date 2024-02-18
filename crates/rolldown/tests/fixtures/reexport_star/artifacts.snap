@@ -26,10 +26,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 import { a_ns } from "./a_js.mjs";
 
 // entry.js
-var entry_ns = {};
-__export(entry_ns, {
-	a:() => a_ns
-});
 
 export { a_ns as a };
 ```
@@ -40,10 +36,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 import { a_ns } from "./a_js.mjs";
 
 // main.js
-var main_ns = {};
-__export(main_ns, {
-	a:() => a_ns
-});
 
 export { a_ns as a };
 ```

@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/default/import_then_catch
 ## entry_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // entry.js
 if (false) {
 	import(name).then(pass, fail);

@@ -11,10 +11,6 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic-es6-into-es6
 import { __export } from "./_rolldown_runtime.mjs";
 
 // foo.js
-var foo_ns = {};
-__export(foo_ns, {
-	bar:() => bar
-});
 let bar = 123;
 
 export { bar };
@@ -22,8 +18,6 @@ export { bar };
 ## main.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // main.js
 import('./foo_js.mjs').then(({bar}) => console.log(bar));
 ```

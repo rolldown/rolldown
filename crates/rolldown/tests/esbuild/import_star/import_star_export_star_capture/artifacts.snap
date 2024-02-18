@@ -11,10 +11,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_ca
 import { __export } from "./_rolldown_runtime.mjs";
 
 // foo.js
-var foo_ns = {};
-__export(foo_ns, {
-	foo:() => foo$1
-});
 const foo$1 = 123;
 
 // bar.js
@@ -24,7 +20,6 @@ __export(bar_ns, {
 });
 
 // entry.js
-var entry_ns = {};
 let foo = 234;
 console.log(bar_ns, bar_ns.foo, foo);
 ```

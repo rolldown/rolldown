@@ -16,11 +16,6 @@ var require_cjs = __commonJSMin((exports, module) => {
 });
 
 // main.js
-var main_ns = {};
-__export(main_ns, {
-	a:() => import_cjs.a,
-	a2:() => import_cjs$1.a
-});
 var import_cjs = __toESM(require_cjs());
 var import_cjs$1 = __toESM(require_cjs());
 

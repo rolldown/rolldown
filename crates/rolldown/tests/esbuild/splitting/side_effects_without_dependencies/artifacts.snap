@@ -12,7 +12,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 import { a } from "./shared_js.mjs";
 
 // a.js
-var a_ns = {};
 console.log(a);
 ```
 ## b.mjs
@@ -22,7 +21,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 import { b } from "./shared_js.mjs";
 
 // b.js
-var b_ns = {};
 console.log(b);
 ```
 ## shared_js.mjs
@@ -31,11 +29,6 @@ console.log(b);
 import { __export } from "./_rolldown_runtime.mjs";
 
 // shared.js
-var shared_ns = {};
-__export(shared_ns, {
-	a:() => a,
-	b:() => b
-});
 let a = 1;
 let b = 2;
 console.log('side effect');

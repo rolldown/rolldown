@@ -23,5 +23,4 @@ globalThis.order += 'b';
 globalThis.order += 'c';
 
 // main.js
-var main_ns = {};
 ```

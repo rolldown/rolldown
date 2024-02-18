@@ -12,7 +12,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 import { shared_default } from "./shared_js.mjs";
 
 // src/a.js
-var a_ns = {};
 console.log(shared_default);
 ```
 ## b.mjs
@@ -22,7 +21,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 import { shared_default } from "./shared_js.mjs";
 
 // src/b.js
-var b_ns = {};
 console.log( -shared_default);
 ```
 ## shared_js.mjs
@@ -31,10 +29,6 @@ console.log( -shared_default);
 import { __export } from "./_rolldown_runtime.mjs";
 
 // shared.js
-var shared_ns = {};
-__export(shared_ns, {
-	default:() => shared_default
-});
 var shared_default = 123;
 
 export { shared_default };

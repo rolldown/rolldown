@@ -12,14 +12,9 @@ import { default as assert } from "assert";
 import { __export } from "./_rolldown_runtime.mjs";
 
 // foo.js
-var foo_ns = {};
-__export(foo_ns, {
-	default:() => foo_default
-});
 var foo_default = 'foo';
 
 // main.js
-var main_ns = {};
 const value = {
 	foo:foo_default
 };

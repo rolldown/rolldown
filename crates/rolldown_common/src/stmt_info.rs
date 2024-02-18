@@ -27,6 +27,18 @@ impl StmtInfos {
     id
   }
 
+  pub fn replace_namespace_stmt_info(&mut self, info: StmtInfo) -> StmtInfoId {
+    self.infos[0] = info;
+    for symbol_ref in &self.infos[0].declared_symbols {
+      self
+        .symbol_ref_to_declared_stmt_idx
+        .entry(*symbol_ref)
+        .or_default()
+        .push(StmtInfoId::from_raw(0));
+    }
+    StmtInfoId::from_raw(0)
+  }
+
   pub fn declared_stmts_by_symbol(&self, symbol_ref: &SymbolRef) -> &[StmtInfoId] {
     self.symbol_ref_to_declared_stmt_idx.get(symbol_ref).map_or(&[], Vec::as_slice)
   }

@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/default/var_relocating_bundle
 ## function-nested_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // function-nested.js
 function x() {
 	if (true) {
@@ -23,8 +21,6 @@ x();
 ## function_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // function.js
 function x() {
 	var a;
@@ -36,8 +32,6 @@ x();
 ## let_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // let.js
 if (true) {
 	let a;
@@ -46,8 +40,6 @@ if (true) {
 ## nested_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // nested.js
 if (true) {
 	var a;
@@ -58,8 +50,6 @@ if (true) {
 ## top-level_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // top-level.js
 var a;
 for (var b; 0; );for (var e of  []) ;for (var {f, x:[g]} of  []) ;for (var h in {}) ;for (var {j, x:[k]} in {}) ;function l() {

@@ -12,7 +12,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 import { value } from "./share_js.mjs";
 
 // entry.js
-var entry_ns = {};
 console.log(value);
 ```
 ## main.mjs
@@ -23,7 +22,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 import { value } from "./share_js.mjs";
 
 // main.js
-var main_ns = {};
 assert(value === 1);
 ```
 ## share_js.mjs
@@ -32,10 +30,6 @@ assert(value === 1);
 import { __export } from "./_rolldown_runtime.mjs";
 
 // share.js
-var share_ns = {};
-__export(share_ns, {
-	value:() => value
-});
 const value = 1;
 
 export { value };

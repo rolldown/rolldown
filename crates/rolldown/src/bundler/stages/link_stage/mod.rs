@@ -18,6 +18,8 @@ use crate::bundler::{
 
 use super::scan_stage::ScanStageOutput;
 
+mod tree_shaking;
+
 #[derive(Debug)]
 pub struct LinkStageOutput {
   pub modules: ModuleVec,
@@ -66,17 +68,25 @@ impl LinkStage {
         return;
       };
 
-      // Create a StmtInfo for the namespace statement
-      let namespace_stmt_info = StmtInfo {
-        stmt_idx: None,
-        declared_symbols: vec![module.namespace_symbol],
-        referenced_symbols: vec![self.runtime.resolve_symbol("__export")],
-        side_effect: false,
-        is_included: true,
-        import_records: Vec::new(),
-      };
+      if matches!(module.exports_kind, ExportsKind::Esm) {
+        let linking_info = &self.linking_infos[module.id];
 
-      let _namespace_stmt_id = module.stmt_infos.add_stmt_info(namespace_stmt_info);
+        // Create a StmtInfo for the namespace statement
+        let namespace_stmt_info = StmtInfo {
+          stmt_idx: None,
+          declared_symbols: vec![module.namespace_symbol],
+          referenced_symbols: linking_info
+            .sorted_exports()
+            .map(|(_, export)| export.symbol_ref)
+            .chain([self.runtime.resolve_symbol("__export")])
+            .collect(),
+          side_effect: false,
+          is_included: false,
+          import_records: Vec::new(),
+        };
+
+        module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
+      }
 
       // We don't create actual ast nodes for the namespace statement here. It will be deferred
       // to the finalize stage.
@@ -103,6 +113,7 @@ impl LinkStage {
         }
       });
     }
+    self.include_statements();
     LinkStageOutput {
       modules: self.modules,
       entries: self.entries,
@@ -331,10 +342,7 @@ impl LinkStage {
                     stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
                     stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
                     stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__reExport"));
-                    let Module::Normal(importee) = &self.modules[importee_id] else {
-                      unreachable!("importee should be a normal module")
-                    };
-                    stmt_info.referenced_symbols.push(importee.namespace_symbol);
+                    stmt_info.referenced_symbols.push(importer.namespace_symbol);
                   } else {
                     // something like `var import_foo = __toESM(require_foo())`
                     // Reference to `require_foo`

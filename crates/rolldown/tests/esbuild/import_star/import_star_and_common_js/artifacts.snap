@@ -21,7 +21,6 @@ var init_foo = __esmMin(() => {
 });
 
 // entry.js
-var entry_ns = {};
 init_foo();
 const ns2 = (init_foo(),__toCommonJS(foo_ns));
 console.log(foo_ns.foo, ns2.foo);

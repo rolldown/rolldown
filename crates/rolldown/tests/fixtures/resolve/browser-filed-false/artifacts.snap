@@ -15,7 +15,6 @@ var require_util = __commonJSMin((exports, module) => {
 });
 
 // node_modules/package/index.js
-var package_index_ns = {};
 var import_util = __toESM(require_util());
 console.log(import_util.default);
 ```

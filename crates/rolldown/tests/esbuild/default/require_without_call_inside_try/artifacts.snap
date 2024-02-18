@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/default/require_without_call_inside_tr
 ## entry_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // entry.js
 try{
 	oldLocale = globalLocale._abbr;

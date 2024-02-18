@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/default/await_import_inside_try
 ## entry_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // entry.js
 async function main(name) {
 	try{

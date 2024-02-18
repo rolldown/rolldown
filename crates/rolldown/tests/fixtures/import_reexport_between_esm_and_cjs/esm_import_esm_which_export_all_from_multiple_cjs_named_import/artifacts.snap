@@ -26,6 +26,5 @@ __reExport(proxy_ns, __toESM(require_commonjs()));
 __reExport(proxy_ns, __toESM(require_commonjs2()));
 
 // main.js
-var main_ns = {};
 console.log(proxy_ns.a, 1);
 ```

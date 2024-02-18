@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/misc/cjs_entry_as_dependency
 ## main.mjs
 
 ```js
-import { __commonJSMin, __export, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __toESM } from "./_rolldown_runtime.mjs";
 import { require_main2 } from "./main2_js.mjs";
 
 // main.js
@@ -29,7 +29,7 @@ export default require_main2();
 ## main2_js.mjs
 
 ```js
-import { __commonJSMin, __export } from "./_rolldown_runtime.mjs";
+import { __commonJSMin } from "./_rolldown_runtime.mjs";
 
 // main2.js
 var require_main2 = __commonJSMin((exports, module) => {

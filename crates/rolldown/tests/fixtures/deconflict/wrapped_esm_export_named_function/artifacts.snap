@@ -25,17 +25,12 @@ var init_foo = __esmMin(() => {
 });
 
 // bar.js
-var bar_ns = {};
-__export(bar_ns, {
-	default:() => bar_default
-});
 init_foo();
 var bar_default = {
 	foo:foo$1
 };
 
 // main.js
-var main_ns = {};
 const a = 2;
 const {foo} = bar_default;
 assert.strictEqual(typeof foo, 'function');

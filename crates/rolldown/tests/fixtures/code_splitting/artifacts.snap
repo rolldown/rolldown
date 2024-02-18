@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/fixtures/code_splitting
 ## dynamic_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // dynamic.js
 console.log('dynamic');
 ```
@@ -19,7 +17,6 @@ console.log('dynamic');
 import { __export } from "./_rolldown_runtime.mjs";
 
 // main1.js
-var main1_ns = {};
 import('./dynamic_js.mjs');
 ```
 ## main2.mjs
@@ -28,13 +25,10 @@ import('./dynamic_js.mjs');
 import { __export } from "./_rolldown_runtime.mjs";
 
 // main2.js
-var main2_ns = {};
 ```
 ## share_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // share.js
 console.log('shared');
 ```

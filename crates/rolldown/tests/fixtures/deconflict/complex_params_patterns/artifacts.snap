@@ -12,25 +12,9 @@ import { default as assert } from "assert";
 import { __export } from "./_rolldown_runtime.mjs";
 
 // names.js
-var names_ns = {};
-__export(names_ns, {
-	a:() => a,
-	b:() => b,
-	c:() => c,
-	d:() => d,
-	e:() => e
-});
 const [a,b,c,d,e] = ['a2', 'b2', 'c2', 'd2', 'e2'];
 
 // main.js
-var main_ns = {};
-__export(main_ns, {
-	a:() => a$1,
-	b:() => b$1,
-	c:() => c$1,
-	d:() => d$1,
-	e:() => e$1
-});
 const [a$1,b$1,c$1,d$1,e$1] = ['a', 'b', 'c', 'd', 'e'];
 function foo(a$1$1, {b$1:b$1$1}, {c$1:c$1$1='c$1'}, {d$1:d$1$1}={
 	d$1:'d$1'

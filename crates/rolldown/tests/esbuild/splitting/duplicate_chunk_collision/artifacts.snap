@@ -11,13 +11,10 @@ input_file: crates/rolldown/tests/esbuild/splitting/duplicate_chunk_collision
 import { __export } from "./_rolldown_runtime.mjs";
 
 // a.js
-var a_ns = {};
 ```
 ## ab_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // ab.js
 console.log(123);
 ```
@@ -27,7 +24,6 @@ console.log(123);
 import { __export } from "./_rolldown_runtime.mjs";
 
 // b.js
-var b_ns = {};
 ```
 ## c.mjs
 
@@ -43,7 +39,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 console.log(123);
 
 // d.js
-var d_ns = {};
 ```
 ## d.mjs
 

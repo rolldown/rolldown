@@ -11,13 +11,8 @@ input_file: crates/rolldown/tests/esbuild/default/require_child_dir_es6
 import { __export } from "./_rolldown_runtime.mjs";
 
 // dir/index.js
-var dir_index_ns = {};
-__export(dir_index_ns, {
-	default:() => dir_index_default
-});
 var dir_index_default = 123;
 
 // entry.js
-var entry_ns = {};
 console.log(dir_index_default);
 ```

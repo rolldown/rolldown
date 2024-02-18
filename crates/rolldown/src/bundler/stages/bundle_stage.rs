@@ -215,8 +215,16 @@ impl<'a> BundleStage<'a> {
       let chunk_meta_imports = &chunk_meta_imports_vec[chunk_id];
       for import_ref in chunk_meta_imports.iter().copied() {
         let import_symbol = self.link_output.symbols.get(import_ref);
-        let importee_chunk_id =
-          import_symbol.chunk_id.expect("Symbol should be declared in a chunk");
+
+        let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
+          let symbol_owner = &self.link_output.modules[import_ref.owner];
+          let symbol_name = self.link_output.symbols.get_original_name(import_ref);
+          panic!(
+            "Symbol {:?} in {:?} should belong to a chunk",
+            symbol_name,
+            symbol_owner.resource_id()
+          )
+        });
         // Find out the import_ref whether comes from the chunk or external module.
         if chunk_id != importee_chunk_id {
           chunk

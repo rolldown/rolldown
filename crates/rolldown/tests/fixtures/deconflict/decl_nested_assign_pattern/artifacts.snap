@@ -12,10 +12,6 @@ import { default as assert } from "assert";
 import { __export } from "./_rolldown_runtime.mjs";
 
 // names.js
-var names_ns = {};
-__export(names_ns, {
-	baz:() => baz
-});
 const {foo:{bar:{baz=''}={}}={}} = {
 	foo:{
 		bar:{
@@ -25,11 +21,6 @@ const {foo:{bar:{baz=''}={}}={}} = {
 };
 
 // main.js
-var main_ns = {};
-__export(main_ns, {
-	baz:() => baz$1,
-	baz2:() => baz
-});
 const {foo:{bar:{baz:baz$1=''}={}}={}} = {
 	foo:{
 		bar:{

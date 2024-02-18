@@ -59,6 +59,7 @@ impl NormalModuleBuilder {
       is_user_defined_entry: self.is_user_defined_entry.unwrap(),
       pretty_path: self.pretty_path.unwrap(),
       sourcemap_chain: self.sourcemap_chain,
+      is_included: false,
     }
   }
 }

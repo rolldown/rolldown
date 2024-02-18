@@ -11,10 +11,6 @@ input_file: crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_kee
 import { __export } from "./_rolldown_runtime.mjs";
 
 // entry.js
-var entry_ns = {};
-__export(entry_ns, {
-	outer:() => outer
-});
 function outer() {
 	{
 		function inner() {

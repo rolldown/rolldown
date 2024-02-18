@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/default/no_overwrite_input_file_error
 ## entry_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // entry.js
 console.log(123);
 ```

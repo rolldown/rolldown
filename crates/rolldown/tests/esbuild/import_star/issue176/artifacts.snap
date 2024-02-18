@@ -11,17 +11,9 @@ input_file: crates/rolldown/tests/esbuild/import_star/issue176
 import { __export } from "./_rolldown_runtime.mjs";
 
 // folders/child/foo.js
-var foo_ns = {};
-__export(foo_ns, {
-	foo:() => foo
-});
 const foo = () => 'hi there';
 
 // folders/child/index.js
-var child_index_ns = {};
-__export(child_index_ns, {
-	foo:() => foo
-});
 
 // folders/index.js
 var folders_index_ns = {};
@@ -30,6 +22,5 @@ __export(folders_index_ns, {
 });
 
 // entry.js
-var entry_ns = {};
 console.log(JSON.stringify(folders_index_ns));
 ```

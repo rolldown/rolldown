@@ -21,10 +21,6 @@ var init_esm = __esmMin(() => {
 });
 
 // main.js
-var main_ns = {};
-__export(main_ns, {
-	esm:() => esm
-});
 const esm = (init_esm(),__toCommonJS(esm_ns));
 
 export { esm };

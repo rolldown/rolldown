@@ -42,7 +42,6 @@ var require_commonjs$1 = __commonJSMin((exports, module) => {
 });
 
 // main.js
-var main_ns = {};
 var import_commonjs = __toESM(require_commonjs$1());
 init_esm();
 console.log(import_commonjs.default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class);

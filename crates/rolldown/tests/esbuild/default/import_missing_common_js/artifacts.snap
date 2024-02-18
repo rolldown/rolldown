@@ -16,7 +16,6 @@ var require_foo = __commonJSMin((exports, module) => {
 });
 
 // entry.js
-var entry_ns = {};
 var import_foo = __toESM(require_foo());
 if (false) {
 	console.log((0,import_foo.default)(import_foo.x, import_foo.y));

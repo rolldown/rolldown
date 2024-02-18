@@ -19,11 +19,6 @@ var require_default_empty = __commonJSMin((exports, module) => {
 });
 
 // main.js
-var main_ns = {};
-__export(main_ns, {
-	defaultImport:() => import_default_empty.default,
-	staImport:() => import_star_empty
-});
 var import_star_empty = __toESM(require_star_empty());
 var import_default_empty = __toESM(require_default_empty());
 

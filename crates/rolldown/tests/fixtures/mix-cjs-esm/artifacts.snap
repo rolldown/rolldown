@@ -11,10 +11,6 @@ input_file: crates/rolldown/tests/fixtures/mix-cjs-esm
 import { __commonJSMin, __export, __toESM } from "./_rolldown_runtime.mjs";
 
 // esm-export-cjs-export.js
-var esm_export_cjs_export_ns = {};
-__export(esm_export_cjs_export_ns, {
-	value:() => value$1
-});
 module.exports = 1;
 const value$1 = 1;
 
@@ -23,10 +19,6 @@ var require_foo = __commonJSMin((exports, module) => {
 });
 
 // esm-export-cjs-require.js
-var esm_export_cjs_require_ns = {};
-__export(esm_export_cjs_require_ns, {
-	value:() => value
-});
 require_foo();
 const value = 1;
 
@@ -42,12 +34,10 @@ var require_cjs = __commonJSMin((exports, module) => {
 });
 
 // esm-import-cjs-require.js
-var esm_import_cjs_require_ns = {};
 var import_cjs = __toESM(require_cjs());
 require_foo();
 console.log(import_cjs.a);
 
 // main.js
-var main_ns = {};
 var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
 ```

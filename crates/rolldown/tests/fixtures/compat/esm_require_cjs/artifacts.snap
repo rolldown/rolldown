@@ -16,10 +16,6 @@ var require_cjs = __commonJSMin((exports, module) => {
 });
 
 // main.js
-var main_ns = {};
-__export(main_ns, {
-	cjs:() => cjs
-});
 const cjs = require_cjs();
 
 export { cjs };

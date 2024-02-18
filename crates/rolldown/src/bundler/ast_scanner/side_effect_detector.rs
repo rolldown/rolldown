@@ -144,6 +144,7 @@ impl<'a> SideEffectDetector<'a> {
       },
       Statement::ExpressionStatement(expr) => self.detect_side_effect_of_expr(&expr.expression),
       Statement::BlockStatement(_)
+      | Statement::ModuleDeclaration(_)
       | Statement::BreakStatement(_)
       | Statement::DebuggerStatement(_)
       | Statement::DoWhileStatement(_)
@@ -159,7 +160,6 @@ impl<'a> SideEffectDetector<'a> {
       | Statement::TryStatement(_)
       | Statement::WhileStatement(_)
       | Statement::WithStatement(_)
-      | Statement::ModuleDeclaration(_)
       | Statement::ContinueStatement(_) => true,
     }
   }

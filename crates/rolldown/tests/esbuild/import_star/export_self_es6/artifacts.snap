@@ -11,10 +11,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_self_es6
 import { __export } from "./_rolldown_runtime.mjs";
 
 // entry.js
-var entry_ns = {};
-__export(entry_ns, {
-	foo:() => foo
-});
 const foo = 123;
 
 export { foo };

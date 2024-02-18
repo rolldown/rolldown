@@ -12,7 +12,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 import { foo, setFoo } from "./shared_js.mjs";
 
 // a.js
-var a_ns = {};
 setFoo(123);
 console.log(foo);
 ```
@@ -23,7 +22,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 import { foo } from "./shared_js.mjs";
 
 // b.js
-var b_ns = {};
 console.log(foo);
 ```
 ## shared_js.mjs
@@ -32,11 +30,6 @@ console.log(foo);
 import { __export } from "./_rolldown_runtime.mjs";
 
 // shared.js
-var shared_ns = {};
-__export(shared_ns, {
-	foo:() => foo,
-	setFoo:() => setFoo
-});
 let foo;
 function setFoo(value) {
 	foo = value;

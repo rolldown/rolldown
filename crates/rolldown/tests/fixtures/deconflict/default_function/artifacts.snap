@@ -12,26 +12,17 @@ import { default as assert } from "assert";
 import { __export } from "./_rolldown_runtime.mjs";
 
 // foo.js
-var foo_ns = {};
-__export(foo_ns, {
-	default:() => foo$1
-});
 const a$1 = 1;
 function foo$1(a$1$1) {
 	console.log(a$1$1, a$1);
 }
 
 // bar.js
-var bar_ns = {};
-__export(bar_ns, {
-	default:() => bar_default
-});
 var bar_default = {
 	foo:foo$1
 };
 
 // main.js
-var main_ns = {};
 const a = 2;
 const {foo} = bar_default;
 assert.strictEqual(typeof foo, 'function');

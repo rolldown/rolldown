@@ -48,6 +48,7 @@ pub struct NormalModule {
   pub scope: AstScope,
   pub default_export_ref: SymbolRef,
   pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
+  pub is_included: bool,
 }
 
 impl NormalModule {

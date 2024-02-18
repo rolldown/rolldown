@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/default/keep_names_class_static_name
 ## entry_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // entry.js
 class A {
 	static foo;

@@ -12,6 +12,5 @@ import * as ns from "ext";
 import { __export } from "./_rolldown_runtime.mjs";
 
 // entry.js
-var entry_ns = {};
 console.log(ns.mustBeUnquoted, ns['mustBeQuoted']);
 ```

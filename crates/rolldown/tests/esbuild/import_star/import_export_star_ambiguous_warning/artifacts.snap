@@ -11,20 +11,10 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguo
 import { __export } from "./_rolldown_runtime.mjs";
 
 // foo.js
-var foo_ns = {};
-__export(foo_ns, {
-	x:() => x,
-	y:() => y$1
-});
 const x = 1;
 const y$1 = 2;
 
 // bar.js
-var bar_ns = {};
-__export(bar_ns, {
-	y:() => y,
-	z:() => z
-});
 const y = 3;
 const z = 4;
 
@@ -36,6 +26,5 @@ __export(common_ns, {
 });
 
 // entry.js
-var entry_ns = {};
 console.log(common_ns.x, common_ns.y, common_ns.z);
 ```

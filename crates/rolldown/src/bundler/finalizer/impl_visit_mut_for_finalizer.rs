@@ -23,7 +23,8 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     let old_body = program.body.take_in(self.alloc);
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
-      && self.ctx.module.id != self.ctx.runtime.id();
+      && self.ctx.module.stmt_infos[0].is_included;
+
     if is_namespace_referenced {
       program.body.extend(self.generate_namespace_variable_declaration());
     }

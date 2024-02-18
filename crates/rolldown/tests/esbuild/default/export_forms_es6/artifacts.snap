@@ -11,10 +11,6 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_es6
 import { __export } from "./_rolldown_runtime.mjs";
 
 // a.js
-var a_ns = {};
-__export(a_ns, {
-	abc:() => abc
-});
 const abc = undefined;
 
 // b.js
@@ -25,18 +21,6 @@ __export(b_ns, {
 const xyz = null;
 
 // entry.js
-var entry_ns = {};
-__export(entry_ns, {
-	C:() => Class,
-	Class:() => Class,
-	Fn:() => Fn,
-	abc:() => abc,
-	b:() => b_ns,
-	c:() => c,
-	default:() => entry_default,
-	l:() => l,
-	v:() => v
-});
 var entry_default = 123;
 var v = 234;
 let l = 234;

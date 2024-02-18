@@ -73,6 +73,7 @@ impl LinkStage {
         referenced_symbols: vec![self.runtime.resolve_symbol("__export")],
         side_effect: false,
         is_included: true,
+        import_records: Vec::new(),
       };
 
       let _namespace_stmt_id = module.stmt_infos.add_stmt_info(namespace_stmt_info);
@@ -311,47 +312,75 @@ impl LinkStage {
         return;
       };
 
-      importer.static_imports().for_each(|rec| {
-        let Module::Normal(importee) = &self.modules[rec.resolved_module] else {
-          return;
-        };
-        // Reference runtime symbols in importers of wrapped modules
-        match self.linking_infos[importee.id].wrap_kind {
-          WrapKind::Cjs | WrapKind::Esm => {
-            let importee_wrapper_ref =
-              self.linking_infos[importee.id].wrapper_ref.expect("Should have wrapper ref");
-            self.linking_infos[importer.id]
-              .reference_symbol_in_facade_stmt_infos(importee_wrapper_ref);
-
-            match (rec.kind, importee.exports_kind) {
-              (ImportKind::Import, ExportsKind::CommonJs) => {
-                self.linking_infos[importer.id]
-                  .reference_symbol_in_facade_stmt_infos(self.runtime.resolve_symbol("__toESM"));
+      importer.stmt_infos.iter().for_each(|stmt_info| {
+        // TODO: we really need to think of a better way to deal with borrow checker
+        let stmt_info = unsafe { &mut *(addr_of!(*stmt_info).cast_mut()) };
+        stmt_info.import_records.iter().for_each(|rec_id| {
+          let rec = unsafe { &mut (*addr_of!(importer.import_records[*rec_id]).cast_mut()) };
+          let importee_id = rec.resolved_module;
+          let importee_linking_info = &self.linking_infos[importee_id];
+          match rec.kind {
+            ImportKind::Import => {
+              let is_reexport_all = importer.star_exports.contains(rec_id);
+              match importee_linking_info.wrap_kind {
+                WrapKind::None => {}
+                WrapKind::Cjs => {
+                  if is_reexport_all {
+                    // something like `__reExport(foo_exports, __toESM(require_bar()))`
+                    // Reference to `require_bar`
+                    stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
+                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
+                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__reExport"));
+                    let Module::Normal(importee) = &self.modules[importee_id] else {
+                      unreachable!("importee should be a normal module")
+                    };
+                    stmt_info.referenced_symbols.push(importee.namespace_symbol);
+                  } else {
+                    // something like `var import_foo = __toESM(require_foo())`
+                    // Reference to `require_foo`
+                    stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
+                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
+                    // TODO:
+                    // stmt_info.declared_symbols.push(rec.namespace_ref);
+                  }
+                }
+                WrapKind::Esm => {
+                  // something like `init_foo()`
+                  // Reference to `init_foo`
+                  stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
+                  if is_reexport_all && importee_linking_info.has_dynamic_exports {
+                    // something like `__reExport(foo_exports, other_exports)`
+                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__reExport"));
+                    stmt_info.referenced_symbols.push(importer.namespace_symbol);
+                    let Module::Normal(importee) = &self.modules[importee_id] else {
+                      unreachable!("importee should be a normal module")
+                    };
+                    stmt_info.referenced_symbols.push(importee.namespace_symbol);
+                  }
+                }
               }
-              (ImportKind::Require, ExportsKind::Esm) => {
-                self.linking_infos[importer.id]
-                  .reference_symbol_in_facade_stmt_infos(importee.namespace_symbol);
-                self.linking_infos[importer.id].reference_symbol_in_facade_stmt_infos(
-                  self.runtime.resolve_symbol("__toCommonJS"),
-                );
-              }
-              _ => {}
             }
+            ImportKind::Require => match importee_linking_info.wrap_kind {
+              WrapKind::None => {}
+              WrapKind::Cjs => {
+                // something like `require_foo()`
+                // Reference to `require_foo`
+                stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
+              }
+              WrapKind::Esm => {
+                // something like `(init_foo(), toCommonJS(foo_exports))`
+                // Reference to `init_foo`
+                stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
+                stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toCommonJS"));
+                let Module::Normal(importee) = &self.modules[importee_id] else {
+                  unreachable!("importee should be a normal module")
+                };
+                stmt_info.referenced_symbols.push(importee.namespace_symbol);
+              }
+            },
+            ImportKind::DynamicImport => {}
           }
-          WrapKind::None => {}
-        }
-      });
-
-      importer.star_export_modules().for_each(|importee_id| {
-        let Module::Normal(importee) = &self.modules[importee_id] else {
-          return;
-        };
-        if importee.exports_kind == ExportsKind::CommonJs {
-          self.linking_infos[importer.id]
-            .reference_symbol_in_facade_stmt_infos(self.runtime.resolve_symbol("__reExport"));
-          self.linking_infos[importer.id]
-            .reference_symbol_in_facade_stmt_infos(self.runtime.resolve_symbol("__toESM"));
-        }
+        });
       });
     });
   }

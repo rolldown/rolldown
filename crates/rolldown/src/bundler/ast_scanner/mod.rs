@@ -152,7 +152,10 @@ impl<'ast> AstScanner<'ast> {
       .into();
     self.add_declared_id(namespace_ref.symbol);
     let rec = RawImportRecord::new(module_request.clone(), kind, namespace_ref);
-    self.result.import_records.push(rec)
+
+    let id = self.result.import_records.push(rec);
+    self.current_stmt_info.import_records.push(id);
+    id
   }
 
   fn add_named_import(&mut self, local: SymbolId, imported: &Atom, record_id: ImportRecordId) {

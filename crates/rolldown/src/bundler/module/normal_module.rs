@@ -7,8 +7,8 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ExportsKind, ImportKind, ImportRecord, ImportRecordId, LocalExport, ModuleId, ModuleType,
-  NamedImport, ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
+  ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleId, ModuleType, NamedImport,
+  ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::{AstSnippet, OxcCompiler, OxcProgram};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -51,13 +51,6 @@ pub struct NormalModule {
 }
 
 impl NormalModule {
-  pub fn static_imports(&self) -> impl Iterator<Item = &ImportRecord> {
-    self
-      .import_records
-      .iter()
-      .filter(|rec| matches!(rec.kind, ImportKind::Import | ImportKind::Require))
-  }
-
   pub fn finalize(&self, ctx: FinalizerContext<'_>, ast: &mut OxcProgram) {
     let (oxc_program, alloc) = ast.program_mut_and_allocator();
 

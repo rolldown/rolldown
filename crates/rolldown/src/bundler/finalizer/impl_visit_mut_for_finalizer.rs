@@ -57,19 +57,24 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             Module::Normal(importee) => {
               match importee.exports_kind {
                 ExportsKind::Esm => {
-                  // __reExport(exports, otherExports)
-                  // TODO: only should do this if the importee must be re-exported dynamically
-                  // let importee_namespace_name = self.canonical_name_for(importee.namespace_symbol);
-                  // program.body.push(
-                  //   self
-                  //     .snippet
-                  //     .call_expr_with_2arg_expr(
-                  //       re_export_fn_name.clone(),
-                  //       importer_namespace_name.clone(),
-                  //       importee_namespace_name.clone(),
-                  //     )
-                  //     .into_in(self.alloc),
-                  // );
+                  if importee_linking_info.has_dynamic_exports {
+                    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+                    let importer_namespace_name =
+                      self.canonical_name_for(self.ctx.module.namespace_symbol);
+                    // __reExport(exports, otherExports)
+                    let importee_namespace_name =
+                      self.canonical_name_for(importee.namespace_symbol);
+                    program.body.push(
+                      self
+                        .snippet
+                        .call_expr_with_2arg_expr(
+                          re_export_fn_name.clone(),
+                          importer_namespace_name.clone(),
+                          importee_namespace_name.clone(),
+                        )
+                        .into_in(self.alloc),
+                    );
+                  }
                 }
                 ExportsKind::CommonJs => {
                   let re_export_fn_name = self.canonical_name_for_runtime("__reExport");

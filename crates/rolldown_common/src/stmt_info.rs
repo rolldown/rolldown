@@ -1,7 +1,7 @@
 use index_vec::IndexVec;
 use rustc_hash::FxHashMap;
 
-use crate::SymbolRef;
+use crate::{ImportRecordId, SymbolRef};
 
 #[derive(Debug, Default)]
 pub struct StmtInfos {
@@ -66,4 +66,5 @@ pub struct StmtInfo {
   pub referenced_symbols: Vec<SymbolRef>,
   pub side_effect: bool,
   pub is_included: bool,
+  pub import_records: Vec<ImportRecordId>,
 }

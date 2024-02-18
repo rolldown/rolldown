@@ -27,11 +27,11 @@ const value = 1;
 // foo.js
 var foo_ns = {};
 __export(foo_ns, {
-	bar:() => import_commonjs$2.bar,
+	bar:() => import_commonjs$1.bar,
 	value:() => value
 });
 __reExport(foo_ns, __toESM(require_commonjs()));
-var import_commonjs$2 = __toESM(require_commonjs());
+var import_commonjs$1 = __toESM(require_commonjs());
 
 // main.js
 var main_ns = {};
@@ -39,7 +39,7 @@ __export(main_ns, {
 	bar:() => import_commonjs.bar
 });
 var import_commonjs = __toESM(require_commonjs());
-console.log(foo_ns, import_commonjs$2.bar, value, foo_ns.foo);
+console.log(foo_ns, import_commonjs$1.bar, value, foo_ns.foo);
 
 var bar$1 = import_commonjs.bar;
 export { bar$1 as bar };

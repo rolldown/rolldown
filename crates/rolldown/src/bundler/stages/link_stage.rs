@@ -340,8 +340,12 @@ impl LinkStage {
                     // Reference to `require_foo`
                     stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
                     stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
-                    // TODO:
-                    // stmt_info.declared_symbols.push(rec.namespace_ref);
+                    stmt_info.declared_symbols.push(rec.namespace_ref);
+                    let Module::Normal(importee) = &self.modules[importee_id] else {
+                      unreachable!("importee should be a normal module")
+                    };
+                    self.symbols.get_mut(rec.namespace_ref).name =
+                      format!("import_{}", &importee.repr_name).into();
                   }
                 }
                 WrapKind::Esm => {

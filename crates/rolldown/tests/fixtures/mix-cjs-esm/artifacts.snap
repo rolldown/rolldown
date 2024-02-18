@@ -32,7 +32,7 @@ const value = 1;
 
 // esm-import-cjs-export.js
 var require_esm_import_cjs_export = __commonJSMin((exports, module) => {
-	var import_foo$1 = __toESM(require_foo());
+	var import_foo = __toESM(require_foo());
 	module.exports = 1;
 });
 

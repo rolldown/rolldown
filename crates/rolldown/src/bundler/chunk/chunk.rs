@@ -112,8 +112,14 @@ impl Chunk {
       .into_iter()
       .try_for_each(
         |(module_path, rendered_module, rendered_content, map)| -> Result<(), BuildError> {
-          if let (Some(rendered_content), Some(map)) = (rendered_content, map) {
-            content_and_sourcemaps.push((rendered_content.to_string(), map?));
+          if let Some(rendered_content) = rendered_content {
+            content_and_sourcemaps.push((
+              rendered_content.to_string(),
+              match map {
+                None => None,
+                Some(v) => v?,
+              },
+            ));
           }
           rendered_modules.insert(module_path, rendered_module);
           Ok(())

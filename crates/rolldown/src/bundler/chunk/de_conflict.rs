@@ -39,19 +39,11 @@ impl Chunk {
       .map(|id| &graph.modules[id])
       .for_each(|module| match module {
         Module::Normal(module) => {
-          module
-            .stmt_infos
-            .iter()
-            .flat_map(|part| part.declared_symbols.iter().copied())
-            .chain(
-              graph.linking_infos[module.id]
-                .facade_stmt_infos
-                .iter()
-                .flat_map(|part| part.declared_symbols.iter().copied()),
-            )
-            .for_each(|symbol_ref| {
+          module.stmt_infos.iter().flat_map(|part| part.declared_symbols.iter().copied()).for_each(
+            |symbol_ref| {
               renamer.add_top_level_symbol(symbol_ref);
-            });
+            },
+          );
         }
         Module::External(_) => {}
       });

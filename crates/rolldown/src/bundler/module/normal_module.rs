@@ -8,7 +8,7 @@ use oxc::{
 };
 use rolldown_common::{
   ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleId, ModuleType, NamedImport,
-  ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
+  ResolvedExport, ResourceId, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::{AstSnippet, OxcCompiler, OxcProgram};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -17,7 +17,7 @@ use string_wizard::MagicString;
 use crate::bundler::{
   finalizer::{Finalizer, FinalizerContext},
   linker::linker_info::{LinkingInfo, LinkingInfoVec},
-  utils::{ast_scope::AstScope, symbols::Symbols},
+  utils::ast_scope::AstScope,
 };
 
 use super::{Module, ModuleRenderContext, ModuleVec};
@@ -179,21 +179,6 @@ impl NormalModule {
     }
 
     resolved
-  }
-
-  pub fn declare_symbol(
-    &self,
-    name: Atom,
-    self_linking_info: &mut LinkingInfo,
-    symbols: &mut Symbols,
-  ) -> SymbolRef {
-    let symbol_ref = symbols.create_symbol(self.id, name);
-    self_linking_info.facade_stmt_infos.push(StmtInfo {
-      declared_symbols: vec![symbol_ref],
-      side_effect: true,
-      ..Default::default()
-    });
-    symbol_ref
   }
 
   pub fn star_export_modules(&self) -> impl Iterator<Item = ModuleId> + '_ {

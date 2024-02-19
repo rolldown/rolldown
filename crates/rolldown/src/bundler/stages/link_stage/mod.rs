@@ -12,14 +12,17 @@ use crate::bundler::{
     linker::ImportExportLinker,
     linker_info::{LinkingInfo, LinkingInfoVec},
   },
-  module::{Module, ModuleVec},
+  module::{Module, ModuleVec, NormalModule},
   runtime::RuntimeModuleBrief,
   utils::symbols::Symbols,
 };
 
+use self::wrapping::create_wrapper;
+
 use super::scan_stage::ScanStageOutput;
 
 mod tree_shaking;
+mod wrapping;
 
 #[derive(Debug)]
 pub struct LinkStageOutput {
@@ -68,6 +71,12 @@ impl LinkStage {
       let Module::Normal(module) = module else {
         return;
       };
+      let linking_info = &mut self.linking_infos[module.id];
+
+      create_wrapper(module, linking_info, &mut self.symbols, &self.runtime);
+      if self.entries.iter().any(|entry| entry.id == module.id) {
+        init_entry_point_stmt_info(module, linking_info);
+      }
 
       if matches!(module.exports_kind, ExportsKind::Esm) {
         let linking_info = &self.linking_infos[module.id];
@@ -106,15 +115,8 @@ impl LinkStage {
     tracing::debug!("linking modules {:#?}", self.linking_infos);
     self.create_exports_for_modules();
     self.reference_needed_symbols();
-    // FIXME: should move `linking_info.facade_stmt_infos` into a separate field
-    for (id, linking_info) in self.linking_infos.iter_mut_enumerated() {
-      std::mem::take(&mut linking_info.facade_stmt_infos).into_iter().for_each(|info| {
-        if let Module::Normal(module) = &mut self.modules[id] {
-          module.stmt_infos.add_stmt_info(info);
-        }
-      });
-    }
     self.include_statements();
+
     LinkStageOutput {
       modules: self.modules,
       entries: self.entries,
@@ -247,77 +249,6 @@ impl LinkStage {
     });
   }
 
-  fn wrap_modules(&mut self) {
-    let mut processed_modules = index_vec::index_vec![false; self.modules.len()];
-
-    let mut visited_modules_for_dynamic_exports = index_vec::index_vec![false; self.modules.len()];
-
-    self.sorted_modules.iter().copied().for_each(|module_id| {
-      let linking_info = &self.linking_infos[module_id];
-      let Module::Normal(module) = &self.modules[module_id] else {
-        return;
-      };
-
-      match linking_info.wrap_kind {
-        WrapKind::Cjs | WrapKind::Esm => {
-          wrap_module_recursively(
-            &mut WrappingContext {
-              processed_modules: &mut processed_modules,
-              linking_infos: &mut self.linking_infos,
-              modules: &self.modules,
-              runtime: &self.runtime,
-              symbols: &mut self.symbols,
-            },
-            module_id,
-          );
-        }
-        WrapKind::None => {}
-      }
-
-      if !module.star_exports.is_empty() {
-        has_dynamic_exports_due_to_export_star(
-          module_id,
-          &self.modules,
-          &mut self.linking_infos,
-          &mut visited_modules_for_dynamic_exports,
-        );
-      }
-
-      module.import_records.iter().for_each(|rec| {
-        let importee = &self.modules[rec.resolved_module];
-        let Module::Normal(importee) = importee else {
-          return;
-        };
-        if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-          wrap_module_recursively(
-            &mut WrappingContext {
-              processed_modules: &mut processed_modules,
-              linking_infos: &mut self.linking_infos,
-              modules: &self.modules,
-              runtime: &self.runtime,
-              symbols: &mut self.symbols,
-            },
-            importee.id,
-          );
-        }
-      });
-    });
-
-    // TODO(hyf0): should merge this loop with the other one
-    self.sorted_modules.iter().copied().for_each(|module_id| {
-      create_wrapper(
-        &mut WrappingContext {
-          processed_modules: &mut processed_modules,
-          linking_infos: &mut self.linking_infos,
-          modules: &self.modules,
-          runtime: &self.runtime,
-          symbols: &mut self.symbols,
-        },
-        module_id,
-      );
-    });
-  }
-
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
     self.modules.iter().par_bridge().for_each(|importer| {
@@ -419,114 +350,23 @@ impl Action {
   }
 }
 
-struct WrappingContext<'a> {
-  pub processed_modules: &'a mut IndexVec<ModuleId, bool>,
-  pub linking_infos: &'a mut LinkingInfoVec,
-  pub modules: &'a ModuleVec,
-  pub runtime: &'a RuntimeModuleBrief,
-  pub symbols: &'a mut Symbols,
-}
-fn wrap_module_recursively(ctx: &mut WrappingContext, target: ModuleId) {
-  let is_processed = &mut ctx.processed_modules[target];
-  if *is_processed {
-    return;
-  }
-  *is_processed = true;
-
-  let Module::Normal(module) = &ctx.modules[target] else {
-    return;
-  };
-
-  if matches!(ctx.linking_infos[target].wrap_kind, WrapKind::None) {
-    ctx.linking_infos[target].wrap_kind = match module.exports_kind {
-      ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
-      ExportsKind::CommonJs => WrapKind::Cjs,
-    }
-  }
-
-  module.import_records.iter().for_each(|rec| {
-    wrap_module_recursively(ctx, rec.resolved_module);
-  });
-}
-
-fn create_wrapper(ctx: &mut WrappingContext, target: ModuleId) {
-  let linking_info = &mut ctx.linking_infos[target];
-  let Module::Normal(module) = &ctx.modules[target] else {
-    return;
-  };
-  match linking_info.wrap_kind {
-    // If this is a CommonJS file, we're going to need to generate a wrapper
-    // for the CommonJS closure. That will end up looking something like this:
-    //
-    //   var require_foo = __commonJS((exports, module) => {
-    //     ...
-    //   });
-    //
-    WrapKind::Cjs => {
-      linking_info
-        .reference_symbol_in_facade_stmt_infos(ctx.runtime.resolve_symbol("__commonJSMin"));
-
-      linking_info.wrapper_ref = Some(module.declare_symbol(
-        format!("require_{}", &module.repr_name).into(),
-        linking_info,
-        ctx.symbols,
-      ));
-    }
-    // If this is a lazily-initialized ESM file, we're going to need to
-    // generate a wrapper for the ESM closure. That will end up looking
-    // something like this:
-    //
-    //   var init_foo = __esm(() => {
-    //     ...
-    //   });
-    //
-    WrapKind::Esm => {
-      linking_info.reference_symbol_in_facade_stmt_infos(ctx.runtime.resolve_symbol("__esmMin"));
-      linking_info.wrapper_ref = Some(module.declare_symbol(
-        format!("init_{}", &module.repr_name).into(),
-        linking_info,
-        ctx.symbols,
-      ));
-    }
-    WrapKind::None => {}
-  }
-}
-
-fn has_dynamic_exports_due_to_export_star(
-  target: ModuleId,
-  modules: &ModuleVec,
-  linking_infos: &mut LinkingInfoVec,
-  visited_modules: &mut IndexVec<ModuleId, bool>,
-) -> bool {
-  if visited_modules[target] {
-    return linking_infos[target].has_dynamic_exports;
-  }
-  visited_modules[target] = true;
-
-  let Module::Normal(module) = &modules[target] else {
-    return false;
-  };
-
+pub fn init_entry_point_stmt_info(module: &mut NormalModule, linking_info: &mut LinkingInfo) {
+  let mut referenced_symbols = vec![];
   if matches!(module.exports_kind, ExportsKind::CommonJs) {
-    linking_infos[target].has_dynamic_exports = true;
-    return true;
+    // If a commonjs module becomes an entry point while targeting esm, we need to at least add a `export default require_foo();`
+    // statement as some kind of syntax sugar. So users won't need to manually create a proxy file with `export default require('./foo.cjs')` in it.
+    referenced_symbols.push(linking_info.wrapper_ref.unwrap());
   }
 
-  let has_dynamic_exports =
-    module.star_export_modules().any(|importee_id| match &modules[importee_id] {
-      Module::Normal(_) => {
-        target != importee_id
-          && has_dynamic_exports_due_to_export_star(
-            importee_id,
-            modules,
-            linking_infos,
-            visited_modules,
-          )
-      }
-      Module::External(_) => true,
-    });
-  if has_dynamic_exports {
-    linking_infos[target].has_dynamic_exports = true;
-  }
-  linking_infos[target].has_dynamic_exports
+  let stmt_info = StmtInfo {
+    stmt_idx: None,
+    declared_symbols: vec![],
+    referenced_symbols,
+    // Yeah, it has side effects
+    side_effect: true,
+    is_included: false,
+    import_records: Vec::new(),
+  };
+
+  module.stmt_infos.add_stmt_info(stmt_info);
 }

@@ -177,80 +177,89 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     }
 
     // check if we need to add wrapper
-    match self.ctx.linking_info.wrap_kind {
-      WrapKind::Cjs => {
-        let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
-        let commonjs_ref_name = self.canonical_name_for_runtime("__commonJSMin");
-        let old_body = program.body.take_in(self.alloc);
+    let needs_wrapper = self
+      .ctx
+      .linking_info
+      .wrapper_stmt_info
+      .map(|idx| self.ctx.module.stmt_infos[idx].is_included)
+      .unwrap_or_default();
 
-        program.body.push(self.snippet.commonjs_wrapper_stmt(
-          wrap_ref_name.clone(),
-          commonjs_ref_name.clone(),
-          old_body,
-        ));
-      }
-      WrapKind::Esm => {
-        let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
-        let esm_ref_name = self.canonical_name_for_runtime("__esmMin");
-        let old_body = program.body.take_in(self.alloc);
+    if needs_wrapper {
+      match self.ctx.linking_info.wrap_kind {
+        WrapKind::Cjs => {
+          let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
+          let commonjs_ref_name = self.canonical_name_for_runtime("__commonJSMin");
+          let old_body = program.body.take_in(self.alloc);
 
-        let mut fn_stmts = allocator::Vec::new_in(self.alloc);
-        let mut hoisted_names = vec![];
-        let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
-
-        // Hoist all top-level "var" and "function" declarations out of the closure
-        old_body.into_iter().for_each(|mut stmt| match &mut stmt {
-          ast::Statement::Declaration(decl) => match decl {
-            ast::Declaration::VariableDeclaration(_) | ast::Declaration::ClassDeclaration(_) => {
-              if let Some(converted) = self.convert_decl_to_assignment(decl, &mut hoisted_names) {
-                stmts_inside_closure.push(converted);
-              }
-            }
-            ast::Declaration::FunctionDeclaration(_) => {
-              fn_stmts.push(stmt);
-            }
-            ast::Declaration::UsingDeclaration(_) => unimplemented!(),
-            _ => {}
-          },
-          ast::Statement::ModuleDeclaration(_) => unreachable!(
-            "At this point, all module declarations should have been removed or transformed"
-          ),
-          _ => {
-            stmts_inside_closure.push(stmt);
-          }
-        });
-        program.body.extend(fn_stmts);
-        if !hoisted_names.is_empty() {
-          let mut declarators = allocator::Vec::new_in(self.alloc);
-          declarators.reserve_exact(hoisted_names.len());
-          hoisted_names.into_iter().for_each(|var_name| {
-            declarators.push(ast::VariableDeclarator {
-              id: ast::BindingPattern {
-                kind: ast::BindingPatternKind::BindingIdentifier(
-                  self.snippet.id(var_name).into_in(self.alloc),
-                ),
-                ..Dummy::dummy(self.alloc)
-              },
-              kind: ast::VariableDeclarationKind::Var,
-              ..Dummy::dummy(self.alloc)
-            });
-          });
-          program.body.push(ast::Statement::Declaration(ast::Declaration::VariableDeclaration(
-            ast::VariableDeclaration {
-              declarations: declarators,
-              kind: ast::VariableDeclarationKind::Var,
-              ..Dummy::dummy(self.alloc)
-            }
-            .into_in(self.alloc),
-          )));
+          program.body.push(self.snippet.commonjs_wrapper_stmt(
+            wrap_ref_name.clone(),
+            commonjs_ref_name.clone(),
+            old_body,
+          ));
         }
-        program.body.push(self.snippet.esm_wrapper_stmt(
-          wrap_ref_name.clone(),
-          esm_ref_name.clone(),
-          stmts_inside_closure,
-        ));
+        WrapKind::Esm => {
+          let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
+          let esm_ref_name = self.canonical_name_for_runtime("__esmMin");
+          let old_body = program.body.take_in(self.alloc);
+
+          let mut fn_stmts = allocator::Vec::new_in(self.alloc);
+          let mut hoisted_names = vec![];
+          let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
+
+          // Hoist all top-level "var" and "function" declarations out of the closure
+          old_body.into_iter().for_each(|mut stmt| match &mut stmt {
+            ast::Statement::Declaration(decl) => match decl {
+              ast::Declaration::VariableDeclaration(_) | ast::Declaration::ClassDeclaration(_) => {
+                if let Some(converted) = self.convert_decl_to_assignment(decl, &mut hoisted_names) {
+                  stmts_inside_closure.push(converted);
+                }
+              }
+              ast::Declaration::FunctionDeclaration(_) => {
+                fn_stmts.push(stmt);
+              }
+              ast::Declaration::UsingDeclaration(_) => unimplemented!(),
+              _ => {}
+            },
+            ast::Statement::ModuleDeclaration(_) => unreachable!(
+              "At this point, all module declarations should have been removed or transformed"
+            ),
+            _ => {
+              stmts_inside_closure.push(stmt);
+            }
+          });
+          program.body.extend(fn_stmts);
+          if !hoisted_names.is_empty() {
+            let mut declarators = allocator::Vec::new_in(self.alloc);
+            declarators.reserve_exact(hoisted_names.len());
+            hoisted_names.into_iter().for_each(|var_name| {
+              declarators.push(ast::VariableDeclarator {
+                id: ast::BindingPattern {
+                  kind: ast::BindingPatternKind::BindingIdentifier(
+                    self.snippet.id(var_name).into_in(self.alloc),
+                  ),
+                  ..Dummy::dummy(self.alloc)
+                },
+                kind: ast::VariableDeclarationKind::Var,
+                ..Dummy::dummy(self.alloc)
+              });
+            });
+            program.body.push(ast::Statement::Declaration(ast::Declaration::VariableDeclaration(
+              ast::VariableDeclaration {
+                declarations: declarators,
+                kind: ast::VariableDeclarationKind::Var,
+                ..Dummy::dummy(self.alloc)
+              }
+              .into_in(self.alloc),
+            )));
+          }
+          program.body.push(self.snippet.esm_wrapper_stmt(
+            wrap_ref_name.clone(),
+            esm_ref_name.clone(),
+            stmts_inside_closure,
+          ));
+        }
+        WrapKind::None => {}
       }
-      WrapKind::None => {}
     }
   }
 

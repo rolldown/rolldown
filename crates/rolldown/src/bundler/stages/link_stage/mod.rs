@@ -1,6 +1,7 @@
-use std::ptr::addr_of;
+use std::{ptr::addr_of, sync::Mutex};
 
 use index_vec::IndexVec;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{EntryPoint, ExportsKind, ImportKind, ModuleId, StmtInfo, WrapKind};
 use rolldown_error::BuildError;
 use rolldown_oxc::OxcProgram;
@@ -318,16 +319,21 @@ impl LinkStage {
   }
 
   fn reference_needed_symbols(&mut self) {
-    self.modules.iter().for_each(|importer| {
+    let symbols = Mutex::new(&mut self.symbols);
+    self.modules.iter().par_bridge().for_each(|importer| {
       let Module::Normal(importer) = importer else {
         return;
       };
 
-      importer.stmt_infos.iter().for_each(|stmt_info| {
-        // TODO: we really need to think of a better way to deal with borrow checker
-        let stmt_info = unsafe { &mut *(addr_of!(*stmt_info).cast_mut()) };
+      // safety: No race conditions here:
+      // - Mutating on `stmt_infos` is isolated in threads for each module
+      // - Mutating on `stmt_infos` does't rely on other mutating operations of other modules
+      // - Mutating and parallel reading is in different memory locations
+      let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
+
+      stmt_infos.iter_mut().for_each(|stmt_info| {
         stmt_info.import_records.iter().for_each(|rec_id| {
-          let rec = unsafe { &mut (*addr_of!(importer.import_records[*rec_id]).cast_mut()) };
+          let rec = &importer.import_records[*rec_id];
           let importee_id = rec.resolved_module;
           let importee_linking_info = &self.linking_infos[importee_id];
           match rec.kind {
@@ -352,7 +358,7 @@ impl LinkStage {
                     let Module::Normal(importee) = &self.modules[importee_id] else {
                       unreachable!("importee should be a normal module")
                     };
-                    self.symbols.get_mut(rec.namespace_ref).name =
+                    symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                       format!("import_{}", &importee.repr_name).into();
                   }
                 }

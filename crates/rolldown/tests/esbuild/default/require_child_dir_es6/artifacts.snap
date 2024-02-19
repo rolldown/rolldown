@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/default/require_child_dir_es6
 ## entry_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // dir/index.js
 var dir_index_default = 123;
 

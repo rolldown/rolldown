@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_of_export_star
 ## entry_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // bar.js
 statement();
 statement();

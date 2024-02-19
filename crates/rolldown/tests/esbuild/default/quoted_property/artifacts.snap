@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/esbuild/default/quoted_property
 
 ```js
 import * as ns from "ext";
-import { __export } from "./_rolldown_runtime.mjs";
 
 // entry.js
 console.log(ns.mustBeUnquoted, ns['mustBeQuoted']);

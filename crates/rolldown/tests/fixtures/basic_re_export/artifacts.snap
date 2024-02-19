@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/fixtures/basic_re_export
 ## main.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // a.js
 const a = 'a.js';
 

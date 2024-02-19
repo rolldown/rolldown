@@ -22,8 +22,6 @@ export { main_default as default };
 ## main_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // main.js
 var main_default = {};
 

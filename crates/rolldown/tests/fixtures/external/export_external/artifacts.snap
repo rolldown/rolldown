@@ -11,7 +11,6 @@ input_file: crates/rolldown/tests/fixtures/external/export_external
 import * as ext1 from "external";
 import * as ext from "external";
 import { a, a as a$1, a as a1, b, b as b$1, b as b1 } from "external";
-import { __export } from "./_rolldown_runtime.mjs";
 
 // foo.js
 const a1$1 = 1;

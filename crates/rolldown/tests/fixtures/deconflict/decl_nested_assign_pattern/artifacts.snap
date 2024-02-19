@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/fixtures/deconflict/decl_nested_assign_pattern
 
 ```js
 import { default as assert } from "assert";
-import { __export } from "./_rolldown_runtime.mjs";
 
 // names.js
 const {foo:{bar:{baz=''}={}}={}} = {

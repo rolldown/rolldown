@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/fixtures/deconflict/complex_params_patterns
 
 ```js
 import { default as assert } from "assert";
-import { __export } from "./_rolldown_runtime.mjs";
 
 // names.js
 const [a,b,c,d,e] = ['a2', 'b2', 'c2', 'd2', 'e2'];

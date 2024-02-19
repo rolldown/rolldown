@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/fixtures/require/create_require
 
 ```js
 import { createRequire } from "node:module";
-import { __export } from "./_rolldown_runtime.mjs";
 
 // main.js
 const require = createRequire(import.meta.url);

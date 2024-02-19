@@ -22,7 +22,6 @@ export { a_ns };
 ## entry.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
 import { a_ns } from "./a_js.mjs";
 
 // entry.js
@@ -32,7 +31,6 @@ export { a_ns as a };
 ## main.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
 import { a_ns } from "./a_js.mjs";
 
 // main.js

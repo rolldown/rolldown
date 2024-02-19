@@ -20,8 +20,6 @@ export default require_cjs();
 ## main.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // main.js
 var main_default = import('./cjs_js.mjs');
 

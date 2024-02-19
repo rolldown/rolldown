@@ -14,16 +14,12 @@ console.log('dynamic');
 ## main1.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // main1.js
 import('./dynamic_js.mjs');
 ```
 ## main2.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // main2.js
 ```
 ## share_js.mjs
@@ -35,7 +31,7 @@ console.log('shared');
 
 ## Output Stats
 
-- _rolldown_runtime.mjs, is_entry false, is_dynamic_entry false, facade_module_id None, exports ["__export"]
+- _rolldown_runtime.mjs, is_entry false, is_dynamic_entry false, facade_module_id None, exports []
 - dynamic_js.mjs, is_entry false, is_dynamic_entry true, facade_module_id Some("$DIR$/dynamic.js"), exports []
 - main1.mjs, is_entry true, is_dynamic_entry false, facade_module_id Some("$DIR$/main1.js"), exports []
 - main2.mjs, is_entry true, is_dynamic_entry false, facade_module_id Some("$DIR$/main2.js"), exports []

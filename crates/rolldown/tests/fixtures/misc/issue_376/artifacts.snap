@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/fixtures/misc/issue_376
 ## main.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // main.js
 const test = 'hello world';
 var main_default = test;

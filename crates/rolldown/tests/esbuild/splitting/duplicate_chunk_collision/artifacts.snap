@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/splitting/duplicate_chunk_collision
 ## a.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // a.js
 ```
 ## ab_js.mjs
@@ -21,8 +19,6 @@ console.log(123);
 ## b.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // b.js
 ```
 ## c.mjs
@@ -33,8 +29,6 @@ import { __export } from "./_rolldown_runtime.mjs";
 ## cd_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // cd.js
 console.log(123);
 

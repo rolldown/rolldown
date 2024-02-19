@@ -165,6 +165,9 @@ impl<'a> BundleStage<'a> {
               }
             });
             for stmt_info in module.stmt_infos.iter() {
+              if !stmt_info.is_included {
+                continue;
+              }
               for declared in &stmt_info.declared_symbols {
                 let symbol = self.link_output.symbols.get_mut(*declared);
                 debug_assert!(

@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/fixtures/exec_order/baisic
 ## main.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // init.js
 globalThis.order = '';
 

@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/fixtures/deconflict/default_function
 
 ```js
 import { default as assert } from "assert";
-import { __export } from "./_rolldown_runtime.mjs";
 
 // foo.js
 const a$1 = 1;

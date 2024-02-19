@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/fixtures/deconflict/issue_364
 
 ```js
 import { default as assert } from "node:assert";
-import { __export } from "./_rolldown_runtime.mjs";
 
 // shared.js
 const a = 'shared.js';

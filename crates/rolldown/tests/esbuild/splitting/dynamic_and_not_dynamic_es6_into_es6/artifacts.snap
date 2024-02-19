@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_and_not_dynamic_es6_
 ## foo_js-3.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // foo.js
 let bar = 123;
 
@@ -25,7 +23,6 @@ export { bar };
 ## main.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
 import { bar } from "./foo_js-3.mjs";
 
 // main.js

@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/default/re_export_default_internal
 ## entry_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // foo.js
 var foo_default = 'foo';
 

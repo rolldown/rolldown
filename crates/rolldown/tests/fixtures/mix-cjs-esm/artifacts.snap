@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/mix-cjs-esm
 ## main.mjs
 
 ```js
-import { __commonJSMin, __export, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __toESM } from "./_rolldown_runtime.mjs";
 
 // esm-export-cjs-export.js
 module.exports = 1;

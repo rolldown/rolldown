@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/default/reserve_props
 ## entry_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // entry.js
 var entry_default = {
 	foo_:0,

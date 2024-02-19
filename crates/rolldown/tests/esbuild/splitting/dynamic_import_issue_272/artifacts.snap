@@ -14,8 +14,6 @@ import('./b.mjs');
 ## b.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // b.js
 var b_default = 1;
 

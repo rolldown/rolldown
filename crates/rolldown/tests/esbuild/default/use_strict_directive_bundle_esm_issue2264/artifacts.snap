@@ -8,8 +8,6 @@ input_file: crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_es
 ## entry_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
-
 // entry.js
 'use strict';let a = 1;
 

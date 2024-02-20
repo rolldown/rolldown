@@ -39,11 +39,14 @@ impl Chunk {
       .map(|id| &graph.modules[id])
       .for_each(|module| match module {
         Module::Normal(module) => {
-          module.stmt_infos.iter().flat_map(|part| part.declared_symbols.iter().copied()).for_each(
-            |symbol_ref| {
+          module
+            .stmt_infos
+            .iter()
+            .filter(|stmt_info| stmt_info.is_included)
+            .flat_map(|stmt_info| stmt_info.declared_symbols.iter().copied())
+            .for_each(|symbol_ref| {
               renamer.add_top_level_symbol(symbol_ref);
-            },
-          );
+            });
         }
         Module::External(_) => {}
       });

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::Deref};
+use std::borrow::Cow;
 
 use oxc::{
   ast::ast::{IdentifierReference, MemberExpression},
@@ -150,7 +150,7 @@ impl<'a> SideEffectDetector<'a> {
     match stmt {
       Statement::Declaration(decl) => self.detect_side_effect_of_decl(decl),
       Statement::ExpressionStatement(expr) => self.detect_side_effect_of_expr(&expr.expression),
-      Statement::ModuleDeclaration(module_decl) => match module_decl.deref() {
+      Statement::ModuleDeclaration(module_decl) => match &**module_decl {
         oxc::ast::ast::ModuleDeclaration::ImportDeclaration(_)
         | oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(_) => true,
         oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(default_decl) => {

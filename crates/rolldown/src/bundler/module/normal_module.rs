@@ -7,8 +7,8 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleId, ModuleType, NamedImport,
-  ResolvedExport, ResourceId, StmtInfos, SymbolRef,
+  DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleId,
+  ModuleType, NamedImport, ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::{AstSnippet, OxcCompiler, OxcProgram};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -192,4 +192,23 @@ impl NormalModule {
     let record = &self.import_records[self.imports[&span]];
     record.resolved_module
   }
+
+  pub fn to_debug_normal_module_for_tree_shaking(&self) -> DebugNormalModuleForTreeShaking {
+    DebugNormalModuleForTreeShaking {
+      id: self.repr_name.to_string(),
+      is_included: self.is_included,
+      stmt_infos: self
+        .stmt_infos
+        .iter()
+        .map(StmtInfo::to_debug_stmt_info_for_tree_shaking)
+        .collect(),
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct DebugNormalModuleForTreeShaking {
+  pub id: String,
+  pub is_included: bool,
+  pub stmt_infos: Vec<DebugStmtInfoForTreeShaking>,
 }

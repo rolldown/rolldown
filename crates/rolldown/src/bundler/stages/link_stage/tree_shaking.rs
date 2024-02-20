@@ -155,6 +155,15 @@ impl LinkStage<'_> {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });
     });
-    tracing::trace!("included statements {:#?}", self.modules);
+
+    tracing::trace!(
+      "included statements {:#?}",
+      self
+        .modules
+        .iter()
+        .filter_map(|m| m.as_normal())
+        .map(NormalModule::to_debug_normal_module_for_tree_shaking)
+        .collect::<Vec<_>>()
+    );
   }
 }

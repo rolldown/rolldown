@@ -81,3 +81,20 @@ pub struct StmtInfo {
   pub import_records: Vec<ImportRecordId>,
   pub debug_label: Option<String>,
 }
+
+impl StmtInfo {
+  pub fn to_debug_stmt_info_for_tree_shaking(&self) -> DebugStmtInfoForTreeShaking {
+    DebugStmtInfoForTreeShaking {
+      is_included: self.is_included,
+      side_effect: self.side_effect,
+      source: self.debug_label.clone().unwrap_or_else(|| "<Noop>".into()),
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct DebugStmtInfoForTreeShaking {
+  pub is_included: bool,
+  pub side_effect: bool,
+  pub source: String,
+}

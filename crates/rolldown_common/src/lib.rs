@@ -24,7 +24,7 @@ pub use crate::{
   named_import::{NamedImport, Specifier},
   resolved_export::ResolvedExport,
   resolved_path::ResolvedPath,
-  stmt_info::{StmtInfo, StmtInfoId, StmtInfos},
+  stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoId, StmtInfos},
   symbol_ref::SymbolRef,
   wrap_kind::WrapKind,
 };

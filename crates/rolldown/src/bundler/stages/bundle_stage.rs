@@ -114,10 +114,16 @@ impl<'a> BundleStage<'a> {
     module_to_bits: &mut IndexVec<ModuleId, BitSet>,
   ) {
     let Module::Normal(module) = &self.link_output.modules[module_id] else { return };
+
+    if !module.is_included {
+      return;
+    }
+
     if module_to_bits[module_id].has_bit(entry_index) {
       return;
     }
     module_to_bits[module_id].set_bit(entry_index);
+
     module.import_records.iter().for_each(|rec| {
       // Module imported dynamically will be considered as an entry,
       // so we don't need to include it in this chunk

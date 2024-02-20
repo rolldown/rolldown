@@ -26,7 +26,7 @@ console.log(foo);
 ## shared_js.mjs
 
 ```js
-import { __commonJSMin } from "./_rolldown_runtime.mjs";
+import { __commonJSMin } from "./$runtime$.mjs";
 
 // shared.js
 var require_shared = __commonJSMin((exports, module) => {

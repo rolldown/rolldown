@@ -17,6 +17,10 @@ impl BitSet {
   pub fn set_bit(&mut self, bit: u32) {
     self.entries[bit as usize / 8] |= 1 << (bit & 7);
   }
+
+  pub fn is_empty(&self) -> bool {
+    self.entries.iter().all(|&e| e == 0)
+  }
 }
 
 impl Display for BitSet {

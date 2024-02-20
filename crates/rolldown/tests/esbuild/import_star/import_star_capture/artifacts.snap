@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_capture
 ## entry_js.mjs
 
 ```js
-import { __export } from "./_rolldown_runtime.mjs";
+import { __export } from "./$runtime$.mjs";
 
 // foo.js
 var foo_ns = {};

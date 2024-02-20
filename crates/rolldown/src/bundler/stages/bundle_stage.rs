@@ -53,33 +53,36 @@ impl<'a> BundleStage<'a> {
       chunk.de_conflict(self.link_output);
     });
 
-    self.link_output.ast_table.iter_mut_enumerated().par_bridge().for_each(|(id, ast)| match &self
+    self
       .link_output
-      .modules[id]
-    {
-      Module::Normal(module) => {
-        // TODO: should consider cases:
-        // - excluded normal modules in code splitting doesn't belong to any chunk.
-        let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
-        let chunk = &chunk_graph.chunks[chunk_id];
-        let linking_info = &self.link_output.linking_infos[module.id];
-        module.finalize(
-          FinalizerContext {
-            canonical_names: &chunk.canonical_names,
-            id: module.id,
-            symbols: &self.link_output.symbols,
-            linking_info,
-            module,
-            modules: &self.link_output.modules,
-            linking_infos: &self.link_output.linking_infos,
-            runtime: &self.link_output.runtime,
-            chunk_graph: &chunk_graph,
-          },
-          ast,
-        );
-      }
-      Module::External(_) => {}
-    });
+      .ast_table
+      .iter_mut_enumerated()
+      .par_bridge()
+      .filter(|(id, _)| self.link_output.modules[*id].is_included())
+      .for_each(|(id, ast)| match &self.link_output.modules[id] {
+        Module::Normal(module) => {
+          // TODO: should consider cases:
+          // - excluded normal modules in code splitting doesn't belong to any chunk.
+          let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
+          let chunk = &chunk_graph.chunks[chunk_id];
+          let linking_info = &self.link_output.linking_infos[module.id];
+          module.finalize(
+            FinalizerContext {
+              canonical_names: &chunk.canonical_names,
+              id: module.id,
+              symbols: &self.link_output.symbols,
+              linking_info,
+              module,
+              modules: &self.link_output.modules,
+              linking_infos: &self.link_output.linking_infos,
+              runtime: &self.link_output.runtime,
+              chunk_graph: &chunk_graph,
+            },
+            ast,
+          );
+        }
+        Module::External(_) => {}
+      });
 
     let chunks = chunk_graph.chunks.iter().map(|c| {
       let (content, rendered_modules) =
@@ -134,6 +137,20 @@ impl<'a> BundleStage<'a> {
           module_to_bits,
         );
       }
+    });
+
+    module.stmt_infos.iter().for_each(|stmt_info| {
+      if !stmt_info.is_included {
+        return;
+      }
+      stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
+        let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*symbol_ref);
+        self.determine_reachable_modules_for_entry(
+          canonical_ref.owner,
+          entry_index,
+          module_to_bits,
+        );
+      });
     });
   }
 
@@ -297,11 +314,11 @@ impl<'a> BundleStage<'a> {
 
   fn generate_chunks(&self) -> ChunkGraph {
     let entries_len: u32 = self.link_output.entries.len().try_into().unwrap();
+    let is_rolldown_test = std::env::var("ROLLDOWN_TEST").is_ok();
 
-    let mut module_to_bits = index_vec::index_vec![
-      BitSet::new(entries_len);
-      self.link_output.modules.len()
-    ];
+    let entries_len = if is_rolldown_test { entries_len + 1 } else { entries_len };
+    let mut module_to_bits =
+      index_vec::index_vec![BitSet::new(entries_len); self.link_output.modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity_and_hasher(
       self.link_output.entries.len(),
       BuildHasherDefault::default(),
@@ -322,18 +339,16 @@ impl<'a> BundleStage<'a> {
       bits_to_chunk.insert(bits, chunk);
     }
 
-    // Determine which modules belong to which chunk. A module could belong to multiple chunks.
-    self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
-      // runtime module are shared by all chunks, so we mark it as reachable for all entries.
-      // FIXME: But this solution is not perfect. If we have two entries, one of them relies on runtime module, the other one doesn't.
-      // In this case, we only need to generate two chunks, but currently we will generate three chunks. We need to analyze the usage of runtime module
-      // to make sure only necessary chunks mark runtime module as reachable.
+    if is_rolldown_test {
       self.determine_reachable_modules_for_entry(
         self.link_output.runtime.id(),
-        i.try_into().unwrap(),
+        entries_len - 1,
         &mut module_to_bits,
       );
+    }
 
+    // Determine which modules belong to which chunk. A module could belong to multiple chunks.
+    self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
       self.determine_reachable_modules_for_entry(
         entry_point.id,
         i.try_into().unwrap(),
@@ -346,30 +361,19 @@ impl<'a> BundleStage<'a> {
       self.link_output.modules.len()
     ];
 
-    // FIXME(hyf0): This is a hack to make the runtime code doesn't show up in the snapshot.
-    let is_rolldown_test = std::env::var("ROLLDOWN_TEST").is_ok();
-    if is_rolldown_test {
-      let runtime_chunk_id = chunks.push(Chunk::new(
-        Some("_rolldown_runtime".to_string()),
-        None,
-        module_to_bits[self.link_output.runtime.id()].clone(),
-        vec![self.link_output.runtime.id()],
-      ));
-      module_to_chunk[self.link_output.runtime.id()] = Some(runtime_chunk_id);
-    }
-
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for module in &self.link_output.modules {
-      let Module::Normal(_) = module else {
+      let Module::Normal(normal_module) = module else {
         continue;
       };
 
-      // FIXME(hyf0): This is a hack to make the runtime code doesn't show up in the snapshot.
-      if is_rolldown_test && module.id() == self.link_output.runtime.id() {
+      if !normal_module.is_included {
         continue;
       }
+
       let bits = &module_to_bits[module.id()];
+      debug_assert!(!bits.is_empty());
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunks[chunk_id].modules.push(module.id());
         module_to_chunk[module.id()] = Some(chunk_id);
@@ -390,24 +394,31 @@ impl<'a> BundleStage<'a> {
   }
 
   fn generate_chunk_filenames(&self, chunk_graph: &mut ChunkGraph) {
+    let is_rolldown_test = std::env::var("ROLLDOWN_TEST").is_ok();
     let mut used_chunk_names = FxHashSet::default();
     chunk_graph.chunks.iter_mut().for_each(|chunk| {
+      let runtime_id = self.link_output.runtime.id();
+
       let file_name_tmp = chunk.file_name_template(self.output_options);
-      let chunk_name = chunk.name.clone().unwrap_or_else(|| {
-        let module_id = if let Some(entry_point) = &chunk.entry_point {
-          debug_assert!(
-            matches!(entry_point.kind, EntryPointKind::DynamicImport),
-            "User-defined entry point should always have a name"
-          );
-          entry_point.id
-        } else {
-          // TODO: we currently use the first executed module to calculate the chunk name for common chunks
-          // This is not perfect, should investigate more to find a better solution
-          chunk.modules.first().copied().unwrap()
-        };
-        let module = &self.link_output.modules[module_id];
-        module.resource_id().expect_file().unique(&self.input_options.cwd)
-      });
+      let chunk_name = if is_rolldown_test && chunk.modules.first().copied() == Some(runtime_id) {
+        "$runtime$".to_string()
+      } else {
+        chunk.name.clone().unwrap_or_else(|| {
+          let module_id = if let Some(entry_point) = &chunk.entry_point {
+            debug_assert!(
+              matches!(entry_point.kind, EntryPointKind::DynamicImport),
+              "User-defined entry point should always have a name"
+            );
+            entry_point.id
+          } else {
+            // TODO: we currently use the first executed module to calculate the chunk name for common chunks
+            // This is not perfect, should investigate more to find a better solution
+            chunk.modules.first().copied().unwrap()
+          };
+          let module = &self.link_output.modules[module_id];
+          module.resource_id().expect_file().unique(&self.input_options.cwd)
+        })
+      };
 
       let mut chunk_name = chunk_name;
       while used_chunk_names.contains(&chunk_name) {

@@ -92,6 +92,13 @@ impl Module {
       Self::External(m) => &m.resource_id,
     }
   }
+
+  pub fn is_included(&self) -> bool {
+    match self {
+      Self::Normal(m) => m.is_included,
+      Self::External(_) => true,
+    }
+  }
 }
 
 pub struct ModuleRenderContext<'a> {

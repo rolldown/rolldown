@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/compat/esm_require_esm
 ## main.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./_rolldown_runtime.mjs";
+import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 
 // esm.js
 var esm_ns, esm_default;

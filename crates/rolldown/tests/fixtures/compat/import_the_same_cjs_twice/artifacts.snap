@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/compat/import_the_same_cjs_twice
 ## main.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./_rolldown_runtime.mjs";
+import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
 // cjs.js
 var require_cjs = __commonJSMin((exports, module) => {

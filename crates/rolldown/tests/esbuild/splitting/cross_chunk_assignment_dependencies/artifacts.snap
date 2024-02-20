@@ -24,9 +24,6 @@ setValue(123);
 // shared.js
 var observer;
 var value;
-function setObserver(cb) {
-	observer = cb;
-}
 function getValue() {
 	return value;
 }

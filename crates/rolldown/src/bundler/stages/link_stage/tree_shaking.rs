@@ -13,6 +13,8 @@ struct Context<'a> {
   symbols: &'a Symbols,
   is_included_vec: &'a mut IndexVec<ModuleId, IndexVec<StmtInfoId, bool>>,
   is_module_included_vec: &'a mut IndexVec<ModuleId, bool>,
+  tree_shaking: bool,
+  runtime_id: ModuleId,
 }
 
 fn include_module(ctx: &mut Context, module: &NormalModule) {
@@ -23,11 +25,20 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 
   ctx.is_module_included_vec[module.id] = true;
 
-  module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
-    if stmt_info.side_effect {
+  if ctx.tree_shaking || module.id == ctx.runtime_id {
+    module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
+      if stmt_info.side_effect {
+        include_statement(ctx, module, stmt_info_id);
+      }
+    });
+  } else {
+    module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, _stmt_info)| {
+      if stmt_info_id.index() == 0 {
+        return;
+      }
       include_statement(ctx, module, stmt_info_id);
-    }
-  });
+    });
+  }
 
   module.import_records.iter().for_each(|import_record| {
     let importee = &ctx.modules[import_record.resolved_module];
@@ -77,7 +88,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
   );
 }
 
-impl LinkStage {
+impl LinkStage<'_> {
   pub fn include_statements(&mut self) {
     use rayon::prelude::*;
 
@@ -100,6 +111,8 @@ impl LinkStage {
       symbols: &self.symbols,
       is_included_vec: &mut is_included_vec,
       is_module_included_vec: &mut is_module_included_vec,
+      tree_shaking: self.input_options.treeshake,
+      runtime_id: self.runtime.id(),
     };
 
     for module in &self.modules {
@@ -114,12 +127,6 @@ impl LinkStage {
               include_statement(context, module, stmt_info_id);
             }
           });
-          if module.is_user_defined_entry {
-            let linking_info = &self.linking_infos[module.id];
-            linking_info.resolved_exports.values().for_each(|resolved_export| {
-              include_symbol(context, resolved_export.symbol_ref);
-            });
-          }
         }
         Module::External(_) => {}
       }
@@ -134,7 +141,7 @@ impl LinkStage {
       include_module(context, module);
 
       let linking_info = &self.linking_infos[module.id];
-      linking_info.resolved_exports.values().for_each(|resolved_export| {
+      linking_info.sorted_exports().for_each(|(_, resolved_export)| {
         include_symbol(context, resolved_export.symbol_ref);
       });
     });
@@ -148,5 +155,6 @@ impl LinkStage {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });
     });
+    tracing::trace!("included statements {:#?}", self.modules);
   }
 }

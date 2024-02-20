@@ -12,7 +12,6 @@ import { __commonJSMin, __toESM } from "./_rolldown_runtime.mjs";
 
 // esm-export-cjs-export.js
 module.exports = 1;
-const value$1 = 1;
 
 // foo.js
 var require_foo = __commonJSMin((exports, module) => {
@@ -20,7 +19,6 @@ var require_foo = __commonJSMin((exports, module) => {
 
 // esm-export-cjs-require.js
 require_foo();
-const value = 1;
 
 // esm-import-cjs-export.js
 var require_esm_import_cjs_export = __commonJSMin((exports, module) => {

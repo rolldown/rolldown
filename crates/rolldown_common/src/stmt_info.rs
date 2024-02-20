@@ -79,4 +79,5 @@ pub struct StmtInfo {
   pub side_effect: bool,
   pub is_included: bool,
   pub import_records: Vec<ImportRecordId>,
+  pub debug_label: Option<String>,
 }

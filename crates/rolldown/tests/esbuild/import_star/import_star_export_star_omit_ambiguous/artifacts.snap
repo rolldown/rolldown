@@ -12,10 +12,8 @@ import { __export } from "./_rolldown_runtime.mjs";
 
 // foo.js
 const x = 1;
-const y$1 = 2;
 
 // bar.js
-const y = 3;
 const z = 4;
 
 // common.js

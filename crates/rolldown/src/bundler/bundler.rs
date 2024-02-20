@@ -168,7 +168,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
   async fn try_build(&mut self) -> BatchedResult<LinkStageOutput> {
     let build_info = self.scan_inner().await?;
 
-    let link_stage = LinkStage::new(build_info);
+    let link_stage = LinkStage::new(build_info, &self.input_options);
 
     Ok(link_stage.link())
   }

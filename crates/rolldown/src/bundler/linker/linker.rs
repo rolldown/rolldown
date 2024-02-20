@@ -7,12 +7,12 @@ use crate::bundler::{
   utils::symbols::{NamespaceAlias, Symbols},
 };
 
-pub struct ImportExportLinker<'graph> {
-  graph: &'graph mut LinkStageOutput,
+pub struct ImportExportLinker<'a, 'b> {
+  graph: &'a mut LinkStageOutput<'b>,
 }
 
-impl<'graph> ImportExportLinker<'graph> {
-  pub fn new(graph: &'graph mut LinkStageOutput) -> Self {
+impl<'a, 'b> ImportExportLinker<'a, 'b> {
+  pub fn new(graph: &'a mut LinkStageOutput<'b>) -> Self {
     Self { graph }
   }
 

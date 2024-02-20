@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use oxc::ast::{ast::IdentifierReference, Visit};
+use oxc::{
+  ast::{ast::IdentifierReference, Visit},
+  codegen::{self, Codegen, CodegenOptions, Gen},
+};
 use rolldown_common::ImportKind;
 use rolldown_error::BuildError;
 
@@ -19,6 +22,11 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
+      if cfg!(debug_assertions) {
+        let mut codegen = Codegen::<false>::new(0, CodegenOptions);
+        stmt.gen(&mut codegen, codegen::Context::default());
+        self.current_stmt_info.debug_label = Some(codegen.into_code());
+      }
       self.visit_top_level_stmt(stmt);
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }

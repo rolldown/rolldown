@@ -7,14 +7,17 @@ use rolldown_error::BuildError;
 use rolldown_oxc::OxcProgram;
 use rustc_hash::FxHashSet;
 
-use crate::bundler::{
-  linker::{
-    linker::ImportExportLinker,
-    linker_info::{LinkingInfo, LinkingInfoVec},
+use crate::{
+  bundler::{
+    linker::{
+      linker::ImportExportLinker,
+      linker_info::{LinkingInfo, LinkingInfoVec},
+    },
+    module::{Module, ModuleVec, NormalModule},
+    runtime::RuntimeModuleBrief,
+    utils::symbols::Symbols,
   },
-  module::{Module, ModuleVec, NormalModule},
-  runtime::RuntimeModuleBrief,
-  utils::symbols::Symbols,
+  InputOptions,
 };
 
 use self::wrapping::create_wrapper;
@@ -37,7 +40,7 @@ pub struct LinkStageOutput {
 }
 
 #[derive(Debug)]
-pub struct LinkStage {
+pub struct LinkStage<'a> {
   pub modules: ModuleVec,
   pub entries: Vec<EntryPoint>,
   pub symbols: Symbols,
@@ -46,10 +49,11 @@ pub struct LinkStage {
   pub linking_infos: LinkingInfoVec,
   pub warnings: Vec<BuildError>,
   pub ast_table: IndexVec<ModuleId, OxcProgram>,
+  pub input_options: &'a InputOptions,
 }
 
-impl LinkStage {
-  pub fn new(scan_stage_output: ScanStageOutput) -> Self {
+impl<'a> LinkStage<'a> {
+  pub fn new(scan_stage_output: ScanStageOutput, input_options: &'a InputOptions) -> Self {
     Self {
       sorted_modules: Vec::new(),
       linking_infos: scan_stage_output
@@ -63,6 +67,7 @@ impl LinkStage {
       runtime: scan_stage_output.runtime,
       warnings: scan_stage_output.warnings,
       ast_table: scan_stage_output.ast_table,
+      input_options,
     }
   }
 
@@ -93,6 +98,7 @@ impl LinkStage {
           side_effect: false,
           is_included: false,
           import_records: Vec::new(),
+          debug_label: None,
         };
 
         module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
@@ -103,7 +109,6 @@ impl LinkStage {
     });
   }
 
-  #[tracing::instrument(skip_all)]
   pub fn link(mut self) -> LinkStageOutput {
     self.sort_modules();
 
@@ -366,6 +371,7 @@ pub fn init_entry_point_stmt_info(module: &mut NormalModule, linking_info: &mut 
     side_effect: true,
     is_included: false,
     import_records: Vec::new(),
+    debug_label: None,
   };
 
   module.stmt_infos.add_stmt_info(stmt_info);

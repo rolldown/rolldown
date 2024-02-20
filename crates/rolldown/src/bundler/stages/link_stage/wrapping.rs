@@ -78,7 +78,7 @@ fn has_dynamic_exports_due_to_export_star(
   linking_infos[target].has_dynamic_exports
 }
 
-impl LinkStage {
+impl LinkStage<'_> {
   pub fn wrap_modules(&mut self) {
     let mut visited_modules_for_wrapping = index_vec::index_vec![false; self.modules.len()];
 
@@ -159,6 +159,7 @@ pub fn create_wrapper(
         side_effect: false,
         is_included: false,
         import_records: Vec::new(),
+        debug_label: None,
       };
 
       linking_info.wrapper_stmt_info = Some(module.stmt_infos.add_stmt_info(stmt_info));
@@ -183,6 +184,7 @@ pub fn create_wrapper(
         side_effect: false,
         is_included: false,
         import_records: Vec::new(),
+        debug_label: None,
       };
 
       linking_info.wrapper_stmt_info = Some(module.stmt_infos.add_stmt_info(stmt_info));

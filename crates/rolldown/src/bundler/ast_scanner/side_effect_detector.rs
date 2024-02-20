@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::Deref};
 
 use oxc::{
   ast::ast::{IdentifierReference, MemberExpression},
@@ -55,6 +55,7 @@ impl<'a> SideEffectDetector<'a> {
       ClassElement::MethodDefinition(_) => false,
       ClassElement::PropertyDefinition(def) => {
         (match &def.key {
+          // FIXME: this is wrong, we should also always check the `def.value`.
           oxc::ast::ast::PropertyKey::Identifier(_)
           | oxc::ast::ast::PropertyKey::PrivateIdentifier(_) => false,
           oxc::ast::ast::PropertyKey::Expression(expr) => self.detect_side_effect_of_expr(expr),
@@ -62,6 +63,7 @@ impl<'a> SideEffectDetector<'a> {
       }
       ClassElement::AccessorProperty(def) => {
         (match &def.key {
+          // FIXME: this is wrong, we should also always check the `def.value`.
           oxc::ast::ast::PropertyKey::Identifier(_)
           | oxc::ast::ast::PropertyKey::PrivateIdentifier(_) => false,
           oxc::ast::ast::PropertyKey::Expression(expr) => self.detect_side_effect_of_expr(expr),
@@ -125,26 +127,64 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
+  fn detect_side_effect_of_decl(&self, decl: &oxc::ast::ast::Declaration) -> bool {
+    use oxc::ast::ast::Declaration;
+    match decl {
+      Declaration::VariableDeclaration(var_decl) => var_decl
+        .declarations
+        .iter()
+        .any(|decl| decl.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))),
+      Declaration::FunctionDeclaration(_) => false,
+      Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
+      Declaration::UsingDeclaration(_) => todo!(),
+      Declaration::TSTypeAliasDeclaration(_)
+      | Declaration::TSInterfaceDeclaration(_)
+      | Declaration::TSEnumDeclaration(_)
+      | Declaration::TSModuleDeclaration(_)
+      | Declaration::TSImportEqualsDeclaration(_) => unreachable!("ts should be transpiled"),
+    }
+  }
+
   pub fn detect_side_effect_of_stmt(&self, stmt: &oxc::ast::ast::Statement) -> bool {
-    use oxc::ast::ast::{Declaration, Statement};
+    use oxc::ast::ast::Statement;
     match stmt {
-      Statement::Declaration(decl) => match decl {
-        Declaration::VariableDeclaration(var_decl) => var_decl
-          .declarations
-          .iter()
-          .any(|decl| decl.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))),
-        Declaration::FunctionDeclaration(_) => false,
-        Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
-        Declaration::UsingDeclaration(_) => todo!(),
-        Declaration::TSTypeAliasDeclaration(_)
-        | Declaration::TSInterfaceDeclaration(_)
-        | Declaration::TSEnumDeclaration(_)
-        | Declaration::TSModuleDeclaration(_)
-        | Declaration::TSImportEqualsDeclaration(_) => unreachable!("ts should be transpiled"),
-      },
+      Statement::Declaration(decl) => self.detect_side_effect_of_decl(decl),
       Statement::ExpressionStatement(expr) => self.detect_side_effect_of_expr(&expr.expression),
+      Statement::ModuleDeclaration(module_decl) => match module_decl.deref() {
+        oxc::ast::ast::ModuleDeclaration::ImportDeclaration(_)
+        | oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(_) => true,
+        oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(default_decl) => {
+          match &default_decl.declaration {
+            oxc::ast::ast::ExportDefaultDeclarationKind::Expression(expr) => {
+              self.detect_side_effect_of_expr(expr)
+            }
+            oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(_) => false,
+            oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
+              self.detect_side_effect_of_class(decl)
+            }
+            oxc::ast::ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_)
+            | oxc::ast::ast::ExportDefaultDeclarationKind::TSEnumDeclaration(_) => {
+              unreachable!("ts should be transpiled")
+            }
+          }
+        }
+        oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
+          if named_decl.source.is_some() {
+            // `export { ... } from '...'` is considered as side effect.
+            true
+          } else {
+            named_decl
+              .declaration
+              .as_ref()
+              .map_or(false, |decl| self.detect_side_effect_of_decl(decl))
+          }
+        }
+        oxc::ast::ast::ModuleDeclaration::TSExportAssignment(_)
+        | oxc::ast::ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
+          unreachable!("ts should be transpiled")
+        }
+      },
       Statement::BlockStatement(_)
-      | Statement::ModuleDeclaration(_)
       | Statement::BreakStatement(_)
       | Statement::DebuggerStatement(_)
       | Statement::DoWhileStatement(_)

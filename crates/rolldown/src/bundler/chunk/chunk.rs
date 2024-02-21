@@ -1,5 +1,5 @@
 use oxc::span::Atom;
-use rolldown_common::{EntryPoint, EntryPointKind, ModuleId, NamedImport, Specifier, SymbolRef};
+use rolldown_common::{ModuleId, NamedImport, Specifier, SymbolRef};
 use rolldown_error::BuildError;
 use rolldown_sourcemap::{collapse_sourcemaps, concat_sourcemaps, SourceMap};
 use rustc_hash::FxHashMap;
@@ -22,9 +22,21 @@ pub struct CrossChunkImportItem {
   pub import_ref: SymbolRef,
 }
 
+#[derive(Debug)]
+pub enum ChunkKind {
+  EntryPoint { is_user_defined: bool, bit: u32, module: ModuleId },
+  Common,
+}
+
+impl Default for ChunkKind {
+  fn default() -> Self {
+    Self::Common
+  }
+}
+
 #[derive(Debug, Default)]
 pub struct Chunk {
-  pub entry_point: Option<EntryPoint>,
+  pub kind: ChunkKind,
   pub modules: Vec<ModuleId>,
   pub name: Option<String>,
   pub file_name: Option<String>,
@@ -37,20 +49,15 @@ pub struct Chunk {
 }
 
 impl Chunk {
-  pub fn new(
-    name: Option<String>,
-    entry_point: Option<EntryPoint>,
-    bits: BitSet,
-    modules: Vec<ModuleId>,
-  ) -> Self {
-    Self { entry_point, modules, name, bits, ..Self::default() }
+  pub fn new(name: Option<String>, bits: BitSet, modules: Vec<ModuleId>, kind: ChunkKind) -> Self {
+    Self { modules, name, bits, kind, ..Self::default() }
   }
 
   pub fn file_name_template<'a>(
     &mut self,
     output_options: &'a OutputOptions,
   ) -> &'a FileNameTemplate {
-    if matches!(self.entry_point, Some(EntryPoint { kind: EntryPointKind::UserDefined, .. })) {
+    if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined) {
       &output_options.entry_file_names
     } else {
       &output_options.chunk_file_names
@@ -139,5 +146,9 @@ impl Chunk {
 
     let (content, map) = concat_sourcemaps(&content_and_sourcemaps)?;
     Ok(((content, Some(map)), rendered_modules))
+  }
+
+  pub fn is_entry_point(&self) -> bool {
+    matches!(self.kind, ChunkKind::EntryPoint { .. })
   }
 }

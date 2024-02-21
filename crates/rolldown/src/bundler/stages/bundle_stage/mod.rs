@@ -1,6 +1,7 @@
 use crate::{
   bundler::{
     bundle::output::OutputChunk,
+    chunk::chunk::ChunkKind,
     chunk_graph::ChunkGraph,
     finalizer::FinalizerContext,
     module::Module,
@@ -15,7 +16,6 @@ use crate::{
   error::BatchedResult,
   InputOptions, Output, OutputAsset,
 };
-use rolldown_common::EntryPointKind;
 use rolldown_error::BuildError;
 use rustc_hash::FxHashSet;
 
@@ -144,17 +144,20 @@ impl<'a> BundleStage<'a> {
         "$runtime$".to_string()
       } else {
         chunk.name.clone().unwrap_or_else(|| {
-          let module_id = if let Some(entry_point) = &chunk.entry_point {
-            debug_assert!(
-              matches!(entry_point.kind, EntryPointKind::DynamicImport),
-              "User-defined entry point should always have a name"
-            );
-            entry_point.id
-          } else {
-            // TODO: we currently use the first executed module to calculate the chunk name for common chunks
-            // This is not perfect, should investigate more to find a better solution
-            chunk.modules.first().copied().unwrap()
-          };
+          let module_id =
+            if let ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } =
+              &chunk.kind
+            {
+              debug_assert!(
+                !*is_user_defined,
+                "User-defined entry point should always have a name"
+              );
+              *entry_module_id
+            } else {
+              // TODO: we currently use the first executed module to calculate the chunk name for common chunks
+              // This is not perfect, should investigate more to find a better solution
+              chunk.modules.first().copied().unwrap()
+            };
           let module = &self.link_output.modules[module_id];
           module.resource_id().expect_file().unique(&self.input_options.cwd)
         })

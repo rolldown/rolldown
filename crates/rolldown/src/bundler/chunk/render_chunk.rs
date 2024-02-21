@@ -1,9 +1,8 @@
-use rolldown_common::EntryPointKind;
 use rustc_hash::FxHashMap;
 
 use crate::{bundler::stages::link_stage::LinkStageOutput, OutputOptions, RenderedModule};
 
-use super::chunk::Chunk;
+use super::chunk::{Chunk, ChunkKind};
 
 #[derive(Debug, Clone)]
 pub struct PreRenderedChunk {
@@ -35,12 +34,14 @@ impl Chunk {
     output_options: &OutputOptions,
   ) -> PreRenderedChunk {
     PreRenderedChunk {
-      is_entry: matches!(&self.entry_point, Some(e) if e.kind == EntryPointKind::UserDefined),
-      is_dynamic_entry: matches!(&self.entry_point, Some(e) if e.kind == EntryPointKind::DynamicImport),
-      facade_module_id: self
-        .entry_point
-        .as_ref()
-        .map(|entry_point| graph.modules[entry_point.id].resource_id().expect_file().to_string()),
+      is_entry: matches!(&self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if *is_user_defined),
+      is_dynamic_entry: matches!(&self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if !*is_user_defined),
+      facade_module_id: match &self.kind {
+        ChunkKind::EntryPoint { module, .. } => {
+          Some(graph.modules[*module].resource_id().expect_file().to_string())
+        }
+        ChunkKind::Common => None,
+      },
       module_ids: self
         .modules
         .iter()

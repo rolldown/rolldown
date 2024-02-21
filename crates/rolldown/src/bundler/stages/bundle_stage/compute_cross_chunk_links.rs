@@ -1,7 +1,11 @@
 use std::{borrow::Cow, ptr::addr_of};
 
 use crate::{
-  bundler::{chunk::chunk::CrossChunkImportItem, chunk_graph::ChunkGraph, module::Module},
+  bundler::{
+    chunk::chunk::{ChunkKind, CrossChunkImportItem},
+    chunk_graph::ChunkGraph,
+    module::Module,
+  },
   OutputFormat,
 };
 
@@ -79,8 +83,8 @@ impl<'a> BundleStage<'a> {
           });
         });
 
-        if let Some(entry_point) = &chunk.entry_point {
-          let entry_module = &self.link_output.modules[entry_point.id];
+        if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &chunk.kind {
+          let entry_module = &self.link_output.modules[*entry_module_id];
           let Module::Normal(entry_module) = entry_module else {
             return;
           };
@@ -153,8 +157,8 @@ impl<'a> BundleStage<'a> {
         }
       }
 
-      if let Some(entry_point) = &chunk.entry_point {
-        let entry_module = &self.link_output.modules[entry_point.id];
+      if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &chunk.kind {
+        let entry_module = &self.link_output.modules[*entry_module_id];
         let Module::Normal(entry_module) = entry_module else {
           return;
         };
@@ -201,7 +205,7 @@ impl<'a> BundleStage<'a> {
         }
       }
 
-      if chunk.entry_point.is_none() {
+      if chunk.is_entry_point() {
         continue;
       }
       // If this is an entry point, make sure we import all chunks belonging to

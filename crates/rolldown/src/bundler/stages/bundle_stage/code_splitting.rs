@@ -5,7 +5,10 @@ use rolldown_common::{ImportKind, ModuleId};
 use rustc_hash::FxHashMap;
 
 use crate::bundler::{
-  chunk::{chunk::Chunk, ChunkId, ChunksVec},
+  chunk::{
+    chunk::{Chunk, ChunkKind},
+    ChunkId, ChunksVec,
+  },
   chunk_graph::ChunkGraph,
   module::Module,
   utils::bitset::BitSet,
@@ -79,11 +82,18 @@ impl<'a> BundleStage<'a> {
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
+      let Module::Normal(module) = &self.link_output.modules[entry_point.id] else {
+        unreachable!("Entry point should always be a normal module")
+      };
       let chunk = chunks.push(Chunk::new(
         entry_point.name.clone(),
-        Some(entry_point.clone()),
         bits.clone(),
         vec![],
+        ChunkKind::EntryPoint {
+          is_user_defined: module.is_user_defined_entry,
+          bit: count,
+          module: entry_point.id,
+        },
       ));
       bits_to_chunk.insert(bits, chunk);
     }
@@ -130,7 +140,7 @@ impl<'a> BundleStage<'a> {
         chunks[chunk_id].modules.push(module.id());
         module_to_chunk[module.id()] = Some(chunk_id);
       } else {
-        let chunk = Chunk::new(None, None, bits.clone(), vec![module.id()]);
+        let chunk = Chunk::new(None, bits.clone(), vec![module.id()], ChunkKind::Common);
         let chunk_id = chunks.push(chunk);
         module_to_chunk[module.id()] = Some(chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);

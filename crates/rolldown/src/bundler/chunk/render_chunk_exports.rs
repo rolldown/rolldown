@@ -4,7 +4,7 @@ use string_wizard::MagicString;
 
 use crate::{bundler::stages::link_stage::LinkStageOutput, OutputFormat, OutputOptions};
 
-use super::chunk::Chunk;
+use super::chunk::{Chunk, ChunkKind};
 
 impl Chunk {
   pub fn render_exports(
@@ -12,8 +12,8 @@ impl Chunk {
     graph: &LinkStageOutput,
     output_options: &OutputOptions,
   ) -> Option<MagicString<'static>> {
-    if let Some(entry) = &self.entry_point {
-      let linking_info = &graph.linking_infos[entry.id];
+    if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &self.kind {
+      let linking_info = &graph.linking_infos[*entry_module_id];
       if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
         match output_options.format {
           OutputFormat::Esm => {
@@ -22,7 +22,7 @@ impl Chunk {
                 panic!(
                   "Cannot find canonical name for wrap ref {:?} of {:?}",
                   linking_info.wrapper_ref.unwrap(),
-                  graph.modules[entry.id].resource_id()
+                  graph.modules[*entry_module_id].resource_id()
                 )
               });
             return Some(MagicString::new(format!("export default {wrap_ref_name}();\n")));
@@ -63,8 +63,15 @@ impl Chunk {
   }
 
   fn get_export_items(&self, graph: &LinkStageOutput) -> Vec<(Atom, SymbolRef)> {
-    self.entry_point.as_ref().map_or_else(
-      || {
+    match self.kind {
+      ChunkKind::EntryPoint { module, .. } => {
+        let linking_info = &graph.linking_infos[module];
+        linking_info
+          .sorted_exports()
+          .map(|(name, export)| (name.clone(), export.symbol_ref))
+          .collect::<Vec<_>>()
+      }
+      ChunkKind::Common => {
         let mut tmp = self
           .exports_to_other_chunks
           .iter()
@@ -74,15 +81,8 @@ impl Chunk {
         tmp.sort_unstable_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
 
         tmp
-      },
-      |entry_point| {
-        let linking_info = &graph.linking_infos[entry_point.id];
-        linking_info
-          .sorted_exports()
-          .map(|(name, export)| (name.clone(), export.symbol_ref))
-          .collect::<Vec<_>>()
-      },
-    )
+      }
+    }
   }
 
   pub fn get_export_names(
@@ -90,8 +90,8 @@ impl Chunk {
     graph: &LinkStageOutput,
     output_options: &OutputOptions,
   ) -> Vec<String> {
-    if let Some(entry_point) = &self.entry_point {
-      let linking_info = &graph.linking_infos[entry_point.id];
+    if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &self.kind {
+      let linking_info = &graph.linking_infos[*entry_module_id];
       if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
         match output_options.format {
           OutputFormat::Esm => {

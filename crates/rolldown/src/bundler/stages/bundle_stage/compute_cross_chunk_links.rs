@@ -8,6 +8,7 @@ use crate::{
     },
     chunk_graph::ChunkGraph,
     module::Module,
+    utils::is_in_rust_test_mode,
   },
   OutputFormat,
 };
@@ -166,6 +167,12 @@ impl<'a> BundleStage<'a> {
           .iter_enumerated()
           .filter(|(id, _)| *id != chunk_id)
           .filter(|(_, importee_chunk)| importee_chunk.bits.has_bit(*importer_chunk_bit))
+          .filter(|(_, importee_chunk)| {
+            // If we are in test environment, to get a cleaner output in snapshot, no need to import
+            // the runtime chunk as it for sure has no side effects.
+            is_in_rust_test_mode()
+              && importee_chunk.modules.first().copied() != Some(self.link_output.runtime.id())
+          })
           .for_each(|(importee_chunk_id, _)| {
             let imports_from_other_chunks =
               unsafe { &mut (*addr_of!(chunk.imports_from_other_chunks).cast_mut()) };

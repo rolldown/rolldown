@@ -11,7 +11,7 @@ use crate::bundler::{
   },
   chunk_graph::ChunkGraph,
   module::Module,
-  utils::bitset::BitSet,
+  utils::{bitset::BitSet, is_in_rust_test_mode},
 };
 
 use super::BundleStage;
@@ -64,10 +64,9 @@ impl<'a> BundleStage<'a> {
   pub fn generate_chunks(&self) -> ChunkGraph {
     let entries_len: u32 =
       self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
-    let is_rolldown_test = std::env::var("ROLLDOWN_TEST").is_ok();
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,
     // we create a facade entry point for it.
-    let entries_len = if is_rolldown_test { entries_len + 1 } else { entries_len };
+    let entries_len = if is_in_rust_test_mode() { entries_len + 1 } else { entries_len };
 
     let mut module_to_bits =
       index_vec::index_vec![BitSet::new(entries_len); self.link_output.modules.len()];
@@ -98,7 +97,7 @@ impl<'a> BundleStage<'a> {
       bits_to_chunk.insert(bits, chunk);
     }
 
-    if is_rolldown_test {
+    if is_in_rust_test_mode() {
       self.determine_reachable_modules_for_entry(
         self.link_output.runtime.id(),
         entries_len - 1,

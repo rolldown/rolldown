@@ -11,7 +11,7 @@ use crate::{
     },
     plugin_driver::SharedPluginDriver,
     stages::link_stage::LinkStageOutput,
-    utils::render_chunks::render_chunks,
+    utils::{is_in_rust_test_mode, render_chunks::render_chunks},
   },
   error::BatchedResult,
   InputOptions, Output, OutputAsset,
@@ -134,34 +134,34 @@ impl<'a> BundleStage<'a> {
   }
 
   fn generate_chunk_filenames(&self, chunk_graph: &mut ChunkGraph) {
-    let is_rolldown_test = std::env::var("ROLLDOWN_TEST").is_ok();
     let mut used_chunk_names = FxHashSet::default();
     chunk_graph.chunks.iter_mut().for_each(|chunk| {
       let runtime_id = self.link_output.runtime.id();
 
       let file_name_tmp = chunk.file_name_template(self.output_options);
-      let chunk_name = if is_rolldown_test && chunk.modules.first().copied() == Some(runtime_id) {
-        "$runtime$".to_string()
-      } else {
-        chunk.name.clone().unwrap_or_else(|| {
-          let module_id =
-            if let ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } =
-              &chunk.kind
-            {
-              debug_assert!(
-                !*is_user_defined,
-                "User-defined entry point should always have a name"
-              );
-              *entry_module_id
-            } else {
-              // TODO: we currently use the first executed module to calculate the chunk name for common chunks
-              // This is not perfect, should investigate more to find a better solution
-              chunk.modules.first().copied().unwrap()
-            };
-          let module = &self.link_output.modules[module_id];
-          module.resource_id().expect_file().unique(&self.input_options.cwd)
-        })
-      };
+      let chunk_name =
+        if is_in_rust_test_mode() && chunk.modules.first().copied() == Some(runtime_id) {
+          "$runtime$".to_string()
+        } else {
+          chunk.name.clone().unwrap_or_else(|| {
+            let module_id =
+              if let ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } =
+                &chunk.kind
+              {
+                debug_assert!(
+                  !*is_user_defined,
+                  "User-defined entry point should always have a name"
+                );
+                *entry_module_id
+              } else {
+                // TODO: we currently use the first executed module to calculate the chunk name for common chunks
+                // This is not perfect, should investigate more to find a better solution
+                chunk.modules.first().copied().unwrap()
+              };
+            let module = &self.link_output.modules[module_id];
+            module.resource_id().expect_file().unique(&self.input_options.cwd)
+          })
+        };
 
       let mut chunk_name = chunk_name;
       while used_chunk_names.contains(&chunk_name) {

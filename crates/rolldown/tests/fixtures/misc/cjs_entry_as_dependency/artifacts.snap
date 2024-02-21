@@ -22,7 +22,6 @@ export default require_main();
 ## main2.mjs
 
 ```js
-import "./$runtime$.mjs";
 import { require_main2 } from "./main2_js.mjs";
 
 export default require_main2();

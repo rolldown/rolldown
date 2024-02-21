@@ -8,7 +8,6 @@ input_file: crates/rolldown/tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
 ## a.mjs
 
 ```js
-import "./$runtime$.mjs";
 import { foo } from "./a_js.mjs";
 
 export { foo };

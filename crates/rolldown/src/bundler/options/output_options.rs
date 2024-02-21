@@ -8,6 +8,24 @@ pub enum OutputFormat {
   Cjs,
 }
 
+#[derive(Debug)]
+pub enum SourceMapType {
+  File,
+  Inline,
+  Hidden,
+}
+
+impl From<String> for SourceMapType {
+  fn from(value: String) -> Self {
+    match value.as_str() {
+      "file" => SourceMapType::File,
+      "inline" => SourceMapType::Inline,
+      "hidden" => SourceMapType::Hidden,
+      _ => unreachable!("unknown sourcemap type"),
+    }
+  }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct OutputOptions {
@@ -15,6 +33,7 @@ pub struct OutputOptions {
   pub chunk_file_names: FileNameTemplate,
   pub dir: String,
   pub format: OutputFormat,
+  pub sourcemap: SourceMapType,
 }
 
 impl Default for OutputOptions {
@@ -24,6 +43,7 @@ impl Default for OutputOptions {
       chunk_file_names: FileNameTemplate::from("[name]-[hash].js".to_string()),
       dir: "dist".into(),
       format: OutputFormat::Esm,
+      sourcemap: SourceMapType::Hidden,
     }
   }
 }

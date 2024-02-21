@@ -35,6 +35,7 @@ export interface OutputOptions {
   dir?: string
   exports?: 'default' | 'named' | 'none' | 'auto'
   format?: 'esm' | 'cjs'
+  sourcemap?: 'file' | 'inline' | 'hidden'
 }
 export interface PluginOptions {
   name: string

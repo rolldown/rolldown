@@ -5,7 +5,6 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{EntryPoint, ExportsKind, ImportKind, ModuleId, StmtInfo, WrapKind};
 use rolldown_error::BuildError;
 use rolldown_oxc::OxcProgram;
-use rustc_hash::FxHashSet;
 
 use crate::{
   bundler::{

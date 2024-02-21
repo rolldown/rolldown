@@ -1,5 +1,7 @@
 use parcel_sourcemap::SourceMap as ParcelSourcemap;
+mod concat_sourcemap;
 
+pub use concat_sourcemap::concat_sourcemaps;
 #[derive(Debug, Default, Clone)]
 pub struct SourceMap {
   pub mappings: String,
@@ -28,6 +30,10 @@ impl SourceMap {
   pub fn to_data_url(&mut self) -> String {
     self.inner.as_mut().expect("should have inner").to_data_url(None).expect("should success")
   }
+
+  pub fn get_inner(&self) -> Option<&ParcelSourcemap> {
+    self.inner.as_ref()
+  }
 }
 
 impl From<ParcelSourcemap> for SourceMap {
@@ -41,16 +47,16 @@ pub fn collapse_sourcemaps(sourcemap_chain: Vec<SourceMap>) -> Result<Option<Sou
     .into_iter()
     .map(|sourcemap| {
       let mut map = ParcelSourcemap::new(sourcemap.source_root.as_deref().unwrap_or(""));
-      if let Err(e) = map.add_vlq_map(
-        sourcemap.mappings.as_bytes(),
-        sourcemap.sources,
-        sourcemap.sources_content,
-        sourcemap.names,
-        0,
-        0,
-      ) {
-        return Err(format!("{e}"));
-      }
+      map
+        .add_vlq_map(
+          sourcemap.mappings.as_bytes(),
+          sourcemap.sources,
+          sourcemap.sources_content,
+          sourcemap.names,
+          0,
+          0,
+        )
+        .map_err(|e| e.to_string())?;
       Ok(map)
     })
     .rev()
@@ -59,9 +65,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: Vec<SourceMap>) -> Result<Option<Sou
   let Some(mut result) = parcel_sourcemap_chain.pop() else { return Ok(None) };
 
   for mut sourcemap in parcel_sourcemap_chain.into_iter().rev() {
-    if let Err(e) = sourcemap.extends(&mut result) {
-      return Err(format!("{e}"));
-    };
+    sourcemap.extends(&mut result).map_err(|e| e.to_string())?;
     result = sourcemap;
   }
 

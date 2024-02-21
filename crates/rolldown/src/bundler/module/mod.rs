@@ -57,6 +57,13 @@ impl Module {
     }
   }
 
+  pub fn as_external(&self) -> Option<&ExternalModule> {
+    match self {
+      Self::Normal(_) => None,
+      Self::External(m) => Some(m),
+    }
+  }
+
   pub fn _expect_normal_mut(&mut self) -> &mut NormalModule {
     match self {
       Self::Normal(m) => m,

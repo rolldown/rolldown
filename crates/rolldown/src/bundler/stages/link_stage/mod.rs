@@ -143,16 +143,15 @@ impl<'a> LinkStage<'a> {
       .collect::<Vec<_>>();
     // The runtime module should always be the first module to be executed
     stack.push(Action::Enter(self.runtime.id()));
-    let mut entered_ids: FxHashSet<ModuleId> = FxHashSet::default();
-    entered_ids.shrink_to(self.modules.len());
+    let mut entered_ids = index_vec::index_vec![false; self.modules.len()];
     let mut sorted_modules = Vec::with_capacity(self.modules.len());
     let mut next_exec_order = 0;
     while let Some(action) = stack.pop() {
       let module = &mut self.modules[action.module_id()];
       match action {
         Action::Enter(id) => {
-          if !entered_ids.contains(&id) {
-            entered_ids.insert(id);
+          if !entered_ids[id] {
+            entered_ids[id] = true;
             stack.push(Action::Exit(id));
             stack.extend(
               module

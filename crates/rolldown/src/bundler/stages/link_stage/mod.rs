@@ -84,16 +84,17 @@ impl<'a> LinkStage<'a> {
 
       if matches!(module.exports_kind, ExportsKind::Esm) {
         let linking_info = &self.linking_infos[module.id];
-
+        let mut referenced_symbols = vec![];
+        if !linking_info.exclude_ambiguous_sorted_resolved_exports.is_empty() {
+          referenced_symbols
+            .extend(linking_info.sorted_exports().map(|(_, export)| export.symbol_ref));
+          referenced_symbols.push(self.runtime.resolve_symbol("__export"));
+        }
         // Create a StmtInfo for the namespace statement
         let namespace_stmt_info = StmtInfo {
           stmt_idx: None,
           declared_symbols: vec![module.namespace_symbol],
-          referenced_symbols: linking_info
-            .sorted_exports()
-            .map(|(_, export)| export.symbol_ref)
-            .chain([self.runtime.resolve_symbol("__export")])
-            .collect(),
+          referenced_symbols,
           side_effect: false,
           is_included: false,
           import_records: Vec::new(),

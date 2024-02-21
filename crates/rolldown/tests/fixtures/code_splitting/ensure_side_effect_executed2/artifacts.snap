@@ -1,0 +1,27 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/code_splitting/ensure_side_effect_executed2
+---
+# Assets
+
+## a.mjs
+
+```js
+import "./shared_js.mjs";
+
+// a.js
+```
+## b.mjs
+
+```js
+import "./shared_js.mjs";
+
+// b.js
+```
+## shared_js.mjs
+
+```js
+// shared.js
+globalThis.sideEffectExecuted = true;
+```

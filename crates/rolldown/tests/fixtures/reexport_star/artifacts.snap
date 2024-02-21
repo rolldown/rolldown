@@ -22,6 +22,7 @@ export { a_ns };
 ## entry.mjs
 
 ```js
+import "./$runtime$.mjs";
 import { a_ns } from "./a_js.mjs";
 
 // entry.js
@@ -31,6 +32,7 @@ export { a_ns as a };
 ## main.mjs
 
 ```js
+import "./$runtime$.mjs";
 import { a_ns } from "./a_js.mjs";
 
 // main.js

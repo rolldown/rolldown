@@ -76,12 +76,16 @@ impl Chunk {
           }
         })
         .collect::<Vec<_>>();
-      import_items.sort();
-      s.append(format!(
-        "import {{ {} }} from \"./{}\";\n",
-        import_items.join(", "),
-        importee_chunk.file_name.as_ref().unwrap()
-      ));
+      let file_name = importee_chunk
+        .file_name
+        .as_ref()
+        .expect("At this point, file name should already be generated");
+      if import_items.is_empty() {
+        s.append(format!("import \"./{file_name}\";\n"));
+      } else {
+        import_items.sort();
+        s.append(format!("import {{ {} }} from \"./{file_name}\";\n", import_items.join(", ")));
+      }
     });
     s
   }

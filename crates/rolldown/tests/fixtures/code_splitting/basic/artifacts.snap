@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/code_splitting
+input_file: crates/rolldown/tests/fixtures/code_splitting/basic
 ---
 # Assets
 
@@ -14,12 +14,16 @@ console.log('dynamic');
 ## main1.mjs
 
 ```js
+import "./share_js.mjs";
+
 // main1.js
 import('./dynamic_js.mjs');
 ```
 ## main2.mjs
 
 ```js
+import "./share_js.mjs";
+
 // main2.js
 ```
 ## share_js.mjs

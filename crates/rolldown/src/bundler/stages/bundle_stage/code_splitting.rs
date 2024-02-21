@@ -152,6 +152,8 @@ impl<'a> BundleStage<'a> {
       chunk.modules.sort_by_key(|module_id| self.link_output.modules[*module_id].exec_order());
     });
 
+    tracing::trace!("Generated chunks: {:#?}", chunks);
+
     ChunkGraph { chunks, module_to_chunk }
   }
 }

@@ -1,0 +1,14 @@
+{
+  "input": {
+    "input": [
+      {
+        "name": "entry_js",
+        "import": "entry.js"
+      },
+      {
+        "name": "entry2_js",
+        "import": "entry.js"
+      }
+    ]
+  }
+}

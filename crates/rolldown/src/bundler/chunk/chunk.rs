@@ -147,8 +147,4 @@ impl Chunk {
     let (content, map) = concat_sourcemaps(&content_and_sourcemaps)?;
     Ok(((content, Some(map)), rendered_modules))
   }
-
-  pub fn is_entry_point(&self) -> bool {
-    matches!(self.kind, ChunkKind::EntryPoint { .. })
-  }
 }

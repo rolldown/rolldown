@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/esbuild/default/duplicate_entry_point
+input_file: crates/rolldown/tests/fixtures/code_splitting/ensure_side_effect_executed
 ---
 # Assets
 
@@ -14,7 +14,7 @@ import "./entry_js-2.mjs";
 
 ```js
 // entry.js
-console.log(123);
+globalThis.sideEffectExecuted = true;
 ```
 ## entry_js.mjs
 

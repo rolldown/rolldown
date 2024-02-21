@@ -10,9 +10,9 @@ use oxc::span::Span;
 use crate::{
   diagnostic::Diagnostic,
   error_kind::{
-    external_entry::ExternalEntry, unresolved_entry::UnresolvedEntry,
-    unresolved_import::UnresolvedImport, unsupported_eval::UnsupportedEval, BuildErrorLike,
-    NapiError,
+    external_entry::ExternalEntry, sourcemap_error::SourceMapError,
+    unresolved_entry::UnresolvedEntry, unresolved_import::UnresolvedImport,
+    unsupported_eval::UnsupportedEval, BuildErrorLike, NapiError,
   },
 };
 
@@ -94,6 +94,10 @@ impl BuildError {
 
   pub fn unresolved_import(specifier: impl Into<StaticStr>, importer: impl Into<PathBuf>) -> Self {
     Self::new_inner(UnresolvedImport { specifier: specifier.into(), importer: importer.into() })
+  }
+
+  pub fn sourcemap_error(reason: String) -> Self {
+    Self::new_inner(SourceMapError { reason })
   }
 
   // --- rolldown specific

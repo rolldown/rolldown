@@ -1,5 +1,3 @@
-use std::{borrow::Cow, hash::BuildHasherDefault};
-
 use crate::{
   bundler::{
     bundle::output::OutputChunk,
@@ -10,17 +8,22 @@ use crate::{
     chunk_graph::ChunkGraph,
     finalizer::FinalizerContext,
     module::Module,
-    options::{file_name_template::FileNameRenderOptions, output_options::OutputOptions},
+    options::{
+      file_name_template::FileNameRenderOptions,
+      output_options::{OutputOptions, SourceMapType},
+    },
     plugin_driver::SharedPluginDriver,
     stages::link_stage::LinkStageOutput,
     utils::{bitset::BitSet, render_chunks::render_chunks},
   },
   error::BatchedResult,
-  InputOptions, Output, OutputFormat,
+  InputOptions, Output, OutputAsset, OutputFormat,
 };
 use index_vec::{index_vec, IndexVec};
 use rolldown_common::{EntryPointKind, ExportsKind, ImportKind, ModuleId, NamedImport, SymbolRef};
+use rolldown_error::BuildError;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::{borrow::Cow, hash::BuildHasherDefault};
 
 pub struct BundleStage<'a> {
   link_output: &'a mut LinkStageOutput,
@@ -85,16 +88,38 @@ impl<'a> BundleStage<'a> {
       });
 
     let chunks = chunk_graph.chunks.iter().map(|c| {
-      let (content, rendered_modules) =
+      let ((content, map), rendered_modules) =
         c.render(self.input_options, self.link_output, &chunk_graph, self.output_options).unwrap();
-      (content, c.get_rendered_chunk_info(self.link_output, self.output_options, rendered_modules))
+      (
+        content,
+        map,
+        c.get_rendered_chunk_info(self.link_output, self.output_options, rendered_modules),
+      )
     });
 
-    let assets = render_chunks(self.plugin_driver, chunks)
-      .await?
-      .into_iter()
-      .map(|(content, rendered_chunk)| {
-        Output::Chunk(Box::new(OutputChunk {
+    let mut assets = vec![];
+
+    render_chunks(self.plugin_driver, chunks).await?.into_iter().try_for_each(
+      |(mut content, map, rendered_chunk)| -> Result<(), BuildError> {
+        if let Some(mut map) = map {
+          match self.output_options.sourcemap {
+            SourceMapType::File => {
+              if let Some(map) = map.to_json() {
+                assets.push(Output::Asset(Box::new(OutputAsset {
+                  file_name: format!("{}.map", rendered_chunk.file_name),
+                  source: map?,
+                })));
+              }
+            }
+            SourceMapType::Inline => {
+              if let Some(map) = map.to_data_url() {
+                content.push_str(&format!("\n//# sourceMappingURL={}", map?));
+              }
+            }
+            SourceMapType::Hidden => {}
+          }
+        }
+        assets.push(Output::Chunk(Box::new(OutputChunk {
           file_name: rendered_chunk.file_name,
           code: content,
           is_entry: rendered_chunk.is_entry,
@@ -103,9 +128,10 @@ impl<'a> BundleStage<'a> {
           modules: rendered_chunk.modules,
           exports: rendered_chunk.exports,
           module_ids: rendered_chunk.module_ids,
-        }))
-      })
-      .collect::<Vec<_>>();
+        })));
+        Ok(())
+      },
+    )?;
 
     Ok(assets)
   }

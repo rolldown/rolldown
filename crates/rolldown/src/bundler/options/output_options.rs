@@ -15,6 +15,12 @@ pub enum SourceMapType {
   Hidden,
 }
 
+impl SourceMapType {
+  pub fn is_hidden(&self) -> bool {
+    matches!(self, Self::Hidden)
+  }
+}
+
 impl From<String> for SourceMapType {
   fn from(value: String) -> Self {
     match value.as_str() {

@@ -12,4 +12,5 @@ pub mod options;
 pub mod plugin_driver;
 mod runtime;
 pub mod stages;
+mod types;
 pub mod utils;

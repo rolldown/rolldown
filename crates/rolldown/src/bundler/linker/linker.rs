@@ -1,9 +1,9 @@
 use rolldown_common::{ExportsKind, ModuleId, NamedImport, Specifier, SymbolRef};
 
-use super::linker_info::{LinkingInfo, LinkingInfoVec};
 use crate::bundler::{
   module::{Module, ModuleVec, NormalModule},
   stages::link_stage::LinkStage as LinkStageOutput,
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   utils::symbols::{NamespaceAlias, Symbols},
 };
 
@@ -16,7 +16,7 @@ impl<'a, 'b> ImportExportLinker<'a, 'b> {
     Self { graph }
   }
 
-  pub fn link(&mut self, linking_infos: &mut LinkingInfoVec) {
+  pub fn link(&mut self, linking_infos: &mut LinkingMetadataVec) {
     // Here take the symbols to avoid borrow graph and mut borrow graph at same time
     let mut symbols = std::mem::take(&mut self.graph.symbols);
 
@@ -74,7 +74,7 @@ impl<'a, 'b> ImportExportLinker<'a, 'b> {
     &self,
     id: ModuleId,
     symbols: &mut Symbols,
-    linking_infos: &LinkingInfoVec,
+    linking_infos: &LinkingMetadataVec,
     modules: &ModuleVec,
   ) {
     let importer = &self.graph.modules[id];
@@ -137,7 +137,7 @@ impl<'a, 'b> ImportExportLinker<'a, 'b> {
   pub fn determine_ambiguous_export(
     &self,
     potentially_ambiguous_symbol_refs: Vec<SymbolRef>,
-    linking_infos: &LinkingInfoVec,
+    linking_infos: &LinkingMetadataVec,
   ) -> bool {
     let modules = &self.graph.modules;
     let mut results = vec![];
@@ -186,8 +186,8 @@ impl<'a, 'b> ImportExportLinker<'a, 'b> {
     _modules: &ModuleVec,
     importer: &NormalModule,
     importee: &NormalModule,
-    importee_linking_info: &LinkingInfo,
-    _importer_linking_info: &LinkingInfo,
+    importee_linking_info: &LinkingMetadata,
+    _importer_linking_info: &LinkingMetadata,
     info: &NamedImport,
   ) -> MatchImportKind {
     // If importee module is commonjs module, it will generate property access to namespace symbol

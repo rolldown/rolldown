@@ -5,9 +5,9 @@ use rustc_hash::FxHashMap;
 
 use crate::bundler::utils::symbols::Symbols;
 
-/// Store the linking info for module
+/// Module metadata about linking
 #[derive(Debug, Default)]
-pub struct LinkingInfo {
+pub struct LinkingMetadata {
   /// A module could be wrapped for some reasons, eg. cjs module need to be wrapped with commonjs runtime function.
   /// The `wrap_ref` is the binding identifier that store return value of executed the wrapper function.
   ///
@@ -46,7 +46,7 @@ pub struct LinkingInfo {
   pub has_dynamic_exports: bool,
 }
 
-impl LinkingInfo {
+impl LinkingMetadata {
   pub fn sorted_exports(&self) -> impl Iterator<Item = (&Atom, &ResolvedExport)> {
     self
       .exclude_ambiguous_sorted_resolved_exports
@@ -77,4 +77,4 @@ impl LinkingInfo {
   }
 }
 
-pub type LinkingInfoVec = IndexVec<ModuleId, LinkingInfo>;
+pub type LinkingMetadataVec = IndexVec<ModuleId, LinkingMetadata>;

@@ -16,7 +16,7 @@ use string_wizard::MagicString;
 
 use crate::bundler::{
   finalizer::{Finalizer, FinalizerContext},
-  linker::linker_info::{LinkingInfo, LinkingInfoVec},
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   utils::ast_scope::AstScope,
 };
 
@@ -75,7 +75,7 @@ impl NormalModule {
     Some(source)
   }
 
-  pub fn create_initial_resolved_exports(&self, self_linking_info: &mut LinkingInfo) {
+  pub fn create_initial_resolved_exports(&self, self_linking_info: &mut LinkingMetadata) {
     self.named_exports.iter().for_each(|(name, local)| {
       let resolved_export =
         ResolvedExport { symbol_ref: local.referenced, potentially_ambiguous_symbol_refs: None };
@@ -86,7 +86,7 @@ impl NormalModule {
   pub fn create_resolved_exports_for_export_star(
     &self,
     id: ModuleId,
-    linking_infos: &mut LinkingInfoVec,
+    linking_infos: &mut LinkingMetadataVec,
     modules: &ModuleVec,
     module_stack: &mut Vec<ModuleId>,
   ) {

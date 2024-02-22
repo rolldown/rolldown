@@ -2,9 +2,9 @@ use index_vec::IndexVec;
 use rolldown_common::{ExportsKind, ModuleId, StmtInfo, WrapKind};
 
 use crate::bundler::{
-  linker::linker_info::{LinkingInfo, LinkingInfoVec},
   module::{Module, ModuleVec, NormalModule},
   runtime::RuntimeModuleBrief,
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   utils::symbols::Symbols,
 };
 
@@ -12,7 +12,7 @@ use super::LinkStage;
 
 struct Context<'a> {
   pub visited_modules: &'a mut IndexVec<ModuleId, bool>,
-  pub linking_infos: &'a mut LinkingInfoVec,
+  pub linking_infos: &'a mut LinkingMetadataVec,
   pub modules: &'a ModuleVec,
 }
 
@@ -42,7 +42,7 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleId) {
 fn has_dynamic_exports_due_to_export_star(
   target: ModuleId,
   modules: &ModuleVec,
-  linking_infos: &mut LinkingInfoVec,
+  linking_infos: &mut LinkingMetadataVec,
   visited_modules: &mut IndexVec<ModuleId, bool>,
 ) -> bool {
   if visited_modules[target] {
@@ -136,7 +136,7 @@ impl LinkStage<'_> {
 
 pub fn create_wrapper(
   module: &mut NormalModule,
-  linking_info: &mut LinkingInfo,
+  linking_info: &mut LinkingMetadata,
   symbols: &mut Symbols,
   runtime: &RuntimeModuleBrief,
 ) {

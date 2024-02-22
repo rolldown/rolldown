@@ -8,12 +8,10 @@ use rolldown_oxc::OxcProgram;
 
 use crate::{
   bundler::{
-    linker::{
-      linker::ImportExportLinker,
-      linker_info::{LinkingInfo, LinkingInfoVec},
-    },
+    linker::linker::ImportExportLinker,
     module::{Module, ModuleVec, NormalModule},
     runtime::RuntimeModuleBrief,
+    types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     utils::symbols::Symbols,
   },
   InputOptions,
@@ -32,7 +30,7 @@ pub struct LinkStageOutput {
   pub entries: Vec<EntryPoint>,
   pub ast_table: IndexVec<ModuleId, OxcProgram>,
   pub sorted_modules: Vec<ModuleId>,
-  pub linking_infos: LinkingInfoVec,
+  pub linking_infos: LinkingMetadataVec,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
@@ -45,7 +43,7 @@ pub struct LinkStage<'a> {
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleId>,
-  pub linking_infos: LinkingInfoVec,
+  pub linking_infos: LinkingMetadataVec,
   pub warnings: Vec<BuildError>,
   pub ast_table: IndexVec<ModuleId, OxcProgram>,
   pub input_options: &'a InputOptions,
@@ -58,7 +56,7 @@ impl<'a> LinkStage<'a> {
       linking_infos: scan_stage_output
         .modules
         .iter()
-        .map(|_| LinkingInfo::default())
+        .map(|_| LinkingMetadata::default())
         .collect::<IndexVec<ModuleId, _>>(),
       modules: scan_stage_output.modules,
       entries: scan_stage_output.entry_points,
@@ -354,7 +352,7 @@ impl Action {
   }
 }
 
-pub fn init_entry_point_stmt_info(module: &mut NormalModule, linking_info: &mut LinkingInfo) {
+pub fn init_entry_point_stmt_info(module: &mut NormalModule, linking_info: &mut LinkingMetadata) {
   let mut referenced_symbols = vec![];
   if matches!(module.exports_kind, ExportsKind::CommonJs) {
     // If a commonjs module becomes an entry point while targeting esm, we need to at least add a `export default require_foo();`

@@ -1,6 +1,6 @@
 use index_vec::IndexVec;
 use oxc::{semantic::SymbolId, span::Atom};
-use rolldown_common::{ModuleId, Specifier, SymbolRef};
+use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 
 use crate::bundler::{chunk::ChunkId, utils::ast_symbol::AstSymbol};
@@ -22,9 +22,6 @@ pub struct Symbol {
   pub link: Option<SymbolRef>,
   /// The chunk that this symbol is defined in.
   pub chunk_id: Option<ChunkId>,
-  // FIXME: should not place those fields here
-  // Only for external modules
-  pub exported_as: Option<Specifier>,
 }
 
 // Information about symbols for all modules
@@ -41,24 +38,13 @@ impl Symbols {
     self.inner[module_id] = ast_symbol
       .names
       .into_iter()
-      .map(|name| Symbol {
-        name,
-        link: None,
-        chunk_id: None,
-        namespace_alias: None,
-        exported_as: None,
-      })
+      .map(|name| Symbol { name, link: None, chunk_id: None, namespace_alias: None })
       .collect();
   }
 
   pub fn create_symbol(&mut self, owner: ModuleId, name: Atom) -> SymbolRef {
-    let symbol_id = self.inner[owner].push(Symbol {
-      name,
-      link: None,
-      chunk_id: None,
-      namespace_alias: None,
-      exported_as: None,
-    });
+    let symbol_id =
+      self.inner[owner].push(Symbol { name, link: None, chunk_id: None, namespace_alias: None });
     SymbolRef { owner, symbol: symbol_id }
   }
 

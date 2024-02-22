@@ -28,6 +28,7 @@
     "Finalizer",
     "hasher",
     "importee",
+    "metas",
     "napi",
     "oxlint",
     "oxlintignore",

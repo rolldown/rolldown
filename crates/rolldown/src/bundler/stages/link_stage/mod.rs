@@ -21,6 +21,7 @@ use self::wrapping::create_wrapper;
 
 use super::scan_stage::ScanStageOutput;
 
+mod match_imports_and_exports;
 mod tree_shaking;
 mod wrapping;
 

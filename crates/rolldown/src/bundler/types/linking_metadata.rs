@@ -39,7 +39,6 @@ pub struct LinkingMetadata {
   // Store the names of exclude ambiguous resolved exports.
   // It will be used to generate chunk exports and module namespace binding.
   pub exclude_ambiguous_sorted_resolved_exports: Vec<Atom>,
-  pub resolved_star_exports: Vec<ModuleId>,
   // If a esm module has export star from commonjs, it will be marked as ESMWithDynamicFallback at linker.
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.

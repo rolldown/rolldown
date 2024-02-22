@@ -11,7 +11,7 @@ use rolldown_common::{
   ModuleType, NamedImport, ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::{AstSnippet, OxcCompiler, OxcProgram};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use string_wizard::MagicString;
 
 use crate::bundler::{
@@ -86,7 +86,7 @@ impl NormalModule {
   pub fn create_resolved_exports_for_export_star(
     &self,
     id: ModuleId,
-    linking_infos: &mut LinkingMetadataVec,
+    metas: &mut LinkingMetadataVec,
     modules: &ModuleVec,
     module_stack: &mut Vec<ModuleId>,
   ) {
@@ -123,11 +123,11 @@ impl NormalModule {
               }
             }
 
-            let resolved_export = linking_infos[importee.id].resolved_exports[name].clone();
+            let resolved_export = metas[importee.id].resolved_exports[name].clone();
 
-            let linking_info = &mut linking_infos[id];
+            let importer_meta = &mut metas[id];
 
-            linking_info
+            importer_meta
               .resolved_exports
               .entry(name.clone())
               .and_modify(|export| {
@@ -146,12 +146,7 @@ impl NormalModule {
               .or_insert(resolved_export);
           });
 
-          importee.create_resolved_exports_for_export_star(
-            id,
-            linking_infos,
-            modules,
-            module_stack,
-          );
+          importee.create_resolved_exports_for_export_star(id, metas, modules, module_stack);
         }
         Module::External(_) => {
           // unimplemented!("handle external module")
@@ -159,26 +154,6 @@ impl NormalModule {
       }
     }
     module_stack.remove(module_stack.len() - 1);
-  }
-
-  pub fn resolve_star_exports(&self, modules: &ModuleVec) -> Vec<ModuleId> {
-    let mut visited = FxHashSet::default();
-    let mut resolved = vec![];
-    let mut queue = self.star_export_modules().collect::<Vec<_>>();
-
-    while let Some(importee_id) = queue.pop() {
-      if !visited.contains(&importee_id) {
-        visited.insert(importee_id);
-        resolved.push(importee_id);
-        let importee = &modules[importee_id];
-        match importee {
-          Module::Normal(importee) => queue.extend(importee.star_export_modules()),
-          Module::External(_) => {}
-        }
-      }
-    }
-
-    resolved
   }
 
   pub fn star_export_modules(&self) -> impl Iterator<Item = ModuleId> + '_ {

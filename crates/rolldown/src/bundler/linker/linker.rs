@@ -20,17 +20,12 @@ impl<'a, 'b> ImportExportLinker<'a, 'b> {
     // Here take the symbols to avoid borrow graph and mut borrow graph at same time
     let mut symbols = std::mem::take(&mut self.graph.symbols);
 
-    // Propagate star exports
-    // Create resolved exports for named export declarations
-    // Mark dynamic exports due to export star
     for id in &self.graph.sorted_modules {
       let importer = &self.graph.modules[*id];
       match importer {
         Module::Normal(importer) => {
           let importer_linking_info = &mut linking_infos[*id];
           importer.create_initial_resolved_exports(importer_linking_info);
-          let resolved = importer.resolve_star_exports(&self.graph.modules);
-          importer_linking_info.resolved_star_exports = resolved;
         }
         Module::External(_) => {
           // meaningless

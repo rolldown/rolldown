@@ -89,14 +89,14 @@ impl LinkStage<'_> {
         return;
       };
       let module_id = module.id;
-      let linking_info = &self.linking_infos[module_id];
+      let linking_info = &self.metas[module_id];
 
       match linking_info.wrap_kind {
         WrapKind::Cjs | WrapKind::Esm => {
           wrap_module_recursively(
             &mut Context {
               visited_modules: &mut visited_modules_for_wrapping,
-              linking_infos: &mut self.linking_infos,
+              linking_infos: &mut self.metas,
               modules: &self.modules,
             },
             module_id,
@@ -109,7 +109,7 @@ impl LinkStage<'_> {
         has_dynamic_exports_due_to_export_star(
           module_id,
           &self.modules,
-          &mut self.linking_infos,
+          &mut self.metas,
           &mut visited_modules_for_dynamic_exports,
         );
       }
@@ -123,7 +123,7 @@ impl LinkStage<'_> {
           wrap_module_recursively(
             &mut Context {
               visited_modules: &mut visited_modules_for_wrapping,
-              linking_infos: &mut self.linking_infos,
+              linking_infos: &mut self.metas,
               modules: &self.modules,
             },
             importee.id,

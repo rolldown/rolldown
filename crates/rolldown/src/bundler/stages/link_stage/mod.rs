@@ -8,7 +8,6 @@ use rolldown_oxc::OxcProgram;
 
 use crate::{
   bundler::{
-    linker::linker::ImportExportLinker,
     module::{Module, ModuleVec, NormalModule},
     runtime::RuntimeModuleBrief,
     types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
@@ -21,7 +20,7 @@ use self::wrapping::create_wrapper;
 
 use super::scan_stage::ScanStageOutput;
 
-mod match_imports_and_exports;
+mod bind_imports_and_exports;
 mod tree_shaking;
 mod wrapping;
 
@@ -44,7 +43,7 @@ pub struct LinkStage<'a> {
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleId>,
-  pub linking_infos: LinkingMetadataVec,
+  pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildError>,
   pub ast_table: IndexVec<ModuleId, OxcProgram>,
   pub input_options: &'a InputOptions,
@@ -54,7 +53,7 @@ impl<'a> LinkStage<'a> {
   pub fn new(scan_stage_output: ScanStageOutput, input_options: &'a InputOptions) -> Self {
     Self {
       sorted_modules: Vec::new(),
-      linking_infos: scan_stage_output
+      metas: scan_stage_output
         .modules
         .iter()
         .map(|_| LinkingMetadata::default())
@@ -74,7 +73,7 @@ impl<'a> LinkStage<'a> {
       let Module::Normal(module) = module else {
         return;
       };
-      let linking_info = &mut self.linking_infos[module.id];
+      let linking_info = &mut self.metas[module.id];
 
       create_wrapper(module, linking_info, &mut self.symbols, &self.runtime);
       if self.entries.iter().any(|entry| entry.id == module.id) {
@@ -82,7 +81,7 @@ impl<'a> LinkStage<'a> {
       }
 
       if matches!(module.exports_kind, ExportsKind::Esm) {
-        let linking_info = &self.linking_infos[module.id];
+        let linking_info = &self.metas[module.id];
         let mut referenced_symbols = vec![];
         if !linking_info.exclude_ambiguous_sorted_resolved_exports.is_empty() {
           referenced_symbols
@@ -113,10 +112,8 @@ impl<'a> LinkStage<'a> {
 
     self.determine_module_exports_kind();
     self.wrap_modules();
-    let mut linking_infos = std::mem::take(&mut self.linking_infos);
-    ImportExportLinker::new(&mut self).link(&mut linking_infos);
-    self.linking_infos = linking_infos;
-    tracing::debug!("linking modules {:#?}", self.linking_infos);
+    self.bind_imports_and_exports();
+    tracing::debug!("linking modules {:#?}", self.metas);
     self.create_exports_for_modules();
     self.reference_needed_symbols();
     self.include_statements();
@@ -125,7 +122,7 @@ impl<'a> LinkStage<'a> {
       modules: self.modules,
       entries: self.entries,
       sorted_modules: self.sorted_modules,
-      linking_infos: self.linking_infos,
+      linking_infos: self.metas,
       symbols: self.symbols,
       runtime: self.runtime,
       warnings: self.warnings,
@@ -200,7 +197,7 @@ impl<'a> LinkStage<'a> {
                 if (rec.contains_import_default || rec.contains_import_star)
                   && matches!(importee.exports_kind, ExportsKind::None)
                 {
-                  self.linking_infos[importee.id].wrap_kind = WrapKind::Cjs;
+                  self.metas[importee.id].wrap_kind = WrapKind::Cjs;
                   // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
                   unsafe {
                     let importee_mut = addr_of!(*importee).cast_mut();
@@ -208,7 +205,7 @@ impl<'a> LinkStage<'a> {
                   }
                 }
               } else {
-                self.linking_infos[importee.id].wrap_kind = WrapKind::Esm;
+                self.metas[importee.id].wrap_kind = WrapKind::Esm;
                 unsafe {
                   let importee_mut = addr_of!(*importee).cast_mut();
                   (*importee_mut).exports_kind = ExportsKind::Esm;
@@ -218,14 +215,14 @@ impl<'a> LinkStage<'a> {
           }
           ImportKind::Require => match importee.exports_kind {
             ExportsKind::Esm => {
-              self.linking_infos[importee.id].wrap_kind = WrapKind::Esm;
+              self.metas[importee.id].wrap_kind = WrapKind::Esm;
             }
             ExportsKind::CommonJs => {
-              self.linking_infos[importee.id].wrap_kind = WrapKind::Cjs;
+              self.metas[importee.id].wrap_kind = WrapKind::Cjs;
             }
             ExportsKind::None => {
               if compat_mode {
-                self.linking_infos[importee.id].wrap_kind = WrapKind::Cjs;
+                self.metas[importee.id].wrap_kind = WrapKind::Cjs;
                 // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
                 // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
                 unsafe {
@@ -233,7 +230,7 @@ impl<'a> LinkStage<'a> {
                   (*importee_mut).exports_kind = ExportsKind::CommonJs;
                 }
               } else {
-                self.linking_infos[importee.id].wrap_kind = WrapKind::Esm;
+                self.metas[importee.id].wrap_kind = WrapKind::Esm;
                 unsafe {
                   let importee_mut = addr_of!(*importee).cast_mut();
                   (*importee_mut).exports_kind = ExportsKind::Esm;
@@ -247,7 +244,7 @@ impl<'a> LinkStage<'a> {
 
       // TODO: should care about output format
       if matches!(importer.exports_kind, ExportsKind::CommonJs) {
-        self.linking_infos[importer.id].wrap_kind = WrapKind::Cjs;
+        self.metas[importer.id].wrap_kind = WrapKind::Cjs;
       }
     });
   }
@@ -269,7 +266,7 @@ impl<'a> LinkStage<'a> {
         stmt_info.import_records.iter().for_each(|rec_id| {
           let rec = &importer.import_records[*rec_id];
           let importee_id = rec.resolved_module;
-          let importee_linking_info = &self.linking_infos[importee_id];
+          let importee_linking_info = &self.metas[importee_id];
           match rec.kind {
             ImportKind::Import => {
               let is_reexport_all = importer.star_exports.contains(rec_id);

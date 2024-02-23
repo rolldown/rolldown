@@ -3,3 +3,4 @@
 // operations on the data they store or only have simple getters and setters.
 
 pub mod linking_metadata;
+pub mod match_import_kind;

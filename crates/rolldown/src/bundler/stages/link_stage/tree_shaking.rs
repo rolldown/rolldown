@@ -140,7 +140,7 @@ impl LinkStage<'_> {
 
       include_module(context, module);
 
-      let linking_info = &self.linking_infos[module.id];
+      let linking_info = &self.metas[module.id];
       linking_info.sorted_exports().for_each(|(_, resolved_export)| {
         include_symbol(context, resolved_export.symbol_ref);
       });

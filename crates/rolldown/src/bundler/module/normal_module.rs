@@ -16,7 +16,7 @@ use string_wizard::MagicString;
 
 use crate::bundler::{
   finalizer::{Finalizer, FinalizerContext},
-  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+  types::linking_metadata::LinkingMetadataVec,
   utils::ast_scope::AstScope,
 };
 
@@ -75,15 +75,7 @@ impl NormalModule {
     Some(source)
   }
 
-  pub fn create_initial_resolved_exports(&self, self_linking_info: &mut LinkingMetadata) {
-    self.named_exports.iter().for_each(|(name, local)| {
-      let resolved_export =
-        ResolvedExport { symbol_ref: local.referenced, potentially_ambiguous_symbol_refs: None };
-      self_linking_info.resolved_exports.insert(name.clone(), resolved_export);
-    });
-  }
-
-  pub fn create_resolved_exports_for_export_star(
+  pub(crate) fn add_exports_for_export_star(
     &self,
     id: ModuleId,
     metas: &mut LinkingMetadataVec,
@@ -95,64 +87,57 @@ impl NormalModule {
     }
     module_stack.push(self.id);
 
-    for module_id in self.star_export_modules() {
-      let importee = &modules[module_id];
+    self.star_export_modules().for_each(|importee_id| {
+      let importee = &modules[importee_id];
       match importee {
+        Module::External(_) => {
+          // This will be resolved at run time instead
+        }
         Module::Normal(importee) => {
           // Export star from commonjs will be resolved at runtime
           if importee.exports_kind == ExportsKind::CommonJs {
-            continue;
+            return;
           }
 
-          importee.named_exports.iter().for_each(|(name, _)| {
+          importee.named_exports.iter().for_each(|(alias, importee_export)| {
             // ES6 export star ignore default export
-            if name.as_str() == "default" {
+            if alias == &"default" {
               return;
             }
 
             // This export star is shadowed if any file in the stack has a matching real named export
-            for id in &*module_stack {
-              let module = &modules[*id];
-              match module {
-                Module::Normal(module) => {
-                  if module.named_exports.contains_key(name) {
-                    return;
-                  }
-                }
-                Module::External(_) => {}
-              }
+            if module_stack
+              .iter()
+              .copied()
+              .filter_map(|id| modules[id].as_normal())
+              .any(|prev_module| prev_module.named_exports.contains_key(alias))
+            {
+              return;
             }
-
-            let resolved_export = metas[importee.id].resolved_exports[name].clone();
 
             let importer_meta = &mut metas[id];
 
             importer_meta
               .resolved_exports
-              .entry(name.clone())
-              .and_modify(|export| {
-                if export.symbol_ref != resolved_export.symbol_ref {
-                  // potentially ambiguous export
-                  if let Some(potentially_ambiguous_symbol_refs) =
-                    &mut export.potentially_ambiguous_symbol_refs
-                  {
-                    potentially_ambiguous_symbol_refs.push(resolved_export.symbol_ref);
-                  } else {
-                    export.potentially_ambiguous_symbol_refs =
-                      Some(vec![resolved_export.symbol_ref]);
-                  }
+              .entry(alias.clone())
+              .and_modify(|existing| {
+                if existing.symbol_ref != importee_export.referenced {
+                  // This means that the importer already has a export with the same name, and it's not from its own
+                  // local named exports. Such a situation is already handled above, so this is a case of ambiguity.
+                  existing
+                    .potentially_ambiguous_symbol_refs
+                    .get_or_insert_with(Default::default)
+                    .push(importee_export.referenced);
                 }
               })
-              .or_insert(resolved_export);
+              .or_insert_with(|| ResolvedExport::new(importee_export.referenced));
           });
 
-          importee.create_resolved_exports_for_export_star(id, metas, modules, module_stack);
-        }
-        Module::External(_) => {
-          // unimplemented!("handle external module")
+          importee.add_exports_for_export_star(id, metas, modules, module_stack);
         }
       }
-    }
+    });
+
     module_stack.remove(module_stack.len() - 1);
   }
 

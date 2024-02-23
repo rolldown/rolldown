@@ -30,7 +30,7 @@ pub struct LinkStageOutput {
   pub entries: Vec<EntryPoint>,
   pub ast_table: IndexVec<ModuleId, OxcProgram>,
   pub sorted_modules: Vec<ModuleId>,
-  pub linking_infos: LinkingMetadataVec,
+  pub metas: LinkingMetadataVec,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
@@ -83,9 +83,9 @@ impl<'a> LinkStage<'a> {
       if matches!(module.exports_kind, ExportsKind::Esm) {
         let linking_info = &self.metas[module.id];
         let mut referenced_symbols = vec![];
-        if !linking_info.exclude_ambiguous_sorted_resolved_exports.is_empty() {
+        if !linking_info.is_canonical_exports_empty() {
           referenced_symbols
-            .extend(linking_info.sorted_exports().map(|(_, export)| export.symbol_ref));
+            .extend(linking_info.canonical_exports().map(|(_, export)| export.symbol_ref));
           referenced_symbols.push(self.runtime.resolve_symbol("__export"));
         }
         // Create a StmtInfo for the namespace statement
@@ -122,7 +122,7 @@ impl<'a> LinkStage<'a> {
       modules: self.modules,
       entries: self.entries,
       sorted_modules: self.sorted_modules,
-      linking_infos: self.metas,
+      metas: self.metas,
       symbols: self.symbols,
       runtime: self.runtime,
       warnings: self.warnings,

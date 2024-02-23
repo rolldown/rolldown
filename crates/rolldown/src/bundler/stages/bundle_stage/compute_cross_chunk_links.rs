@@ -95,7 +95,7 @@ impl<'a> BundleStage<'a> {
           let Module::Normal(entry_module) = entry_module else {
             return;
           };
-          let entry_linking_info = &self.link_output.linking_infos[entry_module.id];
+          let entry_linking_info = &self.link_output.metas[entry_module.id];
           if matches!(entry_module.exports_kind, ExportsKind::CommonJs)
             && matches!(self.output_options.format, OutputFormat::Esm)
           {

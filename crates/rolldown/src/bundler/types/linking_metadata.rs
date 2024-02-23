@@ -38,7 +38,7 @@ pub struct LinkingMetadata {
   pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
   // Store the names of exclude ambiguous resolved exports.
   // It will be used to generate chunk exports and module namespace binding.
-  pub exclude_ambiguous_sorted_resolved_exports: Vec<Atom>,
+  sorted_and_non_ambiguous_resolved_exports: Vec<Atom>,
   // If a esm module has export star from commonjs, it will be marked as ESMWithDynamicFallback at linker.
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
@@ -46,11 +46,19 @@ pub struct LinkingMetadata {
 }
 
 impl LinkingMetadata {
-  pub fn sorted_exports(&self) -> impl Iterator<Item = (&Atom, &ResolvedExport)> {
+  pub fn canonical_exports(&self) -> impl Iterator<Item = (&Atom, &ResolvedExport)> {
     self
-      .exclude_ambiguous_sorted_resolved_exports
+      .sorted_and_non_ambiguous_resolved_exports
       .iter()
       .map(|name| (name, &self.resolved_exports[name]))
+  }
+
+  pub fn canonical_exports_len(&self) -> usize {
+    self.sorted_and_non_ambiguous_resolved_exports.len()
+  }
+
+  pub fn is_canonical_exports_empty(&self) -> bool {
+    self.sorted_and_non_ambiguous_resolved_exports.is_empty()
   }
 
   pub fn create_exclude_ambiguous_resolved_exports(&mut self, symbols: &Symbols) {
@@ -72,7 +80,7 @@ impl LinkingMetadata {
       })
       .collect::<Vec<_>>();
     export_names.sort_unstable_by(|a, b| a.cmp(b));
-    self.exclude_ambiguous_sorted_resolved_exports = export_names;
+    self.sorted_and_non_ambiguous_resolved_exports = export_names;
   }
 }
 

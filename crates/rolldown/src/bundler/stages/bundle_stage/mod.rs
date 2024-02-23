@@ -65,7 +65,7 @@ impl<'a> BundleStage<'a> {
           // - excluded normal modules in code splitting doesn't belong to any chunk.
           let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
           let chunk = &chunk_graph.chunks[chunk_id];
-          let linking_info = &self.link_output.linking_infos[module.id];
+          let linking_info = &self.link_output.metas[module.id];
           module.finalize(
             FinalizerContext {
               canonical_names: &chunk.canonical_names,
@@ -74,7 +74,7 @@ impl<'a> BundleStage<'a> {
               linking_info,
               module,
               modules: &self.link_output.modules,
-              linking_infos: &self.link_output.linking_infos,
+              linking_infos: &self.link_output.metas,
               runtime: &self.link_output.runtime,
               chunk_graph: &chunk_graph,
             },

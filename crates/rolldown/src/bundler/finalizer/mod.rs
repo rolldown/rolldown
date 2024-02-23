@@ -214,7 +214,7 @@ where
       .snippet
       .var_decl_stmt(ns_name.clone(), ast::Expression::ObjectExpression(Dummy::dummy(self.alloc)));
 
-    let exports_len = self.ctx.linking_info.exclude_ambiguous_sorted_resolved_exports.len();
+    let exports_len = self.ctx.linking_info.canonical_exports_len();
 
     if exports_len == 0 {
       return vec![namespace_decl_stmt];
@@ -224,7 +224,7 @@ where
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
     arg_obj_expr.properties.reserve_exact(exports_len);
 
-    self.ctx.linking_info.sorted_exports().for_each(|(export, resolved_export)| {
+    self.ctx.linking_info.canonical_exports().for_each(|(export, resolved_export)| {
       // prop_name: () => returned
       let prop_name = export;
       let returned = self.generate_finalized_expr_for_symbol_ref(resolved_export.symbol_ref);

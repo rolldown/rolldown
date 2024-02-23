@@ -4,9 +4,10 @@ use oxc::{semantic::ScopeId, span::Atom};
 use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::bundler::module::{ModuleVec, NormalModule};
-
-use super::symbols::Symbols;
+use crate::bundler::{
+  module::{ModuleVec, NormalModule},
+  types::symbols::Symbols,
+};
 
 #[derive(Debug)]
 pub struct Renamer<'name> {

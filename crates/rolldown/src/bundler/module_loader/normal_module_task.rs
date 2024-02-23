@@ -20,13 +20,10 @@ use crate::{
     module_loader::NormalModuleTaskResult,
     options::input_options::SharedInputOptions,
     plugin_driver::SharedPluginDriver,
-    utils::{
-      ast_scope::AstScope,
-      ast_symbol::AstSymbol,
-      load_source::load_source,
-      resolve_id::{resolve_id, ResolvedRequestInfo},
-      transform_source::transform_source,
+    types::{
+      ast_scope::AstScope, ast_symbols::AstSymbols, resolved_request_info::ResolvedRequestInfo,
     },
+    utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
   },
   error::{BatchedErrors, BatchedResult},
   HookResolveIdArgsOptions,
@@ -124,7 +121,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     Ok(())
   }
 
-  fn scan(&self, source: &Arc<str>) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
+  fn scan(&self, source: &Arc<str>) -> (OxcProgram, AstScope, ScanResult, AstSymbols, SymbolRef) {
     fn determine_oxc_source_type(path: impl AsRef<Path>, ty: ModuleType) -> SourceType {
       // Determine oxc source type for parsing
       let mut default = SourceType::default().with_module(true);
@@ -154,7 +151,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(scope, std::mem::take(&mut symbol_table.references));
-    let mut symbol_for_module = AstSymbol::from_symbol_table(symbol_table);
+    let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let repr_name = self.resolved_path.path.representative_name();
     let scanner = AstScanner::new(
       self.module_id,

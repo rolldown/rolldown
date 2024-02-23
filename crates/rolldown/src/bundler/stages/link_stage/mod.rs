@@ -11,7 +11,7 @@ use crate::{
     module::{Module, ModuleVec, NormalModule},
     runtime::RuntimeModuleBrief,
     types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    utils::symbols::Symbols,
+    types::symbols::Symbols,
   },
   InputOptions,
 };

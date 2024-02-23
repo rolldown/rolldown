@@ -3,7 +3,7 @@ use rolldown_common::{ModuleId, StmtInfoId, SymbolRef};
 
 use crate::bundler::{
   module::{Module, ModuleVec, NormalModule},
-  utils::symbols::Symbols,
+  types::symbols::Symbols,
 };
 
 use super::LinkStage;

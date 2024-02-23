@@ -5,12 +5,12 @@ use oxc::{
 };
 
 #[derive(Debug, Default)]
-pub struct AstSymbol {
+pub struct AstSymbols {
   pub names: IndexVec<SymbolId, Atom>,
   pub scope_ids: IndexVec<SymbolId, ScopeId>,
 }
 
-impl AstSymbol {
+impl AstSymbols {
   pub fn from_symbol_table(table: SymbolTable) -> Self {
     debug_assert!(table.references.is_empty());
     Self { names: table.names, scope_ids: table.scope_ids }

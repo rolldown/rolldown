@@ -7,8 +7,10 @@ use crate::bundler::{
   chunk_graph::ChunkGraph,
   module::{ModuleVec, NormalModule},
   runtime::RuntimeModuleBrief,
-  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-  utils::symbols::Symbols,
+  types::{
+    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+    symbols::Symbols,
+  },
 };
 
 pub struct FinalizerContext<'me> {

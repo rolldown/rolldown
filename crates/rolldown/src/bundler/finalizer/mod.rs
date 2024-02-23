@@ -6,11 +6,11 @@ use oxc::{
 use rolldown_common::{ImportRecordId, SymbolRef, WrapKind};
 use rolldown_oxc::{AstSnippet, BindingPatternExt, Dummy, IntoIn, TakeIn};
 
-use super::utils::ast_scope::AstScope;
-
 mod finalizer_context;
 mod impl_visit_mut_for_finalizer;
 pub use finalizer_context::FinalizerContext;
+
+use super::types::ast_scope::AstScope;
 
 pub struct Finalizer<'me, 'ast> {
   pub alloc: &'ast Allocator,

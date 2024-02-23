@@ -11,7 +11,7 @@ use rolldown_common::{
 };
 use rustc_hash::FxHashMap;
 
-use crate::bundler::utils::ast_scope::AstScope;
+use crate::bundler::types::ast_scope::AstScope;
 
 use super::NormalModule;
 

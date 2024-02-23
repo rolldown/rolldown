@@ -2,7 +2,7 @@ use oxc::{semantic::SymbolId, span::Atom};
 use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 
-use super::utils::ast_scope::AstScope;
+use super::types::ast_scope::AstScope;
 
 #[derive(Debug)]
 pub struct RuntimeModuleBrief {

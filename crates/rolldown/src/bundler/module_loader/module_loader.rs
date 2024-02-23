@@ -20,8 +20,9 @@ use crate::bundler::module_loader::runtime_normal_module_task::RuntimeNormalModu
 use crate::bundler::options::input_options::SharedInputOptions;
 use crate::bundler::plugin_driver::SharedPluginDriver;
 use crate::bundler::runtime::RuntimeModuleBrief;
-use crate::bundler::utils::resolve_id::ResolvedRequestInfo;
-use crate::bundler::utils::symbols::Symbols;
+use crate::bundler::types::resolved_request_info::ResolvedRequestInfo;
+use crate::bundler::types::symbols::Symbols;
+
 use crate::error::{BatchedErrors, BatchedResult};
 use crate::SharedResolver;
 

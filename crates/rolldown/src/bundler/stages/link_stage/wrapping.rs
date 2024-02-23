@@ -4,8 +4,10 @@ use rolldown_common::{ExportsKind, ModuleId, StmtInfo, WrapKind};
 use crate::bundler::{
   module::{Module, ModuleVec, NormalModule},
   runtime::RuntimeModuleBrief,
-  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-  utils::symbols::Symbols,
+  types::{
+    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+    symbols::Symbols,
+  },
 };
 
 use super::LinkStage;

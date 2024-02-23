@@ -16,8 +16,7 @@ use string_wizard::MagicString;
 
 use crate::bundler::{
   finalizer::{Finalizer, FinalizerContext},
-  types::linking_metadata::LinkingMetadataVec,
-  utils::ast_scope::AstScope,
+  types::{ast_scope::AstScope, linking_metadata::LinkingMetadataVec},
 };
 
 use super::{Module, ModuleRenderContext, ModuleVec};

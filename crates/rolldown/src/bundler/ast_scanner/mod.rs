@@ -22,7 +22,7 @@ use rolldown_oxc::{BindingIdentifierExt, BindingPatternExt};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
-use crate::bundler::utils::{ast_scope::AstScope, ast_symbol::AstSymbol};
+use super::types::{ast_scope::AstScope, ast_symbols::AstSymbols};
 
 #[derive(Debug, Default)]
 pub struct ScanResult {
@@ -44,7 +44,7 @@ pub struct AstScanner<'a> {
   module_type: ModuleType,
   file_path: &'a FilePath,
   scope: &'a AstScope,
-  symbol_table: &'a mut AstSymbol,
+  symbol_table: &'a mut AstSymbols,
   current_stmt_info: StmtInfo,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
@@ -58,7 +58,7 @@ impl<'ast> AstScanner<'ast> {
   pub fn new(
     idx: ModuleId,
     scope: &'ast AstScope,
-    symbol_table: &'ast mut AstSymbol,
+    symbol_table: &'ast mut AstSymbols,
     repr_name: String,
     module_type: ModuleType,
     source: &'ast Arc<str>,

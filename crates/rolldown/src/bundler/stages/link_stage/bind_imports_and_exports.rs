@@ -9,8 +9,8 @@ use crate::bundler::{
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     match_import_kind::MatchImportKind,
+    namespace_alias::NamespaceAlias,
   },
-  utils::symbols::NamespaceAlias,
 };
 
 use super::LinkStage;

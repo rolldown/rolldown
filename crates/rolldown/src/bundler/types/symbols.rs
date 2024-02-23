@@ -3,13 +3,9 @@ use oxc::{semantic::SymbolId, span::Atom};
 use rolldown_common::{ModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 
-use crate::bundler::{chunk::ChunkId, utils::ast_symbol::AstSymbol};
+use crate::bundler::chunk::ChunkId;
 
-#[derive(Debug)]
-pub struct NamespaceAlias {
-  pub property_name: Atom,
-  pub namespace_ref: SymbolRef,
-}
+use super::{ast_symbols::AstSymbols, namespace_alias::NamespaceAlias};
 
 #[derive(Debug)]
 pub struct Symbol {
@@ -34,7 +30,7 @@ impl Symbols {
   pub fn alloc_one(&mut self) {
     self.inner.push(IndexVec::default());
   }
-  pub fn add_ast_symbol(&mut self, module_id: ModuleId, ast_symbol: AstSymbol) {
+  pub fn add_ast_symbol(&mut self, module_id: ModuleId, ast_symbol: AstSymbols) {
     self.inner[module_id] = ast_symbol
       .names
       .into_iter()

@@ -11,7 +11,7 @@ use crate::bundler::{
   ast_scanner::{AstScanner, ScanResult},
   module::normal_module_builder::NormalModuleBuilder,
   runtime::RuntimeModuleBrief,
-  utils::{ast_scope::AstScope, ast_symbol::AstSymbol},
+  types::{ast_scope::AstScope, ast_symbols::AstSymbols},
 };
 pub struct RuntimeNormalModuleTask {
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
@@ -21,7 +21,7 @@ pub struct RuntimeNormalModuleTask {
 
 pub struct RuntimeNormalModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
-  pub ast_symbol: AstSymbol,
+  pub ast_symbol: AstSymbols,
   pub ast: OxcProgram,
   pub warnings: Vec<BuildError>,
   pub builder: NormalModuleBuilder,
@@ -90,14 +90,14 @@ impl RuntimeNormalModuleTask {
   fn make_ast(
     &self,
     source: &Arc<str>,
-  ) -> (OxcProgram, AstScope, ScanResult, AstSymbol, SymbolRef) {
+  ) -> (OxcProgram, AstScope, ScanResult, AstSymbols, SymbolRef) {
     let source_type = SourceType::default();
     let mut program = OxcCompiler::parse(Arc::clone(source), source_type);
 
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(scope, std::mem::take(&mut symbol_table.references));
-    let mut symbol_for_module = AstSymbol::from_symbol_table(symbol_table);
+    let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let facade_path = FilePath::new("runtime");
     let scanner = AstScanner::new(
       self.module_id,

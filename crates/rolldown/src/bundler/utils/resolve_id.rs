@@ -1,25 +1,19 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
-use rolldown_common::{FilePath, ModuleType, ResolvedPath};
+use rolldown_common::{FilePath, ModuleType};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_resolver::Resolver;
 
 use crate::{
-  bundler::plugin_driver::SharedPluginDriver, HookResolveIdArgs, HookResolveIdArgsOptions,
+  bundler::{plugin_driver::SharedPluginDriver, types::resolved_request_info::ResolvedRequestInfo},
+  HookResolveIdArgs, HookResolveIdArgsOptions,
 };
 
 static HTTP_URL_REGEX: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^(https?:)?\/\/").expect("Init HTTP_URL_REGEX failed"));
 static DATA_URL_REGEX: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\s*data:").expect("Init DATA_URL_REGEX failed"));
-
-#[derive(Debug)]
-pub struct ResolvedRequestInfo {
-  pub path: ResolvedPath,
-  pub module_type: ModuleType,
-  pub is_external: bool,
-}
 
 #[allow(clippy::unused_async)]
 pub async fn resolve_id<T: FileSystem + Default>(

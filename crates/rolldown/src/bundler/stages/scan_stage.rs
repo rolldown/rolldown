@@ -14,10 +14,8 @@ use crate::{
     options::input_options::SharedInputOptions,
     plugin_driver::SharedPluginDriver,
     runtime::RuntimeModuleBrief,
-    utils::{
-      resolve_id::{resolve_id, ResolvedRequestInfo},
-      symbols::Symbols,
-    },
+    types::{resolved_request_info::ResolvedRequestInfo, symbols::Symbols},
+    utils::resolve_id::resolve_id,
   },
   error::{into_batched_result, BatchedResult},
   HookResolveIdArgsOptions, SharedResolver,

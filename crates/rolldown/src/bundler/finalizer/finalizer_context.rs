@@ -1,5 +1,5 @@
 use oxc::span::Atom;
-use rolldown_common::{ModuleId, SymbolRef};
+use rolldown_common::{NormalModuleId, SymbolRef};
 
 use rustc_hash::FxHashMap;
 
@@ -14,7 +14,7 @@ use crate::bundler::{
 };
 
 pub struct FinalizerContext<'me> {
-  pub id: ModuleId,
+  pub id: NormalModuleId,
   pub module: &'me NormalModule,
   pub modules: &'me ModuleVec,
   pub linking_info: &'me LinkingMetadata,

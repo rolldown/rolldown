@@ -1,9 +1,9 @@
-use crate::ModuleId;
+use crate::NormalModuleId;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct EntryPoint {
   pub name: Option<String>,
-  pub id: ModuleId,
+  pub id: NormalModuleId,
   pub kind: EntryPointKind,
 }
 

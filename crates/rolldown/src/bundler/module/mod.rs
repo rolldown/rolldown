@@ -4,7 +4,7 @@ pub mod normal_module_builder;
 use index_vec::IndexVec;
 pub use normal_module::NormalModule;
 use oxc::span::Atom;
-use rolldown_common::{ImportRecord, ImportRecordId, ModuleId, ResourceId, SymbolRef};
+use rolldown_common::{ImportRecord, ImportRecordId, NormalModuleId, ResourceId, SymbolRef};
 use rustc_hash::FxHashMap;
 
 use crate::InputOptions;
@@ -13,7 +13,7 @@ use self::external_module::ExternalModule;
 
 use super::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
-pub type ModuleVec = IndexVec<ModuleId, Module>;
+pub type ModuleVec = IndexVec<NormalModuleId, Module>;
 
 #[derive(Debug)]
 pub enum Module {
@@ -22,7 +22,7 @@ pub enum Module {
 }
 
 impl Module {
-  pub fn id(&self) -> ModuleId {
+  pub fn id(&self) -> NormalModuleId {
     match self {
       Self::Normal(m) => m.id,
       Self::External(m) => m.id,

@@ -1,5 +1,5 @@
 use index_vec::IndexVec;
-use rolldown_common::{ExportsKind, ModuleId, StmtInfo, WrapKind};
+use rolldown_common::{ExportsKind, NormalModuleId, StmtInfo, WrapKind};
 
 use crate::bundler::{
   module::{Module, ModuleVec, NormalModule},
@@ -13,12 +13,12 @@ use crate::bundler::{
 use super::LinkStage;
 
 struct Context<'a> {
-  pub visited_modules: &'a mut IndexVec<ModuleId, bool>,
+  pub visited_modules: &'a mut IndexVec<NormalModuleId, bool>,
   pub linking_infos: &'a mut LinkingMetadataVec,
   pub modules: &'a ModuleVec,
 }
 
-fn wrap_module_recursively(ctx: &mut Context, target: ModuleId) {
+fn wrap_module_recursively(ctx: &mut Context, target: NormalModuleId) {
   let is_visited = &mut ctx.visited_modules[target];
   if *is_visited {
     return;
@@ -42,10 +42,10 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleId) {
 }
 
 fn has_dynamic_exports_due_to_export_star(
-  target: ModuleId,
+  target: NormalModuleId,
   modules: &ModuleVec,
   linking_infos: &mut LinkingMetadataVec,
-  visited_modules: &mut IndexVec<ModuleId, bool>,
+  visited_modules: &mut IndexVec<NormalModuleId, bool>,
 ) -> bool {
   if visited_modules[target] {
     return linking_infos[target].has_dynamic_exports;

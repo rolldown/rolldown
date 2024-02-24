@@ -4,7 +4,7 @@ use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  FilePath, ImportRecordId, ModuleId, ModuleType, RawImportRecord, ResolvedPath, ResourceId,
+  FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath, ResourceId,
   SymbolRef,
 };
 use rolldown_fs::FileSystem;
@@ -30,7 +30,7 @@ use crate::{
 };
 pub struct NormalModuleTask<'task, T: FileSystem + Default> {
   ctx: &'task ModuleTaskCommonData<T>,
-  module_id: ModuleId,
+  module_id: NormalModuleId,
   resolved_path: ResolvedPath,
   module_type: ModuleType,
 }
@@ -38,7 +38,7 @@ pub struct NormalModuleTask<'task, T: FileSystem + Default> {
 impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   pub fn new(
     ctx: &'task ModuleTaskCommonData<T>,
-    id: ModuleId,
+    id: NormalModuleId,
     path: ResolvedPath,
     module_type: ModuleType,
   ) -> Self {

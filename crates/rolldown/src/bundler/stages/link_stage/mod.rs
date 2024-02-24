@@ -2,7 +2,7 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use index_vec::IndexVec;
 use rayon::iter::{ParallelBridge, ParallelIterator};
-use rolldown_common::{EntryPoint, ExportsKind, ImportKind, ModuleId, StmtInfo, WrapKind};
+use rolldown_common::{EntryPoint, ExportsKind, ImportKind, NormalModuleId, StmtInfo, WrapKind};
 use rolldown_error::BuildError;
 use rolldown_oxc::OxcProgram;
 
@@ -28,8 +28,8 @@ mod wrapping;
 pub struct LinkStageOutput {
   pub modules: ModuleVec,
   pub entries: Vec<EntryPoint>,
-  pub ast_table: IndexVec<ModuleId, OxcProgram>,
-  pub sorted_modules: Vec<ModuleId>,
+  pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
+  pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
@@ -42,10 +42,10 @@ pub struct LinkStage<'a> {
   pub entries: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
-  pub sorted_modules: Vec<ModuleId>,
+  pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildError>,
-  pub ast_table: IndexVec<ModuleId, OxcProgram>,
+  pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
   pub input_options: &'a InputOptions,
 }
 
@@ -57,7 +57,7 @@ impl<'a> LinkStage<'a> {
         .modules
         .iter()
         .map(|_| LinkingMetadata::default())
-        .collect::<IndexVec<ModuleId, _>>(),
+        .collect::<IndexVec<NormalModuleId, _>>(),
       modules: scan_stage_output.modules,
       entries: scan_stage_output.entry_points,
       symbols: scan_stage_output.symbols,
@@ -337,13 +337,13 @@ impl<'a> LinkStage<'a> {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Action {
-  Enter(ModuleId),
-  Exit(ModuleId),
+  Enter(NormalModuleId),
+  Exit(NormalModuleId),
 }
 
 impl Action {
   #[inline]
-  fn module_id(&self) -> ModuleId {
+  fn module_id(&self) -> NormalModuleId {
     match self {
       Self::Enter(id) | Self::Exit(id) => *id,
     }

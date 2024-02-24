@@ -14,8 +14,8 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  representative_name, ExportsKind, FilePath, ImportKind, ImportRecordId, LocalExport, ModuleId,
-  ModuleType, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
+  representative_name, ExportsKind, FilePath, ImportKind, ImportRecordId, LocalExport, ModuleType,
+  NamedImport, NormalModuleId, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc::{BindingIdentifierExt, BindingPatternExt};
@@ -39,7 +39,7 @@ pub struct ScanResult {
 }
 
 pub struct AstScanner<'a> {
-  idx: ModuleId,
+  idx: NormalModuleId,
   source: &'a Arc<str>,
   module_type: ModuleType,
   file_path: &'a FilePath,
@@ -56,7 +56,7 @@ pub struct AstScanner<'a> {
 
 impl<'ast> AstScanner<'ast> {
   pub fn new(
-    idx: ModuleId,
+    idx: NormalModuleId,
     scope: &'ast AstScope,
     symbol_table: &'ast mut AstSymbols,
     repr_name: String,

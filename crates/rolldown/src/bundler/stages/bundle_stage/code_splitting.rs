@@ -1,7 +1,7 @@
 use std::hash::BuildHasherDefault;
 
 use index_vec::IndexVec;
-use rolldown_common::{ImportKind, ModuleId};
+use rolldown_common::{ImportKind, NormalModuleId};
 use rustc_hash::FxHashMap;
 
 use crate::bundler::{
@@ -19,9 +19,9 @@ use super::BundleStage;
 impl<'a> BundleStage<'a> {
   fn determine_reachable_modules_for_entry(
     &self,
-    module_id: ModuleId,
+    module_id: NormalModuleId,
     entry_index: u32,
-    module_to_bits: &mut IndexVec<ModuleId, BitSet>,
+    module_to_bits: &mut IndexVec<NormalModuleId, BitSet>,
   ) {
     let Module::Normal(module) = &self.link_output.modules[module_id] else { return };
 
@@ -114,7 +114,7 @@ impl<'a> BundleStage<'a> {
       );
     });
 
-    let mut module_to_chunk: IndexVec<ModuleId, Option<ChunkId>> = index_vec::index_vec![
+    let mut module_to_chunk: IndexVec<NormalModuleId, Option<ChunkId>> = index_vec::index_vec![
       None;
       self.link_output.modules.len()
     ];

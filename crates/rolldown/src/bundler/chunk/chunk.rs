@@ -1,5 +1,5 @@
 use oxc::span::Atom;
-use rolldown_common::{ModuleId, NamedImport, RenderedModule, Specifier, SymbolRef};
+use rolldown_common::{NamedImport, NormalModuleId, RenderedModule, Specifier, SymbolRef};
 use rolldown_error::BuildError;
 use rolldown_sourcemap::{collapse_sourcemaps, concat_sourcemaps, SourceMap};
 use rustc_hash::FxHashMap;
@@ -23,7 +23,7 @@ pub struct CrossChunkImportItem {
 
 #[derive(Debug)]
 pub enum ChunkKind {
-  EntryPoint { is_user_defined: bool, bit: u32, module: ModuleId },
+  EntryPoint { is_user_defined: bool, bit: u32, module: NormalModuleId },
   Common,
 }
 
@@ -36,19 +36,24 @@ impl Default for ChunkKind {
 #[derive(Debug, Default)]
 pub struct Chunk {
   pub kind: ChunkKind,
-  pub modules: Vec<ModuleId>,
+  pub modules: Vec<NormalModuleId>,
   pub name: Option<String>,
   pub file_name: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Atom>,
   pub bits: BitSet,
   pub imports_from_other_chunks: FxHashMap<ChunkId, Vec<CrossChunkImportItem>>,
-  pub imports_from_external_modules: FxHashMap<ModuleId, Vec<NamedImport>>,
+  pub imports_from_external_modules: FxHashMap<NormalModuleId, Vec<NamedImport>>,
   // meaningless if the chunk is an entrypoint
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Atom>,
 }
 
 impl Chunk {
-  pub fn new(name: Option<String>, bits: BitSet, modules: Vec<ModuleId>, kind: ChunkKind) -> Self {
+  pub fn new(
+    name: Option<String>,
+    bits: BitSet,
+    modules: Vec<NormalModuleId>,
+    kind: ChunkKind,
+  ) -> Self {
     Self { modules, name, bits, kind, ..Self::default() }
   }
 

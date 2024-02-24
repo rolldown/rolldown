@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use index_vec::IndexVec;
 use rolldown_common::{
-  EntryPoint, EntryPointKind, FilePath, ImportKind, ImportRecordId, ModuleId, ResourceId,
+  EntryPoint, EntryPointKind, FilePath, ImportKind, ImportRecordId, NormalModuleId, ResourceId,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
@@ -30,18 +30,18 @@ pub struct ModuleLoader<T: FileSystem + Default> {
   input_options: SharedInputOptions,
   common_data: ModuleTaskCommonData<T>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
-  visited: FxHashMap<FilePath, ModuleId>,
-  runtime_id: Option<ModuleId>,
+  visited: FxHashMap<FilePath, NormalModuleId>,
+  runtime_id: Option<NormalModuleId>,
   remaining: u32,
-  intermediate_modules: IndexVec<ModuleId, Option<Module>>,
-  intermediate_ast_table: IndexVec<ModuleId, Option<OxcProgram>>,
+  intermediate_modules: IndexVec<NormalModuleId, Option<Module>>,
+  intermediate_ast_table: IndexVec<NormalModuleId, Option<OxcProgram>>,
   symbols: Symbols,
 }
 
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub modules: ModuleVec,
-  pub ast_table: IndexVec<ModuleId, OxcProgram>,
+  pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -80,17 +80,17 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
   }
 
   fn alloc_module_id(
-    intermediate_modules: &mut IndexVec<ModuleId, Option<Module>>,
-    intermediate_ast_table: &mut IndexVec<ModuleId, Option<OxcProgram>>,
+    intermediate_modules: &mut IndexVec<NormalModuleId, Option<Module>>,
+    intermediate_ast_table: &mut IndexVec<NormalModuleId, Option<OxcProgram>>,
     symbols: &mut Symbols,
-  ) -> ModuleId {
+  ) -> NormalModuleId {
     let id = intermediate_modules.push(None);
     intermediate_ast_table.push(None);
     symbols.alloc_one();
     id
   }
 
-  fn try_spawn_new_task(&mut self, info: ResolvedRequestInfo) -> ModuleId {
+  fn try_spawn_new_task(&mut self, info: ResolvedRequestInfo) -> NormalModuleId {
     match self.visited.entry(info.path.path.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
@@ -123,7 +123,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
     }
   }
 
-  pub fn try_spawn_runtime_module_task(&mut self) -> ModuleId {
+  pub fn try_spawn_runtime_module_task(&mut self) -> NormalModuleId {
     *self.runtime_id.get_or_insert_with(|| {
       let id = Self::alloc_module_id(
         &mut self.intermediate_modules,
@@ -230,10 +230,10 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
       return Err(errors);
     }
 
-    let modules: IndexVec<ModuleId, Module> =
+    let modules: IndexVec<NormalModuleId, Module> =
       self.intermediate_modules.into_iter().map(Option::unwrap).collect();
 
-    let ast_table: IndexVec<ModuleId, OxcProgram> =
+    let ast_table: IndexVec<NormalModuleId, OxcProgram> =
       self.intermediate_ast_table.into_iter().map(Option::unwrap).collect();
 
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();

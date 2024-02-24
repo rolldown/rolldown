@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use index_vec::IndexVec;
 use oxc::span::SourceType;
-use rolldown_common::{ExportsKind, FilePath, ModuleId, ModuleType, ResourceId, SymbolRef};
+use rolldown_common::{ExportsKind, FilePath, ModuleType, NormalModuleId, ResourceId, SymbolRef};
 use rolldown_error::BuildError;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
@@ -15,7 +15,7 @@ use crate::bundler::{
 };
 pub struct RuntimeNormalModuleTask {
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,
-  module_id: ModuleId,
+  module_id: NormalModuleId,
   warnings: Vec<BuildError>,
 }
 
@@ -28,7 +28,7 @@ pub struct RuntimeNormalModuleTaskResult {
 }
 
 impl RuntimeNormalModuleTask {
-  pub fn new(id: ModuleId, tx: tokio::sync::mpsc::UnboundedSender<Msg>) -> Self {
+  pub fn new(id: NormalModuleId, tx: tokio::sync::mpsc::UnboundedSender<Msg>) -> Self {
     Self { module_id: id, tx, warnings: Vec::default() }
   }
 

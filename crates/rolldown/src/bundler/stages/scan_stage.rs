@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, ModuleId};
+use rolldown_common::{EntryPoint, ImportKind, NormalModuleId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_oxc::OxcProgram;
@@ -32,7 +32,7 @@ pub struct ScanStage<Fs: FileSystem + Default> {
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub modules: ModuleVec,
-  pub ast_table: IndexVec<ModuleId, OxcProgram>,
+  pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
   pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,

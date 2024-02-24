@@ -1,6 +1,6 @@
 use index_vec::IndexVec;
 use oxc::span::Atom;
-use rolldown_common::{ModuleId, ResolvedExport, StmtInfoId, SymbolRef, WrapKind};
+use rolldown_common::{NormalModuleId, ResolvedExport, StmtInfoId, SymbolRef, WrapKind};
 use rustc_hash::FxHashMap;
 
 use super::symbols::Symbols;
@@ -84,4 +84,4 @@ impl LinkingMetadata {
   }
 }
 
-pub type LinkingMetadataVec = IndexVec<ModuleId, LinkingMetadata>;
+pub type LinkingMetadataVec = IndexVec<NormalModuleId, LinkingMetadata>;

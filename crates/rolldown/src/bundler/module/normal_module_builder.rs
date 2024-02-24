@@ -6,7 +6,7 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleId, ModuleType, NamedImport,
+  ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleType, NamedImport, NormalModuleId,
   ResourceId, StmtInfos, SymbolRef,
 };
 use rustc_hash::FxHashMap;
@@ -17,7 +17,7 @@ use super::NormalModule;
 
 #[derive(Debug, Default)]
 pub struct NormalModuleBuilder {
-  pub id: Option<ModuleId>,
+  pub id: Option<NormalModuleId>,
   pub source: Option<Arc<str>>,
   pub repr_name: Option<String>,
   pub path: Option<ResourceId>,

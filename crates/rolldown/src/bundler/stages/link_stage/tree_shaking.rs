@@ -1,5 +1,5 @@
 use index_vec::IndexVec;
-use rolldown_common::{ModuleId, StmtInfoId, SymbolRef};
+use rolldown_common::{NormalModuleId, StmtInfoId, SymbolRef};
 
 use crate::bundler::{
   module::{Module, ModuleVec, NormalModule},
@@ -11,10 +11,10 @@ use super::LinkStage;
 struct Context<'a> {
   modules: &'a ModuleVec,
   symbols: &'a Symbols,
-  is_included_vec: &'a mut IndexVec<ModuleId, IndexVec<StmtInfoId, bool>>,
-  is_module_included_vec: &'a mut IndexVec<ModuleId, bool>,
+  is_included_vec: &'a mut IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>>,
+  is_module_included_vec: &'a mut IndexVec<NormalModuleId, bool>,
   tree_shaking: bool,
-  runtime_id: ModuleId,
+  runtime_id: NormalModuleId,
 }
 
 fn include_module(ctx: &mut Context, module: &NormalModule) {
@@ -92,7 +92,7 @@ impl LinkStage<'_> {
   pub fn include_statements(&mut self) {
     use rayon::prelude::*;
 
-    let mut is_included_vec: IndexVec<ModuleId, IndexVec<StmtInfoId, bool>> = self
+    let mut is_included_vec: IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>> = self
       .modules
       .iter()
       .map(|m| match m {
@@ -101,9 +101,9 @@ impl LinkStage<'_> {
         }
         Module::External(_) => IndexVec::default(),
       })
-      .collect::<IndexVec<ModuleId, _>>();
+      .collect::<IndexVec<NormalModuleId, _>>();
 
-    let mut is_module_included_vec: IndexVec<ModuleId, bool> =
+    let mut is_module_included_vec: IndexVec<NormalModuleId, bool> =
       index_vec::index_vec![false; self.modules.len()];
 
     let context = &mut Context {

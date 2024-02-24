@@ -16,11 +16,12 @@ use crate::{
 use super::BundleStage;
 use index_vec::{index_vec, IndexVec};
 use rayon::iter::{ParallelBridge, ParallelIterator};
-use rolldown_common::{ExportsKind, ImportKind, ModuleId, NamedImport, SymbolRef};
+use rolldown_common::{ExportsKind, ImportKind, NamedImport, NormalModuleId, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 type ChunkMetaImports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
-type ChunkMetaImportsForExternalModules = IndexVec<ChunkId, FxHashMap<ModuleId, Vec<NamedImport>>>;
+type ChunkMetaImportsForExternalModules =
+  IndexVec<ChunkId, FxHashMap<NormalModuleId, Vec<NamedImport>>>;
 type ChunkMetaExports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
 
 impl<'a> BundleStage<'a> {
@@ -120,8 +121,7 @@ impl<'a> BundleStage<'a> {
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
     let mut chunk_meta_exports_vec: ChunkMetaExports =
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
-    let mut chunk_meta_imports_from_external_modules_vec: ChunkMetaImportsForExternalModules =
-      index_vec![FxHashMap::<ModuleId, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
+    let mut chunk_meta_imports_from_external_modules_vec: ChunkMetaImportsForExternalModules = index_vec![FxHashMap::<NormalModuleId, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
 
     self.collect_potential_chunk_imports(
       chunk_graph,

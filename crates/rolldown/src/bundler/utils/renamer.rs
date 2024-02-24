@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use oxc::{semantic::ScopeId, span::Atom};
-use rolldown_common::{ModuleId, SymbolRef};
+use rolldown_common::{NormalModuleId, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::bundler::{
@@ -53,7 +53,7 @@ impl<'name> Renamer<'name> {
   // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
   pub fn rename_non_top_level_symbol(
     &mut self,
-    modules_in_chunk: &[ModuleId],
+    modules_in_chunk: &[NormalModuleId],
     modules: &ModuleVec,
   ) {
     use rayon::prelude::*;

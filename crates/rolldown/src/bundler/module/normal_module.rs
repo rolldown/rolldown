@@ -7,8 +7,8 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleId,
-  ModuleType, NamedImport, ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
+  DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleType,
+  NamedImport, NormalModuleId, ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_oxc::{AstSnippet, OxcCompiler, OxcProgram};
 use rustc_hash::FxHashMap;
@@ -25,7 +25,7 @@ use super::{Module, ModuleRenderContext, ModuleVec};
 pub struct NormalModule {
   pub exec_order: u32,
   pub source: Arc<str>,
-  pub id: ModuleId,
+  pub id: NormalModuleId,
   pub is_user_defined_entry: bool,
   pub resource_id: ResourceId,
   pub pretty_path: String,
@@ -76,10 +76,10 @@ impl NormalModule {
 
   pub(crate) fn add_exports_for_export_star(
     &self,
-    id: ModuleId,
+    id: NormalModuleId,
     metas: &mut LinkingMetadataVec,
     modules: &ModuleVec,
-    module_stack: &mut Vec<ModuleId>,
+    module_stack: &mut Vec<NormalModuleId>,
   ) {
     if module_stack.contains(&self.id) {
       return;
@@ -140,14 +140,14 @@ impl NormalModule {
     module_stack.remove(module_stack.len() - 1);
   }
 
-  pub fn star_export_modules(&self) -> impl Iterator<Item = ModuleId> + '_ {
+  pub fn star_export_modules(&self) -> impl Iterator<Item = NormalModuleId> + '_ {
     self.star_exports.iter().map(|rec_id| {
       let rec = &self.import_records[*rec_id];
       rec.resolved_module
     })
   }
 
-  pub fn _importee_id_by_span(&self, span: Span) -> ModuleId {
+  pub fn _importee_id_by_span(&self, span: Span) -> NormalModuleId {
     let record = &self.import_records[self.imports[&span]];
     record.resolved_module
   }

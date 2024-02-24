@@ -1,8 +1,7 @@
 use std::{borrow::Cow, fmt::Debug};
 
+use rolldown_common::Output;
 use rolldown_error::BuildError;
-
-use crate::Output;
 
 use super::{
   args::{HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookTransformArgs, RenderChunkArgs},

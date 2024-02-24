@@ -1,14 +1,13 @@
 use oxc::span::Atom;
-use rolldown_common::{ModuleId, NamedImport, Specifier, SymbolRef};
+use rolldown_common::{ModuleId, NamedImport, RenderedModule, Specifier, SymbolRef};
 use rolldown_error::BuildError;
 use rolldown_sourcemap::{collapse_sourcemaps, concat_sourcemaps, SourceMap};
 use rustc_hash::FxHashMap;
 
 use crate::{
   bundler::{
-    bundle::output::RenderedModule, chunk_graph::ChunkGraph, module::ModuleRenderContext,
-    options::output_options::OutputOptions, stages::link_stage::LinkStageOutput,
-    utils::bitset::BitSet,
+    chunk_graph::ChunkGraph, module::ModuleRenderContext, options::output_options::OutputOptions,
+    stages::link_stage::LinkStageOutput, utils::bitset::BitSet,
   },
   error::BatchedResult,
   FileNameTemplate, InputOptions,

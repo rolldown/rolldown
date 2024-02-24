@@ -20,11 +20,13 @@ futures            = { workspace = true }
 napi               = { version = "2.11.1", features = ["full"] }
 napi-derive        = { version = "2.11.0" }
 rolldown           = { path = "../rolldown" }
+rolldown_common    = { path = "../rolldown_common" }
 rolldown_error     = { path = "../rolldown_error" }
 rolldown_tracing   = { path = "../rolldown_tracing" }
 rolldown_fs        = { path = "../rolldown_fs" }
 rolldown_resolver  = { path = "../rolldown_resolver" }
 rolldown_sourcemap = { path = "../rolldown_sourcemap" }
+rolldown_plugin    = { path = "../rolldown_plugin" }
 rustc-hash         = { workspace = true }
 scoped-tls         = { workspace = true }
 serde              = { workspace = true }

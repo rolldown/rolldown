@@ -1,6 +1,7 @@
+use rolldown_common::{RenderedChunk, RenderedModule};
 use rustc_hash::FxHashMap;
 
-use crate::{bundler::stages::link_stage::LinkStageOutput, OutputOptions, RenderedModule};
+use crate::{bundler::stages::link_stage::LinkStageOutput, OutputOptions};
 
 use super::chunk::{Chunk, ChunkKind};
 
@@ -12,19 +13,6 @@ pub struct PreRenderedChunk {
   pub facade_module_id: Option<String>,
   pub module_ids: Vec<String>,
   pub exports: Vec<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct RenderedChunk {
-  // PreRenderedChunk
-  pub is_entry: bool,
-  pub is_dynamic_entry: bool,
-  pub facade_module_id: Option<String>,
-  pub module_ids: Vec<String>,
-  pub exports: Vec<String>,
-  // RenderedChunk
-  pub file_name: String,
-  pub modules: FxHashMap<String, RenderedModule>,
 }
 
 impl Chunk {

@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
+use rolldown_common::Output;
 use rolldown_error::BuildError;
 use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_plugin::{BoxPlugin, HookBuildEndArgs};
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
 use super::{
-  bundle::output::Output,
   options::input_options::SharedInputOptions,
   plugin_driver::{PluginDriver, SharedPluginDriver},
   stages::{
@@ -17,8 +18,7 @@ use super::{
 use crate::{
   bundler::stages::{bundle_stage::BundleStage, scan_stage::ScanStage},
   error::{BatchedErrors, BatchedResult},
-  plugin::plugin::BoxPlugin,
-  HookBuildEndArgs, InputOptions, OutputOptions, SharedResolver,
+  InputOptions, OutputOptions, SharedResolver,
 };
 
 // Rolldown use this alias for outside users.

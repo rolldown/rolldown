@@ -1,8 +1,9 @@
 use rolldown_common::ResolvedPath;
+use rolldown_plugin::HookLoadArgs;
 use rolldown_sourcemap::SourceMap;
 use sugar_path::AsPath;
 
-use crate::{bundler::plugin_driver::PluginDriver, error::BatchedErrors, HookLoadArgs};
+use crate::{bundler::plugin_driver::PluginDriver, error::BatchedErrors};
 
 pub async fn load_source(
   plugin_driver: &PluginDriver,

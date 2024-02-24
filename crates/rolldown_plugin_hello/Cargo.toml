@@ -12,5 +12,5 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-rolldown    = { path = "../rolldown" }
-async-trait = { workspace = true }
+rolldown_plugin = { path = "../rolldown_plugin" }
+async-trait     = { workspace = true }

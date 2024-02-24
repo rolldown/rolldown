@@ -5,6 +5,7 @@ use rolldown_common::{EntryPoint, ImportKind, ModuleId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_oxc::OxcProgram;
+use rolldown_plugin::HookResolveIdArgsOptions;
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
@@ -18,7 +19,7 @@ use crate::{
     utils::resolve_id::resolve_id,
   },
   error::{into_batched_result, BatchedResult},
-  HookResolveIdArgsOptions, SharedResolver,
+  SharedResolver,
 };
 
 pub struct ScanStage<Fs: FileSystem + Default> {

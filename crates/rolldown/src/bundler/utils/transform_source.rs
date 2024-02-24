@@ -1,6 +1,7 @@
+use rolldown_plugin::HookTransformArgs;
 use rolldown_sourcemap::SourceMap;
 
-use crate::{bundler::plugin_driver::PluginDriver, error::BatchedErrors, HookTransformArgs};
+use crate::{bundler::plugin_driver::PluginDriver, error::BatchedErrors};
 
 pub async fn transform_source(
   plugin_driver: &PluginDriver,

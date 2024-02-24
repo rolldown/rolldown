@@ -67,8 +67,8 @@ pub struct HookResolveIdArgsOptions {
   pub kind: String,
 }
 
-impl From<rolldown::HookResolveIdArgsOptions> for HookResolveIdArgsOptions {
-  fn from(value: rolldown::HookResolveIdArgsOptions) -> Self {
+impl From<rolldown_plugin::HookResolveIdArgsOptions> for HookResolveIdArgsOptions {
+  fn from(value: rolldown_plugin::HookResolveIdArgsOptions) -> Self {
     Self { is_entry: value.is_entry, kind: value.kind.to_string() }
   }
 }
@@ -82,7 +82,7 @@ pub struct ResolveIdResult {
   pub external: Option<bool>,
 }
 
-impl From<ResolveIdResult> for rolldown::HookResolveIdOutput {
+impl From<ResolveIdResult> for rolldown_plugin::HookResolveIdOutput {
   fn from(value: ResolveIdResult) -> Self {
     Self { id: value.id, external: value.external }
   }
@@ -97,7 +97,7 @@ pub struct SourceResult {
   pub map: Option<SourceMap>,
 }
 
-impl From<SourceResult> for rolldown::HookLoadOutput {
+impl From<SourceResult> for rolldown_plugin::HookLoadOutput {
   fn from(value: SourceResult) -> Self {
     Self { code: value.code, map: value.map.map(Into::into) }
   }
@@ -111,7 +111,7 @@ pub struct HookRenderChunkOutput {
   pub code: String,
 }
 
-impl From<HookRenderChunkOutput> for rolldown::HookRenderChunkOutput {
+impl From<HookRenderChunkOutput> for rolldown_plugin::HookRenderChunkOutput {
   fn from(value: HookRenderChunkOutput) -> Self {
     Self { code: value.code }
   }
@@ -158,8 +158,8 @@ pub struct RenderedChunk {
   pub modules: HashMap<String, crate::output::RenderedModule>,
 }
 
-impl From<rolldown::RenderedChunk> for RenderedChunk {
-  fn from(value: rolldown::RenderedChunk) -> Self {
+impl From<rolldown_common::RenderedChunk> for RenderedChunk {
+  fn from(value: rolldown_common::RenderedChunk) -> Self {
     Self {
       is_entry: value.is_entry,
       is_dynamic_entry: value.is_dynamic_entry,

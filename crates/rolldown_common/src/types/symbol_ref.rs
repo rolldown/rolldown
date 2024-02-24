@@ -1,6 +1,6 @@
 use oxc::semantic::SymbolId;
 
-use crate::module_id::ModuleId;
+use crate::ModuleId;
 
 /// Crossing module ref between symbols
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

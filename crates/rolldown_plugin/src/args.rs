@@ -1,5 +1,4 @@
-use crate::bundler::chunk::render_chunk::RenderedChunk;
-use rolldown_common::ImportKind;
+use rolldown_common::{ImportKind, RenderedChunk};
 
 #[derive(Debug)]
 pub struct HookResolveIdArgs<'a> {

@@ -1,11 +1,11 @@
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use rolldown::{
+use rolldown_fs::FileSystem;
+use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, Plugin, PluginContext,
 };
-use rolldown_fs::FileSystem;
 use std::{borrow::Cow, fmt::Debug, path::PathBuf};
 use util::{extract_html_module_scripts, VIRTUAL_MODULE_PREFIX};
 mod util;

@@ -1,17 +1,13 @@
 use std::sync::Arc;
 
+use rolldown_common::Output;
 use rolldown_error::BuildError;
+use rolldown_plugin::{
+  BoxPlugin, HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
+  HookResolveIdReturn, HookTransformArgs, PluginContext, RenderChunkArgs,
+};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::block_on_spawn_all;
-
-use crate::{
-  plugin::{
-    args::{HookBuildEndArgs, RenderChunkArgs},
-    plugin::{BoxPlugin, HookNoopReturn},
-  },
-  HookLoadArgs, HookLoadReturn, HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, Output,
-  PluginContext,
-};
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
 

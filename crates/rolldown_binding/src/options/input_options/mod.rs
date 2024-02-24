@@ -105,7 +105,7 @@ pub struct InputOptions {
 
 #[allow(clippy::redundant_closure_for_method_calls)]
 impl From<InputOptions>
-  for (napi::Result<rolldown::InputOptions>, napi::Result<Vec<rolldown::BoxPlugin>>)
+  for (napi::Result<rolldown::InputOptions>, napi::Result<Vec<rolldown_plugin::BoxPlugin>>)
 {
   fn from(value: InputOptions) -> Self {
     let cwd = PathBuf::from(value.cwd.clone());

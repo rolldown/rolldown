@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use rolldown::{HookNoopReturn, Plugin, PluginContext};
+use rolldown_plugin::{HookNoopReturn, Plugin, PluginContext};
 
 #[derive(Debug)]
 pub struct HelloPlugin;

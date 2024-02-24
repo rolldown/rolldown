@@ -9,6 +9,7 @@ use rolldown_common::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
+use rolldown_plugin::HookResolveIdArgsOptions;
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
@@ -26,7 +27,6 @@ use crate::{
     utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
   },
   error::{BatchedErrors, BatchedResult},
-  HookResolveIdArgsOptions,
 };
 pub struct NormalModuleTask<'task, T: FileSystem + Default> {
   ctx: &'task ModuleTaskCommonData<T>,

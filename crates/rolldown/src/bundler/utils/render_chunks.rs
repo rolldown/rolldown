@@ -1,10 +1,11 @@
+use rolldown_common::RenderedChunk;
+use rolldown_plugin::RenderChunkArgs;
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
-  bundler::{chunk::render_chunk::RenderedChunk, plugin_driver::SharedPluginDriver},
+  bundler::plugin_driver::SharedPluginDriver,
   error::{into_batched_result, BatchedErrors},
-  plugin::args::RenderChunkArgs,
 };
 
 #[allow(clippy::future_not_send)]

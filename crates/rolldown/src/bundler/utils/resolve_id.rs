@@ -3,11 +3,11 @@ use regex::Regex;
 use rolldown_common::{FilePath, ModuleType};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
+use rolldown_plugin::{HookResolveIdArgs, HookResolveIdArgsOptions};
 use rolldown_resolver::Resolver;
 
-use crate::{
-  bundler::{plugin_driver::SharedPluginDriver, types::resolved_request_info::ResolvedRequestInfo},
-  HookResolveIdArgs, HookResolveIdArgsOptions,
+use crate::bundler::{
+  plugin_driver::SharedPluginDriver, types::resolved_request_info::ResolvedRequestInfo,
 };
 
 static HTTP_URL_REGEX: Lazy<Regex> =

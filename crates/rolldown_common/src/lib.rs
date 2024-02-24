@@ -1,30 +1,23 @@
-mod entry_point;
-mod exports_kind;
-mod file_path;
-mod import_record;
-mod module_id;
-mod module_path;
-mod module_type;
-mod named_export;
-mod named_import;
-mod resolved_export;
-mod resolved_path;
-mod stmt_info;
-mod symbol_ref;
-mod wrap_kind;
+mod types;
+
+// We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
-  entry_point::{EntryPoint, EntryPointKind},
-  exports_kind::ExportsKind,
-  file_path::{representative_name, FilePath},
-  import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},
-  module_id::ModuleId,
-  module_path::ResourceId,
-  module_type::ModuleType,
-  named_export::LocalExport,
-  named_import::{NamedImport, Specifier},
-  resolved_export::ResolvedExport,
-  resolved_path::ResolvedPath,
-  stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoId, StmtInfos},
-  symbol_ref::SymbolRef,
-  wrap_kind::WrapKind,
+  types::entry_point::{EntryPoint, EntryPointKind},
+  types::exports_kind::ExportsKind,
+  types::file_path::{representative_name, FilePath},
+  types::import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},
+  types::module_id::ModuleId,
+  types::module_path::ResourceId,
+  types::module_type::ModuleType,
+  types::named_export::LocalExport,
+  types::named_import::{NamedImport, Specifier},
+  types::output::{Output, OutputAsset},
+  types::output_chunk::OutputChunk,
+  types::rendered_chunk::RenderedChunk,
+  types::rendered_module::RenderedModule,
+  types::resolved_export::ResolvedExport,
+  types::resolved_path::ResolvedPath,
+  types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoId, StmtInfos},
+  types::symbol_ref::SymbolRef,
+  types::wrap_kind::WrapKind,
 };

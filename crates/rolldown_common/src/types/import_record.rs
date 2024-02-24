@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use oxc::span::Atom;
 
-use crate::{module_id::ModuleId, SymbolRef};
+use crate::{ModuleId, SymbolRef};
 
 index_vec::define_index_type! {
   pub struct ImportRecordId = u32;

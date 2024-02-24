@@ -1,7 +1,8 @@
 use oxc::span::Atom;
 
+use crate::SymbolRef;
+
 use super::import_record::ImportRecordId;
-use crate::symbol_ref::SymbolRef;
 
 /// This is a representation for statements like
 /// - Case A: `import { foo } from 'foo'`

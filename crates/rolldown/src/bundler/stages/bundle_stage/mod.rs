@@ -1,6 +1,5 @@
 use crate::{
   bundler::{
-    bundle::output::OutputChunk,
     chunk::chunk::ChunkKind,
     chunk_graph::ChunkGraph,
     finalizer::FinalizerContext,
@@ -14,8 +13,9 @@ use crate::{
     utils::{is_in_rust_test_mode, render_chunks::render_chunks},
   },
   error::BatchedResult,
-  InputOptions, Output, OutputAsset,
+  InputOptions,
 };
+use rolldown_common::{Output, OutputAsset, OutputChunk};
 use rolldown_error::BuildError;
 use rustc_hash::FxHashSet;
 

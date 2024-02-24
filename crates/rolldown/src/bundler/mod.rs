@@ -1,5 +1,4 @@
 mod ast_scanner;
-pub mod bundle;
 #[allow(clippy::module_inception)]
 pub mod bundler;
 pub mod chunk;

@@ -1,4 +1,4 @@
-use crate::symbol_ref::SymbolRef;
+use crate::SymbolRef;
 
 /// This is a representation for statements like
 /// - Case A: `export function foo() {}`

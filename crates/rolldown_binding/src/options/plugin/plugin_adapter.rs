@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use crate::utils::JsCallback;
 use crate::{output::Outputs, utils::napi_error_ext::NapiErrorExt};
 use derivative::Derivative;
-use rolldown::Plugin;
+use rolldown_plugin::Plugin;
 
 use super::plugin::{
   HookRenderChunkOutput, HookResolveIdArgsOptions, PluginOptions, RenderedChunk, ResolveIdResult,
@@ -78,7 +78,10 @@ impl Plugin for JsAdapterPlugin {
   }
 
   #[allow(clippy::redundant_closure_for_method_calls)]
-  async fn build_start(&self, _ctx: &mut rolldown::PluginContext) -> rolldown::HookNoopReturn {
+  async fn build_start(
+    &self,
+    _ctx: &mut rolldown_plugin::PluginContext,
+  ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_start_fn {
       cb.call_async(()).await.map_err(|e| e.into_bundle_error())?;
     }
@@ -88,9 +91,9 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn resolve_id(
     &self,
-    _ctx: &mut rolldown::PluginContext,
-    args: &rolldown::HookResolveIdArgs,
-  ) -> rolldown::HookResolveIdReturn {
+    _ctx: &mut rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookResolveIdArgs,
+  ) -> rolldown_plugin::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id_fn {
       let res = cb
         .call_async((
@@ -110,9 +113,9 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn load(
     &self,
-    _ctx: &mut rolldown::PluginContext,
-    args: &rolldown::HookLoadArgs,
-  ) -> rolldown::HookLoadReturn {
+    _ctx: &mut rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookLoadArgs,
+  ) -> rolldown_plugin::HookLoadReturn {
     if let Some(cb) = &self.load_fn {
       let res = cb.call_async((args.id.to_string(),)).await.map_err(|e| e.into_bundle_error())?;
       Ok(res.map(Into::into))
@@ -124,9 +127,9 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn transform(
     &self,
-    _ctx: &mut rolldown::PluginContext,
-    args: &rolldown::HookTransformArgs,
-  ) -> rolldown::HookTransformReturn {
+    _ctx: &mut rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookTransformArgs,
+  ) -> rolldown_plugin::HookTransformReturn {
     if let Some(cb) = &self.transform_fn {
       let res = cb
         .call_async((args.code.to_string(), args.id.to_string()))
@@ -141,9 +144,9 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn build_end(
     &self,
-    _ctx: &mut rolldown::PluginContext,
-    args: Option<&rolldown::HookBuildEndArgs>,
-  ) -> rolldown::HookNoopReturn {
+    _ctx: &mut rolldown_plugin::PluginContext,
+    args: Option<&rolldown_plugin::HookBuildEndArgs>,
+  ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_end_fn {
       cb.call_async((args.map(|a| a.error.to_string()),))
         .await
@@ -155,9 +158,9 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn render_chunk(
     &self,
-    _ctx: &rolldown::PluginContext,
-    args: &rolldown::RenderChunkArgs,
-  ) -> rolldown::HookRenderChunkReturn {
+    _ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::RenderChunkArgs,
+  ) -> rolldown_plugin::HookRenderChunkReturn {
     if let Some(cb) = &self.render_chunk_fn {
       let res = cb
         .call_async((args.code.to_string(), args.chunk.clone().into()))
@@ -171,10 +174,10 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn generate_bundle(
     &self,
-    _ctx: &rolldown::PluginContext,
-    bundle: &Vec<rolldown::Output>,
+    _ctx: &rolldown_plugin::PluginContext,
+    bundle: &Vec<rolldown_common::Output>,
     is_write: bool,
-  ) -> rolldown::HookNoopReturn {
+  ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.generate_bundle_fn {
       cb.call_async((bundle.clone().into(), is_write)).await.map_err(|e| e.into_bundle_error())?;
     }
@@ -184,9 +187,9 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn write_bundle(
     &self,
-    _ctx: &rolldown::PluginContext,
-    bundle: &Vec<rolldown::Output>,
-  ) -> rolldown::HookNoopReturn {
+    _ctx: &rolldown_plugin::PluginContext,
+    bundle: &Vec<rolldown_common::Output>,
+  ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.write_bundle_fn {
       cb.call_async((bundle.clone().into(),)).await.map_err(|e| e.into_bundle_error())?;
     }

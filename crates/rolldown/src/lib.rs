@@ -1,6 +1,5 @@
 mod bundler;
 mod error;
-mod plugin;
 
 use std::sync::Arc;
 
@@ -8,27 +7,12 @@ use rolldown_resolver::Resolver;
 
 pub(crate) type SharedResolver<T> = Arc<Resolver<T>>;
 
-pub use crate::{
-  bundler::{
-    bundle::output::{Output, OutputAsset, OutputChunk, RenderedModule},
-    bundler::{Bundler, RolldownOutput},
-    chunk::render_chunk::{PreRenderedChunk, RenderedChunk},
-    options::{
-      file_name_template::FileNameTemplate,
-      input_options::{External, InputItem, InputOptions},
-      output_options::{OutputFormat, OutputOptions},
-    },
-  },
-  plugin::{
-    args::{
-      HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookResolveIdArgsOptions,
-      HookTransformArgs, RenderChunkArgs,
-    },
-    context::PluginContext,
-    output::{HookLoadOutput, HookRenderChunkOutput, HookResolveIdOutput},
-    plugin::{
-      BoxPlugin, HookLoadReturn, HookNoopReturn, HookRenderChunkReturn, HookResolveIdReturn,
-      HookTransformReturn, Plugin,
-    },
+pub use crate::bundler::{
+  bundler::{Bundler, RolldownOutput},
+  chunk::render_chunk::PreRenderedChunk,
+  options::{
+    file_name_template::FileNameTemplate,
+    input_options::{External, InputItem, InputOptions},
+    output_options::{OutputFormat, OutputOptions},
   },
 };

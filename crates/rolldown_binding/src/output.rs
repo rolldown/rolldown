@@ -17,8 +17,8 @@ pub struct RenderedModule {
   pub rendered_length: u32,
 }
 
-impl From<rolldown::RenderedModule> for RenderedModule {
-  fn from(value: rolldown::RenderedModule) -> Self {
+impl From<rolldown_common::RenderedModule> for RenderedModule {
+  fn from(value: rolldown_common::RenderedModule) -> Self {
     Self {
       code: None,
       original_length: value.original_length,
@@ -47,8 +47,8 @@ pub struct OutputChunk {
   pub code: String,
 }
 
-impl From<Box<rolldown::OutputChunk>> for OutputChunk {
-  fn from(chunk: Box<rolldown::OutputChunk>) -> Self {
+impl From<Box<rolldown_common::OutputChunk>> for OutputChunk {
+  fn from(chunk: Box<rolldown_common::OutputChunk>) -> Self {
     Self {
       code: chunk.code,
       file_name: chunk.file_name,
@@ -71,8 +71,8 @@ pub struct OutputAsset {
   pub source: String,
 }
 
-impl From<Box<rolldown::OutputAsset>> for OutputAsset {
-  fn from(chunk: Box<rolldown::OutputAsset>) -> Self {
+impl From<Box<rolldown_common::OutputAsset>> for OutputAsset {
+  fn from(chunk: Box<rolldown_common::OutputAsset>) -> Self {
     Self { source: chunk.source, file_name: chunk.file_name }
   }
 }
@@ -86,14 +86,14 @@ pub struct Outputs {
   pub assets: Vec<OutputAsset>,
 }
 
-impl From<Vec<rolldown::Output>> for Outputs {
-  fn from(outputs: Vec<rolldown::Output>) -> Self {
+impl From<Vec<rolldown_common::Output>> for Outputs {
+  fn from(outputs: Vec<rolldown_common::Output>) -> Self {
     let mut chunks: Vec<OutputChunk> = vec![];
     let mut assets: Vec<OutputAsset> = vec![];
 
     outputs.into_iter().for_each(|o| match o {
-      rolldown::Output::Chunk(chunk) => chunks.push(chunk.into()),
-      rolldown::Output::Asset(asset) => assets.push(asset.into()),
+      rolldown_common::Output::Chunk(chunk) => chunks.push(chunk.into()),
+      rolldown_common::Output::Asset(asset) => assets.push(asset.into()),
     });
 
     Self { chunks, assets }

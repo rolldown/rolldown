@@ -1,7 +1,8 @@
 use std::{borrow::Cow, path::Path};
 
 use super::fixture::Fixture;
-use rolldown::{Output, RolldownOutput};
+use rolldown::RolldownOutput;
+use rolldown_common::Output;
 use rolldown_error::BuildError;
 use string_wizard::MagicString;
 

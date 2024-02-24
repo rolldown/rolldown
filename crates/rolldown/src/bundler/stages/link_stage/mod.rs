@@ -350,13 +350,16 @@ impl Action {
   }
 }
 
-pub fn init_entry_point_stmt_info(module: &mut NormalModule, linking_info: &mut LinkingMetadata) {
+pub fn init_entry_point_stmt_info(module: &mut NormalModule, meta: &mut LinkingMetadata) {
   let mut referenced_symbols = vec![];
   if matches!(module.exports_kind, ExportsKind::CommonJs) {
     // If a commonjs module becomes an entry point while targeting esm, we need to at least add a `export default require_foo();`
     // statement as some kind of syntax sugar. So users won't need to manually create a proxy file with `export default require('./foo.cjs')` in it.
-    referenced_symbols.push(linking_info.wrapper_ref.unwrap());
+    referenced_symbols.push(meta.wrapper_ref.unwrap());
   }
+
+  // Make sure all exports are included
+  referenced_symbols.extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref));
 
   let stmt_info = StmtInfo {
     stmt_idx: None,

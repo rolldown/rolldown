@@ -1,7 +1,7 @@
 use std::hash::BuildHasherDefault;
 
 use index_vec::IndexVec;
-use rolldown_common::{ImportKind, NormalModuleId};
+use rolldown_common::{ImportKind, ModuleId, NormalModuleId};
 use rustc_hash::FxHashMap;
 
 use crate::bundler::{
@@ -10,7 +10,6 @@ use crate::bundler::{
     ChunkId, ChunksVec,
   },
   chunk_graph::ChunkGraph,
-  module::Module,
   utils::{bitset::BitSet, is_in_rust_test_mode},
 };
 
@@ -23,7 +22,7 @@ impl<'a> BundleStage<'a> {
     entry_index: u32,
     module_to_bits: &mut IndexVec<NormalModuleId, BitSet>,
   ) {
-    let Module::Normal(module) = &self.link_output.modules[module_id] else { return };
+    let module = &self.link_output.module_table.normal_modules[module_id];
 
     if !module.is_included {
       return;
@@ -35,14 +34,12 @@ impl<'a> BundleStage<'a> {
     module_to_bits[module_id].set_bit(entry_index);
 
     module.import_records.iter().for_each(|rec| {
-      // Module imported dynamically will be considered as an entry,
-      // so we don't need to include it in this chunk
-      if rec.kind != ImportKind::DynamicImport {
-        self.determine_reachable_modules_for_entry(
-          rec.resolved_module,
-          entry_index,
-          module_to_bits,
-        );
+      if let ModuleId::Normal(importee_id) = rec.resolved_module {
+        // Module imported dynamically will be considered as an entry,
+        // so we don't need to include it in this chunk
+        if rec.kind != ImportKind::DynamicImport {
+          self.determine_reachable_modules_for_entry(importee_id, entry_index, module_to_bits);
+        }
       }
     });
 
@@ -68,8 +65,7 @@ impl<'a> BundleStage<'a> {
     // we create a facade entry point for it.
     let entries_len = if is_in_rust_test_mode() { entries_len + 1 } else { entries_len };
 
-    let mut module_to_bits =
-      index_vec::index_vec![BitSet::new(entries_len); self.link_output.modules.len()];
+    let mut module_to_bits = index_vec::index_vec![BitSet::new(entries_len); self.link_output.module_table.normal_modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity_and_hasher(
       self.link_output.entries.len(),
       BuildHasherDefault::default(),
@@ -81,9 +77,7 @@ impl<'a> BundleStage<'a> {
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
-      let Module::Normal(module) = &self.link_output.modules[entry_point.id] else {
-        unreachable!("Entry point should always be a normal module")
-      };
+      let module = &self.link_output.module_table.normal_modules[entry_point.id];
       let chunk = chunks.push(Chunk::new(
         entry_point.name.clone(),
         bits.clone(),
@@ -116,39 +110,37 @@ impl<'a> BundleStage<'a> {
 
     let mut module_to_chunk: IndexVec<NormalModuleId, Option<ChunkId>> = index_vec::index_vec![
       None;
-      self.link_output.modules.len()
+      self.link_output.module_table.normal_modules.len()
     ];
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
-    for module in &self.link_output.modules {
-      let Module::Normal(normal_module) = module else {
-        continue;
-      };
-
+    for normal_module in &self.link_output.module_table.normal_modules {
       if !normal_module.is_included {
         continue;
       }
 
-      let bits = &module_to_bits[module.id()];
+      let bits = &module_to_bits[normal_module.id];
       debug_assert!(
         !bits.is_empty(),
         "Empty bits means the module is not reachable, so it should bail out with `is_included: false`"
       );
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
-        chunks[chunk_id].modules.push(module.id());
-        module_to_chunk[module.id()] = Some(chunk_id);
+        chunks[chunk_id].modules.push(normal_module.id);
+        module_to_chunk[normal_module.id] = Some(chunk_id);
       } else {
-        let chunk = Chunk::new(None, bits.clone(), vec![module.id()], ChunkKind::Common);
+        let chunk = Chunk::new(None, bits.clone(), vec![normal_module.id], ChunkKind::Common);
         let chunk_id = chunks.push(chunk);
-        module_to_chunk[module.id()] = Some(chunk_id);
+        module_to_chunk[normal_module.id] = Some(chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);
       }
     }
 
     // Sort modules in each chunk by execution order
     chunks.iter_mut().for_each(|chunk| {
-      chunk.modules.sort_by_key(|module_id| self.link_output.modules[*module_id].exec_order());
+      chunk.modules.sort_by_key(|module_id| {
+        self.link_output.module_table.normal_modules[*module_id].exec_order
+      });
     });
 
     tracing::trace!("Generated chunks: {:#?}", chunks);

@@ -3,7 +3,6 @@ use crate::{
     chunk::chunk::ChunkKind,
     chunk_graph::ChunkGraph,
     finalizer::FinalizerContext,
-    module::Module,
     options::{
       file_name_template::FileNameRenderOptions,
       output_options::{OutputOptions, SourceMapType},
@@ -58,30 +57,28 @@ impl<'a> BundleStage<'a> {
       .ast_table
       .iter_mut_enumerated()
       .par_bridge()
-      .filter(|(id, _)| self.link_output.modules[*id].is_included())
-      .for_each(|(id, ast)| match &self.link_output.modules[id] {
-        Module::Normal(module) => {
-          // TODO: should consider cases:
-          // - excluded normal modules in code splitting doesn't belong to any chunk.
-          let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
-          let chunk = &chunk_graph.chunks[chunk_id];
-          let linking_info = &self.link_output.metas[module.id];
-          module.finalize(
-            FinalizerContext {
-              canonical_names: &chunk.canonical_names,
-              id: module.id,
-              symbols: &self.link_output.symbols,
-              linking_info,
-              module,
-              modules: &self.link_output.modules,
-              linking_infos: &self.link_output.metas,
-              runtime: &self.link_output.runtime,
-              chunk_graph: &chunk_graph,
-            },
-            ast,
-          );
-        }
-        Module::External(_) => {}
+      .filter(|(id, _)| self.link_output.module_table.normal_modules[*id].is_included)
+      .for_each(|(id, ast)| {
+        let module = &self.link_output.module_table.normal_modules[id];
+        // TODO: should consider cases:
+        // - excluded normal modules in code splitting doesn't belong to any chunk.
+        let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
+        let chunk = &chunk_graph.chunks[chunk_id];
+        let linking_info = &self.link_output.metas[module.id];
+        module.finalize(
+          FinalizerContext {
+            canonical_names: &chunk.canonical_names,
+            id: module.id,
+            symbols: &self.link_output.symbols,
+            linking_info,
+            module,
+            modules: &self.link_output.module_table.normal_modules,
+            linking_infos: &self.link_output.metas,
+            runtime: &self.link_output.runtime,
+            chunk_graph: &chunk_graph,
+          },
+          ast,
+        );
       });
 
     let chunks = chunk_graph.chunks.iter().map(|c| {
@@ -158,8 +155,8 @@ impl<'a> BundleStage<'a> {
                 // This is not perfect, should investigate more to find a better solution
                 chunk.modules.first().copied().unwrap()
               };
-            let module = &self.link_output.modules[module_id];
-            module.resource_id().expect_file().unique(&self.input_options.cwd)
+            let module = &self.link_output.module_table.normal_modules[module_id];
+            module.resource_id.expect_file().unique(&self.input_options.cwd)
           })
         };
 

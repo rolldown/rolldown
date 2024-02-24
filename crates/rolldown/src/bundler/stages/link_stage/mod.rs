@@ -2,16 +2,22 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use index_vec::IndexVec;
 use rayon::iter::{ParallelBridge, ParallelIterator};
-use rolldown_common::{EntryPoint, ExportsKind, ImportKind, NormalModuleId, StmtInfo, WrapKind};
+use rolldown_common::{
+  EntryPoint, ExportsKind, ImportKind, ModuleId, NormalModuleId, StmtInfo, WrapKind,
+};
 use rolldown_error::BuildError;
 use rolldown_oxc::OxcProgram;
+use rustc_hash::FxHashSet;
 
 use crate::{
   bundler::{
-    module::{Module, ModuleVec, NormalModule},
+    module::NormalModule,
     runtime::RuntimeModuleBrief,
-    types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    types::symbols::Symbols,
+    types::{
+      linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+      module_table::ModuleTable,
+      symbols::Symbols,
+    },
   },
   InputOptions,
 };
@@ -26,7 +32,7 @@ mod wrapping;
 
 #[derive(Debug)]
 pub struct LinkStageOutput {
-  pub modules: ModuleVec,
+  pub module_table: ModuleTable,
   pub entries: Vec<EntryPoint>,
   pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
   pub sorted_modules: Vec<NormalModuleId>,
@@ -38,7 +44,7 @@ pub struct LinkStageOutput {
 
 #[derive(Debug)]
 pub struct LinkStage<'a> {
-  pub modules: ModuleVec,
+  pub module_table: ModuleTable,
   pub entries: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
@@ -54,11 +60,12 @@ impl<'a> LinkStage<'a> {
     Self {
       sorted_modules: Vec::new(),
       metas: scan_stage_output
-        .modules
+        .module_table
+        .normal_modules
         .iter()
         .map(|_| LinkingMetadata::default())
         .collect::<IndexVec<NormalModuleId, _>>(),
-      modules: scan_stage_output.modules,
+      module_table: scan_stage_output.module_table,
       entries: scan_stage_output.entry_points,
       symbols: scan_stage_output.symbols,
       runtime: scan_stage_output.runtime,
@@ -69,10 +76,7 @@ impl<'a> LinkStage<'a> {
   }
 
   fn create_exports_for_modules(&mut self) {
-    self.modules.iter_mut().for_each(|module| {
-      let Module::Normal(module) = module else {
-        return;
-      };
+    self.module_table.normal_modules.iter_mut().for_each(|module| {
       let linking_info = &mut self.metas[module.id];
 
       create_wrapper(module, linking_info, &mut self.symbols, &self.runtime);
@@ -119,7 +123,7 @@ impl<'a> LinkStage<'a> {
     self.include_statements();
 
     LinkStageOutput {
-      modules: self.modules,
+      module_table: self.module_table,
       entries: self.entries,
       sorted_modules: self.sorted_modules,
       metas: self.metas,
@@ -134,36 +138,49 @@ impl<'a> LinkStage<'a> {
     let mut stack = self
       .entries
       .iter()
-      .map(|entry_point| Action::Enter(entry_point.id))
+      .map(|entry_point| Action::Enter(entry_point.id.into()))
       .rev()
       .collect::<Vec<_>>();
     // The runtime module should always be the first module to be executed
-    stack.push(Action::Enter(self.runtime.id()));
-    let mut entered_ids = index_vec::index_vec![false; self.modules.len()];
-    let mut sorted_modules = Vec::with_capacity(self.modules.len());
+    stack.push(Action::Enter(self.runtime.id().into()));
+    let mut entered_ids = FxHashSet::default();
+    let mut sorted_modules = Vec::with_capacity(
+      self.module_table.normal_modules.len() + self.module_table.external_modules.len(),
+    );
     let mut next_exec_order = 0;
     while let Some(action) = stack.pop() {
-      let module = &mut self.modules[action.module_id()];
       match action {
         Action::Enter(id) => {
-          if !entered_ids[id] {
-            entered_ids[id] = true;
+          if !entered_ids.contains(&id) {
+            entered_ids.insert(id);
             stack.push(Action::Exit(id));
-            stack.extend(
-              module
-                .import_records()
-                .iter()
-                .filter(|rec| rec.kind.is_static())
-                .map(|rec| rec.resolved_module)
-                .rev()
-                .map(Action::Enter),
-            );
+            if let ModuleId::Normal(module_id) = id {
+              let module = &self.module_table.normal_modules[module_id];
+              stack.extend(
+                module
+                  .import_records
+                  .iter()
+                  .filter(|rec| rec.kind.is_static())
+                  .map(|rec| rec.resolved_module)
+                  .rev()
+                  .map(Action::Enter),
+              );
+            }
           }
         }
         Action::Exit(id) => {
-          *module.exec_order_mut() = next_exec_order;
+          match id {
+            ModuleId::Normal(id) => {
+              let module = &mut self.module_table.normal_modules[id];
+              module.exec_order = next_exec_order;
+              sorted_modules.push(id);
+            }
+            ModuleId::External(id) => {
+              let module = &mut self.module_table.external_modules[id];
+              module.exec_order = next_exec_order;
+            }
+          }
           next_exec_order += 1;
-          sorted_modules.push(id);
         }
       }
     }
@@ -179,15 +196,12 @@ impl<'a> LinkStage<'a> {
     // Maximize the compatibility with commonjs
     let compat_mode = true;
 
-    self.sorted_modules.iter().copied().for_each(|importer_id| {
-      let Module::Normal(importer) = &self.modules[importer_id] else {
-        return;
-      };
-
+    self.module_table.normal_modules.iter().for_each(|importer| {
       importer.import_records.iter().for_each(|rec| {
-        let Module::Normal(importee) = &self.modules[rec.resolved_module] else {
+        let ModuleId::Normal(importee_id) = rec.resolved_module else {
           return;
         };
+        let importee = &self.module_table.normal_modules[importee_id];
 
         match rec.kind {
           ImportKind::Import => {
@@ -251,11 +265,7 @@ impl<'a> LinkStage<'a> {
 
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
-    self.modules.iter().par_bridge().for_each(|importer| {
-      let Module::Normal(importer) = importer else {
-        return;
-      };
-
+    self.module_table.normal_modules.iter().par_bridge().for_each(|importer| {
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
       // - Mutating on `stmt_infos` does't rely on other mutating operations of other modules
@@ -265,7 +275,9 @@ impl<'a> LinkStage<'a> {
       stmt_infos.iter_mut().for_each(|stmt_info| {
         stmt_info.import_records.iter().for_each(|rec_id| {
           let rec = &importer.import_records[*rec_id];
-          let importee_id = rec.resolved_module;
+          let ModuleId::Normal(importee_id) = rec.resolved_module else {
+            return;
+          };
           let importee_linking_info = &self.metas[importee_id];
           match rec.kind {
             ImportKind::Import => {
@@ -286,9 +298,7 @@ impl<'a> LinkStage<'a> {
                     stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
                     stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
                     stmt_info.declared_symbols.push(rec.namespace_ref);
-                    let Module::Normal(importee) = &self.modules[importee_id] else {
-                      unreachable!("importee should be a normal module")
-                    };
+                    let importee = &self.module_table.normal_modules[importee_id];
                     symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                       format!("import_{}", &importee.repr_name).into();
                   }
@@ -301,9 +311,7 @@ impl<'a> LinkStage<'a> {
                     // something like `__reExport(foo_exports, other_exports)`
                     stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__reExport"));
                     stmt_info.referenced_symbols.push(importer.namespace_symbol);
-                    let Module::Normal(importee) = &self.modules[importee_id] else {
-                      unreachable!("importee should be a normal module")
-                    };
+                    let importee = &self.module_table.normal_modules[importee_id];
                     stmt_info.referenced_symbols.push(importee.namespace_symbol);
                   }
                 }
@@ -321,9 +329,7 @@ impl<'a> LinkStage<'a> {
                 // Reference to `init_foo`
                 stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
                 stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toCommonJS"));
-                let Module::Normal(importee) = &self.modules[importee_id] else {
-                  unreachable!("importee should be a normal module")
-                };
+                let importee = &self.module_table.normal_modules[importee_id];
                 stmt_info.referenced_symbols.push(importee.namespace_symbol);
               }
             },
@@ -337,17 +343,8 @@ impl<'a> LinkStage<'a> {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Action {
-  Enter(NormalModuleId),
-  Exit(NormalModuleId),
-}
-
-impl Action {
-  #[inline]
-  fn module_id(&self) -> NormalModuleId {
-    match self {
-      Self::Enter(id) | Self::Exit(id) => *id,
-    }
-  }
+  Enter(ModuleId),
+  Exit(ModuleId),
 }
 
 pub fn init_entry_point_stmt_info(module: &mut NormalModule, meta: &mut LinkingMetadata) {

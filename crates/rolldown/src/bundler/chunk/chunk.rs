@@ -1,5 +1,7 @@
 use oxc::span::Atom;
-use rolldown_common::{NamedImport, NormalModuleId, RenderedModule, Specifier, SymbolRef};
+use rolldown_common::{
+  ExternalModuleId, NamedImport, NormalModuleId, RenderedModule, Specifier, SymbolRef,
+};
 use rolldown_error::BuildError;
 use rolldown_sourcemap::{collapse_sourcemaps, concat_sourcemaps, SourceMap};
 use rustc_hash::FxHashMap;
@@ -42,7 +44,7 @@ pub struct Chunk {
   pub canonical_names: FxHashMap<SymbolRef, Atom>,
   pub bits: BitSet,
   pub imports_from_other_chunks: FxHashMap<ChunkId, Vec<CrossChunkImportItem>>,
-  pub imports_from_external_modules: FxHashMap<NormalModuleId, Vec<NamedImport>>,
+  pub imports_from_external_modules: FxHashMap<ExternalModuleId, Vec<NamedImport>>,
   // meaningless if the chunk is an entrypoint
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Atom>,
 }
@@ -87,37 +89,31 @@ impl Chunk {
       .modules
       .par_iter()
       .copied()
-      .map(|id| &graph.modules[id])
-      .filter_map(|m| match m {
-        crate::bundler::module::Module::Normal(m) => {
-          let rendered_content = m.render(
-            &ModuleRenderContext {
-              canonical_names: &self.canonical_names,
-              graph,
-              chunk_graph,
-              input_options,
-            },
-            &graph.ast_table[m.id],
-          );
-          Some((
-            m.resource_id.expect_file().to_string(),
-            RenderedModule {
-              original_length: m.source.len().try_into().unwrap(),
-              rendered_length: rendered_content
-                .as_ref()
-                .map(|c| c.len() as u32)
-                .unwrap_or_default(),
-            },
-            rendered_content,
-            if output_options.sourcemap.is_hidden() {
-              None
-            } else {
-              // TODO add oxc codegen sourcemap to sourcemap chain
-              Some(collapse_sourcemaps(m.sourcemap_chain.clone()))
-            },
-          ))
-        }
-        crate::bundler::module::Module::External(_) => None,
+      .map(|id| &graph.module_table.normal_modules[id])
+      .filter_map(|m| {
+        let rendered_content = m.render(
+          &ModuleRenderContext {
+            canonical_names: &self.canonical_names,
+            graph,
+            chunk_graph,
+            input_options,
+          },
+          &graph.ast_table[m.id],
+        );
+        Some((
+          m.resource_id.expect_file().to_string(),
+          RenderedModule {
+            original_length: m.source.len().try_into().unwrap(),
+            rendered_length: rendered_content.as_ref().map(|c| c.len() as u32).unwrap_or_default(),
+          },
+          rendered_content,
+          if output_options.sourcemap.is_hidden() {
+            None
+          } else {
+            // TODO add oxc codegen sourcemap to sourcemap chain
+            Some(collapse_sourcemaps(m.sourcemap_chain.clone()))
+          },
+        ))
       })
       .collect::<Vec<_>>()
       .into_iter()

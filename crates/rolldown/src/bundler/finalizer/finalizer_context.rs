@@ -5,10 +5,11 @@ use rustc_hash::FxHashMap;
 
 use crate::bundler::{
   chunk_graph::ChunkGraph,
-  module::{ModuleVec, NormalModule},
+  module::NormalModule,
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+    module_table::NormalModuleVec,
     symbols::Symbols,
   },
 };
@@ -16,7 +17,7 @@ use crate::bundler::{
 pub struct FinalizerContext<'me> {
   pub id: NormalModuleId,
   pub module: &'me NormalModule,
-  pub modules: &'me ModuleVec,
+  pub modules: &'me NormalModuleVec,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub symbols: &'me Symbols,

@@ -2,14 +2,14 @@ use index_vec::IndexVec;
 use rolldown_common::{NormalModuleId, StmtInfoId, SymbolRef};
 
 use crate::bundler::{
-  module::{Module, ModuleVec, NormalModule},
-  types::symbols::Symbols,
+  module::NormalModule,
+  types::{module_table::NormalModuleVec, symbols::Symbols},
 };
 
 use super::LinkStage;
 
 struct Context<'a> {
-  modules: &'a ModuleVec,
+  modules: &'a NormalModuleVec,
   symbols: &'a Symbols,
   is_included_vec: &'a mut IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>>,
   is_module_included_vec: &'a mut IndexVec<NormalModuleId, bool>,
@@ -40,11 +40,12 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
     });
   }
 
-  module.import_records.iter().for_each(|import_record| {
-    let importee = &ctx.modules[import_record.resolved_module];
-    if let Module::Normal(importee) = importee {
+  module.import_records.iter().for_each(|import_record| match import_record.resolved_module {
+    rolldown_common::ModuleId::Normal(importee_id) => {
+      let importee = &ctx.modules[importee_id];
       include_module(ctx, importee);
     }
+    rolldown_common::ModuleId::External(_) => {}
   });
 }
 
@@ -55,9 +56,6 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
   }
-  let Module::Normal(canonical_ref_module) = canonical_ref_module else {
-    return;
-  };
   include_module(ctx, canonical_ref_module);
   canonical_ref_module
     .stmt_infos
@@ -93,21 +91,17 @@ impl LinkStage<'_> {
     use rayon::prelude::*;
 
     let mut is_included_vec: IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>> = self
-      .modules
+      .module_table
+      .normal_modules
       .iter()
-      .map(|m| match m {
-        Module::Normal(m) => {
-          m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoId, _>>()
-        }
-        Module::External(_) => IndexVec::default(),
-      })
+      .map(|m| m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoId, _>>())
       .collect::<IndexVec<NormalModuleId, _>>();
 
     let mut is_module_included_vec: IndexVec<NormalModuleId, bool> =
-      index_vec::index_vec![false; self.modules.len()];
+      index_vec::index_vec![false; self.module_table.normal_modules.len()];
 
     let context = &mut Context {
-      modules: &self.modules,
+      modules: &self.module_table.normal_modules,
       symbols: &self.symbols,
       is_included_vec: &mut is_included_vec,
       is_module_included_vec: &mut is_module_included_vec,
@@ -115,36 +109,25 @@ impl LinkStage<'_> {
       runtime_id: self.runtime.id(),
     };
 
-    for module in &self.modules {
-      match module {
-        Module::Normal(module) => {
-          let mut stmt_infos = module.stmt_infos.iter_enumerated();
-          // Skip the first one, because it's the namespace variable declaration.
-          // We want to include it on demand.
-          stmt_infos.next();
-          stmt_infos.for_each(|(stmt_info_id, stmt_info)| {
-            if stmt_info.side_effect {
-              include_statement(context, module, stmt_info_id);
-            }
-          });
+    for module in &self.module_table.normal_modules {
+      let mut stmt_infos = module.stmt_infos.iter_enumerated();
+      // Skip the first one, because it's the namespace variable declaration.
+      // We want to include it on demand.
+      stmt_infos.next();
+      stmt_infos.for_each(|(stmt_info_id, stmt_info)| {
+        if stmt_info.side_effect {
+          include_statement(context, module, stmt_info_id);
         }
-        Module::External(_) => {}
-      }
+      });
     }
 
     self.entries.iter().for_each(|entry| {
-      let module = &self.modules[entry.id];
-      let Module::Normal(module) = module else {
-        return;
-      };
+      let module = &self.module_table.normal_modules[entry.id];
 
       include_module(context, module);
     });
 
-    self.modules.iter_mut().par_bridge().for_each(|module| {
-      let Module::Normal(module) = module else {
-        return;
-      };
+    self.module_table.normal_modules.iter_mut().par_bridge().for_each(|module| {
       module.is_included = is_module_included_vec[module.id];
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
@@ -154,9 +137,9 @@ impl LinkStage<'_> {
     tracing::trace!(
       "included statements {:#?}",
       self
-        .modules
+        .module_table
+        .normal_modules
         .iter()
-        .filter_map(|m| m.as_normal())
         .map(NormalModule::to_debug_normal_module_for_tree_shaking)
         .collect::<Vec<_>>()
     );

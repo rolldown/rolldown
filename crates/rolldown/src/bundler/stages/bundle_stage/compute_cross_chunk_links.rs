@@ -7,7 +7,6 @@ use crate::{
       ChunkId,
     },
     chunk_graph::ChunkGraph,
-    module::Module,
     utils::is_in_rust_test_mode,
   },
   OutputFormat,
@@ -16,12 +15,14 @@ use crate::{
 use super::BundleStage;
 use index_vec::{index_vec, IndexVec};
 use rayon::iter::{ParallelBridge, ParallelIterator};
-use rolldown_common::{ExportsKind, ImportKind, NamedImport, NormalModuleId, SymbolRef};
+use rolldown_common::{
+  ExportsKind, ExternalModuleId, ImportKind, ModuleId, NamedImport, SymbolRef,
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 type ChunkMetaImports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
 type ChunkMetaImportsForExternalModules =
-  IndexVec<ChunkId, FxHashMap<NormalModuleId, Vec<NamedImport>>>;
+  IndexVec<ChunkId, FxHashMap<ExternalModuleId, Vec<NamedImport>>>;
 type ChunkMetaExports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
 
 impl<'a> BundleStage<'a> {
@@ -42,12 +43,17 @@ impl<'a> BundleStage<'a> {
       .par_bridge()
       .for_each(|((chunk_id, chunk), (chunk_meta_imports, imports_from_external_modules))| {
         chunk.modules.iter().copied().for_each(|module_id| {
-          let Module::Normal(module) = &self.link_output.modules[module_id] else { return };
+          let module = &self.link_output.module_table.normal_modules[module_id];
           module
             .import_records
             .iter()
             .filter(|rec| matches!(rec.kind, ImportKind::Import))
-            .filter_map(|rec| self.link_output.modules[rec.resolved_module].as_external())
+            .filter_map(|rec| {
+              rec
+                .resolved_module
+                .as_external()
+                .map(|id| &self.link_output.module_table.external_modules[id])
+            })
             .for_each(|importee| {
               // Ensure the external module is imported in case it has side effects.
               imports_from_external_modules.entry(importee.id).or_default();
@@ -55,8 +61,8 @@ impl<'a> BundleStage<'a> {
 
           module.named_imports.iter().for_each(|(_, import)| {
             let rec = &module.import_records[import.record_id];
-            if let Module::External(importee) = &self.link_output.modules[rec.resolved_module] {
-              imports_from_external_modules.entry(importee.id).or_default().push(import.clone());
+            if let ModuleId::External(importee_id) = rec.resolved_module {
+              imports_from_external_modules.entry(importee_id).or_default().push(import.clone());
             }
           });
 
@@ -92,10 +98,7 @@ impl<'a> BundleStage<'a> {
         });
 
         if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &chunk.kind {
-          let entry_module = &self.link_output.modules[*entry_module_id];
-          let Module::Normal(entry_module) = entry_module else {
-            return;
-          };
+          let entry_module = &self.link_output.module_table.normal_modules[*entry_module_id];
           let entry_linking_info = &self.link_output.metas[entry_module.id];
           if matches!(entry_module.exports_kind, ExportsKind::CommonJs)
             && matches!(self.output_options.format, OutputFormat::Esm)
@@ -121,7 +124,7 @@ impl<'a> BundleStage<'a> {
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
     let mut chunk_meta_exports_vec: ChunkMetaExports =
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
-    let mut chunk_meta_imports_from_external_modules_vec: ChunkMetaImportsForExternalModules = index_vec![FxHashMap::<NormalModuleId, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
+    let mut chunk_meta_imports_from_external_modules_vec: ChunkMetaImportsForExternalModules = index_vec![FxHashMap::<ExternalModuleId, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
 
     self.collect_potential_chunk_imports(
       chunk_graph,
@@ -136,12 +139,11 @@ impl<'a> BundleStage<'a> {
         let import_symbol = self.link_output.symbols.get(import_ref);
 
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
-          let symbol_owner = &self.link_output.modules[import_ref.owner];
+          let symbol_owner = &self.link_output.module_table.normal_modules[import_ref.owner];
           let symbol_name = self.link_output.symbols.get_original_name(import_ref);
           panic!(
             "Symbol {:?} in {:?} should belong to a chunk",
-            symbol_name,
-            symbol_owner.resource_id()
+            symbol_name, symbol_owner.resource_id
           )
         });
         // Check if the import is from another chunk

@@ -5,8 +5,8 @@ use rolldown_common::{NormalModuleId, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::bundler::{
-  module::{ModuleVec, NormalModule},
-  types::symbols::Symbols,
+  module::NormalModule,
+  types::{module_table::NormalModuleVec, symbols::Symbols},
 };
 
 #[derive(Debug)]
@@ -54,7 +54,7 @@ impl<'name> Renamer<'name> {
   pub fn rename_non_top_level_symbol(
     &mut self,
     modules_in_chunk: &[NormalModuleId],
-    modules: &ModuleVec,
+    modules: &NormalModuleVec,
   ) {
     use rayon::prelude::*;
 
@@ -105,7 +105,7 @@ impl<'name> Renamer<'name> {
     let canonical_names_of_nested_scopes = modules_in_chunk
       .par_iter()
       .copied()
-      .filter_map(|id| modules[id].as_normal())
+      .map(|id| &modules[id])
       .flat_map(|module| {
         let child_scopes: &[ScopeId] =
           module.scope.get_child_ids(module.scope.root_scope_id()).map_or(&[], Vec::as_slice);

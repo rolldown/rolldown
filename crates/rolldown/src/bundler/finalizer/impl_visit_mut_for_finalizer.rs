@@ -5,10 +5,8 @@ use oxc::{
     VisitMut,
   },
 };
-use rolldown_common::{ExportsKind, SymbolRef, WrapKind};
+use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
 use rolldown_oxc::{Dummy, ExpressionExt, IntoIn, StatementExt, TakeIn};
-
-use crate::bundler::module::Module;
 
 use super::Finalizer;
 
@@ -54,7 +52,10 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
           } else {
             // "export * from 'path'"
             let rec = &self.ctx.module.import_records[rec_id];
-            let importee_id = rec.resolved_module;
+            let ModuleId::Normal(importee_id) = rec.resolved_module else {
+              // TODO: handle re-exporting all from external module
+              return;
+            };
             let importee_linking_info = &self.ctx.linking_infos[importee_id];
             let importee = &self.ctx.modules[importee_id];
             if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
@@ -63,57 +64,50 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name.clone()));
             }
 
-            match importee {
-              Module::Normal(importee) => {
-                match importee.exports_kind {
-                  ExportsKind::Esm => {
-                    if importee_linking_info.has_dynamic_exports {
-                      let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                      let importer_namespace_name =
-                        self.canonical_name_for(self.ctx.module.namespace_symbol);
-                      // __reExport(exports, otherExports)
-                      let importee_namespace_name =
-                        self.canonical_name_for(importee.namespace_symbol);
-                      program.body.push(
-                        self
-                          .snippet
-                          .call_expr_with_2arg_expr(
-                            re_export_fn_name.clone(),
-                            importer_namespace_name.clone(),
-                            importee_namespace_name.clone(),
-                          )
-                          .into_in(self.alloc),
-                      );
-                    }
-                  }
-                  ExportsKind::CommonJs => {
-                    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                    let importer_namespace_name =
-                      self.canonical_name_for(self.ctx.module.namespace_symbol);
-                    // __reExport(exports, __toESM(require_xxxx()))
-                    let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
-                    let importee_wrapper_ref_name =
-                      self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-                    program.body.push(
-                      self
-                        .snippet
-                        .call_expr_with_2arg_expr_expr(
-                          re_export_fn_name.clone(),
-                          self.snippet.id_ref_expr(importer_namespace_name.clone()),
-                          self.snippet.call_expr_with_arg_expr_expr(
-                            to_esm_fn_name.clone(),
-                            self.snippet.call_expr_expr(importee_wrapper_ref_name.clone()),
-                          ),
-                        )
-                        .into_in(self.alloc),
-                    );
-                  }
-                  ExportsKind::None => {}
+            match importee.exports_kind {
+              ExportsKind::Esm => {
+                if importee_linking_info.has_dynamic_exports {
+                  let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+                  let importer_namespace_name =
+                    self.canonical_name_for(self.ctx.module.namespace_symbol);
+                  // __reExport(exports, otherExports)
+                  let importee_namespace_name = self.canonical_name_for(importee.namespace_symbol);
+                  program.body.push(
+                    self
+                      .snippet
+                      .call_expr_with_2arg_expr(
+                        re_export_fn_name.clone(),
+                        importer_namespace_name.clone(),
+                        importee_namespace_name.clone(),
+                      )
+                      .into_in(self.alloc),
+                  );
                 }
               }
-              Module::External(_) => {}
+              ExportsKind::CommonJs => {
+                let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+                let importer_namespace_name =
+                  self.canonical_name_for(self.ctx.module.namespace_symbol);
+                // __reExport(exports, __toESM(require_xxxx()))
+                let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
+                let importee_wrapper_ref_name =
+                  self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                program.body.push(
+                  self
+                    .snippet
+                    .call_expr_with_2arg_expr_expr(
+                      re_export_fn_name.clone(),
+                      self.snippet.id_ref_expr(importer_namespace_name.clone()),
+                      self.snippet.call_expr_with_arg_expr_expr(
+                        to_esm_fn_name.clone(),
+                        self.snippet.call_expr_expr(importee_wrapper_ref_name.clone()),
+                      ),
+                    )
+                    .into_in(self.alloc),
+                );
+              }
+              ExportsKind::None => {}
             }
-            // TODO handle this
             return;
           }
         } else if let Some(default_decl) = top_stmt.as_export_default_declaration_mut() {
@@ -314,7 +308,8 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
         if callee.name == "require" && self.is_global_identifier_reference(callee) {
           let rec_id = self.ctx.module.imports[&call_expr.span];
           let rec = &self.ctx.module.import_records[rec_id];
-          if let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] {
+          if let ModuleId::Normal(importee_id) = rec.resolved_module {
+            let importee = &self.ctx.modules[importee_id];
             let importee_linking_info = &self.ctx.linking_infos[importee.id];
             let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
             if matches!(importee.exports_kind, ExportsKind::CommonJs) {
@@ -419,14 +414,14 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
         let rec_id = self.ctx.module.imports[&expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
-        match self.ctx.modules[importee_id] {
-          Module::Normal(_) => {
+        match importee_id {
+          ModuleId::Normal(importee_id) => {
             let chunk_id = self.ctx.chunk_graph.module_to_chunk[importee_id]
               .expect("Normal module should belong to a chunk");
             let chunk = &self.ctx.chunk_graph.chunks[chunk_id];
             str.value = format!("./{}", chunk.file_name.as_ref().unwrap()).into();
           }
-          Module::External(_) => {
+          ModuleId::External(_) => {
             // external module doesn't belong to any chunk, just keep this as it is
           }
         }

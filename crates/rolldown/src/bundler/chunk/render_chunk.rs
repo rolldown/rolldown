@@ -26,14 +26,14 @@ impl Chunk {
       is_dynamic_entry: matches!(&self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if !*is_user_defined),
       facade_module_id: match &self.kind {
         ChunkKind::EntryPoint { module, .. } => {
-          Some(graph.modules[*module].resource_id().expect_file().to_string())
+          Some(graph.module_table.normal_modules[*module].resource_id.expect_file().to_string())
         }
         ChunkKind::Common => None,
       },
       module_ids: self
         .modules
         .iter()
-        .map(|id| graph.modules[*id].resource_id().expect_file().to_string())
+        .map(|id| graph.module_table.normal_modules[*id].resource_id.expect_file().to_string())
         .collect(),
       exports: self.get_export_names(graph, output_options),
     }

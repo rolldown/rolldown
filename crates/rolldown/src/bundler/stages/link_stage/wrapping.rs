@@ -1,11 +1,12 @@
 use index_vec::IndexVec;
-use rolldown_common::{ExportsKind, NormalModuleId, StmtInfo, WrapKind};
+use rolldown_common::{ExportsKind, ModuleId, NormalModuleId, StmtInfo, WrapKind};
 
 use crate::bundler::{
-  module::{Module, ModuleVec, NormalModule},
+  module::NormalModule,
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+    module_table::NormalModuleVec,
     symbols::Symbols,
   },
 };
@@ -15,7 +16,7 @@ use super::LinkStage;
 struct Context<'a> {
   pub visited_modules: &'a mut IndexVec<NormalModuleId, bool>,
   pub linking_infos: &'a mut LinkingMetadataVec,
-  pub modules: &'a ModuleVec,
+  pub modules: &'a NormalModuleVec,
 }
 
 fn wrap_module_recursively(ctx: &mut Context, target: NormalModuleId) {
@@ -25,9 +26,7 @@ fn wrap_module_recursively(ctx: &mut Context, target: NormalModuleId) {
   }
   *is_visited = true;
 
-  let Module::Normal(module) = &ctx.modules[target] else {
-    return;
-  };
+  let module = &ctx.modules[target];
 
   if matches!(ctx.linking_infos[target].wrap_kind, WrapKind::None) {
     ctx.linking_infos[target].wrap_kind = match module.exports_kind {
@@ -36,14 +35,16 @@ fn wrap_module_recursively(ctx: &mut Context, target: NormalModuleId) {
     }
   }
 
-  module.import_records.iter().for_each(|rec| {
-    wrap_module_recursively(ctx, rec.resolved_module);
-  });
+  module.import_records.iter().filter_map(|rec| rec.resolved_module.as_normal()).for_each(
+    |importee| {
+      wrap_module_recursively(ctx, importee);
+    },
+  );
 }
 
 fn has_dynamic_exports_due_to_export_star(
   target: NormalModuleId,
-  modules: &ModuleVec,
+  modules: &NormalModuleVec,
   linking_infos: &mut LinkingMetadataVec,
   visited_modules: &mut IndexVec<NormalModuleId, bool>,
 ) -> bool {
@@ -52,28 +53,25 @@ fn has_dynamic_exports_due_to_export_star(
   }
   visited_modules[target] = true;
 
-  let Module::Normal(module) = &modules[target] else {
-    return false;
-  };
+  let module = &modules[target];
 
   if matches!(module.exports_kind, ExportsKind::CommonJs) {
     linking_infos[target].has_dynamic_exports = true;
     return true;
   }
 
-  let has_dynamic_exports =
-    module.star_export_modules().any(|importee_id| match &modules[importee_id] {
-      Module::Normal(_) => {
-        target != importee_id
-          && has_dynamic_exports_due_to_export_star(
-            importee_id,
-            modules,
-            linking_infos,
-            visited_modules,
-          )
-      }
-      Module::External(_) => true,
-    });
+  let has_dynamic_exports = module.star_export_modules().any(|importee_id| match importee_id {
+    rolldown_common::ModuleId::Normal(importee_id) => {
+      target != importee_id
+        && has_dynamic_exports_due_to_export_star(
+          importee_id,
+          modules,
+          linking_infos,
+          visited_modules,
+        )
+    }
+    rolldown_common::ModuleId::External(_) => true,
+  });
   if has_dynamic_exports {
     linking_infos[target].has_dynamic_exports = true;
   }
@@ -82,14 +80,13 @@ fn has_dynamic_exports_due_to_export_star(
 
 impl LinkStage<'_> {
   pub fn wrap_modules(&mut self) {
-    let mut visited_modules_for_wrapping = index_vec::index_vec![false; self.modules.len()];
+    let mut visited_modules_for_wrapping =
+      index_vec::index_vec![false; self.module_table.normal_modules.len()];
 
-    let mut visited_modules_for_dynamic_exports = index_vec::index_vec![false; self.modules.len()];
+    let mut visited_modules_for_dynamic_exports =
+      index_vec::index_vec![false; self.module_table.normal_modules.len()];
 
-    for module in &self.modules {
-      let Module::Normal(module) = module else {
-        return;
-      };
+    for module in &self.module_table.normal_modules {
       let module_id = module.id;
       let linking_info = &self.metas[module_id];
 
@@ -99,7 +96,7 @@ impl LinkStage<'_> {
             &mut Context {
               visited_modules: &mut visited_modules_for_wrapping,
               linking_infos: &mut self.metas,
-              modules: &self.modules,
+              modules: &self.module_table.normal_modules,
             },
             module_id,
           );
@@ -110,23 +107,23 @@ impl LinkStage<'_> {
       if !module.star_exports.is_empty() {
         has_dynamic_exports_due_to_export_star(
           module_id,
-          &self.modules,
+          &self.module_table.normal_modules,
           &mut self.metas,
           &mut visited_modules_for_dynamic_exports,
         );
       }
 
       module.import_records.iter().for_each(|rec| {
-        let importee = &self.modules[rec.resolved_module];
-        let Module::Normal(importee) = importee else {
+        let ModuleId::Normal(importee_id) = rec.resolved_module else {
           return;
         };
+        let importee = &self.module_table.normal_modules[importee_id];
         if matches!(importee.exports_kind, ExportsKind::CommonJs) {
           wrap_module_recursively(
             &mut Context {
               visited_modules: &mut visited_modules_for_wrapping,
               linking_infos: &mut self.metas,
-              modules: &self.modules,
+              modules: &self.module_table.normal_modules,
             },
             importee.id,
           );

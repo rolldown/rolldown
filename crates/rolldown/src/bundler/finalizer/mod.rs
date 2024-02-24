@@ -3,7 +3,7 @@ use oxc::{
   ast::ast::{self, IdentifierReference, Statement},
   span::Atom,
 };
-use rolldown_common::{ImportRecordId, SymbolRef, WrapKind};
+use rolldown_common::{ImportRecordId, ModuleId, SymbolRef, WrapKind};
 use rolldown_oxc::{AstSnippet, BindingPatternExt, Dummy, IntoIn, TakeIn};
 
 mod finalizer_context;
@@ -47,7 +47,9 @@ where
     rec_id: ImportRecordId,
   ) -> bool {
     let rec = &self.ctx.module.import_records[rec_id];
-    let importee_id = rec.resolved_module;
+    let ModuleId::Normal(importee_id) = rec.resolved_module else {
+      return true;
+    };
     let importee_linking_info = &self.ctx.linking_infos[importee_id];
     match importee_linking_info.wrap_kind {
       WrapKind::None => {

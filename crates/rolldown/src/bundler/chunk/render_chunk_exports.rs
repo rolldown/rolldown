@@ -22,7 +22,7 @@ impl Chunk {
                 panic!(
                   "Cannot find canonical name for wrap ref {:?} of {:?}",
                   linking_info.wrapper_ref.unwrap(),
-                  graph.modules[*entry_module_id].resource_id()
+                  graph.module_table.normal_modules[*entry_module_id].resource_id
                 )
               });
             return Some(MagicString::new(format!("export default {wrap_ref_name}();\n")));

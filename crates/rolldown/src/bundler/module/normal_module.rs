@@ -7,8 +7,9 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleType,
-  NamedImport, NormalModuleId, ResolvedExport, ResourceId, StmtInfo, StmtInfos, SymbolRef,
+  DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleId,
+  ModuleType, NamedImport, NormalModuleId, ResolvedExport, ResourceId, StmtInfo, StmtInfos,
+  SymbolRef,
 };
 use rolldown_oxc::{AstSnippet, OxcCompiler, OxcProgram};
 use rustc_hash::FxHashMap;
@@ -16,10 +17,12 @@ use string_wizard::MagicString;
 
 use crate::bundler::{
   finalizer::{Finalizer, FinalizerContext},
-  types::{ast_scope::AstScope, linking_metadata::LinkingMetadataVec},
+  types::{
+    ast_scope::AstScope, linking_metadata::LinkingMetadataVec, module_table::NormalModuleVec,
+  },
 };
 
-use super::{Module, ModuleRenderContext, ModuleVec};
+use super::ModuleRenderContext;
 
 #[derive(Debug)]
 pub struct NormalModule {
@@ -78,7 +81,7 @@ impl NormalModule {
     &self,
     id: NormalModuleId,
     metas: &mut LinkingMetadataVec,
-    modules: &ModuleVec,
+    modules: &NormalModuleVec,
     module_stack: &mut Vec<NormalModuleId>,
   ) {
     if module_stack.contains(&self.id) {
@@ -86,70 +89,58 @@ impl NormalModule {
     }
     module_stack.push(self.id);
 
-    self.star_export_modules().for_each(|importee_id| {
+    self.star_export_modules().filter_map(ModuleId::as_normal).for_each(|importee_id| {
       let importee = &modules[importee_id];
-      match importee {
-        Module::External(_) => {
-          // This will be resolved at run time instead
-        }
-        Module::Normal(importee) => {
-          // Export star from commonjs will be resolved at runtime
-          if importee.exports_kind == ExportsKind::CommonJs {
-            return;
-          }
-
-          importee.named_exports.iter().for_each(|(alias, importee_export)| {
-            // ES6 export star ignore default export
-            if alias == &"default" {
-              return;
-            }
-
-            // This export star is shadowed if any file in the stack has a matching real named export
-            if module_stack
-              .iter()
-              .copied()
-              .filter_map(|id| modules[id].as_normal())
-              .any(|prev_module| prev_module.named_exports.contains_key(alias))
-            {
-              return;
-            }
-
-            let importer_meta = &mut metas[id];
-
-            importer_meta
-              .resolved_exports
-              .entry(alias.clone())
-              .and_modify(|existing| {
-                if existing.symbol_ref != importee_export.referenced {
-                  // This means that the importer already has a export with the same name, and it's not from its own
-                  // local named exports. Such a situation is already handled above, so this is a case of ambiguity.
-                  existing
-                    .potentially_ambiguous_symbol_refs
-                    .get_or_insert_with(Default::default)
-                    .push(importee_export.referenced);
-                }
-              })
-              .or_insert_with(|| ResolvedExport::new(importee_export.referenced));
-          });
-
-          importee.add_exports_for_export_star(id, metas, modules, module_stack);
-        }
+      // Export star from commonjs will be resolved at runtime
+      if importee.exports_kind == ExportsKind::CommonJs {
+        return;
       }
+
+      importee.named_exports.iter().for_each(|(alias, importee_export)| {
+        // ES6 export star ignore default export
+        if alias == &"default" {
+          return;
+        }
+
+        // This export star is shadowed if any file in the stack has a matching real named export
+        if module_stack
+          .iter()
+          .copied()
+          .map(|id| &modules[id])
+          .any(|prev_module| prev_module.named_exports.contains_key(alias))
+        {
+          return;
+        }
+
+        let importer_meta = &mut metas[id];
+
+        importer_meta
+          .resolved_exports
+          .entry(alias.clone())
+          .and_modify(|existing| {
+            if existing.symbol_ref != importee_export.referenced {
+              // This means that the importer already has a export with the same name, and it's not from its own
+              // local named exports. Such a situation is already handled above, so this is a case of ambiguity.
+              existing
+                .potentially_ambiguous_symbol_refs
+                .get_or_insert_with(Default::default)
+                .push(importee_export.referenced);
+            }
+          })
+          .or_insert_with(|| ResolvedExport::new(importee_export.referenced));
+      });
+
+      importee.add_exports_for_export_star(id, metas, modules, module_stack);
     });
 
     module_stack.remove(module_stack.len() - 1);
   }
 
-  pub fn star_export_modules(&self) -> impl Iterator<Item = NormalModuleId> + '_ {
+  pub fn star_export_modules(&self) -> impl Iterator<Item = ModuleId> + '_ {
     self.star_exports.iter().map(|rec_id| {
       let rec = &self.import_records[*rec_id];
       rec.resolved_module
     })
-  }
-
-  pub fn _importee_id_by_span(&self, span: Span) -> NormalModuleId {
-    let record = &self.import_records[self.imports[&span]];
-    record.resolved_module
   }
 
   pub fn to_debug_normal_module_for_tree_shaking(&self) -> DebugNormalModuleForTreeShaking {

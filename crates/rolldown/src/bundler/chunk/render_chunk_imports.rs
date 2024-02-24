@@ -17,10 +17,11 @@ impl Chunk {
     // render imports from external modules
     let mut imports_from_external_modules =
       self.imports_from_external_modules.iter().collect::<Vec<_>>();
-    imports_from_external_modules
-      .sort_unstable_by_key(|(module_id, _)| graph.modules[**module_id].exec_order());
+    imports_from_external_modules.sort_unstable_by_key(|(module_id, _)| {
+      graph.module_table.external_modules[**module_id].exec_order
+    });
     imports_from_external_modules.into_iter().for_each(|(importee_id, named_imports)| {
-      let importee = graph.modules[*importee_id].expect_external();
+      let importee = &graph.module_table.external_modules[*importee_id];
       let mut is_importee_imported = false;
       let mut import_items = named_imports
         .iter()

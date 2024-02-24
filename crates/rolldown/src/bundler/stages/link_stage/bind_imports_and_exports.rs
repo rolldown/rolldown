@@ -2,13 +2,14 @@
 // if we want more enhancements related to exports.
 
 use rayon::iter::{ParallelBridge, ParallelIterator};
-use rolldown_common::{ExportsKind, NamedImport, ResolvedExport, Specifier, SymbolRef};
+use rolldown_common::{ExportsKind, ModuleId, NamedImport, ResolvedExport, Specifier, SymbolRef};
 
 use crate::bundler::{
-  module::{Module, ModuleVec, NormalModule},
+  module::NormalModule,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     match_import_kind::MatchImportKind,
+    module_table::NormalModuleVec,
     namespace_alias::NamespaceAlias,
   },
 };
@@ -17,52 +18,43 @@ use super::LinkStage;
 
 impl<'a> LinkStage<'a> {
   pub fn bind_imports_and_exports(&mut self) {
-    self.modules.iter().zip(self.metas.iter_mut()).par_bridge().for_each(|(module, meta)| {
-      match module {
-        Module::Normal(module) => {
-          meta.resolved_exports = module
-            .named_exports
-            .iter()
-            .map(|(name, local)| {
-              let resolved_export = ResolvedExport {
-                symbol_ref: local.referenced,
-                potentially_ambiguous_symbol_refs: None,
-              };
-              (name.clone(), resolved_export)
-            })
-            .collect();
-        }
-        Module::External(_) => {}
-      }
-    });
+    self.module_table.normal_modules.iter().zip(self.metas.iter_mut()).par_bridge().for_each(
+      |(module, meta)| {
+        meta.resolved_exports = module
+          .named_exports
+          .iter()
+          .map(|(name, local)| {
+            let resolved_export = ResolvedExport {
+              symbol_ref: local.referenced,
+              potentially_ambiguous_symbol_refs: None,
+            };
+            (name.clone(), resolved_export)
+          })
+          .collect();
+      },
+    );
 
     // Add exports for export star. Notice that:
     // - There will be potentially ambiguous exports, which need to be resolved later
     let mut module_stack_for_export_star = Vec::default();
-    self.modules.iter_enumerated().for_each(|(id, module)| match module {
-      Module::Normal(module) => {
-        module_stack_for_export_star.clear();
-        module.add_exports_for_export_star(
-          id,
-          &mut self.metas,
-          &self.modules,
-          &mut module_stack_for_export_star,
-        );
-      }
-      Module::External(_) => {}
+    self.module_table.normal_modules.iter_enumerated().for_each(|(id, module)| {
+      module_stack_for_export_star.clear();
+      module.add_exports_for_export_star(
+        id,
+        &mut self.metas,
+        &self.module_table.normal_modules,
+        &mut module_stack_for_export_star,
+      );
     });
 
     // match imports with exports
-    self.modules.iter().for_each(|importer| {
-      let Module::Normal(importer) = importer else {
-        return;
-      };
-
+    self.module_table.normal_modules.iter().for_each(|importer| {
       importer.named_imports.values().for_each(|import| {
         let import_record = &importer.import_records[import.record_id];
-        let Module::Normal(importee) = &self.modules[import_record.resolved_module] else {
+        let ModuleId::Normal(importee_id) = import_record.resolved_module else {
           return;
         };
+        let importee = &self.module_table.normal_modules[importee_id];
 
         match Self::match_import_with_export(importer, importee, &self.metas[importee.id], import) {
           MatchImportKind::NotFound => panic!("info {import:#?}"),
@@ -72,7 +64,7 @@ impl<'a> LinkStage<'a> {
           ) => {
             potentially_ambiguous_symbol_refs.push(symbol_ref);
             if Self::determine_ambiguous_export(
-              &self.modules,
+              &self.module_table.normal_modules,
               potentially_ambiguous_symbol_refs,
               &self.metas,
             ) {
@@ -154,33 +146,23 @@ impl<'a> LinkStage<'a> {
 
   // Iterate all potentially ambiguous symbol refs, If all results not be same, it's a ambiguous export
   fn determine_ambiguous_export(
-    modules: &ModuleVec,
+    modules: &NormalModuleVec,
     potentially_ambiguous_symbol_refs: Vec<SymbolRef>,
     metas: &LinkingMetadataVec,
   ) -> bool {
     let mut results = vec![];
 
     for symbol_ref in potentially_ambiguous_symbol_refs {
-      match &modules[symbol_ref.owner] {
-        Module::Normal(importer) => {
-          if let Some(info) = importer.named_imports.get(&symbol_ref.symbol) {
-            let importee_id = importer.import_records[info.record_id].resolved_module;
-            match &modules[importee_id] {
-              Module::Normal(importee) => {
-                results.push(Self::match_import_with_export(
-                  importer,
-                  importee,
-                  &metas[importee_id],
-                  info,
-                ));
-              }
-              Module::External(_) => {}
-            }
-          } else {
-            results.push(MatchImportKind::Found(symbol_ref));
-          }
-        }
-        Module::External(_) => {}
+      let importer = &modules[symbol_ref.owner];
+      if let Some(info) = importer.named_imports.get(&symbol_ref.symbol) {
+        let importee_id = importer.import_records[info.record_id].resolved_module;
+        let ModuleId::Normal(importee_id) = importee_id else {
+          continue;
+        };
+        let importee = &modules[importee_id];
+        results.push(Self::match_import_with_export(importer, importee, &metas[importee_id], info));
+      } else {
+        results.push(MatchImportKind::Found(symbol_ref));
       }
     }
     let current_result = results.remove(results.len() - 1);

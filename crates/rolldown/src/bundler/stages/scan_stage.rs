@@ -10,12 +10,13 @@ use rolldown_utils::block_on_spawn_all;
 
 use crate::{
   bundler::{
-    module::ModuleVec,
     module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
     options::input_options::SharedInputOptions,
     plugin_driver::SharedPluginDriver,
     runtime::RuntimeModuleBrief,
-    types::{resolved_request_info::ResolvedRequestInfo, symbols::Symbols},
+    types::{
+      module_table::ModuleTable, resolved_request_info::ResolvedRequestInfo, symbols::Symbols,
+    },
     utils::resolve_id::resolve_id,
   },
   error::{into_batched_result, BatchedResult},
@@ -31,7 +32,7 @@ pub struct ScanStage<Fs: FileSystem + Default> {
 
 #[derive(Debug)]
 pub struct ScanStageOutput {
-  pub modules: ModuleVec,
+  pub module_table: ModuleTable,
   pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
   pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
@@ -64,12 +65,12 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
 
     let user_entries = self.resolve_user_defined_entries()?;
 
-    let ModuleLoaderOutput { modules, entry_points, symbols, runtime, warnings, ast_table } =
+    let ModuleLoaderOutput { module_table, entry_points, symbols, runtime, warnings, ast_table } =
       module_loader.fetch_all_modules(user_entries).await?;
 
-    tracing::debug!("Scan stage finished {modules:#?}");
+    tracing::debug!("Scan stage finished {module_table:#?}");
 
-    Ok(ScanStageOutput { modules, entry_points, symbols, runtime, warnings, ast_table })
+    Ok(ScanStageOutput { module_table, entry_points, symbols, runtime, warnings, ast_table })
   }
 
   /// Resolve `InputOptions.input`

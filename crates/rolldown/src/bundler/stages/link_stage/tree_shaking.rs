@@ -109,18 +109,6 @@ impl LinkStage<'_> {
       runtime_id: self.runtime.id(),
     };
 
-    for module in &self.module_table.normal_modules {
-      let mut stmt_infos = module.stmt_infos.iter_enumerated();
-      // Skip the first one, because it's the namespace variable declaration.
-      // We want to include it on demand.
-      stmt_infos.next();
-      stmt_infos.for_each(|(stmt_info_id, stmt_info)| {
-        if stmt_info.side_effect {
-          include_statement(context, module, stmt_info_id);
-        }
-      });
-    }
-
     self.entries.iter().for_each(|entry| {
       let module = &self.module_table.normal_modules[entry.id];
 

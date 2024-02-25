@@ -60,8 +60,6 @@ impl<'a> BundleStage<'a> {
       .filter(|(id, _)| self.link_output.module_table.normal_modules[*id].is_included)
       .for_each(|(id, ast)| {
         let module = &self.link_output.module_table.normal_modules[id];
-        // TODO: should consider cases:
-        // - excluded normal modules in code splitting doesn't belong to any chunk.
         let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
         let chunk = &chunk_graph.chunks[chunk_id];
         let linking_info = &self.link_output.metas[module.id];

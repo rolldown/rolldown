@@ -165,9 +165,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     let namespace_symbol = scanner.namespace_ref;
     program.hoist_import_export_from_stmts();
     let scan_result = scanner.scan(program.program());
-    if !self.ctx.input_options.treeshake {
-      // TODO: tree shaking is not supported yet
-    }
+
     (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }
 

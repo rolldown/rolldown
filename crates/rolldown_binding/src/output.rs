@@ -9,9 +9,7 @@ use serde::Deserialize;
 #[derivative(Debug)]
 pub struct RenderedModule {
   pub code: Option<String>,
-  // TODO
   pub removed_exports: Vec<String>,
-  // TODO
   pub rendered_exports: Vec<String>,
   pub original_length: u32,
   pub rendered_length: u32,

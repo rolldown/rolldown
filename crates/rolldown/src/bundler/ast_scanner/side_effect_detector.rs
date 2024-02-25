@@ -4,9 +4,8 @@ use oxc::{
   ast::ast::{IdentifierReference, MemberExpression},
   span::Atom,
 };
+use rolldown_common::AstScope;
 use rustc_hash::FxHashSet;
-
-use crate::bundler::types::ast_scope::AstScope;
 
 // Probably we should generate this using macros.
 static SIDE_EFFECT_FREE_MEMBER_EXPR_2: once_cell::sync::Lazy<

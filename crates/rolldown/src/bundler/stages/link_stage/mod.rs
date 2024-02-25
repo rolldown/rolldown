@@ -3,14 +3,13 @@ use std::{ptr::addr_of, sync::Mutex};
 use index_vec::IndexVec;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportKind, ModuleId, NormalModuleId, StmtInfo, WrapKind,
+  EntryPoint, ExportsKind, ImportKind, ModuleId, NormalModule, NormalModuleId, StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc::OxcProgram;
 
 use crate::{
   bundler::{
-    module::NormalModule,
     runtime::RuntimeModuleBrief,
     types::{
       linking_metadata::{LinkingMetadata, LinkingMetadataVec},

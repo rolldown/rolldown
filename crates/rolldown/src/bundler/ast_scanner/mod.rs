@@ -14,15 +14,16 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  representative_name, ExportsKind, FilePath, ImportKind, ImportRecordId, LocalExport, ModuleType,
-  NamedImport, NormalModuleId, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
+  representative_name, AstScope, ExportsKind, FilePath, ImportKind, ImportRecordId, LocalExport,
+  ModuleType, NamedImport, NormalModuleId, RawImportRecord, Specifier, StmtInfo, StmtInfos,
+  SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc::{BindingIdentifierExt, BindingPatternExt};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
-use super::types::{ast_scope::AstScope, ast_symbols::AstSymbols};
+use super::types::ast_symbols::AstSymbols;
 
 #[derive(Debug, Default)]
 pub struct ScanResult {

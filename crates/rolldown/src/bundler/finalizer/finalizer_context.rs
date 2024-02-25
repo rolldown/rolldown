@@ -1,11 +1,10 @@
 use oxc::span::Atom;
-use rolldown_common::{NormalModuleId, SymbolRef};
+use rolldown_common::{NormalModule, NormalModuleId, SymbolRef};
 
 use rustc_hash::FxHashMap;
 
 use crate::bundler::{
   chunk_graph::ChunkGraph,
-  module::NormalModule,
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},

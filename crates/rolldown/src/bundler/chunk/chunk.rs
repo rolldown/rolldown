@@ -8,8 +8,11 @@ use rustc_hash::FxHashMap;
 
 use crate::{
   bundler::{
-    chunk_graph::ChunkGraph, module::ModuleRenderContext, options::output_options::OutputOptions,
-    stages::link_stage::LinkStageOutput, utils::bitset::BitSet,
+    chunk_graph::ChunkGraph,
+    options::output_options::OutputOptions,
+    stages::link_stage::LinkStageOutput,
+    types::module_render_context::ModuleRenderContext,
+    utils::{bitset::BitSet, render_normal_module},
   },
   error::BatchedResult,
   FileNameTemplate, InputOptions,
@@ -91,7 +94,8 @@ impl Chunk {
       .copied()
       .map(|id| &graph.module_table.normal_modules[id])
       .filter_map(|m| {
-        let rendered_content = m.render(
+        let rendered_content = render_normal_module(
+          m,
           &ModuleRenderContext {
             canonical_names: &self.canonical_names,
             graph,

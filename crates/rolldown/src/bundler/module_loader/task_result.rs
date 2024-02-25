@@ -3,10 +3,8 @@ use rolldown_common::{ImportRecordId, NormalModuleId, RawImportRecord};
 use rolldown_error::BuildError;
 use rolldown_oxc::OxcProgram;
 
-use crate::bundler::module::normal_module_builder::NormalModuleBuilder;
-
-use crate::bundler::types::ast_symbols::AstSymbols;
 use crate::bundler::types::resolved_request_info::ResolvedRequestInfo;
+use crate::bundler::types::{ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder};
 
 pub struct NormalModuleTaskResult {
   pub module_id: NormalModuleId,

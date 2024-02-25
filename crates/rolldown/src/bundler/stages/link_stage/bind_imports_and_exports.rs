@@ -2,16 +2,16 @@
 // if we want more enhancements related to exports.
 
 use rayon::iter::{ParallelBridge, ParallelIterator};
-use rolldown_common::{ExportsKind, ModuleId, NamedImport, ResolvedExport, Specifier, SymbolRef};
+use rolldown_common::{
+  ExportsKind, ModuleId, NamedImport, NormalModule, NormalModuleId, ResolvedExport, Specifier,
+  SymbolRef,
+};
 
-use crate::bundler::{
-  module::NormalModule,
-  types::{
-    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    match_import_kind::MatchImportKind,
-    module_table::NormalModuleVec,
-    namespace_alias::NamespaceAlias,
-  },
+use crate::bundler::types::{
+  linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+  match_import_kind::MatchImportKind,
+  module_table::NormalModuleVec,
+  namespace_alias::NamespaceAlias,
 };
 
 use super::LinkStage;
@@ -39,7 +39,8 @@ impl<'a> LinkStage<'a> {
     let mut module_stack_for_export_star = Vec::default();
     self.module_table.normal_modules.iter_enumerated().for_each(|(id, module)| {
       module_stack_for_export_star.clear();
-      module.add_exports_for_export_star(
+      add_exports_for_export_star(
+        module,
         id,
         &mut self.metas,
         &self.module_table.normal_modules,
@@ -178,4 +179,63 @@ impl<'a> LinkStage<'a> {
     }
     false
   }
+}
+
+pub(crate) fn add_exports_for_export_star(
+  module: &NormalModule,
+  id: NormalModuleId,
+  metas: &mut LinkingMetadataVec,
+  modules: &NormalModuleVec,
+  module_stack: &mut Vec<NormalModuleId>,
+) {
+  if module_stack.contains(&module.id) {
+    return;
+  }
+  module_stack.push(module.id);
+
+  module.star_export_modules().filter_map(ModuleId::as_normal).for_each(|importee_id| {
+    let importee = &modules[importee_id];
+    // Export star from commonjs will be resolved at runtime
+    if importee.exports_kind == ExportsKind::CommonJs {
+      return;
+    }
+
+    importee.named_exports.iter().for_each(|(alias, importee_export)| {
+      // ES6 export star ignore default export
+      if alias == &"default" {
+        return;
+      }
+
+      // This export star is shadowed if any file in the stack has a matching real named export
+      if module_stack
+        .iter()
+        .copied()
+        .map(|id| &modules[id])
+        .any(|prev_module| prev_module.named_exports.contains_key(alias))
+      {
+        return;
+      }
+
+      let importer_meta = &mut metas[id];
+
+      importer_meta
+        .resolved_exports
+        .entry(alias.clone())
+        .and_modify(|existing| {
+          if existing.symbol_ref != importee_export.referenced {
+            // This means that the importer already has a export with the same name, and it's not from its own
+            // local named exports. Such a situation is already handled above, so this is a case of ambiguity.
+            existing
+              .potentially_ambiguous_symbol_refs
+              .get_or_insert_with(Default::default)
+              .push(importee_export.referenced);
+          }
+        })
+        .or_insert_with(|| ResolvedExport::new(importee_export.referenced));
+    });
+
+    add_exports_for_export_star(importee, id, metas, modules, module_stack);
+  });
+
+  module_stack.remove(module_stack.len() - 1);
 }

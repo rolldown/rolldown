@@ -1,8 +1,7 @@
 use index_vec::IndexVec;
-use rolldown_common::{ExportsKind, ModuleId, NormalModuleId, StmtInfo, WrapKind};
+use rolldown_common::{ExportsKind, ModuleId, NormalModule, NormalModuleId, StmtInfo, WrapKind};
 
 use crate::bundler::{
-  module::NormalModule,
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},

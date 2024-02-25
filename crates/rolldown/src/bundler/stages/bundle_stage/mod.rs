@@ -9,7 +9,7 @@ use crate::{
     },
     plugin_driver::SharedPluginDriver,
     stages::link_stage::LinkStageOutput,
-    utils::{is_in_rust_test_mode, render_chunks::render_chunks},
+    utils::{finalize_normal_module, is_in_rust_test_mode, render_chunks::render_chunks},
   },
   error::BatchedResult,
   InputOptions,
@@ -65,7 +65,8 @@ impl<'a> BundleStage<'a> {
         let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
         let chunk = &chunk_graph.chunks[chunk_id];
         let linking_info = &self.link_output.metas[module.id];
-        module.finalize(
+        finalize_normal_module(
+          module,
           FinalizerContext {
             canonical_names: &chunk.canonical_names,
             id: module.id,

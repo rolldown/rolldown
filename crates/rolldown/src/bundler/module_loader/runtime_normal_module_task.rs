@@ -2,16 +2,17 @@ use std::sync::Arc;
 
 use index_vec::IndexVec;
 use oxc::span::SourceType;
-use rolldown_common::{ExportsKind, FilePath, ModuleType, NormalModuleId, ResourceId, SymbolRef};
+use rolldown_common::{
+  AstScope, ExportsKind, FilePath, ModuleType, NormalModuleId, ResourceId, SymbolRef,
+};
 use rolldown_error::BuildError;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
 
 use super::Msg;
 use crate::bundler::{
   ast_scanner::{AstScanner, ScanResult},
-  module::normal_module_builder::NormalModuleBuilder,
   runtime::RuntimeModuleBrief,
-  types::{ast_scope::AstScope, ast_symbols::AstSymbols},
+  types::{ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder},
 };
 pub struct RuntimeNormalModuleTask {
   tx: tokio::sync::mpsc::UnboundedSender<Msg>,

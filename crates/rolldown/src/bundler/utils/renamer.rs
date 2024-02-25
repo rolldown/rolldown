@@ -1,13 +1,10 @@
 use std::borrow::Cow;
 
 use oxc::{semantic::ScopeId, span::Atom};
-use rolldown_common::{NormalModuleId, SymbolRef};
+use rolldown_common::{NormalModule, NormalModuleId, SymbolRef};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::bundler::{
-  module::NormalModule,
-  types::{module_table::NormalModuleVec, symbols::Symbols},
-};
+use crate::bundler::types::{module_table::NormalModuleVec, symbols::Symbols};
 
 #[derive(Debug)]
 pub struct Renamer<'name> {

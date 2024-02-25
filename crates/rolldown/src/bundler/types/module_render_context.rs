@@ -1,13 +1,11 @@
-pub mod normal_module;
-pub mod normal_module_builder;
-pub use normal_module::NormalModule;
 use oxc::span::Atom;
 use rolldown_common::SymbolRef;
 use rustc_hash::FxHashMap;
 
-use crate::InputOptions;
-
-use super::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
+use crate::{
+  bundler::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput},
+  InputOptions,
+};
 
 pub struct ModuleRenderContext<'a> {
   pub input_options: &'a InputOptions,

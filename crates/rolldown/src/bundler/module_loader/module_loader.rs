@@ -3,7 +3,7 @@ use std::sync::Arc;
 use index_vec::IndexVec;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, FilePath, ImportKind, ImportRecordId, ModuleId,
-  NormalModuleId, ResourceId,
+  NormalModule, NormalModuleId, ResourceId,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
@@ -14,7 +14,6 @@ use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
-use crate::bundler::module::NormalModule;
 use crate::bundler::module_loader::module_task_context::ModuleTaskCommonData;
 use crate::bundler::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
 use crate::bundler::options::input_options::SharedInputOptions;

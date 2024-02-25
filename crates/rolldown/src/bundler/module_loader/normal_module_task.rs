@@ -4,8 +4,8 @@ use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath, ResourceId,
-  SymbolRef,
+  AstScope, FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath,
+  ResourceId, SymbolRef,
 };
 use rolldown_fs::FileSystem;
 use rolldown_oxc::{OxcCompiler, OxcProgram};
@@ -17,12 +17,12 @@ use super::{module_task_context::ModuleTaskCommonData, Msg};
 use crate::{
   bundler::{
     ast_scanner::{AstScanner, ScanResult},
-    module::normal_module_builder::NormalModuleBuilder,
     module_loader::NormalModuleTaskResult,
     options::input_options::SharedInputOptions,
     plugin_driver::SharedPluginDriver,
     types::{
-      ast_scope::AstScope, ast_symbols::AstSymbols, resolved_request_info::ResolvedRequestInfo,
+      ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder,
+      resolved_request_info::ResolvedRequestInfo,
     },
     utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
   },

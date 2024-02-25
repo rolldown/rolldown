@@ -3,14 +3,12 @@ use oxc::{
   ast::ast::{self, IdentifierReference, Statement},
   span::Atom,
 };
-use rolldown_common::{ImportRecordId, ModuleId, SymbolRef, WrapKind};
+use rolldown_common::{AstScope, ImportRecordId, ModuleId, SymbolRef, WrapKind};
 use rolldown_oxc::{AstSnippet, BindingPatternExt, Dummy, IntoIn, TakeIn};
 
 mod finalizer_context;
 mod impl_visit_mut_for_finalizer;
 pub use finalizer_context::FinalizerContext;
-
-use super::types::ast_scope::AstScope;
 
 pub struct Finalizer<'me, 'ast> {
   pub alloc: &'ast Allocator,

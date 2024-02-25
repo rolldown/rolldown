@@ -1779,7 +1779,10 @@ dependencies = [
  "once_cell",
  "oxc",
  "regex",
+ "rolldown_oxc",
+ "rolldown_sourcemap",
  "rustc-hash",
+ "string_wizard",
  "sugar_path",
 ]
 

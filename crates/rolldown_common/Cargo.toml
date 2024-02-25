@@ -13,9 +13,12 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-oxc        = { workspace = true, features = ["semantic"] }
-rustc-hash = { workspace = true }
-index_vec  = { workspace = true }
-sugar_path = { workspace = true }
-regex      = { workspace = true }
-once_cell  = { workspace = true }
+rolldown_oxc       = { path = "../rolldown_oxc" }
+rolldown_sourcemap = { path = "../rolldown_sourcemap" }
+oxc                = { workspace = true, features = ["semantic"] }
+rustc-hash         = { workspace = true }
+index_vec          = { workspace = true }
+sugar_path         = { workspace = true }
+regex              = { workspace = true }
+once_cell          = { workspace = true }
+string_wizard      = { workspace = true }

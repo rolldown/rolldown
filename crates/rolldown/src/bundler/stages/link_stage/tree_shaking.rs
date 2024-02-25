@@ -1,10 +1,7 @@
 use index_vec::IndexVec;
-use rolldown_common::{NormalModuleId, StmtInfoId, SymbolRef};
+use rolldown_common::{NormalModule, NormalModuleId, StmtInfoId, SymbolRef};
 
-use crate::bundler::{
-  module::NormalModule,
-  types::{module_table::NormalModuleVec, symbols::Symbols},
-};
+use crate::bundler::types::{module_table::NormalModuleVec, symbols::Symbols};
 
 use super::LinkStage;
 

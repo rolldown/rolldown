@@ -6,14 +6,10 @@ use oxc::{
   span::{Atom, Span},
 };
 use rolldown_common::{
-  ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleType, NamedImport, NormalModuleId,
-  ResourceId, StmtInfos, SymbolRef,
+  AstScope, ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleType, NamedImport,
+  NormalModule, NormalModuleId, ResourceId, StmtInfos, SymbolRef,
 };
 use rustc_hash::FxHashMap;
-
-use crate::bundler::types::ast_scope::AstScope;
-
-use super::NormalModule;
 
 #[derive(Debug, Default)]
 pub struct NormalModuleBuilder {

@@ -56,6 +56,7 @@ async function runEsbuild(item) {
     outdir: path.join(dirname, `./dist/esbuild/${item.title}`),
     write: true,
     format: 'esm',
+    splitting: true,
     sourcemap: false,
   })
 }

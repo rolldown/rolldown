@@ -1,7 +1,9 @@
+mod module;
 mod types;
 
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
+  module::external_module::ExternalModule,
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,
   types::external_module_id::ExternalModuleId,

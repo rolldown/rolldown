@@ -1,7 +1,7 @@
 use index_vec::IndexVec;
-use rolldown_common::{ExternalModuleId, NormalModuleId};
+use rolldown_common::{ExternalModule, ExternalModuleId, NormalModuleId};
 
-use crate::bundler::module::{external_module::ExternalModule, NormalModule};
+use crate::bundler::module::NormalModule;
 
 pub type NormalModuleVec = IndexVec<NormalModuleId, NormalModule>;
 pub type ExternalModuleVec = IndexVec<ExternalModuleId, ExternalModule>;

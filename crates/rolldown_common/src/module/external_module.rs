@@ -1,5 +1,5 @@
+use crate::{ExternalModuleId, ImportRecord, ImportRecordId, ResourceId};
 use index_vec::IndexVec;
-use rolldown_common::{ExternalModuleId, ImportRecord, ImportRecordId, ResourceId};
 
 #[derive(Debug)]
 pub struct ExternalModule {

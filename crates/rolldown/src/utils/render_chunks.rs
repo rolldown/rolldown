@@ -4,7 +4,7 @@ use rolldown_sourcemap::SourceMap;
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
-  error::{into_batched_result, BatchedErrors},
+  error::{BatchedErrors, IntoBatchedResult},
   plugin_driver::SharedPluginDriver,
 };
 
@@ -27,5 +27,5 @@ pub async fn render_chunks<'a>(
     }
   }));
 
-  into_batched_result(result)
+  result.into_batched_result()
 }

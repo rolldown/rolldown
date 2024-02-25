@@ -32,16 +32,24 @@ impl BatchedErrors {
     }
   }
 }
+pub(crate) trait IntoBatchedResult<T> {
+  fn into_batched_result(self) -> BatchedResult<Vec<T>>;
+}
 
-pub fn into_batched_result<T>(value: Vec<Result<T, BuildError>>) -> BatchedResult<Vec<T>> {
-  let mut errors = BatchedErrors::default();
+impl<T, U> IntoBatchedResult<U> for T
+where
+  T: IntoIterator<Item = Result<U, BuildError>>,
+{
+  fn into_batched_result(self) -> BatchedResult<Vec<U>> {
+    let mut errors = BatchedErrors::default();
+    let collected =
+      self.into_iter().filter_map(|item| errors.take_err_from(item)).collect::<Vec<_>>();
 
-  let collected = value.into_iter().filter_map(|item| errors.take_err_from(item)).collect();
-
-  if errors.is_empty() {
-    Ok(collected)
-  } else {
-    Err(errors)
+    if errors.is_empty() {
+      Ok(collected)
+    } else {
+      Err(errors)
+    }
   }
 }
 

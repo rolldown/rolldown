@@ -9,18 +9,16 @@ use rolldown_plugin::HookResolveIdArgsOptions;
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
-  error::{into_batched_result, BatchedResult},
-  SharedResolver,
-  {
-    module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
-    options::input_options::SharedInputOptions,
-    plugin_driver::SharedPluginDriver,
-    runtime::RuntimeModuleBrief,
-    types::{
-      module_table::ModuleTable, resolved_request_info::ResolvedRequestInfo, symbols::Symbols,
-    },
-    utils::resolve_id::resolve_id,
+  error::{BatchedResult, IntoBatchedResult},
+  module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
+  options::input_options::SharedInputOptions,
+  plugin_driver::SharedPluginDriver,
+  runtime::RuntimeModuleBrief,
+  types::{
+    module_table::ModuleTable, resolved_request_info::ResolvedRequestInfo, symbols::Symbols,
   },
+  utils::resolve_id::resolve_id,
+  SharedResolver,
 };
 
 pub struct ScanStage<Fs: FileSystem + Default> {
@@ -104,6 +102,6 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
         }
       }));
 
-    into_batched_result(resolved_ids)
+    resolved_ids.into_batched_result()
   }
 }

@@ -20,5 +20,5 @@ var require_foo = __commonJSMin((exports, module) => {
 });
 
 // entry.js
-new require_foo().Foo();
+new (require_foo()).Foo();
 ```

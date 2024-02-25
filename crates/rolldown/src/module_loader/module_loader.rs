@@ -229,7 +229,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
           runtime_brief = Some(runtime);
         }
         Msg::Errors(errs) => {
-          errors.merge(errs);
+          errors.extend(errs);
         }
       }
       self.remaining -= 1;

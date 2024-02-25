@@ -5,11 +5,6 @@ use smallvec::SmallVec;
 pub struct BatchedErrors(SmallVec<[BuildError; 1]>);
 
 impl BatchedErrors {
-  // TODO(hyf): using `trait Extend` would be more proper.
-  pub fn merge(&mut self, mut other: Self) {
-    self.0.append(&mut other.0);
-  }
-
   pub fn with_error(err: BuildError) -> Self {
     Self(smallvec::smallvec![err])
   }
@@ -47,6 +42,21 @@ pub fn into_batched_result<T>(value: Vec<Result<T, BuildError>>) -> BatchedResul
     Ok(collected)
   } else {
     Err(errors)
+  }
+}
+
+impl Extend<BuildError> for BatchedErrors {
+  fn extend<T: IntoIterator<Item = BuildError>>(&mut self, iter: T) {
+    self.0.extend(iter.into_iter());
+  }
+}
+
+impl IntoIterator for BatchedErrors {
+  type Item = BuildError;
+  type IntoIter = smallvec::IntoIter<[BuildError; 1]>;
+
+  fn into_iter(self) -> Self::IntoIter {
+    self.0.into_iter()
   }
 }
 

@@ -240,7 +240,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
         ret.push(item);
       }
       Err(e) => {
-        errors.merge(e);
+        errors.extend(e);
       }
     });
     debug_assert!(errors.is_empty() && ret.len() == dependencies.len(), "{dependencies:#?}");

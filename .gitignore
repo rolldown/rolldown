@@ -163,3 +163,6 @@ pkg/
 
 # justfile
 justfile*
+
+# vitepress
+docs/.vitepress/cache

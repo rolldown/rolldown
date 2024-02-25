@@ -22,7 +22,7 @@ A test case is a folder that contains `test.config.json`.
 
 - `main.js` is the default entry of the test case, if `input.input` is not specified in `test.config.json`.
 
-Rolldown will bundle the input into `/dist`, and using the same `node` instance to execute every entry file in `/dist` orderly. If `_test.mjs` is found in test case folder, it will be executed after all entry points are executed. Otherwise, we just execute the entry file in `/dist`.
+Rolldown will bundle the input into `/dist`, and using the same `node` instance to execute every entry file in `/dist` orderly. If `_test.mjs` is found in test case folder, it will be executed after all entry points are executed.
 
 ## Node Testing
 

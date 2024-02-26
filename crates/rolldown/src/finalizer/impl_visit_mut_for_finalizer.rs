@@ -4,6 +4,7 @@ use oxc::{
     ast::{self, SimpleAssignmentTarget},
     VisitMut,
   },
+  span::Span,
 };
 use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
 use rolldown_oxc::{Dummy, ExpressionExt, IntoIn, StatementExt, TakeIn};
@@ -278,13 +279,14 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       if ident.name != canonical_name {
         ident.name = canonical_name.clone();
       }
-      *ident.symbol_id.get_mut() = None;
+      ident.symbol_id.get_mut().take();
     } else {
       // Some `BindingIdentifier`s constructed by bundler don't have `SymbolId` and we just ignore them.
     }
   }
 
   fn visit_identifier_reference(&mut self, ident: &mut ast::IdentifierReference) {
+    // This ensure all `IdentifierReference`s are processed
     debug_assert!(
       self.is_global_identifier_reference(ident) || ident.reference_id.get().is_none(),
       "{} doesn't get processed in {}",
@@ -341,11 +343,13 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
 
   fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {
     // Ensure `{ a }` would be rewritten to `{ a: a$1 }` instead of `{ a$1 }`
-    match prop.value {
-      ast::Expression::Identifier(ref id_ref) if prop.shorthand => {
-        if let Some(expr) = self.generate_finalized_expr_for_reference(id_ref, true) {
+    match &mut prop.value {
+      ast::Expression::Identifier(id_ref) if prop.shorthand => {
+        if let Some(expr) = self.generate_finalized_expr_for_reference(id_ref, false) {
           prop.value = expr;
           prop.shorthand = false;
+        } else {
+          id_ref.reference_id.get_mut().take();
         }
       }
       _ => {}
@@ -371,6 +375,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               ident.name = canonical_name.clone();
               prop.shorthand = false;
             }
+            ident.symbol_id.get_mut().take();
           }
         }
         // Ensure `const { a = 1 } = ...;` will be rewritten to `const { a: a$1 = 1 } = ...` instead of `const { a$1 = 1 } = ...`
@@ -388,6 +393,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               ident.name = canonical_name.clone();
               prop.shorthand = false;
             }
+            ident.symbol_id.get_mut().take();
           }
         }
         _ => {
@@ -435,6 +441,53 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     self.visit_expression(&mut expr.source);
     for arg in expr.arguments.iter_mut() {
       self.visit_expression(arg);
+    }
+  }
+
+  fn visit_assignment_target_property(
+    &mut self,
+    property: &mut ast::AssignmentTargetProperty<'ast>,
+  ) {
+    if let ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(prop) = property {
+      if let Some(target) =
+        self.generate_finalized_simple_assignment_target_for_reference(&prop.binding)
+      {
+        *property = ast::AssignmentTargetProperty::AssignmentTargetPropertyProperty(
+          ast::AssignmentTargetPropertyProperty {
+            name: ast::PropertyKey::Identifier(
+              self.snippet.id_name(prop.binding.name.clone()).into_in(self.alloc),
+            ),
+            binding: if let Some(init) = prop.init.take() {
+              ast::AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
+                ast::AssignmentTargetWithDefault {
+                  binding: ast::AssignmentTarget::SimpleAssignmentTarget(target),
+                  init,
+                  span: Span::default(),
+                }
+                .into_in(self.alloc),
+              )
+            } else {
+              ast::AssignmentTargetMaybeDefault::AssignmentTarget(
+                ast::AssignmentTarget::SimpleAssignmentTarget(target),
+              )
+            },
+            span: Span::default(),
+          }
+          .into_in(self.alloc),
+        );
+      } else {
+        prop.binding.reference_id.get_mut().take();
+      }
+    }
+
+    // visit children
+    match property {
+      ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(ident) => {
+        self.visit_assignment_target_property_identifier(ident);
+      }
+      ast::AssignmentTargetProperty::AssignmentTargetPropertyProperty(prop) => {
+        self.visit_assignment_target_property_property(prop);
+      }
     }
   }
 

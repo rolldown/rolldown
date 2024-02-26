@@ -53,6 +53,45 @@ where
     None
   }
 
+  /// return `None` if
+  /// - the reference is for a global variable/the reference doesn't have a `SymbolId`
+  /// - the reference doesn't have a `ReferenceId`
+  /// - the canonical name is the same as the original name
+  pub fn generate_finalized_simple_assignment_target_for_reference(
+    &self,
+    id_ref: &IdentifierReference,
+  ) -> Option<ast::SimpleAssignmentTarget<'ast>> {
+    // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
+    let reference_id = id_ref.reference_id.get()?;
+
+    // we will hit this branch if the reference points to a global variable
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
+
+    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+    let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
+    let symbol = self.ctx.symbols.get(canonical_ref);
+
+    if let Some(ns_alias) = &symbol.namespace_alias {
+      let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
+      let prop_name = &ns_alias.property_name;
+      let access_expr =
+        self.snippet.literal_prop_access_member_expr(canonical_ns_name.clone(), prop_name.clone());
+
+      return Some(ast::SimpleAssignmentTarget::MemberAssignmentTarget(
+        access_expr.into_in(self.alloc),
+      ));
+    }
+
+    let canonical_name = self.canonical_name_for(canonical_ref);
+    if id_ref.name != canonical_name {
+      return Some(ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
+        self.snippet.id_ref(canonical_name.clone()).into_in(self.alloc),
+      ));
+    }
+
+    None
+  }
+
   pub fn try_rewrite_identifier_reference_expr(
     &mut self,
     expr: &mut ast::Expression<'ast>,

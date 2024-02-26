@@ -1,0 +1,24 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/rollup/simplify-with-destructuring
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "assert";
+
+// main.js
+let foo, unused;
+null,{foo} = {
+	foo:'bar'
+};
+assert.strictEqual(foo, 'bar');
+const assign = () => unused = {foo} = {
+	foo:'baz'
+};
+assign();
+assert.strictEqual(foo, 'baz');
+```

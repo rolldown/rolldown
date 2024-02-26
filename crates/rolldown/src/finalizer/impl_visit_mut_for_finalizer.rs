@@ -1,7 +1,7 @@
 use oxc::{
-  allocator::{self},
+  allocator,
   ast::{
-    ast::{self},
+    ast::{self, SimpleAssignmentTarget},
     VisitMut,
   },
 };
@@ -278,17 +278,23 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       if ident.name != canonical_name {
         ident.name = canonical_name.clone();
       }
+      *ident.symbol_id.get_mut() = None;
     } else {
       // Some `BindingIdentifier`s constructed by bundler don't have `SymbolId` and we just ignore them.
     }
   }
 
+  fn visit_identifier_reference(&mut self, ident: &mut ast::IdentifierReference) {
+    debug_assert!(
+      self.is_global_identifier_reference(ident) || ident.reference_id.get().is_none(),
+      "{} doesn't get processed in {}",
+      ident.name,
+      self.ctx.module.repr_name
+    );
+  }
+
   fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
-    if let ast::Expression::Identifier(id_ref) = &mut expr.callee {
-      if let Some(new_name) = self.generate_finalized_expr_for_reference(id_ref, true) {
-        expr.callee = new_name;
-      }
-    }
+    self.try_rewrite_identifier_reference_expr(&mut expr.callee, true);
 
     // visit children
     for arg in expr.arguments.iter_mut() {
@@ -327,11 +333,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       }
     }
 
-    if let Some(id_ref) = expr.as_identifier() {
-      if let Some(new_expr) = self.generate_finalized_expr_for_reference(id_ref, false) {
-        *expr = new_expr;
-      }
-    }
+    self.try_rewrite_identifier_reference_expr(expr, false);
 
     // visit children
     self.visit_expression_match(expr);
@@ -408,7 +410,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
   }
 
   fn visit_import_expression(&mut self, expr: &mut ast::ImportExpression<'ast>) {
-    // Make sure the import expression is in correct form. If it's not, we should ignore it.
+    // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
     match &mut expr.source {
       ast::Expression::StringLiteral(str) if expr.arguments.len() == 0 => {
         let rec_id = self.ctx.module.imports[&expr.span];
@@ -433,6 +435,32 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     self.visit_expression(&mut expr.source);
     for arg in expr.arguments.iter_mut() {
       self.visit_expression(arg);
+    }
+  }
+
+  fn visit_simple_assignment_target(&mut self, target: &mut SimpleAssignmentTarget<'ast>) {
+    self.rewrite_simple_assignment_target(target);
+
+    // visit children
+    match target {
+      SimpleAssignmentTarget::AssignmentTargetIdentifier(ident) => {
+        self.visit_identifier_reference(ident);
+      }
+      SimpleAssignmentTarget::MemberAssignmentTarget(expr) => {
+        self.visit_member_expression(expr);
+      }
+      SimpleAssignmentTarget::TSAsExpression(expr) => {
+        self.visit_expression(&mut expr.expression);
+      }
+      SimpleAssignmentTarget::TSSatisfiesExpression(expr) => {
+        self.visit_expression(&mut expr.expression);
+      }
+      SimpleAssignmentTarget::TSNonNullExpression(expr) => {
+        self.visit_expression(&mut expr.expression);
+      }
+      SimpleAssignmentTarget::TSTypeAssertion(expr) => {
+        self.visit_expression(&mut expr.expression);
+      }
     }
   }
 }

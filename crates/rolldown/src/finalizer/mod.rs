@@ -9,6 +9,7 @@ use rolldown_oxc::{AstSnippet, BindingPatternExt, Dummy, IntoIn, TakeIn};
 mod finalizer_context;
 mod impl_visit_mut_for_finalizer;
 pub use finalizer_context::FinalizerContext;
+mod rename;
 
 pub struct Finalizer<'me, 'ast> {
   pub alloc: &'ast Allocator,
@@ -75,51 +76,6 @@ where
       }
     }
     true
-  }
-
-  /// return `None` if
-  /// - the reference is for a global variable/the reference doesn't have a `SymbolId`
-  /// - the reference doesn't have a `ReferenceId`
-  /// - the canonical name is the same as the original name
-  fn generate_finalized_expr_for_reference(
-    &self,
-    id_ref: &IdentifierReference,
-    is_callee: bool,
-  ) -> Option<ast::Expression<'ast>> {
-    // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
-    let reference_id = id_ref.reference_id.get()?;
-
-    // we will hit this branch if the reference points to a global variable
-    let symbol_id = self.scope.symbol_id_for(reference_id)?;
-
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-    let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
-    let symbol = self.ctx.symbols.get(canonical_ref);
-
-    if let Some(ns_alias) = &symbol.namespace_alias {
-      let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
-      let prop_name = &ns_alias.property_name;
-      let access_expr = self
-        .snippet
-        .literal_prop_access_member_expr_expr(canonical_ns_name.clone(), prop_name.clone());
-
-      return Some(if is_callee {
-        // `foo()` might be transformed to `xxx.foo()`. To keep the semantic of callee's `this` binding,
-        // we need to wrap the transformed callee. Make it like `(0, xxx.foo)()`.
-        let wrapped_callee =
-          self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0), access_expr);
-        wrapped_callee
-      } else {
-        access_expr
-      });
-    }
-
-    let canonical_name = self.canonical_name_for(canonical_ref);
-    if id_ref.name != canonical_name {
-      return Some(self.snippet.id_ref_expr(canonical_name.clone()));
-    }
-
-    None
   }
 
   fn generate_finalized_expr_for_symbol_ref(&self, symbol_ref: SymbolRef) -> ast::Expression<'ast> {

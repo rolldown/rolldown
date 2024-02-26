@@ -199,6 +199,7 @@ pub trait ExpressionExt<'ast> {
   fn as_call_expression(&self) -> Option<&ast::CallExpression<'ast>>;
 
   fn as_identifier(&self) -> Option<&ast::IdentifierReference>;
+  fn as_identifier_mut(&mut self) -> Option<&mut ast::IdentifierReference>;
 }
 
 impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
@@ -211,6 +212,14 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
   }
 
   fn as_identifier(&self) -> Option<&ast::IdentifierReference> {
+    if let ast::Expression::Identifier(ident) = self {
+      Some(ident)
+    } else {
+      None
+    }
+  }
+
+  fn as_identifier_mut(&mut self) -> Option<&mut ast::IdentifierReference> {
     if let ast::Expression::Identifier(ident) = self {
       Some(ident)
     } else {

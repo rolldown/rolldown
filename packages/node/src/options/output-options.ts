@@ -23,11 +23,12 @@ function normalizeSourcemap(sourcemap: OutputOptions['sourcemap']): BindingOutpu
   switch (sourcemap) {
     case true:
       return "file"
-  
+
     case "inline":
       return "inline"
 
     case false:
+    case undefined:
     case "hidden":
       return "hidden"
 

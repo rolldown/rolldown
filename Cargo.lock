@@ -1684,7 +1684,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_fs",
- "rolldown_oxc",
+ "rolldown_oxc_utils",
  "rolldown_plugin",
  "rolldown_resolver",
  "rolldown_sourcemap",
@@ -1735,7 +1735,7 @@ dependencies = [
  "once_cell",
  "oxc",
  "regex",
- "rolldown_oxc",
+ "rolldown_oxc_utils",
  "rolldown_sourcemap",
  "rustc-hash",
  "string_wizard",
@@ -1762,7 +1762,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_oxc"
+name = "rolldown_oxc_utils"
 version = "0.1.0"
 dependencies = [
  "oxc",
@@ -1777,7 +1777,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_fs",
- "rolldown_oxc",
+ "rolldown_oxc_utils",
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_tracing",

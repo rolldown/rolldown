@@ -1,6 +1,6 @@
 use oxc::ast::VisitMut;
 use rolldown_common::NormalModule;
-use rolldown_oxc::{AstSnippet, OxcCompiler, OxcProgram};
+use rolldown_oxc_utils::{AstSnippet, OxcCompiler, OxcProgram};
 use string_wizard::MagicString;
 
 use super::{

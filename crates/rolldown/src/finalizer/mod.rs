@@ -4,7 +4,7 @@ use oxc::{
   span::Atom,
 };
 use rolldown_common::{AstScope, ImportRecordId, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc::{AstSnippet, BindingPatternExt, Dummy, IntoIn, TakeIn};
+use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, Dummy, IntoIn, TakeIn};
 
 mod finalizer_context;
 mod impl_visit_mut_for_finalizer;

@@ -6,7 +6,7 @@ use rolldown_common::{
   AstScope, ExportsKind, FilePath, ModuleType, NormalModuleId, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
-use rolldown_oxc::{OxcCompiler, OxcProgram};
+use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
 
 use super::Msg;
 use crate::{

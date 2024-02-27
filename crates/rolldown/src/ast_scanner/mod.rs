@@ -19,7 +19,7 @@ use rolldown_common::{
   SymbolRef,
 };
 use rolldown_error::BuildError;
-use rolldown_oxc::{BindingIdentifierExt, BindingPatternExt};
+use rolldown_oxc_utils::{BindingIdentifierExt, BindingPatternExt};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
@@ -295,10 +295,10 @@ impl<'ast> AstScanner<'ast> {
         None
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
-        fn_decl.id.as_ref().map(rolldown_oxc::BindingIdentifierExt::expect_symbol_id)
+        fn_decl.id.as_ref().map(rolldown_oxc_utils::BindingIdentifierExt::expect_symbol_id)
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => {
-        cls_decl.id.as_ref().map(rolldown_oxc::BindingIdentifierExt::expect_symbol_id)
+        cls_decl.id.as_ref().map(rolldown_oxc_utils::BindingIdentifierExt::expect_symbol_id)
       }
       _ => unreachable!(),
     };

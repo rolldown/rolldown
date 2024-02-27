@@ -1,7 +1,7 @@
 use index_vec::IndexVec;
 use rolldown_common::{ImportRecordId, NormalModuleId, RawImportRecord};
 use rolldown_error::BuildError;
-use rolldown_oxc::OxcProgram;
+use rolldown_oxc_utils::OxcProgram;
 
 use crate::types::resolved_request_info::ResolvedRequestInfo;
 use crate::types::{ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder};

@@ -6,7 +6,7 @@ use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, NormalModule, NormalModuleId, StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
-use rolldown_oxc::OxcProgram;
+use rolldown_oxc_utils::OxcProgram;
 
 use crate::{
   InputOptions,

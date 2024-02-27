@@ -8,7 +8,7 @@ use rolldown_common::{
   ResourceId, SymbolRef,
 };
 use rolldown_fs::FileSystem;
-use rolldown_oxc::{OxcCompiler, OxcProgram};
+use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
 use rolldown_plugin::HookResolveIdArgsOptions;
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;

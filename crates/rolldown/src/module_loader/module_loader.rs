@@ -7,7 +7,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
-use rolldown_oxc::OxcProgram;
+use rolldown_oxc_utils::OxcProgram;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::normal_module_task::NormalModuleTask;

@@ -7,7 +7,7 @@ use oxc::{
   span::Span,
 };
 use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc::{Dummy, ExpressionExt, IntoIn, StatementExt, TakeIn};
+use rolldown_oxc_utils::{Dummy, ExpressionExt, IntoIn, StatementExt, TakeIn};
 
 use super::Finalizer;
 

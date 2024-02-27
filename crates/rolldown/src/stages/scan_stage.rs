@@ -4,7 +4,7 @@ use index_vec::IndexVec;
 use rolldown_common::{EntryPoint, ImportKind, NormalModuleId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
-use rolldown_oxc::OxcProgram;
+use rolldown_oxc_utils::OxcProgram;
 use rolldown_plugin::HookResolveIdArgsOptions;
 use rolldown_utils::block_on_spawn_all;
 

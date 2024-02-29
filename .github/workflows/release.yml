@@ -282,5 +282,5 @@ jobs:
         continue-on-error: true
 
       - name: cat package.json
-        run: cat package.json
+        run: cat package.json && git status && git diff
         shell: bash  

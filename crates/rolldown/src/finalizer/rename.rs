@@ -30,9 +30,10 @@ where
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      let access_expr = self
-        .snippet
-        .literal_prop_access_member_expr_expr(canonical_ns_name.clone(), prop_name.clone());
+      let access_expr = self.snippet.literal_prop_access_member_expr_expr(
+        canonical_ns_name.to_oxc_atom(),
+        prop_name.to_oxc_atom(),
+      );
 
       return Some(if is_callee {
         // `foo()` might be transformed to `xxx.foo()`. To keep the semantic of callee's `this` binding,
@@ -46,8 +47,8 @@ where
     }
 
     let canonical_name = self.canonical_name_for(canonical_ref);
-    if id_ref.name != canonical_name {
-      return Some(self.snippet.id_ref_expr(canonical_name.clone()));
+    if id_ref.name != canonical_name.as_str() {
+      return Some(self.snippet.id_ref_expr(canonical_name.to_oxc_atom()));
     }
 
     None
@@ -74,8 +75,9 @@ where
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      let access_expr =
-        self.snippet.literal_prop_access_member_expr(canonical_ns_name.clone(), prop_name.clone());
+      let access_expr = self
+        .snippet
+        .literal_prop_access_member_expr(canonical_ns_name.to_oxc_atom(), prop_name.to_oxc_atom());
 
       return Some(ast::SimpleAssignmentTarget::MemberAssignmentTarget(
         access_expr.into_in(self.alloc),
@@ -83,9 +85,9 @@ where
     }
 
     let canonical_name = self.canonical_name_for(canonical_ref);
-    if id_ref.name != canonical_name {
+    if id_ref.name != canonical_name.as_str() {
       return Some(ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
-        self.snippet.id_ref(canonical_name.clone()).into_in(self.alloc),
+        self.snippet.id_ref(canonical_name.to_oxc_atom()).into_in(self.alloc),
       ));
     }
 
@@ -132,14 +134,15 @@ where
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      let access_expr =
-        self.snippet.literal_prop_access_member_expr(canonical_ns_name.clone(), prop_name.clone());
+      let access_expr = self
+        .snippet
+        .literal_prop_access_member_expr(canonical_ns_name.to_oxc_atom(), prop_name.to_oxc_atom());
       *simple_target =
         ast::SimpleAssignmentTarget::MemberAssignmentTarget(access_expr.into_in(self.alloc));
     } else {
       let canonical_name = self.canonical_name_for(canonical_ref);
-      if target_id_ref.name != canonical_name {
-        target_id_ref.name = canonical_name.clone();
+      if target_id_ref.name != canonical_name.as_str() {
+        target_id_ref.name = canonical_name.to_oxc_atom();
       }
       *target_id_ref.reference_id.get_mut() = None;
     }

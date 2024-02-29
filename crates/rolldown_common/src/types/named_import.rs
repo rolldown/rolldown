@@ -1,4 +1,4 @@
-use oxc::span::Atom;
+use rolldown_rstr::Rstr;
 
 use crate::SymbolRef;
 
@@ -24,7 +24,7 @@ pub struct NamedImport {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Specifier {
   Star,
-  Literal(Atom),
+  Literal(Rstr),
 }
 
 impl Specifier {
@@ -33,12 +33,12 @@ impl Specifier {
   }
 
   pub fn is_default(&self) -> bool {
-    matches!(self, Self::Literal(atom) if atom == &"default")
+    matches!(self, Self::Literal(atom) if atom.as_str() == "default")
   }
 }
 
-impl From<Atom> for Specifier {
-  fn from(atom: Atom) -> Self {
+impl From<Rstr> for Specifier {
+  fn from(atom: Rstr) -> Self {
     Self::Literal(atom)
   }
 }

@@ -1,6 +1,6 @@
-use oxc::span::Atom;
 use rolldown_common::{NormalModule, NormalModuleId, SymbolRef};
 
+use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
 use crate::{
@@ -20,7 +20,7 @@ pub struct FinalizerContext<'me> {
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub symbols: &'me Symbols,
-  pub canonical_names: &'me FxHashMap<SymbolRef, Atom>,
+  pub canonical_names: &'me FxHashMap<SymbolRef, Rstr>,
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,
 }

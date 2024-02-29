@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use oxc::{
-  semantic::SymbolId,
-  span::{Atom, Span},
-};
+use oxc::{semantic::SymbolId, span::Span};
 use rolldown_common::{
   AstScope, ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleType, NamedImport,
   NormalModule, NormalModuleId, ResourceId, StmtInfos, SymbolRef,
 };
+use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
 #[derive(Debug, Default)]
@@ -18,7 +16,7 @@ pub struct NormalModuleBuilder {
   pub repr_name: Option<String>,
   pub path: Option<ResourceId>,
   pub named_imports: Option<FxHashMap<SymbolId, NamedImport>>,
-  pub named_exports: Option<FxHashMap<Atom, LocalExport>>,
+  pub named_exports: Option<FxHashMap<Rstr, LocalExport>>,
   pub stmt_infos: Option<StmtInfos>,
   pub import_records: Option<IndexVec<ImportRecordId, ImportRecord>>,
   pub imports: Option<FxHashMap<Span, ImportRecordId>>,

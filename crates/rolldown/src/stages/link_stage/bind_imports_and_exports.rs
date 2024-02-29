@@ -202,7 +202,7 @@ pub(crate) fn add_exports_for_export_star(
 
     importee.named_exports.iter().for_each(|(alias, importee_export)| {
       // ES6 export star ignore default export
-      if alias == &"default" {
+      if alias.as_str() == "default" {
         return;
       }
 

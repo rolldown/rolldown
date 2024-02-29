@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use rolldown_rstr::ToRstr;
+
 use super::chunk::Chunk;
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 
@@ -17,7 +19,7 @@ impl Chunk {
       .flat_map(|m| m.scope.root_unresolved_references().keys().map(Cow::Borrowed))
       .for_each(|name| {
         // global names should be reserved
-        renamer.reserve(name);
+        renamer.reserve(Cow::Owned(name.to_rstr()));
       });
 
     self.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {

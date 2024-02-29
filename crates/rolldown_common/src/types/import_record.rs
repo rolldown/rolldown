@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use oxc::span::Atom;
+use rolldown_rstr::Rstr;
 
 use crate::{ModuleId, SymbolRef};
 
@@ -34,7 +34,7 @@ impl Display for ImportKind {
 #[derive(Debug)]
 pub struct RawImportRecord {
   // Module Request
-  pub module_request: Atom,
+  pub module_request: Rstr,
   pub kind: ImportKind,
   pub namespace_ref: SymbolRef,
   pub contains_import_star: bool,
@@ -42,7 +42,7 @@ pub struct RawImportRecord {
 }
 
 impl RawImportRecord {
-  pub fn new(specifier: Atom, kind: ImportKind, namespace_ref: SymbolRef) -> Self {
+  pub fn new(specifier: Rstr, kind: ImportKind, namespace_ref: SymbolRef) -> Self {
     Self {
       module_request: specifier,
       kind,
@@ -67,7 +67,7 @@ impl RawImportRecord {
 #[derive(Debug)]
 pub struct ImportRecord {
   // Module Request
-  pub module_request: Atom,
+  pub module_request: Rstr,
   pub resolved_module: ModuleId,
   pub kind: ImportKind,
   pub namespace_ref: SymbolRef,

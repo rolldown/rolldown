@@ -62,7 +62,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
               let wrapper_ref_name =
                 self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-              program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name.clone()));
+              program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name.to_oxc_atom()));
             }
 
             match importee.exports_kind {
@@ -77,9 +77,9 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
                     self
                       .snippet
                       .call_expr_with_2arg_expr(
-                        re_export_fn_name.clone(),
-                        importer_namespace_name.clone(),
-                        importee_namespace_name.clone(),
+                        re_export_fn_name.to_oxc_atom(),
+                        importer_namespace_name.to_oxc_atom(),
+                        importee_namespace_name.to_oxc_atom(),
                       )
                       .into_in(self.alloc),
                   );
@@ -97,11 +97,11 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
                   self
                     .snippet
                     .call_expr_with_2arg_expr_expr(
-                      re_export_fn_name.clone(),
-                      self.snippet.id_ref_expr(importer_namespace_name.clone()),
+                      re_export_fn_name.to_oxc_atom(),
+                      self.snippet.id_ref_expr(importer_namespace_name.to_oxc_atom()),
                       self.snippet.call_expr_with_arg_expr_expr(
-                        to_esm_fn_name.clone(),
-                        self.snippet.call_expr_expr(importee_wrapper_ref_name.clone()),
+                        to_esm_fn_name.to_oxc_atom(),
+                        self.snippet.call_expr_expr(importee_wrapper_ref_name.to_oxc_atom()),
                       ),
                     )
                     .into_in(self.alloc),
@@ -118,7 +118,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               let canonical_name_for_default_export_ref =
                 self.canonical_name_for(self.ctx.module.default_export_ref);
               top_stmt = self.snippet.var_decl_stmt(
-                canonical_name_for_default_export_ref.clone(),
+                canonical_name_for_default_export_ref.to_oxc_atom(),
                 expr.take_in(self.alloc),
               );
             }
@@ -128,7 +128,8 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               if func.id.is_none() {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
-                func.id = Some(self.snippet.id(canonical_name_for_default_export_ref.clone()));
+                func.id =
+                  Some(self.snippet.id(canonical_name_for_default_export_ref.to_oxc_atom()));
               }
               top_stmt = ast::Statement::Declaration(ast::Declaration::FunctionDeclaration(
                 func.take_in(self.alloc),
@@ -140,7 +141,8 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               if class.id.is_none() {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
-                class.id = Some(self.snippet.id(canonical_name_for_default_export_ref.clone()));
+                class.id =
+                  Some(self.snippet.id(canonical_name_for_default_export_ref.to_oxc_atom()));
               }
               top_stmt = ast::Statement::Declaration(ast::Declaration::ClassDeclaration(
                 class.take_in(self.alloc),
@@ -197,8 +199,8 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
           let old_body = program.body.take_in(self.alloc);
 
           program.body.push(self.snippet.commonjs_wrapper_stmt(
-            wrap_ref_name.clone(),
-            commonjs_ref_name.clone(),
+            wrap_ref_name.to_oxc_atom(),
+            commonjs_ref_name.to_oxc_atom(),
             old_body,
           ));
         }
@@ -258,8 +260,8 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             )));
           }
           program.body.push(self.snippet.esm_wrapper_stmt(
-            wrap_ref_name.clone(),
-            esm_ref_name.clone(),
+            wrap_ref_name.to_oxc_atom(),
+            esm_ref_name.to_oxc_atom(),
             stmts_inside_closure,
           ));
         }
@@ -276,8 +278,8 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       let symbol = self.ctx.symbols.get(canonical_ref);
       assert!(symbol.namespace_alias.is_none());
       let canonical_name = self.canonical_name_for(symbol_ref);
-      if ident.name != canonical_name {
-        ident.name = canonical_name.clone();
+      if ident.name != canonical_name.as_str() {
+        ident.name = canonical_name.to_oxc_atom();
       }
       ident.symbol_id.get_mut().take();
     } else {
@@ -321,13 +323,16 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             let importee_linking_info = &self.ctx.linking_infos[importee.id];
             let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
             if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-              *expr = self.snippet.call_expr_expr(wrap_ref_name.clone());
+              *expr = self.snippet.call_expr_expr(wrap_ref_name.to_oxc_atom());
             } else {
               let ns_name = self.canonical_name_for(importee.namespace_symbol);
               let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
               *expr = self.snippet.seq2_in_paren_expr(
-                self.snippet.call_expr_expr(wrap_ref_name.clone()),
-                self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name.clone(), ns_name.clone()),
+                self.snippet.call_expr_expr(wrap_ref_name.to_oxc_atom()),
+                self.snippet.call_expr_with_arg_expr(
+                  to_commonjs_ref_name.to_oxc_atom(),
+                  ns_name.to_oxc_atom(),
+                ),
               );
             }
           }
@@ -371,8 +376,8 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
         ast::BindingPatternKind::BindingIdentifier(ident) if prop.shorthand => {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
-            if ident.name != canonical_name {
-              ident.name = canonical_name.clone();
+            if ident.name != canonical_name.as_str() {
+              ident.name = canonical_name.to_oxc_atom();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();
@@ -389,8 +394,8 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
           };
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
-            if ident.name != canonical_name {
-              ident.name = canonical_name.clone();
+            if ident.name != canonical_name.as_str() {
+              ident.name = canonical_name.to_oxc_atom();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();

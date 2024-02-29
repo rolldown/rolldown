@@ -9,6 +9,7 @@ use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, Dummy, IntoIn, TakeIn};
 mod finalizer_context;
 mod impl_visit_mut_for_finalizer;
 pub use finalizer_context::FinalizerContext;
+use rolldown_rstr::Rstr;
 mod rename;
 
 pub struct Finalizer<'me, 'ast> {
@@ -31,11 +32,11 @@ where
     self.scope.is_unresolved(reference_id)
   }
 
-  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Atom {
+  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {
     self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
   }
 
-  pub fn canonical_name_for_runtime(&self, name: &str) -> &Atom {
+  pub fn canonical_name_for_runtime(&self, name: &str) -> &Rstr {
     let symbol = self.ctx.runtime.resolve_symbol(name);
     self.canonical_name_for(symbol)
   }
@@ -60,10 +61,10 @@ where
         let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
         *stmt = self.snippet.var_decl_stmt(
-          binding_name_for_wrapper_call_ret.clone(),
+          binding_name_for_wrapper_call_ret.to_oxc_atom(),
           self.snippet.call_expr_with_arg_expr_expr(
-            to_esm_fn_name.clone(),
-            self.snippet.call_expr_expr(wrapper_ref_name.clone()),
+            to_esm_fn_name.to_oxc_atom(),
+            self.snippet.call_expr_expr(wrapper_ref_name.to_oxc_atom()),
           ),
         );
         return false;
@@ -71,7 +72,7 @@ where
       // Replace the statement with something like `init_foo()`
       WrapKind::Esm => {
         let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-        *stmt = self.snippet.call_expr_stmt(wrapper_ref_name.clone());
+        *stmt = self.snippet.call_expr_stmt(wrapper_ref_name.to_oxc_atom());
         return false;
       }
     }
@@ -85,14 +86,15 @@ where
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      let access_expr = self
-        .snippet
-        .literal_prop_access_member_expr_expr(canonical_ns_name.clone(), prop_name.clone());
+      let access_expr = self.snippet.literal_prop_access_member_expr_expr(
+        canonical_ns_name.to_oxc_atom(),
+        prop_name.to_oxc_atom(),
+      );
 
       access_expr
     } else {
       let canonical_name = self.canonical_name_for(canonical_ref);
-      self.snippet.id_ref_expr(canonical_name.clone())
+      self.snippet.id_ref_expr(canonical_name.to_oxc_atom())
     }
   }
 
@@ -166,9 +168,10 @@ where
   fn generate_namespace_variable_declaration(&self) -> Vec<ast::Statement<'ast>> {
     let ns_name = self.canonical_name_for(self.ctx.module.namespace_symbol);
     // construct `var ns_name = {}`
-    let namespace_decl_stmt = self
-      .snippet
-      .var_decl_stmt(ns_name.clone(), ast::Expression::ObjectExpression(Dummy::dummy(self.alloc)));
+    let namespace_decl_stmt = self.snippet.var_decl_stmt(
+      ns_name.to_oxc_atom(),
+      ast::Expression::ObjectExpression(Dummy::dummy(self.alloc)),
+    );
 
     let exports_len = self.ctx.linking_info.canonical_exports_len();
 
@@ -187,7 +190,7 @@ where
       arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
         ast::ObjectProperty {
           key: ast::PropertyKey::Identifier(
-            self.snippet.id_name(prop_name.clone()).into_in(self.alloc),
+            self.snippet.id_name(prop_name.to_oxc_atom()).into_in(self.alloc),
           ),
           value: self.snippet.only_return_arrow_expr(returned),
           ..Dummy::dummy(self.alloc)
@@ -198,10 +201,10 @@ where
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
     let mut export_call_expr =
-      self.snippet.call_expr(self.canonical_name_for_runtime("__export").clone());
+      self.snippet.call_expr(self.canonical_name_for_runtime("__export").to_oxc_atom());
     export_call_expr
       .arguments
-      .push(ast::Argument::Expression(self.snippet.id_ref_expr(ns_name.clone())));
+      .push(ast::Argument::Expression(self.snippet.id_ref_expr(ns_name.to_oxc_atom())));
     export_call_expr.arguments.push(ast::Argument::Expression(ast::Expression::ObjectExpression(
       arg_obj_expr.into_in(self.alloc),
     )));

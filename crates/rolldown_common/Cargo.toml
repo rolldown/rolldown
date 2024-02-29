@@ -13,8 +13,9 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-rolldown_oxc_utils       = { path = "../rolldown_oxc_utils" }
+rolldown_oxc_utils = { path = "../rolldown_oxc_utils" }
 rolldown_sourcemap = { path = "../rolldown_sourcemap" }
+rolldown_rstr      = { path = "../rolldown_rstr" }
 oxc                = { workspace = true, features = ["semantic"] }
 rustc-hash         = { workspace = true }
 index_vec          = { workspace = true }

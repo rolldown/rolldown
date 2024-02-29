@@ -36,6 +36,7 @@
     "repr",
     "rolldown",
     "rollup",
+    "Rstr",
     "rustc",
     "smallvec",
     "treeshake"

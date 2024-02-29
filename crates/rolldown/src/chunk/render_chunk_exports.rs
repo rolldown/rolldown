@@ -1,5 +1,5 @@
-use oxc::span::Atom;
 use rolldown_common::{SymbolRef, WrapKind};
+use rolldown_rstr::Rstr;
 use string_wizard::MagicString;
 
 use crate::{stages::link_stage::LinkStageOutput, OutputFormat, OutputOptions};
@@ -62,7 +62,7 @@ impl Chunk {
     Some(s)
   }
 
-  fn get_export_items(&self, graph: &LinkStageOutput) -> Vec<(Atom, SymbolRef)> {
+  fn get_export_items(&self, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolRef)> {
     match self.kind {
       ChunkKind::EntryPoint { module, .. } => {
         let meta = &graph.metas[module];

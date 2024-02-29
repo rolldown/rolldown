@@ -20,6 +20,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::{BindingIdentifierExt, BindingPatternExt};
+use rolldown_rstr::{Rstr, ToRstr};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
@@ -29,7 +30,7 @@ use super::types::ast_symbols::AstSymbols;
 pub struct ScanResult {
   pub repr_name: String,
   pub named_imports: FxHashMap<SymbolId, NamedImport>,
-  pub named_exports: FxHashMap<Atom, LocalExport>,
+  pub named_exports: FxHashMap<Rstr, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordId, RawImportRecord>,
   pub star_exports: Vec<ImportRecordId>,
@@ -149,7 +150,7 @@ impl<'ast> AstScanner<'ast> {
     let namespace_ref: SymbolRef =
       (self.idx, self.symbol_table.create_symbol(Atom::new_inline(""), self.scope.root_scope_id()))
         .into();
-    let rec = RawImportRecord::new(module_request.clone(), kind, namespace_ref);
+    let rec = RawImportRecord::new(module_request.to_rstr(), kind, namespace_ref);
 
     let id = self.result.import_records.push(rec);
     self.current_stmt_info.import_records.push(id);
@@ -160,7 +161,7 @@ impl<'ast> AstScanner<'ast> {
     self.result.named_imports.insert(
       local,
       NamedImport {
-        imported: imported.clone().into(),
+        imported: imported.to_rstr().into(),
         imported_as: (self.idx, local).into(),
         record_id,
       },
@@ -178,14 +179,14 @@ impl<'ast> AstScanner<'ast> {
     self
       .result
       .named_exports
-      .insert(export_name.clone(), LocalExport { referenced: (self.idx, local).into() });
+      .insert(export_name.to_rstr(), LocalExport { referenced: (self.idx, local).into() });
   }
 
   fn add_local_default_export(&mut self, local: SymbolId) {
     self
       .result
       .named_exports
-      .insert(Atom::new_inline("default"), LocalExport { referenced: (self.idx, local).into() });
+      .insert("default".into(), LocalExport { referenced: (self.idx, local).into() });
   }
 
   fn add_re_export(&mut self, export_name: &Atom, imported: &Atom, record_id: ImportRecordId) {
@@ -205,7 +206,7 @@ impl<'ast> AstScanner<'ast> {
       .into();
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import = NamedImport {
-      imported: imported.clone().into(),
+      imported: imported.to_rstr().into(),
       imported_as: generated_imported_as_ref,
       record_id,
     };
@@ -216,7 +217,7 @@ impl<'ast> AstScanner<'ast> {
     self
       .result
       .named_exports
-      .insert(export_name.clone(), LocalExport { referenced: generated_imported_as_ref });
+      .insert(export_name.to_rstr(), LocalExport { referenced: generated_imported_as_ref });
   }
 
   fn add_star_re_export(&mut self, export_name: &Atom, record_id: ImportRecordId) {
@@ -231,7 +232,7 @@ impl<'ast> AstScanner<'ast> {
     self
       .result
       .named_exports
-      .insert(export_name.clone(), LocalExport { referenced: generated_imported_as_ref });
+      .insert(export_name.to_rstr(), LocalExport { referenced: generated_imported_as_ref });
   }
 
   fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration) {
@@ -263,7 +264,7 @@ impl<'ast> AstScanner<'ast> {
             var_decl.declarations.iter().for_each(|decl| {
               decl.id.binding_identifiers().into_iter().for_each(|id| {
                 self.result.named_exports.insert(
-                  id.name.clone(),
+                  id.name.to_rstr(),
                   LocalExport { referenced: (self.idx, id.expect_symbol_id()).into() },
                 );
               });

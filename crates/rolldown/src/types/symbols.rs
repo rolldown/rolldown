@@ -1,6 +1,7 @@
 use index_vec::IndexVec;
 use oxc::{semantic::SymbolId, span::Atom};
 use rolldown_common::{NormalModuleId, SymbolRef};
+use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
 use crate::chunk::ChunkId;
@@ -62,8 +63,8 @@ impl Symbols {
   pub fn canonical_name_for<'name>(
     &self,
     refer: SymbolRef,
-    canonical_names: &'name FxHashMap<SymbolRef, Atom>,
-  ) -> &'name Atom {
+    canonical_names: &'name FxHashMap<SymbolRef, Rstr>,
+  ) -> &'name Rstr {
     let canonical_ref = self.par_canonical_ref_for(refer);
     &canonical_names[&canonical_ref]
   }

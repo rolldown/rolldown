@@ -18,10 +18,11 @@ rolldown_tracing   = { path = "../rolldown_tracing" }
 rolldown_utils     = { path = "../rolldown_utils" }
 rolldown_resolver  = { path = "../rolldown_resolver" }
 rolldown_error     = { path = "../rolldown_error" }
-rolldown_oxc_utils       = { path = "../rolldown_oxc_utils" }
+rolldown_oxc_utils = { path = "../rolldown_oxc_utils" }
 rolldown_fs        = { path = "../rolldown_fs" }
 rolldown_sourcemap = { path = "../rolldown_sourcemap" }
 rolldown_plugin    = { path = "../rolldown_plugin" }
+rolldown_rstr      = { path = "../rolldown_rstr" }
 derivative         = { workspace = true }
 sugar_path         = { workspace = true }
 oxc                = { workspace = true }

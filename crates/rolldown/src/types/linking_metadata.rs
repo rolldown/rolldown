@@ -1,6 +1,6 @@
 use index_vec::IndexVec;
-use oxc::span::Atom;
 use rolldown_common::{NormalModuleId, ResolvedExport, StmtInfoId, SymbolRef, WrapKind};
+use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
 use super::symbols::Symbols;
@@ -35,10 +35,10 @@ pub struct LinkingMetadata {
   pub wrapper_stmt_info: Option<StmtInfoId>,
   pub wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
-  pub resolved_exports: FxHashMap<Atom, ResolvedExport>,
+  pub resolved_exports: FxHashMap<Rstr, ResolvedExport>,
   // Store the names of exclude ambiguous resolved exports.
   // It will be used to generate chunk exports and module namespace binding.
-  sorted_and_non_ambiguous_resolved_exports: Vec<Atom>,
+  sorted_and_non_ambiguous_resolved_exports: Vec<Rstr>,
   // If a esm module has export star from commonjs, it will be marked as ESMWithDynamicFallback at linker.
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
@@ -46,7 +46,7 @@ pub struct LinkingMetadata {
 }
 
 impl LinkingMetadata {
-  pub fn canonical_exports(&self) -> impl Iterator<Item = (&Atom, &ResolvedExport)> {
+  pub fn canonical_exports(&self) -> impl Iterator<Item = (&Rstr, &ResolvedExport)> {
     self
       .sorted_and_non_ambiguous_resolved_exports
       .iter()

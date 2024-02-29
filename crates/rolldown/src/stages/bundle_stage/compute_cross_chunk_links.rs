@@ -18,6 +18,7 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
   ExportsKind, ExternalModuleId, ImportKind, ModuleId, NamedImport, SymbolRef,
 };
+use rolldown_rstr::{Rstr, ToRstr};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 type ChunkMetaImports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
@@ -189,8 +190,10 @@ impl<'a> BundleStage<'a> {
     let mut name_count = FxHashMap::default();
     for (chunk_id, chunk) in chunk_graph.chunks.iter_mut_enumerated() {
       for export in chunk_meta_exports_vec[chunk_id].iter().copied() {
-        let original_name = self.link_output.symbols.get_original_name(export);
-        let count = name_count.entry(Cow::Borrowed(original_name)).or_insert(0u32);
+        let original_name: rolldown_rstr::Rstr =
+          self.link_output.symbols.get_original_name(export).to_rstr();
+        let key: Cow<'_, Rstr> = Cow::Owned(original_name.clone());
+        let count = name_count.entry(key).or_insert(0u32);
         let alias = if *count == 0 {
           original_name.clone()
         } else {

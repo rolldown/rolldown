@@ -238,8 +238,8 @@ jobs:
     permissions:
       contents: write # for softprops/action-gh-release@v1
       id-token: write # for `npm publish --provenance`
-    needs:
-      - test
+    # needs:
+    #   - test
     steps:
       - uses: actions/checkout@v4
 

@@ -279,3 +279,8 @@ jobs:
         env:
           ROLLDOWN_NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: cat package.json
+        run: cat package.json
+        shell: bash  

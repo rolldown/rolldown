@@ -112,11 +112,11 @@ impl<'a> SideEffectDetector<'a> {
     match expr {
       Expression::BooleanLiteral(_)
       | Expression::NullLiteral(_)
-      | Expression::NumberLiteral(_)
+      | Expression::NumericLiteral(_)
       | Expression::BigintLiteral(_)
       | Expression::RegExpLiteral(_)
       | Expression::FunctionExpression(_)
-      | Expression::ArrowExpression(_)
+      | Expression::ArrowFunctionExpression(_)
       | Expression::StringLiteral(_) => false,
       Expression::MemberExpression(mem_expr) => Self::detect_side_effect_of_member_expr(mem_expr),
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),

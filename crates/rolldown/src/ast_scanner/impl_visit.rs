@@ -23,7 +23,7 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       if cfg!(debug_assertions) {
-        let mut codegen = Codegen::<false>::new(0, CodegenOptions);
+        let mut codegen = Codegen::<false>::new(0, CodegenOptions { enable_typescript: true });
         stmt.gen(&mut codegen, codegen::Context::default());
         self.current_stmt_info.debug_label = Some(codegen.into_code());
       }

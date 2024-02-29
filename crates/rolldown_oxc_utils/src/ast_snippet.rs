@@ -174,7 +174,7 @@ impl<'ast> AstSnippet<'ast> {
     body: allocator::Vec<'ast, Statement<'ast>>,
   ) -> ast::Statement<'ast> {
     // (exports, module) => {}
-    let mut arrow_expr = ast::ArrowExpression {
+    let mut arrow_expr = ast::ArrowFunctionExpression {
       body: ast::FunctionBody { statements: body, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
       ..Dummy::dummy(self.alloc)
     };
@@ -199,9 +199,9 @@ impl<'ast> AstSnippet<'ast> {
 
     //  __commonJS(...)
     let mut commonjs_call_expr = self.call_expr(commonjs_name);
-    commonjs_call_expr.arguments.push(ast::Argument::Expression(ast::Expression::ArrowExpression(
-      arrow_expr.into_in(self.alloc),
-    )));
+    commonjs_call_expr.arguments.push(ast::Argument::Expression(
+      ast::Expression::ArrowFunctionExpression(arrow_expr.into_in(self.alloc)),
+    ));
 
     // var require_foo = ...
 
@@ -223,16 +223,16 @@ impl<'ast> AstSnippet<'ast> {
     body: allocator::Vec<'ast, Statement<'ast>>,
   ) -> ast::Statement<'ast> {
     // () => { ... }
-    let arrow_expr = ast::ArrowExpression {
+    let arrow_expr: ast::ArrowFunctionExpression<'_> = ast::ArrowFunctionExpression {
       body: ast::FunctionBody { statements: body, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
       ..Dummy::dummy(self.alloc)
     };
 
     //  __esm(...)
     let mut commonjs_call_expr = self.call_expr(esm_fn_name);
-    commonjs_call_expr.arguments.push(ast::Argument::Expression(ast::Expression::ArrowExpression(
-      arrow_expr.into_in(self.alloc),
-    )));
+    commonjs_call_expr.arguments.push(ast::Argument::Expression(
+      ast::Expression::ArrowFunctionExpression(arrow_expr.into_in(self.alloc)),
+    ));
 
     // var init_foo = ...
 
@@ -266,8 +266,8 @@ impl<'ast> AstSnippet<'ast> {
   /// 42
   /// ```
   pub fn number_expr(&self, value: f64) -> ast::Expression<'ast> {
-    ast::Expression::NumberLiteral(
-      ast::NumberLiteral {
+    ast::Expression::NumericLiteral(
+      ast::NumericLiteral {
         span: Dummy::dummy(self.alloc),
         value,
         raw: self.alloc.alloc(value.to_string()),
@@ -294,8 +294,8 @@ impl<'ast> AstSnippet<'ast> {
     statements.push(ast::Statement::ExpressionStatement(
       ast::ExpressionStatement { expression: expr, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
     ));
-    ast::Expression::ArrowExpression(
-      ast::ArrowExpression {
+    ast::Expression::ArrowFunctionExpression(
+      ast::ArrowFunctionExpression {
         expression: true,
         body: ast::FunctionBody { statements, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
         ..Dummy::dummy(self.alloc)

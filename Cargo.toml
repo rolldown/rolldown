@@ -64,7 +64,7 @@ single_match = "allow"
 
 
 [workspace.dependencies]
-oxc            = { version = "0.7.0" }
+oxc            = { version = "0.8.0" }
 oxc_resolver   = { version = "1.2.0" }
 sugar_path     = "0.0.12"
 tokio          = { version = "1.33.0", default-features = false }

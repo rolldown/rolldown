@@ -209,7 +209,7 @@ impl<'ast> DummyIn<'ast> for ast::CallExpression<'ast> {
   }
 }
 
-impl<'ast> DummyIn<'ast> for ast::ArrowExpression<'ast> {
+impl<'ast> DummyIn<'ast> for ast::ArrowFunctionExpression<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
     Self {
       span: DummyIn::dummy(alloc),

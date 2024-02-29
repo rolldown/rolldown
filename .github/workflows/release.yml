@@ -243,14 +243,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # - name: Install node
-      #   uses: actions/setup-node@v3
-      #   with:
-      #     node-version: 18.18.0
-      #     cache: yarn
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.18.0
+          cache: yarn
 
-      # - name: Install dependencies
-      #   run: yarn install
+      - name: Install dependencies
+        run: yarn install
 
       # - name: Download Binding Artifacts
       #   uses: actions/download-artifact@v4

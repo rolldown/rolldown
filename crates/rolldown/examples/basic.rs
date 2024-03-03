@@ -12,7 +12,6 @@ async fn main() {
     cwd,
     ..Default::default()
   });
-  bundler.build().await.unwrap();
 
   let _outputs = bundler.write(OutputOptions::default()).await.unwrap();
   // println!("{outputs:#?}");

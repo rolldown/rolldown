@@ -21,9 +21,6 @@ use crate::{
   InputOptions, OutputOptions, SharedResolver,
 };
 
-// Rolldown use this alias for outside users.
-type BuildResult<T> = Result<T, Vec<BuildError>>;
-
 pub struct RolldownOutput {
   pub warnings: Vec<BuildError>,
   pub assets: Vec<Output>,
@@ -34,8 +31,6 @@ pub struct Bundler<T: FileSystem + Default> {
   plugin_driver: SharedPluginDriver,
   fs: T,
   resolver: SharedResolver<T>,
-  // Store the build result, using for generate/write.
-  build_result: Option<LinkStageOutput>,
 }
 
 impl Bundler<OsFileSystem> {
@@ -65,7 +60,6 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
       plugin_driver: Arc::new(PluginDriver::new(plugins)),
       input_options: Arc::new(input_options),
       fs,
-      build_result: None,
     }
   }
 
@@ -103,34 +97,12 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     self.bundle_up(output_options, false).await
   }
 
-  pub async fn build(&mut self) -> BuildResult<()> {
-    self.build_inner().await?;
-    Ok(())
-  }
-
   pub async fn scan(&mut self) -> BatchedResult<()> {
     self.plugin_driver.build_start().await?;
 
     let ret = self.scan_inner().await;
 
     self.call_build_end_hook(ret.err()).await?;
-
-    Ok(())
-  }
-
-  async fn build_inner(&mut self) -> BatchedResult<()> {
-    self.plugin_driver.build_start().await?;
-
-    let ret = self.try_build().await;
-
-    let (err, value) = match ret {
-      Err(e) => (Some(e), None),
-      Ok(value) => (None, Some(value)),
-    };
-
-    self.call_build_end_hook(err).await?;
-
-    self.build_result = value;
 
     Ok(())
   }
@@ -181,13 +153,19 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
   ) -> BatchedResult<RolldownOutput> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
     tracing::trace!("OutputOptions: {output_options:#?}",);
-    let graph = self.build_result.as_mut().expect("Build should success");
-    let mut bundle_stage =
-      BundleStage::new(graph, &self.input_options, &output_options, &self.plugin_driver);
+    let mut link_stage_output = self.try_build().await?;
+
+    let mut bundle_stage = BundleStage::new(
+      &mut link_stage_output,
+      &self.input_options,
+      &output_options,
+      &self.plugin_driver,
+    );
+
     let assets = bundle_stage.bundle().await?;
 
     self.plugin_driver.generate_bundle(&assets, is_write).await?;
 
-    Ok(RolldownOutput { warnings: std::mem::take(&mut graph.warnings), assets })
+    Ok(RolldownOutput { warnings: std::mem::take(&mut link_stage_output.warnings), assets })
   }
 }

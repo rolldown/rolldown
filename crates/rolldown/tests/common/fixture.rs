@@ -123,7 +123,6 @@ impl Fixture {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();
     }
 
-    bundler.build().await?;
     let value = bundler
       .write(OutputOptions {
         entry_file_names: FileNameTemplate::from("[name].mjs".to_string()),

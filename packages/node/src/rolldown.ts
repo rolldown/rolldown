@@ -5,7 +5,6 @@ import { createBundler } from './utils'
 // Compat to `rollup.rollup`, it is include scan module graph and linker.
 export const rolldown = async (input: InputOptions): Promise<RolldownBuild> => {
   const bundler = await createBundler(input)
-  await bundler.build()
   return new RolldownBuild(bundler)
 }
 

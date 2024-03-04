@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/node-binding-linux-x64-musl",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "os": [
     "linux"
   ],

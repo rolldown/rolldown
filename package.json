@@ -1,6 +1,6 @@
 {
   "name": "monorepo",
-  "version": "0.0.0",
+  "version": "0.0.3",
   "description": "Rollup in Rust",
   "main": "index.js",
   "private": true,

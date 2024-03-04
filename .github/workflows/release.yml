@@ -179,9 +179,40 @@ jobs:
           name: node-artifact
           path: packages/node/dist/**
 
+  build-wasm: 
+    name: Build Wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          cache-base: main
+
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.18.0
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build Wasm
+        run: yarn build:wasm:release
+
+      - name: Upload Wasm Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: error
+          name: wasm-artifact
+          path: crates/rolldown_binding_wasm/dist/**
+
   test:
     needs:
       - build-binding
+      - build-wasm
       - build-node-packages
     strategy:
       fail-fast: false
@@ -250,7 +281,13 @@ jobs:
           cache: yarn
 
       - name: Install dependencies
-        run: yarn install
+        run: yarn install && git reset --hard # fix yarn install add new line for package.json
+
+      - name: Download Wasm Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: crates/rolldown_binding_wasm/dist
+          name: wasm-artifact
 
       - name: Download Binding Artifacts
         uses: actions/download-artifact@v4
@@ -275,7 +312,7 @@ jobs:
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
           echo "//registry.npmjs.org/:_authToken=$ROLLDOWN_NPM_TOKEN" >> ~/.npmrc
-          yarn lerna publish from-package --no-private --no-verify-access --yes
+          yarn lerna publish from-package --no-private --no-git-reset --yes
         env:
           ROLLDOWN_NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

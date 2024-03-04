@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/node-binding-android-arm64",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "os": [
     "android"
   ],

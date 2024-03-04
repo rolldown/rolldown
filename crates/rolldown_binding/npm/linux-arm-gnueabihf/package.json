@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/node-binding-linux-arm-gnueabihf",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "os": [
     "linux"
   ],

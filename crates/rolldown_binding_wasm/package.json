@@ -6,6 +6,10 @@
     "type": "git",
     "url": "https://github.com/rolldown-rs/rolldown"
   },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "scripts": {
     "build": "npm-run-all -s build:wasm clean-wasm-build",
     "build:release": "npm-run-all -s build:wasm:release clean-wasm-build",

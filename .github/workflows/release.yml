@@ -179,9 +179,40 @@ jobs:
           name: node-artifact
           path: packages/node/dist/**
 
+  build-wasm: 
+    name: Build Wasm
+    runs-on: buildjet-2vcpu-ubuntu-2204
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          cache-base: main
+
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.18.0
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build Wasm
+        run: yarn build:wasm:release
+
+      - name: Upload Wasm Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: error
+          name: wasm-artifact
+          path: crates/rolldown_binding_wasm/dist/**
+
   test:
     needs:
       - build-binding
+      - build-wasm
       - build-node-packages
     strategy:
       fail-fast: false
@@ -251,6 +282,12 @@ jobs:
 
       - name: Install dependencies
         run: yarn install && git reset --hard # fix yarn install add new line for package.json
+
+      - name: Download Wasm Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: crates/rolldown_binding_wasm/dist
+          name: wasm-artifact
 
       - name: Download Binding Artifacts
         uses: actions/download-artifact@v4

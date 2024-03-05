@@ -1,5 +1,5 @@
 [workspace]
-members  = ["./crates/*", "crates/rolldown_rstr"]
+members  = ["./crates/*"]
 resolver = "2"
 
 [workspace.package]
@@ -37,8 +37,8 @@ unnecessary_safety_comment      = "deny"
 pedantic = { level = "deny", priority = -1 }
 
 # Wizards, naming is too hard.
-module_name_repetitions = "allow"
 module_inception        = "allow"
+module_name_repetitions = "allow"
 similar_names           = "allow"
 
 # Forwarding `Result` is a common pattern, this rule is too pedantic.
@@ -50,9 +50,9 @@ missing_errors_doc = "allow"
 must_use_candidate = "allow"
 
 doc_markdown         = "allow"
-new_without_default  = "allow"
-needless_for_each    = "allow"
 missing_const_for_fn = "allow"
+needless_for_each    = "allow"
+new_without_default  = "allow"
 # TODO: should reveiw this rule.
 missing_panics_doc = "allow"
 
@@ -64,26 +64,36 @@ single_match = "allow"
 
 
 [workspace.dependencies]
+ariadne        = "0.4.0"
+async-scoped   = { version = "0.9.0" }
+async-trait    = "0.1.74"
+dashmap        = "5.5.3"
+derivative     = "2.2.0"
+futures        = "0.3.29"
+index_vec      = "0.1.3"
+insta          = "1.34.0"
+mimalloc       = "0.1.39"
+napi           = { version = "2.16.0" }
+napi-build     = { version = "2.1.2" }
+napi-derive    = { version = "2.16.0", default-features = false, features = ["type-def"] }
+once_cell      = "1.18.0"
 oxc            = { version = "0.8.0" }
 oxc_resolver   = { version = "1.2.0" }
-sugar_path     = "0.0.12"
-tokio          = { version = "1.33.0", default-features = false }
-derivative     = "2.2.0"
+regex          = "1.10.2"
 rustc-hash     = "1.1.0"
-tracing        = "0.1.40"
-index_vec      = "0.1.3"
+scoped-tls     = "1.0.1"
 serde          = { version = "1.0.190", features = ["derive"] }
 serde_json     = "1.0.108"
-insta          = "1.34.0"
-testing_macros = "0.2.11"
-scoped-tls     = "1.0.1"
-string_wizard  = { version = "0.0.17" }
-async-trait    = "0.1.74"
-futures        = "0.3.29"
-thiserror      = "1.0.50"
 smallvec       = "1.11.1"
-async-scoped   = { version = "0.7.1" }
-regex          = "1.10.2"
-once_cell      = "1.18.0"
-dashmap        = "5.5.3"
-ariadne        = "0.3.0"
+string_wizard  = { version = "0.0.17" }
+sugar_path     = "0.0.12"
+testing_macros = "0.2.11"
+thiserror      = "1.0.50"
+tokio          = { version = "1.33.0", default-features = false }
+tracing        = "0.1.40"
+vfs            = "0.11.0"
+
+[profile.release]
+codegen-units = 1
+lto           = true
+strip         = "symbols"

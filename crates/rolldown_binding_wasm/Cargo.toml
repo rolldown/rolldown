@@ -1,10 +1,10 @@
 [package]
-name                 = "rolldown_wasm_binding"
-version              = "0.1.0"
 edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
+name                 = "rolldown_wasm_binding"
 repository.workspace = true
+version              = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,10 +15,10 @@ workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
-wasm-bindgen = "0.2.74"
 rolldown     = { path = "../rolldown/" }
 rolldown_fs  = { path = "../rolldown_fs", features = ["memory"], default-features = false }
 tokio        = { workspace = true, default-features = false, features = ["rt", "macros", "sync"] }
+wasm-bindgen = "0.2.74"
 
-sugar_path               = { workspace = true }
 console_error_panic_hook = "0.1.7"
+sugar_path               = { workspace = true }

@@ -1,10 +1,10 @@
 [package]
-name                 = "rolldown_plugin"
-version              = "0.1.0"
 edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
+name                 = "rolldown_plugin"
 repository.workspace = true
+version              = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,12 +12,12 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+async-trait        = { workspace = true }
+rolldown_common    = { path = "../rolldown_common" }
 rolldown_error     = { path = "../rolldown_error" }
+rolldown_fs        = { path = "../rolldown_fs" }
+rolldown_oxc_utils = { path = "../rolldown_oxc_utils" }
+rolldown_resolver  = { path = "../rolldown_resolver" }
+rolldown_sourcemap = { path = "../rolldown_sourcemap" }
 rolldown_tracing   = { path = "../rolldown_tracing" }
 rolldown_utils     = { path = "../rolldown_utils" }
-rolldown_resolver  = { path = "../rolldown_resolver" }
-rolldown_oxc_utils       = { path = "../rolldown_oxc_utils" }
-rolldown_fs        = { path = "../rolldown_fs" }
-rolldown_sourcemap = { path = "../rolldown_sourcemap" }
-rolldown_common    = { path = "../rolldown_common" }
-async-trait        = { workspace = true }

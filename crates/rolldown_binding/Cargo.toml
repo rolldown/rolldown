@@ -2,9 +2,9 @@
 name    = "rolldown_binding"
 version = "0.0.1"
 
+edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
-edition.workspace    = true
 repository.workspace = true
 
 [lints]
@@ -17,26 +17,26 @@ crate-type = ["cdylib"]
 async-trait        = { workspace = true }
 derivative         = { workspace = true }
 futures            = { workspace = true }
-napi               = { version = "2.11.1", features = ["full"] }
-napi-derive        = { version = "2.11.0" }
+napi               = { workspace = true, features = ["napi4", "async"] }
+napi-derive        = { workspace = true }
 rolldown           = { path = "../rolldown" }
 rolldown_common    = { path = "../rolldown_common" }
 rolldown_error     = { path = "../rolldown_error" }
-rolldown_tracing   = { path = "../rolldown_tracing" }
 rolldown_fs        = { path = "../rolldown_fs" }
+rolldown_plugin    = { path = "../rolldown_plugin" }
 rolldown_resolver  = { path = "../rolldown_resolver" }
 rolldown_sourcemap = { path = "../rolldown_sourcemap" }
-rolldown_plugin    = { path = "../rolldown_plugin" }
+rolldown_tracing   = { path = "../rolldown_tracing" }
 rustc-hash         = { workspace = true }
 scoped-tls         = { workspace = true }
 serde              = { workspace = true }
 tracing            = { workspace = true }
 
-[target.'cfg(not(target_os = "linux"))'.dependencies]
-mimalloc-rust = "0.2"
+[target.'cfg(all(not(target_os = "linux"), not(target_family = "wasm")))'.dependencies]
+mimalloc = { workspace = true }
 
-[target.'cfg(all(target_os = "linux", not(all(target_env = "musl", target_arch = "aarch64"))))'.dependencies]
-mimalloc-rust = { version = "0.2", features = ["local-dynamic-tls"] }
+[target.'cfg(all(target_os = "linux"))'.dependencies]
+mimalloc = { workspace = true, features = ["local_dynamic_tls"] }
 
 [build-dependencies]
 napi-build = "2"

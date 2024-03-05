@@ -3,24 +3,24 @@ name    = "bench"
 version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
-edition.workspace    = true
 repository.workspace = true
 
 [lib]
 bench   = false
-test    = false
 doctest = false
+test    = false
 
 [dependencies]
 criterion   = "0.4.0"
 rolldown    = { path = "../rolldown" }
-tokio       = { workspace = true, features = ["full"] }
 rolldown_fs = { path = "../rolldown_fs/" }
+tokio       = { workspace = true, features = ["full"] }
 [[bench]]
-name    = "threejs"
 harness = false
+name    = "threejs"
 
 
 [dev-dependencies]

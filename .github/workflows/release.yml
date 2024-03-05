@@ -15,9 +15,7 @@ jobs:
         include:
           - os: macos-latest
             target: x86_64-apple-darwin
-            build: |
-              yarn build:binding:release
-              strip -x crates/rolldown_binding/*.node
+            build: yarn build:binding:release
 
           - os: macos-latest
             target: aarch64-apple-darwin
@@ -29,7 +27,6 @@ jobs:
               export CFLAGS="-isysroot $SYSROOT -isystem $SYSROOT";
               export CARGO_BUILD_TARGET=aarch64-apple-darwin
               yarn build:binding:release
-              strip -x crates/rolldown_binding/*.node
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -53,13 +50,12 @@ jobs:
             build: |-
               set -e &&
               export CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu &&
-              yarn build:binding:release &&
-              strip crates/rolldown_binding/*.node
+              yarn build:binding:release
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-            build: set -e && yarn build:binding:release && strip crates/rolldown_binding/*.node
+            build: yarn build:binding:release
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
@@ -68,8 +64,7 @@ jobs:
               set -e &&
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-gnu &&
               rustup target add aarch64-unknown-linux-gnu &&
-              yarn build:binding:release &&
-              aarch64-unknown-linux-gnu-strip crates/rolldown_binding/*.node
+              yarn build:binding:release
 
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
@@ -77,22 +72,19 @@ jobs:
               sudo apt-get update
               sudo apt-get install gcc-arm-linux-gnueabihf -y
               export CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf
-              yarn build:binding:release
-              arm-linux-gnueabihf-strip crates/rolldown_binding/*.node
+              yarn build:binding:release --zig --zig-link-only
 
           - os: ubuntu-latest
             target: aarch64-linux-android
             build: |
               export CARGO_BUILD_TARGET=aarch64-linux-android
               yarn build:binding:release
-              ${ANDROID_NDK_LATEST_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip crates/rolldown_binding/*.node
 
           - os: ubuntu-latest
             target: armv7-linux-androideabi
             build: |
               export CARGO_BUILD_TARGET=armv7-linux-androideabi
               yarn build:binding:release
-              ${ANDROID_NDK_LATEST_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip crates/rolldown_binding/*.node
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
@@ -102,8 +94,7 @@ jobs:
               rustup target add aarch64-unknown-linux-musl &&
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl &&
               export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc &&
-              yarn build:binding:release &&
-              /aarch64-linux-musl-cross/bin/aarch64-linux-musl-strip crates/rolldown_binding/*.node
+              yarn build:binding:release
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -120,12 +111,12 @@ jobs:
       - uses: goto-bus-stop/setup-zig@v2
         if: ${{ matrix.target == 'armv7-unknown-linux-gnueabihf' }}
         with:
-          version: 0.10.1
+          version: 0.11.0
 
       - name: Install node
         uses: actions/setup-node@v3
         with:
-          node-version: 18.18.0
+          node-version: 20
           cache: yarn
 
       - name: Install dependencies
@@ -163,7 +154,7 @@ jobs:
       - name: Install node
         uses: actions/setup-node@v3
         with:
-          node-version: 18.18.0
+          node-version: 20
           cache: yarn
 
       - name: Install dependencies
@@ -193,7 +184,7 @@ jobs:
       - name: Install node
         uses: actions/setup-node@v3
         with:
-          node-version: 18.18.0
+          node-version: 20
           cache: yarn
 
       - name: Install dependencies
@@ -236,7 +227,7 @@ jobs:
       - name: Install node
         uses: actions/setup-node@v3
         with:
-          node-version: 18.18.0
+          node-version: 20
           cache: yarn
 
       - name: Install dependencies
@@ -277,7 +268,7 @@ jobs:
       - name: Install node
         uses: actions/setup-node@v3
         with:
-          node-version: 18.18.0
+          node-version: 20
           cache: yarn
 
       - name: Install dependencies

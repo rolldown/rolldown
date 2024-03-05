@@ -1,9 +1,6 @@
-#[cfg(all(
-  not(all(target_os = "linux", target_env = "musl", target_arch = "aarch64")),
-  not(debug_assertions)
-))]
+#[cfg(not(target_family = "wasm"))]
 #[global_allocator]
-static ALLOC: mimalloc_rust::GlobalMiMalloc = mimalloc_rust::GlobalMiMalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 pub mod bundler;
 pub mod options;

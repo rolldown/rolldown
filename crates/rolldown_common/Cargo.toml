@@ -2,9 +2,9 @@
 name    = "rolldown_common"
 version = "0.0.1"
 
+edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
-edition.workspace    = true
 repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -13,13 +13,13 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-rolldown_oxc_utils = { path = "../rolldown_oxc_utils" }
-rolldown_sourcemap = { path = "../rolldown_sourcemap" }
-rolldown_rstr      = { path = "../rolldown_rstr" }
-oxc                = { workspace = true, features = ["semantic"] }
-rustc-hash         = { workspace = true }
 index_vec          = { workspace = true }
-sugar_path         = { workspace = true }
-regex              = { workspace = true }
 once_cell          = { workspace = true }
+oxc                = { workspace = true, features = ["semantic"] }
+regex              = { workspace = true }
+rolldown_oxc_utils = { path = "../rolldown_oxc_utils" }
+rolldown_rstr      = { path = "../rolldown_rstr" }
+rolldown_sourcemap = { path = "../rolldown_sourcemap" }
+rustc-hash         = { workspace = true }
 string_wizard      = { workspace = true }
+sugar_path         = { workspace = true }

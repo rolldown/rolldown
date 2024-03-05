@@ -19,11 +19,13 @@ export interface ResolveOptions {
   symlinks?: boolean
 }
 export interface InputOptions {
-  external?: (
-    source: string,
-    importer?: string,
-    isResolved?: boolean,
-  ) => boolean
+  external?:
+    | undefined
+    | ((
+        source: string,
+        importer: string | undefined,
+        isResolved: boolean,
+      ) => boolean)
   input: Array<InputItem>
   plugins: Array<PluginOptions>
   resolve?: ResolveOptions

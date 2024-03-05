@@ -8480,7 +8480,6 @@ __metadata:
     tree-sitter: "npm:^0.20.6"
     tree-sitter-go: "npm:^0.20.0"
     typescript: "npm:^5.0.0"
-    vitepress: "npm:^1.0.0-rc.44"
     zx: "npm:^7.2.0"
   languageName: unknown
   linkType: soft
@@ -10534,6 +10533,14 @@ __metadata:
   checksum: 10/218ef9122145ccce9d0a71124d36a3894537de46600b37fae7dba26ccff973251eaa98aa63c2c5855a05fa04bca7cbbd7a92d4b29f2875d2203e72530ecf6ede
   languageName: node
   linkType: hard
+
+"rolldown-docs@workspace:web/docs":
+  version: 0.0.0-use.local
+  resolution: "rolldown-docs@workspace:web/docs"
+  dependencies:
+    vitepress: "npm:^1.0.0-rc.44"
+  languageName: unknown
+  linkType: soft
 
 "rolldown-playground@workspace:web/playground":
   version: 0.0.0-use.local

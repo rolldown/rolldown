@@ -51,17 +51,35 @@ async function hashFiles(files) {
   return result.stdout
 }
 
-async function generateBuildHash(files) {
+function getCacheFile(pkgName) {
+  let key = pkgName
+
+  if (key.includes('/')) {
+    key = pkgName.split('/')[1]
+  }
+
+  return path.join(CACHE_DIR, `hash-${key}`)
+}
+
+async function generateBuildHash(deps, files) {
   const hasher = crypto.createHash('sha256')
+
+  for (const dep of deps) {
+    const depFile = getCacheFile(dep)
+
+    if (fs.existsSync(depFile)) {
+      hasher.update(await fsp.readFile(depFile, 'utf8'))
+    }
+  }
 
   hasher.update(await hashFiles(files))
 
   return hasher.digest('hex')
 }
 
-async function isStaleOrUnbuilt(key, files) {
-  const cacheFile = path.join(CACHE_DIR, `hash-${key}`)
-  const buildHash = await generateBuildHash(files)
+async function isStaleOrUnbuilt(pkgName, deps, files) {
+  const cacheFile = getCacheFile(pkgName)
+  const buildHash = await generateBuildHash(deps, files)
 
   if (!fs.existsSync(cacheFile)) {
     await fsp.writeFile(cacheFile, buildHash)
@@ -108,7 +126,7 @@ async function runYarnBuild(pkgName, log) {
 
 const BUILD_TIMERS = {}
 
-async function build(pkgName, changedFile, loadFiles) {
+async function build(pkgName, deps, changedFile, loadFiles) {
   const name = pkgName.split('/')[1]
   const log = debug(`rolldown:${name}`)
 
@@ -123,7 +141,7 @@ async function build(pkgName, changedFile, loadFiles) {
     return false
   }
 
-  if (await isStaleOrUnbuilt(name, files)) {
+  if (await isStaleOrUnbuilt(name, deps, files)) {
     log('Detected changes, building...')
 
     await runYarnBuild(pkgName, log)
@@ -136,7 +154,7 @@ async function build(pkgName, changedFile, loadFiles) {
   return false
 }
 
-async function buildWithDebounce(pkgName, changedFile, loadFiles) {
+async function buildWithDebounce(pkgName, deps, changedFile, loadFiles) {
   if (BUILD_TIMERS[pkgName]) {
     const [resolve, timer] = BUILD_TIMERS[pkgName]
     clearTimeout(timer)
@@ -147,33 +165,46 @@ async function buildWithDebounce(pkgName, changedFile, loadFiles) {
   return new Promise((resolve) => {
     BUILD_TIMERS[pkgName] = [
       resolve,
-      setTimeout(() => resolve(build(pkgName, changedFile, loadFiles)), 125),
+      setTimeout(
+        () => resolve(build(pkgName, deps, changedFile, loadFiles)),
+        125,
+      ),
     ]
   })
 }
 
 async function buildRolldownPackage(changedFile) {
-  return buildWithDebounce('@rolldown/node', changedFile, async () => {
-    const files = await getDirFiles('packages/node/src')
-    files.push(
-      'packages/node/build.config.ts',
-      'packages/node/package.json',
-      'packages/node/tsconfig.json',
-    )
-    return files
-  })
+  return buildWithDebounce(
+    '@rolldown/node',
+    ['@rolldown/node-binding'],
+    changedFile,
+    async () => {
+      const files = await getDirFiles('packages/node/src')
+      files.push(
+        'packages/node/build.config.ts',
+        'packages/node/package.json',
+        'packages/node/tsconfig.json',
+      )
+      return files
+    },
+  )
 }
 
 async function buildNodeBindingCrate(changedFile) {
-  return buildWithDebounce('@rolldown/node-binding', changedFile, async () => {
-    const files = await getDirFiles('crates/rolldown_binding/src')
-    files.push(
-      'crates/rolldown_binding/build.rs',
-      'crates/rolldown_binding/Cargo.toml',
-      'crates/rolldown_binding/package.json',
-    )
-    return files
-  })
+  return buildWithDebounce(
+    '@rolldown/node-binding',
+    [],
+    changedFile,
+    async () => {
+      const files = await getDirFiles('crates/rolldown_binding/src')
+      files.push(
+        'crates/rolldown_binding/build.rs',
+        'crates/rolldown_binding/Cargo.toml',
+        'crates/rolldown_binding/package.json',
+      )
+      return files
+    },
+  )
 }
 
 async function buildWasmBindingCrate(changedFile) {
@@ -181,14 +212,19 @@ async function buildWasmBindingCrate(changedFile) {
     return
   }
 
-  return buildWithDebounce('@rolldown/wasm-binding', changedFile, async () => {
-    const files = await getDirFiles('crates/rolldown_binding_wasm/src')
-    files.push(
-      'crates/rolldown_binding_wasm/Cargo.toml',
-      'crates/rolldown_binding_wasm/package.json',
-    )
-    return files
-  })
+  return buildWithDebounce(
+    '@rolldown/wasm-binding',
+    [],
+    changedFile,
+    async () => {
+      const files = await getDirFiles('crates/rolldown_binding_wasm/src')
+      files.push(
+        'crates/rolldown_binding_wasm/Cargo.toml',
+        'crates/rolldown_binding_wasm/package.json',
+      )
+      return files
+    },
+  )
 }
 
 async function watchForChanges() {
@@ -208,7 +244,9 @@ async function watchForChanges() {
       log(chalk.gray(`${event.type}: ${changedFile}`))
 
       if (changedFile.includes('crates/rolldown_binding/')) {
-        buildNodeBindingCrate(changedFile)
+        buildNodeBindingCrate(changedFile).then(() =>
+          buildRolldownPackage(changedFile),
+        )
       } else if (changedFile.includes('crates/rolldown_binding_wasm/')) {
         buildWasmBindingCrate(changedFile)
       } else if (changedFile.includes('packages/node/')) {

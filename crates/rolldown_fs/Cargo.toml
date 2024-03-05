@@ -1,10 +1,10 @@
 [package]
-name                 = "rolldown_fs"
-version              = "0.1.0"
 edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
+name                 = "rolldown_fs"
 repository.workspace = true
+version              = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -14,10 +14,10 @@ workspace = true
 [features]
 # Defines a feature named `webp` that does not enable any other features.
 default = ["os"]
-os      = []
 memory  = []
+os      = []
 
 [dependencies]
-vfs          = "0.10.0"
-oxc_resolver = { workspace = true }
 dunce        = "1.0.4"              # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+oxc_resolver = { workspace = true }
+vfs          = { workspace = true }

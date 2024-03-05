@@ -1,10 +1,10 @@
 [package]
-name                 = "rolldown"
-version              = "0.1.0"
-license.workspace    = true
-homepage.workspace   = true
 edition.workspace    = true
+homepage.workspace   = true
+license.workspace    = true
+name                 = "rolldown"
 repository.workspace = true
+version              = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -13,33 +13,33 @@ workspace = true
 
 [dependencies]
 
+async-trait        = { workspace = true }
+derivative         = { workspace = true }
+futures            = { workspace = true }
+index_vec          = { workspace = true }
+once_cell          = { workspace = true }
+oxc                = { workspace = true }
+oxc_resolver       = { workspace = true }
+rayon              = "1.6.0"
+regex              = { workspace = true }
 rolldown_common    = { path = "../rolldown_common" }
+rolldown_error     = { path = "../rolldown_error" }
+rolldown_fs        = { path = "../rolldown_fs" }
+rolldown_oxc_utils = { path = "../rolldown_oxc_utils" }
+rolldown_plugin    = { path = "../rolldown_plugin" }
+rolldown_resolver  = { path = "../rolldown_resolver" }
+rolldown_rstr      = { path = "../rolldown_rstr" }
+rolldown_sourcemap = { path = "../rolldown_sourcemap" }
 rolldown_tracing   = { path = "../rolldown_tracing" }
 rolldown_utils     = { path = "../rolldown_utils" }
-rolldown_resolver  = { path = "../rolldown_resolver" }
-rolldown_error     = { path = "../rolldown_error" }
-rolldown_oxc_utils = { path = "../rolldown_oxc_utils" }
-rolldown_fs        = { path = "../rolldown_fs" }
-rolldown_sourcemap = { path = "../rolldown_sourcemap" }
-rolldown_plugin    = { path = "../rolldown_plugin" }
-rolldown_rstr      = { path = "../rolldown_rstr" }
-derivative         = { workspace = true }
-sugar_path         = { workspace = true }
-oxc                = { workspace = true }
+rustc-hash         = { workspace = true }
 serde              = { workspace = true }
 serde_json         = { workspace = true }
-tokio              = { workspace = true, features = ["rt", "macros", "sync"] }
-rustc-hash         = { workspace = true }
-tracing            = { workspace = true }
-index_vec          = { workspace = true }
-futures            = { workspace = true }
-rayon              = "1.6.0"
-string_wizard      = { workspace = true }
-async-trait        = { workspace = true }
 smallvec           = { workspace = true }
-oxc_resolver       = { workspace = true }
-regex              = { workspace = true }
-once_cell          = { workspace = true }
+string_wizard      = { workspace = true }
+sugar_path         = { workspace = true }
+tokio              = { workspace = true, features = ["rt", "macros", "sync"] }
+tracing            = { workspace = true }
 
 [dev_dependencies]
 insta            = { workspace = true }

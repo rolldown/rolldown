@@ -1,10 +1,10 @@
 [package]
-name                 = "rolldown_plugin_vite_scanner"
-version              = "0.1.0"
 edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
+name                 = "rolldown_plugin_vite_scanner"
 repository.workspace = true
+version              = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,11 +12,11 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-rolldown_plugin = { path = "../rolldown_plugin" }
+async-trait     = { workspace = true }
+dashmap         = { workspace = true }
+once_cell       = { workspace = true }
+regex           = { workspace = true }
 rolldown_error  = { path = "../rolldown_error" }
 rolldown_fs     = { path = "../rolldown_fs" }
-async-trait     = { workspace = true }
-regex           = { workspace = true }
-once_cell       = { workspace = true }
+rolldown_plugin = { path = "../rolldown_plugin" }
 rustc-hash      = { workspace = true }
-dashmap         = { workspace = true }

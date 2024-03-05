@@ -25,6 +25,7 @@
     "*.snap.new": "markdown"
   },
   "cSpell.words": [
+    "codegen",
     "Finalizer",
     "hasher",
     "importee",

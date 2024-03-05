@@ -101,7 +101,7 @@ where
   fn convert_decl_to_assignment(
     &self,
     decl: &mut ast::Declaration<'ast>,
-    hoisted_names: &mut Vec<Atom>,
+    hoisted_names: &mut Vec<Atom<'ast>>,
   ) -> Option<ast::Statement<'ast>> {
     match decl {
       ast::Declaration::VariableDeclaration(var_decl) => {

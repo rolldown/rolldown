@@ -117,9 +117,9 @@ impl<'ast> DummyIn<'ast> for ast::Expression<'ast> {
   }
 }
 
-impl<'ast> DummyIn<'ast> for ast::IdentifierName {
+impl<'ast> DummyIn<'ast> for ast::IdentifierName<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
-    Self { span: DummyIn::dummy(alloc), name: Atom::new_inline("") }
+    Self { span: DummyIn::dummy(alloc), name: DummyIn::dummy(alloc) }
   }
 }
 
@@ -134,11 +134,11 @@ impl<'ast> DummyIn<'ast> for ast::StaticMemberExpression<'ast> {
   }
 }
 
-impl<'ast> DummyIn<'ast> for ast::IdentifierReference {
+impl<'ast> DummyIn<'ast> for ast::IdentifierReference<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
     Self {
       span: DummyIn::dummy(alloc),
-      name: Atom::new_inline(""),
+      name: DummyIn::dummy(alloc),
       reference_id: Cell::default(),
       reference_flag: ReferenceFlag::default(),
     }
@@ -185,15 +185,15 @@ impl<'ast> DummyIn<'ast> for ast::BindingPatternKind<'ast> {
   }
 }
 
-impl<'ast> DummyIn<'ast> for ast::BindingIdentifier {
+impl<'ast> DummyIn<'ast> for ast::BindingIdentifier<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
     Self { span: DummyIn::dummy(alloc), name: DummyIn::dummy(alloc), symbol_id: Cell::default() }
   }
 }
 
-impl<'ast> DummyIn<'ast> for Atom {
+impl<'ast> DummyIn<'ast> for Atom<'ast> {
   fn dummy(_alloc: &'ast Allocator) -> Self {
-    Self::new_inline("")
+    Atom::Arena("")
   }
 }
 
@@ -241,6 +241,7 @@ impl<'ast> DummyIn<'ast> for ast::FormalParameter<'ast> {
       accessibility: DummyIn::dummy(alloc),
       readonly: DummyIn::dummy(alloc),
       decorators: DummyIn::dummy(alloc),
+      r#override: DummyIn::dummy(alloc),
     }
   }
 }

@@ -16,28 +16,28 @@ impl<'ast> AstSnippet<'ast> {
     Self { alloc }
   }
 
-  pub fn id(&self, name: Atom) -> ast::BindingIdentifier {
+  pub fn id(&self, name: Atom<'ast>) -> ast::BindingIdentifier<'ast> {
     ast::BindingIdentifier { name, ..Dummy::dummy(self.alloc) }
   }
 
-  pub fn id_ref(&self, name: Atom) -> ast::IdentifierReference {
+  pub fn id_ref(&self, name: Atom<'ast>) -> ast::IdentifierReference<'ast> {
     ast::IdentifierReference { name, ..Dummy::dummy(self.alloc) }
   }
 
-  pub fn id_name(&self, name: Atom) -> ast::IdentifierName {
+  pub fn id_name(&self, name: Atom<'ast>) -> ast::IdentifierName<'ast> {
     ast::IdentifierName { name, ..Dummy::dummy(self.alloc) }
   }
 
-  pub fn id_ref_expr(&self, name: Atom) -> ast::Expression<'_> {
+  pub fn id_ref_expr(&self, name: Atom<'ast>) -> ast::Expression<'ast> {
     ast::Expression::Identifier(self.id_ref(name).into_in(self.alloc))
   }
 
   /// `[object].[property]`
   pub fn literal_prop_access_member_expr(
     &self,
-    object: Atom,
-    property: Atom,
-  ) -> ast::MemberExpression<'_> {
+    object: Atom<'ast>,
+    property: Atom<'ast>,
+  ) -> ast::MemberExpression<'ast> {
     ast::MemberExpression::StaticMemberExpression(ast::StaticMemberExpression {
       object: ast::Expression::Identifier(self.id_ref(object).into_in(self.alloc)),
       property: ast::IdentifierName { name: property, ..Dummy::dummy(self.alloc) },
@@ -48,8 +48,8 @@ impl<'ast> AstSnippet<'ast> {
   /// `[object].[property]`
   pub fn literal_prop_access_member_expr_expr(
     &self,
-    object: Atom,
-    property: Atom,
+    object: Atom<'ast>,
+    property: Atom<'ast>,
   ) -> ast::Expression<'_> {
     ast::Expression::MemberExpression(
       self.literal_prop_access_member_expr(object, property).into_in(self.alloc),
@@ -57,7 +57,7 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// `name()`
-  pub fn call_expr(&self, name: Atom) -> ast::CallExpression<'ast> {
+  pub fn call_expr(&self, name: Atom<'ast>) -> ast::CallExpression<'ast> {
     ast::CallExpression {
       callee: ast::Expression::Identifier(self.id_ref(name).into_in(self.alloc)),
       arguments: allocator::Vec::new_in(self.alloc),
@@ -66,12 +66,16 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// `name()`
-  pub fn call_expr_expr(&self, name: Atom) -> ast::Expression<'_> {
+  pub fn call_expr_expr(&self, name: Atom<'ast>) -> ast::Expression<'ast> {
     ast::Expression::CallExpression(self.call_expr(name).into_in(self.alloc))
   }
 
   /// `name(arg)`
-  pub fn call_expr_with_arg_expr(&self, name: Atom, arg: Atom) -> ast::Expression<'_> {
+  pub fn call_expr_with_arg_expr(
+    &self,
+    name: Atom<'ast>,
+    arg: Atom<'ast>,
+  ) -> ast::Expression<'ast> {
     let arg =
       ast::Argument::Expression(ast::Expression::Identifier(self.id_ref(arg).into_in(self.alloc)));
     let mut call_expr = self.call_expr(name);
@@ -82,7 +86,7 @@ impl<'ast> AstSnippet<'ast> {
   /// `name(arg)`
   pub fn call_expr_with_arg_expr_expr(
     &self,
-    name: Atom,
+    name: Atom<'ast>,
     arg: ast::Expression<'ast>,
   ) -> ast::Expression<'ast> {
     let arg = ast::Argument::Expression(arg);
@@ -94,9 +98,9 @@ impl<'ast> AstSnippet<'ast> {
   /// `name(arg1, arg2)`
   pub fn call_expr_with_2arg_expr(
     &self,
-    name: Atom,
-    arg1: Atom,
-    arg2: Atom,
+    name: Atom<'ast>,
+    arg1: Atom<'ast>,
+    arg2: Atom<'ast>,
   ) -> ast::Expression<'_> {
     let arg1 =
       ast::Argument::Expression(ast::Expression::Identifier(self.id_ref(arg1).into_in(self.alloc)));
@@ -111,7 +115,7 @@ impl<'ast> AstSnippet<'ast> {
   /// `name(arg1, arg2)`
   pub fn call_expr_with_2arg_expr_expr(
     &self,
-    name: Atom,
+    name: Atom<'ast>,
     arg1: ast::Expression<'ast>,
     arg2: ast::Expression<'ast>,
   ) -> ast::Expression<'ast> {
@@ -124,7 +128,7 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// `name()`
-  pub fn call_expr_stmt(&self, name: Atom) -> ast::Statement<'_> {
+  pub fn call_expr_stmt(&self, name: Atom<'ast>) -> ast::Statement<'_> {
     ast::Statement::ExpressionStatement(
       ast::ExpressionStatement {
         expression: self.call_expr_expr(name),
@@ -135,12 +139,16 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// `var [name] = [init]`
-  pub fn var_decl_stmt(&self, name: Atom, init: ast::Expression<'ast>) -> ast::Statement<'ast> {
+  pub fn var_decl_stmt(
+    &self,
+    name: Atom<'ast>,
+    init: ast::Expression<'ast>,
+  ) -> ast::Statement<'ast> {
     ast::Statement::Declaration(self.var_decl(name, init))
   }
 
   /// `var [name] = [init]`
-  pub fn var_decl(&self, name: Atom, init: ast::Expression<'ast>) -> ast::Declaration<'ast> {
+  pub fn var_decl(&self, name: Atom<'ast>, init: ast::Expression<'ast>) -> ast::Declaration<'ast> {
     let mut declarations = allocator::Vec::new_in(self.alloc);
     declarations.push(ast::VariableDeclarator {
       id: ast::BindingPattern {
@@ -169,8 +177,8 @@ impl<'ast> AstSnippet<'ast> {
   /// ```
   pub fn commonjs_wrapper_stmt(
     &'ast self,
-    binding_name: Atom,
-    commonjs_name: Atom,
+    binding_name: Atom<'ast>,
+    commonjs_name: Atom<'ast>,
     body: allocator::Vec<'ast, Statement<'ast>>,
   ) -> ast::Statement<'ast> {
     // (exports, module) => {}
@@ -218,8 +226,8 @@ impl<'ast> AstSnippet<'ast> {
   /// ```
   pub fn esm_wrapper_stmt(
     &'ast self,
-    binding_name: Atom,
-    esm_fn_name: Atom,
+    binding_name: Atom<'ast>,
+    esm_fn_name: Atom<'ast>,
     body: allocator::Vec<'ast, Statement<'ast>>,
   ) -> ast::Statement<'ast> {
     // () => { ... }
@@ -281,7 +289,7 @@ impl<'ast> AstSnippet<'ast> {
   ///  id = ...
   /// ￣￣ AssignmentTarget
   /// ```
-  pub fn simple_id_assignment_target(&self, id: Atom) -> ast::AssignmentTarget<'ast> {
+  pub fn simple_id_assignment_target(&self, id: Atom<'ast>) -> ast::AssignmentTarget<'ast> {
     ast::AssignmentTarget::SimpleAssignmentTarget(
       ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(self.id_ref(id).into_in(self.alloc)),
     )

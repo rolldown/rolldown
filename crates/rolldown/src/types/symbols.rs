@@ -1,5 +1,5 @@
 use index_vec::IndexVec;
-use oxc::{semantic::SymbolId, span::Atom};
+use oxc::{semantic::SymbolId, span::CompactString};
 use rolldown_common::{NormalModuleId, SymbolRef};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
@@ -14,7 +14,7 @@ pub struct Symbol {
   /// So we will transform the code into `console.log(foo_ns.a)`. `foo_ns` is the namespace symbol of `foo.cjs and `a` is the property name.
   /// We use `namespace_alias` to represent this situation. If `namespace_alias` is not `None`, then this symbol must be rewritten to a property access.
   pub namespace_alias: Option<NamespaceAlias>,
-  pub name: Atom,
+  pub name: CompactString,
   /// The symbol that this symbol is linked to.
   pub link: Option<SymbolRef>,
   /// The chunk that this symbol is defined in.
@@ -39,7 +39,7 @@ impl Symbols {
       .collect();
   }
 
-  pub fn create_symbol(&mut self, owner: NormalModuleId, name: Atom) -> SymbolRef {
+  pub fn create_symbol(&mut self, owner: NormalModuleId, name: CompactString) -> SymbolRef {
     let symbol_id =
       self.inner[owner].push(Symbol { name, link: None, chunk_id: None, namespace_alias: None });
     SymbolRef { owner, symbol: symbol_id }
@@ -56,7 +56,7 @@ impl Symbols {
     self.get_mut(root_a).link = Some(root_b);
   }
 
-  pub fn get_original_name(&self, refer: SymbolRef) -> &Atom {
+  pub fn get_original_name(&self, refer: SymbolRef) -> &CompactString {
     &self.get(refer).name
   }
 

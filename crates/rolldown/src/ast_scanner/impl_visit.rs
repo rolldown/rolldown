@@ -23,9 +23,12 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       if cfg!(debug_assertions) {
-        let mut codegen = Codegen::<false>::new(0, CodegenOptions { enable_typescript: true });
+        let mut codegen = Codegen::<false>::new(
+          "",
+          CodegenOptions { enable_typescript: true, enable_source_map: None },
+        );
         stmt.gen(&mut codegen, codegen::Context::default());
-        self.current_stmt_info.debug_label = Some(codegen.into_code());
+        self.current_stmt_info.debug_label = Some(codegen.into_source_text());
       }
       self.visit_top_level_stmt(stmt);
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));

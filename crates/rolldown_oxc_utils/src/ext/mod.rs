@@ -1,6 +1,7 @@
 use oxc::allocator::{Allocator, Box};
 use oxc::ast::ast;
 use oxc::semantic::SymbolId;
+use oxc::span::SPAN;
 use smallvec::SmallVec;
 
 use crate::{AstSnippet, Dummy, IntoIn, TakeIn};
@@ -8,7 +9,7 @@ pub trait BindingIdentifierExt {
   fn expect_symbol_id(&self) -> SymbolId;
 }
 
-impl BindingIdentifierExt for ast::BindingIdentifier {
+impl BindingIdentifierExt for ast::BindingIdentifier<'_> {
   #[inline]
   fn expect_symbol_id(&self) -> SymbolId {
     self.symbol_id.get().unwrap_or_else(|| panic!("fail get symbol id from {self:?}"))
@@ -16,13 +17,13 @@ impl BindingIdentifierExt for ast::BindingIdentifier {
 }
 
 pub trait BindingPatternExt<'ast> {
-  fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<ast::BindingIdentifier>; 1]>;
+  fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<ast::BindingIdentifier<'ast>>; 1]>;
 
   fn into_assignment_target(self, alloc: &'ast Allocator) -> ast::AssignmentTarget<'ast>;
 }
 
 impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
-  fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<ast::BindingIdentifier>; 1]> {
+  fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<ast::BindingIdentifier<'ast>>; 1]> {
     let mut queue = vec![&self.kind];
     let mut ret = SmallVec::default();
     while let Some(binding_kind) = queue.pop() {
@@ -58,7 +59,10 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
       // Turn `var [a, ,c = 1] = ...` to `[a, ,c = 1] = ...`
       ast::BindingPatternKind::ArrayPattern(arr_pat) => {
         let mut arr_target = ast::ArrayAssignmentTarget {
-          rest: arr_pat.rest.take().map(|rest| rest.unbox().argument.into_assignment_target(alloc)),
+          rest: arr_pat.rest.take().map(|rest| ast::AssignmentTargetRest {
+            span: SPAN,
+            target: rest.unbox().argument.into_assignment_target(alloc),
+          }),
           ..Dummy::dummy(alloc)
         };
         arr_pat.elements.take_in(alloc).into_iter().for_each(|binding_pat| {
@@ -198,8 +202,8 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
 pub trait ExpressionExt<'ast> {
   fn as_call_expression(&self) -> Option<&ast::CallExpression<'ast>>;
 
-  fn as_identifier(&self) -> Option<&ast::IdentifierReference>;
-  fn as_identifier_mut(&mut self) -> Option<&mut ast::IdentifierReference>;
+  fn as_identifier(&self) -> Option<&ast::IdentifierReference<'ast>>;
+  fn as_identifier_mut(&mut self) -> Option<&mut ast::IdentifierReference<'ast>>;
 }
 
 impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
@@ -211,7 +215,7 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
     }
   }
 
-  fn as_identifier(&self) -> Option<&ast::IdentifierReference> {
+  fn as_identifier(&self) -> Option<&ast::IdentifierReference<'ast>> {
     if let ast::Expression::Identifier(ident) = self {
       Some(ident)
     } else {
@@ -219,7 +223,7 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
     }
   }
 
-  fn as_identifier_mut(&mut self) -> Option<&mut ast::IdentifierReference> {
+  fn as_identifier_mut(&mut self) -> Option<&mut ast::IdentifierReference<'ast>> {
     if let ast::Expression::Identifier(ident) = self {
       Some(ident)
     } else {

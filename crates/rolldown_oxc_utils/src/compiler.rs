@@ -100,9 +100,12 @@ impl OxcCompiler {
   }
 
   pub fn print(ast: &OxcProgram) -> String {
-    let codegen =
-      Codegen::<false>::new(ast.source().len(), CodegenOptions { enable_typescript: false });
-    codegen.build(&ast.program)
+    let codegen = Codegen::<false>::new(
+      ast.source(),
+      CodegenOptions { enable_typescript: false, enable_source_map: None },
+    );
+    let codegen_ret = codegen.build(&ast.program);
+    codegen_ret.source_text
   }
 }
 

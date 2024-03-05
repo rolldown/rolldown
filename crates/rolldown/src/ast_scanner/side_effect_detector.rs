@@ -1,15 +1,10 @@
-use std::borrow::Cow;
-
-use oxc::{
-  ast::ast::{IdentifierReference, MemberExpression},
-  span::Atom,
-};
+use oxc::ast::ast::{IdentifierReference, MemberExpression};
 use rolldown_common::AstScope;
 use rustc_hash::FxHashSet;
 
 // Probably we should generate this using macros.
 static SIDE_EFFECT_FREE_MEMBER_EXPR_2: once_cell::sync::Lazy<
-  FxHashSet<(Cow<'static, Atom>, Cow<'static, Atom>)>,
+  FxHashSet<(&'static str, &'static str)>,
 > = once_cell::sync::Lazy::new(|| {
   [
     ("Object", "create"),
@@ -19,20 +14,16 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_2: once_cell::sync::Lazy<
     ("Object", "getOwnPropertyNames"),
   ]
   .into_iter()
-  .map(|(obj, prop)| (Cow::Owned(obj.into()), Cow::Owned(prop.into())))
   .collect()
 });
 
 // hyf0: clippy::type_complexity: This is only a temporary solution.
 #[allow(clippy::type_complexity)]
 static SIDE_EFFECT_FREE_MEMBER_EXPR_3: once_cell::sync::Lazy<
-  FxHashSet<(Cow<'static, Atom>, Cow<'static, Atom>, Cow<'static, Atom>)>,
+  FxHashSet<(&'static str, &'static str, &'static str)>,
 > = once_cell::sync::Lazy::new(|| {
   [("Object", "prototype", "hasOwnProperty"), ("Object", "prototype", "constructor")]
     .into_iter()
-    .map(|(obj, obj_mid, prop)| {
-      (Cow::Owned(obj.into()), Cow::Owned(obj_mid.into()), Cow::Owned(prop.into()))
-    })
     .collect()
 });
 
@@ -68,9 +59,7 @@ impl<'a> SideEffectDetector<'a> {
           oxc::ast::ast::PropertyKey::Expression(expr) => self.detect_side_effect_of_expr(expr),
         } || def.value.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init)))
       }
-      ClassElement::TSAbstractMethodDefinition(_)
-      | ClassElement::TSAbstractPropertyDefinition(_)
-      | ClassElement::TSIndexSignature(_) => unreachable!("ts should be transpiled"),
+      ClassElement::TSIndexSignature(_) => unreachable!("ts should be transpiled"),
     })
   }
 
@@ -84,8 +73,7 @@ impl<'a> SideEffectDetector<'a> {
       oxc::ast::ast::Expression::Identifier(ident) => {
         let object_name = &ident.name;
         // Check if `object_name.prop_name` is pure
-        !SIDE_EFFECT_FREE_MEMBER_EXPR_2
-          .contains(&(Cow::Borrowed(object_name), Cow::Borrowed(prop_name)))
+        !SIDE_EFFECT_FREE_MEMBER_EXPR_2.contains(&(object_name.as_str(), prop_name.as_str()))
       }
       oxc::ast::ast::Expression::MemberExpression(mem_expr) => {
         let MemberExpression::StaticMemberExpression(mem_expr) = &**mem_expr else {
@@ -98,9 +86,9 @@ impl<'a> SideEffectDetector<'a> {
         let object_name = &obj_ident.name;
         // Check if `object_name.mid_prop.prop_name` is pure
         !SIDE_EFFECT_FREE_MEMBER_EXPR_3.contains(&(
-          Cow::Borrowed(object_name),
-          Cow::Borrowed(mid_prop),
-          Cow::Borrowed(prop_name),
+          object_name.as_str(),
+          mid_prop.as_str(),
+          prop_name.as_str(),
         ))
       }
       _ => true,

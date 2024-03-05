@@ -32,9 +32,6 @@
     "typecheck": "yarn workspace @rolldown/node run typecheck",
     "bench": "yarn workspace bench run bench",
     "build:ts": "tsc -b tsconfig.project.json",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs",
     "TODO(hyf0): #need to investigate following commands": "_",
     "build:ci:release": "run-s build:node:ci build:binding:release",
     "build:node:ci": "yarn workspace @rolldown/node run build",
@@ -62,7 +59,6 @@
     "tree-sitter": "^0.20.6",
     "tree-sitter-go": "^0.20.0",
     "typescript": "^5.0.0",
-    "vitepress": "^1.0.0-rc.44",
     "zx": "^7.2.0"
   },
   "prettier": {

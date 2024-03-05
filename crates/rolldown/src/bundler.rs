@@ -102,13 +102,18 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
 
     let ret = self.scan_inner().await;
 
-    self.call_build_end_hook(ret.err()).await?;
+    self.call_build_end_hook(&ret).await?;
+
+    ret?;
 
     Ok(())
   }
 
-  async fn call_build_end_hook(&mut self, ret: Option<BatchedErrors>) -> BatchedResult<()> {
-    if let Some(e) = ret {
+  async fn call_build_end_hook(
+    &mut self,
+    ret: &Result<ScanStageOutput, BatchedErrors>,
+  ) -> BatchedResult<()> {
+    if let Err(e) = ret {
       let error = e.get().expect("should have a error");
       self
         .plugin_driver
@@ -117,12 +122,12 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
           error: error.to_string(),
         }))
         .await?;
-      return Err(e);
+      Ok(())
+    } else {
+      self.plugin_driver.build_end(None).await?;
+
+      Ok(())
     }
-
-    self.plugin_driver.build_end(None).await?;
-
-    Ok(())
   }
 
   async fn scan_inner(&mut self) -> BatchedResult<ScanStageOutput> {
@@ -138,10 +143,15 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
 
   #[tracing::instrument(skip_all)]
   async fn try_build(&mut self) -> BatchedResult<LinkStageOutput> {
-    let build_info = self.scan_inner().await?;
+    self.plugin_driver.build_start().await?;
+
+    let scan_ret = self.scan_inner().await;
+
+    self.call_build_end_hook(&scan_ret).await?;
+
+    let build_info = scan_ret?;
 
     let link_stage = LinkStage::new(build_info, &self.input_options);
-
     Ok(link_stage.link())
   }
 

@@ -47,7 +47,7 @@ test-rust:
     cargo test --no-fail-fast
 
 test-node:
-    yarn build --no-wasm
+    yarn build:node
     yarn test
 
 test:
@@ -88,6 +88,15 @@ smoke-rust:
     just test-rust
     just check-rust
     just lint-rust
+
+smoke-node:
+    just test-node
+    just check-node
+    just lint-node
+
+smoke:
+    just smoke-rust
+    just smoke-node
 
 
 # BENCHING

@@ -75,7 +75,9 @@ pub struct InputOptions {
   // experimentalCacheExpiry?: number;
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(source: string, importer?: string, isResolved?: boolean) => boolean")]
+  #[napi(
+    ts_type = "undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)"
+  )]
   pub external: Option<JsFunction>,
   pub input: Vec<InputItem>,
   // makeAbsoluteExternalsRelative?: boolean | 'ifRelativeSource';

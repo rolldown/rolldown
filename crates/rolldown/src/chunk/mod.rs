@@ -15,15 +15,14 @@ use rolldown_rstr::Rstr;
 use rolldown_sourcemap::{collapse_sourcemaps, concat_sourcemaps, SourceMap};
 use rustc_hash::FxHashMap;
 
+use crate::utils::render_normal_module::render_normal_module;
 use crate::{
   error::BatchedResult,
   FileNameTemplate, InputOptions,
   {
-    chunk_graph::ChunkGraph,
-    options::output_options::OutputOptions,
-    stages::link_stage::LinkStageOutput,
-    types::module_render_context::ModuleRenderContext,
-    utils::{bitset::BitSet, render_normal_module},
+    chunk_graph::ChunkGraph, options::output_options::OutputOptions,
+    stages::link_stage::LinkStageOutput, types::module_render_context::ModuleRenderContext,
+    utils::bitset::BitSet,
   },
 };
 
@@ -115,7 +114,10 @@ impl Chunk {
           m.resource_id.expect_file().to_string(),
           RenderedModule {
             original_length: m.source.len().try_into().unwrap(),
-            rendered_length: rendered_content.as_ref().map(|c| c.len() as u32).unwrap_or_default(),
+            rendered_length: rendered_content
+              .as_ref()
+              .map(|c| c.code.len() as u32)
+              .unwrap_or_default(),
           },
           rendered_content,
           if output_options.sourcemap.is_hidden() {
@@ -132,7 +134,7 @@ impl Chunk {
         |(module_path, rendered_module, rendered_content, map)| -> Result<(), BuildError> {
           if let Some(rendered_content) = rendered_content {
             content_and_sourcemaps.push((
-              rendered_content.to_string(),
+              rendered_content.code.to_string(),
               match map {
                 None => None,
                 Some(v) => v?,

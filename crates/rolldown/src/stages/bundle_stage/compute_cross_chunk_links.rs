@@ -3,7 +3,7 @@ use std::{borrow::Cow, ptr::addr_of};
 use crate::{
   OutputFormat,
   {
-    chunk::chunk::{ChunkKind, CrossChunkImportItem},
+    chunk::{ChunkKind, CrossChunkImportItem},
     chunk_graph::ChunkGraph,
     utils::is_in_rust_test_mode,
   },

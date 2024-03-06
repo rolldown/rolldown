@@ -5,10 +5,7 @@ use rolldown_common::{ChunkId, ImportKind, ModuleId, NormalModuleId};
 use rustc_hash::FxHashMap;
 
 use crate::{
-  chunk::{
-    chunk::{Chunk, ChunkKind},
-    ChunksVec,
-  },
+  chunk::{Chunk, ChunkKind, ChunksVec},
   chunk_graph::ChunkGraph,
   utils::{bitset::BitSet, is_in_rust_test_mode},
 };

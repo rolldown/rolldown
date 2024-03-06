@@ -4,7 +4,7 @@ use string_wizard::MagicString;
 
 use crate::{stages::link_stage::LinkStageOutput, OutputFormat, OutputOptions};
 
-use super::chunk::{Chunk, ChunkKind};
+use super::{Chunk, ChunkKind};
 
 impl Chunk {
   pub fn render_exports(

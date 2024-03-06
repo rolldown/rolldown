@@ -2,7 +2,7 @@ use crate::{
   error::BatchedResult,
   InputOptions,
   {
-    chunk::chunk::ChunkKind,
+    chunk::ChunkKind,
     chunk_graph::ChunkGraph,
     finalizer::FinalizerContext,
     options::{

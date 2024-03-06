@@ -3,7 +3,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{stages::link_stage::LinkStageOutput, OutputOptions};
 
-use super::chunk::{Chunk, ChunkKind};
+use super::{Chunk, ChunkKind};
 
 #[derive(Debug, Clone)]
 pub struct PreRenderedChunk {

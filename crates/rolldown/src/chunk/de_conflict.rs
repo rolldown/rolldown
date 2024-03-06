@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use rolldown_rstr::ToRstr;
 
-use super::chunk::Chunk;
+use super::Chunk;
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 
 impl Chunk {

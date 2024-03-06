@@ -3,7 +3,7 @@ use string_wizard::MagicString;
 
 use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
-use super::chunk::Chunk;
+use super::Chunk;
 
 impl Chunk {
   // clippy::too_many_lines: TODO(hyf0): refactor this function

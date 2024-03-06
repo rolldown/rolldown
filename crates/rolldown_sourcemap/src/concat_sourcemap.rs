@@ -4,18 +4,13 @@ use rolldown_error::BuildError;
 use crate::SourceMap;
 
 pub fn concat_sourcemaps(
-  content_and_sourcemaps: &[(String, Option<SourceMap>)],
+  content_and_sourcemaps: &[(String, Option<SourceMap>, Option<String>)],
 ) -> Result<(String, SourceMap), BuildError> {
   let mut s = String::new();
   let mut map = ParcelSourcemap::new("");
   let mut line_offset = 0;
 
-  for (index, (content, sourcemap)) in content_and_sourcemaps.iter().enumerate() {
-    s.push_str(content);
-    if index != content_and_sourcemaps.len() - 1 {
-      s.push('\n');
-    }
-
+  for (index, (content, sourcemap, start)) in content_and_sourcemaps.iter().enumerate() {
     if let Some(sourcemap) = sourcemap {
       map
         .add_sourcemap(
@@ -25,6 +20,17 @@ pub fn concat_sourcemaps(
           line_offset.into(),
         )
         .map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
+    }
+
+    if let Some(start) = start {
+      s.push_str(start);
+      line_offset += u32::try_from(start.lines().count())
+        .map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
+    }
+
+    s.push_str(content);
+    if index != content_and_sourcemaps.len() - 1 {
+      s.push('\n');
     }
     line_offset += u32::try_from(content.lines().count() + 1)
       .map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
@@ -52,10 +58,11 @@ mod tests {
     )
     .unwrap().into();
     let content_and_sourcemaps = vec![
-      ("\nconsole.log()".to_string(), None),
+      ("\nconsole.log()".to_string(), None, None),
       (
         "function sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n".to_string(),
         Some(map),
+        None,
       ),
     ];
 

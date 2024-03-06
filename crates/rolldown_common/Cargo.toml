@@ -21,5 +21,4 @@ rolldown_oxc_utils = { path = "../rolldown_oxc_utils" }
 rolldown_rstr      = { path = "../rolldown_rstr" }
 rolldown_sourcemap = { path = "../rolldown_sourcemap" }
 rustc-hash         = { workspace = true }
-string_wizard      = { workspace = true }
 sugar_path         = { workspace = true }

@@ -4,16 +4,15 @@ use super::fixture::Fixture;
 use rolldown::RolldownOutput;
 use rolldown_common::Output;
 use rolldown_error::BuildError;
-use string_wizard::MagicString;
 
 pub struct Case {
   fixture: Fixture,
-  snapshot: MagicString<'static>,
+  snapshot: String,
 }
 
 impl Case {
   pub fn new(path: impl AsRef<Path>) -> Self {
-    Self { fixture: Fixture::new(path.as_ref().to_path_buf()), snapshot: MagicString::new("") }
+    Self { fixture: Fixture::new(path.as_ref().to_path_buf()), snapshot: String::new() }
   }
 
   pub fn run(self) {
@@ -45,7 +44,7 @@ impl Case {
     let warnings = outputs.warnings;
 
     if !warnings.is_empty() {
-      self.snapshot.append("# warnings\n\n");
+      self.snapshot.push_str("# warnings\n\n");
       let diagnostics = warnings.into_iter().map(|e| (e.code(), e.into_diagnostic()));
       let rendered = diagnostics
         .flat_map(|(code, diagnostic)| {
@@ -58,11 +57,11 @@ impl Case {
         })
         .collect::<Vec<_>>()
         .join("\n");
-      self.snapshot.append(rendered);
-      self.snapshot.append("\n");
+      self.snapshot.push_str(&rendered);
+      self.snapshot.push('\n');
     }
 
-    self.snapshot.append("# Assets\n\n");
+    self.snapshot.push_str("# Assets\n\n");
     assets.sort_by_key(|c| c.file_name().to_string());
     let artifacts = assets
       .iter()
@@ -77,7 +76,7 @@ impl Case {
       })
       .collect::<Vec<_>>()
       .join("\n");
-    self.snapshot.append(artifacts);
+    self.snapshot.push_str(&artifacts);
 
     if self.fixture.test_config().snapshot_output_stats {
       self.render_stats_to_snapshot(assets);
@@ -85,7 +84,7 @@ impl Case {
   }
 
   fn render_stats_to_snapshot(&mut self, assets: Vec<Output>) {
-    self.snapshot.append("\n\n## Output Stats\n\n");
+    self.snapshot.push_str("\n\n## Output Stats\n\n");
     let stats = assets
       .into_iter()
       .flat_map(|asset| match asset {
@@ -106,11 +105,11 @@ impl Case {
       })
       .collect::<Vec<_>>()
       .join("\n");
-    self.snapshot.append(stats);
+    self.snapshot.push_str(&stats);
   }
 
   fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildError>) {
-    self.snapshot.append("# Errors\n\n");
+    self.snapshot.push_str("# Errors\n\n");
     errors.sort_by_key(BuildError::code);
     let diagnostics = errors.into_iter().map(|e| (e.code(), e.into_diagnostic()));
 
@@ -125,19 +124,18 @@ impl Case {
       })
       .collect::<Vec<_>>()
       .join("\n");
-    self.snapshot.append(rendered);
+    self.snapshot.push_str(&rendered);
   }
 
   fn make_snapshot(&self) {
     // Configure insta to use the fixture path as the snapshot path
     let fixture_folder = self.fixture.dir_path();
     let mut settings = insta::Settings::clone_current();
-    let content = self.snapshot.to_string();
     settings.set_snapshot_path(fixture_folder);
     settings.set_prepend_module_to_snapshot(false);
     settings.set_input_file(fixture_folder);
     settings.bind(|| {
-      insta::assert_snapshot!("artifacts", content);
+      insta::assert_snapshot!("artifacts", self.snapshot);
     });
   }
 }

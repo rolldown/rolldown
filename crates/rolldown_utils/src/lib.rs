@@ -1,8 +1,5 @@
-mod magic_string_ext;
-
 pub mod reserved_word;
 
-pub use crate::magic_string_ext::MagicStringExt;
 use std::future::Future;
 
 #[cfg(not(target_arch = "wasm32"))]

@@ -36,7 +36,6 @@ rustc-hash         = { workspace = true }
 serde              = { workspace = true }
 serde_json         = { workspace = true }
 smallvec           = { workspace = true }
-string_wizard      = { workspace = true }
 sugar_path         = { workspace = true }
 tokio              = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing            = { workspace = true }

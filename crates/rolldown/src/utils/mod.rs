@@ -1,12 +1,8 @@
 use oxc::ast::VisitMut;
 use rolldown_common::NormalModule;
-use rolldown_oxc_utils::{AstSnippet, OxcCompiler, OxcProgram};
-use string_wizard::MagicString;
+use rolldown_oxc_utils::{AstSnippet, OxcProgram};
 
-use super::{
-  finalizer::{Finalizer, FinalizerContext},
-  types::module_render_context::ModuleRenderContext,
-};
+use super::finalizer::{Finalizer, FinalizerContext};
 
 pub mod bitset;
 pub mod load_source;
@@ -19,20 +15,6 @@ pub(crate) fn is_in_rust_test_mode() -> bool {
   static TEST_MODE: once_cell::sync::Lazy<bool> =
     once_cell::sync::Lazy::new(|| std::env::var("ROLLDOWN_TEST").is_ok());
   *TEST_MODE
-}
-
-#[allow(clippy::unnecessary_wraps)]
-pub fn render_normal_module(
-  module: &NormalModule,
-  _ctx: &ModuleRenderContext<'_>,
-  ast: &OxcProgram,
-) -> Option<MagicString<'static>> {
-  let generated_code = OxcCompiler::print(ast);
-  let mut source = MagicString::new(generated_code);
-
-  source.prepend(format!("// {}\n", module.pretty_path));
-
-  Some(source)
 }
 
 pub fn finalize_normal_module(

@@ -1654,7 +1654,6 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
- "string_wizard",
  "sugar_path",
  "testing_macros",
  "tokio",
@@ -1698,7 +1697,6 @@ dependencies = [
  "rolldown_rstr",
  "rolldown_sourcemap",
  "rustc-hash",
- "string_wizard",
  "sugar_path",
 ]
 
@@ -1817,7 +1815,6 @@ version = "0.1.0"
 dependencies = [
  "async-scoped",
  "futures",
- "string_wizard",
 ]
 
 [[package]]
@@ -2083,17 +2080,6 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
-name = "string_wizard"
-version = "0.0.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "536dc441575c8eede9a29055262ee76e7c8663935941f35a791f79a1ad219426"
-dependencies = [
- "index_vec",
- "once_cell",
- "rustc-hash",
-]
 
 [[package]]
 name = "sugar_path"

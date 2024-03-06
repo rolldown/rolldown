@@ -1,6 +1,5 @@
 use rolldown_common::{SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
-use string_wizard::MagicString;
 
 use crate::{stages::link_stage::LinkStageOutput, OutputFormat, OutputOptions};
 
@@ -11,7 +10,7 @@ impl Chunk {
     &self,
     graph: &LinkStageOutput,
     output_options: &OutputOptions,
-  ) -> Option<MagicString<'static>> {
+  ) -> Option<String> {
     if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &self.kind {
       let linking_info = &graph.metas[*entry_module_id];
       if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
@@ -25,7 +24,7 @@ impl Chunk {
                   graph.module_table.normal_modules[*entry_module_id].resource_id
                 )
               });
-            return Some(MagicString::new(format!("export default {wrap_ref_name}();\n")));
+            return Some(format!("export default {wrap_ref_name}();\n"));
           }
           OutputFormat::Cjs => {
             unreachable!("entry CJS should not be wrapped in `OutputFormat::Cjs`")
@@ -39,7 +38,7 @@ impl Chunk {
     if export_items.is_empty() {
       return None;
     }
-    let mut s = MagicString::new("");
+    let mut s = String::new();
     let rendered_items = export_items
       .into_iter()
       .map(|(exported_name, export_ref)| {
@@ -49,7 +48,7 @@ impl Chunk {
         if let Some(ns_alias) = &symbol.namespace_alias {
           let canonical_ns_name = &self.canonical_names[&ns_alias.namespace_ref];
           let property_name = &ns_alias.property_name;
-          s.append(format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
+          s.push_str(&format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
         }
         if canonical_name == &exported_name {
           format!("{canonical_name}")
@@ -58,7 +57,7 @@ impl Chunk {
         }
       })
       .collect::<Vec<_>>();
-    s.append(format!("export {{ {} }};", rendered_items.join(", "),));
+    s.push_str(&format!("export {{ {} }};", rendered_items.join(", "),));
     Some(s)
   }
 

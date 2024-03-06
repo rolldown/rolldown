@@ -36,7 +36,7 @@
     "build:ci:release": "run-s build:node:ci build:binding:release",
     "build:node:ci": "yarn workspace @rolldown/node run build",
     "version": "yarn lerna version --no-private && node scripts/update-root-package-version.js && yarn run changelog",
-    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r"
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
   "license": "MIT",
   "devDependencies": {

@@ -24,6 +24,7 @@ export default defineConfig({
           { text: 'Getting Started', link: '/getting-started.md' },
           { text: 'Setup', link: '/setup.md' },
           { text: 'Testing', link: '/testing.md' },
+          { text: 'Release', link: '/release.md' },
         ],
       },
     },

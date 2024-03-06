@@ -23,8 +23,6 @@ import('./dynamic_js.mjs');
 
 ```js
 import "./share_js.mjs";
-
-// main2.js
 ```
 ## share_js.mjs
 

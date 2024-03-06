@@ -25,7 +25,5 @@ export { a };
 ```js
 import { a } from "./a_js.mjs";
 
-// b.js
-
 export { a };
 ```

@@ -12,11 +12,5 @@ input_file: crates/rolldown/tests/fixtures/ambiguous_star_export
 let x = 1;
 let y = 2;
 
-// a.js
-
-// b.js
-
-// main.js
-
 export { x, y };
 ```

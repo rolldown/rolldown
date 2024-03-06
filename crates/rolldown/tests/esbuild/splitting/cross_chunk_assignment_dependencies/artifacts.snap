@@ -17,8 +17,6 @@ setValue(123);
 
 ```js
 import "./shared_js.mjs";
-
-// b.js
 ```
 ## shared_js.mjs
 

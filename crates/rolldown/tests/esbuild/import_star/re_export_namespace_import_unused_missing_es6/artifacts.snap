@@ -17,8 +17,6 @@ __export(bar_ns, {
 });
 const x = 123;
 
-// foo.js
-
 // entry.js
 console.log(bar_ns.foo);
 ```

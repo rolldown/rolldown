@@ -9,8 +9,6 @@ input_file: crates/rolldown/tests/esbuild/splitting/duplicate_chunk_collision
 
 ```js
 import "./ab_js.mjs";
-
-// a.js
 ```
 ## ab_js.mjs
 
@@ -22,8 +20,6 @@ console.log(123);
 
 ```js
 import "./ab_js.mjs";
-
-// b.js
 ```
 ## c.mjs
 
@@ -35,8 +31,6 @@ import "./cd_js.mjs";
 ```js
 // cd.js
 console.log(123);
-
-// d.js
 ```
 ## d.mjs
 

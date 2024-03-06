@@ -15,8 +15,6 @@ statement();
 statement();
 const bar = 123;
 
-// foo.js
-
 // entry.js
 console.log(bar);
 ```

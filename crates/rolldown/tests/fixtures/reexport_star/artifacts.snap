@@ -24,16 +24,12 @@ export { a_ns };
 ```js
 import { a_ns } from "./a_js.mjs";
 
-// entry.js
-
 export { a_ns as a };
 ```
 ## main.mjs
 
 ```js
 import { a_ns } from "./a_js.mjs";
-
-// main.js
 
 export { a_ns as a };
 ```

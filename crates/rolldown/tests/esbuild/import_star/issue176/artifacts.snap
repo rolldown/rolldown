@@ -13,8 +13,6 @@ import { __export } from "./$runtime$.mjs";
 // folders/child/foo.js
 const foo = () => 'hi there';
 
-// folders/child/index.js
-
 // folders/index.js
 var folders_index_ns = {};
 __export(folders_index_ns, {

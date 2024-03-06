@@ -19,6 +19,4 @@ globalThis.order += 'b';
 
 // c.js
 globalThis.order += 'c';
-
-// main.js
 ```

@@ -11,8 +11,6 @@ input_file: crates/rolldown/tests/fixtures/basic_re_export
 // a.js
 const a = 'a.js';
 
-// proxy.js
-
 // main.js
 const a$1 = 'index.js';
 console.log(a$1, a);

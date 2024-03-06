@@ -18,7 +18,5 @@ __export(foo_ns, {
 });
 const foo = 123;
 
-// entry.js
-
 export { foo };
 ```

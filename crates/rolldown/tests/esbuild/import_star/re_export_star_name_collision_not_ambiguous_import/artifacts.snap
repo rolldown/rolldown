@@ -11,12 +11,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_collis
 // c.js
 let x = 1, y = 2;
 
-// a.js
-
-// b.js
-
-// common.js
-
 // entry.js
 console.log(x, y);
 ```

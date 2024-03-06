@@ -11,8 +11,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_of_export_star_of_i
 // baz.js
 const value = 123;
 
-// bar.js
-
 // foo.js
 statement();
 statement();

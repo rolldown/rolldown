@@ -11,9 +11,5 @@ input_file: crates/rolldown/tests/esbuild/default/export_chain
 // bar.js
 const c = 123;
 
-// foo.js
-
-// entry.js
-
 export { c as a };
 ```

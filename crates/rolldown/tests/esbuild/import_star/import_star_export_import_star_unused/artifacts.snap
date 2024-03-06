@@ -17,8 +17,6 @@ __export(foo_ns, {
 });
 const foo$1 = 123;
 
-// bar.js
-
 // entry.js
 let foo = 234;
 console.log(foo);

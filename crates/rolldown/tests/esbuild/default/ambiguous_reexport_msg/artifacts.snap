@@ -17,7 +17,5 @@ let b = 3;
 // c.js
 let c = 4, x = 5;
 
-// entry.js
-
 export { a, b, c };
 ```

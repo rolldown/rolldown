@@ -16,10 +16,14 @@ pub fn render_normal_module(
   _ctx: &ModuleRenderContext<'_>,
   ast: &OxcProgram,
 ) -> Option<RenderedNormalModuleOutput> {
-  let generated_code = OxcCompiler::print(ast);
-  let mut source = MagicString::new(generated_code);
+  if ast.program().body.is_empty() {
+    None
+  } else {
+    let generated_code = OxcCompiler::print(ast);
+    let mut source = MagicString::new(generated_code);
 
-  source.prepend(format!("// {}\n", module.pretty_path));
+    source.prepend(format!("// {}\n", module.pretty_path));
 
-  Some(RenderedNormalModuleOutput { code: source, map: None })
+    Some(RenderedNormalModuleOutput { code: source, map: None })
+  }
 }

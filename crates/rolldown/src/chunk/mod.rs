@@ -46,6 +46,12 @@ pub struct Chunk {
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Rstr>,
 }
 
+pub struct ChunkRenderReturn {
+  pub code: String,
+  pub map: Option<SourceMap>,
+  pub rendered_modules: FxHashMap<String, RenderedModule>,
+}
+
 impl Chunk {
   pub fn new(
     name: Option<String>,
@@ -74,7 +80,7 @@ impl Chunk {
     graph: &LinkStageOutput,
     chunk_graph: &ChunkGraph,
     output_options: &OutputOptions,
-  ) -> BatchedResult<((String, Option<SourceMap>), FxHashMap<String, RenderedModule>)> {
+  ) -> BatchedResult<ChunkRenderReturn> {
     use rayon::prelude::*;
     let mut rendered_modules = FxHashMap::default();
     let mut content_and_sourcemaps = vec![];
@@ -139,13 +145,15 @@ impl Chunk {
     }
 
     if output_options.sourcemap.is_hidden() {
-      return Ok((
-        (content_and_sourcemaps.into_iter().map(|(c, _)| c).collect::<Vec<_>>().join("\n"), None),
+      return Ok(ChunkRenderReturn {
+        code: content_and_sourcemaps.into_iter().map(|(c, _)| c).collect::<Vec<_>>().join("\n"),
+        map: None,
         rendered_modules,
-      ));
+      });
     }
 
     let (content, map) = concat_sourcemaps(&content_and_sourcemaps)?;
-    Ok(((content, Some(map)), rendered_modules))
+
+    Ok(ChunkRenderReturn { code: content, map: Some(map), rendered_modules })
   }
 }

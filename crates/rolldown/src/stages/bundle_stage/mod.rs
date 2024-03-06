@@ -80,12 +80,12 @@ impl<'a> BundleStage<'a> {
       });
 
     let chunks = chunk_graph.chunks.iter().map(|c| {
-      let ((content, map), rendered_modules) =
+      let ret =
         c.render(self.input_options, self.link_output, &chunk_graph, self.output_options).unwrap();
       (
-        content,
-        map,
-        c.get_rendered_chunk_info(self.link_output, self.output_options, rendered_modules),
+        ret.code,
+        ret.map,
+        c.get_rendered_chunk_info(self.link_output, self.output_options, ret.rendered_modules),
       )
     });
 

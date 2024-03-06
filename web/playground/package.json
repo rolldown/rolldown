@@ -1,6 +1,5 @@
 {
   "name": "rolldown-playground",
-  "version": "0.1.0",
   "description": "create an app to consume rust-generated wasm packages",
   "type": "module",
   "private": true,

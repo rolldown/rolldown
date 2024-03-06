@@ -1,7 +1,7 @@
 use index_vec::IndexVec;
-use rolldown_common::NormalModuleId;
+use rolldown_common::{ChunkId, NormalModuleId};
 
-use super::chunk::{ChunkId, ChunksVec};
+use super::chunk::ChunksVec;
 
 #[derive(Debug)]
 pub struct ChunkGraph {

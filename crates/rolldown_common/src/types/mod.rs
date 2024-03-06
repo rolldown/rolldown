@@ -1,4 +1,5 @@
 pub mod ast_scope;
+pub mod chunk_id;
 pub mod entry_point;
 pub mod exports_kind;
 pub mod external_module_id;

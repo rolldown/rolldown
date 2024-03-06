@@ -6,6 +6,7 @@ pub use crate::{
   module::external_module::ExternalModule,
   module::normal_module::NormalModule,
   types::ast_scope::AstScope,
+  types::chunk_id::ChunkId,
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,
   types::external_module_id::ExternalModuleId,

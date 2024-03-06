@@ -1,13 +1,13 @@
 use std::hash::BuildHasherDefault;
 
 use index_vec::IndexVec;
-use rolldown_common::{ImportKind, ModuleId, NormalModuleId};
+use rolldown_common::{ChunkId, ImportKind, ModuleId, NormalModuleId};
 use rustc_hash::FxHashMap;
 
 use crate::{
   chunk::{
     chunk::{Chunk, ChunkKind},
-    ChunkId, ChunksVec,
+    ChunksVec,
   },
   chunk_graph::ChunkGraph,
   utils::{bitset::BitSet, is_in_rust_test_mode},

@@ -1,10 +1,8 @@
 use index_vec::IndexVec;
 use oxc::{semantic::SymbolId, span::CompactString};
-use rolldown_common::{NormalModuleId, SymbolRef};
+use rolldown_common::{ChunkId, NormalModuleId, SymbolRef};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
-
-use crate::chunk::ChunkId;
 
 use super::{ast_symbols::AstSymbols, namespace_alias::NamespaceAlias};
 

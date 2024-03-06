@@ -107,7 +107,7 @@ impl<'ast> AstScanner<'ast> {
     } else if self.used_exports_ref || self.used_module_ref {
       exports_kind = ExportsKind::CommonJs;
     } else {
-      // TODO(hyf0): need review this. Why `ModuleType` doesn't have higher priority?
+      // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
       match self.module_type {
         ModuleType::CJS | ModuleType::CjsPackageJson => {
           exports_kind = ExportsKind::CommonJs;

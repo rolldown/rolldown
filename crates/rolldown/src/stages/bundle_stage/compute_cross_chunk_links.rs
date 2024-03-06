@@ -3,10 +3,7 @@ use std::{borrow::Cow, ptr::addr_of};
 use crate::{
   OutputFormat,
   {
-    chunk::{
-      chunk::{ChunkKind, CrossChunkImportItem},
-      ChunkId,
-    },
+    chunk::chunk::{ChunkKind, CrossChunkImportItem},
     chunk_graph::ChunkGraph,
     utils::is_in_rust_test_mode,
   },
@@ -16,7 +13,7 @@ use super::BundleStage;
 use index_vec::{index_vec, IndexVec};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
-  ExportsKind, ExternalModuleId, ImportKind, ModuleId, NamedImport, SymbolRef,
+  ChunkId, ExportsKind, ExternalModuleId, ImportKind, ModuleId, NamedImport, SymbolRef,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rustc_hash::{FxHashMap, FxHashSet};

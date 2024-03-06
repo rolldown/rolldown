@@ -5,11 +5,8 @@ pub mod render_chunk;
 mod render_chunk_exports;
 mod render_chunk_imports;
 use index_vec::IndexVec;
+use rolldown_common::ChunkId;
 
 use self::chunk::Chunk;
-
-index_vec::define_index_type! {
-    pub struct ChunkId = u32;
-}
 
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;

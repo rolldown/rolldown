@@ -11,4 +11,4 @@ export type {
   OutputAsset,
   OutputBundle,
   SourceMapInput
-} from 'rollup'
+} from './rollup'

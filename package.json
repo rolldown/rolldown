@@ -1,6 +1,6 @@
 {
   "name": "monorepo",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Rollup in Rust",
   "main": "index.js",
   "private": true,
@@ -35,7 +35,8 @@
     "TODO(hyf0): #need to investigate following commands": "_",
     "build:ci:release": "run-s build:node:ci build:binding:release",
     "build:node:ci": "yarn workspace @rolldown/node run build",
-    "version": "yarn lerna version --no-private"
+    "version": "yarn lerna version --no-private && node scripts/update-root-package-version.js && yarn run changelog",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r"
   },
   "license": "MIT",
   "devDependencies": {
@@ -44,6 +45,7 @@
     "@taplo/cli": "^0.7.0",
     "chalk": "^4",
     "change-case": "^4",
+    "conventional-changelog-cli": "^4.1.0",
     "debug": "^4.3.4",
     "dedent": "^1.5.1",
     "execa": "^8.0.1",

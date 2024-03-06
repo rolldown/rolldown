@@ -1,5 +1,4 @@
 {
-  "packages": ["crates/rolldown_binding", "packages/*"],
   "version": "independent",
   "useWorkspaces": true,
   "npmClient": "yarn",

@@ -1,10 +1,10 @@
-use rolldown_common::{SymbolRef, WrapKind};
+use rolldown_common::{ChunkKind, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
 use string_wizard::MagicString;
 
 use crate::{stages::link_stage::LinkStageOutput, OutputFormat, OutputOptions};
 
-use super::{Chunk, ChunkKind};
+use super::Chunk;
 
 impl Chunk {
   pub fn render_exports(

@@ -2,7 +2,6 @@ use crate::{
   error::BatchedResult,
   InputOptions,
   {
-    chunk::ChunkKind,
     chunk_graph::ChunkGraph,
     finalizer::FinalizerContext,
     options::{
@@ -14,7 +13,7 @@ use crate::{
     utils::{finalize_normal_module, is_in_rust_test_mode, render_chunks::render_chunks},
   },
 };
-use rolldown_common::{Output, OutputAsset, OutputChunk};
+use rolldown_common::{ChunkKind, Output, OutputAsset, OutputChunk};
 use rolldown_error::BuildError;
 use rustc_hash::FxHashSet;
 

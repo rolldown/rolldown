@@ -8,7 +8,7 @@ use rolldown_common::ChunkId;
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;
 
 use rolldown_common::{
-  ExternalModuleId, NamedImport, NormalModuleId, RenderedModule, Specifier, SymbolRef,
+  ChunkKind, ExternalModuleId, NamedImport, NormalModuleId, RenderedModule, Specifier, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_rstr::Rstr;
@@ -30,18 +30,6 @@ use crate::{
 pub struct CrossChunkImportItem {
   pub export_alias: Option<Specifier>,
   pub import_ref: SymbolRef,
-}
-
-#[derive(Debug)]
-pub enum ChunkKind {
-  EntryPoint { is_user_defined: bool, bit: u32, module: NormalModuleId },
-  Common,
-}
-
-impl Default for ChunkKind {
-  fn default() -> Self {
-    Self::Common
-  }
 }
 
 #[derive(Debug, Default)]

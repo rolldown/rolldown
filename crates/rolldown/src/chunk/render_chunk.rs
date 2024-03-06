@@ -1,9 +1,9 @@
-use rolldown_common::{RenderedChunk, RenderedModule};
+use rolldown_common::{ChunkKind, RenderedChunk, RenderedModule};
 use rustc_hash::FxHashMap;
 
 use crate::{stages::link_stage::LinkStageOutput, OutputOptions};
 
-use super::{Chunk, ChunkKind};
+use super::Chunk;
 
 #[derive(Debug, Clone)]
 pub struct PreRenderedChunk {

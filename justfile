@@ -22,7 +22,7 @@ init-node:
 init:
     just init-rust
     just init-node
-    git submodule update
+    git submodule update --init
 
 # Update our local branch with the remote branch (this is for you to sync the submodules)
 update:

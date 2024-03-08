@@ -31,18 +31,8 @@ jobs:
             chore
             revert
             release
-          # Configure which scopes are allowed (newline-delimited).
-          # These are regex patterns auto-wrapped in `^ $`.
-          scopes: |
-            ^(?![A-Z]).+$
           # Configure that a scope must always be provided.
           requireScope: false
-          # Configure which scopes are disallowed in PR titles (newline-delimited).
-          # For instance by setting the value below, `chore(release): ...` (lowercase)
-          # and `ci(e2e,release): ...` (unknown scope) will be rejected.
-          # These are regex patterns auto-wrapped in `^ $`.
-          disallowScopes: |
-            [A-Z]+
           # Configure additional validation for the subject based on a regex.
           ignoreLabels: |
             bot

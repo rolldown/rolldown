@@ -1,7 +1,7 @@
 const Parser = require('tree-sitter')
 const Go = require('tree-sitter-go')
 const fs = require('fs-extra')
-const path = require('path')
+const path = require('node:path')
 const changeCase = require('change-case')
 const chalk = require('chalk')
 const dedent = require('dedent')
@@ -261,7 +261,7 @@ function processEntryPath(node, binding) {
 /**
  * @param {import('tree-sitter').SyntaxNode} node
  */
-function processOptions(node) {}
+function processOptions(node) { }
 
 /**
  * @param {import('tree-sitter').SyntaxNode} node

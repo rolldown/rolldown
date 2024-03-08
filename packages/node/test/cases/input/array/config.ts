@@ -1,5 +1,5 @@
 import type { RollupOptions, RollupOutput } from '@rolldown/node'
-import path from 'path'
+import path from 'node:path'
 import { expect } from 'vitest'
 import { getOutputChunkNames } from '../../../util'
 

@@ -13,7 +13,7 @@ static HTTP_URL_REGEX: Lazy<Regex> =
 static DATA_URL_REGEX: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\s*data:").expect("Init DATA_URL_REGEX failed"));
 
-#[allow(clippy::unused_async)]
+#[allow(clippy::no_effect_underscore_binding)]
 pub async fn resolve_id<T: FileSystem + Default>(
   resolver: &Resolver<T>,
   plugin_driver: &SharedPluginDriver,

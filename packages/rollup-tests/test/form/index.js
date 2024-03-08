@@ -8,7 +8,7 @@ const { basename, resolve } = require('node:path');
 const { rollup } = require('../../dist/rollup');
 const {
 	compareLogs,
-	normaliseOutput,
+	normaliseOutput: normalizeOutput,
 	runTestSuiteWithSamples,
 	verifyAstPlugin
 } = require('../utils.js');
@@ -112,13 +112,13 @@ runTestSuiteWithSamples(
 
 async function generateAndTestBundle(bundle, outputOptions, expectedFile, { show }) {
 	await bundle.write(outputOptions);
-	const actualCode = normaliseOutput(readFileSync(outputOptions.file, 'utf8'));
+	const actualCode = normalizeOutput(readFileSync(outputOptions.file, 'utf8'));
 	let expectedCode;
 	let actualMap;
 	let expectedMap;
 
 	try {
-		expectedCode = normaliseOutput(readFileSync(expectedFile, 'utf8'));
+		expectedCode = normalizeOutput(readFileSync(expectedFile, 'utf8'));
 	} catch {
 		expectedCode = 'missing file';
 	}
@@ -126,7 +126,7 @@ async function generateAndTestBundle(bundle, outputOptions, expectedFile, { show
 	try {
 		actualMap = JSON.parse(readFileSync(outputOptions.file + '.map', 'utf8'));
 		actualMap.sourcesContent = actualMap.sourcesContent
-			? actualMap.sourcesContent.map(normaliseOutput)
+			? actualMap.sourcesContent.map(normalizeOutput)
 			: null;
 	} catch (error) {
 		assert.strictEqual(error.code, 'ENOENT');
@@ -135,7 +135,7 @@ async function generateAndTestBundle(bundle, outputOptions, expectedFile, { show
 	try {
 		expectedMap = JSON.parse(readFileSync(expectedFile + '.map', 'utf8'));
 		expectedMap.sourcesContent = actualMap.sourcesContent
-			? expectedMap.sourcesContent.map(normaliseOutput)
+			? expectedMap.sourcesContent.map(normalizeOutput)
 			: null;
 	} catch (error) {
 		assert.equal(error.code, 'ENOENT');

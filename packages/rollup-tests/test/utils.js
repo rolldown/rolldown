@@ -38,7 +38,7 @@ exports.wait = function wait(ms) {
 	});
 };
 
-function normaliseError(error) {
+function normalizeError(error) {
 	if (!error) {
 		throw new Error(`Expected an error but got ${JSON.stringify(error)}`);
 	}
@@ -52,7 +52,7 @@ function normaliseError(error) {
 		clone.frame = clone.frame.replace(/\s+$/gm, '');
 	}
 	if (clone.cause) {
-		clone.cause = normaliseError(clone.cause);
+		clone.cause = normalizeError(clone.cause);
 	}
 	return clone;
 }
@@ -62,9 +62,9 @@ function normaliseError(error) {
  * @param {RollupError} expected
  */
 exports.compareError = function compareError(actual, expected) {
-	actual = normaliseError(actual);
+	actual = normalizeError(actual);
 	if (expected.frame) {
-		expected.frame = deindent(expected.frame);
+		expected.frame = outdent(expected.frame);
 	}
 	assert.deepEqual(actual, expected);
 };
@@ -74,7 +74,7 @@ exports.compareError = function compareError(actual, expected) {
  * @param {(RollupLog & {level: LogLevel})[]} expected
  */
 exports.compareLogs = function compareLogs(actual, expected) {
-	const normalizedActual = actual.map(normaliseError);
+	const normalizedActual = actual.map(normalizeError);
 	const sortedActual = normalizedActual.sort(sortLogs);
 	try {
 		assert.deepEqual(
@@ -82,7 +82,7 @@ exports.compareLogs = function compareLogs(actual, expected) {
 			expected
 				.map(warning => {
 					if (warning.frame) {
-						warning.frame = deindent(warning.frame);
+						warning.frame = outdent(warning.frame);
 					}
 					return warning;
 				})
@@ -105,11 +105,11 @@ function sortLogs(a, b) {
 /**
  * @param {string} stringValue
  */
-function deindent(stringValue) {
+function outdent(stringValue) {
 	return stringValue.slice(1).replace(/^\t+/gm, '').replace(/\s+$/gm, '').trim();
 }
 
-exports.deindent = deindent;
+exports.outdent = outdent;
 
 exports.executeBundle = async function executeBundle(bundle, require) {
 	const {

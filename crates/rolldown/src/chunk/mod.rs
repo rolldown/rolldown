@@ -73,7 +73,7 @@ impl Chunk {
     }
   }
 
-  #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation, clippy::type_complexity)]
+  #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
   pub fn render(
     &self,
     input_options: &InputOptions,

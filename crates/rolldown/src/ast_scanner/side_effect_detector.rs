@@ -1,31 +1,28 @@
+use once_cell::sync::Lazy;
 use oxc::ast::ast::{IdentifierReference, MemberExpression};
 use rolldown_common::AstScope;
 use rustc_hash::FxHashSet;
 
 // Probably we should generate this using macros.
-static SIDE_EFFECT_FREE_MEMBER_EXPR_2: once_cell::sync::Lazy<
-  FxHashSet<(&'static str, &'static str)>,
-> = once_cell::sync::Lazy::new(|| {
-  [
-    ("Object", "create"),
-    ("Object", "defineProperty"),
-    ("Object", "getOwnPropertyDescriptor"),
-    ("Object", "getPrototypeOf"),
-    ("Object", "getOwnPropertyNames"),
-  ]
-  .into_iter()
-  .collect()
-});
-
-// hyf0: clippy::type_complexity: This is only a temporary solution.
-#[allow(clippy::type_complexity)]
-static SIDE_EFFECT_FREE_MEMBER_EXPR_3: once_cell::sync::Lazy<
-  FxHashSet<(&'static str, &'static str, &'static str)>,
-> = once_cell::sync::Lazy::new(|| {
-  [("Object", "prototype", "hasOwnProperty"), ("Object", "prototype", "constructor")]
+static SIDE_EFFECT_FREE_MEMBER_EXPR_2: Lazy<FxHashSet<(&'static str, &'static str)>> =
+  Lazy::new(|| {
+    [
+      ("Object", "create"),
+      ("Object", "defineProperty"),
+      ("Object", "getOwnPropertyDescriptor"),
+      ("Object", "getPrototypeOf"),
+      ("Object", "getOwnPropertyNames"),
+    ]
     .into_iter()
     .collect()
-});
+  });
+
+static SIDE_EFFECT_FREE_MEMBER_EXPR_3: Lazy<FxHashSet<(&'static str, &'static str, &'static str)>> =
+  Lazy::new(|| {
+    [("Object", "prototype", "hasOwnProperty"), ("Object", "prototype", "constructor")]
+      .into_iter()
+      .collect()
+  });
 
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScope,

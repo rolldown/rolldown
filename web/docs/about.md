@@ -43,7 +43,7 @@ const members = [
 Rolldown is a JavaScript bundler written in Rust intended to serve as the future bundler used in Vite. It provides Rollup-compatible APIs and plugin interface, but will be more similar to esbuild in scope.
 
 :::warning 🚧 Work in Progress
-Rolldown is currently in active development and not usable for production yet. but we are open sourcing it now so we can start collaborating with community contributors.
+Rolldown is currently in active development and not usable for production yet. but we are open sourcing it now, so we can start collaborating with community contributors.
 :::
 
 ## Why we are building Rolldown
@@ -62,7 +62,7 @@ Vite **has to** use two different bundlers because while both are amazing, they 
 
 - Rollup is mature and battle tested for bundling applications, but is significantly slower than bundlers written in compile-to-native languages.
 
-Having to use two different bundlers is sub-optimal in several ways:
+Having to use two different bundlers is suboptimal in several ways:
 
 - Subtle differences between the output can cause behavior differences between development and production builds.
 
@@ -92,7 +92,7 @@ Check out the [Roadmap](https://github.com/rolldown-rs/rolldown/discussions/153)
 
 ## Join Us!
 
-Rolldown is still in early stage. We have a lot of ground to cover and we won't be able to do this without the help from community contributors. We are also actively looking for more team members with long term commitment in improving JavaScript tooling with Rust.
+Rolldown is still in early stage. We have a lot of ground to cover, and we won't be able to do this without the help from community contributors. We are also actively looking for more team members with long term commitment in improving JavaScript tooling with Rust.
 
 ### Useful Links
 

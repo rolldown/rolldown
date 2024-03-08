@@ -2,7 +2,7 @@
 
 ## Setup
 
-Before running the benchmarks, setup the necessary fixtures with:
+Before running the benchmarks, set up the necessary fixtures with:
 
 ```shell
 # in project root

@@ -59,7 +59,7 @@ The following commands are available and should be used in your standard develop
 - `just check` - Runs the typechecker.
 - `just lint` - Lints code.
 - `just fmt` - Formats code.
-- `just test` - Runs tests. Also see [Testing](./testing.md).
+- `just test` - Runs tests. Also see [Testing](./test.md).
 - `just ready` - Run everything!
 
 > Every command will run both Rust and Node.js scripts. To only target one, append `-rust` or `-node` to the just command. For example, `just lint-rust` or `just fmt-node`.

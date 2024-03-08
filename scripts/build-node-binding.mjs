@@ -136,7 +136,7 @@ async function build(pkgName, deps, changedFile, loadFiles) {
 
   const files = await loadFiles()
 
-  // Exit early for files we dont care about
+  // Exit early for files we don't care about
   if (changedFile && !files.some((file) => file === changedFile)) {
     return false
   }

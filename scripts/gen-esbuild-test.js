@@ -232,7 +232,7 @@ function processFiles(node, binding) {
 
 /**
  * @param {import('tree-sitter').SyntaxNode} node
- * @param {{[x: string]: import('tree-sitter').SyntaxNode} binding
+ * @param {[x: string]: import('tree-sitter').SyntaxNode} binding
  */
 function processEntryPath(node, binding) {
   if (node.firstChild.type === 'identifier') {

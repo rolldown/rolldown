@@ -1,3 +1,4 @@
+set windows-shell := ["powershell"]
 set shell := ["bash", "-cu"]
 
 _default:

@@ -88,39 +88,7 @@ Rolldown's scope is also larger than Rollup's and more similar to esbuild. It co
 
 ## Roadmap
 
-### Stage 1: Basic bundling (done)
-
-- Mixed CommonJS / ESM support
-
-### Stage 2: Advanced bundling (current stage)
-
-- Treeshaking (done)
-- Chunk hashing (WIP)
-- Source map (WIP)
-- Plugin compatibility (WIP)
-- Advanced Chunk splitting (planned)
-- Module federation (planned)
-
-### Stage 3: Built-in transforms (WIP in parallel in Oxc)
-
-- TypeScript & JSX transforms
-- Minification
-- Syntax lowering
-
-### Stage 4: Integration w/ Vite
-
-- Plugin container w/ rustified Vite internal plugins
-- Full bundle mode w/ HMR
-
-### Nice to haves
-
-- Opinionated, zero config TypeScript library bundling
-- DTS generation + bundling (requires [isolatedDeclarations](https://github.com/microsoft/TypeScript/issues/47947))
-
-### Out of scope
-
-- CSS processing. There is already a great Rust-based CSS build toolkit: [Lightning CSS](https://lightningcss.dev/).
-- Framework specific support (these are expected to be done via plugins)
+Check out the [Roadmap](https://github.com/rolldown-rs/rolldown/discussions/153) on GitHub discussions.
 
 ## Join Us!
 

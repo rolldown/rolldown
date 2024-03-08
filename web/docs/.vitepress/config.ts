@@ -28,6 +28,10 @@ export default defineConfig({
       { text: 'Home', link: '/' },
       { text: 'About', link: '/about.md' },
       { text: 'Contribute', link: '/contrib-guide/' },
+      {
+        text: 'Roadmap',
+        link: 'https://github.com/rolldown-rs/rolldown/discussions/153',
+      },
     ],
 
     sidebar: {

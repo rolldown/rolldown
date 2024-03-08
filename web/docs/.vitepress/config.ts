@@ -18,6 +18,8 @@ export default defineConfig({
     ['meta', { property: 'og:title', content: 'Rolldown | Rust bundler for JavaScript' }],
     ['meta', { property: 'og:site_name', content: 'Rolldown' }],
     ['meta', { property: 'og:url', content: 'https://rolldown.rs/' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:site', content: '@rolldown_rs' }],
   ],
 
   themeConfig: {

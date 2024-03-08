@@ -2,9 +2,10 @@ use std::collections::HashMap;
 
 use derivative::Derivative;
 use napi::JsFunction;
+use rolldown_error::BuildError;
 use serde::Deserialize;
 
-use crate::{options::sourcemap::SourceMap, types::binding_rendered_module::BindingRenderedModule};
+use crate::types::binding_rendered_module::BindingRenderedModule;
 
 #[napi_derive::napi(object)]
 #[derive(Deserialize, Default, Derivative)]
@@ -94,12 +95,23 @@ impl From<ResolveIdResult> for rolldown_plugin::HookResolveIdOutput {
 #[derivative(Debug)]
 pub struct SourceResult {
   pub code: String,
-  pub map: Option<SourceMap>,
+  pub map: Option<String>,
 }
 
-impl From<SourceResult> for rolldown_plugin::HookLoadOutput {
-  fn from(value: SourceResult) -> Self {
-    Self { code: value.code, map: value.map.map(Into::into) }
+impl TryFrom<SourceResult> for rolldown_plugin::HookLoadOutput {
+  type Error = BuildError;
+
+  fn try_from(value: SourceResult) -> Result<Self, Self::Error> {
+    Ok(rolldown_plugin::HookLoadOutput {
+      code: value.code,
+      map: value
+        .map
+        .map(|content| {
+          rolldown_sourcemap::SourceMap::from_slice(content.as_bytes())
+            .map_err(|e| BuildError::sourcemap_error(e.to_string()))
+        })
+        .transpose()?,
+    })
   }
 }
 

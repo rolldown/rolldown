@@ -18,8 +18,6 @@ doctest = false
 test    = false
 
 [dependencies]
-parcel_sourcemap = { version = "2.1.1", features = ["json"] }
-rolldown_error   = { workspace = true }
-
-[dev_dependencies]
-serde_json = { workspace = true }
+rolldown_error = { path = "../rolldown_error" }
+sourcemap      = { git = "https://github.com/underfin/rust-sourcemap.git", branch = "re-fix-sourceview" }
+# sourcemap      = { version = "7.1.0" }

@@ -118,7 +118,7 @@ impl Plugin for JsAdapterPlugin {
   ) -> rolldown_plugin::HookLoadReturn {
     if let Some(cb) = &self.load_fn {
       let res = cb.call_async((args.id.to_string(),)).await.map_err(|e| e.into_bundle_error())?;
-      Ok(res.map(Into::into))
+      Ok(res.map(|x| x.try_into()).transpose()?)
     } else {
       Ok(None)
     }
@@ -135,7 +135,7 @@ impl Plugin for JsAdapterPlugin {
         .call_async((args.code.to_string(), args.id.to_string()))
         .await
         .map_err(|e| e.into_bundle_error())?;
-      Ok(res.map(Into::into))
+      Ok(res.map(|x| x.try_into()).transpose()?)
     } else {
       Ok(None)
     }

@@ -114,7 +114,7 @@ impl Chunk {
             None
           } else {
             // TODO add oxc codegen sourcemap to sourcemap chain
-            Some(collapse_sourcemaps(m.sourcemap_chain.clone()))
+            Some(collapse_sourcemaps(&m.sourcemap_chain))
           },
         ))
       })

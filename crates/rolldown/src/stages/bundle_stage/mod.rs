@@ -96,20 +96,23 @@ impl<'a> BundleStage<'a> {
 
     render_chunks(self.plugin_driver, chunks).await?.into_iter().try_for_each(
       |(mut content, map, rendered_chunk)| -> Result<(), BuildError> {
-        if let Some(mut map) = map {
+        if let Some(map) = map {
           match self.output_options.sourcemap {
             SourceMapType::File => {
-              if let Some(map) = map.to_json() {
-                assets.push(Output::Asset(Box::new(OutputAsset {
-                  file_name: format!("{}.map", rendered_chunk.file_name),
-                  source: map?,
-                })));
-              }
+              let map = {
+                let mut buf = vec![];
+                map.to_writer(&mut buf).map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
+                unsafe { String::from_utf8_unchecked(buf) }
+              };
+              assets.push(Output::Asset(Box::new(OutputAsset {
+                file_name: format!("{}.map", rendered_chunk.file_name),
+                source: map,
+              })));
             }
             SourceMapType::Inline => {
-              if let Some(map) = map.to_data_url() {
-                content.push_str(&format!("\n//# sourceMappingURL={}", map?));
-              }
+              let data_url =
+                map.to_data_url().map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
+              content.push_str(&format!("\n//# sourceMappingURL={data_url}"));
             }
             SourceMapType::Hidden => {}
           }

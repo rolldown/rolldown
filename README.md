@@ -26,6 +26,11 @@ The Rolldown project is heavily inspired by:
 - [esbuild](https://github.com/evanw/esbuild), created by [Evan Wallace](https://github.com/evanw).
 - [@parcel/sourcemap](https://github.com/parcel-bundler/source-map).
 
+And supported by:
+
+- [napi-rs](https://github.com/napi-rs/napi-rs) for Node.js add-ons in Rust via Node-API.
+- [oxc](https://github.com/oxc-project/oxc) for the underlying parser and resolver.
+
 # Licenses
 
 This project is licensed under the [MIT License](LICENSE).

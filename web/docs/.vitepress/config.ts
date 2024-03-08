@@ -16,6 +16,7 @@ export default defineConfig({
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:locale', content: 'en' }],
     ['meta', { property: 'og:title', content: 'Rolldown | Rust bundler for JavaScript' }],
+    ['meta', { property: 'og:image', content: 'https://rolldown.rs/og-image.png' }],
     ['meta', { property: 'og:site_name', content: 'Rolldown' }],
     ['meta', { property: 'og:url', content: 'https://rolldown.rs/' }],
   ],

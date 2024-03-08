@@ -4,7 +4,7 @@ layout: home
 
 hero:
   name: 'Rolldown'
-  text: 'Fast Rust bundler for JavaScript'
+  text: 'Fast Rust-based bundler for JavaScript'
   tagline: 'with Rollup-compatible API'
   image:
     src: /rolldown-round.svg

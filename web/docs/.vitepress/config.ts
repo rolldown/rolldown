@@ -4,7 +4,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'Rolldown',
   description:
-    'Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API',
+    'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
 
   lastUpdated: true,
   cleanUrls: true,

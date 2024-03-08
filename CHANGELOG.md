@@ -1,4 +1,4 @@
-## 0.0.4 (2024-03-04)
+## 0.0.5 (2024-03-08)
 
 
 ### Bug Fixes
@@ -58,6 +58,7 @@
 ### Features
 
 * add ([#124](https://github.com/rolldown-rs/rolldown/issues/124)) ([ca07f3e](https://github.com/rolldown-rs/rolldown/commit/ca07f3ee579c4e245ec1dd792f8e35618740280b))
+* add `ChunkRenderReturn` struct to make code clear ([87f02c2](https://github.com/rolldown-rs/rolldown/commit/87f02c2e819dff496797fb3cc8b8e86708fec988))
 * add `ExportsKind::None` ([#315](https://github.com/rolldown-rs/rolldown/issues/315)) ([efdd252](https://github.com/rolldown-rs/rolldown/commit/efdd2529853f7cf7d30fcd88a1245073908a6065))
 * add `generateBundle` hook ([#403](https://github.com/rolldown-rs/rolldown/issues/403)) ([21fe501](https://github.com/rolldown-rs/rolldown/commit/21fe501869683566988f062c751b877c407d258f))
 * add `OutputChunk` is_entry and facade_module_id ([#230](https://github.com/rolldown-rs/rolldown/issues/230)) ([8fcfda3](https://github.com/rolldown-rs/rolldown/commit/8fcfda3255c15c18aa79ec762d133c64c9c48a03))
@@ -110,6 +111,7 @@
 * create cross-chunk links for runtime module and facade symbols ([#114](https://github.com/rolldown-rs/rolldown/issues/114)) ([0c1e164](https://github.com/rolldown-rs/rolldown/commit/0c1e1641a948dc8c157249902adeaf7324a54624))
 * deconflict symbols in nested scopes in parallel ([b3c5e01](https://github.com/rolldown-rs/rolldown/commit/b3c5e0178aec3381b54ed9bde3ee94bfa0fc0cc2))
 * deconflicting for symbols of nested scopes ([#188](https://github.com/rolldown-rs/rolldown/issues/188)) ([42a2421](https://github.com/rolldown-rs/rolldown/commit/42a242142c906dc9969dc50d3fe00e3b32f4dc01))
+* don't render empty module. Closes [#440](https://github.com/rolldown-rs/rolldown/issues/440), [#162](https://github.com/rolldown-rs/rolldown/issues/162) ([b310a9a](https://github.com/rolldown-rs/rolldown/commit/b310a9aff8c8203be06cb0c8797e7c1f824f14ad))
 * empty module should have `ExportsKind::None` ([#317](https://github.com/rolldown-rs/rolldown/issues/317)) ([b15ff14](https://github.com/rolldown-rs/rolldown/commit/b15ff1454fd6ed06a94920cb9ef6413c3383f5ba))
 * enable bare import by default ([#284](https://github.com/rolldown-rs/rolldown/issues/284)) ([833dfc6](https://github.com/rolldown-rs/rolldown/commit/833dfc6aa5d1bda366829b8928b970920be530e9))
 * exclude modules in code splitting ([#383](https://github.com/rolldown-rs/rolldown/issues/383)) ([ec60aca](https://github.com/rolldown-rs/rolldown/commit/ec60aca10b94758aaf0b971304e8afcff4a3e16a))
@@ -141,6 +143,7 @@
 * print fancy messages for errors ([#329](https://github.com/rolldown-rs/rolldown/issues/329)) ([8751ee4](https://github.com/rolldown-rs/rolldown/commit/8751ee4a214b5778aefb585d1774792fd0c326fd))
 * reexport commonjs ([#87](https://github.com/rolldown-rs/rolldown/issues/87)) ([20271ad](https://github.com/rolldown-rs/rolldown/commit/20271ad6c6eb6a3e99fb4bbffc00c5c2a3b59752))
 * refactor `Symbols` and remove a lot of `ReferenceId` ([#93](https://github.com/rolldown-rs/rolldown/issues/93)) ([5b980d5](https://github.com/rolldown-rs/rolldown/commit/5b980d5311b1347327d525772b139fe08d1309ca))
+* rely on the standalone copy of rollup types. Closes [#439](https://github.com/rolldown-rs/rolldown/issues/439) ([e231e14](https://github.com/rolldown-rs/rolldown/commit/e231e14fa89f88d23ce26dda5afe1c12609dd8d0))
 * remove `build` api ([65b9bd6](https://github.com/rolldown-rs/rolldown/commit/65b9bd6bd6b8d1e9a71e59a7b83d15a57396bcb4))
 * remove `VirtualStmtInfo` ([#99](https://github.com/rolldown-rs/rolldown/issues/99)) ([344be1a](https://github.com/rolldown-rs/rolldown/commit/344be1a5331b8d125dcdba06376c7ca9aab6ffa0))
 * remove special tree shaking logic for entry point ([ba046e6](https://github.com/rolldown-rs/rolldown/commit/ba046e650fffade8f341545aaab3259406c2becc))
@@ -183,6 +186,5 @@
 ### Reverts
 
 * Revert "perf: reduce Module size (#6)" (#7) ([711ddb0](https://github.com/rolldown-rs/rolldown/commit/711ddb0db3637f1ac6c8f3443be4a4af4e415091)), closes [#6](https://github.com/rolldown-rs/rolldown/issues/6) [#7](https://github.com/rolldown-rs/rolldown/issues/7)
-
 
 

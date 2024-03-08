@@ -43,9 +43,11 @@ In `/packages/node`:
 
 ### Rollup behavior alignment tests
 
-We also aim for behavior alignment with Rollup by running Rollup's own tests against Rolldown. The tests are located in `packages/rollup-tests`.
+We also aim for behavior alignment with Rollup by running Rollup's own tests against Rolldown.
 
-Tests cases are stored in `/rollup`, which is a git submodule of `rolldown`. It should have been set up properly after running `just init` when setting up the project, but you should also run `just update` to update the submodule before running the Rollup tests.
+To achieve this, each test case in `packages/rollup-tests/test` proxies to the corresponding test in the `rollup` git submodule in project root.
+
+The git submodule should have been initialized after running `just init` when setting up the project, but you should also run `just update` to update the submodule before running the Rollup tests.
 
 In `/packages/rollup-tests`:
 

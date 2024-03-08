@@ -1,17 +1,12 @@
-The folder `rollup-tests/test` is copied from https://github.com/rollup/rollup/tree/master/test
+## Rollup behavior alignment tests
 
-# Keep the tests up to date
+We aim for behavior alignment with Rollup by running Rollup's own tests against Rolldown.
 
-1. Copy https://github.com/rollup/rollup/tree/master/test to replace folder `rollup-tests/test`.
+To achieve this, each test case in `packages/rollup-tests/test` proxies to the corresponding test in the `rollup` git submodule in project root.
 
-2. Run `yarn test` to check if all tests pass.
+The git submodule should have been initialized after running `just init` when setting up the project, but you should also run `just update` to update the submodule before running the Rollup tests.
 
-# Scripts
+In this directory:
 
-## yarn test
-
-Run all tests but skip the ones in `src/failed-tests.json`.
-
-## yarn test:update
-
-Only run tests in `src/failed-tests.json`. If the test passes, the update test case will be removed.
+- `yarn test` will run rollup tests.
+- `yarn test:update` will run and update the tests status.

@@ -7,7 +7,7 @@
   },
   "devDependencies": {
     "@rolldown/node": "workspace:*",
-    "esbuild": "^0.19.5"
+    "esbuild": "^0.20.1"
   },
   "dependencies": {
     "vue": "^3.4.21"

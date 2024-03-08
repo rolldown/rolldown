@@ -1,6 +1,6 @@
 import type { RollupOptions, RollupOutput } from '@rolldown/node'
 import { expect, vi } from 'vitest'
-import path from 'path'
+import path from 'node:path'
 import { OutputChunk } from 'rollup'
 
 const entry = path.join(__dirname, './main.js')

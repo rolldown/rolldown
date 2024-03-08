@@ -1,6 +1,6 @@
 import type { RollupOptions, RollupOutput } from '@rolldown/node'
 import { expect } from 'vitest'
-import path from 'path'
+import path from 'node:path'
 
 const config: RollupOptions = {
   external: (

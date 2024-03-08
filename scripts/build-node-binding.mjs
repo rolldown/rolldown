@@ -2,13 +2,13 @@
 
 import { execa } from 'execa'
 import watcher from '@parcel/watcher'
-import path from 'path'
+import path from 'node:path'
 import crypto from 'crypto'
-import fs from 'fs'
+import fs from 'node:fs'
 import fsp from 'fs/promises'
 import debug from 'debug'
 import chalk from 'chalk'
-import { fileURLToPath } from 'url'
+import { fileURLToPath } from 'node:url'
 
 if (!process.env.DEBUG) {
   debug.enable('rolldown')

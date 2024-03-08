@@ -1,7 +1,7 @@
 // https://github.com/tinylibs/tinybench
 import { Bench } from 'tinybench'
 import path from 'node:path'
-import url from 'url'
+import url from 'node:url'
 import * as rolldown from '@rolldown/node'
 import * as esbuild from 'esbuild'
 

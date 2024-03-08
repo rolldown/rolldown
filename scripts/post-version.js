@@ -1,6 +1,6 @@
-const fs = require('fs')
-const path = require('path')
-const { execSync } = require('child_process')
+const fs = require('node:fs')
+const path = require('node:path')
+const { execSync } = require('node:child_process')
 
 // The `lerna version` command don't update the root package.json version,
 // We use it to generate changelog, so here update it by packages version.

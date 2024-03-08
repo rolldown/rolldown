@@ -69,12 +69,15 @@ function transformToRollupOutputAsset(asset: OutputAsset): RollupOutputAsset {
 export function transformToRollupOutput(output: Outputs): RollupOutput {
   const { chunks, assets } = output
 
+  if (chunks.length === 0) {
+    throw new Error("No output chunks found. At least one OutputChunk is required.");
+  }
+  
   return {
-    // @ts-expect-error here chunks.length > 0
     output: [
       ...chunks.map(transformToRollupOutputChunk),
       ...assets.map(transformToRollupOutputAsset),
-    ],
+    ] as [OutputChunk, ...(OutputChunk | OutputAsset)[]],
   }
 }
 

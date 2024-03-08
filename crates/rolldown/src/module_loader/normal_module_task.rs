@@ -241,7 +241,10 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
         errors.extend(e);
       }
     });
-    debug_assert!(errors.is_empty() && ret.len() == dependencies.len(), "{dependencies:#?}");
+    debug_assert!(
+      errors.is_empty() && ret.len() == dependencies.len(),
+      "dependencies: {dependencies:#?}, errors: {errors:#?}"
+    );
 
     Ok(ret)
   }

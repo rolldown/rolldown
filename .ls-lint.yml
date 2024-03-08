@@ -5,7 +5,7 @@ ls:
   .d.ts: kebab-case
 
 ignore:
-  - node_modules
+  - '**/node_modules'
   - temp
   - rollup # rollup submodule
   - '**/dist'

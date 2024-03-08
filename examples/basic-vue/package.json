@@ -1,0 +1,15 @@
+{
+  "name": "@example/basic",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "@rolldown/node": "workspace:*",
+    "esbuild": "^0.19.5"
+  },
+  "dependencies": {
+    "vue": "^3.4.21"
+  }
+}

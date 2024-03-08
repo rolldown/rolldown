@@ -2,13 +2,13 @@
   "name": "monorepo",
   "version": "0.0.4",
   "description": "Rollup in Rust",
-  "main": "index.js",
   "private": true,
   "workspaces": [
     "crates/rolldown_binding",
     "crates/rolldown_binding_wasm",
     "packages/**",
-    "web/**"
+    "web/**",
+    "examples/**"
   ],
   "scripts": {
     "lint": "oxlint --ignore-path=./.oxlintignore --import-plugin --deny-warnings",

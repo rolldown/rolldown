@@ -7,7 +7,12 @@ const dirname = path.dirname(url.fileURLToPath(import.meta.url))
 
 const build = await rolldown.rolldown({
   input: path.join(dirname, 'index.js'),
+  // @ts-ignore
   cwd: dirname,
+  resolve: {
+    conditionNames: ['node', 'import'],
+    alias: {},
+  }
 })
 
 await build.write()

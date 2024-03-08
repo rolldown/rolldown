@@ -30,7 +30,7 @@ cargo binstall just
 Once installed, run the following to install secondary tools.
 
 ```shell
-just init-rust
+just init-rust  # Run this command in the directory where the `rolldown` project located
 ```
 
 ### Node.js

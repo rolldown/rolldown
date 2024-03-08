@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://rolldown.rs" target="_blank" rel="noopener noreferrer">
-    <img width="180" src="https://rolldown.rs/rolldown-round.svg" alt="Vite logo">
+    <img width="180" src="https://rolldown.rs/rolldown-round.svg" alt="Rolldown logo">
   </a>
 </p>
 

@@ -26,7 +26,7 @@ static MULTILINE_COMMENT_REGEX: Lazy<Regex> = Lazy::new(|| {
   Regex::new(r"\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\/").expect("Init MULTILINE_COMMENT_REGEX failed")
 });
 static SINGLE_COMMENT_REGEX: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"\/\/.*").expect("Init MULTILINE_COMMENT_REGEX failed"));
+  Lazy::new(|| Regex::new(r"\/\/.*").expect("Init SINGLE_COMMENT_REGEX failed"));
 // A simple regex to detect import sources. This is only used on
 // <script lang="ts"> blocks in vue (setup only) or svelte files, since
 // seemingly unused imports are dropped by bundler when transpiling TS which

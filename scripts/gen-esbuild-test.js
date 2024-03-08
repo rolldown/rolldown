@@ -6,7 +6,7 @@ const changeCase = require('change-case')
 const chalk = require('chalk')
 const dedent = require('dedent')
 // How to use this script
-// 1. Adding a test golang file under this dir or whereever you want, and modify the source path
+// 1. Adding a test golang file under this dir or wherever you want, and modify the source path
 // 2. `let testDir = path.resolve(__dirname, "test", testCaseName);` Modify this testDir, by default,
 // The script will generate testCases under `${__dirname}/test`
 let cases = [
@@ -225,7 +225,7 @@ function processFiles(node, binding) {
     })
     return fileList
   } catch (err) {
-    console.error(`Error occured when processFiles: ${chalk.red(err)}`)
+    console.error(`Error occurred when processFiles: ${chalk.red(err)}`)
     return []
   }
 }
@@ -252,7 +252,7 @@ function processEntryPath(node, binding) {
 
     return entryList
   } catch (err) {
-    console.error(`Error occured when processEntryPath: ${chalk.red(err)}`)
+    console.error(`Error occurred when processEntryPath: ${chalk.red(err)}`)
     return []
   }
 }

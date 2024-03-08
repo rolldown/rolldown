@@ -4,13 +4,14 @@ use ariadne::{sources, Config, Label, Report, ReportBuilder, ReportKind};
 
 use crate::error::Severity;
 
-#[allow(clippy::type_complexity)]
+type Labels = Vec<Label<(String, Range<usize>)>>;
+
 #[derive(Debug, Default)]
 pub struct DiagnosticBuilder {
   pub code: Option<&'static str>,
   pub summary: Option<String>,
   pub files: Option<Vec<(String, String)>>,
-  pub labels: Option<Vec<Label<(String, Range<usize>)>>>,
+  pub labels: Option<Labels>,
   pub severity: Option<Severity>,
 }
 
@@ -31,7 +32,7 @@ pub struct Diagnostic {
   pub(crate) code: &'static str,
   pub(crate) summary: String,
   pub(crate) files: Vec<(String, String)>,
-  pub(crate) labels: Vec<Label<(String, Range<usize>)>>,
+  pub(crate) labels: Labels,
   pub(crate) severity: Severity,
 }
 

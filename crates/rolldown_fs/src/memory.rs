@@ -52,16 +52,14 @@ impl FileSystem for MemoryFileSystem {
     self
       .fs
       .remove_dir(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
-    Ok(())
+      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
   }
 
   fn create_dir_all(&self, path: &Path) -> io::Result<()> {
     self
       .fs
       .create_dir(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
-    Ok(())
+      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
   }
 
   fn write(&self, path: &Path, content: &[u8]) -> io::Result<()> {

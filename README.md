@@ -42,4 +42,4 @@ This project also partially contains code derived or copied from the following p
 - [rollup(MIT)](https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/LICENSE-CORE.md)
 - [esbuild(MIT)](https://github.com/evanw/esbuild/blob/0c8a0a901d9a6c7bbff9b4dd347c8a3f65f6c6dd/LICENSE.md)
 
-Licenses of these projects are list in [THIRD-PARTY-LICENSE](/THIRD-PARTY-LICENSE)
+Licenses of these projects are listed in [THIRD-PARTY-LICENSE](/THIRD-PARTY-LICENSE)

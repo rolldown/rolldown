@@ -1015,7 +1015,7 @@ dependencies = [
  "oxc_ast",
  "oxc_span",
  "oxc_syntax",
- "sourcemap",
+ "sourcemap 7.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1816,6 +1816,25 @@ dependencies = [
  "serde",
  "serde_json",
  "unicode-id-start",
+<<<<<<< HEAD
+=======
+ "url",
+]
+
+[[package]]
+name = "sourcemap"
+version = "7.1.0"
+source = "git+https://github.com/underfin/rust-sourcemap.git?branch=re-fix-sourceview#92ea888aba4ab4e72c4925e5efbb5c6cc461894b"
+dependencies = [
+ "base64-simd",
+ "data-encoding",
+ "debugid",
+ "if_chain",
+ "rustc_version",
+ "serde",
+ "serde_json",
+ "unicode-id-start",
+>>>>>>> a351a63b (refactor: using sourcemap as rolldown sourcemap)
  "url",
 ]
 

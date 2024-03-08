@@ -3,13 +3,14 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/require_property_access_common_js
 ---
-# entry_js.mjs
+# Assets
+
+## entry_js.mjs
 
 ```js
 // entry.js
-// These shouldn't warn since the format is CommonJS
-console.log(Object.keys(require.cache))
-console.log(Object.keys(require.extensions))
-delete require.cache['fs']
-delete require.extensions['.json']
+console.log(Object.keys(require.cache));
+console.log(Object.keys(require.extensions));
+delete require.cache['fs'];
+delete require.extensions['.json'];
 ```

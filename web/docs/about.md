@@ -1,40 +1,8 @@
-<script setup>
-import { VPTeamMembers } from 'vitepress/theme'
-
-const members = [
-  {
-    avatar: 'https://www.github.com/yyx990803.png',
-    name: 'Evan You',
-    title: 'Project lead',
-    links: [
-      { icon: 'github', link: 'https://github.com/yyx990803' },
-      { icon: 'twitter', link: 'https://twitter.com/youyuxi' }
-    ]
-  },
-  {
-    avatar: 'https://www.github.com/hyf0.png',
-    name: 'Yunfei He',
-    links: [
-      { icon: 'github', link: 'https://github.com/hyf0' },
-      { icon: 'twitter', link: 'https://twitter.com/_hyf0' }
-    ]
-  },
-  {
-    avatar: 'https://www.github.com/underfin.png',
-    name: 'Kui Li (underfin)',
-    links: [
-      { icon: 'github', link: 'https://github.com/underfin' }
-    ]
-  }
-]
-</script>
-
 # About Rolldown
 
 ## TL;DR
 
 Rolldown is a JavaScript bundler written in Rust intended to serve as the future bundler used in Vite. It provides Rollup-compatible APIs and plugin interface, but will be more similar to esbuild in scope.
-
 
 :::warning 🚧 Work in Progress
 Rolldown is currently in active development and not usable for production yet. but we are open sourcing it now so we can start collaborating with community contributors.
@@ -125,9 +93,3 @@ Rolldown is still in early stage. We have a lot of ground to cover and we won't 
 - [GitHub](https://github.com/rolldown-rs/rolldown)
 - [Contribution Guide](/contrib-guide/)
 - [Discord Chat](https://discord.gg/vsZxvsfgC5)
-
-### The Team
-
-The Rolldown project is led by the creator of [Vite](https://vitejs.dev/), with team members who previously contributed to Vite and worked on [Rspack](https://www.rspack.dev/):
-
-<VPTeamMembers size="small" :members="members" />

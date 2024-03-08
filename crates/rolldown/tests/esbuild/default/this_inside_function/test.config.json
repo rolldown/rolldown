@@ -6,5 +6,7 @@
         "import": "entry.js"
       }
     ]
-  }
+  },
+  "_comment": "Test has runtime error: \"nested\" is not defined",
+  "expectExecuted": false
 }

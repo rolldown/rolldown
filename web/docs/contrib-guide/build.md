@@ -1,6 +1,6 @@
 # Building Bindings
 
-For the NAPI-RS based Node packages to work, and for their tests and benchmarks to run, they must be built first. This is done by running `yarn build` in the root directory. This will spin up a process that builds the Node/WASM binding crates (with Cargo), and then builds the rolldown npm package. The `yarn build` script is also smart enough to only re-build if it detects changes since the last time it was ran.
+For the NAPI-RS based Node packages to work, and for their tests and benchmarks to run, they must be built first. This is done by running `yarn build` in the root directory. This will spin up a process that builds the Node/WASM binding crates (with Cargo), and then builds the rolldown npm package. The `yarn build` script is also smart enough to only re-build if it detects changes since the last time it was run.
 
 `yarn build` accepts two flags:
 

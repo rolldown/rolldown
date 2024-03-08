@@ -35,7 +35,7 @@ just init-rust
 
 ### Node.js
 
-Rolldown is an npm package built with [NAPI-RS](https://napi.rs/) and is published to the npm registry, and as such requires Node.js and Yarn (for dependency management).
+Rolldown is a npm package built with [NAPI-RS](https://napi.rs/) and is published to the npm registry, and as such requires Node.js and Yarn (for dependency management).
 
 We recommend installing Node.js with a version manager, like [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm). Make sure to install and use Node.js version 18+, which is the minimum requirement for this project. You can skip this step if you are already using a Node.js version manager of your choice and on a Node.js version that meets the requirement.
 
@@ -56,7 +56,7 @@ just init-node
 The following commands are available and should be used in your standard development workflow.
 
 - `just init` - Install required tools and dependencies.
-- `just check` - Runs the typechecker.
+- `just check` - Runs the type checker.
 - `just lint` - Lints code.
 - `just fmt` - Formats code.
 - `just test` - Runs tests. Also see [Testing](./test.md).

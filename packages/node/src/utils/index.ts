@@ -9,11 +9,11 @@ export function arraify<T>(value: T | T[]): T[] {
   return Array.isArray(value) ? value : [value]
 }
 
-export function unimplemented(info?: string): never {
+export function unimplemented(info?: string): Error {
   if (info) {
     throw new Error(`unimplemented: ${info}`)
   }
   throw new Error('unimplemented')
 }
 
-export function noop(..._args: any[]) {}
+export function noop(..._args: any[]) { }

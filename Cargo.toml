@@ -44,7 +44,7 @@ similar_names           = "allow"
 # Forwarding `Result` is a common pattern, this rule is too pedantic.
 missing_errors_doc = "allow"
 
-# #[must_use] is creating too much noise for this codebase, it does not add much value execept nagging
+# #[must_use] is creating too much noise for this codebase, it does not add much value except nagging
 # the programmer to add a #[must_use] after clippy has been run.
 # Having #[must_use] every where also hinders readability.
 must_use_candidate = "allow"
@@ -53,7 +53,7 @@ doc_markdown         = "allow"
 missing_const_for_fn = "allow"
 needless_for_each    = "allow"
 new_without_default  = "allow"
-# TODO: should reveiw this rule.
+# TODO: should review this rule.
 missing_panics_doc = "allow"
 
 # Order doesn't really matter https://rust-lang.github.io/rust-clippy/master/index.html#/inconsistent_struct_constructor

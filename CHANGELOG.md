@@ -5,7 +5,7 @@
 
 * `rolldown` node api should create graph ([#302](https://github.com/rolldown-rs/rolldown/issues/302)) ([c7749ba](https://github.com/rolldown-rs/rolldown/commit/c7749bacf50ef8a0ef7e068a1a01a790ee56c987))
 * A `Symbol` should only be declared in one chunk ([#338](https://github.com/rolldown-rs/rolldown/issues/338)) ([340cd27](https://github.com/rolldown-rs/rolldown/commit/340cd2738605010b8facc0bad64d338d0aa26e8c))
-* add identifier for export default function without identifer ([#81](https://github.com/rolldown-rs/rolldown/issues/81)) ([e84cde7](https://github.com/rolldown-rs/rolldown/commit/e84cde7d3baefd590c585ae400c627ab5837a107))
+* add identifier for export default function without identifier ([#81](https://github.com/rolldown-rs/rolldown/issues/81)) ([e84cde7](https://github.com/rolldown-rs/rolldown/commit/e84cde7d3baefd590c585ae400c627ab5837a107))
 * add stmt info declare symbol for resolution found symbol ([#91](https://github.com/rolldown-rs/rolldown/issues/91)) ([50e191a](https://github.com/rolldown-rs/rolldown/commit/50e191a6e33bb8ef160e0bd53a06b0bee19e4471))
 * allow cjs to be both entry and dependency ([#336](https://github.com/rolldown-rs/rolldown/issues/336)) ([d53155b](https://github.com/rolldown-rs/rolldown/commit/d53155b18a258447f352ea7d39264410888b9d9a))
 * async_scope_block_on ([#210](https://github.com/rolldown-rs/rolldown/issues/210)) ([51f1be1](https://github.com/rolldown-rs/rolldown/commit/51f1be1c0c9c02c3416f18bbe493f644ccd265fe))
@@ -14,7 +14,7 @@
 * clean up render exports from external module ([#394](https://github.com/rolldown-rs/rolldown/issues/394)) ([e51a69a](https://github.com/rolldown-rs/rolldown/commit/e51a69aec7ae1d599f7a20adc1d325ef6103b752))
 * clippy ([#4](https://github.com/rolldown-rs/rolldown/issues/4)) ([f028cff](https://github.com/rolldown-rs/rolldown/commit/f028cffb7f5de19f182127d79684285107b16ff0))
 * conflict between imported and local binding ([#356](https://github.com/rolldown-rs/rolldown/issues/356)) ([7387e35](https://github.com/rolldown-rs/rolldown/commit/7387e3586be27bbdd37a470b8e0eca6a6b8ba52b)), closes [#355](https://github.com/rolldown-rs/rolldown/issues/355)
-* deconflict export named declartion ([#386](https://github.com/rolldown-rs/rolldown/issues/386)) ([21aaa36](https://github.com/rolldown-rs/rolldown/commit/21aaa360d7f8db566b8d9ab8508a57df30b2340e))
+* deconflict export named declaration ([#386](https://github.com/rolldown-rs/rolldown/issues/386)) ([21aaa36](https://github.com/rolldown-rs/rolldown/commit/21aaa360d7f8db566b8d9ab8508a57df30b2340e))
 * deconflict for duplicate canonical names ([#365](https://github.com/rolldown-rs/rolldown/issues/365)) ([eebea46](https://github.com/rolldown-rs/rolldown/commit/eebea46c4db084f8ddda99d8998c3bc9024db127)), closes [#364](https://github.com/rolldown-rs/rolldown/issues/364)
 * defonflict export default function ([#385](https://github.com/rolldown-rs/rolldown/issues/385)) ([518aa5f](https://github.com/rolldown-rs/rolldown/commit/518aa5fc655508d2653b7fbd0a2f6ef1e266299c))
 * determine call expression result is used to render require call ([#144](https://github.com/rolldown-rs/rolldown/issues/144)) ([85224ea](https://github.com/rolldown-rs/rolldown/commit/85224ea21a572a96f510efda667aa2859e61201a))
@@ -52,7 +52,7 @@
 * top level await fix compile error ([#226](https://github.com/rolldown-rs/rolldown/issues/226)) ([ac60fdf](https://github.com/rolldown-rs/rolldown/commit/ac60fdf03ec566e2b219e7c06dcfce85a66588ea))
 * use the same `Resolver` everywhere ([#253](https://github.com/rolldown-rs/rolldown/issues/253)) ([cbcee58](https://github.com/rolldown-rs/rolldown/commit/cbcee5851c54bdfde8b56930d496b151a2d0846a))
 * using vec to keep input options order ([#217](https://github.com/rolldown-rs/rolldown/issues/217)) ([4e4f20a](https://github.com/rolldown-rs/rolldown/commit/4e4f20aafb7278cc66ac0b1add0bda19b4ff95b4))
-* warpped require module ([#79](https://github.com/rolldown-rs/rolldown/issues/79)) ([ee9a682](https://github.com/rolldown-rs/rolldown/commit/ee9a682ada40a218ea1e01516ac2e65eb083c16d))
+* wrapped require module ([#79](https://github.com/rolldown-rs/rolldown/issues/79)) ([ee9a682](https://github.com/rolldown-rs/rolldown/commit/ee9a682ada40a218ea1e01516ac2e65eb083c16d))
 
 
 ### Features
@@ -158,8 +158,8 @@
 * support export star commonjs ([#85](https://github.com/rolldown-rs/rolldown/issues/85)) ([07b8c03](https://github.com/rolldown-rs/rolldown/commit/07b8c039fd5e52f7ba60b5a74eb807ee5b577789))
 * support mix cjs and esm ([#76](https://github.com/rolldown-rs/rolldown/issues/76)) ([22794c3](https://github.com/rolldown-rs/rolldown/commit/22794c3986a0abeac3bd6e5130c3f9f8dac55c3d))
 * support tree shaking ([6e32999](https://github.com/rolldown-rs/rolldown/commit/6e32999b473a50e4faa6e668153f30fd91c48478))
-* suppport load hook return map ([#421](https://github.com/rolldown-rs/rolldown/issues/421)) ([b42b32b](https://github.com/rolldown-rs/rolldown/commit/b42b32b2cdb27fb652100df55bcef0aa8af01ed1))
-* suppport transform hook return map ([#422](https://github.com/rolldown-rs/rolldown/issues/422)) ([9206754](https://github.com/rolldown-rs/rolldown/commit/92067541217777fb1cbed392040deaa80c65f8da))
+* support load hook return map ([#421](https://github.com/rolldown-rs/rolldown/issues/421)) ([b42b32b](https://github.com/rolldown-rs/rolldown/commit/b42b32b2cdb27fb652100df55bcef0aa8af01ed1))
+* support transform hook return map ([#422](https://github.com/rolldown-rs/rolldown/issues/422)) ([9206754](https://github.com/rolldown-rs/rolldown/commit/92067541217777fb1cbed392040deaa80c65f8da))
 * treat empty files as cjs in compat mode ([456e0b3](https://github.com/rolldown-rs/rolldown/commit/456e0b3eef2f6b3607ddb3635f96839d56edd704))
 * treat required module with `ExportKind::None` as commonjs ([#319](https://github.com/rolldown-rs/rolldown/issues/319)) ([0738ad8](https://github.com/rolldown-rs/rolldown/commit/0738ad8e2413ea1a94e8d5c5ce6c2b055aa00ba9))
 * treeshaking in module level ([#382](https://github.com/rolldown-rs/rolldown/issues/382)) ([6f8b03f](https://github.com/rolldown-rs/rolldown/commit/6f8b03f2e3435b7bc3ac47d88b4c47206436eae3))

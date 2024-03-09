@@ -4,7 +4,7 @@ use derivative::Derivative;
 use napi::JsFunction;
 use serde::Deserialize;
 
-use crate::options::sourcemap::SourceMap;
+use crate::{options::sourcemap::SourceMap, types::binding_rendered_module::BindingRenderedModule};
 
 #[napi_derive::napi(object)]
 #[derive(Deserialize, Default, Derivative)]
@@ -156,7 +156,7 @@ pub struct RenderedChunk {
   // RenderedChunk
   pub file_name: String,
   #[serde(skip)]
-  pub modules: HashMap<String, crate::output::BindingRenderedModule>,
+  pub modules: HashMap<String, BindingRenderedModule>,
 }
 
 impl From<rolldown_common::RenderedChunk> for RenderedChunk {

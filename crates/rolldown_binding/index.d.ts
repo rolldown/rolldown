@@ -95,9 +95,6 @@ export interface SourceMap {
   sources: Array<string>
   sourcesContent: Array<string>
 }
-export interface BindingRenderedModule {
-  code?: string
-}
 export interface OutputChunk {
   isEntry: boolean
   isDynamicEntry: boolean
@@ -115,6 +112,9 @@ export interface OutputAsset {
 export interface Outputs {
   chunks: Array<OutputChunk>
   assets: Array<OutputAsset>
+}
+export interface BindingRenderedModule {
+  code?: string
 }
 export class Bundler {
   constructor(inputOpts: InputOptions)

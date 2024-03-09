@@ -1,25 +1,9 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::collections::HashMap;
 
 use derivative::Derivative;
-use napi_derive::napi;
 use serde::Deserialize;
 
-#[napi(object)]
-pub struct BindingRenderedModule {
-  pub code: Option<String>,
-}
-
-impl Debug for BindingRenderedModule {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("BindingRenderedModule").field("code", &"...").finish()
-  }
-}
-
-impl From<rolldown_common::RenderedModule> for BindingRenderedModule {
-  fn from(value: rolldown_common::RenderedModule) -> Self {
-    Self { code: value.code }
-  }
-}
+use crate::types::binding_rendered_module::BindingRenderedModule;
 
 #[napi_derive::napi(object)]
 #[derive(Deserialize, Default, Derivative)]

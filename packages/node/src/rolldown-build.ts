@@ -13,13 +13,13 @@ export class RolldownBuild {
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     const bindingOptions = normalizeOutputOptions(outputOptions)
     const output = await this.#bundler.write(bindingOptions)
-    return transformToRollupOutput(output) as RolldownOutput
+    return transformToRollupOutput(output)
   }
 
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     const bindingOptions = normalizeOutputOptions(outputOptions)
     const output = await this.#bundler.write(bindingOptions)
-    return transformToRollupOutput(output) as RolldownOutput
+    return transformToRollupOutput(output)
   }
 }
 

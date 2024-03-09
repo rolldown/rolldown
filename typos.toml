@@ -1,0 +1,9 @@
+[files]
+# rollup is a submodule
+extend-exclude = ["rollup/**/*"]
+
+[default]
+extend-ignore-re = [
+  # ignore commit id which looks like `[c7749ba]` in CHANGELOG.md
+  "\\[[a-z0-9]{7}\\]"
+]

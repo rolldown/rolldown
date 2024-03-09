@@ -83,7 +83,7 @@
   "rollup@function@circular-missed-reexports: handles circular reexports",
   "rollup@function@circular-namespace-reexport-manual-chunks: correctly handles namespace reexports with circular dependencies when using manual chunks",
   "rollup@function@circular-namespace-reexport-preserve-modules: correctly handles namespace reexports with circular dependencies when preserving modules",
-  "rollup@function@circular-preserve-modules: correctly handles circular dependencies whe preserving modules",
+  "rollup@function@circular-preserve-modules: correctly handles circular dependencies when preserving modules",
   "rollup@function@circular-preserve-modules: correctly handles circular dependencies when preserving modules",
   "rollup@function@circular-reexport: throws proper error for circular reexports",
   "rollup@function@class-method-mutations: includes variable mutations in class methods if tree-shaking is disabled",

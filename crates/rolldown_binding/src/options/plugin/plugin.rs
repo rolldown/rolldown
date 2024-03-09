@@ -155,7 +155,8 @@ pub struct RenderedChunk {
   pub exports: Vec<String>,
   // RenderedChunk
   pub file_name: String,
-  pub modules: HashMap<String, crate::output::RenderedModule>,
+  #[serde(skip)]
+  pub modules: HashMap<String, crate::output::BindingRenderedModule>,
 }
 
 impl From<rolldown_common::RenderedChunk> for RenderedChunk {

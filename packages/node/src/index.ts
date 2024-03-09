@@ -1,6 +1,6 @@
+import { RolldownOutput } from './objects/rolldown-output'
 import type { InputOptions, RolldownPlugin } from './options/input-options'
 import type { OutputOptions } from './options/output-options'
-import { RolldownOutput } from './utils'
 
 export { rolldown, experimental_scan } from './rolldown'
 
@@ -15,5 +15,5 @@ export type {
   InputOptions,
   OutputOptions,
   RolldownPlugin as Plugin,
-  RolldownOutput as RollupOutput,
+  RolldownOutput as RollupOutput
 }

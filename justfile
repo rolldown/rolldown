@@ -78,6 +78,7 @@ lint-node:
     yarn lint-filename
     yarn lint
     yarn prettier:ci
+    yarn typecheck
 
 lint:
     just lint-rust

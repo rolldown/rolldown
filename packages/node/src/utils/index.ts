@@ -16,4 +16,11 @@ export function unimplemented(info?: string): never {
   throw new Error('unimplemented')
 }
 
-export function noop(..._args: any[]) {}
+export function unreachable(info?: string): never {
+  if (info) {
+    throw new Error(`unreachable: ${info}`)
+  }
+  throw new Error('unreachable')
+}
+
+export function noop(..._args: any[]) { }

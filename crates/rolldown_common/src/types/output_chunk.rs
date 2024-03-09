@@ -2,6 +2,7 @@ use rustc_hash::FxHashMap;
 
 use super::rendered_module::RenderedModule;
 
+#[allow(clippy::zero_sized_map_values)]
 #[derive(Debug, Clone)]
 pub struct OutputChunk {
   // PreRenderedChunk

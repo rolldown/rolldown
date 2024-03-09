@@ -99,17 +99,9 @@ impl OxcResolverFileSystem for MemoryFileSystem {
   }
 
   fn symlink_metadata(&self, path: &Path) -> io::Result<FileMetadata> {
-    self
-      .fs
-      .metadata(path.to_string_lossy().as_ref())
-      .map(|meta| {
-        let is_file = meta.file_type == vfs::VfsFileType::File;
-        let is_dir = meta.file_type == vfs::VfsFileType::Directory;
-        FileMetadata::new(is_file, is_dir, false)
-      })
-      .map_err(|err| {
-        io::Error::new(io::ErrorKind::NotFound, format!("symlink_metadata failed: {err}"))
-      })
+    self.metadata(path).map_err(|err| {
+      io::Error::new(io::ErrorKind::NotFound, format!("symlink_metadata failed: {err}"))
+    })
   }
 
   fn canonicalize(&self, _path: &Path) -> io::Result<PathBuf> {

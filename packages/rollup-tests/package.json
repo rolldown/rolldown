@@ -10,22 +10,22 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@jridgewell/sourcemap-codec": "^1.4.14",
+    "@jridgewell/sourcemap-codec": "^1.4.15",
     "@rolldown/node": "workspace:*",
-    "@rollup/plugin-commonjs": "^24.0.1",
-    "@rollup/plugin-json": "^6.0.0",
-    "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
     "buble": "^0.20.0",
     "fixturify": "^3.0.0",
-    "fs-extra": "^11.1.0",
-    "locate-character": "^2.0.5",
-    "magic-string": "^0.27.0",
-    "mocha": "^10.2.0",
-    "terser": "^5.16.1"
+    "fs-extra": "^11.2.0",
+    "locate-character": "^3.0.0",
+    "magic-string": "^0.30.8",
+    "mocha": "^10.3.0",
+    "terser": "^5.29.1"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.1",
-    "@types/node": "^18.7.23",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.25",
     "source-map": "^0.7.4"
   }
 }

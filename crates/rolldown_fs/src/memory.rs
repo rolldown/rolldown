@@ -39,7 +39,11 @@ impl MemoryFileSystem {
       .into_iter()
       .rev()
       .map(|p| p.to_string_lossy().into_owned())
-      .try_for_each(|p| fs.create_dir(p.as_ref()).map_err(|_| "Failed to create directory"))?;
+      .try_for_each(|p| match fs.exists(p.as_ref()) {
+        Ok(true) => Ok(()),
+        Ok(false) => fs.create_dir(p.as_ref()).map_err(|_| "Failed to create directory"),
+        Err(_) => Err("Failed to check if directory exists"),
+      })?;
 
     // Create file
     let mut file = fs.create_file(path.to_string_lossy().as_ref())?;

@@ -1,4 +1,5 @@
 use std::{
+  error::Error,
   io,
   path::{Path, PathBuf},
   sync::Arc,
@@ -20,26 +21,30 @@ impl MemoryFileSystem {
   ///
   /// * Fails to create directory
   /// * Fails to write file
-  pub fn new(data: &[(&String, &String)]) -> Self {
+  pub fn new(data: &[(&String, &String)]) -> Result<Self, Box<dyn Error>> {
     let mut fs = Self::default();
     for (path, content) in data {
-      fs.add_file(Path::new(path), content);
+      fs.add_file(Path::new(path), content)?;
     }
-    fs
+    Ok(fs)
   }
 
-  pub fn add_file(&mut self, path: &Path, content: &str) {
+  pub fn add_file(&mut self, path: &Path, content: &str) -> Result<(), Box<dyn Error>> {
     let fs = &mut self.fs;
+
     // Create all parent directories
-    for path in path.ancestors().collect::<Vec<_>>().iter().rev() {
-      let path = path.to_string_lossy();
-      if !fs.exists(path.as_ref()).unwrap() {
-        fs.create_dir(path.as_ref()).unwrap();
-      }
-    }
+    path
+      .ancestors()
+      .collect::<Vec<_>>()
+      .into_iter()
+      .rev()
+      .map(|p| p.to_string_lossy().into_owned())
+      .try_for_each(|p| fs.create_dir(p.as_ref()).map_err(|_| "Failed to create directory"))?;
+
     // Create file
-    let mut file = fs.create_file(path.to_string_lossy().as_ref()).unwrap();
-    file.write_all(content.as_bytes()).unwrap();
+    let mut file = fs.create_file(path.to_string_lossy().as_ref())?;
+    file.write_all(content.as_bytes())?;
+    Ok(())
   }
 }
 

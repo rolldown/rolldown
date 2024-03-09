@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use crate::utils::JsCallback;
-use crate::{output::Outputs, utils::napi_error_ext::NapiErrorExt};
+use crate::{types::binding_outputs::BindingOutputs, utils::napi_error_ext::NapiErrorExt};
 use derivative::Derivative;
 use rolldown_plugin::Plugin;
 
@@ -17,8 +17,8 @@ pub type LoadCallback = JsCallback<(String,), Option<SourceResult>>;
 pub type TransformCallback = JsCallback<(String, String), Option<SourceResult>>;
 pub type BuildEndCallback = JsCallback<(Option<String>,), ()>;
 pub type RenderChunkCallback = JsCallback<(String, RenderedChunk), Option<HookRenderChunkOutput>>;
-pub type GenerateBundleCallback = JsCallback<(Outputs, bool), Option<HookRenderChunkOutput>>;
-pub type WriteBundleCallback = JsCallback<(Outputs,), ()>;
+pub type GenerateBundleCallback = JsCallback<(BindingOutputs, bool), Option<HookRenderChunkOutput>>;
+pub type WriteBundleCallback = JsCallback<(BindingOutputs,), ()>;
 
 #[derive(Derivative)]
 #[derivative(Debug)]

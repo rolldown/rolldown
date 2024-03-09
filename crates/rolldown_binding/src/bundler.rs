@@ -5,8 +5,10 @@ use rolldown_fs::OsFileSystem;
 use tracing::instrument;
 
 use crate::{
-  options::InputOptions, options::OutputOptions, output::Outputs,
-  utils::try_init_custom_trace_subscriber, NAPI_ENV,
+  options::{InputOptions, OutputOptions},
+  types::binding_outputs::BindingOutputs,
+  utils::try_init_custom_trace_subscriber,
+  NAPI_ENV,
 };
 
 #[napi]
@@ -23,12 +25,12 @@ impl Bundler {
   }
 
   #[napi]
-  pub async fn write(&self, opts: OutputOptions) -> napi::Result<Outputs> {
+  pub async fn write(&self, opts: OutputOptions) -> napi::Result<BindingOutputs> {
     self.write_impl(opts).await
   }
 
   #[napi]
-  pub async fn generate(&self, opts: OutputOptions) -> napi::Result<Outputs> {
+  pub async fn generate(&self, opts: OutputOptions) -> napi::Result<BindingOutputs> {
     self.generate_impl(opts).await
   }
 
@@ -67,7 +69,7 @@ impl Bundler {
 
   #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn write_impl(&self, output_opts: OutputOptions) -> napi::Result<Outputs> {
+  pub async fn write_impl(&self, output_opts: OutputOptions) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
@@ -88,7 +90,7 @@ impl Bundler {
 
   #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn generate_impl(&self, output_opts: OutputOptions) -> napi::Result<Outputs> {
+  pub async fn generate_impl(&self, output_opts: OutputOptions) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;

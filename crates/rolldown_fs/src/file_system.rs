@@ -30,6 +30,6 @@ pub trait FileSystem: Send + Sync + OxcResolverFileSystem {
 
   /// # Errors
   ///
-  /// * See [std::fs::write]
+  /// * See [std::path::Path::exists]
   fn exists(&self, path: &Path) -> bool;
 }

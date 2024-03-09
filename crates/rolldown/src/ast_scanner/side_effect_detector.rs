@@ -29,6 +29,10 @@ pub struct SideEffectDetector<'a> {
 }
 
 impl<'a> SideEffectDetector<'a> {
+  pub fn new(scope: &'a AstScope) -> Self {
+    Self { scope }
+  }
+
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
     self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
   }
@@ -103,6 +107,30 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::FunctionExpression(_)
       | Expression::ArrowFunctionExpression(_)
       | Expression::StringLiteral(_) => false,
+      Expression::ObjectExpression(obj_expr) => {
+        obj_expr.properties.iter().any(|obj_prop| match obj_prop {
+          oxc::ast::ast::ObjectPropertyKind::ObjectProperty(prop) => {
+            let key_side_effect = match &prop.key {
+              oxc::ast::ast::PropertyKey::Identifier(_)
+              | oxc::ast::ast::PropertyKey::PrivateIdentifier(_) => false,
+              oxc::ast::ast::PropertyKey::Expression(expr) => self.detect_side_effect_of_expr(expr),
+            };
+
+            let prop_init_side_effect =
+              prop.init.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr));
+
+            let value_side_effect = self.detect_side_effect_of_expr(&prop.value);
+
+            key_side_effect || prop_init_side_effect || value_side_effect
+          }
+          oxc::ast::ast::ObjectPropertyKind::SpreadProperty(spread) => {
+            self.detect_side_effect_of_expr(&spread.argument)
+          }
+        })
+      }
+      Expression::UnaryExpression(unary_expr) => {
+        self.detect_side_effect_of_expr(&unary_expr.argument)
+      }
       Expression::MemberExpression(mem_expr) => Self::detect_side_effect_of_member_expr(mem_expr),
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
@@ -186,5 +214,75 @@ impl<'a> SideEffectDetector<'a> {
       | Statement::WithStatement(_)
       | Statement::ContinueStatement(_) => true,
     }
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use oxc::span::SourceType;
+  use rolldown_common::AstScope;
+  use rolldown_oxc_utils::OxcCompiler;
+
+  use crate::ast_scanner::side_effect_detector::SideEffectDetector;
+
+  fn assert_statements_no_side_effect(code: &str) {
+    let source_type = SourceType::default()
+      .with_always_strict(true)
+      .with_module(true)
+      .with_jsx(true)
+      .with_typescript(false);
+    let program = OxcCompiler::parse(code, source_type);
+
+    let ast_scope = {
+      let semantic = program.make_semantic(source_type);
+      let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
+      AstScope::new(scope, std::mem::take(&mut symbol_table.references))
+    };
+
+    let has_side_effect = program
+      .program()
+      .body
+      .iter()
+      .any(|stmt| SideEffectDetector::new(&ast_scope).detect_side_effect_of_stmt(stmt));
+
+    assert!(!has_side_effect, "expect\n```js\n{code}\n```\nnot have any side effect");
+  }
+
+  #[test]
+  fn test_side_effect() {
+    assert_statements_no_side_effect("export { a }");
+    assert_statements_no_side_effect("const a = {}");
+    assert_statements_no_side_effect(
+      "const PatchFlags = {
+        'TEXT':1,
+        '1':'TEXT',
+        'CLASS':2,
+        '2':'CLASS',
+        'STYLE':4,
+        '4':'STYLE',
+        'PROPS':8,
+        '8':'PROPS',
+        'FULL_PROPS':16,
+        '16':'FULL_PROPS',
+        'NEED_HYDRATION':32,
+        '32':'NEED_HYDRATION',
+        'STABLE_FRAGMENT':64,
+        '64':'STABLE_FRAGMENT',
+        'KEYED_FRAGMENT':128,
+        '128':'KEYED_FRAGMENT',
+        'UNKEYED_FRAGMENT':256,
+        '256':'UNKEYED_FRAGMENT',
+        'NEED_PATCH':512,
+        '512':'NEED_PATCH',
+        'DYNAMIC_SLOTS':1024,
+        '1024':'DYNAMIC_SLOTS',
+        'DEV_ROOT_FRAGMENT':2048,
+        '2048':'DEV_ROOT_FRAGMENT',
+        'HOISTED': -1,
+        '-1':'HOISTED',
+        'BAIL': -2,
+        '-2':'BAIL'
+      };",
+    );
   }
 }

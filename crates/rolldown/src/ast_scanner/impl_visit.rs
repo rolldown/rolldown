@@ -12,7 +12,7 @@ use super::{side_effect_detector::SideEffectDetector, AstScanner};
 impl<'ast> AstScanner<'ast> {
   fn visit_top_level_stmt(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {
     self.current_stmt_info.side_effect =
-      SideEffectDetector { scope: self.scope }.detect_side_effect_of_stmt(stmt);
+      SideEffectDetector::new(self.scope).detect_side_effect_of_stmt(stmt);
     self.visit_statement(stmt);
   }
 }

@@ -20,7 +20,7 @@ index_vec          = { workspace = true }
 once_cell          = { workspace = true }
 oxc                = { workspace = true }
 oxc_resolver       = { workspace = true }
-rayon              = "1.6.0"
+rayon              = "1.9.0"
 regex              = { workspace = true }
 rolldown_common    = { path = "../rolldown_common" }
 rolldown_error     = { path = "../rolldown_error" }

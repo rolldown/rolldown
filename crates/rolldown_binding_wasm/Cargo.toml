@@ -18,7 +18,7 @@ crate-type = ["cdylib"]
 rolldown     = { path = "../rolldown/" }
 rolldown_fs  = { path = "../rolldown_fs", features = ["memory"], default-features = false }
 tokio        = { workspace = true, default-features = false, features = ["rt", "macros", "sync"] }
-wasm-bindgen = "0.2.74"
+wasm-bindgen = "0.2.92"
 
 console_error_panic_hook = "0.1.7"
 sugar_path               = { workspace = true }

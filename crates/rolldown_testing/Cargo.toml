@@ -18,6 +18,6 @@ path  = "./bin/gen_test_config_schema.rs"
 test  = false
 
 [dependencies]
-schemars   = "0.8.11"
+schemars   = "0.8.16"
 serde      = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

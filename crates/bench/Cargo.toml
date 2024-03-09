@@ -14,7 +14,7 @@ doctest = false
 test    = false
 
 [dependencies]
-criterion   = "0.4.0"
+criterion   = "0.5.1"
 rolldown    = { path = "../rolldown" }
 rolldown_fs = { path = "../rolldown_fs/" }
 tokio       = { workspace = true, features = ["full"] }
@@ -24,4 +24,4 @@ name    = "threejs"
 
 
 [dev-dependencies]
-codspeed-criterion-compat = "2.3.1"
+codspeed-criterion-compat = "2.4.0"

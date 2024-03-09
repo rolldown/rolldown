@@ -24,6 +24,7 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_3: Lazy<FxHashSet<(&'static str, &'static st
       .collect()
   });
 
+/// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScope,
 }
@@ -227,7 +228,7 @@ mod test {
 
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
 
-  fn assert_statements_no_side_effect(code: &str) {
+  fn get_statements_side_effect(code: &str) -> bool {
     let source_type = SourceType::default()
       .with_always_strict(true)
       .with_module(true)
@@ -247,14 +248,14 @@ mod test {
       .iter()
       .any(|stmt| SideEffectDetector::new(&ast_scope).detect_side_effect_of_stmt(stmt));
 
-    assert!(!has_side_effect, "expect\n```js\n{code}\n```\nnot have any side effect");
+    has_side_effect
   }
 
   #[test]
   fn test_side_effect() {
-    assert_statements_no_side_effect("export { a }");
-    assert_statements_no_side_effect("const a = {}");
-    assert_statements_no_side_effect(
+    assert!(!get_statements_side_effect("export { a }"));
+    assert!(!get_statements_side_effect("const a = {}"));
+    assert!(!get_statements_side_effect(
       "const PatchFlags = {
         'TEXT':1,
         '1':'TEXT',
@@ -285,6 +286,6 @@ mod test {
         'BAIL': -2,
         '-2':'BAIL'
       };",
-    );
+    ));
   }
 }

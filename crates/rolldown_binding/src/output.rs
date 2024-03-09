@@ -1,29 +1,23 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 use derivative::Derivative;
+use napi_derive::napi;
 use serde::Deserialize;
 
-#[napi_derive::napi(object)]
-#[derive(Deserialize, Default, Derivative)]
-#[serde(rename_all = "camelCase")]
-#[derivative(Debug)]
-pub struct RenderedModule {
+#[napi(object)]
+pub struct BindingRenderedModule {
   pub code: Option<String>,
-  pub removed_exports: Vec<String>,
-  pub rendered_exports: Vec<String>,
-  pub original_length: u32,
-  pub rendered_length: u32,
 }
 
-impl From<rolldown_common::RenderedModule> for RenderedModule {
+impl Debug for BindingRenderedModule {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("BindingRenderedModule").field("code", &"...").finish()
+  }
+}
+
+impl From<rolldown_common::RenderedModule> for BindingRenderedModule {
   fn from(value: rolldown_common::RenderedModule) -> Self {
-    Self {
-      code: None,
-      original_length: value.original_length,
-      rendered_length: value.rendered_length,
-      removed_exports: vec![],
-      rendered_exports: vec![],
-    }
+    Self { code: value.code }
   }
 }
 
@@ -40,7 +34,8 @@ pub struct OutputChunk {
   pub exports: Vec<String>,
   // RenderedChunk
   pub file_name: String,
-  pub modules: HashMap<String, RenderedModule>,
+  #[serde(skip_deserializing)]
+  pub modules: HashMap<String, BindingRenderedModule>,
   // OutputChunk
   pub code: String,
 }

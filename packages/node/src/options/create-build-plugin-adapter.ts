@@ -34,7 +34,7 @@ function writeBundle(hook: Plugin['writeBundle']) {
     }
     return async (outputs: Outputs) => {
       try {
-        // TODO outputOptions
+        // @ts-expect-error: FIXME: hyf0
         await hook.call({} as any, {} as any, transformToOutputBundle(outputs))
       } catch (error) {
         console.error(error)
@@ -51,10 +51,10 @@ function generateBundle(hook: Plugin['generateBundle']) {
     }
     return async (outputs: Outputs, isWrite: boolean) => {
       try {
-        // TODO outputOptions
         await hook.call(
           {} as any,
           {} as any,
+          // @ts-expect-error: FIXME: hyf0
           transformToOutputBundle(outputs),
           isWrite,
         )
@@ -127,6 +127,7 @@ function renderChunk(hook: Plugin['renderChunk']) {
         const value = await hook.call(
           {} as any,
           code,
+          // @ts-expect-error: FIXME: hyf0
           renderedChunk,
           {} as any,
           {} as any,

@@ -2,6 +2,7 @@ mod de_conflict;
 pub mod render_chunk;
 mod render_chunk_exports;
 mod render_chunk_imports;
+
 use index_vec::IndexVec;
 use rolldown_common::ChunkId;
 
@@ -106,13 +107,7 @@ impl Chunk {
         );
         Some((
           m.resource_id.expect_file().to_string(),
-          RenderedModule {
-            original_length: m.source.len().try_into().unwrap(),
-            rendered_length: rendered_content
-              .as_ref()
-              .map(|c| c.code.len() as u32)
-              .unwrap_or_default(),
-          },
+          RenderedModule { code: None },
           rendered_content,
           if output_options.sourcemap.is_hidden() {
             None

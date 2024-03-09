@@ -86,7 +86,7 @@ export interface RenderedChunk {
   moduleIds: Array<string>
   exports: Array<string>
   fileName: string
-  modules: Record<string, RenderedModule>
+  modules: Record<string, BindingRenderedModule>
 }
 export interface SourceMap {
   mappings: string
@@ -95,12 +95,8 @@ export interface SourceMap {
   sources: Array<string>
   sourcesContent: Array<string>
 }
-export interface RenderedModule {
+export interface BindingRenderedModule {
   code?: string
-  removedExports: Array<string>
-  renderedExports: Array<string>
-  originalLength: number
-  renderedLength: number
 }
 export interface OutputChunk {
   isEntry: boolean
@@ -109,7 +105,7 @@ export interface OutputChunk {
   moduleIds: Array<string>
   exports: Array<string>
   fileName: string
-  modules: Record<string, RenderedModule>
+  modules: Record<string, BindingRenderedModule>
   code: string
 }
 export interface OutputAsset {

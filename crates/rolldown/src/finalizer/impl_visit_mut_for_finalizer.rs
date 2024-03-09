@@ -330,6 +330,83 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     self.visit_class_body(&mut class.body);
   }
 
+  fn visit_variable_declarator(&mut self, declarator: &mut ast::VariableDeclarator<'ast>) {
+    // If we rename a variable declaration, we should preserve the class name
+    // `var a = class { }` should become `var a$1 = class a { }`
+
+    // Preserve the class name if it's a class declaration
+    let mut old_name = None;
+
+    if let (
+      ast::BindingPatternKind::BindingIdentifier(ident),
+      Some(ast::Expression::ClassExpression(_)),
+    ) = (&mut declarator.id.kind, &declarator.init)
+    {
+      old_name = Some(ident.name.clone());
+    }
+
+    // Visit binding pattern
+    self.visit_binding_pattern(&mut declarator.id);
+
+    // Put old name into the declarator if it's a class declaration
+    if let (
+      Some(old_name),
+      ast::BindingPatternKind::BindingIdentifier(ident),
+      Some(ast::Expression::ClassExpression(class)),
+    ) = (old_name, &mut declarator.id.kind, &mut declarator.init)
+    {
+      if ident.name != old_name {
+        class.id = Some(self.snippet.id(old_name));
+      }
+    }
+
+    // Visit children
+    if let Some(init) = &mut declarator.init {
+      self.visit_expression(init);
+    }
+  }
+
+  fn visit_declaration_match(&mut self, decl: &mut ast::Declaration<'ast>) {
+    match decl {
+      ast::Declaration::VariableDeclaration(decl) => self.visit_variable_declaration(decl),
+      ast::Declaration::FunctionDeclaration(func) => self.visit_function(func, None),
+      ast::Declaration::ClassDeclaration(class) => {
+        // Check if we need to rename the class
+        // If we need to rename the class, we should convert the class declaration to a variable declaration
+        // `class A { }` => `var A$1 = class A { }`
+        if let Some(ident) = &mut class.id {
+          if let Some(symbol_id) = ident.symbol_id.get() {
+            let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
+            if ident.name != canonical_name.as_str() {
+              let class_expr = ast::Expression::ClassExpression(class.take_in(self.alloc));
+              let var_decl = self.snippet.var_decl(canonical_name.to_oxc_atom(), class_expr);
+
+              *decl = var_decl;
+
+              return;
+            }
+          }
+        }
+
+        self.visit_class(class);
+      }
+      ast::Declaration::UsingDeclaration(decl) => self.visit_using_declaration(decl),
+      ast::Declaration::TSModuleDeclaration(module) => {
+        self.visit_ts_module_declaration(module);
+      }
+      ast::Declaration::TSTypeAliasDeclaration(decl) => {
+        self.visit_ts_type_alias_declaration(decl);
+      }
+      ast::Declaration::TSEnumDeclaration(decl) => self.visit_enum(decl),
+      ast::Declaration::TSImportEqualsDeclaration(decl) => {
+        self.visit_ts_import_equals_declaration(decl);
+      }
+      ast::Declaration::TSInterfaceDeclaration(decl) => {
+        self.visit_ts_interface_declaration(decl);
+      }
+    }
+  }
+
   #[allow(clippy::collapsible_else_if)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     if let Some(call_expr) = expr.as_call_expression() {

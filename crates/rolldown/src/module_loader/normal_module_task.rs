@@ -45,7 +45,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
 
   pub async fn run(mut self) {
     match self.run_inner().await {
-      Ok(_) => {
+      Ok(()) => {
         if !self.errors.is_empty() {
           self.ctx.tx.send(Msg::BuildErrors(self.errors)).expect("Send should not fail");
         }

@@ -240,9 +240,7 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
       self.remaining -= 1;
     }
 
-    if !panic_errors.is_empty() {
-      panic!("Panics occurred during module loading: {:?}", panic_errors);
-    }
+    assert!(panic_errors.is_empty(), "Panics occurred during module loading: {panic_errors:?}");
 
     if !errors.is_empty() {
       return Err(errors);

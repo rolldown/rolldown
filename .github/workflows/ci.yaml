@@ -124,8 +124,11 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Test
-        run: just test-node
+      - name: Build
+        run: yarn build:node
+
+      - name: Run Test
+        run: yarn test
 
   node-format:
     name: Node Format

@@ -310,6 +310,26 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     }
   }
 
+  fn visit_class(&mut self, class: &mut ast::Class<'ast>) {
+    // Visit children without `visit_binding_identifier` as we don't want to rename class and cause runtime difference
+
+    for decorator in class.decorators.iter_mut() {
+      self.visit_decorator(decorator);
+    }
+
+    if let Some(parameters) = &mut class.type_parameters {
+      self.visit_ts_type_parameter_declaration(parameters);
+    }
+
+    if let Some(super_class) = &mut class.super_class {
+      self.visit_class_heritage(super_class);
+    }
+    if let Some(super_parameters) = &mut class.super_type_parameters {
+      self.visit_ts_type_parameter_instantiation(super_parameters);
+    }
+    self.visit_class_body(&mut class.body);
+  }
+
   #[allow(clippy::collapsible_else_if)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     if let Some(call_expr) = expr.as_call_expression() {

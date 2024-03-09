@@ -51,6 +51,7 @@ afterEach(function updateStatus() {
   }
   const state = this.currentTest.state
   if (state === 'failed') {
+    console.error(this.currentTest.err)
     status.failed += 1
     failedTests.add(calcTestId(this.currentTest))
   } else if (state === 'passed') {

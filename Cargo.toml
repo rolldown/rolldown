@@ -46,7 +46,7 @@ missing_errors_doc = "allow"
 
 # #[must_use] is creating too much noise for this codebase, it does not add much value except nagging
 # the programmer to add a #[must_use] after clippy has been run.
-# Having #[must_use] every where also hinders readability.
+# Having #[must_use] everywhere also hinders readability.
 must_use_candidate = "allow"
 
 doc_markdown         = "allow"

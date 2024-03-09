@@ -1,0 +1,23 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/rollup/object-spread-side-effect
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "assert";
+
+// main.js
+let result = 'FAIL';
+const unused = {
+	...{
+		get prop(){
+			result = 'PASS';
+		}
+	}
+};
+assert.strictEqual(result, 'PASS');
+```

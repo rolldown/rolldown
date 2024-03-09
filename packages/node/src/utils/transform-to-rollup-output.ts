@@ -1,8 +1,8 @@
-import { OutputAsset, OutputChunk, Outputs } from '@rolldown/node-binding'
 import { RolldownOutput, RolldownOutputAsset, RolldownOutputChunk } from '../objects/rolldown-output'
 import { OutputBundle } from '../objects/output-bundle'
+import { BindingOutputAsset, BindingOutputChunk, BindingOutputs } from '@rolldown/node-binding'
 
-function transformToRollupOutputChunk(chunk: OutputChunk): RolldownOutputChunk {
+function transformToRollupOutputChunk(chunk: BindingOutputChunk): RolldownOutputChunk {
   return {
     type: 'chunk',
     code: chunk.code,
@@ -17,7 +17,7 @@ function transformToRollupOutputChunk(chunk: OutputChunk): RolldownOutputChunk {
   }
 }
 
-function transformToRollupOutputAsset(asset: OutputAsset): RolldownOutputAsset {
+function transformToRollupOutputAsset(asset: BindingOutputAsset): RolldownOutputAsset {
   return {
     type: 'asset',
     fileName: asset.fileName,
@@ -25,7 +25,7 @@ function transformToRollupOutputAsset(asset: OutputAsset): RolldownOutputAsset {
   }
 }
 
-export function transformToRollupOutput(output: Outputs): RolldownOutput {
+export function transformToRollupOutput(output: BindingOutputs): RolldownOutput {
   const { chunks, assets } = output
   const [firstChunk, ...restChunks] = chunks
   return {
@@ -38,7 +38,7 @@ export function transformToRollupOutput(output: Outputs): RolldownOutput {
 }
 
 
-export function transformToOutputBundle(output: Outputs): OutputBundle {
+export function transformToOutputBundle(output: BindingOutputs): OutputBundle {
   return Object.fromEntries(
     transformToRollupOutput(output).output.map((item) => [item.fileName, item]),
   )

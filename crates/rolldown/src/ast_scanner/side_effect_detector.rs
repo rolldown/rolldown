@@ -123,8 +123,10 @@ impl<'a> SideEffectDetector<'a> {
 
             key_side_effect || prop_init_side_effect || value_side_effect
           }
-          oxc::ast::ast::ObjectPropertyKind::SpreadProperty(spread) => {
-            self.detect_side_effect_of_expr(&spread.argument)
+          oxc::ast::ast::ObjectPropertyKind::SpreadProperty(_) => {
+            // ...[expression] is considered as having side effect.
+            // see crates/rolldown/tests/fixtures/rollup/object-spread-side-effect
+            true
           }
         })
       }

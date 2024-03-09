@@ -26,12 +26,35 @@ export default defineConfig({
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: 'Home', link: '/' },
-      { text: 'About', link: '/about.md' },
+      {
+        text: 'About',
+        link: '/about.md',
+      },
       { text: 'Contribute', link: '/contrib-guide/' },
       {
-        text: 'Roadmap',
-        link: 'https://github.com/rolldown-rs/rolldown/discussions/153',
+        text: 'Resources',
+        items: [
+          {
+            text: 'Team',
+            link: '/team.md',
+          },
+          {
+            text: 'Roadmap',
+            link: 'https://github.com/rolldown-rs/rolldown/discussions/153',
+          },
+          {
+            items: [
+              {
+                text: 'Twitter',
+                link: 'https://twitter.com/rolldown_rs',
+              },
+              {
+                text: 'Discord Chat',
+                link: 'https://discord.gg/vsZxvsfgC5',
+              },
+            ],
+          },
+        ],
       },
     ],
 

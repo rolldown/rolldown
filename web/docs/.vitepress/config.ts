@@ -19,6 +19,8 @@ export default defineConfig({
     ['meta', { property: 'og:image', content: 'https://rolldown.rs/og-image.png' }],
     ['meta', { property: 'og:site_name', content: 'Rolldown' }],
     ['meta', { property: 'og:url', content: 'https://rolldown.rs/' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:site', content: '@rolldown_rs' }],
   ],
 
   themeConfig: {

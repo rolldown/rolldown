@@ -16,16 +16,16 @@
   "license": "MIT",
   "homepage": "https://github.com/rolldown-rs/rolldown",
   "devDependencies": {
-    "@vitejs/plugin-vue": "^4.4.1",
-    "vite": "^5.0.0"
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.1.5"
   },
   "dependencies": {
-    "@codemirror/lang-javascript": "^6.2.1",
+    "@codemirror/lang-javascript": "^6.2.2",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@rolldown/wasm-binding": "workspace:*",
     "codemirror": "^6.0.1",
-    "pathe": "^1.1.1",
-    "vue": "^3.3.8",
+    "pathe": "^1.1.2",
+    "vue": "^3.4.21",
     "vue-codemirror": "^6.1.1"
   }
 }

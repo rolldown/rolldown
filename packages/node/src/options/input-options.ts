@@ -16,7 +16,7 @@ export interface InputOptions {
 }
 
 export type RolldownResolveOptions = Omit<ResolveOptions, 'alias'> & {
-  alias: Record<string, string>
+  alias?: Record<string, string>
 }
 
 export type RolldownNormalizedInputOptions = NormalizedInputOptions & {

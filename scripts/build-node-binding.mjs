@@ -241,7 +241,7 @@ async function watchForChanges() {
     events.forEach((event) => {
       const changedFile = event.path.replace(ROOT_DIR, '').slice(1)
 
-      log(colors.yellow(`${event.type}: ${changedFile}`))
+      log(colors.gray(`${event.type}: ${changedFile}`))
 
       if (changedFile.includes('crates/rolldown_binding/')) {
         buildNodeBindingCrate(changedFile).then(() =>

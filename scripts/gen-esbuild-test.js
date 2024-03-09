@@ -202,33 +202,37 @@ function calculatePrefix(stringList) {
  */
 function processFiles(node, binding) {
   if (node.firstChild.type === 'identifier') {
-    let name = node.firstChild.text
+    let name = node.firstChild.text;
     if (binding[name]) {
-      node = binding[name]
+      node = binding[name];
     }
   }
-  let fileList = []
-  let compositeLiteral = node.namedChild(0)
-  let body = compositeLiteral.namedChild(1)
+  let fileList = [];
+  let compositeLiteral = node.namedChild(0);
+  let body = compositeLiteral.namedChild(1);
   try {
     body.namedChildren.forEach((child) => {
-      if (child.type !== 'keyed_element') {
-        return
+      let nameNode = child.namedChild(0);
+      let contentNode = child.namedChild(1);
+      if (!nameNode || !contentNode) {
+        console.warn('Missing name or content node');
+        return;
       }
-      let name = child.namedChild(0)?.text.slice(1, -1)
-      let content = child.namedChild(1).text.slice(1, -1).trim()
-      content = dedent.default(content)
+      let name = nameNode.text.slice(1, -1);
+      let content = contentNode.text.slice(1, -1).trim();
+      content = dedent.default(content);
       fileList.push({
         name,
         content,
-      })
-    })
-    return fileList
+      });
+    });
+    return fileList;
   } catch (err) {
-    console.error(`Error occurred when processFiles: ${chalk.red(err)}`)
-    return []
+    console.error(`Error occurred when processing files: ${chalk.red(err)}`);
+    return [];
   }
 }
+
 
 /**
  * @param {import('tree-sitter').SyntaxNode} node
@@ -236,26 +240,31 @@ function processFiles(node, binding) {
  */
 function processEntryPath(node, binding) {
   if (node.firstChild.type === 'identifier') {
-    let name = node.firstChild.text
+    let name = node.firstChild.text;
     if (binding[name]) {
-      node = binding[name]
+      node = binding[name];
     }
   }
-  let entryList = []
-  let compositeLiteral = node.namedChild(0)
-  let body = compositeLiteral.namedChild(1)
+  let entryList = [];
+  let compositeLiteral = node.namedChild(0);
+  let body = compositeLiteral.namedChild(1);
   try {
     body.namedChildren.forEach((child) => {
-      let entry = child.namedChild(0).text.slice(1, -1)
-      entryList.push(entry)
-    })
-
-    return entryList
+      let entryNode = child.namedChild(0);
+      if (!entryNode) {
+        console.warn('Missing entry node');
+        return;
+      }
+      let entry = entryNode.text.slice(1, -1);
+      entryList.push(entry);
+    });
+    return entryList;
   } catch (err) {
-    console.error(`Error occurred when processEntryPath: ${chalk.red(err)}`)
-    return []
+    console.error(`Error occurred when processing entry path: ${chalk.red(err)}`);
+    return [];
   }
 }
+
 
 // TODO only preserve mode ModeBundle test case
 /**

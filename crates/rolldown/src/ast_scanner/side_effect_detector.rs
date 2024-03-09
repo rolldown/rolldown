@@ -288,4 +288,14 @@ mod test {
       };",
     ));
   }
+
+  #[test]
+  fn test_template_literal() {
+    assert!(!get_statements_side_effect("`hello`"));
+    assert!(!get_statements_side_effect("const foo = ''; `hello${foo}`"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("`hello${foo}`"));
+    assert!(get_statements_side_effect("const foo = {}; `hello${foo.bar}`"));
+    assert!(get_statements_side_effect("tag`hello`"));
+  }
 }

@@ -95,7 +95,11 @@ export interface SourceMap {
   sources: Array<string>
   sourcesContent: Array<string>
 }
-export interface OutputChunk {
+export interface BindingOutputAsset {
+  fileName: string
+  source: string
+}
+export interface BindingOutputChunk {
   isEntry: boolean
   isDynamicEntry: boolean
   facadeModuleId?: string
@@ -105,20 +109,16 @@ export interface OutputChunk {
   modules: Record<string, BindingRenderedModule>
   code: string
 }
-export interface OutputAsset {
-  fileName: string
-  source: string
-}
-export interface Outputs {
-  chunks: Array<OutputChunk>
-  assets: Array<OutputAsset>
+export interface BindingOutputs {
+  chunks: Array<BindingOutputChunk>
+  assets: Array<BindingOutputAsset>
 }
 export interface BindingRenderedModule {
   code?: string
 }
 export class Bundler {
   constructor(inputOpts: InputOptions)
-  write(opts: OutputOptions): Promise<Outputs>
-  generate(opts: OutputOptions): Promise<Outputs>
+  write(opts: OutputOptions): Promise<BindingOutputs>
+  generate(opts: OutputOptions): Promise<BindingOutputs>
   scan(): Promise<void>
 }

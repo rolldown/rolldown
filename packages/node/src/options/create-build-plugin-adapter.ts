@@ -5,7 +5,7 @@ import type {
   ResolveIdResult,
   RenderedChunk,
   HookRenderChunkOutput,
-  Outputs,
+  BindingOutputs as Outputs,
 } from '@rolldown/node-binding'
 import { transformToOutputBundle, unimplemented, transformSourcemap } from '../utils'
 

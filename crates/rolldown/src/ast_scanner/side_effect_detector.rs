@@ -138,6 +138,9 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.is_unresolved_reference(ident),
+      Expression::TemplateLiteral(literal) => {
+        literal.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
+      }
       _ => true,
     }
   }

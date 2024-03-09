@@ -80,7 +80,7 @@ impl Default for InputOptions {
       input: vec![],
       cwd: std::env::current_dir().unwrap(),
       external: External::default(),
-      treeshake: false,
+      treeshake: true,
       resolve: None,
     }
   }

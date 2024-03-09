@@ -34,7 +34,7 @@ features:
 ---
 
 :::warning Work in Progress
-Rolldown is currently in active development and not usable for production yet. We encourage you to learn about [why we are building it](/about.md) and welcome community contributions. If you are interested in getting involved, check out the [Contribution Guide](/contrib-guide/) and join us on [Discord](https://discord.gg/vsZxvsfgC5)!
+Rolldown is currently in active development and not usable for production yet. We encourage you to learn about [why we are building it](/about.md) and welcome community contributions. If you are interested in getting involved, check out the [Contribution Guide](/contrib-guide/) and join us on [Discord](https://chat.rolldown.rs)!
 :::
 
 <style>

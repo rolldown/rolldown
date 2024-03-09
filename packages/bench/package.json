@@ -12,6 +12,8 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "tinybench": "^2.5.1"
+    "tinybench": "^2.5.1",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0"
   }
 }

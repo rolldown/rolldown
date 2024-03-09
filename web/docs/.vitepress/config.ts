@@ -16,6 +16,7 @@ export default defineConfig({
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:locale', content: 'en' }],
     ['meta', { property: 'og:title', content: 'Rolldown | Rust bundler for JavaScript' }],
+    ['meta', { property: 'og:image', content: 'https://rolldown.rs/og-image.png' }],
     ['meta', { property: 'og:site_name', content: 'Rolldown' }],
     ['meta', { property: 'og:url', content: 'https://rolldown.rs/' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
@@ -27,12 +28,35 @@ export default defineConfig({
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: 'Home', link: '/' },
-      { text: 'About', link: '/about.md' },
+      {
+        text: 'About',
+        link: '/about.md',
+      },
       { text: 'Contribute', link: '/contrib-guide/' },
       {
-        text: 'Roadmap',
-        link: 'https://github.com/rolldown-rs/rolldown/discussions/153',
+        text: 'Resources',
+        items: [
+          {
+            text: 'Team',
+            link: '/team.md',
+          },
+          {
+            text: 'Roadmap',
+            link: 'https://github.com/rolldown-rs/rolldown/discussions/153',
+          },
+          {
+            items: [
+              {
+                text: 'Twitter',
+                link: 'https://twitter.com/rolldown_rs',
+              },
+              {
+                text: 'Discord Chat',
+                link: 'https://discord.gg/vsZxvsfgC5',
+              },
+            ],
+          },
+        ],
       },
     ],
 
@@ -43,6 +67,7 @@ export default defineConfig({
         { text: 'Build', link: '/contrib-guide/build.md' },
         { text: 'Test', link: '/contrib-guide/test.md' },
         { text: 'Benchmark', link: '/contrib-guide/benchmark.md' },
+        { text: 'Docs', link: '/contrib-guide/docs.md' },
         { text: 'Release', link: '/contrib-guide/release.md' },
       ],
     },

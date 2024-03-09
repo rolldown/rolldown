@@ -1,3 +1,3 @@
-import * as vue from 'vue'
+import { createApp } from 'vue'
 
-export default vue
+export default createApp({})

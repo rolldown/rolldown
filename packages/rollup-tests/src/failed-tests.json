@@ -91,7 +91,6 @@
   "rollup@function@class-name-conflict-2: does not shadow variables when preserving class names",
   "rollup@function@class-name-conflict-3: does not shadow variables when preserving class names",
   "rollup@function@class-name-conflict-4: does not shadow variables when preserving class names",
-  "rollup@function@class-name-conflict: preserves class names even if the class is renamed",
   "rollup@function@class-prop-returns: does not remove calls to props without value",
   "rollup@function@code-splitting-export-default-from-entry: correctly imports the default from an entry point",
   "rollup@function@compact-multiple-imports: correctly handles empty external imports in compact mode",

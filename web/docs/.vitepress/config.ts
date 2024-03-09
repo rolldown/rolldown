@@ -52,7 +52,7 @@ export default defineConfig({
               },
               {
                 text: 'Discord Chat',
-                link: 'https://discord.gg/vsZxvsfgC5',
+                link: 'https://chat.rolldown.rs',
               },
             ],
           },
@@ -74,7 +74,7 @@ export default defineConfig({
 
     socialLinks: [
       { icon: 'x', link: 'https://twitter.com/rolldown_rs' },
-      { icon: 'discord', link: 'https://discord.gg/vsZxvsfgC5' },
+      { icon: 'discord', link: 'https://chat.rolldown.rs' },
       { icon: 'github', link: 'https://github.com/rolldown-rs/rolldown' },
     ],
 

@@ -50,4 +50,4 @@ Rolldown is still in early stage. We have a lot of ground to cover, and we won't
 
 - [GitHub](https://github.com/rolldown-rs/rolldown)
 - [Contribution Guide](/contrib-guide/)
-- [Discord Chat](https://discord.gg/vsZxvsfgC5)
+- [Discord Chat](https://chat.rolldown.rs)

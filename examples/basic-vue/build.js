@@ -1,17 +1,18 @@
-// https://github.com/tinylibs/tinybench
-import path from 'node:path'
-import url from 'node:url'
+import { performance } from 'node:perf_hooks'
 import * as rolldown from '@rolldown/node'
 
-const dirname = path.dirname(url.fileURLToPath(import.meta.url))
+const start = performance.now()
 
 const build = await rolldown.rolldown({
-  input: path.join(dirname, 'index.js'),
-  // @ts-ignore
-  cwd: dirname,
+  input: './index.js',
   resolve: {
-    conditionNames: ['node', 'import'],
+    // This needs to be explicitly set for now because oxc resolver doesn't
+    // assume default exports conditions. Rolldown will ship with a default that
+    // aligns with Vite in the future.
+    conditionNames: ['import'],
   },
 })
 
 await build.write()
+
+console.log(`bundled in ${(performance.now() - start).toFixed(2)}ms`)

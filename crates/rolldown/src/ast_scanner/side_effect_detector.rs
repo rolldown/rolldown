@@ -138,6 +138,9 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.is_unresolved_reference(ident),
+      Expression::TemplateLiteral(literal) => {
+        literal.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
+      }
       _ => true,
     }
   }
@@ -287,5 +290,15 @@ mod test {
         '-2':'BAIL'
       };",
     ));
+  }
+
+  #[test]
+  fn test_template_literal() {
+    assert!(!get_statements_side_effect("`hello`"));
+    assert!(!get_statements_side_effect("const foo = ''; `hello${foo}`"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("`hello${foo}`"));
+    assert!(get_statements_side_effect("const foo = {}; `hello${foo.bar}`"));
+    assert!(get_statements_side_effect("tag`hello`"));
   }
 }

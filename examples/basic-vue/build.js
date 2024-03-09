@@ -11,8 +11,7 @@ const build = await rolldown.rolldown({
   cwd: dirname,
   resolve: {
     conditionNames: ['node', 'import'],
-    alias: {},
-  }
+  },
 })
 
 await build.write()

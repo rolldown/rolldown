@@ -3,8 +3,8 @@ const Go = require('tree-sitter-go')
 const fs = require('fs-extra')
 const path = require('node:path')
 const changeCase = require('change-case')
-const chalk = require('chalk')
 const dedent = require('dedent')
+const colors = require('./colors.js')
 // How to use this script
 // 1. Adding a test golang file under this dir or wherever you want, and modify the source path
 // 2. `let testDir = path.resolve(__dirname, "test", testCaseName);` Modify this testDir, by default,
@@ -151,7 +151,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     const config = { input: {} }
     const entryPaths = jsConfig['entryPaths'] ?? []
     if (!entryPaths.length) {
-      console.error(chalk.red(`No entryPaths found`))
+      console.error(colors.red(`No entryPaths found`))
     }
     let input = entryPaths.map((p) => {
       let normalizedName = p.slice(prefix.length)
@@ -225,7 +225,7 @@ function processFiles(node, binding) {
     })
     return fileList
   } catch (err) {
-    console.error(`Error occurred when processFiles: ${chalk.red(err)}`)
+    console.error(`Error occurred when processFiles: ${colors.red(err)}`)
     return []
   }
 }
@@ -252,7 +252,7 @@ function processEntryPath(node, binding) {
 
     return entryList
   } catch (err) {
-    console.error(`Error occurred when processEntryPath: ${chalk.red(err)}`)
+    console.error(`Error occurred when processEntryPath: ${colors.red(err)}`)
     return []
   }
 }
@@ -285,7 +285,7 @@ function processKeyElement(node, config, binding) {
       config['expectedCompileLog'] = node.namedChild(1).text.slice(1, -1)
       break
     default:
-      console.log(chalk.yellow(`unknown filed ${keyValue}`))
+      console.log(colors.yellow(`unknown filed ${keyValue}`))
       break
   }
 }

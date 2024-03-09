@@ -7,8 +7,8 @@ import crypto from 'crypto'
 import fs from 'node:fs'
 import fsp from 'fs/promises'
 import debug from 'debug'
-import chalk from 'chalk'
 import { fileURLToPath } from 'node:url'
+import colors from './colors.js'
 
 if (!process.env.DEBUG) {
   debug.enable('rolldown')
@@ -241,7 +241,7 @@ async function watchForChanges() {
     events.forEach((event) => {
       const changedFile = event.path.replace(ROOT_DIR, '').slice(1)
 
-      log(chalk.gray(`${event.type}: ${changedFile}`))
+      log(colors.yellow(`${event.type}: ${changedFile}`))
 
       if (changedFile.includes('crates/rolldown_binding/')) {
         buildNodeBindingCrate(changedFile).then(() =>

@@ -4076,7 +4076,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"chalk@npm:^4, chalk@npm:^4.0.0, chalk@npm:^4.0.2, chalk@npm:^4.1.0, chalk@npm:^4.1.1":
+"chalk@npm:^4.0.0, chalk@npm:^4.0.2, chalk@npm:^4.1.0, chalk@npm:^4.1.1":
   version: 4.1.2
   resolution: "chalk@npm:4.1.2"
   dependencies:
@@ -8829,7 +8829,6 @@ __metadata:
     "@ls-lint/ls-lint": "npm:^2.2.2"
     "@parcel/watcher": "npm:^2.3.0"
     "@taplo/cli": "npm:^0.7.0"
-    chalk: "npm:^4"
     change-case: "npm:^4"
     conventional-changelog-cli: "npm:^4.1.0"
     debug: "npm:^4.3.4"

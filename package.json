@@ -46,7 +46,6 @@
     "@ls-lint/ls-lint": "^2.2.2",
     "@parcel/watcher": "^2.3.0",
     "@taplo/cli": "^0.7.0",
-    "chalk": "^4",
     "change-case": "^4",
     "conventional-changelog-cli": "^4.1.0",
     "debug": "^4.3.4",

@@ -30,6 +30,7 @@ pub struct NormalModuleTask<'task, T: FileSystem + Default> {
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
   module_type: ModuleType,
+  errors: BatchedErrors,
 }
 
 impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
@@ -39,30 +40,59 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     path: ResolvedPath,
     module_type: ModuleType,
   ) -> Self {
-    Self { ctx, module_id: id, resolved_path: path, module_type }
+    Self { ctx, module_id: id, resolved_path: path, module_type, errors: BatchedErrors::default() }
   }
+
   pub async fn run(mut self) {
-    if let Err(errs) = self.run_inner().await {
-      self.ctx.tx.send(Msg::Errors(errs)).expect("Send should not fail");
+    match self.run_inner().await {
+      Ok(_) => {
+        if !self.errors.is_empty() {
+          self.ctx.tx.send(Msg::BuildErrors(self.errors)).expect("Send should not fail");
+        }
+      }
+      Err(err) => {
+        self.ctx.tx.send(Msg::Panics(err)).expect("Send should not fail");
+      }
     }
   }
 
-  async fn run_inner(&mut self) -> BatchedResult<()> {
+  async fn run_inner(&mut self) -> anyhow::Result<()> {
     tracing::trace!("process {:?}", self.resolved_path);
 
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let source =
-      load_source(&self.ctx.plugin_driver, &self.resolved_path, &self.ctx.fs, &mut sourcemap_chain)
-        .await?;
+    let source = match load_source(
+      &self.ctx.plugin_driver,
+      &self.resolved_path,
+      &self.ctx.fs,
+      &mut sourcemap_chain,
+    )
+    .await
+    {
+      Ok(ret) => ret,
+      Err(errs) => {
+        self.errors.extend(errs);
+        return Ok(());
+      }
+    };
 
     // Run plugin transform.
-    let source: Arc<str> =
-      transform_source(&self.ctx.plugin_driver, &self.resolved_path, source, &mut sourcemap_chain)
-        .await?
-        .into();
+    let source: Arc<str> = match transform_source(
+      &self.ctx.plugin_driver,
+      &self.resolved_path,
+      source,
+      &mut sourcemap_chain,
+    )
+    .await
+    {
+      Ok(ret) => ret.into(),
+      Err(errs) => {
+        self.errors.extend(errs);
+        return Ok(());
+      }
+    };
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
     tracing::trace!("scan {:?}", self.resolved_path);
@@ -208,7 +238,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordId, RawImportRecord>,
-  ) -> BatchedResult<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
+  ) -> anyhow::Result<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let input_options = Arc::clone(&self.ctx.input_options);
@@ -236,19 +266,30 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
 
     let mut errors = BatchedErrors::default();
     let mut ret = IndexVec::with_capacity(dependencies.len());
-    resolved_ids.into_iter().for_each(|handle| match handle.expect("Assuming no task panics") {
-      Ok((_idx, item)) => {
-        ret.push(item);
+    resolved_ids.into_iter().try_for_each(|handle| -> anyhow::Result<()> {
+      let handle = handle?;
+      match handle {
+        Ok((_idx, item)) => {
+          ret.push(item);
+        }
+        Err(e) => {
+          errors.extend(e);
+        }
       }
-      Err(e) => {
-        errors.extend(e);
-      }
-    });
-    debug_assert!(
-      errors.is_empty() && ret.len() == dependencies.len(),
-      "dependencies: {dependencies:#?}, errors: {errors:#?}"
-    );
+      Ok(())
+    })?;
 
-    Ok(ret)
+    if errors.is_empty() {
+      Ok(ret)
+    } else {
+      // TODO: The better way here is to filter out the failed-resolved dependencies and return
+      // `Ok(rwt)` with recoverable errors `self.errors` instead of returning `Err` and causing panicking.
+      let resolved_err = anyhow::format_err!(
+        "Resolver errors in {:?} => dependencies: {dependencies:#?}, errors: {errors:#?}",
+        self.resolved_path
+      );
+      self.errors.extend(errors);
+      Err(resolved_err)
+    }
   }
 }

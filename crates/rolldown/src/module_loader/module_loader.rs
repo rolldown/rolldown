@@ -179,6 +179,8 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
 
+    let mut panic_errors = vec![];
+
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;
@@ -228,11 +230,18 @@ impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
           self.symbols.add_ast_symbol(runtime.id(), ast_symbol);
           runtime_brief = Some(runtime);
         }
-        Msg::Errors(errs) => {
+        Msg::BuildErrors(errs) => {
           errors.extend(errs);
+        }
+        Msg::Panics(err) => {
+          panic_errors.push(err);
         }
       }
       self.remaining -= 1;
+    }
+
+    if !panic_errors.is_empty() {
+      panic!("Panics occurred during module loading: {:?}", panic_errors);
     }
 
     if !errors.is_empty() {

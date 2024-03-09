@@ -848,7 +848,6 @@ __metadata:
   resolution: "@example/basic@workspace:examples/basic-vue"
   dependencies:
     "@rolldown/node": "workspace:*"
-    esbuild: "npm:^0.19.5"
     vue: "npm:^3.4.21"
   languageName: unknown
   linkType: soft

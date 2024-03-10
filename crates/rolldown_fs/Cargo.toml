@@ -12,10 +12,8 @@ version              = "0.1.0"
 workspace = true
 
 [features]
-# Defines a feature named `webp` that does not enable any other features.
-default = ["os"]
-memory  = []
-os      = []
+memory = []
+os     = []
 
 [dependencies]
 dunce        = "1.0.4"              # Normalize Windows paths to the most compatible format, avoiding UNC where possible

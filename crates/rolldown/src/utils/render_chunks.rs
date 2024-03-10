@@ -8,7 +8,6 @@ use crate::{
   plugin_driver::SharedPluginDriver,
 };
 
-#[allow(clippy::future_not_send)]
 pub async fn render_chunks<'a>(
   plugin_driver: &SharedPluginDriver,
   chunks: impl Iterator<Item = (String, Option<SourceMap>, RenderedChunk)>,

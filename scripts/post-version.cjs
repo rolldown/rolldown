@@ -22,12 +22,20 @@ function generateChangelog() {
 }
 
 // Add git tag, the tag name is `v${version}`, the changelog will generate by tag.
+/**
+ *
+ * @param {string} version
+ */
 function addGitTag(version) {
   execSync(`git tag v${version}`, { stdio: 'inherit' })
 }
 
 // Add commit, the napi will check comment to publish, avoid `No release commit found` error.
 // TODO maybe napi-rs can fix it.
+/**
+ *
+ * @param {string} version
+ */
 function addReleaseCommit(version) {
   execSync(
     `git commit -a -m "chore(release): publish \n- @rolldown/node-binding@${version}"`,

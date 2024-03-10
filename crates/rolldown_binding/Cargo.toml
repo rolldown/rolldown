@@ -19,14 +19,14 @@ derivative         = { workspace = true }
 futures            = { workspace = true }
 napi               = { workspace = true, features = ["napi4", "async"] }
 napi-derive        = { workspace = true }
-rolldown           = { path = "../rolldown" }
-rolldown_common    = { path = "../rolldown_common" }
-rolldown_error     = { path = "../rolldown_error" }
-rolldown_fs        = { path = "../rolldown_fs" }
-rolldown_plugin    = { path = "../rolldown_plugin" }
-rolldown_resolver  = { path = "../rolldown_resolver" }
-rolldown_sourcemap = { path = "../rolldown_sourcemap" }
-rolldown_tracing   = { path = "../rolldown_tracing" }
+rolldown           = { workspace = true }
+rolldown_common    = { workspace = true }
+rolldown_error     = { workspace = true }
+rolldown_fs        = { workspace = true }
+rolldown_plugin    = { workspace = true }
+rolldown_resolver  = { workspace = true }
+rolldown_sourcemap = { workspace = true }
+rolldown_tracing   = { workspace = true }
 rustc-hash         = { workspace = true }
 scoped-tls         = { workspace = true }
 serde              = { workspace = true }

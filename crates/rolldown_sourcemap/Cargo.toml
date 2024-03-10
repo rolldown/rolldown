@@ -19,7 +19,7 @@ test    = false
 
 [dependencies]
 parcel_sourcemap = { version = "2.1.1", features = ["json"] }
-rolldown_error   = { path = "../rolldown_error" }
+rolldown_error   = { workspace = true }
 
 [dev_dependencies]
 serde_json = { workspace = true }

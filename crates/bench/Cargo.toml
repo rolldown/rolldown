@@ -14,14 +14,11 @@ doctest = false
 test    = false
 
 [dependencies]
-criterion   = "0.4.0"
-rolldown    = { path = "../rolldown" }
-rolldown_fs = { path = "../rolldown_fs/" }
-tokio       = { workspace = true, features = ["full"] }
+codspeed-criterion-compat = { workspace = true }
+criterion                 = { workspace = true }
+rolldown                  = { path = "../rolldown" }
+rolldown_fs               = { path = "../rolldown_fs/" }
+tokio                     = { workspace = true, features = ["full"] }
 [[bench]]
 harness = false
 name    = "threejs"
-
-
-[dev-dependencies]
-codspeed-criterion-compat = "2.3.1"

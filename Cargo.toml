@@ -8,6 +8,10 @@ homepage   = "https://github.com/rolldown-rs/rolldown"
 license    = "MIT"
 repository = "https://github.com/rolldown-rs/rolldown"
 
+[profile.release-debug]
+debug    = true
+inherits = "release"
+
 [workspace.lints.rust]
 
 [workspace.lints.clippy]

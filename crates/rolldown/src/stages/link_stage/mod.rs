@@ -111,6 +111,7 @@ impl<'a> LinkStage<'a> {
   }
 
   pub fn link(mut self) -> LinkStageOutput {
+    tracing::info!("Start link stage");
     self.sort_modules();
 
     self.determine_module_exports_kind();

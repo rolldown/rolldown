@@ -27,7 +27,7 @@ use crate::{
   },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CrossChunkImportItem {
   pub export_alias: Option<Specifier>,
   pub import_ref: SymbolRef,

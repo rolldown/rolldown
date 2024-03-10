@@ -15,11 +15,9 @@ pub async fn render_chunks<'a>(
 ) -> Result<Vec<(String, Option<SourceMap>, RenderedChunk)>, BatchedErrors> {
   // TODO support `render_chunk` hook return map
   let result = block_on_spawn_all(chunks.map(|(content, map, rendered_chunk)| async move {
+    tracing::info!("render_chunks");
     match plugin_driver
-      .render_chunk(RenderChunkArgs {
-        code: content,
-        chunk: unsafe { std::mem::transmute(&rendered_chunk) },
-      })
+      .render_chunk(RenderChunkArgs { code: content, chunk: &rendered_chunk })
       .await
     {
       Ok(value) => Ok((value, map, rendered_chunk)),

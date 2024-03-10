@@ -50,6 +50,7 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
 
   #[tracing::instrument(skip_all)]
   pub async fn scan(&self) -> BatchedResult<ScanStageOutput> {
+    tracing::info!("Start scan stage");
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
     let mut module_loader = ModuleLoader::new(

@@ -66,6 +66,7 @@ impl PluginDriver {
   }
 
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs>) -> HookNoopReturn {
+    tracing::info!("PluginDriver::build_end");
     for plugin in &self.plugins {
       plugin.build_end(&mut PluginContext::new(), args).await?;
     }

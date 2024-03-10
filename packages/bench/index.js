@@ -34,11 +34,11 @@ const suites = [
     benchIteration: 3,
   },
   {
-    title: 'vue',
+    title: 'vue-stack',
     inputs: [path.join(dirname, 'vue-entry.js')],
   },
   {
-    title: 'react_and_react_dom',
+    title: 'react-stack',
     inputs: ['react', 'react-dom'],
   },
 ]
@@ -53,7 +53,7 @@ async function runRolldown(item) {
       // TODO
       // For now these are needed to align better w/ esbuild & Vite behavior
       // because internally we are still using the default behavior of oxc
-      // resovler. We should ship a more sensible resolver default that aligns
+      // resolver. We should ship a more sensible resolver default that aligns
       // with Vite's.
       conditionNames: ['import'],
       mainFields: ['module', 'browser', 'main'],

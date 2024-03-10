@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ptr::addr_of};
+use std::{borrow::Cow, sync::Mutex};
 
 use crate::{
   OutputFormat,
@@ -28,8 +28,8 @@ impl<'a> BundleStage<'a> {
     chunk_meta_imports: &mut ChunkMetaImports,
     chunk_meta_imports_from_external_modules: &mut ChunkMetaImportsForExternalModules,
   ) {
-    let symbols = &self.link_output.symbols;
-
+    let symbols = &Mutex::new(&mut self.link_output.symbols);
+    tracing::info!("collect_potential_chunk_imports");
     chunk_graph
       .chunks
       .iter_enumerated()
@@ -64,9 +64,9 @@ impl<'a> BundleStage<'a> {
             if !stmt_info.is_included {
               return;
             }
-
+            let mut symbols = symbols.lock().expect("ignore poison error");
             stmt_info.declared_symbols.iter().for_each(|declared| {
-              let symbol = symbols.get(*declared);
+              let symbol = symbols.get_mut(*declared);
               debug_assert!(
                 symbol.chunk_id.unwrap_or(chunk_id) == chunk_id,
                 "Symbol: {:?}, {:?} in {:?} should only belong to one chunk",
@@ -75,14 +75,11 @@ impl<'a> BundleStage<'a> {
                 module.resource_id,
               );
 
-              // safety: No two threads are ever writing to the same location
-              unsafe {
-                (*addr_of!(*symbols).cast_mut()).get_mut(*declared).chunk_id = Some(chunk_id);
-              }
+              symbol.chunk_id = Some(chunk_id);
             });
 
             stmt_info.referenced_symbols.iter().for_each(|referenced| {
-              let mut canonical_ref = self.link_output.symbols.par_canonical_ref_for(*referenced);
+              let mut canonical_ref = symbols.par_canonical_ref_for(*referenced);
               if let Some(namespace_alias) = &symbols.get(canonical_ref).namespace_alias {
                 canonical_ref = namespace_alias.namespace_ref;
               }
@@ -100,9 +97,9 @@ impl<'a> BundleStage<'a> {
             chunk_meta_imports
               .insert(entry_linking_info.wrapper_ref.expect("cjs should be wrapped in esm output"));
           }
+          let symbols = symbols.lock().expect("ignore poison error");
           for export_ref in entry_linking_info.resolved_exports.values() {
-            let mut canonical_ref =
-              self.link_output.symbols.par_canonical_ref_for(export_ref.symbol_ref);
+            let mut canonical_ref = symbols.par_canonical_ref_for(export_ref.symbol_ref);
             let symbol = symbols.get(canonical_ref);
             if let Some(ns_alias) = &symbol.namespace_alias {
               canonical_ref = ns_alias.namespace_ref;
@@ -111,6 +108,7 @@ impl<'a> BundleStage<'a> {
           }
         }
       });
+    tracing::info!("collect_potential_chunk_imports end");
   }
 
   pub fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
@@ -120,12 +118,18 @@ impl<'a> BundleStage<'a> {
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
     let mut chunk_meta_imports_from_external_modules_vec: ChunkMetaImportsForExternalModules = index_vec![FxHashMap::<ExternalModuleId, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
 
+    let mut imports_from_other_chunks_vec: IndexVec<
+      ChunkId,
+      FxHashMap<ChunkId, Vec<CrossChunkImportItem>>,
+    > = index_vec![FxHashMap::<ChunkId, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunks.len()];
+
     self.collect_potential_chunk_imports(
       chunk_graph,
       &mut chunk_meta_imports_vec,
       &mut chunk_meta_imports_from_external_modules_vec,
     );
 
+    tracing::info!("calculate cross chunk imports");
     // - Find out what imports are actually come from other chunks
     chunk_graph.chunks.iter_enumerated().for_each(|(chunk_id, chunk)| {
       let chunk_meta_imports = &chunk_meta_imports_vec[chunk_id];
@@ -142,10 +146,7 @@ impl<'a> BundleStage<'a> {
         });
         // Check if the import is from another chunk
         if chunk_id != importee_chunk_id {
-          let imports_from_other_chunks =
-          // Safety: No race condition here:
-          // - This loop is executed sequentially in a single thread
-            unsafe { &mut (*addr_of!(chunk.imports_from_other_chunks).cast_mut()) };
+          let imports_from_other_chunks = &mut imports_from_other_chunks_vec[chunk_id];
           imports_from_other_chunks
             .entry(importee_chunk_id)
             .or_default()
@@ -170,13 +171,13 @@ impl<'a> BundleStage<'a> {
               && importee_chunk.modules.first().copied() != Some(self.link_output.runtime.id())
           })
           .for_each(|(importee_chunk_id, _)| {
-            let imports_from_other_chunks =
-              unsafe { &mut (*addr_of!(chunk.imports_from_other_chunks).cast_mut()) };
+            let imports_from_other_chunks = &mut imports_from_other_chunks_vec[chunk_id];
             imports_from_other_chunks.entry(importee_chunk_id).or_default();
           });
       }
     });
 
+    tracing::info!("Generate cross-chunk exports");
     // Generate cross-chunk exports. These must be computed before cross-chunk
     // imports because of export alias renaming, which must consider all export
     // aliases simultaneously to avoid collisions.
@@ -197,27 +198,27 @@ impl<'a> BundleStage<'a> {
       }
     }
     for chunk_id in chunk_graph.chunks.indices() {
-      for (importee_chunk_id, import_items) in
-        &chunk_graph.chunks[chunk_id].imports_from_other_chunks
-      {
+      for (importee_chunk_id, import_items) in &mut imports_from_other_chunks_vec[chunk_id] {
         for item in import_items {
           if let Some(alias) =
             chunk_graph.chunks[*importee_chunk_id].exports_to_other_chunks.get(&item.import_ref)
           {
-            // safety: no other mutable reference to `item` exists
-            unsafe {
-              let item = (item as *const CrossChunkImportItem).cast_mut();
-              (*item).export_alias = Some(alias.clone().into());
-            }
+            item.export_alias = Some(alias.clone().into());
           }
         }
       }
     }
 
-    chunk_meta_imports_from_external_modules_vec.into_iter_enumerated().for_each(
-      |(chunk_id, imports_from_external_modules)| {
-        chunk_graph.chunks[chunk_id].imports_from_external_modules = imports_from_external_modules;
-      },
-    );
+    chunk_graph
+      .chunks
+      .iter_mut()
+      .zip(
+        imports_from_other_chunks_vec.into_iter().zip(chunk_meta_imports_from_external_modules_vec),
+      )
+      .par_bridge()
+      .for_each(|(chunk, (imports_from_other_chunks, imports_from_external_modules))| {
+        chunk.imports_from_other_chunks = imports_from_other_chunks;
+        chunk.imports_from_external_modules = imports_from_external_modules;
+      });
   }
 }

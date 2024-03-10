@@ -206,7 +206,6 @@ const BUILD_TIMERS = {}
  * @returns {Promise<WasRebuilt>} A Promise that resolves to true if the package was rebuilt, false otherwise.
  */
 async function build(pkgName, deps, changedFile, loadFiles) {
-  console.log("CHANGED FILE", changedFile)
   const name = pkgName.split('/')[1]
   const log = debug(`rolldown:${name}`)
 
@@ -381,7 +380,6 @@ async function watchForChanges() {
   await Promise.all(promises)
 }
 
-console.log('here')
 await Promise.all([
   buildNodeBindingCrate().then(() => buildRolldownPackage()),
   buildWasmBindingCrate(),

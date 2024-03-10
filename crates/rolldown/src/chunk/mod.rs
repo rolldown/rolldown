@@ -14,6 +14,7 @@ use rolldown_common::{
 use rolldown_error::BuildError;
 use rolldown_rstr::Rstr;
 use rolldown_sourcemap::{collapse_sourcemaps, concat_sourcemaps, SourceMap};
+use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
 
 use crate::utils::render_normal_module::render_normal_module;
@@ -23,7 +24,6 @@ use crate::{
   {
     chunk_graph::ChunkGraph, options::output_options::OutputOptions,
     stages::link_stage::LinkStageOutput, types::module_render_context::ModuleRenderContext,
-    utils::bitset::BitSet,
   },
 };
 

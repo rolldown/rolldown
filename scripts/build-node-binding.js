@@ -201,7 +201,7 @@ const BUILD_TIMERS = {}
  * Builds the specified package.
  * @param {string} pkgName - The name of the package to build.
  * @param {string[]} deps - An array of dependencies required for building the package.
- * @param {string | undefined} changedFile - Optional. The file that triggered the build, if any.
+ * @param {ChangedFile | undefined} changedFile - Optional. The file that triggered the build, if any.
  * @param {LoadFilesCallback} loadFiles - A function that returns an array of paths for files (similar to the getDirFiles function, see {@link getDirFiles})
  * @returns {Promise<WasRebuilt>} A Promise that resolves to true if the package was rebuilt, false otherwise.
  */

@@ -5,16 +5,16 @@
   "scripts": {
     "bench": "node ./index.js"
   },
-  "devDependencies": {
-    "@rolldown/node": "workspace:*",
-    "esbuild": "^0.20.1"
-  },
   "dependencies": {
+    "@rolldown/node": "workspace:*",
+    "esbuild": "^0.20.1",
+    "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "rollup": "^4.12.1",
     "tinybench": "^2.6.0",
+    "typescript": "^5.4.2",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
   }

@@ -6,7 +6,7 @@ import * as rolldown from '@rolldown/node'
 import * as esbuild from 'esbuild'
 import * as rollup from 'rollup'
 import { nodeResolve } from '@rollup/plugin-node-resolve';
-
+import commonjs from '@rollup/plugin-commonjs';
 
 const dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const repoRoot = path.join(dirname, '../../')
@@ -88,10 +88,14 @@ async function runRollup(item) {
     onwarn: (_warning, _defaultHandler) => {
       // ignore warnings
     },
-    plugins: [nodeResolve({
-      exportConditions: ['import'],
-      mainFields: ['module', 'browser', 'main'],
-    })]
+    plugins: [
+      nodeResolve({
+        exportConditions: ['import'],
+        mainFields: ['module', 'browser', 'main'],
+      }),
+      // @ts-expect-error Something is wrong with the types
+      commonjs(),
+    ]
   })
   await build.write({
     dir: path.join(dirname, `./dist/rollup/${item.title}`),

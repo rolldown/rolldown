@@ -35,16 +35,12 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
-          bins: just
+          bins: just, cargo-codspeed
           cache-base: main
+          cache-target: release
 
       - name: Setup benchmark
         run: just setup-bench
-
-      - name: Install codspeed
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-codspeed
 
       - name: Build the benchmark target(s)
         run: cargo codspeed build -p bench
@@ -52,5 +48,5 @@ jobs:
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@v1
         with:
-          run: cargo codspeed run
+          run: cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}

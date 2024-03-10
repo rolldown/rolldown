@@ -122,11 +122,14 @@ jobs:
       - name: Build
         run: yarn build:node
 
+      - name: Type Check
+        run: yarn type-check
+
       - name: Run Test
         run: yarn test
 
-  node-format:
-    name: Node Format
+  node-validation:
+    name: Node Validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -140,29 +143,12 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Run format check
-        run: yarn format:ci
-
-  node-lint:
-    name: Node Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
-
-      - name: Install dependencies
-        run: yarn install
+      - name: Oxc Lint
+        run: yarn lint
 
       - name: Lint Filename
         run: yarn lint-filename
 
-      - name: Oxc Lint
-        run: yarn lint
+      - name: Run format check
+        run: yarn format:ci
+

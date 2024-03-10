@@ -30,7 +30,7 @@
     "toml:format": "taplo format",
     "toml:ci": "taplo format --check",
     "format:ci": "run-s prettier:ci toml:ci",
-    "typecheck": "yarn workspace @rolldown/node run typecheck",
+    "type-check": "yarn workspaces foreach --all --parallel run type-check",
     "bench": "yarn workspace bench run bench",
     "build:ts": "tsc -b tsconfig.project.json",
     "docs": "cd web/docs && yarn dev",

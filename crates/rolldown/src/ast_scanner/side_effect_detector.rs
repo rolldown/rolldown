@@ -141,7 +141,36 @@ impl<'a> SideEffectDetector<'a> {
       Expression::TemplateLiteral(literal) => {
         literal.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
       }
-      _ => true,
+      Expression::TSAsExpression(_)
+      | Expression::TSSatisfiesExpression(_)
+      | Expression::TSTypeAssertion(_)
+      | Expression::TSNonNullExpression(_)
+      | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
+
+      // TODO: Implement these
+      Expression::MetaProperty(_) => true,
+      Expression::Super(_) => true,
+
+      Expression::ArrayExpression(_) => true,
+      Expression::AssignmentExpression(_) => true,
+      Expression::AwaitExpression(_) => true,
+      Expression::BinaryExpression(_) => true,
+      Expression::CallExpression(_) => true,
+      Expression::ChainExpression(_) => true,
+      Expression::ConditionalExpression(_) => true,
+      Expression::ImportExpression(_) => true,
+      Expression::LogicalExpression(_) => true,
+      Expression::NewExpression(_) => true,
+      Expression::ParenthesizedExpression(_) => true,
+      Expression::SequenceExpression(_) => true,
+      Expression::TaggedTemplateExpression(_) => true,
+      Expression::ThisExpression(_) => true,
+      Expression::UpdateExpression(_) => true,
+      Expression::YieldExpression(_) => true,
+      Expression::PrivateInExpression(_) => true,
+
+      Expression::JSXElement(_) => true,
+      Expression::JSXFragment(_) => true,
     }
   }
 

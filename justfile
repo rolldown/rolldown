@@ -76,7 +76,7 @@ lint-rust:
 
 lint-node:
     yarn lint-filename
-    yarn lint
+    yarn lint-code
     yarn prettier:ci
 
 lint:

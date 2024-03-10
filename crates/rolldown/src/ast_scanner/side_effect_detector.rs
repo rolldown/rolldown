@@ -151,6 +151,11 @@ impl<'a> SideEffectDetector<'a> {
       Expression::SequenceExpression(seq_expr) => {
         seq_expr.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
       }
+      Expression::ConditionalExpression(cond_expr) => {
+        self.detect_side_effect_of_expr(&cond_expr.test)
+          || self.detect_side_effect_of_expr(&cond_expr.consequent)
+          || self.detect_side_effect_of_expr(&cond_expr.alternate)
+      }
       Expression::TSAsExpression(_)
       | Expression::TSSatisfiesExpression(_)
       | Expression::TSTypeAssertion(_)
@@ -166,7 +171,6 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::BinaryExpression(_)
       | Expression::CallExpression(_)
       | Expression::ChainExpression(_)
-      | Expression::ConditionalExpression(_)
       | Expression::ImportExpression(_)
       | Expression::NewExpression(_)
       | Expression::TaggedTemplateExpression(_)

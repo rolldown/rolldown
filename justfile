@@ -102,12 +102,7 @@ smoke:
 # BENCHING
 
 setup-bench:
-    git clone --branch r108 --depth 1 https://github.com/mrdoob/three.js.git ./temp/three
-    echo "import * as three from './src/Three.js'; export { three }" > temp/three/entry.js
-    mkdir -p temp/three10x
-    for i in {1..10}; do cp -r ./temp/three/src ./temp/three10x/copy$i/; done
-    echo > temp/three10x/entry.js
-    for i in {1..10}; do echo "import * as three$i from './copy$i/Three.js'; export { three$i }" >> temp/three10x/entry.js; done
+    node ./scripts/setup-rust-benchmark-input.js
 
 bench:
     cargo bench -p bench

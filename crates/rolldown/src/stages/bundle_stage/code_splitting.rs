@@ -2,12 +2,13 @@ use std::hash::BuildHasherDefault;
 
 use index_vec::IndexVec;
 use rolldown_common::{ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId};
+use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
 
 use crate::{
   chunk::{Chunk, ChunksVec},
   chunk_graph::ChunkGraph,
-  utils::{bitset::BitSet, is_in_rust_test_mode},
+  utils::is_in_rust_test_mode,
 };
 
 use super::BundleStage;

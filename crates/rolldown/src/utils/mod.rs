@@ -4,7 +4,6 @@ use rolldown_oxc_utils::{AstSnippet, OxcProgram};
 
 use super::finalizer::{Finalizer, FinalizerContext};
 
-pub mod bitset;
 pub mod load_source;
 pub mod renamer;
 pub mod render_chunks;

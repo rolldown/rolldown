@@ -39,8 +39,8 @@ jobs:
       - if: steps.filter.outputs.src == 'true'
         run: cargo deny check
 
-  rust-lint:
-    name: Rust Lint
+  rust-validation:
+    name: Rust Validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
-          bins: just
+          bins: just, taplo-cli
           cache-base: main
           components: clippy,rustfmt
 

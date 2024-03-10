@@ -4,7 +4,7 @@ on:
   issue_comment:
   push:
     branches:
-      - "main" # or "master"
+      - 'main' # or "master"
     paths:
       - '**/*.rs'
       - '**/*.toml'
@@ -18,8 +18,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-    cancel-in-progress: ${{ github.ref_name != 'main' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
   benchmark:
@@ -31,7 +31,7 @@ jobs:
         with:
           # Whether Pull submodules for additional files
           submodules: false
-      
+
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:

@@ -170,7 +170,7 @@ jobs:
           name: node-artifact
           path: packages/node/dist/**
 
-  build-wasm: 
+  build-wasm:
     name: Build Wasm
     runs-on: ubuntu-latest
     steps:

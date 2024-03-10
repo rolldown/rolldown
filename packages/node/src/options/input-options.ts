@@ -40,8 +40,8 @@ function getInput(config: InputOptions): NormalizedInputOptions['input'] {
   return configInput == null
     ? []
     : typeof configInput === 'string'
-    ? [configInput]
-    : configInput
+      ? [configInput]
+      : configInput
 }
 
 const getIdMatcher = <T extends Array<any>>(

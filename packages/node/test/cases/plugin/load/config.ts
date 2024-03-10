@@ -19,7 +19,7 @@ const config: RollupOptions = {
         if (id === 'foo') {
           return {
             code: `console.log('foo')`,
-            map: { mappings: "" }
+            map: { mappings: '' },
           }
         }
       },

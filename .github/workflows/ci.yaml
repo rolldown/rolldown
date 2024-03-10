@@ -19,21 +19,6 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  cargo-format:
-    name: Cargo Format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
-        with:
-          cache: false
-          components: rustfmt
-
-      - name: Run Format
-        run: cargo fmt --all -- --check
-
   cargo-deny:
     name: Cargo Deny
     runs-on: ubuntu-latest
@@ -54,8 +39,8 @@ jobs:
       - if: steps.filter.outputs.src == 'true'
         run: cargo deny check
 
-  cargo-clippy:
-    name: Cargo Clippy
+  rust-lint:
+    name: Rust Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

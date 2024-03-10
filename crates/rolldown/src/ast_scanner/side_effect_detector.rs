@@ -370,4 +370,14 @@ mod test {
     assert!(get_statements_side_effect("true, bar"));
     assert!(get_statements_side_effect("foo, true"));
   }
+
+  #[test]
+  fn test_conditional_expression() {
+    assert!(!get_statements_side_effect("true ? false : true"));
+    assert!(!get_statements_side_effect("null ? true : false"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("true ? bar : true"));
+    assert!(get_statements_side_effect("foo ? true : false"));
+    assert!(get_statements_side_effect("true ? true : bar"));
+  }
 }

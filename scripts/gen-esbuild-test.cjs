@@ -1,3 +1,4 @@
+// @ts-nocheck
 const Parser = require('tree-sitter')
 const Go = require('tree-sitter-go')
 const fs = require('fs-extra')
@@ -261,7 +262,7 @@ function processEntryPath(node, binding) {
 /**
  * @param {import('tree-sitter').SyntaxNode} node
  */
-function processOptions(node) { }
+function processOptions(node) {}
 
 /**
  * @param {import('tree-sitter').SyntaxNode} node

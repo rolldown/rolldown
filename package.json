@@ -8,13 +8,14 @@
     "crates/rolldown_binding_wasm",
     "packages/**",
     "web/**",
-    "examples/**"
+    "examples/**",
+    "scripts"
   ],
   "scripts": {
     "lint": "oxlint --ignore-path=./.oxlintignore --import-plugin --deny-warnings",
     "lint-filename": "ls-lint",
     "watch": "yarn run build --watch",
-    "build": "DEBUG='rolldown:*' node ./scripts/build-node-binding.mjs",
+    "build": "DEBUG='rolldown:*' node ./scripts/build-node-binding.js",
     "build:node": "yarn workspaces foreach -R --topological-dev --from '@rolldown/node' run build",
     "build:binding": "yarn workspace @rolldown/node-binding run build",
     "build:binding:release": "yarn workspace @rolldown/node-binding run build:release",
@@ -38,7 +39,7 @@
     "TODO(hyf0): #need to investigate following commands": "_",
     "build:ci:release": "run-s build:node:ci build:binding:release",
     "build:node:ci": "yarn workspace @rolldown/node run build",
-    "version": "yarn lerna version --force-publish --no-private --no-git-tag-version && node scripts/post-version.js",
+    "version": "yarn lerna version --force-publish --no-private --no-git-tag-version && node scripts/post-version.cjs",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
   "license": "MIT",

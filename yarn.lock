@@ -10577,6 +10577,14 @@ __metadata:
   languageName: node
   linkType: hard
 
+"scripts@workspace:scripts":
+  version: 0.0.0-use.local
+  resolution: "scripts@workspace:scripts"
+  dependencies:
+    typescript: "npm:^5.4.2"
+  languageName: unknown
+  linkType: soft
+
 "scule@npm:^1.0.0, scule@npm:^1.2.0":
   version: 1.3.0
   resolution: "scule@npm:1.3.0"

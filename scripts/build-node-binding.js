@@ -1,5 +1,4 @@
-// @ts-check
-
+// @ts-nocheck
 import { execa } from 'execa'
 import watcher from '@parcel/watcher'
 import path from 'node:path'

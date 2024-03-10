@@ -26,12 +26,12 @@ The Rolldown project is heavily inspired by:
 
 - [Rollup](https://github.com/rollup/rollup), created by [Rich Harris](https://github.com/Rich-Harris) and maintained by [Lukas Taegert-Atkinson](https://github.com/lukastaegert).
 - [esbuild](https://github.com/evanw/esbuild), created by [Evan Wallace](https://github.com/evanw).
-- [@parcel/sourcemap](https://github.com/parcel-bundler/source-map).
 
 And supported by:
 
 - [napi-rs](https://github.com/napi-rs/napi-rs) for Node.js add-ons in Rust via Node-API.
 - [oxc](https://github.com/oxc-project/oxc) for the underlying parser and resolver.
+- [@parcel/sourcemap](https://github.com/parcel-bundler/source-map).
 
 # Licenses
 

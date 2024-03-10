@@ -3,6 +3,10 @@
   "version": "0.0.5",
   "description": "Rollup in Rust",
   "private": true,
+  "packageManager": "yarn@4.1.1",
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "workspaces": [
     "crates/rolldown_binding",
     "crates/rolldown_binding_wasm",
@@ -57,9 +61,5 @@
     "singleQuote": true,
     "trailingComma": "all",
     "arrowParens": "always"
-  },
-  "packageManager": "yarn@4.1.1",
-  "engines": {
-    "node": ">=18.18.0"
   }
 }

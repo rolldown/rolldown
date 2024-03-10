@@ -4,7 +4,7 @@ on:
   issue_comment:
   push:
     branches:
-      - "main" # or "master"
+      - 'main' # or "master"
     paths:
       - '**/*.rs'
       - '**/*.toml'
@@ -18,8 +18,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-    cancel-in-progress: ${{ github.ref_name != 'main' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
   benchmark:
@@ -30,23 +30,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           # Whether Pull submodules for additional files
-          submodules: false 
+          submodules: false
 
-      - name: Clone three.js
-        run: |
-            git clone https://github.com/mrdoob/three.js.git --depth 1 ./temp/three.js  
-            for i in {1..10}; do cp -r ./temp/three.js/src ./temp/three.js/copy$i/; done
-
-      - name: Install Rust Toolchain
-        uses: ./.github/actions/rustup
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
         with:
-          shared-key: benchmark
-          save-cache: ${{ github.ref_name == 'main' }}
+          bins: just, cargo-codspeed
+          cache-base: main
+          cache-target: release
 
-      - name: Install codspeed
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-codspeed
+      - name: Setup benchmark
+        run: just setup-bench
 
       - name: Build the benchmark target(s)
         run: cargo codspeed build -p bench
@@ -54,5 +48,5 @@ jobs:
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@v1
         with:
-          run: cargo codspeed run
+          run: cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}

@@ -158,27 +158,24 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
 
       // TODO: Implement these
-      Expression::MetaProperty(_) => true,
-      Expression::Super(_) => true,
-
-      Expression::ArrayExpression(_) => true,
-      Expression::AssignmentExpression(_) => true,
-      Expression::AwaitExpression(_) => true,
-      Expression::BinaryExpression(_) => true,
-      Expression::CallExpression(_) => true,
-      Expression::ChainExpression(_) => true,
-      Expression::ConditionalExpression(_) => true,
-      Expression::ImportExpression(_) => true,
-
-      Expression::NewExpression(_) => true,
-      Expression::TaggedTemplateExpression(_) => true,
-      Expression::ThisExpression(_) => true,
-      Expression::UpdateExpression(_) => true,
-      Expression::YieldExpression(_) => true,
-      Expression::PrivateInExpression(_) => true,
-
-      Expression::JSXElement(_) => true,
-      Expression::JSXFragment(_) => true,
+      Expression::MetaProperty(_)
+      | Expression::Super(_)
+      | Expression::ArrayExpression(_)
+      | Expression::AssignmentExpression(_)
+      | Expression::AwaitExpression(_)
+      | Expression::BinaryExpression(_)
+      | Expression::CallExpression(_)
+      | Expression::ChainExpression(_)
+      | Expression::ConditionalExpression(_)
+      | Expression::ImportExpression(_)
+      | Expression::NewExpression(_)
+      | Expression::TaggedTemplateExpression(_)
+      | Expression::ThisExpression(_)
+      | Expression::UpdateExpression(_)
+      | Expression::YieldExpression(_)
+      | Expression::PrivateInExpression(_)
+      | Expression::JSXElement(_)
+      | Expression::JSXFragment(_) => true,
     }
   }
 

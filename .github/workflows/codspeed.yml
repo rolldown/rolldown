@@ -1,7 +1,6 @@
 name: codspeed-benchmarks
 
 on:
-  issue_comment:
   push:
     branches:
       - 'main' # or "master"

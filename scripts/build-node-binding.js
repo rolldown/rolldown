@@ -26,13 +26,12 @@ fs.mkdirSync(CACHE_DIR, { recursive: true })
 /** The file that triggered the build. @typedef {string} ChangedFile */
 /** Represents whether the package was rebuilt. @typedef {boolean} WasRebuilt */
 
-
 /**
  * Takes a path relative to the project root and returns an array of paths for files in this directory.
  * @param {string} dir - Directory path relative to the project root directory. For example, 'crates/rolldown_binding/src'.
  * @returns {Promise<string[]>} Array of directory file paths relative to the rolldown root directory.
  * Example: If dir is 'crates/rolldown_binding/src', it returns ['crates/rolldown_binding/src/bunder.rs', 'crates/rolldown_binding/src/lib.rs', and so on].
- * 
+ *
  * @example
  * const files = await getDirFiles('crates/rolldown_binding/src')
  * console.log(files) // Example output: ['crates/rolldown_binding/src/bunder.rs', 'crates/rolldown_binding/src/lib.rs', and so on]
@@ -56,8 +55,6 @@ async function getDirFiles(dir) {
   return result.stdout.split('\n').filter(Boolean)
 }
 
-
-
 /**
  * Takes an array of file paths and returns a common hash string.
  * @param {string[]} files - Array of file paths.
@@ -71,7 +68,6 @@ async function hashFiles(files) {
 
   return result.stdout
 }
-
 
 /**
  * Returns the path to the cache file for the given package name.
@@ -87,7 +83,6 @@ function getCacheFile(pkgName) {
 
   return path.join(CACHE_DIR, `hash-${key}`)
 }
-
 
 /**
  * Generates the build hash string
@@ -110,7 +105,6 @@ async function generateBuildHash(deps, files) {
 
   return hasher.digest('hex')
 }
-
 
 /**
  * Checks if the package needs to be rebuilt. If the cache is stale or does not exist, it returns true.
@@ -137,10 +131,9 @@ async function isStaleOrUnbuilt(pkgName, deps, files) {
     return true
   }
 
- // Otherwise, the package is up-to-date
+  // Otherwise, the package is up-to-date
   return false
 }
-
 
 /**
  * Executes the 'yarn build' command for the specified package.
@@ -166,7 +159,7 @@ async function runYarnBuild(pkgName, log) {
       .filter(Boolean)
       .forEach((line) => {
         log(`  ${line.trim()}`)
-      })    
+      })
   }
 
   result.stderr?.on('data', onData)
@@ -184,18 +177,12 @@ async function runYarnBuild(pkgName, log) {
   }
 }
 
-
-
-
-
-
 /**
  * Object with keys representing package names and values as tuples consisting of the resolve function for {@link build} function and the setTimeout timer.
  * Used in the 'buildWithDebounce' function to manage debounced builds for different packages.
  * @type {{ [packageName: string]: [resolve: (value: boolean | PromiseLike<boolean>) => void, timeout: ReturnType<setTimeout>] }}
  */
 const BUILD_TIMERS = {}
-
 
 /**
  * Builds the specified package.
@@ -233,9 +220,8 @@ async function build(pkgName, deps, changedFile, loadFiles) {
   return false
 }
 
-
 /**
- * 
+ *
  * @param {string} pkgName - The package name
  * @param {string[]} deps - An array of dependencies.
  * @param {ChangedFile | undefined} changedFile - Optional. The file that triggered the build, if any.
@@ -261,9 +247,8 @@ async function buildWithDebounce(pkgName, deps, changedFile, loadFiles) {
   })
 }
 
-
 /**
- * 
+ *
  * @param {ChangedFile} [changedFile] - Optional. The file that triggered the build, if any.
  * @returns {Promise<WasRebuilt>} A Promise that resolves to true if the package was rebuilt, false otherwise.
  */

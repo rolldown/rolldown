@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@parcel/watcher": "^2.4.1",
+    "@types/debug": "^4.1.12",
     "chalk": "^5.3.0",
     "change-case": "^5.4.3",
     "debug": "^4.3.4",
@@ -16,7 +17,6 @@
     "tree-sitter": "^0.20.6",
     "tree-sitter-go": "^0.20.0",
     "typescript": "^5.4.2",
-    "zx": "^7.2.3",
-    "@types/debug": "^4.1.12"
+    "zx": "^7.2.3"
   }
 }

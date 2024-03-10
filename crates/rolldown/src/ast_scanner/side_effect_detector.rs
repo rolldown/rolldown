@@ -347,4 +347,13 @@ mod test {
     assert!(get_statements_side_effect("true && bar"));
     assert!(get_statements_side_effect("foo ?? true"));
   }
+
+  #[test]
+  fn test_parenthesized_expression() {
+    assert!(!get_statements_side_effect("(true)"));
+    assert!(!get_statements_side_effect("(null)"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("(bar)"));
+    assert!(get_statements_side_effect("(foo)"));
+  }
 }

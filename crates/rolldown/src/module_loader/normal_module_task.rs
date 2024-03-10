@@ -152,7 +152,11 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
 
     let semantic = program.make_semantic(source_type);
     let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
-    let ast_scope = AstScope::new(scope, std::mem::take(&mut symbol_table.references));
+    let ast_scope = AstScope::new(
+      scope,
+      std::mem::take(&mut symbol_table.references),
+      std::mem::take(&mut symbol_table.resolved_references),
+    );
     let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let repr_name = self.resolved_path.path.representative_name();
     let scanner = AstScanner::new(

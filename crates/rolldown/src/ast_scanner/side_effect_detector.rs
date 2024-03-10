@@ -141,6 +141,16 @@ impl<'a> SideEffectDetector<'a> {
       Expression::TemplateLiteral(literal) => {
         literal.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
       }
+      Expression::LogicalExpression(logic_expr) => {
+        self.detect_side_effect_of_expr(&logic_expr.left)
+          || self.detect_side_effect_of_expr(&logic_expr.right)
+      }
+      Expression::ParenthesizedExpression(paren_expr) => {
+        self.detect_side_effect_of_expr(&paren_expr.expression)
+      }
+      Expression::SequenceExpression(seq_expr) => {
+        seq_expr.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
+      }
       Expression::TSAsExpression(_)
       | Expression::TSSatisfiesExpression(_)
       | Expression::TSTypeAssertion(_)
@@ -159,17 +169,8 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ChainExpression(_) => true,
       Expression::ConditionalExpression(_) => true,
       Expression::ImportExpression(_) => true,
-      Expression::LogicalExpression(logic_expr) => {
-        self.detect_side_effect_of_expr(&logic_expr.left)
-          || self.detect_side_effect_of_expr(&logic_expr.right)
-      }
+
       Expression::NewExpression(_) => true,
-      Expression::ParenthesizedExpression(paren_expr) => {
-        self.detect_side_effect_of_expr(&paren_expr.expression)
-      }
-      Expression::SequenceExpression(seq_expr) => {
-        seq_expr.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
-      }
       Expression::TaggedTemplateExpression(_) => true,
       Expression::ThisExpression(_) => true,
       Expression::UpdateExpression(_) => true,

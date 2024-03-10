@@ -148,7 +148,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
     let scan_ret = self.scan_inner().await;
 
     self.call_build_end_hook(&scan_ret).await?;
-
+    println!("test");
     let build_info = scan_ret?;
 
     let link_stage = LinkStage::new(build_info, &self.input_options);

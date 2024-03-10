@@ -141,7 +141,41 @@ impl<'a> SideEffectDetector<'a> {
       Expression::TemplateLiteral(literal) => {
         literal.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
       }
-      _ => true,
+      Expression::LogicalExpression(logic_expr) => {
+        self.detect_side_effect_of_expr(&logic_expr.left)
+          || self.detect_side_effect_of_expr(&logic_expr.right)
+      }
+      Expression::ParenthesizedExpression(paren_expr) => {
+        self.detect_side_effect_of_expr(&paren_expr.expression)
+      }
+      Expression::SequenceExpression(seq_expr) => {
+        seq_expr.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
+      }
+      Expression::TSAsExpression(_)
+      | Expression::TSSatisfiesExpression(_)
+      | Expression::TSTypeAssertion(_)
+      | Expression::TSNonNullExpression(_)
+      | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
+
+      // TODO: Implement these
+      Expression::MetaProperty(_)
+      | Expression::Super(_)
+      | Expression::ArrayExpression(_)
+      | Expression::AssignmentExpression(_)
+      | Expression::AwaitExpression(_)
+      | Expression::BinaryExpression(_)
+      | Expression::CallExpression(_)
+      | Expression::ChainExpression(_)
+      | Expression::ConditionalExpression(_)
+      | Expression::ImportExpression(_)
+      | Expression::NewExpression(_)
+      | Expression::TaggedTemplateExpression(_)
+      | Expression::ThisExpression(_)
+      | Expression::UpdateExpression(_)
+      | Expression::YieldExpression(_)
+      | Expression::PrivateInExpression(_)
+      | Expression::JSXElement(_)
+      | Expression::JSXFragment(_) => true,
     }
   }
 
@@ -300,5 +334,32 @@ mod test {
     assert!(get_statements_side_effect("`hello${foo}`"));
     assert!(get_statements_side_effect("const foo = {}; `hello${foo.bar}`"));
     assert!(get_statements_side_effect("tag`hello`"));
+  }
+
+  #[test]
+  fn test_logical_expression() {
+    assert!(!get_statements_side_effect("true && false"));
+    assert!(!get_statements_side_effect("null ?? true"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("true && bar"));
+    assert!(get_statements_side_effect("foo ?? true"));
+  }
+
+  #[test]
+  fn test_parenthesized_expression() {
+    assert!(!get_statements_side_effect("(true)"));
+    assert!(!get_statements_side_effect("(null)"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("(bar)"));
+    assert!(get_statements_side_effect("(foo)"));
+  }
+
+  #[test]
+  fn test_sequence_expression() {
+    assert!(!get_statements_side_effect("true, false"));
+    assert!(!get_statements_side_effect("null, true"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("true, bar"));
+    assert!(get_statements_side_effect("foo, true"));
   }
 }

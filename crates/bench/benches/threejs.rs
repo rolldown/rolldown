@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use bench::join_by_repo_root;
-use criterion::{criterion_group, criterion_main, Criterion};
+use codspeed_criterion_compat::{criterion_group, criterion_main, Criterion};
 use rolldown::InputOptions;
 
 #[derive(Debug)]

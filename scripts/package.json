@@ -16,6 +16,7 @@
     "tree-sitter": "^0.20.6",
     "tree-sitter-go": "^0.20.0",
     "typescript": "^5.4.2",
-    "zx": "^7.2.3"
+    "zx": "^7.2.3",
+    "@types/debug": "^4.1.12"
   }
 }

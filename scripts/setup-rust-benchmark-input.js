@@ -9,8 +9,10 @@ await $`git clone --branch r108 --depth 1 https://github.com/mrdoob/three.js.git
 
 // setup three-js
 
-fsExtra.writeFileSync('./temp/three/entry.js', `import * as three from './src/Three.js'; export { three }`)
-
+fsExtra.writeFileSync(
+  './temp/three/entry.js',
+  `import * as three from './src/Three.js'; export { three }`,
+)
 
 // setup three-js 10x
 
@@ -23,5 +25,8 @@ for (let i = 1; i <= 10; i++) {
 
 fsExtra.writeFileSync('./temp/three10x/entry.js', '')
 for (let i = 1; i <= 10; i++) {
-  fsExtra.appendFileSync('./temp/three10x/entry.js', `import * as three${i} from './copy${i}/Three.js'; export { three${i} }\n`)
+  fsExtra.appendFileSync(
+    './temp/three10x/entry.js',
+    `import * as three${i} from './copy${i}/Three.js'; export { three${i} }\n`,
+  )
 }

@@ -2,7 +2,7 @@ import * as nodePath from 'node:path'
 import * as nodeUrl from 'node:url'
 import * as selfExports from './constants.js'
 
-const __filename = nodeUrl.fileURLToPath(import.meta.url);
+const __filename = nodeUrl.fileURLToPath(import.meta.url)
 const __dirname = nodePath.dirname(__filename)
 
 export const repoRoot = nodePath.join(__dirname, '../..').normalize()

@@ -30,18 +30,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           # Whether Pull submodules for additional files
-          submodules: false 
-
-      - name: Clone three.js
-        run: |
-            git clone https://github.com/mrdoob/three.js.git --depth 1 ./temp/three.js  
-            for i in {1..10}; do cp -r ./temp/three.js/src ./temp/three.js/copy$i/; done
-
-      - name: Install Rust Toolchain
-        uses: ./.github/actions/rustup
+          submodules: false
+      
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
         with:
-          shared-key: benchmark
-          save-cache: ${{ github.ref_name == 'main' }}
+          bins: just
+          cache-base: main
+
+      - name: Setup benchmark
+        run: just setup-bench
 
       - name: Install codspeed
         uses: taiki-e/install-action@v2

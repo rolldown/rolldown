@@ -4,26 +4,35 @@ set shell := ["bash", "-cu"]
 _default:
     just --list -u
 
-ready:
-  git diff --exit-code --quiet
-  just fmt
-  just check
-  just test
-  just lint
-  git status
+# `smoke` command almost run all ci checks locally. It's useful to run this before pushing your changes.
+smoke:
+    just smoke-rust
+    just smoke-node
 
-# INITIALIZE
+smoke-rust:
+    just check-rust
+    just test-rust
+    just lint-rust
 
-init-rust:
-    cargo binstall rusty-hook taplo-cli cargo-insta cargo-deny -y
+smoke-node:
+    just check-node
+    just test-node
+    just lint-node
 
-init-node:
-    yarn install
 
+# Initialize the project and its submodules
 init:
     just init-rust
     just init-node
     git submodule update --init
+
+init-rust:
+    cargo binstall taplo-cli cargo-insta cargo-deny -y
+
+init-node:
+    yarn install
+
+
 
 # Update our local branch with the remote branch (this is for you to sync the submodules)
 update:
@@ -42,7 +51,10 @@ check:
     just check-rust
     just check-node
 
-# TESTING
+# run tests for both Rust and Node.js
+test:
+    just test-rust
+    just test-node
 
 test-rust:
     cargo test --no-fail-fast
@@ -51,53 +63,32 @@ test-node:
     yarn build:node
     yarn test
 
-test:
-    just test-rust
-    just test-node
-
-# FORMATTING
-
+# Fix formatting issues both for Rust and Node.js.
+fmt:
+    just fmt-rust
+    just fmt-lint
+  
 fmt-rust:
     cargo fmt --all -- --emit=files
+    taplo fmt
 
 fmt-lint:
     yarn prettier
 
-fmt:
-    just fmt-rust
-    just fmt-lint
-    taplo format
-
-# LINTING
+# lint the codebase
+lint:
+    just lint-rust
+    just lint-node
 
 lint-rust:
-    cargo clippy --workspace --all-targets -- --deny warnings
     cargo fmt --all -- --check
+    taplo fmt --check
+    cargo clippy --workspace --all-targets -- --deny warnings
 
 lint-node:
     yarn lint-filename
     yarn lint-code
     yarn prettier:ci
-
-lint:
-    just lint-rust
-    just lint-node
-    taplo format
-
-# smoke commands allow you to run checks locally without pushing branches to the remote
-smoke-rust:
-    just check-rust
-    just test-rust
-    just lint-rust
-
-smoke-node:
-    just check-node
-    just test-node
-    just lint-node
-
-smoke:
-    just smoke-rust
-    just smoke-node
 
 # BENCHING
 

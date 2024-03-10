@@ -10,8 +10,10 @@
     "esbuild": "^0.20.1"
   },
   "dependencies": {
+    "@rollup/plugin-node-resolve": "^15.2.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "rollup": "^4.12.1",
     "tinybench": "^2.6.0",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"

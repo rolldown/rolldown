@@ -3328,9 +3328,11 @@ __metadata:
   resolution: "bench@workspace:packages/bench"
   dependencies:
     "@rolldown/node": "workspace:*"
+    "@rollup/plugin-node-resolve": "npm:^15.2.3"
     esbuild: "npm:^0.20.1"
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
+    rollup: "npm:^4.12.1"
     tinybench: "npm:^2.6.0"
     vue: "npm:^3.4.21"
     vue-router: "npm:^4.3.0"
@@ -10282,7 +10284,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rollup@npm:^4.2.0":
+"rollup@npm:^4.12.1, rollup@npm:^4.2.0":
   version: 4.12.1
   resolution: "rollup@npm:4.12.1"
   dependencies:

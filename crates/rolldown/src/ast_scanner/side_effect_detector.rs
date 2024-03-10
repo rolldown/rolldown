@@ -338,4 +338,13 @@ mod test {
     assert!(get_statements_side_effect("const foo = {}; `hello${foo.bar}`"));
     assert!(get_statements_side_effect("tag`hello`"));
   }
+
+  #[test]
+  fn test_logical_expression() {
+    assert!(!get_statements_side_effect("true && false"));
+    assert!(!get_statements_side_effect("null ?? true"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("true && bar"));
+    assert!(get_statements_side_effect("foo ?? true"));
+  }
 }

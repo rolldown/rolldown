@@ -36,7 +36,7 @@ check-rust:
     cargo check --workspace
 
 check-node:
-    yarn typecheck
+    yarn type-check
 
 check:
     just check-rust
@@ -78,7 +78,6 @@ lint-node:
     yarn lint-filename
     yarn lint
     yarn prettier:ci
-    yarn typecheck
 
 lint:
     just lint-rust
@@ -87,19 +86,18 @@ lint:
 
 # smoke commands allow you to run checks locally without pushing branches to the remote
 smoke-rust:
-    just test-rust
     just check-rust
+    just test-rust
     just lint-rust
 
 smoke-node:
-    just test-node
     just check-node
+    just test-node
     just lint-node
 
 smoke:
     just smoke-rust
     just smoke-node
-
 
 # BENCHING
 

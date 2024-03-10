@@ -41,6 +41,7 @@
     "Rstr",
     "rustc",
     "smallvec",
+    "taplo",
     "treeshake"
   ],
   "git.ignoreLimitWarning": true,

@@ -55,7 +55,7 @@ jobs:
         run: cargo codspeed build -p bench
 
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@v1
+        uses: CodSpeedHQ/action@v2
         with:
           run: cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}

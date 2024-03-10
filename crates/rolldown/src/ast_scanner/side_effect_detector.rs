@@ -356,4 +356,13 @@ mod test {
     assert!(get_statements_side_effect("(bar)"));
     assert!(get_statements_side_effect("(foo)"));
   }
+
+  #[test]
+  fn test_sequence_expression() {
+    assert!(!get_statements_side_effect("true, false"));
+    assert!(!get_statements_side_effect("null, true"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("true, bar"));
+    assert!(get_statements_side_effect("foo, true"));
+  }
 }

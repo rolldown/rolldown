@@ -15,8 +15,8 @@ workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
-rolldown     = { path = "../rolldown/" }
-rolldown_fs  = { path = "../rolldown_fs", features = ["memory"], default-features = false }
+rolldown     = { workspace = true }
+rolldown_fs  = { workspace = true, features = ["memory"], default-features = false }
 tokio        = { workspace = true, default-features = false, features = ["rt", "macros", "sync"] }
 wasm-bindgen = "0.2.74"
 

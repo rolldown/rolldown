@@ -13,4 +13,4 @@ workspace = true
 
 [dependencies]
 async-trait     = { workspace = true }
-rolldown_plugin = { path = "../rolldown_plugin" }
+rolldown_plugin = { workspace = true }

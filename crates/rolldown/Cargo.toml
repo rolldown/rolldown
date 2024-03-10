@@ -24,7 +24,7 @@ rayon              = { workspace = true }
 regex              = { workspace = true }
 rolldown_common    = { workspace = true }
 rolldown_error     = { workspace = true }
-rolldown_fs        = { workspace = true }
+rolldown_fs        = { workspace = true, features = ["os"] }
 rolldown_oxc_utils = { workspace = true }
 rolldown_plugin    = { workspace = true }
 rolldown_resolver  = { workspace = true }

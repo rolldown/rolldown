@@ -164,7 +164,9 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ParenthesizedExpression(paren_expr) => {
         self.detect_side_effect_of_expr(&paren_expr.expression)
       }
-      Expression::SequenceExpression(_) => true,
+      Expression::SequenceExpression(seq_expr) => {
+        seq_expr.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
+      }
       Expression::TaggedTemplateExpression(_) => true,
       Expression::ThisExpression(_) => true,
       Expression::UpdateExpression(_) => true,

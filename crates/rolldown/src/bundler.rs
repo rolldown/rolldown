@@ -142,6 +142,7 @@ impl<T: FileSystem + Default + 'static> Bundler<T> {
   }
 
   #[tracing::instrument(skip_all)]
+  #[allow(clippy::print_stdout)]
   async fn try_build(&mut self) -> BatchedResult<LinkStageOutput> {
     self.plugin_driver.build_start().await?;
 

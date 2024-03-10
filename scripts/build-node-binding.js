@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { execa } from 'execa'
 import watcher from '@parcel/watcher'
 import path from 'node:path'
@@ -22,6 +21,21 @@ const IS_RELEASE = process.argv.includes('--release')
 
 fs.mkdirSync(CACHE_DIR, { recursive: true })
 
+/** @typedef {import('debug').Debugger['log']} LogFunction  */
+/** A function that returns an array of paths for files (similar to the getDirFiles function, see {@link getDirFiles}) @typedef {() => Promise<string[]>} LoadFilesCallback */
+/** The file that triggered the build. @typedef {string} ChangedFile */
+/** Represents whether the package was rebuilt. @typedef {boolean} WasRebuilt */
+
+/**
+ * Takes a path relative to the project root and returns an array of paths for files in this directory.
+ * @param {string} dir - Directory path relative to the project root directory. For example, 'crates/rolldown_binding/src'.
+ * @returns {Promise<string[]>} Array of directory file paths relative to the rolldown root directory.
+ * Example: If dir is 'crates/rolldown_binding/src', it returns ['crates/rolldown_binding/src/bunder.rs', 'crates/rolldown_binding/src/lib.rs', and so on].
+ *
+ * @example
+ * const files = await getDirFiles('crates/rolldown_binding/src')
+ * console.log(files) // Example output: ['crates/rolldown_binding/src/bunder.rs', 'crates/rolldown_binding/src/lib.rs', and so on]
+ */
 async function getDirFiles(dir) {
   const result = await execa(
     'git',
@@ -41,6 +55,11 @@ async function getDirFiles(dir) {
   return result.stdout.split('\n').filter(Boolean)
 }
 
+/**
+ * Takes an array of file paths and returns a common hash string.
+ * @param {string[]} files - Array of file paths.
+ * @returns {Promise<string>} A common hash string for input files.
+ */
 async function hashFiles(files) {
   const result = await execa('git', ['hash-object', '--stdin-paths'], {
     cwd: ROOT_DIR,
@@ -50,6 +69,11 @@ async function hashFiles(files) {
   return result.stdout
 }
 
+/**
+ * Returns the path to the cache file for the given package name.
+ * @param {string} pkgName - The package name.
+ * @returns {string} The absolute path to the cache file.
+ */
 function getCacheFile(pkgName) {
   let key = pkgName
 
@@ -60,6 +84,12 @@ function getCacheFile(pkgName) {
   return path.join(CACHE_DIR, `hash-${key}`)
 }
 
+/**
+ * Generates the build hash string
+ * @param {string[]} deps - An array of dependencies.
+ * @param {string[]} files - An array of file paths.
+ * @returns {Promise<string>} The build hash string
+ */
 async function generateBuildHash(deps, files) {
   const hasher = crypto.createHash('sha256')
 
@@ -76,10 +106,18 @@ async function generateBuildHash(deps, files) {
   return hasher.digest('hex')
 }
 
+/**
+ * Checks if the package needs to be rebuilt. If the cache is stale or does not exist, it returns true.
+ * @param {string} pkgName - The package name
+ * @param {string[]} deps - An array of dependencies.
+ * @param {string[]} files - An array of file paths.
+ * @returns {Promise<boolean>} Indicates whether the package needs to be rebuilt.
+ */
 async function isStaleOrUnbuilt(pkgName, deps, files) {
   const cacheFile = getCacheFile(pkgName)
   const buildHash = await generateBuildHash(deps, files)
 
+  // If the build does not exist
   if (!fs.existsSync(cacheFile)) {
     await fsp.writeFile(cacheFile, buildHash)
     return true
@@ -87,14 +125,22 @@ async function isStaleOrUnbuilt(pkgName, deps, files) {
 
   const cachedHash = await fsp.readFile(cacheFile, 'utf8')
 
+  // If the cached and build hashes don't match, the build is stale
   if (buildHash != cachedHash) {
     await fsp.writeFile(cacheFile, buildHash)
     return true
   }
 
+  // Otherwise, the package is up-to-date
   return false
 }
 
+/**
+ * Executes the 'yarn build' command for the specified package.
+ * @param {string} pkgName - The package name
+ * @param {LogFunction} log - Log function
+ * @returns {Promise<void>}
+ */
 async function runYarnBuild(pkgName, log) {
   const command = IS_RELEASE ? 'build:release' : 'build'
   const result = execa('yarn', ['workspace', pkgName, 'run', command], {
@@ -103,6 +149,10 @@ async function runYarnBuild(pkgName, log) {
     stdio: 'pipe',
   })
 
+  /**
+   * Callback function called when a chunk of data is received from the stream.
+   * @param {unknown} data - The chunk of data received from the stream.
+   */
   const onData = (data) => {
     String(data)
       .split('\n')
@@ -118,13 +168,30 @@ async function runYarnBuild(pkgName, log) {
   try {
     await result
   } catch (err) {
-    debug(`Yarn Build:error`)(`Failed to build ${pkgName}: ${err.message}`)
+    if (err instanceof Error) {
+      debug(`Yarn Build:error`)(`Failed to build ${pkgName}: ${err.message}`)
+    } else {
+      debug(`Yarn Build:error`)(`Failed to build ${pkgName}: ${err}`)
+    }
     process.exitCode = 1
   }
 }
 
+/**
+ * Object with keys representing package names and values as tuples consisting of the resolve function for {@link build} function and the setTimeout timer.
+ * Used in the 'buildWithDebounce' function to manage debounced builds for different packages.
+ * @type {{ [packageName: string]: [resolve: (value: boolean | PromiseLike<boolean>) => void, timeout: ReturnType<setTimeout>] }}
+ */
 const BUILD_TIMERS = {}
 
+/**
+ * Builds the specified package.
+ * @param {string} pkgName - The name of the package to build.
+ * @param {string[]} deps - An array of dependencies required for building the package.
+ * @param {ChangedFile | undefined} changedFile - Optional. The file that triggered the build, if any.
+ * @param {LoadFilesCallback} loadFiles - A function that returns an array of paths for files (similar to the getDirFiles function, see {@link getDirFiles})
+ * @returns {Promise<WasRebuilt>} A Promise that resolves to true if the package was rebuilt, false otherwise.
+ */
 async function build(pkgName, deps, changedFile, loadFiles) {
   const name = pkgName.split('/')[1]
   const log = debug(`rolldown:${name}`)
@@ -153,11 +220,19 @@ async function build(pkgName, deps, changedFile, loadFiles) {
   return false
 }
 
+/**
+ *
+ * @param {string} pkgName - The package name
+ * @param {string[]} deps - An array of dependencies.
+ * @param {ChangedFile | undefined} changedFile - Optional. The file that triggered the build, if any.
+ * @param {LoadFilesCallback} loadFiles - A function that returns an array of paths for files (similar to the getDirFiles function, see {@link getDirFiles})
+ * @returns {Promise<WasRebuilt>} A Promise that resolves to true if the package was rebuilt, false otherwise.
+ */
 async function buildWithDebounce(pkgName, deps, changedFile, loadFiles) {
   if (BUILD_TIMERS[pkgName]) {
     const [resolve, timer] = BUILD_TIMERS[pkgName]
     clearTimeout(timer)
-    resolve()
+    resolve(true)
     delete BUILD_TIMERS[pkgName]
   }
 
@@ -172,6 +247,11 @@ async function buildWithDebounce(pkgName, deps, changedFile, loadFiles) {
   })
 }
 
+/**
+ *
+ * @param {ChangedFile} [changedFile] - Optional. The file that triggered the build, if any.
+ * @returns {Promise<WasRebuilt>} A Promise that resolves to true if the package was rebuilt, false otherwise.
+ */
 async function buildRolldownPackage(changedFile) {
   return buildWithDebounce(
     '@rolldown/node',
@@ -189,6 +269,10 @@ async function buildRolldownPackage(changedFile) {
   )
 }
 
+/**
+ * @param {ChangedFile} [changedFile] - Optional. The file that triggered the build, if any.
+ * @returns {Promise<WasRebuilt>} A Promise that resolves to true if the package was rebuilt, false otherwise.
+ */
 async function buildNodeBindingCrate(changedFile) {
   return buildWithDebounce(
     '@rolldown/node-binding',
@@ -206,9 +290,13 @@ async function buildNodeBindingCrate(changedFile) {
   )
 }
 
+/**
+ * @param {ChangedFile} [changedFile] - Optional. The file that triggered the build, if any.
+ * @returns {Promise<WasRebuilt>} A Promise that resolves to true if the package was rebuilt, false otherwise.
+ */
 async function buildWasmBindingCrate(changedFile) {
   if (NO_WASM) {
-    return
+    return false
   }
 
   return buildWithDebounce(
@@ -226,11 +314,16 @@ async function buildWasmBindingCrate(changedFile) {
   )
 }
 
+/**
+ * Subscribe to changes in subfolders and rebuild some package if change is detected.
+ * @returns {Promise<void>}
+ */
 async function watchForChanges() {
   const log = debug('rolldown:watcher')
 
   log('Watching for changes...')
 
+  /** @type import('@parcel/watcher').SubscribeCallback */
   const onChange = (error, events) => {
     if (error) {
       console.error(error)
@@ -252,6 +345,7 @@ async function watchForChanges() {
         buildRolldownPackage(changedFile)
       }
     })
+    return
   }
 
   const promises = [

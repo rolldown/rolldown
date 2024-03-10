@@ -97,31 +97,31 @@ async function isStaleOrUnbuilt(pkgName, deps, files) {
 }
 
 async function runYarnBuild(pkgName, log) {
-  const result = execa(
-    'yarn',
-    ['workspace', pkgName, 'run', IS_RELEASE ? 'build:release' : 'build'],
-    {
-      cwd: ROOT_DIR,
-      env: { CARGO_TERM_COLOR: 'always', FORCE_COLOR: 'true' },
-      stdio: 'pipe',
-    },
-  )
+  const command = IS_RELEASE ? 'build:release' : 'build'
+  const result = execa('yarn', ['workspace', pkgName, 'run', command], {
+    cwd: ROOT_DIR,
+    env: { CARGO_TERM_COLOR: 'always', FORCE_COLOR: 'true' },
+    stdio: 'pipe',
+  })
 
   const onData = (data) => {
     String(data)
-      .trim()
       .split('\n')
+      .filter(Boolean)
       .forEach((line) => {
-        if (line) {
-          log(`  ${line.trim()}`)
-        }
+        log(`  ${line.trim()}`)
       })
   }
 
   result.stderr?.on('data', onData)
   result.stdout?.on('data', onData)
 
-  await result
+  try {
+    await result
+  } catch (err) {
+    debug(`Yarn Build:error`)(`Failed to build ${pkgName}: ${err.message}`)
+    process.exitCode = 1
+  }
 }
 
 const BUILD_TIMERS = {}

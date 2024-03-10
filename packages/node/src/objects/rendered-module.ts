@@ -1,1 +1,1 @@
-export interface RenderedModule { }
+export interface RenderedModule {}

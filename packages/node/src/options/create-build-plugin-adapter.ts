@@ -7,7 +7,11 @@ import type {
   HookRenderChunkOutput,
   BindingOutputs as Outputs,
 } from '@rolldown/node-binding'
-import { transformToOutputBundle, unimplemented, transformSourcemap } from '../utils'
+import {
+  transformToOutputBundle,
+  unimplemented,
+  transformSourcemap,
+} from '../utils'
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function createBuildPluginAdapter(

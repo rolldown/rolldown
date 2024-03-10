@@ -7,14 +7,10 @@
     {
       "type": "lldb",
       "request": "launch",
-      "sourceLanguages": [
-        "rust"
-      ],
+      "sourceLanguages": ["rust"],
       "name": "debug-rust-basic",
       "program": "node",
-      "args": [
-        "build.js"
-      ],
+      "args": ["build.js"],
       "cwd": "${workspaceFolder}/examples/basic-vue"
     },
     {

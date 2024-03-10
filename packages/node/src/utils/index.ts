@@ -23,4 +23,4 @@ export function unreachable(info?: string): never {
   throw new Error('unreachable')
 }
 
-export function noop(..._args: any[]) { }
+export function noop(..._args: any[]) {}

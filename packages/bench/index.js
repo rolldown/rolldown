@@ -5,8 +5,8 @@ import url from 'node:url'
 import * as rolldown from '@rolldown/node'
 import * as esbuild from 'esbuild'
 import * as rollup from 'rollup'
-import { nodeResolve } from '@rollup/plugin-node-resolve';
-import commonjs from '@rollup/plugin-commonjs';
+import { nodeResolve } from '@rollup/plugin-node-resolve'
+import commonjs from '@rollup/plugin-commonjs'
 
 const dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const repoRoot = path.join(dirname, '../../')
@@ -95,7 +95,7 @@ async function runRollup(item) {
       }),
       // @ts-expect-error Something is wrong with the types
       commonjs(),
-    ]
+    ],
   })
   await build.write({
     dir: path.join(dirname, `./dist/rollup/${item.title}`),
@@ -140,16 +140,18 @@ for (const suite of suites) {
       console.error(`${t} failed:`, e)
       return null
     } else {
-      const nsAverageTime = e.mean * 1e3 * 1e3;
-      const msAverageTime = nsAverageTime / 1e6;
+      const nsAverageTime = e.mean * 1e3 * 1e3
+      const msAverageTime = nsAverageTime / 1e6
       return {
-        "Task Name": t,
-        "ops/sec": e.error ? "NaN" : parseInt(e.hz.toString(), 10).toLocaleString(),
-        "Average Time (ms)": e.error ? "NaN" : msAverageTime.toFixed(2),
-        Margin: e.error ? "NaN" : `\xB1${e.rme.toFixed(2)}%`,
-        Samples: e.error ? "NaN" : e.samples.length
+        'Task Name': t,
+        'ops/sec': e.error
+          ? 'NaN'
+          : parseInt(e.hz.toString(), 10).toLocaleString(),
+        'Average Time (ms)': e.error ? 'NaN' : msAverageTime.toFixed(2),
+        Margin: e.error ? 'NaN' : `\xB1${e.rme.toFixed(2)}%`,
+        Samples: e.error ? 'NaN' : e.samples.length,
       }
     }
-  });
+  })
   console.table(statusTable)
 }

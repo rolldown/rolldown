@@ -1,10 +1,9 @@
-packages/**/dist/*
+**/.git
+**/node_modules
+**/dist/
+.yarn
 packages/rollup-tests
+rollup
 crates
 target
 temp
-.yarn
-rollup
-**/.git
-**/node_modules
-web/wasm/*

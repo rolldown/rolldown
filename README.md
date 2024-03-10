@@ -16,7 +16,7 @@ For more information, please check out the documentation at [rolldown.rs](https:
 
 # Contributing
 
-We would love to have more contributors involved! 
+We would love to have more contributors involved!
 
 To get started, please read our [Contributing Guide](https://rolldown.rs/contrib-guide/).
 

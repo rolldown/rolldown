@@ -7,5 +7,5 @@ export type {
   NormalizedInputOptions,
   OutputAsset,
   OutputBundle,
-  SourceMapInput
+  SourceMapInput,
 } from './rollup'

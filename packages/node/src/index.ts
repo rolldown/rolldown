@@ -15,5 +15,5 @@ export type {
   InputOptions,
   OutputOptions,
   RolldownPlugin as Plugin,
-  RolldownOutput as RollupOutput
+  RolldownOutput as RollupOutput,
 }

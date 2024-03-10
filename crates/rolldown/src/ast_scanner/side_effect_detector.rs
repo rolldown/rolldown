@@ -161,7 +161,9 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ImportExpression(_) => true,
       Expression::LogicalExpression(_) => true,
       Expression::NewExpression(_) => true,
-      Expression::ParenthesizedExpression(_) => true,
+      Expression::ParenthesizedExpression(paren_expr) => {
+        self.detect_side_effect_of_expr(&paren_expr.expression)
+      }
       Expression::SequenceExpression(_) => true,
       Expression::TaggedTemplateExpression(_) => true,
       Expression::ThisExpression(_) => true,

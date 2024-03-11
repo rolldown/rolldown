@@ -6,7 +6,10 @@ const { execSync } = require('node:child_process')
 // We use it to generate changelog, so here update it by packages version.
 const ROOT_DIR = path.join(__dirname, '..')
 const PACKAGE_JSON_PATH = path.join(ROOT_DIR, 'package.json')
-const NODE_PACKAGE_JSON_PATH = path.join(ROOT_DIR, 'packages/node/package.json')
+const NODE_PACKAGE_JSON_PATH = path.join(
+  ROOT_DIR,
+  'packages/rolldown/package.json',
+)
 
 async function updatePackageVersion() {
   const { version: updatedVersion } = require(NODE_PACKAGE_JSON_PATH)

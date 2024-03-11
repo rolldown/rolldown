@@ -1,0 +1,76 @@
+{
+  "name": "rolldown",
+  "version": "0.0.1",
+  "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
+  "repository": "https://github.com/rolldown/rolldown",
+  "license": "MIT",
+  "keywords": [
+    "webpack",
+    "parcel",
+    "esbuild",
+    "rollup",
+    "bundler",
+    "rolldown"
+  ],
+  "files": [
+    "dist",
+    "!dist/*.node"
+  ],
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "scripts": {
+    "# Scrips for binding #": "_",
+    "artifacts": "napi artifacts -o=./src --npm-dir ./npm",
+    "format-generated-binding-files": "prettier --write src/binding.js src/binding.d.ts",
+    "build-binding": "napi build -o=./src --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts",
+    "build-binding:release": "napi build -o=./src --release --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts",
+    "prepublishOnly": "napi prepublish -p ./npm --tag-style npm",
+    "# Scrips for node #": "_",
+    "build-node": "unbuild",
+    "build": "run-s build-binding build-node format-generated-binding-files",
+    "build:release": "run-s build-binding:release build-node format-generated-binding-files",
+    "# Scrips for checking #": "_",
+    "test": "vitest run",
+    "test:update": "vitest run -u",
+    "type-check": "tsc -p tsconfig.check.json"
+  },
+  "napi": {
+    "binaryName": "rolldown-binding",
+    "packageName": "@rolldown/binding",
+    "targets": [
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-gnu",
+      "i686-pc-windows-msvc",
+      "armv7-unknown-linux-gnueabihf",
+      "aarch64-apple-darwin",
+      "aarch64-linux-android",
+      "x86_64-unknown-freebsd",
+      "aarch64-unknown-linux-musl",
+      "aarch64-pc-windows-msvc",
+      "armv7-linux-androideabi"
+    ]
+  },
+  "dependencies": {
+    "prettier": "^3.2.5"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.0.0-alpha.43",
+    "@types/node": "^20.11.25",
+    "npm-run-all2": "^6.1.2",
+    "type-fest": "^4.12.0",
+    "typescript": "^5.4.2",
+    "unbuild": "^2.0.0",
+    "vitest": "^1.3.1"
+  }
+}

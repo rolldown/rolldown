@@ -85,8 +85,8 @@ function getResolve(
       ...resolve,
       alias: resolve.alias
         ? Object.fromEntries(
-          Object.entries(resolve.alias).map(([key, value]) => [key, [value]]),
-        )
+            Object.entries(resolve.alias).map(([key, value]) => [key, [value]]),
+          )
         : undefined,
     }
   }

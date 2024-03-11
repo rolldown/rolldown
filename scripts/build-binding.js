@@ -6,7 +6,9 @@ $.cwd = repoRoot
 // process.chdir(nodePath.join(repoRoot, 'packages/node').normalize())
 process.chdir(repoRoot)
 
-const manifestPath = nodePath.join('.', 'crates/rolldown_binding/Cargo.toml').normalize()
+const manifestPath = nodePath
+  .join('.', 'crates/rolldown_binding/Cargo.toml')
+  .normalize()
 
 const distPath = nodePath.join('.', 'packages/node/src').normalize()
 

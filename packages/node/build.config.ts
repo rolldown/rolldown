@@ -22,6 +22,6 @@ export default defineBuildConfig({
         console.log('Copying', file, 'to ./dist')
         nodeFs.copyFileSync(file, `./dist/${fileName}`)
       })
-    }
-  }
+    },
+  },
 })

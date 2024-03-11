@@ -14,7 +14,7 @@ export default defineBuildConfig({
     cjsBridge: true,
   },
   hooks: {
-    'build:done'(ctx) {
+    'build:done'(_ctx) {
       const binaryFiles = globSync('./src/rolldown-binding.*.node', {
         absolute: true,
       })

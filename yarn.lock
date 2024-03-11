@@ -10021,6 +10021,7 @@ __metadata:
     "@napi-rs/cli": "npm:^3.0.0-alpha.43"
     "@types/node": "npm:^20.11.25"
     npm-run-all2: "npm:^6.1.2"
+    prettier: "npm:^3.2.5"
     type-fest: "npm:^4.12.0"
     typescript: "npm:^5.4.2"
     unbuild: "npm:^2.0.0"

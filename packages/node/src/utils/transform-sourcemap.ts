@@ -39,6 +39,6 @@ export function transformSourcemap(
 function parseSourceMap(value: string): SourceMap | undefined {
   try {
     return JSON.parse(value) as SourceMap
-  } catch { }
+  } catch {}
   return undefined
 }

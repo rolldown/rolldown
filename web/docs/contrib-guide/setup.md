@@ -49,13 +49,13 @@ Once Rust, Node.js and Yarn are installed, run the following command to install 
 just init
 ```
 
-After initialization, everything should be set up and ready to go. You could run
+After initialization, everything should be setup and ready to go. You could run
 
 ```shell
 just smoke
 ```
 
-to verify that everything is set up correctly.
+to verify that everything is setup correctly.
 
 ::: tip
 `just smoke` command almost run all ci checks locally. It's useful to run this before pushing your changes. It also has two variants `just smoke-rust` and `just smoke-node` to run only Rust or Node.js checks.

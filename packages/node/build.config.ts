@@ -15,7 +15,12 @@ export default defineBuildConfig({
   },
   hooks: {
     'build:done'(ctx) {
-      const binaryFiles = globSync('./src/rolldown.*.node', { absolute: true })
+      const binaryFiles = globSync('./src/rolldown-binding.*.node', {
+        absolute: true,
+      })
+      if (binaryFiles.length === 0) {
+        throw new Error('No binary files found')
+      }
       // Move the binary file to dist
       binaryFiles.forEach((file) => {
         const fileName = nodePath.basename(file)

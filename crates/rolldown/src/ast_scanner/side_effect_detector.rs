@@ -259,6 +259,9 @@ impl<'a> SideEffectDetector<'a> {
       Statement::ReturnStatement(ret_stmt) => {
         ret_stmt.argument.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr))
       }
+      Statement::LabeledStatement(labeled_stmt) => {
+        self.detect_side_effect_of_stmt(&labeled_stmt.body)
+      }
       Statement::EmptyStatement(_)
       | Statement::ContinueStatement(_)
       | Statement::BreakStatement(_) => false,
@@ -266,7 +269,6 @@ impl<'a> SideEffectDetector<'a> {
       | Statement::ForInStatement(_)
       | Statement::ForOfStatement(_)
       | Statement::ForStatement(_)
-      | Statement::LabeledStatement(_)
       | Statement::SwitchStatement(_)
       | Statement::ThrowStatement(_)
       | Statement::TryStatement(_)
@@ -456,5 +458,14 @@ mod test {
     assert!(!get_statements_side_effect("return 1;"));
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("return bar;"));
+  }
+
+  #[test]
+  fn test_labeled_statement() {
+    assert!(!get_statements_side_effect("label: { }"));
+    assert!(!get_statements_side_effect("label: { const a = 1; }"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("label: { const a = 1; bar; }"));
+    assert!(get_statements_side_effect("label: { bar; }"));
   }
 }

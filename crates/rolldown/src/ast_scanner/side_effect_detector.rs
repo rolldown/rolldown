@@ -251,13 +251,17 @@ impl<'a> SideEffectDetector<'a> {
         self.detect_side_effect_of_expr(&while_stmt.test)
           || self.detect_side_effect_of_stmt(&while_stmt.body)
       }
+      Statement::IfStatement(if_stmt) => {
+        self.detect_side_effect_of_expr(&if_stmt.test)
+          || self.detect_side_effect_of_stmt(&if_stmt.consequent)
+          || if_stmt.alternate.as_ref().map_or(false, |stmt| self.detect_side_effect_of_stmt(stmt))
+      }
       Statement::BreakStatement(_)
       | Statement::DebuggerStatement(_)
       | Statement::EmptyStatement(_)
       | Statement::ForInStatement(_)
       | Statement::ForOfStatement(_)
       | Statement::ForStatement(_)
-      | Statement::IfStatement(_)
       | Statement::LabeledStatement(_)
       | Statement::ReturnStatement(_)
       | Statement::SwitchStatement(_)
@@ -416,5 +420,15 @@ mod test {
     assert!(get_statements_side_effect("while (bar) { const a = 1; }"));
     assert!(get_statements_side_effect("while (true) { const a = 1; bar; }"));
     assert!(get_statements_side_effect("while (true) { bar; }"));
+  }
+
+  #[test]
+  fn test_if_statement() {
+    assert!(!get_statements_side_effect("if (true) { }"));
+    assert!(!get_statements_side_effect("if (true) { const a = 1; }"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("if (bar) { const a = 1; }"));
+    assert!(get_statements_side_effect("if (true) { const a = 1; bar; }"));
+    assert!(get_statements_side_effect("if (true) { bar; }"));
   }
 }

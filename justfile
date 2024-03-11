@@ -60,7 +60,7 @@ test-rust:
     cargo test --no-fail-fast
 
 test-node:
-    yarn build:node
+    yarn build
     yarn test
 
 # Fix formatting issues both for Rust and Node.js.

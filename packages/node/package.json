@@ -1,5 +1,5 @@
 {
-  "name": "@rolldown/node",
+  "name": "rolldown",
   "version": "0.0.5",
   "description": "rolldown core binding",
   "main": "./dist/index.cjs",

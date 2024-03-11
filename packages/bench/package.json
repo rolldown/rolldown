@@ -6,12 +6,12 @@
     "bench": "node ./index.js"
   },
   "dependencies": {
-    "@rolldown/node": "workspace:*",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "esbuild": "^0.20.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "rolldown": "workspace:*",
     "rollup": "^4.12.1",
     "tinybench": "^2.6.0",
     "typescript": "^5.4.2",

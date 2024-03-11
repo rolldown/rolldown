@@ -161,7 +161,7 @@ jobs:
         run: yarn install
 
       - name: Build Node Packages
-        run: yarn workspace @rolldown/node run build
+        run: yarn workspace rolldown run build
 
       - name: Upload Node Artifact
         uses: actions/upload-artifact@v4

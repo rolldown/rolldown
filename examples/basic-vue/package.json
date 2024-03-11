@@ -6,7 +6,7 @@
     "build": "node build.js"
   },
   "devDependencies": {
-    "@rolldown/node": "workspace:*"
+    "rolldown": "workspace:*"
   },
   "dependencies": {
     "vue": "^3.4.21"

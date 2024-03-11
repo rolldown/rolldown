@@ -6,7 +6,7 @@ Luckily, NAPI-RS has encapsulated the process of building the glue part, we don'
 
 Typically, rolldown has two main packages:
 
-- `@rolldown/node`, which is the final npm package that users will install directly.
+- `rolldown`, which is the final npm package that users will install directly.
 - `@rolldown/node-binding`, which is the glue part that binds Rust and Node.js together.
 
 ## Incremental Build
@@ -24,13 +24,13 @@ In addition, the `yarn watch` script can be used to watch the file system for ch
 
 ## Fresh Build
 
-If you want to force a fresh build on `@rolldown/node`, you can run `yarn build:node`. It will topologically run the `build` command in `@rolldown/node` and `@rolldown/node-binding` package.
+If you want to force a fresh build on `rolldown`, you can run `yarn build:node`. It will topologically run the `build` command in `rolldown` and `@rolldown/node-binding` package.
 
 To build some specific package only:
 
-For `@rolldown/node`, you could run:
+For `rolldown`, you could run:
 
-- `yarn workspace @rolldown/node build`.
+- `yarn workspace rolldown build`.
 
 For `@rolldown/node-binding`, you could run:
 

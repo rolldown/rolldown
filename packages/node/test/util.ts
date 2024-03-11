@@ -1,4 +1,4 @@
-import { RollupOutput } from '@rolldown/node'
+import { RollupOutput } from 'rolldown'
 
 export function getOutputChunkNames(output: RollupOutput) {
   return output.output

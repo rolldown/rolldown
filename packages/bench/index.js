@@ -2,7 +2,7 @@
 import { Bench } from 'tinybench'
 import path from 'node:path'
 import url from 'node:url'
-import * as rolldown from '@rolldown/node'
+import * as rolldown from 'rolldown'
 import * as esbuild from 'esbuild'
 import * as rollup from 'rollup'
 import { nodeResolve } from '@rollup/plugin-node-resolve'

@@ -945,7 +945,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@example/basic@workspace:examples/basic-vue"
   dependencies:
-    "@rolldown/node": "workspace:*"
+    rolldown: "workspace:*"
     vue: "npm:^3.4.21"
   languageName: unknown
   linkType: soft
@@ -1790,19 +1790,6 @@ __metadata:
     npm-run-all: "npm:^4.1.5"
     prettier: "npm:^3.2.5"
     typescript: "npm:^5.4.2"
-  languageName: unknown
-  linkType: soft
-
-"@rolldown/node@workspace:*, @rolldown/node@workspace:packages/node":
-  version: 0.0.0-use.local
-  resolution: "@rolldown/node@workspace:packages/node"
-  dependencies:
-    "@rolldown/node-binding": "workspace:*"
-    "@types/node": "npm:^20.11.25"
-    type-fest: "npm:^4.12.0"
-    typescript: "npm:^5.4.2"
-    unbuild: "npm:^2.0.0"
-    vitest: "npm:^1.3.1"
   languageName: unknown
   linkType: soft
 
@@ -3385,12 +3372,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "bench@workspace:packages/bench"
   dependencies:
-    "@rolldown/node": "workspace:*"
     "@rollup/plugin-commonjs": "npm:^25.0.7"
     "@rollup/plugin-node-resolve": "npm:^15.2.3"
     esbuild: "npm:^0.20.1"
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
+    rolldown: "workspace:*"
     rollup: "npm:^4.12.1"
     tinybench: "npm:^2.6.0"
     typescript: "npm:^5.4.2"
@@ -10394,6 +10381,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"rolldown@workspace:*, rolldown@workspace:packages/node":
+  version: 0.0.0-use.local
+  resolution: "rolldown@workspace:packages/node"
+  dependencies:
+    "@rolldown/node-binding": "workspace:*"
+    "@types/node": "npm:^20.11.25"
+    type-fest: "npm:^4.12.0"
+    typescript: "npm:^5.4.2"
+    unbuild: "npm:^2.0.0"
+    vitest: "npm:^1.3.1"
+  languageName: unknown
+  linkType: soft
+
 "rollup-plugin-dts@npm:^6.0.0":
   version: 6.1.0
   resolution: "rollup-plugin-dts@npm:6.1.0"
@@ -10415,7 +10415,6 @@ __metadata:
   resolution: "rollup-tests@workspace:packages/rollup-tests"
   dependencies:
     "@jridgewell/sourcemap-codec": "npm:^1.4.15"
-    "@rolldown/node": "workspace:*"
     "@rollup/plugin-commonjs": "npm:^25.0.7"
     "@rollup/plugin-json": "npm:^6.1.0"
     "@rollup/plugin-node-resolve": "npm:^15.2.3"
@@ -10427,6 +10426,7 @@ __metadata:
     locate-character: "npm:^3.0.0"
     magic-string: "npm:^0.30.8"
     mocha: "npm:^10.3.0"
+    rolldown: "workspace:*"
     source-map: "npm:^0.7.4"
     terser: "npm:^5.29.1"
   languageName: unknown

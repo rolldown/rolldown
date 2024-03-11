@@ -254,7 +254,7 @@ async function buildWithDebounce(pkgName, deps, changedFile, loadFiles) {
  */
 async function buildRolldownPackage(changedFile) {
   return buildWithDebounce(
-    '@rolldown/node',
+    'rolldown',
     ['@rolldown/node-binding'],
     changedFile,
     async () => {

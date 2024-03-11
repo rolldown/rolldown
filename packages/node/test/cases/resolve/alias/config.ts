@@ -1,4 +1,4 @@
-import type { RollupOptions } from '@rolldown/node'
+import type { RollupOptions } from 'rolldown'
 
 const config: RollupOptions = {
   resolve: {

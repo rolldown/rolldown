@@ -10429,6 +10429,7 @@ __metadata:
     rolldown: "workspace:*"
     source-map: "npm:^0.7.4"
     terser: "npm:^5.29.1"
+    typescript: "npm:^5.4.2"
   languageName: unknown
   linkType: soft
 

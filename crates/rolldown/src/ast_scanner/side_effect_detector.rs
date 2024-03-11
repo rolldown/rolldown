@@ -240,24 +240,59 @@ impl<'a> SideEffectDetector<'a> {
           unreachable!("ts should be transpiled")
         }
       },
-      Statement::BlockStatement(_)
-      | Statement::BreakStatement(_)
-      | Statement::DebuggerStatement(_)
-      | Statement::DoWhileStatement(_)
-      | Statement::EmptyStatement(_)
+      Statement::BlockStatement(block) => self.detect_side_effect_of_block(block),
+      Statement::DoWhileStatement(do_while) => {
+        self.detect_side_effect_of_stmt(&do_while.body)
+          || self.detect_side_effect_of_expr(&do_while.test)
+      }
+      Statement::WhileStatement(while_stmt) => {
+        self.detect_side_effect_of_expr(&while_stmt.test)
+          || self.detect_side_effect_of_stmt(&while_stmt.body)
+      }
+      Statement::IfStatement(if_stmt) => {
+        self.detect_side_effect_of_expr(&if_stmt.test)
+          || self.detect_side_effect_of_stmt(&if_stmt.consequent)
+          || if_stmt.alternate.as_ref().map_or(false, |stmt| self.detect_side_effect_of_stmt(stmt))
+      }
+      Statement::ReturnStatement(ret_stmt) => {
+        ret_stmt.argument.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr))
+      }
+      Statement::LabeledStatement(labeled_stmt) => {
+        self.detect_side_effect_of_stmt(&labeled_stmt.body)
+      }
+      Statement::TryStatement(try_stmt) => {
+        self.detect_side_effect_of_block(&try_stmt.block)
+          || try_stmt
+            .handler
+            .as_ref()
+            .map_or(false, |handler| self.detect_side_effect_of_block(&handler.body))
+          || try_stmt
+            .finalizer
+            .as_ref()
+            .map_or(false, |finalizer| self.detect_side_effect_of_block(finalizer))
+      }
+      Statement::SwitchStatement(switch_stmt) => {
+        self.detect_side_effect_of_expr(&switch_stmt.discriminant)
+          || switch_stmt.cases.iter().any(|case| {
+            case.test.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr))
+              || case.consequent.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
+          })
+      }
+      Statement::EmptyStatement(_)
+      | Statement::ContinueStatement(_)
+      | Statement::BreakStatement(_) => false,
+      // TODO: Implement these
+      Statement::DebuggerStatement(_)
       | Statement::ForInStatement(_)
       | Statement::ForOfStatement(_)
       | Statement::ForStatement(_)
-      | Statement::IfStatement(_)
-      | Statement::LabeledStatement(_)
-      | Statement::ReturnStatement(_)
-      | Statement::SwitchStatement(_)
       | Statement::ThrowStatement(_)
-      | Statement::TryStatement(_)
-      | Statement::WhileStatement(_)
-      | Statement::WithStatement(_)
-      | Statement::ContinueStatement(_) => true,
+      | Statement::WithStatement(_) => true,
     }
+  }
+
+  fn detect_side_effect_of_block(&self, block: &oxc::ast::ast::BlockStatement) -> bool {
+    block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
   }
 }
 
@@ -379,5 +414,112 @@ mod test {
     assert!(get_statements_side_effect("true ? bar : true"));
     assert!(get_statements_side_effect("foo ? true : false"));
     assert!(get_statements_side_effect("true ? bar : true"));
+  }
+
+  #[test]
+  fn test_block_statement() {
+    assert!(!get_statements_side_effect("{ }"));
+    assert!(!get_statements_side_effect("{ const a = 1; }"));
+    assert!(!get_statements_side_effect("{ const a = 1; const b = 2; }"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("{ const a = 1; bar; }"));
+  }
+
+  #[test]
+  fn test_do_while_statement() {
+    assert!(!get_statements_side_effect("do { } while (true)"));
+    assert!(!get_statements_side_effect("do { const a = 1; } while (true)"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("do { const a = 1; } while (bar)"));
+    assert!(get_statements_side_effect("do { const a = 1; bar; } while (true)"));
+    assert!(get_statements_side_effect("do { bar; } while (true)"));
+  }
+
+  #[test]
+  fn test_while_statement() {
+    assert!(!get_statements_side_effect("while (true) { }"));
+    assert!(!get_statements_side_effect("while (true) { const a = 1; }"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("while (bar) { const a = 1; }"));
+    assert!(get_statements_side_effect("while (true) { const a = 1; bar; }"));
+    assert!(get_statements_side_effect("while (true) { bar; }"));
+  }
+
+  #[test]
+  fn test_if_statement() {
+    assert!(!get_statements_side_effect("if (true) { }"));
+    assert!(!get_statements_side_effect("if (true) { const a = 1; }"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("if (bar) { const a = 1; }"));
+    assert!(get_statements_side_effect("if (true) { const a = 1; bar; }"));
+    assert!(get_statements_side_effect("if (true) { bar; }"));
+  }
+
+  #[test]
+  fn test_empty_statement() {
+    assert!(!get_statements_side_effect(";"));
+    assert!(!get_statements_side_effect(";;"));
+  }
+
+  #[test]
+  fn test_continue_statement() {
+    assert!(!get_statements_side_effect("continue;"));
+  }
+
+  #[test]
+  fn test_break_statement() {
+    assert!(!get_statements_side_effect("break;"));
+  }
+
+  #[test]
+  fn test_return_statement() {
+    assert!(!get_statements_side_effect("return;"));
+    assert!(!get_statements_side_effect("return 1;"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("return bar;"));
+  }
+
+  #[test]
+  fn test_labeled_statement() {
+    assert!(!get_statements_side_effect("label: { }"));
+    assert!(!get_statements_side_effect("label: { const a = 1; }"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("label: { const a = 1; bar; }"));
+    assert!(get_statements_side_effect("label: { bar; }"));
+  }
+
+  #[test]
+  fn test_try_statement() {
+    assert!(!get_statements_side_effect("try { } catch (e) { }"));
+    assert!(!get_statements_side_effect("try { const a = 1; } catch (e) { }"));
+    assert!(!get_statements_side_effect("try { } catch (e) { const a = 1; }"));
+    assert!(!get_statements_side_effect("try { const a = 1; } catch (e) { const a = 1; }"));
+    assert!(!get_statements_side_effect("try { const a = 1; } finally { }"));
+    assert!(!get_statements_side_effect("try { } catch (e) { const a = 1; } finally { }"));
+    assert!(!get_statements_side_effect("try { } catch (e) { } finally { const a = 1; }"));
+    assert!(!get_statements_side_effect(
+      "try { const a = 1; } catch (e) { const a = 1; } finally { const a = 1; }"
+    ));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("try { const a = 1; bar; } catch (e) { }"));
+    assert!(get_statements_side_effect("try { } catch (e) { const a = 1; bar; }"));
+    assert!(get_statements_side_effect("try { } catch (e) { bar; }"));
+    assert!(get_statements_side_effect("try { const a = 1; } catch (e) { bar; }"));
+    assert!(get_statements_side_effect("try { bar; } finally { }"));
+    assert!(get_statements_side_effect("try { } catch (e) { bar; } finally { }"));
+    assert!(get_statements_side_effect("try { } catch (e) { } finally { bar; }"));
+    assert!(get_statements_side_effect("try { bar; } catch (e) { bar; } finally { bar; }"));
+  }
+
+  #[test]
+  fn test_switch_statement() {
+    assert!(!get_statements_side_effect("switch (true) { }"));
+    assert!(!get_statements_side_effect("switch (true) { case 1: break; }"));
+    assert!(!get_statements_side_effect("switch (true) { case 1: break; default: break; }"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("switch (bar) { case 1: break; }"));
+    assert!(get_statements_side_effect("switch (true) { case 1: bar; }"));
+    assert!(get_statements_side_effect("switch (true) { case bar: break; }"));
+    assert!(get_statements_side_effect("switch (true) { case 1: bar; default: bar; }"));
   }
 }

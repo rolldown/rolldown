@@ -6,12 +6,7 @@ export function transformSourcemap(value?: SourceMapInput): SourceMap | undefine
   if (!value) return undefined
 
   if (typeof value === 'string') {
-    try {
-      return JSON.parse(value) as SourceMap
-    } catch (error) {
-      console.error('Error parsing source map:', error)
-      return undefined
-    }
+    return parseSourceMap(value)
   }
 
   if (typeof value === 'object') {
@@ -27,5 +22,12 @@ export function transformSourcemap(value?: SourceMapInput): SourceMap | undefine
     }
   }
 
+  return undefined
+}
+
+function parseSourceMap(value: string): SourceMap | undefined {
+  try {
+    return JSON.parse(value) as SourceMap
+  } catch { }
   return undefined
 }

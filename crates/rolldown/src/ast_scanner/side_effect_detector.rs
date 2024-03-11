@@ -243,9 +243,16 @@ impl<'a> SideEffectDetector<'a> {
       Statement::BlockStatement(block) => {
         block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
       }
+      Statement::DoWhileStatement(do_while) => {
+        self.detect_side_effect_of_stmt(&do_while.body)
+          || self.detect_side_effect_of_expr(&do_while.test)
+      }
+      Statement::WhileStatement(while_stmt) => {
+        self.detect_side_effect_of_expr(&while_stmt.test)
+          || self.detect_side_effect_of_stmt(&while_stmt.body)
+      }
       Statement::BreakStatement(_)
       | Statement::DebuggerStatement(_)
-      | Statement::DoWhileStatement(_)
       | Statement::EmptyStatement(_)
       | Statement::ForInStatement(_)
       | Statement::ForOfStatement(_)
@@ -256,7 +263,6 @@ impl<'a> SideEffectDetector<'a> {
       | Statement::SwitchStatement(_)
       | Statement::ThrowStatement(_)
       | Statement::TryStatement(_)
-      | Statement::WhileStatement(_)
       | Statement::WithStatement(_)
       | Statement::ContinueStatement(_) => true,
     }
@@ -388,8 +394,27 @@ mod test {
     assert!(!get_statements_side_effect("{ }"));
     assert!(!get_statements_side_effect("{ const a = 1; }"));
     assert!(!get_statements_side_effect("{ const a = 1; const b = 2; }"));
-
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("{ const a = 1; bar; }"));
+  }
+
+  #[test]
+  fn test_do_while_statement() {
+    assert!(!get_statements_side_effect("do { } while (true)"));
+    assert!(!get_statements_side_effect("do { const a = 1; } while (true)"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("do { const a = 1; } while (bar)"));
+    assert!(get_statements_side_effect("do { const a = 1; bar; } while (true)"));
+    assert!(get_statements_side_effect("do { bar; } while (true)"));
+  }
+
+  #[test]
+  fn test_while_statement() {
+    assert!(!get_statements_side_effect("while (true) { }"));
+    assert!(!get_statements_side_effect("while (true) { const a = 1; }"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("while (bar) { const a = 1; }"));
+    assert!(get_statements_side_effect("while (true) { const a = 1; bar; }"));
+    assert!(get_statements_side_effect("while (true) { bar; }"));
   }
 }

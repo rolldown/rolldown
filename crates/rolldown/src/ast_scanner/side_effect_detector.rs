@@ -262,18 +262,33 @@ impl<'a> SideEffectDetector<'a> {
       Statement::LabeledStatement(labeled_stmt) => {
         self.detect_side_effect_of_stmt(&labeled_stmt.body)
       }
+      Statement::TryStatement(try_stmt) => {
+        self.detect_side_effect_of_block(&try_stmt.block)
+          || try_stmt
+            .handler
+            .as_ref()
+            .map_or(false, |handler| self.detect_side_effect_of_block(&handler.body))
+          || try_stmt
+            .finalizer
+            .as_ref()
+            .map_or(false, |finalizer| self.detect_side_effect_of_block(finalizer))
+      }
       Statement::EmptyStatement(_)
       | Statement::ContinueStatement(_)
       | Statement::BreakStatement(_) => false,
+      // TODO: Implement these
       Statement::DebuggerStatement(_)
       | Statement::ForInStatement(_)
       | Statement::ForOfStatement(_)
       | Statement::ForStatement(_)
       | Statement::SwitchStatement(_)
       | Statement::ThrowStatement(_)
-      | Statement::TryStatement(_)
       | Statement::WithStatement(_) => true,
     }
+  }
+
+  fn detect_side_effect_of_block(&self, block: &oxc::ast::ast::BlockStatement) -> bool {
+    block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
   }
 }
 
@@ -467,5 +482,28 @@ mod test {
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("label: { const a = 1; bar; }"));
     assert!(get_statements_side_effect("label: { bar; }"));
+  }
+
+  #[test]
+  fn test_try_statement() {
+    assert!(!get_statements_side_effect("try { } catch (e) { }"));
+    assert!(!get_statements_side_effect("try { const a = 1; } catch (e) { }"));
+    assert!(!get_statements_side_effect("try { } catch (e) { const a = 1; }"));
+    assert!(!get_statements_side_effect("try { const a = 1; } catch (e) { const a = 1; }"));
+    assert!(!get_statements_side_effect("try { const a = 1; } finally { }"));
+    assert!(!get_statements_side_effect("try { } catch (e) { const a = 1; } finally { }"));
+    assert!(!get_statements_side_effect("try { } catch (e) { } finally { const a = 1; }"));
+    assert!(!get_statements_side_effect(
+      "try { const a = 1; } catch (e) { const a = 1; } finally { const a = 1; }"
+    ));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("try { const a = 1; bar; } catch (e) { }"));
+    assert!(get_statements_side_effect("try { } catch (e) { const a = 1; bar; }"));
+    assert!(get_statements_side_effect("try { } catch (e) { bar; }"));
+    assert!(get_statements_side_effect("try { const a = 1; } catch (e) { bar; }"));
+    assert!(get_statements_side_effect("try { bar; } finally { }"));
+    assert!(get_statements_side_effect("try { } catch (e) { bar; } finally { }"));
+    assert!(get_statements_side_effect("try { } catch (e) { } finally { bar; }"));
+    assert!(get_statements_side_effect("try { bar; } catch (e) { bar; } finally { bar; }"));
   }
 }

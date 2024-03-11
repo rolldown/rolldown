@@ -598,6 +598,7 @@
   "rollup@function@preserves-catch-argument: does not replace argument to catch block (#1462)",
   "rollup@function@preserves-default-exports-used-locally: preserves default exports that are only used locally (#984)",
   "rollup@function@preserves-function-expression-names: does not rewrite function expression names incorrectly (#1083)",
+  "rollup@function@preserves-var-declarations-in-dead-branches: preserves var declarations in dead branches (#977)",
   "rollup@function@prevent-asi-with-line-comments: prevent semicolon insertion for return statements when there are line comments",
   "rollup@function@prevent-context-resolve-loop: prevents infinite loops when several plugins are calling this.resolve in resolveId",
   "rollup@function@prevent-tree-shaking-asi: prevent automatic semicolon insertion from changing behaviour when tree-shaking",

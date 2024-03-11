@@ -14,7 +14,9 @@ const __dirname = import.meta.dirname
 // 2. `let testDir = path.resolve(__dirname, "test", testCaseName);` Modify this testDir, by default,
 // The script will generate testCases under `${__dirname}/test`
 let cases = [
+  // https://github.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_default_test.go
   { name: 'default', source: './bundler_default_test.go' },
+  // https://github.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_importstar_test.go
   { name: 'import_star', source: './bundler_importstar_test.go' },
 ]
 let currentCase = cases[0]

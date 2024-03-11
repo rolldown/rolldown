@@ -240,9 +240,7 @@ impl<'a> SideEffectDetector<'a> {
           unreachable!("ts should be transpiled")
         }
       },
-      Statement::BlockStatement(block) => {
-        block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
-      }
+      Statement::BlockStatement(block) => self.detect_side_effect_of_block(block),
       Statement::DoWhileStatement(do_while) => {
         self.detect_side_effect_of_stmt(&do_while.body)
           || self.detect_side_effect_of_expr(&do_while.test)

@@ -2,7 +2,9 @@ import type { SourceMap } from '@rolldown/node-binding'
 import type { SourceMapInput } from '../rollup-types'
 import type { ExistingRawSourceMap } from '../rollup'
 
-export function transformSourcemap(value?: SourceMapInput): SourceMap | undefined {
+export function transformSourcemap(
+  value?: SourceMapInput,
+): SourceMap | undefined {
   if (!value) return undefined
 
   if (typeof value === 'string') {
@@ -10,7 +12,13 @@ export function transformSourcemap(value?: SourceMapInput): SourceMap | undefine
   }
 
   if (typeof value === 'object') {
-    const { mappings, names = [], sourceRoot = '', sources = [], sourcesContent = [] } = value as ExistingRawSourceMap
+    const {
+      mappings,
+      names = [],
+      sourceRoot = '',
+      sources = [],
+      sourcesContent = [],
+    } = value as ExistingRawSourceMap
 
     return {
       // TODO file, version, x_google_ignoreList
@@ -18,7 +26,9 @@ export function transformSourcemap(value?: SourceMapInput): SourceMap | undefine
       names,
       sourceRoot,
       sources,
-      sourcesContent: sourcesContent.filter((v): v is string => typeof v === 'string'),
+      sourcesContent: sourcesContent.filter(
+        (v): v is string => typeof v === 'string',
+      ),
     }
   }
 
@@ -28,6 +38,6 @@ export function transformSourcemap(value?: SourceMapInput): SourceMap | undefine
 function parseSourceMap(value: string): SourceMap | undefined {
   try {
     return JSON.parse(value) as SourceMap
-  } catch { }
+  } catch {}
   return undefined
 }

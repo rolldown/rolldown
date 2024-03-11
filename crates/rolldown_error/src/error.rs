@@ -10,9 +10,10 @@ use oxc::span::Span;
 use crate::{
   diagnostic::Diagnostic,
   error_kind::{
-    external_entry::ExternalEntry, sourcemap_error::SourceMapError,
-    unresolved_entry::UnresolvedEntry, unresolved_import::UnresolvedImport,
-    unsupported_eval::UnsupportedEval, BuildErrorLike, NapiError,
+    external_entry::ExternalEntry, forbid_const_assign::ForbitConstAssign,
+    sourcemap_error::SourceMapError, unresolved_entry::UnresolvedEntry,
+    unresolved_import::UnresolvedImport, unsupported_eval::UnsupportedEval, BuildErrorLike,
+    NapiError,
   },
 };
 
@@ -107,6 +108,16 @@ impl BuildError {
 
   pub fn unsupported_eval(filename: String, source: Arc<str>, span: Span) -> Self {
     Self::new_inner(UnsupportedEval { filename, eval_span: span, source })
+  }
+
+  pub fn forbid_const_assign(
+    filename: String,
+    source: Arc<str>,
+    name: String,
+    reference_span: Span,
+    re_assign_span: Span,
+  ) -> Self {
+    Self::new_inner(ForbitConstAssign { filename, source, name, reference_span, re_assign_span })
   }
 }
 

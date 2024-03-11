@@ -40,6 +40,7 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
     if self.is_top_level(symbol_id) {
       self.add_declared_id(symbol_id);
     }
+    self.try_diagnostic_forbid_const_assign(symbol_id);
   }
 
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {

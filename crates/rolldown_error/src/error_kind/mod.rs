@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use crate::diagnostic::DiagnosticBuilder;
 pub mod external_entry;
+pub mod forbid_const_assign;
 pub mod sourcemap_error;
 pub mod unresolved_entry;
 pub mod unresolved_import;

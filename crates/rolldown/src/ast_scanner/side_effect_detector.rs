@@ -256,8 +256,8 @@ impl<'a> SideEffectDetector<'a> {
           || self.detect_side_effect_of_stmt(&if_stmt.consequent)
           || if_stmt.alternate.as_ref().map_or(false, |stmt| self.detect_side_effect_of_stmt(stmt))
       }
-      Statement::BreakStatement(_)
-      | Statement::DebuggerStatement(_)
+      Statement::ContinueStatement(_) | Statement::BreakStatement(_) => false,
+      Statement::DebuggerStatement(_)
       | Statement::EmptyStatement(_)
       | Statement::ForInStatement(_)
       | Statement::ForOfStatement(_)
@@ -267,8 +267,7 @@ impl<'a> SideEffectDetector<'a> {
       | Statement::SwitchStatement(_)
       | Statement::ThrowStatement(_)
       | Statement::TryStatement(_)
-      | Statement::WithStatement(_)
-      | Statement::ContinueStatement(_) => true,
+      | Statement::WithStatement(_) => true,
     }
   }
 }
@@ -430,5 +429,15 @@ mod test {
     assert!(get_statements_side_effect("if (bar) { const a = 1; }"));
     assert!(get_statements_side_effect("if (true) { const a = 1; bar; }"));
     assert!(get_statements_side_effect("if (true) { bar; }"));
+  }
+
+  #[test]
+  fn test_continue_statement() {
+    assert!(!get_statements_side_effect("while (true) { continue; }"));
+  }
+
+  #[test]
+  fn test_break_statement() {
+    assert!(!get_statements_side_effect("while (true) { break; }"));
   }
 }

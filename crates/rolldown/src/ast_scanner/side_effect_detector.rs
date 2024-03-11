@@ -240,8 +240,10 @@ impl<'a> SideEffectDetector<'a> {
           unreachable!("ts should be transpiled")
         }
       },
-      Statement::BlockStatement(_)
-      | Statement::BreakStatement(_)
+      Statement::BlockStatement(block) => {
+        block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
+      }
+      Statement::BreakStatement(_)
       | Statement::DebuggerStatement(_)
       | Statement::DoWhileStatement(_)
       | Statement::EmptyStatement(_)
@@ -379,5 +381,15 @@ mod test {
     assert!(get_statements_side_effect("true ? bar : true"));
     assert!(get_statements_side_effect("foo ? true : false"));
     assert!(get_statements_side_effect("true ? bar : true"));
+  }
+
+  #[test]
+  fn test_block_statement() {
+    assert!(!get_statements_side_effect("{ }"));
+    assert!(!get_statements_side_effect("{ const a = 1; }"));
+    assert!(!get_statements_side_effect("{ const a = 1; const b = 2; }"));
+
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("{ const a = 1; bar; }"));
   }
 }

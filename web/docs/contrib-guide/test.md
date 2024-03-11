@@ -12,13 +12,13 @@ We have two groups of test suites: one for Rust, and one for Node.js.
 Rust tests cases are stored in
 
 - `/crates/rolldown/tests/esbuild`
-- `/crates/rolldown/tests/fixures`
+- `/crates/rolldown/tests/fixtures`
 
 ### How test cases are defined
 
 A test case is a folder that contains `test.config.json`.
 
-`test.config.json` contains the configuration for the test suite. See https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/src/test_config/mod.rs for more information.
+`test.config.json` contains the configuration for the test suite. See [here](https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/src/test_config/mod.rs) for more information.
 
 - `main.js` is the default entry of the test case, if `input.input` is not specified in `test.config.json`.
 

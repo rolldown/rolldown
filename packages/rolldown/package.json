@@ -35,6 +35,7 @@
     "format-generated-binding-files": "prettier --write src/binding.js src/binding.d.ts",
     "build-binding": "napi build -o=./src --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts",
     "build-binding:release": "napi build -o=./src --release --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts",
+    "prepublishOnly": "napi prepublish -p ./npm --tag-style npm",
     "# Scrips for node #": "_",
     "build-node": "unbuild",
     "build": "run-s build-binding build-node format-generated-binding-files",
@@ -46,21 +47,18 @@
   },
   "napi": {
     "binaryName": "rolldown-binding",
-    "triples": {
-      "defaults": true,
-      "additional": [
-        "x86_64-unknown-linux-musl",
-        "aarch64-unknown-linux-gnu",
-        "i686-pc-windows-msvc",
-        "armv7-unknown-linux-gnueabihf",
-        "aarch64-apple-darwin",
-        "aarch64-linux-android",
-        "x86_64-unknown-freebsd",
-        "aarch64-unknown-linux-musl",
-        "aarch64-pc-windows-msvc",
-        "armv7-linux-androideabi"
-      ]
-    }
+    "targets": [
+      "x86_64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "i686-pc-windows-msvc",
+      "armv7-unknown-linux-gnueabihf",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-apple-darwin",
+      "aarch64-unknown-linux-musl",
+      "aarch64-pc-windows-msvc"
+    ]
   },
   "dependencies": {
     "prettier": "^3.2.5"

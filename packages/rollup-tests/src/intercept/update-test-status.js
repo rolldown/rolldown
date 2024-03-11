@@ -79,7 +79,8 @@ after(function printStatus() {
 
 function writeTestStatusToMarkdown() {
   let markdown = '|  | number |\n|----| ---- |\n'
-  for(var key in status) {
+  const statusKeys = /** @type {Array<keyof typeof status>} */ (Object.keys(status))
+  for (const key of statusKeys) {
     markdown += `| ${key} | ${status[key]}|\n`
   }
   fs.writeFileSync(path.join(__dirname, '../status.md'), markdown)

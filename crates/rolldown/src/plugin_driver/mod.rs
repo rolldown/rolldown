@@ -3,8 +3,8 @@ use std::sync::Arc;
 use rolldown_common::Output;
 use rolldown_error::BuildError;
 use rolldown_plugin::{
-  BoxPlugin, HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
-  HookResolveIdReturn, HookTransformArgs, PluginContext, RenderChunkArgs,
+  BoxPlugin, HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookRenderChunkArgs,
+  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginContext,
 };
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::block_on_spawn_all;
@@ -73,7 +73,10 @@ impl PluginDriver {
     Ok(())
   }
 
-  pub async fn render_chunk(&self, mut args: RenderChunkArgs<'_>) -> Result<String, BuildError> {
+  pub async fn render_chunk(
+    &self,
+    mut args: HookRenderChunkArgs<'_>,
+  ) -> Result<String, BuildError> {
     for plugin in &self.plugins {
       if let Some(r) = plugin.render_chunk(&PluginContext::new(), &args).await? {
         args.code = r.code;

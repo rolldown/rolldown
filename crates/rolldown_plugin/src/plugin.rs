@@ -1,13 +1,12 @@
 use std::{borrow::Cow, fmt::Debug};
 
+use super::context::PluginContext;
+use crate::{
+  HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput,
+  HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
+};
 use rolldown_common::Output;
 use rolldown_error::BuildError;
-
-use super::{
-  args::{HookBuildEndArgs, HookLoadArgs, HookResolveIdArgs, HookTransformArgs, RenderChunkArgs},
-  context::PluginContext,
-  output::{HookLoadOutput, HookRenderChunkOutput, HookResolveIdOutput},
-};
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>, BuildError>;
 pub type HookTransformReturn = Result<Option<HookLoadOutput>, BuildError>;
@@ -56,7 +55,7 @@ pub trait Plugin: Debug + Send + Sync {
   async fn render_chunk(
     &self,
     _ctx: &PluginContext,
-    _args: &RenderChunkArgs,
+    _args: &HookRenderChunkArgs,
   ) -> HookRenderChunkReturn {
     Ok(None)
   }

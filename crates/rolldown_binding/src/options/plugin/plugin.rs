@@ -67,8 +67,8 @@ pub struct HookResolveIdArgsOptions {
   pub kind: String,
 }
 
-impl From<rolldown_plugin::HookResolveIdArgsOptions> for HookResolveIdArgsOptions {
-  fn from(value: rolldown_plugin::HookResolveIdArgsOptions) -> Self {
+impl From<rolldown_plugin::HookResolveIdExtraOptions> for HookResolveIdArgsOptions {
+  fn from(value: rolldown_plugin::HookResolveIdExtraOptions) -> Self {
     Self { is_entry: value.is_entry, kind: value.kind.to_string() }
   }
 }

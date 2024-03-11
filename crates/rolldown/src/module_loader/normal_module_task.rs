@@ -9,7 +9,7 @@ use rolldown_common::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
-use rolldown_plugin::HookResolveIdArgsOptions;
+use rolldown_plugin::HookResolveIdExtraOptions;
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
@@ -178,7 +178,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
     plugin_driver: &SharedPluginDriver,
     importer: &FilePath,
     specifier: &str,
-    options: HookResolveIdArgsOptions,
+    options: HookResolveIdExtraOptions,
   ) -> BatchedResult<ResolvedRequestInfo> {
     // Check external with unresolved path
     if input_options.external.call(specifier.to_string(), Some(importer.to_string()), false).await?
@@ -224,7 +224,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
           &plugin_driver,
           &importer.path,
           &specifier,
-          HookResolveIdArgsOptions { is_entry: false, kind },
+          HookResolveIdExtraOptions { is_entry: false, kind },
         )
         .await
         .map(|id| (idx, id))

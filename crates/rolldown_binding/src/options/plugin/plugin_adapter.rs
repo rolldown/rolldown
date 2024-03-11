@@ -159,7 +159,7 @@ impl Plugin for JsAdapterPlugin {
   async fn render_chunk(
     &self,
     _ctx: &rolldown_plugin::PluginContext,
-    args: &rolldown_plugin::RenderChunkArgs,
+    args: &rolldown_plugin::HookRenderChunkArgs,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     if let Some(cb) = &self.render_chunk_fn {
       let res = cb

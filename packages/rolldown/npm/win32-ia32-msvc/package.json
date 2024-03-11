@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/binding-win32-ia32-msvc",
-  "version": "0.0.5",
+  "version": "0.0.1",
   "os": [
     "win32"
   ],

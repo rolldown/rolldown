@@ -70,7 +70,7 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        return require('rolldown-android-arm64')
+        return require('@rolldown/binding-android-arm64')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -81,7 +81,7 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        return require('rolldown-android-arm-eabi')
+        return require('@rolldown/binding-android-arm-eabi')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -98,7 +98,7 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        return require('rolldown-win32-x64-msvc')
+        return require('@rolldown/binding-win32-x64-msvc')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -109,7 +109,7 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        return require('rolldown-win32-ia32-msvc')
+        return require('@rolldown/binding-win32-ia32-msvc')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -120,7 +120,7 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        return require('rolldown-win32-arm64-msvc')
+        return require('@rolldown/binding-win32-arm64-msvc')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -136,7 +136,7 @@ function requireNative() {
       loadErrors.push(e)
     }
     try {
-      return require('rolldown-darwin-universal')
+      return require('@rolldown/binding-darwin-universal')
     } catch (e) {
       loadErrors.push(e)
     }
@@ -148,7 +148,7 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        return require('rolldown-darwin-x64')
+        return require('@rolldown/binding-darwin-x64')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -159,7 +159,7 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        return require('rolldown-darwin-arm64')
+        return require('@rolldown/binding-darwin-arm64')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -176,7 +176,7 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        return require('rolldown-freebsd-x64')
+        return require('@rolldown/binding-freebsd-x64')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -187,7 +187,7 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        return require('rolldown-freebsd-arm64')
+        return require('@rolldown/binding-freebsd-arm64')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -205,7 +205,7 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          return require('rolldown-linux-x64-musl')
+          return require('@rolldown/binding-linux-x64-musl')
         } catch (e) {
           loadErrors.push(e)
         }
@@ -216,7 +216,7 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          return require('rolldown-linux-x64-gnu')
+          return require('@rolldown/binding-linux-x64-gnu')
         } catch (e) {
           loadErrors.push(e)
         }
@@ -229,7 +229,7 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          return require('rolldown-linux-arm64-musl')
+          return require('@rolldown/binding-linux-arm64-musl')
         } catch (e) {
           loadErrors.push(e)
         }
@@ -240,7 +240,7 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          return require('rolldown-linux-arm64-gnu')
+          return require('@rolldown/binding-linux-arm64-gnu')
         } catch (e) {
           loadErrors.push(e)
         }
@@ -252,7 +252,7 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        return require('rolldown-linux-arm-gnueabihf')
+        return require('@rolldown/binding-linux-arm-gnueabihf')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -264,7 +264,7 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          return require('rolldown-linux-riscv64-musl')
+          return require('@rolldown/binding-linux-riscv64-musl')
         } catch (e) {
           loadErrors.push(e)
         }
@@ -275,7 +275,7 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          return require('rolldown-linux-riscv64-gnu')
+          return require('@rolldown/binding-linux-riscv64-gnu')
         } catch (e) {
           loadErrors.push(e)
         }
@@ -287,7 +287,7 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        return require('rolldown-linux-s390x-gnu')
+        return require('@rolldown/binding-linux-s390x-gnu')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -317,7 +317,7 @@ if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
   }
   if (!nativeBinding) {
     try {
-      nativeBinding = require('rolldown-wasm32-wasi')
+      nativeBinding = require('@rolldown/binding-wasm32-wasi')
     } catch (err) {
       if (process.env.NAPI_RS_FORCE_WASI) {
         console.error(err)

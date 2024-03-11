@@ -8,7 +8,7 @@ export default defineBuildConfig({
   entries: ['./src/index'],
   clean: true,
   declaration: true, // generate .d.ts files
-  externals: [/rolldown-binding\..*\.node/],
+  externals: [/rolldown-binding\..*\.node/, /@rolldown\/binding-.*/],
   rollup: {
     emitCJS: true,
     cjsBridge: true,

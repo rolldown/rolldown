@@ -193,7 +193,7 @@ const BUILD_TIMERS = {}
  * @returns {Promise<WasRebuilt>} A Promise that resolves to true if the package was rebuilt, false otherwise.
  */
 async function build(pkgName, deps, changedFile, loadFiles) {
-  const name = pkgName?.split('/')[1] || pkgName;
+  const name = pkgName?.split('/')[1] || pkgName
   const log = debug(`rolldown:${name}`)
 
   if (!changedFile) {

@@ -151,6 +151,11 @@ impl<'a> SideEffectDetector<'a> {
       Expression::SequenceExpression(seq_expr) => {
         seq_expr.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
       }
+      Expression::ConditionalExpression(cond_expr) => {
+        self.detect_side_effect_of_expr(&cond_expr.test)
+          || self.detect_side_effect_of_expr(&cond_expr.consequent)
+          || self.detect_side_effect_of_expr(&cond_expr.alternate)
+      }
       Expression::TSAsExpression(_)
       | Expression::TSSatisfiesExpression(_)
       | Expression::TSTypeAssertion(_)
@@ -166,7 +171,6 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::BinaryExpression(_)
       | Expression::CallExpression(_)
       | Expression::ChainExpression(_)
-      | Expression::ConditionalExpression(_)
       | Expression::ImportExpression(_)
       | Expression::NewExpression(_)
       | Expression::TaggedTemplateExpression(_)
@@ -365,5 +369,15 @@ mod test {
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("true, bar"));
     assert!(get_statements_side_effect("foo, true"));
+  }
+
+  #[test]
+  fn test_conditional_expression() {
+    assert!(!get_statements_side_effect("true ? false : true"));
+    assert!(!get_statements_side_effect("null ? true : false"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("true ? bar : true"));
+    assert!(get_statements_side_effect("foo ? true : false"));
+    assert!(get_statements_side_effect("true ? bar : true"));
   }
 }

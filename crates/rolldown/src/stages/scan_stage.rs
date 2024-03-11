@@ -5,7 +5,7 @@ use rolldown_common::{EntryPoint, ImportKind, NormalModuleId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_oxc_utils::OxcProgram;
-use rolldown_plugin::HookResolveIdArgsOptions;
+use rolldown_plugin::HookResolveIdExtraOptions;
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
@@ -88,7 +88,7 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
           plugin_driver,
           specifier,
           None,
-          HookResolveIdArgsOptions { is_entry: true, kind: ImportKind::Import },
+          HookResolveIdExtraOptions { is_entry: true, kind: ImportKind::Import },
           false,
         )
         .await

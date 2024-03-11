@@ -1,5 +1,5 @@
 use rolldown_common::RenderedChunk;
-use rolldown_plugin::RenderChunkArgs;
+use rolldown_plugin::HookRenderChunkArgs;
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::block_on_spawn_all;
 
@@ -16,7 +16,7 @@ pub async fn render_chunks<'a>(
   let result = block_on_spawn_all(chunks.map(|(content, map, rendered_chunk)| async move {
     tracing::info!("render_chunks");
     match plugin_driver
-      .render_chunk(RenderChunkArgs { code: content, chunk: &rendered_chunk })
+      .render_chunk(HookRenderChunkArgs { code: content, chunk: &rendered_chunk })
       .await
     {
       Ok(value) => Ok((value, map, rendered_chunk)),

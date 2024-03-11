@@ -3,7 +3,7 @@ use regex::Regex;
 use rolldown_common::{FilePath, ModuleType};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
-use rolldown_plugin::{HookResolveIdArgs, HookResolveIdArgsOptions};
+use rolldown_plugin::{HookResolveIdArgs, HookResolveIdExtraOptions};
 use rolldown_resolver::Resolver;
 
 use crate::{plugin_driver::SharedPluginDriver, types::resolved_request_info::ResolvedRequestInfo};
@@ -19,7 +19,7 @@ pub async fn resolve_id<T: FileSystem + Default>(
   plugin_driver: &SharedPluginDriver,
   request: &str,
   importer: Option<&FilePath>,
-  options: HookResolveIdArgsOptions,
+  options: HookResolveIdExtraOptions,
   _preserve_symlinks: bool,
 ) -> Result<ResolvedRequestInfo, BuildError> {
   // Run plugin resolve_id first, if it is None use internal resolver as fallback

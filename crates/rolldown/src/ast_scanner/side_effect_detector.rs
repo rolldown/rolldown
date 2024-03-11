@@ -271,6 +271,13 @@ impl<'a> SideEffectDetector<'a> {
             .as_ref()
             .map_or(false, |finalizer| self.detect_side_effect_of_block(finalizer))
       }
+      Statement::SwitchStatement(switch_stmt) => {
+        self.detect_side_effect_of_expr(&switch_stmt.discriminant)
+          || switch_stmt.cases.iter().any(|case| {
+            case.test.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr))
+              || case.consequent.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
+          })
+      }
       Statement::EmptyStatement(_)
       | Statement::ContinueStatement(_)
       | Statement::BreakStatement(_) => false,
@@ -279,7 +286,6 @@ impl<'a> SideEffectDetector<'a> {
       | Statement::ForInStatement(_)
       | Statement::ForOfStatement(_)
       | Statement::ForStatement(_)
-      | Statement::SwitchStatement(_)
       | Statement::ThrowStatement(_)
       | Statement::WithStatement(_) => true,
     }
@@ -503,5 +509,17 @@ mod test {
     assert!(get_statements_side_effect("try { } catch (e) { bar; } finally { }"));
     assert!(get_statements_side_effect("try { } catch (e) { } finally { bar; }"));
     assert!(get_statements_side_effect("try { bar; } catch (e) { bar; } finally { bar; }"));
+  }
+
+  #[test]
+  fn test_switch_statement() {
+    assert!(!get_statements_side_effect("switch (true) { }"));
+    assert!(!get_statements_side_effect("switch (true) { case 1: break; }"));
+    assert!(!get_statements_side_effect("switch (true) { case 1: break; default: break; }"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("switch (bar) { case 1: break; }"));
+    assert!(get_statements_side_effect("switch (true) { case 1: bar; }"));
+    assert!(get_statements_side_effect("switch (true) { case bar: break; }"));
+    assert!(get_statements_side_effect("switch (true) { case 1: bar; default: bar; }"));
   }
 }

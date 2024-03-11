@@ -259,9 +259,10 @@ impl<'a> SideEffectDetector<'a> {
       Statement::ReturnStatement(ret_stmt) => {
         ret_stmt.argument.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr))
       }
-      Statement::ContinueStatement(_) | Statement::BreakStatement(_) => false,
+      Statement::EmptyStatement(_)
+      | Statement::ContinueStatement(_)
+      | Statement::BreakStatement(_) => false,
       Statement::DebuggerStatement(_)
-      | Statement::EmptyStatement(_)
       | Statement::ForInStatement(_)
       | Statement::ForOfStatement(_)
       | Statement::ForStatement(_)
@@ -431,6 +432,12 @@ mod test {
     assert!(get_statements_side_effect("if (bar) { const a = 1; }"));
     assert!(get_statements_side_effect("if (true) { const a = 1; bar; }"));
     assert!(get_statements_side_effect("if (true) { bar; }"));
+  }
+
+  #[test]
+  fn test_empty_statement() {
+    assert!(!get_statements_side_effect(";"));
+    assert!(!get_statements_side_effect(";;"));
   }
 
   #[test]

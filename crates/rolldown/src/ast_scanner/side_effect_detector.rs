@@ -152,7 +152,6 @@ impl<'a> SideEffectDetector<'a> {
         seq_expr.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
       }
       Expression::ConditionalExpression(cond_expr) => {
-        // TODO: If `test` can be statically evaluated, we can skip evaluating `consequent` or `alternate`.
         self.detect_side_effect_of_expr(&cond_expr.test)
           || self.detect_side_effect_of_expr(&cond_expr.consequent)
           || self.detect_side_effect_of_expr(&cond_expr.alternate)
@@ -379,7 +378,6 @@ mod test {
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("true ? bar : true"));
     assert!(get_statements_side_effect("foo ? true : false"));
-    // this is incorrect, but we don't have a way to statically evaluate `test` yet.
-    assert!(get_statements_side_effect("true ? true : bar"));
+    assert!(get_statements_side_effect("true ? bar : true"));
   }
 }

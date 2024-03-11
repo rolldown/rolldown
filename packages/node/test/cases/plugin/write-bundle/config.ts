@@ -1,4 +1,4 @@
-import type { RollupOptions, RollupOutput } from '@rolldown/node'
+import type { RollupOptions, RollupOutput } from 'rolldown'
 import { expect, vi } from 'vitest'
 import path from 'node:path'
 import { OutputChunk } from 'rollup'

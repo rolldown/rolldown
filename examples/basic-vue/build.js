@@ -1,5 +1,5 @@
 import { performance } from 'node:perf_hooks'
-import * as rolldown from '@rolldown/node'
+import * as rolldown from 'rolldown'
 
 const start = performance.now()
 

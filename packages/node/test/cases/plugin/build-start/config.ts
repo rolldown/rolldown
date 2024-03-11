@@ -1,4 +1,4 @@
-import type { RollupOptions, RollupOutput } from '@rolldown/node'
+import type { RollupOptions, RollupOutput } from 'rolldown'
 import { expect, vi } from 'vitest'
 
 const buildStartFn = vi.fn()

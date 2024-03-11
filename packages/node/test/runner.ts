@@ -1,10 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import {
-  InputOptions,
-  OutputOptions,
-  RollupOptions,
-  rolldown,
-} from '@rolldown/node'
+import { InputOptions, OutputOptions, RollupOptions, rolldown } from 'rolldown'
 import path from 'node:path'
 import fs from 'node:fs'
 

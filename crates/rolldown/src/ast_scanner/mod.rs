@@ -373,14 +373,12 @@ impl<'ast> AstScanner<'ast> {
     if self.symbol_table.get_flag(symbol_id).is_const_variable() {
       for reference in self.scope.get_resolved_references(symbol_id) {
         if reference.is_write() {
-          let name: &str = self.symbol_table.get_name(symbol_id).into();
-          let span = self.symbol_table.get_span(symbol_id);
           self.result.warnings.push(
             BuildError::forbid_const_assign(
               self.file_path.to_string(),
               Arc::clone(self.source),
-              name.to_string(),
-              span,
+              self.symbol_table.get_name(symbol_id).into(),
+              self.symbol_table.get_span(symbol_id),
               reference.span(),
             )
             .with_severity_warning(),

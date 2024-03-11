@@ -1,11 +1,14 @@
 // @ts-nocheck
-const Parser = require('tree-sitter')
-const Go = require('tree-sitter-go')
-const fs = require('fs-extra')
-const path = require('node:path')
-const changeCase = require('change-case')
-const chalk = require('chalk')
-const dedent = require('dedent')
+import Parser from 'tree-sitter'
+import Go from 'tree-sitter-go'
+import fs from 'fs-extra'
+import path from 'node:path'
+import * as changeCase from 'change-case'
+import chalk from 'chalk'
+import * as dedent from 'dedent'
+
+const __dirname = import.meta.dirname
+
 // How to use this script
 // 1. Adding a test golang file under this dir or wherever you want, and modify the source path
 // 2. `let testDir = path.resolve(__dirname, "test", testCaseName);` Modify this testDir, by default,

@@ -6,6 +6,5 @@
         "import": "entry.js"
       }
     ]
-  },
-  "expectExecuted": false
+  }
 }

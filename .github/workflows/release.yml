@@ -168,7 +168,7 @@ jobs:
         with:
           if-no-files-found: error
           name: node-artifact
-          path: packages/node/dist/**
+          path: packages/rolldown/dist/**
 
   build-wasm:
     name: Build Wasm
@@ -248,7 +248,7 @@ jobs:
       - name: Download Node Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: packages/node/dist
+          path: packages/rolldown/dist
           name: node-artifact
 
       - name: Node Test
@@ -295,7 +295,7 @@ jobs:
       - name: Download Node Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: packages/node/dist
+          path: packages/rolldown/dist
           name: node-artifact
 
       - name: Publish

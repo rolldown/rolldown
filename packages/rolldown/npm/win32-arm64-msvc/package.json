@@ -1,15 +1,15 @@
 {
-  "name": "@rolldown/node-binding-darwin-arm64",
+  "name": "@rolldown/binding-win32-arm64-msvc",
   "version": "0.0.5",
   "os": [
-    "darwin"
+    "win32"
   ],
   "cpu": [
     "arm64"
   ],
-  "main": "rolldown.darwin-arm64.node",
+  "main": "rolldown-binding.win32-arm64-msvc.node",
   "files": [
-    "rolldown.darwin-arm64.node"
+    "rolldown-binding.win32-arm64-msvc.node"
   ],
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. ",
   "keywords": [
@@ -33,5 +33,5 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "repository": "git@github.com:rolldown-rs/rolldown.git"
+  "repository": "https://github.com/rolldown/rolldown"
 }

@@ -1,15 +1,15 @@
 {
-  "name": "@rolldown/node-binding-linux-x64-gnu",
+  "name": "@rolldown/binding-android-arm64",
   "version": "0.0.5",
   "os": [
-    "linux"
+    "android"
   ],
   "cpu": [
-    "x64"
+    "arm64"
   ],
-  "main": "rolldown.linux-x64-gnu.node",
+  "main": "rolldown-binding.android-arm64.node",
   "files": [
-    "rolldown.linux-x64-gnu.node"
+    "rolldown-binding.android-arm64.node"
   ],
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. ",
   "keywords": [
@@ -33,8 +33,5 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "repository": "git@github.com:rolldown-rs/rolldown.git",
-  "libc": [
-    "glibc"
-  ]
+  "repository": "https://github.com/rolldown/rolldown"
 }

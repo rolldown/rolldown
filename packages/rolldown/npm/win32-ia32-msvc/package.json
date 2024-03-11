@@ -1,15 +1,15 @@
 {
-  "name": "@rolldown/node-binding-linux-arm64-musl",
+  "name": "@rolldown/binding-win32-ia32-msvc",
   "version": "0.0.5",
   "os": [
-    "linux"
+    "win32"
   ],
   "cpu": [
-    "arm64"
+    "ia32"
   ],
-  "main": "rolldown.linux-arm64-musl.node",
+  "main": "rolldown-binding.win32-ia32-msvc.node",
   "files": [
-    "rolldown.linux-arm64-musl.node"
+    "rolldown-binding.win32-ia32-msvc.node"
   ],
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. ",
   "keywords": [
@@ -33,8 +33,5 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "repository": "git@github.com:rolldown-rs/rolldown.git",
-  "libc": [
-    "musl"
-  ]
+  "repository": "https://github.com/rolldown/rolldown"
 }

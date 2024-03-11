@@ -1,5 +1,5 @@
 {
-  "name": "@rolldown/node-binding-android-arm-eabi",
+  "name": "@rolldown/binding-android-arm-eabi",
   "version": "0.0.5",
   "os": [
     "android"
@@ -7,9 +7,9 @@
   "cpu": [
     "arm"
   ],
-  "main": "rolldown.android-arm-eabi.node",
+  "main": "rolldown-binding.android-arm-eabi.node",
   "files": [
-    "rolldown.android-arm-eabi.node"
+    "rolldown-binding.android-arm-eabi.node"
   ],
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. ",
   "keywords": [
@@ -33,5 +33,5 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "repository": "git@github.com:rolldown-rs/rolldown.git"
+  "repository": "https://github.com/rolldown/rolldown"
 }

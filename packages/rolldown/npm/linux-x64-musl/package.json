@@ -1,15 +1,15 @@
 {
-  "name": "@rolldown/node-binding-freebsd-x64",
+  "name": "@rolldown/binding-linux-x64-musl",
   "version": "0.0.5",
   "os": [
-    "freebsd"
+    "linux"
   ],
   "cpu": [
     "x64"
   ],
-  "main": "rolldown.freebsd-x64.node",
+  "main": "rolldown-binding.linux-x64-musl.node",
   "files": [
-    "rolldown.freebsd-x64.node"
+    "rolldown-binding.linux-x64-musl.node"
   ],
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. ",
   "keywords": [
@@ -33,5 +33,8 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "repository": "git@github.com:rolldown-rs/rolldown.git"
+  "repository": "https://github.com/rolldown/rolldown",
+  "libc": [
+    "musl"
+  ]
 }

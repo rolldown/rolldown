@@ -14,7 +14,7 @@
     "rust"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/rolldown-rs/rolldown",
+  "homepage": "https://github.com/rolldown/rolldown",
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
     "vite": "^5.1.5"

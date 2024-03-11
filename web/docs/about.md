@@ -50,7 +50,7 @@ Rolldown's scope is also larger than Rollup's and more similar to esbuild. It co
 
 ## Roadmap
 
-Check out the [Roadmap](https://github.com/rolldown-rs/rolldown/discussions/153) on GitHub discussions.
+Check out the [Roadmap](https://github.com/rolldown/rolldown/discussions/153) on GitHub discussions.
 
 ## Join Us!
 
@@ -58,6 +58,6 @@ Rolldown is still in early stage. We have a lot of ground to cover, and we won't
 
 ### Useful Links
 
-- [GitHub](https://github.com/rolldown-rs/rolldown)
+- [GitHub](https://github.com/rolldown/rolldown)
 - [Contribution Guide](/contrib-guide/)
 - [Discord Chat](https://chat.rolldown.rs)

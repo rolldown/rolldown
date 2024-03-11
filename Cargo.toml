@@ -4,9 +4,9 @@ resolver = "2"
 
 [workspace.package]
 edition    = "2021"
-homepage   = "https://github.com/rolldown-rs/rolldown"
+homepage   = "https://github.com/rolldown/rolldown"
 license    = "MIT"
-repository = "https://github.com/rolldown-rs/rolldown"
+repository = "https://github.com/rolldown/rolldown"
 
 [profile.release-debug]
 debug    = true

@@ -42,7 +42,7 @@ export default defineConfig({
           },
           {
             text: 'Roadmap',
-            link: 'https://github.com/rolldown-rs/rolldown/discussions/153',
+            link: 'https://github.com/rolldown/rolldown/discussions/153',
           },
           {
             items: [
@@ -75,7 +75,7 @@ export default defineConfig({
     socialLinks: [
       { icon: 'x', link: 'https://twitter.com/rolldown_rs' },
       { icon: 'discord', link: 'https://chat.rolldown.rs' },
-      { icon: 'github', link: 'https://github.com/rolldown-rs/rolldown' },
+      { icon: 'github', link: 'https://github.com/rolldown/rolldown' },
     ],
 
     footer: {

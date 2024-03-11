@@ -4,7 +4,7 @@ Contributions are always welcome, no matter how large or small! Here we summariz
 
 ## Open development
 
-All development happens directly on [GitHub](https://github.com/rolldown-rs/rolldown). Both core team members and external contributors (via forks) send pull requests which go through the same review process.
+All development happens directly on [GitHub](https://github.com/rolldown/rolldown). Both core team members and external contributors (via forks) send pull requests which go through the same review process.
 
 Outside of GitHub, we also use a [Discord server](https://chat.rolldown.rs) for real-time discussions.
 

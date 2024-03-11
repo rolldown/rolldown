@@ -49,7 +49,7 @@ pub async fn resolve_id<T: FileSystem + Default>(
 
   // Rollup external node packages by default.
   // Rolldown will follow esbuild behavior to resolve it by default.
-  // See https://github.com/rolldown-rs/rolldown/issues/282
+  // See https://github.com/rolldown/rolldown/issues/282
   let resolved = resolver.resolve(importer, request)?;
   Ok(ResolvedRequestInfo {
     path: resolved.resolved,

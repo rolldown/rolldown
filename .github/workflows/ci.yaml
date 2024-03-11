@@ -104,8 +104,8 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Build
-        run: yarn build:node
+      - name: Build Rolldown
+        run: yarn build
 
       - name: Type Check
         run: yarn type-check

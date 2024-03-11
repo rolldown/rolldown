@@ -11,10 +11,10 @@
     "access": "public"
   },
   "scripts": {
-    "build": "npm-run-all -s build:wasm clean-wasm-build",
-    "build:release": "npm-run-all -s build:wasm:release clean-wasm-build",
-    "build:wasm": "wasm-pack build --dev --target web -d ./dist",
-    "build:wasm:release": "wasm-pack build --release --target web -d ./dist",
+    "build": "npm-run-all -s build-wasm clean-wasm-build",
+    "build:release": "npm-run-all -s build-wasm:release clean-wasm-build",
+    "build-wasm": "wasm-pack build --dev --target web -d ./dist",
+    "build-wasm:release": "wasm-pack build --release --target web -d ./dist",
     "clean-wasm-build": "rm ./dist/.gitignore"
   },
   "files": [

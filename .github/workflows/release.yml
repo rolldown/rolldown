@@ -15,7 +15,7 @@ jobs:
         include:
           - os: macos-latest
             target: x86_64-apple-darwin
-            build: yarn build:binding:release
+            build: yarn build-binding:release
 
           - os: macos-latest
             target: aarch64-apple-darwin
@@ -26,23 +26,23 @@ jobs:
               SYSROOT=$(xcrun --sdk macosx --show-sdk-path);
               export CFLAGS="-isysroot $SYSROOT -isystem $SYSROOT";
               export CARGO_BUILD_TARGET=aarch64-apple-darwin
-              yarn build:binding:release
+              yarn build-binding:release
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            build: yarn build:binding:release
+            build: yarn build-binding:release
 
           - os: windows-latest
             target: i686-pc-windows-msvc
             build: |
               export CARGO_BUILD_TARGET=i686-pc-windows-msvc
-              yarn build:binding:release
+              yarn build-binding:release
 
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             build: |
               export CARGO_BUILD_TARGET=aarch64-pc-windows-msvc
-              yarn build:binding:release
+              yarn build-binding:release
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -50,12 +50,12 @@ jobs:
             build: |-
               set -e &&
               export CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu &&
-              yarn build:binding:release
+              yarn build-binding:release
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-            build: yarn build:binding:release
+            build: yarn build-binding:release
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
@@ -64,7 +64,7 @@ jobs:
               set -e &&
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-gnu &&
               rustup target add aarch64-unknown-linux-gnu &&
-              yarn build:binding:release
+              yarn build-binding:release
 
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
@@ -72,19 +72,19 @@ jobs:
               sudo apt-get update
               sudo apt-get install gcc-arm-linux-gnueabihf -y
               export CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf
-              yarn build:binding:release --zig --zig-link-only
+              yarn build-binding:release --zig --zig-link-only
 
           - os: ubuntu-latest
             target: aarch64-linux-android
             build: |
               export CARGO_BUILD_TARGET=aarch64-linux-android
-              yarn build:binding:release
+              yarn build-binding:release
 
           - os: ubuntu-latest
             target: armv7-linux-androideabi
             build: |
               export CARGO_BUILD_TARGET=armv7-linux-androideabi
-              yarn build:binding:release
+              yarn build-binding:release
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
@@ -94,7 +94,7 @@ jobs:
               rustup target add aarch64-unknown-linux-musl &&
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl &&
               export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc &&
-              yarn build:binding:release
+              yarn build-binding:release
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -191,7 +191,7 @@ jobs:
         run: yarn install
 
       - name: Build Wasm
-        run: yarn build:wasm:release
+        run: yarn build-wasm:release
 
       - name: Upload Wasm Artifact
         uses: actions/upload-artifact@v4

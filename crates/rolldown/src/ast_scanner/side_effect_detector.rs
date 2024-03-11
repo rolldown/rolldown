@@ -256,6 +256,9 @@ impl<'a> SideEffectDetector<'a> {
           || self.detect_side_effect_of_stmt(&if_stmt.consequent)
           || if_stmt.alternate.as_ref().map_or(false, |stmt| self.detect_side_effect_of_stmt(stmt))
       }
+      Statement::ReturnStatement(ret_stmt) => {
+        ret_stmt.argument.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr))
+      }
       Statement::ContinueStatement(_) | Statement::BreakStatement(_) => false,
       Statement::DebuggerStatement(_)
       | Statement::EmptyStatement(_)
@@ -263,7 +266,6 @@ impl<'a> SideEffectDetector<'a> {
       | Statement::ForOfStatement(_)
       | Statement::ForStatement(_)
       | Statement::LabeledStatement(_)
-      | Statement::ReturnStatement(_)
       | Statement::SwitchStatement(_)
       | Statement::ThrowStatement(_)
       | Statement::TryStatement(_)
@@ -433,11 +435,19 @@ mod test {
 
   #[test]
   fn test_continue_statement() {
-    assert!(!get_statements_side_effect("while (true) { continue; }"));
+    assert!(!get_statements_side_effect("continue;"));
   }
 
   #[test]
   fn test_break_statement() {
-    assert!(!get_statements_side_effect("while (true) { break; }"));
+    assert!(!get_statements_side_effect("break;"));
+  }
+
+  #[test]
+  fn test_return_statement() {
+    assert!(!get_statements_side_effect("return;"));
+    assert!(!get_statements_side_effect("return 1;"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("return bar;"));
   }
 }

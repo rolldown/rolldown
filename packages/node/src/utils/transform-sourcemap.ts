@@ -1,4 +1,5 @@
-import type { SourceMap } from '@rolldown/node-binding'
+import type { SourceMap } from '../binding'
+
 import type { SourceMapInput } from '../rollup-types'
 import type { ExistingRawSourceMap } from '../rollup'
 
@@ -38,6 +39,6 @@ export function transformSourcemap(
 function parseSourceMap(value: string): SourceMap | undefined {
   try {
     return JSON.parse(value) as SourceMap
-  } catch {}
+  } catch { }
   return undefined
 }

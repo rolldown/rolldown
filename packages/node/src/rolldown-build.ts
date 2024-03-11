@@ -1,4 +1,4 @@
-import { Bundler } from '@rolldown/node-binding'
+import { Bundler } from './binding'
 import { normalizeOutputOptions, OutputOptions } from './options/output-options'
 import { transformToRollupOutput, unimplemented } from './utils'
 import { RolldownOutput } from './objects/rolldown-output'

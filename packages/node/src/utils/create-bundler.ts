@@ -1,4 +1,4 @@
-import { Bundler } from '@rolldown/node-binding'
+import { Bundler } from '../binding'
 import {
   normalizeInputOptions,
   type InputOptions,

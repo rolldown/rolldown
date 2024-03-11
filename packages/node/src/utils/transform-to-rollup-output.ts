@@ -8,7 +8,7 @@ import {
   BindingOutputAsset,
   BindingOutputChunk,
   BindingOutputs,
-} from '@rolldown/node-binding'
+} from '../binding'
 
 function transformToRollupOutputChunk(
   chunk: BindingOutputChunk,

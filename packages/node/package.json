@@ -22,20 +22,43 @@
     "dist"
   ],
   "scripts": {
-    "build": "unbuild",
-    "build:release": "unbuild",
+    "#`build-binding[:release]` need to run correctly with the cwd `packages/node`": "_",
+    "build-binding": "napi build -o=./src --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts",
+    "build-binding:release": "napi build -o=./src --release --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts",
+    "build-node": "unbuild",
+    "build": "run-s build-binding build-node",
+    "build:release": "run-s build-binding:release build-node",
     "test": "vitest run",
     "test:update": "vitest run -u",
     "type-check": "tsc -p tsconfig.check.json"
   },
-  "dependencies": {
-    "@rolldown/node-binding": "workspace:*"
+  "napi": {
+    "binaryName": "rolldown-binding",
+    "triples": {
+      "defaults": true,
+      "additional": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-gnu",
+        "i686-pc-windows-msvc",
+        "armv7-unknown-linux-gnueabihf",
+        "aarch64-apple-darwin",
+        "aarch64-linux-android",
+        "x86_64-unknown-freebsd",
+        "aarch64-unknown-linux-musl",
+        "aarch64-pc-windows-msvc",
+        "armv7-linux-androideabi"
+      ]
+    }
   },
   "devDependencies": {
+    "@napi-rs/cli": "^3.0.0-alpha.43",
     "@types/node": "^20.11.25",
     "type-fest": "^4.12.0",
     "typescript": "^5.4.2",
     "unbuild": "^2.0.0",
     "vitest": "^1.3.1"
+  },
+  "dependencies": {
+    "npm-run-all2": "^6.1.2"
   }
 }

@@ -6,7 +6,7 @@ import type {
   RenderedChunk,
   HookRenderChunkOutput,
   BindingOutputs as Outputs,
-} from '@rolldown/node-binding'
+} from '../binding'
 import {
   transformToOutputBundle,
   unimplemented,

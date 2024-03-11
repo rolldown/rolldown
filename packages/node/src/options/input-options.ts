@@ -4,7 +4,7 @@ import {
   Plugin,
 } from '../rollup-types'
 import { ensureArray, normalizePluginOption } from '../utils'
-import { ResolveOptions } from '@rolldown/node-binding'
+import { ResolveOptions } from '../binding'
 
 // TODO export compat plugin type
 export type RolldownPlugin = Plugin
@@ -85,8 +85,8 @@ function getResolve(
       ...resolve,
       alias: resolve.alias
         ? Object.fromEntries(
-            Object.entries(resolve.alias).map(([key, value]) => [key, [value]]),
-          )
+          Object.entries(resolve.alias).map(([key, value]) => [key, [value]]),
+        )
         : undefined,
     }
   }

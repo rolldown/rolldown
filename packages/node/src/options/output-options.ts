@@ -1,5 +1,5 @@
 import { OutputOptions as RollupOutputOptions } from '../rollup-types'
-import { OutputOptions as BindingOutputOptions } from '@rolldown/node-binding'
+import { OutputOptions as BindingOutputOptions } from '../binding'
 import { unimplemented } from '../utils'
 
 export interface OutputOptions {

@@ -8,7 +8,6 @@
     "node": ">=18.18.0"
   },
   "workspaces": [
-    "crates/rolldown_binding",
     "crates/rolldown_binding_wasm",
     "packages/**",
     "web/**",

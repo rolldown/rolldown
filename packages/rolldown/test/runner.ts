@@ -1,5 +1,5 @@
 import { describe, test } from 'vitest'
-import { yellow } from 'colorette';
+import { yellow } from 'colorette'
 import { InputOptions, OutputOptions, RollupOptions, rolldown } from 'rolldown'
 import path from 'node:path'
 import fs from 'node:fs'
@@ -18,7 +18,7 @@ function runCases() {
       for (const subCaseName of subCases) {
         const caseRoot = path.join(subCasesRoot, subCaseName)
         const caseConfig = await getCaseConfig(caseRoot)
-        if(!caseConfig) {
+        if (!caseConfig) {
           console.log(yellow(`[config] is empty in ${caseRoot}`))
         }
         const { config, afterTest } = caseConfig || {}

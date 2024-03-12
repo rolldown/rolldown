@@ -114,6 +114,11 @@ jobs:
         with:
           version: 0.11.0
 
+      # https://github.com/nodejs/node-gyp/issues/2869
+      - name: Setup python
+        run: pip install setuptools
+        if: ${{ matrix.os == 'macos-latest' }}
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
@@ -144,7 +149,7 @@ jobs:
         with:
           if-no-files-found: error
           name: bindings-${{ matrix.target }}
-          path: crates/rolldown_binding/*.node
+          path: packages/rolldown/src/rolldown-binding.*.node
 
   build-node-packages:
     strategy:

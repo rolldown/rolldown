@@ -1,4 +1,4 @@
-import type { RollupOptions, RollupOutput } from 'rolldown'
+import type { RollupOptions } from '../../../../src'
 
 const config: RollupOptions = {
   external: [/external/, 'external-a'],

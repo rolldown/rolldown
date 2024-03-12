@@ -1,6 +1,6 @@
 import { describe, test } from 'vitest'
 import { yellow } from 'colorette'
-import { InputOptions, OutputOptions, RollupOptions, rolldown } from 'rolldown'
+import { InputOptions, OutputOptions, RollupOptions, rolldown } from '../src'
 import path from 'node:path'
 import fs from 'node:fs'
 

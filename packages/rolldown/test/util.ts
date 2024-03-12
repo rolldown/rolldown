@@ -1,4 +1,4 @@
-import { RollupOutput } from 'rolldown'
+import { RollupOutput } from '../src'
 
 export function getOutputChunkNames(output: RollupOutput) {
   return output.output

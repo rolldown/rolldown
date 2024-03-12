@@ -8,6 +8,7 @@
   "dependencies": {
     "@parcel/watcher": "^2.4.1",
     "@types/debug": "^4.1.12",
+    "@types/fs-extra": "^11.0.4",
     "chalk": "^5.3.0",
     "change-case": "^5.4.3",
     "debug": "^4.3.4",

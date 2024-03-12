@@ -114,6 +114,8 @@ jobs:
         with:
           version: 0.11.0
 
+      - run: which zig
+
       # https://github.com/nodejs/node-gyp/issues/2869
       - name: Setup python
         run: pip install setuptools

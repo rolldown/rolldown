@@ -2,6 +2,7 @@
 import Parser from 'tree-sitter'
 import Go from 'tree-sitter-go'
 import fs from 'fs-extra'
+import fsp from 'node:fs/promises'
 import path from 'node:path'
 import * as changeCase from 'change-case'
 import chalk from 'chalk'
@@ -18,20 +19,22 @@ const __dirname = import.meta.dirname
  * Constant object containing test cases.
  * Each test case is represented by a key-value pair where the key is the name of the test case,
  * and the value is an object with properties describing the test case.
- * Each test case includes a comment with the link where you can copy the test file.
+ * Each test case includes a link where you can copy the test file.
  * Download the file needed for your test case and place it under this directory.
  * @readonly
  */
 const cases = /** @type {const} */ ({
-  /** https://github.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_default_test.go */
   default: {
     name: 'default',
     sourcePath: './bundler_default_test.go',
+    sourceGithubUrl:
+      'https://github.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_default_test.go',
   },
-  /** https://github.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_importstar_test.go */
   import_star: {
     name: 'import_star',
     sourcePath: './bundler_importstar_test.go',
+    sourceGithubUrl:
+      'https://github.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_importstar_test.go',
   },
 })
 /**
@@ -47,25 +50,44 @@ const cases = /** @type {const} */ ({
 /**
  * Attempts to read the .go source file based on the provided test case name. {@link cases}
  * @param {TestCaseName} testCaseName - The name of the current test case.
- * @returns {string} The contents of the .go test source file.
+ * @returns {Promise<string>} The contents of the .go test source file.
  *
  * ## Panics
- * Performs {@link process.exit} with helpful text error if cannot find .go source file based on test case name {@link cases}
+ * Performs {@link process.exit} with helpful text error if cannot find(and then download) .go source file based on test case name {@link cases}
  */
-function readTestCaseSource(testCaseName) {
-  const sourcePath = path.resolve(
-    import.meta.dirname,
-    cases[testCaseName].sourcePath,
-  )
+async function readTestCaseSource(testCaseName) {
+  const testCase = cases[testCaseName]
+  const sourcePath = path.resolve(import.meta.dirname, testCase.sourcePath)
   try {
     return fs.readFileSync(sourcePath).toString()
-  } catch (err) {
-    console.log(
-      chalk.red(
-        `Could not read ${cases[testCaseName].sourcePath} source test file at path: ${sourcePath}`,
-      ),
-    ),
+  } catch (err1) {
+    console.log(`Could not read .go source file from ${sourcePath}.`)
+    console.log(`Attempting to download it from ${testCase.sourceGithubUrl}.`)
+    console.log('...')
+
+    // download from github
+    try {
+      const response = await fetch(testCase.sourceGithubUrl)
+      const obj = await response.json()
+      const lines = obj.payload.blob.rawLines
+
+      if (Array.isArray(lines) && typeof lines[0] === 'string') {
+        const source = lines.join('\n')
+        // save under scripts directory
+        await fsp.writeFile(sourcePath, source)
+        console.log(`Downloaded and saved at ${sourcePath}.`)
+
+        return source
+      } else {
+        throw new Error('Unexpected shape of source file')
+      }
+    } catch (err2) {
+      console.log(
+        'Could not download .go source file. Please download it manually and save it under the "scripts" directory.',
+      )
+      console.log(`Download link: ${testCase.sourceGithubUrl}`)
       process.exit(1)
+    }
   }
 }
 
@@ -73,7 +95,7 @@ function readTestCaseSource(testCaseName) {
 const TEST_CASE_NAME = 'default'
 const currentCase = cases[TEST_CASE_NAME]
 /** The contents of the .go test source file. {@link cases} */
-const source = readTestCaseSource(TEST_CASE_NAME)
+const source = await readTestCaseSource(TEST_CASE_NAME)
 const ignoredTestName = [
   'ts',
   'txt',

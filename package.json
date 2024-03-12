@@ -9,9 +9,9 @@
   },
   "workspaces": [
     "crates/rolldown_binding_wasm",
-    "packages/**",
-    "web/**",
-    "examples/**",
+    "packages/*",
+    "web/*",
+    "examples/*",
     "scripts"
   ],
   "scripts": {

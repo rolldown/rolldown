@@ -153,7 +153,7 @@ exports.loader = function loader(modules) {
 	};
 };
 
-exports.normaliseOutput = function normaliseOutput(code) {
+exports.normalizeOutput = function normalizeOutput(code) {
 	return code.toString().trim().replace(/\r\n/g, '\n');
 };
 

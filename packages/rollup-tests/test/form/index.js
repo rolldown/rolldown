@@ -8,7 +8,7 @@ const { basename, resolve } = require('node:path');
 const { rollup } = require('../../dist/rollup');
 const {
 	compareLogs,
-	normaliseOutput: normalizeOutput,
+	normalizeOutput,
 	runTestSuiteWithSamples,
 	verifyAstPlugin
 } = require('../utils.js');

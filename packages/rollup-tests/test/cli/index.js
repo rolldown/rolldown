@@ -5,7 +5,7 @@ const { basename, resolve, sep } = require('node:path');
 const process = require('node:process');
 const { copySync, removeSync, statSync } = require('fs-extra');
 const {
-	normaliseOutput,
+	normalizeOutput,
 	runTestSuiteWithSamples,
 	assertDirectoriesAreEqual,
 	getFileNamesAndRemoveOutput
@@ -123,7 +123,7 @@ function runTest(directory, config, pass) {
 						} else {
 							const expected = readFileSync('_expected.js', 'utf8');
 							try {
-								assert.equal(normaliseOutput(code), normaliseOutput(expected));
+								assert.equal(normalizeOutput(code), normalizeOutput(expected));
 								done();
 							} catch (error) {
 								done(error);

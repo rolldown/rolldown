@@ -9,6 +9,10 @@ use vfs::{FileSystem as _, MemoryFS};
 
 use crate::file_system::FileSystem;
 
+pub type FsPath = String;
+pub type FsFileContent = String;
+pub type FsFileMap<'a> = &'a [(&'a FsPath, &'a FsFileContent)];
+
 #[derive(Default)]
 pub struct MemoryFileSystem {
   // root path
@@ -20,7 +24,7 @@ impl MemoryFileSystem {
   ///
   /// * Fails to create directory
   /// * Fails to write file
-  pub fn new(data: &[(&String, &String)]) -> Self {
+  pub fn new(data: FsFileMap) -> Self {
     let mut fs = Self::default();
     for (path, content) in data {
       fs.add_file(Path::new(path), content);
@@ -106,5 +110,51 @@ impl OxcResolverFileSystem for MemoryFileSystem {
 
   fn canonicalize(&self, _path: &Path) -> io::Result<PathBuf> {
     Err(io::Error::new(io::ErrorKind::NotFound, "not a symlink"))
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::{FileSystem as _, MemoryFileSystem};
+  use oxc_resolver::FileSystem;
+  use std::path::Path;
+
+  #[test]
+  pub fn test_memory_file_system() -> Result<(), String> {
+    let index_path = "/index.js".to_string();
+    let index_content = "const value = 1;".to_string();
+    let initial_files = [(&index_path, &index_content)];
+    let mut fs = MemoryFileSystem::new(&initial_files);
+
+    let module_1_path = Path::new("/module_1.js");
+    let module_1_content = "export const module_name = \"module_1\"";
+    fs.add_file(module_1_path, module_1_content);
+
+    assert_eq!(
+      index_content,
+      fs.read_to_string(Path::new("/index.js")).map_err(|err| err.to_string())?,
+    );
+
+    assert_eq!(
+      module_1_content,
+      fs.read_to_string(Path::new("/module_1.js")).map_err(|err| err.to_string())?
+    );
+
+    let ret = fs.create_dir_all(Path::new("/module_2/utils")).map_err(|err| err.kind());
+    assert_eq!(Err(std::io::ErrorKind::Other), ret);
+
+    fs.create_dir_all(Path::new("/module_2")).map_err(|err| err.to_string())?;
+    fs.create_dir_all(Path::new("/module_2/utils")).map_err(|err| err.to_string())?;
+
+    let utils_content = b"export const name = \"utils\"";
+    fs.write(Path::new("/module_2/utils/index.js"), utils_content)
+      .map_err(|err| err.to_string())?;
+
+    assert_eq!(
+      std::str::from_utf8(utils_content).map_err(|err| err.to_string())?,
+      fs.read_to_string(Path::new("/module_2/utils/index.js")).map_err(|err| err.to_string())?
+    );
+
+    Ok(())
   }
 }

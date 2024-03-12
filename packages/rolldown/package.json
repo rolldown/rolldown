@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "0.0.1",
+  "version": "0.5.0",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "repository": "https://github.com/rolldown/rolldown",
   "license": "MIT",
@@ -61,13 +61,11 @@
       "armv7-linux-androideabi"
     ]
   },
-  "dependencies": {
-    "prettier": "^3.2.5"
-  },
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0-alpha.43",
     "@types/node": "^20.11.25",
     "npm-run-all2": "^6.1.2",
+    "prettier": "^3.2.5",
     "type-fest": "^4.12.0",
     "typescript": "^5.4.2",
     "unbuild": "^2.0.0",

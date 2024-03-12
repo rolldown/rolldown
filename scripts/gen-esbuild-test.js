@@ -16,14 +16,14 @@ const __dirname = import.meta.dirname
 // The script will generate testCases under `${__dirname}/test`
 
 /**
- * Constant object containing test cases.
- * Each test case is represented by a key-value pair where the key is the name of the test case,
- * and the value is an object with properties describing the test case.
- * Each test case includes a link where you can copy the test file.
- * Download the file needed for your test case and place it under this directory.
+ * Constant object containing test suites.
+ * Each test suite is represented by a key-value pair where the key is the name of the test suite,
+ * and the value is an object with properties describing the test suite.
+ * Each test suite includes a link where you can copy the test file.
+ * Download the file needed for your test suite and place it under this directory.
  * @readonly
  */
-const cases = /** @type {const} */ ({
+const suites = /** @type {const} */ ({
   default: {
     name: 'default',
     sourcePath: './bundler_default_test.go',
@@ -38,36 +38,36 @@ const cases = /** @type {const} */ ({
   },
 })
 /**
- * The key of the cases constant. {@link cases}
- * @typedef {keyof cases} TestCaseName
+ * The key of the suites constant. {@link suites}
+ * @typedef {keyof suites} TestSuiteName
  */
 
 /**
- * An object with properties describing the test case.
- * @typedef {cases[keyof cases]} TestCase
+ * An object with properties describing the test suite.
+ * @typedef {suites[keyof suites]} TestSuite
  */
 
 /**
- * Attempts to read the .go source file based on the provided test case name. {@link cases}
- * @param {TestCaseName} testCaseName - The name of the current test case.
+ * Attempts to read the .go source file based on the provided test suite name. {@link suites}
+ * @param {TestSuiteName} testSuiteName - The name of the current test suite.
  * @returns {Promise<string>} The contents of the .go test source file.
  *
  * ## Panics
- * Performs {@link process.exit} with helpful text error if cannot find(and then download) .go source file based on test case name {@link cases}
+ * Performs {@link process.exit} with helpful text error if cannot find(and then download) .go source file based on test suite name {@link suites}
  */
-async function readTestCaseSource(testCaseName) {
-  const testCase = cases[testCaseName]
-  const sourcePath = path.resolve(import.meta.dirname, testCase.sourcePath)
+async function readTestSuiteSource(testSuiteName) {
+  const testSuite = suites[testSuiteName]
+  const sourcePath = path.resolve(import.meta.dirname, testSuite.sourcePath)
   try {
     return fs.readFileSync(sourcePath).toString()
   } catch (err1) {
     console.log(`Could not read .go source file from ${sourcePath}.`)
-    console.log(`Attempting to download it from ${testCase.sourceGithubUrl}.`)
+    console.log(`Attempting to download it from ${testSuite.sourceGithubUrl}.`)
     console.log('...')
 
     // download from github
     try {
-      const response = await fetch(testCase.sourceGithubUrl)
+      const response = await fetch(testSuite.sourceGithubUrl)
       const obj = await response.json()
       const lines = obj.payload.blob.rawLines
 
@@ -85,17 +85,17 @@ async function readTestCaseSource(testCaseName) {
       console.log(
         'Could not download .go source file. Please download it manually and save it under the "scripts" directory.',
       )
-      console.log(`Download link: ${testCase.sourceGithubUrl}`)
+      console.log(`Download link: ${testSuite.sourceGithubUrl}`)
       process.exit(1)
     }
   }
 }
 
-/** @type {TestCaseName} */
-const TEST_CASE_NAME = 'default'
-const currentCase = cases[TEST_CASE_NAME]
-/** The contents of the .go test source file. {@link cases} */
-const source = await readTestCaseSource(TEST_CASE_NAME)
+/** @type {TestSuiteName} */
+const TEST_SUITE_NAME = 'default'
+const currentSuite = suites[TEST_SUITE_NAME]
+/** The contents of the .go test source file. {@link suites} */
+const source = await readTestSuiteSource(TEST_SUITE_NAME)
 const ignoredTestName = [
   'ts',
   'txt',
@@ -170,7 +170,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
   let child = tree.rootNode.namedChild(i)
   if (child.type == 'function_declaration') {
     let testCaseName = child.namedChild(0).text
-    testCaseName = testCaseName.slice(4)
+    testCaseName = testCaseName.slice(4) // every function starts with "Test"
     testCaseName = changeCase.snakeCase(testCaseName)
 
     console.log(testCaseName)
@@ -180,12 +180,12 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     }
     let testDir = path.resolve(
       __dirname,
-      `../crates/rolldown/tests/esbuild/${currentCase.name}`,
+      `../crates/rolldown/tests/esbuild/${currentSuite.name}`,
       testCaseName,
     )
     let ignoredTestDir = path.resolve(
       __dirname,
-      `../crates/rolldown/tests/esbuild/${currentCase.name}`,
+      `../crates/rolldown/tests/esbuild/${currentSuite.name}`,
       `.${testCaseName}`,
     )
 

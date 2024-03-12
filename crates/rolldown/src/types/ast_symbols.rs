@@ -1,12 +1,12 @@
 use index_vec::IndexVec;
 use oxc::{
   semantic::{ScopeId, SymbolFlags, SymbolId, SymbolTable},
-  span::{CompactString, Span},
+  span::{CompactStr, Span},
 };
 
 #[derive(Debug, Default)]
 pub struct AstSymbols {
-  pub names: IndexVec<SymbolId, CompactString>,
+  pub names: IndexVec<SymbolId, CompactStr>,
   pub scope_ids: IndexVec<SymbolId, ScopeId>,
   pub spans: IndexVec<SymbolId, Span>,
   pub flags: IndexVec<SymbolId, SymbolFlags>,
@@ -18,7 +18,7 @@ impl AstSymbols {
     Self { names: table.names, scope_ids: table.scope_ids, spans: table.spans, flags: table.flags }
   }
 
-  pub fn create_symbol(&mut self, name: CompactString, scope_id: ScopeId) -> SymbolId {
+  pub fn create_symbol(&mut self, name: CompactStr, scope_id: ScopeId) -> SymbolId {
     self.scope_ids.push(scope_id);
     self.names.push(name)
   }

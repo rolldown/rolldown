@@ -4,13 +4,13 @@
 
 use std::{fmt::Display, ops::Deref};
 
-use oxc::span::{Atom, CompactString};
+use oxc::span::{Atom, CompactStr};
 
 mod to_str;
 pub use to_str::ToRstr;
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
-pub struct Rstr(CompactString);
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct Rstr(CompactStr);
 
 impl Rstr {
   pub fn as_str(&self) -> &str {
@@ -18,7 +18,8 @@ impl Rstr {
   }
 
   pub fn to_oxc_atom(&self) -> Atom<'static> {
-    Atom::Compact(self.0.clone())
+    let va: Atom<'_> = self.as_str().into();
+    unsafe { std::mem::transmute(va) }
   }
 }
 

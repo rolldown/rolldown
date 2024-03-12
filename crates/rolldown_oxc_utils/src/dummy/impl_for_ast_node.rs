@@ -193,7 +193,7 @@ impl<'ast> DummyIn<'ast> for ast::BindingIdentifier<'ast> {
 
 impl<'ast> DummyIn<'ast> for Atom<'ast> {
   fn dummy(_alloc: &'ast Allocator) -> Self {
-    Atom::Arena("")
+    "".into()
   }
 }
 

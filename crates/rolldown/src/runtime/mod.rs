@@ -1,11 +1,11 @@
-use oxc::{semantic::SymbolId, span::CompactString};
+use oxc::{semantic::SymbolId, span::CompactStr};
 use rolldown_common::{AstScope, NormalModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 
 #[derive(Debug)]
 pub struct RuntimeModuleBrief {
   id: NormalModuleId,
-  name_to_symbol: FxHashMap<CompactString, SymbolId>,
+  name_to_symbol: FxHashMap<CompactStr, SymbolId>,
 }
 
 impl RuntimeModuleBrief {

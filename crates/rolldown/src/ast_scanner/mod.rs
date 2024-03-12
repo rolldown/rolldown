@@ -197,7 +197,7 @@ impl<'ast> AstScanner<'ast> {
             representative_name(&self.result.import_records[record_id].module_request);
           format!("{importee_repr}_default").into()
         } else {
-          export_name.clone().to_compact_string()
+          export_name.clone().to_compact_str()
         },
         self.scope.root_scope_id(),
       ),
@@ -222,7 +222,7 @@ impl<'ast> AstScanner<'ast> {
   fn add_star_re_export(&mut self, export_name: &Atom, record_id: ImportRecordId) {
     let generated_imported_as_ref = (
       self.idx,
-      self.symbol_table.create_symbol(export_name.to_compact_string(), self.scope.root_scope_id()),
+      self.symbol_table.create_symbol(export_name.to_compact_str(), self.scope.root_scope_id()),
     )
       .into();
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
@@ -329,7 +329,7 @@ impl<'ast> AstScanner<'ast> {
         self.add_named_import(sym, spec.imported.name(), id);
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
-        self.add_named_import(spec.local.expect_symbol_id(), &Atom::Arena("default"), id);
+        self.add_named_import(spec.local.expect_symbol_id(), &"default".into(), id);
         self.result.import_records[id].contains_import_default = true;
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {

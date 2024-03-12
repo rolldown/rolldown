@@ -74,6 +74,7 @@ jobs:
               sudo apt-get install gcc-arm-linux-gnueabihf -y;
               export CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf;
               pnpm build-binding:release --use-napi-cross
+
             #  pnpm build-binding:release --zig --zig-link-only
 
           - os: ubuntu-latest

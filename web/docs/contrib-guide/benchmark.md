@@ -22,7 +22,7 @@ Make sure to build the Node.js bindings in release mode:
 
 ```shell
 # in project root
-pnpm build --release
+pnpm build:release
 ```
 
 Then, in `packages/bench`:

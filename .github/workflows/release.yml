@@ -161,7 +161,7 @@ jobs:
         run: pnpm install
 
       - name: Build Node Packages
-        run: pnpm workspace rolldown run build
+        run: pnpm --filter rolldown run build
 
       - name: Upload Node Artifact
         uses: actions/upload-artifact@v4
@@ -239,7 +239,7 @@ jobs:
           path: crates/rolldown_binding/artifacts
 
       - name: Move Binding Artifacts
-        run: pnpm workspace @rolldown/node-binding artifacts
+        run: pnpm --filter @rolldown/node-binding artifacts
 
       - name: List packages
         run: ls -R ./crates/rolldown_binding
@@ -286,7 +286,7 @@ jobs:
           path: crates/rolldown_binding/artifacts
 
       - name: Move Binding Artifacts
-        run: pnpm workspace @rolldown/node-binding artifacts
+        run: pnpm --filter @rolldown/node-binding artifacts
 
       - name: List packages
         run: ls -R ./crates/rolldown_binding

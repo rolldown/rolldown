@@ -14,7 +14,6 @@
     "rolldown": "workspace:*",
     "rollup": "^4.12.1",
     "tinybench": "^2.6.0",
-    "typescript": "^5.4.2",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
   }

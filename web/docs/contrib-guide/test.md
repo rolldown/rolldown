@@ -36,9 +36,9 @@ Tests located in `packages/rolldown/test` are used to test Rolldown's Node.js AP
 
 It is our goal to align Rolldown's Node.js API with that of Rollup's as much as possible, and the tests are used to verify API alignment and track the progress. Currently, there are many Rollup options that are not yet supported. If you implemented support for additional options from rollup, please add corresponding test cases for them.
 
-In `/packages/node`:
+In `/packages/rolldown`:
 
-- `yarn test` will run rollup tests.
+- `yarn test` will run rolldown tests.
 - `yarn test:update` will run and update the tests' status.
 
 ### Rollup behavior alignment tests

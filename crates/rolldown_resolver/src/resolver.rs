@@ -63,34 +63,28 @@ impl<F: FileSystem + Default> Resolver<F> {
         resolved
       }
     };
-
-    match resolved {
-      Ok(info) => Ok(ResolveRet {
-        resolved: ResolvedPath {
-          path: info.path().to_string_lossy().to_string().into(),
-          ignored: false,
-        },
-        module_type: calc_module_type(&info),
-      }),
-      Err(err) => {
-        if let ResolveError::Ignored(path) = err {
-          Ok(ResolveRet {
-            resolved: ResolvedPath {
-              path: path.to_string_lossy().to_string().into(),
-              ignored: true,
-            },
-            module_type: ModuleType::CJS,
-          })
-        } else if let Some(importer) = importer {
-          Err(
-            BuildError::unresolved_import(specifier.to_string(), importer.as_path())
-              .with_source(err),
-          )
-        } else {
-          Err(BuildError::unresolved_entry(specifier).with_source(err))
+    resolved
+      // If result type parsing is correct
+      .map(|info| {
+        build_resolve_ret(info.path().to_string_lossy().to_string(), false, calc_module_type(&info))
+      })
+      .or_else(|err| match err {
+        // If the error type is ignore
+        ResolveError::Ignored(path) => {
+          Ok(build_resolve_ret(path.to_string_lossy().to_string(), true, ModuleType::CJS))
         }
-      }
-    }
+        // To determine whether there is an importer.
+        _ => {
+          if let Some(importer) = importer {
+            Err(
+              BuildError::unresolved_import(specifier.to_string(), importer.as_path())
+                .with_source(err),
+            )
+          } else {
+            Err(BuildError::unresolved_entry(specifier).with_source(err))
+          }
+        }
+      })
   }
 }
 
@@ -111,4 +105,8 @@ fn calc_module_type(info: &Resolution) -> ModuleType {
     }
   }
   ModuleType::Unknown
+}
+
+fn build_resolve_ret(path: String, ignored: bool, module_type: ModuleType) -> ResolveRet {
+  ResolveRet { resolved: ResolvedPath { path: path.into(), ignored }, module_type }
 }

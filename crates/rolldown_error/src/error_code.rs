@@ -1,3 +1,4 @@
+// cSpell:disable
 // // Aligned with rollup
 
 // pub const ADDON_ERROR: &str = "ADDON_ERROR";

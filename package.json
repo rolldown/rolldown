@@ -17,6 +17,7 @@
   "scripts": {
     "lint-code": "oxlint --ignore-path=./.oxlintignore --import-plugin --deny-warnings",
     "lint-filename": "ls-lint",
+    "lint-spell": "cspell \"**\"",
     "build": "yarn workspace rolldown run build",
     "build:release": "yarn workspace rolldown run build:release",
     "build-binding": "yarn workspace rolldown run build-binding",
@@ -45,6 +46,7 @@
     "@ls-lint/ls-lint": "^2.2.2",
     "@taplo/cli": "^0.7.0",
     "conventional-changelog-cli": "^4.1.0",
+    "cspell": "^8.6.0",
     "husky": "^9.0.11",
     "lerna": "^8.1.2",
     "lint-staged": "^15.2.2",

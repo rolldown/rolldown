@@ -20,7 +20,7 @@ const members = [
   },
   {
     avatar: 'https://www.github.com/hyf0.png',
-    name: 'Yunfei He',
+    name: 'Yunfei He(hyf0)',
     links: [
       { icon: 'github', link: 'https://github.com/hyf0' },
       { icon: 'twitter', link: 'https://twitter.com/_hyf0' }

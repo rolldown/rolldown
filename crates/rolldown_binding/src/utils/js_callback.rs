@@ -1,3 +1,4 @@
+// cSpell:disable
 use std::{fmt::Debug, marker::PhantomData};
 
 use napi::{

@@ -92,6 +92,7 @@ lint-node:
     yarn lint-filename
     yarn lint-code
     yarn prettier:ci
+    yarn lint-spell
 
 # BENCHING
 

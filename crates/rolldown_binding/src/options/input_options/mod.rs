@@ -1,3 +1,4 @@
+// cSpell:disable
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 
 use crate::{

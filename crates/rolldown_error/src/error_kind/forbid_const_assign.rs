@@ -1,3 +1,4 @@
+// cSpell:disable
 use std::{path::Path, sync::Arc};
 
 use ariadne::Label;

@@ -5,29 +5,20 @@ on:
   pull_request:
     types: [opened, synchronize]
     paths-ignore:
-      - "**/*.md"
-      - "**/*.yml"
+      - '**/*.md'
+      - '**/*.yml'
   push:
     branches:
       - main
     paths-ignore:
-      - "**/*.md"
-      - "**/*.yml"
+      - '**/*.md'
+      - '**/*.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  cargo-typo:
-    name: Spell Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check spelling
-        uses: crate-ci/typos@master
-
   cargo-deny:
     name: Cargo Deny
     runs-on: ubuntu-latest
@@ -143,5 +134,8 @@ jobs:
       - name: Lint Filename
         run: yarn lint-filename
 
-      - name: Run format check
+      - name: Format Check
         run: yarn format:ci
+
+      - name: Lint Spell
+        run: yarn lint-spell

@@ -7,13 +7,6 @@
   "engines": {
     "node": ">=18.18.0"
   },
-  "workspaces": [
-    "crates/rolldown_binding_wasm",
-    "packages/*",
-    "web/*",
-    "examples/*",
-    "scripts"
-  ],
   "scripts": {
     "nuke": "rm -rf node_modules && rm -rf packages/*/node_modules && rm -rf web/*/node_modules && rm -rf examples/*/node_modules && rm -rf crates/rolldown_binding_wasm/node_modules && rm -rf scripts/node_modules",
     "lint-code": "oxlint --ignore-path=./.oxlintignore --import-plugin --deny-warnings",
@@ -50,9 +43,7 @@
     "conventional-changelog-cli": "^4.1.0",
     "cspell": "^8.6.0",
     "husky": "^9.0.11",
-    "lerna": "^8.1.2",
     "lint-staged": "^15.2.2",
-    "npm-run-all2": "^6.1.2",
     "oxlint": "^0.2.13",
     "prettier": "^3.2.5",
     "typescript": "^5.4.2"

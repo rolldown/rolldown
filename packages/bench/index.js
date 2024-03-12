@@ -2,6 +2,7 @@
 import { Bench } from 'tinybench'
 import path from 'node:path'
 import url from 'node:url'
+import fs from 'node:fs'
 import * as rolldown from 'rolldown'
 import * as esbuild from 'esbuild'
 import * as rollup from 'rollup'
@@ -104,6 +105,15 @@ async function runRollup(item) {
 
 for (const suite of suites) {
   const bench = new Bench({ time: 100, iterations: suite.benchIteration ?? 10 })
+
+  // Check if inputs have been initialized
+  for (const input of suite.inputs) {
+    if (input.includes('/') && !fs.existsSync(input)) {
+      throw new Error(
+        `Benchmark input ${input} not found, try running \`just setup-bench\` first.`,
+      )
+    }
+  }
 
   if (!suite.bundler || suite.bundler === 'rolldown') {
     bench.add(`rolldown-${suite.title}`, async () => {

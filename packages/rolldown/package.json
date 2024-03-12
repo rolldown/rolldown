@@ -64,6 +64,7 @@
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0-alpha.43",
     "@types/node": "^20.11.25",
+    "glob": "^10.3.10",
     "npm-run-all2": "^6.1.2",
     "prettier": "^3.2.5",
     "type-fest": "^4.12.0",

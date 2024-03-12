@@ -14,6 +14,9 @@ importers:
       '@taplo/cli':
         specifier: ^0.7.0
         version: 0.7.0
+      '@types/node':
+        specifier: ^20.11.26
+        version: 20.11.26
       conventional-changelog-cli:
         specifier: ^4.1.0
         version: 4.1.0
@@ -105,6 +108,9 @@ importers:
       '@types/node':
         specifier: ^20.11.25
         version: 20.11.26
+      glob:
+        specifier: ^10.3.10
+        version: 10.3.10
       npm-run-all2:
         specifier: ^6.1.2
         version: 6.1.2
@@ -219,7 +225,7 @@ importers:
     devDependencies:
       vitepress:
         specifier: ^1.0.0-rc.45
-        version: 1.0.0-rc.45(@algolia/client-search@4.22.1)(search-insights@2.13.0)(typescript@5.4.2)
+        version: 1.0.0-rc.45(@algolia/client-search@4.22.1)(@types/node@20.11.26)(search-insights@2.13.0)(typescript@5.4.2)
 
   web/playground:
     dependencies:
@@ -7052,7 +7058,7 @@ packages:
       array-differ: 3.0.0
       array-union: 2.1.0
       arrify: 2.0.1
-      minimatch: 3.0.5
+      minimatch: 3.1.2
     dev: true
 
   /mute-stream@0.0.8:
@@ -9753,7 +9759,7 @@ packages:
       fsevents: 2.3.3
     dev: true
 
-  /vitepress@1.0.0-rc.45(@algolia/client-search@4.22.1)(search-insights@2.13.0)(typescript@5.4.2):
+  /vitepress@1.0.0-rc.45(@algolia/client-search@4.22.1)(@types/node@20.11.26)(search-insights@2.13.0)(typescript@5.4.2):
     resolution: {integrity: sha512-/OiYsu5UKpQKA2c0BAZkfyywjfauDjvXyv6Mo4Ra57m5n4Bxg1HgUGoth1CLH2vwUbR/BHvDA9zOM0RDvgeSVQ==}
     hasBin: true
     peerDependencies:

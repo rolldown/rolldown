@@ -48,13 +48,7 @@ export interface InputItem {
 }
 
 export interface InputOptions {
-  external?:
-    | undefined
-    | ((
-        source: string,
-        importer: string | undefined,
-        isResolved: boolean,
-      ) => boolean)
+  external?: undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<InputItem>
   plugins: Array<PluginOptions>
   resolve?: ResolveOptions
@@ -73,18 +67,11 @@ export interface OutputOptions {
 export interface PluginOptions {
   name: string
   buildStart?: () => Promise<void>
-  resolveId?: (
-    specifier: string,
-    importer?: string,
-    options?: HookResolveIdArgsOptions,
-  ) => Promise<undefined | ResolveIdResult>
+  resolveId?: (specifier: string, importer?: string, options?: HookResolveIdArgsOptions) => Promise<undefined | ResolveIdResult>
   load?: (id: string) => Promise<undefined | SourceResult>
   transform?: (id: string, code: string) => Promise<undefined | SourceResult>
   buildEnd?: (error: string) => Promise<void>
-  renderChunk?: (
-    code: string,
-    chunk: RenderedChunk,
-  ) => Promise<undefined | HookRenderChunkOutput>
+  renderChunk?: (code: string, chunk: RenderedChunk) => Promise<undefined | HookRenderChunkOutput>
   generateBundle?: (bundle: Outputs, isWrite: boolean) => Promise<void>
   writeBundle?: (bundle: Outputs) => Promise<void>
 }
@@ -128,3 +115,4 @@ export interface SourceResult {
   code: string
   map?: string
 }
+

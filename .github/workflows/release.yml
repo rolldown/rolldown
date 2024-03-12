@@ -15,7 +15,7 @@ jobs:
         include:
           - os: macos-latest
             target: x86_64-apple-darwin
-            build: yarn build-binding:release
+            build: pnpm build-binding:release
 
           - os: macos-latest
             target: aarch64-apple-darwin
@@ -26,23 +26,23 @@ jobs:
               SYSROOT=$(xcrun --sdk macosx --show-sdk-path);
               export CFLAGS="-isysroot $SYSROOT -isystem $SYSROOT";
               export CARGO_BUILD_TARGET=aarch64-apple-darwin
-              yarn build-binding:release
+              pnpm build-binding:release
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            build: yarn build-binding:release
+            build: pnpm build-binding:release
 
           - os: windows-latest
             target: i686-pc-windows-msvc
             build: |
               export CARGO_BUILD_TARGET=i686-pc-windows-msvc
-              yarn build-binding:release
+              pnpm build-binding:release
 
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             build: |
               export CARGO_BUILD_TARGET=aarch64-pc-windows-msvc
-              yarn build-binding:release
+              pnpm build-binding:release
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -50,12 +50,12 @@ jobs:
             build: |-
               set -e &&
               export CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu &&
-              yarn build-binding:release
+              pnpm build-binding:release
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-            build: yarn build-binding:release
+            build: pnpm build-binding:release
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
@@ -64,7 +64,7 @@ jobs:
               set -e &&
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-gnu &&
               rustup target add aarch64-unknown-linux-gnu &&
-              yarn build-binding:release
+              pnpm build-binding:release
 
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
@@ -72,19 +72,19 @@ jobs:
               sudo apt-get update
               sudo apt-get install gcc-arm-linux-gnueabihf -y
               export CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf
-              yarn build-binding:release --zig --zig-link-only
+              pnpm build-binding:release --zig --zig-link-only
 
           - os: ubuntu-latest
             target: aarch64-linux-android
             build: |
               export CARGO_BUILD_TARGET=aarch64-linux-android
-              yarn build-binding:release
+              pnpm build-binding:release
 
           - os: ubuntu-latest
             target: armv7-linux-androideabi
             build: |
               export CARGO_BUILD_TARGET=armv7-linux-androideabi
-              yarn build-binding:release
+              pnpm build-binding:release
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
@@ -94,7 +94,7 @@ jobs:
               rustup target add aarch64-unknown-linux-musl &&
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl &&
               export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc &&
-              yarn build-binding:release
+              pnpm build-binding:release
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -117,10 +117,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: yarn
+          cache: pnpm
 
       - name: Install dependencies
-        run: yarn install
+        run: pnpm install
 
       - name: Build Binding in docker
         uses: addnab/docker-run-action@v3
@@ -155,13 +155,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: yarn
+          cache: pnpm
 
       - name: Install dependencies
-        run: yarn install
+        run: pnpm install
 
       - name: Build Node Packages
-        run: yarn workspace rolldown run build
+        run: pnpm workspace rolldown run build
 
       - name: Upload Node Artifact
         uses: actions/upload-artifact@v4
@@ -185,13 +185,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: yarn
+          cache: pnpm
 
       - name: Install dependencies
-        run: yarn install
+        run: pnpm install
 
       - name: Build Wasm
-        run: yarn build-wasm:release
+        run: pnpm build-wasm:release
 
       - name: Upload Wasm Artifact
         uses: actions/upload-artifact@v4
@@ -228,10 +228,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: yarn
+          cache: pnpm
 
       - name: Install dependencies
-        run: yarn install
+        run: pnpm install
 
       - name: Download Binding Artifacts
         uses: actions/download-artifact@v4
@@ -239,7 +239,7 @@ jobs:
           path: crates/rolldown_binding/artifacts
 
       - name: Move Binding Artifacts
-        run: yarn workspace @rolldown/node-binding artifacts
+        run: pnpm workspace @rolldown/node-binding artifacts
 
       - name: List packages
         run: ls -R ./crates/rolldown_binding
@@ -252,7 +252,7 @@ jobs:
           name: node-artifact
 
       - name: Node Test
-        run: yarn test
+        run: pnpm test
 
   publish:
     name: Publish Npm Packages
@@ -269,10 +269,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: yarn
+          cache: pnpm
 
       - name: Install dependencies
-        run: yarn install && git reset --hard # fix yarn install add new line for package.json
+        run: pnpm install && git reset --hard # fix pnpm install add new line for package.json
 
       - name: Download Wasm Artifacts
         uses: actions/download-artifact@v4
@@ -286,7 +286,7 @@ jobs:
           path: crates/rolldown_binding/artifacts
 
       - name: Move Binding Artifacts
-        run: yarn workspace @rolldown/node-binding artifacts
+        run: pnpm workspace @rolldown/node-binding artifacts
 
       - name: List packages
         run: ls -R ./crates/rolldown_binding
@@ -303,7 +303,7 @@ jobs:
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
           echo "//registry.npmjs.org/:_authToken=$ROLLDOWN_NPM_TOKEN" >> ~/.npmrc
-          yarn lerna publish from-package --no-private --no-git-reset --yes
+          pnpm lerna publish from-package --no-private --no-git-reset --yes
         env:
           ROLLDOWN_NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

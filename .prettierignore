@@ -1,7 +1,6 @@
 **/.git
 **/node_modules
 **/dist/
-.yarn
 packages/rollup-tests
 rollup
 crates

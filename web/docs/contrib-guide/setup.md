@@ -4,7 +4,7 @@
 
 - Rust >= 1.75
 - Node.js >= 18.18.0
-- Yarn >= 4
+- pnpm >= 8
 - Git
 
 ## Setup
@@ -12,7 +12,7 @@
 On your first checkout of the repository, you'll need to install required tools and dependencies.
 
 :::tip
-If you are using [proto](https://moonrepo.dev/proto), you can run `proto use` in the repository root to install Rust, Node.js, and Yarn. For other tools, or if not using proto, continue reading.
+If you are using [proto](https://moonrepo.dev/proto), you can run `proto use` in the repository root to install Rust, Node.js, and pnpm. For other tools, or if not using proto, continue reading.
 :::
 
 We have made initializing the project automatic with the `just` command. However, you still need to install some meta tools and dependencies before you can use the command.
@@ -31,11 +31,11 @@ cargo binstall just
 
 ### Node.js
 
-Rolldown is a npm package built with [NAPI-RS](https://napi.rs/) and is published to the npm registry, and as such requires Node.js and Yarn (for dependency management).
+Rolldown is a npm package built with [NAPI-RS](https://napi.rs/) and is published to the npm registry, and as such requires Node.js and pnpm (for dependency management).
 
 We recommend installing Node.js with a version manager, like [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm). Make sure to install and use Node.js version 18.18.0+, which is the minimum requirement for this project. You can skip this step if you are already using a Node.js version manager of your choice and on a Node.js version that meets the requirement.
 
-We recommend enabling Yarn via [corepack](https://nodejs.org/api/corepack.html), so the correct version of Yarn can be automatically used when working in this project:
+We recommend enabling pnpm via [corepack](https://nodejs.org/api/corepack.html), so the correct version of pnpm can be automatically used when working in this project:
 
 ```shell
 corepack enable
@@ -43,7 +43,7 @@ corepack enable
 
 ### Init
 
-Once Rust, Node.js and Yarn are installed, run the following command to install all required dependencies:
+Once Rust, Node.js and pnpm are installed, run the following command to install all required dependencies:
 
 ```shell
 just init

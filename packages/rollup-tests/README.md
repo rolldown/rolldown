@@ -8,5 +8,5 @@ The git submodule should have been initialized after running `just init` when se
 
 In this directory:
 
-- `yarn test` will run rollup tests.
-- `yarn test:update` will run and update the tests status.
+- `pnpm test` will run rollup tests.
+- `pnpm test:update` will run and update the tests status.

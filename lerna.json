@@ -1,7 +1,7 @@
 {
   "version": "independent",
   "useWorkspaces": true,
-  "npmClient": "yarn",
+  "npmClient": "pnpm",
   "command": {
     "version": {
       "message": "chore(release): publish"

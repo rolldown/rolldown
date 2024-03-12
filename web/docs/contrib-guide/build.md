@@ -8,7 +8,7 @@ Luckily, NAPI-RS has encapsulated the process of building the glue part, we don'
 
 To build the `rolldown` package, there are two commands:
 
-- `yarn build`
-- `yarn build:release` (**important if running benchmarks**)
+- `pnpm build`
+- `pnpm build:release` (**important if running benchmarks**)
 
 They will automatically build the Rust crates and the Node.js package. So no matter what changes you made, you can always run these commands to build the latest `rolldown` package.

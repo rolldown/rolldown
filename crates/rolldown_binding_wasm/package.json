@@ -11,8 +11,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "pnpm run build-wasm && pnpm run clean-wasm-build",
-    "build:release": "pnpm run build-wasm:release && pnpm run clean-wasm-build",
+    "build": "pnpm build-wasm && pnpm clean-wasm-build",
+    "build:release": "pnpm build-wasm:release && pnpm clean-wasm-build",
     "build-wasm": "wasm-pack build --dev --target web -d ./dist",
     "build-wasm:release": "wasm-pack build --release --target web -d ./dist",
     "clean-wasm-build": "rm ./dist/.gitignore"

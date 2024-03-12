@@ -1,4 +1,4 @@
-use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
+use rolldown::{Bundler, InputItem, InputOptions, OutputOptions, SourceMapType};
 use std::path::PathBuf;
 use sugar_path::SugarPathBuf;
 
@@ -11,11 +11,15 @@ async fn main() {
     input: vec![
       InputItem { name: Some("react-dom".to_string()), import: "react-dom".to_string() },
       InputItem { name: Some("react".to_string()), import: "react".to_string() },
+      InputItem { name: Some("basic".to_string()), import: "./index.js".to_string() },
     ],
     cwd,
     ..Default::default()
   });
 
-  let _outputs = bundler.write(OutputOptions::default()).await.unwrap();
+  let _outputs = bundler
+    .write(OutputOptions { sourcemap: SourceMapType::File, ..OutputOptions::default() })
+    .await
+    .unwrap();
   // println!("{outputs:#?}");
 }

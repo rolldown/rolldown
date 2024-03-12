@@ -1843,6 +1843,7 @@ dependencies = [
  "index_vec",
  "once_cell",
  "rustc-hash",
+ "sourcemap",
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
 use oxc::{
   allocator::Allocator,
   ast::ast::{self, IdentifierReference, Statement},
-  span::Atom,
+  span::{Atom, SPAN},
 };
 use rolldown_common::{AstScope, ImportRecordId, ModuleId, SymbolRef, WrapKind};
 use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, Dummy, IntoIn, TakeIn};
@@ -94,7 +94,7 @@ where
       access_expr
     } else {
       let canonical_name = self.canonical_name_for(canonical_ref);
-      self.snippet.id_ref_expr(canonical_name.to_oxc_atom())
+      self.snippet.id_ref_expr(canonical_name.to_oxc_atom(), SPAN)
     }
   }
 
@@ -143,7 +143,7 @@ where
           ast::ExpressionStatement {
             expression: ast::Expression::AssignmentExpression(
               ast::AssignmentExpression {
-                left: self.snippet.simple_id_assignment_target(cls_name),
+                left: self.snippet.simple_id_assignment_target(cls_name, cls_decl.span),
                 right: ast::Expression::ClassExpression(cls_decl.take_in(self.alloc)),
                 ..Dummy::dummy(self.alloc)
               }
@@ -190,7 +190,7 @@ where
       arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
         ast::ObjectProperty {
           key: ast::PropertyKey::Identifier(
-            self.snippet.id_name(prop_name.to_oxc_atom()).into_in(self.alloc),
+            self.snippet.id_name(prop_name.to_oxc_atom(), SPAN).into_in(self.alloc),
           ),
           value: self.snippet.only_return_arrow_expr(returned),
           ..Dummy::dummy(self.alloc)
@@ -204,7 +204,7 @@ where
       self.snippet.call_expr(self.canonical_name_for_runtime("__export").to_oxc_atom());
     export_call_expr
       .arguments
-      .push(ast::Argument::Expression(self.snippet.id_ref_expr(ns_name.to_oxc_atom())));
+      .push(ast::Argument::Expression(self.snippet.id_ref_expr(ns_name.to_oxc_atom(), SPAN)));
     export_call_expr.arguments.push(ast::Argument::Expression(ast::Expression::ObjectExpression(
       arg_obj_expr.into_in(self.alloc),
     )));

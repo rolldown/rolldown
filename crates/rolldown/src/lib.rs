@@ -24,6 +24,6 @@ pub use crate::{
   options::{
     file_name_template::FileNameTemplate,
     input_options::{External, InputItem, InputOptions},
-    output_options::{OutputFormat, OutputOptions},
+    output_options::{OutputFormat, OutputOptions, SourceMapType},
   },
 };

@@ -11,14 +11,14 @@ pub fn concat_sourcemaps(
 
   for (index, (content, sourcemap)) in content_and_sourcemaps.iter().enumerate() {
     s.push_str(content);
-    if index != content_and_sourcemaps.len() - 1 {
+    if index < content_and_sourcemaps.len() - 1 {
       s.push('\n');
     }
 
     if let Some(sourcemap) = sourcemap {
-      for source in sourcemap.sources() {
+      for (id, source) in sourcemap.sources().enumerate() {
         let source_id = sourcemap_builder.add_source(source);
-        sourcemap_builder.set_source_contents(source_id, sourcemap.get_source_contents(source_id));
+        sourcemap_builder.set_source_contents(source_id, sourcemap.get_source_contents(id as u32));
       }
       for token in sourcemap.tokens() {
         sourcemap_builder.add(

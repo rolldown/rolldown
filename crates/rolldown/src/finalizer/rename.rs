@@ -48,7 +48,7 @@ where
 
     let canonical_name = self.canonical_name_for(canonical_ref);
     if id_ref.name != canonical_name.as_str() {
-      return Some(self.snippet.id_ref_expr(canonical_name.to_oxc_atom()));
+      return Some(self.snippet.id_ref_expr(canonical_name.to_oxc_atom(), id_ref.span));
     }
 
     None
@@ -87,7 +87,7 @@ where
     let canonical_name = self.canonical_name_for(canonical_ref);
     if id_ref.name != canonical_name.as_str() {
       return Some(ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
-        self.snippet.id_ref(canonical_name.to_oxc_atom()).into_in(self.alloc),
+        self.snippet.id_ref(canonical_name.to_oxc_atom(), id_ref.span).into_in(self.alloc),
       ));
     }
 

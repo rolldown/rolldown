@@ -19,7 +19,6 @@ smoke-node:
     just test-node
     just lint-node
 
-
 # Initialize the project and its submodules
 init:
     just init-rust
@@ -27,7 +26,7 @@ init:
     git submodule update --init
 
 init-rust:
-    cargo binstall taplo-cli cargo-insta cargo-deny -y
+    cargo binstall taplo-cli cargo-insta cargo-deny typos-cli -y
 
 init-node:
     yarn install
@@ -47,9 +46,13 @@ check-rust:
 check-node:
     yarn type-check
 
+check-typo:
+    typos
+
 check:
     just check-rust
     just check-node
+    just check-typo
 
 # run tests for both Rust and Node.js
 test:
@@ -89,6 +92,7 @@ lint-node:
     yarn lint-filename
     yarn lint-code
     yarn prettier:ci
+    yarn lint-spell
 
 # BENCHING
 

@@ -1,3 +1,5 @@
+// cSpell:disable
+
 use oxc::{
   allocator,
   ast::{

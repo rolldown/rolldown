@@ -1,3 +1,4 @@
+// cSpell:disable
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use regex::Regex;

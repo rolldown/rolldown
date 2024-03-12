@@ -1,3 +1,4 @@
+// cSpell:disable
 use parcel_sourcemap::SourceMap as ParcelSourcemap;
 use rolldown_error::BuildError;
 

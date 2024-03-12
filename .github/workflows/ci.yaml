@@ -134,5 +134,8 @@ jobs:
       - name: Lint Filename
         run: yarn lint-filename
 
-      - name: Run format check
+      - name: Format Check
         run: yarn format:ci
+
+      - name: Lint Spell
+        run: yarn lint-spell

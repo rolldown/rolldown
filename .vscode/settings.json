@@ -24,27 +24,6 @@
     "*.snap": "markdown",
     "*.snap.new": "markdown"
   },
-  "cSpell.words": [
-    "codegen",
-    "codspeed",
-    "execa",
-    "Finalizer",
-    "hasher",
-    "importee",
-    "metas",
-    "napi",
-    "oxlint",
-    "oxlintignore",
-    "Renamer",
-    "repr",
-    "rolldown",
-    "rollup",
-    "Rstr",
-    "rustc",
-    "smallvec",
-    "taplo",
-    "treeshake"
-  ],
   "git.ignoreLimitWarning": true,
   "json.schemas": [
     {

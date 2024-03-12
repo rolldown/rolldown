@@ -1,3 +1,5 @@
+// cSpell:disable
+
 import { execa } from 'execa'
 import watcher from '@parcel/watcher'
 import path from 'node:path'

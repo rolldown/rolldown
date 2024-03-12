@@ -1,3 +1,5 @@
+// cSpell:disable
+
 use parcel_sourcemap::SourceMap as ParcelSourcemap;
 mod concat_sourcemap;
 
@@ -89,6 +91,7 @@ mod tests {
   fn it_works() {
     let sourcemaps = vec![
       SourceMap::new(
+        // cspell:disable-line
         "AAAA,SAAS,QAAQ,CAAC,IAAY;IAC5B,OAAO,CAAC,GAAG,CAAC,iBAAU,IAAI,CAAE,CAAC,CAAC;AAChC,CAAC"
           .to_string(),
         vec![],

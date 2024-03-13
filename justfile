@@ -70,7 +70,7 @@ test-node:
 fmt:
     just fmt-rust
     just fmt-lint
-  
+
 fmt-rust:
     cargo fmt --all -- --emit=files
     taplo fmt
@@ -101,3 +101,18 @@ setup-bench:
 
 bench:
     cargo bench -p bench
+
+# RELEASING
+
+change:
+    pnpm changeset add
+
+no-change:
+    pnpm changeset add --empty
+
+version:
+    pnpm changeset version
+
+publish:
+    pnpm changeset publish
+    git push --follow-tags

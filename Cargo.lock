@@ -955,7 +955,7 @@ checksum = "caff54706df99d2a78a5a4e3455ff45448d81ef1bb63c22cd14052ca0e993a3f"
 [[package]]
 name = "oxc"
 version = "0.9.0"
-source = "git+https://github.com/underfin/oxc.git?branch=upgrad-sourcemap#e34f194a646ff720ab34b9676dbb02467462ec80"
+source = "git+https://github.com/oxc-project/oxc.git#265030d049dc25e25bdc31c32447e0efc91cb94f"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
@@ -971,7 +971,7 @@ dependencies = [
 [[package]]
 name = "oxc_allocator"
 version = "0.9.0"
-source = "git+https://github.com/underfin/oxc.git?branch=upgrad-sourcemap#e34f194a646ff720ab34b9676dbb02467462ec80"
+source = "git+https://github.com/oxc-project/oxc.git#265030d049dc25e25bdc31c32447e0efc91cb94f"
 dependencies = [
  "bumpalo",
  "serde",
@@ -980,7 +980,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast"
 version = "0.9.0"
-source = "git+https://github.com/underfin/oxc.git?branch=upgrad-sourcemap#e34f194a646ff720ab34b9676dbb02467462ec80"
+source = "git+https://github.com/oxc-project/oxc.git#265030d049dc25e25bdc31c32447e0efc91cb94f"
 dependencies = [
  "bitflags 2.4.2",
  "num-bigint",
@@ -994,20 +994,20 @@ dependencies = [
 [[package]]
 name = "oxc_codegen"
 version = "0.9.0"
-source = "git+https://github.com/underfin/oxc.git?branch=upgrad-sourcemap#e34f194a646ff720ab34b9676dbb02467462ec80"
+source = "git+https://github.com/oxc-project/oxc.git#265030d049dc25e25bdc31c32447e0efc91cb94f"
 dependencies = [
  "bitflags 2.4.2",
  "oxc_allocator",
  "oxc_ast",
  "oxc_span",
  "oxc_syntax",
- "sourcemap 7.1.0",
+ "sourcemap",
 ]
 
 [[package]]
 name = "oxc_diagnostics"
 version = "0.9.0"
-source = "git+https://github.com/underfin/oxc.git?branch=upgrad-sourcemap#e34f194a646ff720ab34b9676dbb02467462ec80"
+source = "git+https://github.com/oxc-project/oxc.git#265030d049dc25e25bdc31c32447e0efc91cb94f"
 dependencies = [
  "miette",
  "owo-colors",
@@ -1019,7 +1019,7 @@ dependencies = [
 [[package]]
 name = "oxc_index"
 version = "0.9.0"
-source = "git+https://github.com/underfin/oxc.git?branch=upgrad-sourcemap#e34f194a646ff720ab34b9676dbb02467462ec80"
+source = "git+https://github.com/oxc-project/oxc.git#265030d049dc25e25bdc31c32447e0efc91cb94f"
 dependencies = [
  "index_vec",
  "static_assertions",
@@ -1028,7 +1028,7 @@ dependencies = [
 [[package]]
 name = "oxc_macros"
 version = "0.0.0"
-source = "git+https://github.com/underfin/oxc.git?branch=upgrad-sourcemap#e34f194a646ff720ab34b9676dbb02467462ec80"
+source = "git+https://github.com/oxc-project/oxc.git#265030d049dc25e25bdc31c32447e0efc91cb94f"
 dependencies = [
  "convert_case",
  "itertools 0.12.1",
@@ -1040,7 +1040,7 @@ dependencies = [
 [[package]]
 name = "oxc_parser"
 version = "0.9.0"
-source = "git+https://github.com/underfin/oxc.git?branch=upgrad-sourcemap#e34f194a646ff720ab34b9676dbb02467462ec80"
+source = "git+https://github.com/oxc-project/oxc.git#265030d049dc25e25bdc31c32447e0efc91cb94f"
 dependencies = [
  "assert-unchecked",
  "bitflags 2.4.2",
@@ -1077,7 +1077,7 @@ dependencies = [
 [[package]]
 name = "oxc_semantic"
 version = "0.9.0"
-source = "git+https://github.com/underfin/oxc.git?branch=upgrad-sourcemap#e34f194a646ff720ab34b9676dbb02467462ec80"
+source = "git+https://github.com/oxc-project/oxc.git#265030d049dc25e25bdc31c32447e0efc91cb94f"
 dependencies = [
  "indexmap",
  "itertools 0.12.1",
@@ -1096,7 +1096,7 @@ dependencies = [
 [[package]]
 name = "oxc_span"
 version = "0.9.0"
-source = "git+https://github.com/underfin/oxc.git?branch=upgrad-sourcemap#e34f194a646ff720ab34b9676dbb02467462ec80"
+source = "git+https://github.com/oxc-project/oxc.git#265030d049dc25e25bdc31c32447e0efc91cb94f"
 dependencies = [
  "compact_str",
  "miette",
@@ -1106,7 +1106,7 @@ dependencies = [
 [[package]]
 name = "oxc_syntax"
 version = "0.9.0"
-source = "git+https://github.com/underfin/oxc.git?branch=upgrad-sourcemap#e34f194a646ff720ab34b9676dbb02467462ec80"
+source = "git+https://github.com/oxc-project/oxc.git#265030d049dc25e25bdc31c32447e0efc91cb94f"
 dependencies = [
  "bitflags 2.4.2",
  "dashmap",
@@ -1536,7 +1536,7 @@ name = "rolldown_sourcemap"
 version = "0.1.0"
 dependencies = [
  "rolldown_error",
- "sourcemap 7.1.1",
+ "sourcemap",
 ]
 
 [[package]]
@@ -1794,22 +1794,6 @@ checksum = "05ffd9c0a93b7543e062e759284fcf5f5e3b098501104bfbdde4d404db792871"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "sourcemap"
-version = "7.1.0"
-source = "git+https://github.com/underfin/rust-sourcemap.git?branch=re-fix-sourceview#92ea888aba4ab4e72c4925e5efbb5c6cc461894b"
-dependencies = [
- "base64-simd",
- "data-encoding",
- "debugid",
- "if_chain",
- "rustc_version",
- "serde",
- "serde_json",
- "unicode-id-start",
- "url",
 ]
 
 [[package]]

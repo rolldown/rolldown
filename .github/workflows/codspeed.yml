@@ -38,14 +38,16 @@ jobs:
           cache-base: main
           cache-target: release
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.4
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-
-      - name: Install pnpm
-        run: corepack enable
 
       - name: Install dependencies
         run: pnpm install

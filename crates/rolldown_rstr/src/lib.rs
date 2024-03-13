@@ -4,21 +4,18 @@
 
 use std::{fmt::Display, ops::Deref};
 
-use oxc::span::{Atom, CompactString};
+/// `OxcStr` is a alias of string type oxc used internally.
+pub type OxcStr = oxc::span::CompactString;
 
 mod to_str;
 pub use to_str::ToRstr;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
-pub struct Rstr(CompactString);
+pub struct Rstr(OxcStr);
 
 impl Rstr {
   pub fn as_str(&self) -> &str {
     self.0.as_str()
-  }
-
-  pub fn to_oxc_atom(&self) -> Atom<'static> {
-    Atom::Compact(self.0.clone())
   }
 }
 

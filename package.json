@@ -31,11 +31,12 @@
     "docs": "pnpm --filter rolldown-docs run dev",
     "docs:build": "pnpm --filter rolldown-docs run build",
     "docs:preview": "pnpm --filter rolldown-docs run preview",
-    "version": "yarn lerna version --force-publish --no-private --no-git-tag-version && node scripts/post-version.cjs",
+    "version": "pnpm changeset && pnpm changeset version --force-publish --no-private --no-git-tag-version && node scripts/post-version.cjs",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
   "license": "MIT",
   "devDependencies": {
+    "@changesets/cli": "^2.27.1",
     "@ls-lint/ls-lint": "^2.2.2",
     "@taplo/cli": "^0.7.0",
     "@types/node": "^20.11.26",

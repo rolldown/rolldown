@@ -185,11 +185,13 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
       continue
     }
     const testDir = path.resolve(
+      import.meta.dirname,
       TESTS_ROOT_DIR,
       `tests/esbuild/${SUITE_NAME}`,
       testCaseName,
     )
     const ignoredTestDir = path.resolve(
+      import.meta.dirname,
       TESTS_ROOT_DIR,
       `tests/esbuild/${SUITE_NAME}`,
       `.${testCaseName}`,

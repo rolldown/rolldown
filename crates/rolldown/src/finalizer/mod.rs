@@ -61,10 +61,10 @@ where
         let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
         *stmt = self.snippet.var_decl_stmt(
-          binding_name_for_wrapper_call_ret.to_oxc_atom(),
+          binding_name_for_wrapper_call_ret,
           self.snippet.call_expr_with_arg_expr_expr(
-            to_esm_fn_name.to_oxc_atom(),
-            self.snippet.call_expr_expr(wrapper_ref_name.to_oxc_atom()),
+            to_esm_fn_name,
+            self.snippet.call_expr_expr(wrapper_ref_name),
           ),
         );
         return false;
@@ -72,7 +72,7 @@ where
       // Replace the statement with something like `init_foo()`
       WrapKind::Esm => {
         let wrapper_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-        *stmt = self.snippet.call_expr_stmt(wrapper_ref_name.to_oxc_atom());
+        *stmt = self.snippet.call_expr_stmt(wrapper_ref_name);
         return false;
       }
     }
@@ -86,15 +86,13 @@ where
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      let access_expr = self.snippet.literal_prop_access_member_expr_expr(
-        canonical_ns_name.to_oxc_atom(),
-        prop_name.to_oxc_atom(),
-      );
+      let access_expr =
+        self.snippet.literal_prop_access_member_expr_expr(canonical_ns_name, prop_name);
 
       access_expr
     } else {
       let canonical_name = self.canonical_name_for(canonical_ref);
-      self.snippet.id_ref_expr(canonical_name.to_oxc_atom())
+      self.snippet.id_ref_expr(canonical_name)
     }
   }
 
@@ -143,7 +141,7 @@ where
           ast::ExpressionStatement {
             expression: ast::Expression::AssignmentExpression(
               ast::AssignmentExpression {
-                left: self.snippet.simple_id_assignment_target(cls_name),
+                left: self.snippet.simple_id_assignment_target(&cls_name),
                 right: ast::Expression::ClassExpression(cls_decl.take_in(self.alloc)),
                 ..Dummy::dummy(self.alloc)
               }
@@ -168,10 +166,9 @@ where
   fn generate_namespace_variable_declaration(&self) -> Vec<ast::Statement<'ast>> {
     let ns_name = self.canonical_name_for(self.ctx.module.namespace_symbol);
     // construct `var ns_name = {}`
-    let namespace_decl_stmt = self.snippet.var_decl_stmt(
-      ns_name.to_oxc_atom(),
-      ast::Expression::ObjectExpression(Dummy::dummy(self.alloc)),
-    );
+    let namespace_decl_stmt = self
+      .snippet
+      .var_decl_stmt(ns_name, ast::Expression::ObjectExpression(Dummy::dummy(self.alloc)));
 
     let exports_len = self.ctx.linking_info.canonical_exports_len();
 
@@ -189,9 +186,7 @@ where
       let returned = self.generate_finalized_expr_for_symbol_ref(resolved_export.symbol_ref);
       arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
         ast::ObjectProperty {
-          key: ast::PropertyKey::Identifier(
-            self.snippet.id_name(prop_name.to_oxc_atom()).into_in(self.alloc),
-          ),
+          key: ast::PropertyKey::Identifier(self.snippet.id_name(prop_name).into_in(self.alloc)),
           value: self.snippet.only_return_arrow_expr(returned),
           ..Dummy::dummy(self.alloc)
         }
@@ -200,11 +195,8 @@ where
     });
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
-    let mut export_call_expr =
-      self.snippet.call_expr(self.canonical_name_for_runtime("__export").to_oxc_atom());
-    export_call_expr
-      .arguments
-      .push(ast::Argument::Expression(self.snippet.id_ref_expr(ns_name.to_oxc_atom())));
+    let mut export_call_expr = self.snippet.call_expr(self.canonical_name_for_runtime("__export"));
+    export_call_expr.arguments.push(ast::Argument::Expression(self.snippet.id_ref_expr(ns_name)));
     export_call_expr.arguments.push(ast::Argument::Expression(ast::Expression::ObjectExpression(
       arg_obj_expr.into_in(self.alloc),
     )));

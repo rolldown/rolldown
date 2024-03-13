@@ -1,6 +1,5 @@
 {
   "name": "monorepo",
-  "version": "0.0.5",
   "description": "Rollup in Rust",
   "private": true,
   "packageManager": "pnpm@8.15.4",

@@ -29,7 +29,7 @@ init-rust:
     cargo binstall taplo-cli cargo-insta cargo-deny typos-cli -y
 
 init-node:
-    yarn install
+    pnpm install
 
 
 
@@ -44,7 +44,7 @@ check-rust:
     cargo check --workspace
 
 check-node:
-    yarn type-check
+    pnpm type-check
 
 check-typo:
     typos
@@ -63,8 +63,8 @@ test-rust:
     cargo test --no-fail-fast
 
 test-node:
-    yarn build
-    yarn test
+    pnpm build
+    pnpm test
 
 # Fix formatting issues both for Rust and Node.js.
 fmt:
@@ -76,7 +76,7 @@ fmt-rust:
     taplo fmt
 
 fmt-lint:
-    yarn prettier
+    pnpm prettier
 
 # lint the codebase
 lint:
@@ -89,10 +89,10 @@ lint-rust:
     cargo clippy --workspace --all-targets -- --deny warnings
 
 lint-node:
-    yarn lint-filename
-    yarn lint-code
-    yarn prettier:ci
-    yarn lint-spell
+    pnpm lint-filename
+    pnpm lint-code
+    pnpm prettier:ci
+    pnpm lint-spell
 
 # BENCHING
 

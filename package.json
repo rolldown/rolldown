@@ -8,7 +8,6 @@
     "node": ">=18.18.0"
   },
   "scripts": {
-    "nuke": "rm -rf node_modules && rm -rf packages/*/node_modules && rm -rf web/*/node_modules && rm -rf examples/*/node_modules && rm -rf crates/rolldown_binding_wasm/node_modules && rm -rf scripts/node_modules",
     "lint-code": "oxlint --ignore-path=./.oxlintignore --import-plugin --deny-warnings",
     "lint-filename": "ls-lint",
     "lint-spell": "cspell \"**\"",

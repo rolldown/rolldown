@@ -172,9 +172,6 @@ importers:
       tree-sitter:
         specifier: ^0.20.6
         version: 0.20.6
-      tree-sitter-go:
-        specifier: ^0.20.0
-        version: 0.20.0
       zx:
         specifier: ^7.2.3
         version: 7.2.3
@@ -6161,13 +6158,6 @@ packages:
   /toml@3.0.0:
     resolution: {integrity: sha512-y/mWCZinnvxjTKYhJ+pYxwD0mRLVvOtdS2Awbgxln6iEnt4rk0yBxeSBHkGJcPucRiG0e55mwWp+g/05rsrd6w==}
     dev: true
-
-  /tree-sitter-go@0.20.0:
-    resolution: {integrity: sha512-5OBBND9ykffXZnaKrVpk8RnSaZJ26Si8yCfJKPSkEypWrywqCmZOZ74NveqMY0ogmHK2X8mFFuIL5jUnxOKyYw==}
-    requiresBuild: true
-    dependencies:
-      nan: 2.19.0
-    dev: false
 
   /tree-sitter@0.20.6:
     resolution: {integrity: sha512-GxJodajVpfgb3UREzzIbtA1hyRnTxVbWVXrbC6sk4xTMH5ERMBJk9HJNq4c8jOJeUaIOmLcwg+t6mez/PDvGqg==}

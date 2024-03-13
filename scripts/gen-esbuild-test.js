@@ -11,9 +11,20 @@ import * as dedent from 'dedent'
 const __dirname = import.meta.dirname
 
 // How to use this script
-// 1. Adding a test golang file under this dir or wherever you want, and modify the source path
-// 2. `let testDir = path.resolve(__dirname, "test", testCaseName);` Modify this testDir, by default,
-// The script will generate testCases under `${__dirname}/test`
+// 1. Set the root directory where the 'tests/esbuild' directory will be created.
+//    By default, it's the 'scripts' directory (import.meta.dirname).
+
+/** Expected values: '../crates/rolldown' or import.meta.dirname, or your variant.  */
+const TESTS_ROOT_DIR = import.meta.dirname
+
+// 2. Set the test suite name. Refer to the 'suites' constant object for possible variants.
+
+/** @type {TestSuiteName} {@link suites} */
+const SUITE_NAME = 'default'
+
+// 3. Download .go test source file located in the suites object
+//    for each suite and place it under "scripts" dir.
+//    (You can skip this step, the script can download it for you)
 
 /**
  * Constant object containing test suites.
@@ -91,11 +102,57 @@ async function readTestSuiteSource(testSuiteName) {
   }
 }
 
-/** @type {TestSuiteName} */
-const TEST_SUITE_NAME = 'default'
-const currentSuite = suites[TEST_SUITE_NAME]
+/**
+ * Figures out the path for test directories for a specific test case.
+ * @param {string} testsRootDir - The directory where the 'tests/esbuild' directory will be created.
+ * @param {TestSuiteName} suiteName - The name of the test suite, 'tests/esbuild/default'.
+ * @param {string} testCaseName - current test case. tests/esbuild/default/preserve_key_comment
+ * @param {string} [testsEsbuild='tests/esbuild'] - Defaults to 'tests/esbuild'. Pass another path if needed.
+ * @returns {{testDir: string; ignoredTestDir: string; testDirExistsAndNotEmpty: boolean}} - The paths for the test directories and the corresponding ignored test directories.
+ *
+ * @example
+ * ```
+ * const SUITE_NAME = 'defaut'
+ * // Change this constant to 'import.meta.dirname' to generate tests under the 'scripts' directory.
+ * const TESTS_ROOT_DIR = '../crates/rolldown'
+ * const testCaseName = 'preserve_key_comment'
+ * const { testDir, ignoredTestDir } = resolveTestCaseDirs(TESTS_ROOT_DIR, SUITE_NAME, testCaseName)
+ * //  start_of_global_path/rolldown/crates/rolldown/tests/esbuild/default/preserve_key_comment,
+ * //  start_of_global_path/rolldown/crates/rolldown/tests/esbuild/default/.preserve_key_comment
+ * ```
+ */
+function resolveTestCaseDir(
+  testsRootDir,
+  suiteName,
+  testCaseName,
+  testsEsbuild = 'tests/esbuild',
+) {
+  const esbuildTestDir = path.resolve(
+    import.meta.dirname,
+    testsRootDir,
+    testsEsbuild,
+  )
+
+  const testDir = path.resolve(esbuildTestDir, suiteName, testCaseName)
+  const ignoredTestDir = path.resolve(
+    esbuildTestDir,
+    suiteName,
+    `.${testCaseName}`,
+  )
+
+  const testDirExistsAndNotEmpty =
+    (fs.existsSync(testDir) && !isDirEmptySync(testDir)) ||
+    (fs.existsSync(ignoredTestDir) && !isDirEmptySync(ignoredTestDir))
+
+  return {
+    testDir,
+    ignoredTestDir,
+    testDirExistsAndNotEmpty,
+  }
+}
+
 /** The contents of the .go test source file. {@link suites} */
-const source = await readTestSuiteSource(TEST_SUITE_NAME)
+const source = await readTestSuiteSource(SUITE_NAME)
 const ignoredTestName = [
   'ts',
   'txt',
@@ -178,22 +235,15 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     if (ignoredTestName.some((name) => testCaseName.includes(name))) {
       continue
     }
-    let testDir = path.resolve(
-      __dirname,
-      `../crates/rolldown/tests/esbuild/${currentSuite.name}`,
+
+    const { testDir, testDirExistsAndNotEmpty } = resolveTestCaseDir(
+      TESTS_ROOT_DIR,
+      SUITE_NAME,
       testCaseName,
-    )
-    let ignoredTestDir = path.resolve(
-      __dirname,
-      `../crates/rolldown/tests/esbuild/${currentSuite.name}`,
-      `.${testCaseName}`,
     )
 
     // Cause if you withdraw directory in git system, git will cleanup dir but leave the directory alone
-    if (
-      (fs.existsSync(testDir) && !isDirEmptySync(testDir)) ||
-      (fs.existsSync(ignoredTestDir) && !isDirEmptySync(ignoredTestDir))
-    ) {
+    if (testDirExistsAndNotEmpty) {
       continue
     } else {
       fs.ensureDirSync(testDir)

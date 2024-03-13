@@ -16,6 +16,11 @@ impl<'ast> AstSnippet<'ast> {
     Self { alloc }
   }
 
+  #[inline]
+  pub fn new_str(&self, value: &str) -> &'ast str {
+    oxc::allocator::String::from_str_in(value, self.alloc).into_bump_str()
+  }
+
   pub fn id(&self, name: Atom<'ast>) -> ast::BindingIdentifier<'ast> {
     ast::BindingIdentifier { name, ..Dummy::dummy(self.alloc) }
   }

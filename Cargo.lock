@@ -41,7 +41,6 @@ checksum = "8901269c6307e8d93993578286ac0edf7f195079ffff5ebdeea6a59ffb7e36bc"
 [[package]]
 name = "anyhow"
 version = "1.0.81"
-version = "1.0.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0952808a6c2afd1aa8947271f3a60f1a6763c7b912d210184c5149b5cf147247"
 
@@ -140,7 +139,7 @@ checksum = "ed570934406eb16438a4e976b1b4500774099c13b8cb96eec99f620f05090ddf"
 name = "bumpalo"
 version = "3.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ea184aa71bb362a1157c896979544cc23974e08fd265f29ea96b59f0b4a555b"
+checksum = "7ff69b9dd49fd426c69a0db9fc04dd934cdb6645ff000864d98f7e2af8830eaa"
 
 [[package]]
 name = "bytes"
@@ -1002,7 +1001,7 @@ dependencies = [
  "oxc_ast",
  "oxc_span",
  "oxc_syntax",
- "sourcemap",
+ "sourcemap 7.1.0",
 ]
 
 [[package]]
@@ -1815,8 +1814,9 @@ dependencies = [
 
 [[package]]
 name = "sourcemap"
-version = "7.1.0"
-source = "git+https://github.com/underfin/rust-sourcemap.git?branch=re-fix-sourceview#92ea888aba4ab4e72c4925e5efbb5c6cc461894b"
+version = "7.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7768edd06c02535e0d50653968f46e1e0d3aa54742190d35dd9466f59de9c71"
 dependencies = [
  "base64-simd",
  "data-encoding",
@@ -1825,7 +1825,7 @@ dependencies = [
  "rustc_version",
  "serde",
  "serde_json",
- "unicode-id",
+ "unicode-id-start",
  "url",
 ]
 
@@ -1843,7 +1843,7 @@ dependencies = [
  "index_vec",
  "once_cell",
  "rustc-hash",
- "sourcemap",
+ "sourcemap 7.1.0",
 ]
 
 [[package]]
@@ -1875,16 +1875,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "terminal_size"
-version = "0.1.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "633c1a546cee861a1a6d0dc69ebeca693bf4296661ba7852b9d21d159e0506df"
-dependencies = [
- "libc",
- "winapi",
 ]
 
 [[package]]

@@ -35,7 +35,7 @@ pub fn collapse_sourcemaps(
       {
         sourcemap_builder.set_source_contents(
           new_token.src_id,
-          original_token.get_source_view().map(|v| v.source()),
+          original_token.get_source_view().map(sourcemap::SourceView::source),
         );
       }
     }

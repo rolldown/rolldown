@@ -9,15 +9,19 @@ import chalk from 'chalk'
 import * as dedent from 'dedent'
 
 // How to use this script
-// 1. Set the tests root directory
 
-const TESTS_ROOT_DIR = import.meta.dirname
-// const TESTS_ROOT_DIR = path.resolve(import.meta.dirname, '..crates/rolldown')
-
-// 2. Set the test suite name.
+// 1. Set the test suite name.
 
 /** @type {TestSuiteName} {@link suites} */
 const SUITE_NAME = 'default'
+
+// 2. Set the tests root directory
+
+const TESTS_ROOT_DIR = path.resolve(
+  import.meta.dirname,
+  'tests/esbuild',
+  SUITE_NAME,
+)
 
 // 3. Download .go test source file located in the suites object
 //    for each suite and place it under "scripts" dir.
@@ -183,16 +187,8 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     if (ignoredTestName.some((name) => testCaseName.includes(name))) {
       continue
     }
-    const testDir = path.resolve(
-      TESTS_ROOT_DIR,
-      `tests/esbuild/${SUITE_NAME}`,
-      testCaseName,
-    )
-    const ignoredTestDir = path.resolve(
-      TESTS_ROOT_DIR,
-      `tests/esbuild/${SUITE_NAME}`,
-      `.${testCaseName}`,
-    )
+    const testDir = path.resolve(TESTS_ROOT_DIR, testCaseName)
+    const ignoredTestDir = path.resolve(TESTS_ROOT_DIR, `.${testCaseName}`)
 
     // Cause if you withdraw directory in git system, git will cleanup dir but leave the directory alone
     if (

@@ -1,3 +1,4 @@
+// cSpell:disable
 pub use sourcemap::SourceMap;
 mod concat_sourcemap;
 

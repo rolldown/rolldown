@@ -1,3 +1,4 @@
+// cSpell:disable
 use rolldown_error::BuildError;
 use sourcemap::{SourceMap, SourceMapBuilder};
 

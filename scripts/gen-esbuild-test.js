@@ -9,11 +9,10 @@ import chalk from 'chalk'
 import * as dedent from 'dedent'
 
 // How to use this script
-// 1. Set the root directory where the 'tests/esbuild' directory will be created.
-//    By default, it's the 'scripts' directory (import.meta.dirname).
+// 1. Set the root directory (relative to scripts dir)
 
-/** Expected values: '../crates/rolldown' or import.meta.dirname, or your variant.  */
-const TESTS_ROOT_DIR = import.meta.dirname
+/** Relative to scripts dir. Expected values: '../crates/rolldown' or './', or your variant.  */
+const TESTS_ROOT_DIR = './'
 
 // 2. Set the test suite name. Refer to the 'suites' constant object for possible variants.
 

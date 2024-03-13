@@ -1,14 +1,12 @@
 // cSpell:disable
-use parcel_sourcemap::SourceMap as ParcelSourcemap;
 use rolldown_error::BuildError;
-
-use crate::SourceMap;
+use sourcemap::{SourceMap, SourceMapBuilder};
 
 pub fn concat_sourcemaps(
   content_and_sourcemaps: &[(String, Option<SourceMap>)],
 ) -> Result<(String, SourceMap), BuildError> {
   let mut s = String::new();
-  let mut map = ParcelSourcemap::new("");
+  let mut sourcemap_builder = SourceMapBuilder::new(None);
   let mut line_offset = 0;
 
   for (index, (content, sourcemap)) in content_and_sourcemaps.iter().enumerate() {
@@ -18,30 +16,34 @@ pub fn concat_sourcemaps(
     }
 
     if let Some(sourcemap) = sourcemap {
-      map
-        .add_sourcemap(
-          &mut sourcemap.get_inner().cloned().ok_or(BuildError::sourcemap_error(
-            "concat sourcemap not inner sourcemap".to_string(),
-          ))?,
-          line_offset.into(),
-        )
-        .map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
+      for source in sourcemap.sources() {
+        let source_id = sourcemap_builder.add_source(source);
+        sourcemap_builder.set_source_contents(source_id, sourcemap.get_source_contents(source_id));
+      }
+      for token in sourcemap.tokens() {
+        sourcemap_builder.add(
+          token.get_dst_line() + line_offset,
+          token.get_dst_col(),
+          token.get_src_line(),
+          token.get_src_col(),
+          token.get_source(),
+          token.get_name(),
+        );
+      }
     }
     line_offset += u32::try_from(content.lines().count() + 1)
       .map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
   }
 
-  Ok((s, map.into()))
+  Ok((s, sourcemap_builder.into_sourcemap()))
 }
 
 #[cfg(test)]
 mod tests {
-  use parcel_sourcemap::SourceMap;
-  use serde_json;
+  pub use sourcemap::SourceMap;
   #[test]
   fn concat_sourcemaps_works() {
-    let map = SourceMap::from_json(
-        "",
+    let map = SourceMap::from_slice(
         r#"{
           "version":3,
           "sourceRoot":"",
@@ -49,9 +51,9 @@ mod tests {
           "sources":["index.ts"],
           "sourcesContent":["function sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n"],
           "names":[]
-        }"#,
+        }"#.as_bytes()
     )
-    .unwrap().into();
+    .unwrap();
     let content_and_sourcemaps = vec![
       ("\nconsole.log()".to_string(), None),
       (
@@ -60,28 +62,19 @@ mod tests {
       ),
     ];
 
-    let (content, mut map) =
-      super::concat_sourcemaps(&content_and_sourcemaps).expect("should not fail");
+    let (content, map) = {
+      let (content, map) =
+        super::concat_sourcemaps(&content_and_sourcemaps).expect("should not fail");
+      let mut buf = vec![];
+      map.to_writer(&mut buf).unwrap();
+      (content, unsafe { String::from_utf8_unchecked(buf) })
+    };
 
     assert_eq!(
       content,
       "\nconsole.log()\nfunction sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n"
     );
-    let expected = r#"{
-      "version": 3,
-      "sources": [
-      "index.ts"
-    ],
-    "sourceRoot": null,
-    "sourcesContent": [
-        "function sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n"
-    ],
-    "names": [],
-    "mappings": ";;;AAAA,SAAS,QAAQ,CAAC,IAAY;IAC5B,OAAO,CAAC,GAAG,CAAC,iBAAU,IAAI,CAAE,CAAC,CAAC;AAChC,CAAC"
-  }"#;
-    assert_eq!(
-      map.to_json().as_str().parse::<serde_json::Value>().unwrap(),
-      expected.parse::<serde_json::Value>().unwrap()
-    );
+    let expected = "{\"version\":3,\"sources\":[\"index.ts\"],\"sourcesContent\":[\"function sayHello(name: string) {\\n  console.log(`Hello, ${name}`);\\n}\\n\"],\"names\":[],\"mappings\":\";;;AAAA,SAAS,QAAQ,CAAC,IAAY;IAC5B,OAAO,CAAC,GAAG,CAAC,iBAAU,IAAI,CAAE,CAAC,CAAC;AAChC,CAAC\"}";
+    assert_eq!(map, expected);
   }
 }

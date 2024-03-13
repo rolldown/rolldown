@@ -124,15 +124,7 @@ export interface ResolveOptions {
   symlinks?: boolean
 }
 
-export interface SourceMap {
-  mappings: string
-  names: Array<string>
-  sourceRoot?: string
-  sources: Array<string>
-  sourcesContent: Array<string>
-}
-
 export interface SourceResult {
   code: string
-  map?: SourceMap
+  map?: string
 }

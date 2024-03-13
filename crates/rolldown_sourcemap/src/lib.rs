@@ -86,7 +86,7 @@ pub fn collapse_sourcemaps(
 #[cfg(test)]
 mod tests {
   use crate::SourceMap;
-  use serde_json;
+  use serde_json::{self, Value};
   #[test]
   fn it_works() {
     let sourcemaps = vec![
@@ -118,8 +118,8 @@ mod tests {
 
     let result =
       super::collapse_sourcemaps(sourcemaps).expect("should not fail").unwrap().to_json();
-
-    let expected = r#"{
+    let expected_json = serde_json::from_str::<Value>(
+      r#"{
       "version": 3,
       "sources": [
       "index.ts"
@@ -136,10 +136,16 @@ mod tests {
       "concat"
     ],
     "mappings": "AAAA,SAAS,SAAS,CAAY,EAC5B,QAAQ,GAAG,CAAC,UAAA,MAAA,CAAU,GACxB"
-  }"#;
-    assert_eq!(
-      result.as_str().parse::<serde_json::Value>().unwrap(),
-      expected.parse::<serde_json::Value>().unwrap()
-    );
+  }"#,
+    )
+    .unwrap();
+    match result {
+      Some(Ok(json_string)) => {
+        let actual_json = serde_json::from_str::<Value>(&json_string).unwrap();
+        assert_eq!(actual_json, expected_json);
+      }
+      Some(Err(e)) => panic!("Error generating JSON: {:?}", e),
+      None => panic!("JSON generation resulted in None"),
+    }
   }
 }

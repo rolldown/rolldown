@@ -1,11 +1,17 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "access": "public",
+  "baseBranch": "main",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
   "fixed": [["rolldown", "@rolldown/wasm-binding"]],
+  "ignore": [
+    "bench",
+    "rolldown-docs",
+    "rolldown-playground",
+    "rollup-tests",
+    "scripts"
+  ],
   "linked": [],
-  "access": "public",
-  "baseBranch": "main",
-  "updateInternalDependencies": "minor",
-  "ignore": []
+  "updateInternalDependencies": "minor"
 }

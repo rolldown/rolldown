@@ -1,4 +1,4 @@
-import type { RollupOptions, RollupOutput } from 'rolldown'
+import type { RollupOptions } from '../../../../src'
 import { expect } from 'vitest'
 import path from 'node:path'
 

@@ -11,19 +11,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@jridgewell/sourcemap-codec": "^1.4.15",
-    "@rollup/plugin-commonjs": "^25.0.7",
-    "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "buble": "^0.20.0",
     "fixturify": "^3.0.0",
     "fs-extra": "^11.2.0",
-    "locate-character": "^3.0.0",
-    "magic-string": "^0.30.8",
     "mocha": "^10.3.0",
     "rolldown": "workspace:*",
-    "terser": "^5.29.1",
-    "typescript": "^5.4.2"
+    "source-map-support": "^0.5.21"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",

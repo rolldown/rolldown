@@ -34,7 +34,7 @@
   "commitMessageAction": "bump up",
   "commitMessageTopic": "{{depName}} version",
   "ignoreDeps": [],
-  "postUpdateOptions": ["yarnDedupeHighest"],
+  "postUpdateOptions": ["pnpmDedupe"],
   "lockFileMaintenance": {
     "enabled": true,
     "extends": ["schedule:weekly"]

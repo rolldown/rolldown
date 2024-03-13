@@ -17,7 +17,8 @@
     "packages/rolldown/src/binding.js",
     "/CHANGELOG.md",
     "/packages/rolldown/src/rollup.d.ts",
-    "/crates/rolldown/tests/esbuild/splitting/ignore-test.md"
+    "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
+    "/pnpm-lock.yaml"
   ],
   "languageSettings": [
     {

@@ -38,8 +38,8 @@
     "prepublishOnly": "napi prepublish -p ./npm --tag-style npm",
     "# Scrips for node #": "_",
     "build-node": "unbuild",
-    "build": "run-s build-binding build-node format-generated-binding-files",
-    "build:release": "run-s build-binding:release build-node format-generated-binding-files",
+    "build": "pnpm build-binding && pnpm build-node && pnpm format-generated-binding-files",
+    "build:release": "pnpm build-binding:release && pnpm build-node && pnpm format-generated-binding-files",
     "# Scrips for checking #": "_",
     "test": "vitest run",
     "test:update": "vitest run -u",
@@ -63,11 +63,10 @@
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0-alpha.43",
-    "@types/node": "^20.11.25",
-    "npm-run-all2": "^6.1.2",
-    "prettier": "^3.2.5",
+    "colorette": "^2.0.20",
+    "glob": "^10.3.10",
+    "rollup": "^4.12.1",
     "type-fest": "^4.12.0",
-    "typescript": "^5.4.2",
     "unbuild": "^2.0.0",
     "vitest": "^1.3.1"
   }

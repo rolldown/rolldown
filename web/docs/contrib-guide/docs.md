@@ -5,7 +5,7 @@ Rolldown is documented using [VitePress](https://vitepress.dev). You can find th
 To contribute to the documentation, you can start the docs dev server running on the project root:
 
 ```
-yarn docs
+pnpm docs
 ```
 
 You can then edit the markdown files and see your changes instantly. The docs structure is configured at `web/docs/.vitepress/config.ts` (see the [Site Config Reference](https://vitepress.dev/reference/site-config)).
@@ -13,8 +13,8 @@ You can then edit the markdown files and see your changes instantly. The docs st
 If you'd like to review the built site, run in the project root:
 
 ```
-yarn docs:build
-yarn docs:preview
+pnpm docs:build
+pnpm docs:preview
 ```
 
 This step isn't needed when contributing if you aren't modifying the docs build setup.

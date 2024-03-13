@@ -95,23 +95,28 @@ jobs:
           bins: just
           cache-base: main
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.4
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: yarn
+          cache: pnpm
 
       - name: Install dependencies
-        run: yarn install
+        run: pnpm install
 
       - name: Build Rolldown
-        run: yarn build
+        run: pnpm build
 
       - name: Type Check
-        run: yarn type-check
+        run: pnpm type-check
 
       - name: Run Test
-        run: yarn test
+        run: pnpm test
 
   node-validation:
     name: Node Validation
@@ -119,23 +124,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.4
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: yarn
+          cache: pnpm
 
       - name: Install dependencies
-        run: yarn install
+        run: pnpm install
 
       - name: Oxc Lint
-        run: yarn lint-code
+        run: pnpm lint-code
 
       - name: Lint Filename
-        run: yarn lint-filename
+        run: pnpm lint-filename
 
       - name: Format Check
-        run: yarn format:ci
+        run: pnpm format:ci
 
       - name: Lint Spell
-        run: yarn lint-spell
+        run: pnpm lint-spell

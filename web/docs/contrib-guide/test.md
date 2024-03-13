@@ -38,8 +38,8 @@ It is our goal to align Rolldown's Node.js API with that of Rollup's as much as 
 
 In `/packages/rolldown`:
 
-- `yarn test` will run rolldown tests.
-- `yarn test:update` will run and update the tests' status.
+- `pnpm test` will run rolldown tests.
+- `pnpm test:update` will run and update the tests' status.
 
 ### Rollup behavior alignment tests
 
@@ -51,5 +51,5 @@ The git submodule should have been initialized after running `just init` when se
 
 In `/packages/rollup-tests`:
 
-- `yarn test` will run rollup tests.
-- `yarn test:update` will run and update the tests' status.
+- `pnpm test` will run rollup tests.
+- `pnpm test:update` will run and update the tests' status.

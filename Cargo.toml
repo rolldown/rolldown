@@ -37,7 +37,7 @@ rest_pat_in_fully_bound_structs = "deny"
 unnecessary_safety_comment      = "deny"
 
 # --- pedantic #https://doc.rust-lang.org/clippy/usage.html#clippypedantic
-# To write the best rust code, pedantic group is enabled by default. 
+# To write the best rust code, pedantic group is enabled by default.
 pedantic = { level = "deny", priority = -1 }
 
 # Wizards, naming is too hard.
@@ -78,6 +78,7 @@ derivative                = "2.2.0"
 futures                   = "0.3.29"
 index_vec                 = "0.1.3"
 insta                     = "1.34.0"
+jemallocator              = { version = "0.5.4" }
 mimalloc                  = "0.1.39"
 napi                      = { version = "2.16.0" }
 napi-build                = { version = "2.1.2" }

@@ -19,5 +19,4 @@ test    = false
 
 [dependencies]
 rolldown_error = { path = "../rolldown_error" }
-sourcemap      = { git = "https://github.com/underfin/rust-sourcemap.git", branch = "re-fix-sourceview" }
-# sourcemap      = { version = "7.1.0" }
+sourcemap      = { version = "7.1.1" }

@@ -1,14 +1,6 @@
-// #[cfg(not(target_family = "wasm"))]
-// #[global_allocator]
-// static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
-#[cfg(not(target_env = "msvc"))]
+#[cfg(not(target_family = "wasm"))]
 #[global_allocator]
-static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
-
-#[cfg(target_os = "windows")]
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 pub mod bundler;
 pub mod options;

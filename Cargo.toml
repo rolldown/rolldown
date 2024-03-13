@@ -78,7 +78,6 @@ derivative                = "2.2.0"
 futures                   = "0.3.29"
 index_vec                 = "0.1.3"
 insta                     = "1.34.0"
-jemallocator              = { version = "0.5.4" }
 mimalloc                  = "0.1.39"
 napi                      = { version = "2.16.0" }
 napi-build                = { version = "2.1.2" }

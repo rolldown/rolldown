@@ -1001,7 +1001,7 @@ dependencies = [
  "oxc_ast",
  "oxc_span",
  "oxc_syntax",
- "sourcemap 7.1.0",
+ "sourcemap 7.1.1",
 ]
 
 [[package]]

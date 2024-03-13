@@ -22,7 +22,8 @@ pub fn render_normal_module(
     None
   } else {
     let mut sourcemap_chain = vec![];
-    let CodegenReturn { source_map, source_text } = OxcCompiler::print(ast, enable_sourcemap);
+    let CodegenReturn { source_map, source_text } =
+      OxcCompiler::print(ast, enable_sourcemap.clone());
     if let Some(source_map) = source_map {
       sourcemap_chain.push(source_map);
     }

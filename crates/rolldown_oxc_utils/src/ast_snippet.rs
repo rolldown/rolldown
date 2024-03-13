@@ -22,7 +22,7 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   pub fn id(&self, name: Atom<'ast>, span: Span) -> ast::BindingIdentifier<'ast> {
-    ast::BindingIdentifier { name, ..Dummy::dummy(self.alloc) }
+    ast::BindingIdentifier { name, span, ..Dummy::dummy(self.alloc) }
   }
 
   pub fn id_ref(&self, name: Atom<'ast>, span: Span) -> ast::IdentifierReference<'ast> {

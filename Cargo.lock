@@ -1001,7 +1001,7 @@ dependencies = [
  "oxc_ast",
  "oxc_span",
  "oxc_syntax",
- "sourcemap 7.1.1",
+ "sourcemap",
 ]
 
 [[package]]
@@ -1536,7 +1536,7 @@ name = "rolldown_sourcemap"
 version = "0.1.0"
 dependencies = [
  "rolldown_error",
- "sourcemap 7.1.1",
+ "sourcemap",
 ]
 
 [[package]]
@@ -1798,22 +1798,6 @@ dependencies = [
 
 [[package]]
 name = "sourcemap"
-version = "7.1.0"
-source = "git+https://github.com/underfin/rust-sourcemap.git?branch=re-fix-sourceview#92ea888aba4ab4e72c4925e5efbb5c6cc461894b"
-dependencies = [
- "base64-simd",
- "data-encoding",
- "debugid",
- "if_chain",
- "rustc_version",
- "serde",
- "serde_json",
- "unicode-id-start",
- "url",
-]
-
-[[package]]
-name = "sourcemap"
 version = "7.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7768edd06c02535e0d50653968f46e1e0d3aa54742190d35dd9466f59de9c71"
@@ -1843,7 +1827,7 @@ dependencies = [
  "index_vec",
  "once_cell",
  "rustc-hash",
- "sourcemap 7.1.0",
+ "sourcemap",
 ]
 
 [[package]]

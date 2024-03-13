@@ -10,7 +10,7 @@ pub fn concat_sourcemaps(
   let line_offsets: Vec<usize> =
     content_and_sourcemaps.iter().map(|(content, _)| content.lines().count() + 1).collect();
 
-  let total_content = content_and_sourcemaps
+  let sourcemap_content = content_and_sourcemaps
     .iter()
     .map(|(content, _)| content.as_str())
     .collect::<Vec<&str>>()
@@ -34,7 +34,7 @@ pub fn concat_sourcemaps(
     line_offset += line_offsets[index];
   }
 
-  Ok((total_content, map.into()))
+  Ok((sourcemap_content, map.into()))
 }
 
 #[cfg(test)]

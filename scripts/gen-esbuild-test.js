@@ -9,12 +9,12 @@ import chalk from 'chalk'
 import * as dedent from 'dedent'
 
 // How to use this script
-// 1. Set the root directory (relative to scripts dir)
+// 1. Set the tests root directory
 
-/** Relative to scripts dir. Expected values: '../crates/rolldown' or './', or your variant.  */
-const TESTS_ROOT_DIR = './'
+const TESTS_ROOT_DIR = import.meta.dirname
+// const TESTS_ROOT_DIR = path.resolve(import.meta.dirname, '..crates/rolldown')
 
-// 2. Set the test suite name. Refer to the 'suites' constant object for possible variants.
+// 2. Set the test suite name.
 
 /** @type {TestSuiteName} {@link suites} */
 const SUITE_NAME = 'default'
@@ -184,13 +184,11 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
       continue
     }
     const testDir = path.resolve(
-      import.meta.dirname,
       TESTS_ROOT_DIR,
       `tests/esbuild/${SUITE_NAME}`,
       testCaseName,
     )
     const ignoredTestDir = path.resolve(
-      import.meta.dirname,
       TESTS_ROOT_DIR,
       `tests/esbuild/${SUITE_NAME}`,
       `.${testCaseName}`,

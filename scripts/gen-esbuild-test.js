@@ -112,7 +112,7 @@ async function readTestSuiteSource(testSuiteName) {
  *
  * @example
  * ```
- * const SUITE_NAME = 'defaut'
+ * const SUITE_NAME = 'default'
  * // Change this constant to 'import.meta.dirname' to generate tests under the 'scripts' directory.
  * const TESTS_ROOT_DIR = '../crates/rolldown'
  * const testCaseName = 'preserve_key_comment'

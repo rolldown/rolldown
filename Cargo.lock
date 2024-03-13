@@ -1822,7 +1822,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "string_wizard"
 version = "0.0.17"
-source = "git+https://github.com/rolldown/string_wizard.git?branch=refactor-sourcemap#fc697a6537435f785f2fe4b466ea939060eb98d8"
+source = "git+https://github.com/rolldown/string_wizard.git?branch=refactor-sourcemap#a42d9fc4fcd670bcaa3280fe6adc2f7d741ebedb"
 dependencies = [
  "index_vec",
  "once_cell",

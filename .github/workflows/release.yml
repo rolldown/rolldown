@@ -72,7 +72,7 @@ jobs:
             build: |
               sudo apt-get install gcc-arm-linux-gnueabihf -y;
               export CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf;
-              pnpm build-binding:release --use-napi-cross
+              pnpm build-binding:release
 
           - os: ubuntu-latest
             target: aarch64-linux-android

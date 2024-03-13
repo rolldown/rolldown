@@ -28,11 +28,11 @@ pub fn render_normal_module(
     }
     let mut source = MagicString::new(source_text);
 
-    // source.prepend(format!("// {}\n", module.pretty_path));
+    source.prepend(format!("// {}\n", module.pretty_path));
 
-    // if enable_sourcemap {
-    //   sourcemap_chain.push(source.source_map(SourceMapOptions { include_content: true }));
-    // }
+    if enable_sourcemap.is_some() {
+      sourcemap_chain.push(source.source_map(SourceMapOptions { include_content: true }));
+    }
 
     Some(RenderedNormalModuleOutput { code: source, sourcemap_chain })
   }

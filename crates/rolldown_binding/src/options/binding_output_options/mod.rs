@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use super::plugin::PluginOptions;
 
-#[napi(object)]
+#[napi(object, object_to_js = false)]
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingOutputOptions {

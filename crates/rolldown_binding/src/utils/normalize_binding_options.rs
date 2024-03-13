@@ -1,12 +1,10 @@
 use std::path::PathBuf;
 
 use rolldown::{InputOptions, OutputOptions};
+use rolldown_error::BuildError;
 use rolldown_plugin::BoxPlugin;
 
-use crate::{
-  options::{plugin::JsAdapterPlugin, ExternalFn},
-  utils::napi_error_ext::NapiErrorExt,
-};
+use crate::options::plugin::PluginAdapter;
 
 pub struct NormalizeBindingOptionsReturn {
   pub input_options: InputOptions,
@@ -25,21 +23,14 @@ pub fn normalize_binding_options(
 
   let external = input_options
     .external
-    .map(|js_fn| {
-      ExternalFn::new(&js_fn).map(|external_fn| {
-        let cb = Box::new(external_fn);
-        rolldown::External::Fn(Box::new(move |source, importer, is_resolved| {
-          let ts_fn = Box::clone(&cb);
-          Box::pin(async move {
-            ts_fn
-              .call_async((source, importer, is_resolved))
-              .await
-              .map_err(NapiErrorExt::into_bundle_error)
-          })
-        }))
-      })
+    .map(|ts_fn| {
+      rolldown::External::Fn(Box::new(move |source, importer, is_resolved| {
+        let ts_fn = ts_fn.clone();
+        Box::pin(async move {
+          ts_fn.call_async((source, importer, is_resolved)).await.map_err(BuildError::from)
+        })
+      }))
     })
-    .transpose()?
     .unwrap_or_default();
 
   let normalized_input_options = InputOptions {
@@ -66,8 +57,8 @@ pub fn normalize_binding_options(
     .plugins
     .into_iter()
     .chain(output_options.plugins)
-    .map(JsAdapterPlugin::new_boxed)
-    .collect::<napi::Result<Vec<_>>>()?;
+    .map(PluginAdapter::new_boxed)
+    .collect::<Vec<_>>();
 
   Ok(NormalizeBindingOptionsReturn {
     input_options: normalized_input_options,

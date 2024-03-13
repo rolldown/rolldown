@@ -1,13 +1,20 @@
 use std::collections::HashMap;
 
 use derivative::Derivative;
-use napi::JsFunction;
+use napi::{
+  bindgen_prelude::{Either, Either3, Promise},
+  threadsafe_function::{ThreadsafeFunction, UnknownReturnValue},
+};
 use rolldown_error::BuildError;
 use serde::Deserialize;
 
-use crate::types::binding_rendered_module::BindingRenderedModule;
+use crate::{
+  types::binding_outputs::BindingOutputs, types::binding_rendered_module::BindingRenderedModule,
+};
 
-#[napi_derive::napi(object)]
+// Using `Either3<Promise<T>, T, UnknownReturnValue>` in callback functions to handle the
+// unknown return value from JavaScript explicit and avoid unexpected panics.
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default, Derivative)]
 #[serde(rename_all = "camelCase")]
 #[derivative(Debug)]
@@ -17,46 +24,78 @@ pub struct PluginOptions {
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "() => Promise<void>")]
-  pub build_start: Option<JsFunction>,
+  pub build_start: Option<ThreadsafeFunction<(), Either<Promise<()>, UnknownReturnValue>, false>>,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(specifier: string, importer?: string, options?: HookResolveIdArgsOptions) => Promise<undefined | ResolveIdResult>"
   )]
-  pub resolve_id: Option<JsFunction>,
+  pub resolve_id: Option<
+    ThreadsafeFunction<
+      (String, Option<String>, Option<HookResolveIdArgsOptions>),
+      Either3<Promise<Option<ResolveIdResult>>, Option<ResolveIdResult>, UnknownReturnValue>,
+      false,
+    >,
+  >,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(id: string) => Promise<undefined | SourceResult>")]
-  pub load: Option<JsFunction>,
+  pub load: Option<
+    ThreadsafeFunction<
+      String,
+      Either3<Promise<Option<SourceResult>>, Option<SourceResult>, UnknownReturnValue>,
+      false,
+    >,
+  >,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(id: string, code: string) => Promise<undefined | SourceResult>")]
-  pub transform: Option<JsFunction>,
+  pub transform: Option<
+    ThreadsafeFunction<
+      (String, String),
+      Either3<Promise<Option<SourceResult>>, Option<SourceResult>, UnknownReturnValue>,
+      false,
+    >,
+  >,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(error: string) => Promise<void>")]
-  pub build_end: Option<JsFunction>,
+  #[napi(ts_type = "(error?: string) => Promise<void>")]
+  pub build_end:
+    Option<ThreadsafeFunction<Option<String>, Either<Promise<()>, UnknownReturnValue>, false>>,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(code: string, chunk: RenderedChunk) => Promise<undefined | HookRenderChunkOutput>"
   )]
-  pub render_chunk: Option<JsFunction>,
+  pub render_chunk: Option<
+    ThreadsafeFunction<
+      (String, RenderedChunk),
+      Either3<
+        Promise<Option<HookRenderChunkOutput>>,
+        Option<HookRenderChunkOutput>,
+        UnknownReturnValue,
+      >,
+      false,
+    >,
+  >,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(bundle: Outputs, isWrite: boolean) => Promise<void>")]
-  pub generate_bundle: Option<JsFunction>,
+  pub generate_bundle: Option<
+    ThreadsafeFunction<(BindingOutputs, bool), Either<Promise<()>, UnknownReturnValue>, false>,
+  >,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(bundle: Outputs) => Promise<void>")]
-  pub write_bundle: Option<JsFunction>,
+  pub write_bundle:
+    Option<ThreadsafeFunction<BindingOutputs, Either<Promise<()>, UnknownReturnValue>, false>>,
 }
 
 #[napi_derive::napi(object)]

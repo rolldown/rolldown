@@ -1,8 +1,7 @@
 // cSpell:disable
 
-use crate::utils::JsCallback;
 use derivative::Derivative;
-use napi::JsFunction;
+use napi::threadsafe_function::ThreadsafeFunction;
 use napi_derive::napi;
 
 use serde::Deserialize;
@@ -14,9 +13,7 @@ use super::plugin::PluginOptions;
 mod binding_input_item;
 mod binding_resolve_options;
 
-pub type ExternalFn = JsCallback<(String, Option<String>, bool), bool>;
-
-#[napi(object)]
+#[napi(object, object_to_js = false)]
 #[derive(Deserialize, Default, Derivative)]
 #[serde(rename_all = "camelCase")]
 #[derivative(Debug)]
@@ -35,7 +32,7 @@ pub struct BindingInputOptions {
   #[napi(
     ts_type = "undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)"
   )]
-  pub external: Option<JsFunction>,
+  pub external: Option<ThreadsafeFunction<(String, Option<String>, bool), bool, false>>,
   pub input: Vec<BindingInputItem>,
   // makeAbsoluteExternalsRelative?: boolean | 'ifRelativeSource';
   // /** @deprecated Use the "manualChunks" output option instead. */

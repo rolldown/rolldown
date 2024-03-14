@@ -1,4 +1,4 @@
-use oxc::{semantic::SymbolId, span::CompactString};
+use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
 use rolldown_common::{AstScope, NormalModuleId, SymbolRef};
 use rustc_hash::FxHashMap;
 

@@ -20,7 +20,7 @@ impl<'ast> AstSnippet<'ast> {
 
   pub fn atom(&self, value: &str) -> Atom<'ast> {
     let alloc_str = allocator::String::from_str_in(value, self.alloc).into_bump_str();
-    Atom::Arena(alloc_str)
+    Atom::from(alloc_str)
   }
 
   pub fn id(&self, name: PassedStr) -> ast::BindingIdentifier<'ast> {

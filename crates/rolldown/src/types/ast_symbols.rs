@@ -1,7 +1,7 @@
 use index_vec::IndexVec;
 use oxc::{
   semantic::{ScopeId, SymbolFlags, SymbolId, SymbolTable},
-  span::{CompactString, Span},
+  span::{CompactStr as CompactString, Span},
 };
 
 #[derive(Debug, Default)]

@@ -108,7 +108,13 @@ impl Chunk {
           if output_options.sourcemap.is_hidden() {
             None
           } else {
-            Some(m.resource_id.expect_file().to_string())
+            Some(
+              m.resource_id
+                .expect_file()
+                .relative_path(&input_options.cwd)
+                .to_string_lossy()
+                .to_string(),
+            )
           },
         );
         Some((
@@ -118,10 +124,10 @@ impl Chunk {
           if output_options.sourcemap.is_hidden() {
             None
           } else {
-            let render_sourcemap_chain =
-              rendered_output.map_or_else(|| vec![], |v| v.sourcemap_chain);
-            let sourcemap_chain =
-              m.sourcemap_chain.iter().chain(render_sourcemap_chain.iter()).collect::<Vec<_>>();
+            let mut sourcemap_chain = m.sourcemap_chain.iter().collect::<Vec<_>>();
+            if let Some(Some(sourcemap)) = rendered_output.as_ref().map(|x| x.sourcemap.as_ref()) {
+              sourcemap_chain.push(sourcemap);
+            }
             Some(collapse_sourcemaps(sourcemap_chain))
           },
         ))

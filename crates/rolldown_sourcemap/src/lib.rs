@@ -1,10 +1,9 @@
 // cSpell:disable
-pub use sourcemap::SourceMap;
+pub use sourcemap::{SourceMap, SourceMapBuilder};
 mod concat_sourcemap;
 
 pub use concat_sourcemap::concat_sourcemaps;
 use rolldown_error::BuildError;
-use sourcemap::SourceMapBuilder;
 
 pub fn collapse_sourcemaps(
   mut sourcemap_chain: Vec<&SourceMap>,

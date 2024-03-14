@@ -157,7 +157,7 @@ jobs:
         run: pnpm install
 
       - name: Build Node Packages
-        run: pnpm build:release
+        run: pnpm build:release:ci
 
       - name: Upload Node Artifact
         uses: actions/upload-artifact@v4
@@ -233,17 +233,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Download Binding Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: packages/rolldown/src
-          name: bindings-${{ matrix.target }}
-
       - name: Download Node Artifacts
         uses: actions/download-artifact@v4
         with:
           path: packages/rolldown/dist
           name: node-artifact
+
+      - name: Download Binding Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: packages/rolldown/dist
+          name: bindings-${{ matrix.target }}
+
+      - name: List rolldown dist
+        run: ls -R ./packages/rolldown/dist
+        shell: bash
 
       - name: Node Test
         run: pnpm test

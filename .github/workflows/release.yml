@@ -236,14 +236,8 @@ jobs:
       - name: Download Binding Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: crates/rolldown_binding/artifacts
-
-      - name: Move Binding Artifacts
-        run: pnpm --filter rolldown artifacts
-
-      - name: List packages
-        run: ls -R ./crates/rolldown_binding
-        shell: bash
+          path: packages/rolldown/src
+          name: bindings-${{ matrix.target }}
 
       - name: Download Node Artifacts
         uses: actions/download-artifact@v4
@@ -285,13 +279,13 @@ jobs:
       - name: Download Binding Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: crates/rolldown_binding/artifacts
+          path: packages/rolldown/artifacts
 
       - name: Move Binding Artifacts
         run: pnpm --filter rolldown artifacts
 
       - name: List packages
-        run: ls -R ./crates/rolldown_binding
+        run: ls -R ./packages/rolldown/npm
         shell: bash
 
       - name: Download Node Artifacts

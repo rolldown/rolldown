@@ -32,8 +32,7 @@ pub fn concat_sourcemaps(
         );
       }
     }
-    line_offset += u32::try_from(content.lines().count() + 1)
-      .map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
+    line_offset += (content.lines().count() + 1) as u32;
   }
 
   Ok((s, sourcemap_builder.into_sourcemap()))

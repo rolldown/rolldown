@@ -49,22 +49,23 @@ jobs:
             target: x86_64-unknown-linux-gnu
             build: |
               export CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu;
+              export CC=clang;
               pnpm build-binding:release --use-napi-cross
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            build: pnpm build-binding:release -x
+            build: pnpm build-binding:release --target x86_64-unknown-linux-musl -x
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             build: |
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-gnu;
+              export CC=clang;
               pnpm build-binding:release --use-napi-cross
 
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             build: |
-              sudo apt-get install gcc-arm-linux-gnueabihf -y;
               export CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf;
               export CC=clang;
               pnpm build-binding:release --use-napi-cross
@@ -85,7 +86,6 @@ jobs:
             target: aarch64-unknown-linux-musl
             build: |
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl;
-              export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc;
               pnpm build-binding:release -x
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}

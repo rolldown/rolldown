@@ -248,6 +248,12 @@ jobs:
           path: packages/rolldown
           name: bindings-${{ matrix.target }}
 
+      - name: Download Binding Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: packages/rolldown/dist
+          name: bindings-${{ matrix.target }}
+
       - name: List rolldown dist
         run: ls -R ./packages/rolldown
         shell: bash

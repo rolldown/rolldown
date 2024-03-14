@@ -7,7 +7,7 @@ on:
   schedule:
     - cron: '0 0 * * *'
   # Uncomment to test in PRs (its safe)
-  pull_request:
+  # pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -343,8 +343,8 @@ jobs:
           pnpm changeset version
           git add --all
           git commit -m "chore: Release"
-        #  pnpm changeset publish
-        #  git push --follow-tags
+          pnpm changeset publish
+          git push --follow-tags
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -354,7 +354,7 @@ jobs:
         if: ${{ needs.plan.outputs.nightly == 'true' }}
         run: |
           pnpm changeset version --snapshot nightly
-        #  pnpm changeset publish
+          pnpm changeset publish
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

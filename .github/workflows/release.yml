@@ -47,31 +47,26 @@ jobs:
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian
-            build: |-
-              set -e;
+            build: |
               export CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu;
-              pnpm build-binding:release
+              pnpm build-binding:release --use-napi-cross
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-            build: pnpm build-binding:release
+            build: pnpm build-binding:release -x
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
-            build: |-
-              set -e;
+            build: |
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-gnu;
-              rustup target add aarch64-unknown-linux-gnu;
-              pnpm build-binding:release
+              pnpm build-binding:release --use-napi-cross
 
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             build: |
               sudo apt-get install gcc-arm-linux-gnueabihf -y;
               export CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf;
+              export CC=clang;
               pnpm build-binding:release --use-napi-cross
 
           - os: ubuntu-latest
@@ -88,13 +83,10 @@ jobs:
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-            build: |-
-              set -e;
-              rustup target add aarch64-unknown-linux-musl;
+            build: |
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl;
               export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc;
-              pnpm build-binding:release
+              pnpm build-binding:release -x
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -109,7 +101,7 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       - uses: goto-bus-stop/setup-zig@v2
-        if: ${{ matrix.target == 'armv7-unknown-linux-gnueabihf' }}
+        if: ${{ contains(matrix.target, 'musl') }}
         with:
           version: 0.11.0
 
@@ -129,18 +121,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build Binding in docker
-        uses: addnab/docker-run-action@v3
-        if: ${{ matrix.docker }}
-        with:
-          image: ${{ matrix.docker }}
-          run: ${{ matrix.build }}
-          options: '--user 0:0 -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index -v ${{ github.workspace }}:/build -w /build'
-          shell: bash
-
       - name: Build Binding
         run: ${{ matrix.build }}
-        if: ${{ !matrix.docker }}
         shell: bash
 
       - name: Upload Binding Artifact

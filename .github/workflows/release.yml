@@ -332,7 +332,9 @@ jobs:
         run: |
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
-          echo "//registry.npmjs.org/:_authToken=$ROLLDOWN_NPM_TOKEN" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=$ROLLDOWN_NPM_TOKEN" >> ~/.npmrc;
+          git config --global user.email "github-actions[bot]@users.noreply.github.com";
+          git config --global user.name "github-actions[bot]";
 
       # Only runs when manually dispatched
       - name: Publish
@@ -351,7 +353,7 @@ jobs:
       - name: Publish nightly
         if: ${{ needs.plan.outputs.nightly == 'true' }}
         run: |
-          pnpm changeset --snapshot nightly
+          pnpm changeset version --snapshot nightly
         #  pnpm changeset publish
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}

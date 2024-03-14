@@ -18,7 +18,8 @@ export default defineBuildConfig({
       const binaryFiles = globSync('./src/rolldown-binding.*.node', {
         absolute: true,
       })
-      if (binaryFiles.length === 0) {
+      // Binary build is on the separate step on CI
+      if (!process.env.CI && binaryFiles.length === 0) {
         throw new Error('No binary files found')
       }
       // Move the binary file to dist

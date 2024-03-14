@@ -39,9 +39,7 @@ jobs:
           cache-target: release
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8.15.4
+        uses: pnpm/action-setup@v3
 
       - name: Install node
         uses: actions/setup-node@v4

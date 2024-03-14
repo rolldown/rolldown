@@ -1,4 +1,4 @@
-use oxc::span::{Atom, CompactString};
+use oxc::span::{Atom, CompactStr};
 
 use crate::Rstr;
 
@@ -8,14 +8,11 @@ pub trait ToRstr {
 
 impl ToRstr for Atom<'_> {
   fn to_rstr(&self) -> Rstr {
-    match self {
-      Atom::Arena(s) => Rstr((*s).to_string().into()),
-      Atom::Compact(s) => Rstr(s.clone()),
-    }
+    Rstr(CompactStr::new(self.as_str()))
   }
 }
 
-impl ToRstr for CompactString {
+impl ToRstr for CompactStr {
   fn to_rstr(&self) -> Rstr {
     Rstr(self.clone())
   }

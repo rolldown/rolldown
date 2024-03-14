@@ -210,6 +210,9 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
 
+          - os: macos-14
+            target: aarch64-apple-darwin
+
           - os: windows-latest
             target: x86_64-pc-windows-msvc
 
@@ -242,11 +245,11 @@ jobs:
       - name: Download Binding Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: packages/rolldown/dist
+          path: packages/rolldown
           name: bindings-${{ matrix.target }}
 
       - name: List rolldown dist
-        run: ls -R ./packages/rolldown/dist
+        run: ls -R ./packages/rolldown
         shell: bash
 
       - name: Node Test

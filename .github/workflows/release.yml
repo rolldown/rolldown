@@ -245,7 +245,7 @@ jobs:
       - name: Download Binding Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: packages/rolldown
+          path: packages/rolldown/src
           name: bindings-${{ matrix.target }}
 
       - name: Download Binding Artifacts

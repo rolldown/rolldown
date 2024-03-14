@@ -85,7 +85,6 @@ jobs:
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             build: |
-              cargo install cargo-zigbuild
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl;
               pnpm build-binding:release -x --target aarch64-unknown-linux-musl
     name: Build ${{ matrix.target }}
@@ -105,6 +104,11 @@ jobs:
         if: ${{ contains(matrix.target, 'musl') }}
         with:
           version: 0.11.0
+
+      - uses: taiki-e/install-action@v2
+        if: ${{ contains(matrix.target, 'musl') }}
+        with:
+          tool: cargo-zigbuild
 
       # https://github.com/nodejs/node-gyp/issues/2869
       - name: Setup python

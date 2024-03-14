@@ -129,13 +129,14 @@ jobs:
         run: pip install setuptools
         if: ${{ matrix.os == 'macos-latest' }}
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        run: corepack enable
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install
@@ -159,13 +160,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        run: corepack enable
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install
@@ -191,13 +193,14 @@ jobs:
         with:
           cache-base: main
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        run: corepack enable
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install
@@ -240,13 +243,14 @@ jobs:
         with:
           submodules: true # Pull submodules for additional files
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        run: corepack enable
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install
@@ -288,13 +292,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        run: corepack enable
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install && git reset --hard # fix pnpm install add new line for package.json
@@ -331,7 +336,7 @@ jobs:
 
       # Only runs when manually dispatched
       - name: Publish
-        if: ${{ needs.plan.outputs.publish }}
+        if: ${{ needs.plan.outputs.publish == 'true' }}
         run: |
           pnpm changeset version
           git add --all
@@ -344,7 +349,7 @@ jobs:
 
       # Only runs for nightly
       - name: Publish nightly
-        if: ${{ needs.plan.outputs.nightly }}
+        if: ${{ needs.plan.outputs.nightly == 'true' }}
         run: |
           pnpm changeset --snapshot nightly
         #  pnpm changeset publish

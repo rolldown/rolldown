@@ -2,6 +2,7 @@
 use rolldown_error::BuildError;
 use sourcemap::{SourceMap, SourceMapBuilder};
 
+#[allow(clippy::cast_possible_truncation)]
 pub fn concat_sourcemaps(
   content_and_sourcemaps: &[(String, Option<SourceMap>)],
 ) -> Result<(String, SourceMap), BuildError> {

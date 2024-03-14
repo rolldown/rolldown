@@ -30,7 +30,7 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   pub fn id_name(&self, name: Atom<'ast>, span: Span) -> ast::IdentifierName<'ast> {
-    ast::IdentifierName { name, span, ..Dummy::dummy(self.alloc) }
+    ast::IdentifierName { name, span }
   }
 
   pub fn id_ref_expr(&self, name: Atom<'ast>, span: Span) -> ast::Expression<'ast> {

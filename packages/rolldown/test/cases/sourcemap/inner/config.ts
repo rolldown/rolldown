@@ -5,13 +5,11 @@ import { expect } from 'vitest'
 const config: RollupOptions = {
   input: [path.join(__dirname, 'main.js')],
   output: {
-    sourcemap: true
-  }
+    sourcemap: true,
+  },
 }
 
 export default {
   config,
-  afterTest: function (output: RollupOutput) {
-    
-  },
+  afterTest: function (output: RollupOutput) {},
 }

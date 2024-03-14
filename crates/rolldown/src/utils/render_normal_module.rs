@@ -10,7 +10,11 @@ pub struct RenderedNormalModuleOutput {
   pub sourcemap: Option<SourceMap>,
 }
 
-#[allow(clippy::unnecessary_wraps)]
+#[allow(
+  clippy::unnecessary_wraps,
+  clippy::cast_possible_truncation,
+  clippy::needless_pass_by_value
+)]
 pub fn render_normal_module(
   module: &NormalModule,
   _ctx: &ModuleRenderContext<'_>,
@@ -40,7 +44,7 @@ pub fn render_normal_module(
             .set_source_contents(source_id, source_map.get_source_contents(id as u32));
         }
 
-        for token in source_map.tokens().into_iter() {
+        for token in source_map.tokens() {
           sourcemap_builder.add(
             token.get_dst_line() + 1, // line offset by prepend comment
             token.get_dst_col(),

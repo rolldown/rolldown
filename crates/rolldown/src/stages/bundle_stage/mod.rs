@@ -96,7 +96,8 @@ impl<'a> BundleStage<'a> {
 
     render_chunks(self.plugin_driver, chunks).await?.into_iter().try_for_each(
       |(mut content, map, rendered_chunk)| -> Result<(), BuildError> {
-        if let Some(map) = map {
+        if let Some(mut map) = map {
+          map.set_file(Some(rendered_chunk.file_name.clone()));
           match self.output_options.sourcemap {
             SourceMapType::File => {
               let map = {
@@ -104,10 +105,12 @@ impl<'a> BundleStage<'a> {
                 map.to_writer(&mut buf).map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
                 unsafe { String::from_utf8_unchecked(buf) }
               };
+              let map_file_name = format!("{}.map", rendered_chunk.file_name);
               assets.push(Output::Asset(Box::new(OutputAsset {
-                file_name: format!("{}.map", rendered_chunk.file_name),
+                file_name: map_file_name.clone(),
                 source: map,
               })));
+              content.push_str(&format!("\n//# sourceMappingURL={map_file_name}"));
             }
             SourceMapType::Inline => {
               let data_url =

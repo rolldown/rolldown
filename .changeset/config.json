@@ -13,5 +13,8 @@
     "scripts"
   ],
   "linked": [],
+  "snapshot": {
+    "useCalculatedVersion": true
+  },
   "updateInternalDependencies": "minor"
 }

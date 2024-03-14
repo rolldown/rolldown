@@ -85,6 +85,7 @@ jobs:
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             build: |
+              cargo install cargo-zigbuild
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl;
               pnpm build-binding:release -x --target aarch64-unknown-linux-musl
     name: Build ${{ matrix.target }}

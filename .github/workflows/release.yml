@@ -1,13 +1,26 @@
 name: Release
 
 on:
+  # Manually released
   workflow_dispatch:
+  # Every day at midnight (nightly)
+  schedule:
+    - cron: '0 0 * * *'
+  # Uncomment to test in PRs (its safe)
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Plan release
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ github.event_name == 'workflow_dispatch' }}
+      nightly: ${{ github.event_name == 'schedule' || github.event_name == 'pull_request' }}
+
   build-binding:
     strategy:
       fail-fast: false
@@ -199,6 +212,7 @@ jobs:
 
   test:
     needs:
+      - plan
       - build-binding
       - build-wasm
       - build-node-packages
@@ -261,12 +275,13 @@ jobs:
         run: pnpm test
 
   publish:
-    name: Publish Npm Packages
+    name: Publish npm Packages
     runs-on: ubuntu-latest
     permissions:
       contents: write # for softprops/action-gh-release@v1
       id-token: write # for `npm publish --provenance`
     needs:
+      - plan
       - test
     steps:
       - uses: actions/checkout@v4
@@ -306,16 +321,31 @@ jobs:
           path: packages/rolldown/dist
           name: node-artifact
 
-      - name: Publish
+      - name: Prepare publish
         run: |
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
           echo "//registry.npmjs.org/:_authToken=$ROLLDOWN_NPM_TOKEN" >> ~/.npmrc
+
+      # Only runs when manually dispatched
+      - name: Publish
+        if: ${{ needs.plan.outputs.publish }}
+        run: |
           pnpm changeset version
           git add --all
           git commit -m "chore: Release"
-          pnpm changeset publish
-          git push --follow-tags
+        #  pnpm changeset publish
+        #  git push --follow-tags
+        env:
+          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Only runs for nightly
+      - name: Publish nightly
+        if: ${{ needs.plan.outputs.nightly }}
+        run: |
+          pnpm changeset --snapshot nightly
+        #  pnpm changeset publish
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

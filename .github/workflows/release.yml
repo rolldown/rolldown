@@ -157,7 +157,7 @@ jobs:
         run: pnpm install
 
       - name: Build Node Packages
-        run: pnpm build:release:ci
+        run: pnpm --filter rolldown build:release:ci
 
       - name: Upload Node Artifact
         uses: actions/upload-artifact@v4

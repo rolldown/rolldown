@@ -21,8 +21,8 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      rust-changes: ${{ steps.filter.outputs.rust-changes || github.ref_name == 'main' }}
-      node-changes: ${{ steps.filter.outputs.node-changes || github.ref_name == 'main' }}
+      rust-changes: ${{ steps.filter.outputs.rust-changes == 'true' || github.ref_name == 'main' }}
+      node-changes: ${{ steps.filter.outputs.node-changes == 'true' || github.ref_name == 'main' }}
     steps:
       # For pull requests it's not necessary to checkout the code
       - uses: actions/checkout@v4 #Fix https://github.com/dorny/paths-filter/issues/212
@@ -49,7 +49,7 @@ jobs:
   cargo-deny:
     name: Cargo Deny
     needs: changes
-    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
+    if: ${{ needs.changes.outputs.rust-changes }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,7 +70,7 @@ jobs:
   rust-validation:
     name: Rust Validation
     needs: changes
-    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
+    if: ${{ needs.changes.outputs.rust-changes }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +93,7 @@ jobs:
     uses: ./.github/workflows/reusable-cargo-test.yml
     with:
       os: ${{ matrix.target }}
-      changed: ${{ needs.changes.outputs.rust-changes == 'true' }}
+      changed: ${{ needs.changes.outputs.rust-changes }}
 
   node-test:
     needs: changes
@@ -103,12 +103,12 @@ jobs:
     uses: ./.github/workflows/reusable-node-test.yml
     with:
       os: ${{ matrix.target }}
-      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+      changed: ${{ needs.changes.outputs.node-changes }}
 
   node-validation:
     name: Node Validation
     needs: changes
-    if: ${{ needs.changes.outputs.node-changes == 'true' }}
+    if: ${{ needs.changes.outputs.node-changes }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -90,7 +90,7 @@ jobs:
     uses: ./.github/workflows/reusable-cargo-test.yml
     with:
       os: ${{ matrix.target }}
-      skipped: ${{ needs.changes.outputs.rust-changes == 'true' }}
+      changed: ${{ needs.changes.outputs.rust-changes == 'true' }}
 
   node-test:
     name: Node Test

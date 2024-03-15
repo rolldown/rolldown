@@ -6,13 +6,13 @@ on:
       os:
         required: true
         type: string
-      skipped:
+      changed:
         required: true
         type: boolean
 
 jobs:
   cargo-test:
-    if: ${{ !inputs.skipped }}
+    if: ${{ changed }}
     name: Cargo Test - ${{ inputs.os }}
     runs-on: ${{ inputs.os }}
     steps:

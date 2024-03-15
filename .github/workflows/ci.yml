@@ -48,8 +48,8 @@ jobs:
               - '/pnpm-workspace.yaml'
       - name: Show outputs
         run: |
-          echo "Rust changes: ${{ steps.filter.outputs.rust-changes }}"
-          echo "Node changes: ${{ steps.filter.outputs.node-changes }}"
+          echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"
+          echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
 
   cargo-deny:
     name: Cargo Deny

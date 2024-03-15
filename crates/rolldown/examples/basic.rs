@@ -5,7 +5,10 @@ use sugar_path::SugarPathBuf;
 #[tokio::main]
 async fn main() {
   rolldown_tracing::try_init_tracing();
-  let root = PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap());
+  let root = PathBuf::from(
+    &std::env::var("CARGO_MANIFEST_DIR")
+      .unwrap_or(std::env::current_dir().unwrap().display().to_string()),
+  );
   let cwd = root.join("./examples").into_normalize();
   let mut bundler = Bundler::new(InputOptions {
     input: vec![

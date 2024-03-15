@@ -14,13 +14,6 @@ jobs:
     name: Cargo Test - ${{ inputs.os }}
     runs-on: ${{ inputs.os }}
     steps:
-    - uses: actions/labeler@v4
-      with:
-        repo-token: ${{ secrets.token }}
-        configuration-path: ${{ inputs.config-path }}
-
-runs:
- steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust
@@ -34,3 +27,5 @@ runs:
 
       - name: Run Test
         run: just test-rust
+
+

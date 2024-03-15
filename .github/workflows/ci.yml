@@ -16,13 +16,14 @@ concurrency:
 
 jobs:
   # JOB to run change detection
-  changes: # https://github.com/dorny/paths-filter
+  Changes: # https://github.com/dorny/paths-filter
+    name: Detect Changes
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
     outputs:
-      rust-changes: ${{ steps.filter.outputs.rust-changes || github.ref_name == 'main' }}
-      node-changes: ${{ steps.filter.outputs.node-changes || github.ref_name == 'main' }}
+      rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}
+      node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
     steps:
       # For pull requests it's not necessary to checkout the code
       - uses: actions/checkout@v4 #Fix https://github.com/dorny/paths-filter/issues/212
@@ -45,6 +46,10 @@ jobs:
               - '/package.json'
               - '/pnpm-lock.yaml'
               - '/pnpm-workspace.yaml'
+      - name: Show outputs
+        run: |
+          echo "Rust changes: ${{ steps.filter.outputs.rust-changes }}"
+          echo "Node changes: ${{ steps.filter.outputs.node-changes }}"
 
   cargo-deny:
     name: Cargo Deny

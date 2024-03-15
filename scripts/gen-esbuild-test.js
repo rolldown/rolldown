@@ -8,12 +8,24 @@ import * as changeCase from 'change-case'
 import chalk from 'chalk'
 import * as dedent from 'dedent'
 
-const __dirname = import.meta.dirname
-
 // How to use this script
-// 1. Adding a test golang file under this dir or wherever you want, and modify the source path
-// 2. `let testDir = path.resolve(__dirname, "test", testCaseName);` Modify this testDir, by default,
-// The script will generate testCases under `${__dirname}/test`
+
+// 1. Set the test suite name.
+
+/** @type {TestSuiteName} {@link suites} */
+const SUITE_NAME = 'default'
+
+// 2. Set the tests root directory
+
+const TESTS_ROOT_DIR = path.resolve(
+  import.meta.dirname,
+  'tests/esbuild',
+  SUITE_NAME,
+)
+
+// 3. Download .go test source file located in the suites object
+//    for each suite and place it under "scripts" dir.
+//    (You can skip this step, the script can download it for you)
 
 /**
  * Constant object containing test suites.
@@ -91,11 +103,8 @@ async function readTestSuiteSource(testSuiteName) {
   }
 }
 
-/** @type {TestSuiteName} */
-const TEST_SUITE_NAME = 'default'
-const currentSuite = suites[TEST_SUITE_NAME]
 /** The contents of the .go test source file. {@link suites} */
-const source = await readTestSuiteSource(TEST_SUITE_NAME)
+const source = await readTestSuiteSource(SUITE_NAME)
 const ignoredTestName = [
   'ts',
   'txt',
@@ -178,16 +187,8 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     if (ignoredTestName.some((name) => testCaseName.includes(name))) {
       continue
     }
-    let testDir = path.resolve(
-      __dirname,
-      `../crates/rolldown/tests/esbuild/${currentSuite.name}`,
-      testCaseName,
-    )
-    let ignoredTestDir = path.resolve(
-      __dirname,
-      `../crates/rolldown/tests/esbuild/${currentSuite.name}`,
-      `.${testCaseName}`,
-    )
+    const testDir = path.resolve(TESTS_ROOT_DIR, testCaseName)
+    const ignoredTestDir = path.resolve(TESTS_ROOT_DIR, `.${testCaseName}`)
 
     // Cause if you withdraw directory in git system, git will cleanup dir but leave the directory alone
     if (

@@ -1,0 +1,36 @@
+name: Rustup
+
+description: Run cargo test
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
+
+jobs:
+  cargo-test:
+    name: Cargo Test - ${{ inputs.os }}
+    runs-on: ${{ inputs.os }}
+    steps:
+    - uses: actions/labeler@v4
+      with:
+        repo-token: ${{ secrets.token }}
+        configuration-path: ${{ inputs.config-path }}
+
+runs:
+ steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          bins: just
+          cache-base: main
+
+      - name: Build
+        run: cargo test --no-run
+
+      - name: Run Test
+        run: just test-rust

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Parser from 'tree-sitter'
 import Go from 'tree-sitter-go'
 import fs from 'fs-extra'
@@ -58,6 +57,8 @@ const suites = /** @type {const} */ ({
  * An object with properties describing the test suite.
  * @typedef {suites[keyof suites]} TestSuite
  */
+
+/** @typedef {{files: Array<{name: string; content: string}>; entryPaths: string[]; options: void; expectedCompileLog?: string}} JsConfig */
 
 /**
  * Attempts to read the .go source file based on the provided test suite name. {@link suites}
@@ -170,6 +171,10 @@ function getTopLevelBinding(root) {
 let topLevelBindingMap = getTopLevelBinding(tree.rootNode)
 let query = new Parser.Query(parser.getLanguage(), queryString)
 
+/**
+ * @param {string} dir - The directory path.
+ * @returns {boolean}
+ */
 function isDirEmptySync(dir) {
   let list = fs.readdirSync(dir)
   return list.length === 0
@@ -177,8 +182,12 @@ function isDirEmptySync(dir) {
 
 for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
   let child = tree.rootNode.namedChild(i)
-  if (child.type == 'function_declaration') {
-    let testCaseName = child.namedChild(0).text
+  if (child?.type == 'function_declaration') {
+    let testCaseName = child.namedChild(0)?.text
+    if (!testCaseName) {
+      console.error(`No test case name, root's child index: ${i}`)
+      continue
+    }
     testCaseName = testCaseName.slice(4) // every function starts with "Test"
     testCaseName = changeCase.snakeCase(testCaseName)
 
@@ -202,6 +211,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     let bundle_field_list = query.captures(child).filter((item) => {
       return item.name === 'element_list'
     })
+    /** @type {JsConfig} */
     let jsConfig = Object.create(null)
     bundle_field_list.forEach((cap) => {
       processKeyElement(cap.node, jsConfig, topLevelBindingMap)
@@ -232,7 +242,8 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     })
 
     // entry
-    const config = { input: {} }
+    /** @type {{input: {input: Array<{name: string; import: string}>}}} */
+    const config = { input: Object.create({}) }
     const entryPaths = jsConfig['entryPaths'] ?? []
     if (!entryPaths.length) {
       console.error(chalk.red(`No entryPaths found`))
@@ -260,6 +271,10 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
   }
 }
 
+/**
+ * @param {string[]} stringList
+ * @returns {string}
+ */
 function calculatePrefix(stringList) {
   if (stringList.length < 2) {
     return ''
@@ -281,26 +296,34 @@ function calculatePrefix(stringList) {
 }
 
 /**
- * @param {import('tree-sitter').SyntaxNode} node
- * @param {{[x: string]: import('tree-sitter').SyntaxNode} } binding
+ * @param {Parser.SyntaxNode} node
+ * @param {Record<string, Parser.SyntaxNode>} binding
+ * @returns {Array<{name: string; content: string}>}
  */
 function processFiles(node, binding) {
-  if (node.firstChild.type === 'identifier') {
+  if (node.firstChild?.type === 'identifier') {
     let name = node.firstChild.text
     if (binding[name]) {
       node = binding[name]
     }
   }
+  /** @type Array<{name: string; content: string}> */
   let fileList = []
   let compositeLiteral = node.namedChild(0)
-  let body = compositeLiteral.namedChild(1)
+  let body = compositeLiteral?.namedChild(1)
   try {
+    if (!body) {
+      throw new Error('No body')
+    }
     body.namedChildren.forEach((child) => {
       if (child.type !== 'keyed_element') {
         return
       }
       let name = child.namedChild(0)?.text.slice(1, -1)
-      let content = child.namedChild(1).text.slice(1, -1).trim()
+      if (!name) {
+        throw new Error(`File has no name`)
+      }
+      let content = child.namedChild(1)?.text.slice(1, -1).trim() ?? ''
       content = dedent.default(content)
       fileList.push({
         name,
@@ -315,22 +338,30 @@ function processFiles(node, binding) {
 }
 
 /**
- * @param {import('tree-sitter').SyntaxNode} node
- * @param {[x: string]: import('tree-sitter').SyntaxNode} binding
+ * @param {Parser.SyntaxNode} node
+ * @param {Record<string, Parser.SyntaxNode>} binding
+ * @returns {string[]}
  */
 function processEntryPath(node, binding) {
-  if (node.firstChild.type === 'identifier') {
+  if (node.firstChild?.type === 'identifier') {
     let name = node.firstChild.text
     if (binding[name]) {
       node = binding[name]
     }
   }
+  /** @type {string[]} */
   let entryList = []
   let compositeLiteral = node.namedChild(0)
-  let body = compositeLiteral.namedChild(1)
+  let body = compositeLiteral?.namedChild(1)
   try {
+    if (!body) {
+      throw new Error('No body')
+    }
     body.namedChildren.forEach((child) => {
-      let entry = child.namedChild(0).text.slice(1, -1)
+      let entry = child.namedChild(0)?.text.slice(1, -1)
+      if (!entry) {
+        throw new Error('No entry')
+      }
       entryList.push(entry)
     })
 
@@ -343,30 +374,34 @@ function processEntryPath(node, binding) {
 
 // TODO only preserve mode ModeBundle test case
 /**
- * @param {import('tree-sitter').SyntaxNode} node
+ * @param {Parser.SyntaxNode} node
  */
 function processOptions(node) {}
 
 /**
- * @param {import('tree-sitter').SyntaxNode} node
- * @param {*} config
- * @param {{[x: string]: import('tree-sitter').SyntaxNode} } binding
- *
+ * @param {Parser.SyntaxNode} node
+ * @param {JsConfig} jsConfig
+ * @param {Record<string, Parser.SyntaxNode>} binding
+ * @returns {void}
  */
-function processKeyElement(node, config, binding) {
-  let keyValue = node.namedChild(0).text
+function processKeyElement(node, jsConfig, binding) {
+  let keyValue = node.namedChild(0)?.text
+  let child = node.namedChild(1)
+  if (!child) {
+    throw new Error(`Coult not find namedChild(1)`)
+  }
   switch (keyValue) {
     case 'files':
-      config['files'] = processFiles(node.namedChild(1), binding)
+      jsConfig['files'] = processFiles(child, binding)
       break
     case 'entryPaths':
-      config['entryPaths'] = processEntryPath(node.namedChild(1), binding)
+      jsConfig['entryPaths'] = processEntryPath(child, binding)
       break
     case 'options':
-      config['options'] = processOptions(node.namedChild(1))
+      jsConfig['options'] = processOptions(child)
       break
     case 'expectedCompileLog':
-      config['expectedCompileLog'] = node.namedChild(1).text.slice(1, -1)
+      jsConfig['expectedCompileLog'] = child.text.slice(1, -1)
       break
     default:
       console.log(chalk.yellow(`unknown filed ${keyValue}`))

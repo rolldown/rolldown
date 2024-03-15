@@ -16,7 +16,8 @@ concurrency:
 
 jobs:
   # JOB to run change detection
-  changes: # https://github.com/dorny/paths-filter
+  Changes: # https://github.com/dorny/paths-filter
+    name: Detect Changes
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read

@@ -87,7 +87,7 @@ jobs:
     needs: changes
     strategy:
       matrix:
-        target: [ubuntu-latest]
+        target: [ubuntu-latest, macos-latest]
     uses: ./.github/workflows/reusable-cargo-test.yml
     with:
       os: ${{ matrix.target }}

@@ -1,4 +1,4 @@
-name: Rustup
+name: Rust Test
 
 description: Run cargo test
 

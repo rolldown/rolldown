@@ -6,7 +6,7 @@ on:
       os:
         required: true
         type: string
-    skipped:
+      skipped:
         required: true
         type: boolean
 

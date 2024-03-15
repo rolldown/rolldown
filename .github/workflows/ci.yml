@@ -83,7 +83,7 @@ jobs:
       - name: Lint
         run: just lint-rust
 
-  cargo-test-ubuntu:
+  rust-test:
     strategy:
       matrix:
         target: [ubuntu-latest]

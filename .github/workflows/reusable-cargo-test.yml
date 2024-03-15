@@ -12,7 +12,7 @@ on:
 
 jobs:
   cargo-test:
-    if: ${{ changed }}
+    if: ${{ !inputs.changed }}
     name: Cargo Test - ${{ inputs.os }}
     runs-on: ${{ inputs.os }}
     steps:

@@ -84,10 +84,13 @@ jobs:
         run: just lint-rust
 
   cargo-test-ubuntu:
-    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
+    strategy:
+      matrix:
+        target: [ubuntu-latest]
     uses: ./.github/workflows/reusable-cargo-test.yml
     with:
-      os: ubuntu-latest
+      os: ${{ matrix.target }}
+      skipped: ${{ needs.changes.outputs.rust-changes == 'true' }}
 
   node-test:
     name: Node Test

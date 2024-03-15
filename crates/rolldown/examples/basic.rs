@@ -9,7 +9,7 @@ async fn main() {
     &std::env::var("CARGO_MANIFEST_DIR")
       .unwrap_or(std::env::current_dir().unwrap().display().to_string()),
   );
-  let cwd = root.join("./examples1").into_normalize();
+  let cwd = root.join("./examples").into_normalize();
   let mut bundler = Bundler::new(InputOptions {
     input: vec![
       InputItem { name: Some("react-dom".to_string()), import: "react-dom".to_string() },

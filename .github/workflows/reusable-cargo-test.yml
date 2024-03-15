@@ -29,5 +29,3 @@ jobs:
 
       - name: Run Test
         run: just test-rust
-
-

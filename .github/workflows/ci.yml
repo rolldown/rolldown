@@ -25,6 +25,7 @@ jobs:
       node-changes: ${{ steps.filter.outputs.node-changes }}
     steps:
       # For pull requests it's not necessary to checkout the code
+      - uses: actions/checkout@v4 #Fix https://github.com/dorny/paths-filter/issues/212
       - uses: dorny/paths-filter@v3
         id: filter
         with:

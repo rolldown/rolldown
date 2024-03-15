@@ -11,7 +11,7 @@ on:
         type: boolean
 
 jobs:
-  cargo-test:
+  run:
     if: ${{ inputs.changed }}
     name: Cargo Test
     runs-on: ${{ inputs.os }}

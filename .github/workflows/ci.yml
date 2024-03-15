@@ -45,11 +45,15 @@ jobs:
               - '/package.json'
               - '/pnpm-lock.yaml'
               - '/pnpm-workspace.yaml'
+      - name: Show outputs
+        run: |
+          echo "Rust changes: ${{ steps.filter.outputs.rust-changes }}"
+          echo "Node changes: ${{ steps.filter.outputs.node-changes }}"
 
   cargo-deny:
     name: Cargo Deny
     needs: changes
-    if: ${{ needs.changes.outputs.rust-changes }}
+    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,7 +74,7 @@ jobs:
   rust-validation:
     name: Rust Validation
     needs: changes
-    if: ${{ needs.changes.outputs.rust-changes }}
+    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +97,7 @@ jobs:
     uses: ./.github/workflows/reusable-cargo-test.yml
     with:
       os: ${{ matrix.target }}
-      changed: ${{ needs.changes.outputs.rust-changes }}
+      changed: ${{ needs.changes.outputs.rust-changes == 'true' }}
 
   node-test:
     needs: changes
@@ -103,12 +107,12 @@ jobs:
     uses: ./.github/workflows/reusable-node-test.yml
     with:
       os: ${{ matrix.target }}
-      changed: ${{ needs.changes.outputs.node-changes }}
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-validation:
     name: Node Validation
     needs: changes
-    if: ${{ needs.changes.outputs.node-changes }}
+    if: ${{ needs.changes.outputs.node-changes == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

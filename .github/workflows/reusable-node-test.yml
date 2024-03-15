@@ -1,0 +1,51 @@
+name: Rust Test
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
+      changed:
+        required: true
+        type: boolean
+
+jobs:
+  run:
+    name: Node Test
+    if: ${{ inputs.changed }}
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true # Pull submodules for additional files
+
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          bins: just
+          cache-base: main
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Rolldown
+        run: pnpm build
+
+      - name: Type Check
+        run: pnpm type-check
+
+      - name: Run Test
+        run: pnpm test

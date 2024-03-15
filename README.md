@@ -4,7 +4,6 @@
   </a>
 </p>
 
-
 <div align="center">
 
 [![MIT licensed][license-badge]][license-url]
@@ -14,7 +13,6 @@
 [![Discord chat][discord-badge]][discord-url]
 
 </div>
-
 
 > 🚧 **Work in Progress**
 >
@@ -55,8 +53,6 @@ This project also partially contains code derived or copied from the following p
 - [esbuild(MIT)](https://github.com/evanw/esbuild/blob/0c8a0a901d9a6c7bbff9b4dd347c8a3f65f6c6dd/LICENSE.md)
 
 Licenses of these projects are listed in [THIRD-PARTY-LICENSE](/THIRD-PARTY-LICENSE)
-
-
 
 [discord-badge]: https://img.shields.io/discord/1079625926024900739?logo=discord&label=Discord
 [discord-url]: https://chat.rolldown.rs

@@ -1,7 +1,5 @@
 name: Rust Test
 
-description: Run cargo test
-
 on:
   workflow_call:
     inputs:

@@ -1,13 +1,28 @@
 name: Release
 
 on:
+  # Manually released
   workflow_dispatch:
+  # Every day at midnight (nightly)
+  schedule:
+    - cron: '0 0 * * *'
+  # Uncomment to test in PRs (its safe)
+  # pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Plan release
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ github.event_name == 'workflow_dispatch' }}
+      nightly: ${{ github.event_name == 'schedule' || github.event_name == 'pull_request' }}
+    steps:
+      - run: 'echo "Planning release"'
+
   build-binding:
     strategy:
       fail-fast: false
@@ -114,13 +129,14 @@ jobs:
         run: pip install setuptools
         if: ${{ matrix.os == 'macos-latest' }}
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        run: corepack enable
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install
@@ -144,13 +160,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        run: corepack enable
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install
@@ -176,13 +193,14 @@ jobs:
         with:
           cache-base: main
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        run: corepack enable
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install
@@ -199,6 +217,7 @@ jobs:
 
   test:
     needs:
+      - plan
       - build-binding
       - build-wasm
       - build-node-packages
@@ -224,13 +243,14 @@ jobs:
         with:
           submodules: true # Pull submodules for additional files
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        run: corepack enable
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install
@@ -261,23 +281,25 @@ jobs:
         run: pnpm test
 
   publish:
-    name: Publish Npm Packages
+    name: Publish npm Packages
     runs-on: ubuntu-latest
     permissions:
       contents: write # for softprops/action-gh-release@v1
       id-token: write # for `npm publish --provenance`
     needs:
+      - plan
       - test
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
 
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        run: corepack enable
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install && git reset --hard # fix pnpm install add new line for package.json
@@ -306,16 +328,33 @@ jobs:
           path: packages/rolldown/dist
           name: node-artifact
 
-      - name: Publish
+      - name: Prepare publish
         run: |
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
-          echo "//registry.npmjs.org/:_authToken=$ROLLDOWN_NPM_TOKEN" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=$ROLLDOWN_NPM_TOKEN" >> ~/.npmrc;
+          git config --global user.email "github-actions[bot]@users.noreply.github.com";
+          git config --global user.name "github-actions[bot]";
+
+      # Only runs when manually dispatched
+      - name: Publish
+        if: ${{ needs.plan.outputs.publish == 'true' }}
+        run: |
           pnpm changeset version
           git add --all
           git commit -m "chore: Release"
           pnpm changeset publish
           git push --follow-tags
+        env:
+          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Only runs for nightly
+      - name: Publish nightly
+        if: ${{ needs.plan.outputs.nightly == 'true' }}
+        run: |
+          pnpm changeset version --snapshot nightly
+          pnpm changeset publish
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

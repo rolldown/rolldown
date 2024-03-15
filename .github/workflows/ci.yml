@@ -1,30 +1,56 @@
 name: CI
+# Jobs in this workflow are all required run successfully before the PR can be merged. This is enforced by using github status checks.
+# What's github status check: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/about-status-checks
 
 on:
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize]
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.yml'
   push:
     branches:
       - main
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
+  # JOB to run change detection
+  changes: # https://github.com/dorny/paths-filter
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      rust-changes: ${{ steps.filter.outputs.rust-changes }}
+      node-changes: ${{ steps.filter.outputs.node-changes }}
+    steps:
+      # For pull requests it's not necessary to checkout the code
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            rust-changes:
+              - 'crates/**'
+              - '/Cargo.toml'
+              - '/Cargo.lock'
+              - '/rust-toolchain.toml'
+              - '/deny.toml'
+            node-changes:
+              - 'packages/**'
+              - 'web/**'
+              - 'examples/**'
+              - 'scripts/**'
+              - '/package.json'
+              - '/pnpm-lock.yaml'
+              - '/pnpm-workspace.yaml'
+
   cargo-deny:
     name: Cargo Deny
+    needs: changes
+    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -41,6 +67,8 @@ jobs:
 
   rust-validation:
     name: Rust Validation
+    needs: changes
+    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +85,8 @@ jobs:
 
   cargo-test:
     name: Cargo Test
+    needs: changes
+    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -75,6 +105,8 @@ jobs:
 
   node-test:
     name: Node Test
+    needs: changes
+    if: ${{ needs.changes.outputs.node-changes == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -116,23 +148,55 @@ jobs:
       - name: Run Test
         run: pnpm test
 
-  # changesets:
-  #   name: Changesets Status
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
+  node-validation:
+    name: Node Validation
+    needs: changes
+    if: ${{ needs.changes.outputs.node-changes == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-  #     - name: Install pnpm
-  #       uses: pnpm/action-setup@v3
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
 
-  #     - name: Install node
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 20
-  #         cache: pnpm
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
 
-  #     - name: Install dependencies
-  #       run: pnpm install
+      - name: Install dependencies
+        run: pnpm install
 
-  #     - name: Check for changeset
-  #       run: pnpm changeset status --since=main
+      - name: Lint Code
+        run: pnpm lint-code
+
+  repo-validation:
+    name: Repo Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Lint Filename
+        run: pnpm lint-filename
+
+      - name: Lint Spell
+        run: pnpm lint-spell
+
+      - name: Lint Prettier
+        run: pnpm lint-prettier
+
+      - name: Lint Toml
+        run: pnpm lint-toml

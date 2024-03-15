@@ -69,14 +69,15 @@ test-node:
 # Fix formatting issues both for Rust and Node.js.
 fmt:
     just fmt-rust
-    just fmt-lint
+    just fmt-repo
 
 fmt-rust:
     cargo fmt --all -- --emit=files
     taplo fmt
 
-fmt-lint:
-    pnpm prettier
+fmt-repo:
+    pnpm lint-prettier:fix
+    pnpm lint-toml:fix
 
 # lint the codebase
 lint:
@@ -85,14 +86,17 @@ lint:
 
 lint-rust:
     cargo fmt --all -- --check
-    taplo fmt --check
     cargo clippy --workspace --all-targets -- --deny warnings
 
 lint-node:
-    pnpm lint-filename
     pnpm lint-code
-    pnpm prettier:ci
+
+lint-repo:
+    pnpm lint-filename
+    pnpm lint-prettier
     pnpm lint-spell
+    pnpm lint-toml
+
 
 # BENCHING
 

@@ -8,12 +8,14 @@ on:
       - '**/*.rs'
       - '**/*.toml'
       - 'Cargo.lock'
+      - 'rust-toolchain.toml'
   pull_request:
     types: [opened, synchronize]
     paths:
       - '**/*.rs'
       - '**/*.toml'
       - 'Cargo.lock'
+      - 'rust-toolchain.toml'
   workflow_dispatch:
 
 concurrency:

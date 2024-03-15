@@ -21,8 +21,8 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      rust-changes: ${{ steps.filter.outputs.rust-changes }}
-      node-changes: ${{ steps.filter.outputs.node-changes }}
+      rust-changes: ${{ steps.filter.outputs.rust-changes && github.ref_name != 'main' }}
+      node-changes: ${{ steps.filter.outputs.node-changes && github.ref_name != 'main' }}
     steps:
       # For pull requests it's not necessary to checkout the code
       - uses: actions/checkout@v4 #Fix https://github.com/dorny/paths-filter/issues/212

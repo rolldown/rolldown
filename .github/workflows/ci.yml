@@ -102,7 +102,7 @@ jobs:
     uses: ./.github/workflows/reusable-node-test.yml
     with:
       os: ${{ matrix.target }}
-      changed: ${{ needs.changes.outputs.rust-changes == 'true' }}
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-validation:
     name: Node Validation

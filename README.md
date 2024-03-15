@@ -4,6 +4,18 @@
   </a>
 </p>
 
+
+<div align="center">
+
+[![MIT licensed][license-badge]][license-url]
+[![Build Status][ci-badge]][ci-url]
+[![Code Coverage][code-coverage-badge]][code-coverage-url]
+[![CodSpeed Badge](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/rolldown/rolldown)
+[![Discord chat][discord-badge]][discord-url]
+
+</div>
+
+
 > 🚧 **Work in Progress**
 >
 > Rolldown is currently in active development and not usable for production yet.
@@ -43,3 +55,16 @@ This project also partially contains code derived or copied from the following p
 - [esbuild(MIT)](https://github.com/evanw/esbuild/blob/0c8a0a901d9a6c7bbff9b4dd347c8a3f65f6c6dd/LICENSE.md)
 
 Licenses of these projects are listed in [THIRD-PARTY-LICENSE](/THIRD-PARTY-LICENSE)
+
+
+
+[discord-badge]: https://img.shields.io/discord/1079625926024900739?logo=discord&label=Discord
+[discord-url]: https://chat.rolldown.rs
+[license-badge]: https://img.shields.io/badge/license-MIT-blue.svg
+[license-url]: https://github.com/rolldown/rolldown/blob/main/LICENSE
+[ci-badge]: https://github.com/rolldown/rolldown/actions/workflows/ci.yml/badge.svg?event=push&branch=main
+[ci-url]: https://github.com/rolldown/rolldown/actions/workflows/ci.yml?query=event%3Apush+branch%3Amain
+[npm-badge]: https://img.shields.io/npm/v/rolldown/latest?color=brightgreen
+[npm-url]: https://www.npmjs.com/package/rolldown/v/latest
+[code-coverage-badge]: https://codecov.io/github/rolldown/rolldown/branch/main/graph/badge.svg
+[code-coverage-url]: https://codecov.io/gh/rolldown/rolldown

@@ -116,36 +116,6 @@ jobs:
       - name: Run Test
         run: pnpm test
 
-  node-validation:
-    name: Node Validation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Oxc Lint
-        run: pnpm lint-code
-
-      - name: Lint Filename
-        run: pnpm lint-filename
-
-      - name: Format Check
-        run: pnpm format:ci
-
-      - name: Lint Spell
-        run: pnpm lint-spell
-
   # changesets:
   #   name: Changesets Status
   #   runs-on: ubuntu-latest

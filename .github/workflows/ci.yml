@@ -85,7 +85,7 @@ jobs:
 
   cargo-test-ubuntu:
     if: ${{ needs.changes.outputs.rust-changes == 'true' }}
-    uses: ./reusable-cargo-test.yml
+    uses: ././github/workflows/reusable-cargo-test.yml
     with:
       os: ubuntu-latest
 

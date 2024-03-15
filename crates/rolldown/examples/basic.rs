@@ -1,11 +1,11 @@
 use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
-use std::path::PathBuf;
 use sugar_path::SugarPathBuf;
 
 #[tokio::main]
 async fn main() {
   rolldown_tracing::try_init_tracing();
-  let root = PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap());
+  let mut root = std::env::current_dir().unwrap();
+  root.push("crates/rolldown");
   let cwd = root.join("./examples").into_normalize();
   let mut bundler = Bundler::new(InputOptions {
     input: vec![

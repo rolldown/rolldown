@@ -388,7 +388,7 @@ function processKeyElement(node, jsConfig, binding) {
   let keyValue = node.namedChild(0)?.text
   let child = node.namedChild(1)
   if (!child) {
-    throw new Error(`Coult not find namedChild(1)`)
+    throw new Error(`Could not find namedChild(1)`)
   }
   switch (keyValue) {
     case 'files':

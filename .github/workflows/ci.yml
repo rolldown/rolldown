@@ -84,6 +84,7 @@ jobs:
         run: just lint-rust
 
   rust-test:
+    needs: changes
     strategy:
       matrix:
         target: [ubuntu-latest]
@@ -94,7 +95,6 @@ jobs:
 
   node-test:
     name: Node Test
-    needs: changes
     if: ${{ needs.changes.outputs.node-changes == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30

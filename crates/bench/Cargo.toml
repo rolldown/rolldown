@@ -15,9 +15,7 @@ test    = false
 
 [dependencies]
 codspeed-criterion-compat = { workspace = true }
-criterion                 = { workspace = true }
 rolldown                  = { path = "../rolldown" }
-rolldown_fs               = { path = "../rolldown_fs/" }
 tokio                     = { workspace = true, features = ["full"] }
 [[bench]]
 harness = false

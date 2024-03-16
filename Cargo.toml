@@ -72,7 +72,6 @@ ariadne                   = "0.4.0"
 async-scoped              = { version = "0.9.0" }
 async-trait               = "0.1.74"
 codspeed-criterion-compat = "2.4"
-criterion                 = "0.5.1"
 dashmap                   = "5.5.3"
 derivative                = "2.2.0"
 futures                   = "0.3.29"
@@ -107,7 +106,6 @@ smallvec                  = "1.11.1"
 string_wizard             = { version = "0.0.17" }
 sugar_path                = "0.0.12"
 testing_macros            = "0.2.11"
-thiserror                 = "1.0.50"
 tokio                     = { version = "1.33.0", default-features = false }
 tracing                   = "0.1.40"
 vfs                       = "0.11.0"

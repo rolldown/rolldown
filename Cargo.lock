@@ -117,9 +117,7 @@ name = "bench"
 version = "0.1.0"
 dependencies = [
  "codspeed-criterion-compat",
- "criterion",
  "rolldown",
- "rolldown_fs",
  "tokio",
 ]
 
@@ -1360,14 +1358,12 @@ checksum = "e898588f33fdd5b9420719948f9f2a32c922a246964576f71ba7f24f80610fbc"
 name = "rolldown"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "derivative",
  "futures",
  "index_vec",
  "insta",
  "once_cell",
  "oxc",
- "oxc_resolver",
  "rayon",
  "regex",
  "rolldown_common",
@@ -1382,8 +1378,6 @@ dependencies = [
  "rolldown_tracing",
  "rolldown_utils",
  "rustc-hash",
- "serde",
- "serde_json",
  "smallvec",
  "string_wizard",
  "sugar_path",
@@ -1398,7 +1392,6 @@ version = "0.0.1"
 dependencies = [
  "async-trait",
  "derivative",
- "futures",
  "mimalloc",
  "napi",
  "napi-build",
@@ -1411,7 +1404,6 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_tracing",
- "rustc-hash",
  "scoped-tls",
  "serde",
  "tracing",
@@ -1425,11 +1417,9 @@ dependencies = [
  "once_cell",
  "oxc",
  "regex",
- "rolldown_oxc_utils",
  "rolldown_rstr",
  "rolldown_sourcemap",
  "rustc-hash",
- "string_wizard",
  "sugar_path",
 ]
 
@@ -1440,7 +1430,6 @@ dependencies = [
  "ariadne",
  "oxc",
  "sugar_path",
- "thiserror",
 ]
 
 [[package]]
@@ -1467,12 +1456,7 @@ dependencies = [
  "async-trait",
  "rolldown_common",
  "rolldown_error",
- "rolldown_fs",
- "rolldown_oxc_utils",
- "rolldown_resolver",
  "rolldown_sourcemap",
- "rolldown_tracing",
- "rolldown_utils",
 ]
 
 [[package]]
@@ -1491,7 +1475,6 @@ dependencies = [
  "dashmap",
  "once_cell",
  "regex",
- "rolldown_error",
  "rolldown_fs",
  "rolldown_plugin",
  "rustc-hash",
@@ -1557,7 +1540,6 @@ dependencies = [
  "console_error_panic_hook",
  "rolldown",
  "rolldown_fs",
- "sugar_path",
  "tokio",
  "wasm-bindgen",
 ]

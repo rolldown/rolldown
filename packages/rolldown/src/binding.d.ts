@@ -2,10 +2,32 @@
 /* eslint-disable */
 
 export class Bundler {
-  constructor(inputOptions: InputOptions, outputOptions: OutputOptions)
+  constructor(
+    inputOptions: BindingInputOptions,
+    outputOptions: BindingOutputOptions,
+  )
   write(): Promise<BindingOutputs>
   generate(): Promise<BindingOutputs>
   scan(): Promise<void>
+}
+
+export interface BindingInputItem {
+  name?: string
+  import: string
+}
+
+export interface BindingInputOptions {
+  external?:
+    | undefined
+    | ((
+        source: string,
+        importer: string | undefined,
+        isResolved: boolean,
+      ) => boolean)
+  input: Array<BindingInputItem>
+  plugins: Array<PluginOptions>
+  resolve?: ResolveOptions
+  cwd: string
 }
 
 export interface BindingOutputAsset {
@@ -24,6 +46,15 @@ export interface BindingOutputChunk {
   code: string
 }
 
+export interface BindingOutputOptions {
+  entryFileNames?: string
+  chunkFileNames?: string
+  dir?: string
+  exports?: 'default' | 'named' | 'none' | 'auto'
+  format?: 'esm' | 'cjs'
+  sourcemap?: 'file' | 'inline' | 'hidden'
+}
+
 export interface BindingOutputs {
   chunks: Array<BindingOutputChunk>
   assets: Array<BindingOutputAsset>
@@ -40,34 +71,6 @@ export interface HookRenderChunkOutput {
 export interface HookResolveIdArgsOptions {
   isEntry: boolean
   kind: string
-}
-
-export interface InputItem {
-  name?: string
-  import: string
-}
-
-export interface InputOptions {
-  external?:
-    | undefined
-    | ((
-        source: string,
-        importer: string | undefined,
-        isResolved: boolean,
-      ) => boolean)
-  input: Array<InputItem>
-  plugins: Array<PluginOptions>
-  resolve?: ResolveOptions
-  cwd: string
-}
-
-export interface OutputOptions {
-  entryFileNames?: string
-  chunkFileNames?: string
-  dir?: string
-  exports?: 'default' | 'named' | 'none' | 'auto'
-  format?: 'esm' | 'cjs'
-  sourcemap?: 'file' | 'inline' | 'hidden'
 }
 
 export interface PluginOptions {

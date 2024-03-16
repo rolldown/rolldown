@@ -1,5 +1,5 @@
-mod input_options;
-pub use input_options::*;
-mod output_options;
-pub use output_options::*;
+mod binding_input_options;
+pub use binding_input_options::*;
+mod binding_output_options;
+pub use binding_output_options::*;
 mod plugin;

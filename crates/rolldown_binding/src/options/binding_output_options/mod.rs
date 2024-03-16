@@ -4,7 +4,7 @@ use serde::Deserialize;
 #[napi(object)]
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct OutputOptions {
+pub struct BindingOutputOptions {
   // --- Options Rolldown doesn't need to be supported
   // /** @deprecated Use the "renderDynamicImport" plugin hook instead. */
   // dynamicImportFunction: string | undefined;
@@ -58,8 +58,8 @@ pub struct OutputOptions {
   // pub minify: bool,
 }
 
-impl From<OutputOptions> for rolldown::OutputOptions {
-  fn from(value: OutputOptions) -> Self {
+impl From<BindingOutputOptions> for rolldown::OutputOptions {
+  fn from(value: BindingOutputOptions) -> Self {
     let mut options = Self::default();
 
     if let Some(entry_file_names) = value.entry_file_names {

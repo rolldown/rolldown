@@ -10,15 +10,18 @@ async fn main() {
       .unwrap_or(std::env::current_dir().unwrap().display().to_string()),
   );
   let cwd = root.join("./examples").into_normalize();
-  let mut bundler = Bundler::new(InputOptions {
-    input: vec![
-      InputItem { name: Some("react-dom".to_string()), import: "react-dom".to_string() },
-      InputItem { name: Some("react".to_string()), import: "react".to_string() },
-    ],
-    cwd,
-    ..Default::default()
-  });
+  let mut bundler = Bundler::new(
+    InputOptions {
+      input: vec![
+        InputItem { name: Some("react-dom".to_string()), import: "react-dom".to_string() },
+        InputItem { name: Some("react".to_string()), import: "react".to_string() },
+      ],
+      cwd,
+      ..Default::default()
+    },
+    OutputOptions::default(),
+  );
 
-  let _outputs = bundler.write(OutputOptions::default()).await.unwrap();
+  let _outputs = bundler.write().await.unwrap();
   // println!("{outputs:#?}");
 }

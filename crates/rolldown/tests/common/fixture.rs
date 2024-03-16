@@ -92,44 +92,45 @@ impl Fixture {
       test_config.input.input = Some(vec![default_test_input_item()]);
     }
 
-    let mut bundler = Bundler::new(InputOptions {
-      input: test_config
-        .input
-        .input
-        .map(|items| {
-          items
-            .into_iter()
-            .map(|item| rolldown::InputItem { name: Some(item.name), import: item.import })
-            .collect()
-        })
-        .unwrap(),
-      cwd: fixture_path.to_path_buf(),
-      external: test_config.input.external.map(External::ArrayString).unwrap_or_default(),
-      treeshake: test_config.input.treeshake.unwrap_or(true),
-      resolve: test_config.input.resolve.map(|value| rolldown_resolver::ResolverOptions {
-        alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),
-        alias_fields: value.alias_fields,
-        condition_names: value.condition_names,
-        exports_fields: value.exports_fields,
-        extensions: value.extensions,
-        main_fields: value.main_fields,
-        main_files: value.main_files,
-        modules: value.modules,
-        symlinks: value.symlinks,
-      }),
-    });
+    let mut bundler = Bundler::new(
+      InputOptions {
+        input: test_config
+          .input
+          .input
+          .map(|items| {
+            items
+              .into_iter()
+              .map(|item| rolldown::InputItem { name: Some(item.name), import: item.import })
+              .collect()
+          })
+          .unwrap(),
+        cwd: fixture_path.to_path_buf(),
+        external: test_config.input.external.map(External::ArrayString).unwrap_or_default(),
+        treeshake: test_config.input.treeshake.unwrap_or(true),
+        resolve: test_config.input.resolve.map(|value| rolldown_resolver::ResolverOptions {
+          alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),
+          alias_fields: value.alias_fields,
+          condition_names: value.condition_names,
+          exports_fields: value.exports_fields,
+          extensions: value.extensions,
+          main_fields: value.main_fields,
+          main_files: value.main_files,
+          modules: value.modules,
+          symlinks: value.symlinks,
+        }),
+      },
+      OutputOptions {
+        entry_file_names: FileNameTemplate::from("[name].mjs".to_string()),
+        chunk_file_names: FileNameTemplate::from("[name].mjs".to_string()),
+        ..Default::default()
+      },
+    );
 
     if fixture_path.join("dist").is_dir() {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();
     }
 
-    let value = bundler
-      .write(OutputOptions {
-        entry_file_names: FileNameTemplate::from("[name].mjs".to_string()),
-        chunk_file_names: FileNameTemplate::from("[name].mjs".to_string()),
-        ..Default::default()
-      })
-      .await?;
+    let value = bundler.write().await?;
     Ok(value)
   }
 }

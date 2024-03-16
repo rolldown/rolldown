@@ -25,14 +25,17 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function(scan_id, |b| {
       b.iter(|| {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
-          let mut rolldown_bundler = rolldown::Bundler::new(InputOptions {
-            input: vec![rolldown::InputItem {
-              name: Some(item.name.to_string()),
-              import: item.entry_path.to_string_lossy().to_string(),
-            }],
-            cwd: join_by_repo_root("crates/benches"),
-            ..Default::default()
-          });
+          let mut rolldown_bundler = rolldown::Bundler::new(
+            InputOptions {
+              input: vec![rolldown::InputItem {
+                name: Some(item.name.to_string()),
+                import: item.entry_path.to_string_lossy().to_string(),
+              }],
+              cwd: join_by_repo_root("crates/benches"),
+              ..Default::default()
+            },
+            Default::default(),
+          );
           rolldown_bundler.scan().await.unwrap();
         })
       });
@@ -55,15 +58,18 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function(bundle_id, |b| {
       b.iter(|| {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
-          let mut rolldown_bundler = rolldown::Bundler::new(InputOptions {
-            input: vec![rolldown::InputItem {
-              name: Some(item.name.to_string()),
-              import: item.entry_path.to_string_lossy().to_string(),
-            }],
-            cwd: join_by_repo_root("crates/bench"),
-            ..Default::default()
-          });
-          rolldown_bundler.write(Default::default()).await.unwrap();
+          let mut rolldown_bundler = rolldown::Bundler::new(
+            InputOptions {
+              input: vec![rolldown::InputItem {
+                name: Some(item.name.to_string()),
+                import: item.entry_path.to_string_lossy().to_string(),
+              }],
+              cwd: join_by_repo_root("crates/bench"),
+              ..Default::default()
+            },
+            Default::default(),
+          );
+          rolldown_bundler.write().await.unwrap();
         })
       });
     });

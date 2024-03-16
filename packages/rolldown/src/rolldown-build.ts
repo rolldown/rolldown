@@ -1,24 +1,34 @@
 import { Bundler } from './binding'
 import { normalizeOutputOptions, OutputOptions } from './options/output-options'
-import { transformToRollupOutput, unimplemented } from './utils'
+import { createBundler, transformToRollupOutput, unimplemented } from './utils'
 import { RolldownOutput } from './objects/rolldown-output'
 import { HasProperty, TypeAssert } from './utils/type-assert'
+import { InputOptions } from './options/input-options'
 
 export class RolldownBuild {
-  #bundler: Bundler
-  constructor(bundler: Bundler) {
-    this.#bundler = bundler
+  #inputOptions: InputOptions
+  #bundler?: Bundler
+
+  constructor(inputOptions: InputOptions) {
+    this.#inputOptions = inputOptions
+  }
+
+  async #getBundler(outputOptions: OutputOptions): Promise<Bundler> {
+    if (typeof this.#bundler === 'undefined') {
+      this.#bundler = await createBundler(this.#inputOptions, outputOptions)
+    }
+    return this.#bundler
   }
 
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    const bindingOptions = normalizeOutputOptions(outputOptions)
-    const output = await this.#bundler.write(bindingOptions)
+    const bundler = await this.#getBundler(outputOptions)
+    const output = await bundler.generate()
     return transformToRollupOutput(output)
   }
 
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    const bindingOptions = normalizeOutputOptions(outputOptions)
-    const output = await this.#bundler.write(bindingOptions)
+    const bundler = await this.#getBundler(outputOptions)
+    const output = await bundler.write()
     return transformToRollupOutput(output)
   }
 }

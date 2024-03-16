@@ -2,9 +2,9 @@
 /* eslint-disable */
 
 export class Bundler {
-  constructor(inputOpts: InputOptions)
-  write(opts: OutputOptions): Promise<BindingOutputs>
-  generate(opts: OutputOptions): Promise<BindingOutputs>
+  constructor(inputOptions: InputOptions, outputOptions: OutputOptions)
+  write(): Promise<BindingOutputs>
+  generate(): Promise<BindingOutputs>
   scan(): Promise<void>
 }
 

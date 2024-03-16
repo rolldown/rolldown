@@ -4,7 +4,7 @@ use std::path::Path;
 
 use wasm_bindgen::prelude::*;
 
-use rolldown::{BundlerBuilder, External, InputItem, InputOptions, OutputOptions};
+use rolldown::{BundlerBuilder, External, InputItem, InputOptions};
 #[wasm_bindgen]
 pub struct FileItem {
   path: String,
@@ -71,7 +71,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
         .with_file_system(memory_fs)
         .build();
 
-      match bundler.write(OutputOptions::default()).await {
+      match bundler.write().await {
         Ok(assets) => assets
           .assets
           .into_iter()

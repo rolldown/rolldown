@@ -28,7 +28,6 @@
     "docs": "pnpm --filter rolldown-docs run dev",
     "docs:build": "pnpm --filter rolldown-docs run build",
     "docs:preview": "pnpm --filter rolldown-docs run preview",
-    "version": "pnpm changeset version",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
   "license": "MIT",

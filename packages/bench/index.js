@@ -26,6 +26,14 @@ const repoRoot = path.join(dirname, '../../')
  */
 const suites = [
   {
+    title: 'vue-stack',
+    inputs: [path.join(dirname, 'vue-entry.js')],
+  },
+  {
+    title: 'react-stack',
+    inputs: ['react', 'react-dom'],
+  },
+  {
     title: 'threejs',
     inputs: [path.join(repoRoot, './temp/three/entry.js')],
   },
@@ -33,14 +41,6 @@ const suites = [
     title: 'threejs10x',
     inputs: [path.join(repoRoot, './temp/three10x/entry.js')],
     benchIteration: 3,
-  },
-  {
-    title: 'vue-stack',
-    inputs: [path.join(dirname, 'vue-entry.js')],
-  },
-  {
-    title: 'react-stack',
-    inputs: ['react', 'react-dom'],
   },
 ]
 

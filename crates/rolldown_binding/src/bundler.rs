@@ -19,19 +19,23 @@ pub struct Bundler {
 #[napi]
 impl Bundler {
   #[napi(constructor)]
-  pub fn new(env: Env, input_opts: InputOptions) -> napi::Result<Self> {
+  pub fn new(
+    env: Env,
+    input_options: InputOptions,
+    output_options: OutputOptions,
+  ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
-    Self::new_impl(env, input_opts)
+    Self::new_impl(env, input_options, output_options)
   }
 
   #[napi]
-  pub async fn write(&self, opts: OutputOptions) -> napi::Result<BindingOutputs> {
-    self.write_impl(opts).await
+  pub async fn write(&self) -> napi::Result<BindingOutputs> {
+    self.write_impl().await
   }
 
   #[napi]
-  pub async fn generate(&self, opts: OutputOptions) -> napi::Result<BindingOutputs> {
-    self.generate_impl(opts).await
+  pub async fn generate(&self) -> napi::Result<BindingOutputs> {
+    self.generate_impl().await
   }
 
   #[napi]
@@ -41,11 +45,17 @@ impl Bundler {
 }
 
 impl Bundler {
-  pub fn new_impl(env: Env, input_opts: InputOptions) -> napi::Result<Self> {
+  pub fn new_impl(
+    env: Env,
+    input_opts: InputOptions,
+    output_opts: OutputOptions,
+  ) -> napi::Result<Self> {
     NAPI_ENV.set(&env, || {
       let (opts, plugins) = input_opts.into();
 
-      Ok(Self { inner: Mutex::new(NativeBundler::with_plugins(opts?, plugins?)) })
+      Ok(Self {
+        inner: Mutex::new(NativeBundler::with_plugins(opts?, output_opts.into(), plugins?)),
+      })
     })
   }
 
@@ -69,12 +79,12 @@ impl Bundler {
 
   #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn write_impl(&self, output_opts: OutputOptions) -> napi::Result<BindingOutputs> {
+  pub async fn write_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let maybe_outputs = bundler_core.write(output_opts.into()).await;
+    let maybe_outputs = bundler_core.write().await;
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,
@@ -90,12 +100,12 @@ impl Bundler {
 
   #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn generate_impl(&self, output_opts: OutputOptions) -> napi::Result<BindingOutputs> {
+  pub async fn generate_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let maybe_outputs = bundler_core.generate(output_opts.into()).await;
+    let maybe_outputs = bundler_core.generate().await;
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,

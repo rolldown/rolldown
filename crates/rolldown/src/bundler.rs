@@ -23,27 +23,39 @@ use crate::{
 
 pub struct Bundler<T: BundlerFileSystem> {
   pub(crate) input_options: SharedInputOptions,
+  pub(crate) output_options: OutputOptions,
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) fs: T,
   pub(crate) resolver: SharedResolver<T>,
 }
 
 impl Bundler<OsFileSystem> {
-  pub fn new(input_options: InputOptions) -> Self {
-    BundlerBuilder::default().with_input_options(input_options).build()
+  pub fn new(input_options: InputOptions, output_options: OutputOptions) -> Self {
+    BundlerBuilder::default()
+      .with_input_options(input_options)
+      .with_output_options(output_options)
+      .build()
   }
 
-  pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>) -> Self {
-    BundlerBuilder::default().with_input_options(input_options).with_plugins(plugins).build()
+  pub fn with_plugins(
+    input_options: InputOptions,
+    output_options: OutputOptions,
+    plugins: Vec<BoxPlugin>,
+  ) -> Self {
+    BundlerBuilder::default()
+      .with_input_options(input_options)
+      .with_output_options(output_options)
+      .with_plugins(plugins)
+      .build()
   }
 }
 
 impl<T: BundlerFileSystem> Bundler<T> {
-  pub async fn write(&mut self, output_options: OutputOptions) -> BatchedResult<RolldownOutput> {
+  pub async fn write(&mut self) -> BatchedResult<RolldownOutput> {
     let dir =
-      self.input_options.cwd.as_path().join(&output_options.dir).to_string_lossy().to_string();
+      self.input_options.cwd.as_path().join(&self.output_options.dir).to_string_lossy().to_string();
 
-    let output = self.bundle_up(output_options, true).await?;
+    let output = self.bundle_up(true).await?;
 
     self.plugin_driver.write_bundle(&output.assets).await?;
 
@@ -69,8 +81,8 @@ impl<T: BundlerFileSystem> Bundler<T> {
     Ok(output)
   }
 
-  pub async fn generate(&mut self, output_options: OutputOptions) -> BatchedResult<RolldownOutput> {
-    self.bundle_up(output_options, false).await
+  pub async fn generate(&mut self) -> BatchedResult<RolldownOutput> {
+    self.bundle_up(false).await
   }
 
   pub async fn scan(&mut self) -> BatchedResult<()> {
@@ -132,19 +144,15 @@ impl<T: BundlerFileSystem> Bundler<T> {
   }
 
   #[tracing::instrument(skip_all)]
-  async fn bundle_up(
-    &mut self,
-    output_options: OutputOptions,
-    is_write: bool,
-  ) -> BatchedResult<RolldownOutput> {
+  async fn bundle_up(&mut self, is_write: bool) -> BatchedResult<RolldownOutput> {
     tracing::trace!("InputOptions {:#?}", self.input_options);
-    tracing::trace!("OutputOptions: {output_options:#?}",);
+    tracing::trace!("OutputOptions: {:#?}", self.output_options);
     let mut link_stage_output = self.try_build().await?;
 
     let mut bundle_stage = BundleStage::new(
       &mut link_stage_output,
       &self.input_options,
-      &output_options,
+      &self.output_options,
       &self.plugin_driver,
     );
 

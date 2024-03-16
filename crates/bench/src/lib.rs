@@ -20,17 +20,20 @@ pub fn repo_root() -> PathBuf {
 }
 
 pub async fn run_fixture(fixture_path: PathBuf) {
-  let mut bundler = Bundler::new(InputOptions {
-    input: vec![InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }],
-    cwd: fixture_path.clone(),
-    ..Default::default()
-  });
+  let mut bundler = Bundler::new(
+    InputOptions {
+      input: vec![InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }],
+      cwd: fixture_path.clone(),
+      ..Default::default()
+    },
+    OutputOptions::default(),
+  );
 
   if fixture_path.join("dist").is_dir() {
     std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();
   }
 
-  bundler.write(OutputOptions::default()).await.unwrap();
+  bundler.write().await.unwrap();
 }
 
 pub fn join_by_repo_root(path: &str) -> PathBuf {

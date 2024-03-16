@@ -40,7 +40,6 @@
     "build-node": "unbuild",
     "build": "pnpm build-binding && pnpm build-node && pnpm format-generated-binding-files",
     "build:release": "pnpm build-binding:release && pnpm build-node && pnpm format-generated-binding-files",
-    "build:release:ci": "pnpm build-node && pnpm format-generated-binding-files",
     "# Scrips for checking #": "_",
     "test": "vitest run",
     "test:update": "vitest run -u",

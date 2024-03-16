@@ -12,14 +12,11 @@ version              = "0.1.0"
 workspace = true
 
 [dependencies]
-
-async-trait        = { workspace = true }
 derivative         = { workspace = true }
 futures            = { workspace = true }
 index_vec          = { workspace = true }
 once_cell          = { workspace = true }
 oxc                = { workspace = true }
-oxc_resolver       = { workspace = true }
 rayon              = { workspace = true }
 regex              = { workspace = true }
 rolldown_common    = { workspace = true }
@@ -33,8 +30,6 @@ rolldown_sourcemap = { workspace = true }
 rolldown_tracing   = { workspace = true }
 rolldown_utils     = { workspace = true }
 rustc-hash         = { workspace = true }
-serde              = { workspace = true }
-serde_json         = { workspace = true }
 smallvec           = { workspace = true }
 string_wizard      = { workspace = true }
 sugar_path         = { workspace = true }

@@ -21,4 +21,3 @@ tokio        = { workspace = true, default-features = false, features = ["rt", "
 wasm-bindgen = "0.2.74"
 
 console_error_panic_hook = "0.1.7"
-sugar_path               = { workspace = true }

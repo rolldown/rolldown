@@ -16,7 +16,6 @@ async-trait     = { workspace = true }
 dashmap         = { workspace = true }
 once_cell       = { workspace = true }
 regex           = { workspace = true }
-rolldown_error  = { workspace = true }
 rolldown_fs     = { workspace = true }
 rolldown_plugin = { workspace = true }
 rustc-hash      = { workspace = true }

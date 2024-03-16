@@ -1,5 +1,6 @@
 mod ast_scanner;
 mod bundler;
+mod bundler_builder;
 mod chunk;
 mod chunk_graph;
 mod error;
@@ -20,6 +21,7 @@ pub(crate) type SharedResolver<T> = Arc<Resolver<T>>;
 
 pub use crate::{
   bundler::Bundler,
+  bundler_builder::BundlerBuilder,
   chunk::render_chunk::PreRenderedChunk,
   options::{
     file_name_template::FileNameTemplate,

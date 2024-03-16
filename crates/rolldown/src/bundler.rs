@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use rolldown_common::Output;
-use rolldown_error::BuildError;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs};
 use rolldown_resolver::Resolver;
@@ -18,13 +16,9 @@ use super::{
 use crate::{
   error::{BatchedErrors, BatchedResult},
   stages::{bundle_stage::BundleStage, scan_stage::ScanStage},
+  types::rolldown_output::RolldownOutput,
   InputOptions, OutputOptions, SharedResolver,
 };
-
-pub struct RolldownOutput {
-  pub warnings: Vec<BuildError>,
-  pub assets: Vec<Output>,
-}
 
 pub struct Bundler<T: FileSystem + Default> {
   input_options: SharedInputOptions,

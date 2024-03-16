@@ -30,7 +30,7 @@ jobs:
         include:
           - os: macos-latest
             target: x86_64-apple-darwin
-            build: pnpm build-binding:release --target x86_64-apple-darwin
+            build: pnpm ci:build-release-binding --target x86_64-apple-darwin
 
           - os: macos-latest
             target: aarch64-apple-darwin
@@ -41,66 +41,66 @@ jobs:
               SYSROOT=$(xcrun --sdk macosx --show-sdk-path);
               export CFLAGS="-isysroot $SYSROOT -isystem $SYSROOT";
               export CARGO_BUILD_TARGET=aarch64-apple-darwin;
-              pnpm build-binding:release --target aarch64-apple-darwin
+              pnpm ci:build-release-binding --target aarch64-apple-darwin
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            build: pnpm build-binding:release --target x86_64-pc-windows-msvc
+            build: pnpm ci:build-release-binding --target x86_64-pc-windows-msvc
 
           - os: windows-latest
             target: i686-pc-windows-msvc
             build: |
               export CARGO_BUILD_TARGET=i686-pc-windows-msvc;
-              pnpm build-binding:release --target i686-pc-windows-msvc
+              pnpm ci:build-release-binding --target i686-pc-windows-msvc
 
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             build: |
               export CARGO_BUILD_TARGET=aarch64-pc-windows-msvc;
-              pnpm build-binding:release --target aarch64-pc-windows-msvc
+              pnpm ci:build-release-binding --target aarch64-pc-windows-msvc
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             build: |
               export CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu;
               export CC=clang;
-              pnpm build-binding:release --target x86_64-unknown-linux-gnu --use-napi-cross
+              pnpm ci:build-release-binding --target x86_64-unknown-linux-gnu --use-napi-cross
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            build: pnpm build-binding:release --target x86_64-unknown-linux-musl -x
+            build: pnpm ci:build-release-binding --target x86_64-unknown-linux-musl -x
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             build: |
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-gnu;
               export CC=clang;
-              pnpm build-binding:release --use-napi-cross --target aarch64-unknown-linux-gnu
+              pnpm ci:build-release-binding --use-napi-cross --target aarch64-unknown-linux-gnu
 
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             build: |
               export CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf;
               export CC=clang;
-              pnpm build-binding:release --target armv7-unknown-linux-gnueabihf --use-napi-cross
+              pnpm ci:build-release-binding --target armv7-unknown-linux-gnueabihf --use-napi-cross
 
           - os: ubuntu-latest
             target: aarch64-linux-android
             build: |
               export CARGO_BUILD_TARGET=aarch64-linux-android;
-              pnpm build-binding:release --target aarch64-linux-android
+              pnpm ci:build-release-binding --target aarch64-linux-android
 
           - os: ubuntu-latest
             target: armv7-linux-androideabi
             build: |
               export CARGO_BUILD_TARGET=armv7-linux-androideabi;
-              pnpm build-binding:release --target armv7-linux-androideabi
+              pnpm ci:build-release-binding --target armv7-linux-androideabi
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             build: |
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl;
-              pnpm build-binding:release -x --target aarch64-unknown-linux-musl
+              pnpm ci:build-release-binding -x --target aarch64-unknown-linux-musl
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -173,7 +173,8 @@ jobs:
         run: pnpm install
 
       - name: Build Node Packages
-        run: pnpm --filter rolldown build:release:ci
+        # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
+        run: pnpm --filter rolldown build-node
 
       - name: Upload Node Artifact
         uses: actions/upload-artifact@v4

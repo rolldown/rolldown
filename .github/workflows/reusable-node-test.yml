@@ -15,7 +15,7 @@ jobs:
     name: Node Test
     if: ${{ inputs.changed }}
     runs-on: ${{ inputs.os }}
-    timeout-minutes: 5
+    timeout-minutes: 15
     strategy:
       fail-fast: false
     steps:

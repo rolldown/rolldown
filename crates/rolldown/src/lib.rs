@@ -19,11 +19,12 @@ use rolldown_resolver::Resolver;
 pub(crate) type SharedResolver<T> = Arc<Resolver<T>>;
 
 pub use crate::{
-  bundler::{Bundler, RolldownOutput},
+  bundler::Bundler,
   chunk::render_chunk::PreRenderedChunk,
   options::{
     file_name_template::FileNameTemplate,
     input_options::{External, InputItem, InputOptions},
     output_options::{OutputFormat, OutputOptions},
   },
+  types::rolldown_output::RolldownOutput,
 };

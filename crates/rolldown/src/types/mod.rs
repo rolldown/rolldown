@@ -10,4 +10,5 @@ pub mod module_table;
 pub mod namespace_alias;
 pub mod normal_module_builder;
 pub mod resolved_request_info;
+pub mod rolldown_output;
 pub mod symbols;

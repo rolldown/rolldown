@@ -5,7 +5,7 @@ pub use into_js_unknown_vec::*;
 mod js_callback;
 pub use js_callback::*;
 use rolldown_tracing::try_init_tracing_with_chrome_layer;
-pub mod normalize_options;
+pub mod normalize_binding_options;
 
 pub fn try_init_custom_trace_subscriber(mut napi_env: Env) {
   match std::env::var("LOG_LAYER") {

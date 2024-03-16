@@ -52,6 +52,7 @@ export interface BindingOutputOptions {
   dir?: string
   exports?: 'default' | 'named' | 'none' | 'auto'
   format?: 'esm' | 'cjs'
+  plugins: Array<PluginOptions>
   sourcemap?: 'file' | 'inline' | 'hidden'
 }
 

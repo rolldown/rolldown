@@ -1,62 +1,44 @@
 use std::sync::Arc;
 
-use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs};
-use rolldown_resolver::Resolver;
+
 use sugar_path::AsPath;
 
 use super::{
   options::input_options::SharedInputOptions,
-  plugin_driver::{PluginDriver, SharedPluginDriver},
+  plugin_driver::SharedPluginDriver,
   stages::{
     link_stage::{LinkStage, LinkStageOutput},
     scan_stage::ScanStageOutput,
   },
 };
 use crate::{
+  bundler_builder::BundlerBuilder,
   error::{BatchedErrors, BatchedResult},
   stages::{bundle_stage::BundleStage, scan_stage::ScanStage},
-  types::rolldown_output::RolldownOutput,
+  types::{bundler_fs::BundlerFileSystem, rolldown_output::RolldownOutput},
   InputOptions, OutputOptions, SharedResolver,
 };
 
-pub struct Bundler<T: FileSystem + Default> {
-  input_options: SharedInputOptions,
-  plugin_driver: SharedPluginDriver,
-  fs: T,
-  resolver: SharedResolver<T>,
+pub struct Bundler<T: BundlerFileSystem> {
+  pub(crate) input_options: SharedInputOptions,
+  pub(crate) plugin_driver: SharedPluginDriver,
+  pub(crate) fs: T,
+  pub(crate) resolver: SharedResolver<T>,
 }
 
 impl Bundler<OsFileSystem> {
   pub fn new(input_options: InputOptions) -> Self {
-    Self::with_plugins(input_options, vec![])
+    BundlerBuilder::default().with_input_options(input_options).build()
   }
 
   pub fn with_plugins(input_options: InputOptions, plugins: Vec<BoxPlugin>) -> Self {
-    Self::with_plugins_and_fs(input_options, plugins, OsFileSystem)
+    BundlerBuilder::default().with_input_options(input_options).with_plugins(plugins).build()
   }
 }
 
-impl<T: FileSystem + Default + 'static> Bundler<T> {
-  pub fn with_plugins_and_fs(
-    mut input_options: InputOptions,
-    plugins: Vec<BoxPlugin>,
-    fs: T,
-  ) -> Self {
-    rolldown_tracing::try_init_tracing();
-    Self {
-      resolver: Resolver::with_cwd_and_fs(
-        input_options.cwd.clone(),
-        std::mem::take(&mut input_options.resolve),
-        fs.share(),
-      )
-      .into(),
-      plugin_driver: Arc::new(PluginDriver::new(plugins)),
-      input_options: Arc::new(input_options),
-      fs,
-    }
-  }
-
+impl<T: BundlerFileSystem> Bundler<T> {
   pub async fn write(&mut self, output_options: OutputOptions) -> BatchedResult<RolldownOutput> {
     let dir =
       self.input_options.cwd.as_path().join(&output_options.dir).to_string_lossy().to_string();

@@ -24,7 +24,7 @@ pub use crate::{
   chunk::render_chunk::PreRenderedChunk,
   options::{
     file_name_template::FileNameTemplate,
-    input_options::{External, InputOptions},
+    input_options::{resolve_options::ResolveOptions, External, InputOptions},
     output_options::{OutputFormat, OutputOptions},
     types::input_item::InputItem,
   },

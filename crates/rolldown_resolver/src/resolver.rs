@@ -15,9 +15,8 @@ pub struct Resolver<T: FileSystem + Default> {
 }
 
 impl<F: FileSystem + Default> Resolver<F> {
-  pub fn with_cwd_and_fs(cwd: PathBuf, resolver_options: Option<ResolveOptions>, fs: F) -> Self {
-    let option = resolver_options.map_or_else(oxc_resolver::ResolveOptions::default, Into::into);
-    let inner_resolver = ResolverGeneric::new_with_file_system(fs, option);
+  pub fn new(options: ResolveOptions, cwd: PathBuf, fs: F) -> Self {
+    let inner_resolver = ResolverGeneric::new_with_file_system(fs, options);
     Self { cwd, inner: inner_resolver }
   }
 

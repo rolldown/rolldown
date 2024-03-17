@@ -1379,7 +1379,6 @@ dependencies = [
  "rolldown_tracing",
  "rolldown_utils",
  "rustc-hash",
- "smallvec",
  "string_wizard",
  "sugar_path",
  "testing_macros",
@@ -1418,6 +1417,7 @@ dependencies = [
  "once_cell",
  "oxc",
  "regex",
+ "rolldown_error",
  "rolldown_rstr",
  "rolldown_sourcemap",
  "rustc-hash",
@@ -1455,6 +1455,7 @@ name = "rolldown_plugin"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "futures",
  "rolldown_common",
  "rolldown_error",
  "rolldown_sourcemap",

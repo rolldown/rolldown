@@ -22,7 +22,7 @@ impl<Fs: BundlerFileSystem> BundlerBuilder<Fs> {
         self.fs.share(),
       )
       .into(),
-      plugin_driver: Arc::new(PluginDriver::new(self.plugins)),
+      plugin_driver: PluginDriver::new_shared(self.plugins),
       input_options: Arc::new(self.input_options),
       output_options: self.output_options,
       fs: self.fs,

@@ -6,6 +6,7 @@ pub use crate::{
   module::external_module::ExternalModule,
   module::normal_module::NormalModule,
   types::ast_scope::AstScope,
+  types::batched_errors::{BatchedErrors, BatchedResult, IntoBatchedResult},
   types::chunk_id::ChunkId,
   types::chunk_kind::ChunkKind,
   types::entry_point::{EntryPoint, EntryPointKind},

@@ -17,6 +17,7 @@ index_vec          = { workspace = true }
 once_cell          = { workspace = true }
 oxc                = { workspace = true, features = ["semantic"] }
 regex              = { workspace = true }
+rolldown_error     = { workspace = true }
 rolldown_rstr      = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rustc-hash         = { workspace = true }

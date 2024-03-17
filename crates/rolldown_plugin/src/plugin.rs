@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fmt::Debug};
 
-use super::context::PluginContext;
+use super::plugin_context::PluginContext;
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput,
   HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
@@ -20,25 +20,27 @@ pub trait Plugin: Debug + Send + Sync {
 
   // The `option` hook consider call at node side.
 
-  async fn build_start(&self, _ctx: &mut PluginContext) -> HookNoopReturn {
+  // --- Build hooks ---
+
+  async fn build_start(&self, _ctx: &PluginContext) -> HookNoopReturn {
     Ok(())
   }
 
   async fn resolve_id(
     &self,
-    _ctx: &mut PluginContext,
+    _ctx: &PluginContext,
     _args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn {
     Ok(None)
   }
 
-  async fn load(&self, _ctx: &mut PluginContext, _args: &HookLoadArgs) -> HookLoadReturn {
+  async fn load(&self, _ctx: &PluginContext, _args: &HookLoadArgs) -> HookLoadReturn {
     Ok(None)
   }
 
   async fn transform(
     &self,
-    _ctx: &mut PluginContext,
+    _ctx: &PluginContext,
     _args: &HookTransformArgs,
   ) -> HookTransformReturn {
     Ok(None)
@@ -46,7 +48,7 @@ pub trait Plugin: Debug + Send + Sync {
 
   async fn build_end(
     &self,
-    _ctx: &mut PluginContext,
+    _ctx: &PluginContext,
     _args: Option<&HookBuildEndArgs>,
   ) -> HookNoopReturn {
     Ok(())
@@ -60,6 +62,8 @@ pub trait Plugin: Debug + Send + Sync {
     Ok(None)
   }
 
+  // --- Generate hooks ---
+
   #[allow(clippy::ptr_arg)]
   async fn generate_bundle(
     &self,
@@ -70,7 +74,6 @@ pub trait Plugin: Debug + Send + Sync {
     Ok(())
   }
 
-  // Parallel hook
   #[allow(clippy::ptr_arg)]
   async fn write_bundle(&self, _ctx: &PluginContext, _bundle: &Vec<Output>) -> HookNoopReturn {
     Ok(())

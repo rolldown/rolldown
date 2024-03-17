@@ -63,9 +63,9 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
       let mut bundler = BundlerBuilder::<MemoryFileSystem>::default()
         .with_input_options(InputOptions {
           input,
-          cwd: "/".into(),
-          external: External::ArrayString(vec![]),
-          treeshake: false,
+          cwd: Some("/".into()),
+          external: Some(External::ArrayString(vec![])),
+          treeshake: Some(false),
           resolve: None,
         })
         .with_file_system(memory_fs)

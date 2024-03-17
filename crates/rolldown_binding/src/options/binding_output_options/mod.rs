@@ -59,27 +59,3 @@ pub struct BindingOutputOptions {
   // --- Enhanced options
   // pub minify: bool,
 }
-
-impl From<BindingOutputOptions> for rolldown::OutputOptions {
-  fn from(value: BindingOutputOptions) -> Self {
-    let mut options = Self::default();
-
-    if let Some(entry_file_names) = value.entry_file_names {
-      options.entry_file_names = rolldown::FileNameTemplate::from(entry_file_names);
-    }
-
-    if let Some(chunk_file_names) = value.chunk_file_names {
-      options.chunk_file_names = rolldown::FileNameTemplate::from(chunk_file_names);
-    }
-
-    if let Some(dir) = value.dir {
-      options.dir = dir;
-    }
-
-    if let Some(sourcemap) = value.sourcemap {
-      options.sourcemap = sourcemap.into();
-    }
-
-    options
-  }
-}

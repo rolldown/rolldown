@@ -55,24 +55,12 @@ impl External {
   }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, Default)]
 #[derivative(Debug)]
 pub struct InputOptions {
   pub input: Vec<InputItem>,
-  pub cwd: PathBuf,
-  pub external: External,
-  pub treeshake: bool,
+  pub cwd: Option<PathBuf>,
+  pub external: Option<External>,
+  pub treeshake: Option<bool>,
   pub resolve: Option<rolldown_resolver::ResolveOptions>,
-}
-
-impl Default for InputOptions {
-  fn default() -> Self {
-    Self {
-      input: vec![],
-      cwd: std::env::current_dir().unwrap(),
-      external: External::default(),
-      treeshake: true,
-      resolve: None,
-    }
-  }
 }

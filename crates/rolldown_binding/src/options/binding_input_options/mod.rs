@@ -1,10 +1,6 @@
 // cSpell:disable
-use std::path::PathBuf;
 
-use crate::{
-  options::plugin::JsAdapterPlugin,
-  utils::{napi_error_ext::NapiErrorExt, JsCallback},
-};
+use crate::utils::JsCallback;
 use derivative::Derivative;
 use napi::JsFunction;
 use napi_derive::napi;
@@ -64,45 +60,4 @@ pub struct BindingInputOptions {
   // extra
   pub cwd: String,
   // pub builtins: BuiltinsOptions,
-}
-
-#[allow(clippy::redundant_closure_for_method_calls)]
-impl From<BindingInputOptions>
-  for (napi::Result<rolldown::InputOptions>, napi::Result<Vec<rolldown_plugin::BoxPlugin>>)
-{
-  fn from(value: BindingInputOptions) -> Self {
-    let cwd = PathBuf::from(value.cwd.clone());
-    assert!(cwd != PathBuf::from("/"), "{value:#?}");
-
-    let external = if let Some(js_fn) = value.external {
-      match ExternalFn::new(&js_fn) {
-        Err(e) => return (Err(e), Ok(vec![])),
-        Ok(external_fn) => {
-          let cb = Box::new(external_fn);
-          rolldown::External::Fn(Box::new(move |source, importer, is_resolved| {
-            let ts_fn = Box::clone(&cb);
-            Box::pin(async move {
-              ts_fn
-                .call_async((source, importer, is_resolved))
-                .await
-                .map_err(|e| e.into_bundle_error())
-            })
-          }))
-        }
-      }
-    } else {
-      rolldown::External::default()
-    };
-
-    (
-      Ok(rolldown::InputOptions {
-        input: value.input.into_iter().map(Into::into).collect::<Vec<_>>(),
-        cwd,
-        external,
-        treeshake: true,
-        resolve: value.resolve.map(Into::into),
-      }),
-      value.plugins.into_iter().map(JsAdapterPlugin::new_boxed).collect::<napi::Result<Vec<_>>>(),
-    )
-  }
 }

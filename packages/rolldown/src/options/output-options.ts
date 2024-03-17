@@ -48,5 +48,6 @@ export function normalizeOutputOptions(
     format: normalizeFormat(format),
     exports,
     sourcemap: normalizeSourcemap(sourcemap),
+    plugins: [],
   }
 }

@@ -1,6 +1,8 @@
 use napi_derive::napi;
 use serde::Deserialize;
 
+use super::plugin::PluginOptions;
+
 #[napi(object)]
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -41,7 +43,7 @@ pub struct BindingOutputOptions {
   // noConflict: boolean;
   // outro: () => string | Promise<string>;
   // paths: OptionsPaths;
-  // plugins: OutputPlugin[];
+  pub plugins: Vec<PluginOptions>,
   // preferConst: boolean;
   // preserveModules: boolean;
   // preserveModulesRoot: string | undefined;

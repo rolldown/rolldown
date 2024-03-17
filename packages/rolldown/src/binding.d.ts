@@ -26,7 +26,7 @@ export interface BindingInputOptions {
       ) => boolean)
   input: Array<BindingInputItem>
   plugins: Array<PluginOptions>
-  resolve?: ResolveOptions
+  resolve?: BindingResolveOptions
   cwd: string
 }
 
@@ -63,6 +63,18 @@ export interface BindingOutputs {
 
 export interface BindingRenderedModule {
   code?: string
+}
+
+export interface BindingResolveOptions {
+  alias?: Record<string, Array<string>>
+  aliasFields?: Array<Array<string>>
+  conditionNames?: Array<string>
+  exportsFields?: Array<Array<string>>
+  extensions?: Array<string>
+  mainFields?: Array<string>
+  mainFiles?: Array<string>
+  modules?: Array<string>
+  symlinks?: boolean
 }
 
 export interface HookRenderChunkOutput {
@@ -114,18 +126,6 @@ export interface RenderedChunk {
 export interface ResolveIdResult {
   id: string
   external?: boolean
-}
-
-export interface ResolveOptions {
-  alias?: Record<string, Array<string>>
-  aliasFields?: Array<Array<string>>
-  conditionNames?: Array<string>
-  exportsFields?: Array<Array<string>>
-  extensions?: Array<string>
-  mainFields?: Array<string>
-  mainFiles?: Array<string>
-  modules?: Array<string>
-  symlinks?: boolean
 }
 
 export interface SourceResult {

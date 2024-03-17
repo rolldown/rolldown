@@ -15,17 +15,15 @@ use sugar_path::AsPath;
 
 use super::{module_task_context::ModuleTaskCommonData, Msg};
 use crate::{
+  ast_scanner::{AstScanner, ScanResult},
   error::{BatchedErrors, BatchedResult},
-  {
-    ast_scanner::{AstScanner, ScanResult},
-    module_loader::NormalModuleTaskResult,
-    options::input_options::SharedInputOptions,
-    types::{
-      ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder,
-      resolved_request_info::ResolvedRequestInfo,
-    },
-    utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
+  module_loader::NormalModuleTaskResult,
+  options::normalized_input_options::SharedNormalizedInputOptions,
+  types::{
+    ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder,
+    resolved_request_info::ResolvedRequestInfo,
   },
+  utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
 };
 pub struct NormalModuleTask<'task, T: FileSystem + Default> {
   ctx: &'task ModuleTaskCommonData<T>,
@@ -176,7 +174,7 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
 
   #[allow(clippy::option_if_let_else)]
   pub(crate) async fn resolve_id<F: FileSystem + Default>(
-    input_options: &SharedInputOptions,
+    input_options: &SharedNormalizedInputOptions,
     resolver: &Resolver<F>,
     plugin_driver: &SharedPluginDriver,
     importer: &FilePath,

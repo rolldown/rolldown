@@ -1,5 +1,5 @@
 // cSpell:disable
-use std::{collections::HashMap, fmt::Debug, path::PathBuf};
+use std::path::PathBuf;
 
 use crate::{
   options::plugin::JsAdapterPlugin,
@@ -11,44 +11,14 @@ use napi_derive::napi;
 
 use serde::Deserialize;
 
-use self::binding_input_item::BindingInputItem;
+use self::{binding_input_item::BindingInputItem, binding_resolve_options::BindingResolveOptions};
 
 use super::plugin::PluginOptions;
 
 mod binding_input_item;
+mod binding_resolve_options;
 
 pub type ExternalFn = JsCallback<(String, Option<String>, bool), bool>;
-
-#[napi(object)]
-#[derive(Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct ResolveOptions {
-  pub alias: Option<HashMap<String, Vec<String>>>,
-  pub alias_fields: Option<Vec<Vec<String>>>,
-  pub condition_names: Option<Vec<String>>,
-  pub exports_fields: Option<Vec<Vec<String>>>,
-  pub extensions: Option<Vec<String>>,
-  pub main_fields: Option<Vec<String>>,
-  pub main_files: Option<Vec<String>>,
-  pub modules: Option<Vec<String>>,
-  pub symlinks: Option<bool>,
-}
-
-impl From<ResolveOptions> for rolldown_resolver::ResolverOptions {
-  fn from(value: ResolveOptions) -> Self {
-    Self {
-      alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),
-      alias_fields: value.alias_fields,
-      condition_names: value.condition_names,
-      exports_fields: value.exports_fields,
-      extensions: value.extensions,
-      main_fields: value.main_fields,
-      main_files: value.main_files,
-      modules: value.modules,
-      symlinks: value.symlinks,
-    }
-  }
-}
 
 #[napi(object)]
 #[derive(Deserialize, Default, Derivative)]
@@ -81,7 +51,7 @@ pub struct BindingInputOptions {
   // onwarn?: WarningHandlerWithDefault;
   // perf?: boolean;
   pub plugins: Vec<PluginOptions>,
-  pub resolve: Option<ResolveOptions>,
+  pub resolve: Option<BindingResolveOptions>,
   // preserveEntrySignatures?: PreserveEntrySignaturesOption;
   // /** @deprecated Use the "preserveModules" output option instead. */
   // preserveModules?: boolean;

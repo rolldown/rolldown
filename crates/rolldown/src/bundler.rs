@@ -5,24 +5,25 @@ use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
 
 use sugar_path::AsPath;
 
-use super::{
-  options::input_options::SharedInputOptions,
-  stages::{
-    link_stage::{LinkStage, LinkStageOutput},
-    scan_stage::ScanStageOutput,
-  },
+use super::stages::{
+  link_stage::{LinkStage, LinkStageOutput},
+  scan_stage::ScanStageOutput,
 };
 use crate::{
   bundler_builder::BundlerBuilder,
   error::{BatchedErrors, BatchedResult},
+  options::{
+    normalized_input_options::SharedNormalizedInputOptions,
+    normalized_output_options::NormalizedOutputOptions,
+  },
   stages::{bundle_stage::BundleStage, scan_stage::ScanStage},
   types::{bundler_fs::BundlerFileSystem, rolldown_output::RolldownOutput},
   InputOptions, OutputOptions, SharedResolver,
 };
 
 pub struct Bundler<T: BundlerFileSystem> {
-  pub(crate) input_options: SharedInputOptions,
-  pub(crate) output_options: OutputOptions,
+  pub(crate) input_options: SharedNormalizedInputOptions,
+  pub(crate) output_options: NormalizedOutputOptions,
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) fs: T,
   pub(crate) resolver: SharedResolver<T>,

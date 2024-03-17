@@ -24,8 +24,9 @@ pub use crate::{
   chunk::render_chunk::PreRenderedChunk,
   options::{
     file_name_template::FileNameTemplate,
-    input_options::{External, InputItem, InputOptions},
+    input_options::{External, InputOptions},
     output_options::{OutputFormat, OutputOptions},
+    types::input_item::InputItem,
   },
   types::rolldown_output::RolldownOutput,
 };

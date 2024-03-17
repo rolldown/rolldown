@@ -6,7 +6,7 @@ use sugar_path::{AsPath, SugarPathBuf};
 
 use oxc_resolver::{Resolution, ResolveError, ResolverGeneric};
 
-use crate::ResolverOptions;
+use crate::ResolveOptions;
 
 #[derive(Debug)]
 pub struct Resolver<T: FileSystem + Default> {
@@ -15,7 +15,7 @@ pub struct Resolver<T: FileSystem + Default> {
 }
 
 impl<F: FileSystem + Default> Resolver<F> {
-  pub fn with_cwd_and_fs(cwd: PathBuf, resolver_options: Option<ResolverOptions>, fs: F) -> Self {
+  pub fn with_cwd_and_fs(cwd: PathBuf, resolver_options: Option<ResolveOptions>, fs: F) -> Self {
     let option = resolver_options.map_or_else(oxc_resolver::ResolveOptions::default, Into::into);
     let inner_resolver = ResolverGeneric::new_with_file_system(fs, option);
     Self { cwd, inner: inner_resolver }

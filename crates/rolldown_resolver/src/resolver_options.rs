@@ -1,58 +1,20 @@
-#[derive(Debug)]
-pub struct ResolverOptions {
-  /// Create aliases to import or require certain modules more easily.
-  /// A trailing $ can also be added to the given object's keys to signify an exact match.
+/// A simple wrapper around `oxc_resolver::ResolveOptions` to make it easier to use in the `rolldown_resolver` crate.
+/// See [oxc_resolver::ResolveOptions](https://docs.rs/oxc_resolver/latest/oxc_resolver/struct.ResolveOptions.html) for more information.
+#[derive(Debug, Default)]
+pub struct ResolveOptions {
   pub alias: Option<Vec<(String, Vec<String>)>>,
-
-  /// A list of alias fields in description files.
-  /// Specify a field, such as `browser`, to be parsed according to [this specification](https://github.com/defunctzombie/package-browser-field-spec).
-  /// Can be a path to json object such as `["path", "to", "exports"]`.
-  ///
-  /// Default `[]`
   pub alias_fields: Option<Vec<Vec<String>>>,
-
-  /// Condition names for exports field which defines entry points of a package.
-  /// The key order in the exports field is significant. During condition matching, earlier entries have higher priority and take precedence over later entries.
-  ///
-  /// Default `[]`
   pub condition_names: Option<Vec<String>>,
-
-  /// A list of exports fields in description files.
-  /// Can be a path to json object such as `["path", "to", "exports"]`.
-  ///
-  /// Default `[["exports"]]`.
   pub exports_fields: Option<Vec<Vec<String>>>,
-  /// Attempt to resolve these extensions in order.
-  /// If multiple files share the same name but have different extensions,
-  /// will resolve the one with the extension listed first in the array and skip the rest.
-  ///
-  /// Default `[".js", ".json", ".node"]`
   pub extensions: Option<Vec<String>>,
-
-  /// A list of main fields in description files
-  ///
-  /// Default `["main"]`.
   pub main_fields: Option<Vec<String>>,
-
-  /// The filename to be used while resolving directories.
-  ///
-  /// Default `["index"]`
   pub main_files: Option<Vec<String>>,
-
-  /// A list of directories to resolve modules from, can be absolute path or folder name.
-  ///
-  /// Default `["node_modules"]`
   pub modules: Option<Vec<String>>,
-  /// Whether to resolve symlinks to their symlinked location.
-  /// When enabled, symlinked resources are resolved to their real path, not their symlinked location.
-  /// Note that this may cause module resolution to fail when using tools that symlink packages (like npm link).
-  ///
-  /// Default `true`
   pub symlinks: Option<bool>,
 }
 
-impl From<ResolverOptions> for oxc_resolver::ResolveOptions {
-  fn from(value: ResolverOptions) -> Self {
+impl From<ResolveOptions> for oxc_resolver::ResolveOptions {
+  fn from(value: ResolveOptions) -> Self {
     Self {
       alias: value
         .alias

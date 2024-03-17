@@ -18,13 +18,15 @@ use rolldown_sourcemap::{collapse_sourcemaps, concat_sourcemaps, SourceMap};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
 
+use crate::options::normalized_input_options::NormalizedInputOptions;
+use crate::options::normalized_output_options::NormalizedOutputOptions;
 use crate::utils::render_normal_module::render_normal_module;
 use crate::{
   error::BatchedResult,
-  FileNameTemplate, InputOptions,
+  FileNameTemplate,
   {
-    chunk_graph::ChunkGraph, options::output_options::OutputOptions,
-    stages::link_stage::LinkStageOutput, types::module_render_context::ModuleRenderContext,
+    chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
+    types::module_render_context::ModuleRenderContext,
   },
 };
 
@@ -66,7 +68,7 @@ impl Chunk {
 
   pub fn file_name_template<'a>(
     &mut self,
-    output_options: &'a OutputOptions,
+    output_options: &'a NormalizedOutputOptions,
   ) -> &'a FileNameTemplate {
     if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined) {
       &output_options.entry_file_names
@@ -78,10 +80,10 @@ impl Chunk {
   #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
   pub fn render(
     &self,
-    input_options: &InputOptions,
+    input_options: &NormalizedInputOptions,
     graph: &LinkStageOutput,
     chunk_graph: &ChunkGraph,
-    output_options: &OutputOptions,
+    output_options: &NormalizedOutputOptions,
   ) -> BatchedResult<ChunkRenderReturn> {
     use rayon::prelude::*;
     let mut rendered_modules = FxHashMap::default();

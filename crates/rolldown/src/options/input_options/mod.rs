@@ -1,11 +1,14 @@
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::pin::Pin;
-use std::sync::Arc;
 
 use derivative::Derivative;
 use futures::Future;
 use rolldown_error::BuildError;
+
+use super::types::input_item::InputItem;
+
+pub mod resolve_options;
 
 pub type ExternalFn = dyn Fn(
     String,
@@ -52,18 +55,6 @@ impl External {
   }
 }
 
-#[derive(Debug)]
-pub struct InputItem {
-  pub name: Option<String>,
-  pub import: String,
-}
-
-impl From<String> for InputItem {
-  fn from(value: String) -> Self {
-    Self { name: None, import: value }
-  }
-}
-
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct InputOptions {
@@ -71,7 +62,7 @@ pub struct InputOptions {
   pub cwd: PathBuf,
   pub external: External,
   pub treeshake: bool,
-  pub resolve: Option<rolldown_resolver::ResolverOptions>,
+  pub resolve: Option<rolldown_resolver::ResolveOptions>,
 }
 
 impl Default for InputOptions {
@@ -85,5 +76,3 @@ impl Default for InputOptions {
     }
   }
 }
-
-pub type SharedInputOptions = Arc<InputOptions>;

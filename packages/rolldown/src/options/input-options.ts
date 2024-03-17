@@ -4,7 +4,7 @@ import {
   Plugin,
 } from '../rollup-types'
 import { ensureArray, normalizePluginOption } from '../utils'
-import { ResolveOptions } from '../binding'
+import { BindingResolveOptions } from '../binding'
 
 // TODO export compat plugin type
 export type RolldownPlugin = Plugin
@@ -15,12 +15,12 @@ export interface InputOptions {
   resolve?: RolldownResolveOptions
 }
 
-export type RolldownResolveOptions = Omit<ResolveOptions, 'alias'> & {
+export type RolldownResolveOptions = Omit<BindingResolveOptions, 'alias'> & {
   alias?: Record<string, string>
 }
 
 export type RolldownNormalizedInputOptions = NormalizedInputOptions & {
-  resolve?: ResolveOptions
+  resolve?: BindingResolveOptions
 }
 
 export async function normalizeInputOptions(

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, NormalModuleId};
+use rolldown_common::{EntryPoint, ImportKind, IntoBatchedResult, NormalModuleId};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_oxc_utils::OxcProgram;
@@ -9,7 +9,7 @@ use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
-  error::{BatchedResult, IntoBatchedResult},
+  error::BatchedResult,
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
   options::input_options::SharedInputOptions,
   runtime::RuntimeModuleBrief,

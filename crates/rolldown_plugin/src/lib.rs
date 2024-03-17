@@ -1,14 +1,14 @@
-mod context;
 mod plugin;
+mod plugin_context;
 mod plugin_driver;
 mod types;
 
 pub use crate::{
-  context::PluginContext,
   plugin::{
     BoxPlugin, HookLoadReturn, HookNoopReturn, HookRenderChunkReturn, HookResolveIdReturn,
     HookTransformReturn, Plugin,
   },
+  plugin_context::PluginContext,
   plugin_driver::{PluginDriver, SharedPluginDriver},
   types::hook_build_end_args::HookBuildEndArgs,
   types::hook_load_args::HookLoadArgs,

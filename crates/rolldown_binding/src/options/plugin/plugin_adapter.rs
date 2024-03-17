@@ -80,7 +80,7 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn build_start(
     &self,
-    _ctx: &mut rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::PluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_start_fn {
       cb.call_async(()).await.map_err(|e| e.into_bundle_error())?;
@@ -91,7 +91,7 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn resolve_id(
     &self,
-    _ctx: &mut rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id_fn {
@@ -113,7 +113,7 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn load(
     &self,
-    _ctx: &mut rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookLoadArgs,
   ) -> rolldown_plugin::HookLoadReturn {
     if let Some(cb) = &self.load_fn {
@@ -127,7 +127,7 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn transform(
     &self,
-    _ctx: &mut rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookTransformArgs,
   ) -> rolldown_plugin::HookTransformReturn {
     if let Some(cb) = &self.transform_fn {
@@ -144,7 +144,7 @@ impl Plugin for JsAdapterPlugin {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn build_end(
     &self,
-    _ctx: &mut rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::PluginContext,
     args: Option<&rolldown_plugin::HookBuildEndArgs>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_end_fn {

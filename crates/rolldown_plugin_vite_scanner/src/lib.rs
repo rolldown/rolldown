@@ -56,7 +56,7 @@ impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
 
   async fn resolve_id(
     &self,
-    _ctx: &mut PluginContext,
+    _ctx: &PluginContext,
     args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn {
     let HookResolveIdArgs { source, .. } = args;
@@ -95,7 +95,7 @@ impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
     Ok(None)
   }
 
-  async fn load(&self, _ctx: &mut PluginContext, args: &HookLoadArgs) -> HookLoadReturn {
+  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs) -> HookLoadReturn {
     let HookLoadArgs { id } = args;
 
     // extract scripts inside HTML-like files and treat it as a js module

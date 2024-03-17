@@ -3,10 +3,10 @@ use regex::Regex;
 use rolldown_common::{FilePath, ModuleType};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
-use rolldown_plugin::{HookResolveIdArgs, HookResolveIdExtraOptions};
+use rolldown_plugin::{HookResolveIdArgs, HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::Resolver;
 
-use crate::{plugin_driver::SharedPluginDriver, types::resolved_request_info::ResolvedRequestInfo};
+use crate::types::resolved_request_info::ResolvedRequestInfo;
 
 static HTTP_URL_REGEX: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^(https?:)?\/\/").expect("Init HTTP_URL_REGEX failed"));

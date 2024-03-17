@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
 use rolldown_fs::OsFileSystem;
-use rolldown_plugin::{BoxPlugin, HookBuildEndArgs};
+use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
 
 use sugar_path::AsPath;
 
 use super::{
   options::input_options::SharedInputOptions,
-  plugin_driver::SharedPluginDriver,
   stages::{
     link_stage::{LinkStage, LinkStageOutput},
     scan_stage::ScanStageOutput,

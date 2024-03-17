@@ -1,12 +1,9 @@
 use std::sync::Arc;
 
-use rolldown_plugin::BoxPlugin;
+use rolldown_plugin::{BoxPlugin, PluginDriver};
 use rolldown_resolver::Resolver;
 
-use crate::{
-  plugin_driver::PluginDriver, types::bundler_fs::BundlerFileSystem, Bundler, InputOptions,
-  OutputOptions,
-};
+use crate::{types::bundler_fs::BundlerFileSystem, Bundler, InputOptions, OutputOptions};
 
 pub struct BundlerBuilder<Fs: BundlerFileSystem> {
   input_options: InputOptions,

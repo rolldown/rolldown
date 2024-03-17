@@ -9,7 +9,7 @@ use rolldown_common::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
-use rolldown_plugin::HookResolveIdExtraOptions;
+use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
@@ -20,7 +20,6 @@ use crate::{
     ast_scanner::{AstScanner, ScanResult},
     module_loader::NormalModuleTaskResult,
     options::input_options::SharedInputOptions,
-    plugin_driver::SharedPluginDriver,
     types::{
       ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder,
       resolved_request_info::ResolvedRequestInfo,

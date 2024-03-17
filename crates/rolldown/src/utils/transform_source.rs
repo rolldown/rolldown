@@ -1,8 +1,8 @@
 use rolldown_common::ResolvedPath;
-use rolldown_plugin::HookTransformArgs;
+use rolldown_plugin::{HookTransformArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
 
-use crate::{error::BatchedErrors, plugin_driver::PluginDriver};
+use crate::error::BatchedErrors;
 
 pub async fn transform_source(
   plugin_driver: &PluginDriver,

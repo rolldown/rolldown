@@ -8,13 +8,13 @@ use crate::{
       file_name_template::FileNameRenderOptions,
       output_options::{OutputOptions, SourceMapType},
     },
-    plugin_driver::SharedPluginDriver,
     stages::link_stage::LinkStageOutput,
     utils::{finalize_normal_module, is_in_rust_test_mode, render_chunks::render_chunks},
   },
 };
 use rolldown_common::{ChunkKind, Output, OutputAsset, OutputChunk};
 use rolldown_error::BuildError;
+use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::FxHashSet;
 
 mod code_splitting;

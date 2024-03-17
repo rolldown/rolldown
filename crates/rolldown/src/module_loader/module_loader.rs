@@ -8,6 +8,7 @@ use rolldown_common::{
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_oxc_utils::OxcProgram;
+use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::normal_module_task::NormalModuleTask;
@@ -17,7 +18,6 @@ use super::Msg;
 use crate::module_loader::module_task_context::ModuleTaskCommonData;
 use crate::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
 use crate::options::input_options::SharedInputOptions;
-use crate::plugin_driver::SharedPluginDriver;
 use crate::runtime::RuntimeModuleBrief;
 use crate::types::module_table::{ExternalModuleVec, ModuleTable};
 use crate::types::resolved_request_info::ResolvedRequestInfo;

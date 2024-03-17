@@ -1,12 +1,9 @@
 use rolldown_common::RenderedChunk;
-use rolldown_plugin::HookRenderChunkArgs;
+use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::block_on_spawn_all;
 
-use crate::{
-  error::{BatchedErrors, IntoBatchedResult},
-  plugin_driver::SharedPluginDriver,
-};
+use crate::error::{BatchedErrors, IntoBatchedResult};
 
 pub async fn render_chunks<'a>(
   plugin_driver: &SharedPluginDriver,

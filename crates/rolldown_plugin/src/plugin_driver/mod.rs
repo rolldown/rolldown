@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use rolldown_common::Output;
-use rolldown_error::BuildError;
-use rolldown_plugin::{
+use crate::{
   BoxPlugin, HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookRenderChunkArgs,
   HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginContext,
 };
+use rolldown_common::Output;
+use rolldown_error::BuildError;
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::block_on_spawn_all;
 

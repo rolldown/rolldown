@@ -1458,6 +1458,8 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_sourcemap",
+ "rolldown_utils",
+ "tracing",
 ]
 
 [[package]]

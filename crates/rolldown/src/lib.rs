@@ -7,7 +7,6 @@ mod error;
 mod finalizer;
 mod module_loader;
 mod options;
-mod plugin_driver;
 mod runtime;
 mod stages;
 mod types;

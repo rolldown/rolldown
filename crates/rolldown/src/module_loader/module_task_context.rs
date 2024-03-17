@@ -1,9 +1,7 @@
 use rolldown_fs::FileSystem;
+use rolldown_plugin::SharedPluginDriver;
 
-use crate::{
-  SharedResolver,
-  {options::input_options::SharedInputOptions, plugin_driver::SharedPluginDriver},
-};
+use crate::{options::input_options::SharedInputOptions, SharedResolver};
 
 use super::Msg;
 

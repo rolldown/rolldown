@@ -26,6 +26,6 @@ impl PathExt for Path {
       self.display().to_string()
     };
     // TODO: should move this to `sugar_path`
-    ret.replace("\\\\", "/")
+    ret.replace('\\', "/")
   }
 }

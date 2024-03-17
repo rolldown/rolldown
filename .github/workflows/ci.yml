@@ -94,7 +94,7 @@ jobs:
     needs: changes
     strategy:
       matrix:
-        target: [ubuntu-latest, macos-latest]
+        target: [ubuntu-latest, macos-latest, windows-latest]
     uses: ./.github/workflows/reusable-cargo-test.yml
     with:
       os: ${{ matrix.target }}
@@ -104,7 +104,7 @@ jobs:
     needs: changes
     strategy:
       matrix:
-        target: [ubuntu-latest, macos-latest]
+        target: [ubuntu-latest, macos-latest, windows-latest]
     uses: ./.github/workflows/reusable-node-test.yml
     with:
       os: ${{ matrix.target }}

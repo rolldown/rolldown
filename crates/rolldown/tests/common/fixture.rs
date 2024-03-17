@@ -112,7 +112,7 @@ impl Fixture {
         cwd: Some(fixture_path.to_path_buf()),
         external: Some(test_config.input.external.map(External::ArrayString).unwrap_or_default()),
         treeshake: Some(test_config.input.treeshake.unwrap_or(true)),
-        resolve: test_config.input.resolve.map(|value| rolldown_resolver::ResolveOptions {
+        resolve: test_config.input.resolve.map(|value| rolldown::ResolveOptions {
           alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),
           alias_fields: value.alias_fields,
           condition_names: value.condition_names,

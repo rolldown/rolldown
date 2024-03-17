@@ -6,6 +6,8 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingResolveOptions {
+  // FIXME: Using `HashMap<String, Vec<String>>` is wrong here. Rust's `HashMap` is not ordered, while JavaScript's `Object` is ordered.
+  // We should use tuple array instead of object.
   pub alias: Option<HashMap<String, Vec<String>>>,
   pub alias_fields: Option<Vec<Vec<String>>>,
   pub condition_names: Option<Vec<String>>,
@@ -17,7 +19,7 @@ pub struct BindingResolveOptions {
   pub symlinks: Option<bool>,
 }
 
-impl From<BindingResolveOptions> for rolldown_resolver::ResolveOptions {
+impl From<BindingResolveOptions> for rolldown::ResolveOptions {
   fn from(value: BindingResolveOptions) -> Self {
     Self {
       alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),

@@ -6,6 +6,8 @@ use derivative::Derivative;
 use futures::Future;
 use rolldown_error::BuildError;
 
+use self::resolve_options::ResolveOptions;
+
 use super::types::input_item::InputItem;
 
 pub mod resolve_options;
@@ -62,5 +64,5 @@ pub struct InputOptions {
   pub cwd: Option<PathBuf>,
   pub external: Option<External>,
   pub treeshake: Option<bool>,
-  pub resolve: Option<rolldown_resolver::ResolveOptions>,
+  pub resolve: Option<ResolveOptions>,
 }

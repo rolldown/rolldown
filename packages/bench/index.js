@@ -50,15 +50,6 @@ const suites = [
 async function runRolldown(item) {
   const build = await rolldown.rolldown({
     input: item.inputs,
-    resolve: {
-      // TODO
-      // For now these are needed to align better w/ esbuild & Vite behavior
-      // because internally we are still using the default behavior of oxc
-      // resolver. We should ship a more sensible resolver default that aligns
-      // with Vite's.
-      conditionNames: ['import'],
-      mainFields: ['module', 'browser', 'main'],
-    },
   })
   await build.write({
     dir: path.join(dirname, `./dist/rolldown/${item.title}`),

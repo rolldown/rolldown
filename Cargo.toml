@@ -74,6 +74,7 @@ async-trait               = "0.1.74"
 codspeed-criterion-compat = "2.4"
 dashmap                   = "5.5.3"
 derivative                = "2.2.0"
+dunce                     = "1.0.4"                                                                   # Normalize Windows paths to the most compatible format, avoiding UNC where possible
 futures                   = "0.3.29"
 index_vec                 = "0.1.3"
 insta                     = "1.34.0"

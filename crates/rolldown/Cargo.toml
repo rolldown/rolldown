@@ -13,6 +13,7 @@ workspace = true
 
 [dependencies]
 derivative         = { workspace = true }
+dunce              = { workspace = true }
 futures            = { workspace = true }
 index_vec          = { workspace = true }
 once_cell          = { workspace = true }

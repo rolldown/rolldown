@@ -4,7 +4,6 @@ use std::{
   process::Command,
 };
 
-use super::utils::strip_extended_prefix;
 use rolldown::{Bundler, External, FileNameTemplate, InputOptions, OutputOptions, RolldownOutput};
 use rolldown_error::BuildError;
 use rolldown_testing::TestConfig;
@@ -64,12 +63,10 @@ impl Fixture {
       command.arg("--import");
       if cfg!(target_os = "windows") {
         // Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs.
-        let stripped_path =
-          format!("file://{}", strip_extended_prefix(entry).expect("strip_extended_prefix error!"));
-        command.arg(stripped_path);
-        return;
+        command.arg(format!("file://{}", entry.to_str().expect("should be valid utf8")));
+      } else {
+        command.arg(entry);
       }
-      command.arg(entry);
     });
 
     if test_script.exists() {
@@ -100,14 +97,6 @@ impl Fixture {
       test_config.input.input = Some(vec![default_test_input_item()]);
     }
 
-    let mut bundler_cmd = fixture_path.to_path_buf();
-    if cfg!(target_os = "windows") {
-      // in the windows if the path start with \\?\ the Bundler compile will throw Error: UnresolvedEntry { unresolved_id: "entry.js" }
-      // such as when test the crates/rolldown/tests/esbuild/default/await_import_inside_try/test.config.json
-      bundler_cmd =
-        PathBuf::from(strip_extended_prefix(fixture_path).expect("strip_extended_prefix error!"));
-    }
-
     let mut bundler = Bundler::new(
       InputOptions {
         input: test_config
@@ -120,7 +109,7 @@ impl Fixture {
               .collect()
           })
           .unwrap(),
-        cwd: bundler_cmd,
+        cwd: fixture_path.to_path_buf(),
         external: test_config.input.external.map(External::ArrayString).unwrap_or_default(),
         treeshake: test_config.input.treeshake.unwrap_or(true),
         resolve: test_config.input.resolve.map(|value| rolldown_resolver::ResolverOptions {

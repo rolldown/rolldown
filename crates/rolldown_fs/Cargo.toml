@@ -16,6 +16,6 @@ memory = []
 os     = []
 
 [dependencies]
-dunce        = "1.0.4"              # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+dunce        = { workspace = true }
 oxc_resolver = { workspace = true }
 vfs          = { workspace = true }

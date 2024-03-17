@@ -33,7 +33,7 @@ impl ResolvedPath {
     let mut pretty = pretty.replace('\0', "");
     if cfg!(target_os = "windows") {
       // To use snapshots across platforms in testing, replace all backslashes with slashes
-      pretty = pretty.replace("\\", "/")
+      pretty = pretty.replace('\\', "/");
     }
     if self.ignored {
       format!("(ignored) {pretty}")

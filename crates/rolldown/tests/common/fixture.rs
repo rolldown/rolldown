@@ -104,9 +104,8 @@ impl Fixture {
     if cfg!(target_os = "windows") {
       // in the windows if the path start with \\?\ the Bundler compile will throw Error: UnresolvedEntry { unresolved_id: "entry.js" }
       // such as when test the crates/rolldown/tests/esbuild/default/await_import_inside_try/test.config.json
-      bundler_cmd = PathBuf::from(
-        strip_extended_prefix(fixture_path.to_path_buf()).expect("strip_extended_prefix error!"),
-      );
+      bundler_cmd =
+        PathBuf::from(strip_extended_prefix(fixture_path).expect("strip_extended_prefix error!"));
     }
 
     let mut bundler = Bundler::new(

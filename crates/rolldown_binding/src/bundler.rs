@@ -5,7 +5,7 @@ use rolldown_fs::OsFileSystem;
 use tracing::instrument;
 
 use crate::{
-  options::{InputOptions, OutputOptions},
+  options::{BindingInputOptions, BindingOutputOptions},
   types::binding_outputs::BindingOutputs,
   utils::try_init_custom_trace_subscriber,
   NAPI_ENV,
@@ -21,8 +21,8 @@ impl Bundler {
   #[napi(constructor)]
   pub fn new(
     env: Env,
-    input_options: InputOptions,
-    output_options: OutputOptions,
+    input_options: BindingInputOptions,
+    output_options: BindingOutputOptions,
   ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
     Self::new_impl(env, input_options, output_options)
@@ -47,8 +47,8 @@ impl Bundler {
 impl Bundler {
   pub fn new_impl(
     env: Env,
-    input_opts: InputOptions,
-    output_opts: OutputOptions,
+    input_opts: BindingInputOptions,
+    output_opts: BindingOutputOptions,
   ) -> napi::Result<Self> {
     NAPI_ENV.set(&env, || {
       let (opts, plugins) = input_opts.into();

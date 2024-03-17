@@ -11,21 +11,11 @@ use napi_derive::napi;
 
 use serde::Deserialize;
 
+use self::binding_input_item::BindingInputItem;
+
 use super::plugin::PluginOptions;
 
-#[napi(object)]
-#[derive(Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct InputItem {
-  pub name: Option<String>,
-  pub import: String,
-}
-
-impl From<InputItem> for rolldown::InputItem {
-  fn from(value: InputItem) -> Self {
-    Self { name: value.name, import: value.import }
-  }
-}
+mod binding_input_item;
 
 pub type ExternalFn = JsCallback<(String, Option<String>, bool), bool>;
 
@@ -64,7 +54,7 @@ impl From<ResolveOptions> for rolldown_resolver::ResolverOptions {
 #[derive(Deserialize, Default, Derivative)]
 #[serde(rename_all = "camelCase")]
 #[derivative(Debug)]
-pub struct InputOptions {
+pub struct BindingInputOptions {
   // Not going to be supported
   // @deprecated Use the "inlineDynamicImports" output option instead.
   // inlineDynamicImports?: boolean;
@@ -80,7 +70,7 @@ pub struct InputOptions {
     ts_type = "undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)"
   )]
   pub external: Option<JsFunction>,
-  pub input: Vec<InputItem>,
+  pub input: Vec<BindingInputItem>,
   // makeAbsoluteExternalsRelative?: boolean | 'ifRelativeSource';
   // /** @deprecated Use the "manualChunks" output option instead. */
   // manualChunks?: ManualChunksOption;
@@ -107,10 +97,10 @@ pub struct InputOptions {
 }
 
 #[allow(clippy::redundant_closure_for_method_calls)]
-impl From<InputOptions>
+impl From<BindingInputOptions>
   for (napi::Result<rolldown::InputOptions>, napi::Result<Vec<rolldown_plugin::BoxPlugin>>)
 {
-  fn from(value: InputOptions) -> Self {
+  fn from(value: BindingInputOptions) -> Self {
     let cwd = PathBuf::from(value.cwd.clone());
     assert!(cwd != PathBuf::from("/"), "{value:#?}");
 

@@ -5,6 +5,7 @@ use rolldown_oxc_utils::{AstSnippet, OxcProgram};
 use super::finalizer::{Finalizer, FinalizerContext};
 
 pub mod load_source;
+pub mod normalize_options;
 pub mod renamer;
 pub mod render_chunks;
 pub mod render_normal_module;

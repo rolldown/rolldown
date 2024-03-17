@@ -11,7 +11,7 @@ use rolldown_utils::block_on_spawn_all;
 use crate::{
   error::BatchedResult,
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
-  options::input_options::SharedInputOptions,
+  options::normalized_input_options::SharedNormalizedInputOptions,
   runtime::RuntimeModuleBrief,
   types::{
     module_table::ModuleTable, resolved_request_info::ResolvedRequestInfo, symbols::Symbols,
@@ -21,7 +21,7 @@ use crate::{
 };
 
 pub struct ScanStage<Fs: FileSystem + Default> {
-  input_options: SharedInputOptions,
+  input_options: SharedNormalizedInputOptions,
   plugin_driver: SharedPluginDriver,
   fs: Fs,
   resolver: SharedResolver<Fs>,
@@ -39,7 +39,7 @@ pub struct ScanStageOutput {
 
 impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
   pub fn new(
-    input_options: SharedInputOptions,
+    input_options: SharedNormalizedInputOptions,
     plugin_driver: SharedPluginDriver,
     fs: Fs,
     resolver: SharedResolver<Fs>,

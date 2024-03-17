@@ -2,7 +2,10 @@ use rolldown_common::{ChunkKind, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
 use string_wizard::MagicString;
 
-use crate::{stages::link_stage::LinkStageOutput, OutputFormat, OutputOptions};
+use crate::{
+  options::normalized_output_options::NormalizedOutputOptions, stages::link_stage::LinkStageOutput,
+  OutputFormat,
+};
 
 use super::Chunk;
 
@@ -10,7 +13,7 @@ impl Chunk {
   pub fn render_exports(
     &self,
     graph: &LinkStageOutput,
-    output_options: &OutputOptions,
+    output_options: &NormalizedOutputOptions,
   ) -> Option<MagicString<'static>> {
     if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &self.kind {
       let linking_info = &graph.metas[*entry_module_id];
@@ -88,7 +91,7 @@ impl Chunk {
   pub fn get_export_names(
     &self,
     graph: &LinkStageOutput,
-    output_options: &OutputOptions,
+    output_options: &NormalizedOutputOptions,
   ) -> Vec<String> {
     if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &self.kind {
       let linking_info = &graph.metas[*entry_module_id];

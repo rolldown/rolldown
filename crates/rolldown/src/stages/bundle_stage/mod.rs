@@ -1,16 +1,13 @@
 use crate::{
+  chunk_graph::ChunkGraph,
   error::BatchedResult,
-  InputOptions,
-  {
-    chunk_graph::ChunkGraph,
-    finalizer::FinalizerContext,
-    options::{
-      file_name_template::FileNameRenderOptions,
-      output_options::{OutputOptions, SourceMapType},
-    },
-    stages::link_stage::LinkStageOutput,
-    utils::{finalize_normal_module, is_in_rust_test_mode, render_chunks::render_chunks},
+  finalizer::FinalizerContext,
+  options::{
+    file_name_template::FileNameRenderOptions, normalized_input_options::NormalizedInputOptions,
+    normalized_output_options::NormalizedOutputOptions, output_options::SourceMapType,
   },
+  stages::link_stage::LinkStageOutput,
+  utils::{finalize_normal_module, is_in_rust_test_mode, render_chunks::render_chunks},
 };
 use rolldown_common::{ChunkKind, Output, OutputAsset, OutputChunk};
 use rolldown_error::BuildError;
@@ -22,16 +19,16 @@ mod compute_cross_chunk_links;
 
 pub struct BundleStage<'a> {
   link_output: &'a mut LinkStageOutput,
-  output_options: &'a OutputOptions,
-  input_options: &'a InputOptions,
+  output_options: &'a NormalizedOutputOptions,
+  input_options: &'a NormalizedInputOptions,
   plugin_driver: &'a SharedPluginDriver,
 }
 
 impl<'a> BundleStage<'a> {
   pub fn new(
     link_output: &'a mut LinkStageOutput,
-    input_options: &'a InputOptions,
-    output_options: &'a OutputOptions,
+    input_options: &'a NormalizedInputOptions,
+    output_options: &'a NormalizedOutputOptions,
     plugin_driver: &'a SharedPluginDriver,
   ) -> Self {
     Self { link_output, output_options, input_options, plugin_driver }

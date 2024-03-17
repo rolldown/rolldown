@@ -3,7 +3,11 @@ use std::sync::Arc;
 use rolldown_plugin::{BoxPlugin, PluginDriver};
 use rolldown_resolver::Resolver;
 
-use crate::{types::bundler_fs::BundlerFileSystem, Bundler, InputOptions, OutputOptions};
+use crate::{
+  types::bundler_fs::BundlerFileSystem,
+  utils::normalize_options::{normalize_options, NormalizeOptionsReturn},
+  Bundler, InputOptions, OutputOptions,
+};
 
 pub struct BundlerBuilder<Fs: BundlerFileSystem> {
   input_options: InputOptions,
@@ -13,18 +17,22 @@ pub struct BundlerBuilder<Fs: BundlerFileSystem> {
 }
 
 impl<Fs: BundlerFileSystem> BundlerBuilder<Fs> {
-  pub fn build(mut self) -> Bundler<Fs> {
+  pub fn build(self) -> Bundler<Fs> {
     rolldown_tracing::try_init_tracing();
+
+    let NormalizeOptionsReturn { input_options, output_options, resolve_options } =
+      normalize_options(self.input_options, self.output_options);
+
     Bundler {
       resolver: Resolver::with_cwd_and_fs(
-        self.input_options.cwd.clone(),
-        std::mem::take(&mut self.input_options.resolve),
+        input_options.cwd.clone(),
+        resolve_options,
         self.fs.share(),
       )
       .into(),
       plugin_driver: PluginDriver::new_shared(self.plugins),
-      input_options: Arc::new(self.input_options),
-      output_options: self.output_options,
+      input_options: Arc::new(input_options),
+      output_options,
       fs: self.fs,
     }
   }

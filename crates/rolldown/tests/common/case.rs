@@ -1,6 +1,8 @@
 use std::{borrow::Cow, path::Path};
 
 use super::fixture::Fixture;
+use super::utils::normalize_error_windows_path;
+use super::utils::strip_extended_prefix;
 use rolldown::RolldownOutput;
 use rolldown_common::Output;
 use rolldown_error::BuildError;
@@ -52,7 +54,7 @@ impl Case {
           [
             Cow::Owned(format!("## {code}\n")),
             "```text".into(),
-            Cow::Owned(diagnostic.to_string()),
+            Cow::Owned(normalize_error_windows_path(diagnostic.to_string())),
             "```".into(),
           ]
         })
@@ -95,10 +97,11 @@ impl Case {
             chunk.file_name,
             chunk.is_entry,
             chunk.is_dynamic_entry,
-            chunk
-              .facade_module_id
-              .clone()
-              .map(|v| v.replace(self.fixture.dir_path().to_str().unwrap(), "$DIR$")),
+            chunk.facade_module_id.clone().map(|v| {
+              strip_extended_prefix(v)
+                .unwrap()
+                .replace(&strip_extended_prefix(self.fixture.dir_path()).unwrap(), "$DIR$")
+            }),
             chunk.exports
           ))]
         }

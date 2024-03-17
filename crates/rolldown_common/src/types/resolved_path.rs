@@ -30,8 +30,11 @@ impl ResolvedPath {
       self.path.to_string()
     };
     // remove \0
-    let pretty = pretty.replace('\0', "");
-
+    let mut pretty = pretty.replace('\0', "");
+    if cfg!(target_os = "windows") {
+      // To use snapshots across platforms in testing, replace all backslashes with slashes
+      pretty = pretty.replace('\\', "/");
+    }
     if self.ignored {
       format!("(ignored) {pretty}")
     } else {

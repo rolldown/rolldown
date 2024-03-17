@@ -1359,6 +1359,7 @@ name = "rolldown"
 version = "0.1.0"
 dependencies = [
  "derivative",
+ "dunce",
  "futures",
  "index_vec",
  "insta",

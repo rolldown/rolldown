@@ -13,7 +13,10 @@ pub struct Case {
 
 impl Case {
   pub fn new(path: impl AsRef<Path>) -> Self {
-    Self { fixture: Fixture::new(path.as_ref().to_path_buf()), snapshot: MagicString::new("") }
+    // Paths could be UNC format in windows, see https://github.com/rust-lang/rust/issues/42869 for more details
+    let path = dunce::simplified(path.as_ref());
+
+    Self { fixture: Fixture::new(path.to_path_buf()), snapshot: MagicString::new("") }
   }
 
   pub fn run(self) {
@@ -91,15 +94,8 @@ impl Case {
       .flat_map(|asset| match asset {
         Output::Chunk(chunk) => {
           vec![Cow::Owned(format!(
-            "- {}, is_entry {}, is_dynamic_entry {}, facade_module_id {:?}, exports {:?}",
-            chunk.file_name,
-            chunk.is_entry,
-            chunk.is_dynamic_entry,
-            chunk
-              .facade_module_id
-              .clone()
-              .map(|v| v.replace(self.fixture.dir_path().to_str().unwrap(), "$DIR$")),
-            chunk.exports
+            "- {}, is_entry {}, is_dynamic_entry {}, exports {:?}",
+            chunk.file_name, chunk.is_entry, chunk.is_dynamic_entry, chunk.exports
           ))]
         }
         Output::Asset(_) => vec![],

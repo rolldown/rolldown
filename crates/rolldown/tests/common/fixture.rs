@@ -61,7 +61,12 @@ impl Fixture {
     let mut command = Command::new("node");
     compiled_entries.iter().for_each(|entry| {
       command.arg("--import");
-      command.arg(entry);
+      if cfg!(target_os = "windows") {
+        // Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs.
+        command.arg(format!("file://{}", entry.to_str().expect("should be valid utf8")));
+      } else {
+        command.arg(entry);
+      }
     });
 
     if test_script.exists() {

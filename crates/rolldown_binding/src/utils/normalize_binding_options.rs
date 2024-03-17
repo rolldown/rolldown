@@ -44,31 +44,21 @@ pub fn normalize_binding_options(
 
   let normalized_input_options = InputOptions {
     input: input_options.input.into_iter().map(Into::into).collect(),
-    cwd,
-    external,
-    treeshake: true,
+    cwd: cwd.into(),
+    external: external.into(),
+    treeshake: true.into(),
     resolve: input_options.resolve.map(Into::into),
   };
 
   // Deal with output options
 
-  let mut normalized_output_options = OutputOptions::default();
-
-  if let Some(entry_file_names) = output_options.entry_file_names {
-    normalized_output_options.entry_file_names = rolldown::FileNameTemplate::from(entry_file_names);
-  }
-
-  if let Some(chunk_file_names) = output_options.chunk_file_names {
-    normalized_output_options.chunk_file_names = rolldown::FileNameTemplate::from(chunk_file_names);
-  }
-
-  if let Some(dir) = output_options.dir {
-    normalized_output_options.dir = dir;
-  }
-
-  if let Some(sourcemap) = output_options.sourcemap {
-    normalized_output_options.sourcemap = sourcemap.into();
-  }
+  let normalized_output_options = OutputOptions {
+    entry_file_names: output_options.entry_file_names,
+    chunk_file_names: output_options.chunk_file_names,
+    dir: output_options.dir,
+    sourcemap: output_options.sourcemap.map(Into::into),
+    ..Default::default()
+  };
 
   // Deal with plugins
 

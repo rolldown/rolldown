@@ -7,7 +7,7 @@ use tracing::instrument;
 use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
   types::binding_outputs::BindingOutputs,
-  utils::try_init_custom_trace_subscriber,
+  utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
   NAPI_ENV,
 };
 
@@ -51,10 +51,14 @@ impl Bundler {
     output_opts: BindingOutputOptions,
   ) -> napi::Result<Self> {
     NAPI_ENV.set(&env, || {
-      let (opts, plugins) = input_opts.into();
+      let ret = normalize_binding_options(input_opts, output_opts)?;
 
       Ok(Self {
-        inner: Mutex::new(NativeBundler::with_plugins(opts?, output_opts.into(), plugins?)),
+        inner: Mutex::new(NativeBundler::with_plugins(
+          ret.input_options,
+          ret.output_options,
+          ret.plugins,
+        )),
       })
     })
   }

@@ -4,7 +4,7 @@ use std::{
   process::Command,
 };
 
-use rolldown::{Bundler, External, FileNameTemplate, InputOptions, OutputOptions, RolldownOutput};
+use rolldown::{Bundler, External, InputOptions, OutputOptions, RolldownOutput};
 use rolldown_error::BuildError;
 use rolldown_testing::TestConfig;
 
@@ -109,9 +109,9 @@ impl Fixture {
               .collect()
           })
           .unwrap(),
-        cwd: fixture_path.to_path_buf(),
-        external: test_config.input.external.map(External::ArrayString).unwrap_or_default(),
-        treeshake: test_config.input.treeshake.unwrap_or(true),
+        cwd: Some(fixture_path.to_path_buf()),
+        external: Some(test_config.input.external.map(External::ArrayString).unwrap_or_default()),
+        treeshake: Some(test_config.input.treeshake.unwrap_or(true)),
         resolve: test_config.input.resolve.map(|value| rolldown_resolver::ResolveOptions {
           alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),
           alias_fields: value.alias_fields,
@@ -125,8 +125,8 @@ impl Fixture {
         }),
       },
       OutputOptions {
-        entry_file_names: FileNameTemplate::from("[name].mjs".to_string()),
-        chunk_file_names: FileNameTemplate::from("[name].mjs".to_string()),
+        entry_file_names: "[name].mjs".to_string().into(),
+        chunk_file_names: "[name].mjs".to_string().into(),
         ..Default::default()
       },
     );

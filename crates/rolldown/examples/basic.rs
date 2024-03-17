@@ -16,7 +16,7 @@ async fn main() {
         InputItem { name: Some("react-dom".to_string()), import: "react-dom".to_string() },
         InputItem { name: Some("react".to_string()), import: "react".to_string() },
       ],
-      cwd,
+      cwd: cwd.into(),
       ..Default::default()
     },
     OutputOptions::default(),

@@ -31,7 +31,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                 name: Some(item.name.to_string()),
                 import: item.entry_path.to_string_lossy().to_string(),
               }],
-              cwd: join_by_repo_root("crates/benches"),
+              cwd: join_by_repo_root("crates/benches").into(),
               ..Default::default()
             },
             Default::default(),
@@ -64,7 +64,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                 name: Some(item.name.to_string()),
                 import: item.entry_path.to_string_lossy().to_string(),
               }],
-              cwd: join_by_repo_root("crates/bench"),
+              cwd: join_by_repo_root("crates/bench").into(),
               ..Default::default()
             },
             Default::default(),

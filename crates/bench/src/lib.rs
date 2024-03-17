@@ -23,7 +23,7 @@ pub async fn run_fixture(fixture_path: PathBuf) {
   let mut bundler = Bundler::new(
     InputOptions {
       input: vec![InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }],
-      cwd: fixture_path.clone(),
+      cwd: fixture_path.clone().into(),
       ..Default::default()
     },
     OutputOptions::default(),

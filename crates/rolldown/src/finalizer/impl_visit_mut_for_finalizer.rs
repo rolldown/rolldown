@@ -6,7 +6,7 @@ use oxc::{
     ast::{self, SimpleAssignmentTarget},
     VisitMut,
   },
-  span::Span,
+  span::{Span, SPAN},
 };
 use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
 use rolldown_oxc_utils::{Dummy, ExpressionExt, IntoIn, StatementExt, TakeIn};
@@ -100,7 +100,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
                     .snippet
                     .call_expr_with_2arg_expr_expr(
                       re_export_fn_name,
-                      self.snippet.id_ref_expr(importer_namespace_name),
+                      self.snippet.id_ref_expr(importer_namespace_name, SPAN),
                       self.snippet.call_expr_with_arg_expr_expr(
                         to_esm_fn_name,
                         self.snippet.call_expr_expr(importee_wrapper_ref_name),
@@ -129,7 +129,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               if func.id.is_none() {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
-                func.id = Some(self.snippet.id(canonical_name_for_default_export_ref));
+                func.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
               }
               top_stmt = ast::Statement::Declaration(ast::Declaration::FunctionDeclaration(
                 func.take_in(self.alloc),
@@ -141,7 +141,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               if class.id.is_none() {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
-                class.id = Some(self.snippet.id(canonical_name_for_default_export_ref));
+                class.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
               }
               top_stmt = ast::Statement::Declaration(ast::Declaration::ClassDeclaration(
                 class.take_in(self.alloc),
@@ -241,7 +241,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               declarators.push(ast::VariableDeclarator {
                 id: ast::BindingPattern {
                   kind: ast::BindingPatternKind::BindingIdentifier(
-                    self.snippet.id(&var_name).into_in(self.alloc),
+                    self.snippet.id(&var_name, SPAN).into_in(self.alloc),
                   ),
                   ..Dummy::dummy(self.alloc)
                 },
@@ -456,7 +456,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
         *property = ast::AssignmentTargetProperty::AssignmentTargetPropertyProperty(
           ast::AssignmentTargetPropertyProperty {
             name: ast::PropertyKey::Identifier(
-              self.snippet.id_name(&prop.binding.name).into_in(self.alloc),
+              self.snippet.id_name(&prop.binding.name, prop.span).into_in(self.alloc),
             ),
             binding: if let Some(init) = prop.init.take() {
               ast::AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(

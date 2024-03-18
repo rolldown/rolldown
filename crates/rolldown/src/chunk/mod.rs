@@ -98,7 +98,7 @@ impl Chunk {
       .copied()
       .map(|id| &graph.module_table.normal_modules[id])
       .filter_map(|m| {
-        let rendered_content = render_normal_module(
+        let rendered_output = render_normal_module(
           m,
           &ModuleRenderContext {
             canonical_names: &self.canonical_names,
@@ -107,16 +107,30 @@ impl Chunk {
             input_options,
           },
           &graph.ast_table[m.id],
+          if output_options.sourcemap.is_hidden() {
+            None
+          } else {
+            Some(
+              m.resource_id
+                .expect_file()
+                .relative_path(&input_options.cwd)
+                .to_string_lossy()
+                .to_string(),
+            )
+          },
         );
         Some((
           m.resource_id.expect_file().to_string(),
           RenderedModule { code: None },
-          rendered_content,
+          rendered_output.as_ref().map(|v| v.code.to_string()),
           if output_options.sourcemap.is_hidden() {
             None
           } else {
-            // TODO add oxc codegen sourcemap to sourcemap chain
-            Some(collapse_sourcemaps(&m.sourcemap_chain))
+            let mut sourcemap_chain = m.sourcemap_chain.iter().collect::<Vec<_>>();
+            if let Some(Some(sourcemap)) = rendered_output.as_ref().map(|x| x.sourcemap.as_ref()) {
+              sourcemap_chain.push(sourcemap);
+            }
+            Some(collapse_sourcemaps(sourcemap_chain))
           },
         ))
       })
@@ -126,7 +140,7 @@ impl Chunk {
         |(module_path, rendered_module, rendered_content, map)| -> Result<(), BuildError> {
           if let Some(rendered_content) = rendered_content {
             content_and_sourcemaps.push((
-              rendered_content.code.to_string(),
+              rendered_content,
               match map {
                 None => None,
                 Some(v) => v?,

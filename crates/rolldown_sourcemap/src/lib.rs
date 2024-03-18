@@ -1,23 +1,16 @@
 // cSpell:disable
-pub use sourcemap::SourceMap;
+pub use sourcemap::{SourceMap, SourceMapBuilder};
 mod concat_sourcemap;
 
 pub use concat_sourcemap::concat_sourcemaps;
 use rolldown_error::BuildError;
-use sourcemap::SourceMapBuilder;
 
-pub fn collapse_sourcemaps(sourcemap_chain: &[SourceMap]) -> Result<Option<SourceMap>, BuildError> {
-  let Some(last_map) = sourcemap_chain.last() else { return Ok(None) };
+pub fn collapse_sourcemaps(
+  mut sourcemap_chain: Vec<&SourceMap>,
+) -> Result<Option<SourceMap>, BuildError> {
+  let Some(last_map) = sourcemap_chain.pop() else { return Ok(None) };
 
   let mut sourcemap_builder = SourceMapBuilder::new(None);
-
-  if let Some(map) = sourcemap_chain.first() {
-    for source in map.sources() {
-      let source_id = sourcemap_builder.add_source(source);
-      sourcemap_builder.set_source_contents(source_id, map.get_source_contents(source_id));
-    }
-    sourcemap_builder.set_source_root(map.get_source_root());
-  }
 
   for token in last_map.tokens() {
     let original_token = sourcemap_chain.iter().rev().try_fold(token, |token, sourcemap| {
@@ -27,7 +20,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[SourceMap]) -> Result<Option<Sourc
     if let Some(original_token) = original_token {
       token.get_name().map(|name| sourcemap_builder.add_name(name));
 
-      sourcemap_builder.add(
+      let new_token = sourcemap_builder.add(
         token.get_dst_line(),
         token.get_dst_col(),
         original_token.get_src_line(),
@@ -35,6 +28,15 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[SourceMap]) -> Result<Option<Sourc
         original_token.get_source(),
         original_token.get_name(),
       );
+
+      if original_token.get_source().is_some()
+        && !sourcemap_builder.has_source_contents(new_token.src_id)
+      {
+        sourcemap_builder.set_source_contents(
+          new_token.src_id,
+          original_token.get_source_view().map(sourcemap::SourceView::source),
+        );
+      }
     }
   }
 
@@ -75,7 +77,8 @@ mod tests {
     ];
 
     let result = {
-      let map = super::collapse_sourcemaps(&sourcemaps).expect("should not fail").unwrap();
+      let map =
+        super::collapse_sourcemaps(sourcemaps.iter().collect()).expect("should not fail").unwrap();
       let mut buf = vec![];
       map.to_writer(&mut buf).unwrap();
       unsafe { String::from_utf8_unchecked(buf) }

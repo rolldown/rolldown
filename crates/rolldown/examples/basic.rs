@@ -1,4 +1,4 @@
-use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
+use rolldown::{Bundler, InputItem, InputOptions, OutputOptions, SourceMapType};
 use std::path::PathBuf;
 use sugar_path::SugarPathBuf;
 
@@ -19,7 +19,7 @@ async fn main() {
       cwd: cwd.into(),
       ..Default::default()
     },
-    OutputOptions::default(),
+    OutputOptions { sourcemap: Some(SourceMapType::File), ..OutputOptions::default() },
   );
 
   let _outputs = bundler.write().await.unwrap();

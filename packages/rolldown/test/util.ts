@@ -6,3 +6,7 @@ export function getOutputChunkNames(output: RollupOutput) {
     .map((chunk) => chunk.fileName)
     .sort()
 }
+
+export function getOutputFileNames(output: RollupOutput) {
+  return output.output.map((chunk) => chunk.fileName).sort()
+}

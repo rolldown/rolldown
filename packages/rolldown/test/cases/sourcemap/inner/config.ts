@@ -1,3 +1,4 @@
+// cSpell:disable
 import type { RollupOptions, RollupOutput } from '../../../../src'
 import path from 'node:path'
 import { expect } from 'vitest'

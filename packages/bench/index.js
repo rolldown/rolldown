@@ -2,7 +2,6 @@
 import { Bench } from 'tinybench'
 import path from 'node:path'
 import url from 'node:url'
-import fs from 'node:fs'
 import * as rolldown from 'rolldown'
 import * as esbuild from 'esbuild'
 import * as rollup from 'rollup'
@@ -46,20 +45,23 @@ const suites = [
 
 /**
  * @param {BenchSuite} item
+ * @param {boolean} sourcemap
  */
-async function runRolldown(item) {
+async function runRolldown(item, sourcemap) {
   const build = await rolldown.rolldown({
     input: item.inputs,
   })
   await build.write({
     dir: path.join(dirname, `./dist/rolldown/${item.title}`),
+    sourcemap,
   })
 }
 
 /**
  * @param {BenchSuite} item
+ * @param {boolean} sourcemap
  */
-async function runEsbuild(item) {
+async function runEsbuild(item, sourcemap) {
   await esbuild.build({
     entryPoints: item.inputs,
     bundle: true,
@@ -67,14 +69,15 @@ async function runEsbuild(item) {
     write: true,
     format: 'esm',
     splitting: true,
-    sourcemap: false,
+    sourcemap,
   })
 }
 
 /**
  * @param {BenchSuite} item
+ * @param {boolean} sourcemap
  */
-async function runRollup(item) {
+async function runRollup(item, sourcemap) {
   const build = await rollup.rollup({
     input: item.inputs,
     onwarn: (_warning, _defaultHandler) => {
@@ -91,51 +94,52 @@ async function runRollup(item) {
   })
   await build.write({
     dir: path.join(dirname, `./dist/rollup/${item.title}`),
+    sourcemap,
   })
 }
 
-for (const suite of suites) {
+/**
+ * @param {BenchSuite} suite
+ * @param {boolean} sourcemap
+ * @returns {Bench}
+ */
+function createBench(suite, sourcemap) {
   const bench = new Bench({ time: 100, iterations: suite.benchIteration ?? 10 })
-
-  // Check if inputs have been initialized
-  for (const input of suite.inputs) {
-    if (input.includes('/') && !fs.existsSync(input)) {
-      throw new Error(
-        `Benchmark input ${input} not found, try running \`just setup-bench\` first.`,
-      )
-    }
-  }
-
+  const sourcemapTitle = sourcemap ? '-sourcemap' : ''
   if (!suite.bundler || suite.bundler === 'rolldown') {
-    bench.add(`rolldown-${suite.title}`, async () => {
+    bench.add(`rolldown-${suite.title}${sourcemapTitle}`, async () => {
       try {
-        await runRolldown(suite)
+        await runRolldown(suite, sourcemap)
       } catch (err) {
         console.error(err)
       }
     })
   }
   if (!suite.bundler || suite.bundler === 'esbuild') {
-    bench.add(`esbuild-${suite.title}`, async () => {
+    bench.add(`esbuild-${suite.title}${sourcemapTitle}`, async () => {
       try {
-        await runEsbuild(suite)
+        await runEsbuild(suite, sourcemap)
       } catch (err) {
         console.error(err)
       }
     })
   }
   if (!suite.bundler || suite.bundler === 'rollup') {
-    bench.add(`rollup-${suite.title}`, async () => {
+    bench.add(`rollup-${suite.title}${sourcemapTitle}`, async () => {
       try {
-        await runRollup(suite)
+        await runRollup(suite, sourcemap)
       } catch (err) {
         console.error(err)
       }
     })
   }
+  return bench
+}
 
-  await bench.run()
-
+/**
+ * @param {Bench} bench
+ */
+function logBenchResult(bench) {
   const statusTable = bench.tasks.map(({ name: t, result: e }) => {
     if (!e) {
       console.error(`${t} failed:`, e)
@@ -155,4 +159,14 @@ for (const suite of suites) {
     }
   })
   console.table(statusTable)
+}
+
+for (const suite of suites) {
+  const bench = createBench(suite, false)
+  await bench.run()
+  logBenchResult(bench)
+
+  const sourcemapBench = createBench(suite, true)
+  await sourcemapBench.run()
+  logBenchResult(sourcemapBench)
 }

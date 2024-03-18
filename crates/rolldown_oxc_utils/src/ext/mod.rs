@@ -50,7 +50,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
     let left = match &mut self.kind {
       // Turn `var a = 1` into `a = 1`
       ast::BindingPatternKind::BindingIdentifier(id) => {
-        AstSnippet::new(alloc).simple_id_assignment_target(&id.name)
+        AstSnippet::new(alloc).simple_id_assignment_target(&id.name, id.span)
       }
       // Turn `var { a, b = 2 } = ...` to `{a, b = 2} = ...`
       ast::BindingPatternKind::ObjectPattern(_obj_pat) => {

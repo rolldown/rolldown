@@ -2,6 +2,7 @@
 use rolldown_error::BuildError;
 use sourcemap::{SourceMap, SourceMapBuilder};
 
+#[allow(clippy::cast_possible_truncation)]
 pub fn concat_sourcemaps(
   content_and_sourcemaps: &[(String, Option<SourceMap>)],
 ) -> Result<(String, SourceMap), BuildError> {
@@ -11,14 +12,15 @@ pub fn concat_sourcemaps(
 
   for (index, (content, sourcemap)) in content_and_sourcemaps.iter().enumerate() {
     s.push_str(content);
-    if index != content_and_sourcemaps.len() - 1 {
+    if index < content_and_sourcemaps.len() - 1 {
       s.push('\n');
     }
 
     if let Some(sourcemap) = sourcemap {
-      for source in sourcemap.sources() {
+      for (index, source) in sourcemap.sources().enumerate() {
         let source_id = sourcemap_builder.add_source(source);
-        sourcemap_builder.set_source_contents(source_id, sourcemap.get_source_contents(source_id));
+        sourcemap_builder
+          .set_source_contents(source_id, sourcemap.get_source_contents(index as u32));
       }
       for token in sourcemap.tokens() {
         sourcemap_builder.add(
@@ -31,8 +33,7 @@ pub fn concat_sourcemaps(
         );
       }
     }
-    line_offset += u32::try_from(content.lines().count() + 1)
-      .map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
+    line_offset += (content.lines().count() + 1) as u32;
   }
 
   Ok((s, sourcemap_builder.into_sourcemap()))

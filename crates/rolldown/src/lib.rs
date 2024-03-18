@@ -25,7 +25,7 @@ pub use crate::{
   options::{
     file_name_template::FileNameTemplate,
     input_options::{resolve_options::ResolveOptions, External, InputOptions},
-    output_options::{OutputFormat, OutputOptions},
+    output_options::{OutputFormat, OutputOptions, SourceMapType},
     types::input_item::InputItem,
   },
   types::rolldown_output::RolldownOutput,

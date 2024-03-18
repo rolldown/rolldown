@@ -1,7 +1,7 @@
 use oxc::{
   allocator::{self, Allocator},
   ast::ast::{self, Statement},
-  span::Atom,
+  span::{Atom, Span, SPAN},
 };
 
 use crate::{Dummy, IntoIn};
@@ -23,20 +23,20 @@ impl<'ast> AstSnippet<'ast> {
     Atom::from(alloc_str)
   }
 
-  pub fn id(&self, name: PassedStr) -> ast::BindingIdentifier<'ast> {
-    ast::BindingIdentifier { name: self.atom(name), ..Dummy::dummy(self.alloc) }
+  pub fn id(&self, name: PassedStr, span: Span) -> ast::BindingIdentifier<'ast> {
+    ast::BindingIdentifier { name: self.atom(name), span, ..Dummy::dummy(self.alloc) }
   }
 
-  pub fn id_ref(&self, name: PassedStr) -> ast::IdentifierReference<'ast> {
-    ast::IdentifierReference { name: self.atom(name), ..Dummy::dummy(self.alloc) }
+  pub fn id_ref(&self, name: PassedStr, span: Span) -> ast::IdentifierReference<'ast> {
+    ast::IdentifierReference { name: self.atom(name), span, ..Dummy::dummy(self.alloc) }
   }
 
-  pub fn id_name(&self, name: PassedStr) -> ast::IdentifierName<'ast> {
-    ast::IdentifierName { name: self.atom(name), ..Dummy::dummy(self.alloc) }
+  pub fn id_name(&self, name: PassedStr, span: Span) -> ast::IdentifierName<'ast> {
+    ast::IdentifierName { name: self.atom(name), span }
   }
 
-  pub fn id_ref_expr(&self, name: PassedStr) -> ast::Expression<'ast> {
-    ast::Expression::Identifier(self.id_ref(name).into_in(self.alloc))
+  pub fn id_ref_expr(&self, name: PassedStr, span: Span) -> ast::Expression<'ast> {
+    ast::Expression::Identifier(self.id_ref(name, span).into_in(self.alloc))
   }
 
   /// `[object].[property]`
@@ -46,7 +46,7 @@ impl<'ast> AstSnippet<'ast> {
     property: PassedStr,
   ) -> ast::MemberExpression<'ast> {
     ast::MemberExpression::StaticMemberExpression(ast::StaticMemberExpression {
-      object: ast::Expression::Identifier(self.id_ref(object).into_in(self.alloc)),
+      object: ast::Expression::Identifier(self.id_ref(object, SPAN).into_in(self.alloc)),
       property: ast::IdentifierName { name: self.atom(property), ..Dummy::dummy(self.alloc) },
       ..Dummy::dummy(self.alloc)
     })
@@ -66,7 +66,7 @@ impl<'ast> AstSnippet<'ast> {
   /// `name()`
   pub fn call_expr(&self, name: PassedStr) -> ast::CallExpression<'ast> {
     ast::CallExpression {
-      callee: ast::Expression::Identifier(self.id_ref(name).into_in(self.alloc)),
+      callee: ast::Expression::Identifier(self.id_ref(name, SPAN).into_in(self.alloc)),
       arguments: allocator::Vec::new_in(self.alloc),
       ..Dummy::dummy(self.alloc)
     }
@@ -79,8 +79,9 @@ impl<'ast> AstSnippet<'ast> {
 
   /// `name(arg)`
   pub fn call_expr_with_arg_expr(&self, name: PassedStr, arg: PassedStr) -> ast::Expression<'ast> {
-    let arg =
-      ast::Argument::Expression(ast::Expression::Identifier(self.id_ref(arg).into_in(self.alloc)));
+    let arg = ast::Argument::Expression(ast::Expression::Identifier(
+      self.id_ref(arg, SPAN).into_in(self.alloc),
+    ));
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg);
     ast::Expression::CallExpression(call_expr.into_in(self.alloc))
@@ -105,10 +106,12 @@ impl<'ast> AstSnippet<'ast> {
     arg1: PassedStr,
     arg2: PassedStr,
   ) -> ast::Expression<'_> {
-    let arg1 =
-      ast::Argument::Expression(ast::Expression::Identifier(self.id_ref(arg1).into_in(self.alloc)));
-    let arg2 =
-      ast::Argument::Expression(ast::Expression::Identifier(self.id_ref(arg2).into_in(self.alloc)));
+    let arg1 = ast::Argument::Expression(ast::Expression::Identifier(
+      self.id_ref(arg1, SPAN).into_in(self.alloc),
+    ));
+    let arg2 = ast::Argument::Expression(ast::Expression::Identifier(
+      self.id_ref(arg2, SPAN).into_in(self.alloc),
+    ));
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg1);
     call_expr.arguments.push(arg2);
@@ -192,14 +195,18 @@ impl<'ast> AstSnippet<'ast> {
     };
     arrow_expr.params.items.push(ast::FormalParameter {
       pattern: ast::BindingPattern {
-        kind: ast::BindingPatternKind::BindingIdentifier(self.id("exports").into_in(self.alloc)),
+        kind: ast::BindingPatternKind::BindingIdentifier(
+          self.id("exports", SPAN).into_in(self.alloc),
+        ),
         ..Dummy::dummy(self.alloc)
       },
       ..Dummy::dummy(self.alloc)
     });
     arrow_expr.params.items.push(ast::FormalParameter {
       pattern: ast::BindingPattern {
-        kind: ast::BindingPatternKind::BindingIdentifier(self.id("module").into_in(self.alloc)),
+        kind: ast::BindingPatternKind::BindingIdentifier(
+          self.id("module", SPAN).into_in(self.alloc),
+        ),
         ..Dummy::dummy(self.alloc)
       },
       ..Dummy::dummy(self.alloc)
@@ -289,9 +296,15 @@ impl<'ast> AstSnippet<'ast> {
   ///  id = ...
   /// ￣￣ AssignmentTarget
   /// ```
-  pub fn simple_id_assignment_target(&self, id: PassedStr) -> ast::AssignmentTarget<'ast> {
+  pub fn simple_id_assignment_target(
+    &self,
+    id: PassedStr,
+    span: Span,
+  ) -> ast::AssignmentTarget<'ast> {
     ast::AssignmentTarget::SimpleAssignmentTarget(
-      ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(self.id_ref(id).into_in(self.alloc)),
+      ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
+        self.id_ref(id, span).into_in(self.alloc),
+      ),
     )
   }
 

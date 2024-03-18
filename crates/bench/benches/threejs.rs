@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use bench::join_by_repo_root;
 use codspeed_criterion_compat::{criterion_group, criterion_main, Criterion};
-use rolldown::InputOptions;
+use rolldown::{InputOptions, OutputOptions, SourceMapType};
 
 #[derive(Debug)]
 struct BenchItem {
@@ -21,6 +21,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   items.into_iter().for_each(|item| {
     let scan_id = format!("{}-scan", item.name);
     // let build_id = format!("{}-build", item.name);
+    let source_map_id = format!("{}-sourcemap", item.name);
     let bundle_id = format!("{}-bundle", item.name);
     group.bench_function(scan_id, |b| {
       b.iter(|| {
@@ -68,6 +69,25 @@ fn criterion_benchmark(c: &mut Criterion) {
               ..Default::default()
             },
             Default::default(),
+          );
+          rolldown_bundler.write().await.unwrap();
+        })
+      });
+    });
+
+    group.bench_function(source_map_id, |b| {
+      b.iter(|| {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+          let mut rolldown_bundler = rolldown::Bundler::new(
+            InputOptions {
+              input: vec![rolldown::InputItem {
+                name: Some(item.name.to_string()),
+                import: item.entry_path.to_string_lossy().to_string(),
+              }],
+              cwd: join_by_repo_root("crates/bench").into(),
+              ..Default::default()
+            },
+            OutputOptions { sourcemap: Some(SourceMapType::File), ..Default::default() },
           );
           rolldown_bundler.write().await.unwrap();
         })

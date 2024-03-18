@@ -1,7 +1,7 @@
 use std::{
   borrow::Cow,
   ffi::OsStr,
-  path::{Component, Path},
+  path::{Component, Path, PathBuf},
   sync::Arc,
 };
 
@@ -61,6 +61,11 @@ impl FilePath {
       name.push_str(&ext);
     }
     name
+  }
+
+  pub fn relative_path(&self, root: impl AsRef<Path>) -> PathBuf {
+    let path = self.0.as_path();
+    path.relative(root)
   }
 
   pub fn representative_name(&self) -> Cow<str> {

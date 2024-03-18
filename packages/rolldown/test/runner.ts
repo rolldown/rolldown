@@ -50,6 +50,7 @@ function normalizedOptions(caseRoot: string, config?: RollupOptions) {
     input: config?.input ?? path.join(caseRoot, 'main.js'),
     output: {
       dir: output.dir ?? path.join(caseRoot, 'dist'),
+      ...output,
     },
     ...config,
   }

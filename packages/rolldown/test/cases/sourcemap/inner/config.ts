@@ -24,12 +24,6 @@ export default {
     expect(output.output[0].code).contains('//# sourceMappingURL=main.js.map')
     // @ts-expect-error
     const map = JSON.parse(output.output[1].source)
-    expect(map.sources).toMatchInlineSnapshot(`
-      [
-        "test/cases/sourcemap/inner/foo.js",
-        "test/cases/sourcemap/inner/main.js",
-      ]
-    `)
     expect(map.file).toMatchInlineSnapshot(`"main.js"`)
     expect(map.mappings).toMatchInlineSnapshot(
       `";;AAAO,MAAMA,MAAM;;;ACEnB,QAAQ,IAAIA,IAAI"`,

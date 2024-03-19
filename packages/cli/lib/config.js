@@ -1,6 +1,7 @@
 import jitiFactory from 'jiti'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { ERR_UNSUPPORTED_CONFIG_FORMAT } from './errors.js'
 
 const __filename = fileURLToPath(import.meta.url)
 
@@ -12,9 +13,7 @@ const __filename = fileURLToPath(import.meta.url)
  */
 export function loadConfig(configPath) {
   if (!isSupportedFormat(configPath)) {
-    throw new Error(
-      `Unsupported config format. please use '.js', '.mjs' and '.ts' format`,
-    )
+    throw new Error(ERR_UNSUPPORTED_CONFIG_FORMAT)
   }
   return lazyJiti()(configPath)
 }

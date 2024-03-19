@@ -3,6 +3,7 @@ import { describe, test } from 'node:test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getPackageJSON } from '../lib/utils.js'
+import { ERR_CLI_META_DATA } from '../lib/errors.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -17,7 +18,7 @@ describe('utils', () => {
     test('invalid package.json', () => {
       assert.throws(() => {
         getPackageJSON(path.resolve(__dirname, './fixtures'))
-      }, /cli meta data error/)
+      }, new RegExp(ERR_CLI_META_DATA))
     })
 
     test('failure', () => {

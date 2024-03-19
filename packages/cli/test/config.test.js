@@ -3,10 +3,13 @@ import { describe, test } from 'node:test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadConfig } from '../lib/config.js'
+import { ERR_UNSUPPORTED_CONFIG_FORMAT } from '../lib/errors.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 describe('loadConfig', () => {
+  const RE_ERR = RegExp(ERR_UNSUPPORTED_CONFIG_FORMAT)
+
   test('js', () => {
     const config = loadConfig(
       path.resolve(__dirname, 'fixtures/rolldown.config.js'),
@@ -38,12 +41,12 @@ describe('loadConfig', () => {
   test('cjs', () => {
     assert.throws(() => {
       loadConfig(path.resolve(__dirname, 'fixtures/rolldown.config.cjs'))
-    }, /Unsupported config format. please use '.js', '.mjs' and '.ts' format/)
+    }, RE_ERR)
   })
 
   test('other format', () => {
     assert.throws(() => {
       loadConfig(path.join(__dirname, 'fixtures/rolldown.config.json'))
-    }, /Unsupported config format. please use '.js', '.mjs' and '.ts' format/)
+    }, RE_ERR)
   })
 })

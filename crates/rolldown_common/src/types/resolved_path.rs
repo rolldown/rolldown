@@ -49,9 +49,9 @@ fn test() {
   current_dir.push_str("/resolved_path.rs");
   let mut from_test = ResolvedPath::from(current_dir);
 
-  let prettify_res = from_test.prettify(Path::new("./"));
+  let prettify_res = from_test.prettify(Path::new("../"));
 
-  assert_eq!(prettify_res, "resolved_path.rs");
+  assert_eq!(prettify_res, "rolldown_common/resolved_path.rs");
 
   from_test.ignored = true;
 

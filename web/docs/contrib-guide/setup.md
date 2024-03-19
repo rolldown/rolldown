@@ -52,13 +52,18 @@ just init
 After initialization, everything should be setup and ready to go. You could run
 
 ```shell
-just smoke
+just roll
 ```
 
 to verify that everything is setup correctly.
 
 ::: tip
-`just smoke` command almost run all ci checks locally. It's useful to run this before pushing your changes. It also has two variants `just smoke-rust` and `just smoke-node` to run only Rust or Node.js checks.
+`just roll` command almost run all ci checks locally. It's useful to run this before pushing your changes. It also has three variants:
+
+- `just roll-rust` - Run only Rust checks.
+- `just roll-node` - Run only Node.js checks.
+- `just roll-repo` - Checks for non-code related issues, like file na
+
 :::
 
 ## High Level Workflow
@@ -66,13 +71,13 @@ to verify that everything is setup correctly.
 The following commands are available and should be used in your standard development workflow.
 
 - `just init` - Install required tools and dependencies.
-- `just smoke` - Runs various kinds of checks to ensure the project is in a good state.
+- `just roll` - Runs various kinds of checks to ensure the project is in a good state.
 - `just lint` - Lint the codebase.
 - `just fmt` - Fix formatting issues.
 - `just check` - Run the type checker.
 - `just test` - Runs tests. Also see [Testing](./test.md).
 
-> Every command will run both Rust and Node.js scripts. To only target one, append `-rust` or `-node` to the just command. For example, `just lint-rust` or `just fmt-node`.
+> Most of commands will run both Rust and Node.js scripts. To only target one, append `-rust` or `-node` to the just command. For example, `just lint-rust` or `just check-node`.
 
 ::: tip
 You could run the command `just` only and it will show you all available commands.

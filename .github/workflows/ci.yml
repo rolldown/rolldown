@@ -32,17 +32,18 @@ jobs:
         with:
           filters: |
             rust-changes: &rust-changes
-              - 'crates/**'
+              - '/crates/**'
               - '/Cargo.toml'
               - '/Cargo.lock'
               - '/rust-toolchain.toml'
               - '/deny.toml'
             node-changes:
               - *rust-changes
-              - 'packages/**'
-              - 'web/**'
-              - 'examples/**'
-              - 'scripts/**'
+              - '/packages/**'
+              - '/web/**'
+              - '!/web/docs/**'
+              - '/examples/**'
+              - '/scripts/**'
               - '/package.json'
               - '/pnpm-lock.yaml'
               - '/pnpm-workspace.yaml'

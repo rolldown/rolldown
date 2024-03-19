@@ -4,20 +4,24 @@ set shell := ["bash", "-cu"]
 _default:
     just --list -u
 
-# `smoke` command almost run all ci checks locally. It's useful to run this before pushing your changes.
-smoke:
-    just smoke-rust
-    just smoke-node
+# `roll` command almost run all ci checks locally. It's useful to run this before pushing your changes.
+roll:
+    just roll-rust
+    just roll-node
+    just roll-repo
 
-smoke-rust:
+roll-rust:
     just check-rust
     just test-rust
     just lint-rust
 
-smoke-node:
+roll-node:
     just check-node
     just test-node
     just lint-node
+
+roll-repo:
+    just lint-repo
 
 # Initialize the project and its submodules
 init:
@@ -66,7 +70,7 @@ test-node:
     pnpm build
     pnpm test
 
-# Fix formatting issues both for Rust and Node.js.
+# Fix formatting issues both for Rust, Node.js and all files in the repository
 fmt:
     just fmt-rust
     just fmt-repo

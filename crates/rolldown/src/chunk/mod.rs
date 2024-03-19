@@ -91,9 +91,8 @@ impl Chunk {
     let mut rendered_modules = FxHashMap::default();
     let mut concat_source = ConcatSource::default();
 
-    concat_source.add_source(Box::new(RawSource::new(
-      self.render_imports_for_esm(graph, chunk_graph).to_string(),
-    )));
+    concat_source
+      .add_source(Box::new(RawSource::new(self.render_imports_for_esm(graph, chunk_graph))));
 
     self
       .modules
@@ -102,7 +101,6 @@ impl Chunk {
       .map(|id| &graph.module_table.normal_modules[id])
       .filter_map(|m| {
         let rendered_output = render_normal_module(
-          m,
           &ModuleRenderContext {
             canonical_names: &self.canonical_names,
             graph,
@@ -124,13 +122,14 @@ impl Chunk {
         );
         Some((
           m.resource_id.expect_file().to_string(),
+          &m.pretty_path,
           RenderedModule { code: None },
-          rendered_output.as_ref().map(|v| v.code.to_string()),
+          rendered_output.as_ref().map(|v| v.source_text.to_string()),
           if output_options.sourcemap.is_hidden() {
             None
           } else {
             let mut sourcemap_chain = m.sourcemap_chain.iter().collect::<Vec<_>>();
-            if let Some(Some(sourcemap)) = rendered_output.as_ref().map(|x| x.sourcemap.as_ref()) {
+            if let Some(Some(sourcemap)) = rendered_output.as_ref().map(|x| x.source_map.as_ref()) {
               sourcemap_chain.push(sourcemap);
             }
             Some(collapse_sourcemaps(sourcemap_chain))
@@ -140,8 +139,9 @@ impl Chunk {
       .collect::<Vec<_>>()
       .into_iter()
       .try_for_each(
-        |(module_path, rendered_module, rendered_content, map)| -> Result<(), BuildError> {
+        |(module_path, module_pretty_path, rendered_module, rendered_content, map)| -> Result<(), BuildError> {
           if let Some(rendered_content) = rendered_content {
+            concat_source.add_source(Box::new(RawSource::new(format!("// {module_pretty_path}"))));
             if let Some(map) = match map {
               None => None,
               Some(v) => v?,
@@ -157,7 +157,7 @@ impl Chunk {
       )?;
 
     if let Some(exports) = self.render_exports(graph, output_options) {
-      concat_source.add_source(Box::new(RawSource::new(exports.to_string())));
+      concat_source.add_source(Box::new(RawSource::new(exports)));
     }
 
     let (content, map) = concat_source.content_and_sourcemap();

@@ -16,8 +16,7 @@ export function loadConfig(configPath) {
       `Unsupported config format. please use '.js', '.mjs' and '.ts' format`,
     )
   }
-  const jiti = jitiFactory(__filename)
-  return jiti(configPath)
+  return lazyJiti()(configPath)
 }
 
 /**
@@ -29,4 +28,17 @@ export function loadConfig(configPath) {
 function isSupportedFormat(configPath) {
   const ext = path.extname(configPath)
   return /\.(js|mjs|ts)$/.test(ext)
+}
+
+/**
+ * @type {import('jiti').JITI | null}
+ */
+let jiti = null
+
+/**
+ * Get a jiti instance lazily
+ * @returns {import('jiti').JITI}
+ */
+function lazyJiti() {
+  return jiti ?? (jiti = jitiFactory(__filename))
 }

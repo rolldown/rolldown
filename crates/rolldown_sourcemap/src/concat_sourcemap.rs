@@ -3,11 +3,13 @@ use sourcemap::{SourceMap, SourceMapBuilder};
 
 pub trait Source {
   fn sourcemap(&self) -> Option<&SourceMap>;
+  fn content(&self) -> &String;
   #[allow(clippy::wrong_self_convention)]
   fn into_concat_source(
     &self,
     final_source: &mut String,
     sourcemap_builder: &mut Option<SourceMapBuilder>,
+    line_offset: u32,
   );
 }
 
@@ -26,10 +28,15 @@ impl Source for RawSource {
     None
   }
 
+  fn content(&self) -> &String {
+    &self.content
+  }
+
   fn into_concat_source(
     &self,
     final_source: &mut String,
     _sourcemap_builder: &mut Option<SourceMapBuilder>,
+    _line_offset: u32,
   ) {
     final_source.push_str(&self.content);
   }
@@ -51,11 +58,16 @@ impl Source for SourceMapSource {
     Some(&self.sourcemap)
   }
 
+  fn content(&self) -> &String {
+    &self.content
+  }
+
   #[allow(clippy::cast_possible_truncation)]
   fn into_concat_source(
     &self,
     final_source: &mut String,
     sourcemap_builder: &mut Option<SourceMapBuilder>,
+    line_offset: u32,
   ) {
     if let Some(sourcemap_builder) = sourcemap_builder {
       for (index, source) in self.sourcemap.sources().enumerate() {
@@ -65,7 +77,7 @@ impl Source for SourceMapSource {
       }
       for token in self.sourcemap.tokens() {
         sourcemap_builder.add(
-          token.get_dst_line() + final_source.lines().count() as u32,
+          token.get_dst_line() + line_offset,
           token.get_dst_col(),
           token.get_src_line(),
           token.get_src_col(),
@@ -93,14 +105,17 @@ impl ConcatSource {
     self.inner.push(source);
   }
 
+  #[allow(clippy::cast_possible_truncation)]
   pub fn content_and_sourcemap(self) -> (String, Option<SourceMap>) {
     let mut final_source = String::new();
     let mut sourcemap_builder = self.enabel_sourcemap.then_some(SourceMapBuilder::new(None));
+    let mut line_offset = 0;
 
     for (index, source) in self.inner.iter().enumerate() {
-      source.into_concat_source(&mut final_source, &mut sourcemap_builder);
+      source.into_concat_source(&mut final_source, &mut sourcemap_builder, line_offset);
       if index < self.inner.len() - 1 {
         final_source.push('\n');
+        line_offset += source.content().matches('\n').count() as u32 + 1; // +1 for the newline
       }
     }
 

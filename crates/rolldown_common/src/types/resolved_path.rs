@@ -1,6 +1,6 @@
-use std::path::Path;
-
 use crate::FilePath;
+use std::env;
+use std::path::Path;
 use sugar_path::SugarPath;
 
 #[derive(Debug, Clone)]
@@ -41,4 +41,21 @@ impl ResolvedPath {
       pretty
     }
   }
+}
+
+#[test]
+fn test() {
+  let mut current_dir = env::current_dir().unwrap().display().to_string();
+  current_dir.push_str("/resolved_path.rs");
+  let mut from_test = ResolvedPath::from(current_dir);
+
+  let prettify_res = from_test.prettify(Path::new("./"));
+
+  assert_eq!(prettify_res, "resolved_path.rs");
+
+  from_test.ignored = true;
+
+  let ignore_prettify_res = from_test.prettify(Path::new("./"));
+
+  assert_eq!(ignore_prettify_res, "(ignored) resolved_path.rs");
 }

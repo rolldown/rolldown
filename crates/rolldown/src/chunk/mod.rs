@@ -14,9 +14,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_rstr::Rstr;
-use rolldown_sourcemap::{
-  collapse_sourcemaps, ConcatSource, RawSource, SourceMap, SourceMapSource,
-};
+use rolldown_sourcemap::{collapse_sourcemaps, concat_sourcemaps, SourceMap};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
 
@@ -89,11 +87,10 @@ impl Chunk {
   ) -> BatchedResult<ChunkRenderReturn> {
     use rayon::prelude::*;
     let mut rendered_modules = FxHashMap::default();
-    let mut concat_source = ConcatSource::default();
+    let mut content_and_sourcemaps = vec![];
 
-    concat_source.add_source(Box::new(RawSource::new(
-      self.render_imports_for_esm(graph, chunk_graph).to_string(),
-    )));
+    content_and_sourcemaps
+      .push((self.render_imports_for_esm(graph, chunk_graph).to_string(), None));
 
     self
       .modules
@@ -142,14 +139,13 @@ impl Chunk {
       .try_for_each(
         |(module_path, rendered_module, rendered_content, map)| -> Result<(), BuildError> {
           if let Some(rendered_content) = rendered_content {
-            if let Some(map) = match map {
-              None => None,
-              Some(v) => v?,
-            } {
-              concat_source.add_source(Box::new(SourceMapSource::new(rendered_content, map)));
-            } else {
-              concat_source.add_source(Box::new(RawSource::new(rendered_content)));
-            }
+            content_and_sourcemaps.push((
+              rendered_content,
+              match map {
+                None => None,
+                Some(v) => v?,
+              },
+            ));
           }
           rendered_modules.insert(module_path, rendered_module);
           Ok(())
@@ -157,11 +153,19 @@ impl Chunk {
       )?;
 
     if let Some(exports) = self.render_exports(graph, output_options) {
-      concat_source.add_source(Box::new(RawSource::new(exports.to_string())));
+      content_and_sourcemaps.push((exports.to_string(), None));
     }
 
-    let (content, map) = concat_source.content_and_sourcemap();
+    if output_options.sourcemap.is_hidden() {
+      return Ok(ChunkRenderReturn {
+        code: content_and_sourcemaps.into_iter().map(|(c, _)| c).collect::<Vec<_>>().join("\n"),
+        map: None,
+        rendered_modules,
+      });
+    }
 
-    Ok(ChunkRenderReturn { code: content, map, rendered_modules })
+    let (content, map) = concat_sourcemaps(&content_and_sourcemaps)?;
+
+    Ok(ChunkRenderReturn { code: content, map: Some(map), rendered_modules })
   }
 }

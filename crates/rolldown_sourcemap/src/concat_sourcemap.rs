@@ -1,30 +1,71 @@
 // cSpell:disable
-use rolldown_error::BuildError;
 use sourcemap::{SourceMap, SourceMapBuilder};
 
-#[allow(clippy::cast_possible_truncation)]
-pub fn concat_sourcemaps(
-  content_and_sourcemaps: &[(String, Option<SourceMap>)],
-) -> Result<(String, SourceMap), BuildError> {
-  let mut s = String::new();
-  let mut sourcemap_builder = SourceMapBuilder::new(None);
-  let mut line_offset = 0;
+pub trait Source {
+  fn sourcemap(&self) -> Option<&SourceMap>;
+  #[allow(clippy::wrong_self_convention)]
+  fn into_concat_source(
+    &self,
+    final_source: &mut String,
+    sourcemap_builder: &mut Option<SourceMapBuilder>,
+  );
+}
 
-  for (index, (content, sourcemap)) in content_and_sourcemaps.iter().enumerate() {
-    s.push_str(content);
-    if index < content_and_sourcemaps.len() - 1 {
-      s.push('\n');
-    }
+pub struct RawSource {
+  content: String,
+}
 
-    if let Some(sourcemap) = sourcemap {
-      for (index, source) in sourcemap.sources().enumerate() {
+impl RawSource {
+  pub fn new(content: String) -> Self {
+    Self { content }
+  }
+}
+
+impl Source for RawSource {
+  fn sourcemap(&self) -> Option<&SourceMap> {
+    None
+  }
+
+  fn into_concat_source(
+    &self,
+    final_source: &mut String,
+    _sourcemap_builder: &mut Option<SourceMapBuilder>,
+  ) {
+    final_source.push_str(&self.content);
+  }
+}
+
+pub struct SourceMapSource {
+  content: String,
+  sourcemap: SourceMap,
+}
+
+impl SourceMapSource {
+  pub fn new(content: String, sourcemap: SourceMap) -> Self {
+    Self { content, sourcemap }
+  }
+}
+
+impl Source for SourceMapSource {
+  fn sourcemap(&self) -> Option<&SourceMap> {
+    Some(&self.sourcemap)
+  }
+
+  #[allow(clippy::cast_possible_truncation)]
+  fn into_concat_source(
+    &self,
+    final_source: &mut String,
+    sourcemap_builder: &mut Option<SourceMapBuilder>,
+  ) {
+    if let Some(sourcemap_builder) = sourcemap_builder {
+      for (index, source) in self.sourcemap.sources().enumerate() {
         let source_id = sourcemap_builder.add_source(source);
         sourcemap_builder
-          .set_source_contents(source_id, sourcemap.get_source_contents(index as u32));
+          .set_source_contents(source_id, self.sourcemap.get_source_contents(index as u32));
       }
-      for token in sourcemap.tokens() {
+      for token in self.sourcemap.tokens() {
         sourcemap_builder.add(
-          token.get_dst_line() + line_offset,
+          token.get_dst_line() + final_source.lines().count() as u32,
           token.get_dst_col(),
           token.get_src_line(),
           token.get_src_col(),
@@ -33,18 +74,52 @@ pub fn concat_sourcemaps(
         );
       }
     }
-    line_offset += (content.lines().count() + 1) as u32;
+
+    final_source.push_str(&self.content);
+  }
+}
+
+#[derive(Default)]
+pub struct ConcatSource {
+  inner: Vec<Box<dyn Source>>,
+  enabel_sourcemap: bool,
+}
+
+impl ConcatSource {
+  pub fn add_source(&mut self, source: Box<dyn Source>) {
+    if source.sourcemap().is_some() {
+      self.enabel_sourcemap = true;
+    }
+    self.inner.push(source);
   }
 
-  Ok((s, sourcemap_builder.into_sourcemap()))
+  pub fn content_and_sourcemap(self) -> (String, Option<SourceMap>) {
+    let mut final_source = String::new();
+    let mut sourcemap_builder = self.enabel_sourcemap.then_some(SourceMapBuilder::new(None));
+
+    for (index, source) in self.inner.iter().enumerate() {
+      source.into_concat_source(&mut final_source, &mut sourcemap_builder);
+      if index < self.inner.len() - 1 {
+        final_source.push('\n');
+      }
+    }
+
+    (final_source, sourcemap_builder.map(sourcemap::SourceMapBuilder::into_sourcemap))
+  }
 }
 
 #[cfg(test)]
 mod tests {
   pub use sourcemap::SourceMap;
+
+  use crate::{ConcatSource, RawSource, SourceMapSource};
   #[test]
   fn concat_sourcemaps_works() {
-    let map = SourceMap::from_slice(
+    let mut concat_source = ConcatSource::default();
+    concat_source.add_source(Box::new(RawSource::new("\nconsole.log()".to_string())));
+    concat_source.add_source(Box::new(SourceMapSource::new(
+      "function sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n".to_string(),
+      SourceMap::from_slice(
         r#"{
           "version":3,
           "sourceRoot":"",
@@ -54,20 +129,13 @@ mod tests {
           "names":[]
         }"#.as_bytes()
     )
-    .unwrap();
-    let content_and_sourcemaps = vec![
-      ("\nconsole.log()".to_string(), None),
-      (
-        "function sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n".to_string(),
-        Some(map),
-      ),
-    ];
+    .unwrap(),
+    )));
 
     let (content, map) = {
-      let (content, map) =
-        super::concat_sourcemaps(&content_and_sourcemaps).expect("should not fail");
+      let (content, map) = concat_source.content_and_sourcemap();
       let mut buf = vec![];
-      map.to_writer(&mut buf).unwrap();
+      map.expect("should have sourcemap").to_writer(&mut buf).unwrap();
       (content, unsafe { String::from_utf8_unchecked(buf) })
     };
 
@@ -75,7 +143,7 @@ mod tests {
       content,
       "\nconsole.log()\nfunction sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n"
     );
-    let expected = "{\"version\":3,\"sources\":[\"index.ts\"],\"sourcesContent\":[\"function sayHello(name: string) {\\n  console.log(`Hello, ${name}`);\\n}\\n\"],\"names\":[],\"mappings\":\";;;AAAA,SAAS,QAAQ,CAAC,IAAY;IAC5B,OAAO,CAAC,GAAG,CAAC,iBAAU,IAAI,CAAE,CAAC,CAAC;AAChC,CAAC\"}";
+    let expected = "{\"version\":3,\"sources\":[\"index.ts\"],\"sourcesContent\":[\"function sayHello(name: string) {\\n  console.log(`Hello, ${name}`);\\n}\\n\"],\"names\":[],\"mappings\":\";;AAAA,SAAS,QAAQ,CAAC,IAAY;IAC5B,OAAO,CAAC,GAAG,CAAC,iBAAU,IAAI,CAAE,CAAC,CAAC;AAChC,CAAC\"}";
     assert_eq!(map, expected);
   }
 }

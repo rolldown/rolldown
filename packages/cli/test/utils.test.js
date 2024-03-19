@@ -1,9 +1,10 @@
 import assert from 'node:assert'
 import { describe, test } from 'node:test'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { getPackageJSON } from '../lib/utils.js'
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 describe('utils', () => {
   describe('getPackageJSON', () => {

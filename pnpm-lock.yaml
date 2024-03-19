@@ -99,6 +99,9 @@ importers:
       consola:
         specifier: ^3.2.3
         version: 3.2.3
+      jiti:
+        specifier: ^1.21.0
+        version: 1.21.0
       rolldown:
         specifier: workspace:*
         version: link:../rolldown
@@ -5287,7 +5290,6 @@ packages:
   /jiti@1.21.0:
     resolution: {integrity: sha512-gFqAIbuKyyso/3G2qhiO2OM6shY6EPP/R0+mkDbyspxKazh8BXDC5FiFsUjlczgdNz/vfra0da2y+aHrusLG/Q==}
     hasBin: true
-    dev: true
 
   /js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}

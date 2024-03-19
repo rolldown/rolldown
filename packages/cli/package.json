@@ -2,9 +2,6 @@
   "name": "rolldown-cli",
   "version": "0.0.5",
   "description": "Command-line interface for rolldown",
-  "scripts": {
-    "test": "node --test"
-  },
   "keywords": [],
   "author": "",
   "license": "MIT",
@@ -21,9 +18,13 @@
   "bin": {
     "rolldown": "./bin/cli.js"
   },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
   "dependencies": {
     "citty": "^0.1.6",
     "consola": "^3.2.3",
+    "jiti": "^1.21.0",
     "rolldown": "workspace:*"
   }
 }

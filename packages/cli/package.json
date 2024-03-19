@@ -1,0 +1,29 @@
+{
+  "name": "rolldown-cli",
+  "version": "0.0.5",
+  "description": "Command-line interface for rolldown",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "main": "index.js",
+  "type": "module",
+  "files": [
+    "lib",
+    "bin"
+  ],
+  "bin": {
+    "rolldown": "./bin/cli.js"
+  },
+  "dependencies": {
+    "citty": "^0.1.6",
+    "consola": "^3.2.3",
+    "rolldown": "workspace:*"
+  }
+}

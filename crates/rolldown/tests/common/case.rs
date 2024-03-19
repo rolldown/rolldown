@@ -4,11 +4,10 @@ use super::fixture::Fixture;
 use rolldown::RolldownOutput;
 use rolldown_common::Output;
 use rolldown_error::BuildError;
-use string_wizard::MagicString;
 
 pub struct Case {
   fixture: Fixture,
-  snapshot: MagicString<'static>,
+  snapshot: String,
 }
 
 impl Case {
@@ -16,7 +15,7 @@ impl Case {
     // Paths could be UNC format in windows, see https://github.com/rust-lang/rust/issues/42869 for more details
     let path = dunce::simplified(path.as_ref());
 
-    Self { fixture: Fixture::new(path.to_path_buf()), snapshot: MagicString::new("") }
+    Self { fixture: Fixture::new(path.to_path_buf()), snapshot: String::new() }
   }
 
   pub fn run(self) {
@@ -48,7 +47,7 @@ impl Case {
     let warnings = outputs.warnings;
 
     if !warnings.is_empty() {
-      self.snapshot.append("# warnings\n\n");
+      self.snapshot.push_str("# warnings\n\n");
       let diagnostics = warnings.into_iter().map(|e| (e.code(), e.into_diagnostic()));
       let rendered = diagnostics
         .flat_map(|(code, diagnostic)| {
@@ -61,11 +60,11 @@ impl Case {
         })
         .collect::<Vec<_>>()
         .join("\n");
-      self.snapshot.append(rendered);
-      self.snapshot.append("\n");
+      self.snapshot.push_str(&rendered);
+      self.snapshot.push('\n');
     }
 
-    self.snapshot.append("# Assets\n\n");
+    self.snapshot.push_str("# Assets\n\n");
     assets.sort_by_key(|c| c.file_name().to_string());
     let artifacts = assets
       .iter()
@@ -80,7 +79,7 @@ impl Case {
       })
       .collect::<Vec<_>>()
       .join("\n");
-    self.snapshot.append(artifacts);
+    self.snapshot.push_str(&artifacts);
 
     if self.fixture.test_config().snapshot_output_stats {
       self.render_stats_to_snapshot(assets);
@@ -88,7 +87,7 @@ impl Case {
   }
 
   fn render_stats_to_snapshot(&mut self, assets: Vec<Output>) {
-    self.snapshot.append("\n\n## Output Stats\n\n");
+    self.snapshot.push_str("\n\n## Output Stats\n\n");
     let stats = assets
       .into_iter()
       .flat_map(|asset| match asset {
@@ -102,11 +101,11 @@ impl Case {
       })
       .collect::<Vec<_>>()
       .join("\n");
-    self.snapshot.append(stats);
+    self.snapshot.push_str(&stats);
   }
 
   fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildError>) {
-    self.snapshot.append("# Errors\n\n");
+    self.snapshot.push_str("# Errors\n\n");
     errors.sort_by_key(BuildError::code);
     let diagnostics = errors.into_iter().map(|e| (e.code(), e.into_diagnostic()));
 
@@ -121,7 +120,7 @@ impl Case {
       })
       .collect::<Vec<_>>()
       .join("\n");
-    self.snapshot.append(rendered);
+    self.snapshot.push_str(&rendered);
   }
 
   fn make_snapshot(&self) {

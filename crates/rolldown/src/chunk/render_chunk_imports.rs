@@ -1,5 +1,4 @@
 use rolldown_common::Specifier;
-use string_wizard::MagicString;
 
 use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
@@ -12,8 +11,8 @@ impl Chunk {
     &self,
     graph: &LinkStageOutput,
     chunk_graph: &ChunkGraph,
-  ) -> MagicString<'static> {
-    let mut s = MagicString::new("");
+  ) -> String {
+    let mut s = String::new();
     // render imports from external modules
     let mut imports_from_external_modules =
       self.imports_from_external_modules.iter().collect::<Vec<_>>();
@@ -31,7 +30,7 @@ impl Chunk {
           match &item.imported {
             Specifier::Star => {
               is_importee_imported = true;
-              s.append(format!(
+              s.push_str(&format!(
                 "import * as {alias} from \"{module}\";\n",
                 module = importee.resource_id.expect_file().as_str()
               ));
@@ -47,14 +46,14 @@ impl Chunk {
         .collect::<Vec<_>>();
       import_items.sort();
       if !import_items.is_empty() {
-        s.append(format!(
+        s.push_str(&format!(
           "import {{ {} }} from \"{}\";\n",
           import_items.join(", "),
           importee.resource_id.expect_file().as_str()
         ));
       } else if !is_importee_imported {
         // Ensure the side effect
-        s.append(format!("import \"{}\";\n", importee.resource_id.expect_file().as_str()));
+        s.push_str(&format!("import \"{}\";\n", importee.resource_id.expect_file().as_str()));
       }
     });
 
@@ -82,10 +81,10 @@ impl Chunk {
         .as_ref()
         .expect("At this point, file name should already be generated");
       if import_items.is_empty() {
-        s.append(format!("import \"./{file_name}\";\n"));
+        s.push_str(&format!("import \"./{file_name}\";\n"));
       } else {
         import_items.sort();
-        s.append(format!("import {{ {} }} from \"./{file_name}\";\n", import_items.join(", ")));
+        s.push_str(&format!("import {{ {} }} from \"./{file_name}\";\n", import_items.join(", ")));
       }
     });
     s

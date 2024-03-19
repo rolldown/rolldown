@@ -1,10 +1,9 @@
 // We keep some standalone utilities here
 
 mod bitset;
-mod magic_string_ext;
 
+pub use bitset::BitSet;
 use std::future::Future;
-pub use {crate::magic_string_ext::MagicStringExt, bitset::BitSet};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn block_on_spawn_all<Iter, Out>(iter: Iter) -> Vec<Out>

@@ -2,7 +2,7 @@
 pub use sourcemap::{SourceMap, SourceMapBuilder};
 mod concat_sourcemap;
 
-pub use concat_sourcemap::concat_sourcemaps;
+pub use concat_sourcemap::{ConcatSource, RawSource, SourceMapSource};
 use rolldown_error::BuildError;
 
 pub fn collapse_sourcemaps(

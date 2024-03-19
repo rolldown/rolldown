@@ -24,13 +24,13 @@ Rolldown is a JavaScript bundler written in Rust intended to serve as the future
 
 For more information, please check out the documentation at [rolldown.rs](https://rolldown.rs/about).
 
-# Contributing
+## Contributing
 
 We would love to have more contributors involved!
 
 To get started, please read our [Contributing Guide](https://rolldown.rs/contrib-guide/).
 
-# Credits
+## Credits
 
 The Rolldown project is heavily inspired by:
 
@@ -43,7 +43,7 @@ And supported by:
 - [oxc](https://github.com/oxc-project/oxc) for the underlying parser and resolver.
 - [@parcel/sourcemap](https://github.com/parcel-bundler/source-map).
 
-# Licenses
+## Licenses
 
 This project is licensed under the [MIT License](LICENSE).
 

@@ -48,4 +48,10 @@ describe('loadConfig', () => {
       loadConfig(path.join(__dirname, 'fixtures/rolldown.config.json'))
     }, RE_ERR)
   })
+
+  test('not found file', () => {
+    assert.throws(() => {
+      loadConfig(path.join(__dirname, 'fixtures/rollup.config.js'))
+    }, Error)
+  })
 })

@@ -44,7 +44,10 @@ async function buildWithRolldown(option) {
   const start = performance.now()
   const bundle = await rolldown(option)
   const ret = await Promise.all(
-    outputOptions.map((output) => bundle.write(output)),
+    outputOptions.map((output) => {
+      consola.debug('output', output)
+      return bundle.write(output)
+    }),
   )
   ret.forEach((item, index) => {
     consola.debug(index, item)
@@ -64,7 +67,7 @@ async function buildWithRolldown(option) {
  * Resolves a relative id to an absolute id.
  *
  * @param {string} id - An id to resolve
- * @returns {string} - A relatived id
+ * @returns {string} - A resolved relative id
  */
 function relativeId(id) {
   return !path.isAbsolute(id) ? id : path.relative(path.resolve(), id)

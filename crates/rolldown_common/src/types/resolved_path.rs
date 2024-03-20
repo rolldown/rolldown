@@ -1,7 +1,10 @@
 use crate::FilePath;
+<<<<<<< HEAD
 use crate::FilePath;
 use std::env;
 use std::env;
+=======
+>>>>>>> 8b30d8f7 (fix: rs lint)
 use std::path::Path;
 use sugar_path::SugarPath;
 
@@ -47,7 +50,7 @@ impl ResolvedPath {
 
 #[test]
 fn test() {
-  let mut current_dir = env::current_dir().unwrap().display().to_string();
+  let mut current_dir = std::env::current_dir().unwrap().display().to_string();
   current_dir.push_str("/resolved_path.rs");
   let mut from_test = ResolvedPath::from(current_dir);
 

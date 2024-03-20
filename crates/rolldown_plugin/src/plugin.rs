@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt::Debug};
+use std::{any::Any, borrow::Cow, fmt::Debug};
 
 use super::plugin_context::PluginContext;
 use crate::{
@@ -15,7 +15,7 @@ pub type HookNoopReturn = Result<(), BuildError>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>, BuildError>;
 
 #[async_trait::async_trait]
-pub trait Plugin: Debug + Send + Sync {
+pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn name(&self) -> Cow<'static, str>;
 
   // The `option` hook consider call at node side.

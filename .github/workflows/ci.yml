@@ -32,20 +32,20 @@ jobs:
         with:
           filters: |
             rust-changes: &rust-changes
-              - '/crates/**'
-              - '/Cargo.toml'
-              - '/Cargo.lock'
-              - '/rust-toolchain.toml'
-              - '/deny.toml'
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+              - 'deny.toml'
             node-changes:
               - *rust-changes
-              - '/packages/**'
-              - '/web/playground'
-              - '/examples/**'
-              - '/scripts/**'
-              - '/package.json'
-              - '/pnpm-lock.yaml'
-              - '/pnpm-workspace.yaml'
+              - 'packages/**'
+              - 'web/playground'
+              - 'examples/**'
+              - 'scripts/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
       - name: Show outputs
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"

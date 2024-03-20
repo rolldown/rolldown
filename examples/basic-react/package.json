@@ -10,6 +10,6 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "rolldown": "workspace:^"
+    "rolldown": "workspace:*"
   }
 }

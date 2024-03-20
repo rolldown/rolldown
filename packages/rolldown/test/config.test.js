@@ -1,10 +1,30 @@
 import { describe, test, assert } from 'vitest'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadConfig } from '../cli/config.js'
+import { normalizeConfigPath, loadConfig } from '../cli/config.js'
 import { ERR_UNSUPPORTED_CONFIG_FORMAT } from '../cli/errors.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+describe('normalizeConfigPath', () => {
+  test('has the config file', () => {
+    const configPath = path.resolve(__dirname, 'fixtures/rolldown.config.ts')
+    const normalized = normalizeConfigPath(configPath)
+    assert(normalized === configPath)
+  })
+
+  test('directory', () => {
+    const configPath = path.resolve(__dirname, 'fixtures')
+    const normalized = normalizeConfigPath(configPath)
+    assert(normalized === path.resolve(configPath, 'rolldown.config.js'))
+  })
+
+  test('Error: ENOENT', async () => {
+    assert.throws(() => {
+      normalizeConfigPath(path.resolve(__dirname, 'foo/bar'))
+    }, /ENOENT: no such file or directory/)
+  })
+})
 
 describe('loadConfig', () => {
   const RE_ERR = RegExp(ERR_UNSUPPORTED_CONFIG_FORMAT)

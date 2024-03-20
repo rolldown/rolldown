@@ -96,7 +96,7 @@ export interface PluginOptions {
   ) => Promise<undefined | ResolveIdResult>
   load?: (id: string) => Promise<undefined | SourceResult>
   transform?: (id: string, code: string) => Promise<undefined | SourceResult>
-  buildEnd?: (error: string) => Promise<void>
+  buildEnd?: (error?: string) => Promise<void>
   renderChunk?: (
     code: string,
     chunk: RenderedChunk,

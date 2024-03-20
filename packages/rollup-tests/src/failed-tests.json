@@ -644,7 +644,6 @@
   "rollup@function@statement-order: correct statement order is preserved even in weird edge cases",
   "rollup@function@strip-bom: Works correctly with BOM files.",
   "rollup@function@switch-cases-are-deconflicted: deconflicts variables in switch cases (#1970)",
-  "rollup@function@switch-scope: uses correct scopes for switch statements",
   "rollup@function@symlink: follows symlinks",
   "rollup@function@synthetic-named-export-entry: does not expose synthetic named exports on entry points",
   "rollup@function@synthetic-named-exports-fallback-es2015: adds a fallback in case synthetic named exports are falsy",

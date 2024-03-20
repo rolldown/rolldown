@@ -8,7 +8,6 @@ use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
   types::binding_outputs::BindingOutputs,
   utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
-  NAPI_ENV,
 };
 
 #[napi]
@@ -25,7 +24,15 @@ impl Bundler {
     output_options: BindingOutputOptions,
   ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
-    Self::new_impl(env, input_options, output_options)
+    let ret = normalize_binding_options(input_options, output_options)?;
+
+    Ok(Self {
+      inner: Mutex::new(NativeBundler::with_plugins(
+        ret.input_options,
+        ret.output_options,
+        ret.plugins,
+      )),
+    })
   }
 
   #[napi]
@@ -45,24 +52,6 @@ impl Bundler {
 }
 
 impl Bundler {
-  pub fn new_impl(
-    env: Env,
-    input_opts: BindingInputOptions,
-    output_opts: BindingOutputOptions,
-  ) -> napi::Result<Self> {
-    NAPI_ENV.set(&env, || {
-      let ret = normalize_binding_options(input_opts, output_opts)?;
-
-      Ok(Self {
-        inner: Mutex::new(NativeBundler::with_plugins(
-          ret.input_options,
-          ret.output_options,
-          ret.plugins,
-        )),
-      })
-    })
-  }
-
   #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
   pub async fn scan_impl(&self) -> napi::Result<()> {

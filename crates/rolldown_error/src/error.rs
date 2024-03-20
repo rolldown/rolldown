@@ -127,3 +127,10 @@ impl From<std::io::Error> for BuildError {
     Self::new_inner(e)
   }
 }
+
+#[cfg(feature = "napi")]
+impl From<napi::Error> for BuildError {
+  fn from(e: napi::Error) -> Self {
+    BuildError::napi_error(e.status.to_string(), e.reason)
+  }
+}

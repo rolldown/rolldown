@@ -48,10 +48,7 @@ impl External {
     is_resolved: bool,
   ) -> Result<bool, BuildError> {
     match self {
-      Self::ArrayString(value) => {
-        let result = value.iter().any(|item| item == &source);
-        Ok(result)
-      }
+      Self::ArrayString(value) => Ok(value.iter().any(|item| item == &source)),
       Self::Fn(value) => value(source, importer, is_resolved).await,
     }
   }

@@ -179,7 +179,7 @@ function buildEnd(hook: Plugin['buildEnd']) {
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-    return async (e: string) => {
+    return async (e?: string) => {
       try {
         await hook.call({} as any, e ? new Error(e) : undefined)
       } catch (error) {

@@ -12,6 +12,8 @@ version              = "0.1.0"
 workspace = true
 
 [dependencies]
+anyhow             = { workspace = true }
+async-trait        = { workspace = true }
 derivative         = { workspace = true }
 dunce              = { workspace = true }
 futures            = { workspace = true }

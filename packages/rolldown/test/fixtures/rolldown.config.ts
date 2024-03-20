@@ -2,8 +2,10 @@ import { transform } from './transform'
 
 export default {
   input: 'src/index.ts',
-  plugins: [{
-    name: 'test-plugin',
-    transform
-  }],
+  plugins: [
+    {
+      name: 'test-plugin',
+      transform,
+    },
+  ],
 }

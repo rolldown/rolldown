@@ -6,7 +6,7 @@ import { ERR_UNSUPPORTED_CONFIG_FORMAT } from './errors.js'
 
 const __filename = fileURLToPath(import.meta.url)
 
-const DEFULT_CONFIG_FILE = 'rolldown.config.js'
+const DEFAULT_CONFIG_FILE = 'rolldown.config.js'
 
 /**
  * Normalize a rolldown configuration file path
@@ -21,7 +21,7 @@ const DEFULT_CONFIG_FILE = 'rolldown.config.js'
  */
 export function normalizeConfigPath(configPath) {
   if (fs.lstatSync(configPath).isDirectory()) {
-    return path.resolve(configPath, DEFULT_CONFIG_FILE)
+    return path.resolve(configPath, DEFAULT_CONFIG_FILE)
   } else {
     return configPath
   }

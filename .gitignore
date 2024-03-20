@@ -141,7 +141,6 @@ dist
 # os
 .DS_Store
 lib
-!packages/cli/lib
 
 # esbuild test
 *.go

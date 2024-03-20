@@ -6,10 +6,14 @@ import { ERR_UNSUPPORTED_CONFIG_FORMAT } from './errors.js'
 const __filename = fileURLToPath(import.meta.url)
 
 /**
+ * @typedef {import('../src/rollup.d.ts').RollupOptions} RollupOptions
+ */
+
+/**
  * Load a rolldown configuration file
  *
- * @param {string} configPath - The path of the rolldown configuration file
- * @returns {TODO} a loaded rolldown configuration
+ * @param {string} configPath - A path of rolldown configuration file
+ * @returns {RollupOptions | RollupOptions[]} A rollup options via rollup configuration file
  */
 export function loadConfig(configPath) {
   if (!isSupportedFormat(configPath)) {

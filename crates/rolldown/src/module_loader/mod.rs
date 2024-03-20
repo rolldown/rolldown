@@ -15,5 +15,6 @@ use self::{
 pub enum Msg {
   NormalModuleDone(NormalModuleTaskResult),
   RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult),
-  Errors(BatchedErrors),
+  BuildErrors(BatchedErrors),
+  Panics(anyhow::Error),
 }

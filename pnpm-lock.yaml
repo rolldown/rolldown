@@ -107,6 +107,16 @@ importers:
         version: link:../rolldown
 
   packages/rolldown:
+    dependencies:
+      citty:
+        specifier: ^0.1.6
+        version: 0.1.6
+      consola:
+        specifier: ^3.2.3
+        version: 3.2.3
+      jiti:
+        specifier: ^1.21.0
+        version: 1.21.0
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.0.0-alpha.43

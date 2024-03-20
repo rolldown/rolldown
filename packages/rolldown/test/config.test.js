@@ -1,9 +1,8 @@
-import assert from 'node:assert'
-import { describe, test } from 'node:test'
+import { describe, test, assert } from 'vitest'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadConfig } from '../lib/config.js'
-import { ERR_UNSUPPORTED_CONFIG_FORMAT } from '../lib/errors.js'
+import { loadConfig } from '../cli/config.js'
+import { ERR_UNSUPPORTED_CONFIG_FORMAT } from '../cli/errors.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 

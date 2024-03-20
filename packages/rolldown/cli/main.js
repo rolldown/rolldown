@@ -1,11 +1,6 @@
 import { defineCommand, runMain, showUsage } from 'citty'
 import { colors } from 'consola/utils'
-import path from 'node:path'
-import { URL } from 'node:url'
-import { getPackageJSON } from './utils.js'
-
-const __dirname = path.dirname(new URL(import.meta.url).pathname)
-const { version, description } = getPackageJSON(path.resolve(__dirname, '..'))
+import pkgJson from '../package.json' assert { type: 'json' }
 
 /**
  * NOTE:
@@ -16,8 +11,8 @@ const { version, description } = getPackageJSON(path.resolve(__dirname, '..'))
 const main = defineCommand({
   meta: {
     name: 'rolldown',
-    version,
-    description,
+    version: pkgJson.version,
+    description: pkgJson.description,
   },
   args: {
     config: {

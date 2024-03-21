@@ -11,8 +11,23 @@ export class Bundler {
   scan(): Promise<void>
 }
 
+export interface BindingHookLoadOutput {
+  code: string
+  map?: string
+}
+
 export interface BindingHookRenderChunkOutput {
   code: string
+}
+
+export interface BindingHookResolveIdExtraOptions {
+  isEntry: boolean
+  kind: string
+}
+
+export interface BindingHookResolveIdOutput {
+  id: string
+  external?: boolean
 }
 
 export interface BindingInputItem {
@@ -83,21 +98,19 @@ export interface BindingResolveOptions {
   symlinks?: boolean
 }
 
-export interface HookResolveIdArgsOptions {
-  isEntry: boolean
-  kind: string
-}
-
 export interface PluginOptions {
   name: string
   buildStart?: (ctx: BindingPluginContext) => MaybePromise<void>
   resolveId?: (
     specifier: string,
     importer?: string,
-    options?: HookResolveIdArgsOptions,
-  ) => Promise<undefined | ResolveIdResult>
-  load?: (id: string) => Promise<undefined | SourceResult>
-  transform?: (id: string, code: string) => Promise<undefined | SourceResult>
+    options?: BindingHookResolveIdExtraOptions,
+  ) => Promise<undefined | BindingHookResolveIdOutput>
+  load?: (id: string) => Promise<undefined | BindingHookLoadOutput>
+  transform?: (
+    id: string,
+    code: string,
+  ) => Promise<undefined | BindingHookLoadOutput>
   buildEnd?: (error?: string) => Promise<void>
   renderChunk?: (
     code: string,
@@ -115,14 +128,4 @@ export interface RenderedChunk {
   exports: Array<string>
   fileName: string
   modules: Record<string, BindingRenderedModule>
-}
-
-export interface ResolveIdResult {
-  id: string
-  external?: boolean
-}
-
-export interface SourceResult {
-  code: string
-  map?: string
 }

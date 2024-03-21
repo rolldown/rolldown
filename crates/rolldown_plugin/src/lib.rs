@@ -8,7 +8,7 @@ pub use crate::{
     BoxPlugin, HookLoadReturn, HookNoopReturn, HookRenderChunkReturn, HookResolveIdReturn,
     HookTransformReturn, Plugin,
   },
-  plugin_context::PluginContext,
+  plugin_context::{PluginContext, SharedPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},
   types::hook_build_end_args::HookBuildEndArgs,
   types::hook_load_args::HookLoadArgs,

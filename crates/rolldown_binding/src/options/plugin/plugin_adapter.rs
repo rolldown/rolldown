@@ -34,7 +34,7 @@ impl Plugin for PluginAdapter {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn build_start(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::SharedPluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_start {
       cb.call_async(())
@@ -55,7 +55,7 @@ impl Plugin for PluginAdapter {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn resolve_id(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookResolveIdArgs,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id {
@@ -88,7 +88,7 @@ impl Plugin for PluginAdapter {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn load(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookLoadArgs,
   ) -> rolldown_plugin::HookLoadReturn {
     if let Some(cb) = &self.load {
@@ -116,7 +116,7 @@ impl Plugin for PluginAdapter {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn transform(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookTransformArgs,
   ) -> rolldown_plugin::HookTransformReturn {
     if let Some(cb) = &self.transform {
@@ -144,7 +144,7 @@ impl Plugin for PluginAdapter {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn build_end(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::SharedPluginContext,
     args: Option<&rolldown_plugin::HookBuildEndArgs>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_end {
@@ -166,7 +166,7 @@ impl Plugin for PluginAdapter {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn render_chunk(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookRenderChunkArgs,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     if let Some(cb) = &self.render_chunk {
@@ -193,7 +193,7 @@ impl Plugin for PluginAdapter {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn generate_bundle(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::SharedPluginContext,
     bundle: &Vec<rolldown_common::Output>,
     is_write: bool,
   ) -> rolldown_plugin::HookNoopReturn {
@@ -216,7 +216,7 @@ impl Plugin for PluginAdapter {
   #[allow(clippy::redundant_closure_for_method_calls)]
   async fn write_bundle(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::SharedPluginContext,
     bundle: &Vec<rolldown_common::Output>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.write_bundle {

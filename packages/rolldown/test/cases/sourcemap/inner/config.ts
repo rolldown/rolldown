@@ -22,6 +22,8 @@ export default {
     `)
     // include map comment
     expect(output.output[0].code).contains('//# sourceMappingURL=main.js.map')
+    expect(output.output[0].sourcemapFileName).toBe('main.js.map')
+    expect(output.output[0].map).toBeDefined()
     // @ts-expect-error
     const map = JSON.parse(output.output[1].source)
     expect(map.file).toMatchInlineSnapshot(`"main.js"`)

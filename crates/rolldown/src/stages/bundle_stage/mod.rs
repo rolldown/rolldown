@@ -92,8 +92,8 @@ impl<'a> BundleStage<'a> {
     let mut assets = vec![];
 
     render_chunks(self.plugin_driver, chunks).await?.into_iter().try_for_each(
-      |(mut content, map, rendered_chunk)| -> Result<(), BuildError> {
-        if let Some(mut map) = map {
+      |(mut content, mut map, rendered_chunk)| -> Result<(), BuildError> {
+        if let Some(map) = map.as_mut() {
           map.set_file(Some(rendered_chunk.file_name.clone()));
           match self.output_options.sourcemap {
             SourceMapType::File => {
@@ -117,6 +117,7 @@ impl<'a> BundleStage<'a> {
             SourceMapType::Hidden => {}
           }
         }
+        let sourcemap_file_name = map.as_ref().map(|_| format!("{}.map", rendered_chunk.file_name));
         assets.push(Output::Chunk(Box::new(OutputChunk {
           file_name: rendered_chunk.file_name,
           code: content,
@@ -126,6 +127,8 @@ impl<'a> BundleStage<'a> {
           modules: rendered_chunk.modules,
           exports: rendered_chunk.exports,
           module_ids: rendered_chunk.module_ids,
+          map,
+          sourcemap_file_name,
         })));
         Ok(())
       },

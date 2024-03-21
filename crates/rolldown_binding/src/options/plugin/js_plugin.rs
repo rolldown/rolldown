@@ -5,29 +5,29 @@ use futures::TryFutureExt;
 use napi::bindgen_prelude::{Either, Either3, Error, Status};
 use rolldown_plugin::Plugin;
 
-use super::PluginOptions;
+use super::BindingPluginOptions;
 
 #[derive(Debug)]
-pub struct PluginAdapter {
-  pub(crate) inner: PluginOptions,
+pub struct JsPlugin {
+  pub(crate) inner: BindingPluginOptions,
 }
 
-impl Deref for PluginAdapter {
-  type Target = PluginOptions;
+impl Deref for JsPlugin {
+  type Target = BindingPluginOptions;
 
   fn deref(&self) -> &Self::Target {
     &self.inner
   }
 }
 
-impl PluginAdapter {
-  pub(crate) fn new_boxed(inner: PluginOptions) -> Box<dyn Plugin> {
+impl JsPlugin {
+  pub(crate) fn new_boxed(inner: BindingPluginOptions) -> Box<dyn Plugin> {
     Box::new(Self { inner })
   }
 }
 
 #[async_trait::async_trait]
-impl Plugin for PluginAdapter {
+impl Plugin for JsPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Owned(self.name.clone())
   }

@@ -44,7 +44,7 @@ export interface BindingInputOptions {
         isResolved: boolean,
       ) => boolean)
   input: Array<BindingInputItem>
-  plugins: Array<PluginOptions>
+  plugins: Array<BindingPluginOptions>
   resolve?: BindingResolveOptions
   cwd: string
 }
@@ -73,7 +73,7 @@ export interface BindingOutputOptions {
   dir?: string
   exports?: 'default' | 'named' | 'none' | 'auto'
   format?: 'es' | 'cjs'
-  plugins: Array<PluginOptions>
+  plugins: Array<BindingPluginOptions>
   sourcemap?: 'file' | 'inline' | 'hidden'
 }
 
@@ -82,23 +82,7 @@ export interface BindingOutputs {
   assets: Array<BindingOutputAsset>
 }
 
-export interface BindingRenderedModule {
-  code?: string
-}
-
-export interface BindingResolveOptions {
-  alias?: Record<string, Array<string>>
-  aliasFields?: Array<Array<string>>
-  conditionNames?: Array<string>
-  exportsFields?: Array<Array<string>>
-  extensions?: Array<string>
-  mainFields?: Array<string>
-  mainFiles?: Array<string>
-  modules?: Array<string>
-  symlinks?: boolean
-}
-
-export interface PluginOptions {
+export interface BindingPluginOptions {
   name: string
   buildStart?: (ctx: BindingPluginContext) => MaybePromise<void>
   resolveId?: (
@@ -118,6 +102,22 @@ export interface PluginOptions {
   ) => Promise<undefined | BindingHookRenderChunkOutput>
   generateBundle?: (bundle: Outputs, isWrite: boolean) => Promise<void>
   writeBundle?: (bundle: Outputs) => Promise<void>
+}
+
+export interface BindingRenderedModule {
+  code?: string
+}
+
+export interface BindingResolveOptions {
+  alias?: Record<string, Array<string>>
+  aliasFields?: Array<Array<string>>
+  conditionNames?: Array<string>
+  exportsFields?: Array<Array<string>>
+  extensions?: Array<string>
+  mainFields?: Array<string>
+  mainFiles?: Array<string>
+  modules?: Array<string>
+  symlinks?: boolean
 }
 
 export interface RenderedChunk {

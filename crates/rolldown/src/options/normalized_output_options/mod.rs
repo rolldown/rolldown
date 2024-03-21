@@ -12,4 +12,5 @@ pub struct NormalizedOutputOptions {
   pub dir: String,
   pub format: OutputFormat,
   pub sourcemap: SourceMapType,
+  pub banner: Option<String>,
 }

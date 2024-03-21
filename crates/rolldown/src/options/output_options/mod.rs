@@ -38,6 +38,7 @@ pub struct OutputOptions {
   pub dir: Option<String>,
   pub format: Option<OutputFormat>,
   pub sourcemap: Option<SourceMapType>,
+  pub banner: Option<String>,
 }
 
 // impl Default for OutputOptions {

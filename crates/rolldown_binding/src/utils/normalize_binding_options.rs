@@ -48,6 +48,7 @@ pub fn normalize_binding_options(
     chunk_file_names: output_options.chunk_file_names,
     dir: output_options.dir,
     sourcemap: output_options.sourcemap.map(Into::into),
+    banner: output_options.banner,
     ..Default::default()
   };
 

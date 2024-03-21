@@ -15,7 +15,7 @@ pub struct BindingOutputOptions {
 
   // amd: NormalizedAmdOptions;
   // assetFileNames: string | ((chunkInfo: PreRenderedAsset) => string);
-  // banner: () => string | Promise<string>;
+  pub banner: Option<String>,
   // chunkFileNames: string | ((chunkInfo: PreRenderedChunk) => string);
   // compact: boolean;
   pub dir: Option<String>,

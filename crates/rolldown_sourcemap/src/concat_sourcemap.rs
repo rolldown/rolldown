@@ -105,6 +105,13 @@ impl ConcatSource {
     self.inner.push(source);
   }
 
+  pub fn prepend_source(&mut self, source: Box<dyn Source>) {
+    if source.sourcemap().is_some() {
+      self.enabel_sourcemap = true;
+    }
+    self.inner.insert(0, source);
+  }
+
   #[allow(clippy::cast_possible_truncation)]
   pub fn content_and_sourcemap(self) -> (String, Option<SourceMap>) {
     let mut final_source = String::new();
@@ -132,6 +139,8 @@ mod tests {
   fn concat_sourcemaps_works() {
     let mut concat_source = ConcatSource::default();
     concat_source.add_source(Box::new(RawSource::new("\nconsole.log()".to_string())));
+    concat_source.prepend_source(Box::new(RawSource::new("// banner".to_string())));
+
     concat_source.add_source(Box::new(SourceMapSource::new(
       "function sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n".to_string(),
       SourceMap::from_slice(
@@ -156,9 +165,9 @@ mod tests {
 
     assert_eq!(
       content,
-      "\nconsole.log()\nfunction sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n"
+      "// banner\n\nconsole.log()\nfunction sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n"
     );
-    let expected = "{\"version\":3,\"sources\":[\"index.ts\"],\"sourcesContent\":[\"function sayHello(name: string) {\\n  console.log(`Hello, ${name}`);\\n}\\n\"],\"names\":[],\"mappings\":\";;AAAA,SAAS,QAAQ,CAAC,IAAY;IAC5B,OAAO,CAAC,GAAG,CAAC,iBAAU,IAAI,CAAE,CAAC,CAAC;AAChC,CAAC\"}";
+    let expected = "{\"version\":3,\"sources\":[\"index.ts\"],\"sourcesContent\":[\"function sayHello(name: string) {\\n  console.log(`Hello, ${name}`);\\n}\\n\"],\"names\":[],\"mappings\":\";;;AAAA,SAAS,QAAQ,CAAC,IAAY;IAC5B,OAAO,CAAC,GAAG,CAAC,iBAAU,IAAI,CAAE,CAAC,CAAC;AAChC,CAAC\"}";
     assert_eq!(map, expected);
   }
 }

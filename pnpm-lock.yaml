@@ -91,39 +91,20 @@ importers:
         specifier: ^4.3.0
         version: 4.3.0(vue@3.4.21)
 
-  packages/cli:
-    dependencies:
-      citty:
-        specifier: ^0.1.6
-        version: 0.1.6
-      consola:
-        specifier: ^3.2.3
-        version: 3.2.3
-      jiti:
-        specifier: ^1.21.0
-        version: 1.21.0
-      rolldown:
-        specifier: workspace:*
-        version: link:../rolldown
-
   packages/rolldown:
-    dependencies:
-      citty:
-        specifier: ^0.1.6
-        version: 0.1.6
-      consola:
-        specifier: ^3.2.3
-        version: 3.2.3
-      jiti:
-        specifier: ^1.21.0
-        version: 1.21.0
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.0.0-alpha.43
         version: 3.0.0-alpha.43
+      citty:
+        specifier: ^0.1.6
+        version: 0.1.6
       colorette:
         specifier: ^2.0.20
         version: 2.0.20
+      consola:
+        specifier: ^3.2.3
+        version: 3.2.3
       glob:
         specifier: ^10.3.10
         version: 10.3.10
@@ -3450,6 +3431,7 @@ packages:
     resolution: {integrity: sha512-tskPPKEs8D2KPafUypv2gxwJP8h/OaJmC82QQGGDQcHvXX43xF2VDACcJVmZ0EuSxkpO9Kc4MlrA3q0+FG58AQ==}
     dependencies:
       consola: 3.2.3
+    dev: true
 
   /clear-module@4.1.2:
     resolution: {integrity: sha512-LWAxzHqdHsAZlPlEyJ2Poz6AIs384mPeqLVCru2p0BrP9G/kVGuhNyZYClLO6cXlnuJjzC8xtsJIuMjKqLXoAw==}
@@ -3627,6 +3609,7 @@ packages:
   /consola@3.2.3:
     resolution: {integrity: sha512-I5qxpzLv+sJhTVEoLYNcTW+bThDCPsit0vLNKShZx6rLtpilNpmmeTPaeqJb9ZE9dV3DGaeby6Vuhrw38WjeyQ==}
     engines: {node: ^14.18.0 || >=16.10.0}
+    dev: true
 
   /conventional-changelog-angular@7.0.0:
     resolution: {integrity: sha512-ROjNchA9LgfNMTTFSIWPzebCwOGFdgkEq45EnvvrmSLvCtAw0HSmrCs7/ty+wAeYUZyNay0YMUNYFTRL72PkBQ==}
@@ -5300,6 +5283,7 @@ packages:
   /jiti@1.21.0:
     resolution: {integrity: sha512-gFqAIbuKyyso/3G2qhiO2OM6shY6EPP/R0+mkDbyspxKazh8BXDC5FiFsUjlczgdNz/vfra0da2y+aHrusLG/Q==}
     hasBin: true
+    dev: true
 
   /js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}

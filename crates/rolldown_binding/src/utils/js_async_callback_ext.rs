@@ -3,18 +3,19 @@ use std::any::type_name;
 use futures::Future;
 use napi::bindgen_prelude::{Either3, FromNapiValue};
 
-use crate::types::js_hook::{JsHook, JsHookReturn};
+use crate::types::js_async_callback::{JsAsyncCallback, JsAsyncCallbackReturn};
 
-pub trait JsHookExt<Args, Ret>: Send {
+pub trait JsAsyncCallbackExt<Args, Ret>: Send {
   fn call_async_normalized(
     &self,
     args: Args,
   ) -> impl Future<Output = Result<Ret, napi::Error>> + Send;
 }
 
-impl<Args: Send, Ret: FromNapiValue + Send> JsHookExt<Args, Ret> for JsHook<Args, Ret>
+impl<Args: Send, Ret: FromNapiValue + Send> JsAsyncCallbackExt<Args, Ret>
+  for JsAsyncCallback<Args, Ret>
 where
-  JsHookReturn<Ret>: Send + FromNapiValue,
+  JsAsyncCallbackReturn<Ret>: Send + FromNapiValue,
 {
   /// Call the hook and normalize the returned `Either3<Promise<Ret>, Ret, UnknownReturnValue>` to `Result<Ret, napi::Error>`.
   #[allow(clippy::manual_async_fn)]

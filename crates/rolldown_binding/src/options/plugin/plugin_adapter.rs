@@ -1,6 +1,6 @@
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 
-use crate::utils::js_hook_ext::JsHookExt;
+use crate::utils::js_async_callback_ext::JsAsyncCallbackExt;
 use futures::TryFutureExt;
 use napi::bindgen_prelude::{Either, Either3, Error, Status};
 use rolldown_plugin::Plugin;

@@ -9,7 +9,8 @@ use rolldown_error::BuildError;
 use serde::Deserialize;
 
 use crate::types::{
-  binding_outputs::BindingOutputs, binding_rendered_module::BindingRenderedModule, js_hook::JsHook,
+  binding_outputs::BindingOutputs, binding_rendered_module::BindingRenderedModule,
+  js_async_callback::JsAsyncCallback,
 };
 
 use super::binding_plugin_context::BindingPluginContext;
@@ -24,7 +25,7 @@ pub struct PluginOptions {
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext) => Promise<void>")]
-  pub build_start: Option<JsHook<BindingPluginContext, ()>>,
+  pub build_start: Option<JsAsyncCallback<BindingPluginContext, ()>>,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]

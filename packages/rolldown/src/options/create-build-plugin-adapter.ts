@@ -4,7 +4,7 @@ import type {
   SourceResult,
   ResolveIdResult,
   RenderedChunk,
-  HookRenderChunkOutput,
+  BindingHookRenderChunkOutput,
   BindingOutputs as Outputs,
 } from '../binding'
 import {
@@ -78,7 +78,7 @@ function renderChunk(hook: Plugin['renderChunk']) {
     return async (
       code: string,
       chunk: RenderedChunk,
-    ): Promise<undefined | HookRenderChunkOutput> => {
+    ): Promise<undefined | BindingHookRenderChunkOutput> => {
       try {
         let renderedChunk = Object.assign(
           {

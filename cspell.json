@@ -99,6 +99,8 @@
     "tinybench",
     "transpiling",
     "treeshake",
+    "consola",
+    "citty",
     "underfin",
     "UNKEYED",
     "vite",

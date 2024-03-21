@@ -13,9 +13,14 @@
     "rolldown"
   ],
   "files": [
+    "bin",
+    "cli",
     "dist",
     "!dist/*.node"
   ],
+  "bin": {
+    "rolldown": "./bin/cli.js"
+  },
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -63,7 +68,9 @@
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0-alpha.43",
+    "citty": "^0.1.6",
     "colorette": "^2.0.20",
+    "consola": "^3.2.3",
     "glob": "^10.3.10",
     "rollup": "^4.12.1",
     "type-fest": "^4.12.0",

@@ -19,6 +19,8 @@
   "devDependencies": {
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.11.25",
-    "source-map": "^0.7.4"
+    "source-map": "^0.7.4",
+    "buble": "^0.20.0",
+    "terser": "^5.21.0"
   }
 }

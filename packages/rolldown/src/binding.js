@@ -337,4 +337,5 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
+module.exports.BindingPluginContext = nativeBinding.BindingPluginContext
 module.exports.Bundler = nativeBinding.Bundler

@@ -1,5 +1,6 @@
-use std::{borrow::Cow, ops::Deref};
+use std::{borrow::Cow, ops::Deref, sync::Arc};
 
+use crate::utils::js_hook_ext::JsHookExt;
 use futures::TryFutureExt;
 use napi::bindgen_prelude::{Either, Either3, Error, Status};
 use rolldown_plugin::Plugin;
@@ -31,23 +32,12 @@ impl Plugin for PluginAdapter {
     Cow::Owned(self.name.clone())
   }
 
-  #[allow(clippy::redundant_closure_for_method_calls)]
   async fn build_start(
     &self,
-    _ctx: &rolldown_plugin::SharedPluginContext,
+    ctx: &rolldown_plugin::SharedPluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_start {
-      cb.call_async(())
-        .and_then(|start| async {
-          match start {
-            Either::A(p) => {
-              let result = p.await?;
-              Ok(result)
-            }
-            Either::B(_) => Ok(()),
-          }
-        })
-        .await?;
+      cb.call_async_normalized(Arc::clone(ctx).into()).await?;
     }
     Ok(())
   }

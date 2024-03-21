@@ -89,19 +89,19 @@ export interface BindingPluginOptions {
     specifier: string,
     importer?: string,
     options?: BindingHookResolveIdExtraOptions,
-  ) => Promise<undefined | BindingHookResolveIdOutput>
-  load?: (id: string) => Promise<undefined | BindingHookLoadOutput>
+  ) => MaybePromise<undefined | BindingHookResolveIdOutput>
+  load?: (id: string) => MaybePromise<undefined | BindingHookLoadOutput>
   transform?: (
     id: string,
     code: string,
-  ) => Promise<undefined | BindingHookLoadOutput>
-  buildEnd?: (error?: string) => Promise<void>
+  ) => MaybePromise<undefined | BindingHookLoadOutput>
+  buildEnd?: (error?: string) => MaybePromise<void>
   renderChunk?: (
     code: string,
     chunk: RenderedChunk,
-  ) => Promise<undefined | BindingHookRenderChunkOutput>
-  generateBundle?: (bundle: Outputs, isWrite: boolean) => Promise<void>
-  writeBundle?: (bundle: Outputs) => Promise<void>
+  ) => MaybePromise<undefined | BindingHookRenderChunkOutput>
+  generateBundle?: (bundle: Outputs, isWrite: boolean) => MaybePromise<void>
+  writeBundle?: (bundle: Outputs) => MaybePromise<void>
 }
 
 export interface BindingRenderedModule {

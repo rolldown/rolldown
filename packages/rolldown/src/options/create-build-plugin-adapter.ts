@@ -188,6 +188,7 @@ function buildEnd(hook: Plugin['buildEnd']) {
       }
     }
   }
+  return
 }
 
 function transform(hook: Plugin['transform']) {

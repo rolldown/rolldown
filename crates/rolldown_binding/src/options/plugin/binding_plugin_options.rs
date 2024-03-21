@@ -1,8 +1,5 @@
-use derivative::Derivative;
-use napi::{
-  bindgen_prelude::{Either, Either3, Promise},
-  threadsafe_function::{ThreadsafeFunction, UnknownReturnValue},
-};
+use std::fmt::Debug;
+
 use serde::Deserialize;
 
 use crate::types::{
@@ -21,97 +18,58 @@ use super::{
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Deserialize, Default, Derivative)]
+#[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-#[derivative(Debug)]
 pub struct BindingPluginOptions {
   pub name: String,
 
-  #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<void>")]
   pub build_start: Option<JsAsyncCallback<BindingPluginContext, ()>>,
 
-  #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(specifier: string, importer?: string, options?: BindingHookResolveIdExtraOptions) => Promise<undefined | BindingHookResolveIdOutput>"
+    ts_type = "(specifier: string, importer?: string, options?: BindingHookResolveIdExtraOptions) => MaybePromise<undefined | BindingHookResolveIdOutput>"
   )]
   pub resolve_id: Option<
-    ThreadsafeFunction<
+    JsAsyncCallback<
       (String, Option<String>, Option<BindingHookResolveIdExtraOptions>),
-      Either3<
-        Promise<Option<BindingHookResolveIdOutput>>,
-        Option<BindingHookResolveIdOutput>,
-        UnknownReturnValue,
-      >,
-      false,
+      Option<BindingHookResolveIdOutput>,
     >,
   >,
 
-  #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(id: string) => Promise<undefined | BindingHookLoadOutput>")]
-  pub load: Option<
-    ThreadsafeFunction<
-      String,
-      Either3<
-        Promise<Option<BindingHookLoadOutput>>,
-        Option<BindingHookLoadOutput>,
-        UnknownReturnValue,
-      >,
-      false,
-    >,
-  >,
+  #[napi(ts_type = "(id: string) => MaybePromise<undefined | BindingHookLoadOutput>")]
+  pub load: Option<JsAsyncCallback<String, Option<BindingHookLoadOutput>>>,
 
-  #[derivative(Debug = "ignore")]
-  #[serde(skip_deserializing)]
-  #[napi(ts_type = "(id: string, code: string) => Promise<undefined | BindingHookLoadOutput>")]
-  pub transform: Option<
-    ThreadsafeFunction<
-      (String, String),
-      Either3<
-        Promise<Option<BindingHookLoadOutput>>,
-        Option<BindingHookLoadOutput>,
-        UnknownReturnValue,
-      >,
-      false,
-    >,
-  >,
-
-  #[derivative(Debug = "ignore")]
-  #[serde(skip_deserializing)]
-  #[napi(ts_type = "(error?: string) => Promise<void>")]
-  pub build_end:
-    Option<ThreadsafeFunction<Option<String>, Either<Promise<()>, UnknownReturnValue>, false>>,
-
-  #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(code: string, chunk: RenderedChunk) => Promise<undefined | BindingHookRenderChunkOutput>"
+    ts_type = "(id: string, code: string) => MaybePromise<undefined | BindingHookLoadOutput>"
   )]
-  pub render_chunk: Option<
-    ThreadsafeFunction<
-      (String, RenderedChunk),
-      Either3<
-        Promise<Option<BindingHookRenderChunkOutput>>,
-        Option<BindingHookRenderChunkOutput>,
-        UnknownReturnValue,
-      >,
-      false,
-    >,
-  >,
+  pub transform: Option<JsAsyncCallback<(String, String), Option<BindingHookLoadOutput>>>,
 
-  #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(bundle: Outputs, isWrite: boolean) => Promise<void>")]
-  pub generate_bundle: Option<
-    ThreadsafeFunction<(BindingOutputs, bool), Either<Promise<()>, UnknownReturnValue>, false>,
-  >,
+  #[napi(ts_type = "(error?: string) => MaybePromise<void>")]
+  pub build_end: Option<JsAsyncCallback<Option<String>, ()>>,
 
-  #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(bundle: Outputs) => Promise<void>")]
-  pub write_bundle:
-    Option<ThreadsafeFunction<BindingOutputs, Either<Promise<()>, UnknownReturnValue>, false>>,
+  #[napi(
+    ts_type = "(code: string, chunk: RenderedChunk) => MaybePromise<undefined | BindingHookRenderChunkOutput>"
+  )]
+  pub render_chunk:
+    Option<JsAsyncCallback<(String, RenderedChunk), Option<BindingHookRenderChunkOutput>>>,
+
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(bundle: Outputs, isWrite: boolean) => MaybePromise<void>")]
+  pub generate_bundle: Option<JsAsyncCallback<(BindingOutputs, bool), ()>>,
+
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(bundle: Outputs) => MaybePromise<void>")]
+  pub write_bundle: Option<JsAsyncCallback<BindingOutputs, ()>>,
+}
+
+impl Debug for BindingPluginOptions {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("BindingPluginOptions").field("name", &self.name).finish_non_exhaustive()
+  }
 }

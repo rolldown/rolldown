@@ -9,7 +9,7 @@ const { compareLogs, runTestSuiteWithSamples } = require('../utils.js');
 
 // TODO more formats
 // const FORMATS = ['amd', 'cjs', 'system', 'es', 'iife', 'umd'];
-const FORMATS = ['esm'];
+const FORMATS = ['es'];
 
 runTestSuiteWithSamples(
 	'sourcemaps',

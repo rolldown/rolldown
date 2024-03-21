@@ -51,7 +51,7 @@ export interface BindingOutputOptions {
   chunkFileNames?: string
   dir?: string
   exports?: 'default' | 'named' | 'none' | 'auto'
-  format?: 'esm' | 'cjs'
+  format?: 'es' | 'cjs'
   plugins: Array<PluginOptions>
   sourcemap?: 'file' | 'inline' | 'hidden'
 }

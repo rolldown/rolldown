@@ -4,7 +4,7 @@ import { unimplemented } from '../utils'
 
 export interface OutputOptions {
   dir?: RollupOutputOptions['dir']
-  format?: 'esm'
+  format?: 'es'
   exports?: RollupOutputOptions['exports']
   sourcemap?: RollupOutputOptions['sourcemap']
 }
@@ -12,7 +12,7 @@ export interface OutputOptions {
 function normalizeFormat(
   format: OutputOptions['format'],
 ): BindingOutputOptions['format'] {
-  if (format == null || format === 'esm' || format === 'cjs') {
+  if (format == null || format === 'es' || format === 'cjs') {
     return format
   } else {
     return unimplemented(`output.format: ${format}`)

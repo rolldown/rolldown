@@ -26,7 +26,7 @@ pub struct BindingOutputOptions {
   // extend: boolean;
   // externalLiveBindings: boolean;
   // footer: () => string | Promise<string>;
-  #[napi(ts_type = "'esm' | 'cjs'")]
+  #[napi(ts_type = "'es' | 'cjs'")]
   pub format: Option<String>,
   // freeze: boolean;
   // generatedCode: NormalizedGeneratedCodeOptions;

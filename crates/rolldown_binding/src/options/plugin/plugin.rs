@@ -8,12 +8,13 @@ use napi::{
 use rolldown_error::BuildError;
 use serde::Deserialize;
 
-use crate::{
-  types::binding_outputs::BindingOutputs, types::binding_rendered_module::BindingRenderedModule,
+use crate::types::{
+  binding_outputs::BindingOutputs, binding_rendered_module::BindingRenderedModule,
+  js_async_callback::JsAsyncCallback,
 };
 
-// Using `Either3<Promise<T>, T, UnknownReturnValue>` in callback functions to handle the
-// unknown return value from JavaScript explicit and avoid unexpected panics.
+use super::binding_plugin_context::BindingPluginContext;
+
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default, Derivative)]
 #[serde(rename_all = "camelCase")]
@@ -23,8 +24,8 @@ pub struct PluginOptions {
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "() => Promise<void>")]
-  pub build_start: Option<ThreadsafeFunction<(), Either<Promise<()>, UnknownReturnValue>, false>>,
+  #[napi(ts_type = "(ctx: BindingPluginContext) => Promise<void>")]
+  pub build_start: Option<JsAsyncCallback<BindingPluginContext, ()>>,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]

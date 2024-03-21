@@ -1,3 +1,4 @@
+pub mod binding_plugin_context;
 mod plugin;
 mod plugin_adapter;
 

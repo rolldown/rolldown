@@ -4,7 +4,7 @@ const config: RollupOptions = {
   external: [/external/, 'external-a'],
   output: {
     banner: '// banner test\n',
-  }
+  },
 }
 
 export default {

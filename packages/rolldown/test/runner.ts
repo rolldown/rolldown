@@ -45,8 +45,6 @@ function normalizedOptions(caseRoot: string, config?: RollupOptions) {
     throw new Error(`The ${caseRoot} output shouldn't be array`)
   }
   const output = config?.output ?? {}
-  const dir = output.dir ?? path.join(caseRoot, 'dist')
-  console.log(dir)
   return {
     input: config?.input ?? path.join(caseRoot, 'main.js'),
     output: {

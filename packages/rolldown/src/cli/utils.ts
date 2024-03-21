@@ -23,5 +23,5 @@ export async function loadConfig(
  */
 function isSupportedFormat(configPath: string): boolean {
   const ext = path.extname(configPath)
-  return /\.(js|mjs|ts)$/.test(ext)
+  return /\.(js|mjs)$/.test(ext)
 }

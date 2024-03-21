@@ -1,12 +1,12 @@
-import process from 'node:process';
-import path from 'node:path';
-import consola from 'consola';
-import { defineCommand, runMain, showUsage } from 'citty';
-import { loadConfig } from './utils.js';
-import { bundle } from './commands/bundle';
-import pkgJson from '../../package.json' assert { type: 'json' };
+import process from 'node:process'
+import path from 'node:path'
+import consola from 'consola'
+import { defineCommand, runMain, showUsage } from 'citty'
+import { loadConfig } from './utils.js'
+import { bundle } from './commands/bundle'
+import pkgJson from '../../package.json' assert { type: 'json' }
 
-const DEFAULT_CONFIG_FILENAME = 'rolldown.config.js';
+const DEFAULT_CONFIG_FILENAME = 'rolldown.config.js'
 
 const main = defineCommand({
   meta: {
@@ -32,7 +32,7 @@ const main = defineCommand({
       await showUsage(ctx.cmd)
       return
     }
-    const { configPath } = parseArgs(ctx.args);
+    const { configPath } = parseArgs(ctx.args)
 
     const config = await loadConfig(configPath)
 
@@ -46,13 +46,13 @@ const main = defineCommand({
 })
 
 function parseArgs(args: Record<string, any>) {
-  const { config } = args;
-  const cwd = process.cwd();
+  const { config } = args
+  const cwd = process.cwd()
   const configPath = config
     ? path.resolve(cwd, config)
-    : path.resolve(cwd, DEFAULT_CONFIG_FILENAME);
+    : path.resolve(cwd, DEFAULT_CONFIG_FILENAME)
 
-  return { configPath };
+  return { configPath }
 }
 
 runMain(main)

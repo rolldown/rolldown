@@ -1,6 +1,6 @@
 use std::{any::Any, borrow::Cow, fmt::Debug};
 
-use super::plugin_context::PluginContext;
+use super::plugin_context::SharedPluginContext;
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput,
   HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
@@ -22,25 +22,25 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   // --- Build hooks ---
 
-  async fn build_start(&self, _ctx: &PluginContext) -> HookNoopReturn {
+  async fn build_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
     Ok(())
   }
 
   async fn resolve_id(
     &self,
-    _ctx: &PluginContext,
+    _ctx: &SharedPluginContext,
     _args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn {
     Ok(None)
   }
 
-  async fn load(&self, _ctx: &PluginContext, _args: &HookLoadArgs) -> HookLoadReturn {
+  async fn load(&self, _ctx: &SharedPluginContext, _args: &HookLoadArgs) -> HookLoadReturn {
     Ok(None)
   }
 
   async fn transform(
     &self,
-    _ctx: &PluginContext,
+    _ctx: &SharedPluginContext,
     _args: &HookTransformArgs,
   ) -> HookTransformReturn {
     Ok(None)
@@ -48,7 +48,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   async fn build_end(
     &self,
-    _ctx: &PluginContext,
+    _ctx: &SharedPluginContext,
     _args: Option<&HookBuildEndArgs>,
   ) -> HookNoopReturn {
     Ok(())
@@ -56,7 +56,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   async fn render_chunk(
     &self,
-    _ctx: &PluginContext,
+    _ctx: &SharedPluginContext,
     _args: &HookRenderChunkArgs,
   ) -> HookRenderChunkReturn {
     Ok(None)
@@ -67,7 +67,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   #[allow(clippy::ptr_arg)]
   async fn generate_bundle(
     &self,
-    _ctx: &PluginContext,
+    _ctx: &SharedPluginContext,
     _bundle: &Vec<Output>,
     _is_write: bool,
   ) -> HookNoopReturn {
@@ -75,7 +75,11 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   }
 
   #[allow(clippy::ptr_arg)]
-  async fn write_bundle(&self, _ctx: &PluginContext, _bundle: &Vec<Output>) -> HookNoopReturn {
+  async fn write_bundle(
+    &self,
+    _ctx: &SharedPluginContext,
+    _bundle: &Vec<Output>,
+  ) -> HookNoopReturn {
     Ok(())
   }
 }

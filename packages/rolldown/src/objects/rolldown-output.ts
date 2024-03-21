@@ -17,6 +17,17 @@ function _assertRolldownOutputAsset() {
   type _ = TypeAssert<IsPropertiesEqual<RolldownOutputAsset, OutputAsset>>
 }
 
+export interface SourceMap {
+  file: string
+  mappings: string
+  names: string[]
+  sources: string[]
+  sourcesContent: (string | null)[]
+  version: number
+  // toString(): string
+  // toUrl(): string
+}
+
 export interface RolldownOutputChunk {
   type: 'chunk'
   code: string
@@ -29,11 +40,13 @@ export interface RolldownOutputChunk {
   facadeModuleId: string | null
   isDynamicEntry: boolean
   moduleIds: string[]
+  map: SourceMap | null
+  sourcemapFileName: string | null
 }
 
 function _assertRolldownOutputChunk() {
   type _ = TypeAssert<
-    IsPropertiesEqual<Omit<RolldownOutputChunk, 'modules'>, OutputChunk>
+    IsPropertiesEqual<Omit<RolldownOutputChunk, 'modules' | 'map'>, OutputChunk>
   >
 }
 

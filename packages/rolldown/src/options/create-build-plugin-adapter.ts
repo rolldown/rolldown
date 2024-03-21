@@ -1,10 +1,10 @@
 import type { Plugin, NormalizedInputOptions } from '../rollup-types'
 import type {
-  PluginOptions,
-  SourceResult,
-  ResolveIdResult,
+  BindingPluginOptions,
+  BindingHookLoadOutput,
+  BindingHookResolveIdOutput,
   RenderedChunk,
-  HookRenderChunkOutput,
+  BindingHookRenderChunkOutput,
   BindingOutputs as Outputs,
 } from '../binding'
 import {
@@ -17,7 +17,7 @@ import {
 export function createBuildPluginAdapter(
   plugin: Plugin,
   options: NormalizedInputOptions,
-): PluginOptions {
+): BindingPluginOptions {
   return {
     name: plugin.name ?? 'unknown',
     buildStart: buildStart(plugin.buildStart, options),
@@ -78,7 +78,7 @@ function renderChunk(hook: Plugin['renderChunk']) {
     return async (
       code: string,
       chunk: RenderedChunk,
-    ): Promise<undefined | HookRenderChunkOutput> => {
+    ): Promise<undefined | BindingHookRenderChunkOutput> => {
       try {
         let renderedChunk = Object.assign(
           {
@@ -188,6 +188,7 @@ function buildEnd(hook: Plugin['buildEnd']) {
       }
     }
   }
+  return
 }
 
 function transform(hook: Plugin['transform']) {
@@ -198,7 +199,7 @@ function transform(hook: Plugin['transform']) {
     return async (
       code: string,
       id: string,
-    ): Promise<undefined | SourceResult> => {
+    ): Promise<undefined | BindingHookLoadOutput> => {
       try {
         // TODO: Need to investigate how to pass context to plugin.
         const value = await hook.call({} as any, code, id)
@@ -230,7 +231,7 @@ function resolveId(hook: Plugin['resolveId']) {
       source: string,
       importer?: string,
       options?: any,
-    ): Promise<undefined | ResolveIdResult> => {
+    ): Promise<undefined | BindingHookResolveIdOutput> => {
       try {
         const value = await hook.call(
           {} as any,
@@ -253,7 +254,7 @@ function resolveId(hook: Plugin['resolveId']) {
           )
         }
         // TODO other filed
-        return value as ResolveIdResult
+        return value as BindingHookResolveIdOutput
       } catch (error) {
         console.error(error)
         throw error
@@ -267,7 +268,7 @@ function load(hook: Plugin['load']) {
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-    return async (id: string): Promise<undefined | SourceResult> => {
+    return async (id: string): Promise<undefined | BindingHookLoadOutput> => {
       try {
         const value = await hook.call({} as any, id)
         if (value === undefined || value === null) {

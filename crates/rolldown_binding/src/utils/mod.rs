@@ -1,5 +1,6 @@
 use napi::Env;
 use rolldown_tracing::try_init_tracing_with_chrome_layer;
+pub mod js_async_callback_ext;
 pub mod normalize_binding_options;
 
 pub fn try_init_custom_trace_subscriber(mut napi_env: Env) {

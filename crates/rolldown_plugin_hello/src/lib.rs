@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use rolldown_plugin::{HookNoopReturn, Plugin, PluginContext};
+use rolldown_plugin::{HookNoopReturn, Plugin, SharedPluginContext};
 
 #[derive(Debug)]
 pub struct HelloPlugin;
@@ -12,7 +12,7 @@ impl Plugin for HelloPlugin {
   }
 
   #[allow(clippy::print_stdout)]
-  async fn build_start(&self, _ctx: &PluginContext) -> HookNoopReturn {
+  async fn build_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
     println!("hello");
     Ok(())
   }

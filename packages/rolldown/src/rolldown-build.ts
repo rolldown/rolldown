@@ -10,6 +10,7 @@ export class RolldownBuild {
   #bundler?: Bundler
 
   constructor(inputOptions: InputOptions) {
+    // TODO: Check if `inputOptions.output` is set. If so, throw an warning that it is ignored.
     this.#inputOptions = inputOptions
   }
 

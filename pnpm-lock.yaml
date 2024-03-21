@@ -96,9 +96,15 @@ importers:
       '@napi-rs/cli':
         specifier: ^3.0.0-alpha.43
         version: 3.0.0-alpha.43
+      citty:
+        specifier: ^0.1.6
+        version: 0.1.6
       colorette:
         specifier: ^2.0.20
         version: 2.0.20
+      consola:
+        specifier: ^3.2.3
+        version: 3.2.3
       glob:
         specifier: ^10.3.10
         version: 10.3.10

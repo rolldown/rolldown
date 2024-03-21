@@ -1,8 +1,8 @@
 import type { Plugin, NormalizedInputOptions } from '../rollup-types'
 import type {
   PluginOptions,
-  SourceResult,
-  ResolveIdResult,
+  BindingHookLoadOutput,
+  BindingHookResolveIdOutput,
   RenderedChunk,
   BindingHookRenderChunkOutput,
   BindingOutputs as Outputs,
@@ -198,7 +198,7 @@ function transform(hook: Plugin['transform']) {
     return async (
       code: string,
       id: string,
-    ): Promise<undefined | SourceResult> => {
+    ): Promise<undefined | BindingHookLoadOutput> => {
       try {
         // TODO: Need to investigate how to pass context to plugin.
         const value = await hook.call({} as any, code, id)
@@ -230,7 +230,7 @@ function resolveId(hook: Plugin['resolveId']) {
       source: string,
       importer?: string,
       options?: any,
-    ): Promise<undefined | ResolveIdResult> => {
+    ): Promise<undefined | BindingHookResolveIdOutput> => {
       try {
         const value = await hook.call(
           {} as any,
@@ -253,7 +253,7 @@ function resolveId(hook: Plugin['resolveId']) {
           )
         }
         // TODO other filed
-        return value as ResolveIdResult
+        return value as BindingHookResolveIdOutput
       } catch (error) {
         console.error(error)
         throw error
@@ -267,7 +267,7 @@ function load(hook: Plugin['load']) {
     if (typeof hook !== 'function') {
       return unimplemented()
     }
-    return async (id: string): Promise<undefined | SourceResult> => {
+    return async (id: string): Promise<undefined | BindingHookLoadOutput> => {
       try {
         const value = await hook.call({} as any, id)
         if (value === undefined || value === null) {

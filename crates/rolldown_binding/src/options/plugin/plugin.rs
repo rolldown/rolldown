@@ -3,7 +3,6 @@ use napi::{
   bindgen_prelude::{Either, Either3, Promise},
   threadsafe_function::{ThreadsafeFunction, UnknownReturnValue},
 };
-use rolldown_error::BuildError;
 use serde::Deserialize;
 
 use crate::types::{
@@ -13,7 +12,12 @@ use crate::types::{
 
 use super::{
   binding_plugin_context::BindingPluginContext,
-  types::binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
+  types::{
+    binding_hook_load_output::BindingHookLoadOutput,
+    binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
+    binding_hook_resolve_id_extra_options::BindingHookResolveIdExtraOptions,
+    binding_hook_resolve_id_output::BindingHookResolveIdOutput,
+  },
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -31,34 +35,46 @@ pub struct PluginOptions {
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(specifier: string, importer?: string, options?: HookResolveIdArgsOptions) => Promise<undefined | ResolveIdResult>"
+    ts_type = "(specifier: string, importer?: string, options?: BindingHookResolveIdExtraOptions) => Promise<undefined | BindingHookResolveIdOutput>"
   )]
   pub resolve_id: Option<
     ThreadsafeFunction<
-      (String, Option<String>, Option<HookResolveIdArgsOptions>),
-      Either3<Promise<Option<ResolveIdResult>>, Option<ResolveIdResult>, UnknownReturnValue>,
+      (String, Option<String>, Option<BindingHookResolveIdExtraOptions>),
+      Either3<
+        Promise<Option<BindingHookResolveIdOutput>>,
+        Option<BindingHookResolveIdOutput>,
+        UnknownReturnValue,
+      >,
       false,
     >,
   >,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(id: string) => Promise<undefined | SourceResult>")]
+  #[napi(ts_type = "(id: string) => Promise<undefined | BindingHookLoadOutput>")]
   pub load: Option<
     ThreadsafeFunction<
       String,
-      Either3<Promise<Option<SourceResult>>, Option<SourceResult>, UnknownReturnValue>,
+      Either3<
+        Promise<Option<BindingHookLoadOutput>>,
+        Option<BindingHookLoadOutput>,
+        UnknownReturnValue,
+      >,
       false,
     >,
   >,
 
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(id: string, code: string) => Promise<undefined | SourceResult>")]
+  #[napi(ts_type = "(id: string, code: string) => Promise<undefined | BindingHookLoadOutput>")]
   pub transform: Option<
     ThreadsafeFunction<
       (String, String),
-      Either3<Promise<Option<SourceResult>>, Option<SourceResult>, UnknownReturnValue>,
+      Either3<
+        Promise<Option<BindingHookLoadOutput>>,
+        Option<BindingHookLoadOutput>,
+        UnknownReturnValue,
+      >,
       false,
     >,
   >,
@@ -98,60 +114,4 @@ pub struct PluginOptions {
   #[napi(ts_type = "(bundle: Outputs) => Promise<void>")]
   pub write_bundle:
     Option<ThreadsafeFunction<BindingOutputs, Either<Promise<()>, UnknownReturnValue>, false>>,
-}
-
-#[napi_derive::napi(object)]
-#[derive(Deserialize, Default, Derivative)]
-#[serde(rename_all = "camelCase")]
-#[derivative(Debug)]
-pub struct HookResolveIdArgsOptions {
-  pub is_entry: bool,
-  pub kind: String,
-}
-
-impl From<rolldown_plugin::HookResolveIdExtraOptions> for HookResolveIdArgsOptions {
-  fn from(value: rolldown_plugin::HookResolveIdExtraOptions) -> Self {
-    Self { is_entry: value.is_entry, kind: value.kind.to_string() }
-  }
-}
-
-#[napi_derive::napi(object)]
-#[derive(Deserialize, Default, Derivative)]
-#[serde(rename_all = "camelCase")]
-#[derivative(Debug)]
-pub struct ResolveIdResult {
-  pub id: String,
-  pub external: Option<bool>,
-}
-
-impl From<ResolveIdResult> for rolldown_plugin::HookResolveIdOutput {
-  fn from(value: ResolveIdResult) -> Self {
-    Self { id: value.id, external: value.external }
-  }
-}
-
-#[napi_derive::napi(object)]
-#[derive(Deserialize, Default, Derivative)]
-#[serde(rename_all = "camelCase")]
-#[derivative(Debug)]
-pub struct SourceResult {
-  pub code: String,
-  pub map: Option<String>,
-}
-
-impl TryFrom<SourceResult> for rolldown_plugin::HookLoadOutput {
-  type Error = BuildError;
-
-  fn try_from(value: SourceResult) -> Result<Self, Self::Error> {
-    Ok(rolldown_plugin::HookLoadOutput {
-      code: value.code,
-      map: value
-        .map
-        .map(|content| {
-          rolldown_sourcemap::SourceMap::from_slice(content.as_bytes())
-            .map_err(|e| BuildError::sourcemap_error(e.to_string()))
-        })
-        .transpose()?,
-    })
-  }
 }

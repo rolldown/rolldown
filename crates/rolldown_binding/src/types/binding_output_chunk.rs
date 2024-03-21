@@ -22,6 +22,8 @@ pub struct BindingOutputChunk {
   pub modules: HashMap<String, BindingRenderedModule>,
   // OutputChunk
   pub code: String,
+  pub map: Option<String>,
+  pub sourcemap_file_name: Option<String>,
 }
 
 impl From<Box<rolldown_common::OutputChunk>> for BindingOutputChunk {
@@ -35,6 +37,12 @@ impl From<Box<rolldown_common::OutputChunk>> for BindingOutputChunk {
       modules: chunk.modules.into_iter().map(|(key, value)| (key, value.into())).collect(),
       exports: chunk.exports,
       module_ids: chunk.module_ids,
+      map: chunk.map.map(|map| {
+        let mut buf = vec![];
+        map.to_writer(&mut buf).unwrap();
+        unsafe { String::from_utf8_unchecked(buf) }
+      }),
+      sourcemap_file_name: chunk.sourcemap_file_name,
     }
   }
 }

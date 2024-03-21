@@ -25,6 +25,8 @@ function transformToRollupOutputChunk(
     facadeModuleId: chunk.facadeModuleId || null,
     isDynamicEntry: chunk.isDynamicEntry,
     moduleIds: chunk.moduleIds,
+    map: chunk.map ? JSON.parse(chunk.map) : null,
+    sourcemapFileName: chunk.sourcemapFileName || null,
   }
 }
 

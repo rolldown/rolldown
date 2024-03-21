@@ -1,3 +1,4 @@
+use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxHashMap;
 
 use super::rendered_module::RenderedModule;
@@ -16,4 +17,6 @@ pub struct OutputChunk {
   pub modules: FxHashMap<String, RenderedModule>,
   // OutputChunk
   pub code: String,
+  pub map: Option<SourceMap>,
+  pub sourcemap_file_name: Option<String>,
 }

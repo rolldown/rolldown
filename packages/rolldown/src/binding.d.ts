@@ -44,6 +44,8 @@ export interface BindingOutputChunk {
   fileName: string
   modules: Record<string, BindingRenderedModule>
   code: string
+  map?: string
+  sourcemapFileName?: string
 }
 
 export interface BindingOutputOptions {

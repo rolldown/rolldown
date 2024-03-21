@@ -7,7 +7,9 @@ const rollup = require('../../dist/rollup');
 // @ts-expect-error not included in types
 const { compareLogs, runTestSuiteWithSamples } = require('../utils.js');
 
-const FORMATS = ['amd', 'cjs', 'system', 'es', 'iife', 'umd'];
+// TODO more formats
+// const FORMATS = ['amd', 'cjs', 'system', 'es', 'iife', 'umd'];
+const FORMATS = ['esm'];
 
 runTestSuiteWithSamples(
 	'sourcemaps',

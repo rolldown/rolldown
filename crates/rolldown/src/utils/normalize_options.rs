@@ -79,7 +79,7 @@ pub fn normalize_options(
       .unwrap_or_else(|| "[name]-[hash].js".to_string())
       .into(),
     dir: raw_output.dir.unwrap_or_else(|| "dist".to_string()),
-    banner: None,
+    banner: raw_output.banner,
     format: raw_output.format.unwrap_or(crate::OutputFormat::Esm),
     sourcemap: raw_output.sourcemap.unwrap_or(SourceMapType::Hidden),
   };

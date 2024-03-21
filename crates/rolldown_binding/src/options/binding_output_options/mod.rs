@@ -1,7 +1,7 @@
 use napi_derive::napi;
 use serde::Deserialize;
 
-use super::plugin::PluginOptions;
+use super::plugin::BindingPluginOptions;
 
 #[napi(object, object_to_js = false)]
 #[derive(Deserialize, Debug)]
@@ -43,7 +43,7 @@ pub struct BindingOutputOptions {
   // noConflict: boolean;
   // outro: () => string | Promise<string>;
   // paths: OptionsPaths;
-  pub plugins: Vec<PluginOptions>,
+  pub plugins: Vec<BindingPluginOptions>,
   // preferConst: boolean;
   // preserveModules: boolean;
   // preserveModulesRoot: string | undefined;

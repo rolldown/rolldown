@@ -1,6 +1,6 @@
 use std::sync::{Arc, Weak};
 
-use crate::{BoxPlugin, PluginContext};
+use crate::{plugin_context::SharedPluginContext, BoxPlugin, PluginContext};
 
 mod build_hooks;
 mod output_hooks;
@@ -8,7 +8,7 @@ mod output_hooks;
 pub type SharedPluginDriver = Arc<PluginDriver>;
 
 pub struct PluginDriver {
-  plugins: Vec<(BoxPlugin, PluginContext)>,
+  plugins: Vec<(BoxPlugin, SharedPluginContext)>,
 }
 
 impl PluginDriver {
@@ -16,7 +16,7 @@ impl PluginDriver {
     Arc::new_cyclic(|plugin_driver| {
       let with_context = plugins
         .into_iter()
-        .map(|plugin| (plugin, PluginContext { _plugin_driver: Weak::clone(plugin_driver) }))
+        .map(|plugin| (plugin, PluginContext { _plugin_driver: Weak::clone(plugin_driver) }.into()))
         .collect::<Vec<_>>();
 
       Self { plugins: with_context }

@@ -5,7 +5,7 @@ use regex::Regex;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, Plugin, PluginContext,
+  HookResolveIdReturn, Plugin, SharedPluginContext,
 };
 use std::{borrow::Cow, fmt::Debug, path::PathBuf};
 use util::{extract_html_module_scripts, VIRTUAL_MODULE_PREFIX};
@@ -56,7 +56,7 @@ impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
 
   async fn resolve_id(
     &self,
-    _ctx: &PluginContext,
+    _ctx: &SharedPluginContext,
     args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn {
     let HookResolveIdArgs { source, .. } = args;
@@ -95,7 +95,7 @@ impl<T: FileSystem + 'static + Default> Plugin for ViteScannerPlugin<T> {
     Ok(None)
   }
 
-  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs) -> HookLoadReturn {
+  async fn load(&self, _ctx: &SharedPluginContext, args: &HookLoadArgs) -> HookLoadReturn {
     let HookLoadArgs { id } = args;
 
     // extract scripts inside HTML-like files and treat it as a js module

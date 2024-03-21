@@ -7,6 +7,7 @@ export interface OutputOptions {
   format?: 'es'
   exports?: RollupOutputOptions['exports']
   sourcemap?: RollupOutputOptions['sourcemap']
+  banner?: RollupOutputOptions['banner']
 }
 
 function normalizeFormat(

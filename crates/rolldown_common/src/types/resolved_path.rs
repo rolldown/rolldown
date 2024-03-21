@@ -1,10 +1,5 @@
 use crate::FilePath;
-<<<<<<< HEAD
-use crate::FilePath;
-use std::env;
-use std::env;
-=======
->>>>>>> 8b30d8f7 (fix: rs lint)
+
 use std::path::Path;
 use sugar_path::SugarPath;
 

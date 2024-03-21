@@ -1,6 +1,6 @@
 import type { Plugin, NormalizedInputOptions } from '../rollup-types'
 import type {
-  PluginOptions,
+  BindingPluginOptions,
   BindingHookLoadOutput,
   BindingHookResolveIdOutput,
   RenderedChunk,
@@ -17,7 +17,7 @@ import {
 export function createBuildPluginAdapter(
   plugin: Plugin,
   options: NormalizedInputOptions,
-): PluginOptions {
+): BindingPluginOptions {
   return {
     name: plugin.name ?? 'unknown',
     buildStart: buildStart(plugin.buildStart, options),

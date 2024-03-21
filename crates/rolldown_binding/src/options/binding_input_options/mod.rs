@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 use self::{binding_input_item::BindingInputItem, binding_resolve_options::BindingResolveOptions};
 
-use super::plugin::PluginOptions;
+use super::plugin::BindingPluginOptions;
 
 mod binding_input_item;
 mod binding_resolve_options;
@@ -43,7 +43,7 @@ pub struct BindingInputOptions {
   // moduleContext?: ((id: string) => string | null | void) | { [id: string]: string };
   // onwarn?: WarningHandlerWithDefault;
   // perf?: boolean;
-  pub plugins: Vec<PluginOptions>,
+  pub plugins: Vec<BindingPluginOptions>,
   pub resolve: Option<BindingResolveOptions>,
   // preserveEntrySignatures?: PreserveEntrySignaturesOption;
   // /** @deprecated Use the "preserveModules" output option instead. */

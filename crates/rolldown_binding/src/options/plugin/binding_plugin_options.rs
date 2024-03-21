@@ -24,7 +24,7 @@ use super::{
 #[derive(Deserialize, Default, Derivative)]
 #[serde(rename_all = "camelCase")]
 #[derivative(Debug)]
-pub struct PluginOptions {
+pub struct BindingPluginOptions {
   pub name: String,
 
   #[derivative(Debug = "ignore")]

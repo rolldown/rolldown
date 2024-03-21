@@ -4,7 +4,7 @@ use rolldown::{InputOptions, OutputOptions};
 use rolldown_error::BuildError;
 use rolldown_plugin::BoxPlugin;
 
-use crate::options::plugin::PluginAdapter;
+use crate::options::plugin::JsPlugin;
 
 pub struct NormalizeBindingOptionsReturn {
   pub input_options: InputOptions,
@@ -57,7 +57,7 @@ pub fn normalize_binding_options(
     .plugins
     .into_iter()
     .chain(output_options.plugins)
-    .map(PluginAdapter::new_boxed)
+    .map(JsPlugin::new_boxed)
     .collect::<Vec<_>>();
 
   Ok(NormalizeBindingOptionsReturn {

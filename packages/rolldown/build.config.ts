@@ -1,8 +1,8 @@
 // build.config.ts
-import { defineBuildConfig } from 'unbuild'
+import { globSync } from 'glob'
 import nodeFs from 'node:fs'
 import nodePath from 'node:path'
-import { globSync } from 'glob'
+import { defineBuildConfig } from 'unbuild'
 
 export default defineBuildConfig({
   entries: [
@@ -13,6 +13,7 @@ export default defineBuildConfig({
       name: 'cli',
     },
   ],
+  sourcemap: true,
   clean: true,
   declaration: true, // generate .d.ts files
   externals: [/rolldown-binding\..*\.node/, /@rolldown\/binding-.*/],

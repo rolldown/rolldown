@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // build before debugging
+    {
+      "label": "build rolldown",
+      "type": "npm",
+      "script": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "never",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true
+      }
+    }
+  ]
+}

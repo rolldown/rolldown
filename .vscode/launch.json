@@ -5,12 +5,33 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "debug-js-basic",
+      "program": "./node_modules/rolldown/bin/cli.js",
+      "args": ["--config", "./rolldown.config.js"],
+      "request": "launch",
+      "skipFiles": ["<node_internals>/**"],
+      // build before debug
+      "preLaunchTask": "build rolldown",
+      "cwd": "${workspaceFolder}/examples/basic-vue",
+      "console": "internalConsole",
+      "internalConsoleOptions": "openOnSessionStart",
+      "type": "node"
+    },
+    {
       "type": "lldb",
       "request": "launch",
       "sourceLanguages": ["rust"],
       "name": "debug-rust-basic",
       "program": "node",
-      "args": ["build.js"],
+      "args": [
+        "./node_modules/rolldown/bin/cli.js",
+        "--config",
+        "./rolldown.config.js"
+      ],
+      // build before debug
+      "preLaunchTask": "build rolldown",
+      "console": "internalConsole",
+      "internalConsoleOptions": "openOnSessionStart",
       "cwd": "${workspaceFolder}/examples/basic-vue"
     },
     {

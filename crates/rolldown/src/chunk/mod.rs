@@ -90,7 +90,10 @@ impl Chunk {
     use rayon::prelude::*;
     let mut rendered_modules = FxHashMap::default();
     let mut concat_source = ConcatSource::default();
-
+    // add banner
+    if let Some(banner) = &output_options.banner {
+      concat_source.add_source(Box::new(RawSource::new(banner.to_string())))
+    }
     concat_source
       .add_source(Box::new(RawSource::new(self.render_imports_for_esm(graph, chunk_graph))));
 
@@ -155,10 +158,6 @@ impl Chunk {
           Ok(())
         },
       )?;
-    // add banner
-    if let Some(banner) = &output_options.banner {
-      concat_source.prepend_source(Box::new(RawSource::new(banner.to_string())))
-    }
     if let Some(exports) = self.render_exports(graph, output_options) {
       concat_source.add_source(Box::new(RawSource::new(exports)));
     }

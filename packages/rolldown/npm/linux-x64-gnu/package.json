@@ -33,6 +33,7 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
+  "homepage": "https://rolldown.rs/",
   "repository": "https://github.com/rolldown/rolldown",
   "libc": [
     "glibc"

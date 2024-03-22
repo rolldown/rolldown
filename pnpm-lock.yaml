@@ -48,6 +48,16 @@ importers:
         specifier: ^0.12.1
         version: 0.12.1
 
+  examples/basic-react:
+    dependencies:
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.2.0(react@18.2.0)
+    devDependencies:
+      rolldown:
+        specifier: workspace:*
+        version: link:../../packages/rolldown
+
   examples/basic-vue:
     dependencies:
       vue:

@@ -47,12 +47,12 @@ function normalizedOptions(caseRoot: string, config?: RollupOptions) {
   const output = config?.output ?? {}
 
   return {
+    ...config,
     input: config?.input ?? path.join(caseRoot, 'main.js'),
     output: {
       dir: output.dir ?? path.join(caseRoot, 'dist'),
       ...output,
     },
-    ...config,
   }
 }
 

@@ -19,4 +19,4 @@ test    = false
 
 [dependencies]
 rolldown_error = { path = "../rolldown_error" }
-sourcemap      = { version = "7.1.1" }
+sourcemap      = { version = "8.0.0" }

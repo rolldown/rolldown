@@ -1,4 +1,4 @@
-import { RolldownOutput } from './types/rolldown-output'
+import { RolldownOutput, RolldownOutputChunk } from './types/rolldown-output'
 import type { InputOptions } from './options/input-options'
 import type { OutputOptions } from './options/output-options'
 import type { RolldownOptions } from './types/rolldown-options'
@@ -13,7 +13,7 @@ export type {
   RolldownOutput,
   InputOptions,
   OutputOptions,
-  Plugin,
+  RolldownPlugin as Plugin,
 }
 
 // Exports for compatibility

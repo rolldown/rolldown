@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 edition    = "2021"
-homepage   = "https://github.com/rolldown/rolldown"
+homepage   = "https://rolldown.rs/"
 license    = "MIT"
 repository = "https://github.com/rolldown/rolldown"
 

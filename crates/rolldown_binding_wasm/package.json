@@ -4,7 +4,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rolldown/rolldown"
+    "url": "https://github.com/rolldown/rolldown.git",
+    "directory": "creates/rolldown_binding_wasm"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

@@ -34,5 +34,9 @@
     "access": "public"
   },
   "homepage": "https://rolldown.rs/",
-  "repository": "https://github.com/rolldown/rolldown"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rolldown/rolldown.git",
+    "directory": "packages/rolldow/npm/darwin-arm64"
+  }
 }

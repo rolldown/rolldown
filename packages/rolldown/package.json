@@ -3,7 +3,11 @@
   "version": "0.5.0",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",
-  "repository": "https://github.com/rolldown/rolldown",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rolldown/rolldown.git",
+    "directory": "packages/rolldown"
+  },
   "license": "MIT",
   "keywords": [
     "webpack",

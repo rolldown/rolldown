@@ -10,7 +10,8 @@ use rolldown_common::ChunkId;
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;
 
 use rolldown_common::{
-  ChunkKind, ExternalModuleId, NamedImport, NormalModuleId, RenderedModule, Specifier, SymbolRef,
+  ChunkKind, ExternalModuleId, NamedImport, NormalModuleId, RenderedChunk, RenderedModule,
+  Specifier, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_rstr::Rstr;
@@ -55,7 +56,7 @@ pub struct Chunk {
 pub struct ChunkRenderReturn {
   pub code: String,
   pub map: Option<SourceMap>,
-  pub rendered_modules: FxHashMap<String, RenderedModule>,
+  pub rendered_chunk: RenderedChunk,
 }
 
 impl Chunk {
@@ -90,10 +91,7 @@ impl Chunk {
     use rayon::prelude::*;
     let mut rendered_modules = FxHashMap::default();
     let mut concat_source = ConcatSource::default();
-    // add banner
-    if let Some(banner) = &output_options.banner {
-      concat_source.add_source(Box::new(RawSource::new(banner.to_string())))
-    }
+
     concat_source
       .add_source(Box::new(RawSource::new(self.render_imports_for_esm(graph, chunk_graph))));
 
@@ -158,12 +156,17 @@ impl Chunk {
           Ok(())
         },
       )?;
+    let rendered_chunk = self.get_rendered_chunk_info(graph, output_options, rendered_modules);
+    // add banner
+    concat_source
+      .prepend_source(Box::new(RawSource::new(output_options.banner.call(rendered_chunk.clone()))));
+
     if let Some(exports) = self.render_exports(graph, output_options) {
       concat_source.add_source(Box::new(RawSource::new(exports)));
     }
 
     let (content, map) = concat_source.content_and_sourcemap();
 
-    Ok(ChunkRenderReturn { code: content, map, rendered_modules })
+    Ok(ChunkRenderReturn { code: content, map, rendered_chunk })
   }
 }

@@ -1,4 +1,8 @@
 use derivative::Derivative;
+use futures::Future;
+use rolldown_common::RenderedChunk;
+use std::fmt::Debug;
+use std::pin::Pin;
 
 #[derive(Debug)]
 pub enum OutputFormat {
@@ -30,6 +34,37 @@ impl From<String> for SourceMapType {
   }
 }
 
+pub type AddonFn = dyn Fn(RenderedChunk) -> String;
+
+pub enum Addon {
+  String(String),
+  Fn(Box<AddonFn>),
+}
+
+impl Debug for Addon {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::String(value) => write!(f, "Addon::String({value:?})"),
+      Self::Fn(_) => write!(f, "Addon::Fn(...)"),
+    }
+  }
+}
+
+impl Default for Addon {
+  fn default() -> Self {
+    Self::String("".to_string())
+  }
+}
+
+impl Addon {
+  pub fn call(&self, chunk: RenderedChunk) -> String {
+    match self {
+      Self::String(value) => value.clone(),
+      Self::Fn(value) => value(chunk),
+    }
+  }
+}
+
 #[derive(Derivative, Default)]
 #[derivative(Debug)]
 pub struct OutputOptions {
@@ -38,7 +73,7 @@ pub struct OutputOptions {
   pub dir: Option<String>,
   pub format: Option<OutputFormat>,
   pub sourcemap: Option<SourceMapType>,
-  pub banner: Option<String>,
+  pub banner: Option<Addon>,
 }
 
 // impl Default for OutputOptions {

@@ -82,11 +82,7 @@ impl<'a> BundleStage<'a> {
     let chunks = chunk_graph.chunks.iter().map(|c| {
       let ret =
         c.render(self.input_options, self.link_output, &chunk_graph, self.output_options).unwrap();
-      (
-        ret.code,
-        ret.map,
-        c.get_rendered_chunk_info(self.link_output, self.output_options, ret.rendered_modules),
-      )
+      (ret.code, ret.map, ret.rendered_chunk)
     });
 
     let mut assets = vec![];

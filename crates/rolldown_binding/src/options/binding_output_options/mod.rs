@@ -1,4 +1,6 @@
+use crate::types::js_async_callback::JsAsyncCallback;
 use napi_derive::napi;
+use rolldown_common::RenderedChunk;
 use serde::Deserialize;
 
 use super::plugin::BindingPluginOptions;
@@ -15,7 +17,9 @@ pub struct BindingOutputOptions {
 
   // amd: NormalizedAmdOptions;
   // assetFileNames: string | ((chunkInfo: PreRenderedAsset) => string);
-  pub banner: Option<String>,
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "undefined | ((chunk: RenderedChunk) => string)")]
+  pub banner: Option<fn(chunk: RenderedChunk) -> String>,
   // chunkFileNames: string | ((chunkInfo: PreRenderedChunk) => string);
   // compact: boolean;
   pub dir: Option<String>,

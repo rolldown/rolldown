@@ -21,6 +21,9 @@ export default defineBuildConfig({
     emitCJS: true,
     cjsBridge: true,
     inlineDependencies: true,
+    resolve: {
+      exportConditions: ['node'],
+    },
   },
   hooks: {
     'build:done'(_ctx) {

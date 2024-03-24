@@ -7,10 +7,8 @@ use rolldown_common::{
   AstScope, FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath,
   ResourceId, SymbolRef,
 };
-use rolldown_fs::FileSystem;
 use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
-use rolldown_resolver::Resolver;
 use sugar_path::AsPath;
 
 use super::{module_task_context::ModuleTaskCommonData, Msg};
@@ -24,18 +22,19 @@ use crate::{
     resolved_request_info::ResolvedRequestInfo,
   },
   utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
+  SharedResolver,
 };
-pub struct NormalModuleTask<'task, T: FileSystem + Default> {
-  ctx: &'task ModuleTaskCommonData<T>,
+pub struct NormalModuleTask<'task> {
+  ctx: &'task ModuleTaskCommonData,
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
   module_type: ModuleType,
   errors: BatchedErrors,
 }
 
-impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
+impl<'task> NormalModuleTask<'task> {
   pub fn new(
-    ctx: &'task ModuleTaskCommonData<T>,
+    ctx: &'task ModuleTaskCommonData,
     id: NormalModuleId,
     path: ResolvedPath,
     module_type: ModuleType,
@@ -203,9 +202,9 @@ impl<'task, T: FileSystem + Default + 'static> NormalModuleTask<'task, T> {
   }
 
   #[allow(clippy::option_if_let_else)]
-  pub(crate) async fn resolve_id<F: FileSystem + Default>(
+  pub(crate) async fn resolve_id(
     input_options: &SharedNormalizedInputOptions,
-    resolver: &Resolver<F>,
+    resolver: &SharedResolver,
     plugin_driver: &SharedPluginDriver,
     importer: &FilePath,
     specifier: &str,

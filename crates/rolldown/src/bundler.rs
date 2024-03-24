@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use rolldown_common::BundlerFileSystem;
-use rolldown_fs::OsFileSystem;
+use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
 
 use sugar_path::AsPath;
@@ -22,15 +21,15 @@ use crate::{
   InputOptions, OutputOptions, SharedResolver,
 };
 
-pub struct Bundler<Fs: BundlerFileSystem> {
+pub struct Bundler {
   pub(crate) input_options: SharedNormalizedInputOptions,
   pub(crate) output_options: NormalizedOutputOptions,
   pub(crate) plugin_driver: SharedPluginDriver,
-  pub(crate) fs: Fs,
-  pub(crate) resolver: SharedResolver<Fs>,
+  pub(crate) fs: OsFileSystem,
+  pub(crate) resolver: SharedResolver,
 }
 
-impl Bundler<OsFileSystem> {
+impl Bundler {
   pub fn new(input_options: InputOptions, output_options: OutputOptions) -> Self {
     BundlerBuilder::default()
       .with_input_options(input_options)
@@ -51,7 +50,7 @@ impl Bundler<OsFileSystem> {
   }
 }
 
-impl<T: BundlerFileSystem> Bundler<T> {
+impl Bundler {
   pub async fn write(&mut self) -> BatchedResult<RolldownOutput> {
     let dir =
       self.input_options.cwd.as_path().join(&self.output_options.dir).to_string_lossy().to_string();

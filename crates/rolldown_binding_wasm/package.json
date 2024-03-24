@@ -1,7 +1,7 @@
 {
   "name": "@rolldown/wasm-binding",
-  "version": "0.0.5",
   "license": "MIT",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/rolldown/rolldown.git",

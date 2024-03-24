@@ -183,44 +183,10 @@ jobs:
           name: node-artifact
           path: packages/rolldown/dist/**
 
-  build-wasm:
-    name: Build Wasm
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
-        with:
-          cache-base: main
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Build Wasm
-        run: pnpm build-wasm:release
-
-      - name: Upload Wasm Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          if-no-files-found: error
-          name: wasm-artifact
-          path: crates/rolldown_binding_wasm/dist/**
-
   test:
     needs:
       - plan
       - build-binding
-      - build-wasm
       - build-node-packages
     strategy:
       fail-fast: false
@@ -304,12 +270,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install && git reset --hard # fix pnpm install add new line for package.json
-
-      - name: Download Wasm Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: crates/rolldown_binding_wasm/dist
-          name: wasm-artifact
 
       - name: Download Binding Artifacts
         uses: actions/download-artifact@v4

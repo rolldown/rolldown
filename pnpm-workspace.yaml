@@ -1,6 +1,7 @@
 packages:
   - crates/rolldown_binding_wasm
   - packages/*
+  - packages/rolldown/npm/*
   - web/*
   - examples/*
   - scripts

@@ -315,7 +315,8 @@ jobs:
         if: ${{ needs.plan.outputs.nightly == 'true' }}
         run: |
           node ./scripts/bump-version.js snapshot
-          pnpm publish -r --tag nightly
+          pnpm publish -r --tag nightly --dry-run --no-git-checks
+          pnpm publish -r --tag nightly --no-git-checks
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

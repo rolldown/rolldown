@@ -13,7 +13,7 @@ pub type FsPath = String;
 pub type FsFileContent = String;
 pub type FsFileMap<'a> = &'a [(&'a FsPath, &'a FsFileContent)];
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct MemoryFileSystem {
   // root path
   fs: Arc<MemoryFS>,
@@ -48,10 +48,6 @@ impl MemoryFileSystem {
 }
 
 impl FileSystem for MemoryFileSystem {
-  fn share(&self) -> Self {
-    Self { fs: Arc::clone(&self.fs) }
-  }
-
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     self
       .fs

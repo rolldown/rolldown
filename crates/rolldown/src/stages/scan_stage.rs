@@ -14,7 +14,8 @@ use crate::{
   options::normalized_input_options::SharedNormalizedInputOptions,
   runtime::RuntimeModuleBrief,
   types::{
-    module_table::ModuleTable, resolved_request_info::ResolvedRequestInfo, symbols::Symbols,
+    bundler_fs::BundlerFileSystem, module_table::ModuleTable,
+    resolved_request_info::ResolvedRequestInfo, symbols::Symbols,
   },
   utils::resolve_id::resolve_id,
   SharedResolver,
@@ -37,7 +38,7 @@ pub struct ScanStageOutput {
   pub warnings: Vec<BuildError>,
 }
 
-impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
+impl<Fs: BundlerFileSystem> ScanStage<Fs> {
   pub fn new(
     input_options: SharedNormalizedInputOptions,
     plugin_driver: SharedPluginDriver,
@@ -55,7 +56,7 @@ impl<Fs: FileSystem + Default + 'static> ScanStage<Fs> {
     let mut module_loader = ModuleLoader::new(
       Arc::clone(&self.input_options),
       Arc::clone(&self.plugin_driver),
-      self.fs.share(),
+      self.fs.clone(),
       Arc::clone(&self.resolver),
     );
 

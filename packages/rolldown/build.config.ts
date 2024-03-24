@@ -23,7 +23,7 @@ export default defineBuildConfig({
     inlineDependencies: true,
     resolve: {
       exportConditions: ['node'],
-    }
+    },
   },
   hooks: {
     'build:done'(_ctx) {

@@ -1,6 +1,8 @@
+use std::path::Path;
+
 use once_cell::sync::Lazy;
 use regex::Regex;
-use rolldown_common::{FilePath, ModuleType};
+use rolldown_common::ModuleType;
 use rolldown_error::BuildError;
 use rolldown_plugin::{HookResolveIdArgs, HookResolveIdExtraOptions, SharedPluginDriver};
 
@@ -16,7 +18,7 @@ pub async fn resolve_id(
   resolver: &SharedResolver,
   plugin_driver: &SharedPluginDriver,
   request: &str,
-  importer: Option<&FilePath>,
+  importer: Option<&str>,
   options: HookResolveIdExtraOptions,
   _preserve_symlinks: bool,
 ) -> Result<ResolvedRequestInfo, BuildError> {
@@ -48,7 +50,7 @@ pub async fn resolve_id(
   // Rollup external node packages by default.
   // Rolldown will follow esbuild behavior to resolve it by default.
   // See https://github.com/rolldown/rolldown/issues/282
-  let resolved = resolver.resolve(importer, request)?;
+  let resolved = resolver.resolve(importer.map(Path::new), request)?;
   Ok(ResolvedRequestInfo {
     path: resolved.resolved,
     module_type: resolved.module_type,

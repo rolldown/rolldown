@@ -6,7 +6,7 @@ use rolldown_common::{
   NormalModule, NormalModuleId, ResourceId,
 };
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystem;
+use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcProgram;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -44,9 +44,9 @@ impl IntermediateNormalModules {
   }
 }
 
-pub struct ModuleLoader<T: FileSystem + Default> {
+pub struct ModuleLoader {
   input_options: SharedNormalizedInputOptions,
-  common_data: ModuleTaskCommonData<T>,
+  common_data: ModuleTaskCommonData,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
   visited: FxHashMap<FilePath, ModuleId>,
   runtime_id: Option<NormalModuleId>,
@@ -67,12 +67,12 @@ pub struct ModuleLoaderOutput {
   pub warnings: Vec<BuildError>,
 }
 
-impl<T: FileSystem + 'static + Default> ModuleLoader<T> {
+impl ModuleLoader {
   pub fn new(
     input_options: SharedNormalizedInputOptions,
     plugin_driver: SharedPluginDriver,
-    fs: T,
-    resolver: SharedResolver<T>,
+    fs: OsFileSystem,
+    resolver: SharedResolver,
   ) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
 

@@ -1,11 +1,9 @@
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use rolldown_common::{
-  BundlerFileSystem, EntryPoint, ImportKind, IntoBatchedResult, NormalModuleId,
-};
+use rolldown_common::{EntryPoint, ImportKind, IntoBatchedResult, NormalModuleId};
 use rolldown_error::BuildError;
-use rolldown_fs::FileSystem;
+use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcProgram;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_utils::block_on_spawn_all;
@@ -22,11 +20,11 @@ use crate::{
   SharedResolver,
 };
 
-pub struct ScanStage<Fs: FileSystem + Default> {
+pub struct ScanStage {
   input_options: SharedNormalizedInputOptions,
   plugin_driver: SharedPluginDriver,
-  fs: Fs,
-  resolver: SharedResolver<Fs>,
+  fs: OsFileSystem,
+  resolver: SharedResolver,
 }
 
 #[derive(Debug)]
@@ -39,12 +37,12 @@ pub struct ScanStageOutput {
   pub warnings: Vec<BuildError>,
 }
 
-impl<Fs: BundlerFileSystem> ScanStage<Fs> {
+impl ScanStage {
   pub fn new(
     input_options: SharedNormalizedInputOptions,
     plugin_driver: SharedPluginDriver,
-    fs: Fs,
-    resolver: SharedResolver<Fs>,
+    fs: OsFileSystem,
+    resolver: SharedResolver,
   ) -> Self {
     Self { input_options, plugin_driver, fs, resolver }
   }

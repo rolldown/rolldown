@@ -45,7 +45,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
   panic::set_hook(Box::new(console_error_panic_hook::hook));
   let result =
     tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-      let memory_fs = MemoryFileSystem::new(
+      let _memory_fs = MemoryFileSystem::new(
         &file_list.iter().map(|item| (&item.path, &item.content)).collect::<Vec<_>>(),
       );
       let input = file_list
@@ -60,7 +60,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
           }
         })
         .collect::<Vec<_>>();
-      let mut bundler = BundlerBuilder::<MemoryFileSystem>::default()
+      let mut bundler = BundlerBuilder::default()
         .with_input_options(InputOptions {
           input,
           cwd: Some("/".into()),
@@ -68,7 +68,6 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
           treeshake: Some(false),
           resolve: None,
         })
-        .with_file_system(memory_fs)
         .build();
 
       match bundler.write().await {

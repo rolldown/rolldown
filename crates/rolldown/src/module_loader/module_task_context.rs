@@ -1,4 +1,4 @@
-use rolldown_fs::FileSystem;
+use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 
 use crate::{options::normalized_input_options::SharedNormalizedInputOptions, SharedResolver};
@@ -6,15 +6,15 @@ use crate::{options::normalized_input_options::SharedNormalizedInputOptions, Sha
 use super::Msg;
 
 /// Used to store common data shared between all tasks.
-pub struct ModuleTaskCommonData<T: FileSystem + Default> {
+pub struct ModuleTaskCommonData {
   pub input_options: SharedNormalizedInputOptions,
   pub tx: tokio::sync::mpsc::UnboundedSender<Msg>,
-  pub resolver: SharedResolver<T>,
-  pub fs: T,
+  pub resolver: SharedResolver,
+  pub fs: OsFileSystem,
   pub plugin_driver: SharedPluginDriver,
 }
 
-impl<T: FileSystem + Default> ModuleTaskCommonData<T> {
+impl ModuleTaskCommonData {
   pub unsafe fn assume_static(&self) -> &'static Self {
     std::mem::transmute(self)
   }

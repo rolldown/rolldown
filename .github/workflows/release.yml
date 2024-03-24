@@ -18,8 +18,8 @@ jobs:
     name: Plan release
     runs-on: ubuntu-latest
     outputs:
-      publish: ${{ github.event_name == 'workflow_dispatch' }}
-      nightly: ${{ github.event_name == 'schedule' || github.event_name == 'pull_request' }}
+      # publish: ${{ github.event_name == 'workflow_dispatch' }}
+      nightly: ${{ github.event_name == 'schedule' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
     steps:
       - run: 'echo "Planning release"'
 
@@ -314,8 +314,8 @@ jobs:
       - name: Publish nightly
         if: ${{ needs.plan.outputs.nightly == 'true' }}
         run: |
-          pnpm changeset version --snapshot nightly
-          pnpm changeset publish
+          node ./scripts/bump-version.js snapshot
+          pnpm publish -r --tag nightly
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

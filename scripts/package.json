@@ -7,14 +7,17 @@
   },
   "dependencies": {
     "@parcel/watcher": "^2.4.1",
+    "@pnpm/find-workspace-packages": "^6.0.9",
     "@types/debug": "^4.1.12",
     "@types/fs-extra": "^11.0.4",
+    "@types/semver": "^7.5.8",
     "chalk": "^5.3.0",
     "change-case": "^5.4.3",
     "debug": "^4.3.4",
     "dedent": "^1.5.1",
     "execa": "^8.0.1",
     "fs-extra": "^11.2.0",
+    "semver": "^7.6.0",
     "tree-sitter": "^0.20.6",
     "zx": "^7.2.3"
   }

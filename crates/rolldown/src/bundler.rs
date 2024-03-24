@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use rolldown_common::BundlerFileSystem;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
 
@@ -17,7 +18,7 @@ use crate::{
     normalized_output_options::NormalizedOutputOptions,
   },
   stages::{bundle_stage::BundleStage, scan_stage::ScanStage},
-  types::{bundler_fs::BundlerFileSystem, rolldown_output::RolldownOutput},
+  types::rolldown_output::RolldownOutput,
   InputOptions, OutputOptions, SharedResolver,
 };
 

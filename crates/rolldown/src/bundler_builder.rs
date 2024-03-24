@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
+use rolldown_common::BundlerFileSystem;
 use rolldown_plugin::{BoxPlugin, PluginDriver};
 use rolldown_resolver::Resolver;
 
 use crate::{
-  types::bundler_fs::BundlerFileSystem,
   utils::normalize_options::{normalize_options, NormalizeOptionsReturn},
   Bundler, InputOptions, OutputOptions,
 };

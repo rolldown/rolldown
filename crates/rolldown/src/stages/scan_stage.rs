@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, IntoBatchedResult, NormalModuleId};
+use rolldown_common::{
+  BundlerFileSystem, EntryPoint, ImportKind, IntoBatchedResult, NormalModuleId,
+};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use rolldown_oxc_utils::OxcProgram;
@@ -14,8 +16,7 @@ use crate::{
   options::normalized_input_options::SharedNormalizedInputOptions,
   runtime::RuntimeModuleBrief,
   types::{
-    bundler_fs::BundlerFileSystem, module_table::ModuleTable,
-    resolved_request_info::ResolvedRequestInfo, symbols::Symbols,
+    module_table::ModuleTable, resolved_request_info::ResolvedRequestInfo, symbols::Symbols,
   },
   utils::resolve_id::resolve_id,
   SharedResolver,

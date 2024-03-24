@@ -4,7 +4,10 @@ import consola from 'consola'
 import { defineCommand, runMain, showUsage } from 'citty'
 import { loadConfig } from './utils.js'
 import { bundle } from './commands/bundle'
-import { version, description } from '../../package.json' assert { type: 'json' }
+import {
+  version,
+  description,
+} from '../../package.json' assert { type: 'json' }
 
 const DEFAULT_CONFIG_FILENAME = 'rolldown.config.js'
 
@@ -12,7 +15,7 @@ const main = defineCommand({
   meta: {
     name: 'rolldown',
     version,
-    description
+    description,
   },
   args: {
     config: {

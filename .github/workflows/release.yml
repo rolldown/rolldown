@@ -255,7 +255,9 @@ jobs:
       id-token: write # for `npm publish --provenance`
     needs:
       - plan
-      - test
+      - build-binding
+      - build-node-packages
+      # - test
     steps:
       - uses: actions/checkout@v4
 
@@ -314,7 +316,7 @@ jobs:
       - name: Publish nightly
         if: ${{ needs.plan.outputs.nightly == 'true' }}
         run: |
-          node ./scripts/bump-version.js snapshot
+          node ./scripts/bump-version.js canary
           pnpm publish -r --tag nightly --dry-run --no-git-checks
           pnpm publish -r --tag nightly --no-git-checks
         env:

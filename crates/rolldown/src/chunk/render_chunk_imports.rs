@@ -32,7 +32,7 @@ impl Chunk {
               is_importee_imported = true;
               s.push_str(&format!(
                 "import * as {alias} from \"{module}\";\n",
-                module = importee.resource_id.expect_file().as_str()
+                module = &importee.name
               ));
               None
             }
@@ -49,11 +49,11 @@ impl Chunk {
         s.push_str(&format!(
           "import {{ {} }} from \"{}\";\n",
           import_items.join(", "),
-          importee.resource_id.expect_file().as_str()
+          &importee.name
         ));
       } else if !is_importee_imported {
         // Ensure the side effect
-        s.push_str(&format!("import \"{}\";\n", importee.resource_id.expect_file().as_str()));
+        s.push_str(&format!("import \"{}\";\n", importee.name));
       }
     });
 

@@ -41,6 +41,12 @@ impl From<String> for FilePath {
   }
 }
 
+impl From<Arc<str>> for FilePath {
+  fn from(value: Arc<str>) -> Self {
+    Self(value)
+  }
+}
+
 impl FilePath {
   pub fn unique(&self, root: impl AsRef<Path>) -> String {
     let path = self.0.as_path();

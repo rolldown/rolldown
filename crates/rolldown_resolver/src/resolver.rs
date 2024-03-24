@@ -1,12 +1,11 @@
-use rolldown_common::{FilePath, ModuleType, ResolvedPath};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
-use std::path::PathBuf;
-use sugar_path::{AsPath, SugarPathBuf};
+use std::path::{Path, PathBuf};
+use sugar_path::SugarPathBuf;
 
 use oxc_resolver::{Resolution, ResolveError, ResolverGeneric};
 
-use crate::ResolveOptions;
+use crate::{types::resolved_path::ResolvedPath, ModuleType, ResolveOptions};
 
 #[derive(Debug)]
 pub struct Resolver<T: FileSystem + Default> {
@@ -36,11 +35,11 @@ impl<F: FileSystem + Default> Resolver<F> {
   #[allow(clippy::missing_errors_doc, clippy::option_if_let_else)]
   pub fn resolve(
     &self,
-    importer: Option<&FilePath>,
+    importer: Option<&Path>,
     specifier: &str,
   ) -> Result<ResolveRet, BuildError> {
     let resolved = if let Some(importer) = importer {
-      let context = importer.as_path().parent().expect("Should have a parent dir");
+      let context = importer.parent().expect("Should have a parent dir");
       self.inner.resolve(context, specifier)
     } else {
       // If the importer is `None`, it means that the specifier is provided by the user in `input`. In this case, we can't call `resolver.resolve` with
@@ -65,20 +64,23 @@ impl<F: FileSystem + Default> Resolver<F> {
     resolved
       // If result type parsing is correct
       .map(|info| {
-        build_resolve_ret(info.path().to_string_lossy().to_string(), false, calc_module_type(&info))
+        build_resolve_ret(
+          info.full_path().to_str().expect("should be valid utf8").to_string(),
+          false,
+          calc_module_type(&info),
+        )
       })
       .or_else(|err| match err {
         // If the error type is ignore
-        ResolveError::Ignored(path) => {
-          Ok(build_resolve_ret(path.to_string_lossy().to_string(), true, ModuleType::CJS))
-        }
+        ResolveError::Ignored(path) => Ok(build_resolve_ret(
+          path.to_str().expect("should be valid utf8").to_string(),
+          true,
+          ModuleType::CJS,
+        )),
         // To determine whether there is an importer.
         _ => {
           if let Some(importer) = importer {
-            Err(
-              BuildError::unresolved_import(specifier.to_string(), importer.as_path())
-                .with_source(err),
-            )
+            Err(BuildError::unresolved_import(specifier.to_string(), importer).with_source(err))
           } else {
             Err(BuildError::unresolved_entry(specifier).with_source(err))
           }

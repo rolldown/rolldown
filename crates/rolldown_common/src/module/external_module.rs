@@ -1,16 +1,16 @@
-use crate::{ExternalModuleId, ImportRecord, ImportRecordId, ResourceId};
+use crate::{ExternalModuleId, ImportRecord, ImportRecordId};
 use index_vec::IndexVec;
 
 #[derive(Debug)]
 pub struct ExternalModule {
   pub id: ExternalModuleId,
   pub exec_order: u32,
-  pub resource_id: ResourceId,
+  pub name: String,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,
 }
 
 impl ExternalModule {
-  pub fn new(id: ExternalModuleId, resource_id: ResourceId) -> Self {
-    Self { id, exec_order: u32::MAX, resource_id, import_records: IndexVec::default() }
+  pub fn new(id: ExternalModuleId, resource_id: String) -> Self {
+    Self { id, exec_order: u32::MAX, name: resource_id, import_records: IndexVec::default() }
   }
 }

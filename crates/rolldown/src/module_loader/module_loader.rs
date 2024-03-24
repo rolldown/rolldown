@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use index_vec::IndexVec;
 use rolldown_common::{
-  EntryPoint, EntryPointKind, ExternalModule, FilePath, ImportKind, ImportRecordId, ModuleId,
-  NormalModule, NormalModuleId, ResourceId,
+  EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordId, ModuleId, NormalModule,
+  NormalModuleId,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -48,7 +48,7 @@ pub struct ModuleLoader {
   input_options: SharedNormalizedInputOptions,
   common_data: ModuleTaskCommonData,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
-  visited: FxHashMap<FilePath, ModuleId>,
+  visited: FxHashMap<Arc<str>, ModuleId>,
   runtime_id: Option<NormalModuleId>,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
@@ -97,14 +97,14 @@ impl ModuleLoader {
     }
   }
 
-  fn try_spawn_new_task(&mut self, info: ResolvedRequestInfo) -> ModuleId {
-    match self.visited.entry(info.path.path.clone()) {
+  fn try_spawn_new_task(&mut self, info: &ResolvedRequestInfo) -> ModuleId {
+    match self.visited.entry(Arc::<str>::clone(&info.path.path)) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         if info.is_external {
           let id = self.external_modules.len_idx();
           not_visited.insert(id.into());
-          let ext = ExternalModule::new(id, ResourceId::new(info.path.path));
+          let ext = ExternalModule::new(id, info.path.path.to_string());
           self.external_modules.push(ext);
           id.into()
         } else {
@@ -167,7 +167,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name,
-        id: self.try_spawn_new_task(info).expect_normal(),
+        id: self.try_spawn_new_task(&info).expect_normal(),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -201,7 +201,7 @@ impl ModuleLoader {
             .into_iter()
             .zip(resolved_deps)
             .map(|(raw_rec, info)| {
-              let id = self.try_spawn_new_task(info);
+              let id = self.try_spawn_new_task(&info);
               // Dynamic imported module will be considered as an entry
               if let ModuleId::Normal(id) = id {
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)

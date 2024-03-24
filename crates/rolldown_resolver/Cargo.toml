@@ -13,8 +13,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-oxc_resolver    = { workspace = true }
-rolldown_common = { workspace = true }
-rolldown_error  = { workspace = true }
-rolldown_fs     = { workspace = true }
-sugar_path      = { workspace = true }
+oxc_resolver   = { workspace = true }
+rolldown_error = { workspace = true }
+rolldown_fs    = { workspace = true }
+sugar_path     = { workspace = true }

@@ -295,9 +295,13 @@ jobs:
         run: |
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
-          echo "//registry.npmjs.org/:_authToken=$ROLLDOWN_NPM_TOKEN" >> ~/.npmrc;
           git config --global user.email "github-actions[bot]@users.noreply.github.com";
           git config --global user.name "github-actions[bot]";
+
+      - name: Set publishing config
+        run: pnpm config set '//registry.npmjs.org/:_authToken' "${NPM_TOKEN}"
+        env:
+          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
 
       # Only runs when manually dispatched
       - name: Publish

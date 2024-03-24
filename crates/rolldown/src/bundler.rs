@@ -21,12 +21,12 @@ use crate::{
   InputOptions, OutputOptions, SharedResolver,
 };
 
-pub struct Bundler<T: BundlerFileSystem> {
+pub struct Bundler<Fs: BundlerFileSystem> {
   pub(crate) input_options: SharedNormalizedInputOptions,
   pub(crate) output_options: NormalizedOutputOptions,
   pub(crate) plugin_driver: SharedPluginDriver,
-  pub(crate) fs: T,
-  pub(crate) resolver: SharedResolver<T>,
+  pub(crate) fs: Fs,
+  pub(crate) resolver: SharedResolver<Fs>,
 }
 
 impl Bundler<OsFileSystem> {
@@ -122,7 +122,7 @@ impl<T: BundlerFileSystem> Bundler<T> {
     ScanStage::new(
       Arc::clone(&self.input_options),
       Arc::clone(&self.plugin_driver),
-      self.fs.share(),
+      self.fs.clone(),
       Arc::clone(&self.resolver),
     )
     .scan()

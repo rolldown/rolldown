@@ -24,7 +24,7 @@ impl<Fs: BundlerFileSystem> BundlerBuilder<Fs> {
       normalize_options(self.input_options, self.output_options);
 
     Bundler {
-      resolver: Resolver::new(resolve_options, input_options.cwd.clone(), self.fs.share()).into(),
+      resolver: Resolver::new(resolve_options, input_options.cwd.clone(), self.fs.clone()).into(),
       plugin_driver: PluginDriver::new_shared(self.plugins),
       input_options: Arc::new(input_options),
       output_options,

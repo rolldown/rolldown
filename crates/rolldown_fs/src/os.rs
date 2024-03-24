@@ -8,14 +8,10 @@ use std::{
 use crate::file_system::FileSystem;
 
 /// Operating System
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct OsFileSystem;
 
 impl FileSystem for OsFileSystem {
-  fn share(&self) -> Self {
-    Self
-  }
-
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     std::fs::remove_dir_all(path)
   }

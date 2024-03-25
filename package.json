@@ -14,7 +14,7 @@
     "lint-prettier:fix": "prettier . '**/*.{js,ts,json,md,yml,yaml,vue}' -w",
     "lint-toml": "taplo format --check",
     "lint-toml:fix": "taplo format",
-    "build:watch": "node scripts/build-watch.js",
+    "watch:binding": "node scripts/watch.js",
     "build:binding": "cd packages/rolldown && npm run build-binding",
     "build": "pnpm --filter rolldown run build",
     "build:release": "pnpm --filter rolldown run build:release",

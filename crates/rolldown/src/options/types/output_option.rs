@@ -30,7 +30,6 @@ impl Default for Addon {
 
 impl Addon {
   pub async fn call(&self, chunk: RenderedChunk) -> Result<Option<String>, BuildError> {
-    println!("Addon:: {:?}", self);
     match self {
       Self::String(value) => Ok(value.clone()),
       Self::Fn(value) => Ok(value(chunk).await),

@@ -41,16 +41,16 @@ function normalizeSourcemap(
 }
 
 const getAddon = <T extends 'banner'>(
-	config: OutputOptions,
-	name: T
+  config: OutputOptions,
+  name: T,
 ): BindingOutputOptions[T] => {
-	const configAddon = config[name];
-  if(configAddon === undefined) return undefined
-	if (typeof configAddon === 'function') {
-		return configAddon as BindingOutputOptions[T];
-	}
-	return () => configAddon || '';
-};
+  const configAddon = config[name]
+  if (configAddon === undefined) return undefined
+  if (typeof configAddon === 'function') {
+    return configAddon as BindingOutputOptions[T]
+  }
+  return () => configAddon || ''
+}
 
 export function normalizeOutputOptions(
   opts: OutputOptions,

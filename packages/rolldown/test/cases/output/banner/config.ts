@@ -1,4 +1,8 @@
-import type { RollupOptions, RolldownOutput, RolldownOutputChunk } from '../../../../src'
+import type {
+  RollupOptions,
+  RolldownOutput,
+  RolldownOutputChunk,
+} from '../../../../src'
 import { expect } from 'vitest'
 
 const banenrTxt = '// banner test\n'
@@ -17,7 +21,9 @@ export default {
     expect(
       output.output
         .filter(({ type }) => type === 'chunk')
-        .every((chunk) => (chunk as RolldownOutputChunk).code.startsWith(banenrTxt)),
+        .every((chunk) =>
+          (chunk as RolldownOutputChunk).code.startsWith(banenrTxt),
+        ),
     ).toBe(true)
   },
 }

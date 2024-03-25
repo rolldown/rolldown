@@ -81,7 +81,7 @@ impl Chunk {
   }
 
   #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
-  pub fn render(
+  pub async fn render(
     &self,
     input_options: &NormalizedInputOptions,
     graph: &LinkStageOutput,
@@ -158,8 +158,10 @@ impl Chunk {
       )?;
     let rendered_chunk = self.get_rendered_chunk_info(graph, output_options, rendered_modules);
     // add banner
-    concat_source
-      .prepend_source(Box::new(RawSource::new(output_options.banner.call(rendered_chunk.clone()))));
+    if let Some(banner_txt) = output_options.banner.call(rendered_chunk.clone()).await.unwrap() {
+      println!("banner_txt {}", banner_txt);
+      concat_source.prepend_source(Box::new(RawSource::new(banner_txt)));
+    }
 
     if let Some(exports) = self.render_exports(graph, output_options) {
       concat_source.add_source(Box::new(RawSource::new(exports)));

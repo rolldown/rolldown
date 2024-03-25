@@ -1,5 +1,3 @@
-import { OutputOptions as RollupOutputOptions } from './rollup-types'
-
 type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
@@ -80,7 +78,7 @@ export interface BindingOutputChunk {
 export interface BindingOutputOptions {
   entryFileNames?: string
   chunkFileNames?: string
-  banner?: RollupOutputOptions['banner']
+  banner?: undefined | string | ((chunk: RenderedChunk) => string)
   dir?: string
   exports?: 'default' | 'named' | 'none' | 'auto'
   format?: 'es' | 'cjs'

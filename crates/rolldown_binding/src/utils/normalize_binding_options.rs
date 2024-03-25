@@ -1,10 +1,9 @@
 use std::path::PathBuf;
 
-use rolldown::{InputOptions, OutputOptions};
+use crate::{options::plugin::JsPlugin, types::binding_rendered_chunk::RenderedChunk};
+use rolldown::{Addon, InputOptions, OutputOptions};
 use rolldown_error::BuildError;
 use rolldown_plugin::BoxPlugin;
-
-use crate::options::plugin::JsPlugin;
 
 pub struct NormalizeBindingOptionsReturn {
   pub input_options: InputOptions,
@@ -48,7 +47,14 @@ pub fn normalize_binding_options(
     chunk_file_names: output_options.chunk_file_names,
     dir: output_options.dir,
     sourcemap: output_options.sourcemap.map(Into::into),
-    banner: output_options.banner,
+    banner: output_options.banner.and_then(move |value| {
+      Some(Addon::Fn(Box::new(move |chunk| {
+        let fn_js = value.clone();
+        Box::pin(async move {
+          fn_js.call_async(RenderedChunk::from(chunk)).await.map_err(BuildError::from).unwrap()
+        })
+      })))
+    }),
     ..Default::default()
   };
 

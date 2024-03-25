@@ -9,11 +9,12 @@ use crate::{
   stages::link_stage::LinkStageOutput,
   utils::{finalize_normal_module, is_in_rust_test_mode, render_chunks::render_chunks},
 };
+use rolldown_utils::block_on_spawn_all;
+
 use rolldown_common::{ChunkKind, Output, OutputAsset, OutputChunk};
 use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::FxHashSet;
-
 mod code_splitting;
 mod compute_cross_chunk_links;
 
@@ -79,12 +80,14 @@ impl<'a> BundleStage<'a> {
       });
     tracing::info!("finalizing modules");
 
-    let chunks = chunk_graph.chunks.iter().map(|c| {
-      let ret =
-        c.render(self.input_options, self.link_output, &chunk_graph, self.output_options).unwrap();
+    let chunks = block_on_spawn_all(chunk_graph.chunks.iter().map(|c| async {
+      let ret = c
+        .render(self.input_options, self.link_output, &chunk_graph, self.output_options)
+        .await
+        .unwrap();
       (ret.code, ret.map, ret.rendered_chunk)
-    });
-
+    }))
+    .into_iter();
     let mut assets = vec![];
 
     render_chunks(self.plugin_driver, chunks).await?.into_iter().try_for_each(

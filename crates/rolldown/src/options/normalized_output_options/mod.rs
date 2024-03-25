@@ -1,5 +1,5 @@
-use super::output_options::Addon;
 use super::output_options::SourceMapType;
+use crate::Addon;
 use crate::{FileNameTemplate, OutputFormat};
 use derivative::Derivative;
 

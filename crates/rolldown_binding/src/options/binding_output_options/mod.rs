@@ -1,13 +1,15 @@
-use crate::types::js_async_callback::JsAsyncCallback;
+use super::super::types::binding_rendered_chunk::RenderedChunk;
+use super::plugin::BindingPluginOptions;
+use derivative::Derivative;
+
+use napi::threadsafe_function::ThreadsafeFunction;
 use napi_derive::napi;
-use rolldown_common::RenderedChunk;
 use serde::Deserialize;
 
-use super::plugin::BindingPluginOptions;
-
 #[napi(object, object_to_js = false)]
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Derivative)]
 #[serde(rename_all = "camelCase")]
+#[derivative(Debug)]
 pub struct BindingOutputOptions {
   // --- Options Rolldown doesn't need to be supported
   // /** @deprecated Use the "renderDynamicImport" plugin hook instead. */
@@ -17,9 +19,10 @@ pub struct BindingOutputOptions {
 
   // amd: NormalizedAmdOptions;
   // assetFileNames: string | ((chunkInfo: PreRenderedAsset) => string);
+  #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "undefined | ((chunk: RenderedChunk) => string)")]
-  pub banner: Option<fn(chunk: RenderedChunk) -> String>,
+  #[napi(ts_type = "undefined | string | ((chunk: RenderedChunk) => string)")]
+  pub banner: Option<ThreadsafeFunction<RenderedChunk, Option<String>, false>>,
   // chunkFileNames: string | ((chunkInfo: PreRenderedChunk) => string);
   // compact: boolean;
   pub dir: Option<String>,

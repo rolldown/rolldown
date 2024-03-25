@@ -93,19 +93,19 @@ impl Source for SourceMapSource {
 
 #[derive(Default)]
 pub struct ConcatSource {
-  inner: Vec<Box<dyn Source>>,
+  inner: Vec<Box<dyn Source + Send>>,
   enabel_sourcemap: bool,
 }
 
 impl ConcatSource {
-  pub fn add_source(&mut self, source: Box<dyn Source>) {
+  pub fn add_source(&mut self, source: Box<dyn Source + Send>) {
     if source.sourcemap().is_some() {
       self.enabel_sourcemap = true;
     }
     self.inner.push(source);
   }
 
-  pub fn prepend_source(&mut self, source: Box<dyn Source>) {
+  pub fn prepend_source(&mut self, source: Box<dyn Source + Send>) {
     if source.sourcemap().is_some() {
       self.enabel_sourcemap = true;
     }

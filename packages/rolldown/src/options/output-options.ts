@@ -45,6 +45,7 @@ const getAddon = <T extends 'banner'>(
 	name: T
 ): BindingOutputOptions[T] => {
 	const configAddon = config[name];
+  if(configAddon === undefined) return undefined
 	if (typeof configAddon === 'function') {
 		return configAddon as BindingOutputOptions[T];
 	}

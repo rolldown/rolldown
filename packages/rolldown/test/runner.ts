@@ -11,7 +11,7 @@ function runCases() {
   const cases = fs.readdirSync(testCasesRoot)
 
   for (const name of cases) {
-    if(!name.includes('output')) continue 
+    // if(!name.includes('output')) continue 
 
     describe(name, async () => {
       const subCasesRoot = path.join(testCasesRoot, name)

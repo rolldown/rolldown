@@ -1,3 +1,4 @@
+use crate::utils::js_async_callback_ext::JsAsyncCallbackExt;
 use std::path::PathBuf;
 
 use crate::{options::plugin::JsPlugin, types::binding_rendered_chunk::RenderedChunk};
@@ -51,7 +52,11 @@ pub fn normalize_binding_options(
       Some(Addon::Fn(Box::new(move |chunk| {
         let fn_js = value.clone();
         Box::pin(async move {
-          fn_js.call_async(RenderedChunk::from(chunk)).await.map_err(BuildError::from).unwrap()
+          fn_js
+            .call_async_normalized(RenderedChunk::from(chunk))
+            .await
+            .map_err(BuildError::from)
+            .unwrap()
         })
       })))
     }),

@@ -1,8 +1,7 @@
 use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOptions;
+use crate::types::js_async_callback::JsAsyncCallback;
 use derivative::Derivative;
-
-use napi::threadsafe_function::ThreadsafeFunction;
 use napi_derive::napi;
 use serde::Deserialize;
 
@@ -22,7 +21,7 @@ pub struct BindingOutputOptions {
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "undefined | string | ((chunk: RenderedChunk) => string | Promise<String>)")]
-  pub banner: Option<ThreadsafeFunction<RenderedChunk, Option<String>, false>>,
+  pub banner: Option<JsAsyncCallback<RenderedChunk, Option<String>>>,
   // chunkFileNames: string | ((chunkInfo: PreRenderedChunk) => string);
   // compact: boolean;
   pub dir: Option<String>,

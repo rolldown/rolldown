@@ -1,5 +1,4 @@
 import 'zx/globals'
-import nodePath from 'node:path'
 import nodeAssert from 'node:assert'
 import { repoRoot } from '../meta/constants.js'
 
@@ -16,8 +15,11 @@ async function getLastVersion() {
 const gitUserName = await $`git config --global user.name`
 const gitUserEmail = await $`git config --global user.email`
 
-nodeAssert.equal(gitUserName, 'github-actions[bot]')
-nodeAssert.equal(gitUserEmail, 'github-actions[bot]@users.noreply.github.com')
+nodeAssert.strictEqual(gitUserName, 'github-actions[bot]')
+nodeAssert.strictEqual(
+  gitUserEmail,
+  'github-actions[bot]@users.noreply.github.com',
+)
 
 const lastVersion = await getLastVersion()
 

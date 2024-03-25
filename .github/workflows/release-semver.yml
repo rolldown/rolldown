@@ -1,11 +1,18 @@
-name: Release Canary
+name: Release Semver
 
 on:
   # Manually released. This will publish under the canary npm tag.
   workflow_dispatch:
-  # Every day at midnight. This will publish under the nightly npm tag.
-  schedule:
-    - cron: '0 0 * * *'
+    inputs:
+      semver:
+        description: 'The semver release type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch # 0.0.1 -> 0.0.2
+          - minor # 0.0.1 -> 0.1.0
+          - major # 0.0.1 -> 1.0.0
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -34,8 +41,6 @@ jobs:
       - plan
       - build
     steps:
-      - uses: actions/checkout@v4
-
       - name: Install pnpm
         uses: pnpm/action-setup@v3
 
@@ -77,18 +82,23 @@ jobs:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
 
       - name: Bump version
-        run: node ./scripts/bump-version.js canary
+        run: node ./scripts/bump-version.js ${{ inputs.semver }}
 
       - name: Publish(Dry Run)
         run: |
-          pnpm publish -r --tag ${{ needs.plan.outputs.npm-tag }} --dry-run --no-git-checks
+          pnpm publish -r --tag latest --dry-run --no-git-checks
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish
         run: |
-          pnpm publish -r --tag ${{ needs.plan.outputs.npm-tag }} --no-git-checks
+          pnpm publish -r --tag latest --no-git-checks
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push tag
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"

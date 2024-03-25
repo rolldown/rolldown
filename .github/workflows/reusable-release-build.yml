@@ -1,4 +1,4 @@
-name: Release Build
+name: Z - Release Build
 
 on:
   workflow_call:
@@ -64,18 +64,6 @@ jobs:
               export CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf;
               export CC=clang;
               pnpm ci:build-release-binding --target armv7-unknown-linux-gnueabihf --use-napi-cross
-
-          - os: ubuntu-latest
-            target: aarch64-linux-android
-            build: |
-              export CARGO_BUILD_TARGET=aarch64-linux-android;
-              pnpm ci:build-release-binding --target aarch64-linux-android
-
-          - os: ubuntu-latest
-            target: armv7-linux-androideabi
-            build: |
-              export CARGO_BUILD_TARGET=armv7-linux-androideabi;
-              pnpm ci:build-release-binding --target armv7-linux-androideabi
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl

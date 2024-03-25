@@ -1,3 +1,3 @@
-# `@rolldown/node-binding-win32-x64-msvc`
+# `@rolldown/binding-win32-x64-msvc`
 
-This is the **x86_64-pc-windows-msvc** binary for `@rolldown/node-binding`
+This is the **x86_64-pc-windows-msvc** binary for `@rolldown/binding`

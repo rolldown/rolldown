@@ -1,6 +1,6 @@
 # Run cargo-llvm-cov and upload to codecov.io
 
-name: Code Coverage
+name: Z - Code Coverage
 
 on:
   workflow_dispatch:

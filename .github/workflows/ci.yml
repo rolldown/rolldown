@@ -3,7 +3,6 @@ name: CI
 # What's github status check: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/about-status-checks
 
 on:
-  workflow_dispatch:
   pull_request:
     types: [opened, synchronize]
   push:

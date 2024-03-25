@@ -1,4 +1,4 @@
-name: Check Links
+name: Z - Check Links
 
 on:
   workflow_dispatch:

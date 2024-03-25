@@ -1,0 +1,106 @@
+name: Release Semver
+
+on:
+  # Manually released. This will publish under the canary npm tag.
+  workflow_dispatch:
+    inputs:
+      semver:
+        description: 'The semver release type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch # 0.0.1 -> 0.0.2
+          - minor # 0.0.1 -> 0.1.0
+          - major # 0.0.1 -> 1.0.0
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: Plan release
+    runs-on: ubuntu-latest
+    outputs:
+      npm-tag: ${{ github.event_name == 'schedule' && 'nightly' || 'canary' }}
+    steps:
+      - run: 'echo "Planning release"'
+
+  build:
+    name: Build bindings and node packages
+    uses: ./.github/workflows/reusable-release-build.yml
+
+  publish:
+    name: Publish npm Packages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for softprops/action-gh-release@v1
+      id-token: write # for `npm publish --provenance`
+    needs:
+      - plan
+      - build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install && git reset --hard # fix pnpm install add new line for package.json
+
+      - name: Download Binding Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: packages/rolldown/artifacts
+
+      - name: Move Binding Artifacts
+        run: pnpm --filter rolldown artifacts
+
+      - name: List Rolldown Bindings
+        run: ls -R ./packages/rolldown/npm
+        shell: bash
+
+      - name: Download Node Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: packages/rolldown/dist
+          name: node-artifact
+
+      - name: Copy Licenses
+        run: |
+          find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
+          find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
+
+      - name: Set Publishing Config
+        run: pnpm config set '//registry.npmjs.org/:_authToken' "${NPM_TOKEN}"
+        env:
+          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
+
+      - name: Bump version
+        run: node ./scripts/bump-version.js ${{ inputs.semver }}
+
+      - name: Publish(Dry Run)
+        run: |
+          pnpm publish -r --tag latest --dry-run --no-git-checks
+        env:
+          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish
+        run: |
+          pnpm publish -r --tag latest --no-git-checks
+        env:
+          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push tag
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"

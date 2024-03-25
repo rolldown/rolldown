@@ -1,4 +1,4 @@
-name: Release Build
+name: Z - Release Build
 
 on:
   workflow_call:

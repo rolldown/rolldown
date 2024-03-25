@@ -1,4 +1,4 @@
-name: Rust Test
+name: Z - Node Test
 
 on:
   workflow_call:

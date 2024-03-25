@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "0.5.0",
+  "version": "0.10.0",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",
   "repository": {
@@ -59,16 +59,16 @@
     "binaryName": "rolldown-binding",
     "packageName": "@rolldown/binding",
     "targets": [
+      "x86_64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu",
       "x86_64-unknown-linux-musl",
-      "aarch64-unknown-linux-gnu",
       "i686-pc-windows-msvc",
       "armv7-unknown-linux-gnueabihf",
+      "aarch64-unknown-linux-gnu",
       "aarch64-apple-darwin",
-      "aarch64-linux-android",
-      "x86_64-unknown-freebsd",
       "aarch64-unknown-linux-musl",
-      "aarch64-pc-windows-msvc",
-      "armv7-linux-androideabi"
+      "aarch64-pc-windows-msvc"
     ]
   },
   "devDependencies": {

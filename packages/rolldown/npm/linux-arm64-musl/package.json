@@ -1,9 +1,6 @@
 {
   "name": "@rolldown/binding-linux-arm64-musl",
-  "version": "0.0.1",
-  "os": [
-    "linux"
-  ],
+  "version": "0.10.0",
   "cpu": [
     "arm64"
   ],
@@ -11,34 +8,29 @@
   "files": [
     "rolldown-binding.linux-arm64-musl.node"
   ],
-  "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. ",
+  "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
-    "napi-rs",
-    "NAPI",
-    "N-API",
-    "Rust",
-    "node-addon",
-    "node-addon-api",
+    "webpack",
+    "parcel",
+    "esbuild",
     "rollup",
-    "rolldown",
     "bundler",
-    "swc",
-    "esbuild"
+    "rolldown"
   ],
+  "homepage": "https://rolldown.rs/",
   "license": "MIT",
-  "engines": {
-    "node": ">= 10"
-  },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "homepage": "https://rolldown.rs/",
   "repository": {
     "type": "git",
     "url": "https://github.com/rolldown/rolldown.git",
-    "directory": "packages/rolldow/npm/linux-arm64-musl"
+    "directory": "packages/rolldown"
   },
+  "os": [
+    "linux"
+  ],
   "libc": [
     "musl"
   ]

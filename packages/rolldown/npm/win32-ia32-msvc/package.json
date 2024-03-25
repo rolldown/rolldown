@@ -1,9 +1,6 @@
 {
   "name": "@rolldown/binding-win32-ia32-msvc",
-  "version": "0.0.1",
-  "os": [
-    "win32"
-  ],
+  "version": "0.10.0",
   "cpu": [
     "ia32"
   ],
@@ -11,32 +8,27 @@
   "files": [
     "rolldown-binding.win32-ia32-msvc.node"
   ],
-  "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. ",
+  "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
-    "napi-rs",
-    "NAPI",
-    "N-API",
-    "Rust",
-    "node-addon",
-    "node-addon-api",
+    "webpack",
+    "parcel",
+    "esbuild",
     "rollup",
-    "rolldown",
     "bundler",
-    "swc",
-    "esbuild"
+    "rolldown"
   ],
+  "homepage": "https://rolldown.rs/",
   "license": "MIT",
-  "engines": {
-    "node": ">= 10"
-  },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "homepage": "https://rolldown.rs/",
   "repository": {
     "type": "git",
     "url": "https://github.com/rolldown/rolldown.git",
-    "directory": "packages/rolldow/npm/win32-ia32-msvc"
-  }
+    "directory": "packages/rolldown"
+  },
+  "os": [
+    "win32"
+  ]
 }

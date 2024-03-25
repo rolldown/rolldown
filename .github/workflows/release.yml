@@ -23,171 +23,14 @@ jobs:
     steps:
       - run: 'echo "Planning release"'
 
-  build-binding:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            build: pnpm ci:build-release-binding --target x86_64-apple-darwin
-
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            build: |
-              sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*;
-              export CC=$(xcrun -f clang);
-              export CXX=$(xcrun -f clang++);
-              SYSROOT=$(xcrun --sdk macosx --show-sdk-path);
-              export CFLAGS="-isysroot $SYSROOT -isystem $SYSROOT";
-              export CARGO_BUILD_TARGET=aarch64-apple-darwin;
-              pnpm ci:build-release-binding --target aarch64-apple-darwin
-
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            build: pnpm ci:build-release-binding --target x86_64-pc-windows-msvc
-
-          - os: windows-latest
-            target: i686-pc-windows-msvc
-            build: |
-              export CARGO_BUILD_TARGET=i686-pc-windows-msvc;
-              pnpm ci:build-release-binding --target i686-pc-windows-msvc
-
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            build: |
-              export CARGO_BUILD_TARGET=aarch64-pc-windows-msvc;
-              pnpm ci:build-release-binding --target aarch64-pc-windows-msvc
-
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            build: |
-              export CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu;
-              export CC=clang;
-              pnpm ci:build-release-binding --target x86_64-unknown-linux-gnu --use-napi-cross
-
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            build: pnpm ci:build-release-binding --target x86_64-unknown-linux-musl -x
-
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            build: |
-              export CARGO_BUILD_TARGET=aarch64-unknown-linux-gnu;
-              export CC=clang;
-              pnpm ci:build-release-binding --use-napi-cross --target aarch64-unknown-linux-gnu
-
-          - os: ubuntu-latest
-            target: armv7-unknown-linux-gnueabihf
-            build: |
-              export CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf;
-              export CC=clang;
-              pnpm ci:build-release-binding --target armv7-unknown-linux-gnueabihf --use-napi-cross
-
-          - os: ubuntu-latest
-            target: aarch64-linux-android
-            build: |
-              export CARGO_BUILD_TARGET=aarch64-linux-android;
-              pnpm ci:build-release-binding --target aarch64-linux-android
-
-          - os: ubuntu-latest
-            target: armv7-linux-androideabi
-            build: |
-              export CARGO_BUILD_TARGET=armv7-linux-androideabi;
-              pnpm ci:build-release-binding --target armv7-linux-androideabi
-
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            build: |
-              export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl;
-              pnpm ci:build-release-binding -x --target aarch64-unknown-linux-musl
-    name: Build ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
-        with:
-          cache-base: main
-
-      - name: Add Rust Target
-        run: rustup target add ${{ matrix.target }}
-
-      - uses: goto-bus-stop/setup-zig@v2
-        if: ${{ contains(matrix.target, 'musl') }}
-        with:
-          version: 0.11.0
-
-      - uses: taiki-e/install-action@v2
-        if: ${{ contains(matrix.target, 'musl') }}
-        with:
-          tool: cargo-zigbuild
-
-      # https://github.com/nodejs/node-gyp/issues/2869
-      - name: Setup python
-        run: pip install setuptools
-        if: ${{ matrix.os == 'macos-latest' }}
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Build Binding
-        run: ${{ matrix.build }}
-        shell: bash
-
-      - name: Upload Binding Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          if-no-files-found: error
-          name: bindings-${{ matrix.target }}
-          path: packages/rolldown/src/rolldown-binding.*.node
-
-  build-node-packages:
-    strategy:
-      fail-fast: false
-    name: Build Node Package
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Build Node Packages
-        # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
-        run: pnpm --filter rolldown build-node
-
-      - name: Upload Node Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          if-no-files-found: error
-          name: node-artifact
-          path: packages/rolldown/dist/**
+  build:
+    name: Build bindings and node packages
+    uses: ./.github/workflows/reusable-release-build.yml
 
   test:
     needs:
       - plan
-      - build-binding
-      - build-node-packages
+      - build
     strategy:
       fail-fast: false
       matrix:
@@ -255,8 +98,7 @@ jobs:
       id-token: write # for `npm publish --provenance`
     needs:
       - plan
-      - build-binding
-      - build-node-packages
+      - build
       # - test
     steps:
       - uses: actions/checkout@v4
@@ -278,10 +120,14 @@ jobs:
         with:
           path: packages/rolldown/artifacts
 
+      - name: List rolldown package
+        run: ls -R ./packages/rolldown
+        shell: bash
+
       - name: Move Binding Artifacts
         run: pnpm --filter rolldown artifacts
 
-      - name: List packages
+      - name: List rolldown package
         run: ls -R ./packages/rolldown/npm
         shell: bash
 

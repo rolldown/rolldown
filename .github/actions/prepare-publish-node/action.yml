@@ -5,8 +5,6 @@ description: Prepare Publish Node
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v4
-
     - name: Install pnpm
       uses: pnpm/action-setup@v3
 

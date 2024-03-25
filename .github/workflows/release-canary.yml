@@ -34,6 +34,8 @@ jobs:
       - plan
       - build
     steps:
+      - uses: actions/checkout@v4
+
       - uses: ./.github/actions/prepare-publish-node
 
       - name: Bump version

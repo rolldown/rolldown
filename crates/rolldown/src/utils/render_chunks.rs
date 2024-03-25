@@ -10,9 +10,8 @@ pub async fn render_chunks<'a>(
   chunks: impl Iterator<Item = (String, Option<SourceMap>, RenderedChunk)>,
 ) -> Result<Vec<(String, Option<SourceMap>, RenderedChunk)>, BatchedErrors> {
   // TODO support `render_chunk` hook return map
-  let result = block_on_spawn_all(chunks.map(|chunk| async move {
+  let result = block_on_spawn_all(chunks.map(|(content, map, rendered_chunk)| async move {
     tracing::info!("render_chunks");
-    let (content, map, rendered_chunk) = chunk;
     match plugin_driver
       .render_chunk(HookRenderChunkArgs { code: content, chunk: &rendered_chunk })
       .await

@@ -1,6 +1,5 @@
 use crate::Addon;
 use derivative::Derivative;
-use std::fmt::Debug;
 
 #[derive(Debug)]
 pub enum OutputFormat {

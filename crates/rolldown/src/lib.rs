@@ -29,7 +29,6 @@ pub use crate::{
     output_options::{OutputFormat, OutputOptions, SourceMapType},
     types::input_item::InputItem,
     types::output_option::Addon,
-    types::output_option::AddonFn,
   },
   types::rolldown_output::RolldownOutput,
 };

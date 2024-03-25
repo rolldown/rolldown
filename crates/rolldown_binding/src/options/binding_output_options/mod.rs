@@ -21,7 +21,7 @@ pub struct BindingOutputOptions {
   // assetFileNames: string | ((chunkInfo: PreRenderedAsset) => string);
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "undefined | string | ((chunk: RenderedChunk) => string)")]
+  #[napi(ts_type = "undefined | string | ((chunk: RenderedChunk) => string | Promise<String>)")]
   pub banner: Option<ThreadsafeFunction<RenderedChunk, Option<String>, false>>,
   // chunkFileNames: string | ((chunkInfo: PreRenderedChunk) => string);
   // compact: boolean;

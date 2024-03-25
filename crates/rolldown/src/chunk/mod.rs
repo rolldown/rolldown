@@ -159,7 +159,6 @@ impl Chunk {
     let rendered_chunk = self.get_rendered_chunk_info(graph, output_options, rendered_modules);
     // add banner
     if let Some(banner_txt) = output_options.banner.call(rendered_chunk.clone()).await.unwrap() {
-      println!("banner_txt {}", banner_txt);
       concat_source.prepend_source(Box::new(RawSource::new(banner_txt)));
     }
 

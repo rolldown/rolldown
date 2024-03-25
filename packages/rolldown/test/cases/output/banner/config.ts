@@ -2,7 +2,7 @@ import type { RollupOptions, RolldownOutput, RolldownOutputChunk } from '../../.
 import { expect } from 'vitest'
 
 const banenrTxt = '// banner test\n'
-const banner = () => banenrTxt
+const banner = () => Promise.resolve().then(() => banenrTxt)
 
 const config: RollupOptions = {
   external: [/external/, 'external-a'],

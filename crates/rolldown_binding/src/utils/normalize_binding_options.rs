@@ -48,8 +48,8 @@ pub fn normalize_binding_options(
     chunk_file_names: output_options.chunk_file_names,
     dir: output_options.dir,
     sourcemap: output_options.sourcemap.map(Into::into),
-    banner: output_options.banner.and_then(move |value| {
-      Some(Addon::Fn(Box::new(move |chunk| {
+    banner: output_options.banner.map(move |value| {
+      Addon::Fn(Box::new(move |chunk| {
         let fn_js = value.clone();
         Box::pin(async move {
           fn_js
@@ -58,7 +58,7 @@ pub fn normalize_binding_options(
             .map_err(BuildError::from)
             .unwrap()
         })
-      })))
+      }))
     }),
     ..Default::default()
   };

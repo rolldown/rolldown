@@ -5,8 +5,8 @@ import type {
 } from '../../../../src'
 import { expect } from 'vitest'
 
-const banenrTxt = '// banner test\n'
-const banner = () => Promise.resolve().then(() => banenrTxt)
+const bannerTxt = '// banner test\n'
+const banner = () => Promise.resolve().then(() => bannerTxt)
 
 const config: RollupOptions = {
   external: [/external/, 'external-a'],
@@ -22,7 +22,7 @@ export default {
       output.output
         .filter(({ type }) => type === 'chunk')
         .every((chunk) =>
-          (chunk as RolldownOutputChunk).code.startsWith(banenrTxt),
+          (chunk as RolldownOutputChunk).code.startsWith(bannerTxt),
         ),
     ).toBe(true)
   },

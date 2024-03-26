@@ -112,15 +112,8 @@ bench:
 
 # RELEASING
 
-change:
-    pnpm changeset add
+bump packages: 
+  node ./scripts/bump-version.js
 
-no-change:
-    pnpm changeset add --empty
-
-version:
-    pnpm changeset version
-
-publish:
-    pnpm changeset publish
-    git push --follow-tags
+changelog:
+  pnpm conventional-changelog --preset angular --i CHANGELOG.md --same-file --pkg=./packages/rolldown/package.json

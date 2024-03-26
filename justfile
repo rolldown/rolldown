@@ -16,8 +16,8 @@ roll-rust:
     just lint-rust
 
 roll-node:
-    just check-node
     just test-node
+    just check-node
     just lint-node
 
 roll-repo:

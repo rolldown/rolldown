@@ -133,9 +133,15 @@ importers:
       consola:
         specifier: ^3.2.3
         version: 3.2.3
+      fast-glob:
+        specifier: ^3.3.2
+        version: 3.3.2
       glob:
         specifier: ^10.3.10
         version: 10.3.10
+      rolldown:
+        specifier: workspace:*
+        version: 'link:'
       rollup:
         specifier: ^4.12.1
         version: 4.13.0

@@ -1,6 +1,6 @@
 import { NormalizedInputOptions } from '../rollup-types'
 import { BindingInputOptions } from '../binding'
-import path from 'node:path'
+import nodePath from 'node:path'
 import { createBuildPluginAdapter } from './create-build-plugin-adapter'
 import { InputOptions, RolldownNormalizedInputOptions } from './input-options'
 
@@ -24,7 +24,7 @@ function normalizeInput(
 ): BindingInputOptions['input'] {
   if (Array.isArray(input)) {
     return input.map((src) => {
-      const name = path.parse(src).name
+      const name = nodePath.parse(src).name
       return {
         name,
         import: src,

@@ -1,5 +1,5 @@
 import process from 'node:process'
-import path from 'node:path'
+import nodePath from 'node:path'
 import consola from 'consola'
 import { defineCommand, runMain, showUsage } from 'citty'
 import { loadConfig } from './utils.js'
@@ -52,8 +52,8 @@ function parseArgs(args: Record<string, any>) {
   const { config } = args
   const cwd = process.cwd()
   const configPath = config
-    ? path.resolve(cwd, config)
-    : path.resolve(cwd, DEFAULT_CONFIG_FILENAME)
+    ? nodePath.resolve(cwd, config)
+    : nodePath.resolve(cwd, DEFAULT_CONFIG_FILENAME)
 
   return { configPath }
 }

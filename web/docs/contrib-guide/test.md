@@ -41,6 +41,36 @@ In `/packages/rolldown`:
 - `pnpm test` will run rolldown tests.
 - `pnpm test:update` will run and update the tests' status.
 
+#### Run tests of the specific file
+
+To run tests of the specific file, you could use
+
+```shell
+pnpm test -- test-file-name
+```
+
+For example, to run tests in `fixture.test.ts`, you could use `pnpm test -- fixture`.
+
+#### Run the specific test
+
+To run specific test, you could use
+
+```shell
+pnpm test -- -t test-name
+```
+
+Names of tests in `fixture.test.ts` are defined with their folder names. `tests/fixtures/resolve/alias` will has test name `resolve/alias`.
+
+To run the `tests/fixtures/resolve/alias` test, you could use `pnpm test -- -t "resolve/alias"`.
+
+:::info
+
+- `pnpm test -t aaa bbb` is different from `pnpm test -t "aaa bbb"`. The former will run tests that either contains `aaa` or `bbb`, while the latter will run tests with name `resolve alias`.
+
+- For more advanced usage, please refer to https://vitest.dev/guide/filtering.
+
+:::
+
 ### Rollup behavior alignment tests
 
 We also aim for behavior alignment with Rollup by running Rollup's own tests against Rolldown.

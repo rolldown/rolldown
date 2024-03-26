@@ -1,5 +1,4 @@
-import { RolldownOptions } from 'rolldown'
-import { RolldownOutput } from 'src'
+import type { RolldownOptions, RolldownOutput } from 'rolldown'
 
 export interface TestConfig {
   config?: RolldownOptions

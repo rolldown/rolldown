@@ -1,4 +1,4 @@
-name: Z - Node Test
+name: Node Test
 
 on:
   workflow_call:

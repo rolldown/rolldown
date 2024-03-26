@@ -1,4 +1,4 @@
-name: Z - Lint Pr Title
+name: Lint Pr Title
 
 on:
   pull_request_target:

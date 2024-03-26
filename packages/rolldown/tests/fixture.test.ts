@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import type { TestConfig } from './types'
-import { InputOptions, OutputOptions, RollupOptions, rolldown } from '../src'
+import { InputOptions, OutputOptions, rolldown } from '../src'
 import nodePath from 'node:path'
 import * as fastGlob from 'fast-glob'
 
@@ -8,10 +8,10 @@ main()
 
 function main() {
   const fixturesPath = nodePath.join(__dirname, 'fixtures')
-  const testConfigPaths = fastGlob.sync(
-    nodePath.join(fixturesPath, '**', '_config.ts'),
-    { absolute: true },
-  )
+  const testConfigPaths = fastGlob.sync('fixtures/**/_config.ts', {
+    absolute: true,
+    cwd: __dirname,
+  })
   for (const testConfigPath of testConfigPaths) {
     const dirName = nodePath.relative(
       fixturesPath,

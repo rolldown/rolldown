@@ -4,18 +4,21 @@ import { InputOptions, OutputOptions, RollupOptions, rolldown } from '../src'
 import path from 'node:path'
 import fs from 'node:fs'
 
-runCases()
+runCases(process.env.TEST_FILTER)
 
-function runCases() {
+function runCases(filterStr?: string) {
   const testCasesRoot = path.join(__dirname, 'cases')
   const cases = fs.readdirSync(testCasesRoot)
+  const filter = filterStr?.trim() ? filterStr.trim().split(',') : []
 
   for (const name of cases) {
-    describe(name, async () => {
-      const subCasesRoot = path.join(testCasesRoot, name)
-      const subCases = fs.readdirSync(subCasesRoot)
+    const subCasesRoot = path.join(testCasesRoot, name)
+    const subCases = fs.readdirSync(subCasesRoot)
+    const filterCases = subCases.filter(subCase => !filter.length || filter.includes(subCase) || filter.includes(name) || filter.includes(`${name}/${subCase}`))
 
-      for (const subCaseName of subCases) {
+    if(!filterCases.length) continue
+    describe(name, async () => {
+      for (const subCaseName of filterCases) {
         const caseRoot = path.join(subCasesRoot, subCaseName)
         const caseConfig = await getCaseConfig(caseRoot)
         if (!caseConfig) {

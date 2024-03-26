@@ -31,15 +31,15 @@ async function getSnapshotVersion(lastVersion) {
     .toISOString()
     .replace(/\.\d{3}Z$/, '')
     .replace(/[^\d]/g, '')
-  return `${lastVersion}-canary-${commitId}-${dateTime}`
+  return `${lastVersion}-snapshot-${commitId}-${dateTime}`
 }
 
 /**
  *
- * @param {'major' | 'minor' | 'patch' | 'canary'} version
+ * @param {'major' | 'minor' | 'patch' | 'snapshot'} version
  */
 async function bumpVersion(version) {
-  const allowedVersion = ['major', 'minor', 'patch', 'canary']
+  const allowedVersion = ['major', 'minor', 'patch', 'snapshot']
   if (!allowedVersion.includes(version)) {
     throw new Error(
       `version must be one of ${allowedVersion}, but you passed ${version}`,
@@ -49,7 +49,7 @@ async function bumpVersion(version) {
 
   const lastVersion = await getLastVersion()
   const nextVersion = await (() => {
-    if (version === 'canary') {
+    if (version === 'snapshot') {
       return getSnapshotVersion(lastVersion)
     } else {
       return semver.inc(lastVersion, version)

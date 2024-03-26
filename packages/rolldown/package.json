@@ -76,11 +76,11 @@
     "colorette": "^2.0.20",
     "consola": "^3.2.3",
     "glob": "^10.3.10",
+    "rolldown": "workspace:*",
     "rollup": "^4.12.1",
     "type-fest": "^4.12.0",
     "unbuild": "^2.0.0",
-    "vitest": "^1.3.1",
-    "rolldown": "workspace:*"
+    "vitest": "^1.3.1"
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "workspace:*",
@@ -93,5 +93,8 @@
     "@rolldown/binding-win32-arm64-msvc": "workspace:*",
     "@rolldown/binding-win32-ia32-msvc": "workspace:*",
     "@rolldown/binding-win32-x64-msvc": "workspace:*"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.2"
   }
 }

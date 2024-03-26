@@ -89,6 +89,10 @@ importers:
         version: 4.3.0(vue@3.4.21)
 
   packages/rolldown:
+    dependencies:
+      fast-glob:
+        specifier: ^3.3.2
+        version: 3.3.2
     optionalDependencies:
       '@rolldown/binding-darwin-arm64':
         specifier: workspace:*

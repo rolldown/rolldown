@@ -1,16 +1,14 @@
-import { describe, test } from 'vitest'
-import { yellow } from 'colorette'
+import { test } from 'vitest'
 import type { TestConfig } from './types'
 import { InputOptions, OutputOptions, RollupOptions, rolldown } from '../src'
 import nodePath from 'node:path'
-import nodeFs from 'node:fs'
-import * as glob from 'glob'
+import * as fastGlob from 'fast-glob'
 
 main()
 
 function main() {
   const fixturesPath = nodePath.join(__dirname, 'fixtures')
-  const testConfigPaths = glob.globSync(
+  const testConfigPaths = fastGlob.sync(
     nodePath.join(fixturesPath, '**', '_config.ts'),
     { absolute: true },
   )

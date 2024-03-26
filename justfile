@@ -112,8 +112,8 @@ bench:
 
 # RELEASING
 
-bump packages: 
-  node ./scripts/bump-version.js
+bump packages *args: 
+  node ./scripts/bump-version.js {{args}}
 
 changelog:
   pnpm conventional-changelog --preset angular --i CHANGELOG.md --same-file --pkg=./packages/rolldown/package.json

@@ -11,7 +11,7 @@ main()
 function main() {
   const fixturesPath = nodePath.join(__dirname, 'fixtures')
   const testConfigPaths = glob.globSync(
-    nodePath.join(fixturesPath, '**', '/_config.ts'),
+    nodePath.join(fixturesPath, '**', '_config.ts'),
     { absolute: true },
   )
   for (const testConfigPath of testConfigPaths) {

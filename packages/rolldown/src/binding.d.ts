@@ -1,5 +1,11 @@
 type MaybePromise<T> = T | Promise<T>
-export class BindingPluginContext {}
+export class BindingPluginContext {
+  resolve(
+    specifier: string,
+    importer: string | undefined | null,
+    extraOptions: BindingPluginContextResolveOptions,
+  ): void
+}
 
 export class Bundler {
   constructor(
@@ -82,13 +88,17 @@ export interface BindingOutputs {
   assets: Array<BindingOutputAsset>
 }
 
+export interface BindingPluginContextResolveOptions {
+  importKind: string
+}
+
 export interface BindingPluginOptions {
   name: string
   buildStart?: (ctx: BindingPluginContext) => MaybePromise<void>
   resolveId?: (
     specifier: string,
-    importer?: string,
-    options?: BindingHookResolveIdExtraOptions,
+    importer: string | undefined,
+    options: BindingHookResolveIdExtraOptions,
   ) => MaybePromise<undefined | BindingHookResolveIdOutput>
   load?: (id: string) => MaybePromise<undefined | BindingHookLoadOutput>
   transform?: (

@@ -19,4 +19,5 @@ pub use crate::{
   types::hook_resolve_id_extra_options::HookResolveIdExtraOptions,
   types::hook_resolve_id_output::HookResolveIdOutput,
   types::hook_transform_args::HookTransformArgs,
+  types::plugin_context_resolve_options::PluginContextResolveOptions,
 };

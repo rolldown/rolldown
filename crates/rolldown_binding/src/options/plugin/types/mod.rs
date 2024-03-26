@@ -2,3 +2,4 @@ pub mod binding_hook_load_output;
 pub mod binding_hook_render_chunk_output;
 pub mod binding_hook_resolve_id_extra_options;
 pub mod binding_hook_resolve_id_output;
+pub mod binding_plugin_context_resolve_options;

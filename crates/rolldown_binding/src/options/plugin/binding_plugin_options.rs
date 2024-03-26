@@ -29,11 +29,11 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(specifier: string, importer?: string, options?: BindingHookResolveIdExtraOptions) => MaybePromise<undefined | BindingHookResolveIdOutput>"
+    ts_type = "(specifier: string, importer: string | undefined, options: BindingHookResolveIdExtraOptions) => MaybePromise<undefined | BindingHookResolveIdOutput>"
   )]
   pub resolve_id: Option<
     JsAsyncCallback<
-      (String, Option<String>, Option<BindingHookResolveIdExtraOptions>),
+      (String, Option<String>, BindingHookResolveIdExtraOptions),
       Option<BindingHookResolveIdOutput>,
     >,
   >,

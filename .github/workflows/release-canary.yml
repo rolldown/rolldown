@@ -1,4 +1,4 @@
-name: Release Canary
+name: A - Release Canary/Nightly
 
 on:
   # Manually released. This will publish under the canary npm tag.
@@ -76,8 +76,8 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
 
-      - name: Bump version
-        run: node ./scripts/bump-version.js canary
+      - name: Canary/Nightly Versioning
+        run: node ./scripts/bump-version.js snapshot
 
       - name: Publish(Dry Run)
         run: |

@@ -1,4 +1,4 @@
-name: Z - codspeed-benchmarks
+name: codspeed-benchmarks
 
 on:
   push:

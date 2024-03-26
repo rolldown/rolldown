@@ -65,7 +65,7 @@ To run the `tests/fixtures/resolve/alias` test, you could use `pnpm test -- -t "
 
 :::info
 
-- `pnpm test -t aaa bbb` is different from `pnpm test -t "aaa bbb"`. The former will run tests that either contains `aaa` or `bbb`, while the latter will run tests with name `resolve alias`.
+- `pnpm test -t aaa bbb` is different from `pnpm test -t "aaa bbb"`. The former will run tests that either contains `aaa` or `bbb`, while the latter will run tests, whose name contain `aaa bbb`.
 
 - For more advanced usage, please refer to https://vitest.dev/guide/filtering.
 

@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/binding-linux-x64-gnu",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "cpu": [
     "x64"
   ],

@@ -1,3 +1,39 @@
+## [0.9.2](https://github.com/rolldown/rolldown/compare/v0.5.0...v0.9.2) (2024-03-26)
+
+
+### Bug Fixes
+
+* align with rollup, change `output.format: 'esm'` to `output.format: 'es'` ([#625](https://github.com/rolldown/rolldown/issues/625)) ([70b6cfd](https://github.com/rolldown/rolldown/commit/70b6cfd877e715ea356dc7601dc4a5a0a364e266))
+* **binding:** only panic in the main thread ([#507](https://github.com/rolldown/rolldown/issues/507)) ([d844125](https://github.com/rolldown/rolldown/commit/d844125c302446fbf9f948b8ee557d8fd762f0f1))
+* **ci:** don't forget to checkout ([fc231b8](https://github.com/rolldown/rolldown/commit/fc231b84b8f632f552a2570bf43de212447cbeac))
+* **ci:** fix `release-canary.yml` ([6fc0430](https://github.com/rolldown/rolldown/commit/6fc0430844bb7cb36cbe4a7e4e324a8a82c8e0f8))
+* **ci:** fix testing in `release.yml` ([#651](https://github.com/rolldown/rolldown/issues/651)) ([6e68b1a](https://github.com/rolldown/rolldown/commit/6e68b1a2f021676edcbbda5040ca38942904f573))
+* **ci:** need to checkout for using local actions ([bb87f9a](https://github.com/rolldown/rolldown/commit/bb87f9ac5a39e59e939a58e4fbcfb823a94ff1c6))
+* **cli:** Make the CLI output color correctly ([#645](https://github.com/rolldown/rolldown/issues/645)) ([c19c8dc](https://github.com/rolldown/rolldown/commit/c19c8dc3c053bc51a9df5ae45e627230b384843c))
+* **release:** make `prepare-publish-node` folder ([14d2cd5](https://github.com/rolldown/rolldown/commit/14d2cd58f7bd3e904ef2c91b4e72bc4618f64630))
+* **release:** remove build steps for android platform ([161ef5f](https://github.com/rolldown/rolldown/commit/161ef5f6babf3ee1bcd444e4dacf8e861ea830a6))
+* **rust:** should not hard code output.dir ([37ded97](https://github.com/rolldown/rolldown/commit/37ded97900ca49e8c8c338403aba9b468a653800))
+* shoud accept args for `just bump packages` ([778ae11](https://github.com/rolldown/rolldown/commit/778ae1194479fa0c28589dd1b5e234cfce372d19))
+* wrong rolldown test config priority ([#642](https://github.com/rolldown/rolldown/issues/642)) ([9490e31](https://github.com/rolldown/rolldown/commit/9490e31333b26d95e4d8d2a114d6a99832c93563))
+
+
+### Features
+
+* add OutputChunk map and sourcemapFileName ([#626](https://github.com/rolldown/rolldown/issues/626)) ([3135778](https://github.com/rolldown/rolldown/commit/3135778ed6f4fb566c034086a4a0421f6c7723b1))
+* **ci:** add `release-semver.yml` ([bb27d40](https://github.com/rolldown/rolldown/commit/bb27d40a476f5c220cbb69744e272b34f0f91a68))
+* **resolve:** more sensible default resolve options ([#606](https://github.com/rolldown/rolldown/issues/606)) ([7ae8435](https://github.com/rolldown/rolldown/commit/7ae8435b6593fa8010f747a2a6e40f68c512bca4))
+* rolldown cli first implementation ([#610](https://github.com/rolldown/rolldown/issues/610)) ([c82e59d](https://github.com/rolldown/rolldown/commit/c82e59d7ccde656f85c4cbd06d159eea054dbcea))
+* **rust-plugin:** pass `PluginContext` to JS ([#628](https://github.com/rolldown/rolldown/issues/628)) ([e4d33fd](https://github.com/rolldown/rolldown/commit/e4d33fd4deb0d5292e51a69b596f3cf0373f1fb9))
+* **rust:** should create bundler with `InputOptions` and `OutputOptions` together ([#596](https://github.com/rolldown/rolldown/issues/596)) ([d2c63d7](https://github.com/rolldown/rolldown/commit/d2c63d7a742b5961eb71cd1c08c954bd6f23a85d))
+* support generating source map ([#607](https://github.com/rolldown/rolldown/issues/607)) ([f2dcda2](https://github.com/rolldown/rolldown/commit/f2dcda2e1ca695ff695ba0f4b84d46a5e2b4879f))
+
+
+### Reverts
+
+* Revert "refactor: implement ConcatSource (#611)" (#612) ([dc32a76](https://github.com/rolldown/rolldown/commit/dc32a76d91eb91a1a891f960d7bbb32336be69a6)), closes [#611](https://github.com/rolldown/rolldown/issues/611) [#612](https://github.com/rolldown/rolldown/issues/612)
+
+
+
 ## [0.9.1](https://github.com/rolldown/rolldown/compare/v0.5.0...v0.9.1) (2024-03-26)
 
 ### Bug Fixes

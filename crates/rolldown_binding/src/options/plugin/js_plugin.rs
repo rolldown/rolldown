@@ -52,7 +52,7 @@ impl Plugin for JsPlugin {
         cb.call_async_normalized((
           args.source.to_string(),
           args.importer.map(str::to_string),
-          Some(args.options.clone().into()),
+          args.options.clone().into(),
         ))
         .await?
         .map(Into::into),

@@ -7,3 +7,4 @@ pub mod hook_resolve_id_args;
 pub mod hook_resolve_id_extra_options;
 pub mod hook_resolve_id_output;
 pub mod hook_transform_args;
+pub mod plugin_context_resolve_options;

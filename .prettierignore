@@ -7,3 +7,4 @@ crates
 target
 temp
 pnpm-lock.yaml
+CHANGELOG.md

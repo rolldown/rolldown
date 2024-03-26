@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import type { TestConfig } from './types'
-import { InputOptions, OutputOptions, rolldown } from '../src'
+import { InputOptions, OutputOptions, rolldown } from 'rolldown'
 import nodePath from 'node:path'
 import * as fastGlob from 'fast-glob'
 

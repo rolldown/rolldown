@@ -14,9 +14,15 @@ function runCases(filterStr?: string) {
   for (const name of cases) {
     const subCasesRoot = path.join(testCasesRoot, name)
     const subCases = fs.readdirSync(subCasesRoot)
-    const filterCases = subCases.filter(subCase => !filter.length || filter.includes(subCase) || filter.includes(name) || filter.includes(`${name}/${subCase}`))
+    const filterCases = subCases.filter(
+      (subCase) =>
+        !filter.length ||
+        filter.includes(subCase) ||
+        filter.includes(name) ||
+        filter.includes(`${name}/${subCase}`),
+    )
 
-    if(!filterCases.length) continue
+    if (!filterCases.length) continue
     describe(name, async () => {
       for (const subCaseName of filterCases) {
         const caseRoot = path.join(subCasesRoot, subCaseName)

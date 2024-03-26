@@ -50,9 +50,9 @@
     "build": "pnpm build-binding && pnpm build-node && pnpm format-generated-binding-files",
     "build:release": "pnpm build-binding:release && pnpm build-node && pnpm format-generated-binding-files",
     "# Scrips for checking #": "_",
-    "test": "vitest run",
+    "test": "vitest run --reporter verbose",
     "test:update": "vitest run -u",
-    "type-check": "tsc -p tsconfig.check.json"
+    "type-check": "tsc"
   },
   "napi": {
     "binaryName": "rolldown-binding",
@@ -79,7 +79,8 @@
     "rollup": "^4.12.1",
     "type-fest": "^4.12.0",
     "unbuild": "^2.0.0",
-    "vitest": "^1.3.1"
+    "vitest": "^1.3.1",
+    "rolldown": "workspace:*"
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "workspace:*",

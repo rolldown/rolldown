@@ -41,6 +41,12 @@
       "program": "${workspaceFolder}/<executable file>",
       "args": [],
       "cwd": "${workspaceFolder}"
-    }
-  ]
+    },
+    {
+      "type": "lldb",
+      "request": "attach",
+      "pid": "${command:pickProcess}",
+      "name": "Attach:Rust",
+    },
+  ],
 }

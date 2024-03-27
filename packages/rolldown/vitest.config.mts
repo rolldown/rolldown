@@ -7,7 +7,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@tests': nodePath.resolve(__dirname, 'tests'),
+      '@tests': nodePath.resolve(__dirname, 'tests/src'),
     },
   },
   esbuild: {

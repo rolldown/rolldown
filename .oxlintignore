@@ -1,4 +1,4 @@
 crates/**
 packages/rollup-tests/**
-packages/rolldown/tests/**
+packages/rolldown/tests/fixtures
 rollup/**

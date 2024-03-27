@@ -20,6 +20,7 @@
   "[json]": {
     "editor.formatOnSave": true
   },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "files.associations": {
     "*.snap": "markdown",
     "*.snap.new": "markdown"

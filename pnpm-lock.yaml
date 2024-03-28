@@ -133,9 +133,6 @@ importers:
       consola:
         specifier: ^3.2.3
         version: 3.2.3
-      fast-glob:
-        specifier: ^3.3.2
-        version: 3.3.2
       glob:
         specifier: ^10.3.10
         version: 10.3.10

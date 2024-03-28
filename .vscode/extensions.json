@@ -2,6 +2,8 @@
   "recommendations": [
     "editorconfig.editorconfig",
     "streetsidesoftware.code-spell-checker",
-    "esbenp.prettier-vscode"
+    "esbenp.prettier-vscode",
+    "tamasfe.even-better-toml",
+    "rust-lang.rust-analyzer"
   ]
 }

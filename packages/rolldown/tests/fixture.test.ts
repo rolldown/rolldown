@@ -26,7 +26,7 @@ function main() {
           testConfig.afterTest(output)
         }
       } catch (err) {
-        throw new Error(`Failed in ${testConfigPath}`)
+        throw new Error(`Failed in ${testConfigPath}`, { cause: err })
       }
     })
   }

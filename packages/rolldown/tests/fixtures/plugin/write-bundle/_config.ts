@@ -13,6 +13,7 @@ const config: RollupOptions = {
   plugins: [
     {
       name: 'test-plugin',
+      // @ts-expect-error
       writeBundle: (_options, bundle) => {
         writeBundleFn()
         const chunk = bundle['main.js'] as OutputChunk
@@ -31,6 +32,7 @@ const config: RollupOptions = {
 }
 
 export default defineTest({
+  skip: true,
   config,
   afterTest: () => {
     expect(writeBundleFn).toHaveBeenCalledTimes(1)

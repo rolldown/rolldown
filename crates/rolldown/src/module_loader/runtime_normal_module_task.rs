@@ -76,16 +76,15 @@ impl RuntimeNormalModuleTask {
     builder.pretty_path = Some("<runtime>".to_string());
     builder.is_user_defined_entry = Some(false);
 
-    self
-      .tx
-      .send(Msg::RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult {
-        warnings: self.warnings,
-        ast_symbol: symbol,
-        builder,
-        runtime,
-        ast,
-      }))
-      .unwrap();
+    if let Err(_err) = self.tx.send(Msg::RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult {
+      warnings: self.warnings,
+      ast_symbol: symbol,
+      builder,
+      runtime,
+      ast,
+    })) {
+      // hyf0: If main thread is dead, we should handle errors of main thread. So we just ignore the error here.
+    };
   }
 
   fn make_ast(

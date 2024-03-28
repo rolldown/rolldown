@@ -1,4 +1,6 @@
 type MaybePromise<T> = T | Promise<T>
+type Nullable<T> = T | null | undefined
+type VoidNullable<T = void> = T | null | undefined | void
 export class BindingPluginContext {
   resolve(
     specifier: string,
@@ -94,24 +96,27 @@ export interface BindingPluginContextResolveOptions {
 
 export interface BindingPluginOptions {
   name: string
-  buildStart?: (ctx: BindingPluginContext) => MaybePromise<void>
+  buildStart?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
   resolveId?: (
     specifier: string,
-    importer: string | undefined,
+    importer: Nullable<string>,
     options: BindingHookResolveIdExtraOptions,
-  ) => MaybePromise<undefined | BindingHookResolveIdOutput>
-  load?: (id: string) => MaybePromise<undefined | BindingHookLoadOutput>
+  ) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  load?: (id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   transform?: (
     id: string,
     code: string,
-  ) => MaybePromise<undefined | BindingHookLoadOutput>
-  buildEnd?: (error?: string) => MaybePromise<void>
+  ) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  buildEnd?: (error: Nullable<string>) => MaybePromise<VoidNullable>
   renderChunk?: (
     code: string,
     chunk: RenderedChunk,
-  ) => MaybePromise<undefined | BindingHookRenderChunkOutput>
-  generateBundle?: (bundle: Outputs, isWrite: boolean) => MaybePromise<void>
-  writeBundle?: (bundle: Outputs) => MaybePromise<void>
+  ) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
+  generateBundle?: (
+    bundle: Outputs,
+    isWrite: boolean,
+  ) => MaybePromise<VoidNullable>
+  writeBundle?: (bundle: Outputs) => MaybePromise<VoidNullable>
 }
 
 export interface BindingRenderedModule {

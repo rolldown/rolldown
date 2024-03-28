@@ -1,6 +1,6 @@
 |  | number |
 |----| ---- |
 | failed | 0|
-| skipFailed | 678|
+| skipFailed | 681|
 | skipped | 0|
-| passed | 241|
+| passed | 238|

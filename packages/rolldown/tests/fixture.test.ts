@@ -3,6 +3,7 @@ import type { TestConfig } from './src/types'
 import { InputOptions, OutputOptions, rolldown } from 'rolldown'
 import nodePath from 'node:path'
 import * as fastGlob from 'fast-glob'
+import { loadTestConfig } from '@tests/utils'
 
 main()
 
@@ -13,20 +14,30 @@ function main() {
     cwd: __dirname,
   })
   for (const testConfigPath of testConfigPaths) {
-    const dirName = nodePath.relative(
+    const dirPath = nodePath.relative(
       fixturesPath,
       nodePath.dirname(testConfigPath),
     )
-    test(dirName, async () => {
-      const testConfig: TestConfig = await import(testConfigPath).then(
-        (m) => m.default,
-      )
-      const output = await compileFixture(
-        nodePath.dirname(testConfigPath),
-        testConfig,
-      )
-      if (testConfig.afterTest) {
-        testConfig.afterTest(output)
+    test(dirPath, async (ctx) => {
+      const testConfig = await loadTestConfig(testConfigPath)
+      if (testConfig.skip) {
+        ctx.skip()
+        return
+      }
+
+      // FIXME: This empty log is here to make vitest shows stdout/stderr content made from rust. Wonder why.
+      console.log()
+      try {
+        const output = await compileFixture(
+          nodePath.dirname(testConfigPath),
+          testConfig,
+        )
+        if (testConfig.afterTest) {
+          testConfig.afterTest(output)
+        }
+      } catch (err) {
+        console.log(`Failed in ${testConfigPath}`)
+        throw err
       }
     })
   }

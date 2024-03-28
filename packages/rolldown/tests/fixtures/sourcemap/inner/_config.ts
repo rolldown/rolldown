@@ -2,7 +2,7 @@
 import type { RollupOptions, RollupOutput } from 'rolldown'
 import path from 'node:path'
 import { expect } from 'vitest'
-import { getOutputFileNames } from '@tests/util'
+import { getOutputFileNames } from '@tests/utils'
 import { defineTest } from '@tests'
 
 const config: RollupOptions = {

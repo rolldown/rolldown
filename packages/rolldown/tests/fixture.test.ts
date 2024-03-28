@@ -2,32 +2,22 @@ import { test } from 'vitest'
 import type { TestConfig } from './src/types'
 import { InputOptions, OutputOptions, rolldown } from 'rolldown'
 import nodePath from 'node:path'
-import * as fastGlob from 'fast-glob'
-import { loadTestConfig } from '@tests/utils'
 
 main()
 
 function main() {
-  const fixturesPath = nodePath.join(__dirname, 'fixtures')
-  const testConfigPaths = fastGlob.sync('fixtures/**/_config.ts', {
-    absolute: true,
-    cwd: __dirname,
-  })
-  for (const testConfigPath of testConfigPaths) {
-    const dirPath = nodePath.relative(
-      fixturesPath,
-      nodePath.dirname(testConfigPath),
-    )
-    test(dirPath, async (ctx) => {
-      const testConfig = await loadTestConfig(testConfigPath)
-      if (testConfig.skip) {
-        ctx.skip()
-        return
-      }
+  const testConfigPaths = import.meta.glob<TestConfig>(
+    './fixtures/**/_config.ts',
+    { import: 'default', eager: true },
+  )
+  for (const [testConfigPath, testConfig] of Object.entries(testConfigPaths)) {
+    const dirPath = nodePath.dirname(testConfigPath)
+    const testName = dirPath.replace('./fixtures/', '')
 
+    test.skipIf(testConfig.skip)(testName, async () => {
       try {
         const output = await compileFixture(
-          nodePath.dirname(testConfigPath),
+          nodePath.join(import.meta.dirname, dirPath),
           testConfig,
         )
         if (testConfig.afterTest) {

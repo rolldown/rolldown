@@ -9,11 +9,12 @@ import { rolldown, experimental_scan } from './rolldown'
 export { defineConfig, rolldown, experimental_scan }
 
 export type {
+  RolldownOutputChunk,
   RolldownOptions,
   RolldownOutput,
   InputOptions,
   OutputOptions,
-  RolldownPlugin as Plugin,
+  Plugin,
 }
 
 // Exports for compatibility

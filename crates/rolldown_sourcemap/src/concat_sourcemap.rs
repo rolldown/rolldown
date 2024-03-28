@@ -140,7 +140,7 @@ mod tests {
   fn concat_sourcemaps_works() {
     let mut concat_source = ConcatSource::default();
     concat_source.add_source(Box::new(RawSource::new("\nconsole.log()".to_string())));
-    concat_source.prepend_source(Box::new(RawSource::new("// banner".to_string())));
+    concat_source.add_prepend_source(Box::new(RawSource::new("// banner".to_string())));
 
     concat_source.add_source(Box::new(SourceMapSource::new(
       "function sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n".to_string(),

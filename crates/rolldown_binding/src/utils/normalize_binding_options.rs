@@ -1,7 +1,9 @@
-use crate::utils::js_async_callback_ext::JsAsyncCallbackExt;
 use std::path::PathBuf;
 
-use crate::{options::plugin::JsPlugin, types::binding_rendered_chunk::RenderedChunk};
+use crate::{
+  options::plugin::JsPlugin,
+  types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
+};
 use rolldown::{Banner, InputOptions, OutputOptions};
 use rolldown_error::BuildError;
 use rolldown_plugin::BoxPlugin;
@@ -52,7 +54,7 @@ pub fn normalize_binding_options(
       Banner::Fn(Box::new(move |chunk| {
         let fn_js = value.clone();
         Box::pin(async move {
-          fn_js.call_async_normalized(RenderedChunk::from(chunk)).await.map_err(BuildError::from)
+          fn_js.await_call(RenderedChunk::from(chunk)).await.map_err(BuildError::from)
         })
       }))
     }),

@@ -1,6 +1,7 @@
 {
   "[rust]": {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
   },
   "[toml]": {
     "editor.formatOnSave": true

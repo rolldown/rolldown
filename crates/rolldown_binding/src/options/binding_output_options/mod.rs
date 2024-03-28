@@ -1,6 +1,6 @@
 use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOptions;
-use crate::types::js_async_callback::JsAsyncCallback;
+use crate::types::js_callback::MaybeAsyncJsCallback;
 use derivative::Derivative;
 use napi_derive::napi;
 use serde::Deserialize;
@@ -23,7 +23,7 @@ pub struct BindingOutputOptions {
   #[napi(
     ts_type = "Nullable<string> | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)"
   )]
-  pub banner: Option<JsAsyncCallback<RenderedChunk, Option<String>>>,
+  pub banner: Option<MaybeAsyncJsCallback<RenderedChunk, Option<String>>>,
   // chunkFileNames: string | ((chunkInfo: PreRenderedChunk) => string);
   // compact: boolean;
   pub dir: Option<String>,

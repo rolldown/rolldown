@@ -94,6 +94,7 @@ impl Source for SourceMapSource {
 #[derive(Default)]
 pub struct ConcatSource {
   inner: Vec<Box<dyn Source + Send>>,
+  prepend_source: Vec<Box<dyn Source + Send>>,
   enabel_sourcemap: bool,
 }
 
@@ -105,11 +106,11 @@ impl ConcatSource {
     self.inner.push(source);
   }
 
-  pub fn prepend_source(&mut self, source: Box<dyn Source + Send>) {
+  pub fn add_prepend_source(&mut self, source: Box<dyn Source + Send>) {
     if source.sourcemap().is_some() {
       self.enabel_sourcemap = true;
     }
-    self.inner.insert(0, source);
+    self.prepend_source.push(source);
   }
 
   #[allow(clippy::cast_possible_truncation)]
@@ -118,7 +119,7 @@ impl ConcatSource {
     let mut sourcemap_builder = self.enabel_sourcemap.then_some(SourceMapBuilder::new(None));
     let mut line_offset = 0;
 
-    for (index, source) in self.inner.iter().enumerate() {
+    for (index, source) in self.prepend_source.iter().chain(self.inner.iter()).enumerate() {
       source.into_concat_source(&mut final_source, &mut sourcemap_builder, line_offset);
       if index < self.inner.len() - 1 {
         final_source.push('\n');

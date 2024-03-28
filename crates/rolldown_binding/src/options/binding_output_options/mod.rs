@@ -20,7 +20,7 @@ pub struct BindingOutputOptions {
   // assetFileNames: string | ((chunkInfo: PreRenderedAsset) => string);
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "string | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)")]
+  #[napi(ts_type = "VoidNullable<string> | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)")]
   pub banner: Option<JsAsyncCallback<RenderedChunk, Option<String>>>,
   // chunkFileNames: string | ((chunkInfo: PreRenderedChunk) => string);
   // compact: boolean;

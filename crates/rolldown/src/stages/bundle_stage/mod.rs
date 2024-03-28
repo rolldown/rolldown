@@ -1,4 +1,5 @@
 use crate::{
+  chunk::ChunkRenderReturn,
   chunk_graph::ChunkGraph,
   error::BatchedResult,
   finalizer::FinalizerContext,
@@ -81,17 +82,16 @@ impl<'a> BundleStage<'a> {
     tracing::info!("finalizing modules");
 
     let chunks = block_on_spawn_all(chunk_graph.chunks.iter().map(|c| async {
-      let ret = c
-        .render(self.input_options, self.link_output, &chunk_graph, self.output_options)
-        .await
-        .unwrap();
-      (ret.code, ret.map, ret.rendered_chunk)
+      c.render(self.input_options, self.link_output, &chunk_graph, self.output_options).await
     }))
-    .into_iter();
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()?;
+
     let mut assets = vec![];
 
     render_chunks(self.plugin_driver, chunks).await?.into_iter().try_for_each(
-      |(mut content, mut map, rendered_chunk)| -> Result<(), BuildError> {
+      |chunk| -> Result<(), BuildError> {
+        let ChunkRenderReturn { mut map, rendered_chunk, mut code } = chunk;
         if let Some(map) = map.as_mut() {
           map.set_file(Some(rendered_chunk.file_name.clone()));
           match self.output_options.sourcemap {
@@ -106,12 +106,12 @@ impl<'a> BundleStage<'a> {
                 file_name: map_file_name.clone(),
                 source: map,
               })));
-              content.push_str(&format!("\n//# sourceMappingURL={map_file_name}"));
+              code.push_str(&format!("\n//# sourceMappingURL={map_file_name}"));
             }
             SourceMapType::Inline => {
               let data_url =
                 map.to_data_url().map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
-              content.push_str(&format!("\n//# sourceMappingURL={data_url}"));
+              code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
             }
             SourceMapType::Hidden => {}
           }
@@ -119,7 +119,7 @@ impl<'a> BundleStage<'a> {
         let sourcemap_file_name = map.as_ref().map(|_| format!("{}.map", rendered_chunk.file_name));
         assets.push(Output::Chunk(Box::new(OutputChunk {
           file_name: rendered_chunk.file_name,
-          code: content,
+          code,
           is_entry: rendered_chunk.is_entry,
           is_dynamic_entry: rendered_chunk.is_dynamic_entry,
           facade_module_id: rendered_chunk.facade_module_id,

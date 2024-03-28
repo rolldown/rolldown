@@ -1,5 +1,5 @@
 use super::output_options::SourceMapType;
-use crate::Addon;
+use crate::Banner;
 use crate::{FileNameTemplate, OutputFormat};
 use derivative::Derivative;
 
@@ -11,5 +11,5 @@ pub struct NormalizedOutputOptions {
   pub dir: String,
   pub format: OutputFormat,
   pub sourcemap: SourceMapType,
-  pub banner: Addon,
+  pub banner: Banner,
 }

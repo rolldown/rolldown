@@ -2,7 +2,7 @@ use crate::utils::js_async_callback_ext::JsAsyncCallbackExt;
 use std::path::PathBuf;
 
 use crate::{options::plugin::JsPlugin, types::binding_rendered_chunk::RenderedChunk};
-use rolldown::{Addon, InputOptions, OutputOptions};
+use rolldown::{Banner, InputOptions, OutputOptions};
 use rolldown_error::BuildError;
 use rolldown_plugin::BoxPlugin;
 
@@ -49,7 +49,7 @@ pub fn normalize_binding_options(
     dir: output_options.dir,
     sourcemap: output_options.sourcemap.map(Into::into),
     banner: output_options.banner.map(move |value| {
-      Addon::Fn(Box::new(move |chunk| {
+      Banner::Fn(Box::new(move |chunk| {
         let fn_js = value.clone();
         Box::pin(async move {
           fn_js

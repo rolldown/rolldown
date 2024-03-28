@@ -56,20 +56,24 @@ impl Diagnostic {
     builder
   }
 
-  pub fn as_string(&self) -> String {
+  pub fn convert_to_string(&self, color: bool) -> String {
     let builder = self.clone().init_report_builder();
     let mut output = Vec::new();
     builder
-      .with_config(Config::default().with_color(false))
+      .with_config(Config::default().with_color(color))
       .finish()
       .write_for_stdout(sources(self.files.clone()), &mut output)
       .unwrap();
     String::from_utf8(output).expect("Diagnostic should be valid utf8")
   }
+
+  pub fn to_color_string(&self) -> String {
+    self.convert_to_string(true)
+  }
 }
 
 impl Display for Diagnostic {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    self.as_string().fmt(f)
+    self.convert_to_string(false).fmt(f)
   }
 }

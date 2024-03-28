@@ -1,6 +1,8 @@
 use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
+use rolldown_common::BatchedErrors;
+use rolldown_error::BuildError;
 use tracing::instrument;
 
 use crate::{
@@ -60,10 +62,8 @@ impl Bundler {
 
     let result = bundler_core.scan().await;
 
-    if let Err(err) = result {
-      // TODO: better handing errors
-      eprintln!("{err:?}");
-      return Err(napi::Error::from_reason("Build failed"));
+    if let Err(errs) = result {
+      return Err(Self::handle_errors(errs));
     }
 
     Ok(())
@@ -80,12 +80,10 @@ impl Bundler {
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,
-      Err(err) => {
-        // TODO: better handing errors
-        eprintln!("{err:?}");
-        return Err(napi::Error::from_reason("Build failed"));
-      }
+      Err(errs) => return Err(Self::handle_errors(errs)),
     };
+
+    Self::handle_warnings(outputs.warnings);
 
     Ok(outputs.assets.into())
   }
@@ -101,13 +99,25 @@ impl Bundler {
 
     let outputs = match maybe_outputs {
       Ok(outputs) => outputs,
-      Err(err) => {
-        // TODO: better handing errors
-        eprintln!("{err:?}");
-        return Err(napi::Error::from_reason("Build failed"));
-      }
+      Err(errs) => return Err(Self::handle_errors(errs)),
     };
 
+    Self::handle_warnings(outputs.warnings);
+
     Ok(outputs.assets.into())
+  }
+
+  fn handle_errors(errs: BatchedErrors) -> napi::Error {
+    errs.into_iter().for_each(|err| {
+      eprintln!("{}", err.into_diagnostic().to_color_string());
+    });
+    napi::Error::from_reason("Build failed")
+  }
+
+  #[allow(clippy::print_stdout)]
+  fn handle_warnings(warnings: Vec<BuildError>) {
+    warnings.into_iter().for_each(|err| {
+      println!("{}", err.into_diagnostic().to_color_string());
+    });
   }
 }

@@ -78,6 +78,7 @@ pub fn normalize_options(
       .chunk_file_names
       .unwrap_or_else(|| "[name]-[hash].js".to_string())
       .into(),
+    banner: raw_output.banner.unwrap_or_default(),
     dir: raw_output.dir.unwrap_or_else(|| "dist".to_string()),
     format: raw_output.format.unwrap_or(crate::OutputFormat::Esm),
     sourcemap: raw_output.sourcemap.unwrap_or(SourceMapType::Hidden),

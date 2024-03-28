@@ -78,6 +78,10 @@ export interface BindingOutputChunk {
 export interface BindingOutputOptions {
   entryFileNames?: string
   chunkFileNames?: string
+  banner?:
+    | undefined
+    | string
+    | ((chunk: RenderedChunk) => string | Promise<String>)
   dir?: string
   exports?: 'default' | 'named' | 'none' | 'auto'
   format?: 'es' | 'cjs'

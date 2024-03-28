@@ -93,16 +93,24 @@ impl Source for SourceMapSource {
 
 #[derive(Default)]
 pub struct ConcatSource {
-  inner: Vec<Box<dyn Source>>,
+  inner: Vec<Box<dyn Source + Send>>,
+  prepend_source: Vec<Box<dyn Source + Send>>,
   enabel_sourcemap: bool,
 }
 
 impl ConcatSource {
-  pub fn add_source(&mut self, source: Box<dyn Source>) {
+  pub fn add_source(&mut self, source: Box<dyn Source + Send>) {
     if source.sourcemap().is_some() {
       self.enabel_sourcemap = true;
     }
     self.inner.push(source);
+  }
+
+  pub fn add_prepend_source(&mut self, source: Box<dyn Source + Send>) {
+    if source.sourcemap().is_some() {
+      self.enabel_sourcemap = true;
+    }
+    self.prepend_source.push(source);
   }
 
   #[allow(clippy::cast_possible_truncation)]
@@ -111,7 +119,7 @@ impl ConcatSource {
     let mut sourcemap_builder = self.enabel_sourcemap.then_some(SourceMapBuilder::new(None));
     let mut line_offset = 0;
 
-    for (index, source) in self.inner.iter().enumerate() {
+    for (index, source) in self.prepend_source.iter().chain(self.inner.iter()).enumerate() {
       source.into_concat_source(&mut final_source, &mut sourcemap_builder, line_offset);
       if index < self.inner.len() - 1 {
         final_source.push('\n');
@@ -132,6 +140,8 @@ mod tests {
   fn concat_sourcemaps_works() {
     let mut concat_source = ConcatSource::default();
     concat_source.add_source(Box::new(RawSource::new("\nconsole.log()".to_string())));
+    concat_source.add_prepend_source(Box::new(RawSource::new("// banner".to_string())));
+
     concat_source.add_source(Box::new(SourceMapSource::new(
       "function sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n".to_string(),
       SourceMap::from_slice(
@@ -156,9 +166,9 @@ mod tests {
 
     assert_eq!(
       content,
-      "\nconsole.log()\nfunction sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n"
+      "// banner\n\nconsole.log()\nfunction sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n"
     );
-    let expected = "{\"version\":3,\"sources\":[\"index.ts\"],\"sourcesContent\":[\"function sayHello(name: string) {\\n  console.log(`Hello, ${name}`);\\n}\\n\"],\"names\":[],\"mappings\":\";;AAAA,SAAS,QAAQ,CAAC,IAAY;IAC5B,OAAO,CAAC,GAAG,CAAC,iBAAU,IAAI,CAAE,CAAC,CAAC;AAChC,CAAC\"}";
+    let expected = "{\"version\":3,\"sources\":[\"index.ts\"],\"sourcesContent\":[\"function sayHello(name: string) {\\n  console.log(`Hello, ${name}`);\\n}\\n\"],\"names\":[],\"mappings\":\";;;AAAA,SAAS,QAAQ,CAAC,IAAY;IAC5B,OAAO,CAAC,GAAG,CAAC,iBAAU,IAAI,CAAE,CAAC,CAAC;AAChC,CAAC\"}";
     assert_eq!(map, expected);
   }
 }

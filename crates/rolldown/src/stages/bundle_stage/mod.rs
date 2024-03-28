@@ -1,4 +1,5 @@
 use crate::{
+  chunk::ChunkRenderReturn,
   chunk_graph::ChunkGraph,
   error::BatchedResult,
   finalizer::FinalizerContext,
@@ -9,11 +10,12 @@ use crate::{
   stages::link_stage::LinkStageOutput,
   utils::{finalize_normal_module, is_in_rust_test_mode, render_chunks::render_chunks},
 };
+use rolldown_utils::block_on_spawn_all;
+
 use rolldown_common::{ChunkKind, Output, OutputAsset, OutputChunk};
 use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::FxHashSet;
-
 mod code_splitting;
 mod compute_cross_chunk_links;
 
@@ -79,20 +81,17 @@ impl<'a> BundleStage<'a> {
       });
     tracing::info!("finalizing modules");
 
-    let chunks = chunk_graph.chunks.iter().map(|c| {
-      let ret =
-        c.render(self.input_options, self.link_output, &chunk_graph, self.output_options).unwrap();
-      (
-        ret.code,
-        ret.map,
-        c.get_rendered_chunk_info(self.link_output, self.output_options, ret.rendered_modules),
-      )
-    });
+    let chunks = block_on_spawn_all(chunk_graph.chunks.iter().map(|c| async {
+      c.render(self.input_options, self.link_output, &chunk_graph, self.output_options).await
+    }))
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()?;
 
     let mut assets = vec![];
 
     render_chunks(self.plugin_driver, chunks).await?.into_iter().try_for_each(
-      |(mut content, mut map, rendered_chunk)| -> Result<(), BuildError> {
+      |chunk| -> Result<(), BuildError> {
+        let ChunkRenderReturn { mut map, rendered_chunk, mut code } = chunk;
         if let Some(map) = map.as_mut() {
           map.set_file(Some(rendered_chunk.file_name.clone()));
           match self.output_options.sourcemap {
@@ -107,12 +106,12 @@ impl<'a> BundleStage<'a> {
                 file_name: map_file_name.clone(),
                 source: map,
               })));
-              content.push_str(&format!("\n//# sourceMappingURL={map_file_name}"));
+              code.push_str(&format!("\n//# sourceMappingURL={map_file_name}"));
             }
             SourceMapType::Inline => {
               let data_url =
                 map.to_data_url().map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
-              content.push_str(&format!("\n//# sourceMappingURL={data_url}"));
+              code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
             }
             SourceMapType::Hidden => {}
           }
@@ -120,7 +119,7 @@ impl<'a> BundleStage<'a> {
         let sourcemap_file_name = map.as_ref().map(|_| format!("{}.map", rendered_chunk.file_name));
         assets.push(Output::Chunk(Box::new(OutputChunk {
           file_name: rendered_chunk.file_name,
-          code: content,
+          code,
           is_entry: rendered_chunk.is_entry,
           is_dynamic_entry: rendered_chunk.is_dynamic_entry,
           facade_module_id: rendered_chunk.facade_module_id,

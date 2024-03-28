@@ -28,6 +28,7 @@ pub use crate::{
     input_options::{resolve_options::ResolveOptions, External, InputOptions},
     output_options::{OutputFormat, OutputOptions, SourceMapType},
     types::input_item::InputItem,
+    types::output_option::Banner,
   },
   types::rolldown_output::RolldownOutput,
 };

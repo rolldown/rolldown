@@ -29,3 +29,16 @@ For setting up the project's development environment, see [Project Setup](./setu
 Submit all pull requests directly to the `main` branch. We only use separate branches for upcoming releases / breaking changes, otherwise, everything points to main.
 
 Code that lands in main must be compatible with the latest stable release. It may contain additional features, but no breaking changes. We should be able to release a new minor version from the tip of main at any time.
+
+
+## Debug with Javascript and Rust
+
+1. Open Javascript Debug Termial
+2. Execute any program that works with javascript and rust in Javascript Debug Termial
+3. Start Attach:Rust  in Tab `Run and Debug`
+4. select javascript process.
+5. enjoy mixed debug!
+
+I think you'll still be confused after you read this steps.so you can see this video to learn about this process
+
+[bilibili.com: Debug with Javascript and Rust](https://www.bilibili.com/video/BV1Rm421n79f/)

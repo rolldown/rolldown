@@ -52,11 +52,7 @@ pub fn normalize_binding_options(
       Banner::Fn(Box::new(move |chunk| {
         let fn_js = value.clone();
         Box::pin(async move {
-          fn_js
-            .call_async_normalized(RenderedChunk::from(chunk))
-            .await
-            .map_err(BuildError::from)
-            .unwrap()
+          fn_js.call_async_normalized(RenderedChunk::from(chunk)).await.map_err(BuildError::from)
         })
       }))
     }),

@@ -55,7 +55,7 @@ const getAddon = <T extends 'banner'>(
 export function normalizeOutputOptions(
   opts: OutputOptions,
 ): BindingOutputOptions {
-  const { dir, format, exports, sourcemap, banner } = opts
+  const { dir, format, exports, sourcemap } = opts
   return {
     dir: dir,
     format: normalizeFormat(format),

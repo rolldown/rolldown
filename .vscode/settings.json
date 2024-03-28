@@ -35,5 +35,6 @@
   "search.exclude": {
     "rollup": true,
     "temp": true
-  }
+  },
+  "editor.wordWrap": "on"
 }

@@ -1,23 +1,29 @@
-import type { RollupOptions, RollupOutput } from 'rolldown'
+import { defineTest } from '@tests/index'
 import { expect, vi } from 'vitest'
 
 const buildStartFn = vi.fn()
+const buildStartFn2 = vi.fn()
 
-const config: RollupOptions = {
-  plugins: [
-    {
-      name: 'test-plugin',
-      buildStart: function (config) {
-        buildStartFn()
-        expect(config).toBeTypeOf('object')
+export default defineTest({
+  config: {
+    plugins: [
+      {
+        name: 'test-plugin',
+        buildStart: function (config) {
+          buildStartFn()
+          expect(config).toBeTypeOf('object')
+        },
       },
-    },
-  ],
-}
-
-export default {
-  config,
-  afterTest: (output: RollupOutput) => {
-    expect(buildStartFn).toHaveBeenCalledTimes(1)
+      {
+        name: 'test-plugin',
+        buildStart: {
+          handler: buildStartFn2,
+        },
+      },
+    ],
   },
-}
+  afterTest: (_output) => {
+    expect(buildStartFn).toHaveBeenCalledTimes(1)
+    expect(buildStartFn2).toHaveBeenCalledTimes(1)
+  },
+})

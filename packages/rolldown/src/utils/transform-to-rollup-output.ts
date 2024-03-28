@@ -2,8 +2,8 @@ import {
   RolldownOutput,
   RolldownOutputAsset,
   RolldownOutputChunk,
-} from '../objects/rolldown-output'
-import { OutputBundle } from '../objects/output-bundle'
+} from '../types/rolldown-output'
+import { OutputBundle } from '../types/output-bundle'
 import {
   BindingOutputAsset,
   BindingOutputChunk,

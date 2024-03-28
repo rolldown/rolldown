@@ -635,6 +635,7 @@
   "rollup@function@shadowed-external-export: external modules are not shadowed",
   "rollup@function@shadowed-variables: renames shadowed variables correctly",
   "rollup@function@shims-missing-exports: shims missing exports",
+  "rollup@function@side-effect-free-module-function: correctly include functions with side effects from side-effect-free modules (#3942)",
   "rollup@function@side-effects-only-default-exports: Wraps inlined default exports which are rendered for side-effects only",
   "rollup@function@simplified-nested-if: do not catch else branches from parent if statements when simplifiying if-statements",
   "rollup@function@simplify-arrow-expression-with-object: correctly simplifies arrow expressions where the right hand side becomes an object",
@@ -707,6 +708,7 @@
   "rollup@function@warnings-to-string: provides a string conversion for warnings",
   "rollup@function@warns-for-invalid-options: warns for invalid options",
   "rollup@function@wraps-object-expressions-as-statements: wraps object expressions that have become statements",
+  "rollup@function@wraps-simplified-expressions: wraps simplified expressions that have become callees if necessary",
   "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",
   "rollup@sourcemaps@combined-sourcemap-with-loader: get combined sourcemap in transforming with loader@generates es",
   "rollup@sourcemaps@combined-sourcemap: get combined sourcemap in transforming@generates es",
@@ -731,5 +733,6 @@
   "rollup@sourcemaps@transform-full-source-paths: provides the full source map path when transforming source maps@generates es",
   "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es",
   "rollup@sourcemaps@transform-source-paths: transform sourcemap paths (#2168)@generates es",
-  "rollup@sourcemaps@transforms: preserves sourcemap chains when transforming@generates es"
+  "rollup@sourcemaps@transforms: preserves sourcemap chains when transforming@generates es",
+  "rollup@sourcemaps@untransformed-modules: allows sourcemap chains with some untransformed modules (#404)@generates es"
 ]

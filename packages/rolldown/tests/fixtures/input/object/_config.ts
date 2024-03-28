@@ -1,7 +1,7 @@
 import type { RollupOptions, RollupOutput } from 'rolldown'
 import path from 'node:path'
 import { expect } from 'vitest'
-import { getOutputChunkNames } from '@tests/util'
+import { getOutputChunkNames } from '@tests/utils'
 
 const config: RollupOptions = {
   input: {

@@ -1,5 +1,3 @@
-/// <reference types="vite/client" />
-
 import { test } from 'vitest'
 import type { TestConfig } from './src/types'
 import { InputOptions, OutputOptions, rolldown } from 'rolldown'

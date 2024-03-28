@@ -25,8 +25,6 @@ function main() {
         return
       }
 
-      // FIXME: This empty log is here to make vitest shows stdout/stderr content made from rust. Wonder why.
-      console.log()
       try {
         const output = await compileFixture(
           nodePath.dirname(testConfigPath),
@@ -36,8 +34,7 @@ function main() {
           testConfig.afterTest(output)
         }
       } catch (err) {
-        console.log(`Failed in ${testConfigPath}`)
-        throw err
+        throw new Error(`Failed in ${testConfigPath}`, { cause: err })
       }
     })
   }

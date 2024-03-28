@@ -12,9 +12,9 @@ We store all the Rust crates in this directory.
 
 # `/packages`
 
-We store all the Node.js packages in this directory except `@rolldown/node-binding`.
+We store all the Node.js packages in this directory.
 
-- `/node` Node.js package for the project.
+- `/rolldown` Node.js package for the project.
 - `/bench` Benchmark programs for Node.js side of the project.
 - `/rollup-tests` Adapter for running rollup tests with rolldown.
 

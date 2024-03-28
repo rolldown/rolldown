@@ -156,3 +156,6 @@ web/docs/.vitepress/cache
 # ci release avoid lerna error: Working tree has uncommitted changes
 crates/rolldown_binding/artifacts/
 packages/**/THIRD-PARTY-LICENSE
+
+# Opinionated configuration
+.vscode/launch.json

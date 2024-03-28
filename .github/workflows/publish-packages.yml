@@ -15,6 +15,7 @@ jobs:
     uses: ./.github/workflows/reusable-release-build.yml
 
   publish:
+    if: github.repository == 'rolldown/rolldown'
     name: Publish npm Packages
     runs-on: ubuntu-latest
     permissions:

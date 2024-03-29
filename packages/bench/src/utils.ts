@@ -36,11 +36,6 @@ export function createBench(suite: BenchSuite, benchConfig: BenchConfig) {
 interface BenchConfig {
   sourcemap?: boolean
   rolldownOnly?: boolean
-  // CodSpeed don't case about the `describe(...)` name, so we need to convert patterns
-  // `describe('threejs', () => { bench('rolldown', ...) })`
-  // to
-  // `describe('rolldown', () => { bench('rolldown', ...) })`
-  refineNameForCodeSpeed?: boolean
 }
 
 export function createBenchmarks(

@@ -39,7 +39,8 @@ async function compileFixture(fixturePath: string, config: TestConfig) {
   }
 
   const inputOptions: InputOptions = {
-    input: config.config?.input ?? nodePath.join(fixturePath, 'main.js'),
+    input: 'main.js',
+    cwd: fixturePath,
     ...config.config,
   }
   const build = await rolldown(inputOptions)

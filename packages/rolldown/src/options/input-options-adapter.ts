@@ -14,7 +14,7 @@ export function createInputOptionsAdapter(
       // @ts-expect-error
       bindingifyPlugin(plugin, options),
     ),
-    cwd: process.cwd(),
+    cwd: inputOptions.cwd ?? process.cwd(),
     external: inputOptions.external ? options.external : undefined,
     resolve: options.resolve,
   }

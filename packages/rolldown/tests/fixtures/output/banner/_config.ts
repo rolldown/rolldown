@@ -1,23 +1,18 @@
-import type {
-  RollupOptions,
-  RolldownOutput,
-  RolldownOutputChunk,
-} from '../../../../src'
+import type { RolldownOutputChunk } from 'rolldown'
+import { defineTest } from '@tests'
 import { expect } from 'vitest'
 
 const bannerTxt = '// banner test\n'
 const banner = () => Promise.resolve().then(() => bannerTxt)
 
-const config: RollupOptions = {
-  external: [/external/, 'external-a'],
-  output: {
-    banner,
+export default defineTest({
+  config: {
+    external: [/external/, 'external-a'],
+    output: {
+      banner,
+    },
   },
-}
-
-export default {
-  config,
-  afterTest: (output: RolldownOutput) => {
+  afterTest: (output) => {
     expect(
       output.output
         .filter(({ type }) => type === 'chunk')
@@ -26,4 +21,4 @@ export default {
         ),
     ).toBe(true)
   },
-}
+})

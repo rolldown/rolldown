@@ -1,15 +1,13 @@
-import type { RollupOptions, RollupOutput } from 'rolldown'
+import { defineTest } from '@tests'
 import path from 'node:path'
 import { expect } from 'vitest'
 import { getOutputChunkNames } from '@tests/utils'
 
-const config: RollupOptions = {
-  input: path.join(__dirname, 'main.js'),
-}
-
-export default {
-  config,
-  afterTest: (output: RollupOutput) => {
+export default defineTest({
+  config: {
+    input: path.join(__dirname, 'main.js'),
+  },
+  afterTest: (output) => {
     expect(getOutputChunkNames(output)).toStrictEqual(['main.js'])
   },
-}
+})

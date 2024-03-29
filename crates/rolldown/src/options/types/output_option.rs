@@ -4,33 +4,33 @@ use rolldown_error::BuildError;
 use std::fmt::Debug;
 use std::pin::Pin;
 
-pub type BannerFn = dyn Fn(
+pub type AddonFunction = dyn Fn(
     RenderedChunk,
   ) -> Pin<Box<(dyn Future<Output = Result<Option<String>, BuildError>> + Send + 'static)>>
   + Send
   + Sync;
 
-pub enum Banner {
+pub enum AddonOutputOption {
   String(Option<String>),
-  Fn(Box<BannerFn>),
+  Fn(Box<AddonFunction>),
 }
 
-impl Debug for Banner {
+impl Debug for AddonOutputOption {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::String(value) => write!(f, "Banner::String({value:?})"),
-      Self::Fn(_) => write!(f, "Banner::Fn(...)"),
+      Self::String(value) => write!(f, "AddonFunction::String({value:?})"),
+      Self::Fn(_) => write!(f, "AddonFunction::Fn(...)"),
     }
   }
 }
 
-impl Default for Banner {
+impl Default for AddonOutputOption {
   fn default() -> Self {
     Self::String(None)
   }
 }
 
-impl Banner {
+impl AddonOutputOption {
   pub async fn call(&self, chunk: RenderedChunk) -> Result<Option<String>, BuildError> {
     match self {
       Self::String(value) => Ok(value.clone()),

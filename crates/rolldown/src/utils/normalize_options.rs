@@ -72,13 +72,14 @@ pub fn normalize_options(
 
   // Normalize output options
 
-  let output_options = NormalizedOutputOptions {
+  let output_options: NormalizedOutputOptions = NormalizedOutputOptions {
     entry_file_names: raw_output.entry_file_names.unwrap_or_else(|| "[name].js".to_string()).into(),
     chunk_file_names: raw_output
       .chunk_file_names
       .unwrap_or_else(|| "[name]-[hash].js".to_string())
       .into(),
     banner: raw_output.banner.unwrap_or_default(),
+    footer: raw_output.footer.unwrap_or_default(),
     dir: raw_output.dir.unwrap_or_else(|| "dist".to_string()),
     format: raw_output.format.unwrap_or(crate::OutputFormat::Esm),
     sourcemap: raw_output.sourcemap.unwrap_or(SourceMapType::Hidden),

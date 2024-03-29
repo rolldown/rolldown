@@ -8,6 +8,7 @@ export interface OutputOptions {
   exports?: RollupOutputOptions['exports']
   sourcemap?: RollupOutputOptions['sourcemap']
   banner?: RollupOutputOptions['banner']
+  footer?: RollupOutputOptions['footer']
 }
 
 function normalizeFormat(
@@ -40,7 +41,7 @@ function normalizeSourcemap(
   }
 }
 
-const getAddon = <T extends 'banner'>(
+const getAddon = <T extends 'banner' | 'footer'>(
   config: OutputOptions,
   name: T,
 ): BindingOutputOptions[T] => {
@@ -63,5 +64,6 @@ export function normalizeOutputOptions(
     sourcemap: normalizeSourcemap(sourcemap),
     plugins: [],
     banner: getAddon(opts, 'banner'),
+    footer: getAddon(opts, 'footer'),
   }
 }

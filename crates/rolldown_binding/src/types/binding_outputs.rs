@@ -1,9 +1,6 @@
-use napi::Either;
 use napi_derive::napi;
 
 use super::{binding_output_asset::BindingOutputAsset, binding_output_chunk::BindingOutputChunk};
-
-pub type BindingOutput = Either<BindingOutputChunk, BindingOutputAsset>;
 
 #[napi]
 pub struct BindingOutputs {

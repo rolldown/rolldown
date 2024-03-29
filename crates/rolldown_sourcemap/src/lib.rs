@@ -9,6 +9,10 @@ pub fn collapse_sourcemaps(
   mut sourcemap_chain: Vec<&SourceMap>,
 ) -> Result<Option<SourceMap>, BuildError> {
   let Some(last_map) = sourcemap_chain.pop() else { return Ok(None) };
+  // If there is only one sourcemap, return it as result.
+  if sourcemap_chain.is_empty() {
+    return Ok(Some(last_map.clone()));
+  }
 
   let mut sourcemap_builder = SourceMapBuilder::new(None);
 

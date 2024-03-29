@@ -1,13 +1,12 @@
 import { defineTest } from '@tests'
-import path from 'node:path'
 import { expect } from 'vitest'
 import { getOutputChunkNames } from '@tests/utils'
 
 export default defineTest({
   config: {
     input: {
-      main: path.join(__dirname, 'main.js'),
-      entry: path.join(__dirname, 'entry.js'),
+      main: 'main.js',
+      entry: 'entry.js',
     },
   },
   afterTest: (output) => {

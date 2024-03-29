@@ -1,12 +1,11 @@
 // cSpell:disable
-import path from 'node:path'
 import { expect } from 'vitest'
 import { getOutputFileNames } from '@tests/utils'
 import { defineTest } from '@tests'
 
 export default defineTest({
   config: {
-    input: [path.join(__dirname, 'main.js')],
+    input: ['main.js'],
     output: {
       sourcemap: true,
     },

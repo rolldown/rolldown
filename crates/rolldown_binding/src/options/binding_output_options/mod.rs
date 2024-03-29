@@ -5,6 +5,8 @@ use derivative::Derivative;
 use napi_derive::napi;
 use serde::Deserialize;
 
+pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
+
 #[napi(object, object_to_js = false)]
 #[derive(Deserialize, Derivative)]
 #[serde(rename_all = "camelCase")]
@@ -23,7 +25,7 @@ pub struct BindingOutputOptions {
   #[napi(
     ts_type = "Nullable<string> | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)"
   )]
-  pub banner: Option<MaybeAsyncJsCallback<RenderedChunk, Option<String>>>,
+  pub banner: Option<AddonOutputOption>,
   // chunkFileNames: string | ((chunkInfo: PreRenderedChunk) => string);
   // compact: boolean;
   pub dir: Option<String>,
@@ -34,6 +36,12 @@ pub struct BindingOutputOptions {
   // extend: boolean;
   // externalLiveBindings: boolean;
   // footer: () => string | Promise<string>;
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(
+    ts_type = "Nullable<string> | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)"
+  )]
+  pub footer: Option<AddonOutputOption>,
   #[napi(ts_type = "'es' | 'cjs'")]
   pub format: Option<String>,
   // freeze: boolean;

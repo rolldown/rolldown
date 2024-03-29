@@ -83,6 +83,9 @@ export interface BindingOutputOptions {
     | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)
   dir?: string
   exports?: 'default' | 'named' | 'none' | 'auto'
+  footer?:
+    | Nullable<string>
+    | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)
   format?: 'es' | 'cjs'
   plugins: Array<BindingPluginOptions>
   sourcemap?: 'file' | 'inline' | 'hidden'

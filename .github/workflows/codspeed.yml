@@ -1,4 +1,4 @@
-name: codspeed-benchmarks
+name: Codspeed Benchmarks
 
 on:
   push:
@@ -9,6 +9,10 @@ on:
       - '**/*.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+      - 'packages/rolldown/**'
+      - 'packages/bench/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
   pull_request:
     types: [opened, synchronize]
     paths:
@@ -16,6 +20,10 @@ on:
       - '**/*.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+      - 'packages/rolldown/**'
+      - 'packages/bench/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
   workflow_dispatch:
 
 concurrency:
@@ -55,11 +63,11 @@ jobs:
       - name: Setup benchmark
         run: just setup-bench
 
-      - name: Build the benchmark target(s)
-        run: cargo codspeed build -p bench
+      - name: Build packages
+        run: pnpm build:release
 
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@v2
         with:
-          run: cargo codspeed run -p bench
+          run: pnpm --filter bench run bench-ci
           token: ${{ secrets.CODSPEED_TOKEN }}

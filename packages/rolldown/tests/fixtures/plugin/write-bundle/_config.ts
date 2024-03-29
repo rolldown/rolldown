@@ -1,7 +1,7 @@
 import { expect, vi } from 'vitest'
 import path from 'node:path'
 import { OutputChunk } from 'rollup'
-import { defineTest } from '@tests/index'
+import { defineTest } from '@tests'
 
 const entry = path.join(__dirname, './main.js')
 

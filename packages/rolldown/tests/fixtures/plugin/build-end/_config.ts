@@ -1,4 +1,4 @@
-import { defineTest } from '@tests/index'
+import { defineTest } from '@tests'
 import { expect, vi } from 'vitest'
 
 const buildEndFn = vi.fn()

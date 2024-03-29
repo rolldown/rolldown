@@ -1,5 +1,5 @@
 import type { RolldownOutputChunk } from 'rolldown'
-import { defineTest } from '@tests/index'
+import { defineTest } from '@tests'
 import { expect } from 'vitest'
 
 const footerTxt = '// footer test\n'

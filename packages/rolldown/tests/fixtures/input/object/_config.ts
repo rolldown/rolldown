@@ -1,4 +1,4 @@
-import { defineTest } from '@tests/index'
+import { defineTest } from '@tests'
 import path from 'node:path'
 import { expect } from 'vitest'
 import { getOutputChunkNames } from '@tests/utils'

@@ -2,7 +2,7 @@
 import path from 'node:path'
 import { expect } from 'vitest'
 import { getOutputFileNames } from '@tests/utils'
-import { defineTest } from '@tests/index'
+import { defineTest } from '@tests'
 
 export default defineTest({
   config: {

@@ -337,5 +337,8 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
+module.exports.BindingOutputAsset = nativeBinding.BindingOutputAsset
+module.exports.BindingOutputChunk = nativeBinding.BindingOutputChunk
+module.exports.BindingOutputs = nativeBinding.BindingOutputs
 module.exports.BindingPluginContext = nativeBinding.BindingPluginContext
 module.exports.Bundler = nativeBinding.Bundler

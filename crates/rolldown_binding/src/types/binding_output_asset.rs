@@ -1,17 +1,23 @@
-use derivative::Derivative;
-use serde::Deserialize;
+use napi_derive::napi;
 
-#[napi_derive::napi(object)]
-#[derive(Deserialize, Default, Derivative)]
-#[serde(rename_all = "camelCase")]
-#[derivative(Debug)]
+#[napi]
 pub struct BindingOutputAsset {
-  pub file_name: String,
-  pub source: String,
+  inner: Box<rolldown_common::OutputAsset>,
 }
 
-impl From<Box<rolldown_common::OutputAsset>> for BindingOutputAsset {
-  fn from(chunk: Box<rolldown_common::OutputAsset>) -> Self {
-    Self { source: chunk.source, file_name: chunk.file_name }
+#[napi]
+impl BindingOutputAsset {
+  pub fn new(inner: Box<rolldown_common::OutputAsset>) -> Self {
+    Self { inner }
+  }
+
+  #[napi(getter)]
+  pub fn file_name(&self) -> String {
+    self.inner.file_name.clone()
+  }
+
+  #[napi(getter)]
+  pub fn source(&self) -> String {
+    self.inner.source.clone()
   }
 }

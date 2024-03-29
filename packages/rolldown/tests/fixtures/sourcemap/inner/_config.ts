@@ -1,20 +1,17 @@
 // cSpell:disable
-import type { RollupOptions, RollupOutput } from 'rolldown'
 import path from 'node:path'
 import { expect } from 'vitest'
 import { getOutputFileNames } from '@tests/utils'
-import { defineTest } from '@tests'
-
-const config: RollupOptions = {
-  input: [path.join(__dirname, 'main.js')],
-  output: {
-    sourcemap: true,
-  },
-}
+import { defineTest } from '@tests/index'
 
 export default defineTest({
-  config,
-  afterTest: function (output: RollupOutput) {
+  config: {
+    input: [path.join(__dirname, 'main.js')],
+    output: {
+      sourcemap: true,
+    },
+  },
+  afterTest: function (output) {
     expect(getOutputFileNames(output)).toMatchInlineSnapshot(`
       [
         "main.js",

@@ -1,4 +1,4 @@
-import { defineTest } from '@tests'
+import { defineTest } from '@tests/index'
 
 export default defineTest({
   config: {

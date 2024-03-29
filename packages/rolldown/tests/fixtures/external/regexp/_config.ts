@@ -1,9 +1,7 @@
-import type { RollupOptions } from 'rolldown'
+import { defineTest } from '@tests/index'
 
-const config: RollupOptions = {
-  external: /external/,
-}
-
-export default {
-  config,
-}
+export default defineTest({
+  config: {
+    external: /external/,
+  },
+})

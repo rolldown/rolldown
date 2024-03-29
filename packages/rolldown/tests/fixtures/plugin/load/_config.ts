@@ -1,39 +1,37 @@
-import type { RollupOptions, RollupOutput } from 'rolldown'
+import { defineTest } from '@tests/index'
 import { expect, vi } from 'vitest'
 
 const loadFn = vi.fn()
 
-const config: RollupOptions = {
-  plugins: [
-    {
-      name: 'test-plugin',
-      resolveId: function (id, importer, options) {
-        if (id === 'foo') {
-          return {
-            id,
+export default defineTest({
+  config: {
+    plugins: [
+      {
+        name: 'test-plugin',
+        resolveId: function (id, importer, options) {
+          if (id === 'foo') {
+            return {
+              id,
+            }
           }
-        }
-      },
-      load: function (id) {
-        loadFn()
-        if (id === 'foo') {
-          return {
-            code: `console.log('foo')`,
+        },
+        load: function (id) {
+          loadFn()
+          if (id === 'foo') {
+            return {
+              code: `console.log('foo')`,
+            }
           }
-        }
+        },
+        transform: function (id, code) {
+          if (id === 'foo') {
+            expect(code).toStrictEqual('')
+          }
+        },
       },
-      transform: function (id, code) {
-        if (id === 'foo') {
-          expect(code).toStrictEqual('')
-        }
-      },
-    },
-  ],
-}
-
-export default {
-  config,
-  afterTest: (output: RollupOutput) => {
+    ],
+  },
+  afterTest: (output) => {
     expect(loadFn).toHaveBeenCalledTimes(2)
   },
-}
+})

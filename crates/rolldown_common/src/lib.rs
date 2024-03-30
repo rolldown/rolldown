@@ -1,3 +1,5 @@
+//! `rolldown_common` is mostly for sharing code between `rolldown` and `rolldown_plugin`. This means only `rolldown` and `rolldown_plugin`
+//! could rely on this crate. Other `rolldown_xxx` crates should not rely on this crate but other way around.
 mod module;
 mod types;
 

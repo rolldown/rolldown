@@ -174,8 +174,10 @@ impl<'a> BundleStage<'a> {
       }
       used_chunk_names.insert(chunk_name.clone());
 
-      chunk.file_name =
-        Some(file_name_tmp.render(&FileNameRenderOptions { name: Some(&chunk_name) }));
+      chunk.file_name = Some(
+        file_name_tmp
+          .render(&FileNameRenderOptions { name: Some(&chunk_name), hash: Some(&"hash") }),
+      );
     });
   }
 }

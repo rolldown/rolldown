@@ -1,3 +1,5 @@
+use core::hash;
+
 #[derive(Debug)]
 pub struct FileNameTemplate {
   template: String,
@@ -19,6 +21,7 @@ impl From<String> for FileNameTemplate {
 #[derive(Debug, Default)]
 pub struct FileNameRenderOptions<'me> {
   pub name: Option<&'me str>,
+  pub hash: Option<&'me str>,
 }
 
 impl FileNameTemplate {
@@ -26,6 +29,9 @@ impl FileNameTemplate {
     let mut tmp = self.template.clone();
     if let Some(name) = options.name {
       tmp = tmp.replace("[name]", name);
+    }
+    if let Some(hash) = options.name {
+      tmp = tmp.replace("[hash]", hash)
     }
     tmp
   }

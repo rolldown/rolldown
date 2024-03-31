@@ -5,8 +5,11 @@ import nodeAssert from 'node:assert'
 import nodePath from 'node:path'
 import { PROJECT_ROOT } from './src/constants.js'
 
-async function sleep(ms: number) {
-  await new Promise((resolve) => globalThis.setTimeout(resolve, ms))
+function sleep(ms: number) {
+  const now = performance.now()
+  while (performance.now() - now < ms) {
+    // Do nothing
+  }
 }
 
 function main() {
@@ -31,11 +34,11 @@ function main() {
     const realDataSourceMap = realBenchData[`${suite.title}-sourcemap`]
     nodeAssert(realData != null)
     nodeAssert(realDataSourceMap != null)
-    bench(suite.title, async () => {
-      await sleep(realData.mean)
+    bench(suite.title, () => {
+      sleep(realData.mean)
     })
-    bench(`${suite.title}-sourcemap`, async () => {
-      await sleep(realDataSourceMap.mean)
+    bench(`${suite.title}-sourcemap`, () => {
+      sleep(realDataSourceMap.mean)
     })
   }
 }

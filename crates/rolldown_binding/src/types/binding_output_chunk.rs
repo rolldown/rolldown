@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use napi_derive::napi;
 
@@ -6,12 +6,12 @@ use crate::types::binding_rendered_module::BindingRenderedModule;
 
 #[napi]
 pub struct BindingOutputChunk {
-  inner: Box<rolldown_common::OutputChunk>,
+  inner: Arc<rolldown_common::OutputChunk>,
 }
 
 #[napi]
 impl BindingOutputChunk {
-  pub fn new(inner: Box<rolldown_common::OutputChunk>) -> Self {
+  pub fn new(inner: Arc<rolldown_common::OutputChunk>) -> Self {
     Self { inner }
   }
 

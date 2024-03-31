@@ -1,13 +1,15 @@
+use std::sync::Arc;
+
 use napi_derive::napi;
 
 #[napi]
 pub struct BindingOutputAsset {
-  inner: Box<rolldown_common::OutputAsset>,
+  inner: Arc<rolldown_common::OutputAsset>,
 }
 
 #[napi]
 impl BindingOutputAsset {
-  pub fn new(inner: Box<rolldown_common::OutputAsset>) -> Self {
+  pub fn new(inner: Arc<rolldown_common::OutputAsset>) -> Self {
     Self { inner }
   }
 

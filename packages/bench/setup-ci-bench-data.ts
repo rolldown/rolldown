@@ -2,7 +2,7 @@ import { suitesForCI } from './src/suites.js'
 import { runRolldown } from './src/run-bundler.js'
 import { Bench } from 'tinybench'
 import nodePath from 'node:path'
-import nodeFs from 'node:fs/promises'
+import fsExtra from 'fs-extra'
 import { PROJECT_ROOT } from './src/constants.js'
 
 async function setupBenchmarkDataForCI() {
@@ -40,8 +40,8 @@ async function setupBenchmarkDataForCI() {
       ]
     }),
   )
-  await nodeFs.writeFile(
-    nodePath.join(PROJECT_ROOT, 'ci-bench-data.json'),
+  fsExtra.writeFileSync(
+    nodePath.join(PROJECT_ROOT, 'dist/ci-bench-data.json'),
     JSON.stringify(data, null, 2),
   )
 }

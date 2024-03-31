@@ -69,6 +69,9 @@ importers:
       esbuild:
         specifier: ^0.20.1
         version: 0.20.1
+      fs-extra:
+        specifier: ^11.2.0
+        version: 11.2.0
       react:
         specifier: ^18.2.0
         version: 18.2.0

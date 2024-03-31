@@ -1,14 +1,12 @@
 import { bench } from 'vitest'
 import { suitesForCI } from './src/suites.js'
-import { runRolldown } from './src/run-bundler.js'
-import { Bench } from 'tinybench'
 import nodeFs from 'node:fs'
 import nodeAssert from 'node:assert'
 import nodePath from 'node:path'
 import { PROJECT_ROOT } from './src/constants.js'
 
 async function sleep(ms: number) {
-  await new Promise((resolve) => setTimeout(resolve, ms))
+  await new Promise((resolve) => globalThis.setTimeout(resolve, ms))
 }
 
 function main() {
@@ -17,7 +15,7 @@ function main() {
   // - https://github.com/CodSpeedHQ/action/issues/96
   const realBenchData = JSON.parse(
     nodeFs.readFileSync(
-      nodePath.join(PROJECT_ROOT, 'ci-bench-data.json'),
+      nodePath.join(PROJECT_ROOT, 'dist/ci-bench-data.json'),
       'utf8',
     ),
   )

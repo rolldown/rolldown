@@ -15,17 +15,25 @@ function transformToRollupOutputChunk(
 ): RolldownOutputChunk {
   return {
     type: 'chunk',
-    code: chunk.code,
+    get code() {
+      return chunk.code
+    },
     fileName: chunk.fileName,
-    modules: Object.fromEntries(
-      Object.entries(chunk.modules).map(([key, _]) => [key, {}]),
-    ),
+    get modules() {
+      return Object.fromEntries(
+        Object.entries(chunk.modules).map(([key, _]) => [key, {}]),
+      )
+    },
     exports: chunk.exports,
     isEntry: chunk.isEntry,
     facadeModuleId: chunk.facadeModuleId || null,
     isDynamicEntry: chunk.isDynamicEntry,
-    moduleIds: chunk.moduleIds,
-    map: chunk.map ? JSON.parse(chunk.map) : null,
+    get moduleIds() {
+      return chunk.moduleIds
+    },
+    get map() {
+      return chunk.map ? JSON.parse(chunk.map) : null
+    },
     sourcemapFileName: chunk.sourcemapFileName || null,
   }
 }
@@ -36,7 +44,9 @@ function transformToRollupOutputAsset(
   return {
     type: 'asset',
     fileName: asset.fileName,
-    source: asset.source,
+    get source() {
+      return asset.source
+    },
   }
 }
 

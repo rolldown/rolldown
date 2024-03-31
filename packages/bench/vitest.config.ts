@@ -1,15 +1,7 @@
 import { defineConfig } from 'vitest/config'
+// @ts-expect-error: `@codspeed/vitest-plugin` doesn't specify `types` in `package.json#exports`.
+import codspeedPlugin from '@codspeed/vitest-plugin'
 
-const IS_CI = process.env.CI
-
-export default defineConfig(async () => {
-  let codspeedPlugin
-  if (IS_CI) {
-    // @ts-expect-error: `@codspeed/vitest-plugin` doesn't specify `types` in `package.json#exports`.
-    codspeedPlugin = (await import('@codspeed/vitest-plugin')).default
-    console.log('Codspeed plugin enabled')
-  }
-  return {
-    plugins: [codspeedPlugin].filter(Boolean),
-  }
+export default defineConfig({
+  plugins: process.env.CI ? [codspeedPlugin()] : [],
 })

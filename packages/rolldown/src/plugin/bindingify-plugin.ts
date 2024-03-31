@@ -8,6 +8,11 @@ import {
   bindingifyTransform,
 } from './bindingify-build-hooks'
 
+import {
+  bindingifyGenerateBundle,
+  bindingifyWriteBundle,
+} from './bindingify-output-hooks'
+
 import type { Plugin } from './index'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
 
@@ -24,5 +29,7 @@ export function bindingifyPlugin(
     transform: bindingifyTransform(plugin.transform),
     load: bindingifyLoad(plugin.load),
     renderChunk: bindingifyRenderChunk(plugin.renderChunk),
+    generateBundle: bindingifyGenerateBundle(plugin.generateBundle),
+    writeBundle: bindingifyWriteBundle(plugin.writeBundle),
   }
 }

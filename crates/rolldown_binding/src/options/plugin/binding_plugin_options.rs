@@ -59,11 +59,11 @@ pub struct BindingPluginOptions {
     Option<MaybeAsyncJsCallback<(String, RenderedChunk), Option<BindingHookRenderChunkOutput>>>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(bundle: Outputs, isWrite: boolean) => MaybePromise<VoidNullable>")]
+  #[napi(ts_type = "(bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>")]
   pub generate_bundle: Option<MaybeAsyncJsCallback<(BindingOutputs, bool), ()>>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(bundle: Outputs) => MaybePromise<VoidNullable>")]
+  #[napi(ts_type = "(bundle: BindingOutputs) => MaybePromise<VoidNullable>")]
   pub write_bundle: Option<MaybeAsyncJsCallback<BindingOutputs, ()>>,
 }
 

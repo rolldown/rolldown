@@ -44,7 +44,21 @@ export function bindingifyResolveId(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (specifier, importer, options) => {
-    return await handler.call(null, specifier, importer ?? undefined, options)
+    const ret = await handler.call(
+      null,
+      specifier,
+      importer ?? undefined,
+      options,
+    )
+    if (ret == false || ret == null) {
+      return
+    }
+    if (typeof ret === 'string') {
+      return {
+        id: ret,
+      }
+    }
+    return ret
   }
 }
 

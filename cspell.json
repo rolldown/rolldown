@@ -9,6 +9,7 @@
     "*.json",
     "*.toml",
     "*.css",
+    "*.svg",
     "/rollup",
     "/packages/rollup-tests/test",
     "/target",
@@ -107,6 +108,7 @@
     "vite",
     "vitepress",
     "Yinan",
-    "Yunfei"
+    "Yunfei",
+    "dataurl"
   ]
 }

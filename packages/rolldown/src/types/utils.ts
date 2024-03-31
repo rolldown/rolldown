@@ -3,3 +3,5 @@ export interface AnyFn {
 }
 
 export interface AnyObj {}
+
+export type NullValue<T = void> = T | undefined | null | void

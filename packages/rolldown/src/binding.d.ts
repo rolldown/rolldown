@@ -119,10 +119,10 @@ export interface BindingPluginOptions {
     chunk: RenderedChunk,
   ) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   generateBundle?: (
-    bundle: Outputs,
+    bundle: BindingOutputs,
     isWrite: boolean,
   ) => MaybePromise<VoidNullable>
-  writeBundle?: (bundle: Outputs) => MaybePromise<VoidNullable>
+  writeBundle?: (bundle: BindingOutputs) => MaybePromise<VoidNullable>
 }
 
 export interface BindingRenderedModule {

@@ -61,13 +61,13 @@ for (const suite of suitesForCI) {
   nodeAssert(realDataSourceMap != null)
   console.log('suite.title:', suite.title)
   bench(suite.title, async () => {
-    sleep(realData.mean)
+    await sleep(realData.mean)
   })
   bench(`${suite.title}-sourcemap`, async () => {
-    sleep(realDataSourceMap.mean)
+    await sleep(realDataSourceMap.mean)
   })
 }
 
 async function sleep(ms: number) {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+  await new Promise((resolve) => setTimeout(resolve, ms))
 }

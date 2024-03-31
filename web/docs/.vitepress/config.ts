@@ -65,7 +65,7 @@ export default defineConfig({
         { text: 'Overview', link: '/contrib-guide/' },
         { text: 'Setup', link: '/contrib-guide/setup.md' },
         { text: 'Build', link: '/contrib-guide/build.md' },
-        { text: 'Test', link: '/contrib-guide/test.md' },
+        { text: 'Testing', link: '/contrib-guide/testing.md' },
         { text: 'Benchmark', link: '/contrib-guide/benchmark.md' },
         { text: 'Docs', link: '/contrib-guide/docs.md' },
         { text: 'Release', link: '/contrib-guide/release.md' },

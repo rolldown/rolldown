@@ -32,7 +32,7 @@ Make sure to [build Node.js bindings](./build.md) before running these tests.
 
 ### Node.js API tests
 
-Tests located in `packages/rolldown/test` are used to test Rolldown's Node.js API (i.e. the API of the `rolldown` package published on NPM).
+Tests located in `packages/rolldown/tests` are used to test Rolldown's Node.js API (i.e. the API of the `rolldown` package published on NPM).
 
 It is our goal to align Rolldown's Node.js API with that of Rollup's as much as possible, and the tests are used to verify API alignment and track the progress. Currently, there are many Rollup options that are not yet supported. If you implemented support for additional options from rollup, please add corresponding test cases for them.
 

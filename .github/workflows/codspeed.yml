@@ -66,6 +66,11 @@ jobs:
       - name: Build packages
         run: pnpm build:release
 
+      - name: Dry Run
+        run: pnpm --filter bench run bench-ci
+        env:
+          DISABLE_CODSPEED: true
+
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@v2
         with:

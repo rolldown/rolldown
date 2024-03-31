@@ -49,8 +49,11 @@ async function setupBenchmarkDataForCI() {
   return data
 }
 
-async function sleep(ms: number) {
-  return new Promise((resolve) => globalThis.setTimeout(resolve, ms))
+function sleep(ms: number) {
+  const now = performance.now()
+  while (performance.now() - now < ms) {
+    // Do nothing
+  }
 }
 
 async function runForCodSpeed() {
@@ -62,11 +65,11 @@ async function runForCodSpeed() {
   for (const suite of suitesForCI) {
     const realData = benchData[suite.title]
     const realDataSourceMap = benchData[`${suite.title}-sourcemap`]
-    bench.add(suite.title, async () => {
-      await sleep(realData.mean)
+    bench.add(suite.title, () => {
+      sleep(realData.mean)
     })
-    bench.add(`${suite.title}-sourcemap`, async () => {
-      await sleep(realDataSourceMap.mean)
+    bench.add(`${suite.title}-sourcemap`, () => {
+      sleep(realDataSourceMap.mean)
     })
   }
   await bench.run()

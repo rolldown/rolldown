@@ -20,7 +20,6 @@ async function collectRealBenchmarkData() {
   await bench.warmup()
   console.log('Running benchmarks')
   await bench.run()
-  console.table(bench.table())
 
   return Object.fromEntries(
     bench.tasks.map((task) => {
@@ -35,7 +34,6 @@ async function collectRealBenchmarkData() {
           mean: task.result.mean,
           p75: task.result.p75,
           p99: task.result.p99,
-          p995: task.result.p995,
           p999: task.result.p999,
         },
       ]
@@ -59,7 +57,6 @@ for (const suite of suitesForCI) {
   const realDataSourceMap = realBenchData[`${suite.title}-sourcemap`]
   nodeAssert(realData != null)
   nodeAssert(realDataSourceMap != null)
-  console.log('suite.title:', suite.title)
   bench(suite.title, async () => {
     await sleep(realData.mean)
   })

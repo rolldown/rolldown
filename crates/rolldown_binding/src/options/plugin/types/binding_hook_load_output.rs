@@ -20,8 +20,8 @@ impl TryFrom<BindingHookLoadOutput> for rolldown_plugin::HookLoadOutput {
       map: value
         .map
         .map(|content| {
-          rolldown_sourcemap::SourceMap::from_slice(content.as_bytes())
-            .map_err(|e| BuildError::sourcemap_error(e.to_string()))
+          rolldown_sourcemap::SourceMap::from_json_string(&content)
+            .map_err(BuildError::sourcemap_error)
         })
         .transpose()?,
     })

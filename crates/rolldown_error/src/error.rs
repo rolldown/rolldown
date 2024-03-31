@@ -97,8 +97,8 @@ impl BuildError {
     Self::new_inner(UnresolvedImport { specifier: specifier.into(), importer: importer.into() })
   }
 
-  pub fn sourcemap_error(reason: String) -> Self {
-    Self::new_inner(SourceMapError { reason })
+  pub fn sourcemap_error(error: oxc::sourcemap::Error) -> Self {
+    Self::new_inner(SourceMapError { error })
   }
 
   // --- rolldown specific

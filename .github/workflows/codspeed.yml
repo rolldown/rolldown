@@ -66,6 +66,9 @@ jobs:
       - name: Build packages
         run: pnpm build:release
 
+      - name: Collect Benchmarks Data
+        run: pnpm --filter bench run bench-ci:setup
+
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@v2
         with:

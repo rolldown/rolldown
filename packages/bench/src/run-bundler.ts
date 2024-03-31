@@ -5,7 +5,7 @@ import * as esbuild from 'esbuild'
 import * as rollup from 'rollup'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
-import { PROJECT_ROOT } from './utils.js'
+import { PROJECT_ROOT } from './constants.js'
 
 export async function runRolldown(suite: BenchSuite, sourcemap: boolean) {
   const build = await rolldown.rolldown({

@@ -1,5 +1,5 @@
 import nodePath from 'node:path'
-import { PROJECT_ROOT, REPO_ROOT } from './utils.js'
+import { PROJECT_ROOT, REPO_ROOT } from './constants.js'
 
 export interface BenchSuite {
   title: string

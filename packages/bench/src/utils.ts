@@ -1,7 +1,7 @@
 import nodePath from 'node:path'
 import nodeUrl from 'node:url'
 import { bench, describe } from 'vitest'
-import { runRolldown, runEsbuild, runRollup } from './/run-bundler.js'
+import { runRolldown, runEsbuild, runRollup } from './run-bundler.js'
 import { BenchSuite } from './suites.js'
 
 const dirname = nodePath.dirname(nodeUrl.fileURLToPath(import.meta.url))

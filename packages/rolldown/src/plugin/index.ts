@@ -2,6 +2,7 @@ import {
   BindingHookResolveIdExtraOptions,
   BindingPluginContext,
   RenderedChunk,
+  BindingOutputs,
 } from '../binding'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
 import { AnyFn, AnyObj } from '../types/utils'
@@ -82,4 +83,9 @@ export interface Plugin {
 
   buildEnd?: Hook<(this: null, err?: string) => MaybePromise<NullValue>>
   // --- Output hooks ---
+
+  generateBundle?: Hook<
+    (bundle: BindingOutputs[], isWrite: boolean) => MaybePromise<NullValue>
+  >
+  writeBundle?: Hook<(bundle: BindingOutputs[]) => MaybePromise<NullValue>>
 }

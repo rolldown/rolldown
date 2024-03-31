@@ -60,7 +60,9 @@ for (const suite of suitesForCI) {
   nodeAssert(realData != null)
   nodeAssert(realDataSourceMap != null)
   bench(suite.title, async () => {
+    console.log('Running real benchmark for', suite.title)
     sleep(realData.mean)
+    console.log('2Running real benchmark for', suite.title)
   })
   bench(`${suite.title}-sourcemap`, async () => {
     sleep(realDataSourceMap.mean)

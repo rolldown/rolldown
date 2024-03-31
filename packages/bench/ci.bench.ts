@@ -59,6 +59,7 @@ for (const suite of suitesForCI) {
   const realDataSourceMap = realBenchData[`${suite.title}-sourcemap`]
   nodeAssert(realData != null)
   nodeAssert(realDataSourceMap != null)
+  console.log('suite.title:', suite.title)
   bench(suite.title, async () => {
     sleep(realData.mean)
   })

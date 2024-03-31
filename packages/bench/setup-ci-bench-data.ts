@@ -4,6 +4,7 @@ import { Bench } from 'tinybench'
 import nodePath from 'node:path'
 import fsExtra from 'fs-extra'
 import { PROJECT_ROOT } from './src/constants.js'
+import { withCodSpeed } from '@codspeed/tinybench-plugin'
 
 async function setupBenchmarkDataForCI() {
   const bench = new Bench()
@@ -44,6 +45,32 @@ async function setupBenchmarkDataForCI() {
     nodePath.join(PROJECT_ROOT, 'dist/ci-bench-data.json'),
     JSON.stringify(data, null, 2),
   )
+
+  return data
 }
 
-setupBenchmarkDataForCI()
+async function sleep(ms: number) {
+  return new Promise((resolve) => globalThis.setTimeout(resolve, ms))
+}
+
+async function runForCodSpeed() {
+  const benchData = await setupBenchmarkDataForCI()
+  console.log('benchData:')
+  console.table(benchData)
+  const bench = withCodSpeed(new Bench())
+
+  for (const suite of suitesForCI) {
+    const realData = benchData[suite.title]
+    const realDataSourceMap = benchData[`${suite.title}-sourcemap`]
+    bench.add(suite.title, async () => {
+      await sleep(realData.mean)
+    })
+    bench.add(`${suite.title}-sourcemap`, async () => {
+      await sleep(realDataSourceMap.mean)
+    })
+  }
+  await bench.run()
+  console.table(bench.table())
+}
+
+runForCodSpeed()

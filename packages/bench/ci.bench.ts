@@ -6,7 +6,6 @@ import nodePath from 'node:path'
 import { PROJECT_ROOT } from './src/constants.js'
 
 async function sleep(ms: number) {
-  console.log(`Sleeping for ${ms}ms`)
   await new Promise((resolve) => globalThis.setTimeout(resolve, ms))
 }
 

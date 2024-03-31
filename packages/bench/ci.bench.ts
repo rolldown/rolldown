@@ -68,9 +68,5 @@ for (const suite of suitesForCI) {
 }
 
 async function sleep(ms: number) {
-  const now = performance.now()
-  let updated = performance.now()
-  while (updated - now < ms) {
-    updated = performance.now()
-  }
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
 }

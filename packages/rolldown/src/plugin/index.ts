@@ -85,7 +85,7 @@ export interface Plugin {
   // --- Output hooks ---
 
   generateBundle?: Hook<
-    (bundle: BindingOutputs[], isWrite: boolean) => MaybePromise<NullValue>
+    (bundle: BindingOutputs, isWrite: boolean) => MaybePromise<NullValue>
   >
-  writeBundle?: Hook<(bundle: BindingOutputs[]) => MaybePromise<NullValue>>
+  writeBundle?: Hook<(bundle: BindingOutputs) => MaybePromise<NullValue>>
 }

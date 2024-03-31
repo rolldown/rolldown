@@ -117,7 +117,7 @@ impl Plugin for JsPlugin {
 
   async fn generate_bundle(
     &self,
-    _ctx: &rolldown_plugin::SharedPluginContext,
+    ctx: &rolldown_plugin::SharedPluginContext,
     bundle: &Vec<rolldown_common::Output>,
     is_write: bool,
   ) -> rolldown_plugin::HookNoopReturn {

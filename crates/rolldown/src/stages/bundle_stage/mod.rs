@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
   chunk::ChunkRenderReturn,
   chunk_graph::ChunkGraph,
@@ -102,7 +104,7 @@ impl<'a> BundleStage<'a> {
                 unsafe { String::from_utf8_unchecked(buf) }
               };
               let map_file_name = format!("{}.map", rendered_chunk.file_name);
-              assets.push(Output::Asset(Box::new(OutputAsset {
+              assets.push(Output::Asset(Arc::new(OutputAsset {
                 file_name: map_file_name.clone(),
                 source: map,
               })));
@@ -117,7 +119,7 @@ impl<'a> BundleStage<'a> {
           }
         }
         let sourcemap_file_name = map.as_ref().map(|_| format!("{}.map", rendered_chunk.file_name));
-        assets.push(Output::Chunk(Box::new(OutputChunk {
+        assets.push(Output::Chunk(Arc::new(OutputChunk {
           file_name: rendered_chunk.file_name,
           code,
           is_entry: rendered_chunk.is_entry,

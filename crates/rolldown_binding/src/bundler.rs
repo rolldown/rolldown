@@ -85,7 +85,7 @@ impl Bundler {
 
     Self::handle_warnings(outputs.warnings);
 
-    Ok(outputs.assets.into())
+    Ok(BindingOutputs::new(outputs.assets))
   }
 
   #[instrument(skip_all)]
@@ -104,7 +104,7 @@ impl Bundler {
 
     Self::handle_warnings(outputs.warnings);
 
-    Ok(outputs.assets.into())
+    Ok(BindingOutputs::new(outputs.assets))
   }
 
   fn handle_errors(errs: BatchedErrors) -> napi::Error {

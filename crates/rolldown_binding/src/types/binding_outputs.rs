@@ -1,27 +1,44 @@
-use derivative::Derivative;
-use serde::Deserialize;
+use std::sync::Arc;
+
+use napi_derive::napi;
 
 use super::{binding_output_asset::BindingOutputAsset, binding_output_chunk::BindingOutputChunk};
 
-#[napi_derive::napi(object)]
-#[derive(Deserialize, Default, Derivative)]
-#[serde(rename_all = "camelCase")]
-#[derivative(Debug)]
+#[napi]
 pub struct BindingOutputs {
-  pub chunks: Vec<BindingOutputChunk>,
-  pub assets: Vec<BindingOutputAsset>,
+  inner: Vec<rolldown_common::Output>,
 }
 
-impl From<Vec<rolldown_common::Output>> for BindingOutputs {
-  fn from(outputs: Vec<rolldown_common::Output>) -> Self {
-    let mut chunks: Vec<BindingOutputChunk> = vec![];
-    let mut assets: Vec<BindingOutputAsset> = vec![];
+#[napi]
+impl BindingOutputs {
+  pub fn new(inner: Vec<rolldown_common::Output>) -> Self {
+    Self { inner }
+  }
 
-    outputs.into_iter().for_each(|o| match o {
-      rolldown_common::Output::Chunk(chunk) => chunks.push(chunk.into()),
-      rolldown_common::Output::Asset(asset) => assets.push(asset.into()),
+  #[napi(getter)]
+  pub fn chunks(&self) -> Vec<BindingOutputChunk> {
+    let mut chunks: Vec<BindingOutputChunk> = vec![];
+
+    self.inner.iter().for_each(|o| match o {
+      rolldown_common::Output::Chunk(chunk) => {
+        chunks.push(BindingOutputChunk::new(Arc::clone(chunk)));
+      }
+      rolldown_common::Output::Asset(_) => {}
     });
 
-    Self { chunks, assets }
+    chunks
+  }
+
+  #[napi(getter)]
+  pub fn assets(&self) -> Vec<BindingOutputAsset> {
+    let mut assets: Vec<BindingOutputAsset> = vec![];
+
+    self.inner.iter().for_each(|o| match o {
+      rolldown_common::Output::Asset(asset) => {
+        assets.push(BindingOutputAsset::new(Arc::clone(asset)));
+      }
+      rolldown_common::Output::Chunk(_) => {}
+    });
+    assets
   }
 }

@@ -9,8 +9,6 @@ impl Chunk {
   pub fn de_conflict(&mut self, graph: &LinkStageOutput) {
     let mut renamer = Renamer::new(&graph.symbols, graph.module_table.normal_modules.len());
 
-    // TODO: reserve names for keywords in both non-strict and strict mode
-
     self
       .modules
       .iter()

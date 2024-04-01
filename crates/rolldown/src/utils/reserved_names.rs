@@ -1,4 +1,4 @@
-pub const RESERVED_NAMES: [&str; 46] = [
+pub const RESERVED_NAMES: [&str; 48] = [
   "await",
   "break",
   "case",
@@ -45,4 +45,6 @@ pub const RESERVED_NAMES: [&str; 46] = [
   "while",
   "with",
   "yield",
+  "NaN",
+  "undefined",
 ];

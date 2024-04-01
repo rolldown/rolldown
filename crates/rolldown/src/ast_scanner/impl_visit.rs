@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use oxc::{
-  ast::{ast::IdentifierReference, Visit},
+  ast::{ast::IdentifierReference, visit::walk::walk_statement, Visit},
   codegen::{self, Codegen, CodegenOptions, Gen},
 };
 use rolldown_common::ImportKind;
@@ -25,7 +25,8 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
       if cfg!(debug_assertions) {
         let mut codegen = Codegen::<false>::new(
           "",
-          CodegenOptions { enable_typescript: true, enable_source_map: None },
+          "",
+          CodegenOptions { enable_typescript: true, enable_source_map: false },
         );
         stmt.gen(&mut codegen, codegen::Context::default());
         self.current_stmt_info.debug_label = Some(codegen.into_source_text());
@@ -75,7 +76,7 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
     if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
       self.scan_module_decl(decl.0);
     }
-    self.visit_statement_match(stmt);
+    walk_statement(self, stmt);
   }
 
   fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {

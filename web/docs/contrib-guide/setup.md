@@ -75,7 +75,7 @@ The following commands are available and should be used in your standard develop
 - `just lint` - Lint the codebase.
 - `just fmt` - Fix formatting issues.
 - `just check` - Run the type checker.
-- `just test` - Runs tests. Also see [Testing](./test.md).
+- `just test` - Runs tests. Also see [Testing](./testing.md).
 
 > Most of commands will run both Rust and Node.js scripts. To only target one, append `-rust` or `-node` to the just command. For example, `just lint-rust` or `just check-node`.
 

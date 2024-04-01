@@ -9,6 +9,7 @@
     "*.json",
     "*.toml",
     "*.css",
+    "*.svg",
     "/rollup",
     "/packages/rollup-tests/test",
     "/target",
@@ -66,6 +67,7 @@
     "importee",
     "importstar",
     "insta",
+    "instanceof",
     "libc",
     "Lukas",
     "metafile",
@@ -107,6 +109,7 @@
     "vite",
     "vitepress",
     "Yinan",
-    "Yunfei"
+    "Yunfei",
+    "dataurl"
   ]
 }

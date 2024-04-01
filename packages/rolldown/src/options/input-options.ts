@@ -12,6 +12,7 @@ export interface InputOptions {
   plugins?: Plugin[]
   external?: RollupInputOptions['external']
   resolve?: RolldownResolveOptions
+  cwd?: string
 }
 
 export type RolldownResolveOptions = Omit<BindingResolveOptions, 'alias'> & {

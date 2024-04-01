@@ -6,6 +6,7 @@ use rolldown_rstr::{Rstr, ToRstr};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::types::{module_table::NormalModuleVec, symbols::Symbols};
+use crate::utils::reserved_names::RESERVED_NAMES;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
@@ -19,7 +20,7 @@ impl<'name> Renamer<'name> {
     Self {
       canonical_names: FxHashMap::default(),
       symbols,
-      used_canonical_names: FxHashSet::default(),
+      used_canonical_names: RESERVED_NAMES.iter().map(|&s| Cow::Owned(s.into())).collect(),
     }
   }
 

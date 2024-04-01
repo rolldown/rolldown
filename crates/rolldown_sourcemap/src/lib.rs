@@ -1,9 +1,11 @@
 // cSpell:disable
-pub use sourcemap::{SourceMap, SourceMapBuilder};
-mod concat_sourcemap;
-
 pub use concat_sourcemap::{ConcatSource, RawSource, SourceMapSource};
+pub use oxc::sourcemap::SourceMap;
+
+use oxc::sourcemap::SourceMapBuilder;
 use rolldown_error::BuildError;
+
+mod concat_sourcemap;
 
 pub fn collapse_sourcemaps(
   mut sourcemap_chain: Vec<&SourceMap>,
@@ -14,33 +16,41 @@ pub fn collapse_sourcemaps(
     return Ok(Some(last_map.clone()));
   }
 
-  let mut sourcemap_builder = SourceMapBuilder::new(None);
+  let mut sourcemap_builder = SourceMapBuilder::default();
 
-  for token in last_map.tokens() {
-    let original_token = sourcemap_chain.iter().rev().try_fold(token, |token, sourcemap| {
-      sourcemap.lookup_token(token.get_src_line(), token.get_src_col())
-    });
+  let sourcemap_and_lookup_table = sourcemap_chain
+    .iter()
+    .map(|sourcemap| (sourcemap, sourcemap.generate_lookup_table()))
+    .collect::<Vec<_>>();
+
+  for token in last_map.get_source_view_tokens() {
+    let original_token = sourcemap_and_lookup_table.iter().rev().try_fold(
+      token,
+      |token, (sourcemap, lookup_table)| {
+        sourcemap.lookup_source_view_token(lookup_table, token.get_src_line(), token.get_src_col())
+      },
+    );
 
     if let Some(original_token) = original_token {
-      token.get_name().map(|name| sourcemap_builder.add_name(name));
+      token
+        .get_name_id()
+        .and_then(|id| last_map.get_name(id))
+        .map(|name| sourcemap_builder.add_name(name));
 
-      let new_token = sourcemap_builder.add(
+      let name_id = original_token.get_name().map(|name| sourcemap_builder.add_name(name));
+
+      let source_id = original_token.get_source_and_content().map(|(source, source_content)| {
+        sourcemap_builder.add_source_and_content(source, source_content)
+      });
+
+      sourcemap_builder.add_token(
         token.get_dst_line(),
         token.get_dst_col(),
         original_token.get_src_line(),
         original_token.get_src_col(),
-        original_token.get_source(),
-        original_token.get_name(),
+        source_id,
+        name_id,
       );
-
-      if original_token.get_source().is_some()
-        && !sourcemap_builder.has_source_contents(new_token.src_id)
-      {
-        sourcemap_builder.set_source_contents(
-          new_token.src_id,
-          original_token.get_source_view().map(sourcemap::SourceView::source),
-        );
-      }
     }
   }
 
@@ -53,7 +63,7 @@ mod tests {
   #[test]
   fn it_works() {
     let sourcemaps = vec![
-      SourceMap::from_slice(
+      SourceMap::from_json_string(
         r#"{
         "mappings": ";CAEE",
         "names": [],
@@ -61,11 +71,10 @@ mod tests {
         "sourcesContent": ["\n\n  1 + 1;"],
         "version": 3,
         "ignoreList": []
-      }"#
-          .as_bytes(),
+      }"#,
       )
       .unwrap(),
-      SourceMap::from_slice(
+      SourceMap::from_json_string(
         r#"{
         "file": "transpiled.min.js",
         "mappings": "AACCA",
@@ -74,8 +83,7 @@ mod tests {
         "sourcesContent": ["1+1"],
         "version": 3,
         "ignoreList": []
-      }"#
-          .as_bytes(),
+      }"#,
       )
       .unwrap(),
     ];
@@ -83,12 +91,10 @@ mod tests {
     let result = {
       let map =
         super::collapse_sourcemaps(sourcemaps.iter().collect()).expect("should not fail").unwrap();
-      let mut buf = vec![];
-      map.to_writer(&mut buf).unwrap();
-      unsafe { String::from_utf8_unchecked(buf) }
+      map.to_json_string()
     };
 
-    let expected = "{\"version\":3,\"sources\":[\"helloworld.js\"],\"sourcesContent\":[\"\\n\\n  1 + 1;\"],\"names\":[\"add\"],\"mappings\":\"AAEE\"}";
+    let expected = "{\"version\":3,\"names\":[\"add\"],\"sources\":[\"helloworld.js\"],\"sourcesContent\":[\"\\n\\n  1 + 1;\"],\"mappings\":\"AAEE\"}";
 
     assert_eq!(&result, expected);
   }

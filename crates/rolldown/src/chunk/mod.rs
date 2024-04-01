@@ -109,17 +109,11 @@ impl Chunk {
             input_options,
           },
           &graph.ast_table[m.id],
-          if output_options.sourcemap.is_hidden() {
-            None
-          } else {
-            Some(
-              m.resource_id
+          m.resource_id
                 .expect_file()
                 .relative_path(&input_options.cwd)
-                .to_string_lossy()
-                .to_string(),
-            )
-          },
+                .to_string_lossy().as_ref(),
+           !output_options.sourcemap.is_hidden()
         );
         Some((
           m.resource_id.expect_file().to_string(),

@@ -2,7 +2,7 @@ use super::BuildErrorLike;
 
 #[derive(Debug)]
 pub struct SourceMapError {
-  pub reason: String,
+  pub error: oxc::sourcemap::Error,
 }
 
 impl BuildErrorLike for SourceMapError {
@@ -11,6 +11,6 @@ impl BuildErrorLike for SourceMapError {
   }
 
   fn message(&self) -> String {
-    format!("Error when using sourcemap for reporting an error: {}", self.reason)
+    format!("Error when using sourcemap for reporting an error: {:?}", self.error)
   }
 }

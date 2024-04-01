@@ -33,13 +33,9 @@ function main() {
 async function compileFixture(fixturePath: string, config: TestConfig) {
   let outputOptions: OutputOptions = config.config?.output ?? {}
   delete config.config?.output
-  outputOptions = {
-    dir: outputOptions.dir ?? nodePath.join(fixturePath, 'dist'),
-    ...outputOptions,
-  }
-
   const inputOptions: InputOptions = {
-    input: config.config?.input ?? nodePath.join(fixturePath, 'main.js'),
+    input: 'main.js',
+    cwd: fixturePath,
     ...config.config,
   }
   const build = await rolldown(inputOptions)

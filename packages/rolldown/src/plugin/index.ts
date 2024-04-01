@@ -2,13 +2,12 @@ import {
   BindingHookResolveIdExtraOptions,
   BindingPluginContext,
   RenderedChunk,
+  BindingOutputs,
 } from '../binding'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
-import { AnyFn, AnyObj } from '../types/utils'
+import { AnyFn, AnyObj, NullValue } from '../types/utils'
 
 type MaybePromise<T> = T | Promise<T>
-
-type NullValue = null | undefined | void
 
 // Use a type alias here, we might wrap `BindingPluginContext` in the future
 type PluginContext = BindingPluginContext
@@ -40,7 +39,9 @@ export interface Plugin {
       importer: string | undefined,
       extraOptions: BindingHookResolveIdExtraOptions,
     ) => MaybePromise<
+      | string
       | NullValue
+      | false
       | {
           id: string
           external?: boolean
@@ -82,4 +83,9 @@ export interface Plugin {
 
   buildEnd?: Hook<(this: null, err?: string) => MaybePromise<NullValue>>
   // --- Output hooks ---
+
+  generateBundle?: Hook<
+    (bundle: BindingOutputs, isWrite: boolean) => MaybePromise<NullValue>
+  >
+  writeBundle?: Hook<(bundle: BindingOutputs) => MaybePromise<NullValue>>
 }

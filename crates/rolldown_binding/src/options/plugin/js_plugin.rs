@@ -1,4 +1,4 @@
-use crate::types::js_callback::MaybeAsyncJsCallbackExt;
+use crate::types::{binding_outputs::BindingOutputs, js_callback::MaybeAsyncJsCallbackExt};
 use rolldown_plugin::Plugin;
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 
@@ -122,7 +122,7 @@ impl Plugin for JsPlugin {
     is_write: bool,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.generate_bundle {
-      cb.await_call((bundle.clone().into(), is_write)).await?;
+      cb.await_call((BindingOutputs::new(bundle.clone()), is_write)).await?;
     }
     Ok(())
   }
@@ -133,7 +133,7 @@ impl Plugin for JsPlugin {
     bundle: &Vec<rolldown_common::Output>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.write_bundle {
-      cb.await_call(bundle.clone().into()).await?;
+      cb.await_call(BindingOutputs::new(bundle.clone())).await?;
     }
     Ok(())
   }

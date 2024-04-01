@@ -30,7 +30,7 @@ init:
     git submodule update --init
 
 init-rust:
-    cargo binstall taplo-cli cargo-insta cargo-deny typos-cli -y
+    cargo binstall taplo-cli cargo-insta cargo-deny -y
 
 init-node:
     pnpm install
@@ -50,13 +50,9 @@ check-rust:
 check-node:
     pnpm type-check
 
-check-typo:
-    typos
-
 check:
     just check-rust
     just check-node
-    just check-typo
 
 # run tests for both Rust and Node.js
 test:

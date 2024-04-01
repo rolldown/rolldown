@@ -193,7 +193,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 
     console.log(testCaseName)
     // Skip some test cases by ignoredTestName
-    if (ignoredTestName.some((name) => testCaseName.includes(name))) {
+    if (ignoredTestName.some((name) => testCaseName?.includes(name))) {
       continue
     }
     const testDir = path.resolve(TESTS_ROOT_DIR, testCaseName)

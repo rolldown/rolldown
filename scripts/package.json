@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc -b"
   },
   "dependencies": {
     "@parcel/watcher": "^2.4.1",

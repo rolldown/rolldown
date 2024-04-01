@@ -99,8 +99,9 @@ impl OxcCompiler {
     OxcProgram { program, source, allocator }
   }
 
-  pub fn print(ast: &OxcProgram, enable_source_map: Option<String>) -> CodegenReturn {
+  pub fn print(ast: &OxcProgram, source_name: &str, enable_source_map: bool) -> CodegenReturn {
     let codegen = Codegen::<false>::new(
+      source_name,
       ast.source(),
       CodegenOptions { enable_typescript: false, enable_source_map },
     );
@@ -111,6 +112,6 @@ impl OxcCompiler {
 #[test]
 fn basic_test() {
   let ast = OxcCompiler::parse("const a = 1;".to_string(), SourceType::default());
-  let code = OxcCompiler::print(&ast, None).source_text;
+  let code = OxcCompiler::print(&ast, "", false).source_text;
   assert_eq!(code, "const a = 1;\n");
 }

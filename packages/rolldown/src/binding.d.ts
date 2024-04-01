@@ -1,6 +1,29 @@
 type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
+export class BindingOutputAsset {
+  get fileName(): string
+  get source(): string
+}
+
+export class BindingOutputChunk {
+  get isEntry(): boolean
+  get isDynamicEntry(): boolean
+  get facadeModuleId(): string | null
+  get moduleIds(): Array<string>
+  get exports(): Array<string>
+  get fileName(): string
+  get modules(): Record<string, BindingRenderedModule>
+  get code(): string
+  get map(): string | null
+  get sourcemapFileName(): string | null
+}
+
+export class BindingOutputs {
+  get chunks(): Array<BindingOutputChunk>
+  get assets(): Array<BindingOutputAsset>
+}
+
 export class BindingPluginContext {
   resolve(
     specifier: string,
@@ -57,24 +80,6 @@ export interface BindingInputOptions {
   cwd: string
 }
 
-export interface BindingOutputAsset {
-  fileName: string
-  source: string
-}
-
-export interface BindingOutputChunk {
-  isEntry: boolean
-  isDynamicEntry: boolean
-  facadeModuleId?: string
-  moduleIds: Array<string>
-  exports: Array<string>
-  fileName: string
-  modules: Record<string, BindingRenderedModule>
-  code: string
-  map?: string
-  sourcemapFileName?: string
-}
-
 export interface BindingOutputOptions {
   entryFileNames?: string
   chunkFileNames?: string
@@ -89,11 +94,6 @@ export interface BindingOutputOptions {
   format?: 'es' | 'cjs'
   plugins: Array<BindingPluginOptions>
   sourcemap?: 'file' | 'inline' | 'hidden'
-}
-
-export interface BindingOutputs {
-  chunks: Array<BindingOutputChunk>
-  assets: Array<BindingOutputAsset>
 }
 
 export interface BindingPluginContextResolveOptions {
@@ -119,10 +119,10 @@ export interface BindingPluginOptions {
     chunk: RenderedChunk,
   ) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   generateBundle?: (
-    bundle: Outputs,
+    bundle: BindingOutputs,
     isWrite: boolean,
   ) => MaybePromise<VoidNullable>
-  writeBundle?: (bundle: Outputs) => MaybePromise<VoidNullable>
+  writeBundle?: (bundle: BindingOutputs) => MaybePromise<VoidNullable>
 }
 
 export interface BindingRenderedModule {

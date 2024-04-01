@@ -4,6 +4,7 @@ use oxc::{
   allocator,
   ast::{
     ast::{self, SimpleAssignmentTarget},
+    visit::walk_mut::walk_expression_mut,
     VisitMut,
   },
   span::{Span, SPAN},
@@ -339,7 +340,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     self.try_rewrite_identifier_reference_expr(expr, false);
 
     // visit children
-    self.visit_expression_match(expr);
+    walk_expression_mut(self, expr);
   }
 
   fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {

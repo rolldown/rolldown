@@ -374,9 +374,9 @@ function processEntryPath(node, binding) {
 
 // TODO only preserve mode ModeBundle test case
 /**
- * @param {Parser.SyntaxNode} node
+ * @param {Parser.SyntaxNode} _node
  */
-function processOptions(node) {}
+function processOptions(_node) {}
 
 /**
  * @param {Parser.SyntaxNode} node

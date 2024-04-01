@@ -11,7 +11,7 @@ use oxc::span::Span;
 use crate::{
   diagnostic::Diagnostic,
   error_kind::{
-    external_entry::ExternalEntry, forbid_const_assign::ForbitConstAssign,
+    external_entry::ExternalEntry, forbid_const_assign::ForbidConstAssign,
     sourcemap_error::SourceMapError, unresolved_entry::UnresolvedEntry,
     unresolved_import::UnresolvedImport, unsupported_eval::UnsupportedEval, BuildErrorLike,
     NapiError,
@@ -118,7 +118,7 @@ impl BuildError {
     reference_span: Span,
     re_assign_span: Span,
   ) -> Self {
-    Self::new_inner(ForbitConstAssign { filename, source, name, reference_span, re_assign_span })
+    Self::new_inner(ForbidConstAssign { filename, source, name, reference_span, re_assign_span })
   }
 }
 

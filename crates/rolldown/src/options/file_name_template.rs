@@ -1,5 +1,4 @@
-use core::hash;
-
+use regex::Regex;
 #[derive(Debug)]
 pub struct FileNameTemplate {
   template: String,
@@ -30,9 +29,20 @@ impl FileNameTemplate {
     if let Some(name) = options.name {
       tmp = tmp.replace("[name]", name);
     }
-    if let Some(hash) = options.name {
+
+    if let Some(hash) = options.hash {
       tmp = tmp.replace("[hash]", hash)
     }
     tmp
   }
+}
+
+#[test]
+fn file_name_template_render() {
+  let file_name_template = FileNameTemplate { template: "[name]-[hash].js".to_string() };
+
+  let name_res =
+    file_name_template.render(&FileNameRenderOptions { name: Some("test"), hash: Some("123") });
+
+  assert_eq!(name_res, "test-123.js")
 }

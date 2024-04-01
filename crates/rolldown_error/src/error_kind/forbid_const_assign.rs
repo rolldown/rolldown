@@ -9,7 +9,7 @@ use crate::{diagnostic::DiagnosticBuilder, PathExt};
 use super::BuildErrorLike;
 
 #[derive(Debug)]
-pub struct ForbitConstAssign {
+pub struct ForbidConstAssign {
   pub filename: String,
   pub source: Arc<str>,
   pub name: String,
@@ -17,7 +17,7 @@ pub struct ForbitConstAssign {
   pub re_assign_span: Span,
 }
 
-impl BuildErrorLike for ForbitConstAssign {
+impl BuildErrorLike for ForbidConstAssign {
   //
   fn code(&self) -> &'static str {
     "FORBID_CONST_ASSIGN"

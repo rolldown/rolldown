@@ -1,4 +1,4 @@
-pub const RESERVED_NAMES: [&str; 62] = [
+pub const RESERVED_NAMES: [&str; 46] = [
   "await",
   "break",
   "case",
@@ -45,21 +45,4 @@ pub const RESERVED_NAMES: [&str; 62] = [
   "while",
   "with",
   "yield",
-  // ECMAScript 6 (ES6) keywords
-  "abstract",
-  "boolean",
-  "byte",
-  "char",
-  "double",
-  "final",
-  "float",
-  "goto",
-  "int",
-  "long",
-  "native",
-  "short",
-  "synchronized",
-  "throws",
-  "transient",
-  "volatile",
 ];

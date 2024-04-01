@@ -1,6 +1,6 @@
 // cSpell:disable
 pub use concat_sourcemap::{ConcatSource, RawSource, SourceMapSource};
-pub use oxc::sourcemap::SourceMap;
+pub use oxc::sourcemap::{SourceMap, SourcemapVisualizer};
 
 use oxc::sourcemap::SourceMapBuilder;
 use rolldown_error::BuildError;

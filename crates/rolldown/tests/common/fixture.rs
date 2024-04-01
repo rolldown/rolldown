@@ -4,7 +4,7 @@ use std::{
   process::Command,
 };
 
-use rolldown::{Bundler, External, InputOptions, OutputOptions, RolldownOutput};
+use rolldown::{Bundler, External, InputOptions, OutputOptions, RolldownOutput, SourceMapType};
 use rolldown_error::BuildError;
 use rolldown_testing::TestConfig;
 
@@ -127,6 +127,7 @@ impl Fixture {
       OutputOptions {
         entry_file_names: "[name].mjs".to_string().into(),
         chunk_file_names: "[name].mjs".to_string().into(),
+        sourcemap: Some(SourceMapType::File),
         ..Default::default()
       },
     );

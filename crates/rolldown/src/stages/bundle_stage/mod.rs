@@ -95,24 +95,18 @@ impl<'a> BundleStage<'a> {
       |chunk| -> Result<(), BuildError> {
         let ChunkRenderReturn { mut map, rendered_chunk, mut code } = chunk;
         if let Some(map) = map.as_mut() {
-          map.set_file(Some(rendered_chunk.file_name.clone()));
+          map.set_file(rendered_chunk.file_name.as_str());
           match self.output_options.sourcemap {
             SourceMapType::File => {
-              let map = {
-                let mut buf = vec![];
-                map.to_writer(&mut buf).map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
-                unsafe { String::from_utf8_unchecked(buf) }
-              };
               let map_file_name = format!("{}.map", rendered_chunk.file_name);
               assets.push(Output::Asset(Arc::new(OutputAsset {
                 file_name: map_file_name.clone(),
-                source: map,
+                source: map.to_json_string(),
               })));
               code.push_str(&format!("\n//# sourceMappingURL={map_file_name}"));
             }
             SourceMapType::Inline => {
-              let data_url =
-                map.to_data_url().map_err(|e| BuildError::sourcemap_error(e.to_string()))?;
+              let data_url = map.to_data_url();
               code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
             }
             SourceMapType::Hidden => {}

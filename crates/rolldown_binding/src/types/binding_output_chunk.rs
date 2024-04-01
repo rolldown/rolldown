@@ -59,11 +59,7 @@ impl BindingOutputChunk {
 
   #[napi(getter)]
   pub fn map(&self) -> Option<String> {
-    self.inner.map.as_ref().map(|map| {
-      let mut buf = vec![];
-      map.to_writer(&mut buf).unwrap();
-      unsafe { String::from_utf8_unchecked(buf) }
-    })
+    self.inner.map.as_ref().map(rolldown_sourcemap::SourceMap::to_json_string)
   }
 
   #[napi(getter)]

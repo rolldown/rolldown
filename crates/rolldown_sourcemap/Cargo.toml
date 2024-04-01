@@ -18,5 +18,5 @@ doctest = false
 test    = false
 
 [dependencies]
+oxc            = { workspace = true }
 rolldown_error = { path = "../rolldown_error" }
-sourcemap      = { version = "7.1.1" }

@@ -6,11 +6,12 @@ use crate::types::module_render_context::ModuleRenderContext;
 pub fn render_normal_module(
   _ctx: &ModuleRenderContext<'_>,
   ast: &OxcProgram,
-  enable_sourcemap: Option<String>,
+  source_name: &str,
+  enable_sourcemap: bool,
 ) -> Option<CodegenReturn> {
   if ast.program().body.is_empty() {
     None
   } else {
-    Some(OxcCompiler::print(ast, enable_sourcemap))
+    Some(OxcCompiler::print(ast, source_name, enable_sourcemap))
   }
 }

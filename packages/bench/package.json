@@ -3,20 +3,23 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bench": "vitest bench --run compare.bench",
-    "bench-ci": "vitest bench --run ci.bench"
+    "bench": "node ./benches/compare.js",
+    "type-check": "tsc"
   },
   "dependencies": {
-    "@codspeed/vitest-plugin": "^3.1.0",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
+    "@types/lodash": "^4.17.0",
+    "chalk": "^5.3.0",
     "esbuild": "^0.20.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "lodash": "^4.17.21",
     "rolldown": "workspace:*",
     "rollup": "^4.12.1",
-    "tinybench": "^2.6.0",
-    "vitest": "^1.3.1",
+    "tinybench": "^2.6.0"
+  },
+  "devDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
   }

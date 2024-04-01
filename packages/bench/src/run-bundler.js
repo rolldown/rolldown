@@ -1,4 +1,3 @@
-import { BenchSuite } from './suites.js'
 import path from 'node:path'
 import * as rolldown from 'rolldown'
 import * as esbuild from 'esbuild'
@@ -7,7 +6,16 @@ import { nodeResolve } from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import { PROJECT_ROOT } from './utils.js'
 
-export async function runRolldown(suite: BenchSuite, sourcemap: boolean) {
+/**
+ * @typedef {import('./types.js').BenchSuite} BenchSuite
+ */
+
+/**
+ *
+ * @param {BenchSuite} suite
+ * @param {boolean} sourcemap
+ */
+export async function runRolldown(suite, sourcemap) {
   const build = await rolldown.rolldown({
     input: suite.inputs,
   })
@@ -18,14 +26,14 @@ export async function runRolldown(suite: BenchSuite, sourcemap: boolean) {
 }
 
 /**
- * @param {BenchSuite} item
+ * @param {BenchSuite} suite
  * @param {boolean} sourcemap
  */
-export async function runEsbuild(item: BenchSuite, sourcemap: boolean) {
+export async function runEsbuild(suite, sourcemap) {
   await esbuild.build({
-    entryPoints: item.inputs,
+    entryPoints: suite.inputs,
     bundle: true,
-    outdir: path.join(PROJECT_ROOT, `./dist/esbuild/${item.title}`),
+    outdir: path.join(PROJECT_ROOT, `./dist/esbuild/${suite.title}`),
     write: true,
     format: 'esm',
     splitting: true,
@@ -34,12 +42,12 @@ export async function runEsbuild(item: BenchSuite, sourcemap: boolean) {
 }
 
 /**
- * @param {BenchSuite} item
+ * @param {BenchSuite} suite
  * @param {boolean} sourcemap
  */
-export async function runRollup(item: BenchSuite, sourcemap: boolean) {
+export async function runRollup(suite, sourcemap) {
   const build = await rollup.rollup({
-    input: item.inputs,
+    input: suite.inputs,
     onwarn: (_warning, _defaultHandler) => {
       // ignore warnings
     },
@@ -53,7 +61,7 @@ export async function runRollup(item: BenchSuite, sourcemap: boolean) {
     ],
   })
   await build.write({
-    dir: path.join(PROJECT_ROOT, `./dist/rollup/${item.title}`),
+    dir: path.join(PROJECT_ROOT, `./dist/rollup/${suite.title}`),
     sourcemap,
   })
 }

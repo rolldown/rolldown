@@ -1,13 +1,10 @@
 import nodePath from 'node:path'
 import { PROJECT_ROOT, REPO_ROOT } from './utils.js'
 
-export interface BenchSuite {
-  title: string
-  inputs: string[]
-  benchIterationForRollup?: number
-}
-
-export const suitesForCI: BenchSuite[] = [
+/**
+ * @type {import('./types.ts').BenchSuite[]}
+ */
+export const suitesForCI = [
   {
     title: 'threejs',
     inputs: [nodePath.join(REPO_ROOT, './temp/three/entry.js')],
@@ -15,12 +12,12 @@ export const suitesForCI: BenchSuite[] = [
   {
     title: 'threejs10x',
     inputs: [nodePath.join(REPO_ROOT, './temp/three10x/entry.js')],
-    benchIterationForRollup: 2,
+    disableRollup: true,
   },
 ]
 
 /**
- * @type {BenchSuite[]}
+ * @type {import('./types.js').BenchSuite[]}
  */
 export const suites = [
   {

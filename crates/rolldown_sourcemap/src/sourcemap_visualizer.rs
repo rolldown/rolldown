@@ -1,3 +1,4 @@
+// cSpell:disable
 use crate::SourceMap;
 use rustc_hash::FxHashMap;
 

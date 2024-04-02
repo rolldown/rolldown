@@ -30,7 +30,7 @@ pub struct FileNameRenderOptions<'me> {
 
 impl FileNameTemplate {
   pub fn render(&self, options: &FileNameRenderOptions) -> String {
-    const HASH_REGEX: Lazy<Regex> =
+    static HASH_REGEX: Lazy<Regex> =
       Lazy::new(|| Regex::new(r"\[(?<key>\w+)(:(?<len>\d+))??\]").unwrap());
     let mut tmp = self.template.clone();
     HASH_REGEX.captures_iter(tmp.clone().as_str()).for_each(|caps| {

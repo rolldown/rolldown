@@ -3,5 +3,6 @@
     "external": [
       "node:assert"
     ]
-  }
+  },
+  "sourcemap": true
 }

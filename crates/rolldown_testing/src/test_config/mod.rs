@@ -19,6 +19,8 @@ macro_rules! impl_serde_default {
 fn true_by_default() -> bool {
   true
 }
+
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TestConfig {
@@ -38,6 +40,9 @@ pub struct TestConfig {
   #[serde(default)]
   /// If `true`, the fixture output stats will be snapshot.
   pub snapshot_output_stats: bool,
+  #[serde(default)]
+  /// If `true`, the sourcemap visualizer will be snapshot.
+  pub sourcemap: bool,
 }
 
 #[derive(Deserialize, JsonSchema)]

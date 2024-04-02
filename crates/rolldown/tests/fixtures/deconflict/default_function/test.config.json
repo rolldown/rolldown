@@ -4,5 +4,6 @@
             "assert"
         ],
         "treeshake": false
-    }
+    },
+    "sourcemap": true
 }

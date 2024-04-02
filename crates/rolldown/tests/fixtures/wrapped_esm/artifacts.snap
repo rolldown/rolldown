@@ -33,4 +33,21 @@ var init_foo = __esmMin(() => {
 
 // main.js
 init_foo(),__toCommonJS(foo_ns);
+
+//# sourceMappingURL=main.mjs.map
 ```
+
+# Sourcemap Visualizer
+
+- foo.js
+(1:7-1:16) " function" --> (3:0-3:9) "\nfunction"
+(1:16-1:22) " foo()" --> (3:9-3:15) " foo()"
+(1:22-1:25) " { " --> (3:15-4:0) " {"
+(1:25-2:7) "}\nexport" --> (4:0-17:1) "\n}\nvar foo_ns, a, b, c, bar, baz;\nvar init_foo = __esmMin(() => {\n\tfoo_ns = {};\n\t__export(foo_ns, {\n\t\ta:() => a,\n\t\tb:() => b,\n\t\tbar:() => bar,\n\t\tc:() => c,\n\t\tdefault:() => baz,\n\t\tfoo:() => foo\n\t});\n\t[b] = [],[c=1] = [];\n"
+(2:7-2:17) " class bar" --> (17:1-17:13) "\tbar = class"
+(2:17-2:20) " { " --> (17:13-18:1) " {\n"
+(2:20-3:15) "}\nexport default" --> (18:1-19:1) "\t};\n"
+(3:15-3:25) " class baz" --> (19:1-19:13) "\tbaz = class"
+(3:25-3:28) " { " --> (19:13-20:1) " {\n"
+(3:28-7:1) "}\n\n\nexport { }\n" --> (20:1-24:0) "\t};\n});\n\n// main.js"
+(0:0-1:1) "require('./foo')\n" --> (24:0-26:34) "\ninit_foo(),__toCommonJS(foo_ns);\n\n//# sourceMappingURL=main.mjs.map"

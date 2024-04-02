@@ -85,9 +85,13 @@ impl Case {
     if self.fixture.test_config().snapshot_output_stats {
       self.render_stats_to_snapshot(&assets);
     }
+
+    if self.fixture.test_config().sourcemap {
+      self.render_sourcemap_visualizer_to_snapshot(&assets);
+    }
   }
 
-  fn render_stats_to_snapshot(&mut self, assets: &Vec<Output>) {
+  fn render_stats_to_snapshot(&mut self, assets: &[Output]) {
     self.snapshot.push_str("\n\n## Output Stats\n\n");
     let stats = assets
       .iter()
@@ -124,11 +128,12 @@ impl Case {
     self.snapshot.push_str(&rendered);
   }
 
-  fn render_sourcemap_visualizer_to_snapshot(&mut self, assets: &Vec<Output>) {
+  fn render_sourcemap_visualizer_to_snapshot(&mut self, assets: &[Output]) {
     self.snapshot.push_str("\n\n# Sourcemap Visualizer\n\n");
     let visualizer_result = assets
-      .into_iter()
-      .flat_map(|asset| match asset {
+      .iter()
+      .filter(|asset| !asset.file_name().contains("$runtime$"))
+      .filter_map(|asset| match asset {
         Output::Chunk(chunk) => chunk
           .map
           .as_ref()

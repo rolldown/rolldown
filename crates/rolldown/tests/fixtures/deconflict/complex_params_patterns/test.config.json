@@ -3,5 +3,6 @@
         "external": [
             "assert"
         ]
-    }
+    },
+    "sourcemap": true
 }

@@ -127,7 +127,7 @@ impl Fixture {
       OutputOptions {
         entry_file_names: "[name].mjs".to_string().into(),
         chunk_file_names: "[name].mjs".to_string().into(),
-        sourcemap: Some(SourceMapType::File),
+        sourcemap: test_config.sourcemap.then_some(SourceMapType::File),
         ..Default::default()
       },
     );

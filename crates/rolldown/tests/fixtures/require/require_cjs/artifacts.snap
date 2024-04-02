@@ -18,4 +18,18 @@ var require_cjs = __commonJSMin((exports, module) => {
 // main.js
 require_cjs();
 var cjs = require_cjs();
+
+//# sourceMappingURL=main.mjs.map
 ```
+
+# Sourcemap Visualizer
+
+- cjs.js
+(0:0-0:7) "module." --> (3:0-4:8) "\nvar require_cjs = __commonJSMin((exports, module) => {\n\tmodule"
+(0:7-0:17) "exports = " --> (4:8-4:18) ".exports ="
+(0:17-0:19) "{}" --> (4:18-4:20) " {"
+(0:19-1:1) "\n" --> (4:20-8:0) "};\n});\n\n// main.js"
+- main.js
+(0:0-1:0) "require('./cjs.js');" --> (8:0-9:0) "\nrequire_cjs();"
+(1:0-1:4) "\nvar" --> (9:0-9:4) "\nvar"
+(1:4-2:1) " cjs = require('./cjs.js');\n" --> (9:4-11:34) " cjs = require_cjs();\n\n//# sourceMappingURL=main.mjs.map"

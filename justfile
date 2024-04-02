@@ -60,7 +60,7 @@ test:
     just test-node
 
 test-rust:
-    cargo test --no-fail-fast -- --nocapture
+    cargo test --no-fail-fast
 
 test-node:
     pnpm build

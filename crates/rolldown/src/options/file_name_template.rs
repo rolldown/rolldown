@@ -1,7 +1,9 @@
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 const DEFAULT_HASH_LEN: usize = 8;
 const MAX_HASH_LEN: usize = 22;
+
 #[derive(Debug)]
 pub struct FileNameTemplate {
   template: String,
@@ -28,10 +30,10 @@ pub struct FileNameRenderOptions<'me> {
 
 impl FileNameTemplate {
   pub fn render(&self, options: &FileNameRenderOptions) -> String {
-    let hash_regex: Regex = Regex::new(r"\[(?<key>\w+)(:(?<len>\d+))??\]").unwrap();
+    const HASH_REGEX: Lazy<Regex> =
+      Lazy::new(|| Regex::new(r"\[(?<key>\w+)(:(?<len>\d+))??\]").unwrap());
     let mut tmp = self.template.clone();
-
-    hash_regex.captures_iter(tmp.clone().as_str()).for_each(|caps| {
+    HASH_REGEX.captures_iter(tmp.clone().as_str()).for_each(|caps| {
       let key = caps.name("key").unwrap().as_str();
       let pattern = match key {
         // get 'name' value

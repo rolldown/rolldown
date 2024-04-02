@@ -28,6 +28,11 @@
       "description": "If `true`, the fixture output stats will be snapshot.",
       "default": false,
       "type": "boolean"
+    },
+    "sourcemap": {
+      "description": "If `true`, the sourcemap visualizer will be snapshot.",
+      "default": false,
+      "type": "boolean"
     }
   },
   "additionalProperties": false,

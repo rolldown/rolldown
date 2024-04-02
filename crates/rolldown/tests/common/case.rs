@@ -4,6 +4,7 @@ use super::fixture::Fixture;
 use rolldown::RolldownOutput;
 use rolldown_common::Output;
 use rolldown_error::BuildError;
+use rolldown_sourcemap::SourcemapVisualizer;
 
 pub struct Case {
   fixture: Fixture,
@@ -68,7 +69,7 @@ impl Case {
     assets.sort_by_key(|c| c.file_name().to_string());
     let artifacts = assets
       .iter()
-      .filter(|asset| !asset.file_name().contains("$runtime$"))
+      .filter(|asset| !asset.file_name().contains("$runtime$") && matches!(asset, Output::Chunk(_)))
       .flat_map(|asset| {
         [
           Cow::Owned(format!("## {}\n", asset.file_name())),
@@ -82,14 +83,18 @@ impl Case {
     self.snapshot.push_str(&artifacts);
 
     if self.fixture.test_config().snapshot_output_stats {
-      self.render_stats_to_snapshot(assets);
+      self.render_stats_to_snapshot(&assets);
+    }
+
+    if self.fixture.test_config().sourcemap {
+      self.render_sourcemap_visualizer_to_snapshot(&assets);
     }
   }
 
-  fn render_stats_to_snapshot(&mut self, assets: Vec<Output>) {
+  fn render_stats_to_snapshot(&mut self, assets: &[Output]) {
     self.snapshot.push_str("\n\n## Output Stats\n\n");
     let stats = assets
-      .into_iter()
+      .iter()
       .flat_map(|asset| match asset {
         Output::Chunk(chunk) => {
           vec![Cow::Owned(format!(
@@ -121,6 +126,23 @@ impl Case {
       .collect::<Vec<_>>()
       .join("\n");
     self.snapshot.push_str(&rendered);
+  }
+
+  fn render_sourcemap_visualizer_to_snapshot(&mut self, assets: &[Output]) {
+    self.snapshot.push_str("\n\n# Sourcemap Visualizer\n\n");
+    let visualizer_result = assets
+      .iter()
+      .filter(|asset| !asset.file_name().contains("$runtime$"))
+      .filter_map(|asset| match asset {
+        Output::Chunk(chunk) => chunk
+          .map
+          .as_ref()
+          .map(|sourcemap| SourcemapVisualizer::new(&chunk.code, sourcemap).into_visualizer_text()),
+        Output::Asset(_) => None,
+      })
+      .collect::<Vec<_>>()
+      .join("\n");
+    self.snapshot.push_str(&visualizer_result);
   }
 
   fn make_snapshot(&self) {

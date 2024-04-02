@@ -20,3 +20,4 @@ test    = false
 [dependencies]
 oxc            = { workspace = true }
 rolldown_error = { path = "../rolldown_error" }
+rustc-hash     = { workspace = true }

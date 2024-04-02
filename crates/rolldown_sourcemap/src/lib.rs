@@ -1,11 +1,13 @@
 // cSpell:disable
 pub use concat_sourcemap::{ConcatSource, RawSource, SourceMapSource};
 pub use oxc::sourcemap::SourceMap;
+// TODO bump oxc next version and using oxc::sourcemap::SourcemapVisualizer
+pub use sourcemap_visualizer::SourcemapVisualizer;
 
 use oxc::sourcemap::SourceMapBuilder;
 use rolldown_error::BuildError;
-
 mod concat_sourcemap;
+mod sourcemap_visualizer;
 
 pub fn collapse_sourcemaps(
   mut sourcemap_chain: Vec<&SourceMap>,

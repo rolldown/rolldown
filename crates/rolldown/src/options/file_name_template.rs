@@ -1,6 +1,7 @@
-use core::hash;
-
 use regex::Regex;
+
+const DEFAULT_HASH_LEN: usize = 8;
+const MAX_HASH_LEN: usize = 22;
 #[derive(Debug)]
 pub struct FileNameTemplate {
   template: String,
@@ -27,33 +28,71 @@ pub struct FileNameRenderOptions<'me> {
 
 impl FileNameTemplate {
   pub fn render(&self, options: &FileNameRenderOptions) -> String {
-    let hash_regex: Regex = Regex::new(r"\[(\w+)(:\d+)?]").unwrap();
-    let hash = options.hash.unwrap();
+    let hash_regex: Regex = Regex::new(r"\[(?<key>\w+)(:(?<len>\d+))??\]").unwrap();
     let mut tmp = self.template.clone();
-    if let Some(name) = options.name {
-      tmp = tmp.replace("[name]", name);
-    }
 
-    if let Some(hash_cap) = hash_regex.captures(&tmp) {
-      if let Some(hash_len) = hash_cap.get(2) {}
-      if let Some(hash_str) = hash_cap.get(1) {
-        tmp = tmp.replace("[hash]", hash)
+    hash_regex.captures_iter(tmp.clone().as_str()).for_each(|caps| {
+      let key = caps.name("key").unwrap().as_str();
+      let pattern = match key {
+        // get 'name' value
+        "name" => options.name,
+        // get hash value
+        "hash" => match options.hash {
+          Some(hash) => {
+            // get hash length
+            let mut len = match caps.name("len") {
+              Some(match_res) => match_res.as_str().parse::<usize>().unwrap_or(DEFAULT_HASH_LEN),
+              None => DEFAULT_HASH_LEN,
+            };
+            if len > MAX_HASH_LEN {
+              // TODO add len reset warning
+              len = MAX_HASH_LEN;
+            }
+            if hash.len() > len {
+              Some(&hash[0..len])
+            } else {
+              Some(hash)
+            }
+          }
+          None => None,
+        },
+        _ => None,
+      };
+
+      if let Some(value) = pattern {
+        tmp = tmp.replace(caps.get(0).unwrap().as_str(), value);
+      } else {
+        // TODO add None { key } option warning
       }
-    };
-
-    if let Some(hash) = options.hash {
-      tmp = tmp.replace("[hash]", hash)
-    }
+    });
     tmp
   }
 }
 
 #[test]
 fn file_name_template_render() {
-  let file_name_template = FileNameTemplate { template: "[name]-[hash:8].js".to_string() };
+  let file_name_template = FileNameTemplate { template: "[name]-[hash].js".to_string() };
 
-  let name_res =
-    file_name_template.render(&FileNameRenderOptions { name: Some("test"), hash: Some("123") });
+  let name_res_default_hash_len = file_name_template
+    .render(&FileNameRenderOptions { name: Some("test"), hash: Some("123456789") });
+  assert_eq!(name_res_default_hash_len, "test-12345678.js");
 
-  assert_eq!(name_res, "test-123.js")
+  let file_name_template = FileNameTemplate { template: "[name]-[hash:30].js".to_string() };
+  let name_res_max_hash_len = file_name_template.render(&FileNameRenderOptions {
+    name: Some("test"),
+    hash: Some("012345678901234567890123456789"),
+  });
+  assert_eq!(name_res_max_hash_len, "test-0123456789012345678901.js");
+
+  let file_name_template = FileNameTemplate { template: "[name]-[hash:5].js".to_string() };
+  let name_res_common_hash_len = file_name_template
+    .render(&FileNameRenderOptions { name: Some("test"), hash: Some("0123456789") });
+
+  assert_eq!(name_res_common_hash_len, "test-01234.js");
+
+  let file_name_template = FileNameTemplate { template: "[name]-[hash:5].js".to_string() };
+  let name_res_none_hash = file_name_template
+    .render(&FileNameRenderOptions { name: Some("test"), ..FileNameRenderOptions::default() });
+
+  assert_eq!(name_res_none_hash, "test-[hash:5].js");
 }

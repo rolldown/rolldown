@@ -1,5 +1,5 @@
 import 'zx/globals'
-import { assertRunningScriptFromRepoRoot } from './meta/utils.js'
+import { assertRunningScriptFromRepoRoot } from '../meta/utils.js'
 import fsExtra from 'fs-extra'
 
 assertRunningScriptFromRepoRoot()

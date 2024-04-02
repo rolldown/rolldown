@@ -4,7 +4,7 @@ import 'zx/globals'
 import semver from 'semver'
 import path from 'path'
 import { findWorkspacePackagesNoCheck } from '@pnpm/find-workspace-packages'
-import { repoRoot } from './meta/constants.js'
+import { REPO_ROOT } from '../meta/constants.js'
 
 async function getCommitId() {
   const result = await $`git rev-parse --short HEAD`
@@ -12,7 +12,7 @@ async function getCommitId() {
 }
 
 async function getLastVersion() {
-  const pkgPath = path.resolve(repoRoot, './packages/rolldown/package.json')
+  const pkgPath = path.resolve(REPO_ROOT, './packages/rolldown/package.json')
   const result = await import(pkgPath, {
     assert: {
       type: 'json',

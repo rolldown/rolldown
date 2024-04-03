@@ -712,7 +712,6 @@
   "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",
   "rollup@sourcemaps@combined-sourcemap-with-loader: get combined sourcemap in transforming with loader@generates es",
   "rollup@sourcemaps@combined-sourcemap: get combined sourcemap in transforming@generates es",
-  "rollup@sourcemaps@excludes-plugin-helpers: excludes plugin helpers from sources@generates es",
   "rollup@sourcemaps@existing-external-sourcemaps-combined: removes sourcemap comments@generates es",
   "rollup@sourcemaps@ignore-list-default: defaults to adding files within node_modules to the ignore list@generates es",
   "rollup@sourcemaps@ignore-list-false: accepts false for `sourcemapIgnoreList` to disable the default ignore-listing of node_modules@generates es",

@@ -101,12 +101,12 @@ impl<'a> BundleStage<'a> {
               let map_file_name = format!("{}.map", rendered_chunk.file_name);
               assets.push(Output::Asset(Arc::new(OutputAsset {
                 file_name: map_file_name.clone(),
-                source: map.to_json_string(),
+                source: map.to_json_string().map_err(BuildError::sourcemap_error)?,
               })));
               code.push_str(&format!("\n//# sourceMappingURL={map_file_name}"));
             }
             SourceMapType::Inline => {
-              let data_url = map.to_data_url();
+              let data_url = map.to_data_url().map_err(BuildError::sourcemap_error)?;
               code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
             }
             SourceMapType::Hidden => {}

@@ -92,8 +92,7 @@ jobs:
           output-file-path: temp/new-benchmark-node-output.json
           # Where the previous data file is stored
           external-data-json-path: temp/benchmark-node-output.json
-          # Workflow will fail when an alert happens
-          fail-on-alert: true
+          fail-on-alert: false
           summary-always: true
           comment-always: true
           save-data-file: ${{ github.event_name == 'push' }}

@@ -19,7 +19,7 @@ for (const suite of suitesForCI) {
 
 for (const suite of suitesForCI) {
   bench.add(`${suite.title}-sourcemap`, async () => {
-    await runRolldown(suite, false)
+    await runRolldown(suite, true)
   })
 }
 
@@ -34,7 +34,7 @@ const dataForGitHubBenchmarkAction = bench.tasks.map((task) => {
   return {
     name: task.name,
     value: task.result.mean.toFixed(2),
-    unit: 'ms',
+    unit: 'ms / ops',
   }
 })
 

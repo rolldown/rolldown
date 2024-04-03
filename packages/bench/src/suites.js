@@ -6,10 +6,6 @@ import { PROJECT_ROOT, REPO_ROOT } from './utils.js'
  */
 export const suitesForCI = [
   {
-    title: 'threejs',
-    inputs: [nodePath.join(REPO_ROOT, './temp/three/entry.js')],
-  },
-  {
     title: 'threejs10x',
     inputs: [nodePath.join(REPO_ROOT, './temp/three10x/entry.js')],
     disableRollup: true,
@@ -20,6 +16,10 @@ export const suitesForCI = [
  * @type {import('./types.js').BenchSuite[]}
  */
 export const suites = [
+  {
+    title: 'threejs',
+    inputs: [nodePath.join(REPO_ROOT, './temp/three/entry.js')],
+  },
   {
     title: 'vue-stack',
     inputs: [nodePath.join(PROJECT_ROOT, 'vue-entry.js')],

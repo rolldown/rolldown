@@ -48,9 +48,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: rolldown/benchmark-results-storage
-          sparse-checkout: |
-            benchmark-node-output.json
-          sparse-checkout-cone-mode: false
           path: temp
 
       - name: List Files

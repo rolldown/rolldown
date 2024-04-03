@@ -103,7 +103,7 @@ jobs:
         # https://github.com/dmnemec/copy_file_to_another_repo_action
         uses: dmnemec/copy_file_to_another_repo_action@bbebd3da22e4a37d04dca5f782edd5201cb97083
         env:
-          API_TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
+          API_TOKEN_GITHUB: ${{ secrets.REPO_TOKEN_BENCHMARK_RESULTS }}
         with:
           source_file: './temp/benchmark-node-output.json'
           destination_repo: 'rolldown/benchmark-results-storage'

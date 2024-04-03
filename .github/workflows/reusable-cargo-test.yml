@@ -25,7 +25,7 @@ jobs:
           cache-base: main
 
       - name: Build
-        run: cargo test --no-run
+        run: cargo test --workspace --exclude rolldown_binding --no-run
 
       - name: Run Test
-        run: just test-rust
+        run: cargo test --workspace --exclude rolldown_binding --nocapture

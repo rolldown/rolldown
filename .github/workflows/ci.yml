@@ -32,6 +32,7 @@ jobs:
           filters: |
             rust-changes: &rust-changes
               - 'crates/**'
+              - '.github/workflows/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'rust-toolchain.toml'

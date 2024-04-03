@@ -79,7 +79,7 @@ jobs:
           sparse-checkout: |
             benchmark-node-output.json
           sparse-checkout-cone-mode: false
-          path: ./rolldown/temp/benchmark-node-output.json
+          path: temp
 
       - name: List Rolldown Bindings
         run: ls ./temp

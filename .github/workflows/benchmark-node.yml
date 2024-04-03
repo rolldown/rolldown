@@ -11,6 +11,7 @@ on:
       - 'rust-toolchain.toml'
       - 'packages/rolldown/**'
       - 'packages/bench/**'
+      - '.github/workflows/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
   pull_request:
@@ -22,6 +23,7 @@ on:
       - 'rust-toolchain.toml'
       - 'packages/rolldown/**'
       - 'packages/bench/**'
+      - '.github/workflows/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
   workflow_dispatch:

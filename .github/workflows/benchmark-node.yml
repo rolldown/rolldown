@@ -53,8 +53,8 @@ jobs:
           sparse-checkout-cone-mode: false
           path: temp
 
-      - name: List Rolldown Bindings
-        run: ls
+      - name: List Files
+        run: find -maxdepth 2 -type d -ls
 
       - name: Install Rust
         uses: moonrepo/setup-rust@v1

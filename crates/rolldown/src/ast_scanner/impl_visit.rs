@@ -25,7 +25,8 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
       if cfg!(debug_assertions) {
         let mut codegen = Codegen::<false>::new(
           "",
-          CodegenOptions { enable_typescript: true, enable_source_map: None },
+          "",
+          CodegenOptions { enable_typescript: true, enable_source_map: false },
         );
         stmt.gen(&mut codegen, codegen::Context::default());
         self.current_stmt_info.debug_label = Some(codegen.into_source_text());

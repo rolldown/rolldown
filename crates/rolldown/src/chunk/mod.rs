@@ -129,9 +129,9 @@ impl Chunk {
           if output_options.sourcemap.is_hidden() {
             None
           } else {
-            let mut sourcemap_chain = m.sourcemap_chain.iter().collect::<Vec<_>>();
-            if let Some(Some(sourcemap)) = rendered_output.as_ref().map(|x| x.source_map.as_ref()) {
-              sourcemap_chain.push(sourcemap);
+            let  sourcemap_chain = m.sourcemap_chain.iter().collect::<Vec<_>>();
+            if let Some(Some(_sourcemap)) = rendered_output.as_ref().map(|x| x.source_map.as_ref()) {
+              // sourcemap_chain.push(sourcemap);
             }
             Some(collapse_sourcemaps(sourcemap_chain))
           },

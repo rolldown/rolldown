@@ -74,7 +74,7 @@ async-trait               = "0.1.74"
 codspeed-criterion-compat = "2.4"
 dashmap                   = "5.5.3"
 derivative                = "2.2.0"
-dunce                     = "1.0.4"                                                                          # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+dunce                     = "1.0.4"                                                                                           # Normalize Windows paths to the most compatible format, avoiding UNC where possible
 futures                   = "0.3.29"
 index_vec                 = "0.1.3"
 insta                     = "1.34.0"
@@ -83,7 +83,7 @@ napi                      = { version = "3.0.0-alpha.0", features = ["async"] }
 napi-build                = { version = "2.1.2" }
 napi-derive               = { version = "3.0.0-alpha.0", default-features = false, features = ["type-def"] }
 once_cell                 = "1.18.0"
-oxc                       = { version = "0.10.0" }
+oxc                       = { git = "https://github.com/underfin/oxc.git", version = "0.10.0", branch = "detect-windows-ci" }
 oxc_resolver              = { version = "1.2.0" }
 rayon                     = "1.6.0"
 regex                     = "1.10.2"

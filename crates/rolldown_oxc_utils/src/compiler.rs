@@ -99,10 +99,12 @@ impl OxcCompiler {
     OxcProgram { program, source, allocator }
   }
 
-  pub fn print(ast: &OxcProgram, enable_source_map: Option<String>) -> CodegenReturn {
+  #[allow(clippy::needless_pass_by_value)]
+  pub fn print(ast: &OxcProgram, _enable_source_map: Option<String>) -> CodegenReturn {
     let codegen = Codegen::<false>::new(
+      "",
       ast.source(),
-      CodegenOptions { enable_typescript: false, enable_source_map },
+      CodegenOptions { enable_typescript: false, enable_source_map: false },
     );
     codegen.build(&ast.program)
   }

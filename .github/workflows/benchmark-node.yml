@@ -54,7 +54,7 @@ jobs:
           path: temp
 
       - name: List Files
-        run: find -maxdepth 2 -type d -ls
+        run: find -maxdepth 2 -ls
 
       - name: Install Rust
         uses: moonrepo/setup-rust@v1

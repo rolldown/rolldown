@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookRenderChunkArgs,
   HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver,
@@ -35,7 +37,7 @@ impl PluginDriver {
   pub async fn transform(
     &self,
     args: &HookTransformArgs<'_>,
-  ) -> Result<(String, Vec<SourceMap>), BuildError> {
+  ) -> Result<(String, Vec<Arc<SourceMap>>), BuildError> {
     let mut sourcemap_chain = vec![];
     let mut code = args.code.to_string();
     for (plugin, ctx) in &self.plugins {
@@ -44,7 +46,7 @@ impl PluginDriver {
       {
         code = r.code;
         if let Some(map) = r.map {
-          sourcemap_chain.push(map);
+          sourcemap_chain.push(Arc::new(map));
         }
       }
     }

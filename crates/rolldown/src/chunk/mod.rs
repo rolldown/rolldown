@@ -4,6 +4,8 @@ pub mod render_chunk;
 mod render_chunk_exports;
 mod render_chunk_imports;
 
+use std::sync::Arc;
+
 use index_vec::IndexVec;
 use rolldown_common::ChunkId;
 
@@ -123,9 +125,9 @@ impl Chunk {
           if output_options.sourcemap.is_hidden() {
             None
           } else {
-            let mut sourcemap_chain = m.sourcemap_chain.iter().collect::<Vec<_>>();
-            if let Some(Some(sourcemap)) = rendered_output.as_ref().map(|x| x.source_map.as_ref()) {
-              sourcemap_chain.push(sourcemap);
+            let mut sourcemap_chain = m.sourcemap_chain.iter().map(Arc::clone).collect::<Vec<_>>();
+            if let Some(Some(sourcemap)) = rendered_output.map(|x| x.source_map) {
+              sourcemap_chain.push(Arc::new(sourcemap));
             }
             Some(collapse_sourcemaps(sourcemap_chain))
           },

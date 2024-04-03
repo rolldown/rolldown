@@ -19,7 +19,7 @@ for (const suite of suitesForCI) {
 
 for (const suite of suitesForCI) {
   bench.add(`${suite.title}-sourcemap`, async () => {
-    await runRolldown(suite, false)
+    await runRolldown(suite, true)
   })
 }
 

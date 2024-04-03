@@ -90,7 +90,7 @@ jobs:
         run: just lint-rust
 
   cargo-test:
-    needs: changes
+    # needs: changes
     strategy:
       matrix:
         target: [ubuntu-latest, macos-latest, windows-latest]

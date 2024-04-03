@@ -47,7 +47,7 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
-          bins: just, cargo-codspeed
+          bins: just
           cache-base: main
           cache-target: release
 
@@ -70,9 +70,7 @@ jobs:
         run: pnpm build:release
 
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@v2
-        with:
-          run: pnpm --filter bench run bench-ci
+        run: pnpm --filter bench run bench-ci
 
       - name: Download previous benchmark data
         uses: actions/checkout@v4
@@ -81,7 +79,11 @@ jobs:
           sparse-checkout: |
             benchmark-node-output.json
           sparse-checkout-cone-mode: false
-          path: rolldown/temp
+          path: ./temp
+
+      - name: List Rolldown Bindings
+        run: ls ./temp
+        shell: bash
 
       - name: Show/Update benchmark result
         uses: benchmark-action/github-action-benchmark@v1

@@ -92,9 +92,9 @@ jobs:
           # What benchmark tool the output.txt came from
           tool: 'customSmallerIsBetter'
           # Where the output from the benchmark tool is stored
-          output-file-path: ./temp/new-benchmark-node-output.json
+          output-file-path: temp/new-benchmark-node-output.json
           # Where the previous data file is stored
-          external-data-json-path: ./temp/benchmark-node-output.json
+          external-data-json-path: temp/benchmark-node-output.json
           # Workflow will fail when an alert happens
           fail-on-alert: true
           summary-always: true

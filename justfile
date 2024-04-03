@@ -66,6 +66,8 @@ test-node:
     pnpm build
     pnpm test
 
+    
+
 # Fix formatting issues both for Rust, Node.js and all files in the repository
 fmt:
     just fmt-rust

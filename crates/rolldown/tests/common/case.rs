@@ -132,7 +132,6 @@ impl Case {
     self.snapshot.push_str("\n\n# Sourcemap Visualizer\n\n");
     let visualizer_result = assets
       .iter()
-      .filter(|asset| !asset.file_name().contains("$runtime$"))
       .filter_map(|asset| match asset {
         Output::Chunk(chunk) => chunk
           .map

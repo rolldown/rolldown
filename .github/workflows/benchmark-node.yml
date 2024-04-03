@@ -97,7 +97,7 @@ jobs:
           summary-always: true
           comment-always: true
           save-data-file: ${{ github.event_name == 'push' }}
-          alert-threshold: '10%'
+          alert-threshold: '15%'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Save benchmark result

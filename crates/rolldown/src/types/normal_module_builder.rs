@@ -28,8 +28,8 @@ pub struct NormalModuleBuilder {
   pub module_type: ModuleType,
   pub is_user_defined_entry: Option<bool>,
   pub pretty_path: Option<String>,
-  pub is_virtual: bool,
   pub sourcemap_chain: Vec<Arc<rolldown_sourcemap::SourceMap>>,
+  pub is_virtual: bool,
 }
 
 impl NormalModuleBuilder {

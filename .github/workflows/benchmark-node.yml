@@ -80,11 +80,6 @@ jobs:
 
       - name: Run benchmarks
         run: pnpm --filter bench run bench-ci
-      
-      - name: List Files
-        run: |
-          pwd
-          find -maxdepth 2 -ls
 
       - name: Show/Update benchmark result
         uses: benchmark-action/github-action-benchmark@v1

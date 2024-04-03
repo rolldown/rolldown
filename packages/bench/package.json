@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "bench": "node ./benches/compare.js",
+    "bench-ci": "node ./benches/ci.js",
     "type-check": "tsc"
   },
   "dependencies": {

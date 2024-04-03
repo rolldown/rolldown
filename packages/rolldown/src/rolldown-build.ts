@@ -29,6 +29,7 @@ export class RolldownBuild {
 
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     const bundler = await this.#getBundler(outputOptions)
+    await new Promise((rsl) => setTimeout(rsl, 500))
     const output = await bundler.write()
     return transformToRollupOutput(output)
   }

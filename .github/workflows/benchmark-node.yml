@@ -28,12 +28,13 @@ on:
       - 'pnpm-lock.yaml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  deployments: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
-
-permissions:
-  contents: write
 
 jobs:
   benchmark-node:

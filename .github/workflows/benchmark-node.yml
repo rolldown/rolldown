@@ -28,10 +28,6 @@ on:
       - 'pnpm-lock.yaml'
   workflow_dispatch:
 
-permissions:
-  contents: write
-  deployments: write
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
@@ -40,6 +36,9 @@ jobs:
   benchmark-node:
     name: Benchmark Node
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
     steps:
       - name: Checkout Branch
         uses: actions/checkout@v4

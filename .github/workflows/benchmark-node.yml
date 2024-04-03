@@ -30,6 +30,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
+permissions:
+  contents: write
+
 jobs:
   benchmark-node:
     name: Benchmark Node
@@ -69,8 +72,43 @@ jobs:
       - name: Run benchmarks
         uses: CodSpeedHQ/action@v2
         with:
-          run: node packages/bench/benches/ci.js
+          run: pnpm --filter bench run bench-ci
 
-      - name: Continuous Benchmark
-        uses: benchmark-action/github-action-benchmark@v1.19.3
-    
+      - name: Download previous benchmark data
+        uses: actions/checkout@v4
+        with:
+          repository: rolldown/benchmark-results-storage
+          sparse-checkout: |
+            benchmark-node-output.json
+          sparse-checkout-cone-mode: false
+          path: rolldown/temp
+
+      - name: Show/Update benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          # What benchmark tool the output.txt came from
+          tool: 'customSmallerIsBetter'
+          # Where the output from the benchmark tool is stored
+          output-file-path: ./temp/new-benchmark-node-output.json
+          # Where the previous data file is stored
+          external-data-json-path: ./temp/benchmark-node-output.json
+          # Workflow will fail when an alert happens
+          fail-on-alert: true
+          summary-always: true
+          comment-always: true
+          save-data-file: ${{ github.event_name == 'push' }}
+          alert-threshold: "10%"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save benchmark result
+        if: github.event_name == 'push'
+        # https://github.com/dmnemec/copy_file_to_another_repo_action
+        uses: dmnemec/copy_file_to_another_repo_action@bbebd3da22e4a37d04dca5f782edd5201cb97083
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          source_file: './temp/benchmark-node-output.json'
+          destination_repo: 'rolldown/benchmark-results-storage'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          user_name: 'github-actions[bot]'
+          commit_message: 'Update `benchmark-node-output.json`'

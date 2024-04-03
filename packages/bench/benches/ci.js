@@ -1,6 +1,13 @@
 import * as tinyBench from 'tinybench'
+import nodePath from 'path'
+import nodeUrl from 'url'
+import nodeFs from 'fs'
 import { suitesForCI } from '../src/suites.js'
 import { runRolldown } from '../src/run-bundler.js'
+
+const DIRNAME = nodePath.dirname(nodeUrl.fileURLToPath(import.meta.url))
+const PROJECT_ROOT = nodePath.resolve(DIRNAME, '..')
+const REPO_ROOT = nodePath.resolve(PROJECT_ROOT, '../..')
 
 const bench = new tinyBench.Bench()
 
@@ -31,4 +38,12 @@ const dataForGitHubBenchmarkAction = bench.tasks.map((task) => {
   }
 })
 
-console.log(JSON.stringify(dataForGitHubBenchmarkAction, null, 2))
+const serialized = JSON.stringify(dataForGitHubBenchmarkAction, null, 2)
+
+console.log(serialized)
+
+nodeFs.writeFileSync(
+  nodePath.resolve(REPO_ROOT, 'temp/new-benchmark-node-output.json'),
+  serialized,
+  'utf8',
+)

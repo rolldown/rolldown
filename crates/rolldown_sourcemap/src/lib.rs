@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 // cSpell:disable
 pub use concat_sourcemap::{ConcatSource, RawSource, SourceMapSource};
 pub use oxc::sourcemap::SourceMap;
@@ -10,12 +12,12 @@ mod concat_sourcemap;
 mod sourcemap_visualizer;
 
 pub fn collapse_sourcemaps(
-  mut sourcemap_chain: Vec<&SourceMap>,
-) -> Result<Option<SourceMap>, BuildError> {
+  mut sourcemap_chain: Vec<Arc<SourceMap>>,
+) -> Result<Option<Arc<SourceMap>>, BuildError> {
   let Some(last_map) = sourcemap_chain.pop() else { return Ok(None) };
   // If there is only one sourcemap, return it as result.
   if sourcemap_chain.is_empty() {
-    return Ok(Some(last_map.clone()));
+    return Ok(Some(Arc::clone(&last_map)));
   }
 
   let mut sourcemap_builder = SourceMapBuilder::default();
@@ -56,17 +58,19 @@ pub fn collapse_sourcemaps(
     }
   }
 
-  Ok(Some(sourcemap_builder.into_sourcemap()))
+  Ok(Some(Arc::new(sourcemap_builder.into_sourcemap())))
 }
 
 #[cfg(test)]
 mod tests {
   use crate::SourceMap;
+  use std::sync::Arc;
   #[test]
   fn it_works() {
     let sourcemaps = vec![
-      SourceMap::from_json_string(
-        r#"{
+      Arc::new(
+        SourceMap::from_json_string(
+          r#"{
         "mappings": ";CAEE",
         "names": [],
         "sources": ["helloworld.js"],
@@ -74,10 +78,12 @@ mod tests {
         "version": 3,
         "ignoreList": []
       }"#,
-      )
-      .unwrap(),
-      SourceMap::from_json_string(
-        r#"{
+        )
+        .unwrap(),
+      ),
+      Arc::new(
+        SourceMap::from_json_string(
+          r#"{
         "file": "transpiled.min.js",
         "mappings": "AACCA",
         "names": ["add"],
@@ -86,13 +92,13 @@ mod tests {
         "version": 3,
         "ignoreList": []
       }"#,
-      )
-      .unwrap(),
+        )
+        .unwrap(),
+      ),
     ];
 
     let result = {
-      let map =
-        super::collapse_sourcemaps(sourcemaps.iter().collect()).expect("should not fail").unwrap();
+      let map = super::collapse_sourcemaps(sourcemaps).expect("should not fail").unwrap();
       map.to_json_string()
     };
 

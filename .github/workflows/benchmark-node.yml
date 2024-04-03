@@ -54,7 +54,7 @@ jobs:
           path: temp
 
       - name: List Rolldown Bindings
-        run: ls ./temp
+        run: ls
 
       - name: Install Rust
         uses: moonrepo/setup-rust@v1

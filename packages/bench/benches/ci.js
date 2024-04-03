@@ -34,7 +34,7 @@ const dataForGitHubBenchmarkAction = bench.tasks.map((task) => {
   return {
     name: task.name,
     value: task.result.mean.toFixed(2),
-    unit: 'ms',
+    unit: 'ms / ops',
   }
 })
 

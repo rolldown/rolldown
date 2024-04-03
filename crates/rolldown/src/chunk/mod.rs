@@ -113,7 +113,7 @@ impl Chunk {
                 .expect_file()
                 .relative_path(&input_options.cwd)
                 .to_string_lossy().as_ref(),
-           !output_options.sourcemap.is_hidden() && m.sourcemap
+           !output_options.sourcemap.is_hidden() && !m.is_virtual
         );
         Some((
           m.resource_id.expect_file().to_string(),

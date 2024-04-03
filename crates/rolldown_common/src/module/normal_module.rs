@@ -38,7 +38,7 @@ pub struct NormalModule {
   pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
   pub is_included: bool,
   // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
-  pub sourcemap: bool,
+  pub is_virtual: bool,
 }
 
 impl NormalModule {

@@ -129,7 +129,7 @@ impl<'task> NormalModuleTask<'task> {
       module_type: self.module_type,
       pretty_path: Some(self.resolved_path.prettify(&self.ctx.input_options.cwd)),
       sourcemap_chain,
-      sourcemap: !self.resolved_path.is_virtual_module_path(),
+      is_virtual: self.resolved_path.is_virtual_module_path(),
       ..Default::default()
     };
 

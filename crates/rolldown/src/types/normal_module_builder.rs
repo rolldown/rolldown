@@ -29,7 +29,7 @@ pub struct NormalModuleBuilder {
   pub is_user_defined_entry: Option<bool>,
   pub pretty_path: Option<String>,
   pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
-  pub sourcemap: bool,
+  pub is_virtual: bool,
 }
 
 impl NormalModuleBuilder {
@@ -55,7 +55,7 @@ impl NormalModuleBuilder {
       pretty_path: self.pretty_path.unwrap(),
       sourcemap_chain: self.sourcemap_chain,
       is_included: false,
-      sourcemap: self.sourcemap,
+      is_virtual: self.is_virtual,
     }
   }
 }

@@ -34,6 +34,19 @@ export const suites = expandSuitesWithDerived([
     },
   },
   {
+    title: 'rome-ts',
+    inputs: [nodePath.join(REPO_ROOT, './tmp/bench/rome/src/entry.ts')],
+    esbuildOptions: {
+      tsconfig: nodePath.join(REPO_ROOT, './tmp/bench/rome/src/tsconfig.json'),
+    },
+    rolldownOptions: {
+      resolve: {
+        extensions: ['.ts'],
+      },
+    },
+    disableBundler: ['rolldown', 'rollup'],
+  },
+  {
     title: 'react-stack',
     inputs: ['react', 'react-dom'],
   },

@@ -98,7 +98,7 @@ impl Chunk {
         render_normal_module(
           m,
           &graph.ast_table[m.id],
-          // TODO refact the relative path
+          // TODO(underfin): refactor the relative path
           m.resource_id.expect_file().relative_path(&input_options.cwd).to_string_lossy().as_ref(),
           output_options,
         )

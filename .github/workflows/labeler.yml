@@ -1,5 +1,7 @@
 name: 'Automate labeling'
-on: pull_request
+on:
+  pull_request:
+    types: [opened, assigned]
 
 jobs:
   # Labele the PR based on the configuration in `.github/labeler.yml` using https://github.com/actions/labeler

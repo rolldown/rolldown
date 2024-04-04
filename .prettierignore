@@ -6,5 +6,6 @@ rollup
 crates
 target
 temp
+tmp
 pnpm-lock.yaml
 CHANGELOG.md

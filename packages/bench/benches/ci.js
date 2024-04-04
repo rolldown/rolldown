@@ -43,7 +43,7 @@ const serialized = JSON.stringify(dataForGitHubBenchmarkAction, null, 2)
 console.log(serialized)
 
 nodeFs.writeFileSync(
-  nodePath.resolve(REPO_ROOT, 'temp/new-benchmark-node-output.json'),
+  nodePath.resolve(REPO_ROOT, 'tmp/new-benchmark-node-output.json'),
   serialized,
   'utf8',
 )

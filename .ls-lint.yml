@@ -14,6 +14,7 @@ ignore:
   - .pnpm
   - crates
   - temp
+  - tmp
   - rollup # rollup submodule
   - target
   - packages/rollup-tests/test # Copied from rollup repo

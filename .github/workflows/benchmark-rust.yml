@@ -1,4 +1,4 @@
-name: Codspeed Benchmarks Rust
+name: Benchmarks Rust
 
 on:
   push:

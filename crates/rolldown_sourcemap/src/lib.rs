@@ -5,16 +5,13 @@ pub use concat_sourcemap::{ConcatSource, RawSource, SourceMapSource};
 pub use oxc::sourcemap::{SourceMap, SourcemapVisualizer};
 
 use oxc::sourcemap::SourceMapBuilder;
-use rolldown_error::BuildError;
 mod concat_sourcemap;
 
-pub fn collapse_sourcemaps(
-  mut sourcemap_chain: Vec<Arc<SourceMap>>,
-) -> Result<Option<Arc<SourceMap>>, BuildError> {
-  let Some(last_map) = sourcemap_chain.pop() else { return Ok(None) };
+pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<Arc<SourceMap>>) -> Option<Arc<SourceMap>> {
+  let last_map = sourcemap_chain.pop()?;
   // If there is only one sourcemap, return it as result.
   if sourcemap_chain.is_empty() {
-    return Ok(Some(Arc::clone(&last_map)));
+    return Some(Arc::clone(&last_map));
   }
 
   let mut sourcemap_builder = SourceMapBuilder::default();
@@ -55,7 +52,7 @@ pub fn collapse_sourcemaps(
     }
   }
 
-  Ok(Some(Arc::new(sourcemap_builder.into_sourcemap())))
+  Some(Arc::new(sourcemap_builder.into_sourcemap()))
 }
 
 #[cfg(test)]
@@ -95,7 +92,7 @@ mod tests {
     ];
 
     let result = {
-      let map = super::collapse_sourcemaps(sourcemaps).expect("should not fail").unwrap();
+      let map = super::collapse_sourcemaps(sourcemaps).unwrap();
       map.to_json_string()
     };
 

@@ -31,6 +31,7 @@ export async function runRolldown(suite) {
  * @param {BenchSuite} suite
  */
 export async function runEsbuild(suite) {
+  const options = suite.esbuildOptions ?? {}
   await esbuild.build({
     platform: 'node',
     entryPoints: suite.inputs,
@@ -39,6 +40,7 @@ export async function runEsbuild(suite) {
     write: true,
     format: 'esm',
     splitting: true,
+    ...options,
   })
 }
 
@@ -47,7 +49,7 @@ export async function runEsbuild(suite) {
  */
 export async function runRollup(suite) {
   const { output: outputOptions = {}, ...inputOptions } =
-    suite.rolldownOptions ?? {}
+    suite.rollupOptions ?? {}
   const build = await rollup.rollup({
     input: suite.inputs,
     onwarn: (_warning, _defaultHandler) => {

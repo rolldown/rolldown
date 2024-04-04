@@ -49,6 +49,7 @@ jobs:
       - name: Download previous benchmark data
         uses: actions/checkout@v4
         with:
+          # https://github.com/rolldown/benchmark-results-storage
           repository: rolldown/benchmark-results-storage
           path: temp
 
@@ -104,6 +105,7 @@ jobs:
         # https://github.com/dmnemec/copy_file_to_another_repo_action
         uses: dmnemec/copy_file_to_another_repo_action@bbebd3da22e4a37d04dca5f782edd5201cb97083
         env:
+          # Results are stored in https://github.com/rolldown/benchmark-results-storage
           API_TOKEN_GITHUB: ${{ secrets.REPO_TOKEN_BENCHMARK_RESULTS }}
         with:
           source_file: './temp/benchmark-node-output.json'

@@ -35,8 +35,8 @@ pub struct TestConfig {
   /// If `true`, the fixture are expected to fail to compile/build.
   pub expect_error: bool,
   #[serde(default, rename = "_comment")]
-  /// An workaround for writing comments in JSON.
-  pub _comment: String,
+  /// A workaround for writing comments in JSON.
+  pub comment: String,
   #[serde(default)]
   /// If `true`, the fixture output stats will be snapshot.
   pub snapshot_output_stats: bool,

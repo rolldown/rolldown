@@ -188,8 +188,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       .ctx
       .linking_info
       .wrapper_stmt_info
-      .map(|idx| self.ctx.module.stmt_infos[idx].is_included)
-      .unwrap_or_default();
+      .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included);
 
     if needs_wrapper {
       match self.ctx.linking_info.wrap_kind {

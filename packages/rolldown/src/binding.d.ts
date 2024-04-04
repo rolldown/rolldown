@@ -77,6 +77,7 @@ export interface BindingInputOptions {
   input: Array<BindingInputItem>
   plugins: Array<BindingPluginOptions>
   resolve?: BindingResolveOptions
+  platform?: 'node' | 'browser' | 'neutral'
   cwd: string
 }
 

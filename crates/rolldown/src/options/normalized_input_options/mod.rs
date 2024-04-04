@@ -7,7 +7,7 @@ use derivative::Derivative;
 
 use crate::External;
 
-use super::types::input_item::InputItem;
+use super::types::{input_item::InputItem, platform::Platform};
 
 pub type SharedNormalizedInputOptions = Arc<NormalizedInputOptions>;
 
@@ -18,4 +18,5 @@ pub struct NormalizedInputOptions {
   pub cwd: PathBuf,
   pub external: External,
   pub treeshake: bool,
+  pub platform: Platform,
 }

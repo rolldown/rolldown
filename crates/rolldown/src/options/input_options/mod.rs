@@ -9,6 +9,7 @@ use rolldown_error::BuildError;
 use self::resolve_options::ResolveOptions;
 
 use super::types::input_item::InputItem;
+use super::types::platform::Platform;
 
 pub mod resolve_options;
 
@@ -62,4 +63,5 @@ pub struct InputOptions {
   pub external: Option<External>,
   pub treeshake: Option<bool>,
   pub resolve: Option<ResolveOptions>,
+  pub platform: Option<Platform>,
 }

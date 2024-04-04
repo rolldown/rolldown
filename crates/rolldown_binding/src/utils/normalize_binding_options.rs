@@ -4,7 +4,7 @@ use crate::{
   options::plugin::JsPlugin,
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
-use rolldown::{AddonOutputOption, InputOptions, OutputOptions};
+use rolldown::{AddonOutputOption, InputOptions, OutputOptions, Platform};
 use rolldown_error::BuildError;
 use rolldown_plugin::BoxPlugin;
 
@@ -54,6 +54,12 @@ pub fn normalize_binding_options(
     external: external.into(),
     treeshake: true.into(),
     resolve: input_options.resolve.map(Into::into),
+    platform: input_options
+      .platform
+      .as_deref()
+      .map(Platform::try_from)
+      .transpose()
+      .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
   };
 
   // Deal with output options

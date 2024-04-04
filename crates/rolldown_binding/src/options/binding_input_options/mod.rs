@@ -53,6 +53,8 @@ pub struct BindingInputOptions {
   // strictDeprecations?: boolean;
   // pub treeshake: Option<bool>,
   // watch?: WatcherOptions | false;
+  #[napi(ts_type = "'node' | 'browser' | 'neutral'")]
+  pub platform: Option<String>,
 
   // extra
   pub cwd: String,

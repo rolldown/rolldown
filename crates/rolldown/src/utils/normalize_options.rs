@@ -3,6 +3,7 @@ use rolldown_resolver::EnforceExtension;
 use crate::options::{
   normalized_input_options::NormalizedInputOptions,
   normalized_output_options::NormalizedOutputOptions, output_options::SourceMapType,
+  types::platform::Platform,
 };
 
 #[allow(clippy::struct_field_names)]
@@ -68,6 +69,7 @@ pub fn normalize_options(
       .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),
     external: raw_input.external.unwrap_or_default(),
     treeshake: raw_input.treeshake.unwrap_or(true),
+    platform: raw_input.platform.unwrap_or(Platform::Browser),
   };
 
   // Normalize output options

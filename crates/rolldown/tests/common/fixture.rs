@@ -123,6 +123,7 @@ impl Fixture {
           modules: value.modules,
           symlinks: value.symlinks,
         }),
+        ..Default::default()
       },
       OutputOptions {
         entry_file_names: "[name].mjs".to_string().into(),

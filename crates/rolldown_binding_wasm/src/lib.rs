@@ -67,6 +67,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
           external: Some(External::ArrayString(vec![])),
           treeshake: Some(false),
           resolve: None,
+          ..Default::default()
         })
         .build();
 

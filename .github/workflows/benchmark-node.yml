@@ -51,7 +51,7 @@ jobs:
         with:
           # https://github.com/rolldown/benchmark-results-storage
           repository: rolldown/benchmark-results-storage
-          path: temp
+          path: tmp
 
       - name: List Files
         run: find -maxdepth 2 -ls
@@ -90,9 +90,9 @@ jobs:
           # What benchmark tool the output.txt came from
           tool: 'customSmallerIsBetter'
           # Where the output from the benchmark tool is stored
-          output-file-path: temp/new-benchmark-node-output.json
+          output-file-path: tmp/new-benchmark-node-output.json
           # Where the previous data file is stored
-          external-data-json-path: temp/benchmark-node-output.json
+          external-data-json-path: tmp/benchmark-node-output.json
           fail-on-alert: false
           summary-always: true
           comment-always: true
@@ -108,7 +108,7 @@ jobs:
           # Results are stored in https://github.com/rolldown/benchmark-results-storage
           API_TOKEN_GITHUB: ${{ secrets.REPO_TOKEN_BENCHMARK_RESULTS }}
         with:
-          source_file: './temp/benchmark-node-output.json'
+          source_file: './tmp/benchmark-node-output.json'
           destination_repo: 'rolldown/benchmark-results-storage'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           user_name: 'github-actions[bot]'

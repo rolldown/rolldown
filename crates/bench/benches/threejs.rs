@@ -14,8 +14,8 @@ fn criterion_benchmark(c: &mut Criterion) {
   let mut group = c.benchmark_group("rolldown benchmark");
 
   let items = vec![
-    BenchItem { name: "threejs", entry_path: join_by_repo_root("temp/three/entry.js") },
-    BenchItem { name: "threejs10x", entry_path: join_by_repo_root("temp/three10x/entry.js") },
+    BenchItem { name: "threejs", entry_path: join_by_repo_root("tmp/bench/three/entry.js") },
+    BenchItem { name: "threejs10x", entry_path: join_by_repo_root("tmp/bench/three10x/entry.js") },
   ];
   group.sample_size(20);
   items.into_iter().for_each(|item| {

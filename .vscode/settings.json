@@ -40,7 +40,8 @@
   ],
   "search.exclude": {
     "rollup": true,
-    "temp": true
+    "temp": true,
+    "tmp": true
   },
   "editor.wordWrap": "on"
 }

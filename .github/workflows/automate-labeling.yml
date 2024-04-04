@@ -16,9 +16,11 @@ jobs:
 
   remove-needs-triage-when-assigned:
     if: github.event.action == 'assigned'
-    uses: actions-cool/issues-helper@v3
-    with:
-      actions: 'remove-labels'
-      token: ${{ secrets.GITHUB_TOKEN }}
-      issue-number: ${{ github.event.pull_request.number }}
-      labels: 'needs-triage'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-cool/issues-helper@v3
+        with:
+          actions: 'remove-labels'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          labels: 'needs-triage'

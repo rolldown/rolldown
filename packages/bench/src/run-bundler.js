@@ -13,39 +13,41 @@ import { PROJECT_ROOT } from './utils.js'
 /**
  *
  * @param {BenchSuite} suite
- * @param {boolean} sourcemap
  */
-export async function runRolldown(suite, sourcemap) {
+export async function runRolldown(suite) {
+  const { output: outputOptions = {}, ...inputOptions } =
+    suite.rolldownOptions ?? {}
   const build = await rolldown.rolldown({
     input: suite.inputs,
+    ...inputOptions,
   })
   await build.write({
     dir: path.join(PROJECT_ROOT, `./dist/rolldown/${suite.title}`),
-    sourcemap,
+    ...outputOptions,
   })
 }
 
 /**
  * @param {BenchSuite} suite
- * @param {boolean} sourcemap
  */
-export async function runEsbuild(suite, sourcemap) {
+export async function runEsbuild(suite) {
   await esbuild.build({
+    platform: 'node',
     entryPoints: suite.inputs,
     bundle: true,
     outdir: path.join(PROJECT_ROOT, `./dist/esbuild/${suite.title}`),
     write: true,
     format: 'esm',
     splitting: true,
-    sourcemap,
   })
 }
 
 /**
  * @param {BenchSuite} suite
- * @param {boolean} sourcemap
  */
-export async function runRollup(suite, sourcemap) {
+export async function runRollup(suite) {
+  const { output: outputOptions = {}, ...inputOptions } =
+    suite.rolldownOptions ?? {}
   const build = await rollup.rollup({
     input: suite.inputs,
     onwarn: (_warning, _defaultHandler) => {
@@ -59,9 +61,10 @@ export async function runRollup(suite, sourcemap) {
       // @ts-expect-error
       commonjs(),
     ],
+    ...inputOptions,
   })
   await build.write({
     dir: path.join(PROJECT_ROOT, `./dist/rollup/${suite.title}`),
-    sourcemap,
+    ...outputOptions,
   })
 }

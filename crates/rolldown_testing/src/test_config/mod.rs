@@ -20,6 +20,7 @@ fn true_by_default() -> bool {
   true
 }
 
+#[allow(clippy::pub_underscore_fields)]
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -35,7 +36,7 @@ pub struct TestConfig {
   /// If `true`, the fixture are expected to fail to compile/build.
   pub expect_error: bool,
   #[serde(default, rename = "_comment")]
-  /// An workaround for writing comments in JSON.
+  /// A workaround for writing comments in JSON.
   pub _comment: String,
   #[serde(default)]
   /// If `true`, the fixture output stats will be snapshot.

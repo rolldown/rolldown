@@ -13,13 +13,7 @@ const bench = new tinyBench.Bench()
 
 for (const suite of suitesForCI) {
   bench.add(suite.title, async () => {
-    await runRolldown(suite, false)
-  })
-}
-
-for (const suite of suitesForCI) {
-  bench.add(`${suite.title}-sourcemap`, async () => {
-    await runRolldown(suite, true)
+    await runRolldown(suite)
   })
 }
 

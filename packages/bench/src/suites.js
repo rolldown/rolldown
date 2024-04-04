@@ -57,7 +57,7 @@ function expandSuitesWithDerived(suites) {
       derived.title = `${suite.title}-sourcemap`
       delete derived.derived
       _.set(derived, 'esbuildOptions.sourcemap', true)
-      _.set(derived, 'rolldown.output.sourcemap', true)
+      _.set(derived, 'rolldownOptions.output.sourcemap', true)
       _.set(derived, 'rollupOptions.output.sourcemap', true)
       expanded.push(derived)
     }

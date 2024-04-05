@@ -1,9 +1,8 @@
-import { describe, test, assert } from 'vitest'
+import { expect, describe, test, assert } from 'vitest'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadConfig } from '../../src/cli/utils'
 import { ERR_UNSUPPORTED_CONFIG_FORMAT } from '../../src/cli/errors'
-import { expect } from 'vitest'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 

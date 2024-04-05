@@ -732,6 +732,5 @@
   "rollup@sourcemaps@transform-full-source-paths: provides the full source map path when transforming source maps@generates es",
   "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es",
   "rollup@sourcemaps@transform-source-paths: transform sourcemap paths (#2168)@generates es",
-  "rollup@sourcemaps@transforms: preserves sourcemap chains when transforming@generates es",
-  "rollup@sourcemaps@untransformed-modules: allows sourcemap chains with some untransformed modules (#404)@generates es"
+  "rollup@sourcemaps@transforms: preserves sourcemap chains when transforming@generates es"
 ]

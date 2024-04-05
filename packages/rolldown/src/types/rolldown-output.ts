@@ -18,11 +18,11 @@ function _assertRolldownOutputAsset() {
 }
 
 export interface SourceMap {
-  file: string
+  file?: string
   mappings: string
   names: string[]
   sources: string[]
-  sourcesContent: (string | null)[]
+  sourcesContent?: string[]
   version: number
   // toString(): string
   // toUrl(): string

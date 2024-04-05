@@ -5,10 +5,7 @@ use rolldown_common::{NormalModule, RenderedModule};
 use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
 use rolldown_sourcemap::collapse_sourcemaps;
 
-use crate::{
-  bundler_options::types::normalized_bundler_options::SharedOptions,
-  types::module_render_output::ModuleRenderOutput,
-};
+use crate::{types::module_render_output::ModuleRenderOutput, SharedOptions};
 
 pub fn render_normal_module<'a>(
   module: &'a NormalModule,

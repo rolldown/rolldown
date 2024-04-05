@@ -5,7 +5,7 @@ mod render_chunk_exports;
 mod render_chunk_imports;
 
 use index_vec::IndexVec;
-use rolldown_common::ChunkId;
+use rolldown_common::{ChunkId, FileNameTemplate};
 
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;
 
@@ -17,10 +17,9 @@ use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
 
-use crate::bundler_options::types::file_name_template::FileNameTemplate;
-use crate::bundler_options::types::normalized_bundler_options::SharedOptions;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::utils::render_normal_module::render_normal_module;
+use crate::SharedOptions;
 use crate::{
   error::BatchedResult,
   {chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput},

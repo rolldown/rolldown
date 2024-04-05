@@ -9,7 +9,6 @@ use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_utils::block_on_spawn_all;
 
 use crate::{
-  bundler_options::types::normalized_bundler_options::SharedOptions,
   error::BatchedResult,
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
   runtime::RuntimeModuleBrief,
@@ -17,7 +16,7 @@ use crate::{
     module_table::ModuleTable, resolved_request_info::ResolvedRequestInfo, symbols::Symbols,
   },
   utils::resolve_id::resolve_id,
-  SharedResolver,
+  SharedOptions, SharedResolver,
 };
 
 pub struct ScanStage {

@@ -1,7 +1,7 @@
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 
-use crate::{bundler_options::types::normalized_bundler_options::SharedOptions, SharedResolver};
+use crate::{SharedOptions, SharedResolver};
 
 use super::Msg;
 

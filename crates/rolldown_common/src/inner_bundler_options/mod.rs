@@ -1,12 +1,9 @@
 use std::{fmt::Debug, path::PathBuf};
 
-use rolldown_common::Platform;
-use rolldown_resolver::ResolveOptions;
-
-use crate::{AddonOutputOption, InputItem};
-
 use self::types::{
-  external::External, output_format::OutputFormat, source_map_type::SourceMapType,
+  external::External, input_item::InputItem, output_format::OutputFormat,
+  output_option::AddonOutputOption, platform::Platform, resolve_options::ResolveOptions,
+  source_map_type::SourceMapType,
 };
 
 pub mod types;

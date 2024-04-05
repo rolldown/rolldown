@@ -1,7 +1,4 @@
-use crate::bundler_options::types::{
-  normalized_bundler_options::NormalizedBundlerOptions, platform::Platform,
-  source_map_type::SourceMapType,
-};
+use rolldown_common::{NormalizedBundlerOptions, Platform, SourceMapType};
 
 #[allow(clippy::struct_field_names)]
 pub struct NormalizeOptionsReturn {

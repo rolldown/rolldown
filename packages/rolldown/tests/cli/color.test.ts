@@ -14,6 +14,7 @@ describe('brandColor', () => {
 
       const { brandColor } = await import('../../src/cli/colors.js')
       expect(brandColor('rolldown')).toBe(
+        // cspell:disable-next-line
         '\u001b[38;2;227;151;9mrolldown\u001b[39m',
       )
     })
@@ -25,6 +26,7 @@ describe('brandColor', () => {
       }))
 
       const { brandColor } = await import('../../src/cli/colors.js')
+      // cspell:disable-next-line
       expect(brandColor('rolldown')).toBe('\u001b[38;5;178mrolldown\u001b[39m')
     })
 
@@ -35,6 +37,7 @@ describe('brandColor', () => {
       }))
 
       const { brandColor } = await import('../../src/cli/colors.js')
+      // cspell:disable-next-line
       expect(brandColor('rolldown')).toBe('\u001b[33mrolldown\u001b[39m')
     })
 

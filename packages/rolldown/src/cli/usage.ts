@@ -1,5 +1,5 @@
 /**
- * Custom usagae for citty.
+ * Custom usage for citty.
  * This module is based on the following URL from citty
  * https://github.com/unjs/citty/blob/696e5ee8eee9e3b6b10666d82db4899ebf4d5074/src/usage.ts
  */
@@ -121,10 +121,10 @@ function isBooleanArgDef(arg: ArgDef): arg is BooleanArgDef {
 }
 
 function formatLineColumns(lines: string[][], linePrefix = '') {
-  const maxLengh: number[] = []
+  const maxLength: number[] = []
   for (const line of lines) {
     for (const [i, element] of line.entries()) {
-      maxLengh[i] = Math.max(maxLengh[i] || 0, element.length)
+      maxLength[i] = Math.max(maxLength[i] || 0, element.length)
     }
   }
   return lines
@@ -132,7 +132,7 @@ function formatLineColumns(lines: string[][], linePrefix = '') {
       l
         .map(
           (c, i) =>
-            linePrefix + c[i === 0 ? 'padStart' : 'padEnd'](maxLengh[i]),
+            linePrefix + c[i === 0 ? 'padStart' : 'padEnd'](maxLength[i]),
         )
         .join('  '),
     )

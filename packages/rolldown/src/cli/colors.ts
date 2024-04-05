@@ -1,6 +1,6 @@
 /**
  * This module defines the brand color of the rolldown CLI.
- * That color is to be displayed appropriately for the terimnal environment.
+ * That color is to be displayed appropriately for the terminal environment.
  * That color is defined using ansi escape code.
  * See: https://en.wikipedia.org/wiki/ANSI_escape_code
  */
@@ -48,7 +48,7 @@ const BRAND_COLOR_TABLE: Record<number, ColorFunction> = {
  * @description
  * This function supports terminals that color and those that do not
  * @param str a target string
- * @returns color binded string
+ * @returns a string with brand color
  */
 export function brandColor(str: string) {
   if (!isColorSupported) {

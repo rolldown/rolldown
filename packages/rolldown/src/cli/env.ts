@@ -1,7 +1,7 @@
 import tty from 'node:tty'
 
 /**
- * The following flags are based on conosola
+ * The following flags are based on consola
  * https://github.com/unjs/consola/blob/24c98ceb90c269a170fd116134d91803a89f2c9d/src/utils/color.ts#L7-L26
  */
 const { env, argv, platform } = process

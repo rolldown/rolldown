@@ -1,0 +1,12 @@
+{
+  "_comment": "Input of this test are invalid, so the compiling should works but the execution should fail",
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      {
+        "name": "entry_js",
+        "import": "entry.js"
+      }
+    ]
+  }
+}

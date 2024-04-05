@@ -1,0 +1,10 @@
+{
+  "_comment": "The original input import external modules which is not exist in test environment",
+  "expectExecuted": false,
+  "config": {
+    "external": [
+      "ext1",
+      "ext2"
+    ]
+  }
+}

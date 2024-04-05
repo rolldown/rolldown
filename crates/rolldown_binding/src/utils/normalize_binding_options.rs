@@ -46,7 +46,7 @@ pub fn normalize_binding_options(
     .unwrap_or_default();
 
   let bundler_options = BundlerOptions {
-    input: input_options.input.into_iter().map(Into::into).collect(),
+    input: Some(input_options.input.into_iter().map(Into::into).collect()),
     cwd: cwd.into(),
     external: external.into(),
     treeshake: true.into(),

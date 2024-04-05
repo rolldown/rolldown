@@ -1407,6 +1407,9 @@ dependencies = [
  "rolldown_rstr",
  "rolldown_sourcemap",
  "rustc-hash",
+ "schemars",
+ "serde",
+ "serde_json",
  "sugar_path",
 ]
 
@@ -1501,6 +1504,7 @@ dependencies = [
 name = "rolldown_testing"
 version = "0.0.1"
 dependencies = [
+ "rolldown_common",
  "schemars",
  "serde",
  "serde_json",

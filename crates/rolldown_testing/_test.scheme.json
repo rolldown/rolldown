@@ -1,0 +1,298 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TestConfig",
+  "type": "object",
+  "properties": {
+    "_comment": {
+      "description": "A workaround for writing comments in JSON.",
+      "default": "",
+      "type": "string"
+    },
+    "config": {
+      "$ref": "#/definitions/BundlerOptions"
+    },
+    "expectError": {
+      "description": "If `true`, the fixture are expected to fail to compile/build.",
+      "default": false,
+      "type": "boolean"
+    },
+    "expectExecuted": {
+      "description": "If `false`, the compiled artifacts won't be executed.",
+      "default": true,
+      "type": "boolean"
+    },
+    "snapshotOutputStats": {
+      "description": "If `true`, the fixture output stats will be snapshot.",
+      "default": false,
+      "type": "boolean"
+    },
+    "visualizeSourcemap": {
+      "description": "If `true`, the sourcemap visualizer will be snapshot.",
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "BundlerOptions": {
+      "type": "object",
+      "properties": {
+        "banner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "chunkFileNames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cwd": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dir": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "entryFileNames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "external": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "footer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/OutputFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/InputItem"
+          }
+        },
+        "platform": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Platform"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resolve": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ResolveOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sourcemap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceMapType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "treeshake": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "InputItem": {
+      "type": "object",
+      "required": [
+        "import"
+      ],
+      "properties": {
+        "import": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "OutputFormat": {
+      "type": "string",
+      "enum": [
+        "Esm",
+        "Cjs"
+      ]
+    },
+    "Platform": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "Browser",
+            "Neutral"
+          ]
+        },
+        {
+          "description": "Represents the Node.js platform.",
+          "type": "string",
+          "enum": [
+            "Node"
+          ]
+        }
+      ]
+    },
+    "ResolveOptions": {
+      "description": "A simple wrapper around `oxc_resolver::ResolveOptions` to make it easier to use in the `rolldown_resolver` crate. See [oxc_resolver::ResolveOptions](https://docs.rs/oxc_resolver/latest/oxc_resolver/struct.ResolveOptions.html) for more information.",
+      "type": "object",
+      "properties": {
+        "alias": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "array",
+            "items": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2
+          }
+        },
+        "aliasFields": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "conditionNames": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "exportsFields": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "extensions": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "mainFields": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "mainFiles": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "modules": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "symlinks": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "SourceMapType": {
+      "type": "string",
+      "enum": [
+        "File",
+        "Inline",
+        "Hidden"
+      ]
+    }
+  }
+}

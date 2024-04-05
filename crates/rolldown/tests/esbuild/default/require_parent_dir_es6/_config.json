@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "dir_entry_js",
+        "import": "dir/entry.js"
+      }
+    ]
+  }
+}

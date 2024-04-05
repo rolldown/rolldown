@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./react-dom.js"
+      }
+    ]
+  }
+}

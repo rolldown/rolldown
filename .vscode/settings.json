@@ -36,6 +36,10 @@
     {
       "fileMatch": ["test.config.json"],
       "url": "./crates/rolldown_testing/test.config.scheme.json"
+    },
+    {
+      "fileMatch": ["_config.json"],
+      "url": "./crates/rolldown_testing/_test.scheme.json"
     }
   ],
   "search.exclude": {

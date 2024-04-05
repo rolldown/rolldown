@@ -86,7 +86,7 @@ impl Case {
       self.render_stats_to_snapshot(&assets);
     }
 
-    if self.fixture.test_config().sourcemap {
+    if self.fixture.test_config().visualize_sourcemap {
       self.render_sourcemap_visualizer_to_snapshot(&assets);
     }
   }

@@ -12,7 +12,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   let raw_resolve = std::mem::take(&mut raw_options.resolve).unwrap_or_default();
 
   let normalized = NormalizedBundlerOptions {
-    input: raw_options.input,
+    input: raw_options.input.unwrap_or_default(),
     cwd: raw_options
       .cwd
       .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),

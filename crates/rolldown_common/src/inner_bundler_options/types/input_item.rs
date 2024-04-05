@@ -1,4 +1,7 @@
-#[derive(Debug)]
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct InputItem {
   pub name: Option<String>,
   pub import: String,

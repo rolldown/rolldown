@@ -1,4 +1,7 @@
-#[derive(Debug, Clone, Copy)]
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+#[derive(Debug, Clone, Copy, Deserialize, JsonSchema)]
 pub enum Platform {
   /// Represents the Node.js platform.
   Node,

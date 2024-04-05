@@ -62,7 +62,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
         .collect::<Vec<_>>();
       let mut bundler = BundlerBuilder::default()
         .with_options(BundlerOptions {
-          input,
+          input: Some(input),
           cwd: Some("/".into()),
           external: Some(External::ArrayString(vec![])),
           treeshake: Some(false),

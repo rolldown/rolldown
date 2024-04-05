@@ -43,8 +43,10 @@ pub fn collapse_sourcemaps(
 
       let source_id = original_token.get_source_and_content().map(|(source, source_content)| {
         let relative_path = source.as_path().relative(&output_dir);
-        sourcemap_builder
-          .add_source_and_content(relative_path.to_string_lossy().as_ref(), source_content)
+        sourcemap_builder.add_source_and_content(
+          relative_path.normalize().to_string_lossy().as_ref(),
+          source_content,
+        )
       });
 
       sourcemap_builder.add_token(

@@ -3,9 +3,10 @@ mod de_conflict;
 pub mod render_chunk;
 mod render_chunk_exports;
 mod render_chunk_imports;
-
 use index_vec::IndexVec;
 use rolldown_common::{ChunkId, FileNameTemplate};
+use rolldown_common::ChunkId;
+use sugar_path::SugarPath;
 
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;
 

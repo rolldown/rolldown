@@ -18,6 +18,7 @@ export async function runRolldown(suite) {
   const { output: outputOptions = {}, ...inputOptions } =
     suite.rolldownOptions ?? {}
   const build = await rolldown.rolldown({
+    platform: 'node',
     input: suite.inputs,
     ...inputOptions,
   })

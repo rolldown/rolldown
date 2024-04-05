@@ -1,12 +1,12 @@
-//! `rolldown_common` is mostly for sharing code between `rolldown` and `rolldown_plugin`. This means only `rolldown` and `rolldown_plugin`
-//! could rely on this crate. Other `rolldown_xxx` crates should not rely on this crate but other way around.
 mod module;
+mod options;
 mod types;
 
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
   module::external_module::ExternalModule,
   module::normal_module::NormalModule,
+  options::types::platform::Platform,
   types::ast_scope::AstScope,
   types::batched_errors::{BatchedErrors, BatchedResult, IntoBatchedResult},
   types::bundler_file_system::BundlerFileSystem,

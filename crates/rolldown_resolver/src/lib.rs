@@ -5,6 +5,5 @@ mod types;
 
 pub use crate::{
   resolver::{ResolveRet, Resolver},
-  types::{module_type::ModuleType, resolved_path::ResolvedPath},
+  types::resolve_options::ResolveOptions,
 };
-pub use oxc_resolver::{Alias, AliasValue, EnforceExtension, ResolveOptions};

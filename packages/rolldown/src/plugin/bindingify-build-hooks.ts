@@ -3,6 +3,7 @@ import type { BindingPluginOptions } from '../binding'
 
 import type { Plugin } from './index'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
+import { isEmptySourcemapFiled, transformSourcemap } from '../utils'
 
 export function bindingifyBuildStart(
   options: RolldownNormalizedInputOptions,
@@ -77,12 +78,24 @@ export function bindingifyTransform(
       return
     }
 
-    const retCode = typeof ret === 'string' ? ret : ret.code
-    const retMap = typeof ret === 'string' ? undefined : ret.map
+    if (typeof ret === 'string') {
+      return { code: ret }
+    }
+
+    // TODO(underfin) move the logic to rust
+    // If sourcemap hasn't `sourcesContent` and `sources`, using original code to fill it.
+    if (ret.map && typeof ret.map === 'object') {
+      if (isEmptySourcemapFiled(ret.map.sourcesContent)) {
+        ret.map.sourcesContent = [code]
+      }
+      if (isEmptySourcemapFiled(ret.map.sources)) {
+        ret.map.sources = [id]
+      }
+    }
 
     return {
-      code: retCode,
-      map: retMap ?? undefined,
+      code: ret.code,
+      map: transformSourcemap(ret.map),
     }
   }
 }
@@ -102,12 +115,13 @@ export function bindingifyLoad(
       return
     }
 
-    const retCode = typeof ret === 'string' ? ret : ret.code
-    const retMap = typeof ret === 'string' ? undefined : ret.map
+    if (typeof ret === 'string') {
+      return { code: ret }
+    }
 
     return {
-      code: retCode,
-      map: retMap ?? undefined,
+      code: ret.code,
+      map: transformSourcemap(ret.map),
     }
   }
 }

@@ -2,7 +2,7 @@ import process from 'node:process'
 import nodePath from 'node:path'
 import consola from 'consola'
 import { defineCommand, runMain, showUsage } from 'citty'
-import { loadConfig } from './utils.js'
+import { loadConfig } from './utils'
 import { bundle } from './commands/bundle'
 import {
   version,

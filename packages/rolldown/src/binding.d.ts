@@ -102,7 +102,7 @@ export interface BindingPluginContextResolveOptions {
 
 export interface BindingPluginOptions {
   name: string
-  buildStart?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
+  buildStart?: BuildStartHookOption
   resolveId?: (
     specifier: string,
     importer: Nullable<string>,
@@ -139,6 +139,17 @@ export interface BindingResolveOptions {
   mainFiles?: Array<string>
   modules?: Array<string>
   symlinks?: boolean
+}
+
+export interface BuildStartHookOption {
+  handler: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
+  order?: 'pre' | 'post' | null
+  sequential?: boolean
+}
+
+export interface HookOption {
+  order?: 'pre' | 'post' | null
+  sequential?: boolean
 }
 
 export interface RenderedChunk {

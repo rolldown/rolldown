@@ -1,8 +1,9 @@
 import { normalizeHook } from '../utils/normalize-hook'
-import type { BindingPluginOptions } from '../binding'
+import type { BindingPluginOptions, HookOption } from '../binding'
 
-import type { Plugin } from './index'
+import type { Hook, Plugin } from './index'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
+import { AnyFn } from 'src/types/utils'
 
 export function bindingifyBuildStart(
   options: RolldownNormalizedInputOptions,
@@ -11,10 +12,14 @@ export function bindingifyBuildStart(
   if (!hook) {
     return undefined
   }
-  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+  const [handler, option] = normalizeHook<Hook<AnyFn, HookOption>>(hook)
 
-  return async (ctx) => {
-    handler.call(ctx, options)
+  return {
+    handler: async (ctx) => {
+      handler.call(ctx, options)
+    },
+    order: option.order,
+    sequential: option.sequential,
   }
 }
 

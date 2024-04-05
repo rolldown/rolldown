@@ -35,8 +35,8 @@ impl Plugin for JsPlugin {
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
-    if let Some(cb) = &self.build_start {
-      cb.await_call(Arc::clone(ctx).into()).await?;
+    if let Some(hook_option) = &self.build_start {
+      hook_option.handler.await_call(Arc::clone(ctx).into()).await?;
     }
     Ok(())
   }

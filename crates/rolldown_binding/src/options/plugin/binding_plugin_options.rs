@@ -17,14 +17,31 @@ use super::{
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
+#[derive(Default)]
+pub struct HookOption {
+  #[napi(ts_type = "'pre'|'post'|null")]
+  pub order: Option<String>,
+  pub sequential: Option<bool>,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+pub struct BuildStartHookOption {
+  #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
+  pub handler: MaybeAsyncJsCallback<BindingPluginContext, ()>,
+  #[napi(ts_type = "'pre'|'post'|null")]
+  pub order: Option<String>,
+  pub sequential: Option<bool>,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingPluginOptions {
   pub name: String,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
-  pub build_start: Option<MaybeAsyncJsCallback<BindingPluginContext, ()>>,
+  #[napi(ts_type = "BuildStartHookOption")]
+  pub build_start: Option<BuildStartHookOption>,
 
   #[serde(skip_deserializing)]
   #[napi(

@@ -93,11 +93,11 @@ jobs:
           output-file-path: tmp/new-benchmark-node-output.json
           # Where the previous data file is stored
           external-data-json-path: tmp/benchmark-node-output.json
-          fail-on-alert: false
+          fail-on-alert: ${{ github.event_name != 'push' }}
           summary-always: true
-          comment-always: true
+          comment-always: false
           save-data-file: ${{ github.event_name == 'push' }}
-          alert-threshold: '10%' # Too much noise in the benchmark results
+          alert-threshold: '110%' # Too much noise in the benchmark results
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Save benchmark result

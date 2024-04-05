@@ -225,6 +225,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98cc8fbded0c607b7ba9dd60cd98df59af97e84d24e49c8557331cfc26d301ce"
 
 [[package]]
+name = "clean-path"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aaa6b4b263a5d737e9bf6b7c09b72c41a5480aec4d7219af827f6564e950b6a5"
+
+[[package]]
 name = "codspeed"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -812,6 +818,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "nodejs_package_json"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad444c78696e8b4de2de8a45468d0cc76630e2ed235c84e102c197b89d295a0b"
+dependencies = [
+ "indexmap",
+ "rustc-hash",
+ "semver",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "nu-ansi-term"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1000,20 +1020,21 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "1.5.4"
+version = "1.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2033cc3b0e72446d3321866db0954804b9ca559ad692480205053f6aea4bfc15"
+checksum = "cfd1f2171167afd69aefeb4ec8ca5b9fdccdd43ecafe1e8ddf1a1bd756ee5774"
 dependencies = [
  "dashmap",
  "dunce",
- "indexmap",
  "json-strip-comments",
+ "nodejs_package_json",
  "once_cell",
  "rustc-hash",
  "serde",
  "serde_json",
  "thiserror",
  "tracing",
+ "typescript_tsconfig_json",
 ]
 
 [[package]]
@@ -1383,7 +1404,6 @@ dependencies = [
  "regex",
  "rolldown_error",
  "rolldown_fs",
- "rolldown_resolver",
  "rolldown_rstr",
  "rolldown_sourcemap",
  "rustc-hash",
@@ -1455,6 +1475,7 @@ name = "rolldown_resolver"
 version = "0.0.1"
 dependencies = [
  "oxc_resolver",
+ "rolldown_common",
  "rolldown_error",
  "rolldown_fs",
  "sugar_path",
@@ -1581,6 +1602,9 @@ name = "semver"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92d43fe69e652f3df9bdc2b85b2854a0825b86e4fb76bc44d945137d053639ca"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "seq-macro"
@@ -1905,6 +1929,19 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "typescript_tsconfig_json"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7cc416eaf05297012ead9d192226fe9a92e9a20f64f8780efb9085aaae9b590"
+dependencies = [
+ "clean-path",
+ "indexmap",
+ "rustc-hash",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

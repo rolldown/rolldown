@@ -76,7 +76,7 @@ if (fsExtra.existsSync('./tmp/bench/rome')) {
 
   fsExtra.copySync('./tmp/github/rome/packages', './tmp/bench/rome/src/')
   fsExtra.writeFileSync(
-    './tmp/bench/rome/src/entry.js',
+    './tmp/bench/rome/src/entry.ts',
     'import "rome/bin/rome"',
   )
   fsExtra.writeFileSync(

@@ -24,7 +24,13 @@ impl BundlerBuilder {
       normalize_options(self.input_options, self.output_options);
 
     Bundler {
-      resolver: Resolver::new(resolve_options, input_options.cwd.clone(), OsFileSystem).into(),
+      resolver: Resolver::new(
+        resolve_options,
+        input_options.platform,
+        input_options.cwd.clone(),
+        OsFileSystem,
+      )
+      .into(),
       plugin_driver: PluginDriver::new_shared(self.plugins),
       input_options: Arc::new(input_options),
       output_options,

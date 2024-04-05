@@ -15,9 +15,9 @@ use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
+use crate::bundler_options::types::normalized_bundler_options::SharedOptions;
 use crate::module_loader::module_task_context::ModuleTaskCommonData;
 use crate::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
-use crate::options::normalized_input_options::SharedNormalizedInputOptions;
 use crate::runtime::RuntimeModuleBrief;
 use crate::types::module_table::{ExternalModuleVec, ModuleTable};
 use crate::types::resolved_request_info::ResolvedRequestInfo;
@@ -45,7 +45,7 @@ impl IntermediateNormalModules {
 }
 
 pub struct ModuleLoader {
-  input_options: SharedNormalizedInputOptions,
+  input_options: SharedOptions,
   common_data: ModuleTaskCommonData,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
   visited: FxHashMap<Arc<str>, ModuleId>,
@@ -69,7 +69,7 @@ pub struct ModuleLoaderOutput {
 
 impl ModuleLoader {
   pub fn new(
-    input_options: SharedNormalizedInputOptions,
+    input_options: SharedOptions,
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,

@@ -14,9 +14,9 @@ use sugar_path::AsPath;
 use super::{module_task_context::ModuleTaskCommonData, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
+  bundler_options::types::normalized_bundler_options::SharedOptions,
   error::{BatchedErrors, BatchedResult},
   module_loader::NormalModuleTaskResult,
-  options::normalized_input_options::SharedNormalizedInputOptions,
   types::{
     ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder,
     resolved_request_info::ResolvedRequestInfo,
@@ -205,7 +205,7 @@ impl<'task> NormalModuleTask<'task> {
 
   #[allow(clippy::option_if_let_else)]
   pub(crate) async fn resolve_id(
-    input_options: &SharedNormalizedInputOptions,
+    input_options: &SharedOptions,
     resolver: &SharedResolver,
     plugin_driver: &SharedPluginDriver,
     importer: &str,

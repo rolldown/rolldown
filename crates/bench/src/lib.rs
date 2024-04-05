@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use rolldown::{Bundler, InputItem, InputOptions, OutputOptions};
+use rolldown::{Bundler, BundlerOptions, InputItem};
 
 pub fn repo_root() -> PathBuf {
   let cargo_manifest_dir = std::env::var("CARGO_MANIFEST_DIR").map(PathBuf::from);
@@ -20,14 +20,11 @@ pub fn repo_root() -> PathBuf {
 }
 
 pub async fn run_fixture(fixture_path: PathBuf) {
-  let mut bundler = Bundler::new(
-    InputOptions {
-      input: vec![InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }],
-      cwd: fixture_path.clone().into(),
-      ..Default::default()
-    },
-    OutputOptions::default(),
-  );
+  let mut bundler = Bundler::new(BundlerOptions {
+    input: vec![InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }],
+    cwd: fixture_path.clone().into(),
+    ..Default::default()
+  });
 
   if fixture_path.join("dist").is_dir() {
     std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();

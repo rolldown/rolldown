@@ -1,13 +1,13 @@
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 
-use crate::{options::normalized_input_options::SharedNormalizedInputOptions, SharedResolver};
+use crate::{bundler_options::types::normalized_bundler_options::SharedOptions, SharedResolver};
 
 use super::Msg;
 
 /// Used to store common data shared between all tasks.
 pub struct ModuleTaskCommonData {
-  pub input_options: SharedNormalizedInputOptions,
+  pub input_options: SharedOptions,
   pub tx: tokio::sync::mpsc::UnboundedSender<Msg>,
   pub resolver: SharedResolver,
   pub fs: OsFileSystem,

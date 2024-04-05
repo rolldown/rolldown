@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use bench::join_by_repo_root;
 use codspeed_criterion_compat::{criterion_group, criterion_main, Criterion};
-use rolldown::{InputOptions, OutputOptions, SourceMapType};
+use rolldown::{BundlerOptions, SourceMapType};
 
 #[derive(Debug)]
 struct BenchItem {
@@ -26,17 +26,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function(scan_id, |b| {
       b.iter(|| {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
-          let mut rolldown_bundler = rolldown::Bundler::new(
-            InputOptions {
-              input: vec![rolldown::InputItem {
-                name: Some(item.name.to_string()),
-                import: item.entry_path.to_string_lossy().to_string(),
-              }],
-              cwd: join_by_repo_root("crates/benches").into(),
-              ..Default::default()
-            },
-            Default::default(),
-          );
+          let mut rolldown_bundler = rolldown::Bundler::new(BundlerOptions {
+            input: vec![rolldown::InputItem {
+              name: Some(item.name.to_string()),
+              import: item.entry_path.to_string_lossy().to_string(),
+            }],
+            cwd: join_by_repo_root("crates/benches").into(),
+            ..Default::default()
+          });
           rolldown_bundler.scan().await.unwrap();
         })
       });
@@ -59,17 +56,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function(bundle_id, |b| {
       b.iter(|| {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
-          let mut rolldown_bundler = rolldown::Bundler::new(
-            InputOptions {
-              input: vec![rolldown::InputItem {
-                name: Some(item.name.to_string()),
-                import: item.entry_path.to_string_lossy().to_string(),
-              }],
-              cwd: join_by_repo_root("crates/bench").into(),
-              ..Default::default()
-            },
-            Default::default(),
-          );
+          let mut rolldown_bundler = rolldown::Bundler::new(BundlerOptions {
+            input: vec![rolldown::InputItem {
+              name: Some(item.name.to_string()),
+              import: item.entry_path.to_string_lossy().to_string(),
+            }],
+            cwd: join_by_repo_root("crates/bench").into(),
+            ..Default::default()
+          });
           rolldown_bundler.write().await.unwrap();
         })
       });
@@ -78,17 +72,15 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function(source_map_id, |b| {
       b.iter(|| {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
-          let mut rolldown_bundler = rolldown::Bundler::new(
-            InputOptions {
-              input: vec![rolldown::InputItem {
-                name: Some(item.name.to_string()),
-                import: item.entry_path.to_string_lossy().to_string(),
-              }],
-              cwd: join_by_repo_root("crates/bench").into(),
-              ..Default::default()
-            },
-            OutputOptions { sourcemap: Some(SourceMapType::File), ..Default::default() },
-          );
+          let mut rolldown_bundler = rolldown::Bundler::new(BundlerOptions {
+            input: vec![rolldown::InputItem {
+              name: Some(item.name.to_string()),
+              import: item.entry_path.to_string_lossy().to_string(),
+            }],
+            cwd: join_by_repo_root("crates/bench").into(),
+            sourcemap: Some(SourceMapType::File),
+            ..Default::default()
+          });
           rolldown_bundler.write().await.unwrap();
         })
       });

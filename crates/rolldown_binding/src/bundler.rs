@@ -27,13 +27,7 @@ impl Bundler {
     try_init_custom_trace_subscriber(env);
     let ret = normalize_binding_options(input_options, output_options)?;
 
-    Ok(Self {
-      inner: Mutex::new(NativeBundler::with_plugins(
-        ret.input_options,
-        ret.output_options,
-        ret.plugins,
-      )),
-    })
+    Ok(Self { inner: Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins)) })
   }
 
   #[napi]

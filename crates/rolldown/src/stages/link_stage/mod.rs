@@ -9,7 +9,7 @@ use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcProgram;
 
 use crate::{
-  options::normalized_input_options::NormalizedInputOptions,
+  bundler_options::types::normalized_bundler_options::SharedOptions,
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
@@ -49,14 +49,11 @@ pub struct LinkStage<'a> {
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildError>,
   pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
-  pub input_options: &'a NormalizedInputOptions,
+  pub input_options: &'a SharedOptions,
 }
 
 impl<'a> LinkStage<'a> {
-  pub fn new(
-    scan_stage_output: ScanStageOutput,
-    input_options: &'a NormalizedInputOptions,
-  ) -> Self {
+  pub fn new(scan_stage_output: ScanStageOutput, input_options: &'a SharedOptions) -> Self {
     Self {
       sorted_modules: Vec::new(),
       metas: scan_stage_output

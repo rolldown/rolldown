@@ -4,7 +4,7 @@ use std::{
   process::Command,
 };
 
-use rolldown::{Bundler, External, InputOptions, OutputOptions, RolldownOutput, SourceMapType};
+use rolldown::{Bundler, BundlerOptions, External, RolldownOutput, SourceMapType};
 use rolldown_error::BuildError;
 use rolldown_testing::TestConfig;
 
@@ -97,41 +97,36 @@ impl Fixture {
       test_config.input.input = Some(vec![default_test_input_item()]);
     }
 
-    let mut bundler = Bundler::new(
-      InputOptions {
-        input: test_config
-          .input
-          .input
-          .map(|items| {
-            items
-              .into_iter()
-              .map(|item| rolldown::InputItem { name: Some(item.name), import: item.import })
-              .collect()
-          })
-          .unwrap(),
-        cwd: Some(fixture_path.to_path_buf()),
-        external: Some(test_config.input.external.map(External::ArrayString).unwrap_or_default()),
-        treeshake: Some(test_config.input.treeshake.unwrap_or(true)),
-        resolve: test_config.input.resolve.map(|value| rolldown::ResolveOptions {
-          alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),
-          alias_fields: value.alias_fields,
-          condition_names: value.condition_names,
-          exports_fields: value.exports_fields,
-          extensions: value.extensions,
-          main_fields: value.main_fields,
-          main_files: value.main_files,
-          modules: value.modules,
-          symlinks: value.symlinks,
-        }),
-        ..Default::default()
-      },
-      OutputOptions {
-        entry_file_names: "[name].mjs".to_string().into(),
-        chunk_file_names: "[name].mjs".to_string().into(),
-        sourcemap: test_config.sourcemap.then_some(SourceMapType::File),
-        ..Default::default()
-      },
-    );
+    let mut bundler = Bundler::new(BundlerOptions {
+      input: test_config
+        .input
+        .input
+        .map(|items| {
+          items
+            .into_iter()
+            .map(|item| rolldown::InputItem { name: Some(item.name), import: item.import })
+            .collect()
+        })
+        .unwrap(),
+      cwd: Some(fixture_path.to_path_buf()),
+      external: Some(test_config.input.external.map(External::ArrayString).unwrap_or_default()),
+      treeshake: Some(test_config.input.treeshake.unwrap_or(true)),
+      resolve: test_config.input.resolve.map(|value| rolldown::ResolveOptions {
+        alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),
+        alias_fields: value.alias_fields,
+        condition_names: value.condition_names,
+        exports_fields: value.exports_fields,
+        extensions: value.extensions,
+        main_fields: value.main_fields,
+        main_files: value.main_files,
+        modules: value.modules,
+        symlinks: value.symlinks,
+      }),
+      entry_file_names: "[name].mjs".to_string().into(),
+      chunk_file_names: "[name].mjs".to_string().into(),
+      sourcemap: test_config.sourcemap.then_some(SourceMapType::File),
+      ..Default::default()
+    });
 
     if fixture_path.join("dist").is_dir() {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();

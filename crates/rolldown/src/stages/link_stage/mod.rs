@@ -9,13 +9,13 @@ use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcProgram;
 
 use crate::{
-  bundler_options::types::normalized_bundler_options::SharedOptions,
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     module_table::ModuleTable,
     symbols::Symbols,
   },
+  SharedOptions,
 };
 
 use self::wrapping::create_wrapper;

@@ -1,8 +1,9 @@
-use futures::Future;
-use rolldown_common::RenderedChunk;
 use rolldown_error::BuildError;
 use std::fmt::Debug;
+use std::future::Future;
 use std::pin::Pin;
+
+use crate::RenderedChunk;
 
 pub type AddonFunction = dyn Fn(
     RenderedChunk,

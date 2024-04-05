@@ -1,12 +1,31 @@
+mod inner_bundler_options;
 mod module;
-mod options;
 mod types;
+
+/// This module is to help `rolldown` crate could export types related bundler options easily.
+/// `rolldown` crate could use `pub use rolldown_common::bundler_options::*;` to export all types, so we don't need write
+/// the same code in `rolldown` crate again.
+pub mod bundler_options {
+  pub use crate::inner_bundler_options::{
+    types::{
+      external::External,
+      file_name_template::{FileNameRenderOptions, FileNameTemplate},
+      input_item::InputItem,
+      normalized_bundler_options::NormalizedBundlerOptions,
+      output_format::OutputFormat,
+      output_option::{AddonFunction, AddonOutputOption},
+      platform::Platform,
+      resolve_options::ResolveOptions,
+      source_map_type::SourceMapType,
+    },
+    BundlerOptions,
+  };
+}
 
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
   module::external_module::ExternalModule,
   module::normal_module::NormalModule,
-  options::types::platform::Platform,
   types::ast_scope::AstScope,
   types::batched_errors::{BatchedErrors, BatchedResult, IntoBatchedResult},
   types::bundler_file_system::BundlerFileSystem,
@@ -33,3 +52,4 @@ pub use crate::{
   types::symbol_ref::SymbolRef,
   types::wrap_kind::WrapKind,
 };
+pub use bundler_options::*;

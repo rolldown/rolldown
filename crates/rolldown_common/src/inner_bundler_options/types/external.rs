@@ -1,7 +1,7 @@
 use std::fmt::Debug;
+use std::future::Future;
 use std::pin::Pin;
 
-use futures::Future;
 use rolldown_error::BuildError;
 
 pub type ExternalFn = dyn Fn(

@@ -15,7 +15,6 @@ use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
-use crate::bundler_options::types::normalized_bundler_options::SharedOptions;
 use crate::module_loader::module_task_context::ModuleTaskCommonData;
 use crate::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
 use crate::runtime::RuntimeModuleBrief;
@@ -24,7 +23,7 @@ use crate::types::resolved_request_info::ResolvedRequestInfo;
 use crate::types::symbols::Symbols;
 
 use crate::error::{BatchedErrors, BatchedResult};
-use crate::SharedResolver;
+use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<NormalModuleId, Option<NormalModule>>,

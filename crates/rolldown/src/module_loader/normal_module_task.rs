@@ -14,7 +14,6 @@ use sugar_path::AsPath;
 use super::{module_task_context::ModuleTaskCommonData, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
-  bundler_options::types::normalized_bundler_options::SharedOptions,
   error::{BatchedErrors, BatchedResult},
   module_loader::NormalModuleTaskResult,
   types::{
@@ -22,7 +21,7 @@ use crate::{
     resolved_request_info::ResolvedRequestInfo,
   },
   utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
-  SharedResolver,
+  SharedOptions, SharedResolver,
 };
 pub struct NormalModuleTask<'task> {
   ctx: &'task ModuleTaskCommonData,

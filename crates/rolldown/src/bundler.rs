@@ -10,11 +10,10 @@ use super::stages::{
 };
 use crate::{
   bundler_builder::BundlerBuilder,
-  bundler_options::types::normalized_bundler_options::SharedOptions,
   error::{BatchedErrors, BatchedResult},
   stages::{bundle_stage::BundleStage, scan_stage::ScanStage},
   types::rolldown_output::RolldownOutput,
-  BundlerOptions, SharedResolver,
+  BundlerOptions, SharedOptions, SharedResolver,
 };
 
 pub struct Bundler {

@@ -1,12 +1,7 @@
-use rolldown_common::{ChunkKind, SymbolRef, WrapKind};
+use rolldown_common::{ChunkKind, OutputFormat, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
 
-use crate::{
-  bundler_options::types::{
-    normalized_bundler_options::SharedOptions, output_format::OutputFormat,
-  },
-  stages::link_stage::LinkStageOutput,
-};
+use crate::{stages::link_stage::LinkStageOutput, SharedOptions};
 
 use super::Chunk;
 

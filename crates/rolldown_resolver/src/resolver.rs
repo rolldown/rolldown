@@ -1,13 +1,12 @@
-use rolldown_common::{ImportKind, ModuleType, Platform, ResolvedPath};
+use rolldown_common::{ImportKind, ModuleType, Platform, ResolveOptions, ResolvedPath};
 use rolldown_error::BuildError;
 use rolldown_fs::FileSystem;
 use std::path::{Path, PathBuf};
 use sugar_path::SugarPathBuf;
 
-use oxc_resolver::{EnforceExtension, Resolution, ResolveError, ResolverGeneric};
-
-use crate::types::resolve_options::ResolveOptions as NewResolveOptions;
-use oxc_resolver::ResolveOptions as OxcResolverOptions;
+use oxc_resolver::{
+  EnforceExtension, Resolution, ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric,
+};
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -19,7 +18,7 @@ pub struct Resolver<T: FileSystem + Default> {
 }
 
 impl<F: FileSystem + Default> Resolver<F> {
-  pub fn new(raw_resolve: NewResolveOptions, platform: Platform, cwd: PathBuf, fs: F) -> Self {
+  pub fn new(raw_resolve: ResolveOptions, platform: Platform, cwd: PathBuf, fs: F) -> Self {
     let mut default_conditions = vec!["default".to_string()];
     let mut import_conditions = vec!["import".to_string()];
     let mut require_conditions = vec!["require".to_string()];

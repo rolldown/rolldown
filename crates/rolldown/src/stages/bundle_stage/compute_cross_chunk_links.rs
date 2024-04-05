@@ -1,15 +1,13 @@
 use std::{borrow::Cow, sync::Mutex};
 
-use crate::{
-  bundler_options::types::output_format::OutputFormat, chunk::CrossChunkImportItem,
-  chunk_graph::ChunkGraph, utils::is_in_rust_test_mode,
-};
+use crate::{chunk::CrossChunkImportItem, chunk_graph::ChunkGraph, utils::is_in_rust_test_mode};
 
 use super::BundleStage;
 use index_vec::{index_vec, IndexVec};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
-  ChunkId, ChunkKind, ExportsKind, ExternalModuleId, ImportKind, ModuleId, NamedImport, SymbolRef,
+  ChunkId, ChunkKind, ExportsKind, ExternalModuleId, ImportKind, ModuleId, NamedImport,
+  OutputFormat, SymbolRef,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rustc_hash::{FxHashMap, FxHashSet};

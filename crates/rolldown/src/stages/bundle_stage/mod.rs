@@ -1,20 +1,19 @@
 use std::sync::Arc;
 
 use crate::{
-  bundler_options::types::{
-    file_name_template::FileNameRenderOptions, normalized_bundler_options::SharedOptions,
-    source_map_type::SourceMapType,
-  },
   chunk::ChunkRenderReturn,
   chunk_graph::ChunkGraph,
   error::BatchedResult,
   finalizer::FinalizerContext,
   stages::link_stage::LinkStageOutput,
   utils::{finalize_normal_module, is_in_rust_test_mode, render_chunks::render_chunks},
+  SharedOptions,
 };
 use rolldown_utils::block_on_spawn_all;
 
-use rolldown_common::{ChunkKind, Output, OutputAsset, OutputChunk};
+use rolldown_common::{
+  ChunkKind, FileNameRenderOptions, Output, OutputAsset, OutputChunk, SourceMapType,
+};
 use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::FxHashSet;

@@ -1,10 +1,7 @@
 use rolldown_common::{ChunkKind, RenderedChunk, RenderedModule};
 use rustc_hash::FxHashMap;
 
-use crate::{
-  bundler_options::types::normalized_bundler_options::SharedOptions,
-  stages::link_stage::LinkStageOutput,
-};
+use crate::{stages::link_stage::LinkStageOutput, SharedOptions};
 
 use super::Chunk;
 

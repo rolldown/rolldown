@@ -1,17 +1,8 @@
 use std::fmt::Debug;
-use std::path::PathBuf;
 use std::pin::Pin;
 
-use derivative::Derivative;
 use futures::Future;
 use rolldown_error::BuildError;
-
-use self::resolve_options::ResolveOptions;
-
-use super::types::input_item::InputItem;
-use super::types::platform::Platform;
-
-pub mod resolve_options;
 
 pub type ExternalFn = dyn Fn(
     String,
@@ -53,15 +44,4 @@ impl External {
       Self::Fn(value) => value(source, importer, is_resolved).await,
     }
   }
-}
-
-#[derive(Derivative, Default)]
-#[derivative(Debug)]
-pub struct InputOptions {
-  pub input: Vec<InputItem>,
-  pub cwd: Option<PathBuf>,
-  pub external: Option<External>,
-  pub treeshake: Option<bool>,
-  pub resolve: Option<ResolveOptions>,
-  pub platform: Option<Platform>,
 }

@@ -6,7 +6,7 @@ use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
 use rolldown_sourcemap::collapse_sourcemaps;
 
 use crate::{
-  options::normalized_output_options::NormalizedOutputOptions,
+  bundler_options::types::normalized_bundler_options::SharedOptions,
   types::module_render_output::ModuleRenderOutput,
 };
 
@@ -14,7 +14,7 @@ pub fn render_normal_module<'a>(
   module: &'a NormalModule,
   ast: &OxcProgram,
   source_name: &str,
-  output_options: &NormalizedOutputOptions,
+  output_options: &SharedOptions,
 ) -> Option<ModuleRenderOutput<'a>> {
   if ast.program().body.is_empty() {
     None

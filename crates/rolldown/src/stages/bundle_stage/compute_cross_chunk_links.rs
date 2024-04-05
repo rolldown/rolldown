@@ -1,8 +1,8 @@
 use std::{borrow::Cow, sync::Mutex};
 
 use crate::{
-  OutputFormat,
-  {chunk::CrossChunkImportItem, chunk_graph::ChunkGraph, utils::is_in_rust_test_mode},
+  bundler_options::types::output_format::OutputFormat, chunk::CrossChunkImportItem,
+  chunk_graph::ChunkGraph, utils::is_in_rust_test_mode,
 };
 
 use super::BundleStage;
@@ -92,7 +92,7 @@ impl<'a> BundleStage<'a> {
           let entry_module = &self.link_output.module_table.normal_modules[*entry_module_id];
           let entry_linking_info = &self.link_output.metas[entry_module.id];
           if matches!(entry_module.exports_kind, ExportsKind::CommonJs)
-            && matches!(self.output_options.format, OutputFormat::Esm)
+            && matches!(self.options.format, OutputFormat::Esm)
           {
             chunk_meta_imports
               .insert(entry_linking_info.wrapper_ref.expect("cjs should be wrapped in esm output"));

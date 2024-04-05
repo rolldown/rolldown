@@ -17,13 +17,12 @@ use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
 
-use crate::options::normalized_input_options::NormalizedInputOptions;
-use crate::options::normalized_output_options::NormalizedOutputOptions;
+use crate::bundler_options::types::file_name_template::FileNameTemplate;
+use crate::bundler_options::types::normalized_bundler_options::SharedOptions;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::utils::render_normal_module::render_normal_module;
 use crate::{
   error::BatchedResult,
-  FileNameTemplate,
   {chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput},
 };
 
@@ -65,7 +64,7 @@ impl Chunk {
 
   pub fn file_name_template<'a>(
     &mut self,
-    output_options: &'a NormalizedOutputOptions,
+    output_options: &'a SharedOptions,
   ) -> &'a FileNameTemplate {
     if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined) {
       &output_options.entry_file_names
@@ -77,10 +76,9 @@ impl Chunk {
   #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
   pub async fn render(
     &self,
-    input_options: &NormalizedInputOptions,
+    options: &SharedOptions,
     graph: &LinkStageOutput,
     chunk_graph: &ChunkGraph,
-    output_options: &NormalizedOutputOptions,
   ) -> BatchedResult<ChunkRenderReturn> {
     use rayon::prelude::*;
     let mut rendered_modules = FxHashMap::default();
@@ -99,8 +97,8 @@ impl Chunk {
           m,
           &graph.ast_table[m.id],
           // TODO(underfin): refactor the relative path
-          m.resource_id.expect_file().relative_path(&input_options.cwd).to_string_lossy().as_ref(),
-          output_options,
+          m.resource_id.expect_file().relative_path(&options.cwd).to_string_lossy().as_ref(),
+          options,
         )
       })
       .collect::<Vec<_>>()
@@ -121,20 +119,20 @@ impl Chunk {
         }
         rendered_modules.insert(module_path.to_string(), rendered_module);
       });
-    let rendered_chunk = self.get_rendered_chunk_info(graph, output_options, rendered_modules);
+    let rendered_chunk = self.get_rendered_chunk_info(graph, options, rendered_modules);
 
     // TODO avoid rendered_chunk clone
     // add banner
-    if let Some(banner_txt) = output_options.banner.call(rendered_chunk.clone()).await? {
+    if let Some(banner_txt) = options.banner.call(rendered_chunk.clone()).await? {
       concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
     }
 
-    if let Some(exports) = self.render_exports(graph, output_options) {
+    if let Some(exports) = self.render_exports(graph, options) {
       concat_source.add_source(Box::new(RawSource::new(exports)));
     }
 
     // add footer
-    if let Some(footer_txt) = output_options.footer.call(rendered_chunk.clone()).await? {
+    if let Some(footer_txt) = options.footer.call(rendered_chunk.clone()).await? {
       concat_source.add_source(Box::new(RawSource::new(footer_txt)));
     }
 

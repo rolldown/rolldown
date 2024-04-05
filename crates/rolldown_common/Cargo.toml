@@ -23,4 +23,7 @@ rolldown_fs        = { workspace = true }
 rolldown_rstr      = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rustc-hash         = { workspace = true }
+schemars           = { workspace = true }
+serde              = { workspace = true, features = ["derive"] }
+serde_json         = { workspace = true }
 sugar_path         = { workspace = true }

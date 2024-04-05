@@ -1,9 +1,0 @@
-{
-    "input": {
-        "external": [
-            "assert"
-        ],
-        "treeshake": false
-    },
-    "sourcemap": true
-}

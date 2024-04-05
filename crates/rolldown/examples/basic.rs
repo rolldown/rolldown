@@ -11,10 +11,10 @@ async fn main() {
   );
   let cwd = root.join("./examples").into_normalize();
   let mut bundler = Bundler::new(BundlerOptions {
-    input: vec![
+    input: Some(vec![
       InputItem { name: Some("react-dom".to_string()), import: "react-dom".to_string() },
       InputItem { name: Some("react".to_string()), import: "react".to_string() },
-    ],
+    ]),
     cwd: cwd.into(),
     sourcemap: Some(SourceMapType::File),
     ..Default::default()

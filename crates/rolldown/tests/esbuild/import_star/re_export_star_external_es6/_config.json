@@ -1,0 +1,15 @@
+{
+  "_comment": "Module specifier `foo` is marked as external, so the build output will be executed failed expectedly.",
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      {
+        "name": "entry_js",
+        "import": "entry.js"
+      }
+    ],
+    "external": [
+      "foo"
+    ]
+  }
+}

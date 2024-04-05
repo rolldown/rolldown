@@ -100,6 +100,7 @@ rolldown_testing          = { path = "./crates/rolldown_testing" }
 rolldown_tracing          = { path = "./crates/rolldown_tracing" }
 rolldown_utils            = { path = "./crates/rolldown_utils" }
 rustc-hash                = "1.1.0"
+schemars                  = "0.8.11"
 serde                     = { version = "1.0.190", features = ["derive"] }
 serde_json                = "1.0.108"
 smallvec                  = "1.11.1"

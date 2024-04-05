@@ -1498,6 +1498,7 @@ dependencies = [
  "oxc",
  "rolldown_error",
  "rustc-hash",
+ "sugar_path",
 ]
 
 [[package]]

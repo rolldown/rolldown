@@ -1,13 +1,16 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
+use sugar_path::{AsPath, SugarPath};
 
-// cSpell:disable
 pub use concat_sourcemap::{ConcatSource, RawSource, SourceMapSource};
 pub use oxc::sourcemap::{SourceMap, SourcemapVisualizer};
 
 use oxc::sourcemap::SourceMapBuilder;
 mod concat_sourcemap;
 
-pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<Arc<SourceMap>>) -> Option<Arc<SourceMap>> {
+pub fn collapse_sourcemaps(
+  mut sourcemap_chain: Vec<Arc<SourceMap>>,
+  output_dir: impl AsRef<Path>,
+) -> Option<Arc<SourceMap>> {
   let last_map = sourcemap_chain.pop()?;
   // If there is only one sourcemap, return it as result.
   if sourcemap_chain.is_empty() {
@@ -38,7 +41,9 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<Arc<SourceMap>>) -> Option<A
       let name_id = original_token.get_name().map(|name| sourcemap_builder.add_name(name));
 
       let source_id = original_token.get_source_and_content().map(|(source, source_content)| {
-        sourcemap_builder.add_source_and_content(source, source_content)
+        let relative_path = source.as_path().relative(&output_dir);
+        sourcemap_builder
+          .add_source_and_content(relative_path.to_string_lossy().as_ref(), source_content)
       });
 
       sourcemap_builder.add_token(
@@ -55,6 +60,7 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<Arc<SourceMap>>) -> Option<A
   Some(Arc::new(sourcemap_builder.into_sourcemap()))
 }
 
+// cSpell:disable
 #[cfg(test)]
 mod tests {
   use crate::SourceMap;
@@ -67,7 +73,7 @@ mod tests {
           r#"{
         "mappings": ";CAEE",
         "names": [],
-        "sources": ["helloworld.js"],
+        "sources": ["/project/foo.js"],
         "sourcesContent": ["\n\n  1 + 1;"],
         "version": 3,
         "ignoreList": []
@@ -81,7 +87,7 @@ mod tests {
         "file": "transpiled.min.js",
         "mappings": "AACCA",
         "names": ["add"],
-        "sources": ["transpiled.js"],
+        "sources": ["/project/foo_transform.js"],
         "sourcesContent": ["1+1"],
         "version": 3,
         "ignoreList": []
@@ -92,11 +98,11 @@ mod tests {
     ];
 
     let result = {
-      let map = super::collapse_sourcemaps(sourcemaps).unwrap();
-      map.to_json_string()
+      let map = super::collapse_sourcemaps(sourcemaps, "/project/dist").unwrap();
+      map.to_json_string().unwrap()
     };
 
-    let expected = "{\"version\":3,\"names\":[\"add\"],\"sources\":[\"helloworld.js\"],\"sourcesContent\":[\"\\n\\n  1 + 1;\"],\"mappings\":\"AAEE\"}";
+    let expected = "{\"version\":3,\"names\":[\"add\"],\"sources\":[\"../foo.js\"],\"sourcesContent\":[\"\\n\\n  1 + 1;\"],\"mappings\":\"AAEE\"}";
 
     assert_eq!(&result, expected);
   }

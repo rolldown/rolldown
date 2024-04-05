@@ -85,6 +85,7 @@ impl<'a> BundleStage<'a> {
         .chunks
         .iter()
         .map(|c| async { c.render(self.options, self.link_output, &chunk_graph).await }),
+        .map(|c| async { c.render(self.link_output, &chunk_graph, self.output_options).await }),
     )
     .into_iter()
     .collect::<Result<Vec<_>, _>>()?;

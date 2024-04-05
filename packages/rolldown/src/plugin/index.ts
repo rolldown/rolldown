@@ -1,4 +1,3 @@
-import { SourceMap } from 'src/types/rolldown-output'
 import {
   BindingHookResolveIdExtraOptions,
   BindingPluginContext,
@@ -7,6 +6,7 @@ import {
 } from '../binding'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
 import { AnyFn, AnyObj, NullValue } from '../types/utils'
+import { SourceMapInput } from '../types/sourcemap'
 
 type MaybePromise<T> = T | Promise<T>
 
@@ -55,7 +55,7 @@ export interface Plugin {
       this: null,
       id: string,
     ) => MaybePromise<
-      NullValue | string | { code: string; map?: string | null }
+      NullValue | string | { code: string; map?: SourceMapInput }
     >
   >
 
@@ -69,7 +69,7 @@ export interface Plugin {
       | string
       | {
           code: string
-          map?: string | null | SourceMap
+          map?: string | null | SourceMapInput
         }
     >
   >

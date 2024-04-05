@@ -18,6 +18,9 @@ pub fn render_normal_module<'a>(
   } else {
     let enable_sourcemap = !output_options.sourcemap.is_hidden() && !module.is_virtual;
 
+    // Because oxc codegen sourcemap is last of sourcemap chain,
+    // If here no extra sourcemap need remapping, we using it as final module sourcemap.
+    // So here make sure using correct `source_name` and `source_content.
     let render_output = OxcCompiler::print(ast, source_name, enable_sourcemap);
 
     Some(ModuleRenderOutput {
@@ -32,7 +35,7 @@ pub fn render_normal_module<'a>(
         if let Some(sourcemap) = render_output.source_map {
           sourcemap_chain.push(Arc::new(sourcemap));
         }
-        collapse_sourcemaps(sourcemap_chain)
+        collapse_sourcemaps(sourcemap_chain, &output_options.dir)
       },
     })
   }

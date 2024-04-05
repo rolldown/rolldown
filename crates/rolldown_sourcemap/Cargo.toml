@@ -21,3 +21,4 @@ test    = false
 oxc            = { workspace = true }
 rolldown_error = { path = "../rolldown_error" }
 rustc-hash     = { workspace = true }
+sugar_path     = { workspace = true }

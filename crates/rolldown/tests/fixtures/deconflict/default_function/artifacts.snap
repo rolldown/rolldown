@@ -31,7 +31,7 @@ assert.strictEqual(typeof foo, 'function');
 
 # Sourcemap Visualizer
 
-- foo.js
+- ../foo.js
 (0:0-0:6) "const " --> (3:0-3:6) "\nconst"
 (0:6-0:10) "a = " --> (3:6-3:12) " a$1 ="
 (0:10-2:15) "1;\n\nexport default" --> (3:12-4:0) " 1;"
@@ -45,12 +45,12 @@ assert.strictEqual(typeof foo, 'function');
 (3:21-3:23) " a" --> (5:20-5:24) " a$1"
 (3:23-4:1) ")\n" --> (5:24-6:0) ");"
 (4:1-4:2) "}" --> (6:0-9:0) "\n}\n\n// bar.js"
-- bar.js
+- ../bar.js
 (0:0-2:15) "import foo from './foo'\n\nexport default" --> (9:0-9:18) "\nvar bar_default ="
 (2:15-2:17) " {" --> (9:18-10:1) " {\n"
 (2:17-2:22) " foo " --> (10:1-11:1) "\tfoo:foo$1\n"
 (2:22-2:23) "}" --> (11:1-14:0) "};\n\n// main.js"
-- main.js
+- ../main.js
 (3:0-3:6) "\nconst" --> (14:0-14:6) "\nconst"
 (3:6-3:10) " a =" --> (14:6-14:10) " a ="
 (3:10-5:0) " 2; // make foo `a` conflict\n" --> (14:10-15:0) " 2;"

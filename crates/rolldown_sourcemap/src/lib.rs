@@ -1,6 +1,7 @@
 use std::{path::Path, sync::Arc};
 use sugar_path::{AsPath, SugarPath};
 
+// cSpell:disable
 pub use concat_sourcemap::{ConcatSource, RawSource, SourceMapSource};
 pub use oxc::sourcemap::{SourceMap, SourcemapVisualizer};
 
@@ -60,7 +61,6 @@ pub fn collapse_sourcemaps(
   Some(Arc::new(sourcemap_builder.into_sourcemap()))
 }
 
-// cSpell:disable
 #[cfg(test)]
 mod tests {
   use crate::SourceMap;

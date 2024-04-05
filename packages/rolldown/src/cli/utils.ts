@@ -1,11 +1,17 @@
-import { pathToFileURL } from 'url'
+import { pathToFileURL } from 'node:url'
 import nodePath from 'node:path'
+import { createConsola } from 'consola'
 import { ERR_UNSUPPORTED_CONFIG_FORMAT } from './errors.js'
 import { RolldownConfigExport } from '../types/rolldown-config-export.js'
 
 /**
- * @typedef {import('../rollup').RollupOptions} RollupOptions
+ * Console logger
  */
+export const logger = createConsola({
+  formatOptions: {
+    date: false,
+  },
+})
 
 /**
  * Load a rolldown configuration file

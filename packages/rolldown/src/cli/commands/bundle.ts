@@ -1,9 +1,11 @@
 import { performance } from 'node:perf_hooks'
-import consola from 'consola'
 import { colors, ColorFunction } from 'consola/utils'
-import { RolldownOptions, RollupOutput, rolldown } from '../../index'
-import { RolldownConfigExport } from '../../types/rolldown-config-export'
-import { arraify } from '../../utils'
+import { RolldownOptions, RollupOutput, rolldown } from '../../index.js'
+import { RolldownConfigExport } from '../../types/rolldown-config-export.js'
+import { arraify } from '../../utils/index.js'
+import { logger } from '../utils.js'
+import { brandColor } from '../colors.js'
+import { name, version } from '../../../package.json' assert { type: 'json' }
 
 export async function bundle(configExport: RolldownConfigExport) {
   const options = arraify(configExport)
@@ -16,6 +18,8 @@ export async function bundle(configExport: RolldownConfigExport) {
 async function bundleInner(options: RolldownOptions) {
   const dir = options.output?.dir ?? 'dist'
 
+  logger.log(`${brandColor(`${name} ${version}`)}: bundling ...\n`)
+
   const startTime = performance.now()
 
   const build = await rolldown(options)
@@ -27,7 +31,8 @@ async function bundleInner(options: RolldownOptions) {
   const outputLayoutSizes = collectOutputLayoutAdjustmentSizes(outputEntries)
   printOutputEntries(outputEntries, outputLayoutSizes, dir)
 
-  consola.success(
+  logger.log(``)
+  logger.success(
     `Finished in ${colors.bold((entTime - startTime).toFixed(2))} ms`,
   )
 }
@@ -100,7 +105,7 @@ function printOutputEntries(
       log += colors.dim(
         ` │ size: ${displaySize(entry.size).padStart(sizeAdjustment.sizePad)}`,
       )
-      consola.info(log)
+      logger.log(log)
     }
   }
 }

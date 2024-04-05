@@ -4,9 +4,12 @@ pub mod render_chunk;
 mod render_chunk_exports;
 mod render_chunk_imports;
 use index_vec::IndexVec;
+<<<<<<< HEAD
 use rolldown_common::{ChunkId, FileNameTemplate};
+=======
+use path_slash::PathBufExt;
+>>>>>>> e7732e85 (fix: windows ci)
 use rolldown_common::ChunkId;
-use sugar_path::SugarPath;
 
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;
 

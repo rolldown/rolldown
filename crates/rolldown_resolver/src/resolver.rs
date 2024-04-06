@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 use sugar_path::SugarPathBuf;
 
 use oxc_resolver::{
-  EnforceExtension, Resolution, ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric,
+  EnforceExtension, Resolution, ResolveError, ResolveOptions as OxcResolverOptions,
+  ResolverGeneric, TsconfigOptions,
 };
 
 #[derive(Debug)]
@@ -48,7 +49,10 @@ impl<F: FileSystem + Default> Resolver<F> {
     });
 
     let resolve_options_with_default_conditions = OxcResolverOptions {
-      tsconfig: None,
+      tsconfig: raw_resolve.tsconfig_filename.map(|p| TsconfigOptions {
+        config_file: p.into(),
+        references: oxc_resolver::TsconfigReferences::Disabled,
+      }),
       alias: raw_resolve
         .alias
         .map(|alias| {

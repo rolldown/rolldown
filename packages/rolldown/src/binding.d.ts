@@ -140,6 +140,7 @@ export interface BindingResolveOptions {
   mainFiles?: Array<string>
   modules?: Array<string>
   symlinks?: boolean
+  tsconfigFilename?: string
 }
 
 export interface RenderedChunk {

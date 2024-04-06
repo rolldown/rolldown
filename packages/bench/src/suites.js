@@ -1,4 +1,5 @@
 import nodePath from 'node:path'
+import * as esbuild from 'esbuild'
 import { PROJECT_ROOT, REPO_ROOT } from './utils.js'
 import _ from 'lodash'
 
@@ -40,8 +41,54 @@ export const suites = expandSuitesWithDerived([
       tsconfig: nodePath.join(REPO_ROOT, './tmp/bench/rome/src/tsconfig.json'),
     },
     rolldownOptions: {
+      external: [
+        'crypto',
+        'net',
+        'fs',
+        'path',
+        'os',
+        'stream',
+        'buffer',
+        'tty',
+        'util',
+        'child_process',
+        'assert',
+        'http',
+        'https',
+        'url',
+        'vm',
+        'readline',
+        'module',
+        'zlib',
+        'inspector',
+      ],
+      plugins: [
+        {
+          name: '@rolldown/plugin-esbuild',
+          async transform(code, id) {
+            const ext = nodePath.extname(id)
+            if (ext === '.ts' || ext === '.tsx') {
+              const ret = await esbuild.transform(code, {
+                platform: 'node',
+                loader: ext === '.tsx' ? 'tsx' : 'ts',
+                format: 'esm',
+                target: 'es2020',
+                sourcemap: true,
+              })
+
+              return {
+                code: ret.code,
+              }
+            }
+          },
+        },
+      ],
       resolve: {
         extensions: ['.ts'],
+        tsconfigFilename: nodePath.join(
+          REPO_ROOT,
+          './tmp/bench/rome/src/tsconfig.json',
+        ),
       },
     },
     disableBundler: ['rolldown', 'rollup'],

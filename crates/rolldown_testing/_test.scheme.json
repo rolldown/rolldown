@@ -282,6 +282,12 @@
             "boolean",
             "null"
           ]
+        },
+        "tsconfigPath": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

@@ -11,11 +11,14 @@ use super::{
 
 #[derive(Debug)]
 pub struct NormalizedBundlerOptions {
+  // --- Input
   pub input: Vec<InputItem>,
   pub cwd: PathBuf,
   pub external: External,
   pub treeshake: bool,
   pub platform: Platform,
+  pub shim_missing_exports: bool,
+  // --- Output
   pub entry_file_names: FileNameTemplate,
   pub chunk_file_names: FileNameTemplate,
   pub dir: String,

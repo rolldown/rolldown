@@ -7,11 +7,15 @@ use rolldown_common::{
   SymbolRef,
 };
 
-use crate::types::{
-  linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-  match_import_kind::MatchImportKind,
-  module_table::NormalModuleVec,
-  namespace_alias::NamespaceAlias,
+use crate::{
+  types::{
+    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+    match_import_kind::MatchImportKind,
+    module_table::NormalModuleVec,
+    namespace_alias::NamespaceAlias,
+    symbols::Symbols,
+  },
+  SharedOptions,
 };
 
 use super::LinkStage;
@@ -57,7 +61,14 @@ impl<'a> LinkStage<'a> {
         };
         let importee = &self.module_table.normal_modules[importee_id];
 
-        match Self::match_import_with_export(importer, importee, &self.metas[importee.id], import) {
+        match Self::match_import_with_export(
+          importer,
+          importee,
+          &mut self.metas[importee.id],
+          import,
+          &mut self.symbols,
+          &self.input_options,
+        ) {
           MatchImportKind::NotFound => panic!("info {import:#?}"),
           MatchImportKind::PotentiallyAmbiguous(
             symbol_ref,
@@ -67,7 +78,9 @@ impl<'a> LinkStage<'a> {
             if Self::determine_ambiguous_export(
               &self.module_table.normal_modules,
               potentially_ambiguous_symbol_refs,
-              &self.metas,
+              &mut self.metas,
+              &mut self.symbols,
+              &self.input_options,
             ) {
               // ambiguous export
               panic!("ambiguous export");
@@ -100,8 +113,10 @@ impl<'a> LinkStage<'a> {
   pub fn match_import_with_export(
     importer: &NormalModule,
     importee: &NormalModule,
-    importee_meta: &LinkingMetadata,
+    importee_meta: &mut LinkingMetadata,
     import: &NamedImport,
+    symbols: &mut Symbols,
+    options: &SharedOptions,
   ) -> MatchImportKind {
     // If importee module is commonjs module, it will generate property access to namespace symbol
     // The namespace symbols should be importer created local symbol.
@@ -141,6 +156,20 @@ impl<'a> LinkStage<'a> {
     if importee_meta.has_dynamic_exports {
       return MatchImportKind::Namespace(importee.namespace_symbol);
     }
+    if options.shim_missing_exports {
+      match &import.imported {
+        Specifier::Star => unreachable!("star should always exist, no need to shim"),
+        Specifier::Literal(imported_name) => {
+          // TODO: should emit warnings for shimmed exports
+          let shimmed_symbol_ref =
+            importee_meta.shimmed_missing_exports.entry(imported_name.clone()).or_insert_with(
+              || symbols.create_symbol(importee.id, imported_name.clone().to_string().into()),
+            );
+
+          return MatchImportKind::Found(*shimmed_symbol_ref);
+        }
+      }
+    }
 
     MatchImportKind::NotFound
   }
@@ -149,7 +178,9 @@ impl<'a> LinkStage<'a> {
   fn determine_ambiguous_export(
     modules: &NormalModuleVec,
     potentially_ambiguous_symbol_refs: Vec<SymbolRef>,
-    metas: &LinkingMetadataVec,
+    metas: &mut LinkingMetadataVec,
+    symbols: &mut Symbols,
+    options: &SharedOptions,
   ) -> bool {
     let mut results = vec![];
 
@@ -161,7 +192,14 @@ impl<'a> LinkStage<'a> {
           continue;
         };
         let importee = &modules[importee_id];
-        results.push(Self::match_import_with_export(importer, importee, &metas[importee_id], info));
+        results.push(Self::match_import_with_export(
+          importer,
+          importee,
+          &mut metas[importee_id],
+          info,
+          symbols,
+          options,
+        ));
       } else {
         results.push(MatchImportKind::Found(symbol_ref));
       }

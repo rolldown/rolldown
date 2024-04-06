@@ -57,6 +57,7 @@ pub fn normalize_binding_options(
       .map(Platform::try_from)
       .transpose()
       .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
+    shim_missing_exports: input_options.shim_missing_exports,
     entry_file_names: output_options.entry_file_names,
     chunk_file_names: output_options.chunk_file_names,
     dir: output_options.dir,

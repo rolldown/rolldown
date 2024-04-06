@@ -14,6 +14,7 @@ export interface InputOptions {
   resolve?: RolldownResolveOptions
   cwd?: string
   platform?: BindingInputOptions['platform']
+  shimMissingExports?: BindingInputOptions['shimMissingExports']
 }
 
 export type RolldownResolveOptions = Omit<BindingResolveOptions, 'alias'> & {
@@ -35,6 +36,7 @@ export async function normalizeInputOptions(
     external: getIdMatcher(config.external),
     resolve: getResolve(config.resolve),
     platform: config.platform,
+    shimMissingExports: config.shimMissingExports ?? false,
   }
 }
 

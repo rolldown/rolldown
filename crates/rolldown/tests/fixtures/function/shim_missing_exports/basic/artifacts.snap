@@ -1,0 +1,15 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/shim_missing_exports/basic
+---
+# Assets
+
+## main.mjs
+
+```js
+// foo.js
+var missing = void 0;
+
+export { missing };
+```

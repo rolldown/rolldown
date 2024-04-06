@@ -1,0 +1,12 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/tree_shaking/unused_import_external
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "assert";
+```

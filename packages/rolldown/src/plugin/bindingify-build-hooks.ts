@@ -3,7 +3,7 @@ import type { BindingPluginOptions } from '../binding'
 
 import type { Plugin } from './index'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
-import { isEmptySourcemapFiled, transformSourcemap } from '../utils'
+import { isEmptySourcemapFiled } from '../utils'
 import path from 'path'
 import { SourceMapInputObject } from '../types/sourcemap'
 
@@ -144,7 +144,7 @@ export function bindingifyLoad(
 
     return {
       code: ret.code,
-      map: transformSourcemap(ret.map),
+      map: JSON.stringify(map),
     }
   }
 }

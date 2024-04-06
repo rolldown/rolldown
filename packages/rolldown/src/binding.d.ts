@@ -103,11 +103,7 @@ export interface BindingPluginContextResolveOptions {
 export interface BindingPluginOptions {
   name: string
   buildStart?: BuildStartHookOption
-  resolveId?: (
-    specifier: string,
-    importer: Nullable<string>,
-    options: BindingHookResolveIdExtraOptions,
-  ) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveId?: ResolveIdHookOption
   load?: (id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   transform?: (
     id: string,
@@ -160,4 +156,13 @@ export interface RenderedChunk {
   exports: Array<string>
   fileName: string
   modules: Record<string, BindingRenderedModule>
+}
+
+export interface ResolveIdHookOption {
+  handler: (
+    specifier: string,
+    importer: Nullable<string>,
+    options: BindingHookResolveIdExtraOptions,
+  ) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  order?: 'pre' | 'post' | null
 }

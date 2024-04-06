@@ -46,24 +46,27 @@ export function bindingifyResolveId(
   if (!hook) {
     return undefined
   }
-  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+  const [handler, option] = normalizeHook<Hook<AnyFn, HookOption>>(hook)
 
-  return async (specifier, importer, options) => {
-    const ret = await handler.call(
-      null,
-      specifier,
-      importer ?? undefined,
-      options,
-    )
-    if (ret == false || ret == null) {
-      return
-    }
-    if (typeof ret === 'string') {
-      return {
-        id: ret,
+  return {
+    handler: async (specifier, importer, options) => {
+      const ret = await handler.call(
+        null,
+        specifier,
+        importer ?? undefined,
+        options,
+      )
+      if (ret == false || ret == null) {
+        return
       }
-    }
-    return ret
+      if (typeof ret === 'string') {
+        return {
+          id: ret,
+        }
+      }
+      return ret
+    },
+    order: option.order,
   }
 }
 

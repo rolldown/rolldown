@@ -46,15 +46,17 @@ impl Plugin for JsPlugin {
     _ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookResolveIdArgs,
   ) -> rolldown_plugin::HookResolveIdReturn {
-    if let Some(cb) = &self.resolve_id {
+    if let Some(hookOption) = &self.resolve_id {
       Ok(
-        cb.await_call((
-          args.source.to_string(),
-          args.importer.map(str::to_string),
-          args.options.clone().into(),
-        ))
-        .await?
-        .map(Into::into),
+        hookOption
+          .handler
+          .await_call((
+            args.source.to_string(),
+            args.importer.map(str::to_string),
+            args.options.clone().into(),
+          ))
+          .await?
+          .map(Into::into),
       )
     } else {
       Ok(None)

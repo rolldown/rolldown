@@ -34,6 +34,19 @@ pub struct BuildStartHookOption {
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
+pub struct ResolveIdHookOption {
+  #[napi(
+    ts_type = "(specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraOptions) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
+  )]
+  pub handler: MaybeAsyncJsCallback<
+    (String, Option<String>, BindingHookResolveIdExtraOptions),
+    Option<BindingHookResolveIdOutput>,
+  >,
+  #[napi(ts_type = "'pre'|'post'|null")]
+  pub order: Option<String>,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingPluginOptions {
@@ -44,15 +57,8 @@ pub struct BindingPluginOptions {
   pub build_start: Option<BuildStartHookOption>,
 
   #[serde(skip_deserializing)]
-  #[napi(
-    ts_type = "(specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraOptions) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
-  )]
-  pub resolve_id: Option<
-    MaybeAsyncJsCallback<
-      (String, Option<String>, BindingHookResolveIdExtraOptions),
-      Option<BindingHookResolveIdOutput>,
-    >,
-  >,
+  #[napi(ts_type = "ResolveIdHookOption")]
+  pub resolve_id: Option<ResolveIdHookOption>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>")]

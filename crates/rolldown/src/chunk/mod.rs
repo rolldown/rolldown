@@ -5,32 +5,24 @@ mod render_chunk_exports;
 mod render_chunk_imports;
 
 use index_vec::IndexVec;
-use rolldown_common::ChunkId;
+use rolldown_common::{ChunkId, FileNameTemplate};
 
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;
 
 use rolldown_common::{
-  ChunkKind, ExternalModuleId, NamedImport, NormalModuleId, RenderedChunk, RenderedModule,
-  Specifier, SymbolRef,
+  ChunkKind, ExternalModuleId, NamedImport, NormalModuleId, RenderedChunk, Specifier, SymbolRef,
 };
-use rolldown_error::BuildError;
 use rolldown_rstr::Rstr;
-use rolldown_sourcemap::{
-  collapse_sourcemaps, ConcatSource, RawSource, SourceMap, SourceMapSource,
-};
+use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
 
-use crate::options::normalized_input_options::NormalizedInputOptions;
-use crate::options::normalized_output_options::NormalizedOutputOptions;
+use crate::types::module_render_output::ModuleRenderOutput;
 use crate::utils::render_normal_module::render_normal_module;
+use crate::SharedOptions;
 use crate::{
   error::BatchedResult,
-  FileNameTemplate,
-  {
-    chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
-    types::module_render_context::ModuleRenderContext,
-  },
+  {chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput},
 };
 
 #[derive(Debug, Clone)]
@@ -71,7 +63,7 @@ impl Chunk {
 
   pub fn file_name_template<'a>(
     &mut self,
-    output_options: &'a NormalizedOutputOptions,
+    output_options: &'a SharedOptions,
   ) -> &'a FileNameTemplate {
     if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined) {
       &output_options.entry_file_names
@@ -83,10 +75,9 @@ impl Chunk {
   #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
   pub async fn render(
     &self,
-    input_options: &NormalizedInputOptions,
+    options: &SharedOptions,
     graph: &LinkStageOutput,
     chunk_graph: &ChunkGraph,
-    output_options: &NormalizedOutputOptions,
   ) -> BatchedResult<ChunkRenderReturn> {
     use rayon::prelude::*;
     let mut rendered_modules = FxHashMap::default();
@@ -101,69 +92,46 @@ impl Chunk {
       .copied()
       .map(|id| &graph.module_table.normal_modules[id])
       .filter_map(|m| {
-        let rendered_output = render_normal_module(
-          &ModuleRenderContext {
-            canonical_names: &self.canonical_names,
-            graph,
-            chunk_graph,
-            input_options,
-          },
+        render_normal_module(
+          m,
           &graph.ast_table[m.id],
-          m.resource_id
-                .expect_file()
-                .relative_path(&input_options.cwd)
-                .to_string_lossy().as_ref(),
-           !output_options.sourcemap.is_hidden()
-        );
-        Some((
-          m.resource_id.expect_file().to_string(),
-          &m.pretty_path,
-          RenderedModule { code: None },
-          rendered_output.as_ref().map(|v| v.source_text.to_string()),
-          if output_options.sourcemap.is_hidden() {
-            None
-          } else {
-            let mut sourcemap_chain = m.sourcemap_chain.iter().collect::<Vec<_>>();
-            if let Some(Some(sourcemap)) = rendered_output.as_ref().map(|x| x.source_map.as_ref()) {
-              sourcemap_chain.push(sourcemap);
-            }
-            Some(collapse_sourcemaps(sourcemap_chain))
-          },
-        ))
+          // TODO(underfin): refactor the relative path
+          m.resource_id.expect_file().relative_path(&options.cwd).to_string_lossy().as_ref(),
+          options,
+        )
       })
       .collect::<Vec<_>>()
       .into_iter()
-      .try_for_each(
-        |(module_path, module_pretty_path, rendered_module, rendered_content, map)| -> Result<(), BuildError> {
-          if let Some(rendered_content) = rendered_content {
-            concat_source.add_source(Box::new(RawSource::new(format!("// {module_pretty_path}"))));
-            if let Some(map) = match map {
-              None => None,
-              Some(v) => v?,
-            } {
-              concat_source.add_source(Box::new(SourceMapSource::new(rendered_content, map)));
-            } else {
-              concat_source.add_source(Box::new(RawSource::new(rendered_content)));
-            }
-          }
-          rendered_modules.insert(module_path, rendered_module);
-          Ok(())
-        },
-      )?;
-    let rendered_chunk = self.get_rendered_chunk_info(graph, output_options, rendered_modules);
+      .for_each(|module_render_output| {
+        let ModuleRenderOutput {
+          module_path,
+          module_pretty_path,
+          rendered_module,
+          rendered_content,
+          sourcemap,
+        } = module_render_output;
+        concat_source.add_source(Box::new(RawSource::new(format!("// {module_pretty_path}",))));
+        if let Some(sourcemap) = sourcemap {
+          concat_source.add_source(Box::new(SourceMapSource::new(rendered_content, sourcemap)));
+        } else {
+          concat_source.add_source(Box::new(RawSource::new(rendered_content)));
+        }
+        rendered_modules.insert(module_path.to_string(), rendered_module);
+      });
+    let rendered_chunk = self.get_rendered_chunk_info(graph, options, rendered_modules);
 
     // TODO avoid rendered_chunk clone
     // add banner
-    if let Some(banner_txt) = output_options.banner.call(rendered_chunk.clone()).await? {
+    if let Some(banner_txt) = options.banner.call(rendered_chunk.clone()).await? {
       concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
     }
 
-    if let Some(exports) = self.render_exports(graph, output_options) {
+    if let Some(exports) = self.render_exports(graph, options) {
       concat_source.add_source(Box::new(RawSource::new(exports)));
     }
 
     // add footer
-    if let Some(footer_txt) = output_options.footer.call(rendered_chunk.clone()).await? {
+    if let Some(footer_txt) = options.footer.call(rendered_chunk.clone()).await? {
       concat_source.add_source(Box::new(RawSource::new(footer_txt)));
     }
 

@@ -1,3 +1,4 @@
+import { SourceMap } from 'src/types/rolldown-output'
 import {
   BindingHookResolveIdExtraOptions,
   BindingPluginContext,
@@ -68,7 +69,7 @@ export interface Plugin {
       | string
       | {
           code: string
-          map?: string | null
+          map?: string | null | SourceMap
         }
     >
   >

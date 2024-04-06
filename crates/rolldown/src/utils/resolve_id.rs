@@ -22,6 +22,7 @@ pub async fn resolve_id(
   options: HookResolveIdExtraOptions,
   _preserve_symlinks: bool,
 ) -> Result<ResolvedRequestInfo, BuildError> {
+  let import_kind = options.kind;
   // Run plugin resolve_id first, if it is None use internal resolver as fallback
   if let Some(r) = plugin_driver
     .resolve_id(&HookResolveIdArgs {
@@ -50,7 +51,7 @@ pub async fn resolve_id(
   // Rollup external node packages by default.
   // Rolldown will follow esbuild behavior to resolve it by default.
   // See https://github.com/rolldown/rolldown/issues/282
-  let resolved = resolver.resolve(importer.map(Path::new), request)?;
+  let resolved = resolver.resolve(importer.map(Path::new), request, import_kind)?;
   Ok(ResolvedRequestInfo {
     path: resolved.resolved,
     module_type: resolved.module_type,

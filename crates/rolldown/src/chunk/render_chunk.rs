@@ -1,9 +1,7 @@
 use rolldown_common::{ChunkKind, RenderedChunk, RenderedModule};
 use rustc_hash::FxHashMap;
 
-use crate::{
-  options::normalized_output_options::NormalizedOutputOptions, stages::link_stage::LinkStageOutput,
-};
+use crate::{stages::link_stage::LinkStageOutput, SharedOptions};
 
 use super::Chunk;
 
@@ -21,7 +19,7 @@ impl Chunk {
   pub fn get_pre_rendered_chunk_info(
     &self,
     graph: &LinkStageOutput,
-    output_options: &NormalizedOutputOptions,
+    output_options: &SharedOptions,
   ) -> PreRenderedChunk {
     PreRenderedChunk {
       is_entry: matches!(&self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if *is_user_defined),
@@ -44,7 +42,7 @@ impl Chunk {
   pub fn get_rendered_chunk_info(
     &self,
     graph: &LinkStageOutput,
-    output_options: &NormalizedOutputOptions,
+    output_options: &SharedOptions,
     render_modules: FxHashMap<String, RenderedModule>,
   ) -> RenderedChunk {
     let pre_rendered_chunk = self.get_pre_rendered_chunk_info(graph, output_options);

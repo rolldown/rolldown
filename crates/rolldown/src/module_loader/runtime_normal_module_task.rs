@@ -75,6 +75,7 @@ impl RuntimeNormalModuleTask {
     builder.namespace_symbol = Some(namespace_symbol);
     builder.pretty_path = Some("<runtime>".to_string());
     builder.is_user_defined_entry = Some(false);
+    builder.is_virtual = true;
 
     if let Err(_err) = self.tx.send(Msg::RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult {
       warnings: self.warnings,

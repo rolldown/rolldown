@@ -14,6 +14,7 @@
     "/packages/rollup-tests/test",
     "/target",
     "/temp",
+    "/tmp",
     "/packages/rolldown/npm",
     "packages/rolldown/src/binding.js",
     "/CHANGELOG.md",
@@ -43,6 +44,7 @@
     "bindgen",
     "bindingify",
     "binstall",
+    "bools",
     "Brooooooklyn",
     "cdylib",
     "citty",
@@ -55,6 +57,7 @@
     "consola",
     "corepack",
     "dashmap",
+    "dataurl",
     "deconflict",
     "deoptimized",
     "doctest",
@@ -109,7 +112,6 @@
     "vite",
     "vitepress",
     "Yinan",
-    "Yunfei",
-    "dataurl"
+    "Yunfei"
   ]
 }

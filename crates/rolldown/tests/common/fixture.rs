@@ -4,12 +4,12 @@ use std::{
   process::Command,
 };
 
-use rolldown::{Bundler, External, InputOptions, OutputOptions, RolldownOutput};
+use rolldown::{Bundler, RolldownOutput, SourceMapType};
 use rolldown_error::BuildError;
 use rolldown_testing::TestConfig;
 
-fn default_test_input_item() -> rolldown_testing::InputItem {
-  rolldown_testing::InputItem { name: "main".to_string(), import: "./main.js".to_string() }
+fn default_test_input_item() -> rolldown::InputItem {
+  rolldown::InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }
 }
 
 pub struct Fixture {
@@ -28,7 +28,7 @@ impl Fixture {
 
   // `test.config.json` might be not exist.
   pub fn config_path(&self) -> PathBuf {
-    self.fixture_path.join("test.config.json")
+    self.fixture_path.join("_config.json")
   }
 
   pub fn dir_path(&self) -> &Path {
@@ -50,11 +50,13 @@ impl Fixture {
     let test_script = self.dir_path().join("_test.mjs");
 
     let compiled_entries = test_config
-      .input
+      .config
       .input
       .unwrap_or_else(|| vec![default_test_input_item()])
       .iter()
-      .map(|item| format!("{}.mjs", item.name))
+      .map(|item| {
+        format!("{}.mjs", item.name.clone().expect("inputs must have `name` in `_config.json`"))
+      })
       .map(|name| dist_folder.join(name))
       .collect::<Vec<_>>();
 
@@ -90,46 +92,37 @@ impl Fixture {
 
   pub async fn compile(&mut self) -> Result<RolldownOutput, Vec<BuildError>> {
     let fixture_path = self.dir_path();
+    let test_config = self.test_config();
 
-    let mut test_config = self.test_config();
+    let mut bundle_options = self.test_config().config;
 
-    if test_config.input.input.is_none() {
-      test_config.input.input = Some(vec![default_test_input_item()]);
+    if bundle_options.input.is_none() {
+      bundle_options.input = Some(vec![default_test_input_item()]);
     }
 
-    let mut bundler = Bundler::new(
-      InputOptions {
-        input: test_config
-          .input
-          .input
-          .map(|items| {
-            items
-              .into_iter()
-              .map(|item| rolldown::InputItem { name: Some(item.name), import: item.import })
-              .collect()
-          })
-          .unwrap(),
-        cwd: Some(fixture_path.to_path_buf()),
-        external: Some(test_config.input.external.map(External::ArrayString).unwrap_or_default()),
-        treeshake: Some(test_config.input.treeshake.unwrap_or(true)),
-        resolve: test_config.input.resolve.map(|value| rolldown::ResolveOptions {
-          alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),
-          alias_fields: value.alias_fields,
-          condition_names: value.condition_names,
-          exports_fields: value.exports_fields,
-          extensions: value.extensions,
-          main_fields: value.main_fields,
-          main_files: value.main_files,
-          modules: value.modules,
-          symlinks: value.symlinks,
-        }),
-      },
-      OutputOptions {
-        entry_file_names: "[name].mjs".to_string().into(),
-        chunk_file_names: "[name].mjs".to_string().into(),
-        ..Default::default()
-      },
-    );
+    if bundle_options.cwd.is_none() {
+      bundle_options.cwd = Some(fixture_path.to_path_buf());
+    }
+
+    if bundle_options.entry_file_names.is_none() {
+      bundle_options.entry_file_names = Some("[name].mjs".to_string());
+    }
+    if bundle_options.chunk_file_names.is_none() {
+      bundle_options.chunk_file_names = Some("[name].mjs".to_string());
+    }
+
+    if test_config.visualize_sourcemap {
+      if bundle_options.sourcemap.is_none() {
+        bundle_options.sourcemap = Some(SourceMapType::File);
+      } else if !matches!(bundle_options.sourcemap, Some(SourceMapType::File)) {
+        panic!("`visualizeSourcemap` is only supported with `sourcemap: 'file'`")
+      }
+    }
+    if bundle_options.sourcemap.is_none() && test_config.visualize_sourcemap {
+      bundle_options.sourcemap = Some(SourceMapType::File);
+    }
+
+    let mut bundler = Bundler::new(bundle_options);
 
     if fixture_path.join("dist").is_dir() {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();

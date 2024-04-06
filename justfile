@@ -101,7 +101,7 @@ lint-repo:
 # BENCHING
 
 setup-bench:
-    node ./scripts/setup-rust-benchmark-input.js
+    node ./scripts/misc/setup-benchmark-input.js
 
 bench:
     cargo bench -p bench
@@ -109,7 +109,7 @@ bench:
 # RELEASING
 
 bump packages *args: 
-  node ./scripts/bump-version.js {{args}}
+  node ./scripts/misc/bump-version.js {{args}}
 
 changelog:
   pnpm conventional-changelog --preset angular --i CHANGELOG.md --same-file --pkg=./packages/rolldown/package.json

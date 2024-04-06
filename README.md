@@ -40,8 +40,7 @@ The Rolldown project is heavily inspired by:
 And supported by:
 
 - [napi-rs](https://github.com/napi-rs/napi-rs) for Node.js add-ons in Rust via Node-API.
-- [oxc](https://github.com/oxc-project/oxc) for the underlying parser and resolver.
-- [@parcel/sourcemap](https://github.com/parcel-bundler/source-map).
+- [oxc](https://github.com/oxc-project/oxc) for the underlying parser, resolver, and sourcemap support.
 
 ## Licenses
 

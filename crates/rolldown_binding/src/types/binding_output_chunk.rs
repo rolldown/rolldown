@@ -58,8 +58,13 @@ impl BindingOutputChunk {
   }
 
   #[napi(getter)]
-  pub fn map(&self) -> Option<String> {
-    self.inner.map.as_ref().map(rolldown_sourcemap::SourceMap::to_json_string)
+  pub fn map(&self) -> napi::Result<Option<String>> {
+    self
+      .inner
+      .map
+      .as_ref()
+      .map(|v| v.to_json_string().map_err(|e| napi::Error::from_reason(format!("{e:?}"))))
+      .transpose()
   }
 
   #[napi(getter)]

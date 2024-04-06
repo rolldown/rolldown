@@ -16,13 +16,12 @@ use crate::{
   ast_scanner::{AstScanner, ScanResult},
   error::{BatchedErrors, BatchedResult},
   module_loader::NormalModuleTaskResult,
-  options::normalized_input_options::SharedNormalizedInputOptions,
   types::{
     ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder,
     resolved_request_info::ResolvedRequestInfo,
   },
   utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
-  SharedResolver,
+  SharedOptions, SharedResolver,
 };
 pub struct NormalModuleTask<'task> {
   ctx: &'task ModuleTaskCommonData,
@@ -129,6 +128,7 @@ impl<'task> NormalModuleTask<'task> {
       module_type: self.module_type,
       pretty_path: Some(self.resolved_path.prettify(&self.ctx.input_options.cwd)),
       sourcemap_chain,
+      is_virtual: self.resolved_path.is_virtual_module_path(),
       ..Default::default()
     };
 
@@ -204,7 +204,7 @@ impl<'task> NormalModuleTask<'task> {
 
   #[allow(clippy::option_if_let_else)]
   pub(crate) async fn resolve_id(
-    input_options: &SharedNormalizedInputOptions,
+    input_options: &SharedOptions,
     resolver: &SharedResolver,
     plugin_driver: &SharedPluginDriver,
     importer: &str,

@@ -4,13 +4,12 @@ use crate::{
   options::plugin::JsPlugin,
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
-use rolldown::{AddonOutputOption, InputOptions, OutputOptions};
+use rolldown::{AddonOutputOption, BundlerOptions, Platform};
 use rolldown_error::BuildError;
 use rolldown_plugin::BoxPlugin;
 
 pub struct NormalizeBindingOptionsReturn {
-  pub input_options: InputOptions,
-  pub output_options: OutputOptions,
+  pub bundler_options: BundlerOptions,
   pub plugins: Vec<BoxPlugin>,
 }
 
@@ -31,8 +30,6 @@ pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
   output_options: crate::options::BindingOutputOptions,
 ) -> napi::Result<NormalizeBindingOptionsReturn> {
-  // Deal with input options
-
   debug_assert!(PathBuf::from(&input_options.cwd) != PathBuf::from("/"), "{input_options:#?}");
   let cwd = PathBuf::from(input_options.cwd);
 
@@ -48,23 +45,25 @@ pub fn normalize_binding_options(
     })
     .unwrap_or_default();
 
-  let normalized_input_options = InputOptions {
-    input: input_options.input.into_iter().map(Into::into).collect(),
+  let bundler_options = BundlerOptions {
+    input: Some(input_options.input.into_iter().map(Into::into).collect()),
     cwd: cwd.into(),
     external: external.into(),
     treeshake: true.into(),
     resolve: input_options.resolve.map(Into::into),
-  };
-
-  // Deal with output options
-
-  let normalized_output_options = OutputOptions {
+    platform: input_options
+      .platform
+      .as_deref()
+      .map(Platform::try_from)
+      .transpose()
+      .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
     entry_file_names: output_options.entry_file_names,
     chunk_file_names: output_options.chunk_file_names,
     dir: output_options.dir,
     sourcemap: output_options.sourcemap.map(Into::into),
     banner: normalize_addon_option(output_options.banner),
     footer: normalize_addon_option(output_options.footer),
+    // TODO(hyf0): remove this line, all options should set explicitly
     ..Default::default()
   };
 
@@ -77,9 +76,5 @@ pub fn normalize_binding_options(
     .map(JsPlugin::new_boxed)
     .collect::<Vec<_>>();
 
-  Ok(NormalizeBindingOptionsReturn {
-    input_options: normalized_input_options,
-    output_options: normalized_output_options,
-    plugins,
-  })
+  Ok(NormalizeBindingOptionsReturn { bundler_options, plugins })
 }

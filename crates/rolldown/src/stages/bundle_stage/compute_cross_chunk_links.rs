@@ -1,15 +1,13 @@
 use std::{borrow::Cow, sync::Mutex};
 
-use crate::{
-  OutputFormat,
-  {chunk::CrossChunkImportItem, chunk_graph::ChunkGraph, utils::is_in_rust_test_mode},
-};
+use crate::{chunk::CrossChunkImportItem, chunk_graph::ChunkGraph, utils::is_in_rust_test_mode};
 
 use super::BundleStage;
 use index_vec::{index_vec, IndexVec};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
-  ChunkId, ChunkKind, ExportsKind, ExternalModuleId, ImportKind, ModuleId, NamedImport, SymbolRef,
+  ChunkId, ChunkKind, ExportsKind, ExternalModuleId, ImportKind, ModuleId, NamedImport,
+  OutputFormat, SymbolRef,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -92,7 +90,7 @@ impl<'a> BundleStage<'a> {
           let entry_module = &self.link_output.module_table.normal_modules[*entry_module_id];
           let entry_linking_info = &self.link_output.metas[entry_module.id];
           if matches!(entry_module.exports_kind, ExportsKind::CommonJs)
-            && matches!(self.output_options.format, OutputFormat::Esm)
+            && matches!(self.options.format, OutputFormat::Esm)
           {
             chunk_meta_imports
               .insert(entry_linking_info.wrapper_ref.expect("cjs should be wrapped in esm output"));

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-assertion_line: 135
 expression: content
 input_file: crates/rolldown/tests/fixtures/deconflict/reserved_names
 ---

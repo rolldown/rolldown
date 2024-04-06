@@ -4,7 +4,7 @@ use std::path::Path;
 
 use wasm_bindgen::prelude::*;
 
-use rolldown::{BundlerBuilder, External, InputItem, InputOptions};
+use rolldown::{BundlerBuilder, BundlerOptions, External, InputItem};
 #[wasm_bindgen]
 pub struct FileItem {
   path: String,
@@ -61,12 +61,13 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
         })
         .collect::<Vec<_>>();
       let mut bundler = BundlerBuilder::default()
-        .with_input_options(InputOptions {
-          input,
+        .with_options(BundlerOptions {
+          input: Some(input),
           cwd: Some("/".into()),
           external: Some(External::ArrayString(vec![])),
           treeshake: Some(false),
           resolve: None,
+          ..Default::default()
         })
         .build();
 

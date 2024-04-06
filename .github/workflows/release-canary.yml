@@ -80,7 +80,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
 
       - name: Canary/Nightly Versioning
-        run: node ./scripts/bump-version.js snapshot
+        run: node ./scripts/misc/bump-version.js snapshot
 
       - name: Publish(Dry Run)
         run: |
@@ -95,3 +95,4 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true

@@ -11,17 +11,16 @@ use rolldown_utils::block_on_spawn_all;
 use crate::{
   error::BatchedResult,
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
-  options::normalized_input_options::SharedNormalizedInputOptions,
   runtime::RuntimeModuleBrief,
   types::{
     module_table::ModuleTable, resolved_request_info::ResolvedRequestInfo, symbols::Symbols,
   },
   utils::resolve_id::resolve_id,
-  SharedResolver,
+  SharedOptions, SharedResolver,
 };
 
 pub struct ScanStage {
-  input_options: SharedNormalizedInputOptions,
+  input_options: SharedOptions,
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
@@ -39,7 +38,7 @@ pub struct ScanStageOutput {
 
 impl ScanStage {
   pub fn new(
-    input_options: SharedNormalizedInputOptions,
+    input_options: SharedOptions,
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,

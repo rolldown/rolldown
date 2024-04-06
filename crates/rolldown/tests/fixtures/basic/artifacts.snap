@@ -14,4 +14,22 @@ const a = 'shared.js';
 // main.js
 const a$1 = 'index.js';
 console.log(a$1, a);
+
+//# sourceMappingURL=main.mjs.map
 ```
+
+# Sourcemap Visualizer
+
+- shared.js
+(0:0-0:6) "const " --> (2:0-2:6) "\nconst"
+(0:6-0:10) "a = " --> (2:6-2:10) " a ="
+(0:10-2:13) "'shared.js'\n\nexport { a }" --> (2:10-5:0) " 'shared.js';\n\n// main.js"
+- main.js
+(1:0-1:6) "\nconst" --> (5:0-5:6) "\nconst"
+(1:6-1:10) " a =" --> (5:6-5:12) " a$1 ="
+(1:10-2:0) " 'index.js'" --> (5:12-6:0) " 'index.js';"
+(2:0-2:8) "\nconsole" --> (6:0-6:8) "\nconsole"
+(2:8-2:12) ".log" --> (6:8-6:12) ".log"
+(2:12-2:15) "(a," --> (6:12-6:17) "(a$1,"
+(2:15-2:18) " a2" --> (6:17-6:19) " a"
+(2:18-3:1) ")\n" --> (6:19-8:34) ");\n\n//# sourceMappingURL=main.mjs.map"

@@ -3,7 +3,9 @@ import type { BindingPluginOptions } from '../binding'
 
 import type { Plugin } from './index'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
-import { isEmptySourcemapFiled, transformSourcemap } from '../utils'
+import { isEmptySourcemapFiled } from '../utils'
+import path from 'path'
+import { SourceMapInputObject } from '../types/sourcemap'
 
 export function bindingifyBuildStart(
   options: RolldownNormalizedInputOptions,
@@ -82,20 +84,23 @@ export function bindingifyTransform(
       return { code: ret }
     }
 
+    if (!ret.map) {
+      return { code: ret.code }
+    }
+
     // TODO(underfin) move the logic to rust
     // If sourcemap hasn't `sourcesContent` and `sources`, using original code to fill it.
-    if (ret.map && typeof ret.map === 'object') {
-      if (isEmptySourcemapFiled(ret.map.sourcesContent)) {
-        ret.map.sourcesContent = [code]
-      }
-      if (isEmptySourcemapFiled(ret.map.sources)) {
-        ret.map.sources = [id]
-      }
+    let map = typeof ret.map === 'object' ? ret.map : JSON.parse(ret.map)
+    if (isEmptySourcemapFiled(map.sourcesContent)) {
+      map.sourcesContent = [code]
+    }
+    if (isEmptySourcemapFiled(map.sources)) {
+      map.sources = [id]
     }
 
     return {
       code: ret.code,
-      map: transformSourcemap(ret.map),
+      map: JSON.stringify(map),
     }
   }
 }
@@ -119,9 +124,27 @@ export function bindingifyLoad(
       return { code: ret }
     }
 
+    if (!ret.map) {
+      return { code: ret.code }
+    }
+
+    let map =
+      typeof ret.map === 'object'
+        ? ret.map
+        : (JSON.parse(ret.map) as SourceMapInputObject)
+    if (!isEmptySourcemapFiled(map.sources)) {
+      // normalize original sourcemap sources
+      // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
+      const directory = path.dirname(id) || '.'
+      const sourceRoot = map.sourceRoot || '.'
+      map.sources = map.sources!.map((source) =>
+        path.resolve(directory, sourceRoot, source!),
+      )
+    }
+
     return {
       code: ret.code,
-      map: transformSourcemap(ret.map),
+      map: JSON.stringify(map),
     }
   }
 }

@@ -14,7 +14,7 @@ pub mod types;
 #[derive(Default, Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct BundlerOptions {
-  // --- options for output
+  // --- options for input
   pub input: Option<Vec<InputItem>>,
   pub cwd: Option<PathBuf>,
   #[serde(default, deserialize_with = "deserialize_external")]
@@ -22,6 +22,7 @@ pub struct BundlerOptions {
   pub external: Option<External>,
   pub treeshake: Option<bool>,
   pub platform: Option<Platform>,
+  pub shim_missing_exports: Option<bool>,
   // --- options for output
   pub entry_file_names: Option<String>,
   pub chunk_file_names: Option<String>,

@@ -18,6 +18,7 @@ export function createInputOptionsAdapter(
     external: inputOptions.external ? options.external : undefined,
     resolve: options.resolve,
     platform: options.platform,
+    shimMissingExports: options.shimMissingExports,
   }
 }
 

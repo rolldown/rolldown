@@ -81,6 +81,19 @@ impl<'a> LinkStage<'a> {
         init_entry_point_stmt_info(module, linking_info);
       }
 
+      linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
+        let stmt_info = StmtInfo {
+          stmt_idx: None,
+          declared_symbols: vec![*symbol_ref],
+          referenced_symbols: vec![],
+          side_effect: false,
+          is_included: false,
+          import_records: Vec::new(),
+          debug_label: None,
+        };
+        module.stmt_infos.add_stmt_info(stmt_info);
+      });
+
       if matches!(module.exports_kind, ExportsKind::Esm) {
         let linking_info = &self.metas[module.id];
         let mut referenced_symbols = vec![];

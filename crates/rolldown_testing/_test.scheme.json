@@ -121,6 +121,12 @@
             }
           ]
         },
+        "shimMissingExports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "sourcemap": {
           "anyOf": [
             {
@@ -283,7 +289,7 @@
             "null"
           ]
         },
-        "tsconfigPath": {
+        "tsconfigFilename": {
           "type": [
             "string",
             "null"

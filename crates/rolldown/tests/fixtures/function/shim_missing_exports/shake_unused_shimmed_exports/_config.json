@@ -1,1 +1,5 @@
-{}
+{
+  "config": {
+    "shimMissingExports": true
+  }
+}

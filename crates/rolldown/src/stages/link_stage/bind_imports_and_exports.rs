@@ -67,7 +67,7 @@ impl<'a> LinkStage<'a> {
           &mut self.metas[importee.id],
           import,
           &mut self.symbols,
-          &self.input_options,
+          self.input_options,
         ) {
           MatchImportKind::NotFound => panic!("info {import:#?}"),
           MatchImportKind::PotentiallyAmbiguous(
@@ -80,7 +80,7 @@ impl<'a> LinkStage<'a> {
               potentially_ambiguous_symbol_refs,
               &mut self.metas,
               &mut self.symbols,
-              &self.input_options,
+              self.input_options,
             ) {
               // ambiguous export
               panic!("ambiguous export");

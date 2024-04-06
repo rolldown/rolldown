@@ -25,11 +25,11 @@ assert.equal(a$1$1, 'a$1');
 
 # Sourcemap Visualizer
 
-- shared.js
+- ../shared.js
 (0:0-0:6) "const " --> (3:0-3:6) "\nconst"
 (0:6-0:10) "a = " --> (3:6-3:10) " a ="
 (0:10-2:13) "'shared.js'\n\nexport { a }" --> (3:10-6:0) " 'shared.js';\n\n// main.js"
-- main.js
+- ../main.js
 (2:0-2:6) "\nconst" --> (6:0-6:6) "\nconst"
 (2:6-2:10) " a =" --> (6:6-6:12) " a$1 ="
 (2:10-3:0) " 'a'" --> (6:12-7:0) " 'a';"

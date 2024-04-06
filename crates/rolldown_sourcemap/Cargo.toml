@@ -19,5 +19,7 @@ test    = false
 
 [dependencies]
 oxc            = { workspace = true }
+path-slash     = { workspace = true }
 rolldown_error = { path = "../rolldown_error" }
 rustc-hash     = { workspace = true }
+sugar_path     = { workspace = true }

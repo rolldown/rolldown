@@ -25,11 +25,11 @@ assert.deepEqual(foo('foo'), ['foo', 'main.js', 'a.js']);
 
 # Sourcemap Visualizer
 
-- a.js
+- ../a.js
 (0:0-0:6) "const " --> (3:0-3:6) "\nconst"
 (0:6-0:10) "a = " --> (3:6-3:10) " a ="
 (0:10-3:1) "'a.js'\n\nexport { a }\n" --> (3:10-6:0) " 'a.js';\n\n// main.js"
-- main.js
+- ../main.js
 (2:0-2:6) "\nconst" --> (6:0-6:6) "\nconst"
 (2:6-2:10) " a =" --> (6:6-6:12) " a$1 ="
 (2:10-5:0) " 'main.js'\n\n" --> (6:12-7:0) " 'main.js';"

@@ -56,7 +56,7 @@ export { a$1 as a, a as a2, b$1 as b, b as b2, c$1 as c, c as c2, d$1 as d, d as
 
 # Sourcemap Visualizer
 
-- names.js
+- ../names.js
 (0:7-0:13) "const " --> (3:0-3:6) "\nconst"
 (0:13-0:14) "[" --> (3:6-3:7) " "
 (0:14-0:16) "a]" --> (3:7-3:9) "[a"
@@ -100,7 +100,7 @@ export { a$1 as a, a as a2, b$1 as b, b as b2, c$1 as c, c as c2, d$1 as d, d as
 (4:31-4:34) " d:" --> (14:1-14:3) "\td"
 (4:34-4:40) " 'e2' " --> (14:3-15:1) ":'e2'\n"
 (4:40-6:1) "}\n\n" --> (15:1-18:0) "};\n\n// main.js"
-- main.js
+- ../main.js
 (2:7-2:13) " const" --> (18:0-18:6) "\nconst"
 (2:13-2:14) " " --> (18:6-18:7) " "
 (2:14-2:16) "[a" --> (18:7-18:11) "[a$1"

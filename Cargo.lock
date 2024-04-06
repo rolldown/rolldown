@@ -1118,6 +1118,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "path-slash"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e91099d4268b0e11973f036e885d652fb0b21fedcf69738c627f94db6a44f42"
+
+[[package]]
 name = "petgraph"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1353,6 +1359,7 @@ dependencies = [
  "insta",
  "once_cell",
  "oxc",
+ "path-slash",
  "rayon",
  "regex",
  "rolldown_common",
@@ -1496,8 +1503,10 @@ name = "rolldown_sourcemap"
 version = "0.1.0"
 dependencies = [
  "oxc",
+ "path-slash",
  "rolldown_error",
  "rustc-hash",
+ "sugar_path",
 ]
 
 [[package]]

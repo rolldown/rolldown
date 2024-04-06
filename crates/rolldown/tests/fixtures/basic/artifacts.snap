@@ -20,11 +20,11 @@ console.log(a$1, a);
 
 # Sourcemap Visualizer
 
-- shared.js
+- ../shared.js
 (0:0-0:6) "const " --> (2:0-2:6) "\nconst"
 (0:6-0:10) "a = " --> (2:6-2:10) " a ="
 (0:10-2:13) "'shared.js'\n\nexport { a }" --> (2:10-5:0) " 'shared.js';\n\n// main.js"
-- main.js
+- ../main.js
 (1:0-1:6) "\nconst" --> (5:0-5:6) "\nconst"
 (1:6-1:10) " a =" --> (5:6-5:12) " a$1 ="
 (1:10-2:0) " 'index.js'" --> (5:12-6:0) " 'index.js';"

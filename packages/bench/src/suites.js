@@ -62,6 +62,8 @@ export const suites = expandSuitesWithDerived([
         'zlib',
         'inspector',
       ],
+      // Need this due rome is not written with `isolatedModules: true`
+      shimMissingExports: true,
       plugins: [
         {
           name: '@rolldown/plugin-esbuild',
@@ -91,7 +93,7 @@ export const suites = expandSuitesWithDerived([
         ),
       },
     },
-    disableBundler: ['rolldown', 'rollup'],
+    disableBundler: ['rollup'],
   },
   {
     title: 'react-stack',

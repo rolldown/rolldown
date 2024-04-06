@@ -207,8 +207,12 @@ impl<'a> SideEffectDetector<'a> {
       Statement::Declaration(decl) => self.detect_side_effect_of_decl(decl),
       Statement::ExpressionStatement(expr) => self.detect_side_effect_of_expr(&expr.expression),
       Statement::ModuleDeclaration(module_decl) => match &**module_decl {
-        oxc::ast::ast::ModuleDeclaration::ImportDeclaration(_)
-        | oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(_) => true,
+        oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(_) => true,
+        oxc::ast::ast::ModuleDeclaration::ImportDeclaration(_) => {
+          // We consider `import ...` has no side effect. However, `import ...` might be rewritten to other statements by the bundler.
+          // In that case, we will mark the statement as having side effect in link stage.
+          false
+        }
         oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(default_decl) => {
           match &default_decl.declaration {
             oxc::ast::ast::ExportDefaultDeclarationKind::Expression(expr) => {

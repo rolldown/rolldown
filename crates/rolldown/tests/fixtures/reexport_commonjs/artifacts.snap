@@ -33,6 +33,6 @@ var import_commonjs$1 = __toESM(require_commonjs());
 var import_commonjs = __toESM(require_commonjs());
 console.log(foo_ns, import_commonjs$1.bar, value, foo_ns.foo);
 
-var bar$1 = import_commonjs.bar;
-export { bar$1 as bar };
+var bar = import_commonjs.bar;
+export { bar };
 ```

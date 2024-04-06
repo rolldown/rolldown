@@ -45,6 +45,13 @@ pub struct ResolveIdHookOption {
   #[napi(ts_type = "'pre'|'post'|null")]
   pub order: Option<String>,
 }
+#[napi_derive::napi(object, object_to_js = false)]
+pub struct LoadOption {
+  #[napi(ts_type = "(id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>")]
+  pub handler: MaybeAsyncJsCallback<String, Option<BindingHookLoadOutput>>,
+  #[napi(ts_type = "'pre'|'post'|null")]
+  pub order: Option<String>,
+}
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default)]
@@ -61,8 +68,8 @@ pub struct BindingPluginOptions {
   pub resolve_id: Option<ResolveIdHookOption>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>")]
-  pub load: Option<MaybeAsyncJsCallback<String, Option<BindingHookLoadOutput>>>,
+  #[napi(ts_type = "LoadOption")]
+  pub load: Option<LoadOption>,
 
   #[serde(skip_deserializing)]
   #[napi(

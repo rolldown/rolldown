@@ -104,7 +104,7 @@ export interface BindingPluginOptions {
   name: string
   buildStart?: BuildStartHookOption
   resolveId?: ResolveIdHookOption
-  load?: (id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  load?: LoadOption
   transform?: (
     id: string,
     code: string,
@@ -146,6 +146,11 @@ export interface BuildStartHookOption {
 export interface HookOption {
   order?: 'pre' | 'post' | null
   sequential?: boolean
+}
+
+export interface LoadOption {
+  handler: (id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  order?: 'pre' | 'post' | null
 }
 
 export interface RenderedChunk {

@@ -68,8 +68,15 @@ impl Plugin for JsPlugin {
     _ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookLoadArgs,
   ) -> rolldown_plugin::HookLoadReturn {
-    if let Some(cb) = &self.load {
-      Ok(cb.await_call(args.id.to_string()).await?.map(TryInto::try_into).transpose()?)
+    if let Some(hookOption) = &self.load {
+      Ok(
+        hookOption
+          .handler
+          .await_call(args.id.to_string())
+          .await?
+          .map(TryInto::try_into)
+          .transpose()?,
+      )
     } else {
       Ok(None)
     }

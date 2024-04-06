@@ -4,6 +4,7 @@ export interface SourceMapInputObject {
   names?: string[]
   sources?: (string | null)[]
   sourcesContent?: (string | null)[]
+  sourceRoot?: string
   version: number
 }
 

@@ -717,7 +717,6 @@
   "rollup@sourcemaps@ignore-list-false: accepts false for `sourcemapIgnoreList` to disable the default ignore-listing of node_modules@generates es",
   "rollup@sourcemaps@ignore-list-source-files: populates ignore list@generates es",
   "rollup@sourcemaps@ignore-list-sourcemap-path: correctly passes source map path@generates es",
-  "rollup@sourcemaps@loaders: preserves sourcemap chains when transforming@generates es",
   "rollup@sourcemaps@names-transformed-render-chunk: names are recovered if transforms are used@generates es",
   "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",
   "rollup@sourcemaps@reified-namespace: generates correct sourcemap with reified namespace (#668)@generates es",

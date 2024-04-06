@@ -4,12 +4,8 @@ pub mod render_chunk;
 mod render_chunk_exports;
 mod render_chunk_imports;
 use index_vec::IndexVec;
-<<<<<<< HEAD
-use rolldown_common::{ChunkId, FileNameTemplate};
-=======
 use path_slash::PathBufExt;
->>>>>>> e7732e85 (fix: windows ci)
-use rolldown_common::ChunkId;
+use rolldown_common::{ChunkId, FileNameTemplate};
 
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;
 
@@ -21,7 +17,6 @@ use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
 
-use crate::options::normalized_output_options::NormalizedOutputOptions;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::utils::render_normal_module::render_normal_module;
 use crate::SharedOptions;
@@ -101,10 +96,8 @@ impl Chunk {
           m,
           &graph.ast_table[m.id],
           // TODO(underfin): refactor the relative path
-          m.resource_id.expect_file().relative_path(&options.cwd).to_string_lossy().as_ref(),
+          m.resource_id.expect_file().relative_path(&options.dir).to_slash_lossy().as_ref(),
           options,
-          m.resource_id.expect_file().relative_path(&output_options.dir).to_string_lossy().as_ref(),
-          output_options,
         )
       })
       .collect::<Vec<_>>()

@@ -33,8 +33,7 @@ runTestSuiteWithSamples(
 						};
 						const outputOptions = {
 							exports: 'auto',
-							dir: directory + '/dist/',
-							// file: directory + '/_actual/bundle.' + format + '.js',
+							file: directory + '/_actual/bundle.' + format + '.js',
 							format,
 							sourcemap: true,
 							...(config.options || {}).output

@@ -11,7 +11,7 @@ mod concat_sourcemap;
 
 pub fn collapse_sourcemaps(
   mut sourcemap_chain: Vec<Arc<SourceMap>>,
-  output_dir: impl AsRef<Path>,
+  file_dir: impl AsRef<Path>,
 ) -> Option<Arc<SourceMap>> {
   let last_map = sourcemap_chain.pop()?;
   // If there is only one sourcemap, return it as result.
@@ -43,7 +43,7 @@ pub fn collapse_sourcemaps(
       let name_id = original_token.get_name().map(|name| sourcemap_builder.add_name(name));
 
       let source_id = original_token.get_source_and_content().map(|(source, source_content)| {
-        let relative_path = source.as_path().relative(&output_dir);
+        let relative_path = source.as_path().relative(&file_dir);
         sourcemap_builder
           .add_source_and_content(relative_path.to_slash_lossy().as_ref(), source_content)
       });

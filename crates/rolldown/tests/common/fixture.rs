@@ -104,11 +104,6 @@ impl Fixture {
       bundle_options.cwd = Some(fixture_path.to_path_buf());
     }
 
-    if bundle_options.dir.is_none() {
-      bundle_options.dir =
-        Some(fixture_path.to_path_buf().join("dist").to_string_lossy().to_string());
-    }
-
     if bundle_options.entry_file_names.is_none() {
       bundle_options.entry_file_names = Some("[name].mjs".to_string());
     }

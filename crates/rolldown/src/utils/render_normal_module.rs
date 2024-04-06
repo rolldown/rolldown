@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 // cSpell:disable
 
 use rolldown_common::{NormalModule, RenderedModule};
@@ -12,6 +12,7 @@ pub fn render_normal_module<'a>(
   ast: &OxcProgram,
   source_name: &str,
   options: &SharedOptions,
+  file_dir: impl AsRef<Path>,
 ) -> Option<ModuleRenderOutput<'a>> {
   if ast.program().body.is_empty() {
     None
@@ -35,7 +36,7 @@ pub fn render_normal_module<'a>(
         if let Some(sourcemap) = render_output.source_map {
           sourcemap_chain.push(Arc::new(sourcemap));
         }
-        collapse_sourcemaps(sourcemap_chain, &options.dir)
+        collapse_sourcemaps(sourcemap_chain, file_dir)
       },
     })
   }

@@ -46,9 +46,9 @@ impl Plugin for JsPlugin {
     _ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookResolveIdArgs,
   ) -> rolldown_plugin::HookResolveIdReturn {
-    if let Some(hookOption) = &self.resolve_id {
+    if let Some(hook_option) = &self.resolve_id {
       Ok(
-        hookOption
+        hook_option
           .handler
           .await_call((
             args.source.to_string(),
@@ -68,9 +68,9 @@ impl Plugin for JsPlugin {
     _ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookLoadArgs,
   ) -> rolldown_plugin::HookLoadReturn {
-    if let Some(hookOption) = &self.load {
+    if let Some(hook_option) = &self.load {
       Ok(
-        hookOption
+        hook_option
           .handler
           .await_call(args.id.to_string())
           .await?
@@ -87,9 +87,11 @@ impl Plugin for JsPlugin {
     _ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookTransformArgs,
   ) -> rolldown_plugin::HookTransformReturn {
-    if let Some(cb) = &self.transform {
+    if let Some(hook_option) = &self.transform {
       Ok(
-        cb.await_call((args.code.to_string(), args.id.to_string()))
+        hook_option
+          .handler
+          .await_call((args.code.to_string(), args.id.to_string()))
           .await?
           .map(TryInto::try_into)
           .transpose()?,

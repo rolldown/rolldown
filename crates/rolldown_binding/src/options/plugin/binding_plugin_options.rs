@@ -54,6 +54,16 @@ pub struct LoadOption {
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
+pub struct TransformOption {
+  #[napi(
+    ts_type = "(id: string, code: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
+  )]
+  pub handler: MaybeAsyncJsCallback<(String, String), Option<BindingHookLoadOutput>>,
+  #[napi(ts_type = "'pre'|'post'|null")]
+  pub order: Option<String>,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingPluginOptions {
@@ -72,10 +82,8 @@ pub struct BindingPluginOptions {
   pub load: Option<LoadOption>,
 
   #[serde(skip_deserializing)]
-  #[napi(
-    ts_type = "(id: string, code: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
-  )]
-  pub transform: Option<MaybeAsyncJsCallback<(String, String), Option<BindingHookLoadOutput>>>,
+  #[napi(ts_type = "TransformOption")]
+  pub transform: Option<TransformOption>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(error: Nullable<string>) => MaybePromise<VoidNullable>")]

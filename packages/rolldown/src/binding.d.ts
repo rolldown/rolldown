@@ -105,10 +105,7 @@ export interface BindingPluginOptions {
   buildStart?: BuildStartHookOption
   resolveId?: ResolveIdHookOption
   load?: LoadOption
-  transform?: (
-    id: string,
-    code: string,
-  ) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  transform?: TransformOption
   buildEnd?: (error: Nullable<string>) => MaybePromise<VoidNullable>
   renderChunk?: (
     code: string,
@@ -169,5 +166,13 @@ export interface ResolveIdHookOption {
     importer: Nullable<string>,
     options: BindingHookResolveIdExtraOptions,
   ) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  order?: 'pre' | 'post' | null
+}
+
+export interface TransformOption {
+  handler: (
+    id: string,
+    code: string,
+  ) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   order?: 'pre' | 'post' | null
 }

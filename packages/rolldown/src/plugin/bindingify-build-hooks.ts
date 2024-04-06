@@ -29,14 +29,17 @@ export function bindingifyBuildEnd(
   if (!hook) {
     return undefined
   }
-  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+  const [handler, option] = normalizeHook<Hook<AnyFn, HookOption>>(hook)
 
-  return async (err) => {
-    try {
-      handler.call(null, err ?? undefined)
-    } catch (error) {
-      console.error(error)
-    }
+  return {
+    handler: async (err) => {
+      try {
+        handler.call(null, err ?? undefined)
+      } catch (error) {
+        console.error(error)
+      }
+    },
+    order: option.order,
   }
 }
 
@@ -132,17 +135,20 @@ export function bindingifyRenderChunk(
   if (!hook) {
     return undefined
   }
-  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+  const [handler, option] = normalizeHook<Hook<AnyFn, HookOption>>(hook)
 
-  return async (code, chunk) => {
-    const ret = await handler.call(null, code, chunk)
+  return {
+    handler: async (code, chunk) => {
+      const ret = await handler.call(null, code, chunk)
 
-    if (ret == null) {
-      return
-    }
+      if (ret == null) {
+        return
+      }
 
-    return {
-      code: ret,
-    }
+      return {
+        code: ret,
+      }
+    },
+    order: option.order,
   }
 }

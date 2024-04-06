@@ -52,7 +52,6 @@ pub struct LoadOption {
   #[napi(ts_type = "'pre'|'post'|null")]
   pub order: Option<String>,
 }
-
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct TransformOption {
   #[napi(
@@ -61,6 +60,40 @@ pub struct TransformOption {
   pub handler: MaybeAsyncJsCallback<(String, String), Option<BindingHookLoadOutput>>,
   #[napi(ts_type = "'pre'|'post'|null")]
   pub order: Option<String>,
+}
+#[napi_derive::napi(object, object_to_js = false)]
+pub struct BuildEndHookOption {
+  #[napi(ts_type = "(error: Nullable<string>) => MaybePromise<VoidNullable>")]
+  pub handler: MaybeAsyncJsCallback<Option<String>, ()>,
+  #[napi(ts_type = "'pre'|'post'|null")]
+  pub order: Option<String>,
+  pub sequential: Option<bool>,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+pub struct RenderChunkOption {
+  #[napi(
+    ts_type = "(code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>"
+  )]
+  pub handler: MaybeAsyncJsCallback<(String, RenderedChunk), Option<BindingHookRenderChunkOutput>>,
+  #[napi(ts_type = "'pre'|'post'|null")]
+  pub order: Option<String>,
+}
+#[napi_derive::napi(object, object_to_js = false)]
+pub struct GenerateBundleOption {
+  #[napi(ts_type = "(bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>")]
+  pub handler: MaybeAsyncJsCallback<(BindingOutputs, bool), ()>,
+  #[napi(ts_type = "'pre'|'post'|null")]
+  pub order: Option<String>,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+pub struct WriteBundleOption {
+  #[napi(ts_type = "(bundle: BindingOutputs) => MaybePromise<VoidNullable>")]
+  pub handler: MaybeAsyncJsCallback<BindingOutputs, ()>,
+  #[napi(ts_type = "'pre'|'post'|null")]
+  pub order: Option<String>,
+  pub sequential: Option<bool>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -86,23 +119,20 @@ pub struct BindingPluginOptions {
   pub transform: Option<TransformOption>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(error: Nullable<string>) => MaybePromise<VoidNullable>")]
-  pub build_end: Option<MaybeAsyncJsCallback<Option<String>, ()>>,
+  #[napi(ts_type = "BuildEndHookOption")]
+  pub build_end: Option<BuildEndHookOption>,
 
   #[serde(skip_deserializing)]
-  #[napi(
-    ts_type = "(code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>"
-  )]
-  pub render_chunk:
-    Option<MaybeAsyncJsCallback<(String, RenderedChunk), Option<BindingHookRenderChunkOutput>>>,
+  #[napi(ts_type = "RenderChunkOption")]
+  pub render_chunk: Option<RenderChunkOption>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>")]
-  pub generate_bundle: Option<MaybeAsyncJsCallback<(BindingOutputs, bool), ()>>,
+  #[napi(ts_type = "GenerateBundleOption")]
+  pub generate_bundle: Option<GenerateBundleOption>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(bundle: BindingOutputs) => MaybePromise<VoidNullable>")]
-  pub write_bundle: Option<MaybeAsyncJsCallback<BindingOutputs, ()>>,
+  #[napi(ts_type = "WriteBundleOption")]
+  pub write_bundle: Option<WriteBundleOption>,
 }
 
 impl Debug for BindingPluginOptions {

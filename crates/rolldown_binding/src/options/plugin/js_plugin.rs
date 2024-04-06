@@ -106,8 +106,8 @@ impl Plugin for JsPlugin {
     _ctx: &rolldown_plugin::SharedPluginContext,
     args: Option<&rolldown_plugin::HookBuildEndArgs>,
   ) -> rolldown_plugin::HookNoopReturn {
-    if let Some(cb) = &self.build_end {
-      cb.await_call(args.map(|a| a.error.to_string())).await?;
+    if let Some(hook_option) = &self.build_end {
+      hook_option.handler.await_call(args.map(|a| a.error.to_string())).await?;
     }
     Ok(())
   }
@@ -117,8 +117,14 @@ impl Plugin for JsPlugin {
     _ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookRenderChunkArgs,
   ) -> rolldown_plugin::HookRenderChunkReturn {
-    if let Some(cb) = &self.render_chunk {
-      Ok(cb.await_call((args.code.to_string(), args.chunk.clone().into())).await?.map(Into::into))
+    if let Some(hook_option) = &self.render_chunk {
+      Ok(
+        hook_option
+          .handler
+          .await_call((args.code.to_string(), args.chunk.clone().into()))
+          .await?
+          .map(Into::into),
+      )
     } else {
       Ok(None)
     }
@@ -132,8 +138,8 @@ impl Plugin for JsPlugin {
     bundle: &Vec<rolldown_common::Output>,
     is_write: bool,
   ) -> rolldown_plugin::HookNoopReturn {
-    if let Some(cb) = &self.generate_bundle {
-      cb.await_call((BindingOutputs::new(bundle.clone()), is_write)).await?;
+    if let Some(hook_option) = &self.generate_bundle {
+      hook_option.handler.await_call((BindingOutputs::new(bundle.clone()), is_write)).await?;
     }
     Ok(())
   }
@@ -143,8 +149,8 @@ impl Plugin for JsPlugin {
     _ctx: &rolldown_plugin::SharedPluginContext,
     bundle: &Vec<rolldown_common::Output>,
   ) -> rolldown_plugin::HookNoopReturn {
-    if let Some(cb) = &self.write_bundle {
-      cb.await_call(BindingOutputs::new(bundle.clone())).await?;
+    if let Some(hook_option) = &self.write_bundle {
+      hook_option.handler.await_call(BindingOutputs::new(bundle.clone())).await?;
     }
     Ok(())
   }

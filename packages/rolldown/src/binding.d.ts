@@ -106,16 +106,10 @@ export interface BindingPluginOptions {
   resolveId?: ResolveIdHookOption
   load?: LoadOption
   transform?: TransformOption
-  buildEnd?: (error: Nullable<string>) => MaybePromise<VoidNullable>
-  renderChunk?: (
-    code: string,
-    chunk: RenderedChunk,
-  ) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
-  generateBundle?: (
-    bundle: BindingOutputs,
-    isWrite: boolean,
-  ) => MaybePromise<VoidNullable>
-  writeBundle?: (bundle: BindingOutputs) => MaybePromise<VoidNullable>
+  buildEnd?: BuildEndHookOption
+  renderChunk?: RenderChunkOption
+  generateBundle?: GenerateBundleOption
+  writeBundle?: WriteBundleOption
 }
 
 export interface BindingRenderedModule {
@@ -134,10 +128,24 @@ export interface BindingResolveOptions {
   symlinks?: boolean
 }
 
+export interface BuildEndHookOption {
+  handler: (error: Nullable<string>) => MaybePromise<VoidNullable>
+  order?: 'pre' | 'post' | null
+  sequential?: boolean
+}
+
 export interface BuildStartHookOption {
   handler: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
   order?: 'pre' | 'post' | null
   sequential?: boolean
+}
+
+export interface GenerateBundleOption {
+  handler: (
+    bundle: BindingOutputs,
+    isWrite: boolean,
+  ) => MaybePromise<VoidNullable>
+  order?: 'pre' | 'post' | null
 }
 
 export interface HookOption {
@@ -147,6 +155,14 @@ export interface HookOption {
 
 export interface LoadOption {
   handler: (id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  order?: 'pre' | 'post' | null
+}
+
+export interface RenderChunkOption {
+  handler: (
+    code: string,
+    chunk: RenderedChunk,
+  ) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   order?: 'pre' | 'post' | null
 }
 
@@ -175,4 +191,10 @@ export interface TransformOption {
     code: string,
   ) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   order?: 'pre' | 'post' | null
+}
+
+export interface WriteBundleOption {
+  handler: (bundle: BindingOutputs) => MaybePromise<VoidNullable>
+  order?: 'pre' | 'post' | null
+  sequential?: boolean
 }

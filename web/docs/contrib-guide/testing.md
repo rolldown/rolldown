@@ -24,6 +24,13 @@ A test case is a folder that contains `test.config.json`.
 
 Rolldown will bundle the input into `/dist`, and using the same `node` instance to execute every entry file in `/dist` orderly. If `_test.mjs` is found in test case folder, it will be executed after all entry points are executed.
 
+#### Snapshot testing
+
+Rolldown uses [insta](https://insta.rs/docs/cli/) for rust snapshot testing. You could use
+
+- `cargo insta review` to review the new snapshot one by one.
+- `cargo insta accept` to accept all new snapshots at once.
+
 ## Node.js Tests
 
 :::tip

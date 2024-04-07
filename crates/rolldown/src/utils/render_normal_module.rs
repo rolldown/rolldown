@@ -1,5 +1,4 @@
 use std::sync::Arc;
-// cSpell:disable
 
 use rolldown_common::{NormalModule, RenderedModule};
 use rolldown_oxc_utils::{OxcCompiler, OxcProgram};

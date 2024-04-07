@@ -107,7 +107,12 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookRenderChunkArgs,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     if let Some(cb) = &self.render_chunk {
-      Ok(cb.await_call((args.code.to_string(), args.chunk.clone().into())).await?.map(Into::into))
+      Ok(
+        cb.await_call((args.code.to_string(), args.chunk.clone().into()))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()?,
+      )
     } else {
       Ok(None)
     }

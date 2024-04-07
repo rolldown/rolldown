@@ -164,8 +164,22 @@ export function bindingifyRenderChunk(
       return
     }
 
+    if (typeof ret === 'string') {
+      return { code: ret }
+    }
+
+    if (!ret.map) {
+      return { code: ret.code }
+    }
+
+    let map =
+      typeof ret.map === 'object'
+        ? ret.map
+        : (JSON.parse(ret.map) as SourceMapInputObject)
+
     return {
-      code: ret,
+      code: ret.code,
+      map: JSON.stringify(map),
     }
   }
 }

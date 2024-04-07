@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxHashMap;
 
@@ -17,6 +19,6 @@ pub struct OutputChunk {
   pub modules: FxHashMap<String, RenderedModule>,
   // OutputChunk
   pub code: String,
-  pub map: Option<SourceMap>,
+  pub map: Option<Arc<SourceMap>>,
   pub sourcemap_file_name: Option<String>,
 }

@@ -93,9 +93,8 @@ impl<'a> BundleStage<'a> {
 
     render_chunks(self.plugin_driver, chunks).await?.into_iter().try_for_each(
       |chunk| -> Result<(), BuildError> {
-        let ChunkRenderReturn { mut map, rendered_chunk, mut code } = chunk;
-        if let Some(map) = map.as_mut() {
-          map.set_file(rendered_chunk.file_name.as_str());
+        let ChunkRenderReturn { map, rendered_chunk, mut code } = chunk;
+        if let Some(map) = map.as_ref() {
           match self.options.sourcemap {
             SourceMapType::File => {
               let map_file_name = format!("{}.map", rendered_chunk.file_name);

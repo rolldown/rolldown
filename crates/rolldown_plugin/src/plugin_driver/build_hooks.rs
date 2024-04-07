@@ -64,10 +64,14 @@ impl PluginDriver {
   pub async fn render_chunk(
     &self,
     mut args: HookRenderChunkArgs<'_>,
+    sourcemap_chain: &mut Vec<Arc<SourceMap>>,
   ) -> Result<String, BuildError> {
     for (plugin, ctx) in &self.plugins {
       if let Some(r) = plugin.render_chunk(ctx, &args).await? {
         args.code = r.code;
+        if let Some(map) = r.map {
+          sourcemap_chain.push(Arc::new(map));
+        }
       }
     }
     Ok(args.code)

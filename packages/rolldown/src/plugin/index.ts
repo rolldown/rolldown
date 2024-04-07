@@ -79,7 +79,14 @@ export interface Plugin {
       this: null,
       code: string,
       chunk: RenderedChunk,
-    ) => MaybePromise<NullValue | string>
+    ) => MaybePromise<
+      | NullValue
+      | string
+      | {
+          code: string
+          map?: string | null | SourceMapInput
+        }
+    >
   >
 
   buildEnd?: Hook<(this: null, err?: string) => MaybePromise<NullValue>>

@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'url'
 import nodePath from 'node:path'
-import { ERR_UNSUPPORTED_CONFIG_FORMAT } from './errors.js'
-import { RolldownConfigExport } from '../types/rolldown-config-export.js'
+import { ERR_UNSUPPORTED_CONFIG_FORMAT } from './errors'
+import { RolldownConfigExport } from '../types/rolldown-config-export'
 
 /**
  * @typedef {import('../rollup').RollupOptions} RollupOptions

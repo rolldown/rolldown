@@ -9,13 +9,13 @@ use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcProgram;
 
 use crate::{
-  options::normalized_input_options::NormalizedInputOptions,
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     module_table::ModuleTable,
     symbols::Symbols,
   },
+  SharedOptions,
 };
 
 use self::wrapping::create_wrapper;
@@ -49,14 +49,11 @@ pub struct LinkStage<'a> {
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildError>,
   pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
-  pub input_options: &'a NormalizedInputOptions,
+  pub input_options: &'a SharedOptions,
 }
 
 impl<'a> LinkStage<'a> {
-  pub fn new(
-    scan_stage_output: ScanStageOutput,
-    input_options: &'a NormalizedInputOptions,
-  ) -> Self {
+  pub fn new(scan_stage_output: ScanStageOutput, input_options: &'a SharedOptions) -> Self {
     Self {
       sorted_modules: Vec::new(),
       metas: scan_stage_output
@@ -83,6 +80,19 @@ impl<'a> LinkStage<'a> {
       if self.entries.iter().any(|entry| entry.id == module.id) {
         init_entry_point_stmt_info(module, linking_info);
       }
+
+      linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
+        let stmt_info = StmtInfo {
+          stmt_idx: None,
+          declared_symbols: vec![*symbol_ref],
+          referenced_symbols: vec![],
+          side_effect: false,
+          is_included: false,
+          import_records: Vec::new(),
+          debug_label: None,
+        };
+        module.stmt_infos.add_stmt_info(stmt_info);
+      });
 
       if matches!(module.exports_kind, ExportsKind::Esm) {
         let linking_info = &self.metas[module.id];
@@ -218,65 +228,82 @@ impl<'a> LinkStage<'a> {
       stmt_infos.iter_mut().for_each(|stmt_info| {
         stmt_info.import_records.iter().for_each(|rec_id| {
           let rec = &importer.import_records[*rec_id];
-          let ModuleId::Normal(importee_id) = rec.resolved_module else {
-            return;
-          };
-          let importee_linking_info = &self.metas[importee_id];
-          match rec.kind {
-            ImportKind::Import => {
-              let is_reexport_all = importer.star_exports.contains(rec_id);
-              match importee_linking_info.wrap_kind {
-                WrapKind::None => {}
-                WrapKind::Cjs => {
-                  if is_reexport_all {
-                    // something like `__reExport(foo_exports, __toESM(require_bar()))`
-                    // Reference to `require_bar`
-                    stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
-                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
-                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__reExport"));
-                    stmt_info.referenced_symbols.push(importer.namespace_symbol);
-                  } else {
-                    // something like `var import_foo = __toESM(require_foo())`
-                    // Reference to `require_foo`
-                    stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
-                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
-                    stmt_info.declared_symbols.push(rec.namespace_ref);
-                    let importee = &self.module_table.normal_modules[importee_id];
-                    symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
-                      format!("import_{}", &importee.repr_name).into();
+          match rec.resolved_module {
+            ModuleId::External(_) => {
+              // Make sure symbols from external modules are included and de_conflicted
+              stmt_info.side_effect = true;
+            }
+            ModuleId::Normal(importee_id) => {
+              let importee_linking_info = &self.metas[importee_id];
+              match rec.kind {
+                ImportKind::Import => {
+                  let is_reexport_all = importer.star_exports.contains(rec_id);
+                  match importee_linking_info.wrap_kind {
+                    WrapKind::None => {}
+                    WrapKind::Cjs => {
+                      stmt_info.side_effect = true;
+                      if is_reexport_all {
+                        // Turn `export * from 'bar_cjs'` into `__reExport(foo_exports, __toESM(require_bar_cjs()))`
+                        // Reference to `require_bar_cjs`
+                        stmt_info
+                          .referenced_symbols
+                          .push(importee_linking_info.wrapper_ref.unwrap());
+                        stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
+                        stmt_info
+                          .referenced_symbols
+                          .push(self.runtime.resolve_symbol("__reExport"));
+                        stmt_info.referenced_symbols.push(importer.namespace_symbol);
+                      } else {
+                        // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
+                        // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
+                        // Reference to `require_bar_cjs`
+                        stmt_info
+                          .referenced_symbols
+                          .push(importee_linking_info.wrapper_ref.unwrap());
+                        stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
+                        stmt_info.declared_symbols.push(rec.namespace_ref);
+                        let importee = &self.module_table.normal_modules[importee_id];
+                        symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
+                          format!("import_{}", &importee.repr_name).into();
+                      }
+                    }
+                    WrapKind::Esm => {
+                      stmt_info.side_effect = true;
+                      // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
+                      // Reference to `init_foo`
+                      stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
+                      if is_reexport_all && importee_linking_info.has_dynamic_exports {
+                        // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
+                        // something like `__reExport(foo_exports, other_exports)`
+                        stmt_info
+                          .referenced_symbols
+                          .push(self.runtime.resolve_symbol("__reExport"));
+                        stmt_info.referenced_symbols.push(importer.namespace_symbol);
+                        let importee = &self.module_table.normal_modules[importee_id];
+                        stmt_info.referenced_symbols.push(importee.namespace_symbol);
+                      }
+                    }
                   }
                 }
-                WrapKind::Esm => {
-                  // something like `init_foo()`
-                  // Reference to `init_foo`
-                  stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
-                  if is_reexport_all && importee_linking_info.has_dynamic_exports {
-                    // something like `__reExport(foo_exports, other_exports)`
-                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__reExport"));
-                    stmt_info.referenced_symbols.push(importer.namespace_symbol);
+                ImportKind::Require => match importee_linking_info.wrap_kind {
+                  WrapKind::None => {}
+                  WrapKind::Cjs => {
+                    // something like `require_foo()`
+                    // Reference to `require_foo`
+                    stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
+                  }
+                  WrapKind::Esm => {
+                    // something like `(init_foo(), toCommonJS(foo_exports))`
+                    // Reference to `init_foo`
+                    stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
+                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toCommonJS"));
                     let importee = &self.module_table.normal_modules[importee_id];
                     stmt_info.referenced_symbols.push(importee.namespace_symbol);
                   }
-                }
+                },
+                ImportKind::DynamicImport => {}
               }
             }
-            ImportKind::Require => match importee_linking_info.wrap_kind {
-              WrapKind::None => {}
-              WrapKind::Cjs => {
-                // something like `require_foo()`
-                // Reference to `require_foo`
-                stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
-              }
-              WrapKind::Esm => {
-                // something like `(init_foo(), toCommonJS(foo_exports))`
-                // Reference to `init_foo`
-                stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
-                stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toCommonJS"));
-                let importee = &self.module_table.normal_modules[importee_id];
-                stmt_info.referenced_symbols.push(importee.namespace_symbol);
-              }
-            },
-            ImportKind::DynamicImport => {}
           }
         });
       });

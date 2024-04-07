@@ -1,0 +1,8 @@
+{
+  "config": {
+    "external": [
+      "assert"
+    ],
+    "treeshake": false
+  }
+}

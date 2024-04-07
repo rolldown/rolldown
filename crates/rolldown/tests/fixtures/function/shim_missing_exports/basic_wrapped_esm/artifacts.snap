@@ -1,0 +1,25 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/shim_missing_exports/basic_wrapped_esm
+---
+# Assets
+
+## main.mjs
+
+```js
+import { __esmMin, __toCommonJS } from "./$runtime$.mjs";
+
+// foo.js
+var foo_ns, missing;
+var init_foo = __esmMin(() => {
+	foo_ns = {};
+	missing = void 0;
+});
+
+// main.js
+init_foo();
+init_foo(),__toCommonJS(foo_ns);
+
+export { missing };
+```

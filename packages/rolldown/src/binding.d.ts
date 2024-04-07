@@ -49,6 +49,7 @@ export interface BindingHookLoadOutput {
 
 export interface BindingHookRenderChunkOutput {
   code: string
+  map?: string
 }
 
 export interface BindingHookResolveIdExtraOptions {
@@ -77,6 +78,8 @@ export interface BindingInputOptions {
   input: Array<BindingInputItem>
   plugins: Array<BindingPluginOptions>
   resolve?: BindingResolveOptions
+  shimMissingExports?: boolean
+  platform?: 'node' | 'browser' | 'neutral'
   cwd: string
 }
 
@@ -139,6 +142,7 @@ export interface BindingResolveOptions {
   mainFiles?: Array<string>
   modules?: Array<string>
   symlinks?: boolean
+  tsconfigFilename?: string
 }
 
 export interface RenderedChunk {

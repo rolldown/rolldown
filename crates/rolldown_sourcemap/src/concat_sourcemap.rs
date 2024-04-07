@@ -148,7 +148,7 @@ mod tests {
 
     let (content, map) = {
       let (content, map) = concat_source.content_and_sourcemap();
-      (content, map.expect("should have sourcemap").to_json_string())
+      (content, map.expect("should have sourcemap").to_json_string().unwrap())
     };
 
     assert_eq!(

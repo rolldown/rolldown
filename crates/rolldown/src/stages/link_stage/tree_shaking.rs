@@ -78,6 +78,8 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
   // include statements that are referenced by this statement
   stmt_info.declared_symbols.iter().chain(stmt_info.referenced_symbols.iter()).for_each(
     |symbol_ref| {
+      // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
+      // really declared by the module itself. We need to include them where they are really declared.
       include_symbol(ctx, *symbol_ref);
     },
   );

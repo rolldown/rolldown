@@ -43,6 +43,7 @@ pub struct LinkingMetadata {
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
   pub has_dynamic_exports: bool,
+  pub shimmed_missing_exports: FxHashMap<Rstr, SymbolRef>,
 }
 
 impl LinkingMetadata {

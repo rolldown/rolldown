@@ -717,13 +717,10 @@
   "rollup@sourcemaps@ignore-list-false: accepts false for `sourcemapIgnoreList` to disable the default ignore-listing of node_modules@generates es",
   "rollup@sourcemaps@ignore-list-source-files: populates ignore list@generates es",
   "rollup@sourcemaps@ignore-list-sourcemap-path: correctly passes source map path@generates es",
-  "rollup@sourcemaps@loaders: preserves sourcemap chains when transforming@generates es",
   "rollup@sourcemaps@names-transformed-render-chunk: names are recovered if transforms are used@generates es",
   "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",
   "rollup@sourcemaps@reified-namespace: generates correct sourcemap with reified namespace (#668)@generates es",
-  "rollup@sourcemaps@relative-paths: source paths are relative with relative dest (#344)@generates es",
   "rollup@sourcemaps@render-chunk-babili: generates valid sourcemap when source could not be determined@generates es",
-  "rollup@sourcemaps@render-chunk: preserves sourcemap chains when transforming@generates es",
   "rollup@sourcemaps@single-length-segments: handles single-length sourcemap segments@generates es",
   "rollup@sourcemaps@sourcemap-base-url-without-trailing-slash: add a trailing slash automatically if it is missing@generates es",
   "rollup@sourcemaps@sourcemap-base-url: adds a sourcemap base url@generates es",
@@ -731,7 +728,5 @@
   "rollup@sourcemaps@sourcemap-file: populates file property of sourcemap when plugins are used (#986)@generates es",
   "rollup@sourcemaps@transform-full-source-paths: provides the full source map path when transforming source maps@generates es",
   "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es",
-  "rollup@sourcemaps@transform-source-paths: transform sourcemap paths (#2168)@generates es",
-  "rollup@sourcemaps@transforms: preserves sourcemap chains when transforming@generates es",
-  "rollup@sourcemaps@untransformed-modules: allows sourcemap chains with some untransformed modules (#404)@generates es"
+  "rollup@sourcemaps@transform-source-paths: transform sourcemap paths (#2168)@generates es"
 ]

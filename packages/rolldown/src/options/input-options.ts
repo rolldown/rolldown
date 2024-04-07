@@ -3,7 +3,7 @@ import {
   InputOptions as RollupInputOptions,
 } from '../rollup-types'
 import { ensureArray, normalizePluginOption } from '../utils'
-import { BindingResolveOptions } from '../binding'
+import { BindingInputOptions, BindingResolveOptions } from '../binding'
 import { Plugin } from '../plugin'
 
 // TODO export compat plugin type
@@ -13,6 +13,8 @@ export interface InputOptions {
   external?: RollupInputOptions['external']
   resolve?: RolldownResolveOptions
   cwd?: string
+  platform?: BindingInputOptions['platform']
+  shimMissingExports?: BindingInputOptions['shimMissingExports']
 }
 
 export type RolldownResolveOptions = Omit<BindingResolveOptions, 'alias'> & {
@@ -21,6 +23,7 @@ export type RolldownResolveOptions = Omit<BindingResolveOptions, 'alias'> & {
 
 export type RolldownNormalizedInputOptions = NormalizedInputOptions & {
   resolve?: BindingResolveOptions
+  platform?: BindingInputOptions['platform']
 }
 
 export async function normalizeInputOptions(
@@ -32,6 +35,8 @@ export async function normalizeInputOptions(
     plugins: await normalizePluginOption(config.plugins),
     external: getIdMatcher(config.external),
     resolve: getResolve(config.resolve),
+    platform: config.platform,
+    shimMissingExports: config.shimMissingExports ?? false,
   }
 }
 

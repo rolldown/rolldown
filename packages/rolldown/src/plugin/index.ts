@@ -6,6 +6,7 @@ import {
 } from '../binding'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
 import { AnyFn, AnyObj, NullValue } from '../types/utils'
+import { SourceMapInput } from '../types/sourcemap'
 
 type MaybePromise<T> = T | Promise<T>
 
@@ -54,7 +55,7 @@ export interface Plugin {
       this: null,
       id: string,
     ) => MaybePromise<
-      NullValue | string | { code: string; map?: string | null }
+      NullValue | string | { code: string; map?: SourceMapInput }
     >
   >
 
@@ -68,7 +69,7 @@ export interface Plugin {
       | string
       | {
           code: string
-          map?: string | null
+          map?: string | null | SourceMapInput
         }
     >
   >
@@ -78,7 +79,14 @@ export interface Plugin {
       this: null,
       code: string,
       chunk: RenderedChunk,
-    ) => MaybePromise<NullValue | string>
+    ) => MaybePromise<
+      | NullValue
+      | string
+      | {
+          code: string
+          map?: string | null | SourceMapInput
+        }
+    >
   >
 
   buildEnd?: Hook<(this: null, err?: string) => MaybePromise<NullValue>>

@@ -3,6 +3,9 @@ import type { BindingPluginOptions } from '../binding'
 
 import type { Plugin } from './index'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
+import { isEmptySourcemapFiled } from '../utils'
+import path from 'path'
+import { SourceMapInputObject } from '../types/sourcemap'
 
 export function bindingifyBuildStart(
   options: RolldownNormalizedInputOptions,
@@ -77,12 +80,27 @@ export function bindingifyTransform(
       return
     }
 
-    const retCode = typeof ret === 'string' ? ret : ret.code
-    const retMap = typeof ret === 'string' ? undefined : ret.map
+    if (typeof ret === 'string') {
+      return { code: ret }
+    }
+
+    if (!ret.map) {
+      return { code: ret.code }
+    }
+
+    // TODO(underfin) move the logic to rust
+    // If sourcemap hasn't `sourcesContent` and `sources`, using original code to fill it.
+    let map = typeof ret.map === 'object' ? ret.map : JSON.parse(ret.map)
+    if (isEmptySourcemapFiled(map.sourcesContent)) {
+      map.sourcesContent = [code]
+    }
+    if (isEmptySourcemapFiled(map.sources)) {
+      map.sources = [id]
+    }
 
     return {
-      code: retCode,
-      map: retMap ?? undefined,
+      code: ret.code,
+      map: JSON.stringify(map),
     }
   }
 }
@@ -102,12 +120,31 @@ export function bindingifyLoad(
       return
     }
 
-    const retCode = typeof ret === 'string' ? ret : ret.code
-    const retMap = typeof ret === 'string' ? undefined : ret.map
+    if (typeof ret === 'string') {
+      return { code: ret }
+    }
+
+    if (!ret.map) {
+      return { code: ret.code }
+    }
+
+    let map =
+      typeof ret.map === 'object'
+        ? ret.map
+        : (JSON.parse(ret.map) as SourceMapInputObject)
+    if (!isEmptySourcemapFiled(map.sources)) {
+      // normalize original sourcemap sources
+      // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
+      const directory = path.dirname(id) || '.'
+      const sourceRoot = map.sourceRoot || '.'
+      map.sources = map.sources!.map((source) =>
+        path.resolve(directory, sourceRoot, source!),
+      )
+    }
 
     return {
-      code: retCode,
-      map: retMap ?? undefined,
+      code: ret.code,
+      map: JSON.stringify(map),
     }
   }
 }
@@ -127,8 +164,22 @@ export function bindingifyRenderChunk(
       return
     }
 
+    if (typeof ret === 'string') {
+      return { code: ret }
+    }
+
+    if (!ret.map) {
+      return { code: ret.code }
+    }
+
+    let map =
+      typeof ret.map === 'object'
+        ? ret.map
+        : (JSON.parse(ret.map) as SourceMapInputObject)
+
     return {
-      code: ret,
+      code: ret.code,
+      map: JSON.stringify(map),
     }
   }
 }

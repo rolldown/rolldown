@@ -1,9 +1,0 @@
-{
-    "input": {
-        "external": [
-            "external"
-        ],
-        "treeshake": false
-    },
-    "expectExecuted": false
-}

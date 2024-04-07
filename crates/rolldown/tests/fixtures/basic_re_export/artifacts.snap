@@ -9,9 +9,9 @@ input_file: crates/rolldown/tests/fixtures/basic_re_export
 
 ```js
 // a.js
-const a = 'a.js';
+const a$1 = 'a.js';
 
 // main.js
-const a$1 = 'index.js';
-console.log(a$1, a);
+const a = 'index.js';
+console.log(a, a$1);
 ```

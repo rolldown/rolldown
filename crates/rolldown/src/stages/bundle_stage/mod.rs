@@ -5,16 +5,15 @@ use crate::{
   chunk_graph::ChunkGraph,
   error::BatchedResult,
   finalizer::FinalizerContext,
-  options::{
-    file_name_template::FileNameRenderOptions, normalized_input_options::NormalizedInputOptions,
-    normalized_output_options::NormalizedOutputOptions, output_options::SourceMapType,
-  },
   stages::link_stage::LinkStageOutput,
   utils::{finalize_normal_module, is_in_rust_test_mode, render_chunks::render_chunks},
+  SharedOptions,
 };
 use rolldown_utils::block_on_spawn_all;
 
-use rolldown_common::{ChunkKind, Output, OutputAsset, OutputChunk};
+use rolldown_common::{
+  ChunkKind, FileNameRenderOptions, Output, OutputAsset, OutputChunk, SourceMapType,
+};
 use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::FxHashSet;
@@ -23,19 +22,17 @@ mod compute_cross_chunk_links;
 
 pub struct BundleStage<'a> {
   link_output: &'a mut LinkStageOutput,
-  output_options: &'a NormalizedOutputOptions,
-  input_options: &'a NormalizedInputOptions,
+  options: &'a SharedOptions,
   plugin_driver: &'a SharedPluginDriver,
 }
 
 impl<'a> BundleStage<'a> {
   pub fn new(
     link_output: &'a mut LinkStageOutput,
-    input_options: &'a NormalizedInputOptions,
-    output_options: &'a NormalizedOutputOptions,
+    options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
   ) -> Self {
-    Self { link_output, output_options, input_options, plugin_driver }
+    Self { link_output, options, plugin_driver }
   }
 
   #[tracing::instrument(skip_all)]
@@ -83,9 +80,12 @@ impl<'a> BundleStage<'a> {
       });
     tracing::info!("finalizing modules");
 
-    let chunks = block_on_spawn_all(chunk_graph.chunks.iter().map(|c| async {
-      c.render(self.input_options, self.link_output, &chunk_graph, self.output_options).await
-    }))
+    let chunks = block_on_spawn_all(
+      chunk_graph
+        .chunks
+        .iter()
+        .map(|c| async { c.render(self.options, self.link_output, &chunk_graph).await }),
+    )
     .into_iter()
     .collect::<Result<Vec<_>, _>>()?;
 
@@ -93,10 +93,9 @@ impl<'a> BundleStage<'a> {
 
     render_chunks(self.plugin_driver, chunks).await?.into_iter().try_for_each(
       |chunk| -> Result<(), BuildError> {
-        let ChunkRenderReturn { mut map, rendered_chunk, mut code } = chunk;
-        if let Some(map) = map.as_mut() {
-          map.set_file(rendered_chunk.file_name.as_str());
-          match self.output_options.sourcemap {
+        let ChunkRenderReturn { map, rendered_chunk, mut code } = chunk;
+        if let Some(map) = map.as_ref() {
+          match self.options.sourcemap {
             SourceMapType::File => {
               let map_file_name = format!("{}.map", rendered_chunk.file_name);
               assets.push(Output::Asset(Arc::new(OutputAsset {
@@ -139,7 +138,7 @@ impl<'a> BundleStage<'a> {
     chunk_graph.chunks.iter_mut().for_each(|chunk| {
       let runtime_id = self.link_output.runtime.id();
 
-      let file_name_tmp = chunk.file_name_template(self.output_options);
+      let file_name_tmp = chunk.file_name_template(self.options);
       let chunk_name =
         if is_in_rust_test_mode() && chunk.modules.first().copied() == Some(runtime_id) {
           "$runtime$".to_string()
@@ -160,7 +159,7 @@ impl<'a> BundleStage<'a> {
                 chunk.modules.first().copied().unwrap()
               };
             let module = &self.link_output.module_table.normal_modules[module_id];
-            module.resource_id.expect_file().unique(&self.input_options.cwd)
+            module.resource_id.expect_file().unique(&self.options.cwd)
           })
         };
 

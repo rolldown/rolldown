@@ -5,7 +5,7 @@ use oxc::{
   ast::ast::{self, Modifiers},
   semantic::ReferenceFlag,
   span::{Atom, SourceType},
-  syntax,
+  syntax::operator::{self},
 };
 
 use crate::Dummy as DummyIn;
@@ -269,7 +269,7 @@ impl<'ast> DummyIn<'ast> for ast::AssignmentExpression<'ast> {
   }
 }
 
-impl<'ast> DummyIn<'ast> for syntax::operator::AssignmentOperator {
+impl<'ast> DummyIn<'ast> for operator::AssignmentOperator {
   fn dummy(_alloc: &'ast Allocator) -> Self {
     Self::Assign
   }
@@ -358,5 +358,21 @@ impl<'ast> DummyIn<'ast> for ast::PropertyKind {
 impl<'ast> DummyIn<'ast> for ast::PropertyKey<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
     Self::Identifier(DummyIn::dummy(alloc))
+  }
+}
+
+impl<'ast> DummyIn<'ast> for ast::UnaryExpression<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: DummyIn::dummy(alloc),
+      operator: DummyIn::dummy(alloc),
+      argument: DummyIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> DummyIn<'ast> for operator::UnaryOperator {
+  fn dummy(_alloc: &'ast Allocator) -> Self {
+    Self::Void
   }
 }

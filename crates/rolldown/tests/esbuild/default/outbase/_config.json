@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "c_js",
+        "import": "c.js"
+      },
+      {
+        "name": "d_js",
+        "import": "d.js"
+      }
+    ]
+  }
+}

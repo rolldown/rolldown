@@ -39,7 +39,7 @@ init_foo(),__toCommonJS(foo_ns);
 
 # Sourcemap Visualizer
 
-- foo.js
+- ../foo.js
 (1:7-1:16) " function" --> (3:0-3:9) "\nfunction"
 (1:16-1:22) " foo()" --> (3:9-3:15) " foo()"
 (1:22-1:25) " { " --> (3:15-4:0) " {"

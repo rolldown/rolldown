@@ -19,6 +19,7 @@ futures            = { workspace = true }
 index_vec          = { workspace = true }
 once_cell          = { workspace = true }
 oxc                = { workspace = true }
+path-slash         = { workspace = true }
 rayon              = { workspace = true }
 regex              = { workspace = true }
 rolldown_common    = { workspace = true }

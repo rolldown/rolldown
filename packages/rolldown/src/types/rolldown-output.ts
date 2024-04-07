@@ -22,7 +22,7 @@ export interface SourceMap {
   mappings: string
   names: string[]
   sources: string[]
-  sourcesContent: (string | null)[]
+  sourcesContent: string[]
   version: number
   // toString(): string
   // toUrl(): string

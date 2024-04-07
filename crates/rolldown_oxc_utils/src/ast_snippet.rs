@@ -2,6 +2,7 @@ use oxc::{
   allocator::{self, Allocator},
   ast::ast::{self, Statement},
   span::{Atom, Span, SPAN},
+  syntax::operator::UnaryOperator,
 };
 
 use crate::{Dummy, IntoIn};
@@ -319,6 +320,18 @@ impl<'ast> AstSnippet<'ast> {
       ast::ArrowFunctionExpression {
         expression: true,
         body: ast::FunctionBody { statements, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
+        ..Dummy::dummy(self.alloc)
+      }
+      .into_in(self.alloc),
+    )
+  }
+
+  // `undefined` is acting like identifier, it might be shadowed by user code.
+  pub fn void_zero(&self) -> ast::Expression<'ast> {
+    ast::Expression::UnaryExpression(
+      ast::UnaryExpression {
+        operator: UnaryOperator::Void,
+        argument: self.number_expr(0.0),
         ..Dummy::dummy(self.alloc)
       }
       .into_in(self.alloc),

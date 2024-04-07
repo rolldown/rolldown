@@ -6,6 +6,7 @@ export default defineTest({
   config: {
     output: {
       entryFileNames: '[name]test.js',
+      chunkFileNames: '[name]-chunk.js',
     },
   },
   afterTest: (output) => {
@@ -13,5 +14,9 @@ export default defineTest({
       output.output.find((chunk) => (chunk as RolldownOutputChunk).isEntry)
         ?.fileName,
     ).toBe('maintest.js')
+    expect(
+      output.output.find((chunk) => !(chunk as RolldownOutputChunk).isEntry)
+        ?.fileName,
+    ).toBe('test_js-chunk.js')
   },
 })

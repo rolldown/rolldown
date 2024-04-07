@@ -16,11 +16,17 @@ Rust tests cases are stored in
 
 ### How test cases are defined
 
-A test case is a folder that contains `test.config.json`.
+A test case is a folder that contains `_config.json`.
 
-`test.config.json` contains the configuration for the test suite. See [here](https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/src/test_config/mod.rs) for more information.
+`_config.json` contains the configuration for the test suite. If everything works right, you should be able to have auto-completion while editing `_config.json` due to the [config](https://github.com/rolldown/rolldown/blob/226df5b9993e568ff58a345ef1ca39d2cdc37613/.vscode/settings.json#L36-L40).
 
-- `main.js` is the default entry of the test case, if `input.input` is not specified in `test.config.json`.
+For all available options, you could refer to
+
+- https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/src/test_config/mod.rs
+- https://github.com/rolldown/rolldown/blob/main/crates/rolldown_common/src/inner_bundler_options/mod.rs
+- https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/_test.scheme.json
+
+- `main.js` is the default entry of the test case, if `input.input` is not specified in `_test.json`.
 
 Rolldown will bundle the input into `/dist`, and using the same `node` instance to execute every entry file in `/dist` orderly. If `_test.mjs` is found in test case folder, it will be executed after all entry points are executed.
 

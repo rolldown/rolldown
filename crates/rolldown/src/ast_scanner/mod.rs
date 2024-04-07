@@ -146,7 +146,7 @@ impl<'ast> AstScanner<'ast> {
   fn add_import_record(&mut self, module_request: &Atom, kind: ImportKind) -> ImportRecordId {
     // If 'foo' in `import ... from 'foo'` is finally a commonjs module, we will convert the import statement
     // to `var import_foo = __toESM(require_foo())`, so we create a symbol for `import_foo` here. Notice that we
-    // just create the symbol here, if the symbol is finally used would be determined in linking stage.
+    // just create the symbol. If the symbol is finally used would be determined in the linking stage.
     let namespace_ref: SymbolRef =
       (self.idx, self.symbol_table.create_symbol("".into(), self.scope.root_scope_id())).into();
     let rec = RawImportRecord::new(module_request.to_rstr(), kind, namespace_ref);

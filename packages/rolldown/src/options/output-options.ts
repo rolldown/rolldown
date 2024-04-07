@@ -9,6 +9,8 @@ export interface OutputOptions {
   sourcemap?: RollupOutputOptions['sourcemap']
   banner?: RollupOutputOptions['banner']
   footer?: RollupOutputOptions['footer']
+  entryFileNames?: string
+  chunkFileNames?: string
 }
 
 function normalizeFormat(
@@ -56,7 +58,8 @@ const getAddon = <T extends 'banner' | 'footer'>(
 export function normalizeOutputOptions(
   opts: OutputOptions,
 ): BindingOutputOptions {
-  const { dir, format, exports, sourcemap } = opts
+  const { dir, format, exports, sourcemap, entryFileNames, chunkFileNames } =
+    opts
   return {
     dir: dir,
     format: normalizeFormat(format),
@@ -65,5 +68,7 @@ export function normalizeOutputOptions(
     plugins: [],
     banner: getAddon(opts, 'banner'),
     footer: getAddon(opts, 'footer'),
+    entryFileNames,
+    chunkFileNames,
   }
 }

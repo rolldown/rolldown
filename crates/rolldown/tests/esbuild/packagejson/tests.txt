@@ -1,4 +1,3 @@
-TestPackageJsonMain
 TestPackageJsonBadMain
 TestPackageJsonSyntaxErrorComment
 TestPackageJsonSyntaxErrorTrailingComma

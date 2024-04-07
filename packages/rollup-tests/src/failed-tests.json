@@ -721,7 +721,6 @@
   "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",
   "rollup@sourcemaps@reified-namespace: generates correct sourcemap with reified namespace (#668)@generates es",
   "rollup@sourcemaps@render-chunk-babili: generates valid sourcemap when source could not be determined@generates es",
-  "rollup@sourcemaps@render-chunk: preserves sourcemap chains when transforming@generates es",
   "rollup@sourcemaps@single-length-segments: handles single-length sourcemap segments@generates es",
   "rollup@sourcemaps@sourcemap-base-url-without-trailing-slash: add a trailing slash automatically if it is missing@generates es",
   "rollup@sourcemaps@sourcemap-base-url: adds a sourcemap base url@generates es",

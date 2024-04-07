@@ -49,6 +49,7 @@ export interface BindingHookLoadOutput {
 
 export interface BindingHookRenderChunkOutput {
   code: string
+  map?: string
 }
 
 export interface BindingHookResolveIdExtraOptions {

@@ -4,6 +4,8 @@ pub mod render_chunk;
 mod render_chunk_exports;
 mod render_chunk_imports;
 
+use std::sync::Arc;
+
 use index_vec::IndexVec;
 use path_slash::PathBufExt;
 use rolldown_common::{ChunkId, FileNameTemplate};
@@ -48,7 +50,7 @@ pub struct Chunk {
 
 pub struct ChunkRenderReturn {
   pub code: String,
-  pub map: Option<SourceMap>,
+  pub map: Option<Arc<SourceMap>>,
   pub rendered_chunk: RenderedChunk,
 }
 
@@ -105,7 +107,7 @@ impl Chunk {
           // TODO(underfin): refactor the relative path
           m.resource_id.expect_file().relative_path(file_dir).to_slash_lossy().as_ref(),
           options,
-          file_dir,
+          file_dir.to_string_lossy().as_ref(),
         )
       })
       .collect::<Vec<_>>()
@@ -143,8 +145,12 @@ impl Chunk {
       concat_source.add_source(Box::new(RawSource::new(footer_txt)));
     }
 
-    let (content, map) = concat_source.content_and_sourcemap();
+    let (content, mut map) = concat_source.content_and_sourcemap();
 
-    Ok(ChunkRenderReturn { code: content, map, rendered_chunk })
+    if let Some(x) = map.as_mut() {
+      x.set_file(&rendered_chunk.file_name);
+    }
+
+    Ok(ChunkRenderReturn { code: content, map: map.map(Arc::new), rendered_chunk })
   }
 }

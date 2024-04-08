@@ -1130,12 +1130,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "path-slash"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e91099d4268b0e11973f036e885d652fb0b21fedcf69738c627f94db6a44f42"
-
-[[package]]
 name = "petgraph"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1371,7 +1365,6 @@ dependencies = [
  "insta",
  "once_cell",
  "oxc",
- "path-slash",
  "rayon",
  "regex",
  "rolldown_common",
@@ -1515,8 +1508,6 @@ name = "rolldown_sourcemap"
 version = "0.1.0"
 dependencies = [
  "oxc",
- "path-slash",
- "rolldown_error",
  "rustc-hash",
  "sugar_path",
 ]
@@ -1749,12 +1740,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "sugar_path"
-version = "0.0.12"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c23ada2c5165fc936136721f5f69c8dac6eceb5407de40262f32934510bd7b9"
-dependencies = [
- "once_cell",
-]
+checksum = "d41b5edc28ea6268a692cd8cb078af3a956e9c710cf67081ca12f67c53e70ec8"
 
 [[package]]
 name = "syn"

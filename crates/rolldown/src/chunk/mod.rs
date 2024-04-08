@@ -7,7 +7,6 @@ mod render_chunk_imports;
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use path_slash::PathBufExt;
 use rolldown_common::{ChunkId, FileNameTemplate};
 
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;
@@ -19,6 +18,7 @@ use rolldown_rstr::Rstr;
 use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
+use sugar_path::SugarPath;
 
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::utils::render_normal_module::render_normal_module;

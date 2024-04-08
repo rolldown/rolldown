@@ -1,14 +1,11 @@
-use std::collections::HashMap;
-
+use crate::types::binding_resolve_alias::AliasItem;
 use serde::Deserialize;
 
 #[napi_derive::napi(object)]
 #[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingResolveOptions {
-  // FIXME: Using `HashMap<String, Vec<String>>` is wrong here. Rust's `HashMap` is not ordered, while JavaScript's `Object` is ordered.
-  // We should use tuple array instead of object.
-  pub alias: Option<HashMap<String, Vec<String>>>,
+  pub alias: Option<Vec<AliasItem>>,
   pub alias_fields: Option<Vec<Vec<String>>>,
   pub condition_names: Option<Vec<String>>,
   pub exports_fields: Option<Vec<Vec<String>>>,
@@ -23,7 +20,9 @@ pub struct BindingResolveOptions {
 impl From<BindingResolveOptions> for rolldown::ResolveOptions {
   fn from(value: BindingResolveOptions) -> Self {
     Self {
-      alias: value.alias.map(|alias| alias.into_iter().collect::<Vec<_>>()),
+      alias: value.alias.map(|alias| {
+        alias.into_iter().map(|alias_item| (alias_item.name, alias_item.paths)).collect()
+      }),
       alias_fields: value.alias_fields,
       condition_names: value.condition_names,
       exports_fields: value.exports_fields,

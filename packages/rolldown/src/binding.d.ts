@@ -42,6 +42,11 @@ export class Bundler {
   scan(): Promise<void>
 }
 
+export interface AliasItem {
+  name: string
+  paths: Array<string>
+}
+
 export interface BindingHookLoadOutput {
   code: string
   map?: string
@@ -133,7 +138,7 @@ export interface BindingRenderedModule {
 }
 
 export interface BindingResolveOptions {
-  alias?: Record<string, Array<string>>
+  alias?: Array<AliasItem>
   aliasFields?: Array<Array<string>>
   conditionNames?: Array<string>
   exportsFields?: Array<Array<string>>

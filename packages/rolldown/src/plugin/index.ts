@@ -7,6 +7,7 @@ import {
 import { RolldownNormalizedInputOptions } from '../options/input-options'
 import { AnyFn, AnyObj, NullValue } from '../types/utils'
 import { SourceMapInput } from '../types/sourcemap'
+import { NormalizedOutputOptions } from '../options/output-options'
 
 type MaybePromise<T> = T | Promise<T>
 
@@ -79,6 +80,7 @@ export interface Plugin {
       this: null,
       code: string,
       chunk: RenderedChunk,
+      outputOptions: NormalizedOutputOptions,
     ) => MaybePromise<
       | NullValue
       | string

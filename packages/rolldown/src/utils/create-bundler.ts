@@ -15,10 +15,12 @@ export async function createBundler(
 ): Promise<Bundler> {
   // Convert `InputOptions` to `NormalizedInputOptions`.
   const normalizedInputOptions = await normalizeInputOptions(inputOptions)
+  const normalizedOutputOptions = normalizeOutputOptions(outputOptions)
   // Convert `NormalizedInputOptions` to `BindingInputOptions`
   const bindingInputOptions = createInputOptionsAdapter(
     normalizedInputOptions,
     inputOptions,
+    normalizedOutputOptions,
   )
-  return new Bundler(bindingInputOptions, normalizeOutputOptions(outputOptions))
+  return new Bundler(bindingInputOptions, normalizedOutputOptions)
 }

@@ -13,6 +13,8 @@ export interface OutputOptions {
   chunkFileNames?: string
 }
 
+export type NormalizedOutputOptions = BindingOutputOptions
+
 function normalizeFormat(
   format: OutputOptions['format'],
 ): BindingOutputOptions['format'] {

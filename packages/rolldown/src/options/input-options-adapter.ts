@@ -3,16 +3,18 @@ import { BindingInputOptions } from '../binding'
 import nodePath from 'node:path'
 import { bindingifyPlugin } from '../plugin/bindingify-plugin'
 import { InputOptions, RolldownNormalizedInputOptions } from './input-options'
+import { NormalizedOutputOptions } from './output-options'
 
 export function createInputOptionsAdapter(
   options: RolldownNormalizedInputOptions,
   inputOptions: InputOptions,
+  outputOptions: NormalizedOutputOptions,
 ): BindingInputOptions {
   return {
     input: normalizeInput(options.input),
     plugins: options.plugins.map((plugin) =>
       // @ts-expect-error
-      bindingifyPlugin(plugin, options),
+      bindingifyPlugin(plugin, options, outputOptions),
     ),
     cwd: inputOptions.cwd ?? process.cwd(),
     external: inputOptions.external ? options.external : undefined,

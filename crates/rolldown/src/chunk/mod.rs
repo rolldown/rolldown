@@ -18,6 +18,7 @@ use rolldown_rstr::Rstr;
 use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
+use sugar_path::SugarPath;
 
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::utils::render_normal_module::render_normal_module;
@@ -104,7 +105,7 @@ impl Chunk {
           m,
           &graph.ast_table[m.id],
           // TODO(underfin): refactor the relative path
-          m.resource_id.expect_file().relative_path(file_dir).to_string_lossy().as_ref(),
+          m.resource_id.expect_file().relative_path(file_dir).to_slash_lossy().as_ref(),
           options,
           file_dir.to_string_lossy().as_ref(),
         )

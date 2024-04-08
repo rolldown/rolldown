@@ -22,5 +22,5 @@ export async function createBundler(
     inputOptions,
     normalizedOutputOptions,
   )
-  return new Bundler(bindingInputOptions, normalizeOutputOptions(outputOptions))
+  return new Bundler(bindingInputOptions, normalizedOutputOptions)
 }

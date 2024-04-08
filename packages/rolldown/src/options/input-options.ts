@@ -3,11 +3,7 @@ import {
   InputOptions as RollupInputOptions,
 } from '../rollup-types'
 import { ensureArray, normalizePluginOption } from '../utils'
-import {
-  BindingInputOptions,
-  BindingResolveOptions,
-  AliasItem,
-} from '../binding'
+import { BindingInputOptions, BindingResolveOptions } from '../binding'
 import { Plugin } from '../plugin'
 
 // TODO export compat plugin type
@@ -21,12 +17,8 @@ export interface InputOptions {
   shimMissingExports?: BindingInputOptions['shimMissingExports']
 }
 
-export type Alias = Omit<AliasItem, 'replacement'> & {
-  replacement: string
-}
-
 export type RolldownResolveOptions = Omit<BindingResolveOptions, 'alias'> & {
-  alias?: Record<string, string> | Alias[]
+  alias?: Record<string, string>
 }
 
 export type RolldownNormalizedInputOptions = NormalizedInputOptions & {
@@ -90,29 +82,18 @@ const getIdMatcher = <T extends Array<any>>(
   return () => false
 }
 
-function normalizeAlias(alias: {
-  find: string
-  replacement: string | string[]
-}) {
-  const { find, replacement } = alias
-  return {
-    find,
-    replacement: ensureArray(replacement),
-  }
-}
-
 function getResolve(
   resolve?: RolldownResolveOptions,
 ): RolldownNormalizedInputOptions['resolve'] {
-  if (!resolve) return resolve
-  if (!resolve.alias) return { ...resolve, alias: undefined }
-
-  return {
-    ...resolve,
-    alias: Array.isArray(resolve.alias)
-      ? resolve.alias.map(normalizeAlias)
-      : Object.entries(resolve.alias).map(([find, replacement]) =>
-          normalizeAlias({ find, replacement }),
-        ),
+  if (resolve) {
+    return {
+      ...resolve,
+      alias: resolve.alias
+        ? Object.entries(resolve.alias).map(([find, replacement]) => ({
+            find,
+            replacements: [replacement],
+          }))
+        : undefined,
+    }
   }
 }

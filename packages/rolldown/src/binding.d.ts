@@ -44,7 +44,7 @@ export class Bundler {
 
 export interface AliasItem {
   find: string
-  replacement: Array<string>
+  replacements: Array<string>
 }
 
 export interface BindingHookLoadOutput {

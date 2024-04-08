@@ -5,5 +5,5 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase")]
 pub struct AliasItem {
   pub find: String,
-  pub replacement: Vec<String>,
+  pub replacements: Vec<String>,
 }

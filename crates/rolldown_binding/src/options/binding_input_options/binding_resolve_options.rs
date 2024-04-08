@@ -1,4 +1,4 @@
-use crate::types::binding_resolve_alias::AliasItem;
+use crate::types::binding_resolve_alias_item::AliasItem;
 use serde::Deserialize;
 
 #[napi_derive::napi(object)]
@@ -24,7 +24,7 @@ impl From<BindingResolveOptions> for rolldown::ResolveOptions {
       alias: value.alias.map(|alias| {
         alias
           .into_iter()
-          .map(|alias_item| (alias_item.find, alias_item.replacement))
+          .map(|alias_item| (alias_item.find, alias_item.replacements))
           .collect::<Vec<_>>()
       }),
       alias_fields: value.alias_fields,

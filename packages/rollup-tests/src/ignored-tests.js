@@ -27,6 +27,7 @@ const ignoreTests = [
   'rollup@function@preserve-symlink: follows symlinks',
   'rollup@function@symlink: follows symlinks',
   // The rolldown output chunk including `module comment` caused line offset, the rollup provider the fake sourcemap can't remapping.
+  // cSpell:disable
   "rollup@sourcemaps@render-chunk-babili: generates valid sourcemap when source could not be determined@generates es",
 ]
 

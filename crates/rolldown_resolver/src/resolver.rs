@@ -143,7 +143,7 @@ impl<F: FileSystem + Default> Resolver<F> {
 
       let is_path_like = specifier.starts_with('.') || specifier.starts_with('/');
 
-      let resolved = self.default_resolver.resolve(&self.cwd, joined_specifier.to_str().unwrap());
+      let resolved = selected_resolver.resolve(&self.cwd, joined_specifier.to_str().unwrap());
       if resolved.is_ok() {
         resolved
       } else if !is_path_like {

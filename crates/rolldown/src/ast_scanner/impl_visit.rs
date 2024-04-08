@@ -1,27 +1,23 @@
 use std::sync::Arc;
 
 use oxc::{
-  ast::{ast::IdentifierReference, visit::walk::walk_statement, Visit},
+  ast::{ast::IdentifierReference, visit::walk, Visit},
   codegen::{self, Codegen, CodegenOptions, Gen},
 };
 use rolldown_common::ImportKind;
 use rolldown_error::BuildError;
+use rolldown_oxc_utils::StatementExt;
 
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
-
-impl<'ast> AstScanner<'ast> {
-  fn visit_top_level_stmt(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {
-    self.current_stmt_info.side_effect =
-      SideEffectDetector::new(self.scope).detect_side_effect_of_stmt(stmt);
-    self.visit_statement(stmt);
-  }
-}
 
 impl<'ast> Visit<'ast> for AstScanner<'ast> {
   #[tracing::instrument(skip_all)]
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
+      self.current_stmt_info.side_effect =
+        SideEffectDetector::new(self.scope).detect_side_effect_of_stmt(stmt);
+
       if cfg!(debug_assertions) {
         let mut codegen = Codegen::<false>::new(
           "",
@@ -31,7 +27,8 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
         stmt.gen(&mut codegen, codegen::Context::default());
         self.current_stmt_info.debug_label = Some(codegen.into_source_text());
       }
-      self.visit_top_level_stmt(stmt);
+
+      self.visit_statement(stmt);
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }
   }
@@ -73,10 +70,10 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
   }
 
   fn visit_statement(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {
-    if let oxc::ast::ast::Statement::ModuleDeclaration(decl) = stmt {
-      self.scan_module_decl(decl.0);
+    if let Some(decl) = stmt.as_module_declaration() {
+      self.scan_module_decl(decl);
     }
-    walk_statement(self, stmt);
+    walk::walk_statement(self, stmt);
   }
 
   fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
@@ -84,6 +81,7 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
       let id = self.add_import_record(&request.value, ImportKind::DynamicImport);
       self.result.imports.insert(expr.span, id);
     }
+    walk::walk_import_expression(self, expr);
   }
 
   fn visit_call_expression(&mut self, expr: &oxc::ast::ast::CallExpression<'ast>) {
@@ -101,9 +99,7 @@ impl<'ast> Visit<'ast> for AstScanner<'ast> {
       }
       _ => {}
     }
-    for arg in &expr.arguments {
-      self.visit_argument(arg);
-    }
-    self.visit_expression(&expr.callee);
+
+    walk::walk_call_expression(self, expr);
   }
 }

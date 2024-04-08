@@ -43,8 +43,8 @@ export class Bundler {
 }
 
 export interface AliasItem {
-  name: string
-  paths: Array<string>
+  find: string
+  replacement: Array<string>
 }
 
 export interface BindingHookLoadOutput {

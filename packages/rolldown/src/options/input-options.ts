@@ -21,8 +21,12 @@ export interface InputOptions {
   shimMissingExports?: BindingInputOptions['shimMissingExports']
 }
 
+export type Alias = Omit<AliasItem, 'replacement'> & {
+  replacement: string
+}
+
 export type RolldownResolveOptions = Omit<BindingResolveOptions, 'alias'> & {
-  alias?: Record<string, string | string[]> | AliasItem[]
+  alias?: Record<string, string> | Alias[]
 }
 
 export type RolldownNormalizedInputOptions = NormalizedInputOptions & {
@@ -86,6 +90,17 @@ const getIdMatcher = <T extends Array<any>>(
   return () => false
 }
 
+function normalizeAlias(alias: {
+  find: string
+  replacement: string | string[]
+}) {
+  const { find, replacement } = alias
+  return {
+    find,
+    replacement: ensureArray(replacement),
+  }
+}
+
 function getResolve(
   resolve?: RolldownResolveOptions,
 ): RolldownNormalizedInputOptions['resolve'] {
@@ -95,10 +110,9 @@ function getResolve(
   return {
     ...resolve,
     alias: Array.isArray(resolve.alias)
-      ? resolve.alias
-      : Object.entries(resolve.alias).map(([name, path]) => ({
-          name,
-          paths: ensureArray(path),
-        })),
+      ? resolve.alias.map(normalizeAlias)
+      : Object.entries(resolve.alias).map(([find, replacement]) =>
+          normalizeAlias({ find, replacement }),
+        ),
   }
 }

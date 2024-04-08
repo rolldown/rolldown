@@ -21,7 +21,10 @@ impl From<BindingResolveOptions> for rolldown::ResolveOptions {
   fn from(value: BindingResolveOptions) -> Self {
     Self {
       alias: value.alias.map(|alias| {
-        alias.into_iter().map(|alias_item| (alias_item.name, alias_item.paths)).collect()
+        alias
+          .into_iter()
+          .map(|alias_item| (alias_item.find, alias_item.replacement))
+          .collect::<Vec<_>>()
       }),
       alias_fields: value.alias_fields,
       condition_names: value.condition_names,

@@ -272,7 +272,7 @@ importers:
         version: 0.21.1
       zx:
         specifier: ^8.0.0
-        version: 8.0.0
+        version: 8.0.1
 
   web/docs:
     devDependencies:
@@ -7580,8 +7580,8 @@ packages:
     engines: {node: '>=12.20'}
     dev: true
 
-  /zx@8.0.0:
-    resolution: {integrity: sha512-td4Irxh+i+O8waolUHZyHLSMFALMBWTNVKBk1q5NsvP1vxRqj9JJRGPh6YjKZUTbZZ8uGD1mQLyU9mDr40wR6w==}
+  /zx@8.0.1:
+    resolution: {integrity: sha512-Y+ITW1GQjADk7qgrbhnukMgoNsJmlyx53cUQ6/6NXU+BMBdCbTc6flTOHUctmzKvPjTmdwaddzJY/dbLie9sQg==}
     engines: {node: '>= 16.0.0'}
     hasBin: true
     optionalDependencies:

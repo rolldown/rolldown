@@ -85,7 +85,6 @@ napi-derive               = { version = "3.0.0-alpha.0", default-features = fals
 once_cell                 = "1.19.0"
 oxc                       = { version = "0.12.2", features = ["sourcemap"] }
 oxc_resolver              = { version = "1.6.4", features = ["package_json_raw_json_api"] }
-path-slash                = "0.2.1"
 rayon                     = "1.10.0"
 regex                     = "1.10.4"
 rolldown                  = { path = "./crates/rolldown" }
@@ -105,7 +104,7 @@ schemars                  = "0.8.16"
 serde                     = { version = "1.0.197", features = ["derive"] }
 serde_json                = "1.0.115"
 smallvec                  = "1.13.2"
-sugar_path                = "0.0.12"
+sugar_path                = "1.0.0"
 testing_macros            = "0.2.13"
 tokio                     = { version = "1.37.0", default-features = false }
 tracing                   = "0.1.40"

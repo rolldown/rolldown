@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
-use sugar_path::AsPath;
+use sugar_path::SugarPath;
 
 use super::stages::{
   link_stage::{LinkStage, LinkStageOutput},

@@ -6,7 +6,7 @@ use std::{
 };
 
 use regex::Regex;
-use sugar_path::{AsPath, SugarPath};
+use sugar_path::SugarPath;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct FilePath(Arc<str>);

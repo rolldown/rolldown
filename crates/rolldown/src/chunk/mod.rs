@@ -7,7 +7,6 @@ mod render_chunk_imports;
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use path_slash::PathBufExt;
 use rolldown_common::{ChunkId, FileNameTemplate};
 
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;
@@ -105,7 +104,7 @@ impl Chunk {
           m,
           &graph.ast_table[m.id],
           // TODO(underfin): refactor the relative path
-          m.resource_id.expect_file().relative_path(file_dir).to_slash_lossy().as_ref(),
+          m.resource_id.expect_file().relative_path(file_dir).to_string_lossy().as_ref(),
           options,
           file_dir.to_string_lossy().as_ref(),
         )

@@ -9,7 +9,7 @@ use rolldown_common::{
 };
 use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
-use sugar_path::AsPath;
+use sugar_path::SugarPath;
 
 use super::{module_task_context::ModuleTaskCommonData, Msg};
 use crate::{

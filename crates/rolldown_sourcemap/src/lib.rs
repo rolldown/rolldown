@@ -1,6 +1,5 @@
-use path_slash::PathBufExt;
 use std::sync::Arc;
-use sugar_path::{AsPath, SugarPath};
+use sugar_path::SugarPath;
 
 // cSpell:disable
 pub use concat_sourcemap::{ConcatSource, RawSource, SourceMapSource};

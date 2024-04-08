@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rolldown_common::ResolvedPath;
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
-use sugar_path::AsPath;
+use sugar_path::SugarPath;
 
 use crate::error::BatchedErrors;
 

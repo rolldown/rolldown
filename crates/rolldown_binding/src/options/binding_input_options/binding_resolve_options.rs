@@ -5,6 +5,7 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingResolveOptions {
+  // Option<Vec<(String, Vec<String>)>>> is better, maybe NAPI-RS should support tuples.
   pub alias: Option<Vec<AliasItem>>,
   pub alias_fields: Option<Vec<Vec<String>>>,
   pub condition_names: Option<Vec<String>>,

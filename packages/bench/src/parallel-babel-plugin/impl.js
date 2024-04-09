@@ -1,22 +1,32 @@
 import { defineThreadSafePluginImplementation } from 'rolldown/thread-safe-plugin'
-import { transform } from 'sucrase'
 import nodePath from 'node:path'
+import swc from '@swc/core'
 
 /** @returns {import('rolldown').Plugin} */
 export const babelPlugin = () => {
   return {
     name: 'parallel-babel-plugin',
-    transform(code, id) {
+    async transform(code, id) {
       const ext = nodePath.extname(id)
       if (ext === '.ts' || ext === '.tsx') {
-        /** @type {import('sucrase').Transform[]} */
-        const transforms = ['typescript']
-        if (ext === '.tsx') {
-          transforms.push('jsx')
-        }
-
-        const ret = transform(code, { filePath: id, transforms })
-        return { code: ret.code }
+        const ret = /** @type {swc.Output} */ (
+          await swc.transform(code, {
+            filename: id,
+            jsc: {
+              parser: {
+                syntax: 'typescript',
+              },
+            },
+            env: {
+              targets: 'chrome >= 80',
+              bugfixes: true,
+            },
+            sourceMaps: true,
+            configFile: false,
+            inputSourceMap: false,
+          })
+        )
+        return { code: /** @type {string} */ (ret.code) }
       }
     },
   }

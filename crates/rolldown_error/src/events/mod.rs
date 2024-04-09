@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::diagnostic::DiagnosticBuilder;
+use crate::{diagnostic::Diagnostic, event_kind::EventKind};
 pub mod external_entry;
 pub mod forbid_const_assign;
 pub mod sourcemap_error;
@@ -8,22 +8,17 @@ pub mod unresolved_entry;
 pub mod unresolved_import;
 pub mod unsupported_eval;
 
-// TODO(hyf0): Not a good name, probably should rename to `BuildError`
-pub trait BuildErrorLike: Debug + Sync + Send {
+pub trait BuildEvent: Debug + Sync + Send {
+  fn kind(&self) -> EventKind;
+
   fn code(&self) -> &'static str;
 
   fn message(&self) -> String;
 
-  fn diagnostic_builder(&self) -> DiagnosticBuilder {
-    DiagnosticBuilder {
-      code: Some(self.code()),
-      summary: Some(self.message()),
-      ..Default::default()
-    }
-  }
+  fn on_diagnostic(&self, _diagnostic: &mut Diagnostic) {}
 }
 
-impl<T: BuildErrorLike + 'static> From<T> for Box<dyn BuildErrorLike>
+impl<T: BuildEvent + 'static> From<T> for Box<dyn BuildEvent>
 where
   Self: Sized,
 {
@@ -40,7 +35,10 @@ pub struct NapiError {
   pub reason: String,
 }
 
-impl BuildErrorLike for NapiError {
+impl BuildEvent for NapiError {
+  fn kind(&self) -> EventKind {
+    EventKind::NapiError
+  }
   fn code(&self) -> &'static str {
     "NAPI_ERROR"
   }
@@ -50,7 +48,10 @@ impl BuildErrorLike for NapiError {
   }
 }
 
-impl BuildErrorLike for std::io::Error {
+impl BuildEvent for std::io::Error {
+  fn kind(&self) -> EventKind {
+    EventKind::IoError
+  }
   fn code(&self) -> &'static str {
     "IO_ERROR"
   }

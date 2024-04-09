@@ -1,14 +1,18 @@
-use crate::PathExt;
+use crate::{event_kind::EventKind, PathExt};
 use std::path::PathBuf;
 
-use super::BuildErrorLike;
+use super::BuildEvent;
 
 #[derive(Debug)]
 pub struct ExternalEntry {
   pub(crate) id: PathBuf,
 }
 
-impl BuildErrorLike for ExternalEntry {
+impl BuildEvent for ExternalEntry {
+  fn kind(&self) -> crate::event_kind::EventKind {
+    EventKind::UnresolvedEntry
+  }
+
   fn code(&self) -> &'static str {
     "UNRESOLVED_ENTRY"
   }

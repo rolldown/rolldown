@@ -1,16 +1,14 @@
+mod build_error;
 mod diagnostic;
-mod error;
-mod error_kind;
+mod event_kind;
+mod events;
 mod utils;
 
-use std::{borrow::Cow, path::Path};
+use std::path::Path;
 
 use sugar_path::SugarPath;
 
-pub(crate) type StaticStr = Cow<'static, str>;
-
-// pub use crate::{diagnostic::Diagnostic, error::BuildError};
-pub use crate::error::BuildError;
+pub use crate::{build_error::BuildError, event_kind::EventKind};
 
 trait PathExt {
   fn relative_display(&self) -> String;

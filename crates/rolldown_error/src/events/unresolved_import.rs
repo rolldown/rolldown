@@ -1,14 +1,17 @@
-use super::BuildErrorLike;
-use crate::{PathExt, StaticStr};
+use super::BuildEvent;
+use crate::PathExt;
 use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct UnresolvedImport {
-  pub(crate) specifier: StaticStr,
+  pub(crate) specifier: String,
   pub(crate) importer: PathBuf,
 }
 
-impl BuildErrorLike for UnresolvedImport {
+impl BuildEvent for UnresolvedImport {
+  fn kind(&self) -> crate::event_kind::EventKind {
+    crate::event_kind::EventKind::UnresolvedImport
+  }
   fn code(&self) -> &'static str {
     "UNRESOLVED_IMPORT"
   }

@@ -574,6 +574,7 @@ mod test {
   #[test]
   fn test_meta_property_expression() {
     assert!(!get_statements_side_effect("import.meta"));
+    assert!(!get_statements_side_effect("const meta = import.meta"));
     assert!(get_statements_side_effect("import.meta.url"));
     assert!(get_statements_side_effect("const { url } = import.meta"));
     assert!(get_statements_side_effect("import.meta.url = 'test'"));

@@ -16,13 +16,7 @@ The root of the repository contains a number of configuration files for both Rus
 
 ```mermaid
 ---
-title: Bundling code with Rolldown npm package
 ---
----
-title: Bundling code with Rolldown npm package
----
-flowchart TB
-    ---
 title: Bundling code with Rolldown npm package
 ---
 flowchart TB

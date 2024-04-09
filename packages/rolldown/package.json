@@ -48,6 +48,7 @@
     "# Scrips for node #": "_",
     "build-node": "unbuild",
     "build": "pnpm build-binding && pnpm build-node && pnpm format-generated-binding-files",
+    "build-wasi": "napi build -o=./src --release --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts --target wasm32-wasi-preview1-threads --dts-header \"type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\"",
     "build:release": "pnpm build-binding:release && pnpm build-node && pnpm format-generated-binding-files",
     "# Scrips for checking #": "_",
     "test": "vitest run --reporter verbose --hideSkippedTests",
@@ -71,10 +72,12 @@
     ]
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0-alpha.43",
+    "@napi-rs/cli": "^3.0.0-alpha.45",
+    "@napi-rs/wasm-runtime": "^0.1.2",
     "citty": "^0.1.6",
     "colorette": "^2.0.20",
     "consola": "^3.2.3",
+    "emnapi": "^1.1.0",
     "glob": "^10.3.10",
     "rolldown": "workspace:*",
     "rollup": "^4.12.1",

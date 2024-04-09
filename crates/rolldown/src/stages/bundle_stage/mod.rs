@@ -47,7 +47,7 @@ impl<'a> BundleStage<'a> {
     self.compute_cross_chunk_links(&mut chunk_graph);
     tracing::info!("compute_cross_chunk_links");
 
-    chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
+    chunk_graph.chunks.iter_mut().for_each(|chunk| {
       chunk.de_conflict(self.link_output);
     });
 
@@ -55,7 +55,6 @@ impl<'a> BundleStage<'a> {
       .link_output
       .ast_table
       .iter_mut_enumerated()
-      .par_bridge()
       .filter(|(id, _)| self.link_output.module_table.normal_modules[*id].is_included)
       .for_each(|(id, ast)| {
         let module = &self.link_output.module_table.normal_modules[id];

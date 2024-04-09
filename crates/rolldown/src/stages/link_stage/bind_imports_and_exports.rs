@@ -22,7 +22,8 @@ use super::LinkStage;
 
 impl<'a> LinkStage<'a> {
   pub fn bind_imports_and_exports(&mut self) {
-    self.module_table.normal_modules.iter().zip(self.metas.iter_mut()).par_bridge().for_each(
+    tracing::trace!("Start bind imports and exports");
+    self.module_table.normal_modules.iter().zip(self.metas.iter_mut()).for_each(
       |(module, meta)| {
         meta.resolved_exports = module
           .named_exports

@@ -7,6 +7,7 @@ use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {
   pub async fn build_start(&self) -> HookNoopReturn {
+    tracing::info!("PluginDriver::build_start");
     // TODO should call `build_start` of all plugins in parallel
     for (plugin, ctx) in &self.plugins {
       plugin.build_start(ctx).await?;

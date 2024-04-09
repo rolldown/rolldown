@@ -127,10 +127,13 @@ impl<'a> LinkStage<'a> {
 
     self.determine_module_exports_kind();
     self.wrap_modules();
+    tracing::trace!("bind_imports_and_exports");
     self.bind_imports_and_exports();
-    tracing::debug!("linking modules {:#?}", self.metas);
+    tracing::trace!("create_exports_for_modules");
     self.create_exports_for_modules();
+    tracing::trace!("reference_needed_symbols");
     self.reference_needed_symbols();
+    tracing::trace!("include_statements");
     self.include_statements();
 
     LinkStageOutput {
@@ -146,6 +149,7 @@ impl<'a> LinkStage<'a> {
   }
 
   fn determine_module_exports_kind(&mut self) {
+    tracing::trace!("Start determine module exports kind");
     // Maximize the compatibility with commonjs
     let compat_mode = true;
 
@@ -218,7 +222,7 @@ impl<'a> LinkStage<'a> {
 
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
-    self.module_table.normal_modules.iter().par_bridge().for_each(|importer| {
+    self.module_table.normal_modules.iter().for_each(|importer| {
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
       // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules

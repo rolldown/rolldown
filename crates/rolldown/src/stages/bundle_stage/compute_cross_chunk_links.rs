@@ -32,7 +32,6 @@ impl<'a> BundleStage<'a> {
       .chunks
       .iter_enumerated()
       .zip(chunk_meta_imports.iter_mut().zip(chunk_meta_imports_from_external_modules.iter_mut()))
-      .par_bridge()
       .for_each(|((chunk_id, chunk), (chunk_meta_imports, imports_from_external_modules))| {
         chunk.modules.iter().copied().for_each(|module_id| {
           let module = &self.link_output.module_table.normal_modules[module_id];
@@ -213,7 +212,6 @@ impl<'a> BundleStage<'a> {
       .zip(
         imports_from_other_chunks_vec.into_iter().zip(chunk_meta_imports_from_external_modules_vec),
       )
-      .par_bridge()
       .for_each(|(chunk, (imports_from_other_chunks, imports_from_external_modules))| {
         chunk.imports_from_other_chunks = imports_from_other_chunks;
         chunk.imports_from_external_modules = imports_from_external_modules;

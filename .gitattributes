@@ -7,3 +7,7 @@ crates/rolldown/tests/**/*.js -linguist-detectable
 crates/rolldown/tests/**/*.jsx -linguist-detectable
 crates/rolldown/tests/**/*.ts -linguist-detectable
 crates/rolldown/tests/**/*.tsx -linguist-detectable
+crates/rolldown/src/rolldown-binding.wasi-browser.js -linguist-detectable
+crates/rolldown/src/rolldown-binding.wasi.cjs -linguist-detectable
+crates/rolldown/src/wasi-worker-browser.mjs -linguist-detectable
+crates/rolldown/src/wasi-worker.mjs -linguist-detectable

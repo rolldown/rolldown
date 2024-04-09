@@ -35,6 +35,7 @@ impl OxcResolverFileSystem for OsFileSystem {
   }
 
   fn metadata(&self, path: &Path) -> io::Result<FileMetadata> {
+    println!("metadata: {:?}", path);
     std::fs::metadata(path).map(FileMetadata::from)
   }
 

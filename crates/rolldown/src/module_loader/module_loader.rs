@@ -127,6 +127,7 @@ impl ModuleLoader {
   }
 
   pub fn try_spawn_runtime_module_task(&mut self) -> NormalModuleId {
+    tracing::trace!("try_spawn_runtime_module_task");
     *self.runtime_id.get_or_insert_with(|| {
       let id = self.intermediate_normal_modules.alloc_module_id(&mut self.symbols);
       self.remaining += 1;

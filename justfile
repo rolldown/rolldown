@@ -113,3 +113,15 @@ bump packages *args:
 
 changelog:
   pnpm conventional-changelog --preset angular --i CHANGELOG.md --same-file --pkg=./packages/rolldown/package.json
+
+build wasi:
+  pnpm --filter rolldown run build-wasi
+  pnpm --filter rolldown run build-node
+
+run wasi:
+  cd examples/basic-vue && pnpm run build
+
+roll-wasi:
+  just build wasi
+  RUST_LOG=trace just run wasi
+

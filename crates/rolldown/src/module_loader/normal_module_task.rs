@@ -60,6 +60,7 @@ impl NormalModuleTask {
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
+    tracing::trace!("before load");
     // Run plugin load to get content first, if it is None using read fs as fallback.
     let source = match load_source(
       &self.ctx.plugin_driver,
@@ -75,6 +76,7 @@ impl NormalModuleTask {
         return Ok(());
       }
     };
+    tracing::trace!("loaded");
 
     // Run plugin transform.
     let source: Arc<str> = match transform_source(
@@ -92,10 +94,13 @@ impl NormalModuleTask {
       }
     };
 
+    tracing::trace!("transform_sourced");
+
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
     tracing::trace!("scan {:?}", self.resolved_path);
 
     let res = self.resolve_dependencies(&scan_result.import_records).await?;
+    tracing::trace!("resolve_dependencies");
 
     let ScanResult {
       named_imports,

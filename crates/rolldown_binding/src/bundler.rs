@@ -26,6 +26,7 @@ impl Bundler {
   ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
     let ret = normalize_binding_options(input_options, output_options)?;
+    tracing::info!("Calling Bundler#write()");
 
     Ok(Self { inner: Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins)) })
   }

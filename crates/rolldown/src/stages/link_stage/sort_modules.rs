@@ -11,6 +11,7 @@ enum Action {
 
 impl<'a> LinkStage<'a> {
   pub fn sort_modules(&mut self) {
+    tracing::trace!("Start sort modules");
     let mut stack = self
       .entries
       .iter()

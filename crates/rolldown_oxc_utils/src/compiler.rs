@@ -6,26 +6,26 @@ use oxc::{
   span::SourceType,
 };
 
-use crate::{oxc_ast::NewStructName, OxcAst};
+use crate::{oxc_ast::Inner, OxcAst};
 pub struct OxcCompiler;
 
 impl OxcCompiler {
   pub fn parse(source: impl Into<Arc<str>>, ty: SourceType) -> OxcAst {
     let allocator = oxc::allocator::Allocator::default();
-    let inner = NewStructName::new((source.into(), allocator), |(source, allocator)| {
+    let inner = Inner::new((source.into(), allocator), |(source, allocator)| {
       let parser = Parser::new(allocator, source, ty);
       parser.parse().program
     });
     OxcAst { inner }
   }
   pub fn print(ast: &OxcAst, source_name: &str, enable_source_map: bool) -> CodegenReturn {
-    ast.with_dependent(|dep, program| {
+    ast.with(|fields| {
       let codegen = Codegen::<false>::new(
         source_name,
-        &dep.0,
+        fields.source,
         CodegenOptions { enable_typescript: false, enable_source_map },
       );
-      codegen.build(program)
+      codegen.build(fields.program)
     })
   }
 }

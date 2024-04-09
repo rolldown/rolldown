@@ -314,10 +314,10 @@ mod test {
       .with_module(true)
       .with_jsx(true)
       .with_typescript(false);
-    let mut ast = OxcCompiler::parse(code, source_type);
-    ast.with_dependent_mut(|fields, program| {
+    let ast = OxcCompiler::parse(code, source_type);
+    ast.with(|fields| {
       let ast_scope = {
-        let semantic = OxcAst::make_semantic(&fields.0, program, source_type);
+        let semantic = OxcAst::make_semantic(fields.source, fields.program, source_type);
         let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
         AstScope::new(
           scope,
@@ -326,7 +326,8 @@ mod test {
         )
       };
 
-      let has_side_effect = program
+      let has_side_effect = fields
+        .program
         .body
         .iter()
         .any(|stmt| SideEffectDetector::new(&ast_scope).detect_side_effect_of_stmt(stmt));

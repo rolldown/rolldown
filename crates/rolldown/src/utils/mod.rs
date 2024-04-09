@@ -20,8 +20,8 @@ pub(crate) fn is_in_rust_test_mode() -> bool {
 }
 
 pub fn finalize_normal_module(module: &NormalModule, ctx: FinalizerContext<'_>, ast: &mut OxcAst) {
-  ast.with_dependent_mut(|fields, program| {
-    let (oxc_program, alloc) = (program, &fields.1);
+  ast.with_mut(|fields| {
+    let (oxc_program, alloc) = (fields.program, fields.allocator);
     let mut finalizer =
       Finalizer { alloc, ctx, scope: &module.scope, snippet: AstSnippet::new(alloc) };
     finalizer.visit_program(oxc_program);

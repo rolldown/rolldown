@@ -1,8 +1,4 @@
-use std::{
-  fmt::Debug,
-  ops::{Deref, DerefMut},
-  sync::Arc,
-};
+use std::{fmt::Debug, sync::Arc};
 
 use crate::{OxcCompiler, StatementExt, TakeIn};
 use oxc::{
@@ -15,7 +11,7 @@ use oxc::{
 use self_cell::self_cell;
 
 self_cell!(
-  pub struct NewStructName {
+  pub(crate) struct Inner {
     owner: (Arc<str>, Allocator),
 
     #[not_covariant]
@@ -24,7 +20,7 @@ self_cell!(
 );
 
 pub struct OxcAst {
-  pub(crate) inner: NewStructName,
+  pub(crate) inner: Inner,
 }
 impl Debug for OxcAst {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -38,22 +34,20 @@ impl Default for OxcAst {
   }
 }
 
-impl Deref for OxcAst {
-  type Target = NewStructName;
-
-  fn deref(&self) -> &Self::Target {
-    &self.inner
-  }
-}
-
-impl DerefMut for OxcAst {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    &mut self.inner
-  }
-}
-
 unsafe impl Send for OxcAst {}
 unsafe impl Sync for OxcAst {}
+
+pub struct WithFields<'outer, 'inner> {
+  pub source: &'inner Arc<str>,
+  pub allocator: &'inner Allocator,
+  pub program: &'outer Program<'inner>,
+}
+
+pub struct WithFieldsMut<'outer, 'inner> {
+  pub source: &'inner Arc<str>,
+  pub allocator: &'inner Allocator,
+  pub program: &'outer mut Program<'inner>,
+}
 
 impl OxcAst {
   pub fn source(&self) -> &Arc<str> {
@@ -62,6 +56,24 @@ impl OxcAst {
 
   pub fn is_body_empty(&self) -> bool {
     self.inner.with_dependent(|_, program| program.body.is_empty())
+  }
+
+  pub fn with<'outer, Ret>(
+    &'outer self,
+    func: impl for<'inner> ::core::ops::FnOnce(WithFields<'outer, 'inner>) -> Ret,
+  ) -> Ret {
+    self.inner.with_dependent::<'outer, Ret>(|owner, program| {
+      func(WithFields { source: &owner.0, allocator: &owner.1, program })
+    })
+  }
+
+  pub fn with_mut<'outer, Ret>(
+    &'outer mut self,
+    func: impl for<'inner> ::core::ops::FnOnce(WithFieldsMut<'outer, 'inner>) -> Ret,
+  ) -> Ret {
+    self.inner.with_dependent_mut::<'outer, Ret>(|owner, program| {
+      func(WithFieldsMut { source: &owner.0, allocator: &owner.1, program })
+    })
   }
 
   pub fn make_semantic<'ast>(

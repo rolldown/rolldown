@@ -196,7 +196,7 @@ impl<'task> NormalModuleTask<'task> {
     );
     let namespace_symbol = scanner.namespace_ref;
     program.hoist_import_export_from_stmts();
-    let scan_result = program.with_dependent(|_, program| scanner.scan(program));
+    let scan_result = program.with(|f| scanner.scan(f.program));
 
     (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }

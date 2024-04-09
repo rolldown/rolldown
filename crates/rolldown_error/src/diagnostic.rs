@@ -7,7 +7,7 @@ pub struct DiagnosticFileId(Arc<str>);
 
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
-  pub(crate) kind: &'static str,
+  pub(crate) kind: String,
   pub(crate) title: String,
   pub(crate) files: Vec<(/* filename */ Arc<str>, /* file content */ Arc<str>)>,
   pub(crate) labels: Vec<Label<(/* filename */ Arc<str>, Range<usize>)>>,
@@ -18,7 +18,7 @@ type AriadneReportBuilder = ReportBuilder<'static, (Arc<str>, Range<usize>)>;
 type AriadneReport = Report<'static, (Arc<str>, Range<usize>)>;
 
 impl Diagnostic {
-  pub(crate) fn new(kind: &'static str, summary: String, severity: Severity) -> Self {
+  pub(crate) fn new(kind: String, summary: String, severity: Severity) -> Self {
     Self { kind, title: summary, files: Vec::default(), labels: Vec::default(), severity }
   }
 
@@ -56,7 +56,7 @@ impl Diagnostic {
       "",
       0,
     )
-    .with_code(self.kind)
+    .with_code(self.kind.clone())
     .with_message(self.title.clone());
 
     for label in self.labels.clone() {

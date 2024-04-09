@@ -38,10 +38,6 @@ impl BuildError {
     self.inner.kind()
   }
 
-  pub fn code(&self) -> &'static str {
-    self.inner.code()
-  }
-
   #[must_use]
   pub fn with_source(
     mut self,
@@ -58,7 +54,8 @@ impl BuildError {
   }
 
   pub fn into_diagnostic(self) -> Diagnostic {
-    let mut diagnostic = Diagnostic::new(self.code(), self.inner.message(), self.severity);
+    let mut diagnostic =
+      Diagnostic::new(self.kind().to_string(), self.inner.message(), self.severity);
     self.inner.on_diagnostic(&mut diagnostic);
     diagnostic
   }

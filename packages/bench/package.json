@@ -19,6 +19,7 @@
     "lodash": "^4.17.21",
     "rolldown": "workspace:*",
     "rollup": "^4.12.1",
+    "sucrase": "^3.35.0",
     "tinybench": "^2.6.0"
   },
   "devDependencies": {

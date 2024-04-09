@@ -12,7 +12,7 @@ use crate::{
   bundler_builder::BundlerBuilder,
   error::{BatchedErrors, BatchedResult},
   stages::{bundle_stage::BundleStage, scan_stage::ScanStage},
-  types::rolldown_output::RolldownOutput,
+  types::bundle_output::BundleOutput,
   BundlerOptions, SharedOptions, SharedResolver,
 };
 
@@ -34,7 +34,7 @@ impl Bundler {
 }
 
 impl Bundler {
-  pub async fn write(&mut self) -> BatchedResult<RolldownOutput> {
+  pub async fn write(&mut self) -> BatchedResult<BundleOutput> {
     let dir = self.options.cwd.as_path().join(&self.options.dir).to_string_lossy().to_string();
 
     let output = self.bundle_up(true).await?;
@@ -63,7 +63,7 @@ impl Bundler {
     Ok(output)
   }
 
-  pub async fn generate(&mut self) -> BatchedResult<RolldownOutput> {
+  pub async fn generate(&mut self) -> BatchedResult<BundleOutput> {
     self.bundle_up(false).await
   }
 
@@ -126,7 +126,7 @@ impl Bundler {
   }
 
   #[tracing::instrument(skip_all)]
-  async fn bundle_up(&mut self, is_write: bool) -> BatchedResult<RolldownOutput> {
+  async fn bundle_up(&mut self, is_write: bool) -> BatchedResult<BundleOutput> {
     tracing::trace!("Options {:#?}", self.options);
     let mut link_stage_output = self.try_build().await?;
 
@@ -137,6 +137,6 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&assets, is_write).await?;
 
-    Ok(RolldownOutput { warnings: std::mem::take(&mut link_stage_output.warnings), assets })
+    Ok(BundleOutput { warnings: std::mem::take(&mut link_stage_output.warnings), assets })
   }
 }

@@ -1,7 +1,7 @@
 use std::{borrow::Cow, path::Path};
 
 use super::fixture::Fixture;
-use rolldown::RolldownOutput;
+use rolldown::BundleOutput;
 use rolldown_common::Output;
 use rolldown_error::BuildError;
 use rolldown_sourcemap::SourcemapVisualizer;
@@ -43,7 +43,7 @@ impl Case {
     self.fixture.exec();
   }
 
-  fn render_assets_to_snapshot(&mut self, outputs: RolldownOutput) {
+  fn render_assets_to_snapshot(&mut self, outputs: BundleOutput) {
     let mut assets = outputs.assets;
     let warnings = outputs.warnings;
 

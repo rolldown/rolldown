@@ -113,6 +113,8 @@
     "vitepress",
     "Yinan",
     "Yunfei",
-    "sourcemaps"
+    "sourcemaps",
+    "memmem",
+    "memchr"
   ]
 }

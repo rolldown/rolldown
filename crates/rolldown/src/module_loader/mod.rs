@@ -1,8 +1,8 @@
 #[allow(clippy::module_inception)]
 pub mod module_loader;
-pub mod module_task_context;
 mod normal_module_task;
 mod runtime_normal_module_task;
+pub mod task_context;
 mod task_result;
 
 pub use module_loader::ModuleLoader;

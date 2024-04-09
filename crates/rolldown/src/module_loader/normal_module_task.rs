@@ -11,7 +11,7 @@ use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use sugar_path::SugarPath;
 
-use super::{module_task_context::ModuleTaskCommonData, Msg};
+use super::{task_context::TaskContext, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   error::{BatchedErrors, BatchedResult},
@@ -23,17 +23,17 @@ use crate::{
   utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
   SharedOptions, SharedResolver,
 };
-pub struct NormalModuleTask<'task> {
-  ctx: &'task ModuleTaskCommonData,
+pub struct NormalModuleTask {
+  ctx: Arc<TaskContext>,
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
   module_type: ModuleType,
   errors: BatchedErrors,
 }
 
-impl<'task> NormalModuleTask<'task> {
+impl NormalModuleTask {
   pub fn new(
-    ctx: &'task ModuleTaskCommonData,
+    ctx: Arc<TaskContext>,
     id: NormalModuleId,
     path: ResolvedPath,
     module_type: ModuleType,

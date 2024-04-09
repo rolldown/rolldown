@@ -1,11 +1,14 @@
-use super::BuildErrorLike;
+use super::BuildEvent;
 
 #[derive(Debug)]
 pub struct SourceMapError {
   pub error: oxc::sourcemap::Error,
 }
 
-impl BuildErrorLike for SourceMapError {
+impl BuildEvent for SourceMapError {
+  fn kind(&self) -> crate::event_kind::EventKind {
+    crate::event_kind::EventKind::SourcemapError
+  }
   fn code(&self) -> &'static str {
     "SOURCEMAP_ERROR"
   }

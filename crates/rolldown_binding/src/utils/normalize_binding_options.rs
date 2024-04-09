@@ -6,11 +6,11 @@ use crate::{
 };
 use rolldown::{AddonOutputOption, BundlerOptions, Platform};
 use rolldown_error::BuildError;
-use rolldown_plugin::BoxPlugin;
+use rolldown_plugin::PluginOrThreadSafePlugin;
 
 pub struct NormalizeBindingOptionsReturn {
   pub bundler_options: BundlerOptions,
-  pub plugins: Vec<BoxPlugin>,
+  pub plugins: Vec<PluginOrThreadSafePlugin>,
 }
 
 fn normalize_addon_option(
@@ -29,6 +29,7 @@ fn normalize_addon_option(
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
   output_options: crate::options::BindingOutputOptions,
+  mut thread_safe_plugins_map: Option<crate::thread_safe_plugin_registry::PluginValues>,
 ) -> napi::Result<NormalizeBindingOptionsReturn> {
   debug_assert!(PathBuf::from(&input_options.cwd) != PathBuf::from("/"), "{input_options:#?}");
   let cwd = PathBuf::from(input_options.cwd);
@@ -70,11 +71,21 @@ pub fn normalize_binding_options(
 
   // Deal with plugins
 
-  let plugins = input_options
+  let plugins: Vec<PluginOrThreadSafePlugin> = input_options
     .plugins
     .into_iter()
     .chain(output_options.plugins)
-    .map(JsPlugin::new_boxed)
+    .enumerate()
+    .map(|(index, plugin)| {
+      plugin.map_or_else(
+        || {
+          let plugins = thread_safe_plugins_map.as_mut().unwrap().remove(&index).unwrap();
+
+          plugins.into_iter().map(JsPlugin::new_boxed).collect::<Vec<_>>().into_boxed_slice().into()
+        },
+        |plugin| JsPlugin::new_boxed(plugin).into(),
+      )
+    })
     .collect::<Vec<_>>();
 
   Ok(NormalizeBindingOptionsReturn { bundler_options, plugins })

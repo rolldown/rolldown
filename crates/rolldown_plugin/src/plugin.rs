@@ -2,9 +2,11 @@ use std::{any::Any, borrow::Cow, fmt::Debug};
 
 use super::plugin_context::SharedPluginContext;
 use crate::{
-  HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput,
-  HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
+  worker_manager::WorkerManager, HookBuildEndArgs, HookLoadArgs, HookLoadOutput,
+  HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput,
+  HookTransformArgs,
 };
+use futures::future::{self, BoxFuture};
 use rolldown_common::Output;
 use rolldown_error::BuildError;
 
@@ -85,3 +87,52 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 }
 
 pub type BoxPlugin = Box<dyn Plugin>;
+
+#[derive(Debug)]
+pub enum PluginOrThreadSafePlugin {
+  SinglePlugin(BoxPlugin),
+  ThreadSafePlugin(Box<[BoxPlugin]>),
+}
+
+impl PluginOrThreadSafePlugin {
+  pub(crate) async fn run_single<'a, R, F: FnOnce(&'a BoxPlugin) -> BoxFuture<R>>(
+    &'a self,
+    worker_manager: Option<&WorkerManager>,
+    f: F,
+  ) -> R {
+    match self {
+      Self::SinglePlugin(plugin) => f(plugin).await,
+      Self::ThreadSafePlugin(plugins) => {
+        let permit = worker_manager.unwrap().acquire().await;
+        let plugin = &plugins[permit.worker_index() as usize];
+        f(plugin).await
+      }
+    }
+  }
+
+  pub(crate) async fn run_all<'a, R, F: FnMut(&'a BoxPlugin) -> BoxFuture<R>>(
+    &'a self,
+    worker_manager: Option<&WorkerManager>,
+    mut f: F,
+  ) -> Vec<R> {
+    match self {
+      Self::SinglePlugin(plugin) => vec![f(plugin).await],
+      Self::ThreadSafePlugin(plugins) => {
+        let _permit = worker_manager.unwrap().acquire_all().await;
+        future::join_all(plugins.iter().map(f)).await
+      }
+    }
+  }
+}
+
+impl From<BoxPlugin> for PluginOrThreadSafePlugin {
+  fn from(value: BoxPlugin) -> Self {
+    Self::SinglePlugin(value)
+  }
+}
+
+impl From<Box<[BoxPlugin]>> for PluginOrThreadSafePlugin {
+  fn from(value: Box<[BoxPlugin]>) -> Self {
+    Self::ThreadSafePlugin(value)
+  }
+}

@@ -4,12 +4,12 @@ import {
 } from '../rollup-types'
 import { ensureArray, normalizePluginOption } from '../utils'
 import { BindingInputOptions, BindingResolveOptions } from '../binding'
-import { Plugin } from '../plugin'
+import { Plugin, ThreadSafePlugin } from '../plugin'
 
 // TODO export compat plugin type
 export interface InputOptions {
   input?: RollupInputOptions['input']
-  plugins?: Plugin[]
+  plugins?: (Plugin | ThreadSafePlugin)[]
   external?: RollupInputOptions['external']
   resolve?: RolldownResolveOptions
   cwd?: string
@@ -21,7 +21,11 @@ export type RolldownResolveOptions = Omit<BindingResolveOptions, 'alias'> & {
   alias?: Record<string, string>
 }
 
-export type RolldownNormalizedInputOptions = NormalizedInputOptions & {
+export type RolldownNormalizedInputOptions = Omit<
+  NormalizedInputOptions,
+  'plugins'
+> & {
+  plugins: (Plugin | ThreadSafePlugin)[]
   resolve?: BindingResolveOptions
   platform?: BindingInputOptions['platform']
 }

@@ -9,5 +9,6 @@ static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 pub mod bundler;
 pub mod options;
+pub mod thread_safe_plugin_registry;
 pub mod types;
 pub mod utils;

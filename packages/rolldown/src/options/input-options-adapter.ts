@@ -10,10 +10,12 @@ export function createInputOptionsAdapter(
 ): BindingInputOptions {
   return {
     input: normalizeInput(options.input),
-    plugins: options.plugins.map((plugin) =>
-      // @ts-expect-error
-      bindingifyPlugin(plugin, options),
-    ),
+    plugins: options.plugins.map((plugin) => {
+      if ('_threadSafe' in plugin) {
+        return undefined
+      }
+      return bindingifyPlugin(plugin, options)
+    }),
     cwd: inputOptions.cwd ?? process.cwd(),
     external: inputOptions.external ? options.external : undefined,
     resolve: options.resolve,

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
+use rolldown_plugin::{HookBuildEndArgs, PluginOrThreadSafePlugin, SharedPluginDriver};
 use sugar_path::AsPath;
 
 use super::stages::{
@@ -28,8 +28,16 @@ impl Bundler {
     BundlerBuilder::default().with_options(input_options).build()
   }
 
-  pub fn with_plugins(input_options: BundlerOptions, plugins: Vec<BoxPlugin>) -> Self {
-    BundlerBuilder::default().with_options(input_options).with_plugins(plugins).build()
+  pub fn with_plugins(
+    input_options: BundlerOptions,
+    plugins: Vec<PluginOrThreadSafePlugin>,
+    worker_count: u16,
+  ) -> Self {
+    BundlerBuilder::default()
+      .with_options(input_options)
+      .with_plugins(plugins)
+      .with_worker_count(worker_count)
+      .build()
   }
 }
 

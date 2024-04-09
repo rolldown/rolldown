@@ -8,6 +8,7 @@ import { InputOptions } from './options/input-options'
 export class RolldownBuild {
   #inputOptions: InputOptions
   #bundler?: Bundler
+  #stopWorkers?: () => Promise<void>
 
   constructor(inputOptions: InputOptions) {
     // TODO: Check if `inputOptions.output` is set. If so, throw an warning that it is ignored.
@@ -16,7 +17,12 @@ export class RolldownBuild {
 
   async #getBundler(outputOptions: OutputOptions): Promise<Bundler> {
     if (typeof this.#bundler === 'undefined') {
-      this.#bundler = await createBundler(this.#inputOptions, outputOptions)
+      const { bundler, stopWorkers } = await createBundler(
+        this.#inputOptions,
+        outputOptions,
+      )
+      this.#bundler = bundler
+      this.#stopWorkers = stopWorkers
     }
     return this.#bundler
   }
@@ -31,6 +37,10 @@ export class RolldownBuild {
     const bundler = await this.#getBundler(outputOptions)
     const output = await bundler.write()
     return transformToRollupOutput(output)
+  }
+
+  async destroy(): Promise<void> {
+    await this.#stopWorkers?.()
   }
 }
 

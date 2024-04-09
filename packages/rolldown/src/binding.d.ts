@@ -1,6 +1,4 @@
 type MaybePromise<T> = T | Promise<T>
-type Nullable<T> = T | null | undefined
-type VoidNullable<T = void> = T | null | undefined | void
 export class BindingOutputAsset {
   get fileName(): string
   get source(): string
@@ -36,10 +34,17 @@ export class Bundler {
   constructor(
     inputOptions: BindingInputOptions,
     outputOptions: BindingOutputOptions,
+    threadSafePluginsRegistry?: ThreadSafePluginRegistry | undefined | null,
   )
   write(): Promise<BindingOutputs>
   generate(): Promise<BindingOutputs>
   scan(): Promise<void>
+}
+
+export class ThreadSafePluginRegistry {
+  id: number
+  workerCount: number
+  constructor(workerCount: number)
 }
 
 export interface BindingHookLoadOutput {
@@ -75,7 +80,7 @@ export interface BindingInputOptions {
         isResolved: boolean,
       ) => boolean)
   input: Array<BindingInputItem>
-  plugins: Array<BindingPluginOptions>
+  plugins: Array<BindingPluginOrThreadSafePlugin>
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
@@ -94,7 +99,7 @@ export interface BindingOutputOptions {
     | Nullable<string>
     | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)
   format?: 'es' | 'cjs'
-  plugins: Array<BindingPluginOptions>
+  plugins: Array<BindingPluginOrThreadSafePlugin>
   sourcemap?: 'file' | 'inline' | 'hidden'
 }
 
@@ -127,6 +132,11 @@ export interface BindingPluginOptions {
   writeBundle?: (bundle: BindingOutputs) => MaybePromise<VoidNullable>
 }
 
+export interface BindingPluginWithIndex {
+  index: number
+  plugin: BindingPluginOptions
+}
+
 export interface BindingRenderedModule {
   code?: string
 }
@@ -143,6 +153,11 @@ export interface BindingResolveOptions {
   symlinks?: boolean
   tsconfigFilename?: string
 }
+
+export function registerPlugins(
+  id: number,
+  plugins: PluginsInSingleWorker,
+): void
 
 export interface RenderedChunk {
   isEntry: boolean

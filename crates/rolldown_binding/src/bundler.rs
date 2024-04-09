@@ -7,6 +7,7 @@ use tracing::instrument;
 
 use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
+  thread_safe_plugin_registry::ThreadSafePluginRegistry,
   types::binding_outputs::BindingOutputs,
   utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
 };
@@ -23,11 +24,26 @@ impl Bundler {
     env: Env,
     input_options: BindingInputOptions,
     output_options: BindingOutputOptions,
+    thread_safe_plugins_registry: Option<ThreadSafePluginRegistry>,
   ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
-    let ret = normalize_binding_options(input_options, output_options)?;
 
-    Ok(Self { inner: Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins)) })
+    let worker_count = thread_safe_plugins_registry
+      .as_ref()
+      .map(|registry| registry.worker_count)
+      .unwrap_or_default();
+    let thread_safe_plugins_map =
+      thread_safe_plugins_registry.map(|registry| registry.take_plugin_values());
+
+    let ret = normalize_binding_options(input_options, output_options, thread_safe_plugins_map)?;
+
+    Ok(Self {
+      inner: Mutex::new(NativeBundler::with_plugins(
+        ret.bundler_options,
+        ret.plugins,
+        worker_count,
+      )),
+    })
   }
 
   #[napi]

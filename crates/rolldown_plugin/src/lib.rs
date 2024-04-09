@@ -2,11 +2,12 @@ mod plugin;
 mod plugin_context;
 mod plugin_driver;
 mod types;
+mod worker_manager;
 
 pub use crate::{
   plugin::{
     BoxPlugin, HookLoadReturn, HookNoopReturn, HookRenderChunkReturn, HookResolveIdReturn,
-    HookTransformReturn, Plugin,
+    HookTransformReturn, Plugin, PluginOrThreadSafePlugin,
   },
   plugin_context::{PluginContext, SharedPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},

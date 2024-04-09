@@ -5,10 +5,9 @@ import {
   BindingOutputs,
 } from '../binding'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
-import { AnyFn, AnyObj, NullValue } from '../types/utils'
+import { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
 import { SourceMapInput } from '../types/sourcemap'
-
-type MaybePromise<T> = T | Promise<T>
+import { pathToFileURL } from 'node:url'
 
 // Use a type alias here, we might wrap `BindingPluginContext` in the future
 type PluginContext = BindingPluginContext
@@ -89,4 +88,24 @@ export interface Plugin {
     (bundle: BindingOutputs, isWrite: boolean) => MaybePromise<NullValue>
   >
   writeBundle?: Hook<(bundle: BindingOutputs) => MaybePromise<NullValue>>
+}
+
+export type ThreadSafePlugin = {
+  /** @internal */
+  _threadSafe: {
+    fileUrl: string
+    options: unknown
+  }
+}
+
+export type DefineThreadSafePluginResult<Options> = (
+  options: Options,
+) => ThreadSafePlugin
+
+export function defineThreadSafePlugin<Options>(
+  pluginPath: string,
+): DefineThreadSafePluginResult<Options> {
+  return (options) => {
+    return { _threadSafe: { fileUrl: pathToFileURL(pluginPath).href, options } }
+  }
 }

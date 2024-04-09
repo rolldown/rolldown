@@ -12,6 +12,8 @@ export default defineBuildConfig({
       input: './src/cli/index',
       name: 'cli',
     },
+    './src/thread-safe-plugin',
+    './src/thread-safe-plugin-worker',
   ],
   sourcemap: true,
   clean: true,

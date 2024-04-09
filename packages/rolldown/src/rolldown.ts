@@ -13,6 +13,7 @@ export const rolldown = async (input: InputOptions): Promise<RolldownBuild> => {
  * Calling this API will only execute the scan stage of rolldown.
  */
 export const experimental_scan = async (input: InputOptions): Promise<void> => {
-  const bundler = await createBundler(input, {})
+  const { bundler, stopWorkers } = await createBundler(input, {})
   await bundler.scan()
+  await stopWorkers?.()
 }

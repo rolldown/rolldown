@@ -1,7 +1,7 @@
-use std::sync::Arc;
+use std::{fmt::Debug, sync::Arc};
 
 use rolldown_fs::OsFileSystem;
-use rolldown_plugin::{BoxPlugin, PluginDriver};
+use rolldown_plugin::{PluginDriver, PluginOrThreadSafePlugin};
 use rolldown_resolver::Resolver;
 
 use crate::{
@@ -12,7 +12,8 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct BundlerBuilder {
   input_options: BundlerOptions,
-  plugins: Vec<BoxPlugin>,
+  plugins: Vec<PluginOrThreadSafePlugin>,
+  worker_count: u16,
 }
 
 impl BundlerBuilder {
@@ -24,7 +25,7 @@ impl BundlerBuilder {
     Bundler {
       resolver: Resolver::new(resolve_options, options.platform, options.cwd.clone(), OsFileSystem)
         .into(),
-      plugin_driver: PluginDriver::new_shared(self.plugins),
+      plugin_driver: PluginDriver::new_shared(self.plugins, self.worker_count),
       options: Arc::new(options),
       fs: OsFileSystem,
     }
@@ -37,8 +38,14 @@ impl BundlerBuilder {
   }
 
   #[must_use]
-  pub fn with_plugins(mut self, plugins: Vec<BoxPlugin>) -> Self {
+  pub fn with_plugins(mut self, plugins: Vec<PluginOrThreadSafePlugin>) -> Self {
     self.plugins = plugins;
+    self
+  }
+
+  #[must_use]
+  pub fn with_worker_count(mut self, worker_count: u16) -> Self {
+    self.worker_count = worker_count;
     self
   }
 }

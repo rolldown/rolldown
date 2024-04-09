@@ -110,6 +110,8 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::RegExpLiteral(_)
       | Expression::FunctionExpression(_)
       | Expression::ArrowFunctionExpression(_)
+      | Expression::MetaProperty(_)
+      | Expression::ThisExpression(_)
       | Expression::StringLiteral(_) => false,
       Expression::ObjectExpression(obj_expr) => {
         obj_expr.properties.iter().any(|obj_prop| match obj_prop {
@@ -172,7 +174,6 @@ impl<'a> SideEffectDetector<'a> {
       Expression::PrivateInExpression(private_in_expr) => {
         self.detect_side_effect_of_expr(&private_in_expr.right)
       }
-      Expression::MetaProperty(_) | Expression::ThisExpression(_) => false,
       Expression::AwaitExpression(await_expr) => {
         self.detect_side_effect_of_expr(&await_expr.argument)
       }

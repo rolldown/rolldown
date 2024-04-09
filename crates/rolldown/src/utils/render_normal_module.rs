@@ -11,7 +11,7 @@ pub fn render_normal_module<'a>(
   options: &SharedOptions,
   file_dir: &str,
 ) -> Option<ModuleRenderOutput<'a>> {
-  if ast.program().body.is_empty() {
+  if ast.is_body_empty() {
     None
   } else {
     let enable_sourcemap = !options.sourcemap.is_hidden() && !module.is_virtual;

@@ -40,13 +40,13 @@ pub struct ScanResult {
   pub warnings: Vec<BuildError>,
 }
 
-pub struct AstScanner<'a> {
+pub struct AstScanner<'me> {
   idx: NormalModuleId,
-  source: &'a Arc<str>,
+  source: &'me Arc<str>,
   module_type: ModuleType,
-  file_path: &'a FilePath,
-  scope: &'a AstScope,
-  symbol_table: &'a mut AstSymbols,
+  file_path: &'me FilePath,
+  scope: &'me AstScope,
+  symbol_table: &'me mut AstSymbols,
   current_stmt_info: StmtInfo,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
@@ -56,15 +56,15 @@ pub struct AstScanner<'a> {
   used_module_ref: bool,
 }
 
-impl<'ast> AstScanner<'ast> {
+impl<'me> AstScanner<'me> {
   pub fn new(
     idx: NormalModuleId,
-    scope: &'ast AstScope,
-    symbol_table: &'ast mut AstSymbols,
+    scope: &'me AstScope,
+    symbol_table: &'me mut AstSymbols,
     repr_name: String,
     module_type: ModuleType,
-    source: &'ast Arc<str>,
-    file_path: &'ast FilePath,
+    source: &'me Arc<str>,
+    file_path: &'me FilePath,
   ) -> Self {
     let mut result = ScanResult::default();
 
@@ -98,7 +98,7 @@ impl<'ast> AstScanner<'ast> {
     }
   }
 
-  pub fn scan(mut self, program: &Program<'ast>) -> ScanResult {
+  pub fn scan(mut self, program: &Program<'_>) -> ScanResult {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 

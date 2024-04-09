@@ -90,10 +90,9 @@ impl RuntimeNormalModuleTask {
 
   fn make_ast(&self, source: &Arc<str>) -> (OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef) {
     let source_type = SourceType::default();
-    let mut program = OxcCompiler::parse(Arc::clone(source), source_type);
+    let mut ast = OxcCompiler::parse(Arc::clone(source), source_type);
 
-    let semantic = program.make_semantic(source_type);
-    let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
+    let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(
       scope,
       std::mem::take(&mut symbol_table.references),
@@ -111,9 +110,9 @@ impl RuntimeNormalModuleTask {
       &facade_path,
     );
     let namespace_symbol = scanner.namespace_ref;
-    program.hoist_import_export_from_stmts();
-    let scan_result = scanner.scan(program.program());
+    ast.hoist_import_export_from_stmts();
+    let scan_result = ast.with_dependent(|_, program| scanner.scan(program));
 
-    (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)
+    (ast, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }
 }

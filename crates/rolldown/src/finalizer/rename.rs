@@ -4,17 +4,14 @@ use rolldown_oxc_utils::{ExpressionExt, IntoIn};
 
 use super::Finalizer;
 
-impl<'me, 'ast> Finalizer<'me, 'ast>
-where
-  'me: 'ast,
-{
+impl<'me, 'ast> Finalizer<'me, 'ast> {
   /// return `None` if
   /// - the reference is for a global variable/the reference doesn't have a `SymbolId`
   /// - the reference doesn't have a `ReferenceId`
   /// - the canonical name is the same as the original name
   pub fn generate_finalized_expr_for_reference(
     &self,
-    id_ref: &IdentifierReference,
+    id_ref: &IdentifierReference<'ast>,
     is_callee: bool,
   ) -> Option<ast::Expression<'ast>> {
     // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.

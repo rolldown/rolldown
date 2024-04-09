@@ -93,6 +93,9 @@ impl<'a> SideEffectDetector<'a> {
           prop_name.as_str(),
         ))
       }
+      oxc::ast::ast::Expression::ThisExpression(_) | oxc::ast::ast::Expression::MetaProperty(_) => {
+        false
+      }
       _ => true,
     }
   }
@@ -161,23 +164,29 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::TSTypeAssertion(_)
       | Expression::TSNonNullExpression(_)
       | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
-
+      Expression::BinaryExpression(binary_expr) => {
+        // For binary expressions, both sides could potentially have side effects
+        self.detect_side_effect_of_expr(&binary_expr.left)
+          || self.detect_side_effect_of_expr(&binary_expr.right)
+      }
+      Expression::PrivateInExpression(private_in_expr) => {
+        self.detect_side_effect_of_expr(&private_in_expr.right)
+      }
+      Expression::MetaProperty(_) | Expression::ThisExpression(_) => false,
+      Expression::AwaitExpression(await_expr) => {
+        self.detect_side_effect_of_expr(&await_expr.argument)
+      }
       // TODO: Implement these
-      Expression::MetaProperty(_)
-      | Expression::Super(_)
+      Expression::Super(_)
       | Expression::ArrayExpression(_)
       | Expression::AssignmentExpression(_)
-      | Expression::AwaitExpression(_)
-      | Expression::BinaryExpression(_)
       | Expression::CallExpression(_)
       | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
       | Expression::NewExpression(_)
       | Expression::TaggedTemplateExpression(_)
-      | Expression::ThisExpression(_)
       | Expression::UpdateExpression(_)
       | Expression::YieldExpression(_)
-      | Expression::PrivateInExpression(_)
       | Expression::JSXElement(_)
       | Expression::JSXFragment(_) => true,
     }
@@ -526,5 +535,48 @@ mod test {
     assert!(get_statements_side_effect("switch (true) { case 1: bar; }"));
     assert!(get_statements_side_effect("switch (true) { case bar: break; }"));
     assert!(get_statements_side_effect("switch (true) { case 1: bar; default: bar; }"));
+  }
+
+  #[test]
+  fn test_binary_expression() {
+    assert!(!get_statements_side_effect("1 + 1"));
+    assert!(!get_statements_side_effect("const a = 1; const b = 2; a + b"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("1 + foo"));
+    assert!(get_statements_side_effect("2 + bar"));
+  }
+
+  #[test]
+  fn test_private_in_expression() {
+    assert!(!get_statements_side_effect("#privateField in this"));
+    assert!(!get_statements_side_effect("#privateField in this.x"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("#privateField in bar"));
+    assert!(get_statements_side_effect("#privateField in foo"));
+  }
+
+  #[test]
+  fn test_this_expression() {
+    assert!(!get_statements_side_effect("this"));
+    assert!(!get_statements_side_effect("this.a"));
+    assert!(!get_statements_side_effect("this.a + this.b"));
+    assert!(get_statements_side_effect("this.a = 10"));
+  }
+
+  #[test]
+  fn test_meta_property_expression() {
+    assert!(!get_statements_side_effect("import.meta"));
+    assert!(!get_statements_side_effect("import.meta.url"));
+    assert!(!get_statements_side_effect("{ url } = import.meta"));
+    assert!(get_statements_side_effect("import.meta.url = 'test'"));
+  }
+
+  #[test]
+  fn test_await_expression() {
+    assert!(!get_statements_side_effect("await 1 + 1"));
+    assert!(!get_statements_side_effect("const a = 1; const b = 2; await a + b"));
+    assert!(get_statements_side_effect("await foo + bar"));
+    assert!(get_statements_side_effect("await foo"));
+    assert!(get_statements_side_effect("await fetch('https://example.com')"));
   }
 }

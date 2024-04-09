@@ -3,7 +3,8 @@ use sugar_path::SugarPath;
 // cSpell:disable
 pub use concat_sourcemap::{ConcatSource, RawSource, SourceMapSource};
 pub use oxc::sourcemap::{SourceMap, SourcemapVisualizer};
-
+mod lines_count;
+pub use lines_count::lines_count;
 use oxc::sourcemap::SourceMapBuilder;
 mod concat_sourcemap;
 

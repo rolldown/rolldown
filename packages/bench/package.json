@@ -13,14 +13,12 @@
     "@babel/preset-typescript": "^7.24.1",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
-    "@swc/core": "^1.4.13",
     "@types/lodash": "^4.17.0",
     "chalk": "^5.3.0",
     "esbuild": "^0.20.1",
     "lodash": "^4.17.21",
     "rolldown": "workspace:*",
     "rollup": "^4.12.1",
-    "sucrase": "^3.35.0",
     "tinybench": "^2.6.0"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 import { defineThreadSafePluginImplementation } from 'rolldown/thread-safe-plugin'
+import babel from '@babel/core'
 import nodePath from 'node:path'
-import swc from '@swc/core'
 
 /** @returns {import('rolldown').Plugin} */
 export const babelPlugin = () => {
@@ -9,21 +9,17 @@ export const babelPlugin = () => {
     async transform(code, id) {
       const ext = nodePath.extname(id)
       if (ext === '.ts' || ext === '.tsx') {
-        const ret = /** @type {swc.Output} */ (
-          await swc.transform(code, {
+        const ret = /** @type {babel.BabelFileResult} */ (
+          await babel.transformAsync(code, {
             filename: id,
-            jsc: {
-              parser: {
-                syntax: 'typescript',
-              },
-            },
-            env: {
-              targets: 'chrome >= 80',
-              bugfixes: true,
-            },
+            presets: [
+              ['@babel/preset-env', { bugfixes: true }],
+              '@babel/preset-typescript',
+            ],
+            targets: 'chrome >= 80',
             sourceMaps: true,
             configFile: false,
-            inputSourceMap: false,
+            browserslistConfigFile: false,
           })
         )
         return { code: /** @type {string} */ (ret.code) }

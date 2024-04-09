@@ -1507,8 +1507,8 @@ dependencies = [
 name = "rolldown_sourcemap"
 version = "0.1.0"
 dependencies = [
+ "memchr",
  "oxc",
- "rustc-hash",
  "sugar_path",
 ]
 

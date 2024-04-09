@@ -78,6 +78,7 @@ dunce                     = "1.0.4"                                             
 futures                   = "0.3.30"
 index_vec                 = "0.1.3"
 insta                     = "1.38.0"
+memchr                    = "2.7.2"
 mimalloc                  = "0.1.39"
 napi                      = { version = "3.0.0-alpha.0", features = ["async"] }
 napi-build                = { version = "2.1.2" }

@@ -117,10 +117,15 @@ impl Chunk {
           rendered_module,
           rendered_content,
           sourcemap,
+          lines_count,
         } = module_render_output;
         concat_source.add_source(Box::new(RawSource::new(format!("// {module_pretty_path}",))));
         if let Some(sourcemap) = sourcemap {
-          concat_source.add_source(Box::new(SourceMapSource::new(rendered_content, sourcemap)));
+          concat_source.add_source(Box::new(SourceMapSource::new(
+            rendered_content,
+            sourcemap,
+            lines_count,
+          )));
         } else {
           concat_source.add_source(Box::new(RawSource::new(rendered_content)));
         }

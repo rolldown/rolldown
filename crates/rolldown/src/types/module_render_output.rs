@@ -7,4 +7,5 @@ pub struct ModuleRenderOutput<'a> {
   pub rendered_module: RenderedModule,
   pub rendered_content: String,
   pub sourcemap: Option<SourceMap>,
+  pub lines_count: u32,
 }

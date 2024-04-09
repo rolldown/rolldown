@@ -221,7 +221,7 @@ impl<'a> LinkStage<'a> {
     self.module_table.normal_modules.iter().par_bridge().for_each(|importer| {
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
-      // - Mutating on `stmt_infos` does't rely on other mutating operations of other modules
+      // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
       // - Mutating and parallel reading is in different memory locations
       let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
 

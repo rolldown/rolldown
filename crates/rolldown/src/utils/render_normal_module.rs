@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use rolldown_common::{NormalModule, RenderedModule};
 use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
 use rolldown_sourcemap::collapse_sourcemaps;
@@ -30,10 +28,12 @@ pub fn render_normal_module<'a>(
       rendered_content: render_output.source_text,
       sourcemap: if options.sourcemap.is_hidden() {
         None
+      } else if module.sourcemap_chain.is_empty() {
+        render_output.source_map
       } else {
-        let mut sourcemap_chain = module.sourcemap_chain.iter().map(Arc::clone).collect::<Vec<_>>();
-        if let Some(sourcemap) = render_output.source_map {
-          sourcemap_chain.push(Arc::new(sourcemap));
+        let mut sourcemap_chain = module.sourcemap_chain.iter().collect::<Vec<_>>();
+        if let Some(sourcemap) = render_output.source_map.as_ref() {
+          sourcemap_chain.push(sourcemap);
         }
         collapse_sourcemaps(sourcemap_chain, Some(file_dir))
       },

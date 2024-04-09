@@ -11,21 +11,22 @@ pub async fn render_chunks<'a>(
 ) -> Result<Vec<ChunkRenderReturn>, BatchedErrors> {
   let result = block_on_spawn_all(chunks.into_iter().map(|chunk| async move {
     tracing::info!("render_chunks");
-    let mut sourcemap_chain = vec![];
-    if let Some(sourcemap) = chunk.map {
-      sourcemap_chain.push(sourcemap);
-    }
-
     match plugin_driver
-      .render_chunk(
-        HookRenderChunkArgs { code: chunk.code, chunk: &chunk.rendered_chunk },
-        &mut sourcemap_chain,
-      )
+      .render_chunk(HookRenderChunkArgs { code: chunk.code, chunk: &chunk.rendered_chunk })
       .await
     {
-      Ok(code) => Ok(ChunkRenderReturn {
+      Ok((code, render_chunk_sourcemap_chain)) => Ok(ChunkRenderReturn {
         code,
-        map: collapse_sourcemaps(sourcemap_chain, None),
+        map: if render_chunk_sourcemap_chain.is_empty() {
+          chunk.map
+        } else {
+          let mut sourcemap_chain = Vec::with_capacity(render_chunk_sourcemap_chain.len() + 1);
+          if let Some(sourcemap) = chunk.map.as_ref() {
+            sourcemap_chain.push(sourcemap);
+          }
+          sourcemap_chain.extend(render_chunk_sourcemap_chain.iter());
+          collapse_sourcemaps(sourcemap_chain, None)
+        },
         rendered_chunk: chunk.rendered_chunk,
       }),
       Err(e) => Err(e),

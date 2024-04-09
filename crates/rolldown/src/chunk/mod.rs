@@ -4,8 +4,6 @@ pub mod render_chunk;
 mod render_chunk_exports;
 mod render_chunk_imports;
 
-use std::sync::Arc;
-
 use index_vec::IndexVec;
 use rolldown_common::{ChunkId, FileNameTemplate};
 
@@ -50,7 +48,7 @@ pub struct Chunk {
 
 pub struct ChunkRenderReturn {
   pub code: String,
-  pub map: Option<Arc<SourceMap>>,
+  pub map: Option<SourceMap>,
   pub rendered_chunk: RenderedChunk,
 }
 
@@ -145,12 +143,8 @@ impl Chunk {
       concat_source.add_source(Box::new(RawSource::new(footer_txt)));
     }
 
-    let (content, mut map) = concat_source.content_and_sourcemap();
+    let (content, map) = concat_source.content_and_sourcemap();
 
-    if let Some(x) = map.as_mut() {
-      x.set_file(&rendered_chunk.file_name);
-    }
-
-    Ok(ChunkRenderReturn { code: content, map: map.map(Arc::new), rendered_chunk })
+    Ok(ChunkRenderReturn { code: content, map, rendered_chunk })
   }
 }

@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use sugar_path::SugarPath;
 
 // cSpell:disable
@@ -9,14 +8,11 @@ use oxc::sourcemap::SourceMapBuilder;
 mod concat_sourcemap;
 
 pub fn collapse_sourcemaps(
-  mut sourcemap_chain: Vec<Arc<SourceMap>>,
+  mut sourcemap_chain: Vec<&SourceMap>,
   file_dir: Option<&str>,
-) -> Option<Arc<SourceMap>> {
+) -> Option<SourceMap> {
+  debug_assert!(sourcemap_chain.len() > 1);
   let last_map = sourcemap_chain.pop()?;
-  // If there is only one sourcemap, return it as result.
-  if sourcemap_chain.is_empty() {
-    return Some(Arc::clone(&last_map));
-  }
 
   let mut sourcemap_builder = SourceMapBuilder::default();
 
@@ -62,26 +58,17 @@ pub fn collapse_sourcemaps(
     }
   }
 
-  // TODO(underfin) using sourcemap_builder.set_file
-  let mut map = sourcemap_builder.into_sourcemap();
-
-  if let Some(file) = sourcemap_chain.first().and_then(|x| x.get_file()) {
-    map.set_file(file);
-  }
-
-  Some(Arc::new(map))
+  Some(sourcemap_builder.into_sourcemap())
 }
 
 #[cfg(test)]
 mod tests {
   use crate::SourceMap;
-  use std::sync::Arc;
   #[test]
   fn it_works() {
     let sourcemaps = vec![
-      Arc::new(
-        SourceMap::from_json_string(
-          r#"{
+      SourceMap::from_json_string(
+        r#"{
         "mappings": ";CAEE",
         "names": [],
         "sources": ["/project/foo.js"],
@@ -89,12 +76,10 @@ mod tests {
         "version": 3,
         "ignoreList": []
       }"#,
-        )
-        .unwrap(),
-      ),
-      Arc::new(
-        SourceMap::from_json_string(
-          r#"{
+      )
+      .unwrap(),
+      SourceMap::from_json_string(
+        r#"{
         "file": "transpiled.min.js",
         "mappings": "AACCA",
         "names": ["add"],
@@ -103,13 +88,14 @@ mod tests {
         "version": 3,
         "ignoreList": []
       }"#,
-        )
-        .unwrap(),
-      ),
+      )
+      .unwrap(),
     ];
 
     let result = {
-      let map = super::collapse_sourcemaps(sourcemaps, Some("/project/dist")).unwrap();
+      let map =
+        super::collapse_sourcemaps(sourcemaps.iter().collect::<Vec<_>>(), Some("/project/dist"))
+          .unwrap();
       map.to_json_string().unwrap()
     };
 

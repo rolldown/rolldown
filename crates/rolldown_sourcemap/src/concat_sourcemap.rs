@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 // cSpell:disable
 use oxc::sourcemap::{ConcatSourceMapBuilder, SourceMap};
 
@@ -46,11 +44,11 @@ impl Source for RawSource {
 
 pub struct SourceMapSource {
   content: String,
-  sourcemap: Arc<SourceMap>,
+  sourcemap: SourceMap,
 }
 
 impl SourceMapSource {
-  pub fn new(content: String, sourcemap: Arc<SourceMap>) -> Self {
+  pub fn new(content: String, sourcemap: SourceMap) -> Self {
     Self { content, sourcemap }
   }
 }

@@ -58,7 +58,7 @@ impl<'ast> AstSnippet<'ast> {
     &self,
     object: PassedStr,
     property: PassedStr,
-  ) -> ast::Expression<'_> {
+  ) -> ast::Expression<'ast> {
     ast::Expression::MemberExpression(
       self.literal_prop_access_member_expr(object, property).into_in(self.alloc),
     )
@@ -106,7 +106,7 @@ impl<'ast> AstSnippet<'ast> {
     name: PassedStr,
     arg1: PassedStr,
     arg2: PassedStr,
-  ) -> ast::Expression<'_> {
+  ) -> ast::Expression<'ast> {
     let arg1 = ast::Argument::Expression(ast::Expression::Identifier(
       self.id_ref(arg1, SPAN).into_in(self.alloc),
     ));
@@ -135,7 +135,7 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// `name()`
-  pub fn call_expr_stmt(&self, name: PassedStr) -> ast::Statement<'_> {
+  pub fn call_expr_stmt(&self, name: PassedStr) -> ast::Statement<'ast> {
     ast::Statement::ExpressionStatement(
       ast::ExpressionStatement {
         expression: self.call_expr_expr(name),
@@ -184,7 +184,7 @@ impl<'ast> AstSnippet<'ast> {
   ///  });
   /// ```
   pub fn commonjs_wrapper_stmt(
-    &'ast self,
+    &self,
     binding_name: PassedStr,
     commonjs_name: PassedStr,
     body: allocator::Vec<'ast, Statement<'ast>>,
@@ -233,7 +233,7 @@ impl<'ast> AstSnippet<'ast> {
   /// var init_foo = __esm(() => { ... });
   /// ```
   pub fn esm_wrapper_stmt(
-    &'ast self,
+    &self,
     binding_name: PassedStr,
     esm_fn_name: PassedStr,
     body: allocator::Vec<'ast, Statement<'ast>>,

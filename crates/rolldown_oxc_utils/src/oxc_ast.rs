@@ -1,38 +1,54 @@
-use std::{fmt::Debug, pin::Pin, sync::Arc};
+use std::{
+  fmt::Debug,
+  ops::{Deref, DerefMut},
+  sync::Arc,
+};
 
+use crate::{OxcCompiler, StatementExt, TakeIn};
 use oxc::{
   allocator::Allocator,
-  ast::ast,
-  semantic::{Semantic, SemanticBuilder},
+  ast::ast::Program,
+  semantic::{ScopeTree, Semantic, SemanticBuilder, SymbolTable},
   span::SourceType,
 };
 
-use crate::{Dummy, StatementExt, TakeIn};
+use self_cell::self_cell;
 
-#[allow(clippy::box_collection, clippy::non_send_fields_in_send_ty, unused)]
+self_cell!(
+  pub struct NewStructName {
+    owner: (Arc<str>, Allocator),
+
+    #[not_covariant]
+    dependent: Program,
+  }
+);
+
 pub struct OxcAst {
-  pub(crate) program: ast::Program<'static>,
-  pub(crate) source: Pin<Arc<str>>,
-  // Order matters here, we need drop the program first, then drop the allocator. Otherwise, there will be a segmentation fault.
-  // The `program` is allocated on the `allocator`. Clippy think it's not used, but it's used.
-  pub(crate) allocator: Pin<Box<Allocator>>,
+  pub(crate) inner: NewStructName,
 }
 impl Debug for OxcAst {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("Ast").field("source", &self.source).finish_non_exhaustive()
+    f.debug_struct("Ast").field("source", &self.inner.borrow_owner().0).finish_non_exhaustive()
   }
 }
 
 impl Default for OxcAst {
   fn default() -> Self {
-    let source = Pin::new(String::default().into());
-    let allocator = Box::pin(oxc::allocator::Allocator::default());
+    OxcCompiler::parse("", SourceType::default())
+  }
+}
 
-    let program = unsafe {
-      let alloc = std::mem::transmute::<_, &'static Allocator>(allocator.as_ref());
-      ast::Program::dummy(alloc)
-    };
-    Self { program, source, allocator }
+impl Deref for OxcAst {
+  type Target = NewStructName;
+
+  fn deref(&self) -> &Self::Target {
+    &self.inner
+  }
+}
+
+impl DerefMut for OxcAst {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.inner
   }
 }
 
@@ -40,45 +56,47 @@ unsafe impl Send for OxcAst {}
 unsafe impl Sync for OxcAst {}
 
 impl OxcAst {
-  pub fn source(&self) -> &str {
-    &self.source
+  pub fn source(&self) -> &Arc<str> {
+    &self.inner.borrow_owner().0
   }
 
-  pub fn program(&self) -> &ast::Program<'_> {
-    // SAFETY: `&'a ast::Program<'a>` can't outlive the `&'a ast::Program<'static>`.
-    unsafe { std::mem::transmute(&self.program) }
+  pub fn is_body_empty(&self) -> bool {
+    self.inner.with_dependent(|_, program| program.body.is_empty())
   }
 
-  pub fn program_mut(&mut self) -> &mut ast::Program<'_> {
-    // SAFETY: `&'a mut ast::Program<'a>` can't outlive the `&'a mut ast::Program<'static>`.
-    unsafe { std::mem::transmute(&mut self.program) }
-  }
-
-  pub fn program_mut_and_allocator(&mut self) -> (&mut ast::Program<'_>, &Allocator) {
-    // SAFETY: `&'a mut ast::Program<'a>` can't outlive the `&'a mut ast::Program<'static>`.
-    let program = unsafe { std::mem::transmute(&mut self.program) };
-    (program, &self.allocator)
-  }
-
-  pub fn make_semantic(&self, ty: SourceType) -> Semantic<'_> {
-    let semantic = SemanticBuilder::new(&self.source, ty).build(self.program()).semantic;
+  pub fn make_semantic<'ast>(
+    source: &'ast str,
+    program: &'_ Program<'ast>,
+    ty: SourceType,
+  ) -> Semantic<'ast> {
+    let semantic = SemanticBuilder::new(source, ty).build(program).semantic;
     semantic
+  }
+
+  pub fn make_symbol_table_and_scope_tree(&self) -> (SymbolTable, ScopeTree) {
+    self.inner.with_dependent(|dep, program| {
+      // FIXME: Should not use default source type
+      let semantic = Self::make_semantic(&dep.0, program, SourceType::default());
+      semantic.into_symbol_table_and_scope_tree()
+    })
   }
 
   // TODO: should move this to `rolldown` crate
   pub fn hoist_import_export_from_stmts(&mut self) {
-    let (program, allocator) = self.program_mut_and_allocator();
-    let old_body = program.body.take_in(allocator);
-    program.body.reserve_exact(old_body.len());
-    let mut non_hoisted = oxc::allocator::Vec::new_in(allocator);
+    self.inner.with_dependent_mut(|dep, program| {
+      let (program, allocator) = (program, &dep.1);
+      let old_body = program.body.take_in(allocator);
+      program.body.reserve_exact(old_body.len());
+      let mut non_hoisted = oxc::allocator::Vec::new_in(allocator);
 
-    old_body.into_iter().for_each(|top_stmt| {
-      if top_stmt.is_module_declaration_with_source() {
-        program.body.push(top_stmt);
-      } else {
-        non_hoisted.push(top_stmt);
-      }
+      old_body.into_iter().for_each(|top_stmt| {
+        if top_stmt.is_module_declaration_with_source() {
+          program.body.push(top_stmt);
+        } else {
+          non_hoisted.push(top_stmt);
+        }
+      });
+      program.body.extend(non_hoisted);
     });
-    program.body.extend(non_hoisted);
   }
 }

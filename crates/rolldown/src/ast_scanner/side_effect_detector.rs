@@ -304,7 +304,7 @@ impl<'a> SideEffectDetector<'a> {
 mod test {
   use oxc::span::SourceType;
   use rolldown_common::AstScope;
-  use rolldown_oxc_utils::OxcCompiler;
+  use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
 
@@ -314,25 +314,25 @@ mod test {
       .with_module(true)
       .with_jsx(true)
       .with_typescript(false);
-    let program = OxcCompiler::parse(code, source_type);
+    let mut ast = OxcCompiler::parse(code, source_type);
+    ast.with_dependent_mut(|fields, program| {
+      let ast_scope = {
+        let semantic = OxcAst::make_semantic(&fields.0, program, source_type);
+        let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
+        AstScope::new(
+          scope,
+          std::mem::take(&mut symbol_table.references),
+          std::mem::take(&mut symbol_table.resolved_references),
+        )
+      };
 
-    let ast_scope = {
-      let semantic = program.make_semantic(source_type);
-      let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
-      AstScope::new(
-        scope,
-        std::mem::take(&mut symbol_table.references),
-        std::mem::take(&mut symbol_table.resolved_references),
-      )
-    };
+      let has_side_effect = program
+        .body
+        .iter()
+        .any(|stmt| SideEffectDetector::new(&ast_scope).detect_side_effect_of_stmt(stmt));
 
-    let has_side_effect = program
-      .program()
-      .body
-      .iter()
-      .any(|stmt| SideEffectDetector::new(&ast_scope).detect_side_effect_of_stmt(stmt));
-
-    has_side_effect
+      has_side_effect
+    })
   }
 
   #[test]

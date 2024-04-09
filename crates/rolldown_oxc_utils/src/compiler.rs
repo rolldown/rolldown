@@ -1,35 +1,32 @@
-use std::{pin::Pin, sync::Arc};
+use std::sync::Arc;
 
 use oxc::{
-  allocator::Allocator,
   codegen::{Codegen, CodegenOptions, CodegenReturn},
   parser::Parser,
   span::SourceType,
 };
 
-use crate::OxcAst;
+use crate::{oxc_ast::NewStructName, OxcAst};
 pub struct OxcCompiler;
 
 impl OxcCompiler {
   pub fn parse(source: impl Into<Arc<str>>, ty: SourceType) -> OxcAst {
-    let source = Pin::new(source.into());
-    let allocator = Box::pin(oxc::allocator::Allocator::default());
-    let program = unsafe {
-      let source = std::mem::transmute::<_, &'static str>(&*source);
-      let alloc = std::mem::transmute::<_, &'static Allocator>(allocator.as_ref());
-      Parser::new(alloc, source, ty).parse().program
-    };
-
-    OxcAst { program, source, allocator }
+    let allocator = oxc::allocator::Allocator::default();
+    let inner = NewStructName::new((source.into(), allocator), |(source, allocator)| {
+      let parser = Parser::new(allocator, source, ty);
+      parser.parse().program
+    });
+    OxcAst { inner }
   }
-
   pub fn print(ast: &OxcAst, source_name: &str, enable_source_map: bool) -> CodegenReturn {
-    let codegen = Codegen::<false>::new(
-      source_name,
-      ast.source(),
-      CodegenOptions { enable_typescript: false, enable_source_map },
-    );
-    codegen.build(&ast.program)
+    ast.with_dependent(|dep, program| {
+      let codegen = Codegen::<false>::new(
+        source_name,
+        &dep.0,
+        CodegenOptions { enable_typescript: false, enable_source_map },
+      );
+      codegen.build(program)
+    })
   }
 }
 

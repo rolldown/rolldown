@@ -13,16 +13,13 @@ use rolldown_rstr::Rstr;
 mod rename;
 
 pub struct Finalizer<'me, 'ast> {
-  pub alloc: &'ast Allocator,
   pub ctx: FinalizerContext<'me>,
   pub scope: &'me AstScope,
-  pub snippet: &'me AstSnippet<'ast>,
+  pub alloc: &'ast Allocator,
+  pub snippet: AstSnippet<'ast>,
 }
 
-impl<'me, 'ast> Finalizer<'me, 'ast>
-where
-  'me: 'ast,
-{
+impl<'me, 'ast> Finalizer<'me, 'ast> {
   pub fn is_global_identifier_reference(&self, id_ref: &IdentifierReference) -> bool {
     let Some(reference_id) = id_ref.reference_id.get() else {
       // Some `IdentifierReference`s constructed by bundler don't have a `ReferenceId`. They might be global variables.

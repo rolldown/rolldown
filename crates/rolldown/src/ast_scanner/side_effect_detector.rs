@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use oxc::ast::ast::{IdentifierReference, MemberExpression};
+use oxc::ast::ast::{BindingPatternKind, Expression, IdentifierReference, MemberExpression};
 use rolldown_common::AstScope;
 use rustc_hash::FxHashSet;
 
@@ -70,6 +70,7 @@ impl<'a> SideEffectDetector<'a> {
     let MemberExpression::StaticMemberExpression(member_expr) = expr else {
       return true;
     };
+
     let prop_name = &member_expr.property.name;
     match &member_expr.object {
       oxc::ast::ast::Expression::Identifier(ident) => {
@@ -93,15 +94,11 @@ impl<'a> SideEffectDetector<'a> {
           prop_name.as_str(),
         ))
       }
-      oxc::ast::ast::Expression::ThisExpression(_) | oxc::ast::ast::Expression::MetaProperty(_) => {
-        false
-      }
       _ => true,
     }
   }
 
   fn detect_side_effect_of_expr(&self, expr: &oxc::ast::ast::Expression) -> bool {
-    use oxc::ast::ast::Expression;
     match expr {
       Expression::BooleanLiteral(_)
       | Expression::NullLiteral(_)
@@ -174,13 +171,11 @@ impl<'a> SideEffectDetector<'a> {
       Expression::PrivateInExpression(private_in_expr) => {
         self.detect_side_effect_of_expr(&private_in_expr.right)
       }
-      Expression::AwaitExpression(await_expr) => {
-        self.detect_side_effect_of_expr(&await_expr.argument)
-      }
       // TODO: Implement these
       Expression::Super(_)
       | Expression::ArrayExpression(_)
       | Expression::AssignmentExpression(_)
+      | Expression::AwaitExpression(_)
       | Expression::CallExpression(_)
       | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
@@ -193,13 +188,25 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
+  fn detect_side_effect_of_var_decl(&self, var_decl: &oxc::ast::ast::VariableDeclaration) -> bool {
+    var_decl.declarations.iter().any(|declarator| {
+      // Whether to destructure import.meta
+      if let BindingPatternKind::ObjectPattern(ref obj_pat) = declarator.id.kind {
+        if !obj_pat.properties.is_empty() {
+          if let Some(Expression::MetaProperty(_)) = declarator.init {
+            return true;
+          }
+        }
+      }
+
+      declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
+    })
+  }
+
   fn detect_side_effect_of_decl(&self, decl: &oxc::ast::ast::Declaration) -> bool {
     use oxc::ast::ast::Declaration;
     match decl {
-      Declaration::VariableDeclaration(var_decl) => var_decl
-        .declarations
-        .iter()
-        .any(|decl| decl.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))),
+      Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
       Declaration::FunctionDeclaration(_) => false,
       Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
       Declaration::UsingDeclaration(_) => todo!(),
@@ -550,7 +557,7 @@ mod test {
   #[test]
   fn test_private_in_expression() {
     assert!(!get_statements_side_effect("#privateField in this"));
-    assert!(!get_statements_side_effect("#privateField in this.x"));
+    assert!(!get_statements_side_effect("const obj = {}; #privateField in obj"));
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("#privateField in bar"));
     assert!(get_statements_side_effect("#privateField in foo"));
@@ -559,25 +566,16 @@ mod test {
   #[test]
   fn test_this_expression() {
     assert!(!get_statements_side_effect("this"));
-    assert!(!get_statements_side_effect("this.a"));
-    assert!(!get_statements_side_effect("this.a + this.b"));
+    assert!(get_statements_side_effect("this.a"));
+    assert!(get_statements_side_effect("this.a + this.b"));
     assert!(get_statements_side_effect("this.a = 10"));
   }
 
   #[test]
   fn test_meta_property_expression() {
     assert!(!get_statements_side_effect("import.meta"));
-    assert!(!get_statements_side_effect("import.meta.url"));
-    assert!(!get_statements_side_effect("{ url } = import.meta"));
+    assert!(get_statements_side_effect("import.meta.url"));
+    assert!(get_statements_side_effect("const { url } = import.meta"));
     assert!(get_statements_side_effect("import.meta.url = 'test'"));
-  }
-
-  #[test]
-  fn test_await_expression() {
-    assert!(!get_statements_side_effect("await 1 + 1"));
-    assert!(!get_statements_side_effect("const a = 1; const b = 2; await a + b"));
-    assert!(get_statements_side_effect("await foo + bar"));
-    assert!(get_statements_side_effect("await foo"));
-    assert!(get_statements_side_effect("await fetch('https://example.com')"));
   }
 }

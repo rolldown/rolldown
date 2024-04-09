@@ -7,7 +7,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
-use rolldown_oxc_utils::OxcProgram;
+use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -27,7 +27,7 @@ use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<NormalModuleId, Option<NormalModule>>,
-  pub ast_table: IndexVec<NormalModuleId, Option<OxcProgram>>,
+  pub ast_table: IndexVec<NormalModuleId, Option<OxcAst>>,
 }
 
 impl IntermediateNormalModules {
@@ -58,7 +58,7 @@ pub struct ModuleLoader {
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
-  pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
+  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -248,7 +248,7 @@ impl ModuleLoader {
     let modules: IndexVec<NormalModuleId, NormalModule> =
       self.intermediate_normal_modules.modules.into_iter().map(Option::unwrap).collect();
 
-    let ast_table: IndexVec<NormalModuleId, OxcProgram> =
+    let ast_table: IndexVec<NormalModuleId, OxcAst> =
       self.intermediate_normal_modules.ast_table.into_iter().map(Option::unwrap).collect();
 
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();

@@ -1,12 +1,12 @@
 use rolldown_common::{NormalModule, RenderedModule};
-use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
+use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_sourcemap::{collapse_sourcemaps, lines_count};
 
 use crate::{types::module_render_output::ModuleRenderOutput, SharedOptions};
 
 pub fn render_normal_module<'a>(
   module: &'a NormalModule,
-  ast: &OxcProgram,
+  ast: &OxcAst,
   source_name: &str,
   options: &SharedOptions,
   file_dir: &str,

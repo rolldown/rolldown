@@ -1,7 +1,7 @@
 use index_vec::IndexVec;
 use rolldown_common::{ImportRecordId, NormalModuleId, RawImportRecord};
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::OxcProgram;
+use rolldown_oxc_utils::OxcAst;
 
 use crate::types::resolved_request_info::ResolvedRequestInfo;
 use crate::types::{ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder};
@@ -13,5 +13,5 @@ pub struct NormalModuleTaskResult {
   pub raw_import_records: IndexVec<ImportRecordId, RawImportRecord>,
   pub warnings: Vec<BuildError>,
   pub builder: NormalModuleBuilder,
-  pub ast: OxcProgram,
+  pub ast: OxcAst,
 }

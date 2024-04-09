@@ -6,7 +6,7 @@ use rolldown_common::{
   AstScope, ExportsKind, FilePath, ModuleType, NormalModuleId, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
+use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
 use super::Msg;
 use crate::{
@@ -23,7 +23,7 @@ pub struct RuntimeNormalModuleTask {
 pub struct RuntimeNormalModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
   pub ast_symbol: AstSymbols,
-  pub ast: OxcProgram,
+  pub ast: OxcAst,
   pub warnings: Vec<BuildError>,
   pub builder: NormalModuleBuilder,
 }
@@ -88,10 +88,7 @@ impl RuntimeNormalModuleTask {
     };
   }
 
-  fn make_ast(
-    &self,
-    source: &Arc<str>,
-  ) -> (OxcProgram, AstScope, ScanResult, AstSymbols, SymbolRef) {
+  fn make_ast(&self, source: &Arc<str>) -> (OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef) {
     let source_type = SourceType::default();
     let mut program = OxcCompiler::parse(Arc::clone(source), source_type);
 

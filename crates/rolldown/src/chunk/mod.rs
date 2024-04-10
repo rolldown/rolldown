@@ -134,8 +134,10 @@ impl Chunk {
     let rendered_chunk = self.get_rendered_chunk_info(graph, options, rendered_modules);
 
     // add banner
-    if let Some(banner_txt) = options.banner.call(&rendered_chunk).await? {
-      concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
+    if let Some(banner) = options.banner.as_ref() {
+      if let Some(banner_txt) = banner.call(&rendered_chunk).await? {
+        concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
+      }
     }
 
     if let Some(exports) = self.render_exports(graph, options) {
@@ -143,8 +145,10 @@ impl Chunk {
     }
 
     // add footer
-    if let Some(footer_txt) = options.footer.call(&rendered_chunk).await? {
-      concat_source.add_source(Box::new(RawSource::new(footer_txt)));
+    if let Some(footer) = options.footer.as_ref() {
+      if let Some(footer_txt) = footer.call(&rendered_chunk).await? {
+        concat_source.add_source(Box::new(RawSource::new(footer_txt)));
+      }
     }
 
     let (content, map) = concat_source.content_and_sourcemap();

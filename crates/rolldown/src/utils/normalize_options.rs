@@ -27,8 +27,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .chunk_file_names
       .unwrap_or_else(|| "[name]-[hash].js".to_string())
       .into(),
-    banner: raw_options.banner.unwrap_or_default(),
-    footer: raw_options.footer.unwrap_or_default(),
+    banner: raw_options.banner,
+    footer: raw_options.footer,
     dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
     format: raw_options.format.unwrap_or(crate::OutputFormat::Esm),
     sourcemap: raw_options.sourcemap.unwrap_or(SourceMapType::Hidden),

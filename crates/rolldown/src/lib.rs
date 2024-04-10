@@ -2,7 +2,6 @@ mod ast_scanner;
 mod bundler;
 mod bundler_builder;
 mod chunk_graph;
-mod error;
 mod finalizer;
 mod module_loader;
 mod runtime;

@@ -1,15 +1,14 @@
-use std::sync::Arc;
-
 use index_vec::IndexVec;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordId, ModuleId, NormalModule,
   NormalModuleId,
 };
-use rolldown_error::BuildError;
+use rolldown_error::{BuildError, Result};
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::sync::Arc;
 
 use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
@@ -22,7 +21,6 @@ use crate::types::module_table::{ExternalModuleVec, ModuleTable};
 use crate::types::resolved_request_info::ResolvedRequestInfo;
 use crate::types::symbols::Symbols;
 
-use crate::error::{BatchedErrors, BatchedResult};
 use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
@@ -150,10 +148,10 @@ impl ModuleLoader {
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: Vec<(Option<String>, ResolvedRequestInfo)>,
-  ) -> BatchedResult<ModuleLoaderOutput> {
+  ) -> Result<ModuleLoaderOutput> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
-    let mut errors = BatchedErrors::default();
+    let mut errors = vec![];
     let mut all_warnings: Vec<BuildError> = Vec::new();
 
     self
@@ -239,8 +237,8 @@ impl ModuleLoader {
           self.symbols.add_ast_symbol(runtime.id(), ast_symbol);
           runtime_brief = Some(runtime);
         }
-        Msg::BuildErrors(errs) => {
-          errors.extend(errs);
+        Msg::BuildErrors(e) => {
+          errors.extend(e);
         }
         Msg::Panics(err) => {
           panic_errors.push(err);
@@ -252,7 +250,7 @@ impl ModuleLoader {
     assert!(panic_errors.is_empty(), "Panics occurred during module loading: {panic_errors:?}");
 
     if !errors.is_empty() {
-      return Err(errors);
+      return Err(errors.into());
     }
 
     let modules: IndexVec<NormalModuleId, NormalModule> =

@@ -1,5 +1,4 @@
 pub mod ast_scope;
-pub mod batched_errors;
 pub mod bundler_file_system;
 pub mod chunk_id;
 pub mod chunk_kind;

@@ -1,5 +1,6 @@
 mod build_error;
 mod diagnostic;
+mod error;
 mod event_kind;
 mod events;
 mod utils;
@@ -8,10 +9,8 @@ use std::{borrow::Cow, path::Path};
 
 use sugar_path::SugarPath;
 
+pub use crate::error::{Error, Result};
 pub use crate::{build_error::BuildError, event_kind::EventKind};
-
-pub type Result<T> = std::result::Result<T, BuildError>;
-
 trait PathExt {
   fn relative_display(&self) -> Cow<str>;
 }

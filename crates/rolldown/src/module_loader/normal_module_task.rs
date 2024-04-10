@@ -7,6 +7,7 @@ use rolldown_common::{
   AstScope, FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath,
   ResourceId, SymbolRef,
 };
+use rolldown_error::{Error, Result};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use sugar_path::SugarPath;
@@ -14,7 +15,6 @@ use sugar_path::SugarPath;
 use super::{task_context::TaskContext, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
-  error::{BatchedErrors, BatchedResult},
   module_loader::NormalModuleTaskResult,
   types::{
     ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder,
@@ -28,7 +28,7 @@ pub struct NormalModuleTask {
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
   module_type: ModuleType,
-  errors: BatchedErrors,
+  errors: Vec<Error>,
 }
 
 impl NormalModuleTask {
@@ -38,7 +38,7 @@ impl NormalModuleTask {
     path: ResolvedPath,
     module_type: ModuleType,
   ) -> Self {
-    Self { ctx, module_id: id, resolved_path: path, module_type, errors: BatchedErrors::default() }
+    Self { ctx, module_id: id, resolved_path: path, module_type, errors: vec![] }
   }
 
   pub async fn run(mut self) {
@@ -70,8 +70,8 @@ impl NormalModuleTask {
     .await
     {
       Ok(ret) => ret,
-      Err(errs) => {
-        self.errors.extend(errs);
+      Err(err) => {
+        self.errors.push(err);
         return Ok(());
       }
     };
@@ -86,8 +86,8 @@ impl NormalModuleTask {
     .await
     {
       Ok(ret) => ret.into(),
-      Err(errs) => {
-        self.errors.extend(errs);
+      Err(err) => {
+        self.errors.push(err);
         return Ok(());
       }
     };
@@ -209,7 +209,7 @@ impl NormalModuleTask {
     importer: &str,
     specifier: &str,
     options: HookResolveIdExtraOptions,
-  ) -> BatchedResult<ResolvedRequestInfo> {
+  ) -> Result<ResolvedRequestInfo> {
     // Check external with unresolved path
     if let Some(external) = input_options.external.as_ref() {
       if external.call(specifier.to_string(), Some(importer.to_string()), false).await? {
@@ -264,7 +264,7 @@ impl NormalModuleTask {
 
     let resolved_ids = join_all(jobs).await;
 
-    let mut errors = BatchedErrors::default();
+    let mut errors = vec![];
     let mut ret = IndexVec::with_capacity(dependencies.len());
     for handle in resolved_ids {
       match handle {
@@ -272,7 +272,7 @@ impl NormalModuleTask {
           ret.push(item);
         }
         Err(e) => {
-          errors.extend(e);
+          errors.push(e);
         }
       }
     }

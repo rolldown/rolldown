@@ -5,7 +5,7 @@ use std::{
 };
 
 use rolldown::{BundleOutput, Bundler, SourceMapType};
-use rolldown_error::BuildError;
+use rolldown_error::Result;
 use rolldown_testing::TestConfig;
 
 fn default_test_input_item() -> rolldown::InputItem {
@@ -90,7 +90,7 @@ impl Fixture {
     }
   }
 
-  pub async fn compile(&mut self) -> Result<BundleOutput, Vec<BuildError>> {
+  pub async fn compile(&mut self) -> Result<BundleOutput> {
     let fixture_path = self.dir_path();
     let test_config = self.test_config();
 

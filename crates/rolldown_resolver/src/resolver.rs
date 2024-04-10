@@ -172,9 +172,13 @@ impl<F: FileSystem + Default> Resolver<F> {
         // To determine whether there is an importer.
         _ => {
           if let Some(importer) = importer {
-            Err(BuildError::unresolved_import(specifier.to_string(), importer).with_source(err))
+            Err(
+              BuildError::unresolved_import(specifier.to_string(), importer)
+                .with_source(err)
+                .into(),
+            )
           } else {
-            Err(BuildError::unresolved_entry(specifier).with_source(err))
+            Err(BuildError::unresolved_entry(specifier).with_source(err).into())
           }
         }
       })

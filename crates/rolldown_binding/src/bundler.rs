@@ -1,10 +1,3 @@
-use napi::{tokio::sync::Mutex, Env};
-use napi_derive::napi;
-use rolldown::Bundler as NativeBundler;
-use rolldown_common::BatchedErrors;
-use rolldown_error::BuildError;
-use tracing::instrument;
-
 use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
@@ -12,6 +5,12 @@ use crate::{
   utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
   worker_manager::WorkerManager,
 };
+use napi::{tokio::sync::Mutex, Env};
+use napi_derive::napi;
+use rolldown::Bundler as NativeBundler;
+use rolldown_error::BuildError;
+use rolldown_error::Error;
+use tracing::instrument;
 
 #[napi]
 pub struct Bundler {
@@ -124,8 +123,8 @@ impl Bundler {
     Ok(BindingOutputs::new(outputs.assets))
   }
 
-  fn handle_errors(errs: BatchedErrors) -> napi::Error {
-    errs.into_iter().for_each(|err| {
+  fn handle_errors(errs: Error) -> napi::Error {
+    errs.into_vec().into_iter().for_each(|err| {
       eprintln!("{}", err.into_diagnostic().to_color_string());
     });
     napi::Error::from_reason("Build failed")

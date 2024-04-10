@@ -9,7 +9,6 @@ use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 
 use crate::{
-  error::BatchedResult,
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
   runtime::RuntimeModuleBrief,
   types::{
@@ -18,6 +17,14 @@ use crate::{
   utils::resolve_id::resolve_id,
   SharedOptions, SharedResolver,
 };
+use index_vec::IndexVec;
+use rolldown_common::{EntryPoint, ImportKind, NormalModuleId};
+use rolldown_error::BuildError;
+use rolldown_error::Result;
+use rolldown_fs::OsFileSystem;
+use rolldown_oxc_utils::OxcAst;
+use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
+use rolldown_utils::block_on_spawn_all;
 
 pub struct ScanStage {
   input_options: SharedOptions,
@@ -47,7 +54,7 @@ impl ScanStage {
   }
 
   #[tracing::instrument(skip_all)]
-  pub async fn scan(&self) -> BatchedResult<ScanStageOutput> {
+  pub async fn scan(&self) -> Result<ScanStageOutput> {
     tracing::info!("Start scan stage");
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
@@ -101,6 +108,6 @@ impl ScanStage {
     }))
     .await;
 
-    resolved_ids.into_batched_result()
+    resolved_ids.into_iter().collect::<Result<Vec<_>>>()
   }
 }

@@ -133,9 +133,8 @@ impl Chunk {
       });
     let rendered_chunk = self.get_rendered_chunk_info(graph, options, rendered_modules);
 
-    // TODO avoid rendered_chunk clone
     // add banner
-    if let Some(banner_txt) = options.banner.call(rendered_chunk.clone()).await? {
+    if let Some(banner_txt) = options.banner.call(&rendered_chunk).await? {
       concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
     }
 
@@ -144,7 +143,7 @@ impl Chunk {
     }
 
     // add footer
-    if let Some(footer_txt) = options.footer.call(rendered_chunk.clone()).await? {
+    if let Some(footer_txt) = options.footer.call(&rendered_chunk).await? {
       concat_source.add_source(Box::new(RawSource::new(footer_txt)));
     }
 

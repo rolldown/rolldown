@@ -24,6 +24,6 @@ pub struct NormalizedBundlerOptions {
   pub dir: String,
   pub format: OutputFormat,
   pub sourcemap: SourceMapType,
-  pub banner: AddonOutputOption,
-  pub footer: AddonOutputOption,
+  pub banner: Option<AddonOutputOption>,
+  pub footer: Option<AddonOutputOption>,
 }

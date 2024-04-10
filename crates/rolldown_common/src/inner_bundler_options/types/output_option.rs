@@ -25,12 +25,6 @@ impl Debug for AddonOutputOption {
   }
 }
 
-impl Default for AddonOutputOption {
-  fn default() -> Self {
-    Self::String(None)
-  }
-}
-
 impl AddonOutputOption {
   pub async fn call(&self, chunk: &RenderedChunk) -> Result<Option<String>, BuildError> {
     match self {

@@ -6,13 +6,13 @@ use crate::{
   HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
 };
 use rolldown_common::Output;
-use rolldown_error::BuildError;
+use rolldown_error::Result;
 
-pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>, BuildError>;
-pub type HookTransformReturn = Result<Option<HookLoadOutput>, BuildError>;
-pub type HookLoadReturn = Result<Option<HookLoadOutput>, BuildError>;
-pub type HookNoopReturn = Result<(), BuildError>;
-pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>, BuildError>;
+pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
+pub type HookTransformReturn = Result<Option<HookLoadOutput>>;
+pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
+pub type HookNoopReturn = Result<()>;
+pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Any + Debug + Send + Sync + 'static {

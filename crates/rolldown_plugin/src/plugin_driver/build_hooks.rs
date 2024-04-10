@@ -2,7 +2,7 @@ use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
   HookResolveIdReturn, HookTransformArgs, PluginDriver,
 };
-use rolldown_error::BuildError;
+use rolldown_error::Result;
 use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {
@@ -32,10 +32,7 @@ impl PluginDriver {
     Ok(None)
   }
 
-  pub async fn transform(
-    &self,
-    args: &HookTransformArgs<'_>,
-  ) -> Result<(String, Vec<SourceMap>), BuildError> {
+  pub async fn transform(&self, args: &HookTransformArgs<'_>) -> Result<(String, Vec<SourceMap>)> {
     let mut sourcemap_chain = vec![];
     let mut code = args.code.to_string();
     for (plugin, ctx) in &self.plugins {

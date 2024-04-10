@@ -10,6 +10,8 @@ use sugar_path::SugarPath;
 
 pub use crate::{build_error::BuildError, event_kind::EventKind};
 
+pub type Result<T> = std::result::Result<T, BuildError>;
+
 trait PathExt {
   fn relative_display(&self) -> Cow<str>;
 }

@@ -106,13 +106,13 @@ if (fsExtra.existsSync('./tmp/bench/rome')) {
   // replace `export default function name()` with `export default function()`
   // rome uses a same identifier as a type and a value and that chokes babel
   const files = await glob('./tmp/bench/rome/src/**/*.ts')
-  const problamaticExportDefaultRE = /export default function \w+\(/
+  const problematicExportDefaultRE = /export default function \w+\(/
   for (const file of files) {
     const content = await fsExtra.readFile(file, 'utf8')
-    if (problamaticExportDefaultRE.test(content)) {
+    if (problematicExportDefaultRE.test(content)) {
       await fsExtra.writeFile(
         file,
-        content.replace(problamaticExportDefaultRE, 'export default function('),
+        content.replace(problematicExportDefaultRE, 'export default function('),
       )
     }
   }

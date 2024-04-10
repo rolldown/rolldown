@@ -222,7 +222,7 @@ impl<'a> LinkStage<'a> {
 
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
-    self.module_table.normal_modules.iter().for_each(|importer| {
+    self.module_table.normal_modules.iter().par_bridge().for_each(|importer| {
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
       // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules

@@ -46,7 +46,7 @@ impl IntermediateNormalModules {
 pub struct ModuleLoader {
   input_options: SharedOptions,
   shared_context: Arc<TaskContext>,
-  rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
+  rx: tokio::sync::mpsc::Receiver<Msg>,
   visited: FxHashMap<Arc<str>, ModuleId>,
   runtime_id: Option<NormalModuleId>,
   remaining: u32,
@@ -73,7 +73,7 @@ impl ModuleLoader {
     fs: OsFileSystem,
     resolver: SharedResolver,
   ) -> Self {
-    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
+    let (tx, rx) = tokio::sync::mpsc::channel::<Msg>(100);
 
     let common_data = Arc::new(TaskContext {
       input_options: Arc::clone(&input_options),
@@ -132,7 +132,7 @@ impl ModuleLoader {
       let id = self.intermediate_normal_modules.alloc_module_id(&mut self.symbols);
       self.remaining += 1;
       let task = RuntimeNormalModuleTask::new(id, self.shared_context.tx.clone());
-      tokio::spawn(async move { task.run() });
+      tokio::runtime::Handle::current().spawn_blocking(|| task.run());
       id
     })
   }

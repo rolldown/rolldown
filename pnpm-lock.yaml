@@ -142,8 +142,8 @@ importers:
         version: link:npm/win32-x64-msvc
     devDependencies:
       '@napi-rs/cli':
-        specifier: ^3.0.0-alpha.45
-        version: 3.0.0-alpha.45(emnapi@1.1.0)
+        specifier: ^3.0.0-alpha.46
+        version: 3.0.0-alpha.46(emnapi@1.1.0)
       '@napi-rs/wasm-runtime':
         specifier: ^0.1.2
         version: 0.1.2
@@ -1605,8 +1605,8 @@ packages:
     hasBin: true
     dev: true
 
-  /@napi-rs/cli@3.0.0-alpha.45(emnapi@1.1.0):
-    resolution: {integrity: sha512-69m9ssfRMZMLI5A8+nAUrEVTdRe3w8q8oOiH2idI79yt+Uvwj2F+Lde7GN4AV5Z9+Oc17kkf9UQZawNia0ZfkA==}
+  /@napi-rs/cli@3.0.0-alpha.46(emnapi@1.1.0):
+    resolution: {integrity: sha512-PSz4G/wvDzeofaTcXE65VSNMy0YdqAFqo8S3V1BpVwzKZSJiE/ntxeukY3BYsguurhIEy61r2OrLZcIkKiSe3Q==}
     engines: {node: '>= 16'}
     hasBin: true
     peerDependencies:

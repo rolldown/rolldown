@@ -23,9 +23,7 @@
     "dist",
     "!dist/*.node"
   ],
-  "bin": {
-    "rolldown": "./bin/cli.js"
-  },
+  "bin": "./bin/cli.js",
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -72,7 +70,7 @@
     ]
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0-alpha.45",
+    "@napi-rs/cli": "^3.0.0-alpha.46",
     "@napi-rs/wasm-runtime": "^0.1.2",
     "citty": "^0.1.6",
     "colorette": "^2.0.20",

@@ -24,6 +24,9 @@ impl Bundler {
     input_options: BindingInputOptions,
     output_options: BindingOutputOptions,
   ) -> napi::Result<Self> {
+    #[cfg(target_family = "wasm")]
+    // if we don't perform this warmup, the following call to `std::fs` will stuck
+    if let Ok(_) = std::fs::metadata(std::env::current_dir()?) {};
     try_init_custom_trace_subscriber(env);
     let ret = normalize_binding_options(input_options, output_options)?;
     tracing::info!("Calling Bundler#write()");

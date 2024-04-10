@@ -52,11 +52,11 @@ impl Bundler {
     tracing::info!("Write bundle to {:?}", dir);
     for chunk in &output.assets {
       let dest = dir.as_path().join(chunk.file_name());
-      // if let Some(p) = dest.parent() {
-      //   if !self.fs.exists(p) {
-      //     self.fs.create_dir_all(p).unwrap();
-      //   }
-      // };
+      if let Some(p) = dest.parent() {
+        if !self.fs.exists(p) {
+          self.fs.create_dir_all(p).unwrap();
+        }
+      };
       std::fs::write(dest.as_path(), chunk.content().as_bytes()).unwrap_or_else(|_| {
         panic!("Failed to write file in {:?}", dir.as_path().join(chunk.file_name()))
       });

@@ -17,9 +17,9 @@ crate-type = ["cdylib"]
 async-trait        = { workspace = true }
 derivative         = { workspace = true }
 futures            = { workspace = true }
-once_cell          = { workspace = true }
 napi               = { workspace = true }
 napi-derive        = { workspace = true }
+once_cell          = { workspace = true }
 rolldown           = { workspace = true }
 rolldown_common    = { workspace = true }
 rolldown_error     = { workspace = true, features = ["napi"] }

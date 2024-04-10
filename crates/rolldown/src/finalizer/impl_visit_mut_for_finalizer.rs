@@ -4,26 +4,21 @@ use oxc::{
   allocator,
   ast::{
     ast::{self, SimpleAssignmentTarget},
-    visit::walk_mut::walk_expression_mut,
+    visit::walk_mut,
     VisitMut,
   },
   span::{Span, SPAN},
 };
 use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{Dummy, ExpressionExt, IntoIn, StatementExt, TakeIn};
+use rolldown_oxc_utils::{ExpressionExt, IntoIn, StatementExt, TakeIn};
 
 use super::Finalizer;
 
-impl<'ast, 'me: 'ast> Finalizer<'me, 'ast> {
-  fn visit_top_level_statement_mut(&mut self, stmt: &mut ast::Statement<'ast>) {
-    self.visit_statement(stmt);
-  }
-}
-
-impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
+impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
   #[allow(clippy::too_many_lines, clippy::match_same_arms)]
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     let old_body = program.body.take_in(self.alloc);
+
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[0].is_included;
 
@@ -32,6 +27,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     }
 
     let mut stmt_infos = self.ctx.module.stmt_infos.iter();
+    // Skip the first statement info, which is the namespace variable declaration
     stmt_infos.next();
 
     old_body.into_iter().enumerate().zip(stmt_infos).for_each(
@@ -193,13 +189,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       }
     });
 
-    // visit children
-    for directive in program.directives.iter_mut() {
-      self.visit_directive(directive);
-    }
-    for stmt in program.body.iter_mut() {
-      self.visit_top_level_statement_mut(stmt);
-    }
+    walk_mut::walk_program_mut(self, program);
 
     // check if we need to add wrapper
     let needs_wrapper = self
@@ -261,17 +251,17 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
                   kind: ast::BindingPatternKind::BindingIdentifier(
                     self.snippet.id(&var_name, SPAN).into_in(self.alloc),
                   ),
-                  ..Dummy::dummy(self.alloc)
+                  ..TakeIn::dummy(self.alloc)
                 },
                 kind: ast::VariableDeclarationKind::Var,
-                ..Dummy::dummy(self.alloc)
+                ..TakeIn::dummy(self.alloc)
               });
             });
             program.body.push(ast::Statement::Declaration(ast::Declaration::VariableDeclaration(
               ast::VariableDeclaration {
                 declarations: declarators,
                 kind: ast::VariableDeclarationKind::Var,
-                ..Dummy::dummy(self.alloc)
+                ..TakeIn::dummy(self.alloc)
               }
               .into_in(self.alloc),
             )));
@@ -317,14 +307,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
   fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
     self.try_rewrite_identifier_reference_expr(&mut expr.callee, true);
 
-    // visit children
-    for arg in expr.arguments.iter_mut() {
-      self.visit_argument(arg);
-    }
-    self.visit_expression(&mut expr.callee);
-    if let Some(parameters) = &mut expr.type_parameters {
-      self.visit_ts_type_parameter_instantiation(parameters);
-    }
+    walk_mut::walk_call_expression_mut(self, expr);
   }
 
   #[allow(clippy::collapsible_else_if)]
@@ -356,8 +339,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
 
     self.try_rewrite_identifier_reference_expr(expr, false);
 
-    // visit children
-    walk_expression_mut(self, expr);
+    walk_mut::walk_expression_mut(self, expr);
   }
 
   fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {
@@ -374,12 +356,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       _ => {}
     }
 
-    // visit children
-    self.visit_property_key(&mut prop.key);
-    self.visit_expression(&mut prop.value);
-    if let Some(init) = &mut prop.init {
-      self.visit_expression(init);
-    }
+    walk_mut::walk_object_property_mut(self, prop);
   }
 
   fn visit_object_pattern(&mut self, pat: &mut ast::ObjectPattern<'ast>) {
@@ -425,13 +402,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       }
     }
 
-    // visit children
-    for prop in pat.properties.iter_mut() {
-      self.visit_binding_property(prop);
-    }
-    if let Some(rest) = &mut pat.rest {
-      self.visit_rest_element(rest);
-    }
+    walk_mut::walk_object_pattern_mut(self, pat);
   }
 
   fn visit_import_expression(&mut self, expr: &mut ast::ImportExpression<'ast>) {
@@ -456,11 +427,7 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       _ => {}
     }
 
-    // visit children
-    self.visit_expression(&mut expr.source);
-    for arg in expr.arguments.iter_mut() {
-      self.visit_expression(arg);
-    }
+    walk_mut::walk_import_expression_mut(self, expr);
   }
 
   fn visit_assignment_target_property(
@@ -499,40 +466,12 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       }
     }
 
-    // visit children
-    match property {
-      ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(ident) => {
-        self.visit_assignment_target_property_identifier(ident);
-      }
-      ast::AssignmentTargetProperty::AssignmentTargetPropertyProperty(prop) => {
-        self.visit_assignment_target_property_property(prop);
-      }
-    }
+    walk_mut::walk_assignment_target_property_mut(self, property);
   }
 
   fn visit_simple_assignment_target(&mut self, target: &mut SimpleAssignmentTarget<'ast>) {
     self.rewrite_simple_assignment_target(target);
 
-    // visit children
-    match target {
-      SimpleAssignmentTarget::AssignmentTargetIdentifier(ident) => {
-        self.visit_identifier_reference(ident);
-      }
-      SimpleAssignmentTarget::MemberAssignmentTarget(expr) => {
-        self.visit_member_expression(expr);
-      }
-      SimpleAssignmentTarget::TSAsExpression(expr) => {
-        self.visit_expression(&mut expr.expression);
-      }
-      SimpleAssignmentTarget::TSSatisfiesExpression(expr) => {
-        self.visit_expression(&mut expr.expression);
-      }
-      SimpleAssignmentTarget::TSNonNullExpression(expr) => {
-        self.visit_expression(&mut expr.expression);
-      }
-      SimpleAssignmentTarget::TSTypeAssertion(expr) => {
-        self.visit_expression(&mut expr.expression);
-      }
-    }
+    walk_mut::walk_simple_assignment_target_mut(self, target);
   }
 }

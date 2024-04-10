@@ -5,7 +5,6 @@ mod render_chunk_exports;
 mod render_chunk_imports;
 
 use index_vec::IndexVec;
-use path_slash::PathBufExt;
 use rolldown_common::{ChunkId, FileNameTemplate};
 
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;
@@ -17,6 +16,7 @@ use rolldown_rstr::Rstr;
 use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
+use sugar_path::SugarPath;
 
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::utils::render_normal_module::render_normal_module;
@@ -105,7 +105,7 @@ impl Chunk {
           // TODO(underfin): refactor the relative path
           m.resource_id.expect_file().relative_path(file_dir).to_slash_lossy().as_ref(),
           options,
-          file_dir,
+          file_dir.to_string_lossy().as_ref(),
         )
       })
       .collect::<Vec<_>>()
@@ -117,10 +117,15 @@ impl Chunk {
           rendered_module,
           rendered_content,
           sourcemap,
+          lines_count,
         } = module_render_output;
         concat_source.add_source(Box::new(RawSource::new(format!("// {module_pretty_path}",))));
         if let Some(sourcemap) = sourcemap {
-          concat_source.add_source(Box::new(SourceMapSource::new(rendered_content, sourcemap)));
+          concat_source.add_source(Box::new(SourceMapSource::new(
+            rendered_content,
+            sourcemap,
+            lines_count,
+          )));
         } else {
           concat_source.add_source(Box::new(RawSource::new(rendered_content)));
         }
@@ -128,10 +133,11 @@ impl Chunk {
       });
     let rendered_chunk = self.get_rendered_chunk_info(graph, options, rendered_modules);
 
-    // TODO avoid rendered_chunk clone
     // add banner
-    if let Some(banner_txt) = options.banner.call(rendered_chunk.clone()).await? {
-      concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
+    if let Some(banner) = options.banner.as_ref() {
+      if let Some(banner_txt) = banner.call(&rendered_chunk).await? {
+        concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
+      }
     }
 
     if let Some(exports) = self.render_exports(graph, options) {
@@ -139,8 +145,10 @@ impl Chunk {
     }
 
     // add footer
-    if let Some(footer_txt) = options.footer.call(rendered_chunk.clone()).await? {
-      concat_source.add_source(Box::new(RawSource::new(footer_txt)));
+    if let Some(footer) = options.footer.as_ref() {
+      if let Some(footer_txt) = footer.call(&rendered_chunk).await? {
+        concat_source.add_source(Box::new(RawSource::new(footer_txt)));
+      }
     }
 
     let (content, map) = concat_source.content_and_sourcemap();

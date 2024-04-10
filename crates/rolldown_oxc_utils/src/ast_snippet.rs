@@ -5,7 +5,7 @@ use oxc::{
   syntax::operator::UnaryOperator,
 };
 
-use crate::{Dummy, IntoIn};
+use crate::allocator_helpers::{into_in::IntoIn, take_in::TakeIn};
 
 type PassedStr<'a> = &'a str;
 
@@ -25,11 +25,11 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   pub fn id(&self, name: PassedStr, span: Span) -> ast::BindingIdentifier<'ast> {
-    ast::BindingIdentifier { name: self.atom(name), span, ..Dummy::dummy(self.alloc) }
+    ast::BindingIdentifier { name: self.atom(name), span, ..TakeIn::dummy(self.alloc) }
   }
 
   pub fn id_ref(&self, name: PassedStr, span: Span) -> ast::IdentifierReference<'ast> {
-    ast::IdentifierReference { name: self.atom(name), span, ..Dummy::dummy(self.alloc) }
+    ast::IdentifierReference { name: self.atom(name), span, ..TakeIn::dummy(self.alloc) }
   }
 
   pub fn id_name(&self, name: PassedStr, span: Span) -> ast::IdentifierName<'ast> {
@@ -48,8 +48,8 @@ impl<'ast> AstSnippet<'ast> {
   ) -> ast::MemberExpression<'ast> {
     ast::MemberExpression::StaticMemberExpression(ast::StaticMemberExpression {
       object: ast::Expression::Identifier(self.id_ref(object, SPAN).into_in(self.alloc)),
-      property: ast::IdentifierName { name: self.atom(property), ..Dummy::dummy(self.alloc) },
-      ..Dummy::dummy(self.alloc)
+      property: ast::IdentifierName { name: self.atom(property), ..TakeIn::dummy(self.alloc) },
+      ..TakeIn::dummy(self.alloc)
     })
   }
 
@@ -58,7 +58,7 @@ impl<'ast> AstSnippet<'ast> {
     &self,
     object: PassedStr,
     property: PassedStr,
-  ) -> ast::Expression<'_> {
+  ) -> ast::Expression<'ast> {
     ast::Expression::MemberExpression(
       self.literal_prop_access_member_expr(object, property).into_in(self.alloc),
     )
@@ -69,7 +69,7 @@ impl<'ast> AstSnippet<'ast> {
     ast::CallExpression {
       callee: ast::Expression::Identifier(self.id_ref(name, SPAN).into_in(self.alloc)),
       arguments: allocator::Vec::new_in(self.alloc),
-      ..Dummy::dummy(self.alloc)
+      ..TakeIn::dummy(self.alloc)
     }
   }
 
@@ -106,7 +106,7 @@ impl<'ast> AstSnippet<'ast> {
     name: PassedStr,
     arg1: PassedStr,
     arg2: PassedStr,
-  ) -> ast::Expression<'_> {
+  ) -> ast::Expression<'ast> {
     let arg1 = ast::Argument::Expression(ast::Expression::Identifier(
       self.id_ref(arg1, SPAN).into_in(self.alloc),
     ));
@@ -135,11 +135,11 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// `name()`
-  pub fn call_expr_stmt(&self, name: PassedStr) -> ast::Statement<'_> {
+  pub fn call_expr_stmt(&self, name: PassedStr) -> ast::Statement<'ast> {
     ast::Statement::ExpressionStatement(
       ast::ExpressionStatement {
         expression: self.call_expr_expr(name),
-        ..Dummy::dummy(self.alloc)
+        ..TakeIn::dummy(self.alloc)
       }
       .into_in(self.alloc),
     )
@@ -160,19 +160,19 @@ impl<'ast> AstSnippet<'ast> {
     declarations.push(ast::VariableDeclarator {
       id: ast::BindingPattern {
         kind: ast::BindingPatternKind::BindingIdentifier(
-          ast::BindingIdentifier { name: self.atom(name), ..Dummy::dummy(self.alloc) }
+          ast::BindingIdentifier { name: self.atom(name), ..TakeIn::dummy(self.alloc) }
             .into_in(self.alloc),
         ),
-        ..Dummy::dummy(self.alloc)
+        ..TakeIn::dummy(self.alloc)
       },
       init: Some(init),
-      ..Dummy::dummy(self.alloc)
+      ..TakeIn::dummy(self.alloc)
     });
     ast::Declaration::VariableDeclaration(
       ast::VariableDeclaration {
         kind: ast::VariableDeclarationKind::Var,
         declarations,
-        ..Dummy::dummy(self.alloc)
+        ..TakeIn::dummy(self.alloc)
       }
       .into_in(self.alloc),
     )
@@ -184,33 +184,33 @@ impl<'ast> AstSnippet<'ast> {
   ///  });
   /// ```
   pub fn commonjs_wrapper_stmt(
-    &'ast self,
+    &self,
     binding_name: PassedStr,
     commonjs_name: PassedStr,
     body: allocator::Vec<'ast, Statement<'ast>>,
   ) -> ast::Statement<'ast> {
     // (exports, module) => {}
     let mut arrow_expr = ast::ArrowFunctionExpression {
-      body: ast::FunctionBody { statements: body, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
-      ..Dummy::dummy(self.alloc)
+      body: ast::FunctionBody { statements: body, ..TakeIn::dummy(self.alloc) }.into_in(self.alloc),
+      ..TakeIn::dummy(self.alloc)
     };
     arrow_expr.params.items.push(ast::FormalParameter {
       pattern: ast::BindingPattern {
         kind: ast::BindingPatternKind::BindingIdentifier(
           self.id("exports", SPAN).into_in(self.alloc),
         ),
-        ..Dummy::dummy(self.alloc)
+        ..TakeIn::dummy(self.alloc)
       },
-      ..Dummy::dummy(self.alloc)
+      ..TakeIn::dummy(self.alloc)
     });
     arrow_expr.params.items.push(ast::FormalParameter {
       pattern: ast::BindingPattern {
         kind: ast::BindingPatternKind::BindingIdentifier(
           self.id("module", SPAN).into_in(self.alloc),
         ),
-        ..Dummy::dummy(self.alloc)
+        ..TakeIn::dummy(self.alloc)
       },
-      ..Dummy::dummy(self.alloc)
+      ..TakeIn::dummy(self.alloc)
     });
 
     //  __commonJS(...)
@@ -233,15 +233,15 @@ impl<'ast> AstSnippet<'ast> {
   /// var init_foo = __esm(() => { ... });
   /// ```
   pub fn esm_wrapper_stmt(
-    &'ast self,
+    &self,
     binding_name: PassedStr,
     esm_fn_name: PassedStr,
     body: allocator::Vec<'ast, Statement<'ast>>,
   ) -> ast::Statement<'ast> {
     // () => { ... }
     let arrow_expr: ast::ArrowFunctionExpression<'_> = ast::ArrowFunctionExpression {
-      body: ast::FunctionBody { statements: body, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
-      ..Dummy::dummy(self.alloc)
+      body: ast::FunctionBody { statements: body, ..TakeIn::dummy(self.alloc) }.into_in(self.alloc),
+      ..TakeIn::dummy(self.alloc)
     };
 
     //  __esm(...)
@@ -270,10 +270,10 @@ impl<'ast> AstSnippet<'ast> {
     expressions.push(a);
     expressions.push(b);
     let seq_expr = ast::Expression::SequenceExpression(
-      ast::SequenceExpression { expressions, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
+      ast::SequenceExpression { expressions, ..TakeIn::dummy(self.alloc) }.into_in(self.alloc),
     );
     ast::Expression::ParenthesizedExpression(
-      ast::ParenthesizedExpression { expression: seq_expr, ..Dummy::dummy(self.alloc) }
+      ast::ParenthesizedExpression { expression: seq_expr, ..TakeIn::dummy(self.alloc) }
         .into_in(self.alloc),
     )
   }
@@ -284,7 +284,7 @@ impl<'ast> AstSnippet<'ast> {
   pub fn number_expr(&self, value: f64) -> ast::Expression<'ast> {
     ast::Expression::NumericLiteral(
       ast::NumericLiteral {
-        span: Dummy::dummy(self.alloc),
+        span: TakeIn::dummy(self.alloc),
         value,
         raw: self.alloc.alloc(value.to_string()),
         base: oxc::syntax::NumberBase::Decimal,
@@ -314,13 +314,14 @@ impl<'ast> AstSnippet<'ast> {
     let mut statements = allocator::Vec::new_in(self.alloc);
     statements.reserve_exact(1);
     statements.push(ast::Statement::ExpressionStatement(
-      ast::ExpressionStatement { expression: expr, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
+      ast::ExpressionStatement { expression: expr, ..TakeIn::dummy(self.alloc) }
+        .into_in(self.alloc),
     ));
     ast::Expression::ArrowFunctionExpression(
       ast::ArrowFunctionExpression {
         expression: true,
-        body: ast::FunctionBody { statements, ..Dummy::dummy(self.alloc) }.into_in(self.alloc),
-        ..Dummy::dummy(self.alloc)
+        body: ast::FunctionBody { statements, ..TakeIn::dummy(self.alloc) }.into_in(self.alloc),
+        ..TakeIn::dummy(self.alloc)
       }
       .into_in(self.alloc),
     )
@@ -332,7 +333,7 @@ impl<'ast> AstSnippet<'ast> {
       ast::UnaryExpression {
         operator: UnaryOperator::Void,
         argument: self.number_expr(0.0),
-        ..Dummy::dummy(self.alloc)
+        ..TakeIn::dummy(self.alloc)
       }
       .into_in(self.alloc),
     )

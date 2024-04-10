@@ -4,7 +4,7 @@ use std::{
   process::Command,
 };
 
-use rolldown::{Bundler, RolldownOutput, SourceMapType};
+use rolldown::{BundleOutput, Bundler, SourceMapType};
 use rolldown_error::BuildError;
 use rolldown_testing::TestConfig;
 
@@ -90,7 +90,7 @@ impl Fixture {
     }
   }
 
-  pub async fn compile(&mut self) -> Result<RolldownOutput, Vec<BuildError>> {
+  pub async fn compile(&mut self) -> Result<BundleOutput, Vec<BuildError>> {
     let fixture_path = self.dir_path();
     let test_config = self.test_config();
 

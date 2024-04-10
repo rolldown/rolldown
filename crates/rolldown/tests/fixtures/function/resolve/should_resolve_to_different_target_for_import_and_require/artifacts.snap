@@ -1,0 +1,25 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/resolve/should_resolve_to_different_target_for_import_and_require
+---
+# Assets
+
+## main.mjs
+
+```js
+import { __commonJSMin } from "./$runtime$.mjs";
+
+// node_modules/package/esm-output.js
+const output = 'esm';
+
+// node_modules/package/cjs-output.js
+var require_cjs_output = __commonJSMin((exports, module) => {
+	module.exports.output = 'cjs';
+});
+
+// main.js
+const {output:requireOutput} = require_cjs_output();
+
+export { output as importOutput, requireOutput };
+```

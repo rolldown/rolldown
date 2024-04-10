@@ -112,6 +112,9 @@
     "vite",
     "vitepress",
     "Yinan",
-    "Yunfei"
+    "Yunfei",
+    "sourcemaps",
+    "memmem",
+    "memchr"
   ]
 }

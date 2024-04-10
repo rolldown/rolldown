@@ -6,7 +6,7 @@ use rolldown_common::{
   AstScope, ExportsKind, FilePath, ModuleType, NormalModuleId, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
+use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
 use super::Msg;
 use crate::{
@@ -23,7 +23,7 @@ pub struct RuntimeNormalModuleTask {
 pub struct RuntimeNormalModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
   pub ast_symbol: AstSymbols,
-  pub ast: OxcProgram,
+  pub ast: OxcAst,
   pub warnings: Vec<BuildError>,
   pub builder: NormalModuleBuilder,
 }
@@ -88,15 +88,11 @@ impl RuntimeNormalModuleTask {
     };
   }
 
-  fn make_ast(
-    &self,
-    source: &Arc<str>,
-  ) -> (OxcProgram, AstScope, ScanResult, AstSymbols, SymbolRef) {
+  fn make_ast(&self, source: &Arc<str>) -> (OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef) {
     let source_type = SourceType::default();
-    let mut program = OxcCompiler::parse(Arc::clone(source), source_type);
+    let mut ast = OxcCompiler::parse(Arc::clone(source), source_type);
 
-    let semantic = program.make_semantic(source_type);
-    let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
+    let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(
       scope,
       std::mem::take(&mut symbol_table.references),
@@ -114,9 +110,9 @@ impl RuntimeNormalModuleTask {
       &facade_path,
     );
     let namespace_symbol = scanner.namespace_ref;
-    program.hoist_import_export_from_stmts();
-    let scan_result = scanner.scan(program.program());
+    ast.hoist_import_export_from_stmts();
+    let scan_result = ast.with(|f| scanner.scan(f.program));
 
-    (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)
+    (ast, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }
 }

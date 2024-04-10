@@ -1,31 +1,28 @@
+mod build_error;
 mod diagnostic;
-mod error;
-mod error_kind;
+mod event_kind;
+mod events;
 mod utils;
 
 use std::{borrow::Cow, path::Path};
 
 use sugar_path::SugarPath;
 
-pub(crate) type StaticStr = Cow<'static, str>;
-
-// pub use crate::{diagnostic::Diagnostic, error::BuildError};
-pub use crate::error::BuildError;
+pub use crate::{build_error::BuildError, event_kind::EventKind};
 
 trait PathExt {
-  fn relative_display(&self) -> String;
+  fn relative_display(&self) -> Cow<str>;
 }
 
 impl PathExt for Path {
-  fn relative_display(&self) -> String {
-    // TODO: Should have a global cache for `cwd` using once_cell
+  fn relative_display(&self) -> Cow<str> {
     let cwd = std::env::current_dir().expect("Failed to get current directory");
-    let ret = if self.is_absolute() {
-      self.relative(cwd).display().to_string()
+    let non_absolute = if self.is_absolute() {
+      Cow::Owned(self.relative(cwd).to_slash_lossy().into_owned())
     } else {
-      self.display().to_string()
+      self.to_string_lossy()
     };
-    // TODO: should move this to `sugar_path`
-    ret.replace('\\', "/")
+
+    non_absolute
   }
 }

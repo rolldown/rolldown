@@ -95,7 +95,7 @@ impl<'a> BundleStage<'a> {
       |chunk| -> Result<(), BuildError> {
         let ChunkRenderReturn { mut map, rendered_chunk, mut code } = chunk;
         if let Some(map) = map.as_mut() {
-          map.set_file(rendered_chunk.file_name.as_str());
+          map.set_file(&rendered_chunk.file_name);
           match self.options.sourcemap {
             SourceMapType::File => {
               let map_file_name = format!("{}.map", rendered_chunk.file_name);

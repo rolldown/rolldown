@@ -8,6 +8,7 @@ import { RolldownNormalizedInputOptions } from '../options/input-options'
 import { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
 import { SourceMapInput } from '../types/sourcemap'
 import { pathToFileURL } from 'node:url'
+import { NormalizedOutputOptions } from '../options/output-options'
 
 // Use a type alias here, we might wrap `BindingPluginContext` in the future
 type PluginContext = BindingPluginContext
@@ -78,7 +79,15 @@ export interface Plugin {
       this: null,
       code: string,
       chunk: RenderedChunk,
-    ) => MaybePromise<NullValue | string>
+      outputOptions: NormalizedOutputOptions,
+    ) => MaybePromise<
+      | NullValue
+      | string
+      | {
+          code: string
+          map?: string | null | SourceMapInput
+        }
+    >
   >
 
   buildEnd?: Hook<(this: null, err?: string) => MaybePromise<NullValue>>

@@ -4,7 +4,9 @@ use oxc::semantic::SymbolId;
 use oxc::span::SPAN;
 use smallvec::SmallVec;
 
-use crate::{AstSnippet, Dummy, IntoIn, TakeIn};
+use crate::allocator_helpers::into_in::IntoIn;
+use crate::allocator_helpers::take_in::TakeIn;
+use crate::AstSnippet;
 pub trait BindingIdentifierExt {
   fn expect_symbol_id(&self) -> SymbolId;
 }
@@ -63,7 +65,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
             span: SPAN,
             target: rest.unbox().argument.into_assignment_target(alloc),
           }),
-          ..Dummy::dummy(alloc)
+          ..TakeIn::dummy(alloc)
         };
         arr_pat.elements.take_in(alloc).into_iter().for_each(|binding_pat| {
           arr_target.elements.push(binding_pat.map(|binding_pat| match binding_pat.kind {
@@ -73,7 +75,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
                 ast::AssignmentTargetWithDefault {
                   binding: assign_pat.left.into_assignment_target(alloc),
                   init: assign_pat.right,
-                  ..Dummy::dummy(alloc)
+                  ..TakeIn::dummy(alloc)
                 }
                 .into_in(alloc),
               )
@@ -194,6 +196,7 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
     }
   }
 
+  /// Check if the statement is `[import|export] ... from ...` or `export ... from ...`
   fn is_module_declaration_with_source(&self) -> bool {
     matches!(self.as_module_declaration(), Some(decl) if decl.source().is_some())
   }

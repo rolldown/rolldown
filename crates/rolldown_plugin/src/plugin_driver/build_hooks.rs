@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookRenderChunkArgs,
   HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver,
@@ -43,7 +41,7 @@ impl PluginDriver {
   pub async fn transform(
     &self,
     args: &HookTransformArgs<'_>,
-  ) -> Result<(String, Vec<Arc<SourceMap>>), BuildError> {
+  ) -> Result<(String, Vec<SourceMap>), BuildError> {
     let mut sourcemap_chain = vec![];
     let mut code = args.code.to_string();
     for (plugin, ctx) in &self.plugins {
@@ -54,7 +52,7 @@ impl PluginDriver {
       if let Some(r) = result {
         code = r.code;
         if let Some(map) = r.map {
-          sourcemap_chain.push(Arc::new(map));
+          sourcemap_chain.push(map);
         }
       }
     }
@@ -75,14 +73,18 @@ impl PluginDriver {
   pub async fn render_chunk(
     &self,
     mut args: HookRenderChunkArgs<'_>,
-  ) -> Result<String, BuildError> {
+  ) -> Result<(String, Vec<SourceMap>), BuildError> {
+    let mut sourcemap_chain = vec![];
     for (plugin, ctx) in &self.plugins {
       let result =
         plugin.run_single(self.worker_manager.as_ref(), |p| p.render_chunk(ctx, &args)).await?;
       if let Some(r) = result {
         args.code = r.code;
+        if let Some(map) = r.map {
+          sourcemap_chain.push(map);
+        }
       }
     }
-    Ok(args.code)
+    Ok((args.code, sourcemap_chain))
   }
 }

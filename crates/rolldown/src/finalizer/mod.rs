@@ -4,7 +4,7 @@ use oxc::{
   span::{Atom, SPAN},
 };
 use rolldown_common::{AstScope, ImportRecordId, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, Dummy, IntoIn, TakeIn};
+use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, IntoIn, TakeIn};
 
 mod finalizer_context;
 mod impl_visit_mut_for_finalizer;
@@ -13,16 +13,13 @@ use rolldown_rstr::Rstr;
 mod rename;
 
 pub struct Finalizer<'me, 'ast> {
-  pub alloc: &'ast Allocator,
   pub ctx: FinalizerContext<'me>,
   pub scope: &'me AstScope,
-  pub snippet: &'me AstSnippet<'ast>,
+  pub alloc: &'ast Allocator,
+  pub snippet: AstSnippet<'ast>,
 }
 
-impl<'me, 'ast> Finalizer<'me, 'ast>
-where
-  'me: 'ast,
-{
+impl<'me, 'ast> Finalizer<'me, 'ast> {
   pub fn is_global_identifier_reference(&self, id_ref: &IdentifierReference) -> bool {
     let Some(reference_id) = id_ref.reference_id.get() else {
       // Some `IdentifierReference`s constructed by bundler don't have a `ReferenceId`. They might be global variables.
@@ -115,7 +112,7 @@ where
               ast::AssignmentExpression {
                 left,
                 right: init_expr.take_in(self.alloc),
-                ..Dummy::dummy(self.alloc)
+                ..TakeIn::dummy(self.alloc)
               }
               .into_in(self.alloc),
             ));
@@ -127,7 +124,7 @@ where
           Some(ast::Statement::ExpressionStatement(
             ast::ExpressionStatement {
               expression: ast::Expression::SequenceExpression(seq_expr.into_in(self.alloc)),
-              ..Dummy::dummy(self.alloc)
+              ..TakeIn::dummy(self.alloc)
             }
             .into_in(self.alloc),
           ))
@@ -143,11 +140,11 @@ where
               ast::AssignmentExpression {
                 left: self.snippet.simple_id_assignment_target(&cls_name, cls_decl.span),
                 right: ast::Expression::ClassExpression(cls_decl.take_in(self.alloc)),
-                ..Dummy::dummy(self.alloc)
+                ..TakeIn::dummy(self.alloc)
               }
               .into_in(self.alloc),
             ),
-            ..Dummy::dummy(self.alloc)
+            ..TakeIn::dummy(self.alloc)
           }
           .into_in(self.alloc),
         ))
@@ -168,7 +165,7 @@ where
     // construct `var ns_name = {}`
     let namespace_decl_stmt = self
       .snippet
-      .var_decl_stmt(ns_name, ast::Expression::ObjectExpression(Dummy::dummy(self.alloc)));
+      .var_decl_stmt(ns_name, ast::Expression::ObjectExpression(TakeIn::dummy(self.alloc)));
 
     let exports_len = self.ctx.linking_info.canonical_exports_len();
 
@@ -190,7 +187,7 @@ where
             self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
           ),
           value: self.snippet.only_return_arrow_expr(returned),
-          ..Dummy::dummy(self.alloc)
+          ..TakeIn::dummy(self.alloc)
         }
         .into_in(self.alloc),
       ));
@@ -207,7 +204,7 @@ where
     let export_call_stmt = ast::Statement::ExpressionStatement(
       ast::ExpressionStatement {
         expression: ast::Expression::CallExpression(export_call_expr.into_in(self.alloc)),
-        ..Dummy::dummy(self.alloc)
+        ..TakeIn::dummy(self.alloc)
       }
       .into_in(self.alloc),
     );

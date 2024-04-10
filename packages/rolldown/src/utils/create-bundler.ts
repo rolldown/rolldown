@@ -21,17 +21,18 @@ export async function createBundler(
     normalizedInputOptions.plugins,
   )
 
+  const normalizedOutputOptions = normalizeOutputOptions(outputOptions)
   // Convert `NormalizedInputOptions` to `BindingInputOptions`
   const bindingInputOptions = createInputOptionsAdapter(
     normalizedInputOptions,
     inputOptions,
+    normalizedOutputOptions,
   )
-  const bindingOutputOptions = normalizeOutputOptions(outputOptions)
 
   return {
     bundler: new Bundler(
       bindingInputOptions,
-      bindingOutputOptions,
+      normalizedOutputOptions,
       threadSafePluginInitResult?.registry,
     ),
     stopWorkers: threadSafePluginInitResult?.stopWorkers,

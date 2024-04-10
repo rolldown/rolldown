@@ -6,7 +6,7 @@ use std::pin::Pin;
 use crate::RenderedChunk;
 
 pub type AddonFunction = dyn Fn(
-    RenderedChunk,
+    &RenderedChunk,
   ) -> Pin<Box<(dyn Future<Output = Result<Option<String>, BuildError>> + Send + 'static)>>
   + Send
   + Sync;
@@ -25,14 +25,8 @@ impl Debug for AddonOutputOption {
   }
 }
 
-impl Default for AddonOutputOption {
-  fn default() -> Self {
-    Self::String(None)
-  }
-}
-
 impl AddonOutputOption {
-  pub async fn call(&self, chunk: RenderedChunk) -> Result<Option<String>, BuildError> {
+  pub async fn call(&self, chunk: &RenderedChunk) -> Result<Option<String>, BuildError> {
     match self {
       Self::String(value) => Ok(value.clone()),
       Self::Fn(value) => value(chunk).await,

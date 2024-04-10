@@ -47,6 +47,11 @@ export class ThreadSafePluginRegistry {
   constructor(workerCount: number)
 }
 
+export interface AliasItem {
+  find: string
+  replacements: Array<string>
+}
+
 export interface BindingHookLoadOutput {
   code: string
   map?: string
@@ -54,6 +59,7 @@ export interface BindingHookLoadOutput {
 
 export interface BindingHookRenderChunkOutput {
   code: string
+  map?: string
 }
 
 export interface BindingHookResolveIdExtraOptions {
@@ -142,7 +148,7 @@ export interface BindingRenderedModule {
 }
 
 export interface BindingResolveOptions {
-  alias?: Record<string, Array<string>>
+  alias?: Array<AliasItem>
   aliasFields?: Array<Array<string>>
   conditionNames?: Array<string>
   exportsFields?: Array<Array<string>>

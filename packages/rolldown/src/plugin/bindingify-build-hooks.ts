@@ -6,6 +6,7 @@ import { RolldownNormalizedInputOptions } from '../options/input-options'
 import { isEmptySourcemapFiled } from '../utils'
 import path from 'path'
 import { SourceMapInputObject } from '../types/sourcemap'
+import { NormalizedOutputOptions } from '../options/output-options'
 
 export function bindingifyBuildStart(
   options: RolldownNormalizedInputOptions,
@@ -150,6 +151,7 @@ export function bindingifyLoad(
 }
 
 export function bindingifyRenderChunk(
+  outputOptions: NormalizedOutputOptions,
   hook?: Plugin['renderChunk'],
 ): BindingPluginOptions['renderChunk'] {
   if (!hook) {
@@ -158,14 +160,28 @@ export function bindingifyRenderChunk(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (code, chunk) => {
-    const ret = await handler.call(null, code, chunk)
+    const ret = await handler.call(null, code, chunk, outputOptions)
 
     if (ret == null) {
       return
     }
 
+    if (typeof ret === 'string') {
+      return { code: ret }
+    }
+
+    if (!ret.map) {
+      return { code: ret.code }
+    }
+
+    let map =
+      typeof ret.map === 'object'
+        ? ret.map
+        : (JSON.parse(ret.map) as SourceMapInputObject)
+
     return {
-      code: ret,
+      code: ret.code,
+      map: JSON.stringify(map),
     }
   }
 }

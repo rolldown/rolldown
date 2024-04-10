@@ -21,7 +21,7 @@ pub(crate) type SharedOptions = Arc<NormalizedBundlerOptions>;
 
 pub use crate::{
   bundler::Bundler, bundler_builder::BundlerBuilder, chunk::render_chunk::PreRenderedChunk,
-  types::rolldown_output::RolldownOutput,
+  types::bundle_output::BundleOutput,
 };
 
 pub use rolldown_common::bundler_options::*;

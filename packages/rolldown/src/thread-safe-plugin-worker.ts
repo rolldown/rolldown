@@ -1,5 +1,5 @@
 import { parentPort, workerData } from 'node:worker_threads'
-import { registerPlugins } from './binding'
+import { BindingOutputOptions, registerPlugins } from './binding'
 import type { WorkerData } from './utils/initialize-thread-safe-plugins'
 import type { defineThreadSafePluginImplementation } from './thread-safe-plugin'
 import { bindingifyPlugin } from './plugin/bindingify-plugin'
@@ -20,8 +20,12 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData
       })
       return {
         index: pluginInfo.index,
-        // TODO: support inputOptions
-        plugin: bindingifyPlugin(plugin, {} as RolldownNormalizedInputOptions),
+        // TODO: support inputOptions and outputOptions
+        plugin: bindingifyPlugin(
+          plugin,
+          {} as RolldownNormalizedInputOptions,
+          {} as BindingOutputOptions,
+        ),
       }
     }),
   )

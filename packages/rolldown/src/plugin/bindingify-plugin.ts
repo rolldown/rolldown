@@ -15,11 +15,13 @@ import {
 
 import type { Plugin } from './index'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
+import { NormalizedOutputOptions } from '../options/output-options'
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function bindingifyPlugin(
   plugin: Plugin,
   options: RolldownNormalizedInputOptions,
+  outputOptions: NormalizedOutputOptions,
 ): BindingPluginOptions {
   return {
     name: plugin.name ?? 'unknown',
@@ -28,7 +30,7 @@ export function bindingifyPlugin(
     buildEnd: bindingifyBuildEnd(plugin.buildEnd),
     transform: bindingifyTransform(plugin.transform),
     load: bindingifyLoad(plugin.load),
-    renderChunk: bindingifyRenderChunk(plugin.renderChunk),
+    renderChunk: bindingifyRenderChunk(outputOptions, plugin.renderChunk),
     generateBundle: bindingifyGenerateBundle(plugin.generateBundle),
     writeBundle: bindingifyWriteBundle(plugin.writeBundle),
   }

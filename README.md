@@ -6,11 +6,22 @@
 
 <div align="center">
 
-[![MIT licensed][license-badge]][license-url]
-[![Build Status][ci-badge]][ci-url]
-[![Code Coverage][code-coverage-badge]][code-coverage-url]
+[![MIT licensed][badge-license]][url-license]
+[![NPM version][badge-npm-version]][url-npm]
+[![NPM Unpacked Size (with version)](https://img.shields.io/npm/unpacked-size/rolldown/latest?label=npm)][url-npm]
+[![Build Status][badge-ci]][url-ci]
+[![Code Coverage][badge-code-coverage]][url-code-coverage]
 [![CodSpeed Badge](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/rolldown/rolldown)
-[![Discord chat][discord-badge]][discord-url]
+[![Discord chat][badge-discord]][discord-url]
+
+</div>
+
+<div align="center">
+
+[![NPM Unpacked Size darwin-arm64](https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-darwin-arm64/latest?label=darwin-arm64)](https://www.npmjs.com/package/@rolldown/binding-darwin-arm64)
+[![NPM Unpacked Size darwin-x64](https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-darwin-x64/latest?label=darwin-x64)](https://www.npmjs.com/package/@rolldown/binding-darwin-x64)
+[![NPM Unpacked Size linux-x64-gnu](https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-linux-x64-gnu/latest?label=linux-x64-gnu)](https://www.npmjs.com/package/@rolldown/binding-linux-x64-gnu)
+[![NPM Unpacked Size win32-x64](https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-win32-x64-msvc/latest?label=win32-x64)](https://www.npmjs.com/package/@rolldown/binding-win32-x64-msvc)
 
 </div>
 
@@ -53,13 +64,16 @@ This project also partially contains code derived or copied from the following p
 
 Licenses of these projects are listed in [THIRD-PARTY-LICENSE](/THIRD-PARTY-LICENSE)
 
-[discord-badge]: https://img.shields.io/discord/1079625926024900739?logo=discord&label=Discord
+[badge-discord]: https://img.shields.io/discord/1079625926024900739?logo=discord&label=Discord
 [discord-url]: https://chat.rolldown.rs
-[license-badge]: https://img.shields.io/badge/license-MIT-blue.svg
-[license-url]: https://github.com/rolldown/rolldown/blob/main/LICENSE
-[ci-badge]: https://github.com/rolldown/rolldown/actions/workflows/ci.yml/badge.svg?event=push&branch=main
-[ci-url]: https://github.com/rolldown/rolldown/actions/workflows/ci.yml?query=event%3Apush+branch%3Amain
-[npm-badge]: https://img.shields.io/npm/v/rolldown/latest?color=brightgreen
-[npm-url]: https://www.npmjs.com/package/rolldown/v/latest
-[code-coverage-badge]: https://codecov.io/github/rolldown/rolldown/branch/main/graph/badge.svg
-[code-coverage-url]: https://codecov.io/gh/rolldown/rolldown
+[badge-license]: https://img.shields.io/badge/license-MIT-blue.svg
+[url-license]: https://github.com/rolldown/rolldown/blob/main/LICENSE
+[badge-ci]: https://github.com/rolldown/rolldown/actions/workflows/ci.yml/badge.svg?event=push&branch=main
+[url-ci]: https://github.com/rolldown/rolldown/actions/workflows/ci.yml?query=event%3Apush+branch%3Amain
+[badge-code-coverage]: https://codecov.io/github/rolldown/rolldown/branch/main/graph/badge.svg
+[url-code-coverage]: https://codecov.io/gh/rolldown/rolldown
+[badge-npm-version]: https://img.shields.io/npm/v/rolldown/latest?color=brightgreen
+[url-npm]: https://www.npmjs.com/package/rolldown/v/latest
+
+[badge-binary-size-windows]: [https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-win32-x64-msvc/latest]
+[badge-binary-size-macos]: [https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-darwin-arm64/latest]

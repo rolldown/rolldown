@@ -7,11 +7,11 @@ use rolldown_common::{
   AstScope, FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath,
   ResourceId, SymbolRef,
 };
-use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
+use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
-use sugar_path::AsPath;
+use sugar_path::SugarPath;
 
-use super::{module_task_context::ModuleTaskCommonData, Msg};
+use super::{task_context::TaskContext, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   error::{BatchedErrors, BatchedResult},
@@ -23,17 +23,17 @@ use crate::{
   utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
   SharedOptions, SharedResolver,
 };
-pub struct NormalModuleTask<'task> {
-  ctx: &'task ModuleTaskCommonData,
+pub struct NormalModuleTask {
+  ctx: Arc<TaskContext>,
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
   module_type: ModuleType,
   errors: BatchedErrors,
 }
 
-impl<'task> NormalModuleTask<'task> {
+impl NormalModuleTask {
   pub fn new(
-    ctx: &'task ModuleTaskCommonData,
+    ctx: Arc<TaskContext>,
     id: NormalModuleId,
     path: ResolvedPath,
     module_type: ModuleType,
@@ -149,7 +149,7 @@ impl<'task> NormalModuleTask<'task> {
     Ok(())
   }
 
-  fn scan(&self, source: &Arc<str>) -> (OxcProgram, AstScope, ScanResult, AstSymbols, SymbolRef) {
+  fn scan(&self, source: &Arc<str>) -> (OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef) {
     fn determine_oxc_source_type(path: impl AsRef<Path>, ty: ModuleType) -> SourceType {
       // Determine oxc source type for parsing
       let mut default = SourceType::default().with_module(true);
@@ -176,8 +176,7 @@ impl<'task> NormalModuleTask<'task> {
       determine_oxc_source_type(self.resolved_path.path.as_path(), self.module_type);
     let mut program = OxcCompiler::parse(Arc::clone(source), source_type);
 
-    let semantic = program.make_semantic(source_type);
-    let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
+    let (mut symbol_table, scope) = program.make_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(
       scope,
       std::mem::take(&mut symbol_table.references),
@@ -197,7 +196,7 @@ impl<'task> NormalModuleTask<'task> {
     );
     let namespace_symbol = scanner.namespace_ref;
     program.hoist_import_export_from_stmts();
-    let scan_result = scanner.scan(program.program());
+    let scan_result = program.with(|f| scanner.scan(f.program));
 
     (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }

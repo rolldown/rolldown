@@ -7,7 +7,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
-use rolldown_oxc_utils::OxcProgram;
+use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -15,8 +15,8 @@ use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
-use crate::module_loader::module_task_context::ModuleTaskCommonData;
 use crate::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
+use crate::module_loader::task_context::TaskContext;
 use crate::runtime::RuntimeModuleBrief;
 use crate::types::module_table::{ExternalModuleVec, ModuleTable};
 use crate::types::resolved_request_info::ResolvedRequestInfo;
@@ -27,7 +27,7 @@ use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<NormalModuleId, Option<NormalModule>>,
-  pub ast_table: IndexVec<NormalModuleId, Option<OxcProgram>>,
+  pub ast_table: IndexVec<NormalModuleId, Option<OxcAst>>,
 }
 
 impl IntermediateNormalModules {
@@ -45,7 +45,7 @@ impl IntermediateNormalModules {
 
 pub struct ModuleLoader {
   input_options: SharedOptions,
-  common_data: ModuleTaskCommonData,
+  shared_context: Arc<TaskContext>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
   visited: FxHashMap<Arc<str>, ModuleId>,
   runtime_id: Option<NormalModuleId>,
@@ -58,7 +58,7 @@ pub struct ModuleLoader {
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
-  pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
+  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -75,16 +75,16 @@ impl ModuleLoader {
   ) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
 
-    let common_data = ModuleTaskCommonData {
+    let common_data = Arc::new(TaskContext {
       input_options: Arc::clone(&input_options),
       tx,
       resolver,
       fs,
       plugin_driver,
-    };
+    });
 
     Self {
-      common_data,
+      shared_context: common_data,
       rx,
       input_options,
       visited: FxHashMap::default(),
@@ -114,7 +114,7 @@ impl ModuleLoader {
 
           let task = NormalModuleTask::new(
             // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
-            unsafe { self.common_data.assume_static() },
+            Arc::clone(&self.shared_context),
             id,
             module_path,
             info.module_type,
@@ -130,7 +130,7 @@ impl ModuleLoader {
     *self.runtime_id.get_or_insert_with(|| {
       let id = self.intermediate_normal_modules.alloc_module_id(&mut self.symbols);
       self.remaining += 1;
-      let task = RuntimeNormalModuleTask::new(id, self.common_data.tx.clone());
+      let task = RuntimeNormalModuleTask::new(id, self.shared_context.tx.clone());
       tokio::spawn(async move { task.run() });
       id
     })
@@ -248,7 +248,7 @@ impl ModuleLoader {
     let modules: IndexVec<NormalModuleId, NormalModule> =
       self.intermediate_normal_modules.modules.into_iter().map(Option::unwrap).collect();
 
-    let ast_table: IndexVec<NormalModuleId, OxcProgram> =
+    let ast_table: IndexVec<NormalModuleId, OxcAst> =
       self.intermediate_normal_modules.ast_table.into_iter().map(Option::unwrap).collect();
 
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();

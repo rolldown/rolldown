@@ -14,8 +14,31 @@ The root of the repository contains a number of configuration files for both Rus
 
 ## Bird's eye view
 
-```mermaid
----
+Rolldown is primarily two things:
+
+1. A bundler written in Rust
+2. A CLI and Node.js package published to npm, which delegates bundling functionality to the Rust crate
+
+The bundler is designed to be fully compatible with [Rollup](https://rollupjs.org).
+
+<!-- TODO: more detail about what the bundler does -->
+
+## The CLI
+
+The Rolldown CLI is a thin wrapper around the [Node.js bindings](https://github.com/rolldown/rolldown/tree/2011bf463b8cead1903375046643abb1168ef46f/crates/rolldown_binding) of the [`rolldown` Rust crate](https://github.com/rolldown/rolldown/tree/2011bf463b8cead1903375046643abb1168ef46f/crates/rolldown).
+
+![Flowchart of the Node.jS CLI execution. A section titled "CLI" contains the flow "Invoke rolldown CLI command", "Parse arguments", "Load configuration file", "If config does not exist, exit with error" "If config exists, bundle". A section titled "Bundle" contains the flow "Initiate RolldownBuild class with config options", "Load appropriate native binding for system", "Delegate to Rust for bundling and writing output to disk". The final step is "Collect, transform, and print bundle statistics".](/architecture/cli.svg)
+
+
+<!-- 
+To make updates to this chart, use mermaid.live with the below flowchart configuration.
+
+.... ARG! Foiled!!!! My whole strategy was to embed a pre-built SVG, with instructions on how to update.
+
+But the mermaid chart contains closing HTML comment strings so that doesn't work
+
+Need to look more into using Mermaid directly in the build step and/or using something else like https://pintorajs.vercel.app/docs/diagrams/activity-diagram/
+
 ---
 title: Bundling code with Rolldown npm package
 ---
@@ -56,7 +79,8 @@ flowchart TB
     end
 
     writeOutput --> printStats
-```
+
+ -->
 
 <!-- 
 

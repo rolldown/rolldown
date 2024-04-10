@@ -80,7 +80,10 @@ export default defineConfig({
         },
         {
           text: 'Misc',
-          items: [{ text: 'Release', link: '/contrib-guide/release.md' }],
+          items: [
+            { text: 'Release', link: '/contrib-guide/release.md' },
+            { text: 'Architecture', link: '/contrib-guide/architecture.md' },
+          ],
         },
       ],
     },

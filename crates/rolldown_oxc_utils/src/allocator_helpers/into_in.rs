@@ -3,7 +3,7 @@ use oxc::{
   ast::ast,
 };
 
-use crate::{from_in::FromIn, Dummy};
+use super::{from_in::FromIn, take_in::TakeIn};
 
 pub trait IntoIn<'ast, T>: Sized {
   fn into_in(self, alloc: &'ast Allocator) -> T;
@@ -24,7 +24,7 @@ impl<'ast, T: FromIn<'ast, T>> IntoIn<'ast, T> for T {
 impl<'ast> IntoIn<'ast, ast::Statement<'ast>> for ast::Expression<'ast> {
   fn into_in(self, alloc: &'ast Allocator) -> ast::Statement<'ast> {
     ast::Statement::ExpressionStatement(
-      ast::ExpressionStatement { expression: self, ..Dummy::dummy(alloc) }.into_in(alloc),
+      ast::ExpressionStatement { expression: self, ..TakeIn::dummy(alloc) }.into_in(alloc),
     )
   }
 }

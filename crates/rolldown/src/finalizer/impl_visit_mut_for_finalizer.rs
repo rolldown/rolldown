@@ -10,7 +10,7 @@ use oxc::{
   span::{Span, SPAN},
 };
 use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{Dummy, ExpressionExt, IntoIn, StatementExt, TakeIn};
+use rolldown_oxc_utils::{ExpressionExt, IntoIn, StatementExt, TakeIn};
 
 use super::Finalizer;
 
@@ -251,17 +251,17 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
                   kind: ast::BindingPatternKind::BindingIdentifier(
                     self.snippet.id(&var_name, SPAN).into_in(self.alloc),
                   ),
-                  ..Dummy::dummy(self.alloc)
+                  ..TakeIn::dummy(self.alloc)
                 },
                 kind: ast::VariableDeclarationKind::Var,
-                ..Dummy::dummy(self.alloc)
+                ..TakeIn::dummy(self.alloc)
               });
             });
             program.body.push(ast::Statement::Declaration(ast::Declaration::VariableDeclaration(
               ast::VariableDeclaration {
                 declarations: declarators,
                 kind: ast::VariableDeclarationKind::Var,
-                ..Dummy::dummy(self.alloc)
+                ..TakeIn::dummy(self.alloc)
               }
               .into_in(self.alloc),
             )));

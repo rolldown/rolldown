@@ -4,7 +4,7 @@ use oxc::{
   span::SourceType,
 };
 
-use crate::{OxcAst, StatementExt, TakeIn};
+use crate::{allocator_helpers::take_in::TakeIn, OxcAst, StatementExt};
 
 use super::WithFieldsMut;
 

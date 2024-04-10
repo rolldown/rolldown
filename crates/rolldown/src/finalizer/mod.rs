@@ -4,7 +4,7 @@ use oxc::{
   span::{Atom, SPAN},
 };
 use rolldown_common::{AstScope, ImportRecordId, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, Dummy, IntoIn, TakeIn};
+use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, IntoIn, TakeIn};
 
 mod finalizer_context;
 mod impl_visit_mut_for_finalizer;
@@ -112,7 +112,7 @@ impl<'me, 'ast> Finalizer<'me, 'ast> {
               ast::AssignmentExpression {
                 left,
                 right: init_expr.take_in(self.alloc),
-                ..Dummy::dummy(self.alloc)
+                ..TakeIn::dummy(self.alloc)
               }
               .into_in(self.alloc),
             ));
@@ -124,7 +124,7 @@ impl<'me, 'ast> Finalizer<'me, 'ast> {
           Some(ast::Statement::ExpressionStatement(
             ast::ExpressionStatement {
               expression: ast::Expression::SequenceExpression(seq_expr.into_in(self.alloc)),
-              ..Dummy::dummy(self.alloc)
+              ..TakeIn::dummy(self.alloc)
             }
             .into_in(self.alloc),
           ))
@@ -140,11 +140,11 @@ impl<'me, 'ast> Finalizer<'me, 'ast> {
               ast::AssignmentExpression {
                 left: self.snippet.simple_id_assignment_target(&cls_name, cls_decl.span),
                 right: ast::Expression::ClassExpression(cls_decl.take_in(self.alloc)),
-                ..Dummy::dummy(self.alloc)
+                ..TakeIn::dummy(self.alloc)
               }
               .into_in(self.alloc),
             ),
-            ..Dummy::dummy(self.alloc)
+            ..TakeIn::dummy(self.alloc)
           }
           .into_in(self.alloc),
         ))
@@ -165,7 +165,7 @@ impl<'me, 'ast> Finalizer<'me, 'ast> {
     // construct `var ns_name = {}`
     let namespace_decl_stmt = self
       .snippet
-      .var_decl_stmt(ns_name, ast::Expression::ObjectExpression(Dummy::dummy(self.alloc)));
+      .var_decl_stmt(ns_name, ast::Expression::ObjectExpression(TakeIn::dummy(self.alloc)));
 
     let exports_len = self.ctx.linking_info.canonical_exports_len();
 
@@ -187,7 +187,7 @@ impl<'me, 'ast> Finalizer<'me, 'ast> {
             self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
           ),
           value: self.snippet.only_return_arrow_expr(returned),
-          ..Dummy::dummy(self.alloc)
+          ..TakeIn::dummy(self.alloc)
         }
         .into_in(self.alloc),
       ));
@@ -204,7 +204,7 @@ impl<'me, 'ast> Finalizer<'me, 'ast> {
     let export_call_stmt = ast::Statement::ExpressionStatement(
       ast::ExpressionStatement {
         expression: ast::Expression::CallExpression(export_call_expr.into_in(self.alloc)),
-        ..Dummy::dummy(self.alloc)
+        ..TakeIn::dummy(self.alloc)
       }
       .into_in(self.alloc),
     );

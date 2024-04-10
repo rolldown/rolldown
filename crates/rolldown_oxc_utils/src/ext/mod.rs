@@ -194,6 +194,7 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
     }
   }
 
+  /// Check if the statement is `[import|export] ... from ...` or `export ... from ...`
   fn is_module_declaration_with_source(&self) -> bool {
     matches!(self.as_module_declaration(), Some(decl) if decl.source().is_some())
   }

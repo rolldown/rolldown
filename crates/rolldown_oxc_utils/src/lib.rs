@@ -8,8 +8,12 @@ mod oxc_ast;
 mod take_in;
 
 pub use crate::{
-  ast_snippet::AstSnippet, dummy::Dummy, from_in::FromIn, into_in::IntoIn, oxc_ast::OxcAst,
+  ast_snippet::AstSnippet,
+  compiler::OxcCompiler,
+  dummy::Dummy,
+  ext::{BindingIdentifierExt, BindingPatternExt, ExpressionExt, StatementExt},
+  from_in::FromIn,
+  into_in::IntoIn,
+  oxc_ast::{OxcAst, WithFields, WithFieldsMut},
   take_in::TakeIn,
 };
-pub use compiler::OxcCompiler;
-pub use ext::{BindingIdentifierExt, BindingPatternExt, ExpressionExt, StatementExt};

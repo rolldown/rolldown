@@ -19,7 +19,7 @@ Depending on the situation, unforeseen features/changes may be postponed or on h
 
 ## Opinionated preferences
 
-There are many ways to implement a feature or fix a bug and many ways to do other things. From our experiences, it's really hard to convince people that which one it's better. Similar arguments were made repeatedly and no lessons were learned.
+There are many ways to implement a feature or fix a bug and many ways to do other things. From our experiences, it's really hard to convince people that which way it's better. Similar arguments were made repeatedly and no lessons were learned.
 
 We come up a conclusion in the end: it's just simply not worth it. So if your contribution contains opinionated preferences and refuse to be changed, there will be no arguments but with the contribution being on hold forever.
 

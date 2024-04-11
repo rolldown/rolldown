@@ -126,7 +126,6 @@ impl ModuleLoader {
               // could not block on the main thread in WASI, it will block the whole program
               handle.block_on(async move { task.run().await });
             });
-            id.into()
           }
           #[cfg(not(target_family = "wasi"))]
           tokio::spawn(async move { task.run().await });

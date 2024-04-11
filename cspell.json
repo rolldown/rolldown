@@ -115,6 +115,8 @@
     "Yunfei",
     "sourcemaps",
     "memmem",
-    "memchr"
+    "memchr",
+    "wasi",
+    "WASI"
   ]
 }

@@ -26,12 +26,6 @@ impl Debug for External {
   }
 }
 
-impl Default for External {
-  fn default() -> Self {
-    Self::ArrayString(vec![])
-  }
-}
-
 impl External {
   pub async fn call(
     &self,

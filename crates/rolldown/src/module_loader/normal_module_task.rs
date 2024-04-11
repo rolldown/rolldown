@@ -211,13 +211,14 @@ impl NormalModuleTask {
     options: HookResolveIdExtraOptions,
   ) -> BatchedResult<ResolvedRequestInfo> {
     // Check external with unresolved path
-    if input_options.external.call(specifier.to_string(), Some(importer.to_string()), false).await?
-    {
-      return Ok(ResolvedRequestInfo {
-        path: specifier.to_string().into(),
-        module_type: ModuleType::Unknown,
-        is_external: true,
-      });
+    if let Some(external) = input_options.external.as_ref() {
+      if external.call(specifier.to_string(), Some(importer.to_string()), false).await? {
+        return Ok(ResolvedRequestInfo {
+          path: specifier.to_string().into(),
+          module_type: ModuleType::Unknown,
+          is_external: true,
+        });
+      }
     }
 
     let mut info =
@@ -225,10 +226,10 @@ impl NormalModuleTask {
 
     if !info.is_external {
       // Check external with resolved path
-      info.is_external = input_options
-        .external
-        .call(specifier.to_string(), Some(importer.to_string()), true)
-        .await?;
+      if let Some(external) = input_options.external.as_ref() {
+        info.is_external =
+          external.call(specifier.to_string(), Some(importer.to_string()), true).await?;
+      }
     }
     Ok(info)
   }

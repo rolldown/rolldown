@@ -37,14 +37,14 @@ impl Bundler {
   pub async fn write(&mut self) -> BundleOutput {
     match self.write_inner().await {
       Ok(output) => output,
-      Err(e) => BundleOutput { warnings: vec![], assets: vec![], errors: vec![e] },
+      Err(e) => BundleOutput { errors: vec![e], ..Default::default() },
     }
   }
 
   pub async fn generate(&mut self) -> BundleOutput {
     match self.bundle_up(false).await {
       Ok(output) => output,
-      Err(e) => BundleOutput { warnings: vec![], assets: vec![], errors: vec![e] },
+      Err(e) => BundleOutput { errors: vec![e], ..Default::default() },
     }
   }
 

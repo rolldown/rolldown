@@ -6,7 +6,7 @@ use crate::{
   StmtInfo, StmtInfos, SymbolRef,
 };
 use index_vec::IndexVec;
-use oxc::{semantic::SymbolId, span::Span};
+use oxc::span::Span;
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
@@ -22,7 +22,7 @@ pub struct NormalModule {
   pub repr_name: String,
   pub module_type: ModuleType,
   pub namespace_symbol: SymbolRef,
-  pub named_imports: FxHashMap<SymbolId, NamedImport>,
+  pub named_imports: FxHashMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   /// `stmt_infos[0]` represents the namespace binding statement
   pub stmt_infos: StmtInfos,

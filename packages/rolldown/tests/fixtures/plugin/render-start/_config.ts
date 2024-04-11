@@ -16,15 +16,15 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin-render-start',
-        renderStart: (outputoptions, inputOptions) => {
+        renderStart: (outputOptions, inputOptions) => {
           renderStartFn()
           expect(inputOptions.input[0]).toBe(entry)
-          expect(outputoptions.entryFileNames).toBe(entryFileNames)
+          expect(outputOptions.entryFileNames).toBe(entryFileNames)
         },
       },
     ],
   },
-  afterTest: (output) => {
+  afterTest: () => {
     expect(renderStartFn).toHaveBeenCalledTimes(1)
   },
 })

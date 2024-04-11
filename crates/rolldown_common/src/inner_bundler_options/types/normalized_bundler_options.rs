@@ -14,7 +14,7 @@ pub struct NormalizedBundlerOptions {
   // --- Input
   pub input: Vec<InputItem>,
   pub cwd: PathBuf,
-  pub external: External,
+  pub external: Option<External>,
   pub treeshake: bool,
   pub platform: Platform,
   pub shim_missing_exports: bool,

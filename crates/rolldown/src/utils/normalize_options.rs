@@ -16,7 +16,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     cwd: raw_options
       .cwd
       .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),
-    external: raw_options.external.unwrap_or_default(),
+    external: raw_options.external,
     treeshake: raw_options.treeshake.unwrap_or(true),
     platform: raw_options.platform.unwrap_or(Platform::Browser),
     entry_file_names: raw_options

@@ -34,22 +34,19 @@ pub fn normalize_binding_options(
   debug_assert!(PathBuf::from(&input_options.cwd) != PathBuf::from("/"), "{input_options:#?}");
   let cwd = PathBuf::from(input_options.cwd);
 
-  let external = input_options
-    .external
-    .map(|ts_fn| {
-      rolldown::External::Fn(Box::new(move |source, importer, is_resolved| {
-        let ts_fn = ts_fn.clone();
-        Box::pin(async move {
-          ts_fn.call_async((source, importer, is_resolved)).await.map_err(BuildError::from)
-        })
-      }))
-    })
-    .unwrap_or_default();
+  let external = input_options.external.map(|ts_fn| {
+    rolldown::External::Fn(Box::new(move |source, importer, is_resolved| {
+      let ts_fn = ts_fn.clone();
+      Box::pin(async move {
+        ts_fn.call_async((source, importer, is_resolved)).await.map_err(BuildError::from)
+      })
+    }))
+  });
 
   let bundler_options = BundlerOptions {
     input: Some(input_options.input.into_iter().map(Into::into).collect()),
     cwd: cwd.into(),
-    external: external.into(),
+    external,
     treeshake: true.into(),
     resolve: input_options.resolve.map(Into::into),
     platform: input_options

@@ -48,6 +48,12 @@ We started with the intention of a JS to Rust port, but soon realized that in or
 
 Rolldown's scope is also larger than Rollup's and more similar to esbuild. It comes with built-in CommonJS support, `node_modules` resolution, and will also support TypeScript / JSX transforms and minification in the future.
 
+## Why Not Incrementally Improve Rollup?
+
+Vite is standing on the shoulder of giants, and owes a lot of its success to Rollup. We have a good collaboration relationship with Rollup's current maintainer [Lukas](https://github.com/lukastaegert), and are highly appreciative towards his brilliant work. We reached out to Lukas before starting to work on Rolldown to make sure he is aware of and ok with it. The consensus was that it is good to explore both incremental improvements (by Lukas) and ground-up re-implementation (by us) in parallel.
+
+Our thesis is that given the single-threaded nature of JavaScript and the complexity of bundlers, it is extremely unlikely to achieve the performance level we are aiming for via incremental changes. The performance gain from partially moving components to Rust is often significantly offset by the cost of passing data between Rust and JavaScript, as shown in Rollup 4's adoption of the Rust-based SWC parser. To achieve optimal performance, the entire parse / transform / codegen pipeline needs to happen on the native side, and be parallelized as much as possible. This is only feasible with a ground-up implementation.
+
 ## Roadmap
 
 Check out the [Roadmap](https://github.com/rolldown/rolldown/discussions/153) on GitHub discussions.

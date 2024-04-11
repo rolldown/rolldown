@@ -4,7 +4,7 @@ Rolldown is a open-source project and only have a few people working on it. We h
 
 As much as we encourage contributions, we also expect people to follow general guidelines to ensure a positive and productive environment for everyone.
 
-We will appreciate your any contribution, but there are certain situations where we may not be able to accept them.
+We will appreciate any contribution, but there are certain situations where we may not be able to accept them.
 
 ## Unforeseen features/changes
 

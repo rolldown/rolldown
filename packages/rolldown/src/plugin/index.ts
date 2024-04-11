@@ -99,7 +99,7 @@ export interface Plugin {
   renderStart?: Hook<
     (
       outputOptions: BindingOutputOptions,
-      inputOptions: BindingInputOptions,
+      inputOptions: RolldownNormalizedInputOptions,
     ) => MaybePromise<NullValue>
   >
 

@@ -15,7 +15,6 @@ export function bindingifyRenderStart(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async () => {
-    // @ts-expect-error
     handler.call(null, outputOptions, options)
   }
 }

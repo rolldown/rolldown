@@ -774,9 +774,9 @@ dependencies = [
 
 [[package]]
 name = "napi"
-version = "3.0.0-alpha.0"
+version = "3.0.0-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2426e54ee63827ea1d01460019b73f0c29a0b07fbee09fe421e09d505409cce7"
+checksum = "91a58f76e2527361ffb0f1fc90e5e95eb1597d37f1e966374258e3c84c9ddfa0"
 dependencies = [
  "bitflags 2.5.0",
  "ctor",
@@ -793,9 +793,9 @@ checksum = "2f9130fccc5f763cf2069b34a089a18f0d0883c66aceb81f2fad541a3d823c43"
 
 [[package]]
 name = "napi-derive"
-version = "3.0.0-alpha.0"
+version = "3.0.0-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af2661941c8aad961a0c6214b99d06f971b1ca4184a425d8f6aad55662860ee9"
+checksum = "c230c813bfd4d6c7aafead3c075b37f0cf7fecb38be8f4cf5cfcee0b2c273ad0"
 dependencies = [
  "cfg-if",
  "convert_case",
@@ -807,9 +807,9 @@ dependencies = [
 
 [[package]]
 name = "napi-derive-backend"
-version = "2.0.0-alpha.0"
+version = "2.0.0-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a014b6d34997c01ca1a08ad030e3edd3b343a8119222738a04835b42968fa00"
+checksum = "4370cc24c2e58d0f3393527b282eb00f1158b304248f549e1ec81bd2927db5fe"
 dependencies = [
  "convert_case",
  "once_cell",
@@ -822,9 +822,9 @@ dependencies = [
 
 [[package]]
 name = "napi-sys"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2503fa6af34dc83fb74888df8b22afe933b58d37daf7d80424b1c60c68196b8b"
+checksum = "427802e8ec3a734331fec1035594a210ce1ff4dc5bc1950530920ab717964ea3"
 dependencies = [
  "libloading",
 ]
@@ -933,9 +933,9 @@ checksum = "caff54706df99d2a78a5a4e3455ff45448d81ef1bb63c22cd14052ca0e993a3f"
 
 [[package]]
 name = "oxc"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d2c8b600ba0e6eeae1b38be26746ecb402f6c8ccc6921fb75419bb14ecd9364"
+checksum = "c1fae9873d4b15c75f6c1d22a2ce52e81775d691b830d787713b03c5cd7dc72b"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
@@ -951,9 +951,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_allocator"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7a8702ba3891e74a12d56fd76276870627b2e7b5b453e44834098619a829e97"
+checksum = "cc124182c8b2687ae4d1b90010599a7e737f978527c498878206a618d5076e2d"
 dependencies = [
  "bumpalo",
  "serde",
@@ -961,9 +961,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_ast"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "214497343650a28e5fecc3b25ae5cd8040717ddbb92b7e8f7f113317a5a6e61b"
+checksum = "7bf75711e5ee8d5e6b9c9bc944c58becffa094be9895ed9465e1d4ae6e3a3f01"
 dependencies = [
  "bitflags 2.5.0",
  "num-bigint",
@@ -975,9 +975,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_codegen"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a1326d4ee2ba5ebab96f2370ed04e5dfe0d26ca35daeaa0f42a0e92b829417e"
+checksum = "0a95eb0f72cfac7ddc938d0cb7ab2fec90e6c87c7fcfd73d473a85429250633b"
 dependencies = [
  "bitflags 2.5.0",
  "oxc_allocator",
@@ -989,9 +989,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_diagnostics"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "831b3aeb609baeffb0c8d734bdfd6f4edc569ec7f0cbc42f41f88f56f9762c67"
+checksum = "a1687ae59c51a5a78f8f02160a6f934e844e74801654b445d28eec878e09967b"
 dependencies = [
  "miette",
  "owo-colors",
@@ -1002,9 +1002,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_index"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4e887e827ca8258b5f0e64c39f01e14fca9b2c12c7fd680b509eb0f4ad86498"
+checksum = "45aa91e04e64cb708bbdc52e9551433ea2b9b552140a9d5a1eb879d4f888ea20"
 dependencies = [
  "index_vec",
  "static_assertions",
@@ -1012,9 +1012,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_parser"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7419057a6eb0e42bb08d06bcabef67b837ff3764e377087b3067a99db9f6a797"
+checksum = "f6b20dfe742f4355be5f9df2bfacc093fe1884ad8107d775fbd2dc3b0d367a98"
 dependencies = [
  "assert-unchecked",
  "bitflags 2.5.0",
@@ -1032,9 +1032,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "1.6.4"
+version = "1.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfd1f2171167afd69aefeb4ec8ca5b9fdccdd43ecafe1e8ddf1a1bd756ee5774"
+checksum = "398397ad0129603cf7137ba11e86a4c7a731c8bad6b688d391374276ff4d83d2"
 dependencies = [
  "dashmap",
  "dunce",
@@ -1051,9 +1051,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_semantic"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9016c6b6b9b39f8d8a24e40d2fdc0961369a4430e5cdc3aa1cd753a7007af54e"
+checksum = "51d49a991d6e431f03f611760ebca7705724243440e6f0950bfdb157d97daadd"
 dependencies = [
  "indexmap",
  "oxc_allocator",
@@ -1069,9 +1069,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_sourcemap"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40b3733cb8770574ed8f7cf78f6b6f3842ceed478ba9a7ec9155147b24e38110"
+checksum = "94f0febf4840e1adb55304fd1c8535b7511a215d2e3cad0cb338d0b2fa44627d"
 dependencies = [
  "base64-simd",
  "rayon",
@@ -1082,9 +1082,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_span"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22bd09dc3c17b1d202be1adc96f035be4d41aaa9e7398f3232aa26270c1c1952"
+checksum = "eddad0bda5da466b241f4b01d2d356fe44d2df2d1094fb079a5a16c009b0f4c1"
 dependencies = [
  "compact_str",
  "miette",
@@ -1092,9 +1092,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_syntax"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f8b814d3b96f476cd2032765e3a2fda53d9ab14e6c5606d0b1979d10b7b8a1c"
+checksum = "963fbd06ac090db0e3b9b570e7a0ba768f9a94ec631da0ecb97a74f34b518e99"
 dependencies = [
  "bitflags 2.5.0",
  "dashmap",

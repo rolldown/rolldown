@@ -80,9 +80,9 @@ index_vec                 = "0.1.3"
 insta                     = "1.38.0"
 memchr                    = "2.7.2"
 mimalloc                  = "0.1.39"
-napi                      = { version = "3.0.0-alpha", features = ["async"] }
+napi                      = { version = "3.0.0-alpha.1", features = ["async"] }
 napi-build                = { version = "2.1.2" }
-napi-derive               = { version = "3.0.0-alpha", default-features = false, features = ["type-def"] }
+napi-derive               = { version = "3.0.0-alpha.1", default-features = false, features = ["type-def"] }
 once_cell                 = "1.19.0"
 oxc                       = { version = "0.12.3", features = ["sourcemap"] }
 oxc_resolver              = { version = "1.6.5", features = ["package_json_raw_json_api"] }

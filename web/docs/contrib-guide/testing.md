@@ -40,7 +40,7 @@ Rolldown uses [insta](https://insta.rs/docs/cli/) for rust snapshot testing. You
 ## Node.js Tests
 
 :::tip
-Make sure to [build Node.js bindings](./build.md) before running these tests.
+Make sure to [build Node.js bindings](./building-and-running.md) before running these tests.
 :::
 
 ### Node.js API tests

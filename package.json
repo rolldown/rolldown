@@ -25,7 +25,6 @@
     "ci:build-release-binding": "pnpm --filter rolldown run build-binding:release",
     "test:update-rollup": "pnpm --filter rollup-tests run test:update",
     "type-check": "pnpm --recursive run type-check",
-    "bench": "pnpm --filter bench run bench",
     "docs": "pnpm --filter rolldown-docs run dev",
     "docs:build": "pnpm --filter rolldown-docs run build",
     "docs:preview": "pnpm --filter rolldown-docs run preview",
@@ -33,6 +32,7 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "rolldown": "workspace:*",
     "@ls-lint/ls-lint": "^2.2.2",
     "@taplo/cli": "^0.7.0",
     "@types/node": "^20.11.26",

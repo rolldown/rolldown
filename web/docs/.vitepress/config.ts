@@ -62,6 +62,7 @@ export default defineConfig({
     sidebar: {
       '/contrib-guide/': [
         { text: 'Overview', link: '/contrib-guide/' },
+        { text: 'Etiquette', link: '/contrib-guide/etiquette.md' },
         {
           text: 'Development',
           items: [

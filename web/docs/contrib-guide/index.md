@@ -24,6 +24,12 @@ We accept pull requests for all bugs, fixes, improvements, and new features. Bef
 
 For setting up the project's development environment, see [Project Setup](./setup-the-project.md).
 
+:::warning
+
+Please read the [Etiquette](./etiquette.md) chapter before submitting a pull request.
+
+:::
+
 ### Branch organization
 
 Submit all pull requests directly to the `main` branch. We only use separate branches for upcoming releases / breaking changes, otherwise, everything points to main.

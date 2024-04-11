@@ -11,7 +11,7 @@ use crate::{
   types::bundle_output::BundleOutput,
   BundlerOptions, SharedOptions, SharedResolver,
 };
-use rolldown_error::Result;
+use rolldown_error::{BuildError, Result};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
 use sugar_path::SugarPath;
@@ -34,7 +34,30 @@ impl Bundler {
 }
 
 impl Bundler {
-  pub async fn write(&mut self) -> Result<BundleOutput> {
+  pub async fn write(&mut self) -> BundleOutput {
+    match self.write_inner().await {
+      Ok(output) => output,
+      Err(e) => BundleOutput { warnings: vec![], assets: vec![], errors: vec![e] },
+    }
+  }
+
+  pub async fn generate(&mut self) -> BundleOutput {
+    match self.bundle_up(false).await {
+      Ok(output) => output,
+      Err(e) => BundleOutput { warnings: vec![], assets: vec![], errors: vec![e] },
+    }
+  }
+
+  pub async fn scan(&mut self) -> Vec<BuildError> {
+    let mut errors = vec![];
+    match self.scan_inner().await {
+      Ok(output) => errors.extend(output.errors),
+      Err(e) => errors.push(e),
+    }
+    errors
+  }
+
+  async fn write_inner(&mut self) -> Result<BundleOutput> {
     let dir = self.options.cwd.as_path().join(&self.options.dir).to_string_lossy().to_string();
 
     let output = self.bundle_up(true).await?;
@@ -63,24 +86,9 @@ impl Bundler {
     Ok(output)
   }
 
-  pub async fn generate(&mut self) -> Result<BundleOutput> {
-    self.bundle_up(false).await
-  }
-
-  pub async fn scan(&mut self) -> Result<()> {
-    self.plugin_driver.build_start().await?;
-
-    let ret = self.scan_inner().await;
-
-    self.call_build_end_hook(&ret).await?;
-
-    ret?;
-
-    Ok(())
-  }
-
-  async fn call_build_end_hook(&mut self, ret: &Result<ScanStageOutput>) -> Result<()> {
-    if let Err(e) = ret {
+  // TODO call build end hook is not correct
+  async fn call_build_end_hook(&mut self, ret: &ScanStageOutput) -> Result<()> {
+    if let Some(e) = ret.errors.first() {
       self
         .plugin_driver
         .build_end(Some(&HookBuildEndArgs {
@@ -97,27 +105,27 @@ impl Bundler {
   }
 
   async fn scan_inner(&mut self) -> Result<ScanStageOutput> {
-    ScanStage::new(
+    self.plugin_driver.build_start().await?;
+
+    let ret = ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs.clone(),
       Arc::clone(&self.resolver),
     )
     .scan()
-    .await
+    .await;
+
+    self.call_build_end_hook(&ret).await?;
+
+    Ok(ret)
   }
 
   #[tracing::instrument(skip_all)]
   async fn try_build(&mut self) -> Result<LinkStageOutput> {
-    self.plugin_driver.build_start().await?;
+    let scan_ret = self.scan_inner().await?;
 
-    let scan_ret = self.scan_inner().await;
-
-    self.call_build_end_hook(&scan_ret).await?;
-
-    let build_info = scan_ret?;
-
-    let link_stage = LinkStage::new(build_info, &self.options);
+    let link_stage = LinkStage::new(scan_ret, &self.options);
     Ok(link_stage.link())
   }
 
@@ -134,6 +142,6 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&assets, is_write).await?;
 
-    Ok(BundleOutput { warnings: std::mem::take(&mut link_stage_output.warnings), assets })
+    Ok(BundleOutput { warnings: std::mem::take(&mut link_stage_output.warnings), assets, errors })
   }
 }

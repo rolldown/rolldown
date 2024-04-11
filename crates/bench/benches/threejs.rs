@@ -34,7 +34,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             cwd: join_by_repo_root("crates/benches").into(),
             ..Default::default()
           });
-          rolldown_bundler.scan().await.unwrap();
+          let errors = rolldown_bundler.scan().await;
+          assert!(errors.is_empty(), "failed to bundle: {:?}", errors);
         })
       });
     });
@@ -64,7 +65,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             cwd: join_by_repo_root("crates/bench").into(),
             ..Default::default()
           });
-          rolldown_bundler.write().await.unwrap();
+          let result = rolldown_bundler.write().await;
+          assert!(result.errors.is_empty(), "failed to bundle: {:?}", result.errors);
         })
       });
     });
@@ -81,7 +83,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             sourcemap: Some(SourceMapType::File),
             ..Default::default()
           });
-          rolldown_bundler.write().await.unwrap();
+          let result = rolldown_bundler.write().await;
+          assert!(result.errors.is_empty(), "failed to bundle: {:?}", result.errors);
         })
       });
     });

@@ -9,7 +9,7 @@ use std::{borrow::Cow, path::Path};
 
 use sugar_path::SugarPath;
 
-pub use crate::error::{Error, Result};
+pub use crate::error::{collect_results, Result};
 pub use crate::{build_error::BuildError, event_kind::EventKind};
 trait PathExt {
   fn relative_display(&self) -> Cow<str>;

@@ -6,7 +6,7 @@ pub mod task_context;
 mod task_result;
 
 pub use module_loader::ModuleLoader;
-use rolldown_error::Error;
+use rolldown_error::BuildError;
 
 use self::{
   runtime_normal_module_task::RuntimeNormalModuleTaskResult, task_result::NormalModuleTaskResult,
@@ -14,6 +14,6 @@ use self::{
 pub enum Msg {
   NormalModuleDone(NormalModuleTaskResult),
   RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult),
-  BuildErrors(Vec<Error>),
+  BuildErrors(Vec<BuildError>),
   Panics(anyhow::Error),
 }

@@ -3,7 +3,7 @@ use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordId, ModuleId, NormalModule,
   NormalModuleId,
 };
-use rolldown_error::{BuildError, Result};
+use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
@@ -62,6 +62,7 @@ pub struct ModuleLoaderOutput {
   pub entry_points: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
+  pub errors: Vec<BuildError>,
 }
 
 impl ModuleLoader {
@@ -148,7 +149,7 @@ impl ModuleLoader {
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: Vec<(Option<String>, ResolvedRequestInfo)>,
-  ) -> Result<ModuleLoaderOutput> {
+  ) -> ModuleLoaderOutput {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
     let mut errors = vec![];
@@ -249,10 +250,6 @@ impl ModuleLoader {
 
     assert!(panic_errors.is_empty(), "Panics occurred during module loading: {panic_errors:?}");
 
-    if !errors.is_empty() {
-      return Err(errors.into());
-    }
-
     let modules: IndexVec<NormalModuleId, NormalModule> =
       self.intermediate_normal_modules.modules.into_iter().map(Option::unwrap).collect();
 
@@ -268,7 +265,7 @@ impl ModuleLoader {
       kind: EntryPointKind::DynamicImport,
     }));
 
-    Ok(ModuleLoaderOutput {
+    ModuleLoaderOutput {
       module_table: ModuleTable {
         normal_modules: modules,
         external_modules: self.external_modules,
@@ -278,6 +275,7 @@ impl ModuleLoader {
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
-    })
+      errors,
+    }
   }
 }

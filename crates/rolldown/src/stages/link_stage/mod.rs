@@ -37,6 +37,7 @@ pub struct LinkStageOutput {
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
+  pub errors: Vec<BuildError>,
 }
 
 #[derive(Debug)]
@@ -48,6 +49,7 @@ pub struct LinkStage<'a> {
   pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildError>,
+  pub errors: Vec<BuildError>,
   pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub input_options: &'a SharedOptions,
 }
@@ -67,6 +69,7 @@ impl<'a> LinkStage<'a> {
       symbols: scan_stage_output.symbols,
       runtime: scan_stage_output.runtime,
       warnings: scan_stage_output.warnings,
+      errors: scan_stage_output.errors,
       ast_table: scan_stage_output.ast_table,
       input_options,
     }
@@ -141,6 +144,7 @@ impl<'a> LinkStage<'a> {
       symbols: self.symbols,
       runtime: self.runtime,
       warnings: self.warnings,
+      errors: self.errors,
       ast_table: self.ast_table,
     }
   }

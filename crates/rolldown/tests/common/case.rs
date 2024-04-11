@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 use super::fixture::Fixture;
 use rolldown::BundleOutput;
 use rolldown_common::Output;
-use rolldown_error::Error;
+use rolldown_error::BuildError;
 use rolldown_sourcemap::SourcemapVisualizer;
 
 pub struct Case {
@@ -26,18 +26,17 @@ impl Case {
 
   pub async fn run_inner(mut self) {
     let build_output = self.fixture.compile().await;
-    match build_output {
-      Ok(assets) => {
-        assert!(!self.fixture.test_config().expect_error, "expected error, but got success");
-        self.render_assets_to_snapshot(assets);
-      }
-      Err(errs) => {
-        assert!(
-          self.fixture.test_config().expect_error,
-          "expected success, but got errors: {errs:?}"
-        );
-        self.render_errors_to_snapshot(errs);
-      }
+    if build_output.errors.is_empty() {
+      assert!(!self.fixture.test_config().expect_error, "expected error, but got success");
+      let build_output = self.fixture.compile().await;
+      self.render_assets_to_snapshot(build_output);
+    } else {
+      assert!(
+        self.fixture.test_config().expect_error,
+        "expected success, but got errors: {:?}",
+        build_output.errors
+      );
+      self.render_errors_to_snapshot(build_output.errors);
     }
     self.make_snapshot();
     self.fixture.exec();
@@ -109,9 +108,8 @@ impl Case {
     self.snapshot.push_str(&stats);
   }
 
-  fn render_errors_to_snapshot(&mut self, error: Error) {
+  fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildError>) {
     self.snapshot.push_str("# Errors\n\n");
-    let mut errors = error.into_vec();
     errors.sort_by_key(|e| e.kind().to_string());
     let diagnostics = errors.into_iter().map(|e| (e.kind(), e.into_diagnostic()));
 

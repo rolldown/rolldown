@@ -7,7 +7,7 @@ use rolldown_common::{
   AstScope, FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath,
   ResourceId, SymbolRef,
 };
-use rolldown_error::{Error, Result};
+use rolldown_error::{BuildError, Result};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use sugar_path::SugarPath;
@@ -28,7 +28,7 @@ pub struct NormalModuleTask {
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
   module_type: ModuleType,
-  errors: Vec<Error>,
+  errors: Vec<BuildError>,
 }
 
 impl NormalModuleTask {

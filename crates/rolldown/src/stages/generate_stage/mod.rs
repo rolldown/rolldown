@@ -47,6 +47,7 @@ impl<'a> GenerateStage<'a> {
   pub async fn generate(&mut self) -> BatchedResult<Vec<Output>> {
     tracing::info!("Start bundle stage");
     let mut chunk_graph = self.generate_chunks();
+    let mut all_errors = vec![];
 
     self.generate_chunk_filenames(&mut chunk_graph);
     tracing::info!("generate_chunk_filenames");
@@ -133,7 +134,7 @@ impl<'a> GenerateStage<'a> {
 
     tracing::info!("rendered chunks");
 
-    Ok(assets)
+    Ok((assets, all_errors))
   }
 
   fn generate_chunk_filenames(&self, chunk_graph: &mut ChunkGraph) {

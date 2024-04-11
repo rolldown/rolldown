@@ -19,8 +19,7 @@ use crate::{
 };
 use index_vec::IndexVec;
 use rolldown_common::{EntryPoint, ImportKind, NormalModuleId};
-use rolldown_error::BuildError;
-use rolldown_error::Result;
+use rolldown_error::{collect_results, BuildError};
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
@@ -41,6 +40,7 @@ pub struct ScanStageOutput {
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
+  pub errors: Vec<BuildError>,
 }
 
 impl ScanStage {
@@ -54,10 +54,11 @@ impl ScanStage {
   }
 
   #[tracing::instrument(skip_all)]
-  pub async fn scan(&self) -> Result<ScanStageOutput> {
+  pub async fn scan(&self) -> ScanStageOutput {
     tracing::info!("Start scan stage");
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
+    let mut all_errors = vec![];
     let mut module_loader = ModuleLoader::new(
       Arc::clone(&self.input_options),
       Arc::clone(&self.plugin_driver),
@@ -69,12 +70,28 @@ impl ScanStage {
 
     let user_entries = self.resolve_user_defined_entries().await?;
 
-    let ModuleLoaderOutput { module_table, entry_points, symbols, runtime, warnings, ast_table } =
-      module_loader.fetch_all_modules(user_entries).await?;
+    let ModuleLoaderOutput {
+      module_table,
+      entry_points,
+      symbols,
+      runtime,
+      warnings,
+      errors,
+      ast_table,
+    } = module_loader.fetch_all_modules(user_entries).await;
+    all_errors.extend(errors);
 
     tracing::debug!("Scan stage finished {module_table:#?}");
 
-    Ok(ScanStageOutput { module_table, entry_points, symbols, runtime, warnings, ast_table })
+    ScanStageOutput {
+      module_table,
+      entry_points,
+      symbols,
+      runtime,
+      warnings,
+      ast_table,
+      errors: all_errors,
+    }
   }
 
   /// Resolve `InputOptions.input`
@@ -108,6 +125,6 @@ impl ScanStage {
     }))
     .await;
 
-    resolved_ids.into_iter().collect::<Result<Vec<_>>>()
+    collect_results(resolved_ids)
   }
 }

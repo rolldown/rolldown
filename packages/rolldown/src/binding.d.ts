@@ -126,6 +126,10 @@ export interface BindingPluginOptions {
     code: string,
     chunk: RenderedChunk,
   ) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
+  renderStart?: (
+    outputOptions: BindingOutputOptions,
+    inputOptions: BindingInputOptions,
+  ) => void
   generateBundle?: (
     bundle: BindingOutputs,
     isWrite: boolean,

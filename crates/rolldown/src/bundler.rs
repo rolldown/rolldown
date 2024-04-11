@@ -129,6 +129,7 @@ impl Bundler {
   async fn bundle_up(&mut self, is_write: bool) -> BatchedResult<BundleOutput> {
     tracing::trace!("Options {:#?}", self.options);
     let mut link_stage_output = self.try_build().await?;
+    self.plugin_driver.render_start().await?;
 
     let mut bundle_stage =
       BundleStage::new(&mut link_stage_output, &self.options, &self.plugin_driver);

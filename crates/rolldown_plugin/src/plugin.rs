@@ -65,6 +65,11 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   // --- Generate hooks ---
 
   #[allow(clippy::ptr_arg)]
+  async fn render_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
+    Ok(())
+  }
+
+  #[allow(clippy::ptr_arg)]
   async fn generate_bundle(
     &self,
     _ctx: &SharedPluginContext,

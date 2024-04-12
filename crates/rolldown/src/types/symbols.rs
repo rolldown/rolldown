@@ -2,7 +2,6 @@ use index_vec::IndexVec;
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
 use rolldown_common::{ChunkId, NormalModuleId, SymbolRef};
 use rolldown_rstr::Rstr;
-use rolldown_utils::fast_drop;
 use rustc_hash::FxHashMap;
 
 use super::{ast_symbols::AstSymbols, namespace_alias::NamespaceAlias};
@@ -93,11 +92,5 @@ impl Symbols {
       canonical = founded;
     }
     canonical
-  }
-}
-
-impl Drop for Symbols {
-  fn drop(&mut self) {
-    fast_drop(std::mem::take(&mut self.inner));
   }
 }

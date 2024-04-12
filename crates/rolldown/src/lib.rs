@@ -3,6 +3,7 @@ mod bundler;
 mod bundler_builder;
 mod chunk;
 mod chunk_graph;
+mod drop_in_another_thread;
 mod error;
 mod finalizer;
 mod module_loader;

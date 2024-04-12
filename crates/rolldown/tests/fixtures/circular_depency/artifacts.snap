@@ -1,0 +1,36 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/circular_depency
+---
+# warnings
+
+## CIRCULAR_DEPENDENCY
+
+```text
+[CIRCULAR_DEPENDENCY] Warning: Circular dependency: entry.js -> foo.js -> entry.js.
+
+```
+## CIRCULAR_DEPENDENCY
+
+```text
+[CIRCULAR_DEPENDENCY] Warning: Circular dependency: foo.js -> main.js -> foo.js.
+
+```
+# Assets
+
+## entry.mjs
+
+```js
+import "./main_js.mjs";
+```
+## main.mjs
+
+```js
+import "./main_js.mjs";
+```
+## main_js.mjs
+
+```js
+
+```

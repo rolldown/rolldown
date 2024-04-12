@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 
 use crate::{diagnostic::Diagnostic, event_kind::EventKind};
+
+pub mod circular_dependency;
 pub mod external_entry;
 pub mod forbid_const_assign;
 pub mod sourcemap_error;

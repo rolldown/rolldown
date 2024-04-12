@@ -2,7 +2,7 @@ use std::{borrow::Cow, sync::Mutex};
 
 use crate::{chunk::CrossChunkImportItem, chunk_graph::ChunkGraph, utils::is_in_rust_test_mode};
 
-use super::BundleStage;
+use super::GenerateStage;
 use index_vec::{index_vec, IndexVec};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
@@ -17,7 +17,7 @@ type ChunkMetaImportsForExternalModules =
   IndexVec<ChunkId, FxHashMap<ExternalModuleId, Vec<NamedImport>>>;
 type ChunkMetaExports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
 
-impl<'a> BundleStage<'a> {
+impl<'a> GenerateStage<'a> {
   /// - Assign each symbol to the chunk it belongs to
   /// - Collect all referenced symbols and consider them potential imports
   fn collect_potential_chunk_imports(

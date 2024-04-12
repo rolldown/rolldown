@@ -11,9 +11,9 @@ use crate::{
   utils::is_in_rust_test_mode,
 };
 
-use super::BundleStage;
+use super::GenerateStage;
 
-impl<'a> BundleStage<'a> {
+impl<'a> GenerateStage<'a> {
   fn determine_reachable_modules_for_entry(
     &self,
     module_id: NormalModuleId,

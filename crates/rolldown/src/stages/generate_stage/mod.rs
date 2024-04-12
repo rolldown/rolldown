@@ -21,13 +21,13 @@ use crate::{
 mod code_splitting;
 mod compute_cross_chunk_links;
 
-pub struct BundleStage<'a> {
+pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
   options: &'a SharedOptions,
   plugin_driver: &'a SharedPluginDriver,
 }
 
-impl<'a> BundleStage<'a> {
+impl<'a> GenerateStage<'a> {
   pub fn new(
     link_output: &'a mut LinkStageOutput,
     options: &'a SharedOptions,
@@ -37,7 +37,7 @@ impl<'a> BundleStage<'a> {
   }
 
   #[tracing::instrument(skip_all)]
-  pub async fn bundle(&mut self) -> BatchedResult<Vec<Output>> {
+  pub async fn generate(&mut self) -> BatchedResult<Vec<Output>> {
     use rayon::prelude::*;
     tracing::info!("Start bundle stage");
     let mut chunk_graph = self.generate_chunks();

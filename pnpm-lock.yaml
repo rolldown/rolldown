@@ -35,6 +35,9 @@ importers:
       prettier:
         specifier: ^3.2.5
         version: 3.2.5
+      rolldown:
+        specifier: workspace:*
+        version: link:packages/rolldown
       typescript:
         specifier: ^5.4.2
         version: 5.4.5
@@ -277,7 +280,7 @@ importers:
   web/docs:
     devDependencies:
       vitepress:
-        specifier: ^1.0.0-rc.45
+        specifier: ^1.1.0
         version: 1.1.0(@algolia/client-search@4.23.3)(@types/node@20.12.7)(search-insights@2.13.0)(typescript@5.4.5)
 
   web/playground:

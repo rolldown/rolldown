@@ -138,8 +138,6 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&assets, is_write).await?;
 
-    // Here Drop `LinkStageOutput` has larger overhead, so impl `Drop` trait for filed using drop in parallel.
-
     Ok(BundleOutput { warnings: std::mem::take(&mut link_stage_output.warnings), assets })
   }
 }

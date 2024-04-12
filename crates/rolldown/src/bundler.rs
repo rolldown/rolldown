@@ -11,7 +11,7 @@ use super::stages::{
 use crate::{
   bundler_builder::BundlerBuilder,
   error::{BatchedErrors, BatchedResult},
-  stages::{bundle_stage::BundleStage, scan_stage::ScanStage},
+  stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
   BundlerOptions, SharedOptions, SharedResolver,
 };
@@ -131,10 +131,10 @@ impl Bundler {
     let mut link_stage_output = self.try_build().await?;
     self.plugin_driver.render_start().await?;
 
-    let mut bundle_stage =
-      BundleStage::new(&mut link_stage_output, &self.options, &self.plugin_driver);
+    let mut generate_stage =
+      GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver);
 
-    let assets = bundle_stage.bundle().await?;
+    let assets = generate_stage.generate().await?;
 
     self.plugin_driver.generate_bundle(&assets, is_write).await?;
 

@@ -6,7 +6,7 @@ pub enum EventKind {
   UnresolvedImport,
   IllegalReassignment,
   Eval,
-
+  CircularDependency,
   // --- These kinds are rolldown specific
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
@@ -25,6 +25,7 @@ impl Display for EventKind {
       EventKind::IllegalReassignment => write!(f, "ILLEGAL_REASSIGNMENT"),
       EventKind::Eval => write!(f, "EVAL"),
       EventKind::SourcemapError => write!(f, "SOURCEMAP_ERROR"),
+      EventKind::CircularDependency => write!(f, "CIRCULAR_DEPENDENCY"),
 
       // --- Rolldown specific
       EventKind::NapiError => write!(f, "NAPI_ERROR"),

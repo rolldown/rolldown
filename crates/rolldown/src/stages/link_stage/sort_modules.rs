@@ -1,6 +1,7 @@
 use std::iter;
 
 use rolldown_common::ModuleId;
+use rolldown_error::BuildError;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::LinkStage;
@@ -95,9 +96,15 @@ impl<'a> LinkStage<'a> {
     }
 
     if !circular_dependencies.is_empty() {
-      let mut cycles = circular_dependencies.into_iter().collect::<Vec<_>>();
-      cycles.sort();
-      // TODO: emit warning
+      let cycles = circular_dependencies.into_iter().collect::<Vec<_>>();
+      for cycle in cycles {
+        let paths = cycle
+          .iter()
+          .filter_map(|id| id.as_normal())
+          .map(|id| self.module_table.normal_modules[id].resource_id.expect_file().to_string())
+          .collect::<Vec<_>>();
+        self.warnings.push(BuildError::circular_dependency(paths).with_severity_warning());
+      }
     }
 
     self.sorted_modules = sorted_modules;

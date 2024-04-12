@@ -8,9 +8,10 @@ use oxc::span::Span;
 use super::BuildError;
 
 use crate::events::{
-  external_entry::ExternalEntry, forbid_const_assign::ForbidConstAssign,
-  sourcemap_error::SourceMapError, unresolved_entry::UnresolvedEntry,
-  unresolved_import::UnresolvedImport, unsupported_eval::UnsupportedEval, NapiError,
+  circular_dependency::CircularDependency, external_entry::ExternalEntry,
+  forbid_const_assign::ForbidConstAssign, sourcemap_error::SourceMapError,
+  unresolved_entry::UnresolvedEntry, unresolved_import::UnresolvedImport,
+  unsupported_eval::UnsupportedEval, NapiError,
 };
 
 impl BuildError {
@@ -29,6 +30,10 @@ impl BuildError {
 
   pub fn sourcemap_error(error: oxc::sourcemap::Error) -> Self {
     Self::new_inner(SourceMapError { error })
+  }
+
+  pub fn circular_dependency(paths: Vec<String>) -> Self {
+    Self::new_inner(CircularDependency { paths })
   }
 
   // --- Rolldown related

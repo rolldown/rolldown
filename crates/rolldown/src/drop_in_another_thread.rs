@@ -16,7 +16,7 @@ where
 /// We can drop them in another thread to reduce the overhead, it will not block main thread to improve performance, see https://news.ycombinator.com/item?id=23362518.
 
 /// Here using the pattern of impl `Drop` trait to it,
-/// it avoid drop them manually at `scan_stage` or `bundle_stage`.
+/// it avoid drop them manually at `scan_stage` or `generate_stage`.
 impl Drop for ModuleTable {
   fn drop(&mut self) {
     drop_in_another_thread(std::mem::take(self));

@@ -1,6 +1,6 @@
 use crate::{
-  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookRenderChunkArgs,
-  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver,
+  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
+  HookResolveIdReturn, HookTransformArgs, PluginDriver,
 };
 use rolldown_error::BuildError;
 use rolldown_sourcemap::SourceMap;
@@ -57,21 +57,5 @@ impl PluginDriver {
       plugin.build_end(ctx, args).await?;
     }
     Ok(())
-  }
-
-  pub async fn render_chunk(
-    &self,
-    mut args: HookRenderChunkArgs<'_>,
-  ) -> Result<(String, Vec<SourceMap>), BuildError> {
-    let mut sourcemap_chain = vec![];
-    for (plugin, ctx) in &self.plugins {
-      if let Some(r) = plugin.render_chunk(ctx, &args).await? {
-        args.code = r.code;
-        if let Some(map) = r.map {
-          sourcemap_chain.push(map);
-        }
-      }
-    }
-    Ok((args.code, sourcemap_chain))
   }
 }

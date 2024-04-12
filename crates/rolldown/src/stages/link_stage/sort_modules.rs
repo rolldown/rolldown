@@ -106,19 +106,16 @@ impl<'a> LinkStage<'a> {
               .module_table
               .external_modules
               .get(*id)
-              .map(|module| module.name.clone())
-              .unwrap_or_else(|| "Unknown external module".to_string()),
-            ModuleId::Normal(id) => self
-              .module_table
-              .normal_modules
-              .get(*id)
-              .map(|module| module.pretty_path.clone())
-              .unwrap_or_else(|| "Unknown normal module".to_string()),
+              .map_or_else(|| "Unknown external module".to_string(), |module| module.name.clone()),
+            ModuleId::Normal(id) => self.module_table.normal_modules.get(*id).map_or_else(
+              || "Unknown normal module".to_string(),
+              |module| module.pretty_path.clone(),
+            ),
           })
           .collect();
 
         BuildError::circular_dependency(module_names).with_severity_warning()
-      }))
+      }));
     }
 
     self.sorted_modules = sorted_modules;

@@ -3,13 +3,13 @@ import {
   bindingifyBuildEnd,
   bindingifyBuildStart,
   bindingifyLoad,
-  bindingifyRenderChunk,
   bindingifyResolveId,
   bindingifyTransform,
 } from './bindingify-build-hooks'
 
 import {
   bindingifyRenderStart,
+  bindingifyRenderChunk,
   bindingifyGenerateBundle,
   bindingifyWriteBundle,
 } from './bindingify-output-hooks'

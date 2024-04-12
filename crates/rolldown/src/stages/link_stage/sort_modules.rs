@@ -96,26 +96,15 @@ impl<'a> LinkStage<'a> {
     }
 
     if !circular_dependencies.is_empty() {
-      let mut cycles = circular_dependencies.into_iter().collect::<Vec<_>>();
-      cycles.sort();
-      self.warnings.extend(cycles.iter().map(|path| {
-        let module_names: Vec<String> = path
+      let cycles = circular_dependencies.into_iter().collect::<Vec<_>>();
+      for cycle in cycles {
+        let paths = cycle
           .iter()
-          .map(|id| match id {
-            ModuleId::External(id) => self
-              .module_table
-              .external_modules
-              .get(*id)
-              .map_or_else(|| "Unknown external module".to_string(), |module| module.name.clone()),
-            ModuleId::Normal(id) => self.module_table.normal_modules.get(*id).map_or_else(
-              || "Unknown normal module".to_string(),
-              |module| module.pretty_path.clone(),
-            ),
-          })
-          .collect();
-
-        BuildError::circular_dependency(module_names).with_severity_warning()
-      }));
+          .filter_map(|id| id.as_normal())
+          .map(|id| self.module_table.normal_modules[id].resource_id.expect_file().to_string())
+          .collect::<Vec<_>>();
+        self.warnings.push(BuildError::circular_dependency(paths).with_severity_warning());
+      }
     }
 
     self.sorted_modules = sorted_modules;

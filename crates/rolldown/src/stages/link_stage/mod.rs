@@ -6,11 +6,11 @@ use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, NormalModule, NormalModuleId, StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::OxcAst;
 
 use crate::{
   runtime::RuntimeModuleBrief,
   types::{
+    ast_table::AstTable,
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     module_table::ModuleTable,
     symbols::Symbols,
@@ -31,7 +31,7 @@ mod wrapping;
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
   pub entries: Vec<EntryPoint>,
-  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
+  pub ast_table: AstTable,
   pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub symbols: Symbols,
@@ -48,7 +48,7 @@ pub struct LinkStage<'a> {
   pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildError>,
-  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
+  pub ast_table: AstTable,
   pub input_options: &'a SharedOptions,
 }
 

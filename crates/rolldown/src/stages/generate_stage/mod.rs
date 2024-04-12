@@ -55,7 +55,8 @@ impl<'a> GenerateStage<'a> {
     self
       .link_output
       .ast_table
-      .iter_mut_enumerated()
+      .iter_mut()
+      .enumerate()
       .par_bridge()
       .filter(|(id, _)| self.link_output.module_table.normal_modules[*id].is_included)
       .for_each(|(id, ast)| {

@@ -94,3 +94,10 @@ impl Symbols {
     canonical
   }
 }
+
+impl Drop for Symbols {
+  fn drop(&mut self) {
+    use rayon::prelude::*;
+    std::mem::take(&mut self.inner).into_iter().par_bridge().for_each(std::mem::drop);
+  }
+}

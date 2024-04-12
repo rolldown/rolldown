@@ -1,11 +1,9 @@
 use std::sync::Arc;
 
 use futures::future::join_all;
-use index_vec::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, IntoBatchedResult, NormalModuleId};
+use rolldown_common::{EntryPoint, ImportKind, IntoBatchedResult};
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
-use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 
 use crate::{
@@ -13,7 +11,8 @@ use crate::{
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
   runtime::RuntimeModuleBrief,
   types::{
-    module_table::ModuleTable, resolved_request_info::ResolvedRequestInfo, symbols::Symbols,
+    ast_table::AstTable, module_table::ModuleTable, resolved_request_info::ResolvedRequestInfo,
+    symbols::Symbols,
   },
   utils::resolve_id::resolve_id,
   SharedOptions, SharedResolver,
@@ -29,7 +28,7 @@ pub struct ScanStage {
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub module_table: ModuleTable,
-  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
+  pub ast_table: AstTable,
   pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,

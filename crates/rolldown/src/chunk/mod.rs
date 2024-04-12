@@ -101,7 +101,7 @@ impl Chunk {
         let file_dir = file_path.parent().expect("chunk file name should have a parent");
         render_normal_module(
           m,
-          &graph.ast_table[m.id],
+          graph.ast_table.get(m.id),
           // TODO(underfin): refactor the relative path
           m.resource_id.expect_file().relative_path(file_dir).to_slash_lossy().as_ref(),
           options,

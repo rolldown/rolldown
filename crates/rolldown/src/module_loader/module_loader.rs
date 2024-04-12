@@ -18,6 +18,7 @@ use super::Msg;
 use crate::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
 use crate::runtime::RuntimeModuleBrief;
+use crate::types::ast_table::AstTable;
 use crate::types::module_table::{ExternalModuleVec, ModuleTable};
 use crate::types::resolved_request_info::ResolvedRequestInfo;
 use crate::types::symbols::Symbols;
@@ -58,7 +59,7 @@ pub struct ModuleLoader {
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
-  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
+  pub ast_table: AstTable,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -276,7 +277,7 @@ impl ModuleLoader {
         external_modules: self.external_modules,
       },
       symbols: self.symbols,
-      ast_table,
+      ast_table: ast_table.into(),
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,

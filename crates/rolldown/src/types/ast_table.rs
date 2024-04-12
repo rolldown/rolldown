@@ -1,6 +1,7 @@
 use index_vec::IndexVec;
 use rolldown_common::NormalModuleId;
 use rolldown_oxc_utils::OxcAst;
+use rolldown_utils::fast_drop;
 
 #[derive(Debug)]
 pub struct AstTable {
@@ -25,7 +26,6 @@ impl From<IndexVec<NormalModuleId, OxcAst>> for AstTable {
 
 impl Drop for AstTable {
   fn drop(&mut self) {
-    use rayon::prelude::*;
-    std::mem::take(&mut self.inner).into_iter().par_bridge().for_each(std::mem::drop);
+    fast_drop(std::mem::take(&mut self.inner));
   }
 }

@@ -1,5 +1,6 @@
 use index_vec::IndexVec;
 use rolldown_common::{ExternalModule, ExternalModuleId, NormalModule, NormalModuleId};
+use rolldown_utils::fast_drop;
 
 pub type NormalModuleVec = IndexVec<NormalModuleId, NormalModule>;
 pub type ExternalModuleVec = IndexVec<ExternalModuleId, ExternalModule>;
@@ -12,8 +13,7 @@ pub struct ModuleTable {
 
 impl Drop for ModuleTable {
   fn drop(&mut self) {
-    use rayon::prelude::*;
-    std::mem::take(&mut self.normal_modules).into_iter().par_bridge().for_each(std::mem::drop);
-    std::mem::take(&mut self.external_modules).into_iter().par_bridge().for_each(std::mem::drop);
+    fast_drop(std::mem::take(&mut self.normal_modules));
+    fast_drop(std::mem::take(&mut self.external_modules));
   }
 }

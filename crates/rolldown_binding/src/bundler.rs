@@ -9,7 +9,7 @@ use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
   thread_safe_plugin_registry::ThreadSafePluginRegistry,
   types::binding_outputs::BindingOutputs,
-  utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
+  utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber}, worker_manager::WorkerManager,
 };
 
 #[napi]
@@ -35,15 +35,17 @@ impl Bundler {
     let thread_safe_plugins_map =
       thread_safe_plugins_registry.map(|registry| registry.take_plugin_values());
 
-    let ret = normalize_binding_options(input_options, output_options, thread_safe_plugins_map)?;
+    let worker_manager =
+      if worker_count > 0 { Some(WorkerManager::new(worker_count)) } else { None };
 
-    Ok(Self {
-      inner: Mutex::new(NativeBundler::with_plugins(
-        ret.bundler_options,
-        ret.plugins,
-        worker_count,
-      )),
-    })
+    let ret = normalize_binding_options(
+      input_options,
+      output_options,
+      thread_safe_plugins_map,
+      worker_manager,
+    )?;
+
+    Ok(Self { inner: Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins)) })
   }
 
   #[napi]

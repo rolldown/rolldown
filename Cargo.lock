@@ -1438,6 +1438,7 @@ dependencies = [
 name = "rolldown_binding"
 version = "0.0.1"
 dependencies = [
+ "async-channel",
  "async-trait",
  "derivative",
  "futures",
@@ -1508,7 +1509,6 @@ dependencies = [
 name = "rolldown_plugin"
 version = "0.1.0"
 dependencies = [
- "async-channel",
  "async-trait",
  "futures",
  "rolldown_common",

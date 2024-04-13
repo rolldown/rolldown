@@ -1,16 +1,18 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{
   options::plugin::JsPlugin,
+  options::plugin::ParallelJsPlugin,
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
+  worker_manager::WorkerManager,
 };
 use rolldown::{AddonOutputOption, BundlerOptions, Platform};
 use rolldown_error::BuildError;
-use rolldown_plugin::PluginOrThreadSafePlugin;
+use rolldown_plugin::BoxPlugin;
 
 pub struct NormalizeBindingOptionsReturn {
   pub bundler_options: BundlerOptions,
-  pub plugins: Vec<PluginOrThreadSafePlugin>,
+  pub plugins: Vec<BoxPlugin>,
 }
 
 fn normalize_addon_option(
@@ -31,6 +33,7 @@ pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
   output_options: crate::options::BindingOutputOptions,
   mut thread_safe_plugins_map: Option<crate::thread_safe_plugin_registry::PluginValues>,
+  worker_manager: Option<WorkerManager>,
 ) -> napi::Result<NormalizeBindingOptionsReturn> {
   debug_assert!(PathBuf::from(&input_options.cwd) != PathBuf::from("/"), "{input_options:#?}");
   let cwd = PathBuf::from(input_options.cwd);
@@ -71,8 +74,9 @@ pub fn normalize_binding_options(
   };
 
   // Deal with plugins
+  let worker_manager = worker_manager.map(Arc::new);
 
-  let plugins: Vec<PluginOrThreadSafePlugin> = input_options
+  let plugins: Vec<BoxPlugin> = input_options
     .plugins
     .into_iter()
     .chain(output_options.plugins)
@@ -81,10 +85,10 @@ pub fn normalize_binding_options(
       plugin.map_or_else(
         || {
           let plugins = thread_safe_plugins_map.as_mut().unwrap().remove(&index).unwrap();
-
-          plugins.into_iter().map(JsPlugin::new_boxed).collect::<Vec<_>>().into_boxed_slice().into()
+          let worker_manager = worker_manager.as_ref().unwrap();
+          ParallelJsPlugin::new_boxed(plugins, Arc::clone(worker_manager))
         },
-        |plugin| JsPlugin::new_boxed(plugin).into(),
+        |plugin| JsPlugin::new_boxed(plugin),
       )
     })
     .collect::<Vec<_>>();

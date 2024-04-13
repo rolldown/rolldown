@@ -12,3 +12,4 @@ pub mod options;
 pub mod thread_safe_plugin_registry;
 pub mod types;
 pub mod utils;
+mod worker_manager;

@@ -21,6 +21,10 @@ impl JsPlugin {
   pub(crate) fn new_boxed(inner: BindingPluginOptions) -> Box<dyn Plugin> {
     Box::new(Self { inner })
   }
+
+  pub(super) fn new_raw(inner: BindingPluginOptions) -> Self {
+    Self { inner }
+  }
 }
 
 #[async_trait::async_trait]

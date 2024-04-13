@@ -1,6 +1,7 @@
 use async_channel::{Receiver, Sender};
 
-pub(crate) struct WorkerManager {
+#[derive(Debug)]
+pub struct WorkerManager {
   free_workers_sender: Sender<u16>,
   free_workers_receiver: Receiver<u16>,
   worker_count: u16,
@@ -33,7 +34,7 @@ impl WorkerManager {
   }
 }
 
-pub(crate) struct WorkerSemaphorePermit {
+pub struct WorkerSemaphorePermit {
   worker_index: u16,
   sender: Sender<u16>,
 }
@@ -51,7 +52,7 @@ impl Drop for WorkerSemaphorePermit {
   }
 }
 
-pub(crate) struct WorkerAllSemaphorePermit {
+pub struct WorkerAllSemaphorePermit {
   worker_count: u16,
   sender: Sender<u16>,
 }

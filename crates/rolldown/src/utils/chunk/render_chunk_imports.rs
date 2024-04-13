@@ -1,6 +1,6 @@
-use rolldown_common::Specifier;
+use rolldown_common::{Chunk, Specifier};
 
-use crate::{chunk::Chunk, chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
+use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
 // clippy::too_many_lines: TODO(hyf0): refactor this function
 #[allow(clippy::too_many_lines)]

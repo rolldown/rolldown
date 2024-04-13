@@ -1,8 +1,9 @@
 use std::borrow::Cow;
 
+use rolldown_common::Chunk;
 use rolldown_rstr::ToRstr;
 
-use crate::{chunk::Chunk, stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
+use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 
 pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput) {
   let mut renamer =

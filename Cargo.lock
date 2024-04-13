@@ -1386,6 +1386,7 @@ dependencies = [
  "rolldown_fs",
  "rolldown_rstr",
  "rolldown_sourcemap",
+ "rolldown_utils",
  "rustc-hash",
  "schemars",
  "serde",

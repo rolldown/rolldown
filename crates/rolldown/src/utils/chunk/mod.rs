@@ -1,11 +1,7 @@
-use rolldown_common::{ChunkKind, RenderedChunk, RenderedModule};
+use rolldown_common::{Chunk, ChunkKind, PreRenderedChunk, RenderedChunk, RenderedModule};
 use rustc_hash::FxHashMap;
 
-use crate::{
-  chunk::{types::pre_renderer_chunk::PreRenderedChunk, Chunk},
-  stages::link_stage::LinkStageOutput,
-  SharedOptions,
-};
+use crate::{stages::link_stage::LinkStageOutput, SharedOptions};
 
 use self::render_chunk_exports::get_chunk_export_names;
 

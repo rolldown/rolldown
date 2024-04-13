@@ -1,17 +1,20 @@
-use rolldown_common::BatchedResult;
-use rolldown_sourcemap::{ConcatSource, RawSource, SourceMapSource};
+use rolldown_common::{BatchedResult, Chunk, RenderedChunk};
+use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
 use crate::{
-  chunk::{Chunk, ChunkRenderReturn},
-  chunk_graph::ChunkGraph,
-  stages::link_stage::LinkStageOutput,
+  chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
   types::module_render_output::ModuleRenderOutput,
-  utils::render_normal_module::render_normal_module,
-  SharedOptions,
+  utils::render_normal_module::render_normal_module, SharedOptions,
 };
+
+pub struct ChunkRenderReturn {
+  pub code: String,
+  pub map: Option<SourceMap>,
+  pub rendered_chunk: RenderedChunk,
+}
 
 use super::{
   generate_rendered_chunk, render_chunk_exports::render_chunk_exports,

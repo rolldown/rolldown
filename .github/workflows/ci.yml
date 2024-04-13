@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   # JOB to run change detection
-  Changes: # https://github.com/dorny/paths-filter
+  changes: # https://github.com/dorny/paths-filter
     name: Detect Changes
     runs-on: ubuntu-latest
     permissions:
@@ -99,6 +99,20 @@ jobs:
       os: ${{ matrix.target }}
       changed: ${{ needs.changes.outputs.rust-changes == 'true' }}
 
+  check-wasi-target:
+    name: Check WASI Target
+    runs-on: ubuntu-latest
+    needs: changes
+    steps:
+      - uses: actions/checkout@v4
+      - uses: moonrepo/setup-rust@v1
+        with:
+          targets: wasm32-wasi-preview1-threads
+          cache-base: main
+      - name: Check WASI Target
+        if: steps.filter.outputs.src == 'true'
+        run: cargo check --target wasm32-wasi-preview1-threads
+  
   node-test:
     needs: changes
     strategy:

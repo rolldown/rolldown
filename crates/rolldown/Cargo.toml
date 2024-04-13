@@ -19,7 +19,6 @@ futures            = { workspace = true }
 index_vec          = { workspace = true }
 once_cell          = { workspace = true }
 oxc                = { workspace = true }
-rayon              = { workspace = true }
 regex              = { workspace = true }
 rolldown_common    = { workspace = true }
 rolldown_error     = { workspace = true }
@@ -35,6 +34,9 @@ rustc-hash         = { workspace = true }
 sugar_path         = { workspace = true }
 tokio              = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing            = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+rayon = { workspace = true }
 
 [dev_dependencies]
 insta            = { workspace = true }

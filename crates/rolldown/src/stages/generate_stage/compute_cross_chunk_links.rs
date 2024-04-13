@@ -4,6 +4,7 @@ use crate::{chunk::CrossChunkImportItem, chunk_graph::ChunkGraph, utils::is_in_r
 
 use super::GenerateStage;
 use index_vec::{index_vec, IndexVec};
+#[cfg(not(target_family = "wasm"))]
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
   ChunkId, ChunkKind, ExportsKind, ExternalModuleId, ImportKind, ModuleId, NamedImport,
@@ -28,12 +29,21 @@ impl<'a> GenerateStage<'a> {
   ) {
     let symbols = &Mutex::new(&mut self.link_output.symbols);
     tracing::info!("collect_potential_chunk_imports");
-    chunk_graph
-      .chunks
-      .iter_enumerated()
-      .zip(chunk_meta_imports.iter_mut().zip(chunk_meta_imports_from_external_modules.iter_mut()))
-      .par_bridge()
-      .for_each(|((chunk_id, chunk), (chunk_meta_imports, imports_from_external_modules))| {
+    let chunks_iter = {
+      let iter = chunk_graph.chunks.iter_enumerated().zip(
+        chunk_meta_imports.iter_mut().zip(chunk_meta_imports_from_external_modules.iter_mut()),
+      );
+      #[cfg(target_family = "wasm")]
+      {
+        iter
+      }
+      #[cfg(not(target_family = "wasm"))]
+      {
+        iter.par_bridge()
+      }
+    };
+    chunks_iter.for_each(
+      |((chunk_id, chunk), (chunk_meta_imports, imports_from_external_modules))| {
         chunk.modules.iter().copied().for_each(|module_id| {
           let module = &self.link_output.module_table.normal_modules[module_id];
           module
@@ -105,7 +115,8 @@ impl<'a> GenerateStage<'a> {
             chunk_meta_imports.insert(canonical_ref);
           }
         }
-      });
+      },
+    );
     tracing::info!("collect_potential_chunk_imports end");
   }
 
@@ -207,16 +218,23 @@ impl<'a> GenerateStage<'a> {
       }
     }
 
-    chunk_graph
+    #[cfg(not(target_family = "wasm"))]
+    let chunk_graph_iter = chunk_graph
       .chunks
       .iter_mut()
       .zip(
         imports_from_other_chunks_vec.into_iter().zip(chunk_meta_imports_from_external_modules_vec),
       )
-      .par_bridge()
-      .for_each(|(chunk, (imports_from_other_chunks, imports_from_external_modules))| {
+      .par_bridge();
+    #[cfg(target_family = "wasm")]
+    let chunk_graph_iter = chunk_graph.chunks.iter_mut().zip(
+      imports_from_other_chunks_vec.into_iter().zip(chunk_meta_imports_from_external_modules_vec),
+    );
+    chunk_graph_iter.for_each(
+      |(chunk, (imports_from_other_chunks, imports_from_external_modules))| {
         chunk.imports_from_other_chunks = imports_from_other_chunks;
         chunk.imports_from_external_modules = imports_from_external_modules;
-      });
+      },
+    );
   }
 }

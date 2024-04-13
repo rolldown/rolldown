@@ -56,6 +56,7 @@ impl<'name> Renamer<'name> {
     modules_in_chunk: &[NormalModuleId],
     modules: &NormalModuleVec,
   ) {
+    #[cfg(not(target_family = "wasm"))]
     use rayon::prelude::*;
 
     fn rename_symbols_of_nested_scopes<'name>(
@@ -102,30 +103,39 @@ impl<'name> Renamer<'name> {
       stack.pop();
     }
 
-    let canonical_names_of_nested_scopes = modules_in_chunk
-      .par_iter()
-      .copied()
-      .map(|id| &modules[id])
-      .flat_map(|module| {
-        let child_scopes: &[ScopeId] =
-          module.scope.get_child_ids(module.scope.root_scope_id()).map_or(&[], Vec::as_slice);
+    #[cfg(not(target_family = "wasm"))]
+    let modules_in_chunk_iter = modules_in_chunk.par_iter().copied();
+    #[cfg(target_family = "wasm")]
+    let modules_in_chunk_iter = modules_in_chunk.iter().copied();
 
-        child_scopes.into_par_iter().map(|child_scope_id| {
-          let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];
-          let mut canonical_names = FxHashMap::default();
-          rename_symbols_of_nested_scopes(
-            module,
-            *child_scope_id,
-            &mut stack,
-            &mut canonical_names,
-          );
-          canonical_names
-        })
+    let copied_scope_iter = modules_in_chunk_iter.map(|id| &modules[id]).flat_map(|module| {
+      let child_scopes: &[ScopeId] =
+        module.scope.get_child_ids(module.scope.root_scope_id()).map_or(&[], Vec::as_slice);
+      #[cfg(not(target_family = "wasm"))]
+      let child_scopes_iter = child_scopes.into_par_iter();
+      #[cfg(target_family = "wasm")]
+      let child_scopes_iter = child_scopes.iter();
+      child_scopes_iter.map(|child_scope_id| {
+        let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];
+        let mut canonical_names = FxHashMap::default();
+        rename_symbols_of_nested_scopes(module, *child_scope_id, &mut stack, &mut canonical_names);
+        canonical_names
       })
-      .reduce(FxHashMap::default, |mut acc, canonical_names| {
+    });
+
+    #[cfg(not(target_family = "wasm"))]
+    let canonical_names_of_nested_scopes =
+      copied_scope_iter.reduce(FxHashMap::default, |mut acc, canonical_names| {
         acc.extend(canonical_names);
         acc
       });
+    #[cfg(target_family = "wasm")]
+    let canonical_names_of_nested_scopes = copied_scope_iter
+      .reduce(|mut acc, canonical_names| {
+        acc.extend(canonical_names);
+        acc
+      })
+      .unwrap_or_default();
 
     self.canonical_names.extend(canonical_names_of_nested_scopes);
   }

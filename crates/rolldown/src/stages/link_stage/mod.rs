@@ -1,13 +1,12 @@
 use std::{ptr::addr_of, sync::Mutex};
 
 use index_vec::IndexVec;
-#[cfg(not(target_family = "wasm"))]
-use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, NormalModule, NormalModuleId, StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
+use rolldown_rayon::{ParallelBridge, ParallelIterator};
 
 use crate::{
   runtime::RuntimeModuleBrief,
@@ -219,11 +218,7 @@ impl<'a> LinkStage<'a> {
 
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
-    #[cfg(not(target_family = "wasm"))]
-    let normal_modules_iter = self.module_table.normal_modules.iter().par_bridge();
-    #[cfg(target_family = "wasm")]
-    let normal_modules_iter = self.module_table.normal_modules.iter();
-    normal_modules_iter.for_each(|importer| {
+    self.module_table.normal_modules.iter().par_bridge().for_each(|importer| {
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
       // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules

@@ -1,5 +1,6 @@
 use index_vec::IndexVec;
 use rolldown_common::{NormalModule, NormalModuleId, StmtInfoId, SymbolRef};
+use rolldown_rayon::{ParallelBridge, ParallelIterator};
 
 use crate::types::{module_table::NormalModuleVec, symbols::Symbols};
 
@@ -87,9 +88,6 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
 
 impl LinkStage<'_> {
   pub fn include_statements(&mut self) {
-    #[cfg(not(target_family = "wasm"))]
-    use rayon::prelude::*;
-
     let mut is_included_vec: IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>> = self
       .module_table
       .normal_modules
@@ -115,17 +113,7 @@ impl LinkStage<'_> {
       include_module(context, module);
     });
 
-    {
-      #[cfg(not(target_family = "wasm"))]
-      {
-        self.module_table.normal_modules.iter_mut().par_bridge()
-      }
-      #[cfg(target_family = "wasm")]
-      {
-        self.module_table.normal_modules.iter_mut()
-      }
-    }
-    .for_each(|module| {
+    self.module_table.normal_modules.iter_mut().par_bridge().for_each(|module| {
       module.is_included = is_module_included_vec[module.id];
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;

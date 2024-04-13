@@ -110,7 +110,7 @@ jobs:
           targets: wasm32-wasi-preview1-threads
           cache-base: main
       - name: Check WASI Target
-        if: steps.filter.outputs.src == 'true'
+        if: needs.changes.outputs.rust-changes == 'true'
         run: cargo check --target wasm32-wasi-preview1-threads
 
   node-test:

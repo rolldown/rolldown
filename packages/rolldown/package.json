@@ -34,14 +34,14 @@
       "require": "./dist/index.cjs",
       "import": "./dist/index.mjs"
     },
-    "./thread-safe-plugin": {
-      "types": "./dist/thread-safe-plugin.d.mts",
-      "require": "./dist/thread-safe-plugin.cjs",
-      "import": "./dist/thread-safe-plugin.mjs"
+    "./parallel-plugin": {
+      "types": "./dist/parallel-plugin.d.mts",
+      "require": "./dist/parallel-plugin.cjs",
+      "import": "./dist/parallel-plugin.mjs"
     }
   },
   "imports": {
-    "#thread-safe-plugin-worker": "./dist/thread-safe-plugin-worker.mjs"
+    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

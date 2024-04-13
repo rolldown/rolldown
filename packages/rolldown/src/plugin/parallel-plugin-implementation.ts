@@ -1,7 +1,7 @@
 import type { MaybePromise } from '../types/utils'
 import type { Plugin } from './index'
 
-export type ThreadSafePluginImplementation = Plugin
+export type ParallelPluginImplementation = Plugin
 
 export type Context = {
   /**
@@ -10,11 +10,11 @@ export type Context = {
   threadNumber: number
 }
 
-export function defineThreadSafePluginImplementation<Options>(
+export function defineParallelPluginImplementation<Options>(
   plugin: (
     Options: Options,
     context: Context,
-  ) => MaybePromise<ThreadSafePluginImplementation>,
+  ) => MaybePromise<ParallelPluginImplementation>,
 ) {
   return plugin
 }

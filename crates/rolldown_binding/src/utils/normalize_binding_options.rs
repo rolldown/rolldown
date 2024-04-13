@@ -32,7 +32,7 @@ fn normalize_addon_option(
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
   output_options: crate::options::BindingOutputOptions,
-  mut thread_safe_plugins_map: Option<crate::thread_safe_plugin_registry::PluginValues>,
+  mut parallel_plugins_map: Option<crate::parallel_js_plugin_registry::PluginValues>,
   worker_manager: Option<WorkerManager>,
 ) -> napi::Result<NormalizeBindingOptionsReturn> {
   debug_assert!(PathBuf::from(&input_options.cwd) != PathBuf::from("/"), "{input_options:#?}");
@@ -84,7 +84,7 @@ pub fn normalize_binding_options(
     .map(|(index, plugin)| {
       plugin.map_or_else(
         || {
-          let plugins = thread_safe_plugins_map.as_mut().unwrap().remove(&index).unwrap();
+          let plugins = parallel_plugins_map.as_mut().unwrap().remove(&index).unwrap();
           let worker_manager = worker_manager.as_ref().unwrap();
           ParallelJsPlugin::new_boxed(plugins, Arc::clone(worker_manager))
         },

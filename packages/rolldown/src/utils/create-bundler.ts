@@ -8,7 +8,7 @@ import {
   OutputOptions,
   normalizeOutputOptions,
 } from '../options/output-options'
-import { initializeThreadSafePlugins } from './initialize-thread-safe-plugins'
+import { initializeParallelPlugins } from './initialize-parallel-plugins'
 
 export async function createBundler(
   inputOptions: InputOptions,
@@ -17,7 +17,7 @@ export async function createBundler(
   // Convert `InputOptions` to `NormalizedInputOptions`.
   const normalizedInputOptions = await normalizeInputOptions(inputOptions)
 
-  const threadSafePluginInitResult = await initializeThreadSafePlugins(
+  const parallelPluginInitResult = await initializeParallelPlugins(
     normalizedInputOptions.plugins,
   )
 
@@ -33,8 +33,8 @@ export async function createBundler(
     bundler: new Bundler(
       bindingInputOptions,
       normalizedOutputOptions,
-      threadSafePluginInitResult?.registry,
+      parallelPluginInitResult?.registry,
     ),
-    stopWorkers: threadSafePluginInitResult?.stopWorkers,
+    stopWorkers: parallelPluginInitResult?.stopWorkers,
   }
 }

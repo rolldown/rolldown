@@ -1,27 +1,27 @@
 import { Worker } from 'node:worker_threads'
 import { availableParallelism } from 'node:os'
-import { ThreadSafePlugin, Plugin } from '../plugin'
-import { ThreadSafePluginRegistry } from '../binding'
+import { ParallelPlugin, Plugin } from '../plugin'
+import { ParallelJsPluginRegistry } from '../binding'
 
 export type WorkerData = {
   registryId: number
-  pluginInfos: ThreadSafePluginInfo[]
+  pluginInfos: ParallelPluginInfo[]
   threadNumber: number
 }
 
-type ThreadSafePluginInfo = {
+type ParallelPluginInfo = {
   index: number
   fileUrl: string
   options: unknown
 }
 
-export async function initializeThreadSafePlugins(
-  plugins: (Plugin | ThreadSafePlugin)[],
+export async function initializeParallelPlugins(
+  plugins: (Plugin | ParallelPlugin)[],
 ) {
-  const pluginInfos: ThreadSafePluginInfo[] = []
+  const pluginInfos: ParallelPluginInfo[] = []
   for (const [index, plugin] of plugins.entries()) {
-    if ('_threadSafe' in plugin) {
-      const { fileUrl, options } = plugin._threadSafe
+    if ('_parallel' in plugin) {
+      const { fileUrl, options } = plugin._parallel
       pluginInfos.push({ index, fileUrl, options })
     }
   }
@@ -30,21 +30,21 @@ export async function initializeThreadSafePlugins(
   }
 
   const count = Math.min(availableParallelism(), 8)
-  const threadSafePluginRegistry = new ThreadSafePluginRegistry(count)
-  const registryId = threadSafePluginRegistry.id
+  const parallelJsPluginRegistry = new ParallelJsPluginRegistry(count)
+  const registryId = parallelJsPluginRegistry.id
 
   const workers = await initializeWorkers(registryId, count, pluginInfos)
   const stopWorkers = async () => {
     await Promise.all(workers.map((worker) => worker.terminate()))
   }
 
-  return { registry: threadSafePluginRegistry, stopWorkers }
+  return { registry: parallelJsPluginRegistry, stopWorkers }
 }
 
 export function initializeWorkers(
   registryId: number,
   count: number,
-  pluginInfos: ThreadSafePluginInfo[],
+  pluginInfos: ParallelPluginInfo[],
 ) {
   return Promise.all(
     Array.from({ length: count }, (_, i) =>
@@ -55,10 +55,10 @@ export function initializeWorkers(
 
 async function initializeWorker(
   registryId: number,
-  pluginInfos: ThreadSafePluginInfo[],
+  pluginInfos: ParallelPluginInfo[],
   threadNumber: number,
 ) {
-  const urlString = import.meta.resolve('#thread-safe-plugin-worker')
+  const urlString = import.meta.resolve('#parallel-plugin-worker')
   const worker = new Worker(new URL(urlString), {
     workerData: { registryId, pluginInfos, threadNumber } satisfies WorkerData,
   })

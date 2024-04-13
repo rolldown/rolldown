@@ -67,7 +67,7 @@ export function normalizeOutputOptions(
     format: normalizeFormat(format),
     exports,
     sourcemap: normalizeSourcemap(sourcemap),
-    // TODO: support thread safe plugins
+    // TODO: support parallel plugins
     plugins: [],
     banner: getAddon(opts, 'banner'),
     footer: getAddon(opts, 'footer'),

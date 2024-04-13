@@ -34,14 +34,14 @@ export class Bundler {
   constructor(
     inputOptions: BindingInputOptions,
     outputOptions: BindingOutputOptions,
-    threadSafePluginsRegistry?: ThreadSafePluginRegistry | undefined | null,
+    parallelPluginsRegistry?: ParallelJsPluginRegistry | undefined | null,
   )
   write(): Promise<BindingOutputs>
   generate(): Promise<BindingOutputs>
   scan(): Promise<void>
 }
 
-export class ThreadSafePluginRegistry {
+export class ParallelJsPluginRegistry {
   id: number
   workerCount: number
   constructor(workerCount: number)
@@ -86,7 +86,7 @@ export interface BindingInputOptions {
         isResolved: boolean,
       ) => boolean)
   input: Array<BindingInputItem>
-  plugins: Array<BindingPluginOrThreadSafePlugin>
+  plugins: Array<BindingPluginOrParallelJsPluginPlaceholder>
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
@@ -105,7 +105,7 @@ export interface BindingOutputOptions {
     | Nullable<string>
     | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)
   format?: 'es' | 'cjs'
-  plugins: Array<BindingPluginOrThreadSafePlugin>
+  plugins: Array<BindingPluginOrParallelJsPluginPlaceholder>
   sourcemap?: 'file' | 'inline' | 'hidden'
 }
 

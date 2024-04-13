@@ -16,8 +16,8 @@ use super::{
   },
 };
 
-/// none is threadsafe plugin
-pub type BindingPluginOrThreadSafePlugin = Option<BindingPluginOptions>;
+/// none is parallel js plugin
+pub type BindingPluginOrParallelJsPluginPlaceholder = Option<BindingPluginOptions>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default)]

@@ -1,5 +1,5 @@
 use super::super::types::binding_rendered_chunk::RenderedChunk;
-use super::plugin::BindingPluginOrThreadSafePlugin;
+use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::types::js_callback::MaybeAsyncJsCallback;
 use derivative::Derivative;
 use napi_derive::napi;
@@ -59,7 +59,7 @@ pub struct BindingOutputOptions {
   // noConflict: boolean;
   // outro: () => string | Promise<string>;
   // paths: OptionsPaths;
-  pub plugins: Vec<BindingPluginOrThreadSafePlugin>,
+  pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder>,
   // preferConst: boolean;
   // preserveModules: boolean;
   // preserveModulesRoot: string | undefined;

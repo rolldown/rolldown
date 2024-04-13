@@ -99,22 +99,22 @@ export interface Plugin {
   writeBundle?: Hook<(bundle: BindingOutputs) => MaybePromise<NullValue>>
 }
 
-export type ThreadSafePlugin = {
+export type ParallelPlugin = {
   /** @internal */
-  _threadSafe: {
+  _parallel: {
     fileUrl: string
     options: unknown
   }
 }
 
-export type DefineThreadSafePluginResult<Options> = (
+export type DefineParallelPluginResult<Options> = (
   options: Options,
-) => ThreadSafePlugin
+) => ParallelPlugin
 
-export function defineThreadSafePlugin<Options>(
+export function defineParallelPlugin<Options>(
   pluginPath: string,
-): DefineThreadSafePluginResult<Options> {
+): DefineParallelPluginResult<Options> {
   return (options) => {
-    return { _threadSafe: { fileUrl: pathToFileURL(pluginPath).href, options } }
+    return { _parallel: { fileUrl: pathToFileURL(pluginPath).href, options } }
   }
 }

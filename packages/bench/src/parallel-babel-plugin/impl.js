@@ -1,4 +1,4 @@
-import { defineThreadSafePluginImplementation } from 'rolldown/thread-safe-plugin'
+import { defineParallelPluginImplementation } from 'rolldown/parallel-plugin'
 import babel from '@babel/core'
 import nodePath from 'node:path'
 
@@ -32,6 +32,6 @@ export const babelPlugin = () => {
   }
 }
 
-export default defineThreadSafePluginImplementation((_options, _context) => {
+export default defineParallelPluginImplementation((_options, _context) => {
   return babelPlugin()
 })

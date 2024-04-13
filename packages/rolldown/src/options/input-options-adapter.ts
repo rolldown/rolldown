@@ -13,7 +13,7 @@ export function createInputOptionsAdapter(
   return {
     input: normalizeInput(options.input),
     plugins: options.plugins.map((plugin) => {
-      if ('_threadSafe' in plugin) {
+      if ('_parallel' in plugin) {
         return undefined
       }
       return bindingifyPlugin(plugin, options, outputOptions)

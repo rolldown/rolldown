@@ -22,7 +22,7 @@ static PLUGINS_MAP: Lazy<Mutex<FxHashMap<u16, PluginsList>>> = Lazy::new(Mutex::
 static NEXT_ID: AtomicU16 = AtomicU16::new(1);
 
 #[napi(custom_finalize)]
-pub struct ThreadSafePluginRegistry {
+pub struct ParallelJsPluginRegistry {
   #[napi(writable = false)]
   pub id: u16,
   #[napi(writable = false)]
@@ -30,7 +30,7 @@ pub struct ThreadSafePluginRegistry {
 }
 
 #[napi]
-impl ThreadSafePluginRegistry {
+impl ParallelJsPluginRegistry {
   #[napi(constructor)]
   pub fn new(worker_count: u16) -> napi::Result<Self> {
     if worker_count == 0 {
@@ -61,7 +61,7 @@ impl ThreadSafePluginRegistry {
   }
 }
 
-impl ObjectFinalize for ThreadSafePluginRegistry {
+impl ObjectFinalize for ParallelJsPluginRegistry {
   fn finalize(self, mut _env: Env) -> napi::Result<()> {
     let mut map = PLUGINS_MAP.lock().unwrap();
     map.remove(&self.id);
@@ -70,13 +70,13 @@ impl ObjectFinalize for ThreadSafePluginRegistry {
   }
 }
 
-impl FromNapiValue for ThreadSafePluginRegistry {
+impl FromNapiValue for ParallelJsPluginRegistry {
   unsafe fn from_napi_value(
     env: napi::sys::napi_env,
     napi_val: napi::sys::napi_value,
   ) -> napi::Result<Self> {
     let unknown = JsUnknown::from_napi_value(env, napi_val)?;
-    if !ThreadSafePluginRegistry::instance_of(env.into(), &unknown)? {
+    if !ParallelJsPluginRegistry::instance_of(env.into(), &unknown)? {
       return Err(napi::Error::from_status(napi::Status::GenericFailure));
     }
 

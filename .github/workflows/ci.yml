@@ -111,7 +111,7 @@ jobs:
           cache-base: main
       - name: Check WASI Target
         if: needs.changes.outputs.rust-changes == 'true'
-        run: cargo check --target wasm32-wasi-preview1-threads
+        run: cargo check -p rolldown --target wasm32-wasi-preview1-threads
 
   node-test:
     needs: changes

@@ -1,6 +1,7 @@
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 
+#[cfg(not(target_family = "wasm"))]
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
   ExportsKind, ModuleId, NamedImport, NormalModule, NormalModuleId, ResolvedExport, Specifier,
@@ -22,21 +23,24 @@ use super::LinkStage;
 
 impl<'a> LinkStage<'a> {
   pub fn bind_imports_and_exports(&mut self) {
-    self.module_table.normal_modules.iter().zip(self.metas.iter_mut()).par_bridge().for_each(
-      |(module, meta)| {
-        meta.resolved_exports = module
-          .named_exports
-          .iter()
-          .map(|(name, local)| {
-            let resolved_export = ResolvedExport {
-              symbol_ref: local.referenced,
-              potentially_ambiguous_symbol_refs: None,
-            };
-            (name.clone(), resolved_export)
-          })
-          .collect();
-      },
-    );
+    #[cfg(not(target_family = "wasm"))]
+    let normal_modules_iter =
+      self.module_table.normal_modules.iter().zip(self.metas.iter_mut()).par_bridge();
+    #[cfg(target_family = "wasm")]
+    let normal_modules_iter = self.module_table.normal_modules.iter().zip(self.metas.iter_mut());
+    normal_modules_iter.for_each(|(module, meta)| {
+      meta.resolved_exports = module
+        .named_exports
+        .iter()
+        .map(|(name, local)| {
+          let resolved_export = ResolvedExport {
+            symbol_ref: local.referenced,
+            potentially_ambiguous_symbol_refs: None,
+          };
+          (name.clone(), resolved_export)
+        })
+        .collect();
+    });
 
     // Add exports for export star. Notice that:
     // - There will be potentially ambiguous exports, which need to be resolved later

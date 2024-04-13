@@ -35,12 +35,6 @@ sugar_path         = { workspace = true }
 tokio              = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing            = { workspace = true }
 
-[target.'cfg(not(target_family = "wasm"))'.dependencies]
-rolldown_rayon = { workspace = true, features = ["rayon"] }
-
-[target.'cfg(target_family = "wasm")'.dependencies]
-rolldown_rayon = { workspace = true }
-
 [dev_dependencies]
 insta            = { workspace = true }
 rolldown_testing = { workspace = true }

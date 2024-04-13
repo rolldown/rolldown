@@ -6,7 +6,6 @@ mod render_chunk_imports;
 
 use index_vec::IndexVec;
 use rolldown_common::{ChunkId, FileNameTemplate};
-use rolldown_rayon::{IntoParallelRefIterator, ParallelIterator};
 
 pub type ChunksVec = IndexVec<ChunkId, Chunk>;
 
@@ -15,6 +14,7 @@ use rolldown_common::{
 };
 use rolldown_rstr::Rstr;
 use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;

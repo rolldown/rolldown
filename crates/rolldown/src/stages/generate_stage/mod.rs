@@ -15,7 +15,11 @@ use crate::{
   error::BatchedResult,
   finalizer::FinalizerContext,
   stages::link_stage::LinkStageOutput,
-  utils::{finalize_normal_module, is_in_rust_test_mode, render_chunks::render_chunks},
+  utils::{
+    chunk::{deconflict_chunk_symbols::deconflict_chunk_symbols, render_chunk::render_chunk},
+    finalize_normal_module, is_in_rust_test_mode,
+    render_chunks::render_chunks,
+  },
   SharedOptions,
 };
 
@@ -49,7 +53,7 @@ impl<'a> GenerateStage<'a> {
     tracing::info!("compute_cross_chunk_links");
 
     chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
-      chunk.de_conflict(self.link_output);
+      deconflict_chunk_symbols(chunk, self.link_output);
     });
 
     let ast_table_iter = self.link_output.ast_table.iter_mut_enumerated();
@@ -83,7 +87,7 @@ impl<'a> GenerateStage<'a> {
       chunk_graph
         .chunks
         .iter()
-        .map(|c| async { c.render(self.options, self.link_output, &chunk_graph).await }),
+        .map(|c| async { render_chunk(c, self.options, self.link_output, &chunk_graph).await }),
     )
     .await?;
 
@@ -166,7 +170,7 @@ impl<'a> GenerateStage<'a> {
       }
       used_chunk_names.insert(chunk_name.clone());
 
-      chunk.file_name =
+      chunk.filename =
         Some(file_name_tmp.render(&FileNameRenderOptions { name: Some(&chunk_name) }));
     });
   }

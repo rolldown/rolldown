@@ -8,8 +8,8 @@ use rolldown_common::{
   ChunkId, ChunkKind, ExportsKind, ExternalModuleId, ImportKind, ModuleId, NamedImport,
   OutputFormat, SymbolRef,
 };
-use rolldown_rayon::{ParallelBridge, ParallelIterator};
 use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 type ChunkMetaImports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;

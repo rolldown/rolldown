@@ -5,7 +5,7 @@ use rolldown_common::{
   ExportsKind, ModuleId, NamedImport, NormalModule, NormalModuleId, ResolvedExport, Specifier,
   SymbolRef,
 };
-use rolldown_rayon::{ParallelBridge, ParallelIterator};
+use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 
 use crate::{
   types::{

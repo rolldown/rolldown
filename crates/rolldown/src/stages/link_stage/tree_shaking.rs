@@ -1,6 +1,6 @@
 use index_vec::IndexVec;
 use rolldown_common::{NormalModule, NormalModuleId, StmtInfoId, SymbolRef};
-use rolldown_rayon::{ParallelBridge, ParallelIterator};
+use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 
 use crate::types::{module_table::NormalModuleVec, symbols::Symbols};
 

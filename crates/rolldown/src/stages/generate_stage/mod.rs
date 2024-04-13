@@ -6,7 +6,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_rayon::{ParallelBridge, ParallelIterator};
+use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashSet;
 
 use crate::{

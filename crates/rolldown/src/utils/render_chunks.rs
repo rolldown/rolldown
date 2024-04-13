@@ -3,7 +3,9 @@ use rolldown_common::IntoBatchedResult;
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::collapse_sourcemaps;
 
-use crate::{chunk::ChunkRenderReturn, error::BatchedErrors};
+use crate::error::BatchedErrors;
+
+use super::chunk::render_chunk::ChunkRenderReturn;
 
 pub async fn render_chunks<'a>(
   plugin_driver: &SharedPluginDriver,

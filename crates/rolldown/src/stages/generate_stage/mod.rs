@@ -10,13 +10,15 @@ use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashSet;
 
 use crate::{
-  chunk::ChunkRenderReturn,
   chunk_graph::ChunkGraph,
   error::BatchedResult,
   finalizer::FinalizerContext,
   stages::link_stage::LinkStageOutput,
   utils::{
-    chunk::{deconflict_chunk_symbols::deconflict_chunk_symbols, render_chunk::render_chunk},
+    chunk::{
+      deconflict_chunk_symbols::deconflict_chunk_symbols,
+      render_chunk::{render_chunk, ChunkRenderReturn},
+    },
     finalize_normal_module, is_in_rust_test_mode,
     render_chunks::render_chunks,
   },

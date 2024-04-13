@@ -1,7 +1,7 @@
-use rolldown_common::{ChunkKind, OutputFormat, SymbolRef, WrapKind};
+use rolldown_common::{Chunk, ChunkKind, OutputFormat, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
 
-use crate::{chunk::Chunk, stages::link_stage::LinkStageOutput, SharedOptions};
+use crate::{stages::link_stage::LinkStageOutput, SharedOptions};
 
 pub fn render_chunk_exports(
   this: &Chunk,

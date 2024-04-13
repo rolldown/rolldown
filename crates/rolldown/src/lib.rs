@@ -1,13 +1,13 @@
 mod ast_scanner;
 mod bundler;
 mod bundler_builder;
-mod chunk;
 mod chunk_graph;
 mod error;
 mod finalizer;
 mod module_loader;
 mod runtime;
 mod stages;
+mod type_alias;
 mod types;
 mod utils;
 
@@ -20,8 +20,7 @@ pub(crate) type SharedResolver = Arc<Resolver<OsFileSystem>>;
 pub(crate) type SharedOptions = Arc<NormalizedBundlerOptions>;
 
 pub use crate::{
-  bundler::Bundler, bundler_builder::BundlerBuilder,
-  chunk::types::pre_renderer_chunk::PreRenderedChunk, types::bundle_output::BundleOutput,
+  bundler::Bundler, bundler_builder::BundlerBuilder, types::bundle_output::BundleOutput,
 };
 
 pub use rolldown_common::bundler_options::*;

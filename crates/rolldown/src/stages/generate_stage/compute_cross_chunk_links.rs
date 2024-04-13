@@ -1,12 +1,12 @@
 use std::{borrow::Cow, sync::Mutex};
 
-use crate::{chunk::CrossChunkImportItem, chunk_graph::ChunkGraph, utils::is_in_rust_test_mode};
+use crate::{chunk_graph::ChunkGraph, utils::is_in_rust_test_mode};
 
 use super::GenerateStage;
 use index_vec::{index_vec, IndexVec};
 use rolldown_common::{
-  ChunkId, ChunkKind, ExportsKind, ExternalModuleId, ImportKind, ModuleId, NamedImport,
-  OutputFormat, SymbolRef,
+  ChunkId, ChunkKind, CrossChunkImportItem, ExportsKind, ExternalModuleId, ImportKind, ModuleId,
+  NamedImport, OutputFormat, SymbolRef,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};

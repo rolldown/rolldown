@@ -6,6 +6,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashSet;
 
 use crate::{
@@ -38,8 +39,6 @@ impl<'a> GenerateStage<'a> {
 
   #[tracing::instrument(skip_all)]
   pub async fn generate(&mut self) -> BatchedResult<Vec<Output>> {
-    #[cfg(not(target_family = "wasm"))]
-    use rayon::prelude::*;
     tracing::info!("Start bundle stage");
     let mut chunk_graph = self.generate_chunks();
 
@@ -49,53 +48,35 @@ impl<'a> GenerateStage<'a> {
     self.compute_cross_chunk_links(&mut chunk_graph);
     tracing::info!("compute_cross_chunk_links");
 
-    #[cfg(not(target_family = "wasm"))]
-    {
-      chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
-        chunk.de_conflict(self.link_output);
-      });
-    }
-
-    #[cfg(target_family = "wasm")]
-    {
-      chunk_graph.chunks.iter_mut().for_each(|chunk| {
-        chunk.de_conflict(self.link_output);
-      });
-    }
+    chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
+      chunk.de_conflict(self.link_output);
+    });
 
     let ast_table_iter = self.link_output.ast_table.iter_mut_enumerated();
-    {
-      #[cfg(not(target_family = "wasm"))]
-      {
-        ast_table_iter.par_bridge()
-      }
-      #[cfg(target_family = "wasm")]
-      {
-        ast_table_iter
-      }
-    }
-    .filter(|(id, _)| self.link_output.module_table.normal_modules[*id].is_included)
-    .for_each(|(id, ast)| {
-      let module = &self.link_output.module_table.normal_modules[id];
-      let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
-      let chunk = &chunk_graph.chunks[chunk_id];
-      let linking_info = &self.link_output.metas[module.id];
-      finalize_normal_module(
-        module,
-        FinalizerContext {
-          canonical_names: &chunk.canonical_names,
-          id: module.id,
-          symbols: &self.link_output.symbols,
-          linking_info,
+    ast_table_iter
+      .par_bridge()
+      .filter(|(id, _)| self.link_output.module_table.normal_modules[*id].is_included)
+      .for_each(|(id, ast)| {
+        let module = &self.link_output.module_table.normal_modules[id];
+        let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
+        let chunk = &chunk_graph.chunks[chunk_id];
+        let linking_info = &self.link_output.metas[module.id];
+        finalize_normal_module(
           module,
-          modules: &self.link_output.module_table.normal_modules,
-          linking_infos: &self.link_output.metas,
-          runtime: &self.link_output.runtime,
-          chunk_graph: &chunk_graph,
-        },
-        ast,
-      );
-    });
+          FinalizerContext {
+            canonical_names: &chunk.canonical_names,
+            id: module.id,
+            symbols: &self.link_output.symbols,
+            linking_info,
+            module,
+            modules: &self.link_output.module_table.normal_modules,
+            linking_infos: &self.link_output.metas,
+            runtime: &self.link_output.runtime,
+            chunk_graph: &chunk_graph,
+          },
+          ast,
+        );
+      });
     tracing::info!("finalizing modules");
 
     let chunks = try_join_all(

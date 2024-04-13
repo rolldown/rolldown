@@ -1,0 +1,17 @@
+[package]
+description          = "This crate provides abstraction traits for using rayon's `par_iter` and `par_bridge` methods on non rayon supported platforms."
+edition.workspace    = true
+homepage.workspace   = true
+license.workspace    = true
+name                 = "rolldown_rayon"
+repository.workspace = true
+version              = "0.1.0"
+
+[features]
+rayon = ["dep:rayon"]
+
+[dependencies]
+rayon = { workspace = true, optional = true }
+
+[lints]
+workspace = true

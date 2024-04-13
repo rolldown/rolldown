@@ -119,7 +119,7 @@ impl ModuleLoader {
             module_path,
             info.module_type,
           );
-          #[cfg(target_family = "wasi")]
+          #[cfg(target_family = "wasm")]
           {
             let handle = tokio::runtime::Handle::current();
             std::thread::spawn(move || {
@@ -127,7 +127,7 @@ impl ModuleLoader {
               handle.block_on(async move { task.run().await });
             });
           }
-          #[cfg(not(target_family = "wasi"))]
+          #[cfg(not(target_family = "wasm"))]
           tokio::spawn(async move { task.run().await });
           id.into()
         }

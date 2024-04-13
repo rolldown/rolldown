@@ -36,7 +36,10 @@ tokio              = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing            = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-rayon = { workspace = true }
+rolldown_rayon = { workspace = true, features = ["rayon"] }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+rolldown_rayon = { workspace = true }
 
 [dev_dependencies]
 insta            = { workspace = true }

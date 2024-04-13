@@ -1334,13 +1334,13 @@ dependencies = [
  "insta",
  "once_cell",
  "oxc",
- "rayon",
  "regex",
  "rolldown_common",
  "rolldown_error",
  "rolldown_fs",
  "rolldown_oxc_utils",
  "rolldown_plugin",
+ "rolldown_rayon",
  "rolldown_resolver",
  "rolldown_rstr",
  "rolldown_sourcemap",
@@ -1453,6 +1453,13 @@ dependencies = [
  "rolldown_fs",
  "rolldown_plugin",
  "rustc-hash",
+]
+
+[[package]]
+name = "rolldown_rayon"
+version = "0.1.0"
+dependencies = [
+ "rayon",
 ]
 
 [[package]]

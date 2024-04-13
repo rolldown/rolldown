@@ -166,7 +166,7 @@ impl<'a> GenerateStage<'a> {
       }
       used_chunk_names.insert(chunk_name.clone());
 
-      chunk.file_name =
+      chunk.filename =
         Some(file_name_tmp.render(&FileNameRenderOptions { name: Some(&chunk_name) }));
     });
   }

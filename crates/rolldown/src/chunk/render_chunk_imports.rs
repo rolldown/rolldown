@@ -77,7 +77,7 @@ impl Chunk {
         })
         .collect::<Vec<_>>();
       let file_name = importee_chunk
-        .file_name
+        .filename
         .as_ref()
         .expect("At this point, file name should already be generated");
       if import_items.is_empty() {

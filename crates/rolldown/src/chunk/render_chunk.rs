@@ -52,7 +52,7 @@ impl Chunk {
       facade_module_id: pre_rendered_chunk.facade_module_id,
       module_ids: pre_rendered_chunk.module_ids,
       exports: pre_rendered_chunk.exports,
-      file_name: self.file_name.clone().expect("should have file name"),
+      file_name: self.filename.clone().expect("should have file name"),
       modules: render_modules,
     }
   }

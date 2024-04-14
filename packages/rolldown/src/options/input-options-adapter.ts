@@ -23,6 +23,7 @@ export function createInputOptionsAdapter(
     resolve: options.resolve,
     platform: options.platform,
     shimMissingExports: options.shimMissingExports,
+    logLevel: inputOptions.logLevel,
   }
 }
 

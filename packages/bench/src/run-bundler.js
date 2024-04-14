@@ -16,10 +16,6 @@ import { PROJECT_ROOT } from './utils.js'
  * @returns {RolldownBenchSuite[]}
  */
 export function getRolldownSuiteList(suite) {
-  if (!suite.rolldownOptions) {
-    return []
-  }
-
   const rolldownOptionsList = Array.isArray(suite.rolldownOptions)
     ? suite.rolldownOptions
     : [{ name: 'default', options: suite.rolldownOptions }]
@@ -35,7 +31,7 @@ export function getRolldownSuiteList(suite) {
  * @param {RolldownBenchSuite} suite
  */
 export async function runRolldown(suite) {
-  const { output: outputOptions = {}, ...inputOptions } = suite.options
+  const { output: outputOptions = {}, ...inputOptions } = suite.options ?? {}
   const build = await rolldown.rolldown({
     platform: 'node',
     input: suite.inputs,

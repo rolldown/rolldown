@@ -23,5 +23,5 @@ export interface RolldownBenchSuite {
   suiteName: string
   title: string
   inputs: string[]
-  options: RolldownOptions
+  options?: RolldownOptions
 }

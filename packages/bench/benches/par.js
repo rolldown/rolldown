@@ -5,10 +5,12 @@ import {
   runRolldown,
   runRollup,
 } from '../src/run-bundler.js'
-import { suiteRomeTs } from '../src/suites/rome-ts.js'
+import { suiteRomeTsWithBabelAndParallelism } from '../src/suites/rome-ts.js'
 import { expandSuitesWithDerived } from '../src/suites/index.js'
 
-for (const suite of expandSuitesWithDerived([suiteRomeTs])) {
+for (const suite of expandSuitesWithDerived([
+  suiteRomeTsWithBabelAndParallelism,
+])) {
   const excludedBundlers = Array.isArray(suite.disableBundler)
     ? suite.disableBundler
     : suite.disableBundler

@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use super::{
-  external::External, file_name_template::FileNameTemplate, input_item::InputItem,
+  external::External, file_name_template::FilenameTemplate, input_item::InputItem,
   output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
   source_map_type::SourceMapType, sourcemap_ignore_list::SourceMapIgnoreList,
 };
@@ -19,8 +19,8 @@ pub struct NormalizedBundlerOptions {
   pub platform: Platform,
   pub shim_missing_exports: bool,
   // --- Output
-  pub entry_file_names: FileNameTemplate,
-  pub chunk_file_names: FileNameTemplate,
+  pub entry_file_names: FilenameTemplate,
+  pub chunk_file_names: FilenameTemplate,
   pub dir: String,
   pub format: OutputFormat,
   pub sourcemap: SourceMapType,

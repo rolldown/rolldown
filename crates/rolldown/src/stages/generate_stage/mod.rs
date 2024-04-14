@@ -1,13 +1,19 @@
 use anyhow::Result;
+use std::{
+  hash::{DefaultHasher, Hash, Hasher},
+  sync::Arc,
+};
+
 use futures::future::try_join_all;
+use index_vec::IndexVec;
 use rolldown_common::{
-  ChunkKind, FileNameRenderOptions, Output, OutputAsset, OutputChunk, SourceMapType,
+  ChunkId, ChunkKind, FileNameRenderOptions, Output, OutputAsset, OutputChunk, PreliminaryFilename,
+  SourceMapType,
 };
 use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashSet;
-use std::sync::Arc;
 
 use crate::{
   chunk_graph::ChunkGraph,
@@ -17,6 +23,9 @@ use crate::{
     chunk::{
       deconflict_chunk_symbols::deconflict_chunk_symbols,
       render_chunk::{render_chunk, ChunkRenderReturn},
+    },
+    extract_hash_placeholder::{
+      extract_hash_placeholder, generate_facade_replacement_of_hash_placeholder,
     },
     finalize_normal_module, is_in_rust_test_mode,
     render_chunks::render_chunks,
@@ -47,8 +56,8 @@ impl<'a> GenerateStage<'a> {
     tracing::info!("Start bundle stage");
     let mut chunk_graph = self.generate_chunks();
 
-    self.generate_chunk_filenames(&mut chunk_graph);
-    tracing::info!("generate_chunk_filenames");
+    self.generate_chunk_preliminary_filenames(&mut chunk_graph);
+    tracing::info!("generate_chunk_preliminary_filenames");
 
     self.compute_cross_chunk_links(&mut chunk_graph);
     tracing::info!("compute_cross_chunk_links");
@@ -92,11 +101,44 @@ impl<'a> GenerateStage<'a> {
     )
     .await?;
 
-    let mut assets = vec![];
+    let mut chunks = render_chunks(self.plugin_driver, chunks).await?;
 
-    for ChunkRenderReturn { mut map, rendered_chunk, mut code } in
-      render_chunks(self.plugin_driver, chunks).await?
-    {
+    let base_hash_state = chunks
+      .iter()
+      .map(|chunk| {
+        // TODO: use a better hash function
+        let mut state = DefaultHasher::default();
+        chunk.code.hash(&mut state);
+        state
+      })
+      .collect::<IndexVec<ChunkId, _>>();
+
+    // calculate the final hash of each chunk by traverse the chunk graph
+
+    let final_hashes = base_hash_state
+      .into_iter()
+      .map(|state| state.finish().to_string())
+      .collect::<IndexVec<ChunkId, _>>();
+
+    chunk_graph.chunks.iter_mut().zip(chunks.iter_mut()).zip(final_hashes).for_each(
+      |((chunk, chunk_render_return), hash)| {
+        let preliminary_filename_raw =
+          chunk.preliminary_filename.as_ref().expect("should have file name").as_str();
+        let filename = chunk
+          .preliminary_filename
+          .as_ref()
+          .expect("should have file name")
+          .finalize(&hash)
+          .into_owned();
+
+        chunk_render_return.rendered_chunk.file_name = filename;
+        // TODO replace code
+        // chunk_render_return.code = chunk_render_return.code.replace(from, to)
+      },
+    );
+
+    let mut assets = vec![];
+    for ChunkRenderReturn { mut map, rendered_chunk, mut code } in chunks {
       if let Some(map) = map.as_mut() {
         map.set_file(&rendered_chunk.file_name);
 
@@ -167,7 +209,7 @@ impl<'a> GenerateStage<'a> {
     })
   }
 
-  fn generate_chunk_filenames(&self, chunk_graph: &mut ChunkGraph) {
+  fn generate_chunk_preliminary_filenames(&self, chunk_graph: &mut ChunkGraph) {
     let mut used_chunk_names = FxHashSet::default();
     chunk_graph.chunks.iter_mut().for_each(|chunk| {
       let runtime_id = self.link_output.runtime.id();
@@ -203,8 +245,20 @@ impl<'a> GenerateStage<'a> {
       }
       used_chunk_names.insert(chunk_name.clone());
 
-      chunk.filename =
-        Some(file_name_tmp.render(&FileNameRenderOptions { name: Some(&chunk_name) }));
+      let extracted_hash = extract_hash_placeholder(file_name_tmp.template());
+
+      let preliminary = file_name_tmp.render(&FileNameRenderOptions {
+        name: Some(&chunk_name),
+        hash: extracted_hash
+          .as_ref()
+          .map(|extracted| generate_facade_replacement_of_hash_placeholder(extracted))
+          .as_deref(),
+      });
+
+      chunk.preliminary_filename = Some(PreliminaryFilename {
+        filename: preliminary,
+        hash_placeholder: extracted_hash.map(|v| v.pattern),
+      });
     });
   }
 }

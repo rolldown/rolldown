@@ -74,9 +74,10 @@ pub fn render_chunk_imports(
       })
       .collect::<Vec<_>>();
     let file_name = importee_chunk
-      .filename
+      .preliminary_filename
       .as_ref()
-      .expect("At this point, file name should already be generated");
+      .expect("At this point, file name should already be generated")
+      .as_str();
     if import_items.is_empty() {
       s.push_str(&format!("import \"./{file_name}\";\n"));
     } else {

@@ -107,6 +107,9 @@ bench-rust:
 bench-node:
   pnpm --filter bench run bench 
 
+bench-node-par:
+  pnpm --filter bench exec node ./benches/par.js
+
 # RELEASING
 
 bump packages *args: 

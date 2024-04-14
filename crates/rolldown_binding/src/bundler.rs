@@ -29,10 +29,8 @@ impl Bundler {
   ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
 
-    let worker_count = parallel_plugins_registry
-      .as_ref()
-      .map(|registry| registry.worker_count)
-      .unwrap_or_default();
+    let worker_count =
+      parallel_plugins_registry.as_ref().map(|registry| registry.worker_count).unwrap_or_default();
     let parallel_plugins_map =
       parallel_plugins_registry.map(|registry| registry.take_plugin_values());
 

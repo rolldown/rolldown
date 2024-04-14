@@ -1,7 +1,7 @@
 import * as tinyBench from 'tinybench'
-import nodePath from 'path'
-import nodeUrl from 'url'
-import nodeFs from 'fs'
+import nodePath from 'node:path'
+import nodeUrl from 'node:url'
+import nodeFs from 'node:fs'
 import { suitesForCI } from '../src/suites.js'
 import { getRolldownSuiteList, runRolldown } from '../src/run-bundler.js'
 

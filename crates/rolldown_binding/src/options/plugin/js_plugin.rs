@@ -18,12 +18,12 @@ impl Deref for JsPlugin {
 }
 
 impl JsPlugin {
-  pub(crate) fn new_boxed(inner: BindingPluginOptions) -> Box<dyn Plugin> {
-    Box::new(Self { inner })
+  pub(super) fn new(inner: BindingPluginOptions) -> Self {
+    Self { inner }
   }
 
-  pub(super) fn new_raw(inner: BindingPluginOptions) -> Self {
-    Self { inner }
+  pub(crate) fn new_boxed(inner: BindingPluginOptions) -> Box<dyn Plugin> {
+    Box::new(Self { inner })
   }
 }
 

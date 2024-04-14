@@ -18,7 +18,7 @@ impl ParallelJsPlugin {
     plugins: Vec<BindingPluginOptions>,
     worker_manager: Arc<WorkerManager>,
   ) -> Box<dyn Plugin> {
-    let plugins = plugins.into_iter().map(JsPlugin::new_raw).collect::<Vec<_>>().into_boxed_slice();
+    let plugins = plugins.into_iter().map(JsPlugin::new).collect::<Vec<_>>().into_boxed_slice();
     Box::new(Self { plugins, worker_manager })
   }
 

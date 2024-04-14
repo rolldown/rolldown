@@ -10,7 +10,7 @@ pub mod bundler_options {
   pub use crate::inner_bundler_options::{
     types::{
       external::External,
-      file_name_template::{FileNameRenderOptions, FileNameTemplate},
+      file_name_template::{FileNameRenderOptions, FilenameTemplate},
       input_item::InputItem,
       normalized_bundler_options::NormalizedBundlerOptions,
       output_format::OutputFormat,
@@ -26,7 +26,10 @@ pub mod bundler_options {
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
   chunk::{
-    types::{cross_chunk_import_item::CrossChunkImportItem, pre_renderer_chunk::PreRenderedChunk},
+    types::{
+      cross_chunk_import_item::CrossChunkImportItem, pre_renderer_chunk::PreRenderedChunk,
+      preliminary_filename::PreliminaryFilename,
+    },
     Chunk,
   },
   module::external_module::ExternalModule,

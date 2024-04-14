@@ -1,4 +1,4 @@
-use std::{fmt::Debug, sync::Arc};
+use std::sync::Arc;
 
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{BoxPlugin, PluginDriver};

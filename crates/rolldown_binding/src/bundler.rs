@@ -16,6 +16,7 @@ use crate::{
 #[napi]
 pub struct Bundler {
   inner: Mutex<NativeBundler>,
+  log_level: String,
 }
 
 #[napi]
@@ -23,11 +24,13 @@ impl Bundler {
   #[napi(constructor)]
   pub fn new(
     env: Env,
-    input_options: BindingInputOptions,
+    mut input_options: BindingInputOptions,
     output_options: BindingOutputOptions,
     parallel_plugins_registry: Option<ParallelJsPluginRegistry>,
   ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
+
+    let log_level = input_options.log_level.take().unwrap_or_else(|| "info".to_string());
 
     let worker_count =
       parallel_plugins_registry.as_ref().map(|registry| registry.worker_count).unwrap_or_default();
@@ -44,7 +47,10 @@ impl Bundler {
       worker_manager,
     )?;
 
-    Ok(Self { inner: Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins)) })
+    Ok(Self {
+      inner: Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins)),
+      log_level,
+    })
   }
 
   #[napi]
@@ -94,7 +100,7 @@ impl Bundler {
       Err(errs) => return Err(Self::handle_errors(errs)),
     };
 
-    Self::handle_warnings(outputs.warnings);
+    self.handle_warnings(outputs.warnings);
 
     Ok(BindingOutputs::new(outputs.assets))
   }
@@ -113,7 +119,7 @@ impl Bundler {
       Err(errs) => return Err(Self::handle_errors(errs)),
     };
 
-    Self::handle_warnings(outputs.warnings);
+    self.handle_warnings(outputs.warnings);
 
     Ok(BindingOutputs::new(outputs.assets))
   }
@@ -126,7 +132,11 @@ impl Bundler {
   }
 
   #[allow(clippy::print_stdout)]
-  fn handle_warnings(warnings: Vec<BuildError>) {
+  fn handle_warnings(&self, warnings: Vec<BuildError>) {
+    match self.log_level.as_str() {
+      "silent" => return,
+      _ => {}
+    }
     warnings.into_iter().for_each(|err| {
       println!("{}", err.into_diagnostic().to_color_string());
     });

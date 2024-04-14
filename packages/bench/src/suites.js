@@ -14,6 +14,9 @@ export const rawSuitesForCI = [
     title: 'threejs10x',
     inputs: [nodePath.join(REPO_ROOT, './tmp/bench/three10x/entry.js')],
     disableBundler: 'rollup',
+    rolldownOptions: {
+      logLevel: 'silent',
+    },
     derived: {
       sourcemap: true,
     },
@@ -29,6 +32,9 @@ export const suites = expandSuitesWithDerived([
   {
     title: 'threejs',
     inputs: [nodePath.join(REPO_ROOT, './tmp/bench/three/entry.js')],
+    rolldownOptions: {
+      logLevel: 'silent',
+    },
   },
   {
     title: 'vue-stack',
@@ -47,6 +53,7 @@ export const suites = expandSuitesWithDerived([
       {
         name: 'esbuild',
         options: {
+          logLevel: 'silent',
           external: builtinModules,
           // Need this due rome is not written with `isolatedModules: true`
           shimMissingExports: true,
@@ -83,6 +90,7 @@ export const suites = expandSuitesWithDerived([
       {
         name: 'js-single',
         options: {
+          logLevel: 'silent',
           external: builtinModules,
           // Need this due rome is not written with `isolatedModules: true`
           shimMissingExports: true,
@@ -99,6 +107,7 @@ export const suites = expandSuitesWithDerived([
       {
         name: 'js-parallel',
         options: {
+          logLevel: 'silent',
           external: builtinModules,
           // Need this due rome is not written with `isolatedModules: true`
           shimMissingExports: true,

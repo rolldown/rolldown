@@ -7,11 +7,10 @@ import {
   BindingInputOptions,
 } from '../binding'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
-import { AnyFn, AnyObj, NullValue } from '../types/utils'
+import { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
 import { SourceMapInput } from '../types/sourcemap'
+import { pathToFileURL } from 'node:url'
 import { NormalizedOutputOptions } from '../options/output-options'
-
-type MaybePromise<T> = T | Promise<T>
 
 // Use a type alias here, we might wrap `BindingPluginContext` in the future
 type PluginContext = BindingPluginContext
@@ -107,4 +106,24 @@ export interface Plugin {
     (bundle: BindingOutputs, isWrite: boolean) => MaybePromise<NullValue>
   >
   writeBundle?: Hook<(bundle: BindingOutputs) => MaybePromise<NullValue>>
+}
+
+export type ParallelPlugin = {
+  /** @internal */
+  _parallel: {
+    fileUrl: string
+    options: unknown
+  }
+}
+
+export type DefineParallelPluginResult<Options> = (
+  options: Options,
+) => ParallelPlugin
+
+export function defineParallelPlugin<Options>(
+  pluginPath: string,
+): DefineParallelPluginResult<Options> {
+  return (options) => {
+    return { _parallel: { fileUrl: pathToFileURL(pluginPath).href, options } }
+  }
 }

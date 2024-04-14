@@ -67,6 +67,7 @@ export function normalizeOutputOptions(
     format: normalizeFormat(format),
     exports,
     sourcemap: normalizeSourcemap(sourcemap),
+    // TODO(sapphi-red): support parallel plugins
     plugins: [],
     banner: getAddon(opts, 'banner'),
     footer: getAddon(opts, 'footer'),

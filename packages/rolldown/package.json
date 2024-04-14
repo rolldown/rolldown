@@ -33,7 +33,15 @@
       "types": "./dist/index.d.mts",
       "require": "./dist/index.cjs",
       "import": "./dist/index.mjs"
+    },
+    "./parallel-plugin": {
+      "types": "./dist/parallel-plugin.d.mts",
+      "require": "./dist/parallel-plugin.cjs",
+      "import": "./dist/parallel-plugin.mjs"
     }
+  },
+  "imports": {
+    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

@@ -1,6 +1,7 @@
 import 'zx/globals'
 import { assertRunningScriptFromRepoRoot } from '../meta/utils.js'
 import fsExtra from 'fs-extra'
+import glob from 'fast-glob'
 
 assertRunningScriptFromRepoRoot()
 
@@ -74,7 +75,12 @@ if (fsExtra.existsSync('./tmp/bench/rome')) {
 } else {
   console.log('Setup `rome` in tmp/bench')
 
-  fsExtra.copySync('./tmp/github/rome/packages', './tmp/bench/rome/src/')
+  fsExtra.copySync('./tmp/github/rome/packages', './tmp/bench/rome/src/', {
+    filter(src) {
+      // an error happens on windows without this filter
+      return !src.includes('.bin')
+    },
+  })
   fsExtra.writeFileSync(
     './tmp/bench/rome/src/entry.ts',
     'import "rome/bin/rome"',
@@ -97,4 +103,28 @@ if (fsExtra.existsSync('./tmp/bench/rome')) {
       2,
     ),
   )
+
+  // replace `export default function name()` with `export default function()`
+  // rome uses a same identifier as a type and a value and that chokes babel
+  const files = await glob('./tmp/bench/rome/src/**/*.ts')
+  const problematicExportDefaultRE = /export default function \w+\(/
+  for (const file of files) {
+    const content = await fsExtra.readFile(file, 'utf8')
+    if (problematicExportDefaultRE.test(content)) {
+      await fsExtra.writeFile(
+        file,
+        content.replace(problematicExportDefaultRE, 'export default function('),
+      )
+    }
+  }
+  // also replace some additional things in `@romejs/js-formatter/node/parentheses.ts`
+  {
+    const file = './tmp/bench/rome/src/@romejs/js-formatter/node/parentheses.ts'
+    const content = await fsExtra.readFile(file, 'utf8')
+    const newContent = content.replace(
+      /import \{((?:.|\n)*)\} from '@romejs\/js-ast';/,
+      "import type {$1} from '@romejs/js-ast';",
+    )
+    await fsExtra.writeFile(file, newContent)
+  }
 }

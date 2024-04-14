@@ -7,8 +7,10 @@ use tracing::instrument;
 
 use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
+  parallel_js_plugin_registry::ParallelJsPluginRegistry,
   types::binding_outputs::BindingOutputs,
   utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
+  worker_manager::WorkerManager,
 };
 
 #[napi]
@@ -23,9 +25,24 @@ impl Bundler {
     env: Env,
     input_options: BindingInputOptions,
     output_options: BindingOutputOptions,
+    parallel_plugins_registry: Option<ParallelJsPluginRegistry>,
   ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
-    let ret = normalize_binding_options(input_options, output_options)?;
+
+    let worker_count =
+      parallel_plugins_registry.as_ref().map(|registry| registry.worker_count).unwrap_or_default();
+    let parallel_plugins_map =
+      parallel_plugins_registry.map(|registry| registry.take_plugin_values());
+
+    let worker_manager =
+      if worker_count > 0 { Some(WorkerManager::new(worker_count)) } else { None };
+
+    let ret = normalize_binding_options(
+      input_options,
+      output_options,
+      parallel_plugins_map,
+      worker_manager,
+    )?;
 
     Ok(Self { inner: Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins)) })
   }

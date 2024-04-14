@@ -12,6 +12,8 @@ export default defineBuildConfig({
       input: './src/cli/index',
       name: 'cli',
     },
+    './src/parallel-plugin',
+    './src/parallel-plugin-worker',
   ],
   sourcemap: true,
   clean: true,

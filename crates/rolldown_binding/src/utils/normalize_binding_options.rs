@@ -1,8 +1,10 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{
   options::plugin::JsPlugin,
+  options::plugin::ParallelJsPlugin,
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
+  worker_manager::WorkerManager,
 };
 use rolldown::{AddonOutputOption, BundlerOptions, Platform};
 use rolldown_error::BuildError;
@@ -30,6 +32,8 @@ fn normalize_addon_option(
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
   output_options: crate::options::BindingOutputOptions,
+  mut parallel_plugins_map: Option<crate::parallel_js_plugin_registry::PluginValues>,
+  worker_manager: Option<WorkerManager>,
 ) -> napi::Result<NormalizeBindingOptionsReturn> {
   debug_assert!(PathBuf::from(&input_options.cwd) != PathBuf::from("/"), "{input_options:#?}");
   let cwd = PathBuf::from(input_options.cwd);
@@ -67,12 +71,23 @@ pub fn normalize_binding_options(
   };
 
   // Deal with plugins
+  let worker_manager = worker_manager.map(Arc::new);
 
-  let plugins = input_options
+  let plugins: Vec<BoxPlugin> = input_options
     .plugins
     .into_iter()
     .chain(output_options.plugins)
-    .map(JsPlugin::new_boxed)
+    .enumerate()
+    .map(|(index, plugin)| {
+      plugin.map_or_else(
+        || {
+          let plugins = parallel_plugins_map.as_mut().unwrap().remove(&index).unwrap();
+          let worker_manager = worker_manager.as_ref().unwrap();
+          ParallelJsPlugin::new_boxed(plugins, Arc::clone(worker_manager))
+        },
+        |plugin| JsPlugin::new_boxed(plugin),
+      )
+    })
     .collect::<Vec<_>>();
 
   Ok(NormalizeBindingOptionsReturn { bundler_options, plugins })

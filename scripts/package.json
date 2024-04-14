@@ -16,6 +16,7 @@
     "debug": "^4.3.4",
     "dedent": "^1.5.1",
     "execa": "^8.0.1",
+    "fast-glob": "^3.3.2",
     "fs-extra": "^11.2.0",
     "semver": "^7.6.0",
     "tree-sitter": "^0.21.0",

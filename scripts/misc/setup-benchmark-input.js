@@ -77,6 +77,7 @@ if (fsExtra.existsSync('./tmp/bench/rome')) {
 
   fsExtra.copySync('./tmp/github/rome/packages', './tmp/bench/rome/src/', {
     filter(src) {
+      // an error happens on windows without this filter
       return !src.includes('.bin')
     },
   })

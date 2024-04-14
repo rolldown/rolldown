@@ -8,7 +8,7 @@ import { RolldownNormalizedInputOptions } from './options/input-options'
 const { registryId, pluginInfos, threadNumber } = workerData as WorkerData
 
 ;(async () => {
-  // TODO: handle error
+  // TODO(sapphi-red): handle error
   const plugins = await Promise.all(
     pluginInfos.map(async (pluginInfo) => {
       const pluginModule = await import(pluginInfo.fileUrl)
@@ -20,7 +20,7 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData
       })
       return {
         index: pluginInfo.index,
-        // TODO: support inputOptions and outputOptions
+        // TODO(sapphi-red): support inputOptions and outputOptions
         plugin: bindingifyPlugin(
           plugin,
           {} as RolldownNormalizedInputOptions,

@@ -29,6 +29,7 @@ export async function createBundler(
     normalizedOutputOptions,
   )
 
+  // TODO(sapphi-red): call stopWorkers when an error happened
   return {
     bundler: new Bundler(
       bindingInputOptions,

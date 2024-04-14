@@ -1,6 +1,6 @@
 /// Some guidelines for tracing:
 /// - By default, only allow tracing events from crates of this repo.
-/// - Using `LOG_OUTPUT=chrome` to collect tracing events into a json file.
+/// - Using `LOG_LAYER=chrome` to collect tracing events into a json file.
 ///   - This only works on using `@rolldown/node`. If you are running rolldown in rust, this doesn't works.
 /// - Using `RUST_LOG=TRACE` to enable tracing or other values for more specific tracing.
 ///   - See  https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#example-syntax for more syntax details.

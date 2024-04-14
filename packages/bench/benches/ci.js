@@ -14,7 +14,7 @@ const bench = new tinyBench.Bench()
 for (const suite of suitesForCI) {
   const rolldownSuiteList = getRolldownSuiteList(suite)
   for (const rolldownSuite of rolldownSuiteList) {
-    bench.add(`rolldown (${rolldownSuite.suiteName})`, async () => {
+    bench.add(`${suite.title} (${rolldownSuite.suiteName})`, async () => {
       await runRolldown(rolldownSuite)
     })
   }

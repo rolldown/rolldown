@@ -1,4 +1,5 @@
 use crate::options::plugin::{BindingPluginOptions, BindingPluginWithIndex};
+use dashmap::DashMap;
 use napi::{
   bindgen_prelude::{FromNapiValue, Object, ObjectFinalize},
   Env, JsUnknown,
@@ -8,17 +9,14 @@ use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap;
 use std::{
   hash::BuildHasherDefault,
-  sync::{
-    atomic::{self, AtomicU16},
-    Mutex,
-  },
+  sync::atomic::{self, AtomicU16},
 };
 
 type PluginsInSingleWorker = Vec<BindingPluginWithIndex>;
 type PluginsList = Vec<PluginsInSingleWorker>;
 pub(crate) type PluginValues = FxHashMap<usize, Vec<BindingPluginOptions>>;
 
-static PLUGINS_MAP: Lazy<Mutex<FxHashMap<u16, PluginsList>>> = Lazy::new(Mutex::default);
+static PLUGINS_MAP: Lazy<DashMap<u16, PluginsList>> = Lazy::new(DashMap::default);
 static NEXT_ID: AtomicU16 = AtomicU16::new(1);
 
 #[napi(custom_finalize)]
@@ -38,16 +36,13 @@ impl ParallelJsPluginRegistry {
     }
 
     let id = NEXT_ID.fetch_add(1, atomic::Ordering::Relaxed);
-
-    let mut map = PLUGINS_MAP.lock().unwrap();
-    map.insert(id, vec![]);
+    PLUGINS_MAP.insert(id, vec![]);
 
     Ok(Self { id, worker_count })
   }
 
   pub fn take_plugin_values(&self) -> PluginValues {
-    let mut map = PLUGINS_MAP.lock().unwrap();
-    let plugins_list = map.remove(&self.id).expect("plugin list already taken");
+    let plugins_list = PLUGINS_MAP.remove(&self.id).expect("plugin list already taken").1;
 
     let mut map: FxHashMap<usize, Vec<BindingPluginOptions>> =
       FxHashMap::with_capacity_and_hasher(plugins_list[0].len(), BuildHasherDefault::default());
@@ -63,9 +58,7 @@ impl ParallelJsPluginRegistry {
 
 impl ObjectFinalize for ParallelJsPluginRegistry {
   fn finalize(self, mut _env: Env) -> napi::Result<()> {
-    let mut map = PLUGINS_MAP.lock().unwrap();
-    map.remove(&self.id);
-
+    PLUGINS_MAP.remove(&self.id);
     Ok(())
   }
 }
@@ -89,8 +82,7 @@ impl FromNapiValue for ParallelJsPluginRegistry {
 
 #[napi]
 pub fn register_plugins(id: u16, plugins: PluginsInSingleWorker) {
-  let mut map = PLUGINS_MAP.lock().unwrap();
-  if let Some(existing_plugins) = map.get_mut(&id) {
+  if let Some(mut existing_plugins) = PLUGINS_MAP.get_mut(&id) {
     existing_plugins.push(plugins);
   }
 }

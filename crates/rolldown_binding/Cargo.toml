@@ -16,6 +16,7 @@ crate-type = ["cdylib"]
 [dependencies]
 async-channel      = { workspace = true }
 async-trait        = { workspace = true }
+dashmap            = { workspace = true }
 derivative         = { workspace = true }
 futures            = { workspace = true }
 napi               = { workspace = true }

@@ -11,9 +11,11 @@ just setup-bench
 
 ## Benchmarking in Rust
 
+`bench-rust` will build the Rust code automatically, so you don't need to build yourself.
+
 ```shell
 # in project root
-just bench
+just bench-rust
 ```
 
 ## Benchmarking in Node.js
@@ -21,13 +23,11 @@ just bench
 Make sure to build the Node.js bindings in release mode:
 
 ```shell
-# in project root
-pnpm build:release
+pnpm -w build:release
 ```
 
-Then, in `packages/bench`:
+Then run
 
-```shell
-# in packages/bench
-pnpm bench
+```sh
+just bench-node
 ```

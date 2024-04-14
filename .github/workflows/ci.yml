@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   # JOB to run change detection
-  Changes: # https://github.com/dorny/paths-filter
+  changes: # https://github.com/dorny/paths-filter
     name: Detect Changes
     runs-on: ubuntu-latest
     permissions:
@@ -88,6 +88,23 @@ jobs:
 
       - name: Lint
         run: just lint-rust
+
+  build-wasi:
+    name: Build WASI
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust-changes == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: moonrepo/setup-rust@v1
+        with:
+          targets: wasm32-wasi-preview1-threads
+          cache-base: main
+      - name: Cargo Check
+        run: cargo check -p rolldown --target wasm32-wasi-preview1-threads
+
+      - name: Cargo Build
+        run: cargo build -p rolldown --target wasm32-wasi-preview1-threads
 
   cargo-test:
     needs: changes

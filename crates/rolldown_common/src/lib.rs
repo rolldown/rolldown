@@ -1,3 +1,4 @@
+mod chunk;
 mod inner_bundler_options;
 mod module;
 mod types;
@@ -24,6 +25,10 @@ pub mod bundler_options {
 
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
+  chunk::{
+    types::{cross_chunk_import_item::CrossChunkImportItem, pre_renderer_chunk::PreRenderedChunk},
+    Chunk,
+  },
   module::external_module::ExternalModule,
   module::normal_module::NormalModule,
   types::ast_scope::AstScope,

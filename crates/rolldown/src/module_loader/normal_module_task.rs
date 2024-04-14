@@ -211,13 +211,14 @@ impl NormalModuleTask {
     options: HookResolveIdExtraOptions,
   ) -> BatchedResult<ResolvedRequestInfo> {
     // Check external with unresolved path
-    if input_options.external.call(specifier.to_string(), Some(importer.to_string()), false).await?
-    {
-      return Ok(ResolvedRequestInfo {
-        path: specifier.to_string().into(),
-        module_type: ModuleType::Unknown,
-        is_external: true,
-      });
+    if let Some(external) = input_options.external.as_ref() {
+      if external.call(specifier.to_string(), Some(importer.to_string()), false).await? {
+        return Ok(ResolvedRequestInfo {
+          path: specifier.to_string().into(),
+          module_type: ModuleType::Unknown,
+          is_external: true,
+        });
+      }
     }
 
     let mut info =
@@ -225,10 +226,10 @@ impl NormalModuleTask {
 
     if !info.is_external {
       // Check external with resolved path
-      info.is_external = input_options
-        .external
-        .call(specifier.to_string(), Some(importer.to_string()), true)
-        .await?;
+      if let Some(external) = input_options.external.as_ref() {
+        info.is_external =
+          external.call(specifier.to_string(), Some(importer.to_string()), true).await?;
+      }
     }
     Ok(info)
   }
@@ -247,7 +248,7 @@ impl NormalModuleTask {
       let importer = self.resolved_path.clone();
       let kind = item.kind;
       // let on_warn = self.input_options.on_warn.clone();
-      tokio::spawn(async move {
+      async move {
         Self::resolve_id(
           &input_options,
           &resolver,
@@ -258,15 +259,14 @@ impl NormalModuleTask {
         )
         .await
         .map(|id| (idx, id))
-      })
+      }
     });
 
     let resolved_ids = join_all(jobs).await;
 
     let mut errors = BatchedErrors::default();
     let mut ret = IndexVec::with_capacity(dependencies.len());
-    resolved_ids.into_iter().try_for_each(|handle| -> anyhow::Result<()> {
-      let handle = handle?;
+    for handle in resolved_ids {
       match handle {
         Ok((_idx, item)) => {
           ret.push(item);
@@ -275,8 +275,7 @@ impl NormalModuleTask {
           errors.extend(e);
         }
       }
-      Ok(())
-    })?;
+    }
 
     if errors.is_empty() {
       Ok(ret)

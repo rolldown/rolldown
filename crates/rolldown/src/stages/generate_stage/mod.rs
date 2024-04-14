@@ -1,32 +1,40 @@
 use std::sync::Arc;
 
-use crate::{
-  chunk::ChunkRenderReturn,
-  chunk_graph::ChunkGraph,
-  error::BatchedResult,
-  finalizer::FinalizerContext,
-  stages::link_stage::LinkStageOutput,
-  utils::{finalize_normal_module, is_in_rust_test_mode, render_chunks::render_chunks},
-  SharedOptions,
-};
-use rolldown_utils::block_on_spawn_all;
-
+use futures::future::try_join_all;
 use rolldown_common::{
   ChunkKind, FileNameRenderOptions, Output, OutputAsset, OutputChunk, SourceMapType,
 };
 use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashSet;
+
+use crate::{
+  chunk_graph::ChunkGraph,
+  error::BatchedResult,
+  finalizer::FinalizerContext,
+  stages::link_stage::LinkStageOutput,
+  utils::{
+    chunk::{
+      deconflict_chunk_symbols::deconflict_chunk_symbols,
+      render_chunk::{render_chunk, ChunkRenderReturn},
+    },
+    finalize_normal_module, is_in_rust_test_mode,
+    render_chunks::render_chunks,
+  },
+  SharedOptions,
+};
+
 mod code_splitting;
 mod compute_cross_chunk_links;
 
-pub struct BundleStage<'a> {
+pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
   options: &'a SharedOptions,
   plugin_driver: &'a SharedPluginDriver,
 }
 
-impl<'a> BundleStage<'a> {
+impl<'a> GenerateStage<'a> {
   pub fn new(
     link_output: &'a mut LinkStageOutput,
     options: &'a SharedOptions,
@@ -36,8 +44,7 @@ impl<'a> BundleStage<'a> {
   }
 
   #[tracing::instrument(skip_all)]
-  pub async fn bundle(&mut self) -> BatchedResult<Vec<Output>> {
-    use rayon::prelude::*;
+  pub async fn generate(&mut self) -> BatchedResult<Vec<Output>> {
     tracing::info!("Start bundle stage");
     let mut chunk_graph = self.generate_chunks();
 
@@ -48,13 +55,11 @@ impl<'a> BundleStage<'a> {
     tracing::info!("compute_cross_chunk_links");
 
     chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
-      chunk.de_conflict(self.link_output);
+      deconflict_chunk_symbols(chunk, self.link_output);
     });
 
-    self
-      .link_output
-      .ast_table
-      .iter_mut_enumerated()
+    let ast_table_iter = self.link_output.ast_table.iter_mut_enumerated();
+    ast_table_iter
       .par_bridge()
       .filter(|(id, _)| self.link_output.module_table.normal_modules[*id].is_included)
       .for_each(|(id, ast)| {
@@ -80,54 +85,51 @@ impl<'a> BundleStage<'a> {
       });
     tracing::info!("finalizing modules");
 
-    let chunks = block_on_spawn_all(
+    let chunks = try_join_all(
       chunk_graph
         .chunks
         .iter()
-        .map(|c| async { c.render(self.options, self.link_output, &chunk_graph).await }),
+        .map(|c| async { render_chunk(c, self.options, self.link_output, &chunk_graph).await }),
     )
-    .into_iter()
-    .collect::<Result<Vec<_>, _>>()?;
+    .await?;
 
     let mut assets = vec![];
 
-    render_chunks(self.plugin_driver, chunks).await?.into_iter().try_for_each(
-      |chunk| -> Result<(), BuildError> {
-        let ChunkRenderReturn { mut map, rendered_chunk, mut code } = chunk;
-        if let Some(map) = map.as_mut() {
-          map.set_file(&rendered_chunk.file_name);
-          match self.options.sourcemap {
-            SourceMapType::File => {
-              let map_file_name = format!("{}.map", rendered_chunk.file_name);
-              assets.push(Output::Asset(Arc::new(OutputAsset {
-                file_name: map_file_name.clone(),
-                source: map.to_json_string().map_err(BuildError::sourcemap_error)?,
-              })));
-              code.push_str(&format!("\n//# sourceMappingURL={map_file_name}"));
-            }
-            SourceMapType::Inline => {
-              let data_url = map.to_data_url().map_err(BuildError::sourcemap_error)?;
-              code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
-            }
-            SourceMapType::Hidden => {}
+    for ChunkRenderReturn { mut map, rendered_chunk, mut code } in
+      render_chunks(self.plugin_driver, chunks).await?
+    {
+      if let Some(map) = map.as_mut() {
+        map.set_file(&rendered_chunk.file_name);
+        match self.options.sourcemap {
+          SourceMapType::File => {
+            let map_file_name = format!("{}.map", rendered_chunk.file_name);
+            assets.push(Output::Asset(Arc::new(OutputAsset {
+              file_name: map_file_name.clone(),
+              source: map.to_json_string().map_err(BuildError::sourcemap_error)?,
+            })));
+            code.push_str(&format!("\n//# sourceMappingURL={map_file_name}"));
           }
+          SourceMapType::Inline => {
+            let data_url = map.to_data_url().map_err(BuildError::sourcemap_error)?;
+            code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
+          }
+          SourceMapType::Hidden => {}
         }
-        let sourcemap_file_name = map.as_ref().map(|_| format!("{}.map", rendered_chunk.file_name));
-        assets.push(Output::Chunk(Arc::new(OutputChunk {
-          file_name: rendered_chunk.file_name,
-          code,
-          is_entry: rendered_chunk.is_entry,
-          is_dynamic_entry: rendered_chunk.is_dynamic_entry,
-          facade_module_id: rendered_chunk.facade_module_id,
-          modules: rendered_chunk.modules,
-          exports: rendered_chunk.exports,
-          module_ids: rendered_chunk.module_ids,
-          map,
-          sourcemap_file_name,
-        })));
-        Ok(())
-      },
-    )?;
+      }
+      let sourcemap_file_name = map.as_ref().map(|_| format!("{}.map", rendered_chunk.file_name));
+      assets.push(Output::Chunk(Arc::new(OutputChunk {
+        file_name: rendered_chunk.file_name,
+        code,
+        is_entry: rendered_chunk.is_entry,
+        is_dynamic_entry: rendered_chunk.is_dynamic_entry,
+        facade_module_id: rendered_chunk.facade_module_id,
+        modules: rendered_chunk.modules,
+        exports: rendered_chunk.exports,
+        module_ids: rendered_chunk.module_ids,
+        map,
+        sourcemap_file_name,
+      })));
+    }
 
     tracing::info!("rendered chunks");
 
@@ -170,7 +172,7 @@ impl<'a> BundleStage<'a> {
       }
       used_chunk_names.insert(chunk_name.clone());
 
-      chunk.file_name =
+      chunk.filename =
         Some(file_name_tmp.render(&FileNameRenderOptions { name: Some(&chunk_name) }));
     });
   }

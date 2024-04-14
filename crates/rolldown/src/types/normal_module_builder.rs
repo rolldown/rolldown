@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use index_vec::IndexVec;
-use oxc::{semantic::SymbolId, span::Span};
+use oxc::span::Span;
 use rolldown_common::{
   AstScope, ExportsKind, ImportRecord, ImportRecordId, LocalExport, ModuleType, NamedImport,
   NormalModule, NormalModuleId, ResourceId, StmtInfos, SymbolRef,
@@ -15,7 +15,7 @@ pub struct NormalModuleBuilder {
   pub source: Option<Arc<str>>,
   pub repr_name: Option<String>,
   pub path: Option<ResourceId>,
-  pub named_imports: Option<FxHashMap<SymbolId, NamedImport>>,
+  pub named_imports: Option<FxHashMap<SymbolRef, NamedImport>>,
   pub named_exports: Option<FxHashMap<Rstr, LocalExport>>,
   pub stmt_infos: Option<StmtInfos>,
   pub import_records: Option<IndexVec<ImportRecordId, ImportRecord>>,

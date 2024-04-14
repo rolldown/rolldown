@@ -124,6 +124,16 @@ impl Plugin for JsPlugin {
 
   // --- Output hooks ---
 
+  async fn render_start(
+    &self,
+    _ctx: &rolldown_plugin::SharedPluginContext,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if let Some(cb) = &self.render_start {
+      cb.await_call(()).await?;
+    }
+    Ok(())
+  }
+
   async fn generate_bundle(
     &self,
     _ctx: &rolldown_plugin::SharedPluginContext,

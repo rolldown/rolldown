@@ -131,6 +131,7 @@ export interface BindingPluginOptions {
     code: string,
     chunk: RenderedChunk,
   ) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
+  renderStart?: () => void
   generateBundle?: (
     bundle: BindingOutputs,
     isWrite: boolean,

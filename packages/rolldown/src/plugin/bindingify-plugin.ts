@@ -3,12 +3,13 @@ import {
   bindingifyBuildEnd,
   bindingifyBuildStart,
   bindingifyLoad,
-  bindingifyRenderChunk,
   bindingifyResolveId,
   bindingifyTransform,
 } from './bindingify-build-hooks'
 
 import {
+  bindingifyRenderStart,
+  bindingifyRenderChunk,
   bindingifyGenerateBundle,
   bindingifyWriteBundle,
 } from './bindingify-output-hooks'
@@ -31,6 +32,11 @@ export function bindingifyPlugin(
     transform: bindingifyTransform(plugin.transform),
     load: bindingifyLoad(plugin.load),
     renderChunk: bindingifyRenderChunk(outputOptions, plugin.renderChunk),
+    renderStart: bindingifyRenderStart(
+      outputOptions,
+      options,
+      plugin.renderStart,
+    ),
     generateBundle: bindingifyGenerateBundle(plugin.generateBundle),
     writeBundle: bindingifyWriteBundle(plugin.writeBundle),
   }

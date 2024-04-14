@@ -1,12 +1,12 @@
 use std::{ptr::addr_of, sync::Mutex};
 
 use index_vec::IndexVec;
-use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, NormalModule, NormalModuleId, StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
+use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 
 use crate::{
   runtime::RuntimeModuleBrief,

@@ -4,6 +4,26 @@ set shell := ["bash", "-cu"]
 _default:
     just --list -u
 
+setup:
+  # Rust related setup
+  cargo install cargo-binstall
+  cargo binstall taplo-cli cargo-insta cargo-deny -y
+  # Node.js related setup
+  corepack enable
+  pnpm install
+  just setup-submodule
+  echo "✅✅✅ Setup complete!"
+
+setup-submodule:
+  git submodule update --init
+
+setup-bench:
+    node ./scripts/misc/setup-benchmark-input.js
+
+# Update the submodule to the latest commit
+update-submodule:
+  git submodule update --init
+
 # `roll` command almost run all ci checks locally. It's useful to run this before pushing your changes.
 roll:
     just roll-rust
@@ -22,25 +42,6 @@ roll-node:
 
 roll-repo:
     just lint-repo
-
-# Initialize the project and its submodules
-init:
-    just init-rust
-    just init-node
-    git submodule update --init
-
-init-rust:
-    cargo binstall taplo-cli cargo-insta cargo-deny -y
-
-init-node:
-    pnpm install
-
-
-
-# Update our local branch with the remote branch (this is for you to sync the submodules)
-update:
-    git pull
-    git submodule update --init
 
 # CHECKING
 
@@ -100,11 +101,11 @@ lint-repo:
 
 # BENCHING
 
-setup-bench:
-    node ./scripts/misc/setup-benchmark-input.js
+bench-rust:
+  cargo bench -p bench
 
-bench:
-    cargo bench -p bench
+bench-node:
+  pnpm --filter bench run bench 
 
 # RELEASING
 

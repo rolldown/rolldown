@@ -246,15 +246,28 @@ function requireNative() {
         }
       }
     } else if (process.arch === 'arm') {
-      try {
-        return require('./rolldown-binding.linux-arm-gnueabihf.node')
-      } catch (e) {
-        loadErrors.push(e)
-      }
-      try {
-        return require('@rolldown/binding-linux-arm-gnueabihf')
-      } catch (e) {
-        loadErrors.push(e)
+      if (isMusl()) {
+        try {
+          return require('./rolldown-binding.linux-arm-musleabihf.node')
+        } catch (e) {
+          loadErrors.push(e)
+        }
+        try {
+          return require('@rolldown/binding-linux-arm-musleabihf')
+        } catch (e) {
+          loadErrors.push(e)
+        }
+      } else {
+        try {
+          return require('./rolldown-binding.linux-arm-gnueabihf.node')
+        } catch (e) {
+          loadErrors.push(e)
+        }
+        try {
+          return require('@rolldown/binding-linux-arm-gnueabihf')
+        } catch (e) {
+          loadErrors.push(e)
+        }
       }
     } else if (process.arch === 'riscv64') {
       if (isMusl()) {
@@ -279,6 +292,17 @@ function requireNative() {
         } catch (e) {
           loadErrors.push(e)
         }
+      }
+    } else if (process.arch === 'ppc64') {
+      try {
+        return require('./rolldown-binding.linux-ppc64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('@rolldown/binding-linux-ppc64-gnu')
+      } catch (e) {
+        loadErrors.push(e)
       }
     } else if (process.arch === 's390x') {
       try {

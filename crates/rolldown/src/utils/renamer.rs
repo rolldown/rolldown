@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use oxc::semantic::ScopeId;
 use rolldown_common::{NormalModule, NormalModuleId, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::types::{module_table::NormalModuleVec, symbols::Symbols};
@@ -56,8 +57,6 @@ impl<'name> Renamer<'name> {
     modules_in_chunk: &[NormalModuleId],
     modules: &NormalModuleVec,
   ) {
-    use rayon::prelude::*;
-
     fn rename_symbols_of_nested_scopes<'name>(
       module: &'name NormalModule,
       scope_id: ScopeId,
@@ -102,11 +101,8 @@ impl<'name> Renamer<'name> {
       stack.pop();
     }
 
-    let canonical_names_of_nested_scopes = modules_in_chunk
-      .par_iter()
-      .copied()
-      .map(|id| &modules[id])
-      .flat_map(|module| {
+    let copied_scope_iter =
+      modules_in_chunk.par_iter().copied().map(|id| &modules[id]).flat_map(|module| {
         let child_scopes: &[ScopeId] =
           module.scope.get_child_ids(module.scope.root_scope_id()).map_or(&[], Vec::as_slice);
 
@@ -121,11 +117,21 @@ impl<'name> Renamer<'name> {
           );
           canonical_names
         })
-      })
-      .reduce(FxHashMap::default, |mut acc, canonical_names| {
+      });
+
+    #[cfg(not(target_family = "wasm"))]
+    let canonical_names_of_nested_scopes =
+      copied_scope_iter.reduce(FxHashMap::default, |mut acc, canonical_names| {
         acc.extend(canonical_names);
         acc
       });
+    #[cfg(target_family = "wasm")]
+    let canonical_names_of_nested_scopes = copied_scope_iter
+      .reduce(|mut acc, canonical_names| {
+        acc.extend(canonical_names);
+        acc
+      })
+      .unwrap_or_default();
 
     self.canonical_names.extend(canonical_names_of_nested_scopes);
   }

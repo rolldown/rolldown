@@ -1,19 +1,15 @@
 use std::hash::BuildHasherDefault;
 
 use index_vec::IndexVec;
-use rolldown_common::{ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId};
+use rolldown_common::{Chunk, ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
 
-use crate::{
-  chunk::{Chunk, ChunksVec},
-  chunk_graph::ChunkGraph,
-  utils::is_in_rust_test_mode,
-};
+use crate::{chunk_graph::ChunkGraph, type_alias::IndexChunks, utils::is_in_rust_test_mode};
 
-use super::BundleStage;
+use super::GenerateStage;
 
-impl<'a> BundleStage<'a> {
+impl<'a> GenerateStage<'a> {
   fn determine_reachable_modules_for_entry(
     &self,
     module_id: NormalModuleId,
@@ -68,7 +64,7 @@ impl<'a> BundleStage<'a> {
       self.link_output.entries.len(),
       BuildHasherDefault::default(),
     );
-    let mut chunks = ChunksVec::with_capacity(self.link_output.entries.len());
+    let mut chunks = IndexChunks::with_capacity(self.link_output.entries.len());
 
     // Create chunk for each static and dynamic entry
     for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {

@@ -29,7 +29,7 @@ use super::types::ast_symbols::AstSymbols;
 #[derive(Debug, Default)]
 pub struct ScanResult {
   pub repr_name: String,
-  pub named_imports: FxHashMap<SymbolId, NamedImport>,
+  pub named_imports: FxHashMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordId, RawImportRecord>,
@@ -158,7 +158,7 @@ impl<'me> AstScanner<'me> {
 
   fn add_named_import(&mut self, local: SymbolId, imported: &str, record_id: ImportRecordId) {
     self.result.named_imports.insert(
-      local,
+      (self.idx, local).into(),
       NamedImport {
         imported: Rstr::new(imported).into(),
         imported_as: (self.idx, local).into(),
@@ -169,7 +169,7 @@ impl<'me> AstScanner<'me> {
 
   fn add_star_import(&mut self, local: SymbolId, record_id: ImportRecordId) {
     self.result.named_imports.insert(
-      local,
+      (self.idx, local).into(),
       NamedImport { imported: Specifier::Star, imported_as: (self.idx, local).into(), record_id },
     );
   }
@@ -212,7 +212,7 @@ impl<'me> AstScanner<'me> {
     if name_import.imported.is_default() {
       self.result.import_records[record_id].contains_import_default = true;
     }
-    self.result.named_imports.insert(generated_imported_as_ref.symbol, name_import);
+    self.result.named_imports.insert(generated_imported_as_ref, name_import);
     self
       .result
       .named_exports
@@ -228,7 +228,7 @@ impl<'me> AstScanner<'me> {
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import =
       NamedImport { imported: Specifier::Star, imported_as: generated_imported_as_ref, record_id };
-    self.result.named_imports.insert(generated_imported_as_ref.symbol, name_import);
+    self.result.named_imports.insert(generated_imported_as_ref, name_import);
     self.result.import_records[record_id].contains_import_star = true;
     self
       .result

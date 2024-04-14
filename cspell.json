@@ -71,8 +71,11 @@
     "importstar",
     "insta",
     "instanceof",
+    "justfile",
     "libc",
     "Lukas",
+    "memchr",
+    "memmem",
     "metafile",
     "metas",
     "mimalloc",
@@ -97,6 +100,7 @@
     "schemars",
     "serde",
     "smallvec",
+    "sourcemaps",
     "struct",
     "structs",
     "systemjs",
@@ -116,6 +120,8 @@
     "Yunfei",
     "sourcemaps",
     "memmem",
-    "memchr"
+    "memchr",
+    "wasi",
+    "WASI"
   ]
 }

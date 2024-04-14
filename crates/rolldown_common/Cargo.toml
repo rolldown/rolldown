@@ -22,6 +22,7 @@ rolldown_error     = { workspace = true }
 rolldown_fs        = { workspace = true }
 rolldown_rstr      = { workspace = true }
 rolldown_sourcemap = { workspace = true }
+rolldown_utils     = { workspace = true }
 rustc-hash         = { workspace = true }
 schemars           = { workspace = true }
 serde              = { workspace = true, features = ["derive"] }

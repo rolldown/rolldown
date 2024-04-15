@@ -806,9 +806,9 @@ dependencies = [
 
 [[package]]
 name = "napi"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91a58f76e2527361ffb0f1fc90e5e95eb1597d37f1e966374258e3c84c9ddfa0"
+checksum = "99d38fbf4cbfd7d2785d153f4dcce374d515d3dabd688504dd9093f8135829d0"
 dependencies = [
  "bitflags 2.5.0",
  "ctor",

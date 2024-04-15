@@ -80,7 +80,7 @@ index_vec                 = "0.1.3"
 insta                     = "1.38.0"
 memchr                    = "2.7.2"
 mimalloc                  = "0.1.39"
-napi                      = { version = "3.0.0-alpha.1", features = ["async"] }
+napi                      = { version = "3.0.0-alpha", features = ["async"] }
 napi-build                = { version = "2.1.3" }
 napi-derive               = { version = "3.0.0-alpha.1", default-features = false, features = ["type-def"] }
 once_cell                 = "1.19.0"

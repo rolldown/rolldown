@@ -46,11 +46,11 @@ impl NormalModuleTask {
     match self.run_inner().await {
       Ok(()) => {
         if !self.errors.is_empty() {
-          self.ctx.tx.send(Msg::BuildErrors(self.errors)).expect("Send should not fail");
+          self.ctx.tx.send(Msg::BuildErrors(self.errors)).await.expect("Send should not fail");
         }
       }
       Err(err) => {
-        self.ctx.tx.send(Msg::Panics(err)).expect("Send should not fail");
+        self.ctx.tx.send(Msg::Panics(err)).await.expect("Send should not fail");
       }
     }
   }
@@ -124,6 +124,7 @@ impl NormalModuleTask {
         raw_import_records: import_records,
         ast,
       }))
+      .await
       .expect("Send should not fail");
     tracing::trace!("end process {:?}", self.resolved_path);
     Ok(())

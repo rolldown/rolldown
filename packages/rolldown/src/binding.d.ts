@@ -1,6 +1,11 @@
 type MaybePromise<T> = T | Promise<T>
-type Nullable<T> = T | null | undefined
-type VoidNullable<T = void> = T | null | undefined | void
+
+export class ExternalObject<T> {
+  readonly '': {
+    readonly '': unique symbol
+    [K: symbol]: T
+  }
+}
 export class BindingOutputAsset {
   get fileName(): string
   get source(): string
@@ -36,17 +41,11 @@ export class Bundler {
   constructor(
     inputOptions: BindingInputOptions,
     outputOptions: BindingOutputOptions,
-    parallelPluginsRegistry?: ParallelJsPluginRegistry | undefined | null,
+    parallelPluginsRegistry: OptionExtended,
   )
   write(): Promise<BindingOutputs>
   generate(): Promise<BindingOutputs>
   scan(): Promise<void>
-}
-
-export class ParallelJsPluginRegistry {
-  id: number
-  workerCount: number
-  constructor(workerCount: number)
 }
 
 export interface AliasItem {
@@ -163,6 +162,14 @@ export interface BindingResolveOptions {
   symlinks?: boolean
   tsconfigFilename?: string
 }
+
+export function createParallelJsPluginRegistry(
+  workerCount: number,
+): ExternalObject<ParallelJsPluginRegistry>
+
+export function getRegistryId(
+  registry: ExternalObject<ParallelJsPluginRegistry>,
+): number
 
 export function registerPlugins(
   id: number,

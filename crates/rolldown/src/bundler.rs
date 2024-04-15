@@ -69,22 +69,24 @@ impl Bundler {
   pub async fn scan(&mut self) -> Result<ScanStageOutput> {
     self.plugin_driver.build_start().await?;
 
-    let ret = self.scan_inner().await?;
+    let ret = self.scan_inner().await;
 
     self.call_build_end_hook(&ret).await?;
 
-    Ok(ret)
+    ret
   }
 
-  async fn call_build_end_hook(&mut self, ret: &ScanStageOutput) -> Result<()> {
-    if let Some(e) = ret.errors.first() {
-      self
-        .plugin_driver
-        .build_end(Some(&HookBuildEndArgs {
-          // TODO(hyf0): 1.Need a better way to expose the error
-          error: e.to_string(),
-        }))
-        .await?;
+  async fn call_build_end_hook(&mut self, ret: &Result<ScanStageOutput>) -> Result<()> {
+    if let Ok(ret) = ret {
+      if let Some(error) = ret.errors.first() {
+        self
+          .plugin_driver
+          .build_end(Some(&HookBuildEndArgs {
+            // TODO(hyf0): 1.Need a better way to expose the error
+            error: error.to_string(),
+          }))
+          .await?;
+      }
       Ok(())
     } else {
       self.plugin_driver.build_end(None).await?;
@@ -108,11 +110,13 @@ impl Bundler {
   async fn try_build(&mut self) -> Result<LinkStageOutput> {
     self.plugin_driver.build_start().await?;
 
-    let scan_ret = self.scan_inner().await?;
+    let scan_ret = self.scan_inner().await;
 
     self.call_build_end_hook(&scan_ret).await?;
 
-    let link_stage = LinkStage::new(scan_ret, &self.options);
+    let build_info = scan_ret?;
+
+    let link_stage = LinkStage::new(build_info, &self.options);
     Ok(link_stage.link())
   }
 

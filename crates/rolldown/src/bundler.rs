@@ -86,13 +86,13 @@ impl Bundler {
             error: error.to_string(),
           }))
           .await?;
+        return Ok(());
       }
-      Ok(())
-    } else {
-      self.plugin_driver.build_end(None).await?;
-
-      Ok(())
     }
+
+    self.plugin_driver.build_end(None).await?;
+
+    Ok(())
   }
 
   async fn scan_inner(&mut self) -> Result<ScanStageOutput> {

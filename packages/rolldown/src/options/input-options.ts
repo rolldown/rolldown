@@ -15,6 +15,7 @@ export interface InputOptions {
   cwd?: string
   platform?: BindingInputOptions['platform']
   shimMissingExports?: BindingInputOptions['shimMissingExports']
+  logLevel?: BindingInputOptions['logLevel']
 }
 
 export type RolldownResolveOptions = Omit<BindingResolveOptions, 'alias'> & {

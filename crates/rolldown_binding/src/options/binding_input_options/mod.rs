@@ -55,6 +55,8 @@ pub struct BindingInputOptions {
   // watch?: WatcherOptions | false;
   #[napi(ts_type = "'node' | 'browser' | 'neutral'")]
   pub platform: Option<String>,
+  #[napi(ts_type = "'silent' | 'error' | 'warn' | 'info'")]
+  pub log_level: Option<String>,
 
   // extra
   pub cwd: String,

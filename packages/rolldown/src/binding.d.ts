@@ -1,4 +1,6 @@
 type MaybePromise<T> = T | Promise<T>
+type Nullable<T> = T | null | undefined
+type VoidNullable<T = void> = T | null | undefined | void
 export class BindingOutputAsset {
   get fileName(): string
   get source(): string
@@ -90,6 +92,7 @@ export interface BindingInputOptions {
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
+  logLevel?: 'silent' | 'error' | 'warn' | 'info'
   cwd: string
 }
 

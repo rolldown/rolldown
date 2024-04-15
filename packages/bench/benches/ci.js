@@ -2,7 +2,7 @@ import * as tinyBench from 'tinybench'
 import nodePath from 'node:path'
 import nodeUrl from 'node:url'
 import nodeFs from 'node:fs'
-import { suitesForCI } from '../src/suites.js'
+import { expandSuitesWithDerived, suitesForCI } from '../src/suites/index.js'
 import { getRolldownSuiteList, runRolldown } from '../src/run-bundler.js'
 
 const DIRNAME = nodePath.dirname(nodeUrl.fileURLToPath(import.meta.url))
@@ -11,7 +11,7 @@ const REPO_ROOT = nodePath.resolve(PROJECT_ROOT, '../..')
 
 const bench = new tinyBench.Bench()
 
-for (const suite of suitesForCI) {
+for (const suite of expandSuitesWithDerived(suitesForCI)) {
   const rolldownSuiteList = getRolldownSuiteList(suite)
   for (const rolldownSuite of rolldownSuiteList) {
     bench.add(`${suite.title} (${rolldownSuite.suiteName})`, async () => {

@@ -75,11 +75,13 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let errors = bundler_core.scan().await;
+    let output = Self::handle_result(bundler_core.scan().await)?;
 
-    if !errors.is_empty() {
-      return Err(Self::handle_errors(errors));
+    if !output.errors.is_empty() {
+      return Err(Self::handle_errors(output.errors));
     }
+
+    self.handle_warnings(output.warnings);
 
     Ok(())
   }
@@ -91,7 +93,7 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let outputs = bundler_core.write().await;
+    let outputs = Self::handle_result(bundler_core.write().await)?;
 
     if !outputs.errors.is_empty() {
       return Err(Self::handle_errors(outputs.errors));
@@ -109,7 +111,7 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let outputs = bundler_core.generate().await;
+    let outputs = Self::handle_result(bundler_core.generate().await)?;
 
     if !outputs.errors.is_empty() {
       return Err(Self::handle_errors(outputs.errors));
@@ -118,6 +120,10 @@ impl Bundler {
     self.handle_warnings(outputs.warnings);
 
     Ok(BindingOutputs::new(outputs.assets))
+  }
+
+  fn handle_result<T>(result: rolldown_error::Result<T>) -> napi::Result<T> {
+    result.map_err(|e| napi::Error::from_reason(format!("Rolldown internal error: {e}")))
   }
 
   fn handle_errors(errs: Vec<BuildError>) -> napi::Error {

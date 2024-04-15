@@ -1,5 +1,5 @@
 use rolldown_common::{ImportKind, ModuleType, Platform, ResolveOptions, ResolvedPath};
-use rolldown_error::{BuildError, Result};
+use rolldown_error::{BuildError, BuildResult};
 use rolldown_fs::FileSystem;
 use std::path::{Path, PathBuf};
 use sugar_path::SugarPath;
@@ -125,7 +125,7 @@ impl<F: FileSystem + Default> Resolver<F> {
     importer: Option<&Path>,
     specifier: &str,
     import_kind: ImportKind,
-  ) -> Result<ResolveRet> {
+  ) -> BuildResult<ResolveRet> {
     let selected_resolver = match import_kind {
       ImportKind::Import | ImportKind::DynamicImport => &self.import_resolver,
       ImportKind::Require => &self.require_resolver,

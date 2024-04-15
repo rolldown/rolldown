@@ -1,14 +1,15 @@
-use rolldown_common::{BatchedResult, Chunk, RenderedChunk};
-use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
-use rustc_hash::FxHashMap;
-use sugar_path::SugarPath;
-
 use crate::{
   chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
   types::module_render_output::ModuleRenderOutput,
   utils::render_normal_module::render_normal_module, SharedOptions,
 };
+
+use rolldown_common::{Chunk, RenderedChunk};
+use rolldown_error::Result;
+use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rustc_hash::FxHashMap;
+use sugar_path::SugarPath;
 
 pub struct ChunkRenderReturn {
   pub code: String,
@@ -27,7 +28,7 @@ pub async fn render_chunk(
   options: &SharedOptions,
   graph: &LinkStageOutput,
   chunk_graph: &ChunkGraph,
-) -> BatchedResult<ChunkRenderReturn> {
+) -> Result<ChunkRenderReturn> {
   let mut rendered_modules = FxHashMap::default();
   let mut concat_source = ConcatSource::default();
 

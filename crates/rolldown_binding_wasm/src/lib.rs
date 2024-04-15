@@ -71,7 +71,7 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
         })
         .build();
 
-      let result = bundler.write().await;
+      let result = bundler.write().await.unwrap();
 
       assert!(result.errors.is_empty(), "{:?}", result.errors);
 

@@ -1,5 +1,5 @@
 use rolldown_common::ResolvedPath;
-use rolldown_error::Result;
+use rolldown_error::{BuildError, InternalResult};
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
 use sugar_path::SugarPath;
@@ -9,7 +9,7 @@ pub async fn load_source(
   resolved_path: &ResolvedPath,
   fs: &dyn rolldown_fs::FileSystem,
   sourcemap_chain: &mut Vec<SourceMap>,
-) -> Result<String> {
+) -> InternalResult<String> {
   let source =
     if let Some(r) = plugin_driver.load(&HookLoadArgs { id: &resolved_path.path }).await? {
       if let Some(map) = r.map {
@@ -19,7 +19,7 @@ pub async fn load_source(
     } else if resolved_path.ignored {
       String::new()
     } else {
-      fs.read_to_string(resolved_path.path.as_path())?
+      fs.read_to_string(resolved_path.path.as_path()).map_err(BuildError::from)?
     };
   Ok(source)
 }

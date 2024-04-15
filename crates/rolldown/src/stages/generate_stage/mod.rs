@@ -1,17 +1,16 @@
-use std::sync::Arc;
-
 use futures::future::try_join_all;
 use rolldown_common::{
   ChunkKind, FileNameRenderOptions, Output, OutputAsset, OutputChunk, SourceMapType,
 };
 use rolldown_error::BuildError;
+use rolldown_error::Result;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashSet;
+use std::sync::Arc;
 
 use crate::{
   chunk_graph::ChunkGraph,
-  error::BatchedResult,
   finalizer::FinalizerContext,
   stages::link_stage::LinkStageOutput,
   utils::{
@@ -44,10 +43,9 @@ impl<'a> GenerateStage<'a> {
   }
 
   #[tracing::instrument(skip_all)]
-  pub async fn generate(&mut self) -> BatchedResult<Vec<Output>> {
+  pub async fn generate(&mut self) -> Result<Vec<Output>> {
     tracing::info!("Start bundle stage");
     let mut chunk_graph = self.generate_chunks();
-    let mut all_errors = vec![];
 
     self.generate_chunk_filenames(&mut chunk_graph);
     tracing::info!("generate_chunk_filenames");
@@ -134,7 +132,7 @@ impl<'a> GenerateStage<'a> {
 
     tracing::info!("rendered chunks");
 
-    Ok((assets, all_errors))
+    Ok(assets)
   }
 
   fn generate_chunk_filenames(&self, chunk_graph: &mut ChunkGraph) {

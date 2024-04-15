@@ -79,3 +79,5 @@ impl From<napi::Error> for BuildError {
     BuildError::napi_error(e.status.to_string(), e.reason)
   }
 }
+
+pub type BuildResult<T> = std::result::Result<T, BuildError>;

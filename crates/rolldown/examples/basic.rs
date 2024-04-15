@@ -20,7 +20,7 @@ async fn main() {
     ..Default::default()
   });
 
-  let result = bundler.write().await;
+  let result = bundler.write().await.unwrap();
   assert!(result.errors.is_empty(), "failed to bundle: {:?}", result.errors);
   // println!("{outputs:#?}");
 }

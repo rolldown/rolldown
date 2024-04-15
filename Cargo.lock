@@ -1375,7 +1375,6 @@ checksum = "e898588f33fdd5b9420719948f9f2a32c922a246964576f71ba7f24f80610fbc"
 name = "rolldown"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "derivative",
  "dunce",
  "futures",
@@ -1451,6 +1450,7 @@ dependencies = [
 name = "rolldown_error"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "ariadne",
  "napi",
  "oxc",

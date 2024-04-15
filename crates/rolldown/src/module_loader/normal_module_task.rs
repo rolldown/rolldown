@@ -7,7 +7,7 @@ use rolldown_common::{
   AstScope, FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath,
   ResourceId, SymbolRef,
 };
-use rolldown_error::{BuildError, Result};
+use rolldown_error::{BuildError, InterError, InternalResult, Result};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use sugar_path::SugarPath;
@@ -54,7 +54,7 @@ impl NormalModuleTask {
     }
   }
 
-  async fn run_inner(&mut self) -> anyhow::Result<()> {
+  async fn run_inner(&mut self) -> Result<()> {
     tracing::trace!("process {:?}", self.resolved_path);
 
     let mut sourcemap_chain = vec![];
@@ -70,27 +70,20 @@ impl NormalModuleTask {
     .await
     {
       Ok(ret) => ret,
-      Err(err) => {
-        self.errors.push(err);
-        return Ok(());
-      }
+      Err(err) => match err {
+        InterError::Err(e) => return Err(e),
+        InterError::BuildError(e) => {
+          self.errors.push(e);
+          return Ok(());
+        }
+      },
     };
 
     // Run plugin transform.
-    let source: Arc<str> = match transform_source(
-      &self.ctx.plugin_driver,
-      &self.resolved_path,
-      source,
-      &mut sourcemap_chain,
-    )
-    .await
-    {
-      Ok(ret) => ret.into(),
-      Err(err) => {
-        self.errors.push(err);
-        return Ok(());
-      }
-    };
+    let source: Arc<str> =
+      transform_source(&self.ctx.plugin_driver, &self.resolved_path, source, &mut sourcemap_chain)
+        .await?
+        .into();
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
     tracing::trace!("scan {:?}", self.resolved_path);
@@ -209,7 +202,7 @@ impl NormalModuleTask {
     importer: &str,
     specifier: &str,
     options: HookResolveIdExtraOptions,
-  ) -> Result<ResolvedRequestInfo> {
+  ) -> InternalResult<ResolvedRequestInfo> {
     // Check external with unresolved path
     if let Some(external) = input_options.external.as_ref() {
       if external.call(specifier.to_string(), Some(importer.to_string()), false).await? {
@@ -238,7 +231,7 @@ impl NormalModuleTask {
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordId, RawImportRecord>,
-  ) -> anyhow::Result<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
+  ) -> Result<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let input_options = Arc::clone(&self.ctx.input_options);
@@ -264,30 +257,19 @@ impl NormalModuleTask {
 
     let resolved_ids = join_all(jobs).await;
 
-    let mut errors = vec![];
     let mut ret = IndexVec::with_capacity(dependencies.len());
     for handle in resolved_ids {
       match handle {
         Ok((_idx, item)) => {
           ret.push(item);
         }
-        Err(e) => {
-          errors.push(e);
-        }
+        Err(e) => match e {
+          InterError::BuildError(e) => self.errors.push(e),
+          InterError::Err(e) => return Err(e),
+        },
       }
     }
 
-    if errors.is_empty() {
-      Ok(ret)
-    } else {
-      // TODO: The better way here is to filter out the failed-resolved dependencies and return
-      // `Ok(rwt)` with recoverable errors `self.errors` instead of returning `Err` and causing panicking.
-      let resolved_err = anyhow::format_err!(
-        "Resolver errors in {:?} => dependencies: {dependencies:#?}, errors: {errors:#?}",
-        self.resolved_path
-      );
-      self.errors.extend(errors);
-      Err(resolved_err)
-    }
+    Ok(ret)
   }
 }

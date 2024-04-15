@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use futures::future::join_all;
 use index_vec::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, IntoBatchedResult, NormalModuleId};
-use rolldown_error::BuildError;
+use rolldown_common::{EntryPoint, ImportKind, NormalModuleId};
+use rolldown_error::{BuildError, InterError, Result};
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
@@ -17,19 +17,13 @@ use crate::{
   utils::resolve_id::resolve_id,
   SharedOptions, SharedResolver,
 };
-use index_vec::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, NormalModuleId};
-use rolldown_error::{collect_results, BuildError};
-use rolldown_fs::OsFileSystem;
-use rolldown_oxc_utils::OxcAst;
-use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
-use rolldown_utils::block_on_spawn_all;
 
 pub struct ScanStage {
   input_options: SharedOptions,
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
+  pub errors: Vec<BuildError>,
 }
 
 #[derive(Debug)]
@@ -50,15 +44,14 @@ impl ScanStage {
     fs: OsFileSystem,
     resolver: SharedResolver,
   ) -> Self {
-    Self { input_options, plugin_driver, fs, resolver }
+    Self { input_options, plugin_driver, fs, resolver, errors: vec![] }
   }
 
   #[tracing::instrument(skip_all)]
-  pub async fn scan(&self) -> ScanStageOutput {
+  pub async fn scan(&mut self) -> Result<ScanStageOutput> {
     tracing::info!("Start scan stage");
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
-    let mut all_errors = vec![];
     let mut module_loader = ModuleLoader::new(
       Arc::clone(&self.input_options),
       Arc::clone(&self.plugin_driver),
@@ -79,26 +72,27 @@ impl ScanStage {
       errors,
       ast_table,
     } = module_loader.fetch_all_modules(user_entries).await;
-    all_errors.extend(errors);
+    self.errors.extend(errors);
 
     tracing::debug!("Scan stage finished {module_table:#?}");
 
-    ScanStageOutput {
+    Ok(ScanStageOutput {
       module_table,
       entry_points,
       symbols,
       runtime,
       warnings,
       ast_table,
-      errors: all_errors,
-    }
+      errors: std::mem::take(&mut self.errors),
+    })
   }
 
   /// Resolve `InputOptions.input`
   #[tracing::instrument(skip_all)]
+  #[allow(clippy::type_complexity)]
   async fn resolve_user_defined_entries(
-    &self,
-  ) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {
+    &mut self,
+  ) -> Result<Vec<(Option<String>, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 
@@ -116,7 +110,9 @@ impl ScanStage {
       {
         Ok(info) => {
           if info.is_external {
-            return Err(BuildError::entry_cannot_be_external(&*info.path.path));
+            return Err(rolldown_error::InterError::BuildError(
+              BuildError::entry_cannot_be_external(&*info.path.path),
+            ));
           }
           Ok((input_item.name.clone(), info))
         }
@@ -125,6 +121,19 @@ impl ScanStage {
     }))
     .await;
 
-    collect_results(resolved_ids)
+    let mut ret = Vec::with_capacity(self.input_options.input.len());
+
+    for handle in resolved_ids {
+      match handle {
+        Ok(value) => {
+          ret.push(value);
+        }
+        Err(e) => match e {
+          InterError::BuildError(e) => self.errors.push(e),
+          InterError::Err(e) => return Err(e),
+        },
+      }
+    }
+    Ok(ret)
   }
 }

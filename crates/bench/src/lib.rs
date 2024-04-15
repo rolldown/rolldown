@@ -33,7 +33,7 @@ pub async fn run_fixture(fixture_path: PathBuf) {
     std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();
   }
 
-  let result = bundler.write().await;
+  let result = bundler.write().await.unwrap();
   assert!(result.errors.is_empty(), "failed to bundle: {:?}", result.errors);
 }
 

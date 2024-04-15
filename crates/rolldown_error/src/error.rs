@@ -1,13 +1,22 @@
 use crate::BuildError;
 
-pub type Result<T> = std::result::Result<T, BuildError>;
+pub type Error = anyhow::Error;
+pub type Result<T> = anyhow::Result<T>;
 
-pub fn collect_results<T>(results: Vec<Result<T>>) -> (Vec<T>, Vec<BuildError>) {
-  let mut errors = vec![];
-  let mut values = vec![];
-  results.into_iter().for_each(|result| match result {
-    Ok(value) => values.push(value),
-    Err(e) => errors.push(e),
-  });
-  (values, errors)
+pub enum InterError {
+  Err(anyhow::Error),
+  BuildError(BuildError),
+}
+pub type InternalResult<T> = std::result::Result<T, InterError>;
+
+impl From<anyhow::Error> for InterError {
+  fn from(err: anyhow::Error) -> Self {
+    Self::Err(err)
+  }
+}
+
+impl From<BuildError> for InterError {
+  fn from(err: BuildError) -> Self {
+    Self::BuildError(err)
+  }
 }

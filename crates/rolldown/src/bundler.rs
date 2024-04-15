@@ -6,12 +6,11 @@ use super::stages::{
 };
 use crate::{
   bundler_builder::BundlerBuilder,
-  error::{BatchedErrors, BatchedResult},
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
   BundlerOptions, SharedOptions, SharedResolver,
 };
-use rolldown_error::{BuildError, Result};
+use rolldown_error::Result;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
 use sugar_path::SugarPath;
@@ -34,30 +33,7 @@ impl Bundler {
 }
 
 impl Bundler {
-  pub async fn write(&mut self) -> BundleOutput {
-    match self.write_inner().await {
-      Ok(output) => output,
-      Err(e) => BundleOutput { errors: vec![e], ..Default::default() },
-    }
-  }
-
-  pub async fn generate(&mut self) -> BundleOutput {
-    match self.bundle_up(false).await {
-      Ok(output) => output,
-      Err(e) => BundleOutput { errors: vec![e], ..Default::default() },
-    }
-  }
-
-  pub async fn scan(&mut self) -> Vec<BuildError> {
-    let mut errors = vec![];
-    match self.scan_inner().await {
-      Ok(output) => errors.extend(output.errors),
-      Err(e) => errors.push(e),
-    }
-    errors
-  }
-
-  async fn write_inner(&mut self) -> Result<BundleOutput> {
+  pub async fn write(&mut self) -> Result<BundleOutput> {
     let dir = self.options.cwd.as_path().join(&self.options.dir).to_string_lossy().to_string();
 
     let output = self.bundle_up(true).await?;
@@ -86,6 +62,27 @@ impl Bundler {
     Ok(output)
   }
 
+  pub async fn generate(&mut self) -> Result<BundleOutput> {
+    self.bundle_up(false).await
+  }
+
+  pub async fn scan(&mut self) -> Result<ScanStageOutput> {
+    self.plugin_driver.build_start().await?;
+
+    let ret = ScanStage::new(
+      Arc::clone(&self.options),
+      Arc::clone(&self.plugin_driver),
+      self.fs.clone(),
+      Arc::clone(&self.resolver),
+    )
+    .scan()
+    .await?;
+
+    self.call_build_end_hook(&ret).await?;
+
+    Ok(ret)
+  }
+
   // TODO call build end hook is not correct
   async fn call_build_end_hook(&mut self, ret: &ScanStageOutput) -> Result<()> {
     if let Some(e) = ret.errors.first() {
@@ -104,26 +101,9 @@ impl Bundler {
     }
   }
 
-  async fn scan_inner(&mut self) -> Result<ScanStageOutput> {
-    self.plugin_driver.build_start().await?;
-
-    let ret = ScanStage::new(
-      Arc::clone(&self.options),
-      Arc::clone(&self.plugin_driver),
-      self.fs.clone(),
-      Arc::clone(&self.resolver),
-    )
-    .scan()
-    .await;
-
-    self.call_build_end_hook(&ret).await?;
-
-    Ok(ret)
-  }
-
   #[tracing::instrument(skip_all)]
   async fn try_build(&mut self) -> Result<LinkStageOutput> {
-    let scan_ret = self.scan_inner().await?;
+    let scan_ret = self.scan().await?;
 
     let link_stage = LinkStage::new(scan_ret, &self.options);
     Ok(link_stage.link())
@@ -133,6 +113,7 @@ impl Bundler {
   async fn bundle_up(&mut self, is_write: bool) -> Result<BundleOutput> {
     tracing::trace!("Options {:#?}", self.options);
     let mut link_stage_output = self.try_build().await?;
+
     self.plugin_driver.render_start().await?;
 
     let mut generate_stage =
@@ -142,6 +123,10 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&assets, is_write).await?;
 
-    Ok(BundleOutput { warnings: std::mem::take(&mut link_stage_output.warnings), assets, errors })
+    Ok(BundleOutput {
+      warnings: std::mem::take(&mut link_stage_output.warnings),
+      assets,
+      errors: std::mem::take(&mut link_stage_output.errors),
+    })
   }
 }

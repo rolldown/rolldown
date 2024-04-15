@@ -2,7 +2,7 @@ use crate::HookRenderChunkArgs;
 use crate::{HookNoopReturn, PluginDriver};
 use futures::future::join_all;
 use rolldown_common::Output;
-use rolldown_error::BuildError;
+use rolldown_error::Result;
 use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {
@@ -16,7 +16,7 @@ impl PluginDriver {
   pub async fn render_chunk(
     &self,
     mut args: HookRenderChunkArgs<'_>,
-  ) -> Result<(String, Vec<SourceMap>), BuildError> {
+  ) -> Result<(String, Vec<SourceMap>)> {
     let mut sourcemap_chain = vec![];
     for (plugin, ctx) in &self.plugins {
       if let Some(r) = plugin.render_chunk(ctx, &args).await? {

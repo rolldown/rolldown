@@ -1,7 +1,7 @@
 import { Worker } from 'node:worker_threads'
 import { availableParallelism } from 'node:os'
 import { ParallelPlugin, Plugin } from '../plugin'
-import { ParallelJsPluginRegistry } from '../binding'
+import { createParallelJsPluginRegistry, getRegistryId } from '../binding'
 
 export type WorkerData = {
   registryId: number
@@ -30,8 +30,8 @@ export async function initializeParallelPlugins(
   }
 
   const count = Math.min(availableParallelism(), 8)
-  const parallelJsPluginRegistry = new ParallelJsPluginRegistry(count)
-  const registryId = parallelJsPluginRegistry.id
+  const parallelJsPluginRegistry = createParallelJsPluginRegistry(count)
+  const registryId = getRegistryId(parallelJsPluginRegistry)
 
   const workers = await initializeWorkers(registryId, count, pluginInfos)
   const stopWorkers = async () => {

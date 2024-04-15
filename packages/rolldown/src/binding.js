@@ -366,5 +366,7 @@ module.exports.BindingOutputChunk = nativeBinding.BindingOutputChunk
 module.exports.BindingOutputs = nativeBinding.BindingOutputs
 module.exports.BindingPluginContext = nativeBinding.BindingPluginContext
 module.exports.Bundler = nativeBinding.Bundler
-module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
+module.exports.createParallelJsPluginRegistry =
+  nativeBinding.createParallelJsPluginRegistry
+module.exports.getRegistryId = nativeBinding.getRegistryId
 module.exports.registerPlugins = nativeBinding.registerPlugins

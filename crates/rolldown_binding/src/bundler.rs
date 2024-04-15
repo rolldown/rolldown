@@ -1,4 +1,13 @@
-use napi::{tokio::sync::Mutex, Env};
+use std::{
+  ops::{Deref, DerefMut},
+  sync::Arc,
+};
+
+use napi::{
+  bindgen_prelude::{External, FromNapiRef, FromNapiValue},
+  tokio::sync::Mutex,
+  Env, JsUnknown, NapiValue, ValueType,
+};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
 use rolldown_common::BatchedErrors;
@@ -26,14 +35,14 @@ impl Bundler {
     env: Env,
     mut input_options: BindingInputOptions,
     output_options: BindingOutputOptions,
-    parallel_plugins_registry: Option<ParallelJsPluginRegistry>,
+    parallel_plugins_registry: OptionExtended<External<Arc<ParallelJsPluginRegistry>>>,
   ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
 
     let log_level = input_options.log_level.take().unwrap_or_else(|| "info".to_string());
 
     let worker_count =
-      parallel_plugins_registry.as_ref().map(|registry| registry.worker_count).unwrap_or_default();
+      parallel_plugins_registry.map(|registry| registry.worker_count).unwrap_or_default();
     let parallel_plugins_map =
       parallel_plugins_registry.map(|registry| registry.take_plugin_values());
 
@@ -140,5 +149,35 @@ impl Bundler {
     warnings.into_iter().for_each(|err| {
       println!("{}", err.into_diagnostic().to_color_string());
     });
+  }
+}
+
+pub struct OptionExtended<'a, T>(Option<&'a T>);
+
+impl<'a, T> Deref for OptionExtended<'a, T> {
+  type Target = Option<&'a T>;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+impl<'a, T> DerefMut for OptionExtended<'a, T> {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.0
+  }
+}
+
+impl<T: FromNapiRef> FromNapiValue for OptionExtended<'static, T> {
+  unsafe fn from_napi_value(
+    env: napi::sys::napi_env,
+    napi_val: napi::sys::napi_value,
+  ) -> napi::Result<Self> {
+    let unknown = JsUnknown::from_raw_unchecked(env, napi_val);
+    let val = match unknown.get_type()? {
+      ValueType::Undefined => None,
+      _ => Some(T::from_napi_ref(env, napi_val)?),
+    };
+    Ok(Self(val))
   }
 }

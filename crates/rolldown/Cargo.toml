@@ -32,7 +32,7 @@ rolldown_tracing   = { workspace = true }
 rolldown_utils     = { workspace = true }
 rustc-hash         = { workspace = true }
 sugar_path         = { workspace = true }
-tokio              = { workspace = true, features = ["rt", "macros", "sync"] }
+tokio              = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 tracing            = { workspace = true }
 
 [dev_dependencies]

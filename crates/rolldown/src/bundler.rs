@@ -69,21 +69,13 @@ impl Bundler {
   pub async fn scan(&mut self) -> Result<ScanStageOutput> {
     self.plugin_driver.build_start().await?;
 
-    let ret = ScanStage::new(
-      Arc::clone(&self.options),
-      Arc::clone(&self.plugin_driver),
-      self.fs.clone(),
-      Arc::clone(&self.resolver),
-    )
-    .scan()
-    .await?;
+    let ret = self.scan_inner().await?;
 
     self.call_build_end_hook(&ret).await?;
 
     Ok(ret)
   }
 
-  // TODO call build end hook is not correct
   async fn call_build_end_hook(&mut self, ret: &ScanStageOutput) -> Result<()> {
     if let Some(e) = ret.errors.first() {
       self
@@ -101,9 +93,24 @@ impl Bundler {
     }
   }
 
+  async fn scan_inner(&mut self) -> Result<ScanStageOutput> {
+    ScanStage::new(
+      Arc::clone(&self.options),
+      Arc::clone(&self.plugin_driver),
+      self.fs.clone(),
+      Arc::clone(&self.resolver),
+    )
+    .scan()
+    .await
+  }
+
   #[tracing::instrument(skip_all)]
   async fn try_build(&mut self) -> Result<LinkStageOutput> {
-    let scan_ret = self.scan().await?;
+    self.plugin_driver.build_start().await?;
+
+    let scan_ret = self.scan_inner().await?;
+
+    self.call_build_end_hook(&scan_ret).await?;
 
     let link_stage = LinkStage::new(scan_ret, &self.options);
     Ok(link_stage.link())

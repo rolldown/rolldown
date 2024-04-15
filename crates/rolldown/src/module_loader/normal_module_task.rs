@@ -1,5 +1,6 @@
 use std::{path::Path, sync::Arc};
 
+use anyhow::Result;
 use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
@@ -7,6 +8,7 @@ use rolldown_common::{
   AstScope, FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath,
   ResourceId, SymbolRef,
 };
+use rolldown_error::{BuildError, BuildResult};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use sugar_path::SugarPath;
@@ -14,7 +16,6 @@ use sugar_path::SugarPath;
 use super::{task_context::TaskContext, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
-  error::{BatchedErrors, BatchedResult},
   module_loader::NormalModuleTaskResult,
   types::{
     ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder,
@@ -28,7 +29,7 @@ pub struct NormalModuleTask {
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
   module_type: ModuleType,
-  errors: BatchedErrors,
+  errors: Vec<BuildError>,
 }
 
 impl NormalModuleTask {
@@ -38,7 +39,7 @@ impl NormalModuleTask {
     path: ResolvedPath,
     module_type: ModuleType,
   ) -> Self {
-    Self { ctx, module_id: id, resolved_path: path, module_type, errors: BatchedErrors::default() }
+    Self { ctx, module_id: id, resolved_path: path, module_type, errors: vec![] }
   }
 
   pub async fn run(mut self) {
@@ -54,43 +55,22 @@ impl NormalModuleTask {
     }
   }
 
-  async fn run_inner(&mut self) -> anyhow::Result<()> {
+  async fn run_inner(&mut self) -> Result<()> {
     tracing::trace!("process {:?}", self.resolved_path);
 
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let source = match load_source(
-      &self.ctx.plugin_driver,
-      &self.resolved_path,
-      &self.ctx.fs,
-      &mut sourcemap_chain,
-    )
-    .await
-    {
-      Ok(ret) => ret,
-      Err(errs) => {
-        self.errors.extend(errs);
-        return Ok(());
-      }
-    };
+    let source =
+      load_source(&self.ctx.plugin_driver, &self.resolved_path, &self.ctx.fs, &mut sourcemap_chain)
+        .await?;
 
     // Run plugin transform.
-    let source: Arc<str> = match transform_source(
-      &self.ctx.plugin_driver,
-      &self.resolved_path,
-      source,
-      &mut sourcemap_chain,
-    )
-    .await
-    {
-      Ok(ret) => ret.into(),
-      Err(errs) => {
-        self.errors.extend(errs);
-        return Ok(());
-      }
-    };
+    let source: Arc<str> =
+      transform_source(&self.ctx.plugin_driver, &self.resolved_path, source, &mut sourcemap_chain)
+        .await?
+        .into();
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
     tracing::trace!("scan {:?}", self.resolved_path);
@@ -209,36 +189,41 @@ impl NormalModuleTask {
     importer: &str,
     specifier: &str,
     options: HookResolveIdExtraOptions,
-  ) -> BatchedResult<ResolvedRequestInfo> {
+  ) -> anyhow::Result<BuildResult<ResolvedRequestInfo>> {
     // Check external with unresolved path
     if let Some(external) = input_options.external.as_ref() {
       if external.call(specifier.to_string(), Some(importer.to_string()), false).await? {
-        return Ok(ResolvedRequestInfo {
+        return Ok(Ok(ResolvedRequestInfo {
           path: specifier.to_string().into(),
           module_type: ModuleType::Unknown,
           is_external: true,
-        });
+        }));
       }
     }
 
-    let mut info =
+    let info =
       resolve_id(resolver, plugin_driver, specifier, Some(importer), options, false).await?;
 
-    if !info.is_external {
-      // Check external with resolved path
-      if let Some(external) = input_options.external.as_ref() {
-        info.is_external =
-          external.call(specifier.to_string(), Some(importer.to_string()), true).await?;
+    match info {
+      Ok(mut info) => {
+        if !info.is_external {
+          // Check external with resolved path
+          if let Some(external) = input_options.external.as_ref() {
+            info.is_external =
+              external.call(specifier.to_string(), Some(importer.to_string()), true).await?;
+          }
+        }
+        Ok(Ok(info))
       }
+      Err(e) => Ok(Err(e)),
     }
-    Ok(info)
   }
 
   #[tracing::instrument(skip_all)]
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordId, RawImportRecord>,
-  ) -> anyhow::Result<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
+  ) -> Result<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let input_options = Arc::clone(&self.ctx.input_options);
@@ -264,29 +249,29 @@ impl NormalModuleTask {
 
     let resolved_ids = join_all(jobs).await;
 
-    let mut errors = BatchedErrors::default();
     let mut ret = IndexVec::with_capacity(dependencies.len());
+    let mut build_errors = vec![];
     for handle in resolved_ids {
+      let (_idx, handle) = handle?;
       match handle {
-        Ok((_idx, item)) => {
-          ret.push(item);
+        Ok(info) => {
+          ret.push(info);
         }
         Err(e) => {
-          errors.extend(e);
+          build_errors.push(e);
         }
       }
     }
 
-    if errors.is_empty() {
+    if build_errors.is_empty() {
       Ok(ret)
     } else {
       // TODO: The better way here is to filter out the failed-resolved dependencies and return
-      // `Ok(rwt)` with recoverable errors `self.errors` instead of returning `Err` and causing panicking.
+      // `Ok(ret)` with recoverable errors `self.errors` instead of returning `Err` and causing panicking.
       let resolved_err = anyhow::format_err!(
-        "Resolver errors in {:?} => dependencies: {dependencies:#?}, errors: {errors:#?}",
+        "Resolver errors in {:?} => dependencies: {dependencies:#?}, build_errors: {build_errors:#?}",
         self.resolved_path
       );
-      self.errors.extend(errors);
       Err(resolved_err)
     }
   }

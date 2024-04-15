@@ -1,17 +1,14 @@
-use futures::future::join_all;
-use rolldown_common::IntoBatchedResult;
+use super::chunk::render_chunk::ChunkRenderReturn;
+use anyhow::Result;
+use futures::future::try_join_all;
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::collapse_sourcemaps;
-
-use crate::error::BatchedErrors;
-
-use super::chunk::render_chunk::ChunkRenderReturn;
 
 pub async fn render_chunks<'a>(
   plugin_driver: &SharedPluginDriver,
   chunks: Vec<ChunkRenderReturn>,
-) -> Result<Vec<ChunkRenderReturn>, BatchedErrors> {
-  join_all(chunks.into_iter().map(|chunk| async move {
+) -> Result<Vec<ChunkRenderReturn>> {
+  try_join_all(chunks.into_iter().map(|chunk| async move {
     tracing::info!("render_chunks");
     plugin_driver
       .render_chunk(HookRenderChunkArgs { code: chunk.code, chunk: &chunk.rendered_chunk })
@@ -32,5 +29,4 @@ pub async fn render_chunks<'a>(
       })
   }))
   .await
-  .into_batched_result()
 }

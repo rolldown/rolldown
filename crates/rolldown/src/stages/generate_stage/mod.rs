@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use anyhow::Result;
 use futures::future::try_join_all;
 use rolldown_common::{
   ChunkKind, FileNameRenderOptions, Output, OutputAsset, OutputChunk, SourceMapType,
@@ -8,10 +7,10 @@ use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashSet;
+use std::sync::Arc;
 
 use crate::{
   chunk_graph::ChunkGraph,
-  error::BatchedResult,
   finalizer::FinalizerContext,
   stages::link_stage::LinkStageOutput,
   utils::{
@@ -44,7 +43,7 @@ impl<'a> GenerateStage<'a> {
   }
 
   #[tracing::instrument(skip_all)]
-  pub async fn generate(&mut self) -> BatchedResult<Vec<Output>> {
+  pub async fn generate(&mut self) -> Result<Vec<Output>> {
     tracing::info!("Start bundle stage");
     let mut chunk_graph = self.generate_chunks();
 
@@ -103,14 +102,27 @@ impl<'a> GenerateStage<'a> {
         match self.options.sourcemap {
           SourceMapType::File => {
             let map_file_name = format!("{}.map", rendered_chunk.file_name);
+            let source = match map.to_json_string().map_err(BuildError::sourcemap_error) {
+              Ok(source) => source,
+              Err(e) => {
+                self.link_output.errors.push(e);
+                continue;
+              }
+            };
             assets.push(Output::Asset(Arc::new(OutputAsset {
               file_name: map_file_name.clone(),
-              source: map.to_json_string().map_err(BuildError::sourcemap_error)?,
+              source,
             })));
             code.push_str(&format!("\n//# sourceMappingURL={map_file_name}"));
           }
           SourceMapType::Inline => {
-            let data_url = map.to_data_url().map_err(BuildError::sourcemap_error)?;
+            let data_url = match map.to_data_url().map_err(BuildError::sourcemap_error) {
+              Ok(data_url) => data_url,
+              Err(e) => {
+                self.link_output.errors.push(e);
+                continue;
+              }
+            };
             code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
           }
           SourceMapType::Hidden => {}

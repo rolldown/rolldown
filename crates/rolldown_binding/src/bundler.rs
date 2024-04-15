@@ -1,10 +1,3 @@
-use napi::{tokio::sync::Mutex, Env};
-use napi_derive::napi;
-use rolldown::Bundler as NativeBundler;
-use rolldown_common::BatchedErrors;
-use rolldown_error::BuildError;
-use tracing::instrument;
-
 use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
@@ -12,6 +5,11 @@ use crate::{
   utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
   worker_manager::WorkerManager,
 };
+use napi::{tokio::sync::Mutex, Env};
+use napi_derive::napi;
+use rolldown::Bundler as NativeBundler;
+use rolldown_error::BuildError;
+use tracing::instrument;
 
 #[napi]
 pub struct Bundler {
@@ -77,11 +75,13 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let result = bundler_core.scan().await;
+    let output = Self::handle_result(bundler_core.scan().await)?;
 
-    if let Err(errs) = result {
-      return Err(Self::handle_errors(errs));
+    if !output.errors.is_empty() {
+      return Err(Self::handle_errors(output.errors));
     }
+
+    self.handle_warnings(output.warnings);
 
     Ok(())
   }
@@ -93,12 +93,11 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let maybe_outputs = bundler_core.write().await;
+    let outputs = Self::handle_result(bundler_core.write().await)?;
 
-    let outputs = match maybe_outputs {
-      Ok(outputs) => outputs,
-      Err(errs) => return Err(Self::handle_errors(errs)),
-    };
+    if !outputs.errors.is_empty() {
+      return Err(Self::handle_errors(outputs.errors));
+    }
 
     self.handle_warnings(outputs.warnings);
 
@@ -112,19 +111,22 @@ impl Bundler {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
 
-    let maybe_outputs = bundler_core.generate().await;
+    let outputs = Self::handle_result(bundler_core.generate().await)?;
 
-    let outputs = match maybe_outputs {
-      Ok(outputs) => outputs,
-      Err(errs) => return Err(Self::handle_errors(errs)),
-    };
+    if !outputs.errors.is_empty() {
+      return Err(Self::handle_errors(outputs.errors));
+    }
 
     self.handle_warnings(outputs.warnings);
 
     Ok(BindingOutputs::new(outputs.assets))
   }
 
-  fn handle_errors(errs: BatchedErrors) -> napi::Error {
+  fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {
+    result.map_err(|e| napi::Error::from_reason(format!("Rolldown internal error: {e}")))
+  }
+
+  fn handle_errors(errs: Vec<BuildError>) -> napi::Error {
     errs.into_iter().for_each(|err| {
       eprintln!("{}", err.into_diagnostic().to_color_string());
     });

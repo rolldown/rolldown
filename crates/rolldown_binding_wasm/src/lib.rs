@@ -71,19 +71,18 @@ pub fn bundle(file_list: Vec<FileItem>) -> Vec<AssetItem> {
         })
         .build();
 
-      match bundler.write().await {
-        Ok(assets) => assets
-          .assets
-          .into_iter()
-          .map(|item| AssetItem {
-            name: item.file_name().to_string(),
-            content: item.content().to_owned(),
-          })
-          .collect::<Vec<_>>(),
-        Err(err) => {
-          panic!("{err:?}",);
-        }
-      }
+      let result = bundler.write().await.unwrap();
+
+      assert!(result.errors.is_empty(), "{:?}", result.errors);
+
+      result
+        .assets
+        .into_iter()
+        .map(|item| AssetItem {
+          name: item.file_name().to_string(),
+          content: item.content().to_owned(),
+        })
+        .collect::<Vec<_>>()
     });
   result
 }

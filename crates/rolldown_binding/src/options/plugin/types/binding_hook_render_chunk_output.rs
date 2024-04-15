@@ -1,5 +1,4 @@
 use derivative::Derivative;
-use rolldown_error::BuildError;
 use serde::Deserialize;
 
 #[napi_derive::napi(object)]
@@ -12,7 +11,7 @@ pub struct BindingHookRenderChunkOutput {
 }
 
 impl TryFrom<BindingHookRenderChunkOutput> for rolldown_plugin::HookRenderChunkOutput {
-  type Error = BuildError;
+  type Error = anyhow::Error;
 
   fn try_from(value: BindingHookRenderChunkOutput) -> Result<Self, Self::Error> {
     Ok(rolldown_plugin::HookRenderChunkOutput {
@@ -21,7 +20,7 @@ impl TryFrom<BindingHookRenderChunkOutput> for rolldown_plugin::HookRenderChunkO
         .map
         .map(|content| {
           rolldown_sourcemap::SourceMap::from_json_string(&content)
-            .map_err(BuildError::sourcemap_error)
+            .map_err(|e| anyhow::format_err!("SOURCEMAP_ERROR: {:?}", e))
         })
         .transpose()?,
     })

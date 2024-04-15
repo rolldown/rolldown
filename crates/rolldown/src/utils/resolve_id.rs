@@ -3,7 +3,7 @@ use std::path::Path;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rolldown_common::ModuleType;
-use rolldown_error::BuildError;
+use rolldown_error::BuildResult;
 use rolldown_plugin::{HookResolveIdArgs, HookResolveIdExtraOptions, SharedPluginDriver};
 
 use crate::{types::resolved_request_info::ResolvedRequestInfo, SharedResolver};
@@ -21,7 +21,7 @@ pub async fn resolve_id(
   importer: Option<&str>,
   options: HookResolveIdExtraOptions,
   _preserve_symlinks: bool,
-) -> Result<ResolvedRequestInfo, BuildError> {
+) -> anyhow::Result<BuildResult<ResolvedRequestInfo>> {
   let import_kind = options.kind;
   // Run plugin resolve_id first, if it is None use internal resolver as fallback
   if let Some(r) = plugin_driver
@@ -32,29 +32,32 @@ pub async fn resolve_id(
     })
     .await?
   {
-    return Ok(ResolvedRequestInfo {
+    return Ok(Ok(ResolvedRequestInfo {
       path: r.id.into(),
       module_type: ModuleType::Unknown,
       is_external: matches!(r.external, Some(true)),
-    });
+    }));
   }
 
   // Auto external http url or data url
   if HTTP_URL_REGEX.is_match(request) || DATA_URL_REGEX.is_match(request) {
-    return Ok(ResolvedRequestInfo {
+    return Ok(Ok(ResolvedRequestInfo {
       path: request.to_string().into(),
       module_type: ModuleType::Unknown,
       is_external: true,
-    });
+    }));
   }
 
   // Rollup external node packages by default.
   // Rolldown will follow esbuild behavior to resolve it by default.
   // See https://github.com/rolldown/rolldown/issues/282
-  let resolved = resolver.resolve(importer.map(Path::new), request, import_kind)?;
-  Ok(ResolvedRequestInfo {
-    path: resolved.resolved,
-    module_type: resolved.module_type,
-    is_external: false,
-  })
+  let resolved = resolver.resolve(importer.map(Path::new), request, import_kind);
+  match resolved {
+    Ok(resolved) => Ok(Ok(ResolvedRequestInfo {
+      path: resolved.resolved,
+      module_type: resolved.module_type,
+      is_external: false,
+    })),
+    Err(e) => Ok(Err(e)),
+  }
 }

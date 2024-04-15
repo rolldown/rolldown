@@ -7,7 +7,6 @@ use crate::{
   worker_manager::WorkerManager,
 };
 use rolldown::{AddonOutputOption, BundlerOptions, Platform};
-use rolldown_error::BuildError;
 use rolldown_plugin::BoxPlugin;
 
 pub struct NormalizeBindingOptionsReturn {
@@ -23,7 +22,7 @@ fn normalize_addon_option(
       let fn_js = value.clone();
       let chunk = chunk.clone();
       Box::pin(async move {
-        fn_js.await_call(RenderedChunk::from(chunk)).await.map_err(BuildError::from)
+        fn_js.await_call(RenderedChunk::from(chunk)).await.map_err(anyhow::Error::from)
       })
     }))
   })
@@ -42,7 +41,7 @@ pub fn normalize_binding_options(
     rolldown::External::Fn(Box::new(move |source, importer, is_resolved| {
       let ts_fn = ts_fn.clone();
       Box::pin(async move {
-        ts_fn.call_async((source, importer, is_resolved)).await.map_err(BuildError::from)
+        ts_fn.call_async((source, importer, is_resolved)).await.map_err(anyhow::Error::from)
       })
     }))
   });

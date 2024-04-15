@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use index_vec::IndexVec;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordId, ModuleId, NormalModule,
@@ -10,6 +8,7 @@ use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::sync::Arc;
 
 use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
@@ -22,7 +21,6 @@ use crate::types::module_table::{ExternalModuleVec, ModuleTable};
 use crate::types::resolved_request_info::ResolvedRequestInfo;
 use crate::types::symbols::Symbols;
 
-use crate::error::{BatchedErrors, BatchedResult};
 use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
@@ -64,6 +62,7 @@ pub struct ModuleLoaderOutput {
   pub entry_points: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
+  pub errors: Vec<BuildError>,
 }
 
 impl ModuleLoader {
@@ -150,10 +149,10 @@ impl ModuleLoader {
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: Vec<(Option<String>, ResolvedRequestInfo)>,
-  ) -> BatchedResult<ModuleLoaderOutput> {
+  ) -> ModuleLoaderOutput {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
-    let mut errors = BatchedErrors::default();
+    let mut errors = vec![];
     let mut all_warnings: Vec<BuildError> = Vec::new();
 
     self
@@ -239,8 +238,8 @@ impl ModuleLoader {
           self.symbols.add_ast_symbol(runtime.id(), ast_symbol);
           runtime_brief = Some(runtime);
         }
-        Msg::BuildErrors(errs) => {
-          errors.extend(errs);
+        Msg::BuildErrors(e) => {
+          errors.extend(e);
         }
         Msg::Panics(err) => {
           panic_errors.push(err);
@@ -250,10 +249,6 @@ impl ModuleLoader {
     }
 
     assert!(panic_errors.is_empty(), "Panics occurred during module loading: {panic_errors:?}");
-
-    if !errors.is_empty() {
-      return Err(errors);
-    }
 
     let modules: IndexVec<NormalModuleId, NormalModule> =
       self.intermediate_normal_modules.modules.into_iter().map(Option::unwrap).collect();
@@ -270,7 +265,7 @@ impl ModuleLoader {
       kind: EntryPointKind::DynamicImport,
     }));
 
-    Ok(ModuleLoaderOutput {
+    ModuleLoaderOutput {
       module_table: ModuleTable {
         normal_modules: modules,
         external_modules: self.external_modules,
@@ -280,6 +275,7 @@ impl ModuleLoader {
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
-    })
+      errors,
+    }
   }
 }

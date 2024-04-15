@@ -1406,6 +1406,7 @@ dependencies = [
 name = "rolldown_binding"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "async-channel",
  "async-trait",
  "dashmap",
@@ -1431,6 +1432,7 @@ dependencies = [
 name = "rolldown_common"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "index_vec",
  "once_cell",
  "oxc",
@@ -1479,6 +1481,7 @@ dependencies = [
 name = "rolldown_plugin"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "futures",
  "rolldown_common",

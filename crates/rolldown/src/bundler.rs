@@ -1,20 +1,19 @@
 use std::sync::Arc;
 
-use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
-use sugar_path::SugarPath;
-
 use super::stages::{
   link_stage::{LinkStage, LinkStageOutput},
   scan_stage::ScanStageOutput,
 };
 use crate::{
   bundler_builder::BundlerBuilder,
-  error::{BatchedErrors, BatchedResult},
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
   BundlerOptions, SharedOptions, SharedResolver,
 };
+use anyhow::Result;
+use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
+use sugar_path::SugarPath;
 
 pub struct Bundler {
   pub(crate) options: SharedOptions,
@@ -34,7 +33,7 @@ impl Bundler {
 }
 
 impl Bundler {
-  pub async fn write(&mut self) -> BatchedResult<BundleOutput> {
+  pub async fn write(&mut self) -> Result<BundleOutput> {
     let dir = self.options.cwd.as_path().join(&self.options.dir).to_string_lossy().to_string();
 
     let output = self.bundle_up(true).await?;
@@ -63,44 +62,40 @@ impl Bundler {
     Ok(output)
   }
 
-  pub async fn generate(&mut self) -> BatchedResult<BundleOutput> {
+  pub async fn generate(&mut self) -> Result<BundleOutput> {
     self.bundle_up(false).await
   }
 
-  pub async fn scan(&mut self) -> BatchedResult<()> {
+  pub async fn scan(&mut self) -> Result<ScanStageOutput> {
     self.plugin_driver.build_start().await?;
 
     let ret = self.scan_inner().await;
 
     self.call_build_end_hook(&ret).await?;
 
-    ret?;
+    ret
+  }
+
+  async fn call_build_end_hook(&mut self, ret: &Result<ScanStageOutput>) -> Result<()> {
+    if let Ok(ret) = ret {
+      if let Some(error) = ret.errors.first() {
+        self
+          .plugin_driver
+          .build_end(Some(&HookBuildEndArgs {
+            // TODO(hyf0): 1.Need a better way to expose the error
+            error: error.to_string(),
+          }))
+          .await?;
+        return Ok(());
+      }
+    }
+
+    self.plugin_driver.build_end(None).await?;
 
     Ok(())
   }
 
-  async fn call_build_end_hook(
-    &mut self,
-    ret: &Result<ScanStageOutput, BatchedErrors>,
-  ) -> BatchedResult<()> {
-    if let Err(e) = ret {
-      let error = e.get().expect("should have a error");
-      self
-        .plugin_driver
-        .build_end(Some(&HookBuildEndArgs {
-          // TODO(hyf0): 1.Need a better way to expose the error
-          error: error.to_string(),
-        }))
-        .await?;
-      Ok(())
-    } else {
-      self.plugin_driver.build_end(None).await?;
-
-      Ok(())
-    }
-  }
-
-  async fn scan_inner(&mut self) -> BatchedResult<ScanStageOutput> {
+  async fn scan_inner(&mut self) -> Result<ScanStageOutput> {
     ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
@@ -112,7 +107,7 @@ impl Bundler {
   }
 
   #[tracing::instrument(skip_all)]
-  async fn try_build(&mut self) -> BatchedResult<LinkStageOutput> {
+  async fn try_build(&mut self) -> Result<LinkStageOutput> {
     self.plugin_driver.build_start().await?;
 
     let scan_ret = self.scan_inner().await;
@@ -126,9 +121,10 @@ impl Bundler {
   }
 
   #[tracing::instrument(skip_all)]
-  async fn bundle_up(&mut self, is_write: bool) -> BatchedResult<BundleOutput> {
+  async fn bundle_up(&mut self, is_write: bool) -> Result<BundleOutput> {
     tracing::trace!("Options {:#?}", self.options);
     let mut link_stage_output = self.try_build().await?;
+
     self.plugin_driver.render_start().await?;
 
     let mut generate_stage =
@@ -138,6 +134,10 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&assets, is_write).await?;
 
-    Ok(BundleOutput { warnings: std::mem::take(&mut link_stage_output.warnings), assets })
+    Ok(BundleOutput {
+      warnings: std::mem::take(&mut link_stage_output.warnings),
+      assets,
+      errors: std::mem::take(&mut link_stage_output.errors),
+    })
   }
 }

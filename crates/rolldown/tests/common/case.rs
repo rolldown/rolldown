@@ -26,18 +26,16 @@ impl Case {
 
   pub async fn run_inner(mut self) {
     let build_output = self.fixture.compile().await;
-    match build_output {
-      Ok(assets) => {
-        assert!(!self.fixture.test_config().expect_error, "expected error, but got success");
-        self.render_assets_to_snapshot(assets);
-      }
-      Err(errs) => {
-        assert!(
-          self.fixture.test_config().expect_error,
-          "expected success, but got errors: {errs:?}"
-        );
-        self.render_errors_to_snapshot(errs);
-      }
+    if build_output.errors.is_empty() {
+      assert!(!self.fixture.test_config().expect_error, "expected error, but got success");
+      self.render_assets_to_snapshot(build_output);
+    } else {
+      assert!(
+        self.fixture.test_config().expect_error,
+        "expected success, but got errors: {:?}",
+        build_output.errors
+      );
+      self.render_errors_to_snapshot(build_output.errors);
     }
     self.make_snapshot();
     self.fixture.exec();

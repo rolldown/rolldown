@@ -24,15 +24,6 @@ impl Display for BuildError {
   }
 }
 
-impl std::error::Error for BuildError {
-  // clippy::option_map_or_none: Cool. Finally, catch a error of clippy. Clippy suggest using `self.source.as_ref().map(|source| source.as_ref())`
-  // which will cause type mismatch error.
-  #[allow(clippy::option_map_or_none)]
-  fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-    self.source.as_ref().map_or(None, |source| Some(source.as_ref()))
-  }
-}
-
 impl BuildError {
   pub fn kind(&self) -> crate::event_kind::EventKind {
     self.inner.kind()
@@ -79,3 +70,5 @@ impl From<napi::Error> for BuildError {
     BuildError::napi_error(e.status.to_string(), e.reason)
   }
 }
+
+pub type BuildResult<T> = std::result::Result<T, BuildError>;

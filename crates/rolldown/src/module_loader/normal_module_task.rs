@@ -8,7 +8,7 @@ use rolldown_common::{
   AstScope, FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath,
   ResourceId, SymbolRef,
 };
-use rolldown_error::BuildError;
+use rolldown_error::{BuildError, BuildResult};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use sugar_path::SugarPath;
@@ -189,29 +189,34 @@ impl NormalModuleTask {
     importer: &str,
     specifier: &str,
     options: HookResolveIdExtraOptions,
-  ) -> anyhow::Result<ResolvedRequestInfo> {
+  ) -> anyhow::Result<BuildResult<ResolvedRequestInfo>> {
     // Check external with unresolved path
     if let Some(external) = input_options.external.as_ref() {
       if external.call(specifier.to_string(), Some(importer.to_string()), false).await? {
-        return Ok(ResolvedRequestInfo {
+        return Ok(Ok(ResolvedRequestInfo {
           path: specifier.to_string().into(),
           module_type: ModuleType::Unknown,
           is_external: true,
-        });
+        }));
       }
     }
 
-    let mut info =
+    let info =
       resolve_id(resolver, plugin_driver, specifier, Some(importer), options, false).await?;
 
-    if !info.is_external {
-      // Check external with resolved path
-      if let Some(external) = input_options.external.as_ref() {
-        info.is_external =
-          external.call(specifier.to_string(), Some(importer.to_string()), true).await?;
+    match info {
+      Ok(mut info) => {
+        if !info.is_external {
+          // Check external with resolved path
+          if let Some(external) = input_options.external.as_ref() {
+            info.is_external =
+              external.call(specifier.to_string(), Some(importer.to_string()), true).await?;
+          }
+        }
+        Ok(Ok(info))
       }
+      Err(e) => Ok(Err(e)),
     }
-    Ok(info)
   }
 
   #[tracing::instrument(skip_all)]
@@ -245,11 +250,29 @@ impl NormalModuleTask {
     let resolved_ids = join_all(jobs).await;
 
     let mut ret = IndexVec::with_capacity(dependencies.len());
+    let mut build_errors = vec![];
     for handle in resolved_ids {
       let (_idx, handle) = handle?;
-      ret.push(handle);
+      match handle {
+        Ok(info) => {
+          ret.push(info);
+        }
+        Err(e) => {
+          build_errors.push(e);
+        }
+      }
     }
 
-    Ok(ret)
+    if build_errors.is_empty() {
+      Ok(ret)
+    } else {
+      // TODO: The better way here is to filter out the failed-resolved dependencies and return
+      // `Ok(ret)` with recoverable errors `self.errors` instead of returning `Err` and causing panicking.
+      let resolved_err = anyhow::format_err!(
+        "Resolver errors in {:?} => dependencies: {dependencies:#?}, build_errors: {build_errors:#?}",
+        self.resolved_path
+      );
+      Err(resolved_err)
+    }
   }
 }

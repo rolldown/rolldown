@@ -1,5 +1,4 @@
 use rolldown_common::ResolvedPath;
-use rolldown_error::BuildError;
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
 use sugar_path::SugarPath;
@@ -19,7 +18,7 @@ pub async fn load_source(
     } else if resolved_path.ignored {
       String::new()
     } else {
-      fs.read_to_string(resolved_path.path.as_path()).map_err(BuildError::from)?
+      fs.read_to_string(resolved_path.path.as_path())?
     };
   Ok(source)
 }

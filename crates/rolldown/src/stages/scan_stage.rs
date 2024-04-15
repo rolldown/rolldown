@@ -109,12 +109,7 @@ impl ScanStage {
       )
       .await
       {
-        Ok(info) => {
-          if info.is_external {
-            return Ok(Err(BuildError::entry_cannot_be_external(&*info.path.path)));
-          }
-          Ok(Ok((input_item.name.clone(), info)))
-        }
+        Ok(info) => Ok(info.map(|info| (input_item.name.clone(), info))),
         Err(e) => Err(e),
       }
     }))

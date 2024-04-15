@@ -28,7 +28,6 @@ impl Case {
     let build_output = self.fixture.compile().await;
     if build_output.errors.is_empty() {
       assert!(!self.fixture.test_config().expect_error, "expected error, but got success");
-      let build_output = self.fixture.compile().await;
       self.render_assets_to_snapshot(build_output);
     } else {
       assert!(

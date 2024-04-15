@@ -2,7 +2,7 @@ use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
   HookResolveIdReturn, HookTransformArgs, PluginDriver,
 };
-use rolldown_error::Result;
+use anyhow::Result;
 use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {

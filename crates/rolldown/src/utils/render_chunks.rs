@@ -1,6 +1,6 @@
 use super::chunk::render_chunk::ChunkRenderReturn;
+use anyhow::Result;
 use futures::future::try_join_all;
-use rolldown_error::Result;
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::collapse_sourcemaps;
 

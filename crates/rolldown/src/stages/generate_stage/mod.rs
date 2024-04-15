@@ -1,9 +1,9 @@
+use anyhow::Result;
 use futures::future::try_join_all;
 use rolldown_common::{
   ChunkKind, FileNameRenderOptions, Output, OutputAsset, OutputChunk, SourceMapType,
 };
 use rolldown_error::BuildError;
-use rolldown_error::Result;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashSet;

@@ -122,7 +122,7 @@ impl Bundler {
     Ok(BindingOutputs::new(outputs.assets))
   }
 
-  fn handle_result<T>(result: rolldown_error::Result<T>) -> napi::Result<T> {
+  fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {
     result.map_err(|e| napi::Error::from_reason(format!("Rolldown internal error: {e}")))
   }
 

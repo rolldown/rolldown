@@ -4,8 +4,8 @@ use crate::{
   utils::render_normal_module::render_normal_module, SharedOptions,
 };
 
+use anyhow::Result;
 use rolldown_common::{Chunk, RenderedChunk};
-use rolldown_error::Result;
 use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;

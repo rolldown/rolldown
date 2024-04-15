@@ -1,5 +1,6 @@
 use std::{path::Path, sync::Arc};
 
+use anyhow::Result;
 use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
@@ -7,7 +8,7 @@ use rolldown_common::{
   AstScope, FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath,
   ResourceId, SymbolRef,
 };
-use rolldown_error::{BuildError, InterError, InternalResult, Result};
+use rolldown_error::BuildError;
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use sugar_path::SugarPath;
@@ -61,23 +62,9 @@ impl NormalModuleTask {
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let source = match load_source(
-      &self.ctx.plugin_driver,
-      &self.resolved_path,
-      &self.ctx.fs,
-      &mut sourcemap_chain,
-    )
-    .await
-    {
-      Ok(ret) => ret,
-      Err(err) => match err {
-        InterError::Err(e) => return Err(e),
-        InterError::BuildError(e) => {
-          self.errors.push(e);
-          return Ok(());
-        }
-      },
-    };
+    let source =
+      load_source(&self.ctx.plugin_driver, &self.resolved_path, &self.ctx.fs, &mut sourcemap_chain)
+        .await?;
 
     // Run plugin transform.
     let source: Arc<str> =
@@ -202,7 +189,7 @@ impl NormalModuleTask {
     importer: &str,
     specifier: &str,
     options: HookResolveIdExtraOptions,
-  ) -> InternalResult<ResolvedRequestInfo> {
+  ) -> anyhow::Result<ResolvedRequestInfo> {
     // Check external with unresolved path
     if let Some(external) = input_options.external.as_ref() {
       if external.call(specifier.to_string(), Some(importer.to_string()), false).await? {
@@ -259,15 +246,8 @@ impl NormalModuleTask {
 
     let mut ret = IndexVec::with_capacity(dependencies.len());
     for handle in resolved_ids {
-      match handle {
-        Ok((_idx, item)) => {
-          ret.push(item);
-        }
-        Err(e) => match e {
-          InterError::BuildError(e) => self.errors.push(e),
-          InterError::Err(e) => return Err(e),
-        },
-      }
+      let (_idx, handle) = handle?;
+      ret.push(handle);
     }
 
     Ok(ret)

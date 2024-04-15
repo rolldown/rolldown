@@ -5,8 +5,8 @@ use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput,
   HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
 };
+use anyhow::Result;
 use rolldown_common::Output;
-use rolldown_error::Result;
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
 pub type HookTransformReturn = Result<Option<HookLoadOutput>>;

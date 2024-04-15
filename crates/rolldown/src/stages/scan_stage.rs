@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use futures::future::join_all;
 use index_vec::IndexVec;
 use rolldown_common::{EntryPoint, ImportKind, NormalModuleId};
-use rolldown_error::{BuildError, InterError, Result};
+use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
@@ -48,7 +49,7 @@ impl ScanStage {
   }
 
   #[tracing::instrument(skip_all)]
-  pub async fn scan(&mut self) -> Result<ScanStageOutput> {
+  pub async fn scan(&mut self) -> anyhow::Result<ScanStageOutput> {
     tracing::info!("Start scan stage");
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
@@ -110,11 +111,9 @@ impl ScanStage {
       {
         Ok(info) => {
           if info.is_external {
-            return Err(rolldown_error::InterError::BuildError(
-              BuildError::entry_cannot_be_external(&*info.path.path),
-            ));
+            return Ok(Err(BuildError::entry_cannot_be_external(&*info.path.path)));
           }
-          Ok((input_item.name.clone(), info))
+          Ok(Ok((input_item.name.clone(), info)))
         }
         Err(e) => Err(e),
       }
@@ -124,14 +123,10 @@ impl ScanStage {
     let mut ret = Vec::with_capacity(self.input_options.input.len());
 
     for handle in resolved_ids {
+      let handle = handle?;
       match handle {
-        Ok(value) => {
-          ret.push(value);
-        }
-        Err(e) => match e {
-          InterError::BuildError(e) => self.errors.push(e),
-          InterError::Err(e) => return Err(e),
-        },
+        Ok((name, info)) => ret.push((name, info)),
+        Err(e) => self.errors.push(e),
       }
     }
     Ok(ret)

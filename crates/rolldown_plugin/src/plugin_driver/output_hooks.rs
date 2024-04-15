@@ -1,8 +1,8 @@
 use crate::HookRenderChunkArgs;
 use crate::{HookNoopReturn, PluginDriver};
+use anyhow::Result;
 use futures::future::join_all;
 use rolldown_common::Output;
-use rolldown_error::Result;
 use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {

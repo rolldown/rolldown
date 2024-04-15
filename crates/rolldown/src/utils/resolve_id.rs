@@ -3,7 +3,6 @@ use std::path::Path;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rolldown_common::ModuleType;
-use rolldown_error::InternalResult;
 use rolldown_plugin::{HookResolveIdArgs, HookResolveIdExtraOptions, SharedPluginDriver};
 
 use crate::{types::resolved_request_info::ResolvedRequestInfo, SharedResolver};
@@ -21,7 +20,7 @@ pub async fn resolve_id(
   importer: Option<&str>,
   options: HookResolveIdExtraOptions,
   _preserve_symlinks: bool,
-) -> InternalResult<ResolvedRequestInfo> {
+) -> anyhow::Result<ResolvedRequestInfo> {
   let import_kind = options.kind;
   // Run plugin resolve_id first, if it is None use internal resolver as fallback
   if let Some(r) = plugin_driver

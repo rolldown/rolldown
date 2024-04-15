@@ -2,9 +2,11 @@ use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
 
-use rolldown_error::Result;
-
-pub type ExternalFn = dyn Fn(String, Option<String>, bool) -> Pin<Box<(dyn Future<Output = Result<bool>> + Send + 'static)>>
+pub type ExternalFn = dyn Fn(
+    String,
+    Option<String>,
+    bool,
+  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<bool>> + Send + 'static)>>
   + Send
   + Sync;
 
@@ -28,7 +30,7 @@ impl External {
     source: String,
     importer: Option<String>,
     is_resolved: bool,
-  ) -> Result<bool> {
+  ) -> anyhow::Result<bool> {
     match self {
       Self::ArrayString(value) => Ok(value.iter().any(|item| item == &source)),
       Self::Fn(value) => value(source, importer, is_resolved).await,

@@ -10,7 +10,7 @@ use crate::{
   types::bundle_output::BundleOutput,
   BundlerOptions, SharedOptions, SharedResolver,
 };
-use rolldown_error::Result;
+use anyhow::Result;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
 use sugar_path::SugarPath;

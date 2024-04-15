@@ -1,5 +1,5 @@
+use anyhow::Result;
 use rolldown_common::ResolvedPath;
-use rolldown_error::Result;
 use rolldown_plugin::{HookTransformArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
 

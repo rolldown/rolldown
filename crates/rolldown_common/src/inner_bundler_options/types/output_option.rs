@@ -1,11 +1,12 @@
-use rolldown_error::Result;
 use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
 
 use crate::RenderedChunk;
 
-pub type AddonFunction = dyn Fn(&RenderedChunk) -> Pin<Box<(dyn Future<Output = Result<Option<String>>> + Send + 'static)>>
+pub type AddonFunction = dyn Fn(
+    &RenderedChunk,
+  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + 'static)>>
   + Send
   + Sync;
 
@@ -24,7 +25,7 @@ impl Debug for AddonOutputOption {
 }
 
 impl AddonOutputOption {
-  pub async fn call(&self, chunk: &RenderedChunk) -> Result<Option<String>> {
+  pub async fn call(&self, chunk: &RenderedChunk) -> anyhow::Result<Option<String>> {
     match self {
       Self::String(value) => Ok(value.clone()),
       Self::Fn(value) => value(chunk).await,

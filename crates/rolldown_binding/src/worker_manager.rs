@@ -1,12 +1,14 @@
 use async_channel::{Receiver, Sender};
 
 #[derive(Debug)]
+#[allow(unused)]
 pub struct WorkerManager {
   free_workers_sender: Sender<u16>,
   free_workers_receiver: Receiver<u16>,
   worker_count: u16,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl WorkerManager {
   pub fn new(worker_count: u16) -> Self {
     let (sender, receiver) = async_channel::unbounded::<u16>();
@@ -34,17 +36,20 @@ impl WorkerManager {
   }
 }
 
+#[cfg(not(target_family = "wasm"))]
 pub struct WorkerSemaphorePermit {
   worker_index: u16,
   sender: Sender<u16>,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl WorkerSemaphorePermit {
   pub fn worker_index(&self) -> u16 {
     self.worker_index
   }
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl Drop for WorkerSemaphorePermit {
   fn drop(&mut self) {
     let worker_index = self.worker_index;
@@ -52,11 +57,13 @@ impl Drop for WorkerSemaphorePermit {
   }
 }
 
+#[cfg(not(target_family = "wasm"))]
 pub struct WorkerAllSemaphorePermit {
   worker_count: u16,
   sender: Sender<u16>,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl Drop for WorkerAllSemaphorePermit {
   fn drop(&mut self) {
     let worker_count = self.worker_count;

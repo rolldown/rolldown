@@ -91,19 +91,16 @@ impl ModuleLoader {
     let runtime_id = intermediate_normal_modules.alloc_module_id(&mut symbols);
 
     let task = RuntimeNormalModuleTask::new(runtime_id, tx_to_runtime_module);
-    let handle = tokio::runtime::Handle::current();
 
     #[cfg(target_family = "wasm")]
     {
-      // could not block_on/spawn the main thread in WASI
-      std::thread::spawn(move || {
-        handle.block_on(async { task.run() });
-      });
+      task.run()
     }
     // task is sync, but execution time is too short at the moment
     // so we are using spawn instead of spawn_blocking here to avoid an additional blocking thread creation within tokio
     #[cfg(not(target_family = "wasm"))]
     {
+      let handle = tokio::runtime::Handle::current();
       handle.spawn(async { task.run() });
     }
 
@@ -149,7 +146,7 @@ impl ModuleLoader {
             let handle = tokio::runtime::Handle::current();
             // could not block_on/spawn the main thread in WASI
             std::thread::spawn(move || {
-              handle.block_on(task.run());
+              handle.spawn(task.run());
             });
           }
           #[cfg(not(target_family = "wasm"))]

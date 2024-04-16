@@ -12,6 +12,14 @@ repository = "https://github.com/rolldown/rolldown"
 debug    = true
 inherits = "release"
 
+[profile.release-wasi]
+codegen-units = 16
+debug         = true
+inherits      = "release"
+lto           = "thin"
+opt-level     = "z"
+strip         = "none"
+
 [workspace.lints.rust]
 
 [workspace.lints.clippy]

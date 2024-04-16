@@ -18,6 +18,7 @@ impl Deref for JsPlugin {
 }
 
 impl JsPlugin {
+  #[cfg_attr(target_family = "wasm", allow(unused))]
   pub(super) fn new(inner: BindingPluginOptions) -> Self {
     Self { inner }
   }

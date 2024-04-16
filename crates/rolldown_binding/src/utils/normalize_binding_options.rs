@@ -1,5 +1,8 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
+#[cfg(not(target_family = "wasm"))]
+use std::sync::Arc;
 
+#[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
   options::plugin::JsPlugin,
   options::plugin::ParallelJsPlugin,
@@ -9,6 +12,7 @@ use crate::{
 use rolldown::{AddonOutputOption, BundlerOptions, Platform};
 use rolldown_plugin::BoxPlugin;
 
+#[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct NormalizeBindingOptionsReturn {
   pub bundler_options: BundlerOptions,
   pub plugins: Vec<BoxPlugin>,
@@ -31,8 +35,10 @@ fn normalize_addon_option(
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
   output_options: crate::options::BindingOutputOptions,
-  mut parallel_plugins_map: Option<crate::parallel_js_plugin_registry::PluginValues>,
-  worker_manager: Option<WorkerManager>,
+  #[cfg(not(target_family = "wasm"))] mut parallel_plugins_map: Option<
+    crate::parallel_js_plugin_registry::PluginValues,
+  >,
+  #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
 ) -> napi::Result<NormalizeBindingOptionsReturn> {
   debug_assert!(PathBuf::from(&input_options.cwd) != PathBuf::from("/"), "{input_options:#?}");
   let cwd = PathBuf::from(input_options.cwd);
@@ -69,9 +75,11 @@ pub fn normalize_binding_options(
     ..Default::default()
   };
 
+  #[cfg(not(target_family = "wasm"))]
   // Deal with plugins
   let worker_manager = worker_manager.map(Arc::new);
 
+  #[cfg(not(target_family = "wasm"))]
   let plugins: Vec<BoxPlugin> = input_options
     .plugins
     .into_iter()
@@ -80,13 +88,24 @@ pub fn normalize_binding_options(
     .map(|(index, plugin)| {
       plugin.map_or_else(
         || {
-          let plugins = parallel_plugins_map.as_mut().unwrap().remove(&index).unwrap();
+          let plugins = parallel_plugins_map
+            .as_mut()
+            .and_then(|plugin| plugin.remove(&index))
+            .unwrap_or_default();
           let worker_manager = worker_manager.as_ref().unwrap();
           ParallelJsPlugin::new_boxed(plugins, Arc::clone(worker_manager))
         },
         |plugin| JsPlugin::new_boxed(plugin),
       )
     })
+    .collect::<Vec<_>>();
+
+  #[cfg(target_family = "wasm")]
+  let plugins: Vec<BoxPlugin> = input_options
+    .plugins
+    .into_iter()
+    .chain(output_options.plugins)
+    .filter_map(|plugin| plugin.map(|plugin| JsPlugin::new_boxed(plugin)))
     .collect::<Vec<_>>();
 
   Ok(NormalizeBindingOptionsReturn { bundler_options, plugins })

@@ -1,18 +1,26 @@
-use std::{borrow::Cow, sync::Arc};
+#[cfg(not(target_family = "wasm"))]
+use std::borrow::Cow;
+use std::sync::Arc;
 
+#[cfg(not(target_family = "wasm"))]
 use futures::future::{self, BoxFuture};
+#[cfg(not(target_family = "wasm"))]
 use rolldown_plugin::Plugin;
 
 use crate::worker_manager::WorkerManager;
 
-use super::{BindingPluginOptions, JsPlugin};
+#[cfg(not(target_family = "wasm"))]
+use super::BindingPluginOptions;
+use super::JsPlugin;
 
 #[derive(Debug)]
+#[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct ParallelJsPlugin {
   plugins: Box<[JsPlugin]>,
   worker_manager: Arc<WorkerManager>,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl ParallelJsPlugin {
   pub fn new_boxed(
     plugins: Vec<BindingPluginOptions>,
@@ -26,12 +34,14 @@ impl ParallelJsPlugin {
     &self.plugins[0]
   }
 
+  #[cfg(not(target_family = "wasm"))]
   async fn run_single<'a, R, F: FnOnce(&'a JsPlugin) -> BoxFuture<R>>(&'a self, f: F) -> R {
     let permit = self.worker_manager.acquire().await;
     let plugin = &self.plugins[permit.worker_index() as usize];
     f(plugin).await
   }
 
+  #[cfg(not(target_family = "wasm"))]
   async fn run_all<'a, R, E: std::fmt::Debug, F: FnMut(&'a JsPlugin) -> BoxFuture<Result<R, E>>>(
     &'a self,
     f: F,
@@ -46,6 +56,7 @@ impl ParallelJsPlugin {
   }
 }
 
+#[cfg(not(target_family = "wasm"))]
 #[async_trait::async_trait]
 impl Plugin for ParallelJsPlugin {
   fn name(&self) -> Cow<'static, str> {

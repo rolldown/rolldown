@@ -18,7 +18,12 @@ export default defineBuildConfig({
   sourcemap: true,
   clean: true,
   declaration: true, // generate .d.ts files
-  externals: [/rolldown-binding\..*\.node/, /@rolldown\/binding-.*/],
+  externals: [
+    /rolldown-binding\..*\.node/,
+    /rolldown-binding\..*\.wasm/,
+    /@rolldown\/binding-.*/,
+    /\.\/rolldown-binding\.wasi\.cjs/,
+  ],
   rollup: {
     emitCJS: true,
     cjsBridge: true,
@@ -29,9 +34,18 @@ export default defineBuildConfig({
   },
   hooks: {
     'build:done'(_ctx) {
-      const binaryFiles = globSync('./src/rolldown-binding.*.node', {
-        absolute: true,
-      })
+      const binaryFiles = globSync(
+        [
+          './src/rolldown-binding.*.node',
+          './src/rolldown-binding.*.wasm',
+          './src/*.wasi.js',
+          './src/*.wasi.cjs',
+          './src/*.mjs',
+        ],
+        {
+          absolute: true,
+        },
+      )
       // Binary build is on the separate step on CI
       if (!process.env.CI && binaryFiles.length === 0) {
         throw new Error('No binary files found')

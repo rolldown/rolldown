@@ -118,7 +118,7 @@ jobs:
 
       - name: Build wasi
         run: |
-          pnpm --filter=rolldown build-binding:wasi
+          pnpm --filter=rolldown build-binding:wasi:release
           pnpm --filter=rolldown build-node
           pnpm --filter=@example/basic build
         env:

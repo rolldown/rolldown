@@ -74,7 +74,7 @@ jobs:
             target: wasm32-wasi-preview1-threads
             build: |
               export CARGO_BUILD_TARGET=wasm32-wasi-preview1-threads;
-              pnpm --filter rolldown build-binding:wasi
+              pnpm --filter rolldown build-binding:wasi:release
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:

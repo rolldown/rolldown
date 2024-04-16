@@ -23,8 +23,8 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  benchmark:
-    name: Benchmark
+  codspeed-benchmark:
+    name: Codspeed Benchmark
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Branch
@@ -40,18 +40,6 @@ jobs:
           cache-base: main
           cache-target: release
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
       - name: Setup benchmark
         run: just setup-bench
 
@@ -63,3 +51,67 @@ jobs:
         with:
           run: cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}
+
+  rust-benchmark:
+    name: Rust Benchmark
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v4
+        with:
+          # Whether Pull submodules for additional files
+          submodules: false
+
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          bins: just
+          cache-base: main
+          cache-target: release
+
+      - name: Setup benchmark
+        run: just setup-bench
+
+      - name: Download previous benchmark data
+        uses: actions/checkout@v4
+        with:
+          # https://github.com/rolldown/benchmark-results-storage
+          repository: rolldown/benchmark-results-storage
+          path: tmp
+
+      - name: Run the benchmarks
+        run: cargo bench -p bench | tee tmp/new-benchmark-rust-output.txt
+
+      - name: Show/Update benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: 'Rust Benchmark'
+          # What benchmark tool the output.txt came from
+          tool: 'cargo'
+          # Where the output from the benchmark tool is stored
+          output-file-path: tmp/new-benchmark-rust-output.txt
+          # Where the previous data file is stored
+          external-data-json-path: tmp/benchmark-rust-output.txt
+          fail-on-alert: ${{ github.event_name != 'push' }}
+          summary-always: true
+          comment-always: false
+          save-data-file: ${{ github.event_name == 'push' }}
+          alert-threshold: '110%' # Too much noise in the benchmark results
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save benchmark result
+        if: github.event_name == 'push'
+        # https://github.com/dmnemec/copy_file_to_another_repo_action
+        uses: dmnemec/copy_file_to_another_repo_action@bbebd3da22e4a37d04dca5f782edd5201cb97083
+        env:
+          # Results are stored in https://github.com/rolldown/benchmark-results-storage
+          API_TOKEN_GITHUB: ${{ secrets.REPO_TOKEN_BENCHMARK_RESULTS }}
+        with:
+          source_file: './tmp/benchmark-rust-output.txt'
+          destination_repo: 'rolldown/benchmark-results-storage'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          user_name: 'github-actions[bot]'
+          commit_message: 'Update `benchmark-rust-output.txt`'

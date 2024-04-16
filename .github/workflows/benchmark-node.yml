@@ -87,6 +87,7 @@ jobs:
       - name: Show/Update benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
+          name: 'Node Benchmark'
           # What benchmark tool the output.txt came from
           tool: 'customSmallerIsBetter'
           # Where the output from the benchmark tool is stored

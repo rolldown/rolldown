@@ -100,11 +100,30 @@ jobs:
         with:
           targets: wasm32-wasi-preview1-threads
           cache-base: main
-      - name: Cargo Check
-        run: cargo check -p rolldown --target wasm32-wasi-preview1-threads
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
 
-      - name: Cargo Build
-        run: cargo build -p rolldown --target wasm32-wasi-preview1-threads
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        # Node.js wasi runtime has bug with `std::fs::read_link`
+        run: |
+          touch .npmrc
+          echo "node-linker=hoisted" >> .npmrc
+          pnpm install
+
+      - name: Build wasi
+        run: |
+          pnpm --filter=rolldown build-binding:wasi
+          pnpm --filter=rolldown build-node
+          pnpm --filter=@example/basic build
+        env:
+          NAPI_RS_FORCE_WASI: 1
+          RUST_LOG: trace
 
   cargo-test:
     needs: changes

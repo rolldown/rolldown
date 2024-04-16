@@ -40,13 +40,14 @@ impl Bundler {
 
     self.plugin_driver.write_bundle(&output.assets).await?;
 
-    self.fs.create_dir_all(dir.as_path()).unwrap_or_else(|_| {
-      panic!(
+    self.fs.create_dir_all(dir.as_path()).map_err(|err| {
+      anyhow::anyhow!(
         "Could not create directory for output chunks: {:?} \ncwd: {}",
         dir.as_path(),
         self.options.cwd.display()
       )
-    });
+      .context(err)
+    })?;
     for chunk in &output.assets {
       let dest = dir.as_path().join(chunk.file_name());
       if let Some(p) = dest.parent() {
@@ -54,9 +55,10 @@ impl Bundler {
           self.fs.create_dir_all(p).unwrap();
         }
       };
-      self.fs.write(dest.as_path(), chunk.content().as_bytes()).unwrap_or_else(|_| {
-        panic!("Failed to write file in {:?}", dir.as_path().join(chunk.file_name()))
-      });
+      self.fs.write(dest.as_path(), chunk.content().as_bytes()).map_err(|err| {
+        anyhow::anyhow!("Failed to write file in {:?}", dir.as_path().join(chunk.file_name()))
+          .context(err)
+      })?;
     }
 
     Ok(output)

@@ -40,6 +40,18 @@ jobs:
           cache-base: main
           cache-target: release
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
       - name: Setup benchmark
         run: just setup-bench
 
@@ -71,6 +83,18 @@ jobs:
           bins: just
           cache-base: main
           cache-target: release
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Setup benchmark
         run: just setup-bench

@@ -23,8 +23,8 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  benchmark:
-    name: Benchmark
+  codspeed-benchmark:
+    name: Codspeed Benchmark
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Branch
@@ -63,3 +63,70 @@ jobs:
         with:
           run: cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}
+
+  rust-benchmark:
+    name: Rust Benchmark
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v4
+        with:
+          # Whether Pull submodules for additional files
+          submodules: false
+
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          bins: just
+          cache-base: main
+          cache-target: release
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Setup benchmark
+        run: just setup-bench
+
+      - name: Run Bench on PR Branch
+        run: cargo bench -p bench -- --save-baseline pr
+
+      - name: Checkout Next Branch
+        uses: actions/checkout@v4
+        with:
+          clean: false
+          ref: main
+
+      - name: Run Bench on Main Branch
+        run: cargo bench -p bench -- --save-baseline baseline
+
+      - name: Compare Bench Results
+        id: bench_comparison
+        shell: bash
+        run: |
+          echo "### Benchmark Results" > output
+          echo "\`\`\`"  >> output
+          critcmp baseline pr >> output
+          echo "\`\`\`" >> output
+          cat output
+          comment="$(cat output)"
+          comment="${comment//'%'/%25}"
+          comment="${comment//$'\n'/%0A}"
+          comment="${comment//$'\r'/%0D}"
+          echo "::set-output name=comment::$comment"
+
+      - name: Write a new comment
+        uses: peter-evans/create-or-update-comment@v1.4.5
+        continue-on-error: true
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: ${{ steps.bench_comparison.outputs.comment }}

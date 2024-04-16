@@ -1,5 +1,7 @@
 # Release Workflow
 
+## Semantic Versioning
+
 :::tip Maintainers only
 This section is for maintainers with push and release privileges only.
 :::
@@ -28,3 +30,16 @@ This section is for maintainers with push and release privileges only.
 - See publishing status in https://github.com/rolldown/rolldown/actions/workflows/publish-packages.yml.
 
 :::
+
+## Canary/Nightly
+
+Canary/Nightly share the same publishing [workflow](https://github.com/rolldown/rolldown/actions/workflows/release-canary.yml). They are almost the same thing, but with different npm tags.
+
+If you trigger the workflow manually, it will publish the latest commit to the `canary` tag.
+
+If the workflow is triggered by a schedule, it will publish the latest commit to the `nightly` tag.
+
+You could see latest Canary/Nightly version in
+
+- https://www.npmjs.com/package/rolldown/v/nightly
+- https://www.npmjs.com/package/rolldown/v/canary

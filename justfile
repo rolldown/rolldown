@@ -46,7 +46,7 @@ roll-repo:
 # CHECKING
 
 check-rust:
-    cargo check --workspace
+    cargo check --workspace --all-features
 
 check-node:
     pnpm type-check
@@ -61,7 +61,7 @@ test:
     just test-node
 
 test-rust:
-    cargo test --no-fail-fast
+    cargo test --no-fail-fast --features "serialize"
 
 # Supported presets: all, rolldown, rollup
 test-node preset="all" *args="":
@@ -101,7 +101,7 @@ lint:
 
 lint-rust:
     cargo fmt --all -- --check
-    cargo clippy --workspace --all-targets -- --deny warnings
+    cargo clippy --workspace --all-targets --all-features -- --deny warnings
 
 lint-node:
     pnpm lint-code

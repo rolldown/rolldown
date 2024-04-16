@@ -109,7 +109,7 @@ jobs:
       - name: Run the benchmarks
         run: cargo bench -p bench | tee tmp/new-benchmark-rust-output.txt
 
-      - name: Show/Update benchmark result
+      - name: Save benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: 'Rust Benchmark'
@@ -124,18 +124,7 @@ jobs:
           comment-always: false
           save-data-file: ${{ github.event_name == 'push' }}
           alert-threshold: '110%' # Too much noise in the benchmark results
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Save benchmark result
-        if: github.event_name == 'push'
-        # https://github.com/dmnemec/copy_file_to_another_repo_action
-        uses: dmnemec/copy_file_to_another_repo_action@bbebd3da22e4a37d04dca5f782edd5201cb97083
-        env:
-          # Results are stored in https://github.com/rolldown/benchmark-results-storage
-          API_TOKEN_GITHUB: ${{ secrets.REPO_TOKEN_BENCHMARK_RESULTS }}
-        with:
-          source_file: './tmp/benchmark-rust-output.txt'
-          destination_repo: 'rolldown/benchmark-results-storage'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          user_name: 'github-actions[bot]'
-          commit_message: 'Update `benchmark-rust-output.txt`'
+          github-token: ${{ secrets.REPO_TOKEN_BENCHMARK_RESULTS }}
+          gh-pages-branch: 'main'
+          gh-repository: 'rolldown/benchmark-results-storage'
+          auto-push: ${{ github.event_name == 'push' }}

@@ -18,7 +18,7 @@ path  = "./bin/gen_test_config_schema.rs"
 test  = false
 
 [dependencies]
-rolldown_common = { workspace = true }
+rolldown_common = { workspace = true, features = ["deserialize_bundler_options"] }
 schemars        = { workspace = true }
 serde           = { workspace = true, features = ["derive"] }
 serde_json      = { workspace = true }

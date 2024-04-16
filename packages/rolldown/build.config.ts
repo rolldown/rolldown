@@ -35,13 +35,13 @@ export default defineBuildConfig({
   hooks: {
     'build:done'(_ctx) {
       const binaryFiles = globSync(
-        [
-          './src/rolldown-binding.*.node',
-          './src/rolldown-binding.*.wasm',
-          './src/*.wasi.js',
-          './src/*.wasi.cjs',
-          './src/*.mjs',
-        ],
+        ['./src/rolldown-binding.*.node', './src/rolldown-binding.*.wasm'],
+        {
+          absolute: true,
+        },
+      )
+      const wasiShims = globSync(
+        ['./src/*.wasi.js', './src/*.wasi.cjs', './src/*.mjs'],
         {
           absolute: true,
         },
@@ -50,10 +50,18 @@ export default defineBuildConfig({
       if (!process.env.CI && binaryFiles.length === 0) {
         throw new Error('No binary files found')
       }
+
       // Move the binary file to dist
       binaryFiles.forEach((file) => {
         const fileName = nodePath.basename(file)
-        console.log('Copying', file, 'to ./dist/shared')
+        console.log('[build:done] Copying', file, 'to ./dist/shared')
+        nodeFs.copyFileSync(file, `./dist/shared/${fileName}`)
+        console.log(`[build:done] Cleaning ${file}`)
+        nodeFs.rmSync(file)
+      })
+      wasiShims.forEach((file) => {
+        const fileName = nodePath.basename(file)
+        console.log('[build:done] Copying', file, 'to ./dist/shared')
         nodeFs.copyFileSync(file, `./dist/shared/${fileName}`)
       })
     },

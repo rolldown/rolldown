@@ -146,6 +146,9 @@ importers:
       '@rolldown/binding-linux-x64-musl':
         specifier: workspace:*
         version: link:npm/linux-x64-musl
+      '@rolldown/binding-wasm32-wasi':
+        specifier: workspace:*
+        version: link:npm/wasm32-wasi
       '@rolldown/binding-win32-arm64-msvc':
         specifier: workspace:*
         version: link:npm/win32-arm64-msvc

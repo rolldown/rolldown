@@ -32,10 +32,11 @@ rolldown_tracing   = { workspace = true }
 rolldown_utils     = { workspace = true }
 rustc-hash         = { workspace = true }
 sugar_path         = { workspace = true }
-tokio              = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+tokio              = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing            = { workspace = true }
 
 [dev_dependencies]
 insta            = { workspace = true }
 rolldown_testing = { workspace = true }
 testing_macros   = { workspace = true }
+tokio              = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }

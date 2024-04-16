@@ -44,7 +44,7 @@ impl IntermediateNormalModules {
 pub struct ModuleLoader {
   input_options: SharedOptions,
   shared_context: Arc<TaskContext>,
-  rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
+  rx: tokio::sync::mpsc::Receiver<Msg>,
   visited: FxHashMap<Arc<str>, ModuleId>,
   runtime_id: NormalModuleId,
   remaining: u32,
@@ -72,7 +72,9 @@ impl ModuleLoader {
     fs: OsFileSystem,
     resolver: SharedResolver,
   ) -> Self {
-    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
+    // 1024 should be enough for most cases
+    // over 1024 pending tasks are insane
+    let (tx, rx) = tokio::sync::mpsc::channel::<Msg>(1024);
 
     let tx_to_runtime_module = tx.clone();
 

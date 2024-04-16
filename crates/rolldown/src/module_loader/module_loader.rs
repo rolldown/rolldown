@@ -46,7 +46,7 @@ pub struct ModuleLoader {
   shared_context: Arc<TaskContext>,
   rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
   visited: FxHashMap<Arc<str>, ModuleId>,
-  runtime_id: Option<NormalModuleId>,
+  runtime_id: NormalModuleId,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   external_modules: ExternalModuleVec,
@@ -74,6 +74,8 @@ impl ModuleLoader {
   ) -> Self {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
 
+    let tx_to_runtime_module = tx.clone();
+
     let common_data = Arc::new(TaskContext {
       input_options: Arc::clone(&input_options),
       tx,
@@ -82,16 +84,38 @@ impl ModuleLoader {
       plugin_driver,
     });
 
+    let mut intermediate_normal_modules = IntermediateNormalModules::new();
+    let mut symbols = Symbols::default();
+    let runtime_id = intermediate_normal_modules.alloc_module_id(&mut symbols);
+
+    let task = RuntimeNormalModuleTask::new(runtime_id, tx_to_runtime_module);
+    let handle = tokio::runtime::Handle::current();
+
+    #[cfg(target_family = "wasm")]
+    {
+      // could not block_on/spawn the main thread in WASI
+      std::thread::spawn(move || {
+        handle.block_on(async { task.run() });
+      });
+    }
+    // task is sync, but execution time is too short at the moment
+    // so we are using spawn instead of spawn_blocking here to avoid an additional blocking thread creation within tokio
+    #[cfg(not(target_family = "wasm"))]
+    {
+      handle.spawn(async { task.run() });
+    }
+
     Self {
       shared_context: common_data,
       rx,
       input_options,
       visited: FxHashMap::default(),
-      runtime_id: None,
-      remaining: 0,
-      intermediate_normal_modules: IntermediateNormalModules::new(),
+      runtime_id,
+      // runtime module is always there
+      remaining: 1,
+      intermediate_normal_modules,
       external_modules: IndexVec::new(),
-      symbols: Symbols::default(),
+      symbols,
     }
   }
 
@@ -121,28 +145,17 @@ impl ModuleLoader {
           #[cfg(target_family = "wasm")]
           {
             let handle = tokio::runtime::Handle::current();
+            // could not block_on/spawn the main thread in WASI
             std::thread::spawn(move || {
-              // could not block on the main thread in WASI, it will block the whole program
-              handle.block_on(async move { task.run().await });
+              handle.block_on(task.run());
             });
           }
           #[cfg(not(target_family = "wasm"))]
-          tokio::spawn(async move { task.run().await });
+          tokio::spawn(task.run());
           id.into()
         }
       }
     }
-  }
-
-  pub fn try_spawn_runtime_module_task(&mut self) -> NormalModuleId {
-    *self.runtime_id.get_or_insert_with(|| {
-      let id = self.intermediate_normal_modules.alloc_module_id(&mut self.symbols);
-      self.remaining += 1;
-      let task = RuntimeNormalModuleTask::new(id, self.shared_context.tx.clone());
-      let handle = tokio::runtime::Handle::current();
-      handle.spawn_blocking(|| task.run());
-      id
-    })
   }
 
   #[allow(clippy::too_many_lines)]
@@ -232,10 +245,10 @@ impl ModuleLoader {
           let RuntimeNormalModuleTaskResult { ast_symbol, builder, runtime, warnings: _, ast } =
             task_result;
 
-          self.intermediate_normal_modules.modules[runtime.id()] = Some(builder.build());
-          self.intermediate_normal_modules.ast_table[runtime.id()] = Some(ast);
+          self.intermediate_normal_modules.modules[self.runtime_id] = Some(builder.build());
+          self.intermediate_normal_modules.ast_table[self.runtime_id] = Some(ast);
 
-          self.symbols.add_ast_symbol(runtime.id(), ast_symbol);
+          self.symbols.add_ast_symbol(self.runtime_id, ast_symbol);
           runtime_brief = Some(runtime);
         }
         Msg::BuildErrors(e) => {
@@ -251,10 +264,10 @@ impl ModuleLoader {
     assert!(panic_errors.is_empty(), "Panics occurred during module loading: {panic_errors:?}");
 
     let modules: IndexVec<NormalModuleId, NormalModule> =
-      self.intermediate_normal_modules.modules.into_iter().map(Option::unwrap).collect();
+      self.intermediate_normal_modules.modules.into_iter().flatten().collect();
 
     let ast_table: IndexVec<NormalModuleId, OxcAst> =
-      self.intermediate_normal_modules.ast_table.into_iter().map(Option::unwrap).collect();
+      self.intermediate_normal_modules.ast_table.into_iter().flatten().collect();
 
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
     dynamic_import_entry_ids.sort_by_key(|id| &modules[*id].resource_id);

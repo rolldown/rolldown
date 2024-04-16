@@ -53,14 +53,12 @@ impl ScanStage {
     tracing::info!("Start scan stage");
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
-    let mut module_loader = ModuleLoader::new(
+    let module_loader = ModuleLoader::new(
       Arc::clone(&self.input_options),
       Arc::clone(&self.plugin_driver),
       self.fs.clone(),
       Arc::clone(&self.resolver),
     );
-
-    module_loader.try_spawn_runtime_module_task();
 
     let user_entries = self.resolve_user_defined_entries().await?;
 

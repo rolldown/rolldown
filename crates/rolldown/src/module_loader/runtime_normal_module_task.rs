@@ -15,7 +15,7 @@ use crate::{
   types::{ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder},
 };
 pub struct RuntimeNormalModuleTask {
-  tx: tokio::sync::mpsc::UnboundedSender<Msg>,
+  tx: tokio::sync::mpsc::Sender<Msg>,
   module_id: NormalModuleId,
   warnings: Vec<BuildError>,
 }
@@ -29,7 +29,7 @@ pub struct RuntimeNormalModuleTaskResult {
 }
 
 impl RuntimeNormalModuleTask {
-  pub fn new(id: NormalModuleId, tx: tokio::sync::mpsc::UnboundedSender<Msg>) -> Self {
+  pub fn new(id: NormalModuleId, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
     Self { module_id: id, tx, warnings: Vec::default() }
   }
 
@@ -77,13 +77,15 @@ impl RuntimeNormalModuleTask {
     builder.is_user_defined_entry = Some(false);
     builder.is_virtual = true;
 
-    if let Err(_err) = self.tx.send(Msg::RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult {
-      warnings: self.warnings,
-      ast_symbol: symbol,
-      builder,
-      runtime,
-      ast,
-    })) {
+    if let Err(_err) =
+      self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult {
+        warnings: self.warnings,
+        ast_symbol: symbol,
+        builder,
+        runtime,
+        ast,
+      }))
+    {
       // hyf0: If main thread is dead, we should handle errors of main thread. So we just ignore the error here.
     };
   }

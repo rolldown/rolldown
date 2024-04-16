@@ -66,10 +66,8 @@ jobs:
 
   rust-benchmark:
     name: Rust Benchmark
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: write
     steps:
       - name: Checkout Branch
         uses: actions/checkout@v4
@@ -99,32 +97,36 @@ jobs:
       - name: Setup benchmark
         run: just setup-bench
 
-      - name: Download previous benchmark data
+      - name: Run Bench on PR Branch
+        run: cargo bench -p bench -- --save-baseline pr
+
+      - name: Checkout Next Branch
         uses: actions/checkout@v4
         with:
-          # https://github.com/rolldown/benchmark-results-storage
-          repository: rolldown/benchmark-results-storage
-          path: tmp
+          clean: false
+          ref: main
 
-      - name: Run the benchmarks
-        run: cargo bench -p bench | tee tmp/new-benchmark-rust-output.txt
+      - name: Run Bench on Main Branch
+        run: cargo bench -p bench -- --save-baseline baseline
 
-      - name: Save benchmark result
-        uses: benchmark-action/github-action-benchmark@v1
+      - name: Compare Bench Results
+        id: bench_comparison
+        shell: bash
+        run: |
+          echo "### Benchmark Results" > output
+          echo "\`\`\`"  >> output
+          critcmp baseline pr >> output
+          echo "\`\`\`" >> output
+          cat output
+          comment="$(cat output)"
+          comment="${comment//'%'/%25}"
+          comment="${comment//$'\n'/%0A}"
+          comment="${comment//$'\r'/%0D}"
+          echo "::set-output name=comment::$comment"
+
+      - name: Write a new comment
+        uses: peter-evans/create-or-update-comment@v1.4.5
+        continue-on-error: true
         with:
-          name: 'Rust Benchmark'
-          # What benchmark tool the output.txt came from
-          tool: 'cargo'
-          # Where the output from the benchmark tool is stored
-          output-file-path: tmp/new-benchmark-rust-output.txt
-          # Where the previous data file is stored
-          external-data-json-path: tmp/benchmark-rust-output.txt
-          fail-on-alert: ${{ github.event_name != 'push' }}
-          summary-always: true
-          comment-always: false
-          save-data-file: ${{ github.event_name == 'push' }}
-          alert-threshold: '110%' # Too much noise in the benchmark results
-          github-token: ${{ secrets.REPO_TOKEN_BENCHMARK_RESULTS }}
-          gh-pages-branch: 'main'
-          gh-repository: 'rolldown/benchmark-results-storage'
-          auto-push: ${{ github.event_name == 'push' }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: ${{ steps.bench_comparison.outputs.comment }}

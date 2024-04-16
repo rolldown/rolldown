@@ -320,13 +320,10 @@ impl<'me> AstScanner<'me> {
       oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
         let imported = spec.imported.name();
+        self.add_named_import(sym, imported, id);
         if imported == "default" {
-          self.add_named_import(sym, imported, id);
           self.result.import_records[id].contains_import_default = true;
-        } else {
-          self.add_named_import(sym, imported, id);
         }
-        self.add_named_import(sym, spec.imported.name(), id);
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
         self.add_named_import(spec.local.expect_symbol_id(), "default", id);

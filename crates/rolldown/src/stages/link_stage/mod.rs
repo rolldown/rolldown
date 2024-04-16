@@ -165,9 +165,7 @@ impl<'a> LinkStage<'a> {
             if matches!(importee.exports_kind, ExportsKind::None) {
               if compat_mode {
                 // See https://github.com/evanw/esbuild/issues/447
-                if (rec.contains_import_default || rec.contains_import_star)
-                  && matches!(importee.exports_kind, ExportsKind::None)
-                {
+                if rec.contains_import_default || rec.contains_import_star {
                   self.metas[importee.id].wrap_kind = WrapKind::Cjs;
                   // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
                   unsafe {

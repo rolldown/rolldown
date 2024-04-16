@@ -1,5 +1,5 @@
 [workspace]
-members  = ["./crates/*", "crates/rolldown_testing_config"]
+members  = ["./crates/*"]
 resolver = "2"
 
 [workspace.package]

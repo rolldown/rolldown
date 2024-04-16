@@ -145,6 +145,16 @@ jobs:
       os: ${{ matrix.target }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
+  wasi-test:
+    needs: changes
+    strategy:
+      matrix:
+        target: [ubuntu-latest, macos-latest, windows-latest]
+    uses: ./.github/workflows/reusable-wasi-test.yml
+    with:
+      os: ${{ matrix.target }}
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
   node-validation:
     name: Node Validation
     needs: changes

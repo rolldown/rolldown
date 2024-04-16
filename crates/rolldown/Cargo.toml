@@ -39,4 +39,4 @@ tracing            = { workspace = true }
 insta            = { workspace = true }
 rolldown_testing = { workspace = true }
 testing_macros   = { workspace = true }
-tokio              = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+tokio            = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }

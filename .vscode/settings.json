@@ -43,6 +43,5 @@
     "temp": true,
     "tmp": true
   },
-  "editor.wordWrap": "on",
-  "rust-analyzer.cargo.features": "all"
+  "editor.wordWrap": "on"
 }

@@ -1,7 +1,8 @@
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug)]
+#[cfg_attr(feature = "deserialize_bundler_options", derive(Deserialize, JsonSchema))]
 pub enum SourceMapType {
   File,
   Inline,

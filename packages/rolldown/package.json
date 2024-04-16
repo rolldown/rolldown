@@ -49,7 +49,7 @@
   },
   "scripts": {
     "# Scrips for binding #": "_",
-    "artifacts": "napi artifacts --cwd ./src -o=../artifacts --npm-dir ../npm",
+    "artifacts": "napi artifacts --cwd ./src --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
     "build-binding": "napi build -o=./src --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts",
     "build-binding:release": "pnpm build-binding --release",
     "build-binding:wasi": "pnpm build-binding --profile release-wasi --target wasm32-wasi-preview1-threads",
@@ -107,6 +107,7 @@
     "@rolldown/binding-linux-arm64-musl": "workspace:*",
     "@rolldown/binding-linux-x64-gnu": "workspace:*",
     "@rolldown/binding-linux-x64-musl": "workspace:*",
+    "@rolldown/binding-wasm32-wasi": "workspace:*",
     "@rolldown/binding-win32-arm64-msvc": "workspace:*",
     "@rolldown/binding-win32-ia32-msvc": "workspace:*",
     "@rolldown/binding-win32-x64-msvc": "workspace:*"

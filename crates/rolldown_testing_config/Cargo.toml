@@ -1,0 +1,19 @@
+[package]
+edition.workspace    = true
+homepage.workspace   = true
+license.workspace    = true
+name                 = "rolldown_testing_config"
+repository.workspace = true
+version              = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rolldown_common = { workspace = true }
+schemars        = "0.8"
+serde           = { version = "1.0", features = ["derive"] }
+serde_json      = "1.0"
+
+
+[lints]
+workspace = true

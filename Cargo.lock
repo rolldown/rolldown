@@ -1543,6 +1543,17 @@ name = "rolldown_testing"
 version = "0.0.1"
 dependencies = [
  "rolldown_common",
+ "rolldown_testing_config",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "rolldown_testing_config"
+version = "0.1.0"
+dependencies = [
+ "rolldown_common",
  "schemars",
  "serde",
  "serde_json",

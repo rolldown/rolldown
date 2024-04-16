@@ -64,7 +64,7 @@ test-rust:
     cargo test --no-fail-fast
 
 test-node:
-    pnpm build
+    just build native debug
     pnpm test
 
 # Fix formatting issues both for Rust, Node.js and all files in the repository
@@ -98,6 +98,9 @@ lint-repo:
     pnpm lint-spell
     pnpm lint-toml
 
+# Support `just build [native|wasi] [debug|release]`
+build target="native" mode="debug":
+  pnpm run --filter rolldown build-{{target}}:{{mode}}
 
 # BENCHING
 

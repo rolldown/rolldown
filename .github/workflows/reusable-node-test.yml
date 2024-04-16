@@ -41,8 +41,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build Rolldown
-        run: pnpm build
+      - name: Build Rolldown with native binding
+        run: just build native
 
       - name: Type Check
         run: pnpm type-check

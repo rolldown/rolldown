@@ -40,10 +40,21 @@ Luckily, NAPI-RS has encapsulated the process of building the glue part, we don'
 
 To build the `rolldown` package, there are two commands:
 
-- `pnpm build`
-- `pnpm build:release` (**important if running benchmarks**)
+- `just build`/`just build native`
+- `just build native release` (**important if running benchmarks**)
 
 They will automatically build the Rust crates and the Node.js package. So no matter what changes you made, you can always run these commands to build the latest `rolldown` package.
+
+### WASI
+
+Rolldown supports WASI by considering is as a special platform. So we still use the `rolldown` package to distribute the WASI version of Rolldown.
+
+To build the WASI version, you can run the following command:
+
+- `just build wasi`
+- `just build wasi release` (**important if running benchmarks**)
+
+Building the WASI version will remove the native version of Rolldown. We designed the local build process on purpose that is you either build the native version or the WASI version. You can't mix them together, though NAPI-RS supports it.
 
 ## Running
 

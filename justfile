@@ -61,7 +61,7 @@ test:
     just test-node
 
 test-rust:
-    cargo test --no-fail-fast --features "serialize"
+    cargo test --no-fail-fast --features "deserialize_bundler_options"
 
 # Supported presets: all, rolldown, rollup
 test-node preset="all" *args="":

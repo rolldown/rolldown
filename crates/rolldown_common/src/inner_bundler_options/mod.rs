@@ -1,8 +1,8 @@
 use std::{fmt::Debug, path::PathBuf};
 
-#[cfg(feature = "serialize")]
+#[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
-#[cfg(feature = "serialize")]
+#[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
 
 use self::types::{
@@ -15,7 +15,7 @@ pub mod types;
 
 #[derive(Default, Debug)]
 #[cfg_attr(
-  feature = "serialize",
+  feature = "deserialize_bundler_options",
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
@@ -24,7 +24,7 @@ pub struct BundlerOptions {
   pub input: Option<Vec<InputItem>>,
   pub cwd: Option<PathBuf>,
   #[cfg_attr(
-    feature = "serialize",
+    feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_external"),
     schemars(with = "Option<Vec<String>>")
   )]
@@ -39,13 +39,13 @@ pub struct BundlerOptions {
   pub format: Option<OutputFormat>,
   pub sourcemap: Option<SourceMapType>,
   #[cfg_attr(
-    feature = "serialize",
+    feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_addon"),
     schemars(with = "Option<String>")
   )]
   pub banner: Option<AddonOutputOption>,
   #[cfg_attr(
-    feature = "serialize",
+    feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_addon"),
     schemars(with = "Option<String>")
   )]
@@ -54,7 +54,7 @@ pub struct BundlerOptions {
   pub resolve: Option<ResolveOptions>,
 }
 
-#[cfg(feature = "serialize")]
+#[cfg(feature = "deserialize_bundler_options")]
 fn deserialize_external<'de, D>(deserializer: D) -> Result<Option<External>, D::Error>
 where
   D: Deserializer<'de>,
@@ -63,7 +63,7 @@ where
   Ok(deserialized.map(External::ArrayString))
 }
 
-#[cfg(feature = "serialize")]
+#[cfg(feature = "deserialize_bundler_options")]
 fn deserialize_addon<'de, D>(deserializer: D) -> Result<Option<AddonOutputOption>, D::Error>
 where
   D: Deserializer<'de>,

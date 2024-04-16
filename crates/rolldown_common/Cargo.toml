@@ -31,4 +31,4 @@ serde_json         = { workspace = true }
 sugar_path         = { workspace = true }
 
 [features]
-serialize = []
+deserialize_bundler_options = []

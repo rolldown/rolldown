@@ -1,22 +1,7 @@
-use std::path::Path;
-
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-#[macro_export]
-macro_rules! impl_serde_default {
-  ($name:ident) => {
-    impl Default for $name {
-      fn default() -> Self {
-        serde_json::from_str("{}").expect("Failed to parse default config")
-      }
-    }
-  };
-}
-
-fn true_by_default() -> bool {
-  true
-}
+use std::fs;
+use std::path::Path;
 
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -41,19 +26,14 @@ pub struct TestConfig {
   pub visualize_sourcemap: bool,
 }
 
-#[derive(Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct ExpectedError {
-  pub code: String,
-  pub message: String,
+fn true_by_default() -> bool {
+  true
 }
 
 impl TestConfig {
   pub fn from_config_path(filepath: &Path) -> Self {
-    let config_str = std::fs::read_to_string(filepath)
-      .unwrap_or_else(|_| panic!("Failed to read config file: {filepath:?}"));
-    let test_config: Self =
-      serde_json::from_str(&config_str).expect("Failed to parse test config file");
-    test_config
+    let config_str =
+      fs::read_to_string(filepath).unwrap_or_else(|e| panic!("Failed to read config file: {e:?}"));
+    serde_json::from_str(&config_str).expect("Failed to parse test config file")
   }
 }

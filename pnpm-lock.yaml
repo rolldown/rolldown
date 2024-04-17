@@ -318,6 +318,9 @@ importers:
       vitepress:
         specifier: ^1.1.0
         version: 1.1.0(@algolia/client-search@4.23.2)(@types/node@20.12.5)(search-insights@2.13.0)(typescript@5.4.4)
+      vue:
+        specifier: ^3.4.21
+        version: 3.4.21(typescript@5.4.4)
 
   web/playground:
     dependencies:

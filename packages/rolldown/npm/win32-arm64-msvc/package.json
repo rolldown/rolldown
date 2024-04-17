@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/binding-win32-arm64-msvc",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "cpu": [
     "arm64"
   ],

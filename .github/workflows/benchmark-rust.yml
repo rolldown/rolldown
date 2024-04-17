@@ -78,7 +78,7 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
-          bins: just
+          bins: just, critcmp
           cache-base: main
           cache-target: release
 

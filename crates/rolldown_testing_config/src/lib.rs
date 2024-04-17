@@ -1,5 +1,5 @@
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::fs;
 use std::path::Path;
 
@@ -28,13 +28,6 @@ pub struct TestConfig {
 
 fn true_by_default() -> bool {
   true
-}
-
-#[derive(Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct ExpectedError {
-  pub code: String,
-  pub message: String,
 }
 
 impl TestConfig {

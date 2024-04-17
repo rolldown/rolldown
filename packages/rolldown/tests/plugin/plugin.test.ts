@@ -1,4 +1,4 @@
-import { expect, test, vi } from 'vitest'
+import { expect, test, vi, describe } from 'vitest'
 import { rolldown, Plugin } from 'rolldown'
 
 async function buildWithPlugin(plugin: Plugin) {
@@ -30,4 +30,31 @@ test('Plugin renderError hook', async () => {
     },
   })
   expect(renderErrorFn).toHaveBeenCalledTimes(1)
+})
+
+describe('Plugin buildEnd hook', async () => {
+  test('call buildEnd hook with error', async () => {
+    const buildEndFn = vi.fn()
+    await buildWithPlugin({
+      load() {
+        throw new Error('load error')
+      },
+      buildEnd: (error) => {
+        buildEndFn()
+        expect(error).toBeInstanceOf(Error)
+      },
+    })
+    expect(buildEndFn).toHaveBeenCalledTimes(1)
+  })
+
+  test('call buildEnd hook without error', async () => {
+    const buildEndFn = vi.fn()
+    await buildWithPlugin({
+      buildEnd: (error) => {
+        buildEndFn()
+        expect(error).toBeNull()
+      },
+    })
+    expect(buildEndFn).toHaveBeenCalledTimes(1)
+  })
 })

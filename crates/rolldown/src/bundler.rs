@@ -80,20 +80,10 @@ impl Bundler {
   }
 
   async fn call_build_end_hook(&mut self, ret: &Result<ScanStageOutput>) -> Result<()> {
-    if let Ok(ret) = ret {
-      if let Some(error) = ret.errors.first() {
-        self
-          .plugin_driver
-          .build_end(Some(&HookBuildEndArgs {
-            // TODO(hyf0): 1.Need a better way to expose the error
-            error: error.to_string(),
-          }))
-          .await?;
-        return Ok(());
-      }
-    }
+    let args =
+      Self::normalize_error(ret, |ret| &ret.errors).map(|error| HookBuildEndArgs { error });
 
-    self.plugin_driver.build_end(None).await?;
+    self.plugin_driver.build_end(args.as_ref()).await?;
 
     Ok(())
   }
@@ -133,31 +123,28 @@ impl Bundler {
     let mut generate_stage =
       GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver);
 
-    let assets = {
+    let output = {
       let ret = generate_stage.generate().await;
 
-      self.call_render_error_hook(&ret, &link_stage_output.errors).await?;
+      if let Some(error) = Self::normalize_error(&ret, |ret| &ret.errors) {
+        self.plugin_driver.render_error(&HookRenderErrorArgs { error }).await?;
+      }
 
       ret?
     };
 
-    self.plugin_driver.generate_bundle(&assets, is_write).await?;
+    self.plugin_driver.generate_bundle(&output.assets, is_write).await?;
 
-    Ok(BundleOutput {
-      warnings: std::mem::take(&mut link_stage_output.warnings),
-      assets,
-      errors: std::mem::take(&mut link_stage_output.errors),
-    })
+    Ok(output)
   }
 
-  // The `render_error` hook should catch plugin errors.
-  async fn call_render_error_hook<T>(&self, ret: &Result<T>, errors: &[BuildError]) -> Result<()> {
-    if let Some(error) = ret
-      .as_ref()
-      .map_or_else(|error| Some(error.to_string()), |_| errors.first().map(ToString::to_string))
-    {
-      self.plugin_driver.render_error(&HookRenderErrorArgs { error }).await?;
-    }
-    Ok(())
+  fn normalize_error<T>(
+    ret: &Result<T>,
+    errors_fn: impl Fn(&T) -> &[BuildError],
+  ) -> Option<String> {
+    ret.as_ref().map_or_else(
+      |error| Some(error.to_string()),
+      |ret| errors_fn(ret).first().map(ToString::to_string),
+    )
   }
 }

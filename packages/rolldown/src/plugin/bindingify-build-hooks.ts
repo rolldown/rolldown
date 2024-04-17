@@ -30,11 +30,7 @@ export function bindingifyBuildEnd(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (err) => {
-    try {
-      handler.call(null, err ?? undefined)
-    } catch (error) {
-      console.error(error)
-    }
+    handler.call(null, err ? new Error(err) : undefined)
   }
 }
 

@@ -161,7 +161,7 @@ impl ModuleLoader {
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: Vec<(Option<String>, ResolvedRequestInfo)>,
-  ) -> ModuleLoaderOutput {
+  ) -> anyhow::Result<ModuleLoaderOutput> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
     let mut errors = vec![];
@@ -198,8 +198,6 @@ impl ModuleLoader {
     let mut dynamic_import_entry_ids = FxHashSet::default();
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
-
-    let mut panic_errors = vec![];
 
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
@@ -254,13 +252,11 @@ impl ModuleLoader {
           errors.extend(e);
         }
         Msg::Panics(err) => {
-          panic_errors.push(err);
+          return Err(err);
         }
       }
       self.remaining -= 1;
     }
-
-    assert!(panic_errors.is_empty(), "Panics occurred during module loading: {panic_errors:?}");
 
     let modules: IndexVec<NormalModuleId, NormalModule> =
       self.intermediate_normal_modules.modules.into_iter().flatten().collect();
@@ -277,7 +273,7 @@ impl ModuleLoader {
       kind: EntryPointKind::DynamicImport,
     }));
 
-    ModuleLoaderOutput {
+    Ok(ModuleLoaderOutput {
       module_table: ModuleTable {
         normal_modules: modules,
         external_modules: self.external_modules,
@@ -288,6 +284,6 @@ impl ModuleLoader {
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
       errors,
-    }
+    })
   }
 }

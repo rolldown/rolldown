@@ -1,4 +1,4 @@
-name: Node Test
+name: WASI Test
 
 on:
   workflow_call:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   run:
-    name: Node Test
+    name: WASI Test
     if: ${{ inputs.changed }}
     runs-on: ${{ inputs.os }}
     timeout-minutes: 15
@@ -28,6 +28,7 @@ jobs:
         with:
           bins: just
           cache-base: main
+          targets: wasm32-wasi-preview1-threads
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -38,17 +39,33 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install
+      - name: Pnpm install
+        # Node.js wasi runtime has bug with `std::fs::read_link`
+        run: |
+          touch .npmrc
+          echo "node-linker=hoisted" >> .npmrc
+          pnpm install
 
-      - name: Build Native Rolldown
-        run: just build native
+      - name: Build WASI Rolldown
+        run: just build wasi release
 
-      - name: Type Check
-        run: pnpm type-check
+      - name: Build Basic Example
+        run: pnpm --filter=@example/basic build
+        if: ${{ inputs.os == 'ubuntu-latest' }}
+        env:
+          NAPI_RS_FORCE_WASI: 1
+          RUST_LOG: trace
 
       - name: Node Test
-        run: pnpm run --recursive --parallel --filter=!rollup-tests test
+        run: pnpm run --recursive --filter=!rollup-tests test
+        if: false
+        env:
+          NAPI_RS_FORCE_WASI: 1
+          RUST_LOG: trace
 
       - name: Rollup Test
         run: pnpm run --filter rollup-tests test
+        if: false
+        env:
+          NAPI_RS_FORCE_WASI: 1
+          RUST_LOG: trace

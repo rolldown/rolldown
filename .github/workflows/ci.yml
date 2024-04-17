@@ -31,6 +31,7 @@ jobs:
         with:
           filters: |
             rust-changes: &rust-changes
+              - '.github/workflows/**'
               - 'crates/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
@@ -89,42 +90,6 @@ jobs:
       - name: Lint
         run: just lint-rust
 
-  build-wasi:
-    name: Build WASI
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.rust-changes == 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: moonrepo/setup-rust@v1
-        with:
-          targets: wasm32-wasi-preview1-threads
-          cache-base: main
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        # Node.js wasi runtime has bug with `std::fs::read_link`
-        run: |
-          touch .npmrc
-          echo "node-linker=hoisted" >> .npmrc
-          pnpm install
-
-      - name: Build wasi
-        run: |
-          pnpm --filter=rolldown build-binding:wasi:release
-          pnpm --filter=rolldown build-node
-          pnpm --filter=@example/basic build
-        env:
-          NAPI_RS_FORCE_WASI: 1
-          RUST_LOG: trace
-
   cargo-test:
     needs: changes
     strategy:
@@ -141,6 +106,16 @@ jobs:
       matrix:
         target: [ubuntu-latest, macos-latest, windows-latest]
     uses: ./.github/workflows/reusable-node-test.yml
+    with:
+      os: ${{ matrix.target }}
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  wasi-test:
+    needs: changes
+    strategy:
+      matrix:
+        target: [ubuntu-latest, macos-latest, windows-latest]
+    uses: ./.github/workflows/reusable-wasi-test.yml
     with:
       os: ${{ matrix.target }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}

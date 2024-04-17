@@ -1,3 +1,1 @@
-mod test_config;
-
-pub use test_config::TestConfig;
+pub use rolldown_testing_config::TestConfig;

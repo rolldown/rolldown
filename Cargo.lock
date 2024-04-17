@@ -1551,7 +1551,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_testing_config"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "rolldown_common",
  "schemars",

@@ -106,7 +106,7 @@ impl Plugin for JsPlugin {
     Ok(())
   }
 
-  // --- Output hooks ---
+  // --- Generate hooks ---
 
   async fn render_start(
     &self,

@@ -47,5 +47,8 @@ jobs:
       - name: Type Check
         run: pnpm type-check
 
-      - name: Run Test
-        run: pnpm test
+      - name: Node Test
+        run: pnpm run --recursive --parallel --filter=!rollup-tests test
+
+      - name: Rollup Test
+        run: pnpm run --filter rollup-tests test

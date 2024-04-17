@@ -4,8 +4,11 @@ We have two groups of test suites: one for Rust, and one for Node.js.
 
 ## Summary
 
+- `just test` for running all tests.
 - `just test-rust` for running all Rust tests.
 - `just test-node` for running all Node.js tests.
+- `just test-node rolldown` for running only Rolldown's Node.js tests.
+- `just test-node rollup` for running only Rollup's tests.
 
 ## Rust Tests
 
@@ -49,36 +52,34 @@ Tests located in `packages/rolldown/tests` are used to test Rolldown's Node.js A
 
 It is our goal to align Rolldown's Node.js API with that of Rollup's as much as possible, and the tests are used to verify API alignment and track the progress. Currently, there are many Rollup options that are not yet supported. If you implemented support for additional options from rollup, please add corresponding test cases for them.
 
-In `/packages/rolldown`:
-
-- `pnpm test` will run rolldown tests.
-- `pnpm test:update` will run and update the tests' status.
+- `just test-node rolldown` will run rolldown tests.
+- `just test-node rolldown --update` will run tests and update snapshots.
 
 #### Run tests of the specific file
 
 To run tests of the specific file, you could use
 
 ```shell
-pnpm test -- test-file-name
+just test-node rolldown test-file-name
 ```
 
-For example, to run tests in `fixture.test.ts`, you could use `pnpm test -- fixture`.
+For example, to run tests in `fixture.test.ts`, you could use `just test-node rolldown fixture`.
 
 #### Run the specific test
 
 To run specific test, you could use
 
 ```shell
-pnpm test -- -t test-name
+just test-node rolldown -t test-name
 ```
 
 Names of tests in `fixture.test.ts` are defined with their folder names. `tests/fixtures/resolve/alias` will has test name `resolve/alias`.
 
-To run the `tests/fixtures/resolve/alias` test, you could use `pnpm test -- -t "resolve/alias"`.
+To run the `tests/fixtures/resolve/alias` test, you could use `just test-node rolldown -t resolve/alias`.
 
 :::info
 
-- `pnpm test -t aaa bbb` is different from `pnpm test -t "aaa bbb"`. The former will run tests that either contains `aaa` or `bbb`, while the latter will run tests, whose name contain `aaa bbb`.
+- `just test-node rolldown -t aaa bbb` is different from `just test-node rolldown -t "aaa bbb"`. The former will run tests that either contains `aaa` or `bbb`, while the latter will run tests, whose name contain `aaa bbb`.
 
 - For more advanced usage, please refer to https://vitest.dev/guide/filtering.
 
@@ -94,5 +95,5 @@ The git submodule should have been initialized after running `just init` when se
 
 In `/packages/rollup-tests`:
 
-- `pnpm test` will run rollup tests.
-- `pnpm test:update` will run and update the tests' status.
+- `just test-node rollup` will run rollup tests.
+- `just test-node rollup --update` will run and update the tests' status.

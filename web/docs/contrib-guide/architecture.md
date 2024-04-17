@@ -14,7 +14,7 @@ This document covers the organization of the repository, as well as some high le
 
 ## Source code layout
 
-A detailed description of the repository layout is provided [in the contribution guide](https://rolldown.rs/contrib-guide/repo-structure). Below is an overview of the sections which are most important for this document.
+A detailed description of the repository layout is provided [in the repo structure guide](./repo-structure). Below is an overview of the sections which are most important for this document.
 
 - `crates`: Contains the source code for the Rust libraries which power the [`rolldown` npm package](http://npmjs.com/package/rolldown).
 - `packages`: Most importantly, contains the source code for the [`rolldown` npm package](http://npmjs.com/package/rolldown).

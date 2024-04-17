@@ -112,7 +112,7 @@ rolldown_utils            = { path = "./crates/rolldown_utils" }
 rustc-hash                = "1.1.0"
 schemars                  = "0.8.16"
 self_cell                 = "1.0.3"
-serde                     = { version = "1.0.197", features = ["derive"] }
+serde                     = { version = "1.0.198", features = ["derive"] }
 serde_json                = "1.0.116"
 smallvec                  = "1.13.2"
 sugar_path                = { version = "1.2.0", features = ["cached_current_dir"] }

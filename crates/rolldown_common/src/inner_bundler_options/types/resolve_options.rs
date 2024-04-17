@@ -3,8 +3,12 @@ use serde::Deserialize;
 
 /// A simple wrapper around `oxc_resolver::ResolveOptions` to make it easier to use in the `rolldown_resolver` crate.
 /// See [oxc_resolver::ResolveOptions](https://docs.rs/oxc_resolver/latest/oxc_resolver/struct.ResolveOptions.html) for more information.
-#[derive(Debug, Default, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[derive(Debug, Default)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(rename_all = "camelCase", deny_unknown_fields)
+)]
 pub struct ResolveOptions {
   pub alias: Option<Vec<(String, Vec<String>)>>,
   pub alias_fields: Option<Vec<Vec<String>>>,

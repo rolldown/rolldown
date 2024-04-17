@@ -77,7 +77,7 @@ export interface Plugin {
   >
 
   buildEnd?: Hook<(this: null, err?: string) => MaybePromise<NullValue>>
-  // --- Output hooks ---
+  // --- Generate hooks ---
 
   renderStart?: Hook<
     (

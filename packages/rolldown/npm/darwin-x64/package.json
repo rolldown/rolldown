@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/binding-darwin-x64",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "cpu": [
     "x64"
   ],

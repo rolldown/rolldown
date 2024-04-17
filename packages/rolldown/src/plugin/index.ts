@@ -76,6 +76,16 @@ export interface Plugin {
     >
   >
 
+  buildEnd?: Hook<(this: null, err?: string) => MaybePromise<NullValue>>
+  // --- Generate hooks ---
+
+  renderStart?: Hook<
+    (
+      outputOptions: BindingOutputOptions,
+      inputOptions: RolldownNormalizedInputOptions,
+    ) => MaybePromise<NullValue>
+  >
+
   renderChunk?: Hook<
     (
       this: null,
@@ -92,15 +102,7 @@ export interface Plugin {
     >
   >
 
-  buildEnd?: Hook<(this: null, err?: string) => MaybePromise<NullValue>>
-  // --- Output hooks ---
-
-  renderStart?: Hook<
-    (
-      outputOptions: BindingOutputOptions,
-      inputOptions: RolldownNormalizedInputOptions,
-    ) => MaybePromise<NullValue>
-  >
+  renderError?: Hook<(this: null, error: Error) => MaybePromise<NullValue>>
 
   generateBundle?: Hook<
     (bundle: BindingOutputs, isWrite: boolean) => MaybePromise<NullValue>

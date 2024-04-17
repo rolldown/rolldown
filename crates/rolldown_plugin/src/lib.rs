@@ -15,6 +15,7 @@ pub use crate::{
   types::hook_load_output::HookLoadOutput,
   types::hook_render_chunk_args::HookRenderChunkArgs,
   types::hook_render_chunk_output::HookRenderChunkOutput,
+  types::hook_render_error::HookRenderErrorArgs,
   types::hook_resolve_id_args::HookResolveIdArgs,
   types::hook_resolve_id_extra_options::HookResolveIdExtraOptions,
   types::hook_resolve_id_output::HookResolveIdOutput,

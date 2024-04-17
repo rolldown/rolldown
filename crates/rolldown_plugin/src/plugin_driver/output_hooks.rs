@@ -1,3 +1,4 @@
+use crate::types::hook_render_error::HookRenderErrorArgs;
 use crate::HookRenderChunkArgs;
 use crate::{HookNoopReturn, PluginDriver};
 use anyhow::Result;
@@ -27,6 +28,13 @@ impl PluginDriver {
       }
     }
     Ok((args.code, sourcemap_chain))
+  }
+
+  pub async fn render_error(&self, args: &HookRenderErrorArgs) -> HookNoopReturn {
+    for (plugin, ctx) in &self.plugins {
+      plugin.render_error(ctx, args).await?;
+    }
+    Ok(())
   }
 
   pub async fn generate_bundle(&self, bundle: &Vec<Output>, is_write: bool) -> HookNoopReturn {

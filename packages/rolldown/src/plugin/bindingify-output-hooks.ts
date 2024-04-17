@@ -50,6 +50,19 @@ export function bindingifyRenderChunk(
   }
 }
 
+export function bindingifyRenderError(
+  hook?: Plugin['renderError'],
+): BindingPluginOptions['renderError'] {
+  if (!hook) {
+    return undefined
+  }
+  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+
+  return async (err) => {
+    handler.call(null, new Error(err))
+  }
+}
+
 export function bindingifyGenerateBundle(
   hook?: Plugin['generateBundle'],
 ): BindingPluginOptions['generateBundle'] {

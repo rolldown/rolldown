@@ -11,8 +11,9 @@ use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
+use rolldown_error::BuildError;
 use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, SharedPluginDriver};
+use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
 use sugar_path::SugarPath;
 
 pub struct Bundler {
@@ -132,7 +133,13 @@ impl Bundler {
     let mut generate_stage =
       GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver);
 
-    let assets = generate_stage.generate().await?;
+    let assets = {
+      let ret = generate_stage.generate().await;
+
+      self.call_render_error_hook(&ret, &link_stage_output.errors).await?;
+
+      ret?
+    };
 
     self.plugin_driver.generate_bundle(&assets, is_write).await?;
 
@@ -141,5 +148,16 @@ impl Bundler {
       assets,
       errors: std::mem::take(&mut link_stage_output.errors),
     })
+  }
+
+  // The `render_error` hook should catch plugin errors.
+  async fn call_render_error_hook<T>(&self, ret: &Result<T>, errors: &[BuildError]) -> Result<()> {
+    if let Some(error) = ret
+      .as_ref()
+      .map_or_else(|error| Some(error.to_string()), |_| errors.first().map(ToString::to_string))
+    {
+      self.plugin_driver.render_error(&HookRenderErrorArgs { error }).await?;
+    }
+    Ok(())
   }
 }

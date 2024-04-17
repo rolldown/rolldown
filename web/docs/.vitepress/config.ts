@@ -99,4 +99,25 @@ export default defineConfig({
       copyright: 'Copyright © 2023-present Rolldown Team & Contributors',
     },
   },
+
+  markdown: {
+    config: (md) => {
+      const originalFence = md.renderer.rules.fence
+      md.renderer.rules.fence = (tokens, index, options, env, self) => {
+        const token = tokens[index]
+        if (token.info.trim() === 'mermaid') {
+          return `
+            <Suspense>
+              <template #default>
+                <Mermaid id="mermaid-${index}"  graph="${encodeURIComponent(token.content)}"></Mermaid>
+              </template>
+              <template #fallback>
+                Loading...
+              </template>
+            </Suspense>`
+        }
+        return originalFence?.(tokens, index, options, env, self) ?? ''
+      }
+    },
+  },
 })

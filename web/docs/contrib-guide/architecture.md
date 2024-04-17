@@ -1,3 +1,7 @@
+<script setup>
+import Mermaid from '../.vitepress/components/Mermaid.vue'
+</script>
+
 # Architecture
 
 This document covers the organization of the repository, as well as some high level discussion of how Rolldown works. The goal of this document is to provide an entry point for understanding the project layout. The primary audience is people who might be interested in modifying or contributing to the Rolldown source code.
@@ -25,20 +29,9 @@ The bundler is designed to be fully compatible with [Rollup](https://rollupjs.or
 
 ## The CLI
 
-The Rolldown CLI is a thin wrapper around the [Node.js bindings](https://github.com/rolldown/rolldown/tree/2011bf463b8cead1903375046643abb1168ef46f/crates/rolldown_binding) of the [`rolldown` Rust crate](https://github.com/rolldown/rolldown/tree/2011bf463b8cead1903375046643abb1168ef46f/crates/rolldown).
+The Rolldown CLI is a thin wrapper around the [Node.js bindings](https://github.com/rolldown/rolldown/tree/2011bf463b8cead1903375046643abb1168ef46f/crates/rolldown_binding) of the [`rolldown` Rust crate](https://github.com/rolldown/rolldown/tree/2011bf463b8cead1903375046643abb1168ef46f/crates/rolldown). Here's a simple flowchart describing the process of calling the `rolldown` CLI command.
 
-![Flowchart of the Node.jS CLI execution. A section titled "CLI" contains the flow "Invoke rolldown CLI command", "Parse arguments", "Load configuration file", "If config does not exist, exit with error" "If config exists, bundle". A section titled "Bundle" contains the flow "Initiate RolldownBuild class with config options", "Load appropriate native binding for system", "Delegate to Rust for bundling and writing output to disk". The final step is "Collect, transform, and print bundle statistics".](/architecture/cli.svg)
-
-
-<!-- 
-To make updates to this chart, use mermaid.live with the below flowchart configuration.
-
-.... ARG! Foiled!!!! My whole strategy was to embed a pre-built SVG, with instructions on how to update.
-
-But the mermaid chart contains closing HTML comment strings so that doesn't work
-
-Need to look more into using Mermaid directly in the build step and/or using something else like https://pintorajs.vercel.app/docs/diagrams/activity-diagram/
-
+```mermaid
 ---
 title: Bundling code with Rolldown npm package
 ---
@@ -79,8 +72,19 @@ flowchart TB
     end
 
     writeOutput --> printStats
+```
 
- -->
+## The Bundler
+
+The Rolldown bundler is the 
+
+```js
+const thing = [1, 2, 3]
+function main() {
+    console.log(thing)
+}
+```
+
 
 <!-- 
 

@@ -63,9 +63,23 @@ test:
 test-rust:
     cargo test --no-fail-fast
 
-test-node:
-    just build native debug
-    pnpm test
+# Supported presets: all, rolldown, rollup
+test-node preset="all" *args="":
+    just _test-node-{{preset}} {{args}}
+
+_test-node-all:
+  just build native debug
+  pnpm run --recursive --parallel --filter=!rollup-tests test 
+  # We run rollup tests separately to have a clean output.
+  pnpm run --filter rollup-tests test
+
+_test-node-rolldown *args:
+  just build native debug
+  pnpm run --filter rolldown test {{args}}
+
+_test-node-rollup command="":
+  just build native debug
+  pnpm run --filter rollup-tests test{{command}}
 
 # Fix formatting issues both for Rust, Node.js and all files in the repository
 fmt:

@@ -70,7 +70,7 @@ impl ScanStage {
       warnings,
       errors,
       ast_table,
-    } = module_loader.fetch_all_modules(user_entries).await;
+    } = module_loader.fetch_all_modules(user_entries).await?;
     self.errors.extend(errors);
 
     tracing::debug!("Scan stage finished {module_table:#?}");

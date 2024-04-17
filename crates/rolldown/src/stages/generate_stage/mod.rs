@@ -21,7 +21,7 @@ use crate::{
     finalize_normal_module, is_in_rust_test_mode,
     render_chunks::render_chunks,
   },
-  SharedOptions,
+  BundleOutput, SharedOptions,
 };
 
 mod code_splitting;
@@ -43,7 +43,7 @@ impl<'a> GenerateStage<'a> {
   }
 
   #[tracing::instrument(skip_all)]
-  pub async fn generate(&mut self) -> Result<Vec<Output>> {
+  pub async fn generate(&mut self) -> Result<BundleOutput> {
     tracing::info!("Start bundle stage");
     let mut chunk_graph = self.generate_chunks();
 
@@ -145,7 +145,11 @@ impl<'a> GenerateStage<'a> {
 
     tracing::info!("rendered chunks");
 
-    Ok(assets)
+    Ok(BundleOutput {
+      assets,
+      warnings: std::mem::take(&mut self.link_output.warnings),
+      errors: std::mem::take(&mut self.link_output.errors),
+    })
   }
 
   fn generate_chunk_filenames(&self, chunk_graph: &mut ChunkGraph) {

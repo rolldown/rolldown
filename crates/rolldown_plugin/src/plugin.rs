@@ -2,8 +2,9 @@ use std::{any::Any, borrow::Cow, fmt::Debug};
 
 use super::plugin_context::SharedPluginContext;
 use crate::{
-  HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput,
-  HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
+  types::hook_render_error::HookRenderErrorArgs, HookBuildEndArgs, HookLoadArgs, HookLoadOutput,
+  HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput,
+  HookTransformArgs,
 };
 use anyhow::Result;
 use rolldown_common::Output;
@@ -54,6 +55,13 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     Ok(())
   }
 
+  // --- Generate hooks ---
+
+  #[allow(clippy::ptr_arg)]
+  async fn render_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
+    Ok(())
+  }
+
   async fn render_chunk(
     &self,
     _ctx: &SharedPluginContext,
@@ -62,10 +70,11 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     Ok(None)
   }
 
-  // --- Generate hooks ---
-
-  #[allow(clippy::ptr_arg)]
-  async fn render_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
+  async fn render_error(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookRenderErrorArgs,
+  ) -> HookNoopReturn {
     Ok(())
   }
 

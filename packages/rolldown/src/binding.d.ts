@@ -107,6 +107,7 @@ export interface BindingPluginOptions {
   buildEnd?: (error: Nullable<string>) => MaybePromise<VoidNullable>
   renderChunk?: (code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   renderStart?: () => void
+  renderError?: (error: string) => void
   generateBundle?: (bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>
   writeBundle?: (bundle: BindingOutputs) => MaybePromise<VoidNullable>
 }

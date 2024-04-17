@@ -66,6 +66,10 @@ pub struct BindingPluginOptions {
   pub render_start: Option<MaybeAsyncJsCallback<(), ()>>,
 
   #[serde(skip_deserializing)]
+  #[napi(ts_type = "(error: string) => void")]
+  pub render_error: Option<MaybeAsyncJsCallback<String, ()>>,
+
+  #[serde(skip_deserializing)]
   #[napi(ts_type = "(bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>")]
   pub generate_bundle: Option<MaybeAsyncJsCallback<(BindingOutputs, bool), ()>>,
 

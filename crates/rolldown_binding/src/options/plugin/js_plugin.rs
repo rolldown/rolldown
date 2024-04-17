@@ -106,6 +106,18 @@ impl Plugin for JsPlugin {
     Ok(())
   }
 
+  // --- Output hooks ---
+
+  async fn render_start(
+    &self,
+    _ctx: &rolldown_plugin::SharedPluginContext,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if let Some(cb) = &self.render_start {
+      cb.await_call(()).await?;
+    }
+    Ok(())
+  }
+
   async fn render_chunk(
     &self,
     _ctx: &rolldown_plugin::SharedPluginContext,
@@ -123,14 +135,13 @@ impl Plugin for JsPlugin {
     }
   }
 
-  // --- Output hooks ---
-
-  async fn render_start(
+  async fn render_error(
     &self,
     _ctx: &rolldown_plugin::SharedPluginContext,
+    args: &rolldown_plugin::HookRenderErrorArgs,
   ) -> rolldown_plugin::HookNoopReturn {
-    if let Some(cb) = &self.render_start {
-      cb.await_call(()).await?;
+    if let Some(cb) = &self.render_error {
+      cb.await_call(args.error.to_string()).await?;
     }
     Ok(())
   }

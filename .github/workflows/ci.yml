@@ -83,12 +83,15 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
-          bins: just, taplo-cli
+          bins: just, taplo-cli, cargo-shear
           cache-base: main
           components: clippy,rustfmt
 
       - name: Lint
         run: just lint-rust
+
+      - name: Check unused dependencies
+        run: cargo shear
 
   cargo-test:
     needs: changes

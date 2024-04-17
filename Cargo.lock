@@ -1376,14 +1376,12 @@ name = "rolldown"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "derivative",
  "dunce",
  "futures",
  "index_vec",
  "insta",
  "once_cell",
  "oxc",
- "regex",
  "rolldown_common",
  "rolldown_error",
  "rolldown_fs",
@@ -1437,7 +1435,6 @@ dependencies = [
  "once_cell",
  "oxc",
  "regex",
- "rolldown_error",
  "rolldown_fs",
  "rolldown_rstr",
  "rolldown_sourcemap",
@@ -1445,7 +1442,6 @@ dependencies = [
  "rustc-hash",
  "schemars",
  "serde",
- "serde_json",
  "sugar_path",
 ]
 
@@ -1485,7 +1481,6 @@ dependencies = [
  "async-trait",
  "futures",
  "rolldown_common",
- "rolldown_error",
  "rolldown_sourcemap",
  "tracing",
 ]
@@ -1542,10 +1537,8 @@ dependencies = [
 name = "rolldown_testing"
 version = "0.0.1"
 dependencies = [
- "rolldown_common",
  "rolldown_testing_config",
  "schemars",
- "serde",
  "serde_json",
 ]
 

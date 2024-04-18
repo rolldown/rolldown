@@ -72,42 +72,28 @@ impl Bundler {
   pub async fn scan(&mut self) -> Result<ScanStageOutput> {
     self.plugin_driver.build_start().await?;
 
-    let ret = self.scan_inner().await;
-
-    self.call_build_end_hook(&ret).await?;
-
-    ret
-  }
-
-  async fn call_build_end_hook(&mut self, ret: &Result<ScanStageOutput>) -> Result<()> {
-    let args =
-      Self::normalize_error(ret, |ret| &ret.errors).map(|error| HookBuildEndArgs { error });
-
-    self.plugin_driver.build_end(args.as_ref()).await?;
-
-    Ok(())
-  }
-
-  async fn scan_inner(&mut self) -> Result<ScanStageOutput> {
-    ScanStage::new(
+    let ret = ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs.clone(),
       Arc::clone(&self.resolver),
     )
     .scan()
-    .await
+    .await;
+
+    {
+      let args =
+        Self::normalize_error(&ret, |ret| &ret.errors).map(|error| HookBuildEndArgs { error });
+
+      self.plugin_driver.build_end(args.as_ref()).await?;
+    }
+
+    ret
   }
 
   #[tracing::instrument(skip_all)]
   async fn try_build(&mut self) -> Result<LinkStageOutput> {
-    self.plugin_driver.build_start().await?;
-
-    let scan_ret = self.scan_inner().await;
-
-    self.call_build_end_hook(&scan_ret).await?;
-
-    let build_info = scan_ret?;
+    let build_info = self.scan().await?;
 
     let link_stage = LinkStage::new(build_info, &self.options);
     Ok(link_stage.link())

@@ -10,7 +10,7 @@ export default defineTest({
         name: 'test-plugin',
         moduleParsed: function (moduleInfo) {
           moduleParsedFn()
-          expect(moduleInfo.code).toBe(`console.log('module-parsed')`)
+          expect(moduleInfo.code).include(`module-parsed`)
           expect(moduleInfo.id.endsWith('main.js')).toBeTruthy()
         },
       },

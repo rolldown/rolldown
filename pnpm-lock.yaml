@@ -314,7 +314,7 @@ importers:
     devDependencies:
       vitepress:
         specifier: ^1.1.0
-        version: 1.1.0(@algolia/client-search@4.23.3)(@types/node@20.12.7)(axios@0.26.1)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.13.0)(terser@5.30.3)(typescript@5.4.5)
+        version: 1.1.1(@algolia/client-search@4.23.3)(@types/node@20.12.7)(axios@0.26.1)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.13.0)(terser@5.30.3)(typescript@5.4.5)
 
   web/playground:
     dependencies:
@@ -2415,8 +2415,8 @@ packages:
   '@types/lodash@4.17.0':
     resolution: {integrity: sha512-t7dhREVv6dbNj0q17X12j7yDG4bD/DHYX7o5/DbDxobP0HnGPgpRz2Ej77aL7TZT3DSw13fqUTj8J4mMnqa7WA==}
 
-  '@types/markdown-it@13.0.7':
-    resolution: {integrity: sha512-U/CBi2YUUcTHBt5tjO2r5QV/x0Po6nsYwQU4Y04fBS6vfoImaiZ6f8bi3CjTCxBPQSO1LMyUqkByzi8AidyxfA==}
+  '@types/markdown-it@14.0.1':
+    resolution: {integrity: sha512-6WfOG3jXR78DW8L5cTYCVVGAsIFZskRHCDo5tbqa+qtKVt4oDRVH7hyIWu1SpDQJlmIoEivNQZ5h+AGAOrgOtQ==}
 
   '@types/mdurl@1.0.5':
     resolution: {integrity: sha512-6L6VymKTzYSrEf4Nev4Xa1LCHKrlTlYCBMTlQKFuddo1CvQcE52I0mwfOJayueUC7MJuXOeHTcIU683lzd0cUA==}
@@ -4987,8 +4987,8 @@ packages:
       terser:
         optional: true
 
-  vitepress@1.1.0:
-    resolution: {integrity: sha512-G+NS5I2OETxC0SfGAMDO75JWNkrcir0UCptuhQMNoaZhhlqvYtTDQhph4qGc5dtiTtZkcFa/bCcSx+A2gSS3lA==}
+  vitepress@1.1.1:
+    resolution: {integrity: sha512-8M4v+7K1AQSOnfNDtDVEPF/BFmmeA5291Y0uhq1qgAh5Sa6H2oiTxoW0YyFNtq/35kB33sEgkvZHflWM2sgrkw==}
     hasBin: true
     peerDependencies:
       markdown-it-mathjax3: ^4
@@ -7302,7 +7302,7 @@ snapshots:
 
   '@types/lodash@4.17.0': {}
 
-  '@types/markdown-it@13.0.7':
+  '@types/markdown-it@14.0.1':
     dependencies:
       '@types/linkify-it': 3.0.5
       '@types/mdurl': 1.0.5
@@ -9960,13 +9960,13 @@ snapshots:
       fsevents: 2.3.3
       terser: 5.30.3
 
-  vitepress@1.1.0(@algolia/client-search@4.23.3)(@types/node@20.12.7)(axios@0.26.1)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.13.0)(terser@5.30.3)(typescript@5.4.5):
+  vitepress@1.1.1(@algolia/client-search@4.23.3)(@types/node@20.12.7)(axios@0.26.1)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.13.0)(terser@5.30.3)(typescript@5.4.5):
     dependencies:
       '@docsearch/css': 3.6.0
       '@docsearch/js': 3.6.0(@algolia/client-search@4.23.3)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.13.0)
       '@shikijs/core': 1.3.0
       '@shikijs/transformers': 1.3.0
-      '@types/markdown-it': 13.0.7
+      '@types/markdown-it': 14.0.1
       '@vitejs/plugin-vue': 5.0.4(vite@5.2.9(@types/node@20.12.7)(terser@5.30.3))(vue@3.4.23(typescript@5.4.5))
       '@vue/devtools-api': 7.0.27(vue@3.4.23(typescript@5.4.5))
       '@vueuse/core': 10.9.0(vue@3.4.23(typescript@5.4.5))

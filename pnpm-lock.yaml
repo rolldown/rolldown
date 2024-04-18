@@ -308,13 +308,13 @@ importers:
         version: 0.21.1
       zx:
         specifier: ^8.0.0
-        version: 8.0.1
+        version: 8.0.2
 
   web/docs:
     devDependencies:
       vitepress:
         specifier: ^1.1.0
-        version: 1.1.1(@algolia/client-search@4.23.3)(@types/node@20.12.7)(axios@0.26.1)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.13.0)(terser@5.30.3)(typescript@5.4.5)
+        version: 1.1.3(@algolia/client-search@4.23.3)(@types/node@20.12.7)(axios@0.26.1)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.13.0)(terser@5.30.3)(typescript@5.4.5)
 
   web/playground:
     dependencies:
@@ -4987,8 +4987,8 @@ packages:
       terser:
         optional: true
 
-  vitepress@1.1.1:
-    resolution: {integrity: sha512-8M4v+7K1AQSOnfNDtDVEPF/BFmmeA5291Y0uhq1qgAh5Sa6H2oiTxoW0YyFNtq/35kB33sEgkvZHflWM2sgrkw==}
+  vitepress@1.1.3:
+    resolution: {integrity: sha512-hGrIYN0w9IHWs0NQSnlMjKV/v/HLfD+Ywv5QdvCSkiT32mpNOOwUrZjnqZv/JL/WBPpUc94eghTUvmipxw0xrA==}
     hasBin: true
     peerDependencies:
       markdown-it-mathjax3: ^4
@@ -5175,8 +5175,8 @@ packages:
     resolution: {integrity: sha512-9bnSc/HEW2uRy67wc+T8UwauLuPJVn28jb+GtJY16iiKWyvmYJRXVT4UamsAEGQfPohgr2q4Tq0sQbQlxTfi1g==}
     engines: {node: '>=12.20'}
 
-  zx@8.0.1:
-    resolution: {integrity: sha512-Y+ITW1GQjADk7qgrbhnukMgoNsJmlyx53cUQ6/6NXU+BMBdCbTc6flTOHUctmzKvPjTmdwaddzJY/dbLie9sQg==}
+  zx@8.0.2:
+    resolution: {integrity: sha512-3g+ePtPYmyrjRuASlJiUhkje1je4a47woML/fzTKBb9PA5BzRQbSswwyJ8nlFWJjA1ORRi6TMyAdhuz/jK+Gaw==}
     engines: {node: '>= 16.0.0'}
     hasBin: true
 
@@ -9960,7 +9960,7 @@ snapshots:
       fsevents: 2.3.3
       terser: 5.30.3
 
-  vitepress@1.1.1(@algolia/client-search@4.23.3)(@types/node@20.12.7)(axios@0.26.1)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.13.0)(terser@5.30.3)(typescript@5.4.5):
+  vitepress@1.1.3(@algolia/client-search@4.23.3)(@types/node@20.12.7)(axios@0.26.1)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.13.0)(terser@5.30.3)(typescript@5.4.5):
     dependencies:
       '@docsearch/css': 3.6.0
       '@docsearch/js': 3.6.0(@algolia/client-search@4.23.3)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(search-insights@2.13.0)
@@ -10191,7 +10191,7 @@ snapshots:
 
   yocto-queue@1.0.0: {}
 
-  zx@8.0.1:
+  zx@8.0.2:
     optionalDependencies:
       '@types/fs-extra': 11.0.4
       '@types/node': 20.12.7

@@ -41,6 +41,7 @@ pub use crate::{
   types::file_path::{representative_name, FilePath},
   types::import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},
   types::module_id::ModuleId,
+  types::module_info::ModuleInfo,
   types::module_path::ResourceId,
   types::module_type::ModuleType,
   types::named_export::LocalExport,

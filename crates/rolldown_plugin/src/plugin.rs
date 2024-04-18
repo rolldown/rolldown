@@ -1,4 +1,4 @@
-use std::{any::Any, borrow::Cow, fmt::Debug};
+use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
 use super::plugin_context::SharedPluginContext;
 use crate::{
@@ -7,7 +7,7 @@ use crate::{
   HookTransformArgs,
 };
 use anyhow::Result;
-use rolldown_common::Output;
+use rolldown_common::{ModuleInfo, Output};
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
 pub type HookTransformReturn = Result<Option<HookLoadOutput>>;
@@ -45,6 +45,14 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     _args: &HookTransformArgs,
   ) -> HookTransformReturn {
     Ok(None)
+  }
+
+  async fn module_parsed(
+    &self,
+    _ctx: &SharedPluginContext,
+    _module_info: Arc<ModuleInfo>,
+  ) -> HookNoopReturn {
+    Ok(())
   }
 
   async fn build_end(

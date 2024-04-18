@@ -1,6 +1,11 @@
 type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
+export class BindingModuleInfo {
+  id: string
+  get code(): string | null
+}
+
 export class BindingOutputAsset {
   get fileName(): string
   get source(): string
@@ -104,6 +109,7 @@ export interface BindingPluginOptions {
   resolveId?: (specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraOptions) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   load?: (id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   transform?: (id: string, code: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   buildEnd?: (error: Nullable<string>) => MaybePromise<VoidNullable>
   renderChunk?: (code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   renderStart?: () => void

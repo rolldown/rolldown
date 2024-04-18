@@ -11,6 +11,7 @@ import { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
 import { SourceMapInput } from '../types/sourcemap'
 import { pathToFileURL } from 'node:url'
 import { NormalizedOutputOptions } from '../options/output-options'
+import { ModuleInfo } from '../types/module-info'
 
 // Use a type alias here, we might wrap `BindingPluginContext` in the future
 type PluginContext = BindingPluginContext
@@ -74,6 +75,10 @@ export interface Plugin {
           map?: string | null | SourceMapInput
         }
     >
+  >
+
+  moduleParsed?: Hook<
+    (this: PluginContext, moduleInfo: ModuleInfo) => MaybePromise<NullValue>
   >
 
   buildEnd?: Hook<(this: null, err?: Error) => MaybePromise<NullValue>>

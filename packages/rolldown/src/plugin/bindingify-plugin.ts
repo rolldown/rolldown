@@ -3,6 +3,7 @@ import {
   bindingifyBuildEnd,
   bindingifyBuildStart,
   bindingifyLoad,
+  bindingifyModuleParsed,
   bindingifyResolveId,
   bindingifyTransform,
 } from './bindingify-build-hooks'
@@ -31,6 +32,7 @@ export function bindingifyPlugin(
     resolveId: bindingifyResolveId(plugin.resolveId),
     buildEnd: bindingifyBuildEnd(plugin.buildEnd),
     transform: bindingifyTransform(plugin.transform),
+    moduleParsed: bindingifyModuleParsed(plugin.moduleParsed),
     load: bindingifyLoad(plugin.load),
     renderChunk: bindingifyRenderChunk(outputOptions, plugin.renderChunk),
     renderStart: bindingifyRenderStart(

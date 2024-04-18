@@ -1,8 +1,11 @@
+use std::sync::Arc;
+
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
   HookResolveIdReturn, HookTransformArgs, PluginDriver,
 };
 use anyhow::Result;
+use rolldown_common::ModuleInfo;
 use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {
@@ -46,6 +49,13 @@ impl PluginDriver {
       }
     }
     Ok((code, sourcemap_chain))
+  }
+
+  pub async fn module_parsed(&self, module_info: Arc<ModuleInfo>) -> HookNoopReturn {
+    for (plugin, ctx) in &self.plugins {
+      plugin.module_parsed(ctx, Arc::clone(&module_info)).await?;
+    }
+    Ok(())
   }
 
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs>) -> HookNoopReturn {

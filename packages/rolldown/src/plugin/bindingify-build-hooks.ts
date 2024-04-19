@@ -84,19 +84,9 @@ export function bindingifyTransform(
       return { code: ret.code }
     }
 
-    // TODO(underfin) move the logic to rust
-    // If sourcemap hasn't `sourcesContent` and `sources`, using original code to fill it.
-    let map = typeof ret.map === 'object' ? ret.map : JSON.parse(ret.map)
-    if (isEmptySourcemapFiled(map.sourcesContent)) {
-      map.sourcesContent = [code]
-    }
-    if (isEmptySourcemapFiled(map.sources)) {
-      map.sources = [id]
-    }
-
     return {
       code: ret.code,
-      map: JSON.stringify(map),
+      map: typeof ret.map === 'object' ? JSON.stringify(ret.map) : ret.map,
     }
   }
 }

@@ -3,7 +3,7 @@ import type { BindingPluginOptions } from '../binding'
 
 import type { Plugin } from './index'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
-import { isEmptySourcemapFiled } from '../utils'
+import { isEmptySourcemapFiled, transformModuleInfo } from '../utils'
 import path from 'path'
 import { SourceMapInputObject } from '../types/sourcemap'
 
@@ -142,5 +142,18 @@ export function bindingifyLoad(
       code: ret.code,
       map: JSON.stringify(map),
     }
+  }
+}
+
+export function bindingifyModuleParsed(
+  hook?: Plugin['moduleParsed'],
+): BindingPluginOptions['moduleParsed'] {
+  if (!hook) {
+    return undefined
+  }
+  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+
+  return async (ctx, moduleInfo) => {
+    handler.call(ctx, transformModuleInfo(moduleInfo))
   }
 }

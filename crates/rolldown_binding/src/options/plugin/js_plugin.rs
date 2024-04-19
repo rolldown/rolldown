@@ -1,4 +1,7 @@
-use crate::types::{binding_outputs::BindingOutputs, js_callback::MaybeAsyncJsCallbackExt};
+use crate::types::{
+  binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
+  js_callback::MaybeAsyncJsCallbackExt,
+};
 use rolldown_plugin::Plugin;
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 
@@ -93,6 +96,17 @@ impl Plugin for JsPlugin {
     } else {
       Ok(None)
     }
+  }
+
+  async fn module_parsed(
+    &self,
+    ctx: &rolldown_plugin::SharedPluginContext,
+    module_info: Arc<rolldown_common::ModuleInfo>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if let Some(cb) = &self.module_parsed {
+      cb.await_call((Arc::clone(ctx).into(), BindingModuleInfo::new(module_info))).await?;
+    }
+    Ok(())
   }
 
   async fn build_end(

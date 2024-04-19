@@ -119,6 +119,7 @@ flowchart TB
     configExists-->|yes|Bundle
 
     subgraph Bundle
+        direction TB
         instantiateBuild([
             Instantiate `RolldownBuild`
             class with config options

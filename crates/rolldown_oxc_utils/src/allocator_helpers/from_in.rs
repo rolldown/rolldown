@@ -6,6 +6,6 @@ pub trait FromIn<'ast, T>: Sized {
 
 impl<'ast, T> FromIn<'ast, T> for Box<'ast, T> {
   fn from_in(value: T, alloc: &'ast Allocator) -> Self {
-    Box(alloc.alloc(value))
+    Box::new_in(value, alloc)
   }
 }

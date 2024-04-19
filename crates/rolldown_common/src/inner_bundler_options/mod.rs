@@ -5,6 +5,8 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
 
+use crate::SourceMapIgnoreList;
+
 use self::types::{
   external::External, input_item::InputItem, output_format::OutputFormat,
   output_option::AddonOutputOption, platform::Platform, resolve_options::ResolveOptions,
@@ -50,6 +52,12 @@ pub struct BundlerOptions {
     schemars(with = "Option<String>")
   )]
   pub footer: Option<AddonOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub sourcemap_ignore_list: Option<SourceMapIgnoreList>,
   // --- options for resolve
   pub resolve: Option<ResolveOptions>,
 }

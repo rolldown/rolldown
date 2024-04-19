@@ -97,6 +97,7 @@ export interface BindingOutputOptions {
   format?: 'es' | 'cjs'
   plugins: Array<BindingPluginOrParallelJsPluginPlaceholder>
   sourcemap?: 'file' | 'inline' | 'hidden'
+  sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
 }
 
 export interface BindingPluginContextResolveOptions {

@@ -1,5 +1,3 @@
-use sugar_path::SugarPath;
-
 // cSpell:disable
 pub use concat_sourcemap::{ConcatSource, RawSource, SourceMapSource};
 pub use oxc::sourcemap::{SourceMap, SourcemapVisualizer};
@@ -8,10 +6,7 @@ pub use lines_count::lines_count;
 use oxc::sourcemap::SourceMapBuilder;
 mod concat_sourcemap;
 
-pub fn collapse_sourcemaps(
-  mut sourcemap_chain: Vec<&SourceMap>,
-  file_dir: Option<&str>,
-) -> Option<SourceMap> {
+pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> Option<SourceMap> {
   debug_assert!(sourcemap_chain.len() > 1);
   let last_map = sourcemap_chain.pop()?;
 
@@ -39,13 +34,7 @@ pub fn collapse_sourcemaps(
       let name_id = original_token.get_name().map(|name| sourcemap_builder.add_name(name));
 
       let source_id = original_token.get_source_and_content().map(|(source, source_content)| {
-        if let Some(file_dir) = file_dir.as_ref() {
-          let relative_path = source.as_path().relative(file_dir);
-          sourcemap_builder
-            .add_source_and_content(relative_path.to_slash_lossy().as_ref(), source_content)
-        } else {
-          sourcemap_builder.add_source_and_content(source, source_content)
-        }
+        sourcemap_builder.add_source_and_content(source, source_content)
       });
 
       sourcemap_builder.add_token(
@@ -94,13 +83,11 @@ mod tests {
     ];
 
     let result = {
-      let map =
-        super::collapse_sourcemaps(sourcemaps.iter().collect::<Vec<_>>(), Some("/project/dist"))
-          .unwrap();
+      let map = super::collapse_sourcemaps(sourcemaps.iter().collect::<Vec<_>>()).unwrap();
       map.to_json_string().unwrap()
     };
 
-    let expected = "{\"version\":3,\"names\":[\"add\"],\"sources\":[\"../foo.js\"],\"sourcesContent\":[\"\\n\\n  1 + 1;\"],\"mappings\":\"AAEE\"}";
+    let expected = "{\"version\":3,\"names\":[\"add\"],\"sources\":[\"project/foo.js\"],\"sourcesContent\":[\"\\n\\n  1 + 1;\"],\"mappings\":\"AAEE\"}";
 
     assert_eq!(&result, expected);
   }

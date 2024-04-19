@@ -1,6 +1,6 @@
 import { OutputOptions as RollupOutputOptions } from '../rollup-types'
 import { BindingOutputOptions } from '../binding'
-import { noop, unimplemented } from '../utils'
+import { unimplemented } from '../utils'
 
 export interface OutputOptions {
   dir?: RollupOutputOptions['dir']

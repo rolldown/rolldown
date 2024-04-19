@@ -82,13 +82,16 @@
       "wasm32-wasi-preview1-threads"
     ],
     "wasm": {
-      "initialMemory": 16384
+      "initialMemory": 16384,
+      "browser": {
+        "fs": true
+      }
     },
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\n"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0-alpha.49",
-    "@napi-rs/wasm-runtime": "^0.1.2",
+    "@napi-rs/cli": "^3.0.0-alpha.51",
+    "@napi-rs/wasm-runtime": "^0.2.0",
     "citty": "^0.1.6",
     "colorette": "^2.0.20",
     "consola": "^3.2.3",

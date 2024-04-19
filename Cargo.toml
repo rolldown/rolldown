@@ -14,7 +14,7 @@ inherits = "release"
 
 [profile.release-wasi]
 codegen-units = 16
-debug         = true
+debug         = 'full'
 inherits      = "release"
 lto           = "thin"
 opt-level     = "z"

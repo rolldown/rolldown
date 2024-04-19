@@ -160,11 +160,11 @@ importers:
         version: link:npm/win32-x64-msvc
     devDependencies:
       '@napi-rs/cli':
-        specifier: ^3.0.0-alpha.49
-        version: 3.0.0-alpha.50(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))
+        specifier: ^3.0.0-alpha.51
+        version: 3.0.0-alpha.51(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))
       '@napi-rs/wasm-runtime':
-        specifier: ^0.1.2
-        version: 0.1.2
+        specifier: ^0.2.0
+        version: 0.2.0
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -219,8 +219,8 @@ importers:
   packages/rolldown/npm/wasm32-wasi:
     dependencies:
       '@napi-rs/wasm-runtime':
-        specifier: ^0.1.2
-        version: 0.1.2
+        specifier: ^0.2.0
+        version: 0.2.0
 
   packages/rolldown/npm/win32-arm64-msvc: {}
 
@@ -1610,8 +1610,8 @@ packages:
     os: [darwin, linux, win32]
     hasBin: true
 
-  '@napi-rs/cli@3.0.0-alpha.50':
-    resolution: {integrity: sha512-5lnOzph5H58C7PKQRHbHj6V+fEfkAmEkrsg+UxbUs3l7H84dn4KmypEymfPvxHr3ShluT+dOUwCv66qpJrB6+w==}
+  '@napi-rs/cli@3.0.0-alpha.51':
+    resolution: {integrity: sha512-fzTQ4RfhaghFNryWTfb0e93N/J7hNfAOpUNL98u9qMymsXa3w2cUTN8W/HjiNVTUvHHus8X5PuHt9q65cDXcSg==}
     engines: {node: '>= 16'}
     hasBin: true
     peerDependencies:
@@ -1812,6 +1812,9 @@ packages:
 
   '@napi-rs/wasm-runtime@0.1.2':
     resolution: {integrity: sha512-8JuczewTFIZ/XIjHQ+YlQUydHvlKx2hkcxtuGwh+t/t5zWyZct6YG4+xjHcq8xyc/e7FmFwf42Zj2YgICwmlvA==}
+
+  '@napi-rs/wasm-runtime@0.2.0':
+    resolution: {integrity: sha512-ETCooPEZJN7cGp6GwE5mUTrStrhIeuEPo0lOhLe48Iz35z6CkbgDauR8nE/K4GaMEu2BwTOm2Epy7ru8w1ua7w==}
 
   '@napi-rs/wasm-tools-android-arm-eabi@0.0.1':
     resolution: {integrity: sha512-Q/SyyO60dbpoLcN/hvGzNWDaCjuaMGFeg92GnsDBWm3OCwhvltr51+VDZbCIHQwfIvH4d63X29nEls7FHK75dA==}
@@ -2378,6 +2381,9 @@ packages:
 
   '@tybys/wasm-util@0.8.1':
     resolution: {integrity: sha512-GSsTwyBl4pIzsxAY5wroZdyQKyhXk0d8PCRZtrSZ2WEB1cBdrp2EgGBwHOGCZtIIPun/DL3+AykCv+J6fyRH4Q==}
+
+  '@tybys/wasm-util@0.8.2':
+    resolution: {integrity: sha512-kzI0zdUtC/ymNQCVQiqHCKobSSyppUHet+pHaiOdKUV48B/uKCEDznwf4N9tOoDKdh7Uuhm8V60xPU8VYbBbrQ==}
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -6504,7 +6510,7 @@ snapshots:
 
   '@ls-lint/ls-lint@2.2.3': {}
 
-  '@napi-rs/cli@3.0.0-alpha.50(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))':
+  '@napi-rs/cli@3.0.0-alpha.51(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))':
     dependencies:
       '@napi-rs/cross-toolchain': 0.0.14
       '@napi-rs/wasm-tools': 0.0.1
@@ -6654,6 +6660,13 @@ snapshots:
       '@emnapi/core': 1.1.1
       '@emnapi/runtime': 1.1.1
       '@tybys/wasm-util': 0.8.1
+    optional: true
+
+  '@napi-rs/wasm-runtime@0.2.0':
+    dependencies:
+      '@emnapi/core': 1.1.1
+      '@emnapi/runtime': 1.1.1
+      '@tybys/wasm-util': 0.8.2
 
   '@napi-rs/wasm-tools-android-arm-eabi@0.0.1':
     optional: true
@@ -7250,6 +7263,11 @@ snapshots:
   '@trysound/sax@0.2.0': {}
 
   '@tybys/wasm-util@0.8.1':
+    dependencies:
+      tslib: 2.6.2
+    optional: true
+
+  '@tybys/wasm-util@0.8.2':
     dependencies:
       tslib: 2.6.2
 

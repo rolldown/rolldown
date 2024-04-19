@@ -99,9 +99,24 @@ impl<'a> GenerateStage<'a> {
     {
       if let Some(map) = map.as_mut() {
         map.set_file(&rendered_chunk.file_name);
+
+        let map_file_name = format!("{}.map", rendered_chunk.file_name);
+
+        if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
+          let mut x_google_ignore_list = vec![];
+          for (index, source) in map.get_sources().enumerate() {
+            if source_map_ignore_list.call(source, map_file_name.as_str()).await? {
+              #[allow(clippy::cast_possible_truncation)]
+              x_google_ignore_list.push(index as u32);
+            }
+          }
+          if !x_google_ignore_list.is_empty() {
+            map.set_x_google_ignore_list(x_google_ignore_list);
+          }
+        }
+
         match self.options.sourcemap {
           SourceMapType::File => {
-            let map_file_name = format!("{}.map", rendered_chunk.file_name);
             let source = match map.to_json_string().map_err(BuildError::sourcemap_error) {
               Ok(source) => source,
               Err(e) => {

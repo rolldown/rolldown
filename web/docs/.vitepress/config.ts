@@ -109,7 +109,7 @@ export default defineConfig({
           return `
             <Suspense>
               <template #default>
-                <Mermaid id="mermaid-${index}"  graph="${encodeURIComponent(token.content)}"></Mermaid>
+                <Mermaid id="mermaid-${index}" graph="${encodeURIComponent(token.content)}"></Mermaid>
               </template>
               <template #fallback>
                 Loading...

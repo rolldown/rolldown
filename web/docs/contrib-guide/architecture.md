@@ -10,7 +10,7 @@ import Mermaid from '../.vitepress/components/Mermaid.vue'
 
 # Architecture
 
-This document covers the organization of the repository, as well as some high level discussion of how Rolldown works. The goal of this document is to provide an entry point for understanding the project layout. The primary audience is people who might be interested in modifying or contributing to the Rolldown source code.
+This document provides a high level discussion of how Rolldown works. The goal of this document is to provide an entry point for understanding the project layout. The primary audience is people who might be interested in modifying or contributing to the Rolldown source code.
 
 ## Source code layout
 
@@ -32,9 +32,9 @@ The bundler is designed to be fully compatible with [Rollup](https://rollupjs.or
 
 Bundling occurs in three broad stages:
 
-1. Scan: loads modules, parses source files into ASTs, and builds maps of imports, exports, and symbols.
-2. Link: wraps modules based on type (CJS/ESM), creates bindings between imports and exports, and performs tree shaking to remove dead code.
-3. Generate: split code into chunks and calculate links between chunks, then render chunks to final bundled representation.
+1. [**Scan**](#scan): loads modules, parses source files into ASTs, and builds maps of imports, exports, and symbols.
+2. [**Link**](#link): wraps modules based on type (CJS/ESM), creates bindings between imports and exports, and performs tree shaking to remove dead code.
+3. [**Generate**](#generate): split code into chunks and calculate links between chunks, then render chunks to final bundled representation.
 
 The following flow chart describes the high-level bundling process:
 
@@ -72,7 +72,7 @@ flowchart TB
 
 The scan stage loads all modules from the inputs defined in the Rolldown config. This stage outputs a set of symbols, entry points, a module table, and an ast table.
 
-Files are loaded and transformed by any applicable plugins, before being parsed by [oxc](https://oxc-project.github.io/) into an AST.
+Files are loaded and transformed by any applicable plugins, before being parsed by [oxc](https://oxc-project.github.io/).
 
 After parsing, the scan stage builds a map of statements and expressions in the source code. Imports, exports, symbols, references, and side effects are all identified at this stage.
 
@@ -95,9 +95,11 @@ The sorted, tree-shaken, wrapped modules are then passed to the generate stage f
 
 The generate stage is responsible for code splitting and rendering the file code artifacts.
 
-Modules are assigned to chunks based on their external references. Modules can be assigned to multiple chunks. Cross-chunk are then computed. <!-- TODO: why... what??? -->
+Modules are assigned to chunks based on their external references. Modules can be assigned to multiple chunks.
 
-Chunks are then rendered to their final code representation, and returned with any warnings and errors accumulated during the bundling process.
+<!-- TODO: more information about how modules are assigned to chunks, and how cross-chunk links are identified -->
+
+Chunks are then rendered to their final code representation, and the assets are returned with any warnings and errors accumulated during the bundling process.
 
 ## The CLI
 

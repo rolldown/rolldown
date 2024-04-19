@@ -5,7 +5,7 @@
  *  - https://github.com/rust-lang/rust-analyzer/blob/d9c29afaee6cb26044b5a605e0073fcabb2e9722/docs/dev/architecture.md
  *  - https://github.com/evanw/esbuild/blob/44e746965d783646f97daf3d0617ff816727e7fb/docs/architecture.md
  */
-import Mermaid from '../.vitepress/components/Mermaid.vue'
+import Mermaid from '../components/Mermaid.vue'
 </script>
 
 # Architecture

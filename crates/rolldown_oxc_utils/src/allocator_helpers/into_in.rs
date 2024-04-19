@@ -11,7 +11,7 @@ pub trait IntoIn<'ast, T>: Sized {
 
 impl<'ast, T> IntoIn<'ast, Box<'ast, T>> for T {
   fn into_in(self, alloc: &'ast Allocator) -> Box<'ast, T> {
-    Box(alloc.alloc(self))
+    Box::new_in(self, alloc)
   }
 }
 

@@ -4,7 +4,7 @@ use oxc::allocator::{Allocator, Box, Vec};
 
 impl<'ast, T: TakeIn<'ast>> TakeIn<'ast> for Box<'ast, T> {
   fn dummy(alloc: &'ast Allocator) -> Self {
-    Box(alloc.alloc(TakeIn::dummy(alloc)))
+    Box::new_in(TakeIn::dummy(alloc), alloc)
   }
 }
 

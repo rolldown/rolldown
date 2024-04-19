@@ -32,7 +32,7 @@ impl<'ast> TakeIn<'ast> for ast::VariableDeclaration<'ast> {
 }
 impl<'ast> TakeIn<'ast> for ast::Declaration<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
-    Self::VariableDeclaration(Box(alloc.alloc(TakeIn::dummy(alloc))))
+    Self::VariableDeclaration(Box::new_in(TakeIn::dummy(alloc), alloc))
   }
 }
 impl<'ast> TakeIn<'ast> for ast::ExpressionStatement<'ast> {
@@ -112,7 +112,7 @@ impl<'ast> TakeIn<'ast> for ast::Function<'ast> {
 }
 impl<'ast> TakeIn<'ast> for ast::Expression<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
-    Self::ThisExpression(Box(alloc.alloc(TakeIn::dummy(alloc))))
+    Self::ThisExpression(Box::new_in(TakeIn::dummy(alloc), alloc))
   }
 }
 

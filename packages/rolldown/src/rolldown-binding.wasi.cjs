@@ -13,11 +13,13 @@ const {
   getDefaultContext: __emnapiGetDefaultContext,
 } = require('@napi-rs/wasm-runtime')
 
+const __rootDir = __nodePath.parse(process.cwd()).root
+
 const __wasi = new __nodeWASI({
   version: 'preview1',
   env: process.env,
   preopens: {
-    '/': '/'
+    [__rootDir]: __rootDir,
   }
 })
 
@@ -30,8 +32,11 @@ const __sharedMemory = new WebAssembly.Memory({
 })
 
 let __wasmFilePath = __nodePath.join(__dirname, 'rolldown-binding.wasm32-wasi.wasm')
+const __wasmDebugFilePath = __nodePath.join(__dirname, 'rolldown-binding.wasm32-wasi.debug.wasm')
 
-if (!__nodeFs.existsSync(__wasmFilePath)) {
+if (__nodeFs.existsSync(__wasmDebugFilePath)) {
+  __wasmFilePath = __wasmDebugFilePath
+} else if (!__nodeFs.existsSync(__wasmFilePath)) {
   try {
     __wasmFilePath = __nodePath.resolve('@rolldown/binding-wasm32-wasi')
   } catch {
@@ -90,16 +95,19 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__ParallelJsPluginRegistry_struct_20']?.()
   __napiInstance.exports['__napi_register__ParallelJsPluginRegistry_impl_22']?.()
   __napiInstance.exports['__napi_register__register_plugins_23']?.()
-  __napiInstance.exports['__napi_register__BindingOutputAsset_struct_24']?.()
-  __napiInstance.exports['__napi_register__BindingOutputAsset_impl_27']?.()
-  __napiInstance.exports['__napi_register__BindingOutputChunk_struct_28']?.()
-  __napiInstance.exports['__napi_register__BindingOutputChunk_impl_39']?.()
-  __napiInstance.exports['__napi_register__BindingOutputs_struct_40']?.()
-  __napiInstance.exports['__napi_register__BindingOutputs_impl_43']?.()
-  __napiInstance.exports['__napi_register__RenderedChunk_struct_44']?.()
-  __napiInstance.exports['__napi_register__BindingRenderedModule_struct_45']?.()
-  __napiInstance.exports['__napi_register__AliasItem_struct_46']?.()
+  __napiInstance.exports['__napi_register__BindingModuleInfo_struct_24']?.()
+  __napiInstance.exports['__napi_register__BindingModuleInfo_impl_26']?.()
+  __napiInstance.exports['__napi_register__BindingOutputAsset_struct_27']?.()
+  __napiInstance.exports['__napi_register__BindingOutputAsset_impl_30']?.()
+  __napiInstance.exports['__napi_register__BindingOutputChunk_struct_31']?.()
+  __napiInstance.exports['__napi_register__BindingOutputChunk_impl_42']?.()
+  __napiInstance.exports['__napi_register__BindingOutputs_struct_43']?.()
+  __napiInstance.exports['__napi_register__BindingOutputs_impl_46']?.()
+  __napiInstance.exports['__napi_register__RenderedChunk_struct_47']?.()
+  __napiInstance.exports['__napi_register__BindingRenderedModule_struct_48']?.()
+  __napiInstance.exports['__napi_register__AliasItem_struct_49']?.()
 }
+module.exports.BindingModuleInfo = __napiModule.exports.BindingModuleInfo
 module.exports.BindingOutputAsset = __napiModule.exports.BindingOutputAsset
 module.exports.BindingOutputChunk = __napiModule.exports.BindingOutputChunk
 module.exports.BindingOutputs = __napiModule.exports.BindingOutputs

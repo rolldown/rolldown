@@ -28,55 +28,113 @@ Rolldown is primarily two things:
 1. A bundler written in Rust
 2. A CLI and Node.js package published to npm, which delegates bundling functionality to the Rust crate
 
-The bundler is designed to be fully compatible with [Rollup](https://rollupjs.org).
+The bundler is designed to be fully compatible with [Rollup](https://rollupjs.org). The [CLI](#the-cli) is primarily a wrapper around the bundler library, so more detail is given to the bundling mechanics.
+
+Bundling occurs in three broad stages:
+
+1. Scan: loads modules, parses source files into ASTs, and builds maps of imports, exports, and symbols.
+2. Link: wraps modules based on type (CJS/ESM), creates bindings between imports and exports, and performs tree shaking to remove dead code.
+3. Generate: split code into chunks and calculate links between chunks, then render chunks to final bundled representation.
+
+The following flow chart describes the high-level bundling process:
+
+```mermaid
+---
+title: Rolldown bundling stages
+---
+flowchart TB
+    subgraph Scan
+        direction LR
+        load([Load modules]) -->
+        parse([Parse into AST]) -->
+        map([Build symbol maps])
+    end
+
+    Scan --> Link
+
+    subgraph Link
+        direction LR
+        wrap([Wrap modules]) -->
+        bind([Create import/export bindings]) -->
+        shake([Tree shaking])
+    end
+
+    Link --> Generate
+
+    subgraph Generate
+        direction LR
+        split([Split code into chunks]) -->
+        render([Render chunks])
+    end
+```
+
+### Scan
+
+The scan stage loads all modules from the inputs defined in the Rolldown config. This stage outputs a set of symbols, entry points, a module table, and an ast table.
+
+Files are loaded and transformed by any applicable plugins, before being parsed by [oxc](https://oxc-project.github.io/) into an AST.
+
+After parsing, the scan stage builds a map of statements and expressions in the source code. Imports, exports, symbols, references, and side effects are all identified at this stage.
+
+### Link
+
+The linking stage takes the scan stage output and builds a comprehensive graph of the code to be bundled.
+
+Modules are sorted by execution order to ensure the bundle executes correctly. Any circular dependencies are identified and warnings are issued.
+
+Tree shaking is a multi-step process:
+
+1. Imports are bound to exports to build a dependency graph of the source code.
+2. Modules are then wrapped according to their module type. CommonJS and ESM modules require different wrappers to process correctly. <!-- TODO: more information on how CommonJS and ESM WrapKind is determined -->
+3. Gather all symbols that are referenced in statements.
+4. Collect final list of statements that should be included in the final bundle.
+
+The sorted, tree-shaken, wrapped modules are then passed to the generate stage for chunking and rendering.
+
+### Generate
+
+The generate stage is responsible for code splitting and rendering the file code artifacts.
+
+Modules are assigned to chunks based on their external references. Modules can be assigned to multiple chunks. Cross-chunk are then computed. <!-- TODO: why... what??? -->
+
+Chunks are then rendered to their final code representation, and returned with any warnings and errors accumulated during the bundling process.
 
 ## The CLI
 
-The Rolldown CLI is a thin wrapper around the [Node.js bindings](https://github.com/rolldown/rolldown/tree/2011bf463b8cead1903375046643abb1168ef46f/crates/rolldown_binding) of the [`rolldown` Rust crate](https://github.com/rolldown/rolldown/tree/2011bf463b8cead1903375046643abb1168ef46f/crates/rolldown). Here's a simple flowchart describing the process of calling the `rolldown` CLI command.
+The Rolldown CLI is a thin wrapper around the [Node.js bindings](https://github.com/rolldown/rolldown/tree/2011bf463b8cead1903375046643abb1168ef46f/crates/rolldown_binding) of the [`rolldown` Rust crate](https://github.com/rolldown/rolldown/tree/2011bf463b8cead1903375046643abb1168ef46f/crates/rolldown). Below is a simple flowchart describing the process of calling the `rolldown` CLI command.
 
 ```mermaid
 ---
 title: Bundling code with Rolldown npm package
 ---
 flowchart TB
-    subgraph CLI
-        invokeCli(["Invoke `rolldown` CLI command"]) --> parse([Parse arguments])
-        parse --> loadConfig([Load configuration file])
-        loadConfig --> configExists{
-            Configuration
-            file exists?
-        }
-        configExists -->|no|exitWithError([Exit with error])
-
-        printStats([
-            Collect, transform,
-            and print bundle statistics.
-        ])
-    end
-
-    configExists-->|yes|instantiateBuild
+    invokeCli(["Invoke `rolldown` CLI command"]) -->
+    parse([Parse arguments]) -->
+    loadConfig([Load configuration file]) -->
+    configExists{
+        Configuration
+        file exists?
+    }
+    configExists -->|no|exitWithError([Exit with error])
+    configExists-->|yes|Bundle
 
     subgraph Bundle
         instantiateBuild([
             Instantiate `RolldownBuild`
             class with config options
-        ])
+        ]) -->
         loadNativeBinding([
             Load appropriate native
             binding for system
-        ])
+        ]) -->
         writeOutput([
-            Delegate to Rust for bundling
-            and writing output to disk
+            Delegate bundling and writing
+            output to native binding
         ])
-
-        instantiateBuild --> loadNativeBinding
-        loadNativeBinding --> writeOutput
     end
 
-    writeOutput --> printStats
+    Bundle --> printStats([
+        Collect, transform,
+        and print bundle statistics
+    ])
 ```
-
-## The Bundler
-
-More info coming soon!

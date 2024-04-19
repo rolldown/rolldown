@@ -18,6 +18,5 @@ doctest = false
 test    = false
 
 [dependencies]
-memchr     = { workspace = true }
-oxc        = { workspace = true }
-sugar_path = { workspace = true }
+memchr = { workspace = true }
+oxc    = { workspace = true }

@@ -23,7 +23,7 @@ pub async fn render_chunks<'a>(
             sourcemap_chain.push(sourcemap);
           }
           sourcemap_chain.extend(render_chunk_sourcemap_chain.iter());
-          collapse_sourcemaps(sourcemap_chain, None)
+          collapse_sourcemaps(sourcemap_chain)
         },
         rendered_chunk: chunk.rendered_chunk,
       })

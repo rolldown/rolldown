@@ -1530,7 +1530,6 @@ version = "0.1.0"
 dependencies = [
  "memchr",
  "oxc",
- "sugar_path",
 ]
 
 [[package]]

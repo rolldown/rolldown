@@ -9,7 +9,6 @@ pub fn render_normal_module<'a>(
   ast: &OxcAst,
   source_name: &str,
   options: &SharedOptions,
-  file_dir: &str,
 ) -> Option<ModuleRenderOutput<'a>> {
   if ast.is_body_empty() {
     None
@@ -37,7 +36,7 @@ pub fn render_normal_module<'a>(
         if let Some(sourcemap) = render_output.source_map.as_ref() {
           sourcemap_chain.push(sourcemap);
         }
-        collapse_sourcemaps(sourcemap_chain, Some(file_dir))
+        collapse_sourcemaps(sourcemap_chain)
       },
     })
   }

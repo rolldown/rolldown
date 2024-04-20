@@ -123,6 +123,14 @@ impl<'a> GenerateStage<'a> {
           }
         }
 
+        if let Some(sourcemap_path_transform) = &self.options.sourcemap_path_transform {
+          let mut sources = Vec::with_capacity(map.get_sources().count());
+          for source in map.get_sources() {
+            sources.push(sourcemap_path_transform.call(source, map_file_name.as_str()).await?);
+          }
+          map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+        }
+
         match self.options.sourcemap {
           SourceMapType::File => {
             let source = match map.to_json_string().map_err(BuildError::sourcemap_error) {

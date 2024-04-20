@@ -63,6 +63,17 @@ pub fn normalize_binding_options(
     }))
   });
 
+  let sourcemap_path_transform = output_options.sourcemap_path_transform.map(|ts_fn| {
+    rolldown::SourceMapPathTransform::new(Box::new(move |source, sourcemap_path| {
+      let ts_fn = ts_fn.clone();
+      let source = source.to_string();
+      let sourcemap_path = sourcemap_path.to_string();
+      Box::pin(async move {
+        ts_fn.call_async((source, sourcemap_path)).await.map_err(anyhow::Error::from)
+      })
+    }))
+  });
+
   let bundler_options = BundlerOptions {
     input: Some(input_options.input.into_iter().map(Into::into).collect()),
     cwd: cwd.into(),
@@ -83,6 +94,7 @@ pub fn normalize_binding_options(
     banner: normalize_addon_option(output_options.banner),
     footer: normalize_addon_option(output_options.footer),
     sourcemap_ignore_list,
+    sourcemap_path_transform,
     // TODO(hyf0): remove this line, all options should set explicitly
     ..Default::default()
   };

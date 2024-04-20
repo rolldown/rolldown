@@ -98,6 +98,7 @@ export interface BindingOutputOptions {
   plugins: Array<BindingPluginOrParallelJsPluginPlaceholder>
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
+  sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
 }
 
 export interface BindingPluginContextResolveOptions {

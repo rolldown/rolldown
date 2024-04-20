@@ -113,7 +113,7 @@ impl RuntimeNormalModuleTask {
     );
     let namespace_symbol = scanner.namespace_ref;
     ast.hoist_import_export_from_stmts();
-    let scan_result = ast.with(|f| scanner.scan(f.program));
+    let scan_result = scanner.scan(ast.program());
 
     (ast, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }

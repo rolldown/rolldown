@@ -40,4 +40,4 @@ mimalloc = { workspace = true }
 mimalloc = { workspace = true, features = ["local_dynamic_tls"] }
 
 [build-dependencies]
-napi-build = "2"
+napi-build = { workspace = true }

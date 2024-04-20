@@ -33,7 +33,7 @@ sugar_path         = { workspace = true }
 tokio              = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing            = { workspace = true }
 
-[dev_dependencies]
+[dev-dependencies]
 insta            = { workspace = true }
 rolldown_testing = { workspace = true }
 testing_macros   = { workspace = true }

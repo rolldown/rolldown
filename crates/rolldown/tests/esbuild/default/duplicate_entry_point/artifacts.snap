@@ -5,19 +5,19 @@ input_file: crates/rolldown/tests/esbuild/default/duplicate_entry_point
 ---
 # Assets
 
-## entry2_js.mjs
-
-```js
-import "./entry_js-2.mjs";
-```
-## entry_js-2.mjs
+## entry-79FD3FFCBB751125.mjs
 
 ```js
 // entry.js
 console.log(123);
 ```
+## entry2_js.mjs
+
+```js
+import "./entry-79FD3FFCBB751125.mjs";
+```
 ## entry_js.mjs
 
 ```js
-import "./entry_js-2.mjs";
+import "./entry-79FD3FFCBB751125.mjs";
 ```

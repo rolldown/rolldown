@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/compat/esm_require_esm_unused
 ## main.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
+import { __esmMin, __export, __toCommonJS } from "./$runtime$-6A47153C362195BB.mjs";
 
 // esm.js
 var esm_ns, esm_default;

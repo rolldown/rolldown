@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/fixtures/deconflict/wrapped_esm_default_functi
 
 ```js
 import { default as assert } from "assert";
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
+import { __esmMin, __export, __toCommonJS } from "./$runtime$-6A47153C362195BB.mjs";
 
 // foo.js
 function foo$1(a$1$1) {

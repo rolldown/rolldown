@@ -107,7 +107,7 @@ impl Fixture {
       bundle_options.entry_file_names = Some("[name].mjs".to_string());
     }
     if bundle_options.chunk_file_names.is_none() {
-      bundle_options.chunk_file_names = Some("[name].mjs".to_string());
+      bundle_options.chunk_file_names = Some("[name]-[hash].mjs".to_string());
     }
 
     if test_config.visualize_sourcemap {

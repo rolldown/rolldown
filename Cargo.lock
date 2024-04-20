@@ -1295,6 +1295,7 @@ dependencies = [
  "insta",
  "once_cell",
  "oxc",
+ "regex",
  "rolldown_common",
  "rolldown_error",
  "rolldown_fs",

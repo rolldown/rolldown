@@ -5,19 +5,19 @@ input_file: crates/rolldown/tests/fixtures/code_splitting/ensure_side_effect_exe
 ---
 # Assets
 
-## entry2_js.mjs
-
-```js
-import "./entry_js-2.mjs";
-```
-## entry_js-2.mjs
+## entry-3E216297E3003F2.mjs
 
 ```js
 // entry.js
 globalThis.sideEffectExecuted = true;
 ```
+## entry2_js.mjs
+
+```js
+import "./entry-3E216297E3003F2.mjs";
+```
 ## entry_js.mjs
 
 ```js
-import "./entry_js-2.mjs";
+import "./entry-3E216297E3003F2.mjs";
 ```

@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/cross_chunk_assignment_depen
 ## a.mjs
 
 ```js
-import { setValue } from "./shared_js.mjs";
+import { setValue } from "./shared-E018FFC0CDA35508.mjs";
 
 // a.js
 setValue(123);
@@ -16,9 +16,9 @@ setValue(123);
 ## b.mjs
 
 ```js
-import "./shared_js.mjs";
+import "./shared-E018FFC0CDA35508.mjs";
 ```
-## shared_js.mjs
+## shared-E018FFC0CDA35508.mjs
 
 ```js
 // shared.js

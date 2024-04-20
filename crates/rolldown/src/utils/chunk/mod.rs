@@ -50,8 +50,7 @@ pub fn generate_rendered_chunk(
     file_name: chunk
       .preliminary_filename
       .as_ref()
-      .expect("should have file name")
-      .as_str()
+      .expect("should have preliminary_filename")
       .to_string(),
     modules: render_modules,
   }

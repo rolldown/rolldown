@@ -133,6 +133,7 @@ impl<'a> GenerateStage<'a> {
     tracing::info!("collect_potential_chunk_imports end");
   }
 
+  #[allow(clippy::too_many_lines)]
   pub fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
     let mut chunk_meta_imports_vec: ChunkMetaImports =
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
@@ -235,6 +236,26 @@ impl<'a> GenerateStage<'a> {
       }
     }
 
+    let index_sorted_cross_chunk_imports = index_cross_chunk_imports
+      .into_iter()
+      .par_bridge()
+      .map(|cross_chunk_imports| {
+        let mut cross_chunk_imports = cross_chunk_imports.into_iter().collect::<Vec<_>>();
+        cross_chunk_imports.sort_by_cached_key(|chunk_id| {
+          let mut resource_ids = chunk_graph.chunks[*chunk_id]
+            .modules
+            .iter()
+            .map(|id| {
+              self.link_output.module_table.normal_modules[*id].resource_id.expect_file().as_str()
+            })
+            .collect::<Vec<_>>();
+          resource_ids.sort_unstable();
+          resource_ids
+        });
+        cross_chunk_imports
+      })
+      .collect::<Vec<_>>();
+
     chunk_graph
       .chunks
       .iter_mut()
@@ -242,7 +263,7 @@ impl<'a> GenerateStage<'a> {
         imports_from_other_chunks_vec.into_iter().zip(
           chunk_meta_imports_from_external_modules_vec
             .into_iter()
-            .zip(index_cross_chunk_imports.into_iter()),
+            .zip(index_sorted_cross_chunk_imports),
         ),
       )
       .par_bridge()

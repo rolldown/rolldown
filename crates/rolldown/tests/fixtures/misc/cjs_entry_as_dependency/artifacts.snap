@@ -8,8 +8,8 @@ input_file: crates/rolldown/tests/fixtures/misc/cjs_entry_as_dependency
 ## main.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
-import { require_main2 } from "./main2_js.mjs";
+import { __commonJSMin, __toESM } from "./$runtime$-B1631BBDF89F4FCD.mjs";
+import { require_main2 } from "./main2-844F1759604F4F6.mjs";
 
 // main.js
 var require_main = __commonJSMin((exports, module) => {
@@ -19,17 +19,10 @@ var require_main = __commonJSMin((exports, module) => {
 
 export default require_main();
 ```
-## main2.mjs
+## main2-844F1759604F4F6.mjs
 
 ```js
-import { require_main2 } from "./main2_js.mjs";
-
-export default require_main2();
-```
-## main2_js.mjs
-
-```js
-import { __commonJSMin } from "./$runtime$.mjs";
+import { __commonJSMin } from "./$runtime$-B1631BBDF89F4FCD.mjs";
 
 // main2.js
 var require_main2 = __commonJSMin((exports, module) => {
@@ -37,4 +30,11 @@ var require_main2 = __commonJSMin((exports, module) => {
 });
 
 export { require_main2 };
+```
+## main2.mjs
+
+```js
+import { require_main2 } from "./main2-844F1759604F4F6.mjs";
+
+export default require_main2();
 ```

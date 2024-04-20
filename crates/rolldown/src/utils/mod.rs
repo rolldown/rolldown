@@ -5,7 +5,7 @@ use rolldown_oxc_utils::{AstSnippet, OxcAst};
 use super::finalizer::{Finalizer, FinalizerContext};
 
 pub mod chunk;
-pub mod extract_hash_placeholder;
+pub mod extract_hash_pattern;
 pub mod hash_placeholder;
 pub mod load_source;
 pub mod normalize_options;

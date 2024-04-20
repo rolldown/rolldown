@@ -19,18 +19,18 @@ input_file: crates/rolldown/tests/fixtures/circular_depency
 ```
 # Assets
 
+## entry-30406EA523C53DEF.mjs
+
+```js
+
+```
 ## entry.mjs
 
 ```js
-import "./main_js.mjs";
+import "./entry-30406EA523C53DEF.mjs";
 ```
 ## main.mjs
 
 ```js
-import "./main_js.mjs";
-```
-## main_js.mjs
-
-```js
-
+import "./entry-30406EA523C53DEF.mjs";
 ```

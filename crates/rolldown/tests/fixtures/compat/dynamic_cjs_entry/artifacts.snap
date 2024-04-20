@@ -5,10 +5,10 @@ input_file: crates/rolldown/tests/fixtures/compat/dynamic_cjs_entry
 ---
 # Assets
 
-## cjs_js.mjs
+## cjs-D84FFF432654C3B0.mjs
 
 ```js
-import { __commonJSMin } from "./$runtime$.mjs";
+import { __commonJSMin } from "./$runtime$-A01288BBC421F238.mjs";
 
 // cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
@@ -21,7 +21,7 @@ export default require_cjs();
 
 ```js
 // main.js
-var main_default = import('./cjs_js.mjs');
+var main_default = import('./cjs-D84FFF432654C3B0.mjs');
 
 export { main_default as default };
 ```

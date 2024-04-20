@@ -18,6 +18,7 @@ futures            = { workspace = true }
 index_vec          = { workspace = true }
 once_cell          = { workspace = true }
 oxc                = { workspace = true }
+regex              = { workspace = true }
 rolldown_common    = { workspace = true }
 rolldown_error     = { workspace = true }
 rolldown_fs        = { workspace = true, features = ["os"] }

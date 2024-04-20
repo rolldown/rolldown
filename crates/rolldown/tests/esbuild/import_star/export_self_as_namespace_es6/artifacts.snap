@@ -16,7 +16,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_self_as_namespace_e
 ## entry_js.mjs
 
 ```js
-import { __export } from "./$runtime$.mjs";
+import { __export } from "./$runtime$-A97F4037B897C149.mjs";
 
 // entry.js
 var entry_ns = {};

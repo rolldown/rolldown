@@ -5,7 +5,7 @@ input_file: crates/rolldown/tests/fixtures/code_splitting/basic
 ---
 # Assets
 
-## dynamic_js.mjs
+## dynamic-2E0A32CCED3C56A.mjs
 
 ```js
 // dynamic.js
@@ -14,17 +14,17 @@ console.log('dynamic');
 ## main1.mjs
 
 ```js
-import "./share_js.mjs";
+import "./share-1AFF5B1C772C1515.mjs";
 
 // main1.js
-import('./dynamic_js.mjs');
+import('./dynamic-2E0A32CCED3C56A.mjs');
 ```
 ## main2.mjs
 
 ```js
-import "./share_js.mjs";
+import "./share-1AFF5B1C772C1515.mjs";
 ```
-## share_js.mjs
+## share-1AFF5B1C772C1515.mjs
 
 ```js
 // share.js
@@ -33,7 +33,7 @@ console.log('shared');
 
 ## Output Stats
 
-- dynamic_js.mjs, is_entry false, is_dynamic_entry true, exports []
+- dynamic-2E0A32CCED3C56A.mjs, is_entry false, is_dynamic_entry true, exports []
 - main1.mjs, is_entry true, is_dynamic_entry false, exports []
 - main2.mjs, is_entry true, is_dynamic_entry false, exports []
-- share_js.mjs, is_entry false, is_dynamic_entry false, exports []
+- share-1AFF5B1C772C1515.mjs, is_entry false, is_dynamic_entry false, exports []

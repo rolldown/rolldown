@@ -1,33 +1,30 @@
 use anyhow::Result;
-use std::{
-  hash::{DefaultHasher, Hash, Hasher},
-  sync::Arc,
-};
+use std::sync::Arc;
 
 use futures::future::try_join_all;
-use index_vec::IndexVec;
 use rolldown_common::{
-  ChunkId, ChunkKind, FileNameRenderOptions, Output, OutputAsset, OutputChunk, PreliminaryFilename,
-  SourceMapType,
+  Chunk, ChunkKind, FileNameRenderOptions, NormalModuleId, Output, OutputAsset, OutputChunk,
+  PreliminaryFilename, SourceMapType,
 };
 use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
-use rustc_hash::FxHashSet;
 
 use crate::{
   chunk_graph::ChunkGraph,
   finalizer::FinalizerContext,
   stages::link_stage::LinkStageOutput,
+  type_alias::IndexNormalModules,
   utils::{
     chunk::{
       deconflict_chunk_symbols::deconflict_chunk_symbols,
+      finalize_chunks::finalize_chunks,
       render_chunk::{render_chunk, ChunkRenderReturn},
     },
-    extract_hash_placeholder::{
-      extract_hash_placeholder, generate_facade_replacement_of_hash_placeholder,
-    },
-    finalize_normal_module, is_in_rust_test_mode,
+    extract_hash_pattern::extract_hash_pattern,
+    finalize_normal_module,
+    hash_placeholder::HashPlaceholderGenerator,
+    is_in_rust_test_mode,
     render_chunks::render_chunks,
   },
   BundleOutput, SharedOptions,
@@ -101,41 +98,9 @@ impl<'a> GenerateStage<'a> {
     )
     .await?;
 
-    let mut chunks = render_chunks(self.plugin_driver, chunks).await?;
+    let chunks = render_chunks(self.plugin_driver, chunks).await?;
 
-    let base_hash_state = chunks
-      .iter()
-      .map(|chunk| {
-        // TODO: use a better hash function
-        let mut state = DefaultHasher::default();
-        chunk.code.hash(&mut state);
-        state
-      })
-      .collect::<IndexVec<ChunkId, _>>();
-
-    // calculate the final hash of each chunk by traverse the chunk graph
-
-    let final_hashes = base_hash_state
-      .into_iter()
-      .map(|state| state.finish().to_string())
-      .collect::<IndexVec<ChunkId, _>>();
-
-    chunk_graph.chunks.iter_mut().zip(chunks.iter_mut()).zip(final_hashes).for_each(
-      |((chunk, chunk_render_return), hash)| {
-        let preliminary_filename_raw =
-          chunk.preliminary_filename.as_ref().expect("should have file name").as_str();
-        let filename = chunk
-          .preliminary_filename
-          .as_ref()
-          .expect("should have file name")
-          .finalize(&hash)
-          .into_owned();
-
-        chunk_render_return.rendered_chunk.file_name = filename;
-        // TODO replace code
-        // chunk_render_return.code = chunk_render_return.code.replace(from, to)
-      },
-    );
+    let chunks = finalize_chunks(&mut chunk_graph, chunks);
 
     let mut assets = vec![];
     for ChunkRenderReturn { mut map, rendered_chunk, mut code } in chunks {
@@ -209,56 +174,70 @@ impl<'a> GenerateStage<'a> {
     })
   }
 
+  // Notices:
+  // - We don't ensure chunk name uniqueness here.
+  // - If users want to ensure uniqueness of chunk's filename, they should use `[hash]` pattern in the filename template.
   fn generate_chunk_preliminary_filenames(&self, chunk_graph: &mut ChunkGraph) {
-    let mut used_chunk_names = FxHashSet::default();
+    fn ensure_chunk_name(
+      chunk: &Chunk,
+      runtime_id: NormalModuleId,
+      normal_modules: &IndexNormalModules,
+    ) -> String {
+      if is_in_rust_test_mode() && chunk.modules.first().copied() == Some(runtime_id) {
+        return "$runtime$".to_string();
+      }
+
+      // User-defined entry point should always have a name that given by the user
+      match chunk.kind {
+        ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
+          if is_user_defined {
+            chunk
+              .name
+              .clone()
+              .unwrap_or_else(|| panic!("User-defined entry point should always have a name"))
+          } else {
+            let module_id = entry_module_id;
+            let module = &normal_modules[module_id];
+            module.resource_id.expect_file().representative_name().into_owned()
+          }
+        }
+        ChunkKind::Common => {
+          // For common chunks, esbuild always use 'chunk' as the name. However we try to make the name more meaningful here.
+          let first_executed_non_runtime_module =
+            chunk.modules.iter().rev().find(|each| **each != runtime_id);
+
+          first_executed_non_runtime_module.map_or_else(
+            || "chunk".to_string(),
+            |module_id| {
+              let module = &normal_modules[*module_id];
+              module.resource_id.expect_file().representative_name().into_owned()
+            },
+          )
+        }
+      }
+    }
+
+    let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
+
     chunk_graph.chunks.iter_mut().for_each(|chunk| {
       let runtime_id = self.link_output.runtime.id();
 
-      let file_name_tmp = chunk.file_name_template(self.options);
+      let filename_template = chunk.file_name_template(self.options);
+
       let chunk_name =
-        if is_in_rust_test_mode() && chunk.modules.first().copied() == Some(runtime_id) {
-          "$runtime$".to_string()
-        } else {
-          chunk.name.clone().unwrap_or_else(|| {
-            let module_id =
-              if let ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } =
-                &chunk.kind
-              {
-                debug_assert!(
-                  !*is_user_defined,
-                  "User-defined entry point should always have a name"
-                );
-                *entry_module_id
-              } else {
-                // TODO: we currently use the first executed module to calculate the chunk name for common chunks
-                // This is not perfect, should investigate more to find a better solution
-                chunk.modules.first().copied().unwrap()
-              };
-            let module = &self.link_output.module_table.normal_modules[module_id];
-            module.resource_id.expect_file().unique(&self.options.cwd)
-          })
-        };
+        ensure_chunk_name(chunk, runtime_id, &self.link_output.module_table.normal_modules);
 
-      let mut chunk_name = chunk_name;
-      while used_chunk_names.contains(&chunk_name) {
-        chunk_name = format!("{}-{}", chunk_name, used_chunk_names.len());
-      }
-      used_chunk_names.insert(chunk_name.clone());
+      let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
 
-      let extracted_hash = extract_hash_placeholder(file_name_tmp.template());
+      let hash_placeholder =
+        extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
 
-      let preliminary = file_name_tmp.render(&FileNameRenderOptions {
+      let preliminary = filename_template.render(&FileNameRenderOptions {
         name: Some(&chunk_name),
-        hash: extracted_hash
-          .as_ref()
-          .map(|extracted| generate_facade_replacement_of_hash_placeholder(extracted))
-          .as_deref(),
+        hash: hash_placeholder.as_deref(),
       });
 
-      chunk.preliminary_filename = Some(PreliminaryFilename {
-        filename: preliminary,
-        hash_placeholder: extracted_hash.map(|v| v.pattern),
-      });
+      chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));
     });
   }
 }

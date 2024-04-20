@@ -103,15 +103,15 @@ impl<'a> GenerateStage<'a> {
         let map_file_name = format!("{}.map", rendered_chunk.file_name);
 
         if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
-          let mut x_google_ignore_list = vec![];
+          let mut x_google_ignore_list = FxHashSet::default();
           for (index, source) in map.get_sources().enumerate() {
             if source_map_ignore_list.call(source, map_file_name.as_str()).await? {
               #[allow(clippy::cast_possible_truncation)]
-              x_google_ignore_list.push(index as u32);
+              x_google_ignore_list.insert(index as u32);
             }
           }
           if !x_google_ignore_list.is_empty() {
-            map.set_x_google_ignore_list(x_google_ignore_list);
+            map.set_x_google_ignore_list(x_google_ignore_list.into_iter().collect::<Vec<_>>());
           }
         }
 

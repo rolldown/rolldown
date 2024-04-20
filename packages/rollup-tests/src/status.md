@@ -2,6 +2,7 @@
 |----| ---- |
 | failed | 0|
 <<<<<<< HEAD
+<<<<<<< HEAD
 | skipFailed | 657|
 | skipped | 0|
 | passed | 261|
@@ -10,3 +11,13 @@
 | skipped | 0|
 | passed | 258|
 >>>>>>> 4d2fb057 (test(rollup): enable tests related to hash (#934))
+=======
+| skipFailed | 660|
+| skipped | 0|
+| passed | 258|
+=======
+| skipFailed | 670|
+| skipped | 0|
+| passed | 248|
+>>>>>>> bf938cc4 (feat: support sourcemapPathTransform option)
+>>>>>>> ba4593f1 (feat: support sourcemapPathTransform option)

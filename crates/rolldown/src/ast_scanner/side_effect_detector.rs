@@ -332,25 +332,23 @@ mod test {
       .with_jsx(true)
       .with_typescript(false);
     let ast = OxcCompiler::parse(code, source_type);
-    ast.with(|fields| {
-      let ast_scope = {
-        let semantic = OxcAst::make_semantic(fields.source, fields.program, source_type);
-        let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
-        AstScope::new(
-          scope,
-          std::mem::take(&mut symbol_table.references),
-          std::mem::take(&mut symbol_table.resolved_references),
-        )
-      };
+    let ast_scope = {
+      let semantic = OxcAst::make_semantic(ast.source(), ast.program(), source_type);
+      let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
+      AstScope::new(
+        scope,
+        std::mem::take(&mut symbol_table.references),
+        std::mem::take(&mut symbol_table.resolved_references),
+      )
+    };
 
-      let has_side_effect = fields
-        .program
-        .body
-        .iter()
-        .any(|stmt| SideEffectDetector::new(&ast_scope).detect_side_effect_of_stmt(stmt));
+    let has_side_effect = ast
+      .program()
+      .body
+      .iter()
+      .any(|stmt| SideEffectDetector::new(&ast_scope).detect_side_effect_of_stmt(stmt));
 
-      has_side_effect
-    })
+    has_side_effect
   }
 
   #[test]

@@ -19,14 +19,12 @@ impl OxcCompiler {
     OxcAst { inner }
   }
   pub fn print(ast: &OxcAst, source_name: &str, enable_source_map: bool) -> CodegenReturn {
-    ast.with(|fields| {
-      let codegen = Codegen::<false>::new(
-        source_name,
-        fields.source,
-        CodegenOptions { enable_typescript: false, enable_source_map },
-      );
-      codegen.build(fields.program)
-    })
+    let codegen = Codegen::<false>::new(
+      source_name,
+      ast.source(),
+      CodegenOptions { enable_typescript: false, enable_source_map },
+    );
+    codegen.build(ast.program())
   }
 }
 

@@ -11,7 +11,7 @@ self_cell!(
   pub(crate) struct Inner {
     owner: (Arc<str>, Allocator),
 
-    #[not_covariant]
+    #[covariant]
     dependent: Program,
   }
 );
@@ -30,25 +30,8 @@ impl OxcAst {
     &self.inner.borrow_owner().1
   }
 
-  /// Visit all fields including `&Program` within a closure.
-  ///
-  /// ## Example
-  ///
-  /// ```ignore
-  /// let mut ast = OxcCompiler::parse("", SourceType::default());
-  /// ast.with(|fields| {
-  ///   fields.source; // &Arc<str>
-  ///   fields.allocator; // &Allocator
-  ///   fields.program; // &Program
-  /// });
-  /// ```
-  pub fn with<'outer, Ret>(
-    &'outer self,
-    func: impl for<'inner> ::core::ops::FnOnce(WithFields<'outer, 'inner>) -> Ret,
-  ) -> Ret {
-    self.inner.with_dependent::<'outer, Ret>(|owner, program| {
-      func(WithFields { source: &owner.0, allocator: &owner.1, program })
-    })
+  pub fn program(&self) -> &Program {
+    self.inner.borrow_dependent()
   }
 
   /// Visit all fields including `&mut Program` within a closure.
@@ -71,12 +54,6 @@ impl OxcAst {
       func(WithFieldsMut { source: &owner.0, allocator: &owner.1, program })
     })
   }
-}
-
-pub struct WithFields<'outer, 'inner> {
-  pub source: &'inner Arc<str>,
-  pub allocator: &'inner Allocator,
-  pub program: &'outer Program<'inner>,
 }
 
 pub struct WithFieldsMut<'outer, 'inner> {

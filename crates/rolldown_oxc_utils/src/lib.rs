@@ -9,5 +9,5 @@ pub use crate::{
   ast_snippet::AstSnippet,
   compiler::OxcCompiler,
   ext::{BindingIdentifierExt, BindingPatternExt, ExpressionExt, StatementExt},
-  oxc_ast::{OxcAst, WithFields, WithFieldsMut},
+  oxc_ast::{OxcAst, WithFieldsMut},
 };

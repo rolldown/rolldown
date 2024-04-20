@@ -89,11 +89,18 @@ rolldown_testing_config = { version = "0.0.1", path = "./crates/rolldown_testing
 rolldown_tracing        = { version = "0.0.1", path = "./crates/rolldown_tracing" }
 rolldown_utils          = { version = "0.0.1", path = "./crates/rolldown_utils" }
 
-anyhow                   = "1.0.82"
+
+<<<<<<< HEAD
+base64                   = "0.22.0"
+=======
+>>>>>>> 23046d0d (chore: use `cargo-autoinherit` to DRY up Cargo.toml manifests in a workspace (#923))
+<<<<<<< HEAD
+xxhash-rust              = "0.8.10"
+=======
+>>>>>>> 23046d0d (chore: use `cargo-autoinherit` to DRY up Cargo.toml manifests in a workspace (#923))anyhow                   = "1.0.82"
 ariadne                  = "0.4.0"
 async-channel            = "2.2.1"
 async-trait              = "0.1.80"
-base64                   = "0.22.0"
 console_error_panic_hook = "0.1.7"
 dashmap                  = "5.5.3"
 derivative               = "2.2.0"
@@ -126,7 +133,6 @@ tracing-chrome           = "0.7.2"
 tracing-subscriber       = "0.3.18"
 vfs                      = "0.12.0"
 wasm-bindgen             = "0.2.92"
-xxhash-rust              = "0.8.10"
 
 [profile.release]
 codegen-units = 1

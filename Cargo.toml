@@ -75,51 +75,50 @@ inconsistent_struct_constructor = "allow"
 single_match = "allow"
 
 [workspace.dependencies]
-anyhow                    = "1.0.82"
-ariadne                   = "0.4.0"
-async-channel             = "2.2.1"
-async-trait               = "0.1.80"
-codspeed-criterion-compat = "2.4"
-dashmap                   = "5.5.3"
-derivative                = "2.2.0"
-dunce                     = "1.0.4"                                                                          # Normalize Windows paths to the most compatible format, avoiding UNC where possible
-futures                   = "0.3.30"
-index_vec                 = "0.1.3"
-insta                     = "1.38.0"
-memchr                    = "2.7.2"
-mimalloc                  = "0.1.39"
-napi                      = { version = "3.0.0-alpha", features = ["async"] }
-napi-build                = { version = "2.1.3" }
-napi-derive               = { version = "3.0.0-alpha.1", default-features = false, features = ["type-def"] }
-once_cell                 = "1.19.0"
-oxc                       = { version = "0.12.4", features = ["sourcemap"] }
-oxc_resolver              = { version = "1.6.5", features = ["package_json_raw_json_api"] }
-rayon                     = "1.10.0"
-regex                     = "1.10.4"
-rolldown                  = { path = "./crates/rolldown" }
-rolldown_common           = { path = "./crates/rolldown_common" }
-rolldown_error            = { path = "./crates/rolldown_error" }
-rolldown_fs               = { path = "./crates/rolldown_fs" }
-rolldown_oxc_utils        = { path = "./crates/rolldown_oxc_utils" }
-rolldown_plugin           = { path = "./crates/rolldown_plugin" }
-rolldown_resolver         = { path = "./crates/rolldown_resolver" }
-rolldown_rstr             = { path = "./crates/rolldown_rstr" }
-rolldown_sourcemap        = { path = "./crates/rolldown_sourcemap" }
-rolldown_testing          = { path = "./crates/rolldown_testing" }
-rolldown_testing_config   = { path = "./crates/rolldown_testing_config" }
-rolldown_tracing          = { path = "./crates/rolldown_tracing" }
-rolldown_utils            = { path = "./crates/rolldown_utils" }
-rustc-hash                = "1.1.0"
-schemars                  = "0.8.16"
-self_cell                 = "1.0.3"
-serde                     = { version = "1.0.198", features = ["derive"] }
-serde_json                = "1.0.116"
-smallvec                  = "1.13.2"
-sugar_path                = { version = "1.2.0", features = ["cached_current_dir"] }
-testing_macros            = "0.2.13"
-tokio                     = { version = "1.37.0", default-features = false }
-tracing                   = "0.1.40"
-vfs                       = "0.12.0"
+anyhow                  = "1.0.82"
+ariadne                 = "0.4.0"
+async-channel           = "2.2.1"
+async-trait             = "0.1.80"
+dashmap                 = "5.5.3"
+derivative              = "2.2.0"
+dunce                   = "1.0.4"                                                                          # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+futures                 = "0.3.30"
+index_vec               = "0.1.3"
+insta                   = "1.38.0"
+memchr                  = "2.7.2"
+mimalloc                = "0.1.39"
+napi                    = { version = "3.0.0-alpha", features = ["async"] }
+napi-build              = { version = "2.1.3" }
+napi-derive             = { version = "3.0.0-alpha.1", default-features = false, features = ["type-def"] }
+once_cell               = "1.19.0"
+oxc                     = { version = "0.12.4", features = ["sourcemap"] }
+oxc_resolver            = { version = "1.6.5", features = ["package_json_raw_json_api"] }
+rayon                   = "1.10.0"
+regex                   = "1.10.4"
+rolldown                = { path = "./crates/rolldown" }
+rolldown_common         = { path = "./crates/rolldown_common" }
+rolldown_error          = { path = "./crates/rolldown_error" }
+rolldown_fs             = { path = "./crates/rolldown_fs" }
+rolldown_oxc_utils      = { path = "./crates/rolldown_oxc_utils" }
+rolldown_plugin         = { path = "./crates/rolldown_plugin" }
+rolldown_resolver       = { path = "./crates/rolldown_resolver" }
+rolldown_rstr           = { path = "./crates/rolldown_rstr" }
+rolldown_sourcemap      = { path = "./crates/rolldown_sourcemap" }
+rolldown_testing        = { path = "./crates/rolldown_testing" }
+rolldown_testing_config = { path = "./crates/rolldown_testing_config" }
+rolldown_tracing        = { path = "./crates/rolldown_tracing" }
+rolldown_utils          = { path = "./crates/rolldown_utils" }
+rustc-hash              = "1.1.0"
+schemars                = "0.8.16"
+self_cell               = "1.0.3"
+serde                   = { version = "1.0.198", features = ["derive"] }
+serde_json              = "1.0.116"
+smallvec                = "1.13.2"
+sugar_path              = { version = "1.2.0", features = ["cached_current_dir"] }
+testing_macros          = "0.2.13"
+tokio                   = { version = "1.37.0", default-features = false }
+tracing                 = "0.1.40"
+vfs                     = "0.12.0"
 
 [profile.release]
 codegen-units = 1

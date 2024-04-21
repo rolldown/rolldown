@@ -25,7 +25,7 @@ impl Case {
   }
 
   pub async fn run_inner(mut self) {
-    let build_output = self.fixture.compile().await;
+    let build_output = self.fixture.bundle(true, false).await;
     if build_output.errors.is_empty() {
       assert!(!self.fixture.test_config().expect_error, "expected error, but got success");
       self.render_assets_to_snapshot(build_output);

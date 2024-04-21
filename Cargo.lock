@@ -1297,6 +1297,7 @@ dependencies = [
  "anyhow",
  "dunce",
  "futures",
+ "glob",
  "index_vec",
  "insta",
  "once_cell",

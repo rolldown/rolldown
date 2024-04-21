@@ -230,7 +230,7 @@ impl<'a> GenerateStage<'a> {
         ensure_chunk_name(chunk, runtime_id, &self.link_output.module_table.normal_modules);
       let mut next_count = 1;
       while used_names.contains(&chunk_name) {
-        chunk_name = format!("{}{}", chunk_name, next_count);
+        chunk_name = format!("{chunk_name}{next_count}");
         used_names.insert(chunk_name.clone());
         next_count += 1;
       }

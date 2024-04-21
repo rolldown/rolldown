@@ -9,7 +9,7 @@ use rolldown_common::{
   NamedImport, OutputFormat, SymbolRef,
 };
 use rolldown_rstr::{Rstr, ToRstr};
-use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use rolldown_utils::rayon::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 type ChunkMetaImports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
@@ -238,7 +238,9 @@ impl<'a> GenerateStage<'a> {
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .into_iter()
-      .par_bridge()
+      // FIXME: Extra traversing. This is a workaround due to `par_bridge` doesn't ensure order https://github.com/rayon-rs/rayon/issues/551#issuecomment-882069261
+      .collect::<Vec<_>>()
+      .into_par_iter()
       .map(|cross_chunk_imports| {
         let mut cross_chunk_imports = cross_chunk_imports.into_iter().collect::<Vec<_>>();
         cross_chunk_imports.sort_by_cached_key(|chunk_id| {

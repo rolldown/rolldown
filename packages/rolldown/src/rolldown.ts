@@ -1,4 +1,4 @@
-import { InputOptions } from './options/input-options'
+import type { InputOptions } from './options/input-options'
 import { RolldownBuild } from './rolldown-build'
 import { createBundler } from './utils'
 

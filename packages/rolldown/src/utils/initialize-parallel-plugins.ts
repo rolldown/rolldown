@@ -1,6 +1,6 @@
 import { Worker } from 'node:worker_threads'
 import { availableParallelism } from 'node:os'
-import { ParallelPlugin, Plugin } from '../plugin'
+import type { ParallelPlugin, Plugin } from '../plugin'
 import { ParallelJsPluginRegistry } from '../binding'
 
 export type WorkerData = {

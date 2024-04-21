@@ -1,3 +1,3 @@
-import { RolldownOptions } from './rolldown-options'
+import type { RolldownOptions } from './rolldown-options'
 
 export type RolldownConfigExport = RolldownOptions | RolldownOptions[]

@@ -1,9 +1,5 @@
-import {
+export {
   defineParallelPluginImplementation,
-  ParallelPluginImplementation,
-  Context,
+  type ParallelPluginImplementation,
+  type Context,
 } from './plugin/parallel-plugin-implementation'
-
-export { defineParallelPluginImplementation }
-
-export type { ParallelPluginImplementation, Context }

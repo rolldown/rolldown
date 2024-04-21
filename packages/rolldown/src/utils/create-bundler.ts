@@ -5,7 +5,7 @@ import {
 } from '../options/input-options'
 import { createInputOptionsAdapter } from '../options/input-options-adapter'
 import {
-  OutputOptions,
+  type OutputOptions,
   normalizeOutputOptions,
 } from '../options/output-options'
 import { initializeParallelPlugins } from './initialize-parallel-plugins'

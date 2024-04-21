@@ -1,0 +1,831 @@
+---
+source: crates/rolldown/tests/fixtures.rs
+expression: "snapshot_outputs.join(\"\\n\")"
+---
+# tests/esbuild/default/ambiguous_reexport_msg
+
+- entry_js-kqV4_A4m.mjs
+
+# tests/esbuild/default/arrow_fn_scope
+
+- entry_js-knWMXlT7.mjs
+
+# tests/esbuild/default/auto_external
+
+- entry_js-8GMzEca-.mjs
+
+# tests/esbuild/default/avoid_tdz
+
+- entry_js-sn9RcHQl.mjs
+
+# tests/esbuild/default/await_import_inside_try
+
+- entry_js-NUEjoY5v.mjs
+
+# tests/esbuild/default/common_js_from_es6
+
+- entry_js-JJnM0w-y.mjs
+- $runtime$-Z-c-hKoo.mjs
+
+# tests/esbuild/default/const_with_let
+
+- entry_js-d1sNq3Xh.mjs
+
+# tests/esbuild/default/duplicate_entry_point
+
+- entry_js-retlWIJI.mjs
+- entry2_js-retlWIJI.mjs
+- entry-PLV8EjsS.mjs
+
+# tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
+
+- entry_js-Fb0cs2MR.mjs
+- $runtime$-pI7lnPPu.mjs
+
+# tests/esbuild/default/es6_from_common_js
+
+- entry_js-alr1VI_I.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/default/export_chain
+
+- entry_js-EnNjD5Yw.mjs
+
+# tests/esbuild/default/export_forms_common_js
+
+- entry_js-pkODD-uo.mjs
+- $runtime$-Z-c-hKoo.mjs
+
+# tests/esbuild/default/export_forms_es6
+
+- entry_js-EnnaaOzj.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/default/forbid_const_assign_when_bundling
+
+- entry_js-eHT9gvE6.mjs
+
+# tests/esbuild/default/import_missing_common_js
+
+- entry_js-V5CIq315.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/default/import_then_catch
+
+- entry_js-4ck2WnUy.mjs
+
+# tests/esbuild/default/keep_names_class_static_name
+
+- entry_js-J5FVjBVa.mjs
+
+# tests/esbuild/default/nested_common_js
+
+- entry_js-VR_Z4xQM.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/esbuild/default/nested_es6_from_common_js
+
+- entry_js-EuWryN5n.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/default/nested_require_without_call
+
+- entry_js-PDYdKbww.mjs
+
+# tests/esbuild/default/nested_scope_bug
+
+- entry_js-MPOZ-FKh.mjs
+
+# tests/esbuild/default/new_expression_common_js
+
+- entry_js-Tn2EAjWy.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/esbuild/default/no_overwrite_input_file_error
+
+- entry_js-PLV8EjsS.mjs
+
+# tests/esbuild/default/outbase
+
+- c_js-9JbBdQ6M.mjs
+- d_js-4Ps9mOU5.mjs
+
+# tests/esbuild/default/quoted_property
+
+- entry_js-bpX_joLy.mjs
+
+# tests/esbuild/default/re_export_common_js_as_es6
+
+- entry_js-_dCFhw47.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/default/re_export_default_internal
+
+- entry_js-_YZtULPo.mjs
+
+# tests/esbuild/default/relative_entry_point_error
+
+- entry-PLV8EjsS.mjs
+
+# tests/esbuild/default/require_child_dir_common_js
+
+- entry_js-hotXWPdm.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/esbuild/default/require_child_dir_es6
+
+- entry_js-IQTTUmuw.mjs
+
+# tests/esbuild/default/require_main_cache_common_js
+
+- entry_js-EncpfrJv.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/esbuild/default/require_parent_dir_common_js
+
+- dir_entry_js-iYyW26rz.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/esbuild/default/require_parent_dir_es6
+
+- dir_entry_js-A8ZoGr8F.mjs
+
+# tests/esbuild/default/require_property_access_common_js
+
+- entry_js-SWVDiOhy.mjs
+
+# tests/esbuild/default/require_resolve
+
+- entry_js-tbm-BoBZ.mjs
+
+# tests/esbuild/default/require_with_call_inside_try
+
+- entry_js-UoF-GCJ1.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/esbuild/default/require_without_call
+
+- entry_js-BuvwGEwP.mjs
+
+# tests/esbuild/default/require_without_call_inside_try
+
+- entry_js-RYzUwOJY.mjs
+
+# tests/esbuild/default/reserve_props
+
+- entry_js-20tr2TKT.mjs
+
+# tests/esbuild/default/simple_common_js
+
+- entry_js-2acdTi1M.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/esbuild/default/simple_es6
+
+- entry_js-vHtUVPr0.mjs
+
+# tests/esbuild/default/strict_mode_nested_fn_decl_keep_names_variable_inlining_issue1552
+
+- entry_js-Yd7hdWwh.mjs
+
+# tests/esbuild/default/this_inside_function
+
+- entry_js-676kLNBp.mjs
+
+# tests/esbuild/default/use_strict_directive_bundle_esm_issue2264
+
+- entry_js-G27ZTstm.mjs
+
+# tests/esbuild/default/use_strict_directive_bundle_issue1837
+
+- entry_js-FHLXHsXC.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/esbuild/default/var_relocating_bundle
+
+- top-level_js-0Pqt6OB8.mjs
+- nested_js-TqYfAGvA.mjs
+- let_js-zHQO5wQb.mjs
+- function_js-UIH1gRsA.mjs
+- function-nested_js-KZJZ9VL9.mjs
+
+# tests/esbuild/import_star/export_self_as_namespace_es6
+
+- entry_js-SSzW-3uT.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/export_self_es6
+
+- entry_js-nvU10OVq.mjs
+
+# tests/esbuild/import_star/import_export_self_as_namespace_es6
+
+- entry_js-SSzW-3uT.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_export_star_ambiguous_warning
+
+- entry_js-f7J5Bk7l.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_of_export_star
+
+- entry_js-KMFAnqT2.mjs
+
+# tests/esbuild/import_star/import_of_export_star_of_import
+
+- entry_js-oagxpBfe.mjs
+
+# tests/esbuild/import_star/import_star_and_common_js
+
+- entry_js-cJDp2q9k.mjs
+- $runtime$-Z-c-hKoo.mjs
+
+# tests/esbuild/import_star/import_star_capture
+
+- entry_js-CK8ZS88o.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_star_common_js_capture
+
+- entry_js-5CRD1DXq.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/import_star/import_star_common_js_no_capture
+
+- entry_js-hv_DZYju.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/import_star/import_star_common_js_unused
+
+- entry_js-4GzQ6wdf.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/import_star/import_star_export_import_star_capture
+
+- entry_js-CK8ZS88o.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_star_export_import_star_no_capture
+
+- entry_js-sQCkSUP8.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_star_export_import_star_unused
+
+- entry_js-UvthDZZZ.mjs
+
+# tests/esbuild/import_star/import_star_export_star_as_capture
+
+- entry_js-CK8ZS88o.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_star_export_star_as_no_capture
+
+- entry_js-sQCkSUP8.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_star_export_star_as_unused
+
+- entry_js-O_1O1ARU.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_star_export_star_capture
+
+- entry_js-1xv8mngn.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_star_export_star_no_capture
+
+- entry_js-_fTafR_z.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_star_export_star_omit_ambiguous
+
+- entry_js-_e97A4iG.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_star_export_star_unused
+
+- entry_js-UvthDZZZ.mjs
+
+# tests/esbuild/import_star/import_star_no_capture
+
+- entry_js-sQCkSUP8.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_star_of_export_star_as
+
+- entry_js-9iB-WT_T.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/import_star_unused
+
+- entry_js-UvthDZZZ.mjs
+
+# tests/esbuild/import_star/issue176
+
+- entry_js-41ioCbxo.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/namespace_import_missing_common_js
+
+- entry_js-sdT7CaES.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/import_star/namespace_import_missing_es6
+
+- entry_js-i_jTUTv7.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/namespace_import_re_export_star_missing_es6
+
+- entry_js-FDHnHMA9.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/namespace_import_re_export_star_unused_missing_es6
+
+- entry_js-lS9HG4kP.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/namespace_import_unused_missing_common_js
+
+- entry_js-9GYfTiAV.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/import_star/namespace_import_unused_missing_es6
+
+- entry_js-KaZsNW-d.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/other_file_export_self_as_namespace_unused_es6
+
+- entry_js-JYDUAw4m.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/other_file_import_export_self_as_namespace_unused_es6
+
+- entry_js--NnGId1P.mjs
+
+# tests/esbuild/import_star/re_export_namespace_import_missing_es6
+
+- entry_js-1n2UqwtF.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/re_export_namespace_import_unused_missing_es6
+
+- entry_js-wEPz_mQy.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/re_export_other_file_export_self_as_namespace_es6
+
+- entry_js-3nwG86I-.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/re_export_other_file_import_export_self_as_namespace_es6
+
+- entry_js-3nwG86I-.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/import_star/re_export_star_external_es6
+
+- entry_js-IG1h-nPm.mjs
+
+# tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_export
+
+- entry_js-wvmEH3MF.mjs
+
+# tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_import
+
+- entry_js-ZSvF2NCU.mjs
+
+# tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous
+
+- entry_js-1tvWC_vK.mjs
+
+# tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous_re_export
+
+- entry_js-xwGRq5T_.mjs
+
+# tests/esbuild/packagejson/main
+
+- entry-PddIz6eA.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/splitting/assign-to-local
+
+- a-_XWSW13g.mjs
+- b-HJyK04H3.mjs
+- shared-j5Ff6q07.mjs
+
+# tests/esbuild/splitting/cross_chunk_assignment_dependencies
+
+- a-GAfEkhBz.mjs
+- b-3CfKunof.mjs
+- shared-PossxWD_.mjs
+
+# tests/esbuild/splitting/duplicate_chunk_collision
+
+- a--jUnewN_.mjs
+- b--jUnewN_.mjs
+- c-S8FEqMOR.mjs
+- d-S8FEqMOR.mjs
+- d~1--oOy2sQW.mjs
+- ab-fdOaNPnJ.mjs
+
+# tests/esbuild/splitting/dynamic-commonjs-into-es6
+
+- main-ZqD8gjUh.mjs
+- foo-CU9PLCFM.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/esbuild/splitting/dynamic-es6-into-es6
+
+- main-fBTrTgKH.mjs
+- foo-pnPcej-0.mjs
+
+# tests/esbuild/splitting/dynamic_and_not_dynamic_es6_into_es6
+
+- main-GwCqVkdJ.mjs
+- foo-WOsfWFxp.mjs
+- foo~1-pnPcej-0.mjs
+
+# tests/esbuild/splitting/dynamic_import_issue_272
+
+- a-5lVutzQC.mjs
+- b-z3RcbbOY.mjs
+
+# tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
+
+- a-eTzMFeQH.mjs
+- b-We39kZhF.mjs
+- $runtime$-Z-c-hKoo.mjs
+- a~1-baXnHtKD.mjs
+
+# tests/esbuild/splitting/nested_directories
+
+- a-K4EOBJrC.mjs
+- b-elm0aqot.mjs
+- shared-Y8Wz-glY.mjs
+
+# tests/esbuild/splitting/re_export_issue273
+
+- a-zoNK6lDC.mjs
+- b-zoNK6lDC.mjs
+- a~1-IFG6qtjQ.mjs
+
+# tests/esbuild/splitting/shared-commonjs-into-es6
+
+- a-3G5V_sCq.mjs
+- b-g8lVLaS_.mjs
+- $runtime$-UXfAy_R1.mjs
+- shared-j8ukAKFw.mjs
+
+# tests/esbuild/splitting/shared-es6-into-es6
+
+- a-9m9PMLo5.mjs
+- b-4KFCPrjB.mjs
+- shared-lRt456VI.mjs
+
+# tests/esbuild/splitting/side_effects_without_dependencies
+
+- a-QLTCCela.mjs
+- b-B232sYxN.mjs
+- shared-77sYuFdk.mjs
+
+# tests/fixtures/ambiguous_star_export
+
+- main-oGb5soj4.mjs
+
+# tests/fixtures/basic
+
+- main-goKjyff3.mjs.map
+- main-goKjyff3.mjs
+
+# tests/fixtures/basic_commonjs
+
+- main-HSYhN_K3.mjs
+- $runtime$-76fOA9tz.mjs
+
+# tests/fixtures/basic_re_export
+
+- main-mO2iY3R-.mjs
+
+# tests/fixtures/circular_depency
+
+- entry-ppagLKlq.mjs
+- main-ppagLKlq.mjs
+- entry~1-b0ZPZIig.mjs
+
+# tests/fixtures/code_splitting/basic
+
+- main1-r-0MJL-5.mjs
+- main2-w_GNefeL.mjs
+- dynamic-GEHD338z.mjs
+- share-SOE6O4SM.mjs
+
+# tests/fixtures/code_splitting/ensure_side_effect_executed
+
+- entry_js-retlWIJI.mjs
+- entry2_js-retlWIJI.mjs
+- entry-dWYJnVqt.mjs
+
+# tests/fixtures/code_splitting/ensure_side_effect_executed2
+
+- a-3CfKunof.mjs
+- b-3CfKunof.mjs
+- shared-N5WFVGpv.mjs
+
+# tests/fixtures/compat/cjs_entry
+
+- main-OTdRCYV_.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/fixtures/compat/dynamic_cjs_entry
+
+- main-esNU5dY_.mjs
+- cjs-s1G658b7.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/fixtures/compat/empty_file_should_be_treated_as_cjs/import
+
+- main-X6_QwVIL.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/fixtures/compat/empty_file_should_be_treated_as_cjs/re_export
+
+- main-X6_QwVIL.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/fixtures/compat/esm_require_cjs
+
+- main-M6-rzLwY.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/fixtures/compat/esm_require_esm
+
+- main-07GXTKjT.mjs
+- $runtime$-Z-c-hKoo.mjs
+
+# tests/fixtures/compat/esm_require_esm_unused
+
+- main-oWY1aWaC.mjs
+- $runtime$-Z-c-hKoo.mjs
+
+# tests/fixtures/compat/import_the_same_cjs_twice
+
+- main-oP0xzrei.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/fixtures/deconflict/basic
+
+- main-5imSwRxT.mjs
+
+# tests/fixtures/deconflict/basic_scoped
+
+- main-0YR8BEAD.mjs.map
+- main-0YR8BEAD.mjs
+
+# tests/fixtures/deconflict/complex_params_patterns
+
+- main-rKyMfp6i.mjs.map
+- main-rKyMfp6i.mjs
+
+# tests/fixtures/deconflict/conflict_between_global_and_local_binding
+
+- main-BbKWUH9z.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/fixtures/deconflict/conflict_between_imported_and_local_binding
+
+- main-SJob6gEf.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/fixtures/deconflict/decl_complex_patterns
+
+- main-H-W3Yesg.mjs.map
+- main-H-W3Yesg.mjs
+
+# tests/fixtures/deconflict/decl_nested_assign_pattern
+
+- main-ZIW-rgWY.mjs.map
+- main-ZIW-rgWY.mjs
+
+# tests/fixtures/deconflict/default_function
+
+- main-_jDe_Lk3.mjs.map
+- main-_jDe_Lk3.mjs
+
+# tests/fixtures/deconflict/issue_364
+
+- main-6M8A8E5q.mjs.map
+- main-6M8A8E5q.mjs
+
+# tests/fixtures/deconflict/reserved_names
+
+- main-R98p_V0_.mjs
+
+# tests/fixtures/deconflict/wrapped_esm_default_function
+
+- main-C_X9PBxc.mjs.map
+- main-C_X9PBxc.mjs
+- $runtime$-Z-c-hKoo.mjs
+
+# tests/fixtures/deconflict/wrapped_esm_export_named_function
+
+- main-KrGzQPEm.mjs.map
+- main-KrGzQPEm.mjs
+- $runtime$-Z-c-hKoo.mjs
+
+# tests/fixtures/errors/unresolved_entry
+
+
+# tests/fixtures/exec_order/basic
+
+- main-wosaaZwK.mjs
+
+# tests/fixtures/external/export_external
+
+- main-mwAasMX8.mjs
+
+# tests/fixtures/external/implicit_import_external
+
+- main-mXCdQe4v.mjs
+
+# tests/fixtures/external/import_external
+
+- main-iCe0vVJ6.mjs
+
+# tests/fixtures/external/keep_import_external_order
+
+- main-QoOCMinU.mjs
+
+# tests/fixtures/external/splitting_with_external_module
+
+- main-DZatqKo2.mjs
+- entry-CqwYkjJP.mjs
+- share-V80RWhXp.mjs
+
+# tests/fixtures/function/resolve/browser_filed_false
+
+- package-Rumap1Qh.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/fixtures/function/resolve/node_modules_as_entries
+
+- is-plain-obj-UtkJ5BV5.mjs
+
+# tests/fixtures/function/resolve/resolve_node_modules_by_default
+
+- main-UtkJ5BV5.mjs
+
+# tests/fixtures/function/resolve/should_resolve_to_different_target_for_import_and_require
+
+- main-Dh_r9BiR.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/fixtures/function/shim_missing_exports/basic
+
+- main-7nrrdq6t.mjs
+
+# tests/fixtures/function/shim_missing_exports/basic_wrapped_esm
+
+- main-b_g5jfQ0.mjs
+- $runtime$-pI7lnPPu.mjs
+
+# tests/fixtures/function/shim_missing_exports/shake_unused_shimmed_exports
+
+- main-7nrrdq6t.mjs
+
+# tests/fixtures/function/tree_shaking/unused_import_external
+
+- main-hA3nL9xn.mjs
+
+# tests/fixtures/function/tree_shaking/unused_import_named
+
+- main-b0ZPZIig.mjs
+
+# tests/fixtures/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
+
+- main-BmjYmACO.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/fixtures/import_reexport_between_esm_and_cjs/esm_import_cjs_named_import
+
+- main-i8MTt0Gj.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/fixtures/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_cjs_named_import
+
+- main-NMgLEzKm.mjs
+- $runtime$-aNQ4BPjH.mjs
+
+# tests/fixtures/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_multiple_cjs_named_import
+
+- main-AxGURCmy.mjs
+- $runtime$-aNQ4BPjH.mjs
+
+# tests/fixtures/import_reexport_between_esm_and_cjs/esm_reexport_cjs_default
+
+- main-3cSpHY2c.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/fixtures/import_reexport_between_esm_and_cjs/esm_reexport_cjs_named_reexport
+
+- main-Nz9rnyvk.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/fixtures/misc/cjs_entry_as_dependency
+
+- main-fT3loXNG.mjs
+- main2-ZAjolxoW.mjs
+- $runtime$-MEb4HyiP.mjs
+- main2~1-zMP6nZW5.mjs
+
+# tests/fixtures/misc/duplicate_entries
+
+- main-7vNvwwut.mjs
+- main2-7vNvwwut.mjs
+- main~1-29bMZaWG.mjs
+
+# tests/fixtures/misc/generate_valid_name_for_kebab_case_files
+
+- main-c89RRSFp.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/fixtures/misc/issue_376
+
+- main-tH_XK2jX.mjs
+
+# tests/fixtures/mix-cjs-esm
+
+- main-JtErwRGT.mjs.map
+- main-JtErwRGT.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/fixtures/object_shorthand_property
+
+- main-IGISejGn.mjs.map
+- main-IGISejGn.mjs
+
+# tests/fixtures/reexport_commonjs
+
+- main-kDEC13Hu.mjs
+- $runtime$-bXpUbT3V.mjs
+
+# tests/fixtures/reexport_star
+
+- main-3JR_3wiT.mjs
+- entry-3JR_3wiT.mjs
+- $runtime$-q_K1VDSH.mjs
+- a-uKv6e4CK.mjs
+
+# tests/fixtures/reexport_star_from_local_named_export
+
+- main-zePOg9Nq.mjs
+
+# tests/fixtures/require/create_require
+
+- main-ITXL_U98.mjs
+
+# tests/fixtures/require/require_cjs
+
+- main-jklmAiZI.mjs.map
+- main-jklmAiZI.mjs
+- $runtime$-UXfAy_R1.mjs
+
+# tests/fixtures/require/require_esm
+
+- main-smYdxwc3.mjs.map
+- main-smYdxwc3.mjs
+- $runtime$-pI7lnPPu.mjs
+
+# tests/fixtures/rollup/assignment-patterns
+
+- main-RClCATDF.mjs
+
+# tests/fixtures/rollup/catch-scope-shadowing
+
+- main-OSwo6a1u.mjs
+
+# tests/fixtures/rollup/object-spread-side-effect
+
+- main-ikTg5xsT.mjs
+
+# tests/fixtures/rollup/preserve-for-of-iterable
+
+- main-Y-wzxAq3.mjs
+
+# tests/fixtures/rollup/simplify-with-destructuring
+
+- main-t1MmfxxF.mjs
+
+# tests/fixtures/warnings/basic
+
+- main-FVcrgCyD.mjs
+
+# tests/fixtures/wrapped_esm
+
+- main-D7nd2r-Z.mjs.map
+- main-D7nd2r-Z.mjs
+- $runtime$-Z-c-hKoo.mjs

@@ -8,9 +8,9 @@ input_file: crates/rolldown/tests/esbuild/splitting/duplicate_chunk_collision
 ## a.mjs
 
 ```js
-import "./ab_js.mjs";
+import "./ab.mjs";
 ```
-## ab_js.mjs
+## ab.mjs
 
 ```js
 // ab.js
@@ -19,21 +19,21 @@ console.log(123);
 ## b.mjs
 
 ```js
-import "./ab_js.mjs";
+import "./ab.mjs";
 ```
 ## c.mjs
 
 ```js
-import "./cd_js.mjs";
-```
-## cd_js.mjs
-
-```js
-// cd.js
-console.log(123);
+import "./d~1.mjs";
 ```
 ## d.mjs
 
 ```js
-import "./cd_js.mjs";
+import "./d~1.mjs";
+```
+## d~1.mjs
+
+```js
+// cd.js
+console.log(123);
 ```

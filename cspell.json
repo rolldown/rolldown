@@ -67,6 +67,7 @@
     "Finalizer",
     "hashbang",
     "hasher",
+    "hashers",
     "iife",
     "importee",
     "importstar",
@@ -76,8 +77,8 @@
     "libc",
     "Lukas",
     "memchr",
-    "memmem",
     "memfs",
+    "memmem",
     "metafile",
     "metas",
     "mimalloc",
@@ -119,12 +120,9 @@
     "UNKEYED",
     "vite",
     "vitepress",
-    "Yinan",
-    "Yunfei",
-    "sourcemaps",
-    "memmem",
-    "memchr",
     "wasi",
-    "WASI"
+    "WASI",
+    "Yinan",
+    "Yunfei"
   ]
 }

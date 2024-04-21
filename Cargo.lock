@@ -106,6 +106,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "base64"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9475866fec1451be56a3c2400fd081ff546538961565ccb5b7142cbd22bc7a51"
+
+[[package]]
 name = "base64-simd"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1295,6 +1301,7 @@ dependencies = [
  "insta",
  "once_cell",
  "oxc",
+ "regex",
  "rolldown_common",
  "rolldown_error",
  "rolldown_fs",
@@ -1311,6 +1318,7 @@ dependencies = [
  "testing_macros",
  "tokio",
  "tracing",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -1477,7 +1485,9 @@ dependencies = [
 name = "rolldown_utils"
 version = "0.0.1"
 dependencies = [
+ "base64",
  "rayon",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -2185,6 +2195,12 @@ name = "windows_x86_64_msvc"
 version = "0.52.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bec47e5bfd1bff0eeaf6d8b485cc1074891a197ab4225d504cb7a1ab88b02bf0"
+
+[[package]]
+name = "xxhash-rust"
+version = "0.8.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "927da81e25be1e1a2901d59b81b37dd2efd1fc9c9345a55007f09bf5a2d3ee03"
 
 [[package]]
 name = "yansi"

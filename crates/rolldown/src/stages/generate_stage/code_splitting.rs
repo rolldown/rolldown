@@ -65,7 +65,7 @@ impl<'a> GenerateStage<'a> {
       BuildHasherDefault::default(),
     );
     let mut chunks = IndexChunks::with_capacity(self.link_output.entries.len());
-
+    let mut user_defined_entry_chunk_ids: Vec<ChunkId> = Vec::new();
     // Create chunk for each static and dynamic entry
     for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
@@ -83,6 +83,9 @@ impl<'a> GenerateStage<'a> {
         },
       ));
       bits_to_chunk.insert(bits, chunk);
+      if entry_point.kind.is_user_defined() {
+        user_defined_entry_chunk_ids.push(chunk);
+      }
     }
 
     if is_in_rust_test_mode() {
@@ -139,6 +142,6 @@ impl<'a> GenerateStage<'a> {
 
     tracing::trace!("Generated chunks: {:#?}", chunks);
 
-    ChunkGraph { chunks, module_to_chunk }
+    ChunkGraph { chunks, module_to_chunk, user_defined_entry_chunk_ids }
   }
 }

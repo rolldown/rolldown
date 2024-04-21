@@ -6,6 +6,7 @@ use crate::{stages::link_stage::LinkStageOutput, SharedOptions};
 use self::render_chunk_exports::get_chunk_export_names;
 
 pub mod deconflict_chunk_symbols;
+pub mod finalize_chunks;
 pub mod render_chunk;
 pub mod render_chunk_exports;
 pub mod render_chunk_imports;
@@ -46,7 +47,11 @@ pub fn generate_rendered_chunk(
     facade_module_id: pre_rendered_chunk.facade_module_id,
     module_ids: pre_rendered_chunk.module_ids,
     exports: pre_rendered_chunk.exports,
-    file_name: chunk.filename.clone().expect("should have file name"),
+    file_name: chunk
+      .preliminary_filename
+      .as_ref()
+      .expect("should have preliminary_filename")
+      .to_string(),
     modules: render_modules,
   }
 }

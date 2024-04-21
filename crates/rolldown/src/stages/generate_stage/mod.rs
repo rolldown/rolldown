@@ -230,7 +230,6 @@ impl<'a> GenerateStage<'a> {
       .chain(chunk_graph.chunks.iter_enumerated().map(|(id, _)| id))
       .collect::<Vec<_>>();
 
-    println!("chunk_ids {chunk_ids:?}");
     chunk_ids.into_iter().for_each(|chunk_id| {
       let chunk = &mut chunk_graph.chunks[chunk_id];
       if chunk.preliminary_filename.is_some() {
@@ -244,10 +243,9 @@ impl<'a> GenerateStage<'a> {
         ensure_chunk_name(chunk, runtime_id, &self.link_output.module_table.normal_modules);
       let mut next_count = 1;
       while used_names.contains(&chunk_name) {
-        chunk_name = format!("{}~{}", chunk_name, next_count);
+        chunk_name = format!("{chunk_name}~{next_count}");
         next_count += 1;
       }
-      println!("chunk_name {chunk_name:?} id{:?}", chunk_id);
       used_names.insert(chunk_name.clone());
 
       let extracted_hash_pattern = extract_hash_pattern(filename_template.template());

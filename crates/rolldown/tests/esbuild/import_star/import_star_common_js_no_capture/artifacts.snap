@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_common_js_no_c
 ## entry_js.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$-B1631BBDF89F4FCD.mjs";
+import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
 // foo.js
 var require_foo = __commonJSMin((exports, module) => {

@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/external/splitting_with_external_modu
 ## entry.mjs
 
 ```js
-import { value } from "./share-8603596BAC75FDA9.mjs";
+import { value } from "./share.mjs";
 
 // entry.js
 console.log(value);
@@ -17,12 +17,12 @@ console.log(value);
 
 ```js
 import { default as assert } from "assert";
-import { value } from "./share-8603596BAC75FDA9.mjs";
+import { value } from "./share.mjs";
 
 // main.js
 assert(value === 1);
 ```
-## share-8603596BAC75FDA9.mjs
+## share.mjs
 
 ```js
 // share.js

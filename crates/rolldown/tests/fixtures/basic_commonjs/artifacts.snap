@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/basic_commonjs
 ## main.mjs
 
 ```js
-import { __commonJSMin, __esmMin, __export, __toCommonJS, __toESM } from "./$runtime$-1F671D9256CDA306.mjs";
+import { __commonJSMin, __esmMin, __export, __toCommonJS, __toESM } from "./$runtime$.mjs";
 
 // esm.js
 function esm_default_fn() {

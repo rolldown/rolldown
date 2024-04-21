@@ -5,7 +5,14 @@ input_file: crates/rolldown/tests/fixtures/misc/duplicate_entries
 ---
 # Assets
 
-## main-40AA061A8726587E.mjs
+## main.mjs
+
+```js
+import { main_default } from "./main.mjs";
+
+export { main_default as default };
+```
+## main.mjs
 
 ```js
 // main.js
@@ -13,17 +20,10 @@ var main_default = {};
 
 export { main_default };
 ```
-## main.mjs
-
-```js
-import { main_default } from "./main-40AA061A8726587E.mjs";
-
-export { main_default as default };
-```
 ## main2.mjs
 
 ```js
-import { main_default } from "./main-40AA061A8726587E.mjs";
+import { main_default } from "./main.mjs";
 
 export { main_default as default };
 ```

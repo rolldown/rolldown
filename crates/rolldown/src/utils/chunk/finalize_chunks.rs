@@ -1,4 +1,4 @@
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::hash::{Hash, Hasher};
 
 use index_vec::IndexVec;
 use rolldown_common::ChunkId;

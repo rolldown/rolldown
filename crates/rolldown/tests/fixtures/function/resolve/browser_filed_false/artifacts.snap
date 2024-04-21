@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/function/resolve/browser_filed_false
 ## package.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$-B1631BBDF89F4FCD.mjs";
+import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
 // (ignored) node_modules/package/util.js
 var require_util = __commonJSMin((exports, module) => {

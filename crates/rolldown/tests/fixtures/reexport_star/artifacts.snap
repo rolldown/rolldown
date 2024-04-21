@@ -5,10 +5,10 @@ input_file: crates/rolldown/tests/fixtures/reexport_star
 ---
 # Assets
 
-## a-A9F728ACC348AC.mjs
+## a.mjs
 
 ```js
-import { __export } from "./$runtime$-A97F4037B897C149.mjs";
+import { __export } from "./$runtime$.mjs";
 
 // a.js
 var a_ns = {};
@@ -22,14 +22,14 @@ export { a_ns };
 ## entry.mjs
 
 ```js
-import { a_ns } from "./a-A9F728ACC348AC.mjs";
+import { a_ns } from "./a.mjs";
 
 export { a_ns as a };
 ```
 ## main.mjs
 
 ```js
-import { a_ns } from "./a-A9F728ACC348AC.mjs";
+import { a_ns } from "./a.mjs";
 
 export { a_ns as a };
 ```

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use rustc_hash::FxHashSet;
 use std::sync::Arc;
 
 use futures::future::try_join_all;
@@ -175,8 +176,7 @@ impl<'a> GenerateStage<'a> {
   }
 
   // Notices:
-  // - We don't ensure chunk name uniqueness here.
-  // - If users want to ensure uniqueness of chunk's filename, they should use `[hash]` pattern in the filename template.
+  // - We ensure `[name]` is unique for each chunk in this function.
   fn generate_chunk_preliminary_filenames(&self, chunk_graph: &mut ChunkGraph) {
     fn ensure_chunk_name(
       chunk: &Chunk,
@@ -202,7 +202,8 @@ impl<'a> GenerateStage<'a> {
           }
         }
         ChunkKind::Common => {
-          // For common chunks, esbuild always use 'chunk' as the name. However we try to make the name more meaningful here.
+          // - rollup use the first entered/last executed module as the name of the common chunk.
+          // - esbuild always use 'chunk' as the name. However we try to make the name more meaningful here.
           let first_executed_non_runtime_module =
             chunk.modules.iter().rev().find(|each| **each != runtime_id);
 
@@ -218,14 +219,21 @@ impl<'a> GenerateStage<'a> {
     }
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
+    let mut used_names = FxHashSet::default();
 
     chunk_graph.chunks.iter_mut().for_each(|chunk| {
       let runtime_id = self.link_output.runtime.id();
 
       let filename_template = chunk.file_name_template(self.options);
 
-      let chunk_name =
+      let mut chunk_name =
         ensure_chunk_name(chunk, runtime_id, &self.link_output.module_table.normal_modules);
+      let mut next_count = 1;
+      while used_names.contains(&chunk_name) {
+        chunk_name = format!("{}{}", chunk_name, next_count);
+        used_names.insert(chunk_name.clone());
+        next_count += 1;
+      }
 
       let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
 

@@ -5,14 +5,14 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_and_not_dynamic_es6_
 ---
 # Assets
 
-## foo-DB289AE537EAA540.mjs
+## foo.mjs
 
 ```js
-import { bar } from "./foo-FE3C24763C0A0B4E.mjs";
+import { bar } from "./foo.mjs";
 
 export { bar };
 ```
-## foo-FE3C24763C0A0B4E.mjs
+## foo.mjs
 
 ```js
 // foo.js
@@ -23,8 +23,8 @@ export { bar };
 ## main.mjs
 
 ```js
-import { bar } from "./foo-FE3C24763C0A0B4E.mjs";
+import { bar } from "./foo.mjs";
 
 // main.js
-import('./foo-FE3C24763C0A0B4E.mjs').then(({bar:b}) => console.log(bar, b));
+import('./foo.mjs').then(({bar:b}) => console.log(bar, b));
 ```

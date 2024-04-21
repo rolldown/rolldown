@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_es6
 ## entry_js.mjs
 
 ```js
-import { __export } from "./$runtime$-A97F4037B897C149.mjs";
+import { __export } from "./$runtime$.mjs";
 
 // a.js
 const abc = undefined;

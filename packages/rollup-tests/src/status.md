@@ -1,6 +1,12 @@
 |  | number |
 |----| ---- |
 | failed | 0|
+<<<<<<< HEAD
 | skipFailed | 657|
 | skipped | 0|
 | passed | 261|
+=======
+| skipFailed | 660|
+| skipped | 0|
+| passed | 258|
+>>>>>>> 4d2fb057 (test(rollup): enable tests related to hash (#934))

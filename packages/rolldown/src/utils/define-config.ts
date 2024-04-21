@@ -1,4 +1,4 @@
-import { RolldownConfigExport } from '../types/rolldown-config-export'
+import type { RolldownConfigExport } from '../types/rolldown-config-export'
 
 export function defineConfig(
   config: RolldownConfigExport,

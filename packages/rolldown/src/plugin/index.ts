@@ -1,17 +1,16 @@
-import {
+import type {
   BindingHookResolveIdExtraOptions,
   BindingPluginContext,
   RenderedChunk,
   BindingOutputs,
   BindingOutputOptions,
-  BindingInputOptions,
 } from '../binding'
-import { RolldownNormalizedInputOptions } from '../options/input-options'
+import type { RolldownNormalizedInputOptions } from '../options/input-options'
 import { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
-import { SourceMapInput } from '../types/sourcemap'
+import type { SourceMapInput } from '../types/sourcemap'
 import { pathToFileURL } from 'node:url'
-import { NormalizedOutputOptions } from '../options/output-options'
-import { ModuleInfo } from '../types/module-info'
+import type { NormalizedOutputOptions } from '../options/output-options'
+import type { ModuleInfo } from '../types/module-info'
 
 // Use a type alias here, we might wrap `BindingPluginContext` in the future
 type PluginContext = BindingPluginContext

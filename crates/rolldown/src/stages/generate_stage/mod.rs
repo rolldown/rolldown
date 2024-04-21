@@ -176,7 +176,7 @@ impl<'a> GenerateStage<'a> {
   }
 
   // Notices:
-  // - We ensure `[name]` is unique for each chunk in this function.
+  // - Should generate filenames that are stable cross builds and os.
   fn generate_chunk_preliminary_filenames(&self, chunk_graph: &mut ChunkGraph) {
     fn ensure_chunk_name(
       chunk: &Chunk,
@@ -221,7 +221,21 @@ impl<'a> GenerateStage<'a> {
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
     let mut used_names = FxHashSet::default();
 
-    chunk_graph.chunks.iter_mut().for_each(|chunk| {
+    // First ensure names of user-defined entry chunks aren't shadowed by other chunks
+
+    let chunk_ids = chunk_graph
+      .user_defined_entry_chunk_ids
+      .iter()
+      .copied()
+      .chain(chunk_graph.chunks.iter_enumerated().map(|(id, _)| id))
+      .collect::<Vec<_>>();
+
+    println!("chunk_ids {chunk_ids:?}");
+    chunk_ids.into_iter().for_each(|chunk_id| {
+      let chunk = &mut chunk_graph.chunks[chunk_id];
+      if chunk.preliminary_filename.is_some() {
+        return;
+      }
       let runtime_id = self.link_output.runtime.id();
 
       let filename_template = chunk.file_name_template(self.options);
@@ -230,10 +244,11 @@ impl<'a> GenerateStage<'a> {
         ensure_chunk_name(chunk, runtime_id, &self.link_output.module_table.normal_modules);
       let mut next_count = 1;
       while used_names.contains(&chunk_name) {
-        chunk_name = format!("{chunk_name}{next_count}");
-        used_names.insert(chunk_name.clone());
+        chunk_name = format!("{}~{}", chunk_name, next_count);
         next_count += 1;
       }
+      println!("chunk_name {chunk_name:?} id{:?}", chunk_id);
+      used_names.insert(chunk_name.clone());
 
       let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
 

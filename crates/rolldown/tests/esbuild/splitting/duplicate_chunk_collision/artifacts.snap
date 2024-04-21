@@ -24,14 +24,14 @@ import "./ab.mjs";
 ## c.mjs
 
 ```js
-import "./d.mjs";
+import "./d~1.mjs";
 ```
 ## d.mjs
 
 ```js
-import "./d.mjs";
+import "./d~1.mjs";
 ```
-## d.mjs
+## d~1.mjs
 
 ```js
 // cd.js

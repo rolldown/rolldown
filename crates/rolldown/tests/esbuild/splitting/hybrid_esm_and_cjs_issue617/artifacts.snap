@@ -8,11 +8,11 @@ input_file: crates/rolldown/tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
 ## a.mjs
 
 ```js
-import { foo } from "./a.mjs";
+import { foo } from "./a~1.mjs";
 
 export { foo };
 ```
-## a.mjs
+## a~1.mjs
 
 ```js
 import { __esmMin, __export } from "./$runtime$.mjs";
@@ -32,7 +32,7 @@ export { a_ns, foo, init_a };
 
 ```js
 import { __toCommonJS } from "./$runtime$.mjs";
-import { a_ns, init_a } from "./a.mjs";
+import { a_ns, init_a } from "./a~1.mjs";
 
 // b.js
 let bar = (init_a(),__toCommonJS(a_ns));

@@ -22,9 +22,9 @@ input_file: crates/rolldown/tests/fixtures/circular_depency
 ## entry.mjs
 
 ```js
-import "./entry.mjs";
+import "./entry~1.mjs";
 ```
-## entry.mjs
+## entry~1.mjs
 
 ```js
 
@@ -32,5 +32,5 @@ import "./entry.mjs";
 ## main.mjs
 
 ```js
-import "./entry.mjs";
+import "./entry~1.mjs";
 ```

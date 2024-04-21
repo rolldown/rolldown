@@ -12,3 +12,9 @@ pub enum EntryPointKind {
   UserDefined,
   DynamicImport,
 }
+
+impl EntryPointKind {
+  pub fn is_user_defined(&self) -> bool {
+    matches!(self, EntryPointKind::UserDefined)
+  }
+}

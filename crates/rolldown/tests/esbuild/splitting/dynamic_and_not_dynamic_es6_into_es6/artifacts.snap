@@ -8,11 +8,11 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_and_not_dynamic_es6_
 ## foo.mjs
 
 ```js
-import { bar } from "./foo.mjs";
+import { bar } from "./foo~1.mjs";
 
 export { bar };
 ```
-## foo.mjs
+## foo~1.mjs
 
 ```js
 // foo.js
@@ -23,8 +23,8 @@ export { bar };
 ## main.mjs
 
 ```js
-import { bar } from "./foo.mjs";
+import { bar } from "./foo~1.mjs";
 
 // main.js
-import('./foo.mjs').then(({bar:b}) => console.log(bar, b));
+import('./foo~1.mjs').then(({bar:b}) => console.log(bar, b));
 ```

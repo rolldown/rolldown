@@ -8,22 +8,22 @@ input_file: crates/rolldown/tests/fixtures/misc/duplicate_entries
 ## main.mjs
 
 ```js
-import { main_default } from "./main.mjs";
+import { main_default } from "./main~1.mjs";
 
 export { main_default as default };
 ```
-## main.mjs
+## main2.mjs
+
+```js
+import { main_default } from "./main~1.mjs";
+
+export { main_default as default };
+```
+## main~1.mjs
 
 ```js
 // main.js
 var main_default = {};
 
 export { main_default };
-```
-## main2.mjs
-
-```js
-import { main_default } from "./main.mjs";
-
-export { main_default as default };
 ```

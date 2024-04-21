@@ -63,12 +63,12 @@ impl HashPlaceholderGenerator {
 
 pub fn replace_facade_hash_replacement(
   source: String,
-  real_hashes: &FxHashMap<String, &str>,
+  final_hashes_by_placeholder: &FxHashMap<String, &str>,
 ) -> String {
   let replaced = REPLACER_REGEX.replace_all(&source, |captures: &Captures<'_>| -> &str {
     debug_assert!(captures.len() == 1);
     let facade = captures.get(0).unwrap().as_str();
-    let real_hash = real_hashes.get(facade).unwrap_or_else(|| {
+    let real_hash = final_hashes_by_placeholder.get(facade).unwrap_or_else(|| {
       panic!("This should not happen. hash not found for facade replacement: {facade}")
     });
     real_hash

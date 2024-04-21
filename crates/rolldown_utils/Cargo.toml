@@ -12,5 +12,9 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[dependencies]
+base64      = { workspace = true }
+xxhash-rust = { workspace = true, features = ["xxh3"] }
+
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 rayon = { workspace = true }

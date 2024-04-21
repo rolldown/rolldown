@@ -33,6 +33,7 @@ rustc-hash         = { workspace = true }
 sugar_path         = { workspace = true }
 tokio              = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing            = { workspace = true }
+xxhash-rust        = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
 insta            = { workspace = true }

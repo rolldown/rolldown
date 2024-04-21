@@ -2,8 +2,13 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 
 use index_vec::IndexVec;
 use rolldown_common::ChunkId;
-use rolldown_utils::rayon::{IntoParallelIterator, ParallelBridge, ParallelIterator};
+use rolldown_utils::{
+  base64::to_url_safe_base64,
+  rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
+  xxhash::xxhash_base64_url,
+};
 use rustc_hash::{FxHashMap, FxHashSet};
+use xxhash_rust::xxh3::Xxh3;
 
 use crate::{chunk_graph::ChunkGraph, utils::hash_placeholder::replace_facade_hash_replacement};
 
@@ -15,10 +20,11 @@ pub fn finalize_chunks(
 ) -> Vec<ChunkRenderReturn> {
   fn append_hash(
     visited: &mut FxHashSet<ChunkId>,
-    state: &mut DefaultHasher,
+    state: &mut impl Hasher,
     chunk_id: ChunkId,
     chunk_graph: &ChunkGraph,
     chunk_refs: &IndexVec<ChunkId, &ChunkRenderReturn>,
+    index_standalone_content_hashes: &IndexVec<ChunkId, String>,
   ) {
     if visited.contains(&chunk_id) {
       return;
@@ -26,7 +32,7 @@ pub fn finalize_chunks(
     visited.insert(chunk_id);
 
     // perf: maybe we could reuse the `hash_states_of_chunks` directly rather than rehashing the full content
-    chunk_refs[chunk_id].code.hash(state);
+    index_standalone_content_hashes[chunk_id].hash(state);
 
     tracing::debug!(
       "append_hash {filename}, hash: {hash}",
@@ -35,74 +41,79 @@ pub fn finalize_chunks(
     );
 
     for dep in &chunk_graph.chunks[chunk_id].cross_chunk_imports {
-      append_hash(visited, state, *dep, chunk_graph, chunk_refs);
+      append_hash(visited, state, *dep, chunk_graph, chunk_refs, index_standalone_content_hashes);
     }
   }
 
-  let mut hash_states_of_chunks = chunks
-    .iter()
-    .map(|_| {
-      // TODO: use a better hash function
-      DefaultHasher::default()
-    })
-    .collect::<IndexVec<ChunkId, _>>();
+  let index_standalone_content_hashes: IndexVec<ChunkId, String> = chunks
+    .par_iter()
+    .map(|chunk| xxhash_base64_url(chunk.code.as_bytes()))
+    .collect::<Vec<_>>()
+    .into();
+
+  let mut index_chunk_hashers = index_vec::index_vec![Xxh3::default(); chunks.len()];
 
   let chunk_refs = chunks.iter().collect::<IndexVec<ChunkId, _>>();
 
-  let finalized_hashes = hash_states_of_chunks
+  let index_final_hashes: IndexVec<ChunkId, String> = index_chunk_hashers
     .iter_mut_enumerated()
     // FIXME: Extra traversing. This is a workaround due to `par_bridge` doesn't ensure order https://github.com/rayon-rs/rayon/issues/551#issuecomment-882069261
     .collect::<Vec<_>>()
     .into_par_iter()
     .map(|(chunk_id, state)| {
-      let tracing_span = tracing::debug_span!(
-        "append_hash",
-        filename = chunk_refs[chunk_id].rendered_chunk.file_name
-      );
+      let chunk_render_ret: &ChunkRenderReturn = chunk_refs[chunk_id];
+      let tracing_span =
+        tracing::debug_span!("append_hash", filename = chunk_render_ret.rendered_chunk.file_name);
       let _entered = tracing_span.enter();
 
       let mut visited = FxHashSet::default();
-      append_hash(&mut visited, state, chunk_id, chunk_graph, &chunk_refs);
-      let hashed = format!("{:08X}", state.finish());
-      tracing::debug!("hashed: {hashed}");
-      hashed
+      append_hash(
+        &mut visited,
+        state,
+        chunk_id,
+        chunk_graph,
+        &chunk_refs,
+        &index_standalone_content_hashes,
+      );
+      let digested = state.digest128();
+      tracing::debug!("digested: {digested}");
+      to_url_safe_base64(digested.to_le_bytes())
     })
-    .collect::<Vec<_>>();
+    .collect::<Vec<_>>()
+    .into();
 
-  tracing::debug!("finalized_hashes: {:#?}", finalized_hashes);
+  tracing::debug!("index_final_hashes: {:#?}", index_final_hashes);
 
-  let placeholder_to_finalized_hashes = chunk_graph
+  let final_hashes_by_placeholder = chunk_graph
     .chunks
     .iter()
-    .zip(&finalized_hashes)
+    .zip(&index_final_hashes)
     .filter_map(|(chunk, hash)| {
       chunk
         .preliminary_filename
         .as_ref()
         .unwrap()
         .hash_placeholder()
-        .map(|hash_placeholder| (hash_placeholder.to_string(), hash.as_str()))
+        .map(|hash_placeholder| (hash_placeholder.to_string(), &hash[..hash_placeholder.len()]))
     })
     .collect::<FxHashMap<_, _>>();
 
-  tracing::debug!("placeholder_to_finalized_hashes: {:#?}", placeholder_to_finalized_hashes);
+  tracing::debug!("final_hashes_by_placeholder: {:#?}", final_hashes_by_placeholder);
 
-  chunk_graph.chunks.iter_mut().zip(chunks.iter_mut()).for_each(|(chunk, chunk_render_return)| {
-    let preliminary_filename_raw =
-      chunk.preliminary_filename.as_ref().expect("should have file name").to_string();
-    let filename =
-      replace_facade_hash_replacement(preliminary_filename_raw, &placeholder_to_finalized_hashes);
-    chunk.filename = Some(filename.clone());
-    chunk_render_return.rendered_chunk.file_name = filename;
-    // TODO replace code
-    // chunk_render_return.code = chunk_render_return.code.replace(from, to)
-  });
+  chunk_graph.chunks.iter_mut().zip(chunks.iter_mut()).par_bridge().for_each(
+    |(chunk, chunk_render_return)| {
+      let preliminary_filename_raw =
+        chunk.preliminary_filename.as_ref().expect("should have file name").to_string();
+      let filename =
+        replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder);
+      chunk.filename = Some(filename.clone());
+      chunk_render_return.rendered_chunk.file_name = filename;
+      chunk_render_return.code = replace_facade_hash_replacement(
+        std::mem::take(&mut chunk_render_return.code),
+        &final_hashes_by_placeholder,
+      );
+    },
+  );
 
-  chunks.iter_mut().par_bridge().for_each(|chunk_ret| {
-    chunk_ret.code = replace_facade_hash_replacement(
-      std::mem::take(&mut chunk_ret.code),
-      &placeholder_to_finalized_hashes,
-    );
-  });
   chunks
 }

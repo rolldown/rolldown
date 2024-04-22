@@ -26,7 +26,7 @@ use std::sync::Arc;
 
 use super::types::ast_symbols::AstSymbols;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ScanResult {
   pub repr_name: String,
   pub named_imports: FxHashMap<SymbolRef, NamedImport>,
@@ -34,7 +34,7 @@ pub struct ScanResult {
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordId, RawImportRecord>,
   pub star_exports: Vec<ImportRecordId>,
-  pub default_export_ref: Option<SymbolRef>,
+  pub default_export_ref: SymbolRef,
   pub imports: FxHashMap<Span, ImportRecordId>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildError>,
@@ -66,20 +66,31 @@ impl<'me> AstScanner<'me> {
     source: &'me Arc<str>,
     file_path: &'me FilePath,
   ) -> Self {
-    let mut result = ScanResult::default();
-
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let symbol_id_for_default_export_ref =
       symbol_table.create_symbol(format!("{repr_name}_default").into(), scope.root_scope_id());
-    result.default_export_ref = Some((idx, symbol_id_for_default_export_ref).into());
 
     let name = format!("{repr_name}_ns");
     let namespace_ref: SymbolRef =
       (idx, symbol_table.create_symbol(name.into(), scope.root_scope_id())).into();
-    result.repr_name = repr_name;
 
-    // The first `StmtInfo` is used to represent the namespace binding statement
-    result.stmt_infos.push(StmtInfo::default());
+    let result = ScanResult {
+      repr_name,
+      named_imports: FxHashMap::default(),
+      named_exports: FxHashMap::default(),
+      stmt_infos: {
+        let mut stmt_infos = StmtInfos::default();
+        // The first `StmtInfo` is used to represent the namespace binding statement
+        stmt_infos.push(StmtInfo::default());
+        stmt_infos
+      },
+      import_records: IndexVec::new(),
+      star_exports: Vec::new(),
+      default_export_ref: (idx, symbol_id_for_default_export_ref).into(),
+      imports: FxHashMap::default(),
+      exports_kind: ExportsKind::None,
+      warnings: Vec::new(),
+    };
 
     Self {
       idx,
@@ -305,8 +316,8 @@ impl<'me> AstScanner<'me> {
       _ => unreachable!(),
     };
 
-    let final_binding = local_binding_for_default_export
-      .unwrap_or_else(|| self.result.default_export_ref.unwrap().symbol);
+    let final_binding =
+      local_binding_for_default_export.unwrap_or(self.result.default_export_ref.symbol);
 
     self.add_declared_id(final_binding);
     self.add_local_default_export(final_binding);

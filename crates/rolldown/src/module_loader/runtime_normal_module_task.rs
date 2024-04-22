@@ -3,7 +3,7 @@ use std::sync::Arc;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  AstScope, ExportsKind, FilePath, ModuleType, NormalModuleId, ResourceId, SymbolRef,
+  AstScope, ExportsKind, FilePath, ModuleType, NormalModule, NormalModuleId, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
@@ -12,7 +12,7 @@ use super::Msg;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   runtime::RuntimeModuleBrief,
-  types::{ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder},
+  types::ast_symbols::AstSymbols,
 };
 pub struct RuntimeNormalModuleTask {
   tx: tokio::sync::mpsc::Sender<Msg>,
@@ -25,7 +25,7 @@ pub struct RuntimeNormalModuleTaskResult {
   pub ast_symbol: AstSymbols,
   pub ast: OxcAst,
   pub warnings: Vec<BuildError>,
-  pub builder: NormalModuleBuilder,
+  pub module: NormalModule,
 }
 
 impl RuntimeNormalModuleTask {
@@ -36,7 +36,6 @@ impl RuntimeNormalModuleTask {
   #[tracing::instrument(skip_all)]
   pub fn run(self) {
     tracing::trace!("process <runtime>");
-    let mut builder = NormalModuleBuilder::default();
 
     let source: Arc<str> =
       include_str!("../runtime/runtime-without-comments.js").to_string().into();
@@ -58,30 +57,36 @@ impl RuntimeNormalModuleTask {
       warnings: _,
     } = scan_result;
 
-    builder.source = Some(source);
-    builder.id = Some(self.module_id);
-    builder.repr_name = Some(repr_name);
-    // TODO: Runtime module should not have FilePath as source id
-    builder.path = Some(ResourceId::new("runtime".to_string().into()));
-    builder.named_imports = Some(named_imports);
-    builder.named_exports = Some(named_exports);
-    builder.stmt_infos = Some(stmt_infos);
-    builder.imports = Some(imports);
-    builder.star_exports = Some(star_exports);
-    builder.default_export_ref = Some(default_export_ref.expect("should exist"));
-    builder.import_records = Some(IndexVec::default());
-    builder.scope = Some(scope);
-    builder.exports_kind = Some(ExportsKind::Esm);
-    builder.namespace_symbol = Some(namespace_symbol);
-    builder.pretty_path = Some("<runtime>".to_string());
-    builder.is_user_defined_entry = Some(false);
-    builder.is_virtual = true;
+    let module = NormalModule {
+      source,
+      id: self.module_id,
+      repr_name,
+      // TODO: Runtime module should not have FilePath as source id
+      resource_id: ResourceId::new("runtime".to_string().into()),
+      named_imports,
+      named_exports,
+      stmt_infos,
+      imports,
+      star_exports,
+      default_export_ref,
+      scope,
+      exports_kind: ExportsKind::Esm,
+      namespace_symbol,
+      module_type: ModuleType::EsmMjs,
+      pretty_path: "<runtime>".to_string(),
+      is_virtual: true,
+      exec_order: u32::MAX,
+      is_user_defined_entry: false,
+      import_records: IndexVec::default(),
+      is_included: false,
+      sourcemap_chain: vec![],
+    };
 
     if let Err(_err) =
       self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult {
         warnings: self.warnings,
         ast_symbol: symbol,
-        builder,
+        module,
         runtime,
         ast,
       }))

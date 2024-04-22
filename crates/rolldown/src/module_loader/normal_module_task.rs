@@ -5,8 +5,8 @@ use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  AstScope, FilePath, ImportRecordId, ModuleInfo, ModuleType, NormalModuleId, RawImportRecord,
-  ResolvedPath, ResourceId, SymbolRef,
+  AstScope, FilePath, ImportRecordId, ModuleInfo, ModuleType, NormalModule, NormalModuleId,
+  RawImportRecord, ResolvedPath, ResourceId, SymbolRef,
 };
 use rolldown_error::{BuildError, BuildResult};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
@@ -17,10 +17,7 @@ use super::{task_context::TaskContext, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   module_loader::NormalModuleTaskResult,
-  types::{
-    ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder,
-    resolved_request_info::ResolvedRequestInfo,
-  },
+  types::{ast_symbols::AstSymbols, resolved_request_info::ResolvedRequestInfo},
   utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
   SharedOptions, SharedResolver,
 };
@@ -100,25 +97,28 @@ impl NormalModuleTask {
     } = scan_result;
     warnings.extend(scan_warnings);
 
-    let builder = NormalModuleBuilder {
-      source: Some(source),
-      id: Some(self.module_id),
-      repr_name: Some(repr_name),
-      path: Some(ResourceId::new(Arc::<str>::clone(&self.resolved_path.path).into())),
-      named_imports: Some(named_imports),
-      named_exports: Some(named_exports),
-      stmt_infos: Some(stmt_infos),
-      imports: Some(imports),
-      star_exports: Some(star_exports),
+    let module = NormalModule {
+      source,
+      id: self.module_id,
+      repr_name,
+      resource_id: ResourceId::new(Arc::<str>::clone(&self.resolved_path.path).into()),
+      named_imports,
+      named_exports,
+      stmt_infos,
+      imports,
+      star_exports,
       default_export_ref,
-      scope: Some(scope),
-      exports_kind: Some(exports_kind),
-      namespace_symbol: Some(namespace_symbol),
+      scope,
+      exports_kind,
+      namespace_symbol,
       module_type: self.module_type,
-      pretty_path: Some(self.resolved_path.prettify(&self.ctx.input_options.cwd)),
+      pretty_path: self.resolved_path.prettify(&self.ctx.input_options.cwd),
       sourcemap_chain,
       is_virtual: self.resolved_path.is_virtual_module_path(),
-      ..Default::default()
+      exec_order: u32::MAX,
+      is_user_defined_entry: false,
+      import_records: IndexVec::default(),
+      is_included: false,
     };
 
     self
@@ -129,7 +129,7 @@ impl NormalModuleTask {
         module_id: self.module_id,
         warnings,
         ast_symbol,
-        builder,
+        module,
         raw_import_records: import_records,
         ast,
       }))

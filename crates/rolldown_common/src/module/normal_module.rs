@@ -2,8 +2,8 @@ use std::{fmt::Debug, sync::Arc};
 
 use crate::{
   types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
-  ImportRecordId, LocalExport, ModuleId, ModuleType, NamedImport, NormalModuleId, ResourceId,
-  StmtInfo, StmtInfos, SymbolRef,
+  ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
+  ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use index_vec::IndexVec;
 use oxc::span::Span;
@@ -59,6 +59,10 @@ impl NormalModule {
         .map(StmtInfo::to_debug_stmt_info_for_tree_shaking)
         .collect(),
     }
+  }
+
+  pub fn to_module_info(&self) -> ModuleInfo {
+    ModuleInfo { code: Some(Arc::clone(&self.source)), id: self.resource_id.expect_file().clone() }
   }
 }
 

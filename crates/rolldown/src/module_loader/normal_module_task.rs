@@ -5,8 +5,8 @@ use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  AstScope, FilePath, ImportRecordId, ModuleInfo, ModuleType, NormalModule, NormalModuleId,
-  RawImportRecord, ResolvedPath, ResourceId, SymbolRef,
+  AstScope, FilePath, ImportRecordId, ModuleType, NormalModule, NormalModuleId, RawImportRecord,
+  ResolvedPath, ResourceId, SymbolRef,
 };
 use rolldown_error::{BuildError, BuildResult};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
@@ -72,15 +72,6 @@ impl NormalModuleTask {
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
     tracing::trace!("scan {:?}", self.resolved_path);
 
-    self
-      .ctx
-      .plugin_driver
-      .module_parsed(Arc::new(ModuleInfo {
-        code: Some(Arc::clone(&source)),
-        id: Arc::clone(&self.resolved_path.path),
-      }))
-      .await?;
-
     let res = self.resolve_dependencies(&scan_result.import_records).await?;
 
     let ScanResult {
@@ -120,6 +111,8 @@ impl NormalModuleTask {
       import_records: IndexVec::default(),
       is_included: false,
     };
+
+    self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
 
     self
       .ctx

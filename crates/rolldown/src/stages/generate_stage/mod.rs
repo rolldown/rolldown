@@ -105,16 +105,17 @@ impl<'a> GenerateStage<'a> {
     let chunks = finalize_chunks(&mut chunk_graph, chunks);
 
     let mut assets = vec![];
-    for ChunkRenderReturn { mut map, rendered_chunk, mut code } in chunks {
+    for ChunkRenderReturn { mut map, rendered_chunk, mut code, file_dir } in chunks {
       if let Some(map) = map.as_mut() {
         map.set_file(&rendered_chunk.file_name);
 
         let map_file_name = format!("{}.map", rendered_chunk.file_name);
+        let map_path = file_dir.join(&map_file_name);
 
         if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
           let mut x_google_ignore_list = vec![];
           for (index, source) in map.get_sources().enumerate() {
-            if source_map_ignore_list.call(source, map_file_name.as_str()).await? {
+            if source_map_ignore_list.call(source, map_path.to_string_lossy().as_ref()).await? {
               #[allow(clippy::cast_possible_truncation)]
               x_google_ignore_list.push(index as u32);
             }
@@ -127,7 +128,9 @@ impl<'a> GenerateStage<'a> {
         if let Some(sourcemap_path_transform) = &self.options.sourcemap_path_transform {
           let mut sources = Vec::with_capacity(map.get_sources().count());
           for source in map.get_sources() {
-            sources.push(sourcemap_path_transform.call(source, map_file_name.as_str()).await?);
+            sources.push(
+              sourcemap_path_transform.call(source, map_path.to_string_lossy().as_ref()).await?,
+            );
           }
           map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
         }

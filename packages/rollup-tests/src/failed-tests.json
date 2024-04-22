@@ -699,15 +699,9 @@
   "rollup@sourcemaps@combined-sourcemap-with-loader: get combined sourcemap in transforming with loader@generates es",
   "rollup@sourcemaps@combined-sourcemap: get combined sourcemap in transforming@generates es",
   "rollup@sourcemaps@existing-external-sourcemaps-combined: removes sourcemap comments@generates es",
-  "rollup@sourcemaps@ignore-list-sourcemap-path: correctly passes source map path@generates es",
-  "rollup@sourcemaps@names-transformed-render-chunk: names are recovered if transforms are used@generates es",
   "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",
-  "rollup@sourcemaps@reified-namespace: generates correct sourcemap with reified namespace (#668)@generates es",
   "rollup@sourcemaps@single-length-segments: handles single-length sourcemap segments@generates es",
   "rollup@sourcemaps@sourcemap-base-url-without-trailing-slash: add a trailing slash automatically if it is missing@generates es",
   "rollup@sourcemaps@sourcemap-base-url: adds a sourcemap base url@generates es",
-  "rollup@sourcemaps@sourcemap-file-hashed: populates file property of sourcemap with final name when using hashes@generates es",
-  "rollup@sourcemaps@sourcemap-file: populates file property of sourcemap when plugins are used (#986)@generates es",
-  "rollup@sourcemaps@transform-full-source-paths: provides the full source map path when transforming source maps@generates es",
   "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es"
 ]

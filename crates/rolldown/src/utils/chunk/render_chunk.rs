@@ -104,7 +104,8 @@ pub async fn render_chunk(
 
     let paths =
       map.get_sources().map(|source| source.as_path().relative(file_dir)).collect::<Vec<_>>();
-    let sources = paths.iter().map(|x| x.to_slash_lossy()).collect::<Vec<_>>();
+    // Here not normalize the windows path, the rollup `sourcemap_path_transform` options need to original path.
+    let sources = paths.iter().map(|x| x.to_string_lossy()).collect::<Vec<_>>();
     map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
   }
 

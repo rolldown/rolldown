@@ -10,6 +10,7 @@ use rolldown_common::{
 use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use sugar_path::SugarPath;
 
 use crate::{
   chunk_graph::ChunkGraph,
@@ -130,6 +131,10 @@ impl<'a> GenerateStage<'a> {
           }
           map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
         }
+
+        // Normalize the windows path at final.
+        let sources = map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
+        map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
 
         match self.options.sourcemap {
           SourceMapType::File => {

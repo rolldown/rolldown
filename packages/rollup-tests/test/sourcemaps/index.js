@@ -31,12 +31,15 @@ runTestSuiteWithSamples(
 							strictDeprecations: true,
 							...config.options
 						};
+						let customOutputOptions = (config.options || {}).output || {};
 						const outputOptions = {
 							exports: 'auto',
-							file: directory + '/_actual/bundle.' + format + '.js',
+							dir: directory + '/_actual/',
+							entryFileNames: customOutputOptions.file ? path.basename(customOutputOptions.file) : 'bundle.' + format + '.js',
+							// file: directory + '/_actual/bundle.' + format + '.js',
 							format,
 							sourcemap: true,
-							...(config.options || {}).output
+							...customOutputOptions
 						};
 
 						let bundle = await rollup.rollup(inputOptions);

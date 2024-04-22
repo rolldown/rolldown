@@ -26,6 +26,7 @@ pub async fn render_chunks<'a>(
           collapse_sourcemaps(sourcemap_chain)
         },
         rendered_chunk: chunk.rendered_chunk,
+        file_dir: chunk.file_dir,
       })
   }))
   .await

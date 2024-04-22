@@ -44,3 +44,6 @@ nodeFs.writeFileSync(
   serialized,
   'utf8',
 )
+
+// TODO: avoid hanging benchmark-node in CI
+process.exit(0)

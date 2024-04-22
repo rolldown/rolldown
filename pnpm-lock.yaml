@@ -161,7 +161,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.0.0-alpha.51
-        version: 3.0.0-alpha.51(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))
+        version: 3.0.0-alpha.52(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.0
         version: 0.2.1
@@ -1616,8 +1616,8 @@ packages:
     os: [darwin, linux, win32]
     hasBin: true
 
-  '@napi-rs/cli@3.0.0-alpha.51':
-    resolution: {integrity: sha512-fzTQ4RfhaghFNryWTfb0e93N/J7hNfAOpUNL98u9qMymsXa3w2cUTN8W/HjiNVTUvHHus8X5PuHt9q65cDXcSg==}
+  '@napi-rs/cli@3.0.0-alpha.52':
+    resolution: {integrity: sha512-vOS+UO7PoJozmDd+9ixUtycGdnIacRrovRyE9IHkctF2f0I4JbW5r/O5w820v/RI+kvEzRwdqq82IAOjIzrdKQ==}
     engines: {node: '>= 16'}
     hasBin: true
     peerDependencies:
@@ -6512,7 +6512,7 @@ snapshots:
 
   '@ls-lint/ls-lint@2.2.3': {}
 
-  '@napi-rs/cli@3.0.0-alpha.51(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))':
+  '@napi-rs/cli@3.0.0-alpha.52(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))':
     dependencies:
       '@napi-rs/cross-toolchain': 0.0.14
       '@napi-rs/wasm-tools': 0.0.1

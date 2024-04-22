@@ -641,9 +641,9 @@ dependencies = [
 
 [[package]]
 name = "libmimalloc-sys"
-version = "0.1.35"
+version = "0.1.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3979b5c37ece694f1f5e51e7ecc871fdb0f517ed04ee45f88d15d6d553cb9664"
+checksum = "81eb4061c0582dedea1cbc7aff2240300dd6982e0239d1c99e65c1dbf4a30ba7"
 dependencies = [
  "cc",
  "libc",
@@ -713,9 +713,9 @@ dependencies = [
 
 [[package]]
 name = "mimalloc"
-version = "0.1.39"
+version = "0.1.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa01922b5ea280a911e323e4d2fd24b7fe5cc4042e0d2cda3c40775cdc4bdc9c"
+checksum = "9f41a2280ded0da56c8cf898babb86e8f10651a34adcfff190ae9a1159c6908d"
 dependencies = [
  "libmimalloc-sys",
 ]
@@ -1001,9 +1001,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "1.6.5"
+version = "1.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "398397ad0129603cf7137ba11e86a4c7a731c8bad6b688d391374276ff4d83d2"
+checksum = "8cad753abd0769c10c20933651a75df3001188bca832b2f3e3088e91d73b4da3"
 dependencies = [
  "dashmap",
  "dunce",

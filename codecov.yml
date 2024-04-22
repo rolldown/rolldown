@@ -1,0 +1,4 @@
+# https://docs.codecov.com/docs/ignoring-paths
+
+ignore:
+  - 'crates/rolldown_binding' # `rolldown_binding` is tested in nodejs

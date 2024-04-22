@@ -5,6 +5,7 @@ name: CI
 on:
   pull_request:
     types: [opened, synchronize]
+  merge_group:
   push:
     branches:
       - main

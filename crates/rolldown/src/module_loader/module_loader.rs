@@ -1,7 +1,8 @@
+use glob::Pattern;
 use index_vec::IndexVec;
 use rolldown_common::{
-  EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordId, ModuleId, NormalModule,
-  NormalModuleId,
+  EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordId, ModuleId, ModuleType,
+  NormalModule, NormalModuleId, ResolvedPath,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -75,6 +76,11 @@ impl ModuleLoader {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
     let (tx, rx) = tokio::sync::mpsc::channel::<Msg>(1024);
+    Self::prefetch_file_paths(
+      &input_options.warmup_files,
+      &input_options.warmup_files_exclude,
+      tx.clone(),
+    );
 
     let tx_to_runtime_module = tx.clone();
 
@@ -118,6 +124,34 @@ impl ModuleLoader {
     }
   }
 
+  fn prefetch_file_paths(
+    warmup_files: &[String],
+    warmup_files_exclude: &[String],
+    tx: tokio::sync::mpsc::Sender<Msg>,
+  ) {
+    let warmup_files = warmup_files.to_owned();
+    let warmup_files_exclude = warmup_files_exclude.to_owned();
+    tokio::task::spawn_blocking(move || {
+      let exclude_patterns =
+        warmup_files_exclude.iter().flat_map(|pattern| Pattern::new(pattern)).collect::<Vec<_>>();
+      let results = warmup_files.iter().map(|pattern| glob::glob(pattern));
+      for result in results.flatten() {
+        for file in result.flatten() {
+          if exclude_patterns.iter().any(|p| p.matches_path(&file)) {
+            continue;
+          }
+
+          let path = file.to_str().unwrap().to_string();
+          let res = tx.blocking_send(Msg::RequestPrefetch(path));
+          if res.is_err() {
+            return;
+          }
+        }
+      }
+    });
+  }
+
+  #[tracing::instrument(skip_all)]
   fn try_spawn_new_task(&mut self, info: &ResolvedRequestInfo) -> ModuleId {
     match self.visited.entry(Arc::<str>::clone(&info.path.path)) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
@@ -248,6 +282,15 @@ impl ModuleLoader {
 
           self.symbols.add_ast_symbol(self.runtime_id, ast_symbol);
           runtime_brief = Some(runtime);
+        }
+        Msg::RequestPrefetch(path) => {
+          self.remaining += 1;
+          let resolved_request_info = ResolvedRequestInfo {
+            path: ResolvedPath::from(path),
+            module_type: ModuleType::EsmMjs,
+            is_external: false,
+          };
+          self.try_spawn_new_task(&resolved_request_info);
         }
         Msg::BuildErrors(e) => {
           errors.extend(e);

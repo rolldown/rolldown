@@ -29,4 +29,7 @@ pub struct NormalizedBundlerOptions {
   pub footer: Option<AddonOutputOption>,
   pub sourcemap_ignore_list: Option<SourceMapIgnoreList>,
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
+
+  pub warmup_files: Vec<String>,
+  pub warmup_files_exclude: Vec<String>,
 }

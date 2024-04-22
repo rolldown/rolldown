@@ -16,6 +16,8 @@ export interface InputOptions {
   platform?: BindingInputOptions['platform']
   shimMissingExports?: BindingInputOptions['shimMissingExports']
   logLevel?: BindingInputOptions['logLevel']
+  warmupFiles?: string[]
+  warmupFilesExclude?: string[]
 }
 
 export type RolldownResolveOptions = Omit<BindingResolveOptions, 'alias'> & {
@@ -29,6 +31,8 @@ export type RolldownNormalizedInputOptions = Omit<
   plugins: (Plugin | ParallelPlugin)[]
   resolve?: BindingResolveOptions
   platform?: BindingInputOptions['platform']
+  warmupFiles: string[]
+  warmupFilesExclude: string[]
 }
 
 export async function normalizeInputOptions(
@@ -42,6 +46,8 @@ export async function normalizeInputOptions(
     resolve: getResolve(config.resolve),
     platform: config.platform,
     shimMissingExports: config.shimMissingExports ?? false,
+    warmupFiles: config.warmupFiles ?? [],
+    warmupFilesExclude: config.warmupFilesExclude ?? [],
   }
 }
 

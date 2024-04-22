@@ -14,6 +14,7 @@ use self::{
 pub enum Msg {
   NormalModuleDone(NormalModuleTaskResult),
   RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult),
+  RequestPrefetch(String),
   BuildErrors(Vec<BuildError>),
   Panics(anyhow::Error),
 }

@@ -85,6 +85,8 @@ export interface BindingInputOptions {
   platform?: 'node' | 'browser' | 'neutral'
   logLevel?: 'silent' | 'error' | 'warn' | 'info'
   cwd: string
+  warmupFiles: Array<string>
+  warmupFilesExclude: Array<string>
 }
 
 export interface BindingOutputOptions {

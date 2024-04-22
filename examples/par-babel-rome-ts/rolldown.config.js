@@ -24,4 +24,10 @@ export default defineConfig({
       './tmp/bench/rome/src/tsconfig.json',
     ),
   },
+  warmupFiles: [
+    nodePath.join(REPO_ROOT, './tmp/bench/rome/src/rome/**/*.ts'),
+    nodePath.join(REPO_ROOT, './tmp/bench/rome/src/@romejs/*/*.ts'),
+    nodePath.join(REPO_ROOT, './tmp/bench/rome/src/@romejs/**/*.ts'),
+  ],
+  warmupFilesExclude: ['**/test-fixtures/**/*.ts', '**/*.test.ts'],
 })

@@ -36,6 +36,10 @@
   "definitions": {
     "BundlerOptions": {
       "type": "object",
+      "required": [
+        "warmupFiles",
+        "warmupFilesExclude"
+      ],
       "properties": {
         "banner": {
           "type": [
@@ -142,6 +146,18 @@
             "boolean",
             "null"
           ]
+        },
+        "warmupFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warmupFilesExclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

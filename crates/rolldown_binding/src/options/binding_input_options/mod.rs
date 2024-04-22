@@ -61,4 +61,6 @@ pub struct BindingInputOptions {
   // extra
   pub cwd: String,
   // pub builtins: BuiltinsOptions,
+  pub warmup_files: Vec<String>,
+  pub warmup_files_exclude: Vec<String>,
 }

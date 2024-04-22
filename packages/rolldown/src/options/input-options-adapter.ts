@@ -24,6 +24,8 @@ export function createInputOptionsAdapter(
     platform: options.platform,
     shimMissingExports: options.shimMissingExports,
     logLevel: inputOptions.logLevel,
+    warmupFiles: options.warmupFiles,
+    warmupFilesExclude: options.warmupFilesExclude,
   }
 }
 

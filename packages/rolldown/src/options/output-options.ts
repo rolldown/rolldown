@@ -8,6 +8,7 @@ export interface OutputOptions {
   exports?: RollupOutputOptions['exports']
   sourcemap?: RollupOutputOptions['sourcemap']
   sourcemapIgnoreList?: RollupOutputOptions['sourcemapIgnoreList']
+  sourcemapPathTransform?: RollupOutputOptions['sourcemapPathTransform']
   banner?: RollupOutputOptions['banner']
   footer?: RollupOutputOptions['footer']
   entryFileNames?: string
@@ -78,6 +79,7 @@ export function normalizeOutputOptions(
     exports,
     sourcemap,
     sourcemapIgnoreList,
+    sourcemapPathTransform,
     entryFileNames,
     chunkFileNames,
   } = opts
@@ -87,6 +89,7 @@ export function normalizeOutputOptions(
     exports,
     sourcemap: normalizeSourcemap(sourcemap),
     sourcemapIgnoreList: normalizeSourcemapIgnoreList(sourcemapIgnoreList),
+    sourcemapPathTransform,
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
     banner: getAddon(opts, 'banner'),

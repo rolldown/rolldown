@@ -7,6 +7,7 @@ use super::{
   external::External, file_name_template::FilenameTemplate, input_item::InputItem,
   output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
   source_map_type::SourceMapType, sourcemap_ignore_list::SourceMapIgnoreList,
+  sourcemap_path_transform::SourceMapPathTransform,
 };
 
 #[derive(Debug)]
@@ -27,4 +28,5 @@ pub struct NormalizedBundlerOptions {
   pub banner: Option<AddonOutputOption>,
   pub footer: Option<AddonOutputOption>,
   pub sourcemap_ignore_list: Option<SourceMapIgnoreList>,
+  pub sourcemap_path_transform: Option<SourceMapPathTransform>,
 }

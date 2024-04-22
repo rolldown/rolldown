@@ -10,7 +10,7 @@ use crate::SourceMapIgnoreList;
 use self::types::{
   external::External, input_item::InputItem, output_format::OutputFormat,
   output_option::AddonOutputOption, platform::Platform, resolve_options::ResolveOptions,
-  source_map_type::SourceMapType,
+  source_map_type::SourceMapType, sourcemap_path_transform::SourceMapPathTransform,
 };
 
 pub mod types;
@@ -58,6 +58,12 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub sourcemap_ignore_list: Option<SourceMapIgnoreList>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub sourcemap_path_transform: Option<SourceMapPathTransform>,
   // --- options for resolve
   pub resolve: Option<ResolveOptions>,
 }

@@ -209,7 +209,7 @@ impl ModuleLoader {
             module_id,
             ast_symbol,
             resolved_deps,
-            mut builder,
+            mut module,
             raw_import_records,
             warnings,
             ast,
@@ -231,18 +231,18 @@ impl ModuleLoader {
               raw_rec.into_import_record(id)
             })
             .collect::<IndexVec<ImportRecordId, _>>();
-          builder.import_records = Some(import_records);
-          builder.is_user_defined_entry = Some(user_defined_entry_ids.contains(&module_id));
-          self.intermediate_normal_modules.modules[module_id] = Some(builder.build());
+          module.import_records = import_records;
+          module.is_user_defined_entry = user_defined_entry_ids.contains(&module_id);
+          self.intermediate_normal_modules.modules[module_id] = Some(module);
           self.intermediate_normal_modules.ast_table[module_id] = Some(ast);
 
           self.symbols.add_ast_symbol(module_id, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeNormalModuleTaskResult { ast_symbol, builder, runtime, warnings: _, ast } =
+          let RuntimeNormalModuleTaskResult { ast_symbol, module, runtime, warnings: _, ast } =
             task_result;
 
-          self.intermediate_normal_modules.modules[self.runtime_id] = Some(builder.build());
+          self.intermediate_normal_modules.modules[self.runtime_id] = Some(module);
           self.intermediate_normal_modules.ast_table[self.runtime_id] = Some(ast);
 
           self.symbols.add_ast_symbol(self.runtime_id, ast_symbol);

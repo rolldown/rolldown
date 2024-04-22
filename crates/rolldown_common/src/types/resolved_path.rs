@@ -20,18 +20,17 @@ impl ResolvedPath {
   /// 2. relative to the cwd, so it could show stable path across different machines
   pub fn prettify(&self, cwd: impl AsRef<Path>) -> String {
     let path = self.path.as_path();
-    let pretty = if path.is_absolute() {
+    let mut pretty = if path.is_absolute() {
       path.relative(cwd.as_ref()).to_slash_lossy().to_string()
     } else {
       path.to_slash_lossy().to_string()
     };
     // remove \0
-    let pretty = pretty.replace('\0', "");
+    pretty.retain(|c| c != '\0');
     if self.ignored {
-      format!("(ignored) {pretty}")
-    } else {
-      pretty
+      pretty.insert_str(0, "(ignored) ");
     }
+    pretty
   }
 
   pub fn is_virtual_module_path(&self) -> bool {

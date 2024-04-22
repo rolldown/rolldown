@@ -14,7 +14,7 @@ doctest = false
 test    = false
 
 [dependencies]
-criterion = { package = "criterion2", version = "0.7.0", default-features = false }
+criterion = { package = "criterion2", version = "0.7.2", default-features = false }
 rolldown  = { path = "../rolldown" }
 tokio     = { workspace = true, features = ["full"] }
 [[bench]]

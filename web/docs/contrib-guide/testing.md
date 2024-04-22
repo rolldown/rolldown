@@ -25,7 +25,7 @@ A test case is a folder that contains `_config.json`.
 
 For all available options, you could refer to
 
-- https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/src/test_config/mod.rs
+- https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing_config/src/lib.rs
 - https://github.com/rolldown/rolldown/blob/main/crates/rolldown_common/src/inner_bundler_options/mod.rs
 - https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/_test.scheme.json
 

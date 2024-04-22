@@ -1,4 +1,5 @@
 import { isAbsolute, join } from 'pathe'
+// @ts-expect-error
 import { AssetItem, FileItem } from '@rolldown/wasm-binding'
 
 export type ModuleInfo = {

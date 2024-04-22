@@ -1,3 +1,47 @@
+## [0.10.2](https://github.com/rolldown/rolldown/compare/v0.10.1...v0.10.2) (2024-04-17)
+
+
+### Bug Fixes
+
+* buildEnd hook handle error ([#902](https://github.com/rolldown/rolldown/issues/902)) ([bc8e9ab](https://github.com/rolldown/rolldown/commit/bc8e9ab4529e8d18b28a4c67dbac1aceb1177f22))
+* **ci:** cargo bench should install critcmp ([#899](https://github.com/rolldown/rolldown/issues/899)) ([0169bfe](https://github.com/rolldown/rolldown/commit/0169bfed760e5e159fd7538e2c34d4f610709af8))
+* normalize original sourcemap sources ([#765](https://github.com/rolldown/rolldown/issues/765)) ([679a9ac](https://github.com/rolldown/rolldown/commit/679a9ac97c351712c5f97e5f2168985c3f6f9cd2))
+* passing `BindingResolveOptions#alias` from js to rust with maintaining order ([#798](https://github.com/rolldown/rolldown/issues/798)) ([2f3d865](https://github.com/rolldown/rolldown/commit/2f3d86559c7d62d072ba7a130a6c616f14699acb))
+* remapping sourcemap from transform hook ([#755](https://github.com/rolldown/rolldown/issues/755)) ([43242f4](https://github.com/rolldown/rolldown/commit/43242f4a52ebe3c00e7fb2f603d8ef2a7c9ed46d))
+* **rust/resolver:** use selected resolver instead of the default one ([#780](https://github.com/rolldown/rolldown/issues/780)) ([226df5b](https://github.com/rolldown/rolldown/commit/226df5b9993e568ff58a345ef1ca39d2cdc37613))
+* sourcemap sources path  relative to output file dirname ([#758](https://github.com/rolldown/rolldown/issues/758)) ([7f5047f](https://github.com/rolldown/rolldown/commit/7f5047fa03cf93e638a01e6fcafe63fec4eeb7a6))
+
+
+### Features
+
+* add `InputOptions#platform` ([#751](https://github.com/rolldown/rolldown/issues/751)) ([97ea4b6](https://github.com/rolldown/rolldown/commit/97ea4b635a0789e5a62114887da8bef9acdca6cd))
+* Allow pass tsconfig to `oxc-resolver` via `InputOptions#resolve#tsconfigFilename` ([#767](https://github.com/rolldown/rolldown/issues/767)) ([c304a0d](https://github.com/rolldown/rolldown/commit/c304a0dcde43234654626f8695cd745f37de4d33))
+* emit warning for circular dependency ([#839](https://github.com/rolldown/rolldown/issues/839)) ([6d64a64](https://github.com/rolldown/rolldown/commit/6d64a640cc96b950e26cf6859894097612bb96f1))
+* improve side effect detector  ([#807](https://github.com/rolldown/rolldown/issues/807)) ([b948cf6](https://github.com/rolldown/rolldown/commit/b948cf6aac4baad169a3afcb93eb177714b4eaa5))
+* **node/plugin:** support `renderStart` hook ([#833](https://github.com/rolldown/rolldown/issues/833)) ([c1194e6](https://github.com/rolldown/rolldown/commit/c1194e6282dccf2496f5fa3c437415348286a4d8))
+* **rolldown:** introduce rolldown_rayon ([#846](https://github.com/rolldown/rolldown/issues/846)) ([4f9ae49](https://github.com/rolldown/rolldown/commit/4f9ae4945a424c2360c8b9d0ad29874eeb3b8f5f))
+* **rolldown:** support compile to wasi ([#467](https://github.com/rolldown/rolldown/issues/467)) ([da45d40](https://github.com/rolldown/rolldown/commit/da45d4042fb46e98cb17a5e6c29470dbd5e23c42))
+* **rust:**  only derive `deserialize` on `BundlerOptions` in testing ([#880](https://github.com/rolldown/rolldown/issues/880)) ([06df20d](https://github.com/rolldown/rolldown/commit/06df20d5cbf1eb880a911833388e56445f172892))
+* **rust:** collect circular dependencies while sorting modules ([#830](https://github.com/rolldown/rolldown/issues/830)) ([c092e0b](https://github.com/rolldown/rolldown/commit/c092e0b4a9a8c1a9382340c7794e4b81ec0db1b1))
+* **rust:** improve alignment of resolve behaviors with esbuild ([#759](https://github.com/rolldown/rolldown/issues/759)) ([e9d7717](https://github.com/rolldown/rolldown/commit/e9d77178f5e89539e35ce0f16b3544e9aa71cbdc))
+* support `entryFileNames` and `chunkFileNames` ([#777](https://github.com/rolldown/rolldown/issues/777)) ([50da487](https://github.com/rolldown/rolldown/commit/50da487d00f540d8512a80f8eb9736b2d4e08fc8))
+* support `InputOptions#shimMissingExports` ([#772](https://github.com/rolldown/rolldown/issues/772)) ([2c84963](https://github.com/rolldown/rolldown/commit/2c84963b63b946bcfd0bc569e4f5d13243016939))
+* support `renderError` hook ([#900](https://github.com/rolldown/rolldown/issues/900)) ([b9c9181](https://github.com/rolldown/rolldown/commit/b9c9181a77e3bba021ae2d9d92cb6a768f79e892))
+* support disable warnings using `InputOptions#logLevel` ([#859](https://github.com/rolldown/rolldown/issues/859)) ([f90bbb0](https://github.com/rolldown/rolldown/commit/f90bbb0baa4950228122291f3ac79c8d009b4801))
+* support render chunk hook normalzied output options ([#795](https://github.com/rolldown/rolldown/issues/795)) ([709aca7](https://github.com/rolldown/rolldown/commit/709aca7d522f66b5b67385411a5d88d7af5b3fc5))
+* support return sourcemap in render chunk hook  ([#776](https://github.com/rolldown/rolldown/issues/776)) ([0d4c2d5](https://github.com/rolldown/rolldown/commit/0d4c2d51b1f9a48fccc210c08df33ba22773cff5))
+* support running Js plugin in parallel via Worker ([#825](https://github.com/rolldown/rolldown/issues/825)) ([cff55de](https://github.com/rolldown/rolldown/commit/cff55de13d250a131daea59a0861a03fa11435bc))
+* **tree_shaking:** shake unused import variables ([#771](https://github.com/rolldown/rolldown/issues/771)) ([6714dd0](https://github.com/rolldown/rolldown/commit/6714dd070b4f1bd08283734be3685a3963badd03))
+
+
+### Performance Improvements
+
+* avoid unnecessary clone in `AddonFunction` ([#822](https://github.com/rolldown/rolldown/issues/822)) ([f814c3e](https://github.com/rolldown/rolldown/commit/f814c3e780969a8b8e3a6618d110016dcc9390ad))
+* **rolldown:** use starts_with instead of regex in resolve ([#878](https://github.com/rolldown/rolldown/issues/878)) ([93dc6ce](https://github.com/rolldown/rolldown/commit/93dc6ce52262d65dfc37a63eca44900981d48864))
+* **sourcemap:** search lines count at parallel ([#806](https://github.com/rolldown/rolldown/issues/806)) ([267fc2a](https://github.com/rolldown/rolldown/commit/267fc2ac5744006872edaf3e4ab7cf11156138c1))
+
+
+
 ## 0.10.1 (2024-04-03)
 
 

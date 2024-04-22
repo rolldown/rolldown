@@ -8,14 +8,14 @@ input_file: crates/rolldown/tests/fixtures/code_splitting/ensure_side_effect_exe
 ## a.mjs
 
 ```js
-import "./shared_js.mjs";
+import "./shared.mjs";
 ```
 ## b.mjs
 
 ```js
-import "./shared_js.mjs";
+import "./shared.mjs";
 ```
-## shared_js.mjs
+## shared.mjs
 
 ```js
 // shared.js

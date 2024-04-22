@@ -16,7 +16,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     cwd: raw_options
       .cwd
       .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),
-    external: raw_options.external.unwrap_or_default(),
+    external: raw_options.external,
     treeshake: raw_options.treeshake.unwrap_or(true),
     platform: raw_options.platform.unwrap_or(Platform::Browser),
     entry_file_names: raw_options
@@ -27,11 +27,12 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .chunk_file_names
       .unwrap_or_else(|| "[name]-[hash].js".to_string())
       .into(),
-    banner: raw_options.banner.unwrap_or_default(),
-    footer: raw_options.footer.unwrap_or_default(),
+    banner: raw_options.banner,
+    footer: raw_options.footer,
     dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
     format: raw_options.format.unwrap_or(crate::OutputFormat::Esm),
     sourcemap: raw_options.sourcemap.unwrap_or(SourceMapType::Hidden),
+    sourcemap_ignore_list: raw_options.sourcemap_ignore_list,
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
   };
 

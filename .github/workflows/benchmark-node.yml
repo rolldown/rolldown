@@ -79,7 +79,7 @@ jobs:
         run: just setup-bench
 
       - name: Build packages
-        run: pnpm build:release
+        run: just build native release
 
       - name: Run benchmarks
         run: pnpm --filter bench run bench-ci
@@ -87,6 +87,7 @@ jobs:
       - name: Show/Update benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
+          name: 'Node Benchmark'
           # What benchmark tool the output.txt came from
           tool: 'customSmallerIsBetter'
           # Where the output from the benchmark tool is stored

@@ -1,6 +1,6 @@
 use std::{path::Path, sync::Arc};
 
-use sugar_path::{AsPath, SugarPath};
+use sugar_path::SugarPath;
 
 #[derive(Debug, Clone)]
 pub struct ResolvedPath {
@@ -21,17 +21,12 @@ impl ResolvedPath {
   pub fn prettify(&self, cwd: impl AsRef<Path>) -> String {
     let path = self.path.as_path();
     let pretty = if path.is_absolute() {
-      path.relative(cwd.as_ref()).to_string_lossy().to_string()
+      path.relative(cwd.as_ref()).to_slash_lossy().to_string()
     } else {
-      path.to_string_lossy().to_string()
+      path.to_slash_lossy().to_string()
     };
     // remove \0
-    let mut pretty = pretty.replace('\0', "");
-    if cfg!(target_os = "windows") {
-      // TODO: remove this after https://github.com/hyf0/sugar_path/issues/18 is solved
-      // To use snapshots across platforms in testing, replace all backslashes with slashes
-      pretty = pretty.replace('\\', "/");
-    }
+    let pretty = pretty.replace('\0', "");
     if self.ignored {
       format!("(ignored) {pretty}")
     } else {

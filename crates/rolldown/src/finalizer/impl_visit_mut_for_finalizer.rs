@@ -10,14 +10,15 @@ use oxc::{
   span::{Span, SPAN},
 };
 use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{Dummy, ExpressionExt, IntoIn, StatementExt, TakeIn};
+use rolldown_oxc_utils::{ExpressionExt, IntoIn, StatementExt, TakeIn};
 
 use super::Finalizer;
 
-impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
+impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
   #[allow(clippy::too_many_lines, clippy::match_same_arms)]
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     let old_body = program.body.take_in(self.alloc);
+
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[0].is_included;
 
@@ -250,17 +251,17 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
                   kind: ast::BindingPatternKind::BindingIdentifier(
                     self.snippet.id(&var_name, SPAN).into_in(self.alloc),
                   ),
-                  ..Dummy::dummy(self.alloc)
+                  ..TakeIn::dummy(self.alloc)
                 },
                 kind: ast::VariableDeclarationKind::Var,
-                ..Dummy::dummy(self.alloc)
+                ..TakeIn::dummy(self.alloc)
               });
             });
             program.body.push(ast::Statement::Declaration(ast::Declaration::VariableDeclaration(
               ast::VariableDeclaration {
                 declarations: declarators,
                 kind: ast::VariableDeclarationKind::Var,
-                ..Dummy::dummy(self.alloc)
+                ..TakeIn::dummy(self.alloc)
               }
               .into_in(self.alloc),
             )));
@@ -416,7 +417,8 @@ impl<'ast, 'me: 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             let chunk_id = self.ctx.chunk_graph.module_to_chunk[importee_id]
               .expect("Normal module should belong to a chunk");
             let chunk = &self.ctx.chunk_graph.chunks[chunk_id];
-            str.value = self.snippet.atom(&format!("./{}", chunk.file_name.as_ref().unwrap()));
+            str.value =
+              self.snippet.atom(&format!("./{}", &**chunk.preliminary_filename.as_ref().unwrap()));
           }
           ModuleId::External(_) => {
             // external module doesn't belong to any chunk, just keep this as it is

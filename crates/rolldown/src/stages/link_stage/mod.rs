@@ -1,12 +1,12 @@
 use std::{ptr::addr_of, sync::Mutex};
 
 use index_vec::IndexVec;
-use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, NormalModule, NormalModuleId, StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::OxcProgram;
+use rolldown_oxc_utils::OxcAst;
+use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 
 use crate::{
   runtime::RuntimeModuleBrief,
@@ -31,12 +31,13 @@ mod wrapping;
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
   pub entries: Vec<EntryPoint>,
-  pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
+  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
+  pub errors: Vec<BuildError>,
 }
 
 #[derive(Debug)]
@@ -48,7 +49,8 @@ pub struct LinkStage<'a> {
   pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildError>,
-  pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
+  pub errors: Vec<BuildError>,
+  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub input_options: &'a SharedOptions,
 }
 
@@ -67,6 +69,7 @@ impl<'a> LinkStage<'a> {
       symbols: scan_stage_output.symbols,
       runtime: scan_stage_output.runtime,
       warnings: scan_stage_output.warnings,
+      errors: scan_stage_output.errors,
       ast_table: scan_stage_output.ast_table,
       input_options,
     }
@@ -141,6 +144,7 @@ impl<'a> LinkStage<'a> {
       symbols: self.symbols,
       runtime: self.runtime,
       warnings: self.warnings,
+      errors: self.errors,
       ast_table: self.ast_table,
     }
   }
@@ -161,9 +165,7 @@ impl<'a> LinkStage<'a> {
             if matches!(importee.exports_kind, ExportsKind::None) {
               if compat_mode {
                 // See https://github.com/evanw/esbuild/issues/447
-                if (rec.contains_import_default || rec.contains_import_star)
-                  && matches!(importee.exports_kind, ExportsKind::None)
-                {
+                if rec.contains_import_default || rec.contains_import_star {
                   self.metas[importee.id].wrap_kind = WrapKind::Cjs;
                   // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
                   unsafe {
@@ -221,7 +223,7 @@ impl<'a> LinkStage<'a> {
     self.module_table.normal_modules.iter().par_bridge().for_each(|importer| {
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
-      // - Mutating on `stmt_infos` does't rely on other mutating operations of other modules
+      // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
       // - Mutating and parallel reading is in different memory locations
       let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
 

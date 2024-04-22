@@ -3,19 +3,19 @@ use std::sync::Arc;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  AstScope, ExportsKind, FilePath, ModuleType, NormalModuleId, ResourceId, SymbolRef,
+  AstScope, ExportsKind, FilePath, ModuleType, NormalModule, NormalModuleId, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
+use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
 use super::Msg;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   runtime::RuntimeModuleBrief,
-  types::{ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder},
+  types::ast_symbols::AstSymbols,
 };
 pub struct RuntimeNormalModuleTask {
-  tx: tokio::sync::mpsc::UnboundedSender<Msg>,
+  tx: tokio::sync::mpsc::Sender<Msg>,
   module_id: NormalModuleId,
   warnings: Vec<BuildError>,
 }
@@ -23,20 +23,19 @@ pub struct RuntimeNormalModuleTask {
 pub struct RuntimeNormalModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
   pub ast_symbol: AstSymbols,
-  pub ast: OxcProgram,
+  pub ast: OxcAst,
   pub warnings: Vec<BuildError>,
-  pub builder: NormalModuleBuilder,
+  pub module: NormalModule,
 }
 
 impl RuntimeNormalModuleTask {
-  pub fn new(id: NormalModuleId, tx: tokio::sync::mpsc::UnboundedSender<Msg>) -> Self {
+  pub fn new(id: NormalModuleId, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
     Self { module_id: id, tx, warnings: Vec::default() }
   }
 
   #[tracing::instrument(skip_all)]
   pub fn run(self) {
     tracing::trace!("process <runtime>");
-    let mut builder = NormalModuleBuilder::default();
 
     let source: Arc<str> =
       include_str!("../runtime/runtime-without-comments.js").to_string().into();
@@ -58,45 +57,49 @@ impl RuntimeNormalModuleTask {
       warnings: _,
     } = scan_result;
 
-    builder.source = Some(source);
-    builder.id = Some(self.module_id);
-    builder.repr_name = Some(repr_name);
-    // TODO: Runtime module should not have FilePath as source id
-    builder.path = Some(ResourceId::new("runtime".to_string().into()));
-    builder.named_imports = Some(named_imports);
-    builder.named_exports = Some(named_exports);
-    builder.stmt_infos = Some(stmt_infos);
-    builder.imports = Some(imports);
-    builder.star_exports = Some(star_exports);
-    builder.default_export_ref = Some(default_export_ref.expect("should exist"));
-    builder.import_records = Some(IndexVec::default());
-    builder.scope = Some(scope);
-    builder.exports_kind = Some(ExportsKind::Esm);
-    builder.namespace_symbol = Some(namespace_symbol);
-    builder.pretty_path = Some("<runtime>".to_string());
-    builder.is_user_defined_entry = Some(false);
-    builder.is_virtual = true;
+    let module = NormalModule {
+      source,
+      id: self.module_id,
+      repr_name,
+      // TODO: Runtime module should not have FilePath as source id
+      resource_id: ResourceId::new("runtime".to_string().into()),
+      named_imports,
+      named_exports,
+      stmt_infos,
+      imports,
+      star_exports,
+      default_export_ref,
+      scope,
+      exports_kind: ExportsKind::Esm,
+      namespace_symbol,
+      module_type: ModuleType::EsmMjs,
+      pretty_path: "<runtime>".to_string(),
+      is_virtual: true,
+      exec_order: u32::MAX,
+      is_user_defined_entry: false,
+      import_records: IndexVec::default(),
+      is_included: false,
+      sourcemap_chain: vec![],
+    };
 
-    if let Err(_err) = self.tx.send(Msg::RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult {
-      warnings: self.warnings,
-      ast_symbol: symbol,
-      builder,
-      runtime,
-      ast,
-    })) {
+    if let Err(_err) =
+      self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult {
+        warnings: self.warnings,
+        ast_symbol: symbol,
+        module,
+        runtime,
+        ast,
+      }))
+    {
       // hyf0: If main thread is dead, we should handle errors of main thread. So we just ignore the error here.
     };
   }
 
-  fn make_ast(
-    &self,
-    source: &Arc<str>,
-  ) -> (OxcProgram, AstScope, ScanResult, AstSymbols, SymbolRef) {
+  fn make_ast(&self, source: &Arc<str>) -> (OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef) {
     let source_type = SourceType::default();
-    let mut program = OxcCompiler::parse(Arc::clone(source), source_type);
+    let mut ast = OxcCompiler::parse(Arc::clone(source), source_type);
 
-    let semantic = program.make_semantic(source_type);
-    let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
+    let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(
       scope,
       std::mem::take(&mut symbol_table.references),
@@ -114,9 +117,9 @@ impl RuntimeNormalModuleTask {
       &facade_path,
     );
     let namespace_symbol = scanner.namespace_ref;
-    program.hoist_import_export_from_stmts();
-    let scan_result = scanner.scan(program.program());
+    ast.hoist_import_export_from_stmts();
+    let scan_result = scanner.scan(ast.program());
 
-    (program, ast_scope, scan_result, symbol_for_module, namespace_symbol)
+    (ast, ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }
 }

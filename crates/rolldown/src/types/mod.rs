@@ -3,13 +3,12 @@
 // operations on the data they store or only have simple getters and setters.
 
 pub mod ast_symbols;
+pub mod bundle_output;
 pub mod bundler_fs;
 pub mod linking_metadata;
 pub mod match_import_kind;
 pub mod module_render_output;
 pub mod module_table;
 pub mod namespace_alias;
-pub mod normal_module_builder;
 pub mod resolved_request_info;
-pub mod rolldown_output;
 pub mod symbols;

@@ -4,7 +4,9 @@ use oxc::semantic::SymbolId;
 use oxc::span::SPAN;
 use smallvec::SmallVec;
 
-use crate::{AstSnippet, Dummy, IntoIn, TakeIn};
+use crate::allocator_helpers::into_in::IntoIn;
+use crate::allocator_helpers::take_in::TakeIn;
+use crate::AstSnippet;
 pub trait BindingIdentifierExt {
   fn expect_symbol_id(&self) -> SymbolId;
 }
@@ -63,7 +65,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
             span: SPAN,
             target: rest.unbox().argument.into_assignment_target(alloc),
           }),
-          ..Dummy::dummy(alloc)
+          ..TakeIn::dummy(alloc)
         };
         arr_pat.elements.take_in(alloc).into_iter().for_each(|binding_pat| {
           arr_target.elements.push(binding_pat.map(|binding_pat| match binding_pat.kind {
@@ -73,7 +75,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
                 ast::AssignmentTargetWithDefault {
                   binding: assign_pat.left.into_assignment_target(alloc),
                   init: assign_pat.right,
-                  ..Dummy::dummy(alloc)
+                  ..TakeIn::dummy(alloc)
                 }
                 .into_in(alloc),
               )
@@ -117,13 +119,13 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
     matches!(
       self,
       ast::Statement::ModuleDeclaration(module_decl)
-        if matches!(module_decl.0, ast::ModuleDeclaration::ImportDeclaration(_))
+        if matches!(&**module_decl, ast::ModuleDeclaration::ImportDeclaration(_))
     )
   }
 
   fn as_import_declaration(&self) -> Option<&ast::ImportDeclaration<'ast>> {
     if let ast::Statement::ModuleDeclaration(module_decl) = self {
-      if let ast::ModuleDeclaration::ImportDeclaration(import_decl) = &module_decl.0 {
+      if let ast::ModuleDeclaration::ImportDeclaration(import_decl) = &**module_decl {
         return Some(import_decl);
       }
     }
@@ -135,7 +137,7 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
   ) -> Option<&mut ast::ExportDefaultDeclaration<'ast>> {
     if let ast::Statement::ModuleDeclaration(export_default_decl) = self {
       if let ast::ModuleDeclaration::ExportDefaultDeclaration(export_default_decl) =
-        &mut export_default_decl.0
+        &mut **export_default_decl
       {
         return Some(export_default_decl);
       }
@@ -145,7 +147,7 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
 
   fn as_export_all_declaration(&self) -> Option<&ast::ExportAllDeclaration<'ast>> {
     if let ast::Statement::ModuleDeclaration(export_all_decl) = self {
-      if let ast::ModuleDeclaration::ExportAllDeclaration(export_all_decl) = &export_all_decl.0 {
+      if let ast::ModuleDeclaration::ExportAllDeclaration(export_all_decl) = &**export_all_decl {
         return Some(export_all_decl);
       }
     }
@@ -155,7 +157,7 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
   fn as_export_named_declaration(&self) -> Option<&ast::ExportNamedDeclaration<'ast>> {
     if let ast::Statement::ModuleDeclaration(export_named_decl) = self {
       if let ast::ModuleDeclaration::ExportNamedDeclaration(export_named_decl) =
-        &export_named_decl.0
+        &**export_named_decl
       {
         return Some(export_named_decl);
       }
@@ -166,7 +168,7 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
   fn as_export_named_declaration_mut(&mut self) -> Option<&mut ast::ExportNamedDeclaration<'ast>> {
     if let ast::Statement::ModuleDeclaration(export_named_decl) = self {
       if let ast::ModuleDeclaration::ExportNamedDeclaration(export_named_decl) =
-        &mut export_named_decl.0
+        &mut **export_named_decl
       {
         return Some(export_named_decl);
       }
@@ -194,6 +196,7 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
     }
   }
 
+  /// Check if the statement is `[import|export] ... from ...` or `export ... from ...`
   fn is_module_declaration_with_source(&self) -> bool {
     matches!(self.as_module_declaration(), Some(decl) if decl.source().is_some())
   }

@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 use self::{binding_input_item::BindingInputItem, binding_resolve_options::BindingResolveOptions};
 
-use super::plugin::BindingPluginOptions;
+use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 
 mod binding_input_item;
 mod binding_resolve_options;
@@ -43,7 +43,7 @@ pub struct BindingInputOptions {
   // moduleContext?: ((id: string) => string | null | void) | { [id: string]: string };
   // onwarn?: WarningHandlerWithDefault;
   // perf?: boolean;
-  pub plugins: Vec<BindingPluginOptions>,
+  pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder>,
   pub resolve: Option<BindingResolveOptions>,
   // preserveEntrySignatures?: PreserveEntrySignaturesOption;
   // /** @deprecated Use the "preserveModules" output option instead. */
@@ -55,6 +55,8 @@ pub struct BindingInputOptions {
   // watch?: WatcherOptions | false;
   #[napi(ts_type = "'node' | 'browser' | 'neutral'")]
   pub platform: Option<String>,
+  #[napi(ts_type = "'silent' | 'error' | 'warn' | 'info'")]
+  pub log_level: Option<String>,
 
   // extra
   pub cwd: String,

@@ -2,8 +2,8 @@ use serde::Deserialize;
 use std::fmt::Debug;
 
 use crate::types::{
-  binding_outputs::BindingOutputs, binding_rendered_chunk::RenderedChunk,
-  js_callback::MaybeAsyncJsCallback,
+  binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
+  binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallback,
 };
 
 use super::{
@@ -15,6 +15,9 @@ use super::{
     binding_hook_resolve_id_output::BindingHookResolveIdOutput,
   },
 };
+
+/// none is parallel js plugin
+pub type BindingPluginOrParallelJsPluginPlaceholder = Option<BindingPluginOptions>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default)]
@@ -48,6 +51,12 @@ pub struct BindingPluginOptions {
   pub transform: Option<MaybeAsyncJsCallback<(String, String), Option<BindingHookLoadOutput>>>,
 
   #[serde(skip_deserializing)]
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>"
+  )]
+  pub module_parsed: Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingModuleInfo), ()>>,
+
+  #[serde(skip_deserializing)]
   #[napi(ts_type = "(error: Nullable<string>) => MaybePromise<VoidNullable>")]
   pub build_end: Option<MaybeAsyncJsCallback<Option<String>, ()>>,
 
@@ -57,6 +66,14 @@ pub struct BindingPluginOptions {
   )]
   pub render_chunk:
     Option<MaybeAsyncJsCallback<(String, RenderedChunk), Option<BindingHookRenderChunkOutput>>>,
+
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "() => void")]
+  pub render_start: Option<MaybeAsyncJsCallback<(), ()>>,
+
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(error: string) => void")]
+  pub render_error: Option<MaybeAsyncJsCallback<String, ()>>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>")]
@@ -71,4 +88,12 @@ impl Debug for BindingPluginOptions {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("BindingPluginOptions").field("name", &self.name).finish_non_exhaustive()
   }
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingPluginWithIndex {
+  pub index: u32,
+  pub plugin: BindingPluginOptions,
 }

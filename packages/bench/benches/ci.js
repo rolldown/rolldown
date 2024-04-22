@@ -1,9 +1,9 @@
 import * as tinyBench from 'tinybench'
-import nodePath from 'path'
-import nodeUrl from 'url'
-import nodeFs from 'fs'
-import { suitesForCI } from '../src/suites.js'
-import { runRolldown } from '../src/run-bundler.js'
+import nodePath from 'node:path'
+import nodeUrl from 'node:url'
+import nodeFs from 'node:fs'
+import { expandSuitesWithDerived, suitesForCI } from '../src/suites/index.js'
+import { getRolldownSuiteList, runRolldown } from '../src/run-bundler.js'
 
 const DIRNAME = nodePath.dirname(nodeUrl.fileURLToPath(import.meta.url))
 const PROJECT_ROOT = nodePath.resolve(DIRNAME, '..')
@@ -11,10 +11,13 @@ const REPO_ROOT = nodePath.resolve(PROJECT_ROOT, '../..')
 
 const bench = new tinyBench.Bench()
 
-for (const suite of suitesForCI) {
-  bench.add(suite.title, async () => {
-    await runRolldown(suite)
-  })
+for (const suite of expandSuitesWithDerived(suitesForCI)) {
+  const rolldownSuiteList = getRolldownSuiteList(suite)
+  for (const rolldownSuite of rolldownSuiteList) {
+    bench.add(`${suite.title} (${rolldownSuite.suiteName})`, async () => {
+      await runRolldown(rolldownSuite)
+    })
+  }
 }
 
 await bench.warmup()
@@ -41,3 +44,6 @@ nodeFs.writeFileSync(
   serialized,
   'utf8',
 )
+
+// TODO: avoid hanging benchmark-node in CI
+process.exit(0)

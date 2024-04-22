@@ -2,13 +2,11 @@ use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
 
-use rolldown_error::BuildError;
-
 pub type ExternalFn = dyn Fn(
     String,
     Option<String>,
     bool,
-  ) -> Pin<Box<(dyn Future<Output = Result<bool, BuildError>> + Send + 'static)>>
+  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<bool>> + Send + 'static)>>
   + Send
   + Sync;
 
@@ -26,19 +24,13 @@ impl Debug for External {
   }
 }
 
-impl Default for External {
-  fn default() -> Self {
-    Self::ArrayString(vec![])
-  }
-}
-
 impl External {
   pub async fn call(
     &self,
     source: String,
     importer: Option<String>,
     is_resolved: bool,
-  ) -> Result<bool, BuildError> {
+  ) -> anyhow::Result<bool> {
     match self {
       Self::ArrayString(value) => Ok(value.iter().any(|item| item == &source)),
       Self::Fn(value) => value(source, importer, is_resolved).await,

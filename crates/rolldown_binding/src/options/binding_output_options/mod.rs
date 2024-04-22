@@ -1,7 +1,8 @@
 use super::super::types::binding_rendered_chunk::RenderedChunk;
-use super::plugin::BindingPluginOptions;
+use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::types::js_callback::MaybeAsyncJsCallback;
 use derivative::Derivative;
+use napi::threadsafe_function::ThreadsafeFunction;
 use napi_derive::napi;
 use serde::Deserialize;
 
@@ -59,13 +60,17 @@ pub struct BindingOutputOptions {
   // noConflict: boolean;
   // outro: () => string | Promise<string>;
   // paths: OptionsPaths;
-  pub plugins: Vec<BindingPluginOptions>,
+  pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder>,
   // preferConst: boolean;
   // preserveModules: boolean;
   // preserveModulesRoot: string | undefined;
   // sanitizeFileName: (fileName: string) => string;
   #[napi(ts_type = "'file' | 'inline' | 'hidden'")]
   pub sourcemap: Option<String>,
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(source: string, sourcemapPath: string) => boolean")]
+  pub sourcemap_ignore_list: Option<ThreadsafeFunction<(String, String), bool, false>>,
   // sourcemapExcludeSources: boolean;
   // sourcemapFile: string | undefined;
   // sourcemapPathTransform: SourcemapPathTransformOption | undefined;

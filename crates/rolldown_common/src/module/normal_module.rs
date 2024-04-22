@@ -6,7 +6,7 @@ use crate::{
   StmtInfo, StmtInfos, SymbolRef,
 };
 use index_vec::IndexVec;
-use oxc::{semantic::SymbolId, span::Span};
+use oxc::span::Span;
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
@@ -22,7 +22,7 @@ pub struct NormalModule {
   pub repr_name: String,
   pub module_type: ModuleType,
   pub namespace_symbol: SymbolRef,
-  pub named_imports: FxHashMap<SymbolId, NamedImport>,
+  pub named_imports: FxHashMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   /// `stmt_infos[0]` represents the namespace binding statement
   pub stmt_infos: StmtInfos,
@@ -35,7 +35,7 @@ pub struct NormalModule {
   pub exports_kind: ExportsKind,
   pub scope: AstScope,
   pub default_export_ref: SymbolRef,
-  pub sourcemap_chain: Vec<Arc<rolldown_sourcemap::SourceMap>>,
+  pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
   pub is_included: bool,
   // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
   pub is_virtual: bool,

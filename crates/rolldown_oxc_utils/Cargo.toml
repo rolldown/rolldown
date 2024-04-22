@@ -15,4 +15,5 @@ workspace = true
 [dependencies]
 oxc = { workspace = true, features = ["semantic", "codegen"] }
 
-smallvec = { workspace = true }
+self_cell = { workspace = true }
+smallvec  = { workspace = true }

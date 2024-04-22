@@ -18,6 +18,6 @@ crate-type = ["cdylib"]
 rolldown     = { workspace = true }
 rolldown_fs  = { workspace = true, features = ["memory"] }
 tokio        = { workspace = true, default-features = false, features = ["rt", "macros", "sync"] }
-wasm-bindgen = "0.2.92"
+wasm-bindgen = { workspace = true }
 
-console_error_panic_hook = "0.1.7"
+console_error_panic_hook = { workspace = true }

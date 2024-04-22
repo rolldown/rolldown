@@ -1,7 +1,10 @@
+#[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
+#[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "deserialize_bundler_options", derive(Deserialize, JsonSchema))]
 pub enum Platform {
   /// Represents the Node.js platform.
   Node,

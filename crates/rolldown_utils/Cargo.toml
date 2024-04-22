@@ -1,6 +1,6 @@
 [package]
 name    = "rolldown_utils"
-version = "0.1.0"
+version = "0.0.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -13,9 +13,8 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+base64      = { workspace = true }
+xxhash-rust = { workspace = true, features = ["xxh3"] }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-async-scoped = { workspace = true, features = ["use-tokio"] }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-futures = { workspace = true, features = ["executor"] }
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+rayon = { workspace = true }

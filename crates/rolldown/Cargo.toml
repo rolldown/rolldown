@@ -13,14 +13,11 @@ workspace = true
 
 [dependencies]
 anyhow             = { workspace = true }
-derivative         = { workspace = true }
 dunce              = { workspace = true }
 futures            = { workspace = true }
 index_vec          = { workspace = true }
 once_cell          = { workspace = true }
 oxc                = { workspace = true }
-path-slash         = { workspace = true }
-rayon              = { workspace = true }
 regex              = { workspace = true }
 rolldown_common    = { workspace = true }
 rolldown_error     = { workspace = true }
@@ -36,8 +33,12 @@ rustc-hash         = { workspace = true }
 sugar_path         = { workspace = true }
 tokio              = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing            = { workspace = true }
+xxhash-rust        = { workspace = true, features = ["xxh3"] }
 
-[dev_dependencies]
+[dev-dependencies]
+glob             = { workspace = true }
 insta            = { workspace = true }
 rolldown_testing = { workspace = true }
+sugar_path       = { workspace = true }
 testing_macros   = { workspace = true }
+tokio            = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }

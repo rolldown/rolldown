@@ -1,44 +1,54 @@
-use std::{fmt::Display, ops::Range};
-
+use crate::build_error::severity::Severity;
 use ariadne::{sources, Config, Label, Report, ReportBuilder, ReportKind};
+use std::{fmt::Display, ops::Range, sync::Arc};
 
-use crate::error::Severity;
-
-type Labels = Vec<Label<(String, Range<usize>)>>;
-
-#[derive(Debug, Default)]
-pub struct DiagnosticBuilder {
-  pub code: Option<&'static str>,
-  pub summary: Option<String>,
-  pub files: Option<Vec<(String, String)>>,
-  pub labels: Option<Labels>,
-  pub severity: Option<Severity>,
-}
-
-impl DiagnosticBuilder {
-  pub fn build(self) -> Diagnostic {
-    Diagnostic {
-      code: self.code.expect("Field `code` should be sett"),
-      summary: self.summary.expect("Field `summary` should be set"),
-      severity: self.severity.expect("Field `severity` should be set"),
-      labels: self.labels.unwrap_or_default(),
-      files: self.files.unwrap_or_default(),
-    }
-  }
-}
+#[derive(Debug, Clone)]
+pub struct DiagnosticFileId(Arc<str>);
 
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
-  pub(crate) code: &'static str,
-  pub(crate) summary: String,
-  pub(crate) files: Vec<(String, String)>,
-  pub(crate) labels: Labels,
+  pub(crate) kind: String,
+  pub(crate) title: String,
+  pub(crate) files: Vec<(/* filename */ Arc<str>, /* file content */ Arc<str>)>,
+  pub(crate) labels: Vec<Label<(/* filename */ Arc<str>, Range<usize>)>>,
   pub(crate) severity: Severity,
 }
 
+type AriadneReportBuilder = ReportBuilder<'static, (Arc<str>, Range<usize>)>;
+type AriadneReport = Report<'static, (Arc<str>, Range<usize>)>;
+
 impl Diagnostic {
-  fn init_report_builder(&mut self) -> ReportBuilder<'static, (String, Range<usize>)> {
-    let mut builder = Report::<(String, Range<usize>)>::build(
+  pub(crate) fn new(kind: String, summary: String, severity: Severity) -> Self {
+    Self { kind, title: summary, files: Vec::default(), labels: Vec::default(), severity }
+  }
+
+  pub(crate) fn add_file(
+    &mut self,
+    filename: impl Into<Arc<str>>,
+    content: impl Into<Arc<str>>,
+  ) -> DiagnosticFileId {
+    let filename = filename.into();
+    let content = content.into();
+    debug_assert!(self.files.iter().all(|(id, _)| id != &filename));
+    self.files.push((Arc::clone(&filename), content));
+    DiagnosticFileId(filename)
+  }
+
+  pub(crate) fn add_label(
+    &mut self,
+    file_id: &DiagnosticFileId,
+    range: impl Into<Range<u32>>,
+    message: String,
+  ) -> &mut Self {
+    let range = range.into();
+    let range = range.start as usize..range.end as usize;
+    let label = Label::new((Arc::clone(&file_id.0), range)).with_message(message);
+    self.labels.push(label);
+    self
+  }
+
+  fn init_report_builder(&mut self) -> AriadneReportBuilder {
+    let mut builder = AriadneReport::build(
       match self.severity {
         Severity::Error => ReportKind::Error,
         Severity::Warning => ReportKind::Warning,
@@ -46,8 +56,8 @@ impl Diagnostic {
       "",
       0,
     )
-    .with_code(self.code)
-    .with_message(self.summary.clone());
+    .with_code(self.kind.clone())
+    .with_message(self.title.clone());
 
     for label in self.labels.clone() {
       builder = builder.with_label(label);

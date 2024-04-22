@@ -8,15 +8,30 @@ import { PROJECT_ROOT } from './utils.js'
 
 /**
  * @typedef {import('./types.js').BenchSuite} BenchSuite
+ * @typedef {import('./types.js').RolldownBenchSuite} RolldownBenchSuite
  */
 
 /**
- *
  * @param {BenchSuite} suite
+ * @returns {RolldownBenchSuite[]}
+ */
+export function getRolldownSuiteList(suite) {
+  const rolldownOptionsList = Array.isArray(suite.rolldownOptions)
+    ? suite.rolldownOptions
+    : [{ name: 'default', options: suite.rolldownOptions }]
+  return rolldownOptionsList.map(({ name, options }) => ({
+    suiteName: name,
+    title: suite.title,
+    inputs: suite.inputs,
+    options,
+  }))
+}
+
+/**
+ * @param {RolldownBenchSuite} suite
  */
 export async function runRolldown(suite) {
-  const { output: outputOptions = {}, ...inputOptions } =
-    suite.rolldownOptions ?? {}
+  const { output: outputOptions = {}, ...inputOptions } = suite.options ?? {}
   const build = await rolldown.rolldown({
     platform: 'node',
     input: suite.inputs,
@@ -26,6 +41,7 @@ export async function runRolldown(suite) {
     dir: path.join(PROJECT_ROOT, `./dist/rolldown/${suite.title}`),
     ...outputOptions,
   })
+  await build.destroy()
 }
 
 /**

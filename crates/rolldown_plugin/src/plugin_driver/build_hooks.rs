@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use crate::{
-  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookRenderChunkArgs,
-  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver,
+  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
+  HookResolveIdReturn, HookTransformArgs, PluginDriver,
 };
-use rolldown_error::BuildError;
+use anyhow::Result;
+use rolldown_common::ModuleInfo;
 use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {
@@ -34,10 +35,8 @@ impl PluginDriver {
     Ok(None)
   }
 
-  pub async fn transform(
-    &self,
-    args: &HookTransformArgs<'_>,
-  ) -> Result<(String, Vec<Arc<SourceMap>>), BuildError> {
+  #[allow(clippy::unnecessary_cast)]
+  pub async fn transform(&self, args: &HookTransformArgs<'_>) -> Result<(String, Vec<SourceMap>)> {
     let mut sourcemap_chain = vec![];
     let mut code = args.code.to_string();
     for (plugin, ctx) in &self.plugins {
@@ -45,12 +44,27 @@ impl PluginDriver {
         plugin.transform(ctx, &HookTransformArgs { id: args.id, code: &code }).await?
       {
         code = r.code;
-        if let Some(map) = r.map {
-          sourcemap_chain.push(Arc::new(map));
+        if let Some(mut map) = r.map {
+          // If sourcemap  hasn't `sources`, using original id to fill it.
+          if map.get_source(0 as u32).map_or(true, str::is_empty) {
+            map.set_sources(vec![args.id]);
+          }
+          // If sourcemap hasn't `sourcesContent`, using original code to fill it.
+          if map.get_source_content(0 as u32).map_or(true, str::is_empty) {
+            map.set_source_contents(vec![args.code]);
+          }
+          sourcemap_chain.push(map);
         }
       }
     }
     Ok((code, sourcemap_chain))
+  }
+
+  pub async fn module_parsed(&self, module_info: Arc<ModuleInfo>) -> HookNoopReturn {
+    for (plugin, ctx) in &self.plugins {
+      plugin.module_parsed(ctx, Arc::clone(&module_info)).await?;
+    }
+    Ok(())
   }
 
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs>) -> HookNoopReturn {
@@ -59,21 +73,5 @@ impl PluginDriver {
       plugin.build_end(ctx, args).await?;
     }
     Ok(())
-  }
-
-  pub async fn render_chunk(
-    &self,
-    mut args: HookRenderChunkArgs<'_>,
-    sourcemap_chain: &mut Vec<Arc<SourceMap>>,
-  ) -> Result<String, BuildError> {
-    for (plugin, ctx) in &self.plugins {
-      if let Some(r) = plugin.render_chunk(ctx, &args).await? {
-        args.code = r.code;
-        if let Some(map) = r.map {
-          sourcemap_chain.push(Arc::new(map));
-        }
-      }
-    }
-    Ok(args.code)
   }
 }

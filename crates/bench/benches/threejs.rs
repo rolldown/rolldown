@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use bench::join_by_repo_root;
-use codspeed_criterion_compat::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use rolldown::{BundlerOptions, SourceMapType};
 
 #[derive(Debug)]
@@ -34,7 +34,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             cwd: join_by_repo_root("crates/benches").into(),
             ..Default::default()
           });
-          rolldown_bundler.scan().await.unwrap();
+          let output = rolldown_bundler.scan().await.unwrap();
+          assert!(output.errors.is_empty(), "failed to bundle: {:?}", output.errors);
         })
       });
     });
@@ -64,7 +65,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             cwd: join_by_repo_root("crates/bench").into(),
             ..Default::default()
           });
-          rolldown_bundler.write().await.unwrap();
+          let output = rolldown_bundler.write().await.unwrap();
+          assert!(output.errors.is_empty(), "failed to bundle: {:?}", output.errors);
         })
       });
     });
@@ -81,7 +83,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             sourcemap: Some(SourceMapType::File),
             ..Default::default()
           });
-          rolldown_bundler.write().await.unwrap();
+          let output = rolldown_bundler.write().await.unwrap();
+          assert!(output.errors.is_empty(), "failed to bundle: {:?}", output.errors);
         })
       });
     });

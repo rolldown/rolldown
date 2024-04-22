@@ -7,11 +7,14 @@ export interface OutputOptions {
   format?: 'es'
   exports?: RollupOutputOptions['exports']
   sourcemap?: RollupOutputOptions['sourcemap']
+  sourcemapIgnoreList?: RollupOutputOptions['sourcemapIgnoreList']
   banner?: RollupOutputOptions['banner']
   footer?: RollupOutputOptions['footer']
   entryFileNames?: string
   chunkFileNames?: string
 }
+
+export type NormalizedOutputOptions = BindingOutputOptions
 
 function normalizeFormat(
   format: OutputOptions['format'],
@@ -43,6 +46,17 @@ function normalizeSourcemap(
   }
 }
 
+function normalizeSourcemapIgnoreList(
+  sourcemapIgnoreList: OutputOptions['sourcemapIgnoreList'],
+): BindingOutputOptions['sourcemapIgnoreList'] {
+  return typeof sourcemapIgnoreList === 'function'
+    ? sourcemapIgnoreList
+    : sourcemapIgnoreList === false
+      ? () => false
+      : (relativeSourcePath: string, sourcemapPath: string) =>
+          relativeSourcePath.includes('node_modules')
+}
+
 const getAddon = <T extends 'banner' | 'footer'>(
   config: OutputOptions,
   name: T,
@@ -58,13 +72,22 @@ const getAddon = <T extends 'banner' | 'footer'>(
 export function normalizeOutputOptions(
   opts: OutputOptions,
 ): BindingOutputOptions {
-  const { dir, format, exports, sourcemap, entryFileNames, chunkFileNames } =
-    opts
+  const {
+    dir,
+    format,
+    exports,
+    sourcemap,
+    sourcemapIgnoreList,
+    entryFileNames,
+    chunkFileNames,
+  } = opts
   return {
     dir: dir,
     format: normalizeFormat(format),
     exports,
     sourcemap: normalizeSourcemap(sourcemap),
+    sourcemapIgnoreList: normalizeSourcemapIgnoreList(sourcemapIgnoreList),
+    // TODO(sapphi-red): support parallel plugins
     plugins: [],
     banner: getAddon(opts, 'banner'),
     footer: getAddon(opts, 'footer'),

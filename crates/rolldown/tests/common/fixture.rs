@@ -4,8 +4,7 @@ use std::{
   process::Command,
 };
 
-use rolldown::{Bundler, RolldownOutput, SourceMapType};
-use rolldown_error::BuildError;
+use rolldown::{BundleOutput, Bundler, SourceMapType};
 use rolldown_testing::TestConfig;
 
 fn default_test_input_item() -> rolldown::InputItem {
@@ -90,7 +89,7 @@ impl Fixture {
     }
   }
 
-  pub async fn compile(&mut self) -> Result<RolldownOutput, Vec<BuildError>> {
+  pub async fn bundle(&mut self, write_to_disk: bool, with_hash: bool) -> BundleOutput {
     let fixture_path = self.dir_path();
     let test_config = self.test_config();
 
@@ -105,10 +104,19 @@ impl Fixture {
     }
 
     if bundle_options.entry_file_names.is_none() {
-      bundle_options.entry_file_names = Some("[name].mjs".to_string());
+      if with_hash {
+        bundle_options.entry_file_names = Some("[name]-[hash].mjs".to_string());
+      } else {
+        bundle_options.entry_file_names = Some("[name].mjs".to_string());
+      }
     }
+
     if bundle_options.chunk_file_names.is_none() {
-      bundle_options.chunk_file_names = Some("[name].mjs".to_string());
+      if with_hash {
+        bundle_options.chunk_file_names = Some("[name]-[hash].mjs".to_string());
+      } else {
+        bundle_options.chunk_file_names = Some("[name].mjs".to_string());
+      }
     }
 
     if test_config.visualize_sourcemap {
@@ -124,11 +132,13 @@ impl Fixture {
 
     let mut bundler = Bundler::new(bundle_options);
 
-    if fixture_path.join("dist").is_dir() {
+    if write_to_disk && fixture_path.join("dist").is_dir() {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();
     }
-
-    let value = bundler.write().await?;
-    Ok(value)
+    if write_to_disk {
+      bundler.write().await.unwrap()
+    } else {
+      bundler.generate().await.unwrap()
+    }
   }
 }

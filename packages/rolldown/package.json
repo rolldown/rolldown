@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",
   "repository": {
@@ -33,7 +33,15 @@
       "types": "./dist/index.d.mts",
       "require": "./dist/index.cjs",
       "import": "./dist/index.mjs"
+    },
+    "./parallel-plugin": {
+      "types": "./dist/parallel-plugin.d.mts",
+      "require": "./dist/parallel-plugin.cjs",
+      "import": "./dist/parallel-plugin.mjs"
     }
+  },
+  "imports": {
+    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -41,14 +49,17 @@
   },
   "scripts": {
     "# Scrips for binding #": "_",
-    "artifacts": "napi artifacts -o=./artifacts --npm-dir ./npm",
-    "format-generated-binding-files": "prettier --write src/binding.js src/binding.d.ts",
-    "build-binding": "napi build -o=./src --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts --dts-header \"type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\"",
-    "build-binding:release": "napi build -o=./src --release --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts --dts-header \"type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\"",
+    "artifacts": "napi artifacts --cwd ./src --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
+    "build-binding": "napi build -o=./src --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts",
+    "build-binding:release": "pnpm build-binding --release",
+    "build-binding:wasi": "pnpm build-binding --target wasm32-wasi-preview1-threads",
+    "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasi-preview1-threads",
     "# Scrips for node #": "_",
     "build-node": "unbuild",
-    "build": "pnpm build-binding && pnpm build-node && pnpm format-generated-binding-files",
-    "build:release": "pnpm build-binding:release && pnpm build-node && pnpm format-generated-binding-files",
+    "build-native:debug": "run-s build-binding build-node",
+    "build-native:release": "run-s build-binding:release build-node",
+    "build-wasi:debug": "run-s build-binding:wasi build-node",
+    "build-wasi:release": "run-s build-binding:wasi:release build-node",
     "# Scrips for checking #": "_",
     "test": "vitest run --reporter verbose --hideSkippedTests",
     "test:update": "vitest run -u",
@@ -67,15 +78,26 @@
       "aarch64-unknown-linux-gnu",
       "aarch64-apple-darwin",
       "aarch64-unknown-linux-musl",
-      "aarch64-pc-windows-msvc"
-    ]
+      "aarch64-pc-windows-msvc",
+      "wasm32-wasi-preview1-threads"
+    ],
+    "wasm": {
+      "initialMemory": 16384,
+      "browser": {
+        "fs": true
+      }
+    },
+    "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\n"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0-alpha.43",
+    "@napi-rs/cli": "^3.0.0-alpha.51",
+    "@napi-rs/wasm-runtime": "^0.2.0",
     "citty": "^0.1.6",
     "colorette": "^2.0.20",
     "consola": "^3.2.3",
+    "emnapi": "^1.1.1",
     "glob": "^10.3.10",
+    "npm-run-all2": "^6.1.2",
     "rolldown": "workspace:*",
     "rollup": "^4.12.1",
     "type-fest": "^4.12.0",
@@ -91,6 +113,7 @@
     "@rolldown/binding-linux-arm64-musl": "workspace:*",
     "@rolldown/binding-linux-x64-gnu": "workspace:*",
     "@rolldown/binding-linux-x64-musl": "workspace:*",
+    "@rolldown/binding-wasm32-wasi": "workspace:*",
     "@rolldown/binding-win32-arm64-msvc": "workspace:*",
     "@rolldown/binding-win32-ia32-msvc": "workspace:*",
     "@rolldown/binding-win32-x64-msvc": "workspace:*"

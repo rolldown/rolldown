@@ -1,11 +1,11 @@
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 
-use rayon::iter::{ParallelBridge, ParallelIterator};
 use rolldown_common::{
   ExportsKind, ModuleId, NamedImport, NormalModule, NormalModuleId, ResolvedExport, Specifier,
   SymbolRef,
 };
+use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 
 use crate::{
   types::{
@@ -186,7 +186,7 @@ impl<'a> LinkStage<'a> {
 
     for symbol_ref in potentially_ambiguous_symbol_refs {
       let importer = &modules[symbol_ref.owner];
-      if let Some(info) = importer.named_imports.get(&symbol_ref.symbol) {
+      if let Some(info) = importer.named_imports.get(&symbol_ref) {
         let importee_id = importer.import_records[info.record_id].resolved_module;
         let ModuleId::Normal(importee_id) = importee_id else {
           continue;

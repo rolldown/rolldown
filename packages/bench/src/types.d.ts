@@ -12,7 +12,16 @@ export interface BenchSuite {
   title: string
   inputs: string[]
   disableBundler?: BundlerName | BundlerName[]
-  rolldownOptions?: RolldownOptions
+  rolldownOptions?:
+    | RolldownOptions
+    | { name: string; options: RolldownOptions }[]
   rollupOptions?: RollupOptions
   esbuildOptions?: BuildOptions
+}
+
+export interface RolldownBenchSuite {
+  suiteName: string
+  title: string
+  inputs: string[]
+  options?: RolldownOptions
 }

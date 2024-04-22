@@ -1,14 +1,16 @@
-import {
+import type {
   BindingHookResolveIdExtraOptions,
   BindingPluginContext,
   RenderedChunk,
   BindingOutputs,
+  BindingOutputOptions,
 } from '../binding'
-import { RolldownNormalizedInputOptions } from '../options/input-options'
-import { AnyFn, AnyObj, NullValue } from '../types/utils'
-import { SourceMapInput } from '../types/sourcemap'
-
-type MaybePromise<T> = T | Promise<T>
+import type { RolldownNormalizedInputOptions } from '../options/input-options'
+import { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
+import type { SourceMapInput } from '../types/sourcemap'
+import { pathToFileURL } from 'node:url'
+import type { NormalizedOutputOptions } from '../options/output-options'
+import type { ModuleInfo } from '../types/module-info'
 
 // Use a type alias here, we might wrap `BindingPluginContext` in the future
 type PluginContext = BindingPluginContext
@@ -74,11 +76,27 @@ export interface Plugin {
     >
   >
 
+  moduleParsed?: Hook<
+    (this: PluginContext, moduleInfo: ModuleInfo) => MaybePromise<NullValue>
+  >
+
+  buildEnd?: Hook<(this: null, err?: Error) => MaybePromise<NullValue>>
+
+  // --- Generate hooks ---
+
+  renderStart?: Hook<
+    (
+      outputOptions: BindingOutputOptions,
+      inputOptions: RolldownNormalizedInputOptions,
+    ) => MaybePromise<NullValue>
+  >
+
   renderChunk?: Hook<
     (
       this: null,
       code: string,
       chunk: RenderedChunk,
+      outputOptions: NormalizedOutputOptions,
     ) => MaybePromise<
       | NullValue
       | string
@@ -89,11 +107,30 @@ export interface Plugin {
     >
   >
 
-  buildEnd?: Hook<(this: null, err?: string) => MaybePromise<NullValue>>
-  // --- Output hooks ---
+  renderError?: Hook<(this: null, error: Error) => MaybePromise<NullValue>>
 
   generateBundle?: Hook<
     (bundle: BindingOutputs, isWrite: boolean) => MaybePromise<NullValue>
   >
   writeBundle?: Hook<(bundle: BindingOutputs) => MaybePromise<NullValue>>
+}
+
+export type ParallelPlugin = {
+  /** @internal */
+  _parallel: {
+    fileUrl: string
+    options: unknown
+  }
+}
+
+export type DefineParallelPluginResult<Options> = (
+  options: Options,
+) => ParallelPlugin
+
+export function defineParallelPlugin<Options>(
+  pluginPath: string,
+): DefineParallelPluginResult<Options> {
+  return (options) => {
+    return { _parallel: { fileUrl: pathToFileURL(pluginPath).href, options } }
+  }
 }

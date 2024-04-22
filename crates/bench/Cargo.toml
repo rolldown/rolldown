@@ -14,9 +14,12 @@ doctest = false
 test    = false
 
 [dependencies]
-codspeed-criterion-compat = { workspace = true }
-rolldown                  = { path = "../rolldown" }
-tokio                     = { workspace = true, features = ["full"] }
+criterion = { package = "criterion2", version = "0.7.2", default-features = false }
+rolldown  = { path = "../rolldown" }
+tokio     = { workspace = true, features = ["full"] }
 [[bench]]
 harness = false
 name    = "threejs"
+
+[features]
+codspeed = ["criterion/codspeed"]

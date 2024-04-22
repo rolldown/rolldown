@@ -1,13 +1,18 @@
 import nodeUtil from 'node:util'
-import { suites } from '../src/suites.js'
+import { expandSuitesWithDerived, suites } from '../src/suites/index.js'
 import * as bencher from '../src/bencher.js'
-import { runEsbuild, runRolldown, runRollup } from '../src/run-bundler.js'
+import {
+  getRolldownSuiteList,
+  runEsbuild,
+  runRolldown,
+  runRollup,
+} from '../src/run-bundler.js'
 
 console.log(
   nodeUtil.inspect(suites, { depth: null, colors: true, showHidden: false }),
 )
 
-for (const suite of suites) {
+for (const suite of expandSuitesWithDerived(suites)) {
   const excludedBundlers = Array.isArray(suite.disableBundler)
     ? suite.disableBundler
     : suite.disableBundler
@@ -16,9 +21,11 @@ for (const suite of suites) {
 
   const group = bencher.group(suite.title, (bench) => {
     if (!excludedBundlers.includes(`rolldown`)) {
-      bench.add(`rolldown`, async () => {
-        await runRolldown(suite)
-      })
+      for (const rolldownSuite of getRolldownSuiteList(suite)) {
+        bench.add(`rolldown (${rolldownSuite.suiteName})`, async () => {
+          await runRolldown(rolldownSuite)
+        })
+      }
     }
     if (!excludedBundlers.includes(`esbuild`)) {
       bench.add(`esbuild`, async () => {

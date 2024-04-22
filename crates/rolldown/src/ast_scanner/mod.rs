@@ -26,27 +26,27 @@ use std::sync::Arc;
 
 use super::types::ast_symbols::AstSymbols;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ScanResult {
   pub repr_name: String,
-  pub named_imports: FxHashMap<SymbolId, NamedImport>,
+  pub named_imports: FxHashMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordId, RawImportRecord>,
   pub star_exports: Vec<ImportRecordId>,
-  pub default_export_ref: Option<SymbolRef>,
+  pub default_export_ref: SymbolRef,
   pub imports: FxHashMap<Span, ImportRecordId>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildError>,
 }
 
-pub struct AstScanner<'a> {
+pub struct AstScanner<'me> {
   idx: NormalModuleId,
-  source: &'a Arc<str>,
+  source: &'me Arc<str>,
   module_type: ModuleType,
-  file_path: &'a FilePath,
-  scope: &'a AstScope,
-  symbol_table: &'a mut AstSymbols,
+  file_path: &'me FilePath,
+  scope: &'me AstScope,
+  symbol_table: &'me mut AstSymbols,
   current_stmt_info: StmtInfo,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
@@ -56,30 +56,41 @@ pub struct AstScanner<'a> {
   used_module_ref: bool,
 }
 
-impl<'ast> AstScanner<'ast> {
+impl<'me> AstScanner<'me> {
   pub fn new(
     idx: NormalModuleId,
-    scope: &'ast AstScope,
-    symbol_table: &'ast mut AstSymbols,
+    scope: &'me AstScope,
+    symbol_table: &'me mut AstSymbols,
     repr_name: String,
     module_type: ModuleType,
-    source: &'ast Arc<str>,
-    file_path: &'ast FilePath,
+    source: &'me Arc<str>,
+    file_path: &'me FilePath,
   ) -> Self {
-    let mut result = ScanResult::default();
-
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let symbol_id_for_default_export_ref =
       symbol_table.create_symbol(format!("{repr_name}_default").into(), scope.root_scope_id());
-    result.default_export_ref = Some((idx, symbol_id_for_default_export_ref).into());
 
     let name = format!("{repr_name}_ns");
     let namespace_ref: SymbolRef =
       (idx, symbol_table.create_symbol(name.into(), scope.root_scope_id())).into();
-    result.repr_name = repr_name;
 
-    // The first `StmtInfo` is used to represent the namespace binding statement
-    result.stmt_infos.push(StmtInfo::default());
+    let result = ScanResult {
+      repr_name,
+      named_imports: FxHashMap::default(),
+      named_exports: FxHashMap::default(),
+      stmt_infos: {
+        let mut stmt_infos = StmtInfos::default();
+        // The first `StmtInfo` is used to represent the namespace binding statement
+        stmt_infos.push(StmtInfo::default());
+        stmt_infos
+      },
+      import_records: IndexVec::new(),
+      star_exports: Vec::new(),
+      default_export_ref: (idx, symbol_id_for_default_export_ref).into(),
+      imports: FxHashMap::default(),
+      exports_kind: ExportsKind::None,
+      warnings: Vec::new(),
+    };
 
     Self {
       idx,
@@ -98,7 +109,7 @@ impl<'ast> AstScanner<'ast> {
     }
   }
 
-  pub fn scan(mut self, program: &Program<'ast>) -> ScanResult {
+  pub fn scan(mut self, program: &Program<'_>) -> ScanResult {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
@@ -158,7 +169,7 @@ impl<'ast> AstScanner<'ast> {
 
   fn add_named_import(&mut self, local: SymbolId, imported: &str, record_id: ImportRecordId) {
     self.result.named_imports.insert(
-      local,
+      (self.idx, local).into(),
       NamedImport {
         imported: Rstr::new(imported).into(),
         imported_as: (self.idx, local).into(),
@@ -169,7 +180,7 @@ impl<'ast> AstScanner<'ast> {
 
   fn add_star_import(&mut self, local: SymbolId, record_id: ImportRecordId) {
     self.result.named_imports.insert(
-      local,
+      (self.idx, local).into(),
       NamedImport { imported: Specifier::Star, imported_as: (self.idx, local).into(), record_id },
     );
   }
@@ -212,7 +223,7 @@ impl<'ast> AstScanner<'ast> {
     if name_import.imported.is_default() {
       self.result.import_records[record_id].contains_import_default = true;
     }
-    self.result.named_imports.insert(generated_imported_as_ref.symbol, name_import);
+    self.result.named_imports.insert(generated_imported_as_ref, name_import);
     self
       .result
       .named_exports
@@ -228,7 +239,7 @@ impl<'ast> AstScanner<'ast> {
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import =
       NamedImport { imported: Specifier::Star, imported_as: generated_imported_as_ref, record_id };
-    self.result.named_imports.insert(generated_imported_as_ref.symbol, name_import);
+    self.result.named_imports.insert(generated_imported_as_ref, name_import);
     self.result.import_records[record_id].contains_import_star = true;
     self
       .result
@@ -305,8 +316,8 @@ impl<'ast> AstScanner<'ast> {
       _ => unreachable!(),
     };
 
-    let final_binding = local_binding_for_default_export
-      .unwrap_or_else(|| self.result.default_export_ref.unwrap().symbol);
+    let final_binding =
+      local_binding_for_default_export.unwrap_or(self.result.default_export_ref.symbol);
 
     self.add_declared_id(final_binding);
     self.add_local_default_export(final_binding);
@@ -320,13 +331,10 @@ impl<'ast> AstScanner<'ast> {
       oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
         let imported = spec.imported.name();
+        self.add_named_import(sym, imported, id);
         if imported == "default" {
-          self.add_named_import(sym, imported, id);
           self.result.import_records[id].contains_import_default = true;
-        } else {
-          self.add_named_import(sym, imported, id);
         }
-        self.add_named_import(sym, spec.imported.name(), id);
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
         self.add_named_import(spec.local.expect_symbol_id(), "default", id);

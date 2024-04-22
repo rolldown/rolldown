@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
+use anyhow::Result;
+use futures::future::join_all;
 use index_vec::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, IntoBatchedResult, NormalModuleId};
+use rolldown_common::{EntryPoint, ImportKind, NormalModuleId};
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
-use rolldown_oxc_utils::OxcProgram;
+use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
-use rolldown_utils::block_on_spawn_all;
 
 use crate::{
-  error::BatchedResult,
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
   runtime::RuntimeModuleBrief,
   types::{
@@ -24,16 +24,18 @@ pub struct ScanStage {
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
+  pub errors: Vec<BuildError>,
 }
 
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub module_table: ModuleTable,
-  pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
+  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
+  pub errors: Vec<BuildError>,
 }
 
 impl ScanStage {
@@ -43,64 +45,83 @@ impl ScanStage {
     fs: OsFileSystem,
     resolver: SharedResolver,
   ) -> Self {
-    Self { input_options, plugin_driver, fs, resolver }
+    Self { input_options, plugin_driver, fs, resolver, errors: vec![] }
   }
 
   #[tracing::instrument(skip_all)]
-  pub async fn scan(&self) -> BatchedResult<ScanStageOutput> {
+  pub async fn scan(&mut self) -> anyhow::Result<ScanStageOutput> {
     tracing::info!("Start scan stage");
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
-    let mut module_loader = ModuleLoader::new(
+    let module_loader = ModuleLoader::new(
       Arc::clone(&self.input_options),
       Arc::clone(&self.plugin_driver),
       self.fs.clone(),
       Arc::clone(&self.resolver),
     );
 
-    module_loader.try_spawn_runtime_module_task();
+    let user_entries = self.resolve_user_defined_entries().await?;
 
-    let user_entries = self.resolve_user_defined_entries()?;
-
-    let ModuleLoaderOutput { module_table, entry_points, symbols, runtime, warnings, ast_table } =
-      module_loader.fetch_all_modules(user_entries).await?;
+    let ModuleLoaderOutput {
+      module_table,
+      entry_points,
+      symbols,
+      runtime,
+      warnings,
+      errors,
+      ast_table,
+    } = module_loader.fetch_all_modules(user_entries).await?;
+    self.errors.extend(errors);
 
     tracing::debug!("Scan stage finished {module_table:#?}");
 
-    Ok(ScanStageOutput { module_table, entry_points, symbols, runtime, warnings, ast_table })
+    Ok(ScanStageOutput {
+      module_table,
+      entry_points,
+      symbols,
+      runtime,
+      warnings,
+      ast_table,
+      errors: std::mem::take(&mut self.errors),
+    })
   }
 
   /// Resolve `InputOptions.input`
   #[tracing::instrument(skip_all)]
-  fn resolve_user_defined_entries(
-    &self,
-  ) -> BatchedResult<Vec<(Option<String>, ResolvedRequestInfo)>> {
+  #[allow(clippy::type_complexity)]
+  async fn resolve_user_defined_entries(
+    &mut self,
+  ) -> Result<Vec<(Option<String>, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 
-    let resolved_ids =
-      block_on_spawn_all(self.input_options.input.iter().map(|input_item| async move {
-        let specifier = &input_item.import;
-        match resolve_id(
-          resolver,
-          plugin_driver,
-          specifier,
-          None,
-          HookResolveIdExtraOptions { is_entry: true, kind: ImportKind::Import },
-          false,
-        )
-        .await
-        {
-          Ok(info) => {
-            if info.is_external {
-              return Err(BuildError::entry_cannot_be_external(&*info.path.path));
-            }
-            Ok((input_item.name.clone(), info))
-          }
-          Err(e) => Err(e),
-        }
-      }));
+    let resolved_ids = join_all(self.input_options.input.iter().map(|input_item| async move {
+      let specifier = &input_item.import;
+      match resolve_id(
+        resolver,
+        plugin_driver,
+        specifier,
+        None,
+        HookResolveIdExtraOptions { is_entry: true, kind: ImportKind::Import },
+        false,
+      )
+      .await
+      {
+        Ok(info) => Ok(info.map(|info| (input_item.name.clone(), info))),
+        Err(e) => Err(e),
+      }
+    }))
+    .await;
 
-    resolved_ids.into_batched_result()
+    let mut ret = Vec::with_capacity(self.input_options.input.len());
+
+    for handle in resolved_ids {
+      let handle = handle?;
+      match handle {
+        Ok((name, info)) => ret.push((name, info)),
+        Err(e) => self.errors.push(e),
+      }
+    }
+    Ok(ret)
   }
 }

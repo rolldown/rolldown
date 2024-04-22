@@ -1,4 +1,7 @@
-use crate::types::{binding_outputs::BindingOutputs, js_callback::MaybeAsyncJsCallbackExt};
+use crate::types::{
+  binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
+  js_callback::MaybeAsyncJsCallbackExt,
+};
 use rolldown_plugin::Plugin;
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 
@@ -18,6 +21,11 @@ impl Deref for JsPlugin {
 }
 
 impl JsPlugin {
+  #[cfg_attr(target_family = "wasm", allow(unused))]
+  pub(super) fn new(inner: BindingPluginOptions) -> Self {
+    Self { inner }
+  }
+
   pub(crate) fn new_boxed(inner: BindingPluginOptions) -> Box<dyn Plugin> {
     Box::new(Self { inner })
   }
@@ -90,6 +98,17 @@ impl Plugin for JsPlugin {
     }
   }
 
+  async fn module_parsed(
+    &self,
+    ctx: &rolldown_plugin::SharedPluginContext,
+    module_info: Arc<rolldown_common::ModuleInfo>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if let Some(cb) = &self.module_parsed {
+      cb.await_call((Arc::clone(ctx).into(), BindingModuleInfo::new(module_info))).await?;
+    }
+    Ok(())
+  }
+
   async fn build_end(
     &self,
     _ctx: &rolldown_plugin::SharedPluginContext,
@@ -97,6 +116,18 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_end {
       cb.await_call(args.map(|a| a.error.to_string())).await?;
+    }
+    Ok(())
+  }
+
+  // --- Generate hooks ---
+
+  async fn render_start(
+    &self,
+    _ctx: &rolldown_plugin::SharedPluginContext,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if let Some(cb) = &self.render_start {
+      cb.await_call(()).await?;
     }
     Ok(())
   }
@@ -118,7 +149,16 @@ impl Plugin for JsPlugin {
     }
   }
 
-  // --- Output hooks ---
+  async fn render_error(
+    &self,
+    _ctx: &rolldown_plugin::SharedPluginContext,
+    args: &rolldown_plugin::HookRenderErrorArgs,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if let Some(cb) = &self.render_error {
+      cb.await_call(args.error.to_string()).await?;
+    }
+    Ok(())
+  }
 
   async fn generate_bundle(
     &self,

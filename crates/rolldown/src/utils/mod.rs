@@ -1,9 +1,12 @@
 use oxc::ast::VisitMut;
 use rolldown_common::NormalModule;
-use rolldown_oxc_utils::{AstSnippet, OxcProgram};
+use rolldown_oxc_utils::{AstSnippet, OxcAst};
 
 use super::finalizer::{Finalizer, FinalizerContext};
 
+pub mod chunk;
+pub mod extract_hash_pattern;
+pub mod hash_placeholder;
 pub mod load_source;
 pub mod normalize_options;
 pub mod renamer;
@@ -19,15 +22,11 @@ pub(crate) fn is_in_rust_test_mode() -> bool {
   *TEST_MODE
 }
 
-pub fn finalize_normal_module(
-  module: &NormalModule,
-  ctx: FinalizerContext<'_>,
-  ast: &mut OxcProgram,
-) {
-  let (oxc_program, alloc) = ast.program_mut_and_allocator();
-
-  let mut finalizer =
-    Finalizer { alloc, ctx, scope: &module.scope, snippet: &AstSnippet::new(alloc) };
-
-  finalizer.visit_program(oxc_program);
+pub fn finalize_normal_module(module: &NormalModule, ctx: FinalizerContext<'_>, ast: &mut OxcAst) {
+  ast.with_mut(|fields| {
+    let (oxc_program, alloc) = (fields.program, fields.allocator);
+    let mut finalizer =
+      Finalizer { alloc, ctx, scope: &module.scope, snippet: AstSnippet::new(alloc) };
+    finalizer.visit_program(oxc_program);
+  });
 }

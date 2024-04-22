@@ -1,99 +1,85 @@
 use std::{path::Path, sync::Arc};
 
+use anyhow::Result;
 use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  AstScope, FilePath, ImportRecordId, ModuleType, NormalModuleId, RawImportRecord, ResolvedPath,
-  ResourceId, SymbolRef,
+  AstScope, FilePath, ImportRecordId, ModuleInfo, ModuleType, NormalModule, NormalModuleId,
+  RawImportRecord, ResolvedPath, ResourceId, SymbolRef,
 };
-use rolldown_oxc_utils::{OxcCompiler, OxcProgram};
+use rolldown_error::{BuildError, BuildResult};
+use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
-use sugar_path::AsPath;
+use sugar_path::SugarPath;
 
-use super::{module_task_context::ModuleTaskCommonData, Msg};
+use super::{task_context::TaskContext, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
-  error::{BatchedErrors, BatchedResult},
   module_loader::NormalModuleTaskResult,
-  types::{
-    ast_symbols::AstSymbols, normal_module_builder::NormalModuleBuilder,
-    resolved_request_info::ResolvedRequestInfo,
-  },
+  types::{ast_symbols::AstSymbols, resolved_request_info::ResolvedRequestInfo},
   utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
   SharedOptions, SharedResolver,
 };
-pub struct NormalModuleTask<'task> {
-  ctx: &'task ModuleTaskCommonData,
+pub struct NormalModuleTask {
+  ctx: Arc<TaskContext>,
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
   module_type: ModuleType,
-  errors: BatchedErrors,
+  errors: Vec<BuildError>,
 }
 
-impl<'task> NormalModuleTask<'task> {
+impl NormalModuleTask {
   pub fn new(
-    ctx: &'task ModuleTaskCommonData,
+    ctx: Arc<TaskContext>,
     id: NormalModuleId,
     path: ResolvedPath,
     module_type: ModuleType,
   ) -> Self {
-    Self { ctx, module_id: id, resolved_path: path, module_type, errors: BatchedErrors::default() }
+    Self { ctx, module_id: id, resolved_path: path, module_type, errors: vec![] }
   }
 
   pub async fn run(mut self) {
     match self.run_inner().await {
       Ok(()) => {
         if !self.errors.is_empty() {
-          self.ctx.tx.send(Msg::BuildErrors(self.errors)).expect("Send should not fail");
+          self.ctx.tx.send(Msg::BuildErrors(self.errors)).await.expect("Send should not fail");
         }
       }
       Err(err) => {
-        self.ctx.tx.send(Msg::Panics(err)).expect("Send should not fail");
+        self.ctx.tx.send(Msg::Panics(err)).await.expect("Send should not fail");
       }
     }
   }
 
-  async fn run_inner(&mut self) -> anyhow::Result<()> {
+  async fn run_inner(&mut self) -> Result<()> {
     tracing::trace!("process {:?}", self.resolved_path);
 
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let source = match load_source(
-      &self.ctx.plugin_driver,
-      &self.resolved_path,
-      &self.ctx.fs,
-      &mut sourcemap_chain,
-    )
-    .await
-    {
-      Ok(ret) => ret,
-      Err(errs) => {
-        self.errors.extend(errs);
-        return Ok(());
-      }
-    };
+    let source =
+      load_source(&self.ctx.plugin_driver, &self.resolved_path, &self.ctx.fs, &mut sourcemap_chain)
+        .await?;
 
     // Run plugin transform.
-    let source: Arc<str> = match transform_source(
-      &self.ctx.plugin_driver,
-      &self.resolved_path,
-      source,
-      &mut sourcemap_chain,
-    )
-    .await
-    {
-      Ok(ret) => ret.into(),
-      Err(errs) => {
-        self.errors.extend(errs);
-        return Ok(());
-      }
-    };
+    let source: Arc<str> =
+      transform_source(&self.ctx.plugin_driver, &self.resolved_path, source, &mut sourcemap_chain)
+        .await?
+        .into();
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
     tracing::trace!("scan {:?}", self.resolved_path);
+
+    self
+      .ctx
+      .plugin_driver
+      .module_parsed(Arc::new(ModuleInfo {
+        code: Some(Arc::clone(&source)),
+        id: Arc::clone(&self.resolved_path.path),
+      }))
+      .await?;
 
     let res = self.resolve_dependencies(&scan_result.import_records).await?;
 
@@ -111,25 +97,28 @@ impl<'task> NormalModuleTask<'task> {
     } = scan_result;
     warnings.extend(scan_warnings);
 
-    let builder = NormalModuleBuilder {
-      source: Some(source),
-      id: Some(self.module_id),
-      repr_name: Some(repr_name),
-      path: Some(ResourceId::new(Arc::<str>::clone(&self.resolved_path.path).into())),
-      named_imports: Some(named_imports),
-      named_exports: Some(named_exports),
-      stmt_infos: Some(stmt_infos),
-      imports: Some(imports),
-      star_exports: Some(star_exports),
+    let module = NormalModule {
+      source,
+      id: self.module_id,
+      repr_name,
+      resource_id: ResourceId::new(Arc::<str>::clone(&self.resolved_path.path).into()),
+      named_imports,
+      named_exports,
+      stmt_infos,
+      imports,
+      star_exports,
       default_export_ref,
-      scope: Some(scope),
-      exports_kind: Some(exports_kind),
-      namespace_symbol: Some(namespace_symbol),
+      scope,
+      exports_kind,
+      namespace_symbol,
       module_type: self.module_type,
-      pretty_path: Some(self.resolved_path.prettify(&self.ctx.input_options.cwd)),
+      pretty_path: self.resolved_path.prettify(&self.ctx.input_options.cwd),
       sourcemap_chain,
       is_virtual: self.resolved_path.is_virtual_module_path(),
-      ..Default::default()
+      exec_order: u32::MAX,
+      is_user_defined_entry: false,
+      import_records: IndexVec::default(),
+      is_included: false,
     };
 
     self
@@ -140,16 +129,17 @@ impl<'task> NormalModuleTask<'task> {
         module_id: self.module_id,
         warnings,
         ast_symbol,
-        builder,
+        module,
         raw_import_records: import_records,
         ast,
       }))
+      .await
       .expect("Send should not fail");
     tracing::trace!("end process {:?}", self.resolved_path);
     Ok(())
   }
 
-  fn scan(&self, source: &Arc<str>) -> (OxcProgram, AstScope, ScanResult, AstSymbols, SymbolRef) {
+  fn scan(&self, source: &Arc<str>) -> (OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef) {
     fn determine_oxc_source_type(path: impl AsRef<Path>, ty: ModuleType) -> SourceType {
       // Determine oxc source type for parsing
       let mut default = SourceType::default().with_module(true);
@@ -176,8 +166,7 @@ impl<'task> NormalModuleTask<'task> {
       determine_oxc_source_type(self.resolved_path.path.as_path(), self.module_type);
     let mut program = OxcCompiler::parse(Arc::clone(source), source_type);
 
-    let semantic = program.make_semantic(source_type);
-    let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
+    let (mut symbol_table, scope) = program.make_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(
       scope,
       std::mem::take(&mut symbol_table.references),
@@ -210,35 +199,41 @@ impl<'task> NormalModuleTask<'task> {
     importer: &str,
     specifier: &str,
     options: HookResolveIdExtraOptions,
-  ) -> BatchedResult<ResolvedRequestInfo> {
+  ) -> anyhow::Result<BuildResult<ResolvedRequestInfo>> {
     // Check external with unresolved path
-    if input_options.external.call(specifier.to_string(), Some(importer.to_string()), false).await?
-    {
-      return Ok(ResolvedRequestInfo {
-        path: specifier.to_string().into(),
-        module_type: ModuleType::Unknown,
-        is_external: true,
-      });
+    if let Some(external) = input_options.external.as_ref() {
+      if external.call(specifier.to_string(), Some(importer.to_string()), false).await? {
+        return Ok(Ok(ResolvedRequestInfo {
+          path: specifier.to_string().into(),
+          module_type: ModuleType::Unknown,
+          is_external: true,
+        }));
+      }
     }
 
-    let mut info =
+    let info =
       resolve_id(resolver, plugin_driver, specifier, Some(importer), options, false).await?;
 
-    if !info.is_external {
-      // Check external with resolved path
-      info.is_external = input_options
-        .external
-        .call(specifier.to_string(), Some(importer.to_string()), true)
-        .await?;
+    match info {
+      Ok(mut info) => {
+        if !info.is_external {
+          // Check external with resolved path
+          if let Some(external) = input_options.external.as_ref() {
+            info.is_external =
+              external.call(specifier.to_string(), Some(importer.to_string()), true).await?;
+          }
+        }
+        Ok(Ok(info))
+      }
+      Err(e) => Ok(Err(e)),
     }
-    Ok(info)
   }
 
   #[tracing::instrument(skip_all)]
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordId, RawImportRecord>,
-  ) -> anyhow::Result<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
+  ) -> Result<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let input_options = Arc::clone(&self.ctx.input_options);
@@ -248,7 +243,7 @@ impl<'task> NormalModuleTask<'task> {
       let importer = self.resolved_path.clone();
       let kind = item.kind;
       // let on_warn = self.input_options.on_warn.clone();
-      tokio::spawn(async move {
+      async move {
         Self::resolve_id(
           &input_options,
           &resolver,
@@ -259,36 +254,34 @@ impl<'task> NormalModuleTask<'task> {
         )
         .await
         .map(|id| (idx, id))
-      })
+      }
     });
 
     let resolved_ids = join_all(jobs).await;
 
-    let mut errors = BatchedErrors::default();
     let mut ret = IndexVec::with_capacity(dependencies.len());
-    resolved_ids.into_iter().try_for_each(|handle| -> anyhow::Result<()> {
-      let handle = handle?;
+    let mut build_errors = vec![];
+    for handle in resolved_ids {
+      let (_idx, handle) = handle?;
       match handle {
-        Ok((_idx, item)) => {
-          ret.push(item);
+        Ok(info) => {
+          ret.push(info);
         }
         Err(e) => {
-          errors.extend(e);
+          build_errors.push(e);
         }
       }
-      Ok(())
-    })?;
+    }
 
-    if errors.is_empty() {
+    if build_errors.is_empty() {
       Ok(ret)
     } else {
       // TODO: The better way here is to filter out the failed-resolved dependencies and return
-      // `Ok(rwt)` with recoverable errors `self.errors` instead of returning `Err` and causing panicking.
+      // `Ok(ret)` with recoverable errors `self.errors` instead of returning `Err` and causing panicking.
       let resolved_err = anyhow::format_err!(
-        "Resolver errors in {:?} => dependencies: {dependencies:#?}, errors: {errors:#?}",
+        "Resolver errors in {:?} => dependencies: {dependencies:#?}, build_errors: {build_errors:#?}",
         self.resolved_path
       );
-      self.errors.extend(errors);
       Err(resolved_err)
     }
   }

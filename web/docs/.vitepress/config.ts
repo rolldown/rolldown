@@ -5,7 +5,6 @@ export default defineConfig({
   title: 'Rolldown',
   description:
     'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
-
   lastUpdated: true,
   cleanUrls: true,
 
@@ -63,12 +62,26 @@ export default defineConfig({
     sidebar: {
       '/contrib-guide/': [
         { text: 'Overview', link: '/contrib-guide/' },
-        { text: 'Setup', link: '/contrib-guide/setup.md' },
-        { text: 'Build', link: '/contrib-guide/build.md' },
-        { text: 'Testing', link: '/contrib-guide/testing.md' },
-        { text: 'Benchmark', link: '/contrib-guide/benchmark.md' },
-        { text: 'Docs', link: '/contrib-guide/docs.md' },
-        { text: 'Release', link: '/contrib-guide/release.md' },
+        {
+          text: 'Development',
+          items: [
+            {
+              text: 'Setup the project',
+              link: '/contrib-guide/setup-the-project.md',
+            },
+            {
+              text: 'Building and running',
+              link: '/contrib-guide/building-and-running.md',
+            },
+            { text: 'Testing', link: '/contrib-guide/testing.md' },
+            { text: 'Benchmarking', link: '/contrib-guide/benchmarking.md' },
+            { text: 'Docs', link: '/contrib-guide/docs.md' },
+          ],
+        },
+        {
+          text: 'Misc',
+          items: [{ text: 'Release', link: '/contrib-guide/release.md' }],
+        },
       ],
     },
 

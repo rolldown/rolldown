@@ -1,3 +1,4 @@
+mod chunk;
 mod inner_bundler_options;
 mod module;
 mod types;
@@ -9,7 +10,7 @@ pub mod bundler_options {
   pub use crate::inner_bundler_options::{
     types::{
       external::External,
-      file_name_template::{FileNameRenderOptions, FileNameTemplate},
+      file_name_template::{FileNameRenderOptions, FilenameTemplate},
       input_item::InputItem,
       normalized_bundler_options::NormalizedBundlerOptions,
       output_format::OutputFormat,
@@ -17,6 +18,7 @@ pub mod bundler_options {
       platform::Platform,
       resolve_options::ResolveOptions,
       source_map_type::SourceMapType,
+      sourcemap_ignore_list::SourceMapIgnoreList,
     },
     BundlerOptions,
   };
@@ -24,10 +26,16 @@ pub mod bundler_options {
 
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
+  chunk::{
+    types::{
+      cross_chunk_import_item::CrossChunkImportItem, pre_renderer_chunk::PreRenderedChunk,
+      preliminary_filename::PreliminaryFilename,
+    },
+    Chunk,
+  },
   module::external_module::ExternalModule,
   module::normal_module::NormalModule,
   types::ast_scope::AstScope,
-  types::batched_errors::{BatchedErrors, BatchedResult, IntoBatchedResult},
   types::bundler_file_system::BundlerFileSystem,
   types::chunk_id::ChunkId,
   types::chunk_kind::ChunkKind,
@@ -37,6 +45,7 @@ pub use crate::{
   types::file_path::{representative_name, FilePath},
   types::import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},
   types::module_id::ModuleId,
+  types::module_info::ModuleInfo,
   types::module_path::ResourceId,
   types::module_type::ModuleType,
   types::named_export::LocalExport,

@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   # JOB to run change detection
-  Changes: # https://github.com/dorny/paths-filter
+  changes: # https://github.com/dorny/paths-filter
     name: Detect Changes
     runs-on: ubuntu-latest
     permissions:
@@ -31,6 +31,7 @@ jobs:
         with:
           filters: |
             rust-changes: &rust-changes
+              - '.github/workflows/**'
               - 'crates/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
@@ -82,12 +83,15 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
-          bins: just, taplo-cli
+          bins: just, taplo-cli, cargo-shear
           cache-base: main
           components: clippy,rustfmt
 
       - name: Lint
         run: just lint-rust
+
+      - name: Check unused dependencies
+        run: cargo shear
 
   cargo-test:
     needs: changes
@@ -105,6 +109,16 @@ jobs:
       matrix:
         target: [ubuntu-latest, macos-latest, windows-latest]
     uses: ./.github/workflows/reusable-node-test.yml
+    with:
+      os: ${{ matrix.target }}
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  wasi-test:
+    needs: changes
+    strategy:
+      matrix:
+        target: [ubuntu-latest, macos-latest, windows-latest]
+    uses: ./.github/workflows/reusable-wasi-test.yml
     with:
       os: ${{ matrix.target }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}

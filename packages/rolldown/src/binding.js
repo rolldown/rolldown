@@ -32,10 +32,7 @@ const isMuslFromFilesystem = () => {
 }
 
 const isMuslFromReport = () => {
-  const report =
-    typeof process.report.getReport === 'function'
-      ? process.report.getReport()
-      : null
+  const report = typeof process.report.getReport === 'function' ? process.report.getReport() : null
   if (!report) {
     return null
   }
@@ -52,9 +49,7 @@ const isMuslFromReport = () => {
 
 const isMuslFromChildProcess = () => {
   try {
-    return require('child_process')
-      .execSync('ldd --version', { encoding: 'utf8' })
-      .includes('musl')
+    return require('child_process').execSync('ldd --version', { encoding: 'utf8' }).includes('musl')
   } catch (e) {
     // If we reach this case, we don't know if the system is musl or not, so is better to just fallback to false
     return false
@@ -74,6 +69,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm') {
       try {
         return require('./rolldown-binding.android-arm-eabi.node')
@@ -85,10 +81,9 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
-      loadErrors.push(
-        new Error(`Unsupported architecture on Android ${process.arch}`),
-      )
+      loadErrors.push(new Error(`Unsupported architecture on Android ${process.arch}`))
     }
   } else if (process.platform === 'win32') {
     if (process.arch === 'x64') {
@@ -102,6 +97,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'ia32') {
       try {
         return require('./rolldown-binding.win32-ia32-msvc.node')
@@ -113,6 +109,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm64') {
       try {
         return require('./rolldown-binding.win32-arm64-msvc.node')
@@ -124,22 +121,21 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
-      loadErrors.push(
-        new Error(`Unsupported architecture on Windows: ${process.arch}`),
-      )
+      loadErrors.push(new Error(`Unsupported architecture on Windows: ${process.arch}`))
     }
   } else if (process.platform === 'darwin') {
     try {
-      return require('./rolldown-binding.darwin-universal.node')
-    } catch (e) {
-      loadErrors.push(e)
-    }
-    try {
-      return require('@rolldown/binding-darwin-universal')
-    } catch (e) {
-      loadErrors.push(e)
-    }
+        return require('./rolldown-binding.darwin-universal.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('@rolldown/binding-darwin-universal')
+      } catch (e) {
+        loadErrors.push(e)
+      }
 
     if (process.arch === 'x64') {
       try {
@@ -152,6 +148,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm64') {
       try {
         return require('./rolldown-binding.darwin-arm64.node')
@@ -163,10 +160,9 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
-      loadErrors.push(
-        new Error(`Unsupported architecture on macOS: ${process.arch}`),
-      )
+      loadErrors.push(new Error(`Unsupported architecture on macOS: ${process.arch}`))
     }
   } else if (process.platform === 'freebsd') {
     if (process.arch === 'x64') {
@@ -180,6 +176,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm64') {
       try {
         return require('./rolldown-binding.freebsd-arm64.node')
@@ -191,62 +188,78 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
-      loadErrors.push(
-        new Error(`Unsupported architecture on FreeBSD: ${process.arch}`),
-      )
+      loadErrors.push(new Error(`Unsupported architecture on FreeBSD: ${process.arch}`))
     }
   } else if (process.platform === 'linux') {
     if (process.arch === 'x64') {
       if (isMusl()) {
         try {
-          return require('./rolldown-binding.linux-x64-musl.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('@rolldown/binding-linux-x64-musl')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./rolldown-binding.linux-x64-musl.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('@rolldown/binding-linux-x64-musl')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       } else {
         try {
-          return require('./rolldown-binding.linux-x64-gnu.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('@rolldown/binding-linux-x64-gnu')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./rolldown-binding.linux-x64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('@rolldown/binding-linux-x64-gnu')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       }
     } else if (process.arch === 'arm64') {
       if (isMusl()) {
         try {
-          return require('./rolldown-binding.linux-arm64-musl.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('@rolldown/binding-linux-arm64-musl')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./rolldown-binding.linux-arm64-musl.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('@rolldown/binding-linux-arm64-musl')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       } else {
         try {
-          return require('./rolldown-binding.linux-arm64-gnu.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('@rolldown/binding-linux-arm64-gnu')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./rolldown-binding.linux-arm64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('@rolldown/binding-linux-arm64-gnu')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       }
     } else if (process.arch === 'arm') {
+      if (isMusl()) {
+        try {
+        return require('./rolldown-binding.linux-arm-musleabihf.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
       try {
+        return require('@rolldown/binding-linux-arm-musleabihf')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
+      } else {
+        try {
         return require('./rolldown-binding.linux-arm-gnueabihf.node')
       } catch (e) {
         loadErrors.push(e)
@@ -256,30 +269,46 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
+      }
     } else if (process.arch === 'riscv64') {
       if (isMusl()) {
         try {
-          return require('./rolldown-binding.linux-riscv64-musl.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('@rolldown/binding-linux-riscv64-musl')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./rolldown-binding.linux-riscv64-musl.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('@rolldown/binding-linux-riscv64-musl')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       } else {
         try {
-          return require('./rolldown-binding.linux-riscv64-gnu.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('@rolldown/binding-linux-riscv64-gnu')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./rolldown-binding.linux-riscv64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
       }
+      try {
+        return require('@rolldown/binding-linux-riscv64-gnu')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
+      }
+    } else if (process.arch === 'ppc64') {
+      try {
+        return require('./rolldown-binding.linux-ppc64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('@rolldown/binding-linux-ppc64-gnu')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
     } else if (process.arch === 's390x') {
       try {
         return require('./rolldown-binding.linux-s390x-gnu.node')
@@ -291,17 +320,12 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
-      loadErrors.push(
-        new Error(`Unsupported architecture on Linux: ${process.arch}`),
-      )
+      loadErrors.push(new Error(`Unsupported architecture on Linux: ${process.arch}`))
     }
   } else {
-    loadErrors.push(
-      new Error(
-        `Unsupported OS: ${process.platform}, architecture: ${process.arch}`,
-      ),
-    )
+    loadErrors.push(new Error(`Unsupported OS: ${process.platform}, architecture: ${process.arch}`))
   }
 }
 
@@ -337,8 +361,11 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
+module.exports.BindingModuleInfo = nativeBinding.BindingModuleInfo
 module.exports.BindingOutputAsset = nativeBinding.BindingOutputAsset
 module.exports.BindingOutputChunk = nativeBinding.BindingOutputChunk
 module.exports.BindingOutputs = nativeBinding.BindingOutputs
 module.exports.BindingPluginContext = nativeBinding.BindingPluginContext
 module.exports.Bundler = nativeBinding.Bundler
+module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
+module.exports.registerPlugins = nativeBinding.registerPlugins

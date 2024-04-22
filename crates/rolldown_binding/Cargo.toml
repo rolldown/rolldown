@@ -14,17 +14,22 @@ workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
+anyhow             = { workspace = true }
+async-channel      = { workspace = true }
 async-trait        = { workspace = true }
+dashmap            = { workspace = true }
 derivative         = { workspace = true }
 futures            = { workspace = true }
 napi               = { workspace = true }
 napi-derive        = { workspace = true }
+once_cell          = { workspace = true }
 rolldown           = { workspace = true }
 rolldown_common    = { workspace = true }
 rolldown_error     = { workspace = true, features = ["napi"] }
 rolldown_plugin    = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_tracing   = { workspace = true }
+rustc-hash         = { workspace = true }
 serde              = { workspace = true }
 tracing            = { workspace = true }
 
@@ -35,4 +40,4 @@ mimalloc = { workspace = true }
 mimalloc = { workspace = true, features = ["local_dynamic_tls"] }
 
 [build-dependencies]
-napi-build = "2"
+napi-build = { workspace = true }

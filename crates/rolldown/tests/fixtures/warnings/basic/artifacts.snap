@@ -5,10 +5,10 @@ input_file: crates/rolldown/tests/fixtures/warnings/basic
 ---
 # warnings
 
-## UNSUPPORTED_EVAL
+## EVAL
 
 ```text
-[UNSUPPORTED_EVAL] Warning: Rolldown does not support `eval` function currently.
+[EVAL] Warning: Rolldown does not support `eval` function currently.
    ╭─[tests/fixtures/warnings/basic/main.js:1:13]
    │
  1 │ console.log(eval)

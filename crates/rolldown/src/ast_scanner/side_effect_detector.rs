@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use oxc::ast::ast::{IdentifierReference, MemberExpression};
+use oxc::ast::ast::{BindingPatternKind, Expression, IdentifierReference, MemberExpression};
 use rolldown_common::AstScope;
 use rustc_hash::FxHashSet;
 
@@ -70,6 +70,7 @@ impl<'a> SideEffectDetector<'a> {
     let MemberExpression::StaticMemberExpression(member_expr) = expr else {
       return true;
     };
+
     let prop_name = &member_expr.property.name;
     match &member_expr.object {
       oxc::ast::ast::Expression::Identifier(ident) => {
@@ -98,7 +99,6 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_expr(&self, expr: &oxc::ast::ast::Expression) -> bool {
-    use oxc::ast::ast::Expression;
     match expr {
       Expression::BooleanLiteral(_)
       | Expression::NullLiteral(_)
@@ -107,6 +107,8 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::RegExpLiteral(_)
       | Expression::FunctionExpression(_)
       | Expression::ArrowFunctionExpression(_)
+      | Expression::MetaProperty(_)
+      | Expression::ThisExpression(_)
       | Expression::StringLiteral(_) => false,
       Expression::ObjectExpression(obj_expr) => {
         obj_expr.properties.iter().any(|obj_prop| match obj_prop {
@@ -161,35 +163,50 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::TSTypeAssertion(_)
       | Expression::TSNonNullExpression(_)
       | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
-
+      Expression::BinaryExpression(binary_expr) => {
+        // For binary expressions, both sides could potentially have side effects
+        self.detect_side_effect_of_expr(&binary_expr.left)
+          || self.detect_side_effect_of_expr(&binary_expr.right)
+      }
+      Expression::PrivateInExpression(private_in_expr) => {
+        self.detect_side_effect_of_expr(&private_in_expr.right)
+      }
       // TODO: Implement these
-      Expression::MetaProperty(_)
-      | Expression::Super(_)
+      Expression::Super(_)
       | Expression::ArrayExpression(_)
       | Expression::AssignmentExpression(_)
       | Expression::AwaitExpression(_)
-      | Expression::BinaryExpression(_)
       | Expression::CallExpression(_)
       | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
       | Expression::NewExpression(_)
       | Expression::TaggedTemplateExpression(_)
-      | Expression::ThisExpression(_)
       | Expression::UpdateExpression(_)
       | Expression::YieldExpression(_)
-      | Expression::PrivateInExpression(_)
       | Expression::JSXElement(_)
       | Expression::JSXFragment(_) => true,
     }
   }
 
+  fn detect_side_effect_of_var_decl(&self, var_decl: &oxc::ast::ast::VariableDeclaration) -> bool {
+    var_decl.declarations.iter().any(|declarator| {
+      // Whether to destructure import.meta
+      if let BindingPatternKind::ObjectPattern(ref obj_pat) = declarator.id.kind {
+        if !obj_pat.properties.is_empty() {
+          if let Some(Expression::MetaProperty(_)) = declarator.init {
+            return true;
+          }
+        }
+      }
+
+      declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
+    })
+  }
+
   fn detect_side_effect_of_decl(&self, decl: &oxc::ast::ast::Declaration) -> bool {
     use oxc::ast::ast::Declaration;
     match decl {
-      Declaration::VariableDeclaration(var_decl) => var_decl
-        .declarations
-        .iter()
-        .any(|decl| decl.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))),
+      Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
       Declaration::FunctionDeclaration(_) => false,
       Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
       Declaration::UsingDeclaration(_) => todo!(),
@@ -304,7 +321,7 @@ impl<'a> SideEffectDetector<'a> {
 mod test {
   use oxc::span::SourceType;
   use rolldown_common::AstScope;
-  use rolldown_oxc_utils::OxcCompiler;
+  use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
 
@@ -314,10 +331,9 @@ mod test {
       .with_module(true)
       .with_jsx(true)
       .with_typescript(false);
-    let program = OxcCompiler::parse(code, source_type);
-
+    let ast = OxcCompiler::parse(code, source_type);
     let ast_scope = {
-      let semantic = program.make_semantic(source_type);
+      let semantic = OxcAst::make_semantic(ast.source(), ast.program(), source_type);
       let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
       AstScope::new(
         scope,
@@ -326,7 +342,7 @@ mod test {
       )
     };
 
-    let has_side_effect = program
+    let has_side_effect = ast
       .program()
       .body
       .iter()
@@ -525,5 +541,40 @@ mod test {
     assert!(get_statements_side_effect("switch (true) { case 1: bar; }"));
     assert!(get_statements_side_effect("switch (true) { case bar: break; }"));
     assert!(get_statements_side_effect("switch (true) { case 1: bar; default: bar; }"));
+  }
+
+  #[test]
+  fn test_binary_expression() {
+    assert!(!get_statements_side_effect("1 + 1"));
+    assert!(!get_statements_side_effect("const a = 1; const b = 2; a + b"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("1 + foo"));
+    assert!(get_statements_side_effect("2 + bar"));
+  }
+
+  #[test]
+  fn test_private_in_expression() {
+    assert!(!get_statements_side_effect("#privateField in this"));
+    assert!(!get_statements_side_effect("const obj = {}; #privateField in obj"));
+    // accessing global variable may have side effect
+    assert!(get_statements_side_effect("#privateField in bar"));
+    assert!(get_statements_side_effect("#privateField in foo"));
+  }
+
+  #[test]
+  fn test_this_expression() {
+    assert!(!get_statements_side_effect("this"));
+    assert!(get_statements_side_effect("this.a"));
+    assert!(get_statements_side_effect("this.a + this.b"));
+    assert!(get_statements_side_effect("this.a = 10"));
+  }
+
+  #[test]
+  fn test_meta_property_expression() {
+    assert!(!get_statements_side_effect("import.meta"));
+    assert!(!get_statements_side_effect("const meta = import.meta"));
+    assert!(get_statements_side_effect("import.meta.url"));
+    assert!(get_statements_side_effect("const { url } = import.meta"));
+    assert!(get_statements_side_effect("import.meta.url = 'test'"));
   }
 }

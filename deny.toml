@@ -107,7 +107,8 @@ allow = [
     "ISC",
     "Unicode-DFS-2016",
     "BSD-3-Clause",
-    "OpenSSL"
+    "OpenSSL",
+    "BSL-1.0",
     #"Apache-2.0 WITH LLVM-exception",
 ]
 # List of explicitly disallowed licenses

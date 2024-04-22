@@ -70,6 +70,11 @@ jobs:
             build: |
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl;
               pnpm ci:build-release-binding -x --target aarch64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: wasm32-wasi-preview1-threads
+            build: |
+              export CARGO_BUILD_TARGET=wasm32-wasi-preview1-threads;
+              pnpm --filter rolldown build-binding:wasi:release
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -79,9 +84,7 @@ jobs:
         uses: moonrepo/setup-rust@v1
         with:
           cache-base: main
-
-      - name: Add Rust Target
-        run: rustup target add ${{ matrix.target }}
+          targets: ${{ matrix.target }}
 
       - uses: goto-bus-stop/setup-zig@v2
         if: ${{ contains(matrix.target, 'musl') }}
@@ -119,7 +122,9 @@ jobs:
         with:
           if-no-files-found: error
           name: bindings-${{ matrix.target }}
-          path: packages/rolldown/src/rolldown-binding.*.node
+          path: |
+            packages/rolldown/src/rolldown-binding.*.node
+            packages/rolldown/src/rolldown-binding.*.wasm
 
   build-node-packages:
     strategy:

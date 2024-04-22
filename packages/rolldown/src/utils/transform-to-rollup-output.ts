@@ -1,10 +1,10 @@
-import {
+import type {
   RolldownOutput,
   RolldownOutputAsset,
   RolldownOutputChunk,
 } from '../types/rolldown-output'
-import { OutputBundle } from '../types/output-bundle'
-import {
+import type { OutputBundle } from '../types/output-bundle'
+import type {
   BindingOutputAsset,
   BindingOutputChunk,
   BindingOutputs,

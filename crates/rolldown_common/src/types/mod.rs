@@ -1,5 +1,4 @@
 pub mod ast_scope;
-pub mod batched_errors;
 pub mod bundler_file_system;
 pub mod chunk_id;
 pub mod chunk_kind;
@@ -9,6 +8,7 @@ pub mod external_module_id;
 pub mod file_path;
 pub mod import_record;
 pub mod module_id;
+pub mod module_info;
 pub mod module_path;
 pub mod module_type;
 pub mod named_export;

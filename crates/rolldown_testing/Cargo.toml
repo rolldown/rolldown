@@ -11,14 +11,12 @@ repository.workspace = true
 [lints]
 workspace = true
 
-[[bin]]
-bench = false
-name  = "gen_test_config_schema"
-path  = "./bin/gen_test_config_schema.rs"
-test  = false
-
 [dependencies]
-rolldown_common = { workspace = true }
-schemars        = { workspace = true }
-serde           = { workspace = true, features = ["derive"] }
-serde_json      = { workspace = true }
+rolldown_testing_config = { workspace = true }
+schemars                = { workspace = true }
+serde_json              = { workspace = true }
+
+[build-dependencies]
+rolldown_testing_config = { workspace = true }
+schemars                = { workspace = true }
+serde_json              = { workspace = true }

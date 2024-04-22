@@ -1,0 +1,71 @@
+name: WASI Test
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
+      changed:
+        required: true
+        type: boolean
+
+jobs:
+  run:
+    name: WASI Test
+    if: ${{ inputs.changed }}
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true # Pull submodules for additional files
+
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          bins: just
+          cache-base: main
+          targets: wasm32-wasi-preview1-threads
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Pnpm install
+        # Node.js wasi runtime has bug with `std::fs::read_link`
+        run: |
+          touch .npmrc
+          echo "node-linker=hoisted" >> .npmrc
+          pnpm install
+
+      - name: Build WASI Rolldown
+        run: just build wasi release
+
+      - name: Build Basic Example
+        run: pnpm --filter=@example/basic build
+        if: ${{ inputs.os == 'ubuntu-latest' }}
+        env:
+          NAPI_RS_FORCE_WASI: 1
+          RUST_LOG: trace
+
+      - name: Node Test
+        run: pnpm run --recursive --filter=!rollup-tests test
+        if: false
+        env:
+          NAPI_RS_FORCE_WASI: 1
+          RUST_LOG: trace
+
+      - name: Rollup Test
+        run: pnpm run --filter rollup-tests test
+        if: false
+        env:
+          NAPI_RS_FORCE_WASI: 1
+          RUST_LOG: trace

@@ -5,10 +5,10 @@ input_file: crates/rolldown/tests/esbuild/default/forbid_const_assign_when_bundl
 ---
 # warnings
 
-## FORBID_CONST_ASSIGN
+## ILLEGAL_REASSIGNMENT
 
 ```text
-[FORBID_CONST_ASSIGN] Warning: Unexpected re-assignment of const variable `x`
+[ILLEGAL_REASSIGNMENT] Warning: Unexpected re-assignment of const variable `x`
    ╭─[tests/esbuild/default/forbid_const_assign_when_bundling/entry.js:4:3]
    │
  3 │   const x = 1
@@ -20,10 +20,10 @@ input_file: crates/rolldown/tests/esbuild/default/forbid_const_assign_when_bundl
 ───╯
 
 ```
-## FORBID_CONST_ASSIGN
+## ILLEGAL_REASSIGNMENT
 
 ```text
-[FORBID_CONST_ASSIGN] Warning: Unexpected re-assignment of const variable `y`
+[ILLEGAL_REASSIGNMENT] Warning: Unexpected re-assignment of const variable `y`
     ╭─[tests/esbuild/default/forbid_const_assign_when_bundling/entry.js:14:5]
     │
  13 │     const y = 1

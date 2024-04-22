@@ -1,8 +1,8 @@
 use rolldown_common::{ImportKind, ModuleType, Platform, ResolveOptions, ResolvedPath};
-use rolldown_error::BuildError;
+use rolldown_error::{BuildError, BuildResult};
 use rolldown_fs::FileSystem;
 use std::path::{Path, PathBuf};
-use sugar_path::SugarPathBuf;
+use sugar_path::SugarPath;
 
 use oxc_resolver::{
   EnforceExtension, Resolution, ResolveError, ResolveOptions as OxcResolverOptions,
@@ -125,7 +125,7 @@ impl<F: FileSystem + Default> Resolver<F> {
     importer: Option<&Path>,
     specifier: &str,
     import_kind: ImportKind,
-  ) -> Result<ResolveRet, BuildError> {
+  ) -> BuildResult<ResolveRet> {
     let selected_resolver = match import_kind {
       ImportKind::Import | ImportKind::DynamicImport => &self.import_resolver,
       ImportKind::Require => &self.require_resolver,
@@ -139,7 +139,7 @@ impl<F: FileSystem + Default> Resolver<F> {
       // `{ context: cwd, specifier: cwd.join(main) }`, which will resolve to `<cwd>/main.{js,mjs}`. To align with this behavior, we should also
       // concat the CWD with the specifier.
       // Related rollup code: https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56.
-      let joined_specifier = self.cwd.join(specifier).into_normalize();
+      let joined_specifier = self.cwd.join(specifier).normalize();
 
       let is_path_like = specifier.starts_with('.') || specifier.starts_with('/');
 

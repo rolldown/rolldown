@@ -22,6 +22,7 @@
 [![NPM Unpacked Size darwin-x64](https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-darwin-x64/latest?label=darwin-x64)](https://www.npmjs.com/package/@rolldown/binding-darwin-x64)
 [![NPM Unpacked Size linux-x64-gnu](https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-linux-x64-gnu/latest?label=linux-x64-gnu)](https://www.npmjs.com/package/@rolldown/binding-linux-x64-gnu)
 [![NPM Unpacked Size win32-x64](https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-win32-x64-msvc/latest?label=win32-x64)](https://www.npmjs.com/package/@rolldown/binding-win32-x64-msvc)
+[![NPM Unpacked Size wasm32-wasi](https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-wasm32-wasi/latest?label=wasm32-wasi)](https://www.npmjs.com/package/@rolldown/binding-wasm32-wasi)
 
 </div>
 

@@ -5,7 +5,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic-es6-into-es6
 ---
 # Assets
 
-## foo_js.mjs
+## foo.mjs
 
 ```js
 // foo.js
@@ -17,5 +17,5 @@ export { bar };
 
 ```js
 // main.js
-import('./foo_js.mjs').then(({bar}) => console.log(bar));
+import('./foo.mjs').then(({bar}) => console.log(bar));
 ```

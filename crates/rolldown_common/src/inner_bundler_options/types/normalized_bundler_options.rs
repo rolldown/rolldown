@@ -4,9 +4,9 @@
 use std::path::PathBuf;
 
 use super::{
-  external::External, file_name_template::FileNameTemplate, input_item::InputItem,
+  external::External, file_name_template::FilenameTemplate, input_item::InputItem,
   output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
-  source_map_type::SourceMapType,
+  source_map_type::SourceMapType, sourcemap_ignore_list::SourceMapIgnoreList,
 };
 
 #[derive(Debug)]
@@ -14,16 +14,17 @@ pub struct NormalizedBundlerOptions {
   // --- Input
   pub input: Vec<InputItem>,
   pub cwd: PathBuf,
-  pub external: External,
+  pub external: Option<External>,
   pub treeshake: bool,
   pub platform: Platform,
   pub shim_missing_exports: bool,
   // --- Output
-  pub entry_file_names: FileNameTemplate,
-  pub chunk_file_names: FileNameTemplate,
+  pub entry_file_names: FilenameTemplate,
+  pub chunk_file_names: FilenameTemplate,
   pub dir: String,
   pub format: OutputFormat,
   pub sourcemap: SourceMapType,
-  pub banner: AddonOutputOption,
-  pub footer: AddonOutputOption,
+  pub banner: Option<AddonOutputOption>,
+  pub footer: Option<AddonOutputOption>,
+  pub sourcemap_ignore_list: Option<SourceMapIgnoreList>,
 }

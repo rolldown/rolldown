@@ -3,7 +3,7 @@ import type { BindingPluginOptions } from '../binding'
 
 import type { Plugin } from './index'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
-import { isEmptySourcemapFiled } from '../utils'
+import { isEmptySourcemapFiled, transformModuleInfo } from '../utils'
 import path from 'path'
 import { SourceMapInputObject } from '../types/sourcemap'
 
@@ -30,11 +30,7 @@ export function bindingifyBuildEnd(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (err) => {
-    try {
-      handler.call(null, err ?? undefined)
-    } catch (error) {
-      console.error(error)
-    }
+    handler.call(null, err ? new Error(err) : undefined)
   }
 }
 
@@ -88,19 +84,9 @@ export function bindingifyTransform(
       return { code: ret.code }
     }
 
-    // TODO(underfin) move the logic to rust
-    // If sourcemap hasn't `sourcesContent` and `sources`, using original code to fill it.
-    let map = typeof ret.map === 'object' ? ret.map : JSON.parse(ret.map)
-    if (isEmptySourcemapFiled(map.sourcesContent)) {
-      map.sourcesContent = [code]
-    }
-    if (isEmptySourcemapFiled(map.sources)) {
-      map.sources = [id]
-    }
-
     return {
       code: ret.code,
-      map: JSON.stringify(map),
+      map: typeof ret.map === 'object' ? JSON.stringify(ret.map) : ret.map,
     }
   }
 }
@@ -149,37 +135,15 @@ export function bindingifyLoad(
   }
 }
 
-export function bindingifyRenderChunk(
-  hook?: Plugin['renderChunk'],
-): BindingPluginOptions['renderChunk'] {
+export function bindingifyModuleParsed(
+  hook?: Plugin['moduleParsed'],
+): BindingPluginOptions['moduleParsed'] {
   if (!hook) {
     return undefined
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (code, chunk) => {
-    const ret = await handler.call(null, code, chunk)
-
-    if (ret == null) {
-      return
-    }
-
-    if (typeof ret === 'string') {
-      return { code: ret }
-    }
-
-    if (!ret.map) {
-      return { code: ret.code }
-    }
-
-    let map =
-      typeof ret.map === 'object'
-        ? ret.map
-        : (JSON.parse(ret.map) as SourceMapInputObject)
-
-    return {
-      code: ret.code,
-      map: JSON.stringify(map),
-    }
+  return async (ctx, moduleInfo) => {
+    handler.call(ctx, transformModuleInfo(moduleInfo))
   }
 }

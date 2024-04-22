@@ -17,6 +17,6 @@ export default defineTest({
     expect(
       output.output.find((chunk) => !(chunk as RolldownOutputChunk).isEntry)
         ?.fileName,
-    ).toBe('test_js-chunk.js')
+    ).toBe('test-chunk.js')
   },
 })

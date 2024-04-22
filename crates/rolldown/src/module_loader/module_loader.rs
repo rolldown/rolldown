@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use index_vec::IndexVec;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordId, ModuleId, NormalModule,
@@ -7,27 +5,27 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
-use rolldown_oxc_utils::OxcProgram;
+use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::sync::Arc;
 
 use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
-use crate::module_loader::module_task_context::ModuleTaskCommonData;
 use crate::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
+use crate::module_loader::task_context::TaskContext;
 use crate::runtime::RuntimeModuleBrief;
 use crate::types::module_table::{ExternalModuleVec, ModuleTable};
 use crate::types::resolved_request_info::ResolvedRequestInfo;
 use crate::types::symbols::Symbols;
 
-use crate::error::{BatchedErrors, BatchedResult};
 use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<NormalModuleId, Option<NormalModule>>,
-  pub ast_table: IndexVec<NormalModuleId, Option<OxcProgram>>,
+  pub ast_table: IndexVec<NormalModuleId, Option<OxcAst>>,
 }
 
 impl IntermediateNormalModules {
@@ -45,10 +43,10 @@ impl IntermediateNormalModules {
 
 pub struct ModuleLoader {
   input_options: SharedOptions,
-  common_data: ModuleTaskCommonData,
-  rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
+  shared_context: Arc<TaskContext>,
+  rx: tokio::sync::mpsc::Receiver<Msg>,
   visited: FxHashMap<Arc<str>, ModuleId>,
-  runtime_id: Option<NormalModuleId>,
+  runtime_id: NormalModuleId,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   external_modules: ExternalModuleVec,
@@ -58,12 +56,13 @@ pub struct ModuleLoader {
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
-  pub ast_table: IndexVec<NormalModuleId, OxcProgram>,
+  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
+  pub errors: Vec<BuildError>,
 }
 
 impl ModuleLoader {
@@ -73,26 +72,49 @@ impl ModuleLoader {
     fs: OsFileSystem,
     resolver: SharedResolver,
   ) -> Self {
-    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Msg>();
+    // 1024 should be enough for most cases
+    // over 1024 pending tasks are insane
+    let (tx, rx) = tokio::sync::mpsc::channel::<Msg>(1024);
 
-    let common_data = ModuleTaskCommonData {
+    let tx_to_runtime_module = tx.clone();
+
+    let common_data = Arc::new(TaskContext {
       input_options: Arc::clone(&input_options),
       tx,
       resolver,
       fs,
       plugin_driver,
-    };
+    });
+
+    let mut intermediate_normal_modules = IntermediateNormalModules::new();
+    let mut symbols = Symbols::default();
+    let runtime_id = intermediate_normal_modules.alloc_module_id(&mut symbols);
+
+    let task = RuntimeNormalModuleTask::new(runtime_id, tx_to_runtime_module);
+
+    #[cfg(target_family = "wasm")]
+    {
+      task.run()
+    }
+    // task is sync, but execution time is too short at the moment
+    // so we are using spawn instead of spawn_blocking here to avoid an additional blocking thread creation within tokio
+    #[cfg(not(target_family = "wasm"))]
+    {
+      let handle = tokio::runtime::Handle::current();
+      handle.spawn(async { task.run() });
+    }
 
     Self {
-      common_data,
+      shared_context: common_data,
       rx,
       input_options,
       visited: FxHashMap::default(),
-      runtime_id: None,
-      remaining: 0,
-      intermediate_normal_modules: IntermediateNormalModules::new(),
+      runtime_id,
+      // runtime module is always there
+      remaining: 1,
+      intermediate_normal_modules,
       external_modules: IndexVec::new(),
-      symbols: Symbols::default(),
+      symbols,
     }
   }
 
@@ -114,36 +136,35 @@ impl ModuleLoader {
 
           let task = NormalModuleTask::new(
             // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
-            unsafe { self.common_data.assume_static() },
+            Arc::clone(&self.shared_context),
             id,
             module_path,
             info.module_type,
           );
-          tokio::spawn(async move { task.run().await });
+          #[cfg(target_family = "wasm")]
+          {
+            let handle = tokio::runtime::Handle::current();
+            // could not block_on/spawn the main thread in WASI
+            std::thread::spawn(move || {
+              handle.spawn(task.run());
+            });
+          }
+          #[cfg(not(target_family = "wasm"))]
+          tokio::spawn(task.run());
           id.into()
         }
       }
     }
   }
 
-  pub fn try_spawn_runtime_module_task(&mut self) -> NormalModuleId {
-    *self.runtime_id.get_or_insert_with(|| {
-      let id = self.intermediate_normal_modules.alloc_module_id(&mut self.symbols);
-      self.remaining += 1;
-      let task = RuntimeNormalModuleTask::new(id, self.common_data.tx.clone());
-      tokio::spawn(async move { task.run() });
-      id
-    })
-  }
-
   #[allow(clippy::too_many_lines)]
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: Vec<(Option<String>, ResolvedRequestInfo)>,
-  ) -> BatchedResult<ModuleLoaderOutput> {
+  ) -> anyhow::Result<ModuleLoaderOutput> {
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
-    let mut errors = BatchedErrors::default();
+    let mut errors = vec![];
     let mut all_warnings: Vec<BuildError> = Vec::new();
 
     self
@@ -178,8 +199,6 @@ impl ModuleLoader {
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
 
-    let mut panic_errors = vec![];
-
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;
@@ -190,7 +209,7 @@ impl ModuleLoader {
             module_id,
             ast_symbol,
             resolved_deps,
-            mut builder,
+            mut module,
             raw_import_records,
             warnings,
             ast,
@@ -212,44 +231,38 @@ impl ModuleLoader {
               raw_rec.into_import_record(id)
             })
             .collect::<IndexVec<ImportRecordId, _>>();
-          builder.import_records = Some(import_records);
-          builder.is_user_defined_entry = Some(user_defined_entry_ids.contains(&module_id));
-          self.intermediate_normal_modules.modules[module_id] = Some(builder.build());
+          module.import_records = import_records;
+          module.is_user_defined_entry = user_defined_entry_ids.contains(&module_id);
+          self.intermediate_normal_modules.modules[module_id] = Some(module);
           self.intermediate_normal_modules.ast_table[module_id] = Some(ast);
 
           self.symbols.add_ast_symbol(module_id, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeNormalModuleTaskResult { ast_symbol, builder, runtime, warnings: _, ast } =
+          let RuntimeNormalModuleTaskResult { ast_symbol, module, runtime, warnings: _, ast } =
             task_result;
 
-          self.intermediate_normal_modules.modules[runtime.id()] = Some(builder.build());
-          self.intermediate_normal_modules.ast_table[runtime.id()] = Some(ast);
+          self.intermediate_normal_modules.modules[self.runtime_id] = Some(module);
+          self.intermediate_normal_modules.ast_table[self.runtime_id] = Some(ast);
 
-          self.symbols.add_ast_symbol(runtime.id(), ast_symbol);
+          self.symbols.add_ast_symbol(self.runtime_id, ast_symbol);
           runtime_brief = Some(runtime);
         }
-        Msg::BuildErrors(errs) => {
-          errors.extend(errs);
+        Msg::BuildErrors(e) => {
+          errors.extend(e);
         }
         Msg::Panics(err) => {
-          panic_errors.push(err);
+          return Err(err);
         }
       }
       self.remaining -= 1;
     }
 
-    assert!(panic_errors.is_empty(), "Panics occurred during module loading: {panic_errors:?}");
-
-    if !errors.is_empty() {
-      return Err(errors);
-    }
-
     let modules: IndexVec<NormalModuleId, NormalModule> =
-      self.intermediate_normal_modules.modules.into_iter().map(Option::unwrap).collect();
+      self.intermediate_normal_modules.modules.into_iter().flatten().collect();
 
-    let ast_table: IndexVec<NormalModuleId, OxcProgram> =
-      self.intermediate_normal_modules.ast_table.into_iter().map(Option::unwrap).collect();
+    let ast_table: IndexVec<NormalModuleId, OxcAst> =
+      self.intermediate_normal_modules.ast_table.into_iter().flatten().collect();
 
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
     dynamic_import_entry_ids.sort_by_key(|id| &modules[*id].resource_id);
@@ -270,6 +283,7 @@ impl ModuleLoader {
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
+      errors,
     })
   }
 }

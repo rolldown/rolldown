@@ -7,6 +7,7 @@ on:
     paths:
       - '**/*.rs'
       - '**/*.toml'
+      - '.github/workflows/**'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
   pull_request:
@@ -14,6 +15,7 @@ on:
     paths:
       - '**/*.rs'
       - '**/*.toml'
+      - '.github/workflows/**'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
   workflow_dispatch:
@@ -23,11 +25,55 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  benchmark:
-    name: Benchmark
+  # https://github.com/CodSpeedHQ/codspeed-rust/issues/29
+  # codspeed-benchmark:
+  #   name: Codspeed Benchmark
+  #   if: false
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout Branch
+  #       uses: actions/checkout@v4
+  #       with:
+  #         # Whether Pull submodules for additional files
+  #         submodules: false
+
+  #     - name: Install Rust
+  #       uses: moonrepo/setup-rust@v1
+  #       with:
+  #         bins: just, cargo-codspeed
+  #         cache-base: main
+  #         cache-target: release
+
+  #     - name: Install pnpm
+  #       uses: pnpm/action-setup@v3
+
+  #     - name: Install node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         cache: pnpm
+
+  #     - name: Install dependencies
+  #       run: pnpm install
+
+  #     - name: Setup benchmark
+  #       run: just setup-bench
+
+  #     - name: Build the benchmark target(s)
+  #       run: cargo codspeed build -p bench
+
+  #     - name: Run the benchmarks
+  #       uses: CodSpeedHQ/action@v2
+  #       with:
+  #         run: cargo codspeed run -p bench
+  #         token: ${{ secrets.CODSPEED_TOKEN }}
+
+  benchmark-rust:
+    name: Benchmark Rust
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Branch
+      - name: Checkout PR Branch
         uses: actions/checkout@v4
         with:
           # Whether Pull submodules for additional files
@@ -36,7 +82,7 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
-          bins: just, cargo-codspeed
+          bins: just, critcmp
           cache-base: main
           cache-target: release
 
@@ -55,11 +101,48 @@ jobs:
       - name: Setup benchmark
         run: just setup-bench
 
-      - name: Build the benchmark target(s)
-        run: cargo codspeed build -p bench
+      - name: Run Bench on PR Branch
+        run: cargo bench -p bench -- --save-baseline pr
 
-      - name: Run the benchmarks
-        uses: CodSpeedHQ/action@v2
+      - name: Checkout Target Branch
+        uses: actions/checkout@v4
         with:
-          run: cargo codspeed run -p bench
-          token: ${{ secrets.CODSPEED_TOKEN }}
+          clean: false
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Run Bench on Target Branch
+        run: cargo bench -p bench -- --save-baseline target
+
+      - name: Compare Bench Results
+        id: bench_comparison
+        shell: bash
+        run: |
+          echo "### Benchmarks Rust" > output
+          echo "- target: \`${{ github.event.pull_request.base.ref }}\`(${{ github.event.pull_request.base.sha }})" >> output
+          echo "- pr: \`${{ github.event.pull_request.head.ref }}\`(${{ github.event.pull_request.head.sha }})" >> output
+          echo "\`\`\`"  >> output
+          critcmp target pr >> output
+          echo "\`\`\`" >> output
+          cat output
+          comment="$(cat output)"
+          comment="${comment//'%'/%25}"
+          comment="${comment//$'\n'/%0A}"
+          comment="${comment//$'\r'/%0D}"
+          echo "::set-output name=comment::$comment"
+
+      - name: Find Comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Benchmarks Rust
+
+      - name: Write a new comment
+        uses: peter-evans/create-or-update-comment@v4.0.0
+        continue-on-error: true
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: ${{ steps.bench_comparison.outputs.comment }}
+          reactions-edit-mode: 'replace'

@@ -164,7 +164,7 @@ importers:
         version: 3.0.0-alpha.51(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.0
-        version: 0.2.0
+        version: 0.2.1
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -191,7 +191,7 @@ importers:
         version: 4.16.1
       type-fest:
         specifier: ^4.12.0
-        version: 4.15.0
+        version: 4.16.0
       unbuild:
         specifier: ^2.0.0
         version: 2.0.0(typescript@5.4.5)
@@ -220,7 +220,7 @@ importers:
     dependencies:
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.0
-        version: 0.2.0
+        version: 0.2.1
 
   packages/rolldown/npm/win32-arm64-msvc: {}
 
@@ -1819,8 +1819,8 @@ packages:
   '@napi-rs/wasm-runtime@0.1.2':
     resolution: {integrity: sha512-8JuczewTFIZ/XIjHQ+YlQUydHvlKx2hkcxtuGwh+t/t5zWyZct6YG4+xjHcq8xyc/e7FmFwf42Zj2YgICwmlvA==}
 
-  '@napi-rs/wasm-runtime@0.2.0':
-    resolution: {integrity: sha512-ETCooPEZJN7cGp6GwE5mUTrStrhIeuEPo0lOhLe48Iz35z6CkbgDauR8nE/K4GaMEu2BwTOm2Epy7ru8w1ua7w==}
+  '@napi-rs/wasm-runtime@0.2.1':
+    resolution: {integrity: sha512-fGODCBcZm6ikQ70X7znOZ122xCmc8GOpV5tIMuUEoFeNKfsokbOw92KwS6bsIkvnR20F2CvRo/e+EDUPW+h7cA==}
 
   '@napi-rs/wasm-tools-android-arm-eabi@0.0.1':
     resolution: {integrity: sha512-Q/SyyO60dbpoLcN/hvGzNWDaCjuaMGFeg92GnsDBWm3OCwhvltr51+VDZbCIHQwfIvH4d63X29nEls7FHK75dA==}
@@ -4867,8 +4867,8 @@ packages:
     resolution: {integrity: sha512-tLq3bSNx+xSpwvAJnzrK0Ep5CLNWjvFTOp71URMaAEWBfRb9nnJiBoUe0tF8bI4ZFO3omgBR6NvnbzVUT3Ly4g==}
     engines: {node: '>=14.16'}
 
-  type-fest@4.15.0:
-    resolution: {integrity: sha512-tB9lu0pQpX5KJq54g+oHOLumOx+pMep4RaM6liXh2PKmVRFF+/vAtUP0ZaJ0kOySfVNjF6doBWPHhBhISKdlIA==}
+  type-fest@4.16.0:
+    resolution: {integrity: sha512-z7Rf5PXxIhbI6eJBTwdqe5bO02nUUmctq4WqviFSstBAWV0YNtEQRhEnZw73WJ8sZOqgFG6Jdl8gYZu7NBJZnA==}
     engines: {node: '>=16'}
 
   typedarray-to-buffer@3.1.5:
@@ -6664,7 +6664,7 @@ snapshots:
       '@tybys/wasm-util': 0.8.3
     optional: true
 
-  '@napi-rs/wasm-runtime@0.2.0':
+  '@napi-rs/wasm-runtime@0.2.1':
     dependencies:
       '@emnapi/core': 1.1.1
       '@emnapi/runtime': 1.1.1
@@ -9412,14 +9412,14 @@ snapshots:
     dependencies:
       find-up: 6.3.0
       read-pkg: 8.1.0
-      type-fest: 4.15.0
+      type-fest: 4.16.0
 
   read-pkg@8.1.0:
     dependencies:
       '@types/normalize-package-data': 2.4.4
       normalize-package-data: 6.0.0
       parse-json: 7.1.1
-      type-fest: 4.15.0
+      type-fest: 4.16.0
 
   read-yaml-file@2.1.0:
     dependencies:
@@ -9842,7 +9842,7 @@ snapshots:
 
   type-fest@3.13.1: {}
 
-  type-fest@4.15.0: {}
+  type-fest@4.16.0: {}
 
   typedarray-to-buffer@3.1.5:
     dependencies:

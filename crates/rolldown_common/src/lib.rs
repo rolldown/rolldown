@@ -19,6 +19,7 @@ pub mod bundler_options {
       resolve_options::ResolveOptions,
       source_map_type::SourceMapType,
       sourcemap_ignore_list::SourceMapIgnoreList,
+      sourcemap_path_transform::SourceMapPathTransform,
     },
     BundlerOptions,
   };

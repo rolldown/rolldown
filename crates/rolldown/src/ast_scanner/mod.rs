@@ -317,7 +317,7 @@ impl<'me> AstScanner<'me> {
     };
 
     let final_binding =
-      local_binding_for_default_export.unwrap_or_else(|| self.result.default_export_ref.symbol);
+      local_binding_for_default_export.unwrap_or(self.result.default_export_ref.symbol);
 
     self.add_declared_id(final_binding);
     self.add_local_default_export(final_binding);

@@ -1,1 +1,1 @@
-TestPackageJsonNodePathsIssue2752  --> todo add it
+TestPackageJsonNodePathsIssue2752

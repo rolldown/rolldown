@@ -135,7 +135,6 @@ impl ModuleLoader {
           let module_path = info.path.clone();
 
           let task = NormalModuleTask::new(
-            // safety: Data in `ModuleTaskContext` are alive as long as the `NormalModuleTask`, but rustc doesn't know that.
             Arc::clone(&self.shared_context),
             id,
             module_path,
@@ -162,7 +161,9 @@ impl ModuleLoader {
     mut self,
     user_defined_entries: Vec<(Option<String>, ResolvedRequestInfo)>,
   ) -> anyhow::Result<ModuleLoaderOutput> {
-    assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
+    if self.input_options.input.is_empty() {
+      return Err(anyhow::format_err!("You must supply options.input to rolldown"));
+    }
 
     let mut errors = vec![];
     let mut all_warnings: Vec<BuildError> = Vec::new();

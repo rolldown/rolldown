@@ -1,7 +1,6 @@
-use crate::PathExt;
-use std::path::PathBuf;
-
 use super::BuildEvent;
+use crate::types::diagnostic_options::DiagnosticOptions;
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct UnresolvedEntry {
@@ -16,7 +15,7 @@ impl BuildEvent for UnresolvedEntry {
     "UNRESOLVED_ENTRY"
   }
 
-  fn message(&self) -> String {
-    format!("Cannot resolve entry module {}.", self.unresolved_id.relative_display())
+  fn message(&self, opts: &DiagnosticOptions) -> String {
+    format!("Cannot resolve entry module {}.", opts.stabilize_path(&self.unresolved_id))
   }
 }

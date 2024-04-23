@@ -1,8 +1,8 @@
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 use oxc::span::Span;
 
-use crate::{diagnostic::Diagnostic, PathExt};
+use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions};
 
 use super::BuildEvent;
 
@@ -23,11 +23,11 @@ impl BuildEvent for ForbidConstAssign {
     "FORBID_CONST_ASSIGN"
   }
 
-  fn message(&self) -> String {
+  fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("Unexpected re-assignment of const variable `{0}` at {1}", self.name, self.filename)
   }
-  fn on_diagnostic(&self, diagnostic: &mut Diagnostic) {
-    let filename = Path::new(&self.filename).relative_display();
+  fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {
+    let filename = opts.stabilize_path(&self.filename);
     diagnostic.title = format!("Unexpected re-assignment of const variable `{0}`", self.name);
 
     let file_id = diagnostic.add_file(filename, Arc::clone(&self.source));

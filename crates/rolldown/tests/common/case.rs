@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 use super::fixture::Fixture;
 use rolldown::BundleOutput;
 use rolldown_common::Output;
-use rolldown_error::BuildError;
+use rolldown_error::{BuildError, DiagnosticOptions};
 use rolldown_sourcemap::SourcemapVisualizer;
 
 pub struct Case {
@@ -47,7 +47,12 @@ impl Case {
 
     if !warnings.is_empty() {
       self.snapshot.push_str("# warnings\n\n");
-      let diagnostics = warnings.into_iter().map(|e| (e.kind(), e.into_diagnostic()));
+      let diagnostics = warnings.into_iter().map(|e| {
+        (
+          e.kind(),
+          e.into_diagnostic_with(&DiagnosticOptions { cwd: self.fixture.dir_path().to_path_buf() }),
+        )
+      });
       let rendered = diagnostics
         .flat_map(|(code, diagnostic)| {
           [
@@ -110,7 +115,12 @@ impl Case {
   fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildError>) {
     self.snapshot.push_str("# Errors\n\n");
     errors.sort_by_key(|e| e.kind().to_string());
-    let diagnostics = errors.into_iter().map(|e| (e.kind(), e.into_diagnostic()));
+    let diagnostics = errors.into_iter().map(|e| {
+      (
+        e.kind(),
+        e.into_diagnostic_with(&DiagnosticOptions { cwd: self.fixture.dir_path().to_path_buf() }),
+      )
+    });
 
     let rendered = diagnostics
       .flat_map(|(code, diagnostic)| {

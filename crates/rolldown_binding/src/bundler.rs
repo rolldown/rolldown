@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 #[cfg(not(target_family = "wasm"))]
 use crate::worker_manager::WorkerManager;
 use crate::{
@@ -9,13 +11,14 @@ use crate::{
 use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
-use rolldown_error::BuildError;
+use rolldown_error::{BuildError, DiagnosticOptions};
 use tracing::instrument;
 
 #[napi]
 pub struct Bundler {
   inner: Mutex<NativeBundler>,
   log_level: String,
+  cwd: PathBuf,
 }
 
 #[napi]
@@ -57,6 +60,7 @@ impl Bundler {
     )?;
 
     Ok(Self {
+      cwd: ret.bundler_options.cwd.clone().unwrap_or_else(|| std::env::current_dir().unwrap()),
       inner: Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins)),
       log_level,
     })
@@ -89,7 +93,7 @@ impl Bundler {
     let output = Self::handle_result(bundler_core.scan().await)?;
 
     if !output.errors.is_empty() {
-      return Err(Self::handle_errors(output.errors));
+      return Err(self.handle_errors(output.errors));
     }
 
     self.handle_warnings(output.warnings);
@@ -107,7 +111,7 @@ impl Bundler {
     let outputs = Self::handle_result(bundler_core.write().await)?;
 
     if !outputs.errors.is_empty() {
-      return Err(Self::handle_errors(outputs.errors));
+      return Err(self.handle_errors(outputs.errors));
     }
 
     self.handle_warnings(outputs.warnings);
@@ -125,7 +129,7 @@ impl Bundler {
     let outputs = Self::handle_result(bundler_core.generate().await)?;
 
     if !outputs.errors.is_empty() {
-      return Err(Self::handle_errors(outputs.errors));
+      return Err(self.handle_errors(outputs.errors));
     }
 
     self.handle_warnings(outputs.warnings);
@@ -137,9 +141,12 @@ impl Bundler {
     result.map_err(|e| napi::Error::from_reason(format!("Rolldown internal error: {e}")))
   }
 
-  fn handle_errors(errs: Vec<BuildError>) -> napi::Error {
+  fn handle_errors(&self, errs: Vec<BuildError>) -> napi::Error {
     errs.into_iter().for_each(|err| {
-      eprintln!("{}", err.into_diagnostic().to_color_string());
+      eprintln!(
+        "{}",
+        err.into_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() }).to_color_string()
+      );
     });
     napi::Error::from_reason("Build failed")
   }
@@ -151,7 +158,10 @@ impl Bundler {
       _ => {}
     }
     warnings.into_iter().for_each(|err| {
-      println!("{}", err.into_diagnostic().to_color_string());
+      println!(
+        "{}",
+        err.into_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() }).to_color_string()
+      );
     });
   }
 }

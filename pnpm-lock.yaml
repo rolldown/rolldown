@@ -155,10 +155,10 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.0.0-alpha.51
-        version: 3.0.0-alpha.52(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))
+        version: 3.0.0-alpha.53(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.0
-        version: 0.2.1
+        version: 0.2.3
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -214,7 +214,7 @@ importers:
     dependencies:
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.0
-        version: 0.2.1
+        version: 0.2.3
 
   packages/rolldown/npm/win32-arm64-msvc: {}
 
@@ -1607,8 +1607,8 @@ packages:
     os: [darwin, linux, win32]
     hasBin: true
 
-  '@napi-rs/cli@3.0.0-alpha.52':
-    resolution: {integrity: sha512-vOS+UO7PoJozmDd+9ixUtycGdnIacRrovRyE9IHkctF2f0I4JbW5r/O5w820v/RI+kvEzRwdqq82IAOjIzrdKQ==}
+  '@napi-rs/cli@3.0.0-alpha.53':
+    resolution: {integrity: sha512-H0WFN7tQCbIg3mOiWSNKFdyIrAKgotuSSg65lNHZnNUHqkSCx8k3ELIpVZc64LDKzdIh1w05Uj7BDVz74l9EYg==}
     engines: {node: '>= 16'}
     hasBin: true
     peerDependencies:
@@ -1810,8 +1810,8 @@ packages:
   '@napi-rs/wasm-runtime@0.1.2':
     resolution: {integrity: sha512-8JuczewTFIZ/XIjHQ+YlQUydHvlKx2hkcxtuGwh+t/t5zWyZct6YG4+xjHcq8xyc/e7FmFwf42Zj2YgICwmlvA==}
 
-  '@napi-rs/wasm-runtime@0.2.1':
-    resolution: {integrity: sha512-fGODCBcZm6ikQ70X7znOZ122xCmc8GOpV5tIMuUEoFeNKfsokbOw92KwS6bsIkvnR20F2CvRo/e+EDUPW+h7cA==}
+  '@napi-rs/wasm-runtime@0.2.3':
+    resolution: {integrity: sha512-e4qmGDzXu2MYjj/XiKSgJ7XS7Z83MYVRN1yYaYXeQNVEO56zmshqmzFaELfdb612sLq/GmiPfRIwSji+bIlyCw==}
 
   '@napi-rs/wasm-tools-android-arm-eabi@0.0.1':
     resolution: {integrity: sha512-Q/SyyO60dbpoLcN/hvGzNWDaCjuaMGFeg92GnsDBWm3OCwhvltr51+VDZbCIHQwfIvH4d63X29nEls7FHK75dA==}
@@ -6455,7 +6455,7 @@ snapshots:
 
   '@ls-lint/ls-lint@2.2.3': {}
 
-  '@napi-rs/cli@3.0.0-alpha.52(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))':
+  '@napi-rs/cli@3.0.0-alpha.53(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))':
     dependencies:
       '@napi-rs/cross-toolchain': 0.0.14
       '@napi-rs/wasm-tools': 0.0.1
@@ -6607,7 +6607,7 @@ snapshots:
       '@tybys/wasm-util': 0.8.3
     optional: true
 
-  '@napi-rs/wasm-runtime@0.2.1':
+  '@napi-rs/wasm-runtime@0.2.3':
     dependencies:
       '@emnapi/core': 1.1.1
       '@emnapi/runtime': 1.1.1

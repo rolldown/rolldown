@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/fixtures/warnings/basic
 
 ```text
 [EVAL] Warning: Rolldown does not support `eval` function currently.
-   ╭─[tests/fixtures/warnings/basic/main.js:1:13]
+   ╭─[main.js:1:13]
    │
  1 │ console.log(eval)
    │             ──┬─  

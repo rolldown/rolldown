@@ -8,4 +8,5 @@ mod utils;
 pub use crate::{
   build_error::{BuildError, BuildResult},
   event_kind::EventKind,
+  types::diagnostic_options::DiagnosticOptions,
 };

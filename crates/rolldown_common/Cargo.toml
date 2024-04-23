@@ -24,9 +24,9 @@ rolldown_rstr      = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_utils     = { workspace = true }
 rustc-hash         = { workspace = true }
-schemars           = { workspace = true }
-serde              = { workspace = true, features = ["derive"] }
+schemars           = { workspace = true, optional = true }
+serde              = { workspace = true, features = ["derive"], optional = true }
 sugar_path         = { workspace = true }
 
 [features]
-deserialize_bundler_options = []
+deserialize_bundler_options = ["dep:schemars", "dep:serde"]

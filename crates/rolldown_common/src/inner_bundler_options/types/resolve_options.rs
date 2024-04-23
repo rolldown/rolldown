@@ -1,4 +1,6 @@
+#[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
+#[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
 
 /// A simple wrapper around `oxc_resolver::ResolveOptions` to make it easier to use in the `rolldown_resolver` crate.

@@ -1,0 +1,6 @@
+{
+  "browser": {
+    "./no-ext": "./no-ext-browser/index.js",
+    "./ext/index.js": "./ext-browser/index.js"
+  }
+}

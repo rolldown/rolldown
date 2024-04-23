@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./src/entry.js"
+      }
+    ],
+    "resolve": {
+      "mainFields": ["some", "fields"]
+    }
+  },
+  "expectError": true
+}

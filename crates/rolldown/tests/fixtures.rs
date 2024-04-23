@@ -12,7 +12,7 @@ fn fixture_with_config(config_path: PathBuf) {
   Case::new(config_path.parent().unwrap()).run();
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn filename_with_hash() {
   let mut snapshot_outputs = vec![];
 

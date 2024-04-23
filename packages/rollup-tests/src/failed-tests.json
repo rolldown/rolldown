@@ -54,7 +54,6 @@
   "rollup@function@cannot-call-external-namespace: warns if code calls an external namespace",
   "rollup@function@cannot-call-internal-namespace: warns if code calls an internal namespace",
   "rollup@function@cannot-resolve-sourcemap-warning: handles when a sourcemap cannot be resolved in a warning",
-  "rollup@function@catch-block-scope: uses correct scope in catch blocks",
   "rollup@function@catch-dynamic-import-failure: allows catching failed dynamic imports",
   "rollup@function@chained-mutable-array-methods: recognizes side-effects when applying mutable array methods to chained array methods (#3555)",
   "rollup@function@check-exports-exportedBindings-as-a-supplementary-test: check exports and exportedBindings in moduleParsed as a supplementary test",

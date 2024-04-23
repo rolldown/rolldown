@@ -1,4 +1,4 @@
-use crate::{event_kind::EventKind, PathExt};
+use crate::{event_kind::EventKind, types::diagnostic_options::DiagnosticOptions};
 use std::path::PathBuf;
 
 use super::BuildEvent;
@@ -17,7 +17,7 @@ impl BuildEvent for ExternalEntry {
     "UNRESOLVED_ENTRY"
   }
 
-  fn message(&self) -> String {
-    format!("Entry module {} cannot be external.", self.id.relative_display())
+  fn message(&self, opts: &DiagnosticOptions) -> String {
+    format!("Entry module {} cannot be external.", opts.stabilize_path(&self.id))
   }
 }

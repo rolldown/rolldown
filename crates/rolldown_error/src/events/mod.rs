@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 
-use crate::{diagnostic::Diagnostic, event_kind::EventKind};
+use crate::{
+  diagnostic::Diagnostic, event_kind::EventKind, types::diagnostic_options::DiagnosticOptions,
+};
 
 pub mod circular_dependency;
 pub mod external_entry;
@@ -15,9 +17,9 @@ pub trait BuildEvent: Debug + Sync + Send {
 
   fn code(&self) -> &'static str;
 
-  fn message(&self) -> String;
+  fn message(&self, opts: &DiagnosticOptions) -> String;
 
-  fn on_diagnostic(&self, _diagnostic: &mut Diagnostic) {}
+  fn on_diagnostic(&self, _diagnostic: &mut Diagnostic, _opts: &DiagnosticOptions) {}
 }
 
 impl<T: BuildEvent + 'static> From<T> for Box<dyn BuildEvent>
@@ -45,7 +47,7 @@ impl BuildEvent for NapiError {
     "NAPI_ERROR"
   }
 
-  fn message(&self) -> String {
+  fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("Napi error: {status}: {reason}", status = self.status, reason = self.reason)
   }
 }
@@ -58,7 +60,7 @@ impl BuildEvent for std::io::Error {
     "IO_ERROR"
   }
 
-  fn message(&self) -> String {
+  fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("IO error: {self}")
   }
 }

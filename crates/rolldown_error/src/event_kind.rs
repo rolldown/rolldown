@@ -4,16 +4,16 @@ pub enum EventKind {
   // --- These kinds are copied from rollup: https://github.com/rollup/rollup/blob/0b665c31833525c923c0fc20f43ebfca748c6670/src/utils/logs.ts#L102-L179
   UnresolvedEntry,
   UnresolvedImport,
-  IllegalReassignment,
   Eval,
   CircularDependency,
+  SourcemapError,
   // --- These kinds are rolldown specific
+  IllegalReassignment,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // TODO remove following kinds
   NapiError,
   IoError,
-  SourcemapError,
 }
 
 impl Display for EventKind {

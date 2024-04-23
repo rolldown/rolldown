@@ -1,3 +1,5 @@
+use crate::types::diagnostic_options::DiagnosticOptions;
+
 use super::BuildEvent;
 
 #[derive(Debug)]
@@ -13,7 +15,7 @@ impl BuildEvent for SourceMapError {
     "SOURCEMAP_ERROR"
   }
 
-  fn message(&self) -> String {
+  fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("Error when using sourcemap for reporting an error: {:?}", self.error)
   }
 }

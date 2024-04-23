@@ -2,7 +2,9 @@ pub mod error_constructors;
 pub mod severity;
 use std::fmt::Display;
 
-use crate::{diagnostic::Diagnostic, events::BuildEvent};
+use crate::{
+  diagnostic::Diagnostic, events::BuildEvent, types::diagnostic_options::DiagnosticOptions,
+};
 
 use self::severity::Severity;
 
@@ -20,7 +22,7 @@ fn _assert_build_error_send_sync() {
 
 impl Display for BuildError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    self.inner.message().fmt(f)
+    self.inner.message(&DiagnosticOptions::default()).fmt(f)
   }
 }
 
@@ -45,9 +47,13 @@ impl BuildError {
   }
 
   pub fn into_diagnostic(self) -> Diagnostic {
+    self.into_diagnostic_with(&DiagnosticOptions::default())
+  }
+
+  pub fn into_diagnostic_with(self, opts: &DiagnosticOptions) -> Diagnostic {
     let mut diagnostic =
-      Diagnostic::new(self.kind().to_string(), self.inner.message(), self.severity);
-    self.inner.on_diagnostic(&mut diagnostic);
+      Diagnostic::new(self.kind().to_string(), self.inner.message(opts), self.severity);
+    self.inner.on_diagnostic(&mut diagnostic, opts);
     diagnostic
   }
 

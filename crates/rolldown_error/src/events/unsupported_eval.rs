@@ -1,8 +1,8 @@
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 use oxc::span::Span;
 
-use crate::{diagnostic::Diagnostic, PathExt};
+use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions};
 
 use super::BuildEvent;
 
@@ -22,12 +22,12 @@ impl BuildEvent for UnsupportedEval {
     "UNSUPPORTED_EVAL"
   }
 
-  fn message(&self) -> String {
+  fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("Unsupported eval at {}", self.filename)
   }
 
-  fn on_diagnostic(&self, diagnostic: &mut Diagnostic) {
-    let filename = Path::new(&self.filename).relative_display();
+  fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {
+    let filename = opts.stabilize_path(&self.filename);
 
     diagnostic.title = "Rolldown does not support `eval` function currently.".to_string();
 

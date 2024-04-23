@@ -17,4 +17,5 @@ async-trait        = { workspace = true }
 futures            = { workspace = true }
 rolldown_common    = { workspace = true }
 rolldown_sourcemap = { workspace = true }
+rolldown_utils     = { workspace = true }
 tracing            = { workspace = true }

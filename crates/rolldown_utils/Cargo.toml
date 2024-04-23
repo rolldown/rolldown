@@ -14,7 +14,9 @@ workspace = true
 
 [dependencies]
 base64      = { workspace = true }
+futures     = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-rayon = { workspace = true }
+async-scoped = { workspace = true, features = ["use-tokio"] }
+rayon        = { workspace = true }

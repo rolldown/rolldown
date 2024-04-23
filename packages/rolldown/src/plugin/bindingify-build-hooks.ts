@@ -17,7 +17,7 @@ export function bindingifyBuildStart(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx) => {
-    handler.call(ctx, options)
+    await handler.call(ctx, options)
   }
 }
 
@@ -30,7 +30,7 @@ export function bindingifyBuildEnd(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (err) => {
-    handler.call(null, err ? new Error(err) : undefined)
+    await handler.call(null, err ? new Error(err) : undefined)
   }
 }
 
@@ -144,6 +144,6 @@ export function bindingifyModuleParsed(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, moduleInfo) => {
-    handler.call(ctx, transformModuleInfo(moduleInfo))
+    await handler.call(ctx, transformModuleInfo(moduleInfo))
   }
 }

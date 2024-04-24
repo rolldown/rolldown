@@ -109,7 +109,7 @@ napi-build         = { version = "2.1.3" }
 napi-derive        = { version = "3.0.0-alpha.1", default-features = false, features = ["type-def"] }
 once_cell          = "1.19.0"
 oxc                = { version = "0.12.5", features = ["sourcemap"] }
-oxc_resolver       = { version = "1.6.7", features = ["package_json_raw_json_api"] }
+oxc_resolver       = { version = "1.7.0", features = ["package_json_raw_json_api"] }
 rayon              = "1.10.0"
 regex              = "1.10.4"
 rustc-hash         = "1.1.0"

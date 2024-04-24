@@ -809,20 +809,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nodejs_package_json"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad444c78696e8b4de2de8a45468d0cc76630e2ed235c84e102c197b89d295a0b"
-dependencies = [
- "indexmap",
- "rustc-hash",
- "semver",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
 name = "nu-ansi-term"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1012,14 +998,13 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "1.6.7"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cad753abd0769c10c20933651a75df3001188bca832b2f3e3088e91d73b4da3"
+checksum = "ab805c61c1758a7bf350c52ab8962307d1c0fe9677ffa0ac5007789c2e98858f"
 dependencies = [
  "dashmap",
  "dunce",
  "json-strip-comments",
- "nodejs_package_json",
  "once_cell",
  "rustc-hash",
  "serde",
@@ -1571,9 +1556,6 @@ name = "semver"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92d43fe69e652f3df9bdc2b85b2854a0825b86e4fb76bc44d945137d053639ca"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "seq-macro"

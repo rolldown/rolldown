@@ -13,7 +13,6 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        // @ts-expect-error
         writeBundle: (_options, bundle) => {
           writeBundleFn()
           const chunk = bundle['main.js'] as OutputChunk

@@ -1,8 +1,9 @@
-use crate::types::js_callback::MaybeAsyncJsCallbackExt;
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
-  options::plugin::JsPlugin, options::plugin::ParallelJsPlugin,
-  types::binding_rendered_chunk::RenderedChunk, worker_manager::WorkerManager,
+  options::plugin::JsPlugin,
+  options::plugin::ParallelJsPlugin,
+  types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
+  worker_manager::WorkerManager,
 };
 use rolldown::{AddonOutputOption, BundlerOptions, Platform};
 use rolldown_plugin::BoxPlugin;

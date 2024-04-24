@@ -8,13 +8,11 @@ const entry = path.join(__dirname, './main.js')
 const generateBundleFn = vi.fn()
 
 export default defineTest({
-  skip: true,
   config: {
     input: entry,
     plugins: [
       {
         name: 'test-plugin',
-        // @ts-expect-error
         generateBundle: (options, bundle, isWrite) => {
           generateBundleFn()
           const chunk = bundle['main.js'] as OutputChunk

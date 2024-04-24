@@ -11,6 +11,7 @@ import type { SourceMapInput } from '../types/sourcemap'
 import { pathToFileURL } from 'node:url'
 import type { NormalizedOutputOptions } from '../options/output-options'
 import type { ModuleInfo } from '../types/module-info'
+import type { OutputBundle } from '../types/output-bundle'
 
 // Use a type alias here, we might wrap `BindingPluginContext` in the future
 type PluginContext = BindingPluginContext
@@ -110,9 +111,19 @@ export interface Plugin {
   renderError?: Hook<(this: null, error: Error) => MaybePromise<NullValue>>
 
   generateBundle?: Hook<
-    (bundle: BindingOutputs, isWrite: boolean) => MaybePromise<NullValue>
+    (
+      outputOptions: NormalizedOutputOptions,
+      bundle: OutputBundle,
+      isWrite: boolean,
+    ) => MaybePromise<NullValue>
   >
-  writeBundle?: Hook<(bundle: BindingOutputs) => MaybePromise<NullValue>>
+
+  writeBundle?: Hook<
+    (
+      outputOptions: NormalizedOutputOptions,
+      bundle: OutputBundle,
+    ) => MaybePromise<NullValue>
+  >
 }
 
 export type ParallelPlugin = {

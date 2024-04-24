@@ -41,7 +41,10 @@ export function bindingifyPlugin(
       plugin.renderStart,
     ),
     renderError: bindingifyRenderError(plugin.renderError),
-    generateBundle: bindingifyGenerateBundle(plugin.generateBundle),
-    writeBundle: bindingifyWriteBundle(plugin.writeBundle),
+    generateBundle: bindingifyGenerateBundle(
+      outputOptions,
+      plugin.generateBundle,
+    ),
+    writeBundle: bindingifyWriteBundle(outputOptions, plugin.writeBundle),
   }
 }

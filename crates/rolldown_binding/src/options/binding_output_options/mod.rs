@@ -1,3 +1,5 @@
+use crate::types::js_callback::MaybeAsyncJsCallback;
+
 use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use derivative::Derivative;
@@ -5,7 +7,7 @@ use napi::threadsafe_function::ThreadsafeFunction;
 use napi_derive::napi;
 use serde::Deserialize;
 
-pub type AddonOutputOption = ThreadsafeFunction<RenderedChunk, Option<String>, false>;
+pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Deserialize, Derivative)]
@@ -22,9 +24,7 @@ pub struct BindingOutputOptions {
   // assetFileNames: string | ((chunkInfo: PreRenderedAsset) => string);
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(
-    ts_type = "Nullable<string> | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)"
-  )]
+  #[napi(ts_type = "(chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>")]
   pub banner: Option<AddonOutputOption>,
   // chunkFileNames: string | ((chunkInfo: PreRenderedChunk) => string);
   // compact: boolean;
@@ -38,9 +38,7 @@ pub struct BindingOutputOptions {
   // footer: () => string | Promise<string>;
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
-  #[napi(
-    ts_type = "Nullable<string> | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)"
-  )]
+  #[napi(ts_type = "(chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>")]
   pub footer: Option<AddonOutputOption>,
   #[napi(ts_type = "'es' | 'cjs'")]
   pub format: Option<String>,

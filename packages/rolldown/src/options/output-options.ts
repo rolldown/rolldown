@@ -73,7 +73,8 @@ const getAddon = <T extends 'banner' | 'footer'>(
   if (typeof configAddon === 'function') {
     return configAddon as NormalizedOutputOptions[T]
   }
-  return () => configAddon || ''
+  // TODO Here should be remove async
+  return async () => configAddon || ''
 }
 
 export function normalizeOutputOptions(
@@ -130,7 +131,6 @@ function getBindingSourcemap(
 }
 
 export function createOutputOptionsAdapter(
-  opts: OutputOptions,
   outputOptions: NormalizedOutputOptions,
 ): BindingOutputOptions {
   const {
@@ -142,6 +142,8 @@ export function createOutputOptionsAdapter(
     sourcemapPathTransform,
     entryFileNames,
     chunkFileNames,
+    banner,
+    footer,
   } = outputOptions
   return {
     dir,
@@ -150,9 +152,8 @@ export function createOutputOptionsAdapter(
     sourcemap: getBindingSourcemap(sourcemap),
     sourcemapIgnoreList,
     sourcemapPathTransform,
-    // Note: Here using `NormalizedOutputOptions#banner` will caused an error at sourcemaps excludes-plugin-helpers test.
-    banner: opts.banner && getAddon(opts, 'banner'),
-    footer: opts.footer && getAddon(opts, 'footer'),
+    banner,
+    footer,
     entryFileNames,
     chunkFileNames,
     // TODO(sapphi-red): support parallel plugins

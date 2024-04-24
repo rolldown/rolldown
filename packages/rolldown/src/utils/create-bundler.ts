@@ -34,7 +34,7 @@ export async function createBundler(
   return {
     bundler: new Bundler(
       bindingInputOptions,
-      createOutputOptionsAdapter(outputOptions, normalizedOutputOptions),
+      createOutputOptionsAdapter(normalizedOutputOptions),
       parallelPluginInitResult?.registry,
     ),
     stopWorkers: parallelPluginInitResult?.stopWorkers,

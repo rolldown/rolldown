@@ -1,3 +1,4 @@
+// cSpell:disable
 const ignoreTests = [
   // The giving code is not valid JavaScript.
   'rollup@function@circular-default-exports: handles circular default exports',
@@ -27,8 +28,10 @@ const ignoreTests = [
   'rollup@function@preserve-symlink: follows symlinks',
   'rollup@function@symlink: follows symlinks',
   // The rolldown output chunk including `module comment` caused line offset, the rollup provider the fake sourcemap can't remapping.
-  // cSpell:disable
   "rollup@sourcemaps@render-chunk-babili: generates valid sourcemap when source could not be determined@generates es",
+  // Here has unexpected error `Error: nul byte found in provided data at position: 0` from rust due to #967.
+  // It crashed at call `banner` function at rust. 
+  "rollup@sourcemaps@excludes-plugin-helpers: excludes plugin helpers from sources@generates es",
 ]
 
 module.exports = {

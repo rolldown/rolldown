@@ -3,7 +3,7 @@ import { defineTest } from '@tests'
 import { expect } from 'vitest'
 
 const bannerTxt = '// banner test\n'
-const banner = () => bannerTxt
+const banner = () => Promise.resolve().then(() => bannerTxt)
 
 export default defineTest({
   config: {

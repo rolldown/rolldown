@@ -1,7 +1,4 @@
-use std::path::PathBuf;
-#[cfg(not(target_family = "wasm"))]
-use std::sync::Arc;
-
+use crate::types::js_callback::MaybeAsyncJsCallbackExt;
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
   options::plugin::JsPlugin, options::plugin::ParallelJsPlugin,
@@ -9,6 +6,9 @@ use crate::{
 };
 use rolldown::{AddonOutputOption, BundlerOptions, Platform};
 use rolldown_plugin::BoxPlugin;
+use std::path::PathBuf;
+#[cfg(not(target_family = "wasm"))]
+use std::sync::Arc;
 
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct NormalizeBindingOptionsReturn {
@@ -24,7 +24,7 @@ fn normalize_addon_option(
       let fn_js = value.clone();
       let chunk = chunk.clone();
       Box::pin(async move {
-        fn_js.call_async(RenderedChunk::from(chunk)).await.map_err(anyhow::Error::from)
+        fn_js.await_call(RenderedChunk::from(chunk)).await.map_err(anyhow::Error::from)
       })
     }))
   })

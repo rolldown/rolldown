@@ -7,6 +7,7 @@ import { createInputOptionsAdapter } from '../options/input-options-adapter'
 import {
   type OutputOptions,
   normalizeOutputOptions,
+  createOutputOptionsAdapter,
 } from '../options/output-options'
 import { initializeParallelPlugins } from './initialize-parallel-plugins'
 
@@ -33,7 +34,7 @@ export async function createBundler(
   return {
     bundler: new Bundler(
       bindingInputOptions,
-      normalizedOutputOptions,
+      createOutputOptionsAdapter(outputOptions, normalizedOutputOptions),
       parallelPluginInitResult?.registry,
     ),
     stopWorkers: parallelPluginInitResult?.stopWorkers,

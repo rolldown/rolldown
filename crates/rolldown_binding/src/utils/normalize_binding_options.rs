@@ -4,10 +4,8 @@ use std::sync::Arc;
 
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
-  options::plugin::JsPlugin,
-  options::plugin::ParallelJsPlugin,
-  types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
-  worker_manager::WorkerManager,
+  options::plugin::JsPlugin, options::plugin::ParallelJsPlugin,
+  types::binding_rendered_chunk::RenderedChunk, worker_manager::WorkerManager,
 };
 use rolldown::{AddonOutputOption, BundlerOptions, Platform};
 use rolldown_plugin::BoxPlugin;
@@ -26,7 +24,7 @@ fn normalize_addon_option(
       let fn_js = value.clone();
       let chunk = chunk.clone();
       Box::pin(async move {
-        fn_js.await_call(RenderedChunk::from(chunk)).await.map_err(anyhow::Error::from)
+        fn_js.call_async(RenderedChunk::from(chunk)).await.map_err(anyhow::Error::from)
       })
     }))
   })

@@ -1,12 +1,11 @@
 use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
-use crate::types::js_callback::MaybeAsyncJsCallback;
 use derivative::Derivative;
 use napi::threadsafe_function::ThreadsafeFunction;
 use napi_derive::napi;
 use serde::Deserialize;
 
-pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
+pub type AddonOutputOption = ThreadsafeFunction<RenderedChunk, Option<String>, false>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Deserialize, Derivative)]

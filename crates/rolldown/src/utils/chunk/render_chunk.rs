@@ -77,7 +77,9 @@ pub async fn render_chunk(
   // add banner
   if let Some(banner) = options.banner.as_ref() {
     if let Some(banner_txt) = banner.call(&rendered_chunk).await? {
-      concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
+      if !banner_txt.is_empty() {
+        concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
+      }
     }
   }
 
@@ -88,7 +90,9 @@ pub async fn render_chunk(
   // add footer
   if let Some(footer) = options.footer.as_ref() {
     if let Some(footer_txt) = footer.call(&rendered_chunk).await? {
-      concat_source.add_source(Box::new(RawSource::new(footer_txt)));
+      if !footer_txt.is_empty() {
+        concat_source.add_source(Box::new(RawSource::new(footer_txt)));
+      }
     }
   }
 

@@ -1,11 +1,10 @@
-use std::any::type_name;
-
 use futures::Future;
 use napi::{
   bindgen_prelude::{FromNapiValue, Promise},
   threadsafe_function::{ThreadsafeFunction, UnknownReturnValue},
   Either,
 };
+use rolldown_utils::debug::pretty_type_name;
 
 /// `JsCallback`  is a type alias for `ThreadsafeFunction`. It represents a JavaScript function that passed to Rust side.
 /// Related concepts are complex, so we use `JsCallback` to simplify the mental model. For details, please refer to:
@@ -89,10 +88,19 @@ where
       match self.call_async(args).await? {
         Either::A(Either::A(promise)) => promise.await,
         Either::A(Either::B(ret)) => Ok(ret),
-        Either::B(_unknown) => Err(napi::Error::new(
-          napi::Status::InvalidArg,
-          format!("Unknown return value. Cannot convert to `{}`.", type_name::<Ret>()),
-        )),
+        Either::B(_unknown) => {
+          // TODO: should provide more information about the unknown return value
+          let js_type = "unknown";
+          let expected_rust_type = pretty_type_name::<Ret>();
+
+          Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            format!(
+              "UNKNOWN_RETURN_VALUE. Cannot convert {js_type} to `{expected_rust_type}` in {}.",
+              pretty_type_name::<Self>(),
+            ),
+          ))
+        }
       }
     }
   }

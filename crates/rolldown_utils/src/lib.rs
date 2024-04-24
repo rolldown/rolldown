@@ -2,6 +2,7 @@
 
 pub mod base64;
 mod bitset;
+pub mod debug;
 pub mod futures;
 pub mod rayon;
 pub mod xxhash;

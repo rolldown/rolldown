@@ -1364,6 +1364,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_sourcemap",
  "rolldown_tracing",
+ "rolldown_utils",
  "rustc-hash",
  "serde",
  "tracing",
@@ -1490,7 +1491,9 @@ dependencies = [
  "async-scoped",
  "base64",
  "futures",
+ "once_cell",
  "rayon",
+ "regex",
  "xxhash-rust",
 ]
 

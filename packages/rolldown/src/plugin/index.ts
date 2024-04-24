@@ -117,7 +117,7 @@ export interface Plugin {
       isWrite: boolean,
     ) => MaybePromise<NullValue>
   >
-  
+
   writeBundle?: Hook<
     (
       outputOptions: NormalizedOutputOptions,

@@ -3,6 +3,7 @@ import type { BindingPluginOptions } from '../binding'
 import { RolldownNormalizedInputOptions } from '../options/input-options'
 import { NormalizedOutputOptions } from '../options/output-options'
 import type { Plugin } from './index'
+import { transformToOutputBundle } from '../utils/transform-to-rollup-output'
 
 export function bindingifyRenderStart(
   outputOptions: NormalizedOutputOptions,
@@ -64,6 +65,7 @@ export function bindingifyRenderError(
 }
 
 export function bindingifyGenerateBundle(
+  outputOptions: NormalizedOutputOptions,
   hook?: Plugin['generateBundle'],
 ): BindingPluginOptions['generateBundle'] {
   if (!hook) {
@@ -72,10 +74,11 @@ export function bindingifyGenerateBundle(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (bundle, isWrite) => {
-    handler.call(null, bundle, isWrite)
+    handler.call(null, outputOptions, transformToOutputBundle(bundle), isWrite)
   }
 }
 export function bindingifyWriteBundle(
+  outputOptions: NormalizedOutputOptions,
   hook?: Plugin['writeBundle'],
 ): BindingPluginOptions['writeBundle'] {
   if (!hook) {
@@ -84,6 +87,6 @@ export function bindingifyWriteBundle(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (bundle) => {
-    handler.call(null, bundle)
+    handler.call(null, outputOptions, transformToOutputBundle(bundle))
   }
 }

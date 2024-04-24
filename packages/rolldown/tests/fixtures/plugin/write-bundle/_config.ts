@@ -8,7 +8,6 @@ const entry = path.join(__dirname, './main.js')
 const writeBundleFn = vi.fn()
 
 export default defineTest({
-  skip: true,
   config: {
     input: entry,
     plugins: [

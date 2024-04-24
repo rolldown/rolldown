@@ -90,10 +90,10 @@ export interface BindingInputOptions {
 export interface BindingOutputOptions {
   entryFileNames?: string
   chunkFileNames?: string
-  banner?: Nullable<string> | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)
+  banner?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   dir?: string
   exports?: 'default' | 'named' | 'none' | 'auto'
-  footer?: Nullable<string> | ((chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>)
+  footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs'
   plugins: Array<BindingPluginOrParallelJsPluginPlaceholder>
   sourcemap?: 'file' | 'inline' | 'hidden'

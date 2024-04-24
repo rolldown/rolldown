@@ -1,33 +1,116 @@
-import { OutputOptions as RollupOutputOptions } from '../rollup-types'
-import { BindingOutputOptions } from '../binding'
+import { BindingOutputOptions, RenderedChunk } from '../binding'
 import { unimplemented } from '../utils'
 
+export type SourcemapIgnoreListOption = (
+  relativeSourcePath: string,
+  sourcemapPath: string,
+) => boolean
+
+export type SourcemapPathTransformOption = (
+  relativeSourcePath: string,
+  sourcemapPath: string,
+) => string
+
+type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
+
+export type InternalModuleFormat = 'es' | 'cjs'
+
+export type ModuleFormat = InternalModuleFormat | 'esm' | 'module' | 'commonjs'
+
+// Make sure port `OutputOptions` and `NormalizedOutputOptions` from rollup.
 export interface OutputOptions {
-  dir?: RollupOutputOptions['dir']
-  format?: 'es'
-  exports?: RollupOutputOptions['exports']
-  sourcemap?: RollupOutputOptions['sourcemap']
-  sourcemapIgnoreList?: RollupOutputOptions['sourcemapIgnoreList']
-  sourcemapPathTransform?: RollupOutputOptions['sourcemapPathTransform']
-  banner?: RollupOutputOptions['banner']
-  footer?: RollupOutputOptions['footer']
+  dir?: string
+  format?: ModuleFormat
+  exports?: 'default' | 'named' | 'none' | 'auto'
+  sourcemap?: boolean | 'inline' | 'hidden'
+  sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption
+  sourcemapPathTransform?: SourcemapPathTransformOption
+  banner?: string | AddonFunction
+  footer?: string | AddonFunction
   entryFileNames?: string
   chunkFileNames?: string
 }
 
-export type NormalizedOutputOptions = BindingOutputOptions
+export type NormalizedOutputOptions = {
+  dir: string | undefined
+  format: InternalModuleFormat
+  exports: 'default' | 'named' | 'none' | 'auto'
+  sourcemap: boolean | 'inline' | 'hidden'
+  sourcemapIgnoreList: SourcemapIgnoreListOption
+  sourcemapPathTransform: SourcemapPathTransformOption | undefined
+  banner: AddonFunction
+  footer: AddonFunction
+  entryFileNames: string
+  chunkFileNames: string
+}
 
-function normalizeFormat(
+function getFormat(
   format: OutputOptions['format'],
-): BindingOutputOptions['format'] {
-  if (format == null || format === 'es' || format === 'cjs') {
-    return format
-  } else {
-    return unimplemented(`output.format: ${format}`)
+): NormalizedOutputOptions['format'] {
+  switch (format) {
+    case undefined:
+    case 'es':
+    case 'esm':
+    case 'module': {
+      return 'es'
+    }
+
+    case 'cjs':
+    case 'commonjs': {
+      return 'cjs'
+    }
+
+    default:
+      unimplemented(`output.format: ${format}`)
   }
 }
 
-function normalizeSourcemap(
+const getAddon = <T extends 'banner' | 'footer'>(
+  config: OutputOptions,
+  name: T,
+): NormalizedOutputOptions[T] => {
+  const configAddon = config[name]
+  if (typeof configAddon === 'function') {
+    return configAddon as NormalizedOutputOptions[T]
+  }
+  // TODO Here should be remove async
+  return async () => configAddon || ''
+}
+
+export function normalizeOutputOptions(
+  opts: OutputOptions,
+): NormalizedOutputOptions {
+  const {
+    dir,
+    format,
+    exports,
+    sourcemap,
+    sourcemapIgnoreList,
+    sourcemapPathTransform,
+    entryFileNames,
+    chunkFileNames,
+  } = opts
+  return {
+    dir: dir,
+    format: getFormat(format),
+    exports: exports ?? 'auto',
+    sourcemap: sourcemap ?? false,
+    sourcemapIgnoreList:
+      typeof sourcemapIgnoreList === 'function'
+        ? sourcemapIgnoreList
+        : sourcemapIgnoreList === false
+          ? () => false
+          : (relativeSourcePath: string, sourcemapPath: string) =>
+              relativeSourcePath.includes('node_modules'),
+    sourcemapPathTransform,
+    banner: getAddon(opts, 'banner'),
+    footer: getAddon(opts, 'footer'),
+    entryFileNames: entryFileNames ?? '[name].js',
+    chunkFileNames: chunkFileNames ?? '[name]-[hash].js',
+  }
+}
+
+function getBindingSourcemap(
   sourcemap: OutputOptions['sourcemap'],
 ): BindingOutputOptions['sourcemap'] {
   switch (sourcemap) {
@@ -47,31 +130,8 @@ function normalizeSourcemap(
   }
 }
 
-function normalizeSourcemapIgnoreList(
-  sourcemapIgnoreList: OutputOptions['sourcemapIgnoreList'],
-): BindingOutputOptions['sourcemapIgnoreList'] {
-  return typeof sourcemapIgnoreList === 'function'
-    ? sourcemapIgnoreList
-    : sourcemapIgnoreList === false
-      ? () => false
-      : (relativeSourcePath: string, sourcemapPath: string) =>
-          relativeSourcePath.includes('node_modules')
-}
-
-const getAddon = <T extends 'banner' | 'footer'>(
-  config: OutputOptions,
-  name: T,
-): BindingOutputOptions[T] => {
-  const configAddon = config[name]
-  if (configAddon === undefined) return undefined
-  if (typeof configAddon === 'function') {
-    return configAddon as BindingOutputOptions[T]
-  }
-  return () => configAddon || ''
-}
-
-export function normalizeOutputOptions(
-  opts: OutputOptions,
+export function createOutputOptionsAdapter(
+  outputOptions: NormalizedOutputOptions,
 ): BindingOutputOptions {
   const {
     dir,
@@ -82,19 +142,21 @@ export function normalizeOutputOptions(
     sourcemapPathTransform,
     entryFileNames,
     chunkFileNames,
-  } = opts
+    banner,
+    footer,
+  } = outputOptions
   return {
-    dir: dir,
-    format: normalizeFormat(format),
+    dir,
+    format,
     exports,
-    sourcemap: normalizeSourcemap(sourcemap),
-    sourcemapIgnoreList: normalizeSourcemapIgnoreList(sourcemapIgnoreList),
+    sourcemap: getBindingSourcemap(sourcemap),
+    sourcemapIgnoreList,
     sourcemapPathTransform,
-    // TODO(sapphi-red): support parallel plugins
-    plugins: [],
-    banner: getAddon(opts, 'banner'),
-    footer: getAddon(opts, 'footer'),
+    banner,
+    footer,
     entryFileNames,
     chunkFileNames,
+    // TODO(sapphi-red): support parallel plugins
+    plugins: [],
   }
 }

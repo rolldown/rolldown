@@ -4,6 +4,7 @@ import type { WorkerData } from './utils/initialize-parallel-plugins'
 import type { defineParallelPluginImplementation } from './parallel-plugin'
 import { bindingifyPlugin } from './plugin/bindingify-plugin'
 import type { RolldownNormalizedInputOptions } from './options/input-options'
+import type { NormalizedOutputOptions } from './options/output-options'
 
 const { registryId, pluginInfos, threadNumber } = workerData as WorkerData
 
@@ -24,7 +25,7 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData
         plugin: bindingifyPlugin(
           plugin,
           {} as RolldownNormalizedInputOptions,
-          {} as BindingOutputOptions,
+          {} as NormalizedOutputOptions,
         ),
       }
     }),

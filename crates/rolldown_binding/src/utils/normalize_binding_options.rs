@@ -1,7 +1,3 @@
-use std::path::PathBuf;
-#[cfg(not(target_family = "wasm"))]
-use std::sync::Arc;
-
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
   options::plugin::JsPlugin,
@@ -11,6 +7,9 @@ use crate::{
 };
 use rolldown::{AddonOutputOption, BundlerOptions, Platform};
 use rolldown_plugin::BoxPlugin;
+use std::path::PathBuf;
+#[cfg(not(target_family = "wasm"))]
+use std::sync::Arc;
 
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct NormalizeBindingOptionsReturn {

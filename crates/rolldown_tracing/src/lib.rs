@@ -8,6 +8,7 @@ use std::sync::atomic::AtomicBool;
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_chrome::FlushGuard;
 use tracing_subscriber::fmt;
+use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 
@@ -40,7 +41,7 @@ pub fn try_init_tracing() -> Option<FlushGuard> {
     _ => {
       tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())
-        .with(fmt::layer().pretty().without_time())
+        .with(fmt::layer().pretty().without_time().with_span_events(FmtSpan::EXIT))
         .init();
       tracing::trace!("Tracing is initialized.");
       None

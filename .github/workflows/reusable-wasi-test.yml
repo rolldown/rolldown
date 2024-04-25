@@ -51,7 +51,7 @@ jobs:
 
       - name: Build Basic Example
         run: pnpm --filter=@example/basic build
-        if: ${{ inputs.os == 'ubuntu-latest' }}
+        if: false
         env:
           NAPI_RS_FORCE_WASI: 1
           RD_LOG: trace

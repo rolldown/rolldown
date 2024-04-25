@@ -48,9 +48,8 @@ impl ScanStage {
     Self { input_options, plugin_driver, fs, resolver, errors: vec![] }
   }
 
-  #[tracing::instrument(skip_all)]
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn scan(&mut self) -> anyhow::Result<ScanStageOutput> {
-    tracing::info!("Start scan stage");
     assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
 
     let module_loader = ModuleLoader::new(
@@ -73,8 +72,6 @@ impl ScanStage {
     } = module_loader.fetch_all_modules(user_entries).await?;
     self.errors.extend(errors);
 
-    tracing::debug!("Scan stage finished {module_table:#?}");
-
     Ok(ScanStageOutput {
       module_table,
       entry_points,
@@ -87,8 +84,8 @@ impl ScanStage {
   }
 
   /// Resolve `InputOptions.input`
-  #[tracing::instrument(skip_all)]
-  #[allow(clippy::type_complexity)]
+
+  #[tracing::instrument(level = "debug", skip_all)]
   async fn resolve_user_defined_entries(
     &mut self,
   ) -> Result<Vec<(Option<String>, ResolvedRequestInfo)>> {

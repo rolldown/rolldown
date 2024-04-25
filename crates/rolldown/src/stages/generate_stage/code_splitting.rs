@@ -52,6 +52,7 @@ impl<'a> GenerateStage<'a> {
     });
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   pub fn generate_chunks(&self) -> ChunkGraph {
     let entries_len: u32 =
       self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
@@ -139,8 +140,6 @@ impl<'a> GenerateStage<'a> {
         self.link_output.module_table.normal_modules[*module_id].exec_order
       });
     });
-
-    tracing::trace!("Generated chunks: {:#?}", chunks);
 
     ChunkGraph { chunks, module_to_chunk, user_defined_entry_chunk_ids }
   }

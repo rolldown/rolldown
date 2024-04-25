@@ -50,16 +50,13 @@ impl<'a> GenerateStage<'a> {
     Self { link_output, options, plugin_driver }
   }
 
-  #[tracing::instrument(skip_all)]
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> Result<BundleOutput> {
-    tracing::info!("Start bundle stage");
     let mut chunk_graph = self.generate_chunks();
 
     self.generate_chunk_preliminary_filenames(&mut chunk_graph);
-    tracing::info!("generate_chunk_preliminary_filenames");
 
     self.compute_cross_chunk_links(&mut chunk_graph);
-    tracing::info!("compute_cross_chunk_links");
 
     chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
       deconflict_chunk_symbols(chunk, self.link_output);
@@ -90,7 +87,6 @@ impl<'a> GenerateStage<'a> {
           ast,
         );
       });
-    tracing::info!("finalizing modules");
 
     let chunks = try_join_all(
       chunk_graph
@@ -182,8 +178,6 @@ impl<'a> GenerateStage<'a> {
       })));
     }
 
-    tracing::info!("rendered chunks");
-
     Ok(BundleOutput {
       assets,
       warnings: std::mem::take(&mut self.link_output.warnings),
@@ -193,6 +187,7 @@ impl<'a> GenerateStage<'a> {
 
   // Notices:
   // - Should generate filenames that are stable cross builds and os.
+  #[tracing::instrument(level = "debug", skip_all)]
   fn generate_chunk_preliminary_filenames(&self, chunk_graph: &mut ChunkGraph) {
     fn ensure_chunk_name(
       chunk: &Chunk,

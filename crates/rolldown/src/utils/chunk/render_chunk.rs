@@ -26,6 +26,7 @@ use super::{
 };
 
 #[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
+#[tracing::instrument(level = "trace", skip_all)]
 pub async fn render_chunk(
   this: &Chunk,
   options: &SharedOptions,

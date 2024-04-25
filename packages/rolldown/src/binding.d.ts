@@ -3,6 +3,10 @@ type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export class BindingModuleInfo {
   id: string
+  importers: Array<string>
+  dynamicImporters: Array<string>
+  importedIds: Array<string>
+  dynamicallyImportedIds: Array<string>
   get code(): string | null
 }
 

@@ -78,6 +78,9 @@ impl RuntimeNormalModuleTask {
       import_records: IndexVec::default(),
       is_included: false,
       sourcemap_chain: vec![],
+      // The internal runtime module `importers/dynamic_importers` should be skip.
+      importers: vec![],
+      dynamic_importers: vec![],
     };
 
     if let Err(_err) =

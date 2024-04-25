@@ -117,9 +117,28 @@ impl ModuleLoader {
     }
   }
 
-  fn try_spawn_new_task(&mut self, info: &ResolvedRequestInfo) -> ModuleId {
+  fn try_spawn_new_task(
+    &mut self,
+    info: &ResolvedRequestInfo,
+    importer: Option<(NormalModuleId, ImportKind)>,
+  ) -> ModuleId {
     match self.visited.entry(Arc::<str>::clone(&info.path.path)) {
-      std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
+      std::collections::hash_map::Entry::Occupied(visited) => {
+        let id = *visited.get();
+        // If dependency already created, here need to update the `importers/dynamic_importers`
+        if let Some((importer, kind)) = importer {
+          if let ModuleId::Normal(id) = id {
+            if let Some(m) = self.intermediate_normal_modules.modules[id].as_mut() {
+              if kind.is_static() {
+                m.importers.push(importer);
+              } else {
+                m.dynamic_importers.push(importer);
+              }
+            }
+          }
+        }
+        id
+      }
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         if info.is_external {
           let id = self.external_modules.len_idx();
@@ -138,6 +157,7 @@ impl ModuleLoader {
             id,
             module_path,
             info.module_type,
+            importer,
           );
           #[cfg(target_family = "wasm")]
           {
@@ -187,7 +207,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name,
-        id: self.try_spawn_new_task(&info).expect_normal(),
+        id: self.try_spawn_new_task(&info, None).expect_normal(),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -219,7 +239,7 @@ impl ModuleLoader {
             .into_iter()
             .zip(resolved_deps)
             .map(|(raw_rec, info)| {
-              let id = self.try_spawn_new_task(&info);
+              let id = self.try_spawn_new_task(&info, Some((module_id, raw_rec.kind)));
               // Dynamic imported module will be considered as an entry
               if let ModuleId::Normal(id) = id {
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)

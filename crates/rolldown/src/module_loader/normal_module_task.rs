@@ -5,8 +5,8 @@ use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  AstScope, FilePath, ImportRecordId, ModuleType, NormalModule, NormalModuleId, RawImportRecord,
-  ResolvedPath, ResourceId, SymbolRef,
+  AstScope, FilePath, ImportKind, ImportRecordId, ModuleType, NormalModule, NormalModuleId,
+  RawImportRecord, ResolvedPath, ResourceId, SymbolRef,
 };
 use rolldown_error::{BuildError, BuildResult};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
@@ -27,6 +27,7 @@ pub struct NormalModuleTask {
   resolved_path: ResolvedPath,
   module_type: ModuleType,
   errors: Vec<BuildError>,
+  importer: Option<(NormalModuleId, ImportKind)>,
 }
 
 impl NormalModuleTask {
@@ -35,8 +36,9 @@ impl NormalModuleTask {
     id: NormalModuleId,
     path: ResolvedPath,
     module_type: ModuleType,
+    importer: Option<(NormalModuleId, ImportKind)>,
   ) -> Self {
-    Self { ctx, module_id: id, resolved_path: path, module_type, errors: vec![] }
+    Self { ctx, module_id: id, resolved_path: path, module_type, errors: vec![], importer }
   }
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_path = ?self.resolved_path))]
@@ -86,7 +88,7 @@ impl NormalModuleTask {
     } = scan_result;
     warnings.extend(scan_warnings);
 
-    let module = NormalModule {
+    let mut module = NormalModule {
       source,
       id: self.module_id,
       repr_name,
@@ -108,9 +110,20 @@ impl NormalModuleTask {
       is_user_defined_entry: false,
       import_records: IndexVec::default(),
       is_included: false,
+      importers: vec![],
+      dynamic_importers: vec![],
     };
 
-    self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
+    if let Some((importer, kind)) = self.importer.take() {
+      if kind.is_static() {
+        module.importers.push(importer);
+      } else {
+        module.dynamic_importers.push(importer);
+      }
+    }
+
+    // TODO here `normal_module_table` should be `Some`.
+    self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info(None))).await?;
 
     self
       .ctx

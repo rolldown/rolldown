@@ -11,5 +11,9 @@ export function transformModuleInfo(info: BindingModuleInfo): ModuleInfo {
       return info.code
     },
     id: info.id,
+    importers: info.importers,
+    dynamicImporters: info.dynamicImporters,
+    importedIds: info.importedIds,
+    dynamicallyImportedIds: info.dynamicallyImportedIds,
   }
 }

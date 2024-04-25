@@ -4,7 +4,6 @@ use sugar_path::SugarPath;
 
 #[tokio::main]
 async fn main() {
-  rolldown_tracing::try_init_tracing();
   let root = PathBuf::from(
     &std::env::var("CARGO_MANIFEST_DIR")
       .unwrap_or(std::env::current_dir().unwrap().display().to_string()),

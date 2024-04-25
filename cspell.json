@@ -101,6 +101,7 @@
     "romejs",
     "Rstr",
     "rustc",
+    "rustdoc",
     "rustup",
     "sapphi-red",
     "schemars",

@@ -75,6 +75,10 @@ export default defineConfig({
             },
             { text: 'Testing', link: '/contrib-guide/testing.md' },
             { text: 'Benchmarking', link: '/contrib-guide/benchmarking.md' },
+            {
+              text: 'Tracing/Logging',
+              link: '/contrib-guide/tracing-logging.md',
+            },
             { text: 'Docs', link: '/contrib-guide/docs.md' },
           ],
         },

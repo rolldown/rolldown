@@ -138,6 +138,7 @@ version = "0.1.0"
 dependencies = [
  "criterion2",
  "rolldown",
+ "rolldown_testing",
  "tokio",
 ]
 
@@ -1448,6 +1449,7 @@ dependencies = [
  "rolldown_testing_config",
  "schemars",
  "serde_json",
+ "sugar_path",
 ]
 
 [[package]]

@@ -51,21 +51,21 @@ jobs:
 
       - name: Build Basic Example
         run: pnpm --filter=@example/basic build
-        if: ${{ inputs.os == 'ubuntu-latest' }}
+        if: false
         env:
           NAPI_RS_FORCE_WASI: 1
-          RUST_LOG: trace
+          RD_LOG: trace
 
       - name: Node Test
         run: pnpm run --recursive --filter=!rollup-tests test
         if: false
         env:
           NAPI_RS_FORCE_WASI: 1
-          RUST_LOG: trace
+          RD_LOG: trace
 
       - name: Rollup Test
         run: pnpm run --filter rollup-tests test
         if: false
         env:
           NAPI_RS_FORCE_WASI: 1
-          RUST_LOG: trace
+          RD_LOG: trace

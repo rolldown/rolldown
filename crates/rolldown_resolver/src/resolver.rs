@@ -64,6 +64,7 @@ impl<F: FileSystem + Default> Resolver<F> {
             .collect::<Vec<_>>()
         })
         .unwrap_or_default(),
+      imports_fields: vec![vec!["imports".to_string()]],
       alias_fields: raw_resolve.alias_fields.unwrap_or_default(),
       condition_names: default_conditions,
       description_files: vec!["package.json".to_string()],

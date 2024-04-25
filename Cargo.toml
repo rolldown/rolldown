@@ -90,7 +90,7 @@ rolldown_tracing        = { version = "0.0.1", path = "./crates/rolldown_tracing
 rolldown_utils          = { version = "0.0.1", path = "./crates/rolldown_utils" }
 
 anyhow             = "1.0.82"
-ariadne            = "0.4.0"
+ariadne            = "0.4.1"
 async-channel      = "2.2.1"
 async-scoped       = { version = "0.9.0" }
 async-trait        = "0.1.80"

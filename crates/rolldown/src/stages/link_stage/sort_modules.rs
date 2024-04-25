@@ -13,6 +13,7 @@ enum Status {
 }
 
 impl<'a> LinkStage<'a> {
+  #[tracing::instrument(level = "debug", skip_all)]
   pub fn sort_modules(&mut self) {
     // The runtime module should always be the first module to be executed
     let mut execution_stack = self

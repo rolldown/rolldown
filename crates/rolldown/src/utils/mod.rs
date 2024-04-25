@@ -22,6 +22,7 @@ pub(crate) fn is_in_rust_test_mode() -> bool {
   *TEST_MODE
 }
 
+#[tracing::instrument(level = "trace", skip_all)]
 pub fn finalize_normal_module(module: &NormalModule, ctx: FinalizerContext<'_>, ast: &mut OxcAst) {
   ast.with_mut(|fields| {
     let (oxc_program, alloc) = (fields.program, fields.allocator);

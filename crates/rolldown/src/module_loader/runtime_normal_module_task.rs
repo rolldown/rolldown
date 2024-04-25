@@ -33,10 +33,8 @@ impl RuntimeNormalModuleTask {
     Self { module_id: id, tx, warnings: Vec::default() }
   }
 
-  #[tracing::instrument(skip_all)]
+  #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
   pub fn run(self) {
-    tracing::trace!("process <runtime>");
-
     let source: Arc<str> =
       include_str!("../runtime/runtime-without-comments.js").to_string().into();
 

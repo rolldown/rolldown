@@ -156,7 +156,7 @@ impl ModuleLoader {
     }
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: Vec<(Option<String>, ResolvedRequestInfo)>,

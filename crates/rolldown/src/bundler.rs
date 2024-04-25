@@ -15,12 +15,14 @@ use rolldown_error::BuildError;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
 use sugar_path::SugarPath;
+use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
   pub(crate) options: SharedOptions,
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) fs: OsFileSystem,
   pub(crate) resolver: SharedResolver,
+  pub(crate) _log_guard: Option<FlushGuard>,
 }
 
 impl Bundler {
@@ -34,6 +36,7 @@ impl Bundler {
 }
 
 impl Bundler {
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn write(&mut self) -> Result<BundleOutput> {
     let dir = self.options.cwd.as_path().join(&self.options.dir).to_string_lossy().to_string();
 
@@ -65,6 +68,7 @@ impl Bundler {
     Ok(output)
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> Result<BundleOutput> {
     self.bundle_up(false).await
   }
@@ -91,7 +95,6 @@ impl Bundler {
     ret
   }
 
-  #[tracing::instrument(skip_all)]
   async fn try_build(&mut self) -> Result<LinkStageOutput> {
     let build_info = self.scan().await?;
 
@@ -99,9 +102,7 @@ impl Bundler {
     Ok(link_stage.link())
   }
 
-  #[tracing::instrument(skip_all)]
   async fn bundle_up(&mut self, is_write: bool) -> Result<BundleOutput> {
-    tracing::trace!("Options {:#?}", self.options);
     let mut link_stage_output = self.try_build().await?;
 
     self.plugin_driver.render_start().await?;

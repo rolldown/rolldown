@@ -75,6 +75,7 @@ impl<'a> LinkStage<'a> {
     }
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   fn create_exports_for_modules(&mut self) {
     self.module_table.normal_modules.iter_mut().for_each(|module| {
       let linking_info = &mut self.metas[module.id];
@@ -124,14 +125,14 @@ impl<'a> LinkStage<'a> {
     });
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> LinkStageOutput {
-    tracing::info!("Start link stage");
     self.sort_modules();
 
     self.determine_module_exports_kind();
     self.wrap_modules();
     self.bind_imports_and_exports();
-    tracing::debug!("linking modules {:#?}", self.metas);
+
     self.create_exports_for_modules();
     self.reference_needed_symbols();
     self.include_statements();
@@ -149,6 +150,7 @@ impl<'a> LinkStage<'a> {
     }
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   fn determine_module_exports_kind(&mut self) {
     // Maximize the compatibility with commonjs
     let compat_mode = true;
@@ -218,6 +220,7 @@ impl<'a> LinkStage<'a> {
     });
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
     self.module_table.normal_modules.iter().par_bridge().for_each(|importer| {

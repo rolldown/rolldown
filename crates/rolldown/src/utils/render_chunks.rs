@@ -4,12 +4,12 @@ use futures::future::try_join_all;
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::collapse_sourcemaps;
 
+#[tracing::instrument(level = "debug", skip_all)]
 pub async fn render_chunks<'a>(
   plugin_driver: &SharedPluginDriver,
   chunks: Vec<ChunkRenderReturn>,
 ) -> Result<Vec<ChunkRenderReturn>> {
   try_join_all(chunks.into_iter().map(|chunk| async move {
-    tracing::info!("render_chunks");
     plugin_driver
       .render_chunk(HookRenderChunkArgs { code: chunk.code, chunk: &chunk.rendered_chunk })
       .await

@@ -28,10 +28,12 @@ pub fn try_init_tracing() -> Option<FlushGuard> {
 
   let output_mode = std::env::var(LOG_OUTPUT_ENV_NAME).unwrap_or_else(|_| "stdout".to_string());
 
+  let env_filter = EnvFilter::from_env(LOG_ENV_NAME);
+
   match output_mode.as_str() {
     "chrome-json" => {
       let (chrome_layer, guard) = ChromeLayerBuilder::new().build();
-      tracing_subscriber::registry().with(EnvFilter::from_default_env()).with(chrome_layer).init();
+      tracing_subscriber::registry().with(env_filter).with(chrome_layer).init();
       Some(guard)
     }
     "json" => {
@@ -40,10 +42,10 @@ pub fn try_init_tracing() -> Option<FlushGuard> {
     }
     _ => {
       tracing_subscriber::registry()
-        .with(EnvFilter::from_default_env())
-        .with(fmt::layer().pretty().without_time().with_span_events(FmtSpan::EXIT))
+        .with(env_filter)
+        .with(fmt::layer().pretty().with_span_events(FmtSpan::CLOSE | FmtSpan::ENTER))
         .init();
-      tracing::trace!("Tracing is initialized.");
+      tracing::debug!("Tracing initialized");
       None
     }
   }

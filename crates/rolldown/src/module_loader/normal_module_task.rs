@@ -39,6 +39,7 @@ impl NormalModuleTask {
     Self { ctx, module_id: id, resolved_path: path, module_type, errors: vec![] }
   }
 
+  #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_path = ?self.resolved_path))]
   pub async fn run(mut self) {
     match self.run_inner().await {
       Ok(()) => {
@@ -53,8 +54,6 @@ impl NormalModuleTask {
   }
 
   async fn run_inner(&mut self) -> Result<()> {
-    tracing::trace!("process {:?}", self.resolved_path);
-
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
@@ -70,7 +69,6 @@ impl NormalModuleTask {
         .into();
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
-    tracing::trace!("scan {:?}", self.resolved_path);
 
     let res = self.resolve_dependencies(&scan_result.import_records).await?;
 
@@ -128,7 +126,6 @@ impl NormalModuleTask {
       }))
       .await
       .expect("Send should not fail");
-    tracing::trace!("end process {:?}", self.resolved_path);
     Ok(())
   }
 
@@ -222,7 +219,6 @@ impl NormalModuleTask {
     }
   }
 
-  #[tracing::instrument(skip_all)]
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordId, RawImportRecord>,

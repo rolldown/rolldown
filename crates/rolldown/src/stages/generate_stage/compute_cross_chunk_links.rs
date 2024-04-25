@@ -29,7 +29,7 @@ impl<'a> GenerateStage<'a> {
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
   ) {
     let symbols = &Mutex::new(&mut self.link_output.symbols);
-    tracing::info!("collect_potential_chunk_imports");
+
     let chunks_iter = {
       chunk_graph
         .chunks
@@ -130,10 +130,10 @@ impl<'a> GenerateStage<'a> {
         }
       },
     );
-    tracing::info!("collect_potential_chunk_imports end");
   }
 
   #[allow(clippy::too_many_lines)]
+  #[tracing::instrument(level = "debug", skip_all)]
   pub fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
     let mut chunk_meta_imports_vec: ChunkMetaImports =
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
@@ -155,7 +155,6 @@ impl<'a> GenerateStage<'a> {
       &mut index_cross_chunk_imports,
     );
 
-    tracing::info!("calculate cross chunk imports");
     // - Find out what imports are actually come from other chunks
     chunk_graph.chunks.iter_enumerated().for_each(|(chunk_id, chunk)| {
       let chunk_meta_imports = &chunk_meta_imports_vec[chunk_id];
@@ -204,7 +203,6 @@ impl<'a> GenerateStage<'a> {
       }
     });
 
-    tracing::info!("Generate cross-chunk exports");
     // Generate cross-chunk exports. These must be computed before cross-chunk
     // imports because of export alias renaming, which must consider all export
     // aliases simultaneously to avoid collisions.

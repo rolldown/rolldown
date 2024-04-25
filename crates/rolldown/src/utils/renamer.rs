@@ -52,11 +52,13 @@ impl<'name> Renamer<'name> {
   }
 
   // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
+  #[tracing::instrument(level = "trace", skip_all)]
   pub fn rename_non_top_level_symbol(
     &mut self,
     modules_in_chunk: &[NormalModuleId],
     modules: &NormalModuleVec,
   ) {
+    #[tracing::instrument(level = "trace", skip_all)]
     fn rename_symbols_of_nested_scopes<'name>(
       module: &'name NormalModule,
       scope_id: ScopeId,

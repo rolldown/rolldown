@@ -78,6 +78,7 @@ fn has_dynamic_exports_due_to_export_star(
 }
 
 impl LinkStage<'_> {
+  #[tracing::instrument(level = "debug", skip_all)]
   pub fn wrap_modules(&mut self) {
     let mut visited_modules_for_wrapping =
       index_vec::index_vec![false; self.module_table.normal_modules.len()];

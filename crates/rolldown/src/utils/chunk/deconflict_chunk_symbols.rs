@@ -5,6 +5,7 @@ use rolldown_rstr::ToRstr;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 
+#[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput) {
   let mut renamer =
     Renamer::new(&link_output.symbols, link_output.module_table.normal_modules.len());

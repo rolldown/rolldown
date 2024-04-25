@@ -21,6 +21,7 @@ use crate::{
 use super::LinkStage;
 
 impl<'a> LinkStage<'a> {
+  #[tracing::instrument(level = "debug", skip_all)]
   pub fn bind_imports_and_exports(&mut self) {
     self.module_table.normal_modules.iter().zip(self.metas.iter_mut()).par_bridge().for_each(
       |(module, meta)| {

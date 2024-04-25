@@ -17,7 +17,7 @@ pub struct BundlerBuilder {
 
 impl BundlerBuilder {
   pub fn build(self) -> Bundler {
-    rolldown_tracing::try_init_tracing();
+    let maybe_guard = rolldown_tracing::try_init_tracing();
 
     let NormalizeOptionsReturn { options, resolve_options } = normalize_options(self.input_options);
 
@@ -27,6 +27,7 @@ impl BundlerBuilder {
       plugin_driver: PluginDriver::new_shared(self.plugins),
       options: Arc::new(options),
       fs: OsFileSystem,
+      _log_guard: maybe_guard,
     }
   }
 

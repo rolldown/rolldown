@@ -12,7 +12,6 @@ use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
 use rolldown_error::{BuildError, DiagnosticOptions};
-use tracing::instrument;
 
 #[napi]
 pub struct Bundler {
@@ -67,23 +66,25 @@ impl Bundler {
   }
 
   #[napi]
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn write(&self) -> napi::Result<BindingOutputs> {
     self.write_impl().await
   }
 
   #[napi]
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&self) -> napi::Result<BindingOutputs> {
     self.generate_impl().await
   }
 
   #[napi]
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn scan(&self) -> napi::Result<()> {
     self.scan_impl().await
   }
 }
 
 impl Bundler {
-  #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
   pub async fn scan_impl(&self) -> napi::Result<()> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
@@ -101,7 +102,6 @@ impl Bundler {
     Ok(())
   }
 
-  #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
   pub async fn write_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
@@ -119,7 +119,6 @@ impl Bundler {
     Ok(BindingOutputs::new(outputs.assets))
   }
 
-  #[instrument(skip_all)]
   #[allow(clippy::significant_drop_tightening)]
   pub async fn generate_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {

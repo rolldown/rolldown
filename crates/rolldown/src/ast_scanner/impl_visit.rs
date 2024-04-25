@@ -11,7 +11,6 @@ use rolldown_oxc_utils::StatementExt;
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
 impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
-  #[tracing::instrument(skip_all)]
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);

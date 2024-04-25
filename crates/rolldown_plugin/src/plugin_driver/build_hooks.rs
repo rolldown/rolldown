@@ -10,6 +10,7 @@ use rolldown_sourcemap::SourceMap;
 use rolldown_utils::futures::block_on_spawn_all;
 
 impl PluginDriver {
+  #[tracing::instrument(level = "trace", skip_all)]
   pub async fn build_start(&self) -> HookNoopReturn {
     #[cfg(not(target_arch = "wasm32"))]
     block_on_spawn_all(self.plugins.iter().map(|(plugin, ctx)| plugin.build_start(ctx))).await;
@@ -79,7 +80,6 @@ impl PluginDriver {
   }
 
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs>) -> HookNoopReturn {
-    tracing::info!("PluginDriver::build_end");
     for (plugin, ctx) in &self.plugins {
       plugin.build_end(ctx, args).await?;
     }

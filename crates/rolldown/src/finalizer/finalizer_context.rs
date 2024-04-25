@@ -1,4 +1,4 @@
-use rolldown_common::{NormalModule, NormalModuleId, SymbolRef};
+use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, SymbolRef};
 
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
@@ -8,7 +8,6 @@ use crate::{
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    module_table::NormalModuleVec,
     symbols::Symbols,
   },
 };

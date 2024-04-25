@@ -1,8 +1,7 @@
+use crate::types::symbols::Symbols;
 use index_vec::IndexVec;
-use rolldown_common::{NormalModule, NormalModuleId, StmtInfoId, SymbolRef};
+use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolRef};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
-
-use crate::types::{module_table::NormalModuleVec, symbols::Symbols};
 
 use super::LinkStage;
 

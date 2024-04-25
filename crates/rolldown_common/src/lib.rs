@@ -48,6 +48,7 @@ pub use crate::{
   types::module_id::ModuleId,
   types::module_info::ModuleInfo,
   types::module_path::ResourceId,
+  types::module_table::{ExternalModuleVec, ModuleTable, NormalModuleVec},
   types::module_type::ModuleType,
   types::named_export::LocalExport,
   types::named_import::{NamedImport, Specifier},

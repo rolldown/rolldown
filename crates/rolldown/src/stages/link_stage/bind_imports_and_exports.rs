@@ -2,8 +2,8 @@
 // if we want more enhancements related to exports.
 
 use rolldown_common::{
-  ExportsKind, ModuleId, NamedImport, NormalModule, NormalModuleId, ResolvedExport, Specifier,
-  SymbolRef,
+  ExportsKind, ModuleId, NamedImport, NormalModule, NormalModuleId, NormalModuleVec,
+  ResolvedExport, Specifier, SymbolRef,
 };
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 
@@ -11,7 +11,6 @@ use crate::{
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     match_import_kind::MatchImportKind,
-    module_table::NormalModuleVec,
     namespace_alias::NamespaceAlias,
     symbols::Symbols,
   },

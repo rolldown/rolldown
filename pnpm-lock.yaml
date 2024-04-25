@@ -52,6 +52,21 @@ importers:
         specifier: workspace:*
         version: link:../../packages/rolldown
 
+  examples/par-babel-rome-ts:
+    devDependencies:
+      '@babel/core':
+        specifier: ^7.24.4
+        version: 7.24.4
+      '@babel/preset-env':
+        specifier: ^7.24.4
+        version: 7.24.4(@babel/core@7.24.4)
+      '@babel/preset-typescript':
+        specifier: ^7.24.1
+        version: 7.24.1(@babel/core@7.24.4)
+      rolldown:
+        specifier: workspace:*
+        version: link:../../packages/rolldown
+
   examples/rollup-plugin-esbuild:
     dependencies:
       rollup-plugin-esbuild:

@@ -3,10 +3,12 @@
 ///   - See  https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#example-syntax for more syntax details.
 ///   - https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives
 /// - Using `RD_LOG=trace RD_LOG_OUTPUT=chrome-json` to collect tracing events into a json file.
+///   - Using `RD_LOG_OUTPUT_STYLE=async` to record traces as a group of asynchronous operations.
 use std::sync::atomic::AtomicBool;
 
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_chrome::FlushGuard;
+use tracing_chrome::TraceStyle;
 use tracing_subscriber::fmt;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::prelude::*;
@@ -14,6 +16,7 @@ use tracing_subscriber::EnvFilter;
 
 static LOG_ENV_NAME: &str = "RD_LOG";
 static LOG_OUTPUT_ENV_NAME: &str = "RD_LOG_OUTPUT";
+static LOG_OUTPUT_STYLE_NAME: &str = "RD_LOG_OUTPUT_STYLE";
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -32,7 +35,11 @@ pub fn try_init_tracing() -> Option<FlushGuard> {
 
   match output_mode.as_str() {
     "chrome-json" => {
-      let (chrome_layer, guard) = ChromeLayerBuilder::new().build();
+      let trace_style = match std::env::var(LOG_OUTPUT_STYLE_NAME).unwrap_or_default().as_str() {
+        "async" => TraceStyle::Async,
+        _ => TraceStyle::Threaded,
+      };
+      let (chrome_layer, guard) = ChromeLayerBuilder::new().trace_style(trace_style).build();
       tracing_subscriber::registry().with(env_filter).with(chrome_layer).init();
       Some(guard)
     }

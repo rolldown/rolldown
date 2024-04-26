@@ -94,6 +94,8 @@ pub fn normalize_binding_options(
     footer: normalize_addon_option(output_options.footer),
     sourcemap_ignore_list,
     sourcemap_path_transform,
+    warmup_files: input_options.warmup_files,
+    warmup_files_exclude: input_options.warmup_files_exclude,
     // TODO(hyf0): remove this line, all options should set explicitly
     ..Default::default()
   };

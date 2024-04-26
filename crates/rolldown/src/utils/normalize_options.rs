@@ -35,6 +35,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     sourcemap_ignore_list: raw_options.sourcemap_ignore_list,
     sourcemap_path_transform: raw_options.sourcemap_path_transform,
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
+    warmup_files: raw_options.warmup_files,
+    warmup_files_exclude: raw_options.warmup_files_exclude,
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }

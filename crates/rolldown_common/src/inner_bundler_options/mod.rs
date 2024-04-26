@@ -66,6 +66,9 @@ pub struct BundlerOptions {
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
   // --- options for resolve
   pub resolve: Option<ResolveOptions>,
+
+  pub warmup_files: Vec<String>,
+  pub warmup_files_exclude: Vec<String>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

@@ -1,9 +1,9 @@
 use std::{fmt::Debug, sync::Arc};
 
 use crate::{
-  types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
+  types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, FilePath, ImportRecord,
   ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
-  NormalModuleVec, ResourceId, StmtInfo, StmtInfos, SymbolRef,
+  ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use index_vec::IndexVec;
 use oxc::span::Span;
@@ -40,9 +40,13 @@ pub struct NormalModule {
   // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
   pub is_virtual: bool,
   // the ids of all modules that statically import this module
-  pub importers: Vec<NormalModuleId>,
+  pub importers: Vec<FilePath>,
   // the ids of all modules that import this module via dynamic import()
-  pub dynamic_importers: Vec<NormalModuleId>,
+  pub dynamic_importers: Vec<FilePath>,
+  // the module ids statically imported by this module
+  pub imported_ids: Vec<FilePath>,
+  // the module ids imported by this module via dynamic import()
+  pub dynamically_imported_ids: Vec<FilePath>,
 }
 
 impl NormalModule {
@@ -65,54 +69,22 @@ impl NormalModule {
     }
   }
 
-  pub fn to_module_info(&self, normal_module_table: Option<&NormalModuleVec>) -> ModuleInfo {
+  pub fn to_module_info(&self) -> ModuleInfo {
     ModuleInfo {
       code: Some(Arc::clone(&self.source)),
       id: self.resource_id.expect_file().clone(),
-      importers: normal_module_table
-        .map(|normal_module_table| {
-          self
-            .importers
-            .iter()
-            .map(|id| normal_module_table[*id].resource_id.expect_file().clone())
-            .collect()
-        })
-        .unwrap_or_default(),
-      dynamic_importers: normal_module_table
-        .map(|normal_module_table| {
-          self
-            .dynamic_importers
-            .iter()
-            .map(|id| normal_module_table[*id].resource_id.expect_file().clone())
-            .collect()
-        })
-        .unwrap_or_default(),
-      imported_ids: normal_module_table
-        .map(|normal_module_table| {
-          self
-            .import_records
-            .iter()
-            .filter(|record| record.kind.is_static())
-            .map(|record| match record.resolved_module {
-              ModuleId::Normal(id) => normal_module_table[id].resource_id.expect_file().clone(),
-              ModuleId::External(_) => unreachable!(),
-            })
-            .collect()
-        })
-        .unwrap_or_default(),
-      dynamically_imported_ids: normal_module_table
-        .map(|normal_module_table| {
-          self
-            .import_records
-            .iter()
-            .filter(|record| !record.kind.is_static())
-            .map(|record| match record.resolved_module {
-              ModuleId::Normal(id) => normal_module_table[id].resource_id.expect_file().clone(),
-              ModuleId::External(_) => unreachable!(),
-            })
-            .collect()
-        })
-        .unwrap_or_default(),
+      importers: {
+        let mut value = self.importers.clone();
+        value.sort_unstable();
+        value
+      },
+      dynamic_importers: {
+        let mut value = self.dynamic_importers.clone();
+        value.sort_unstable();
+        value
+      },
+      imported_ids: self.imported_ids.clone(),
+      dynamically_imported_ids: self.dynamically_imported_ids.clone(),
     }
   }
 }

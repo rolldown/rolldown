@@ -5,7 +5,7 @@ use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  AstScope, FilePath, ImportKind, ImportRecordId, ModuleType, NormalModule, NormalModuleId,
+  AstScope, FilePath, ImportRecordId, ImporterRecord, ModuleType, NormalModule, NormalModuleId,
   RawImportRecord, ResolvedPath, ResourceId, SymbolRef,
 };
 use rolldown_error::{BuildError, BuildResult};
@@ -27,7 +27,7 @@ pub struct NormalModuleTask {
   resolved_path: ResolvedPath,
   module_type: ModuleType,
   errors: Vec<BuildError>,
-  importer: Option<(NormalModuleId, ImportKind)>,
+  importer: Option<ImporterRecord>,
 }
 
 impl NormalModuleTask {
@@ -36,7 +36,7 @@ impl NormalModuleTask {
     id: NormalModuleId,
     path: ResolvedPath,
     module_type: ModuleType,
-    importer: Option<(NormalModuleId, ImportKind)>,
+    importer: Option<ImporterRecord>,
   ) -> Self {
     Self { ctx, module_id: id, resolved_path: path, module_type, errors: vec![], importer }
   }
@@ -72,7 +72,7 @@ impl NormalModuleTask {
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
 
-    let res = self.resolve_dependencies(&scan_result.import_records).await?;
+    let resolved_deps = self.resolve_dependencies(&scan_result.import_records).await?;
 
     let ScanResult {
       named_imports,
@@ -87,6 +87,17 @@ impl NormalModuleTask {
       warnings: scan_warnings,
     } = scan_result;
     warnings.extend(scan_warnings);
+
+    let mut imported_ids = vec![];
+    let mut dynamically_imported_ids = vec![];
+
+    for (record, info) in import_records.iter().zip(&resolved_deps) {
+      if record.kind.is_static() {
+        imported_ids.push(Arc::clone(&info.path.path).into());
+      } else {
+        dynamically_imported_ids.push(Arc::clone(&info.path.path).into());
+      }
+    }
 
     let mut module = NormalModule {
       source,
@@ -112,24 +123,27 @@ impl NormalModuleTask {
       is_included: false,
       importers: vec![],
       dynamic_importers: vec![],
+      imported_ids,
+      dynamically_imported_ids,
     };
 
-    if let Some((importer, kind)) = self.importer.take() {
-      if kind.is_static() {
-        module.importers.push(importer);
+    self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
+
+    // Note: (Compat to rollup)
+    // The `dynamic_importers/importers` should be added after `module_parsed` hook.
+    if let Some(importer) = self.importer.take() {
+      if importer.kind.is_static() {
+        module.importers.push(importer.importer_path);
       } else {
-        module.dynamic_importers.push(importer);
+        module.dynamic_importers.push(importer.importer_path);
       }
     }
-
-    // TODO here `normal_module_table` should be `Some`.
-    self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info(None))).await?;
 
     self
       .ctx
       .tx
       .send(Msg::NormalModuleDone(NormalModuleTaskResult {
-        resolved_deps: res,
+        resolved_deps,
         module_id: self.module_id,
         warnings,
         ast_symbol,

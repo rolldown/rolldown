@@ -7,6 +7,7 @@ pub mod exports_kind;
 pub mod external_module_id;
 pub mod file_path;
 pub mod import_record;
+pub mod importer_record;
 pub mod module_id;
 pub mod module_info;
 pub mod module_path;

@@ -1,7 +1,7 @@
 use index_vec::IndexVec;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind, ImportRecordId,
-  ModuleId, ModuleTable, NormalModule, NormalModuleId,
+  ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -120,19 +120,19 @@ impl ModuleLoader {
   fn try_spawn_new_task(
     &mut self,
     info: &ResolvedRequestInfo,
-    importer: Option<(NormalModuleId, ImportKind)>,
+    importer: Option<ImporterRecord>,
   ) -> ModuleId {
     match self.visited.entry(Arc::<str>::clone(&info.path.path)) {
       std::collections::hash_map::Entry::Occupied(visited) => {
         let id = *visited.get();
         // If dependency already created, here need to update the `importers/dynamic_importers`
-        if let Some((importer, kind)) = importer {
+        if let Some(importer) = importer {
           if let ModuleId::Normal(id) = id {
             if let Some(m) = self.intermediate_normal_modules.modules[id].as_mut() {
-              if kind.is_static() {
-                m.importers.push(importer);
+              if importer.kind.is_static() {
+                m.importers.push(importer.importer_path);
               } else {
-                m.dynamic_importers.push(importer);
+                m.dynamic_importers.push(importer.importer_path);
               }
             }
           }
@@ -239,7 +239,13 @@ impl ModuleLoader {
             .into_iter()
             .zip(resolved_deps)
             .map(|(raw_rec, info)| {
-              let id = self.try_spawn_new_task(&info, Some((module_id, raw_rec.kind)));
+              let id = self.try_spawn_new_task(
+                &info,
+                Some(ImporterRecord {
+                  kind: raw_rec.kind,
+                  importer_path: module.resource_id.expect_file().clone(),
+                }),
+              );
               // Dynamic imported module will be considered as an entry
               if let ModuleId::Normal(id) = id {
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)

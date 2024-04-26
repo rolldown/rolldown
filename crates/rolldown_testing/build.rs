@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use rolldown_testing_config::TestConfig;
 
 fn main() {
-  // If the definition of `TestConfig` changes, this build script will automatically re-run due we rely on `rolldown_testing_config` in `Cargo.toml`.
+  // If the definition of `TestConfig` changes, this build script will automatically re-run due to we rely on `rolldown_testing_config` in `Cargo.toml` already.
   // So we only add `build.rs` as the dependency to prevent unnecessary re-runs for every `cargo build`
   println!("cargo:rerun-if-changed=build.rs");
   let schema = schema_for!(TestConfig);

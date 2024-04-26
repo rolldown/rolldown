@@ -61,6 +61,28 @@ export function bindingifyResolveId(
   }
 }
 
+export function bindingifyResolveDynamicImport(
+  hook?: Plugin['resolveDynamicImport'],
+): BindingPluginOptions['resolveDynamicImport'] {
+  if (!hook) {
+    return undefined
+  }
+  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+
+  return async (specifier, importer) => {
+    const ret = await handler.call(null, specifier, importer ?? undefined)
+    if (ret == false || ret == null) {
+      return
+    }
+    if (typeof ret === 'string') {
+      return {
+        id: ret,
+      }
+    }
+    return ret
+  }
+}
+
 export function bindingifyTransform(
   hook?: Plugin['transform'],
 ): BindingPluginOptions['transform'] {

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use crate::{
-  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
-  HookResolveIdReturn, HookTransformArgs, PluginDriver,
+  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveDynamicImportArgs,
+  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver,
 };
 use anyhow::Result;
 use rolldown_common::ModuleInfo;
@@ -32,6 +32,18 @@ impl PluginDriver {
   pub async fn resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
     for (plugin, ctx) in &self.plugins {
       if let Some(r) = plugin.resolve_id(ctx, args).await? {
+        return Ok(Some(r));
+      }
+    }
+    Ok(None)
+  }
+
+  pub async fn resolve_dynamic_import(
+    &self,
+    args: &HookResolveDynamicImportArgs<'_>,
+  ) -> HookResolveIdReturn {
+    for (plugin, ctx) in &self.plugins {
+      if let Some(r) = plugin.resolve_dynamic_import(ctx, args).await? {
         return Ok(Some(r));
       }
     }

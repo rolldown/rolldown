@@ -3,8 +3,8 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 use super::plugin_context::SharedPluginContext;
 use crate::{
   types::hook_render_error::HookRenderErrorArgs, HookBuildEndArgs, HookLoadArgs, HookLoadOutput,
-  HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs,
+  HookRenderChunkArgs, HookRenderChunkOutput, HookResolveDynamicImportArgs, HookResolveIdArgs,
+  HookResolveIdOutput, HookTransformArgs,
 };
 use anyhow::Result;
 use rolldown_common::{ModuleInfo, Output};
@@ -31,6 +31,14 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookResolveIdArgs,
+  ) -> HookResolveIdReturn {
+    Ok(None)
+  }
+
+  async fn resolve_dynamic_import(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookResolveDynamicImportArgs,
   ) -> HookResolveIdReturn {
     Ok(None)
   }

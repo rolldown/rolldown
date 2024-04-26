@@ -1,8 +1,10 @@
 use std::path::Path;
 
-use rolldown_common::ModuleType;
+use rolldown_common::{ImportKind, ModuleType};
 use rolldown_error::BuildResult;
-use rolldown_plugin::{HookResolveIdArgs, HookResolveIdExtraOptions, SharedPluginDriver};
+use rolldown_plugin::{
+  HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdExtraOptions, SharedPluginDriver,
+};
 
 use crate::{types::resolved_request_info::ResolvedRequestInfo, SharedResolver};
 
@@ -24,6 +26,21 @@ pub async fn resolve_id(
   _preserve_symlinks: bool,
 ) -> anyhow::Result<BuildResult<ResolvedRequestInfo>> {
   let import_kind = options.kind;
+  if import_kind == ImportKind::DynamicImport {
+    if let Some(r) = plugin_driver
+      .resolve_dynamic_import(&HookResolveDynamicImportArgs {
+        importer: importer.map(std::convert::AsRef::as_ref),
+        source: request,
+      })
+      .await?
+    {
+      return Ok(Ok(ResolvedRequestInfo {
+        path: r.id.into(),
+        module_type: ModuleType::Unknown,
+        is_external: matches!(r.external, Some(true)),
+      }));
+    }
+  }
   // Run plugin resolve_id first, if it is None use internal resolver as fallback
   if let Some(r) = plugin_driver
     .resolve_id(&HookResolveIdArgs {

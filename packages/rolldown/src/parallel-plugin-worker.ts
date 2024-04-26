@@ -9,30 +9,34 @@ import type { NormalizedOutputOptions } from './options/output-options'
 const { registryId, pluginInfos, threadNumber } = workerData as WorkerData
 
 ;(async () => {
-  // TODO(sapphi-red): handle error
-  const plugins = await Promise.all(
-    pluginInfos.map(async (pluginInfo) => {
-      const pluginModule = await import(pluginInfo.fileUrl)
-      const definePluginImpl = pluginModule.default as ReturnType<
-        typeof defineParallelPluginImplementation
-      >
-      const plugin = await definePluginImpl(pluginInfo.options, {
-        threadNumber,
-      })
-      return {
-        index: pluginInfo.index,
-        // TODO(sapphi-red): support inputOptions and outputOptions
-        plugin: bindingifyPlugin(
-          plugin,
-          {} as RolldownNormalizedInputOptions,
-          {} as NormalizedOutputOptions,
-        ),
-      }
-    }),
-  )
+  try {
+    const plugins = await Promise.all(
+      pluginInfos.map(async (pluginInfo) => {
+        const pluginModule = await import(pluginInfo.fileUrl)
+        const definePluginImpl = pluginModule.default as ReturnType<
+          typeof defineParallelPluginImplementation
+        >
+        const plugin = await definePluginImpl(pluginInfo.options, {
+          threadNumber,
+        })
+        return {
+          index: pluginInfo.index,
+          // TODO(sapphi-red): support inputOptions and outputOptions
+          plugin: bindingifyPlugin(
+            plugin,
+            {} as RolldownNormalizedInputOptions,
+            {} as NormalizedOutputOptions,
+          ),
+        }
+      }),
+    )
 
-  registerPlugins(registryId, plugins)
+    registerPlugins(registryId, plugins)
 
-  parentPort!.postMessage('')
-  parentPort!.unref()
+    parentPort!.postMessage({ type: 'success' })
+  } catch (error) {
+    parentPort!.postMessage({ type: 'error', error })
+  } finally {
+    parentPort!.unref()
+  }
 })()

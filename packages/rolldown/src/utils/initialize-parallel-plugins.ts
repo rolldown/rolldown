@@ -59,14 +59,28 @@ async function initializeWorker(
   threadNumber: number,
 ) {
   const urlString = import.meta.resolve('#parallel-plugin-worker')
-  const worker = new Worker(new URL(urlString), {
-    workerData: { registryId, pluginInfos, threadNumber } satisfies WorkerData,
-  })
-  worker.unref()
-  await new Promise<void>((resolve) => {
-    worker.once('message', async () => {
-      resolve()
+  const workerData: WorkerData = {
+    registryId,
+    pluginInfos,
+    threadNumber,
+  }
+
+  let worker: Worker | undefined
+  try {
+    worker = new Worker(new URL(urlString), { workerData })
+    worker.unref()
+    await new Promise<void>((resolve, reject) => {
+      worker!.once('message', async (message) => {
+        if (message.type === 'error') {
+          reject(message.error)
+        } else {
+          resolve()
+        }
+      })
     })
-  })
-  return worker
+    return worker
+  } catch (e) {
+    worker?.terminate()
+    throw e
+  }
 }

@@ -7,7 +7,7 @@ use napi::threadsafe_function::ThreadsafeFunction;
 use napi_derive::napi;
 use serde::Deserialize;
 
-pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
+pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>, true>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Deserialize, Derivative)]
@@ -67,11 +67,11 @@ pub struct BindingOutputOptions {
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => boolean")]
-  pub sourcemap_ignore_list: Option<ThreadsafeFunction<(String, String), bool, false>>,
+  pub sourcemap_ignore_list: Option<ThreadsafeFunction<(String, String), bool, false, true>>,
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]
-  pub sourcemap_path_transform: Option<ThreadsafeFunction<(String, String), String, false>>,
+  pub sourcemap_path_transform: Option<ThreadsafeFunction<(String, String), String, false, true>>,
   // sourcemapExcludeSources: boolean;
   // sourcemapFile: string | undefined;
   // strict: boolean;

@@ -32,7 +32,7 @@ pub struct BindingInputOptions {
   #[napi(
     ts_type = "undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)"
   )]
-  pub external: Option<ThreadsafeFunction<(String, Option<String>, bool), bool, false>>,
+  pub external: Option<ThreadsafeFunction<(String, Option<String>, bool), bool, false, true>>,
   pub input: Vec<BindingInputItem>,
   // makeAbsoluteExternalsRelative?: boolean | 'ifRelativeSource';
   // /** @deprecated Use the "manualChunks" output option instead. */

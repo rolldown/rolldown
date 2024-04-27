@@ -1,3 +1,4 @@
+use napi::bindgen_prelude::FromNapiValue;
 use serde::Deserialize;
 use std::fmt::Debug;
 
@@ -17,12 +18,12 @@ use super::{
 };
 
 /// none is parallel js plugin
-pub type BindingPluginOrParallelJsPluginPlaceholder = Option<BindingPluginOptions>;
+pub type BindingPluginOrParallelJsPluginPlaceholder = Option<BindingPluginOptions<true>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct BindingPluginOptions {
+pub struct BindingPluginOptions<const WEAK: bool = false> {
   pub name: String,
 
   #[serde(skip_deserializing)]
@@ -84,9 +85,69 @@ pub struct BindingPluginOptions {
   pub write_bundle: Option<MaybeAsyncJsCallback<BindingOutputs, ()>>,
 }
 
-impl Debug for BindingPluginOptions {
+impl<const WEAK: bool> Debug for BindingPluginOptions<WEAK> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("BindingPluginOptions").field("name", &self.name).finish_non_exhaustive()
+  }
+}
+
+impl FromNapiValue for BindingPluginOptions<true> {
+  #[allow(deprecated)] // cb.unref is deprecated, fix napi_derive to support const generics with
+  unsafe fn from_napi_value(
+    env: napi::sys::napi_env,
+    napi_val: napi::sys::napi_value,
+  ) -> napi::Result<Self> {
+    let mut false_options = BindingPluginOptions::<false>::from_napi_value(env, napi_val)?;
+    let env = &napi::Env::from_raw(env);
+
+    if let Some(cb) = &mut false_options.build_start {
+      cb.unref(env)?;
+    }
+    if let Some(cb) = &mut false_options.resolve_id {
+      cb.unref(env)?;
+    }
+    if let Some(cb) = &mut false_options.load {
+      cb.unref(env)?;
+    }
+    if let Some(cb) = &mut false_options.transform {
+      cb.unref(env)?;
+    }
+    if let Some(cb) = &mut false_options.module_parsed {
+      cb.unref(env)?;
+    }
+    if let Some(cb) = &mut false_options.build_end {
+      cb.unref(env)?;
+    }
+    if let Some(cb) = &mut false_options.render_chunk {
+      cb.unref(env)?;
+    }
+    if let Some(cb) = &mut false_options.render_start {
+      cb.unref(env)?;
+    }
+    if let Some(cb) = &mut false_options.render_error {
+      cb.unref(env)?;
+    }
+    if let Some(cb) = &mut false_options.generate_bundle {
+      cb.unref(env)?;
+    }
+    if let Some(cb) = &mut false_options.write_bundle {
+      cb.unref(env)?;
+    }
+
+    Ok(Self {
+      name: false_options.name,
+      build_start: false_options.build_start,
+      resolve_id: false_options.resolve_id,
+      load: false_options.load,
+      transform: false_options.transform,
+      module_parsed: false_options.module_parsed,
+      build_end: false_options.build_end,
+      render_chunk: false_options.render_chunk,
+      render_start: false_options.render_start,
+      render_error: false_options.render_error,
+      generate_bundle: false_options.generate_bundle,
+      write_bundle: false_options.write_bundle,
+    })
   }
 }
 

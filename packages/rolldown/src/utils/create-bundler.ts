@@ -22,21 +22,25 @@ export async function createBundler(
     normalizedInputOptions.plugins,
   )
 
-  const normalizedOutputOptions = normalizeOutputOptions(outputOptions)
-  // Convert `NormalizedInputOptions` to `BindingInputOptions`
-  const bindingInputOptions = createInputOptionsAdapter(
-    normalizedInputOptions,
-    inputOptions,
-    normalizedOutputOptions,
-  )
+  try {
+    const normalizedOutputOptions = normalizeOutputOptions(outputOptions)
+    // Convert `NormalizedInputOptions` to `BindingInputOptions`
+    const bindingInputOptions = createInputOptionsAdapter(
+      normalizedInputOptions,
+      inputOptions,
+      normalizedOutputOptions,
+    )
 
-  // TODO(sapphi-red): call stopWorkers when an error happened
-  return {
-    bundler: new Bundler(
-      bindingInputOptions,
-      createOutputOptionsAdapter(normalizedOutputOptions),
-      parallelPluginInitResult?.registry,
-    ),
-    stopWorkers: parallelPluginInitResult?.stopWorkers,
+    return {
+      bundler: new Bundler(
+        bindingInputOptions,
+        createOutputOptionsAdapter(normalizedOutputOptions),
+        parallelPluginInitResult?.registry,
+      ),
+      stopWorkers: parallelPluginInitResult?.stopWorkers,
+    }
+  } catch (e) {
+    await parallelPluginInitResult?.stopWorkers()
+    throw e
   }
 }

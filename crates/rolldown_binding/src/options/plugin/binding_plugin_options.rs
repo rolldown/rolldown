@@ -92,7 +92,7 @@ impl<const WEAK: bool> Debug for BindingPluginOptions<WEAK> {
 }
 
 impl FromNapiValue for BindingPluginOptions<true> {
-  #[allow(deprecated)] // cb.unref is deprecated, fix napi_derive to support const generics with
+  #[allow(deprecated)] // cb.unref is deprecated, fix napi_derive to support const generics
   unsafe fn from_napi_value(
     env: napi::sys::napi_env,
     napi_val: napi::sys::napi_value,

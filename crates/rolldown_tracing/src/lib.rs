@@ -16,7 +16,6 @@ use tracing_subscriber::EnvFilter;
 
 static LOG_ENV_NAME: &str = "RD_LOG";
 static LOG_OUTPUT_ENV_NAME: &str = "RD_LOG_OUTPUT";
-static LOG_OUTPUT_STYLE_NAME: &str = "RD_LOG_OUTPUT_STYLE";
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -34,11 +33,9 @@ pub fn try_init_tracing() -> Option<FlushGuard> {
   let env_filter = EnvFilter::from_env(LOG_ENV_NAME);
 
   match output_mode.as_str() {
-    "chrome-json" => {
-      let trace_style = match std::env::var(LOG_OUTPUT_STYLE_NAME).unwrap_or_default().as_str() {
-        "async" => TraceStyle::Async,
-        _ => TraceStyle::Threaded,
-      };
+    "chrome-json" | "chrome-json-threaded" => {
+      let trace_style =
+        if output_mode == "chrome-json" { TraceStyle::Async } else { TraceStyle::Threaded };
       let (chrome_layer, guard) = ChromeLayerBuilder::new().trace_style(trace_style).build();
       tracing_subscriber::registry().with(env_filter).with(chrome_layer).init();
       Some(guard)

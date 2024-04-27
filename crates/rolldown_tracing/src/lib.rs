@@ -3,10 +3,12 @@
 ///   - See  https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#example-syntax for more syntax details.
 ///   - https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives
 /// - Using `RD_LOG=trace RD_LOG_OUTPUT=chrome-json` to collect tracing events into a json file.
+///   - Using `RD_LOG_OUTPUT_STYLE=async` to record traces as a group of asynchronous operations.
 use std::sync::atomic::AtomicBool;
 
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_chrome::FlushGuard;
+use tracing_chrome::TraceStyle;
 use tracing_subscriber::fmt;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::prelude::*;
@@ -31,8 +33,10 @@ pub fn try_init_tracing() -> Option<FlushGuard> {
   let env_filter = EnvFilter::from_env(LOG_ENV_NAME);
 
   match output_mode.as_str() {
-    "chrome-json" => {
-      let (chrome_layer, guard) = ChromeLayerBuilder::new().build();
+    "chrome-json" | "chrome-json-threaded" => {
+      let trace_style =
+        if output_mode == "chrome-json" { TraceStyle::Async } else { TraceStyle::Threaded };
+      let (chrome_layer, guard) = ChromeLayerBuilder::new().trace_style(trace_style).build();
       tracing_subscriber::registry().with(env_filter).with(chrome_layer).init();
       Some(guard)
     }

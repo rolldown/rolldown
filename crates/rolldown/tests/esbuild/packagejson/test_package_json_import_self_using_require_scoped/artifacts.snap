@@ -1,0 +1,33 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_import_self_using_require_scoped
+---
+# warnings
+
+## CIRCULAR_DEPENDENCY
+
+```text
+[CIRCULAR_DEPENDENCY] Warning: Circular dependency: src/index.js -> src/index.js.
+
+```
+# Assets
+
+## entry.mjs
+
+```js
+import { __commonJSMin } from "./$runtime$.mjs";
+
+// src/foo-require.js
+var require_foo_require = __commonJSMin((exports, module) => {
+	module.exports = 'foo';
+});
+
+// src/index.js
+var require_src_index = __commonJSMin((exports, module) => {
+	module.exports = 'index';
+	console.log(require_src_index(), require_foo_require());
+});
+
+export default require_src_index();
+```

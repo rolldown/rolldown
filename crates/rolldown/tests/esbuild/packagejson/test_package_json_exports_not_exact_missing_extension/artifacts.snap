@@ -1,0 +1,13 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_not_exact_missing_extension
+---
+# Assets
+
+## entry.mjs
+
+```js
+// node_modules/pkg1/dir/bar.js
+console.log('SUCCESS');
+```

@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "#top-level": "pkg/a.js",
+    "#nested/path.js": "pkg/b.js",
+    "#star/*": "pkg/some-star/*",
+    "#slash/": "pkg/some-slash/"
+  }
+}

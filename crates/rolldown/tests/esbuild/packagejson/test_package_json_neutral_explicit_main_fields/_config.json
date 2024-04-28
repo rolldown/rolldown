@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./src/entry.js"
+      }
+    ],
+    "platform": "Neutral",
+    "resolve": {
+      "mainFields": ["hello"]
+    }
+  },
+  "expectError": false
+}

@@ -1,0 +1,4 @@
+{
+  "main": "./src/index.js",
+  "type": "./src/index.d.ts"
+}

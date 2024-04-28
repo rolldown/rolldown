@@ -1,0 +1,23 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_bad_main
+---
+# Assets
+
+## entry.mjs
+
+```js
+import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
+// node_modules/demo-pkg/index.js
+var require_demo_pkg_index = __commonJSMin((exports, module) => {
+	module.exports = function() {
+		return 123;
+	};
+});
+
+// src/entry.js
+var import_demo_pkg_index = __toESM(require_demo_pkg_index());
+console.log((0,import_demo_pkg_index.default)());
+```

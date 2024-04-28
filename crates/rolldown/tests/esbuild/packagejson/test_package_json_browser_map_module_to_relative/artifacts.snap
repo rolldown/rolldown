@@ -1,0 +1,31 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_map_module_to_relative
+---
+# Assets
+
+## entry.mjs
+
+```js
+import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
+// node_modules/node-pkg/index.js
+var require_node_pkg_index = __commonJSMin((exports, module) => {
+	module.exports = function() {
+		return 234;
+	};
+});
+
+// node_modules/demo-pkg/index.js
+var require_demo_pkg_index = __commonJSMin((exports, module) => {
+	const fn$1 = require_node_pkg_index();
+	module.exports = function() {
+		return fn$1();
+	};
+});
+
+// src/entry.js
+var import_demo_pkg_index = __toESM(require_demo_pkg_index());
+console.log((0,import_demo_pkg_index.default)());
+```

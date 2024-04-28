@@ -1,0 +1,10 @@
+{
+  "name": "@some-scope/xyz",
+  "exports": {
+    ".": "./src/index.js",
+    "./bar": {
+      "import": "./src/foo-import.js",
+      "require": "./src/foo-require.js"
+    }
+  }
+}

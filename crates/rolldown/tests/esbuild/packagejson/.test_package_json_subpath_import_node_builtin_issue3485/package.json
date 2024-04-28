@@ -1,0 +1,12 @@
+{
+  "imports": {
+    "#fs": {
+      "node": "fs",
+      "default": "./empty.js"
+    },
+    "#http": {
+      "node": "node:http",
+      "default": "./empty.js"
+    }
+  }
+}

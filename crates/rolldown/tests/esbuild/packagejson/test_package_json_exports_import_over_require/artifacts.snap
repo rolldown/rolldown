@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_import_over_require
+---
+# Assets
+
+## entry.mjs
+
+```js
+import { __commonJSMin } from "./$runtime$.mjs";
+
+// node_modules/pkg/require.js
+var require_require = __commonJSMin((exports, module) => {
+	console.log('FAILURE');
+});
+
+// src/entry.js
+require_require();
+```

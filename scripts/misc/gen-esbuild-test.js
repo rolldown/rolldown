@@ -2,22 +2,24 @@ import Parser from 'tree-sitter'
 import Go from 'tree-sitter-go'
 import fs from 'fs-extra'
 import fsp from 'node:fs/promises'
-import path from 'node:path'
+import * as path from 'node:path'
 import * as changeCase from 'change-case'
 import chalk from 'chalk'
 import * as dedent from 'dedent'
+import { fileURLToPath } from 'node:url'
+import {URL} from 'node:url'
 
 // How to use this script
-
 // 1. Set the test suite name.
 
 /** @type {TestSuiteName} {@link suites} */
-const SUITE_NAME = 'default'
+const SUITE_NAME = 'dce'
 
 // 2. Set the tests root directory
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 const TESTS_ROOT_DIR = path.resolve(
-  import.meta.dirname,
+  __dirname,
   'tests/esbuild',
   SUITE_NAME,
 )
@@ -39,13 +41,19 @@ const suites = /** @type {const} */ ({
     name: 'default',
     sourcePath: './bundler_default_test.go',
     sourceGithubUrl:
-      'https://github.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_default_test.go',
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_default_test.go',
+  },
+  dce: {
+    name: 'dce',
+    sourcePath: './bundler_dce_test.go',
+    sourceGithubUrl:
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_dce_test.go',
   },
   import_star: {
     name: 'import_star',
     sourcePath: './bundler_importstar_test.go',
     sourceGithubUrl:
-      'https://github.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_importstar_test.go',
+      'https://raw.githubusercontent.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_importstar_test.go',
   },
 })
 /**
@@ -70,7 +78,7 @@ const suites = /** @type {const} */ ({
  */
 async function readTestSuiteSource(testSuiteName) {
   const testSuite = suites[testSuiteName]
-  const sourcePath = path.resolve(import.meta.dirname, testSuite.sourcePath)
+  const sourcePath = path.resolve(__dirname, testSuite.sourcePath)
   try {
     return fs.readFileSync(sourcePath).toString()
   } catch (err1) {
@@ -81,9 +89,7 @@ async function readTestSuiteSource(testSuiteName) {
     // download from github
     try {
       const response = await fetch(testSuite.sourceGithubUrl)
-      const obj = await response.json()
-      const lines = obj.payload.blob.rawLines
-
+      const lines = await response.text()
       if (Array.isArray(lines) && typeof lines[0] === 'string') {
         const source = lines.join('\n')
         // save under scripts directory

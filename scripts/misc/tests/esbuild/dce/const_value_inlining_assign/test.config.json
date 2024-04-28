@@ -1,0 +1,14 @@
+{
+  "input": {
+    "input": [
+      {
+        "name": "assign_js",
+        "import": "assign.js"
+      },
+      {
+        "name": "update_js",
+        "import": "update.js"
+      }
+    ]
+  }
+}

@@ -28,7 +28,6 @@ async fn filename_with_hash() {
     let mut snapshot_output = String::new();
     let config_path = path.canonicalize().unwrap();
     let config_path = dunce::simplified(&config_path);
-    dbg!(&config_path);
 
     let mut fixture = Fixture::new(config_path.parent().unwrap().to_path_buf());
     snapshot_output

@@ -119,7 +119,11 @@ impl ModuleLoader {
     }
   }
 
-  fn try_spawn_new_task(&mut self, info: &ResolvedRequestInfo) -> ModuleId {
+  fn try_spawn_new_task(
+    &mut self,
+    info: &ResolvedRequestInfo,
+    is_user_defined_entry: bool,
+  ) -> ModuleId {
     match self.visited.entry(Arc::<str>::clone(&info.path.path)) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
@@ -140,6 +144,7 @@ impl ModuleLoader {
             id,
             module_path,
             info.module_type,
+            is_user_defined_entry,
           );
           #[cfg(target_family = "wasm")]
           {
@@ -189,7 +194,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name,
-        id: self.try_spawn_new_task(&info).expect_normal(),
+        id: self.try_spawn_new_task(&info, true).expect_normal(),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -221,7 +226,7 @@ impl ModuleLoader {
             .into_iter()
             .zip(resolved_deps)
             .map(|(raw_rec, info)| {
-              let id = self.try_spawn_new_task(&info);
+              let id = self.try_spawn_new_task(&info, false);
               // Dynamic imported module will be considered as an entry
               if let ModuleId::Normal(id) = id {
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
@@ -238,7 +243,7 @@ impl ModuleLoader {
             })
             .collect::<IndexVec<ImportRecordId, _>>();
           module.import_records = import_records;
-          module.is_user_defined_entry = user_defined_entry_ids.contains(&module_id);
+
           self.intermediate_normal_modules.modules[module_id] = Some(module);
           self.intermediate_normal_modules.ast_table[module_id] = Some(ast);
 

@@ -197,22 +197,10 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     testCaseName = testCaseName.slice(4) // every function starts with "Test"
     testCaseName = changeCase.snakeCase(testCaseName)
 
-    console.log(testCaseName)
+    console.log('testCaseName: ', testCaseName)
     // Skip some test cases by ignoredTestName
     if (ignoredTestName.some((name) => testCaseName?.includes(name))) {
       continue
-    }
-    const testDir = path.resolve(TESTS_ROOT_DIR, testCaseName)
-    const ignoredTestDir = path.resolve(TESTS_ROOT_DIR, `.${testCaseName}`)
-
-    // Cause if you withdraw directory in git system, git will cleanup dir but leave the directory alone
-    if (
-      (fs.existsSync(testDir) && !isDirEmptySync(testDir)) ||
-      (fs.existsSync(ignoredTestDir) && !isDirEmptySync(ignoredTestDir))
-    ) {
-      continue
-    } else {
-      fs.ensureDirSync(testDir)
     }
     let bundle_field_list = query.captures(child).filter((item) => {
       return item.name === 'element_list'
@@ -225,6 +213,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 
     const fileList = jsConfig['files']
     // Skip jsx/ts/tsx files test case
+    let hasUnsupportedSyntax = false;
     if (
       fileList.some(
         (file) =>
@@ -233,11 +222,26 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
           file.name.endsWith('jsx'),
       )
     ) {
-      continue
+      hasUnsupportedSyntax = true
+      testCaseName = `.${testCaseName}`
     }
-    let prefix = calculatePrefix(fileList.map((item) => item.name))
+
+    const testDir = path.resolve(TESTS_ROOT_DIR, testCaseName)
+    const ignoredTestDir = path.resolve(TESTS_ROOT_DIR, `.${testCaseName}`)
+
+    // Cause if you withdraw directory in git system, git will cleanup dir but leave the directory alone
+    if (
+      (fs.existsSync(testDir) && !isDirEmptySync(testDir)) ||
+      (fs.existsSync(ignoredTestDir) && !isDirEmptySync(ignoredTestDir))
+    ) {
+      continue
+    } else {
+      fs.ensureDirSync(testDir)
+    }
+    let prefix = calculatePrefixDir(fileList.map((item) => item.name))
     fileList.forEach((file) => {
       let normalizedName = file.name.slice(prefix.length)
+
       if (path.isAbsolute(normalizedName)) {
         normalizedName = normalizedName.slice(1)
       }
@@ -265,40 +269,47 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
       }
     })
     config.input.input = input
-    const configFilePath = path.resolve(testDir, 'test.config.json')
+    const configFilePath = path.resolve(testDir, '_config.json')
     fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2))
     // TODO: options
 
     let log = jsConfig['expectedCompileLog']
     if (log) {
-      const configFilePath = path.resolve(testDir, 'compile-log.text')
-      fs.writeFileSync(configFilePath, log)
+      const compileLogPath = path.resolve(testDir, 'compile-log.text')
+      fs.writeFileSync(compileLogPath, log)
     }
   }
 }
 
 /**
- * @param {string[]} stringList
+ * @param {string[]} paths
  * @returns {string}
  */
-function calculatePrefix(stringList) {
-  if (stringList.length < 2) {
-    return ''
-  }
-  let res = ''
-  while (true) {
-    if (stringList[0][res.length]) {
-      res += stringList[0][res.length]
-    } else {
-      break
+function calculatePrefixDir(paths) {
+    if (paths.length === 1) {
+        return '';
     }
-    for (let i = 0; i < stringList.length; i++) {
-      if (!stringList[i].startsWith(res)) {
-        return res.slice(0, res.length - 1)
-      }
+    
+    // Split each path into directory components
+    const pathComponents = paths.map(path => path.split('/'));
+    
+    // Initialize the common directory prefix with the first path
+    let commonPrefix = pathComponents[0];
+    
+    // Iterate over each path's components
+    for (let i = 1; i < pathComponents.length; i++) {
+        // Compare each directory component in the current path with the common prefix
+        for (let j = 0; j < commonPrefix.length; j++) {
+            if (pathComponents[i][j] !== commonPrefix[j]) {
+                // If components don't match, truncate the common prefix
+                commonPrefix = commonPrefix.slice(0, j);
+                break;
+            }
+        }
     }
-  }
-  return res
+    
+    // Join the common directory components back into a path
+    return commonPrefix.join('/');
 }
 
 /**

@@ -13,6 +13,7 @@ export default defineTest({
           expect(moduleInfo.code).not.toBeUndefined()
           expect(moduleInfo.id).not.toBeUndefined()
           if (moduleInfo.id.endsWith('main.js')) {
+            expect(moduleInfo.isEntry).toBe(true)
             expect(moduleInfo.importedIds).toStrictEqual([
               path.join(import.meta.dirname, 'static.js'),
             ])
@@ -22,6 +23,7 @@ export default defineTest({
             expect(moduleInfo.importers).toStrictEqual([])
             expect(moduleInfo.dynamicImporters).toStrictEqual([])
           } else {
+            expect(moduleInfo.isEntry).toBe(false)
             expect(moduleInfo.importedIds).toStrictEqual([])
             expect(moduleInfo.dynamicallyImportedIds).toStrictEqual([])
             expect(moduleInfo.importers).toStrictEqual([])

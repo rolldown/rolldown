@@ -27,6 +27,7 @@ pub struct NormalModuleTask {
   resolved_path: ResolvedPath,
   module_type: ModuleType,
   errors: Vec<BuildError>,
+  is_user_defined_entry: bool,
 }
 
 impl NormalModuleTask {
@@ -35,8 +36,16 @@ impl NormalModuleTask {
     id: NormalModuleId,
     path: ResolvedPath,
     module_type: ModuleType,
+    is_user_defined_entry: bool,
   ) -> Self {
-    Self { ctx, module_id: id, resolved_path: path, module_type, errors: vec![] }
+    Self {
+      ctx,
+      module_id: id,
+      resolved_path: path,
+      module_type,
+      errors: vec![],
+      is_user_defined_entry,
+    }
   }
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_path = ?self.resolved_path))]
@@ -116,7 +125,7 @@ impl NormalModuleTask {
       sourcemap_chain,
       is_virtual: self.resolved_path.is_virtual_module_path(),
       exec_order: u32::MAX,
-      is_user_defined_entry: false,
+      is_user_defined_entry: self.is_user_defined_entry,
       import_records: IndexVec::default(),
       is_included: false,
       importers: vec![],

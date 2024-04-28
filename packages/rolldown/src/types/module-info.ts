@@ -9,4 +9,5 @@ export interface ModuleInfo {
   dynamicImporters: string[]
   importedIds: string[]
   dynamicallyImportedIds: string[]
+  isEntry: boolean
 }

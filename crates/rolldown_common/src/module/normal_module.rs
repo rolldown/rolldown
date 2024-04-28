@@ -73,6 +73,7 @@ impl NormalModule {
     ModuleInfo {
       code: Some(Arc::clone(&self.source)),
       id: self.resource_id.expect_file().clone(),
+      is_entry: self.is_user_defined_entry,
       importers: {
         let mut value = self.importers.clone();
         value.sort_unstable();

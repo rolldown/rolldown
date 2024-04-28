@@ -7,6 +7,7 @@ export class BindingModuleInfo {
   dynamicImporters: Array<string>
   importedIds: Array<string>
   dynamicallyImportedIds: Array<string>
+  isEntry: boolean
   get code(): string | null
 }
 

@@ -10,6 +10,7 @@ pub struct BindingModuleInfo {
   pub dynamic_importers: Vec<String>,
   pub imported_ids: Vec<String>,
   pub dynamically_imported_ids: Vec<String>,
+  pub is_entry: bool,
 }
 
 #[napi]
@@ -25,6 +26,7 @@ impl BindingModuleInfo {
         .iter()
         .map(|id| id.to_string())
         .collect(),
+      is_entry: inner.is_entry,
       inner,
     }
   }

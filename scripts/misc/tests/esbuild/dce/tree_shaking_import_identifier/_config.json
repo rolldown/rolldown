@@ -2,8 +2,8 @@
   "input": {
     "input": [
       {
-        "name": "ntry_js",
-        "import": "ntry.js"
+        "name": "entry_js",
+        "import": "entry.js"
       }
     ]
   }

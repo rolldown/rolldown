@@ -5,8 +5,8 @@ use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  AstScope, FilePath, ImportRecordId, ImporterRecord, ModuleType, NormalModule, NormalModuleId,
-  RawImportRecord, ResolvedPath, ResourceId, SymbolRef,
+  AstScope, FilePath, ImportRecordId, ModuleType, NormalModule, NormalModuleId, RawImportRecord,
+  ResolvedPath, ResourceId, SymbolRef,
 };
 use rolldown_error::{BuildError, BuildResult};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
@@ -27,7 +27,6 @@ pub struct NormalModuleTask {
   resolved_path: ResolvedPath,
   module_type: ModuleType,
   errors: Vec<BuildError>,
-  importer: Option<ImporterRecord>,
 }
 
 impl NormalModuleTask {
@@ -36,9 +35,8 @@ impl NormalModuleTask {
     id: NormalModuleId,
     path: ResolvedPath,
     module_type: ModuleType,
-    importer: Option<ImporterRecord>,
   ) -> Self {
-    Self { ctx, module_id: id, resolved_path: path, module_type, errors: vec![], importer }
+    Self { ctx, module_id: id, resolved_path: path, module_type, errors: vec![] }
   }
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_path = ?self.resolved_path))]
@@ -99,7 +97,7 @@ impl NormalModuleTask {
       }
     }
 
-    let mut module = NormalModule {
+    let module = NormalModule {
       source,
       id: self.module_id,
       repr_name,
@@ -128,16 +126,6 @@ impl NormalModuleTask {
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
-
-    // Note: (Compat to rollup)
-    // The `dynamic_importers/importers` should be added after `module_parsed` hook.
-    if let Some(importer) = self.importer.take() {
-      if importer.kind.is_static() {
-        module.importers.push(importer.importer_path);
-      } else {
-        module.dynamic_importers.push(importer.importer_path);
-      }
-    }
 
     self
       .ctx

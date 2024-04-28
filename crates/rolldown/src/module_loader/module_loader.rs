@@ -25,16 +25,18 @@ use crate::{SharedOptions, SharedResolver};
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<NormalModuleId, Option<NormalModule>>,
   pub ast_table: IndexVec<NormalModuleId, Option<OxcAst>>,
+  pub importers: IndexVec<NormalModuleId, Vec<ImporterRecord>>,
 }
 
 impl IntermediateNormalModules {
   pub fn new() -> Self {
-    Self { modules: IndexVec::new(), ast_table: IndexVec::new() }
+    Self { modules: IndexVec::new(), ast_table: IndexVec::new(), importers: IndexVec::new() }
   }
 
   pub fn alloc_module_id(&mut self, symbols: &mut Symbols) -> NormalModuleId {
     let id = self.modules.push(None);
     self.ast_table.push(None);
+    self.importers.push(Vec::new());
     symbols.alloc_one();
     id
   }
@@ -117,28 +119,9 @@ impl ModuleLoader {
     }
   }
 
-  fn try_spawn_new_task(
-    &mut self,
-    info: &ResolvedRequestInfo,
-    importer: Option<ImporterRecord>,
-  ) -> ModuleId {
+  fn try_spawn_new_task(&mut self, info: &ResolvedRequestInfo) -> ModuleId {
     match self.visited.entry(Arc::<str>::clone(&info.path.path)) {
-      std::collections::hash_map::Entry::Occupied(visited) => {
-        let id = *visited.get();
-        // If dependency already created, here need to update the `importers/dynamic_importers`
-        if let Some(importer) = importer {
-          if let ModuleId::Normal(id) = id {
-            if let Some(m) = self.intermediate_normal_modules.modules[id].as_mut() {
-              if importer.kind.is_static() {
-                m.importers.push(importer.importer_path);
-              } else {
-                m.dynamic_importers.push(importer.importer_path);
-              }
-            }
-          }
-        }
-        id
-      }
+      std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         if info.is_external {
           let id = self.external_modules.len_idx();
@@ -157,7 +140,6 @@ impl ModuleLoader {
             id,
             module_path,
             info.module_type,
-            importer,
           );
           #[cfg(target_family = "wasm")]
           {
@@ -207,7 +189,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name,
-        id: self.try_spawn_new_task(&info, None).expect_normal(),
+        id: self.try_spawn_new_task(&info).expect_normal(),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -239,15 +221,13 @@ impl ModuleLoader {
             .into_iter()
             .zip(resolved_deps)
             .map(|(raw_rec, info)| {
-              let id = self.try_spawn_new_task(
-                &info,
-                Some(ImporterRecord {
-                  kind: raw_rec.kind,
-                  importer_path: module.resource_id.expect_file().clone(),
-                }),
-              );
+              let id = self.try_spawn_new_task(&info);
               // Dynamic imported module will be considered as an entry
               if let ModuleId::Normal(id) = id {
+                self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+                  kind: raw_rec.kind,
+                  importer_path: module.resource_id.expect_file().clone(),
+                });
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
                 {
@@ -284,8 +264,25 @@ impl ModuleLoader {
       self.remaining -= 1;
     }
 
-    let modules: IndexVec<NormalModuleId, NormalModule> =
-      self.intermediate_normal_modules.modules.into_iter().flatten().collect();
+    let modules: IndexVec<NormalModuleId, NormalModule> = self
+      .intermediate_normal_modules
+      .modules
+      .into_iter()
+      .flatten()
+      .enumerate()
+      .map(|(id, mut module)| {
+        // Note: (Compat to rollup)
+        // The `dynamic_importers/importers` should be added after `module_parsed` hook.
+        for importer in std::mem::take(&mut self.intermediate_normal_modules.importers[id]) {
+          if importer.kind.is_static() {
+            module.importers.push(importer.importer_path);
+          } else {
+            module.dynamic_importers.push(importer.importer_path);
+          }
+        }
+        module
+      })
+      .collect();
 
     let ast_table: IndexVec<NormalModuleId, OxcAst> =
       self.intermediate_normal_modules.ast_table.into_iter().flatten().collect();

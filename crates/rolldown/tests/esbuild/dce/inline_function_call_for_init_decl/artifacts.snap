@@ -1,0 +1,18 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/inline_function_call_for_init_decl
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+function empty() {
+}
+function id(x) {
+	return x;
+}
+for (var y = empty(); false; );for (var z = id(123); false; );
+```

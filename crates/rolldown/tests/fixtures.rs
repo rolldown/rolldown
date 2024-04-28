@@ -22,7 +22,7 @@ async fn filename_with_hash() {
   config_paths.sort_by_cached_key(|p| p.relative(&cwd));
 
   for path in config_paths {
-    if path.to_slash_lossy().contains(".") {
+    if path.to_slash_lossy().contains('.') {
       return;
     }
     let mut snapshot_output = String::new();

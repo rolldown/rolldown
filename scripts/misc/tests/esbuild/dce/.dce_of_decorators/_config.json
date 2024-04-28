@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "keep-these_js",
+        "import": "keep-these.js"
+      }
+    ]
+  }
+}

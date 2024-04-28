@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/text_loader_remove_unused
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
+// example.txt
+var require_example = __commonJSMin((exports, module) => {
+});
+
+// entry.js
+var import_example = __toESM(require_example());
+console.log('unused import');
+```

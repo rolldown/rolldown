@@ -1,0 +1,34 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/import_re_export_of_namespace_import
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import { __commonJSMin, __export, __toESM } from "./$runtime$.mjs";
+
+// node_modules/pkg/foo.js
+var require_foo = __commonJSMin((exports, module) => {
+	module.exports = 123;
+});
+
+// node_modules/pkg/bar.js
+var require_bar = __commonJSMin((exports, module) => {
+	module.exports = 'abc';
+});
+
+// node_modules/pkg/index.js
+var pkg_index_ns = {};
+__export(pkg_index_ns, {
+	bar:() => import_bar.default,
+	foo:() => import_foo.default
+});
+var import_foo = __toESM(require_foo());
+var import_bar = __toESM(require_bar());
+
+// entry.js
+console.log(pkg_index_ns.foo);
+```

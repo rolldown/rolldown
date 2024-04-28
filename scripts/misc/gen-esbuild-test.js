@@ -48,6 +48,29 @@ const suites = /** @type {const} */ ({
     sourcePath: './bundler_dce_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_dce_test.go',
+    ignoreCases: [
+      "const_value_inlining_assign",
+      "const_value_inlining_bundle",
+      "dce_of_expr_after_keep_names_issue3195",
+      "dce_of_using_declarations",
+      "dce_type_of_compare_string_guard_condition",
+      "dce_type_of_equals_string_guard_condition",
+      "dead_code_following_jump",
+      "drop_labels",
+      "inline_empty_function_calls",
+      "inline_function_call_behavior_changes",
+      "inline_identity_function_calls",
+      "multiple_declaration_tree_shaking",
+      "nested_function_inlining_with_spread",
+      "pure_calls_with_spread",
+      "remove_unused_pure_comment_calls",
+      "top_level_function_inlining_with_spread",
+      "tree_shaking_class_property",
+      "tree_shaking_class_static_property",
+      "tree_shaking_lowered_class_static_field",
+      "tree_shaking_object_property",
+      "dce_of_using_declarations"
+    ]
   },
   import_star: {
     name: 'import_star',
@@ -112,7 +135,10 @@ async function readTestSuiteSource(testSuiteName) {
 
 /** The contents of the .go test source file. {@link suites} */
 const source = await readTestSuiteSource(SUITE_NAME)
-const ignoredTestName = [
+// This is up to suit name
+const ignoreCases = suites[SUITE_NAME].ignoreCases ?? []
+// Generic ignored pattern, maybe used in many suites 
+const ignoredTestPattern = [
   'ts',
   'txt',
   'json',
@@ -198,9 +224,15 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     testCaseName = changeCase.snakeCase(testCaseName)
 
     console.log('testCaseName: ', testCaseName)
+
+    let isIgnored = false;
     // Skip some test cases by ignoredTestName
-    if (ignoredTestName.some((name) => testCaseName?.includes(name))) {
-      continue
+    if (ignoredTestPattern.some((name) => testCaseName?.includes(name))) {
+      isIgnored = true
+    }
+    // @ts-ignore
+    if (ignoreCases.includes(testCaseName)) {
+      isIgnored = true
     }
     let bundle_field_list = query.captures(child).filter((item) => {
       return item.name === 'element_list'
@@ -213,7 +245,6 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
 
     const fileList = jsConfig['files']
     // Skip jsx/ts/tsx files test case
-    let hasUnsupportedSyntax = false;
     if (
       fileList.some(
         (file) =>
@@ -222,7 +253,9 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
           file.name.endsWith('jsx'),
       )
     ) {
-      hasUnsupportedSyntax = true
+      isIgnored = true
+    }
+    if (isIgnored) {
       testCaseName = `.${testCaseName}`
     }
 
@@ -252,8 +285,8 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     })
 
     // entry
-    /** @type {{input: {input: Array<{name: string; import: string}>}}} */
-    const config = { input: Object.create({}) }
+    /** @type {{config: {input: Array<{name: string; import: string}>}}} */
+    const config = { config: Object.create({}) }
     const entryPaths = jsConfig['entryPaths'] ?? []
     if (!entryPaths.length) {
       console.error(chalk.red(`No entryPaths found`))
@@ -268,7 +301,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
         import: normalizedName,
       }
     })
-    config.input.input = input
+    config.config.input = input
     const configFilePath = path.resolve(testDir, '_config.json')
     fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2))
     // TODO: options

@@ -1,0 +1,11 @@
+function DROP() {}
+console.log(DROP(foo(), bar()))
+console.log(DROP(foo(), 1))
+console.log(DROP(1, foo()))
+console.log(DROP(1))
+console.log(DROP())
+DROP(foo(), bar())
+DROP(foo(), 1)
+DROP(1, foo())
+DROP(1)
+DROP()

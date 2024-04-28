@@ -65,14 +65,14 @@ use rolldown_utils::debug::pretty_type_name;
 /// - Rust(Simplified): `MaybeAsyncJsCallback<(Option<String>, i32), Option<i32>>`
 /// - Js: `(a: string | null | undefined, b: number) => Promise<number | null | undefined | void> | number | null | undefined | void`
 /// - Js(Simplified): `(a: Nullable<string>, b: number) => MaybePromise<VoidNullable<number>>`
-pub type JsCallback<Args, Ret, const WEAK: bool = false> =
+pub type JsCallback<Args, Ret, const WEAK: bool = true> =
   ThreadsafeFunction<Args, Either<Ret, UnknownReturnValue>, false, WEAK>;
 
 /// Shortcut for `JsCallback<..., Either<Promise<Ret>, Ret>>`, which could be simplified to `MaybeAsyncJsCallback<..., Ret>`.
-pub type MaybeAsyncJsCallback<Args, Ret, const WEAK: bool = false> =
+pub type MaybeAsyncJsCallback<Args, Ret, const WEAK: bool = true> =
   ThreadsafeFunction<Args, Either<Either<Promise<Ret>, Ret>, UnknownReturnValue>, false, WEAK>;
 
-pub trait MaybeAsyncJsCallbackExt<Args, Ret, const WEAK: bool = false> {
+pub trait MaybeAsyncJsCallbackExt<Args, Ret, const WEAK: bool = true> {
   /// Call Js function asynchronously in rust. If the Js function returns `Promise<T>`, it will unwrap/await the promise and return `T`.
   fn await_call(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send;
 }

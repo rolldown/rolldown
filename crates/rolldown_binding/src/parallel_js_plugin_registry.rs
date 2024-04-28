@@ -14,7 +14,7 @@ use std::{
 
 type PluginsInSingleWorker = Vec<BindingPluginWithIndex>;
 type PluginsList = Vec<PluginsInSingleWorker>;
-pub(crate) type PluginValues = FxHashMap<usize, Vec<BindingPluginOptions>>;
+pub(crate) type PluginValues = FxHashMap<usize, Vec<BindingPluginOptions<false>>>;
 
 static PLUGINS_MAP: Lazy<DashMap<u16, PluginsList>> = Lazy::new(DashMap::default);
 static NEXT_ID: AtomicU16 = AtomicU16::new(1);
@@ -44,7 +44,7 @@ impl ParallelJsPluginRegistry {
   pub fn take_plugin_values(&self) -> PluginValues {
     let plugins_list = PLUGINS_MAP.remove(&self.id).expect("plugin list already taken").1;
 
-    let mut map: FxHashMap<usize, Vec<BindingPluginOptions>> =
+    let mut map: FxHashMap<usize, Vec<BindingPluginOptions<false>>> =
       FxHashMap::with_capacity_and_hasher(plugins_list[0].len(), BuildHasherDefault::default());
     for plugins in plugins_list {
       for plugin in plugins {

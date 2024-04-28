@@ -7,7 +7,7 @@ use napi::threadsafe_function::ThreadsafeFunction;
 use napi_derive::napi;
 use serde::Deserialize;
 
-pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>, true>;
+pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Deserialize, Derivative)]

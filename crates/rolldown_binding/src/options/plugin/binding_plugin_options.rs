@@ -28,7 +28,7 @@ pub struct BindingPluginOptions<const WEAK: bool = false> {
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
-  pub build_start: Option<MaybeAsyncJsCallback<BindingPluginContext, ()>>,
+  pub build_start: Option<MaybeAsyncJsCallback<BindingPluginContext, (), false>>,
 
   #[serde(skip_deserializing)]
   #[napi(
@@ -38,51 +38,52 @@ pub struct BindingPluginOptions<const WEAK: bool = false> {
     MaybeAsyncJsCallback<
       (String, Option<String>, BindingHookResolveIdExtraOptions),
       Option<BindingHookResolveIdOutput>,
+      false,
     >,
   >,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>")]
-  pub load: Option<MaybeAsyncJsCallback<String, Option<BindingHookLoadOutput>>>,
+  pub load: Option<MaybeAsyncJsCallback<String, Option<BindingHookLoadOutput>, false>>,
 
   #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(id: string, code: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
   )]
-  pub transform: Option<MaybeAsyncJsCallback<(String, String), Option<BindingHookLoadOutput>>>,
+  pub transform: Option<MaybeAsyncJsCallback<(String, String), Option<BindingHookLoadOutput>, false>>,
 
   #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>"
   )]
-  pub module_parsed: Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingModuleInfo), ()>>,
+  pub module_parsed: Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingModuleInfo), (), false>>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(error: Nullable<string>) => MaybePromise<VoidNullable>")]
-  pub build_end: Option<MaybeAsyncJsCallback<Option<String>, ()>>,
+  pub build_end: Option<MaybeAsyncJsCallback<Option<String>, (), false>>,
 
   #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>"
   )]
   pub render_chunk:
-    Option<MaybeAsyncJsCallback<(String, RenderedChunk), Option<BindingHookRenderChunkOutput>>>,
+    Option<MaybeAsyncJsCallback<(String, RenderedChunk), Option<BindingHookRenderChunkOutput>, false>>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "() => void")]
-  pub render_start: Option<MaybeAsyncJsCallback<(), ()>>,
+  pub render_start: Option<MaybeAsyncJsCallback<(), (), false>>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(error: string) => void")]
-  pub render_error: Option<MaybeAsyncJsCallback<String, ()>>,
+  pub render_error: Option<MaybeAsyncJsCallback<String, (), false>>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>")]
-  pub generate_bundle: Option<MaybeAsyncJsCallback<(BindingOutputs, bool), ()>>,
+  pub generate_bundle: Option<MaybeAsyncJsCallback<(BindingOutputs, bool), (), false>>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(bundle: BindingOutputs) => MaybePromise<VoidNullable>")]
-  pub write_bundle: Option<MaybeAsyncJsCallback<BindingOutputs, ()>>,
+  pub write_bundle: Option<MaybeAsyncJsCallback<BindingOutputs, (), false>>,
 }
 
 impl<const WEAK: bool> Debug for BindingPluginOptions<WEAK> {
@@ -156,5 +157,5 @@ impl FromNapiValue for BindingPluginOptions<true> {
 #[serde(rename_all = "camelCase")]
 pub struct BindingPluginWithIndex {
   pub index: u32,
-  pub plugin: BindingPluginOptions,
+  pub plugin: BindingPluginOptions<false>,
 }

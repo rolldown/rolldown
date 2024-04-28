@@ -4,5 +4,7 @@
       "name": "entry",
       "import": "./src/entry.js"
     }]
-  }
+  },
+  "_comment": "This test is not intended to be executed.",
+  "expectExecuted": false
 }

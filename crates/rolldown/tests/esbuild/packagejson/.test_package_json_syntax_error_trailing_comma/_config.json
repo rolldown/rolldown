@@ -6,6 +6,5 @@
         "import": "./src/entry.js"
       }
     ]
-  },
-  "expectError": true
+  }
 }

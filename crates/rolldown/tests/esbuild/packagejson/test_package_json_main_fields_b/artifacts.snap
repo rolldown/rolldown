@@ -1,0 +1,16 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_main_fields_b
+---
+# Assets
+
+## entry.mjs
+
+```js
+// node_modules/demo-pkg/b.js
+var b_default = 'b';
+
+// src/entry.js
+console.log(b_default);
+```

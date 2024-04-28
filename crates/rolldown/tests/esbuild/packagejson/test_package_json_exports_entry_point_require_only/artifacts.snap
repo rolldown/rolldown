@@ -1,0 +1,13 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_entry_point_require_only
+---
+# Errors
+
+## UNRESOLVED_ENTRY
+
+```text
+[UNRESOLVED_ENTRY] Error: Cannot resolve entry module pkg.
+
+```

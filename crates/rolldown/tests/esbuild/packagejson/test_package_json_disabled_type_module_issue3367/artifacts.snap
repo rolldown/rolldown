@@ -1,0 +1,17 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_disabled_type_module_issue3367
+---
+# Assets
+
+## entry.mjs
+
+```js
+// node_modules/foo/index.js
+function foo_index_default() {
+}
+
+// entry.js
+foo_index_default();
+```

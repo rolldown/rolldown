@@ -1,0 +1,13 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_entry_point_main_only
+---
+# Assets
+
+## entry.mjs
+
+```js
+// node_modules/pkg/main.js
+console.log('SUCCESS');
+```

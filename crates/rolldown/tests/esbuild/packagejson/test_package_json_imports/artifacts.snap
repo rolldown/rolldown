@@ -1,0 +1,22 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_imports
+---
+# Assets
+
+## entry.mjs
+
+```js
+// src/a.js
+console.log('a.js');
+
+// src/b.js
+console.log('b.js');
+
+// src/some-star/c.js
+console.log('c.js');
+
+// src/some-slash/d.js
+console.log('d.js');
+```

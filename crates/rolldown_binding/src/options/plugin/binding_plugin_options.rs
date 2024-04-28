@@ -41,6 +41,13 @@ pub struct BindingPluginOptions {
   >,
 
   #[serde(skip_deserializing)]
+  #[napi(
+    ts_type = "(specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
+  )]
+  pub resolve_dynamic_import:
+    Option<MaybeAsyncJsCallback<(String, Option<String>), Option<BindingHookResolveIdOutput>>>,
+
+  #[serde(skip_deserializing)]
   #[napi(ts_type = "(id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>")]
   pub load: Option<MaybeAsyncJsCallback<String, Option<BindingHookLoadOutput>>>,
 

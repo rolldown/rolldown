@@ -69,6 +69,22 @@ impl Plugin for JsPlugin {
     }
   }
 
+  async fn resolve_dynamic_import(
+    &self,
+    _ctx: &rolldown_plugin::SharedPluginContext,
+    args: &rolldown_plugin::HookResolveDynamicImportArgs,
+  ) -> rolldown_plugin::HookResolveIdReturn {
+    if let Some(cb) = &self.resolve_dynamic_import {
+      Ok(
+        cb.await_call((args.source.to_string(), args.importer.map(str::to_string)))
+          .await?
+          .map(Into::into),
+      )
+    } else {
+      Ok(None)
+    }
+  }
+
   async fn load(
     &self,
     _ctx: &rolldown_plugin::SharedPluginContext,

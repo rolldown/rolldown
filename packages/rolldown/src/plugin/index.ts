@@ -24,6 +24,15 @@ export type Hook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> =
   | FormalHook<Handler, HookOptions>
   | Handler
 
+export type ResolveIdResult =
+  | string
+  | NullValue
+  | false
+  | {
+      id: string
+      external?: boolean
+    }
+
 export interface Plugin {
   name?: string
 
@@ -42,15 +51,15 @@ export interface Plugin {
       source: string,
       importer: string | undefined,
       extraOptions: BindingHookResolveIdExtraOptions,
-    ) => MaybePromise<
-      | string
-      | NullValue
-      | false
-      | {
-          id: string
-          external?: boolean
-        }
-    >
+    ) => MaybePromise<ResolveIdResult>
+  >
+
+  resolveDynamicImport?: Hook<
+    (
+      this: null,
+      source: string,
+      importer: string | undefined,
+    ) => MaybePromise<ResolveIdResult>
   >
 
   load?: Hook<

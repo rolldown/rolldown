@@ -4,6 +4,7 @@ import {
   bindingifyBuildStart,
   bindingifyLoad,
   bindingifyModuleParsed,
+  bindingifyResolveDynamicImport,
   bindingifyResolveId,
   bindingifyTransform,
 } from './bindingify-build-hooks'
@@ -30,6 +31,9 @@ export function bindingifyPlugin(
     name: plugin.name ?? 'unknown',
     buildStart: bindingifyBuildStart(options, plugin.buildStart),
     resolveId: bindingifyResolveId(plugin.resolveId),
+    resolveDynamicImport: bindingifyResolveDynamicImport(
+      plugin.resolveDynamicImport,
+    ),
     buildEnd: bindingifyBuildEnd(plugin.buildEnd),
     transform: bindingifyTransform(plugin.transform),
     moduleParsed: bindingifyModuleParsed(plugin.moduleParsed),

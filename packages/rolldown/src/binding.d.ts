@@ -109,6 +109,7 @@ export interface BindingPluginOptions {
   name: string
   buildStart?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
   resolveId?: (specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraOptions) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveDynamicImport?: (specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   load?: (id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   transform?: (id: string, code: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>

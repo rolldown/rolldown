@@ -1,7 +1,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use crate::{
-  types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
+  types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, FilePath, ImportRecord,
   ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
   ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
@@ -39,6 +39,14 @@ pub struct NormalModule {
   pub is_included: bool,
   // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
   pub is_virtual: bool,
+  // the ids of all modules that statically import this module
+  pub importers: Vec<FilePath>,
+  // the ids of all modules that import this module via dynamic import()
+  pub dynamic_importers: Vec<FilePath>,
+  // the module ids statically imported by this module
+  pub imported_ids: Vec<FilePath>,
+  // the module ids imported by this module via dynamic import()
+  pub dynamically_imported_ids: Vec<FilePath>,
 }
 
 impl NormalModule {
@@ -62,7 +70,22 @@ impl NormalModule {
   }
 
   pub fn to_module_info(&self) -> ModuleInfo {
-    ModuleInfo { code: Some(Arc::clone(&self.source)), id: self.resource_id.expect_file().clone() }
+    ModuleInfo {
+      code: Some(Arc::clone(&self.source)),
+      id: self.resource_id.expect_file().clone(),
+      importers: {
+        let mut value = self.importers.clone();
+        value.sort_unstable();
+        value
+      },
+      dynamic_importers: {
+        let mut value = self.dynamic_importers.clone();
+        value.sort_unstable();
+        value
+      },
+      imported_ids: self.imported_ids.clone(),
+      dynamically_imported_ids: self.dynamically_imported_ids.clone(),
+    }
   }
 }
 

@@ -1,7 +1,7 @@
 use index_vec::IndexVec;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind, ImportRecordId,
-  ModuleId, ModuleTable, NormalModule, NormalModuleId,
+  ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -25,16 +25,18 @@ use crate::{SharedOptions, SharedResolver};
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<NormalModuleId, Option<NormalModule>>,
   pub ast_table: IndexVec<NormalModuleId, Option<OxcAst>>,
+  pub importers: IndexVec<NormalModuleId, Vec<ImporterRecord>>,
 }
 
 impl IntermediateNormalModules {
   pub fn new() -> Self {
-    Self { modules: IndexVec::new(), ast_table: IndexVec::new() }
+    Self { modules: IndexVec::new(), ast_table: IndexVec::new(), importers: IndexVec::new() }
   }
 
   pub fn alloc_module_id(&mut self, symbols: &mut Symbols) -> NormalModuleId {
     let id = self.modules.push(None);
     self.ast_table.push(None);
+    self.importers.push(Vec::new());
     symbols.alloc_one();
     id
   }
@@ -222,6 +224,10 @@ impl ModuleLoader {
               let id = self.try_spawn_new_task(&info);
               // Dynamic imported module will be considered as an entry
               if let ModuleId::Normal(id) = id {
+                self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+                  kind: raw_rec.kind,
+                  importer_path: module.resource_id.expect_file().clone(),
+                });
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
                 {
@@ -258,8 +264,25 @@ impl ModuleLoader {
       self.remaining -= 1;
     }
 
-    let modules: IndexVec<NormalModuleId, NormalModule> =
-      self.intermediate_normal_modules.modules.into_iter().flatten().collect();
+    let modules: IndexVec<NormalModuleId, NormalModule> = self
+      .intermediate_normal_modules
+      .modules
+      .into_iter()
+      .flatten()
+      .enumerate()
+      .map(|(id, mut module)| {
+        // Note: (Compat to rollup)
+        // The `dynamic_importers/importers` should be added after `module_parsed` hook.
+        for importer in std::mem::take(&mut self.intermediate_normal_modules.importers[id]) {
+          if importer.kind.is_static() {
+            module.importers.push(importer.importer_path);
+          } else {
+            module.dynamic_importers.push(importer.importer_path);
+          }
+        }
+        module
+      })
+      .collect();
 
     let ast_table: IndexVec<NormalModuleId, OxcAst> =
       self.intermediate_normal_modules.ast_table.into_iter().flatten().collect();

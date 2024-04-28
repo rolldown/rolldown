@@ -70,7 +70,7 @@ impl NormalModuleTask {
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
 
-    let res = self.resolve_dependencies(&scan_result.import_records).await?;
+    let resolved_deps = self.resolve_dependencies(&scan_result.import_records).await?;
 
     let ScanResult {
       named_imports,
@@ -85,6 +85,17 @@ impl NormalModuleTask {
       warnings: scan_warnings,
     } = scan_result;
     warnings.extend(scan_warnings);
+
+    let mut imported_ids = vec![];
+    let mut dynamically_imported_ids = vec![];
+
+    for (record, info) in import_records.iter().zip(&resolved_deps) {
+      if record.kind.is_static() {
+        imported_ids.push(Arc::clone(&info.path.path).into());
+      } else {
+        dynamically_imported_ids.push(Arc::clone(&info.path.path).into());
+      }
+    }
 
     let module = NormalModule {
       source,
@@ -108,6 +119,10 @@ impl NormalModuleTask {
       is_user_defined_entry: false,
       import_records: IndexVec::default(),
       is_included: false,
+      importers: vec![],
+      dynamic_importers: vec![],
+      imported_ids,
+      dynamically_imported_ids,
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
@@ -116,7 +131,7 @@ impl NormalModuleTask {
       .ctx
       .tx
       .send(Msg::NormalModuleDone(NormalModuleTaskResult {
-        resolved_deps: res,
+        resolved_deps,
         module_id: self.module_id,
         warnings,
         ast_symbol,

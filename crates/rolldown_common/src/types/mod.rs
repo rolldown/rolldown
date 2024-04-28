@@ -10,6 +10,7 @@ pub mod import_record;
 pub mod module_id;
 pub mod module_info;
 pub mod module_path;
+pub mod module_table;
 pub mod module_type;
 pub mod named_export;
 pub mod named_import;

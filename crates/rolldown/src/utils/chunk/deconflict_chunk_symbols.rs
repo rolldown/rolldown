@@ -1,9 +1,8 @@
 use std::borrow::Cow;
 
+use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use rolldown_common::Chunk;
 use rolldown_rstr::ToRstr;
-
-use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput) {

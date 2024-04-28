@@ -2,7 +2,8 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use index_vec::IndexVec;
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportKind, ModuleId, NormalModule, NormalModuleId, StmtInfo, WrapKind,
+  EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
+  StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -12,7 +13,6 @@ use crate::{
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    module_table::ModuleTable,
     symbols::Symbols,
   },
   SharedOptions,

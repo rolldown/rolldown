@@ -1,12 +1,12 @@
 use std::borrow::Cow;
 
 use oxc::semantic::ScopeId;
-use rolldown_common::{NormalModule, NormalModuleId, SymbolRef};
+use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::types::{module_table::NormalModuleVec, symbols::Symbols};
+use crate::types::symbols::Symbols;
 use crate::utils::reserved_names::RESERVED_NAMES;
 
 #[derive(Debug)]

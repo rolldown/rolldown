@@ -1,11 +1,12 @@
 use index_vec::IndexVec;
-use rolldown_common::{ExportsKind, ModuleId, NormalModule, NormalModuleId, StmtInfo, WrapKind};
+use rolldown_common::{
+  ExportsKind, ModuleId, NormalModule, NormalModuleId, NormalModuleVec, StmtInfo, WrapKind,
+};
 
 use crate::{
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    module_table::NormalModuleVec,
     symbols::Symbols,
   },
 };

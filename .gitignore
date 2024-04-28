@@ -163,4 +163,5 @@ packages/**/THIRD-PARTY-LICENSE
 .vscode/launch.json
 
 # node_modules in tests
-!crates/rolldown/tests/**/node_modules/
+!/crates/rolldown/tests/**/node_modules
+!/crates/rolldown/tests/**/pkg

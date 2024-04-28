@@ -7,7 +7,7 @@ import * as changeCase from 'change-case'
 import chalk from 'chalk'
 import * as dedent from 'dedent'
 import { fileURLToPath } from 'node:url'
-import {URL} from 'node:url'
+import { URL } from 'node:url'
 
 // How to use this script
 // 1. Set the test suite name.
@@ -16,13 +16,9 @@ import {URL} from 'node:url'
 const SUITE_NAME = 'dce'
 
 // 2. Set the tests root directory
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
-const TESTS_ROOT_DIR = path.resolve(
-  __dirname,
-  'tests/esbuild',
-  SUITE_NAME,
-)
+const TESTS_ROOT_DIR = path.resolve(__dirname, 'tests/esbuild', SUITE_NAME)
 
 // 3. Download .go test source file located in the suites object
 //    for each suite and place it under "scripts" dir.
@@ -49,28 +45,28 @@ const suites = /** @type {const} */ ({
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_dce_test.go',
     ignoreCases: [
-      "const_value_inlining_assign",
-      "const_value_inlining_bundle",
-      "dce_of_expr_after_keep_names_issue3195",
-      "dce_of_using_declarations",
-      "dce_type_of_compare_string_guard_condition",
-      "dce_type_of_equals_string_guard_condition",
-      "dead_code_following_jump",
-      "drop_labels",
-      "inline_empty_function_calls",
-      "inline_function_call_behavior_changes",
-      "inline_identity_function_calls",
-      "multiple_declaration_tree_shaking",
-      "nested_function_inlining_with_spread",
-      "pure_calls_with_spread",
-      "remove_unused_pure_comment_calls",
-      "top_level_function_inlining_with_spread",
-      "tree_shaking_class_property",
-      "tree_shaking_class_static_property",
-      "tree_shaking_lowered_class_static_field",
-      "tree_shaking_object_property",
-      "dce_of_using_declarations"
-    ]
+      'const_value_inlining_assign',
+      'const_value_inlining_bundle',
+      'dce_of_expr_after_keep_names_issue3195',
+      'dce_of_using_declarations',
+      'dce_type_of_compare_string_guard_condition',
+      'dce_type_of_equals_string_guard_condition',
+      'dead_code_following_jump',
+      'drop_labels',
+      'inline_empty_function_calls',
+      'inline_function_call_behavior_changes',
+      'inline_identity_function_calls',
+      'multiple_declaration_tree_shaking',
+      'nested_function_inlining_with_spread',
+      'pure_calls_with_spread',
+      'remove_unused_pure_comment_calls',
+      'top_level_function_inlining_with_spread',
+      'tree_shaking_class_property',
+      'tree_shaking_class_static_property',
+      'tree_shaking_lowered_class_static_field',
+      'tree_shaking_object_property',
+      'dce_of_using_declarations',
+    ],
   },
   import_star: {
     name: 'import_star',
@@ -137,7 +133,7 @@ async function readTestSuiteSource(testSuiteName) {
 const source = await readTestSuiteSource(SUITE_NAME)
 // This is up to suit name
 const ignoreCases = suites[SUITE_NAME].ignoreCases ?? []
-// Generic ignored pattern, maybe used in many suites 
+// Generic ignored pattern, maybe used in many suites
 const ignoredTestPattern = [
   'ts',
   'txt',
@@ -222,10 +218,13 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     }
     testCaseName = testCaseName.slice(4) // every function starts with "Test"
     testCaseName = changeCase.snakeCase(testCaseName)
+    if (testCaseName !== "import_re_export_of_namespace_import") {
+      continue
+    }
 
     console.log('testCaseName: ', testCaseName)
 
-    let isIgnored = false;
+    let isIgnored = false
     // Skip some test cases by ignoredTestName
     if (ignoredTestPattern.some((name) => testCaseName?.includes(name))) {
       isIgnored = true
@@ -319,30 +318,30 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
  * @returns {string}
  */
 function calculatePrefixDir(paths) {
-    if (paths.length === 1) {
-        return '';
+  if (paths.length === 1) {
+    return ''
+  }
+
+  // Split each path into directory components
+  const pathComponents = paths.map((path) => path.split('/'))
+
+  // Initialize the common directory prefix with the first path
+  let commonPrefix = pathComponents[0]
+
+  // Iterate over each path's components
+  for (let i = 1; i < pathComponents.length; i++) {
+    // Compare each directory component in the current path with the common prefix
+    for (let j = 0; j < commonPrefix.length; j++) {
+      if (pathComponents[i][j] !== commonPrefix[j]) {
+        // If components don't match, truncate the common prefix
+        commonPrefix = commonPrefix.slice(0, j)
+        break
+      }
     }
-    
-    // Split each path into directory components
-    const pathComponents = paths.map(path => path.split('/'));
-    
-    // Initialize the common directory prefix with the first path
-    let commonPrefix = pathComponents[0];
-    
-    // Iterate over each path's components
-    for (let i = 1; i < pathComponents.length; i++) {
-        // Compare each directory component in the current path with the common prefix
-        for (let j = 0; j < commonPrefix.length; j++) {
-            if (pathComponents[i][j] !== commonPrefix[j]) {
-                // If components don't match, truncate the common prefix
-                commonPrefix = commonPrefix.slice(0, j);
-                break;
-            }
-        }
-    }
-    
-    // Join the common directory components back into a path
-    return commonPrefix.join('/');
+  }
+
+  // Join the common directory components back into a path
+  return commonPrefix.join('/')
 }
 
 /**

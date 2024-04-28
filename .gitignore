@@ -161,3 +161,6 @@ packages/**/THIRD-PARTY-LICENSE
 
 # Opinionated configuration
 .vscode/launch.json
+
+# node_modules in tests
+!crates/rolldown/tests/**/node_modules/

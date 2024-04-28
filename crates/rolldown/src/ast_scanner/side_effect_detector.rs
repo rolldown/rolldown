@@ -209,7 +209,9 @@ impl<'a> SideEffectDetector<'a> {
       Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
       Declaration::FunctionDeclaration(_) => false,
       Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
-      Declaration::UsingDeclaration(_) => todo!(),
+      // Currently, using a fallback value to make the bundle correct,
+      // finishing the implementation after we carefully read the spec
+      Declaration::UsingDeclaration(_) => true,
       Declaration::TSTypeAliasDeclaration(_)
       | Declaration::TSInterfaceDeclaration(_)
       | Declaration::TSEnumDeclaration(_)

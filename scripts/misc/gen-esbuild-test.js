@@ -13,7 +13,7 @@ import { URL } from 'node:url'
 // 1. Set the test suite name.
 
 /** @type {TestSuiteName} {@link suites} */
-const SUITE_NAME = 'dce'
+const SUITE_NAME = 'import_star_ts'
 
 // 2. Set the tests root directory
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -74,6 +74,12 @@ const suites = /** @type {const} */ ({
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_importstar_test.go',
   },
+  import_star_ts: {
+    name: 'import_star_ts',
+    sourcePath: './bundler_importstar_ts_test.go',
+    sourceGithubUrl:
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_importstar_ts_test.go',
+  },
 })
 /**
  * The key of the suites constant. {@link suites}
@@ -132,7 +138,7 @@ async function readTestSuiteSource(testSuiteName) {
 /** The contents of the .go test source file. {@link suites} */
 const source = await readTestSuiteSource(SUITE_NAME)
 // This is up to suit name
-const ignoreCases = suites[SUITE_NAME].ignoreCases ?? []
+const ignoreCases = suites[SUITE_NAME]?.ignoreCases ?? []
 // Generic ignored pattern, maybe used in many suites
 const ignoredTestPattern = [
   'ts',
@@ -218,9 +224,6 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     }
     testCaseName = testCaseName.slice(4) // every function starts with "Test"
     testCaseName = changeCase.snakeCase(testCaseName)
-    if (testCaseName !== 'import_re_export_of_namespace_import') {
-      continue
-    }
 
     console.log('testCaseName: ', testCaseName)
 

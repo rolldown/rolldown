@@ -173,6 +173,7 @@ impl<'a> GenerateStage<'a> {
         modules: rendered_chunk.modules,
         exports: rendered_chunk.exports,
         module_ids: rendered_chunk.module_ids,
+        imports: rendered_chunk.imports,
         map,
         sourcemap_file_name,
       })));

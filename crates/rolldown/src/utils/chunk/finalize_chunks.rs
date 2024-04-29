@@ -90,5 +90,18 @@ pub fn finalize_chunks(
     },
   );
 
+  // Replace hash placeholder in `imports`
+  chunk_graph.chunks.iter().zip(chunks.iter_mut()).par_bridge().for_each(
+    |(chunk, chunk_render_return)| {
+      chunk_render_return.rendered_chunk.imports = chunk
+        .cross_chunk_imports
+        .iter()
+        .map(|id| {
+          chunk_graph.chunks[*id].filename.as_ref().expect("should have file name").to_string()
+        })
+        .collect();
+    },
+  );
+
   chunks
 }

@@ -1,0 +1,6 @@
+{
+	"compilerOptions": {
+		"useDefineForClassFields": false,
+		"experimentalDecorators": true
+	}
+}

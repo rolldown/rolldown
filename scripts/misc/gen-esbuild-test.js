@@ -13,7 +13,7 @@ import { URL } from 'node:url'
 // 1. Set the test suite name.
 
 /** @type {TestSuiteName} {@link suites} */
-const SUITE_NAME = 'import_star_ts'
+const SUITE_NAME = 'bundler_ts'
 
 // 2. Set the tests root directory
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -79,6 +79,12 @@ const suites = /** @type {const} */ ({
     sourcePath: './bundler_importstar_ts_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_importstar_ts_test.go',
+  },
+  bundler_ts: {
+    name: 'bundler_ts',
+    sourcePath: './bundler_ts_test.go',
+    sourceGithubUrl:
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_ts_test.go',
   },
 })
 /**

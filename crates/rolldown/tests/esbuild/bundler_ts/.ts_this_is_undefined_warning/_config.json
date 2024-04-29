@@ -1,0 +1,26 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "warning1_ts",
+        "import": "warning1.ts"
+      },
+      {
+        "name": "warning2_ts",
+        "import": "warning2.ts"
+      },
+      {
+        "name": "warning3_ts",
+        "import": "warning3.ts"
+      },
+      {
+        "name": "silent1_ts",
+        "import": "silent1.ts"
+      },
+      {
+        "name": "silent2_ts",
+        "import": "silent2.ts"
+      }
+    ]
+  }
+}

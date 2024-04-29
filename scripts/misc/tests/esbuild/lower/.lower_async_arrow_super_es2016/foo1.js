@@ -1,1 +1,0 @@
-export default class extends x { foo1() { return async () => super.foo('foo1') } }

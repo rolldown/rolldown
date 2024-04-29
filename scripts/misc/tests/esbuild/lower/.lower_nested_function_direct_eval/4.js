@@ -1,1 +1,0 @@
-if (foo) { eval(''); function x() {} }

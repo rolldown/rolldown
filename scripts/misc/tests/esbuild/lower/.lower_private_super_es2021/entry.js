@@ -1,8 +1,0 @@
-export { default as foo1 } from "./foo1"
-export { default as foo2 } from "./foo2"
-export { default as foo3 } from "./foo3"
-export { default as foo4 } from "./foo4"
-export { default as foo5 } from "./foo5"
-export { default as foo6 } from "./foo6"
-export { default as foo7 } from "./foo7"
-export { default as foo8 } from "./foo8"

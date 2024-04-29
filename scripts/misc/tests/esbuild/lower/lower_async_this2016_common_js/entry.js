@@ -1,1 +1,0 @@
-exports.foo = async () => this

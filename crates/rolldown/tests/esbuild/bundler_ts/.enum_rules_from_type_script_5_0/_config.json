@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "supported_ts",
+        "import": "supported.ts"
+      },
+      {
+        "name": "not-supported_ts",
+        "import": "not-supported.ts"
+      }
+    ]
+  }
+}

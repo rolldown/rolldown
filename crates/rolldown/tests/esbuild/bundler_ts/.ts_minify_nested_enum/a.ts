@@ -1,0 +1,1 @@
+function foo() { enum Foo { A, B, C = Foo } return Foo }

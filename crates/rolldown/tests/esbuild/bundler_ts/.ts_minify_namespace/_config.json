@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "a_ts",
+        "import": "a.ts"
+      },
+      {
+        "name": "b_ts",
+        "import": "b.ts"
+      }
+    ]
+  }
+}

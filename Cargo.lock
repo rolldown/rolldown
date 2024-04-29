@@ -1314,6 +1314,7 @@ dependencies = [
  "futures",
  "glob",
  "index_vec",
+ "indexmap",
  "insta",
  "once_cell",
  "oxc",

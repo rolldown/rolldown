@@ -218,7 +218,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     }
     testCaseName = testCaseName.slice(4) // every function starts with "Test"
     testCaseName = changeCase.snakeCase(testCaseName)
-    if (testCaseName !== "import_re_export_of_namespace_import") {
+    if (testCaseName !== 'import_re_export_of_namespace_import') {
       continue
     }
 

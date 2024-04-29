@@ -1,0 +1,38 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "1_js",
+        "import": "1.js"
+      },
+      {
+        "name": "2_js",
+        "import": "2.js"
+      },
+      {
+        "name": "3_js",
+        "import": "3.js"
+      },
+      {
+        "name": "4_js",
+        "import": "4.js"
+      },
+      {
+        "name": "5_js",
+        "import": "5.js"
+      },
+      {
+        "name": "6_js",
+        "import": "6.js"
+      },
+      {
+        "name": "7_js",
+        "import": "7.js"
+      },
+      {
+        "name": "8_js",
+        "import": "8.js"
+      }
+    ]
+  }
+}

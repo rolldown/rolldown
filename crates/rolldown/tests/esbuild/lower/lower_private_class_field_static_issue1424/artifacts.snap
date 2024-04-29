@@ -1,0 +1,26 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_field_static_issue1424
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+class T {
+	#a(){
+		return 'a';
+	}
+	#b(){
+		return 'b';
+	}
+	static c;
+
+	d(){
+		console.log(this.#a());
+	}
+}
+new T().d();
+```

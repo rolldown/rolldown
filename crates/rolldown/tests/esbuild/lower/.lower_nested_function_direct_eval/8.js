@@ -1,0 +1,1 @@
+'use strict'; if (foo) { eval(''); function x() {} }

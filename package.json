@@ -45,10 +45,5 @@
     "singleQuote": true,
     "trailingComma": "all",
     "arrowParens": "always"
-  },
-  "pnpm": {
-    "overrides": {
-      "lru-cache": "10.2.1"
-    }
   }
 }

@@ -43,7 +43,7 @@ impl BindingOutputChunk {
   // RenderedChunk
   #[napi(getter)]
   pub fn file_name(&self) -> String {
-    self.inner.file_name.clone()
+    self.inner.file_name.to_string()
   }
 
   #[napi(getter)]
@@ -59,7 +59,7 @@ impl BindingOutputChunk {
 
   #[napi(getter)]
   pub fn imports(&self) -> Vec<String> {
-    self.inner.imports.clone()
+    self.inner.imports.iter().map(|x| x.to_string()).collect()
   }
 
   // OutputChunk

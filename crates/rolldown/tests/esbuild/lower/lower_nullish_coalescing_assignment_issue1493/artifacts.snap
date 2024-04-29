@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+class A {
+	#a;
+
+	f(){
+		this.#a ??= 1;
+	}
+}
+
+export { A };
+```

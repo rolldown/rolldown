@@ -1,0 +1,31 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/lower/static_class_block_es_next
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+class A {
+	static{
+	}
+	static{
+		this.thisField++;
+		A.classField++;
+		super.superField = super.superField + 1;
+		super.superField++;
+	}
+}
+let B = class {
+	static{
+	}
+	static{
+		this.thisField++;
+		super.superField = super.superField + 1;
+		super.superField++;
+	}
+};
+```

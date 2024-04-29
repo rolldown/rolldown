@@ -1,0 +1,12 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_brand_check_supported
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+```

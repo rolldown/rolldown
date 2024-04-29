@@ -13,7 +13,7 @@ import { URL } from 'node:url'
 // 1. Set the test suite name.
 
 /** @type {TestSuiteName} {@link suites} */
-const SUITE_NAME = 'bundler_ts'
+const SUITE_NAME = 'lower'
 
 // 2. Set the tests root directory
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -91,6 +91,28 @@ const suites = /** @type {const} */ ({
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_ts_test.go',
     ignoreCases: [],
+  },
+  lower: {
+    name: 'lower',
+    sourcePath: './bundler_lower_test.go',
+    sourceGithubUrl:
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_lower_test.go',
+    ignoreCases: [
+      'lower_async_arrow_super_es2016',
+      'lower_async_arrow_super_setter_es2016',
+      'lower_export_star_as_name_collision',
+      'lower_forbid_strict_mode_syntax',
+      'lower_nested_function_direct_eval',
+      'lower_private_super_es2021',
+      'lower_private_super_es2022',
+      'lower_static_async_arrow_super_es2016',
+      'lower_static_async_arrow_super_setter_es2016',
+      'lower_strict_mode_syntax',
+      'lower_using',
+      'lower_using_hoisting',
+      'lower_using_unsupported_async',
+      'lower_using_unsupported_using_and_async',
+    ],
   },
 })
 /**

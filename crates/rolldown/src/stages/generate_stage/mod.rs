@@ -105,7 +105,7 @@ impl<'a> GenerateStage<'a> {
       if let Some(map) = map.as_mut() {
         map.set_file(&rendered_chunk.file_name);
 
-        let map_file_name = format!("{}.map", rendered_chunk.file_name);
+        let map_file_name = format!("{}.map", rendered_chunk.file_name.as_str());
         let map_path = file_dir.join(&map_file_name);
 
         if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
@@ -163,7 +163,8 @@ impl<'a> GenerateStage<'a> {
           SourceMapType::Hidden => {}
         }
       }
-      let sourcemap_file_name = map.as_ref().map(|_| format!("{}.map", rendered_chunk.file_name));
+      let sourcemap_file_name =
+        map.as_ref().map(|_| format!("{}.map", rendered_chunk.file_name.as_str()));
       assets.push(Output::Chunk(Arc::new(OutputChunk {
         file_name: rendered_chunk.file_name,
         code,

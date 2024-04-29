@@ -1,0 +1,1 @@
+export default class extends x { bar1 = async () => super.foo('bar1') }

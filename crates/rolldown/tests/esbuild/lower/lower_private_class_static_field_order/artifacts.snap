@@ -1,0 +1,26 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_static_field_order
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+class Foo {
+	static #foo=123;
+
+	static bar=Foo.#foo;
+
+}
+console.log(Foo.bar === 123);
+class FooThis {
+	static #foo=123;
+
+	static bar=this.#foo;
+
+}
+console.log(FooThis.bar === 123);
+```

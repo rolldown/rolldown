@@ -1,0 +1,1 @@
+if (foo) { function x() {} eval('') }

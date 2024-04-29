@@ -1,0 +1,23 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/lower/lower_private_super_static_bundle_issue2158
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+class Foo extends Object {
+	static FOO;
+
+	constructor(){
+		super();
+	}
+	#foo;
+
+}
+
+export { Foo };
+```

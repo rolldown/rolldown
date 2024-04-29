@@ -1,0 +1,7 @@
+import './fn-stmt'
+import './fn-expr'
+import './arrow-1'
+import './arrow-2'
+import './export-def-1'
+import './export-def-2'
+import './obj-method'

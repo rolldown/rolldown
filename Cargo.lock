@@ -301,9 +301,9 @@ dependencies = [
 
 [[package]]
 name = "criterion2"
-version = "0.7.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f29e2b09b5cf655d28af8865ffdf0da71b6c0c313915f27b2e28664d43e450a"
+checksum = "43b57a5b1bf6ed08b671717cf7ce07d3dea4efa30f54d0b64abce48d8299818f"
 dependencies = [
  "anes",
  "bpaf",
@@ -314,7 +314,6 @@ dependencies = [
  "itertools",
  "num-traits",
  "oorandom",
- "regex",
  "serde",
  "serde_derive",
  "serde_json",

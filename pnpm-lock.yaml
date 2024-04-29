@@ -200,7 +200,7 @@ importers:
         version: 4.17.1
       type-fest:
         specifier: ^4.12.0
-        version: 4.17.0
+        version: 4.18.0
       unbuild:
         specifier: ^2.0.0
         version: 2.0.0(typescript@5.4.5)
@@ -4849,8 +4849,8 @@ packages:
     resolution: {integrity: sha512-tLq3bSNx+xSpwvAJnzrK0Ep5CLNWjvFTOp71URMaAEWBfRb9nnJiBoUe0tF8bI4ZFO3omgBR6NvnbzVUT3Ly4g==}
     engines: {node: '>=14.16'}
 
-  type-fest@4.17.0:
-    resolution: {integrity: sha512-9flrz1zkfLRH3jO3bLflmTxryzKMxVa7841VeMgBaNQGY6vH4RCcpN/sQLB7mQQYh1GZ5utT2deypMuCy4yicw==}
+  type-fest@4.18.0:
+    resolution: {integrity: sha512-+dbmiyliDY/2TTcjCS7NpI9yV2iEFlUDk5TKnsbkN7ZoRu5s7bT+zvYtNFhFXC2oLwURGT2frACAZvbbyNBI+w==}
     engines: {node: '>=16'}
 
   typedarray-to-buffer@3.1.5:
@@ -9362,14 +9362,14 @@ snapshots:
     dependencies:
       find-up: 6.3.0
       read-pkg: 8.1.0
-      type-fest: 4.17.0
+      type-fest: 4.18.0
 
   read-pkg@8.1.0:
     dependencies:
       '@types/normalize-package-data': 2.4.4
       normalize-package-data: 6.0.0
       parse-json: 7.1.1
-      type-fest: 4.17.0
+      type-fest: 4.18.0
 
   read-yaml-file@2.1.0:
     dependencies:
@@ -9787,7 +9787,7 @@ snapshots:
 
   type-fest@3.13.1: {}
 
-  type-fest@4.17.0: {}
+  type-fest@4.18.0: {}
 
   typedarray-to-buffer@3.1.5:
     dependencies:

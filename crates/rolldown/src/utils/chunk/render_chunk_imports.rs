@@ -76,7 +76,8 @@ pub fn render_chunk_imports(
     let file_name = importee_chunk
       .preliminary_filename
       .as_deref()
-      .expect("At this point, preliminary_filename should already be generated");
+      .expect("At this point, preliminary_filename should already be generated")
+      .as_str();
 
     if import_items.is_empty() {
       s.push_str(&format!("import \"./{file_name}\";\n"));

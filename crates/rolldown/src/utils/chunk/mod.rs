@@ -52,9 +52,9 @@ pub fn generate_rendered_chunk(
     exports: pre_rendered_chunk.exports,
     file_name: chunk
       .preliminary_filename
-      .as_ref()
+      .as_deref()
       .expect("should have preliminary_filename")
-      .to_string(),
+      .clone(),
     modules: render_modules,
     imports: chunk
       .cross_chunk_imports
@@ -62,9 +62,9 @@ pub fn generate_rendered_chunk(
       .map(|id| {
         chunk_graph.chunks[*id]
           .preliminary_filename
-          .as_ref()
+          .as_deref()
           .expect("should have preliminary_filename")
-          .to_string()
+          .clone()
       })
       .collect(),
   }

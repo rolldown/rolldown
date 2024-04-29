@@ -102,7 +102,10 @@ impl Case {
         Output::Chunk(chunk) => {
           vec![Cow::Owned(format!(
             "- {}, is_entry {}, is_dynamic_entry {}, exports {:?}",
-            chunk.file_name, chunk.is_entry, chunk.is_dynamic_entry, chunk.exports
+            chunk.file_name.as_str(),
+            chunk.is_entry,
+            chunk.is_dynamic_entry,
+            chunk.exports
           ))]
         }
         Output::Asset(_) => vec![],

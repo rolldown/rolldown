@@ -62,6 +62,11 @@ impl BindingOutputChunk {
     self.inner.imports.iter().map(|x| x.to_string()).collect()
   }
 
+  #[napi(getter)]
+  pub fn dynamic_imports(&self) -> Vec<String> {
+    self.inner.dynamic_imports.iter().map(|x| x.to_string()).collect()
+  }
+
   // OutputChunk
   #[napi(getter)]
   pub fn code(&self) -> String {

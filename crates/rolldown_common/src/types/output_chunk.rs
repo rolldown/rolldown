@@ -18,6 +18,7 @@ pub struct OutputChunk {
   pub file_name: FilePath,
   pub modules: FxHashMap<FilePath, RenderedModule>,
   pub imports: Vec<FilePath>,
+  pub dynamic_imports: Vec<FilePath>,
   // OutputChunk
   pub code: String,
   pub map: Option<SourceMap>,

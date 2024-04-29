@@ -21,6 +21,7 @@ pub struct RenderedChunk {
   #[serde(skip)]
   pub modules: HashMap<String, BindingRenderedModule>,
   pub imports: Vec<String>,
+  pub dynamic_imports: Vec<String>,
 }
 
 impl From<rolldown_common::RenderedChunk> for RenderedChunk {
@@ -38,6 +39,7 @@ impl From<rolldown_common::RenderedChunk> for RenderedChunk {
         .map(|(key, value)| (key.to_string(), value.into()))
         .collect(),
       imports: value.imports.iter().map(|x| x.to_string()).collect(),
+      dynamic_imports: value.dynamic_imports.iter().map(|x| x.to_string()).collect(),
     }
   }
 }

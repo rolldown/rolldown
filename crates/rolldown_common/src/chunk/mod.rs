@@ -23,6 +23,7 @@ pub struct Chunk {
   pub canonical_names: FxHashMap<SymbolRef, Rstr>,
   // Sorted by resource_id of modules in the chunk
   pub cross_chunk_imports: Vec<ChunkId>,
+  pub cross_chunk_dynamic_imports: Vec<ChunkId>,
   pub bits: BitSet,
   pub imports_from_other_chunks: FxHashMap<ChunkId, Vec<CrossChunkImportItem>>,
   pub imports_from_external_modules: FxHashMap<ExternalModuleId, Vec<NamedImport>>,

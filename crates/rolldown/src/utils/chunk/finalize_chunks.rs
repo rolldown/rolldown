@@ -99,6 +99,11 @@ pub fn finalize_chunks(
         .iter()
         .map(|id| chunk_graph.chunks[*id].filename.clone().expect("should have file name"))
         .collect();
+      chunk_render_return.rendered_chunk.dynamic_imports = chunk
+        .cross_chunk_dynamic_imports
+        .iter()
+        .map(|id| chunk_graph.chunks[*id].filename.clone().expect("should have file name"))
+        .collect();
     },
   );
 

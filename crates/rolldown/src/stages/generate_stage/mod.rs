@@ -175,6 +175,7 @@ impl<'a> GenerateStage<'a> {
         exports: rendered_chunk.exports,
         module_ids: rendered_chunk.module_ids,
         imports: rendered_chunk.imports,
+        dynamic_imports: rendered_chunk.dynamic_imports,
         map,
         sourcemap_file_name,
       })));

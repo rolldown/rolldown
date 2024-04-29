@@ -37,6 +37,7 @@ export interface RolldownOutputChunk {
     [id: string]: RenderedModule
   }
   imports: string[]
+  dynamicImports: string[]
   facadeModuleId: string | null
   isDynamicEntry: boolean
   moduleIds: string[]

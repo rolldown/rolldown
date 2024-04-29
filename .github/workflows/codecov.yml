@@ -10,6 +10,7 @@ on:
     paths:
       - '**.rs'
       - '.github/workflows/codecov.yml'
+      - 'codecov.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

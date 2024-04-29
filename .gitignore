@@ -159,8 +159,6 @@ web/docs/.vitepress/cache
 crates/rolldown_binding/artifacts/
 packages/**/THIRD-PARTY-LICENSE
 
-# Opinionated configuration
-.vscode/launch.json
 
 # node_modules in tests
 !/crates/rolldown/tests/**/node_modules

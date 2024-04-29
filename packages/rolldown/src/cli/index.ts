@@ -1,9 +1,9 @@
 import process from 'node:process'
 import nodePath from 'node:path'
-import consola from 'consola'
-import { defineCommand, runMain, showUsage } from 'citty'
-import { loadConfig } from './utils'
-import { bundle } from './commands/bundle'
+import { defineCommand, runMain, showUsage as _showUsage } from 'citty'
+import { logger, loadConfig } from './utils.js'
+import { bundle } from './commands/bundle.js'
+import { showUsage } from './usage.js'
 import {
   version,
   description,
@@ -31,16 +31,12 @@ const main = defineCommand({
     },
   },
   async run(ctx) {
-    if (ctx.args.help) {
-      await showUsage(ctx.cmd)
-      return
-    }
     const { configPath } = parseArgs(ctx.args)
 
     const config = await loadConfig(configPath)
 
     if (!config) {
-      consola.error(`No configuration found at ${configPath}`)
+      logger.error(`No configuration found at ${configPath}`)
       process.exit(1)
     }
 
@@ -58,4 +54,4 @@ function parseArgs(args: Record<string, any>) {
   return { configPath }
 }
 
-runMain(main)
+runMain(main, { showUsage })

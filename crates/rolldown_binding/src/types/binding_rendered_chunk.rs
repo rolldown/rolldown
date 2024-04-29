@@ -27,11 +27,15 @@ impl From<rolldown_common::RenderedChunk> for RenderedChunk {
     Self {
       is_entry: value.is_entry,
       is_dynamic_entry: value.is_dynamic_entry,
-      facade_module_id: value.facade_module_id,
-      module_ids: value.module_ids,
+      facade_module_id: value.facade_module_id.map(|x| x.to_string()),
+      module_ids: value.module_ids.into_iter().map(|x| x.to_string()).collect(),
       exports: value.exports,
       file_name: value.file_name,
-      modules: value.modules.into_iter().map(|(key, value)| (key, value.into())).collect(),
+      modules: value
+        .modules
+        .into_iter()
+        .map(|(key, value)| (key.to_string(), value.into()))
+        .collect(),
     }
   }
 }

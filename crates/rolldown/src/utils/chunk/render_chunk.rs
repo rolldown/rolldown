@@ -71,7 +71,7 @@ pub async fn render_chunk(
       } else {
         concat_source.add_source(Box::new(RawSource::new(rendered_content)));
       }
-      rendered_modules.insert(module_path.to_string(), rendered_module);
+      rendered_modules.insert(module_path, rendered_module);
     });
   let rendered_chunk = generate_rendered_chunk(this, graph, options, rendered_modules);
 

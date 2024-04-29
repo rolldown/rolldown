@@ -3,7 +3,7 @@ use rolldown_common::{
 };
 use rustc_hash::FxHashMap;
 
-use crate::{stages::link_stage::LinkStageOutput, SharedOptions};
+use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput, SharedOptions};
 
 use self::render_chunk_exports::get_chunk_export_names;
 
@@ -41,6 +41,7 @@ pub fn generate_rendered_chunk(
   graph: &LinkStageOutput,
   output_options: &SharedOptions,
   render_modules: FxHashMap<FilePath, RenderedModule>,
+  chunk_graph: &ChunkGraph,
 ) -> RenderedChunk {
   let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, graph, output_options);
   RenderedChunk {
@@ -55,5 +56,16 @@ pub fn generate_rendered_chunk(
       .expect("should have preliminary_filename")
       .to_string(),
     modules: render_modules,
+    imports: chunk
+      .cross_chunk_imports
+      .iter()
+      .map(|id| {
+        chunk_graph.chunks[*id]
+          .preliminary_filename
+          .as_ref()
+          .expect("should have preliminary_filename")
+          .to_string()
+      })
+      .collect(),
   }
 }

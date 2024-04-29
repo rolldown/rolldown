@@ -13,4 +13,5 @@ pub struct RenderedChunk {
   // RenderedChunk
   pub file_name: String,
   pub modules: FxHashMap<FilePath, RenderedModule>,
+  pub imports: Vec<String>,
 }

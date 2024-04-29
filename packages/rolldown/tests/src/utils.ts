@@ -1,4 +1,4 @@
-import { RollupOutput } from '../../src'
+import { RollupOutput, RolldownOutputChunk } from '../../src'
 import { TestConfig } from './types'
 
 export function getOutputChunkNames(output: RollupOutput) {
@@ -6,6 +6,12 @@ export function getOutputChunkNames(output: RollupOutput) {
     .filter((chunk) => chunk.type === 'chunk')
     .map((chunk) => chunk.fileName)
     .sort()
+}
+
+export function getOutputChunk(output: RollupOutput): RolldownOutputChunk[] {
+  return output.output.filter(
+    (chunk) => chunk.type === 'chunk',
+  ) as RolldownOutputChunk[]
 }
 
 export function getOutputFileNames(output: RollupOutput) {

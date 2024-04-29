@@ -24,6 +24,9 @@ function transformToRollupOutputChunk(
         Object.entries(chunk.modules).map(([key, _]) => [key, {}]),
       )
     },
+    get imports() {
+      return chunk.imports
+    },
     exports: chunk.exports,
     isEntry: chunk.isEntry,
     facadeModuleId: chunk.facadeModuleId || null,

@@ -73,7 +73,7 @@ pub async fn render_chunk(
       }
       rendered_modules.insert(module_path, rendered_module);
     });
-  let rendered_chunk = generate_rendered_chunk(this, graph, options, rendered_modules);
+  let rendered_chunk = generate_rendered_chunk(this, graph, options, rendered_modules, chunk_graph);
 
   // add banner
   if let Some(banner) = options.banner.as_ref() {

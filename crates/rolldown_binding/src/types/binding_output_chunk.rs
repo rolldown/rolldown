@@ -57,6 +57,11 @@ impl BindingOutputChunk {
       .collect()
   }
 
+  #[napi(getter)]
+  pub fn imports(&self) -> Vec<String> {
+    self.inner.imports.clone()
+  }
+
   // OutputChunk
   #[napi(getter)]
   pub fn code(&self) -> String {

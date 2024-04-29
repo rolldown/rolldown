@@ -27,12 +27,12 @@ impl BindingOutputChunk {
 
   #[napi(getter)]
   pub fn facade_module_id(&self) -> Option<String> {
-    self.inner.facade_module_id.clone()
+    self.inner.facade_module_id.as_ref().map(|x| x.to_string())
   }
 
   #[napi(getter)]
   pub fn module_ids(&self) -> Vec<String> {
-    self.inner.module_ids.clone()
+    self.inner.module_ids.iter().map(|x| x.to_string()).collect()
   }
 
   #[napi(getter)]
@@ -48,7 +48,13 @@ impl BindingOutputChunk {
 
   #[napi(getter)]
   pub fn modules(&self) -> HashMap<String, BindingRenderedModule> {
-    self.inner.modules.clone().into_iter().map(|(key, value)| (key, value.into())).collect()
+    self
+      .inner
+      .modules
+      .clone()
+      .into_iter()
+      .map(|(key, value)| (key.to_string(), value.into()))
+      .collect()
   }
 
   // OutputChunk

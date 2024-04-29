@@ -105,7 +105,8 @@ pub async fn render_chunk(
     this
       .preliminary_filename
       .as_deref()
-      .expect("chunk file name should be generated before rendering"),
+      .expect("chunk file name should be generated before rendering")
+      .as_str(),
   );
   let file_dir = file_path.parent().expect("chunk file name should have a parent");
 

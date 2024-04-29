@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 
 use index_vec::IndexVec;
-use rolldown_common::ChunkId;
+use rolldown_common::{ChunkId, FilePath};
 use rolldown_utils::{
   base64::to_url_safe_base64,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
@@ -78,9 +78,10 @@ pub fn finalize_chunks(
   chunk_graph.chunks.iter_mut().zip(chunks.iter_mut()).par_bridge().for_each(
     |(chunk, chunk_render_return)| {
       let preliminary_filename_raw =
-        chunk.preliminary_filename.as_ref().expect("should have file name").to_string();
-      let filename =
-        replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder);
+        chunk.preliminary_filename.as_deref().expect("should have file name").to_string();
+      let filename: FilePath =
+        replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder)
+          .into();
       chunk.filename = Some(filename.clone());
       chunk_render_return.rendered_chunk.file_name = filename;
       chunk_render_return.code = replace_facade_hash_replacement(
@@ -96,9 +97,7 @@ pub fn finalize_chunks(
       chunk_render_return.rendered_chunk.imports = chunk
         .cross_chunk_imports
         .iter()
-        .map(|id| {
-          chunk_graph.chunks[*id].filename.as_ref().expect("should have file name").to_string()
-        })
+        .map(|id| chunk_graph.chunks[*id].filename.clone().expect("should have file name"))
         .collect();
     },
   );

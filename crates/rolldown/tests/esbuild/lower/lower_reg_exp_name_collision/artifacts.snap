@@ -1,0 +1,17 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/lower/lower_reg_exp_name_collision
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+function foo(RegExp) {
+	return new RegExp(/./d, 'd');
+}
+
+export { foo };
+```

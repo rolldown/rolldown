@@ -1,2 +1,2 @@
-pub use rolldown_testing_config::TestConfig;
+pub use rolldown_common::TestConfig;
 pub mod workspace;

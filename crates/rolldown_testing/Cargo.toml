@@ -12,12 +12,10 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-rolldown_testing_config = { workspace = true }
-schemars                = { workspace = true }
-serde_json              = { workspace = true }
-sugar_path              = { workspace = true }
+rolldown_common = { workspace = true, features = ["deserialize_bundler_options"] }
+sugar_path      = { workspace = true }
 
 [build-dependencies]
-rolldown_testing_config = { workspace = true }
-schemars                = { workspace = true }
-serde_json              = { workspace = true }
+rolldown_common = { workspace = true, features = ["deserialize_bundler_options"] }
+schemars        = { workspace = true }
+serde_json      = { workspace = true }

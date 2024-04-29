@@ -1,9 +1,8 @@
+use rolldown_common::TestConfig;
 use schemars::schema_for;
 use serde_json::to_string_pretty;
 use std::fs;
 use std::path::PathBuf;
-
-use rolldown_testing_config::TestConfig;
 
 fn main() {
   // If the definition of `TestConfig` changes, this build script will automatically re-run due to we rely on `rolldown_testing_config` in `Cargo.toml` already.

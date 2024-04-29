@@ -26,6 +26,8 @@ pub mod bundler_options {
 }
 
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
+#[cfg(feature = "deserialize_bundler_options")]
+pub use crate::types::test_config::TestConfig;
 pub use crate::{
   chunk::{
     types::{

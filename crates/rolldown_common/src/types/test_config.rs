@@ -1,3 +1,4 @@
+use crate::BundlerOptions;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use std::fs;
@@ -8,7 +9,7 @@ use std::path::Path;
 #[allow(clippy::struct_excessive_bools, clippy::pub_underscore_fields)]
 pub struct TestConfig {
   #[serde(default)]
-  pub config: rolldown_common::BundlerOptions,
+  pub config: BundlerOptions,
   #[serde(default = "true_by_default")]
   /// If `false`, the compiled artifacts won't be executed.
   pub expect_executed: bool,

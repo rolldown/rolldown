@@ -24,4 +24,6 @@ pub mod resolved_export;
 pub mod resolved_path;
 pub mod stmt_info;
 pub mod symbol_ref;
+#[cfg(feature = "deserialize_bundler_options")]
+pub mod test_config;
 pub mod wrap_kind;

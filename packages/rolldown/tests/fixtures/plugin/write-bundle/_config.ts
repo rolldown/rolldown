@@ -1,6 +1,6 @@
 import { expect, vi } from 'vitest'
 import path from 'node:path'
-import { OutputChunk } from 'rollup'
+import type { OutputChunk } from 'rollup'
 import { defineTest } from '@tests'
 
 const entry = path.join(__dirname, './main.js')
@@ -23,6 +23,8 @@ export default defineTest({
           expect(chunk.isDynamicEntry).toBe(false)
           expect(chunk.facadeModuleId).toBe(entry)
           expect(chunk.exports.length).toBe(0)
+          expect(chunk.imports).length(0)
+          expect(chunk.name).toBe(undefined)
           expect(chunk.moduleIds).toStrictEqual([entry])
           expect(Object.keys(chunk.modules).length).toBe(1)
         },

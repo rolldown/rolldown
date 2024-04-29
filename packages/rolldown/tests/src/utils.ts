@@ -1,5 +1,5 @@
-import { RollupOutput, RolldownOutputChunk } from '../../src'
-import { TestConfig } from './types'
+import type { RollupOutput, RolldownOutputChunk } from '../../src'
+import type { TestConfig } from './types'
 
 export function getOutputChunkNames(output: RollupOutput) {
   return output.output

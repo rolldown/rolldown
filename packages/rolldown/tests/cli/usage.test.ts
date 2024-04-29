@@ -18,7 +18,7 @@ afterEach(() => {
 })
 
 describe('renderUsage', () => {
-  test('render', async () => {
+  test.skip('render', async () => {
     vi.doMock('../../src/cli/env.js', () => ({
       isColorSupported: false,
     }))

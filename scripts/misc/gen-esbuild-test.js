@@ -38,6 +38,7 @@ const suites = /** @type {const} */ ({
     sourcePath: './bundler_default_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_default_test.go',
+    ignoreCases: [],
   },
   dce: {
     name: 'dce',
@@ -73,18 +74,23 @@ const suites = /** @type {const} */ ({
     sourcePath: './bundler_importstar_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_importstar_test.go',
+
+    ignoreCases: [],
   },
   import_star_ts: {
     name: 'import_star_ts',
     sourcePath: './bundler_importstar_ts_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_importstar_ts_test.go',
+
+    ignoreCases: [],
   },
   bundler_ts: {
     name: 'bundler_ts',
     sourcePath: './bundler_ts_test.go',
     sourceGithubUrl:
       'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_ts_test.go',
+    ignoreCases: [],
   },
 })
 /**

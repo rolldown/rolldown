@@ -2,6 +2,81 @@
 source: crates/rolldown/tests/fixtures.rs
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
+# tests/esbuild/dce/base64_loader_remove_unused
+
+- entry_js-wRZBj5xW.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/dce/data_url_loader_remove_unused
+
+- entry_js-wRZBj5xW.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/dce/dce_template_literal
+
+- entry_js-b0ZPZIig.mjs
+
+# tests/esbuild/dce/dce_type_of
+
+- entry_js-QNmQl-Q4.mjs
+
+# tests/esbuild/dce/dce_type_of_equals_string
+
+- entry_js-rFbAl2MQ.mjs
+
+# tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
+
+- entry_js-Nsgo4OFw.mjs
+
+# tests/esbuild/dce/file_loader_remove_unused
+
+- entry_js-wRZBj5xW.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/dce/import_re_export_of_namespace_import
+
+- entry_js-QP_Mrok_.mjs
+- $runtime$-IK9Iyt2s.mjs
+
+# tests/esbuild/dce/inline_function_call_for_init_decl
+
+- entry_js-zb9ANeDj.mjs
+
+# tests/esbuild/dce/remove_code_after_label_with_return
+
+- entry_js-b0ZPZIig.mjs
+
+# tests/esbuild/dce/remove_trailing_return
+
+- entry_js-EIzpGvjW.mjs
+
+# tests/esbuild/dce/remove_unused_import_meta
+
+- entry_js-mJH_R08y.mjs
+
+# tests/esbuild/dce/text_loader_remove_unused
+
+- entry_js-NeyAh0wX.mjs
+- $runtime$-MEb4HyiP.mjs
+
+# tests/esbuild/dce/tree_shaking_binary_operators
+
+- entry_js-YOMVOouG.mjs
+
+# tests/esbuild/dce/tree_shaking_import_identifier
+
+- entry_js-7PcFFuL3.mjs
+- $runtime$-q_K1VDSH.mjs
+
+# tests/esbuild/dce/tree_shaking_in_esm_wrapper
+
+- entry_js-cAq-Z1Y4.mjs
+- $runtime$-Z-c-hKoo.mjs
+
+# tests/esbuild/dce/tree_shaking_unary_operators
+
+- entry_js-1569tIl6.mjs
+
 # tests/esbuild/default/ambiguous_reexport_msg
 
 - entry_js-kqV4_A4m.mjs

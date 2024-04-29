@@ -1,0 +1,14 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+var hasBar = typeof bar !== 'undefined';
+if (false) console.log(hasBar);
+```

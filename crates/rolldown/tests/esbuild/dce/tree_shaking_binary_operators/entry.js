@@ -1,0 +1,47 @@
+// These operators may have side effects
+let keep, keep2;
+keep + keep2;
+keep - keep2;
+keep * keep2;
+keep / keep2;
+keep % keep2;
+keep ** keep2;
+keep < keep2;
+keep <= keep2;
+keep > keep2;
+keep >= keep2;
+keep in keep2;
+keep instanceof keep2;
+keep << keep2;
+keep >> keep2;
+keep >>> keep2;
+keep == keep2;
+keep != keep2;
+keep | keep2;
+keep & keep2;
+keep ^ keep2;
+keep = keep2;
+keep += keep2;
+keep -= keep2;
+keep *= keep2;
+keep /= keep2;
+keep %= keep2;
+keep **= keep2;
+keep <<= keep2;
+keep >>= keep2;
+keep >>>= keep2;
+keep |= keep2;
+keep &= keep2;
+keep ^= keep2;
+keep ??= keep2;
+keep ||= keep2;
+keep &&= keep2;
+
+// These operators never have side effects
+let REMOVE, REMOVE2;
+REMOVE === REMOVE2;
+REMOVE !== REMOVE2;
+REMOVE, REMOVE2;
+REMOVE ?? REMOVE2;
+REMOVE || REMOVE2;
+REMOVE && REMOVE2;

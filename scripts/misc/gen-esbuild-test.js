@@ -2,25 +2,23 @@ import Parser from 'tree-sitter'
 import Go from 'tree-sitter-go'
 import fs from 'fs-extra'
 import fsp from 'node:fs/promises'
-import path from 'node:path'
+import * as path from 'node:path'
 import * as changeCase from 'change-case'
 import chalk from 'chalk'
 import * as dedent from 'dedent'
+import { fileURLToPath } from 'node:url'
+import { URL } from 'node:url'
 
 // How to use this script
-
 // 1. Set the test suite name.
 
 /** @type {TestSuiteName} {@link suites} */
-const SUITE_NAME = 'default'
+const SUITE_NAME = 'dce'
 
 // 2. Set the tests root directory
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
-const TESTS_ROOT_DIR = path.resolve(
-  import.meta.dirname,
-  'tests/esbuild',
-  SUITE_NAME,
-)
+const TESTS_ROOT_DIR = path.resolve(__dirname, 'tests/esbuild', SUITE_NAME)
 
 // 3. Download .go test source file located in the suites object
 //    for each suite and place it under "scripts" dir.
@@ -39,13 +37,42 @@ const suites = /** @type {const} */ ({
     name: 'default',
     sourcePath: './bundler_default_test.go',
     sourceGithubUrl:
-      'https://github.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_default_test.go',
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_default_test.go',
+  },
+  dce: {
+    name: 'dce',
+    sourcePath: './bundler_dce_test.go',
+    sourceGithubUrl:
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_dce_test.go',
+    ignoreCases: [
+      'const_value_inlining_assign',
+      'const_value_inlining_bundle',
+      'dce_of_expr_after_keep_names_issue3195',
+      'dce_of_using_declarations',
+      'dce_type_of_compare_string_guard_condition',
+      'dce_type_of_equals_string_guard_condition',
+      'dead_code_following_jump',
+      'drop_labels',
+      'inline_empty_function_calls',
+      'inline_function_call_behavior_changes',
+      'inline_identity_function_calls',
+      'multiple_declaration_tree_shaking',
+      'nested_function_inlining_with_spread',
+      'pure_calls_with_spread',
+      'remove_unused_pure_comment_calls',
+      'top_level_function_inlining_with_spread',
+      'tree_shaking_class_property',
+      'tree_shaking_class_static_property',
+      'tree_shaking_lowered_class_static_field',
+      'tree_shaking_object_property',
+      'dce_of_using_declarations',
+    ],
   },
   import_star: {
     name: 'import_star',
     sourcePath: './bundler_importstar_test.go',
     sourceGithubUrl:
-      'https://github.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_importstar_test.go',
+      'https://raw.githubusercontent.com/evanw/esbuild/blob/main/internal/bundler_tests/bundler_importstar_test.go',
   },
 })
 /**
@@ -70,7 +97,7 @@ const suites = /** @type {const} */ ({
  */
 async function readTestSuiteSource(testSuiteName) {
   const testSuite = suites[testSuiteName]
-  const sourcePath = path.resolve(import.meta.dirname, testSuite.sourcePath)
+  const sourcePath = path.resolve(__dirname, testSuite.sourcePath)
   try {
     return fs.readFileSync(sourcePath).toString()
   } catch (err1) {
@@ -81,9 +108,7 @@ async function readTestSuiteSource(testSuiteName) {
     // download from github
     try {
       const response = await fetch(testSuite.sourceGithubUrl)
-      const obj = await response.json()
-      const lines = obj.payload.blob.rawLines
-
+      const lines = await response.text()
       if (Array.isArray(lines) && typeof lines[0] === 'string') {
         const source = lines.join('\n')
         // save under scripts directory
@@ -106,7 +131,10 @@ async function readTestSuiteSource(testSuiteName) {
 
 /** The contents of the .go test source file. {@link suites} */
 const source = await readTestSuiteSource(SUITE_NAME)
-const ignoredTestName = [
+// This is up to suit name
+const ignoreCases = suites[SUITE_NAME].ignoreCases ?? []
+// Generic ignored pattern, maybe used in many suites
+const ignoredTestPattern = [
   'ts',
   'txt',
   'json',
@@ -190,23 +218,20 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     }
     testCaseName = testCaseName.slice(4) // every function starts with "Test"
     testCaseName = changeCase.snakeCase(testCaseName)
-
-    console.log(testCaseName)
-    // Skip some test cases by ignoredTestName
-    if (ignoredTestName.some((name) => testCaseName?.includes(name))) {
+    if (testCaseName !== 'import_re_export_of_namespace_import') {
       continue
     }
-    const testDir = path.resolve(TESTS_ROOT_DIR, testCaseName)
-    const ignoredTestDir = path.resolve(TESTS_ROOT_DIR, `.${testCaseName}`)
 
-    // Cause if you withdraw directory in git system, git will cleanup dir but leave the directory alone
-    if (
-      (fs.existsSync(testDir) && !isDirEmptySync(testDir)) ||
-      (fs.existsSync(ignoredTestDir) && !isDirEmptySync(ignoredTestDir))
-    ) {
-      continue
-    } else {
-      fs.ensureDirSync(testDir)
+    console.log('testCaseName: ', testCaseName)
+
+    let isIgnored = false
+    // Skip some test cases by ignoredTestName
+    if (ignoredTestPattern.some((name) => testCaseName?.includes(name))) {
+      isIgnored = true
+    }
+    // @ts-ignore
+    if (ignoreCases.includes(testCaseName)) {
+      isIgnored = true
     }
     let bundle_field_list = query.captures(child).filter((item) => {
       return item.name === 'element_list'
@@ -227,11 +252,28 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
           file.name.endsWith('jsx'),
       )
     ) {
-      continue
+      isIgnored = true
     }
-    let prefix = calculatePrefix(fileList.map((item) => item.name))
+    if (isIgnored) {
+      testCaseName = `.${testCaseName}`
+    }
+
+    const testDir = path.resolve(TESTS_ROOT_DIR, testCaseName)
+    const ignoredTestDir = path.resolve(TESTS_ROOT_DIR, `.${testCaseName}`)
+
+    // Cause if you withdraw directory in git system, git will cleanup dir but leave the directory alone
+    if (
+      (fs.existsSync(testDir) && !isDirEmptySync(testDir)) ||
+      (fs.existsSync(ignoredTestDir) && !isDirEmptySync(ignoredTestDir))
+    ) {
+      continue
+    } else {
+      fs.ensureDirSync(testDir)
+    }
+    let prefix = calculatePrefixDir(fileList.map((item) => item.name))
     fileList.forEach((file) => {
       let normalizedName = file.name.slice(prefix.length)
+
       if (path.isAbsolute(normalizedName)) {
         normalizedName = normalizedName.slice(1)
       }
@@ -242,8 +284,8 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     })
 
     // entry
-    /** @type {{input: {input: Array<{name: string; import: string}>}}} */
-    const config = { input: Object.create({}) }
+    /** @type {{config: {input: Array<{name: string; import: string}>}}} */
+    const config = { config: Object.create({}) }
     const entryPaths = jsConfig['entryPaths'] ?? []
     if (!entryPaths.length) {
       console.error(chalk.red(`No entryPaths found`))
@@ -258,41 +300,48 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
         import: normalizedName,
       }
     })
-    config.input.input = input
-    const configFilePath = path.resolve(testDir, 'test.config.json')
+    config.config.input = input
+    const configFilePath = path.resolve(testDir, '_config.json')
     fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2))
     // TODO: options
 
     let log = jsConfig['expectedCompileLog']
     if (log) {
-      const configFilePath = path.resolve(testDir, 'compile-log.text')
-      fs.writeFileSync(configFilePath, log)
+      const compileLogPath = path.resolve(testDir, 'compile-log.text')
+      fs.writeFileSync(compileLogPath, log)
     }
   }
 }
 
 /**
- * @param {string[]} stringList
+ * @param {string[]} paths
  * @returns {string}
  */
-function calculatePrefix(stringList) {
-  if (stringList.length < 2) {
+function calculatePrefixDir(paths) {
+  if (paths.length === 1) {
     return ''
   }
-  let res = ''
-  while (true) {
-    if (stringList[0][res.length]) {
-      res += stringList[0][res.length]
-    } else {
-      break
-    }
-    for (let i = 0; i < stringList.length; i++) {
-      if (!stringList[i].startsWith(res)) {
-        return res.slice(0, res.length - 1)
+
+  // Split each path into directory components
+  const pathComponents = paths.map((path) => path.split('/'))
+
+  // Initialize the common directory prefix with the first path
+  let commonPrefix = pathComponents[0]
+
+  // Iterate over each path's components
+  for (let i = 1; i < pathComponents.length; i++) {
+    // Compare each directory component in the current path with the common prefix
+    for (let j = 0; j < commonPrefix.length; j++) {
+      if (pathComponents[i][j] !== commonPrefix[j]) {
+        // If components don't match, truncate the common prefix
+        commonPrefix = commonPrefix.slice(0, j)
+        break
       }
     }
   }
-  return res
+
+  // Join the common directory components back into a path
+  return commonPrefix.join('/')
 }
 
 /**

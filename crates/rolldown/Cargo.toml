@@ -16,6 +16,7 @@ anyhow             = { workspace = true }
 dunce              = { workspace = true }
 futures            = { workspace = true }
 index_vec          = { workspace = true }
+indexmap           = { workspace = true }
 once_cell          = { workspace = true }
 oxc                = { workspace = true }
 regex              = { workspace = true }

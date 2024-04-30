@@ -67,5 +67,16 @@ pub fn generate_rendered_chunk(
           .clone()
       })
       .collect(),
+    dynamic_imports: chunk
+      .cross_chunk_dynamic_imports
+      .iter()
+      .map(|id| {
+        chunk_graph.chunks[*id]
+          .preliminary_filename
+          .as_deref()
+          .expect("should have preliminary_filename")
+          .clone()
+      })
+      .collect(),
   }
 }

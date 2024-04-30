@@ -25,6 +25,7 @@ export class BindingOutputChunk {
   get fileName(): string
   get modules(): Record<string, BindingRenderedModule>
   get imports(): Array<string>
+  get dynamicImports(): Array<string>
   get code(): string
   get map(): string | null
   get sourcemapFileName(): string | null
@@ -160,5 +161,6 @@ export interface RenderedChunk {
   fileName: string
   modules: Record<string, BindingRenderedModule>
   imports: Array<string>
+  dynamicImports: Array<string>
 }
 

@@ -1,22 +1,26 @@
+use std::hash::BuildHasherDefault;
 use std::{borrow::Cow, sync::Mutex};
 
-use crate::{chunk_graph::ChunkGraph, utils::is_in_rust_test_mode};
-
 use super::GenerateStage;
+use crate::{chunk_graph::ChunkGraph, utils::is_in_rust_test_mode};
 use index_vec::{index_vec, IndexVec};
+use indexmap::IndexSet;
 use rolldown_common::{
   ChunkId, ChunkKind, CrossChunkImportItem, ExportsKind, ExternalModuleId, ImportKind, ModuleId,
   NamedImport, OutputFormat, SymbolRef,
 };
 use rolldown_rstr::{Rstr, ToRstr};
-use rolldown_utils::rayon::{IntoParallelIterator, ParallelBridge, ParallelIterator};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rolldown_utils::rayon::IntoParallelIterator;
+use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use rustc_hash::{FxHashMap, FxHashSet, FxHasher};
 
 type ChunkMetaImports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
 type ChunkMetaImportsForExternalModules =
   IndexVec<ChunkId, FxHashMap<ExternalModuleId, Vec<NamedImport>>>;
 type ChunkMetaExports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
 type IndexCrossChunkImports = IndexVec<ChunkId, FxHashSet<ChunkId>>;
+type IndexCrossChunkDynamicImports =
+  IndexVec<ChunkId, IndexSet<ChunkId, BuildHasherDefault<FxHasher>>>;
 
 impl<'a> GenerateStage<'a> {
   /// - Assign each symbol to the chunk it belongs to
@@ -26,7 +30,7 @@ impl<'a> GenerateStage<'a> {
     chunk_graph: &mut ChunkGraph,
     chunk_meta_imports: &mut ChunkMetaImports,
     chunk_meta_imports_from_external_modules: &mut ChunkMetaImportsForExternalModules,
-    index_cross_chunk_imports: &mut IndexCrossChunkImports,
+    index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
   ) {
     let symbols = &Mutex::new(&mut self.link_output.symbols);
 
@@ -38,7 +42,7 @@ impl<'a> GenerateStage<'a> {
           chunk_meta_imports.iter_mut().zip(
             chunk_meta_imports_from_external_modules
               .iter_mut()
-              .zip(index_cross_chunk_imports.iter_mut()),
+              .zip(index_cross_chunk_dynamic_imports.iter_mut()),
           ),
         )
         .par_bridge()
@@ -46,7 +50,7 @@ impl<'a> GenerateStage<'a> {
     chunks_iter.for_each(
       |(
         (chunk_id, chunk),
-        (chunk_meta_imports, (imports_from_external_modules, cross_chunk_imports)),
+        (chunk_meta_imports, (imports_from_external_modules, cross_chunk_dynamic_imports)),
       )| {
         chunk.modules.iter().copied().for_each(|module_id| {
           let module = &self.link_output.module_table.normal_modules[module_id];
@@ -58,7 +62,7 @@ impl<'a> GenerateStage<'a> {
                 if let ModuleId::Normal(importee_id) = rec.resolved_module {
                   let importee_chunk =
                     chunk_graph.module_to_chunk[importee_id].expect("importee chunk should exist");
-                  cross_chunk_imports.insert(importee_chunk);
+                  cross_chunk_dynamic_imports.insert(importee_chunk);
                 }
               }
             })
@@ -147,12 +151,14 @@ impl<'a> GenerateStage<'a> {
     > = index_vec![FxHashMap::<ChunkId, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunks.len()];
     let mut index_cross_chunk_imports: IndexCrossChunkImports =
       index_vec![FxHashSet::default(); chunk_graph.chunks.len()];
+    let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
+      index_vec![IndexSet::default(); chunk_graph.chunks.len()];
 
     self.collect_potential_chunk_imports(
       chunk_graph,
       &mut chunk_meta_imports_vec,
       &mut chunk_meta_imports_from_external_modules_vec,
-      &mut index_cross_chunk_imports,
+      &mut index_cross_chunk_dynamic_imports,
     );
 
     // - Find out what imports are actually come from other chunks
@@ -261,20 +267,25 @@ impl<'a> GenerateStage<'a> {
       .iter_mut()
       .zip(
         imports_from_other_chunks_vec.into_iter().zip(
-          chunk_meta_imports_from_external_modules_vec
-            .into_iter()
-            .zip(index_sorted_cross_chunk_imports),
+          chunk_meta_imports_from_external_modules_vec.into_iter().zip(
+            index_sorted_cross_chunk_imports.into_iter().zip(index_cross_chunk_dynamic_imports),
+          ),
         ),
       )
       .par_bridge()
       .for_each(
         |(
           chunk,
-          (imports_from_other_chunks, (imports_from_external_modules, cross_chunk_imports)),
+          (
+            imports_from_other_chunks,
+            (imports_from_external_modules, (cross_chunk_imports, cross_chunk_dynamic_imports)),
+          ),
         )| {
           chunk.imports_from_other_chunks = imports_from_other_chunks;
           chunk.imports_from_external_modules = imports_from_external_modules;
           chunk.cross_chunk_imports = cross_chunk_imports;
+          chunk.cross_chunk_dynamic_imports =
+            cross_chunk_dynamic_imports.into_iter().collect::<Vec<_>>();
         },
       );
   }

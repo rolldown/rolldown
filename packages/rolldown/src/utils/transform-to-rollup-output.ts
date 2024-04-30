@@ -27,6 +27,9 @@ function transformToRollupOutputChunk(
     get imports() {
       return chunk.imports
     },
+    get dynamicImports() {
+      return chunk.dynamicImports
+    },
     exports: chunk.exports,
     isEntry: chunk.isEntry,
     facadeModuleId: chunk.facadeModuleId || null,

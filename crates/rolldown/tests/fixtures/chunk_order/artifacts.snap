@@ -1,0 +1,39 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/chunk_order
+---
+# Assets
+
+## b.mjs
+
+```js
+// b.js
+console.log('b');
+```
+## c.mjs
+
+```js
+// c.js
+console.log('c');
+```
+## entry1.mjs
+
+```js
+import "./c.mjs";
+```
+## entry2.mjs
+
+```js
+import "./c.mjs";
+import "./b.mjs";
+```
+## entry3.mjs
+
+```js
+import "./c.mjs";
+import "./b.mjs";
+
+// a.js
+console.log('a');
+```

@@ -18,7 +18,7 @@ type ChunkMetaImports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
 type ChunkMetaImportsForExternalModules =
   IndexVec<ChunkId, FxHashMap<ExternalModuleId, Vec<NamedImport>>>;
 type ChunkMetaExports = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
-type IndexCrossChunkImports = IndexVec<ChunkId, Vec<ChunkId>>;
+type IndexCrossChunkImports = IndexVec<ChunkId, FxHashSet<ChunkId>>;
 type IndexCrossChunkDynamicImports =
   IndexVec<ChunkId, IndexSet<ChunkId, BuildHasherDefault<FxHasher>>>;
 
@@ -150,7 +150,7 @@ impl<'a> GenerateStage<'a> {
       FxHashMap<ChunkId, Vec<CrossChunkImportItem>>,
     > = index_vec![FxHashMap::<ChunkId, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunks.len()];
     let mut index_cross_chunk_imports: IndexCrossChunkImports =
-      index_vec![vec![]; chunk_graph.chunks.len()];
+      index_vec![FxHashSet::default(); chunk_graph.chunks.len()];
     let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
       index_vec![IndexSet::default(); chunk_graph.chunks.len()];
 
@@ -177,7 +177,7 @@ impl<'a> GenerateStage<'a> {
         });
         // Check if the import is from another chunk
         if chunk_id != importee_chunk_id {
-          index_cross_chunk_imports[chunk_id].push(importee_chunk_id);
+          index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
           let imports_from_other_chunks = &mut imports_from_other_chunks_vec[chunk_id];
           imports_from_other_chunks
             .entry(importee_chunk_id)

@@ -1,6 +1,6 @@
 import { expect, vi } from 'vitest'
 import path from 'node:path'
-import { OutputChunk } from 'rollup'
+import type { RolldownOutputChunk } from '../../../../src'
 import { defineTest } from '@tests'
 
 const entry = path.join(__dirname, './main.js')
@@ -15,7 +15,7 @@ export default defineTest({
         name: 'test-plugin',
         writeBundle: (_options, bundle) => {
           writeBundleFn()
-          const chunk = bundle['main.js'] as OutputChunk
+          const chunk = bundle['main.js'] as RolldownOutputChunk
           expect(chunk.code.indexOf('console.log') > -1).toBe(true)
           expect(chunk.type).toBe('chunk')
           expect(chunk.fileName).toBe('main.js')
@@ -23,6 +23,7 @@ export default defineTest({
           expect(chunk.isDynamicEntry).toBe(false)
           expect(chunk.facadeModuleId).toBe(entry)
           expect(chunk.exports.length).toBe(0)
+          expect(chunk.imports).length(0)
           expect(chunk.moduleIds).toStrictEqual([entry])
           expect(Object.keys(chunk.modules).length).toBe(1)
         },

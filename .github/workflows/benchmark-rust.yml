@@ -25,48 +25,50 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  # https://github.com/CodSpeedHQ/codspeed-rust/issues/29
-  # codspeed-benchmark:
-  #   name: Codspeed Benchmark
-  #   if: false
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout Branch
-  #       uses: actions/checkout@v4
-  #       with:
-  #         # Whether Pull submodules for additional files
-  #         submodules: false
+  codspeed-benchmark:
+    name: Codspeed Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v4
+        with:
+          # Whether Pull submodules for additional files
+          submodules: false
 
-  #     - name: Install Rust
-  #       uses: moonrepo/setup-rust@v1
-  #       with:
-  #         bins: just, cargo-codspeed
-  #         cache-base: main
-  #         cache-target: release
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          bins: just, cargo-codspeed
+          cache-base: main
+          cache-target: release
 
-  #     - name: Install pnpm
-  #       uses: pnpm/action-setup@v3
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
 
-  #     - name: Install node
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 20
-  #         cache: pnpm
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
 
-  #     - name: Install dependencies
-  #       run: pnpm install
+      - name: Install dependencies
+        run: pnpm install
 
-  #     - name: Setup benchmark
-  #       run: just setup-bench
+      - name: Setup benchmark
+        run: just setup-bench
 
-  #     - name: Build the benchmark target(s)
-  #       run: cargo codspeed build -p bench
+      - name: Build the benchmark target(s)
+        run: cargo codspeed build -p bench --features codspeed
 
-  #     - name: Run the benchmarks
-  #       uses: CodSpeedHQ/action@v2
-  #       with:
-  #         run: cargo codspeed run -p bench
-  #         token: ${{ secrets.CODSPEED_TOKEN }}
+      - name: Run the benchmarks
+        uses: CodSpeedHQ/action@v2
+        with:
+          run: cargo codspeed run -p bench
+          token: ${{ secrets.CODSPEED_TOKEN }}
+        env:
+          # ensure that `root_dir()` from `crates/rolldown_testing/src/workspace.rs` works during the benchmark
+          # see https://github.com/adriencaccia/rolldown/pull/1 for explanation
+          CARGO_MANIFEST_DIR: ${{ github.workspace }}/target/codspeed
 
   benchmark-rust:
     name: Benchmark Rust

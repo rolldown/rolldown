@@ -1,5 +1,7 @@
-import type { RollupOutput, RolldownOutputChunk } from '../../src'
-import type { TestConfig } from './types'
+import { RollupOutput, RolldownOutputChunk } from '../../src'
+import nodePath from 'node:path'
+import nodeUrl from 'node:url'
+import assert from 'node:assert'
 
 export function getOutputChunkNames(output: RollupOutput) {
   return output.output
@@ -18,6 +20,26 @@ export function getOutputFileNames(output: RollupOutput) {
   return output.output.map((chunk) => chunk.fileName).sort()
 }
 
-export async function loadTestConfig(path: string): Promise<TestConfig> {
-  return await import(path).then((m) => m.default)
+/**
+ *
+ * @returns The absolute path to the `${WORKSPACE}/packages/rolldown/tests` directory
+ */
+export function testsDir(...joined: string[]) {
+  const __dirname = nodePath.dirname(nodeUrl.fileURLToPath(import.meta.url))
+  return nodePath.resolve(__dirname, '..', ...joined)
 }
+
+/**
+ *
+ * @returns The absolute path to the `${WORKSPACE}/packages/rolldown` directory
+ */
+export function projectDir(...joined: string[]) {
+  return testsDir('..')
+}
+
+assert.deepEqual(testsDir().split(nodePath.sep).slice(-4), [
+  'rolldown',
+  'packages',
+  'rolldown',
+  'tests',
+])

@@ -115,8 +115,8 @@ rayon              = "1.10.0"
 regex              = "1.10.4"
 rustc-hash         = "1.1.0"
 schemars           = "0.8.17"
-self_cell          = "1.0.3"
-serde              = { version = "1.0.199", features = ["derive"] }
+self_cell          = "1.0.4"
+serde              = { version = "1.0.200", features = ["derive"] }
 serde_json         = "1.0.116"
 smallvec           = "1.13.2"
 sugar_path         = { version = "1.2.0", features = ["cached_current_dir"] }

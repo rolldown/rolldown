@@ -98,7 +98,6 @@
     "emnapi": "^1.1.1",
     "execa": "^8.0.1",
     "glob": "^10.3.10",
-    "mri": "^1.2.0",
     "npm-run-all2": "^6.1.2",
     "rolldown": "workspace:*",
     "rollup": "^4.12.1",

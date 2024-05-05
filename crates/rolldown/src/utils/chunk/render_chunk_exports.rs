@@ -35,27 +35,49 @@ pub fn render_chunk_exports(
   if export_items.is_empty() {
     return None;
   }
-  let mut s = String::new();
-  let rendered_items = export_items
-    .into_iter()
-    .map(|(exported_name, export_ref)| {
-      let canonical_ref = graph.symbols.par_canonical_ref_for(export_ref);
-      let symbol = graph.symbols.get(canonical_ref);
-      let canonical_name = &this.canonical_names[&canonical_ref];
-      if let Some(ns_alias) = &symbol.namespace_alias {
-        let canonical_ns_name = &this.canonical_names[&ns_alias.namespace_ref];
-        let property_name = &ns_alias.property_name;
-        s.push_str(&format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
-      }
-      if canonical_name == &exported_name {
-        format!("{canonical_name}")
-      } else {
-        format!("{canonical_name} as {exported_name}")
-      }
-    })
-    .collect::<Vec<_>>();
-  s.push_str(&format!("export {{ {} }};", rendered_items.join(", "),));
-  Some(s)
+
+  match output_options.format {
+    OutputFormat::Esm => {
+      let mut s = String::new();
+      let rendered_items = export_items
+        .into_iter()
+        .map(|(exported_name, export_ref)| {
+          let canonical_ref = graph.symbols.par_canonical_ref_for(export_ref);
+          let symbol = graph.symbols.get(canonical_ref);
+          let canonical_name = &this.canonical_names[&canonical_ref];
+          if let Some(ns_alias) = &symbol.namespace_alias {
+            let canonical_ns_name = &this.canonical_names[&ns_alias.namespace_ref];
+            let property_name = &ns_alias.property_name;
+            s.push_str(&format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
+          }
+          if canonical_name == &exported_name {
+            format!("{canonical_name}")
+          } else {
+            format!("{canonical_name} as {exported_name}")
+          }
+        })
+        .collect::<Vec<_>>();
+      s.push_str(&format!("export {{ {} }};", rendered_items.join(", "),));
+      Some(s)
+    }
+    OutputFormat::Cjs => {
+      let mut s = String::new();
+      export_items.into_iter().for_each(|(exported_name, export_ref)| {
+        let canonical_ref = graph.symbols.par_canonical_ref_for(export_ref);
+        let symbol = graph.symbols.get(canonical_ref);
+        let canonical_name = &this.canonical_names[&canonical_ref];
+        if let Some(ns_alias) = &symbol.namespace_alias {
+          let canonical_ns_name = &this.canonical_names[&ns_alias.namespace_ref];
+          let property_name = &ns_alias.property_name;
+          s.push_str(&format!("exports.{exported_name} = {canonical_ns_name}.{property_name};;\n"));
+        } else {
+          s.push_str(&format!("exports.{exported_name} = {canonical_name};\n"));
+        }
+      });
+
+      Some(s)
+    }
+  }
 }
 
 fn get_export_items(this: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolRef)> {

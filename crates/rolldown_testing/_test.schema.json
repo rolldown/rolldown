@@ -166,8 +166,8 @@
     "OutputFormat": {
       "type": "string",
       "enum": [
-        "Esm",
-        "Cjs"
+        "esm",
+        "cjs"
       ]
     },
     "Platform": {

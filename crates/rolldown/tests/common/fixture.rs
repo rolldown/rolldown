@@ -4,7 +4,7 @@ use std::{
   process::Command,
 };
 
-use rolldown::{BundleOutput, Bundler, SourceMapType};
+use rolldown::{BundleOutput, Bundler, OutputFormat, SourceMapType};
 use rolldown_testing::TestConfig;
 
 fn default_test_input_item() -> rolldown::InputItem {
@@ -103,19 +103,24 @@ impl Fixture {
       bundle_options.cwd = Some(fixture_path.to_path_buf());
     }
 
+    let output_ext = match bundle_options.format {
+      Some(OutputFormat::Cjs) => "cjs",
+      _ => "mjs",
+    };
+
     if bundle_options.entry_file_names.is_none() {
       if with_hash {
-        bundle_options.entry_file_names = Some("[name]-[hash].mjs".to_string());
+        bundle_options.entry_file_names = Some(format!("[name]-[hash].{output_ext}"));
       } else {
-        bundle_options.entry_file_names = Some("[name].mjs".to_string());
+        bundle_options.entry_file_names = Some(format!("[name].{output_ext}"));
       }
     }
 
     if bundle_options.chunk_file_names.is_none() {
       if with_hash {
-        bundle_options.chunk_file_names = Some("[name]-[hash].mjs".to_string());
+        bundle_options.chunk_file_names = Some(format!("[name]-[hash].{output_ext}"));
       } else {
-        bundle_options.chunk_file_names = Some("[name].mjs".to_string());
+        bundle_options.chunk_file_names = Some(format!("[name].{output_ext}"));
       }
     }
 

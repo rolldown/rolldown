@@ -1,0 +1,14 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/dynamic_import_with_expression_cjs
+---
+# Assets
+
+## a_js.cjs
+
+```js
+// a.js
+import('foo');
+import(foo());
+```

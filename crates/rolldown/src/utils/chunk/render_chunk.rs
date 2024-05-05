@@ -40,6 +40,7 @@ pub async fn render_chunk(
     this,
     graph,
     chunk_graph,
+    options,
   ))));
 
   this

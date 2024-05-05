@@ -1,0 +1,16 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/import_fs_node_common_js
+---
+# Assets
+
+## entry_js.cjs
+
+```js
+const fs = require("fs");
+const { default: defaultValue, readFileSync } = require("fs");
+
+// entry.js
+console.log(fs, readFileSync, defaultValue);
+```

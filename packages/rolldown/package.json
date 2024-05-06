@@ -120,5 +120,8 @@
     "@rolldown/binding-win32-arm64-msvc": "workspace:*",
     "@rolldown/binding-win32-ia32-msvc": "workspace:*",
     "@rolldown/binding-win32-x64-msvc": "workspace:*"
+  },
+  "dependencies": {
+    "zod": "^3.23.6"
   }
 }

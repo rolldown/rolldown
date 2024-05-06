@@ -18,13 +18,13 @@ import {
 } from './bindingify-output-hooks'
 
 import type { Plugin } from './index'
-import type { RolldownNormalizedInputOptions } from '../options/input-options'
+import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type { NormalizedOutputOptions } from '../options/output-options'
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function bindingifyPlugin(
   plugin: Plugin,
-  options: RolldownNormalizedInputOptions,
+  options: NormalizedInputOptions,
   outputOptions: NormalizedOutputOptions,
 ): BindingPluginOptions {
   return {

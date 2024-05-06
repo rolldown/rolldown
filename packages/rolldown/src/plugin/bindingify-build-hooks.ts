@@ -2,13 +2,13 @@ import { normalizeHook } from '../utils/normalize-hook'
 import type { BindingPluginOptions } from '../binding'
 
 import type { Plugin } from './index'
-import { RolldownNormalizedInputOptions } from '../options/input-options'
+import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled, transformModuleInfo } from '../utils'
 import path from 'path'
 import { SourceMapInputObject } from '../types/sourcemap'
 
 export function bindingifyBuildStart(
-  options: RolldownNormalizedInputOptions,
+  options: NormalizedInputOptions,
   hook?: Plugin['buildStart'],
 ): BindingPluginOptions['buildStart'] {
   if (!hook) {

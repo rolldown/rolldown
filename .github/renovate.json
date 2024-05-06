@@ -18,7 +18,24 @@
       "matchPackageNames": ["napi", "napi-build", "napi-derive"],
       "rangeStrategy": "replace",
       "groupName": "napi-rs"
+    },
+    {
+      "groupName": "rust toolchain",
+      "matchManagers": ["regex"],
+      "matchPackageNames": ["rust"]
     }
   ],
-  "postUpdateOptions": ["pnpmDedupe"]
+  "postUpdateOptions": ["pnpmDedupe"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^rust-toolchain\\.toml?$"],
+      "matchStrings": [
+        "channel\\s*=\\s*\"(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)\""
+      ],
+      "depNameTemplate": "rust",
+      "lookupNameTemplate": "rust-lang/rust",
+      "datasourceTemplate": "github-releases"
+    }
+  ]
 }

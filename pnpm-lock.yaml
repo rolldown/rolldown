@@ -15,7 +15,7 @@ importers:
         specifier: ^0.7.0
         version: 0.7.0
       '@types/node':
-        specifier: ^20.11.26
+        specifier: ^20.12.8
         version: 20.12.8
       conventional-changelog-cli:
         specifier: ^5.0.0
@@ -268,7 +268,7 @@ importers:
         specifier: ^10.0.6
         version: 10.0.6
       '@types/node':
-        specifier: ^20.11.25
+        specifier: ^20.12.8
         version: 20.12.8
       buble:
         specifier: ^0.20.0

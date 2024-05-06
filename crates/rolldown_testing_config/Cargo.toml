@@ -13,6 +13,8 @@ rolldown_common = { workspace = true, features = ["deserialize_bundler_options"]
 schemars        = { workspace = true }
 serde           = { workspace = true, features = ["derive"] }
 serde_json      = { workspace = true }
+jsonschema      = { workspace = true }
+once_cell       = { workspace = true }
 
 
 [lints]

@@ -1,15 +1,13 @@
+import { bindingifyInputOptions } from '@src/options/bindingify-input-options'
 import { Bundler } from '../binding'
-import {
-  normalizeInputOptions,
-  type InputOptions,
-} from '../options/input-options'
-import { createInputOptionsAdapter } from '../options/input-options-adapter'
+import type { InputOptions } from '../options/input-options'
 import {
   type OutputOptions,
   normalizeOutputOptions,
   createOutputOptionsAdapter,
 } from '../options/output-options'
 import { initializeParallelPlugins } from './initialize-parallel-plugins'
+import { normalizeInputOptions } from './normalize-input-options'
 
 export async function createBundler(
   inputOptions: InputOptions,
@@ -25,9 +23,8 @@ export async function createBundler(
   try {
     const normalizedOutputOptions = normalizeOutputOptions(outputOptions)
     // Convert `NormalizedInputOptions` to `BindingInputOptions`
-    const bindingInputOptions = createInputOptionsAdapter(
+    const bindingInputOptions = bindingifyInputOptions(
       normalizedInputOptions,
-      inputOptions,
       normalizedOutputOptions,
     )
 

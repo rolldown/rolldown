@@ -2,10 +2,8 @@ import type {
   BindingHookResolveIdExtraOptions,
   BindingPluginContext,
   RenderedChunk,
-  BindingOutputs,
-  BindingOutputOptions,
 } from '../binding'
-import type { RolldownNormalizedInputOptions } from '../options/input-options'
+import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
 import type { SourceMapInput } from '../types/sourcemap'
 import { pathToFileURL } from 'node:url'
@@ -41,7 +39,7 @@ export interface Plugin {
   buildStart?: Hook<
     (
       this: PluginContext,
-      options: RolldownNormalizedInputOptions,
+      options: NormalizedInputOptions,
     ) => MaybePromise<NullValue>
   >
 
@@ -97,7 +95,7 @@ export interface Plugin {
   renderStart?: Hook<
     (
       outputOptions: NormalizedOutputOptions,
-      inputOptions: RolldownNormalizedInputOptions,
+      inputOptions: NormalizedInputOptions,
     ) => MaybePromise<NullValue>
   >
 

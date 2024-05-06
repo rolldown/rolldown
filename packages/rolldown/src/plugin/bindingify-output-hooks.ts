@@ -1,13 +1,13 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type { BindingPluginOptions } from '../binding'
-import { RolldownNormalizedInputOptions } from '../options/input-options'
+import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { NormalizedOutputOptions } from '../options/output-options'
 import type { Plugin } from './index'
 import { transformToOutputBundle } from '../utils/transform-to-rollup-output'
 
 export function bindingifyRenderStart(
   outputOptions: NormalizedOutputOptions,
-  options: RolldownNormalizedInputOptions,
+  options: NormalizedInputOptions,
   hook?: Plugin['renderStart'],
 ): BindingPluginOptions['renderStart'] {
   if (!hook) {

@@ -1,6 +1,7 @@
 // build.config.ts
 import { globSync } from 'glob'
 import nodeFs from 'node:fs'
+import nodeUrl from 'node:url'
 import nodePath from 'node:path'
 import { defineBuildConfig } from 'unbuild'
 
@@ -15,6 +16,12 @@ export default defineBuildConfig({
     './src/parallel-plugin',
     './src/parallel-plugin-worker',
   ],
+  alias: {
+    '@src': nodePath.resolve(
+      nodePath.dirname(nodeUrl.fileURLToPath(import.meta.url)),
+      'src',
+    ),
+  },
   sourcemap: true,
   clean: true,
   declaration: true, // generate .d.ts files

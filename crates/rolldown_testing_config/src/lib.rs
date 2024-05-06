@@ -11,7 +11,6 @@ use std::sync::Mutex;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[allow(clippy::struct_excessive_bools, clippy::pub_underscore_fields)]
 pub struct TestConfig {
-  #[serde(default)]
   pub config: rolldown_common::BundlerOptions,
   #[serde(default = "true_by_default")]
   /// If `false`, the compiled artifacts won't be executed.

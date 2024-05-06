@@ -35,7 +35,10 @@ impl Fixture {
   }
 
   pub fn test_config(&self) -> TestConfig {
-    TestConfig::from_config_path(&self.config_path(), &self.fixture_path.join("_config.schema.json"))
+    TestConfig::from_config_path(
+      &self.config_path(),
+      &self.fixture_path.join("_config.schema.json"),
+    )
   }
 
   pub fn exec(&self) {

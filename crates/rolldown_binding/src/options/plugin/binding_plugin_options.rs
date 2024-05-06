@@ -1,3 +1,4 @@
+use napi::bindgen_prelude::FromNapiValue;
 use serde::Deserialize;
 use std::fmt::Debug;
 
@@ -17,17 +18,17 @@ use super::{
 };
 
 /// none is parallel js plugin
-pub type BindingPluginOrParallelJsPluginPlaceholder = Option<BindingPluginOptions>;
+pub type BindingPluginOrParallelJsPluginPlaceholder = Option<BindingPluginOptions<true>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct BindingPluginOptions {
+pub struct BindingPluginOptions<const WEAK: bool = false> {
   pub name: String,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
-  pub build_start: Option<MaybeAsyncJsCallback<BindingPluginContext, ()>>,
+  pub build_start: Option<MaybeAsyncJsCallback<BindingPluginContext, (), WEAK>>,
 
   #[serde(skip_deserializing)]
   #[napi(
@@ -37,6 +38,7 @@ pub struct BindingPluginOptions {
     MaybeAsyncJsCallback<
       (String, Option<String>, BindingHookResolveIdExtraOptions),
       Option<BindingHookResolveIdOutput>,
+      WEAK,
     >,
   >,
 
@@ -49,58 +51,59 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>")]
-  pub load: Option<MaybeAsyncJsCallback<String, Option<BindingHookLoadOutput>>>,
+  pub load: Option<MaybeAsyncJsCallback<String, Option<BindingHookLoadOutput>, WEAK>>,
 
   #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(id: string, code: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
   )]
-  pub transform: Option<MaybeAsyncJsCallback<(String, String), Option<BindingHookLoadOutput>>>,
+  pub transform: Option<MaybeAsyncJsCallback<(String, String), Option<BindingHookLoadOutput>, WEAK>>,
 
   #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>"
   )]
-  pub module_parsed: Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingModuleInfo), ()>>,
+  pub module_parsed: Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingModuleInfo), (), WEAK>>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(error: Nullable<string>) => MaybePromise<VoidNullable>")]
-  pub build_end: Option<MaybeAsyncJsCallback<Option<String>, ()>>,
+  pub build_end: Option<MaybeAsyncJsCallback<Option<String>, (), WEAK>>,
 
   #[serde(skip_deserializing)]
   #[napi(
     ts_type = "(code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>"
   )]
   pub render_chunk:
-    Option<MaybeAsyncJsCallback<(String, RenderedChunk), Option<BindingHookRenderChunkOutput>>>,
+    Option<MaybeAsyncJsCallback<(String, RenderedChunk), Option<BindingHookRenderChunkOutput>, WEAK>>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "() => void")]
-  pub render_start: Option<MaybeAsyncJsCallback<(), ()>>,
+  pub render_start: Option<MaybeAsyncJsCallback<(), (), WEAK>>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(error: string) => void")]
-  pub render_error: Option<MaybeAsyncJsCallback<String, ()>>,
+  pub render_error: Option<MaybeAsyncJsCallback<String, (), WEAK>>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>")]
-  pub generate_bundle: Option<MaybeAsyncJsCallback<(BindingOutputs, bool), ()>>,
+  pub generate_bundle: Option<MaybeAsyncJsCallback<(BindingOutputs, bool), (), WEAK>>,
 
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(bundle: BindingOutputs) => MaybePromise<VoidNullable>")]
-  pub write_bundle: Option<MaybeAsyncJsCallback<BindingOutputs, ()>>,
+  pub write_bundle: Option<MaybeAsyncJsCallback<BindingOutputs, (), WEAK>>,
 }
 
-impl Debug for BindingPluginOptions {
+impl<const WEAK: bool> Debug for BindingPluginOptions<WEAK> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("BindingPluginOptions").field("name", &self.name).finish_non_exhaustive()
   }
 }
+
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BindingPluginWithIndex {
   pub index: u32,
-  pub plugin: BindingPluginOptions,
+  pub plugin: BindingPluginOptions<false>,
 }

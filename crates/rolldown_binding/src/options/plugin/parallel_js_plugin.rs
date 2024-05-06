@@ -23,7 +23,7 @@ pub struct ParallelJsPlugin {
 #[cfg(not(target_family = "wasm"))]
 impl ParallelJsPlugin {
   pub fn new_boxed(
-    plugins: Vec<BindingPluginOptions>,
+    plugins: Vec<BindingPluginOptions<false>>,
     worker_manager: Arc<WorkerManager>,
   ) -> Box<dyn Plugin> {
     let plugins = plugins.into_iter().map(JsPlugin::new).collect::<Vec<_>>().into_boxed_slice();

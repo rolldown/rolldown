@@ -8,31 +8,31 @@ use std::{borrow::Cow, ops::Deref, sync::Arc};
 use super::BindingPluginOptions;
 
 #[derive(Debug)]
-pub struct JsPlugin {
-  pub(crate) inner: BindingPluginOptions,
+pub struct JsPlugin<const WEAK: bool = false> {
+  pub(crate) inner: BindingPluginOptions<WEAK>,
 }
 
-impl Deref for JsPlugin {
-  type Target = BindingPluginOptions;
+impl<const WEAK: bool> Deref for JsPlugin<WEAK> {
+  type Target = BindingPluginOptions<WEAK>;
 
   fn deref(&self) -> &Self::Target {
     &self.inner
   }
 }
 
-impl JsPlugin {
+impl<const WEAK: bool> JsPlugin<WEAK> {
   #[cfg_attr(target_family = "wasm", allow(unused))]
-  pub(super) fn new(inner: BindingPluginOptions) -> Self {
+  pub(super) fn new(inner: BindingPluginOptions<WEAK>) -> Self {
     Self { inner }
   }
 
-  pub(crate) fn new_boxed(inner: BindingPluginOptions) -> Box<dyn Plugin> {
+  pub(crate) fn new_boxed(inner: BindingPluginOptions<WEAK>) -> Box<dyn Plugin> {
     Box::new(Self { inner })
   }
 }
 
 #[async_trait::async_trait]
-impl Plugin for JsPlugin {
+impl<const WEAK: bool> Plugin for JsPlugin<WEAK> {
   fn name(&self) -> Cow<'static, str> {
     Cow::Owned(self.name.clone())
   }

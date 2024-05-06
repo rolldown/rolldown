@@ -120,6 +120,7 @@
     "transpiling",
     "treeshake",
     "underfin",
+    "unref",
     "UNKEYED",
     "vite",
     "vitepress",

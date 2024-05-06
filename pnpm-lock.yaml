@@ -19,7 +19,7 @@ importers:
         version: 20.12.8
       conventional-changelog-cli:
         specifier: ^5.0.0
-        version: 5.0.0(conventional-commits-filter@5.0.0)
+        version: 5.0.0
       cspell:
         specifier: ^8.6.0
         version: 8.8.0
@@ -6049,12 +6049,11 @@ snapshots:
       style-mod: 4.1.2
       w3c-keyname: 2.2.8
 
-  '@conventional-changelog/git-client@1.0.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0)':
+  '@conventional-changelog/git-client@1.0.0(conventional-commits-parser@6.0.0)':
     dependencies:
       '@types/semver': 7.5.8
       semver: 7.6.0
     optionalDependencies:
-      conventional-commits-filter: 5.0.0
       conventional-commits-parser: 6.0.0
 
   '@cspell/cspell-bundled-dicts@8.8.0':
@@ -7865,10 +7864,10 @@ snapshots:
 
   conventional-changelog-atom@5.0.0: {}
 
-  conventional-changelog-cli@5.0.0(conventional-commits-filter@5.0.0):
+  conventional-changelog-cli@5.0.0:
     dependencies:
       add-stream: 1.0.0
-      conventional-changelog: 6.0.0(conventional-commits-filter@5.0.0)
+      conventional-changelog: 6.0.0
       meow: 13.2.0
       tempfile: 5.0.0
     transitivePeerDependencies:
@@ -7880,14 +7879,14 @@ snapshots:
     dependencies:
       compare-func: 2.0.0
 
-  conventional-changelog-core@8.0.0(conventional-commits-filter@5.0.0):
+  conventional-changelog-core@8.0.0:
     dependencies:
       '@hutson/parse-repository-url': 5.0.0
       add-stream: 1.0.0
       conventional-changelog-writer: 8.0.0
       conventional-commits-parser: 6.0.0
-      git-raw-commits: 5.0.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0)
-      git-semver-tags: 8.0.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0)
+      git-raw-commits: 5.0.0(conventional-commits-parser@6.0.0)
+      git-semver-tags: 8.0.0(conventional-commits-parser@6.0.0)
       hosted-git-info: 7.0.1
       normalize-package-data: 6.0.0
       read-package-up: 11.0.0
@@ -7917,13 +7916,13 @@ snapshots:
       meow: 13.2.0
       semver: 7.6.0
 
-  conventional-changelog@6.0.0(conventional-commits-filter@5.0.0):
+  conventional-changelog@6.0.0:
     dependencies:
       conventional-changelog-angular: 8.0.0
       conventional-changelog-atom: 5.0.0
       conventional-changelog-codemirror: 5.0.0
       conventional-changelog-conventionalcommits: 8.0.0
-      conventional-changelog-core: 8.0.0(conventional-commits-filter@5.0.0)
+      conventional-changelog-core: 8.0.0
       conventional-changelog-ember: 5.0.0
       conventional-changelog-eslint: 6.0.0
       conventional-changelog-express: 5.0.0
@@ -8436,17 +8435,17 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  git-raw-commits@5.0.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0):
+  git-raw-commits@5.0.0(conventional-commits-parser@6.0.0):
     dependencies:
-      '@conventional-changelog/git-client': 1.0.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0)
+      '@conventional-changelog/git-client': 1.0.0(conventional-commits-parser@6.0.0)
       meow: 13.2.0
     transitivePeerDependencies:
       - conventional-commits-filter
       - conventional-commits-parser
 
-  git-semver-tags@8.0.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0):
+  git-semver-tags@8.0.0(conventional-commits-parser@6.0.0):
     dependencies:
-      '@conventional-changelog/git-client': 1.0.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0)
+      '@conventional-changelog/git-client': 1.0.0(conventional-commits-parser@6.0.0)
       meow: 13.2.0
     transitivePeerDependencies:
       - conventional-commits-filter

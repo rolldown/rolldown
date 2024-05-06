@@ -1,42 +1,23 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":disablePeerDependencies"],
-  "labels": ["dependencies"],
+  "extends": [
+    "config:best-practices",
+    ":automergeStableNonMajor",
+    ":automergeRequireAllStatusChecks",
+    ":automergePr",
+    ":automergeTypes"
+  ],
   "ignorePaths": [
     "**/node_modules/**",
-    "**/bower_components/**",
-    "**/vendor/**",
     "**/examples/**",
-    "**/__tests__/**",
-    "**/test/**",
-    "**/__fixtures__/**"
+    "**/crates/rolldown/tests/**"
   ],
   "packageRules": [
     {
       "matchPackageNames": ["napi", "napi-build", "napi-derive"],
       "rangeStrategy": "replace",
       "groupName": "napi-rs"
-    },
-    {
-      "matchPackageNames": ["oxlint"],
-      "rangeStrategy": "replace",
-      "groupName": "oxlint"
-    },
-    {
-      "groupName": "all non-major dependencies",
-      "groupSlug": "all-minor-patch",
-      "matchPackagePatterns": ["*"],
-      "excludePackagePatterns": ["oxlint"],
-      "matchUpdateTypes": ["minor", "patch"]
     }
   ],
-  "commitMessagePrefix": "chore: ",
-  "commitMessageAction": "bump up",
-  "commitMessageTopic": "{{depName}} version",
-  "ignoreDeps": [],
-  "postUpdateOptions": ["pnpmDedupe"],
-  "lockFileMaintenance": {
-    "enabled": true,
-    "extends": ["schedule:weekly"]
-  }
+  "postUpdateOptions": ["pnpmDedupe"]
 }

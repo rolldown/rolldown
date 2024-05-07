@@ -29,26 +29,17 @@ export function bindingifyPlugin(
 ): BindingPluginOptions {
   return {
     name: plugin.name ?? 'unknown',
-    buildStart: bindingifyBuildStart(options, plugin.buildStart),
-    resolveId: bindingifyResolveId(plugin.resolveId),
-    resolveDynamicImport: bindingifyResolveDynamicImport(
-      plugin.resolveDynamicImport,
-    ),
-    buildEnd: bindingifyBuildEnd(plugin.buildEnd),
+    buildStart: bindingifyBuildStart(plugin, options),
+    resolveId: bindingifyResolveId(plugin, options),
+    resolveDynamicImport: bindingifyResolveDynamicImport(plugin, options),
+    buildEnd: bindingifyBuildEnd(plugin, options),
     transform: bindingifyTransform(plugin.transform),
-    moduleParsed: bindingifyModuleParsed(plugin.moduleParsed),
-    load: bindingifyLoad(plugin.load),
-    renderChunk: bindingifyRenderChunk(outputOptions, plugin.renderChunk),
-    renderStart: bindingifyRenderStart(
-      outputOptions,
-      options,
-      plugin.renderStart,
-    ),
-    renderError: bindingifyRenderError(plugin.renderError),
-    generateBundle: bindingifyGenerateBundle(
-      outputOptions,
-      plugin.generateBundle,
-    ),
-    writeBundle: bindingifyWriteBundle(outputOptions, plugin.writeBundle),
+    moduleParsed: bindingifyModuleParsed(plugin, options),
+    load: bindingifyLoad(plugin, options),
+    renderChunk: bindingifyRenderChunk(plugin, options, outputOptions),
+    renderStart: bindingifyRenderStart(plugin, options, outputOptions),
+    renderError: bindingifyRenderError(plugin, options),
+    generateBundle: bindingifyGenerateBundle(plugin, options, outputOptions),
+    writeBundle: bindingifyWriteBundle(plugin, options, outputOptions),
   }
 }

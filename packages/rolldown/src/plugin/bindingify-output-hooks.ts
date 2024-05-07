@@ -7,24 +7,31 @@ import { transformToOutputBundle } from '../utils/transform-to-rollup-output'
 import { transformPluginContext } from './plugin-context'
 
 export function bindingifyRenderStart(
-  outputOptions: NormalizedOutputOptions,
+  plugin: Plugin,
   options: NormalizedInputOptions,
-  hook?: Plugin['renderStart'],
+  outputOptions: NormalizedOutputOptions,
 ): BindingPluginOptions['renderStart'] {
+  const hook = plugin.renderStart
   if (!hook) {
     return undefined
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx) => {
-    handler.call(transformPluginContext(ctx), outputOptions, options)
+    handler.call(
+      transformPluginContext(options, ctx, plugin),
+      outputOptions,
+      options,
+    )
   }
 }
 
 export function bindingifyRenderChunk(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
   outputOptions: NormalizedOutputOptions,
-  hook?: Plugin['renderChunk'],
 ): BindingPluginOptions['renderChunk'] {
+  const hook = plugin.renderChunk
   if (!hook) {
     return undefined
   }
@@ -32,7 +39,7 @@ export function bindingifyRenderChunk(
 
   return async (ctx, code, chunk) => {
     const ret = await handler.call(
-      transformPluginContext(ctx),
+      transformPluginContext(options, ctx, plugin),
       code,
       chunk,
       outputOptions,
@@ -58,22 +65,26 @@ export function bindingifyRenderChunk(
 }
 
 export function bindingifyRenderError(
-  hook?: Plugin['renderError'],
+  plugin: Plugin,
+  options: NormalizedInputOptions,
 ): BindingPluginOptions['renderError'] {
+  const hook = plugin.renderError
   if (!hook) {
     return undefined
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, err) => {
-    handler.call(transformPluginContext(ctx), new Error(err))
+    handler.call(transformPluginContext(options, ctx, plugin), new Error(err))
   }
 }
 
 export function bindingifyGenerateBundle(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
   outputOptions: NormalizedOutputOptions,
-  hook?: Plugin['generateBundle'],
 ): BindingPluginOptions['generateBundle'] {
+  const hook = plugin.generateBundle
   if (!hook) {
     return undefined
   }
@@ -81,7 +92,7 @@ export function bindingifyGenerateBundle(
 
   return async (ctx, bundle, isWrite) => {
     handler.call(
-      transformPluginContext(ctx),
+      transformPluginContext(options, ctx, plugin),
       outputOptions,
       transformToOutputBundle(bundle),
       isWrite,
@@ -89,9 +100,11 @@ export function bindingifyGenerateBundle(
   }
 }
 export function bindingifyWriteBundle(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
   outputOptions: NormalizedOutputOptions,
-  hook?: Plugin['writeBundle'],
 ): BindingPluginOptions['writeBundle'] {
+  const hook = plugin.writeBundle
   if (!hook) {
     return undefined
   }
@@ -99,7 +112,7 @@ export function bindingifyWriteBundle(
 
   return async (ctx, bundle) => {
     handler.call(
-      transformPluginContext(ctx),
+      transformPluginContext(options, ctx, plugin),
       outputOptions,
       transformToOutputBundle(bundle),
     )

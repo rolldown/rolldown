@@ -6,6 +6,7 @@ import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled, transformModuleInfo } from '../utils'
 import path from 'path'
 import { SourceMapInputObject } from '../types/sourcemap'
+import { transformPluginContext } from './plugin-context'
 
 export function bindingifyBuildStart(
   options: NormalizedInputOptions,
@@ -17,7 +18,7 @@ export function bindingifyBuildStart(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx) => {
-    await handler.call(ctx, options)
+    await handler.call(transformPluginContext(ctx), options)
   }
 }
 
@@ -29,8 +30,11 @@ export function bindingifyBuildEnd(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (err) => {
-    await handler.call(null, err ? new Error(err) : undefined)
+  return async (ctx, err) => {
+    await handler.call(
+      transformPluginContext(ctx),
+      err ? new Error(err) : undefined,
+    )
   }
 }
 
@@ -42,9 +46,9 @@ export function bindingifyResolveId(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (specifier, importer, options) => {
+  return async (ctx, specifier, importer, options) => {
     const ret = await handler.call(
-      null,
+      transformPluginContext(ctx),
       specifier,
       importer ?? undefined,
       options,
@@ -69,8 +73,12 @@ export function bindingifyResolveDynamicImport(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (specifier, importer) => {
-    const ret = await handler.call(null, specifier, importer ?? undefined)
+  return async (ctx, specifier, importer) => {
+    const ret = await handler.call(
+      transformPluginContext(ctx),
+      specifier,
+      importer ?? undefined,
+    )
     if (ret == false || ret == null) {
       return
     }
@@ -91,7 +99,7 @@ export function bindingifyTransform(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (code, id) => {
+  return async (ctx, code, id) => {
     const ret = await handler.call(null, code, id)
 
     if (ret == null) {
@@ -121,8 +129,8 @@ export function bindingifyLoad(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (id) => {
-    const ret = await handler.call(null, id)
+  return async (ctx, id) => {
+    const ret = await handler.call(transformPluginContext(ctx), id)
 
     if (ret == null) {
       return
@@ -166,6 +174,9 @@ export function bindingifyModuleParsed(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, moduleInfo) => {
-    await handler.call(ctx, transformModuleInfo(moduleInfo))
+    await handler.call(
+      transformPluginContext(ctx),
+      transformModuleInfo(moduleInfo),
+    )
   }
 }

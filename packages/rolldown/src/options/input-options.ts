@@ -1,6 +1,7 @@
 import { Plugin, ParallelPlugin } from '../plugin'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
+import { LogLevelOptionSchema } from '../log/logging'
 
 const inputOptionsSchema = z.strictObject({
   input: z.string().or(z.string().array()).or(z.record(z.string())).optional(),
@@ -37,12 +38,7 @@ const inputOptionsSchema = z.strictObject({
     .or(z.literal('neutral'))
     .optional(),
   shimMissingExports: z.boolean().optional(),
-  logLevel: z
-    .literal('silent')
-    .or(z.literal('error'))
-    .or(z.literal('warn'))
-    .or(z.literal('info'))
-    .optional(),
+  logLevel: LogLevelOptionSchema.optional(),
 })
 
 export type InputOptions = z.infer<typeof inputOptionsSchema>

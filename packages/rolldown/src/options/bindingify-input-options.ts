@@ -55,6 +55,7 @@ export function bindingifyInputOptions(
       : undefined,
     platform: options.platform,
     shimMissingExports: options.shimMissingExports,
+    // @ts-ignore TODO: logLevel shouldn't include `error`
     logLevel: options.logLevel,
   }
 }

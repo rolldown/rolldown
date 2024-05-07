@@ -1,6 +1,5 @@
 import type {
   BindingHookResolveIdExtraOptions,
-  BindingPluginContext,
   RenderedChunk,
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
@@ -10,9 +9,7 @@ import { pathToFileURL } from 'node:url'
 import type { NormalizedOutputOptions } from '../options/output-options'
 import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
-
-// Use a type alias here, we might wrap `BindingPluginContext` in the future
-type PluginContext = BindingPluginContext
+import { PluginContext } from './plugin-context'
 
 type FormalHook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> = {
   handler: Handler
@@ -45,7 +42,7 @@ export interface Plugin {
 
   resolveId?: Hook<
     (
-      this: null,
+      this: PluginContext,
       source: string,
       importer: string | undefined,
       extraOptions: BindingHookResolveIdExtraOptions,
@@ -54,7 +51,7 @@ export interface Plugin {
 
   resolveDynamicImport?: Hook<
     (
-      this: null,
+      this: PluginContext,
       source: string,
       importer: string | undefined,
     ) => MaybePromise<ResolveIdResult>
@@ -62,7 +59,7 @@ export interface Plugin {
 
   load?: Hook<
     (
-      this: null,
+      this: PluginContext,
       id: string,
     ) => MaybePromise<
       NullValue | string | { code: string; map?: SourceMapInput }
@@ -88,12 +85,13 @@ export interface Plugin {
     (this: PluginContext, moduleInfo: ModuleInfo) => MaybePromise<NullValue>
   >
 
-  buildEnd?: Hook<(this: null, err?: Error) => MaybePromise<NullValue>>
+  buildEnd?: Hook<(this: PluginContext, err?: Error) => MaybePromise<NullValue>>
 
   // --- Generate hooks ---
 
   renderStart?: Hook<
     (
+      this: PluginContext,
       outputOptions: NormalizedOutputOptions,
       inputOptions: NormalizedInputOptions,
     ) => MaybePromise<NullValue>
@@ -101,7 +99,7 @@ export interface Plugin {
 
   renderChunk?: Hook<
     (
-      this: null,
+      this: PluginContext,
       code: string,
       chunk: RenderedChunk,
       outputOptions: NormalizedOutputOptions,
@@ -115,10 +113,13 @@ export interface Plugin {
     >
   >
 
-  renderError?: Hook<(this: null, error: Error) => MaybePromise<NullValue>>
+  renderError?: Hook<
+    (this: PluginContext, error: Error) => MaybePromise<NullValue>
+  >
 
   generateBundle?: Hook<
     (
+      this: PluginContext,
       outputOptions: NormalizedOutputOptions,
       bundle: OutputBundle,
       isWrite: boolean,
@@ -127,6 +128,7 @@ export interface Plugin {
 
   writeBundle?: Hook<
     (
+      this: PluginContext,
       outputOptions: NormalizedOutputOptions,
       bundle: OutputBundle,
     ) => MaybePromise<NullValue>

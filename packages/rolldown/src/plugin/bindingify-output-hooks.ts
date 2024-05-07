@@ -4,6 +4,7 @@ import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { NormalizedOutputOptions } from '../options/output-options'
 import type { Plugin } from './index'
 import { transformToOutputBundle } from '../utils/transform-to-rollup-output'
+import { transformPluginContext } from './plugin-context'
 
 export function bindingifyRenderStart(
   outputOptions: NormalizedOutputOptions,
@@ -15,8 +16,8 @@ export function bindingifyRenderStart(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async () => {
-    handler.call(null, outputOptions, options)
+  return async (ctx) => {
+    handler.call(transformPluginContext(ctx), outputOptions, options)
   }
 }
 
@@ -29,8 +30,13 @@ export function bindingifyRenderChunk(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (code, chunk) => {
-    const ret = await handler.call(null, code, chunk, outputOptions)
+  return async (ctx, code, chunk) => {
+    const ret = await handler.call(
+      transformPluginContext(ctx),
+      code,
+      chunk,
+      outputOptions,
+    )
 
     if (ret == null) {
       return
@@ -59,8 +65,8 @@ export function bindingifyRenderError(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (err) => {
-    handler.call(null, new Error(err))
+  return async (ctx, err) => {
+    handler.call(transformPluginContext(ctx), new Error(err))
   }
 }
 
@@ -73,8 +79,13 @@ export function bindingifyGenerateBundle(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (bundle, isWrite) => {
-    handler.call(null, outputOptions, transformToOutputBundle(bundle), isWrite)
+  return async (ctx, bundle, isWrite) => {
+    handler.call(
+      transformPluginContext(ctx),
+      outputOptions,
+      transformToOutputBundle(bundle),
+      isWrite,
+    )
   }
 }
 export function bindingifyWriteBundle(
@@ -86,7 +97,11 @@ export function bindingifyWriteBundle(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (bundle) => {
-    handler.call(null, outputOptions, transformToOutputBundle(bundle))
+  return async (ctx, bundle) => {
+    handler.call(
+      transformPluginContext(ctx),
+      outputOptions,
+      transformToOutputBundle(bundle),
+    )
   }
 }

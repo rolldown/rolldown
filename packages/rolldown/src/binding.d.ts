@@ -115,17 +115,17 @@ export interface BindingPluginContextResolveOptions {
 export interface BindingPluginOptions {
   name: string
   buildStart?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
-  resolveId?: (specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraOptions) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
-  resolveDynamicImport?: (specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
-  load?: (id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
-  transform?: (id: string, code: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraOptions) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  load?: (ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  transform?: (ctx: BindingPluginContext, id: string, code: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
-  buildEnd?: (error: Nullable<string>) => MaybePromise<VoidNullable>
-  renderChunk?: (code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
-  renderStart?: () => void
-  renderError?: (error: string) => void
-  generateBundle?: (bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>
-  writeBundle?: (bundle: BindingOutputs) => MaybePromise<VoidNullable>
+  buildEnd?: (ctx: BindingPluginContext, error: Nullable<string>) => MaybePromise<VoidNullable>
+  renderChunk?: (ctx: BindingPluginContext, code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
+  renderStart?: (ctx: BindingPluginContext) => void
+  renderError?: (ctx: BindingPluginContext, error: string) => void
+  generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>
+  writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
 }
 
 export interface BindingPluginWithIndex {

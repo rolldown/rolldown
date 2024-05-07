@@ -8,5 +8,4 @@ import { Plugin, ParallelPlugin } from '../plugin'
 export interface NormalizedInputOptions extends InputOptions {
   input: RollupNormalizedInputOptions['input']
   plugins: (Plugin | ParallelPlugin)[]
-  onLog: LogHandler
 }

@@ -18,7 +18,8 @@ export function transformPluginContext(
   context: BindingPluginContext,
   plugin: Plugin,
 ): PluginContext {
-  const { onLog } = options
+  // TODO add `onLog` option
+  const onLog = () => {}
   const pluginName = plugin.name || 'unknown'
   const logLevel = options.logLevel || LOG_LEVEL_INFO
   return {

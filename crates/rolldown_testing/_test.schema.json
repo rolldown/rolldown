@@ -149,7 +149,8 @@
     "InputItem": {
       "type": "object",
       "required": [
-        "import"
+        "import",
+        "name"
       ],
       "properties": {
         "import": {

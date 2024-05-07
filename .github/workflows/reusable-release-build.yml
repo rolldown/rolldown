@@ -71,9 +71,9 @@ jobs:
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl;
               pnpm ci:build-release-binding -x --target aarch64-unknown-linux-musl
           - os: ubuntu-latest
-            target: wasm32-wasi-preview1-threads
+            target: wasm32-wasip1-threads
             build: |
-              export CARGO_BUILD_TARGET=wasm32-wasi-preview1-threads;
+              export CARGO_BUILD_TARGET=wasm32-wasip1-threads;
               pnpm --filter rolldown build-binding:wasi:release
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}

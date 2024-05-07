@@ -52,8 +52,8 @@
     "artifacts": "napi artifacts --cwd ./src --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
     "build-binding": "napi build -o=./src --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts",
     "build-binding:release": "pnpm build-binding --release",
-    "build-binding:wasi": "pnpm build-binding --target wasm32-wasi-preview1-threads",
-    "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasi-preview1-threads",
+    "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
+    "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
     "build-node": "unbuild",
     "build-native:debug": "run-s build-binding build-node",
@@ -79,7 +79,7 @@
       "aarch64-apple-darwin",
       "aarch64-unknown-linux-musl",
       "aarch64-pc-windows-msvc",
-      "wasm32-wasi-preview1-threads"
+      "wasm32-wasip1-threads"
     ],
     "wasm": {
       "initialMemory": 16384,

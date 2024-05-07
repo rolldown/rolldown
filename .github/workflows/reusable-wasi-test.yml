@@ -28,7 +28,7 @@ jobs:
         with:
           bins: just
           cache-base: main
-          targets: wasm32-wasi-preview1-threads
+          targets: wasm32-wasip1-threads
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3

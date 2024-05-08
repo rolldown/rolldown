@@ -43,3 +43,17 @@ Rolldown is currently in active development and not usable for production yet. W
   --vp-home-hero-name-background: -webkit-linear-gradient(90deg, #FF5D13, #F0DB4F);
 }
 </style>
+
+<script setup>
+import { onMounted } from 'vue'
+
+onMounted(() => {
+  const urlParams = new URLSearchParams(window.location.search)
+  if (urlParams.get('uwu') != null) {
+    const img = document.querySelector('.VPHero .VPImage.image-src')
+    img.src = '/rolldown-uwu.png'
+    img.alt = 'Rolldown Kawaii Logo by @icarusgkx'
+    img.style.maxWidth = '540px'
+  }
+})
+</script>

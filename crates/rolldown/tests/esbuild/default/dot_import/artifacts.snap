@@ -1,0 +1,22 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 167
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/dot_import
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
+// index.js
+var require_dot_import_index = __commonJSMin((exports, module) => {
+	exports.x = 123;
+});
+
+// entry.js
+var import_dot_import_index = __toESM(require_dot_import_index());
+console.log(import_dot_import_index.x);
+```

@@ -12,8 +12,9 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+jsonschema              = { workspace = true }
+once_cell               = { workspace = true }
 rolldown_testing_config = { workspace = true }
-schemars                = { workspace = true }
 serde_json              = { workspace = true }
 sugar_path              = { workspace = true }
 

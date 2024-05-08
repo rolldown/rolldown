@@ -35,7 +35,7 @@
   "json.schemas": [
     {
       "fileMatch": ["_config.json"],
-      "url": "./crates/rolldown_testing/_test.schema.json"
+      "url": "./crates/rolldown_testing/_config.schema.json"
     }
   ],
   "search.exclude": {

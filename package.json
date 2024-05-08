@@ -30,7 +30,7 @@
     "rolldown": "workspace:*",
     "@ls-lint/ls-lint": "^2.2.2",
     "@taplo/cli": "^0.7.0",
-    "@types/node": "20.12.10",
+    "@types/node": "20.12.11",
     "conventional-changelog-cli": "^5.0.0",
     "cspell": "^8.6.0",
     "husky": "^9.0.11",

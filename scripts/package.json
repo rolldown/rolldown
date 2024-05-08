@@ -15,7 +15,7 @@
     "change-case": "^5.4.3",
     "debug": "^4.3.4",
     "dedent": "^1.5.1",
-    "execa": "^8.0.1",
+    "execa": "^9.0.0",
     "fast-glob": "^3.3.2",
     "fs-extra": "^11.2.0",
     "semver": "^7.6.0",

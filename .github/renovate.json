@@ -12,24 +12,34 @@
   ],
   "packageRules": [
     {
+      "automerge": true,
+      "matchUpdateTypes": ["patch", "minor", "lockFileMaintenance", "pin"]
+    },
+    {
+      "matchManagers": ["custom.regex"],
+      "matchPackageNames": ["rustc", "oxlint"]
+    },
+    {
+      "automerge": true,
+      "matchUpdateTypes": ["patch"],
+      "excludePackageNames": ["rustc", "oxlint"],
+      "groupName": "patch dependencies"
+    },
+    {
+      "automerge": true,
+      "matchUpdateTypes": ["minor"],
+      "excludePackageNames": ["rustc"],
+      "groupName": "minor dependencies"
+    },
+    {
+      "automerge": true,
+      "matchPackagePrefixes": ["@types/"],
+      "groupName": "`@types/*` dependencies"
+    },
+    {
       "matchPackageNames": ["napi", "napi-build", "napi-derive"],
       "rangeStrategy": "replace",
       "groupName": "napi-rs"
-    },
-    {
-      "automerge": true,
-      "autoApprove": true,
-      "matchUpdateTypes": ["minor", "patch", "pin", "lockFileMaintenance"]
-    },
-    {
-      "automerge": true,
-      "autoApprove": true,
-      "matchPackagePrefixes": ["@types/"]
-    },
-    {
-      "groupName": "rust toolchain",
-      "matchManagers": ["custom.regex"],
-      "matchPackageNames": ["rustc"]
     }
   ],
   "postUpdateOptions": ["pnpmDedupe"],

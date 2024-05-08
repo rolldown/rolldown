@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 167
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/external_packages
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import "pkg1";
+import "pkg2";
+
+// file.js
+console.log('file');
+
+// libs/pkg3.js
+console.log('pkg3');
+```

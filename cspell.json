@@ -64,6 +64,7 @@
     "doctest",
     "emnapi",
     "esbuild",
+    "evanw",
     "execa",
     "Finalizer",
     "hashbang",
@@ -73,8 +74,10 @@
     "iife",
     "importee",
     "importstar",
+    "indexmap",
     "insta",
     "instanceof",
+    "jsonschema",
     "justfile",
     "libc",
     "Lukas",
@@ -108,6 +111,7 @@
     "serde",
     "smallvec",
     "sourcemaps",
+    "Stmts",
     "struct",
     "structs",
     "systemjs",
@@ -119,6 +123,7 @@
     "tinybench",
     "transpiling",
     "treeshake",
+    "typeof",
     "underfin",
     "UNKEYED",
     "vite",
@@ -126,10 +131,6 @@
     "wasi",
     "WASI",
     "Yinan",
-    "Yunfei",
-    "evanw",
-    "Stmts",
-    "typeof",
-    "indexmap"
+    "Yunfei"
   ]
 }

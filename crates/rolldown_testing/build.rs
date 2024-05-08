@@ -12,7 +12,7 @@ fn main() {
   let schema = schema_for!(TestConfig);
   let scheme_path =
     PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").expect("Should have CARGO_MANIFEST_DIR"))
-      .join("_test.schema.json");
+      .join("_config.schema.json");
 
   fs::write(scheme_path, to_string_pretty(&schema).expect("Should be valid JSON"))
     .expect("Failed to write schema");

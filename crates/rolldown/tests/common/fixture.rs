@@ -5,7 +5,7 @@ use std::{
 };
 
 use rolldown::{BundleOutput, Bundler, OutputFormat, SourceMapType};
-use rolldown_testing::TestConfig;
+use rolldown_testing::test_config::{read_test_config, TestConfig};
 
 fn default_test_input_item() -> rolldown::InputItem {
   rolldown::InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }
@@ -35,10 +35,7 @@ impl Fixture {
   }
 
   pub fn test_config(&self) -> TestConfig {
-    TestConfig::from_config_path(
-      &self.config_path(),
-      &self.fixture_path.join("_config.schema.json"),
-    )
+    read_test_config(&self.config_path())
   }
 
   pub fn exec(&self) {

@@ -2,9 +2,6 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "TestConfig",
   "type": "object",
-  "required": [
-    "config"
-  ],
   "properties": {
     "_comment": {
       "description": "A workaround for writing comments in JSON.",

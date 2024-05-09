@@ -9,6 +9,9 @@ input_file: crates/rolldown/tests/esbuild/dce/multiple_declaration_tree_shaking
 
 ```js
 // function2.js
+function x() {
+	return 1;
+}
 console.log(x());
 function x() {
 	return 2;
@@ -18,7 +21,13 @@ function x() {
 
 ```js
 // function3.js
+function x() {
+	return 1;
+}
 console.log(x());
+function x() {
+	return 2;
+}
 console.log(x());
 function x() {
 	return 3;
@@ -28,6 +37,7 @@ function x() {
 
 ```js
 // var2.js
+var x = 1;
 console.log(x);
 var x = 2;
 ```
@@ -35,7 +45,9 @@ var x = 2;
 
 ```js
 // var3.js
+var x = 1;
 console.log(x);
+var x = 2;
 console.log(x);
 var x = 3;
 ```

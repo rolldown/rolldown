@@ -194,7 +194,7 @@ importers:
         specifier: ^9.0.0
         version: 9.0.0
       glob:
-        specifier: ^10.3.10
+        specifier: ^10.3.12
         version: 10.3.12
       mri:
         specifier: ^1.2.0
@@ -4928,6 +4928,7 @@ packages:
   svgo@3.3.0:
     resolution: {integrity: sha512-y350OL6eAmhDbWcASdukXoG0MbpdfJQPHwEUAaTW1HBNSO2VErJ35fs7uNLSWjzFDhfua517RcouBzjZoO1JFg==}
     engines: {node: '>=14.0.0'}
+    deprecated: introduced breaking changes, reverted in v3.3.2
     hasBin: true
 
   tabbable@6.2.0:

@@ -1,8 +1,7 @@
-" +
-"var remove;\n" +
-"var alsoKeep;\n" +
-"let a = `${keep}`\n" +
-"let b = `${123}`\n" +
-"let c = `${keep ? 1 : 2n}`\n" +
-"let d = `${remove ? 1 : 2n}`\n" +
-"let e = `${alsoKeep}`\n
+var remove;
+var alsoKeep;
+let a = `${keep}`
+let b = `${123}`
+let c = `${keep ? 1 : 2n}`
+let d = `${remove ? 1 : 2n}`
+let e = `${alsoKeep}`

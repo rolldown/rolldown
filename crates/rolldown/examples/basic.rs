@@ -6,10 +6,11 @@ use sugar_path::SugarPath;
 async fn main() {
   let root = workspace::crate_dir("rolldown");
   let cwd = root.join("./examples").normalize();
+  dbg!(&cwd);
   let mut bundler = Bundler::new(BundlerOptions {
     input: Some(vec![
-      InputItem { name: Some("react-dom".to_string()), import: "react-dom".to_string() },
-      InputItem { name: Some("react".to_string()), import: "react".to_string() },
+      InputItem { name: Some("basic".to_string()), import: "./index.js".to_string() },
+      // InputItem { name: Some("react".to_string()), import: "react".to_string() },
     ]),
     cwd: cwd.into(),
     sourcemap: Some(SourceMapType::File),

@@ -54,14 +54,28 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
     canonical_ref = namespace_alias.namespace_ref;
   }
   include_module(ctx, canonical_ref_module);
-  canonical_ref_module
-    .stmt_infos
-    .declared_stmts_by_symbol(&canonical_ref)
+
+  let need_merge_duplicate_function_decl = canonical_ref_module.stmt_infos.len() > 1;
+
+  let declared_stmts =
+    canonical_ref_module.stmt_infos.declared_stmts_by_symbol(&canonical_ref).to_vec();
+
+  // dbg!(&canonical_ref.symbol_id);
+  dbg!(&ctx.symbols.get_original_name(canonical_ref));
+  dbg!(&declared_stmts
     .iter()
-    .copied()
-    .for_each(|stmt_info_id| {
-      include_statement(ctx, canonical_ref_module, stmt_info_id);
-    });
+    .map(|item| canonical_ref_module.stmt_infos[*item].clone())
+    .collect::<Vec<_>>());
+  dbg!(&declared_stmts);
+
+  if let Some(stmt_info_id) =
+    canonical_ref_module.stmt_infos.declared_stmts_by_symbol(&canonical_ref).last()
+  {
+    include_statement(ctx, canonical_ref_module, *stmt_info_id);
+  };
+  // .copied()
+  // .for_each(|stmt_info_id| {
+  // });
 }
 
 fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoId) {
@@ -117,6 +131,9 @@ impl LinkStage<'_> {
       module.is_included = is_module_included_vec[module.id];
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
+        if module.pretty_path != "<runtime>" {
+          // dbg!(&module.stmt_infos);
+        }
       });
     });
 

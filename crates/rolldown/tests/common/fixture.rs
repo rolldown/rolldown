@@ -79,12 +79,11 @@ impl Fixture {
 
     let output = command.output().unwrap();
 
-    #[allow(clippy::print_stdout)]
     if !output.status.success() {
       let stdout_utf8 = std::str::from_utf8(&output.stdout).unwrap();
       let stderr_utf8 = std::str::from_utf8(&output.stderr).unwrap();
 
-      println!("⬇️⬇️ Failed to execute command ⬇️⬇️\n{command:?}\n⬆️⬆️ end  ⬆️⬆️");
+      eprintln!("⬇️⬇️ Failed to execute command ⬇️⬇️\n{command:?}\n⬆️⬆️ end  ⬆️⬆️");
       panic!("⬇️⬇️ stderr ⬇️⬇️\n{stderr_utf8}\n⬇️⬇️ stdout ⬇️⬇️\n{stdout_utf8}\n⬆️⬆️ end  ⬆️⬆️",);
     }
   }

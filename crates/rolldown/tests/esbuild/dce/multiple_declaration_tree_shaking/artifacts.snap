@@ -1,0 +1,41 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/multiple_declaration_tree_shaking
+---
+# Assets
+
+## function2_js.mjs
+
+```js
+// function2.js
+console.log(x());
+function x() {
+	return 2;
+}
+```
+## function3_js.mjs
+
+```js
+// function3.js
+console.log(x());
+console.log(x());
+function x() {
+	return 3;
+}
+```
+## var2_js.mjs
+
+```js
+// var2.js
+console.log(x);
+var x = 2;
+```
+## var3_js.mjs
+
+```js
+// var3.js
+console.log(x);
+console.log(x);
+var x = 3;
+```

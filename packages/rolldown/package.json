@@ -97,7 +97,7 @@
     "consola": "^3.2.3",
     "emnapi": "^1.1.1",
     "execa": "^9.0.0",
-    "glob": "^10.3.10",
+    "glob": "^10.3.12",
     "mri": "^1.2.0",
     "npm-run-all2": "^6.1.2",
     "rolldown": "workspace:*",

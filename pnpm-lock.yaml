@@ -192,7 +192,7 @@ importers:
         version: 1.1.1(node-addon-api@8.0.0)
       execa:
         specifier: ^9.0.0
-        version: 9.0.0
+        version: 9.0.1
       glob:
         specifier: ^10.3.12
         version: 10.3.12
@@ -315,7 +315,7 @@ importers:
         version: 1.5.3
       execa:
         specifier: ^9.0.0
-        version: 9.0.0
+        version: 9.0.1
       fast-glob:
         specifier: ^3.3.2
         version: 3.3.2
@@ -324,7 +324,7 @@ importers:
         version: 11.2.0
       semver:
         specifier: ^7.6.0
-        version: 7.6.1
+        version: 7.6.2
       tree-sitter:
         specifier: ^0.21.0
         version: 0.21.1
@@ -3504,8 +3504,8 @@ packages:
     resolution: {integrity: sha512-VyhnebXciFV2DESc+p6B+y0LjSm0krU4OgJN44qFAhBY0TJ+1V61tYD2+wHusZ6F9n5K+vl8k0sTy7PEfV4qpg==}
     engines: {node: '>=16.17'}
 
-  execa@9.0.0:
-    resolution: {integrity: sha512-YqlYPdTp6UMdt0WEM8QKeBR8ORtgxWP7ZB5NB9AMlfGWg32Fg48j6uZdKfhG2o6cNJBIRPF0Ok93R0vY37oBWQ==}
+  execa@9.0.1:
+    resolution: {integrity: sha512-U5ck8xJmf3sVebV1v+Hh436VWHVHUfzkdbKJynd3kCP9sQRDxCY5x2Tml5lGB7XM6lpj6ATfgWWqynDt2MBLJg==}
     engines: {node: '>=18'}
 
   external-editor@3.1.0:
@@ -4740,8 +4740,8 @@ packages:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
 
-  semver@7.6.1:
-    resolution: {integrity: sha512-f/vbBsu+fOiYt+lmwZV0rVwJScl46HppnOA1ZvIuBWKOTlllpyJ3bfVax76/OrhCH38dyxoDIA8K7uB963IYgA==}
+  semver@7.6.2:
+    resolution: {integrity: sha512-FNAIBWCx9qcRhoHcgcJ0gvU7SN1lYU2ZXuSfl04bSC5OpvDHFyJCjdNHomPXxjQlCBU67YW64PzY7/VIEH7F2w==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -6251,7 +6251,7 @@ snapshots:
   '@conventional-changelog/git-client@1.0.1(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0)':
     dependencies:
       '@types/semver': 7.5.8
-      semver: 7.6.1
+      semver: 7.6.2
     optionalDependencies:
       conventional-commits-filter: 5.0.0
       conventional-commits-parser: 6.0.0
@@ -6751,7 +6751,7 @@ snapshots:
       inquirer: 9.2.20
       js-yaml: 4.1.0
       lodash-es: 4.17.21
-      semver: 7.6.1
+      semver: 7.6.2
       toml: 3.0.0
       typanion: 3.14.0
       wasm-sjlj: 1.0.5
@@ -7207,7 +7207,7 @@ snapshots:
       ramda: '@pnpm/ramda@0.28.1'
       right-pad: 1.0.1
       rxjs: 7.8.1
-      semver: 7.6.1
+      semver: 7.6.2
       stacktracey: 2.1.8
       string-length: 4.0.2
       strip-ansi: 6.0.1
@@ -7294,7 +7294,7 @@ snapshots:
       detect-libc: 2.0.3
       execa: safe-execa@0.1.2
       mem: 8.1.1
-      semver: 7.6.1
+      semver: 7.6.2
 
   '@pnpm/pnpmfile@5.0.7(@pnpm/logger@5.0.0)':
     dependencies:
@@ -8193,7 +8193,7 @@ snapshots:
       conventional-commits-filter: 5.0.0
       handlebars: 4.7.8
       meow: 13.2.0
-      semver: 7.6.1
+      semver: 7.6.2
 
   conventional-changelog@6.0.0(conventional-commits-filter@5.0.0):
     dependencies:
@@ -8318,7 +8318,7 @@ snapshots:
       fast-json-stable-stringify: 2.1.0
       file-entry-cache: 8.0.0
       get-stdin: 9.0.0
-      semver: 7.6.1
+      semver: 7.6.2
       strip-ansi: 7.1.0
       vscode-uri: 3.0.8
 
@@ -8618,7 +8618,7 @@ snapshots:
       signal-exit: 4.1.0
       strip-final-newline: 3.0.0
 
-  execa@9.0.0:
+  execa@9.0.1:
     dependencies:
       '@sindresorhus/merge-streams': 4.0.0
       cross-spawn: 7.0.3
@@ -9202,7 +9202,7 @@ snapshots:
       pkg-types: 1.1.0
       postcss: 8.4.38
       postcss-nested: 6.0.1(postcss@8.4.38)
-      semver: 7.6.1
+      semver: 7.6.2
     optionalDependencies:
       typescript: 5.4.5
 
@@ -9268,7 +9268,7 @@ snapshots:
     dependencies:
       hosted-git-info: 7.0.2
       is-core-module: 2.13.1
-      semver: 7.6.1
+      semver: 7.6.2
       validate-npm-package-license: 3.0.4
 
   normalize-path@3.0.0: {}
@@ -9829,7 +9829,7 @@ snapshots:
 
   semver@6.3.1: {}
 
-  semver@7.6.1: {}
+  semver@7.6.2: {}
 
   serialize-javascript@6.0.0:
     dependencies:

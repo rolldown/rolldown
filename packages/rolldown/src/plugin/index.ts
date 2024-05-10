@@ -49,6 +49,10 @@ export interface Plugin {
     ) => MaybePromise<ResolveIdResult>
   >
 
+  /**
+   * @deprecated
+   * This hook is only for rollup plugin compatibility. Please use `resolveId` instead.
+   */
   resolveDynamicImport?: Hook<
     (
       this: PluginContext,

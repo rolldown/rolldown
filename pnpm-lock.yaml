@@ -21,7 +21,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0(conventional-commits-filter@5.0.0)
       cspell:
-        specifier: ^8.6.0
+        specifier: ^8.8.0
         version: 8.8.0
       husky:
         specifier: ^9.0.11

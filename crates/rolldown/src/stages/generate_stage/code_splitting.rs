@@ -31,7 +31,7 @@ impl<'a> GenerateStage<'a> {
       if let ModuleId::Normal(importee_id) = rec.resolved_module {
         // Module imported dynamically will be considered as an entry,
         // so we don't need to include it in this chunk
-        if rec.kind != ImportKind::DynamicImport {
+        if !matches!(rec.kind, ImportKind::DynamicImport) {
           self.determine_reachable_modules_for_entry(importee_id, entry_index, module_to_bits);
         }
       }

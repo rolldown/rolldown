@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use rolldown_common::{ImportKind, ModuleType, Platform, ResolveOptions, ResolvedPath};
 use rolldown_error::{BuildError, BuildResult};
 use rolldown_fs::FileSystem;
@@ -34,11 +35,11 @@ impl<F: FileSystem + Default> Resolver<F> {
       }
       Platform::Neutral => {}
     }
-    default_conditions.dedup();
+    default_conditions = default_conditions.into_iter().unique().collect();
     import_conditions.extend(default_conditions.clone());
     require_conditions.extend(default_conditions.clone());
-    import_conditions.dedup();
-    require_conditions.dedup();
+    import_conditions = import_conditions.into_iter().unique().collect();
+    require_conditions = require_conditions.into_iter().unique().collect();
 
     let main_fields = raw_resolve.main_fields.clone().unwrap_or_else(|| match platform {
       Platform::Node => {

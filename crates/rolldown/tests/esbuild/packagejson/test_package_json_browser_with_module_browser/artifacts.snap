@@ -8,11 +8,11 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 ## entry.mjs
 
 ```js
-// node_modules/demo-pkg/main.esm.js
-function main_esm_default() {
+// node_modules/demo-pkg/main.browser.esm.js
+function main_browser_esm_default() {
 	return 123;
 }
 
 // src/entry.js
-console.log(main_esm_default());
+console.log(main_browser_esm_default());
 ```

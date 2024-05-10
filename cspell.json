@@ -71,14 +71,17 @@
     "hasher",
     "hashers",
     "HRTB",
+    "icarusgkx",
     "iife",
     "importee",
     "importstar",
     "indexmap",
     "insta",
     "instanceof",
+    "Itertools",
     "jsonschema",
     "justfile",
+    "Kawaii",
     "libc",
     "Lukas",
     "memchr",
@@ -131,8 +134,6 @@
     "wasi",
     "WASI",
     "Yinan",
-    "Yunfei",
-    "Kawaii",
-    "icarusgkx"
+    "Yunfei"
   ]
 }

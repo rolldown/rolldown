@@ -1900,6 +1900,7 @@ dependencies = [
 name = "rolldown_resolver"
 version = "0.0.1"
 dependencies = [
+ "itertools",
  "oxc_resolver",
  "rolldown_common",
  "rolldown_error",

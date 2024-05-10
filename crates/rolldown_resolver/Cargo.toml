@@ -13,6 +13,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+itertools       = { workspace = true }
 oxc_resolver    = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_error  = { workspace = true }

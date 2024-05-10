@@ -225,8 +225,7 @@ impl NormalModuleTask {
       }
     }
 
-    let info =
-      resolve_id(resolver, plugin_driver, specifier, Some(importer), options, false).await?;
+    let info = resolve_id(resolver, plugin_driver, specifier, Some(importer), options).await?;
 
     match info {
       Ok(mut info) => {

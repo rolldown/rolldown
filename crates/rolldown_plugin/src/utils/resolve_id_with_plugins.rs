@@ -22,7 +22,6 @@ pub async fn resolve_id_with_plugins(
   request: &str,
   importer: Option<&str>,
   options: HookResolveIdExtraOptions,
-  _preserve_symlinks: bool,
 ) -> anyhow::Result<BuildResult<ResolvedRequestInfo>> {
   let import_kind = options.kind;
   if import_kind == ImportKind::DynamicImport {

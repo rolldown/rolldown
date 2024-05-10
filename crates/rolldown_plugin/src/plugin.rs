@@ -35,6 +35,9 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     Ok(None)
   }
 
+  #[deprecated(
+    note = "This hook is only for rollup compatibility, please use `resolve_id` instead."
+  )]
   async fn resolve_dynamic_import(
     &self,
     _ctx: &SharedPluginContext,

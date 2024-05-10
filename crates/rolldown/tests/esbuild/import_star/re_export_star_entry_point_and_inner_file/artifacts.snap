@@ -1,0 +1,30 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 167
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_entry_point_and_inner_file
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import { __export } from "./$runtime$.mjs";
+
+// a.js
+const A = 1;
+const B = '2';
+
+// b.js
+const C = 1;
+const D = '2';
+
+// inner.js
+var inner_ns = {};
+__export(inner_ns, {
+	C:() => C,
+	D:() => D
+});
+
+export { A, B, inner_ns as inner };
+```

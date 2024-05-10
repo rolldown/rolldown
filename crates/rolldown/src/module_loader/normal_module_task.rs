@@ -8,9 +8,10 @@ use rolldown_common::{
   AstScope, FilePath, ImportRecordId, ModuleType, NormalModule, NormalModuleId, RawImportRecord,
   ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
 };
-use rolldown_error::{BuildError, BuildResult};
+use rolldown_error::BuildError;
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
+use rolldown_resolver::ResolveError;
 use sugar_path::SugarPath;
 
 use super::{task_context::TaskContext, Msg};
@@ -79,7 +80,8 @@ impl NormalModuleTask {
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source);
 
-    let resolved_deps = self.resolve_dependencies(&scan_result.import_records).await?;
+    let resolved_deps =
+      self.resolve_dependencies(&scan_result.import_records, &mut warnings).await?;
 
     let ScanResult {
       named_imports,
@@ -213,7 +215,7 @@ impl NormalModuleTask {
     importer: &str,
     specifier: &str,
     options: HookResolveIdExtraOptions,
-  ) -> anyhow::Result<BuildResult<ResolvedRequestInfo>> {
+  ) -> anyhow::Result<Result<ResolvedRequestInfo, ResolveError>> {
     // Check external with unresolved path
     if let Some(external) = input_options.external.as_ref() {
       if external.call(specifier.to_string(), Some(importer.to_string()), false).await? {
@@ -225,18 +227,19 @@ impl NormalModuleTask {
       }
     }
 
-    let info = resolve_id(resolver, plugin_driver, specifier, Some(importer), options).await?;
+    let resolved_id =
+      resolve_id(resolver, plugin_driver, specifier, Some(importer), options).await?;
 
-    match info {
-      Ok(mut info) => {
-        if !info.is_external {
+    match resolved_id {
+      Ok(mut resolved_id) => {
+        if !resolved_id.is_external {
           // Check external with resolved path
           if let Some(external) = input_options.external.as_ref() {
-            info.is_external =
+            resolved_id.is_external =
               external.call(specifier.to_string(), Some(importer.to_string()), true).await?;
           }
         }
-        Ok(Ok(info))
+        Ok(Ok(resolved_id))
       }
       Err(e) => Ok(Err(e)),
     }
@@ -245,6 +248,7 @@ impl NormalModuleTask {
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordId, RawImportRecord>,
+    warnings: &mut Vec<BuildError>,
   ) -> Result<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
@@ -254,7 +258,6 @@ impl NormalModuleTask {
       let plugin_driver = Arc::clone(&self.ctx.plugin_driver);
       let importer = self.resolved_path.clone();
       let kind = item.kind;
-      // let on_warn = self.input_options.on_warn.clone();
       async move {
         Self::resolve_id(
           &input_options,
@@ -265,7 +268,7 @@ impl NormalModuleTask {
           HookResolveIdExtraOptions { is_entry: false, kind },
         )
         .await
-        .map(|id| (idx, id))
+        .map(|id| (specifier, idx, id))
       }
     });
 
@@ -273,26 +276,42 @@ impl NormalModuleTask {
 
     let mut ret = IndexVec::with_capacity(dependencies.len());
     let mut build_errors = vec![];
-    for handle in resolved_ids {
-      let (_idx, handle) = handle?;
-      match handle {
+    for resolved_id in resolved_ids {
+      let (specifier, idx, resolved_id) = resolved_id?;
+
+      match resolved_id {
         Ok(info) => {
           ret.push(info);
         }
-        Err(e) => {
-          build_errors.push(e);
-        }
+        Err(e) => match &e {
+          ResolveError::NotFound(..) => {
+            warnings.push(
+              BuildError::unresolved_import_treated_as_external(
+                specifier.to_string(),
+                self.resolved_path.path.to_string(),
+                Some(e),
+              )
+              .with_severity_warning(),
+            );
+            ret.push(ResolvedRequestInfo {
+              path: specifier.to_string().into(),
+              module_type: ModuleType::Unknown,
+              is_external: true,
+            });
+          }
+          _ => {
+            build_errors.push((&dependencies[idx], e));
+          }
+        },
       }
     }
 
     if build_errors.is_empty() {
       Ok(ret)
     } else {
-      // TODO: The better way here is to filter out the failed-resolved dependencies and return
-      // `Ok(ret)` with recoverable errors `self.errors` instead of returning `Err` and causing panicking.
       let resolved_err = anyhow::format_err!(
-        "Resolver errors in {:?} => dependencies: {dependencies:#?}, build_errors: {build_errors:#?}",
-        self.resolved_path
+        "Unexpectedly failed to resolve dependencies of {importer}. Got errors {build_errors:#?}",
+        importer = self.resolved_path.path,
       );
       Err(resolved_err)
     }

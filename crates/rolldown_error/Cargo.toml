@@ -14,7 +14,8 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-ariadne    = { workspace = true }
-napi       = { workspace = true, optional = true }
-oxc        = { workspace = true }
-sugar_path = { workspace = true }
+ariadne           = { workspace = true }
+napi              = { workspace = true, optional = true }
+oxc               = { workspace = true }
+rolldown_resolver = { workspace = true }
+sugar_path        = { workspace = true }

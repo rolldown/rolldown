@@ -10,6 +10,7 @@ pub mod forbid_const_assign;
 pub mod sourcemap_error;
 pub mod unresolved_entry;
 pub mod unresolved_import;
+pub mod unresolved_import_treated_as_external;
 pub mod unsupported_eval;
 
 pub trait BuildEvent: Debug + Sync + Send {

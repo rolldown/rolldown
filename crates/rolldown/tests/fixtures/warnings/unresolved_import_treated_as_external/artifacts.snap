@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/warnings/unresolved_import_treated_as_external
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "foo" is imported by "main.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## main.mjs
+
+```js
+import "foo";
+```

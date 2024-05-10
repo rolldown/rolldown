@@ -1,3 +1,5 @@
+use std::path::Path;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub enum ModuleType {
   #[default]
@@ -13,6 +15,16 @@ pub enum ModuleType {
 }
 
 impl ModuleType {
+  pub fn from_path(p: impl AsRef<Path>) -> Self {
+    let p = p.as_ref();
+
+    match p.extension().and_then(|ext| ext.to_str()) {
+      Some("mjs") => Self::EsmMjs,
+      Some("cjs") => Self::CJS,
+      _ => Self::Unknown,
+    }
+  }
+
   pub fn is_esm(&self) -> bool {
     matches!(self, Self::EsmMjs | Self::EsmPackageJson)
   }

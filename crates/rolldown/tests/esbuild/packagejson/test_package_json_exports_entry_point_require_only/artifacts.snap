@@ -9,5 +9,6 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_
 
 ```text
 [UNRESOLVED_ENTRY] Error: Cannot resolve entry module pkg.
+- Package subpath '.' is not defined by "exports" in node_modules/pkg/package.json
 
 ```

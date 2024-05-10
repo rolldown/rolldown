@@ -8,6 +8,7 @@ use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
+use rolldown_resolver::ResolveError;
 
 use crate::{
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
@@ -91,29 +92,43 @@ impl ScanStage {
     let plugin_driver = &self.plugin_driver;
 
     let resolved_ids = join_all(self.input_options.input.iter().map(|input_item| async move {
-      let specifier = &input_item.import;
-      match resolve_id(
+      struct Args<'a> {
+        specifier: &'a str,
+      }
+      let args = Args { specifier: &input_item.import };
+      let resolved = resolve_id(
         resolver,
         plugin_driver,
-        specifier,
+        args.specifier,
         None,
         HookResolveIdExtraOptions { is_entry: true, kind: ImportKind::Import },
       )
-      .await
-      {
-        Ok(info) => Ok(info.map(|info| (input_item.name.clone(), info))),
-        Err(e) => Err(e),
-      }
+      .await;
+
+      resolved.map(|info| (args, info.map(|info| (input_item.name.clone(), info))))
     }))
     .await;
 
     let mut ret = Vec::with_capacity(self.input_options.input.len());
 
-    for handle in resolved_ids {
-      let handle = handle?;
-      match handle {
-        Ok((name, info)) => ret.push((name, info)),
-        Err(e) => self.errors.push(e),
+    for resolve_id in resolved_ids {
+      let (args, resolve_id) = resolve_id?;
+
+      match resolve_id {
+        Ok(item) => {
+          ret.push(item);
+        }
+        Err(e) => match e {
+          ResolveError::NotFound(..) => {
+            self.errors.push(BuildError::unresolved_entry(args.specifier, None));
+          }
+          ResolveError::PackagePathNotExported(..) => {
+            self.errors.push(BuildError::unresolved_entry(args.specifier, Some(e)));
+          }
+          _ => {
+            return Err(e.into());
+          }
+        },
       }
     }
     Ok(ret)

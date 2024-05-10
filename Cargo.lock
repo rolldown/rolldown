@@ -1862,6 +1862,7 @@ dependencies = [
  "ariadne",
  "napi",
  "oxc",
+ "rolldown_resolver",
  "sugar_path",
 ]
 
@@ -1890,7 +1891,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "rolldown_common",
- "rolldown_error",
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_utils",
@@ -1901,10 +1901,10 @@ dependencies = [
 name = "rolldown_resolver"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "itertools",
  "oxc_resolver",
  "rolldown_common",
- "rolldown_error",
  "rolldown_fs",
  "sugar_path",
 ]

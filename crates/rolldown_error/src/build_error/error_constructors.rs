@@ -4,6 +4,7 @@ use std::{
 };
 
 use oxc::span::Span;
+use rolldown_resolver::ResolveError;
 
 use super::BuildError;
 
@@ -11,6 +12,7 @@ use crate::events::{
   circular_dependency::CircularDependency, external_entry::ExternalEntry,
   forbid_const_assign::ForbidConstAssign, sourcemap_error::SourceMapError,
   unresolved_entry::UnresolvedEntry, unresolved_import::UnresolvedImport,
+  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
   unsupported_eval::UnsupportedEval, NapiError,
 };
 
@@ -20,8 +22,14 @@ impl BuildError {
     Self::new_inner(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })
   }
 
-  pub fn unresolved_entry(unresolved_id: impl AsRef<Path>) -> Self {
-    Self::new_inner(UnresolvedEntry { unresolved_id: unresolved_id.as_ref().to_path_buf() })
+  pub fn unresolved_entry(
+    unresolved_id: impl AsRef<Path>,
+    resolve_error: Option<ResolveError>,
+  ) -> Self {
+    Self::new_inner(UnresolvedEntry {
+      unresolved_id: unresolved_id.as_ref().to_path_buf(),
+      resolve_error,
+    })
   }
 
   pub fn unresolved_import(specifier: impl Into<String>, importer: impl Into<PathBuf>) -> Self {
@@ -34,6 +42,18 @@ impl BuildError {
 
   pub fn circular_dependency(paths: Vec<String>) -> Self {
     Self::new_inner(CircularDependency { paths })
+  }
+
+  pub fn unresolved_import_treated_as_external(
+    specifier: impl Into<String>,
+    importer: impl Into<PathBuf>,
+    resolve_error: Option<ResolveError>,
+  ) -> Self {
+    Self::new_inner(UnresolvedImportTreatedAsExternal {
+      specifier: specifier.into(),
+      importer: importer.into(),
+      resolve_error,
+    })
   }
 
   // --- Rolldown related

@@ -1,8 +1,7 @@
 use std::path::Path;
 
 use rolldown_common::{ImportKind, ModuleType, ResolvedRequestInfo};
-use rolldown_error::BuildResult;
-use rolldown_resolver::Resolver;
+use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
   HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdExtraOptions, PluginDriver,
@@ -22,7 +21,7 @@ pub async fn resolve_id_with_plugins(
   request: &str,
   importer: Option<&str>,
   options: HookResolveIdExtraOptions,
-) -> anyhow::Result<BuildResult<ResolvedRequestInfo>> {
+) -> anyhow::Result<Result<ResolvedRequestInfo, ResolveError>> {
   let import_kind = options.kind;
   if import_kind == ImportKind::DynamicImport {
     if let Some(r) = plugin_driver
@@ -33,8 +32,8 @@ pub async fn resolve_id_with_plugins(
       .await?
     {
       return Ok(Ok(ResolvedRequestInfo {
+        module_type: ModuleType::from_path(&r.id),
         path: r.id.into(),
-        module_type: ModuleType::Unknown,
         is_external: matches!(r.external, Some(true)),
       }));
     }
@@ -49,8 +48,8 @@ pub async fn resolve_id_with_plugins(
     .await?
   {
     return Ok(Ok(ResolvedRequestInfo {
+      module_type: ModuleType::from_path(&r.id),
       path: r.id.into(),
-      module_type: ModuleType::Unknown,
       is_external: matches!(r.external, Some(true)),
     }));
   }
@@ -67,13 +66,10 @@ pub async fn resolve_id_with_plugins(
   // Rollup external node packages by default.
   // Rolldown will follow esbuild behavior to resolve it by default.
   // See https://github.com/rolldown/rolldown/issues/282
-  let resolved = resolver.resolve(importer.map(Path::new), request, import_kind);
-  match resolved {
-    Ok(resolved) => Ok(Ok(ResolvedRequestInfo {
-      path: resolved.resolved,
-      module_type: resolved.module_type,
-      is_external: false,
-    })),
-    Err(e) => Ok(Err(e)),
-  }
+  let resolved = resolver.resolve(importer.map(Path::new), request, import_kind)?;
+  Ok(resolved.map(|resolved| ResolvedRequestInfo {
+    path: resolved.path,
+    module_type: resolved.module_type,
+    is_external: false,
+  }))
 }

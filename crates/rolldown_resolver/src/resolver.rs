@@ -1,6 +1,5 @@
 use itertools::Itertools;
 use rolldown_common::{ImportKind, ModuleType, Platform, ResolveOptions, ResolvedPath};
-use rolldown_error::{BuildError, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use std::path::{Path, PathBuf};
 use sugar_path::SugarPath;
@@ -119,8 +118,8 @@ impl<F: FileSystem + Default> Resolver<F> {
 }
 
 #[derive(Debug)]
-pub struct ResolveRet {
-  pub resolved: ResolvedPath,
+pub struct ResolveReturn {
+  pub path: ResolvedPath,
   pub module_type: ModuleType,
 }
 
@@ -132,12 +131,12 @@ impl<F: FileSystem + Default> Resolver<F> {
     importer: Option<&Path>,
     specifier: &str,
     import_kind: ImportKind,
-  ) -> BuildResult<ResolveRet> {
+  ) -> anyhow::Result<Result<ResolveReturn, ResolveError>> {
     let selected_resolver = match import_kind {
       ImportKind::Import | ImportKind::DynamicImport => &self.import_resolver,
       ImportKind::Require => &self.require_resolver,
     };
-    let resolved = if let Some(importer) = importer {
+    let resolution = if let Some(importer) = importer {
       let context = importer.parent().expect("Should have a parent dir");
       selected_resolver.resolve(context, specifier)
     } else {
@@ -150,41 +149,35 @@ impl<F: FileSystem + Default> Resolver<F> {
 
       let is_path_like = specifier.starts_with('.') || specifier.starts_with('/');
 
-      let resolved = selected_resolver.resolve(&self.cwd, joined_specifier.to_str().unwrap());
-      if resolved.is_ok() {
-        resolved
+      let resolution = selected_resolver.resolve(&self.cwd, joined_specifier.to_str().unwrap());
+      if resolution.is_ok() {
+        resolution
       } else if !is_path_like {
         // If the specifier is not path-like, we should try to resolve it as a bare specifier. This allows us to resolve modules from node_modules.
         selected_resolver.resolve(&self.cwd, specifier)
       } else {
-        resolved
+        resolution
       }
     };
-    resolved
-      // If result type parsing is correct
-      .map(|info| {
-        build_resolve_ret(
-          info.full_path().to_str().expect("should be valid utf8").to_string(),
+
+    match resolution {
+      Ok(info) => {
+        let module_type = calc_module_type(&info);
+        Ok(Ok(build_resolve_ret(
+          info.full_path().to_str().expect("Should be valid utf8").to_string(),
           false,
-          calc_module_type(&info),
-        )
-      })
-      .or_else(|err| match err {
-        // If the error type is ignore
-        ResolveError::Ignored(path) => Ok(build_resolve_ret(
-          path.to_str().expect("should be valid utf8").to_string(),
+          module_type,
+        )))
+      }
+      Err(err) => match err {
+        ResolveError::Ignored(p) => Ok(Ok(build_resolve_ret(
+          p.to_str().expect("Should be valid utf8").to_string(),
           true,
-          ModuleType::CJS,
-        )),
-        // To determine whether there is an importer.
-        _ => {
-          if let Some(importer) = importer {
-            Err(BuildError::unresolved_import(specifier.to_string(), importer).with_source(err))
-          } else {
-            Err(BuildError::unresolved_entry(specifier).with_source(err))
-          }
-        }
-      })
+          ModuleType::Unknown,
+        ))),
+        _ => Ok(Err(err)),
+      },
+    }
   }
 }
 
@@ -207,6 +200,6 @@ fn calc_module_type(info: &Resolution) -> ModuleType {
   ModuleType::Unknown
 }
 
-fn build_resolve_ret(path: String, ignored: bool, module_type: ModuleType) -> ResolveRet {
-  ResolveRet { resolved: ResolvedPath { path: path.into(), ignored }, module_type }
+fn build_resolve_ret(path: String, ignored: bool, module_type: ModuleType) -> ResolveReturn {
+  ResolveReturn { path: ResolvedPath { path: path.into(), ignored }, module_type }
 }

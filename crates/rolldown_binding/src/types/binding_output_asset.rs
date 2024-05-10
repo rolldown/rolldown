@@ -1,15 +1,13 @@
-use std::sync::Arc;
-
 use napi_derive::napi;
 
 #[napi]
 pub struct BindingOutputAsset {
-  inner: Arc<rolldown_common::OutputAsset>,
+  inner: &'static mut rolldown_common::OutputAsset,
 }
 
 #[napi]
 impl BindingOutputAsset {
-  pub fn new(inner: Arc<rolldown_common::OutputAsset>) -> Self {
+  pub fn new(inner: &'static mut rolldown_common::OutputAsset) -> Self {
     Self { inner }
   }
 
@@ -21,5 +19,10 @@ impl BindingOutputAsset {
   #[napi(getter)]
   pub fn source(&self) -> String {
     self.inner.source.clone()
+  }
+
+  #[napi(setter, js_name = "source")]
+  pub fn set_source(&mut self, source: String) {
+    self.inner.source = source;
   }
 }

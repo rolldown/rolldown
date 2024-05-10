@@ -14,7 +14,6 @@ workspace = true
 [dependencies]
 anyhow             = { workspace = true }
 async-trait        = { workspace = true }
-futures            = { workspace = true }
 rolldown_common    = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_utils     = { workspace = true }

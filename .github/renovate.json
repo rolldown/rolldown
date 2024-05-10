@@ -5,6 +5,10 @@
     ":automergeRequireAllStatusChecks",
     ":automergePr"
   ],
+  "assignees": ["hyf0", "IWANABETHATGUY", "underfin"],
+  "assigneesSampleSize": 1,
+  "timezone": "Asia/Shanghai",
+  "schedule": ["every 12:00pm"],
   "ignorePaths": [
     "**/node_modules/**",
     "**/examples/**",

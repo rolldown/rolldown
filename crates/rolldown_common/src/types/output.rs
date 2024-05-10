@@ -1,15 +1,15 @@
 use crate::OutputChunk;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct OutputAsset {
   pub file_name: String,
   pub source: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Output {
-  Chunk(OutputChunk),
-  Asset(OutputAsset),
+  Chunk(Box<OutputChunk>),
+  Asset(Box<OutputAsset>),
 }
 
 impl Output {

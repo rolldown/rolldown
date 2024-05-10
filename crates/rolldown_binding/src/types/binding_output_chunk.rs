@@ -98,7 +98,7 @@ impl BindingOutputChunk {
   pub fn set_map(&mut self, map: String) -> napi::Result<()> {
     self.inner.map = Some(
       SourceMap::from_json_string(map.as_str())
-        .map_err(|e| napi::Error::from_reason(format!("{:?}", e)))?,
+        .map_err(|e| napi::Error::from_reason(format!("{e:?}")))?,
     );
     Ok(())
   }

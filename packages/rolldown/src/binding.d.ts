@@ -35,6 +35,7 @@ export class BindingOutputChunk {
   get sourcemapFileName(): string | null
 }
 
+/** The `BindingOutputs` owner `Vec<Output>` the mutable reference, it avoid `Clone` at call `writeBundle/generateBundle` hook, and make it mutable. */
 export class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
@@ -46,20 +47,24 @@ export class BindingPluginContext {
 
 export class Bundler {
   constructor(inputOptions: BindingInputOptions, outputOptions: BindingOutputOptions, parallelPluginsRegistry?: ParallelJsPluginRegistry | undefined | null)
-  write(): Promise<ReadOnlyBindingOutputs>
-  generate(): Promise<ReadOnlyBindingOutputs>
+  write(): Promise<FinalBindingOutputs>
+  generate(): Promise<FinalBindingOutputs>
   scan(): Promise<void>
+}
+
+/**
+ * The `FinalBindingOutputs` is used at `write()` or `generate()`, it is similar to `BindingOutputs`, if using `BindingOutputs` has unexpected behavior.
+ * TODO find a way to export it gracefully.
+ */
+export class FinalBindingOutputs {
+  get chunks(): Array<BindingOutputChunk>
+  get assets(): Array<BindingOutputAsset>
 }
 
 export class ParallelJsPluginRegistry {
   id: number
   workerCount: number
   constructor(workerCount: number)
-}
-
-export class ReadOnlyBindingOutputs {
-  get chunks(): Array<BindingOutputChunk>
-  get assets(): Array<BindingOutputAsset>
 }
 
 export interface AliasItem {

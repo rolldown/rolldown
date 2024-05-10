@@ -14,6 +14,7 @@ export class BindingModuleInfo {
 export class BindingOutputAsset {
   get fileName(): string
   get source(): string
+  set source(source: string)
 }
 
 export class BindingOutputChunk {
@@ -25,9 +26,12 @@ export class BindingOutputChunk {
   get fileName(): string
   get modules(): Record<string, BindingRenderedModule>
   get imports(): Array<string>
+  set imports(imports: Array<string>)
   get dynamicImports(): Array<string>
   get code(): string
+  set code(code: string)
   get map(): string | null
+  set map(map: string)
   get sourcemapFileName(): string | null
 }
 
@@ -42,8 +46,8 @@ export class BindingPluginContext {
 
 export class Bundler {
   constructor(inputOptions: BindingInputOptions, outputOptions: BindingOutputOptions, parallelPluginsRegistry?: ParallelJsPluginRegistry | undefined | null)
-  write(): Promise<BindingOutputs>
-  generate(): Promise<BindingOutputs>
+  write(): Promise<ReadOnlyBindingOutputs>
+  generate(): Promise<ReadOnlyBindingOutputs>
   scan(): Promise<void>
 }
 
@@ -51,6 +55,11 @@ export class ParallelJsPluginRegistry {
   id: number
   workerCount: number
   constructor(workerCount: number)
+}
+
+export class ReadOnlyBindingOutputs {
+  get chunks(): Array<BindingOutputChunk>
+  get assets(): Array<BindingOutputAsset>
 }
 
 export interface AliasItem {

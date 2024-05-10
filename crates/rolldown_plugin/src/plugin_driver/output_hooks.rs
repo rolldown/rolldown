@@ -1,8 +1,7 @@
 use crate::types::hook_render_error::HookRenderErrorArgs;
-use crate::HookRenderChunkArgs;
+use crate::{HookGenerateBundleReturn, HookRenderChunkArgs};
 use crate::{HookNoopReturn, PluginDriver};
 use anyhow::Result;
-use futures::future::join_all;
 use rolldown_common::Output;
 use rolldown_sourcemap::SourceMap;
 
@@ -37,21 +36,21 @@ impl PluginDriver {
     Ok(())
   }
 
-  pub async fn generate_bundle(&self, bundle: &Vec<Output>, is_write: bool) -> HookNoopReturn {
+  pub async fn generate_bundle(
+    &self,
+    mut bundle: Vec<Output>,
+    is_write: bool,
+  ) -> HookGenerateBundleReturn {
     for (plugin, ctx) in &self.plugins {
-      plugin.generate_bundle(ctx, bundle, is_write).await?;
+      bundle = plugin.generate_bundle(ctx, bundle, is_write).await?;
     }
-    Ok(())
+    Ok(bundle)
   }
 
-  pub async fn write_bundle(&self, bundle: &Vec<Output>) -> HookNoopReturn {
-    let results =
-      join_all(self.plugins.iter().map(|(plugin, ctx)| plugin.write_bundle(ctx, bundle))).await;
-
-    for result in results {
-      result?;
+  pub async fn write_bundle(&self, mut bundle: Vec<Output>) -> HookGenerateBundleReturn {
+    for (plugin, ctx) in &self.plugins {
+      bundle = plugin.write_bundle(ctx, bundle).await?;
     }
-
-    Ok(())
+    Ok(bundle)
   }
 }

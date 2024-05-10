@@ -5,7 +5,7 @@ use crate::worker_manager::WorkerManager;
 use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
-  types::binding_outputs::BindingOutputs,
+  types::binding_outputs::ReadOnlyBindingOutputs,
   utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
 };
 use napi::{tokio::sync::Mutex, Env};
@@ -67,13 +67,13 @@ impl Bundler {
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn write(&self) -> napi::Result<BindingOutputs> {
+  pub async fn write(&self) -> napi::Result<ReadOnlyBindingOutputs> {
     self.write_impl().await
   }
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn generate(&self) -> napi::Result<BindingOutputs> {
+  pub async fn generate(&self) -> napi::Result<ReadOnlyBindingOutputs> {
     self.generate_impl().await
   }
 
@@ -103,7 +103,7 @@ impl Bundler {
   }
 
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn write_impl(&self) -> napi::Result<BindingOutputs> {
+  pub async fn write_impl(&self) -> napi::Result<ReadOnlyBindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
@@ -116,11 +116,11 @@ impl Bundler {
 
     self.handle_warnings(outputs.warnings);
 
-    Ok(BindingOutputs::new(outputs.assets))
+    Ok(ReadOnlyBindingOutputs::new(outputs.assets))
   }
 
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn generate_impl(&self) -> napi::Result<BindingOutputs> {
+  pub async fn generate_impl(&self) -> napi::Result<ReadOnlyBindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
@@ -133,7 +133,7 @@ impl Bundler {
 
     self.handle_warnings(outputs.warnings);
 
-    Ok(BindingOutputs::new(outputs.assets))
+    Ok(ReadOnlyBindingOutputs::new(outputs.assets))
   }
 
   fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {

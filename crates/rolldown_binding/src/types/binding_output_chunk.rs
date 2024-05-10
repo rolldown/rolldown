@@ -1,17 +1,18 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use napi_derive::napi;
+use rolldown_sourcemap::SourceMap;
 
 use crate::types::binding_rendered_module::BindingRenderedModule;
 
 #[napi]
 pub struct BindingOutputChunk {
-  inner: Arc<rolldown_common::OutputChunk>,
+  inner: &'static mut rolldown_common::OutputChunk,
 }
 
 #[napi]
 impl BindingOutputChunk {
-  pub fn new(inner: Arc<rolldown_common::OutputChunk>) -> Self {
+  pub fn new(inner: &'static mut rolldown_common::OutputChunk) -> Self {
     Self { inner }
   }
 
@@ -62,6 +63,11 @@ impl BindingOutputChunk {
     self.inner.imports.iter().map(|x| x.to_string()).collect()
   }
 
+  #[napi(setter, js_name = "imports")]
+  pub fn set_imports(&mut self, imports: Vec<String>) {
+    self.inner.imports = imports.into_iter().map(Into::into).collect();
+  }
+
   #[napi(getter)]
   pub fn dynamic_imports(&self) -> Vec<String> {
     self.inner.dynamic_imports.iter().map(|x| x.to_string()).collect()
@@ -73,6 +79,11 @@ impl BindingOutputChunk {
     self.inner.code.clone()
   }
 
+  #[napi(setter, js_name = "code")]
+  pub fn set_code(&mut self, code: String) {
+    self.inner.code = code;
+  }
+
   #[napi(getter)]
   pub fn map(&self) -> napi::Result<Option<String>> {
     self
@@ -81,6 +92,15 @@ impl BindingOutputChunk {
       .as_ref()
       .map(|v| v.to_json_string().map_err(|e| napi::Error::from_reason(format!("{e:?}"))))
       .transpose()
+  }
+
+  #[napi(setter, js_name = "map")]
+  pub fn set_map(&mut self, map: String) -> napi::Result<()> {
+    self.inner.map = Some(
+      SourceMap::from_json_string(map.as_str())
+        .map_err(|e| napi::Error::from_reason(format!("{:?}", e)))?,
+    );
+    Ok(())
   }
 
   #[napi(getter)]

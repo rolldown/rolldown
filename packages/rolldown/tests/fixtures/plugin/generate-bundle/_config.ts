@@ -2,6 +2,7 @@ import { defineTest } from '@tests'
 import { expect, vi } from 'vitest'
 import path from 'node:path'
 import type { RolldownOutputChunk } from '../../../../src'
+import { getOutputChunk } from '@tests/utils'
 
 const entry = path.join(__dirname, './main.js')
 
@@ -28,11 +29,15 @@ export default defineTest({
           expect(Object.keys(chunk.modules).length).toBe(1)
           // called bundle.generate()
           expect(isWrite).toBe(true)
+          // Mutate chunk
+          chunk.code = 'console.error()'
         },
       },
     ],
   },
-  afterTest: () => {
+  afterTest: (output) => {
     expect(generateBundleFn).toHaveBeenCalledTimes(1)
+    const chunk = getOutputChunk(output)[0]
+    expect(chunk.code).toBe('console.error()')
   },
 })

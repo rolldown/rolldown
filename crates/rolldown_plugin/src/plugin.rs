@@ -14,6 +14,7 @@ pub type HookTransformReturn = Result<Option<HookLoadOutput>>;
 pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
 pub type HookNoopReturn = Result<()>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
+pub type HookGenerateBundleReturn = Result<Vec<Output>>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
@@ -98,19 +99,19 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   async fn generate_bundle(
     &self,
     _ctx: &SharedPluginContext,
-    _bundle: &Vec<Output>,
+    _bundle: Vec<Output>,
     _is_write: bool,
-  ) -> HookNoopReturn {
-    Ok(())
+  ) -> HookGenerateBundleReturn {
+    Ok(vec![])
   }
 
   #[allow(clippy::ptr_arg)]
   async fn write_bundle(
     &self,
     _ctx: &SharedPluginContext,
-    _bundle: &Vec<Output>,
-  ) -> HookNoopReturn {
-    Ok(())
+    _bundle: Vec<Output>,
+  ) -> HookGenerateBundleReturn {
+    Ok(vec![])
   }
 }
 

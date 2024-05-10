@@ -368,4 +368,5 @@ module.exports.BindingOutputs = nativeBinding.BindingOutputs
 module.exports.BindingPluginContext = nativeBinding.BindingPluginContext
 module.exports.Bundler = nativeBinding.Bundler
 module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
+module.exports.ReadOnlyBindingOutputs = nativeBinding.ReadOnlyBindingOutputs
 module.exports.registerPlugins = nativeBinding.registerPlugins

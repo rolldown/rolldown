@@ -2,6 +2,7 @@ import type {
   RolldownOutput,
   RolldownOutputAsset,
   RolldownOutputChunk,
+  SourceMap,
 } from '../types/rolldown-output'
 import type { OutputBundle } from '../types/output-bundle'
 import type {
@@ -18,6 +19,9 @@ function transformToRollupOutputChunk(
     get code() {
       return chunk.code
     },
+    set code(code: string) {
+      chunk.code = code
+    },
     fileName: chunk.fileName,
     get modules() {
       return Object.fromEntries(
@@ -26,6 +30,9 @@ function transformToRollupOutputChunk(
     },
     get imports() {
       return chunk.imports
+    },
+    set imports(imports: string[]) {
+      chunk.imports = imports
     },
     get dynamicImports() {
       return chunk.dynamicImports
@@ -40,6 +47,9 @@ function transformToRollupOutputChunk(
     get map() {
       return chunk.map ? JSON.parse(chunk.map) : null
     },
+    set map(map: SourceMap) {
+      chunk.map = JSON.stringify(map)
+    },
     sourcemapFileName: chunk.sourcemapFileName || null,
   }
 }
@@ -52,6 +62,9 @@ function transformToRollupOutputAsset(
     fileName: asset.fileName,
     get source() {
       return asset.source
+    },
+    set source(source: string) {
+      asset.source = source
     },
   }
 }

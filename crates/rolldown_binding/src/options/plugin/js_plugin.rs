@@ -189,24 +189,32 @@ impl Plugin for JsPlugin {
   async fn generate_bundle(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    bundle: &Vec<rolldown_common::Output>,
+    mut bundle: Vec<rolldown_common::Output>,
     is_write: bool,
-  ) -> rolldown_plugin::HookNoopReturn {
+  ) -> rolldown_plugin::HookGenerateBundleReturn {
     if let Some(cb) = &self.generate_bundle {
-      cb.await_call((Arc::clone(ctx).into(), BindingOutputs::new(bundle.clone()), is_write))
-        .await?;
+      cb.await_call((
+        Arc::clone(ctx).into(),
+        BindingOutputs::new(unsafe { std::mem::transmute(&mut bundle) }),
+        is_write,
+      ))
+      .await?;
     }
-    Ok(())
+    Ok(bundle)
   }
 
   async fn write_bundle(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    bundle: &Vec<rolldown_common::Output>,
-  ) -> rolldown_plugin::HookNoopReturn {
+    mut bundle: Vec<rolldown_common::Output>,
+  ) -> rolldown_plugin::HookGenerateBundleReturn {
     if let Some(cb) = &self.write_bundle {
-      cb.await_call((Arc::clone(ctx).into(), BindingOutputs::new(bundle.clone()))).await?;
+      cb.await_call((
+        Arc::clone(ctx).into(),
+        BindingOutputs::new(unsafe { std::mem::transmute(&mut bundle) }),
+      ))
+      .await?;
     }
-    Ok(())
+    Ok(bundle)
   }
 }

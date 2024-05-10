@@ -40,9 +40,9 @@ impl Bundler {
   pub async fn write(&mut self) -> Result<BundleOutput> {
     let dir = self.options.cwd.as_path().join(&self.options.dir).to_string_lossy().to_string();
 
-    let output = self.bundle_up(true).await?;
+    let mut output = self.bundle_up(true).await?;
 
-    self.plugin_driver.write_bundle(&output.assets).await?;
+    output.assets = self.plugin_driver.write_bundle(output.assets).await?;
 
     self.fs.create_dir_all(dir.as_path()).map_err(|err| {
       anyhow::anyhow!(
@@ -110,7 +110,7 @@ impl Bundler {
     let mut generate_stage =
       GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver);
 
-    let output = {
+    let mut output = {
       let ret = generate_stage.generate().await;
 
       if let Some(error) = Self::normalize_error(&ret, |ret| &ret.errors) {
@@ -120,7 +120,7 @@ impl Bundler {
       ret?
     };
 
-    self.plugin_driver.generate_bundle(&output.assets, is_write).await?;
+    output.assets = self.plugin_driver.generate_bundle(output.assets, is_write).await?;
 
     Ok(output)
   }

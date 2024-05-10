@@ -60,6 +60,7 @@ pub use crate::{
   types::rendered_module::RenderedModule,
   types::resolved_export::ResolvedExport,
   types::resolved_path::ResolvedPath,
+  types::resolved_request_info::ResolvedRequestInfo,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoId, StmtInfos},
   types::symbol_ref::SymbolRef,
   types::wrap_kind::WrapKind,

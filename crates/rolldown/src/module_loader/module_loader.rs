@@ -1,7 +1,7 @@
 use index_vec::IndexVec;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind, ImportRecordId,
-  ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId,
+  ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId, ResolvedRequestInfo,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -17,7 +17,6 @@ use super::Msg;
 use crate::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
 use crate::runtime::RuntimeModuleBrief;
-use crate::types::resolved_request_info::ResolvedRequestInfo;
 use crate::types::symbols::Symbols;
 
 use crate::{SharedOptions, SharedResolver};

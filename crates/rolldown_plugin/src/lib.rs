@@ -2,6 +2,12 @@ mod plugin;
 mod plugin_context;
 mod plugin_driver;
 mod types;
+mod utils;
+
+/// For internal usage only
+pub mod inner {
+  pub use super::utils::resolve_id_with_plugins::resolve_id_with_plugins;
+}
 
 pub use crate::{
   plugin::{

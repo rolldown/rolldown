@@ -8,7 +8,7 @@ index_vec::define_index_type! {
   pub struct ImportRecordId = u32;
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum ImportKind {
   Import,
   DynamicImport,

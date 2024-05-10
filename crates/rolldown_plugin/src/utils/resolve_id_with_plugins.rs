@@ -23,7 +23,7 @@ pub async fn resolve_id_with_plugins(
   options: HookResolveIdExtraOptions,
 ) -> anyhow::Result<Result<ResolvedRequestInfo, ResolveError>> {
   let import_kind = options.kind;
-  if import_kind == ImportKind::DynamicImport {
+  if matches!(import_kind, ImportKind::DynamicImport) {
     if let Some(r) = plugin_driver
       .resolve_dynamic_import(&HookResolveDynamicImportArgs {
         importer: importer.map(std::convert::AsRef::as_ref),

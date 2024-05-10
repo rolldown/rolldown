@@ -6,7 +6,7 @@ use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
   AstScope, FilePath, ImportRecordId, ModuleType, NormalModule, NormalModuleId, RawImportRecord,
-  ResolvedPath, ResourceId, SymbolRef,
+  ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
 };
 use rolldown_error::{BuildError, BuildResult};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
@@ -17,7 +17,7 @@ use super::{task_context::TaskContext, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   module_loader::NormalModuleTaskResult,
-  types::{ast_symbols::AstSymbols, resolved_request_info::ResolvedRequestInfo},
+  types::ast_symbols::AstSymbols,
   utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
   SharedOptions, SharedResolver,
 };

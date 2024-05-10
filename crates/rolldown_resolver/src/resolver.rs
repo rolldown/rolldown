@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rolldown_common::{ImportKind, ModuleType, Platform, ResolveOptions, ResolvedPath};
 use rolldown_error::{BuildError, BuildResult};
-use rolldown_fs::FileSystem;
+use rolldown_fs::{FileSystem, OsFileSystem};
 use std::path::{Path, PathBuf};
 use sugar_path::SugarPath;
 
@@ -12,7 +12,7 @@ use oxc_resolver::{
 
 #[derive(Debug)]
 #[allow(dead_code)]
-pub struct Resolver<T: FileSystem + Default> {
+pub struct Resolver<T: FileSystem + Default = OsFileSystem> {
   cwd: PathBuf,
   default_resolver: ResolverGeneric<T>,
   import_resolver: ResolverGeneric<T>,

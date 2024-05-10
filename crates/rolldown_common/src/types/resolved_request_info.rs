@@ -1,4 +1,4 @@
-use rolldown_common::{ModuleType, ResolvedPath};
+use crate::{ModuleType, ResolvedPath};
 
 #[derive(Debug)]
 pub struct ResolvedRequestInfo {

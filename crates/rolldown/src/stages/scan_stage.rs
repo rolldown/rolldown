@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::future::join_all;
 use index_vec::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, ModuleTable, NormalModuleId};
+use rolldown_common::{EntryPoint, ImportKind, ModuleTable, NormalModuleId, ResolvedRequestInfo};
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
@@ -12,7 +12,7 @@ use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use crate::{
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
   runtime::RuntimeModuleBrief,
-  types::{resolved_request_info::ResolvedRequestInfo, symbols::Symbols},
+  types::symbols::Symbols,
   utils::resolve_id::resolve_id,
   SharedOptions, SharedResolver,
 };

@@ -1890,6 +1890,8 @@ dependencies = [
  "anyhow",
  "async-trait",
  "rolldown_common",
+ "rolldown_error",
+ "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_utils",
  "tracing",

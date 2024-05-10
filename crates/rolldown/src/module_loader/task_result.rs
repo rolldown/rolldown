@@ -1,10 +1,11 @@
 use index_vec::IndexVec;
-use rolldown_common::{ImportRecordId, NormalModule, NormalModuleId, RawImportRecord};
+use rolldown_common::{
+  ImportRecordId, NormalModule, NormalModuleId, RawImportRecord, ResolvedRequestInfo,
+};
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
 
 use crate::types::ast_symbols::AstSymbols;
-use crate::types::resolved_request_info::ResolvedRequestInfo;
 
 pub struct NormalModuleTaskResult {
   pub module_id: NormalModuleId,

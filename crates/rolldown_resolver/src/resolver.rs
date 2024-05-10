@@ -48,6 +48,11 @@ impl<F: FileSystem + Default> Resolver<F> {
       Platform::Neutral => vec![],
     });
 
+    let alias_fields = raw_resolve.alias_fields.clone().unwrap_or_else(|| match platform {
+      Platform::Browser => vec![vec!["browser".to_string()]],
+      _ => vec![],
+    });
+
     let resolve_options_with_default_conditions = OxcResolverOptions {
       tsconfig: raw_resolve.tsconfig_filename.map(|p| TsconfigOptions {
         config_file: p.into(),
@@ -65,7 +70,7 @@ impl<F: FileSystem + Default> Resolver<F> {
         })
         .unwrap_or_default(),
       imports_fields: vec![vec!["imports".to_string()]],
-      alias_fields: raw_resolve.alias_fields.unwrap_or_default(),
+      alias_fields,
       condition_names: default_conditions,
       description_files: vec!["package.json".to_string()],
       enforce_extension: EnforceExtension::Auto,

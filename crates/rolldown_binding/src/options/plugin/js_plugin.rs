@@ -189,32 +189,32 @@ impl Plugin for JsPlugin {
   async fn generate_bundle(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    mut bundle: Vec<rolldown_common::Output>,
+    bundle: &mut Vec<rolldown_common::Output>,
     is_write: bool,
-  ) -> rolldown_plugin::HookGenerateBundleReturn {
+  ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.generate_bundle {
       cb.await_call((
         Arc::clone(ctx).into(),
-        BindingOutputs::new(unsafe { std::mem::transmute(&mut bundle) }),
+        BindingOutputs::new(unsafe { std::mem::transmute(bundle) }),
         is_write,
       ))
       .await?;
     }
-    Ok(bundle)
+    Ok(())
   }
 
   async fn write_bundle(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    mut bundle: Vec<rolldown_common::Output>,
-  ) -> rolldown_plugin::HookGenerateBundleReturn {
+    bundle: &mut Vec<rolldown_common::Output>,
+  ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.write_bundle {
       cb.await_call((
         Arc::clone(ctx).into(),
-        BindingOutputs::new(unsafe { std::mem::transmute(&mut bundle) }),
+        BindingOutputs::new(unsafe { std::mem::transmute(bundle) }),
       ))
       .await?;
     }
-    Ok(bundle)
+    Ok(())
   }
 }

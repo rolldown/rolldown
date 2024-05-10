@@ -5,8 +5,8 @@ mod types;
 
 pub use crate::{
   plugin::{
-    BoxPlugin, HookGenerateBundleReturn, HookLoadReturn, HookNoopReturn, HookRenderChunkReturn,
-    HookResolveIdReturn, HookTransformReturn, Plugin,
+    BoxPlugin, HookLoadReturn, HookNoopReturn, HookRenderChunkReturn, HookResolveIdReturn,
+    HookTransformReturn, Plugin,
   },
   plugin_context::{PluginContext, SharedPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},

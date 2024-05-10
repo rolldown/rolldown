@@ -42,7 +42,7 @@ impl Bundler {
 
     let mut output = self.bundle_up(true).await?;
 
-    output.assets = self.plugin_driver.write_bundle(output.assets).await?;
+    self.plugin_driver.write_bundle(&mut output.assets).await?;
 
     self.fs.create_dir_all(dir.as_path()).map_err(|err| {
       anyhow::anyhow!(
@@ -120,7 +120,7 @@ impl Bundler {
       ret?
     };
 
-    output.assets = self.plugin_driver.generate_bundle(output.assets, is_write).await?;
+    self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 
     Ok(output)
   }

@@ -1,6 +1,5 @@
 use anyhow::Result;
 use rustc_hash::FxHashSet;
-use std::sync::Arc;
 
 use futures::future::try_join_all;
 use rolldown_common::{
@@ -144,7 +143,7 @@ impl<'a> GenerateStage<'a> {
                 continue;
               }
             };
-            assets.push(Output::Asset(Arc::new(OutputAsset {
+            assets.push(Output::Asset(Box::new(OutputAsset {
               file_name: map_file_name.clone(),
               source,
             })));
@@ -165,7 +164,7 @@ impl<'a> GenerateStage<'a> {
       }
       let sourcemap_file_name =
         map.as_ref().map(|_| format!("{}.map", rendered_chunk.file_name.as_str()));
-      assets.push(Output::Chunk(Arc::new(OutputChunk {
+      assets.push(Output::Chunk(Box::new(OutputChunk {
         file_name: rendered_chunk.file_name,
         code,
         is_entry: rendered_chunk.is_entry,

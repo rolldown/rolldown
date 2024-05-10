@@ -1,17 +1,15 @@
-use std::sync::Arc;
-
 use crate::OutputChunk;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct OutputAsset {
   pub file_name: String,
   pub source: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Output {
-  Chunk(Arc<OutputChunk>),
-  Asset(Arc<OutputAsset>),
+  Chunk(Box<OutputChunk>),
+  Asset(Box<OutputAsset>),
 }
 
 impl Output {

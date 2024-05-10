@@ -98,7 +98,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   async fn generate_bundle(
     &self,
     _ctx: &SharedPluginContext,
-    _bundle: &Vec<Output>,
+    _bundle: &mut Vec<Output>,
     _is_write: bool,
   ) -> HookNoopReturn {
     Ok(())
@@ -108,7 +108,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   async fn write_bundle(
     &self,
     _ctx: &SharedPluginContext,
-    _bundle: &Vec<Output>,
+    _bundle: &mut Vec<Output>,
   ) -> HookNoopReturn {
     Ok(())
   }

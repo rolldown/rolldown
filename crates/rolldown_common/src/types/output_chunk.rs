@@ -6,7 +6,7 @@ use crate::FilePath;
 use super::rendered_module::RenderedModule;
 
 #[allow(clippy::zero_sized_map_values)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct OutputChunk {
   // PreRenderedChunk
   pub is_entry: bool,

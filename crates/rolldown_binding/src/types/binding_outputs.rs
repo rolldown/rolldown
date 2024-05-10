@@ -40,6 +40,13 @@ impl BindingOutputs {
     });
     assets
   }
+
+  #[napi]
+  pub fn delete(&mut self, file_name: String) {
+    if let Some(index) = self.inner.iter().position(|o| o.file_name() == file_name) {
+      self.inner.remove(index);
+    }
+  }
 }
 
 /// The `FinalBindingOutputs` is used at `write()` or `generate()`, it is similar to `BindingOutputs`, if using `BindingOutputs` has unexpected behavior.

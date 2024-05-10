@@ -10,7 +10,7 @@ const generateBundleFn = vi.fn()
 
 export default defineTest({
   config: {
-    input: entry,
+    input: [entry, path.join(__dirname, './index.js')],
     plugins: [
       {
         name: 'test-plugin',
@@ -31,13 +31,16 @@ export default defineTest({
           expect(isWrite).toBe(true)
           // Mutate chunk
           chunk.code = 'console.error()'
+          // Delete chunk
+          delete bundle['index.js']
         },
       },
     ],
   },
   afterTest: (output) => {
     expect(generateBundleFn).toHaveBeenCalledTimes(1)
-    const chunk = getOutputChunk(output)[0]
-    expect(chunk.code).toBe('console.error()')
+    const chunks = getOutputChunk(output)
+    expect(chunks.length).toBe(1)
+    expect(chunks[0].code).toBe('console.error()')
   },
 })

@@ -1,3 +1,3 @@
-const a = 'shared.js', b = 1000;
+const a = 'shared.js'
 
-export { a, b }
+export { a }

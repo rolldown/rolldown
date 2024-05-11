@@ -62,7 +62,7 @@ index_vec::define_index_type! {
   pub struct StmtInfoId = u32;
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug)]
 pub struct StmtInfo {
   /// The index of this statement in the module body.
   ///

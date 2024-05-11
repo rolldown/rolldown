@@ -14,13 +14,12 @@ struct Context<'a> {
   runtime_id: NormalModuleId,
 }
 
-fn include_module(ctx: &mut Context, module: &NormalModule) {
+/// if no export is used, and the module has no side effedcts, the module should not be included
+fn include_module(ctx: &mut Context, module: &NormalModule) -> bool {
   let is_included = ctx.is_module_included_vec[module.id];
   if is_included {
-    return;
+    return is_included;
   }
-
-  ctx.is_module_included_vec[module.id] = true;
 
   if ctx.tree_shaking || module.id == ctx.runtime_id {
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
@@ -44,15 +43,22 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
     }
     rolldown_common::ModuleId::External(_) => {}
   });
+
+  let should_include =
+    module.stmt_infos.has_export_used || matches!(module.side_effects, Some(true));
+  // should derived from analyze
+  ctx.is_module_included_vec[module.id] = should_include;
+  return should_include;
 }
 
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
+fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) -> bool {
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
   let canonical_ref_module = &ctx.modules[canonical_ref.owner];
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
   }
+  let mut has_used_export = false;
   include_module(ctx, canonical_ref_module);
   canonical_ref_module
     .stmt_infos
@@ -60,29 +66,32 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
     .iter()
     .copied()
     .for_each(|stmt_info_id| {
-      include_statement(ctx, canonical_ref_module, stmt_info_id);
+      has_used_export |= include_statement(ctx, canonical_ref_module, stmt_info_id);
     });
+  has_used_export
 }
 
-fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoId) {
+fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoId) -> bool {
   let is_included = &mut ctx.is_included_vec[module.id][stmt_info_id];
+
+  let stmt_info = module.stmt_infos.get(stmt_info_id);
+  let mut has_used_export = stmt_info.is_export;
   if *is_included {
-    return;
+    return has_used_export;
   }
 
   // include the statement itself
   *is_included = true;
-
-  let stmt_info = module.stmt_infos.get(stmt_info_id);
 
   // include statements that are referenced by this statement
   stmt_info.declared_symbols.iter().chain(stmt_info.referenced_symbols.iter()).for_each(
     |symbol_ref| {
       // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
       // really declared by the module itself. We need to include them where they are really declared.
-      include_symbol(ctx, *symbol_ref);
+      has_used_export |= include_symbol(ctx, *symbol_ref);
     },
   );
+  return has_used_export;
 }
 
 impl LinkStage<'_> {

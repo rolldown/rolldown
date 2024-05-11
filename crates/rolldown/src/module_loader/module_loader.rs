@@ -1,8 +1,9 @@
 use index_vec::IndexVec;
 use oxc_resolver::PackageJson;
 use rolldown_common::{
-  EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind, ImportRecordId,
-  ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId, ResolvedRequestInfo,
+  side_effects, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind,
+  ImportRecordId, ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId,
+  ResolvedRequestInfo,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -10,6 +11,7 @@ use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
+use sugar_path::SugarPath;
 
 use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
@@ -244,7 +246,7 @@ impl ModuleLoader {
                   self
                     .intermediate_normal_modules
                     .module_side_effects
-                    .resize_with((id + 1).into(), Default::default);
+                    .resize_with((id).into(), Default::default);
                 }
                 self
                   .intermediate_normal_modules
@@ -285,15 +287,32 @@ impl ModuleLoader {
       }
       self.remaining -= 1;
     }
-    dbg!(&self.intermediate_normal_modules.module_side_effects);
-    dbg!(&self
-      .intermediate_normal_modules
-      .modules
-      .iter()
-      .map(|item| item.as_ref().and_then(|m| Some(m.pretty_path.clone())))
-      .collect::<Vec<_>>());
 
-    let modules: IndexVec<NormalModuleId, NormalModule> = self
+    let module_id_to_side_effects = self
+      .intermediate_normal_modules
+      .module_side_effects
+      .iter()
+      .enumerate()
+      .map(|(id, package_json)| {
+        let module_path = &self.intermediate_normal_modules.modules[id]
+          .as_ref()
+          .expect("should have index")
+          .pretty_path;
+        let res = package_json.as_ref().and_then(|json| {
+          dbg!(&json.realpath);
+          dbg!(&module_path);
+          let relative = &json.realpath.parent()?.relative(&self.input_options.cwd);
+          let relative_path = module_path.relative(relative);
+          side_effects::SideEffects::from_description(json.raw_json()).map(|item| {
+            item.derive_side_effects_from_package_json(&relative_path.to_string_lossy())
+          })
+        });
+        dbg!(&res);
+        res
+      })
+      .collect::<Vec<_>>();
+
+    let mut modules: IndexVec<NormalModuleId, NormalModule> = self
       .intermediate_normal_modules
       .modules
       .into_iter()
@@ -312,6 +331,10 @@ impl ModuleLoader {
         module
       })
       .collect();
+
+    for (id, derived_side_effect) in module_id_to_side_effects.into_iter().enumerate() {
+      modules[id].side_effects = derived_side_effect;
+    }
 
     let ast_table: IndexVec<NormalModuleId, OxcAst> =
       self.intermediate_normal_modules.ast_table.into_iter().flatten().collect();

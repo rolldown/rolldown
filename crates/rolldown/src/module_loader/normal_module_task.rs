@@ -101,8 +101,8 @@ impl NormalModuleTask {
     let mut dynamically_imported_ids = vec![];
 
     for (record, info) in import_records.iter().zip(&resolved_deps) {
-      dbg!(&info.path);
-      dbg!(&info.package_json);
+      // dbg!(&info.path);
+      // dbg!(&info.package_json);
       if record.kind.is_static() {
         imported_ids.push(Arc::clone(&info.path.path).into());
       } else {

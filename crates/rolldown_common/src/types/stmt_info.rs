@@ -8,6 +8,7 @@ pub struct StmtInfos {
   infos: IndexVec<StmtInfoId, StmtInfo>,
   // only for top level symbols
   symbol_ref_to_declared_stmt_idx: FxHashMap<SymbolRef, Vec<StmtInfoId>>,
+  pub has_export_used: bool,
 }
 
 impl StmtInfos {
@@ -78,6 +79,7 @@ pub struct StmtInfo {
   pub referenced_symbols: Vec<SymbolRef>,
   pub side_effect: bool,
   pub is_included: bool,
+  pub is_export: bool,
   pub import_records: Vec<ImportRecordId>,
   pub debug_label: Option<String>,
 }

@@ -94,6 +94,7 @@ impl<'a> LinkStage<'a> {
           is_included: false,
           import_records: Vec::new(),
           debug_label: None,
+          is_export: true,
         };
         module.stmt_infos.add_stmt_info(stmt_info);
       });
@@ -115,6 +116,7 @@ impl<'a> LinkStage<'a> {
           is_included: false,
           import_records: Vec::new(),
           debug_label: None,
+          is_export: true,
         };
 
         module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
@@ -336,6 +338,7 @@ pub fn init_entry_point_stmt_info(module: &mut NormalModule, meta: &mut LinkingM
     is_included: false,
     import_records: Vec::new(),
     debug_label: None,
+    is_export: true,
   };
 
   module.stmt_infos.add_stmt_info(stmt_info);

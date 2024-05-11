@@ -5,7 +5,7 @@ use crate::{
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
   worker_manager::WorkerManager,
 };
-use rolldown::{AddonOutputOption, BundlerOptions, Platform};
+use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, Platform};
 use rolldown_plugin::BoxPlugin;
 use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
@@ -43,12 +43,17 @@ pub fn normalize_binding_options(
   let cwd = PathBuf::from(input_options.cwd);
 
   let external = input_options.external.map(|ts_fn| {
-    rolldown::External::Fn(Box::new(move |source, importer, is_resolved| {
+    IsExternal::from_closure(move |source, importer, is_resolved| {
+      let source = source.to_string();
+      let importer = importer.map(ToString::to_string);
       let ts_fn = ts_fn.clone();
       Box::pin(async move {
-        ts_fn.call_async((source, importer, is_resolved)).await.map_err(anyhow::Error::from)
+        ts_fn
+          .call_async((source.to_string(), importer.map(|v| v.to_string()), is_resolved))
+          .await
+          .map_err(anyhow::Error::from)
       })
-    }))
+    })
   });
 
   let sourcemap_ignore_list = output_options.sourcemap_ignore_list.map(|ts_fn| {

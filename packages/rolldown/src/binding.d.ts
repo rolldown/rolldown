@@ -39,6 +39,7 @@ export class BindingOutputChunk {
 export class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
+  delete(fileName: string): void
 }
 
 export class BindingPluginContext {

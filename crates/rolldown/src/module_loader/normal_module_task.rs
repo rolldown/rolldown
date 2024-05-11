@@ -217,8 +217,8 @@ impl NormalModuleTask {
     options: HookResolveIdExtraOptions,
   ) -> anyhow::Result<Result<ResolvedRequestInfo, ResolveError>> {
     // Check external with unresolved path
-    if let Some(external) = input_options.external.as_ref() {
-      if external.call(specifier.to_string(), Some(importer.to_string()), false).await? {
+    if let Some(is_external) = input_options.external.as_ref() {
+      if is_external(specifier, Some(importer), false).await? {
         return Ok(Ok(ResolvedRequestInfo {
           path: specifier.to_string().into(),
           module_type: ModuleType::Unknown,
@@ -234,9 +234,8 @@ impl NormalModuleTask {
       Ok(mut resolved_id) => {
         if !resolved_id.is_external {
           // Check external with resolved path
-          if let Some(external) = input_options.external.as_ref() {
-            resolved_id.is_external =
-              external.call(specifier.to_string(), Some(importer.to_string()), true).await?;
+          if let Some(is_external) = input_options.external.as_ref() {
+            resolved_id.is_external = is_external(specifier, Some(importer), true).await?;
           }
         }
         Ok(Ok(resolved_id))

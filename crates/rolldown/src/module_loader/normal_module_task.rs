@@ -101,6 +101,8 @@ impl NormalModuleTask {
     let mut dynamically_imported_ids = vec![];
 
     for (record, info) in import_records.iter().zip(&resolved_deps) {
+      dbg!(&info.path);
+      dbg!(&info.package_json);
       if record.kind.is_static() {
         imported_ids.push(Arc::clone(&info.path.path).into());
       } else {
@@ -134,6 +136,7 @@ impl NormalModuleTask {
       dynamic_importers: vec![],
       imported_ids,
       dynamically_imported_ids,
+      side_effects: None,
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
@@ -223,6 +226,7 @@ impl NormalModuleTask {
           path: specifier.to_string().into(),
           module_type: ModuleType::Unknown,
           is_external: true,
+          package_json: None,
         }));
       }
     }
@@ -296,6 +300,7 @@ impl NormalModuleTask {
               path: specifier.to_string().into(),
               module_type: ModuleType::Unknown,
               is_external: true,
+              package_json: None,
             });
           }
           _ => {

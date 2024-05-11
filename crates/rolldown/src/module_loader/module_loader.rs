@@ -1,4 +1,5 @@
 use index_vec::IndexVec;
+use oxc_resolver::PackageJson;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind, ImportRecordId,
   ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId, ResolvedRequestInfo,
@@ -23,13 +24,19 @@ use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<NormalModuleId, Option<NormalModule>>,
+  pub module_side_effects: IndexVec<NormalModuleId, Option<Arc<PackageJson>>>,
   pub ast_table: IndexVec<NormalModuleId, Option<OxcAst>>,
   pub importers: IndexVec<NormalModuleId, Vec<ImporterRecord>>,
 }
 
 impl IntermediateNormalModules {
   pub fn new() -> Self {
-    Self { modules: IndexVec::new(), ast_table: IndexVec::new(), importers: IndexVec::new() }
+    Self {
+      modules: IndexVec::new(),
+      ast_table: IndexVec::new(),
+      importers: IndexVec::new(),
+      module_side_effects: IndexVec::new(),
+    }
   }
 
   pub fn alloc_module_id(&mut self, symbols: &mut Symbols) -> NormalModuleId {
@@ -221,6 +228,7 @@ impl ModuleLoader {
             ast,
           } = task_result;
           all_warnings.extend(warnings);
+
           let import_records = raw_import_records
             .into_iter()
             .zip(resolved_deps)
@@ -232,6 +240,16 @@ impl ModuleLoader {
                   kind: raw_rec.kind,
                   importer_path: module.resource_id.expect_file().clone(),
                 });
+                if id >= self.intermediate_normal_modules.module_side_effects.len() {
+                  self
+                    .intermediate_normal_modules
+                    .module_side_effects
+                    .resize_with((id + 1).into(), Default::default);
+                }
+                self
+                  .intermediate_normal_modules
+                  .module_side_effects
+                  .insert(id, info.package_json.clone());
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
                 {
@@ -267,6 +285,13 @@ impl ModuleLoader {
       }
       self.remaining -= 1;
     }
+    dbg!(&self.intermediate_normal_modules.module_side_effects);
+    dbg!(&self
+      .intermediate_normal_modules
+      .modules
+      .iter()
+      .map(|item| item.as_ref().and_then(|m| Some(m.pretty_path.clone())))
+      .collect::<Vec<_>>());
 
     let modules: IndexVec<NormalModuleId, NormalModule> = self
       .intermediate_normal_modules

@@ -47,6 +47,8 @@ pub struct NormalModule {
   pub imported_ids: Vec<FilePath>,
   // the module ids imported by this module via dynamic import()
   pub dynamically_imported_ids: Vec<FilePath>,
+  /// SideEffects derived from package.json
+  pub side_effects: Option<bool>,
 }
 
 impl NormalModule {

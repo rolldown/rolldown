@@ -35,6 +35,7 @@ pub async fn resolve_id_with_plugins(
         module_type: ModuleType::from_path(&r.id),
         path: r.id.into(),
         is_external: matches!(r.external, Some(true)),
+        package_json: None,
       }));
     }
   }
@@ -51,6 +52,7 @@ pub async fn resolve_id_with_plugins(
       module_type: ModuleType::from_path(&r.id),
       path: r.id.into(),
       is_external: matches!(r.external, Some(true)),
+      package_json: None,
     }));
   }
 
@@ -60,6 +62,7 @@ pub async fn resolve_id_with_plugins(
       path: request.to_string().into(),
       module_type: ModuleType::Unknown,
       is_external: true,
+      package_json: None,
     }));
   }
 
@@ -70,6 +73,7 @@ pub async fn resolve_id_with_plugins(
   Ok(resolved.map(|resolved| ResolvedRequestInfo {
     path: resolved.path,
     module_type: resolved.module_type,
+    package_json: resolved.package_json,
     is_external: false,
   }))
 }

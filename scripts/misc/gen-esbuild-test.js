@@ -13,7 +13,7 @@ import { URL } from 'node:url'
 // 1. Set the test suite name.
 
 /** @type {TestSuiteName} {@link suites} */
-const SUITE_NAME = 'lower'
+const SUITE_NAME = 'dce'
 
 // 2. Set the tests root directory
 const __dirname = fileURLToPath(new URL('.', import.meta.url))

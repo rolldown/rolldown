@@ -10,20 +10,26 @@ struct Context<'a> {
   symbols: &'a Symbols,
   is_included_vec: &'a mut IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>>,
   is_module_included_vec: &'a mut IndexVec<NormalModuleId, bool>,
+  has_export_used: &'a mut IndexVec<NormalModuleId, bool>,
+  module_side_effects: &'a mut IndexVec<NormalModuleId, bool>,
   tree_shaking: bool,
   runtime_id: NormalModuleId,
 }
 
 /// if no export is used, and the module has no side effedcts, the module should not be included
-fn include_module(ctx: &mut Context, module: &NormalModule) -> bool {
+fn include_module(ctx: &mut Context, module: &NormalModule) {
   let is_included = ctx.is_module_included_vec[module.id];
   if is_included {
-    return is_included;
+    return;
   }
 
+  // should derived from analyze
+  ctx.is_module_included_vec[module.id] = true;
   if ctx.tree_shaking || module.id == ctx.runtime_id {
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
       if stmt_info.side_effect {
+        ctx.module_side_effects[module.id] = true;
+        dbg!(&stmt_info.debug_label);
         include_statement(ctx, module, stmt_info_id);
       }
     });
@@ -43,18 +49,14 @@ fn include_module(ctx: &mut Context, module: &NormalModule) -> bool {
     }
     rolldown_common::ModuleId::External(_) => {}
   });
-
-  let should_include =
-    module.stmt_infos.has_export_used || matches!(module.side_effects, Some(true));
-  // should derived from analyze
-  ctx.is_module_included_vec[module.id] = should_include;
-  return should_include;
 }
 
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) -> bool {
+fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
   let canonical_ref_module = &ctx.modules[canonical_ref.owner];
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
+  dbg!(&canonical_ref_module.pretty_path, &canonical_ref_symbol);
+  ctx.has_export_used[canonical_ref_module.id] = true;
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
   }
@@ -68,7 +70,6 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) -> bool {
     .for_each(|stmt_info_id| {
       has_used_export |= include_statement(ctx, canonical_ref_module, stmt_info_id);
     });
-  has_used_export
 }
 
 fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoId) -> bool {
@@ -88,9 +89,10 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
     |symbol_ref| {
       // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
       // really declared by the module itself. We need to include them where they are really declared.
-      has_used_export |= include_symbol(ctx, *symbol_ref);
+      include_symbol(ctx, *symbol_ref);
     },
   );
+  // dbg!(&module.pretty_path, has_used_export);
   return has_used_export;
 }
 
@@ -107,6 +109,11 @@ impl LinkStage<'_> {
     let mut is_module_included_vec: IndexVec<NormalModuleId, bool> =
       index_vec::index_vec![false; self.module_table.normal_modules.len()];
 
+    let mut has_export_used: IndexVec<NormalModuleId, bool> =
+      index_vec::index_vec![false; self.module_table.normal_modules.len()];
+
+    let mut module_side_effects: IndexVec<NormalModuleId, bool> =
+      index_vec::index_vec![false; self.module_table.normal_modules.len()];
     let context = &mut Context {
       modules: &self.module_table.normal_modules,
       symbols: &self.symbols,
@@ -114,6 +121,8 @@ impl LinkStage<'_> {
       is_module_included_vec: &mut is_module_included_vec,
       tree_shaking: self.input_options.treeshake,
       runtime_id: self.runtime.id(),
+      has_export_used: &mut has_export_used,
+      module_side_effects: &mut module_side_effects,
     };
 
     self.entries.iter().for_each(|entry| {
@@ -123,7 +132,11 @@ impl LinkStage<'_> {
     });
 
     self.module_table.normal_modules.iter_mut().par_bridge().for_each(|module| {
-      module.is_included = is_module_included_vec[module.id];
+      module.is_included = has_export_used[module.id]
+        || matches!(module.side_effects, Some(true))
+        || (matches!(module.side_effects, None) && module_side_effects[module.id])
+        || module.is_user_defined_entry;
+      dbg!(&module.pretty_path, module.is_included);
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });

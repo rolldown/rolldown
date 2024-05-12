@@ -1,23 +1,15 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-assertion_line: 167
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "demo-pkg" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
 ## src_entry_js.mjs
 
 ```js
-import { foo } from "demo-pkg";
+// node_modules/demo-pkg/index.js
+console.log('hello');
 
 // src/entry.js
 console.log('unused import');

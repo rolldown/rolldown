@@ -238,6 +238,7 @@ impl ModuleLoader {
               let id = self.try_spawn_new_task(&info, false);
               // Dynamic imported module will be considered as an entry
               if let ModuleId::Normal(id) = id {
+                dbg!(&id, &info.path.path);
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
                   importer_path: module.resource_id.expect_file().clone(),
@@ -246,12 +247,11 @@ impl ModuleLoader {
                   self
                     .intermediate_normal_modules
                     .module_side_effects
-                    .resize_with((id).into(), Default::default);
+                    .resize_with((id + 1).into(), Default::default);
+                  dbg!(&self.intermediate_normal_modules.module_side_effects);
                 }
-                self
-                  .intermediate_normal_modules
-                  .module_side_effects
-                  .insert(id, info.package_json.clone());
+                self.intermediate_normal_modules.module_side_effects[id] =
+                  info.package_json.clone();
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
                 {
@@ -288,30 +288,6 @@ impl ModuleLoader {
       self.remaining -= 1;
     }
 
-    let module_id_to_side_effects = self
-      .intermediate_normal_modules
-      .module_side_effects
-      .iter()
-      .enumerate()
-      .map(|(id, package_json)| {
-        let module_path = &self.intermediate_normal_modules.modules[id]
-          .as_ref()
-          .expect("should have index")
-          .pretty_path;
-        let res = package_json.as_ref().and_then(|json| {
-          dbg!(&json.realpath);
-          dbg!(&module_path);
-          let relative = &json.realpath.parent()?.relative(&self.input_options.cwd);
-          let relative_path = module_path.relative(relative);
-          side_effects::SideEffects::from_description(json.raw_json()).map(|item| {
-            item.derive_side_effects_from_package_json(&relative_path.to_string_lossy())
-          })
-        });
-        dbg!(&res);
-        res
-      })
-      .collect::<Vec<_>>();
-
     let mut modules: IndexVec<NormalModuleId, NormalModule> = self
       .intermediate_normal_modules
       .modules
@@ -319,6 +295,7 @@ impl ModuleLoader {
       .flatten()
       .enumerate()
       .map(|(id, mut module)| {
+        // dbg!(id, &module.pretty_path);
         // Note: (Compat to rollup)
         // The `dynamic_importers/importers` should be added after `module_parsed` hook.
         for importer in std::mem::take(&mut self.intermediate_normal_modules.importers[id]) {
@@ -332,6 +309,26 @@ impl ModuleLoader {
       })
       .collect();
 
+    let module_id_to_side_effects = self
+      .intermediate_normal_modules
+      .module_side_effects
+      .iter()
+      .enumerate()
+      .map(|(id, package_json)| {
+        // dbg!(&id, &package_json);
+        let module_path = &modules[id].pretty_path;
+        let res = package_json.as_ref().and_then(|json| {
+          let relative = &json.realpath.parent()?.relative(&self.input_options.cwd);
+          let relative_path = module_path.relative(relative);
+          side_effects::SideEffects::from_description(json.raw_json()).map(|item| {
+            item.derive_side_effects_from_package_json(&relative_path.to_string_lossy())
+          })
+        });
+        res
+      })
+      .collect::<Vec<_>>();
+    //
+    //
     for (id, derived_side_effect) in module_id_to_side_effects.into_iter().enumerate() {
       modules[id].side_effects = derived_side_effect;
     }

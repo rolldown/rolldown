@@ -338,7 +338,7 @@ pub fn init_entry_point_stmt_info(module: &mut NormalModule, meta: &mut LinkingM
     is_included: false,
     import_records: Vec::new(),
     debug_label: None,
-    is_export: true,
+    is_export: false,
   };
 
   module.stmt_infos.add_stmt_info(stmt_info);

@@ -1,4 +1,4 @@
-include = [".taplo.toml", "Cargo.toml", "crates/*/*.toml"]
+include = [".taplo.toml", "Cargo.toml", "crates/*/*.toml", "*.toml", "web/docs/netlify.toml"]
 
 [formatting]
 align_entries = true

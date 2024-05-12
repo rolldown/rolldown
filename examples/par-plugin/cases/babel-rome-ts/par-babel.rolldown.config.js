@@ -1,12 +1,9 @@
 import { defineConfig } from 'rolldown'
 import { builtinModules } from 'node:module'
 import nodePath from 'node:path'
-import nodeUrl from 'node:url'
-import { default as parallelBabelPluginSync } from './parallel-babel-plugin/index.js'
+import { default as parallelBabelPluginSync } from '../../parallel-babel-plugin/index.js'
 
-const dirname = nodePath.dirname(nodeUrl.fileURLToPath(import.meta.url))
-
-export const REPO_ROOT = nodePath.resolve(dirname, '../..')
+export const REPO_ROOT = nodePath.resolve(import.meta.dirname, '../../../..')
 
 export default defineConfig({
   logLevel: 'silent',

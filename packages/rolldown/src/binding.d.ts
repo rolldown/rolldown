@@ -33,6 +33,7 @@ export class BindingOutputChunk {
   get map(): string | null
   set map(map: string)
   get sourcemapFileName(): string | null
+  get preliminaryFileName(): string
 }
 
 /** The `BindingOutputs` owner `Vec<Output>` the mutable reference, it avoid `Clone` at call `writeBundle/generateBundle` hook, and make it mutable. */

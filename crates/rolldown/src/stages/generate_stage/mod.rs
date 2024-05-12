@@ -100,7 +100,9 @@ impl<'a> GenerateStage<'a> {
     let chunks = finalize_chunks(&mut chunk_graph, chunks);
 
     let mut assets = vec![];
-    for ChunkRenderReturn { mut map, rendered_chunk, mut code, file_dir } in chunks {
+    for ChunkRenderReturn { mut map, rendered_chunk, mut code, file_dir, preliminary_file_name } in
+      chunks
+    {
       if let Some(map) = map.as_mut() {
         map.set_file(&rendered_chunk.file_name);
 
@@ -177,6 +179,7 @@ impl<'a> GenerateStage<'a> {
         dynamic_imports: rendered_chunk.dynamic_imports,
         map,
         sourcemap_file_name,
+        preliminary_file_name,
       })));
     }
 

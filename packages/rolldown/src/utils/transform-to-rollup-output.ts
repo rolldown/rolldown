@@ -52,6 +52,7 @@ function transformToRollupOutputChunk(
       chunk.map = JSON.stringify(map)
     },
     sourcemapFileName: chunk.sourcemapFileName || null,
+    preliminaryFileName: chunk.preliminaryFileName,
   }
 }
 

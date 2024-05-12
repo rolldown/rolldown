@@ -23,4 +23,5 @@ pub struct OutputChunk {
   pub code: String,
   pub map: Option<SourceMap>,
   pub sourcemap_file_name: Option<String>,
+  pub preliminary_file_name: FilePath,
 }

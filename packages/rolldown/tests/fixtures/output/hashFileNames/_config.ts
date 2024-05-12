@@ -54,6 +54,9 @@ export default defineTest({
     for (const chunk of chunks) {
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
+          expect(chunk.preliminaryFileName).toMatchInlineSnapshot(
+            `"main-!~{000}~.js"`,
+          )
           expect(chunk.fileName).toMatchInlineSnapshot(`"main-zpPZMo1b.js"`)
           expect(chunk.imports[0]).toMatchInlineSnapshot(`"shared-RtRL5WZ7.js"`)
           expect(chunk.dynamicImports[0]).toMatchInlineSnapshot(

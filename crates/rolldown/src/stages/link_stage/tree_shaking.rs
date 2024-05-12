@@ -131,8 +131,10 @@ impl LinkStage<'_> {
       include_module(context, module);
     });
 
+    let enable_tree_shaking = self.input_options.treeshake;
     self.module_table.normal_modules.iter_mut().par_bridge().for_each(|module| {
-      module.is_included = has_export_used[module.id]
+      module.is_included = !enable_tree_shaking
+        || has_export_used[module.id]
         || matches!(module.side_effects, Some(true))
         || (matches!(module.side_effects, None) && module_side_effects[module.id])
         || module.is_user_defined_entry;

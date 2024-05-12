@@ -6,47 +6,46 @@ import type { Plugin } from './index'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
 
-export interface PluginContext {
+export class PluginContext {
   debug: LoggingFunction
   info: LoggingFunction
   warn: LoggingFunction
   error: (error: RollupError | string) => never
-}
+  resolve: BindingPluginContext['resolve']
 
-export function transformPluginContext(
-  options: NormalizedInputOptions,
-  context: BindingPluginContext,
-  plugin: Plugin,
-): PluginContext {
-  // TODO add `onLog` option
-  const onLog = () => {}
-  const pluginName = plugin.name || 'unknown'
-  const logLevel = options.logLevel || LOG_LEVEL_INFO
-  return {
-    ...context,
-    debug: getLogHandler(
+  constructor(
+    options: NormalizedInputOptions,
+    context: BindingPluginContext,
+    plugin: Plugin,
+  ) {
+    // TODO add `onLog` option
+    const onLog = () => {}
+    const pluginName = plugin.name || 'unknown'
+    const logLevel = options.logLevel || LOG_LEVEL_INFO
+    this.debug = getLogHandler(
       LOG_LEVEL_DEBUG,
       'PLUGIN_LOG',
       onLog,
       pluginName,
       logLevel,
-    ),
-    warn: getLogHandler(
+    )
+    this.warn = getLogHandler(
       LOG_LEVEL_WARN,
       'PLUGIN_WARNING',
       onLog,
       pluginName,
       logLevel,
-    ),
-    info: getLogHandler(
+    )
+    this.info = getLogHandler(
       LOG_LEVEL_INFO,
       'PLUGIN_LOG',
       onLog,
       pluginName,
       logLevel,
-    ),
-    error(e): never {
+    )
+    this.error = (e): never => {
       return error(logPluginError(normalizeLog(e), pluginName))
-    },
+    }
+    this.resolve = context.resolve.bind(context)
   }
 }

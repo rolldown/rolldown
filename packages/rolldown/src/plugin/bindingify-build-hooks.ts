@@ -6,7 +6,7 @@ import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled, transformModuleInfo } from '../utils'
 import path from 'path'
 import { SourceMapInputObject } from '../types/sourcemap'
-import { transformPluginContext } from './plugin-context'
+import { PluginContext } from './plugin-context'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -19,7 +19,7 @@ export function bindingifyBuildStart(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx) => {
-    await handler.call(transformPluginContext(options, ctx, plugin), options)
+    await handler.call(new PluginContext(options, ctx, plugin), options)
   }
 }
 
@@ -35,7 +35,7 @@ export function bindingifyBuildEnd(
 
   return async (ctx, err) => {
     await handler.call(
-      transformPluginContext(options, ctx, plugin),
+      new PluginContext(options, ctx, plugin),
       err ? new Error(err) : undefined,
     )
   }
@@ -53,7 +53,7 @@ export function bindingifyResolveId(
 
   return async (ctx, specifier, importer, extraOptions) => {
     const ret = await handler.call(
-      transformPluginContext(options, ctx, plugin),
+      new PluginContext(options, ctx, plugin),
       specifier,
       importer ?? undefined,
       extraOptions,
@@ -82,7 +82,7 @@ export function bindingifyResolveDynamicImport(
 
   return async (ctx, specifier, importer) => {
     const ret = await handler.call(
-      transformPluginContext(options, ctx, plugin),
+      new PluginContext(options, ctx, plugin),
       specifier,
       importer ?? undefined,
     )
@@ -139,10 +139,7 @@ export function bindingifyLoad(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, id) => {
-    const ret = await handler.call(
-      transformPluginContext(options, ctx, plugin),
-      id,
-    )
+    const ret = await handler.call(new PluginContext(options, ctx, plugin), id)
 
     if (ret == null) {
       return
@@ -189,7 +186,7 @@ export function bindingifyModuleParsed(
 
   return async (ctx, moduleInfo) => {
     await handler.call(
-      transformPluginContext(options, ctx, plugin),
+      new PluginContext(options, ctx, plugin),
       transformModuleInfo(moduleInfo),
     )
   }

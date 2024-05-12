@@ -44,7 +44,7 @@ export class BindingOutputs {
 }
 
 export class BindingPluginContext {
-  resolve(specifier: string, importer: string | undefined | null, extraOptions: BindingPluginContextResolveOptions): void
+  resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
 }
 
 export class Bundler {
@@ -124,8 +124,13 @@ export interface BindingOutputOptions {
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
 }
 
+export interface BindingPluginContextResolvedId {
+  id: string
+  external: boolean
+}
+
 export interface BindingPluginContextResolveOptions {
-  importKind: string
+  importKind?: 'import' | 'dynamic-import' | 'require-call'
 }
 
 export interface BindingPluginOptions {

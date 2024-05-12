@@ -6,7 +6,7 @@ use rolldown_resolver::Resolver;
 
 use crate::{
   utils::normalize_options::{normalize_options, NormalizeOptionsReturn},
-  Bundler, BundlerOptions,
+  Bundler, BundlerOptions, SharedResolver,
 };
 
 #[derive(Debug, Default)]
@@ -21,10 +21,12 @@ impl BundlerBuilder {
 
     let NormalizeOptionsReturn { options, resolve_options } = normalize_options(self.input_options);
 
+    let resolver: SharedResolver =
+      Resolver::new(resolve_options, options.platform, options.cwd.clone(), OsFileSystem).into();
+
     Bundler {
-      resolver: Resolver::new(resolve_options, options.platform, options.cwd.clone(), OsFileSystem)
-        .into(),
-      plugin_driver: PluginDriver::new_shared(self.plugins),
+      plugin_driver: PluginDriver::new_shared(self.plugins, &resolver),
+      resolver,
       options: Arc::new(options),
       fs: OsFileSystem,
       _log_guard: maybe_guard,

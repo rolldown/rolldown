@@ -4,7 +4,7 @@ import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { NormalizedOutputOptions } from '../options/output-options'
 import type { Plugin } from './index'
 import { transformToOutputBundle } from '../utils/transform-to-rollup-output'
-import { transformPluginContext } from './plugin-context'
+import { PluginContext } from './plugin-context'
 
 export function bindingifyRenderStart(
   plugin: Plugin,
@@ -19,7 +19,7 @@ export function bindingifyRenderStart(
 
   return async (ctx) => {
     handler.call(
-      transformPluginContext(options, ctx, plugin),
+      new PluginContext(options, ctx, plugin),
       outputOptions,
       options,
     )
@@ -39,7 +39,7 @@ export function bindingifyRenderChunk(
 
   return async (ctx, code, chunk) => {
     const ret = await handler.call(
-      transformPluginContext(options, ctx, plugin),
+      new PluginContext(options, ctx, plugin),
       code,
       chunk,
       outputOptions,
@@ -75,7 +75,7 @@ export function bindingifyRenderError(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, err) => {
-    handler.call(transformPluginContext(options, ctx, plugin), new Error(err))
+    handler.call(new PluginContext(options, ctx, plugin), new Error(err))
   }
 }
 
@@ -92,7 +92,7 @@ export function bindingifyGenerateBundle(
 
   return async (ctx, bundle, isWrite) => {
     handler.call(
-      transformPluginContext(options, ctx, plugin),
+      new PluginContext(options, ctx, plugin),
       outputOptions,
       transformToOutputBundle(bundle),
       isWrite,
@@ -112,7 +112,7 @@ export function bindingifyWriteBundle(
 
   return async (ctx, bundle) => {
     handler.call(
-      transformPluginContext(options, ctx, plugin),
+      new PluginContext(options, ctx, plugin),
       outputOptions,
       transformToOutputBundle(bundle),
     )

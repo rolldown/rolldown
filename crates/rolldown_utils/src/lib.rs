@@ -4,6 +4,8 @@ pub mod base64;
 mod bitset;
 pub mod debug;
 pub mod futures;
+pub mod path_buf_ext;
+pub mod path_ext;
 pub mod rayon;
 pub mod xxhash;
 

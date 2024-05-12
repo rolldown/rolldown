@@ -1,5 +1,6 @@
 use napi::Env;
 use rolldown_tracing::try_init_tracing;
+pub mod napi_error;
 pub mod normalize_binding_options;
 
 pub fn try_init_custom_trace_subscriber(mut napi_env: Env) {

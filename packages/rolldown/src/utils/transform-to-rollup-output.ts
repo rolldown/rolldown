@@ -9,6 +9,7 @@ import type {
   BindingOutputAsset,
   BindingOutputChunk,
   BindingOutputs,
+  FinalBindingOutputs,
 } from '../binding'
 
 function transformToRollupOutputChunk(
@@ -51,6 +52,7 @@ function transformToRollupOutputChunk(
       chunk.map = JSON.stringify(map)
     },
     sourcemapFileName: chunk.sourcemapFileName || null,
+    preliminaryFileName: chunk.preliminaryFileName,
   }
 }
 
@@ -70,7 +72,7 @@ function transformToRollupOutputAsset(
 }
 
 export function transformToRollupOutput(
-  output: BindingOutputs,
+  output: BindingOutputs | FinalBindingOutputs,
 ): RolldownOutput {
   const { chunks, assets } = output
   const [firstChunk, ...restChunks] = chunks
@@ -84,7 +86,15 @@ export function transformToRollupOutput(
 }
 
 export function transformToOutputBundle(output: BindingOutputs): OutputBundle {
-  return Object.fromEntries(
+  const bundle = Object.fromEntries(
     transformToRollupOutput(output).output.map((item) => [item.fileName, item]),
   )
+  return new Proxy(bundle, {
+    deleteProperty(target, property): boolean {
+      if (typeof property === 'string') {
+        output.delete(property)
+      }
+      return true
+    },
+  })
 }

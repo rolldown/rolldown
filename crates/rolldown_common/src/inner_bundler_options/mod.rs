@@ -8,7 +8,7 @@ use serde::{Deserialize, Deserializer};
 use crate::SourceMapIgnoreList;
 
 use self::types::{
-  external::External, input_item::InputItem, output_format::OutputFormat,
+  input_item::InputItem, is_external::IsExternal, output_format::OutputFormat,
   output_option::AddonOutputOption, platform::Platform, resolve_options::ResolveOptions,
   source_map_type::SourceMapType, sourcemap_path_transform::SourceMapPathTransform,
 };
@@ -30,7 +30,7 @@ pub struct BundlerOptions {
     serde(default, deserialize_with = "deserialize_external"),
     schemars(with = "Option<Vec<String>>")
   )]
-  pub external: Option<External>,
+  pub external: Option<IsExternal>,
   pub treeshake: Option<bool>,
   pub platform: Option<Platform>,
   pub shim_missing_exports: Option<bool>,
@@ -69,12 +69,12 @@ pub struct BundlerOptions {
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
-fn deserialize_external<'de, D>(deserializer: D) -> Result<Option<External>, D::Error>
+fn deserialize_external<'de, D>(deserializer: D) -> Result<Option<IsExternal>, D::Error>
 where
   D: Deserializer<'de>,
 {
   let deserialized = Option::<Vec<String>>::deserialize(deserializer)?;
-  Ok(deserialized.map(External::ArrayString))
+  Ok(deserialized.map(IsExternal::from_vec))
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

@@ -46,6 +46,7 @@ const main = defineCommand({
         argConfig = DEFAULT_CONFIG_FILENAME
       }
       await bundle(argConfig)
+      process.exit(0)
       return
     }
 

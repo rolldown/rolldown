@@ -33,12 +33,14 @@ export class BindingOutputChunk {
   get map(): string | null
   set map(map: string)
   get sourcemapFileName(): string | null
+  get preliminaryFileName(): string
 }
 
 /** The `BindingOutputs` owner `Vec<Output>` the mutable reference, it avoid `Clone` at call `writeBundle/generateBundle` hook, and make it mutable. */
 export class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
+  delete(fileName: string): void
 }
 
 export class BindingPluginContext {

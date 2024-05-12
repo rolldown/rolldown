@@ -17,14 +17,33 @@ export const babelPlugin = () => {
 
   return {
     name: 'parallel-babel-plugin',
-    async transform(code, id) {
+    transform(code, id) {
       const ext = nodePath.extname(id)
       if (ext === '.ts' || ext === '.tsx') {
+        let now = performance.now()
+        const ast = babel.parseSync(code, {
+          ...partialConfig?.options,
+          filename: id,
+        })
+        if (!ast || !partialConfig || !partialConfig.options) {
+          throw new Error('failed to parse')
+        }
+        let diffAst = performance.now() - now
         const ret = /** @type {babel.BabelFileResult} */ (
-          await babel.transformAsync(code, {
+          babel.transformFromAstSync(ast, code, {
             ...partialConfig?.options,
             filename: id,
           })
+        )
+        let diffTrans = performance.now() - now - diffAst
+        console.log(
+          id,
+          'total',
+          diffAst + diffTrans,
+          'parse: ',
+          diffAst,
+          'trans: ',
+          diffTrans,
         )
         return { code: /** @type {string} */ (ret.code) }
       }

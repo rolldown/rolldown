@@ -1,4 +1,5 @@
 import { defineParallelPluginImplementation } from 'rolldown/parallel-plugin'
+// @ts-expect-error
 import babel from '@babel/core'
 import nodePath from 'node:path'
 
@@ -20,12 +21,22 @@ export const babelPlugin = () => {
     transform(code, id) {
       const ext = nodePath.extname(id)
       if (ext === '.ts' || ext === '.tsx') {
+        let now = performance.now()
+        const ast = babel.parseSync(code, {
+          ...partialConfig?.options,
+          filename: id,
+        })
+        if (!ast || !partialConfig || !partialConfig.options) {
+          throw new Error('failed to parse')
+        }
+        let diffAst = performance.now() - now
         const ret = /** @type {babel.BabelFileResult} */ (
-          babel.transformSync(code, {
+          babel.transformFromAstSync(ast, code, {
             ...partialConfig?.options,
             filename: id,
           })
         )
+        let diffTrans = performance.now() - now - diffAst
         return { code: /** @type {string} */ (ret.code) }
       }
     },

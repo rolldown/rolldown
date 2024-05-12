@@ -43,6 +43,7 @@ export interface RolldownOutputChunk {
   moduleIds: string[]
   map: SourceMap | null
   sourcemapFileName: string | null
+  preliminaryFileName: string
 }
 
 function _assertRolldownOutputChunk() {

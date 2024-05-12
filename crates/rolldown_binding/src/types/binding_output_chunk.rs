@@ -107,4 +107,9 @@ impl BindingOutputChunk {
   pub fn sourcemap_file_name(&self) -> Option<String> {
     self.inner.sourcemap_file_name.clone()
   }
+
+  #[napi(getter)]
+  pub fn preliminary_file_name(&self) -> String {
+    self.inner.preliminary_file_name.to_string()
+  }
 }

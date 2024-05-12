@@ -52,7 +52,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/rolldown
 
-  examples/par-babel-rome-ts:
+  examples/par-plugin:
     devDependencies:
       '@babel/core':
         specifier: ^7.24.4

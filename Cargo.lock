@@ -1964,6 +1964,7 @@ dependencies = [
  "once_cell",
  "rayon",
  "regex",
+ "sugar_path",
  "xxhash-rust",
 ]
 

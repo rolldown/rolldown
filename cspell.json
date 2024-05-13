@@ -101,6 +101,7 @@
     "oxlintignore",
     "proto",
     "Renamer",
+    "replacen",
     "repr",
     "rolldown",
     "rollup",

@@ -1,6 +1,7 @@
 use std::hash::{Hash, Hasher};
 
 use index_vec::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_common::{ChunkId, ResourceId};
 use rolldown_utils::{
   base64::to_url_safe_base64,
@@ -45,7 +46,7 @@ pub fn finalize_chunks(
     .collect::<Vec<_>>()
     .into();
 
-  let mut index_chunk_hashers = index_vec::index_vec![Xxh3::default(); chunks.len()];
+  let mut index_chunk_hashers = oxc_index::index_vec![Xxh3::default(); chunks.len()];
 
   let index_final_hashes: IndexVec<ChunkId, String> = index_chunk_hashers
     .iter_mut_enumerated()

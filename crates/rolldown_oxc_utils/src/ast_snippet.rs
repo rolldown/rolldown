@@ -46,11 +46,14 @@ impl<'ast> AstSnippet<'ast> {
     object: PassedStr,
     property: PassedStr,
   ) -> ast::MemberExpression<'ast> {
-    ast::MemberExpression::StaticMemberExpression(ast::StaticMemberExpression {
-      object: ast::Expression::Identifier(self.id_ref(object, SPAN).into_in(self.alloc)),
-      property: ast::IdentifierName { name: self.atom(property), ..TakeIn::dummy(self.alloc) },
-      ..TakeIn::dummy(self.alloc)
-    })
+    ast::MemberExpression::StaticMemberExpression(
+      ast::StaticMemberExpression {
+        object: ast::Expression::Identifier(self.id_ref(object, SPAN).into_in(self.alloc)),
+        property: ast::IdentifierName { name: self.atom(property), ..TakeIn::dummy(self.alloc) },
+        ..TakeIn::dummy(self.alloc)
+      }
+      .into_in(self.alloc),
+    )
   }
 
   /// `[object].[property]`
@@ -59,9 +62,7 @@ impl<'ast> AstSnippet<'ast> {
     object: PassedStr,
     property: PassedStr,
   ) -> ast::Expression<'ast> {
-    ast::Expression::MemberExpression(
-      self.literal_prop_access_member_expr(object, property).into_in(self.alloc),
-    )
+    ast::Expression::from(self.literal_prop_access_member_expr(object, property))
   }
 
   /// `name()`
@@ -80,9 +81,7 @@ impl<'ast> AstSnippet<'ast> {
 
   /// `name(arg)`
   pub fn call_expr_with_arg_expr(&self, name: PassedStr, arg: PassedStr) -> ast::Expression<'ast> {
-    let arg = ast::Argument::Expression(ast::Expression::Identifier(
-      self.id_ref(arg, SPAN).into_in(self.alloc),
-    ));
+    let arg = ast::Argument::Identifier(self.id_ref(arg, SPAN).into_in(self.alloc));
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg);
     ast::Expression::CallExpression(call_expr.into_in(self.alloc))
@@ -94,7 +93,7 @@ impl<'ast> AstSnippet<'ast> {
     name: PassedStr,
     arg: ast::Expression<'ast>,
   ) -> ast::Expression<'ast> {
-    let arg = ast::Argument::Expression(arg);
+    let arg = ast::Argument::from(arg);
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg);
     ast::Expression::CallExpression(call_expr.into_in(self.alloc))
@@ -107,12 +106,8 @@ impl<'ast> AstSnippet<'ast> {
     arg1: PassedStr,
     arg2: PassedStr,
   ) -> ast::Expression<'ast> {
-    let arg1 = ast::Argument::Expression(ast::Expression::Identifier(
-      self.id_ref(arg1, SPAN).into_in(self.alloc),
-    ));
-    let arg2 = ast::Argument::Expression(ast::Expression::Identifier(
-      self.id_ref(arg2, SPAN).into_in(self.alloc),
-    ));
+    let arg1 = ast::Argument::Identifier(self.id_ref(arg1, SPAN).into_in(self.alloc));
+    let arg2 = ast::Argument::Identifier(self.id_ref(arg2, SPAN).into_in(self.alloc));
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg1);
     call_expr.arguments.push(arg2);
@@ -126,8 +121,8 @@ impl<'ast> AstSnippet<'ast> {
     arg1: ast::Expression<'ast>,
     arg2: ast::Expression<'ast>,
   ) -> ast::Expression<'ast> {
-    let arg1 = ast::Argument::Expression(arg1);
-    let arg2 = ast::Argument::Expression(arg2);
+    let arg1 = ast::Argument::from(arg1);
+    let arg2 = ast::Argument::from(arg2);
     let mut call_expr = self.call_expr(name);
     call_expr.arguments.push(arg1);
     call_expr.arguments.push(arg2);
@@ -151,7 +146,7 @@ impl<'ast> AstSnippet<'ast> {
     name: PassedStr,
     init: ast::Expression<'ast>,
   ) -> ast::Statement<'ast> {
-    ast::Statement::Declaration(self.var_decl(name, init))
+    ast::Statement::from(self.var_decl(name, init))
   }
 
   /// `var [name] = [init]`
@@ -215,7 +210,7 @@ impl<'ast> AstSnippet<'ast> {
 
     //  __commonJS(...)
     let mut commonjs_call_expr = self.call_expr(commonjs_name);
-    commonjs_call_expr.arguments.push(ast::Argument::Expression(
+    commonjs_call_expr.arguments.push(ast::Argument::from(
       ast::Expression::ArrowFunctionExpression(arrow_expr.into_in(self.alloc)),
     ));
 
@@ -246,7 +241,7 @@ impl<'ast> AstSnippet<'ast> {
 
     //  __esm(...)
     let mut commonjs_call_expr = self.call_expr(esm_fn_name);
-    commonjs_call_expr.arguments.push(ast::Argument::Expression(
+    commonjs_call_expr.arguments.push(ast::Argument::from(
       ast::Expression::ArrowFunctionExpression(arrow_expr.into_in(self.alloc)),
     ));
 
@@ -287,7 +282,7 @@ impl<'ast> AstSnippet<'ast> {
         span: TakeIn::dummy(self.alloc),
         value,
         raw: self.alloc.alloc(value.to_string()),
-        base: oxc::syntax::NumberBase::Decimal,
+        base: oxc::syntax::number::NumberBase::Decimal,
       }
       .into_in(self.alloc),
     )
@@ -302,11 +297,9 @@ impl<'ast> AstSnippet<'ast> {
     id: PassedStr,
     span: Span,
   ) -> ast::AssignmentTarget<'ast> {
-    ast::AssignmentTarget::SimpleAssignmentTarget(
-      ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
-        self.id_ref(id, span).into_in(self.alloc),
-      ),
-    )
+    ast::AssignmentTarget::from(ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
+      self.id_ref(id, span).into_in(self.alloc),
+    ))
   }
 
   // `() => xx`

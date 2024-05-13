@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use index_vec::IndexVec;
 use oxc::span::SourceType;
+use oxc_index::IndexVec;
 use rolldown_common::{
   AstScope, ExportsKind, ModuleType, NormalModule, NormalModuleId, ResourceId, SymbolRef,
 };

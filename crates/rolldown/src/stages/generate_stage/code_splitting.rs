@@ -1,6 +1,6 @@
 use std::hash::BuildHasherDefault;
 
-use index_vec::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_common::{Chunk, ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
@@ -60,7 +60,7 @@ impl<'a> GenerateStage<'a> {
     // we create a facade entry point for it.
     let entries_len = if is_in_rust_test_mode() { entries_len + 1 } else { entries_len };
 
-    let mut module_to_bits = index_vec::index_vec![BitSet::new(entries_len); self.link_output.module_table.normal_modules.len()];
+    let mut module_to_bits = oxc_index::index_vec![BitSet::new(entries_len); self.link_output.module_table.normal_modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity_and_hasher(
       self.link_output.entries.len(),
       BuildHasherDefault::default(),
@@ -106,7 +106,7 @@ impl<'a> GenerateStage<'a> {
       );
     });
 
-    let mut module_to_chunk: IndexVec<NormalModuleId, Option<ChunkId>> = index_vec::index_vec![
+    let mut module_to_chunk: IndexVec<NormalModuleId, Option<ChunkId>> = oxc_index::index_vec![
       None;
       self.link_output.module_table.normal_modules.len()
     ];

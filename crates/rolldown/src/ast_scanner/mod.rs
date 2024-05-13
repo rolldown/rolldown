@@ -1,7 +1,6 @@
 pub mod impl_visit;
 pub mod side_effect_detector;
 
-use index_vec::IndexVec;
 use oxc::{
   ast::{
     ast::{
@@ -13,6 +12,7 @@ use oxc::{
   semantic::SymbolId,
   span::{Atom, Span},
 };
+use oxc_index::IndexVec;
 use rolldown_common::{
   representative_name, AstScope, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleType,
   NamedImport, NormalModuleId, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos,
@@ -303,7 +303,7 @@ impl<'me> AstScanner<'me> {
   }
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     let local_binding_for_default_export = match &decl.declaration {
-      oxc::ast::ast::ExportDefaultDeclarationKind::Expression(_exp) => {
+      decl if decl.is_expression() => {
         // `export default [expression]` pattern
         None
       }

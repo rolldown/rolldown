@@ -1,4 +1,4 @@
-use index_vec::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_common::{ChunkId, NormalModuleId};
 
 use crate::type_alias::IndexChunks;

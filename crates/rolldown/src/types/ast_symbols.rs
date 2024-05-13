@@ -1,8 +1,8 @@
-use index_vec::IndexVec;
 use oxc::{
   semantic::{ScopeId, SymbolFlags, SymbolId, SymbolTable},
   span::{CompactStr as CompactString, Span},
 };
+use oxc_index::IndexVec;
 
 #[derive(Debug, Default)]
 pub struct AstSymbols {

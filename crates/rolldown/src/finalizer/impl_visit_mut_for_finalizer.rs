@@ -112,7 +112,8 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
           }
         } else if let Some(default_decl) = top_stmt.as_export_default_declaration_mut() {
           match &mut default_decl.declaration {
-            ast::ExportDefaultDeclarationKind::Expression(expr) => {
+            decl if decl.is_expression() => {
+              let expr = decl.to_expression_mut();
               // "export default foo;" => "var default = foo;"
               let canonical_name_for_default_export_ref =
                 self.canonical_name_for(self.ctx.module.default_export_ref);
@@ -128,9 +129,7 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 func.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
               }
-              top_stmt = ast::Statement::Declaration(ast::Declaration::FunctionDeclaration(
-                func.take_in(self.alloc),
-              ));
+              top_stmt = ast::Statement::FunctionDeclaration(func.take_in(self.alloc));
             }
             ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
               // "export default class {}" => "class default {}"
@@ -140,9 +139,7 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 class.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
               }
-              top_stmt = ast::Statement::Declaration(ast::Declaration::ClassDeclaration(
-                class.take_in(self.alloc),
-              ));
+              top_stmt = ast::Statement::ClassDeclaration(class.take_in(self.alloc));
             }
             _ => {}
           }
@@ -152,7 +149,7 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               // `export var foo = 1` => `var foo = 1`
               // `export function foo() {}` => `function foo() {}`
               // `export class Foo {}` => `class Foo {}`
-              top_stmt = ast::Statement::Declaration(decl.take_in(self.alloc));
+              top_stmt = ast::Statement::from(decl.take_in(self.alloc));
             } else {
               // `export { foo }`
               // Remove this statement by ignoring it
@@ -222,19 +219,18 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
 
           // Hoist all top-level "var" and "function" declarations out of the closure
           old_body.into_iter().for_each(|mut stmt| match &mut stmt {
-            ast::Statement::Declaration(decl) => match decl {
-              ast::Declaration::VariableDeclaration(_) | ast::Declaration::ClassDeclaration(_) => {
-                if let Some(converted) = self.convert_decl_to_assignment(decl, &mut hoisted_names) {
-                  stmts_inside_closure.push(converted);
-                }
+            ast::Statement::VariableDeclaration(_) | ast::Statement::ClassDeclaration(_) => {
+              if let Some(converted) =
+                self.convert_decl_to_assignment(stmt.to_declaration_mut(), &mut hoisted_names)
+              {
+                stmts_inside_closure.push(converted);
               }
-              ast::Declaration::FunctionDeclaration(_) => {
-                fn_stmts.push(stmt);
-              }
-              ast::Declaration::UsingDeclaration(_) => unimplemented!(),
-              _ => {}
-            },
-            ast::Statement::ModuleDeclaration(_) => unreachable!(
+            }
+            ast::Statement::FunctionDeclaration(_) => {
+              fn_stmts.push(stmt);
+            }
+            ast::Statement::UsingDeclaration(_) => unimplemented!(),
+            stmt if stmt.is_module_declaration() => unreachable!(
               "At this point, all module declarations should have been removed or transformed"
             ),
             _ => {
@@ -257,14 +253,14 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
                 ..TakeIn::dummy(self.alloc)
               });
             });
-            program.body.push(ast::Statement::Declaration(ast::Declaration::VariableDeclaration(
+            program.body.push(ast::Statement::VariableDeclaration(
               ast::VariableDeclaration {
                 declarations: declarators,
                 kind: ast::VariableDeclarationKind::Var,
                 ..TakeIn::dummy(self.alloc)
               }
               .into_in(self.alloc),
-            )));
+            ));
           }
           program.body.push(self.snippet.esm_wrapper_stmt(
             wrap_ref_name,
@@ -442,22 +438,20 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       {
         *property = ast::AssignmentTargetProperty::AssignmentTargetPropertyProperty(
           ast::AssignmentTargetPropertyProperty {
-            name: ast::PropertyKey::Identifier(
+            name: ast::PropertyKey::StaticIdentifier(
               self.snippet.id_name(&prop.binding.name, prop.span).into_in(self.alloc),
             ),
             binding: if let Some(init) = prop.init.take() {
               ast::AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
                 ast::AssignmentTargetWithDefault {
-                  binding: ast::AssignmentTarget::SimpleAssignmentTarget(target),
+                  binding: ast::AssignmentTarget::from(target),
                   init,
                   span: Span::default(),
                 }
                 .into_in(self.alloc),
               )
             } else {
-              ast::AssignmentTargetMaybeDefault::AssignmentTarget(
-                ast::AssignmentTarget::SimpleAssignmentTarget(target),
-              )
+              ast::AssignmentTargetMaybeDefault::from(target)
             },
             span: Span::default(),
           }

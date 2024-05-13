@@ -2,8 +2,8 @@ use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
 use futures::future::join_all;
-use index_vec::IndexVec;
 use oxc::span::SourceType;
+use oxc_index::IndexVec;
 use rolldown_common::{
   AstScope, ImportRecordId, ModuleType, NormalModule, NormalModuleId, RawImportRecord,
   ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,

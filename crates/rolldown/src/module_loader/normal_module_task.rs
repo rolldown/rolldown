@@ -126,7 +126,7 @@ impl NormalModuleTask {
       exports_kind,
       namespace_symbol,
       module_type: self.module_type,
-      pretty_path: self.resolved_path.prettify(&self.ctx.input_options.cwd),
+      pretty_path: self.resolved_path.debug_display(&self.ctx.input_options.cwd),
       sourcemap_chain,
       exec_order: u32::MAX,
       is_user_defined_entry: self.is_user_defined_entry,

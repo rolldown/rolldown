@@ -97,7 +97,7 @@ fn test_ensure_valid_identifier() {
   assert_eq!(ensure_valid_identifier("react-dom".into()), "react_dom");
 }
 
-pub fn stabilize_resource_id(resource_id: &str, cwd: &Path) -> String {
+pub(crate) fn stabilize_resource_id(resource_id: &str, cwd: &Path) -> String {
   if resource_id.as_path().is_absolute() {
     resource_id.relative(cwd).as_path().expect_to_slash()
   } else if resource_id.starts_with('\0') {

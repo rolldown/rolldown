@@ -39,8 +39,6 @@ pub struct NormalModule {
   pub default_export_ref: SymbolRef,
   pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
   pub is_included: bool,
-  // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
-  pub is_virtual: bool,
   // the ids of all modules that statically import this module
   pub importers: Vec<ResourceId>,
   // the ids of all modules that import this module via dynamic import()
@@ -89,6 +87,11 @@ impl NormalModule {
       imported_ids: self.imported_ids.clone(),
       dynamically_imported_ids: self.dynamically_imported_ids.clone(),
     }
+  }
+
+  // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
+  pub fn is_virtual(&self) -> bool {
+    self.resource_id.starts_with('\0')
   }
 }
 

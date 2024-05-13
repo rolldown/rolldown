@@ -32,10 +32,6 @@ impl ResolvedPath {
     }
     pretty
   }
-
-  pub fn is_virtual_module_path(&self) -> bool {
-    self.path.starts_with('\0')
-  }
 }
 
 #[test]
@@ -53,10 +49,4 @@ fn test() {
   let ignore_prettify_res = from_test.prettify(Path::new("./"));
 
   assert_eq!(ignore_prettify_res, "(ignored) resolved_path.rs");
-}
-
-#[test]
-fn is_virtual_module_path() {
-  assert!(ResolvedPath::from("\0a.js".to_string()).is_virtual_module_path());
-  assert!(!ResolvedPath::from("a.js".to_string()).is_virtual_module_path());
 }

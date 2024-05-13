@@ -73,7 +73,10 @@ pub async fn render_chunk(
       } else {
         concat_source.add_source(Box::new(RawSource::new(rendered_content)));
       }
-      rendered_modules.insert(module_path, rendered_module);
+      // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.
+      if !module_path.starts_with('\0') {
+        rendered_modules.insert(module_path, rendered_module);
+      }
     });
   let rendered_chunk = generate_rendered_chunk(this, graph, options, rendered_modules, chunk_graph);
 

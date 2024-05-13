@@ -128,7 +128,6 @@ impl NormalModuleTask {
       module_type: self.module_type,
       pretty_path: self.resolved_path.prettify(&self.ctx.input_options.cwd),
       sourcemap_chain,
-      is_virtual: self.resolved_path.is_virtual_module_path(),
       exec_order: u32::MAX,
       is_user_defined_entry: self.is_user_defined_entry,
       import_records: IndexVec::default(),

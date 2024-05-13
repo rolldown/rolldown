@@ -21,7 +21,7 @@ pub fn render_normal_module<'a>(
     let render_output = OxcCompiler::print(ast, source_name, enable_sourcemap);
 
     Some(ModuleRenderOutput {
-      module_path: module.resource_id.expect_file().clone(),
+      module_path: module.resource_id.clone(),
       module_pretty_path: &module.pretty_path,
       rendered_module: RenderedModule { code: None },
       // Search lines count from rendered content has a little overhead, so make it at parallel.

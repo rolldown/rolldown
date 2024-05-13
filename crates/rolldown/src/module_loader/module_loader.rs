@@ -230,7 +230,7 @@ impl ModuleLoader {
               if let ModuleId::Normal(id) = id {
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
-                  importer_path: module.resource_id.expect_file().clone(),
+                  importer_path: module.resource_id.clone(),
                 });
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)

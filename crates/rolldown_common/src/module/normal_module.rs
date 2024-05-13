@@ -1,7 +1,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use crate::{
-  types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, FilePath, ImportRecord,
+  types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
   ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
   ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
@@ -42,13 +42,13 @@ pub struct NormalModule {
   // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
   pub is_virtual: bool,
   // the ids of all modules that statically import this module
-  pub importers: Vec<FilePath>,
+  pub importers: Vec<ResourceId>,
   // the ids of all modules that import this module via dynamic import()
-  pub dynamic_importers: Vec<FilePath>,
+  pub dynamic_importers: Vec<ResourceId>,
   // the module ids statically imported by this module
-  pub imported_ids: Vec<FilePath>,
+  pub imported_ids: Vec<ResourceId>,
   // the module ids imported by this module via dynamic import()
-  pub dynamically_imported_ids: Vec<FilePath>,
+  pub dynamically_imported_ids: Vec<ResourceId>,
 }
 
 impl NormalModule {
@@ -74,7 +74,7 @@ impl NormalModule {
   pub fn to_module_info(&self) -> ModuleInfo {
     ModuleInfo {
       code: Some(Arc::clone(&self.source)),
-      id: self.resource_id.expect_file().clone(),
+      id: self.resource_id.clone(),
       is_entry: self.is_user_defined_entry,
       importers: {
         let mut value = self.importers.clone();

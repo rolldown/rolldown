@@ -214,7 +214,7 @@ impl<'a> GenerateStage<'a> {
           } else {
             let module_id = entry_module_id;
             let module = &normal_modules[module_id];
-            module.resource_id.expect_file().representative_name().into_owned()
+            module.resource_id.representative_name().into_owned()
           }
         }
         ChunkKind::Common => {
@@ -227,7 +227,7 @@ impl<'a> GenerateStage<'a> {
             || "chunk".to_string(),
             |module_id| {
               let module = &normal_modules[*module_id];
-              module.resource_id.expect_file().representative_name().into_owned()
+              module.resource_id.representative_name().into_owned()
             },
           )
         }

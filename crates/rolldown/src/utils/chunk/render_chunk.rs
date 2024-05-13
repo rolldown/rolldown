@@ -7,7 +7,7 @@ use crate::{
 };
 
 use anyhow::Result;
-use rolldown_common::{Chunk, FilePath, RenderedChunk};
+use rolldown_common::{Chunk, RenderedChunk, ResourceId};
 use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -18,7 +18,7 @@ pub struct ChunkRenderReturn {
   pub map: Option<SourceMap>,
   pub rendered_chunk: RenderedChunk,
   pub file_dir: PathBuf,
-  pub preliminary_file_name: FilePath,
+  pub preliminary_file_name: ResourceId,
 }
 
 use super::{
@@ -50,7 +50,7 @@ pub async fn render_chunk(
     .copied()
     .map(|id| &graph.module_table.normal_modules[id])
     .filter_map(|m| {
-      render_normal_module(m, &graph.ast_table[m.id], m.resource_id.expect_file().as_ref(), options)
+      render_normal_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
     })
     .collect::<Vec<_>>()
     .into_iter()

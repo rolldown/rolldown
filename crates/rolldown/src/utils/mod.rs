@@ -14,6 +14,7 @@ pub mod render_chunks;
 pub mod render_normal_module;
 pub mod reserved_names;
 pub mod resolve_id;
+pub mod stabilize_resource_id;
 pub mod transform_source;
 
 pub(crate) fn is_in_rust_test_mode() -> bool {

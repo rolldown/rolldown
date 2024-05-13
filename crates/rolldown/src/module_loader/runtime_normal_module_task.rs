@@ -61,6 +61,7 @@ impl RuntimeNormalModuleTask {
       repr_name,
       // TODO: Runtime module should not have FilePath as source id
       resource_id: ResourceId::new("runtime".to_string().into()),
+      stable_resource_id: "\\0<runtime>".to_string(),
       named_imports,
       named_exports,
       stmt_infos,

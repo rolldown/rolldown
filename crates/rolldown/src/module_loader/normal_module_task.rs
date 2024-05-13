@@ -19,7 +19,10 @@ use crate::{
   ast_scanner::{AstScanner, ScanResult},
   module_loader::NormalModuleTaskResult,
   types::ast_symbols::AstSymbols,
-  utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
+  utils::{
+    load_source::load_source, resolve_id::resolve_id, stabilize_resource_id::stabilize_resource_id,
+    transform_source::transform_source,
+  },
   SharedOptions, SharedResolver,
 };
 pub struct NormalModuleTask {
@@ -113,6 +116,10 @@ impl NormalModuleTask {
       id: self.module_id,
       repr_name,
       resource_id: ResourceId::new(Arc::<str>::clone(&self.resolved_path.path).into()),
+      stable_resource_id: stabilize_resource_id(
+        &self.resolved_path.path,
+        &self.ctx.input_options.cwd,
+      ),
       named_imports,
       named_exports,
       stmt_infos,

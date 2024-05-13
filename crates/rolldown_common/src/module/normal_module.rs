@@ -17,6 +17,8 @@ pub struct NormalModule {
   pub id: NormalModuleId,
   pub is_user_defined_entry: bool,
   pub resource_id: ResourceId,
+  /// `stable_resource_id` is calculated based on `resource_id` to be stable across machine and os.
+  pub stable_resource_id: String,
   pub pretty_path: String,
   /// Representative name of `FilePath`, which is created by `FilePath#representative_name` belong to `resource_id`
   pub repr_name: String,

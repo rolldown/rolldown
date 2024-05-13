@@ -13,7 +13,7 @@ pub fn render_normal_module<'a>(
   if ast.is_body_empty() {
     None
   } else {
-    let enable_sourcemap = !options.sourcemap.is_hidden() && !module.is_virtual;
+    let enable_sourcemap = !options.sourcemap.is_hidden() && !module.is_virtual();
 
     // Because oxc codegen sourcemap is last of sourcemap chain,
     // If here no extra sourcemap need remapping, we using it as final module sourcemap.

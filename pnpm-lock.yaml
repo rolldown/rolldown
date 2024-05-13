@@ -191,8 +191,8 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1(node-addon-api@8.0.0)
       execa:
-        specifier: ^9.0.1
-        version: 9.0.2
+        specifier: ^9.1.0
+        version: 9.1.0
       glob:
         specifier: ^10.3.12
         version: 10.3.12
@@ -315,7 +315,7 @@ importers:
         version: 1.5.3
       execa:
         specifier: ^9.0.0
-        version: 9.0.2
+        version: 9.1.0
       fast-glob:
         specifier: ^3.3.2
         version: 3.3.2
@@ -3507,8 +3507,8 @@ packages:
     resolution: {integrity: sha512-VyhnebXciFV2DESc+p6B+y0LjSm0krU4OgJN44qFAhBY0TJ+1V61tYD2+wHusZ6F9n5K+vl8k0sTy7PEfV4qpg==}
     engines: {node: '>=16.17'}
 
-  execa@9.0.2:
-    resolution: {integrity: sha512-oO281GF7ksH/Ogv1xyDf1prvFta/6/XkGKxRUvA3IB2MU1rCJGlFs86HRZhdooow1ISkR0Np0rOxUCIJVw36Rg==}
+  execa@9.1.0:
+    resolution: {integrity: sha512-lSgHc4Elo2m6bUDhc3Hl/VxvUDJdQWI40RZ4KMY9bKRc+hgMOT7II/JjbNDhI8VnMtrCb7U/fhpJIkLORZozWw==}
     engines: {node: '>=18'}
 
   external-editor@3.1.0:
@@ -8626,7 +8626,7 @@ snapshots:
       signal-exit: 4.1.0
       strip-final-newline: 3.0.0
 
-  execa@9.0.2:
+  execa@9.1.0:
     dependencies:
       '@sindresorhus/merge-streams': 4.0.0
       cross-spawn: 7.0.3

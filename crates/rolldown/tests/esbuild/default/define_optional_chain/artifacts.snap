@@ -1,0 +1,13 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/define_optional_chain
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+console.log([a.b.c, a?.b.c, a.b?.c,], [a['b']['c'], a?.['b']['c'], a['b']?.['c'],], [a[b][c], a?.[b][c], a[b]?.[c],]);
+```

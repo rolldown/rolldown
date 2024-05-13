@@ -1,0 +1,14 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/top_level_await_esm
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+await foo;
+for  await(foo of  bar) ;
+```

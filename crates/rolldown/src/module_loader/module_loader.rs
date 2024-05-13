@@ -238,7 +238,6 @@ impl ModuleLoader {
               let id = self.try_spawn_new_task(&info, false);
               // Dynamic imported module will be considered as an entry
               if let ModuleId::Normal(id) = id {
-                dbg!(&id, &info.path.path);
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
                   importer_path: module.resource_id.expect_file().clone(),
@@ -248,10 +247,9 @@ impl ModuleLoader {
                     .intermediate_normal_modules
                     .module_side_effects
                     .resize_with((id + 1).into(), Default::default);
-                  dbg!(&self.intermediate_normal_modules.module_side_effects);
                 }
-                self.intermediate_normal_modules.module_side_effects[id] =
-                  info.package_json.clone();
+                self.intermediate_normal_modules.module_side_effects[id]
+                  .clone_from(&info.package_json);
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
                 {

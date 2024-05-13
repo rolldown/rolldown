@@ -25,27 +25,13 @@ impl SideEffects {
   pub fn derive_side_effects_from_package_json(&self, relative_path: &str) -> bool {
     match self {
       SideEffects::Bool(s) => *s,
-      SideEffects::String(s) => glob_match_with_normalized_pattern(&s, relative_path),
+      SideEffects::String(s) => glob_match_with_normalized_pattern(s, relative_path),
       SideEffects::Array(patterns) => {
         patterns.iter().any(|pattern| glob_match_with_normalized_pattern(pattern, relative_path))
       }
     }
   }
 }
-
-// fn get_side_effects_from_package_json_helper(
-//   side_effects_config: Vec<&str>,
-//   relative_path: &str,
-// ) -> bool {
-//   assert!(!side_effects_config.is_empty());
-//   let side_effects = if side_effects_config.len() > 1 {
-//     SideEffects::Array(side_effects_config.into_iter().map(String::from).collect::<Vec<_>>())
-//   } else {
-//     SideEffects::String((&side_effects_config[0]).to_string())
-//   };
-//
-//   get_side_effects_from_package_json(side_effects, relative_path)
-// }
 
 fn glob_match_with_normalized_pattern(pattern: &str, path: &str) -> bool {
   let trimed_start = pattern.trim_start_matches("./");

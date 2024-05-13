@@ -119,9 +119,6 @@ impl<'a> GenerateStage<'a> {
       }
 
       let bits = &module_to_bits[normal_module.id];
-      if bits.is_empty() {
-        dbg!(&normal_module.pretty_path);
-      }
       debug_assert!(
         !bits.is_empty(),
         "Empty bits means the module is not reachable, so it should bail out with `is_included: false`"

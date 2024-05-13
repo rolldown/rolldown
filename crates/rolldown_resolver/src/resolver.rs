@@ -169,7 +169,7 @@ impl<F: FileSystem + Default> Resolver<F> {
           info.full_path().to_str().expect("Should be valid utf8").to_string(),
           false,
           module_type,
-          info.package_json().map(|item| item.clone()),
+          info.package_json().cloned(),
         )))
       }
       Err(err) => match err {

@@ -29,7 +29,6 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
       if stmt_info.side_effect {
         ctx.module_side_effects[module.id] = true;
-        dbg!(&stmt_info.debug_label);
         include_statement(ctx, module, stmt_info_id);
       }
     });
@@ -55,12 +54,10 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
   let canonical_ref_module = &ctx.modules[canonical_ref.owner];
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
-  dbg!(&canonical_ref_module.pretty_path, &canonical_ref_symbol);
   ctx.has_export_used[canonical_ref_module.id] = true;
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
   }
-  let mut has_used_export = false;
   include_module(ctx, canonical_ref_module);
   canonical_ref_module
     .stmt_infos
@@ -68,18 +65,18 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
     .iter()
     .copied()
     .for_each(|stmt_info_id| {
-      has_used_export |= include_statement(ctx, canonical_ref_module, stmt_info_id);
+      include_statement(ctx, canonical_ref_module, stmt_info_id);
     });
 }
 
-fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoId) -> bool {
+fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoId) {
   let is_included = &mut ctx.is_included_vec[module.id][stmt_info_id];
 
-  let stmt_info = module.stmt_infos.get(stmt_info_id);
-  let mut has_used_export = stmt_info.is_export;
   if *is_included {
-    return has_used_export;
+    return;
   }
+
+  let stmt_info = module.stmt_infos.get(stmt_info_id);
 
   // include the statement itself
   *is_included = true;
@@ -92,8 +89,6 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       include_symbol(ctx, *symbol_ref);
     },
   );
-  // dbg!(&module.pretty_path, has_used_export);
-  return has_used_export;
 }
 
 impl LinkStage<'_> {
@@ -136,9 +131,8 @@ impl LinkStage<'_> {
       module.is_included = !enable_tree_shaking
         || has_export_used[module.id]
         || matches!(module.side_effects, Some(true))
-        || (matches!(module.side_effects, None) && module_side_effects[module.id])
+        || (module.side_effects.is_none() && module_side_effects[module.id])
         || module.is_user_defined_entry;
-      dbg!(&module.pretty_path, module.is_included);
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });

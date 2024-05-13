@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown/tests/common/case.rs
+assertion_line: 167
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/external_packages
 ---

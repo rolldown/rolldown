@@ -1,12 +1,12 @@
 use std::ops::Deref;
 
-use crate::FilePath;
+use crate::ResourceId;
 
 #[derive(Debug)]
 /// Represents a filename that might contains hash placeholder.
 pub struct PreliminaryFilename {
   /// Might contains preliminary hash
-  filename: FilePath,
+  filename: ResourceId,
   /// Something like `!~{abcd}~`
   hash_placeholder: Option<String>,
 }
@@ -22,7 +22,7 @@ impl PreliminaryFilename {
 }
 
 impl Deref for PreliminaryFilename {
-  type Target = FilePath;
+  type Target = ResourceId;
 
   fn deref(&self) -> &Self::Target {
     &self.filename

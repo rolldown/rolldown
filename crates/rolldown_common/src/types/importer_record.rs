@@ -1,7 +1,7 @@
-use crate::{FilePath, ImportKind};
+use crate::{ImportKind, ResourceId};
 
 #[derive(Debug)]
 pub struct ImporterRecord {
-  pub importer_path: FilePath,
+  pub importer_path: ResourceId,
   pub kind: ImportKind,
 }

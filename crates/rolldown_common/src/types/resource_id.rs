@@ -1,33 +1,38 @@
 use std::{
   borrow::Cow,
   ffi::OsStr,
-  path::{Component, Path, PathBuf},
+  path::{Path, PathBuf},
   sync::Arc,
 };
 
 use regex::Regex;
+use rolldown_utils::path_ext::PathExt;
 use sugar_path::SugarPath;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct FilePath(Arc<str>);
+pub struct ResourceId(Arc<str>);
 
-impl FilePath {
-  pub fn new(value: impl Into<String>) -> Self {
-    Self(value.into().into())
+impl ResourceId {
+  pub fn new(value: impl Into<Arc<str>>) -> Self {
+    Self(value.into())
   }
 
   pub fn as_str(&self) -> &str {
     &self.0
   }
+
+  pub fn stabilize(&self, cwd: &Path) -> String {
+    stabilize_resource_id(&self.0, cwd)
+  }
 }
 
-impl AsRef<str> for FilePath {
+impl AsRef<str> for ResourceId {
   fn as_ref(&self) -> &str {
     &self.0
   }
 }
 
-impl std::ops::Deref for FilePath {
+impl std::ops::Deref for ResourceId {
   type Target = str;
 
   fn deref(&self) -> &Self::Target {
@@ -35,40 +40,19 @@ impl std::ops::Deref for FilePath {
   }
 }
 
-impl From<String> for FilePath {
+impl From<String> for ResourceId {
   fn from(value: String) -> Self {
     Self::new(value)
   }
 }
 
-impl From<Arc<str>> for FilePath {
+impl From<Arc<str>> for ResourceId {
   fn from(value: Arc<str>) -> Self {
     Self(value)
   }
 }
 
-impl FilePath {
-  pub fn unique(&self, root: impl AsRef<Path>) -> String {
-    let path = self.0.as_path();
-    let mut relative = path.relative(root);
-    let ext = relative.extension().and_then(OsStr::to_str).unwrap_or("").to_string();
-    relative.set_extension("");
-
-    let mut name = relative
-      .components()
-      .filter(|com| matches!(com, Component::Normal(_)))
-      .filter_map(|seg| seg.as_os_str().to_str())
-      .flat_map(|seg| seg.split('.'))
-      .collect::<Vec<_>>()
-      .join("_");
-
-    if !ext.is_empty() {
-      name.push('_');
-      name.push_str(&ext);
-    }
-    name
-  }
-
+impl ResourceId {
   pub fn relative_path(&self, root: impl AsRef<Path>) -> PathBuf {
     let path = self.0.as_path();
     path.relative(root)
@@ -113,16 +97,37 @@ fn test_ensure_valid_identifier() {
   assert_eq!(ensure_valid_identifier("react-dom".into()), "react_dom");
 }
 
+pub fn stabilize_resource_id(resource_id: &str, cwd: &Path) -> String {
+  if resource_id.as_path().is_absolute() {
+    resource_id.relative(cwd).as_path().expect_to_slash()
+  } else if resource_id.starts_with('\0') {
+    // handle virtual modules
+    resource_id.replace('\0', "\\0")
+  } else {
+    resource_id.to_string()
+  }
+}
+
 #[test]
-fn test() {
-  let cwd = "/projects/foo".to_string();
-  let p = FilePath::new("/projects/foo/src/index.ts".to_string());
-  assert_eq!(p.unique(&cwd), "src_index_ts");
-  let p = FilePath::new("/projects/foo/src/index.module.css".to_string());
-  assert_eq!(p.unique(&cwd), "src_index_module_css");
-  // FIXME: "/projects/bar.ts" should not have the same result with "/bar.ts"
-  let p = FilePath::new("/projects/bar.ts".to_string());
-  assert_eq!(p.unique(&cwd), "bar_ts");
-  let p = FilePath::new("/bar.ts".to_string());
-  assert_eq!(p.unique(&cwd), "bar_ts");
+fn test_stabilize_resource_id() {
+  let cwd = std::env::current_dir().unwrap();
+  // absolute path
+  assert_eq!(
+    stabilize_resource_id(cwd.join("src").join("main.js").expect_to_str(), &cwd),
+    "src/main.js"
+  );
+  assert_eq!(
+    stabilize_resource_id(cwd.join("..").join("src").join("main.js").expect_to_str(), &cwd),
+    "../src/main.js"
+  );
+
+  // non-path specifier
+  assert_eq!(stabilize_resource_id("fs", &cwd), "fs");
+  assert_eq!(
+    stabilize_resource_id("https://deno.land/x/oak/mod.ts", &cwd),
+    "https://deno.land/x/oak/mod.ts"
+  );
+
+  // virtual module
+  assert_eq!(stabilize_resource_id("\0foo", &cwd), "\\0foo");
 }

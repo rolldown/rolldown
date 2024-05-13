@@ -251,9 +251,7 @@ impl<'a> GenerateStage<'a> {
           let mut resource_ids = chunk_graph.chunks[*chunk_id]
             .modules
             .iter()
-            .map(|id| {
-              self.link_output.module_table.normal_modules[*id].resource_id.expect_file().as_str()
-            })
+            .map(|id| self.link_output.module_table.normal_modules[*id].resource_id.as_str())
             .collect::<Vec<_>>();
           resource_ids.sort_unstable();
           resource_ids

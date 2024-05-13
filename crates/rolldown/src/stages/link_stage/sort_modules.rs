@@ -102,7 +102,7 @@ impl<'a> LinkStage<'a> {
         let paths = cycle
           .iter()
           .filter_map(|id| id.as_normal())
-          .map(|id| self.module_table.normal_modules[id].resource_id.expect_file().to_string())
+          .map(|id| self.module_table.normal_modules[id].resource_id.to_string())
           .collect::<Vec<_>>();
         self.warnings.push(BuildError::circular_dependency(paths).with_severity_warning());
       }

@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 
 use index_vec::IndexVec;
-use rolldown_common::{ChunkId, FilePath};
+use rolldown_common::{ChunkId, ResourceId};
 use rolldown_utils::{
   base64::to_url_safe_base64,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
@@ -79,7 +79,7 @@ pub fn finalize_chunks(
     |(chunk, chunk_render_return)| {
       let preliminary_filename_raw =
         chunk.preliminary_filename.as_deref().expect("should have file name").to_string();
-      let filename: FilePath =
+      let filename: ResourceId =
         replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder)
           .into();
       chunk.filename = Some(filename.clone());

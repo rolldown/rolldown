@@ -5,7 +5,7 @@ use futures::future::join_all;
 use index_vec::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  AstScope, FilePath, ImportRecordId, ModuleType, NormalModule, NormalModuleId, RawImportRecord,
+  AstScope, ImportRecordId, ModuleType, NormalModule, NormalModuleId, RawImportRecord,
   ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
@@ -19,10 +19,7 @@ use crate::{
   ast_scanner::{AstScanner, ScanResult},
   module_loader::NormalModuleTaskResult,
   types::ast_symbols::AstSymbols,
-  utils::{
-    load_source::load_source, resolve_id::resolve_id, stabilize_resource_id::stabilize_resource_id,
-    transform_source::transform_source,
-  },
+  utils::{load_source::load_source, resolve_id::resolve_id, transform_source::transform_source},
   SharedOptions, SharedResolver,
 };
 pub struct NormalModuleTask {
@@ -111,15 +108,14 @@ impl NormalModuleTask {
       }
     }
 
+    let resource_id = ResourceId::new(Arc::clone(&self.resolved_path.path));
+
     let module = NormalModule {
       source,
       id: self.module_id,
       repr_name,
-      resource_id: ResourceId::new(Arc::<str>::clone(&self.resolved_path.path).into()),
-      stable_resource_id: stabilize_resource_id(
-        &self.resolved_path.path,
-        &self.ctx.input_options.cwd,
-      ),
+      stable_resource_id: resource_id.stabilize(&self.ctx.input_options.cwd),
+      resource_id,
       named_imports,
       named_exports,
       stmt_infos,
@@ -197,7 +193,7 @@ impl NormalModuleTask {
     );
     let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let file_path = Arc::<str>::clone(&self.resolved_path.path).into();
-    let repr_name = FilePath::representative_name(&file_path);
+    let repr_name = ResourceId::representative_name(&file_path);
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,

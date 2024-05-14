@@ -1331,7 +1331,7 @@ dependencies = [
  "oxc_index",
  "oxc_parser",
  "oxc_semantic",
- "oxc_sourcemap",
+ "oxc_sourcemap 0.12.5",
  "oxc_span",
  "oxc_syntax",
 ]
@@ -1370,7 +1370,7 @@ dependencies = [
  "bitflags 2.5.0",
  "oxc_allocator",
  "oxc_ast",
- "oxc_sourcemap",
+ "oxc_sourcemap 0.12.5",
  "oxc_span",
  "oxc_syntax",
 ]
@@ -1462,6 +1462,19 @@ checksum = "3d4449bd75a521bd5673fbe0e2edfffaa30a406524db324baeecdfe1f1728194"
 dependencies = [
  "base64-simd",
  "rayon",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "oxc_sourcemap"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca8626bf95bfc6a84f9a08026a80e51e1592eeac49bdf475c8fd43c71dd9271a"
+dependencies = [
+ "base64-simd",
+ "cfg-if",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -2174,13 +2187,13 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "string_wizard"
-version = "0.0.18"
+version = "0.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc7d4e04363413465dcf6a3b657ad9345adce8e112ec119f7a25f6d6f8529495"
+checksum = "82c4596bb221caf7db6b64c812f2ffe8d54617f06ecc31379b4c2f57cf945a67"
 dependencies = [
  "index_vec",
  "once_cell",
- "oxc",
+ "oxc_sourcemap 0.13.0",
  "rustc-hash",
 ]
 

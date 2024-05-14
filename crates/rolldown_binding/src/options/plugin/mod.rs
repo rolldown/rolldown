@@ -1,5 +1,6 @@
 pub mod binding_plugin_context;
 mod binding_plugin_options;
+mod binding_transform_context;
 mod js_plugin;
 mod parallel_js_plugin;
 pub mod types;

@@ -9,10 +9,11 @@ pub async fn transform_source(
   source: String,
   sourcemap_chain: &mut Vec<SourceMap>,
 ) -> Result<String> {
-  let (code, map_chain) =
-    plugin_driver.transform(&HookTransformArgs { id: &resolved_path.path, code: &source }).await?;
-
-  sourcemap_chain.extend(map_chain);
-
-  Ok(code)
+  plugin_driver
+    .transform(
+      &HookTransformArgs { id: &resolved_path.path, code: &source },
+      sourcemap_chain,
+      &source,
+    )
+    .await
 }

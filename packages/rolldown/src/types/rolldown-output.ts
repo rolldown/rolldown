@@ -23,6 +23,7 @@ export interface SourceMap {
   sources: string[]
   sourcesContent: string[]
   version: number
+  // TODO
   // toString(): string
   // toUrl(): string
 }

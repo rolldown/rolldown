@@ -4,5 +4,6 @@
       "name": "entry",
       "import": "./src/entry.js"
     }]
-  }
+  },
+  "expectExecuted": false
 }

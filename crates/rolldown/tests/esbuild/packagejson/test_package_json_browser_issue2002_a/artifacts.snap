@@ -1,0 +1,25 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_issue2002_a
+---
+# Assets
+
+## entry.mjs
+
+```js
+import { __commonJSMin } from "./$runtime$.mjs";
+
+// src/node_modules/sub/bar.js
+var require_bar = __commonJSMin((exports, module) => {
+	works();
+});
+
+// src/node_modules/pkg/sub/foo.js
+var require_foo = __commonJSMin((exports, module) => {
+	require_bar();
+});
+
+// src/entry.js
+require_foo();
+```

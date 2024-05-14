@@ -51,8 +51,8 @@ impl<'a> SideEffectDetector<'a> {
         (match &def.key {
           // FIXME: this is wrong, we should also always check the `def.value`.
           PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
-          oxc::ast::match_expression!(PropertyKey) => {
-            self.detect_side_effect_of_expr(def.key.to_expression())
+          key @ oxc::ast::match_expression!(PropertyKey) => {
+            self.detect_side_effect_of_expr(key.to_expression())
           }
         } || def.value.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init)))
       }
@@ -60,8 +60,8 @@ impl<'a> SideEffectDetector<'a> {
         (match &def.key {
           // FIXME: this is wrong, we should also always check the `def.value`.
           PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
-          oxc::ast::match_expression!(PropertyKey) => {
-            self.detect_side_effect_of_expr(def.key.to_expression())
+          key @ oxc::ast::match_expression!(PropertyKey) => {
+            self.detect_side_effect_of_expr(key.to_expression())
           }
         } || def.value.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init)))
       }
@@ -82,8 +82,8 @@ impl<'a> SideEffectDetector<'a> {
         // Check if `object_name.prop_name` is pure
         !SIDE_EFFECT_FREE_MEMBER_EXPR_2.contains(&(object_name.as_str(), prop_name.as_str()))
       }
-      oxc::ast::match_member_expression!(Expression) => {
-        let mem_expr = member_expr.object.to_member_expression();
+      expr @ oxc::ast::match_member_expression!(Expression) => {
+        let mem_expr = expr.to_member_expression();
         let MemberExpression::StaticMemberExpression(mem_expr) = mem_expr else {
           return true;
         };
@@ -121,8 +121,8 @@ impl<'a> SideEffectDetector<'a> {
             let key_side_effect = match &prop.key {
               oxc::ast::ast::PropertyKey::StaticIdentifier(_)
               | oxc::ast::ast::PropertyKey::PrivateIdentifier(_) => false,
-              oxc::ast::match_expression!(PropertyKey) => {
-                self.detect_side_effect_of_expr(prop.key.to_expression())
+              key @ oxc::ast::match_expression!(PropertyKey) => {
+                self.detect_side_effect_of_expr(key.to_expression())
               }
             };
 
@@ -246,8 +246,8 @@ impl<'a> SideEffectDetector<'a> {
         oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(default_decl) => {
           use oxc::ast::ast::ExportDefaultDeclarationKind;
           match &default_decl.declaration {
-            oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
-              self.detect_side_effect_of_expr(default_decl.declaration.to_expression())
+            decl @ oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
+              self.detect_side_effect_of_expr(decl.to_expression())
             }
             oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(_) => false,
             oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {

@@ -302,8 +302,9 @@ impl<'me> AstScanner<'me> {
     self.scope.symbol_id_for(ref_id)
   }
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
+    use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
-      decl if decl.is_expression() => {
+      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
         // `export default [expression]` pattern
         None
       }

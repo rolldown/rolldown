@@ -210,9 +210,9 @@ impl<'ast> AstSnippet<'ast> {
 
     //  __commonJS(...)
     let mut commonjs_call_expr = self.call_expr(commonjs_name);
-    commonjs_call_expr.arguments.push(ast::Argument::from(
-      ast::Expression::ArrowFunctionExpression(arrow_expr.into_in(self.alloc)),
-    ));
+    commonjs_call_expr
+      .arguments
+      .push(ast::Argument::ArrowFunctionExpression(arrow_expr.into_in(self.alloc)));
 
     // var require_foo = ...
 
@@ -241,9 +241,9 @@ impl<'ast> AstSnippet<'ast> {
 
     //  __esm(...)
     let mut commonjs_call_expr = self.call_expr(esm_fn_name);
-    commonjs_call_expr.arguments.push(ast::Argument::from(
-      ast::Expression::ArrowFunctionExpression(arrow_expr.into_in(self.alloc)),
-    ));
+    commonjs_call_expr
+      .arguments
+      .push(ast::Argument::ArrowFunctionExpression(arrow_expr.into_in(self.alloc)));
 
     // var init_foo = ...
 
@@ -297,9 +297,7 @@ impl<'ast> AstSnippet<'ast> {
     id: PassedStr,
     span: Span,
   ) -> ast::AssignmentTarget<'ast> {
-    ast::AssignmentTarget::from(ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
-      self.id_ref(id, span).into_in(self.alloc),
-    ))
+    ast::AssignmentTarget::AssignmentTargetIdentifier(self.id_ref(id, span).into_in(self.alloc))
   }
 
   // `() => xx`

@@ -111,8 +111,9 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
             return;
           }
         } else if let Some(default_decl) = top_stmt.as_export_default_declaration_mut() {
+          use ast::ExportDefaultDeclarationKind;
           match &mut default_decl.declaration {
-            decl if decl.is_expression() => {
+            decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
               let expr = decl.to_expression_mut();
               // "export default foo;" => "var default = foo;"
               let canonical_name_for_default_export_ref =
@@ -209,6 +210,7 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
           ));
         }
         WrapKind::Esm => {
+          use ast::Statement;
           let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
           let esm_ref_name = self.canonical_name_for_runtime("__esmMin");
           let old_body = program.body.take_in(self.alloc);
@@ -230,7 +232,7 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               fn_stmts.push(stmt);
             }
             ast::Statement::UsingDeclaration(_) => unimplemented!(),
-            stmt if stmt.is_module_declaration() => unreachable!(
+            ast::match_module_declaration!(Statement) => unreachable!(
               "At this point, all module declarations should have been removed or transformed"
             ),
             _ => {

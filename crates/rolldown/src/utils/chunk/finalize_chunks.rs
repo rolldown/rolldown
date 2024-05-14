@@ -1,6 +1,5 @@
 use std::hash::{Hash, Hasher};
 
-use index_vec::IndexVec;
 use oxc_index::IndexVec;
 use rolldown_common::{ChunkId, ResourceId};
 use rolldown_utils::{

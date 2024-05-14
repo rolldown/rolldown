@@ -83,9 +83,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
             _ => ast::AssignmentTargetMaybeDefault::from(binding_pat.into_assignment_target(alloc)),
           }));
         });
-        ast::AssignmentTarget::from(ast::AssignmentTargetPattern::ArrayAssignmentTarget(
-          arr_target.into_in(alloc),
-        ))
+        ast::AssignmentTarget::ArrayAssignmentTarget(arr_target.into_in(alloc))
       }
       ast::BindingPatternKind::AssignmentPattern(_) => {
         unreachable!("`BindingPatternKind::AssignmentPattern` should be pre-handled in above")
@@ -108,7 +106,6 @@ pub trait StatementExt<'me, 'ast> {
   fn is_function_declaration(&self) -> bool;
   fn as_function_declaration(&self) -> Option<&ast::Function<'ast>>;
 
-  fn as_module_declaration(&self) -> Option<&ast::ModuleDeclaration<'ast>>;
   fn is_module_declaration_with_source(&self) -> bool;
 }
 
@@ -118,8 +115,8 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
   }
 
   fn as_import_declaration(&self) -> Option<&ast::ImportDeclaration<'ast>> {
-    if let ast::Statement::ImportDeclaration(module_decl) = self {
-      return Some(&**module_decl);
+    if let ast::Statement::ImportDeclaration(import_decl) = self {
+      return Some(&**import_decl);
     }
     None
   }
@@ -164,10 +161,6 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
 
   fn is_function_declaration(&self) -> bool {
     self.as_function_declaration().is_some()
-  }
-
-  fn as_module_declaration(&self) -> Option<&ast::ModuleDeclaration<'ast>> {
-    self.as_module_declaration()
   }
 
   /// Check if the statement is `[import|export] ... from ...` or `export ... from ...`

@@ -1,6 +1,6 @@
 use std::{ptr::addr_of, sync::Mutex};
 
-use index_vec::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
   StmtInfo, WrapKind,

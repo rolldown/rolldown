@@ -3,8 +3,8 @@ use std::{borrow::Cow, sync::Mutex};
 
 use super::GenerateStage;
 use crate::{chunk_graph::ChunkGraph, utils::is_in_rust_test_mode};
-use index_vec::{index_vec, IndexVec};
 use indexmap::IndexSet;
+use oxc_index::{index_vec, IndexVec};
 use rolldown_common::{
   ChunkId, ChunkKind, CrossChunkImportItem, ExportsKind, ExternalModuleId, ImportKind, ModuleId,
   NamedImport, OutputFormat, SymbolRef,

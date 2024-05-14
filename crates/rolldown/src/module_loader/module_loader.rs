@@ -1,4 +1,4 @@
-use index_vec::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind, ImportRecordId,
   ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId, ResolvedRequestInfo,

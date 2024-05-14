@@ -1,4 +1,4 @@
-use index_vec::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_common::{
   ExportsKind, ModuleId, NormalModule, NormalModuleId, NormalModuleVec, StmtInfo, WrapKind,
 };
@@ -82,10 +82,10 @@ impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn wrap_modules(&mut self) {
     let mut visited_modules_for_wrapping =
-      index_vec::index_vec![false; self.module_table.normal_modules.len()];
+      oxc_index::index_vec![false; self.module_table.normal_modules.len()];
 
     let mut visited_modules_for_dynamic_exports =
-      index_vec::index_vec![false; self.module_table.normal_modules.len()];
+      oxc_index::index_vec![false; self.module_table.normal_modules.len()];
 
     for module in &self.module_table.normal_modules {
       let module_id = module.id;

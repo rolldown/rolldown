@@ -72,9 +72,7 @@ impl<'me, 'ast> Finalizer<'me, 'ast> {
       let prop_name = &ns_alias.property_name;
       let access_expr = self.snippet.literal_prop_access_member_expr(canonical_ns_name, prop_name);
 
-      return Some(ast::SimpleAssignmentTarget::MemberAssignmentTarget(
-        access_expr.into_in(self.alloc),
-      ));
+      return Some(ast::SimpleAssignmentTarget::from(access_expr));
     }
 
     let canonical_name = self.canonical_name_for(canonical_ref);
@@ -128,8 +126,7 @@ impl<'me, 'ast> Finalizer<'me, 'ast> {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
       let access_expr = self.snippet.literal_prop_access_member_expr(canonical_ns_name, prop_name);
-      *simple_target =
-        ast::SimpleAssignmentTarget::MemberAssignmentTarget(access_expr.into_in(self.alloc));
+      *simple_target = ast::SimpleAssignmentTarget::from(access_expr);
     } else {
       let canonical_name = self.canonical_name_for(canonical_ref);
       if target_id_ref.name != canonical_name.as_str() {

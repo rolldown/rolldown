@@ -183,7 +183,7 @@ impl<'me, 'ast> Finalizer<'me, 'ast> {
       let returned = self.generate_finalized_expr_for_symbol_ref(resolved_export.symbol_ref);
       arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
         ast::ObjectProperty {
-          key: ast::PropertyKey::Identifier(
+          key: ast::PropertyKey::StaticIdentifier(
             self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
           ),
           value: self.snippet.only_return_arrow_expr(returned),
@@ -195,12 +195,10 @@ impl<'me, 'ast> Finalizer<'me, 'ast> {
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
     let mut export_call_expr = self.snippet.call_expr(self.canonical_name_for_runtime("__export"));
+    export_call_expr.arguments.push(ast::Argument::from(self.snippet.id_ref_expr(ns_name, SPAN)));
     export_call_expr
       .arguments
-      .push(ast::Argument::Expression(self.snippet.id_ref_expr(ns_name, SPAN)));
-    export_call_expr.arguments.push(ast::Argument::Expression(ast::Expression::ObjectExpression(
-      arg_obj_expr.into_in(self.alloc),
-    )));
+      .push(ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc)));
     let export_call_stmt = ast::Statement::ExpressionStatement(
       ast::ExpressionStatement {
         expression: ast::Expression::CallExpression(export_call_expr.into_in(self.alloc)),

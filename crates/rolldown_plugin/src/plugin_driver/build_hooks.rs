@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveDynamicImportArgs,
-  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver,
+  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver, TransformPluginContext,
 };
 use anyhow::Result;
 use rolldown_common::ModuleInfo;
@@ -71,14 +71,21 @@ impl PluginDriver {
   }
 
   #[allow(clippy::unnecessary_cast)]
-  pub async fn transform(&self, args: &HookTransformArgs<'_>) -> Result<(String, Vec<SourceMap>)> {
-    let mut sourcemap_chain = vec![];
+  pub async fn transform(
+    &self,
+    args: &HookTransformArgs<'_>,
+    sourcemap_chain: &mut Vec<SourceMap>,
+    original_code: &str,
+  ) -> Result<String> {
     let mut code = args.code.to_string();
     for (plugin, ctx) in &self.plugins {
-      if let Some(r) =
-        plugin.transform(ctx, &HookTransformArgs { id: args.id, code: &code }).await?
+      if let Some(r) = plugin
+        .transform(
+          &TransformPluginContext::new(Arc::clone(ctx), sourcemap_chain, original_code, args.id),
+          &HookTransformArgs { id: args.id, code: &code },
+        )
+        .await?
       {
-        code = r.code;
         if let Some(mut map) = r.map {
           // If sourcemap  hasn't `sources`, using original id to fill it.
           if map.get_source(0 as u32).map_or(true, str::is_empty) {
@@ -86,13 +93,14 @@ impl PluginDriver {
           }
           // If sourcemap hasn't `sourcesContent`, using original code to fill it.
           if map.get_source_content(0 as u32).map_or(true, str::is_empty) {
-            map.set_source_contents(vec![args.code]);
+            map.set_source_contents(vec![&code]);
           }
           sourcemap_chain.push(map);
         }
+        code = r.code;
       }
     }
-    Ok((code, sourcemap_chain))
+    Ok(code)
   }
 
   pub async fn module_parsed(&self, module_info: Arc<ModuleInfo>) -> HookNoopReturn {

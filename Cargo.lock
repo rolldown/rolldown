@@ -1894,6 +1894,7 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_utils",
+ "string_wizard",
  "tracing",
 ]
 
@@ -2170,6 +2171,18 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "string_wizard"
+version = "0.0.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc7d4e04363413465dcf6a3b657ad9345adce8e112ec119f7a25f6d6f8529495"
+dependencies = [
+ "index_vec",
+ "once_cell",
+ "oxc",
+ "rustc-hash",
+]
 
 [[package]]
 name = "strsim"

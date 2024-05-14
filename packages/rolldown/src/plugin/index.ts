@@ -1,5 +1,6 @@
 import type {
   BindingHookResolveIdExtraOptions,
+  BindingTransformPluginContext,
   RenderedChunk,
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
@@ -10,6 +11,7 @@ import type { NormalizedOutputOptions } from '../options/output-options'
 import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
 import { PluginContext } from './plugin-context'
+import { TransformPluginContext } from './transfrom-plugin-context'
 
 type FormalHook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> = {
   handler: Handler
@@ -72,7 +74,7 @@ export interface Plugin {
 
   transform?: Hook<
     (
-      this: null,
+      this: TransformPluginContext,
       code: string,
       id: string,
     ) => MaybePromise<

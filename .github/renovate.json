@@ -8,7 +8,7 @@
   "assignees": ["hyf0", "IWANABETHATGUY", "underfin"],
   "assigneesSampleSize": 1,
   "timezone": "Asia/Shanghai",
-  "schedule": ["after 12:00pm", "before 4:00am"],
+  "schedule": ["after 12:00pm", "before 4:00pm"],
   "ignorePaths": [
     "**/node_modules/**",
     "**/examples/**",

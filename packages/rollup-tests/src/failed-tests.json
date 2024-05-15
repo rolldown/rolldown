@@ -1,5 +1,8 @@
 [
   "rollup@file hashes@banner: creates different hashes if the banner differs@generates correct hashes",
+  "rollup@file hashes@content: creates different hashes if the content differs@generates correct hashes",
+  "rollup@file hashes@dependency-content: creates different hashes if the content of dependencies differs@generates correct hashes",
+  "rollup@file hashes@exports: creates different hashes if the generated exports differ@generates correct hashes",
   "rollup@file hashes@footer: creates different hashes if the footer differs@generates correct hashes",
   "rollup@function@add-watch-file-generate: throws when adding watch files during generate",
   "rollup@function@adds-json-hint-for-missing-export-if-is-json-file: should provide json hint when importing a no export json file",

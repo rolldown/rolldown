@@ -7,6 +7,7 @@ use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
 
@@ -183,11 +184,7 @@ impl ModuleLoader {
       .reserve(user_defined_entries.len() + 1 /* runtime */);
 
     // Store the already consider as entry module
-    let mut user_defined_entry_ids = {
-      let mut tmp = FxHashSet::default();
-      tmp.reserve(user_defined_entries.len());
-      tmp
-    };
+    let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
 
     let mut entry_points = user_defined_entries
       .into_iter()

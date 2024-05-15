@@ -289,7 +289,7 @@ impl ModuleLoader {
       self.intermediate_normal_modules.ast_table.into_iter().flatten().collect();
 
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
-    dynamic_import_entry_ids.sort_by_key(|id| &modules[*id].resource_id);
+    dynamic_import_entry_ids.sort_by_key(|id| &modules[*id].stable_resource_id);
 
     entry_points.extend(dynamic_import_entry_ids.into_iter().map(|id| EntryPoint {
       name: None,

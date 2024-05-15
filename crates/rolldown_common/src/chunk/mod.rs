@@ -25,8 +25,8 @@ pub struct Chunk {
   pub cross_chunk_imports: Vec<ChunkId>,
   pub cross_chunk_dynamic_imports: Vec<ChunkId>,
   pub bits: BitSet,
-  pub imports_from_other_chunks: FxHashMap<ChunkId, Vec<CrossChunkImportItem>>,
-  pub imports_from_external_modules: FxHashMap<ExternalModuleId, Vec<NamedImport>>,
+  pub imports_from_other_chunks: Vec<(ChunkId, Vec<CrossChunkImportItem>)>,
+  pub imports_from_external_modules: Vec<(ExternalModuleId, Vec<NamedImport>)>,
   // meaningless if the chunk is an entrypoint
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Rstr>,
 }

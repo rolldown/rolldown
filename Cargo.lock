@@ -1786,6 +1786,7 @@ dependencies = [
  "glob",
  "indexmap",
  "insta",
+ "itertools",
  "once_cell",
  "oxc",
  "oxc_index",

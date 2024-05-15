@@ -11,11 +11,7 @@ pub fn render_chunk_imports(
   options: &SharedOptions,
 ) -> String {
   let mut s = String::new();
-  let mut imports_from_external_modules =
-    chunk.imports_from_external_modules.iter().collect::<Vec<_>>();
-  imports_from_external_modules.sort_unstable_by_key(|(module_id, _)| {
-    graph.module_table.external_modules[**module_id].exec_order
-  });
+  let imports_from_external_modules = &chunk.imports_from_external_modules;
 
   let render_import_specifier = |imported: &str, alias: &str| match options.format {
     rolldown_common::OutputFormat::Esm => {
@@ -61,7 +57,7 @@ pub fn render_chunk_imports(
       }
     };
 
-  imports_from_external_modules.into_iter().for_each(|(importee_id, named_imports)| {
+  imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &graph.module_table.external_modules[*importee_id];
     let mut is_importee_imported = false;
     let mut import_items = named_imports

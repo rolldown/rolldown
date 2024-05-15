@@ -1,0 +1,16 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264
+---
+# Assets
+
+## entry_js.cjs
+
+```js
+// entry.js
+'use strict';
+let a = 1;
+
+exports.a = a;
+```

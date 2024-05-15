@@ -1,0 +1,31 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/source_map
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
+// bar.js
+function bar() {
+	throw new Error('test');
+}
+
+// data.txt
+var require_data = __commonJSMin((exports, module) => {
+});
+
+// entry.js
+var import_data = __toESM(require_data());
+function foo() {
+	bar();
+}
+foo();
+console.log(import_data.default);
+
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiZW50cnlfanMubWpzIiwibmFtZXMiOltdLCJzb3VyY2VzIjpbIi4uL2Jhci5qcyIsIi4uL2RhdGEudHh0IiwiLi4vZW50cnkuanMiXSwic291cmNlc0NvbnRlbnQiOlsiZXhwb3J0IGZ1bmN0aW9uIGJhcigpIHsgdGhyb3cgbmV3IEVycm9yKCd0ZXN0JykgfSIsIiMyMDQxIiwiaW1wb3J0IHtiYXJ9IGZyb20gJy4vYmFyJ1xuaW1wb3J0IGRhdGEgZnJvbSAnLi9kYXRhLnR4dCdcbmZ1bmN0aW9uIGZvbygpIHsgYmFyKCkgfVxuZm9vKClcbmNvbnNvbGUubG9nKGRhdGEpIl0sIm1hcHBpbmdzIjoiOzs7QUFBTyxTQUFTLE1BQU07QUFBRSxPQUFNLElBQUksTUFBTTtBQUFTOzs7QUNBakQ7Ozs7QUNBQTtBQUVBLFNBQVMsTUFBTTtBQUFFLE1BQUs7QUFBRTtBQUN4QixLQUFLO0FBQ0wsUUFBUSx3QkFBUyJ9
+```

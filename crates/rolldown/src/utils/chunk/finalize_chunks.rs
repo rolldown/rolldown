@@ -1,5 +1,6 @@
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
+use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{ChunkId, ResourceId};
 use rolldown_utils::{
@@ -7,10 +8,13 @@ use rolldown_utils::{
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
   xxhash::xxhash_base64_url,
 };
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use xxhash_rust::xxh3::Xxh3;
 
-use crate::{chunk_graph::ChunkGraph, utils::hash_placeholder::replace_facade_hash_replacement};
+use crate::{
+  chunk_graph::ChunkGraph,
+  utils::hash_placeholder::{extract_hash_placeholders, replace_facade_hash_replacement},
+};
 
 use super::render_chunk::ChunkRenderReturn;
 
@@ -19,25 +23,29 @@ pub fn finalize_chunks(
   chunk_graph: &mut ChunkGraph,
   mut chunks: Vec<ChunkRenderReturn>,
 ) -> Vec<ChunkRenderReturn> {
-  fn append_hash(
-    visited: &mut FxHashSet<ChunkId>,
-    state: &mut impl Hasher,
-    chunk_id: ChunkId,
-    chunk_graph: &ChunkGraph,
-    index_standalone_content_hashes: &IndexVec<ChunkId, String>,
-  ) {
-    if visited.contains(&chunk_id) {
-      return;
-    }
-    visited.insert(chunk_id);
+  let chunk_id_by_placeholder = chunk_graph
+    .chunks
+    .iter_enumerated()
+    .filter_map(|(chunk_id, chunk)| {
+      chunk
+        .preliminary_filename
+        .as_ref()
+        .unwrap()
+        .hash_placeholder()
+        .map(|hash_placeholder| (hash_placeholder.to_string(), chunk_id))
+    })
+    .collect::<FxHashMap<_, _>>();
 
-    // perf: maybe we could reuse the `hash_states_of_chunks` directly rather than rehashing the full content
-    index_standalone_content_hashes[chunk_id].hash(state);
-
-    for dep in &chunk_graph.chunks[chunk_id].cross_chunk_imports {
-      append_hash(visited, state, *dep, chunk_graph, index_standalone_content_hashes);
-    }
-  }
+  let index_chunk_dependencies: IndexVec<ChunkId, Vec<ChunkId>> = chunks
+    .par_iter()
+    .map(|chunk| {
+      extract_hash_placeholders(&chunk.code)
+        .iter()
+        .map(|placeholder| chunk_id_by_placeholder[placeholder])
+        .collect_vec()
+    })
+    .collect::<Vec<_>>()
+    .into();
 
   let index_standalone_content_hashes: IndexVec<ChunkId, String> = chunks
     .par_iter()
@@ -45,7 +53,8 @@ pub fn finalize_chunks(
     .collect::<Vec<_>>()
     .into();
 
-  let mut index_chunk_hashers = oxc_index::index_vec![Xxh3::default(); chunks.len()];
+  let mut index_chunk_hashers: IndexVec<ChunkId, Xxh3> =
+    oxc_index::index_vec![Xxh3::default(); chunks.len()];
 
   let index_final_hashes: IndexVec<ChunkId, String> = index_chunk_hashers
     .iter_mut_enumerated()
@@ -53,8 +62,18 @@ pub fn finalize_chunks(
     .collect::<Vec<_>>()
     .into_par_iter()
     .map(|(chunk_id, state)| {
-      let mut visited = FxHashSet::default();
-      append_hash(&mut visited, state, chunk_id, chunk_graph, &index_standalone_content_hashes);
+      // hash itself
+      index_standalone_content_hashes[chunk_id].hash(state);
+      // hash itself's preliminary filename to prevent different chunks that have the same content from having the same hash
+      chunk_graph.chunks[chunk_id]
+        .preliminary_filename
+        .as_ref()
+        .expect("must have preliminary_filename")
+        .hash(state);
+      let dependencies = &index_chunk_dependencies[chunk_id];
+      dependencies.iter().copied().for_each(|dep_id| {
+        index_standalone_content_hashes[dep_id].hash(state);
+      });
       let digested = state.digest128();
       to_url_safe_base64(digested.to_le_bytes())
     })

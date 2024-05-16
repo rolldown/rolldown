@@ -179,9 +179,16 @@ impl<'a> GenerateStage<'a> {
         dynamic_imports: rendered_chunk.dynamic_imports,
         map,
         sourcemap_file_name,
-        preliminary_file_name,
+        preliminary_file_name: preliminary_file_name.to_string(),
       })));
     }
+
+    // Make sure order of assets are deterministic
+    assets.sort_by_cached_key(|item| match item {
+      // TODO: use `preliminary_file_name` instead
+      Output::Asset(asset) => asset.file_name.to_string(),
+      Output::Chunk(chunk) => chunk.preliminary_file_name.to_string(),
+    });
 
     Ok(BundleOutput {
       assets,

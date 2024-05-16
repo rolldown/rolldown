@@ -1,1 +1,2 @@
 TestPackageJsonNodePathsIssue2752
+

@@ -28,20 +28,20 @@ export default defineTest({
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
           expect(chunk.fileName).toMatchInlineSnapshot(`"main-!~{000}~.js"`)
-          expect(chunk.imports[0]).toMatchInlineSnapshot(`"shared-!~{003}~.js"`)
+          expect(chunk.imports[0]).toMatchInlineSnapshot(`"shared-!~{002}~.js"`)
           expect(chunk.dynamicImports[0]).toMatchInlineSnapshot(
-            `"dynamic-!~{002}~.js"`,
+            `"dynamic-!~{003}~.js"`,
           )
           break
 
         case path.join(__dirname, 'entry.js'):
           expect(chunk.fileName).toMatchInlineSnapshot(`"entry-!~{001}~.js"`)
-          expect(chunk.imports[0]).toMatchInlineSnapshot(`"shared-!~{003}~.js"`)
+          expect(chunk.imports[0]).toMatchInlineSnapshot(`"shared-!~{002}~.js"`)
           expect(chunk.dynamicImports).toStrictEqual([])
           break
 
         case path.join(__dirname, 'dynamic.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"dynamic-!~{002}~.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"dynamic-!~{003}~.js"`)
           break
 
         default:
@@ -57,21 +57,21 @@ export default defineTest({
           expect(chunk.preliminaryFileName).toMatchInlineSnapshot(
             `"main-!~{000}~.js"`,
           )
-          expect(chunk.fileName).toMatchInlineSnapshot(`"main-zpPZMo1b.js"`)
-          expect(chunk.imports[0]).toMatchInlineSnapshot(`"shared-RtRL5WZ7.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"main-b4IqQb8v.js"`)
+          expect(chunk.imports[0]).toMatchInlineSnapshot(`"shared-HPOF0b0V.js"`)
           expect(chunk.dynamicImports[0]).toMatchInlineSnapshot(
-            `"dynamic-GEHD338z.js"`,
+            `"dynamic-GH3GEpHx.js"`,
           )
           break
 
         case path.join(__dirname, 'entry.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-r47VG7AS.js"`)
-          expect(chunk.imports[0]).toMatchInlineSnapshot(`"shared-RtRL5WZ7.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-4V01jUNm.js"`)
+          expect(chunk.imports[0]).toMatchInlineSnapshot(`"shared-HPOF0b0V.js"`)
           expect(chunk.dynamicImports).toStrictEqual([])
           break
 
         case path.join(__dirname, 'dynamic.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"dynamic-GEHD338z.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"dynamic-GH3GEpHx.js"`)
           break
 
         default:

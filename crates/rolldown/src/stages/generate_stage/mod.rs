@@ -243,7 +243,7 @@ impl<'a> GenerateStage<'a> {
       .user_defined_entry_chunk_ids
       .iter()
       .copied()
-      .chain(chunk_graph.chunks.iter_enumerated().map(|(id, _)| id))
+      .chain(chunk_graph.sorted_chunk_ids.iter().copied())
       .collect::<Vec<_>>();
 
     chunk_ids.into_iter().for_each(|chunk_id| {

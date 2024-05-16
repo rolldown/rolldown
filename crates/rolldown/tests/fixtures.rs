@@ -3,6 +3,7 @@ mod common;
 use std::path::{Component, PathBuf};
 
 use common::{Case, Fixture};
+use rolldown_common::Output;
 use sugar_path::SugarPath;
 use testing_macros::fixture;
 
@@ -35,8 +36,17 @@ async fn filename_with_hash() {
 
     let assets = fixture.bundle(false, true).await;
 
-    assets.assets.iter().for_each(|asset| {
-      snapshot_output.push_str(&format!("- {}\n", asset.file_name()));
+    assets.assets.iter().for_each(|asset| match asset {
+      Output::Asset(asset) => {
+        snapshot_output.push_str(&format!("- {}\n", asset.file_name));
+      }
+      Output::Chunk(chunk) => {
+        snapshot_output.push_str(&format!(
+          "- {} => {}\n",
+          chunk.preliminary_file_name.as_str(),
+          chunk.file_name.as_str()
+        ));
+      }
     });
 
     snapshot_outputs.push(snapshot_output);

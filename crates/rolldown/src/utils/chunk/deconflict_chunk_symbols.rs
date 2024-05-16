@@ -6,14 +6,14 @@ use rolldown_rstr::ToRstr;
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput) {
-  let mut renamer =
-    Renamer::new(&link_output.symbols, link_output.module_table.normal_modules.len());
+  let module_table = &link_output.module_table.read().expect("should get module table read lock");
+  let mut renamer = Renamer::new(&link_output.symbols, module_table.normal_modules.len());
 
   chunk
     .modules
     .iter()
     .copied()
-    .map(|id| &link_output.module_table.normal_modules[id])
+    .map(|id| &module_table.normal_modules[id])
     .flat_map(|m| m.scope.root_unresolved_references().keys().map(Cow::Borrowed))
     .for_each(|name| {
       // global names should be reserved
@@ -30,7 +30,7 @@ pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput
     .copied()
     // Starts with entry module
     .rev()
-    .map(|id| &link_output.module_table.normal_modules[id])
+    .map(|id| &module_table.normal_modules[id])
     .for_each(|module| {
       module
         .stmt_infos
@@ -43,7 +43,7 @@ pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput
     });
 
   // rename non-top-level names
-  renamer.rename_non_top_level_symbol(&chunk.modules, &link_output.module_table.normal_modules);
+  renamer.rename_non_top_level_symbol(&chunk.modules, &module_table.normal_modules);
 
   chunk.canonical_names = renamer.into_canonical_names();
 }

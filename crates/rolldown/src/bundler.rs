@@ -11,6 +11,7 @@ use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
+use rolldown_common::SharedModuleTable;
 use rolldown_error::BuildError;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
@@ -23,6 +24,7 @@ pub struct Bundler {
   pub(crate) fs: OsFileSystem,
   pub(crate) resolver: SharedResolver,
   pub(crate) _log_guard: Option<FlushGuard>,
+  pub(crate) module_table: SharedModuleTable,
 }
 
 impl Bundler {
@@ -81,6 +83,7 @@ impl Bundler {
       Arc::clone(&self.plugin_driver),
       self.fs.clone(),
       Arc::clone(&self.resolver),
+      Arc::clone(&self.module_table),
     )
     .scan()
     .await;

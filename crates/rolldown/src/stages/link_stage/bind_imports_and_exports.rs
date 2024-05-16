@@ -22,44 +22,44 @@ use super::LinkStage;
 impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn bind_imports_and_exports(&mut self) {
-    self.module_table.normal_modules.iter().zip(self.metas.iter_mut()).par_bridge().for_each(
-      |(module, meta)| {
-        meta.resolved_exports = module
-          .named_exports
-          .iter()
-          .map(|(name, local)| {
-            let resolved_export = ResolvedExport {
-              symbol_ref: local.referenced,
-              potentially_ambiguous_symbol_refs: None,
-            };
-            (name.clone(), resolved_export)
-          })
-          .collect();
-      },
-    );
+    let normal_modules =
+      &self.module_table.read().expect("should get module table read lock").normal_modules;
+    normal_modules.iter().zip(self.metas.iter_mut()).par_bridge().for_each(|(module, meta)| {
+      meta.resolved_exports = module
+        .named_exports
+        .iter()
+        .map(|(name, local)| {
+          let resolved_export = ResolvedExport {
+            symbol_ref: local.referenced,
+            potentially_ambiguous_symbol_refs: None,
+          };
+          (name.clone(), resolved_export)
+        })
+        .collect();
+    });
 
     // Add exports for export star. Notice that:
     // - There will be potentially ambiguous exports, which need to be resolved later
     let mut module_stack_for_export_star = Vec::default();
-    self.module_table.normal_modules.iter_enumerated().for_each(|(id, module)| {
+    normal_modules.iter_enumerated().for_each(|(id, module)| {
       module_stack_for_export_star.clear();
       add_exports_for_export_star(
         module,
         id,
         &mut self.metas,
-        &self.module_table.normal_modules,
+        normal_modules,
         &mut module_stack_for_export_star,
       );
     });
 
     // match imports with exports
-    self.module_table.normal_modules.iter().for_each(|importer| {
+    normal_modules.iter().for_each(|importer| {
       importer.named_imports.values().for_each(|import| {
         let import_record = &importer.import_records[import.record_id];
         let ModuleId::Normal(importee_id) = import_record.resolved_module else {
           return;
         };
-        let importee = &self.module_table.normal_modules[importee_id];
+        let importee = &normal_modules[importee_id];
 
         match Self::match_import_with_export(
           importer,
@@ -76,7 +76,7 @@ impl<'a> LinkStage<'a> {
           ) => {
             potentially_ambiguous_symbol_refs.push(symbol_ref);
             if Self::determine_ambiguous_export(
-              &self.module_table.normal_modules,
+              normal_modules,
               potentially_ambiguous_symbol_refs,
               &mut self.metas,
               &mut self.symbols,

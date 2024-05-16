@@ -2,7 +2,9 @@ use std::hash::BuildHasherDefault;
 
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{Chunk, ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId};
+use rolldown_common::{
+  Chunk, ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId, NormalModuleVec,
+};
 use rolldown_utils::BitSet;
 use rustc_hash::FxHashMap;
 
@@ -13,11 +15,12 @@ use super::GenerateStage;
 impl<'a> GenerateStage<'a> {
   fn determine_reachable_modules_for_entry(
     &self,
+    normal_modules: &NormalModuleVec,
     module_id: NormalModuleId,
     entry_index: u32,
     module_to_bits: &mut IndexVec<NormalModuleId, BitSet>,
   ) {
-    let module = &self.link_output.module_table.normal_modules[module_id];
+    let module = &normal_modules[module_id];
 
     if !module.is_included {
       return;
@@ -33,7 +36,12 @@ impl<'a> GenerateStage<'a> {
         // Module imported dynamically will be considered as an entry,
         // so we don't need to include it in this chunk
         if !matches!(rec.kind, ImportKind::DynamicImport) {
-          self.determine_reachable_modules_for_entry(importee_id, entry_index, module_to_bits);
+          self.determine_reachable_modules_for_entry(
+            normal_modules,
+            importee_id,
+            entry_index,
+            module_to_bits,
+          );
         }
       }
     });
@@ -45,6 +53,7 @@ impl<'a> GenerateStage<'a> {
       stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
         let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*symbol_ref);
         self.determine_reachable_modules_for_entry(
+          normal_modules,
           canonical_ref.owner,
           entry_index,
           module_to_bits,
@@ -61,7 +70,14 @@ impl<'a> GenerateStage<'a> {
     // we create a facade entry point for it.
     let entries_len = if is_in_rust_test_mode() { entries_len + 1 } else { entries_len };
 
-    let mut module_to_bits = oxc_index::index_vec![BitSet::new(entries_len); self.link_output.module_table.normal_modules.len()];
+    let normal_modules = &self
+      .link_output
+      .module_table
+      .read()
+      .expect("should get module table read lock")
+      .normal_modules;
+
+    let mut module_to_bits = oxc_index::index_vec![BitSet::new(entries_len); normal_modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity_and_hasher(
       self.link_output.entries.len(),
       BuildHasherDefault::default(),
@@ -73,7 +89,7 @@ impl<'a> GenerateStage<'a> {
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
-      let module = &self.link_output.module_table.normal_modules[entry_point.id];
+      let module = &normal_modules[entry_point.id];
       let chunk = chunks.push(Chunk::new(
         entry_point.name.clone(),
         bits.clone(),
@@ -92,6 +108,7 @@ impl<'a> GenerateStage<'a> {
 
     if is_in_rust_test_mode() {
       self.determine_reachable_modules_for_entry(
+        normal_modules,
         self.link_output.runtime.id(),
         entries_len - 1,
         &mut module_to_bits,
@@ -101,6 +118,7 @@ impl<'a> GenerateStage<'a> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
       self.determine_reachable_modules_for_entry(
+        normal_modules,
         entry_point.id,
         i.try_into().expect("Too many entries, u32 overflowed."),
         &mut module_to_bits,
@@ -109,12 +127,12 @@ impl<'a> GenerateStage<'a> {
 
     let mut module_to_chunk: IndexVec<NormalModuleId, Option<ChunkId>> = oxc_index::index_vec![
       None;
-      self.link_output.module_table.normal_modules.len()
+      normal_modules.len()
     ];
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
-    for normal_module in &self.link_output.module_table.normal_modules {
+    for normal_module in normal_modules {
       if !normal_module.is_included {
         continue;
       }
@@ -137,9 +155,7 @@ impl<'a> GenerateStage<'a> {
 
     // Sort modules in each chunk by execution order
     chunks.iter_mut().for_each(|chunk| {
-      chunk.modules.sort_by_key(|module_id| {
-        self.link_output.module_table.normal_modules[*module_id].exec_order
-      });
+      chunk.modules.sort_by_key(|module_id| normal_modules[*module_id].exec_order);
     });
 
     let sorted_chunk_ids =

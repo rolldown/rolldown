@@ -88,18 +88,18 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
-    let mut is_included_vec: IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>> = self
-      .module_table
+    let mut module_table = self.module_table.write().expect("should get module table write lock");
+    let mut is_included_vec: IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>> = module_table
       .normal_modules
       .iter()
       .map(|m| m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoId, _>>())
       .collect::<IndexVec<NormalModuleId, _>>();
 
     let mut is_module_included_vec: IndexVec<NormalModuleId, bool> =
-      oxc_index::index_vec![false; self.module_table.normal_modules.len()];
+      oxc_index::index_vec![false; module_table.normal_modules.len()];
 
     let context = &mut Context {
-      modules: &self.module_table.normal_modules,
+      modules: &module_table.normal_modules,
       symbols: &self.symbols,
       is_included_vec: &mut is_included_vec,
       is_module_included_vec: &mut is_module_included_vec,
@@ -108,12 +108,12 @@ impl LinkStage<'_> {
     };
 
     self.entries.iter().for_each(|entry| {
-      let module = &self.module_table.normal_modules[entry.id];
+      let module = &module_table.normal_modules[entry.id];
 
       include_module(context, module);
     });
 
-    self.module_table.normal_modules.iter_mut().par_bridge().for_each(|module| {
+    module_table.normal_modules.iter_mut().par_bridge().for_each(|module| {
       module.is_included = is_module_included_vec[module.id];
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
@@ -122,8 +122,7 @@ impl LinkStage<'_> {
 
     tracing::trace!(
       "included statements {:#?}",
-      self
-        .module_table
+      module_table
         .normal_modules
         .iter()
         .map(NormalModule::to_debug_normal_module_for_tree_shaking)

@@ -1,8 +1,11 @@
-use std::{ptr::addr_of, sync::Mutex};
+use std::{
+  ptr::addr_of,
+  sync::{Arc, Mutex},
+};
 
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
+  EntryPoint, ExportsKind, ImportKind, ModuleId, NormalModule, NormalModuleId, SharedModuleTable,
   StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
@@ -29,7 +32,7 @@ mod wrapping;
 
 #[derive(Debug)]
 pub struct LinkStageOutput {
-  pub module_table: ModuleTable,
+  pub module_table: SharedModuleTable,
   pub entries: Vec<EntryPoint>,
   pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub sorted_modules: Vec<NormalModuleId>,
@@ -42,7 +45,7 @@ pub struct LinkStageOutput {
 
 #[derive(Debug)]
 pub struct LinkStage<'a> {
-  pub module_table: ModuleTable,
+  pub module_table: SharedModuleTable,
   pub entries: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
@@ -60,11 +63,13 @@ impl<'a> LinkStage<'a> {
       sorted_modules: Vec::new(),
       metas: scan_stage_output
         .module_table
+        .read()
+        .expect("should get module table read lock")
         .normal_modules
         .iter()
         .map(|_| LinkingMetadata::default())
         .collect::<IndexVec<NormalModuleId, _>>(),
-      module_table: scan_stage_output.module_table,
+      module_table: Arc::clone(&scan_stage_output.module_table),
       entries: scan_stage_output.entry_points,
       symbols: scan_stage_output.symbols,
       runtime: scan_stage_output.runtime,
@@ -77,52 +82,58 @@ impl<'a> LinkStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   fn create_exports_for_modules(&mut self) {
-    self.module_table.normal_modules.iter_mut().for_each(|module| {
-      let linking_info = &mut self.metas[module.id];
+    self
+      .module_table
+      .write()
+      .expect("should get module table write lock")
+      .normal_modules
+      .iter_mut()
+      .for_each(|module| {
+        let linking_info = &mut self.metas[module.id];
 
-      create_wrapper(module, linking_info, &mut self.symbols, &self.runtime);
-      if self.entries.iter().any(|entry| entry.id == module.id) {
-        init_entry_point_stmt_info(module, linking_info);
-      }
-
-      linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
-        let stmt_info = StmtInfo {
-          stmt_idx: None,
-          declared_symbols: vec![*symbol_ref],
-          referenced_symbols: vec![],
-          side_effect: false,
-          is_included: false,
-          import_records: Vec::new(),
-          debug_label: None,
-        };
-        module.stmt_infos.add_stmt_info(stmt_info);
-      });
-
-      if matches!(module.exports_kind, ExportsKind::Esm) {
-        let linking_info = &self.metas[module.id];
-        let mut referenced_symbols = vec![];
-        if !linking_info.is_canonical_exports_empty() {
-          referenced_symbols
-            .extend(linking_info.canonical_exports().map(|(_, export)| export.symbol_ref));
-          referenced_symbols.push(self.runtime.resolve_symbol("__export"));
+        create_wrapper(module, linking_info, &mut self.symbols, &self.runtime);
+        if self.entries.iter().any(|entry| entry.id == module.id) {
+          init_entry_point_stmt_info(module, linking_info);
         }
-        // Create a StmtInfo for the namespace statement
-        let namespace_stmt_info = StmtInfo {
-          stmt_idx: None,
-          declared_symbols: vec![module.namespace_symbol],
-          referenced_symbols,
-          side_effect: false,
-          is_included: false,
-          import_records: Vec::new(),
-          debug_label: None,
-        };
 
-        module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
-      }
+        linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
+          let stmt_info = StmtInfo {
+            stmt_idx: None,
+            declared_symbols: vec![*symbol_ref],
+            referenced_symbols: vec![],
+            side_effect: false,
+            is_included: false,
+            import_records: Vec::new(),
+            debug_label: None,
+          };
+          module.stmt_infos.add_stmt_info(stmt_info);
+        });
 
-      // We don't create actual ast nodes for the namespace statement here. It will be deferred
-      // to the finalize stage.
-    });
+        if matches!(module.exports_kind, ExportsKind::Esm) {
+          let linking_info = &self.metas[module.id];
+          let mut referenced_symbols = vec![];
+          if !linking_info.is_canonical_exports_empty() {
+            referenced_symbols
+              .extend(linking_info.canonical_exports().map(|(_, export)| export.symbol_ref));
+            referenced_symbols.push(self.runtime.resolve_symbol("__export"));
+          }
+          // Create a StmtInfo for the namespace statement
+          let namespace_stmt_info = StmtInfo {
+            stmt_idx: None,
+            declared_symbols: vec![module.namespace_symbol],
+            referenced_symbols,
+            side_effect: false,
+            is_included: false,
+            import_records: Vec::new(),
+            debug_label: None,
+          };
+
+          module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
+        }
+
+        // We don't create actual ast nodes for the namespace statement here. It will be deferred
+        // to the finalize stage.
+      });
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -138,7 +149,7 @@ impl<'a> LinkStage<'a> {
     self.include_statements();
 
     LinkStageOutput {
-      module_table: self.module_table,
+      module_table: Arc::clone(&self.module_table),
       entries: self.entries,
       sorted_modules: self.sorted_modules,
       metas: self.metas,
@@ -154,13 +165,14 @@ impl<'a> LinkStage<'a> {
   fn determine_module_exports_kind(&mut self) {
     // Maximize the compatibility with commonjs
     let compat_mode = true;
-
-    self.module_table.normal_modules.iter().for_each(|importer| {
+    let normal_modules =
+      &self.module_table.read().expect("should get module table read lock").normal_modules;
+    normal_modules.iter().for_each(|importer| {
       importer.import_records.iter().for_each(|rec| {
         let ModuleId::Normal(importee_id) = rec.resolved_module else {
           return;
         };
-        let importee = &self.module_table.normal_modules[importee_id];
+        let importee = &normal_modules[importee_id];
 
         match rec.kind {
           ImportKind::Import => {
@@ -222,8 +234,10 @@ impl<'a> LinkStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   fn reference_needed_symbols(&mut self) {
+    let normal_modules =
+      &self.module_table.read().expect("should get module table read lock").normal_modules;
     let symbols = Mutex::new(&mut self.symbols);
-    self.module_table.normal_modules.iter().par_bridge().for_each(|importer| {
+    normal_modules.iter().par_bridge().for_each(|importer| {
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
       // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
@@ -267,7 +281,7 @@ impl<'a> LinkStage<'a> {
                           .push(importee_linking_info.wrapper_ref.unwrap());
                         stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
                         stmt_info.declared_symbols.push(rec.namespace_ref);
-                        let importee = &self.module_table.normal_modules[importee_id];
+                        let importee = &normal_modules[importee_id];
                         symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                           format!("import_{}", &importee.repr_name).into();
                       }
@@ -284,7 +298,7 @@ impl<'a> LinkStage<'a> {
                           .referenced_symbols
                           .push(self.runtime.resolve_symbol("__reExport"));
                         stmt_info.referenced_symbols.push(importer.namespace_symbol);
-                        let importee = &self.module_table.normal_modules[importee_id];
+                        let importee = &normal_modules[importee_id];
                         stmt_info.referenced_symbols.push(importee.namespace_symbol);
                       }
                     }
@@ -302,7 +316,7 @@ impl<'a> LinkStage<'a> {
                     // Reference to `init_foo`
                     stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
                     stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toCommonJS"));
-                    let importee = &self.module_table.normal_modules[importee_id];
+                    let importee = &normal_modules[importee_id];
                     stmt_info.referenced_symbols.push(importee.namespace_symbol);
                   }
                 },

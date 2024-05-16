@@ -81,13 +81,15 @@ fn has_dynamic_exports_due_to_export_star(
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn wrap_modules(&mut self) {
+    let module_table = self.module_table.read().expect("should get module table read lock");
+
     let mut visited_modules_for_wrapping =
-      oxc_index::index_vec![false; self.module_table.normal_modules.len()];
+      oxc_index::index_vec![false; module_table.normal_modules.len()];
 
     let mut visited_modules_for_dynamic_exports =
-      oxc_index::index_vec![false; self.module_table.normal_modules.len()];
+      oxc_index::index_vec![false; module_table.normal_modules.len()];
 
-    for module in &self.module_table.normal_modules {
+    for module in &module_table.normal_modules {
       let module_id = module.id;
       let linking_info = &self.metas[module_id];
 
@@ -97,7 +99,7 @@ impl LinkStage<'_> {
             &mut Context {
               visited_modules: &mut visited_modules_for_wrapping,
               linking_infos: &mut self.metas,
-              modules: &self.module_table.normal_modules,
+              modules: &module_table.normal_modules,
             },
             module_id,
           );
@@ -108,7 +110,7 @@ impl LinkStage<'_> {
       if !module.star_exports.is_empty() {
         has_dynamic_exports_due_to_export_star(
           module_id,
-          &self.module_table.normal_modules,
+          &module_table.normal_modules,
           &mut self.metas,
           &mut visited_modules_for_dynamic_exports,
         );
@@ -118,13 +120,13 @@ impl LinkStage<'_> {
         let ModuleId::Normal(importee_id) = rec.resolved_module else {
           return;
         };
-        let importee = &self.module_table.normal_modules[importee_id];
+        let importee = &module_table.normal_modules[importee_id];
         if matches!(importee.exports_kind, ExportsKind::CommonJs) {
           wrap_module_recursively(
             &mut Context {
               visited_modules: &mut visited_modules_for_wrapping,
               linking_infos: &mut self.metas,
-              modules: &self.module_table.normal_modules,
+              modules: &module_table.normal_modules,
             },
             importee.id,
           );

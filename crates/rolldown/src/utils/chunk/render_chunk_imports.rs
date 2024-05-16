@@ -10,6 +10,7 @@ pub fn render_chunk_imports(
   chunk_graph: &ChunkGraph,
   options: &SharedOptions,
 ) -> String {
+  let module_table = graph.module_table.read().expect("should get module table read lock");
   let mut s = String::new();
   let imports_from_external_modules = &chunk.imports_from_external_modules;
 
@@ -58,7 +59,7 @@ pub fn render_chunk_imports(
     };
 
   imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
-    let importee = &graph.module_table.external_modules[*importee_id];
+    let importee = &module_table.external_modules[*importee_id];
     let mut is_importee_imported = false;
     let mut import_items = named_imports
       .iter()

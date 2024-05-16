@@ -3,7 +3,9 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::future::join_all;
 use oxc_index::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, ModuleTable, NormalModuleId, ResolvedRequestInfo};
+use rolldown_common::{
+  EntryPoint, ImportKind, NormalModuleId, ResolvedRequestInfo, SharedModuleTable,
+};
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
@@ -24,11 +26,12 @@ pub struct ScanStage {
   fs: OsFileSystem,
   resolver: SharedResolver,
   pub errors: Vec<BuildError>,
+  pub module_table: SharedModuleTable,
 }
 
 #[derive(Debug)]
 pub struct ScanStageOutput {
-  pub module_table: ModuleTable,
+  pub module_table: SharedModuleTable,
   pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
@@ -43,8 +46,9 @@ impl ScanStage {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
+    module_table: SharedModuleTable,
   ) -> Self {
-    Self { input_options, plugin_driver, fs, resolver, errors: vec![] }
+    Self { input_options, plugin_driver, fs, resolver, errors: vec![], module_table }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -56,23 +60,17 @@ impl ScanStage {
       Arc::clone(&self.plugin_driver),
       self.fs.clone(),
       Arc::clone(&self.resolver),
+      Arc::clone(&self.module_table),
     );
 
     let user_entries = self.resolve_user_defined_entries().await?;
 
-    let ModuleLoaderOutput {
-      module_table,
-      entry_points,
-      symbols,
-      runtime,
-      warnings,
-      errors,
-      ast_table,
-    } = module_loader.fetch_all_modules(user_entries).await?;
+    let ModuleLoaderOutput { entry_points, symbols, runtime, warnings, errors, ast_table } =
+      module_loader.fetch_all_modules(user_entries).await?;
     self.errors.extend(errors);
 
     Ok(ScanStageOutput {
-      module_table,
+      module_table: Arc::clone(&self.module_table),
       entry_points,
       symbols,
       runtime,

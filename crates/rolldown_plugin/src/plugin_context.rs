@@ -1,6 +1,6 @@
 use std::sync::{Arc, Weak};
 
-use rolldown_common::ResolvedRequestInfo;
+use rolldown_common::{ModuleInfo, ResolvedRequestInfo, SharedModuleTable};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
@@ -14,6 +14,7 @@ pub type SharedPluginContext = std::sync::Arc<PluginContext>;
 pub struct PluginContext {
   pub(crate) resolver: Arc<Resolver>,
   pub(crate) plugin_driver: Weak<PluginDriver>,
+  pub(crate) module_table: SharedModuleTable,
 }
 
 impl PluginContext {
@@ -36,5 +37,17 @@ impl PluginContext {
       HookResolveIdExtraOptions { is_entry: false, kind: extra_options.import_kind },
     )
     .await
+  }
+
+  pub fn get_module_info(&self, module_id: &str) -> Option<ModuleInfo> {
+    let module_table = self.module_table.read().expect("should get module table read lock");
+
+    for module in &module_table.normal_modules {
+      if module.resource_id.as_str() == module_id {
+        return Some(module.to_module_info());
+      }
+    }
+    // TODO handle external modules
+    None
   }
 }

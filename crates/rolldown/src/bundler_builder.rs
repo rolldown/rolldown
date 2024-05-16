@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
+use rolldown_common::ModuleTable;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{BoxPlugin, PluginDriver};
 use rolldown_resolver::Resolver;
@@ -24,12 +25,15 @@ impl BundlerBuilder {
     let resolver: SharedResolver =
       Resolver::new(resolve_options, options.platform, options.cwd.clone(), OsFileSystem).into();
 
+    let module_table = Arc::new(RwLock::new(ModuleTable::default()));
+
     Bundler {
-      plugin_driver: PluginDriver::new_shared(self.plugins, &resolver),
+      plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &module_table),
       resolver,
       options: Arc::new(options),
       fs: OsFileSystem,
       _log_guard: maybe_guard,
+      module_table,
     }
   }
 

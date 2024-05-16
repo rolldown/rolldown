@@ -8,6 +8,7 @@ pub fn render_chunk_exports(
   graph: &LinkStageOutput,
   output_options: &SharedOptions,
 ) -> Option<String> {
+  let module_table = graph.module_table.read().expect("should get module table read lock");
   if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &this.kind {
     let linking_info = &graph.metas[*entry_module_id];
     if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
@@ -18,7 +19,7 @@ pub fn render_chunk_exports(
               panic!(
                 "Cannot find canonical name for wrap ref {:?} of {:?}",
                 linking_info.wrapper_ref.unwrap(),
-                graph.module_table.normal_modules[*entry_module_id].resource_id
+                module_table.normal_modules[*entry_module_id].resource_id
               )
             });
           return Some(format!("export default {wrap_ref_name}();\n"));

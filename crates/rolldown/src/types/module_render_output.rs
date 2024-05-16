@@ -1,9 +1,8 @@
-use rolldown_common::{RenderedModule, ResourceId};
+use rolldown_common::{NormalModuleId, RenderedModule};
 use rolldown_sourcemap::SourceMap;
 
-pub struct ModuleRenderOutput<'a> {
-  pub module_path: ResourceId,
-  pub module_pretty_path: &'a str,
+pub struct ModuleRenderOutput {
+  pub module_id: NormalModuleId,
   pub rendered_module: RenderedModule,
   pub rendered_content: String,
   pub sourcemap: Option<SourceMap>,

@@ -1,5 +1,6 @@
 use std::sync::{Arc, Weak};
 
+use rolldown_common::SharedModuleTable;
 use rolldown_resolver::Resolver;
 
 use crate::{plugin_context::SharedPluginContext, BoxPlugin, PluginContext};
@@ -14,7 +15,11 @@ pub struct PluginDriver {
 }
 
 impl PluginDriver {
-  pub fn new_shared(plugins: Vec<BoxPlugin>, resolver: &Arc<Resolver>) -> SharedPluginDriver {
+  pub fn new_shared(
+    plugins: Vec<BoxPlugin>,
+    resolver: &Arc<Resolver>,
+    module_table: &SharedModuleTable,
+  ) -> SharedPluginDriver {
     Arc::new_cyclic(|plugin_driver| {
       let with_context = plugins
         .into_iter()
@@ -24,6 +29,7 @@ impl PluginDriver {
             PluginContext {
               plugin_driver: Weak::clone(plugin_driver),
               resolver: Arc::clone(resolver),
+              module_table: Arc::clone(module_table),
             }
             .into(),
           )

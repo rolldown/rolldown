@@ -66,6 +66,9 @@ impl<'a> GenerateStage<'a> {
       &mut index_imports_from_other_chunks,
     );
 
+    let module_table =
+      &self.link_output.module_table.read().expect("should get module table read lock");
+
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .into_iter()
       // FIXME: Extra traversing. This is a workaround due to `par_bridge` doesn't ensure order https://github.com/rayon-rs/rayon/issues/551#issuecomment-882069261
@@ -77,7 +80,7 @@ impl<'a> GenerateStage<'a> {
           let mut resource_ids = chunk_graph.chunks[*chunk_id]
             .modules
             .iter()
-            .map(|id| self.link_output.module_table.normal_modules[*id].resource_id.as_str())
+            .map(|id| module_table.normal_modules[*id].resource_id.as_str())
             .collect::<Vec<_>>();
           resource_ids.sort_unstable();
           resource_ids
@@ -105,7 +108,7 @@ impl<'a> GenerateStage<'a> {
         imports_from_external_modules
           .into_iter()
           .sorted_by_key(|(external_module_id, _)| {
-            self.link_output.module_table.external_modules[*external_module_id].exec_order
+            module_table.external_modules[*external_module_id].exec_order
           })
           .collect_vec()
       })
@@ -148,6 +151,9 @@ impl<'a> GenerateStage<'a> {
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
     index_chunk_dependency_order: &mut IndexChunkDependencyOrder,
   ) {
+    let module_table =
+      &self.link_output.module_table.read().expect("should get module table read lock");
+
     let symbols = &Mutex::new(&mut self.link_output.symbols);
 
     let chunks_iter = multizip((
@@ -178,7 +184,7 @@ impl<'a> GenerateStage<'a> {
         }
 
         chunk.modules.iter().copied().for_each(|module_id| {
-          let module = &self.link_output.module_table.normal_modules[module_id];
+          let module = &module_table.normal_modules[module_id];
           module
             .import_records
             .iter()
@@ -201,10 +207,7 @@ impl<'a> GenerateStage<'a> {
             })
             .filter(|rec| matches!(rec.kind, ImportKind::Import))
             .filter_map(|rec| {
-              rec
-                .resolved_module
-                .as_external()
-                .map(|id| &self.link_output.module_table.external_modules[id])
+              rec.resolved_module.as_external().map(|id| &module_table.external_modules[id])
             })
             .for_each(|importee| {
               // Ensure the external module is imported in case it has side effects.
@@ -247,7 +250,7 @@ impl<'a> GenerateStage<'a> {
         });
 
         if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
-          let entry = &self.link_output.module_table.normal_modules[*entry_id];
+          let entry = &module_table.normal_modules[*entry_id];
           let entry_meta = &self.link_output.metas[entry.id];
 
           if !matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
@@ -282,13 +285,15 @@ impl<'a> GenerateStage<'a> {
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
   ) {
+    let module_table =
+      &self.link_output.module_table.read().expect("should get module table read lock");
     chunk_graph.chunks.iter_enumerated().for_each(|(chunk_id, chunk)| {
       let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
       for import_ref in chunk_meta_imports.iter().copied() {
         let import_symbol = self.link_output.symbols.get(import_ref);
 
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
-          let symbol_owner = &self.link_output.module_table.normal_modules[import_ref.owner];
+          let symbol_owner = &module_table.normal_modules[import_ref.owner];
           let symbol_name = self.link_output.symbols.get_original_name(import_ref);
           panic!(
             "Symbol {:?} in {:?} should belong to a chunk",

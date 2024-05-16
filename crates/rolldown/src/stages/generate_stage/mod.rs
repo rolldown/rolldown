@@ -61,31 +61,32 @@ impl<'a> GenerateStage<'a> {
       deconflict_chunk_symbols(chunk, self.link_output);
     });
 
-    let ast_table_iter = self.link_output.ast_table.iter_mut_enumerated();
-    ast_table_iter
-      .par_bridge()
-      .filter(|(id, _)| self.link_output.module_table.normal_modules[*id].is_included)
-      .for_each(|(id, ast)| {
-        let module = &self.link_output.module_table.normal_modules[id];
-        let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
-        let chunk = &chunk_graph.chunks[chunk_id];
-        let linking_info = &self.link_output.metas[module.id];
-        finalize_normal_module(
+    self.link_output.ast_table.iter_mut_enumerated().par_bridge().for_each(|(id, ast)| {
+      let module_table =
+        &self.link_output.module_table.read().expect("should get module table read lock");
+      if !module_table.normal_modules[id].is_included {
+        return;
+      }
+      let module = &module_table.normal_modules[id];
+      let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
+      let chunk = &chunk_graph.chunks[chunk_id];
+      let linking_info = &self.link_output.metas[module.id];
+      finalize_normal_module(
+        module,
+        FinalizerContext {
+          canonical_names: &chunk.canonical_names,
+          id: module.id,
+          symbols: &self.link_output.symbols,
+          linking_info,
           module,
-          FinalizerContext {
-            canonical_names: &chunk.canonical_names,
-            id: module.id,
-            symbols: &self.link_output.symbols,
-            linking_info,
-            module,
-            modules: &self.link_output.module_table.normal_modules,
-            linking_infos: &self.link_output.metas,
-            runtime: &self.link_output.runtime,
-            chunk_graph: &chunk_graph,
-          },
-          ast,
-        );
-      });
+          modules: &module_table.normal_modules,
+          linking_infos: &self.link_output.metas,
+          runtime: &self.link_output.runtime,
+          chunk_graph: &chunk_graph,
+        },
+        ast,
+      );
+    });
 
     let chunks = try_join_all(
       chunk_graph
@@ -262,8 +263,16 @@ impl<'a> GenerateStage<'a> {
 
       let filename_template = chunk.file_name_template(self.options);
 
-      let mut chunk_name =
-        ensure_chunk_name(chunk, runtime_id, &self.link_output.module_table.normal_modules);
+      let mut chunk_name = ensure_chunk_name(
+        chunk,
+        runtime_id,
+        &self
+          .link_output
+          .module_table
+          .read()
+          .expect("should get module table read lock")
+          .normal_modules,
+      );
       let mut next_count = 1;
       while used_names.contains(&chunk_name) {
         chunk_name = format!("{chunk_name}~{next_count}");

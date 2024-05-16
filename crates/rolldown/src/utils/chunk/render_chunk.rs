@@ -48,22 +48,24 @@ pub async fn render_chunk(
     .modules
     .par_iter()
     .copied()
-    .map(|id| &graph.module_table.normal_modules[id])
-    .filter_map(|m| {
-      render_normal_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
+    .filter_map(|id| {
+      let module_table = graph.module_table.read().expect("should get module table read lock");
+      let module = &module_table.normal_modules[id];
+      render_normal_module(id, module, &graph.ast_table[id], options)
     })
     .collect::<Vec<_>>()
     .into_iter()
     .for_each(|module_render_output| {
+      let module_table = graph.module_table.read().expect("should get module table read lock");
       let ModuleRenderOutput {
-        module_path,
-        module_pretty_path,
+        module_id,
         rendered_module,
         rendered_content,
         sourcemap,
         lines_count,
       } = module_render_output;
-      concat_source.add_source(Box::new(RawSource::new(format!("// {module_pretty_path}",))));
+      let module = &module_table.normal_modules[module_id];
+      concat_source.add_source(Box::new(RawSource::new(format!("// {}", module.pretty_path))));
       if let Some(sourcemap) = sourcemap {
         concat_source.add_source(Box::new(SourceMapSource::new(
           rendered_content,
@@ -74,8 +76,8 @@ pub async fn render_chunk(
         concat_source.add_source(Box::new(RawSource::new(rendered_content)));
       }
       // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.
-      if !module_path.starts_with('\0') {
-        rendered_modules.insert(module_path, rendered_module);
+      if !module.resource_id.starts_with('\0') {
+        rendered_modules.insert(module.resource_id.clone(), rendered_module);
       }
     });
   let rendered_chunk = generate_rendered_chunk(this, graph, options, rendered_modules, chunk_graph);

@@ -1,15 +1,15 @@
-use rolldown_common::{NormalModule, RenderedModule};
+use rolldown_common::{NormalModule, NormalModuleId, RenderedModule};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_sourcemap::{collapse_sourcemaps, lines_count};
 
 use crate::{types::module_render_output::ModuleRenderOutput, SharedOptions};
 
-pub fn render_normal_module<'a>(
-  module: &'a NormalModule,
+pub fn render_normal_module(
+  module_id: NormalModuleId,
+  module: &NormalModule,
   ast: &OxcAst,
-  source_name: &str,
   options: &SharedOptions,
-) -> Option<ModuleRenderOutput<'a>> {
+) -> Option<ModuleRenderOutput> {
   if ast.is_body_empty() {
     None
   } else {
@@ -18,11 +18,10 @@ pub fn render_normal_module<'a>(
     // Because oxc codegen sourcemap is last of sourcemap chain,
     // If here no extra sourcemap need remapping, we using it as final module sourcemap.
     // So here make sure using correct `source_name` and `source_content.
-    let render_output = OxcCompiler::print(ast, source_name, enable_sourcemap);
+    let render_output = OxcCompiler::print(ast, module.resource_id.as_ref(), enable_sourcemap);
 
     Some(ModuleRenderOutput {
-      module_path: module.resource_id.clone(),
-      module_pretty_path: &module.pretty_path,
+      module_id,
       rendered_module: RenderedModule { code: None },
       // Search lines count from rendered content has a little overhead, so make it at parallel.
       lines_count: lines_count(&render_output.source_text),

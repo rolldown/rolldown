@@ -2,6 +2,7 @@ use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind, ImportRecordId,
   ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId, ResolvedRequestInfo,
+  SharedModuleTable,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -43,6 +44,7 @@ impl IntermediateNormalModules {
 }
 
 pub struct ModuleLoader {
+  module_table: SharedModuleTable,
   input_options: SharedOptions,
   shared_context: Arc<TaskContext>,
   rx: tokio::sync::mpsc::Receiver<Msg>,
@@ -55,8 +57,6 @@ pub struct ModuleLoader {
 }
 
 pub struct ModuleLoaderOutput {
-  // Stored all modules
-  pub module_table: ModuleTable,
   pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
@@ -72,6 +72,7 @@ impl ModuleLoader {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
+    module_table: SharedModuleTable,
   ) -> Self {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -106,6 +107,7 @@ impl ModuleLoader {
     }
 
     Self {
+      module_table,
       shared_context: common_data,
       rx,
       input_options,
@@ -297,11 +299,13 @@ impl ModuleLoader {
       kind: EntryPointKind::DynamicImport,
     }));
 
+    let mut module_table = self.module_table.write().expect("should get module table write lock");
+
+    // TODO
+    *module_table =
+      ModuleTable { normal_modules: modules, external_modules: self.external_modules };
+
     Ok(ModuleLoaderOutput {
-      module_table: ModuleTable {
-        normal_modules: modules,
-        external_modules: self.external_modules,
-      },
       symbols: self.symbols,
       ast_table,
       entry_points,

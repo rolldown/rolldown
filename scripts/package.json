@@ -19,10 +19,9 @@
     "fast-glob": "^3.3.2",
     "fs-extra": "^11.2.0",
     "semver": "^7.6.0",
-    "tree-sitter": "^0.21.0",
     "zx": "^8.0.0"
   },
   "devDependencies": {
-    "tree-sitter-go": "^0.21.0"
+    "web-tree-sitter": "^0.22.6"
   }
 }

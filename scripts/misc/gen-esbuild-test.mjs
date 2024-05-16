@@ -1,5 +1,5 @@
-import Parser from 'tree-sitter'
-import Go from 'tree-sitter-go'
+import Parser from 'web-tree-sitter'
+// import Go from 'tree-sitter-go'
 import fs from 'fs-extra'
 import fsp from 'node:fs/promises'
 import * as path from 'node:path'
@@ -8,12 +8,19 @@ import chalk from 'chalk'
 import * as dedent from 'dedent'
 import { fileURLToPath } from 'node:url'
 import { URL } from 'node:url'
+import compat from 'tree-sitter-compat'
+import { warn } from 'node:console'
 
 // How to use this script
 // 1. Set the test suite name.
 
 /** @type {TestSuiteName} {@link suites} */
-const SUITE_NAME = 'lower'
+if (process.argv.length < 3) {
+  throw new Error('Please provide the test suite name')
+}
+
+const SUITE_NAME = process.argv[2]
+console.log(`Processing test suite: ${SUITE_NAME}`)
 
 // 2. Set the tests root directory
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -171,6 +178,7 @@ async function readTestSuiteSource(testSuiteName) {
 
 /** The contents of the .go test source file. {@link suites} */
 const source = await readTestSuiteSource(SUITE_NAME)
+
 // This is up to suit name
 const ignoreCases = suites[SUITE_NAME]?.ignoreCases ?? []
 // Generic ignored pattern, maybe used in many suites
@@ -196,10 +204,6 @@ const ignoredTestPattern = [
   'output_extension',
   'top_level_return_forbidden',
 ]
-const parser = new Parser()
-parser.setLanguage(Go)
-
-const tree = parser.parse(source)
 
 let queryString = `
 (call_expression
@@ -216,7 +220,7 @@ let queryString = `
 `
 
 /**
- * @param {import("tree-sitter").SyntaxNode} root
+ * @param {import("web-tree-sitter").SyntaxNode} root
  * @returns {Record<string, Parser.SyntaxNode>}
  * */
 function getTopLevelBinding(root) {
@@ -236,8 +240,15 @@ function getTopLevelBinding(root) {
   return binding
 }
 
+await Parser.init()
+const Lang = await Parser.Language.load(
+  '../tree-sitter-wasm/tree-sitter-go.wasm',
+)
+const parser = new Parser()
+parser.setLanguage(Lang)
+const tree = parser.parse(source)
 let topLevelBindingMap = getTopLevelBinding(tree.rootNode)
-let query = new Parser.Query(parser.getLanguage(), queryString)
+const query = Lang.query(queryString)
 
 /**
  * @param {string} dir - The directory path.

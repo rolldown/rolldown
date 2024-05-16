@@ -1963,6 +1963,7 @@ dependencies = [
  "async-scoped",
  "base64",
  "futures",
+ "indexmap",
  "once_cell",
  "rayon",
  "regex",

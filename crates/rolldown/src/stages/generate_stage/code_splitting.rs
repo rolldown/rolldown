@@ -1,5 +1,6 @@
 use std::hash::BuildHasherDefault;
 
+use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{Chunk, ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId};
 use rolldown_utils::BitSet;
@@ -141,6 +142,9 @@ impl<'a> GenerateStage<'a> {
       });
     });
 
-    ChunkGraph { chunks, module_to_chunk, user_defined_entry_chunk_ids }
+    let sorted_chunk_ids =
+      chunks.indices().sorted_by_key(|id| &chunks[*id].bits).collect::<Vec<_>>();
+
+    ChunkGraph { chunks, sorted_chunk_ids, module_to_chunk, user_defined_entry_chunk_ids }
   }
 }

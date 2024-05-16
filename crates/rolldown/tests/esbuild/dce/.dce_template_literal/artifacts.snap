@@ -8,5 +8,7 @@ input_file: crates/rolldown/tests/esbuild/dce/dce_template_literal
 ## entry_js.mjs
 
 ```js
-
+// entry.js
+let a = `${keep}`;
+let c = `${keep ? 1 : 2n}`;
 ```

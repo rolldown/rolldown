@@ -13,7 +13,14 @@ import { URL } from 'node:url'
 // 1. Set the test suite name.
 
 /** @type {TestSuiteName} {@link suites} */
-const SUITE_NAME = 'lower'
+if (process.argv.length < 3) {
+  throw new Error("The length of arguments should not less than 3")
+}
+
+
+const SUITE_NAME = process.argv[2]
+
+console.log(`SUITE_NAME: `, SUITE_NAME)
 
 // 2. Set the tests root directory
 const __dirname = fileURLToPath(new URL('.', import.meta.url))

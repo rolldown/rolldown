@@ -1,0 +1,15 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_iife
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+function keep() {
+}
+keep();
+```

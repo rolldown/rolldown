@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+const myFunc = () => {
+	DROP:	{
+		console.log('drop');
+	}
+	console.log('keep');
+};
+var entry_default = myFunc;
+
+export { entry_default as default };
+```

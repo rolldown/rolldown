@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "class_js",
+        "import": "class.js"
+      },
+      {
+        "name": "object_js",
+        "import": "object.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

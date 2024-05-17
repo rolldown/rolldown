@@ -12,6 +12,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - $runtime$-!~{001}~.mjs => $runtime$-aUKPtNTY.mjs
 - entry_js-!~{000}~.mjs => entry_js-a50D-tCc.mjs
 
+# tests/esbuild/dce/dce_of_destructuring
+
+- entry_js-!~{000}~.mjs => entry_js-29r09uIA.mjs
+
+# tests/esbuild/dce/dce_of_symbol_instances
+
+- class_js-!~{000}~.mjs => class_js-l4WsvKDV.mjs
+- object_js-!~{001}~.mjs => object_js-dn-DPZbv.mjs
+
 # tests/esbuild/dce/dce_template_literal
 
 - entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs

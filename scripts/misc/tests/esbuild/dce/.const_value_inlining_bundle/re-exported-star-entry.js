@@ -1,1 +1,0 @@
-export * from './re-exported-star-constants'

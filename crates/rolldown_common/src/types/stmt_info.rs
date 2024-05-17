@@ -1,5 +1,6 @@
+use oxc::span::{Atom, CompactStr};
 use oxc_index::IndexVec;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{ImportRecordId, SymbolRef};
 
@@ -62,6 +63,14 @@ oxc_index::define_index_type! {
   pub struct StmtInfoId = u32;
 }
 
+#[derive(Debug, Clone, Default)]
+pub enum IncludedInfo {
+  #[default]
+  False,
+  True,
+  Declarator(FxHashSet<CompactStr>),
+}
+
 #[derive(Default, Debug)]
 pub struct StmtInfo {
   /// The index of this statement in the module body.
@@ -77,7 +86,7 @@ pub struct StmtInfo {
   /// Top level symbols referenced by this statement.
   pub referenced_symbols: Vec<SymbolRef>,
   pub side_effect: bool,
-  pub included_decls: Vec<bool>,
+  pub included_info: IncludedInfo,
   pub import_records: Vec<ImportRecordId>,
   pub debug_label: Option<String>,
 }
@@ -85,15 +94,43 @@ pub struct StmtInfo {
 impl StmtInfo {
   pub fn to_debug_stmt_info_for_tree_shaking(&self) -> DebugStmtInfoForTreeShaking {
     DebugStmtInfoForTreeShaking {
-      is_included: self.fully_included(),
+      is_included: self.partial_included(),
       side_effect: self.side_effect,
       source: self.debug_label.clone().unwrap_or_else(|| "<Noop>".into()),
     }
   }
 
-  pub fn fully_included(&self) -> bool {
-    self.included_decls.iter().all(|&b| b)
+  pub fn partial_included(&self) -> bool {
+    match self.included_info {
+      IncludedInfo::False => false,
+      IncludedInfo::True => true,
+      IncludedInfo::Declarator(ref set) => {
+        set.len() > 0
+        // self.declared_symbols.iter().all(|symbol_ref| set.contains(symbol_ref))
+      }
+    }
   }
+
+  pub fn fully_included(&self) -> bool {
+    match self.included_info {
+      IncludedInfo::False => false,
+      IncludedInfo::True => true,
+      IncludedInfo::Declarator(ref set) => {
+        set.len() == self.declared_symbols.len()
+        // self.declared_symbols.iter().all(|symbol_ref| set.contains(symbol_ref))
+      }
+    }
+  }
+
+  // pub fn (&self) -> bool {
+  //   match self.included_info {
+  //     IncludedInfo::False => false,
+  //     IncludedInfo::True => true,
+  //     IncludedInfo::Declarator(ref set) => {
+  //       self.declared_symbols.iter().all(|symbol_ref| set.contains(symbol_ref))
+  //     }
+  //   }
+  // }
 }
 
 #[derive(Debug)]

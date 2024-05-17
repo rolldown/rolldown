@@ -96,7 +96,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/ambiguous_reexport_msg
 
-- entry_js-!~{000}~.mjs => entry_js-K2tYIvmv.mjs
+- entry_js-!~{000}~.mjs => entry_js-T2IejSu8.mjs
 
 # tests/esbuild/default/arrow_fn_scope
 
@@ -1370,7 +1370,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/tree_shaking/multi_declaration
 
-- main1-!~{000}~.mjs => main1-9fU3It8m.mjs
+- main1-!~{000}~.mjs => main1-yGZKcwYm.mjs
 
 # tests/fixtures/warnings/eval
 

@@ -60,7 +60,7 @@ pub use crate::{
   types::resolved_path::ResolvedPath,
   types::resolved_request_info::ResolvedRequestInfo,
   types::resource_id::{representative_name, ResourceId},
-  types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoId, StmtInfos},
+  types::stmt_info::{DebugStmtInfoForTreeShaking, IncludedInfo, StmtInfo, StmtInfoId, StmtInfos},
   types::symbol_ref::SymbolRef,
   types::wrap_kind::WrapKind,
 };

@@ -8,7 +8,7 @@ use crate::{
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-    symbols::Symbols,
+    symbols::{Symbol, Symbols},
   },
 };
 

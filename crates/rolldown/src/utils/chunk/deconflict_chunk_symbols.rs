@@ -35,7 +35,7 @@ pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput
       module
         .stmt_infos
         .iter()
-        .filter(|stmt_info| stmt_info.fully_included())
+        .filter(|stmt_info| stmt_info.partial_included())
         .flat_map(|stmt_info| stmt_info.declared_symbols.iter().copied())
         .for_each(|symbol_ref| {
           renamer.add_top_level_symbol(symbol_ref);

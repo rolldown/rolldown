@@ -39,7 +39,7 @@ impl<'a> GenerateStage<'a> {
     });
 
     module.stmt_infos.iter().for_each(|stmt_info| {
-      if !stmt_info.fully_included() {
+      if !stmt_info.partial_included() {
         return;
       }
       stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {

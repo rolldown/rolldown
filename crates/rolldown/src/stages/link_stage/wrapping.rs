@@ -1,6 +1,7 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ExportsKind, ModuleId, NormalModule, NormalModuleId, NormalModuleVec, StmtInfo, WrapKind,
+  ExportsKind, IncludedInfo, ModuleId, NormalModule, NormalModuleId, NormalModuleVec, StmtInfo,
+  WrapKind,
 };
 
 use crate::{
@@ -157,7 +158,7 @@ pub fn create_wrapper(
         declared_symbols: vec![wrapper_ref],
         referenced_symbols: vec![runtime.resolve_symbol("__commonJSMin")],
         side_effect: false,
-        included_decls: vec![false],
+        included_info: IncludedInfo::False,
         import_records: Vec::new(),
         debug_label: None,
       };
@@ -182,7 +183,7 @@ pub fn create_wrapper(
         declared_symbols: vec![wrapper_ref],
         referenced_symbols: vec![runtime.resolve_symbol("__esmMin")],
         side_effect: false,
-        included_decls: vec![false],
+        included_info: IncludedInfo::False,
         import_records: Vec::new(),
         debug_label: None,
       };

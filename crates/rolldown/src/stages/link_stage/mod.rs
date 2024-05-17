@@ -2,8 +2,8 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
-  OutputFormat, StmtInfo, WrapKind,
+  EntryPoint, ExportsKind, ImportKind, IncludedInfo, ModuleId, ModuleTable, NormalModule,
+  NormalModuleId, StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -92,7 +92,7 @@ impl<'a> LinkStage<'a> {
           declared_symbols: vec![*symbol_ref],
           referenced_symbols: vec![],
           side_effect: false,
-          included_decls: vec![false],
+          included_info: IncludedInfo::False,
           import_records: Vec::new(),
           debug_label: None,
         };
@@ -113,7 +113,7 @@ impl<'a> LinkStage<'a> {
           declared_symbols: vec![module.namespace_symbol],
           referenced_symbols,
           side_effect: false,
-          included_decls: vec![false],
+          included_info: IncludedInfo::False,
           import_records: Vec::new(),
           debug_label: None,
         };
@@ -338,7 +338,7 @@ pub fn init_entry_point_stmt_info(module: &mut NormalModule, meta: &mut LinkingM
     referenced_symbols,
     // Yeah, it has side effects
     side_effect: true,
-    included_decls: vec![],
+    included_info: IncludedInfo::default(),
     import_records: Vec::new(),
     debug_label: None,
   };

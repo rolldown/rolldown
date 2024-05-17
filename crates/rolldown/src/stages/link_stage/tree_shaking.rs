@@ -1,14 +1,18 @@
 use crate::types::symbols::Symbols;
+use oxc::span::CompactStr;
 use oxc_index::IndexVec;
-use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolRef};
+use rolldown_common::{
+  IncludedInfo, NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolRef,
+};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use rustc_hash::FxHashSet;
 
 use super::LinkStage;
 
 struct Context<'a> {
   modules: &'a NormalModuleVec,
   symbols: &'a Symbols,
-  is_included_vec: &'a mut IndexVec<NormalModuleId, IndexVec<StmtInfoId, Vec<bool>>>,
+  is_included_vec: &'a mut IndexVec<NormalModuleId, IndexVec<StmtInfoId, IncludedInfo>>,
   is_module_included_vec: &'a mut IndexVec<NormalModuleId, bool>,
   tree_shaking: bool,
   runtime_id: NormalModuleId,
@@ -25,7 +29,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   if ctx.tree_shaking || module.id == ctx.runtime_id {
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
       if stmt_info.side_effect {
-        include_statement(ctx, module, stmt_info_id);
+        include_statement(ctx, module, stmt_info_id, None);
       }
     });
   } else {
@@ -33,7 +37,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       if stmt_info_id.index() == 0 {
         return;
       }
-      include_statement(ctx, module, stmt_info_id);
+      include_statement(ctx, module, stmt_info_id, None);
     });
   }
 
@@ -60,42 +64,63 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
     .iter()
     .copied()
     .for_each(|stmt_info_id| {
-      include_statement(ctx, canonical_ref_module, stmt_info_id);
+      include_statement(ctx, canonical_ref_module, stmt_info_id, Some(&canonical_ref_symbol.name));
     });
 }
 
-fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoId) {
+fn include_statement(
+  ctx: &mut Context,
+  module: &NormalModule,
+  stmt_info_id: StmtInfoId,
+  declared_symbol_ref: Option<&CompactStr>,
+) {
   let is_included = &mut ctx.is_included_vec[module.id][stmt_info_id];
-  if is_included.iter().all(|included| *included) {
+  if matches!(is_included, IncludedInfo::True) {
     return;
   }
 
+  dbg!(&declared_symbol_ref, &module.pretty_path);
+  // *is_included = IncludedInfo::True;
   // include the statement itself
-  is_included.iter_mut().for_each(|included| *included = true);
+  match declared_symbol_ref {
+    Some(symbol_ref) => match is_included {
+      IncludedInfo::False => {
+        *is_included = IncludedInfo::Declarator(FxHashSet::from_iter([symbol_ref.clone()]));
+      }
+      IncludedInfo::True => unreachable!(),
+      IncludedInfo::Declarator(set) => {
+        if set.contains(symbol_ref) {
+          return;
+        }
+        set.insert(symbol_ref.clone());
+      }
+    },
+    None => *is_included = IncludedInfo::True,
+  }
 
   let stmt_info = module.stmt_infos.get(stmt_info_id);
 
   // include statements that are referenced by this statement
-  stmt_info.declared_symbols.iter().chain(stmt_info.referenced_symbols.iter()).for_each(
-    |symbol_ref| {
+  if stmt_info.import_records.len() > 0 { stmt_info.declared_symbols.iter() } else { [].iter() }
+    .chain(stmt_info.referenced_symbols.iter())
+    .for_each(|symbol_ref| {
       // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
       // really declared by the module itself. We need to include them where they are really declared.
       include_symbol(ctx, *symbol_ref);
-    },
-  );
+    });
 }
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
-    let mut is_included_vec: IndexVec<NormalModuleId, IndexVec<StmtInfoId, Vec<bool>>> = self
+    let mut is_included_vec: IndexVec<NormalModuleId, IndexVec<StmtInfoId, IncludedInfo>> = self
       .module_table
       .normal_modules
       .iter()
       .map(|m| {
         m.stmt_infos
           .iter()
-          .map(|stmt| vec![false; stmt.included_decls.len()])
+          .map(|stmt| stmt.included_info.clone())
           .collect::<IndexVec<StmtInfoId, _>>()
       })
       .collect::<IndexVec<NormalModuleId, _>>();
@@ -121,7 +146,8 @@ impl LinkStage<'_> {
     self.module_table.normal_modules.iter_mut().par_bridge().for_each(|module| {
       module.is_included = is_module_included_vec[module.id];
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
-        module.stmt_infos.get_mut(stmt_info_id).included_decls = is_included.clone();
+        module.stmt_infos.get_mut(stmt_info_id).included_info = is_included.clone();
+        dbg!(&module.stmt_infos.get(stmt_info_id));
       });
     });
 

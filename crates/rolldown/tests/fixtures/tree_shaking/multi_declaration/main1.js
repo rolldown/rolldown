@@ -1,2 +1,2 @@
-import {a} from './share'
+import {a,} from './share'
 console.log(a)

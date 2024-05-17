@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/multi_declaration
 
 ```js
 // share.js
-const a = 100, b = 200;
+const a = 100;
 
 // main1.js
 console.log(a);

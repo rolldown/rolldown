@@ -15,7 +15,7 @@ import * as fsExtra from 'fs-extra'
 
 const TREE_SITTER_WASM_GO_FILENAME = path.resolve(
   import.meta.dirname,
-  '../../temp/tree-sitter-go.wasm',
+  '../../tmp/tree-sitter-go.wasm',
 )
 
 // How to use this script

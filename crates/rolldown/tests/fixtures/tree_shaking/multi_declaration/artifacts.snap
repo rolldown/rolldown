@@ -1,39 +1,20 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/code_splitting/basic
+input_file: crates/rolldown/tests/fixtures/tree_shaking/multi_declaration
 ---
 # Assets
 
-## dynamic.mjs
-
-```js
-// dynamic.js
-console.log('dynamic');
-```
 ## main1.mjs
 
 ```js
-import "./share.mjs";
+// share.js
+const a = 100, b = 200;
 
 // main1.js
-import('./dynamic.mjs');
-```
-## main2.mjs
-
-```js
-import "./share.mjs";
-```
-## share.mjs
-
-```js
-// share.js
-console.log('shared');
+console.log(a);
 ```
 
 ## Output Stats
 
-- dynamic.mjs, is_entry false, is_dynamic_entry true, exports []
 - main1.mjs, is_entry true, is_dynamic_entry false, exports []
-- main2.mjs, is_entry true, is_dynamic_entry false, exports []
-- share.mjs, is_entry false, is_dynamic_entry false, exports []

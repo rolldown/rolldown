@@ -1368,6 +1368,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-m9nnNuko.mjs
 
+# tests/fixtures/tree_shaking/multi_declaration
+
+- main1-!~{000}~.mjs => main1-9fU3It8m.mjs
+
 # tests/fixtures/warnings/eval
 
 - main-!~{000}~.mjs => main-yOBrKQ94.mjs

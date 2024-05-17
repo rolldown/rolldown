@@ -8,7 +8,7 @@ use super::LinkStage;
 struct Context<'a> {
   modules: &'a NormalModuleVec,
   symbols: &'a Symbols,
-  is_included_vec: &'a mut IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>>,
+  is_included_vec: &'a mut IndexVec<NormalModuleId, IndexVec<StmtInfoId, Vec<bool>>>,
   is_module_included_vec: &'a mut IndexVec<NormalModuleId, bool>,
   tree_shaking: bool,
   runtime_id: NormalModuleId,
@@ -66,12 +66,12 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
 
 fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoId) {
   let is_included = &mut ctx.is_included_vec[module.id][stmt_info_id];
-  if *is_included {
+  if is_included.iter().all(|included| *included) {
     return;
   }
 
   // include the statement itself
-  *is_included = true;
+  is_included.iter_mut().for_each(|included| *included = true);
 
   let stmt_info = module.stmt_infos.get(stmt_info_id);
 
@@ -88,11 +88,16 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
-    let mut is_included_vec: IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>> = self
+    let mut is_included_vec: IndexVec<NormalModuleId, IndexVec<StmtInfoId, Vec<bool>>> = self
       .module_table
       .normal_modules
       .iter()
-      .map(|m| m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoId, _>>())
+      .map(|m| {
+        m.stmt_infos
+          .iter()
+          .map(|stmt| vec![false; stmt.included_decls.len()])
+          .collect::<IndexVec<StmtInfoId, _>>()
+      })
       .collect::<IndexVec<NormalModuleId, _>>();
 
     let mut is_module_included_vec: IndexVec<NormalModuleId, bool> =
@@ -116,7 +121,7 @@ impl LinkStage<'_> {
     self.module_table.normal_modules.iter_mut().par_bridge().for_each(|module| {
       module.is_included = is_module_included_vec[module.id];
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
-        module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
+        module.stmt_infos.get_mut(stmt_info_id).included_decls = is_included.clone();
       });
     });
 

@@ -157,7 +157,7 @@ pub fn create_wrapper(
         declared_symbols: vec![wrapper_ref],
         referenced_symbols: vec![runtime.resolve_symbol("__commonJSMin")],
         side_effect: false,
-        is_included: false,
+        included_decls: vec![false],
         import_records: Vec::new(),
         debug_label: None,
       };
@@ -182,7 +182,7 @@ pub fn create_wrapper(
         declared_symbols: vec![wrapper_ref],
         referenced_symbols: vec![runtime.resolve_symbol("__esmMin")],
         side_effect: false,
-        is_included: false,
+        included_decls: vec![false],
         import_records: Vec::new(),
         debug_label: None,
       };

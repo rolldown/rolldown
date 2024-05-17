@@ -92,7 +92,7 @@ impl<'a> LinkStage<'a> {
           declared_symbols: vec![*symbol_ref],
           referenced_symbols: vec![],
           side_effect: false,
-          is_included: false,
+          included_decls: vec![false],
           import_records: Vec::new(),
           debug_label: None,
         };
@@ -113,7 +113,7 @@ impl<'a> LinkStage<'a> {
           declared_symbols: vec![module.namespace_symbol],
           referenced_symbols,
           side_effect: false,
-          is_included: false,
+          included_decls: vec![false],
           import_records: Vec::new(),
           debug_label: None,
         };
@@ -338,7 +338,7 @@ pub fn init_entry_point_stmt_info(module: &mut NormalModule, meta: &mut LinkingM
     referenced_symbols,
     // Yeah, it has side effects
     side_effect: true,
-    is_included: false,
+    included_decls: vec![],
     import_records: Vec::new(),
     debug_label: None,
   };

@@ -20,7 +20,7 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     let old_body = program.body.take_in(self.alloc);
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
-      && self.ctx.module.stmt_infos[0].is_included;
+      && self.ctx.module.stmt_infos[0].fully_included();
 
     if is_namespace_referenced {
       program.body.extend(self.generate_namespace_variable_declaration());
@@ -33,7 +33,7 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
     old_body.into_iter().enumerate().zip(stmt_infos).for_each(
       |((_top_stmt_idx, mut top_stmt), stmt_info)| {
         debug_assert!(matches!(stmt_info.stmt_idx, Some(_top_stmt_idx)));
-        if !stmt_info.is_included {
+        if !stmt_info.fully_included() {
           return;
         }
 
@@ -180,7 +180,7 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
         .stmt_infos
         .declared_stmts_by_symbol(symbol_ref)
         .iter()
-        .any(|id| self.ctx.module.stmt_infos[*id].is_included);
+        .any(|id| self.ctx.module.stmt_infos[*id].fully_included());
       if is_included {
         let canonical_name = self.canonical_name_for(*symbol_ref);
         program.body.push(self.snippet.var_decl_stmt(canonical_name, self.snippet.void_zero()));
@@ -194,7 +194,7 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
       .ctx
       .linking_info
       .wrapper_stmt_info
-      .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included);
+      .is_some_and(|idx| self.ctx.module.stmt_infos[idx].fully_included());
 
     if needs_wrapper {
       match self.ctx.linking_info.wrap_kind {

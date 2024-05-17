@@ -77,7 +77,7 @@ pub struct StmtInfo {
   /// Top level symbols referenced by this statement.
   pub referenced_symbols: Vec<SymbolRef>,
   pub side_effect: bool,
-  pub is_included: bool,
+  pub included_decls: Vec<bool>,
   pub import_records: Vec<ImportRecordId>,
   pub debug_label: Option<String>,
 }
@@ -85,10 +85,14 @@ pub struct StmtInfo {
 impl StmtInfo {
   pub fn to_debug_stmt_info_for_tree_shaking(&self) -> DebugStmtInfoForTreeShaking {
     DebugStmtInfoForTreeShaking {
-      is_included: self.is_included,
+      is_included: self.fully_included(),
       side_effect: self.side_effect,
       source: self.debug_label.clone().unwrap_or_else(|| "<Noop>".into()),
     }
+  }
+
+  pub fn fully_included(&self) -> bool {
+    self.included_decls.iter().all(|&b| b)
   }
 }
 

@@ -178,6 +178,9 @@ importers:
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.3
         version: 0.2.4
+      '@rolldown/testing':
+        specifier: workspace:*
+        version: link:../testing
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -284,6 +287,8 @@ importers:
         specifier: ^5.21.0
         version: 5.31.0
 
+  packages/testing: {}
+
   scripts:
     dependencies:
       '@parcel/watcher':
@@ -292,6 +297,9 @@ importers:
       '@pnpm/find-workspace-packages':
         specifier: ^6.0.9
         version: 6.0.9(@pnpm/logger@5.0.0)
+      '@rolldown/testing':
+        specifier: workspace:*
+        version: link:../packages/testing
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12

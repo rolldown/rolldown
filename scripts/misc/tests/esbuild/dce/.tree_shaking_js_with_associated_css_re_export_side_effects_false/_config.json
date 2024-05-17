@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "test_jsx",
+        "import": "test.jsx"
+      }
+    ]
+  }
+}

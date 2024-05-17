@@ -15,7 +15,7 @@ import * as fsExtra from 'fs-extra'
 
 const TREE_SITTER_WASM_GO_FILENAME = path.resolve(
   import.meta.dirname,
-  '../../tmp/tree-sitter-go.wasm',
+  '../../temp/tree-sitter-go.wasm',
 )
 
 // How to use this script
@@ -517,7 +517,7 @@ function ensureTreeSitterWasmGo() {
   fsExtra.ensureDirSync(path.dirname(TREE_SITTER_WASM_GO_FILENAME))
   return new Promise((rsl, rej) => {
     nodeHttps.get(
-      'https://github.com/tree-sitter/tree-sitter.github.io/raw/master/tree-sitter-go.wasm',
+      'https://tree-sitter.github.io/tree-sitter-go.wasm',
       (resp) => {
         resp.on('end', () => {
           console.log('saved', TREE_SITTER_WASM_GO_FILENAME)

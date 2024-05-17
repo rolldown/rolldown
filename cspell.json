@@ -20,7 +20,8 @@
     "/CHANGELOG.md",
     "/packages/rolldown/src/rollup.d.ts",
     "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
-    "/pnpm-lock.yaml"
+    "/pnpm-lock.yaml",
+    "*.wasm"
   ],
   "languageSettings": [
     {

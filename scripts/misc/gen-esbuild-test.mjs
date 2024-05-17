@@ -1,5 +1,5 @@
-import Parser from 'tree-sitter'
-import Go from 'tree-sitter-go'
+import Parser from 'web-tree-sitter'
+// import Go from 'tree-sitter-go'
 import fs from 'fs-extra'
 import fsp from 'node:fs/promises'
 import * as path from 'node:path'
@@ -8,12 +8,26 @@ import chalk from 'chalk'
 import * as dedent from 'dedent'
 import { fileURLToPath } from 'node:url'
 import { URL } from 'node:url'
+import { warn } from 'node:console'
+import * as nodeHttps from 'node:https'
+import * as nodeFs from 'node:fs'
+import * as fsExtra from 'fs-extra'
+
+const TREE_SITTER_WASM_GO_FILENAME = path.resolve(
+  import.meta.dirname,
+  '../../tmp/tree-sitter-go.wasm',
+)
 
 // How to use this script
 // 1. Set the test suite name.
 
 /** @type {TestSuiteName} {@link suites} */
-const SUITE_NAME = 'lower'
+if (process.argv.length < 3) {
+  throw new Error('Please provide the test suite name')
+}
+
+const SUITE_NAME = process.argv[2]
+console.log(`Processing test suite: ${SUITE_NAME}`)
 
 // 2. Set the tests root directory
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -148,20 +162,18 @@ async function readTestSuiteSource(testSuiteName) {
     // download from github
     try {
       const response = await fetch(testSuite.sourceGithubUrl)
-      const lines = await response.text()
-      if (Array.isArray(lines) && typeof lines[0] === 'string') {
-        const source = lines.join('\n')
+      const text = await response.text()
+      if (typeof text === 'string') {
         // save under scripts directory
-        await fsp.writeFile(sourcePath, source)
+        await fsp.writeFile(sourcePath, text)
         console.log(`Downloaded and saved at ${sourcePath}.`)
-
-        return source
       } else {
         throw new Error('Unexpected shape of source file')
       }
     } catch (err2) {
       console.log(
         'Could not download .go source file. Please download it manually and save it under the "scripts" directory.',
+        err2,
       )
       console.log(`Download link: ${testSuite.sourceGithubUrl}`)
       process.exit(1)
@@ -171,6 +183,7 @@ async function readTestSuiteSource(testSuiteName) {
 
 /** The contents of the .go test source file. {@link suites} */
 const source = await readTestSuiteSource(SUITE_NAME)
+
 // This is up to suit name
 const ignoreCases = suites[SUITE_NAME]?.ignoreCases ?? []
 // Generic ignored pattern, maybe used in many suites
@@ -196,10 +209,6 @@ const ignoredTestPattern = [
   'output_extension',
   'top_level_return_forbidden',
 ]
-const parser = new Parser()
-parser.setLanguage(Go)
-
-const tree = parser.parse(source)
 
 let queryString = `
 (call_expression
@@ -216,7 +225,7 @@ let queryString = `
 `
 
 /**
- * @param {import("tree-sitter").SyntaxNode} root
+ * @param {import("web-tree-sitter").SyntaxNode} root
  * @returns {Record<string, Parser.SyntaxNode>}
  * */
 function getTopLevelBinding(root) {
@@ -236,8 +245,14 @@ function getTopLevelBinding(root) {
   return binding
 }
 
+await Parser.init()
+await ensureTreeSitterWasmGo()
+const Lang = await Parser.Language.load(TREE_SITTER_WASM_GO_FILENAME)
+const parser = new Parser()
+parser.setLanguage(Lang)
+const tree = parser.parse(source)
 let topLevelBindingMap = getTopLevelBinding(tree.rootNode)
-let query = new Parser.Query(parser.getLanguage(), queryString)
+const query = Lang.query(queryString)
 
 /**
  * @param {string} dir - The directory path.
@@ -493,4 +508,24 @@ function processKeyElement(node, jsConfig, binding) {
       console.log(chalk.yellow(`unknown filed ${keyValue}`))
       break
   }
+}
+
+function ensureTreeSitterWasmGo() {
+  if (nodeFs.existsSync(TREE_SITTER_WASM_GO_FILENAME)) {
+    return
+  }
+  fsExtra.ensureDirSync(path.dirname(TREE_SITTER_WASM_GO_FILENAME))
+  return new Promise((rsl, rej) => {
+    nodeHttps.get(
+      'https://github.com/tree-sitter/tree-sitter.github.io/raw/master/tree-sitter-go.wasm',
+      (resp) => {
+        resp.on('end', () => {
+          console.log('saved', TREE_SITTER_WASM_GO_FILENAME)
+          rsl()
+        })
+        resp.on('error', rej)
+        resp.pipe(nodeFs.createWriteStream(TREE_SITTER_WASM_GO_FILENAME))
+      },
+    )
+  })
 }

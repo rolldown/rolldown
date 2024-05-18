@@ -84,18 +84,13 @@ fn get_export_items(this: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolR
 pub fn get_chunk_export_names(
   this: &Chunk,
   graph: &LinkStageOutput,
-  output_options: &SharedOptions,
+  options: &SharedOptions,
 ) -> Vec<String> {
-  if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &this.kind {
-    let linking_info = &graph.metas[*entry_module_id];
-    if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
-      match output_options.format {
-        OutputFormat::Esm => {
-          return vec!["default".to_string()];
-        }
-        OutputFormat::Cjs => {
-          unreachable!("entry CJS should not be wrapped in `OutputFormat::Cjs`")
-        }
+  if matches!(options.format, OutputFormat::Esm) {
+    if let ChunkKind::EntryPoint { module: entry_id, .. } = &this.kind {
+      let entry_meta = &graph.metas[*entry_id];
+      if matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
+        return vec!["default".to_string()];
       }
     }
   }

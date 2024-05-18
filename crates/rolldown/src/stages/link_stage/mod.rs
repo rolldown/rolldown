@@ -3,11 +3,12 @@ use std::{ptr::addr_of, sync::Mutex};
 use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
-  StmtInfo, WrapKind,
+  OutputFormat, StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use rustc_hash::FxHashSet;
 
 use crate::{
   runtime::RuntimeModuleBrief,
@@ -154,7 +155,7 @@ impl<'a> LinkStage<'a> {
   fn determine_module_exports_kind(&mut self) {
     // Maximize the compatibility with commonjs
     let compat_mode = true;
-
+    let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
     self.module_table.normal_modules.iter().for_each(|importer| {
       importer.import_records.iter().for_each(|rec| {
         let ModuleId::Normal(importee_id) = rec.resolved_module else {
@@ -213,8 +214,10 @@ impl<'a> LinkStage<'a> {
         }
       });
 
-      // TODO: should care about output format
-      if matches!(importer.exports_kind, ExportsKind::CommonJs) {
+      let is_entry = entry_ids_set.contains(&importer.id);
+      if matches!(importer.exports_kind, ExportsKind::CommonJs)
+        && (!is_entry || matches!(self.input_options.format, OutputFormat::Esm))
+      {
         self.metas[importer.id].wrap_kind = WrapKind::Cjs;
       }
     });
@@ -318,7 +321,9 @@ impl<'a> LinkStage<'a> {
 
 pub fn init_entry_point_stmt_info(module: &mut NormalModule, meta: &mut LinkingMetadata) {
   let mut referenced_symbols = vec![];
-  if matches!(module.exports_kind, ExportsKind::CommonJs) {
+
+  // Include the wrapper if present
+  if !matches!(meta.wrap_kind, WrapKind::None) {
     // If a commonjs module becomes an entry point while targeting esm, we need to at least add a `export default require_foo();`
     // statement as some kind of syntax sugar. So users won't need to manually create a proxy file with `export default require('./foo.cjs')` in it.
     referenced_symbols.push(meta.wrapper_ref.unwrap());

@@ -1,0 +1,31 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/export_self_as_namespace_common_js
+---
+# warnings
+
+## CIRCULAR_DEPENDENCY
+
+```text
+[CIRCULAR_DEPENDENCY] Warning: Circular dependency: entry.js -> entry.js.
+
+```
+# Assets
+
+## entry_js.cjs
+
+```js
+const { __export } = require("./$runtime$.cjs");
+
+// entry.js
+var entry_ns = {};
+__export(entry_ns, {
+	foo:() => foo,
+	ns:() => entry_ns
+});
+const foo = 123;
+
+exports.foo = foo;
+exports.ns = entry_ns;
+```

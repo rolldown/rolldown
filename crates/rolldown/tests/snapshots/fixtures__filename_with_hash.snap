@@ -310,6 +310,16 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - nested_js-!~{001}~.mjs => nested_js-9gULdUmo.mjs
 - top-level_js-!~{000}~.mjs => top-level_js-zFcTRQCq.mjs
 
+# tests/esbuild/import_star/export_other_as_namespace_common_js
+
+- $runtime$-!~{001}~.cjs => $runtime$-H-XUyW5S.cjs
+- entry_js-!~{000}~.cjs => entry_js-Ofmnt1A3.cjs
+
+# tests/esbuild/import_star/export_self_as_namespace_common_js
+
+- $runtime$-!~{001}~.cjs => $runtime$-ffpSX9w6.cjs
+- entry_js-!~{000}~.cjs => entry_js-lyRdmduO.cjs
+
 # tests/esbuild/import_star/export_self_as_namespace_es6
 
 - $runtime$-!~{001}~.mjs => $runtime$-p3E6YEwS.mjs

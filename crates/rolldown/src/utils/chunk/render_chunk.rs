@@ -93,15 +93,25 @@ pub async fn render_chunk(
     // let entry = &graph.module_table.normal_modules[entry_id];
     let entry_meta = &graph.metas[entry_id];
     match options.format {
-      OutputFormat::Esm => {
-        if matches!(entry_meta.wrap_kind, WrapKind::Esm) {
-          // init()
+      OutputFormat::Esm => match entry_meta.wrap_kind {
+        WrapKind::Esm => {
+          // init_xxx()
           let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
           let wrapper_ref_name =
             graph.symbols.canonical_name_for(*wrapper_ref, &this.canonical_names);
           concat_source.add_source(Box::new(RawSource::new(format!("{wrapper_ref_name}();",))));
         }
-      }
+        WrapKind::Cjs => {
+          // "export default require_xxx();"
+          let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+          let wrapper_ref_name =
+            graph.symbols.canonical_name_for(*wrapper_ref, &this.canonical_names);
+          concat_source.add_source(Box::new(RawSource::new(format!(
+            "export default {wrapper_ref_name}();\n"
+          ))));
+        }
+        WrapKind::None => {}
+      },
       OutputFormat::Cjs => {}
     }
   }

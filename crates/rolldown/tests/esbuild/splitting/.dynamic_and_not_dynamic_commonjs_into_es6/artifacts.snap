@@ -1,0 +1,36 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/dynamic_and_not_dynamic_commonjs_into_es6
+---
+# Assets
+
+## foo.mjs
+
+```js
+import { require_foo } from "./foo~1.mjs";
+
+export default require_foo();
+```
+## foo~1.mjs
+
+```js
+import { __commonJSMin } from "./$runtime$.mjs";
+
+// foo.js
+var require_foo = __commonJSMin((exports, module) => {
+	exports.bar = 123;
+});
+
+export { require_foo };
+```
+## main.mjs
+
+```js
+import { __toESM } from "./$runtime$.mjs";
+import { require_foo } from "./foo~1.mjs";
+
+// main.js
+var import_foo = __toESM(require_foo());
+import('./foo~1.mjs').then(({default:{bar:b}}) => console.log(import_foo.bar, b));
+```

@@ -1,0 +1,43 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/missing_lazy_export_missing_lazy_export
+---
+# Assets
+
+## a.mjs
+
+```js
+import { foo } from "./common.mjs";
+
+// a.js
+console.log(foo());
+```
+## b.mjs
+
+```js
+import { bar } from "./common.mjs";
+
+// b.js
+console.log(bar());
+```
+## common.mjs
+
+```js
+import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
+// empty.js
+var require_empty = __commonJSMin((exports, module) => {
+});
+
+// common.js
+var import_empty = __toESM(require_empty());
+function foo() {
+	return [import_empty, import_empty.missing];
+}
+function bar() {
+	return [import_empty.missing];
+}
+
+export { bar, foo };
+```

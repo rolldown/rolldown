@@ -1,0 +1,11 @@
+{
+  "_comment": "This test requires supporting disable code splitting",
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./src/index.js"
+      }
+    ]
+  }
+}

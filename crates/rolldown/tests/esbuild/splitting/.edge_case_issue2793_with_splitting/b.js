@@ -1,1 +1,0 @@
-export const B = async () => (await import("./main")).A

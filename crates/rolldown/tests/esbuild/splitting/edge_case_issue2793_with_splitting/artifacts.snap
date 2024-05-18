@@ -1,0 +1,18 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/edge_case_issue2793_with_splitting
+---
+# Assets
+
+## index.mjs
+
+```js
+// src/a.js
+const A = 42;
+
+// src/b.js
+const B = async() => (await import('./index.mjs')).A;
+
+export { A, B };
+```

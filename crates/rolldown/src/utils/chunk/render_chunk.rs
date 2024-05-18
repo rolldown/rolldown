@@ -7,7 +7,7 @@ use crate::{
 };
 
 use anyhow::Result;
-use rolldown_common::{Chunk, RenderedChunk, ResourceId};
+use rolldown_common::{Chunk, ChunkKind, OutputFormat, RenderedChunk, ResourceId, WrapKind};
 use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -86,6 +86,23 @@ pub async fn render_chunk(
       if !banner_txt.is_empty() {
         concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
       }
+    }
+  }
+
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = this.kind {
+    // let entry = &graph.module_table.normal_modules[entry_id];
+    let entry_meta = &graph.metas[entry_id];
+    match options.format {
+      OutputFormat::Esm => {
+        if matches!(entry_meta.wrap_kind, WrapKind::Esm) {
+          // init()
+          let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+          let wrapper_ref_name =
+            graph.symbols.canonical_name_for(*wrapper_ref, &this.canonical_names);
+          concat_source.add_source(Box::new(RawSource::new(format!("{wrapper_ref_name}();",))));
+        }
+      }
+      OutputFormat::Cjs => {}
     }
   }
 

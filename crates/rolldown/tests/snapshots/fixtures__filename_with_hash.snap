@@ -971,7 +971,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
 
 - $runtime$-!~{003}~.mjs => $runtime$-6upNuhUk.mjs
-- a-!~{000}~.mjs => a-j8sPFyQR.mjs
+- a-!~{000}~.mjs => a-w1csk7qt.mjs
 - a~1-!~{002}~.mjs => a~1-dKuKLwqf.mjs
 - b-!~{001}~.mjs => b-37AHhNXO.mjs
 

@@ -10,6 +10,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
 ```js
 import { foo, init_a } from "./a~1.mjs";
 
+init_a();
 export { foo };
 ```
 ## a~1.mjs

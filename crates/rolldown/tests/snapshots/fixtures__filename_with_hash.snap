@@ -82,6 +82,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - $runtime$-!~{001}~.mjs => $runtime$-vR6TnGxp.mjs
 - entry_js-!~{000}~.mjs => entry_js-Ot39bAO0.mjs
 
+# tests/esbuild/dce/tree_shaking_no_bundle_cjs
+
+- entry_js-!~{000}~.cjs => entry_js-dfCzcbGG.cjs
+
 # tests/esbuild/dce/tree_shaking_unary_operators
 
 - entry_js-!~{000}~.mjs => entry_js-MxqxhYGb.mjs

@@ -968,12 +968,23 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - a-!~{000}~.mjs => a-lzkhn1t-.mjs
 - b-!~{001}~.mjs => b-Ngqr-aWB.mjs
 
+# tests/esbuild/splitting/edge_case_issue2793_with_splitting
+
+- index-!~{000}~.mjs => index-2dSZw5C-.mjs
+
 # tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
 
 - $runtime$-!~{003}~.mjs => $runtime$-6upNuhUk.mjs
 - a-!~{000}~.mjs => a-w1csk7qt.mjs
 - a~1-!~{002}~.mjs => a~1-dKuKLwqf.mjs
 - b-!~{001}~.mjs => b-37AHhNXO.mjs
+
+# tests/esbuild/splitting/missing_lazy_export_missing_lazy_export
+
+- $runtime$-!~{003}~.mjs => $runtime$-jJEZqZu9.mjs
+- a-!~{000}~.mjs => a-4UmQTqX0.mjs
+- b-!~{001}~.mjs => b-6bMvjxrz.mjs
+- common-!~{002}~.mjs => common-eSeEkKft.mjs
 
 # tests/esbuild/splitting/nested_directories
 

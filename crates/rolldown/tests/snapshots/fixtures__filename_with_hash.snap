@@ -82,6 +82,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - $runtime$-!~{001}~.mjs => $runtime$-vR6TnGxp.mjs
 - entry_js-!~{000}~.mjs => entry_js-Ot39bAO0.mjs
 
+# tests/esbuild/dce/tree_shaking_no_bundle_cjs
+
+- entry_js-!~{000}~.cjs => entry_js-dfCzcbGG.cjs
+
 # tests/esbuild/dce/tree_shaking_unary_operators
 
 - entry_js-!~{000}~.mjs => entry_js-MxqxhYGb.mjs
@@ -309,6 +313,16 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - let_js-!~{002}~.mjs => let_js-NZtFdo_X.mjs
 - nested_js-!~{001}~.mjs => nested_js-9gULdUmo.mjs
 - top-level_js-!~{000}~.mjs => top-level_js-zFcTRQCq.mjs
+
+# tests/esbuild/import_star/export_other_as_namespace_common_js
+
+- $runtime$-!~{001}~.cjs => $runtime$-H-XUyW5S.cjs
+- entry_js-!~{000}~.cjs => entry_js-Ofmnt1A3.cjs
+
+# tests/esbuild/import_star/export_self_as_namespace_common_js
+
+- $runtime$-!~{001}~.cjs => $runtime$-ffpSX9w6.cjs
+- entry_js-!~{000}~.cjs => entry_js-lyRdmduO.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_es6
 

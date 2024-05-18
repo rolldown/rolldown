@@ -1,0 +1,22 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star/export_other_as_namespace_common_js
+---
+# Assets
+
+## entry_js.cjs
+
+```js
+const { __commonJSMin, __toESM } = require("./$runtime$.cjs");
+
+// foo.js
+var require_foo = __commonJSMin((exports, module) => {
+	exports.foo = 123;
+});
+
+// entry.js
+var import_foo = __toESM(require_foo());
+
+exports.ns = import_foo;
+```

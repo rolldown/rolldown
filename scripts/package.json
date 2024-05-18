@@ -6,6 +6,7 @@
     "type-check": "tsc -b"
   },
   "dependencies": {
+    "@rolldown/testing": "workspace:*",
     "@parcel/watcher": "^2.4.1",
     "@pnpm/find-workspace-packages": "^6.0.9",
     "@types/debug": "^4.1.12",

@@ -1,0 +1,10 @@
+{
+  "name": "@rolldown/testing",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "types": "./index.d.ts",
+    "import": "./src/index.js",
+    "default": "./src/index.js"
+  }
+}

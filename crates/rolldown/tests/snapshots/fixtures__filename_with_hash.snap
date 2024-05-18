@@ -162,6 +162,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - $runtime$-!~{001}~.mjs => $runtime$-p3E6YEwS.mjs
 - entry_js-!~{000}~.mjs => entry_js-sos27Agl.mjs
 
+# tests/esbuild/default/exports_and_module_format_common_js
+
+- $runtime$-!~{001}~.cjs => $runtime$-ffpSX9w6.cjs
+- entry-!~{000}~.cjs => entry-qmH3dz3e.cjs
+
 # tests/esbuild/default/external_packages
 
 - entry_js-!~{000}~.mjs => entry_js-qquV9Mgf.mjs

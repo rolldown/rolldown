@@ -192,6 +192,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-s9lvs6K0.mjs
 
+# tests/esbuild/default/keep_names_tree_shaking
+
+- entry_js-!~{000}~.mjs => entry_js-WU0XOvna.mjs
+
 # tests/esbuild/default/nested_common_js
 
 - $runtime$-!~{001}~.mjs => $runtime$-6wzC9jCL.mjs

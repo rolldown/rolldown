@@ -8,28 +8,6 @@ pub fn render_chunk_exports(
   graph: &LinkStageOutput,
   output_options: &SharedOptions,
 ) -> Option<String> {
-  if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &this.kind {
-    let linking_info = &graph.metas[*entry_module_id];
-    if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
-      match output_options.format {
-        OutputFormat::Esm => {
-          let wrap_ref_name =
-            &this.canonical_names.get(&linking_info.wrapper_ref.unwrap()).unwrap_or_else(|| {
-              panic!(
-                "Cannot find canonical name for wrap ref {:?} of {:?}",
-                linking_info.wrapper_ref.unwrap(),
-                graph.module_table.normal_modules[*entry_module_id].resource_id
-              )
-            });
-          return Some(format!("export default {wrap_ref_name}();\n"));
-        }
-        OutputFormat::Cjs => {
-          unreachable!("entry CJS should not be wrapped in `OutputFormat::Cjs`")
-        }
-      }
-    }
-  }
-
   let export_items = get_export_items(this, graph);
 
   if export_items.is_empty() {
@@ -106,18 +84,13 @@ fn get_export_items(this: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolR
 pub fn get_chunk_export_names(
   this: &Chunk,
   graph: &LinkStageOutput,
-  output_options: &SharedOptions,
+  options: &SharedOptions,
 ) -> Vec<String> {
-  if let ChunkKind::EntryPoint { module: entry_module_id, .. } = &this.kind {
-    let linking_info = &graph.metas[*entry_module_id];
-    if matches!(linking_info.wrap_kind, WrapKind::Cjs) {
-      match output_options.format {
-        OutputFormat::Esm => {
-          return vec!["default".to_string()];
-        }
-        OutputFormat::Cjs => {
-          unreachable!("entry CJS should not be wrapped in `OutputFormat::Cjs`")
-        }
+  if matches!(options.format, OutputFormat::Esm) {
+    if let ChunkKind::EntryPoint { module: entry_id, .. } = &this.kind {
+      let entry_meta = &graph.metas[*entry_id];
+      if matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
+        return vec!["default".to_string()];
       }
     }
   }

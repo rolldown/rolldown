@@ -2,6 +2,7 @@ import { RollupOutput, RolldownOutputChunk } from '../../src'
 import nodePath from 'node:path'
 import nodeUrl from 'node:url'
 import assert from 'node:assert'
+import { workspaceRoot } from '@rolldown/testing'
 
 export function getOutputChunkNames(output: RollupOutput) {
   return output.output
@@ -22,19 +23,18 @@ export function getOutputFileNames(output: RollupOutput) {
 
 /**
  *
- * @returns The absolute path to the `${WORKSPACE}/packages/rolldown/tests` directory
+ * @returns The absolute path to the `${WORKSPACE}/packages/rolldown` directory
  */
-export function testsDir(...joined: string[]) {
-  const __dirname = nodePath.dirname(nodeUrl.fileURLToPath(import.meta.url))
-  return nodePath.resolve(__dirname, '..', ...joined)
+export function projectDir(...joined: string[]) {
+  return workspaceRoot('packages/rolldown', ...joined)
 }
 
 /**
  *
- * @returns The absolute path to the `${WORKSPACE}/packages/rolldown` directory
+ * @returns The absolute path to the `${WORKSPACE}/packages/rolldown/tests` directory
  */
-export function projectDir(...joined: string[]) {
-  return testsDir('..')
+export function testsDir(...joined: string[]) {
+  return projectDir('tests', ...joined)
 }
 
 assert.deepEqual(testsDir().split(nodePath.sep).slice(-4), [

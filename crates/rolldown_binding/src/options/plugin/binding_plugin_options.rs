@@ -8,6 +8,7 @@ use crate::types::{
 
 use super::{
   binding_plugin_context::BindingPluginContext,
+  binding_transform_context::BindingTransformPluginContext,
   types::{
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
@@ -60,10 +61,13 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, id: string, code: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
+    ts_type = "(ctx:  BindingTransformPluginContext, id: string, code: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
   )]
   pub transform: Option<
-    MaybeAsyncJsCallback<(BindingPluginContext, String, String), Option<BindingHookLoadOutput>>,
+    MaybeAsyncJsCallback<
+      (BindingTransformPluginContext, String, String),
+      Option<BindingHookLoadOutput>,
+    >,
   >,
 
   #[serde(skip_deserializing)]

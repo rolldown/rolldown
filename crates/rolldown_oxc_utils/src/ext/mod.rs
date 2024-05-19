@@ -80,14 +80,10 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
                 .into_in(alloc),
               )
             }
-            _ => ast::AssignmentTargetMaybeDefault::AssignmentTarget(
-              binding_pat.into_assignment_target(alloc),
-            ),
+            _ => ast::AssignmentTargetMaybeDefault::from(binding_pat.into_assignment_target(alloc)),
           }));
         });
-        ast::AssignmentTarget::AssignmentTargetPattern(
-          ast::AssignmentTargetPattern::ArrayAssignmentTarget(arr_target.into_in(alloc)),
-        )
+        ast::AssignmentTarget::ArrayAssignmentTarget(arr_target.into_in(alloc))
       }
       ast::BindingPatternKind::AssignmentPattern(_) => {
         unreachable!("`BindingPatternKind::AssignmentPattern` should be pre-handled in above")
@@ -110,24 +106,17 @@ pub trait StatementExt<'me, 'ast> {
   fn is_function_declaration(&self) -> bool;
   fn as_function_declaration(&self) -> Option<&ast::Function<'ast>>;
 
-  fn as_module_declaration(&self) -> Option<&ast::ModuleDeclaration<'ast>>;
   fn is_module_declaration_with_source(&self) -> bool;
 }
 
 impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
   fn is_import_declaration(&self) -> bool {
-    matches!(
-      self,
-      ast::Statement::ModuleDeclaration(module_decl)
-        if matches!(&**module_decl, ast::ModuleDeclaration::ImportDeclaration(_))
-    )
+    matches!(self, ast::Statement::ImportDeclaration(_))
   }
 
   fn as_import_declaration(&self) -> Option<&ast::ImportDeclaration<'ast>> {
-    if let ast::Statement::ModuleDeclaration(module_decl) = self {
-      if let ast::ModuleDeclaration::ImportDeclaration(import_decl) = &**module_decl {
-        return Some(import_decl);
-      }
+    if let ast::Statement::ImportDeclaration(import_decl) = self {
+      return Some(&**import_decl);
     }
     None
   }
@@ -135,49 +124,35 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
   fn as_export_default_declaration_mut(
     &mut self,
   ) -> Option<&mut ast::ExportDefaultDeclaration<'ast>> {
-    if let ast::Statement::ModuleDeclaration(export_default_decl) = self {
-      if let ast::ModuleDeclaration::ExportDefaultDeclaration(export_default_decl) =
-        &mut **export_default_decl
-      {
-        return Some(export_default_decl);
-      }
+    if let ast::Statement::ExportDefaultDeclaration(export_default_decl) = self {
+      return Some(&mut **export_default_decl);
     }
     None
   }
 
   fn as_export_all_declaration(&self) -> Option<&ast::ExportAllDeclaration<'ast>> {
-    if let ast::Statement::ModuleDeclaration(export_all_decl) = self {
-      if let ast::ModuleDeclaration::ExportAllDeclaration(export_all_decl) = &**export_all_decl {
-        return Some(export_all_decl);
-      }
+    if let ast::Statement::ExportAllDeclaration(export_all_decl) = self {
+      return Some(&**export_all_decl);
     }
     None
   }
 
   fn as_export_named_declaration(&self) -> Option<&ast::ExportNamedDeclaration<'ast>> {
-    if let ast::Statement::ModuleDeclaration(export_named_decl) = self {
-      if let ast::ModuleDeclaration::ExportNamedDeclaration(export_named_decl) =
-        &**export_named_decl
-      {
-        return Some(export_named_decl);
-      }
+    if let ast::Statement::ExportNamedDeclaration(export_named_decl) = self {
+      return Some(&**export_named_decl);
     }
     None
   }
 
   fn as_export_named_declaration_mut(&mut self) -> Option<&mut ast::ExportNamedDeclaration<'ast>> {
-    if let ast::Statement::ModuleDeclaration(export_named_decl) = self {
-      if let ast::ModuleDeclaration::ExportNamedDeclaration(export_named_decl) =
-        &mut **export_named_decl
-      {
-        return Some(export_named_decl);
-      }
+    if let ast::Statement::ExportNamedDeclaration(export_named_decl) = self {
+      return Some(&mut **export_named_decl);
     }
     None
   }
 
   fn as_function_declaration(&self) -> Option<&ast::Function<'ast>> {
-    if let ast::Statement::Declaration(ast::Declaration::FunctionDeclaration(func_decl)) = self {
+    if let ast::Statement::FunctionDeclaration(func_decl) = self {
       Some(func_decl)
     } else {
       None
@@ -186,14 +161,6 @@ impl<'me, 'ast> StatementExt<'me, 'ast> for ast::Statement<'ast> {
 
   fn is_function_declaration(&self) -> bool {
     self.as_function_declaration().is_some()
-  }
-
-  fn as_module_declaration(&self) -> Option<&ast::ModuleDeclaration<'ast>> {
-    if let ast::Statement::ModuleDeclaration(module_decl) = self {
-      Some(module_decl)
-    } else {
-      None
-    }
   }
 
   /// Check if the statement is `[import|export] ... from ...` or `export ... from ...`

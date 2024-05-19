@@ -1,0 +1,39 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/issue/122/a
+---
+# Assets
+
+## b.mjs
+
+```js
+// b.js
+console.log('b');
+```
+## c.mjs
+
+```js
+// c.js
+console.log('c');
+```
+## entry1.mjs
+
+```js
+import "./c.mjs";
+```
+## entry2.mjs
+
+```js
+import "./b.mjs";
+import "./c.mjs";
+```
+## entry3.mjs
+
+```js
+import "./b.mjs";
+import "./c.mjs";
+
+// a.js
+console.log('a');
+```

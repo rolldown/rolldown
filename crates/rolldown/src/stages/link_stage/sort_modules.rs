@@ -13,6 +13,21 @@ enum Status {
 }
 
 impl<'a> LinkStage<'a> {
+  /// Some notes about the module execution order:
+  /// - We assume user-defined entries are always executed orderly.
+  /// - Async entries is sorted by `resource_id` of entry module to ensure deterministic output.
+  /// - `require(...)` is treated as implicit static `import`, which required modules are executed before the module that requires them.
+  /// - Since import statements are hoisted, `require(...)` is always placed after static `import` statements.
+  /// - Order of `require(...)` is determined by who shows up first while scanning ast. For such code
+  ///
+  /// ```js
+  /// () => require('b')
+  /// require('c')
+  /// import 'a';
+  /// ```
+  ///
+  /// The execution order is `a -> b -> c`.
+  /// - We only ensure execution order is relative correct, which means imported/required modules are executed before the module that imports/require them.
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn sort_modules(&mut self) {
     // The runtime module should always be the first module to be executed
@@ -102,7 +117,7 @@ impl<'a> LinkStage<'a> {
         let paths = cycle
           .iter()
           .filter_map(|id| id.as_normal())
-          .map(|id| self.module_table.normal_modules[id].resource_id.expect_file().to_string())
+          .map(|id| self.module_table.normal_modules[id].resource_id.to_string())
           .collect::<Vec<_>>();
         self.warnings.push(BuildError::circular_dependency(paths).with_severity_warning());
       }

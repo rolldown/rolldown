@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
+use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashMap;
 
 const HASH_PLACEHOLDER_LEFT: &str = "!~{";
@@ -13,7 +14,6 @@ const MAX_HASH_SIZE: usize = 22;
 // const DEFAULT_HASH_SIZE: usize = 8;
 
 static REPLACER_REGEX: Lazy<Regex> = Lazy::new(|| {
-  // let pattern = [HASH_PLACEHOLDER_LEFT, "[0-9a-zA-Z_$]{1,17}", HASH_PLACEHOLDER_RIGHT].concat();
   let pattern = "!~\\{[0-9a-zA-Z_$]{1,17}\\}~";
   Regex::new(pattern).expect("failed to compile regex")
 });
@@ -77,6 +77,15 @@ pub fn replace_facade_hash_replacement(
   match replaced {
     Cow::Borrowed(_) => source,
     Cow::Owned(s) => s,
+  }
+}
+
+pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<String> {
+  let captures = REPLACER_REGEX.captures(source);
+  if let Some(captures) = captures {
+    captures.iter().map(|capture| capture.unwrap().as_str().to_string()).collect()
+  } else {
+    FxIndexSet::default()
   }
 }
 

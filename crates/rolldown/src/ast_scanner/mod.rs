@@ -1,7 +1,6 @@
 pub mod impl_visit;
 pub mod side_effect_detector;
 
-use index_vec::IndexVec;
 use oxc::{
   ast::{
     ast::{
@@ -13,9 +12,10 @@ use oxc::{
   semantic::SymbolId,
   span::{Atom, Span},
 };
+use oxc_index::IndexVec;
 use rolldown_common::{
-  representative_name, AstScope, ExportsKind, FilePath, ImportKind, ImportRecordId, LocalExport,
-  ModuleType, NamedImport, NormalModuleId, RawImportRecord, Specifier, StmtInfo, StmtInfos,
+  representative_name, AstScope, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleType,
+  NamedImport, NormalModuleId, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos,
   SymbolRef,
 };
 use rolldown_error::BuildError;
@@ -44,7 +44,7 @@ pub struct AstScanner<'me> {
   idx: NormalModuleId,
   source: &'me Arc<str>,
   module_type: ModuleType,
-  file_path: &'me FilePath,
+  file_path: &'me ResourceId,
   scope: &'me AstScope,
   symbol_table: &'me mut AstSymbols,
   current_stmt_info: StmtInfo,
@@ -64,7 +64,7 @@ impl<'me> AstScanner<'me> {
     repr_name: String,
     module_type: ModuleType,
     source: &'me Arc<str>,
-    file_path: &'me FilePath,
+    file_path: &'me ResourceId,
   ) -> Self {
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let symbol_id_for_default_export_ref =
@@ -302,8 +302,9 @@ impl<'me> AstScanner<'me> {
     self.scope.symbol_id_for(ref_id)
   }
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
+    use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
-      oxc::ast::ast::ExportDefaultDeclarationKind::Expression(_exp) => {
+      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
         // `export default [expression]` pattern
         None
       }

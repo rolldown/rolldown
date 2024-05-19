@@ -7,7 +7,7 @@ use crate::{
 };
 
 use anyhow::Result;
-use rolldown_common::{Chunk, FilePath, RenderedChunk};
+use rolldown_common::{Chunk, ChunkKind, OutputFormat, RenderedChunk, ResourceId, WrapKind};
 use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -18,7 +18,7 @@ pub struct ChunkRenderReturn {
   pub map: Option<SourceMap>,
   pub rendered_chunk: RenderedChunk,
   pub file_dir: PathBuf,
-  pub preliminary_file_name: FilePath,
+  pub preliminary_file_name: ResourceId,
 }
 
 use super::{
@@ -50,7 +50,7 @@ pub async fn render_chunk(
     .copied()
     .map(|id| &graph.module_table.normal_modules[id])
     .filter_map(|m| {
-      render_normal_module(m, &graph.ast_table[m.id], m.resource_id.expect_file().as_ref(), options)
+      render_normal_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
     })
     .collect::<Vec<_>>()
     .into_iter()
@@ -73,7 +73,10 @@ pub async fn render_chunk(
       } else {
         concat_source.add_source(Box::new(RawSource::new(rendered_content)));
       }
-      rendered_modules.insert(module_path, rendered_module);
+      // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.
+      if !module_path.starts_with('\0') {
+        rendered_modules.insert(module_path, rendered_module);
+      }
     });
   let rendered_chunk = generate_rendered_chunk(this, graph, options, rendered_modules, chunk_graph);
 
@@ -83,6 +86,33 @@ pub async fn render_chunk(
       if !banner_txt.is_empty() {
         concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
       }
+    }
+  }
+
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = this.kind {
+    // let entry = &graph.module_table.normal_modules[entry_id];
+    let entry_meta = &graph.metas[entry_id];
+    match options.format {
+      OutputFormat::Esm => match entry_meta.wrap_kind {
+        WrapKind::Esm => {
+          // init_xxx()
+          let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+          let wrapper_ref_name =
+            graph.symbols.canonical_name_for(*wrapper_ref, &this.canonical_names);
+          concat_source.add_source(Box::new(RawSource::new(format!("{wrapper_ref_name}();",))));
+        }
+        WrapKind::Cjs => {
+          // "export default require_xxx();"
+          let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+          let wrapper_ref_name =
+            graph.symbols.canonical_name_for(*wrapper_ref, &this.canonical_names);
+          concat_source.add_source(Box::new(RawSource::new(format!(
+            "export default {wrapper_ref_name}();\n"
+          ))));
+        }
+        WrapKind::None => {}
+      },
+      OutputFormat::Cjs => {}
     }
   }
 

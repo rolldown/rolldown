@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use index_vec::IndexVec;
 use oxc::span::SourceType;
+use oxc_index::IndexVec;
 use rolldown_common::{
-  AstScope, ExportsKind, FilePath, ModuleType, NormalModule, NormalModuleId, ResourceId, SymbolRef,
+  AstScope, ExportsKind, ModuleType, NormalModule, NormalModuleId, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
@@ -59,8 +59,8 @@ impl RuntimeNormalModuleTask {
       source,
       id: self.module_id,
       repr_name,
-      // TODO: Runtime module should not have FilePath as source id
-      resource_id: ResourceId::new("runtime".to_string().into()),
+      stable_resource_id: "\\0<runtime>".to_string(),
+      resource_id: ResourceId::new("\0<runtime>"),
       named_imports,
       named_exports,
       stmt_infos,
@@ -71,8 +71,7 @@ impl RuntimeNormalModuleTask {
       exports_kind: ExportsKind::Esm,
       namespace_symbol,
       module_type: ModuleType::EsmMjs,
-      pretty_path: "<runtime>".to_string(),
-      is_virtual: true,
+      pretty_path: "\\0<runtime>".to_string(),
       exec_order: u32::MAX,
       is_user_defined_entry: false,
       import_records: IndexVec::default(),
@@ -110,7 +109,7 @@ impl RuntimeNormalModuleTask {
       std::mem::take(&mut symbol_table.resolved_references),
     );
     let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
-    let facade_path = FilePath::new("runtime");
+    let facade_path = ResourceId::new("runtime");
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,

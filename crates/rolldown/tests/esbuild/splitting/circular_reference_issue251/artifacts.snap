@@ -1,0 +1,40 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/splitting/circular_reference_issue251
+---
+# warnings
+
+## CIRCULAR_DEPENDENCY
+
+```text
+[CIRCULAR_DEPENDENCY] Warning: Circular dependency: a.js -> b.js -> a.js.
+
+```
+# Assets
+
+## a.mjs
+
+```js
+import { p, q } from "./a~1.mjs";
+
+export { p, q };
+```
+## a~1.mjs
+
+```js
+// b.js
+var q = 6;
+
+// a.js
+var p = 5;
+
+export { p, q };
+```
+## b.mjs
+
+```js
+import { p, q } from "./a~1.mjs";
+
+export { p, q };
+```

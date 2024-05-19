@@ -1,12 +1,12 @@
 use std::{fmt::Debug, sync::Arc};
 
 use crate::{
-  types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, FilePath, ImportRecord,
+  types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
   ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
   ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
-use index_vec::IndexVec;
 use oxc::span::Span;
+use oxc_index::IndexVec;
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
@@ -17,6 +17,8 @@ pub struct NormalModule {
   pub id: NormalModuleId,
   pub is_user_defined_entry: bool,
   pub resource_id: ResourceId,
+  /// `stable_resource_id` is calculated based on `resource_id` to be stable across machine and os.
+  pub stable_resource_id: String,
   pub pretty_path: String,
   /// Representative name of `FilePath`, which is created by `FilePath#representative_name` belong to `resource_id`
   pub repr_name: String,
@@ -37,16 +39,14 @@ pub struct NormalModule {
   pub default_export_ref: SymbolRef,
   pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
   pub is_included: bool,
-  // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
-  pub is_virtual: bool,
   // the ids of all modules that statically import this module
-  pub importers: Vec<FilePath>,
+  pub importers: Vec<ResourceId>,
   // the ids of all modules that import this module via dynamic import()
-  pub dynamic_importers: Vec<FilePath>,
+  pub dynamic_importers: Vec<ResourceId>,
   // the module ids statically imported by this module
-  pub imported_ids: Vec<FilePath>,
+  pub imported_ids: Vec<ResourceId>,
   // the module ids imported by this module via dynamic import()
-  pub dynamically_imported_ids: Vec<FilePath>,
+  pub dynamically_imported_ids: Vec<ResourceId>,
   /// SideEffects derived from package.json
   pub side_effects: Option<bool>,
 }
@@ -74,7 +74,7 @@ impl NormalModule {
   pub fn to_module_info(&self) -> ModuleInfo {
     ModuleInfo {
       code: Some(Arc::clone(&self.source)),
-      id: self.resource_id.expect_file().clone(),
+      id: self.resource_id.clone(),
       is_entry: self.is_user_defined_entry,
       importers: {
         let mut value = self.importers.clone();
@@ -89,6 +89,11 @@ impl NormalModule {
       imported_ids: self.imported_ids.clone(),
       dynamically_imported_ids: self.dynamically_imported_ids.clone(),
     }
+  }
+
+  // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
+  pub fn is_virtual(&self) -> bool {
+    self.resource_id.starts_with('\0')
   }
 }
 

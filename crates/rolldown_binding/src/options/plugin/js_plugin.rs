@@ -5,7 +5,7 @@ use crate::types::{
 use rolldown_plugin::Plugin;
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 
-use super::BindingPluginOptions;
+use super::{binding_transform_context::BindingTransformPluginContext, BindingPluginOptions};
 
 #[derive(Debug)]
 pub struct JsPlugin {
@@ -109,15 +109,19 @@ impl Plugin for JsPlugin {
 
   async fn transform(
     &self,
-    ctx: &rolldown_plugin::SharedPluginContext,
+    ctx: &rolldown_plugin::TransformPluginContext<'_>,
     args: &rolldown_plugin::HookTransformArgs,
   ) -> rolldown_plugin::HookTransformReturn {
     if let Some(cb) = &self.transform {
       Ok(
-        cb.await_call((Arc::clone(ctx).into(), args.code.to_string(), args.id.to_string()))
-          .await?
-          .map(TryInto::try_into)
-          .transpose()?,
+        cb.await_call((
+          BindingTransformPluginContext::new(unsafe { std::mem::transmute(ctx) }),
+          args.code.to_string(),
+          args.id.to_string(),
+        ))
+        .await?
+        .map(TryInto::try_into)
+        .transpose()?,
       )
     } else {
       Ok(None)

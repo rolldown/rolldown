@@ -179,9 +179,16 @@ impl<'a> GenerateStage<'a> {
         dynamic_imports: rendered_chunk.dynamic_imports,
         map,
         sourcemap_file_name,
-        preliminary_file_name,
+        preliminary_file_name: preliminary_file_name.to_string(),
       })));
     }
+
+    // Make sure order of assets are deterministic
+    assets.sort_by_cached_key(|item| match item {
+      // TODO: use `preliminary_file_name` instead
+      Output::Asset(asset) => asset.file_name.to_string(),
+      Output::Chunk(chunk) => chunk.preliminary_file_name.to_string(),
+    });
 
     Ok(BundleOutput {
       assets,
@@ -214,7 +221,7 @@ impl<'a> GenerateStage<'a> {
           } else {
             let module_id = entry_module_id;
             let module = &normal_modules[module_id];
-            module.resource_id.expect_file().representative_name().into_owned()
+            module.resource_id.representative_name().into_owned()
           }
         }
         ChunkKind::Common => {
@@ -227,7 +234,7 @@ impl<'a> GenerateStage<'a> {
             || "chunk".to_string(),
             |module_id| {
               let module = &normal_modules[*module_id];
-              module.resource_id.expect_file().representative_name().into_owned()
+              module.resource_id.representative_name().into_owned()
             },
           )
         }
@@ -243,7 +250,7 @@ impl<'a> GenerateStage<'a> {
       .user_defined_entry_chunk_ids
       .iter()
       .copied()
-      .chain(chunk_graph.chunks.iter_enumerated().map(|(id, _)| id))
+      .chain(chunk_graph.sorted_chunk_ids.iter().copied())
       .collect::<Vec<_>>();
 
     chunk_ids.into_iter().for_each(|chunk_id| {

@@ -5,13 +5,6 @@
         "name": "package",
         "import": "package"
       }
-    ],
-    "resolve": {
-      "aliasFields": [
-        [
-          "browser"
-        ]
-      ]
-    }
+    ]
   }
 }

@@ -1,8 +1,9 @@
 mod common;
 
-use std::path::PathBuf;
+use std::path::{Component, PathBuf};
 
 use common::{Case, Fixture};
+use rolldown_common::Output;
 use sugar_path::SugarPath;
 use testing_macros::fixture;
 
@@ -22,8 +23,8 @@ async fn filename_with_hash() {
   config_paths.sort_by_cached_key(|p| p.relative(&cwd));
 
   for path in config_paths {
-    if path.to_slash_lossy().contains('.') {
-      return;
+    if path.components().map(Component::as_os_str).any(|c| c.to_string_lossy().starts_with('.')) {
+      continue;
     }
     let mut snapshot_output = String::new();
     let config_path = path.canonicalize().unwrap();
@@ -35,8 +36,17 @@ async fn filename_with_hash() {
 
     let assets = fixture.bundle(false, true).await;
 
-    assets.assets.iter().for_each(|asset| {
-      snapshot_output.push_str(&format!("- {}\n", asset.file_name()));
+    assets.assets.iter().for_each(|asset| match asset {
+      Output::Asset(asset) => {
+        snapshot_output.push_str(&format!("- {}\n", asset.file_name));
+      }
+      Output::Chunk(chunk) => {
+        snapshot_output.push_str(&format!(
+          "- {} => {}\n",
+          chunk.preliminary_file_name.as_str(),
+          chunk.file_name.as_str()
+        ));
+      }
     });
 
     snapshot_outputs.push(snapshot_output);

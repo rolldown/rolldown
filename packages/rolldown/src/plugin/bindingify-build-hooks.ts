@@ -7,6 +7,7 @@ import { isEmptySourcemapFiled, transformModuleInfo } from '../utils'
 import path from 'path'
 import { SourceMapInputObject } from '../types/sourcemap'
 import { PluginContext } from './plugin-context'
+import { TransformPluginContext } from './transfrom-plugin-context'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -107,7 +108,7 @@ export function bindingifyTransform(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, code, id) => {
-    const ret = await handler.call(null, code, id)
+    const ret = await handler.call(new TransformPluginContext(ctx), code, id)
 
     if (ret == null) {
       return

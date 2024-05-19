@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-#[derive(Clone, PartialEq, Eq, Default, Hash)]
+#[derive(Clone, PartialEq, Eq, Default, Hash, PartialOrd, Ord)]
 pub struct BitSet {
   entries: Vec<u8>,
 }

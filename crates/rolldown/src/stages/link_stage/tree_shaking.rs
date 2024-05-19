@@ -1,5 +1,5 @@
 use crate::types::symbols::Symbols;
-use index_vec::IndexVec;
+use oxc_index::IndexVec;
 use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolRef};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 
@@ -102,7 +102,7 @@ impl LinkStage<'_> {
       .collect::<IndexVec<NormalModuleId, _>>();
 
     let mut is_module_included_vec: IndexVec<NormalModuleId, bool> =
-      index_vec::index_vec![false; self.module_table.normal_modules.len()];
+      oxc_index::index_vec![false; self.module_table.normal_modules.len()];
 
     let mut has_export_used: IndexVec<NormalModuleId, bool> =
       index_vec::index_vec![false; self.module_table.normal_modules.len()];

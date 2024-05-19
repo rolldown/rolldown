@@ -1,4 +1,4 @@
-use index_vec::IndexVec;
+use oxc_index::IndexVec;
 use oxc_resolver::PackageJson;
 use rolldown_common::{
   side_effects, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind,
@@ -9,6 +9,7 @@ use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
 use sugar_path::SugarPath;
@@ -192,11 +193,7 @@ impl ModuleLoader {
       .reserve(user_defined_entries.len() + 1 /* runtime */);
 
     // Store the already consider as entry module
-    let mut user_defined_entry_ids = {
-      let mut tmp = FxHashSet::default();
-      tmp.reserve(user_defined_entries.len());
-      tmp
-    };
+    let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
 
     let mut entry_points = user_defined_entries
       .into_iter()
@@ -240,7 +237,7 @@ impl ModuleLoader {
               if let ModuleId::Normal(id) = id {
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
-                  importer_path: module.resource_id.expect_file().clone(),
+                  importer_path: module.resource_id.clone(),
                 });
                 if id >= self.intermediate_normal_modules.module_side_effects.len() {
                   self
@@ -335,7 +332,7 @@ impl ModuleLoader {
       self.intermediate_normal_modules.ast_table.into_iter().flatten().collect();
 
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
-    dynamic_import_entry_ids.sort_by_key(|id| &modules[*id].resource_id);
+    dynamic_import_entry_ids.sort_by_key(|id| &modules[*id].stable_resource_id);
 
     entry_points.extend(dynamic_import_entry_ids.into_iter().map(|id| EntryPoint {
       name: None,

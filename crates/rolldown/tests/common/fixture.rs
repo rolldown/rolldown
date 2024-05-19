@@ -48,21 +48,29 @@ impl Fixture {
     let dist_folder = self.dir_path().join("dist");
     let test_script = self.dir_path().join("_test.mjs");
 
+    let is_output_cjs = matches!(test_config.config.format, Some(OutputFormat::Cjs));
+
     let compiled_entries = test_config
       .config
       .input
       .unwrap_or_else(|| vec![default_test_input_item()])
       .iter()
       .map(|item| {
-        format!("{}.mjs", item.name.clone().expect("inputs must have `name` in `_config.json`"))
+        let name = item.name.clone().expect("inputs must have `name` in `_config.json`");
+        let ext = if is_output_cjs { "cjs" } else { "mjs" };
+        format!("{name}.{ext}",)
       })
       .map(|name| dist_folder.join(name))
       .collect::<Vec<_>>();
 
     let mut command = Command::new("node");
     compiled_entries.iter().for_each(|entry| {
-      command.arg("--import");
-      if cfg!(target_os = "windows") {
+      if is_output_cjs {
+        command.arg("--require");
+      } else {
+        command.arg("--import");
+      }
+      if cfg!(target_os = "windows") && !is_output_cjs {
         // Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs.
         command.arg(format!("file://{}", entry.to_str().expect("should be valid utf8")));
       } else {

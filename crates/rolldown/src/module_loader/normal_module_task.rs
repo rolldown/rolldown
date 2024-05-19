@@ -2,10 +2,10 @@ use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
 use futures::future::join_all;
-use index_vec::IndexVec;
 use oxc::span::SourceType;
+use oxc_index::IndexVec;
 use rolldown_common::{
-  AstScope, FilePath, ImportRecordId, ModuleType, NormalModule, NormalModuleId, RawImportRecord,
+  AstScope, ImportRecordId, ModuleType, NormalModule, NormalModuleId, RawImportRecord,
   ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
@@ -110,11 +110,14 @@ impl NormalModuleTask {
       }
     }
 
+    let resource_id = ResourceId::new(Arc::clone(&self.resolved_path.path));
+
     let module = NormalModule {
       source,
       id: self.module_id,
       repr_name,
-      resource_id: ResourceId::new(Arc::<str>::clone(&self.resolved_path.path).into()),
+      stable_resource_id: resource_id.stabilize(&self.ctx.input_options.cwd),
+      resource_id,
       named_imports,
       named_exports,
       stmt_infos,
@@ -125,9 +128,8 @@ impl NormalModuleTask {
       exports_kind,
       namespace_symbol,
       module_type: self.module_type,
-      pretty_path: self.resolved_path.prettify(&self.ctx.input_options.cwd),
+      pretty_path: self.resolved_path.debug_display(&self.ctx.input_options.cwd),
       sourcemap_chain,
-      is_virtual: self.resolved_path.is_virtual_module_path(),
       exec_order: u32::MAX,
       is_user_defined_entry: self.is_user_defined_entry,
       import_records: IndexVec::default(),
@@ -193,7 +195,7 @@ impl NormalModuleTask {
     );
     let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let file_path = Arc::<str>::clone(&self.resolved_path.path).into();
-    let repr_name = FilePath::representative_name(&file_path);
+    let repr_name = ResourceId::representative_name(&file_path);
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,

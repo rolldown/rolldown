@@ -270,7 +270,7 @@ impl<'ast> TakeIn<'ast> for ast::AssignmentExpression<'ast> {
 
 impl<'ast> TakeIn<'ast> for ast::AssignmentTarget<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
-    Self::SimpleAssignmentTarget(TakeIn::dummy(alloc))
+    Self::AssignmentTargetIdentifier(TakeIn::dummy(alloc))
   }
 }
 

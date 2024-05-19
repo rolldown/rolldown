@@ -1,0 +1,29 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_map_relative_to_relative
+---
+# Assets
+
+## entry.mjs
+
+```js
+import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
+// node_modules/demo-pkg/lib/util-browser.js
+var require_util_browser = __commonJSMin((exports, module) => {
+	module.exports = 'util-browser';
+});
+
+// node_modules/demo-pkg/main-browser.js
+var require_main_browser = __commonJSMin((exports, module) => {
+	const util = require_util_browser();
+	module.exports = function() {
+		return ['main-browser', util];
+	};
+});
+
+// src/entry.js
+var import_main_browser = __toESM(require_main_browser());
+console.log((0,import_main_browser.default)());
+```

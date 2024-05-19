@@ -101,7 +101,7 @@ impl Plugin for ParallelJsPlugin {
 
   async fn transform(
     &self,
-    ctx: &rolldown_plugin::SharedPluginContext,
+    ctx: &rolldown_plugin::TransformPluginContext<'_>,
     args: &rolldown_plugin::HookTransformArgs,
   ) -> rolldown_plugin::HookTransformReturn {
     if self.first_plugin().transform.is_some() {

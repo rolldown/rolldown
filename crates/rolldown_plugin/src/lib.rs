@@ -1,9 +1,9 @@
 mod plugin;
 mod plugin_context;
 mod plugin_driver;
+mod transform_plugin_context;
 mod types;
 mod utils;
-
 /// For internal usage only
 pub mod inner {
   pub use super::utils::resolve_id_with_plugins::resolve_id_with_plugins;
@@ -16,6 +16,7 @@ pub use crate::{
   },
   plugin_context::{PluginContext, SharedPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},
+  transform_plugin_context::TransformPluginContext,
   types::hook_build_end_args::HookBuildEndArgs,
   types::hook_load_args::HookLoadArgs,
   types::hook_load_output::HookLoadOutput,

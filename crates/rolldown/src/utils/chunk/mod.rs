@@ -1,5 +1,5 @@
 use rolldown_common::{
-  Chunk, ChunkKind, FilePath, PreRenderedChunk, RenderedChunk, RenderedModule,
+  Chunk, ChunkKind, PreRenderedChunk, RenderedChunk, RenderedModule, ResourceId,
 };
 use rustc_hash::FxHashMap;
 
@@ -23,14 +23,14 @@ pub fn generate_pre_rendered_chunk(
     is_dynamic_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { is_user_defined, .. } if !*is_user_defined),
     facade_module_id: match &chunk.kind {
       ChunkKind::EntryPoint { module, .. } => {
-        Some(graph.module_table.normal_modules[*module].resource_id.expect_file().clone())
+        Some(graph.module_table.normal_modules[*module].resource_id.clone())
       }
       ChunkKind::Common => None,
     },
     module_ids: chunk
       .modules
       .iter()
-      .map(|id| graph.module_table.normal_modules[*id].resource_id.expect_file().clone())
+      .map(|id| graph.module_table.normal_modules[*id].resource_id.clone())
       .collect(),
     exports: get_chunk_export_names(chunk, graph, output_options),
   }
@@ -40,7 +40,7 @@ pub fn generate_rendered_chunk(
   chunk: &Chunk,
   graph: &LinkStageOutput,
   output_options: &SharedOptions,
-  render_modules: FxHashMap<FilePath, RenderedModule>,
+  render_modules: FxHashMap<ResourceId, RenderedModule>,
   chunk_graph: &ChunkGraph,
 ) -> RenderedChunk {
   let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, graph, output_options);

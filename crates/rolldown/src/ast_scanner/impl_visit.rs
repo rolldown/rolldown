@@ -6,7 +6,6 @@ use oxc::{
 };
 use rolldown_common::ImportKind;
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::StatementExt;
 
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
@@ -88,10 +87,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
       oxc::ast::ast::Expression::Identifier(ident)
         if ident.name == "require" && self.is_unresolved_reference(ident) =>
       {
-        if let Some(oxc::ast::ast::Argument::Expression(
-          oxc::ast::ast::Expression::StringLiteral(request),
-        )) = &expr.arguments.first()
-        {
+        if let Some(oxc::ast::ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
           let id = self.add_import_record(&request.value, ImportKind::Require);
           self.result.imports.insert(expr.span, id);
         }

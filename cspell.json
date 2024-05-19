@@ -20,7 +20,8 @@
     "/CHANGELOG.md",
     "/packages/rolldown/src/rollup.d.ts",
     "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
-    "/pnpm-lock.yaml"
+    "/pnpm-lock.yaml",
+    "*.wasm"
   ],
   "languageSettings": [
     {
@@ -79,6 +80,7 @@
     "insta",
     "instanceof",
     "Itertools",
+    "izip",
     "jsonschema",
     "justfile",
     "Kawaii",
@@ -91,6 +93,7 @@
     "metas",
     "mimalloc",
     "minifier",
+    "multizip",
     "napi",
     "nocheck",
     "nodenext",
@@ -101,6 +104,7 @@
     "oxlintignore",
     "proto",
     "Renamer",
+    "replacen",
     "repr",
     "rolldown",
     "rollup",

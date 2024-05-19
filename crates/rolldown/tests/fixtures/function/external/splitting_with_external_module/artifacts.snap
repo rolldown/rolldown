@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/external/splitting_with_external_module
+input_file: crates/rolldown/tests/fixtures/function/external/splitting_with_external_module
 ---
 # Assets
 
@@ -16,8 +16,8 @@ console.log(value);
 ## main.mjs
 
 ```js
-import { default as assert } from "assert";
 import { value } from "./share.mjs";
+import { default as assert } from "assert";
 
 // main.js
 assert(value === 1);

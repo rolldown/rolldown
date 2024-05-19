@@ -1172,12 +1172,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/deconflict/conflict_between_global_and_local_binding
 
 - $runtime$-!~{001}~.mjs => $runtime$-6wzC9jCL.mjs
-- main-!~{000}~.mjs => main-tOEcGaC9.mjs
+- main-!~{000}~.mjs => main-yq81GCoq.mjs
 
 # tests/fixtures/deconflict/conflict_between_imported_and_local_binding
 
 - $runtime$-!~{001}~.mjs => $runtime$-6wzC9jCL.mjs
-- main-!~{000}~.mjs => main-UgkBYeKd.mjs
+- main-!~{000}~.mjs => main-jGSEfPCH.mjs
 
 # tests/fixtures/deconflict/decl_complex_patterns
 
@@ -1206,14 +1206,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/deconflict/wrapped_esm_default_function
 
 - $runtime$-!~{001}~.mjs => $runtime$-vR6TnGxp.mjs
-- main-!~{000}~.mjs => main-Hwm0PQEH.mjs
-- main-Hwm0PQEH.mjs.map
+- main-!~{000}~.mjs => main-p6u6QFeo.mjs
+- main-p6u6QFeo.mjs.map
 
 # tests/fixtures/deconflict/wrapped_esm_export_named_function
 
 - $runtime$-!~{001}~.mjs => $runtime$-vR6TnGxp.mjs
-- main-!~{000}~.mjs => main-puld6Obw.mjs
-- main-puld6Obw.mjs.map
+- main-!~{000}~.mjs => main-_ZUi0Cvz.mjs
+- main-_ZUi0Cvz.mjs.map
 
 # tests/fixtures/errors/unresolved_entry
 
@@ -1237,7 +1237,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/function/external/splitting_with_external_module
 
 - entry-!~{001}~.mjs => entry-ahgOZOc1.mjs
-- main-!~{000}~.mjs => main-1dgL9psc.mjs
+- main-!~{000}~.mjs => main-LeJVwZoF.mjs
 - share-!~{002}~.mjs => share-eIGIrVeP.mjs
 
 # tests/fixtures/function/resolve/browser_filed_false

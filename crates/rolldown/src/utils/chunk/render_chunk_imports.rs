@@ -11,7 +11,6 @@ pub fn render_chunk_imports(
   options: &SharedOptions,
 ) -> String {
   let mut s = String::new();
-  let imports_from_external_modules = &chunk.imports_from_external_modules;
 
   let render_import_specifier = |imported: &str, alias: &str| match options.format {
     rolldown_common::OutputFormat::Esm => {
@@ -57,6 +56,39 @@ pub fn render_chunk_imports(
       }
     };
 
+  // render imports from other chunks
+
+  chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
+    let importee_chunk = &chunk_graph.chunks[*exporter_id];
+    let mut import_items = items
+      .iter()
+      .map(|item| {
+        let canonical_ref = graph.symbols.par_canonical_ref_for(item.import_ref);
+        let local_binding = &chunk.canonical_names[&canonical_ref];
+        let Specifier::Literal(export_alias) = item.export_alias.as_ref().unwrap() else {
+          panic!("should not be star import from other chunks")
+        };
+        render_import_specifier(export_alias, local_binding)
+      })
+      .collect::<Vec<_>>();
+    let filename = importee_chunk
+      .preliminary_filename
+      .as_deref()
+      .expect("At this point, preliminary_filename should already be generated")
+      .as_str();
+
+    if import_items.is_empty() {
+      // TODO: filename relative to importee
+      render_plain_import(&format!("./{filename}"), &mut s);
+    } else {
+      import_items.sort();
+      render_import_stmt(&import_items, &format!("./{filename}"), &mut s);
+    }
+  });
+
+  // render external imports
+
+  let imports_from_external_modules = &chunk.imports_from_external_modules;
   imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &graph.module_table.external_modules[*importee_id];
     let mut is_importee_imported = false;
@@ -90,36 +122,6 @@ pub fn render_chunk_imports(
     } else if !is_importee_imported {
       // Ensure the side effect
       render_plain_import(&importee.name, &mut s);
-    }
-  });
-
-  // render imports from other chunks
-
-  chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
-    let importee_chunk = &chunk_graph.chunks[*exporter_id];
-    let mut import_items = items
-      .iter()
-      .map(|item| {
-        let canonical_ref = graph.symbols.par_canonical_ref_for(item.import_ref);
-        let local_binding = &chunk.canonical_names[&canonical_ref];
-        let Specifier::Literal(export_alias) = item.export_alias.as_ref().unwrap() else {
-          panic!("should not be star import from other chunks")
-        };
-        render_import_specifier(export_alias, local_binding)
-      })
-      .collect::<Vec<_>>();
-    let filename = importee_chunk
-      .preliminary_filename
-      .as_deref()
-      .expect("At this point, preliminary_filename should already be generated")
-      .as_str();
-
-    if import_items.is_empty() {
-      // TODO: filename relative to importee
-      render_plain_import(&format!("./{filename}"), &mut s);
-    } else {
-      import_items.sort();
-      render_import_stmt(&import_items, &format!("./{filename}"), &mut s);
     }
   });
   s

@@ -241,6 +241,12 @@ impl<'a> LinkStage<'a> {
             ModuleId::External(_) => {
               // Make sure symbols from external modules are included and de_conflicted
               stmt_info.side_effect = true;
+              if matches!(self.input_options.format, OutputFormat::Cjs)
+                && matches!(rec.kind, ImportKind::Import)
+                && !rec.is_plain_import
+              {
+                stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
+              }
             }
             ModuleId::Normal(importee_id) => {
               let importee_linking_info = &self.metas[importee_id];

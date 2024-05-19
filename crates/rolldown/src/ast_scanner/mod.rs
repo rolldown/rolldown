@@ -297,8 +297,10 @@ impl<'me> AstScanner<'me> {
       let record_id = self.add_import_record(&source.value, ImportKind::Import);
       decl.specifiers.iter().for_each(|spec| {
         self.add_re_export(spec.exported.name(), spec.local.name(), record_id);
-        self.result.imports.insert(decl.span, record_id);
       });
+      self.result.imports.insert(decl.span, record_id);
+      // `export {} from '...'`
+      self.result.import_records[record_id].is_plain_import = decl.specifiers.is_empty();
     } else {
       decl.specifiers.iter().for_each(|spec| {
         self.add_local_export(spec.exported.name(), self.get_root_binding(spec.local.name()));
@@ -358,25 +360,29 @@ impl<'me> AstScanner<'me> {
   }
 
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
-    let id = self.add_import_record(&decl.source.value, ImportKind::Import);
-    self.result.imports.insert(decl.span, id);
+    let rec_id = self.add_import_record(&decl.source.value, ImportKind::Import);
+    self.result.imports.insert(decl.span, rec_id);
+    // // `import '...'` or `import {} from '...'`
+    self.result.import_records[rec_id].is_plain_import =
+      decl.specifiers.as_ref().map_or(true, |s| s.is_empty());
+
     let Some(specifiers) = &decl.specifiers else { return };
     specifiers.iter().for_each(|spec| match spec {
       oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
         let imported = spec.imported.name();
-        self.add_named_import(sym, imported, id);
+        self.add_named_import(sym, imported, rec_id);
         if imported == "default" {
-          self.result.import_records[id].contains_import_default = true;
+          self.result.import_records[rec_id].contains_import_default = true;
         }
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
-        self.add_named_import(spec.local.expect_symbol_id(), "default", id);
-        self.result.import_records[id].contains_import_default = true;
+        self.add_named_import(spec.local.expect_symbol_id(), "default", rec_id);
+        self.result.import_records[rec_id].contains_import_default = true;
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
-        self.add_star_import(spec.local.expect_symbol_id(), id);
-        self.result.import_records[id].contains_import_star = true;
+        self.add_star_import(spec.local.expect_symbol_id(), rec_id);
+        self.result.import_records[rec_id].contains_import_star = true;
       }
     });
   }

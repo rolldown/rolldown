@@ -8,7 +8,5 @@
     ],
     "format": "cjs",
     "external": ["fs"]
-  },
-  "_comment": "TODO: support excution of cjs format",
-  "expectExecuted": false
+  }
 }

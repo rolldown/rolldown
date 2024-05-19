@@ -60,7 +60,7 @@ fn has_dynamic_exports_due_to_export_star(
     return true;
   }
 
-  let has_dynamic_exports = module.star_export_modules().any(|importee_id| match importee_id {
+  let has_dynamic_exports = module.star_export_module_ids().any(|importee_id| match importee_id {
     rolldown_common::ModuleId::Normal(importee_id) => {
       target != importee_id
         && has_dynamic_exports_due_to_export_star(

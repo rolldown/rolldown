@@ -6,7 +6,6 @@ pub mod ast_symbols;
 pub mod bundle_output;
 pub mod bundler_fs;
 pub mod linking_metadata;
-pub mod match_import_kind;
 pub mod module_render_output;
 pub mod namespace_alias;
 pub mod symbols;

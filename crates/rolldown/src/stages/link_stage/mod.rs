@@ -137,6 +137,7 @@ impl<'a> LinkStage<'a> {
     self.create_exports_for_modules();
     self.reference_needed_symbols();
     self.include_statements();
+    tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
     LinkStageOutput {
       module_table: self.module_table,

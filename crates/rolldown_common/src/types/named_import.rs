@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use rolldown_rstr::Rstr;
 
 use crate::SymbolRef;
@@ -8,7 +10,7 @@ use super::import_record::ImportRecordId;
 /// - Case A: `import { foo } from 'foo'`
 /// - Case B: `import * as fooNs from 'foo'`
 /// - Case C: `import { foo as foo2 } from 'foo'`
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NamedImport {
   /// For case A, the `imported` is `foo`.
   /// For case B, the `imported` is meaningless.
@@ -34,6 +36,15 @@ impl Specifier {
 
   pub fn is_default(&self) -> bool {
     matches!(self, Self::Literal(atom) if atom.as_str() == "default")
+  }
+}
+
+impl Display for Specifier {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Star => "*".fmt(f),
+      Self::Literal(atom) => atom.as_str().fmt(f),
+    }
   }
 }
 

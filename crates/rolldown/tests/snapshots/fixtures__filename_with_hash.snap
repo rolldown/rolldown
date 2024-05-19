@@ -1368,6 +1368,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-Jck2JIxa.mjs
 
+# tests/fixtures/rollup/same-binding
+
+- main-!~{000}~.mjs => main-iKxGvXgZ.mjs
+
 # tests/fixtures/rollup/simplify-with-destructuring
 
 - main-!~{000}~.mjs => main-m9nnNuko.mjs

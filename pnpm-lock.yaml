@@ -174,7 +174,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.0.0-alpha
-        version: 3.0.0-alpha.55(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))
+        version: 3.0.0-alpha.55(@emnapi/runtime@1.1.1)(emnapi@1.2.0(node-addon-api@8.0.0))
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.3
         version: 0.2.4
@@ -191,8 +191,8 @@ importers:
         specifier: ^3.2.3
         version: 3.2.3
       emnapi:
-        specifier: ^1.1.1
-        version: 1.1.1(node-addon-api@8.0.0)
+        specifier: ^1.2.0
+        version: 1.2.0(node-addon-api@8.0.0)
       execa:
         specifier: ^9.1.0
         version: 9.1.0
@@ -3403,8 +3403,8 @@ packages:
   electron-to-chromium@1.4.770:
     resolution: {integrity: sha512-ONwOsDiVvV07CMsyH4+dEaZ9L79HMH/ODHnDS3GkIhgNqdDHJN2C18kFb0fBj0RXpQywsPJl6k2Pqg1IY4r1ig==}
 
-  emnapi@1.1.1:
-    resolution: {integrity: sha512-md0YDBLCX+378+zzibHvOLsj28YKFy8vl7BiSzVocCY7HujOkYt+N5LCOYqLeYi5C5/5NlnkNweVdUjrvKpGNg==}
+  emnapi@1.2.0:
+    resolution: {integrity: sha512-rcq+dJCcfr08I0XM/57LPRqaUokGfni/+SvhO7NaJthTTjRdohhIy0FQwyC5rR1enAsjkldQg83th8J5hURv0Q==}
     peerDependencies:
       node-addon-api: '>= 6.1.0'
     peerDependenciesMeta:
@@ -6703,7 +6703,7 @@ snapshots:
 
   '@ls-lint/ls-lint@2.2.3': {}
 
-  '@napi-rs/cli@3.0.0-alpha.55(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))':
+  '@napi-rs/cli@3.0.0-alpha.55(@emnapi/runtime@1.1.1)(emnapi@1.2.0(node-addon-api@8.0.0))':
     dependencies:
       '@napi-rs/cross-toolchain': 0.0.16
       '@napi-rs/wasm-tools': 0.0.2
@@ -6720,7 +6720,7 @@ snapshots:
       wasm-sjlj: 1.0.5
     optionalDependencies:
       '@emnapi/runtime': 1.1.1
-      emnapi: 1.1.1(node-addon-api@8.0.0)
+      emnapi: 1.2.0(node-addon-api@8.0.0)
     transitivePeerDependencies:
       - '@napi-rs/cross-toolchain-arm64-target-aarch64'
       - '@napi-rs/cross-toolchain-arm64-target-armv7'
@@ -8413,7 +8413,7 @@ snapshots:
 
   electron-to-chromium@1.4.770: {}
 
-  emnapi@1.1.1(node-addon-api@8.0.0):
+  emnapi@1.2.0(node-addon-api@8.0.0):
     optionalDependencies:
       node-addon-api: 8.0.0
 

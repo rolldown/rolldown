@@ -121,7 +121,7 @@ impl ModuleLoader {
 
   fn try_spawn_new_task(
     &mut self,
-    info: &ResolvedRequestInfo,
+    info: ResolvedRequestInfo,
     is_user_defined_entry: bool,
   ) -> ModuleId {
     match self.visited.entry(Arc::<str>::clone(&info.path.path)) {
@@ -145,6 +145,7 @@ impl ModuleLoader {
             module_path,
             info.module_type,
             is_user_defined_entry,
+            info.package_json,
           );
           #[cfg(target_family = "wasm")]
           {
@@ -190,7 +191,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name,
-        id: self.try_spawn_new_task(&info, true).expect_normal(),
+        id: self.try_spawn_new_task(info, true).expect_normal(),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -222,7 +223,7 @@ impl ModuleLoader {
             .into_iter()
             .zip(resolved_deps)
             .map(|(raw_rec, info)| {
-              let id = self.try_spawn_new_task(&info, false);
+              let id = self.try_spawn_new_task(info, false);
               // Dynamic imported module will be considered as an entry
               if let ModuleId::Normal(id) = id {
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {

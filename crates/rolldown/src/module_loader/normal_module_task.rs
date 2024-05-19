@@ -5,7 +5,7 @@ use futures::future::join_all;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  AstScope, ImportRecordId, ModuleType, NormalModule, NormalModuleId, RawImportRecord,
+  AstScope, ImportRecordId, ModuleType, NormalModule, NormalModuleId, PackageJson, RawImportRecord,
   ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
@@ -26,6 +26,7 @@ pub struct NormalModuleTask {
   ctx: Arc<TaskContext>,
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
+  package_json: Option<PackageJson>,
   module_type: ModuleType,
   errors: Vec<BuildError>,
   is_user_defined_entry: bool,
@@ -38,6 +39,7 @@ impl NormalModuleTask {
     path: ResolvedPath,
     module_type: ModuleType,
     is_user_defined_entry: bool,
+    package_json: Option<PackageJson>,
   ) -> Self {
     Self {
       ctx,
@@ -46,6 +48,7 @@ impl NormalModuleTask {
       module_type,
       errors: vec![],
       is_user_defined_entry,
+      package_json,
     }
   }
 
@@ -136,6 +139,7 @@ impl NormalModuleTask {
       dynamic_importers: vec![],
       imported_ids,
       dynamically_imported_ids,
+      package_json: self.package_json.take(),
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
@@ -225,6 +229,7 @@ impl NormalModuleTask {
           path: specifier.to_string().into(),
           module_type: ModuleType::Unknown,
           is_external: true,
+          package_json: None,
         }));
       }
     }
@@ -298,6 +303,7 @@ impl NormalModuleTask {
               path: specifier.to_string().into(),
               module_type: ModuleType::Unknown,
               is_external: true,
+              package_json: None,
             });
           }
           _ => {

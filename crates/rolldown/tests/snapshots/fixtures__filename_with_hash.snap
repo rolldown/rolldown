@@ -177,7 +177,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/import_fs_node_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-TE_F6vZL.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-OBYYRk4K.cjs
+- entry_js-!~{000}~.cjs => entry_js-98OoslfP.cjs
 
 # tests/esbuild/default/import_missing_common_js
 
@@ -531,7 +532,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_as_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-xqfVgBNO.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-OBYYRk4K.cjs
+- entry_js-!~{000}~.cjs => entry_js-lO9-PfCm.cjs
 
 # tests/esbuild/import_star/re_export_star_as_external_es6
 
@@ -544,7 +546,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-rud5zVrH.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-OBYYRk4K.cjs
+- entry_js-!~{000}~.cjs => entry_js-XWUyJeqD.cjs
 
 # tests/esbuild/import_star/re_export_star_external_es6
 
@@ -1239,6 +1242,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - entry-!~{001}~.mjs => entry-ahgOZOc1.mjs
 - main-!~{000}~.mjs => main-LeJVwZoF.mjs
 - share-!~{002}~.mjs => share-eIGIrVeP.mjs
+
+# tests/fixtures/function/format/cjs/plain_import_should_not_introduce_to_esm
+
+- main-!~{000}~.cjs => main-rClOc9Ow.cjs
 
 # tests/fixtures/function/resolve/browser_filed_false
 

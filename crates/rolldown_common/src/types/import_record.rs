@@ -52,6 +52,7 @@ pub struct RawImportRecord {
   pub namespace_ref: SymbolRef,
   pub contains_import_star: bool,
   pub contains_import_default: bool,
+  pub is_plain_import: bool,
 }
 
 impl RawImportRecord {
@@ -62,6 +63,7 @@ impl RawImportRecord {
       namespace_ref,
       contains_import_default: false,
       contains_import_star: false,
+      is_plain_import: false,
     }
   }
 
@@ -73,6 +75,7 @@ impl RawImportRecord {
       namespace_ref: self.namespace_ref,
       contains_import_star: self.contains_import_star,
       contains_import_default: self.contains_import_default,
+      is_plain_import: self.is_plain_import,
     }
   }
 }
@@ -86,4 +89,5 @@ pub struct ImportRecord {
   pub namespace_ref: SymbolRef,
   pub contains_import_star: bool,
   pub contains_import_default: bool,
+  pub is_plain_import: bool,
 }

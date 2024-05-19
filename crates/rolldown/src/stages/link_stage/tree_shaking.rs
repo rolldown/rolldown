@@ -79,8 +79,6 @@ fn include_statement(
     return;
   }
 
-  dbg!(&declared_symbol_ref, &module.pretty_path);
-  // *is_included = IncludedInfo::True;
   // include the statement itself
   match declared_symbol_ref {
     Some(symbol_ref) => match is_included {
@@ -101,7 +99,7 @@ fn include_statement(
   let stmt_info = module.stmt_infos.get(stmt_info_id);
 
   // include statements that are referenced by this statement
-  if stmt_info.import_records.len() > 0 { stmt_info.declared_symbols.iter() } else { [].iter() }
+  if stmt_info.import_records.is_empty() { [].iter() } else { stmt_info.declared_symbols.iter() }
     .chain(stmt_info.referenced_symbols.iter())
     .for_each(|symbol_ref| {
       // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
@@ -147,7 +145,6 @@ impl LinkStage<'_> {
       module.is_included = is_module_included_vec[module.id];
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).included_info = is_included.clone();
-        dbg!(&module.stmt_infos.get(stmt_info_id));
       });
     });
 

@@ -36,7 +36,6 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
         if !stmt_info.partial_included() {
           return;
         }
-        dbg!(&top_stmt);
 
         if let Some(import_decl) = top_stmt.as_import_declaration() {
           let rec_id = self.ctx.module.imports[&import_decl.span];
@@ -153,7 +152,6 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               // `export class Foo {}` => `class Foo {}`
               match decl {
                 ast::Declaration::VariableDeclaration(var_decl) if !stmt_info.fully_included() => {
-                  dbg!(&stmt_info);
                   var_decl.declarations.retain(|decl| match decl.id.kind {
                     ast::BindingPatternKind::BindingIdentifier(ref id) => {
                       match &stmt_info.included_info {

@@ -1,4 +1,4 @@
-use oxc::span::{Atom, CompactStr};
+use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -104,10 +104,7 @@ impl StmtInfo {
     match self.included_info {
       IncludedInfo::False => false,
       IncludedInfo::True => true,
-      IncludedInfo::Declarator(ref set) => {
-        set.len() > 0
-        // self.declared_symbols.iter().all(|symbol_ref| set.contains(symbol_ref))
-      }
+      IncludedInfo::Declarator(ref set) => !set.is_empty(),
     }
   }
 

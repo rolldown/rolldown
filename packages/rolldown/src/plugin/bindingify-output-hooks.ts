@@ -1,10 +1,10 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type { BindingPluginOptions } from '../binding'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
-import { NormalizedOutputOptions } from '../options/output-options'
 import type { Plugin } from './index'
 import { transformToOutputBundle } from '../utils/transform-to-rollup-output'
 import { PluginContext } from './plugin-context'
+import { NormalizedOutputOptions } from '@src/options/normalized-output-options'
 
 export function bindingifyRenderStart(
   plugin: Plugin,

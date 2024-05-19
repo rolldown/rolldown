@@ -3,7 +3,7 @@ use std::{ptr::addr_of, sync::Mutex};
 use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, IncludedInfo, ModuleId, ModuleTable, NormalModule,
-  NormalModuleId, StmtInfo, WrapKind,
+  NormalModuleId, OutputFormat, StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;

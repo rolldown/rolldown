@@ -189,6 +189,12 @@ impl<'a> GenerateStage<'a> {
                     chunk_graph.module_to_chunk[importee_id].expect("importee chunk should exist");
                   cross_chunk_dynamic_imports.insert(importee_chunk);
                 } else if matches!(rec.kind, ImportKind::Import | ImportKind::Require) {
+                  // the the resolved module is not included in module graph, skip
+                  // TODO: Is that possible that the module of the record is a external module?
+                  let importee_module = &self.link_output.module_table.normal_modules[importee_id];
+                  if !importee_module.is_included {
+                    return;
+                  }
                   let importee_chunk =
                     chunk_graph.module_to_chunk[importee_id].expect("importee chunk should exist");
                   chunk_dependency_order.entry(importee_chunk).or_insert_with(|| {

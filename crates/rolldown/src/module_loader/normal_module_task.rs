@@ -196,6 +196,7 @@ impl NormalModuleTask {
     let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let file_path = Arc::<str>::clone(&self.resolved_path.path).into();
     let repr_name = ResourceId::representative_name(&file_path);
+    let trivias = program.with_mut(|fields| std::mem::take(fields.trivias));
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,
@@ -204,8 +205,12 @@ impl NormalModuleTask {
       self.module_type,
       source,
       &file_path,
+      &trivias,
     );
     let namespace_symbol = scanner.namespace_ref;
+    // program.with_mut(|fields| {
+    //   *fields.trivias = trivias;
+    // });
     program.hoist_import_export_from_stmts();
     let scan_result = scanner.scan(program.program());
 

@@ -1383,6 +1383,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-m9nnNuko.mjs
 
+# tests/fixtures/tree_shaking/pure-annotation
+
+- main-!~{000}~.mjs => main-Km8M_iGP.mjs
+
 # tests/fixtures/warnings/eval
 
 - main-!~{000}~.mjs => main-yOBrKQ94.mjs

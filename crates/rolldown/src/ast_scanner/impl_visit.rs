@@ -14,7 +14,8 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.current_stmt_info.side_effect =
-        SideEffectDetector::new(self.scope).detect_side_effect_of_stmt(stmt);
+        SideEffectDetector::new(self.scope, &self.travias, self.source)
+          .detect_side_effect_of_stmt(stmt);
 
       if cfg!(debug_assertions) {
         let mut codegen = Codegen::<false>::new(

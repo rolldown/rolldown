@@ -1,8 +1,11 @@
+use std::borrow::BorrowMut;
 use std::{fmt::Debug, sync::Arc};
 
 use crate::OxcCompiler;
+use oxc::parser::ParserReturn;
 use oxc::{allocator::Allocator, ast::ast::Program, span::SourceType};
 
+use oxc_ast::Trivias;
 use self_cell::self_cell;
 
 mod helpers;
@@ -12,7 +15,7 @@ self_cell!(
     owner: (Arc<str>, Allocator),
 
     #[covariant]
-    dependent: Program,
+    dependent: ParserReturn,
   }
 );
 
@@ -31,7 +34,11 @@ impl OxcAst {
   }
 
   pub fn program(&self) -> &Program {
-    self.inner.borrow_dependent()
+    &self.inner.borrow_dependent().program
+  }
+
+  pub fn trivias(&self) -> &Trivias {
+    &self.inner.borrow_dependent().trivias
   }
 
   /// Visit all fields including `&mut Program` within a closure.
@@ -50,8 +57,13 @@ impl OxcAst {
     &'outer mut self,
     func: impl for<'inner> ::core::ops::FnOnce(WithFieldsMut<'outer, 'inner>) -> Ret,
   ) -> Ret {
-    self.inner.with_dependent_mut::<'outer, Ret>(|owner, program| {
-      func(WithFieldsMut { source: &owner.0, allocator: &owner.1, program })
+    self.inner.with_dependent_mut::<'outer, Ret>(|owner, parse_return| {
+      func(WithFieldsMut {
+        source: &owner.0,
+        allocator: &owner.1,
+        program: &mut parse_return.program,
+        trivias: &mut parse_return.trivias,
+      })
     })
   }
 }
@@ -60,6 +72,7 @@ pub struct WithFieldsMut<'outer, 'inner> {
   pub source: &'inner Arc<str>,
   pub allocator: &'inner Allocator,
   pub program: &'outer mut Program<'inner>,
+  pub trivias: &'outer mut Trivias,
 }
 
 impl Debug for OxcAst {

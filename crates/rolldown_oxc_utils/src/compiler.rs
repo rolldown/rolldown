@@ -1,10 +1,10 @@
-use std::sync::Arc;
-
 use oxc::{
   codegen::{Codegen, CodegenOptions, CodegenReturn},
   parser::Parser,
   span::SourceType,
 };
+use oxc_ast::Trivias;
+use std::sync::Arc;
 
 use crate::{oxc_ast::Inner, OxcAst};
 pub struct OxcCompiler;
@@ -14,7 +14,7 @@ impl OxcCompiler {
     let allocator = oxc::allocator::Allocator::default();
     let inner = Inner::new((source.into(), allocator), |(source, allocator)| {
       let parser = Parser::new(allocator, source, ty);
-      parser.parse().program
+      parser.parse()
     });
     OxcAst { inner }
   }

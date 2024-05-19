@@ -7,7 +7,7 @@ use oxc::{
       ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
       ImportDeclaration, ModuleDeclaration, Program,
     },
-    Visit,
+    Trivias, Visit,
   },
   semantic::SymbolId,
   span::{Atom, Span},
@@ -47,6 +47,7 @@ pub struct AstScanner<'me> {
   file_path: &'me ResourceId,
   scope: &'me AstScope,
   symbol_table: &'me mut AstSymbols,
+  travias: &'me Trivias,
   current_stmt_info: StmtInfo,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
@@ -65,6 +66,7 @@ impl<'me> AstScanner<'me> {
     module_type: ModuleType,
     source: &'me Arc<str>,
     file_path: &'me ResourceId,
+    travias: &'me Trivias,
   ) -> Self {
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let symbol_id_for_default_export_ref =
@@ -106,6 +108,7 @@ impl<'me> AstScanner<'me> {
       used_module_ref: false,
       source,
       file_path,
+      travias,
     }
   }
 

@@ -10,9 +10,6 @@ use oxc::span::Span;
 use rolldown_common::AstScope;
 use rustc_hash::FxHashSet;
 
-static PURE_COMMENTS: Lazy<regex::Regex> =
-  Lazy::new(|| regex::Regex::new("^\\s*(#|@)__PURE__\\s*$").expect("Should create the regex"));
-
 // Probably we should generate this using macros.
 static SIDE_EFFECT_FREE_MEMBER_EXPR_2: Lazy<FxHashSet<(&'static str, &'static str)>> =
   Lazy::new(|| {
@@ -207,33 +204,13 @@ impl<'a> SideEffectDetector<'a> {
       Expression::CallExpression(expr) => {
         let mut leading_comment: Option<(CommentKind, Span)> = None;
         self.travias.comments().for_each(|(kind, span)| {
-          if span.end < expr.span.start && matches!(kind, CommentKind::MultiLine) {
+          if span.end < expr.span.start {
             leading_comment = Some((kind, span));
           }
         });
-        let is_pure_comment = if let Some(leading_comment) = leading_comment {
-          dbg!(&leading_comment);
-          let res = &self.source[leading_comment.1.end as usize + 2..expr.span.start as usize];
-          let is_between_str_all_whitespace = res.chars().all(|ch| ch == ' ');
-          if is_between_str_all_whitespace {
-            let comment_content =
-              &self.source[leading_comment.1.start as usize..leading_comment.1.end as usize];
-            PURE_COMMENTS.is_match(comment_content)
-          } else {
-            false
-          }
-        } else {
-          false
-        };
-        if is_pure_comment {
-          expr.arguments.iter().any(|arg| match arg {
-            oxc::ast::ast::Argument::SpreadElement(_) => true,
-            // TODO: implementa this
-            _ => false,
-          })
-        } else {
-          true
-        }
+        dbg!(&leading_comment);
+        dbg!(&self.travias.irregular_whitespaces());
+        true
       }
     }
   }
@@ -399,8 +376,7 @@ mod test {
     ast.trivias();
 
     let has_side_effect = ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(&ast_scope, ast.trivias(), ast.source())
-        .detect_side_effect_of_stmt(stmt)
+      SideEffectDetector::new(&ast_scope, ast.trivias(), ast.source()).detect_side_effect_of_stmt(stmt)
     });
 
     has_side_effect

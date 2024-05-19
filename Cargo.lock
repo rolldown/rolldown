@@ -1900,6 +1900,7 @@ name = "rolldown_oxc_utils"
 version = "0.1.0"
 dependencies = [
  "oxc",
+ "oxc_ast",
  "self_cell",
  "smallvec",
 ]

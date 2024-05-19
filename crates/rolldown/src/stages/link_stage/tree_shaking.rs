@@ -105,10 +105,11 @@ impl LinkStage<'_> {
       oxc_index::index_vec![false; self.module_table.normal_modules.len()];
 
     let mut has_export_used: IndexVec<NormalModuleId, bool> =
-      index_vec::index_vec![false; self.module_table.normal_modules.len()];
+      oxc_index::index_vec![false; self.module_table.normal_modules.len()];
 
     let mut module_side_effects: IndexVec<NormalModuleId, bool> =
-      index_vec::index_vec![false; self.module_table.normal_modules.len()];
+      oxc_index::index_vec![false; self.module_table.normal_modules.len()];
+    
     let context = &mut Context {
       modules: &self.module_table.normal_modules,
       symbols: &self.symbols,

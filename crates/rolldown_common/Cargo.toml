@@ -14,23 +14,22 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-anyhow               = { workspace = true }
-glob-match           = "0.2.1"
-index_vec            = { workspace = true }
-once_cell            = { workspace = true }
-oxc                  = { workspace = true, features = ["semantic"] }
-oxc_index            = { workspace = true }
-oxc_resolver         = { workspace = true }
-regex                = { workspace = true }
-rolldown_fs          = { workspace = true }
-rolldown_rstr        = { workspace = true }
-rolldown_sourcemap   = { workspace = true }
-rolldown_utils       = { workspace = true }
-rustc-hash           = { workspace = true }
-schemars             = { workspace = true, optional = true }
-serde                = { workspace = true, features = ["derive"], optional = true }
-serde_json.workspace = true
-sugar_path           = { workspace = true }
+anyhow             = { workspace = true }
+glob-match         = "0.2.1"
+once_cell          = { workspace = true }
+oxc                = { workspace = true, features = ["semantic"] }
+oxc_index          = { workspace = true }
+oxc_resolver       = { workspace = true }
+regex              = { workspace = true }
+rolldown_fs        = { workspace = true }
+rolldown_rstr      = { workspace = true }
+rolldown_sourcemap = { workspace = true }
+rolldown_utils     = { workspace = true }
+rustc-hash         = { workspace = true }
+schemars           = { workspace = true, optional = true }
+serde              = { workspace = true, features = ["derive"], optional = true }
+serde_json         = { workspace = true }
+sugar_path         = { workspace = true }
 
 [features]
 deserialize_bundler_options = ["dep:schemars", "dep:serde"]

@@ -1,9 +1,7 @@
 use oxc_index::IndexVec;
 use rolldown_common::{NormalModuleId, ResolvedExport, StmtInfoId, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
-use rustc_hash::FxHashMap;
-
-use super::symbols::Symbols;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Module metadata about linking
 #[derive(Debug, Default)]
@@ -36,9 +34,10 @@ pub struct LinkingMetadata {
   pub wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<Rstr, ResolvedExport>,
+  pub re_export_all_names: FxHashSet<Rstr>,
   // Store the names of exclude ambiguous resolved exports.
   // It will be used to generate chunk exports and module namespace binding.
-  sorted_and_non_ambiguous_resolved_exports: Vec<Rstr>,
+  pub sorted_and_non_ambiguous_resolved_exports: Vec<Rstr>,
   // If a esm module has export star from commonjs, it will be marked as ESMWithDynamicFallback at linker.
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
@@ -60,28 +59,6 @@ impl LinkingMetadata {
 
   pub fn is_canonical_exports_empty(&self) -> bool {
     self.sorted_and_non_ambiguous_resolved_exports.is_empty()
-  }
-
-  pub fn create_exclude_ambiguous_resolved_exports(&mut self, symbols: &Symbols) {
-    let mut export_names = self
-      .resolved_exports
-      .iter()
-      .filter_map(|(name, resolved_export)| {
-        if let Some(potentially_ambiguous_symbol_refs) =
-          &resolved_export.potentially_ambiguous_symbol_refs
-        {
-          // because the un-ambiguous export is already union at linking imports, so here use symbols to check
-          for export in potentially_ambiguous_symbol_refs {
-            if resolved_export.symbol_ref != symbols.par_canonical_ref_for(*export) {
-              return None;
-            }
-          }
-        }
-        Some(name.clone())
-      })
-      .collect::<Vec<_>>();
-    export_names.sort_unstable_by(|a, b| a.cmp(b));
-    self.sorted_and_non_ambiguous_resolved_exports = export_names;
   }
 }
 

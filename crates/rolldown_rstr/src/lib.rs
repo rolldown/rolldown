@@ -13,6 +13,18 @@ pub use to_str::ToRstr;
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Rstr(OxcStr);
 
+impl PartialOrd for Rstr {
+  fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    Some(self.as_str().cmp(other.as_str()))
+  }
+}
+
+impl Ord for Rstr {
+  fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    self.as_str().cmp(other.as_str())
+  }
+}
+
 impl Rstr {
   pub fn new(s: &str) -> Self {
     Self(OxcStr::new(s))

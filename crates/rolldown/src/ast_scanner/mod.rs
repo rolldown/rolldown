@@ -158,8 +158,15 @@ impl<'me> AstScanner<'me> {
     // If 'foo' in `import ... from 'foo'` is finally a commonjs module, we will convert the import statement
     // to `var import_foo = __toESM(require_foo())`, so we create a symbol for `import_foo` here. Notice that we
     // just create the symbol. If the symbol is finally used would be determined in the linking stage.
-    let namespace_ref: SymbolRef =
-      (self.idx, self.symbol_table.create_symbol("".into(), self.scope.root_scope_id())).into();
+    let namespace_ref: SymbolRef = (
+      self.idx,
+      self.symbol_table.create_symbol(
+        format!("#LOCAL_NAMESPACE_IN_{}#", self.current_stmt_info.stmt_idx.unwrap_or_default())
+          .into(),
+        self.scope.root_scope_id(),
+      ),
+    )
+      .into();
     let rec = RawImportRecord::new(module_request.to_rstr(), kind, namespace_ref);
 
     let id = self.result.import_records.push(rec);
@@ -199,7 +206,32 @@ impl<'me> AstScanner<'me> {
       .insert("default".into(), LocalExport { referenced: (self.idx, local).into() });
   }
 
+  /// Record `export { [imported] as [export_name] } from ...` statement.
+  ///
+  /// Notice that we will pretend
+  /// ```js
+  /// export { [imported] as [export_name] } from '...'
+  /// ```
+  /// to be
+  /// ```js
+  /// import { [imported] as [generated] } from '...'
+  /// export { [generated] as [export_name] }
+  /// ```
+  /// Reasons are:
+  /// - No extra logic for dealing with re-exports concept.
+  /// - Cjs compatibility. We need a [generated] binding to holds the value reexport from commonjs. For example
+  /// ```js
+  /// export { foo } from 'commonjs'
+  /// ```
+  /// would be converted to
+  /// ```js
+  /// const import_commonjs = __toESM(require_commonjs())
+  /// const [generated] = import_commonjs.foo
+  /// export { [generated] as foo }
+  /// ```
+  /// `export { foo } from 'commonjs'` would be converted to `const import_commonjs = require()` in the linking stage.
   fn add_re_export(&mut self, export_name: &Atom, imported: &Atom, record_id: ImportRecordId) {
+    // We will pretend `export { [imported] as [export_name] }` to be `import `
     let generated_imported_as_ref = (
       self.idx,
       self.symbol_table.create_symbol(
@@ -214,6 +246,7 @@ impl<'me> AstScanner<'me> {
       ),
     )
       .into();
+
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
     let name_import = NamedImport {
       imported: imported.to_rstr().into(),

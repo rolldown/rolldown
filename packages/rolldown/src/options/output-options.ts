@@ -1,5 +1,44 @@
+import { format } from 'path'
 import { BindingOutputOptions, RenderedChunk } from '../binding'
 import { unimplemented } from '../utils'
+import { z } from 'zod'
+import * as zodExt from '../utils/zod-ext'
+
+const addonFunctionSchema = z
+  .function()
+  .args(zodExt.phantom<RenderedChunk>())
+  .returns(z.string().or(z.promise(z.string())))
+
+const outputOptionsSchema = z.strictObject({
+  dir: z.string().optional(),
+  exports: z.literal('named').optional(),
+  format: z
+    .literal('es')
+    .or(z.literal('cjs'))
+    .or(z.literal('es'))
+    .or(z.literal('esm'))
+    .or(z.literal('module'))
+    .or(z.literal('commonjs'))
+    .optional(),
+  sourcemap: z
+    .boolean()
+    .or(z.literal('inline'))
+    .or(z.literal('hidden'))
+    .optional(),
+  sourcemapIgnoreList: z
+    .boolean()
+    .or(zodExt.phantom<SourcemapIgnoreListOption>())
+    .optional(),
+  sourcemapPathTransform: zodExt
+    .phantom<SourcemapPathTransformOption>()
+    .optional(),
+  banner: z.string().or(addonFunctionSchema).optional(),
+  footer: z.string().or(addonFunctionSchema).optional(),
+  entryFileNames: z.string().optional(),
+  chunkFileNames: z.string().optional(),
+})
+
+export type OutputOptions = z.infer<typeof outputOptionsSchema>
 
 export type SourcemapIgnoreListOption = (
   relativeSourcePath: string,
@@ -12,151 +51,3 @@ export type SourcemapPathTransformOption = (
 ) => string
 
 type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
-
-export type InternalModuleFormat = 'es' | 'cjs'
-
-export type ModuleFormat = InternalModuleFormat | 'esm' | 'module' | 'commonjs'
-
-// Make sure port `OutputOptions` and `NormalizedOutputOptions` from rollup.
-export interface OutputOptions {
-  dir?: string
-  format?: ModuleFormat
-  exports?: 'default' | 'named' | 'none' | 'auto'
-  sourcemap?: boolean | 'inline' | 'hidden'
-  sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption
-  sourcemapPathTransform?: SourcemapPathTransformOption
-  banner?: string | AddonFunction
-  footer?: string | AddonFunction
-  entryFileNames?: string
-  chunkFileNames?: string
-}
-
-export type NormalizedOutputOptions = {
-  dir: string | undefined
-  format: InternalModuleFormat
-  exports: 'default' | 'named' | 'none' | 'auto'
-  sourcemap: boolean | 'inline' | 'hidden'
-  sourcemapIgnoreList: SourcemapIgnoreListOption
-  sourcemapPathTransform: SourcemapPathTransformOption | undefined
-  banner: AddonFunction
-  footer: AddonFunction
-  entryFileNames: string
-  chunkFileNames: string
-}
-
-function getFormat(
-  format: OutputOptions['format'],
-): NormalizedOutputOptions['format'] {
-  switch (format) {
-    case undefined:
-    case 'es':
-    case 'esm':
-    case 'module': {
-      return 'es'
-    }
-
-    case 'cjs':
-    case 'commonjs': {
-      return 'cjs'
-    }
-
-    default:
-      unimplemented(`output.format: ${format}`)
-  }
-}
-
-const getAddon = <T extends 'banner' | 'footer'>(
-  config: OutputOptions,
-  name: T,
-): NormalizedOutputOptions[T] => {
-  const configAddon = config[name]
-  if (typeof configAddon === 'function') {
-    return configAddon as NormalizedOutputOptions[T]
-  }
-  // TODO Here should be remove async
-  return async () => configAddon || ''
-}
-
-export function normalizeOutputOptions(
-  opts: OutputOptions,
-): NormalizedOutputOptions {
-  const {
-    dir,
-    format,
-    exports,
-    sourcemap,
-    sourcemapIgnoreList,
-    sourcemapPathTransform,
-    entryFileNames,
-    chunkFileNames,
-  } = opts
-  return {
-    dir: dir,
-    format: getFormat(format),
-    exports: exports ?? 'auto',
-    sourcemap: sourcemap ?? false,
-    sourcemapIgnoreList:
-      typeof sourcemapIgnoreList === 'function'
-        ? sourcemapIgnoreList
-        : sourcemapIgnoreList === false
-          ? () => false
-          : (relativeSourcePath: string, sourcemapPath: string) =>
-              relativeSourcePath.includes('node_modules'),
-    sourcemapPathTransform,
-    banner: getAddon(opts, 'banner'),
-    footer: getAddon(opts, 'footer'),
-    entryFileNames: entryFileNames ?? '[name].js',
-    chunkFileNames: chunkFileNames ?? '[name]-[hash].js',
-  }
-}
-
-function getBindingSourcemap(
-  sourcemap: OutputOptions['sourcemap'],
-): BindingOutputOptions['sourcemap'] {
-  switch (sourcemap) {
-    case true:
-      return 'file'
-
-    case 'inline':
-      return 'inline'
-
-    case false:
-    case undefined:
-    case 'hidden':
-      return 'hidden'
-
-    default:
-      throw new Error(`unknown sourcemap: ${sourcemap}`)
-  }
-}
-
-export function createOutputOptionsAdapter(
-  outputOptions: NormalizedOutputOptions,
-): BindingOutputOptions {
-  const {
-    dir,
-    format,
-    exports,
-    sourcemap,
-    sourcemapIgnoreList,
-    sourcemapPathTransform,
-    entryFileNames,
-    chunkFileNames,
-    banner,
-    footer,
-  } = outputOptions
-  return {
-    dir,
-    format,
-    exports,
-    sourcemap: getBindingSourcemap(sourcemap),
-    sourcemapIgnoreList,
-    sourcemapPathTransform,
-    banner,
-    footer,
-    entryFileNames,
-    chunkFileNames,
-    // TODO(sapphi-red): support parallel plugins
-    plugins: [],
-  }
-}

@@ -1,17 +1,16 @@
 import type {
   BindingHookResolveIdExtraOptions,
-  BindingTransformPluginContext,
   RenderedChunk,
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
 import type { SourceMapInput } from '../types/sourcemap'
 import { pathToFileURL } from 'node:url'
-import type { NormalizedOutputOptions } from '../options/output-options'
 import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
 import { PluginContext } from './plugin-context'
 import { TransformPluginContext } from './transfrom-plugin-context'
+import { NormalizedOutputOptions } from '@src/options/normalized-output-options'
 
 type FormalHook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> = {
   handler: Handler

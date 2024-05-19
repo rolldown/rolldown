@@ -3,7 +3,7 @@ use std::{fmt::Debug, sync::Arc};
 use crate::{
   types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
   ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
-  ResourceId, StmtInfo, StmtInfos, SymbolRef,
+  PackageJson, ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use oxc::span::Span;
 use oxc_index::IndexVec;
@@ -47,6 +47,7 @@ pub struct NormalModule {
   pub imported_ids: Vec<ResourceId>,
   // the module ids imported by this module via dynamic import()
   pub dynamically_imported_ids: Vec<ResourceId>,
+  pub package_json: Option<PackageJson>,
 }
 
 impl NormalModule {

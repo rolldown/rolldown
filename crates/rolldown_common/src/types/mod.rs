@@ -16,6 +16,7 @@ pub mod named_import;
 pub mod normal_module_id;
 pub mod output;
 pub mod output_chunk;
+pub mod package_json;
 pub mod rendered_chunk;
 pub mod rendered_module;
 pub mod resolved_export;

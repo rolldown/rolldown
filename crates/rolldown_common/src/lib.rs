@@ -54,6 +54,7 @@ pub use crate::{
   types::normal_module_id::NormalModuleId,
   types::output::{Output, OutputAsset},
   types::output_chunk::OutputChunk,
+  types::package_json::PackageJson,
   types::rendered_chunk::RenderedChunk,
   types::rendered_module::RenderedModule,
   types::resolved_export::ResolvedExport,

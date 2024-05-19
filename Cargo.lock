@@ -1862,6 +1862,7 @@ dependencies = [
  "rustc-hash",
  "schemars",
  "serde",
+ "serde_json",
  "sugar_path",
 ]
 

@@ -1,7 +1,12 @@
 use itertools::Itertools;
-use rolldown_common::{ImportKind, ModuleType, Platform, ResolveOptions, ResolvedPath};
+use rolldown_common::{
+  ImportKind, ModuleType, PackageJson, Platform, ResolveOptions, ResolvedPath,
+};
 use rolldown_fs::{FileSystem, OsFileSystem};
-use std::path::{Path, PathBuf};
+use std::{
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 use sugar_path::SugarPath;
 
 use oxc_resolver::{
@@ -121,6 +126,7 @@ impl<F: FileSystem + Default> Resolver<F> {
 pub struct ResolveReturn {
   pub path: ResolvedPath,
   pub module_type: ModuleType,
+  pub package_json: Option<PackageJson>,
 }
 
 impl<F: FileSystem + Default> Resolver<F> {
@@ -162,11 +168,13 @@ impl<F: FileSystem + Default> Resolver<F> {
 
     match resolution {
       Ok(info) => {
+        let package_json = info.package_json().map(|p| PackageJson::new(Arc::clone(p.raw_json())));
         let module_type = calc_module_type(&info);
         Ok(Ok(build_resolve_ret(
           info.full_path().to_str().expect("Should be valid utf8").to_string(),
           false,
           module_type,
+          package_json,
         )))
       }
       Err(err) => match err {
@@ -174,6 +182,7 @@ impl<F: FileSystem + Default> Resolver<F> {
           p.to_str().expect("Should be valid utf8").to_string(),
           true,
           ModuleType::Unknown,
+          None,
         ))),
         _ => Ok(Err(err)),
       },
@@ -200,6 +209,11 @@ fn calc_module_type(info: &Resolution) -> ModuleType {
   ModuleType::Unknown
 }
 
-fn build_resolve_ret(path: String, ignored: bool, module_type: ModuleType) -> ResolveReturn {
-  ResolveReturn { path: ResolvedPath { path: path.into(), ignored }, module_type }
+fn build_resolve_ret(
+  path: String,
+  ignored: bool,
+  module_type: ModuleType,
+  package_json: Option<PackageJson>,
+) -> ResolveReturn {
+  ResolveReturn { path: ResolvedPath { path: path.into(), ignored }, module_type, package_json }
 }

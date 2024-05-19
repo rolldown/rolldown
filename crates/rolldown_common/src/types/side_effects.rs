@@ -34,11 +34,11 @@ impl SideEffects {
 }
 
 fn glob_match_with_normalized_pattern(pattern: &str, path: &str) -> bool {
-  let trimed_start = pattern.trim_start_matches("./");
-  let normalized_glob = if trimed_start.contains('/') {
-    trimed_start.to_string()
+  let trimmed_str = pattern.trim_start_matches("./");
+  let normalized_glob = if trimmed_str.contains('/') {
+    trimmed_str.to_string()
   } else {
-    String::from("**/") + trimed_start
+    String::from("**/") + trimmed_str
   };
   glob_match::glob_match(&normalized_glob, path.trim_start_matches("./"))
 }

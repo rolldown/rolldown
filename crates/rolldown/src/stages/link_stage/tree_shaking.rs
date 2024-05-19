@@ -16,7 +16,7 @@ struct Context<'a> {
   runtime_id: NormalModuleId,
 }
 
-/// if no export is used, and the module has no side effedcts, the module should not be included
+/// if no export is used, and the module has no side effects, the module should not be included
 fn include_module(ctx: &mut Context, module: &NormalModule) {
   let is_included = ctx.is_module_included_vec[module.id];
   if is_included {
@@ -109,7 +109,7 @@ impl LinkStage<'_> {
 
     let mut module_side_effects: IndexVec<NormalModuleId, bool> =
       oxc_index::index_vec![false; self.module_table.normal_modules.len()];
-    
+
     let context = &mut Context {
       modules: &self.module_table.normal_modules,
       symbols: &self.symbols,

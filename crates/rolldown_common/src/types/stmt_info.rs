@@ -79,7 +79,6 @@ pub struct StmtInfo {
   pub referenced_symbols: Vec<SymbolRef>,
   pub side_effect: bool,
   pub is_included: bool,
-  pub is_export: bool,
   pub import_records: Vec<ImportRecordId>,
   pub debug_label: Option<String>,
 }

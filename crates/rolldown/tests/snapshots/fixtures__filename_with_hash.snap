@@ -203,7 +203,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/keep_names_class_static_name
 
-- $runtime$-!~{001}~.mjs => $runtime$-Fy0WDQC_.mjs
 - entry_js-!~{000}~.mjs => entry_js-s9lvs6K0.mjs
 
 # tests/esbuild/default/keep_names_tree_shaking
@@ -335,7 +334,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/var_relocating_bundle
 
-- $runtime$-!~{005}~.mjs => $runtime$-UX1yuiKl.mjs
 - function-nested_js-!~{004}~.mjs => function-nested_js-3Itl4oYw.mjs
 - function_js-!~{003}~.mjs => function_js-508d9udD.mjs
 - let_js-!~{002}~.mjs => let_js-NZtFdo_X.mjs
@@ -965,7 +963,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/splitting/duplicate_chunk_collision
 
-- $runtime$-!~{006}~.mjs => $runtime$-161d1E9X.mjs
 - a-!~{000}~.mjs => a-_w0taR1b.mjs
 - ab-!~{004}~.mjs => ab-cKY-d3KL.mjs
 - b-!~{001}~.mjs => b-olkBUWGd.mjs
@@ -1209,7 +1206,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/deconflict/default_function
 
-- $runtime$-!~{001}~.mjs => $runtime$-Fy0WDQC_.mjs
 - main-!~{000}~.mjs => main-mCrUgOwW.mjs
 - main-mCrUgOwW.mjs.map
 
@@ -1239,7 +1235,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/external/export_external
 
-- $runtime$-!~{001}~.mjs => $runtime$-Fy0WDQC_.mjs
 - main-!~{000}~.mjs => main-dVl9dQVv.mjs
 
 # tests/fixtures/function/external/implicit_import_external
@@ -1248,7 +1243,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/external/import_external
 
-- $runtime$-!~{001}~.mjs => $runtime$-Fy0WDQC_.mjs
 - main-!~{000}~.mjs => main-EY3aBkcP.mjs
 
 # tests/fixtures/function/external/keep_import_external_order
@@ -1379,7 +1373,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/rollup/assignment-patterns
 
-- $runtime$-!~{001}~.mjs => $runtime$-Fy0WDQC_.mjs
 - main-!~{000}~.mjs => main-M9e-PvSP.mjs
 
 # tests/fixtures/rollup/catch-scope-shadowing

@@ -1,4 +1,4 @@
-use crate::{ModuleType, ResolvedPath, PackageJson};
+use crate::{ModuleType, PackageJson, ResolvedPath};
 
 #[derive(Debug)]
 pub struct ResolvedRequestInfo {

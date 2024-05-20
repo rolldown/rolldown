@@ -20,7 +20,6 @@ itertools          = { workspace = true }
 once_cell          = { workspace = true }
 oxc                = { workspace = true }
 oxc_index          = { workspace = true }
-oxc_resolver       = { workspace = true }
 regex              = { workspace = true }
 rolldown_common    = { workspace = true }
 rolldown_error     = { workspace = true }

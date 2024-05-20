@@ -19,7 +19,6 @@ glob-match         = "0.2.1"
 once_cell          = { workspace = true }
 oxc                = { workspace = true, features = ["semantic"] }
 oxc_index          = { workspace = true }
-oxc_resolver       = { workspace = true }
 regex              = { workspace = true }
 rolldown_fs        = { workspace = true }
 rolldown_rstr      = { workspace = true }

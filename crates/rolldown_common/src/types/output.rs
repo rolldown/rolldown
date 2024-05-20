@@ -2,7 +2,7 @@ use crate::OutputChunk;
 
 #[derive(Debug)]
 pub struct OutputAsset {
-  pub file_name: String,
+  pub filename: String,
   pub source: String,
 }
 
@@ -13,10 +13,10 @@ pub enum Output {
 }
 
 impl Output {
-  pub fn file_name(&self) -> &str {
+  pub fn filename(&self) -> &str {
     match self {
-      Self::Chunk(chunk) => &chunk.file_name,
-      Self::Asset(asset) => &asset.file_name,
+      Self::Chunk(chunk) => &chunk.filename,
+      Self::Asset(asset) => &asset.filename,
     }
   }
 

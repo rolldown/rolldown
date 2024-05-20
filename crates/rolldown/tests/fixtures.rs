@@ -38,13 +38,13 @@ async fn filename_with_hash() {
 
     assets.assets.iter().for_each(|asset| match asset {
       Output::Asset(asset) => {
-        snapshot_output.push_str(&format!("- {}\n", asset.file_name));
+        snapshot_output.push_str(&format!("- {}\n", asset.filename));
       }
       Output::Chunk(chunk) => {
         snapshot_output.push_str(&format!(
           "- {} => {}\n",
-          chunk.preliminary_file_name.as_str(),
-          chunk.file_name.as_str()
+          chunk.preliminary_filename.as_str(),
+          chunk.filename.as_str()
         ));
       }
     });

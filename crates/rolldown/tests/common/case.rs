@@ -69,13 +69,13 @@ impl Case {
     }
 
     self.snapshot.push_str("# Assets\n\n");
-    assets.sort_by_key(|c| c.file_name().to_string());
+    assets.sort_by_key(|c| c.filename().to_string());
     let artifacts = assets
       .iter()
-      .filter(|asset| !asset.file_name().contains("$runtime$") && matches!(asset, Output::Chunk(_)))
+      .filter(|asset| !asset.filename().contains("$runtime$") && matches!(asset, Output::Chunk(_)))
       .flat_map(|asset| {
         [
-          Cow::Owned(format!("## {}\n", asset.file_name())),
+          Cow::Owned(format!("## {}\n", asset.filename())),
           "```js".into(),
           Cow::Borrowed(asset.content().trim()),
           "```".into(),
@@ -102,7 +102,7 @@ impl Case {
         Output::Chunk(chunk) => {
           vec![Cow::Owned(format!(
             "- {}, is_entry {}, is_dynamic_entry {}, exports {:?}",
-            chunk.file_name.as_str(),
+            chunk.filename.as_str(),
             chunk.is_entry,
             chunk.is_dynamic_entry,
             chunk.exports

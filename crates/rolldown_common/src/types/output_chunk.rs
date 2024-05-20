@@ -15,13 +15,13 @@ pub struct OutputChunk {
   pub module_ids: Vec<ResourceId>,
   pub exports: Vec<String>,
   // RenderedChunk
-  pub file_name: ResourceId,
+  pub filename: ResourceId,
   pub modules: FxHashMap<ResourceId, RenderedModule>,
   pub imports: Vec<ResourceId>,
   pub dynamic_imports: Vec<ResourceId>,
   // OutputChunk
   pub code: String,
   pub map: Option<SourceMap>,
-  pub sourcemap_file_name: Option<String>,
-  pub preliminary_file_name: String,
+  pub sourcemap_filename: Option<String>,
+  pub preliminary_filename: String,
 }

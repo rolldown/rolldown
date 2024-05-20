@@ -35,8 +35,8 @@ pub struct BundlerOptions {
   pub platform: Option<Platform>,
   pub shim_missing_exports: Option<bool>,
   // --- options for output
-  pub entry_file_names: Option<String>,
-  pub chunk_file_names: Option<String>,
+  pub entry_filenames: Option<String>,
+  pub chunk_filenames: Option<String>,
   pub dir: Option<String>,
   pub format: Option<OutputFormat>,
   pub sourcemap: Option<SourceMapType>,

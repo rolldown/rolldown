@@ -116,19 +116,19 @@ impl Fixture {
       _ => "mjs",
     };
 
-    if bundle_options.entry_file_names.is_none() {
+    if bundle_options.entry_filenames.is_none() {
       if with_hash {
-        bundle_options.entry_file_names = Some(format!("[name]-[hash].{output_ext}"));
+        bundle_options.entry_filenames = Some(format!("[name]-[hash].{output_ext}"));
       } else {
-        bundle_options.entry_file_names = Some(format!("[name].{output_ext}"));
+        bundle_options.entry_filenames = Some(format!("[name].{output_ext}"));
       }
     }
 
-    if bundle_options.chunk_file_names.is_none() {
+    if bundle_options.chunk_filenames.is_none() {
       if with_hash {
-        bundle_options.chunk_file_names = Some(format!("[name]-[hash].{output_ext}"));
+        bundle_options.chunk_filenames = Some(format!("[name]-[hash].{output_ext}"));
       } else {
-        bundle_options.chunk_file_names = Some(format!("[name].{output_ext}"));
+        bundle_options.chunk_filenames = Some(format!("[name].{output_ext}"));
       }
     }
 

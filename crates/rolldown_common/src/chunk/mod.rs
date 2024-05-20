@@ -41,14 +41,14 @@ impl Chunk {
     Self { modules, name, bits, kind, ..Self::default() }
   }
 
-  pub fn file_name_template<'a>(
+  pub fn filename_template<'a>(
     &mut self,
     options: &'a NormalizedBundlerOptions,
   ) -> &'a FilenameTemplate {
     if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined) {
-      &options.entry_file_names
+      &options.entry_filenames
     } else {
-      &options.chunk_file_names
+      &options.chunk_filenames
     }
   }
 

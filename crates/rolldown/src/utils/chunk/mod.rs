@@ -50,7 +50,7 @@ pub fn generate_rendered_chunk(
     facade_module_id: pre_rendered_chunk.facade_module_id,
     module_ids: pre_rendered_chunk.module_ids,
     exports: pre_rendered_chunk.exports,
-    file_name: chunk
+    filename: chunk
       .preliminary_filename
       .as_deref()
       .expect("should have preliminary_filename")

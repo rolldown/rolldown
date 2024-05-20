@@ -19,12 +19,9 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     external: raw_options.external,
     treeshake: raw_options.treeshake.unwrap_or(true),
     platform: raw_options.platform.unwrap_or(Platform::Browser),
-    entry_file_names: raw_options
-      .entry_file_names
-      .unwrap_or_else(|| "[name].js".to_string())
-      .into(),
-    chunk_file_names: raw_options
-      .chunk_file_names
+    entry_filenames: raw_options.entry_filenames.unwrap_or_else(|| "[name].js".to_string()).into(),
+    chunk_filenames: raw_options
+      .chunk_filenames
       .unwrap_or_else(|| "[name]-[hash].js".to_string())
       .into(),
     banner: raw_options.banner,

@@ -43,7 +43,7 @@
             "null"
           ]
         },
-        "chunkFileNames": {
+        "chunkFilenames": {
           "type": [
             "string",
             "null"
@@ -61,7 +61,7 @@
             "null"
           ]
         },
-        "entryFileNames": {
+        "entryFilenames": {
           "type": [
             "string",
             "null"

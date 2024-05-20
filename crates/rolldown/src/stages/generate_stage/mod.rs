@@ -100,14 +100,14 @@ impl<'a> GenerateStage<'a> {
     let chunks = finalize_chunks(&mut chunk_graph, chunks);
 
     let mut assets = vec![];
-    for ChunkRenderReturn { mut map, rendered_chunk, mut code, file_dir, preliminary_file_name } in
+    for ChunkRenderReturn { mut map, rendered_chunk, mut code, file_dir, preliminary_filename } in
       chunks
     {
       if let Some(map) = map.as_mut() {
-        map.set_file(&rendered_chunk.file_name);
+        map.set_file(&rendered_chunk.filename);
 
-        let map_file_name = format!("{}.map", rendered_chunk.file_name.as_str());
-        let map_path = file_dir.join(&map_file_name);
+        let map_filename = format!("{}.map", rendered_chunk.filename.as_str());
+        let map_path = file_dir.join(&map_filename);
 
         if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
           let mut x_google_ignore_list = vec![];
@@ -146,10 +146,10 @@ impl<'a> GenerateStage<'a> {
               }
             };
             assets.push(Output::Asset(Box::new(OutputAsset {
-              file_name: map_file_name.clone(),
+              filename: map_filename.clone(),
               source,
             })));
-            code.push_str(&format!("\n//# sourceMappingURL={map_file_name}"));
+            code.push_str(&format!("\n//# sourceMappingURL={map_filename}"));
           }
           SourceMapType::Inline => {
             let data_url = match map.to_data_url().map_err(BuildError::sourcemap_error) {
@@ -164,10 +164,10 @@ impl<'a> GenerateStage<'a> {
           SourceMapType::Hidden => {}
         }
       }
-      let sourcemap_file_name =
-        map.as_ref().map(|_| format!("{}.map", rendered_chunk.file_name.as_str()));
+      let sourcemap_filename =
+        map.as_ref().map(|_| format!("{}.map", rendered_chunk.filename.as_str()));
       assets.push(Output::Chunk(Box::new(OutputChunk {
-        file_name: rendered_chunk.file_name,
+        filename: rendered_chunk.filename,
         code,
         is_entry: rendered_chunk.is_entry,
         is_dynamic_entry: rendered_chunk.is_dynamic_entry,
@@ -178,16 +178,16 @@ impl<'a> GenerateStage<'a> {
         imports: rendered_chunk.imports,
         dynamic_imports: rendered_chunk.dynamic_imports,
         map,
-        sourcemap_file_name,
-        preliminary_file_name: preliminary_file_name.to_string(),
+        sourcemap_filename,
+        preliminary_filename: preliminary_filename.to_string(),
       })));
     }
 
     // Make sure order of assets are deterministic
     assets.sort_by_cached_key(|item| match item {
-      // TODO: use `preliminary_file_name` instead
-      Output::Asset(asset) => asset.file_name.to_string(),
-      Output::Chunk(chunk) => chunk.preliminary_file_name.to_string(),
+      // TODO: use `preliminary_filename` instead
+      Output::Asset(asset) => asset.filename.to_string(),
+      Output::Chunk(chunk) => chunk.preliminary_filename.to_string(),
     });
 
     Ok(BundleOutput {
@@ -260,7 +260,7 @@ impl<'a> GenerateStage<'a> {
       }
       let runtime_id = self.link_output.runtime.id();
 
-      let filename_template = chunk.file_name_template(self.options);
+      let filename_template = chunk.filename_template(self.options);
 
       let mut chunk_name =
         ensure_chunk_name(chunk, runtime_id, &self.link_output.module_table.normal_modules);

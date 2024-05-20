@@ -1,4 +1,4 @@
-pub mod file_name_template;
+pub mod filename_template;
 pub mod input_item;
 pub mod is_external;
 pub mod normalized_bundler_options;

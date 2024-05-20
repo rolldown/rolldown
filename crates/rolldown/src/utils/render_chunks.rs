@@ -27,7 +27,7 @@ pub async fn render_chunks<'a>(
         },
         rendered_chunk: chunk.rendered_chunk,
         file_dir: chunk.file_dir,
-        preliminary_file_name: chunk.preliminary_file_name,
+        preliminary_filename: chunk.preliminary_filename,
       })
   }))
   .await

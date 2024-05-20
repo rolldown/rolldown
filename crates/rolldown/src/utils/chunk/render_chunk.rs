@@ -18,7 +18,7 @@ pub struct ChunkRenderReturn {
   pub map: Option<SourceMap>,
   pub rendered_chunk: RenderedChunk,
   pub file_dir: PathBuf,
-  pub preliminary_file_name: ResourceId,
+  pub preliminary_filename: ResourceId,
 }
 
 use super::{
@@ -155,7 +155,7 @@ pub async fn render_chunk(
     map,
     rendered_chunk,
     file_dir: file_dir.to_path_buf(),
-    preliminary_file_name: this
+    preliminary_filename: this
       .preliminary_filename
       .as_deref()
       .expect("should have preliminary filename")

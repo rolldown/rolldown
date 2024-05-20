@@ -30,13 +30,13 @@ async function bundleInner(options: RolldownOptions) {
   const build = await rolldown(options)
   const bundleOutput = await build.write(options?.output)
 
-  const entTime = performance.now()
+  const endTime = performance.now()
 
   printBundleOutputPretty(bundleOutput)
 
   logger.log(``)
   logger.success(
-    `Finished in ${colors.bold((entTime - startTime).toFixed(2))} ms`,
+    `Finished in ${colors.bold((endTime - startTime).toFixed(2))} ms`,
   )
 }
 

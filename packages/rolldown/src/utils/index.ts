@@ -5,6 +5,7 @@ export * from './ensure-array'
 export * from './create-bundler'
 export * from './transform-sourcemap'
 export * from './transform-module-info'
+export * from './code-frame'
 
 export function arraify<T>(value: T | T[]): T[] {
   return Array.isArray(value) ? value : [value]

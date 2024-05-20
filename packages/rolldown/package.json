@@ -90,6 +90,7 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\n"
   },
   "devDependencies": {
+    "locate-character": "^3.0.0",
     "@napi-rs/cli": "^3.0.0-alpha",
     "@napi-rs/wasm-runtime": "^0.2.3",
     "citty": "^0.1.6",

@@ -33,7 +33,7 @@ export function bindingifyPlugin(
     resolveId: bindingifyResolveId(plugin, options),
     resolveDynamicImport: bindingifyResolveDynamicImport(plugin, options),
     buildEnd: bindingifyBuildEnd(plugin, options),
-    transform: bindingifyTransform(plugin.transform),
+    transform: bindingifyTransform(plugin, options),
     moduleParsed: bindingifyModuleParsed(plugin, options),
     load: bindingifyLoad(plugin, options),
     renderChunk: bindingifyRenderChunk(plugin, options, outputOptions),

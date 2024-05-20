@@ -1,3 +1,5 @@
+import { getCodeFrame } from '@src/utils'
+import { locate } from 'locate-character'
 import { RollupLog } from '../rollup'
 
 const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
@@ -43,4 +45,29 @@ export function error(base: Error | RollupLog): never {
     })
   }
   throw base
+}
+
+export function augmentCodeLocation(
+  properties: RollupLog,
+  pos: number | { column: number; line: number },
+  source: string,
+  id: string,
+): void {
+  if (typeof pos === 'object') {
+    const { line, column } = pos
+    properties.loc = { column, file: id, line }
+  } else {
+    properties.pos = pos
+    const location = locate(source, pos, { offsetLine: 1 })
+    if (!location) {
+      return
+    }
+    const { line, column } = location
+    properties.loc = { column, file: id, line }
+  }
+
+  if (properties.frame === undefined) {
+    const { line, column } = properties.loc
+    properties.frame = getCodeFrame(source, line, column)
+  }
 }

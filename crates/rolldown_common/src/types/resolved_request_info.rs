@@ -1,8 +1,4 @@
-use std::sync::Arc;
-
-use oxc_resolver::PackageJson;
-
-use crate::{ModuleType, PackageJson, ResolvedPath};
+use crate::{ModuleType, ResolvedPath, PackageJson};
 
 #[derive(Debug)]
 pub struct ResolvedRequestInfo {

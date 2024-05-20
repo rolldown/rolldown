@@ -142,6 +142,7 @@ impl NormalModuleTask {
       imported_ids,
       dynamically_imported_ids,
       package_json: self.package_json.take(),
+      side_effects: None,
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;

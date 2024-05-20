@@ -3,7 +3,6 @@ use rolldown_common::{
   ImportKind, ModuleType, PackageJson, Platform, ResolveOptions, ResolvedPath,
 };
 use rolldown_fs::{FileSystem, OsFileSystem};
-use std::sync::Arc;
 use std::{
   path::{Path, PathBuf},
   sync::Arc,
@@ -11,7 +10,7 @@ use std::{
 use sugar_path::SugarPath;
 
 use oxc_resolver::{
-  EnforceExtension, PackageJson, Resolution, ResolveError, ResolveOptions as OxcResolverOptions,
+  EnforceExtension, Resolution, ResolveError, ResolveOptions as OxcResolverOptions,
   ResolverGeneric, TsconfigOptions,
 };
 
@@ -169,7 +168,9 @@ impl<F: FileSystem + Default> Resolver<F> {
 
     match resolution {
       Ok(info) => {
-        let package_json = info.package_json().map(|p| PackageJson::new(Arc::clone(p.raw_json())));
+        let package_json = info
+          .package_json()
+          .map(|p| PackageJson::new(Arc::clone(p.raw_json()), p.realpath.clone()));
         let module_type = calc_module_type(&info);
         Ok(Ok(build_resolve_ret(
           info.full_path().to_str().expect("Should be valid utf8").to_string(),

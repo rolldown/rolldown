@@ -1,5 +1,4 @@
 use oxc_index::IndexVec;
-use oxc_resolver::PackageJson;
 use rolldown_common::{
   side_effects, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind,
   ImportRecordId, ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId,
@@ -27,19 +26,14 @@ use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<NormalModuleId, Option<NormalModule>>,
-  pub module_side_effects: IndexVec<NormalModuleId, Option<Arc<PackageJson>>>,
+  // pub module_side_effects: IndexVec<NormalModuleId, Option<PackageJson>>,
   pub ast_table: IndexVec<NormalModuleId, Option<OxcAst>>,
   pub importers: IndexVec<NormalModuleId, Vec<ImporterRecord>>,
 }
 
 impl IntermediateNormalModules {
   pub fn new() -> Self {
-    Self {
-      modules: IndexVec::new(),
-      ast_table: IndexVec::new(),
-      importers: IndexVec::new(),
-      module_side_effects: IndexVec::new(),
-    }
+    Self { modules: IndexVec::new(), ast_table: IndexVec::new(), importers: IndexVec::new() }
   }
 
   pub fn alloc_module_id(&mut self, symbols: &mut Symbols) -> NormalModuleId {
@@ -240,14 +234,14 @@ impl ModuleLoader {
                   kind: raw_rec.kind,
                   importer_path: module.resource_id.clone(),
                 });
-                if id >= self.intermediate_normal_modules.module_side_effects.len() {
-                  self
-                    .intermediate_normal_modules
-                    .module_side_effects
-                    .resize_with((id + 1).into(), Default::default);
-                }
-                self.intermediate_normal_modules.module_side_effects[id]
-                  .clone_from(&info.package_json);
+                // if id >= self.intermediate_normal_modules.module_side_effects.len() {
+                //   self
+                //     .intermediate_normal_modules
+                //     .module_side_effects
+                //     .resize_with((id + 1).into(), Default::default);
+                // }
+                // self.intermediate_normal_modules.module_side_effects[id] =
+                //   info.package_json.clone();
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
                 {
@@ -284,14 +278,22 @@ impl ModuleLoader {
       self.remaining -= 1;
     }
 
-    let mut modules: IndexVec<NormalModuleId, NormalModule> = self
+    let modules: IndexVec<NormalModuleId, NormalModule> = self
       .intermediate_normal_modules
       .modules
       .into_iter()
       .flatten()
       .enumerate()
       .map(|(id, mut module)| {
-        // dbg!(id, &module.pretty_path);
+        let module_path = &module.pretty_path;
+        let derived_side_effects = module.package_json.as_ref().and_then(|json| {
+          let relative = &json.realpath.parent()?.relative(&self.input_options.cwd);
+          let relative_path = module_path.relative(relative);
+          side_effects::SideEffects::from_description(&json.raw).map(|item| {
+            item.derive_side_effects_from_package_json(&relative_path.to_string_lossy())
+          })
+        });
+        module.side_effects = derived_side_effects;
         // Note: (Compat to rollup)
         // The `dynamic_importers/importers` should be added after `module_parsed` hook.
         for importer in std::mem::take(&mut self.intermediate_normal_modules.importers[id]) {
@@ -304,30 +306,6 @@ impl ModuleLoader {
         module
       })
       .collect();
-
-    let module_id_to_side_effects = self
-      .intermediate_normal_modules
-      .module_side_effects
-      .iter()
-      .enumerate()
-      .map(|(id, package_json)| {
-        // dbg!(&id, &package_json);
-        let module_path = &modules[id].pretty_path;
-        let res = package_json.as_ref().and_then(|json| {
-          let relative = &json.realpath.parent()?.relative(&self.input_options.cwd);
-          let relative_path = module_path.relative(relative);
-          side_effects::SideEffects::from_description(json.raw_json()).map(|item| {
-            item.derive_side_effects_from_package_json(&relative_path.to_string_lossy())
-          })
-        });
-        res
-      })
-      .collect::<Vec<_>>();
-    //
-    //
-    for (id, derived_side_effect) in module_id_to_side_effects.into_iter().enumerate() {
-      modules[id].side_effects = derived_side_effect;
-    }
 
     let ast_table: IndexVec<NormalModuleId, OxcAst> =
       self.intermediate_normal_modules.ast_table.into_iter().flatten().collect();

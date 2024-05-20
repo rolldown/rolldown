@@ -26,7 +26,7 @@ pub struct NormalModuleTask {
   ctx: Arc<TaskContext>,
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
-  package_json: Option<PackageJson>,
+  package_json: Option<Arc<PackageJson>>,
   module_type: ModuleType,
   errors: Vec<BuildError>,
   is_user_defined_entry: bool,
@@ -39,7 +39,7 @@ impl NormalModuleTask {
     path: ResolvedPath,
     module_type: ModuleType,
     is_user_defined_entry: bool,
-    package_json: Option<PackageJson>,
+    package_json: Option<Arc<PackageJson>>,
   ) -> Self {
     Self {
       ctx,

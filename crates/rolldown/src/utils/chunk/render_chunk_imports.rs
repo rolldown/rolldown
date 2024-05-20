@@ -71,18 +71,15 @@ pub fn render_chunk_imports(
         render_import_specifier(export_alias, local_binding)
       })
       .collect::<Vec<_>>();
-    let filename = importee_chunk
-      .preliminary_filename
-      .as_deref()
-      .expect("At this point, preliminary_filename should already be generated")
-      .as_str();
+
+    let import_path = chunk.import_path_for(importee_chunk);
 
     if import_items.is_empty() {
       // TODO: filename relative to importee
-      render_plain_import(&format!("./{filename}"), &mut s);
+      render_plain_import(&import_path, &mut s);
     } else {
       import_items.sort();
-      render_import_stmt(&import_items, &format!("./{filename}"), &mut s);
+      render_import_stmt(&import_items, &import_path, &mut s);
     }
   });
 

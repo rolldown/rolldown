@@ -1,0 +1,43 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/entry_filenames/should_generate_correct_relative_import_path
+---
+# Assets
+
+## ./chunks/async.mjs
+
+```js
+// async.js
+const value = 'async';
+
+export { value };
+```
+## ./chunks/shared.mjs
+
+```js
+// shared.js
+const value = 'shared';
+
+export { value };
+```
+## ./entries/a.mjs
+
+```js
+import { value } from "../chunks/shared.mjs";
+
+// a.js
+const asyncValue = import('../chunks/async.mjs');
+
+export { asyncValue, value };
+```
+## ./entries/b.mjs
+
+```js
+import { value } from "../chunks/shared.mjs";
+
+// b.js
+const asyncValue = import('../chunks/async.mjs');
+
+export { asyncValue, value };
+```

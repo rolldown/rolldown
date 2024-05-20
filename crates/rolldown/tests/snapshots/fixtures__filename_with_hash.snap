@@ -1225,6 +1225,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/errors/unresolved_entry
 
 
+# tests/fixtures/function/dir/should_generate_correct_relative_import_path
+
+- ./chunks/async.mjs => ./chunks/async.mjs
+- ./chunks/shared.mjs => ./chunks/shared.mjs
+- ./entries/a.mjs => ./entries/a.mjs
+- ./entries/b.mjs => ./entries/b.mjs
+
 # tests/fixtures/function/entry_filenames/should_generate_correct_relative_import_path
 
 - ./chunks/async.mjs => ./chunks/async.mjs

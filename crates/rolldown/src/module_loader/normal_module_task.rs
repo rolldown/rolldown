@@ -104,8 +104,6 @@ impl NormalModuleTask {
     let mut dynamically_imported_ids = vec![];
 
     for (record, info) in import_records.iter().zip(&resolved_deps) {
-      // dbg!(&info.path);
-      // dbg!(&info.package_json);
       if record.kind.is_static() {
         imported_ids.push(Arc::clone(&info.path.path).into());
       } else {
@@ -114,6 +112,14 @@ impl NormalModuleTask {
     }
 
     let resource_id = ResourceId::new(Arc::clone(&self.resolved_path.path));
+    let stable_resource_id = resource_id.stabilize(&self.ctx.input_options.cwd);
+
+    let side_effects = self
+      .package_json
+      .as_ref()
+      .and_then(|p| p.check_side_effects_for(&stable_resource_id))
+      .unwrap_or_else(|| stmt_infos.iter().any(|stmt_info| stmt_info.side_effect));
+    // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
 
     let module = NormalModule {
       source,
@@ -142,7 +148,7 @@ impl NormalModuleTask {
       imported_ids,
       dynamically_imported_ids,
       package_json: self.package_json.take(),
-      side_effects: None,
+      side_effects,
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;

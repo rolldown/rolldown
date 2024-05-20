@@ -125,7 +125,7 @@ impl NormalModuleTask {
       source,
       id: self.module_id,
       repr_name,
-      stable_resource_id: resource_id.stabilize(&self.ctx.input_options.cwd),
+      stable_resource_id,
       resource_id,
       named_imports,
       named_exports,

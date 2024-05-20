@@ -82,7 +82,7 @@ impl RuntimeNormalModuleTask {
       dynamic_importers: vec![],
       imported_ids: vec![],
       dynamically_imported_ids: vec![],
-      side_effects: None,
+      package_json: None,
     };
 
     if let Err(_err) =

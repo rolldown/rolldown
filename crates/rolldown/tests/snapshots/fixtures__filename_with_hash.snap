@@ -185,7 +185,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/import_fs_node_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-TE_F6vZL.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-OBYYRk4K.cjs
+- entry_js-!~{000}~.cjs => entry_js-98OoslfP.cjs
 
 # tests/esbuild/default/import_missing_common_js
 
@@ -200,6 +201,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - $runtime$-!~{001}~.mjs => $runtime$-Fy0WDQC_.mjs
 - entry_js-!~{000}~.mjs => entry_js-s9lvs6K0.mjs
+
+# tests/esbuild/default/keep_names_tree_shaking
+
+- entry_js-!~{000}~.mjs => entry_js-WU0XOvna.mjs
 
 # tests/esbuild/default/nested_common_js
 
@@ -537,7 +542,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_as_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-xqfVgBNO.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-OBYYRk4K.cjs
+- entry_js-!~{000}~.cjs => entry_js-lO9-PfCm.cjs
 
 # tests/esbuild/import_star/re_export_star_as_external_es6
 
@@ -550,7 +556,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-rud5zVrH.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-OBYYRk4K.cjs
+- entry_js-!~{000}~.cjs => entry_js-XWUyJeqD.cjs
 
 # tests/esbuild/import_star/re_export_star_external_es6
 
@@ -1179,12 +1186,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/deconflict/conflict_between_global_and_local_binding
 
 - $runtime$-!~{001}~.mjs => $runtime$-6wzC9jCL.mjs
-- main-!~{000}~.mjs => main-tOEcGaC9.mjs
+- main-!~{000}~.mjs => main-yq81GCoq.mjs
 
 # tests/fixtures/deconflict/conflict_between_imported_and_local_binding
 
 - $runtime$-!~{001}~.mjs => $runtime$-6wzC9jCL.mjs
-- main-!~{000}~.mjs => main-UgkBYeKd.mjs
+- main-!~{000}~.mjs => main-jGSEfPCH.mjs
 
 # tests/fixtures/deconflict/decl_complex_patterns
 
@@ -1214,14 +1221,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/deconflict/wrapped_esm_default_function
 
 - $runtime$-!~{001}~.mjs => $runtime$-vR6TnGxp.mjs
-- main-!~{000}~.mjs => main-Hwm0PQEH.mjs
-- main-Hwm0PQEH.mjs.map
+- main-!~{000}~.mjs => main-p6u6QFeo.mjs
+- main-p6u6QFeo.mjs.map
 
 # tests/fixtures/deconflict/wrapped_esm_export_named_function
 
 - $runtime$-!~{001}~.mjs => $runtime$-vR6TnGxp.mjs
-- main-!~{000}~.mjs => main-puld6Obw.mjs
-- main-puld6Obw.mjs.map
+- main-!~{000}~.mjs => main-_ZUi0Cvz.mjs
+- main-_ZUi0Cvz.mjs.map
 
 # tests/fixtures/errors/unresolved_entry
 
@@ -1247,8 +1254,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/function/external/splitting_with_external_module
 
 - entry-!~{001}~.mjs => entry-ahgOZOc1.mjs
-- main-!~{000}~.mjs => main-1dgL9psc.mjs
+- main-!~{000}~.mjs => main-LeJVwZoF.mjs
 - share-!~{002}~.mjs => share-eIGIrVeP.mjs
+
+# tests/fixtures/function/format/cjs/plain_import_should_not_introduce_to_esm
+
+- main-!~{000}~.cjs => main-rClOc9Ow.cjs
 
 # tests/fixtures/function/resolve/browser_filed_false
 
@@ -1378,6 +1389,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/rollup/preserve-for-of-iterable
 
 - main-!~{000}~.mjs => main-Jck2JIxa.mjs
+
+# tests/fixtures/rollup/same-binding
+
+- main-!~{000}~.mjs => main-iKxGvXgZ.mjs
 
 # tests/fixtures/rollup/simplify-with-destructuring
 

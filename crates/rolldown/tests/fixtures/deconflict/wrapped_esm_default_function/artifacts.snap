@@ -8,8 +8,8 @@ input_file: crates/rolldown/tests/fixtures/deconflict/wrapped_esm_default_functi
 ## main.mjs
 
 ```js
-import { default as assert } from "assert";
 import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
+import { default as assert } from "assert";
 
 // foo.js
 function foo$1(a$1$1) {

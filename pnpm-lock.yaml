@@ -174,7 +174,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.0.0-alpha
-        version: 3.0.0-alpha.55(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))
+        version: 3.0.0-alpha.55(@emnapi/runtime@1.1.1)(emnapi@1.2.0(node-addon-api@8.0.0))
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.3
         version: 0.2.4
@@ -191,14 +191,17 @@ importers:
         specifier: ^3.2.3
         version: 3.2.3
       emnapi:
-        specifier: ^1.1.1
-        version: 1.1.1(node-addon-api@8.0.0)
+        specifier: ^1.2.0
+        version: 1.2.0(node-addon-api@8.0.0)
       execa:
         specifier: ^9.1.0
         version: 9.1.0
       glob:
         specifier: ^10.3.12
         version: 10.3.15
+      locate-character:
+        specifier: ^3.0.0
+        version: 3.0.0
       mri:
         specifier: ^1.2.0
         version: 1.2.0
@@ -3403,8 +3406,8 @@ packages:
   electron-to-chromium@1.4.770:
     resolution: {integrity: sha512-ONwOsDiVvV07CMsyH4+dEaZ9L79HMH/ODHnDS3GkIhgNqdDHJN2C18kFb0fBj0RXpQywsPJl6k2Pqg1IY4r1ig==}
 
-  emnapi@1.1.1:
-    resolution: {integrity: sha512-md0YDBLCX+378+zzibHvOLsj28YKFy8vl7BiSzVocCY7HujOkYt+N5LCOYqLeYi5C5/5NlnkNweVdUjrvKpGNg==}
+  emnapi@1.2.0:
+    resolution: {integrity: sha512-rcq+dJCcfr08I0XM/57LPRqaUokGfni/+SvhO7NaJthTTjRdohhIy0FQwyC5rR1enAsjkldQg83th8J5hURv0Q==}
     peerDependencies:
       node-addon-api: '>= 6.1.0'
     peerDependenciesMeta:
@@ -3962,6 +3965,9 @@ packages:
   local-pkg@0.5.0:
     resolution: {integrity: sha512-ok6z3qlYyCDS4ZEU27HaU6x/xZa9Whf8jD4ptH5UZTQYZVYeb9bnZ3ojVhiJNLiXK1Hfc0GNbLXcmZ5plLDDBg==}
     engines: {node: '>=14'}
+
+  locate-character@3.0.0:
+    resolution: {integrity: sha512-SW13ws7BjaeJ6p7Q6CO2nchbYEc3X3J6WrmTTDto7yMPqVSZTUyY5Tjbid+Ab8gLnATtygYtiDIJGQRRn2ZOiA==}
 
   locate-path@6.0.0:
     resolution: {integrity: sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw==}
@@ -6703,7 +6709,7 @@ snapshots:
 
   '@ls-lint/ls-lint@2.2.3': {}
 
-  '@napi-rs/cli@3.0.0-alpha.55(@emnapi/runtime@1.1.1)(emnapi@1.1.1(node-addon-api@8.0.0))':
+  '@napi-rs/cli@3.0.0-alpha.55(@emnapi/runtime@1.1.1)(emnapi@1.2.0(node-addon-api@8.0.0))':
     dependencies:
       '@napi-rs/cross-toolchain': 0.0.16
       '@napi-rs/wasm-tools': 0.0.2
@@ -6720,7 +6726,7 @@ snapshots:
       wasm-sjlj: 1.0.5
     optionalDependencies:
       '@emnapi/runtime': 1.1.1
-      emnapi: 1.1.1(node-addon-api@8.0.0)
+      emnapi: 1.2.0(node-addon-api@8.0.0)
     transitivePeerDependencies:
       - '@napi-rs/cross-toolchain-arm64-target-aarch64'
       - '@napi-rs/cross-toolchain-arm64-target-armv7'
@@ -8413,7 +8419,7 @@ snapshots:
 
   electron-to-chromium@1.4.770: {}
 
-  emnapi@1.1.1(node-addon-api@8.0.0):
+  emnapi@1.2.0(node-addon-api@8.0.0):
     optionalDependencies:
       node-addon-api: 8.0.0
 
@@ -9012,6 +9018,8 @@ snapshots:
     dependencies:
       mlly: 1.7.0
       pkg-types: 1.1.1
+
+  locate-character@3.0.0: {}
 
   locate-path@6.0.0:
     dependencies:

@@ -3,12 +3,12 @@ use std::{fmt::Debug, sync::Arc};
 use crate::{
   types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
   ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
-  ResourceId, StmtInfo, StmtInfos, SymbolRef,
+  PackageJson, ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_rstr::Rstr;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 #[derive(Debug)]
 pub struct NormalModule {
@@ -49,10 +49,11 @@ pub struct NormalModule {
   pub dynamically_imported_ids: Vec<ResourceId>,
   /// SideEffects derived from package.json
   pub side_effects: Option<bool>,
+  pub package_json: Option<PackageJson>,
 }
 
 impl NormalModule {
-  pub fn star_export_modules(&self) -> impl Iterator<Item = ModuleId> + '_ {
+  pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleId> + '_ {
     self.star_exports.iter().map(|rec_id| {
       let rec = &self.import_records[*rec_id];
       rec.resolved_module
@@ -95,6 +96,52 @@ impl NormalModule {
   pub fn is_virtual(&self) -> bool {
     self.resource_id.starts_with('\0')
   }
+
+  // https://tc39.es/ecma262/#sec-getexportednames
+  pub fn get_exported_names<'modules>(
+    &'modules self,
+    export_star_set: &mut FxHashSet<NormalModuleId>,
+    modules: &'modules IndexVec<NormalModuleId, NormalModule>,
+    include_default: bool,
+    ret: &mut FxHashSet<&'modules Rstr>,
+  ) {
+    if export_star_set.contains(&self.id) {
+      return;
+    }
+
+    export_star_set.insert(self.id);
+
+    self
+      .star_export_module_ids()
+      .filter_map(ModuleId::as_normal)
+      .for_each(|id| modules[id].get_exported_names(export_star_set, modules, false, ret));
+    if include_default {
+      ret.extend(self.named_exports.keys());
+    } else {
+      ret.extend(self.named_exports.keys().filter(|name| name.as_str() != "default"));
+    }
+  }
+
+  // // https://tc39.es/ecma262/#sec-getexportednames
+  // pub fn get_exported_names<'module>(
+  //   &'module self,
+  //   export_star_set: &mut FxHashSet<NormalModuleId>,
+  //   ret: &mut FxHashSet<&'module Rstr>,
+  //   modules: &'module IndexVec<NormalModuleId, NormalModule>,
+  // ) {
+  //   if export_star_set.contains(&self.id) {
+  //     // noop
+  //   } else {
+  //     export_star_set.insert(self.id);
+  //     ret.extend(self.named_exports.keys().filter(|name| name.as_str() != "default"));
+  //     self.star_export_modules().for_each(|importee_id| match importee_id {
+  //       ModuleId::Normal(importee_id) => {
+  //         modules[importee_id].get_exported_names(export_star_set, ret, modules)
+  //       }
+  //       ModuleId::External(_) => {}
+  //     });
+  //   }
+  // }
 }
 
 #[derive(Debug)]

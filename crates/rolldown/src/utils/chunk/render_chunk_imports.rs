@@ -11,7 +11,6 @@ pub fn render_chunk_imports(
   options: &SharedOptions,
 ) -> String {
   let mut s = String::new();
-  let imports_from_external_modules = &chunk.imports_from_external_modules;
 
   let render_import_specifier = |imported: &str, alias: &str| match options.format {
     rolldown_common::OutputFormat::Esm => {
@@ -57,42 +56,6 @@ pub fn render_chunk_imports(
       }
     };
 
-  imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
-    let importee = &graph.module_table.external_modules[*importee_id];
-    let mut is_importee_imported = false;
-    let mut import_items = named_imports
-      .iter()
-      .filter_map(|item| {
-        let canonical_ref = graph.symbols.par_canonical_ref_for(item.imported_as);
-        let alias = &chunk.canonical_names[&canonical_ref];
-        match &item.imported {
-          Specifier::Star => {
-            is_importee_imported = true;
-            let importee_name = &importee.name;
-            match options.format {
-              rolldown_common::OutputFormat::Esm => {
-                s.push_str(&format!("import * as {alias} from \"{importee_name}\";\n",));
-              }
-              rolldown_common::OutputFormat::Cjs => {
-                s.push_str(&format!("const {alias} = require(\"{importee_name}\");\n",));
-              }
-            }
-
-            None
-          }
-          Specifier::Literal(imported) => Some(render_import_specifier(imported, alias)),
-        }
-      })
-      .collect::<Vec<_>>();
-    import_items.sort();
-    if !import_items.is_empty() {
-      render_import_stmt(&import_items, &importee.name, &mut s);
-    } else if !is_importee_imported {
-      // Ensure the side effect
-      render_plain_import(&importee.name, &mut s);
-    }
-  });
-
   // render imports from other chunks
 
   chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
@@ -120,6 +83,70 @@ pub fn render_chunk_imports(
     } else {
       import_items.sort();
       render_import_stmt(&import_items, &format!("./{filename}"), &mut s);
+    }
+  });
+
+  // render external imports
+  let imports_from_external_modules = &chunk.imports_from_external_modules;
+
+  if imports_from_external_modules.is_empty() {
+    return s;
+  }
+
+  imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
+    let importee = &graph.module_table.external_modules[*importee_id];
+    let mut is_importee_imported = false;
+    let mut import_items = named_imports
+      .iter()
+      .filter_map(|item| {
+        let canonical_ref = graph.symbols.par_canonical_ref_for(item.imported_as);
+        let alias = &chunk.canonical_names[&canonical_ref];
+        match &item.imported {
+          Specifier::Star => {
+            is_importee_imported = true;
+            let importee_name = &importee.name;
+            match options.format {
+              rolldown_common::OutputFormat::Esm => {
+                s.push_str(&format!("import * as {alias} from \"{importee_name}\";\n",));
+              }
+              rolldown_common::OutputFormat::Cjs => {
+                let to_esm_fn_name = &chunk.canonical_names
+                  [&graph.symbols.par_canonical_ref_for(graph.runtime.resolve_symbol("__toESM"))];
+                s.push_str(&format!(
+                  "const {alias} = {to_esm_fn_name}(require(\"{importee_name}\"));\n",
+                ));
+              }
+            }
+
+            None
+          }
+          Specifier::Literal(imported) => Some(render_import_specifier(imported, alias)),
+        }
+      })
+      .collect::<Vec<_>>();
+    import_items.sort();
+    if !import_items.is_empty() {
+      match options.format {
+        rolldown_common::OutputFormat::Esm => {
+          s.push_str(&format!(
+            "import {{ {} }} from \"{importee_module_specifier}\";\n",
+            import_items.join(", "),
+            importee_module_specifier = &importee.name
+          ));
+        }
+        rolldown_common::OutputFormat::Cjs => {
+          let to_esm_fn_name = &chunk.canonical_names
+            [&graph.symbols.par_canonical_ref_for(graph.runtime.resolve_symbol("__toESM"))];
+          s.push_str(&format!(
+            "const {{ {} }} = {to_esm_fn_name}(require(\"{importee_module_specifier}\"));\n",
+            import_items.join(", "),
+            importee_module_specifier = &importee.name
+          ));
+        }
+      }
+    } else if !is_importee_imported {
+      // Ensure the side effect
+      render_plain_import(&importee.name, &mut s);
     }
   });
   s

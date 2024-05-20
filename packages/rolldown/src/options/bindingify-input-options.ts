@@ -2,8 +2,8 @@ import { BindingInputOptions } from '../binding'
 import nodePath from 'node:path'
 import { bindingifyPlugin } from '../plugin/bindingify-plugin'
 import type { NormalizedInputOptions } from './normalized-input-options'
-import { NormalizedOutputOptions } from './output-options'
 import { arraify } from '@src/utils'
+import { NormalizedOutputOptions } from './normalized-output-options'
 
 export function bindingifyInputOptions(
   options: NormalizedInputOptions,

@@ -1,0 +1,24 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/keep_names_tree_shaking
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+// entry.js
+function fnStmtKeep() {
+}
+x = fnStmtKeep;
+let fnExprKeep = function keep() {
+};
+x = fnExprKeep;
+class clsStmtKeep {
+}
+new clsStmtKeep();
+let clsExprKeep = class keep {
+};
+new clsExprKeep();
+```

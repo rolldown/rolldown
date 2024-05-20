@@ -75,5 +75,6 @@ pub async fn resolve_id_with_plugins(
     module_type: resolved.module_type,
     package_json: resolved.package_json,
     is_external: false,
+    package_json: resolved.package_json,
   }))
 }

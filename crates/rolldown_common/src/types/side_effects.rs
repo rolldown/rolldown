@@ -42,7 +42,7 @@ impl SideEffects {
 }
 
 /// Possible patterns in `sideEffects` field:
-/// - `./src/some-side-effectful-file.js`
+/// - `./src/some-side-effect-file.js`
 /// - `*.css`
 /// - `**/*.css`
 /// - `./esnext/index.js`

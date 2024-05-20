@@ -100,15 +100,26 @@ export function bindingifyResolveDynamicImport(
 }
 
 export function bindingifyTransform(
-  hook?: Plugin['transform'],
+  plugin: Plugin,
+  options: NormalizedInputOptions,
 ): BindingPluginOptions['transform'] {
+  const hook = plugin.transform
   if (!hook) {
     return undefined
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, code, id) => {
-    const ret = await handler.call(new TransformPluginContext(ctx), code, id)
+    const ret = await handler.call(
+      new TransformPluginContext(
+        ctx,
+        new PluginContext(options, ctx.inner(), plugin),
+        code,
+        id,
+      ),
+      code,
+      id,
+    )
 
     if (ret == null) {
       return

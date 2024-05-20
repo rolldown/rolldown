@@ -10,6 +10,7 @@ use crate::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     symbols::Symbols,
   },
+  SharedOptions,
 };
 
 pub struct FinalizerContext<'me> {
@@ -22,4 +23,5 @@ pub struct FinalizerContext<'me> {
   pub canonical_names: &'me FxHashMap<SymbolRef, Rstr>,
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,
+  pub options: &'me SharedOptions,
 }

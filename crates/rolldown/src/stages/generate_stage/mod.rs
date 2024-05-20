@@ -8,7 +8,10 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use rolldown_utils::{
+  path_buf_ext::PathBufExt,
+  rayon::{ParallelBridge, ParallelIterator},
+};
 use sugar_path::SugarPath;
 
 use crate::{
@@ -82,6 +85,7 @@ impl<'a> GenerateStage<'a> {
             linking_infos: &self.link_output.metas,
             runtime: &self.link_output.runtime,
             chunk_graph: &chunk_graph,
+            options: self.options,
           },
           ast,
         );
@@ -281,6 +285,8 @@ impl<'a> GenerateStage<'a> {
         hash: hash_placeholder.as_deref(),
       });
 
+      chunk.absolute_preliminary_filename =
+        Some(preliminary.absolutize_with(&self.options.dir).expect_into_string());
       chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));
     });
   }

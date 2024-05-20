@@ -412,12 +412,17 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
         let importee_id = rec.resolved_module;
         match importee_id {
           ModuleId::Normal(importee_id) => {
-            let chunk_id = self.ctx.chunk_graph.module_to_chunk[importee_id]
+            let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.id]
               .expect("Normal module should belong to a chunk");
-            let chunk = &self.ctx.chunk_graph.chunks[chunk_id];
-            str.value = self
-              .snippet
-              .atom(&format!("./{}", &**chunk.preliminary_filename.as_deref().unwrap()));
+            let importer_chunk = &self.ctx.chunk_graph.chunks[importer_chunk_id];
+
+            let importee_chunk_id = self.ctx.chunk_graph.module_to_chunk[importee_id]
+              .expect("Normal module should belong to a chunk");
+            let importee_chunk = &self.ctx.chunk_graph.chunks[importee_chunk_id];
+
+            let import_path = importer_chunk.import_path_for(importee_chunk);
+
+            str.value = self.snippet.atom(&import_path);
           }
           ModuleId::External(_) => {
             // external module doesn't belong to any chunk, just keep this as it is

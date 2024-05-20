@@ -8,7 +8,7 @@ pub struct TestConfig {
   #[serde(default)]
   pub config: rolldown_common::BundlerOptions,
   #[serde(default = "true_by_default")]
-  /// If `false`, the compiled artifacts won't be executed.
+  /// If `false`, the compiled artifacts won't be executed, but `_test.mjs` will be still executed if exists.
   pub expect_executed: bool,
   #[serde(default)]
   /// If `true`, the fixture are expected to fail to compile/build.

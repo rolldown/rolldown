@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/tree_shaking/multi_declaration
+---
+# Assets
+
+## main1.mjs
+
+```js
+// share.js
+const a = 100;
+
+// main1.js
+console.log(a);
+```
+
+## Output Stats
+
+- main1.mjs, is_entry true, is_dynamic_entry false, exports []

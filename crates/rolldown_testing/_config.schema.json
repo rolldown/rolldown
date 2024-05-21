@@ -175,15 +175,15 @@
         {
           "type": "string",
           "enum": [
-            "Browser",
-            "Neutral"
+            "browser",
+            "neutral"
           ]
         },
         {
           "description": "Represents the Node.js platform.",
           "type": "string",
           "enum": [
-            "Node"
+            "node"
           ]
         }
       ]

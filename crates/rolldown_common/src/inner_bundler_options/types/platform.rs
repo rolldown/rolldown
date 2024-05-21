@@ -5,6 +5,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "deserialize_bundler_options", derive(Deserialize, JsonSchema))]
+#[cfg_attr(feature = "deserialize_bundler_options", serde(rename_all = "camelCase"))]
 pub enum Platform {
   /// Represents the Node.js platform.
   Node,

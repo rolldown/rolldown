@@ -6,7 +6,7 @@
         "import": "./lib/msw-config.ts"
       }
     ],
-    "platform": "Node"
+    "platform": "node"
   },
   "expectError": true
 }

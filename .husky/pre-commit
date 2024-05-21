@@ -1,0 +1,4 @@
+npx lint-staged
+npm run lint-spell
+npm run lint-prettier
+npm run lint-toml

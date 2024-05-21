@@ -7,6 +7,7 @@
     "node": ">=18.18.0"
   },
   "scripts": {
+    "prepare": "husky",
     "lint-code": "oxlint --ignore-path=./.oxlintignore --import-plugin --deny-warnings",
     "lint-filename": "echo 'TODO: ls-lint is too slow now'",
     "lint-filename:bak": "ls-lint",
@@ -45,5 +46,11 @@
     "singleQuote": true,
     "trailingComma": "all",
     "arrowParens": "always"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,md,yml,yaml,vue}": [
+      "prettier --write",
+      "git add"
+    ]
   }
 }

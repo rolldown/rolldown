@@ -686,6 +686,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-aooHLG4F.mjs
 
+# tests/esbuild/packagejson/test_common_js_variable_in_esm_type_module
+
+- $runtime$-!~{001}~.mjs => $runtime$-6wzC9jCL.mjs
+- entry-!~{000}~.mjs => entry-xr-wOazA.mjs
+
 # tests/esbuild/packagejson/test_package_json_bad_main
 
 - $runtime$-!~{001}~.mjs => $runtime$-aUKPtNTY.mjs

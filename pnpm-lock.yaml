@@ -193,6 +193,9 @@ importers:
       emnapi:
         specifier: ^1.2.0
         version: 1.2.0(node-addon-api@8.0.0)
+      esbuild:
+        specifier: ^0.21.0
+        version: 0.21.3
       execa:
         specifier: ^9.1.0
         version: 9.1.0

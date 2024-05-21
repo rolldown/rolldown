@@ -19,7 +19,8 @@ pub struct NormalModule {
   pub resource_id: ResourceId,
   /// `stable_resource_id` is calculated based on `resource_id` to be stable across machine and os.
   pub stable_resource_id: String,
-  pub pretty_path: String,
+  // Pretty resource id for debug
+  pub debug_resource_id: String,
   /// Representative name of `FilePath`, which is created by `FilePath#representative_name` belong to `resource_id`
   pub repr_name: String,
   pub module_type: ModuleType,

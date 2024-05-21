@@ -22,7 +22,7 @@ pub fn render_normal_module<'a>(
 
     Some(ModuleRenderOutput {
       module_path: module.resource_id.clone(),
-      module_pretty_path: &module.pretty_path,
+      module_pretty_path: &module.debug_resource_id,
       rendered_module: RenderedModule { code: None },
       // Search lines count from rendered content has a little overhead, so make it at parallel.
       lines_count: lines_count(&render_output.source_text),

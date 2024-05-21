@@ -948,6 +948,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - $runtime$-!~{001}~.mjs => $runtime$-aUKPtNTY.mjs
 - entry-!~{000}~.mjs => entry-UoUzFxo1.mjs
 
+# tests/esbuild/packagejson/test_package_json_subpath_import_node_builtin_issue3485
+
+- entry-!~{000}~.mjs => entry-cZBBdjsb.mjs
+
 # tests/esbuild/packagejson/test_package_json_type_should_be_types
 
 - entry-!~{000}~.mjs => entry-6RW6pzd1.mjs

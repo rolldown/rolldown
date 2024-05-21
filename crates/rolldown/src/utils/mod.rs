@@ -9,6 +9,7 @@ pub mod extract_hash_pattern;
 pub mod hash_placeholder;
 pub mod load_source;
 pub mod normalize_options;
+pub mod parse_to_ast;
 pub mod renamer;
 pub mod render_chunks;
 pub mod render_normal_module;

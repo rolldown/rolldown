@@ -24,8 +24,7 @@ impl OxcAst {
 
   pub fn make_symbol_table_and_scope_tree(&self) -> (SymbolTable, ScopeTree) {
     self.inner.with_dependent(|dep, program| {
-      // FIXME: Should not use default source type
-      let semantic = Self::make_semantic(&dep.0, program, SourceType::default());
+      let semantic = Self::make_semantic(&dep.0, program, self.source_type);
       semantic.into_symbol_table_and_scope_tree()
     })
   }

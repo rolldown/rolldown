@@ -19,6 +19,7 @@ self_cell!(
 /// `OxcAst` is a wrapper of `Program` that provides a safe way to treat `Program<'ast>` as as owned value without considering the lifetime of `'ast`.
 pub struct OxcAst {
   pub(crate) inner: Inner,
+  pub source_type: SourceType,
 }
 
 impl OxcAst {

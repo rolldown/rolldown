@@ -990,11 +990,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - foo-!~{001}~.mjs => foo-y4QWWTtX.mjs
 - main-!~{000}~.mjs => main-aZfKZWQl.mjs
 
+# tests/esbuild/splitting/dynamic_and_not_dynamic_commonjs_into_es6
+
+- $runtime$-!~{003}~.mjs => $runtime$-jJEZqZu9.mjs
+- foo-!~{001}~.mjs => foo-3IYD1jk9.mjs
+- foo~1-!~{002}~.mjs => foo~1-3uh3qeiy.mjs
+- main-!~{000}~.mjs => main-6b_Z-Jkw.mjs
+
 # tests/esbuild/splitting/dynamic_and_not_dynamic_es6_into_es6
 
 - foo-!~{001}~.mjs => foo-O6enMBv0.mjs
 - foo~1-!~{002}~.mjs => foo~1-Sof3A-nJ.mjs
-- main-!~{000}~.mjs => main-8i8JF42P.mjs
+- main-!~{000}~.mjs => main-tRMbAGeX.mjs
 
 # tests/esbuild/splitting/dynamic_import_issue_272
 

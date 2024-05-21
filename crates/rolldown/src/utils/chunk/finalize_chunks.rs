@@ -102,7 +102,7 @@ pub fn finalize_chunks(
         replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder)
           .into();
       chunk.filename = Some(filename.clone());
-      chunk_render_return.rendered_chunk.file_name = filename;
+      chunk_render_return.rendered_chunk.filename = filename;
       chunk_render_return.code = replace_facade_hash_replacement(
         std::mem::take(&mut chunk_render_return.code),
         &final_hashes_by_placeholder,

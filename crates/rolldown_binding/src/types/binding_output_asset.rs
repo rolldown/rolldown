@@ -13,7 +13,7 @@ impl BindingOutputAsset {
 
   #[napi(getter)]
   pub fn file_name(&self) -> String {
-    self.inner.file_name.clone()
+    self.inner.filename.clone()
   }
 
   #[napi(getter)]

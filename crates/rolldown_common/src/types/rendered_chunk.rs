@@ -11,7 +11,7 @@ pub struct RenderedChunk {
   pub module_ids: Vec<ResourceId>,
   pub exports: Vec<String>,
   // RenderedChunk
-  pub file_name: ResourceId,
+  pub filename: ResourceId,
   pub modules: FxHashMap<ResourceId, RenderedModule>,
   pub imports: Vec<ResourceId>,
   pub dynamic_imports: Vec<ResourceId>,

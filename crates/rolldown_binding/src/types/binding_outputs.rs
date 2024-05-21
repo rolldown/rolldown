@@ -43,7 +43,7 @@ impl BindingOutputs {
 
   #[napi]
   pub fn delete(&mut self, file_name: String) {
-    if let Some(index) = self.inner.iter().position(|o| o.file_name() == file_name) {
+    if let Some(index) = self.inner.iter().position(|o| o.filename() == file_name) {
       self.inner.remove(index);
     }
   }

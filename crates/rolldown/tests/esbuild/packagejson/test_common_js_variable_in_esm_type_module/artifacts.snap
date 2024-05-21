@@ -1,0 +1,19 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_common_js_variable_in_esm_type_module
+---
+# Assets
+
+## entry.mjs
+
+```js
+import { __commonJSMin } from "./$runtime$.mjs";
+
+// entry.js
+var require_entry = __commonJSMin((exports, module) => {
+	module.exports = null;
+});
+
+export default require_entry();
+```

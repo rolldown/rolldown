@@ -9,7 +9,7 @@ mod types;
 pub mod bundler_options {
   pub use crate::inner_bundler_options::{
     types::{
-      file_name_template::{FileNameRenderOptions, FilenameTemplate},
+      filename_template::{FileNameRenderOptions, FilenameTemplate},
       input_item::InputItem,
       is_external::IsExternal,
       normalized_bundler_options::NormalizedBundlerOptions,

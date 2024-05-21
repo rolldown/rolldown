@@ -6,8 +6,9 @@ use crate::{
 pub mod types;
 
 use rolldown_rstr::Rstr;
-use rolldown_utils::BitSet;
+use rolldown_utils::{path_ext::PathExt, BitSet};
 use rustc_hash::FxHashMap;
+use sugar_path::SugarPath;
 
 use self::types::{
   cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
@@ -20,6 +21,7 @@ pub struct Chunk {
   pub name: Option<String>,
   pub filename: Option<ResourceId>,
   pub preliminary_filename: Option<PreliminaryFilename>,
+  pub absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Rstr>,
   // Sorted by resource_id of modules in the chunk
   pub cross_chunk_imports: Vec<ChunkId>,
@@ -41,14 +43,14 @@ impl Chunk {
     Self { modules, name, bits, kind, ..Self::default() }
   }
 
-  pub fn file_name_template<'a>(
+  pub fn filename_template<'a>(
     &mut self,
     options: &'a NormalizedBundlerOptions,
   ) -> &'a FilenameTemplate {
     if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined) {
-      &options.entry_file_names
+      &options.entry_filenames
     } else {
-      &options.chunk_file_names
+      &options.chunk_filenames
     }
   }
 
@@ -60,5 +62,18 @@ impl Chunk {
     // TODO: Wether a chunk has side effect is determined by wether it's module has side effect
     // Now we just return `true`
     true
+  }
+
+  pub fn import_path_for(&self, importee: &Chunk) -> String {
+    let importer_dir =
+      self.absolute_preliminary_filename.as_ref().unwrap().as_path().parent().unwrap();
+    let importee_filename = importee.absolute_preliminary_filename.as_ref().unwrap();
+    let import_path = importee_filename.relative(importer_dir).as_path().expect_to_slash();
+
+    if import_path.starts_with('.') {
+      import_path
+    } else {
+      format!("./{import_path}")
+    }
   }
 }

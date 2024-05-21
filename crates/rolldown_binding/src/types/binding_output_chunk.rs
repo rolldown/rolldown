@@ -44,7 +44,7 @@ impl BindingOutputChunk {
   // RenderedChunk
   #[napi(getter)]
   pub fn file_name(&self) -> String {
-    self.inner.file_name.to_string()
+    self.inner.filename.to_string()
   }
 
   #[napi(getter)]
@@ -105,11 +105,11 @@ impl BindingOutputChunk {
 
   #[napi(getter)]
   pub fn sourcemap_file_name(&self) -> Option<String> {
-    self.inner.sourcemap_file_name.clone()
+    self.inner.sourcemap_filename.clone()
   }
 
   #[napi(getter)]
   pub fn preliminary_file_name(&self) -> String {
-    self.inner.preliminary_file_name.to_string()
+    self.inner.preliminary_filename.to_string()
   }
 }

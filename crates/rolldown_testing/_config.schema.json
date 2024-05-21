@@ -17,7 +17,7 @@
       "type": "boolean"
     },
     "expectExecuted": {
-      "description": "If `false`, the compiled artifacts won't be executed.",
+      "description": "If `false`, the compiled artifacts won't be executed, but `_test.mjs` will be still executed if exists.",
       "default": true,
       "type": "boolean"
     },
@@ -43,7 +43,7 @@
             "null"
           ]
         },
-        "chunkFileNames": {
+        "chunkFilenames": {
           "type": [
             "string",
             "null"
@@ -61,7 +61,7 @@
             "null"
           ]
         },
-        "entryFileNames": {
+        "entryFilenames": {
           "type": [
             "string",
             "null"

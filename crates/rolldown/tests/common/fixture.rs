@@ -41,42 +41,46 @@ impl Fixture {
   pub fn exec(&self) {
     let test_config = self.test_config();
 
-    if !test_config.expect_executed || test_config.expect_error {
-      return;
-    }
+    let mut command = Command::new("node");
 
-    let dist_folder = self.dir_path().join("dist");
     let test_script = self.dir_path().join("_test.mjs");
 
-    let is_output_cjs = matches!(test_config.config.format, Some(OutputFormat::Cjs));
+    if !test_config.expect_executed || test_config.expect_error {
+      // do nothing
+    } else {
+      // Notices, we now don't have the finalized `dir` value, so we assume the `dist` folder is the output folder. But this cause
+      // problem once `entry_filenames` or `dir` is configured using a different folder.
+      let dist_folder = self.dir_path().join("dist");
 
-    let compiled_entries = test_config
-      .config
-      .input
-      .unwrap_or_else(|| vec![default_test_input_item()])
-      .iter()
-      .map(|item| {
-        let name = item.name.clone().expect("inputs must have `name` in `_config.json`");
-        let ext = if is_output_cjs { "cjs" } else { "mjs" };
-        format!("{name}.{ext}",)
-      })
-      .map(|name| dist_folder.join(name))
-      .collect::<Vec<_>>();
+      let is_output_cjs = matches!(test_config.config.format, Some(OutputFormat::Cjs));
 
-    let mut command = Command::new("node");
-    compiled_entries.iter().for_each(|entry| {
-      if is_output_cjs {
-        command.arg("--require");
-      } else {
-        command.arg("--import");
-      }
-      if cfg!(target_os = "windows") && !is_output_cjs {
-        // Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs.
-        command.arg(format!("file://{}", entry.to_str().expect("should be valid utf8")));
-      } else {
-        command.arg(entry);
-      }
-    });
+      let compiled_entries = test_config
+        .config
+        .input
+        .unwrap_or_else(|| vec![default_test_input_item()])
+        .iter()
+        .map(|item| {
+          let name = item.name.clone().expect("inputs must have `name` in `_config.json`");
+          let ext = if is_output_cjs { "cjs" } else { "mjs" };
+          format!("{name}.{ext}",)
+        })
+        .map(|name| dist_folder.join(name))
+        .collect::<Vec<_>>();
+
+      compiled_entries.iter().for_each(|entry| {
+        if is_output_cjs {
+          command.arg("--require");
+        } else {
+          command.arg("--import");
+        }
+        if cfg!(target_os = "windows") && !is_output_cjs {
+          // Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs.
+          command.arg(format!("file://{}", entry.to_str().expect("should be valid utf8")));
+        } else {
+          command.arg(entry);
+        }
+      });
+    }
 
     if test_script.exists() {
       command.arg(test_script);
@@ -116,19 +120,19 @@ impl Fixture {
       _ => "mjs",
     };
 
-    if bundle_options.entry_file_names.is_none() {
+    if bundle_options.entry_filenames.is_none() {
       if with_hash {
-        bundle_options.entry_file_names = Some(format!("[name]-[hash].{output_ext}"));
+        bundle_options.entry_filenames = Some(format!("[name]-[hash].{output_ext}"));
       } else {
-        bundle_options.entry_file_names = Some(format!("[name].{output_ext}"));
+        bundle_options.entry_filenames = Some(format!("[name].{output_ext}"));
       }
     }
 
-    if bundle_options.chunk_file_names.is_none() {
+    if bundle_options.chunk_filenames.is_none() {
       if with_hash {
-        bundle_options.chunk_file_names = Some(format!("[name]-[hash].{output_ext}"));
+        bundle_options.chunk_filenames = Some(format!("[name]-[hash].{output_ext}"));
       } else {
-        bundle_options.chunk_file_names = Some(format!("[name].{output_ext}"));
+        bundle_options.chunk_filenames = Some(format!("[name].{output_ext}"));
       }
     }
 

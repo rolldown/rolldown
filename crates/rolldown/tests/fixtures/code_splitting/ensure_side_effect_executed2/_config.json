@@ -1,6 +1,4 @@
 {
-  "_comment": "`sideEffects` in `shared.js` is not defined, so the input is invalid in the first place.",
-  "expectExecuted": false,
   "config": {
     "input": [
       {

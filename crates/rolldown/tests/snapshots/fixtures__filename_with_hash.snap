@@ -694,6 +694,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-aooHLG4F.mjs
 
+# tests/esbuild/packagejson/test_common_js_variable_in_esm_type_module
+
+- $runtime$-!~{001}~.mjs => $runtime$-6wzC9jCL.mjs
+- entry-!~{000}~.mjs => entry-xr-wOazA.mjs
+
 # tests/esbuild/packagejson/test_package_json_bad_main
 
 - $runtime$-!~{001}~.mjs => $runtime$-aUKPtNTY.mjs
@@ -942,6 +947,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - $runtime$-!~{001}~.mjs => $runtime$-aUKPtNTY.mjs
 - entry-!~{000}~.mjs => entry-UoUzFxo1.mjs
+
+# tests/esbuild/packagejson/test_package_json_type_should_be_types
+
+- entry-!~{000}~.mjs => entry-6RW6pzd1.mjs
 
 # tests/esbuild/splitting/assign-to-local
 
@@ -1232,6 +1241,20 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/errors/unresolved_entry
 
+
+# tests/fixtures/function/dir/should_generate_correct_relative_import_path
+
+- ./chunks/async.mjs => ./chunks/async.mjs
+- ./chunks/shared.mjs => ./chunks/shared.mjs
+- ./entries/a.mjs => ./entries/a.mjs
+- ./entries/b.mjs => ./entries/b.mjs
+
+# tests/fixtures/function/entry_filenames/should_generate_correct_relative_import_path
+
+- ./chunks/async.mjs => ./chunks/async.mjs
+- ./chunks/shared.mjs => ./chunks/shared.mjs
+- ./entries/a.mjs => ./entries/a.mjs
+- ./entries/b.mjs => ./entries/b.mjs
 
 # tests/fixtures/function/external/export_external
 

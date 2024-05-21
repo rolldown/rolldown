@@ -32,7 +32,7 @@ impl From<rolldown_common::RenderedChunk> for RenderedChunk {
       facade_module_id: value.facade_module_id.map(|x| x.to_string()),
       module_ids: value.module_ids.into_iter().map(|x| x.to_string()).collect(),
       exports: value.exports,
-      file_name: value.file_name.to_string(),
+      file_name: value.filename.to_string(),
       modules: value
         .modules
         .into_iter()

@@ -6,6 +6,6 @@
         "import": "./entry.js"
       }
     ],
-    "platform": "Node"
+    "platform": "node"
   }
 }

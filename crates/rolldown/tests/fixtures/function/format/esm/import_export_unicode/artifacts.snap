@@ -1,0 +1,15 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/misc/import_export_unicode
+---
+# Assets
+
+## main.mjs
+
+```js
+// foo.js
+const devil = 'devil';
+
+export { devil as '😈' };
+```

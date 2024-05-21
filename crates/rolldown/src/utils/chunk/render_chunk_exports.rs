@@ -1,5 +1,6 @@
 use rolldown_common::{Chunk, ChunkKind, OutputFormat, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
+use rolldown_utils::ecma_script::is_validate_identifier_name;
 
 use crate::{stages::link_stage::LinkStageOutput, SharedOptions};
 
@@ -28,10 +29,13 @@ pub fn render_chunk_exports(
             let property_name = &ns_alias.property_name;
             s.push_str(&format!("var {canonical_name} = {canonical_ns_name}.{property_name};\n"));
           }
+
           if canonical_name == &exported_name {
             format!("{canonical_name}")
-          } else {
+          } else if is_validate_identifier_name(&exported_name) {
             format!("{canonical_name} as {exported_name}")
+          } else {
+            format!("{canonical_name} as '{exported_name}'")
           }
         })
         .collect::<Vec<_>>();
@@ -44,12 +48,17 @@ pub fn render_chunk_exports(
         let canonical_ref = graph.symbols.par_canonical_ref_for(export_ref);
         let symbol = graph.symbols.get(canonical_ref);
         let canonical_name = &this.canonical_names[&canonical_ref];
+        let assignee_name = if is_validate_identifier_name(&exported_name) {
+          format!("exports.{exported_name}")
+        } else {
+          format!("exports['{exported_name}']")
+        };
         if let Some(ns_alias) = &symbol.namespace_alias {
           let canonical_ns_name = &this.canonical_names[&ns_alias.namespace_ref];
           let property_name = &ns_alias.property_name;
-          s.push_str(&format!("exports.{exported_name} = {canonical_ns_name}.{property_name};;\n"));
+          s.push_str(&format!("{assignee_name} = {canonical_ns_name}.{property_name};;\n"));
         } else {
-          s.push_str(&format!("exports.{exported_name} = {canonical_name};\n"));
+          s.push_str(&format!("{assignee_name} = {canonical_name};\n"));
         }
       });
 

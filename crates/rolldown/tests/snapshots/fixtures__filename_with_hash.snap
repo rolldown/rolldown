@@ -1186,6 +1186,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{001}~.mjs => b-qe8TOhJq.mjs
 - shared-!~{002}~.mjs => shared-ACOB7Y24.mjs
 
+# tests/fixtures/code_splitting/import_export_unicode
+
+- foo-!~{001}~.mjs => foo-iaNEv4T3.mjs
+- foo~1-!~{002}~.mjs => foo~1-3fuLbyqQ.mjs
+- main-!~{000}~.mjs => main-Ti07to62.mjs
+
 # tests/fixtures/deconflict/basic
 
 - main-!~{000}~.mjs => main-S-XTf22h.mjs
@@ -1285,9 +1291,17 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-LeJVwZoF.mjs
 - share-!~{002}~.mjs => share-eIGIrVeP.mjs
 
+# tests/fixtures/function/format/cjs/import_export_unicode
+
+- main-!~{000}~.cjs => main-wZIizBnE.cjs
+
 # tests/fixtures/function/format/cjs/plain_import_should_not_introduce_to_esm
 
 - main-!~{000}~.cjs => main-rClOc9Ow.cjs
+
+# tests/fixtures/function/format/esm/import_export_unicode
+
+- main-!~{000}~.mjs => main-usfFiBny.mjs
 
 # tests/fixtures/function/loader/json/array
 

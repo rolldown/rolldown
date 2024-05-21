@@ -1,6 +1,6 @@
 export interface ModuleInfo {
   /**
-   *  @Unsupported at rolldown
+   *  Unsupported at rolldown
    */
   ast: any
   code: string | null

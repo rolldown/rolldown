@@ -1,6 +1,7 @@
 pub mod filename_template;
 pub mod input_item;
 pub mod is_external;
+pub mod loader;
 pub mod normalized_bundler_options;
 pub mod output_format;
 pub mod output_option;

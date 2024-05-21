@@ -21,21 +21,13 @@ impl SideEffects {
       _ => None,
     })
   }
-
-  pub fn derive_side_effects_from_package_json(&self, relative_path: &str) -> bool {
-    match self {
-      SideEffects::Bool(s) => *s,
-      SideEffects::String(s) => glob_match_with_normalized_pattern(s, relative_path),
-      SideEffects::Array(patterns) => {
-        patterns.iter().any(|pattern| glob_match_with_normalized_pattern(pattern, relative_path))
-      }
-    }
-  }
 }
 
-fn glob_match_with_normalized_pattern(pattern: &str, path: &str) -> bool {
+pub(crate) fn glob_match_with_normalized_pattern(pattern: &str, path: &str) -> bool {
   let trimmed_str = pattern.trim_start_matches("./");
-  let normalized_glob = if trimmed_str.contains('/') {
+  let normalized_glob = if trimmed_str.len() != pattern.len() {
+    String::from("**/") + trimmed_str
+  } else if trimmed_str.contains('/') {
     trimmed_str.to_string()
   } else {
     String::from("**/") + trimmed_str

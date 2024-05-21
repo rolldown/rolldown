@@ -11,7 +11,6 @@ use rolldown_error::BuildError;
 use self::{
   runtime_normal_module_task::RuntimeNormalModuleTaskResult, task_result::NormalModuleTaskResult,
 };
-
 pub enum Msg {
   NormalModuleDone(NormalModuleTaskResult),
   RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult),

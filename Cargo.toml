@@ -100,6 +100,7 @@ derivative         = "2.2.0"
 dunce              = "1.0.4"                                                                          # Normalize Windows paths to the most compatible format, avoiding UNC where possible
 futures            = "0.3.30"
 glob               = "0.3.1"
+glob-match         = "0.2.1"
 indexmap           = "2.2.6"
 insta              = "1.38.0"
 itertools          = "0.13.0"

@@ -1921,6 +1921,7 @@ name = "rolldown_resolver"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "dashmap",
  "itertools 0.13.0",
  "oxc_resolver",
  "rolldown_common",

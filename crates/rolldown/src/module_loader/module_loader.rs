@@ -1,8 +1,7 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  side_effects, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind,
-  ImportRecordId, ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId,
-  ResolvedRequestInfo,
+  EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind, ImportRecordId,
+  ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId, ResolvedRequestInfo,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -11,7 +10,6 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
-use sugar_path::SugarPath;
 
 use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
@@ -26,7 +24,6 @@ use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<NormalModuleId, Option<NormalModule>>,
-  // pub module_side_effects: IndexVec<NormalModuleId, Option<PackageJson>>,
   pub ast_table: IndexVec<NormalModuleId, Option<OxcAst>>,
   pub importers: IndexVec<NormalModuleId, Vec<ImporterRecord>>,
 }
@@ -234,14 +231,6 @@ impl ModuleLoader {
                   kind: raw_rec.kind,
                   importer_path: module.resource_id.clone(),
                 });
-                // if id >= self.intermediate_normal_modules.module_side_effects.len() {
-                //   self
-                //     .intermediate_normal_modules
-                //     .module_side_effects
-                //     .resize_with((id + 1).into(), Default::default);
-                // }
-                // self.intermediate_normal_modules.module_side_effects[id] =
-                //   info.package_json.clone();
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
                 {
@@ -285,15 +274,6 @@ impl ModuleLoader {
       .flatten()
       .enumerate()
       .map(|(id, mut module)| {
-        let module_path = &module.pretty_path;
-        let derived_side_effects = module.package_json.as_ref().and_then(|json| {
-          let relative = &json.realpath.parent()?.relative(&self.input_options.cwd);
-          let relative_path = module_path.relative(relative);
-          side_effects::SideEffects::from_description(&json.raw).map(|item| {
-            item.derive_side_effects_from_package_json(&relative_path.to_string_lossy())
-          })
-        });
-        module.side_effects = derived_side_effects;
         // Note: (Compat to rollup)
         // The `dynamic_importers/importers` should be added after `module_parsed` hook.
         for importer in std::mem::take(&mut self.intermediate_normal_modules.importers[id]) {

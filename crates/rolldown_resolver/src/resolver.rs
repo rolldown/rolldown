@@ -1,3 +1,4 @@
+use dashmap::DashMap;
 use itertools::Itertools;
 use rolldown_common::{
   ImportKind, ModuleType, PackageJson, Platform, ResolveOptions, ResolvedPath,
@@ -10,8 +11,8 @@ use std::{
 use sugar_path::SugarPath;
 
 use oxc_resolver::{
-  EnforceExtension, Resolution, ResolveError, ResolveOptions as OxcResolverOptions,
-  ResolverGeneric, TsconfigOptions,
+  EnforceExtension, PackageJson as OxcPackageJson, Resolution, ResolveError,
+  ResolveOptions as OxcResolverOptions, ResolverGeneric, TsconfigOptions,
 };
 
 #[derive(Debug)]
@@ -21,6 +22,7 @@ pub struct Resolver<T: FileSystem + Default = OsFileSystem> {
   default_resolver: ResolverGeneric<T>,
   import_resolver: ResolverGeneric<T>,
   require_resolver: ResolverGeneric<T>,
+  package_json_cache: DashMap<PathBuf, Arc<PackageJson>>,
 }
 
 impl<F: FileSystem + Default> Resolver<F> {
@@ -114,7 +116,13 @@ impl<F: FileSystem + Default> Resolver<F> {
     let require_resolver =
       default_resolver.clone_with_options(resolve_options_with_require_conditions);
 
-    Self { cwd, default_resolver, import_resolver, require_resolver }
+    Self {
+      cwd,
+      default_resolver,
+      import_resolver,
+      require_resolver,
+      package_json_cache: DashMap::default(),
+    }
   }
 
   pub fn cwd(&self) -> &PathBuf {
@@ -126,7 +134,7 @@ impl<F: FileSystem + Default> Resolver<F> {
 pub struct ResolveReturn {
   pub path: ResolvedPath,
   pub module_type: ModuleType,
-  pub package_json: Option<PackageJson>,
+  pub package_json: Option<Arc<PackageJson>>,
 }
 
 impl<F: FileSystem + Default> Resolver<F> {
@@ -168,9 +176,7 @@ impl<F: FileSystem + Default> Resolver<F> {
 
     match resolution {
       Ok(info) => {
-        let package_json = info
-          .package_json()
-          .map(|p| PackageJson::new(Arc::clone(p.raw_json()), p.realpath.clone()));
+        let package_json = info.package_json().map(|p| self.cached_package_json(p));
         let module_type = calc_module_type(&info);
         Ok(Ok(build_resolve_ret(
           info.full_path().to_str().expect("Should be valid utf8").to_string(),
@@ -188,6 +194,18 @@ impl<F: FileSystem + Default> Resolver<F> {
         ))),
         _ => Ok(Err(err)),
       },
+    }
+  }
+
+  fn cached_package_json(&self, oxc_pkg_json: &OxcPackageJson) -> Arc<PackageJson> {
+    if let Some(v) = self.package_json_cache.get(&oxc_pkg_json.realpath) {
+      Arc::clone(v.value())
+    } else {
+      let pkg_json =
+        PackageJson::new(Arc::clone(oxc_pkg_json.raw_json()), oxc_pkg_json.realpath.clone());
+      let pkg_json = Arc::new(pkg_json);
+      self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
+      pkg_json
     }
   }
 }
@@ -215,7 +233,7 @@ fn build_resolve_ret(
   path: String,
   ignored: bool,
   module_type: ModuleType,
-  package_json: Option<PackageJson>,
+  package_json: Option<Arc<PackageJson>>,
 ) -> ResolveReturn {
   ResolveReturn { path: ResolvedPath { path: path.into(), ignored }, module_type, package_json }
 }

@@ -68,6 +68,7 @@
     "evanw",
     "execa",
     "Finalizer",
+    "globset",
     "hashbang",
     "hasher",
     "hashers",
@@ -103,6 +104,7 @@
     "oxlint",
     "oxlintignore",
     "proto",
+    "realpath",
     "Renamer",
     "replacen",
     "repr",
@@ -138,7 +140,6 @@
     "wasi",
     "WASI",
     "Yinan",
-    "Yunfei",
-    "realpath"
+    "Yunfei"
   ]
 }

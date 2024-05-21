@@ -3,7 +3,7 @@ use std::hash::BuildHasherDefault;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{Chunk, ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId};
-use rolldown_utils::BitSet;
+use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
 
 use crate::{chunk_graph::ChunkGraph, type_alias::IndexChunks, utils::is_in_rust_test_mode};
@@ -68,6 +68,8 @@ impl<'a> GenerateStage<'a> {
     );
     let mut chunks = IndexChunks::with_capacity(self.link_output.entries.len());
     let mut user_defined_entry_chunk_ids: Vec<ChunkId> = Vec::new();
+    let mut entry_module_to_entry_chunk: FxHashMap<NormalModuleId, ChunkId> =
+      FxHashMap::with_capacity(self.link_output.entries.len());
     // Create chunk for each static and dynamic entry
     for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
@@ -85,6 +87,7 @@ impl<'a> GenerateStage<'a> {
         },
       ));
       bits_to_chunk.insert(bits, chunk);
+      entry_module_to_entry_chunk.insert(entry_point.id, chunk);
       if entry_point.kind.is_user_defined() {
         user_defined_entry_chunk_ids.push(chunk);
       }
@@ -145,6 +148,12 @@ impl<'a> GenerateStage<'a> {
     let sorted_chunk_ids =
       chunks.indices().sorted_by_key(|id| &chunks[*id].bits).collect::<Vec<_>>();
 
-    ChunkGraph { chunks, sorted_chunk_ids, module_to_chunk, user_defined_entry_chunk_ids }
+    ChunkGraph {
+      chunks,
+      sorted_chunk_ids,
+      module_to_chunk,
+      entry_module_to_entry_chunk,
+      user_defined_entry_chunk_ids,
+    }
   }
 }

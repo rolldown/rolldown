@@ -416,8 +416,7 @@ impl<'me, 'ast> VisitMut<'ast> for Finalizer<'me, 'ast> {
               .expect("Normal module should belong to a chunk");
             let importer_chunk = &self.ctx.chunk_graph.chunks[importer_chunk_id];
 
-            let importee_chunk_id = self.ctx.chunk_graph.module_to_chunk[importee_id]
-              .expect("Normal module should belong to a chunk");
+            let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
             let importee_chunk = &self.ctx.chunk_graph.chunks[importee_chunk_id];
 
             let import_path = importer_chunk.import_path_for(importee_chunk);

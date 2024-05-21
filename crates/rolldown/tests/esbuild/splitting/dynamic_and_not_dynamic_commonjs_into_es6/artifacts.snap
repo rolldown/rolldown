@@ -32,5 +32,5 @@ import { require_foo } from "./foo~1.mjs";
 
 // main.js
 var import_foo = __toESM(require_foo());
-import('./foo~1.mjs').then(({default:{bar:b}}) => console.log(import_foo.bar, b));
+import('./foo.mjs').then(({default:{bar:b}}) => console.log(import_foo.bar, b));
 ```

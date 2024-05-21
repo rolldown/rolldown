@@ -71,7 +71,7 @@ impl RuntimeNormalModuleTask {
       exports_kind: ExportsKind::Esm,
       namespace_symbol,
       module_type: ModuleType::EsmMjs,
-      pretty_path: "\\0<runtime>".to_string(),
+      debug_resource_id: "\\0<runtime>".to_string(),
       exec_order: u32::MAX,
       is_user_defined_entry: false,
       import_records: IndexVec::default(),

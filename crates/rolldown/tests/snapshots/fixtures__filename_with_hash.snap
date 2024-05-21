@@ -1282,6 +1282,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.cjs => main-rClOc9Ow.cjs
 
+# tests/fixtures/function/loader/json/array
+
+- main-!~{000}~.mjs => main-4Kd30BAw.mjs
+
+# tests/fixtures/function/loader/json/object
+
+- main-!~{000}~.mjs => main-3FhLLo2b.mjs
+
+# tests/fixtures/function/loader/json/object_with_invalid_key
+
+- main-!~{000}~.mjs => main-pZUL7Yg8.mjs
+
 # tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
 - main-!~{000}~.mjs => main-tAxph1ul.mjs
@@ -1316,6 +1328,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/function/shim_missing_exports/shake_unused_shimmed_exports
 
 - main-!~{000}~.mjs => main-z7O5ieUj.mjs
+
+# tests/fixtures/function/tree_shaking/json_object
+
+- main-!~{000}~.mjs => main-Ep15x52X.mjs
 
 # tests/fixtures/function/tree_shaking/unused_import_external
 

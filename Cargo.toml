@@ -1,5 +1,5 @@
 [workspace]
-members  = ["./crates/*"]
+members  = ["./crates/*", "crates/rolldown_lang_json"]
 resolver = "2"
 
 [workspace.package]
@@ -72,13 +72,15 @@ missing_panics_doc = "allow"
 inconsistent_struct_constructor = "allow"
 
 # Single match is equally readable as if/else. https://rust-lang.github.io/rust-clippy/master/index.html#/single_match
-single_match = "allow"
+single_match      = "allow"
+single_match_else = "allow"
 
 [workspace.dependencies]
 rolldown                = { version = "0.1.0", path = "./crates/rolldown" }
 rolldown_common         = { version = "0.0.1", path = "./crates/rolldown_common" }
 rolldown_error          = { version = "0.0.1", path = "./crates/rolldown_error" }
 rolldown_fs             = { version = "0.1.0", path = "./crates/rolldown_fs" }
+rolldown_lang_json      = { version = "0.1.0", path = "./crates/rolldown_lang_json" }
 rolldown_oxc_utils      = { version = "0.1.0", path = "./crates/rolldown_oxc_utils" }
 rolldown_plugin         = { version = "0.1.0", path = "./crates/rolldown_plugin" }
 rolldown_resolver       = { version = "0.0.1", path = "./crates/rolldown_resolver" }

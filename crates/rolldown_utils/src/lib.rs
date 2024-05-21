@@ -3,6 +3,7 @@
 pub mod base64;
 mod bitset;
 pub mod debug;
+pub mod ecma_script;
 pub mod futures;
 pub mod indexmap;
 pub mod path_buf_ext;

@@ -1808,6 +1808,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_fs",
+ "rolldown_lang_json",
  "rolldown_oxc_utils",
  "rolldown_plugin",
  "rolldown_resolver",
@@ -1891,6 +1892,15 @@ dependencies = [
  "dunce",
  "oxc_resolver",
  "vfs",
+]
+
+[[package]]
+name = "rolldown_lang_json"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "rolldown_utils",
+ "serde_json",
 ]
 
 [[package]]

@@ -1,0 +1,18 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/loader/json/basic
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+// foo.json
+var foo_default = ['foo'];
+
+// main.js
+assert.deepStrictEqual(foo_default, ['foo']);
+```

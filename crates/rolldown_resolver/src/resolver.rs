@@ -60,6 +60,11 @@ impl<F: FileSystem + Default> Resolver<F> {
       _ => vec![],
     });
 
+    let builtin_modules = match platform {
+      Platform::Node => true,
+      Platform::Browser | Platform::Neutral => false,
+    };
+
     let resolve_options_with_default_conditions = OxcResolverOptions {
       tsconfig: raw_resolve.tsconfig_filename.map(|p| TsconfigOptions {
         config_file: p.into(),
@@ -99,7 +104,7 @@ impl<F: FileSystem + Default> Resolver<F> {
       restrictions: vec![],
       roots: vec![],
       symlinks: raw_resolve.symlinks.unwrap_or(true),
-      builtin_modules: false,
+      builtin_modules,
     };
     let resolve_options_with_import_conditions = OxcResolverOptions {
       condition_names: import_conditions,

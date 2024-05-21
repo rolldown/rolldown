@@ -1,0 +1,16 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
+---
+# Assets
+
+## main.mjs
+
+```js
+import * as fs from "fs";
+import * as nodeFs from "node:fs";
+
+// main.js
+console.log(fs, nodeFs, require('path'), require('node:path'));
+```

@@ -1,0 +1,7 @@
+{
+  "config": {
+    "platform": "node"
+  },
+  "_comment": "TODO: wait for https://github.com/rolldown/rolldown/issues/1189",
+  "expectExecuted": false
+}

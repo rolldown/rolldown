@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use rolldown_common::{ImportKind, ModuleType, ResolvedRequestInfo};
+use rolldown_common::{ImportKind, ModuleType, ResolvedPath, ResolvedRequestInfo};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
@@ -66,14 +66,33 @@ pub async fn resolve_id_with_plugins(
     }));
   }
 
-  // Rollup external node packages by default.
-  // Rolldown will follow esbuild behavior to resolve it by default.
-  // See https://github.com/rolldown/rolldown/issues/282
+  resolve_id(resolver, request, importer, import_kind)
+}
+
+fn resolve_id(
+  resolver: &Resolver,
+  request: &str,
+  importer: Option<&str>,
+  import_kind: ImportKind,
+) -> anyhow::Result<Result<ResolvedRequestInfo, ResolveError>> {
   let resolved = resolver.resolve(importer.map(Path::new), request, import_kind)?;
-  Ok(resolved.map(|resolved| ResolvedRequestInfo {
-    path: resolved.path,
-    module_type: resolved.module_type,
-    is_external: false,
-    package_json: resolved.package_json,
-  }))
+
+  if let Err(err) = resolved {
+    match err {
+      ResolveError::Builtin(specifier) => Ok(Ok(ResolvedRequestInfo {
+        path: ResolvedPath { path: specifier.into(), ignored: false },
+        is_external: true,
+        module_type: ModuleType::Unknown,
+        package_json: None,
+      })),
+      _ => Ok(Err(err)),
+    }
+  } else {
+    Ok(resolved.map(|resolved| ResolvedRequestInfo {
+      path: resolved.path,
+      module_type: resolved.module_type,
+      is_external: false,
+      package_json: resolved.package_json,
+    }))
+  }
 }

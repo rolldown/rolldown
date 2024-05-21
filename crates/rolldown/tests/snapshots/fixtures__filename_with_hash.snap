@@ -1282,6 +1282,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.cjs => main-rClOc9Ow.cjs
 
+# tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
+
+- main-!~{000}~.mjs => main-tAxph1ul.mjs
+
 # tests/fixtures/function/resolve/browser_filed_false
 
 - $runtime$-!~{001}~.mjs => $runtime$-aUKPtNTY.mjs

@@ -202,7 +202,7 @@ impl<F: FileSystem + Default> Resolver<F> {
       Arc::clone(v.value())
     } else {
       let pkg_json =
-        PackageJson::new(Arc::clone(oxc_pkg_json.raw_json()), oxc_pkg_json.realpath.clone());
+        PackageJson::new(Arc::clone(oxc_pkg_json.raw_json()), oxc_pkg_json.path.clone());
       let pkg_json = Arc::new(pkg_json);
       self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
       pkg_json

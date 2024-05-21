@@ -6,15 +6,15 @@ use crate::side_effects::{glob_match_with_normalized_pattern, SideEffects};
 #[derive(Debug, Clone)]
 pub struct PackageJson {
   pub raw: Arc<serde_json::Value>,
-  /// Realpath to `package.json`. Contains the `package.json` filename.
-  pub realpath: PathBuf,
+  /// Path to `package.json`. Contains the `package.json` filename.
+  pub path: PathBuf,
   pub side_effects: Option<SideEffects>,
 }
 
 impl PackageJson {
-  pub fn new(raw: impl Into<Arc<serde_json::Value>>, realpath: PathBuf) -> Self {
+  pub fn new(raw: impl Into<Arc<serde_json::Value>>, path: PathBuf) -> Self {
     let raw = raw.into();
-    Self { side_effects: SideEffects::from_description(&raw), raw, realpath }
+    Self { side_effects: SideEffects::from_description(&raw), raw, path }
   }
 
   pub fn r#type(&self) -> Option<&str> {

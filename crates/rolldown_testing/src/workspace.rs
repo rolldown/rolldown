@@ -30,7 +30,7 @@ pub fn root_dir() -> PathBuf {
       .to_path_buf();
 
     // Check if the root directory contains the `pnpm-workspace.yaml` file
-    assert!(std::fs::metadata(root_dir.join("pnpm-workspace.yaml")).is_ok(), "Incorrect root directory detected. Expected to find `pnpm-workspace.yaml` in the root directory. But got {root_dir:?}");
+    assert!(root_dir.join("pnpm-workspace.yaml").exists(), "Incorrect root directory detected. Expected to find `pnpm-workspace.yaml` in the root directory. But got {root_dir:?}");
   };
   root_dir
 }

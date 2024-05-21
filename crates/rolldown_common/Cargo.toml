@@ -15,7 +15,7 @@ workspace = true
 
 [dependencies]
 anyhow             = { workspace = true }
-globset            = { workspace = true }
+glob-match         = { workspace = true }
 once_cell          = { workspace = true }
 oxc                = { workspace = true, features = ["semantic"] }
 oxc_index          = { workspace = true }

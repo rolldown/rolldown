@@ -36,7 +36,7 @@ impl Bundler {
 
     #[cfg(target_family = "wasm")]
     // if we don't perform this warmup, the following call to `std::fs` will stuck
-    if let Ok(_) = std::fs::metadata(std::env::current_dir()?) {};
+    let _ = std::env::current_dir()?.exists();
 
     #[cfg(not(target_family = "wasm"))]
     let worker_count =

@@ -1,0 +1,12 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_type_should_be_types
+---
+# Assets
+
+## entry.mjs
+
+```js
+
+```

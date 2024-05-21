@@ -1,13 +1,12 @@
 import process from 'node:process'
 import parseArgs from 'mri'
 import { defineCommand, runMain, showUsage } from 'citty'
-import { ensureConfig, logger } from './utils.js'
-import { bundle } from './commands/bundle.js'
+import { bundle } from './commands/bundle'
 import {
   version,
   description,
 } from '../../package.json' assert { type: 'json' }
-import { DEFAULT_CONFIG_FILENAME } from './constants.js'
+import { DEFAULT_CONFIG_FILENAME } from './constants'
 
 interface ParsedArgs {
   config?: string | true

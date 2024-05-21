@@ -1,13 +1,9 @@
 import { performance } from 'node:perf_hooks'
-import {
-  RolldownOptions,
-  RolldownOutput,
-  RollupOutput,
-  rolldown,
-} from '../../index.js'
-import { arraify } from '../../utils/index.js'
-import { ensureConfig, logger } from '../utils.js'
-import * as colors from '../colors.js'
+import { rolldown } from '@src/rolldown'
+import type { RolldownOptions, RolldownOutput, RollupOutput } from '../../index'
+import { arraify } from '../../utils/index'
+import { ensureConfig, logger } from '../utils'
+import * as colors from '../colors'
 
 export async function bundle(configPath: string) {
   const config = await ensureConfig(configPath)

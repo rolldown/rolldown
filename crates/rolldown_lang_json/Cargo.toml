@@ -1,0 +1,15 @@
+[package]
+edition.workspace    = true
+homepage.workspace   = true
+license.workspace    = true
+name                 = "rolldown_lang_json"
+repository.workspace = true
+version              = "0.1.0"
+
+[dependencies]
+anyhow         = { workspace = true }
+rolldown_utils = { workspace = true }
+serde_json     = { workspace = true }
+
+[lints]
+workspace = true

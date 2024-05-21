@@ -1,0 +1,16 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/tree_shaking/json_object
+---
+# Assets
+
+## main.mjs
+
+```js
+// foo.json
+const shouldBeReserved = 'shouldBeReserved';
+
+// main.js
+console.log(shouldBeReserved);
+```

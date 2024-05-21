@@ -219,6 +219,7 @@ impl ModuleLoader {
             ast,
           } = task_result;
           all_warnings.extend(warnings);
+
           let import_records = raw_import_records
             .into_iter()
             .zip(resolved_deps)

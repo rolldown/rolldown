@@ -23,6 +23,7 @@ pub mod resolved_export;
 pub mod resolved_path;
 pub mod resolved_request_info;
 pub mod resource_id;
+pub mod side_effects;
 pub mod stmt_info;
 pub mod symbol_ref;
 pub mod wrap_kind;

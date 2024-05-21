@@ -26,7 +26,7 @@ pub struct NormalModuleTask {
   ctx: Arc<TaskContext>,
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
-  package_json: Option<PackageJson>,
+  package_json: Option<Arc<PackageJson>>,
   module_type: ModuleType,
   errors: Vec<BuildError>,
   is_user_defined_entry: bool,
@@ -39,7 +39,7 @@ impl NormalModuleTask {
     path: ResolvedPath,
     module_type: ModuleType,
     is_user_defined_entry: bool,
-    package_json: Option<PackageJson>,
+    package_json: Option<Arc<PackageJson>>,
   ) -> Self {
     Self {
       ctx,
@@ -112,12 +112,20 @@ impl NormalModuleTask {
     }
 
     let resource_id = ResourceId::new(Arc::clone(&self.resolved_path.path));
+    let stable_resource_id = resource_id.stabilize(&self.ctx.input_options.cwd);
+
+    let side_effects = self
+      .package_json
+      .as_ref()
+      .and_then(|p| p.check_side_effects_for(&stable_resource_id))
+      .unwrap_or_else(|| stmt_infos.iter().any(|stmt_info| stmt_info.side_effect));
+    // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
 
     let module = NormalModule {
       source,
       id: self.module_id,
       repr_name,
-      stable_resource_id: resource_id.stabilize(&self.ctx.input_options.cwd),
+      stable_resource_id,
       resource_id,
       named_imports,
       named_exports,
@@ -140,6 +148,7 @@ impl NormalModuleTask {
       imported_ids,
       dynamically_imported_ids,
       package_json: self.package_json.take(),
+      side_effects,
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;

@@ -184,6 +184,12 @@ impl<'a> GenerateStage<'a> {
             .iter()
             .inspect(|rec| {
               if let ModuleId::Normal(importee_id) = rec.resolved_module {
+                let importee_module = &self.link_output.module_table.normal_modules[importee_id];
+                // the the resolved module is not included in module graph, skip
+                // TODO: Is that possible that the module of the record is a external module?
+                if !importee_module.is_included {
+                  return;
+                }
                 if matches!(rec.kind, ImportKind::DynamicImport) {
                   let importee_chunk =
                     chunk_graph.module_to_chunk[importee_id].expect("importee chunk should exist");

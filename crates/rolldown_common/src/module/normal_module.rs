@@ -47,7 +47,8 @@ pub struct NormalModule {
   pub imported_ids: Vec<ResourceId>,
   // the module ids imported by this module via dynamic import()
   pub dynamically_imported_ids: Vec<ResourceId>,
-  pub package_json: Option<PackageJson>,
+  pub side_effects: bool,
+  pub package_json: Option<Arc<PackageJson>>,
 }
 
 impl NormalModule {

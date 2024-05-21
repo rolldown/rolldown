@@ -43,7 +43,13 @@ impl Fixture {
 
     let mut command = Command::new("node");
 
-    let test_script = self.dir_path().join("_test.mjs");
+    let is_output_cjs = matches!(test_config.config.format, Some(OutputFormat::Cjs));
+
+    let test_script = if is_output_cjs {
+      self.dir_path().join("_test.cjs")
+    } else {
+      self.dir_path().join("_test.mjs")
+    };
 
     if !test_config.expect_executed || test_config.expect_error {
       // do nothing
@@ -51,8 +57,6 @@ impl Fixture {
       // Notices, we now don't have the finalized `dir` value, so we assume the `dist` folder is the output folder. But this cause
       // problem once `entry_filenames` or `dir` is configured using a different folder.
       let dist_folder = self.dir_path().join("dist");
-
-      let is_output_cjs = matches!(test_config.config.format, Some(OutputFormat::Cjs));
 
       let compiled_entries = test_config
         .config

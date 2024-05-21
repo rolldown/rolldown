@@ -17,6 +17,7 @@ base64      = { workspace = true }
 futures     = { workspace = true }
 indexmap    = { workspace = true }
 once_cell   = { workspace = true }
+oxc_syntax  = { workspace = true }
 regex       = { workspace = true }
 rustc-hash  = { workspace = true }
 sugar_path  = { workspace = true }

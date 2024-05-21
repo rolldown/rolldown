@@ -1,0 +1,32 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/code_splitting/import_export_unicode
+---
+# Assets
+
+## foo.mjs
+
+```js
+import { devil } from "./foo~1.mjs";
+
+export { devil as '😈' };
+```
+## foo~1.mjs
+
+```js
+// foo.js
+const devil = 'devil';
+
+export { devil };
+```
+## main.mjs
+
+```js
+import { devil } from "./foo~1.mjs";
+
+// main.js
+const moduleFoo = import('./foo.mjs');
+
+export { moduleFoo, devil as '😈' };
+```

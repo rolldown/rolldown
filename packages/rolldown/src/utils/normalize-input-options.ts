@@ -19,7 +19,6 @@ export async function normalizeInputOptions(
     ...rest,
     input: input ? (typeof input === 'string' ? [input] : input) : [],
     plugins,
-    // @ts-ignore TODO: remove this ignore
     logLevel,
     onLog,
   }

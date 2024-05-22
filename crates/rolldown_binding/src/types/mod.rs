@@ -1,3 +1,5 @@
+pub mod binding_log;
+pub mod binding_log_level;
 pub mod binding_module_info;
 pub mod binding_output_asset;
 pub mod binding_output_chunk;

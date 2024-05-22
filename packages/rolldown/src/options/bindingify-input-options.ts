@@ -4,6 +4,7 @@ import { bindingifyPlugin } from '../plugin/bindingify-plugin'
 import type { NormalizedInputOptions } from './normalized-input-options'
 import { arraify } from '@src/utils'
 import { NormalizedOutputOptions } from './normalized-output-options'
+import { LogLevelOption } from '@src/log/logging'
 
 export function bindingifyInputOptions(
   options: NormalizedInputOptions,
@@ -55,8 +56,35 @@ export function bindingifyInputOptions(
       : undefined,
     platform: options.platform,
     shimMissingExports: options.shimMissingExports,
-    // @ts-ignore TODO: logLevel shouldn't include `error`
-    logLevel: options.logLevel,
+    // @ts-ignore TODO The typing should import from binding
+    logLevel: bindingifyLogLevel(options.logLevel),
+    onLog: options.onLog,
+  }
+}
+
+// TODO The typing should import from binding, but const enum is disabled by `isolatedModules`.
+const enum BindingLogLevel {
+  Silent = 0,
+  Warn = 1,
+  Info = 2,
+  Debug = 3,
+}
+
+function bindingifyLogLevel(
+  logLevel: LogLevelOption,
+): BindingLogLevel | undefined {
+  switch (logLevel) {
+    case 'silent':
+      return BindingLogLevel.Silent
+    case 'warn':
+      return BindingLogLevel.Warn
+    case 'info':
+      return BindingLogLevel.Info
+    case 'debug':
+      return BindingLogLevel.Debug
+
+    default:
+      throw new Error(`Unexpected log level: ${logLevel}`)
   }
 }
 

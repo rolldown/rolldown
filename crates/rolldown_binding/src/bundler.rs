@@ -3,9 +3,12 @@ use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
 use crate::worker_manager::WorkerManager;
 use crate::{
-  options::{BindingInputOptions, BindingOutputOptions},
+  options::{BindingInputOptions, BindingOnLog, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
-  types::binding_outputs::FinalBindingOutputs,
+  types::{
+    binding_log::BindingLog, binding_log_level::BindingLogLevel,
+    binding_outputs::FinalBindingOutputs,
+  },
   utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
 };
 use napi::{tokio::sync::Mutex, Env};
@@ -16,7 +19,8 @@ use rolldown_error::{BuildError, DiagnosticOptions};
 #[napi]
 pub struct Bundler {
   inner: Mutex<NativeBundler>,
-  log_level: String,
+  on_log: BindingOnLog,
+  log_level: Option<BindingLogLevel>,
   cwd: PathBuf,
 }
 
@@ -32,7 +36,8 @@ impl Bundler {
   ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
 
-    let log_level = input_options.log_level.take().unwrap_or_else(|| "info".to_string());
+    let log_level = input_options.log_level.take();
+    let on_log = input_options.on_log.take();
 
     #[cfg(target_family = "wasm")]
     // if we don't perform this warmup, the following call to `std::fs` will stuck
@@ -62,6 +67,7 @@ impl Bundler {
       cwd: ret.bundler_options.cwd.clone().unwrap_or_else(|| std::env::current_dir().unwrap()),
       inner: Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins)),
       log_level,
+      on_log,
     })
   }
 
@@ -97,7 +103,7 @@ impl Bundler {
       return Err(self.handle_errors(output.errors));
     }
 
-    self.handle_warnings(output.warnings);
+    self.handle_warnings(output.warnings).await;
 
     Ok(())
   }
@@ -114,7 +120,7 @@ impl Bundler {
       return Err(self.handle_errors(outputs.errors));
     }
 
-    self.handle_warnings(outputs.warnings);
+    self.handle_warnings(outputs.warnings).await;
 
     Ok(FinalBindingOutputs::new(outputs.assets))
   }
@@ -131,7 +137,7 @@ impl Bundler {
       return Err(self.handle_errors(outputs.errors));
     }
 
-    self.handle_warnings(outputs.warnings);
+    self.handle_warnings(outputs.warnings).await;
 
     Ok(FinalBindingOutputs::new(outputs.assets))
   }
@@ -150,17 +156,28 @@ impl Bundler {
     napi::Error::from_reason("Build failed")
   }
 
-  #[allow(clippy::print_stdout)]
-  fn handle_warnings(&self, warnings: Vec<BuildError>) {
-    match self.log_level.as_str() {
-      "silent" => return,
-      _ => {}
+  #[allow(clippy::print_stdout, unused_must_use)]
+  async fn handle_warnings(&self, warnings: Vec<BuildError>) {
+    if let Some(log_level) = self.log_level {
+      if log_level == BindingLogLevel::Silent {
+        return;
+      }
     }
-    warnings.into_iter().for_each(|err| {
-      println!(
-        "{}",
-        err.into_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() }).to_color_string()
-      );
-    });
+
+    if let Some(on_log) = self.on_log.as_ref() {
+      for warning in warnings {
+        on_log
+          .call_async((
+            BindingLogLevel::Warn.to_string(),
+            BindingLog {
+              code: warning.kind().to_string(),
+              message: warning
+                .into_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() })
+                .to_color_string(),
+            },
+          ))
+          .await;
+      }
+    }
   }
 }

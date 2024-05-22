@@ -1,9 +1,9 @@
 // cSpell:disable
 
+use crate::types::{binding_log::BindingLog, binding_log_level::BindingLogLevel};
 use derivative::Derivative;
 use napi::threadsafe_function::ThreadsafeFunction;
 use napi_derive::napi;
-
 use serde::Deserialize;
 
 use self::{binding_input_item::BindingInputItem, binding_resolve_options::BindingResolveOptions};
@@ -55,10 +55,15 @@ pub struct BindingInputOptions {
   // watch?: WatcherOptions | false;
   #[napi(ts_type = "'node' | 'browser' | 'neutral'")]
   pub platform: Option<String>,
-  #[napi(ts_type = "'silent' | 'error' | 'warn' | 'info'")]
-  pub log_level: Option<String>,
-
+  #[serde(skip_deserializing)]
+  pub log_level: Option<BindingLogLevel>,
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void")]
+  pub on_log: BindingOnLog,
   // extra
   pub cwd: String,
   // pub builtins: BuiltinsOptions,
 }
+
+pub type BindingOnLog = Option<ThreadsafeFunction<(String, BindingLog), (), false>>;

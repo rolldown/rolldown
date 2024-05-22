@@ -361,6 +361,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
+module.exports.BindingLog = nativeBinding.BindingLog
 module.exports.BindingModuleInfo = nativeBinding.BindingModuleInfo
 module.exports.BindingOutputAsset = nativeBinding.BindingOutputAsset
 module.exports.BindingOutputChunk = nativeBinding.BindingOutputChunk
@@ -370,4 +371,5 @@ module.exports.BindingTransformPluginContext = nativeBinding.BindingTransformPlu
 module.exports.Bundler = nativeBinding.Bundler
 module.exports.FinalBindingOutputs = nativeBinding.FinalBindingOutputs
 module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
+module.exports.BindingLogLevel = nativeBinding.BindingLogLevel
 module.exports.registerPlugins = nativeBinding.registerPlugins

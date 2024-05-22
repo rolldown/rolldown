@@ -1,6 +1,11 @@
 type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
+export class BindingLog {
+  code: string
+  message: string
+}
+
 export class BindingModuleInfo {
   id: string
   importers: Array<string>
@@ -111,8 +116,16 @@ export interface BindingInputOptions {
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
-  logLevel?: 'silent' | 'error' | 'warn' | 'info'
+  logLevel?: BindingLogLevel
+  onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
+}
+
+export const enum BindingLogLevel {
+  Silent = 0,
+  Warn = 1,
+  Info = 2,
+  Debug = 3
 }
 
 export interface BindingOutputOptions {

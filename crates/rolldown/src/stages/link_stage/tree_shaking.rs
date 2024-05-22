@@ -92,6 +92,8 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
+    self.determine_side_effects();
+
     let mut is_included_vec: IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>> = self
       .module_table
       .normal_modules
@@ -132,6 +134,75 @@ impl LinkStage<'_> {
         .iter()
         .map(NormalModule::to_debug_normal_module_for_tree_shaking)
         .collect::<Vec<_>>()
+    );
+  }
+
+  fn determine_side_effects(&mut self) {
+    type IndexVisited = IndexVec<NormalModuleId, bool>;
+    type IndexSideEffectsCache = IndexVec<NormalModuleId, Option<bool>>;
+
+    fn determine_side_effects_for_module(
+      visited: &mut IndexVisited,
+      cache: &mut IndexSideEffectsCache,
+      module_id: NormalModuleId,
+      normal_modules: &NormalModuleVec,
+    ) -> bool {
+      let module = &normal_modules[module_id];
+
+      let is_visited = &mut visited[module_id];
+
+      if *is_visited {
+        return module.side_effects;
+      }
+
+      *is_visited = true;
+
+      if let Some(ret) = cache[module_id] {
+        return ret;
+      }
+
+      let ret = if module.side_effects {
+        true
+      } else {
+        module.import_records.iter().any(|import_record| match import_record.resolved_module {
+          rolldown_common::ModuleId::Normal(importee_id) => {
+            determine_side_effects_for_module(visited, cache, importee_id, normal_modules)
+          }
+          rolldown_common::ModuleId::External(_) => {
+            // External module is currently treated as always having side effects, but
+            // it's ensured by `render_chunk_imports`. So here we consider it as no side effects.
+            false
+          }
+        })
+      };
+
+      cache[module_id] = Some(ret);
+
+      ret
+    }
+
+    let mut index_side_effects_cache =
+      oxc_index::index_vec![None; self.module_table.normal_modules.len()];
+    let index_module_side_effects = self
+      .module_table
+      .normal_modules
+      .iter()
+      .map(|module| {
+        let mut visited: IndexVisited =
+          oxc_index::index_vec![false; self.module_table.normal_modules.len()];
+        determine_side_effects_for_module(
+          &mut visited,
+          &mut index_side_effects_cache,
+          module.id,
+          &self.module_table.normal_modules,
+        )
+      })
+      .collect::<Vec<_>>();
+
+    self.module_table.normal_modules.iter_mut().zip(index_module_side_effects).for_each(
+      |(module, side_effects)| {
+        module.side_effects = side_effects;
+      },
     );
   }
 }

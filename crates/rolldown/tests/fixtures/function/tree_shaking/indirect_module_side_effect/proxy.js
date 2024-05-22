@@ -1,0 +1,1 @@
+import './indirect-side-effect'

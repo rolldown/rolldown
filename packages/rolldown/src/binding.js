@@ -371,5 +371,5 @@ module.exports.BindingTransformPluginContext = nativeBinding.BindingTransformPlu
 module.exports.Bundler = nativeBinding.Bundler
 module.exports.FinalBindingOutputs = nativeBinding.FinalBindingOutputs
 module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
-module.exports.LogLevel = nativeBinding.LogLevel
+module.exports.BindingLogLevel = nativeBinding.BindingLogLevel
 module.exports.registerPlugins = nativeBinding.registerPlugins

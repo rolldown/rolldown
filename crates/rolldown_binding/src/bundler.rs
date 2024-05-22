@@ -5,7 +5,10 @@ use crate::worker_manager::WorkerManager;
 use crate::{
   options::{BindingInputOptions, BindingOnLog, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
-  types::{binding_log::BindingLog, binding_outputs::FinalBindingOutputs, log_level::LogLevel},
+  types::{
+    binding_log::BindingLog, binding_log_level::BindingLogLevel,
+    binding_outputs::FinalBindingOutputs,
+  },
   utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
 };
 use napi::{tokio::sync::Mutex, Env};
@@ -17,7 +20,7 @@ use rolldown_error::{BuildError, DiagnosticOptions};
 pub struct Bundler {
   inner: Mutex<NativeBundler>,
   on_log: BindingOnLog,
-  log_level: Option<LogLevel>,
+  log_level: Option<BindingLogLevel>,
   cwd: PathBuf,
 }
 
@@ -156,7 +159,7 @@ impl Bundler {
   #[allow(clippy::print_stdout, unused_must_use)]
   async fn handle_warnings(&self, warnings: Vec<BuildError>) {
     if let Some(log_level) = self.log_level {
-      if log_level == LogLevel::Silent {
+      if log_level == BindingLogLevel::Silent {
         return;
       }
     }
@@ -165,7 +168,7 @@ impl Bundler {
       for warning in warnings {
         on_log
           .call_async((
-            LogLevel::Warn,
+            BindingLogLevel::Warn.to_string(),
             BindingLog {
               code: warning.kind().to_string(),
               message: warning

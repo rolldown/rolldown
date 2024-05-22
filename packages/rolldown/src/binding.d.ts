@@ -116,9 +116,16 @@ export interface BindingInputOptions {
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
-  logLevel?: 'silent' | 'debug' | 'warn' | 'info'
+  logLevel?: BindingLogLevel
   onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
+}
+
+export const enum BindingLogLevel {
+  Silent = 0,
+  Warn = 1,
+  Info = 2,
+  Debug = 3
 }
 
 export interface BindingOutputOptions {
@@ -180,13 +187,6 @@ export interface BindingResolveOptions {
   modules?: Array<string>
   symlinks?: boolean
   tsconfigFilename?: string
-}
-
-export const enum LogLevel {
-  Silent = 0,
-  Warn = 1,
-  Info = 2,
-  Debug = 3
 }
 
 export function registerPlugins(id: number, plugins: PluginsInSingleWorker): void

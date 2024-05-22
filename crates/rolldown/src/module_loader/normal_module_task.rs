@@ -4,8 +4,9 @@ use anyhow::Result;
 use futures::future::join_all;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  AstScope, ImportRecordId, ModuleType, NormalModule, NormalModuleId, PackageJson, RawImportRecord,
-  ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
+  side_effects::DeterminedSideEffects, AstScope, ImportRecordId, ModuleType, NormalModule,
+  NormalModuleId, PackageJson, RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId,
+  SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -119,8 +120,13 @@ impl NormalModuleTask {
     let side_effects = self
       .package_json
       .as_ref()
-      .and_then(|p| p.check_side_effects_for(&stable_resource_id))
-      .unwrap_or_else(|| stmt_infos.iter().any(|stmt_info| stmt_info.side_effect));
+      .and_then(|p| {
+        p.check_side_effects_for(&stable_resource_id).map(DeterminedSideEffects::PackageJson)
+      })
+      .unwrap_or_else(|| {
+        let analyzed_side_effects = stmt_infos.iter().any(|stmt_info| stmt_info.side_effect);
+        DeterminedSideEffects::Analyzed(analyzed_side_effects)
+      });
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
 
     let module = NormalModule {

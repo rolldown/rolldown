@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-assertion_line: 167
 expression: content
 input_file: crates/rolldown/tests/fixtures/tree_shaking/array-side-effects
 ---
@@ -9,9 +8,6 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/array-side-effects
 ## main.mjs
 
 ```js
-// another/a/index.js
-console.log('result');
-
 // another/b/index.js
 const b = 100;
 

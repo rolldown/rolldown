@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 167
+expression: content
+input_file: crates/rolldown/tests/fixtures/tree_shaking/array-side-effects
+---
+# Assets
+
+## main.mjs
+
+```js
+// another/a/index.js
+console.log('result');
+
+// another/b/index.js
+const b = 100;
+
+// main.js
+console.log(b);
+```

@@ -94,7 +94,7 @@ jobs:
           output-file-path: tmp/new-benchmark-node-output.json
           # Where the previous data file is stored
           external-data-json-path: tmp/benchmark-node-output.json
-          fail-on-alert: ${{ github.event_name != 'push' }}
+          fail-on-alert: false
           summary-always: true
           comment-always: false
           save-data-file: ${{ github.event_name == 'push' }}

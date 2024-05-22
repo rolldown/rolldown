@@ -5,7 +5,7 @@ use crate::{
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
   worker_manager::WorkerManager,
 };
-use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, Platform};
+use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, OutputFormat, Platform};
 use rolldown_plugin::BoxPlugin;
 use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
@@ -99,8 +99,11 @@ pub fn normalize_binding_options(
     footer: normalize_addon_option(output_options.footer),
     sourcemap_ignore_list,
     sourcemap_path_transform,
-    // TODO(hyf0): remove this line, all options should set explicitly
-    ..Default::default()
+    format: output_options.format.map(|format_str| match format_str.as_str() {
+      "esm" => OutputFormat::Esm,
+      "cjs" => OutputFormat::Cjs,
+      _ => panic!("Invalid format: {format_str}"),
+    }),
   };
 
   #[cfg(not(target_family = "wasm"))]

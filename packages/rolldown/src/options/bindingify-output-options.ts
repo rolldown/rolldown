@@ -19,7 +19,14 @@ export function bindingifyOutputOptions(
   } = outputOptions
   return {
     dir,
-    format,
+    format: (function () {
+      switch (format) {
+        case 'es':
+          return 'esm'
+        case 'cjs':
+          return 'cjs'
+      }
+    })(),
     exports,
     sourcemap: bindingifySourcemap(sourcemap),
     sourcemapIgnoreList,

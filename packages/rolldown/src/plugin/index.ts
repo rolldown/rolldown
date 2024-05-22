@@ -11,6 +11,9 @@ import type { OutputBundle } from '../types/output-bundle'
 import { PluginContext } from './plugin-context'
 import { TransformPluginContext } from './transfrom-plugin-context'
 import { NormalizedOutputOptions } from '@src/options/normalized-output-options'
+import { LogLevel } from '../log/logging'
+import { RollupLog } from '../rollup'
+import { MinimalPluginContext } from '../log/logger'
 
 type FormalHook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> = {
   handler: Handler
@@ -31,6 +34,14 @@ export type ResolveIdResult =
 
 export interface Plugin {
   name?: string
+
+  onLog?: Hook<
+    (
+      this: MinimalPluginContext,
+      level: LogLevel,
+      log: RollupLog,
+    ) => NullValue | boolean
+  >
 
   // --- Build hooks ---
 

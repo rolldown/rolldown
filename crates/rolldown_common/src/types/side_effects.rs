@@ -9,8 +9,7 @@ impl DeterminedSideEffects {
   /// get the boolean value of the side effects enum
   pub fn inner(&self) -> bool {
     match self {
-      DeterminedSideEffects::PackageJson(v) => *v,
-      DeterminedSideEffects::Analyzed(v) => *v,
+      DeterminedSideEffects::PackageJson(v) | DeterminedSideEffects::Analyzed(v) => *v,
     }
   }
 }

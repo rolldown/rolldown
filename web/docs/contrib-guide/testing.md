@@ -27,7 +27,7 @@ For all available options, you could refer to
 
 - https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing_config/src/lib.rs
 - https://github.com/rolldown/rolldown/blob/main/crates/rolldown_common/src/inner_bundler_options/mod.rs
-- https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/_test.scheme.json
+- https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/_config.schema.json
 
 - `main.js` is the default entry of the test case, if `input.input` is not specified in `_test.json`.
 

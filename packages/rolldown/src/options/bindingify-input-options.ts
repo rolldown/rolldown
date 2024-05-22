@@ -69,7 +69,9 @@ const enum BindingLogLevel {
   Debug = 3,
 }
 
-function bindingifyLogLevel(logLevel: LogLevelOption): BindingLogLevel {
+function bindingifyLogLevel(
+  logLevel: LogLevelOption,
+): BindingLogLevel | undefined {
   switch (logLevel) {
     case 'silent':
       return BindingLogLevel.Silent

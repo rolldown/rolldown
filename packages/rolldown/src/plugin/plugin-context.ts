@@ -18,10 +18,9 @@ export class PluginContext {
     context: BindingPluginContext,
     plugin: Plugin,
   ) {
-    // TODO add `onLog` option
-    const onLog = () => {}
+    const onLog = options.onLog
     const pluginName = plugin.name || 'unknown'
-    const logLevel = options.logLevel || LOG_LEVEL_INFO
+    const logLevel = options.logLevel
     this.debug = getLogHandler(
       LOG_LEVEL_DEBUG,
       'PLUGIN_LOG',

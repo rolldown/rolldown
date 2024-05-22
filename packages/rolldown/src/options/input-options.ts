@@ -1,7 +1,13 @@
 import { Plugin, ParallelPlugin } from '../plugin'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
-import { LogLevelOptionSchema } from '../log/logging'
+import {
+  LogLevelOptionSchema,
+  LogLevelSchema,
+  LogLevelWithErrorSchema,
+  RollupLogSchema,
+  RollupLogWithStringSchema,
+} from '../log/logging'
 
 const inputOptionsSchema = z.strictObject({
   input: z.string().or(z.string().array()).or(z.record(z.string())).optional(),
@@ -39,6 +45,27 @@ const inputOptionsSchema = z.strictObject({
     .optional(),
   shimMissingExports: z.boolean().optional(),
   logLevel: LogLevelOptionSchema.optional(),
+  onLog: z
+    .function()
+    .args(
+      LogLevelSchema,
+      RollupLogSchema,
+      z.function().args(LogLevelWithErrorSchema, RollupLogWithStringSchema),
+    )
+    .optional(),
+  onwarn: z
+    .function()
+    .args(
+      RollupLogSchema,
+      z
+        .function()
+        .args(
+          RollupLogWithStringSchema.or(
+            z.function().returns(RollupLogWithStringSchema),
+          ),
+        ),
+    )
+    .optional(),
 })
 
 export type InputOptions = z.infer<typeof inputOptionsSchema>

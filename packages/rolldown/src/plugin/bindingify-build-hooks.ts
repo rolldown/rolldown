@@ -114,8 +114,8 @@ export function bindingifyTransform(
       new TransformPluginContext(
         ctx,
         new PluginContext(options, ctx.inner(), plugin),
-        code,
         id,
+        code,
       ),
       code,
       id,

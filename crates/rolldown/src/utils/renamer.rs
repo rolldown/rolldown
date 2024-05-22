@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
 use oxc::semantic::ScopeId;
+use oxc_syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::types::symbols::Symbols;
-use crate::utils::reserved_names::RESERVED_NAMES;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
@@ -21,7 +21,11 @@ impl<'name> Renamer<'name> {
     Self {
       canonical_names: FxHashMap::default(),
       symbols,
-      used_canonical_names: RESERVED_NAMES.iter().map(|&s| Cow::Owned(s.into())).collect(),
+      used_canonical_names: RESERVED_KEYWORDS
+        .iter()
+        .chain(GLOBAL_OBJECTS.iter())
+        .map(|s| Cow::Owned(Rstr::new(s)))
+        .collect(),
     }
   }
 

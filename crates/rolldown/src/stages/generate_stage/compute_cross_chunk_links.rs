@@ -8,7 +8,7 @@ use itertools::{multizip, Itertools};
 use oxc_index::{index_vec, IndexVec};
 use rolldown_common::{
   ChunkId, ChunkKind, CrossChunkImportItem, ExternalModuleId, ImportKind, ModuleId, NamedImport,
-  NormalModuleId, SymbolRef, WrapKind,
+  SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::IntoParallelIterator;
@@ -23,7 +23,6 @@ type IndexChunkExportedSymbols = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
 type IndexCrossChunkImports = IndexVec<ChunkId, FxHashSet<ChunkId>>;
 type IndexCrossChunkDynamicImports =
   IndexVec<ChunkId, IndexSet<ChunkId, BuildHasherDefault<FxHasher>>>;
-type IndexChunkDependencyOrder = IndexVec<ChunkId, FxHashMap<ChunkId, u32>>;
 type IndexImportsFromOtherChunks = IndexVec<ChunkId, FxHashMap<ChunkId, Vec<CrossChunkImportItem>>>;
 
 impl<'a> GenerateStage<'a> {
@@ -35,8 +34,7 @@ impl<'a> GenerateStage<'a> {
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
     let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ExternalModuleId, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
-    let mut index_chunk_dependency_order: IndexChunkDependencyOrder =
-      index_vec![FxHashMap::default(); chunk_graph.chunks.len()];
+
     let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkId, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunks.len()];
     let mut index_cross_chunk_imports: IndexCrossChunkImports =
       index_vec![FxHashSet::default(); chunk_graph.chunks.len()];
@@ -45,11 +43,9 @@ impl<'a> GenerateStage<'a> {
 
     self.collect_depended_symbols(
       chunk_graph,
-      self.link_output.runtime.id(),
       &mut index_chunk_depended_symbols,
       &mut index_chunk_imports_from_external_modules,
       &mut index_cross_chunk_dynamic_imports,
-      &mut index_chunk_dependency_order,
     );
 
     self.compute_chunk_imports(
@@ -90,11 +86,10 @@ impl<'a> GenerateStage<'a> {
       .into_iter_enumerated()
       .collect_vec()
       .into_par_iter()
-      .map(|(chunk_id, importee_map)| {
-        let dependency_order = &index_chunk_dependency_order[chunk_id];
+      .map(|(_chunk_id, importee_map)| {
         importee_map
           .into_iter()
-          .sorted_by_key(|(importee_chunk_id, _)| dependency_order[importee_chunk_id])
+          .sorted_by_key(|(importee_chunk_id, _)| chunk_graph.chunks[*importee_chunk_id].exec_order)
           .collect_vec()
       })
       .collect::<Vec<_>>();
@@ -142,11 +137,9 @@ impl<'a> GenerateStage<'a> {
   fn collect_depended_symbols(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-    runtime_module: NormalModuleId,
     index_chunk_depended_symbols: &mut IndexChunkDependedSymbols,
     index_chunk_imports_from_external_modules: &mut IndexChunkImportsFromExternalModules,
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
-    index_chunk_dependency_order: &mut IndexChunkDependencyOrder,
   ) {
     let symbols = &Mutex::new(&mut self.link_output.symbols);
 
@@ -155,7 +148,6 @@ impl<'a> GenerateStage<'a> {
       index_chunk_depended_symbols.iter_mut(),
       index_chunk_imports_from_external_modules.iter_mut(),
       index_cross_chunk_dynamic_imports.iter_mut(),
-      index_chunk_dependency_order.iter_mut(),
     ));
 
     chunks_iter.par_bridge().for_each(
@@ -164,19 +156,7 @@ impl<'a> GenerateStage<'a> {
         depended_symbols,
         imports_from_external_modules,
         cross_chunk_dynamic_imports,
-        chunk_dependency_order,
       )| {
-        let mut static_import_order = 0;
-        // ensure chunk contains runtime module is always included
-        if let Some(Some(importee_chunk)) = chunk_graph.module_to_chunk.get(runtime_module).copied()
-        {
-          chunk_dependency_order.entry(importee_chunk).or_insert_with(|| {
-            let tmp = static_import_order;
-            static_import_order += 1;
-            tmp
-          });
-        }
-
         chunk.modules.iter().copied().for_each(|module_id| {
           let module = &self.link_output.module_table.normal_modules[module_id];
           module
@@ -194,14 +174,6 @@ impl<'a> GenerateStage<'a> {
                   let importee_chunk =
                     chunk_graph.module_to_chunk[importee_id].expect("importee chunk should exist");
                   cross_chunk_dynamic_imports.insert(importee_chunk);
-                } else if matches!(rec.kind, ImportKind::Import | ImportKind::Require) {
-                  let importee_chunk =
-                    chunk_graph.module_to_chunk[importee_id].expect("importee chunk should exist");
-                  chunk_dependency_order.entry(importee_chunk).or_insert_with(|| {
-                    let tmp = static_import_order;
-                    static_import_order += 1;
-                    tmp
-                  });
                 }
               }
             })

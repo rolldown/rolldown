@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/issue/122/a
+input_file: crates/rolldown/tests/fixtures/issues/122/a
 ---
 # Assets
 
@@ -25,14 +25,14 @@ import "./c.mjs";
 ## entry2.mjs
 
 ```js
-import "./b.mjs";
 import "./c.mjs";
+import "./b.mjs";
 ```
 ## entry3.mjs
 
 ```js
-import "./b.mjs";
 import "./c.mjs";
+import "./b.mjs";
 
 // a.js
 console.log('a');

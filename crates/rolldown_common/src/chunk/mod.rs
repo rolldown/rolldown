@@ -16,6 +16,7 @@ use self::types::{
 
 #[derive(Debug, Default)]
 pub struct Chunk {
+  pub exec_order: u32,
   pub kind: ChunkKind,
   pub modules: Vec<NormalModuleId>,
   pub name: Option<String>,
@@ -40,7 +41,7 @@ impl Chunk {
     modules: Vec<NormalModuleId>,
     kind: ChunkKind,
   ) -> Self {
-    Self { modules, name, bits, kind, ..Self::default() }
+    Self { exec_order: u32::MAX, modules, name, bits, kind, ..Self::default() }
   }
 
   pub fn filename_template<'a>(

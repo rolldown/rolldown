@@ -2,7 +2,7 @@
 
 import 'zx/globals'
 import semver from 'semver'
-import path from 'path'
+import path from 'node:path'
 import { findWorkspacePackagesNoCheck } from '@pnpm/find-workspace-packages'
 import { REPO_ROOT } from '../meta/constants.js'
 

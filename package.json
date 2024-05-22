@@ -7,7 +7,7 @@
     "node": ">=18.18.0"
   },
   "scripts": {
-    "lint-code": "oxlint --ignore-path=./.oxlintignore --import-plugin --jsdoc-plugin -D=correctness -A=namespace --deny-warnings",
+    "lint-code": "oxlint --ignore-path=./.oxlintignore --import-plugin --jsdoc-plugin -D=correctness -A=namespace -D=prefer-node-protocol --deny-warnings",
     "lint-filename": "echo 'TODO: ls-lint is too slow now'",
     "lint-filename:bak": "ls-lint",
     "lint-spell": "cspell \"**\"",

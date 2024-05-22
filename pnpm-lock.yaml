@@ -197,7 +197,7 @@ importers:
         specifier: ^9.1.0
         version: 9.1.0
       glob:
-        specifier: ^10.3.12
+        specifier: ^10.3.15
         version: 10.3.15
       locate-character:
         specifier: ^3.0.0

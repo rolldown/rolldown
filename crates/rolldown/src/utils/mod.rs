@@ -13,7 +13,6 @@ pub mod parse_to_ast;
 pub mod renamer;
 pub mod render_chunks;
 pub mod render_normal_module;
-pub mod reserved_names;
 pub mod resolve_id;
 pub mod transform_source;
 

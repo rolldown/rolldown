@@ -90,6 +90,7 @@ impl<'ast> TakeIn<'ast> for ast::Class<'ast> {
       implements: TakeIn::dummy(alloc),
       decorators: TakeIn::dummy(alloc),
       modifiers: TakeIn::dummy(alloc),
+      scope_id: Cell::default(),
     }
   }
 }
@@ -107,6 +108,7 @@ impl<'ast> TakeIn<'ast> for ast::Function<'ast> {
       return_type: TakeIn::dummy(alloc),
       modifiers: Modifiers::default(),
       this_param: TakeIn::dummy(alloc),
+      scope_id: Cell::default(),
     }
   }
 }
@@ -152,6 +154,7 @@ impl<'ast> TakeIn<'ast> for ast::Program<'ast> {
       directives: TakeIn::dummy(alloc),
       hashbang: TakeIn::dummy(alloc),
       body: TakeIn::dummy(alloc),
+      scope_id: Cell::default(),
     }
   }
 }
@@ -218,6 +221,7 @@ impl<'ast> TakeIn<'ast> for ast::ArrowFunctionExpression<'ast> {
       body: TakeIn::dummy(alloc),
       type_parameters: TakeIn::dummy(alloc),
       return_type: TakeIn::dummy(alloc),
+      scope_id: Cell::default(),
     }
   }
 }

@@ -59,6 +59,91 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-Rn8q0JMh.mjs
 
+# tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
+
+- $runtime$-!~{001}~.mjs => $runtime$-wMuOmvcp.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js--g8iVASn.mjs
+
+# tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_module
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-503Es-7M.mjs
+
+# tests/esbuild/dce/package_json_side_effects_array_keep_main_use_module
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-503Es-7M.mjs
+
+# tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_module
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-pqCG0HXj.mjs
+
+# tests/esbuild/dce/package_json_side_effects_array_keep_module_use_module
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-pqCG0HXj.mjs
+
+# tests/esbuild/dce/package_json_side_effects_array_remove
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-503Es-7M.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-Bw812NkN.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_intermediate_files_diamond
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-GEdsf6DD.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_intermediate_files_unused
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-h5EtpwH6.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_keep_named_import_common_js
+
+- $runtime$-!~{001}~.mjs => $runtime$-_kwtb1f_.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-TKLwbxN0.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_keep_named_import_es6
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-CZAoxxM9.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_keep_star_import_common_js
+
+- $runtime$-!~{001}~.mjs => $runtime$-_kwtb1f_.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-qfiRblnU.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6
+
+- $runtime$-!~{001}~.mjs => $runtime$-p3E6YEwS.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-eaTV-Y88.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_no_warning_in_node_modules_issue999
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-Zt6Oya4g.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_es6
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-503Es-7M.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_remove_named_import_es6
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-503Es-7M.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_remove_star_import_es6
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-503Es-7M.mjs
+
+# tests/esbuild/dce/package_json_side_effects_keep_export_default_expr
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-W4tSnCyu.mjs
+
+# tests/esbuild/dce/package_json_side_effects_nested_directory_remove
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-503Es-7M.mjs
+
+# tests/esbuild/dce/package_json_side_effects_true_keep_common_js
+
+- $runtime$-!~{001}~.mjs => $runtime$-_kwtb1f_.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-ugS1T2iI.mjs
+
 # tests/esbuild/dce/package_json_side_effects_true_keep_es6
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-Rn8q0JMh.mjs

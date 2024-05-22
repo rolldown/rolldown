@@ -1,0 +1,22 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_common_js
+---
+# Assets
+
+## src_entry_js.mjs
+
+```js
+import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
+// node_modules/demo-pkg/index.js
+var require_demo_pkg_index = __commonJSMin((exports, module) => {
+	exports.foo = 123;
+	console.log('hello');
+});
+
+// src/entry.js
+var import_demo_pkg_index = __toESM(require_demo_pkg_index());
+console.log(import_demo_pkg_index);
+```

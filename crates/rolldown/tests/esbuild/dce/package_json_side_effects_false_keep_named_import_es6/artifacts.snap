@@ -1,0 +1,17 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_named_import_es6
+---
+# Assets
+
+## src_entry_js.mjs
+
+```js
+// node_modules/demo-pkg/index.js
+const foo = 123;
+console.log('hello');
+
+// src/entry.js
+console.log(foo);
+```

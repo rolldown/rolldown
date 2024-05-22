@@ -16,7 +16,7 @@ impl From<String> for LogLevel {
       "warn" => Self::Warn,
       "info" => Self::Info,
       "debug" => Self::Debug,
-      _ => panic!("Invalid log level: {}", value),
+      _ => panic!("Invalid log level: {value}"),
     }
   }
 }

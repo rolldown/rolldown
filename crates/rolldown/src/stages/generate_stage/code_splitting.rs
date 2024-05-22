@@ -1,4 +1,4 @@
-use std::hash::BuildHasherDefault;
+use std::{cmp::Ordering, hash::BuildHasherDefault};
 
 use itertools::Itertools;
 use oxc_index::IndexVec;
@@ -144,6 +144,55 @@ impl<'a> GenerateStage<'a> {
         self.link_output.module_table.normal_modules[*module_id].exec_order
       });
     });
+
+    chunks
+      .iter_mut()
+      .sorted_by(|a, b| {
+        let a_should_be_first = Ordering::Less;
+        let b_should_be_first = Ordering::Greater;
+
+        match (&a.kind, &b.kind) {
+          (
+            ChunkKind::EntryPoint { module: a_module_id, .. },
+            ChunkKind::EntryPoint { module: b_module_id, .. },
+          ) => self.link_output.module_table.normal_modules[*a_module_id]
+            .exec_order
+            .cmp(&self.link_output.module_table.normal_modules[*b_module_id].exec_order),
+          (ChunkKind::EntryPoint { module: a_module_id, .. }, ChunkKind::Common) => {
+            let a_module_exec_order =
+              self.link_output.module_table.normal_modules[*a_module_id].exec_order;
+            let b_chunk_first_module_exec_order =
+              self.link_output.module_table.normal_modules[b.modules[0]].exec_order;
+            if a_module_exec_order == b_chunk_first_module_exec_order {
+              a_should_be_first
+            } else {
+              a_module_exec_order.cmp(&b_chunk_first_module_exec_order)
+            }
+          }
+          (ChunkKind::Common, ChunkKind::EntryPoint { module: b_module_id, .. }) => {
+            let b_module_exec_order =
+              self.link_output.module_table.normal_modules[*b_module_id].exec_order;
+            let a_chunk_first_module_exec_order =
+              self.link_output.module_table.normal_modules[a.modules[0]].exec_order;
+            if a_chunk_first_module_exec_order == b_module_exec_order {
+              b_should_be_first
+            } else {
+              a_chunk_first_module_exec_order.cmp(&b_module_exec_order)
+            }
+          }
+          (ChunkKind::Common, ChunkKind::Common) => {
+            let a_chunk_first_module_exec_order =
+              self.link_output.module_table.normal_modules[a.modules[0]].exec_order;
+            let b_chunk_first_module_exec_order =
+              self.link_output.module_table.normal_modules[b.modules[0]].exec_order;
+            a_chunk_first_module_exec_order.cmp(&b_chunk_first_module_exec_order)
+          }
+        }
+      })
+      .enumerate()
+      .for_each(|(i, chunk)| {
+        chunk.exec_order = i.try_into().expect("Too many chunks, u32 overflowed.");
+      });
 
     let sorted_chunk_ids =
       chunks.indices().sorted_by_key(|id| &chunks[*id].bits).collect::<Vec<_>>();

@@ -1375,15 +1375,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{003}~.mjs => b-91ZliBhV.mjs
 - c-!~{004}~.mjs => c-XewjZoRS.mjs
 - entry1-!~{000}~.mjs => entry1-_fcFnBsf.mjs
-- entry2-!~{001}~.mjs => entry2-HA1lKBk8.mjs
-- entry3-!~{002}~.mjs => entry3-bRT67heJ.mjs
+- entry2-!~{001}~.mjs => entry2-jt0I7hrk.mjs
+- entry3-!~{002}~.mjs => entry3-hyni2iWP.mjs
 
 # tests/fixtures/issues/122/b
 
 - 1-!~{004}~.mjs => 1-Hl9Rv5WQ.mjs
 - 2-!~{003}~.mjs => 2-BzwAbMwC.mjs
 - a-!~{000}~.mjs => a-9ZdsWyCX.mjs
-- b-!~{001}~.mjs => b-Ryq1zljY.mjs
+- b-!~{001}~.mjs => b-PViJx8IB.mjs
 - c-!~{002}~.mjs => c-Q0kP-AMp.mjs
 
 # tests/fixtures/misc/ambiguous_star_export

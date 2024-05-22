@@ -1354,6 +1354,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-z7O5ieUj.mjs
 
+# tests/fixtures/function/tree_shaking/indirect_module_side_effect
+
+- main-!~{000}~.mjs => main-F3dsfqz-.mjs
+
 # tests/fixtures/function/tree_shaking/json_object
 
 - main-!~{000}~.mjs => main-Ep15x52X.mjs

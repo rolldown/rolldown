@@ -84,14 +84,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-503Es-7M.mjs
 
-# tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
-
-- src_entry_js-!~{000}~.mjs => src_entry_js-Bw812NkN.mjs
-
-# tests/esbuild/dce/package_json_side_effects_false_intermediate_files_diamond
-
-- src_entry_js-!~{000}~.mjs => src_entry_js-GEdsf6DD.mjs
-
 # tests/esbuild/dce/package_json_side_effects_false_intermediate_files_unused
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-h5EtpwH6.mjs

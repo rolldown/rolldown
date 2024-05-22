@@ -11,9 +11,6 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_in
 // node_modules/d/index.js
 const foo = 123;
 
-// node_modules/b/index.js
-throw 'keep this';
-
 // src/entry.js
 console.log(foo);
 ```

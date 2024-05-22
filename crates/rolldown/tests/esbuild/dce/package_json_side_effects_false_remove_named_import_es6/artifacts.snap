@@ -1,0 +1,13 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_named_import_es6
+---
+# Assets
+
+## src_entry_js.mjs
+
+```js
+// src/entry.js
+console.log('unused import');
+```

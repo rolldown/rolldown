@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork
+---
+# Assets
+
+## a_index.mjs
+
+```js
+// node_modules/c/index.js
+let foo = 'foo';
+
+export { foo };
+```
+## src_entry_js.mjs
+
+```js
+// src/entry.js
+import('./a_index.mjs').then(x => assert(x.foo === 'foo'));
+```

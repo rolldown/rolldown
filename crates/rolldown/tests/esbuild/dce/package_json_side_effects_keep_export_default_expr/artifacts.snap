@@ -1,0 +1,16 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_keep_export_default_expr
+---
+# Assets
+
+## src_entry_js.mjs
+
+```js
+// node_modules/demo-pkg/index.js
+var demo_pkg_index_default = exprWithSideEffects();
+
+// src/entry.js
+console.log(demo_pkg_index_default);
+```

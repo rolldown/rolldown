@@ -1,0 +1,23 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6
+---
+# Assets
+
+## src_entry_js.mjs
+
+```js
+import { __export } from "./$runtime$.mjs";
+
+// node_modules/demo-pkg/index.js
+var demo_pkg_index_ns = {};
+__export(demo_pkg_index_ns, {
+	foo:() => foo
+});
+const foo = 123;
+console.log('hello');
+
+// src/entry.js
+console.log(demo_pkg_index_ns);
+```

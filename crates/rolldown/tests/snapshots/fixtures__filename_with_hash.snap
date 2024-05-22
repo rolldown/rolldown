@@ -1354,22 +1354,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-z7O5ieUj.mjs
 
-# tests/fixtures/function/tree_shaking/indirect_module_side_effect
-
-- main-!~{000}~.mjs => main-F3dsfqz-.mjs
-
-# tests/fixtures/function/tree_shaking/json_object
-
-- main-!~{000}~.mjs => main-Ep15x52X.mjs
-
-# tests/fixtures/function/tree_shaking/unused_import_external
-
-- main-!~{000}~.mjs => main-Ix9nDVBV.mjs
-
-# tests/fixtures/function/tree_shaking/unused_import_named
-
-- main-!~{000}~.mjs => main-nyQrEnyN.mjs
-
 # tests/fixtures/issues/122/a
 
 - b-!~{003}~.mjs => b-91ZliBhV.mjs
@@ -1466,6 +1450,26 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/rollup/simplify-with-destructuring
 
 - main-!~{000}~.mjs => main-m9nnNuko.mjs
+
+# tests/fixtures/tree_shaking/derived_side_effects_should_have_high_priority
+
+- main-!~{000}~.mjs => main-iu9o57bq.mjs
+
+# tests/fixtures/tree_shaking/indirect_module_side_effect
+
+- main-!~{000}~.mjs => main-F3dsfqz-.mjs
+
+# tests/fixtures/tree_shaking/json_object
+
+- main-!~{000}~.mjs => main-Ep15x52X.mjs
+
+# tests/fixtures/tree_shaking/unused_import_external
+
+- main-!~{000}~.mjs => main-Ix9nDVBV.mjs
+
+# tests/fixtures/tree_shaking/unused_import_named
+
+- main-!~{000}~.mjs => main-nyQrEnyN.mjs
 
 # tests/fixtures/warnings/eval
 

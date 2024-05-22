@@ -1453,7 +1453,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/tree_shaking/derived_side_effects_should_have_high_priority
 
-- main-!~{000}~.mjs => main-iu9o57bq.mjs
+- main-!~{000}~.mjs => main-V3tT_Jb-.mjs
 
 # tests/fixtures/tree_shaking/indirect_module_side_effect
 

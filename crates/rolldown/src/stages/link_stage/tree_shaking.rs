@@ -1,5 +1,6 @@
 use crate::types::symbols::Symbols;
 use oxc_index::IndexVec;
+use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolRef};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 
@@ -41,7 +42,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   module.import_records.iter().for_each(|import_record| match import_record.resolved_module {
     rolldown_common::ModuleId::Normal(importee_id) => {
       let importee = &ctx.modules[importee_id];
-      if !ctx.tree_shaking || importee.side_effects {
+      if !ctx.tree_shaking || importee.side_effects.has_side_effects() {
         include_module(ctx, importee);
       }
     }
@@ -139,14 +140,14 @@ impl LinkStage<'_> {
 
   fn determine_side_effects(&mut self) {
     type IndexVisited = IndexVec<NormalModuleId, bool>;
-    type IndexSideEffectsCache = IndexVec<NormalModuleId, Option<bool>>;
+    type IndexSideEffectsCache = IndexVec<NormalModuleId, Option<DeterminedSideEffects>>;
 
     fn determine_side_effects_for_module(
       visited: &mut IndexVisited,
       cache: &mut IndexSideEffectsCache,
       module_id: NormalModuleId,
       normal_modules: &NormalModuleVec,
-    ) -> bool {
+    ) -> DeterminedSideEffects {
       let module = &normal_modules[module_id];
 
       let is_visited = &mut visited[module_id];
@@ -161,19 +162,27 @@ impl LinkStage<'_> {
         return ret;
       }
 
-      let ret = if module.side_effects {
-        true
-      } else {
-        module.import_records.iter().any(|import_record| match import_record.resolved_module {
-          rolldown_common::ModuleId::Normal(importee_id) => {
-            determine_side_effects_for_module(visited, cache, importee_id, normal_modules)
-          }
-          rolldown_common::ModuleId::External(_) => {
-            // External module is currently treated as always having side effects, but
-            // it's ensured by `render_chunk_imports`. So here we consider it as no side effects.
-            false
-          }
-        })
+      let ret = match module.side_effects {
+        // should keep as is if the side effects is derived from package.json, or it is already
+        // true
+        DeterminedSideEffects::PackageJson(_) => module.side_effects,
+        DeterminedSideEffects::Analyzed(v) if v => module.side_effects,
+        // this branch means the side effects of the module is analyzed `false`
+        DeterminedSideEffects::Analyzed(_) => {
+          let has_side_effects_in_dep =
+            module.import_records.iter().any(|import_record| match import_record.resolved_module {
+              rolldown_common::ModuleId::Normal(importee_id) => {
+                determine_side_effects_for_module(visited, cache, importee_id, normal_modules)
+                  .has_side_effects()
+              }
+              rolldown_common::ModuleId::External(_) => {
+                // External module is currently treated as always having side effects, but
+                // it's ensured by `render_chunk_imports`. So here we consider it as no side effects.
+                DeterminedSideEffects::Analyzed(false).has_side_effects()
+              }
+            });
+          DeterminedSideEffects::Analyzed(has_side_effects_in_dep)
+        }
       };
 
       cache[module_id] = Some(ret);

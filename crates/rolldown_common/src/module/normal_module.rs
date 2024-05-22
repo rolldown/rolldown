@@ -1,5 +1,6 @@
 use std::{fmt::Debug, sync::Arc};
 
+use crate::side_effects::DeterminedSideEffects;
 use crate::{
   types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
   ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
@@ -48,7 +49,7 @@ pub struct NormalModule {
   pub imported_ids: Vec<ResourceId>,
   // the module ids imported by this module via dynamic import()
   pub dynamically_imported_ids: Vec<ResourceId>,
-  pub side_effects: bool,
+  pub side_effects: DeterminedSideEffects,
   pub package_json: Option<Arc<PackageJson>>,
 }
 

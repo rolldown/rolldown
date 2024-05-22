@@ -8,7 +8,7 @@
   "assignees": ["hyf0", "IWANABETHATGUY", "underfin"],
   "assigneesSampleSize": 1,
   "timezone": "Asia/Shanghai",
-  "schedule": ["after 12:00pm", "before 4:00pm"],
+  "schedule": ["after 00:01pm", "before 4:01pm"],
   "ignorePaths": [
     "**/node_modules/**",
     "**/examples/**",
@@ -16,23 +16,19 @@
   ],
   "packageRules": [
     {
-      "automerge": true,
-      "matchUpdateTypes": ["patch", "minor", "lockFileMaintenance", "pin"]
-    },
-    {
       "matchManagers": ["custom.regex"],
-      "matchPackageNames": ["rustc", "oxlint"]
+      "matchPackageNames": ["rustc"]
     },
     {
       "automerge": true,
       "matchUpdateTypes": ["patch"],
-      "excludePackageNames": ["rustc", "oxlint"],
+      "excludePackageNames": ["rustc", "oxlint", "npm-rolldown"],
       "groupName": "patch dependencies"
     },
     {
       "automerge": true,
       "matchUpdateTypes": ["minor"],
-      "excludePackageNames": ["rustc"],
+      "excludePackageNames": ["rustc", "oxlint", "npm-rolldown"],
       "groupName": "minor dependencies"
     },
     {

@@ -1451,10 +1451,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-m9nnNuko.mjs
 
-# tests/fixtures/tree_shaking/array-side-effects
-
-- main-!~{000}~.mjs => main-V3tT_Jb-.mjs
-
 # tests/fixtures/tree_shaking/derived_side_effects_should_have_high_priority
 
 - main-!~{000}~.mjs => main-V3tT_Jb-.mjs

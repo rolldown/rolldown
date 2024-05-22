@@ -42,7 +42,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   module.import_records.iter().for_each(|import_record| match import_record.resolved_module {
     rolldown_common::ModuleId::Normal(importee_id) => {
       let importee = &ctx.modules[importee_id];
-      if !ctx.tree_shaking || importee.side_effects.inner() {
+      if !ctx.tree_shaking || importee.side_effects.has_side_effects() {
         include_module(ctx, importee);
       }
     }
@@ -173,12 +173,12 @@ impl LinkStage<'_> {
             module.import_records.iter().any(|import_record| match import_record.resolved_module {
               rolldown_common::ModuleId::Normal(importee_id) => {
                 determine_side_effects_for_module(visited, cache, importee_id, normal_modules)
-                  .inner()
+                  .has_side_effects()
               }
               rolldown_common::ModuleId::External(_) => {
                 // External module is currently treated as always having side effects, but
                 // it's ensured by `render_chunk_imports`. So here we consider it as no side effects.
-                DeterminedSideEffects::Analyzed(false).inner()
+                DeterminedSideEffects::Analyzed(false).has_side_effects()
               }
             });
           DeterminedSideEffects::Analyzed(has_side_effects_in_dep)

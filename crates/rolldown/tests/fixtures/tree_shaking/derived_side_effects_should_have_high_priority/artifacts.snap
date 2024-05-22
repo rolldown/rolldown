@@ -8,9 +8,6 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/derived_side_effects_sho
 ## main.mjs
 
 ```js
-// another/a/index.js
-console.log('result');
-
 // another/b/index.js
 const b = 100;
 

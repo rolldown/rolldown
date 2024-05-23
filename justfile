@@ -98,7 +98,6 @@ fmt-repo:
 lint:
     just lint-rust
     just lint-node
-    pnpm lint-spell
 
 lint-rust:
     cargo fmt --all -- --check

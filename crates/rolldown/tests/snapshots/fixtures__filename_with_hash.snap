@@ -250,6 +250,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - $runtime$-!~{001}~.mjs => $runtime$-_kwtb1f_.mjs
 - entry_js-!~{000}~.mjs => entry_js-9kkzMOt7.mjs
 
+# tests/esbuild/default/re_export_default_external_common_js
+
+- $runtime$-!~{001}~.cjs => $runtime$-QX0-ycNd.cjs
+- entry_js-!~{000}~.cjs => entry_js-bJN9bB3m.cjs
+
+# tests/esbuild/default/re_export_default_external_es6
+
+- entry_js-!~{000}~.mjs => entry_js-reizSzfx.mjs
+
 # tests/esbuild/default/re_export_default_internal
 
 - entry_js-!~{000}~.mjs => entry_js-VAX5GNXh.mjs

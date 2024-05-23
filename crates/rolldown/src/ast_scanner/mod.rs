@@ -58,6 +58,7 @@ pub struct AstScanner<'me> {
 }
 
 impl<'me> AstScanner<'me> {
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     idx: NormalModuleId,
     scope: &'me AstScope,

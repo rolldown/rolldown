@@ -4,7 +4,6 @@ use once_cell::sync::Lazy;
 use oxc::ast::ast::{
   BindingPatternKind, Expression, IdentifierReference, MemberExpression, PropertyKey,
 };
-use oxc::ast::{CommentKind, Trivias};
 use oxc::span::Span;
 use rolldown_common::AstScope;
 use rustc_hash::FxHashSet;
@@ -116,6 +115,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
+  #[allow(clippy::too_many_lines)]
   fn detect_side_effect_of_expr(&mut self, expr: &oxc::ast::ast::Expression) -> bool {
     match expr {
       Expression::BooleanLiteral(_)
@@ -207,7 +207,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::JSXElement(_)
       | Expression::JSXFragment(_) => true,
       Expression::CallExpression(expr) => {
-        let mut leading_comment_index: Option<usize> = if self.attached_comment_vecmap.is_empty() {
+        let leading_comment_index: Option<usize> = if self.attached_comment_vecmap.is_empty() {
           None
         } else {
           // because the span is the content of comment, so the two span should never overlapped,
@@ -427,7 +427,6 @@ mod test {
       ast
         .trivias()
         .comments()
-        .into_iter()
         .filter_map(|(kind, span)| {
           if matches!(kind, CommentKind::SingleLine) {
             None

@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use itertools::Itertools;
 use oxc::{
   ast::{ast::IdentifierReference, visit::walk, CommentKind, Visit},
   codegen::{self, Codegen, CodegenOptions, Gen},
@@ -30,7 +29,6 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
       self
         .trivias
         .comments()
-        .into_iter()
         .filter_map(|(kind, span)| {
           if matches!(kind, CommentKind::SingleLine) {
             None

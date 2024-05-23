@@ -46,7 +46,7 @@ pub struct AstScanner<'me> {
   module_type: ModuleType,
   file_path: &'me ResourceId,
   scope: &'me AstScope,
-  travias: &'me Trivias,
+  trivias: &'me Trivias,
   symbol_table: &'me mut AstSymbols,
   current_stmt_info: StmtInfo,
   result: ScanResult,
@@ -108,7 +108,7 @@ impl<'me> AstScanner<'me> {
       used_module_ref: false,
       source,
       file_path,
-      travias,
+      trivias: travias,
     }
   }
 

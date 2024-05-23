@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
+use itertools::Itertools;
 use oxc::{
-  ast::{ast::IdentifierReference, visit::walk, Visit},
+  ast::{ast::IdentifierReference, visit::walk, CommentKind, Visit},
   codegen::{self, Codegen, CodegenOptions, Gen},
 };
 use rolldown_common::ImportKind;
@@ -11,10 +12,38 @@ use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
 impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
+    // the first element the span of the content
+    // the second element is the end of the comment content,
+    // the third element of tuple is whether the comment has been attached to any statement before,
+    // we use the third element and binary search, making the search fast e.g.
+    // ```js
+    // /** test**/
+    // call1();
+    // call2();
+    // ```
+    // Although, the `test` comment is both closest leading comment of `call1()` and `call2()`,
+    // but when we visited `call1()`, the second element of tuple will be set to true, so when we visited `call2()`,
+    // we don't need to check again;
+    // for n `CallExpression`, m `Comments`, k is average length between `CallExpression` and `Comments`,
+    // We could make the algorithm complexity to O(nlogmk), usually the k is a constant, so the final complexity is O(nlogm)
+    let mut attached_comment_vecmap =
+      self
+        .trivias
+        .comments()
+        .into_iter()
+        .filter_map(|(kind, span)| {
+          if matches!(kind, CommentKind::SingleLine) {
+            None
+          } else {
+            Some((span, false))
+          }
+        })
+        .collect::<Vec<_>>();
+
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.current_stmt_info.side_effect =
-        SideEffectDetector::new(self.scope, &self.travias, self.source)
+        SideEffectDetector::new(self.scope, self.source, &mut attached_comment_vecmap)
           .detect_side_effect_of_stmt(stmt);
 
       if cfg!(debug_assertions) {

@@ -36,20 +36,24 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_3: Lazy<FxHashSet<(&'static str, &'static st
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScope,
-  pub travias: &'a Trivias,
   pub source: &'a Arc<str>,
+  pub attached_comment_vecmap: &'a mut Vec<(Span, bool)>,
 }
 
 impl<'a> SideEffectDetector<'a> {
-  pub fn new(scope: &'a AstScope, travias: &'a Trivias, source: &'a Arc<str>) -> Self {
-    Self { scope, travias, source }
+  pub fn new(
+    scope: &'a AstScope,
+    source: &'a Arc<str>,
+    attached_comment_vecmap: &'a mut Vec<(Span, bool)>,
+  ) -> Self {
+    Self { scope, source, attached_comment_vecmap }
   }
 
-  fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
+  fn is_unresolved_reference(&mut self, ident_ref: &IdentifierReference) -> bool {
     self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
   }
 
-  fn detect_side_effect_of_class(&self, cls: &oxc::ast::ast::Class) -> bool {
+  fn detect_side_effect_of_class(&mut self, cls: &oxc::ast::ast::Class) -> bool {
     use oxc::ast::ast::{ClassElement, PropertyKey};
     cls.body.body.iter().any(|elm| match elm {
       ClassElement::StaticBlock(static_block) => {
@@ -112,7 +116,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_expr(&self, expr: &oxc::ast::ast::Expression) -> bool {
+  fn detect_side_effect_of_expr(&mut self, expr: &oxc::ast::ast::Expression) -> bool {
     match expr {
       Expression::BooleanLiteral(_)
       | Expression::NullLiteral(_)
@@ -203,20 +207,40 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::JSXElement(_)
       | Expression::JSXFragment(_) => true,
       Expression::CallExpression(expr) => {
-        let mut leading_comment: Option<(CommentKind, Span)> = None;
-        self.travias.comments().for_each(|(kind, span)| {
-          if span.end < expr.span.start && matches!(kind, CommentKind::MultiLine) {
-            leading_comment = Some((kind, span));
+        let mut leading_comment_index: Option<usize> = if self.attached_comment_vecmap.is_empty() {
+          None
+        } else {
+          // because the span is the content of comment, so the two span should never overlapped,
+          // the result Variant should be `Err(usize)`
+          let insert_index = self
+            .attached_comment_vecmap
+            .binary_search_by(|probe| probe.0.end.cmp(&expr.span.start));
+          let leading_comment_index = match insert_index {
+            Ok(_) => unreachable!(),
+            // n is the position to insert, so the comment index should be n - 1
+            Err(n) => n - 1,
+          };
+          let comment = self.attached_comment_vecmap[leading_comment_index];
+          if comment.1 {
+            None
+          } else {
+            Some(leading_comment_index)
           }
-        });
-        let is_pure_comment = if let Some(leading_comment) = leading_comment {
+        };
+        let is_pure_comment = if let Some(leading_comment_index) = leading_comment_index {
           // dbg!(&leading_comment);
-          let res = &self.source[leading_comment.1.end as usize + 2..expr.span.start as usize];
-          let is_between_str_all_whitespace = res.chars().all(|ch| ch == ' ');
-          if is_between_str_all_whitespace {
+          let comment_span = self.attached_comment_vecmap[leading_comment_index].0;
+          // the end of a comment span is always 2 characters before the actual end of the comment
+          let res = &self.source[comment_span.end as usize + 2..expr.span.start as usize];
+          let is_interval_content_all_whitespace = res.chars().all(|ch| ch == ' ');
+          if is_interval_content_all_whitespace {
             let comment_content =
-              &self.source[leading_comment.1.start as usize..leading_comment.1.end as usize];
-            PURE_COMMENTS.is_match(comment_content)
+              &self.source[comment_span.start as usize..comment_span.end as usize];
+            let matched = PURE_COMMENTS.is_match(comment_content);
+            if matched {
+              self.attached_comment_vecmap[leading_comment_index].1 = true;
+            }
+            matched
           } else {
             false
           }
@@ -236,7 +260,10 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_var_decl(&self, var_decl: &oxc::ast::ast::VariableDeclaration) -> bool {
+  fn detect_side_effect_of_var_decl(
+    &mut self,
+    var_decl: &oxc::ast::ast::VariableDeclaration,
+  ) -> bool {
     var_decl.declarations.iter().any(|declarator| {
       // Whether to destructure import.meta
       if let BindingPatternKind::ObjectPattern(ref obj_pat) = declarator.id.kind {
@@ -251,7 +278,7 @@ impl<'a> SideEffectDetector<'a> {
     })
   }
 
-  fn detect_side_effect_of_decl(&self, decl: &oxc::ast::ast::Declaration) -> bool {
+  fn detect_side_effect_of_decl(&mut self, decl: &oxc::ast::ast::Declaration) -> bool {
     use oxc::ast::ast::Declaration;
     match decl {
       Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
@@ -268,7 +295,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  pub fn detect_side_effect_of_stmt(&self, stmt: &oxc::ast::ast::Statement) -> bool {
+  pub fn detect_side_effect_of_stmt(&mut self, stmt: &oxc::ast::ast::Statement) -> bool {
     use oxc::ast::ast::Statement;
     match stmt {
       oxc::ast::match_declaration!(Statement) => {
@@ -365,13 +392,14 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_block(&self, block: &oxc::ast::ast::BlockStatement) -> bool {
+  fn detect_side_effect_of_block(&mut self, block: &oxc::ast::ast::BlockStatement) -> bool {
     block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
   }
 }
 
 #[cfg(test)]
 mod test {
+  use oxc::ast::CommentKind;
   use oxc::span::SourceType;
   use rolldown_common::AstScope;
   use rolldown_oxc_utils::{OxcAst, OxcCompiler};
@@ -395,8 +423,21 @@ mod test {
       )
     };
 
+    let mut attached_comment_vecmap =
+      ast
+        .trivias()
+        .comments()
+        .into_iter()
+        .filter_map(|(kind, span)| {
+          if matches!(kind, CommentKind::SingleLine) {
+            None
+          } else {
+            Some((span, false))
+          }
+        })
+        .collect::<Vec<_>>();
     let has_side_effect = ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(&ast_scope, ast.trivias(), ast.source())
+      SideEffectDetector::new(&ast_scope, ast.source(), &mut attached_comment_vecmap)
         .detect_side_effect_of_stmt(stmt)
     });
 

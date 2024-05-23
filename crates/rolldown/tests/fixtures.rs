@@ -34,22 +34,24 @@ async fn filename_with_hash() {
     snapshot_output
       .push_str(&format!("# {}\n\n", fixture.dir_path().relative(&cwd).to_slash_lossy()));
 
-    let assets = fixture.bundle(false, true).await;
+    if !fixture.test_config().expect_uncaught_error {
+      let assets = fixture.bundle(false, true).await;
 
-    assets.assets.iter().for_each(|asset| match asset {
-      Output::Asset(asset) => {
-        snapshot_output.push_str(&format!("- {}\n", asset.filename));
-      }
-      Output::Chunk(chunk) => {
-        snapshot_output.push_str(&format!(
-          "- {} => {}\n",
-          chunk.preliminary_filename.as_str(),
-          chunk.filename.as_str()
-        ));
-      }
-    });
+      assets.assets.iter().for_each(|asset| match asset {
+        Output::Asset(asset) => {
+          snapshot_output.push_str(&format!("- {}\n", asset.filename));
+        }
+        Output::Chunk(chunk) => {
+          snapshot_output.push_str(&format!(
+            "- {} => {}\n",
+            chunk.preliminary_filename.as_str(),
+            chunk.filename.as_str()
+          ));
+        }
+      });
 
-    snapshot_outputs.push(snapshot_output);
+      snapshot_outputs.push(snapshot_output);
+    }
   }
   insta::assert_snapshot!(snapshot_outputs.join("\n"));
 }

@@ -21,6 +21,11 @@
       "default": true,
       "type": "boolean"
     },
+    "expectUncaughtError": {
+      "description": "If `true`, the fixture throw an unknown error that can be caught in the final execution phase.",
+      "default": false,
+      "type": "boolean"
+    },
     "snapshotOutputStats": {
       "description": "If `true`, the fixture output stats will be snapshot.",
       "default": false,

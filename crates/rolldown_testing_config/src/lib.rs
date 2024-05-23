@@ -22,6 +22,9 @@ pub struct TestConfig {
   #[serde(default)]
   /// If `true`, the sourcemap visualizer will be snapshot.
   pub visualize_sourcemap: bool,
+  #[serde(default)]
+  /// If `true`, the fixture throw an unknown error that can be caught in the final execution phase.
+  pub expect_uncaught_error: bool,
 }
 
 fn true_by_default() -> bool {

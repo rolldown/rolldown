@@ -21,7 +21,24 @@ impl Case {
 
   pub fn run(self) {
     std::env::set_var("ROLLDOWN_TEST", "1");
-    tokio::runtime::Runtime::new().unwrap().block_on(self.run_inner());
+    let expect_uncaught_error = self.fixture.test_config().expect_uncaught_error.clone();
+
+    let res = std::panic::catch_unwind(|| {
+      tokio::runtime::Runtime::new().unwrap().block_on(self.run_inner());
+    });
+
+    match res {
+      Ok(_) => {
+        assert!(!expect_uncaught_error, "expected uncaught error, but got success");
+      }
+      Err(err) => {
+        assert!(
+          expect_uncaught_error,
+          "expected success, but got errors: {:?}",
+          err
+        );
+      }
+    }
   }
 
   pub async fn run_inner(mut self) {

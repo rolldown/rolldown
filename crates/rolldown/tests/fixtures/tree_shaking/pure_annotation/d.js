@@ -1,3 +1,3 @@
-function dtest() {}
+function test2() {}
 
-export const d = /* #__PURE__ */                 dtest(), e =  dtest();
+export const d = /* #__PURE__ */                 test2(), e =  test2();

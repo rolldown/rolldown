@@ -35,8 +35,8 @@ impl BuildEvent for Eval {
 
     diagnostic.add_label(
       &file_id,
-      self.eval_span.start..self.eval_span.end,
-      "Used `eval` function at here.".to_string(),
+      self.span.start..self.span.end,
+      "Used `eval` function here.".to_string(),
     );
   }
 }

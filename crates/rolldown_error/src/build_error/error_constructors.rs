@@ -72,6 +72,6 @@ impl BuildError {
   }
 
   pub fn eval(filename: String, source: Arc<str>, span: Span) -> Self {
-    Self::new_inner(Eval { filename, eval_span: span, source })
+    Self::new_inner(Eval { filename, span, source })
   }
 }

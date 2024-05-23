@@ -10,7 +10,7 @@ use super::BuildEvent;
 pub struct Eval {
   pub filename: String,
   pub source: Arc<str>,
-  pub eval_span: Span,
+  pub span: Span,
 }
 
 impl BuildEvent for Eval {

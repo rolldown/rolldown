@@ -54,12 +54,8 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         }
         if ident.name == "eval" {
           self.result.warnings.push(
-            BuildError::unsupported_eval(
-              self.file_path.to_string(),
-              Arc::clone(self.source),
-              ident.span,
-            )
-            .with_severity_warning(),
+            BuildError::eval(self.file_path.to_string(), Arc::clone(self.source), ident.span)
+              .with_severity_warning(),
           );
         }
       }

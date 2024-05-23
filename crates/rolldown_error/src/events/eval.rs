@@ -7,35 +7,35 @@ use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions
 use super::BuildEvent;
 
 #[derive(Debug)]
-pub struct UnsupportedEval {
+pub struct Eval {
   pub filename: String,
   pub source: Arc<str>,
-  pub eval_span: Span,
+  pub span: Span,
 }
 
-impl BuildEvent for UnsupportedEval {
+impl BuildEvent for Eval {
   fn kind(&self) -> crate::event_kind::EventKind {
     crate::event_kind::EventKind::Eval
   }
 
   fn code(&self) -> &'static str {
-    "UNSUPPORTED_EVAL"
+    "EVAL"
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    format!("Unsupported eval at {}", self.filename)
+    format!("Use of eval in '{}' is strongly discouraged as it poses security risks and may cause issues with minification.", self.filename)
   }
 
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {
     let filename = opts.stabilize_path(&self.filename);
 
-    diagnostic.title = "Rolldown does not support `eval` function currently.".to_string();
+    diagnostic.title = "Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.".to_string();
 
     let file_id = diagnostic.add_file(filename, Arc::clone(&self.source));
 
     diagnostic.add_label(
       &file_id,
-      self.eval_span.start..self.eval_span.end,
+      self.span.start..self.span.end,
       "Used `eval` function here.".to_string(),
     );
   }

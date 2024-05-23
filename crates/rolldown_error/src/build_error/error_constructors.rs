@@ -9,11 +9,10 @@ use rolldown_resolver::ResolveError;
 use super::BuildError;
 
 use crate::events::{
-  circular_dependency::CircularDependency, external_entry::ExternalEntry,
+  circular_dependency::CircularDependency, eval::Eval, external_entry::ExternalEntry,
   forbid_const_assign::ForbidConstAssign, sourcemap_error::SourceMapError,
   unresolved_entry::UnresolvedEntry, unresolved_import::UnresolvedImport,
-  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
-  unsupported_eval::UnsupportedEval, NapiError,
+  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal, NapiError,
 };
 
 impl BuildError {
@@ -72,7 +71,7 @@ impl BuildError {
     Self::new_inner(NapiError { status, reason })
   }
 
-  pub fn unsupported_eval(filename: String, source: Arc<str>, span: Span) -> Self {
-    Self::new_inner(UnsupportedEval { filename, eval_span: span, source })
+  pub fn eval(filename: String, source: Arc<str>, span: Span) -> Self {
+    Self::new_inner(Eval { filename, span, source })
   }
 }

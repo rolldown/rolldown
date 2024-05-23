@@ -24,7 +24,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     // but when we visited `call1()`, the second element of tuple will be set to true, so when we visited `call2()`,
     // we don't need to check again;
     // for n `CallExpression`, m `Comments`, k is average length between `CallExpression` and `Comments`,
-    // We could make the algorithm complexity to O(nlogmk), usually the k is a constant, so the final complexity is O(nlogm)
+    // We could make the algorithm complexity to O(n * log(m) * k), usually the k is a constant, so the final complexity is O(n * log(m))
     let mut attached_comment_vecmap =
       self
         .trivias

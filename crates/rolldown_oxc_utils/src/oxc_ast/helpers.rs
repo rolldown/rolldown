@@ -10,7 +10,7 @@ use super::WithFieldsMut;
 
 impl OxcAst {
   pub fn is_body_empty(&self) -> bool {
-    self.inner.with_dependent(|_, praser_return| praser_return.program.body.is_empty())
+    self.inner.with_dependent(|_, parser_return| parser_return.program.body.is_empty())
   }
 
   pub fn make_semantic<'ast>(

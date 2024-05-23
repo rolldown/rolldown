@@ -250,7 +250,7 @@ impl<'a> SideEffectDetector<'a> {
         if is_pure_comment {
           expr.arguments.iter().any(|arg| match arg {
             oxc::ast::ast::Argument::SpreadElement(_) => true,
-            // TODO: implementa this
+            // TODO: implement this
             _ => false,
           })
         } else {

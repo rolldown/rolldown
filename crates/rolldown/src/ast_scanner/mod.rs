@@ -67,7 +67,7 @@ impl<'me> AstScanner<'me> {
     module_type: ModuleType,
     source: &'me Arc<str>,
     file_path: &'me ResourceId,
-    travias: &'me Trivias,
+    trivias: &'me Trivias,
   ) -> Self {
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let symbol_id_for_default_export_ref =
@@ -109,7 +109,7 @@ impl<'me> AstScanner<'me> {
       used_module_ref: false,
       source,
       file_path,
-      trivias: travias,
+      trivias,
     }
   }
 

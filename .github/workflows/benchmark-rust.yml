@@ -148,3 +148,4 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body: ${{ steps.bench_comparison.outputs.comment }}
           reactions-edit-mode: 'replace'
+          edit-mode: replace

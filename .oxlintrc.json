@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "unicorn/prefer-node-protocol": "error",
+    "import/namespace": [
+      "error",
+      {
+        "allowComputed": true
+      }
+    ]
+  }
+}

@@ -10,7 +10,7 @@ use super::WithFieldsMut;
 
 impl OxcAst {
   pub fn is_body_empty(&self) -> bool {
-    self.inner.with_dependent(|_, program| program.body.is_empty())
+    self.inner.with_dependent(|_, praser_return| praser_return.program.body.is_empty())
   }
 
   pub fn make_semantic<'ast>(
@@ -24,7 +24,7 @@ impl OxcAst {
 
   pub fn make_symbol_table_and_scope_tree(&self) -> (SymbolTable, ScopeTree) {
     self.inner.with_dependent(|dep, program| {
-      let semantic = Self::make_semantic(&dep.0, program, self.source_type);
+      let semantic = Self::make_semantic(&dep.0, &program.program, self.source_type);
       semantic.into_symbol_table_and_scope_tree()
     })
   }

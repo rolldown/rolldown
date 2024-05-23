@@ -1544,6 +1544,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-Ep15x52X.mjs
 
+# tests/fixtures/tree_shaking/pure_annotation
+
+- main-!~{000}~.mjs => main-Km8M_iGP.mjs
+
 # tests/fixtures/tree_shaking/unused_import_external
 
 - main-!~{000}~.mjs => main-Ix9nDVBV.mjs

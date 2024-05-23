@@ -1,7 +1,11 @@
+use std::sync::Arc;
+
 use once_cell::sync::Lazy;
 use oxc::ast::ast::{
   BindingPatternKind, Expression, IdentifierReference, MemberExpression, PropertyKey,
 };
+use oxc::ast::{CommentKind, Trivias};
+use oxc::span::Span;
 use rolldown_common::AstScope;
 use rustc_hash::FxHashSet;
 
@@ -19,6 +23,9 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_2: Lazy<FxHashSet<(&'static str, &'static st
     .collect()
   });
 
+static PURE_COMMENTS: Lazy<regex::Regex> =
+  Lazy::new(|| regex::Regex::new("^\\s*(#|@)__PURE__\\s*$").expect("Should create the regex"));
+
 static SIDE_EFFECT_FREE_MEMBER_EXPR_3: Lazy<FxHashSet<(&'static str, &'static str, &'static str)>> =
   Lazy::new(|| {
     [("Object", "prototype", "hasOwnProperty"), ("Object", "prototype", "constructor")]
@@ -29,11 +36,13 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_3: Lazy<FxHashSet<(&'static str, &'static st
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScope,
+  pub travias: &'a Trivias,
+  pub source: &'a Arc<str>,
 }
 
 impl<'a> SideEffectDetector<'a> {
-  pub fn new(scope: &'a AstScope) -> Self {
-    Self { scope }
+  pub fn new(scope: &'a AstScope, travias: &'a Trivias, source: &'a Arc<str>) -> Self {
+    Self { scope, travias, source }
   }
 
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
@@ -185,7 +194,6 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::ArrayExpression(_)
       | Expression::AssignmentExpression(_)
       | Expression::AwaitExpression(_)
-      | Expression::CallExpression(_)
       | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
       | Expression::NewExpression(_)
@@ -194,6 +202,37 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::YieldExpression(_)
       | Expression::JSXElement(_)
       | Expression::JSXFragment(_) => true,
+      Expression::CallExpression(expr) => {
+        let mut leading_comment: Option<(CommentKind, Span)> = None;
+        self.travias.comments().for_each(|(kind, span)| {
+          if span.end < expr.span.start && matches!(kind, CommentKind::MultiLine) {
+            leading_comment = Some((kind, span));
+          }
+        });
+        let is_pure_comment = if let Some(leading_comment) = leading_comment {
+          // dbg!(&leading_comment);
+          let res = &self.source[leading_comment.1.end as usize + 2..expr.span.start as usize];
+          let is_between_str_all_whitespace = res.chars().all(|ch| ch == ' ');
+          if is_between_str_all_whitespace {
+            let comment_content =
+              &self.source[leading_comment.1.start as usize..leading_comment.1.end as usize];
+            PURE_COMMENTS.is_match(comment_content)
+          } else {
+            false
+          }
+        } else {
+          false
+        };
+        if is_pure_comment {
+          expr.arguments.iter().any(|arg| match arg {
+            oxc::ast::ast::Argument::SpreadElement(_) => true,
+            // TODO: implementa this
+            _ => false,
+          })
+        } else {
+          true
+        }
+      }
     }
   }
 
@@ -356,11 +395,10 @@ mod test {
       )
     };
 
-    let has_side_effect = ast
-      .program()
-      .body
-      .iter()
-      .any(|stmt| SideEffectDetector::new(&ast_scope).detect_side_effect_of_stmt(stmt));
+    let has_side_effect = ast.program().body.iter().any(|stmt| {
+      SideEffectDetector::new(&ast_scope, ast.trivias(), ast.source())
+        .detect_side_effect_of_stmt(stmt)
+    });
 
     has_side_effect
   }

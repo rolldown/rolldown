@@ -14,7 +14,7 @@ impl OxcCompiler {
     let allocator = oxc::allocator::Allocator::default();
     let inner = Inner::new((source.into(), allocator), |(source, allocator)| {
       let parser = Parser::new(allocator, source, ty);
-      parser.parse().program
+      parser.parse()
     });
     OxcAst { inner, source_type: ty }
   }

@@ -1,0 +1,37 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_syntax_error_trailing_comma
+---
+# Errors
+
+## ANYHOW_Error
+
+```text
+[ANYHOW_Error] Error: Anyhow error: Unexpectedly failed to resolve dependencies of /src/entry.js. Got errors [
+    (
+        RawImportRecord {
+            module_request: Rstr(
+                "demo-pkg",
+            ),
+            kind: Import,
+            namespace_ref: SymbolRef {
+                owner: 1,
+                symbol: 3,
+            },
+            contains_import_star: false,
+            contains_import_default: true,
+            is_plain_import: false,
+        },
+        JSON(
+            JSONError {
+                path: "/node_modules/demo-pkg/package.json",
+                message: "trailing comma at line 4 column 1",
+                line: 4,
+                column: 1,
+            },
+        ),
+    ),
+]
+
+```

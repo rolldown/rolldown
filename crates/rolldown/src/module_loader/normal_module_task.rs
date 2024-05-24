@@ -4,9 +4,9 @@ use anyhow::Result;
 use futures::future::join_all;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScope, ImportRecordId, ModuleType, NormalModule,
-  NormalModuleId, PackageJson, RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId,
-  SymbolRef,
+  side_effects::{DeterminedSideEffects, HookSideEffects},
+  AstScope, ImportRecordId, ModuleType, NormalModule, NormalModuleId, PackageJson, RawImportRecord,
+  ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -33,6 +33,7 @@ pub struct NormalModuleTask {
   module_type: ModuleType,
   errors: Vec<BuildError>,
   is_user_defined_entry: bool,
+  side_effects: Option<HookSideEffects>,
 }
 
 impl NormalModuleTask {
@@ -43,6 +44,7 @@ impl NormalModuleTask {
     module_type: ModuleType,
     is_user_defined_entry: bool,
     package_json: Option<Arc<PackageJson>>,
+    side_effects: Option<HookSideEffects>,
   ) -> Self {
     Self {
       ctx,
@@ -52,6 +54,7 @@ impl NormalModuleTask {
       errors: vec![],
       is_user_defined_entry,
       package_json,
+      side_effects,
     }
   }
 
@@ -69,20 +72,32 @@ impl NormalModuleTask {
     }
   }
 
+  #[allow(clippy::too_many_lines)]
   async fn run_inner(&mut self) -> Result<()> {
+    let mut hook_side_effects = self.side_effects.take();
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let source =
-      load_source(&self.ctx.plugin_driver, &self.resolved_path, &self.ctx.fs, &mut sourcemap_chain)
-        .await?;
+    let source = load_source(
+      &self.ctx.plugin_driver,
+      &self.resolved_path,
+      &self.ctx.fs,
+      &mut sourcemap_chain,
+      &mut hook_side_effects,
+    )
+    .await?;
 
     // Run plugin transform.
-    let source: Arc<str> =
-      transform_source(&self.ctx.plugin_driver, &self.resolved_path, source, &mut sourcemap_chain)
-        .await?
-        .into();
+    let source: Arc<str> = transform_source(
+      &self.ctx.plugin_driver,
+      &self.resolved_path,
+      source,
+      &mut sourcemap_chain,
+      &mut hook_side_effects,
+    )
+    .await?
+    .into();
 
     let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source)?;
 
@@ -117,7 +132,7 @@ impl NormalModuleTask {
     let resource_id = ResourceId::new(Arc::clone(&self.resolved_path.path));
     let stable_resource_id = resource_id.stabilize(&self.ctx.input_options.cwd);
 
-    let side_effects = self
+    self
       .package_json
       .as_ref()
       .and_then(|p| {
@@ -127,6 +142,26 @@ impl NormalModuleTask {
         let analyzed_side_effects = stmt_infos.iter().any(|stmt_info| stmt_info.side_effect);
         DeterminedSideEffects::Analyzed(analyzed_side_effects)
       });
+
+    let default_side_effects = self
+      .package_json
+      .as_ref()
+      .and_then(|p| {
+        p.check_side_effects_for(&stable_resource_id).map(DeterminedSideEffects::PackageJson)
+      })
+      .unwrap_or_else(|| {
+        let analyzed_side_effects = stmt_infos.iter().any(|stmt_info| stmt_info.side_effect);
+        DeterminedSideEffects::Analyzed(analyzed_side_effects)
+      });
+
+    let side_effects = match hook_side_effects {
+      Some(side_effects) => match side_effects {
+        HookSideEffects::True => default_side_effects,
+        HookSideEffects::False => DeterminedSideEffects::PackageJson(false),
+        HookSideEffects::NoTreeshake => unimplemented!(),
+      },
+      None => default_side_effects,
+    };
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
 
     let module = NormalModule {
@@ -226,6 +261,7 @@ impl NormalModuleTask {
           module_type: ModuleType::Unknown,
           is_external: true,
           package_json: None,
+          side_effects: None,
         }));
       }
     }
@@ -300,6 +336,7 @@ impl NormalModuleTask {
               module_type: ModuleType::Unknown,
               is_external: true,
               package_json: None,
+              side_effects: None,
             });
           }
           _ => {

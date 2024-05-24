@@ -36,6 +36,7 @@ pub async fn resolve_id_with_plugins(
         path: r.id.into(),
         is_external: matches!(r.external, Some(true)),
         package_json: None,
+        side_effects: r.side_effects,
       }));
     }
   }
@@ -53,6 +54,7 @@ pub async fn resolve_id_with_plugins(
       path: r.id.into(),
       is_external: matches!(r.external, Some(true)),
       package_json: None,
+      side_effects: r.side_effects,
     }));
   }
 
@@ -63,6 +65,7 @@ pub async fn resolve_id_with_plugins(
       module_type: ModuleType::Unknown,
       is_external: true,
       package_json: None,
+      side_effects: None,
     }));
   }
 
@@ -84,6 +87,7 @@ fn resolve_id(
         is_external: true,
         module_type: ModuleType::Unknown,
         package_json: None,
+        side_effects: None,
       })),
       _ => Ok(Err(err)),
     }
@@ -93,6 +97,7 @@ fn resolve_id(
       module_type: resolved.module_type,
       is_external: false,
       package_json: resolved.package_json,
+      side_effects: None,
     }))
   }
 }

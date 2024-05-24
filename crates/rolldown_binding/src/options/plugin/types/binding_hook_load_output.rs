@@ -1,6 +1,8 @@
 use derivative::Derivative;
 use serde::Deserialize;
 
+use super::binding_hook_side_effects::BindingHookSideEffects;
+
 #[napi_derive::napi(object)]
 #[derive(Deserialize, Default, Derivative)]
 #[serde(rename_all = "camelCase")]
@@ -8,6 +10,7 @@ use serde::Deserialize;
 pub struct BindingHookLoadOutput {
   pub code: String,
   pub map: Option<String>,
+  pub side_effects: Option<BindingHookSideEffects>,
 }
 
 impl TryFrom<BindingHookLoadOutput> for rolldown_plugin::HookLoadOutput {
@@ -23,6 +26,7 @@ impl TryFrom<BindingHookLoadOutput> for rolldown_plugin::HookLoadOutput {
             .map_err(|e| anyhow::format_err!("SOURCEMAP_ERROR: {:?}", e))
         })
         .transpose()?,
+      side_effects: value.side_effects.map(Into::into),
     })
   }
 }

@@ -23,6 +23,8 @@ export type Hook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> =
   | FormalHook<Handler, HookOptions>
   | Handler
 
+export type ModuleSideEffects = boolean | 'no-treeshake' | null
+
 export type ResolveIdResult =
   | string
   | NullValue
@@ -30,6 +32,7 @@ export type ResolveIdResult =
   | {
       id: string
       external?: boolean
+      moduleSideEffects?: ModuleSideEffects
     }
 
 export interface Plugin {
@@ -78,7 +81,13 @@ export interface Plugin {
       this: PluginContext,
       id: string,
     ) => MaybePromise<
-      NullValue | string | { code: string; map?: SourceMapInput }
+      | NullValue
+      | string
+      | {
+          code: string
+          map?: SourceMapInput
+          moduleSideEffects?: ModuleSideEffects
+        }
     >
   >
 
@@ -93,6 +102,7 @@ export interface Plugin {
       | {
           code: string
           map?: string | null | SourceMapInput
+          moduleSideEffects?: ModuleSideEffects
         }
     >
   >

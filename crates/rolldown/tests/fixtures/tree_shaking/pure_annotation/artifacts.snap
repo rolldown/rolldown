@@ -17,9 +17,9 @@ function test() {
 const c = test();
 
 // d.js
-function dtest() {
+function test2() {
 }
-const d = dtest(), e = dtest();
+const d = test2(), e = test2();
 
 // main.js
 console.log(`a: `, a);

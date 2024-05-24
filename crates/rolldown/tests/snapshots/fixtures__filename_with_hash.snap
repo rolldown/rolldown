@@ -51,6 +51,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-usjR7oHI.mjs
 
+# tests/esbuild/dce/json_loader_remove_unused
+
+- entry_js-!~{000}~.mjs => entry_js-sU_ENWRL.mjs
+
 # tests/esbuild/dce/package_json_side_effects_array_glob
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-rTJv8BwR.mjs

@@ -31,7 +31,9 @@ impl Display for EventKind {
       // --- Rolldown specific
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
       EventKind::IoError => write!(f, "IO_ERROR"),
-      EventKind::AnyhowError => { write!(f, "ANYHOW_Error") }
+      EventKind::AnyhowError => {
+        write!(f, "ANYHOW_Error")
+      }
     }
   }
 }

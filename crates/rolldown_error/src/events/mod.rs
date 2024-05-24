@@ -66,4 +66,18 @@ impl BuildEvent for std::io::Error {
   }
 }
 
+impl BuildEvent for anyhow::Error {
+  fn kind(&self) -> EventKind {
+    EventKind::AnyhowError
+  }
+
+  fn code(&self) -> &'static str {
+    "ANYHOW_ERROR"
+  }
+
+  fn message(&self, _opts: &DiagnosticOptions) -> String {
+    format!("Anyhow error: {self}")
+  }
+}
+
 // --- end

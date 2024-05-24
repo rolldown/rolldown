@@ -3,6 +3,7 @@ use std::{
   path::{Path, PathBuf},
   process::Command,
 };
+use anyhow::anyhow;
 
 use rolldown::{BundleOutput, Bundler, OutputFormat, SourceMapType};
 use rolldown_testing::test_config::{read_test_config, TestConfig};
@@ -66,7 +67,7 @@ impl Fixture {
         .map(|item| {
           let name = item.name.clone().expect("inputs must have `name` in `_config.json`");
           let ext = if is_output_cjs { "cjs" } else { "mjs" };
-          format!("{name}.{ext}",)
+          format!("{name}.{ext}", )
         })
         .map(|name| dist_folder.join(name))
         .collect::<Vec<_>>();
@@ -101,8 +102,15 @@ impl Fixture {
       let stderr_utf8 = std::str::from_utf8(&output.stderr).unwrap();
 
       println!("⬇️⬇️ Failed to execute command ⬇️⬇️\n{command:?}\n⬆️⬆️ end  ⬆️⬆️");
-      panic!("⬇️⬇️ stderr ⬇️⬇️\n{stderr_utf8}\n⬇️⬇️ stdout ⬇️⬇️\n{stdout_utf8}\n⬆️⬆️ end  ⬆️⬆️",);
+      panic!("⬇️⬇️ stderr ⬇️⬇️\n{stderr_utf8}\n⬇️⬇️ stdout ⬇️⬇️\n{stdout_utf8}\n⬆️⬆️ end  ⬆️⬆️", );
     }
+  }
+
+  pub fn converting_error_msg_containing_paths(&self, err: anyhow::Error) -> anyhow::Error {
+    let msg = err.to_string();
+    let dir_path = self.fixture_path.to_str().unwrap();
+    let relative_path_error_msg = msg.replace(dir_path, "");
+    anyhow!(relative_path_error_msg)
   }
 
   pub async fn bundle(&mut self, write_to_disk: bool, with_hash: bool) -> BundleOutput {
@@ -157,9 +165,29 @@ impl Fixture {
       std::fs::remove_dir_all(fixture_path.join("dist")).unwrap();
     }
     if write_to_disk {
-      bundler.write().await.unwrap()
+      match bundler.write().await {
+        Ok(output) => {
+          output
+        }
+        Err(err) => {
+          BundleOutput {
+            warnings: vec![],
+            errors: vec![self.converting_error_msg_containing_paths(err).into()],
+            assets: vec![],
+          }
+        }
+      }
     } else {
-      bundler.generate().await.unwrap()
+      match bundler.generate().await {
+        Ok(output) => { output }
+        Err(err) => {
+          BundleOutput {
+            warnings: vec![],
+            errors: vec![self.converting_error_msg_containing_paths(err).into()],
+            assets: vec![],
+          }
+        }
+      }
     }
   }
 }

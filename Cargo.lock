@@ -1880,6 +1880,7 @@ dependencies = [
 name = "rolldown_error"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "ariadne",
  "napi",
  "oxc",

@@ -14,6 +14,7 @@ pub enum EventKind {
   // TODO remove following kinds
   NapiError,
   IoError,
+  AnyhowError,
 }
 
 impl Display for EventKind {
@@ -30,6 +31,7 @@ impl Display for EventKind {
       // --- Rolldown specific
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
       EventKind::IoError => write!(f, "IO_ERROR"),
+      EventKind::AnyhowError => { write!(f, "ANYHOW_Error") }
     }
   }
 }

@@ -1,6 +1,8 @@
 pub mod error_constructors;
 pub mod severity;
+
 use std::fmt::Display;
+use anyhow::Error;
 
 use crate::{
   diagnostic::Diagnostic, events::BuildEvent, types::diagnostic_options::DiagnosticOptions,
@@ -67,6 +69,12 @@ impl BuildError {
 impl From<std::io::Error> for BuildError {
   fn from(e: std::io::Error) -> Self {
     Self::new_inner(e)
+  }
+}
+
+impl From<anyhow::Error> for BuildError {
+  fn from(value: Error) -> Self {
+     Self::new_inner(value)
   }
 }
 

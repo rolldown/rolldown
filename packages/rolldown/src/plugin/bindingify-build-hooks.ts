@@ -2,10 +2,10 @@ import { normalizeHook } from '../utils/normalize-hook'
 import type { BindingPluginOptions } from '../binding'
 
 import type { Plugin } from './index'
-import { NormalizedInputOptions } from '../options/normalized-input-options'
+import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled, transformModuleInfo } from '../utils'
 import path from 'node:path'
-import { SourceMapInputObject } from '../types/sourcemap'
+import type { SourceMapInputObject } from '../types/sourcemap'
 import { PluginContext } from './plugin-context'
 import { TransformPluginContext } from './transfrom-plugin-context'
 

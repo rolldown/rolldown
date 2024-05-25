@@ -1,15 +1,15 @@
-import {
+import type {
   BindingPluginContext,
   BindingTransformPluginContext,
 } from '@src/binding'
-import { SourceMap } from '@src/types/rolldown-output'
-import {
+import type { SourceMap } from '@src/types/rolldown-output'
+import type {
   LoggingFunction,
   LoggingFunctionWithPosition,
   RollupError,
 } from '../rollup'
 import { normalizeLog } from '@src/log/logHandler'
-import { PluginContext } from './plugin-context'
+import type { PluginContext } from './plugin-context'
 import { augmentCodeLocation } from '@src/log/logs'
 
 export class TransformPluginContext {

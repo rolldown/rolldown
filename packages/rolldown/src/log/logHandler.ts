@@ -1,9 +1,13 @@
 import { noop } from '../utils'
-import { LoggingFunctionWithPosition, LogHandler, RollupLog } from '../rollup'
+import type {
+  LoggingFunctionWithPosition,
+  LogHandler,
+  RollupLog,
+} from '../rollup'
 import {
   LOG_LEVEL_WARN,
-  LogLevel,
-  LogLevelOption,
+  type LogLevel,
+  type LogLevelOption,
   logLevelPriority,
 } from './logging'
 import { logInvalidLogPosition } from './logs'

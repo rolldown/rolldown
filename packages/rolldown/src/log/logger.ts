@@ -5,20 +5,20 @@ import type {
   RollupLog,
   WarningHandlerWithDefault,
 } from '../rollup'
-import { Plugin } from '../plugin'
+import type { Plugin } from '../plugin'
 import {
   LOG_LEVEL_DEBUG,
   LOG_LEVEL_INFO,
   LOG_LEVEL_WARN,
   LOG_LEVEL_ERROR,
   logLevelPriority,
-  LogLevelOption,
-  LogLevel,
+  type LogLevelOption,
+  type LogLevel,
 } from './logging'
 import { error } from './logs'
 import { normalizeLog } from './logHandler'
-import { InputOptions } from '../options/input-options'
-import { NormalizedInputOptions } from '../options/normalized-input-options'
+import type { InputOptions } from '../options/input-options'
+import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import path from 'node:path'
 
 export interface MinimalPluginContext {

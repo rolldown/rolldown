@@ -1,12 +1,10 @@
 import type {
-  LogHandler,
-  NormalizedInputOptions as RollupNormalizedInputOptions,
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
 } from '../rollup'
 import type { OutputOptions } from './output-options'
-import { Plugin, ParallelPlugin } from '../plugin'
-import { RenderedChunk } from '@src/binding'
+import type { Plugin, ParallelPlugin } from '../plugin'
+import type { RenderedChunk } from '@src/binding'
 
 type InternalModuleFormat = 'es' | 'cjs'
 

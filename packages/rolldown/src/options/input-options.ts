@@ -1,4 +1,4 @@
-import { Plugin, ParallelPlugin } from '../plugin'
+import type { Plugin, ParallelPlugin } from '../plugin'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
 import {

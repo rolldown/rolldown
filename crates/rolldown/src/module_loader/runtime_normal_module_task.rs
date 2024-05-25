@@ -14,6 +14,7 @@ use crate::{
   ast_scanner::{AstScanner, ScanResult},
   runtime::RuntimeModuleBrief,
   types::ast_symbols::AstSymbols,
+  utils::tweak_ast_for_scanning::tweak_ast_for_scanning,
 };
 pub struct RuntimeNormalModuleTask {
   tx: tokio::sync::mpsc::Sender<Msg>,
@@ -112,7 +113,7 @@ impl RuntimeNormalModuleTask {
     );
     let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let facade_path = ResourceId::new("runtime");
-    ast.hoist_import_export_from_stmts();
+    tweak_ast_for_scanning(&mut ast);
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,

@@ -15,6 +15,7 @@ pub mod render_chunks;
 pub mod render_normal_module;
 pub mod resolve_id;
 pub mod transform_source;
+pub mod tweak_ast_for_scanning;
 
 pub(crate) fn is_in_rust_test_mode() -> bool {
   static TEST_MODE: once_cell::sync::Lazy<bool> =

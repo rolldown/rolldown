@@ -21,7 +21,7 @@ use crate::{
   types::ast_symbols::AstSymbols,
   utils::{
     load_source::load_source, parse_to_ast::parse_to_ast, resolve_id::resolve_id,
-    transform_source::transform_source,
+    transform_source::transform_source, tweak_ast_for_scanning::tweak_ast_for_scanning,
   },
   SharedOptions, SharedResolver,
 };
@@ -193,7 +193,7 @@ impl NormalModuleTask {
     let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let file_path = Arc::<str>::clone(&self.resolved_path.path).into();
     let repr_name = ResourceId::representative_name(&file_path);
-    ast.hoist_import_export_from_stmts();
+    tweak_ast_for_scanning(&mut ast);
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,

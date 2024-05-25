@@ -1,10 +1,10 @@
-import { BindingInputOptions } from '../binding'
+import type { BindingInputOptions } from '../binding'
 import nodePath from 'node:path'
 import { bindingifyPlugin } from '../plugin/bindingify-plugin'
 import type { NormalizedInputOptions } from './normalized-input-options'
 import { arraify } from '@src/utils'
-import { NormalizedOutputOptions } from './normalized-output-options'
-import { LogLevelOption } from '@src/log/logging'
+import type { NormalizedOutputOptions } from './normalized-output-options'
+import type { LogLevelOption } from '@src/log/logging'
 
 export function bindingifyInputOptions(
   options: NormalizedInputOptions,

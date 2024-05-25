@@ -1,4 +1,4 @@
-import { RenderedChunk } from '../binding'
+import type { RenderedChunk } from '../binding'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
 

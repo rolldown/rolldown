@@ -1,7 +1,7 @@
 import { bindingifyInputOptions } from '@src/options/bindingify-input-options'
 import { Bundler } from '../binding'
 import type { InputOptions } from '../options/input-options'
-import { type OutputOptions } from '../options/output-options'
+import type { OutputOptions } from '../options/output-options'
 import { initializeParallelPlugins } from './initialize-parallel-plugins'
 import { normalizeInputOptions } from './normalize-input-options'
 import { normalizeOutputOptions } from './normalize-output-options'

@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url'
 import nodePath from 'node:path'
 import { createConsola } from 'consola'
-import { RolldownConfigExport } from '../types/rolldown-config-export.js'
+import type { RolldownConfigExport } from '../types/rolldown-config-export'
 
 /**
  * Console logger

@@ -3,17 +3,17 @@ import type {
   RenderedChunk,
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
-import { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
+import type { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
 import type { SourceMapInput } from '../types/sourcemap'
 import { pathToFileURL } from 'node:url'
 import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
-import { PluginContext } from './plugin-context'
-import { TransformPluginContext } from './transfrom-plugin-context'
-import { NormalizedOutputOptions } from '@src/options/normalized-output-options'
-import { LogLevel } from '../log/logging'
-import { RollupLog } from '../rollup'
-import { MinimalPluginContext } from '../log/logger'
+import type { PluginContext } from './plugin-context'
+import type { TransformPluginContext } from './transfrom-plugin-context'
+import type { NormalizedOutputOptions } from '@src/options/normalized-output-options'
+import type { LogLevel } from '../log/logging'
+import type { RollupLog } from '../rollup'
+import type { MinimalPluginContext } from '../log/logger'
 
 type FormalHook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> = {
   handler: Handler

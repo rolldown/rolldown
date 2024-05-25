@@ -1,6 +1,6 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type { BindingPluginOptions } from '../binding'
-import { NormalizedInputOptions } from '../options/normalized-input-options'
+import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type { Plugin } from './index'
 import { transformToOutputBundle } from '../utils/transform-to-rollup-output'
 import { PluginContext } from './plugin-context'

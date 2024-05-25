@@ -1,6 +1,5 @@
-import { BindingOutputOptions } from '../binding'
-import type { NormalizedInputOptions } from './normalized-input-options'
-import { NormalizedOutputOptions } from './normalized-output-options'
+import type { BindingOutputOptions } from '../binding'
+import type { NormalizedOutputOptions } from './normalized-output-options'
 
 export function bindingifyOutputOptions(
   outputOptions: NormalizedOutputOptions,

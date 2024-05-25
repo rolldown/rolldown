@@ -1,6 +1,6 @@
-import { OutputOptions } from '@src/options/output-options'
+import type { OutputOptions } from '@src/options/output-options'
 import { unimplemented } from '.'
-import { NormalizedOutputOptions } from '@src/options/normalized-output-options'
+import type { NormalizedOutputOptions } from '@src/options/normalized-output-options'
 
 export function normalizeOutputOptions(
   opts: OutputOptions,

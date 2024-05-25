@@ -4,8 +4,8 @@ import type {
   NormalizedInputOptions as RollupNormalizedInputOptions,
 } from '../rollup'
 import type { InputOptions } from './input-options'
-import { Plugin, ParallelPlugin } from '../plugin'
-import { LogLevel } from '../log/logging'
+import type { Plugin, ParallelPlugin } from '../plugin'
+import type { LogLevel } from '../log/logging'
 
 export interface NormalizedInputOptions extends InputOptions {
   input: RollupNormalizedInputOptions['input']

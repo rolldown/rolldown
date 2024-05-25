@@ -2,43 +2,30 @@ use std::{fmt::Debug, sync::Arc};
 
 use crate::OxcCompiler;
 use oxc::ast::Trivias;
-use oxc::parser::ParserReturn;
 use oxc::{allocator::Allocator, ast::ast::Program, span::SourceType};
 
-use self_cell::self_cell;
+use self::program_cell::{ProgramCell, ProgramCellOwner};
 
 mod helpers;
+pub mod program_cell;
 
-self_cell!(
-  pub(crate) struct Inner {
-    owner: (Arc<str>, Allocator),
-
-    #[covariant]
-    dependent: ParserReturn,
-  }
-);
-
-/// `OxcAst` is a wrapper of `Program` that provides a safe way to treat `Program<'ast>` as as owned value without considering the lifetime of `'ast`.
 pub struct OxcAst {
-  pub(crate) inner: Inner,
+  pub(crate) inner: ProgramCell,
+  pub trivias: Trivias,
   pub source_type: SourceType,
 }
 
 impl OxcAst {
   pub fn source(&self) -> &Arc<str> {
-    &self.inner.borrow_owner().0
+    &self.inner.borrow_owner().source
   }
 
   pub fn allocator(&self) -> &Allocator {
-    &self.inner.borrow_owner().1
+    &self.inner.borrow_owner().allocator
   }
 
   pub fn program(&self) -> &Program {
-    &self.inner.borrow_dependent().program
-  }
-
-  pub fn trivias(&self) -> &Trivias {
-    &self.inner.borrow_dependent().trivias
+    self.inner.borrow_dependent()
   }
 
   /// Visit all fields including `&mut Program` within a closure.
@@ -57,14 +44,16 @@ impl OxcAst {
     &'outer mut self,
     func: impl for<'inner> ::core::ops::FnOnce(WithFieldsMut<'outer, 'inner>) -> Ret,
   ) -> Ret {
-    self.inner.with_dependent_mut::<'outer, Ret>(|owner, parse_return| {
-      func(WithFieldsMut {
-        source: &owner.0,
-        allocator: &owner.1,
-        program: &mut parse_return.program,
-        trivias: &mut parse_return.trivias,
-      })
-    })
+    self.inner.with_dependent_mut::<'outer, Ret>(
+      |owner: &ProgramCellOwner, program: &'outer mut Program| {
+        func(WithFieldsMut {
+          source: &owner.source,
+          allocator: &owner.allocator,
+          program,
+          trivias: &mut self.trivias,
+        })
+      },
+    )
   }
 }
 
@@ -77,7 +66,7 @@ pub struct WithFieldsMut<'outer, 'inner> {
 
 impl Debug for OxcAst {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("Ast").field("source", &self.inner.borrow_owner().0).finish_non_exhaustive()
+    f.debug_struct("Ast").field("source", &self.source()).finish_non_exhaustive()
   }
 }
 

@@ -182,9 +182,9 @@ impl NormalModuleTask {
     &self,
     source: &Arc<str>,
   ) -> anyhow::Result<(OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef)> {
-    let mut program = parse_to_ast(self.resolved_path.path.as_path(), Arc::clone(source))?;
+    let mut ast = parse_to_ast(self.resolved_path.path.as_path(), Arc::clone(source))?;
 
-    let (mut symbol_table, scope) = program.make_symbol_table_and_scope_tree();
+    let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(
       scope,
       std::mem::take(&mut symbol_table.references),
@@ -193,7 +193,7 @@ impl NormalModuleTask {
     let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let file_path = Arc::<str>::clone(&self.resolved_path.path).into();
     let repr_name = ResourceId::representative_name(&file_path);
-    let trivias = program.with_mut(|fields| std::mem::take(fields.trivias));
+    ast.hoist_import_export_from_stmts();
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,
@@ -202,13 +202,12 @@ impl NormalModuleTask {
       self.module_type,
       source,
       &file_path,
-      &trivias,
+      &ast.trivias,
     );
     let namespace_symbol = scanner.namespace_ref;
-    program.hoist_import_export_from_stmts();
-    let scan_result = scanner.scan(program.program());
+    let scan_result = scanner.scan(ast.program());
 
-    Ok((program, ast_scope, scan_result, symbol_for_module, namespace_symbol))
+    Ok((ast, ast_scope, scan_result, symbol_for_module, namespace_symbol))
   }
 
   #[allow(clippy::option_if_let_else)]

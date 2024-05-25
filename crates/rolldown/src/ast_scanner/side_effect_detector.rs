@@ -425,7 +425,7 @@ mod test {
 
     let mut attached_comment_vecmap =
       ast
-        .trivias()
+        .trivias
         .comments()
         .filter_map(|(kind, span)| {
           if matches!(kind, CommentKind::SingleLine) {

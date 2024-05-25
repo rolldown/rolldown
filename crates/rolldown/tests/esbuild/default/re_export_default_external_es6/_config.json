@@ -6,6 +6,7 @@
         "name": "entry_js",
         "import": "entry.js"
       }
-    ]
+    ],
+    "external": ["foo", "bar"]
   }
 }

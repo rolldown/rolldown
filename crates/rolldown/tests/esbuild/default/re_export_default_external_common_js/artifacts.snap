@@ -1,0 +1,17 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/re_export_default_external_common_js
+---
+# Assets
+
+## entry_js.cjs
+
+```js
+const { __toESM } = require("./$runtime$.cjs");
+const { default: foo } = __toESM(require("foo"));
+const { default: bar } = __toESM(require("bar"));
+
+exports.bar = bar;
+exports.foo = foo;
+```

@@ -1,0 +1,26 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/tree_shaking/pure_annotation
+---
+# Assets
+
+## main.mjs
+
+```js
+// a.js
+const a = 100;
+
+// c.js
+function test() {
+}
+const c = test();
+
+// d.js
+function test2() {
+}
+const d = test2(), e = test2();
+
+// main.js
+console.log(`a: `, a);
+```

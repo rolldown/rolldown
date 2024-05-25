@@ -140,6 +140,9 @@
     "wasi",
     "WASI",
     "Yinan",
-    "Yunfei"
+    "Yunfei",
+    "Trivias",
+    "vecmap",
+    "usize"
   ]
 }

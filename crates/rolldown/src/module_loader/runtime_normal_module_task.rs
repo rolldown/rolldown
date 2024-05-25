@@ -112,7 +112,7 @@ impl RuntimeNormalModuleTask {
     );
     let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let facade_path = ResourceId::new("runtime");
-    let trivias = ast.with_mut(|fields| std::mem::take(fields.trivias));
+    ast.hoist_import_export_from_stmts();
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,
@@ -121,10 +121,9 @@ impl RuntimeNormalModuleTask {
       ModuleType::EsmMjs,
       source,
       &facade_path,
-      &trivias,
+      &ast.trivias,
     );
     let namespace_symbol = scanner.namespace_ref;
-    ast.hoist_import_export_from_stmts();
     let scan_result = scanner.scan(ast.program());
 
     (ast, ast_scope, scan_result, symbol_for_module, namespace_symbol)

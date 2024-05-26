@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use oxc::span::Span;
 use rolldown_rstr::Rstr;
 
 use crate::SymbolRef;
@@ -16,6 +17,7 @@ pub struct NamedImport {
   /// For case B, the `imported` is meaningless.
   /// For case C, the `imported` is `foo`.
   pub imported: Specifier,
+  pub span_imported: Span,
   /// For case A, the `imported_as` is a `SymbolRef` from `foo`.
   /// For case B, the `imported_as` is a `SymbolRef` from `fooNs`.
   /// For case C, the `imported_as` is a `SymbolRef` from `foo2`.

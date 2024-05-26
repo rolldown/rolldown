@@ -10,8 +10,9 @@ use super::BuildError;
 
 use crate::events::{
   circular_dependency::CircularDependency, eval::Eval, external_entry::ExternalEntry,
-  forbid_const_assign::ForbidConstAssign, sourcemap_error::SourceMapError,
-  unresolved_entry::UnresolvedEntry, unresolved_import::UnresolvedImport,
+  forbid_const_assign::ForbidConstAssign, missing_export::MissingExport,
+  sourcemap_error::SourceMapError, unresolved_entry::UnresolvedEntry,
+  unresolved_import::UnresolvedImport,
   unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal, NapiError,
 };
 
@@ -52,6 +53,22 @@ impl BuildError {
       specifier: specifier.into(),
       importer: importer.into(),
       resolve_error,
+    })
+  }
+
+  pub fn missing_export(
+    stable_importer: String,
+    stable_importee: String,
+    importer_source: Arc<str>,
+    imported_specifier: String,
+    imported_specifier_span: Span,
+  ) -> Self {
+    Self::new_inner(MissingExport {
+      stable_importer,
+      stable_importee,
+      importer_source,
+      imported_specifier,
+      imported_specifier_span,
     })
   }
 

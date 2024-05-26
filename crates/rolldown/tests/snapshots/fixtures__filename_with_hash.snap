@@ -1346,6 +1346,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-dawEWZCQ.mjs
 - main-dawEWZCQ.mjs.map
 
+# tests/fixtures/errors/missing_export
+
+- main-!~{000}~.mjs => main-MsirdRn5.mjs
+
 # tests/fixtures/errors/unresolved_entry
 
 

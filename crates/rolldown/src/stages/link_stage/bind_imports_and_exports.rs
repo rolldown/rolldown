@@ -1,9 +1,12 @@
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 
+use std::sync::Arc;
+
 use rolldown_common::{
   ExportsKind, ModuleId, NormalModuleId, NormalModuleVec, ResolvedExport, Specifier, SymbolRef,
 };
+use rolldown_error::BuildError;
 use rolldown_rstr::Rstr;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -130,11 +133,14 @@ impl<'link> LinkStage<'link> {
       metas: &mut self.metas,
       symbols: &mut self.symbols,
       input_options: self.input_options,
+      errors: Vec::default(),
     };
 
     self.module_table.normal_modules.iter().for_each(|module| {
       binding_ctx.match_imports_with_exports(module.id);
     });
+
+    self.errors.extend(binding_ctx.errors);
 
     self.metas.iter_mut().par_bridge().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
@@ -221,6 +227,7 @@ struct BindImportsAndExportsContext<'a> {
   pub metas: &'a mut LinkingMetadataVec,
   pub symbols: &'a mut Symbols,
   pub input_options: &'a SharedOptions,
+  pub errors: Vec<BuildError>,
 }
 
 impl<'a> BindImportsAndExportsContext<'a> {
@@ -250,10 +257,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
       };
       tracing::trace!("Got match result {:?}", ret);
       match ret {
-        MatchImportKind::_Ignore
-        | MatchImportKind::Ambiguous
-        | MatchImportKind::NoMatch
-        | MatchImportKind::Cycle => {}
+        MatchImportKind::_Ignore | MatchImportKind::Ambiguous | MatchImportKind::Cycle => {}
         MatchImportKind::Normal { symbol } => {
           self.symbols.union(*imported_as_ref, symbol);
         }
@@ -263,6 +267,16 @@ impl<'a> BindImportsAndExportsContext<'a> {
         MatchImportKind::NormalAndNamespace { namespace_ref, alias } => {
           self.symbols.get_mut(*imported_as_ref).namespace_alias =
             Some(NamespaceAlias { property_name: alias, namespace_ref });
+        }
+        MatchImportKind::NoMatch => {
+          let importee = &self.normal_modules[rec.resolved_module.as_normal().unwrap()];
+          self.errors.push(BuildError::missing_export(
+            module.stable_resource_id.clone(),
+            importee.stable_resource_id.clone(),
+            Arc::clone(&module.source),
+            named_import.imported.to_string(),
+            named_import.span_imported,
+          ));
         }
       }
     }

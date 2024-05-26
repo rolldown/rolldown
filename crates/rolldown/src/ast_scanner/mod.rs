@@ -10,7 +10,7 @@ use oxc::{
     Trivias, Visit,
   },
   semantic::SymbolId,
-  span::{Atom, Span},
+  span::{Atom, GetSpan, Span},
 };
 use oxc_index::IndexVec;
 use rolldown_common::{
@@ -178,21 +178,33 @@ impl<'me> AstScanner<'me> {
     id
   }
 
-  fn add_named_import(&mut self, local: SymbolId, imported: &str, record_id: ImportRecordId) {
+  fn add_named_import(
+    &mut self,
+    local: SymbolId,
+    imported: &str,
+    record_id: ImportRecordId,
+    span_imported: Span,
+  ) {
     self.result.named_imports.insert(
       (self.idx, local).into(),
       NamedImport {
         imported: Rstr::new(imported).into(),
         imported_as: (self.idx, local).into(),
+        span_imported,
         record_id,
       },
     );
   }
 
-  fn add_star_import(&mut self, local: SymbolId, record_id: ImportRecordId) {
+  fn add_star_import(&mut self, local: SymbolId, record_id: ImportRecordId, span_imported: Span) {
     self.result.named_imports.insert(
       (self.idx, local).into(),
-      NamedImport { imported: Specifier::Star, imported_as: (self.idx, local).into(), record_id },
+      NamedImport {
+        imported: Specifier::Star,
+        imported_as: (self.idx, local).into(),
+        record_id,
+        span_imported,
+      },
     );
   }
 
@@ -234,7 +246,13 @@ impl<'me> AstScanner<'me> {
   /// export { [generated] as foo }
   /// ```
   /// `export { foo } from 'commonjs'` would be converted to `const import_commonjs = require()` in the linking stage.
-  fn add_re_export(&mut self, export_name: &Atom, imported: &Atom, record_id: ImportRecordId) {
+  fn add_re_export(
+    &mut self,
+    export_name: &Atom,
+    imported: &Atom,
+    record_id: ImportRecordId,
+    span_imported: Span,
+  ) {
     // We will pretend `export { [imported] as [export_name] }` to be `import `
     let generated_imported_as_ref = (
       self.idx,
@@ -256,6 +274,7 @@ impl<'me> AstScanner<'me> {
       imported: imported.to_rstr().into(),
       imported_as: generated_imported_as_ref,
       record_id,
+      span_imported,
     };
     if name_import.imported.is_default() {
       self.result.import_records[record_id].contains_import_default = true;
@@ -267,15 +286,24 @@ impl<'me> AstScanner<'me> {
       .insert(export_name.to_rstr(), LocalExport { referenced: generated_imported_as_ref });
   }
 
-  fn add_star_re_export(&mut self, export_name: &Atom, record_id: ImportRecordId) {
+  fn add_star_re_export(
+    &mut self,
+    export_name: &Atom,
+    record_id: ImportRecordId,
+    span_for_export_name: Span,
+  ) {
     let generated_imported_as_ref = (
       self.idx,
       self.symbol_table.create_symbol(export_name.to_compact_str(), self.scope.root_scope_id()),
     )
       .into();
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
-    let name_import =
-      NamedImport { imported: Specifier::Star, imported_as: generated_imported_as_ref, record_id };
+    let name_import = NamedImport {
+      imported: Specifier::Star,
+      span_imported: span_for_export_name,
+      imported_as: generated_imported_as_ref,
+      record_id,
+    };
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
     self.result.import_records[record_id].contains_import_star = true;
     self
@@ -288,7 +316,7 @@ impl<'me> AstScanner<'me> {
     let id = self.add_import_record(&decl.source.value, ImportKind::Import);
     if let Some(exported) = &decl.exported {
       // export * as ns from '...'
-      self.add_star_re_export(exported.name(), id);
+      self.add_star_re_export(exported.name(), id, decl.span);
     } else {
       // export * from '...'
       self.result.star_exports.push(id);
@@ -300,7 +328,7 @@ impl<'me> AstScanner<'me> {
     if let Some(source) = &decl.source {
       let record_id = self.add_import_record(&source.value, ImportKind::Import);
       decl.specifiers.iter().for_each(|spec| {
-        self.add_re_export(spec.exported.name(), spec.local.name(), record_id);
+        self.add_re_export(spec.exported.name(), spec.local.name(), record_id, spec.local.span());
       });
       self.result.imports.insert(decl.span, record_id);
       // `export {} from '...'`
@@ -375,17 +403,17 @@ impl<'me> AstScanner<'me> {
       oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
         let imported = spec.imported.name();
-        self.add_named_import(sym, imported, rec_id);
+        self.add_named_import(sym, imported, rec_id, spec.imported.span());
         if imported == "default" {
           self.result.import_records[rec_id].contains_import_default = true;
         }
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
-        self.add_named_import(spec.local.expect_symbol_id(), "default", rec_id);
+        self.add_named_import(spec.local.expect_symbol_id(), "default", rec_id, spec.span);
         self.result.import_records[rec_id].contains_import_default = true;
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
-        self.add_star_import(spec.local.expect_symbol_id(), rec_id);
+        self.add_star_import(spec.local.expect_symbol_id(), rec_id, spec.span);
         self.result.import_records[rec_id].contains_import_star = true;
       }
     });

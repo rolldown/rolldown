@@ -12,4 +12,5 @@ use serde::Deserialize;
 pub enum OutputFormat {
   Esm,
   Cjs,
+  App,
 }

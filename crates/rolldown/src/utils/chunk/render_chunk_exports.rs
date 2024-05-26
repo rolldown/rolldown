@@ -64,6 +64,7 @@ pub fn render_chunk_exports(
 
       Some(s)
     }
+    OutputFormat::App => None,
   }
 }
 

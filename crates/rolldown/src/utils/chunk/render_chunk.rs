@@ -112,7 +112,7 @@ pub async fn render_chunk(
         }
         WrapKind::None => {}
       },
-      OutputFormat::Cjs => {}
+      OutputFormat::Cjs | OutputFormat::App => {}
     }
   }
 

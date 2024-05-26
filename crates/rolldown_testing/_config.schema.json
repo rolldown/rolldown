@@ -167,7 +167,8 @@
       "type": "string",
       "enum": [
         "esm",
-        "cjs"
+        "cjs",
+        "app"
       ]
     },
     "Platform": {

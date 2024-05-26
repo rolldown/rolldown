@@ -1,4 +1,4 @@
-use rolldown_common::{Chunk, Specifier};
+use rolldown_common::{Chunk, OutputFormat, Specifier};
 
 use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput, SharedOptions};
 
@@ -13,46 +13,55 @@ pub fn render_chunk_imports(
   let mut s = String::new();
 
   let render_import_specifier = |imported: &str, alias: &str| match options.format {
-    rolldown_common::OutputFormat::Esm => {
+    OutputFormat::Esm => {
       if imported == alias {
         imported.to_string()
       } else {
         format!("{imported} as {alias}")
       }
     }
-    rolldown_common::OutputFormat::Cjs => {
+    OutputFormat::Cjs => {
       if imported == alias {
         imported.to_string()
       } else {
         format!("{imported}: {alias}")
       }
     }
+    OutputFormat::App => {
+      unreachable!("App format doesn't need to generate imports")
+    }
   };
 
   let render_import_stmt = |import_items: &[String],
                             importee_module_specifier: &str,
                             output: &mut String| match options.format {
-    rolldown_common::OutputFormat::Esm => {
+    OutputFormat::Esm => {
       output.push_str(&format!(
         "import {{ {} }} from \"{importee_module_specifier}\";\n",
         import_items.join(", "),
       ));
     }
-    rolldown_common::OutputFormat::Cjs => {
+    OutputFormat::Cjs => {
       output.push_str(&format!(
         "const {{ {} }} = require(\"{importee_module_specifier}\");\n",
         import_items.join(", "),
       ));
     }
+    OutputFormat::App => {
+      unreachable!("App format doesn't need to generate imports")
+    }
   };
 
   let render_plain_import =
     |importee_module_specifier: &str, output: &mut String| match options.format {
-      rolldown_common::OutputFormat::Esm => {
+      OutputFormat::Esm => {
         output.push_str(&format!("import \"{importee_module_specifier}\";\n"));
       }
-      rolldown_common::OutputFormat::Cjs => {
+      OutputFormat::Cjs => {
         output.push_str(&format!("require(\"{importee_module_specifier}\");\n"));
+      }
+      OutputFormat::App => {
+        unreachable!("App format doesn't need to generate imports")
       }
     };
 
@@ -103,16 +112,17 @@ pub fn render_chunk_imports(
             is_importee_imported = true;
             let importee_name = &importee.name;
             match options.format {
-              rolldown_common::OutputFormat::Esm => {
+              OutputFormat::Esm => {
                 s.push_str(&format!("import * as {alias} from \"{importee_name}\";\n",));
               }
-              rolldown_common::OutputFormat::Cjs => {
+              OutputFormat::Cjs => {
                 let to_esm_fn_name = &chunk.canonical_names
                   [&graph.symbols.par_canonical_ref_for(graph.runtime.resolve_symbol("__toESM"))];
                 s.push_str(&format!(
                   "const {alias} = {to_esm_fn_name}(require(\"{importee_name}\"));\n",
                 ));
               }
+              OutputFormat::App => {}
             }
 
             None
@@ -124,14 +134,14 @@ pub fn render_chunk_imports(
     import_items.sort();
     if !import_items.is_empty() {
       match options.format {
-        rolldown_common::OutputFormat::Esm => {
+        OutputFormat::Esm => {
           s.push_str(&format!(
             "import {{ {} }} from \"{importee_module_specifier}\";\n",
             import_items.join(", "),
             importee_module_specifier = &importee.name
           ));
         }
-        rolldown_common::OutputFormat::Cjs => {
+        OutputFormat::Cjs => {
           let to_esm_fn_name = &chunk.canonical_names
             [&graph.symbols.par_canonical_ref_for(graph.runtime.resolve_symbol("__toESM"))];
           s.push_str(&format!(
@@ -139,6 +149,9 @@ pub fn render_chunk_imports(
             import_items.join(", "),
             importee_module_specifier = &importee.name
           ));
+        }
+        OutputFormat::App => {
+          unreachable!("App format doesn't need to generate imports")
         }
       }
     } else if !is_importee_imported {

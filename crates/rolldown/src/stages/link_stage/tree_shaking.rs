@@ -165,7 +165,7 @@ impl LinkStage<'_> {
       let ret = match module.side_effects {
         // should keep as is if the side effects is derived from package.json, or it is already
         // true
-        DeterminedSideEffects::PackageJson(_) => module.side_effects,
+        DeterminedSideEffects::UserDefined(_) => module.side_effects,
         DeterminedSideEffects::Analyzed(v) if v => module.side_effects,
         // this branch means the side effects of the module is analyzed `false`
         DeterminedSideEffects::Analyzed(_) => {

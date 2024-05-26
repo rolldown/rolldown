@@ -132,35 +132,31 @@ impl NormalModuleTask {
     let resource_id = ResourceId::new(Arc::clone(&self.resolved_path.path));
     let stable_resource_id = resource_id.stabilize(&self.ctx.input_options.cwd);
 
-    self
-      .package_json
-      .as_ref()
-      .and_then(|p| {
-        p.check_side_effects_for(&stable_resource_id).map(DeterminedSideEffects::PackageJson)
-      })
-      .unwrap_or_else(|| {
-        let analyzed_side_effects = stmt_infos.iter().any(|stmt_info| stmt_info.side_effect);
-        DeterminedSideEffects::Analyzed(analyzed_side_effects)
-      });
-
-    let default_side_effects = self
-      .package_json
-      .as_ref()
-      .and_then(|p| {
-        p.check_side_effects_for(&stable_resource_id).map(DeterminedSideEffects::PackageJson)
-      })
-      .unwrap_or_else(|| {
-        let analyzed_side_effects = stmt_infos.iter().any(|stmt_info| stmt_info.side_effect);
-        DeterminedSideEffects::Analyzed(analyzed_side_effects)
-      });
+    // The side effects priority is:
+    // 1. Hook side effects
+    // 2. Package.json side effects
+    // 3. Analyzed side effects
+    // We should skip the `check_side_effects_for` if the hook side effects is not `None`.
+    let lazy_check_side_effects = || {
+      self
+        .package_json
+        .as_ref()
+        .and_then(|p| {
+          p.check_side_effects_for(&stable_resource_id).map(DeterminedSideEffects::UserDefined)
+        })
+        .unwrap_or_else(|| {
+          let analyzed_side_effects = stmt_infos.iter().any(|stmt_info| stmt_info.side_effect);
+          DeterminedSideEffects::Analyzed(analyzed_side_effects)
+        })
+    };
 
     let side_effects = match hook_side_effects {
       Some(side_effects) => match side_effects {
-        HookSideEffects::True => default_side_effects,
-        HookSideEffects::False => DeterminedSideEffects::PackageJson(false),
+        HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
+        HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
         HookSideEffects::NoTreeshake => unimplemented!(),
       },
-      None => default_side_effects,
+      None => lazy_check_side_effects(),
     };
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
 

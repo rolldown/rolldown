@@ -17,8 +17,6 @@ pub mod unresolved_import_treated_as_external;
 pub trait BuildEvent: Debug + Sync + Send {
   fn kind(&self) -> EventKind;
 
-  fn code(&self) -> &'static str;
-
   fn message(&self, opts: &DiagnosticOptions) -> String;
 
   fn on_diagnostic(&self, _diagnostic: &mut Diagnostic, _opts: &DiagnosticOptions) {}
@@ -45,9 +43,6 @@ impl BuildEvent for NapiError {
   fn kind(&self) -> EventKind {
     EventKind::NapiError
   }
-  fn code(&self) -> &'static str {
-    "NAPI_ERROR"
-  }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("Napi error: {status}: {reason}", status = self.status, reason = self.reason)
@@ -57,9 +52,6 @@ impl BuildEvent for NapiError {
 impl BuildEvent for std::io::Error {
   fn kind(&self) -> EventKind {
     EventKind::IoError
-  }
-  fn code(&self) -> &'static str {
-    "IO_ERROR"
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

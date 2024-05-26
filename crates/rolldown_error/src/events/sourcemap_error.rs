@@ -11,9 +11,6 @@ impl BuildEvent for SourceMapError {
   fn kind(&self) -> crate::event_kind::EventKind {
     crate::event_kind::EventKind::SourcemapError
   }
-  fn code(&self) -> &'static str {
-    "SOURCEMAP_ERROR"
-  }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("Error when using sourcemap for reporting an error: {:?}", self.error)

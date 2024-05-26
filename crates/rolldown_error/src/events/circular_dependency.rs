@@ -16,9 +16,6 @@ impl BuildEvent for CircularDependency {
   fn kind(&self) -> EventKind {
     EventKind::CircularDependency
   }
-  fn code(&self) -> &'static str {
-    "CIRCULAR_DEPENDENCY"
-  }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {
     format!("Circular dependency: {}.", self.stable_paths(opts).join(" -> "))

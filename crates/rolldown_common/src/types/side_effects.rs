@@ -1,7 +1,8 @@
 #[derive(Debug, Copy, Clone)]
-/// represent the side-effects of module is derived from package.json or analyzed from source file
+/// represent the side-effects of module is derived from `side effect hook`, package.json or analyzed from source file
 pub enum DeterminedSideEffects {
-  PackageJson(bool),
+  /// Including the side effects from package.json and hook side effects
+  UserDefined(bool),
   Analyzed(bool),
 }
 
@@ -9,7 +10,7 @@ impl DeterminedSideEffects {
   /// get the boolean value of the side effects enum
   pub fn has_side_effects(&self) -> bool {
     match self {
-      DeterminedSideEffects::PackageJson(v) | DeterminedSideEffects::Analyzed(v) => *v,
+      DeterminedSideEffects::UserDefined(v) | DeterminedSideEffects::Analyzed(v) => *v,
     }
   }
 }

@@ -19,10 +19,6 @@ impl BuildEvent for MissingExport {
     EventKind::MissingExport
   }
 
-  fn code(&self) -> &'static str {
-    "MISSING_EXPORT"
-  }
-
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!(
       r#""{}" is not exported by "{}", imported by "{}"."#,

@@ -1,5 +1,8 @@
 import { normalizeHook } from '../utils/normalize-hook'
-import type { BindingPluginOptions } from '../binding'
+import type {
+  BindingHookResolveIdOutput,
+  BindingPluginOptions,
+} from '../binding'
 
 import type { Plugin } from './index'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
@@ -9,6 +12,7 @@ import path from 'node:path'
 import type { SourceMapInputObject } from '../types/sourcemap'
 import { PluginContext } from './plugin-context'
 import { TransformPluginContext } from './transfrom-plugin-context'
+import { bindingifySideEffects } from '../utils/transform-side-effects'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -68,7 +72,18 @@ export function bindingifyResolveId(
         id: ret,
       }
     }
-    return ret
+
+    const result: BindingHookResolveIdOutput = {
+      id: ret.id,
+      external: ret.external,
+    }
+
+    if (ret.moduleSideEffects !== null) {
+      // @ts-ignore TODO The typing should import from binding
+      result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
+    }
+
+    return result
   }
 }
 
@@ -96,7 +111,18 @@ export function bindingifyResolveDynamicImport(
         id: ret,
       }
     }
-    return ret
+
+    const result: BindingHookResolveIdOutput = {
+      id: ret.id,
+      external: ret.external,
+    }
+
+    if (ret.moduleSideEffects !== null) {
+      // @ts-ignore TODO The typing should import from binding
+      result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
+    }
+
+    return result
   }
 }
 
@@ -134,10 +160,17 @@ export function bindingifyTransform(
       return { code: ret.code }
     }
 
-    return {
+    const result = {
       code: ret.code,
       map: typeof ret.map === 'object' ? JSON.stringify(ret.map) : ret.map,
     }
+
+    if (ret.moduleSideEffects !== null) {
+      // @ts-ignore TODO The typing should import from binding
+      result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
+    }
+
+    return result
   }
 }
 
@@ -180,10 +213,17 @@ export function bindingifyLoad(
       )
     }
 
-    return {
+    const result = {
       code: ret.code,
       map: JSON.stringify(map),
     }
+
+    if (ret.moduleSideEffects !== null) {
+      // @ts-ignore TODO The typing should import from binding
+      result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
+    }
+
+    return result
   }
 }
 

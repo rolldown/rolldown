@@ -87,6 +87,7 @@ export interface AliasItem {
 export interface BindingHookLoadOutput {
   code: string
   map?: string
+  sideEffects?: BindingHookSideEffects
 }
 
 export interface BindingHookRenderChunkOutput {
@@ -102,6 +103,13 @@ export interface BindingHookResolveIdExtraOptions {
 export interface BindingHookResolveIdOutput {
   id: string
   external?: boolean
+  sideEffects?: BindingHookSideEffects
+}
+
+export const enum BindingHookSideEffects {
+  True = 0,
+  False = 1,
+  NoTreeshake = 2
 }
 
 export interface BindingInputItem {

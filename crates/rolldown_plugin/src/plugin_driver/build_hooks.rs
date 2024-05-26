@@ -5,7 +5,7 @@ use crate::{
   HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver, TransformPluginContext,
 };
 use anyhow::Result;
-use rolldown_common::ModuleInfo;
+use rolldown_common::{side_effects::HookSideEffects, ModuleInfo};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::futures::block_on_spawn_all;
 
@@ -75,6 +75,7 @@ impl PluginDriver {
     &self,
     args: &HookTransformArgs<'_>,
     sourcemap_chain: &mut Vec<SourceMap>,
+    side_effects: &mut Option<HookSideEffects>,
     original_code: &str,
   ) -> Result<String> {
     let mut code = args.code.to_string();
@@ -96,6 +97,9 @@ impl PluginDriver {
             map.set_source_contents(vec![&code]);
           }
           sourcemap_chain.push(map);
+        }
+        if let Some(v) = r.side_effects {
+          *side_effects = Some(v);
         }
         code = r.code;
       }

@@ -146,6 +146,7 @@ impl ModuleLoader {
             info.module_type,
             is_user_defined_entry,
             info.package_json,
+            info.side_effects,
           );
           #[cfg(target_family = "wasm")]
           {

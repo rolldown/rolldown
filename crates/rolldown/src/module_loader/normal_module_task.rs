@@ -132,11 +132,11 @@ impl NormalModuleTask {
     let resource_id = ResourceId::new(Arc::clone(&self.resolved_path.path));
     let stable_resource_id = resource_id.stabilize(&self.ctx.input_options.cwd);
 
-    // The side effects pripority is:
+    // The side effects priority is:
     // 1. Hook side effects
     // 2. Package.json side effects
     // 3. Analyzed side effects
-    // We should skiping the `check_side_effects_for` if the hook side effects is not None.
+    // We should skip the `check_side_effects_for` if the hook side effects is not `None`.
     let lazy_check_side_effects = || {
       self
         .package_json

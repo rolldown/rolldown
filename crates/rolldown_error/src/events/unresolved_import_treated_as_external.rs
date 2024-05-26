@@ -18,10 +18,6 @@ impl BuildEvent for UnresolvedImportTreatedAsExternal {
     EventKind::UnresolvedImport
   }
 
-  fn code(&self) -> &'static str {
-    "UNRESOLVED_IMPORT"
-  }
-
   fn message(&self, opts: &crate::DiagnosticOptions) -> String {
     // https://github.com/rollup/rollup/blob/fe6cb3a291df245408ef2bdc708fc64fa4ecb262/src/utils/logs.ts#L1031-L1041
     let mut message=

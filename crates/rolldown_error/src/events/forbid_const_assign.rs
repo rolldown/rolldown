@@ -19,9 +19,6 @@ impl BuildEvent for ForbidConstAssign {
   fn kind(&self) -> crate::event_kind::EventKind {
     crate::event_kind::EventKind::IllegalReassignment
   }
-  fn code(&self) -> &'static str {
-    "FORBID_CONST_ASSIGN"
-  }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("Unexpected re-assignment of const variable `{0}` at {1}", self.name, self.filename)

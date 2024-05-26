@@ -13,10 +13,6 @@ impl BuildEvent for ExternalEntry {
     EventKind::UnresolvedEntry
   }
 
-  fn code(&self) -> &'static str {
-    "UNRESOLVED_ENTRY"
-  }
-
   fn message(&self, opts: &DiagnosticOptions) -> String {
     format!("Entry module {} cannot be external.", opts.stabilize_path(&self.id))
   }

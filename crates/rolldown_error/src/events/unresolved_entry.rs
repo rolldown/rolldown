@@ -14,9 +14,6 @@ impl BuildEvent for UnresolvedEntry {
   fn kind(&self) -> crate::event_kind::EventKind {
     crate::event_kind::EventKind::UnresolvedEntry
   }
-  fn code(&self) -> &'static str {
-    "UNRESOLVED_ENTRY"
-  }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {
     let mut message =

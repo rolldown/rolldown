@@ -2,7 +2,6 @@ import { Bundler } from './binding'
 import type { OutputOptions } from './options/output-options'
 import { createBundler, transformToRollupOutput } from './utils'
 import type { RolldownOutput } from './types/rolldown-output'
-import type { HasProperty, TypeAssert } from './utils/type-assert'
 import type { InputOptions } from './options/input-options'
 
 export class RolldownBuild {
@@ -42,8 +41,4 @@ export class RolldownBuild {
   async destroy(): Promise<void> {
     await this.#stopWorkers?.()
   }
-}
-
-function _assert() {
-  type _ = TypeAssert<HasProperty<RolldownBuild, 'generate' | 'write'>>
 }

@@ -55,7 +55,6 @@
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
-    "bak_build-node": "unbuild",
     "build-node": "node ../../node_modules/npm-rolldown/bin/cli.js -c ./rolldown.config.mjs",
     "build-types": "tsc -p ./tsconfig.dts.json",
     "build-native:debug": "run-s build-binding build-types build-node",
@@ -109,10 +108,10 @@
     "rolldown": "workspace:*",
     "rollup": "^4.18.0",
     "type-fest": "^4.18.1",
-    "unbuild": "^2.0.0",
     "vite": "^5.1.5",
     "vitest": "^1.3.1",
-    "why-is-node-running": "^2.2.2"
+    "why-is-node-running": "^2.2.2",
+    "zod": "^3.23.6"
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "workspace:*",
@@ -126,8 +125,5 @@
     "@rolldown/binding-win32-arm64-msvc": "workspace:*",
     "@rolldown/binding-win32-ia32-msvc": "workspace:*",
     "@rolldown/binding-win32-x64-msvc": "workspace:*"
-  },
-  "dependencies": {
-    "zod": "^3.23.6"
   }
 }

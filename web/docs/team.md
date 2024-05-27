@@ -20,7 +20,7 @@ const members = [
   },
   {
     avatar: 'https://www.github.com/hyf0.png',
-    name: 'Yunfei He(hyf0)',
+    name: 'Yunfei He (hyf0)',
     links: [
       { icon: 'github', link: 'https://github.com/hyf0' },
       { icon: 'twitter', link: 'https://twitter.com/_hyf0' }
@@ -32,7 +32,22 @@ const members = [
     links: [
       { icon: 'github', link: 'https://github.com/underfin' }
     ]
-  }
+  },
+  {
+    avatar: 'https://www.github.com/iwanabethatguy.png',
+    name: 'Xiangjun He (iwanabethatguy)',
+    links: [
+      { icon: 'github', link: 'https://github.com/iwanabethatguy' }
+    ]
+  },
+  {
+    avatar: 'https://www.github.com/boshen.png',
+    name: 'Boshen',
+    links: [
+      { icon: 'github', link: 'https://github.com/boshen' },
+      { icon: 'twitter', link: 'https://twitter.com/boshen_c' }
+    ]
+  },
 ]
 </script>
 

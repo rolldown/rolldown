@@ -1,0 +1,11 @@
+{
+  "config": {
+    "platform": "node",
+    "resolve": {
+      "alias": [
+        ["shouldRenamedToFs", ["fs"]]
+      ]
+    }
+  },
+  "expectExecuted": false
+}

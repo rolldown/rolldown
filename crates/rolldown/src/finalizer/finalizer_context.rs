@@ -1,4 +1,6 @@
-use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, SymbolRef};
+use rolldown_common::{
+  ExternalModuleVec, NormalModule, NormalModuleId, NormalModuleVec, SymbolRef,
+};
 
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
@@ -17,6 +19,7 @@ pub struct FinalizerContext<'me> {
   pub id: NormalModuleId,
   pub module: &'me NormalModule,
   pub modules: &'me NormalModuleVec,
+  pub external_modules: &'me ExternalModuleVec,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub symbols: &'me Symbols,

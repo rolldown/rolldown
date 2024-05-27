@@ -7,6 +7,8 @@ use oxc::{
 use rolldown_common::ImportKind;
 use rolldown_error::BuildError;
 
+use crate::utils::call_expression_ext::CallExpressionExt;
+
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
 impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
@@ -80,16 +82,11 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   }
 
   fn visit_call_expression(&mut self, expr: &oxc::ast::ast::CallExpression<'ast>) {
-    match &expr.callee {
-      oxc::ast::ast::Expression::Identifier(ident)
-        if ident.name == "require" && self.is_unresolved_reference(ident) =>
-      {
-        if let Some(oxc::ast::ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
-          let id = self.add_import_record(&request.value, ImportKind::Require);
-          self.result.imports.insert(expr.span, id);
-        }
+    if expr.is_global_require_call(self.scope) {
+      if let Some(oxc::ast::ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
+        let id = self.add_import_record(&request.value, ImportKind::Require);
+        self.result.imports.insert(expr.span, id);
       }
-      _ => {}
     }
 
     walk::walk_call_expression(self, expr);

@@ -1427,6 +1427,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-tAxph1ul.mjs
 
+# tests/fixtures/function/resolve/alias_to_node_builtin_module
+
+- main-!~{000}~.mjs => main-OPOddjoM.mjs
+
 # tests/fixtures/function/resolve/browser_filed_false
 
 - $runtime$-!~{001}~.mjs => $runtime$-_kwtb1f_.mjs

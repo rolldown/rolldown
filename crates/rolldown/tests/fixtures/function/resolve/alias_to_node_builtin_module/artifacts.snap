@@ -1,0 +1,15 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/resolve/alias_to_node_builtin_module
+---
+# Assets
+
+## main.mjs
+
+```js
+import { readFile } from "fs";
+
+// main.js
+require('fs');
+```

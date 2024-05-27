@@ -329,4 +329,8 @@ impl<'ast> AstSnippet<'ast> {
       .into_in(self.alloc),
     )
   }
+
+  pub fn string_literal(&self, value: PassedStr, span: Span) -> ast::StringLiteral<'ast> {
+    ast::StringLiteral { span, value: self.atom(value) }
+  }
 }

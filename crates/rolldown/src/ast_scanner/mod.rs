@@ -142,10 +142,6 @@ impl<'me> AstScanner<'me> {
     self.result
   }
 
-  fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
-    self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
-  }
-
   fn set_esm_export_keyword(&mut self, span: Span) {
     self.esm_export_keyword.get_or_insert(span);
   }

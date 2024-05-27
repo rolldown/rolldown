@@ -1050,7 +1050,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/packagejson/test_package_json_subpath_import_node_builtin_issue3485
 
-- entry-!~{000}~.mjs => entry-cZBBdjsb.mjs
+- entry-!~{000}~.mjs => entry-VUmwa4CY.mjs
 
 # tests/esbuild/packagejson/test_package_json_type_should_be_types
 
@@ -1425,11 +1425,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
-- main-!~{000}~.mjs => main-tAxph1ul.mjs
+- main-!~{000}~.mjs => main-Qz44DwzH.mjs
 
 # tests/fixtures/function/resolve/alias_to_node_builtin_module
 
-- main-!~{000}~.mjs => main-OPOddjoM.mjs
+- main-!~{000}~.mjs => main-0vQJynXA.mjs
 
 # tests/fixtures/function/resolve/browser_filed_false
 

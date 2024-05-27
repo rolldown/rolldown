@@ -8,8 +8,8 @@ input_file: crates/rolldown/tests/fixtures/function/resolve/alias_to_node_builti
 ## main.mjs
 
 ```js
-import { readFile } from "fs";
+import { readFile } from "node:fs";
 
 // main.js
-require('fs');
+require('node:fs');
 ```

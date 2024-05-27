@@ -435,6 +435,16 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - $runtime$-!~{001}~.cjs => $runtime$-r1VW0EHT.cjs
 - entry_js-!~{000}~.cjs => entry_js-9V0NuFff.cjs
 
+# tests/esbuild/import_star/export_other_common_js
+
+- $runtime$-!~{001}~.cjs => $runtime$-r1VW0EHT.cjs
+- entry_js-!~{000}~.cjs => entry_js-Py4UDEQS.cjs
+
+# tests/esbuild/import_star/export_other_nested_common_js
+
+- $runtime$-!~{001}~.cjs => $runtime$-r1VW0EHT.cjs
+- entry_js-!~{000}~.cjs => entry_js-ChHWKU2T.cjs
+
 # tests/esbuild/import_star/export_self_as_namespace_common_js
 
 - $runtime$-!~{001}~.cjs => $runtime$-ffpSX9w6.cjs

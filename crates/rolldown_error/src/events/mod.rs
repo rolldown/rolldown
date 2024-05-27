@@ -13,6 +13,8 @@ pub mod sourcemap_error;
 pub mod unresolved_entry;
 pub mod unresolved_import;
 pub mod unresolved_import_treated_as_external;
+pub mod unresolved_json_illegally;
+pub mod unresolved_other_unknown;
 
 pub trait BuildEvent: Debug + Sync + Send {
   fn kind(&self) -> EventKind;

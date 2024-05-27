@@ -1,3 +1,4 @@
+pub mod error;
 #[allow(clippy::module_inception)]
 pub mod module_loader;
 mod normal_module_task;

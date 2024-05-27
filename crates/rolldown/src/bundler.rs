@@ -95,34 +95,41 @@ impl Bundler {
     ret
   }
 
-  async fn try_build(&mut self) -> Result<LinkStageOutput> {
-    let build_info = self.scan().await?;
-
-    let link_stage = LinkStage::new(build_info, &self.options);
-    Ok(link_stage.link())
+  async fn try_build(&mut self) -> Result<std::result::Result<LinkStageOutput, Vec<BuildError>>> {
+    let build_info: ScanStageOutput = self.scan().await?;
+    if build_info.errors.is_empty() {
+      let link_stage = LinkStage::new(build_info, &self.options);
+      Ok(Ok(link_stage.link()))
+    } else {
+      Ok(Err(build_info.errors))
+    }
   }
 
   async fn bundle_up(&mut self, is_write: bool) -> Result<BundleOutput> {
-    let mut link_stage_output = self.try_build().await?;
+    let link_stage_output_res = self.try_build().await?;
+    match link_stage_output_res {
+      Ok(mut link_stage_output) => {
+        self.plugin_driver.render_start().await?;
 
-    self.plugin_driver.render_start().await?;
+        let mut generate_stage =
+          GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver);
 
-    let mut generate_stage =
-      GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver);
+        let mut output = {
+          let ret = generate_stage.generate().await;
 
-    let mut output = {
-      let ret = generate_stage.generate().await;
+          if let Some(error) = Self::normalize_error(&ret, |ret| &ret.errors) {
+            self.plugin_driver.render_error(&HookRenderErrorArgs { error }).await?;
+          }
 
-      if let Some(error) = Self::normalize_error(&ret, |ret| &ret.errors) {
-        self.plugin_driver.render_error(&HookRenderErrorArgs { error }).await?;
+          ret?
+        };
+
+        self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
+
+        Ok(output)
       }
-
-      ret?
-    };
-
-    self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
-
-    Ok(output)
+      Err(e) => Ok(BundleOutput { assets: vec![], errors: e, warnings: vec![] }),
+    }
   }
 
   fn normalize_error<T>(

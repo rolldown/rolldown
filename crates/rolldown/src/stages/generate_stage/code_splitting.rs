@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, hash::BuildHasherDefault};
+use std::cmp::Ordering;
 
 use itertools::Itertools;
 use oxc_index::IndexVec;
@@ -62,10 +62,7 @@ impl<'a> GenerateStage<'a> {
     let entries_len = if is_in_rust_test_mode() { entries_len + 1 } else { entries_len };
 
     let mut module_to_bits = oxc_index::index_vec![BitSet::new(entries_len); self.link_output.module_table.normal_modules.len()];
-    let mut bits_to_chunk = FxHashMap::with_capacity_and_hasher(
-      self.link_output.entries.len(),
-      BuildHasherDefault::default(),
-    );
+    let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
     let mut chunks = IndexChunks::with_capacity(self.link_output.entries.len());
     let mut user_defined_entry_chunk_ids: Vec<ChunkId> = Vec::new();
     let mut entry_module_to_entry_chunk: FxHashMap<NormalModuleId, ChunkId> =

@@ -94,6 +94,13 @@ pub struct BindingPluginOptions {
   >,
 
   #[serde(skip_deserializing)]
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => MaybePromise<void | string>"
+  )]
+  pub augment_chunk_hash:
+    Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
+
+  #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext) => void")]
   pub render_start: Option<MaybeAsyncJsCallback<BindingPluginContext, ()>>,
 

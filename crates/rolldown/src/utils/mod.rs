@@ -3,7 +3,7 @@ use rolldown_common::NormalModule;
 use rolldown_oxc_utils::{AstSnippet, OxcAst};
 
 use super::finalizer::{Finalizer, FinalizerContext};
-
+pub mod augment_chunk_hash;
 pub mod call_expression_ext;
 pub mod chunk;
 pub mod extract_hash_pattern;

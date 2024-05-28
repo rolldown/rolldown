@@ -179,6 +179,18 @@ impl Plugin for JsPlugin {
     }
   }
 
+  async fn augment_chunk_hash(
+    &self,
+    ctx: &rolldown_plugin::SharedPluginContext,
+    chunk: &rolldown_common::RenderedChunk,
+  ) -> rolldown_plugin::HookAugmentChunkHashReturn {
+    if let Some(cb) = &self.augment_chunk_hash {
+      Ok(cb.await_call((Arc::clone(ctx).into(), chunk.clone().into())).await?)
+    } else {
+      Ok(None)
+    }
+  }
+
   async fn render_error(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,

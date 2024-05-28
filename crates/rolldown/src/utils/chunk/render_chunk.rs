@@ -17,6 +17,7 @@ pub struct ChunkRenderReturn {
   pub code: String,
   pub map: Option<SourceMap>,
   pub rendered_chunk: RenderedChunk,
+  pub augment_chunk_hash: Option<String>,
   pub file_dir: PathBuf,
   pub preliminary_filename: ResourceId,
 }
@@ -154,6 +155,7 @@ pub async fn render_chunk(
     code: content,
     map,
     rendered_chunk,
+    augment_chunk_hash: None,
     file_dir: file_dir.to_path_buf(),
     preliminary_filename: this
       .preliminary_filename

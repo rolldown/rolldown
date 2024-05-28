@@ -139,6 +139,10 @@ export interface Plugin {
     >
   >
 
+  augmentChunkHash?: Hook<
+    (this: PluginContext, chunk: RenderedChunk) => MaybePromise<string | void>
+  >
+
   renderError?: Hook<
     (this: PluginContext, error: Error) => MaybePromise<NullValue>
   >

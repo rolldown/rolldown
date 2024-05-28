@@ -64,6 +64,21 @@ export function bindingifyRenderChunk(
   }
 }
 
+export function bindingifyAugmentChunkHash(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
+): BindingPluginOptions['augmentChunkHash'] {
+  const hook = plugin.augmentChunkHash
+  if (!hook) {
+    return undefined
+  }
+  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+
+  return async (ctx, chunk) => {
+    return await handler.call(new PluginContext(options, ctx, plugin), chunk)
+  }
+}
+
 export function bindingifyRenderError(
   plugin: Plugin,
   options: NormalizedInputOptions,

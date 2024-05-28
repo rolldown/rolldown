@@ -17,7 +17,7 @@
   "homepage": "https://github.com/rolldown/rolldown",
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
-    "vite": "^5.1.5"
+    "vite": "^5.2.11"
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.2",

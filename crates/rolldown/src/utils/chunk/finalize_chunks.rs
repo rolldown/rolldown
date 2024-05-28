@@ -49,7 +49,13 @@ pub fn finalize_chunks(
 
   let index_standalone_content_hashes: IndexVec<ChunkId, String> = chunks
     .par_iter()
-    .map(|chunk| xxhash_base64_url(chunk.code.as_bytes()))
+    .map(|chunk| {
+      let mut content = chunk.code.as_bytes().to_vec();
+      if let Some(augment_chunk_hash) = &chunk.augment_chunk_hash {
+        content.extend(augment_chunk_hash.as_bytes());
+      }
+      xxhash_base64_url(&content)
+    })
     .collect::<Vec<_>>()
     .into();
 

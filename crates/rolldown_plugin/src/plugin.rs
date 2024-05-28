@@ -7,13 +7,14 @@ use crate::{
   HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
 };
 use anyhow::Result;
-use rolldown_common::{ModuleInfo, Output};
+use rolldown_common::{ModuleInfo, Output, RenderedChunk};
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
 pub type HookTransformReturn = Result<Option<HookLoadOutput>>;
 pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
 pub type HookNoopReturn = Result<()>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
+pub type HookAugmentChunkHashReturn = Result<Option<String>>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
@@ -86,6 +87,14 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     _ctx: &SharedPluginContext,
     _args: &HookRenderChunkArgs,
   ) -> HookRenderChunkReturn {
+    Ok(None)
+  }
+
+  async fn augment_chunk_hash(
+    &self,
+    _ctx: &SharedPluginContext,
+    _chunk: &RenderedChunk,
+  ) -> HookAugmentChunkHashReturn {
     Ok(None)
   }
 

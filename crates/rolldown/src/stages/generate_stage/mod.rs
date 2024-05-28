@@ -20,6 +20,7 @@ use crate::{
   stages::link_stage::LinkStageOutput,
   type_alias::IndexNormalModules,
   utils::{
+    augment_chunk_hash::augment_chunk_hash,
     chunk::{
       deconflict_chunk_symbols::deconflict_chunk_symbols,
       finalize_chunks::finalize_chunks,
@@ -102,11 +103,19 @@ impl<'a> GenerateStage<'a> {
 
     let chunks = render_chunks(self.plugin_driver, chunks).await?;
 
+    let chunks = augment_chunk_hash(self.plugin_driver, chunks).await?;
+
     let chunks = finalize_chunks(&mut chunk_graph, chunks);
 
     let mut assets = vec![];
-    for ChunkRenderReturn { mut map, rendered_chunk, mut code, file_dir, preliminary_filename } in
-      chunks
+    for ChunkRenderReturn {
+      mut map,
+      rendered_chunk,
+      mut code,
+      file_dir,
+      preliminary_filename,
+      ..
+    } in chunks
     {
       if let Some(map) = map.as_mut() {
         map.set_file(&rendered_chunk.filename);

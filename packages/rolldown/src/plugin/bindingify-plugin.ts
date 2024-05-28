@@ -15,6 +15,7 @@ import {
   bindingifyGenerateBundle,
   bindingifyWriteBundle,
   bindingifyRenderError,
+  bindingifyAugmentChunkHash,
 } from './bindingify-output-hooks'
 
 import type { Plugin } from './index'
@@ -37,6 +38,7 @@ export function bindingifyPlugin(
     moduleParsed: bindingifyModuleParsed(plugin, options),
     load: bindingifyLoad(plugin, options),
     renderChunk: bindingifyRenderChunk(plugin, options, outputOptions),
+    augmentChunkHash: bindingifyAugmentChunkHash(plugin, options),
     renderStart: bindingifyRenderStart(plugin, options, outputOptions),
     renderError: bindingifyRenderError(plugin, options),
     generateBundle: bindingifyGenerateBundle(plugin, options, outputOptions),

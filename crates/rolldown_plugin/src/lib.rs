@@ -11,8 +11,8 @@ pub mod inner {
 
 pub use crate::{
   plugin::{
-    BoxPlugin, HookLoadReturn, HookNoopReturn, HookRenderChunkReturn, HookResolveIdReturn,
-    HookTransformReturn, Plugin,
+    BoxPlugin, HookAugmentChunkHashReturn, HookLoadReturn, HookNoopReturn, HookRenderChunkReturn,
+    HookResolveIdReturn, HookTransformReturn, Plugin,
   },
   plugin_context::{PluginContext, SharedPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},

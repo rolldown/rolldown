@@ -1,3 +1,4 @@
+// cSpell:disable
 import { expect, vi } from 'vitest'
 import { defineTest } from '@tests'
 import { getOutputChunk } from '@tests/utils'

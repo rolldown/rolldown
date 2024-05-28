@@ -233,9 +233,9 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 
 [[package]]
 name = "bpaf"
-version = "0.9.11"
+version = "0.9.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "567fc5f0a754100df11b167b2a247b2366fc1ac18e9b776a07659be00878f681"
+checksum = "3280efcf6d66bc77c2cf9b67dc8acee47a217d9be67dd590b3230dffe663724d"
 
 [[package]]
 name = "bumpalo"
@@ -430,9 +430,9 @@ dependencies = [
 
 [[package]]
 name = "criterion2"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43b57a5b1bf6ed08b671717cf7ce07d3dea4efa30f54d0b64abce48d8299818f"
+checksum = "b05a0f6ef5d7bc5c62d49e823079028b883b2f5321b881f92c1ab317c3427db4"
 dependencies = [
  "anes",
  "bpaf",
@@ -440,7 +440,7 @@ dependencies = [
  "ciborium",
  "codspeed",
  "colored",
- "itertools 0.12.1",
+ "itertools",
  "num-traits",
  "oorandom",
  "serde",
@@ -918,15 +918,6 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
@@ -1276,9 +1267,9 @@ dependencies = [
 
 [[package]]
 name = "num-traits"
-version = "0.2.18"
+version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da0df0e5185db44f69b44f26786fe401b6c293d1907744beaa7fa62b2e5a517a"
+checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
 ]
@@ -1801,7 +1792,7 @@ dependencies = [
  "glob",
  "indexmap",
  "insta",
- "itertools 0.13.0",
+ "itertools",
  "once_cell",
  "oxc",
  "oxc_index",
@@ -1934,7 +1925,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "dashmap",
- "itertools 0.13.0",
+ "itertools",
  "oxc_resolver",
  "rolldown_common",
  "rolldown_fs",
@@ -2011,9 +2002,9 @@ checksum = "d626bb9dae77e28219937af045c257c28bfd3f69333c512553507f5f9798cb76"
 
 [[package]]
 name = "rustc-hash"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+checksum = "3450ed37fe9609abb6bc3b8891b6e078404e4c53c7332350e2e15126a95229bf"
 
 [[package]]
 name = "rustversion"

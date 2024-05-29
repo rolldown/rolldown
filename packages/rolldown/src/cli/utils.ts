@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url'
 import nodePath from 'node:path'
 import { createConsola } from 'consola'
-import type { RolldownConfigExport } from '../types/rolldown-config-export'
+import type { ConfigExport } from '../types/config-export'
 
 /**
  * Console logger
@@ -12,9 +12,7 @@ export const logger = createConsola({
   },
 })
 
-export async function ensureConfig(
-  configPath: string,
-): Promise<RolldownConfigExport> {
+export async function ensureConfig(configPath: string): Promise<ConfigExport> {
   if (!isSupportedFormat(configPath)) {
     throw new Error(
       `Unsupported config format. Expected: \`${SUPPORTED_CONFIG_FORMATS.join(',')}\` but got \`${nodePath.extname(configPath)}\``,

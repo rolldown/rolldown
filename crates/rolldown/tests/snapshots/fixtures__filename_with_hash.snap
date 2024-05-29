@@ -946,6 +946,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry-!~{000}~.mjs => entry-a0bF4eQm.mjs
 
+# tests/esbuild/packagejson/test_package_json_exports_default_over_import_and_require
+
+- entry-!~{000}~.mjs => entry-JF9d90w2.mjs
+
 # tests/esbuild/packagejson/test_package_json_exports_entry_point_import_over_require
 
 - entry-!~{000}~.mjs => entry-3tCW4XWQ.mjs

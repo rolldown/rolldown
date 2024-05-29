@@ -46,6 +46,10 @@ export interface Plugin {
     ) => NullValue | boolean
   >
 
+  options?: Hook<
+    (this: MinimalPluginContext, options: NormalizedInputOptions) => NullValue
+  >
+
   // --- Build hooks ---
 
   buildStart?: Hook<

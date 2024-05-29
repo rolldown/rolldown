@@ -813,6 +813,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - $runtime$-!~{001}~.mjs => $runtime$-6wzC9jCL.mjs
 - entry-!~{000}~.mjs => entry-Grp4OUuD.mjs
 
+# tests/esbuild/packagejson/test_package_json_browser_issue2002_b
+
+- $runtime$-!~{001}~.mjs => $runtime$-6wzC9jCL.mjs
+- entry-!~{000}~.mjs => entry-S6vy68hQ.mjs
+
 # tests/esbuild/packagejson/test_package_json_browser_issue2002_c
 
 - $runtime$-!~{001}~.mjs => $runtime$-6wzC9jCL.mjs

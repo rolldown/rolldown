@@ -1,0 +1,28 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_issue2002_b
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "sub" is imported by "src/node_modules/pkg/sub/foo.js", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry.mjs
+
+```js
+import { __commonJSMin } from "./$runtime$.mjs";
+
+// src/node_modules/pkg/sub/foo.js
+var require_foo = __commonJSMin((exports, module) => {
+	require('sub');
+});
+
+// src/entry.js
+require_foo();
+```

@@ -58,7 +58,9 @@ export function bindingifyInputOptions(
     shimMissingExports: options.shimMissingExports,
     // @ts-ignore TODO The typing should import from binding
     logLevel: bindingifyLogLevel(options.logLevel),
-    onLog: options.onLog,
+    onLog: (level, log) => {
+      options.onLog(level, { code: log.code, message: log.message })
+    },
   }
 }
 

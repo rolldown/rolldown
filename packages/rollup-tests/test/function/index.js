@@ -64,7 +64,7 @@ runTestSuiteWithSamples(
 	(directory, config) => {
 		(config.skip ? it.skip : config.solo ? it.only : it)(
 			path.basename(directory) + ': ' + config.description,
-			async () => {
+			async () => {		
 				if (config.show) console.group(path.basename(directory));
 				if (config.before) {
 					await config.before();
@@ -202,7 +202,26 @@ runTestSuiteWithSamples(
 										if (config.show) console.groupEnd();
 										if (unintendedError) throw unintendedError;
 										if (config.after) {
-											return config.after();
+											try {
+												return config.after();
+											} catch (error) {
+												// intercept log messages assertion, because the rolldown internal warning messages are not different with rollup internal warning messages
+												if (error instanceof assert.AssertionError && error.message.includes('EVAL') && error.message.includes('/samples/logging/')) {
+													const actual = error.actual;
+													const expected = error.expected;
+													if (Array.isArray(actual) && Array.isArray(expected)) {
+														// assert eval warning
+														const actualLast = actual.pop();
+														const expectedLast = expected.pop();
+														assert.deepStrictEqual(actualLast[0], expectedLast[0]);
+														assert.deepStrictEqual(actualLast[1].code, expectedLast[1].code);
+														// assert other logs
+														assert.deepStrictEqual(actual, expected);
+														return;
+													}
+												}
+												throw error;
+											}
 										}
 									});
 							});

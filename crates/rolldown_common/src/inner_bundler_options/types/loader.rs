@@ -8,6 +8,7 @@ use serde::Deserialize;
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
+#[derive(Debug, Clone, Copy)]
 pub enum Loader {
   Js,
   Json,

@@ -104,6 +104,7 @@ pub fn normalize_binding_options(
       "cjs" => OutputFormat::Cjs,
       _ => panic!("Invalid format: {format_str}"),
     }),
+    loaders: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

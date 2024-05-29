@@ -1,4 +1,5 @@
-use rolldown_common::{NormalizedBundlerOptions, Platform, SourceMapType};
+use rolldown_common::{Loader, NormalizedBundlerOptions, Platform, SourceMapType};
+use rustc_hash::FxHashMap;
 
 #[allow(clippy::struct_field_names)]
 pub struct NormalizeOptionsReturn {
@@ -10,6 +11,33 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   // Take out resolve options
 
   let raw_resolve = std::mem::take(&mut raw_options.resolve).unwrap_or_default();
+
+  let mut loaders = FxHashMap::from(
+    [
+      ("json".to_string(), Loader::Json),
+      ("js".to_string(), Loader::Js),
+      ("mjs".to_string(), Loader::Js),
+      ("cjs".to_string(), Loader::Js),
+    ]
+    .into_iter()
+    .collect(),
+  );
+
+  let user_defined_loaders: FxHashMap<String, Loader> = raw_options
+    .loaders
+    .map(|loaders| {
+      loaders
+        .into_iter()
+        .map(|(ext, value)| {
+          let stripped = ext.strip_prefix('.').map(ToString::to_string).unwrap_or(ext);
+
+          (stripped, value)
+        })
+        .collect()
+    })
+    .unwrap_or_default();
+
+  loaders.extend(user_defined_loaders);
 
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
@@ -32,6 +60,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     sourcemap_ignore_list: raw_options.sourcemap_ignore_list,
     sourcemap_path_transform: raw_options.sourcemap_path_transform,
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
+    loaders,
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }

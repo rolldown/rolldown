@@ -1420,6 +1420,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-usfFiBny.mjs
 
+# tests/fixtures/function/loader/customize
+
+- main-!~{000}~.mjs => main-l9Nf0vVa.mjs
+
 # tests/fixtures/function/loader/json/array
 
 - main-!~{000}~.mjs => main-4Kd30BAw.mjs

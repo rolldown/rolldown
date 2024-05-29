@@ -1,11 +1,11 @@
-use std::{fmt::Debug, path::PathBuf};
+use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
 
-use crate::SourceMapIgnoreList;
+use crate::{Loader, SourceMapIgnoreList};
 
 use self::types::{
   input_item::InputItem, is_external::IsExternal, output_format::OutputFormat,
@@ -64,6 +64,9 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
+
+  /// Key is the file extension. The extension should start with a `.`. E.g. `".txt"`.
+  pub loaders: Option<HashMap<String, Loader>>,
   // --- options for resolve
   pub resolve: Option<ResolveOptions>,
 }

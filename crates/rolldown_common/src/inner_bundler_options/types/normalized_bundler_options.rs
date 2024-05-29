@@ -3,6 +3,10 @@
 
 use std::path::PathBuf;
 
+use rustc_hash::FxHashMap;
+
+use crate::Loader;
+
 use super::{
   filename_template::FilenameTemplate, input_item::InputItem, is_external::IsExternal,
   output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
@@ -19,6 +23,8 @@ pub struct NormalizedBundlerOptions {
   pub treeshake: bool,
   pub platform: Platform,
   pub shim_missing_exports: bool,
+  /// The key is the extension. Unlike `BundlerOptions`, the extension doesn't start with a dot.
+  pub loaders: FxHashMap<String, Loader>,
   // --- Output
   pub entry_filenames: FilenameTemplate,
   pub chunk_filenames: FilenameTemplate,

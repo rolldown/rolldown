@@ -101,6 +101,16 @@
             "$ref": "#/definitions/InputItem"
           }
         },
+        "loaders": {
+          "description": "Key is the file extension. The extension should start with a `.`. E.g. `\".txt\"`.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/definitions/Loader"
+          }
+        },
         "platform": {
           "anyOf": [
             {
@@ -162,6 +172,13 @@
           ]
         }
       }
+    },
+    "Loader": {
+      "type": "string",
+      "enum": [
+        "js",
+        "json"
+      ]
     },
     "OutputFormat": {
       "type": "string",

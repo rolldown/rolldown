@@ -213,7 +213,8 @@ impl NormalModuleTask {
     &self,
     source: &Arc<str>,
   ) -> anyhow::Result<(OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef)> {
-    let mut ast = parse_to_ast(self.resolved_path.path.as_path(), Arc::clone(source))?;
+    let mut ast =
+      parse_to_ast(&self.ctx.input_options, self.resolved_path.path.as_path(), Arc::clone(source))?;
 
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(

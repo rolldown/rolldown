@@ -1420,19 +1420,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-usfFiBny.mjs
 
-# tests/fixtures/function/loader/customize
+# tests/fixtures/function/loaders/customize
 
 - main-!~{000}~.mjs => main-l9Nf0vVa.mjs
 
-# tests/fixtures/function/loader/json/array
+# tests/fixtures/function/loaders/json/array
 
 - main-!~{000}~.mjs => main-4Kd30BAw.mjs
 
-# tests/fixtures/function/loader/json/object
+# tests/fixtures/function/loaders/json/object
 
 - main-!~{000}~.mjs => main-3FhLLo2b.mjs
 
-# tests/fixtures/function/loader/json/object_with_invalid_key
+# tests/fixtures/function/loaders/json/object_with_invalid_key
 
 - main-!~{000}~.mjs => main-pZUL7Yg8.mjs
 

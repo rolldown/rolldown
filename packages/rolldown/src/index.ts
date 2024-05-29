@@ -6,6 +6,7 @@ import type { Plugin } from './plugin'
 import { defineParallelPlugin, DefineParallelPluginResult } from './plugin'
 import { defineConfig } from './utils/define-config'
 import { rolldown, experimental_scan } from './rolldown'
+import { ConfigExport } from './types/config-export'
 
 export { defineConfig, defineParallelPlugin, rolldown, experimental_scan }
 
@@ -17,6 +18,7 @@ export type {
   OutputOptions,
   Plugin,
   DefineParallelPluginResult,
+  ConfigExport,
 }
 
 // Exports for compatibility

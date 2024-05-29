@@ -1,7 +1,5 @@
-import type { RolldownConfigExport } from '../types/rolldown-config-export'
+import type { ConfigExport } from '../types/config-export'
 
-export function defineConfig(
-  config: RolldownConfigExport,
-): RolldownConfigExport {
+export function defineConfig(config: ConfigExport): ConfigExport {
   return config
 }

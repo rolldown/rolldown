@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/wrapped_esm
+input_file: crates/rolldown/tests/fixtures/misc/wrapped_esm
 ---
 # Assets
 
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/wrapped_esm
 ```js
 import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 
-// foo.js
+//#region foo.js
 function foo() {
 }
 var foo_ns, a, b, c, bar, baz;
@@ -31,8 +31,12 @@ var init_foo = __esmMin(() => {
 	};
 });
 
-// main.js
+//#endregion
+
+//#region main.js
 init_foo(),__toCommonJS(foo_ns);
+
+//#endregion
 
 //# sourceMappingURL=main.mjs.map
 ```
@@ -49,5 +53,5 @@ init_foo(),__toCommonJS(foo_ns);
 (2:20-3:15) "}\nexport default" --> (18:1-19:1) "\t};\n"
 (3:15-3:25) " class baz" --> (19:1-19:13) "\tbaz = class"
 (3:25-3:28) " { " --> (19:13-20:1) " {\n"
-(3:28-7:1) "}\n\n\nexport { }\n" --> (20:1-24:0) "\t};\n});\n\n// main.js"
-(0:0-1:1) "require('./foo')\n" --> (24:0-26:34) "\ninit_foo(),__toCommonJS(foo_ns);\n\n//# sourceMappingURL=main.mjs.map"
+(3:28-7:1) "}\n\n\nexport { }\n" --> (20:1-26:0) "\t};\n});\n\n//#endregion\n\n//#region main.js"
+(0:0-1:1) "require('./foo')\n" --> (26:0-30:34) "\ninit_foo(),__toCommonJS(foo_ns);\n\n//#endregion\n\n//# sourceMappingURL=main.mjs.map"

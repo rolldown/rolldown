@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/avoid_tdz
 ## entry_js.mjs
 
 ```js
-// entry.js
+//#region entry.js
 class Foo {
 	static foo=new Foo();
 
@@ -18,6 +18,8 @@ console.log(foo);
 class Bar {
 }
 let bar = 123;
+
+//#endregion
 
 export { Bar, bar };
 ```

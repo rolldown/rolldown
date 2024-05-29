@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances
 ## class_js.mjs
 
 ```js
-// class.js
+//#region class.js
 class Keep1 {
 	*[Symbol.iterator](){
 	}
@@ -21,11 +21,13 @@ class Keep2 {
 	*[Symbol.iterator](){
 	}
 }
+
+//#endregion
 ```
 ## object_js.mjs
 
 ```js
-// object.js
+//#region object.js
 let remove2 = {
 	*[Symbol.iterator](){
 	}
@@ -48,4 +50,6 @@ let keep3 = {
 	*[Symbol.wtf](){
 	}
 };
+
+//#endregion
 ```

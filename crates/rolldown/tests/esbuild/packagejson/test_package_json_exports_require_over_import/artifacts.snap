@@ -10,11 +10,15 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// node_modules/pkg/require.js
+//#region node_modules/pkg/require.js
 var require_require = __commonJSMin((exports, module) => {
 	console.log('SUCCESS');
 });
 
-// src/entry.js
+//#endregion
+
+//#region src/entry.js
 require_require();
+
+//#endregion
 ```

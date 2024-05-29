@@ -13,8 +13,10 @@ import "./ab.mjs";
 ## ab.mjs
 
 ```js
-// ab.js
+//#region ab.js
 console.log(123);
+
+//#endregion
 ```
 ## b.mjs
 
@@ -34,6 +36,8 @@ import "./d~1.mjs";
 ## d~1.mjs
 
 ```js
-// cd.js
+//#region cd.js
 console.log(123);
+
+//#endregion
 ```

@@ -64,7 +64,8 @@ pub async fn render_chunk(
         sourcemap,
         lines_count,
       } = module_render_output;
-      concat_source.add_source(Box::new(RawSource::new(format!("// {module_pretty_path}",))));
+      concat_source
+        .add_source(Box::new(RawSource::new(format!("//#region {module_pretty_path}",))));
       if let Some(sourcemap) = sourcemap {
         concat_source.add_source(Box::new(SourceMapSource::new(
           rendered_content,
@@ -74,6 +75,7 @@ pub async fn render_chunk(
       } else {
         concat_source.add_source(Box::new(RawSource::new(rendered_content)));
       }
+      concat_source.add_source(Box::new(RawSource::new("//#endregion\n".to_string())));
       // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.
       if !module_path.starts_with('\0') {
         rendered_modules.insert(module_path, rendered_module);

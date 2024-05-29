@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_static_acces
 ## entry_js.mjs
 
 ```js
-// entry.js
+//#region entry.js
 class Foo {
 	static bar=Foo.#foo;
 
@@ -25,4 +25,6 @@ class FooThis {
 	}
 }
 console.log(FooThis.bar === 123);
+
+//#endregion
 ```

@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_nullish_coalescing_assignm
 ## entry_js.mjs
 
 ```js
-// entry.js
+//#region entry.js
 class A {
 	#a;
 
@@ -16,6 +16,8 @@ class A {
 		this.#a ??= 1;
 	}
 }
+
+//#endregion
 
 export { A };
 ```

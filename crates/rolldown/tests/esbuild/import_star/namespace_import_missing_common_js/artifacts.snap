@@ -10,12 +10,16 @@ input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_missing_c
 ```js
 import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// foo.js
+//#region foo.js
 var require_foo = __commonJSMin((exports, module) => {
 	exports.x = 123;
 });
 
-// entry.js
+//#endregion
+
+//#region entry.js
 var import_foo = __toESM(require_foo());
 console.log(import_foo, import_foo.foo);
+
+//#endregion
 ```

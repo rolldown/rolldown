@@ -10,11 +10,15 @@ input_file: crates/rolldown/tests/fixtures/function/resolve/browser_filed_false
 ```js
 import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// (ignored) node_modules/package/util.js
+//#region (ignored) node_modules/package/util.js
 var require_util = __commonJSMin((exports, module) => {
 });
 
-// node_modules/package/index.js
+//#endregion
+
+//#region node_modules/package/index.js
 var import_util = __toESM(require_util());
 console.log(import_util.default);
+
+//#endregion
 ```

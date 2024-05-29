@@ -10,11 +10,15 @@ input_file: crates/rolldown/tests/esbuild/default/require_child_dir_common_js
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// dir/index.js
+//#region dir/index.js
 var require_dir_index = __commonJSMin((exports, module) => {
 	module.exports = 123;
 });
 
-// entry.js
+//#endregion
+
+//#region entry.js
 console.log(require_dir_index());
+
+//#endregion
 ```

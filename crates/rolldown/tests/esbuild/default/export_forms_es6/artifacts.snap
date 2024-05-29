@@ -10,17 +10,21 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_es6
 ```js
 import { __export } from "./$runtime$.mjs";
 
-// a.js
+//#region a.js
 const abc = undefined;
 
-// b.js
+//#endregion
+
+//#region b.js
 var b_ns = {};
 __export(b_ns, {
 	xyz:() => xyz
 });
 const xyz = null;
 
-// entry.js
+//#endregion
+
+//#region entry.js
 var entry_default = 123;
 var v = 234;
 let l = 234;
@@ -29,6 +33,8 @@ function Fn() {
 }
 class Class {
 }
+
+//#endregion
 
 export { Class as C, Class, Fn, abc, b_ns as b, c, entry_default as default, l, v };
 ```

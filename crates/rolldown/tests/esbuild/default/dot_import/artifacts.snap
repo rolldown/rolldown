@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-assertion_line: 167
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/dot_import
 ---
@@ -11,12 +10,16 @@ input_file: crates/rolldown/tests/esbuild/default/dot_import
 ```js
 import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// index.js
+//#region index.js
 var require_dot_import_index = __commonJSMin((exports, module) => {
 	exports.x = 123;
 });
 
-// entry.js
+//#endregion
+
+//#region entry.js
 var import_dot_import_index = __toESM(require_dot_import_index());
 console.log(import_dot_import_index.x);
+
+//#endregion
 ```

@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_ke
 ```js
 import { __export } from "./$runtime$.mjs";
 
-// node_modules/demo-pkg/index.js
+//#region node_modules/demo-pkg/index.js
 var demo_pkg_index_ns = {};
 __export(demo_pkg_index_ns, {
 	foo:() => foo
@@ -18,6 +18,10 @@ __export(demo_pkg_index_ns, {
 const foo = 123;
 console.log('hello');
 
-// src/entry.js
+//#endregion
+
+//#region src/entry.js
 console.log(demo_pkg_index_ns);
+
+//#endregion
 ```

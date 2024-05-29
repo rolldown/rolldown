@@ -8,8 +8,10 @@ input_file: crates/rolldown/tests/fixtures/function/shim_missing_exports/basic
 ## main.mjs
 
 ```js
-// foo.js
+//#region foo.js
 var missing = void 0;
+
+//#endregion
 
 export { missing };
 ```

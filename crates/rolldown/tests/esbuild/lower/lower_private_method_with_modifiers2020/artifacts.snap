@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_method_with_modifi
 ## entry_js.mjs
 
 ```js
-// entry.js
+//#region entry.js
 class Foo {
 	*#g(){
 	}
@@ -23,6 +23,8 @@ class Foo {
 	static async *#sag(){
 	}
 }
+
+//#endregion
 
 export { Foo };
 ```

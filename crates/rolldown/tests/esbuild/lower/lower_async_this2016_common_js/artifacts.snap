@@ -10,10 +10,12 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_async_this2016_common_js
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// entry.js
+//#region entry.js
 var require_entry = __commonJSMin((exports, module) => {
 	exports.foo = async() => this;
 });
+
+//#endregion
 
 export default require_entry();
 ```

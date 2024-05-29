@@ -8,19 +8,27 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/pure_annotation
 ## main.mjs
 
 ```js
-// a.js
+//#region a.js
 const a = 100;
 
-// c.js
+//#endregion
+
+//#region c.js
 function test() {
 }
 const c = test();
 
-// d.js
+//#endregion
+
+//#region d.js
 function test2() {
 }
 const d = test2(), e = test2();
 
-// main.js
+//#endregion
+
+//#region main.js
 console.log(`a: `, a);
+
+//#endregion
 ```

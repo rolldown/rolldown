@@ -1,23 +1,27 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/function/entry_filenames/should_generate_correct_relative_import_path
+input_file: crates/rolldown/tests/fixtures/function/dir/should_generate_correct_relative_import_path
 ---
 # Assets
 
 ## ./chunks/async.mjs
 
 ```js
-// async.js
+//#region async.js
 const value = 'async';
+
+//#endregion
 
 export { value };
 ```
 ## ./chunks/shared.mjs
 
 ```js
-// shared.js
+//#region shared.js
 const value = 'shared';
+
+//#endregion
 
 export { value };
 ```
@@ -26,8 +30,10 @@ export { value };
 ```js
 import { value } from "../chunks/shared.mjs";
 
-// a.js
+//#region a.js
 const asyncValue = import('../chunks/async.mjs');
+
+//#endregion
 
 export { asyncValue, value };
 ```
@@ -36,8 +42,10 @@ export { asyncValue, value };
 ```js
 import { value } from "../chunks/shared.mjs";
 
-// b.js
+//#region b.js
 const asyncValue = import('../chunks/async.mjs');
+
+//#endregion
 
 export { asyncValue, value };
 ```

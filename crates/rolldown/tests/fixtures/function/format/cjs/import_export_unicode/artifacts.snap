@@ -8,8 +8,10 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/import_export_uni
 ## main.cjs
 
 ```js
-// foo.js
+//#region foo.js
 const devil = 'devil';
+
+//#endregion
 
 exports['😈'] = devil;
 ```

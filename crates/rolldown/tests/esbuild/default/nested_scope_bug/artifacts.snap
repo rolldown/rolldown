@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/nested_scope_bug
 ## entry_js.mjs
 
 ```js
-// entry.js
+//#region entry.js
 (() => {
 	function a() {
 		b();
@@ -19,4 +19,6 @@ input_file: crates/rolldown/tests/esbuild/default/nested_scope_bug
 	}
 	a();
 })();
+
+//#endregion
 ```

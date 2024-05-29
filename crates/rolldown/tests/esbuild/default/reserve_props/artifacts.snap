@@ -8,11 +8,13 @@ input_file: crates/rolldown/tests/esbuild/default/reserve_props
 ## entry_js.mjs
 
 ```js
-// entry.js
+//#region entry.js
 var entry_default = {
 	foo_:0,
 	_bar_:1
 };
+
+//#endregion
 
 export { entry_default as default };
 ```

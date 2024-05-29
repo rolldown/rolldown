@@ -10,12 +10,16 @@ input_file: crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_
 ```js
 import { __esmMin, __toCommonJS } from "./$runtime$.mjs";
 
-// types.mjs
+//#region types.mjs
 var types_ns;
 var init_types = __esmMin(() => {
 	types_ns = {};
 });
 
-// entry.js
+//#endregion
+
+//#region entry.js
 console.log((init_types(),__toCommonJS(types_ns)));
+
+//#endregion
 ```

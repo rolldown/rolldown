@@ -10,9 +10,13 @@ input_file: crates/rolldown/tests/fixtures/deconflict/reserved_names
 ```js
 import { default as assert } from "assert";
 
-// a.js
+//#region a.js
 const interface$1 = 'interface';
 
-// main.js
+//#endregion
+
+//#region main.js
 assert.equal(interface$1, 'interface');
+
+//#endregion
 ```

@@ -22,8 +22,10 @@ export { main_default as default };
 ## main~1.mjs
 
 ```js
-// main.js
+//#region main.js
 var main_default = {};
+
+//#endregion
 
 export { main_default };
 ```

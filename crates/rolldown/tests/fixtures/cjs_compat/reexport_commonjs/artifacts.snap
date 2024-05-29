@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/reexport_commonjs
+input_file: crates/rolldown/tests/fixtures/cjs_compat/reexport_commonjs
 ---
 # Assets
 
@@ -10,17 +10,21 @@ input_file: crates/rolldown/tests/fixtures/reexport_commonjs
 ```js
 import { __commonJSMin, __export, __reExport, __toESM } from "./$runtime$.mjs";
 
-// commonjs.js
+//#region commonjs.js
 var require_commonjs = __commonJSMin((exports, module) => {
 	module.exports = {
 		bar:1
 	};
 });
 
-// esm.js
+//#endregion
+
+//#region esm.js
 const value = 1;
 
-// foo.js
+//#endregion
+
+//#region foo.js
 var foo_ns = {};
 __export(foo_ns, {
 	bar:() => import_commonjs$1.bar,
@@ -29,9 +33,13 @@ __export(foo_ns, {
 __reExport(foo_ns, __toESM(require_commonjs()));
 var import_commonjs$1 = __toESM(require_commonjs());
 
-// main.js
+//#endregion
+
+//#region main.js
 var import_commonjs = __toESM(require_commonjs());
 console.log(foo_ns, import_commonjs$1.bar, value, foo_ns.foo);
+
+//#endregion
 
 var bar = import_commonjs.bar;
 export { bar };

@@ -8,11 +8,15 @@ input_file: crates/rolldown/tests/esbuild/default/simple_es6
 ## entry_js.mjs
 
 ```js
-// foo.js
+//#region foo.js
 function fn() {
 	return 123;
 }
 
-// entry.js
+//#endregion
+
+//#region entry.js
 console.log(fn());
+
+//#endregion
 ```

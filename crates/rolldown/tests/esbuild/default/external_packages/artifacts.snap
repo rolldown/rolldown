@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-assertion_line: 167
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/external_packages
 ---
@@ -12,9 +11,13 @@ input_file: crates/rolldown/tests/esbuild/default/external_packages
 import "pkg1";
 import "pkg2";
 
-// file.js
+//#region file.js
 console.log('file');
 
-// libs/pkg3.js
+//#endregion
+
+//#region libs/pkg3.js
 console.log('pkg3');
+
+//#endregion
 ```

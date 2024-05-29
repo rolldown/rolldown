@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_getter_setter2019
 ## entry_js.mjs
 
 ```js
-// entry.js
+//#region entry.js
 class Foo {
 	get #foo(){
 		return this.foo;
@@ -53,6 +53,8 @@ class Foo {
 		fn().#prop ??= 1;
 	}
 }
+
+//#endregion
 
 export { Foo };
 ```

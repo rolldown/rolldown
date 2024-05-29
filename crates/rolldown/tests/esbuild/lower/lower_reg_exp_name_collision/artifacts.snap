@@ -8,10 +8,12 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_reg_exp_name_collision
 ## entry_js.mjs
 
 ```js
-// entry.js
+//#region entry.js
 function foo(RegExp) {
 	return new RegExp(/./d, 'd');
 }
+
+//#endregion
 
 export { foo };
 ```

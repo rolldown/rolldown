@@ -11,11 +11,13 @@ input_file: crates/rolldown/tests/fixtures/misc/cjs_entry_as_dependency
 import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 import { require_main2 } from "./main2~1.mjs";
 
-// main.js
+//#region main.js
 var require_main = __commonJSMin((exports, module) => {
 	var import_main2 = __toESM(require_main2());
 	module.exports = import_main2.default;
 });
+
+//#endregion
 
 export default require_main();
 ```
@@ -31,10 +33,12 @@ export default require_main2();
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// main2.js
+//#region main2.js
 var require_main2 = __commonJSMin((exports, module) => {
 	module.exports = {};
 });
+
+//#endregion
 
 export { require_main2 };
 ```

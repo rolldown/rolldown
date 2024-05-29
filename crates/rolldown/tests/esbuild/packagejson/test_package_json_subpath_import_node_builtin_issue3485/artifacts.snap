@@ -11,7 +11,9 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_subpath_
 import { default as fs } from "node:fs";
 import { default as http } from "node:http";
 
-// entry.js
+//#region entry.js
 fs.readFileSync();
 http.createServer();
+
+//#endregion
 ```

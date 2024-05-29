@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/compat/esm_require_cjs
+input_file: crates/rolldown/tests/fixtures/cjs_compat/esm_require_cjs
 ---
 # Assets
 
@@ -10,13 +10,17 @@ input_file: crates/rolldown/tests/fixtures/compat/esm_require_cjs
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// cjs.js
+//#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
 	module.exports = 'cjs';
 });
 
-// main.js
+//#endregion
+
+//#region main.js
 const cjs = require_cjs();
+
+//#endregion
 
 export { cjs };
 ```

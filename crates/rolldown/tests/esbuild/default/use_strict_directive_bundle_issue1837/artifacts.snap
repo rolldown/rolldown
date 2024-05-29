@@ -10,12 +10,16 @@ input_file: crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_is
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// cjs.js
+//#region cjs.js
 'use strict';
 var require_cjs = __commonJSMin((exports, module) => {
 	exports.foo = process;
 });
 
-// entry.js
+//#endregion
+
+//#region entry.js
 console.log(require_cjs());
+
+//#endregion
 ```

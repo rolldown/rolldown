@@ -10,13 +10,17 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_true_kee
 ```js
 import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// node_modules/demo-pkg/index.js
+//#region node_modules/demo-pkg/index.js
 var require_demo_pkg_index = __commonJSMin((exports, module) => {
 	exports.foo = 123;
 	console.log('hello');
 });
 
-// src/entry.js
+//#endregion
+
+//#region src/entry.js
 var import_demo_pkg_index = __toESM(require_demo_pkg_index());
 console.log('unused import');
+
+//#endregion
 ```

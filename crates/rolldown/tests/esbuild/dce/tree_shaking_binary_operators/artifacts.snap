@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators
 ## entry_js.mjs
 
 ```js
-// entry.js
+//#region entry.js
 let keep, keep2;
 keep = keep2;
 keep += keep2;
@@ -26,4 +26,6 @@ keep ^= keep2;
 keep ??= keep2;
 keep ||= keep2;
 keep &&= keep2;
+
+//#endregion
 ```

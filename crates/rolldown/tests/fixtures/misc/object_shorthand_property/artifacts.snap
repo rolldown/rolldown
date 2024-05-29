@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/object_shorthand_property
+input_file: crates/rolldown/tests/fixtures/misc/object_shorthand_property
 ---
 # Assets
 
@@ -10,14 +10,18 @@ input_file: crates/rolldown/tests/fixtures/object_shorthand_property
 ```js
 import { default as assert } from "assert";
 
-// foo.js
+//#region foo.js
 var foo_default = 'foo';
 
-// main.js
+//#endregion
+
+//#region main.js
 const value = {
 	foo:foo_default
 };
 assert.strictEqual(value.foo, 'foo');
+
+//#endregion
 
 //# sourceMappingURL=main.mjs.map
 ```
@@ -26,16 +30,16 @@ assert.strictEqual(value.foo, 'foo');
 
 - ../foo.js
 (0:0-0:15) "export default " --> (3:0-3:18) "\nvar foo_default ="
-(0:15-0:20) "'foo'" --> (3:18-6:0) " 'foo';\n\n// main.js"
+(0:15-0:20) "'foo'" --> (3:18-8:0) " 'foo';\n\n//#endregion\n\n//#region main.js"
 - ../main.js
-(3:0-3:6) "\nconst" --> (6:0-6:6) "\nconst"
-(3:6-3:14) " value =" --> (6:6-6:14) " value ="
-(3:14-3:16) " {" --> (6:14-7:1) " {\n"
-(3:16-3:21) " foo " --> (7:1-8:1) "\tfoo:foo_default\n"
-(3:21-5:0) "}\n" --> (8:1-9:0) "};"
-(5:0-5:7) "\nassert" --> (9:0-9:7) "\nassert"
-(5:7-5:19) ".strictEqual" --> (9:7-9:19) ".strictEqual"
-(5:19-5:25) "(value" --> (9:19-9:25) "(value"
-(5:25-5:30) ".foo," --> (9:25-9:30) ".foo,"
-(5:30-5:36) " 'foo'" --> (9:30-9:36) " 'foo'"
-(5:36-5:37) ")" --> (9:36-11:34) ");\n\n//# sourceMappingURL=main.mjs.map"
+(3:0-3:6) "\nconst" --> (8:0-8:6) "\nconst"
+(3:6-3:14) " value =" --> (8:6-8:14) " value ="
+(3:14-3:16) " {" --> (8:14-9:1) " {\n"
+(3:16-3:21) " foo " --> (9:1-10:1) "\tfoo:foo_default\n"
+(3:21-5:0) "}\n" --> (10:1-11:0) "};"
+(5:0-5:7) "\nassert" --> (11:0-11:7) "\nassert"
+(5:7-5:19) ".strictEqual" --> (11:7-11:19) ".strictEqual"
+(5:19-5:25) "(value" --> (11:19-11:25) "(value"
+(5:25-5:30) ".foo," --> (11:25-11:30) ".foo,"
+(5:30-5:36) " 'foo'" --> (11:30-11:36) " 'foo'"
+(5:36-5:37) ")" --> (11:36-15:34) ");\n\n//#endregion\n\n//# sourceMappingURL=main.mjs.map"

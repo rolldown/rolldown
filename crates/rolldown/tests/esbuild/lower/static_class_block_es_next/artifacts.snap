@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/lower/static_class_block_es_next
 ## entry_js.mjs
 
 ```js
-// entry.js
+//#region entry.js
 class A {
 	static{
 	}
@@ -28,4 +28,6 @@ let B = class {
 		super.superField++;
 	}
 };
+
+//#endregion
 ```

@@ -8,8 +8,10 @@ input_file: crates/rolldown/tests/esbuild/default/export_chain
 ## entry_js.mjs
 
 ```js
-// bar.js
+//#region bar.js
 const c = 123;
+
+//#endregion
 
 export { c as a };
 ```

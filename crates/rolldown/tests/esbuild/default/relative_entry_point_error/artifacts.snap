@@ -8,6 +8,8 @@ input_file: crates/rolldown/tests/esbuild/default/relative_entry_point_error
 ## entry.mjs
 
 ```js
-// entry.js
+//#region entry.js
 console.log(123);
+
+//#endregion
 ```

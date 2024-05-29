@@ -22,6 +22,8 @@ input_file: crates/rolldown/tests/fixtures/warnings/eval
 ## main.mjs
 
 ```js
-// main.js
+//#region main.js
 console.log(eval);
+
+//#endregion
 ```

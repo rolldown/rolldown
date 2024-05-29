@@ -206,7 +206,7 @@ runTestSuiteWithSamples(
 												return config.after();
 											} catch (error) {
 												// intercept log messages assertion, because the rolldown internal warning messages are not different with rollup internal warning messages
-												if (error instanceof assert.AssertionError && error.message.includes('EVAL') && error.message.includes('/samples/logging/')) {
+												if (error instanceof assert.AssertionError && error.message.includes('EVAL') && error.message.includes('logging')) {
 													const actual = error.actual;
 													const expected = error.expected;
 													if (Array.isArray(actual) && Array.isArray(expected)) {

@@ -13,6 +13,7 @@ pub struct OxcAst {
   pub(crate) inner: ProgramCell,
   pub trivias: Trivias,
   pub source_type: SourceType,
+  pub contains_use_strict: bool,
 }
 
 impl OxcAst {

@@ -1542,6 +1542,16 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-Hw_z1K-p.mjs
 
+# tests/fixtures/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
+
+- $runtime$-!~{001}~.cjs => $runtime$-Erv9vQWi.cjs
+- main-!~{000}~.cjs => main-l0iwTlcH.cjs
+
+# tests/fixtures/misc/use_strict/no_use_strict_with_non_strict_cjs_in_cjs_format
+
+- $runtime$-!~{001}~.cjs => $runtime$-Erv9vQWi.cjs
+- main-!~{000}~.cjs => main-mcpHUvgA.cjs
+
 # tests/fixtures/misc/wrapped_esm
 
 - $runtime$-!~{001}~.mjs => $runtime$-wMuOmvcp.mjs

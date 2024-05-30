@@ -1,0 +1,22 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/misc/use_strict/no_use_strict_with_non_strict_cjs_in_cjs_format
+---
+# Assets
+
+## main.cjs
+
+```js
+const { __commonJSMin, __toESM } = require("./$runtime$.cjs");
+
+// cjs.js
+var require_cjs = __commonJSMin((exports, module) => {
+	console.log('This chunk should not have "use strict" at the top.');
+	module.exports = {};
+});
+
+// main.js
+var import_cjs = __toESM(require_cjs());
+console.log(import_cjs.default);
+```

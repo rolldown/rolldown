@@ -7,7 +7,9 @@ use crate::{
 };
 
 use anyhow::Result;
-use rolldown_common::{Chunk, ChunkKind, OutputFormat, RenderedChunk, ResourceId, WrapKind};
+use rolldown_common::{
+  Chunk, ChunkKind, ExportsKind, OutputFormat, RenderedChunk, ResourceId, WrapKind,
+};
 use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -87,6 +89,22 @@ pub async fn render_chunk(
       if !banner_txt.is_empty() {
         concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
       }
+    }
+  }
+
+  // Add `use strict` directive if needed. This must come before the banner, because users might use banner to add hashbang.
+  if matches!(options.format, OutputFormat::Cjs) {
+    let are_modules_all_strict = this.modules.iter().all(|id| {
+      let is_esm = matches!(graph.module_table.normal_modules[*id].exports_kind, ExportsKind::Esm);
+      if is_esm {
+        true
+      } else {
+        graph.ast_table[*id].contains_use_strict
+      }
+    });
+
+    if are_modules_all_strict {
+      concat_source.add_prepend_source(Box::new(RawSource::new("\"use strict\";\n".to_string())));
     }
   }
 

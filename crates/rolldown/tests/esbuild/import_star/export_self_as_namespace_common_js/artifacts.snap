@@ -16,6 +16,8 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_self_as_namespace_c
 ## entry_js.cjs
 
 ```js
+"use strict";
+
 const { __export } = require("./$runtime$.cjs");
 
 // entry.js

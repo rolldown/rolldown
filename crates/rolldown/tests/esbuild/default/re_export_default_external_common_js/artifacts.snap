@@ -8,6 +8,8 @@ input_file: crates/rolldown/tests/esbuild/default/re_export_default_external_com
 ## entry_js.cjs
 
 ```js
+"use strict";
+
 const { __toESM } = require("./$runtime$.cjs");
 const { default: foo } = __toESM(require("foo"));
 const { default: bar } = __toESM(require("bar"));

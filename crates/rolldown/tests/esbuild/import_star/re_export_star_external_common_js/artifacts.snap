@@ -16,6 +16,8 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_external_co
 ## entry_js.cjs
 
 ```js
+"use strict";
+
 const { __toESM } = require("./$runtime$.cjs");
 require("foo");
 ```

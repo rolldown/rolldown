@@ -8,6 +8,9 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/import_export_uni
 ## main.cjs
 
 ```js
+"use strict";
+
+
 // foo.js
 const devil = 'devil';
 

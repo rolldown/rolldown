@@ -43,4 +43,4 @@ See here for more details about what are affected by `"use strict"` [link](https
 
 ## `format: 'app'`
 
-With ever module being wrapped within a function, rolldown could choose if to emit `"use strict"` per function by respecting what the original module is.
+With every module being wrapped within a function, rolldown could choose if to emit `"use strict"` per function by respecting what the original module is.

@@ -415,12 +415,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/use_strict_directive_bundle_esm_issue2264
 
-- entry_js-!~{000}~.mjs => entry_js-S_UqMuPR.mjs
+- entry_js-!~{000}~.mjs => entry_js-drcDE90p.mjs
 
 # tests/esbuild/default/use_strict_directive_bundle_issue1837
 
 - $runtime$-!~{001}~.mjs => $runtime$-6wzC9jCL.mjs
-- entry_js-!~{000}~.mjs => entry_js-iJ-IQkDg.mjs
+- entry_js-!~{000}~.mjs => entry_js-HGnXwvCj.mjs
 
 # tests/esbuild/default/var_relocating_bundle
 

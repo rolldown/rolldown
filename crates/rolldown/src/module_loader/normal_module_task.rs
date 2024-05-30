@@ -99,7 +99,13 @@ impl NormalModuleTask {
     .await?
     .into();
 
-    let (ast, scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&source)?;
+    let mut ast = parse_to_ast(
+      &self.ctx.input_options,
+      self.resolved_path.path.as_path(),
+      Arc::clone(&source),
+    )?;
+
+    let (scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&mut ast, &source);
 
     let resolved_deps =
       self.resolve_dependencies(&scan_result.import_records, &mut warnings).await?;
@@ -211,11 +217,9 @@ impl NormalModuleTask {
 
   fn scan(
     &self,
+    ast: &mut OxcAst,
     source: &Arc<str>,
-  ) -> anyhow::Result<(OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef)> {
-    let mut ast =
-      parse_to_ast(&self.ctx.input_options, self.resolved_path.path.as_path(), Arc::clone(source))?;
-
+  ) -> (AstScope, ScanResult, AstSymbols, SymbolRef) {
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(
       scope,
@@ -225,7 +229,7 @@ impl NormalModuleTask {
     let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let file_path = Arc::<str>::clone(&self.resolved_path.path).into();
     let repr_name = ResourceId::representative_name(&file_path);
-    tweak_ast_for_scanning(&mut ast);
+    tweak_ast_for_scanning(ast);
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,
@@ -239,7 +243,7 @@ impl NormalModuleTask {
     let namespace_symbol = scanner.namespace_ref;
     let scan_result = scanner.scan(ast.program());
 
-    Ok((ast, ast_scope, scan_result, symbol_for_module, namespace_symbol))
+    (ast_scope, scan_result, symbol_for_module, namespace_symbol)
   }
 
   #[allow(clippy::option_if_let_else)]

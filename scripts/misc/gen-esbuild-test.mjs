@@ -128,6 +128,13 @@ const suites = /** @type {const} */ ({
       'lower_using_unsupported_using_and_async',
     ],
   },
+  loader: {
+    name: 'loader',
+    sourcePath: './bundler_loader_test.go',
+    sourceGithubUrl:
+      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_loader_test.go',
+    ignoreCases: [],
+  },
 })
 /**
  * The key of the suites constant. {@link suites}
@@ -167,6 +174,7 @@ async function readTestSuiteSource(testSuiteName) {
         // save under scripts directory
         await fsp.writeFile(sourcePath, text)
         console.log(`Downloaded and saved at ${sourcePath}.`)
+        return fs.readFileSync(sourcePath).toString()
       } else {
         throw new Error('Unexpected shape of source file')
       }

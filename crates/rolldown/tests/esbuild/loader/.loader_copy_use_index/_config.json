@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "Users_user_project_src_index_copy",
+        "import": "Users/user/project/src/index.copy"
+      }
+    ]
+  }
+}

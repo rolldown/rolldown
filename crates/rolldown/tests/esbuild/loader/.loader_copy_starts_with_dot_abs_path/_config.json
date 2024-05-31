@@ -1,0 +1,18 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "_htaccess",
+        "import": ".htaccess"
+      },
+      {
+        "name": "entry_js",
+        "import": "entry.js"
+      },
+      {
+        "name": "_ts",
+        "import": ".ts"
+      }
+    ]
+  }
+}

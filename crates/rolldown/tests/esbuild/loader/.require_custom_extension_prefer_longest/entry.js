@@ -1,0 +1,1 @@
+console.log(require('./test.txt'), require('./test.base64.txt'))

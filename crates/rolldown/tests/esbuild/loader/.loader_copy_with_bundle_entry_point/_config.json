@@ -1,0 +1,18 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "src_entry_js",
+        "import": "src/entry.js"
+      },
+      {
+        "name": "src_entry_css",
+        "import": "src/entry.css"
+      },
+      {
+        "name": "assets_some_file",
+        "import": "assets/some.file"
+      }
+    ]
+  }
+}

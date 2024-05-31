@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entries_entry_js",
+        "import": "entries/entry.js"
+      },
+      {
+        "name": "entries_other_entry_js",
+        "import": "entries/other/entry.js"
+      }
+    ]
+  }
+}

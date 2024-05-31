@@ -1,0 +1,1 @@
+import "data:text/javascript,console.log(1+2)";

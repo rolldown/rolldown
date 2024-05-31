@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entries_entry_js",
+        "import": "entries/entry.js"
+      }
+    ]
+  }
+}

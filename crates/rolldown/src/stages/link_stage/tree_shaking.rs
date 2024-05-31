@@ -17,6 +17,17 @@ struct Context<'a> {
 
 /// if no export is used, and the module has no side effects, the module should not be included
 fn include_module(ctx: &mut Context, module: &NormalModule) {
+  fn forcefully_include_all_statements(ctx: &mut Context, module: &NormalModule) {
+    module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, _stmt_info)| {
+      // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
+      // tree shaking is enabled or not.
+      if stmt_info_id.index() == 0 {
+        return;
+      }
+      include_statement(ctx, module, stmt_info_id);
+    });
+  }
+
   let is_included = ctx.is_module_included_vec[module.id];
   if is_included {
     return;
@@ -31,25 +42,18 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 
   if ctx.tree_shaking {
     let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
-    module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
-      // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
-      // tree shaking is enabled or not.
-      if stmt_info_id.index() == 0 {
-        return;
-      }
-      if stmt_info.side_effect && !forced_no_treeshake {
-        include_statement(ctx, module, stmt_info_id);
-      }
-    });
+    if forced_no_treeshake {
+      forcefully_include_all_statements(ctx, module);
+    } else {
+      module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
+        // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
+        if stmt_info.side_effect {
+          include_statement(ctx, module, stmt_info_id);
+        }
+      });
+    }
   } else {
-    module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, _stmt_info)| {
-      // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
-      // tree shaking is enabled or not.
-      if stmt_info_id.index() == 0 {
-        return;
-      }
-      include_statement(ctx, module, stmt_info_id);
-    });
+    forcefully_include_all_statements(ctx, module);
   }
 
   // Include imported modules for its side effects

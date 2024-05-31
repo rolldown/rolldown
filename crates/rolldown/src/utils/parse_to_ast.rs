@@ -15,6 +15,14 @@ fn pure_esm_js_oxc_source_type() -> OxcSourceType {
   pure_esm_js
 }
 
+#[allow(dead_code)]
+enum ParseType {
+  Js,
+  Jsx,
+  Ts,
+  Tsx,
+}
+
 pub fn parse_to_ast(
   options: &NormalizedBundlerOptions,
   resource_id: &Path,
@@ -22,6 +30,7 @@ pub fn parse_to_ast(
 ) -> anyhow::Result<OxcAst> {
   let source: Arc<str> = source.into();
 
+  // 1. Determine the loader based on the file extension.
   let loader = {
     let ext = resource_id.extension().and_then(|ext| ext.to_str()).unwrap_or("js");
     let loader = options.loaders.get(ext);
@@ -29,14 +38,19 @@ pub fn parse_to_ast(
     // FIXME: Once we support more loaders, we should return error instead of defaulting to JS.
     loader.copied().unwrap_or(Loader::Js)
   };
-
-  let ast = match loader {
-    Loader::Js => OxcCompiler::parse(Arc::clone(&source), pure_esm_js_oxc_source_type()),
-    Loader::Json => {
-      let source: Arc<str> = json_to_esm(&source)?.into();
-      OxcCompiler::parse(Arc::clone(&source), pure_esm_js_oxc_source_type())
-    }
+  // 2. Transform the source to the type that rolldown supported.
+  let (source, parsed_type) = match loader {
+    Loader::Js => (source, ParseType::Js),
+    Loader::Json => (json_to_esm(&source)?.into(), ParseType::Js),
   };
 
-  Ok(ast)
+  // 3. Parse the source to AST and transform non-js AST to valid JS AST.
+  let valid_js_ast = match parsed_type {
+    ParseType::Js => OxcCompiler::parse(Arc::clone(&source), pure_esm_js_oxc_source_type()),
+    ParseType::Jsx => todo!(),
+    ParseType::Ts => todo!(),
+    ParseType::Tsx => todo!(),
+  };
+
+  Ok(valid_js_ast)
 }

@@ -13,7 +13,9 @@ use crate::events::{
   forbid_const_assign::ForbidConstAssign, missing_export::MissingExport,
   sourcemap_error::SourceMapError, unresolved_entry::UnresolvedEntry,
   unresolved_import::UnresolvedImport,
-  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal, NapiError,
+  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
+  unresolved_json_illegally::UnresolvedJsonIllegally,
+  unresolved_other_unknown::UnresolvedOtherUnknown, NapiError,
 };
 
 impl BuildError {
@@ -54,6 +56,19 @@ impl BuildError {
       importer: importer.into(),
       resolve_error,
     })
+  }
+
+  pub fn unresolved_json_illegally(
+    path: PathBuf,
+    col: usize,
+    line: usize,
+    message: String,
+  ) -> Self {
+    Self::new_inner(UnresolvedJsonIllegally { path, col, line, message })
+  }
+
+  pub fn unresolved_other_unknown(message: String) -> Self {
+    Self::new_inner(UnresolvedOtherUnknown { message })
   }
 
   pub fn missing_export(

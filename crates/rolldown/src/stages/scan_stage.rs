@@ -70,7 +70,6 @@ impl ScanStage {
       ast_table,
     } = module_loader.fetch_all_modules(user_entries).await?;
     self.errors.extend(errors);
-
     Ok(ScanStageOutput {
       module_table,
       entry_points,
@@ -83,7 +82,6 @@ impl ScanStage {
   }
 
   /// Resolve `InputOptions.input`
-
   #[tracing::instrument(level = "debug", skip_all)]
   async fn resolve_user_defined_entries(
     &mut self,

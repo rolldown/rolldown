@@ -32,7 +32,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   if ctx.tree_shaking {
     let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
-      // Skip the first statement, which is the namespace object. It should included only if it is used no matter
+      // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
       // tree shaking is enabled or not.
       if stmt_info_id.index() == 0 {
         return;
@@ -43,7 +43,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
     });
   } else {
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, _stmt_info)| {
-      // Skip the first statement, which is the namespace object. It should included only if it is used no matter
+      // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
       // tree shaking is enabled or not.
       if stmt_info_id.index() == 0 {
         return;

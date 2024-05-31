@@ -16,7 +16,7 @@ use sugar_path::SugarPath;
 
 use crate::{
   chunk_graph::ChunkGraph,
-  finalizer::FinalizerContext,
+  module_finalizers::FinalizerContext,
   stages::link_stage::LinkStageOutput,
   type_alias::IndexNormalModules,
   utils::{

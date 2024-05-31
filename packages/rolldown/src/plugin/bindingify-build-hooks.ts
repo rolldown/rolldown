@@ -1,5 +1,6 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type {
+  BindingHookLoadOutput,
   BindingHookResolveIdOutput,
   BindingPluginOptions,
 } from '../binding'
@@ -149,28 +150,18 @@ export function bindingifyTransform(
     )
 
     if (ret == null) {
-      return
+      return undefined
     }
 
     if (typeof ret === 'string') {
       return { code: ret }
     }
 
-    if (!ret.map) {
-      return { code: ret.code }
-    }
-
-    const result = {
+    return {
       code: ret.code,
       map: typeof ret.map === 'object' ? JSON.stringify(ret.map) : ret.map,
+      sideEffects: bindingifySideEffects(ret.moduleSideEffects),
     }
-
-    if (ret.moduleSideEffects !== null) {
-      // @ts-ignore TODO The typing should import from binding
-      result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
-    }
-
-    return result
   }
 }
 

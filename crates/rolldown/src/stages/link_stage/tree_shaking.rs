@@ -17,25 +17,43 @@ struct Context<'a> {
 
 /// if no export is used, and the module has no side effects, the module should not be included
 fn include_module(ctx: &mut Context, module: &NormalModule) {
+  fn forcefully_include_all_statements(ctx: &mut Context, module: &NormalModule) {
+    module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, _stmt_info)| {
+      // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
+      // tree shaking is enabled or not.
+      if stmt_info_id.index() == 0 {
+        return;
+      }
+      include_statement(ctx, module, stmt_info_id);
+    });
+  }
+
   let is_included = ctx.is_module_included_vec[module.id];
   if is_included {
     return;
   }
   ctx.is_module_included_vec[module.id] = true;
 
-  if ctx.tree_shaking || module.id == ctx.runtime_id {
-    module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
-      if stmt_info.side_effect {
-        include_statement(ctx, module, stmt_info_id);
-      }
-    });
+  if module.id == ctx.runtime_id {
+    // runtime module has no side effects and it's statements should be included
+    // by other modules's references.
+    return;
+  }
+
+  if ctx.tree_shaking {
+    let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
+    if forced_no_treeshake {
+      forcefully_include_all_statements(ctx, module);
+    } else {
+      module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
+        // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
+        if stmt_info.side_effect {
+          include_statement(ctx, module, stmt_info_id);
+        }
+      });
+    }
   } else {
-    module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, _stmt_info)| {
-      if stmt_info_id.index() == 0 {
-        return;
-      }
-      include_statement(ctx, module, stmt_info_id);
-    });
+    forcefully_include_all_statements(ctx, module);
   }
 
   // Include imported modules for its side effects
@@ -163,9 +181,11 @@ impl LinkStage<'_> {
       }
 
       let ret = match module.side_effects {
-        // should keep as is if the side effects is derived from package.json, or it is already
-        // true
-        DeterminedSideEffects::UserDefined(_) => module.side_effects,
+        // should keep as is if the side effects is derived from package.json, it is already
+        // true or `no-treeshake`
+        DeterminedSideEffects::UserDefined(_) | DeterminedSideEffects::NoTreeshake => {
+          module.side_effects
+        }
         DeterminedSideEffects::Analyzed(v) if v => module.side_effects,
         // this branch means the side effects of the module is analyzed `false`
         DeterminedSideEffects::Analyzed(_) => {

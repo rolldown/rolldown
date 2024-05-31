@@ -5,6 +5,8 @@ use rolldown_common::{Loader, NormalizedBundlerOptions};
 use rolldown_lang_json::json_to_esm;
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
+use super::text_to_esm::text_to_esm;
+
 fn pure_esm_js_oxc_source_type() -> OxcSourceType {
   let pure_esm_js = OxcSourceType::default().with_module(true);
   debug_assert!(pure_esm_js.is_javascript());
@@ -42,7 +44,7 @@ pub fn parse_to_ast(
   let (source, parsed_type) = match loader {
     Loader::Js => (source, ParseType::Js),
     Loader::Json => (json_to_esm(&source)?.into(), ParseType::Js),
-    Loader::Text => (("export default \"".to_string() + &source + "\";").into(), ParseType::Js),
+    Loader::Text => (text_to_esm(&source).into(), ParseType::Js),
   };
 
   // 3. Parse the source to AST and transform non-js AST to valid JS AST.

@@ -1495,6 +1495,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{001}~.mjs => b-PViJx8IB.mjs
 - c-!~{002}~.mjs => c-Q0kP-AMp.mjs
 
+# tests/fixtures/loaders/txt/empty
+
+- main-!~{000}~.mjs => main-kxlEh92o.mjs
+
+# tests/fixtures/loaders/txt/escape_quote
+
+- main-!~{000}~.mjs => main-HdxITPEx.mjs
+
 # tests/fixtures/misc/ambiguous_star_export
 
 - main-!~{000}~.mjs => main-4CQEffTL.mjs

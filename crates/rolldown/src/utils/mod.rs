@@ -2,7 +2,7 @@ use oxc::ast::VisitMut;
 use rolldown_common::NormalModule;
 use rolldown_oxc_utils::{AstSnippet, OxcAst};
 
-use super::finalizer::{Finalizer, FinalizerContext};
+use super::module_finalizers::{Finalizer, FinalizerContext};
 pub mod augment_chunk_hash;
 pub mod call_expression_ext;
 pub mod chunk;

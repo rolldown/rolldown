@@ -12,4 +12,5 @@ use serde::Deserialize;
 pub enum Loader {
   Js,
   Json,
+  Text,
 }

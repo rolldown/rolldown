@@ -158,8 +158,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/text_loader_remove_unused
 
-- $runtime$-!~{001}~.mjs => $runtime$-_kwtb1f_.mjs
-- entry_js-!~{000}~.mjs => entry_js-niDVJccc.mjs
+- entry_js-!~{000}~.mjs => entry_js-sU_ENWRL.mjs
 
 # tests/esbuild/dce/tree_shaking_binary_operators
 
@@ -680,6 +679,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous_re_export
 
 - entry_js-!~{000}~.mjs => entry_js-JPJ4y3_I.mjs
+
+# tests/esbuild/loader/loader_text_common_js_and_es6
+
+- $runtime$-!~{001}~.mjs => $runtime$-wMuOmvcp.mjs
+- entry_js-!~{000}~.mjs => entry_js-abWPsYll.mjs
 
 # tests/esbuild/lower/lower_async_es5
 

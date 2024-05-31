@@ -42,6 +42,7 @@ pub fn parse_to_ast(
   let (source, parsed_type) = match loader {
     Loader::Js => (source, ParseType::Js),
     Loader::Json => (json_to_esm(&source)?.into(), ParseType::Js),
+    Loader::Text => (("export default \"".to_string() + &source + "\";").into(), ParseType::Js),
   };
 
   // 3. Parse the source to AST and transform non-js AST to valid JS AST.

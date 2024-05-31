@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "project_TEST FAILED_copy",
+        "import": "project/TEST FAILED.copy"
+      }
+    ]
+  }
+}

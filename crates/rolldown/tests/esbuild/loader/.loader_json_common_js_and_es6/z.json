@@ -1,0 +1,5 @@
+{
+	"big": "this is a big long line of text that should be discarded",
+	"small": "some small text",
+	"if": "test keyword imports"
+}

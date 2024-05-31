@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "test_json",
+        "import": "test.json"
+      }
+    ]
+  }
+}

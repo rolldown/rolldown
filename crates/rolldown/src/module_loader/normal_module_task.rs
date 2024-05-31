@@ -158,7 +158,7 @@ impl NormalModuleTask {
 
     let side_effects = match hook_side_effects {
       Some(side_effects) => match side_effects {
-        HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
+        HookSideEffects::True => lazy_check_side_effects(),
         HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
         HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
       },

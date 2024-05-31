@@ -40,18 +40,14 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
     return;
   }
 
-  if ctx.tree_shaking {
-    let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
-    if forced_no_treeshake {
-      forcefully_include_all_statements(ctx, module);
-    } else {
-      module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
-        // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
-        if stmt_info.side_effect {
-          include_statement(ctx, module, stmt_info_id);
-        }
-      });
-    }
+  let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
+  if ctx.tree_shaking && !forced_no_treeshake {
+    module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
+      // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
+      if stmt_info.side_effect {
+        include_statement(ctx, module, stmt_info_id);
+      }
+    });
   } else {
     forcefully_include_all_statements(ctx, module);
   }

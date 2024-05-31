@@ -4,6 +4,8 @@ pub enum DeterminedSideEffects {
   /// Including the side effects from package.json and hook side effects
   UserDefined(bool),
   Analyzed(bool),
+  /// Align with rollup moduleSideEffects
+  NoTreeshake,
 }
 
 impl DeterminedSideEffects {
@@ -11,6 +13,7 @@ impl DeterminedSideEffects {
   pub fn has_side_effects(&self) -> bool {
     match self {
       DeterminedSideEffects::UserDefined(v) | DeterminedSideEffects::Analyzed(v) => *v,
+      DeterminedSideEffects::NoTreeshake => true,
     }
   }
 }

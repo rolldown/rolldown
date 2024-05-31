@@ -160,7 +160,7 @@ impl NormalModuleTask {
       Some(side_effects) => match side_effects {
         HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
         HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
-        HookSideEffects::NoTreeshake => unimplemented!(),
+        HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
       },
       None => lazy_check_side_effects(),
     };

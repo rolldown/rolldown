@@ -9,7 +9,7 @@ export function bindingifySideEffects(
       return BindingHookSideEffects.True
 
     case false:
-      return BindingHookSideEffects.True
+      return BindingHookSideEffects.False
 
     case 'no-treeshake':
       return BindingHookSideEffects.NoTreeshake

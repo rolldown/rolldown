@@ -1,5 +1,6 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type {
+    BindingHookLoadOutput,
   BindingHookResolveIdOutput,
   BindingPluginOptions,
 } from '../binding'
@@ -12,7 +13,7 @@ import path from 'node:path'
 import type { SourceMapInputObject } from '../types/sourcemap'
 import { PluginContext } from './plugin-context'
 import { TransformPluginContext } from './transfrom-plugin-context'
-import { bindingifySideEffects } from '../utils/transform-side-effects'
+import { BindingHookSideEffects, bindingifySideEffects } from '../utils/transform-side-effects'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -149,28 +150,20 @@ export function bindingifyTransform(
     )
 
     if (ret == null) {
-      return
+      return undefined;
     }
-
+    //
     if (typeof ret === 'string') {
       return { code: ret }
     }
 
-    if (!ret.map) {
-      return { code: ret.code }
-    }
-
-    const result = {
+    let result =  {
       code: ret.code,
       map: typeof ret.map === 'object' ? JSON.stringify(ret.map) : ret.map,
-    }
-
-    if (ret.moduleSideEffects !== null) {
-      // @ts-ignore TODO The typing should import from binding
-      result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
-    }
-
-    return result
+      sideEffects: bindingifySideEffects(ret.moduleSideEffects)
+    } as unknown as BindingHookLoadOutput
+      console.log(`result: `, result, ret.moduleSideEffects)
+      return result
   }
 }
 

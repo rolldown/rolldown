@@ -23,7 +23,9 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   }
   ctx.is_module_included_vec[module.id] = true;
 
-  if ctx.tree_shaking || module.id == ctx.runtime_id {
+  if !matches!(module.side_effects, DeterminedSideEffects::NoTreeshake)
+    && (ctx.tree_shaking || module.id == ctx.runtime_id)
+  {
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
       if stmt_info.side_effect {
         include_statement(ctx, module, stmt_info_id);
@@ -163,9 +165,11 @@ impl LinkStage<'_> {
       }
 
       let ret = match module.side_effects {
-        // should keep as is if the side effects is derived from package.json, or it is already
-        // true
-        DeterminedSideEffects::UserDefined(_) => module.side_effects,
+        // should keep as is if the side effects is derived from package.json, it is already
+        // true or `no-treeshake`
+        DeterminedSideEffects::UserDefined(_) | DeterminedSideEffects::NoTreeshake => {
+          module.side_effects
+        }
         DeterminedSideEffects::Analyzed(v) if v => module.side_effects,
         // this branch means the side effects of the module is analyzed `false`
         DeterminedSideEffects::Analyzed(_) => {

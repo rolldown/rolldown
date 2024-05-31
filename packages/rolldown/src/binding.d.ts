@@ -106,7 +106,7 @@ export interface BindingHookResolveIdOutput {
   sideEffects?: BindingHookSideEffects
 }
 
-export const enum BindingHookSideEffects {
+export enum BindingHookSideEffects {
   True = 0,
   False = 1,
   NoTreeshake = 2
@@ -129,7 +129,7 @@ export interface BindingInputOptions {
   cwd: string
 }
 
-export const enum BindingLogLevel {
+export enum BindingLogLevel {
   Silent = 0,
   Warn = 1,
   Info = 2,

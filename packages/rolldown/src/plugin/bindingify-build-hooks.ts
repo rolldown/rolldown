@@ -161,7 +161,7 @@ export function bindingifyTransform(
       code: ret.code,
       map: typeof ret.map === 'object' ? JSON.stringify(ret.map) : ret.map,
       sideEffects: bindingifySideEffects(ret.moduleSideEffects),
-    } as unknown as BindingHookLoadOutput
+    }
   }
 }
 

@@ -23,16 +23,23 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   }
   ctx.is_module_included_vec[module.id] = true;
 
-  if !matches!(module.side_effects, DeterminedSideEffects::NoTreeshake)
-    && (ctx.tree_shaking || module.id == ctx.runtime_id)
-  {
+  if module.id == ctx.runtime_id {
+    // runtime module has no side effects and it's statements should be included
+    // by other modules's references.
+    return;
+  }
+
+  if ctx.tree_shaking {
+    let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
-      if stmt_info.side_effect {
+      if stmt_info.side_effect && !forced_no_treeshake {
         include_statement(ctx, module, stmt_info_id);
       }
     });
   } else {
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, _stmt_info)| {
+      // Skip the first statement, which is the namespace object. It should included only if it is used no matter
+      // tree shaking is enabled or not.
       if stmt_info_id.index() == 0 {
         return;
       }

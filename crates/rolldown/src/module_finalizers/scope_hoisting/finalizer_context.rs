@@ -15,7 +15,7 @@ use crate::{
   SharedOptions,
 };
 
-pub struct FinalizerContext<'me> {
+pub struct ScopeHoistingFinalizerContext<'me> {
   pub id: NormalModuleId,
   pub module: &'me NormalModule,
   pub modules: &'me NormalModuleVec,

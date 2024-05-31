@@ -2,9 +2,9 @@ use oxc::ast::ast::{self, IdentifierReference};
 use rolldown_common::SymbolRef;
 use rolldown_oxc_utils::{ExpressionExt, IntoIn};
 
-use super::Finalizer;
+use super::ScopeHoistingFinalizer;
 
-impl<'me, 'ast> Finalizer<'me, 'ast> {
+impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// return `None` if
   /// - the reference is for a global variable/the reference doesn't have a `SymbolId`
   /// - the reference doesn't have a `ReferenceId`

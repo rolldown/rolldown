@@ -16,7 +16,7 @@ use sugar_path::SugarPath;
 
 use crate::{
   chunk_graph::ChunkGraph,
-  module_finalizers::FinalizerContext,
+  module_finalizers::scope_hoisting::ScopeHoistingFinalizerContext,
   stages::link_stage::LinkStageOutput,
   type_alias::IndexNormalModules,
   utils::{
@@ -76,7 +76,7 @@ impl<'a> GenerateStage<'a> {
         let linking_info = &self.link_output.metas[module.id];
         finalize_normal_module(
           module,
-          FinalizerContext {
+          ScopeHoistingFinalizerContext {
             canonical_names: &chunk.canonical_names,
             id: module.id,
             symbols: &self.link_output.symbols,

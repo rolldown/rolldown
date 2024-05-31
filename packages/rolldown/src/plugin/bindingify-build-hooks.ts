@@ -1,6 +1,6 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type {
-    BindingHookLoadOutput,
+  BindingHookLoadOutput,
   BindingHookResolveIdOutput,
   BindingPluginOptions,
 } from '../binding'
@@ -13,7 +13,7 @@ import path from 'node:path'
 import type { SourceMapInputObject } from '../types/sourcemap'
 import { PluginContext } from './plugin-context'
 import { TransformPluginContext } from './transfrom-plugin-context'
-import { BindingHookSideEffects, bindingifySideEffects } from '../utils/transform-side-effects'
+import { bindingifySideEffects } from '../utils/transform-side-effects'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
@@ -150,20 +150,18 @@ export function bindingifyTransform(
     )
 
     if (ret == null) {
-      return undefined;
+      return undefined
     }
-    //
+
     if (typeof ret === 'string') {
       return { code: ret }
     }
 
-    let result =  {
+    return {
       code: ret.code,
       map: typeof ret.map === 'object' ? JSON.stringify(ret.map) : ret.map,
-      sideEffects: bindingifySideEffects(ret.moduleSideEffects)
+      sideEffects: bindingifySideEffects(ret.moduleSideEffects),
     } as unknown as BindingHookLoadOutput
-      console.log(`result: `, result, ret.moduleSideEffects)
-      return result
   }
 }
 

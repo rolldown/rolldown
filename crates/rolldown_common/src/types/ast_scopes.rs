@@ -2,13 +2,13 @@ use oxc::semantic::{Reference, ReferenceId, ScopeTree, SymbolId};
 use oxc_index::IndexVec;
 
 #[derive(Debug)]
-pub struct AstScope {
+pub struct AstScopes {
   inner: ScopeTree,
   references: IndexVec<ReferenceId, Reference>,
   resolved_references: IndexVec<SymbolId, Vec<ReferenceId>>,
 }
 
-impl AstScope {
+impl AstScopes {
   pub fn new(
     inner: ScopeTree,
     references: IndexVec<ReferenceId, Reference>,
@@ -33,7 +33,7 @@ impl AstScope {
   }
 }
 
-impl std::ops::Deref for AstScope {
+impl std::ops::Deref for AstScopes {
   type Target = ScopeTree;
 
   fn deref(&self) -> &Self::Target {

@@ -29,8 +29,8 @@ impl Symbols {
   pub fn alloc_one(&mut self) {
     self.inner.push(IndexVec::default());
   }
-  pub fn add_ast_symbol(&mut self, module_id: NormalModuleId, ast_symbol: AstSymbols) {
-    self.inner[module_id] = ast_symbol
+  pub fn add_ast_symbols(&mut self, module_id: NormalModuleId, ast_symbols: AstSymbols) {
+    self.inner[module_id] = ast_symbols
       .names
       .into_iter()
       .map(|name| Symbol { name, link: None, chunk_id: None, namespace_alias: None })

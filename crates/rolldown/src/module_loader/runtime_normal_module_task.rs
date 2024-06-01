@@ -3,7 +3,7 @@ use std::sync::Arc;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScope, ExportsKind, ModuleType, NormalModule,
+  side_effects::DeterminedSideEffects, AstScopes, ExportsKind, ModuleType, NormalModule,
   NormalModuleId, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
@@ -106,19 +106,19 @@ impl RuntimeNormalModuleTask {
   fn make_ast(
     &self,
     source: &Arc<str>,
-  ) -> anyhow::Result<(OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef)> {
+  ) -> anyhow::Result<(OxcAst, AstScopes, ScanResult, AstSymbols, SymbolRef)> {
     let source_type = SourceType::default();
     let mut ast = OxcCompiler::parse(Arc::clone(source), source_type)?;
+    tweak_ast_for_scanning(&mut ast);
 
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
-    let ast_scope = AstScope::new(
+    let ast_scope = AstScopes::new(
       scope,
       std::mem::take(&mut symbol_table.references),
       std::mem::take(&mut symbol_table.resolved_references),
     );
     let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
     let facade_path = ResourceId::new("runtime");
-    tweak_ast_for_scanning(&mut ast);
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,

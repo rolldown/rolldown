@@ -5,8 +5,8 @@ use futures::future::join_all;
 use oxc_index::IndexVec;
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScope, ImportRecordId, ModuleType, NormalModule, NormalModuleId, PackageJson, RawImportRecord,
-  ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
+  AstScopes, ImportRecordId, ModuleType, NormalModule, NormalModuleId, PackageJson,
+  RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -20,8 +20,9 @@ use crate::{
   module_loader::NormalModuleTaskResult,
   types::ast_symbols::AstSymbols,
   utils::{
-    load_source::load_source, parse_to_ast::parse_to_ast, resolve_id::resolve_id,
-    transform_source::transform_source, tweak_ast_for_scanning::tweak_ast_for_scanning,
+    load_source::load_source, make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
+    parse_to_ast::parse_to_ast, resolve_id::resolve_id, transform_source::transform_source,
+    tweak_ast_for_scanning::tweak_ast_for_scanning,
   },
   SharedOptions, SharedResolver,
 };
@@ -104,6 +105,7 @@ impl NormalModuleTask {
       self.resolved_path.path.as_path(),
       Arc::clone(&source),
     )?;
+    tweak_ast_for_scanning(&mut ast);
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);
 
@@ -219,21 +221,15 @@ impl NormalModuleTask {
     &self,
     ast: &mut OxcAst,
     source: &Arc<str>,
-  ) -> (AstScope, ScanResult, AstSymbols, SymbolRef) {
-    let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
-    let ast_scope = AstScope::new(
-      scope,
-      std::mem::take(&mut symbol_table.references),
-      std::mem::take(&mut symbol_table.resolved_references),
-    );
-    let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
+  ) -> (AstScopes, ScanResult, AstSymbols, SymbolRef) {
+    let (ast_scopes, mut ast_symbols) = make_ast_scopes_and_symbols(ast);
     let file_path = Arc::<str>::clone(&self.resolved_path.path).into();
     let repr_name = ResourceId::representative_name(&file_path);
-    tweak_ast_for_scanning(ast);
+
     let scanner = AstScanner::new(
       self.module_id,
-      &ast_scope,
-      &mut symbol_for_module,
+      &ast_scopes,
+      &mut ast_symbols,
       repr_name.into_owned(),
       self.module_type,
       source,
@@ -243,7 +239,7 @@ impl NormalModuleTask {
     let namespace_object_ref = scanner.namespace_object_ref;
     let scan_result = scanner.scan(ast.program());
 
-    (ast_scope, scan_result, symbol_for_module, namespace_object_ref)
+    (ast_scopes, scan_result, ast_symbols, namespace_object_ref)
   }
 
   #[allow(clippy::option_if_let_else)]

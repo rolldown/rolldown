@@ -16,7 +16,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.current_stmt_info.side_effect =
-        SideEffectDetector::new(self.scope, self.source, self.trivias)
+        SideEffectDetector::new(self.scopes, self.source, self.trivias)
           .detect_side_effect_of_stmt(stmt);
 
       if cfg!(debug_assertions) {
@@ -82,7 +82,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   }
 
   fn visit_call_expression(&mut self, expr: &oxc::ast::ast::CallExpression<'ast>) {
-    if expr.is_global_require_call(self.scope) {
+    if expr.is_global_require_call(self.scopes) {
       if let Some(oxc::ast::ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
         let id = self.add_import_record(&request.value, ImportKind::Require);
         self.result.imports.insert(expr.span, id);

@@ -137,6 +137,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-tiQvKDBq.mjs
 
+# tests/esbuild/dce/text_loader_remove_unused
+
+- entry_js-!~{000}~.mjs => entry_js-sU_ENWRL.mjs
+
 # tests/esbuild/dce/tree_shaking_binary_operators
 
 - entry_js-!~{000}~.mjs => entry_js-xEJLYvwR.mjs
@@ -656,6 +660,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous_re_export
 
 - entry_js-!~{000}~.mjs => entry_js-JPJ4y3_I.mjs
+
+# tests/esbuild/loader/loader_text_common_js_and_es6
+
+- $runtime$-!~{001}~.mjs => $runtime$-wMuOmvcp.mjs
+- entry_js-!~{000}~.mjs => entry_js-abWPsYll.mjs
 
 # tests/esbuild/lower/lower_async_es5
 
@@ -1458,6 +1467,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - a-!~{000}~.mjs => a-9ZdsWyCX.mjs
 - b-!~{001}~.mjs => b-PViJx8IB.mjs
 - c-!~{002}~.mjs => c-Q0kP-AMp.mjs
+
+# tests/fixtures/loaders/txt/empty
+
+- main-!~{000}~.mjs => main-kxlEh92o.mjs
+
+# tests/fixtures/loaders/txt/escape_quote
+
+- main-!~{000}~.mjs => main-HdxITPEx.mjs
 
 # tests/fixtures/misc/ambiguous_star_export
 

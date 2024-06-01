@@ -1,0 +1,16 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/loaders/txt/empty
+---
+# Assets
+
+## main.mjs
+
+```js
+// x.txt
+var x_default = '';
+
+// main.js
+console.log(x_default);
+```

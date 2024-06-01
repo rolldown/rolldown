@@ -1811,6 +1811,7 @@ dependencies = [
  "rolldown_tracing",
  "rolldown_utils",
  "rustc-hash",
+ "serde_json",
  "sugar_path",
  "testing_macros",
  "tokio",

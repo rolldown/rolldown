@@ -177,7 +177,8 @@
       "type": "string",
       "enum": [
         "js",
-        "json"
+        "json",
+        "text"
       ]
     },
     "OutputFormat": {

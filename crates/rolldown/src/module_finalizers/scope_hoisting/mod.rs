@@ -162,17 +162,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn generate_namespace_variable_declaration(&self) -> Vec<ast::Statement<'ast>> {
-    let ns_name = self.canonical_name_for(self.ctx.module.namespace_symbol);
+  fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
+    let var_name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
     // construct `var ns_name = {}`
-    let namespace_decl_stmt = self
+    let decl_stmt = self
       .snippet
-      .var_decl_stmt(ns_name, ast::Expression::ObjectExpression(TakeIn::dummy(self.alloc)));
+      .var_decl_stmt(var_name, ast::Expression::ObjectExpression(TakeIn::dummy(self.alloc)));
 
     let exports_len = self.ctx.linking_info.canonical_exports_len();
 
     if exports_len == 0 {
-      return vec![namespace_decl_stmt];
+      return vec![decl_stmt];
     }
 
     // construct `{ prop_name: () => returned, ... }`
@@ -203,7 +203,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
     let mut export_call_expr = self.snippet.call_expr(self.canonical_name_for_runtime("__export"));
-    export_call_expr.arguments.push(ast::Argument::from(self.snippet.id_ref_expr(ns_name, SPAN)));
+    export_call_expr.arguments.push(ast::Argument::from(self.snippet.id_ref_expr(var_name, SPAN)));
     export_call_expr
       .arguments
       .push(ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc)));
@@ -215,6 +215,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .into_in(self.alloc),
     );
 
-    vec![namespace_decl_stmt, export_call_stmt]
+    vec![decl_stmt, export_call_stmt]
   }
 }

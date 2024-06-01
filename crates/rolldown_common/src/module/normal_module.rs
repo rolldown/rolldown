@@ -25,7 +25,8 @@ pub struct NormalModule {
   /// Representative name of `FilePath`, which is created by `FilePath#representative_name` belong to `resource_id`
   pub repr_name: String,
   pub module_type: ModuleType,
-  pub namespace_symbol: SymbolRef,
+  /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
+  pub namespace_object_ref: SymbolRef,
   pub named_imports: FxHashMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   /// `stmt_infos[0]` represents the namespace binding statement

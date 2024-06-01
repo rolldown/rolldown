@@ -52,7 +52,8 @@ pub struct AstScanner<'me> {
   result: ScanResult,
   esm_export_keyword: Option<Span>,
   esm_import_keyword: Option<Span>,
-  pub namespace_ref: SymbolRef,
+  /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
+  pub namespace_object_ref: SymbolRef,
   used_exports_ref: bool,
   used_module_ref: bool,
 }
@@ -74,7 +75,7 @@ impl<'me> AstScanner<'me> {
       symbol_table.create_symbol(format!("{repr_name}_default").into(), scope.root_scope_id());
 
     let name = format!("{repr_name}_ns");
-    let namespace_ref: SymbolRef =
+    let namespace_object_ref: SymbolRef =
       (idx, symbol_table.create_symbol(name.into(), scope.root_scope_id())).into();
 
     let result = ScanResult {
@@ -83,7 +84,7 @@ impl<'me> AstScanner<'me> {
       named_exports: FxHashMap::default(),
       stmt_infos: {
         let mut stmt_infos = StmtInfos::default();
-        // The first `StmtInfo` is used to represent the namespace binding statement
+        // The first `StmtInfo` is used to represent the statement that declares and constructs Module Namespace Object
         stmt_infos.push(StmtInfo::default());
         stmt_infos
       },
@@ -104,7 +105,7 @@ impl<'me> AstScanner<'me> {
       esm_export_keyword: None,
       esm_import_keyword: None,
       module_type,
-      namespace_ref,
+      namespace_object_ref,
       used_exports_ref: false,
       used_module_ref: false,
       source,

@@ -89,6 +89,8 @@ impl<'a> LinkStage<'a> {
         init_entry_point_stmt_info(self.input_options, &self.runtime, module, linking_info);
       }
 
+      // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
+      // tree-shaking process.
       linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
         let stmt_info = StmtInfo {
           stmt_idx: None,
@@ -102,30 +104,33 @@ impl<'a> LinkStage<'a> {
         module.stmt_infos.add_stmt_info(stmt_info);
       });
 
+      // Generate export of Module Namespace Object for Namespace Import
+      // - Namespace import: https://tc39.es/ecma262/#prod-NameSpaceImport
+      // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
+      // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
+      // real statement to construct the Module Namespace Object and assign it to a variable.
+      // This is only a concept of esm, so no need to care about this in commonjs.
       if matches!(module.exports_kind, ExportsKind::Esm) {
-        let linking_info = &self.metas[module.id];
+        let meta = &self.metas[module.id];
         let mut referenced_symbols = vec![];
-        if !linking_info.is_canonical_exports_empty() {
-          referenced_symbols
-            .extend(linking_info.canonical_exports().map(|(_, export)| export.symbol_ref));
+        if !meta.is_canonical_exports_empty() {
+          // Reference to all exports. Once the Module Namespace Object is included, all exports should be included too.
+          referenced_symbols.extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref));
           referenced_symbols.push(self.runtime.resolve_symbol("__export"));
         }
-        // Create a StmtInfo for the namespace statement
+        // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
+        // Corresponding AST for this statement will be created by the finalizer.
         let namespace_stmt_info = StmtInfo {
           stmt_idx: None,
-          declared_symbols: vec![module.namespace_symbol],
+          declared_symbols: vec![module.namespace_object_ref],
           referenced_symbols,
           side_effect: false,
           is_included: false,
           import_records: Vec::new(),
           debug_label: None,
         };
-
         module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
       }
-
-      // We don't create actual ast nodes for the namespace statement here. It will be deferred
-      // to the finalize stage.
     });
   }
 
@@ -256,7 +261,7 @@ impl<'a> LinkStage<'a> {
                     symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                       format!("import_{}", legitimize_identifier_name(&importee.name)).into();
                     stmt_info.declared_symbols.push(rec.namespace_ref);
-                    stmt_info.referenced_symbols.push(importer.namespace_symbol);
+                    stmt_info.referenced_symbols.push(importer.namespace_object_ref);
                     stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__reExport"));
                   }
                 }
@@ -282,7 +287,7 @@ impl<'a> LinkStage<'a> {
                         stmt_info
                           .referenced_symbols
                           .push(self.runtime.resolve_symbol("__reExport"));
-                        stmt_info.referenced_symbols.push(importer.namespace_symbol);
+                        stmt_info.referenced_symbols.push(importer.namespace_object_ref);
                       } else {
                         // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
                         // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
@@ -308,9 +313,9 @@ impl<'a> LinkStage<'a> {
                         stmt_info
                           .referenced_symbols
                           .push(self.runtime.resolve_symbol("__reExport"));
-                        stmt_info.referenced_symbols.push(importer.namespace_symbol);
+                        stmt_info.referenced_symbols.push(importer.namespace_object_ref);
                         let importee = &self.module_table.normal_modules[importee_id];
-                        stmt_info.referenced_symbols.push(importee.namespace_symbol);
+                        stmt_info.referenced_symbols.push(importee.namespace_object_ref);
                       }
                     }
                   }
@@ -328,7 +333,7 @@ impl<'a> LinkStage<'a> {
                     stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
                     stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toCommonJS"));
                     let importee = &self.module_table.normal_modules[importee_id];
-                    stmt_info.referenced_symbols.push(importee.namespace_symbol);
+                    stmt_info.referenced_symbols.push(importee.namespace_object_ref);
                   }
                 },
                 ImportKind::DynamicImport => {}
@@ -363,7 +368,7 @@ pub fn init_entry_point_stmt_info(
   {
     // We will generate `module.exports = __toCommonJS(exports);` for esm modules that are entry points
     // Include the namespace statement
-    referenced_symbols.push(module.namespace_symbol);
+    referenced_symbols.push(module.namespace_object_ref);
     referenced_symbols.push(runtime.resolve_symbol("__toCommonJS"));
   }
 

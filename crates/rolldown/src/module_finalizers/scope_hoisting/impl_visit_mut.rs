@@ -25,7 +25,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       && self.ctx.module.stmt_infos[0].is_included;
 
     if is_namespace_referenced {
-      program.body.extend(self.generate_namespace_variable_declaration());
+      program.body.extend(self.generate_declaration_of_module_namespace_object());
     }
 
     let mut stmt_infos = self.ctx.module.stmt_infos.iter();
@@ -69,10 +69,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                     if importee_linking_info.has_dynamic_exports {
                       let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
                       let importer_namespace_name =
-                        self.canonical_name_for(self.ctx.module.namespace_symbol);
+                        self.canonical_name_for(self.ctx.module.namespace_object_ref);
                       // __reExport(exports, otherExports)
                       let importee_namespace_name =
-                        self.canonical_name_for(importee.namespace_symbol);
+                        self.canonical_name_for(importee.namespace_object_ref);
                       program.body.push(
                         self
                           .snippet
@@ -88,7 +88,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   ExportsKind::CommonJs => {
                     let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
                     let importer_namespace_name =
-                      self.canonical_name_for(self.ctx.module.namespace_symbol);
+                      self.canonical_name_for(self.ctx.module.namespace_object_ref);
                     // __reExport(exports, __toESM(require_xxxx()))
                     let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
                     let importee_wrapper_ref_name =
@@ -116,7 +116,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 // Insert `__reExport(exports, ns)`
                 let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
                 let importer_namespace_name =
-                  self.canonical_name_for(self.ctx.module.namespace_symbol);
+                  self.canonical_name_for(self.ctx.module.namespace_object_ref);
                 let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
                 program
                   .body
@@ -349,7 +349,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             if matches!(importee.exports_kind, ExportsKind::CommonJs) {
               *expr = self.snippet.call_expr_expr(wrap_ref_name);
             } else {
-              let ns_name = self.canonical_name_for(importee.namespace_symbol);
+              let ns_name = self.canonical_name_for(importee.namespace_object_ref);
               let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
               *expr = self.snippet.seq2_in_paren_expr(
                 self.snippet.call_expr_expr(wrap_ref_name),

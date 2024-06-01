@@ -1,4 +1,5 @@
 use anyhow::Result;
+use oxc::ast::VisitMut;
 use rustc_hash::FxHashSet;
 
 use futures::future::try_join_all;
@@ -16,7 +17,9 @@ use sugar_path::SugarPath;
 
 use crate::{
   chunk_graph::ChunkGraph,
-  module_finalizers::scope_hoisting::ScopeHoistingFinalizerContext,
+  module_finalizers::{
+    isolating::IsolatingModuleFinalizer, scope_hoisting::ScopeHoistingFinalizerContext,
+  },
   stages::link_stage::LinkStageOutput,
   type_alias::IndexNormalModules,
   utils::{
@@ -74,23 +77,31 @@ impl<'a> GenerateStage<'a> {
         let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
         let chunk = &chunk_graph.chunks[chunk_id];
         let linking_info = &self.link_output.metas[module.id];
-        finalize_normal_module(
-          module,
-          ScopeHoistingFinalizerContext {
-            canonical_names: &chunk.canonical_names,
-            id: module.id,
-            symbols: &self.link_output.symbols,
-            linking_info,
+        if self.options.format.requires_scope_hoisting() {
+          finalize_normal_module(
             module,
-            modules: &self.link_output.module_table.normal_modules,
-            external_modules: &self.link_output.module_table.external_modules,
-            linking_infos: &self.link_output.metas,
-            runtime: &self.link_output.runtime,
-            chunk_graph: &chunk_graph,
-            options: self.options,
-          },
-          ast,
-        );
+            ScopeHoistingFinalizerContext {
+              canonical_names: &chunk.canonical_names,
+              id: module.id,
+              symbols: &self.link_output.symbols,
+              linking_info,
+              module,
+              modules: &self.link_output.module_table.normal_modules,
+              external_modules: &self.link_output.module_table.external_modules,
+              linking_infos: &self.link_output.metas,
+              runtime: &self.link_output.runtime,
+              chunk_graph: &chunk_graph,
+              options: self.options,
+            },
+            ast,
+          );
+        } else {
+          ast.with_mut(|fields| {
+            let (oxc_program, alloc) = (fields.program, fields.allocator);
+            let mut finalizer = IsolatingModuleFinalizer { alloc, scope: &module.scope };
+            finalizer.visit_program(oxc_program);
+          });
+        }
       });
 
     let chunks = try_join_all(

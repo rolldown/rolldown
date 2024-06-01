@@ -3,7 +3,7 @@ use oxc::{
   ast::ast::{self, IdentifierReference, Statement},
   span::{Atom, SPAN},
 };
-use rolldown_common::{AstScope, ImportRecordId, ModuleId, SymbolRef, WrapKind};
+use rolldown_common::{AstScopes, ImportRecordId, ModuleId, SymbolRef, WrapKind};
 use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, IntoIn, TakeIn};
 
 mod finalizer_context;
@@ -16,7 +16,7 @@ mod rename;
 /// Finalizer for emitting output code with scope hoisting.
 pub struct ScopeHoistingFinalizer<'me, 'ast> {
   pub ctx: ScopeHoistingFinalizerContext<'me>,
-  pub scope: &'me AstScope,
+  pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
 }

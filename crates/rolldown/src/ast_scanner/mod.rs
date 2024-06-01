@@ -14,7 +14,7 @@ use oxc::{
 };
 use oxc_index::IndexVec;
 use rolldown_common::{
-  representative_name, AstScope, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleType,
+  representative_name, AstScopes, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleType,
   NamedImport, NormalModuleId, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos,
   SymbolRef,
 };
@@ -45,9 +45,9 @@ pub struct AstScanner<'me> {
   source: &'me Arc<str>,
   module_type: ModuleType,
   file_path: &'me ResourceId,
-  scope: &'me AstScope,
+  scopes: &'me AstScopes,
   trivias: &'me Trivias,
-  symbol_table: &'me mut AstSymbols,
+  symbols: &'me mut AstSymbols,
   current_stmt_info: StmtInfo,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
@@ -62,8 +62,8 @@ impl<'me> AstScanner<'me> {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
     idx: NormalModuleId,
-    scope: &'me AstScope,
-    symbol_table: &'me mut AstSymbols,
+    scope: &'me AstScopes,
+    symbols: &'me mut AstSymbols,
     repr_name: String,
     module_type: ModuleType,
     source: &'me Arc<str>,
@@ -72,11 +72,11 @@ impl<'me> AstScanner<'me> {
   ) -> Self {
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let symbol_id_for_default_export_ref =
-      symbol_table.create_symbol(format!("{repr_name}_default").into(), scope.root_scope_id());
+      symbols.create_symbol(format!("{repr_name}_default").into(), scope.root_scope_id());
 
     let name = format!("{repr_name}_ns");
     let namespace_object_ref: SymbolRef =
-      (idx, symbol_table.create_symbol(name.into(), scope.root_scope_id())).into();
+      (idx, symbols.create_symbol(name.into(), scope.root_scope_id())).into();
 
     let result = ScanResult {
       repr_name,
@@ -98,8 +98,8 @@ impl<'me> AstScanner<'me> {
 
     Self {
       idx,
-      scope,
-      symbol_table,
+      scopes: scope,
+      symbols,
       current_stmt_info: StmtInfo::default(),
       result,
       esm_export_keyword: None,
@@ -152,7 +152,7 @@ impl<'me> AstScanner<'me> {
   }
 
   fn get_root_binding(&self, name: &Atom) -> SymbolId {
-    self.scope.get_root_binding(name).expect("must have")
+    self.scopes.get_root_binding(name).expect("must have")
   }
 
   fn add_import_record(&mut self, module_request: &Atom, kind: ImportKind) -> ImportRecordId {
@@ -161,10 +161,10 @@ impl<'me> AstScanner<'me> {
     // just create the symbol. If the symbol is finally used would be determined in the linking stage.
     let namespace_ref: SymbolRef = (
       self.idx,
-      self.symbol_table.create_symbol(
+      self.symbols.create_symbol(
         format!("#LOCAL_NAMESPACE_IN_{}#", self.current_stmt_info.stmt_idx.unwrap_or_default())
           .into(),
-        self.scope.root_scope_id(),
+        self.scopes.root_scope_id(),
       ),
     )
       .into();
@@ -253,7 +253,7 @@ impl<'me> AstScanner<'me> {
     // We will pretend `export { [imported] as [export_name] }` to be `import `
     let generated_imported_as_ref = (
       self.idx,
-      self.symbol_table.create_symbol(
+      self.symbols.create_symbol(
         if export_name.as_str() == "default" {
           let importee_repr =
             representative_name(&self.result.import_records[record_id].module_request);
@@ -261,7 +261,7 @@ impl<'me> AstScanner<'me> {
         } else {
           export_name.clone().to_compact_str()
         },
-        self.scope.root_scope_id(),
+        self.scopes.root_scope_id(),
       ),
     )
       .into();
@@ -291,7 +291,7 @@ impl<'me> AstScanner<'me> {
   ) {
     let generated_imported_as_ref = (
       self.idx,
-      self.symbol_table.create_symbol(export_name.to_compact_str(), self.scope.root_scope_id()),
+      self.symbols.create_symbol(export_name.to_compact_str(), self.scopes.root_scope_id()),
     )
       .into();
     self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
@@ -363,7 +363,7 @@ impl<'me> AstScanner<'me> {
   // If the reference is a global variable, `None` will be returned.
   fn resolve_symbol_from_reference(&self, id_ref: &IdentifierReference) -> Option<SymbolId> {
     let ref_id = id_ref.reference_id.get().expect("must have reference id");
-    self.scope.symbol_id_for(ref_id)
+    self.scopes.symbol_id_for(ref_id)
   }
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     use oxc::ast::ast::ExportDefaultDeclarationKind;
@@ -443,19 +443,19 @@ impl<'me> AstScanner<'me> {
   }
 
   fn is_top_level(&self, symbol_id: SymbolId) -> bool {
-    self.scope.root_scope_id() == self.symbol_table.scope_id_for(symbol_id)
+    self.scopes.root_scope_id() == self.symbols.scope_id_for(symbol_id)
   }
 
   fn try_diagnostic_forbid_const_assign(&mut self, symbol_id: SymbolId) {
-    if self.symbol_table.get_flag(symbol_id).is_const_variable() {
-      for reference in self.scope.get_resolved_references(symbol_id) {
+    if self.symbols.get_flag(symbol_id).is_const_variable() {
+      for reference in self.scopes.get_resolved_references(symbol_id) {
         if reference.is_write() {
           self.result.warnings.push(
             BuildError::forbid_const_assign(
               self.file_path.to_string(),
               Arc::clone(self.source),
-              self.symbol_table.get_name(symbol_id).into(),
-              self.symbol_table.get_span(symbol_id),
+              self.symbols.get_name(symbol_id).into(),
+              self.symbols.get_span(symbol_id),
               reference.span(),
             )
             .with_severity_warning(),

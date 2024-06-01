@@ -5,7 +5,7 @@ use oxc::ast::ast::{
   BindingPatternKind, Expression, IdentifierReference, MemberExpression, PropertyKey,
 };
 use oxc::ast::Trivias;
-use rolldown_common::AstScope;
+use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
 
 mod annotation;
@@ -34,13 +34,13 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_3: Lazy<FxHashSet<(&'static str, &'static st
 
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
-  pub scope: &'a AstScope,
+  pub scope: &'a AstScopes,
   pub source: &'a Arc<str>,
   pub trivias: &'a Trivias,
 }
 
 impl<'a> SideEffectDetector<'a> {
-  pub fn new(scope: &'a AstScope, source: &'a Arc<str>, trivias: &'a Trivias) -> Self {
+  pub fn new(scope: &'a AstScopes, source: &'a Arc<str>, trivias: &'a Trivias) -> Self {
     Self { scope, source, trivias }
   }
 
@@ -357,7 +357,7 @@ impl<'a> SideEffectDetector<'a> {
 #[cfg(test)]
 mod test {
   use oxc::span::SourceType;
-  use rolldown_common::AstScope;
+  use rolldown_common::AstScopes;
   use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
@@ -372,7 +372,7 @@ mod test {
     let ast_scope = {
       let semantic = OxcAst::make_semantic(ast.source(), ast.program(), source_type);
       let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
-      AstScope::new(
+      AstScopes::new(
         scope,
         std::mem::take(&mut symbol_table.references),
         std::mem::take(&mut symbol_table.resolved_references),

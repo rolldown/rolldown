@@ -2,7 +2,7 @@ use std::{fmt::Debug, sync::Arc};
 
 use crate::side_effects::DeterminedSideEffects;
 use crate::{
-  types::ast_scope::AstScope, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
+  types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
   ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
   PackageJson, ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
@@ -38,7 +38,7 @@ pub struct NormalModule {
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordId>,
   pub exports_kind: ExportsKind,
-  pub scope: AstScope,
+  pub scope: AstScopes,
   pub default_export_ref: SymbolRef,
   pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
   pub is_included: bool,

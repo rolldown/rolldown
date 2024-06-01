@@ -11,6 +11,7 @@ pub mod chunk;
 pub mod extract_hash_pattern;
 pub mod hash_placeholder;
 pub mod load_source;
+pub mod make_ast_symbol_and_scope;
 pub mod normalize_options;
 pub mod parse_to_ast;
 pub mod renamer;

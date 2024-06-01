@@ -37,7 +37,7 @@ pub use crate::{
   },
   module::external_module::ExternalModule,
   module::normal_module::NormalModule,
-  types::ast_scope::AstScope,
+  types::ast_scopes::AstScopes,
   types::bundler_file_system::BundlerFileSystem,
   types::chunk_id::ChunkId,
   types::chunk_kind::ChunkKind,

@@ -36,11 +36,11 @@ impl RuntimeNormalModuleTask {
   }
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
-  pub fn run(self) {
+  pub fn run(self) -> anyhow::Result<()> {
     let source: Arc<str> =
       include_str!("../runtime/runtime-without-comments.js").to_string().into();
 
-    let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(&source);
+    let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(&source)?;
 
     let runtime = RuntimeModuleBrief::new(self.module_id, &scope);
 
@@ -99,11 +99,16 @@ impl RuntimeNormalModuleTask {
     {
       // hyf0: If main thread is dead, we should handle errors of main thread. So we just ignore the error here.
     };
+
+    Ok(())
   }
 
-  fn make_ast(&self, source: &Arc<str>) -> (OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef) {
+  fn make_ast(
+    &self,
+    source: &Arc<str>,
+  ) -> anyhow::Result<(OxcAst, AstScope, ScanResult, AstSymbols, SymbolRef)> {
     let source_type = SourceType::default();
-    let mut ast = OxcCompiler::parse(Arc::clone(source), source_type);
+    let mut ast = OxcCompiler::parse(Arc::clone(source), source_type)?;
 
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
     let ast_scope = AstScope::new(
@@ -127,6 +132,6 @@ impl RuntimeNormalModuleTask {
     let namespace_symbol = scanner.namespace_ref;
     let scan_result = scanner.scan(ast.program());
 
-    (ast, ast_scope, scan_result, symbol_for_module, namespace_symbol)
+    Ok((ast, ast_scope, scan_result, symbol_for_module, namespace_symbol))
   }
 }

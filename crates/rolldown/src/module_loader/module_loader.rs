@@ -95,7 +95,7 @@ impl ModuleLoader {
 
     #[cfg(target_family = "wasm")]
     {
-      task.run()
+      task.run().unwrap();
     }
     // task is sync, but execution time is too short at the moment
     // so we are using spawn instead of spawn_blocking here to avoid an additional blocking thread creation within tokio

@@ -2,16 +2,6 @@
 source: crates/rolldown/tests/fixtures.rs
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
-# tests/esbuild/dce/base64_loader_remove_unused
-
-- $runtime$-!~{001}~.mjs => $runtime$-_kwtb1f_.mjs
-- entry_js-!~{000}~.mjs => entry_js-LOgEuPCU.mjs
-
-# tests/esbuild/dce/data_url_loader_remove_unused
-
-- $runtime$-!~{001}~.mjs => $runtime$-_kwtb1f_.mjs
-- entry_js-!~{000}~.mjs => entry_js-LOgEuPCU.mjs
-
 # tests/esbuild/dce/dce_of_destructuring
 
 - entry_js-!~{000}~.mjs => entry_js-29r09uIA.mjs
@@ -20,10 +10,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - class_js-!~{000}~.mjs => class_js-l4WsvKDV.mjs
 - object_js-!~{001}~.mjs => object_js-dn-DPZbv.mjs
-
-# tests/esbuild/dce/dce_template_literal
-
-- entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs
 
 # tests/esbuild/dce/dce_type_of
 
@@ -36,11 +22,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 
 - entry_js-!~{000}~.mjs => entry_js-V4_lttMm.mjs
-
-# tests/esbuild/dce/file_loader_remove_unused
-
-- $runtime$-!~{001}~.mjs => $runtime$-_kwtb1f_.mjs
-- entry_js-!~{000}~.mjs => entry_js-LOgEuPCU.mjs
 
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
@@ -155,11 +136,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/dce/remove_unused_import_meta
 
 - entry_js-!~{000}~.mjs => entry_js-tiQvKDBq.mjs
-
-# tests/esbuild/dce/text_loader_remove_unused
-
-- $runtime$-!~{001}~.mjs => $runtime$-_kwtb1f_.mjs
-- entry_js-!~{000}~.mjs => entry_js-niDVJccc.mjs
 
 # tests/esbuild/dce/tree_shaking_binary_operators
 
@@ -782,10 +758,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-WTSQ2kHq.mjs
 
-# tests/esbuild/lower/lower_template_object
-
-- entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs
-
 # tests/esbuild/lower/static_class_block_es2021
 
 - entry_js-!~{000}~.mjs => entry_js-aooHLG4F.mjs
@@ -1348,10 +1320,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-ivEW-tP0.mjs
 - main-ivEW-tP0.mjs.map
-
-# tests/fixtures/deconflict/reserved_names
-
-- main-!~{000}~.mjs => main-l74A9xAq.mjs
 
 # tests/fixtures/deconflict/wrapped_esm_default_function
 

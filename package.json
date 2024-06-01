@@ -31,7 +31,7 @@
     "npm-rolldown": "npm:rolldown@0.10.3",
     "@ls-lint/ls-lint": "^2.2.2",
     "@taplo/cli": "^0.7.0",
-    "@types/node": "20.12.13",
+    "@types/node": "20.13.0",
     "conventional-changelog-cli": "^5.0.0",
     "cspell": "^8.8.1",
     "husky": "^9.0.11",

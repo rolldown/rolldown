@@ -49,7 +49,7 @@ pub fn parse_to_ast(
 
   // 3. Parse the source to AST and transform non-js AST to valid JS AST.
   let valid_js_ast = match parsed_type {
-    ParseType::Js => OxcCompiler::parse(Arc::clone(&source), pure_esm_js_oxc_source_type()),
+    ParseType::Js => OxcCompiler::parse(Arc::clone(&source), pure_esm_js_oxc_source_type())?,
     ParseType::Jsx => todo!(),
     ParseType::Ts => todo!(),
     ParseType::Tsx => todo!(),

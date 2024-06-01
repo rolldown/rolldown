@@ -7,19 +7,20 @@ use rolldown_common::{AstScope, ImportRecordId, ModuleId, SymbolRef, WrapKind};
 use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, IntoIn, TakeIn};
 
 mod finalizer_context;
-mod impl_visit_mut_for_finalizer;
-pub use finalizer_context::FinalizerContext;
+mod impl_visit_mut;
+pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
 mod rename;
 
-pub struct Finalizer<'me, 'ast> {
-  pub ctx: FinalizerContext<'me>,
+/// Finalizer for emitting output code with scope hoisting.
+pub struct ScopeHoistingFinalizer<'me, 'ast> {
+  pub ctx: ScopeHoistingFinalizerContext<'me>,
   pub scope: &'me AstScope,
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
 }
 
-impl<'me, 'ast> Finalizer<'me, 'ast> {
+impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   pub fn is_global_identifier_reference(&self, id_ref: &IdentifierReference) -> bool {
     let Some(reference_id) = id_ref.reference_id.get() else {
       // Some `IdentifierReference`s constructed by bundler don't have a `ReferenceId`. They might be global variables.

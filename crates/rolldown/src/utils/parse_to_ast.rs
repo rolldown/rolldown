@@ -2,10 +2,8 @@ use std::{path::Path, sync::Arc};
 
 use oxc::span::SourceType as OxcSourceType;
 use rolldown_common::{Loader, NormalizedBundlerOptions};
-use rolldown_loader_utils::json_to_esm;
+use rolldown_loader_utils::{json_to_esm, text_to_esm};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
-
-use super::text_to_esm::text_to_esm;
 
 fn pure_esm_js_oxc_source_type() -> OxcSourceType {
   let pure_esm_js = OxcSourceType::default().with_module(true);

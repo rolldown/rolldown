@@ -49,7 +49,7 @@ pub fn render_chunk_exports(
         ChunkKind::EntryPoint { module, .. } => {
           let to_commonjs_ref_name = &this.canonical_names[&runtime.resolve_symbol("__toCommonJS")];
           let module = &graph.module_table.normal_modules[module];
-          let namespace_ref_name = &this.canonical_names[&module.namespace_symbol];
+          let namespace_ref_name = &this.canonical_names[&module.namespace_object_ref];
           s.push_str(&format!(
             "module.exports = {}({})",
             to_commonjs_ref_name.as_str(),

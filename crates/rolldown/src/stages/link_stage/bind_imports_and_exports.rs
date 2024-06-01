@@ -305,7 +305,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
 
     match &named_import.imported {
       Specifier::Star => ImportStatus::Found {
-        symbol: importee.namespace_symbol,
+        symbol: importee.namespace_object_ref,
         owner: importee_id,
         potentially_ambiguous_export_star_refs: vec![],
       },
@@ -320,7 +320,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
               .unwrap_or_default(),
           }
         } else if self.metas[importee_id].has_dynamic_exports {
-          ImportStatus::DynamicFallback { namespace_ref: importee.namespace_symbol }
+          ImportStatus::DynamicFallback { namespace_ref: importee.namespace_object_ref }
         } else {
           ImportStatus::NoMatch { importee_id }
         }

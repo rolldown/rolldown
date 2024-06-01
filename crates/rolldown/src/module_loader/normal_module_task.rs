@@ -105,7 +105,7 @@ impl NormalModuleTask {
       Arc::clone(&source),
     )?;
 
-    let (scope, scan_result, ast_symbol, namespace_symbol) = self.scan(&mut ast, &source);
+    let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);
 
     let resolved_deps =
       self.resolve_dependencies(&scan_result.import_records, &mut warnings).await?;
@@ -180,7 +180,7 @@ impl NormalModuleTask {
       default_export_ref,
       scope,
       exports_kind,
-      namespace_symbol,
+      namespace_object_ref,
       module_type: self.module_type,
       debug_resource_id: self.resolved_path.debug_display(&self.ctx.input_options.cwd),
       sourcemap_chain,
@@ -240,10 +240,10 @@ impl NormalModuleTask {
       &file_path,
       &ast.trivias,
     );
-    let namespace_symbol = scanner.namespace_ref;
+    let namespace_object_ref = scanner.namespace_object_ref;
     let scan_result = scanner.scan(ast.program());
 
-    (ast_scope, scan_result, symbol_for_module, namespace_symbol)
+    (ast_scope, scan_result, symbol_for_module, namespace_object_ref)
   }
 
   #[allow(clippy::option_if_let_else)]

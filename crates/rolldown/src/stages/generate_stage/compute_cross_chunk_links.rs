@@ -250,7 +250,7 @@ impl<'a> GenerateStage<'a> {
             && matches!(entry.exports_kind, ExportsKind::Esm)
           {
             depended_symbols.insert(self.link_output.runtime.resolve_symbol("__toCommonJS"));
-            depended_symbols.insert(entry.namespace_symbol);
+            depended_symbols.insert(entry.namespace_object_ref);
           }
         }
       },

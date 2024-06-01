@@ -40,7 +40,7 @@ impl RuntimeNormalModuleTask {
     let source: Arc<str> =
       include_str!("../runtime/runtime-without-comments.js").to_string().into();
 
-    let (ast, scope, scan_result, symbol, namespace_symbol) = self.make_ast(&source)?;
+    let (ast, scope, scan_result, symbol, namespace_object_ref) = self.make_ast(&source)?;
 
     let runtime = RuntimeModuleBrief::new(self.module_id, &scope);
 
@@ -71,7 +71,7 @@ impl RuntimeNormalModuleTask {
       default_export_ref,
       scope,
       exports_kind: ExportsKind::Esm,
-      namespace_symbol,
+      namespace_object_ref,
       module_type: ModuleType::EsmMjs,
       debug_resource_id: "\\0<runtime>".to_string(),
       exec_order: u32::MAX,
@@ -129,7 +129,7 @@ impl RuntimeNormalModuleTask {
       &facade_path,
       &ast.trivias,
     );
-    let namespace_symbol = scanner.namespace_ref;
+    let namespace_symbol = scanner.namespace_object_ref;
     let scan_result = scanner.scan(ast.program());
 
     Ok((ast, ast_scope, scan_result, symbol_for_module, namespace_symbol))

@@ -2,7 +2,7 @@
 edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
-name                 = "rolldown_lang_json"
+name                 = "rolldown_loader_utils"
 repository.workspace = true
 version              = "0.1.0"
 

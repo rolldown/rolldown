@@ -1402,7 +1402,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - $runtime$-!~{003}~.cjs => $runtime$-rpvIkp_A.cjs
 - entry1-!~{000}~.cjs => entry1-42Aa8MLb.cjs
 - entry2-!~{001}~.cjs => entry2-gGFk4qR7.cjs
-- main-!~{002}~.cjs => main-4fzGSnAd.cjs
+- main-!~{002}~.cjs => main-K0IPkNCw.cjs
 
 # tests/fixtures/function/format/esm/import_export_unicode
 

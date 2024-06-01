@@ -361,7 +361,7 @@ pub fn init_entry_point_stmt_info(
     referenced_symbols.push(meta.wrapper_ref.unwrap());
   }
 
-  // Make sure all exports are included
+  // Entry chunk need to generate exports, so we need reference to all exports to make sure they are included in tree-shaking.
   referenced_symbols.extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref));
 
   if matches!(module.exports_kind, ExportsKind::Esm) && matches!(options.format, OutputFormat::Cjs)
@@ -372,16 +372,5 @@ pub fn init_entry_point_stmt_info(
     referenced_symbols.push(runtime.resolve_symbol("__toCommonJS"));
   }
 
-  let stmt_info = StmtInfo {
-    stmt_idx: None,
-    declared_symbols: vec![],
-    referenced_symbols,
-    // Yeah, it has side effects
-    side_effect: true,
-    is_included: false,
-    import_records: Vec::new(),
-    debug_label: None,
-  };
-
-  module.stmt_infos.add_stmt_info(stmt_info);
+  meta.referenced_symbols_by_entry_point_chunk.extend(referenced_symbols);
 }

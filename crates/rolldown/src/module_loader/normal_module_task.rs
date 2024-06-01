@@ -12,6 +12,7 @@ use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
+use rolldown_utils::path_ext::PathExt;
 use sugar_path::SugarPath;
 
 use super::{task_context::TaskContext, Msg};
@@ -223,8 +224,8 @@ impl NormalModuleTask {
     source: &Arc<str>,
   ) -> (AstScopes, ScanResult, AstSymbols, SymbolRef) {
     let (ast_scopes, mut ast_symbols) = make_ast_scopes_and_symbols(ast);
-    let file_path = Arc::<str>::clone(&self.resolved_path.path).into();
-    let repr_name = ResourceId::representative_name(&file_path);
+    let file_path: ResourceId = Arc::<str>::clone(&self.resolved_path.path).into();
+    let repr_name = file_path.as_path().representative_file_name();
 
     let scanner = AstScanner::new(
       self.module_id,

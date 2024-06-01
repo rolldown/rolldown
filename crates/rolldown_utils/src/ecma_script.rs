@@ -1,5 +1,6 @@
 use regex::Regex;
 use std::borrow::Cow;
+
 pub fn is_validate_identifier_name(name: &str) -> bool {
   oxc_syntax::identifier::is_identifier_name(name)
 }
@@ -15,4 +16,11 @@ pub fn legitimize_identifier_name(name: &str) -> Cow<str> {
 fn test_is_validate_identifier_name() {
   assert!(is_validate_identifier_name("foo"));
   assert!(!is_validate_identifier_name("😈"));
+}
+
+#[test]
+fn test_legitimize_identifier_name() {
+  assert_eq!(legitimize_identifier_name("foo"), "foo");
+  assert_eq!(legitimize_identifier_name("$foo$"), "$foo$");
+  assert_eq!(legitimize_identifier_name("react-dom"), "react_dom");
 }

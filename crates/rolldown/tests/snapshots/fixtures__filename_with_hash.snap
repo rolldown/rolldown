@@ -137,6 +137,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-tiQvKDBq.mjs
 
+# tests/esbuild/dce/text_loader_remove_unused
+
+- entry_js-!~{000}~.mjs => entry_js-sU_ENWRL.mjs
+
 # tests/esbuild/dce/tree_shaking_binary_operators
 
 - entry_js-!~{000}~.mjs => entry_js-xEJLYvwR.mjs

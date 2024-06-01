@@ -1387,6 +1387,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-LeJVwZoF.mjs
 - share-!~{002}~.mjs => share-eIGIrVeP.mjs
 
+# tests/fixtures/function/format/app/multiple_entry_modules
+
+- cube-!~{002}~.mjs => cube-uhjZ_rWA.mjs
+- main-!~{000}~.mjs => main-unBf2xtz.mjs
+- other-entry-!~{001}~.mjs => other-entry-08LFZhc1.mjs
+
 # tests/fixtures/function/format/cjs/import_export_unicode
 
 - $runtime$-!~{001}~.cjs => $runtime$-kixSD92L.cjs

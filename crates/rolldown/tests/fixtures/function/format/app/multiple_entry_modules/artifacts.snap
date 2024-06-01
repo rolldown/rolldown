@@ -1,0 +1,39 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/format/app/multiple_entry_modules
+---
+# Assets
+
+## cube.mjs
+
+```js
+// square.js
+export default function square(x) {
+	return x * x;
+}
+// cube.js
+import square from './square.js';
+export default function cube(x) {
+	return square(x) * x;
+}
+```
+## main.mjs
+
+```js
+// hyper-cube.js
+import cube from './cube.js';
+export default function hyperCube(x) {
+	return cube(x) * x;
+}
+// main.js
+import hyperCube from './hyper-cube.js';
+console.log(hyperCube(5));
+```
+## other-entry.mjs
+
+```js
+// other-entry.js
+import cube from './cube.js';
+console.log(cube(5));
+```

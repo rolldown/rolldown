@@ -73,7 +73,7 @@ impl Debug for OxcAst {
 
 impl Default for OxcAst {
   fn default() -> Self {
-    OxcCompiler::parse("", SourceType::default())
+    OxcCompiler::parse("", SourceType::default()).unwrap()
   }
 }
 

@@ -368,7 +368,7 @@ mod test {
       .with_module(true)
       .with_jsx(true)
       .with_typescript(false);
-    let ast = OxcCompiler::parse(code, source_type);
+    let ast = OxcCompiler::parse(code, source_type).unwrap();
     let ast_scope = {
       let semantic = OxcAst::make_semantic(ast.source(), ast.program(), source_type);
       let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();

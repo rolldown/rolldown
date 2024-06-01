@@ -1,0 +1,44 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/format/cjs/shared_entry_modules/plain_import_should_not_introduce_to_esm
+---
+# Assets
+
+## entry1.cjs
+
+```js
+"use strict";
+
+const { __toCommonJS } = require("./$runtime$.cjs");
+const { main_ns, value } = require("./main.cjs");
+
+module.exports = __toCommonJS(main_ns)
+```
+## entry2.cjs
+
+```js
+"use strict";
+
+const { __toCommonJS } = require("./$runtime$.cjs");
+const { main_ns, value } = require("./main.cjs");
+
+module.exports = __toCommonJS(main_ns)
+```
+## main.cjs
+
+```js
+"use strict";
+
+const { __export, __toCommonJS } = require("./$runtime$.cjs");
+
+// main.js
+var main_ns = {};
+__export(main_ns, {
+	value:() => value
+});
+const value = 'main';
+
+exports.main_ns = main_ns;
+exports.value = value;
+```

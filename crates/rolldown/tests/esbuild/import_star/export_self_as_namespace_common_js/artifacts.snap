@@ -18,7 +18,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_self_as_namespace_c
 ```js
 "use strict";
 
-const { __export } = require("./$runtime$.cjs");
+const { __export, __toCommonJS } = require("./$runtime$.cjs");
 
 // entry.js
 var entry_ns = {};
@@ -28,6 +28,5 @@ __export(entry_ns, {
 });
 const foo = 123;
 
-exports.foo = foo;
-exports.ns = entry_ns;
+module.exports = __toCommonJS(entry_ns)
 ```

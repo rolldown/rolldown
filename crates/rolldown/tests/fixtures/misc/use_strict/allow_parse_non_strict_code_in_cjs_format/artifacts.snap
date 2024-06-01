@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/misc/use_strict/allow_parse_non_stric
 ## main.cjs
 
 ```js
-const { __commonJSMin, __toESM } = require("./$runtime$.cjs");
+const { __commonJSMin, __toCommonJS, __toESM } = require("./$runtime$.cjs");
 
 // cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
@@ -17,6 +17,7 @@ var require_cjs = __commonJSMin((exports, module) => {
 });
 
 // main.js
+var main_ns = {};
 var import_cjs = __toESM(require_cjs());
 console.log(import_cjs.default);
 ```

@@ -3,11 +3,14 @@ use std::{ptr::addr_of, sync::Mutex};
 use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
-  OutputFormat, StmtInfo, WrapKind,
+  NormalizedBundlerOptions, OutputFormat, StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
-use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use rolldown_utils::{
+  ecma_script::legitimize_identifier_name,
+  rayon::{ParallelBridge, ParallelIterator},
+};
 use rustc_hash::FxHashSet;
 
 use crate::{
@@ -83,7 +86,7 @@ impl<'a> LinkStage<'a> {
 
       create_wrapper(module, linking_info, &mut self.symbols, &self.runtime);
       if self.entries.iter().any(|entry| entry.id == module.id) {
-        init_entry_point_stmt_info(module, linking_info);
+        init_entry_point_stmt_info(self.input_options, &self.runtime, module, linking_info);
       }
 
       linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
@@ -238,14 +241,26 @@ impl<'a> LinkStage<'a> {
         stmt_info.import_records.iter().for_each(|rec_id| {
           let rec = &importer.import_records[*rec_id];
           match rec.resolved_module {
-            ModuleId::External(_) => {
+            ModuleId::External(importee_id) => {
               // Make sure symbols from external modules are included and de_conflicted
               stmt_info.side_effect = true;
-              if matches!(self.input_options.format, OutputFormat::Cjs)
-                && matches!(rec.kind, ImportKind::Import)
-                && !rec.is_plain_import
-              {
-                stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
+              match rec.kind {
+                ImportKind::Import => {
+                  if matches!(self.input_options.format, OutputFormat::Cjs) && !rec.is_plain_import
+                  {
+                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
+                  }
+                  let is_reexport_all = importer.star_exports.contains(rec_id);
+                  if is_reexport_all {
+                    let importee = &self.module_table.external_modules[importee_id];
+                    symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
+                      format!("import_{}", legitimize_identifier_name(&importee.name)).into();
+                    stmt_info.declared_symbols.push(rec.namespace_ref);
+                    stmt_info.referenced_symbols.push(importer.namespace_symbol);
+                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__reExport"));
+                  }
+                }
+                _ => {}
               }
             }
             ModuleId::Normal(importee_id) => {
@@ -326,7 +341,12 @@ impl<'a> LinkStage<'a> {
   }
 }
 
-pub fn init_entry_point_stmt_info(module: &mut NormalModule, meta: &mut LinkingMetadata) {
+pub fn init_entry_point_stmt_info(
+  options: &NormalizedBundlerOptions,
+  runtime: &RuntimeModuleBrief,
+  module: &mut NormalModule,
+  meta: &mut LinkingMetadata,
+) {
   let mut referenced_symbols = vec![];
 
   // Include the wrapper if present
@@ -338,6 +358,14 @@ pub fn init_entry_point_stmt_info(module: &mut NormalModule, meta: &mut LinkingM
 
   // Make sure all exports are included
   referenced_symbols.extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref));
+
+  if matches!(module.exports_kind, ExportsKind::Esm) && matches!(options.format, OutputFormat::Cjs)
+  {
+    // We will generate `module.exports = __toCommonJS(exports);` for esm modules that are entry points
+    // Include the namespace statement
+    referenced_symbols.push(module.namespace_symbol);
+    referenced_symbols.push(runtime.resolve_symbol("__toCommonJS"));
+  }
 
   let stmt_info = StmtInfo {
     stmt_idx: None,

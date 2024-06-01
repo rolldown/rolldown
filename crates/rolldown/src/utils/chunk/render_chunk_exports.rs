@@ -2,10 +2,11 @@ use rolldown_common::{Chunk, ChunkKind, OutputFormat, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
 
-use crate::{stages::link_stage::LinkStageOutput, SharedOptions};
+use crate::{runtime::RuntimeModuleBrief, stages::link_stage::LinkStageOutput, SharedOptions};
 
 pub fn render_chunk_exports(
   this: &Chunk,
+  runtime: &RuntimeModuleBrief,
   graph: &LinkStageOutput,
   output_options: &SharedOptions,
 ) -> Option<String> {
@@ -44,23 +45,37 @@ pub fn render_chunk_exports(
     }
     OutputFormat::Cjs => {
       let mut s = String::new();
-      export_items.into_iter().for_each(|(exported_name, export_ref)| {
-        let canonical_ref = graph.symbols.par_canonical_ref_for(export_ref);
-        let symbol = graph.symbols.get(canonical_ref);
-        let canonical_name = &this.canonical_names[&canonical_ref];
-        let assignee_name = if is_validate_identifier_name(&exported_name) {
-          format!("exports.{exported_name}")
-        } else {
-          format!("exports['{exported_name}']")
-        };
-        if let Some(ns_alias) = &symbol.namespace_alias {
-          let canonical_ns_name = &this.canonical_names[&ns_alias.namespace_ref];
-          let property_name = &ns_alias.property_name;
-          s.push_str(&format!("{assignee_name} = {canonical_ns_name}.{property_name};;\n"));
-        } else {
-          s.push_str(&format!("{assignee_name} = {canonical_name};\n"));
+      match this.kind {
+        ChunkKind::EntryPoint { module, .. } => {
+          let to_commonjs_ref_name = &this.canonical_names[&runtime.resolve_symbol("__toCommonJS")];
+          let module = &graph.module_table.normal_modules[module];
+          let namespace_ref_name = &this.canonical_names[&module.namespace_symbol];
+          s.push_str(&format!(
+            "module.exports = {}({})",
+            to_commonjs_ref_name.as_str(),
+            namespace_ref_name.as_str()
+          ));
         }
-      });
+        ChunkKind::Common => {
+          export_items.into_iter().for_each(|(exported_name, export_ref)| {
+            let canonical_ref = graph.symbols.par_canonical_ref_for(export_ref);
+            let symbol = graph.symbols.get(canonical_ref);
+            let canonical_name = &this.canonical_names[&canonical_ref];
+            let assignee_name = if is_validate_identifier_name(&exported_name) {
+              format!("exports.{exported_name}")
+            } else {
+              format!("exports['{exported_name}']")
+            };
+            if let Some(ns_alias) = &symbol.namespace_alias {
+              let canonical_ns_name = &this.canonical_names[&ns_alias.namespace_ref];
+              let property_name = &ns_alias.property_name;
+              s.push_str(&format!("{assignee_name} = {canonical_ns_name}.{property_name};;\n"));
+            } else {
+              s.push_str(&format!("{assignee_name} = {canonical_name};\n"));
+            }
+          });
+        }
+      }
 
       Some(s)
     }

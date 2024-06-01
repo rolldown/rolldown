@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_other_as_namespace_
 ## entry_js.cjs
 
 ```js
-const { __commonJSMin, __toESM } = require("./$runtime$.cjs");
+const { __commonJSMin, __export, __toCommonJS, __toESM } = require("./$runtime$.cjs");
 
 // foo.js
 var require_foo = __commonJSMin((exports, module) => {
@@ -16,7 +16,11 @@ var require_foo = __commonJSMin((exports, module) => {
 });
 
 // entry.js
+var entry_ns = {};
+__export(entry_ns, {
+	ns:() => import_foo
+});
 var import_foo = __toESM(require_foo());
 
-exports.ns = import_foo;
+module.exports = __toCommonJS(entry_ns)
 ```

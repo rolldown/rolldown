@@ -10,6 +10,7 @@ mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
+use rolldown_utils::ecma_script::is_validate_identifier_name;
 mod rename;
 
 /// Finalizer for emitting output code with scope hoisting.
@@ -184,9 +185,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let returned = self.generate_finalized_expr_for_symbol_ref(resolved_export.symbol_ref);
       arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
         ast::ObjectProperty {
-          key: ast::PropertyKey::StaticIdentifier(
-            self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
-          ),
+          key: if is_validate_identifier_name(prop_name) {
+            ast::PropertyKey::StaticIdentifier(
+              self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
+            )
+          } else {
+            ast::PropertyKey::StringLiteral(
+              self.snippet.string_literal(prop_name, SPAN).into_in(self.alloc),
+            )
+          },
           value: self.snippet.only_return_arrow_expr(returned),
           ..TakeIn::dummy(self.alloc)
         }

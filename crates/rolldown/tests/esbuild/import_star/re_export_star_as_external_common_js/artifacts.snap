@@ -18,8 +18,14 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_as_external
 ```js
 "use strict";
 
-const { __toESM } = require("./$runtime$.cjs");
+const { __export, __toCommonJS, __toESM } = require("./$runtime$.cjs");
 const out = __toESM(require("foo"));
 
-exports.out = out;
+// entry.js
+var entry_ns = {};
+__export(entry_ns, {
+	out:() => out
+});
+
+module.exports = __toCommonJS(entry_ns)
 ```

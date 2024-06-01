@@ -135,7 +135,7 @@ pub async fn render_chunk(
     }
   }
 
-  if let Some(exports) = render_chunk_exports(this, graph, options) {
+  if let Some(exports) = render_chunk_exports(this, &graph.runtime, graph, options) {
     concat_source.add_source(Box::new(RawSource::new(exports)));
   }
 

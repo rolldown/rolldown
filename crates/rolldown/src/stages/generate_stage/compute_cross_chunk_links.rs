@@ -7,8 +7,8 @@ use indexmap::IndexSet;
 use itertools::{multizip, Itertools};
 use oxc_index::{index_vec, IndexVec};
 use rolldown_common::{
-  ChunkId, ChunkKind, CrossChunkImportItem, ExternalModuleId, ImportKind, ModuleId, NamedImport,
-  SymbolRef, WrapKind,
+  ChunkId, ChunkKind, CrossChunkImportItem, ExportsKind, ExternalModuleId, ImportKind, ModuleId,
+  NamedImport, OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::IntoParallelIterator;
@@ -244,6 +244,13 @@ impl<'a> GenerateStage<'a> {
           if !matches!(entry_meta.wrap_kind, WrapKind::None) {
             depended_symbols
               .insert(entry_meta.wrapper_ref.expect("cjs should be wrapped in esm output"));
+          }
+
+          if matches!(self.options.format, OutputFormat::Cjs)
+            && matches!(entry.exports_kind, ExportsKind::Esm)
+          {
+            depended_symbols.insert(self.link_output.runtime.resolve_symbol("__toCommonJS"));
+            depended_symbols.insert(entry.namespace_symbol);
           }
         }
       },

@@ -333,4 +333,20 @@ impl<'ast> AstSnippet<'ast> {
   pub fn string_literal(&self, value: PassedStr, span: Span) -> ast::StringLiteral<'ast> {
     ast::StringLiteral { span, value: self.atom(value) }
   }
+
+  pub fn import_star_stmt(&self, source: PassedStr, as_name: PassedStr) -> ast::Statement<'ast> {
+    let mut specifiers = allocator::Vec::with_capacity_in(1, self.alloc);
+    specifiers.push(ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(
+      ast::ImportNamespaceSpecifier { span: SPAN, local: self.id(as_name, SPAN) }
+        .into_in(self.alloc),
+    ));
+    ast::Statement::ImportDeclaration(
+      ast::ImportDeclaration {
+        specifiers: Some(specifiers),
+        source: self.string_literal(source, SPAN),
+        ..TakeIn::dummy(self.alloc)
+      }
+      .into_in(self.alloc),
+    )
+  }
 }

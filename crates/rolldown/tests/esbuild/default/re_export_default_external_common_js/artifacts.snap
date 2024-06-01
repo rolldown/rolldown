@@ -10,10 +10,16 @@ input_file: crates/rolldown/tests/esbuild/default/re_export_default_external_com
 ```js
 "use strict";
 
-const { __toESM } = require("./$runtime$.cjs");
+const { __export, __toCommonJS, __toESM } = require("./$runtime$.cjs");
 const { default: foo } = __toESM(require("foo"));
 const { default: bar } = __toESM(require("bar"));
 
-exports.bar = bar;
-exports.foo = foo;
+// entry.js
+var entry_ns = {};
+__export(entry_ns, {
+	bar:() => bar,
+	foo:() => foo
+});
+
+module.exports = __toCommonJS(entry_ns)
 ```

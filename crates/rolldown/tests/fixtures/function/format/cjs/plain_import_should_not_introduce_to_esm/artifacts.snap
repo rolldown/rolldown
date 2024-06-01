@@ -10,7 +10,11 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/plain_import_shou
 ```js
 "use strict";
 
+const { __toCommonJS } = require("./$runtime$.cjs");
 require("foo");
 require("bar");
 require("baz");
+
+// main.js
+var main_ns = {};
 ```

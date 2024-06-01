@@ -18,6 +18,11 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_external_co
 ```js
 "use strict";
 
-const { __toESM } = require("./$runtime$.cjs");
+const { __reExport, __toCommonJS, __toESM } = require("./$runtime$.cjs");
 require("foo");
+
+// entry.js
+var entry_ns = {};
+import * as import_foo from 'foo';
+__reExport(entry_ns, import_foo);
 ```

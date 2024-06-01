@@ -363,3 +363,26 @@ impl<'ast> TakeIn<'ast> for ast::UnaryExpression<'ast> {
     }
   }
 }
+
+impl<'ast> TakeIn<'ast> for ast::StringLiteral<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self { span: TakeIn::dummy(alloc), value: TakeIn::dummy(alloc) }
+  }
+}
+impl<'ast> TakeIn<'ast> for ast::ImportOrExportKind {
+  fn dummy(_alloc: &'ast Allocator) -> Self {
+    Self::Value
+  }
+}
+
+impl<'ast> TakeIn<'ast> for ast::ImportDeclaration<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: TakeIn::dummy(alloc),
+      specifiers: TakeIn::dummy(alloc),
+      source: TakeIn::dummy(alloc),
+      with_clause: TakeIn::dummy(alloc),
+      import_kind: TakeIn::dummy(alloc),
+    }
+  }
+}

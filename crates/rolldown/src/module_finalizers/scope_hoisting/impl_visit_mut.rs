@@ -54,62 +54,86 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           } else {
             // "export * from 'path'"
             let rec = &self.ctx.module.import_records[rec_id];
-            let ModuleId::Normal(importee_id) = rec.resolved_module else {
-              // TODO: handle re-exporting all from external module
-              return;
-            };
-            let importee_linking_info = &self.ctx.linking_infos[importee_id];
-            let importee = &self.ctx.modules[importee_id];
-            if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
-              let wrapper_ref_name =
-                self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-              program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name));
-            }
+            match rec.resolved_module {
+              ModuleId::Normal(importee_id) => {
+                let importee_linking_info = &self.ctx.linking_infos[importee_id];
+                let importee = &self.ctx.modules[importee_id];
+                if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
+                  let wrapper_ref_name =
+                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                  program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name));
+                }
 
-            match importee.exports_kind {
-              ExportsKind::Esm => {
-                if importee_linking_info.has_dynamic_exports {
-                  let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                  let importer_namespace_name =
-                    self.canonical_name_for(self.ctx.module.namespace_symbol);
-                  // __reExport(exports, otherExports)
-                  let importee_namespace_name = self.canonical_name_for(importee.namespace_symbol);
-                  program.body.push(
-                    self
-                      .snippet
-                      .call_expr_with_2arg_expr(
-                        re_export_fn_name,
-                        importer_namespace_name,
-                        importee_namespace_name,
-                      )
-                      .into_in(self.alloc),
-                  );
+                match importee.exports_kind {
+                  ExportsKind::Esm => {
+                    if importee_linking_info.has_dynamic_exports {
+                      let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+                      let importer_namespace_name =
+                        self.canonical_name_for(self.ctx.module.namespace_symbol);
+                      // __reExport(exports, otherExports)
+                      let importee_namespace_name =
+                        self.canonical_name_for(importee.namespace_symbol);
+                      program.body.push(
+                        self
+                          .snippet
+                          .call_expr_with_2arg_expr(
+                            re_export_fn_name,
+                            importer_namespace_name,
+                            importee_namespace_name,
+                          )
+                          .into_in(self.alloc),
+                      );
+                    }
+                  }
+                  ExportsKind::CommonJs => {
+                    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+                    let importer_namespace_name =
+                      self.canonical_name_for(self.ctx.module.namespace_symbol);
+                    // __reExport(exports, __toESM(require_xxxx()))
+                    let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
+                    let importee_wrapper_ref_name =
+                      self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                    program.body.push(
+                      self
+                        .snippet
+                        .call_expr_with_2arg_expr_expr(
+                          re_export_fn_name,
+                          self.snippet.id_ref_expr(importer_namespace_name, SPAN),
+                          self.snippet.call_expr_with_arg_expr_expr(
+                            to_esm_fn_name,
+                            self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                          ),
+                        )
+                        .into_in(self.alloc),
+                    );
+                  }
+                  ExportsKind::None => {}
                 }
               }
-              ExportsKind::CommonJs => {
+              ModuleId::External(importee_id) => {
+                let importee = &self.ctx.external_modules[importee_id];
+                // Insert `import * as ns from 'ext'`
+                // Insert `__reExport(exports, ns)`
                 let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
                 let importer_namespace_name =
                   self.canonical_name_for(self.ctx.module.namespace_symbol);
-                // __reExport(exports, __toESM(require_xxxx()))
-                let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
-                let importee_wrapper_ref_name =
-                  self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
+                program
+                  .body
+                  .push(self.snippet.import_star_stmt(&importee.name, importee_namespace_name));
                 program.body.push(
                   self
                     .snippet
-                    .call_expr_with_2arg_expr_expr(
+                    .call_expr_with_2arg_expr(
                       re_export_fn_name,
-                      self.snippet.id_ref_expr(importer_namespace_name, SPAN),
-                      self.snippet.call_expr_with_arg_expr_expr(
-                        to_esm_fn_name,
-                        self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                      ),
+                      importer_namespace_name,
+                      importee_namespace_name,
                     )
                     .into_in(self.alloc),
                 );
               }
-              ExportsKind::None => {}
             }
+
             return;
           }
         } else if let Some(default_decl) = top_stmt.as_export_default_declaration_mut() {

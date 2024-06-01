@@ -10,10 +10,11 @@ input_file: crates/rolldown/tests/esbuild/default/import_fs_node_common_js
 ```js
 "use strict";
 
-const { __toESM } = require("./$runtime$.cjs");
+const { __toCommonJS, __toESM } = require("./$runtime$.cjs");
 const fs = __toESM(require("fs"));
 const { default: defaultValue, readFileSync } = __toESM(require("fs"));
 
 // entry.js
+var entry_ns = {};
 console.log(fs, readFileSync, defaultValue);
 ```

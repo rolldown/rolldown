@@ -250,8 +250,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/import_fs_node_common_js
 
-- $runtime$-!~{001}~.cjs => $runtime$-36w35jWX.cjs
-- entry_js-!~{000}~.cjs => entry_js-jsyGxd0t.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-3yVjCMSP.cjs
+- entry_js-!~{000}~.cjs => entry_js-Cu7LHpYO.cjs
 
 # tests/esbuild/default/import_missing_common_js
 
@@ -313,8 +313,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/re_export_default_external_common_js
 
-- $runtime$-!~{001}~.cjs => $runtime$-36w35jWX.cjs
-- entry_js-!~{000}~.cjs => entry_js-rI8gzao4.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-gfbLKmIP.cjs
+- entry_js-!~{000}~.cjs => entry_js-jyXjqsyF.cjs
 
 # tests/esbuild/default/re_export_default_external_es6
 
@@ -412,23 +412,23 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_other_as_namespace_common_js
 
-- $runtime$-!~{001}~.cjs => $runtime$-Erv9vQWi.cjs
-- entry_js-!~{000}~.cjs => entry_js-ltqwzXDO.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-IC2_GUcQ.cjs
+- entry_js-!~{000}~.cjs => entry_js-GhnADW3f.cjs
 
 # tests/esbuild/import_star/export_other_common_js
 
-- $runtime$-!~{001}~.cjs => $runtime$-Erv9vQWi.cjs
-- entry_js-!~{000}~.cjs => entry_js-io0yehOz.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-IC2_GUcQ.cjs
+- entry_js-!~{000}~.cjs => entry_js-EaGyMRNg.cjs
 
 # tests/esbuild/import_star/export_other_nested_common_js
 
-- $runtime$-!~{001}~.cjs => $runtime$-Erv9vQWi.cjs
-- entry_js-!~{000}~.cjs => entry_js-1sSLcfO6.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-IC2_GUcQ.cjs
+- entry_js-!~{000}~.cjs => entry_js-86AUSTne.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_common_js
 
-- $runtime$-!~{001}~.cjs => $runtime$-237Vl76_.cjs
-- entry_js-!~{000}~.cjs => entry_js-oAo0azmx.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-kixSD92L.cjs
+- entry_js-!~{000}~.cjs => entry_js-u-DdGbW3.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_es6
 
@@ -437,7 +437,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_self_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-6MX8976S.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-kixSD92L.cjs
+- entry_js-!~{000}~.cjs => entry_js-1nkJDj0x.cjs
 
 # tests/esbuild/import_star/export_self_es6
 
@@ -624,8 +625,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_as_external_common_js
 
-- $runtime$-!~{001}~.cjs => $runtime$-36w35jWX.cjs
-- entry_js-!~{000}~.cjs => entry_js-N8vd39m8.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-gfbLKmIP.cjs
+- entry_js-!~{000}~.cjs => entry_js-xGTtUXlQ.cjs
 
 # tests/esbuild/import_star/re_export_star_as_external_es6
 
@@ -638,12 +639,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_external_common_js
 
-- $runtime$-!~{001}~.cjs => $runtime$-36w35jWX.cjs
-- entry_js-!~{000}~.cjs => entry_js-qc4J4MGF.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-_XhA5y4U.cjs
+- entry_js-!~{000}~.cjs => entry_js-nqdQE_T8.cjs
 
 # tests/esbuild/import_star/re_export_star_external_es6
 
-- entry_js-!~{000}~.mjs => entry_js--Ducb3XN.mjs
+- $runtime$-!~{001}~.mjs => $runtime$-4sU98kEN.mjs
+- entry_js-!~{000}~.mjs => entry_js-e6kutrfU.mjs
 
 # tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_export
 
@@ -1387,11 +1389,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/format/cjs/import_export_unicode
 
-- main-!~{000}~.cjs => main-is7MaIRh.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-kixSD92L.cjs
+- main-!~{000}~.cjs => main-fe9AkFK4.cjs
 
 # tests/fixtures/function/format/cjs/plain_import_should_not_introduce_to_esm
 
-- main-!~{000}~.cjs => main-3pDEUHkP.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-0uxwQ9GO.cjs
+- main-!~{000}~.cjs => main-YKHdgxsQ.cjs
 
 # tests/fixtures/function/format/esm/import_export_unicode
 
@@ -1529,18 +1533,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 
-- $runtime$-!~{001}~.cjs => $runtime$-Erv9vQWi.cjs
-- main-!~{000}~.cjs => main-7S31PJNc.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-cBPZhQ6s.cjs
+- main-!~{000}~.cjs => main-sZf8SL25.cjs
 
 # tests/fixtures/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 
-- $runtime$-!~{001}~.cjs => $runtime$-Erv9vQWi.cjs
-- main-!~{000}~.cjs => main-l0iwTlcH.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-cBPZhQ6s.cjs
+- main-!~{000}~.cjs => main-M1cjvj-T.cjs
 
 # tests/fixtures/misc/use_strict/no_use_strict_with_non_strict_cjs_in_cjs_format
 
-- $runtime$-!~{001}~.cjs => $runtime$-Erv9vQWi.cjs
-- main-!~{000}~.cjs => main-mcpHUvgA.cjs
+- $runtime$-!~{001}~.cjs => $runtime$-cBPZhQ6s.cjs
+- main-!~{000}~.cjs => main-CM1TkMCD.cjs
 
 # tests/fixtures/misc/wrapped_esm
 

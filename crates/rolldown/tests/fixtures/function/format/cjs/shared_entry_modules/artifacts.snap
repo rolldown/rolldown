@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/function/format/cjs/shared_entry_modules/plain_import_should_not_introduce_to_esm
+input_file: crates/rolldown/tests/fixtures/function/format/cjs/shared_entry_modules
 ---
 # Assets
 
@@ -30,7 +30,7 @@ module.exports = __toCommonJS(main_ns)
 ```js
 "use strict";
 
-const { __export, __toCommonJS } = require("./$runtime$.cjs");
+const { __export } = require("./$runtime$.cjs");
 
 // main.js
 var main_ns = {};

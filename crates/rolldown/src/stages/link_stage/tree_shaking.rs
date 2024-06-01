@@ -130,7 +130,10 @@ impl LinkStage<'_> {
 
     self.entries.iter().for_each(|entry| {
       let module = &self.module_table.normal_modules[entry.id];
-
+      let meta = &self.metas[entry.id];
+      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
+        include_symbol(context, *symbol_ref);
+      });
       include_module(context, module);
     });
 

@@ -18,6 +18,7 @@ impl<'a> GenerateStage<'a> {
     module_to_bits: &mut IndexVec<NormalModuleId, BitSet>,
   ) {
     let module = &self.link_output.module_table.normal_modules[module_id];
+    let meta = &self.link_output.metas[module_id];
 
     if !module.is_included {
       return;
@@ -36,6 +37,12 @@ impl<'a> GenerateStage<'a> {
           self.determine_reachable_modules_for_entry(importee_id, entry_index, module_to_bits);
         }
       }
+    });
+
+    // Symbols from runtime are referenced by bundler not import statements.
+    meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
+      let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*symbol_ref);
+      self.determine_reachable_modules_for_entry(canonical_ref.owner, entry_index, module_to_bits);
     });
 
     module.stmt_infos.iter().for_each(|stmt_info| {
@@ -122,7 +129,7 @@ impl<'a> GenerateStage<'a> {
       let bits = &module_to_bits[normal_module.id];
       debug_assert!(
         !bits.is_empty(),
-        "Empty bits means the module is not reachable, so it should bail out with `is_included: false`"
+        "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_resource_id
       );
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunks[chunk_id].modules.push(normal_module.id);

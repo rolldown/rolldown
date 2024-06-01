@@ -1849,10 +1849,8 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "glob-match",
- "once_cell",
  "oxc",
  "oxc_index",
- "regex",
  "rolldown_fs",
  "rolldown_rstr",
  "rolldown_sourcemap",

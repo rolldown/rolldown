@@ -11,6 +11,7 @@ use rolldown_error::BuildError;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
   path_buf_ext::PathBufExt,
+  path_ext::PathExt,
   rayon::{ParallelBridge, ParallelIterator},
 };
 use sugar_path::SugarPath;
@@ -246,7 +247,7 @@ impl<'a> GenerateStage<'a> {
           } else {
             let module_id = entry_module_id;
             let module = &normal_modules[module_id];
-            module.resource_id.representative_name().into_owned()
+            module.resource_id.as_path().representative_file_name().into_owned()
           }
         }
         ChunkKind::Common => {
@@ -259,7 +260,7 @@ impl<'a> GenerateStage<'a> {
             || "chunk".to_string(),
             |module_id| {
               let module = &normal_modules[*module_id];
-              module.resource_id.representative_name().into_owned()
+              module.resource_id.as_path().representative_file_name().into_owned()
             },
           )
         }

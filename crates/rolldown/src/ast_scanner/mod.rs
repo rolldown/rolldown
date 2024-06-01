@@ -14,15 +14,16 @@ use oxc::{
 };
 use oxc_index::IndexVec;
 use rolldown_common::{
-  representative_name, AstScopes, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleType,
-  NamedImport, NormalModuleId, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos,
-  SymbolRef,
+  AstScopes, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleType, NamedImport,
+  NormalModuleId, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_utils::path_ext::PathExt;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
+use sugar_path::SugarPath;
 
 use super::types::ast_symbols::AstSymbols;
 
@@ -255,8 +256,10 @@ impl<'me> AstScanner<'me> {
       self.idx,
       self.symbols.create_symbol(
         if export_name.as_str() == "default" {
-          let importee_repr =
-            representative_name(&self.result.import_records[record_id].module_request);
+          let importee_repr = self.result.import_records[record_id]
+            .module_request
+            .as_path()
+            .representative_file_name();
           format!("{importee_repr}_default").into()
         } else {
           export_name.clone().to_compact_str()

@@ -61,7 +61,7 @@ pub use crate::{
   types::resolved_export::ResolvedExport,
   types::resolved_path::ResolvedPath,
   types::resolved_request_info::ResolvedRequestInfo,
-  types::resource_id::{representative_name, ResourceId},
+  types::resource_id::ResourceId,
   types::side_effects,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoId, StmtInfos},
   types::symbol_ref::SymbolRef,

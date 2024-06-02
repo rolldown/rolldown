@@ -195,7 +195,6 @@ impl NormalModuleTask {
       dynamic_importers: vec![],
       imported_ids,
       dynamically_imported_ids,
-      package_json: self.package_json.take(),
       side_effects,
     };
 

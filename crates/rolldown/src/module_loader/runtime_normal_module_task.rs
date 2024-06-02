@@ -84,7 +84,6 @@ impl RuntimeNormalModuleTask {
       dynamic_importers: vec![],
       imported_ids: vec![],
       dynamically_imported_ids: vec![],
-      package_json: None,
       side_effects: DeterminedSideEffects::Analyzed(false),
     };
 

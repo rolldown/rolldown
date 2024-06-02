@@ -4,7 +4,7 @@ use crate::side_effects::DeterminedSideEffects;
 use crate::{
   types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
   ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
-  PackageJson, ResourceId, StmtInfo, StmtInfos, SymbolRef,
+  ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use oxc::span::Span;
 use oxc_index::IndexVec;
@@ -51,7 +51,6 @@ pub struct NormalModule {
   // the module ids imported by this module via dynamic import()
   pub dynamically_imported_ids: Vec<ResourceId>,
   pub side_effects: DeterminedSideEffects,
-  pub package_json: Option<Arc<PackageJson>>,
 }
 
 impl NormalModule {

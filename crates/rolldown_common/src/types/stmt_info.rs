@@ -3,6 +3,8 @@ use rustc_hash::FxHashMap;
 
 use crate::{ImportRecordId, SymbolRef};
 
+use super::symbol_ref::SymbolOrMemberExprRef;
+
 #[derive(Debug, Default)]
 pub struct StmtInfos {
   infos: IndexVec<StmtInfoId, StmtInfo>,
@@ -76,7 +78,7 @@ pub struct StmtInfo {
   // We will add symbols of other modules to `referenced_symbols`, so we need `SymbolRef`
   // here instead of `SymbolId`.
   /// Top level symbols referenced by this statement.
-  pub referenced_symbols: Vec<SymbolRef>,
+  pub referenced_symbols: Vec<SymbolOrMemberExprRef>,
   pub side_effect: bool,
   pub is_included: bool,
   pub import_records: Vec<ImportRecordId>,

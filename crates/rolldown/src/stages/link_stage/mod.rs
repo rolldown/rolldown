@@ -115,8 +115,9 @@ impl<'a> LinkStage<'a> {
         let mut referenced_symbols = vec![];
         if !meta.is_canonical_exports_empty() {
           // Reference to all exports. Once the Module Namespace Object is included, all exports should be included too.
-          referenced_symbols.extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref));
-          referenced_symbols.push(self.runtime.resolve_symbol("__export"));
+          referenced_symbols
+            .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
+          referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
         }
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
         // Corresponding AST for this statement will be created by the finalizer.
@@ -253,7 +254,9 @@ impl<'a> LinkStage<'a> {
                 ImportKind::Import => {
                   if matches!(self.input_options.format, OutputFormat::Cjs) && !rec.is_plain_import
                   {
-                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
+                    stmt_info
+                      .referenced_symbols
+                      .push(self.runtime.resolve_symbol("__toESM").into());
                   }
                   let is_reexport_all = importer.star_exports.contains(rec_id);
                   if is_reexport_all {
@@ -261,8 +264,10 @@ impl<'a> LinkStage<'a> {
                     symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                       format!("import_{}", legitimize_identifier_name(&importee.name)).into();
                     stmt_info.declared_symbols.push(rec.namespace_ref);
-                    stmt_info.referenced_symbols.push(importer.namespace_object_ref);
-                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__reExport"));
+                    stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
+                    stmt_info
+                      .referenced_symbols
+                      .push(self.runtime.resolve_symbol("__reExport").into());
                   }
                 }
                 _ => {}
@@ -282,20 +287,24 @@ impl<'a> LinkStage<'a> {
                         // Reference to `require_bar_cjs`
                         stmt_info
                           .referenced_symbols
-                          .push(importee_linking_info.wrapper_ref.unwrap());
-                        stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
+                          .push(importee_linking_info.wrapper_ref.unwrap().into());
                         stmt_info
                           .referenced_symbols
-                          .push(self.runtime.resolve_symbol("__reExport"));
-                        stmt_info.referenced_symbols.push(importer.namespace_object_ref);
+                          .push(self.runtime.resolve_symbol("__toESM").into());
+                        stmt_info
+                          .referenced_symbols
+                          .push(self.runtime.resolve_symbol("__reExport").into());
+                        stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                       } else {
                         // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
                         // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
                         // Reference to `require_bar_cjs`
                         stmt_info
                           .referenced_symbols
-                          .push(importee_linking_info.wrapper_ref.unwrap());
-                        stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toESM"));
+                          .push(importee_linking_info.wrapper_ref.unwrap().into());
+                        stmt_info
+                          .referenced_symbols
+                          .push(self.runtime.resolve_symbol("__toESM").into());
                         stmt_info.declared_symbols.push(rec.namespace_ref);
                         let importee = &self.module_table.normal_modules[importee_id];
                         symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
@@ -306,16 +315,18 @@ impl<'a> LinkStage<'a> {
                       stmt_info.side_effect = true;
                       // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
                       // Reference to `init_foo`
-                      stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
+                      stmt_info
+                        .referenced_symbols
+                        .push(importee_linking_info.wrapper_ref.unwrap().into());
                       if is_reexport_all && importee_linking_info.has_dynamic_exports {
                         // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
                         // something like `__reExport(foo_exports, other_exports)`
                         stmt_info
                           .referenced_symbols
-                          .push(self.runtime.resolve_symbol("__reExport"));
-                        stmt_info.referenced_symbols.push(importer.namespace_object_ref);
+                          .push(self.runtime.resolve_symbol("__reExport").into());
+                        stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                         let importee = &self.module_table.normal_modules[importee_id];
-                        stmt_info.referenced_symbols.push(importee.namespace_object_ref);
+                        stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                       }
                     }
                   }
@@ -325,15 +336,21 @@ impl<'a> LinkStage<'a> {
                   WrapKind::Cjs => {
                     // something like `require_foo()`
                     // Reference to `require_foo`
-                    stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
+                    stmt_info
+                      .referenced_symbols
+                      .push(importee_linking_info.wrapper_ref.unwrap().into());
                   }
                   WrapKind::Esm => {
                     // something like `(init_foo(), toCommonJS(foo_exports))`
                     // Reference to `init_foo`
-                    stmt_info.referenced_symbols.push(importee_linking_info.wrapper_ref.unwrap());
-                    stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__toCommonJS"));
+                    stmt_info
+                      .referenced_symbols
+                      .push(importee_linking_info.wrapper_ref.unwrap().into());
+                    stmt_info
+                      .referenced_symbols
+                      .push(self.runtime.resolve_symbol("__toCommonJS").into());
                     let importee = &self.module_table.normal_modules[importee_id];
-                    stmt_info.referenced_symbols.push(importee.namespace_object_ref);
+                    stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                   }
                 },
                 ImportKind::DynamicImport => {}

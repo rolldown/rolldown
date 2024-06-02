@@ -10,7 +10,7 @@ use oxc::{
     Trivias, Visit,
   },
   semantic::SymbolId,
-  span::{Atom, GetSpan, Span},
+  span::{Atom, CompactStr, GetSpan, Span},
 };
 use oxc_index::IndexVec;
 use rolldown_common::{
@@ -443,6 +443,10 @@ impl<'me> AstScanner<'me> {
 
   pub fn add_referenced_symbol(&mut self, id: SymbolId) {
     self.current_stmt_info.referenced_symbols.push((self.idx, id).into());
+  }
+
+  pub fn add_member_expr_reference(&mut self, id: SymbolId, chains: Vec<CompactStr>) {
+    self.current_stmt_info.referenced_symbols.push((self.idx, id, chains).into());
   }
 
   fn is_top_level(&self, symbol_id: SymbolId) -> bool {

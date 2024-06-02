@@ -2,7 +2,9 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{Chunk, ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId};
+use rolldown_common::{
+  Chunk, ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId, SymbolOrMemberExprRef,
+};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
 
@@ -49,8 +51,15 @@ impl<'a> GenerateStage<'a> {
       if !stmt_info.is_included {
         return;
       }
-      stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
-        let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*symbol_ref);
+      stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+        let canonical_ref = match reference_ref {
+          SymbolOrMemberExprRef::Symbol(symbol) => {
+            self.link_output.symbols.par_canonical_ref_for(*symbol)
+          }
+          SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+            self.link_output.symbols.par_canonical_ref_for(member_expr.symbol)
+          }
+        };
         self.determine_reachable_modules_for_entry(
           canonical_ref.owner,
           entry_index,

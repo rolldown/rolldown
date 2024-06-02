@@ -1,7 +1,9 @@
 use crate::types::symbols::Symbols;
 use oxc_index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
-use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolRef};
+use rolldown_common::{
+  NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
+};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 
 use super::LinkStage;
@@ -64,10 +66,17 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   });
 }
 
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
+fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, display: bool) {
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
   let canonical_ref_module = &ctx.modules[canonical_ref.owner];
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
+  let p = canonical_ref_module.stable_resource_id.contains("runtime");
+  if !p && display {
+    let original_symbol = &ctx.symbols.get(symbol_ref);
+    dbg!(original_symbol, &ctx.modules[symbol_ref.owner].stable_resource_id);
+    dbg!(&canonical_ref_symbol, &canonical_ref_module.stable_resource_id);
+    println!("-----------------------------")
+  }
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
   }
@@ -95,13 +104,20 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
   *is_included = true;
 
   // include statements that are referenced by this statement
-  stmt_info.declared_symbols.iter().chain(stmt_info.referenced_symbols.iter()).for_each(
-    |symbol_ref| {
-      // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
-      // really declared by the module itself. We need to include them where they are really declared.
-      include_symbol(ctx, *symbol_ref);
-    },
-  );
+  stmt_info.declared_symbols.iter().for_each(|symbol_ref| {
+    // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
+    // really declared by the module itself. We need to include them where they are really declared.
+    include_symbol(ctx, *symbol_ref, false);
+  });
+
+  stmt_info.referenced_symbols.iter().for_each(|reference_ref| match reference_ref {
+    SymbolOrMemberExprRef::Symbol(symbol_ref) => {
+      include_symbol(ctx, *symbol_ref, false);
+    }
+    SymbolOrMemberExprRef::MemberExpr(_) => {
+      //TODO:
+    }
+  });
 }
 
 impl LinkStage<'_> {
@@ -132,7 +148,7 @@ impl LinkStage<'_> {
       let module = &self.module_table.normal_modules[entry.id];
       let meta = &self.metas[entry.id];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-        include_symbol(context, *symbol_ref);
+        include_symbol(context, *symbol_ref, true);
       });
       include_module(context, module);
     });

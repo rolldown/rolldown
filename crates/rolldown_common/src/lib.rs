@@ -64,7 +64,7 @@ pub use crate::{
   types::resource_id::ResourceId,
   types::side_effects,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoId, StmtInfos},
-  types::symbol_ref::SymbolRef,
+  types::symbol_ref::{MemberExprRef, SymbolOrMemberExprRef, SymbolRef},
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;

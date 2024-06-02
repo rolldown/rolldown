@@ -2,10 +2,8 @@ import process from 'node:process'
 import parseArgs from 'mri'
 import { defineCommand, runMain, showUsage } from 'citty'
 import { bundle } from './commands/bundle'
-import {
-  version,
-  description,
-} from '../../package.json' assert { type: 'json' }
+import { version, description } from '../../package.json' assert { type:
+  'json' }
 import { DEFAULT_CONFIG_FILENAME } from './constants'
 
 interface ParsedArgs {

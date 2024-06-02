@@ -1,9 +1,13 @@
+use core::panic;
+
 use crate::types::symbols::Symbols;
+use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
 };
+use rolldown_rstr::ToRstr;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 
 use super::LinkStage;
@@ -66,14 +70,31 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   });
 }
 
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, display: bool) {
+#[track_caller]
+fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<CompactStr>) {
+  let mut cursor = 0;
+
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
-  let canonical_ref_module = &ctx.modules[canonical_ref.owner];
-  let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
+  let mut canonical_ref_symbol = ctx.symbols.get(canonical_ref);
+  let mut canonical_ref_module = &ctx.modules[canonical_ref.owner];
+
+  while cursor < chains.len() && canonical_ref_symbol.name.ends_with("_ns") {
+    let name = &chains[cursor];
+    let Some(export_symbol) = canonical_ref_module.named_exports.get(&name.to_rstr()) else {
+      break;
+    };
+    dbg!(export_symbol);
+    canonical_ref = ctx.symbols.par_canonical_ref_for(export_symbol.referenced);
+    canonical_ref_symbol = ctx.symbols.get(canonical_ref);
+    canonical_ref_module = &ctx.modules[canonical_ref.owner];
+    cursor += 1;
+  }
+
   let p = canonical_ref_module.stable_resource_id.contains("runtime");
-  if !p && display {
+  if !p {
+    dbg!(&std::panic::Location::caller());
     let original_symbol = &ctx.symbols.get(symbol_ref);
-    dbg!(original_symbol, &ctx.modules[symbol_ref.owner].stable_resource_id);
+    dbg!(original_symbol, &chains, &ctx.modules[symbol_ref.owner].stable_resource_id);
     dbg!(&canonical_ref_symbol, &canonical_ref_module.stable_resource_id);
     println!("-----------------------------")
   }
@@ -107,15 +128,15 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
   stmt_info.declared_symbols.iter().for_each(|symbol_ref| {
     // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
     // really declared by the module itself. We need to include them where they are really declared.
-    include_symbol(ctx, *symbol_ref, false);
+    include_symbol(ctx, *symbol_ref, &vec![]);
   });
 
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| match reference_ref {
     SymbolOrMemberExprRef::Symbol(symbol_ref) => {
-      include_symbol(ctx, *symbol_ref, false);
+      include_symbol(ctx, *symbol_ref, &vec![]);
     }
-    SymbolOrMemberExprRef::MemberExpr(_) => {
-      //TODO:
+    SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+      include_symbol(ctx, member_expr.symbol, &member_expr.chains);
     }
   });
 }
@@ -148,7 +169,7 @@ impl LinkStage<'_> {
       let module = &self.module_table.normal_modules[entry.id];
       let meta = &self.metas[entry.id];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-        include_symbol(context, *symbol_ref, true);
+        include_symbol(context, *symbol_ref, &vec![]);
       });
       include_module(context, module);
     });

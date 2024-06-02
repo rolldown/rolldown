@@ -89,7 +89,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         let mut chain = vec![];
         let mut cur = inner_expr;
         let top_level_symbol = loop {
-          chain.push(inner_expr.property.clone());
+          chain.push(cur.property.clone());
           match &cur.object {
             Expression::StaticMemberExpression(expr) => {
               cur = &expr;
@@ -102,10 +102,14 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
             _ => break None,
           }
         };
-        self.visit_expression(&cur.object);
         chain.reverse();
         let chain = chain.into_iter().map(|ident| ident.name.as_str().into()).collect::<Vec<_>>();
-        top_level_symbol.map(|symbol| (symbol, chain))
+        if let Some(symbol_id) = top_level_symbol {
+          Some((symbol_id, chain))
+        } else {
+          self.visit_expression(&cur.object);
+          None
+        }
       }
       MemberExpression::PrivateFieldExpression(expr) => {
         self.visit_private_field_expression(expr);

@@ -24,7 +24,7 @@ export default require_a();
 ## a~1.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
 
 //#region b.js
 var require_b = __commonJSMin((exports, module) => {

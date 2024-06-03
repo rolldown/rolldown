@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/dot_import
 ## entry_js.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
 
 //#region index.js
 var require_dot_import_index = __commonJSMin((exports, module) => {

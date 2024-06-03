@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## entry_js.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
+
 
 //#region a.js
 var abc;

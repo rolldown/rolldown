@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 ## entry.mjs
 
 ```js
-import { __commonJSMin } from "./$runtime$.mjs";
+
 
 //#region node_modules/component-indexof/index.js
 var require_component_indexof_index = __commonJSMin((exports, module) => {

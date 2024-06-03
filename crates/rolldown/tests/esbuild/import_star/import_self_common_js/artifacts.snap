@@ -16,7 +16,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_self_common_js
 ## entry_js.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
 
 //#region entry.js
 var require_entry = __commonJSMin((exports, module) => {

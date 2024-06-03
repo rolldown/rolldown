@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_ke
 ## src_entry_js.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
+
 
 //#region node_modules/demo-pkg/index-module.js
 var index_module_ns, foo;

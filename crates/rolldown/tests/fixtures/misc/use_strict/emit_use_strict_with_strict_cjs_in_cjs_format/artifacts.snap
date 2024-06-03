@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/misc/use_strict/emit_use_strict_with_
 ```js
 "use strict";
 
-const { __commonJSMin, __toCommonJS, __toESM } = require("./$runtime$.cjs");
+
 
 //#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {

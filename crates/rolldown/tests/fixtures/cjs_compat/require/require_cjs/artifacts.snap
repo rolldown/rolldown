@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/require/require_cjs
 ## main.mjs
 
 ```js
-import { __commonJSMin } from "./$runtime$.mjs";
+
 
 //#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
@@ -27,11 +27,11 @@ var cjs = require_cjs();
 # Sourcemap Visualizer
 
 - ../cjs.js
-(0:0-0:7) "module." --> (3:0-4:8) "\nvar require_cjs = __commonJSMin((exports, module) => {\n\tmodule"
-(0:7-0:17) "exports = " --> (4:8-4:18) ".exports ="
-(0:17-0:19) "{}" --> (4:18-4:20) " {"
-(0:19-1:1) "\n" --> (4:20-9:0) "};\n});\n\n//#endregion\n//#region main.js"
+(0:0-0:7) "module." --> (8:0-9:8) "\nvar require_cjs = __commonJSMin((exports, module) => {\n\tmodule"
+(0:7-0:17) "exports = " --> (9:8-9:18) ".exports ="
+(0:17-0:19) "{}" --> (9:18-9:20) " {"
+(0:19-1:1) "\n" --> (9:20-14:0) "};\n});\n\n//#endregion\n//#region main.js"
 - ../main.js
-(0:0-1:0) "require('./cjs.js');" --> (9:0-10:0) "\nrequire_cjs();"
-(1:0-1:4) "\nvar" --> (10:0-10:4) "\nvar"
-(1:4-2:1) " cjs = require('./cjs.js');\n" --> (10:4-13:34) " cjs = require_cjs();\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(0:0-1:0) "require('./cjs.js');" --> (14:0-15:0) "\nrequire_cjs();"
+(1:0-1:4) "\nvar" --> (15:0-15:4) "\nvar"
+(1:4-2:1) " cjs = require('./cjs.js');\n" --> (15:4-18:34) " cjs = require_cjs();\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_dual_pac
 ## entry.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
+
 
 //#region node_modules/demo-pkg/module.js
 var module_ns, module_default;

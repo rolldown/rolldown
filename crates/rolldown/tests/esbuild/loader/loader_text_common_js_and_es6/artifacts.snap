@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6
 ## entry_js.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
+
 
 //#region y.txt
 var y_default = 'y';

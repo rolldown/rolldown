@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/require/require_esm
 ## main.mjs
 
 ```js
-import { __esmMin, __toCommonJS } from "./$runtime$.mjs";
+
 
 //#region esm.js
 var esm_ns;
@@ -28,8 +28,8 @@ var esm = (init_esm(),__toCommonJS(esm_ns));
 # Sourcemap Visualizer
 
 - ../esm.js
-(0:0-1:1) "export { }\n" --> (3:0-10:0) "\nvar esm_ns;\nvar init_esm = __esmMin(() => {\n\tesm_ns = {};\n});\n\n//#endregion\n//#region main.js"
+(0:0-1:1) "export { }\n" --> (25:0-32:0) "\nvar esm_ns;\nvar init_esm = __esmMin(() => {\n\tesm_ns = {};\n});\n\n//#endregion\n//#region main.js"
 - ../main.js
-(0:0-1:0) "require('./esm.js');" --> (10:0-11:0) "\ninit_esm(),__toCommonJS(esm_ns);"
-(1:0-1:4) "\nvar" --> (11:0-11:4) "\nvar"
-(1:4-2:1) " esm = require('./esm.js');\n" --> (11:4-14:34) " esm = (init_esm(),__toCommonJS(esm_ns));\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(0:0-1:0) "require('./esm.js');" --> (32:0-33:0) "\ninit_esm(),__toCommonJS(esm_ns);"
+(1:0-1:4) "\nvar" --> (33:0-33:4) "\nvar"
+(1:4-2:1) " esm = require('./esm.js');\n" --> (33:4-36:34) " esm = (init_esm(),__toCommonJS(esm_ns));\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

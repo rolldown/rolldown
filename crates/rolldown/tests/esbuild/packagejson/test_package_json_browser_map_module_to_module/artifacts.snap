@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 ## entry.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
 
 //#region node_modules/node-pkg-browser/index.js
 var require_node_pkg_browser_index = __commonJSMin((exports, module) => {

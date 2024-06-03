@@ -16,7 +16,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_import_s
 ## entry.mjs
 
 ```js
-import { __commonJSMin } from "./$runtime$.mjs";
+
 
 //#region src/foo-require.js
 var require_foo_require = __commonJSMin((exports, module) => {

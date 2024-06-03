@@ -35,7 +35,6 @@ use crate::{
     extract_hash_pattern::extract_hash_pattern,
     finalize_normal_module,
     hash_placeholder::HashPlaceholderGenerator,
-    is_in_rust_test_mode,
     render_chunks::render_chunks,
   },
   BundleOutput, SharedOptions,
@@ -242,10 +241,6 @@ impl<'a> GenerateStage<'a> {
       runtime_id: NormalModuleId,
       normal_modules: &IndexNormalModules,
     ) -> String {
-      if is_in_rust_test_mode() && chunk.modules.first().copied() == Some(runtime_id) {
-        return "$runtime$".to_string();
-      }
-
       // User-defined entry point should always have a name that given by the user
       match chunk.kind {
         ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {

@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/empty_file_should_be_treat
 ## main.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
 
 //#region star-empty.js
 var require_star_empty = __commonJSMin((exports, module) => {

@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/dynamic_cjs_entry
 ## cjs.mjs
 
 ```js
-import { __commonJSMin } from "./$runtime$.mjs";
+
 
 //#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {

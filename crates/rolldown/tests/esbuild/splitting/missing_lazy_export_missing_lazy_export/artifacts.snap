@@ -28,7 +28,7 @@ console.log(bar());
 ## common.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
 
 //#region empty.js
 var require_empty = __commonJSMin((exports, module) => {

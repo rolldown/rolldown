@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_entry_point
 ## entry_js.mjs
 
 ```js
-import { __export } from "./$runtime$.mjs";
+
 
 //#region a.js
 const A = 1;

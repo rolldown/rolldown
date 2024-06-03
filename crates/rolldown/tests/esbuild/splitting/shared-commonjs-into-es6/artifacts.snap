@@ -30,7 +30,7 @@ console.log(foo);
 ## shared.mjs
 
 ```js
-import { __commonJSMin } from "./$runtime$.mjs";
+
 
 //#region shared.js
 var require_shared = __commonJSMin((exports, module) => {

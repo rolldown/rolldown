@@ -10,8 +10,7 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/shared_entry_modu
 ```js
 "use strict";
 
-const { __toCommonJS } = require("./$runtime$.cjs");
-const { main_ns, value } = require("./main.cjs");
+const { __toCommonJS, main_ns, value } = require("./main.cjs");
 
 module.exports = __toCommonJS(main_ns)
 ```
@@ -20,8 +19,7 @@ module.exports = __toCommonJS(main_ns)
 ```js
 "use strict";
 
-const { __toCommonJS } = require("./$runtime$.cjs");
-const { main_ns, value } = require("./main.cjs");
+const { __toCommonJS, main_ns, value } = require("./main.cjs");
 
 module.exports = __toCommonJS(main_ns)
 ```
@@ -30,7 +28,7 @@ module.exports = __toCommonJS(main_ns)
 ```js
 "use strict";
 
-const { __export } = require("./$runtime$.cjs");
+
 
 //#region main.js
 var main_ns = {};
@@ -40,6 +38,7 @@ __export(main_ns, {
 const value = 'main';
 
 //#endregion
+exports.__toCommonJS = __toCommonJS;
 exports.main_ns = main_ns;
 exports.value = value;
 

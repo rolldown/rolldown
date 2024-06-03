@@ -16,7 +16,7 @@ export default require_foo();
 ## foo~1.mjs
 
 ```js
-import { __commonJSMin } from "./$runtime$.mjs";
+
 
 //#region foo.js
 var require_foo = __commonJSMin((exports, module) => {
@@ -24,13 +24,12 @@ var require_foo = __commonJSMin((exports, module) => {
 });
 
 //#endregion
-export { require_foo };
+export { __toESM, require_foo };
 ```
 ## main.mjs
 
 ```js
-import { __toESM } from "./$runtime$.mjs";
-import { require_foo } from "./foo~1.mjs";
+import { __toESM, require_foo } from "./foo~1.mjs";
 
 //#region main.js
 var import_foo = __toESM(require_foo());

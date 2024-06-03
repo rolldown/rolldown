@@ -6,7 +6,7 @@ use rolldown_common::{Chunk, ChunkId, ChunkKind, ImportKind, ModuleId, NormalMod
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
 
-use crate::{chunk_graph::ChunkGraph, type_alias::IndexChunks, utils::is_in_rust_test_mode};
+use crate::{chunk_graph::ChunkGraph, type_alias::IndexChunks};
 
 use super::GenerateStage;
 
@@ -66,7 +66,6 @@ impl<'a> GenerateStage<'a> {
       self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,
     // we create a facade entry point for it.
-    let entries_len = if is_in_rust_test_mode() { entries_len + 1 } else { entries_len };
 
     let mut module_to_bits = oxc_index::index_vec![BitSet::new(entries_len); self.link_output.module_table.normal_modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
@@ -95,14 +94,6 @@ impl<'a> GenerateStage<'a> {
       if entry_point.kind.is_user_defined() {
         user_defined_entry_chunk_ids.push(chunk);
       }
-    }
-
-    if is_in_rust_test_mode() {
-      self.determine_reachable_modules_for_entry(
-        self.link_output.runtime.id(),
-        entries_len - 1,
-        &mut module_to_bits,
-      );
     }
 
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.

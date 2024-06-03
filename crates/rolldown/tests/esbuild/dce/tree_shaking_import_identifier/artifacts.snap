@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier
 ## entry_js.mjs
 
 ```js
-import { __export } from "./$runtime$.mjs";
+
 
 //#region b.js
 var b_ns = {};

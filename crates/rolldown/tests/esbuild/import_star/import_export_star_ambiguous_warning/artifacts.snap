@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguo
 ## entry_js.mjs
 
 ```js
-import { __export } from "./$runtime$.mjs";
+
 
 //#region foo.js
 const x = 1;

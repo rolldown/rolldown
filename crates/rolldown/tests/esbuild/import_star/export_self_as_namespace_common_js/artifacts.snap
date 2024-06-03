@@ -18,7 +18,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_self_as_namespace_c
 ```js
 "use strict";
 
-const { __export, __toCommonJS } = require("./$runtime$.cjs");
+
 
 //#region entry.js
 var entry_ns = {};

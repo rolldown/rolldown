@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_main
 ## entry.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
 
 //#region node_modules/demo-pkg/custom-main.js
 var require_custom_main = __commonJSMin((exports, module) => {

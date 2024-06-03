@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/dce/import_re_export_of_namespace_impo
 ## entry_js.mjs
 
 ```js
-import { __commonJSMin, __export, __toESM } from "./$runtime$.mjs";
+
 
 //#region node_modules/pkg/foo.js
 var require_foo = __commonJSMin((exports, module) => {

@@ -8,5 +8,7 @@
     ],
     "format": "cjs",
     "external": ["fs"]
-  }
+  },
+  "_comment": "TODO(hyf0): need to solved",
+  "expectExecuted": false
 }

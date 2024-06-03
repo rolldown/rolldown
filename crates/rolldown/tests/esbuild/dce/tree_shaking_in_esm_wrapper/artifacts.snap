@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper
 ## entry_js.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
+
 
 //#region lib.js
 var keep1, keep2;

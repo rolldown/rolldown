@@ -16,7 +16,7 @@ export { foo };
 ## a~1.mjs
 
 ```js
-import { __esmMin, __export } from "./$runtime$.mjs";
+
 
 //#region a.js
 var a_ns, foo;
@@ -28,13 +28,12 @@ var init_a = __esmMin(() => {
 });
 
 //#endregion
-export { a_ns, foo, init_a };
+export { __toCommonJS, a_ns, foo, init_a };
 ```
 ## b.mjs
 
 ```js
-import { __toCommonJS } from "./$runtime$.mjs";
-import { a_ns, init_a } from "./a~1.mjs";
+import { __toCommonJS, a_ns, init_a } from "./a~1.mjs";
 
 //#region b.js
 let bar = (init_a(),__toCommonJS(a_ns));

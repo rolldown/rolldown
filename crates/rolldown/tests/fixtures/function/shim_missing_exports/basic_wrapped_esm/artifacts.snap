@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/function/shim_missing_exports/basic_w
 ## main.mjs
 
 ```js
-import { __esmMin, __toCommonJS } from "./$runtime$.mjs";
+
 
 //#region foo.js
 var foo_ns, missing;

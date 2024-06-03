@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/import_export_uni
 ```js
 "use strict";
 
-const { __export, __toCommonJS } = require("./$runtime$.cjs");
+
 
 //#region foo.js
 const devil = 'devil';

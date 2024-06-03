@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_disabled
 ## entry.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
 
 //#region (ignored) 
 var require_test_package_json_disabled_type_module_issue3367 = __commonJSMin((exports, module) => {

@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/import_reexport_between_es
 ## main.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
+
 
 //#region commonjs.js
 var require_commonjs = __commonJSMin((exports, module) => {

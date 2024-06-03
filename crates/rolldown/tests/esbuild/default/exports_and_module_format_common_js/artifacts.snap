@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/exports_and_module_format_comm
 ## entry.cjs
 
 ```js
-const { __export } = require("./$runtime$.cjs");
+
 
 //#region foo/test.js
 var test_ns$1 = {};

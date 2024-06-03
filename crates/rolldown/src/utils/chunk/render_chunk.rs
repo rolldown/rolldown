@@ -2,15 +2,14 @@ use std::path::PathBuf;
 
 use crate::{
   chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
-  types::module_render_output::ModuleRenderOutput,
   utils::render_normal_module::render_normal_module, SharedOptions,
 };
 
 use anyhow::Result;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, OutputFormat, RenderedChunk, ResourceId, WrapKind,
+  Chunk, ChunkKind, ExportsKind, OutputFormat, RenderedChunk, RenderedModule, ResourceId, WrapKind,
 };
-use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap, SourceMapSource};
+use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
@@ -55,31 +54,19 @@ pub async fn render_chunk(
         .map(|id| &graph.module_table.normal_modules[id])
         .filter_map(|m| {
           render_normal_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
+            .map(|rendered| (&m.resource_id, rendered))
         })
         .collect::<Vec<_>>()
         .into_iter()
-        .for_each(|module_render_output| {
-          let ModuleRenderOutput {
-            module_path,
-            module_pretty_path,
-            rendered_module,
-            rendered_content,
-            sourcemap,
-            lines_count,
-          } = module_render_output;
-          concat_source.add_source(Box::new(RawSource::new(format!("// {module_pretty_path}",))));
-          if let Some(sourcemap) = sourcemap {
-            concat_source.add_source(Box::new(SourceMapSource::new(
-              rendered_content,
-              sourcemap,
-              lines_count,
-            )));
-          } else {
-            concat_source.add_source(Box::new(RawSource::new(rendered_content)));
+        .for_each(|(module_resource_id, module_render_output)| {
+          let emitted_sources = module_render_output;
+          for source in emitted_sources {
+            concat_source.add_source(source);
           }
+
           // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.
-          if !module_path.starts_with('\0') {
-            rendered_modules.insert(module_path, rendered_module);
+          if !module_resource_id.starts_with('\0') {
+            rendered_modules.insert(module_resource_id.clone(), RenderedModule { code: None });
           }
         });
 
@@ -93,31 +80,19 @@ pub async fn render_chunk(
         .map(|id| &graph.module_table.normal_modules[id])
         .filter_map(|m| {
           render_normal_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
+            .map(|rendered| (&m.resource_id, rendered))
         })
         .collect::<Vec<_>>()
         .into_iter()
-        .for_each(|module_render_output| {
-          let ModuleRenderOutput {
-            module_path,
-            module_pretty_path,
-            rendered_module,
-            rendered_content,
-            sourcemap,
-            lines_count,
-          } = module_render_output;
-          concat_source.add_source(Box::new(RawSource::new(format!("// {module_pretty_path}",))));
-          if let Some(sourcemap) = sourcemap {
-            concat_source.add_source(Box::new(SourceMapSource::new(
-              rendered_content,
-              sourcemap,
-              lines_count,
-            )));
-          } else {
-            concat_source.add_source(Box::new(RawSource::new(rendered_content)));
+        .for_each(|(module_resource_id, module_render_output)| {
+          let emitted_sources = module_render_output;
+          for source in emitted_sources {
+            concat_source.add_source(source);
           }
+
           // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.
-          if !module_path.starts_with('\0') {
-            rendered_modules.insert(module_path, rendered_module);
+          if !module_resource_id.starts_with('\0') {
+            rendered_modules.insert(module_resource_id.clone(), RenderedModule { code: None });
           }
         });
       generate_rendered_chunk(this, graph, options, rendered_modules, chunk_graph)

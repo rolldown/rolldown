@@ -11,10 +11,12 @@ input_file: crates/rolldown/tests/fixtures/function/external/keep_import_externa
 import "ext1";
 import "ext2";
 
-// foo.js
+//#region foo.js
 const a = 'foo';
 
-// main.js
+//#endregion
+//#region main.js
 console.log(a);
 
+//#endregion
 ```

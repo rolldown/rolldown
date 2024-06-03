@@ -10,15 +10,17 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_neutral_
 ```js
 import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// node_modules/demo-pkg/main.js
+//#region node_modules/demo-pkg/main.js
 var require_main = __commonJSMin((exports, module) => {
 	module.exports = function() {
 		return 123;
 	};
 });
 
-// src/entry.js
+//#endregion
+//#region src/entry.js
 var import_main = __toESM(require_main());
 console.log((0,import_main.default)());
 
+//#endregion
 ```

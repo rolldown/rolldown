@@ -10,29 +10,32 @@ input_file: crates/rolldown/tests/esbuild/splitting/assign-to-local
 ```js
 import { foo, setFoo } from "./shared.mjs";
 
-// a.js
+//#region a.js
 setFoo(123);
 console.log(foo);
 
+//#endregion
 ```
 ## b.mjs
 
 ```js
 import { foo } from "./shared.mjs";
 
-// b.js
+//#region b.js
 console.log(foo);
 
+//#endregion
 ```
 ## shared.mjs
 
 ```js
 
-// shared.js
+//#region shared.js
 let foo;
 function setFoo(value) {
 	foo = value;
 }
 
+//#endregion
 export { foo, setFoo };
 ```

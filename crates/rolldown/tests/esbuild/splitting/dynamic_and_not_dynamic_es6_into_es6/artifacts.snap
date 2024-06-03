@@ -16,9 +16,10 @@ export { bar };
 
 ```js
 
-// foo.js
+//#region foo.js
 let bar = 123;
 
+//#endregion
 export { bar };
 ```
 ## main.mjs
@@ -26,7 +27,8 @@ export { bar };
 ```js
 import { bar } from "./foo~1.mjs";
 
-// main.js
+//#region main.js
 import('./foo.mjs').then(({bar:b}) => console.log(bar, b));
 
+//#endregion
 ```

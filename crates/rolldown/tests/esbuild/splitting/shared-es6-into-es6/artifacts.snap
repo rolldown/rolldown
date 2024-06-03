@@ -10,25 +10,28 @@ input_file: crates/rolldown/tests/esbuild/splitting/shared-es6-into-es6
 ```js
 import { foo } from "./shared.mjs";
 
-// a.js
+//#region a.js
 console.log(foo);
 
+//#endregion
 ```
 ## b.mjs
 
 ```js
 import { foo } from "./shared.mjs";
 
-// b.js
+//#region b.js
 console.log(foo);
 
+//#endregion
 ```
 ## shared.mjs
 
 ```js
 
-// shared.js
+//#region shared.js
 let foo = 123;
 
+//#endregion
 export { foo };
 ```

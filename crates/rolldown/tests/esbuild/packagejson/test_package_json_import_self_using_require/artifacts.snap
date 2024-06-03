@@ -18,17 +18,19 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_import_s
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// src/foo-require.js
+//#region src/foo-require.js
 var require_foo_require = __commonJSMin((exports, module) => {
 	module.exports = 'foo';
 });
 
-// src/index.js
+//#endregion
+//#region src/index.js
 var require_src_index = __commonJSMin((exports, module) => {
 	module.exports = 'index';
 	console.log(require_src_index(), require_foo_require());
 });
 
+//#endregion
 export default require_src_index();
 
 ```

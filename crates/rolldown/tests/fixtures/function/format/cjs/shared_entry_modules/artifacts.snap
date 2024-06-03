@@ -32,13 +32,14 @@ module.exports = __toCommonJS(main_ns)
 
 const { __export } = require("./$runtime$.cjs");
 
-// main.js
+//#region main.js
 var main_ns = {};
 __export(main_ns, {
 	value:() => value
 });
 const value = 'main';
 
+//#endregion
 exports.main_ns = main_ns;
 exports.value = value;
 

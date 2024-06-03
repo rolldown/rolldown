@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/rollup/simplify-with-destructuring
 ```js
 import { default as assert } from "assert";
 
-// main.js
+//#region main.js
 let foo, unused;
 null,{foo} = {
 	foo:'bar'
@@ -22,4 +22,5 @@ const assign = () => unused = {foo} = {
 assign();
 assert.strictEqual(foo, 'baz');
 
+//#endregion
 ```

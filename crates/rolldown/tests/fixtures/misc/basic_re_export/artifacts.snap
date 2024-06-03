@@ -9,11 +9,13 @@ input_file: crates/rolldown/tests/fixtures/misc/basic_re_export
 
 ```js
 
-// a.js
+//#region a.js
 const a$1 = 'a.js';
 
-// main.js
+//#endregion
+//#region main.js
 const a = 'index.js';
 console.log(a, a$1);
 
+//#endregion
 ```

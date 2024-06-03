@@ -15,7 +15,8 @@ require("foo");
 require("bar");
 require("baz");
 
-// main.js
+//#region main.js
 var main_ns = {};
 
+//#endregion
 ```

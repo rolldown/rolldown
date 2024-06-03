@@ -9,10 +9,12 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/json_object
 
 ```js
 
-// foo.json
+//#region foo.json
 const shouldBeReserved = 'shouldBeReserved';
 
-// main.js
+//#endregion
+//#region main.js
 console.log(shouldBeReserved);
 
+//#endregion
 ```

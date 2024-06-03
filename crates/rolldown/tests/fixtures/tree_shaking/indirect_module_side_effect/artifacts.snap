@@ -9,7 +9,8 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/indirect_module_side_eff
 
 ```js
 
-// indirect-side-effect.js
+//#region indirect-side-effect.js
 console.log('should be kept');
 
+//#endregion
 ```

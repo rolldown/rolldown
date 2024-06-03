@@ -9,8 +9,9 @@ input_file: crates/rolldown/tests/fixtures/misc/reexport_star_from_local_named_e
 
 ```js
 
-// foo.js
+//#region foo.js
 const value = 1;
 
+//#endregion
 export { value as foo };
 ```

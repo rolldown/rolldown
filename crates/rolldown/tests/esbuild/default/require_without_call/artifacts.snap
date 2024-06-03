@@ -9,10 +9,11 @@ input_file: crates/rolldown/tests/esbuild/default/require_without_call
 
 ```js
 
-// entry.js
+//#region entry.js
 if (false) {
 	const req = require;
 	req('./entry');
 }
 
+//#endregion
 ```

@@ -10,11 +10,12 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/cjs_entry
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// main.js
+//#region main.js
 var require_main = __commonJSMin((exports, module) => {
 	module.exports = 'main';
 });
 
+//#endregion
 export default require_main();
 
 ```

@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/default/arrow_fn_scope
 
 ```js
 
-// entry.js
+//#region entry.js
 tests = {
 	0:(x$1=y$2 => x$1 + y$2, y$1) => x$1 + y$1,
 	1:(y$1, x$1=y$2 => x$1 + y$2) => x$1 + y$1,
@@ -21,4 +21,5 @@ tests = {
 	7:((y,z,x = (z$1, y$1=z$2 => x + y$1 + z$2) => x + y$1 + z$1),x + y + z)
 };
 
+//#endregion
 ```

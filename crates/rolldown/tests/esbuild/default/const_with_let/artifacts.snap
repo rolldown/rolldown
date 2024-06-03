@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/default/const_with_let
 
 ```js
 
-// entry.js
+//#region entry.js
 const a = 1;
 console.log(a);
 if (true) {
@@ -24,4 +24,5 @@ for (const c = x;;) console.log(c);
 for (const d in x) console.log(d);
 for (const e of  x) console.log(e);
 
+//#endregion
 ```

@@ -9,14 +9,16 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_of_export_star
 
 ```js
 
-// bar.js
+//#region bar.js
 statement();
 statement();
 statement();
 statement();
 const bar = 123;
 
-// entry.js
+//#endregion
+//#region entry.js
 console.log(bar);
 
+//#endregion
 ```

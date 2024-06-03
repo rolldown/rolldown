@@ -9,9 +9,10 @@ input_file: crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string
 
 ```js
 
-// entry.js
+//#region entry.js
 var hasBar = typeof bar !== 'undefined';
 if (false) console.log(hasBar);
 
 
+//#endregion
 ```

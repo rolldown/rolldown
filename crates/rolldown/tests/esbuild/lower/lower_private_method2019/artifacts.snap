@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_method2019
 
 ```js
 
-// entry.js
+//#region entry.js
 class Foo {
 	#field;
 
@@ -40,5 +40,6 @@ class Foo {
 	}
 }
 
+//#endregion
 export { Foo };
 ```

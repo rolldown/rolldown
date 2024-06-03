@@ -20,12 +20,13 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_self_common_js
 
 const { __export, __toCommonJS } = require("./$runtime$.cjs");
 
-// entry.js
+//#region entry.js
 var entry_ns = {};
 __export(entry_ns, {
 	foo:() => foo
 });
 const foo = 123;
 
+//#endregion
 module.exports = __toCommonJS(entry_ns)
 ```

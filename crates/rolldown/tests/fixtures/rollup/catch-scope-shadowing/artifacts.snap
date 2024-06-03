@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/rollup/catch-scope-shadowing
 ```js
 import { default as assert } from "assert";
 
-// main.js
+//#region main.js
 var e = 'failed1', x = 'value';
 (function() {
 	try{
@@ -27,4 +27,5 @@ var e = 'failed1', x = 'value';
 	}})();
 assert.strictEqual(x, 'value');
 
+//#endregion
 ```

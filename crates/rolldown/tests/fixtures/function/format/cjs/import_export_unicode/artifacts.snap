@@ -12,14 +12,16 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/import_export_uni
 
 const { __export, __toCommonJS } = require("./$runtime$.cjs");
 
-// foo.js
+//#region foo.js
 const devil = 'devil';
 
-// main.js
+//#endregion
+//#region main.js
 var main_ns = {};
 __export(main_ns, {
 	'\u{1f608}':() => devil
 });
 
+//#endregion
 module.exports = __toCommonJS(main_ns)
 ```

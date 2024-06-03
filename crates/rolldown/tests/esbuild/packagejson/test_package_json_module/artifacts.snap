@@ -9,12 +9,14 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_module
 
 ```js
 
-// node_modules/demo-pkg/main.esm.js
+//#region node_modules/demo-pkg/main.esm.js
 function main_esm_default() {
 	return 123;
 }
 
-// src/entry.js
+//#endregion
+//#region src/entry.js
 console.log(main_esm_default());
 
+//#endregion
 ```

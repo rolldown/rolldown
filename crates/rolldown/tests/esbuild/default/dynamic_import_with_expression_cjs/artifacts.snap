@@ -9,8 +9,9 @@ input_file: crates/rolldown/tests/esbuild/default/dynamic_import_with_expression
 
 ```js
 
-// a.js
+//#region a.js
 import('foo');
 import(foo());
 
+//#endregion
 ```

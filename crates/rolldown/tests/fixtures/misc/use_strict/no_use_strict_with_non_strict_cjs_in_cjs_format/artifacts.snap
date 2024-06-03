@@ -10,15 +10,17 @@ input_file: crates/rolldown/tests/fixtures/misc/use_strict/no_use_strict_with_no
 ```js
 const { __commonJSMin, __toCommonJS, __toESM } = require("./$runtime$.cjs");
 
-// cjs.js
+//#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
 	console.log('This chunk should not have "use strict" at the top.');
 	module.exports = {};
 });
 
-// main.js
+//#endregion
+//#region main.js
 var main_ns = {};
 var import_cjs = __toESM(require_cjs());
 console.log(import_cjs.default);
 
+//#endregion
 ```

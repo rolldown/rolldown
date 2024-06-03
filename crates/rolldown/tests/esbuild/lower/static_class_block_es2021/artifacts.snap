@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/lower/static_class_block_es2021
 
 ```js
 
-// entry.js
+//#region entry.js
 class A {
 	static{
 	}
@@ -30,4 +30,5 @@ let B = class {
 	}
 };
 
+//#endregion
 ```

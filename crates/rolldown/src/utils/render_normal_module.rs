@@ -15,7 +15,7 @@ pub fn render_normal_module(
   } else {
     let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send>> = vec![];
     sources.push(Box::new(RawSource::new(format!(
-      "// {debug_resource_id}",
+      "//#region {debug_resource_id}",
       debug_resource_id = module.debug_resource_id
     ))));
 
@@ -50,6 +50,8 @@ pub fn render_normal_module(
     } else {
       sources.push(Box::new(RawSource::new(render_output.source_text)));
     }
+
+    sources.push(Box::new(RawSource::new("//#endregion".to_string())));
 
     Some(sources)
   }

@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/default/common_js_from_es6
 ```js
 import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 
-// foo.js
+//#region foo.js
 function foo$1() {
 	return 'foo';
 }
@@ -22,7 +22,8 @@ var init_foo = __esmMin(() => {
 	});
 });
 
-// bar.js
+//#endregion
+//#region bar.js
 function bar$1() {
 	return 'bar';
 }
@@ -34,9 +35,11 @@ var init_bar = __esmMin(() => {
 	});
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 const {foo} = (init_foo(),__toCommonJS(foo_ns));
 console.log(foo(), bar());
 const {bar} = (init_bar(),__toCommonJS(bar_ns));
 
+//#endregion
 ```

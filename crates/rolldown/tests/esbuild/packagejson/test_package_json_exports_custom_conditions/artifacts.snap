@@ -9,7 +9,8 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_
 
 ```js
 
-// node_modules/pkg1/custom2.js
+//#region node_modules/pkg1/custom2.js
 console.log('SUCCESS');
 
+//#endregion
 ```

@@ -9,10 +9,12 @@ input_file: crates/rolldown/tests/esbuild/default/require_child_dir_es6
 
 ```js
 
-// dir/index.js
+//#region dir/index.js
 var dir_index_default = 123;
 
-// entry.js
+//#endregion
+//#region entry.js
 console.log(dir_index_default);
 
+//#endregion
 ```

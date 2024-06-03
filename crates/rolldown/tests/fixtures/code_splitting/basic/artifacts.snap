@@ -9,18 +9,20 @@ input_file: crates/rolldown/tests/fixtures/code_splitting/basic
 
 ```js
 
-// dynamic.js
+//#region dynamic.js
 console.log('dynamic');
 
+//#endregion
 ```
 ## main1.mjs
 
 ```js
 import "./share.mjs";
 
-// main1.js
+//#region main1.js
 import('./dynamic.mjs');
 
+//#endregion
 ```
 ## main2.mjs
 
@@ -32,9 +34,10 @@ import "./share.mjs";
 
 ```js
 
-// share.js
+//#region share.js
 console.log('shared');
 
+//#endregion
 ```
 
 ## Output Stats

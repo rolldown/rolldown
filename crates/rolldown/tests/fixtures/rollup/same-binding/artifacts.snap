@@ -9,10 +9,12 @@ input_file: crates/rolldown/tests/fixtures/rollup/same-binding
 
 ```js
 
-// shared.js
+//#region shared.js
 const foo = 1;
 
-// main.js
+//#endregion
+//#region main.js
 assert.strictEqual(foo, 1);
 
+//#endregion
 ```

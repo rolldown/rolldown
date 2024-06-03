@@ -21,6 +21,11 @@
       "default": true,
       "type": "boolean"
     },
+    "hiddenRuntimeModule": {
+      "description": "Default is `true`. If `false`, the runtime module will not be hidden.",
+      "default": true,
+      "type": "boolean"
+    },
     "snapshotOutputStats": {
       "description": "If `true`, the fixture output stats will be snapshot.",
       "default": false,

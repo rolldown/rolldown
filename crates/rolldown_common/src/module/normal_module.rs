@@ -95,7 +95,7 @@ impl NormalModule {
 
   // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
   pub fn is_virtual(&self) -> bool {
-    self.resource_id.starts_with('\0')
+    self.resource_id.starts_with('\0') || self.resource_id.starts_with("rolldown:")
   }
 
   // https://tc39.es/ecma262/#sec-getexportednames

@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/avoid_tdz
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 class Foo {
 	static foo=new Foo();

@@ -23,4 +23,5 @@ var init_module = __esmMin(() => {
 // src/entry.js
 init_module();
 console.log(module_default, (init_module(),__toCommonJS(module_ns)));
+
 ```

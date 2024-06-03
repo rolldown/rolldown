@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-assertion_line: 167
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/dot_import
 ---
@@ -19,4 +18,5 @@ var require_dot_import_index = __commonJSMin((exports, module) => {
 // entry.js
 var import_dot_import_index = __toESM(require_dot_import_index());
 console.log(import_dot_import_index.x);
+
 ```

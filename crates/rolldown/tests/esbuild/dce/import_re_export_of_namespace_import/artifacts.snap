@@ -31,4 +31,5 @@ var import_bar = __toESM(require_bar());
 
 // entry.js
 console.log(pkg_index_ns.foo);
+
 ```

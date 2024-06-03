@@ -16,10 +16,13 @@ var require_foo = __commonJSMin((exports, module) => {
 });
 
 export default require_foo();
+
 ```
 ## main.mjs
 
 ```js
+
 // main.js
 import('./foo.mjs').then(({bar}) => console.log(bar));
+
 ```

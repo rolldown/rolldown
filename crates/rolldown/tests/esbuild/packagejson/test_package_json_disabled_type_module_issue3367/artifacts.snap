@@ -17,4 +17,5 @@ var require_test_package_json_disabled_type_module_issue3367 = __commonJSMin((ex
 // entry.js
 var import_test_package_json_disabled_type_module_issue3367 = __toESM(require_test_package_json_disabled_type_module_issue3367());
 (0,import_test_package_json_disabled_type_module_issue3367.default)();
+
 ```

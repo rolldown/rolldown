@@ -31,4 +31,5 @@ var init_cjs = __esmMin(() => {
 // entry.js
 init_lib();
 console.log(keep1(), (init_cjs(),__toCommonJS(cjs_ns)));
+
 ```

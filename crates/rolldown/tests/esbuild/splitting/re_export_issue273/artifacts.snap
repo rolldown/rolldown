@@ -15,6 +15,7 @@ export { a };
 ## a~1.mjs
 
 ```js
+
 // a.js
 const a = 1;
 

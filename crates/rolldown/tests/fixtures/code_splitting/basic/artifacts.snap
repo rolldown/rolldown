@@ -8,8 +8,10 @@ input_file: crates/rolldown/tests/fixtures/code_splitting/basic
 ## dynamic.mjs
 
 ```js
+
 // dynamic.js
 console.log('dynamic');
+
 ```
 ## main1.mjs
 
@@ -18,17 +20,21 @@ import "./share.mjs";
 
 // main1.js
 import('./dynamic.mjs');
+
 ```
 ## main2.mjs
 
 ```js
 import "./share.mjs";
+
 ```
 ## share.mjs
 
 ```js
+
 // share.js
 console.log('shared');
+
 ```
 
 ## Output Stats

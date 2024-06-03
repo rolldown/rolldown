@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_
 ## entry.mjs
 
 ```js
+
 // node_modules/pkg/dir/baz-foo.js
 console.log('works');
 
@@ -16,4 +17,5 @@ console.log('abc');
 
 // node_modules/pkg2/public/xyz.js
 console.log('xyz');
+
 ```

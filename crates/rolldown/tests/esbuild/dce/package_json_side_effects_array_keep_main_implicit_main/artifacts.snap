@@ -27,4 +27,5 @@ init_index_module(),__toCommonJS(index_module_ns);
 // src/entry.js
 init_index_module();
 console.log('unused import');
+
 ```

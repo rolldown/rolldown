@@ -21,4 +21,5 @@ const assign = () => unused = {foo} = {
 };
 assign();
 assert.strictEqual(foo, 'baz');
+
 ```

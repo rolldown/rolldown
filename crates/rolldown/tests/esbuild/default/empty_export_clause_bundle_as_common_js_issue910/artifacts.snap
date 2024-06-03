@@ -18,4 +18,5 @@ var init_types = __esmMin(() => {
 
 // entry.js
 console.log((init_types(),__toCommonJS(types_ns)));
+
 ```

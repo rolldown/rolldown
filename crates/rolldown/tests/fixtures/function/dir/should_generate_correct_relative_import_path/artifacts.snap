@@ -1,13 +1,14 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/function/entry_filenames/should_generate_correct_relative_import_path
+input_file: crates/rolldown/tests/fixtures/function/dir/should_generate_correct_relative_import_path
 ---
 # Assets
 
 ## ./chunks/async.mjs
 
 ```js
+
 // async.js
 const value = 'async';
 
@@ -16,6 +17,7 @@ export { value };
 ## ./chunks/shared.mjs
 
 ```js
+
 // shared.js
 const value = 'shared';
 

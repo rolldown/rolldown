@@ -25,4 +25,5 @@ __export(common_ns, {
 
 // entry.js
 console.log(common_ns);
+
 ```

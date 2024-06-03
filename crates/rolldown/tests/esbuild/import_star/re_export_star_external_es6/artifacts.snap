@@ -15,4 +15,5 @@ import "foo";
 var entry_ns = {};
 import * as import_foo from 'foo';
 __reExport(entry_ns, import_foo);
+
 ```

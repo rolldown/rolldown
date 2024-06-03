@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/import_reexport_between_esm_and_cjs/esm_import_cjs_named_import
+input_file: crates/rolldown/tests/fixtures/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_cjs_named_import
 ---
 # Assets
 
@@ -18,4 +18,5 @@ var require_commonjs = __commonJSMin((exports, module) => {
 // main.js
 var import_commonjs = __toESM(require_commonjs());
 console.log(import_commonjs.a, 1);
+
 ```

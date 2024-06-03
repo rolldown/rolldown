@@ -17,4 +17,5 @@ require("baz");
 
 // main.js
 var main_ns = {};
+
 ```

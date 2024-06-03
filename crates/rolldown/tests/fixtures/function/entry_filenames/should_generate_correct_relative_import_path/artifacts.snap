@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/fixtures/function/entry_filenames/should_gener
 ## ./chunks/async.mjs
 
 ```js
+
 // async.js
 const value = 'async';
 
@@ -16,6 +17,7 @@ export { value };
 ## ./chunks/shared.mjs
 
 ```js
+
 // shared.js
 const value = 'shared';
 

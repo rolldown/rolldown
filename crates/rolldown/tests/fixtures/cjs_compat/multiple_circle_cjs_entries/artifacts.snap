@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/compat/multiple_circle_cjs_entries
+input_file: crates/rolldown/tests/fixtures/cjs_compat/multiple_circle_cjs_entries
 ---
 # warnings
 
@@ -19,6 +19,7 @@ input_file: crates/rolldown/tests/fixtures/compat/multiple_circle_cjs_entries
 import { require_a } from "./a~1.mjs";
 
 export default require_a();
+
 ```
 ## a~1.mjs
 
@@ -45,4 +46,5 @@ export { require_a, require_b };
 import { require_b } from "./a~1.mjs";
 
 export default require_b();
+
 ```

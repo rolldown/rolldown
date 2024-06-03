@@ -8,8 +8,10 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_cjs
 ## entry_js.cjs
 
 ```js
+
 // entry.js
 function keep() {
 }
 keep();
+
 ```

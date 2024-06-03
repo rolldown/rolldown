@@ -8,6 +8,8 @@ input_file: crates/rolldown/tests/esbuild/dce/text_loader_remove_unused
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 console.log('unused import');
+
 ```

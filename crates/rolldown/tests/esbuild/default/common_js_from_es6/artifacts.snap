@@ -38,4 +38,5 @@ var init_bar = __esmMin(() => {
 const {foo} = (init_foo(),__toCommonJS(foo_ns));
 console.log(foo(), bar());
 const {bar} = (init_bar(),__toCommonJS(bar_ns));
+
 ```

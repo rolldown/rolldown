@@ -8,9 +8,11 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_
 ## entry.mjs
 
 ```js
+
 // node_modules/pkg1/file.js
 console.log('SUCCESS');
 
 // node_modules/pkg1/file2.js
 console.log('SUCCESS');
+
 ```

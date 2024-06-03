@@ -21,4 +21,5 @@ __export(foo_ns, {
 
 // entry.js
 console.log(foo_ns.foo);
+
 ```

@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/esbuild/packagejson/main
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_main
 ---
 # Assets
 
@@ -20,4 +20,5 @@ var require_custom_main = __commonJSMin((exports, module) => {
 // src/entry.js
 var import_custom_main = __toESM(require_custom_main());
 console.log((0,import_custom_main.default)());
+
 ```

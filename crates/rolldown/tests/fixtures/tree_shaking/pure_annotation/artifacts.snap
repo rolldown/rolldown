@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/pure_annotation
 ## main.mjs
 
 ```js
+
 // a.js
 const a = 100;
 
@@ -23,4 +24,5 @@ const d = test2(), e = test2();
 
 // main.js
 console.log(`a: `, a);
+
 ```

@@ -8,14 +8,18 @@ input_file: crates/rolldown/tests/fixtures/issues/122/b
 ## 1.mjs
 
 ```js
+
 // 1.js
 console.log(1);
+
 ```
 ## 2.mjs
 
 ```js
+
 // 2.js
 console.log(2);
+
 ```
 ## a.mjs
 
@@ -25,6 +29,7 @@ import "./2.mjs";
 
 // a.js
 console.log('a');
+
 ```
 ## b.mjs
 
@@ -34,6 +39,7 @@ import "./2.mjs";
 
 // b.js
 console.log('a');
+
 ```
 ## c.mjs
 
@@ -42,4 +48,5 @@ import "./1.mjs";
 
 // c.js
 console.log('c');
+
 ```

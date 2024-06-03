@@ -22,4 +22,5 @@ var require_cjs = __commonJSMin((exports, module) => {
 var main_ns = {};
 var import_cjs = __toESM(require_cjs());
 console.log(import_cjs.default);
+
 ```

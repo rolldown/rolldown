@@ -1,13 +1,14 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/reexport_star_from_local_named_export
+input_file: crates/rolldown/tests/fixtures/misc/reexport_star_from_local_named_export
 ---
 # Assets
 
 ## main.mjs
 
 ```js
+
 // foo.js
 const value = 1;
 

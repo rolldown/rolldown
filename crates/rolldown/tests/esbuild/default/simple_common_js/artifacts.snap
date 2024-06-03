@@ -20,4 +20,5 @@ var require_foo = __commonJSMin((exports, module) => {
 // entry.js
 const fn = require_foo();
 console.log(fn());
+
 ```

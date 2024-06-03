@@ -16,6 +16,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/other_file_import_export_s
 ## entry_js.mjs
 
 ```js
+
 // foo.js
 const foo = 123;
 

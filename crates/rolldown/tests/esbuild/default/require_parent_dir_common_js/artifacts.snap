@@ -17,4 +17,5 @@ var require_require_parent_dir_common_js_index = __commonJSMin((exports, module)
 
 // dir/entry.js
 console.log(require_require_parent_dir_common_js_index());
+
 ```

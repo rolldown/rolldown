@@ -15,6 +15,7 @@ export { devil as '😈' };
 ## foo~1.mjs
 
 ```js
+
 // foo.js
 const devil = 'devil';
 

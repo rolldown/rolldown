@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/function/tree_shaking/unused_import_external
+input_file: crates/rolldown/tests/fixtures/tree_shaking/unused_import_external
 ---
 # Assets
 
@@ -9,4 +9,5 @@ input_file: crates/rolldown/tests/fixtures/function/tree_shaking/unused_import_e
 
 ```js
 import { default as assert } from "assert";
+
 ```

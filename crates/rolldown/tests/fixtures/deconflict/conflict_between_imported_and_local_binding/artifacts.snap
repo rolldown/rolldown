@@ -19,4 +19,5 @@ var require_main = __commonJSMin((exports, module) => {
 });
 
 export default require_main();
+
 ```

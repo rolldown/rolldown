@@ -41,4 +41,5 @@ const iterate = iterable => {
 assert.equal(dirty, undefined);
 iterate(zeroToFive);
 assert.equal(dirty, 5);
+
 ```

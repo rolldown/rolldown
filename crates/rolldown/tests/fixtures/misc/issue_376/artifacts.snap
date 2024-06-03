@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/fixtures/misc/issue_376
 ## main.mjs
 
 ```js
+
 // main.js
 const test = 'hello world';
 var main_default = test;

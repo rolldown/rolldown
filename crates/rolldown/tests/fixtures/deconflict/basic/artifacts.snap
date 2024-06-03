@@ -17,4 +17,5 @@ const a$1 = 'a.js';
 const a = 'main.js';
 assert.equal(a, 'main.js');
 assert.equal(a$1, 'a.js');
+
 ```

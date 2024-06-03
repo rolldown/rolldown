@@ -8,6 +8,8 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_nested_d
 ## src_entry_js.mjs
 
 ```js
+
 // src/entry.js
 console.log('unused import');
+
 ```

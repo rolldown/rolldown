@@ -8,7 +8,9 @@ input_file: crates/rolldown/tests/esbuild/default/dynamic_import_with_expression
 ## a_js.cjs
 
 ```js
+
 // a.js
 import('foo');
 import(foo());
+
 ```

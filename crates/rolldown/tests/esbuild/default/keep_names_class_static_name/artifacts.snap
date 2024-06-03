@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/keep_names_class_static_name
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 class A {
 	static foo;
@@ -81,4 +82,5 @@ let f2 = class {
 	static ['name']=0;
 
 };
+
 ```

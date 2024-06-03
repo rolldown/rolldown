@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/require_resolve
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 console.log(require.resolve);
 console.log(require.resolve());
@@ -31,4 +32,5 @@ console.log(true ? 0 : require.resolve('dead-if'));
 console.log(false && require.resolve('dead-and'));
 console.log(true || require.resolve('dead-or'));
 console.log(true ?? require.resolve('dead-nullish'));
+
 ```

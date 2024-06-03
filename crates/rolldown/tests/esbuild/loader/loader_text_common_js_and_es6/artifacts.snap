@@ -26,4 +26,5 @@ var init_x = __esmMin(() => {
 // entry.js
 const x_txt = (init_x(),__toCommonJS(x_ns));
 console.log(x_txt, y_default);
+
 ```

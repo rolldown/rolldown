@@ -20,4 +20,5 @@ var require_main_browser = __commonJSMin((exports, module) => {
 // src/entry.js
 var import_main_browser = __toESM(require_main_browser());
 console.log((0,import_main_browser.default)());
+
 ```

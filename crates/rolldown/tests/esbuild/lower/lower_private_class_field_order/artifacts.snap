@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_field_order
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 class Foo {
 	#foo=123;
@@ -16,4 +17,5 @@ class Foo {
 
 }
 console.log(new Foo().bar === 123);
+
 ```

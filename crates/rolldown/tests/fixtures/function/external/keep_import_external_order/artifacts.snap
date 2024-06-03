@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/external/keep_import_external_order
+input_file: crates/rolldown/tests/fixtures/function/external/keep_import_external_order
 ---
 # Assets
 
@@ -16,4 +16,5 @@ const a = 'foo';
 
 // main.js
 console.log(a);
+
 ```

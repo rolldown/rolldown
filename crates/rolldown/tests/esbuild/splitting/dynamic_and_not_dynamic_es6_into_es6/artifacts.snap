@@ -15,6 +15,7 @@ export { bar };
 ## foo~1.mjs
 
 ```js
+
 // foo.js
 let bar = 123;
 
@@ -27,4 +28,5 @@ import { bar } from "./foo~1.mjs";
 
 // main.js
 import('./foo.mjs').then(({bar:b}) => console.log(bar, b));
+
 ```

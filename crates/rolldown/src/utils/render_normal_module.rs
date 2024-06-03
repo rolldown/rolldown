@@ -1,18 +1,24 @@
-use rolldown_common::{NormalModule, RenderedModule};
+use rolldown_common::NormalModule;
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
-use rolldown_sourcemap::{collapse_sourcemaps, lines_count};
+use rolldown_sourcemap::{collapse_sourcemaps, lines_count, RawSource, Source, SourceMapSource};
 
-use crate::{types::module_render_output::ModuleRenderOutput, SharedOptions};
+use crate::SharedOptions;
 
-pub fn render_normal_module<'a>(
-  module: &'a NormalModule,
+pub fn render_normal_module(
+  module: &NormalModule,
   ast: &OxcAst,
   source_name: &str,
   options: &SharedOptions,
-) -> Option<ModuleRenderOutput<'a>> {
+) -> Option<Vec<Box<dyn Source + Send>>> {
   if ast.is_body_empty() {
     None
   } else {
+    let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send>> = vec![];
+    sources.push(Box::new(RawSource::new(format!(
+      "// {debug_resource_id}",
+      debug_resource_id = module.debug_resource_id
+    ))));
+
     let enable_sourcemap = !options.sourcemap.is_hidden() && !module.is_virtual();
 
     // Because oxc codegen sourcemap is last of sourcemap chain,
@@ -20,16 +26,8 @@ pub fn render_normal_module<'a>(
     // So here make sure using correct `source_name` and `source_content.
     let render_output = OxcCompiler::print(ast, source_name, enable_sourcemap);
 
-    Some(ModuleRenderOutput {
-      module_path: module.resource_id.clone(),
-      module_pretty_path: &module.debug_resource_id,
-      rendered_module: RenderedModule { code: None },
-      // Search lines count from rendered content has a little overhead, so make it at parallel.
-      lines_count: lines_count(&render_output.source_text),
-      rendered_content: render_output.source_text,
-      sourcemap: if options.sourcemap.is_hidden() {
-        None
-      } else if module.sourcemap_chain.is_empty() {
+    if enable_sourcemap {
+      let sourcemap = if module.sourcemap_chain.is_empty() {
         render_output.source_map
       } else {
         let mut sourcemap_chain = module.sourcemap_chain.iter().collect::<Vec<_>>();
@@ -37,7 +35,22 @@ pub fn render_normal_module<'a>(
           sourcemap_chain.push(sourcemap);
         }
         collapse_sourcemaps(sourcemap_chain)
-      },
-    })
+      };
+
+      if let Some(sourcemap) = sourcemap {
+        let lines_count = lines_count(&render_output.source_text);
+        sources.push(Box::new(SourceMapSource::new(
+          render_output.source_text,
+          sourcemap,
+          lines_count,
+        )));
+      } else {
+        sources.push(Box::new(RawSource::new(render_output.source_text)));
+      }
+    } else {
+      sources.push(Box::new(RawSource::new(render_output.source_text)));
+    }
+
+    Some(sources)
   }
 }

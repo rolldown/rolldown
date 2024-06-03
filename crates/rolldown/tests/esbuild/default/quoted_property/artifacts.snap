@@ -10,7 +10,8 @@ input_file: crates/rolldown/tests/esbuild/default/quoted_property
 ```js
 import * as ns from "ext";
 
-// entry.js
+//#region entry.js
 console.log(ns.mustBeUnquoted, ns['mustBeQuoted']);
 
+//#endregion
 ```

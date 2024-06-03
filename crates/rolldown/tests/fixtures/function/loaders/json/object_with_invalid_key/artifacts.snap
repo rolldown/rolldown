@@ -10,15 +10,17 @@ input_file: crates/rolldown/tests/fixtures/function/loaders/json/object_with_inv
 ```js
 import { default as assert } from "node:assert";
 
-// foo.json
+//#region foo.json
 const key_0 = 1;
 var foo_default = {
 	'\u{1f608}':key_0
 };
 
-// main.js
+//#endregion
+//#region main.js
 assert.deepStrictEqual(foo_default, {
 	'\u{1f608}':key_0
 });
 
+//#endregion
 ```

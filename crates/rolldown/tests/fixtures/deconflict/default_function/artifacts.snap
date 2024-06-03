@@ -10,22 +10,25 @@ input_file: crates/rolldown/tests/fixtures/deconflict/default_function
 ```js
 import { default as assert } from "assert";
 
-// foo.js
+//#region foo.js
 const a$1 = 1;
 function foo$1(a$1$1) {
 	console.log(a$1$1, a$1);
 }
 
-// bar.js
+//#endregion
+//#region bar.js
 var bar_default = {
 	foo:foo$1
 };
 
-// main.js
+//#endregion
+//#region main.js
 const a = 2;
 const {foo} = bar_default;
 assert.strictEqual(typeof foo, 'function');
 
+//#endregion
 //# sourceMappingURL=main.mjs.map
 ```
 
@@ -44,23 +47,23 @@ assert.strictEqual(typeof foo, 'function');
 (3:16-3:21) "(a$1," --> (5:13-5:20) "(a$1$1,"
 (3:21-3:23) " a" --> (5:20-5:24) " a$1"
 (3:23-4:1) ")\n" --> (5:24-6:0) ");"
-(4:1-4:2) "}" --> (6:0-9:0) "\n}\n\n// bar.js"
+(4:1-4:2) "}" --> (6:0-10:0) "\n}\n\n//#endregion\n//#region bar.js"
 - ../bar.js
-(0:0-2:15) "import foo from './foo'\n\nexport default" --> (9:0-9:18) "\nvar bar_default ="
-(2:15-2:17) " {" --> (9:18-10:1) " {\n"
-(2:17-2:22) " foo " --> (10:1-11:1) "\tfoo:foo$1\n"
-(2:22-2:23) "}" --> (11:1-14:0) "};\n\n// main.js"
+(0:0-2:15) "import foo from './foo'\n\nexport default" --> (10:0-10:18) "\nvar bar_default ="
+(2:15-2:17) " {" --> (10:18-11:1) " {\n"
+(2:17-2:22) " foo " --> (11:1-12:1) "\tfoo:foo$1\n"
+(2:22-2:23) "}" --> (12:1-16:0) "};\n\n//#endregion\n//#region main.js"
 - ../main.js
-(3:0-3:6) "\nconst" --> (14:0-14:6) "\nconst"
-(3:6-3:10) " a =" --> (14:6-14:10) " a ="
-(3:10-5:0) " 2; // make foo `a` conflict\n" --> (14:10-15:0) " 2;"
-(5:0-5:6) "\nconst" --> (15:0-15:6) "\nconst"
-(5:6-5:8) " {" --> (15:6-15:7) " "
-(5:8-5:13) " foo " --> (15:7-15:11) "{foo"
-(5:13-5:16) "} =" --> (15:11-15:14) "} ="
-(5:16-7:0) " bar\n" --> (15:14-16:0) " bar_default;"
-(7:0-7:7) "\nassert" --> (16:0-16:7) "\nassert"
-(7:7-7:26) ".strictEqual(typeof" --> (16:7-16:26) ".strictEqual(typeof"
-(7:26-7:31) " foo," --> (16:26-16:31) " foo,"
-(7:31-7:42) " 'function'" --> (16:31-16:42) " 'function'"
-(7:42-7:43) ")" --> (16:42-18:34) ");\n\n//# sourceMappingURL=main.mjs.map"
+(3:0-3:6) "\nconst" --> (16:0-16:6) "\nconst"
+(3:6-3:10) " a =" --> (16:6-16:10) " a ="
+(3:10-5:0) " 2; // make foo `a` conflict\n" --> (16:10-17:0) " 2;"
+(5:0-5:6) "\nconst" --> (17:0-17:6) "\nconst"
+(5:6-5:8) " {" --> (17:6-17:7) " "
+(5:8-5:13) " foo " --> (17:7-17:11) "{foo"
+(5:13-5:16) "} =" --> (17:11-17:14) "} ="
+(5:16-7:0) " bar\n" --> (17:14-18:0) " bar_default;"
+(7:0-7:7) "\nassert" --> (18:0-18:7) "\nassert"
+(7:7-7:26) ".strictEqual(typeof" --> (18:7-18:26) ".strictEqual(typeof"
+(7:26-7:31) " foo," --> (18:26-18:31) " foo,"
+(7:31-7:42) " 'function'" --> (18:31-18:42) " 'function'"
+(7:42-7:43) ")" --> (18:42-21:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

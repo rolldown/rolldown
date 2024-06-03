@@ -10,16 +10,19 @@ input_file: crates/rolldown/tests/fixtures/function/resolve/should_resolve_to_di
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// node_modules/package/esm-output.js
+//#region node_modules/package/esm-output.js
 const output = 'esm';
 
-// node_modules/package/cjs-output.js
+//#endregion
+//#region node_modules/package/cjs-output.js
 var require_cjs_output = __commonJSMin((exports, module) => {
 	module.exports.output = 'cjs';
 });
 
-// main.js
+//#endregion
+//#region main.js
 const {output:requireOutput} = require_cjs_output();
 
+//#endregion
 export { output as importOutput, requireOutput };
 ```

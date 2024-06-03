@@ -8,34 +8,39 @@ input_file: crates/rolldown/tests/fixtures/function/format/app/multiple_entry_mo
 ## cube.mjs
 
 ```js
-// square.js
+//#region square.js
 export default function square(x) {
 	return x * x;
 }
-// cube.js
+//#endregion
+//#region cube.js
 var {default:square} = __static_import('square.js');
 export default function cube(x) {
 	return square(x) * x;
 }
+//#endregion
 ```
 ## main.mjs
 
 ```js
-// hyper-cube.js
+//#region hyper-cube.js
 var {default:cube} = __static_import('cube.js');
 export default function hyperCube(x) {
 	return cube(x) * x;
 }
-// main.js
+//#endregion
+//#region main.js
 var {default:hyperCube} = __static_import('hyper-cube.js');
 console.log(hyperCube(5));
 
+//#endregion
 ```
 ## other-entry.mjs
 
 ```js
-// other-entry.js
+//#region other-entry.js
 var {default:cube} = __static_import('cube.js');
 console.log(cube(5));
 
+//#endregion
 ```

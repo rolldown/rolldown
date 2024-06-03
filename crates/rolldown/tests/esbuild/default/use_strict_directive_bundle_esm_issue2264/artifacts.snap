@@ -9,8 +9,9 @@ input_file: crates/rolldown/tests/esbuild/default/use_strict_directive_bundle_es
 
 ```js
 
-// entry.js
+//#region entry.js
 let a = 1;
 
+//#endregion
 export { a };
 ```

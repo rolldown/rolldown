@@ -10,11 +10,12 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_common_js_variable_in
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// entry.js
+//#region entry.js
 var require_entry = __commonJSMin((exports, module) => {
 	module.exports = null;
 });
 
+//#endregion
 export default require_entry();
 
 ```

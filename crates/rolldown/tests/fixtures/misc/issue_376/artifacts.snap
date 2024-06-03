@@ -9,9 +9,10 @@ input_file: crates/rolldown/tests/fixtures/misc/issue_376
 
 ```js
 
-// main.js
+//#region main.js
 const test = 'hello world';
 var main_default = test;
 
+//#endregion
 export { main_default as default };
 ```

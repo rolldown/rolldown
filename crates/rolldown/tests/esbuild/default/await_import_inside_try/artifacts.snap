@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/default/await_import_inside_try
 
 ```js
 
-// entry.js
+//#region entry.js
 async function main(name) {
 	try{
 		return await import(name);
@@ -17,4 +17,5 @@ async function main(name) {
 	}}
 main('fs');
 
+//#endregion
 ```

@@ -9,8 +9,9 @@ input_file: crates/rolldown/tests/esbuild/default/export_chain
 
 ```js
 
-// bar.js
+//#region bar.js
 const c = 123;
 
+//#endregion
 export { c as a };
 ```

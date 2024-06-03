@@ -9,8 +9,9 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_un
 
 ```js
 
-// entry.js
+//#region entry.js
 let foo = 234;
 console.log(foo);
 
+//#endregion
 ```

@@ -41,7 +41,7 @@ input_file: crates/rolldown/tests/esbuild/default/forbid_const_assign_when_bundl
 
 ```js
 
-// entry.js
+//#region entry.js
 let err;
 try{
 	const x = 1;
@@ -60,4 +60,5 @@ function foo() {
 }
 foo();
 
+//#endregion
 ```

@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/default/require_without_call_inside_tr
 
 ```js
 
-// entry.js
+//#region entry.js
 try{
 	oldLocale = globalLocale._abbr;
 	var aliasedRequire = require;
@@ -17,4 +17,5 @@ try{
 	getSetGlobalLocale(oldLocale);
 }catch(e){
 }
+//#endregion
 ```

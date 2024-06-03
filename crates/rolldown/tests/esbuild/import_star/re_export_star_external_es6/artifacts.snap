@@ -11,9 +11,10 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_external_es
 import { __reExport } from "./$runtime$.mjs";
 import "foo";
 
-// entry.js
+//#region entry.js
 var entry_ns = {};
 import * as import_foo from 'foo';
 __reExport(entry_ns, import_foo);
 
+//#endregion
 ```

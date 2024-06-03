@@ -10,9 +10,10 @@ input_file: crates/rolldown/tests/fixtures/function/external/splitting_with_exte
 ```js
 import { value } from "./share.mjs";
 
-// entry.js
+//#region entry.js
 console.log(value);
 
+//#endregion
 ```
 ## main.mjs
 
@@ -20,16 +21,18 @@ console.log(value);
 import { value } from "./share.mjs";
 import { default as assert } from "assert";
 
-// main.js
+//#region main.js
 assert(value === 1);
 
+//#endregion
 ```
 ## share.mjs
 
 ```js
 
-// share.js
+//#region share.js
 const value = 1;
 
+//#endregion
 export { value };
 ```

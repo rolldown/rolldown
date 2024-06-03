@@ -10,17 +10,19 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_other_common_js
 ```js
 const { __commonJSMin, __export, __toCommonJS, __toESM } = require("./$runtime$.cjs");
 
-// foo.js
+//#region foo.js
 var require_foo = __commonJSMin((exports, module) => {
 	exports.foo = 123;
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 var entry_ns = {};
 __export(entry_ns, {
 	bar:() => import_foo.bar
 });
 var import_foo = __toESM(require_foo());
 
+//#endregion
 module.exports = __toCommonJS(entry_ns)
 ```

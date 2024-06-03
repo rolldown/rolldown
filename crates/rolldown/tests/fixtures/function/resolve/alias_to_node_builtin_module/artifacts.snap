@@ -10,7 +10,8 @@ input_file: crates/rolldown/tests/fixtures/function/resolve/alias_to_node_builti
 ```js
 import { readFile } from "node:fs";
 
-// main.js
+//#region main.js
 require('node:fs');
 
+//#endregion
 ```

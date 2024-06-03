@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/default/keep_names_tree_shaking
 
 ```js
 
-// entry.js
+//#region entry.js
 function fnStmtKeep() {
 }
 x = fnStmtKeep;
@@ -23,4 +23,5 @@ let clsExprKeep = class keep {
 };
 new clsExprKeep();
 
+//#endregion
 ```

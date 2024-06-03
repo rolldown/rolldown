@@ -14,8 +14,9 @@ const { __toCommonJS, __toESM } = require("./$runtime$.cjs");
 const fs = __toESM(require("fs"));
 const { default: defaultValue, readFileSync } = __toESM(require("fs"));
 
-// entry.js
+//#region entry.js
 var entry_ns = {};
 console.log(fs, readFileSync, defaultValue);
 
+//#endregion
 ```

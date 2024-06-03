@@ -16,9 +16,10 @@ export { a };
 
 ```js
 
-// a.js
+//#region a.js
 const a = 1;
 
+//#endregion
 export { a };
 ```
 ## b.mjs

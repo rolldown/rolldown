@@ -10,14 +10,16 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_namespace_import
 ```js
 import { __export } from "./$runtime$.mjs";
 
-// bar.js
+//#region bar.js
 var bar_ns = {};
 __export(bar_ns, {
 	x:() => x
 });
 const x = 123;
 
-// entry.js
+//#endregion
+//#region entry.js
 console.log(bar_ns, bar_ns.foo);
 
+//#endregion
 ```

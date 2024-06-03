@@ -9,15 +9,17 @@ input_file: crates/rolldown/tests/esbuild/default/outbase
 
 ```js
 
-// c.js
+//#region c.js
 console.log('c');
 
+//#endregion
 ```
 ## d_js.mjs
 
 ```js
 
-// d.js
+//#region d.js
 console.log('d');
 
+//#endregion
 ```

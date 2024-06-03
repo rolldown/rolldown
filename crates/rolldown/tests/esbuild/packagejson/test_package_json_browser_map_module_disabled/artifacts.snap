@@ -10,11 +10,12 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 ```js
 import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// (ignored) node_modules/demo-pkg
+//#region (ignored) node_modules/demo-pkg
 var require_demo_pkg = __commonJSMin((exports, module) => {
 });
 
-// node_modules/demo-pkg/index.js
+//#endregion
+//#region node_modules/demo-pkg/index.js
 var require_demo_pkg_index = __commonJSMin((exports, module) => {
 	const fn$1 = require_demo_pkg();
 	module.exports = function() {
@@ -22,8 +23,10 @@ var require_demo_pkg_index = __commonJSMin((exports, module) => {
 	};
 });
 
-// src/entry.js
+//#endregion
+//#region src/entry.js
 var import_demo_pkg_index = __toESM(require_demo_pkg_index());
 console.log((0,import_demo_pkg_index.default)());
 
+//#endregion
 ```

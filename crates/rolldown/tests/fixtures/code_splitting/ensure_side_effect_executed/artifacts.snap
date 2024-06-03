@@ -9,9 +9,10 @@ input_file: crates/rolldown/tests/fixtures/code_splitting/ensure_side_effect_exe
 
 ```js
 
-// entry.js
+//#region entry.js
 globalThis.sideEffectExecuted = true;
 
+//#endregion
 ```
 ## entry2_js.mjs
 

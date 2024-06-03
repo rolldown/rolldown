@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/default/require_with_call_inside_try
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// entry.js
+//#region entry.js
 var require_entry = __commonJSMin((exports, module) => {
 	try{
 		const supportsColor = require('supports-color');
@@ -20,6 +20,7 @@ var require_entry = __commonJSMin((exports, module) => {
 	}catch(error){
 	}});
 
+//#endregion
 export default require_entry();
 
 ```

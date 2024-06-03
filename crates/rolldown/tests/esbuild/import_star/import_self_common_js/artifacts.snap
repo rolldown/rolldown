@@ -18,13 +18,14 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_self_common_js
 ```js
 import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// entry.js
+//#region entry.js
 var require_entry = __commonJSMin((exports, module) => {
 	var import_entry = __toESM(require_entry());
 	exports.foo = 123;
 	console.log(import_entry.foo);
 });
 
+//#endregion
 export default require_entry();
 
 ```

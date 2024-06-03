@@ -10,30 +10,33 @@ input_file: crates/rolldown/tests/esbuild/splitting/shared-commonjs-into-es6
 ```js
 import { require_shared } from "./shared.mjs";
 
-// a.js
+//#region a.js
 const {foo} = require_shared();
 console.log(foo);
 
+//#endregion
 ```
 ## b.mjs
 
 ```js
 import { require_shared } from "./shared.mjs";
 
-// b.js
+//#region b.js
 const {foo} = require_shared();
 console.log(foo);
 
+//#endregion
 ```
 ## shared.mjs
 
 ```js
 import { __commonJSMin } from "./$runtime$.mjs";
 
-// shared.js
+//#region shared.js
 var require_shared = __commonJSMin((exports, module) => {
 	exports.foo = 123;
 });
 
+//#endregion
 export { require_shared };
 ```

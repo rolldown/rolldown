@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_nullish_coalescing_assignm
 
 ```js
 
-// entry.js
+//#region entry.js
 class A {
 	#a;
 
@@ -18,5 +18,6 @@ class A {
 	}
 }
 
+//#endregion
 export { A };
 ```

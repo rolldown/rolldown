@@ -16,9 +16,10 @@ export { devil as '😈' };
 
 ```js
 
-// foo.js
+//#region foo.js
 const devil = 'devil';
 
+//#endregion
 export { devil };
 ```
 ## main.mjs
@@ -26,8 +27,9 @@ export { devil };
 ```js
 import { devil } from "./foo~1.mjs";
 
-// main.js
+//#region main.js
 const moduleFoo = import('./foo.mjs');
 
+//#endregion
 export { moduleFoo, devil as '😈' };
 ```

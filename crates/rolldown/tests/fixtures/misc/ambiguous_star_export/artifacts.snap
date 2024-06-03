@@ -9,9 +9,10 @@ input_file: crates/rolldown/tests/fixtures/misc/ambiguous_star_export
 
 ```js
 
-// c.js
+//#region c.js
 let x = 1;
 let y = 2;
 
+//#endregion
 export { x, y };
 ```

@@ -9,11 +9,13 @@ input_file: crates/rolldown/tests/esbuild/splitting/edge_case_issue2793_with_spl
 
 ```js
 
-// src/a.js
+//#region src/a.js
 const A = 42;
 
-// src/b.js
+//#endregion
+//#region src/b.js
 const B = async() => (await import('./index.mjs')).A;
 
+//#endregion
 export { A, B };
 ```

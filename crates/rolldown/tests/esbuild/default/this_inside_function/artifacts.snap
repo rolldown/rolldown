@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/esbuild/default/this_inside_function
 
 ```js
 
-// entry.js
+//#region entry.js
 function foo(x=this) {
 	console.log(this);
 }
@@ -55,4 +55,5 @@ if (nested) {
 	new Bar(bar(objBar));
 }
 
+//#endregion
 ```

@@ -23,8 +23,9 @@ export { main_default as default };
 
 ```js
 
-// main.js
+//#region main.js
 var main_default = {};
 
+//#endregion
 export { main_default };
 ```

@@ -10,14 +10,15 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper
 ```js
 import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 
-// lib.js
+//#region lib.js
 var keep1, keep2;
 var init_lib = __esmMin(() => {
 	keep1 = () => 'keep1';
 	keep2 = () => 'keep2';
 });
 
-// cjs.js
+//#endregion
+//#region cjs.js
 var cjs_ns, cjs_default;
 var init_cjs = __esmMin(() => {
 	cjs_ns = {};
@@ -28,8 +29,10 @@ var init_cjs = __esmMin(() => {
 	cjs_default = keep2();
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 init_lib();
 console.log(keep1(), (init_cjs(),__toCommonJS(cjs_ns)));
 
+//#endregion
 ```

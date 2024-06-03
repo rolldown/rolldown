@@ -1,7 +1,6 @@
 use rolldown_common::{Loader, NormalizedBundlerOptions, Platform, SourceMapType};
 use rustc_hash::FxHashMap;
 
-#[allow(clippy::struct_field_names)]
 pub struct NormalizeOptionsReturn {
   pub options: NormalizedBundlerOptions,
   pub resolve_options: rolldown_resolver::ResolveOptions,

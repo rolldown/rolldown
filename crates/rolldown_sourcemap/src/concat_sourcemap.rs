@@ -74,7 +74,6 @@ impl Source for SourceMapSource {
     self.lines_count
   }
 
-  #[allow(clippy::cast_possible_truncation)]
   fn into_concat_source(
     &self,
     final_source: &mut String,
@@ -111,7 +110,6 @@ impl ConcatSource {
     self.prepend_source.push(source);
   }
 
-  #[allow(clippy::cast_possible_truncation)]
   pub fn content_and_sourcemap(self) -> (String, Option<SourceMap>) {
     let mut final_source = String::new();
     let mut sourcemap_builder = self.enable_sourcemap.then_some(ConcatSourceMapBuilder::default());

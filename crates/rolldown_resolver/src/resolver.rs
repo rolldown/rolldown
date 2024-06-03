@@ -143,8 +143,6 @@ pub struct ResolveReturn {
 }
 
 impl<F: FileSystem + Default> Resolver<F> {
-  // clippy::option_if_let_else: I think the current code is more readable.
-  #[allow(clippy::missing_errors_doc, clippy::option_if_let_else)]
   pub fn resolve(
     &self,
     importer: Option<&Path>,

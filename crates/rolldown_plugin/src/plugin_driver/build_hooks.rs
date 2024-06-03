@@ -70,7 +70,6 @@ impl PluginDriver {
     Ok(None)
   }
 
-  #[allow(clippy::unnecessary_cast)]
   pub async fn transform(
     &self,
     args: &HookTransformArgs<'_>,
@@ -89,11 +88,11 @@ impl PluginDriver {
       {
         if let Some(mut map) = r.map {
           // If sourcemap  hasn't `sources`, using original id to fill it.
-          if map.get_source(0 as u32).map_or(true, str::is_empty) {
+          if map.get_source(0).map_or(true, str::is_empty) {
             map.set_sources(vec![args.id]);
           }
           // If sourcemap hasn't `sourcesContent`, using original code to fill it.
-          if map.get_source_content(0 as u32).map_or(true, str::is_empty) {
+          if map.get_source_content(0).map_or(true, str::is_empty) {
             map.set_source_contents(vec![&code]);
           }
           sourcemap_chain.push(map);

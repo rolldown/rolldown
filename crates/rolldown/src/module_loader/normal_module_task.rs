@@ -242,7 +242,6 @@ impl NormalModuleTask {
     (ast_scopes, scan_result, ast_symbols, namespace_object_ref)
   }
 
-  #[allow(clippy::option_if_let_else)]
   pub(crate) async fn resolve_id(
     input_options: &SharedOptions,
     resolver: &SharedResolver,

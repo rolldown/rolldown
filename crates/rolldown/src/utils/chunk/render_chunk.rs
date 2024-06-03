@@ -29,7 +29,6 @@ use super::{
   render_chunk_imports::render_chunk_imports,
 };
 
-#[allow(clippy::unnecessary_wraps, clippy::cast_possible_truncation)]
 #[tracing::instrument(level = "trace", skip_all)]
 pub async fn render_chunk(
   this: &Chunk,

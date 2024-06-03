@@ -17,7 +17,7 @@ use crate::utils::call_expression_ext::CallExpressionExt;
 use super::ScopeHoistingFinalizer;
 
 impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
-  #[allow(clippy::too_many_lines, clippy::match_same_arms)]
+  #[allow(clippy::too_many_lines)]
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     let old_body = program.body.take_in(self.alloc);
 

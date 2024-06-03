@@ -4,7 +4,7 @@ use oxc::{
   allocator::{Allocator, Box},
   ast::ast::{self, Modifiers},
   semantic::ReferenceFlag,
-  span::{Atom, SourceType},
+  span::{Atom, SourceType, SPAN},
 };
 
 use super::TakeIn;
@@ -383,6 +383,28 @@ impl<'ast> TakeIn<'ast> for ast::ImportDeclaration<'ast> {
       source: TakeIn::dummy(alloc),
       with_clause: TakeIn::dummy(alloc),
       import_kind: TakeIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> TakeIn<'ast> for ast::ObjectPattern<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: TakeIn::dummy(alloc),
+      properties: TakeIn::dummy(alloc),
+      rest: TakeIn::dummy(alloc),
+    }
+  }
+}
+
+impl<'ast> TakeIn<'ast> for ast::BindingProperty<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self {
+      span: SPAN,
+      key: TakeIn::dummy(alloc),
+      value: TakeIn::dummy(alloc),
+      shorthand: TakeIn::dummy(alloc),
+      computed: TakeIn::dummy(alloc),
     }
   }
 }

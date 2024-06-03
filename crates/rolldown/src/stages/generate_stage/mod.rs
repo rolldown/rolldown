@@ -1,5 +1,6 @@
 use anyhow::Result;
 use oxc::ast::VisitMut;
+use rolldown_oxc_utils::AstSnippet;
 use rustc_hash::FxHashSet;
 
 use futures::future::try_join_all;
@@ -19,7 +20,8 @@ use sugar_path::SugarPath;
 use crate::{
   chunk_graph::ChunkGraph,
   module_finalizers::{
-    isolating::IsolatingModuleFinalizer, scope_hoisting::ScopeHoistingFinalizerContext,
+    isolating::{IsolatingModuleFinalizer, IsolatingModuleFinalizerContext},
+    scope_hoisting::ScopeHoistingFinalizerContext,
   },
   stages::link_stage::LinkStageOutput,
   type_alias::IndexNormalModules,
@@ -99,7 +101,15 @@ impl<'a> GenerateStage<'a> {
         } else {
           ast.with_mut(|fields| {
             let (oxc_program, alloc) = (fields.program, fields.allocator);
-            let mut finalizer = IsolatingModuleFinalizer { alloc, scope: &module.scope };
+            let mut finalizer = IsolatingModuleFinalizer {
+              alloc,
+              scope: &module.scope,
+              ctx: &IsolatingModuleFinalizerContext {
+                module,
+                modules: &self.link_output.module_table.normal_modules,
+              },
+              snippet: AstSnippet::new(alloc),
+            };
             finalizer.visit_program(oxc_program);
           });
         }

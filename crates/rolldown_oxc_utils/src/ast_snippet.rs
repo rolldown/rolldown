@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{self, Allocator},
+  allocator::{self, Allocator, Box},
   ast::ast::{self, Statement},
   span::{Atom, Span, SPAN},
   syntax::operator::UnaryOperator,
@@ -146,11 +146,15 @@ impl<'ast> AstSnippet<'ast> {
     name: PassedStr,
     init: ast::Expression<'ast>,
   ) -> ast::Statement<'ast> {
-    ast::Statement::from(self.var_decl(name, init))
+    ast::Statement::from(self.decl_var_decl(name, init))
   }
 
   /// `var [name] = [init]`
-  pub fn var_decl(&self, name: PassedStr, init: ast::Expression<'ast>) -> ast::Declaration<'ast> {
+  pub fn decl_var_decl(
+    &self,
+    name: PassedStr,
+    init: ast::Expression<'ast>,
+  ) -> ast::Declaration<'ast> {
     let mut declarations = allocator::Vec::new_in(self.alloc);
     declarations.push(ast::VariableDeclarator {
       id: ast::BindingPattern {
@@ -171,6 +175,70 @@ impl<'ast> AstSnippet<'ast> {
       }
       .into_in(self.alloc),
     )
+  }
+
+  /// `var [name] = [init]`
+  pub fn var_decl(
+    &self,
+    name: PassedStr,
+    init: ast::Expression<'ast>,
+  ) -> Box<'ast, ast::VariableDeclaration<'ast>> {
+    let mut declarations = allocator::Vec::new_in(self.alloc);
+    declarations.push(ast::VariableDeclarator {
+      id: ast::BindingPattern {
+        kind: ast::BindingPatternKind::BindingIdentifier(
+          ast::BindingIdentifier { name: self.atom(name), ..TakeIn::dummy(self.alloc) }
+            .into_in(self.alloc),
+        ),
+        ..TakeIn::dummy(self.alloc)
+      },
+      init: Some(init),
+      ..TakeIn::dummy(self.alloc)
+    });
+    ast::VariableDeclaration {
+      kind: ast::VariableDeclarationKind::Var,
+      declarations,
+      ..TakeIn::dummy(self.alloc)
+    }
+    .into_in(self.alloc)
+  }
+
+  pub fn var_decl_multiple_names(
+    &self,
+    names: &[(&str, &str)],
+    init: ast::Expression<'ast>,
+  ) -> Box<'ast, ast::VariableDeclaration<'ast>> {
+    let mut declarations = allocator::Vec::new_in(self.alloc);
+    let mut properties = allocator::Vec::new_in(self.alloc);
+    names.iter().for_each(|(imported, local)| {
+      properties.push(ast::BindingProperty {
+        key: ast::PropertyKey::StaticIdentifier(self.id_name(imported, SPAN).into_in(self.alloc)),
+        value: ast::BindingPattern {
+          kind: ast::BindingPatternKind::BindingIdentifier(
+            self.id(local, SPAN).into_in(self.alloc),
+          ),
+          ..TakeIn::dummy(self.alloc)
+        },
+        ..TakeIn::dummy(self.alloc)
+      });
+    });
+    declarations.push(ast::VariableDeclarator {
+      id: ast::BindingPattern {
+        kind: ast::BindingPatternKind::ObjectPattern(
+          ast::ObjectPattern { properties, ..TakeIn::dummy(self.alloc) }.into_in(self.alloc),
+        ),
+        ..TakeIn::dummy(self.alloc)
+      },
+      init: Some(init),
+      ..TakeIn::dummy(self.alloc)
+    });
+
+    ast::VariableDeclaration {
+      kind: ast::VariableDeclarationKind::Var,
+      declarations,
+      ..TakeIn::dummy(self.alloc)
+    }
+    .into_in(self.alloc)
   }
 
   /// ```js
@@ -344,6 +412,82 @@ impl<'ast> AstSnippet<'ast> {
       ast::ImportDeclaration {
         specifiers: Some(specifiers),
         source: self.string_literal(source, SPAN),
+        ..TakeIn::dummy(self.alloc)
+      }
+      .into_in(self.alloc),
+    )
+  }
+
+  pub fn app_static_import_star_call_stmt(
+    &self,
+    as_name: &str,
+    importee_source: &str,
+  ) -> ast::Statement<'ast> {
+    let mut declarations = allocator::Vec::new_in(self.alloc);
+
+    let mut call_expr = self.call_expr("__static_import");
+    call_expr.arguments.push(ast::Argument::StringLiteral(
+      self.string_literal(importee_source, SPAN).into_in(self.alloc),
+    ));
+    declarations.push(ast::VariableDeclarator {
+      id: ast::BindingPattern {
+        kind: ast::BindingPatternKind::BindingIdentifier(
+          self.id(as_name, SPAN).into_in(self.alloc),
+        ),
+        ..TakeIn::dummy(self.alloc)
+      },
+      init: Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc))),
+      ..TakeIn::dummy(self.alloc)
+    });
+
+    ast::Statement::VariableDeclaration(
+      ast::VariableDeclaration {
+        kind: ast::VariableDeclarationKind::Var,
+        declarations,
+        ..TakeIn::dummy(self.alloc)
+      }
+      .into_in(self.alloc),
+    )
+  }
+
+  pub fn app_static_import_call_multiple_specifiers_stmt(
+    &self,
+    names: &[(&str, &str)],
+    importee_source: &str,
+  ) -> ast::Statement<'ast> {
+    let mut declarations = allocator::Vec::new_in(self.alloc);
+    let mut properties = allocator::Vec::new_in(self.alloc);
+    names.iter().for_each(|(imported, local)| {
+      properties.push(ast::BindingProperty {
+        key: ast::PropertyKey::StaticIdentifier(self.id_name(imported, SPAN).into_in(self.alloc)),
+        value: ast::BindingPattern {
+          kind: ast::BindingPatternKind::BindingIdentifier(
+            self.id(local, SPAN).into_in(self.alloc),
+          ),
+          ..TakeIn::dummy(self.alloc)
+        },
+        ..TakeIn::dummy(self.alloc)
+      });
+    });
+    let mut call_expr = self.call_expr("__static_import");
+    call_expr.arguments.push(ast::Argument::StringLiteral(
+      self.string_literal(importee_source, SPAN).into_in(self.alloc),
+    ));
+    declarations.push(ast::VariableDeclarator {
+      id: ast::BindingPattern {
+        kind: ast::BindingPatternKind::ObjectPattern(
+          ast::ObjectPattern { properties, ..TakeIn::dummy(self.alloc) }.into_in(self.alloc),
+        ),
+        ..TakeIn::dummy(self.alloc)
+      },
+      init: Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc))),
+      ..TakeIn::dummy(self.alloc)
+    });
+
+    ast::Statement::VariableDeclaration(
+      ast::VariableDeclaration {
+        kind: ast::VariableDeclarationKind::Var,
+        declarations,
         ..TakeIn::dummy(self.alloc)
       }
       .into_in(self.alloc),

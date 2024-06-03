@@ -29,6 +29,7 @@ export default function hyperCube(x) {
 // main.js
 var {default:hyperCube} = __static_import('hyper-cube.js');
 console.log(hyperCube(5));
+
 ```
 ## other-entry.mjs
 
@@ -36,4 +37,5 @@ console.log(hyperCube(5));
 // other-entry.js
 var {default:cube} = __static_import('cube.js');
 console.log(cube(5));
+
 ```

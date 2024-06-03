@@ -17,4 +17,5 @@ const { default: defaultValue, readFileSync } = __toESM(require("fs"));
 // entry.js
 var entry_ns = {};
 console.log(fs, readFileSync, defaultValue);
+
 ```

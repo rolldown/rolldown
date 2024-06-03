@@ -1,13 +1,14 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/basic
+input_file: crates/rolldown/tests/fixtures/misc/basic
 ---
 # Assets
 
 ## main.mjs
 
 ```js
+
 // shared.js
 const a$1 = 'shared.js';
 

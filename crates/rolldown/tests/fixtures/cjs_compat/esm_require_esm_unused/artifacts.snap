@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/compat/esm_require_esm_unused
+input_file: crates/rolldown/tests/fixtures/cjs_compat/esm_require_esm_unused
 ---
 # Assets
 
@@ -22,4 +22,5 @@ var init_esm = __esmMin(() => {
 
 // main.js
 init_esm(),__toCommonJS(esm_ns);
+
 ```

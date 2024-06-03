@@ -12,6 +12,7 @@ import { value } from "./share.mjs";
 
 // entry.js
 console.log(value);
+
 ```
 ## main.mjs
 
@@ -21,10 +22,12 @@ import { default as assert } from "assert";
 
 // main.js
 assert(value === 1);
+
 ```
 ## share.mjs
 
 ```js
+
 // share.js
 const value = 1;
 

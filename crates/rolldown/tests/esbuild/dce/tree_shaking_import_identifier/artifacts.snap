@@ -31,4 +31,5 @@ class REMOVE extends b_ns.Base {
 
 // entry.js
 new a_ns.Keep();
+
 ```

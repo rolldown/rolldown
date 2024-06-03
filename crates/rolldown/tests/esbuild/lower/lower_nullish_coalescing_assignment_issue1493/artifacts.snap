@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_nullish_coalescing_assignm
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 class A {
 	#a;

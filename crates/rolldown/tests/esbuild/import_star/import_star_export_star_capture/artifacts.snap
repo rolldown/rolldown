@@ -22,4 +22,5 @@ __export(bar_ns, {
 // entry.js
 let foo = 234;
 console.log(bar_ns, bar_ns.foo, foo);
+
 ```

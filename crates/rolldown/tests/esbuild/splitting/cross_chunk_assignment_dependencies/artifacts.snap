@@ -12,15 +12,18 @@ import { setValue } from "./shared.mjs";
 
 // a.js
 setValue(123);
+
 ```
 ## b.mjs
 
 ```js
 import "./shared.mjs";
+
 ```
 ## shared.mjs
 
 ```js
+
 // shared.js
 var observer;
 var value;

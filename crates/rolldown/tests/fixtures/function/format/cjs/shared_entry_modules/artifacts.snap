@@ -41,4 +41,5 @@ const value = 'main';
 
 exports.main_ns = main_ns;
 exports.value = value;
+
 ```

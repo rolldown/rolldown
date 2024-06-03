@@ -26,4 +26,5 @@ let bar = 123;
 
 // entry.js
 console.log(exports, module.exports, test_ns$1, test_ns);
+
 ```

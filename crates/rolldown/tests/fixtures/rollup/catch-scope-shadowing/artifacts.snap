@@ -26,4 +26,5 @@ var e = 'failed1', x = 'value';
 		var x$1 = 'failed4';
 	}})();
 assert.strictEqual(x, 'value');
+
 ```

@@ -16,4 +16,5 @@ var require_entry = __commonJSMin((exports, module) => {
 });
 
 export default require_entry();
+
 ```

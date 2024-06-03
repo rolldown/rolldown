@@ -8,9 +8,11 @@ input_file: crates/rolldown/tests/fixtures/rollup/same-binding
 ## main.mjs
 
 ```js
+
 // shared.js
 const foo = 1;
 
 // main.js
 assert.strictEqual(foo, 1);
+
 ```

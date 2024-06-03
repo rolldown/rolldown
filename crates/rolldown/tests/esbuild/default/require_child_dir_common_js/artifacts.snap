@@ -17,4 +17,5 @@ var require_dir_index = __commonJSMin((exports, module) => {
 
 // entry.js
 console.log(require_dir_index());
+
 ```

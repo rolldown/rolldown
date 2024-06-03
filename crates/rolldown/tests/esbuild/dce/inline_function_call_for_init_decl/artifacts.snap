@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/dce/inline_function_call_for_init_decl
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 function empty() {
 }

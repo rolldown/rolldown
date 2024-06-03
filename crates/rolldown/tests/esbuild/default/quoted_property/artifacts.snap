@@ -12,4 +12,5 @@ import * as ns from "ext";
 
 // entry.js
 console.log(ns.mustBeUnquoted, ns['mustBeQuoted']);
+
 ```

@@ -8,16 +8,20 @@ input_file: crates/rolldown/tests/esbuild/default/duplicate_entry_point
 ## entry.mjs
 
 ```js
+
 // entry.js
 console.log(123);
+
 ```
 ## entry2_js.mjs
 
 ```js
 import "./entry.mjs";
+
 ```
 ## entry_js.mjs
 
 ```js
 import "./entry.mjs";
+
 ```

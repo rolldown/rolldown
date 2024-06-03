@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/function/loader/json/object
+input_file: crates/rolldown/tests/fixtures/function/loaders/json/object
 ---
 # Assets
 
@@ -20,4 +20,5 @@ var foo_default = {
 assert.deepStrictEqual(foo_default, {
 	foo:foo
 });
+
 ```

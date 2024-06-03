@@ -12,6 +12,7 @@ import { a } from "./shared.mjs";
 
 // a.js
 console.log(a);
+
 ```
 ## b.mjs
 
@@ -20,10 +21,12 @@ import { b } from "./shared.mjs";
 
 // b.js
 console.log(b);
+
 ```
 ## shared.mjs
 
 ```js
+
 // shared.js
 let a = 1;
 let b = 2;

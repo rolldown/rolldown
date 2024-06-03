@@ -19,4 +19,5 @@ const x = 123;
 
 // entry.js
 console.log(bar_ns, bar_ns.foo);
+
 ```

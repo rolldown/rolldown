@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_imports
 ## entry.mjs
 
 ```js
+
 // src/a.js
 console.log('a.js');
 
@@ -19,4 +20,5 @@ console.log('c.js');
 
 // src/some-slash/d.js
 console.log('d.js');
+
 ```

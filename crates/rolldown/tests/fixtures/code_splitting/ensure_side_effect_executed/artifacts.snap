@@ -8,16 +8,20 @@ input_file: crates/rolldown/tests/fixtures/code_splitting/ensure_side_effect_exe
 ## entry.mjs
 
 ```js
+
 // entry.js
 globalThis.sideEffectExecuted = true;
+
 ```
 ## entry2_js.mjs
 
 ```js
 import "./entry.mjs";
+
 ```
 ## entry_js.mjs
 
 ```js
 import "./entry.mjs";
+
 ```

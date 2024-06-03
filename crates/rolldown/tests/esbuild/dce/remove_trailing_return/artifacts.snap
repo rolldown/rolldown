@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/dce/remove_trailing_return
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 function foo() {
 	if (a) 	b();

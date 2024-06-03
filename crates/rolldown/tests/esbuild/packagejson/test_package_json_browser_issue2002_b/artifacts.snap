@@ -25,4 +25,5 @@ var require_foo = __commonJSMin((exports, module) => {
 
 // src/entry.js
 require_foo();
+
 ```

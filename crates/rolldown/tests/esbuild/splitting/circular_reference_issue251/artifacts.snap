@@ -23,6 +23,7 @@ export { p, q };
 ## a~1.mjs
 
 ```js
+
 // b.js
 var q = 6;
 

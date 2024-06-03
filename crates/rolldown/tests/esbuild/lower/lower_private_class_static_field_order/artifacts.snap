@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_static_field
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 class Foo {
 	static #foo=123;
@@ -23,4 +24,5 @@ class FooThis {
 
 }
 console.log(FooThis.bar === 123);
+
 ```

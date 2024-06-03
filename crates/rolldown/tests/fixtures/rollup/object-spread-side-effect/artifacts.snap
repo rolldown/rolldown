@@ -20,4 +20,5 @@ const unused = {
 	}
 };
 assert.strictEqual(result, 'PASS');
+
 ```

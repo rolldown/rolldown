@@ -21,4 +21,5 @@ __export(folders_index_ns, {
 
 // entry.js
 console.log(JSON.stringify(folders_index_ns));
+
 ```

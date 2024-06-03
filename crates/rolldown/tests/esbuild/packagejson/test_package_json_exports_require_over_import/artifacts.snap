@@ -17,4 +17,5 @@ var require_require = __commonJSMin((exports, module) => {
 
 // src/entry.js
 require_require();
+
 ```

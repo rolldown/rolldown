@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/require/create_require
+input_file: crates/rolldown/tests/fixtures/cjs_compat/require/create_require
 ---
 # Assets
 
@@ -14,4 +14,5 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const assert = require('node:assert');
 assert.equal(1, 1);
+
 ```

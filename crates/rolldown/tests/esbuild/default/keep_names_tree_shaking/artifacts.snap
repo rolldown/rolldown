@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/keep_names_tree_shaking
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 function fnStmtKeep() {
 }
@@ -21,4 +22,5 @@ new clsStmtKeep();
 let clsExprKeep = class keep {
 };
 new clsExprKeep();
+
 ```

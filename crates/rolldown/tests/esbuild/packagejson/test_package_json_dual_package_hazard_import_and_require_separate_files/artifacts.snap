@@ -26,4 +26,5 @@ console.log((init_module(),__toCommonJS(module_ns)));
 // src/test-module.js
 init_module();
 console.log(module_default);
+
 ```

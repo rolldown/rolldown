@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_for_await2017
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 var entry_default = [async() => {
 	for  await(x of  y) 	z(x);

@@ -77,7 +77,7 @@ impl Case {
         [
           Cow::Owned(format!("## {}\n", asset.filename())),
           "```js".into(),
-          Cow::Borrowed(asset.content().trim()),
+          Cow::Borrowed(asset.content()),
           "```".into(),
         ]
       })

@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/reserve_props
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 var entry_default = {
 	foo_:0,

@@ -13,6 +13,7 @@ import { require_shared } from "./shared.mjs";
 // a.js
 const {foo} = require_shared();
 console.log(foo);
+
 ```
 ## b.mjs
 
@@ -22,6 +23,7 @@ import { require_shared } from "./shared.mjs";
 // b.js
 const {foo} = require_shared();
 console.log(foo);
+
 ```
 ## shared.mjs
 

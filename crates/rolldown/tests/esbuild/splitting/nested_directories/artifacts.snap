@@ -12,6 +12,7 @@ import { shared_default } from "./shared.mjs";
 
 // src/a.js
 console.log(shared_default);
+
 ```
 ## b.mjs
 
@@ -20,10 +21,12 @@ import { shared_default } from "./shared.mjs";
 
 // src/b.js
 console.log( -shared_default);
+
 ```
 ## shared.mjs
 
 ```js
+
 // shared.js
 var shared_default = 123;
 

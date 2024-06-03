@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/await_import_inside_try
 ## entry_js.mjs
 
 ```js
+
 // entry.js
 async function main(name) {
 	try{
@@ -15,4 +16,5 @@ async function main(name) {
 	}catch{
 	}}
 main('fs');
+
 ```

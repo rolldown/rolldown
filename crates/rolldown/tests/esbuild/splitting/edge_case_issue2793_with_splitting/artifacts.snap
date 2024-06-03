@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/edge_case_issue2793_with_spl
 ## index.mjs
 
 ```js
+
 // src/a.js
 const A = 42;
 

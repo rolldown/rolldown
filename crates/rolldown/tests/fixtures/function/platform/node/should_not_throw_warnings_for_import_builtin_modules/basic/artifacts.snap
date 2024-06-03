@@ -13,4 +13,5 @@ import * as nodeFs from "node:fs";
 
 // main.js
 console.log(fs, nodeFs, require('node:path'), require('node:path'));
+
 ```

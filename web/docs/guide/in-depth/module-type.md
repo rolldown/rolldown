@@ -1,8 +1,8 @@
 # Module Type
 
-As a web bundler, rolldown not only support bundling JavaScript files, but also support bundling other types of files, such as CSS(in the future), JSON, and so on.
+As a web bundler, rolldown not only accept JavaScript files as input items, but also support other types of input items, such as CSS(in the future), JSON, dataurl, and so on.
 
-Therefore, if a file could be recognized by rolldown without any extra plugins, it means that the type of this file is treated as a as first-class citizen by rolldown.
+Therefore, if an input item could be recognized by rolldown without any extra plugins, it means that the type of this input item is treated as a first-class citizen by rolldown.
 
 We call these fist-class types as `Module Type`s.
 

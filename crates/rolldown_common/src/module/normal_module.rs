@@ -3,7 +3,7 @@ use std::{fmt::Debug, sync::Arc};
 use crate::side_effects::DeterminedSideEffects;
 use crate::{
   types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
-  ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
+  ImportRecordId, LocalExport, ModuleDefFormat, ModuleId, ModuleInfo, NamedImport, NormalModuleId,
   ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use oxc::span::Span;
@@ -24,7 +24,7 @@ pub struct NormalModule {
   pub debug_resource_id: String,
   /// Representative name of `FilePath`, which is created by `FilePath#representative_name` belong to `resource_id`
   pub repr_name: String,
-  pub module_type: ModuleType,
+  pub def_format: ModuleDefFormat,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
   pub named_imports: FxHashMap<SymbolRef, NamedImport>,

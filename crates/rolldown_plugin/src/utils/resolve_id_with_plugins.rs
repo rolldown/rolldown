@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use rolldown_common::{ImportKind, ModuleType, ResolvedPath, ResolvedRequestInfo};
+use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedPath, ResolvedRequestInfo};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
@@ -32,7 +32,7 @@ pub async fn resolve_id_with_plugins(
       .await?
     {
       return Ok(Ok(ResolvedRequestInfo {
-        module_type: ModuleType::from_path(&r.id),
+        module_type: ModuleDefFormat::from_path(&r.id),
         path: r.id.into(),
         is_external: matches!(r.external, Some(true)),
         package_json: None,
@@ -50,7 +50,7 @@ pub async fn resolve_id_with_plugins(
     .await?
   {
     return Ok(Ok(ResolvedRequestInfo {
-      module_type: ModuleType::from_path(&r.id),
+      module_type: ModuleDefFormat::from_path(&r.id),
       path: r.id.into(),
       is_external: matches!(r.external, Some(true)),
       package_json: None,
@@ -62,7 +62,7 @@ pub async fn resolve_id_with_plugins(
   if is_http_url(request) || is_data_url(request) {
     return Ok(Ok(ResolvedRequestInfo {
       path: request.to_string().into(),
-      module_type: ModuleType::Unknown,
+      module_type: ModuleDefFormat::Unknown,
       is_external: true,
       package_json: None,
       side_effects: None,
@@ -85,7 +85,7 @@ fn resolve_id(
       ResolveError::Builtin(specifier) => Ok(Ok(ResolvedRequestInfo {
         path: ResolvedPath { path: specifier.into(), ignored: false },
         is_external: true,
-        module_type: ModuleType::Unknown,
+        module_type: ModuleDefFormat::Unknown,
         package_json: None,
         side_effects: None,
       })),

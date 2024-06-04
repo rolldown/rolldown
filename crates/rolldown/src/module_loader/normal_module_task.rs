@@ -5,7 +5,7 @@ use futures::future::join_all;
 use oxc_index::IndexVec;
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, ImportRecordId, ModuleType, NormalModule, NormalModuleId, PackageJson,
+  AstScopes, ImportRecordId, ModuleDefFormat, NormalModule, NormalModuleId, PackageJson,
   RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
@@ -32,7 +32,7 @@ pub struct NormalModuleTask {
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
   package_json: Option<Arc<PackageJson>>,
-  module_type: ModuleType,
+  module_type: ModuleDefFormat,
   errors: Vec<BuildError>,
   is_user_defined_entry: bool,
   side_effects: Option<HookSideEffects>,
@@ -43,7 +43,7 @@ impl NormalModuleTask {
     ctx: Arc<TaskContext>,
     id: NormalModuleId,
     path: ResolvedPath,
-    module_type: ModuleType,
+    module_type: ModuleDefFormat,
     is_user_defined_entry: bool,
     package_json: Option<Arc<PackageJson>>,
     side_effects: Option<HookSideEffects>,
@@ -184,7 +184,7 @@ impl NormalModuleTask {
       scope,
       exports_kind,
       namespace_object_ref,
-      module_type: self.module_type,
+      def_format: self.module_type,
       debug_resource_id: self.resolved_path.debug_display(&self.ctx.input_options.cwd),
       sourcemap_chain,
       exec_order: u32::MAX,
@@ -255,7 +255,7 @@ impl NormalModuleTask {
       if is_external(specifier, Some(importer), false).await? {
         return Ok(Ok(ResolvedRequestInfo {
           path: specifier.to_string().into(),
-          module_type: ModuleType::Unknown,
+          module_type: ModuleDefFormat::Unknown,
           is_external: true,
           package_json: None,
           side_effects: None,
@@ -330,7 +330,7 @@ impl NormalModuleTask {
             );
             ret.push(ResolvedRequestInfo {
               path: specifier.to_string().into(),
-              module_type: ModuleType::Unknown,
+              module_type: ModuleDefFormat::Unknown,
               is_external: true,
               package_json: None,
               side_effects: None,

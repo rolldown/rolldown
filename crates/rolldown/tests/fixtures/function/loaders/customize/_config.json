@@ -1,7 +1,7 @@
 {
   "config": {
     "external": ["node:assert"],
-    "loaders": {
+    "moduleTypes": {
       ".json2": "json"
     }
   }

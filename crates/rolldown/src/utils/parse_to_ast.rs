@@ -1,7 +1,7 @@
 use std::{path::Path, sync::Arc};
 
 use oxc::span::SourceType as OxcSourceType;
-use rolldown_common::{Loader, NormalizedBundlerOptions};
+use rolldown_common::{ModuleType, NormalizedBundlerOptions};
 use rolldown_loader_utils::{json_to_esm, text_to_esm};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
@@ -30,19 +30,19 @@ pub fn parse_to_ast(
 ) -> anyhow::Result<OxcAst> {
   let source: Arc<str> = source.into();
 
-  // 1. Determine the loader based on the file extension.
-  let loader = {
+  // 1. Determine the ModuleType based on the file extension.
+  let module_type = {
     let ext = resource_id.extension().and_then(|ext| ext.to_str()).unwrap_or("js");
-    let loader = options.loaders.get(ext);
+    let module_type = options.module_types.get(ext);
 
-    // FIXME: Once we support more loaders, we should return error instead of defaulting to JS.
-    loader.copied().unwrap_or(Loader::Js)
+    // FIXME: Once we support more types, we should return error instead of defaulting to JS.
+    module_type.copied().unwrap_or(ModuleType::Js)
   };
   // 2. Transform the source to the type that rolldown supported.
-  let (source, parsed_type) = match loader {
-    Loader::Js => (source, ParseType::Js),
-    Loader::Json => (json_to_esm(&source)?.into(), ParseType::Js),
-    Loader::Text => (text_to_esm(&source)?.into(), ParseType::Js),
+  let (source, parsed_type) = match module_type {
+    ModuleType::Js => (source, ParseType::Js),
+    ModuleType::Json => (json_to_esm(&source)?.into(), ParseType::Js),
+    ModuleType::Text => (text_to_esm(&source)?.into(), ParseType::Js),
   };
 
   // 3. Parse the source to AST and transform non-js AST to valid JS AST.

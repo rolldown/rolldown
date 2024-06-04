@@ -1,3 +1,30 @@
+## [0.10.4](https://github.com/rolldown/rolldown/compare/v0.10.3...v0.10.4) (2024-06-04)
+
+
+### Bug Fixes
+
+* add return source logic when file not downloaded and add loader … ([#1287](https://github.com/rolldown/rolldown/issues/1287)) ([103b8e5](https://github.com/rolldown/rolldown/commit/103b8e50d92c5fafea36e830a62ffb627c4d4f9e))
+* **cjs:** distinguish if symbols are referenced by chunk or modules ([#1316](https://github.com/rolldown/rolldown/issues/1316)) ([75c69b3](https://github.com/rolldown/rolldown/commit/75c69b322711e738bb367a0d7d73f2c738943013))
+* **cjs:** should render runtime module before generated imports ([#1335](https://github.com/rolldown/rolldown/issues/1335)) ([94b1371](https://github.com/rolldown/rolldown/commit/94b137111b28d92684725cc24dd2e944f25c0ab1))
+* **deps:** update dependency debug to v4.3.5 ([#1296](https://github.com/rolldown/rolldown/issues/1296)) ([95460de](https://github.com/rolldown/rolldown/commit/95460de45ddb8d825fd544a4a2399822b55068d9))
+
+
+### Features
+
+* **app:** rewrite static import ([#1323](https://github.com/rolldown/rolldown/issues/1323)) ([68c6592](https://github.com/rolldown/rolldown/commit/68c6592d6986cdb53bef1c33159c5bad6314bcd8))
+* **app:** use `IsolatingModuleFinalizer` for app output ([#1317](https://github.com/rolldown/rolldown/issues/1317)) ([92bfe2d](https://github.com/rolldown/rolldown/commit/92bfe2d6d27ec313d5afcca0207d0847eba1e681))
+* **cjs:** add `__esModule` flag ([#1313](https://github.com/rolldown/rolldown/issues/1313)) ([d892948](https://github.com/rolldown/rolldown/commit/d892948c77e1815f4ce9b224c0711ca63bdb594e))
+* **cjs:** add `"use strict"` if possible ([#1284](https://github.com/rolldown/rolldown/issues/1284)) ([bf3f86e](https://github.com/rolldown/rolldown/commit/bf3f86e09058fc34ab281fc232ea9fd031d2e07d))
+* **output:** make output folding-friendly using `#region` ([#1330](https://github.com/rolldown/rolldown/issues/1330)) ([ace105c](https://github.com/rolldown/rolldown/commit/ace105cf69965baec8ac1626d5b79e42b66574e3))
+* **plugin:** support `options` hook ([#1275](https://github.com/rolldown/rolldown/issues/1275)) ([fc94245](https://github.com/rolldown/rolldown/commit/fc9424582f34fc540d285aa40f3aa1d95d1ddd23))
+* **plugin:** support return `sideEffect: 'no-treeshake'` ([#1293](https://github.com/rolldown/rolldown/issues/1293)) ([283a58c](https://github.com/rolldown/rolldown/commit/283a58c1fdb5db1bb98458abd9c7570124c8c776))
+* remove `use strict` while emitting esm output ([#1283](https://github.com/rolldown/rolldown/issues/1283)) ([79fbbd4](https://github.com/rolldown/rolldown/commit/79fbbd4e5357335ea07f2f63041c47e17dd77e6b))
+* **rust/options:** add `BundlerOptions#loaders` ([#1280](https://github.com/rolldown/rolldown/issues/1280)) ([804df07](https://github.com/rolldown/rolldown/commit/804df07c57a5d9be1b299b9facd0fdff132c55a3))
+* **rust:** deny invalid parsing code ([#1310](https://github.com/rolldown/rolldown/issues/1310)) ([5be6ffb](https://github.com/rolldown/rolldown/commit/5be6ffb1b157780879dfcf4a96d0db15c3861ba0))
+* support text loader ([#1302](https://github.com/rolldown/rolldown/issues/1302)) ([b0f19c1](https://github.com/rolldown/rolldown/commit/b0f19c1f203a45f8a300028cbfe8cd38a77d95b4))
+
+
+
 ## [0.10.3](https://github.com/rolldown/rolldown/compare/v0.10.2...v0.10.3) (2024-05-29)
 
 

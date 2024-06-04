@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
 
-use crate::{Loader, SourceMapIgnoreList};
+use crate::{ModuleType, SourceMapIgnoreList};
 
 use self::types::{
   input_item::InputItem, is_external::IsExternal, output_format::OutputFormat,
@@ -66,7 +66,7 @@ pub struct BundlerOptions {
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
 
   /// Key is the file extension. The extension should start with a `.`. E.g. `".txt"`.
-  pub loaders: Option<HashMap<String, Loader>>,
+  pub module_types: Option<HashMap<String, ModuleType>>,
   // --- options for resolve
   pub resolve: Option<ResolveOptions>,
 }

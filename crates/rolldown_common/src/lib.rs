@@ -12,7 +12,7 @@ pub mod bundler_options {
       filename_template::{FileNameRenderOptions, FilenameTemplate},
       input_item::InputItem,
       is_external::IsExternal,
-      loader::Loader,
+      module_type::ModuleType,
       normalized_bundler_options::NormalizedBundlerOptions,
       output_format::OutputFormat,
       output_option::{AddonFunction, AddonOutputOption},

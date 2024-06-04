@@ -106,14 +106,14 @@
             "$ref": "#/definitions/InputItem"
           }
         },
-        "loaders": {
+        "moduleTypes": {
           "description": "Key is the file extension. The extension should start with a `.`. E.g. `\".txt\"`.",
           "type": [
             "object",
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Loader"
+            "$ref": "#/definitions/ModuleType"
           }
         },
         "platform": {
@@ -178,7 +178,7 @@
         }
       }
     },
-    "Loader": {
+    "ModuleType": {
       "type": "string",
       "enum": [
         "js",

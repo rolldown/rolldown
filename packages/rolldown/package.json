@@ -111,7 +111,7 @@
     "npm-run-all2": "^6.2.0",
     "rolldown": "workspace:*",
     "rollup": "^4.18.0",
-    "type-fest": "^4.18.2",
+    "type-fest": "^4.19.0",
     "unbuild": "^2.0.0",
     "vite": "^5.2.11",
     "vitest": "^1.3.1",

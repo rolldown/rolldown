@@ -10,9 +10,6 @@ input_file: crates/rolldown/tests/esbuild/default/import_fs_node_common_js
 ```js
 "use strict";
 
-const fs = __toESM(require("fs"));
-const { default: defaultValue, readFileSync } = __toESM(require("fs"));
-
 //#region rolldown:runtime
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -41,6 +38,9 @@ var __toCommonJS = mod => __copyProps(__defProp({}, '__esModule', {
 }), mod);
 
 //#endregion
+const fs = __toESM(require("fs"));
+const { default: defaultValue, readFileSync } = __toESM(require("fs"));
+
 //#region entry.js
 var entry_ns = {};
 console.log(fs, readFileSync, defaultValue);

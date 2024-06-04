@@ -18,8 +18,8 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_as_external
 ```js
 "use strict";
 
-const out = __toESM(require("foo"));
 
+const out = __toESM(require("foo"));
 
 //#region entry.js
 var entry_ns = {};

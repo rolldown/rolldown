@@ -12,5 +12,6 @@
     ],
     "format": "cjs"
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "hiddenRuntimeModule": false
 }

@@ -40,35 +40,60 @@ pub async fn render_chunk(
 
   let rendered_chunk = match options.format {
     OutputFormat::Esm | OutputFormat::Cjs => {
-      concat_source.add_source(Box::new(RawSource::new(render_chunk_imports(
-        this,
-        graph,
-        chunk_graph,
-        options,
-      ))));
-
-      this
+      let mut rendered_iter = this
         .modules
         .par_iter()
         .copied()
         .map(|id| &graph.module_table.normal_modules[id])
         .filter_map(|m| {
           render_normal_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
-            .map(|rendered| (&m.resource_id, rendered))
+            .map(|rendered| (m.id, &m.resource_id, rendered))
         })
         .collect::<Vec<_>>()
         .into_iter()
-        .for_each(|(module_resource_id, module_render_output)| {
-          let emitted_sources = module_render_output;
-          for source in emitted_sources {
-            concat_source.add_source(source);
-          }
+        .peekable();
 
-          // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.
-          if !module_resource_id.starts_with('\0') {
-            rendered_modules.insert(module_resource_id.clone(), RenderedModule { code: None });
+      let maybe_runtime_module = rendered_iter.peek();
+
+      match maybe_runtime_module {
+        Some((id, _, _))
+          if *id == graph.runtime.id() && matches!(options.format, OutputFormat::Cjs) =>
+        {
+          let maybe_runtime_module = rendered_iter.next();
+          if let Some((_, _module_resource_id, module_render_output)) = maybe_runtime_module {
+            let emitted_sources = module_render_output;
+            for source in emitted_sources {
+              concat_source.add_source(source);
+            }
           }
-        });
+          concat_source.add_source(Box::new(RawSource::new(render_chunk_imports(
+            this,
+            graph,
+            chunk_graph,
+            options,
+          ))));
+        }
+        _ => {
+          concat_source.add_source(Box::new(RawSource::new(render_chunk_imports(
+            this,
+            graph,
+            chunk_graph,
+            options,
+          ))));
+        }
+      }
+
+      rendered_iter.for_each(|(_id, module_resource_id, module_render_output)| {
+        let emitted_sources = module_render_output;
+        for source in emitted_sources {
+          concat_source.add_source(source);
+        }
+
+        // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.
+        if !module_resource_id.starts_with('\0') {
+          rendered_modules.insert(module_resource_id.clone(), RenderedModule { code: None });
+        }
+      });
 
       generate_rendered_chunk(this, graph, options, rendered_modules, chunk_graph)
     }

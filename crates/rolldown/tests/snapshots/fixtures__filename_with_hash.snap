@@ -223,7 +223,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/exports_and_module_format_common_js
 
-- entry-!~{000}~.cjs => entry-KR4jEwXX.cjs
+- entry-!~{000}~.cjs => entry-9NpNyYfu.cjs
 
 # tests/esbuild/default/external_packages
 
@@ -235,7 +235,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/import_fs_node_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-spjdZpeg.cjs
+- entry_js-!~{000}~.cjs => entry_js-6tzemz7n.cjs
 
 # tests/esbuild/default/import_missing_common_js
 
@@ -292,7 +292,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/re_export_default_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-2ZyvkNOV.cjs
+- entry_js-!~{000}~.cjs => entry_js-rVgJaoRP.cjs
 
 # tests/esbuild/default/re_export_default_external_es6
 
@@ -384,19 +384,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_other_as_namespace_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-K0ypsfgU.cjs
+- entry_js-!~{000}~.cjs => entry_js-1EPRsBw5.cjs
 
 # tests/esbuild/import_star/export_other_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-GxFbjS2i.cjs
+- entry_js-!~{000}~.cjs => entry_js-5o6qWvNs.cjs
 
 # tests/esbuild/import_star/export_other_nested_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-dNjFD79r.cjs
+- entry_js-!~{000}~.cjs => entry_js-AkbmEGBw.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-2Guqgfo-.cjs
+- entry_js-!~{000}~.cjs => entry_js-rXVWi1AO.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_es6
 
@@ -404,7 +404,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_self_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-fPEoh-0i.cjs
+- entry_js-!~{000}~.cjs => entry_js-PJvqCT_z.cjs
 
 # tests/esbuild/import_star/export_self_es6
 
@@ -560,7 +560,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_as_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-piIHYHJO.cjs
+- entry_js-!~{000}~.cjs => entry_js-0AMq3vLY.cjs
 
 # tests/esbuild/import_star/re_export_star_as_external_es6
 
@@ -572,7 +572,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-wDm-ST9x.cjs
+- entry_js-!~{000}~.cjs => entry_js-2acrHhQ2.cjs
 
 # tests/esbuild/import_star/re_export_star_external_es6
 
@@ -1263,17 +1263,17 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/format/cjs/import_export_unicode
 
-- main-!~{000}~.cjs => main-g2hoQ6A8.cjs
+- main-!~{000}~.cjs => main-fb10U16R.cjs
 
 # tests/fixtures/function/format/cjs/plain_import_should_not_introduce_to_esm
 
-- main-!~{000}~.cjs => main-Gs0BAIx4.cjs
+- main-!~{000}~.cjs => main-dLtgDVxA.cjs
 
 # tests/fixtures/function/format/cjs/shared_entry_modules
 
-- entry1-!~{000}~.cjs => entry1-WeELE_vd.cjs
-- entry2-!~{001}~.cjs => entry2-4twCoGhc.cjs
-- main-!~{002}~.cjs => main-zDi-JLRL.cjs
+- entry1-!~{000}~.cjs => entry1-8cGBC_oX.cjs
+- entry2-!~{001}~.cjs => entry2-dMxZMpNN.cjs
+- main-!~{002}~.cjs => main-gL_WNu_W.cjs
 
 # tests/fixtures/function/format/esm/import_export_unicode
 
@@ -1405,15 +1405,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 
-- main-!~{000}~.cjs => main-tms_fg_B.cjs
+- main-!~{000}~.cjs => main-OCdoUYLr.cjs
 
 # tests/fixtures/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 
-- main-!~{000}~.cjs => main-j7bzewNF.cjs
+- main-!~{000}~.cjs => main-OjgxrU0A.cjs
 
 # tests/fixtures/misc/use_strict/no_use_strict_with_non_strict_cjs_in_cjs_format
 
-- main-!~{000}~.cjs => main-g0I0XkUg.cjs
+- main-!~{000}~.cjs => main-u-caX-3S.cjs
 
 # tests/fixtures/misc/wrapped_esm
 

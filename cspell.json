@@ -107,6 +107,7 @@
     "outro",
     "oxlint",
     "oxlintignore",
+    "peekable",
     "proto",
     "realpath",
     "Renamer",

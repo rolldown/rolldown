@@ -10,9 +10,9 @@ input_file: crates/rolldown/tests/esbuild/default/re_export_default_external_com
 ```js
 "use strict";
 
+
 const { default: foo } = __toESM(require("foo"));
 const { default: bar } = __toESM(require("bar"));
-
 
 //#region entry.js
 var entry_ns = {};

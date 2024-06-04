@@ -3,6 +3,7 @@ import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { Plugin } from './'
 import { error, logPluginError } from '../log/logs'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
+import { NormalizedOutputOptions } from '../options/normalized-output-options'
 import { RollupError } from '@src/rollup'
 import { normalizeHook } from '../utils/normalize-hook'
 
@@ -49,6 +50,23 @@ export class PluginDriver {
           // TODO Here only support readonly access to the inputOptions at now
           inputOptions,
         )
+      }
+    }
+  }
+
+  public callOutputOptionsHook(
+    inputOptions: NormalizedInputOptions,
+    outputOptions: NormalizedOutputOptions,
+  ) {
+    const plugins = inputOptions.plugins.filter(
+      (plugin) => !('_parallel' in plugin),
+    ) as Plugin[]
+
+    for (const plugin of plugins) {
+      const options = plugin.outputOptions
+      if (options) {
+        const [handler, _optionsIgnoredSofar] = normalizeHook(options)
+        handler.call(null, outputOptions)
       }
     }
   }

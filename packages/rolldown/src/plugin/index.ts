@@ -50,6 +50,11 @@ export interface Plugin {
     (this: MinimalPluginContext, options: NormalizedInputOptions) => NullValue
   >
 
+  // TODO find a way to make `this: PluginContext` work.
+  outputOptions?: Hook<
+    (this: null, options: NormalizedOutputOptions) => NullValue
+  >
+
   // --- Build hooks ---
 
   buildStart?: Hook<

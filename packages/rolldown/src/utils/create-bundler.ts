@@ -24,6 +24,12 @@ export async function createBundler(
 
   try {
     const normalizedOutputOptions = normalizeOutputOptions(outputOptions)
+
+    pluginDriver.callOutputOptionsHook(
+      normalizedInputOptions,
+      normalizedOutputOptions,
+    )
+
     // Convert `NormalizedInputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(
       normalizedInputOptions,

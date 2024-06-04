@@ -33,7 +33,7 @@ cargo install just
 
 :::
 
-- Install Node.js >= 18.18.0
+- Install Node.js >= 20.11 / 21.2
 
 ## `just setup`
 

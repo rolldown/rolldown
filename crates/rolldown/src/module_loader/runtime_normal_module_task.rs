@@ -3,7 +3,7 @@ use std::sync::Arc;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, ExportsKind, ModuleType, NormalModule,
+  side_effects::DeterminedSideEffects, AstScopes, ExportsKind, ModuleDefFormat, NormalModule,
   NormalModuleId, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
@@ -72,7 +72,7 @@ impl RuntimeNormalModuleTask {
       scope,
       exports_kind: ExportsKind::Esm,
       namespace_object_ref,
-      module_type: ModuleType::EsmMjs,
+      def_format: ModuleDefFormat::EsmMjs,
       debug_resource_id: "rolldown:runtime".to_string(),
       exec_order: u32::MAX,
       is_user_defined_entry: false,
@@ -123,7 +123,7 @@ impl RuntimeNormalModuleTask {
       &ast_scope,
       &mut symbol_for_module,
       "runtime".to_string(),
-      ModuleType::EsmMjs,
+      ModuleDefFormat::EsmMjs,
       source,
       &facade_path,
       &ast.trivias,

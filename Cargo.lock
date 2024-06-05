@@ -1848,6 +1848,7 @@ name = "rolldown_common"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "dashmap",
  "glob-match",
  "oxc",
  "oxc_index",

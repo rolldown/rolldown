@@ -310,6 +310,7 @@ impl<'a> GenerateStage<'a> {
       let preliminary = filename_template.render(&FileNameRenderOptions {
         name: Some(&chunk_name),
         hash: hash_placeholder.as_deref(),
+        ..Default::default()
       });
 
       chunk.absolute_preliminary_filename =

@@ -42,6 +42,12 @@
     "BundlerOptions": {
       "type": "object",
       "properties": {
+        "assetFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "banner": {
           "type": [
             "string",

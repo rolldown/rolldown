@@ -1,6 +1,6 @@
 use std::sync::{Arc, Weak};
 
-use rolldown_common::ResolvedRequestInfo;
+use rolldown_common::{ResolvedRequestInfo, SharedFileEmitter};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
@@ -14,6 +14,7 @@ pub type SharedPluginContext = std::sync::Arc<PluginContext>;
 pub struct PluginContext {
   pub(crate) resolver: Arc<Resolver>,
   pub(crate) plugin_driver: Weak<PluginDriver>,
+  pub(crate) file_emitter: SharedFileEmitter,
 }
 
 impl PluginContext {
@@ -36,5 +37,13 @@ impl PluginContext {
       HookResolveIdExtraOptions { is_entry: false, kind: extra_options.import_kind },
     )
     .await
+  }
+
+  pub fn emit_file(&self, file: rolldown_common::EmittedAsset) -> String {
+    self.file_emitter.emit_file(file)
+  }
+
+  pub fn get_file_name(&self, reference_id: &str) -> String {
+    self.file_emitter.get_file_name(reference_id)
   }
 }

@@ -19,7 +19,7 @@ pub struct BindingOutputOptions {
   // dynamicImportFunction: string | undefined;
   pub entry_file_names: Option<String>,
   pub chunk_file_names: Option<String>,
-
+  pub asset_file_names: Option<String>,
   // amd: NormalizedAmdOptions;
   // assetFileNames: string | ((chunkInfo: PreRenderedAsset) => string);
   #[derivative(Debug = "ignore")]

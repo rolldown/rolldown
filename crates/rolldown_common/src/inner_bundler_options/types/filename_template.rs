@@ -23,6 +23,7 @@ impl From<String> for FilenameTemplate {
 pub struct FileNameRenderOptions<'me> {
   pub name: Option<&'me str>,
   pub hash: Option<&'me str>,
+  pub ext: Option<&'me str>,
 }
 
 impl FilenameTemplate {
@@ -33,6 +34,9 @@ impl FilenameTemplate {
     }
     if let Some(hash) = options.hash {
       tmp = tmp.replace("[hash]", hash);
+    }
+    if let Some(ext) = options.ext {
+      tmp = tmp.replace("[ext]", ext);
     }
     tmp
   }

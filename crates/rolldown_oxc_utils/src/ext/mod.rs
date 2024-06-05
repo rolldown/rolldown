@@ -7,6 +7,9 @@ use smallvec::SmallVec;
 use crate::allocator_helpers::into_in::IntoIn;
 use crate::allocator_helpers::take_in::TakeIn;
 use crate::AstSnippet;
+
+pub mod allocator_ext;
+
 pub trait BindingIdentifierExt {
   fn expect_symbol_id(&self) -> SymbolId;
 }

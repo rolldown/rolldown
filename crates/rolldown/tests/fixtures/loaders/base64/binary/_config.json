@@ -1,0 +1,7 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".webp": "base64"
+    }
+  }
+}

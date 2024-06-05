@@ -27,6 +27,10 @@ impl FileSystem for OsFileSystem {
   fn exists(&self, path: &Path) -> bool {
     path.exists()
   }
+
+  fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
+    std::fs::read(path)
+  }
 }
 
 impl OxcResolverFileSystem for OsFileSystem {

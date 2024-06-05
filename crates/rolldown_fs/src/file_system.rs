@@ -22,4 +22,9 @@ pub trait FileSystem: Send + Sync + OxcResolverFileSystem {
   ///
   /// * See [std::path::Path::exists]
   fn exists(&self, path: &Path) -> bool;
+
+  /// # Errors
+  ///
+  /// * See [std::fs::read]
+  fn read(&self, path: &Path) -> io::Result<Vec<u8>>;
 }

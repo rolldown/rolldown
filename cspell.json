@@ -20,6 +20,7 @@
     "/CHANGELOG.md",
     "/packages/rolldown/src/rollup.d.ts",
     "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
+    "/crates/rolldown/tests/fixtures/loaders/base64/text/text.data",
     "/pnpm-lock.yaml",
     "*.wasm"
   ],

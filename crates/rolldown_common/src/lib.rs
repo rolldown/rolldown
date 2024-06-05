@@ -1,4 +1,5 @@
 mod chunk;
+mod file_emitter;
 mod inner_bundler_options;
 mod module;
 mod types;
@@ -35,6 +36,7 @@ pub use crate::{
     },
     Chunk,
   },
+  file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
   module::external_module::ExternalModule,
   module::normal_module::NormalModule,
   types::ast_scopes::AstScopes,

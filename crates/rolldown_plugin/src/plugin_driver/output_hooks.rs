@@ -49,6 +49,7 @@ impl PluginDriver {
   pub async fn generate_bundle(&self, bundle: &mut Vec<Output>, is_write: bool) -> HookNoopReturn {
     for (plugin, ctx) in &self.plugins {
       plugin.generate_bundle(ctx, bundle, is_write).await?;
+      ctx.file_emitter.add_additional_files(bundle);
     }
     Ok(())
   }
@@ -56,6 +57,7 @@ impl PluginDriver {
   pub async fn write_bundle(&self, bundle: &mut Vec<Output>) -> HookNoopReturn {
     for (plugin, ctx) in &self.plugins {
       plugin.write_bundle(ctx, bundle).await?;
+      ctx.file_emitter.add_additional_files(bundle);
     }
     Ok(())
   }

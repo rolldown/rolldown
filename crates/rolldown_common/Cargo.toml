@@ -15,6 +15,7 @@ workspace = true
 
 [dependencies]
 anyhow             = { workspace = true }
+dashmap            = { workspace = true }
 glob-match         = { workspace = true }
 oxc                = { workspace = true, features = ["semantic"] }
 oxc_index          = { workspace = true }

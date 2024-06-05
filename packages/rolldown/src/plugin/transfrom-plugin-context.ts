@@ -1,4 +1,5 @@
 import type {
+  BindingEmittedAsset,
   BindingPluginContext,
   BindingTransformPluginContext,
 } from '@src/binding'
@@ -19,6 +20,8 @@ export class TransformPluginContext {
   error: (error: RollupError | string) => never
   resolve: BindingPluginContext['resolve']
   getCombinedSourcemap: () => SourceMap
+  emitFile: (file: BindingEmittedAsset) => string
+  getFileName: (referenceId: string) => string
 
   constructor(
     inner: BindingTransformPluginContext,
@@ -51,5 +54,7 @@ export class TransformPluginContext {
     }
     this.resolve = context.resolve
     this.getCombinedSourcemap = () => JSON.parse(inner.getCombinedSourcemap())
+    this.emitFile = context.emitFile
+    this.getFileName = context.getFileName
   }
 }

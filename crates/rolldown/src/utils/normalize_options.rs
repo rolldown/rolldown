@@ -52,6 +52,10 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .chunk_filenames
       .unwrap_or_else(|| "[name]-[hash].js".to_string())
       .into(),
+    asset_filenames: raw_options
+      .asset_filenames
+      .unwrap_or_else(|| "[name].[ext]".to_string())
+      .into(),
     banner: raw_options.banner,
     footer: raw_options.footer,
     dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),

@@ -1,5 +1,5 @@
 import type { RollupError, LoggingFunction } from '../rollup'
-import type { BindingPluginContext } from '../binding'
+import type { BindingEmittedAsset, BindingPluginContext } from '../binding'
 import { getLogHandler, normalizeLog } from '../log/logHandler'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type { Plugin } from './index'
@@ -12,6 +12,8 @@ export class PluginContext {
   warn: LoggingFunction
   error: (error: RollupError | string) => never
   resolve: BindingPluginContext['resolve']
+  emitFile: (file: BindingEmittedAsset) => string
+  getFileName: (referenceId: string) => string
 
   constructor(
     options: NormalizedInputOptions,
@@ -46,5 +48,7 @@ export class PluginContext {
       return error(logPluginError(normalizeLog(e), pluginName))
     }
     this.resolve = context.resolve.bind(context)
+    this.emitFile = context.emitFile.bind(context)
+    this.getFileName = context.getFileName.bind(context)
   }
 }

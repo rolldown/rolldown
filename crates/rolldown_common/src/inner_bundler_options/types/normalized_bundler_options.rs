@@ -28,6 +28,7 @@ pub struct NormalizedBundlerOptions {
   // --- Output
   pub entry_filenames: FilenameTemplate,
   pub chunk_filenames: FilenameTemplate,
+  pub asset_filenames: FilenameTemplate,
   pub dir: String,
   pub format: OutputFormat,
   pub sourcemap: SourceMapType,

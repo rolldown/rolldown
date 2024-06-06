@@ -36,7 +36,7 @@ impl FilenameTemplate {
       tmp = tmp.replace("[hash]", hash);
     }
     if let Some(ext) = options.ext {
-      tmp = tmp.replace("[ext]", ext);
+      tmp = tmp.replace("[ext]", ext).replace("[extname]", &format!(".{ext}"));
     }
     tmp
   }

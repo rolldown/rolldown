@@ -60,7 +60,7 @@ impl FileEmitter {
       let extension = path.and_then(|x| x.extension().and_then(OsStr::to_str));
       let file_name = self.options.asset_filenames.render(&FileNameRenderOptions {
         name: path.and_then(|x| x.file_stem().and_then(OsStr::to_str)),
-        hash: Some(xxhash_base64_url(file.source.as_bytes()).as_str()),
+        hash: Some(&xxhash_base64_url(file.source.as_bytes()).as_str()[..8]),
         ext: extension,
       });
       file.file_name = Some(file_name);

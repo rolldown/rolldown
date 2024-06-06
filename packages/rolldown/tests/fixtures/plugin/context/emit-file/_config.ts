@@ -1,3 +1,4 @@
+// cSpell:disable
 import { defineTest } from '@tests'
 import { getOutputFileNames } from '@tests/utils'
 import { expect } from 'vitest'
@@ -8,6 +9,9 @@ let referenceId: string
 
 export default defineTest({
   config: {
+    output: {
+      assetFileNames: '[name]-[hash].[ext]',
+    },
     plugins: [
       {
         name: 'test-plugin-context',
@@ -21,7 +25,7 @@ export default defineTest({
         },
         generateBundle() {
           expect(this.getFileName(referenceId)).toMatchInlineSnapshot(
-            `"emitted.txt"`,
+            `"emitted-umwR9Fta.txt"`,
           )
           // emit asset buffer source
           this.emitFile({
@@ -36,8 +40,8 @@ export default defineTest({
   afterTest: (output) => {
     expect(getOutputFileNames(output)).toMatchInlineSnapshot(`
       [
-        "emitted.txt",
-        "icon.png",
+        "emitted-umwR9Fta.txt",
+        "icon-eUkSwvpV.png",
         "main.js",
       ]
     `)

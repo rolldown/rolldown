@@ -54,7 +54,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .into(),
     asset_filenames: raw_options
       .asset_filenames
-      .unwrap_or_else(|| "[name].[ext]".to_string())
+      .unwrap_or_else(|| "assets/[name]-[hash][extname]".to_string())
       .into(),
     banner: raw_options.banner,
     footer: raw_options.footer,

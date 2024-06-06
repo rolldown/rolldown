@@ -182,7 +182,7 @@ impl<'a> GenerateStage<'a> {
             };
             assets.push(Output::Asset(Box::new(OutputAsset {
               filename: map_filename.clone(),
-              source,
+              source: source.into(),
             })));
             code.push_str(&format!("\n//# sourceMappingURL={map_filename}"));
           }

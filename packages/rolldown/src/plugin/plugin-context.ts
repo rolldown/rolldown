@@ -1,10 +1,19 @@
 import type { RollupError, LoggingFunction } from '../rollup'
-import type { BindingEmittedAsset, BindingPluginContext } from '../binding'
+import type { BindingPluginContext } from '../binding'
 import { getLogHandler, normalizeLog } from '../log/logHandler'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type { Plugin } from './index'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
+import { AssetSource, bindingAssetSource } from '../utils/asset-source'
+import { unimplemented } from '@src/utils'
+
+export interface EmittedAsset {
+  type: 'asset'
+  name?: string
+  fileName?: string
+  source: AssetSource
+}
 
 export class PluginContext {
   debug: LoggingFunction
@@ -12,7 +21,7 @@ export class PluginContext {
   warn: LoggingFunction
   error: (error: RollupError | string) => never
   resolve: BindingPluginContext['resolve']
-  emitFile: (file: BindingEmittedAsset) => string
+  emitFile: (file: EmittedAsset) => string
   getFileName: (referenceId: string) => string
 
   constructor(
@@ -48,7 +57,17 @@ export class PluginContext {
       return error(logPluginError(normalizeLog(e), pluginName))
     }
     this.resolve = context.resolve.bind(context)
-    this.emitFile = context.emitFile.bind(context)
+    this.emitFile = (file: EmittedAsset): string => {
+      if (file.type !== 'asset') {
+        return unimplemented(
+          'PluginContext.emitFile: only asset type is supported',
+        )
+      }
+      return context.emitFile({
+        ...file,
+        source: bindingAssetSource(file.source),
+      })
+    }
     this.getFileName = context.getFileName.bind(context)
   }
 }

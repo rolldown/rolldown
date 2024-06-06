@@ -61,7 +61,7 @@ impl Bundler {
           self.fs.create_dir_all(p).unwrap();
         }
       };
-      self.fs.write(dest.as_path(), chunk.content().as_bytes()).map_err(|err| {
+      self.fs.write(dest.as_path(), chunk.content_as_bytes()).map_err(|err| {
         anyhow::anyhow!("Failed to write file in {:?}", dir.as_path().join(chunk.filename()))
           .context(err)
       })?;

@@ -1,6 +1,8 @@
 import { defineTest } from '@tests'
 import { getOutputFileNames } from '@tests/utils'
 import { expect } from 'vitest'
+import fs from 'node:fs'
+import path from 'node:path'
 
 let referenceId: string
 
@@ -10,6 +12,7 @@ export default defineTest({
       {
         name: 'test-plugin-context',
         async buildStart() {
+          // emit asset string source
           referenceId = this.emitFile({
             type: 'asset',
             name: 'emitted.txt',
@@ -20,6 +23,12 @@ export default defineTest({
           expect(this.getFileName(referenceId)).toMatchInlineSnapshot(
             `"emitted.txt"`,
           )
+          // emit asset buffer source
+          this.emitFile({
+            type: 'asset',
+            name: 'icon.png',
+            source: fs.readFileSync(path.join(__dirname, 'icon.png')),
+          })
         },
       },
     ],
@@ -28,6 +37,7 @@ export default defineTest({
     expect(getOutputFileNames(output)).toMatchInlineSnapshot(`
       [
         "emitted.txt",
+        "icon.png",
         "main.js",
       ]
     `)

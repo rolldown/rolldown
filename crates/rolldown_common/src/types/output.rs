@@ -1,9 +1,9 @@
-use crate::OutputChunk;
+use crate::{AssetSource, OutputChunk};
 
 #[derive(Debug)]
 pub struct OutputAsset {
   pub filename: String,
-  pub source: String,
+  pub source: AssetSource,
 }
 
 #[derive(Debug)]
@@ -20,10 +20,10 @@ impl Output {
     }
   }
 
-  pub fn content(&self) -> &str {
+  pub fn content_as_bytes(&self) -> &[u8] {
     match self {
-      Self::Chunk(chunk) => &chunk.code,
-      Self::Asset(asset) => &asset.source,
+      Self::Chunk(chunk) => chunk.code.as_bytes(),
+      Self::Asset(asset) => asset.source.as_bytes(),
     }
   }
 }

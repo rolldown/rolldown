@@ -11,6 +11,11 @@ import type {
   BindingOutputs,
   FinalBindingOutputs,
 } from '../binding'
+import {
+  AssetSource,
+  bindingAssetSource,
+  transformAssetSource,
+} from './asset-source'
 
 function transformToRollupOutputChunk(
   chunk: BindingOutputChunk,
@@ -62,11 +67,11 @@ function transformToRollupOutputAsset(
   return {
     type: 'asset',
     fileName: asset.fileName,
-    get source() {
-      return asset.source
+    get source(): AssetSource {
+      return transformAssetSource(asset.source)
     },
-    set source(source: string) {
-      asset.source = source
+    set source(source: AssetSource) {
+      asset.source = bindingAssetSource(source)
     },
   }
 }

@@ -8,5 +8,5 @@ crates/rolldown/tests/**/*.jsx -linguist-detectable
 crates/rolldown/tests/**/*.ts -linguist-detectable
 crates/rolldown/tests/**/*.tsx -linguist-detectable
 
-# Disable git's EOL conversion for test files
-crates/rolldown/tests/fixtures/loaders/base64/text/text.data -text
+# https://github.com/rolldown/rolldown/issues/1354
+* text eol=lf

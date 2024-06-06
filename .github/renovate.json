@@ -1,14 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:best-practices",
-    ":automergeRequireAllStatusChecks",
-    ":automergePr"
-  ],
-  "assignees": ["hyf0", "IWANABETHATGUY", "underfin"],
-  "assigneesSampleSize": 1,
-  "timezone": "Asia/Shanghai",
-  "schedule": ["after 1pm", "before 4pm"],
+  "extends": ["github>Boshen/renovate"],
   "ignorePaths": [
     "**/node_modules/**",
     "**/examples/**",
@@ -16,43 +8,21 @@
   ],
   "packageRules": [
     {
-      "matchManagers": ["custom.regex"],
-      "matchPackageNames": ["rustc"]
+      "groupName": "napi-rs",
+      "matchPackagePrefixes": ["napi"],
+      "schedule": ["at any time"]
     },
     {
-      "automerge": true,
-      "matchUpdateTypes": ["patch"],
-      "excludePackageNames": ["rustc", "oxlint", "npm-rolldown"],
-      "groupName": "patch dependencies"
+      "groupName": "oxlint",
+      "matchManagers": ["npm"],
+      "matchDepNames": ["oxlint"],
+      "schedule": ["at any time"]
     },
     {
-      "automerge": true,
-      "matchUpdateTypes": ["minor"],
-      "excludePackageNames": ["rustc", "oxlint", "npm-rolldown"],
-      "groupName": "minor dependencies"
-    },
-    {
-      "automerge": true,
-      "matchPackagePrefixes": ["@types/"],
-      "groupName": "`@types/*` dependencies"
-    },
-    {
-      "matchPackageNames": ["napi", "napi-build", "napi-derive"],
-      "rangeStrategy": "replace",
-      "groupName": "napi-rs"
-    }
-  ],
-  "postUpdateOptions": ["pnpmDedupe"],
-  "customManagers": [
-    {
-      "customType": "regex",
-      "fileMatch": ["^rust-toolchain\\.toml?$"],
-      "matchStrings": [
-        "channel\\s*=\\s*\"(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)\""
-      ],
-      "depNameTemplate": "rustc",
-      "packageNameTemplate": "rust-lang/rust",
-      "datasourceTemplate": "github-releases"
+      "groupName": "oxc",
+      "matchManagers": ["npm"],
+      "matchPackagePrefixes": ["oxc"],
+      "schedule": ["at any time"]
     }
   ]
 }

@@ -14,6 +14,7 @@ export function normalizeOutputOptions(
     sourcemapPathTransform,
     entryFileNames,
     chunkFileNames,
+    assetFileNames,
   } = opts
   return {
     dir: dir,
@@ -32,6 +33,7 @@ export function normalizeOutputOptions(
     footer: getAddon(opts, 'footer'),
     entryFileNames: entryFileNames ?? '[name].js',
     chunkFileNames: chunkFileNames ?? '[name]-[hash].js',
+    assetFileNames: assetFileNames ?? 'assets/[name]-[hash][extname]',
     plugins: [],
   }
 }

@@ -22,4 +22,5 @@ export interface NormalizedOutputOptions extends OutputOptions {
   footer: AddonFunction
   entryFileNames: string
   chunkFileNames: string
+  assetFileNames: string
 }

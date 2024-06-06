@@ -13,6 +13,7 @@ export function bindingifyOutputOptions(
     sourcemapPathTransform,
     entryFileNames,
     chunkFileNames,
+    assetFileNames,
     banner,
     footer,
   } = outputOptions
@@ -34,6 +35,7 @@ export function bindingifyOutputOptions(
     footer,
     entryFileNames,
     chunkFileNames,
+    assetFileNames,
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
   }

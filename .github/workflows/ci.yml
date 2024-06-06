@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - main
+      - 'renovate/**' # For renovate bot "automerge": true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}

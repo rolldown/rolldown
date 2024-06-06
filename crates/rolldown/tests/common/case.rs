@@ -76,10 +76,11 @@ impl Case {
       .iter()
       .filter(|asset| !asset.filename().contains("$runtime$") && matches!(asset, Output::Chunk(_)))
       .flat_map(|asset| {
+        let content = std::str::from_utf8(asset.content_as_bytes()).unwrap();
         let content = if self.fixture.test_config().hidden_runtime_module {
-          RUNTIME_MODULE_OUTPUT_RE.replace_all(asset.content(), "")
+          RUNTIME_MODULE_OUTPUT_RE.replace_all(content, "")
         } else {
-          Cow::Borrowed(asset.content())
+          Cow::Borrowed(content)
         };
 
         [Cow::Owned(format!("## {}\n", asset.filename())), "```js".into(), content, "```".into()]

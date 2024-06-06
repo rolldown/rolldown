@@ -1,4 +1,4 @@
-use crate::{FileNameRenderOptions, NormalizedBundlerOptions, Output, OutputAsset};
+use crate::{AssetSource, FileNameRenderOptions, NormalizedBundlerOptions, Output, OutputAsset};
 use dashmap::{DashMap, DashSet};
 use rolldown_utils::xxhash::xxhash_base64_url;
 use std::ffi::OsStr;
@@ -10,7 +10,7 @@ use std::sync::Arc;
 pub struct EmittedAsset {
   pub name: Option<String>,
   pub file_name: Option<String>,
-  pub source: String,
+  pub source: AssetSource,
 }
 
 #[derive(Debug)]
@@ -49,7 +49,7 @@ impl FileEmitter {
   pub fn assign_reference_id(&self, filename: Option<String>) -> String {
     xxhash_base64_url(
       filename
-        .unwrap_or_else(|| self.base_reference_id.fetch_add(0, Ordering::Relaxed).to_string())
+        .unwrap_or_else(|| self.base_reference_id.fetch_add(1, Ordering::Relaxed).to_string())
         .as_bytes(),
     )
   }

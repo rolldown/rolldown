@@ -39,6 +39,7 @@ pub use crate::{
   file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
   module::external_module::ExternalModule,
   module::normal_module::NormalModule,
+  types::asset_source::AssetSource,
   types::ast_scopes::AstScopes,
   types::bundler_file_system::BundlerFileSystem,
   types::chunk_id::ChunkId,

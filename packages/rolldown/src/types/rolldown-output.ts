@@ -1,3 +1,4 @@
+import { AssetSource } from '../utils/asset-source'
 import type { OutputAsset, OutputChunk } from '../rollup'
 import type {
   HasProperty,
@@ -9,7 +10,7 @@ import type { RenderedModule } from './rendered-module'
 export interface RolldownOutputAsset {
   type: 'asset'
   fileName: string
-  source: string | Uint8Array
+  source: AssetSource
 }
 
 function _assertRolldownOutputAsset() {

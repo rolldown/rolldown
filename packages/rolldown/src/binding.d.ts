@@ -18,8 +18,8 @@ export class BindingModuleInfo {
 
 export class BindingOutputAsset {
   get fileName(): string
-  get source(): string
-  set source(source: string)
+  get source(): BindingAssetSource
+  set source(source: BindingAssetSource)
 }
 
 export class BindingOutputChunk {
@@ -86,10 +86,15 @@ export interface AliasItem {
   replacements: Array<string>
 }
 
+export interface BindingAssetSource {
+  type: string
+  source: Uint8Array
+}
+
 export interface BindingEmittedAsset {
   name?: string
   fileName?: string
-  source: string
+  source: BindingAssetSource
 }
 
 export interface BindingHookLoadOutput {

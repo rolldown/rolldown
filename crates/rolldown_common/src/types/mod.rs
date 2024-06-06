@@ -1,3 +1,4 @@
+pub mod asset_source;
 pub mod ast_scopes;
 pub mod bundler_file_system;
 pub mod chunk_id;

@@ -1,5 +1,4 @@
 import type {
-  BindingEmittedAsset,
   BindingPluginContext,
   BindingTransformPluginContext,
 } from '@src/binding'
@@ -10,7 +9,7 @@ import type {
   RollupError,
 } from '../rollup'
 import { normalizeLog } from '@src/log/logHandler'
-import type { PluginContext } from './plugin-context'
+import type { EmittedAsset, PluginContext } from './plugin-context'
 import { augmentCodeLocation } from '@src/log/logs'
 
 export class TransformPluginContext {
@@ -20,7 +19,7 @@ export class TransformPluginContext {
   error: (error: RollupError | string) => never
   resolve: BindingPluginContext['resolve']
   getCombinedSourcemap: () => SourceMap
-  emitFile: (file: BindingEmittedAsset) => string
+  emitFile: (file: EmittedAsset) => string
   getFileName: (referenceId: string) => string
 
   constructor(

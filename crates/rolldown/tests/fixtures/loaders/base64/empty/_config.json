@@ -1,0 +1,7 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".base64": "base64"
+    }
+  }
+}

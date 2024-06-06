@@ -2,6 +2,10 @@
 source: crates/rolldown/tests/fixtures.rs
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
+# tests/esbuild/dce/base64_loader_remove_unused
+
+- entry_js-!~{000}~.mjs => entry_js-G8jr1j_W.mjs
+
 # tests/esbuild/dce/dce_of_destructuring
 
 - entry_js-!~{000}~.mjs => entry_js-NUMxwkF0.mjs
@@ -593,6 +597,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous_re_export
 
 - entry_js-!~{000}~.mjs => entry_js-uhxNPwxJ.mjs
+
+# tests/esbuild/loader/loader_base64_common_js_and_es6
+
+- entry_js-!~{000}~.mjs => entry_js-29xuUhLE.mjs
 
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
@@ -1346,6 +1354,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - a-!~{000}~.mjs => a-4qebpb0B.mjs
 - b-!~{001}~.mjs => b-5N9UMKWl.mjs
 - c-!~{002}~.mjs => c-49hHscdr.mjs
+
+# tests/fixtures/loaders/base64/binary
+
+- main-!~{000}~.mjs => main-AUjXRnmQ.mjs
+
+# tests/fixtures/loaders/base64/empty
+
+- main-!~{000}~.mjs => main-bVuzikkm.mjs
+
+# tests/fixtures/loaders/base64/text
+
+- main-!~{000}~.mjs => main-mRR340KN.mjs
 
 # tests/fixtures/loaders/txt/empty
 

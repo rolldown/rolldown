@@ -189,7 +189,8 @@
       "enum": [
         "js",
         "json",
-        "text"
+        "text",
+        "base64"
       ]
     },
     "OutputFormat": {

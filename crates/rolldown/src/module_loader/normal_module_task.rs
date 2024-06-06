@@ -5,8 +5,8 @@ use futures::future::join_all;
 use oxc_index::IndexVec;
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, ImportRecordId, ModuleDefFormat, NormalModule, NormalModuleId, PackageJson,
-  RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
+  AstScopes, ImportRecordId, ModuleDefFormat, ModuleType, NormalModule, NormalModuleId,
+  PackageJson, RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -80,10 +80,20 @@ impl NormalModuleTask {
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
+    let module_type = {
+      let ext =
+        self.resolved_path.path.as_path().extension().and_then(|ext| ext.to_str()).unwrap_or("js");
+      let module_type = self.ctx.input_options.module_types.get(ext);
+
+      // FIXME: Once we support more types, we should return error instead of defaulting to JS.
+      module_type.copied().unwrap_or(ModuleType::Js)
+    };
+
     // Run plugin load to get content first, if it is None using read fs as fallback.
     let source = load_source(
       &self.ctx.plugin_driver,
       &self.resolved_path,
+      module_type,
       &self.ctx.fs,
       &mut sourcemap_chain,
       &mut hook_side_effects,
@@ -101,11 +111,7 @@ impl NormalModuleTask {
     .await?
     .into();
 
-    let mut ast = parse_to_ast(
-      &self.ctx.input_options,
-      self.resolved_path.path.as_path(),
-      Arc::clone(&source),
-    )?;
+    let mut ast = parse_to_ast(module_type, Arc::clone(&source))?;
     tweak_ast_for_scanning(&mut ast);
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);

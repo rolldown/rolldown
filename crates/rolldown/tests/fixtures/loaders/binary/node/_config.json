@@ -1,0 +1,8 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".data": "binary"
+    },
+    "platform": "node"
+  }
+}

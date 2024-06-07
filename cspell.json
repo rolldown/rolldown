@@ -21,6 +21,8 @@
     "/packages/rolldown/src/rollup.d.ts",
     "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
     "/crates/rolldown/tests/fixtures/loaders/base64/text/text.data",
+    "./crates/rolldown/tests/fixtures/loaders/binary/node/text.data",
+    "./crates/rolldown/tests/fixtures/loaders/binary/text/text.data",
     "/pnpm-lock.yaml",
     "*.wasm"
   ],

@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/loaders/binary/empty
+---
+# Assets
+
+## main.mjs
+
+```js
+
+
+//#region example.data
+var example_default = __toBinary('');
+
+//#endregion
+//#region main.js
+console.log(example_default);
+
+//#endregion
+```

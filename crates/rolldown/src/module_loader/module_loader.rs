@@ -17,7 +17,7 @@ use super::task_result::NormalModuleTaskResult;
 use super::Msg;
 use crate::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
-use crate::runtime::RuntimeModuleBrief;
+use crate::runtime::{RuntimeModuleBrief, ROLLDOWN_RUNTIME_RESOURCE_ID};
 use crate::types::symbols::Symbols;
 
 use crate::{SharedOptions, SharedResolver};
@@ -109,7 +109,7 @@ impl ModuleLoader {
       shared_context: common_data,
       rx,
       input_options,
-      visited: FxHashMap::default(),
+      visited: FxHashMap::from_iter([(ROLLDOWN_RUNTIME_RESOURCE_ID.into(), runtime_id.into())]),
       runtime_id,
       // runtime module is always there
       remaining: 1,

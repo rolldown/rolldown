@@ -24,7 +24,7 @@ pub async fn load_source(
       String::new()
     } else {
       match module_type {
-        ModuleType::Base64 => {
+        ModuleType::Base64 | ModuleType::Binary => {
           rolldown_utils::base64::to_standard_base64(fs.read(resolved_path.path.as_path())?)
         }
         _ => fs.read_to_string(resolved_path.path.as_path())?,

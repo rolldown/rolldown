@@ -19,6 +19,7 @@ use super::{task_context::TaskContext, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   module_loader::NormalModuleTaskResult,
+  runtime::ROLLDOWN_RUNTIME_RESOURCE_ID,
   types::ast_symbols::AstSymbols,
   utils::{
     load_source::load_source, make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
@@ -111,7 +112,7 @@ impl NormalModuleTask {
     .await?
     .into();
 
-    let mut ast = parse_to_ast(module_type, Arc::clone(&source))?;
+    let mut ast = parse_to_ast(&self.ctx.input_options, module_type, Arc::clone(&source))?;
     tweak_ast_for_scanning(&mut ast);
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);
@@ -267,6 +268,17 @@ impl NormalModuleTask {
           side_effects: None,
         }));
       }
+    }
+
+    // Check runtime module
+    if specifier == ROLLDOWN_RUNTIME_RESOURCE_ID {
+      return Ok(Ok(ResolvedRequestInfo {
+        path: specifier.to_string().into(),
+        module_type: ModuleDefFormat::EsmMjs,
+        is_external: false,
+        package_json: None,
+        side_effects: None,
+      }));
     }
 
     let resolved_id =

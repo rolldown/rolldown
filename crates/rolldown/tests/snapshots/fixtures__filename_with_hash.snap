@@ -1305,7 +1305,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
-- main-!~{000}~.mjs => main-a0GLJYok.mjs
+- main-!~{000}~.mjs => main-Epcg7SRV.mjs
 
 # tests/fixtures/function/resolve/alias_to_node_builtin_module
 
@@ -1382,6 +1382,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/loaders/binary/text
 
 - main-!~{000}~.mjs => main-HOErwbTT.mjs
+
+# tests/fixtures/loaders/jsx
+
+- main_jsx-!~{000}~.mjs => main_jsx-2aXoU9Jq.mjs
+
+# tests/fixtures/loaders/ts
+
+- main_ts-!~{000}~.mjs => main_ts-NyiJuHHI.mjs
+
+# tests/fixtures/loaders/tsx
+
+- main_tsx-!~{000}~.mjs => main_tsx-WwTEFRUx.mjs
 
 # tests/fixtures/loaders/txt/empty
 

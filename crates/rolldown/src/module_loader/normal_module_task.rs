@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
 use futures::future::join_all;
@@ -112,7 +112,12 @@ impl NormalModuleTask {
     .await?
     .into();
 
-    let mut ast = parse_to_ast(&self.ctx.input_options, module_type, Arc::clone(&source))?;
+    let mut ast = parse_to_ast(
+      Path::new(&self.resolved_path.path.as_ref()),
+      &self.ctx.input_options,
+      module_type,
+      Arc::clone(&source),
+    )?;
     tweak_ast_for_scanning(&mut ast);
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);

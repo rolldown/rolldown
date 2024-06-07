@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{rc::Rc, sync::Arc};
 
 use oxc::{
   codegen::{Codegen, CodegenOptions, CodegenReturn},
@@ -32,7 +32,7 @@ impl OxcCompiler {
     Ok(OxcAst {
       inner,
       source_type: ty,
-      trivias: trivias.expect("Should be initialized"),
+      trivias: Rc::new(trivias.expect("Should be initialized")),
       contains_use_strict: false,
     })
   }

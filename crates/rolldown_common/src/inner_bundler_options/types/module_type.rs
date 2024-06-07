@@ -11,6 +11,9 @@ use serde::Deserialize;
 #[derive(Debug, Clone, Copy)]
 pub enum ModuleType {
   Js,
+  Jsx,
+  Ts,
+  Tsx,
   Json,
   Text,
   Base64,

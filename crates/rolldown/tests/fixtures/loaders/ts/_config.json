@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [{
+      "name": "main_ts",
+      "import": "main.ts"
+    }]
+  },
+  "expectExecuted": false
+}

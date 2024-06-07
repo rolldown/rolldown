@@ -19,6 +19,7 @@ pub mod render_chunks;
 pub mod render_normal_module;
 pub mod resolve_id;
 pub mod transform_source;
+pub mod transformer;
 pub mod tweak_ast_for_scanning;
 
 #[tracing::instrument(level = "trace", skip_all)]

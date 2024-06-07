@@ -18,7 +18,7 @@ futures               = { workspace = true }
 indexmap              = { workspace = true }
 itertools             = { workspace = true }
 once_cell             = { workspace = true }
-oxc                   = { workspace = true }
+oxc                   = { workspace = true, features = ["transformer"] }
 oxc_index             = { workspace = true }
 oxc_syntax            = { workspace = true }
 regex                 = { workspace = true }

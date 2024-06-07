@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [{
+      "name": "main_tsx",
+      "import": "main.tsx"
+    }]
+  },
+  "expectExecuted": false
+}

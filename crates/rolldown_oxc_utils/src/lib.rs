@@ -9,8 +9,8 @@ pub use crate::{
   ast_snippet::AstSnippet,
   compiler::OxcCompiler,
   ext::{
-    allocator_ext::AllocatorExt, BindingIdentifierExt, BindingPatternExt, ExpressionExt,
-    StatementExt,
+    allocator_ext::AllocatorExt, span_ext::SpanExt, BindingIdentifierExt, BindingPatternExt,
+    ExpressionExt, StatementExt,
   },
   oxc_ast::{OxcAst, WithFieldsMut},
 };

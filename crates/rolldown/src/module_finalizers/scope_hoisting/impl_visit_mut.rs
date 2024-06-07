@@ -10,7 +10,7 @@ use oxc::{
   span::{GetSpan, Span, SPAN},
 };
 use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, IntoIn, StatementExt, TakeIn};
+use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, IntoIn, SpanExt, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -111,26 +111,51 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 }
               }
               ModuleId::External(importee_id) => {
-                let importee = &self.ctx.external_modules[importee_id];
-                // Insert `import * as ns from 'ext'`
-                // Insert `__reExport(exports, ns)`
-                let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                let importer_namespace_name =
-                  self.canonical_name_for(self.ctx.module.namespace_object_ref);
-                let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
-                program
-                  .body
-                  .push(self.snippet.import_star_stmt(&importee.name, importee_namespace_name));
-                program.body.push(
-                  self
-                    .snippet
-                    .call_expr_with_2arg_expr(
-                      re_export_fn_name,
-                      importer_namespace_name,
-                      importee_namespace_name,
-                    )
-                    .into_in(self.alloc),
-                );
+                match self.ctx.options.format {
+                  rolldown_common::OutputFormat::Esm => {
+                    let importee = &self.ctx.external_modules[importee_id];
+                    // Insert `import * as ns from 'ext'`
+                    // Insert `__reExport(exports, ns)`
+                    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+                    let importer_namespace_name =
+                      self.canonical_name_for(self.ctx.module.namespace_object_ref);
+                    let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
+                    program
+                      .body
+                      .push(self.snippet.import_star_stmt(&importee.name, importee_namespace_name));
+                    program.body.push(
+                      self
+                        .snippet
+                        .call_expr_with_2arg_expr(
+                          re_export_fn_name,
+                          importer_namespace_name,
+                          importee_namespace_name,
+                        )
+                        .into_in(self.alloc),
+                    );
+                  }
+                  rolldown_common::OutputFormat::Cjs => {
+                    let importee = &self.ctx.external_modules[importee_id];
+                    // Insert `__reExport(exports, require('ext'))`
+                    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+                    let importer_namespace_name =
+                      self.canonical_name_for(self.ctx.module.namespace_object_ref);
+                    program.body.push(
+                      self
+                        .snippet
+                        .call_expr_with_2arg_expr_expr(
+                          re_export_fn_name,
+                          self.snippet.id_ref_expr(importer_namespace_name, SPAN),
+                          self.snippet.call_expr_with_arg_expr_expr(
+                            "require",
+                            self.snippet.string_literal_expr(&importee.name, SPAN),
+                          ),
+                        )
+                        .into_in(self.alloc),
+                    );
+                  }
+                  rolldown_common::OutputFormat::App => unreachable!(),
+                }
               }
             }
 
@@ -337,7 +362,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
   #[allow(clippy::collapsible_else_if)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     if let Some(call_expr) = expr.as_call_expression_mut() {
-      if call_expr.is_global_require_call(self.scope) {
+      if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_empty() {
         let rec_id = self.ctx.module.imports[&call_expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         match rec.resolved_module {

@@ -7,8 +7,15 @@ pub trait CallExpressionExt<'ast> {
 
 impl<'ast> CallExpressionExt<'ast> for ast::CallExpression<'ast> {
   fn is_global_require_call(&self, scope: &AstScopes) -> bool {
-    matches!(&self.callee,  ast::Expression::Identifier(ident) if ident.name == "require"
-    && scope.is_unresolved(
-      ident.reference_id.get().expect("require should have a reference id")))
+    match &self.callee {
+      ast::Expression::Identifier(ident) if ident.name == "require" => {
+        let Some(ref_id) = ident.reference_id.get() else {
+          // `require(...)` inserted by bundler does not have a reference id
+          return true;
+        };
+        scope.is_unresolved(ref_id)
+      }
+      _ => false,
+    }
   }
 }

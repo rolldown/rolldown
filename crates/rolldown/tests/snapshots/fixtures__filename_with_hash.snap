@@ -576,7 +576,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-2acrHhQ2.cjs
+- entry_js-!~{000}~.cjs => entry_js-mqfy5kPJ.cjs
 
 # tests/esbuild/import_star/re_export_star_external_es6
 

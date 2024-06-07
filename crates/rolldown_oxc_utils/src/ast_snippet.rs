@@ -402,6 +402,10 @@ impl<'ast> AstSnippet<'ast> {
     ast::StringLiteral { span, value: self.atom(value) }
   }
 
+  pub fn string_literal_expr(&self, value: PassedStr, span: Span) -> ast::Expression<'ast> {
+    ast::Expression::StringLiteral(self.string_literal(value, span).into_in(self.alloc))
+  }
+
   pub fn import_star_stmt(&self, source: PassedStr, as_name: PassedStr) -> ast::Statement<'ast> {
     let mut specifiers = allocator::Vec::with_capacity_in(1, self.alloc);
     specifiers.push(ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(

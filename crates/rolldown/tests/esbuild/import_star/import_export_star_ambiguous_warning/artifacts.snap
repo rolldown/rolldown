@@ -14,9 +14,15 @@ import { __export } from "./$runtime$.mjs";
 const x = 1;
 const y = 2;
 
+// bar.js
+const z = 4;
+
 // common.js
 var common_ns = {};
-__export(common_ns, {});
+__export(common_ns, {
+	x:() => x,
+	z:() => z
+});
 
 // entry.js
 console.log(common_ns.x, common_ns.y, common_ns.z);

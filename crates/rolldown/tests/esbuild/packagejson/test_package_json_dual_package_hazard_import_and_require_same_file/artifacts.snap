@@ -14,7 +14,9 @@ import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 var module_ns, module_default;
 var init_module = __esmMin(() => {
 	module_ns = {};
-	__export(module_ns, {});
+	__export(module_ns, {
+		default:() => module_default
+	});
 	module_default = 'module';
 });
 

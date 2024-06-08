@@ -87,7 +87,6 @@ impl RuntimeNormalModuleTask {
       dynamically_imported_ids: vec![],
       package_json: None,
       side_effects: DeterminedSideEffects::Analyzed(false),
-      used_exports: FxHashSet::default(),
     };
 
     if let Err(_err) =

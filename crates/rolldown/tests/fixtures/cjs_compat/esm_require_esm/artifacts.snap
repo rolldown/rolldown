@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/compat/esm_require_esm
+input_file: crates/rolldown/tests/fixtures/cjs_compat/esm_require_esm
 ---
 # Assets
 

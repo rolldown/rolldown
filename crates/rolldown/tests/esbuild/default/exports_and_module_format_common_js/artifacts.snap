@@ -12,11 +12,17 @@ const { __export } = require("./$runtime$.cjs");
 
 // foo/test.js
 var test_ns$1 = {};
-__export(test_ns$1, {});
+__export(test_ns$1, {
+	foo:() => foo
+});
+let foo = 123;
 
 // bar/test.js
 var test_ns = {};
-__export(test_ns, {});
+__export(test_ns, {
+	bar:() => bar
+});
+let bar = 123;
 
 // entry.js
 console.log(exports, module.exports, test_ns$1, test_ns);

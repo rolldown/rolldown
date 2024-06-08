@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/basic_commonjs
+input_file: crates/rolldown/tests/fixtures/cjs_compat/basic_commonjs
 ---
 # Assets
 

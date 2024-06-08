@@ -1,4 +1,4 @@
-use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
+use rolldown::{Bundler, BundlerOptions, InputItem, IsExternal, SourceMapType};
 use rolldown_testing::workspace;
 use sugar_path::SugarPath;
 
@@ -8,11 +8,13 @@ async fn main() {
   let cwd = root.join("./examples").normalize();
   let mut bundler = Bundler::new(BundlerOptions {
     input: Some(vec![
-      InputItem { name: Some("react-dom".to_string()), import: "./index.js".to_string() },
+      InputItem { name: Some("react-dom".to_string()), import: "./entry.js".to_string() },
       // InputItem { name: Some("react".to_string()), import: "react".to_string() },
     ]),
+    // format: Some(rolldown::OutputFormat::Cjs),
     cwd: cwd.into(),
     sourcemap: Some(SourceMapType::File),
+    // external: Some(IsExternal::from_vec(vec!["bar".to_string(), "foo".to_string()])),
     ..Default::default()
   });
 

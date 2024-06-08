@@ -36,4 +36,6 @@ var entry_default = [foo, bar, function() {
 
 	return KEEP_ME;
 },];
+
+export { entry_default as default };
 ```

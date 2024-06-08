@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown/tests/common/case.rs
-assertion_line: 167
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_entry_point_and_inner_file
 ---

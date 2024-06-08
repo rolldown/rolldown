@@ -12,7 +12,10 @@ import { __export } from "./$runtime$.mjs";
 
 // foo.js
 var foo_ns = {};
-__export(foo_ns, {});
+__export(foo_ns, {
+	x:() => x
+});
+const x = 123;
 
 // entry.js
 console.log(foo_ns, foo_ns.foo);

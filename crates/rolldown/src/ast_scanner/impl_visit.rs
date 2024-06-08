@@ -22,12 +22,9 @@ impl<'me> AstScanner<'me> {
     &mut self,
     symbol_id: Option<SymbolId>,
     ident: &IdentifierReference,
-  ) -> bool {
+  ) -> Option<SymbolId> {
     match symbol_id {
-      Some(symbol_id) if self.is_top_level(symbol_id) => {
-        self.add_referenced_symbol(symbol_id);
-        true
-      }
+      Some(symbol_id) if self.is_top_level(symbol_id) => Some(symbol_id),
       None => {
         if ident.name == "module" {
           self.used_module_ref = true;
@@ -41,9 +38,9 @@ impl<'me> AstScanner<'me> {
               .with_severity_warning(),
           );
         }
-        false
+        None
       }
-      _ => false,
+      _ => None,
     }
   }
 }
@@ -96,8 +93,8 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
             }
             Expression::Identifier(ident) => {
               let symbol_id = self.resolve_symbol_from_reference(&ident);
-              let is_top_level = self.resolve_identifier_reference(symbol_id, &ident);
-              break if is_top_level { symbol_id } else { None };
+              let resolved_top_level = self.resolve_identifier_reference(symbol_id, &ident);
+              break resolved_top_level;
             }
             _ => break None,
           }
@@ -123,7 +120,9 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
 
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {
     let symbol_id = self.resolve_symbol_from_reference(ident);
-    self.resolve_identifier_reference(symbol_id, ident);
+    if let Some(resolved_symbol_id) = self.resolve_identifier_reference(symbol_id, ident) {
+      self.add_referenced_symbol(resolved_symbol_id);
+    };
   }
 
   fn visit_statement(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {

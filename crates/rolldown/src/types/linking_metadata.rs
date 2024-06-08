@@ -55,6 +55,13 @@ impl LinkingMetadata {
     self
       .sorted_and_non_ambiguous_resolved_exports
       .iter()
+      .map(|name| (name, &self.resolved_exports[name]))
+  }
+
+  pub fn used_canonical_exports(&self) -> impl Iterator<Item = (&Rstr, &ResolvedExport)> {
+    self
+      .sorted_and_non_ambiguous_resolved_exports
+      .iter()
       .filter(|name| self.used_exports.contains(name))
       .inspect(|name| {
         dbg!(&name,);

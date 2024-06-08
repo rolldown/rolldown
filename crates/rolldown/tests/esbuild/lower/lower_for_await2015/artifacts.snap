@@ -18,4 +18,6 @@ var entry_default = [async() => {
 }, async() => {
 	for  await(const x$1 of  y) 	z(x$1);
 },];
+
+export { entry_default as default };
 ```

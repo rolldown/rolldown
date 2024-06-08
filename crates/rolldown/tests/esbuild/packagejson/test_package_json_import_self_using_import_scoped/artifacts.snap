@@ -22,4 +22,6 @@ var foo_import_default = 'foo';
 // src/index.js
 var src_index_default = 'index';
 console.log(src_index_default, foo_import_default);
+
+export { src_index_default as default };
 ```

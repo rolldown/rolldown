@@ -23,5 +23,9 @@ const out = __toESM(require("foo"));
 
 // entry.js
 var entry_ns = {};
-__export(entry_ns, {});
+__export(entry_ns, {
+	out:() => out
+});
+
+module.exports = __toCommonJS(entry_ns)
 ```

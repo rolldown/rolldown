@@ -10,9 +10,18 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_of_export_star
 ```js
 import { __export } from "./$runtime$.mjs";
 
+// bar.js
+var bar_ns = {};
+__export(bar_ns, {
+	bar:() => bar
+});
+const bar = 123;
+
 // foo.js
 var foo_ns = {};
-__export(foo_ns, {});
+__export(foo_ns, {
+	bar_ns:() => bar_ns
+});
 
 // entry.js
 console.log(foo_ns);

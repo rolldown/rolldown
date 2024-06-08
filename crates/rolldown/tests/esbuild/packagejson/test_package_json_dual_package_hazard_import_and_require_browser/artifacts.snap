@@ -14,7 +14,9 @@ import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 var module_browser_ns, module_browser_default;
 var init_module_browser = __esmMin(() => {
 	module_browser_ns = {};
-	__export(module_browser_ns, {});
+	__export(module_browser_ns, {
+		default:() => module_browser_default
+	});
 	module_browser_default = 'browser module';
 });
 

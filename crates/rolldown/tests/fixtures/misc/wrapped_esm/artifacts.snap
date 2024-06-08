@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/wrapped_esm
+input_file: crates/rolldown/tests/fixtures/misc/wrapped_esm
 ---
 # Assets
 

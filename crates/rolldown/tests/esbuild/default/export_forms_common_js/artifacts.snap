@@ -17,40 +17,74 @@ var init_a = __esmMin(() => {
 });
 
 // b.js
+var b_ns, xyz;
 var init_b = __esmMin(() => {
+	b_ns = {};
+	__export(b_ns, {
+		xyz:() => xyz
+	});
+	xyz = null;
 });
 
 // commonjs.js
-var commonjs_ns;
+function Fn() {
+}
+var commonjs_ns, commonjs_default, v, l, c, Class;
 var init_commonjs = __esmMin(() => {
 	commonjs_ns = {};
-	__export(commonjs_ns, {});
+	__export(commonjs_ns, {
+		C:() => Class,
+		Class:() => Class,
+		Fn:() => Fn,
+		abc:() => abc,
+		b:() => b_ns,
+		c:() => c,
+		default:() => commonjs_default,
+		l:() => l,
+		v:() => v
+	});
 	init_a();
 	init_b();
+	commonjs_default = 123;
+	v = 234;
+	l = 234;
+	c = 234;
+	Class = class {
+	};
 });
 
 // c.js
-var c_ns;
+var c_ns, c_default;
 var init_c = __esmMin(() => {
 	c_ns = {};
-	__export(c_ns, {});
+	__export(c_ns, {
+		default:() => c_default
+	});
+	c_default = class {
+	};
 });
 
 // d.js
 var d_ns, Foo;
 var init_d = __esmMin(() => {
 	d_ns = {};
-	__export(d_ns, {});
+	__export(d_ns, {
+		default:() => Foo
+	});
 	Foo = class {
 	};
 	Foo.prop = 123;
 });
 
 // e.js
+function e_default() {
+}
 var e_ns;
 var init_e = __esmMin(() => {
 	e_ns = {};
-	__export(e_ns, {});
+	__export(e_ns, {
+		default:() => e_default
+	});
 });
 
 // f.js
@@ -59,15 +93,21 @@ function foo$1() {
 var f_ns;
 var init_f = __esmMin(() => {
 	f_ns = {};
-	__export(f_ns, {});
+	__export(f_ns, {
+		default:() => foo$1
+	});
 	foo$1.prop = 123;
 });
 
 // g.js
+async function g_default() {
+}
 var g_ns;
 var init_g = __esmMin(() => {
 	g_ns = {};
-	__export(g_ns, {});
+	__export(g_ns, {
+		default:() => g_default
+	});
 });
 
 // h.js
@@ -76,7 +116,9 @@ async function foo() {
 var h_ns;
 var init_h = __esmMin(() => {
 	h_ns = {};
-	__export(h_ns, {});
+	__export(h_ns, {
+		default:() => foo
+	});
 	foo.prop = 123;
 });
 

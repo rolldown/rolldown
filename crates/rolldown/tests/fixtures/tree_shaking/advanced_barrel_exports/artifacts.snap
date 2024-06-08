@@ -1,11 +1,11 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_unused_missing_es6
+input_file: crates/rolldown/tests/fixtures/tree_shaking/advanced_barrel_exports
 ---
 # Assets
 
-## entry_js.mjs
+## main.mjs
 
 ```js
 import { __export } from "./$runtime$.mjs";
@@ -13,10 +13,10 @@ import { __export } from "./$runtime$.mjs";
 // foo.js
 var foo_ns = {};
 __export(foo_ns, {
-	x:() => x
+	a:() => a
 });
-const x = 123;
+const a = 100;
 
-// entry.js
-console.log(foo_ns.foo);
+// main.js
+console.log(foo_ns.a);
 ```

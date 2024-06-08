@@ -1,6 +1,6 @@
 use std::{ptr::addr_of, sync::Mutex};
 
-use oxc_index::IndexVec;
+use oxc_index::{Idx, IndexVec};
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
   NormalizedBundlerOptions, OutputFormat, StmtInfo, WrapKind,
@@ -148,15 +148,14 @@ impl<'a> LinkStage<'a> {
   pub fn link(mut self) -> LinkStageOutput {
     self.sort_modules();
 
-    // self.print_reference_symbol();
-
     self.determine_module_exports_kind();
     self.wrap_modules();
     self.bind_imports_and_exports();
-
+    // self.print_reference_symbol();
     self.create_exports_for_modules();
     self.reference_needed_symbols();
     self.include_statements();
+    // self.print_reference_symbol();
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
     LinkStageOutput {
@@ -173,23 +172,10 @@ impl<'a> LinkStage<'a> {
   }
 
   fn print_reference_symbol(&self) {
-    for ele in self.sorted_modules.iter() {
-      let m = &self.module_table.normal_modules[*ele];
-      if m.is_virtual() {
-        continue;
-      }
-      dbg!(&m.stable_resource_id);
-      m.stmt_infos.iter().for_each(|stmt_info| {
-        dbg!(&stmt_info.debug_label);
-        for symbol in &stmt_info.referenced_symbols {
-          match symbol {
-            rolldown_common::SymbolOrMemberExprRef::Symbol(s) => {
-              dbg!(&self.symbols.get(*s));
-            }
-            rolldown_common::SymbolOrMemberExprRef::MemberExpr(_) => {}
-          }
-        }
-      });
+    for (id, m) in self.metas.iter().enumerate() {
+      let module = &self.module_table.normal_modules[NormalModuleId::from_usize(id)];
+      dbg!(&module.stable_resource_id);
+      dbg!(&m);
     }
   }
 
@@ -332,13 +318,13 @@ impl<'a> LinkStage<'a> {
                         // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
                         // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
                         // Reference to `require_bar_cjs`
-                        // stmt_info
-                        //   .referenced_symbols
-                        //   .push(importee_linking_info.wrapper_ref.unwrap().into());
+                        stmt_info
+                          .referenced_symbols
+                          .push(importee_linking_info.wrapper_ref.unwrap().into());
                         // dbg!(&importee_linking_info.wrapper_ref);
-                        // stmt_info
-                        //   .referenced_symbols
-                        //   .push(self.runtime.resolve_symbol("__toESM").into());
+                        stmt_info
+                          .referenced_symbols
+                          .push(self.runtime.resolve_symbol("__toESM").into());
                         stmt_info.declared_symbols.push(rec.namespace_ref);
                         let importee = &self.module_table.normal_modules[importee_id];
                         symbols.lock().unwrap().get_mut(rec.namespace_ref).name =

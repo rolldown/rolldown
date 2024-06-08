@@ -178,8 +178,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
     arg_obj_expr.properties.reserve_exact(exports_len);
 
-    dbg!(&self.ctx.linking_info.canonical_exports().collect::<Vec<_>>());
-    self.ctx.linking_info.canonical_exports().for_each(|(export, resolved_export)| {
+    self.ctx.linking_info.used_canonical_exports().for_each(|(export, resolved_export)| {
       // prop_name: () => returned
       let prop_name = export;
       let returned = self.generate_finalized_expr_for_symbol_ref(resolved_export.symbol_ref);

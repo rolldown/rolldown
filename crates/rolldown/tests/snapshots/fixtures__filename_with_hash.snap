@@ -26,7 +26,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
 - $runtime$-!~{001}~.mjs => $runtime$-VsLkndd-.mjs
-- entry_js-!~{000}~.mjs => entry_js-aZxrtKVc.mjs
+- entry_js-!~{000}~.mjs => entry_js-jQRCBDDy.mjs
 
 # tests/esbuild/dce/inline_function_call_for_init_decl
 
@@ -148,7 +148,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/dce/tree_shaking_import_identifier
 
 - $runtime$-!~{001}~.mjs => $runtime$-p3E6YEwS.mjs
-- entry_js-!~{000}~.mjs => entry_js-VY9fbi7V.mjs
+- entry_js-!~{000}~.mjs => entry_js-lQJaokM-.mjs
 
 # tests/esbuild/dce/tree_shaking_in_esm_wrapper
 
@@ -457,7 +457,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/import_star/import_export_star_ambiguous_warning
 
 - $runtime$-!~{001}~.mjs => $runtime$-p3E6YEwS.mjs
-- entry_js-!~{000}~.mjs => entry_js-jEM63MHK.mjs
+- entry_js-!~{000}~.mjs => entry_js-6EufadGw.mjs
 
 # tests/esbuild/import_star/import_of_export_star
 
@@ -523,8 +523,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/import_star_export_star_as_unused
 
-- $runtime$-!~{001}~.mjs => $runtime$-p3E6YEwS.mjs
-- entry_js-!~{000}~.mjs => entry_js-ydely-ew.mjs
+- entry_js-!~{000}~.mjs => entry_js-0ZgkONLo.mjs
 
 # tests/esbuild/import_star/import_star_export_star_capture
 
@@ -596,8 +595,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/other_file_export_self_as_namespace_unused_es6
 
-- $runtime$-!~{001}~.mjs => $runtime$-p3E6YEwS.mjs
-- entry_js-!~{000}~.mjs => entry_js-kdwdpUqf.mjs
+- entry_js-!~{000}~.mjs => entry_js-9AmJ1Gkp.mjs
 
 # tests/esbuild/import_star/other_file_import_export_self_as_namespace_unused_es6
 
@@ -1588,6 +1586,16 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/rollup/simplify-with-destructuring
 
 - main-!~{000}~.mjs => main-m9nnNuko.mjs
+
+# tests/fixtures/tree_shaking/advanced_barrel_exports
+
+- $runtime$-!~{001}~.mjs => $runtime$-p3E6YEwS.mjs
+- main-!~{000}~.mjs => main-191fJ8Lw.mjs
+
+# tests/fixtures/tree_shaking/advanced_barrel_exports2
+
+- $runtime$-!~{001}~.mjs => $runtime$-p3E6YEwS.mjs
+- main-!~{000}~.mjs => main-ObkNfDI1.mjs
 
 # tests/fixtures/tree_shaking/derived_side_effects_should_have_high_priority
 

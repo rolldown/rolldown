@@ -165,6 +165,7 @@ pub async fn render_chunk(
         WrapKind::Cjs => {
           // "export default require_xxx();"
           let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+          dbg!(&wrapper_ref);
           let wrapper_ref_name =
             graph.symbols.canonical_name_for(*wrapper_ref, &this.canonical_names);
           concat_source.add_source(Box::new(RawSource::new(format!(

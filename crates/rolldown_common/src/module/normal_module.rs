@@ -29,7 +29,6 @@ pub struct NormalModule {
   pub namespace_object_ref: SymbolRef,
   pub named_imports: FxHashMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
-  pub used_exports: FxHashSet<Rstr>,
   /// `stmt_infos[0]` represents the namespace binding statement
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordId, ImportRecord>,

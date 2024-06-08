@@ -13,6 +13,7 @@ use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
 use rolldown_utils::path_ext::PathExt;
+use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
 use super::{task_context::TaskContext, Msg};
@@ -197,6 +198,7 @@ impl NormalModuleTask {
       dynamically_imported_ids,
       package_json: self.package_json.take(),
       side_effects,
+      used_exports: FxHashSet::default(),
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;

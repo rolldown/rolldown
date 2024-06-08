@@ -23,6 +23,18 @@ pub enum SymbolOrMemberExprRef {
   MemberExpr(MemberExprRef),
 }
 
+impl SymbolOrMemberExprRef {
+  /// get the first part of the expression,
+  /// e.g. `test.a.b` will return `test`
+  /// for identifier, it will return itself
+  pub fn symbol(&self) -> &SymbolRef {
+    match self {
+      SymbolOrMemberExprRef::Symbol(s) => s,
+      SymbolOrMemberExprRef::MemberExpr(expr) => &expr.symbol,
+    }
+  }
+}
+
 /// Crossing module ref between symbols
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberExprRef {

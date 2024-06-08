@@ -12,10 +12,7 @@ import { __export } from "./$runtime$.mjs";
 
 // bar.js
 var bar_ns = {};
-__export(bar_ns, {
-	x:() => x
-});
-const x = 123;
+__export(bar_ns, {});
 
 // entry.js
 console.log(bar_ns.foo);

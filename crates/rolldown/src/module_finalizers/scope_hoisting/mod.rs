@@ -170,7 +170,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .var_decl_stmt(var_name, ast::Expression::ObjectExpression(TakeIn::dummy(self.alloc)));
 
     let exports_len = self.ctx.linking_info.canonical_exports_len();
-
     if exports_len == 0 {
       return vec![decl_stmt];
     }
@@ -179,6 +178,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
     arg_obj_expr.properties.reserve_exact(exports_len);
 
+    dbg!(&self.ctx.linking_info.canonical_exports().collect::<Vec<_>>());
     self.ctx.linking_info.canonical_exports().for_each(|(export, resolved_export)| {
       // prop_name: () => returned
       let prop_name = export;

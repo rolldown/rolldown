@@ -17,6 +17,4 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_as_external
 
 ```js
 import * as out from "foo";
-
-export { out };
 ```

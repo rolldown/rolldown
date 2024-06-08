@@ -21,12 +21,9 @@ class Base {
 // a.js
 var a_ns = {};
 __export(a_ns, {
-	Keep:() => Keep,
-	REMOVE:() => REMOVE
+	Keep:() => Keep
 });
 class Keep extends b_ns.Base {
-}
-class REMOVE extends b_ns.Base {
 }
 
 // entry.js

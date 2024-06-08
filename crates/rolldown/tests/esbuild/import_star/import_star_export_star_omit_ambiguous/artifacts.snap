@@ -10,18 +10,9 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_om
 ```js
 import { __export } from "./$runtime$.mjs";
 
-// foo.js
-const x = 1;
-
-// bar.js
-const z = 4;
-
 // common.js
 var common_ns = {};
-__export(common_ns, {
-	x:() => x,
-	z:() => z
-});
+__export(common_ns, {});
 
 // entry.js
 console.log(common_ns);

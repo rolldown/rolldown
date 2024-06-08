@@ -8,6 +8,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
+use rustc_hash::FxHashSet;
 
 use super::Msg;
 use crate::{
@@ -86,6 +87,7 @@ impl RuntimeNormalModuleTask {
       dynamically_imported_ids: vec![],
       package_json: None,
       side_effects: DeterminedSideEffects::Analyzed(false),
+      used_exports: FxHashSet::default(),
     };
 
     if let Err(_err) =

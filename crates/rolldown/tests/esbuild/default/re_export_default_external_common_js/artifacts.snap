@@ -16,10 +16,5 @@ const { default: bar } = __toESM(require("bar"));
 
 // entry.js
 var entry_ns = {};
-__export(entry_ns, {
-	bar:() => bar,
-	foo:() => foo
-});
-
-module.exports = __toCommonJS(entry_ns)
+__export(entry_ns, {});
 ```

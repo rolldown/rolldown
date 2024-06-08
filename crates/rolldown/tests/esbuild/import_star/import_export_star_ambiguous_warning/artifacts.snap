@@ -12,16 +12,11 @@ import { __export } from "./$runtime$.mjs";
 
 // foo.js
 const x = 1;
-
-// bar.js
-const z = 4;
+const y = 2;
 
 // common.js
 var common_ns = {};
-__export(common_ns, {
-	x:() => x,
-	z:() => z
-});
+__export(common_ns, {});
 
 // entry.js
 console.log(common_ns.x, common_ns.y, common_ns.z);

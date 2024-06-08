@@ -11,27 +11,17 @@ input_file: crates/rolldown/tests/esbuild/default/common_js_from_es6
 import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 
 // foo.js
-function foo$1() {
-	return 'foo';
-}
 var foo_ns;
 var init_foo = __esmMin(() => {
 	foo_ns = {};
-	__export(foo_ns, {
-		foo:() => foo$1
-	});
+	__export(foo_ns, {});
 });
 
 // bar.js
-function bar$1() {
-	return 'bar';
-}
 var bar_ns;
 var init_bar = __esmMin(() => {
 	bar_ns = {};
-	__export(bar_ns, {
-		bar:() => bar$1
-	});
+	__export(bar_ns, {});
 });
 
 // entry.js

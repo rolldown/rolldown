@@ -14,13 +14,10 @@ import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 var y_default = 'y';
 
 // x.txt
-var x_ns, x_default;
+var x_ns;
 var init_x = __esmMin(() => {
 	x_ns = {};
-	__export(x_ns, {
-		default:() => x_default
-	});
-	x_default = 'x';
+	__export(x_ns, {});
 });
 
 // entry.js

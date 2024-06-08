@@ -442,10 +442,12 @@ impl<'me> AstScanner<'me> {
   }
 
   pub fn add_referenced_symbol(&mut self, id: SymbolId) {
+    dbg!(&self.symbols.get_name(id));
     self.current_stmt_info.referenced_symbols.push((self.idx, id).into());
   }
 
   pub fn add_member_expr_reference(&mut self, id: SymbolId, chains: Vec<CompactStr>) {
+    dbg!(&self.symbols.get_name(id));
     self.current_stmt_info.referenced_symbols.push((self.idx, id, chains).into());
   }
 

@@ -7,8 +7,9 @@ use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
 };
-use rolldown_rstr::ToRstr;
+use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use rustc_hash::FxHashSet;
 
 use super::LinkStage;
 
@@ -17,6 +18,7 @@ struct Context<'a> {
   symbols: &'a Symbols,
   is_included_vec: &'a mut IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>>,
   is_module_included_vec: &'a mut IndexVec<NormalModuleId, bool>,
+  used_exports_vec: &'a mut IndexVec<NormalModuleId, FxHashSet<Rstr>>,
   tree_shaking: bool,
   runtime_id: NormalModuleId,
 }
@@ -78,12 +80,26 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<Compact
   let mut canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   let mut canonical_ref_module = &ctx.modules[canonical_ref.owner];
 
+  dbg!(&canonical_ref_symbol.namespace_alias);
   while cursor < chains.len() && canonical_ref_symbol.name.ends_with("_ns") {
     let name = &chains[cursor];
-    let Some(export_symbol) = canonical_ref_module.named_exports.get(&name.to_rstr()) else {
-      break;
-    };
-    dbg!(export_symbol);
+    // TODO: multiple ambiougous exports
+    let export_symbol = canonical_ref_module.named_exports.get(&name.to_rstr()).or_else(|| {
+      let mut candidate_count = 0;
+      for item in canonical_ref_module.star_export_module_ids() {
+        let id = match item {
+          rolldown_common::ModuleId::Normal(i) => i,
+          rolldown_common::ModuleId::External(_) => continue,
+        };
+        let m = &ctx.modules[id];
+        if let Some(symbol) = m.named_exports.get(&name.to_rstr()) {
+          return Some(symbol);
+        }
+      }
+      None
+    });
+    let Some(export_symbol) = export_symbol else { break };
+    dbg!(ctx.symbols.get(export_symbol.referenced));
     canonical_ref = ctx.symbols.par_canonical_ref_for(export_symbol.referenced);
     canonical_ref_symbol = ctx.symbols.get(canonical_ref);
     canonical_ref_module = &ctx.modules[canonical_ref.owner];
@@ -99,7 +115,13 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<Compact
     println!("-----------------------------")
   }
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
+    dbg!(&namespace_alias);
+    // TODO: consider namespace_alias
     canonical_ref = namespace_alias.namespace_ref;
+  }
+  let canonical_ref_symbol_name = canonical_ref_symbol.name.to_rstr();
+  if canonical_ref_module.named_exports.get(&canonical_ref_symbol_name).is_some() {
+    ctx.used_exports_vec[canonical_ref_module.id].insert(canonical_ref_symbol_name);
   }
   include_module(ctx, canonical_ref_module);
   canonical_ref_module
@@ -125,11 +147,11 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
   *is_included = true;
 
   // include statements that are referenced by this statement
-  stmt_info.declared_symbols.iter().for_each(|symbol_ref| {
-    // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
-    // really declared by the module itself. We need to include them where they are really declared.
-    include_symbol(ctx, *symbol_ref, &vec![]);
-  });
+  // stmt_info.declared_symbols.iter().for_each(|symbol_ref| {
+  //   // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
+  //   // really declared by the module itself. We need to include them where they are really declared.
+  //   include_symbol(ctx, *symbol_ref, &vec![]);
+  // });
 
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| match reference_ref {
     SymbolOrMemberExprRef::Symbol(symbol_ref) => {
@@ -156,6 +178,8 @@ impl LinkStage<'_> {
     let mut is_module_included_vec: IndexVec<NormalModuleId, bool> =
       oxc_index::index_vec![false; self.module_table.normal_modules.len()];
 
+    let mut used_exports_vec: IndexVec<NormalModuleId, FxHashSet<Rstr>> =
+      oxc_index::index_vec![FxHashSet::default(); self.module_table.normal_modules.len()];
     let context = &mut Context {
       modules: &self.module_table.normal_modules,
       symbols: &self.symbols,
@@ -163,6 +187,7 @@ impl LinkStage<'_> {
       is_module_included_vec: &mut is_module_included_vec,
       tree_shaking: self.input_options.treeshake,
       runtime_id: self.runtime.id(),
+      used_exports_vec: &mut used_exports_vec,
     };
 
     self.entries.iter().for_each(|entry| {
@@ -180,6 +205,11 @@ impl LinkStage<'_> {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });
     });
+    {
+      self.module_table.normal_modules.iter_mut().for_each(|module| {
+        self.metas[module.id].used_exports = std::mem::take(&mut used_exports_vec[module.id]);
+      });
+    }
 
     tracing::trace!(
       "included statements {:#?}",

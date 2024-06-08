@@ -11,13 +11,10 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_dual_pac
 import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 
 // node_modules/demo-pkg/module.js
-var module_ns, module_default;
+var module_ns;
 var init_module = __esmMin(() => {
 	module_ns = {};
-	__export(module_ns, {
-		default:() => module_default
-	});
-	module_default = 'module';
+	__export(module_ns, {});
 });
 
 // src/entry.js

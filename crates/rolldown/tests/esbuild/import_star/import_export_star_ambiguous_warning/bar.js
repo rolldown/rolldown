@@ -1,2 +1,1 @@
-export const y = 3
-export const z = 4
+export * from './xxxx.js'

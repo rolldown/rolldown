@@ -12,10 +12,7 @@ import { __export } from "./$runtime$.mjs";
 
 // node_modules/demo-pkg/index.js
 var demo_pkg_index_ns = {};
-__export(demo_pkg_index_ns, {
-	foo:() => foo
-});
-const foo = 123;
+__export(demo_pkg_index_ns, {});
 console.log('hello');
 
 // src/entry.js

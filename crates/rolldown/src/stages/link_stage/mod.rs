@@ -112,12 +112,21 @@ impl<'a> LinkStage<'a> {
       // This is only a concept of esm, so no need to care about this in commonjs.
       if matches!(module.exports_kind, ExportsKind::Esm) {
         let meta = &self.metas[module.id];
+        dbg!(&module.stable_resource_id);
         let mut referenced_symbols = vec![];
         if !meta.is_canonical_exports_empty() {
           // Reference to all exports. Once the Module Namespace Object is included, all exports should be included too.
-          referenced_symbols
-            .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
+          // referenced_symbols
+          //   .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
           referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
+        }
+        for s in referenced_symbols.iter() {
+          match s {
+            rolldown_common::SymbolOrMemberExprRef::Symbol(s) => {
+              dbg!(&self.symbols.get(*s));
+            }
+            rolldown_common::SymbolOrMemberExprRef::MemberExpr(_) => {}
+          }
         }
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
         // Corresponding AST for this statement will be created by the finalizer.
@@ -139,6 +148,8 @@ impl<'a> LinkStage<'a> {
   pub fn link(mut self) -> LinkStageOutput {
     self.sort_modules();
 
+    // self.print_reference_symbol();
+
     self.determine_module_exports_kind();
     self.wrap_modules();
     self.bind_imports_and_exports();
@@ -158,6 +169,27 @@ impl<'a> LinkStage<'a> {
       warnings: self.warnings,
       errors: self.errors,
       ast_table: self.ast_table,
+    }
+  }
+
+  fn print_reference_symbol(&self) {
+    for ele in self.sorted_modules.iter() {
+      let m = &self.module_table.normal_modules[*ele];
+      if m.is_virtual() {
+        continue;
+      }
+      dbg!(&m.stable_resource_id);
+      m.stmt_infos.iter().for_each(|stmt_info| {
+        dbg!(&stmt_info.debug_label);
+        for symbol in &stmt_info.referenced_symbols {
+          match symbol {
+            rolldown_common::SymbolOrMemberExprRef::Symbol(s) => {
+              dbg!(&self.symbols.get(*s));
+            }
+            rolldown_common::SymbolOrMemberExprRef::MemberExpr(_) => {}
+          }
+        }
+      });
     }
   }
 
@@ -265,6 +297,7 @@ impl<'a> LinkStage<'a> {
                       format!("import_{}", legitimize_identifier_name(&importee.name)).into();
                     stmt_info.declared_symbols.push(rec.namespace_ref);
                     stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
+                    dbg!(&importer.namespace_object_ref);
                     stmt_info
                       .referenced_symbols
                       .push(self.runtime.resolve_symbol("__reExport").into());
@@ -299,12 +332,13 @@ impl<'a> LinkStage<'a> {
                         // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
                         // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
                         // Reference to `require_bar_cjs`
-                        stmt_info
-                          .referenced_symbols
-                          .push(importee_linking_info.wrapper_ref.unwrap().into());
-                        stmt_info
-                          .referenced_symbols
-                          .push(self.runtime.resolve_symbol("__toESM").into());
+                        // stmt_info
+                        //   .referenced_symbols
+                        //   .push(importee_linking_info.wrapper_ref.unwrap().into());
+                        // dbg!(&importee_linking_info.wrapper_ref);
+                        // stmt_info
+                        //   .referenced_symbols
+                        //   .push(self.runtime.resolve_symbol("__toESM").into());
                         stmt_info.declared_symbols.push(rec.namespace_ref);
                         let importee = &self.module_table.normal_modules[importee_id];
                         symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
@@ -318,6 +352,7 @@ impl<'a> LinkStage<'a> {
                       stmt_info
                         .referenced_symbols
                         .push(importee_linking_info.wrapper_ref.unwrap().into());
+                      dbg!(&importee_linking_info.wrapper_ref);
                       if is_reexport_all && importee_linking_info.has_dynamic_exports {
                         // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
                         // something like `__reExport(foo_exports, other_exports)`

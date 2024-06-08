@@ -10,6 +10,4 @@ input_file: crates/rolldown/tests/esbuild/default/re_export_default_external_es6
 ```js
 import { default as foo } from "foo";
 import { default as bar } from "bar";
-
-export { bar, foo };
 ```

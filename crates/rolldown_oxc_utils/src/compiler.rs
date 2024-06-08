@@ -40,7 +40,12 @@ impl OxcCompiler {
     let codegen = Codegen::<false>::new(
       source_name,
       ast.source(),
-      CodegenOptions { enable_typescript: false, enable_source_map },
+      CodegenOptions {
+        enable_typescript: false,
+        enable_source_map,
+        preserve_annotate_comments: false,
+      },
+      None,
     );
     codegen.build(ast.program())
   }

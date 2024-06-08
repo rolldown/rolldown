@@ -1367,6 +1367,22 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-mRR340KN.mjs
 
+# tests/fixtures/loaders/binary/binary
+
+- main-!~{000}~.mjs => main-CmAMqcrz.mjs
+
+# tests/fixtures/loaders/binary/empty
+
+- main-!~{000}~.mjs => main-C77p5x1M.mjs
+
+# tests/fixtures/loaders/binary/node
+
+- main-!~{000}~.mjs => main-k2Ntq9Fb.mjs
+
+# tests/fixtures/loaders/binary/text
+
+- main-!~{000}~.mjs => main-HOErwbTT.mjs
+
 # tests/fixtures/loaders/txt/empty
 
 - main-!~{000}~.mjs => main-mjp40V8P.mjs

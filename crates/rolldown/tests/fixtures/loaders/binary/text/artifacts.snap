@@ -1,0 +1,23 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/loaders/binary/text
+---
+# Assets
+
+## main.mjs
+
+```js
+
+
+//#region text.data
+var text_default = __toBinary('IidgKz0vQCMkJCVeJiooCuS9oOWlve+8jOS4lueVjArQn9GA0LjQstC10YIg0LzQuNGACuOBk+OCk+OBq+OBoeOBr+S4lueVjAo=');
+
+//#endregion
+//#region main.js
+console.log(text_default);
+var main_default = text_default;
+
+//#endregion
+export { main_default as default };
+```

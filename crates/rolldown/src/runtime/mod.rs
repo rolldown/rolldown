@@ -26,3 +26,5 @@ impl RuntimeModuleBrief {
     (self.id, *symbol_id).into()
   }
 }
+
+pub static ROLLDOWN_RUNTIME_RESOURCE_ID: &str = "rolldown:runtime";

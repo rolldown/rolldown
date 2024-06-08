@@ -1271,7 +1271,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/format/cjs/import_export_unicode
 
-- main-!~{000}~.cjs => main-fb10U16R.cjs
+- main-!~{000}~.cjs => main-wni2Jo-6.cjs
 
 # tests/fixtures/function/format/cjs/plain_import_should_not_introduce_to_esm
 
@@ -1301,7 +1301,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/loaders/json/object_with_invalid_key
 
-- main-!~{000}~.mjs => main-fnISKm7v.mjs
+- main-!~{000}~.mjs => main-rAOgwMBc.mjs
 
 # tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 

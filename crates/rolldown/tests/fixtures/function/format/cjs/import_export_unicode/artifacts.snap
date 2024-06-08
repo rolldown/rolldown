@@ -19,7 +19,7 @@ const devil = 'devil';
 //#region main.js
 var main_ns = {};
 __export(main_ns, {
-	'\u{1f608}':() => devil
+	'😈':() => devil
 });
 
 //#endregion

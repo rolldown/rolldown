@@ -2,6 +2,7 @@ use core::panic;
 
 use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
+use itertools::Itertools;
 use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
@@ -122,7 +123,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<Compact
   let mut canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   let mut canonical_ref_module = &ctx.modules[canonical_ref.owner];
   let is_same_ref = canonical_ref == symbol_ref;
-  let mut ns_list = vec![];
+  let mut ns_symbol_list = vec![];
   let is_namespace_ref = canonical_ref_module.namespace_object_ref == canonical_ref;
   while cursor < chains.len() && is_namespace_ref {
     let name = &chains[cursor];
@@ -135,18 +136,13 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<Compact
     if !ctx.modules[export_symbol.symbol_ref.owner].exports_kind.is_esm() {
       break;
     }
-    ns_list.push((canonical_ref_module.id, canonical_ref));
+    ns_symbol_list.push((canonical_ref, name.to_rstr()));
     canonical_ref = ctx.symbols.par_canonical_ref_for(export_symbol.symbol_ref);
     canonical_ref_symbol = ctx.symbols.get(canonical_ref);
     canonical_ref_module = &ctx.modules[canonical_ref.owner];
     cursor += 1;
   }
   // if canonical_ref_symbol
-
-  for (module_id, symbol_ref) in ns_list.iter() {
-    let module = &ctx.modules[*module_id];
-    include_symbol(ctx, *symbol_ref, &vec![]);
-  }
 
   let p = canonical_ref_module.stable_resource_id.contains("runtime");
   if !p {
@@ -171,9 +167,14 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<Compact
   let is_namespace_ref = canonical_ref_module.namespace_object_ref == canonical_ref;
   if export_name.ends_with("_ns") && !is_same_ref {
     ctx.used_exports_info_vec[canonical_ref_module.id].used_info |= UsedInfo::USED_AS_NAMESPACE;
-  } else if ctx.metas[canonical_ref_module.id].resolved_exports.get(&export_name).is_some() {
-    let id = ns_list.last().map(|(module_id, _)| *module_id).unwrap_or(symbol_ref.owner);
-    ctx.used_exports_info_vec[id].used_exports.insert(export_name);
+  }
+
+  let id = ns_symbol_list.last().map(|(symbol, _)| symbol.owner).unwrap_or(symbol_ref.owner);
+  ctx.used_exports_info_vec[id].used_exports.insert(export_name);
+  // Keep the namespace object chain
+  for (pre_ns_symbol, next_prop) in ns_symbol_list.into_iter() {
+    include_symbol(ctx, pre_ns_symbol, &vec![]);
+    ctx.used_exports_info_vec[pre_ns_symbol.owner].used_exports.insert(next_prop);
   }
   include_module(ctx, canonical_ref_module);
   canonical_ref_module

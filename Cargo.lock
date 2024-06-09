@@ -1921,9 +1921,7 @@ dependencies = [
 name = "rolldown_plugin_wasm"
 version = "0.0.1"
 dependencies = [
- "anyhow",
  "async-trait",
- "rolldown",
  "rolldown_common",
  "rolldown_plugin",
 ]

@@ -1835,6 +1835,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_plugin",
+ "rolldown_plugin_wasm",
  "rolldown_sourcemap",
  "rolldown_tracing",
  "rolldown_utils",
@@ -1914,6 +1915,17 @@ dependencies = [
  "rolldown_utils",
  "string_wizard",
  "tracing",
+]
+
+[[package]]
+name = "rolldown_plugin_wasm"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "rolldown",
+ "rolldown_common",
+ "rolldown_plugin",
 ]
 
 [[package]]

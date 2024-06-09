@@ -5,6 +5,10 @@ import type { NormalizedInputOptions } from './normalized-input-options'
 import { arraify } from '@src/utils'
 import type { NormalizedOutputOptions } from './normalized-output-options'
 import type { LogLevelOption } from '@src/log/logging'
+import {
+  bindingifyBuiltInPlugin,
+  BuiltinPlugin,
+} from '../plugin/bindingify-builtin-plugin'
 
 export function bindingifyInputOptions(
   options: NormalizedInputOptions,
@@ -15,6 +19,9 @@ export function bindingifyInputOptions(
     plugins: options.plugins.map((plugin) => {
       if ('_parallel' in plugin) {
         return undefined
+      }
+      if (plugin instanceof BuiltinPlugin) {
+        return bindingifyBuiltInPlugin(plugin)
       }
       return bindingifyPlugin(plugin, options, outputOptions)
     }),

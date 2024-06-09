@@ -24,7 +24,7 @@
   "homepage": "https://rolldown.rs/",
   "license": "MIT",
   "engines": {
-    "node": ">=14.21.3"
+    "node": ">=20.14.0"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

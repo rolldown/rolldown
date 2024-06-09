@@ -12,7 +12,7 @@
   "dependencies": {
     "fixturify": "^3.0.0",
     "fs-extra": "^11.2.0",
-    "mocha": "^10.3.0",
+    "mocha": "^10.4.0",
     "rolldown": "workspace:*",
     "source-map-support": "^0.5.21"
   },
@@ -21,6 +21,6 @@
     "@types/node": "20.14.2",
     "source-map": "^0.7.4",
     "buble": "^0.20.0",
-    "terser": "^5.21.0"
+    "terser": "^5.31.1"
   }
 }

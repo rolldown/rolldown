@@ -9,7 +9,7 @@ importers:
   .:
     devDependencies:
       '@ls-lint/ls-lint':
-        specifier: ^2.2.2
+        specifier: ^2.2.3
         version: 2.2.3
       '@taplo/cli':
         specifier: ^0.7.0
@@ -21,13 +21,13 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0(conventional-commits-filter@5.0.0)
       cspell:
-        specifier: ^8.8.1
+        specifier: ^8.8.4
         version: 8.8.4
       husky:
         specifier: ^9.0.11
         version: 9.0.11
       lint-staged:
-        specifier: ^15.2.2
+        specifier: ^15.2.5
         version: 15.2.5
       npm-rolldown:
         specifier: npm:rolldown@0.10.4
@@ -36,13 +36,13 @@ importers:
         specifier: 0.4.3
         version: 0.4.3
       prettier:
-        specifier: ^3.3.0
+        specifier: ^3.3.1
         version: 3.3.1
       rolldown:
         specifier: workspace:*
         version: link:packages/rolldown
       typescript:
-        specifier: ^5.4.2
+        specifier: ^5.4.5
         version: 5.4.5
 
   examples/basic-vue:
@@ -83,28 +83,28 @@ importers:
   packages/bench:
     dependencies:
       '@babel/core':
-        specifier: ^7.24.4
+        specifier: ^7.24.7
         version: 7.24.7
       '@babel/preset-env':
-        specifier: ^7.24.4
+        specifier: ^7.24.7
         version: 7.24.7(@babel/core@7.24.7)
       '@babel/preset-typescript':
-        specifier: ^7.24.1
+        specifier: ^7.24.7
         version: 7.24.7(@babel/core@7.24.7)
       '@rollup/plugin-commonjs':
-        specifier: ^26.0.0
+        specifier: ^26.0.1
         version: 26.0.1(rollup@4.18.0)
       '@rollup/plugin-node-resolve':
         specifier: ^15.2.3
         version: 15.2.3(rollup@4.18.0)
       '@types/lodash':
-        specifier: ^4.17.0
-        version: 4.17.4
+        specifier: ^4.17.5
+        version: 4.17.5
       chalk:
         specifier: ^5.3.0
         version: 5.3.0
       esbuild:
-        specifier: ^0.21.0
+        specifier: ^0.21.4
         version: 0.21.4
       lodash:
         specifier: ^4.17.21
@@ -113,26 +113,26 @@ importers:
         specifier: workspace:*
         version: link:../rolldown
       rollup:
-        specifier: ^4.12.1
+        specifier: ^4.18.0
         version: 4.18.0
       tinybench:
-        specifier: ^2.6.0
+        specifier: ^2.8.0
         version: 2.8.0
     devDependencies:
       '@types/babel__core':
         specifier: 7.20.5
         version: 7.20.5
       react:
-        specifier: ^18.2.0
+        specifier: ^18.3.1
         version: 18.3.1
       react-dom:
-        specifier: ^18.2.0
+        specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
       vue:
-        specifier: ^3.4.26
+        specifier: ^3.4.27
         version: 3.4.27(typescript@5.4.5)
       vue-router:
-        specifier: ^4.3.0
+        specifier: ^4.3.2
         version: 4.3.2(vue@3.4.27(typescript@5.4.5))
 
   packages/rolldown:
@@ -153,7 +153,7 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0
       zod:
-        specifier: ^3.23.6
+        specifier: ^3.23.8
         version: 3.23.8
     optionalDependencies:
       '@rolldown/binding-darwin-arm64':
@@ -191,10 +191,10 @@ importers:
         version: link:npm/win32-x64-msvc
     devDependencies:
       '@napi-rs/cli':
-        specifier: ^3.0.0-alpha
+        specifier: ^3.0.0-alpha.55
         version: 3.0.0-alpha.55(@emnapi/runtime@1.2.0)(emnapi@1.2.0(node-addon-api@7.1.0))
       '@napi-rs/wasm-runtime':
-        specifier: ^0.2.3
+        specifier: ^0.2.4
         version: 0.2.4
       '@rolldown/testing':
         specifier: workspace:*
@@ -203,11 +203,11 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0(node-addon-api@7.1.0)
       esbuild:
-        specifier: ^0.21.3
+        specifier: ^0.21.4
         version: 0.21.4
       execa:
-        specifier: ^9.1.0
-        version: 9.1.0
+        specifier: ^9.2.0
+        version: 9.2.0
       fs-extra:
         specifier: ^11.2.0
         version: 11.2.0
@@ -224,17 +224,17 @@ importers:
         specifier: ^4.18.0
         version: 4.18.0
       type-fest:
-        specifier: ^4.19.0
-        version: 4.19.0
+        specifier: ^4.20.0
+        version: 4.20.0
       unbuild:
         specifier: ^2.0.0
         version: 2.0.0(typescript@5.4.5)
       vite:
-        specifier: ^5.2.11
-        version: 5.2.12(@types/node@20.14.2)(terser@5.31.0)
+        specifier: ^5.2.13
+        version: 5.2.13(@types/node@20.14.2)(terser@5.31.1)
       vitest:
-        specifier: ^1.3.1
-        version: 1.6.0(@types/node@20.14.2)(terser@5.31.0)
+        specifier: ^1.6.0
+        version: 1.6.0(@types/node@20.14.2)(terser@5.31.1)
       why-is-node-running:
         specifier: ^2.2.2
         version: 2.2.2
@@ -256,7 +256,7 @@ importers:
   packages/rolldown/npm/wasm32-wasi:
     dependencies:
       '@napi-rs/wasm-runtime':
-        specifier: ^0.2.0
+        specifier: ^0.2.4
         version: 0.2.4
 
   packages/rolldown/npm/win32-arm64-msvc: {}
@@ -274,7 +274,7 @@ importers:
         specifier: ^11.2.0
         version: 11.2.0
       mocha:
-        specifier: ^10.3.0
+        specifier: ^10.4.0
         version: 10.4.0
       rolldown:
         specifier: workspace:*
@@ -296,8 +296,8 @@ importers:
         specifier: ^0.7.4
         version: 0.7.4
       terser:
-        specifier: ^5.21.0
-        version: 5.31.0
+        specifier: ^5.31.1
+        version: 5.31.1
 
   packages/testing: {}
 
@@ -325,17 +325,17 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0
       change-case:
-        specifier: ^5.4.3
+        specifier: ^5.4.4
         version: 5.4.4
       debug:
-        specifier: ^4.3.4
+        specifier: ^4.3.5
         version: 4.3.5
       dedent:
-        specifier: ^1.5.1
+        specifier: ^1.5.3
         version: 1.5.3
       execa:
-        specifier: ^9.0.0
-        version: 9.1.0
+        specifier: ^9.2.0
+        version: 9.2.0
       fast-glob:
         specifier: ^3.3.2
         version: 3.3.2
@@ -343,10 +343,10 @@ importers:
         specifier: ^11.2.0
         version: 11.2.0
       semver:
-        specifier: ^7.6.0
+        specifier: ^7.6.2
         version: 7.6.2
       zx:
-        specifier: ^8.0.0
+        specifier: ^8.1.2
         version: 8.1.2
     devDependencies:
       web-tree-sitter:
@@ -356,8 +356,8 @@ importers:
   web/docs:
     devDependencies:
       vitepress:
-        specifier: ^1.2.0
-        version: 1.2.3(@algolia/client-search@4.23.3)(@types/node@20.14.2)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.14.0)(terser@5.31.0)(typescript@5.4.5)
+        specifier: ^1.2.3
+        version: 1.2.3(@algolia/client-search@4.23.3)(@types/node@20.14.2)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.14.0)(terser@5.31.1)(typescript@5.4.5)
 
   web/playground:
     dependencies:
@@ -371,7 +371,7 @@ importers:
         specifier: ^6.1.2
         version: 6.1.2
       '@codemirror/view':
-        specifier: ^6.26.3
+        specifier: ^6.27.0
         version: 6.27.0
       codemirror:
         specifier: ^6.0.1
@@ -380,18 +380,18 @@ importers:
         specifier: ^1.1.2
         version: 1.1.2
       vue:
-        specifier: ^3.4.21
+        specifier: ^3.4.27
         version: 3.4.27(typescript@5.4.5)
       vue-codemirror:
         specifier: ^6.1.1
         version: 6.1.1(codemirror@6.0.1(@lezer/common@1.2.1))(vue@3.4.27(typescript@5.4.5))
     devDependencies:
       '@vitejs/plugin-vue':
-        specifier: ^5.0.4
-        version: 5.0.5(vite@5.2.12(@types/node@20.14.2)(terser@5.31.0))(vue@3.4.27(typescript@5.4.5))
+        specifier: ^5.0.5
+        version: 5.0.5(vite@5.2.13(@types/node@20.14.2)(terser@5.31.1))(vue@3.4.27(typescript@5.4.5))
       vite:
-        specifier: ^5.2.11
-        version: 5.2.12(@types/node@20.14.2)(terser@5.31.0)
+        specifier: ^5.2.13
+        version: 5.2.13(@types/node@20.14.2)(terser@5.31.1)
 
 packages:
 
@@ -2693,8 +2693,8 @@ packages:
   '@types/linkify-it@5.0.0':
     resolution: {integrity: sha512-sVDA58zAw4eWAffKOaQH5/5j3XeayukzDk+ewSsnv3p4yJEZHCCzMDiZM8e0OUrRvmpGZ85jf4yDHkHsgBNr9Q==}
 
-  '@types/lodash@4.17.4':
-    resolution: {integrity: sha512-wYCP26ZLxaT3R39kiN2+HcJ4kTd3U1waI/cY7ivWYqFP6pW3ZNpvi6Wd6PHZx7T/t8z0vlkXMg3QYLa7DZ/IJQ==}
+  '@types/lodash@4.17.5':
+    resolution: {integrity: sha512-MBIOHVZqVqgfro1euRDWX7OO0fBVUUMrN6Pwm8LQsz8cWhEpihlvR70ENj3f40j58TNxZaWv2ndSkInykNBBJw==}
 
   '@types/markdown-it@14.1.1':
     resolution: {integrity: sha512-4NpsnpYl2Gt1ljyBGrKMxFYAYvpqbnnkgP/i/g+NLpjEUa3obn1XJCur9YbEXKDAkaXqsR1LbDnGEJ0MmKFxfg==}
@@ -3585,9 +3585,9 @@ packages:
     resolution: {integrity: sha512-VyhnebXciFV2DESc+p6B+y0LjSm0krU4OgJN44qFAhBY0TJ+1V61tYD2+wHusZ6F9n5K+vl8k0sTy7PEfV4qpg==}
     engines: {node: '>=16.17'}
 
-  execa@9.1.0:
-    resolution: {integrity: sha512-lSgHc4Elo2m6bUDhc3Hl/VxvUDJdQWI40RZ4KMY9bKRc+hgMOT7II/JjbNDhI8VnMtrCb7U/fhpJIkLORZozWw==}
-    engines: {node: '>=18'}
+  execa@9.2.0:
+    resolution: {integrity: sha512-vpOyYg7UAVKLAWWtRS2gAdgkT7oJbCn0me3gmUmxZih4kd3MF/oo8kNTBTIbkO3yuuF5uB4ZCZfn8BOolITYhg==}
+    engines: {node: ^18.19.0 || >=20.5.0}
 
   external-editor@3.1.0:
     resolution: {integrity: sha512-hMQ4CX1p1izmuLYyZqLMO/qGNw10wSv9QDCPfzXfyFrOaCSSoRfqE1Kf1s5an66J5JZC62NewG+mK49jOCtQew==}
@@ -5012,8 +5012,8 @@ packages:
     resolution: {integrity: sha512-bX655WZI/F7EoTDw9JvQURqAXiPHi8o8+yFxPF2lWYyz1aHnmMRuXWqL6YB6GmeO0o4DIYWHLgGNi/X64T+X4Q==}
     engines: {node: '>=14.18'}
 
-  terser@5.31.0:
-    resolution: {integrity: sha512-Q1JFAoUKE5IMfI4Z/lkE/E6+SwgzO+x4tq4v1AyBLRj8VSYvRO6A/rQrPg1yud4g0En9EKI1TvFRF2tQFcoUkg==}
+  terser@5.31.1:
+    resolution: {integrity: sha512-37upzU1+viGvuFtBo9NPufCb9dwM0+l9hMxYyWfBA+fbwrPqNJAhbZ6W47bBFnZHKHTUBnMvi87434qq+qnxOg==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -5068,8 +5068,8 @@ packages:
     resolution: {integrity: sha512-q+MB8nYR1KDLrgr4G5yemftpMC7/QLqVndBmEEdqzmNj5dcFOO4Oo8qlwZE3ULT3+Zim1F8Kq4cBnikNhlCMlg==}
     engines: {node: '>=8'}
 
-  type-fest@4.19.0:
-    resolution: {integrity: sha512-CN2l+hWACRiejlnr68vY0/7734Kzu+9+TOslUXbSCQ1ruY9XIHDBSceVXCcHm/oXrdzhtLMMdJEKfemf1yXiZQ==}
+  type-fest@4.20.0:
+    resolution: {integrity: sha512-MBh+PHUHHisjXf4tlx0CFWoMdjx8zCMLJHOjnV1prABYZFHqtFOyauCIK2/7w4oIfwkF8iNhLtnJEfVY2vn3iw==}
     engines: {node: '>=16'}
 
   typescript@5.4.5:
@@ -5165,8 +5165,8 @@ packages:
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
 
-  vite@5.2.12:
-    resolution: {integrity: sha512-/gC8GxzxMK5ntBwb48pR32GGhENnjtY30G4A0jemunsBkiEZFw60s8InGpN8gkhHEkjnRK1aSAxeQgwvFhUHAA==}
+  vite@5.2.13:
+    resolution: {integrity: sha512-SSq1noJfY9pR3I1TUENL3rQYDQCFqgD+lM6fTRAM8Nv6Lsg5hDLaXkjETVeBt+7vZBCMoibD+6IWnT2mJ+Zb/A==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
     peerDependencies:
@@ -7697,7 +7697,7 @@ snapshots:
 
   '@types/linkify-it@5.0.0': {}
 
-  '@types/lodash@4.17.4': {}
+  '@types/lodash@4.17.5': {}
 
   '@types/markdown-it@14.1.1':
     dependencies:
@@ -7735,9 +7735,9 @@ snapshots:
 
   '@types/web-bluetooth@0.0.20': {}
 
-  '@vitejs/plugin-vue@5.0.5(vite@5.2.12(@types/node@20.14.2)(terser@5.31.0))(vue@3.4.27(typescript@5.4.5))':
+  '@vitejs/plugin-vue@5.0.5(vite@5.2.13(@types/node@20.14.2)(terser@5.31.1))(vue@3.4.27(typescript@5.4.5))':
     dependencies:
-      vite: 5.2.12(@types/node@20.14.2)(terser@5.31.0)
+      vite: 5.2.13(@types/node@20.14.2)(terser@5.31.1)
       vue: 3.4.27(typescript@5.4.5)
 
   '@vitest/expect@1.6.0':
@@ -8749,7 +8749,7 @@ snapshots:
       signal-exit: 4.1.0
       strip-final-newline: 3.0.0
 
-  execa@9.1.0:
+  execa@9.2.0:
     dependencies:
       '@sindresorhus/merge-streams': 4.0.0
       cross-spawn: 7.0.3
@@ -9498,7 +9498,7 @@ snapshots:
     dependencies:
       '@babel/code-frame': 7.24.7
       index-to-position: 0.1.2
-      type-fest: 4.19.0
+      type-fest: 4.20.0
 
   parse-ms@2.1.0: {}
 
@@ -9772,14 +9772,14 @@ snapshots:
     dependencies:
       find-up-simple: 1.0.0
       read-pkg: 9.0.1
-      type-fest: 4.19.0
+      type-fest: 4.20.0
 
   read-pkg@9.0.1:
     dependencies:
       '@types/normalize-package-data': 2.4.4
       normalize-package-data: 6.0.1
       parse-json: 8.1.0
-      type-fest: 4.19.0
+      type-fest: 4.20.0
       unicorn-magic: 0.1.0
 
   read-yaml-file@2.1.0:
@@ -10157,7 +10157,7 @@ snapshots:
     dependencies:
       temp-dir: 3.0.0
 
-  terser@5.31.0:
+  terser@5.31.1:
     dependencies:
       '@jridgewell/source-map': 0.3.6
       acorn: 8.11.3
@@ -10198,7 +10198,7 @@ snapshots:
 
   type-fest@0.6.0: {}
 
-  type-fest@4.19.0: {}
+  type-fest@4.20.0: {}
 
   typescript@5.4.5: {}
 
@@ -10299,13 +10299,13 @@ snapshots:
       spdx-correct: 3.2.0
       spdx-expression-parse: 3.0.1
 
-  vite-node@1.6.0(@types/node@20.14.2)(terser@5.31.0):
+  vite-node@1.6.0(@types/node@20.14.2)(terser@5.31.1):
     dependencies:
       cac: 6.7.14
       debug: 4.3.5
       pathe: 1.1.2
       picocolors: 1.0.1
-      vite: 5.2.12(@types/node@20.14.2)(terser@5.31.0)
+      vite: 5.2.13(@types/node@20.14.2)(terser@5.31.1)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -10316,7 +10316,7 @@ snapshots:
       - supports-color
       - terser
 
-  vite@5.2.12(@types/node@20.14.2)(terser@5.31.0):
+  vite@5.2.13(@types/node@20.14.2)(terser@5.31.1):
     dependencies:
       esbuild: 0.20.2
       postcss: 8.4.38
@@ -10324,16 +10324,16 @@ snapshots:
     optionalDependencies:
       '@types/node': 20.14.2
       fsevents: 2.3.3
-      terser: 5.31.0
+      terser: 5.31.1
 
-  vitepress@1.2.3(@algolia/client-search@4.23.3)(@types/node@20.14.2)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.14.0)(terser@5.31.0)(typescript@5.4.5):
+  vitepress@1.2.3(@algolia/client-search@4.23.3)(@types/node@20.14.2)(change-case@5.4.4)(postcss@8.4.38)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.14.0)(terser@5.31.1)(typescript@5.4.5):
     dependencies:
       '@docsearch/css': 3.6.0
       '@docsearch/js': 3.6.0(@algolia/client-search@4.23.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.14.0)
       '@shikijs/core': 1.6.2
       '@shikijs/transformers': 1.6.2
       '@types/markdown-it': 14.1.1
-      '@vitejs/plugin-vue': 5.0.5(vite@5.2.12(@types/node@20.14.2)(terser@5.31.0))(vue@3.4.27(typescript@5.4.5))
+      '@vitejs/plugin-vue': 5.0.5(vite@5.2.13(@types/node@20.14.2)(terser@5.31.1))(vue@3.4.27(typescript@5.4.5))
       '@vue/devtools-api': 7.2.1(vue@3.4.27(typescript@5.4.5))
       '@vue/shared': 3.4.27
       '@vueuse/core': 10.10.0(vue@3.4.27(typescript@5.4.5))
@@ -10342,7 +10342,7 @@ snapshots:
       mark.js: 8.11.1
       minisearch: 6.3.0
       shiki: 1.6.2
-      vite: 5.2.12(@types/node@20.14.2)(terser@5.31.0)
+      vite: 5.2.13(@types/node@20.14.2)(terser@5.31.1)
       vue: 3.4.27(typescript@5.4.5)
     optionalDependencies:
       postcss: 8.4.38
@@ -10373,7 +10373,7 @@ snapshots:
       - typescript
       - universal-cookie
 
-  vitest@1.6.0(@types/node@20.14.2)(terser@5.31.0):
+  vitest@1.6.0(@types/node@20.14.2)(terser@5.31.1):
     dependencies:
       '@vitest/expect': 1.6.0
       '@vitest/runner': 1.6.0
@@ -10392,8 +10392,8 @@ snapshots:
       strip-literal: 2.1.0
       tinybench: 2.8.0
       tinypool: 0.8.4
-      vite: 5.2.12(@types/node@20.14.2)(terser@5.31.0)
-      vite-node: 1.6.0(@types/node@20.14.2)(terser@5.31.0)
+      vite: 5.2.13(@types/node@20.14.2)(terser@5.31.1)
+      vite-node: 1.6.0(@types/node@20.14.2)(terser@5.31.1)
       why-is-node-running: 2.2.2
     optionalDependencies:
       '@types/node': 20.14.2

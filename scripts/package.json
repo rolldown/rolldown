@@ -13,14 +13,14 @@
     "@types/fs-extra": "^11.0.4",
     "@types/semver": "^7.5.8",
     "chalk": "^5.3.0",
-    "change-case": "^5.4.3",
-    "debug": "^4.3.4",
-    "dedent": "^1.5.1",
-    "execa": "^9.0.0",
+    "change-case": "^5.4.4",
+    "debug": "^4.3.5",
+    "dedent": "^1.5.3",
+    "execa": "^9.2.0",
     "fast-glob": "^3.3.2",
     "fs-extra": "^11.2.0",
-    "semver": "^7.6.0",
-    "zx": "^8.0.0"
+    "semver": "^7.6.2",
+    "zx": "^8.1.2"
   },
   "devDependencies": {
     "web-tree-sitter": "^0.22.6"

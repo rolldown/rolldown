@@ -129,8 +129,9 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<Compact
     // TODO: multiple ambiguous exports
     let export_symbol = ctx.metas[canonical_ref_module.id].resolved_exports.get(&name.to_rstr());
     let Some(export_symbol) = export_symbol else { break };
-    dbg!(&ctx.modules[export_symbol.symbol_ref.owner].stable_resource_id);
-    dbg!(&ctx.modules[export_symbol.symbol_ref.owner].exports_kind);
+    if export_symbol.potentially_ambiguous_symbol_refs.is_some() {
+      return;
+    }
     if !ctx.modules[export_symbol.symbol_ref.owner].exports_kind.is_esm() {
       break;
     }
@@ -140,6 +141,8 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<Compact
     canonical_ref_module = &ctx.modules[canonical_ref.owner];
     cursor += 1;
   }
+  // if canonical_ref_symbol
+
   for (module_id, symbol_ref) in ns_list.iter() {
     let module = &ctx.modules[*module_id];
     include_symbol(ctx, *symbol_ref, &vec![]);

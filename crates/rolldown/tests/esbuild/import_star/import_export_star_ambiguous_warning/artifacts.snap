@@ -12,7 +12,6 @@ import { __export } from "./$runtime$.mjs";
 
 // foo.js
 const x = 1;
-const y = 2;
 
 // bar.js
 const z = 4;

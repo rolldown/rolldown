@@ -1,4 +1,2 @@
-// exports.foo = 123
-export const foo = 123;
-
-export const bar = 100;
+export const x = 1
+export const y = 2

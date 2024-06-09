@@ -1,2 +1,2 @@
-import * as ns from './foo'
-console.log(ns.foo)
+import * as ns from './common'
+console.log(ns.x, ns.y, ns.z)

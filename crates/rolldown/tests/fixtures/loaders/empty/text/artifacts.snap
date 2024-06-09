@@ -1,0 +1,24 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 171
+expression: content
+input_file: crates/rolldown/tests/fixtures/loaders/empty/text
+---
+# Assets
+
+## main.mjs
+
+```js
+
+
+//#region text.empty
+var require_text = __commonJSMin((exports, module) => {
+});
+
+//#endregion
+//#region main.js
+var import_text = __toESM(require_text());
+console.log(import_text.default);
+
+//#endregion
+```

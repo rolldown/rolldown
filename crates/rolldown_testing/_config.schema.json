@@ -191,7 +191,8 @@
         "json",
         "text",
         "base64",
-        "binary"
+        "binary",
+        "empty"
       ]
     },
     "OutputFormat": {

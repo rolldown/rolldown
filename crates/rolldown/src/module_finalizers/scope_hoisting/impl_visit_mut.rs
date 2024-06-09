@@ -10,7 +10,7 @@ use oxc::{
   span::{GetSpan, Span, SPAN},
 };
 use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, IntoIn, SpanExt, StatementExt, TakeIn};
+use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, IntoIn, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 

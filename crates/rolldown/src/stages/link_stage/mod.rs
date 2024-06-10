@@ -157,13 +157,6 @@ impl<'a> LinkStage<'a> {
     }
   }
 
-  // fn print_reference_symbol(&self) {
-  //   for (id, m) in self.metas.iter().enumerate() {
-  //     let module = &self.module_table.normal_modules[NormalModuleId::from_usize(id)];
-  //     &module.stable_resource_id;
-  //   }
-  // }
-
   #[tracing::instrument(level = "debug", skip_all)]
   fn determine_module_exports_kind(&mut self) {
     // Maximize the compatibility with commonjs

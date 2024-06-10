@@ -13,7 +13,7 @@ workspace = true
 
 [dependencies]
 anyhow                = { workspace = true }
-bitflags = "2.5.0"
+bitflags              = "2.5.0"
 dunce                 = { workspace = true }
 futures               = { workspace = true }
 indexmap              = { workspace = true }

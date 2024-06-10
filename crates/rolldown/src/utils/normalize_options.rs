@@ -18,7 +18,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       ("mjs".to_string(), ModuleType::Js),
       ("cjs".to_string(), ModuleType::Js),
       ("txt".to_string(), ModuleType::Text),
-      ("empty".to_string(), ModuleType::Empty),
     ]
     .into_iter()
     .collect(),

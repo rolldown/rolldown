@@ -10,15 +10,12 @@ input_file: crates/rolldown/tests/fixtures/loaders/empty/text
 
 ```js
 
-
 //#region text.empty
-var require_text = __commonJSMin((exports, module) => {
-});
+var text_default = {};
 
 //#endregion
 //#region main.js
-var import_text = __toESM(require_text());
-console.log(import_text.default);
+console.log(text_default);
 
 //#endregion
 ```

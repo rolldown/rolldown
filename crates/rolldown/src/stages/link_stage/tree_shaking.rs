@@ -86,7 +86,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
     rolldown_common::ModuleId::Normal(importee_id) => {
       let importee = &ctx.modules[importee_id];
       let bailout_side_effect = matches!(import_record.kind, rolldown_common::ImportKind::Require)
-        || importee.module_type.is_commonjs();
+        || importee.def_format.is_commonjs();
       if bailout_side_effect {
         ctx.used_exports_info_vec[importee_id].used_info |= UsedInfo::USED_AS_NAMESPACE;
       }

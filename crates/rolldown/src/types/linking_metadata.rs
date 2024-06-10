@@ -63,9 +63,6 @@ impl LinkingMetadata {
       .sorted_and_non_ambiguous_resolved_exports
       .iter()
       .filter(|name| self.used_exports.contains(name))
-      .inspect(|name| {
-        dbg!(&name,);
-      })
       .map(|name| (name, &self.resolved_exports[name]))
   }
 

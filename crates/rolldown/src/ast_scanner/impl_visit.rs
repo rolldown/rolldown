@@ -9,7 +9,7 @@ use oxc::{
   codegen::{self, Codegen, CodegenOptions, Gen},
   semantic::SymbolId,
 };
-use rolldown_common::{ImportKind, MemberExprRef, SymbolOrMemberExprRef};
+use rolldown_common::ImportKind;
 use rolldown_error::BuildError;
 
 use crate::utils::call_expression_ext::CallExpressionExt;
@@ -89,11 +89,11 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
           chain.push(cur.property.clone());
           match &cur.object {
             Expression::StaticMemberExpression(expr) => {
-              cur = &expr;
+              cur = expr;
             }
             Expression::Identifier(ident) => {
-              let symbol_id = self.resolve_symbol_from_reference(&ident);
-              let resolved_top_level = self.resolve_identifier_reference(symbol_id, &ident);
+              let symbol_id = self.resolve_symbol_from_reference(ident);
+              let resolved_top_level = self.resolve_identifier_reference(symbol_id, ident);
               break resolved_top_level;
             }
             _ => break None,

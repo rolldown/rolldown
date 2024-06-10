@@ -13,7 +13,6 @@ use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
 use rolldown_utils::path_ext::PathExt;
-use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
 use super::{task_context::TaskContext, Msg};

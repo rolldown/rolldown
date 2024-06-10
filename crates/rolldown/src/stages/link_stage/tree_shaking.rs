@@ -1,8 +1,5 @@
-use core::panic;
-
 use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
-use itertools::Itertools;
 use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
@@ -58,7 +55,6 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   if used_info.contains(UsedInfo::USED_AS_NAMESPACE)
     && !used_info.contains(UsedInfo::INCLUDED_AS_NAMESPACE)
   {
-    dbg!(&module.stable_resource_id);
     ctx.used_exports_info_vec[module.id].used_info |= UsedInfo::INCLUDED_AS_NAMESPACE;
     include_module_as_namespace(ctx, module);
   }
@@ -94,7 +90,6 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       if bailout_side_effect {
         ctx.used_exports_info_vec[importee_id].used_info |= UsedInfo::USED_AS_NAMESPACE;
       }
-      dbg!(&ctx.used_exports_info_vec[importee_id].used_info);
       if !ctx.tree_shaking || importee.side_effects.has_side_effects() || bailout_side_effect {
         include_module(ctx, importee);
       }
@@ -104,19 +99,19 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 }
 
 fn include_module_as_namespace(ctx: &mut Context, module: &NormalModule) {
-  dbg!(&module.stable_resource_id, "all");
   // Collect all the canonical export to avoid violating rustc borrow rules.
-  let canonical_export_list = ctx.metas[module.id].canonical_exports().collect::<Vec<_>>();
-  canonical_export_list.iter().for_each(|(ref key, ref symbol_ref)| {
-    // let symbol = ctx.symbols.get(symbol_ref);
-    ctx.used_exports_info_vec[module.id].used_exports.insert(key.clone().clone());
-    include_symbol(ctx, symbol_ref.symbol_ref, &vec![]);
+  let canonical_export_list = ctx.metas[module.id]
+    .canonical_exports()
+    .map(|(key, export)| (key.clone(), export.symbol_ref))
+    .collect::<Vec<_>>();
+  canonical_export_list.into_iter().for_each(|(key, symbol_ref)| {
+    ctx.used_exports_info_vec[module.id].used_exports.insert(key);
+    include_symbol(ctx, symbol_ref, &[]);
   });
-  println!("--------------------");
 }
 
 #[track_caller]
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<CompactStr>) {
+fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr]) {
   let mut cursor = 0;
 
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
@@ -127,7 +122,6 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<Compact
   let is_namespace_ref = canonical_ref_module.namespace_object_ref == canonical_ref;
   while cursor < chains.len() && is_namespace_ref {
     let name = &chains[cursor];
-    // TODO: multiple ambiguous exports
     let export_symbol = ctx.metas[canonical_ref_module.id].resolved_exports.get(&name.to_rstr());
     let Some(export_symbol) = export_symbol else { break };
     if export_symbol.potentially_ambiguous_symbol_refs.is_some() {
@@ -142,21 +136,10 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<Compact
     canonical_ref_module = &ctx.modules[canonical_ref.owner];
     cursor += 1;
   }
-  // if canonical_ref_symbol
 
-  let p = canonical_ref_module.stable_resource_id.contains("runtime");
-  if !p {
-    dbg!(&std::panic::Location::caller());
-    let original_symbol = &ctx.symbols.get(symbol_ref);
-    dbg!(original_symbol, &chains, &ctx.modules[symbol_ref.owner].stable_resource_id);
-    dbg!(&canonical_ref_symbol, &canonical_ref_module.stable_resource_id);
-    println!("-----------------------------")
-  }
   let export_name = if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
-    // TODO: consider namespace_alias
     let name = canonical_ref_symbol.name.clone();
     canonical_ref = namespace_alias.namespace_ref;
-    canonical_ref_symbol = ctx.symbols.get(canonical_ref);
     canonical_ref_module = &ctx.modules[canonical_ref.owner];
     name
   } else {
@@ -165,15 +148,16 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &Vec<Compact
 
   let export_name = export_name.to_rstr();
   let is_namespace_ref = canonical_ref_module.namespace_object_ref == canonical_ref;
-  if export_name.ends_with("_ns") && !is_same_ref {
+  if is_namespace_ref && !is_same_ref {
     ctx.used_exports_info_vec[canonical_ref_module.id].used_info |= UsedInfo::USED_AS_NAMESPACE;
   }
 
-  let id = ns_symbol_list.last().map(|(symbol, _)| symbol.owner).unwrap_or(symbol_ref.owner);
+  let id = ns_symbol_list.last().map_or(symbol_ref.owner, |(symbol, _)| symbol.owner);
   ctx.used_exports_info_vec[id].used_exports.insert(export_name);
   // Keep the namespace object chain
-  for (pre_ns_symbol, next_prop) in ns_symbol_list.into_iter() {
-    include_symbol(ctx, pre_ns_symbol, &vec![]);
+  // TODO: remove the chain and related runtime code, after we finish move dependency optimization
+  for (pre_ns_symbol, next_prop) in ns_symbol_list {
+    include_symbol(ctx, pre_ns_symbol, &[]);
     ctx.used_exports_info_vec[pre_ns_symbol.owner].used_exports.insert(next_prop);
   }
   include_module(ctx, canonical_ref_module);
@@ -199,17 +183,9 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
   // include the statement itself
   *is_included = true;
 
-  // include statements that are referenced by this statement
-  // stmt_info.declared_symbols.iter().for_each(|symbol_ref| {
-  //   dbg!(&stmt_info.debug_label);
-  //   // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
-  //   // really declared by the module itself. We need to include them where they are really declared.
-  //   include_symbol(ctx, *symbol_ref, &vec![]);
-  // });
-
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| match reference_ref {
     SymbolOrMemberExprRef::Symbol(symbol_ref) => {
-      include_symbol(ctx, *symbol_ref, &vec![]);
+      include_symbol(ctx, *symbol_ref, &[]);
     }
     SymbolOrMemberExprRef::MemberExpr(member_expr) => {
       include_symbol(ctx, member_expr.symbol, &member_expr.chains);
@@ -249,9 +225,9 @@ impl LinkStage<'_> {
       let module = &self.module_table.normal_modules[entry.id];
       let meta = &self.metas[entry.id];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-        include_symbol(context, *symbol_ref, &vec![]);
+        include_symbol(context, *symbol_ref, &[]);
       });
-      module.named_exports.iter().for_each(|(name, symbol_ref)| {
+      module.named_exports.iter().for_each(|(name, _)| {
         context.used_exports_info_vec[entry.id].used_exports.insert(name.clone());
       });
       include_module(context, module);
@@ -269,7 +245,6 @@ impl LinkStage<'_> {
         std::mem::take(&mut used_exports_info_vec[module.id].used_exports);
     });
 
-    dbg!("end");
     tracing::trace!(
       "included statements {:#?}",
       self

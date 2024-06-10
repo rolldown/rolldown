@@ -1,6 +1,6 @@
 use std::{ptr::addr_of, sync::Mutex};
 
-use oxc_index::{Idx, IndexVec};
+use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
   NormalizedBundlerOptions, OutputFormat, StmtInfo, WrapKind,
@@ -112,21 +112,9 @@ impl<'a> LinkStage<'a> {
       // This is only a concept of esm, so no need to care about this in commonjs.
       if matches!(module.exports_kind, ExportsKind::Esm) {
         let meta = &self.metas[module.id];
-        dbg!(&module.stable_resource_id);
         let mut referenced_symbols = vec![];
         if !meta.is_canonical_exports_empty() {
-          // Reference to all exports. Once the Module Namespace Object is included, all exports should be included too.
-          // referenced_symbols
-          //   .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
           referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
-        }
-        for s in referenced_symbols.iter() {
-          match s {
-            rolldown_common::SymbolOrMemberExprRef::Symbol(s) => {
-              dbg!(&self.symbols.get(*s));
-            }
-            rolldown_common::SymbolOrMemberExprRef::MemberExpr(_) => {}
-          }
         }
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
         // Corresponding AST for this statement will be created by the finalizer.
@@ -151,11 +139,9 @@ impl<'a> LinkStage<'a> {
     self.determine_module_exports_kind();
     self.wrap_modules();
     self.bind_imports_and_exports();
-    // self.print_reference_symbol();
     self.create_exports_for_modules();
     self.reference_needed_symbols();
     self.include_statements();
-    // self.print_reference_symbol();
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
     LinkStageOutput {
@@ -171,13 +157,12 @@ impl<'a> LinkStage<'a> {
     }
   }
 
-  fn print_reference_symbol(&self) {
-    for (id, m) in self.metas.iter().enumerate() {
-      let module = &self.module_table.normal_modules[NormalModuleId::from_usize(id)];
-      dbg!(&module.stable_resource_id);
-      dbg!(&m);
-    }
-  }
+  // fn print_reference_symbol(&self) {
+  //   for (id, m) in self.metas.iter().enumerate() {
+  //     let module = &self.module_table.normal_modules[NormalModuleId::from_usize(id)];
+  //     &module.stable_resource_id;
+  //   }
+  // }
 
   #[tracing::instrument(level = "debug", skip_all)]
   fn determine_module_exports_kind(&mut self) {
@@ -283,7 +268,6 @@ impl<'a> LinkStage<'a> {
                       format!("import_{}", legitimize_identifier_name(&importee.name)).into();
                     stmt_info.declared_symbols.push(rec.namespace_ref);
                     stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
-                    dbg!(&importer.namespace_object_ref);
                     stmt_info
                       .referenced_symbols
                       .push(self.runtime.resolve_symbol("__reExport").into());
@@ -338,7 +322,6 @@ impl<'a> LinkStage<'a> {
                       stmt_info
                         .referenced_symbols
                         .push(importee_linking_info.wrapper_ref.unwrap().into());
-                      dbg!(&importee_linking_info.wrapper_ref);
                       if is_reexport_all && importee_linking_info.has_dynamic_exports {
                         // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
                         // something like `__reExport(foo_exports, other_exports)`

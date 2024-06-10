@@ -8,7 +8,6 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
-use rustc_hash::FxHashSet;
 
 use super::Msg;
 use crate::{

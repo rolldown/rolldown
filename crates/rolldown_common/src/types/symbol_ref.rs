@@ -1,6 +1,5 @@
-use oxc::ast::ast::IdentifierName;
 use oxc::semantic::SymbolId;
-use oxc::span::{Atom, CompactStr};
+use oxc::span::CompactStr;
 
 use crate::NormalModuleId;
 
@@ -27,7 +26,7 @@ impl SymbolOrMemberExprRef {
   /// get the first part of the expression,
   /// e.g. `test.a.b` will return `test`
   /// for identifier, it will return itself
-  pub fn symbol(&self) -> &SymbolRef {
+  pub fn first_part(&self) -> &SymbolRef {
     match self {
       SymbolOrMemberExprRef::Symbol(s) => s,
       SymbolOrMemberExprRef::MemberExpr(expr) => &expr.symbol,
@@ -39,7 +38,6 @@ impl SymbolOrMemberExprRef {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberExprRef {
   pub symbol: SymbolRef,
-  /// TODO: Only atom should be enough
   /// rest static member expr chain, e.g.
   /// ```js
   /// import {test} frmo './a.js'

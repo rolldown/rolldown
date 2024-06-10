@@ -8,7 +8,7 @@ use itertools::{multizip, Itertools};
 use oxc_index::{index_vec, IndexVec};
 use rolldown_common::{
   ChunkId, ChunkKind, CrossChunkImportItem, ExportsKind, ExternalModuleId, ImportKind, ModuleId,
-  NamedImport, OutputFormat, SymbolOrMemberExprRef, SymbolRef, WrapKind,
+  NamedImport, OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::IntoParallelIterator;
@@ -215,10 +215,7 @@ impl<'a> GenerateStage<'a> {
             });
 
             stmt_info.referenced_symbols.iter().for_each(|referenced| {
-              let referenced = match referenced {
-                SymbolOrMemberExprRef::Symbol(referenced) => referenced,
-                SymbolOrMemberExprRef::MemberExpr(member_expr) => &member_expr.symbol,
-              };
+              let referenced = referenced.first_part();
               let mut canonical_ref = symbols.par_canonical_ref_for(*referenced);
               if let Some(namespace_alias) = &symbols.get(canonical_ref).namespace_alias {
                 canonical_ref = namespace_alias.namespace_ref;

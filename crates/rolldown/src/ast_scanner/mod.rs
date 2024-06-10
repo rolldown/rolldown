@@ -21,7 +21,7 @@ use rolldown_error::BuildError;
 use rolldown_oxc_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::path_ext::PathExt;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
 use sugar_path::SugarPath;
 
@@ -41,6 +41,25 @@ pub struct ScanResult {
   pub warnings: Vec<BuildError>,
 }
 
+#[derive(Default, Debug)]
+enum DynamicImportUse {
+  #[default]
+  All,
+  Partial(FxHashSet<CompactStr>),
+}
+
+#[derive(Default, Debug)]
+struct DynamicImportUsageCollector {
+  /// Each span is the span of `ImportExpression`, because we visit call_expression before visiting import_expression.
+  /// and we use the span to find the corresponding import record, finally convert it into resolved
+  /// module id
+  pub dynamic_import_usage_map: FxHashMap<Span, DynamicImportUse>,
+  pub in_import_then_body: bool,
+  /// Using span to identify the module id, SymbolRef is used to collect the namespace object
+  /// usage
+  pub dynamic_module_ref: Option<(Span, SymbolRef)>,
+}
+
 pub struct AstScanner<'me> {
   idx: NormalModuleId,
   source: &'me Arc<str>,
@@ -57,6 +76,7 @@ pub struct AstScanner<'me> {
   pub namespace_object_ref: SymbolRef,
   used_exports_ref: bool,
   used_module_ref: bool,
+  dynamic_import_usage_collector: DynamicImportUsageCollector,
 }
 
 impl<'me> AstScanner<'me> {
@@ -112,6 +132,7 @@ impl<'me> AstScanner<'me> {
       source,
       file_path,
       trivias,
+      dynamic_import_usage_collector: DynamicImportUsageCollector::default(),
     }
   }
 

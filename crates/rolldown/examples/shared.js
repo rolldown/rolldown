@@ -1,3 +1,8 @@
-const a = 'shared.js'
+import { d } from "./lib";
+const a = "shared.js";
+function test() {
+	d;
+}
 
-export { a }
+test();
+export { a };

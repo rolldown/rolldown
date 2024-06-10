@@ -8,19 +8,21 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 ## entry.mjs
 
 ```js
-import { __commonJSMin } from "./$runtime$.mjs";
 
-// node_modules/component-indexof/index.js
+
+//#region node_modules/component-indexof/index.js
 var require_component_indexof_index = __commonJSMin((exports, module) => {
 	module.exports = function() {
 		return 234;
 	};
 });
 
-// node_modules/component-classes/index.js
+//#endregion
+//#region node_modules/component-classes/index.js
 try{
 	var index = require_component_indexof_index();
 }catch(err){
 	var index = require_component_indexof_index();
 }
+//#endregion
 ```

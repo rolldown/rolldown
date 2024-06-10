@@ -1,5 +1,7 @@
 use napi_derive::napi;
 
+use crate::options::plugin::types::binding_asset_source::BindingAssetSource;
+
 #[napi]
 pub struct BindingOutputAsset {
   inner: &'static mut rolldown_common::OutputAsset,
@@ -17,12 +19,12 @@ impl BindingOutputAsset {
   }
 
   #[napi(getter)]
-  pub fn source(&self) -> String {
-    self.inner.source.clone()
+  pub fn source(&self) -> BindingAssetSource {
+    self.inner.source.clone().into()
   }
 
   #[napi(setter, js_name = "source")]
-  pub fn set_source(&mut self, source: String) {
-    self.inner.source = source;
+  pub fn set_source(&mut self, source: BindingAssetSource) {
+    self.inner.source = source.into();
   }
 }

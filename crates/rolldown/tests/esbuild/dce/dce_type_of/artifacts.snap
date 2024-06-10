@@ -8,6 +8,9 @@ input_file: crates/rolldown/tests/esbuild/dce/dce_type_of
 ## entry_js.mjs
 
 ```js
-// entry.js
+
+//#region entry.js
 typeof x_REMOVE;
+
+//#endregion
 ```

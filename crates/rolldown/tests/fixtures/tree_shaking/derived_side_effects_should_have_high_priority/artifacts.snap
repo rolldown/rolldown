@@ -8,9 +8,13 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/derived_side_effects_sho
 ## main.mjs
 
 ```js
-// another/b/index.js
+
+//#region another/b/index.js
 const b = 100;
 
-// main.js
+//#endregion
+//#region main.js
 console.log(b);
+
+//#endregion
 ```

@@ -22,6 +22,9 @@ pub struct TestConfig {
   #[serde(default)]
   /// If `true`, the sourcemap visualizer will be snapshot.
   pub visualize_sourcemap: bool,
+  #[serde(default = "true_by_default")]
+  /// Default is `true`. If `false`, the runtime module will not be hidden.
+  pub hidden_runtime_module: bool,
 }
 
 fn true_by_default() -> bool {

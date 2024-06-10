@@ -8,14 +8,19 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_import_issue_272
 ## a.mjs
 
 ```js
-// a.js
+
+//#region a.js
 import('./b.mjs');
+
+//#endregion
 ```
 ## b.mjs
 
 ```js
-// b.js
+
+//#region b.js
 var b_default = 1;
 
+//#endregion
 export { b_default as default };
 ```

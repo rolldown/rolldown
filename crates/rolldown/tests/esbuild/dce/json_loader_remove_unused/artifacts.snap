@@ -8,6 +8,9 @@ input_file: crates/rolldown/tests/esbuild/dce/json_loader_remove_unused
 ## entry_js.mjs
 
 ```js
-// entry.js
+
+//#region entry.js
 console.log('unused import');
+
+//#endregion
 ```

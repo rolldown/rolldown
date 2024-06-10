@@ -19,5 +19,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/other_file_export_self_as_
 // foo.js
 const foo = 123;
 
+//#endregion
 export { foo };
 ```

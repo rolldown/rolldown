@@ -8,9 +8,9 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/basic_commonjs
 ## main.mjs
 
 ```js
-import { __commonJSMin, __esmMin, __export, __toCommonJS, __toESM } from "./$runtime$.mjs";
 
-// esm.js
+
+//#region esm.js
 function esm_default_fn() {
 }
 function esm_named_fn() {
@@ -35,13 +35,15 @@ var init_esm = __esmMin(() => {
 	};
 });
 
-// commonjs.js
+//#endregion
+//#region commonjs.js
 var require_commonjs$1 = __commonJSMin((exports, module) => {
 	var value = (init_esm(),__toCommonJS(esm_ns));
 	module.exports = value;
 });
 
-// main.js
+//#endregion
+//#region main.js
 var import_commonjs = __toESM(require_commonjs$1());
 init_esm();
 console.log(import_commonjs.default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class);
@@ -50,4 +52,6 @@ const require_commonjs = () => {
 function esm_default_fn$1() {
 }
 console.log(require_commonjs, esm_default_fn$1);
+
+//#endregion
 ```

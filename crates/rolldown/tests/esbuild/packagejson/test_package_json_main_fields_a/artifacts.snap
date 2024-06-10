@@ -8,14 +8,17 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_main_fie
 ## entry.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// node_modules/demo-pkg/a.js
+
+//#region node_modules/demo-pkg/a.js
 var require_a = __commonJSMin((exports, module) => {
 	module.exports = 'a';
 });
 
-// src/entry.js
+//#endregion
+//#region src/entry.js
 var import_a = __toESM(require_a());
 console.log(import_a.default);
+
+//#endregion
 ```

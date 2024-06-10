@@ -1,4 +1,5 @@
 mod chunk;
+mod file_emitter;
 mod inner_bundler_options;
 mod module;
 mod types;
@@ -12,7 +13,7 @@ pub mod bundler_options {
       filename_template::{FileNameRenderOptions, FilenameTemplate},
       input_item::InputItem,
       is_external::IsExternal,
-      loader::Loader,
+      module_type::ModuleType,
       normalized_bundler_options::NormalizedBundlerOptions,
       output_format::OutputFormat,
       output_option::{AddonFunction, AddonOutputOption},
@@ -35,8 +36,10 @@ pub use crate::{
     },
     Chunk,
   },
+  file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
   module::external_module::ExternalModule,
   module::normal_module::NormalModule,
+  types::asset_source::AssetSource,
   types::ast_scopes::AstScopes,
   types::bundler_file_system::BundlerFileSystem,
   types::chunk_id::ChunkId,
@@ -46,10 +49,10 @@ pub use crate::{
   types::external_module_id::ExternalModuleId,
   types::import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},
   types::importer_record::ImporterRecord,
+  types::module_def_format::ModuleDefFormat,
   types::module_id::ModuleId,
   types::module_info::ModuleInfo,
   types::module_table::{ExternalModuleVec, ModuleTable, NormalModuleVec},
-  types::module_type::ModuleType,
   types::named_export::LocalExport,
   types::named_import::{NamedImport, Specifier},
   types::normal_module_id::NormalModuleId,

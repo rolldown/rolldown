@@ -21,6 +21,11 @@
       "default": true,
       "type": "boolean"
     },
+    "hiddenRuntimeModule": {
+      "description": "Default is `true`. If `false`, the runtime module will not be hidden.",
+      "default": true,
+      "type": "boolean"
+    },
     "snapshotOutputStats": {
       "description": "If `true`, the fixture output stats will be snapshot.",
       "default": false,
@@ -37,6 +42,12 @@
     "BundlerOptions": {
       "type": "object",
       "properties": {
+        "assetFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "banner": {
           "type": [
             "string",
@@ -101,14 +112,14 @@
             "$ref": "#/definitions/InputItem"
           }
         },
-        "loaders": {
+        "moduleTypes": {
           "description": "Key is the file extension. The extension should start with a `.`. E.g. `\".txt\"`.",
           "type": [
             "object",
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Loader"
+            "$ref": "#/definitions/ModuleType"
           }
         },
         "platform": {
@@ -173,12 +184,14 @@
         }
       }
     },
-    "Loader": {
+    "ModuleType": {
       "type": "string",
       "enum": [
         "js",
         "json",
-        "text"
+        "text",
+        "base64",
+        "binary"
       ]
     },
     "OutputFormat": {

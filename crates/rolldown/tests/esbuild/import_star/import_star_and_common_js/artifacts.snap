@@ -8,9 +8,9 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_and_common_js
 ## entry_js.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 
-// foo.js
+
+//#region foo.js
 var foo_ns, foo;
 var init_foo = __esmMin(() => {
 	foo_ns = {};
@@ -20,8 +20,11 @@ var init_foo = __esmMin(() => {
 	foo = 123;
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 init_foo();
 const ns2 = (init_foo(),__toCommonJS(foo_ns));
 console.log(foo_ns.foo, ns2.foo);
+
+//#endregion
 ```

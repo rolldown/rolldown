@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/rollup/preserve-for-of-iterable
 ```js
 import { default as assert } from "assert";
 
-// iterables.js
+//#region iterables.js
 let dirty;
 const zeroToFive = {
 	[Symbol.iterator](){
@@ -31,14 +31,18 @@ const zeroToFive = {
 	}
 };
 
-// loops.js
+//#endregion
+//#region loops.js
 const iterate = iterable => {
 	for (const value of  iterable) 	{
 	}
 };
 
-// main.js
+//#endregion
+//#region main.js
 assert.equal(dirty, undefined);
 iterate(zeroToFive);
 assert.equal(dirty, 5);
+
+//#endregion
 ```

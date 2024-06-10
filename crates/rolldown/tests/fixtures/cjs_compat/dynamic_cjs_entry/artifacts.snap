@@ -1,27 +1,31 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/compat/dynamic_cjs_entry
+input_file: crates/rolldown/tests/fixtures/cjs_compat/dynamic_cjs_entry
 ---
 # Assets
 
 ## cjs.mjs
 
 ```js
-import { __commonJSMin } from "./$runtime$.mjs";
 
-// cjs.js
+
+//#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
 	module.exports = 'cjs';
 });
 
+//#endregion
 export default require_cjs();
+
 ```
 ## main.mjs
 
 ```js
-// main.js
+
+//#region main.js
 var main_default = import('./cjs.mjs');
 
+//#endregion
 export { main_default as default };
 ```

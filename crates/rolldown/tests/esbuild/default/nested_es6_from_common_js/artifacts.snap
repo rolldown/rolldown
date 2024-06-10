@@ -8,18 +8,21 @@ input_file: crates/rolldown/tests/esbuild/default/nested_es6_from_common_js
 ## entry_js.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// foo.js
+
+//#region foo.js
 var require_foo = __commonJSMin((exports, module) => {
 	exports.fn = function() {
 		return 123;
 	};
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 var import_foo = __toESM(require_foo());
 (() => {
 	console.log((0,import_foo.fn)());
 })();
+
+//#endregion
 ```

@@ -8,9 +8,9 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier
 ## entry_js.mjs
 
 ```js
-import { __export } from "./$runtime$.mjs";
 
-// b.js
+
+//#region b.js
 var b_ns = {};
 __export(b_ns, {
 	Base:() => Base
@@ -18,7 +18,8 @@ __export(b_ns, {
 class Base {
 }
 
-// a.js
+//#endregion
+//#region a.js
 var a_ns = {};
 __export(a_ns, {
 	Keep:() => Keep
@@ -26,6 +27,9 @@ __export(a_ns, {
 class Keep extends b_ns.Base {
 }
 
-// entry.js
+//#endregion
+//#region entry.js
 new a_ns.Keep();
+
+//#endregion
 ```

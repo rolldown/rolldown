@@ -8,24 +8,28 @@ input_file: crates/rolldown/tests/esbuild/default/es6_from_common_js
 ## entry_js.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// foo.js
+
+//#region foo.js
 var require_foo = __commonJSMin((exports, module) => {
 	exports.foo = function() {
 		return 'foo';
 	};
 });
 
-// bar.js
+//#endregion
+//#region bar.js
 var require_bar = __commonJSMin((exports, module) => {
 	exports.bar = function() {
 		return 'bar';
 	};
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 var import_foo = __toESM(require_foo());
 var import_bar = __toESM(require_bar());
 console.log((0,import_foo.foo)(), (0,import_bar.bar)());
+
+//#endregion
 ```

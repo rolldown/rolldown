@@ -8,18 +8,22 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_ca
 ## entry_js.mjs
 
 ```js
-import { __export } from "./$runtime$.mjs";
 
-// foo.js
+
+//#region foo.js
 const foo$1 = 123;
 
-// bar.js
+//#endregion
+//#region bar.js
 var bar_ns = {};
 __export(bar_ns, {
 	foo:() => foo$1
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 let foo = 234;
 console.log(bar_ns, bar_ns.foo, foo);
+
+//#endregion
 ```

@@ -8,17 +8,21 @@ input_file: crates/rolldown/tests/esbuild/import_star/issue176
 ## entry_js.mjs
 
 ```js
-import { __export } from "./$runtime$.mjs";
 
-// folders/child/foo.js
+
+//#region folders/child/foo.js
 const foo = () => 'hi there';
 
-// folders/index.js
+//#endregion
+//#region folders/index.js
 var folders_index_ns = {};
 __export(folders_index_ns, {
 	foo:() => foo
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 console.log(JSON.stringify(folders_index_ns));
+
+//#endregion
 ```

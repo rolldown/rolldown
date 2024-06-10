@@ -8,6 +8,9 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_gl
 ## src_entry_js.mjs
 
 ```js
-// node_modules/demo-pkg/keep/this/file.js
+
+//#region node_modules/demo-pkg/keep/this/file.js
 console.log('this should be kept');
+
+//#endregion
 ```

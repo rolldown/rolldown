@@ -57,7 +57,12 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         let mut codegen = Codegen::<false>::new(
           "",
           "",
-          CodegenOptions { enable_typescript: true, enable_source_map: false },
+          CodegenOptions {
+            enable_typescript: true,
+            enable_source_map: false,
+            preserve_annotate_comments: false,
+          },
+          None,
         );
         stmt.gen(&mut codegen, codegen::Context::default());
         self.current_stmt_info.debug_label = Some(codegen.into_source_text());

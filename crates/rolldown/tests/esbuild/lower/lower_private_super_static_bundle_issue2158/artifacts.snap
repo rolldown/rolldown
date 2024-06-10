@@ -8,7 +8,8 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_super_static_bundl
 ## entry_js.mjs
 
 ```js
-// entry.js
+
+//#region entry.js
 class Foo extends Object {
 	static FOO;
 
@@ -19,5 +20,6 @@ class Foo extends Object {
 
 }
 
+//#endregion
 export { Foo };
 ```

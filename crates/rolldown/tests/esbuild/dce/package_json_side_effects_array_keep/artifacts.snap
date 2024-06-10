@@ -8,9 +8,13 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_ke
 ## src_entry_js.mjs
 
 ```js
-// node_modules/demo-pkg/index.js
+
+//#region node_modules/demo-pkg/index.js
 console.log('hello');
 
-// src/entry.js
+//#endregion
+//#region src/entry.js
 console.log('unused import');
+
+//#endregion
 ```

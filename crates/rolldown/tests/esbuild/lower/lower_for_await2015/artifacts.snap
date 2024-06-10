@@ -8,7 +8,8 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_for_await2015
 ## entry_js.mjs
 
 ```js
-// entry.js
+
+//#region entry.js
 var entry_default = [async() => {
 	for  await(x of  y) 	z(x);
 }, async() => {
@@ -19,5 +20,6 @@ var entry_default = [async() => {
 	for  await(const x$1 of  y) 	z(x$1);
 },];
 
+//#endregion
 export { entry_default as default };
 ```

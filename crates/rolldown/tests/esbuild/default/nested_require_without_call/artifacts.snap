@@ -8,9 +8,12 @@ input_file: crates/rolldown/tests/esbuild/default/nested_require_without_call
 ## entry_js.mjs
 
 ```js
-// entry.js
+
+//#region entry.js
 (() => {
 	const req = require;
 	req('./entry');
 })();
+
+//#endregion
 ```

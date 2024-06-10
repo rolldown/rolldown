@@ -3,7 +3,7 @@ use std::sync::Arc;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, ExportsKind, ModuleType, NormalModule,
+  side_effects::DeterminedSideEffects, AstScopes, ExportsKind, ModuleDefFormat, NormalModule,
   NormalModuleId, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
@@ -12,7 +12,7 @@ use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use super::Msg;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
-  runtime::RuntimeModuleBrief,
+  runtime::{RuntimeModuleBrief, ROLLDOWN_RUNTIME_RESOURCE_ID},
   types::ast_symbols::AstSymbols,
   utils::tweak_ast_for_scanning::tweak_ast_for_scanning,
 };
@@ -61,8 +61,8 @@ impl RuntimeNormalModuleTask {
       source,
       id: self.module_id,
       repr_name,
-      stable_resource_id: "\\0<runtime>".to_string(),
-      resource_id: ResourceId::new("\0<runtime>"),
+      stable_resource_id: ROLLDOWN_RUNTIME_RESOURCE_ID.to_string(),
+      resource_id: ResourceId::new(ROLLDOWN_RUNTIME_RESOURCE_ID),
       named_imports,
       named_exports,
       stmt_infos,
@@ -72,8 +72,8 @@ impl RuntimeNormalModuleTask {
       scope,
       exports_kind: ExportsKind::Esm,
       namespace_object_ref,
-      module_type: ModuleType::EsmMjs,
-      debug_resource_id: "\\0<runtime>".to_string(),
+      def_format: ModuleDefFormat::EsmMjs,
+      debug_resource_id: ROLLDOWN_RUNTIME_RESOURCE_ID.to_string(),
       exec_order: u32::MAX,
       is_user_defined_entry: false,
       import_records: IndexVec::default(),
@@ -84,7 +84,6 @@ impl RuntimeNormalModuleTask {
       dynamic_importers: vec![],
       imported_ids: vec![],
       dynamically_imported_ids: vec![],
-      package_json: None,
       side_effects: DeterminedSideEffects::Analyzed(false),
     };
 
@@ -124,7 +123,7 @@ impl RuntimeNormalModuleTask {
       &ast_scope,
       &mut symbol_for_module,
       "runtime".to_string(),
-      ModuleType::EsmMjs,
+      ModuleDefFormat::EsmMjs,
       source,
       &facade_path,
       &ast.trivias,

@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - main
+      - 'renovate/**' # For renovate bot "automerge": true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
@@ -38,6 +39,7 @@ jobs:
               - 'Cargo.lock'
               - 'rust-toolchain.toml'
               - 'deny.toml'
+              - '.gitattributes'
             node-changes:
               - *rust-changes
               - 'packages/**'

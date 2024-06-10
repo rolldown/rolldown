@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/binding-wasm32-wasi",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "cpu": [
     "wasm32"
   ],
@@ -24,7 +24,7 @@
   "homepage": "https://rolldown.rs/",
   "license": "MIT",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=20.14.0"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -37,6 +37,6 @@
   },
   "browser": "rolldown-binding.wasi-browser.js",
   "dependencies": {
-    "@napi-rs/wasm-runtime": "^0.2.0"
+    "@napi-rs/wasm-runtime": "^0.2.4"
   }
 }

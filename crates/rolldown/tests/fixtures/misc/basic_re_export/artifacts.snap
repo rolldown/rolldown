@@ -1,17 +1,21 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/basic_re_export
+input_file: crates/rolldown/tests/fixtures/misc/basic_re_export
 ---
 # Assets
 
 ## main.mjs
 
 ```js
-// a.js
+
+//#region a.js
 const a$1 = 'a.js';
 
-// main.js
+//#endregion
+//#region main.js
 const a = 'index.js';
 console.log(a, a$1);
+
+//#endregion
 ```

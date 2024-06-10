@@ -8,22 +8,25 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_entry_point
 ## entry_js.mjs
 
 ```js
-import { __export } from "./$runtime$.mjs";
 
-// a.js
+
+//#region a.js
 const A = 1;
 const B = '2';
 
-// b.js
+//#endregion
+//#region b.js
 const C = 1;
 const D = '2';
 
-// inner.js
+//#endregion
+//#region inner.js
 var inner_ns = {};
 __export(inner_ns, {
 	C:() => C,
 	D:() => D
 });
 
+//#endregion
 export { A, B, inner_ns as inner };
 ```

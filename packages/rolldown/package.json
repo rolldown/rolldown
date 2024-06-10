@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",
   "repository": {
@@ -91,27 +91,30 @@
     },
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\n"
   },
-  "devDependencies": {
-    "@napi-rs/cli": "^3.0.0-alpha",
-    "@napi-rs/wasm-runtime": "^0.2.3",
-    "@rolldown/testing": "workspace:*",
+  "dependencies": {
     "citty": "^0.1.6",
     "colorette": "^2.0.20",
     "consola": "^3.2.3",
-    "emnapi": "^1.2.0",
-    "esbuild": "^0.21.3",
-    "execa": "^9.1.0",
-    "fs-extra": "^11.2.0",
-    "glob": "^10.4.1",
     "locate-character": "^3.0.0",
     "mri": "^1.2.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.0.0-alpha.55",
+    "@napi-rs/wasm-runtime": "^0.2.4",
+    "@rolldown/testing": "workspace:*",
+    "emnapi": "^1.2.0",
+    "esbuild": "^0.21.5",
+    "execa": "^9.2.0",
+    "fs-extra": "^11.2.0",
+    "glob": "^10.4.1",
     "npm-run-all2": "^6.2.0",
     "rolldown": "workspace:*",
     "rollup": "^4.18.0",
-    "type-fest": "^4.18.2",
+    "type-fest": "^4.20.0",
     "unbuild": "^2.0.0",
-    "vite": "^5.2.11",
-    "vitest": "^1.3.1",
+    "vite": "^5.2.13",
+    "vitest": "^1.6.0",
     "why-is-node-running": "^2.2.2"
   },
   "optionalDependencies": {
@@ -126,8 +129,5 @@
     "@rolldown/binding-win32-arm64-msvc": "workspace:*",
     "@rolldown/binding-win32-ia32-msvc": "workspace:*",
     "@rolldown/binding-win32-x64-msvc": "workspace:*"
-  },
-  "dependencies": {
-    "zod": "^3.23.6"
   }
 }

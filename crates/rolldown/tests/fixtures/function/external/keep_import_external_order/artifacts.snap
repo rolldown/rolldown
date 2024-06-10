@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/external/keep_import_external_order
+input_file: crates/rolldown/tests/fixtures/function/external/keep_import_external_order
 ---
 # Assets
 
@@ -11,9 +11,12 @@ input_file: crates/rolldown/tests/fixtures/external/keep_import_external_order
 import "ext1";
 import "ext2";
 
-// foo.js
+//#region foo.js
 const a = 'foo';
 
-// main.js
+//#endregion
+//#region main.js
 console.log(a);
+
+//#endregion
 ```

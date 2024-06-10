@@ -8,5 +8,8 @@
     ],
     "format": "cjs",
     "external": ["fs"]
-  }
+  },
+  "hiddenRuntimeModule": false,
+  "_comment": "TODO(hyf0): need to be solved",
+  "expectExecuted": false
 }

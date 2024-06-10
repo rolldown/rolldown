@@ -23,12 +23,15 @@ export { p, q };
 ## a~1.mjs
 
 ```js
-// b.js
+
+//#region b.js
 var q = 6;
 
-// a.js
+//#endregion
+//#region a.js
 var p = 5;
 
+//#endregion
 export { p, q };
 ```
 ## b.mjs

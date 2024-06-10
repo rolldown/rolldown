@@ -14,7 +14,7 @@ use oxc::{
 };
 use oxc_index::IndexVec;
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleType, NamedImport,
+  AstScopes, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleDefFormat, NamedImport,
   NormalModuleId, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_error::BuildError;
@@ -44,7 +44,7 @@ pub struct ScanResult {
 pub struct AstScanner<'me> {
   idx: NormalModuleId,
   source: &'me Arc<str>,
-  module_type: ModuleType,
+  module_type: ModuleDefFormat,
   file_path: &'me ResourceId,
   scopes: &'me AstScopes,
   trivias: &'me Trivias,
@@ -66,7 +66,7 @@ impl<'me> AstScanner<'me> {
     scope: &'me AstScopes,
     symbols: &'me mut AstSymbols,
     repr_name: String,
-    module_type: ModuleType,
+    module_type: ModuleDefFormat,
     source: &'me Arc<str>,
     file_path: &'me ResourceId,
     trivias: &'me Trivias,
@@ -126,13 +126,13 @@ impl<'me> AstScanner<'me> {
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
       match self.module_type {
-        ModuleType::CJS | ModuleType::CjsPackageJson => {
+        ModuleDefFormat::CJS | ModuleDefFormat::CjsPackageJson => {
           exports_kind = ExportsKind::CommonJs;
         }
-        ModuleType::EsmMjs | ModuleType::EsmPackageJson => {
+        ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmPackageJson => {
           exports_kind = ExportsKind::Esm;
         }
-        ModuleType::Unknown => {
+        ModuleDefFormat::Unknown => {
           if self.esm_import_keyword.is_some() {
             exports_kind = ExportsKind::Esm;
           }

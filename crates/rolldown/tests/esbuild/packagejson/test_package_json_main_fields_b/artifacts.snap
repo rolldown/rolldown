@@ -8,9 +8,13 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_main_fie
 ## entry.mjs
 
 ```js
-// node_modules/demo-pkg/b.js
+
+//#region node_modules/demo-pkg/b.js
 var b_default = 'b';
 
-// src/entry.js
+//#endregion
+//#region src/entry.js
 console.log(b_default);
+
+//#endregion
 ```

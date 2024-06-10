@@ -3,8 +3,8 @@ use std::{fmt::Debug, sync::Arc};
 use crate::side_effects::DeterminedSideEffects;
 use crate::{
   types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
-  ImportRecordId, LocalExport, ModuleId, ModuleInfo, ModuleType, NamedImport, NormalModuleId,
-  PackageJson, ResourceId, StmtInfo, StmtInfos, SymbolRef,
+  ImportRecordId, LocalExport, ModuleDefFormat, ModuleId, ModuleInfo, NamedImport, NormalModuleId,
+  ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use oxc::span::Span;
 use oxc_index::IndexVec;
@@ -24,7 +24,7 @@ pub struct NormalModule {
   pub debug_resource_id: String,
   /// Representative name of `FilePath`, which is created by `FilePath#representative_name` belong to `resource_id`
   pub repr_name: String,
-  pub module_type: ModuleType,
+  pub def_format: ModuleDefFormat,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
   pub named_imports: FxHashMap<SymbolRef, NamedImport>,
@@ -51,7 +51,6 @@ pub struct NormalModule {
   // the module ids imported by this module via dynamic import()
   pub dynamically_imported_ids: Vec<ResourceId>,
   pub side_effects: DeterminedSideEffects,
-  pub package_json: Option<Arc<PackageJson>>,
 }
 
 impl NormalModule {
@@ -96,7 +95,7 @@ impl NormalModule {
 
   // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
   pub fn is_virtual(&self) -> bool {
-    self.resource_id.starts_with('\0')
+    self.resource_id.starts_with('\0') || self.resource_id.starts_with("rolldown:")
   }
 
   // https://tc39.es/ecma262/#sec-getexportednames

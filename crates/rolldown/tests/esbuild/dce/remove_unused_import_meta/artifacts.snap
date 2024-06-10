@@ -8,6 +8,9 @@ input_file: crates/rolldown/tests/esbuild/dce/remove_unused_import_meta
 ## entry_js.mjs
 
 ```js
-// entry.js
+
+//#region entry.js
 console.log('foo is unused');
+
+//#endregion
 ```

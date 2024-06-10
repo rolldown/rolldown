@@ -8,18 +8,24 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 ## entry.mjs
 
 ```js
-// src/demo-pkg/no-ext-browser/index.js
+
+//#region src/demo-pkg/no-ext-browser/index.js
 let browser$1 = 'browser';
 
-// src/demo-pkg/no-ext/index.js
+//#endregion
+//#region src/demo-pkg/no-ext/index.js
 let node = 'node';
 
-// src/demo-pkg/ext-browser/index.js
+//#endregion
+//#region src/demo-pkg/ext-browser/index.js
 let browser = 'browser';
 
-// src/entry.js
+//#endregion
+//#region src/entry.js
 console.log(browser$1);
 console.log(node);
 console.log(browser);
 console.log(browser);
+
+//#endregion
 ```

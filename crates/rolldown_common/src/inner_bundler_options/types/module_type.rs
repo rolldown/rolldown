@@ -9,8 +9,10 @@ use serde::Deserialize;
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
 #[derive(Debug, Clone, Copy)]
-pub enum Loader {
+pub enum ModuleType {
   Js,
   Json,
   Text,
+  Base64,
+  Binary,
 }

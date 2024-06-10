@@ -18,8 +18,8 @@ export class BindingModuleInfo {
 
 export class BindingOutputAsset {
   get fileName(): string
-  get source(): string
-  set source(source: string)
+  get source(): BindingAssetSource
+  set source(source: BindingAssetSource)
 }
 
 export class BindingOutputChunk {
@@ -50,6 +50,8 @@ export class BindingOutputs {
 
 export class BindingPluginContext {
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
+  emitFile(file: BindingEmittedAsset): string
+  getFileName(referenceId: string): string
 }
 
 export class BindingTransformPluginContext {
@@ -82,6 +84,17 @@ export class ParallelJsPluginRegistry {
 export interface AliasItem {
   find: string
   replacements: Array<string>
+}
+
+export interface BindingAssetSource {
+  type: string
+  source: Uint8Array
+}
+
+export interface BindingEmittedAsset {
+  name?: string
+  fileName?: string
+  source: BindingAssetSource
 }
 
 export interface BindingHookLoadOutput {
@@ -139,6 +152,7 @@ export enum BindingLogLevel {
 export interface BindingOutputOptions {
   entryFileNames?: string
   chunkFileNames?: string
+  assetFileNames?: string
   banner?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   dir?: string
   exports?: 'default' | 'named' | 'none' | 'auto'

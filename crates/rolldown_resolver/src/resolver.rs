@@ -1,7 +1,7 @@
 use dashmap::DashMap;
 use itertools::Itertools;
 use rolldown_common::{
-  ImportKind, ModuleType, PackageJson, Platform, ResolveOptions, ResolvedPath,
+  ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions, ResolvedPath,
 };
 use rolldown_fs::{FileSystem, OsFileSystem};
 use std::{
@@ -138,13 +138,11 @@ impl<F: FileSystem + Default> Resolver<F> {
 #[derive(Debug)]
 pub struct ResolveReturn {
   pub path: ResolvedPath,
-  pub module_type: ModuleType,
+  pub module_type: ModuleDefFormat,
   pub package_json: Option<Arc<PackageJson>>,
 }
 
 impl<F: FileSystem + Default> Resolver<F> {
-  // clippy::option_if_let_else: I think the current code is more readable.
-  #[allow(clippy::missing_errors_doc, clippy::option_if_let_else)]
   pub fn resolve(
     &self,
     importer: Option<&Path>,
@@ -194,7 +192,7 @@ impl<F: FileSystem + Default> Resolver<F> {
         ResolveError::Ignored(p) => Ok(Ok(build_resolve_ret(
           p.to_str().expect("Should be valid utf8").to_string(),
           true,
-          ModuleType::Unknown,
+          ModuleDefFormat::Unknown,
           None,
         ))),
         _ => Ok(Err(err)),
@@ -215,29 +213,29 @@ impl<F: FileSystem + Default> Resolver<F> {
   }
 }
 
-fn calc_module_type(info: &Resolution) -> ModuleType {
+fn calc_module_type(info: &Resolution) -> ModuleDefFormat {
   if let Some(extension) = info.path().extension() {
     if extension == "mjs" {
-      return ModuleType::EsmMjs;
+      return ModuleDefFormat::EsmMjs;
     } else if extension == "cjs" {
-      return ModuleType::CJS;
+      return ModuleDefFormat::CJS;
     }
   }
   if let Some(package_json) = info.package_json() {
     let type_value = package_json.raw_json().get("type").and_then(|v| v.as_str());
     if type_value == Some("module") {
-      return ModuleType::EsmPackageJson;
+      return ModuleDefFormat::EsmPackageJson;
     } else if type_value == Some("commonjs") {
-      return ModuleType::CjsPackageJson;
+      return ModuleDefFormat::CjsPackageJson;
     }
   }
-  ModuleType::Unknown
+  ModuleDefFormat::Unknown
 }
 
 fn build_resolve_ret(
   path: String,
   ignored: bool,
-  module_type: ModuleType,
+  module_type: ModuleDefFormat,
   package_json: Option<Arc<PackageJson>>,
 ) -> ResolveReturn {
   ResolveReturn { path: ResolvedPath { path: path.into(), ignored }, module_type, package_json }

@@ -1,7 +1,6 @@
-use rolldown_common::{Loader, NormalizedBundlerOptions, Platform, SourceMapType};
+use rolldown_common::{ModuleType, NormalizedBundlerOptions, Platform, SourceMapType};
 use rustc_hash::FxHashMap;
 
-#[allow(clippy::struct_field_names)]
 pub struct NormalizeOptionsReturn {
   pub options: NormalizedBundlerOptions,
   pub resolve_options: rolldown_resolver::ResolveOptions,
@@ -14,18 +13,18 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   let mut loaders = FxHashMap::from(
     [
-      ("json".to_string(), Loader::Json),
-      ("js".to_string(), Loader::Js),
-      ("mjs".to_string(), Loader::Js),
-      ("cjs".to_string(), Loader::Js),
-      ("txt".to_string(), Loader::Text),
+      ("json".to_string(), ModuleType::Json),
+      ("js".to_string(), ModuleType::Js),
+      ("mjs".to_string(), ModuleType::Js),
+      ("cjs".to_string(), ModuleType::Js),
+      ("txt".to_string(), ModuleType::Text),
     ]
     .into_iter()
     .collect(),
   );
 
-  let user_defined_loaders: FxHashMap<String, Loader> = raw_options
-    .loaders
+  let user_defined_loaders: FxHashMap<String, ModuleType> = raw_options
+    .module_types
     .map(|loaders| {
       loaders
         .into_iter()
@@ -53,6 +52,10 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .chunk_filenames
       .unwrap_or_else(|| "[name]-[hash].js".to_string())
       .into(),
+    asset_filenames: raw_options
+      .asset_filenames
+      .unwrap_or_else(|| "assets/[name]-[hash][extname]".to_string())
+      .into(),
     banner: raw_options.banner,
     footer: raw_options.footer,
     dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
@@ -61,7 +64,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     sourcemap_ignore_list: raw_options.sourcemap_ignore_list,
     sourcemap_path_transform: raw_options.sourcemap_path_transform,
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
-    loaders,
+    module_types: loaders,
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }

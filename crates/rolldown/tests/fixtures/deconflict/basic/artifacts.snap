@@ -10,11 +10,14 @@ input_file: crates/rolldown/tests/fixtures/deconflict/basic
 ```js
 import { default as assert } from "assert";
 
-// a.js
+//#region a.js
 const a$1 = 'a.js';
 
-// main.js
+//#endregion
+//#region main.js
 const a = 'main.js';
 assert.equal(a, 'main.js');
 assert.equal(a$1, 'a.js');
+
+//#endregion
 ```

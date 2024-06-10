@@ -8,7 +8,8 @@ input_file: crates/rolldown/tests/esbuild/default/var_relocating_bundle
 ## function-nested_js.mjs
 
 ```js
-// function-nested.js
+
+//#region function-nested.js
 function x() {
 	if (true) {
 		var a;
@@ -17,41 +18,55 @@ function x() {
 	}
 }
 x();
+
+//#endregion
 ```
 ## function_js.mjs
 
 ```js
-// function.js
+
+//#region function.js
 function x() {
 	var a;
 	for (var b; 0;) 	;	for (var e of  []) 	;	for (var {f, x:[g]} of  []) 	;	for (var h in {}) 	;	for (var {j, x:[k]} in {}) 	;	function l() {
 	}
 }
 x();
+
+//#endregion
 ```
 ## let_js.mjs
 
 ```js
-// let.js
+
+//#region let.js
 if (true) {
 	let a;
 	for (let b; 0;) 	;	for (let e of  []) 	;	for (let {f, x:[g]} of  []) 	;	for (let h in {}) 	;	for (let {j, x:[k]} in {}) 	;}
+
+//#endregion
 ```
 ## nested_js.mjs
 
 ```js
-// nested.js
+
+//#region nested.js
 if (true) {
 	var a;
 	for (var b; 0;) 	;	for (var e of  []) 	;	for (var {f, x:[g]} of  []) 	;	for (var h in {}) 	;	for (var {j, x:[k]} in {}) 	;	function l() {
 	}
 }
+
+//#endregion
 ```
 ## top-level_js.mjs
 
 ```js
-// top-level.js
+
+//#region top-level.js
 var a;
 for (var b; 0;) ;for (var e of  []) ;for (var {f, x:[g]} of  []) ;for (var h in {}) ;for (var {j, x:[k]} in {}) ;function l() {
 }
+
+//#endregion
 ```

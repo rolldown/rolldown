@@ -8,9 +8,9 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/esm_require_esm
 ## main.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 
-// esm.js
+
+//#region esm.js
 var esm_ns, esm_default;
 var init_esm = __esmMin(() => {
 	esm_ns = {};
@@ -20,8 +20,10 @@ var init_esm = __esmMin(() => {
 	esm_default = 'esm';
 });
 
-// main.js
+//#endregion
+//#region main.js
 const esm = (init_esm(),__toCommonJS(esm_ns));
 
+//#endregion
 export { esm };
 ```

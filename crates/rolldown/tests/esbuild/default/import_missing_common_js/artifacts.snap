@@ -8,16 +8,19 @@ input_file: crates/rolldown/tests/esbuild/default/import_missing_common_js
 ## entry_js.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// foo.js
+
+//#region foo.js
 var require_foo = __commonJSMin((exports, module) => {
 	exports.x = 123;
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 var import_foo = __toESM(require_foo());
 if (false) {
 	console.log((0,import_foo.default)(import_foo.x, import_foo.y));
 }
+
+//#endregion
 ```

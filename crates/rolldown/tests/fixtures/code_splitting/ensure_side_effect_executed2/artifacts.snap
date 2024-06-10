@@ -9,15 +9,20 @@ input_file: crates/rolldown/tests/fixtures/code_splitting/ensure_side_effect_exe
 
 ```js
 import "./shared.mjs";
+
 ```
 ## b.mjs
 
 ```js
 import "./shared.mjs";
+
 ```
 ## shared.mjs
 
 ```js
-// shared.js
+
+//#region shared.js
 globalThis.sideEffectExecuted = true;
+
+//#endregion
 ```

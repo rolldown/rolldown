@@ -93,6 +93,7 @@ pub fn normalize_binding_options(
     shim_missing_exports: input_options.shim_missing_exports,
     entry_filenames: output_options.entry_file_names,
     chunk_filenames: output_options.chunk_file_names,
+    asset_filenames: output_options.asset_file_names,
     dir: output_options.dir,
     sourcemap: output_options.sourcemap.map(Into::into),
     banner: normalize_addon_option(output_options.banner),
@@ -104,7 +105,7 @@ pub fn normalize_binding_options(
       "cjs" => OutputFormat::Cjs,
       _ => panic!("Invalid format: {format_str}"),
     }),
-    loaders: None,
+    module_types: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

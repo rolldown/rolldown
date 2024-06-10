@@ -8,7 +8,8 @@ input_file: crates/rolldown/tests/esbuild/dce/remove_trailing_return
 ## entry_js.mjs
 
 ```js
-// entry.js
+
+//#region entry.js
 function foo() {
 	if (a) 	b();
 
@@ -37,5 +38,6 @@ var entry_default = [foo, bar, function() {
 	return KEEP_ME;
 },];
 
+//#endregion
 export { entry_default as default };
 ```

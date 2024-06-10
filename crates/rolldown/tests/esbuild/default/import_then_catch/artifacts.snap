@@ -8,10 +8,13 @@ input_file: crates/rolldown/tests/esbuild/default/import_then_catch
 ## entry_js.mjs
 
 ```js
-// entry.js
+
+//#region entry.js
 if (false) {
 	import(name).then(pass, fail);
 	import(name).then(pass).catch(fail);
 	import(name).catch(fail);
 }
+
+//#endregion
 ```

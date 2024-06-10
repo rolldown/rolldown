@@ -1,5 +1,6 @@
 use anyhow::Result;
 use oxc::ast::VisitMut;
+use rolldown_oxc_utils::AstSnippet;
 use rustc_hash::FxHashSet;
 
 use futures::future::try_join_all;
@@ -19,7 +20,8 @@ use sugar_path::SugarPath;
 use crate::{
   chunk_graph::ChunkGraph,
   module_finalizers::{
-    isolating::IsolatingModuleFinalizer, scope_hoisting::ScopeHoistingFinalizerContext,
+    isolating::{IsolatingModuleFinalizer, IsolatingModuleFinalizerContext},
+    scope_hoisting::ScopeHoistingFinalizerContext,
   },
   stages::link_stage::LinkStageOutput,
   type_alias::IndexNormalModules,
@@ -33,7 +35,6 @@ use crate::{
     extract_hash_pattern::extract_hash_pattern,
     finalize_normal_module,
     hash_placeholder::HashPlaceholderGenerator,
-    is_in_rust_test_mode,
     render_chunks::render_chunks,
   },
   BundleOutput, SharedOptions,
@@ -99,7 +100,15 @@ impl<'a> GenerateStage<'a> {
         } else {
           ast.with_mut(|fields| {
             let (oxc_program, alloc) = (fields.program, fields.allocator);
-            let mut finalizer = IsolatingModuleFinalizer { alloc, scope: &module.scope };
+            let mut finalizer = IsolatingModuleFinalizer {
+              alloc,
+              scope: &module.scope,
+              ctx: &IsolatingModuleFinalizerContext {
+                module,
+                modules: &self.link_output.module_table.normal_modules,
+              },
+              snippet: AstSnippet::new(alloc),
+            };
             finalizer.visit_program(oxc_program);
           });
         }
@@ -173,7 +182,7 @@ impl<'a> GenerateStage<'a> {
             };
             assets.push(Output::Asset(Box::new(OutputAsset {
               filename: map_filename.clone(),
-              source,
+              source: source.into(),
             })));
             code.push_str(&format!("\n//# sourceMappingURL={map_filename}"));
           }
@@ -232,10 +241,6 @@ impl<'a> GenerateStage<'a> {
       runtime_id: NormalModuleId,
       normal_modules: &IndexNormalModules,
     ) -> String {
-      if is_in_rust_test_mode() && chunk.modules.first().copied() == Some(runtime_id) {
-        return "$runtime$".to_string();
-      }
-
       // User-defined entry point should always have a name that given by the user
       match chunk.kind {
         ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
@@ -305,6 +310,7 @@ impl<'a> GenerateStage<'a> {
       let preliminary = filename_template.render(&FileNameRenderOptions {
         name: Some(&chunk_name),
         hash: hash_placeholder.as_deref(),
+        ..Default::default()
       });
 
       chunk.absolute_preliminary_filename =

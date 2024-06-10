@@ -5,7 +5,6 @@ use crate::ResourceId;
 
 use super::rendered_module::RenderedModule;
 
-#[allow(clippy::zero_sized_map_values)]
 #[derive(Debug)]
 pub struct OutputChunk {
   // PreRenderedChunk

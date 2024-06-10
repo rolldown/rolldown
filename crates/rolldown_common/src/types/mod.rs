@@ -1,3 +1,4 @@
+pub mod asset_source;
 pub mod ast_scopes;
 pub mod bundler_file_system;
 pub mod chunk_id;
@@ -7,10 +8,10 @@ pub mod exports_kind;
 pub mod external_module_id;
 pub mod import_record;
 pub mod importer_record;
+pub mod module_def_format;
 pub mod module_id;
 pub mod module_info;
 pub mod module_table;
-pub mod module_type;
 pub mod named_export;
 pub mod named_import;
 pub mod normal_module_id;

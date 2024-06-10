@@ -17,4 +17,5 @@ input_file: crates/rolldown/tests/fixtures/warnings/unresolved_import_treated_as
 
 ```js
 import "foo";
+
 ```

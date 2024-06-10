@@ -1,23 +1,26 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/esbuild/packagejson/main
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_main
 ---
 # Assets
 
 ## entry.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// node_modules/demo-pkg/custom-main.js
+
+//#region node_modules/demo-pkg/custom-main.js
 var require_custom_main = __commonJSMin((exports, module) => {
 	module.exports = function() {
 		return 123;
 	};
 });
 
-// src/entry.js
+//#endregion
+//#region src/entry.js
 var import_custom_main = __toESM(require_custom_main());
 console.log((0,import_custom_main.default)());
+
+//#endregion
 ```

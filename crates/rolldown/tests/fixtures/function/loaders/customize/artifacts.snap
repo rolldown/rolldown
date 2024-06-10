@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/function/loader/customize
+input_file: crates/rolldown/tests/fixtures/function/loaders/customize
 ---
 # Assets
 
@@ -10,9 +10,12 @@ input_file: crates/rolldown/tests/fixtures/function/loader/customize
 ```js
 import { default as assert } from "node:assert";
 
-// foo.json2
+//#region foo.json2
 var foo_default = ['foo'];
 
-// main.js
+//#endregion
+//#region main.js
 assert.deepStrictEqual(foo_default, ['foo']);
+
+//#endregion
 ```

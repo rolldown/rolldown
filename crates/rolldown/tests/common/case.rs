@@ -1,6 +1,8 @@
 use std::{borrow::Cow, path::Path};
 
 use super::fixture::Fixture;
+use once_cell::sync::Lazy;
+use regex::Regex;
 use rolldown::BundleOutput;
 use rolldown_common::Output;
 use rolldown_error::{BuildError, DiagnosticOptions};
@@ -74,12 +76,14 @@ impl Case {
       .iter()
       .filter(|asset| !asset.filename().contains("$runtime$") && matches!(asset, Output::Chunk(_)))
       .flat_map(|asset| {
-        [
-          Cow::Owned(format!("## {}\n", asset.filename())),
-          "```js".into(),
-          Cow::Borrowed(asset.content().trim()),
-          "```".into(),
-        ]
+        let content = std::str::from_utf8(asset.content_as_bytes()).unwrap();
+        let content = if self.fixture.test_config().hidden_runtime_module {
+          RUNTIME_MODULE_OUTPUT_RE.replace_all(content, "")
+        } else {
+          Cow::Borrowed(content)
+        };
+
+        [Cow::Owned(format!("## {}\n", asset.filename())), "```js".into(), content, "```".into()]
       })
       .collect::<Vec<_>>()
       .join("\n");
@@ -168,3 +172,8 @@ impl Case {
     });
   }
 }
+
+static RUNTIME_MODULE_OUTPUT_RE: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"(//#region rolldown:runtime[\s\S]*?//#endregion)")
+    .expect("invalid runtime module output regex")
+});

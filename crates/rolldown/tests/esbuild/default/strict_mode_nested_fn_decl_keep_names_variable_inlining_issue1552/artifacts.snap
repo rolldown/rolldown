@@ -8,7 +8,8 @@ input_file: crates/rolldown/tests/esbuild/default/strict_mode_nested_fn_decl_kee
 ## entry_js.mjs
 
 ```js
-// entry.js
+
+//#region entry.js
 function outer() {
 	{
 		function inner() {
@@ -20,5 +21,6 @@ function outer() {
 }
 outer();
 
+//#endregion
 export { outer };
 ```

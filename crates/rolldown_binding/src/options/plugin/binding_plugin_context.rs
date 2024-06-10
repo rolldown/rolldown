@@ -4,7 +4,10 @@ use rolldown_plugin::SharedPluginContext;
 
 use crate::utils::napi_error;
 
-use super::types::binding_plugin_context_resolve_options::BindingPluginContextResolveOptions;
+use super::types::{
+  binding_emitted_asset::BindingEmittedAsset,
+  binding_plugin_context_resolve_options::BindingPluginContextResolveOptions,
+};
 
 #[napi]
 pub struct BindingPluginContext {
@@ -35,6 +38,16 @@ impl BindingPluginContext {
       id: info.path.path.to_string(),
       external: info.is_external,
     }))
+  }
+
+  #[napi]
+  pub fn emit_file(&self, file: BindingEmittedAsset) -> String {
+    self.inner.emit_file(file.into())
+  }
+
+  #[napi]
+  pub fn get_file_name(&self, reference_id: String) -> String {
+    self.inner.get_file_name(reference_id.as_str())
   }
 }
 

@@ -8,10 +8,10 @@ input_file: crates/rolldown/tests/fixtures/deconflict/conflict_between_global_an
 ## main.mjs
 
 ```js
-import { __commonJSMin } from "./$runtime$.mjs";
 import { default as assert } from "node:assert";
 
-// main.js
+
+//#region main.js
 var require_main = __commonJSMin((exports, module) => {
 	module.exports = 'main';
 	globalThis.__commonJS = 0;
@@ -19,5 +19,7 @@ var require_main = __commonJSMin((exports, module) => {
 	assert.equal(__commonJS, 1);
 });
 
+//#endregion
 export default require_main();
+
 ```

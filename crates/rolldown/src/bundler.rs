@@ -11,6 +11,7 @@ use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
+use rolldown_common::SharedFileEmitter;
 use rolldown_error::BuildError;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
@@ -22,6 +23,7 @@ pub struct Bundler {
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) fs: OsFileSystem,
   pub(crate) resolver: SharedResolver,
+  pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) _log_guard: Option<FlushGuard>,
 }
 
@@ -59,7 +61,7 @@ impl Bundler {
           self.fs.create_dir_all(p).unwrap();
         }
       };
-      self.fs.write(dest.as_path(), chunk.content().as_bytes()).map_err(|err| {
+      self.fs.write(dest.as_path(), chunk.content_as_bytes()).map_err(|err| {
         anyhow::anyhow!("Failed to write file in {:?}", dir.as_path().join(chunk.filename()))
           .context(err)
       })?;
@@ -119,6 +121,9 @@ impl Bundler {
 
       ret?
     };
+
+    // Add additional files from build plugins.
+    self.file_emitter.add_additional_files(&mut output.assets);
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
 

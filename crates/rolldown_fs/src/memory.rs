@@ -75,6 +75,16 @@ impl FileSystem for MemoryFileSystem {
   fn exists(&self, path: &Path) -> bool {
     self.fs.exists(path.to_string_lossy().as_ref()).is_ok()
   }
+
+  fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
+    let mut buf = Vec::new();
+    self
+      .fs
+      .open_file(&path.to_string_lossy())
+      .map_err(|err| io::Error::new(io::ErrorKind::NotFound, err))?
+      .read_to_end(&mut buf)?;
+    Ok(buf)
+  }
 }
 
 impl OxcResolverFileSystem for MemoryFileSystem {
@@ -149,6 +159,11 @@ mod tests {
     assert_eq!(
       std::str::from_utf8(utils_content).map_err(|err| err.to_string())?,
       fs.read_to_string(Path::new("/module_2/utils/index.js")).map_err(|err| err.to_string())?
+    );
+
+    assert_eq!(
+      utils_content.to_vec(),
+      fs.read(Path::new("/module_2/utils/index.js")).map_err(|err| err.to_string())?
     );
 
     Ok(())

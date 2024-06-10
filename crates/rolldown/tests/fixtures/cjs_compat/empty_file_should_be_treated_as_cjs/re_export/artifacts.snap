@@ -1,27 +1,30 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/compat/empty_file_should_be_treated_as_cjs/re_export
+input_file: crates/rolldown/tests/fixtures/cjs_compat/empty_file_should_be_treated_as_cjs/re_export
 ---
 # Assets
 
 ## main.mjs
 
 ```js
-import { __commonJSMin, __toESM } from "./$runtime$.mjs";
 
-// star-empty.js
+
+//#region star-empty.js
 var require_star_empty = __commonJSMin((exports, module) => {
 });
 
-// default-empty.js
+//#endregion
+//#region default-empty.js
 var require_default_empty = __commonJSMin((exports, module) => {
 });
 
-// main.js
+//#endregion
+//#region main.js
 var import_star_empty = __toESM(require_star_empty());
 var import_default_empty = __toESM(require_default_empty());
 
+//#endregion
 var defaultImport = import_default_empty.default;
 export { defaultImport, import_star_empty as staImport };
 ```

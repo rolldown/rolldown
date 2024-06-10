@@ -1,4 +1,4 @@
-use rolldown_common::{side_effects::HookSideEffects, ResolvedPath};
+use rolldown_common::{side_effects::HookSideEffects, ModuleType, ResolvedPath};
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
 use sugar_path::SugarPath;
@@ -6,6 +6,7 @@ use sugar_path::SugarPath;
 pub async fn load_source(
   plugin_driver: &PluginDriver,
   resolved_path: &ResolvedPath,
+  module_type: ModuleType,
   fs: &dyn rolldown_fs::FileSystem,
   sourcemap_chain: &mut Vec<SourceMap>,
   side_effects: &mut Option<HookSideEffects>,
@@ -22,7 +23,12 @@ pub async fn load_source(
     } else if resolved_path.ignored {
       String::new()
     } else {
-      fs.read_to_string(resolved_path.path.as_path())?
+      match module_type {
+        ModuleType::Base64 | ModuleType::Binary => {
+          rolldown_utils::base64::to_standard_base64(fs.read(resolved_path.path.as_path())?)
+        }
+        _ => fs.read_to_string(resolved_path.path.as_path())?,
+      }
     };
   Ok(source)
 }

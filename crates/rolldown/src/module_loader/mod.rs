@@ -1,4 +1,3 @@
-#[allow(clippy::module_inception)]
 pub mod module_loader;
 mod normal_module_task;
 mod runtime_normal_module_task;

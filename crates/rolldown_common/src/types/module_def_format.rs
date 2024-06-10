@@ -1,7 +1,8 @@
 use std::path::Path;
 
+/// Module Definition Format.
 #[derive(Debug, Default, Clone, Copy)]
-pub enum ModuleType {
+pub enum ModuleDefFormat {
   #[default]
   Unknown,
   // ".cjs"
@@ -14,7 +15,7 @@ pub enum ModuleType {
   EsmPackageJson,
 }
 
-impl ModuleType {
+impl ModuleDefFormat {
   pub fn from_path(p: impl AsRef<Path>) -> Self {
     let p = p.as_ref();
 

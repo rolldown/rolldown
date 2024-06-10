@@ -8,9 +8,9 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_ke
 ## src_entry_js.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 
-// node_modules/demo-pkg/index-module.js
+
+//#region node_modules/demo-pkg/index-module.js
 var index_module_ns, foo;
 var init_index_module = __esmMin(() => {
 	index_module_ns = {};
@@ -21,10 +21,14 @@ var init_index_module = __esmMin(() => {
 	console.log('TEST FAILED');
 });
 
-// src/require-demo-pkg.js
+//#endregion
+//#region src/require-demo-pkg.js
 init_index_module(),__toCommonJS(index_module_ns);
 
-// src/entry.js
+//#endregion
+//#region src/entry.js
 init_index_module();
 console.log('unused import');
+
+//#endregion
 ```

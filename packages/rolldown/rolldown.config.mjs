@@ -1,4 +1,5 @@
 import { defineConfig } from 'npm-rolldown'
+import pkgJson from './package.json' with { type: 'json' }
 import esbuild from 'esbuild'
 import nodePath from 'node:path'
 import fsExtra from 'fs-extra'
@@ -19,6 +20,11 @@ const shared = defineConfig({
     /rolldown-binding\..*\.wasm/,
     /@rolldown\/binding-.*/,
     /\.\/rolldown-binding\.wasi\.cjs/,
+    ...Object.keys(pkgJson.dependencies).filter(
+      (dep) =>
+        // `locate-character` only exports esm, so we have to inline it.
+        dep !== 'locate-character',
+    ),
   ],
   resolve: {
     extensions: ['.ts', '.js'],

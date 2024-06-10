@@ -7,3 +7,7 @@ crates/rolldown/tests/**/*.js -linguist-detectable
 crates/rolldown/tests/**/*.jsx -linguist-detectable
 crates/rolldown/tests/**/*.ts -linguist-detectable
 crates/rolldown/tests/**/*.tsx -linguist-detectable
+
+# https://github.com/rolldown/rolldown/issues/1354
+* text eol=lf
+*.png -text

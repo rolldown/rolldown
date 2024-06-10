@@ -8,12 +8,13 @@ input_file: crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6
 ## entry_js.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 
-// y.txt
+
+//#region y.txt
 var y_default = 'y';
 
-// x.txt
+//#endregion
+//#region x.txt
 var x_ns, x_default;
 var init_x = __esmMin(() => {
 	x_ns = {};
@@ -23,7 +24,10 @@ var init_x = __esmMin(() => {
 	x_default = 'x';
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 const x_txt = (init_x(),__toCommonJS(x_ns));
 console.log(x_txt, y_default);
+
+//#endregion
 ```

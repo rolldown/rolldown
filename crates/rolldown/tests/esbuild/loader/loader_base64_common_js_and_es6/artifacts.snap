@@ -1,0 +1,33 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/loader_base64_common_js_and_es6
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+
+//#region y.b64
+var y_default = 'eQ==';
+
+//#endregion
+//#region x.b64
+var x_ns, x_default;
+var init_x = __esmMin(() => {
+	x_ns = {};
+	__export(x_ns, {
+		default:() => x_default
+	});
+	x_default = 'eA==';
+});
+
+//#endregion
+//#region entry.js
+const x_b64 = (init_x(),__toCommonJS(x_ns));
+console.log(x_b64, y_default);
+
+//#endregion
+```

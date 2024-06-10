@@ -8,15 +8,16 @@ input_file: crates/rolldown/tests/esbuild/default/export_forms_common_js
 ## entry_js.mjs
 
 ```js
-import { __esmMin, __export, __toCommonJS } from "./$runtime$.mjs";
 
-// a.js
+
+//#region a.js
 var abc;
 var init_a = __esmMin(() => {
 	abc = undefined;
 });
 
-// b.js
+//#endregion
+//#region b.js
 var b_ns, xyz;
 var init_b = __esmMin(() => {
 	b_ns = {};
@@ -26,7 +27,8 @@ var init_b = __esmMin(() => {
 	xyz = null;
 });
 
-// commonjs.js
+//#endregion
+//#region commonjs.js
 function Fn() {
 }
 var commonjs_ns, commonjs_default, v, l, c, Class;
@@ -53,7 +55,8 @@ var init_commonjs = __esmMin(() => {
 	};
 });
 
-// c.js
+//#endregion
+//#region c.js
 var c_ns, c_default;
 var init_c = __esmMin(() => {
 	c_ns = {};
@@ -64,7 +67,8 @@ var init_c = __esmMin(() => {
 	};
 });
 
-// d.js
+//#endregion
+//#region d.js
 var d_ns, Foo;
 var init_d = __esmMin(() => {
 	d_ns = {};
@@ -76,7 +80,8 @@ var init_d = __esmMin(() => {
 	Foo.prop = 123;
 });
 
-// e.js
+//#endregion
+//#region e.js
 function e_default() {
 }
 var e_ns;
@@ -87,7 +92,8 @@ var init_e = __esmMin(() => {
 	});
 });
 
-// f.js
+//#endregion
+//#region f.js
 function foo$1() {
 }
 var f_ns;
@@ -99,7 +105,8 @@ var init_f = __esmMin(() => {
 	foo$1.prop = 123;
 });
 
-// g.js
+//#endregion
+//#region g.js
 async function g_default() {
 }
 var g_ns;
@@ -110,7 +117,8 @@ var init_g = __esmMin(() => {
 	});
 });
 
-// h.js
+//#endregion
+//#region h.js
 async function foo() {
 }
 var h_ns;
@@ -122,7 +130,8 @@ var init_h = __esmMin(() => {
 	foo.prop = 123;
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 init_commonjs(),__toCommonJS(commonjs_ns);
 init_c(),__toCommonJS(c_ns);
 init_d(),__toCommonJS(d_ns);
@@ -130,4 +139,6 @@ init_e(),__toCommonJS(e_ns);
 init_f(),__toCommonJS(f_ns);
 init_g(),__toCommonJS(g_ns);
 init_h(),__toCommonJS(h_ns);
+
+//#endregion
 ```

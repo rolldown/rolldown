@@ -21,12 +21,6 @@ pub mod resolve_id;
 pub mod transform_source;
 pub mod tweak_ast_for_scanning;
 
-pub(crate) fn is_in_rust_test_mode() -> bool {
-  static TEST_MODE: once_cell::sync::Lazy<bool> =
-    once_cell::sync::Lazy::new(|| std::env::var("ROLLDOWN_TEST").is_ok());
-  *TEST_MODE
-}
-
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn finalize_normal_module(
   module: &NormalModule,

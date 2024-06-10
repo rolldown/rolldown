@@ -8,9 +8,9 @@ input_file: crates/rolldown/tests/esbuild/default/new_expression_common_js
 ## entry_js.mjs
 
 ```js
-import { __commonJSMin } from "./$runtime$.mjs";
 
-// foo.js
+
+//#region foo.js
 var require_foo = __commonJSMin((exports, module) => {
 	class Foo {
 	}
@@ -19,6 +19,9 @@ var require_foo = __commonJSMin((exports, module) => {
 	};
 });
 
-// entry.js
+//#endregion
+//#region entry.js
 new (require_foo()).Foo();
+
+//#endregion
 ```

@@ -5,8 +5,8 @@ use futures::future::join_all;
 use oxc_index::IndexVec;
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, ImportRecordId, ModuleType, NormalModule, NormalModuleId, PackageJson,
-  RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
+  AstScopes, ImportRecordId, ModuleDefFormat, ModuleType, NormalModule, NormalModuleId,
+  PackageJson, RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -19,6 +19,7 @@ use super::{task_context::TaskContext, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   module_loader::NormalModuleTaskResult,
+  runtime::ROLLDOWN_RUNTIME_RESOURCE_ID,
   types::ast_symbols::AstSymbols,
   utils::{
     load_source::load_source, make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
@@ -32,7 +33,7 @@ pub struct NormalModuleTask {
   module_id: NormalModuleId,
   resolved_path: ResolvedPath,
   package_json: Option<Arc<PackageJson>>,
-  module_type: ModuleType,
+  module_type: ModuleDefFormat,
   errors: Vec<BuildError>,
   is_user_defined_entry: bool,
   side_effects: Option<HookSideEffects>,
@@ -43,7 +44,7 @@ impl NormalModuleTask {
     ctx: Arc<TaskContext>,
     id: NormalModuleId,
     path: ResolvedPath,
-    module_type: ModuleType,
+    module_type: ModuleDefFormat,
     is_user_defined_entry: bool,
     package_json: Option<Arc<PackageJson>>,
     side_effects: Option<HookSideEffects>,
@@ -80,10 +81,20 @@ impl NormalModuleTask {
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
+    let module_type = {
+      let ext =
+        self.resolved_path.path.as_path().extension().and_then(|ext| ext.to_str()).unwrap_or("js");
+      let module_type = self.ctx.input_options.module_types.get(ext);
+
+      // FIXME: Once we support more types, we should return error instead of defaulting to JS.
+      module_type.copied().unwrap_or(ModuleType::Js)
+    };
+
     // Run plugin load to get content first, if it is None using read fs as fallback.
     let source = load_source(
       &self.ctx.plugin_driver,
       &self.resolved_path,
+      module_type,
       &self.ctx.fs,
       &mut sourcemap_chain,
       &mut hook_side_effects,
@@ -101,11 +112,7 @@ impl NormalModuleTask {
     .await?
     .into();
 
-    let mut ast = parse_to_ast(
-      &self.ctx.input_options,
-      self.resolved_path.path.as_path(),
-      Arc::clone(&source),
-    )?;
+    let mut ast = parse_to_ast(&self.ctx.input_options, module_type, Arc::clone(&source))?;
     tweak_ast_for_scanning(&mut ast);
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);
@@ -184,7 +191,7 @@ impl NormalModuleTask {
       scope,
       exports_kind,
       namespace_object_ref,
-      module_type: self.module_type,
+      def_format: self.module_type,
       debug_resource_id: self.resolved_path.debug_display(&self.ctx.input_options.cwd),
       sourcemap_chain,
       exec_order: u32::MAX,
@@ -195,7 +202,6 @@ impl NormalModuleTask {
       dynamic_importers: vec![],
       imported_ids,
       dynamically_imported_ids,
-      package_json: self.package_json.take(),
       side_effects,
     };
 
@@ -243,7 +249,6 @@ impl NormalModuleTask {
     (ast_scopes, scan_result, ast_symbols, namespace_object_ref)
   }
 
-  #[allow(clippy::option_if_let_else)]
   pub(crate) async fn resolve_id(
     input_options: &SharedOptions,
     resolver: &SharedResolver,
@@ -257,12 +262,23 @@ impl NormalModuleTask {
       if is_external(specifier, Some(importer), false).await? {
         return Ok(Ok(ResolvedRequestInfo {
           path: specifier.to_string().into(),
-          module_type: ModuleType::Unknown,
+          module_type: ModuleDefFormat::Unknown,
           is_external: true,
           package_json: None,
           side_effects: None,
         }));
       }
+    }
+
+    // Check runtime module
+    if specifier == ROLLDOWN_RUNTIME_RESOURCE_ID {
+      return Ok(Ok(ResolvedRequestInfo {
+        path: specifier.to_string().into(),
+        module_type: ModuleDefFormat::EsmMjs,
+        is_external: false,
+        package_json: None,
+        side_effects: None,
+      }));
     }
 
     let resolved_id =
@@ -332,7 +348,7 @@ impl NormalModuleTask {
             );
             ret.push(ResolvedRequestInfo {
               path: specifier.to_string().into(),
-              module_type: ModuleType::Unknown,
+              module_type: ModuleDefFormat::Unknown,
               is_external: true,
               package_json: None,
               side_effects: None,

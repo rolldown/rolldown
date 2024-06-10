@@ -8,9 +8,13 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_
 ## entry.mjs
 
 ```js
-// node_modules/pkg1/2/bar.js
+
+//#region node_modules/pkg1/2/bar.js
 console.log('SUCCESS');
 
-// node_modules/pkg2/1/bar.js
+//#endregion
+//#region node_modules/pkg2/1/bar.js
 console.log('SUCCESS');
+
+//#endregion
 ```

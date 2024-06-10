@@ -10,18 +10,22 @@ input_file: crates/rolldown/tests/esbuild/splitting/cross_chunk_assignment_depen
 ```js
 import { setValue } from "./shared.mjs";
 
-// a.js
+//#region a.js
 setValue(123);
+
+//#endregion
 ```
 ## b.mjs
 
 ```js
 import "./shared.mjs";
+
 ```
 ## shared.mjs
 
 ```js
-// shared.js
+
+//#region shared.js
 var observer;
 var value;
 function getValue() {
@@ -34,5 +38,6 @@ function setValue(next) {
 }
 sideEffects(getValue);
 
+//#endregion
 export { setValue };
 ```

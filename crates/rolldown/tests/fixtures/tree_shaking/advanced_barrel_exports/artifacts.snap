@@ -8,15 +8,18 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/advanced_barrel_exports
 ## main.mjs
 
 ```js
-import { __export } from "./$runtime$.mjs";
 
-// foo.js
+
+//#region foo.js
 var foo_ns = {};
 __export(foo_ns, {
 	a:() => a
 });
 const a = 100;
 
-// main.js
+//#endregion
+//#region main.js
 console.log(foo_ns.a);
+
+//#endregion
 ```

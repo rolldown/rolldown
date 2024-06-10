@@ -8,21 +8,25 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/advanced_barrel_exports2
 ## main.mjs
 
 ```js
-import { __export } from "./$runtime$.mjs";
 
-// a.js
+
+//#region a.js
 var a_ns = {};
 __export(a_ns, {
 	b:() => b
 });
 const b = 500;
 
-// shared.js
+//#endregion
+//#region shared.js
 var shared_ns = {};
 __export(shared_ns, {
 	a:() => a_ns
 });
 
-// main.js
+//#endregion
+//#region main.js
 console.log(shared_ns.a.b);
+
+//#endregion
 ```

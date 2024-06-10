@@ -16,7 +16,8 @@ input_file: crates/rolldown/tests/esbuild/import_star/other_file_export_self_as_
 ## entry_js.mjs
 
 ```js
-// foo.js
+
+//#region foo.js
 const foo = 123;
 
 //#endregion

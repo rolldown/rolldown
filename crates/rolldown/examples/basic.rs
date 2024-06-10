@@ -8,13 +8,11 @@ async fn main() {
   let cwd = root.join("./examples").normalize();
   let mut bundler = Bundler::new(BundlerOptions {
     input: Some(vec![
-      InputItem { name: Some("react-dom".to_string()), import: "./main.js".to_string() },
-      // InputItem { name: Some("react".to_string()), import: "react".to_string() },
+      InputItem { name: Some("react-dom".to_string()), import: "react-dom".to_string() },
+      InputItem { name: Some("react".to_string()), import: "react".to_string() },
     ]),
-    // format: Some(rolldown::OutputFormat::Cjs),
     cwd: cwd.into(),
     sourcemap: Some(SourceMapType::File),
-    // external: Some(IsExternal::from_vec(vec!["bar".to_string(), "foo".to_string()])),
     ..Default::default()
   });
 

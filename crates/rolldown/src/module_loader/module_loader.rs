@@ -218,13 +218,15 @@ impl ModuleLoader {
             raw_import_records,
             warnings,
             ast,
+            dynamic_usage,
           } = task_result;
           all_warnings.extend(warnings);
 
           let import_records = raw_import_records
             .into_iter()
             .zip(resolved_deps)
-            .map(|(raw_rec, info)| {
+            .enumerate()
+            .map(|(import_record_id, (raw_rec, info))| {
               let id = self.try_spawn_new_task(info, false);
               // Dynamic imported module will be considered as an entry
               if let ModuleId::Normal(id) = id {

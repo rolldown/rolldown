@@ -131,6 +131,7 @@ impl NormalModuleTask {
       exports_kind,
       repr_name,
       warnings: scan_warnings,
+      normalized_dynamic_import_usage,
     } = scan_result;
     warnings.extend(scan_warnings);
 
@@ -218,6 +219,7 @@ impl NormalModuleTask {
         module,
         raw_import_records: import_records,
         ast,
+        dynamic_usage: normalized_dynamic_import_usage,
       }))
       .await
       .expect("Send should not fail");

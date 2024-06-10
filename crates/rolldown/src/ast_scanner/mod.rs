@@ -39,10 +39,11 @@ pub struct ScanResult {
   pub imports: FxHashMap<Span, ImportRecordId>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildError>,
+  pub normalized_dynamic_import_usage: FxHashMap<ImportRecordId, DynamicImportUse>,
 }
 
 #[derive(Default, Debug)]
-enum DynamicImportUse {
+pub enum DynamicImportUse {
   #[default]
   All,
   Partial(FxHashSet<CompactStr>),
@@ -115,6 +116,7 @@ impl<'me> AstScanner<'me> {
       imports: FxHashMap::default(),
       exports_kind: ExportsKind::None,
       warnings: Vec::new(),
+      normalized_dynamic_import_usage: Default::default(),
     };
 
     Self {
@@ -160,7 +162,13 @@ impl<'me> AstScanner<'me> {
         }
       }
     }
-
+    let normalized_usage = self
+      .dynamic_import_usage_collector
+      .dynamic_import_usage_map
+      .into_iter()
+      .filter_map(|(span, usage)| self.result.imports.get(&span).map(|id| (*id, usage)))
+      .collect::<FxHashMap<ImportRecordId, DynamicImportUse>>();
+    self.result.normalized_dynamic_import_usage = normalized_usage;
     self.result.exports_kind = exports_kind;
     self.result
   }

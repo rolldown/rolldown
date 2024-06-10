@@ -4,7 +4,9 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
+use rustc_hash::FxHashMap;
 
+use crate::ast_scanner::DynamicImportUse;
 use crate::types::ast_symbols::AstSymbols;
 
 pub struct NormalModuleTaskResult {
@@ -15,4 +17,5 @@ pub struct NormalModuleTaskResult {
   pub warnings: Vec<BuildError>,
   pub module: NormalModule,
   pub ast: OxcAst,
+  pub dynamic_usage: FxHashMap<ImportRecordId, DynamicImportUse>,
 }

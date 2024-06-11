@@ -23,7 +23,7 @@ __export(bar_ns, {
 //#endregion
 //#region entry.js
 let foo = 234;
-console.log(bar_ns, bar_ns.foo, foo);
+console.log(bar_ns, foo$1, foo);
 
 //#endregion
 ```

@@ -1,3 +1,3 @@
-import { a as a2 } from './shared'
-const a = 'index.js'
-console.log(a, a2)
+import * as m from './shared'
+
+console.log(`a.c.a: `, m.c)

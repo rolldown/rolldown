@@ -29,7 +29,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
-- entry_js-!~{000}~.mjs => entry_js-a8fcunwt.mjs
+- entry_js-!~{000}~.mjs => entry_js-VM94ePNz.mjs
 
 # tests/esbuild/dce/inline_function_call_for_init_decl
 
@@ -145,7 +145,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_import_identifier
 
-- entry_js-!~{000}~.mjs => entry_js-dr9zLzXi.mjs
+- entry_js-!~{000}~.mjs => entry_js-10W63jtY.mjs
 
 # tests/esbuild/dce/tree_shaking_in_esm_wrapper
 
@@ -424,7 +424,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/import_export_star_ambiguous_warning
 
-- entry_js-!~{000}~.mjs => entry_js--fDLU8hK.mjs
+- entry_js-!~{000}~.mjs => entry_js-Xrycz-Pz.mjs
 
 # tests/esbuild/import_star/import_of_export_star
 
@@ -440,11 +440,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/import_star_and_common_js
 
-- entry_js-!~{000}~.mjs => entry_js-4MwI0G4c.mjs
+- entry_js-!~{000}~.mjs => entry_js-XtcuSJqy.mjs
 
 # tests/esbuild/import_star/import_star_capture
 
-- entry_js-!~{000}~.mjs => entry_js-Ur9Okg1r.mjs
+- entry_js-!~{000}~.mjs => entry_js-yaMfwPz7.mjs
 
 # tests/esbuild/import_star/import_star_common_js_capture
 
@@ -460,11 +460,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/import_star_export_import_star_capture
 
-- entry_js-!~{000}~.mjs => entry_js-Ur9Okg1r.mjs
+- entry_js-!~{000}~.mjs => entry_js-yaMfwPz7.mjs
 
 # tests/esbuild/import_star/import_star_export_import_star_no_capture
 
-- entry_js-!~{000}~.mjs => entry_js-gIn7YVhC.mjs
+- entry_js-!~{000}~.mjs => entry_js-lUTBC1JT.mjs
 
 # tests/esbuild/import_star/import_star_export_import_star_unused
 
@@ -472,11 +472,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/import_star_export_star_as_capture
 
-- entry_js-!~{000}~.mjs => entry_js-Ur9Okg1r.mjs
+- entry_js-!~{000}~.mjs => entry_js-yaMfwPz7.mjs
 
 # tests/esbuild/import_star/import_star_export_star_as_no_capture
 
-- entry_js-!~{000}~.mjs => entry_js-gIn7YVhC.mjs
+- entry_js-!~{000}~.mjs => entry_js-lUTBC1JT.mjs
 
 # tests/esbuild/import_star/import_star_export_star_as_unused
 
@@ -484,11 +484,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/import_star_export_star_capture
 
-- entry_js-!~{000}~.mjs => entry_js-f1o6pcVs.mjs
+- entry_js-!~{000}~.mjs => entry_js-PzSvMdOz.mjs
 
 # tests/esbuild/import_star/import_star_export_star_no_capture
 
-- entry_js-!~{000}~.mjs => entry_js-TOkV4oCv.mjs
+- entry_js-!~{000}~.mjs => entry_js-lUTBC1JT.mjs
 
 # tests/esbuild/import_star/import_star_export_star_omit_ambiguous
 
@@ -500,7 +500,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/import_star_no_capture
 
-- entry_js-!~{000}~.mjs => entry_js-gIn7YVhC.mjs
+- entry_js-!~{000}~.mjs => entry_js-lUTBC1JT.mjs
 
 # tests/esbuild/import_star/import_star_of_export_star_as
 
@@ -1482,11 +1482,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/tree_shaking/advanced_barrel_exports
 
-- main-!~{000}~.mjs => main-MAZqdDdR.mjs
+- main-!~{000}~.mjs => main-nvTJaXaR.mjs
 
 # tests/fixtures/tree_shaking/advanced_barrel_exports2
 
-- main-!~{000}~.mjs => main-px1fYsjj.mjs
+- main-!~{000}~.mjs => main-e0IvAD54.mjs
 
 # tests/fixtures/tree_shaking/derived_side_effects_should_have_high_priority
 

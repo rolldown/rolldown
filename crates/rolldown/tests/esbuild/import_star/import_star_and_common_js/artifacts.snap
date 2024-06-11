@@ -24,7 +24,7 @@ var init_foo = __esmMin(() => {
 //#region entry.js
 init_foo();
 const ns2 = (init_foo(),__toCommonJS(foo_ns));
-console.log(foo_ns.foo, ns2.foo);
+console.log(foo, ns2.foo);
 
 //#endregion
 ```

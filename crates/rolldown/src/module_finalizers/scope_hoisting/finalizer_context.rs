@@ -1,3 +1,4 @@
+use oxc::span::CompactStr;
 use rolldown_common::{
   ExternalModuleVec, NormalModule, NormalModuleId, NormalModuleVec, SymbolRef,
 };
@@ -27,4 +28,5 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,
   pub options: &'me SharedOptions,
+  pub top_level_cache: &'me FxHashMap<SymbolRef, FxHashMap<Box<[CompactStr]>, (SymbolRef, usize)>>,
 }

@@ -2,6 +2,7 @@ import { Worker } from 'node:worker_threads'
 import { availableParallelism } from 'node:os'
 import type { ParallelPlugin, Plugin } from '../plugin'
 import { ParallelJsPluginRegistry } from '../binding'
+import { BuiltinPlugin } from '../plugin/bindingify-builtin-plugin'
 
 export type WorkerData = {
   registryId: number
@@ -16,7 +17,7 @@ type ParallelPluginInfo = {
 }
 
 export async function initializeParallelPlugins(
-  plugins: (Plugin | ParallelPlugin)[],
+  plugins: (Plugin | ParallelPlugin | BuiltinPlugin)[],
 ) {
   const pluginInfos: ParallelPluginInfo[] = []
   for (const [index, plugin] of plugins.entries()) {

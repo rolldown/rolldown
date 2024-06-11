@@ -87,8 +87,16 @@ export interface AliasItem {
 }
 
 export interface BindingAssetSource {
-  type: string
-  source: Uint8Array
+  inner: string | Uint8Array
+}
+
+export interface BindingBuiltinPlugin {
+  name: BindingBuiltinPluginName
+  options?: unknown
+}
+
+export enum BindingBuiltinPluginName {
+  WasmPlugin = 0
 }
 
 export interface BindingEmittedAsset {
@@ -133,7 +141,7 @@ export interface BindingInputItem {
 export interface BindingInputOptions {
   external?: undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<BindingInputItem>
-  plugins: Array<BindingPluginOrParallelJsPluginPlaceholder>
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
@@ -158,7 +166,7 @@ export interface BindingOutputOptions {
   exports?: 'default' | 'named' | 'none' | 'auto'
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'esm' | 'cjs'
-  plugins: Array<BindingPluginOrParallelJsPluginPlaceholder>
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string

@@ -7,8 +7,15 @@ import { defineParallelPlugin, DefineParallelPluginResult } from './plugin'
 import { defineConfig } from './utils/define-config'
 import { rolldown, experimental_scan } from './rolldown'
 import { ConfigExport } from './types/config-export'
+import { BuiltinWasmPlugin } from './plugin/bindingify-builtin-plugin'
 
-export { defineConfig, defineParallelPlugin, rolldown, experimental_scan }
+export {
+  defineConfig,
+  defineParallelPlugin,
+  rolldown,
+  experimental_scan,
+  BuiltinWasmPlugin,
+}
 
 export type {
   RolldownOutputChunk,

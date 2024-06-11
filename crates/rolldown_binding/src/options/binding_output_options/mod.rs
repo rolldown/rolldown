@@ -57,6 +57,8 @@ pub struct BindingOutputOptions {
   // noConflict: boolean;
   // outro: () => string | Promise<string>;
   // paths: OptionsPaths;
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
   pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder>,
   // preferConst: boolean;
   // preserveModules: boolean;

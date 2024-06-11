@@ -14,25 +14,26 @@ workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
-anyhow             = { workspace = true }
-async-channel      = { workspace = true }
-async-trait        = { workspace = true }
-dashmap            = { workspace = true }
-derivative         = { workspace = true }
-futures            = { workspace = true }
-napi               = { workspace = true }
-napi-derive        = { workspace = true }
-once_cell          = { workspace = true }
-rolldown           = { workspace = true }
-rolldown_common    = { workspace = true }
-rolldown_error     = { workspace = true, features = ["napi"] }
-rolldown_plugin    = { workspace = true }
-rolldown_sourcemap = { workspace = true }
-rolldown_tracing   = { workspace = true }
-rolldown_utils     = { workspace = true }
-rustc-hash         = { workspace = true }
-serde              = { workspace = true }
-tracing            = { workspace = true }
+anyhow               = { workspace = true }
+async-channel        = { workspace = true }
+async-trait          = { workspace = true }
+dashmap              = { workspace = true }
+derivative           = { workspace = true }
+futures              = { workspace = true }
+napi                 = { workspace = true }
+napi-derive          = { workspace = true }
+once_cell            = { workspace = true }
+rolldown             = { workspace = true }
+rolldown_common      = { workspace = true }
+rolldown_error       = { workspace = true, features = ["napi"] }
+rolldown_plugin      = { workspace = true }
+rolldown_plugin_wasm = { workspace = true }
+rolldown_sourcemap   = { workspace = true }
+rolldown_tracing     = { workspace = true }
+rolldown_utils       = { workspace = true }
+rustc-hash           = { workspace = true }
+serde                = { workspace = true }
+tracing              = { workspace = true }
 
 [target.'cfg(all(not(target_os = "linux"), not(target_family = "wasm")))'.dependencies]
 mimalloc = { workspace = true }

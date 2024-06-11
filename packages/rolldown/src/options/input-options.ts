@@ -8,10 +8,14 @@ import {
   RollupLogSchema,
   RollupLogWithStringSchema,
 } from '../log/logging'
+import { BuiltinPlugin } from '../plugin/bindingify-builtin-plugin'
 
 const inputOptionsSchema = z.strictObject({
   input: z.string().or(z.string().array()).or(z.record(z.string())).optional(),
-  plugins: zodExt.phantom<Plugin | ParallelPlugin>().array().optional(),
+  plugins: zodExt
+    .phantom<Plugin | ParallelPlugin | BuiltinPlugin>()
+    .array()
+    .optional(),
   external: zodExt
     .stringOrRegExp()
     .or(zodExt.stringOrRegExp().array())

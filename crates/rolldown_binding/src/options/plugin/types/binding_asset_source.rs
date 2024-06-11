@@ -12,7 +12,7 @@ pub struct BindingAssetSource {
 }
 
 fn default_source() -> Either<String, Buffer> {
-  Either::A(Default::default())
+  Either::A(String::default())
 }
 
 impl Default for BindingAssetSource {

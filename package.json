@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@9.2.0",
   "engines": {
-    "node": ">=20.14.0"
+    "node": ">=18.20.3"
   },
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --import-plugin --jsdoc-plugin --deny-warnings",

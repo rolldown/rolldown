@@ -87,8 +87,7 @@ export interface AliasItem {
 }
 
 export interface BindingAssetSource {
-  type: string
-  source: Uint8Array
+  inner: string | Uint8Array
 }
 
 export interface BindingBuiltinPlugin {

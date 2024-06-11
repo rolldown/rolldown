@@ -41,7 +41,7 @@ pub fn parse_to_ast(
     ModuleType::Binary => {
       (binary_to_esm(&source, options.platform, ROLLDOWN_RUNTIME_RESOURCE_ID).into(), ParseType::Js)
     }
-    ModuleType::Empty => ("export default {}".to_string().into(), ParseType::Js),
+    ModuleType::Empty => ("export {}".to_string().into(), ParseType::Js),
   };
 
   // 2. Parse the source to AST and transform non-js AST to valid JS AST.

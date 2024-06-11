@@ -1,0 +1,32 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 173
+expression: content
+input_file: crates/rolldown/tests/fixtures/loaders/empty/text
+---
+# Errors
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "named" is not exported by "d.empty".
+   ╭─[main.js:4:10]
+   │
+ 4 │ import { named } from './d.empty'
+   │          ──┬──  
+   │            ╰──── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "c.empty".
+   ╭─[main.js:3:8]
+   │
+ 3 │ import def from './c.empty'
+   │        ─┬─  
+   │         ╰─── Missing export
+───╯
+
+```

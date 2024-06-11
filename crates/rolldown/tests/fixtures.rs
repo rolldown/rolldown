@@ -51,5 +51,6 @@ async fn filename_with_hash() {
 
     snapshot_outputs.push(snapshot_output);
   }
+
   insta::assert_snapshot!(snapshot_outputs.join("\n"));
 }

@@ -3,6 +3,7 @@
       "moduleTypes": {
         ".empty": "empty"
       }
-    }
+    },
+    "expectError": true
   }
   

@@ -1,5 +1,4 @@
 import { BindingAssetSource } from '../binding'
-import { Buffer } from 'node:buffer'
 
 export type AssetSource = string | Uint8Array
 

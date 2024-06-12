@@ -110,7 +110,6 @@ fn include_module_as_namespace(ctx: &mut Context, module: &NormalModule) {
   });
 }
 
-#[track_caller]
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr]) {
   let mut cursor = 0;
 

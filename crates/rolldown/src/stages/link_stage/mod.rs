@@ -1,6 +1,5 @@
 use std::{ptr::addr_of, sync::Mutex};
 
-use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
@@ -23,7 +22,7 @@ use crate::{
   SharedOptions,
 };
 
-use self::wrapping::create_wrapper;
+use self::{tree_shaking::MemberChainToResolvedSymbolRef, wrapping::create_wrapper};
 
 use super::scan_stage::ScanStageOutput;
 
@@ -44,8 +43,7 @@ pub struct LinkStageOutput {
   pub warnings: Vec<BuildError>,
   pub errors: Vec<BuildError>,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
-  pub top_level_member_expr_resolved_cache:
-    FxHashMap<SymbolRef, FxHashMap<Box<[CompactStr]>, (SymbolRef, usize)>>,
+  pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
 
 #[derive(Debug)]
@@ -61,8 +59,7 @@ pub struct LinkStage<'a> {
   pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub input_options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
-  pub top_level_member_expr_resolved_cache:
-    FxHashMap<SymbolRef, FxHashMap<Box<[CompactStr]>, (SymbolRef, usize)>>,
+  pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
 
 impl<'a> LinkStage<'a> {

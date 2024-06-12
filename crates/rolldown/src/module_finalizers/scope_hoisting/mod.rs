@@ -1,5 +1,3 @@
-use core::panic;
-
 use oxc::{
   allocator::Allocator,
   ast::ast::{self, Expression, IdentifierReference, Statement},
@@ -193,17 +191,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
             if let Some(normal_module_id) = id.as_normal() {
               let m = &self.ctx.modules[normal_module_id];
-              dbg!(&m.stable_resource_id, m.exports_kind);
               !m.exports_kind.is_esm()
             } else {
-              return true;
+              true
             }
           });
       if can_not_be_eliminated {
         return vec![decl_stmt];
-      } else {
-        return vec![];
       }
+      return vec![];
     }
 
     // construct `{ prop_name: () => returned, ... }`

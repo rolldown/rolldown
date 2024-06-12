@@ -4,12 +4,11 @@ use crate::types::tree_shake::{UsedExportsInfo, UsedInfo};
 // use crate::utils::extract_member_chain::extract_canonical_symbol_info;
 use oxc::span::CompactStr;
 use oxc_index::IndexVec;
-use oxc_syntax::symbol;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
 };
-use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_rstr::ToRstr;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -31,8 +30,10 @@ struct Context<'a> {
   /// for the value, the first element is the resolved symbol ref, the second element is how much
   /// chain element does this member expr consume.
   top_level_member_expr_resolved_cache:
-    &'a mut FxHashMap<SymbolRef, FxHashMap<Box<[CompactStr]>, (SymbolRef, usize)>>,
+    &'a mut FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
+
+pub type MemberChainToResolvedSymbolRef = FxHashMap<Box<[CompactStr]>, (SymbolRef, usize)>;
 
 /// if no export is used, and the module has no side effects, the module should not be included
 fn include_module(ctx: &mut Context, module: &NormalModule) {
@@ -152,8 +153,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr
   ctx.used_exports_info_vec[id].used_exports.insert(export_name);
   // Only cache the top level member epxr resolved result, if it consume at least one chain element.
   if cursor > 0 {
-    let map =
-      ctx.top_level_member_expr_resolved_cache.entry(symbol_ref).or_insert_with(FxHashMap::default);
+    let map = ctx.top_level_member_expr_resolved_cache.entry(symbol_ref).or_default();
     map.insert(chains.to_vec().into_boxed_slice(), (canonical_ref, cursor));
   }
   if has_ambiguous_symbol {

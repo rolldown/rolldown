@@ -65,8 +65,6 @@ impl Symbols {
     canonical_names: &'name FxHashMap<SymbolRef, Rstr>,
   ) -> &'name Rstr {
     let canonical_ref = self.par_canonical_ref_for(refer);
-    let location = std::panic::Location::caller();
-    // dbg!(&location, canonical_names.get(&canonical_ref));
     &canonical_names[&canonical_ref]
   }
 

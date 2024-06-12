@@ -406,7 +406,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
   fn visit_member_expression(&mut self, expr: &mut MemberExpression<'ast>) {
     let top_level_member_expr: Option<()> = match expr {
-      MemberExpression::ComputedMemberExpression(expr) => None,
       MemberExpression::StaticMemberExpression(ref inner_expr) => {
         let mut chain = vec![];
         let mut cur = inner_expr;
@@ -414,7 +413,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           chain.push(cur.property.clone());
           match cur.object {
             ast::Expression::StaticMemberExpression(ref expr) => {
-              cur = &expr;
+              cur = expr;
             }
             ast::Expression::Identifier(ref ident) => {
               break self.resolve_symbol_from_reference(ident);
@@ -431,9 +430,8 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             .top_level_cache
             .get(&(self.ctx.id, symbol).into())
             .and_then(|map| map.get(&chain.clone().into_boxed_slice()))
-            .and_then(|(symbol_ref, cursor)| {
+            .map(|(symbol_ref, cursor)| {
               let replaced_expr = if let Some(name) = self.try_canonical_name_for(*symbol_ref) {
-                dbg!(&name, &chain[*cursor..]);
                 self.snippet.member_expr_or_ident_ref(name.as_str(), &chain[*cursor..], SPAN)
               } else {
                 // Ambiguous symbol, replace the member expr with `undefined`, the runtime semantic
@@ -442,18 +440,15 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
               };
 
               self.expr_post_replacement = Some(replaced_expr);
-              Some(())
             })
         } else {
           None
         }
       }
-      MemberExpression::PrivateFieldExpression(expr) => None,
+      MemberExpression::PrivateFieldExpression(_)
+      | MemberExpression::ComputedMemberExpression(_) => None,
     };
-    dbg!(&top_level_member_expr);
-    if let Some(_) = top_level_member_expr {
-      dbg!(&expr);
-    } else {
+    if top_level_member_expr.is_none() {
       walk_mut::walk_member_expression_mut(self, expr);
     };
   }

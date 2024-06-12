@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use std::{fmt::Debug, sync::Arc};
 
 use crate::OxcCompiler;
@@ -12,7 +11,7 @@ pub mod program_cell;
 
 pub struct OxcAst {
   pub(crate) inner: ProgramCell,
-  pub trivias: Rc<Trivias>,
+  pub trivias: Trivias,
   pub source_type: SourceType,
   pub contains_use_strict: bool,
 }
@@ -56,7 +55,7 @@ impl OxcAst {
           source: &owner.source,
           allocator: &owner.allocator,
           program,
-          trivias: Rc::clone(&self.trivias),
+          trivias: self.trivias.clone(),
         })
       },
     )
@@ -67,7 +66,7 @@ pub struct WithFieldsMut<'outer, 'inner> {
   pub source: &'inner Arc<str>,
   pub allocator: &'inner Allocator,
   pub program: &'outer mut Program<'inner>,
-  pub trivias: Rc<Trivias>,
+  pub trivias: Trivias,
 }
 
 impl Debug for OxcAst {

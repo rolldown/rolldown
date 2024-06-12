@@ -1,6 +1,6 @@
 import type { ModuleInfo } from '../types/module-info'
 import type { BindingModuleInfo } from '../binding'
-import { unsupported } from '.'
+import { unsupported } from './misc'
 
 export function transformModuleInfo(info: BindingModuleInfo): ModuleInfo {
   return {

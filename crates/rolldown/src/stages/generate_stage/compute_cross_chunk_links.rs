@@ -5,7 +5,7 @@ use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 use indexmap::IndexSet;
 use itertools::{multizip, Itertools};
-use oxc_index::{index_vec, IndexVec};
+use oxc::index::{index_vec, IndexVec};
 use rolldown_common::{
   ChunkId, ChunkKind, CrossChunkImportItem, ExportsKind, ExternalModuleId, ImportKind, ModuleId,
   NamedImport, OutputFormat, SymbolRef, WrapKind,

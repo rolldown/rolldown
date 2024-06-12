@@ -1,5 +1,5 @@
 use crate::{ExternalModuleId, ImportRecord, ImportRecordId};
-use oxc_index::IndexVec;
+use oxc::index::IndexVec;
 
 #[derive(Debug)]
 pub struct ExternalModule {

@@ -1,3 +1,5 @@
+import { BindingSourcemap } from '../binding'
+
 export interface SourceMapInputObject {
   file?: string
   mappings: string
@@ -9,3 +11,10 @@ export interface SourceMapInputObject {
 }
 
 export type SourceMapInput = SourceMapInputObject | string | null
+
+export function bidingSourcemap(
+  map?: SourceMapInput,
+): undefined | BindingSourcemap {
+  if (map == null) return
+  return { inner: map }
+}

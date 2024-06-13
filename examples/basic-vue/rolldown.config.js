@@ -8,7 +8,5 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
-  treeshake: {
-    moduleSideEffects: true,
-  }
+  treeshake: false
 })

@@ -19,5 +19,5 @@ export async function normalizeTreeshakeOptions(
   if (config.moduleSideEffects === undefined) {
     config.moduleSideEffects = true;
   }
-  return config
+  return config as NormalizedTreeshakingOptions
 }

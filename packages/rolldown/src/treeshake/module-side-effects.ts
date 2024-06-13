@@ -13,7 +13,7 @@ export type ModuleSideEffectsOption = z.infer<typeof ModuleSideEffectsOptionSche
 export const ModuleSideEffectsOptionSchema = z.boolean();
 
 export const NormalizedTreeshakingOptionsSchema = z.strictObject({
-  moduleSideEffects: ModuleSideEffectsOptionSchema.optional(),
+  moduleSideEffects: ModuleSideEffectsOptionSchema
 })
 
 export type NormalizedTreeshakingOptions = z.infer<typeof NormalizedTreeshakingOptionsSchema>;

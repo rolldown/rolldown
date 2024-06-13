@@ -237,7 +237,7 @@ export interface BindingSourcemap {
 export function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 export function registerPlugins(id: number, plugins: PluginsInSingleWorker): void
 export interface BindingTreeshake {
-  moduleSideEffects?: boolean
+  moduleSideEffects: boolean
 }
 
 export function registerPlugins(id: number, plugins: PluginsInSingleWorker): void

@@ -177,6 +177,7 @@ impl NormalModuleTask {
       },
       // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
       None => match self.ctx.input_options.treeshake {
+        // Actually this convert is not necessary, just for passing type checking
         TreeshakeOptions::False => DeterminedSideEffects::NoTreeshake,
         TreeshakeOptions::Option(ref opt) => {
           if opt.module_side_effects {
@@ -188,7 +189,7 @@ impl NormalModuleTask {
       },
     };
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
-    dbg!(&stable_resource_id);
+    dbg!(&stable_resource_id, &self.ctx.input_options.treeshake);
     dbg!(&side_effects);
     let module = NormalModule {
       source,

@@ -1,9 +1,7 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
-use oxc::span::CompactStr;
-use oxc_index::IndexVec;
-use oxc_index::IndexVec;
 use oxc::index::IndexVec;
+use oxc::span::CompactStr;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
@@ -210,7 +208,7 @@ impl LinkStage<'_> {
       oxc::index::index_vec![false; self.module_table.normal_modules.len()];
 
     let mut used_exports_info_vec: IndexVec<NormalModuleId, UsedExportsInfo> =
-      oxc_index::index_vec![UsedExportsInfo::default(); self.module_table.normal_modules.len()];
+      oxc::index::index_vec![UsedExportsInfo::default(); self.module_table.normal_modules.len()];
     let context = &mut Context {
       modules: &self.module_table.normal_modules,
       symbols: &self.symbols,

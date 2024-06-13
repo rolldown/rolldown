@@ -12,7 +12,7 @@ export interface SourceMapInputObject {
 
 export type SourceMapInput = SourceMapInputObject | string | null
 
-export function bidingSourcemap(
+export function bindingifySourcemap(
   map?: SourceMapInput,
 ): undefined | BindingSourcemap {
   if (map == null) return

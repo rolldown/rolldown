@@ -110,7 +110,7 @@ export interface Plugin {
       | string
       | {
           code: string
-          map?: string | null | SourceMapInput
+          map?: SourceMapInput
           moduleSideEffects?: ModuleSideEffects
         }
     >
@@ -143,7 +143,7 @@ export interface Plugin {
       | string
       | {
           code: string
-          map?: string | null | SourceMapInput
+          map?: SourceMapInput
         }
     >
   >

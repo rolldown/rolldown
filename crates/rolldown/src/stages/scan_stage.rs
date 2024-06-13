@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use futures::future::join_all;
-use oxc_index::IndexVec;
+use oxc::index::IndexVec;
 use rolldown_common::{EntryPoint, ImportKind, ModuleTable, NormalModuleId, ResolvedRequestInfo};
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;

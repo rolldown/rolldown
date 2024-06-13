@@ -10,7 +10,10 @@ import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { isEmptySourcemapFiled } from '../utils/transform-sourcemap'
 import { transformModuleInfo } from '../utils/transform-module-info'
 import path from 'node:path'
-import type { SourceMapInputObject } from '../types/sourcemap'
+import {
+  bindingifySourcemap,
+  type SourceMapInputObject,
+} from '../types/sourcemap'
 import { PluginContext } from './plugin-context'
 import { TransformPluginContext } from './transfrom-plugin-context'
 import { bindingifySideEffects } from '../utils/transform-side-effects'
@@ -159,7 +162,7 @@ export function bindingifyTransform(
 
     return {
       code: ret.code,
-      map: typeof ret.map === 'object' ? JSON.stringify(ret.map) : ret.map,
+      map: bindingifySourcemap(ret.map),
       sideEffects: bindingifySideEffects(ret.moduleSideEffects),
     }
   }
@@ -206,7 +209,7 @@ export function bindingifyLoad(
 
     const result = {
       code: ret.code,
-      map: JSON.stringify(map),
+      map: bindingifySourcemap(map),
     }
 
     if (ret.moduleSideEffects !== null) {

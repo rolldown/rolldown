@@ -1,6 +1,7 @@
 pub mod impl_visit;
 pub mod side_effect_detector;
 
+use oxc::index::IndexVec;
 use oxc::{
   ast::{
     ast::{
@@ -12,7 +13,6 @@ use oxc::{
   semantic::SymbolId,
   span::{Atom, CompactStr, GetSpan, Span},
 };
-use oxc_index::IndexVec;
 use rolldown_common::{
   AstScopes, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleDefFormat, NamedImport,
   NormalModuleId, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos, SymbolRef,

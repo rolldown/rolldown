@@ -107,13 +107,13 @@ export interface BindingEmittedAsset {
 
 export interface BindingHookLoadOutput {
   code: string
-  map?: string
   sideEffects?: BindingHookSideEffects
+  map?: BindingSourcemap
 }
 
 export interface BindingHookRenderChunkOutput {
   code: string
-  map?: string
+  map?: BindingSourcemap
 }
 
 export interface BindingHookResolveIdExtraOptions {
@@ -148,6 +148,15 @@ export interface BindingInputOptions {
   logLevel?: BindingLogLevel
   onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
+}
+
+export interface BindingJsonSourcemap {
+  file?: string
+  mappings?: string
+  sourceRoot?: string
+  sources?: Array<string | undefined | null>
+  sourcesContent?: Array<string | undefined | null>
+  names?: Array<string>
 }
 
 export enum BindingLogLevel {
@@ -218,6 +227,10 @@ export interface BindingResolveOptions {
   modules?: Array<string>
   symlinks?: boolean
   tsconfigFilename?: string
+}
+
+export interface BindingSourcemap {
+  inner: string | BindingJSONSourcemap
 }
 
 export function registerPlugins(id: number, plugins: PluginsInSingleWorker): void

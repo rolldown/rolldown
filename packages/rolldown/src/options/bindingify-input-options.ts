@@ -2,7 +2,7 @@ import type { BindingInputOptions } from '../binding'
 import nodePath from 'node:path'
 import { bindingifyPlugin } from '../plugin/bindingify-plugin'
 import type { NormalizedInputOptions } from './normalized-input-options'
-import { arraify } from '@src/utils'
+import { arraify } from '@src/utils/misc'
 import type { NormalizedOutputOptions } from './normalized-output-options'
 import type { LogLevelOption } from '@src/log/logging'
 import {

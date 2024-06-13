@@ -4,7 +4,7 @@ use std::{
   process::Command,
 };
 
-use rolldown::{BundleOutput, Bundler, OutputFormat, SourceMapType, TreeshakeOptions};
+use rolldown::{BundleOutput, Bundler, OutputFormat, SourceMapType};
 use rolldown_testing::test_config::{read_test_config, TestConfig};
 
 fn default_test_input_item() -> rolldown::InputItem {
@@ -115,7 +115,6 @@ impl Fixture {
       bundle_options.input = Some(vec![default_test_input_item()]);
     }
 
-    dbg!(&bundle_options.treeshake);
     if bundle_options.cwd.is_none() {
       bundle_options.cwd = Some(fixture_path.to_path_buf());
     }

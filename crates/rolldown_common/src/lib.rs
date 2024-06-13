@@ -23,7 +23,7 @@ pub mod bundler_options {
       source_map_type::SourceMapType,
       sourcemap_ignore_list::SourceMapIgnoreList,
       sourcemap_path_transform::SourceMapPathTransform,
-      treeshake::{InnerOptions, TreeshakeOptions},
+      treeshake::{InnerOptions, ModuleSideEffects, TreeshakeOptions},
     },
     BundlerOptions,
   };
@@ -51,6 +51,7 @@ pub use crate::{
   types::external_module_id::ExternalModuleId,
   types::import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},
   types::importer_record::ImporterRecord,
+  types::js_regex,
   types::module_def_format::ModuleDefFormat,
   types::module_id::ModuleId,
   types::module_info::ModuleInfo,

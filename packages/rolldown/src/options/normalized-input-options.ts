@@ -7,7 +7,7 @@ import type { InputOptions } from './input-options'
 import type { Plugin, ParallelPlugin } from '../plugin'
 import type { LogLevel } from '../log/logging'
 import { BuiltinPlugin } from '../plugin/bindingify-builtin-plugin'
-import { NormalizedTreeshakingOptions,  } from '@src/treeshake'
+import { NormalizedTreeshakingOptions } from '@src/treeshake'
 
 export interface NormalizedInputOptions extends InputOptions {
   input: RollupNormalizedInputOptions['input']
@@ -15,7 +15,7 @@ export interface NormalizedInputOptions extends InputOptions {
   onLog: (level: LogLevel, log: RollupLog) => void
   logLevel: LogLevelOption
   // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
-  // This is becuase it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
-  // So we use `undefined | NormalizedTreeshakingOptions` (or None in rust side), to represnt `false | NormalizedTreeshakingOptions`
+  // This is because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
+  // So we use `undefined | NormalizedTreeshakingOptions` (or None in rust side), to represent `false | NormalizedTreeshakingOptions`
   treeshake?: NormalizedTreeshakingOptions
 }

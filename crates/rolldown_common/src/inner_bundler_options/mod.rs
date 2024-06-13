@@ -102,11 +102,10 @@ where
   D: Deserializer<'de>,
 {
   let deserialized = Option::<bool>::deserialize(deserializer)?;
-  let res = match deserialized {
+  match deserialized {
     Some(false) => Ok(TreeshakeOptions::False),
-    Some(true) | None => {
-      Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions { module_side_effects: true }))
-    }
-  };
-  res
+    Some(true) | None => Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
+      module_side_effects: types::treeshake::ModuleSideEffects::Boolean(true),
+    })),
+  }
 }

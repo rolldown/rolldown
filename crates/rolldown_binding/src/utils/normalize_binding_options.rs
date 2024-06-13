@@ -85,7 +85,7 @@ pub fn normalize_binding_options(
     cwd: cwd.into(),
     external,
     treeshake: match input_options.treeshake {
-      Some(v) => v.into(),
+      Some(v) => v.try_into().map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
       None => rolldown::TreeshakeOptions::False,
     },
     resolve: input_options.resolve.map(Into::into),

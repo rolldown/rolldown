@@ -1,3 +1,3 @@
-import { a } from './share'
+import { a } from './share.mjs'
 
 console.log(a)

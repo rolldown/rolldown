@@ -1384,9 +1384,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-HOErwbTT.mjs
 
-# tests/fixtures/loaders/empty/text
+# tests/fixtures/loaders/empty/js
 
-- main-!~{000}~.mjs => main-Ng1iUwu2.mjs
+- main-!~{000}~.mjs => main-5LpMK__u.mjs
 
 # tests/fixtures/loaders/txt/empty
 

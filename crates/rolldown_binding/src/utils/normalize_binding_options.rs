@@ -84,7 +84,10 @@ pub fn normalize_binding_options(
     input: Some(input_options.input.into_iter().map(Into::into).collect()),
     cwd: cwd.into(),
     external,
-    treeshake: input_options.treeshake.map(Into::into),
+    treeshake: match input_options.treeshake {
+      Some(v) => v.into(),
+      None => rolldown::TreeshakeOptions::False,
+    },
     resolve: input_options.resolve.map(Into::into),
     platform: input_options
       .platform

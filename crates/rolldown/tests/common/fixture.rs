@@ -116,10 +116,6 @@ impl Fixture {
     }
 
     dbg!(&bundle_options.treeshake);
-    if bundle_options.treeshake.is_none() {
-      bundle_options.treeshake = Some(TreeshakeOptions { module_side_effects: Some(true) });
-    }
-
     if bundle_options.cwd.is_none() {
       bundle_options.cwd = Some(fixture_path.to_path_buf());
     }

@@ -22,7 +22,7 @@ pub struct NormalizedBundlerOptions {
   pub cwd: PathBuf,
   pub external: Option<IsExternal>,
   /// corresponding to `false | NormalizedTreeshakeOption`
-  pub treeshake: Option<TreeshakeOptions>,
+  pub treeshake: TreeshakeOptions,
   pub platform: Platform,
   pub shim_missing_exports: bool,
   /// The key is the extension. Unlike `BundlerOptions`, the extension doesn't start with a dot.

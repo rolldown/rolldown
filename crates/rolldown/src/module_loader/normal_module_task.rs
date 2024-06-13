@@ -7,6 +7,7 @@ use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
   AstScopes, ImportRecordId, ModuleDefFormat, ModuleType, NormalModule, NormalModuleId,
   PackageJson, RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
+  TreeshakeOptions,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -168,7 +169,6 @@ impl NormalModuleTask {
           DeterminedSideEffects::Analyzed(analyzed_side_effects)
         })
     };
-    dbg!(&hook_side_effects, self.ctx.input_options.treeshake.as_ref());
     let side_effects = match hook_side_effects {
       Some(side_effects) => match side_effects {
         HookSideEffects::True => lazy_check_side_effects(),
@@ -176,13 +176,16 @@ impl NormalModuleTask {
         HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
       },
       // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
-      None => {
-        match self.ctx.input_options.treeshake.as_ref().and_then(|opt| opt.module_side_effects) {
-          Some(true) => lazy_check_side_effects(),
-          Some(false) => DeterminedSideEffects::UserDefined(false),
-          None => DeterminedSideEffects::NoTreeshake,
+      None => match self.ctx.input_options.treeshake {
+        TreeshakeOptions::False => DeterminedSideEffects::NoTreeshake,
+        TreeshakeOptions::Option(ref opt) => {
+          if opt.module_side_effects {
+            lazy_check_side_effects()
+          } else {
+            DeterminedSideEffects::UserDefined(false)
+          }
         }
-      }
+      },
     };
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
     dbg!(&stable_resource_id);

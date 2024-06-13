@@ -4,7 +4,7 @@ import type {
 } from '../rollup'
 import type { OutputOptions } from './output-options'
 import type { Plugin, ParallelPlugin } from '../plugin'
-import type { RenderedChunk } from '@src/binding'
+import type { RenderedChunk } from '../binding'
 
 type InternalModuleFormat = 'es' | 'cjs'
 

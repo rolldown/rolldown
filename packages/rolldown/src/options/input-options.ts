@@ -8,6 +8,7 @@ import {
   RollupLogSchema,
   RollupLogWithStringSchema,
 } from '../log/logging'
+import {TreeshakingOptionsSchema} from '../treeshake'
 import { BuiltinPlugin } from '../plugin/bindingify-builtin-plugin'
 
 const inputOptionSchema = z
@@ -53,6 +54,7 @@ const inputOptionsSchema = z.strictObject({
     .or(z.literal('neutral'))
     .optional(),
   shimMissingExports: z.boolean().optional(),
+	treeshake: z.boolean().or(TreeshakingOptionsSchema).optional(),
   logLevel: LogLevelOptionSchema.optional(),
   onLog: z
     .function()

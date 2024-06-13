@@ -78,7 +78,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .cwd
       .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),
     external: raw_options.external,
-    treeshake: raw_options.treeshake.unwrap_or(true),
+    treeshake: raw_options.treeshake,
     platform: raw_options.platform.unwrap_or(Platform::Browser),
     entry_filenames: raw_options.entry_filenames.unwrap_or_else(|| "[name].js".to_string()).into(),
     chunk_filenames: raw_options

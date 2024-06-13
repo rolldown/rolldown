@@ -7,6 +7,7 @@ use serde::{Deserialize, Deserializer};
 
 use crate::{ModuleType, SourceMapIgnoreList};
 
+use self::types::treeshake::TreeshakeOptions;
 use self::types::{
   input_item::InputItem, is_external::IsExternal, output_format::OutputFormat,
   output_option::AddonOutputOption, platform::Platform, resolve_options::ResolveOptions,
@@ -31,7 +32,6 @@ pub struct BundlerOptions {
     schemars(with = "Option<Vec<String>>")
   )]
   pub external: Option<IsExternal>,
-  pub treeshake: Option<bool>,
   pub platform: Option<Platform>,
   pub shim_missing_exports: Option<bool>,
   // --- options for output
@@ -70,6 +70,12 @@ pub struct BundlerOptions {
   pub module_types: Option<HashMap<String, ModuleType>>,
   // --- options for resolve
   pub resolve: Option<ResolveOptions>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_treeshake"),
+    schemars(with = "Option<bool>")
+  )]
+  pub treeshake: Option<TreeshakeOptions>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -88,4 +94,18 @@ where
 {
   let deserialized = Option::<String>::deserialize(deserializer)?;
   Ok(deserialized.map(|s| AddonOutputOption::String(Some(s))))
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_treeshake<'de, D>(deserializer: D) -> Result<Option<TreeshakeOptions>, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  let deserialized = Option::<bool>::deserialize(deserializer)?;
+  let res = match deserialized {
+    Some(true) => Ok(Some(TreeshakeOptions { module_side_effects: Some(true) })),
+    Some(false) => Ok(Some(TreeshakeOptions { module_side_effects: Some(false) })),
+    None => Ok(Some(TreeshakeOptions { module_side_effects: Some(true) })),
+  };
+  res
 }

@@ -1,3 +1,3 @@
-import { createApp } from 'vue'
+import { a } from './share'
 
-export default createApp({})
+console.log(a)

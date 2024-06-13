@@ -7,6 +7,7 @@ use rustc_hash::FxHashMap;
 
 use crate::ModuleType;
 
+use super::treeshake::TreeshakeOptions;
 use super::{
   filename_template::FilenameTemplate, is_external::IsExternal,
   normalized_input_item::NormalizedInputItem, output_format::OutputFormat,
@@ -20,7 +21,8 @@ pub struct NormalizedBundlerOptions {
   pub input: Vec<NormalizedInputItem>,
   pub cwd: PathBuf,
   pub external: Option<IsExternal>,
-  pub treeshake: bool,
+  /// corresponding to `false | NormalizedTreeshakeOption`
+  pub treeshake: Option<TreeshakeOptions>,
   pub platform: Platform,
   pub shim_missing_exports: bool,
   /// The key is the extension. Unlike `BundlerOptions`, the extension doesn't start with a dot.

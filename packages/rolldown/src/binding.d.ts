@@ -148,6 +148,7 @@ export interface BindingInputOptions {
   logLevel?: BindingLogLevel
   onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
+  treeshake?: BindingTreeshake
 }
 
 export interface BindingJsonSourcemap {
@@ -234,6 +235,12 @@ export interface BindingSourcemap {
 }
 
 export function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+export function registerPlugins(id: number, plugins: PluginsInSingleWorker): void
+export interface BindingTreeshake {
+  moduleSideEffects?: boolean
+}
+
+export function registerPlugins(id: number, plugins: PluginsInSingleWorker): void
 
 export interface RenderedChunk {
   isEntry: boolean

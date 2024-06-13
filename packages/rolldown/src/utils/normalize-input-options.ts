@@ -3,12 +3,15 @@ import { LOG_LEVEL_INFO } from '../log/logging'
 import type { InputOptions } from '../options/input-options'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import { normalizePluginOption } from './normalize-plugin-option'
+import { normalizeTreeshakeOptions } from './normalize-tree-shake'
 
 export async function normalizeInputOptions(
   config: InputOptions,
 ): Promise<NormalizedInputOptions> {
   const { input, ...rest } = config
   const plugins = await normalizePluginOption(config.plugins)
+  const treeshake = await normalizeTreeshakeOptions(config.treeshake)
+  console.log(`treeshake: `, treeshake)
   const logLevel = config.logLevel || LOG_LEVEL_INFO
   const onLog = getLogger(
     plugins.filter((plugin) => !('_parallel' in plugin)) as Plugin[],
@@ -21,5 +24,6 @@ export async function normalizeInputOptions(
     plugins,
     logLevel,
     onLog,
+    treeshake,
   }
 }

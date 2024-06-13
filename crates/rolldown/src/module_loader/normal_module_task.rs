@@ -168,17 +168,25 @@ impl NormalModuleTask {
           DeterminedSideEffects::Analyzed(analyzed_side_effects)
         })
     };
-
+    dbg!(&hook_side_effects, self.ctx.input_options.treeshake.as_ref());
     let side_effects = match hook_side_effects {
       Some(side_effects) => match side_effects {
         HookSideEffects::True => lazy_check_side_effects(),
         HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
         HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
       },
-      None => lazy_check_side_effects(),
+      // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
+      None => {
+        match self.ctx.input_options.treeshake.as_ref().and_then(|opt| opt.module_side_effects) {
+          Some(true) => lazy_check_side_effects(),
+          Some(false) => DeterminedSideEffects::UserDefined(false),
+          None => DeterminedSideEffects::NoTreeshake,
+        }
+      }
     };
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
-
+    dbg!(&stable_resource_id);
+    dbg!(&side_effects);
     let module = NormalModule {
       source,
       id: self.module_id,

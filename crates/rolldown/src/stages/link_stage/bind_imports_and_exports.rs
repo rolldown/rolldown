@@ -59,12 +59,12 @@ pub enum MatchImportKind {
 pub enum ImportStatus {
   // The imported file has no matching export
   NoMatch {
-    importee_id: NormalModuleId,
+    // importee_id: NormalModuleId,
   },
 
   // The imported file has a matching export
   Found {
-    owner: NormalModuleId,
+    // owner: NormalModuleId,
     symbol: SymbolRef,
     potentially_ambiguous_export_star_refs: Vec<SymbolRef>,
   },
@@ -306,13 +306,13 @@ impl<'a> BindImportsAndExportsContext<'a> {
     match &named_import.imported {
       Specifier::Star => ImportStatus::Found {
         symbol: importee.namespace_object_ref,
-        owner: importee_id,
+        // owner: importee_id,
         potentially_ambiguous_export_star_refs: vec![],
       },
       Specifier::Literal(literal_imported) => {
         if let Some(export) = self.metas[importee_id].resolved_exports.get(literal_imported) {
           ImportStatus::Found {
-            owner: importee_id,
+            // owner: importee_id,
             symbol: export.symbol_ref,
             potentially_ambiguous_export_star_refs: export
               .potentially_ambiguous_symbol_refs
@@ -322,7 +322,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
         } else if self.metas[importee_id].has_dynamic_exports {
           ImportStatus::DynamicFallback { namespace_ref: importee.namespace_object_ref }
         } else {
-          ImportStatus::NoMatch { importee_id }
+          ImportStatus::NoMatch {}
         }
       }
     }

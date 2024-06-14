@@ -7,4 +7,5 @@ pub mod binding_outputs;
 pub mod binding_rendered_chunk;
 pub mod binding_rendered_module;
 pub mod binding_resolve_alias_item;
+pub mod binding_sourcemap;
 pub mod js_callback;

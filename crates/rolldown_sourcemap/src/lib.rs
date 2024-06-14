@@ -1,9 +1,9 @@
 // cSpell:disable
 pub use concat_sourcemap::{ConcatSource, RawSource, Source, SourceMapSource};
-pub use oxc::sourcemap::{SourceMap, SourcemapVisualizer};
+pub use oxc::sourcemap::SourceMapBuilder;
+pub use oxc::sourcemap::{JSONSourceMap, SourceMap, SourcemapVisualizer};
 mod lines_count;
 pub use lines_count::lines_count;
-use oxc::sourcemap::SourceMapBuilder;
 mod concat_sourcemap;
 
 pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> Option<SourceMap> {

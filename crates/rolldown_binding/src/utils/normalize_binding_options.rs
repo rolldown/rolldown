@@ -5,6 +5,7 @@ use crate::{
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
   worker_manager::WorkerManager,
 };
+use napi::Either;
 use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, OutputFormat, Platform};
 use rolldown_plugin::BoxPlugin;
 use std::path::PathBuf;
@@ -31,6 +32,7 @@ fn normalize_addon_option(
   })
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
   output_options: crate::options::BindingOutputOptions,
@@ -128,7 +130,10 @@ pub fn normalize_binding_options(
           let worker_manager = worker_manager.as_ref().unwrap();
           ParallelJsPlugin::new_boxed(plugins, Arc::clone(worker_manager))
         },
-        |plugin| JsPlugin::new_boxed(plugin),
+        |plugin| match plugin {
+          Either::A(plugin) => JsPlugin::new_boxed(plugin),
+          Either::B(plugin) => plugin.into(),
+        },
       )
     })
     .collect::<Vec<_>>();
@@ -138,7 +143,12 @@ pub fn normalize_binding_options(
     .plugins
     .into_iter()
     .chain(output_options.plugins)
-    .filter_map(|plugin| plugin.map(|plugin| JsPlugin::new_boxed(plugin)))
+    .filter_map(|plugin| {
+      plugin.map(|plugin| match plugin {
+        Either::A(plugin) => JsPlugin::new_boxed(plugin),
+        Either::B(plugin) => plugin.into(),
+      })
+    })
     .collect::<Vec<_>>();
 
   Ok(NormalizeBindingOptionsReturn { bundler_options, plugins })

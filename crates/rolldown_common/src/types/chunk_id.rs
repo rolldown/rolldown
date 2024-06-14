@@ -1,3 +1,3 @@
-oxc_index::define_index_type! {
+oxc::index::define_index_type! {
   pub struct ChunkId = u32;
 }

@@ -87,8 +87,16 @@ export interface AliasItem {
 }
 
 export interface BindingAssetSource {
-  type: string
-  source: Uint8Array
+  inner: string | Uint8Array
+}
+
+export interface BindingBuiltinPlugin {
+  name: BindingBuiltinPluginName
+  options?: unknown
+}
+
+export enum BindingBuiltinPluginName {
+  WasmPlugin = 0
 }
 
 export interface BindingEmittedAsset {
@@ -99,13 +107,13 @@ export interface BindingEmittedAsset {
 
 export interface BindingHookLoadOutput {
   code: string
-  map?: string
   sideEffects?: BindingHookSideEffects
+  map?: BindingSourcemap
 }
 
 export interface BindingHookRenderChunkOutput {
   code: string
-  map?: string
+  map?: BindingSourcemap
 }
 
 export interface BindingHookResolveIdExtraOptions {
@@ -133,13 +141,22 @@ export interface BindingInputItem {
 export interface BindingInputOptions {
   external?: undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<BindingInputItem>
-  plugins: Array<BindingPluginOrParallelJsPluginPlaceholder>
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
   logLevel?: BindingLogLevel
   onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
+}
+
+export interface BindingJsonSourcemap {
+  file?: string
+  mappings?: string
+  sourceRoot?: string
+  sources?: Array<string | undefined | null>
+  sourcesContent?: Array<string | undefined | null>
+  names?: Array<string>
 }
 
 export enum BindingLogLevel {
@@ -158,7 +175,7 @@ export interface BindingOutputOptions {
   exports?: 'default' | 'named' | 'none' | 'auto'
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'esm' | 'cjs'
-  plugins: Array<BindingPluginOrParallelJsPluginPlaceholder>
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
@@ -210,6 +227,10 @@ export interface BindingResolveOptions {
   modules?: Array<string>
   symlinks?: boolean
   tsconfigFilename?: string
+}
+
+export interface BindingSourcemap {
+  inner: string | BindingJSONSourcemap
 }
 
 export function registerPlugins(id: number, plugins: PluginsInSingleWorker): void

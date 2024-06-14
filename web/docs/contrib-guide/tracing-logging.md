@@ -62,3 +62,21 @@ to do the following all at once
 Notices:
 
 We generally recommend using `skip_all` unless you have a good reason to use logging for the arguments.
+
+## Trace Module Resolution
+
+Rolldown uses [oxc-resolver](https://github.com/oxc-project/oxc-resolver), which exposes trace information for debugging purposes.
+
+```bash
+RD_LOG='oxc_resolver' rolldown
+```
+
+This emits trace information for the `oxc_resolver::resolve` function, e.g.
+
+```
+2024-06-11T07:12:20.003537Z DEBUG oxc_resolver: options: ResolveOptions { ... }, path: "...", specifier: "...", ret: "..."
+    at /path/to/oxc_resolver-1.8.1/src/lib.rs:212
+    in oxc_resolver::resolve with path: "...", specifier: "..."
+```
+
+The input values are `options`, `path` and `specifier`, the returned value is `ret`.

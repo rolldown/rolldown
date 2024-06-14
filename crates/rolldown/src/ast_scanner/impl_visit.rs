@@ -1,5 +1,7 @@
 use std::{borrow::Borrow, collections::hash_map::Entry, sync::Arc};
 
+use std::sync::Arc;
+
 use oxc::{
   ast::{
     ast::{Argument, Expression, FormalParameter, IdentifierReference, MemberExpression},
@@ -9,43 +11,18 @@ use oxc::{
   codegen::{self, Codegen, CodegenOptions, Gen},
   semantic::SymbolId,
   span::CompactStr,
+  semantic::SymbolId,
 };
 use rolldown_common::{ImportKind, SymbolRef};
 use rolldown_error::BuildError;
 use rustc_hash::FxHashSet;
+use rolldown_common::ImportKind;
+use rolldown_error::BuildError;
+use rolldown_common::ImportKind;
 
 use crate::utils::call_expression_ext::{CallExpressionExt, CallExpressionKind};
 
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
-
-impl<'me> AstScanner<'me> {
-  /// resolve the symbol from the identifier reference, and return if it is a top level symbol
-  fn resolve_identifier_reference(
-    &mut self,
-    symbol_id: Option<SymbolId>,
-    ident: &IdentifierReference,
-  ) -> Option<SymbolId> {
-    match symbol_id {
-      Some(symbol_id) if self.is_top_level(symbol_id) => Some(symbol_id),
-      None => {
-        if ident.name == "module" {
-          self.used_module_ref = true;
-        }
-        if ident.name == "exports" {
-          self.used_exports_ref = true;
-        }
-        if ident.name == "eval" {
-          self.result.warnings.push(
-            BuildError::eval(self.file_path.to_string(), Arc::clone(self.source), ident.span)
-              .with_severity_warning(),
-          );
-        }
-        None
-      }
-      _ => None,
-    }
-  }
-}
 
 impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {

@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use itertools::Itertools;
-use oxc_index::IndexVec;
+use oxc::index::IndexVec;
 use rolldown_common::{Chunk, ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
@@ -69,7 +69,7 @@ impl<'a> GenerateStage<'a> {
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,
     // we create a facade entry point for it.
 
-    let mut module_to_bits = oxc_index::index_vec![BitSet::new(entries_len); self.link_output.module_table.normal_modules.len()];
+    let mut module_to_bits = oxc::index::index_vec![BitSet::new(entries_len); self.link_output.module_table.normal_modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
     let mut chunks = IndexChunks::with_capacity(self.link_output.entries.len());
     let mut user_defined_entry_chunk_ids: Vec<ChunkId> = Vec::new();
@@ -107,7 +107,7 @@ impl<'a> GenerateStage<'a> {
       );
     });
 
-    let mut module_to_chunk: IndexVec<NormalModuleId, Option<ChunkId>> = oxc_index::index_vec![
+    let mut module_to_chunk: IndexVec<NormalModuleId, Option<ChunkId>> = oxc::index::index_vec![
       None;
       self.link_output.module_table.normal_modules.len()
     ];

@@ -5,6 +5,7 @@ import type { Plugin } from './index'
 import { transformToOutputBundle } from '../utils/transform-to-rollup-output'
 import { PluginContext } from './plugin-context'
 import { NormalizedOutputOptions } from '@src/options/normalized-output-options'
+import { bindingifySourcemap } from '../types/sourcemap'
 
 export function bindingifyRenderStart(
   plugin: Plugin,
@@ -59,7 +60,7 @@ export function bindingifyRenderChunk(
 
     return {
       code: ret.code,
-      map: typeof ret.map === 'object' ? JSON.stringify(ret.map) : ret.map,
+      map: bindingifySourcemap(ret.map),
     }
   }
 }

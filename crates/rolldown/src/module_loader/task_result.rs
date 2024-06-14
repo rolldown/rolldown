@@ -1,4 +1,4 @@
-use oxc_index::IndexVec;
+use oxc::index::IndexVec;
 use rolldown_common::{
   ImportRecordId, NormalModule, NormalModuleId, RawImportRecord, ResolvedRequestInfo,
 };

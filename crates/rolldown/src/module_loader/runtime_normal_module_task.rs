@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use oxc::index::IndexVec;
 use oxc::span::SourceType;
-use oxc_index::IndexVec;
 use rolldown_common::{
   side_effects::DeterminedSideEffects, AstScopes, ExportsKind, ModuleDefFormat, NormalModule,
   NormalModuleId, ResourceId, SymbolRef,

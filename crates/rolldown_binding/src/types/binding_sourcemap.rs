@@ -1,0 +1,53 @@
+use derivative::Derivative;
+use napi::Either;
+use serde::Deserialize;
+
+#[napi_derive::napi(object)]
+#[derive(Deserialize, Debug, Derivative)]
+pub struct BindingSourcemap {
+  #[serde(skip_deserializing, default = "default_sourcemap")]
+  pub inner: Either<String, BindingJSONSourcemap>,
+}
+
+fn default_sourcemap() -> Either<String, BindingJSONSourcemap> {
+  Either::A(String::default())
+}
+
+impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
+  type Error = anyhow::Error;
+
+  fn try_from(value: BindingSourcemap) -> Result<Self, Self::Error> {
+    match value.inner {
+      Either::A(s) => rolldown_sourcemap::SourceMap::from_json_string(&s)
+        .map_err(|e| anyhow::format_err!("Convert string sourcemap error: {:?}", e)),
+      Either::B(v) => v.try_into(),
+    }
+  }
+}
+
+#[derive(Deserialize, Debug, Default, Derivative)]
+#[napi_derive::napi(object)]
+pub struct BindingJSONSourcemap {
+  pub file: Option<String>,
+  pub mappings: Option<String>,
+  pub source_root: Option<String>,
+  pub sources: Option<Vec<Option<String>>>,
+  pub sources_content: Option<Vec<Option<String>>>,
+  pub names: Option<Vec<String>>,
+}
+
+impl TryFrom<BindingJSONSourcemap> for rolldown_sourcemap::SourceMap {
+  type Error = anyhow::Error;
+
+  fn try_from(value: BindingJSONSourcemap) -> Result<Self, Self::Error> {
+    rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
+      file: value.file,
+      mappings: value.mappings,
+      source_root: value.source_root,
+      sources: value.sources,
+      sources_content: value.sources_content,
+      names: value.names,
+    })
+    .map_err(|e| anyhow::format_err!("Convert json sourcemap error: {:?}", e))
+  }
+}

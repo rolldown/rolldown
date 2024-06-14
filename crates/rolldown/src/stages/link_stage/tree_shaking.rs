@@ -1,7 +1,7 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
+use oxc::index::IndexVec;
 use oxc::span::CompactStr;
-use oxc_index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
@@ -110,7 +110,6 @@ fn include_module_as_namespace(ctx: &mut Context, module: &NormalModule) {
   });
 }
 
-#[track_caller]
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr]) {
   let mut cursor = 0;
 
@@ -206,10 +205,10 @@ impl LinkStage<'_> {
       .collect::<IndexVec<NormalModuleId, _>>();
 
     let mut is_module_included_vec: IndexVec<NormalModuleId, bool> =
-      oxc_index::index_vec![false; self.module_table.normal_modules.len()];
+      oxc::index::index_vec![false; self.module_table.normal_modules.len()];
 
     let mut used_exports_info_vec: IndexVec<NormalModuleId, UsedExportsInfo> =
-      oxc_index::index_vec![UsedExportsInfo::default(); self.module_table.normal_modules.len()];
+      oxc::index::index_vec![UsedExportsInfo::default(); self.module_table.normal_modules.len()];
     let context = &mut Context {
       modules: &self.module_table.normal_modules,
       symbols: &self.symbols,
@@ -311,14 +310,14 @@ impl LinkStage<'_> {
     }
 
     let mut index_side_effects_cache =
-      oxc_index::index_vec![None; self.module_table.normal_modules.len()];
+      oxc::index::index_vec![None; self.module_table.normal_modules.len()];
     let index_module_side_effects = self
       .module_table
       .normal_modules
       .iter()
       .map(|module| {
         let mut visited: IndexVisited =
-          oxc_index::index_vec![false; self.module_table.normal_modules.len()];
+          oxc::index::index_vec![false; self.module_table.normal_modules.len()];
         determine_side_effects_for_module(
           &mut visited,
           &mut index_side_effects_cache,

@@ -1,4 +1,4 @@
-use oxc_index::IndexVec;
+use oxc::index::IndexVec;
 use rolldown_common::{NormalModuleId, ResolvedExport, StmtInfoId, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
 use rustc_hash::{FxHashMap, FxHashSet};

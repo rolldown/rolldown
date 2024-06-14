@@ -20,7 +20,7 @@ const foo$1 = 123;
 //#endregion
 //#region entry.js
 let foo = 234;
-console.log(foo_ns, foo_ns.foo, foo);
+console.log(foo_ns, foo$1, foo);
 
 //#endregion
 ```

@@ -118,7 +118,7 @@ export interface BindingHookRenderChunkOutput {
 
 export interface BindingHookResolveIdExtraOptions {
   isEntry: boolean
-  kind: string
+  kind: 'import' | 'dynamic-import' | 'require-call'
 }
 
 export interface BindingHookResolveIdOutput {
@@ -233,7 +233,7 @@ export interface BindingSourcemap {
   inner: string | BindingJSONSourcemap
 }
 
-export function registerPlugins(id: number, plugins: PluginsInSingleWorker): void
+export function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 export interface RenderedChunk {
   isEntry: boolean

@@ -8,3 +8,4 @@ pub mod bundler_fs;
 pub mod linking_metadata;
 pub mod namespace_alias;
 pub mod symbols;
+pub mod tree_shake;

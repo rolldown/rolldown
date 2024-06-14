@@ -20,7 +20,7 @@
     },
     {
       "groupName": "oxc",
-      "matchManagers": ["npm"],
+      "matchManagers": ["cargo"],
       "matchPackagePrefixes": ["oxc"],
       "schedule": ["at any time"]
     }

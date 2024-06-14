@@ -271,6 +271,9 @@ impl<'a> GenerateStage<'a> {
     chunk_graph.chunks.iter_enumerated().for_each(|(chunk_id, chunk)| {
       let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
       for import_ref in chunk_meta_imports.iter().copied() {
+        if !self.link_output.used_symbol_refs.contains(&import_ref) {
+          continue;
+        }
         let import_symbol = self.link_output.symbols.get(import_ref);
 
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {

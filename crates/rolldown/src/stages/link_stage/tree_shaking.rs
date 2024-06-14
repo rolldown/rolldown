@@ -1,14 +1,24 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
+<<<<<<<<< Temporary merge branch 1
+use oxc::span::CompactStr;
+use oxc_index::IndexVec;
+||||||||| b79148d7
+use oxc_index::IndexVec;
+=========
+use crate::types::tree_shake::{UsedExportsInfo, UsedInfo};
 use oxc::index::IndexVec;
+use oxc::span::CompactStr;
+>>>>>>>>> Temporary merge branch 2
+// use crate::utils::extract_member_chain::extract_canonical_symbol_info;
 use oxc::span::CompactStr;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
 };
-use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_rstr::ToRstr;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::LinkStage;
 
@@ -21,22 +31,18 @@ struct Context<'a> {
   tree_shaking: bool,
   runtime_id: NormalModuleId,
   metas: &'a LinkingMetadataVec,
+  used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
+  /// Hash list of string is relatively slow, so we use a two dimensions hashmap to cache the resolved symbol.
+  /// The first level only store the top level namespace member expr object identifier symbol ref.
+  /// With this method, we could avoid the hash calculation of the whole member expr chains.
+  /// for the value, the first element is the resolved symbol ref, the second element is how much
+  /// chain element does this member expr consume.
+  top_level_member_expr_resolved_cache:
+    &'a mut FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
 
-bitflags::bitflags! {
-  #[derive(Default, Copy, Clone, Debug)]
-  pub struct UsedInfo: u8 {
-    // If the module is used as a namespace
-    const USED_AS_NAMESPACE = 1 << 1;
-    const INCLUDED_AS_NAMESPACE = 1 << 2;
-  }
-}
+pub type MemberChainToResolvedSymbolRef = FxHashMap<Box<[CompactStr]>, (SymbolRef, usize)>;
 
-#[derive(Default, Clone)]
-struct UsedExportsInfo {
-  used_exports: FxHashSet<Rstr>,
-  used_info: UsedInfo,
-}
 /// if no export is used, and the module has no side effects, the module should not be included
 fn include_module(ctx: &mut Context, module: &NormalModule) {
   fn forcefully_include_all_statements(ctx: &mut Context, module: &NormalModule) {
@@ -119,13 +125,12 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr
   let is_same_ref = canonical_ref == symbol_ref;
   let mut ns_symbol_list = vec![];
   let is_namespace_ref = canonical_ref_module.namespace_object_ref == canonical_ref;
+  let mut has_ambiguous_symbol = false;
   while cursor < chains.len() && is_namespace_ref {
     let name = &chains[cursor];
     let export_symbol = ctx.metas[canonical_ref_module.id].resolved_exports.get(&name.to_rstr());
     let Some(export_symbol) = export_symbol else { break };
-    if export_symbol.potentially_ambiguous_symbol_refs.is_some() {
-      return;
-    }
+    has_ambiguous_symbol = export_symbol.potentially_ambiguous_symbol_refs.is_some();
     if !ctx.modules[export_symbol.symbol_ref.owner].exports_kind.is_esm() {
       break;
     }
@@ -153,12 +158,15 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr
 
   let id = ns_symbol_list.last().map_or(symbol_ref.owner, |(symbol, _)| symbol.owner);
   ctx.used_exports_info_vec[id].used_exports.insert(export_name);
-  // Keep the namespace object chain
-  // TODO: remove the chain and related runtime code, after we finish move dependency optimization
-  for (pre_ns_symbol, next_prop) in ns_symbol_list {
-    include_symbol(ctx, pre_ns_symbol, &[]);
-    ctx.used_exports_info_vec[pre_ns_symbol.owner].used_exports.insert(next_prop);
+  // Only cache the top level member epxr resolved result, if it consume at least one chain element.
+  if cursor > 0 {
+    let map = ctx.top_level_member_expr_resolved_cache.entry(symbol_ref).or_default();
+    map.insert(chains.to_vec().into_boxed_slice(), (canonical_ref, cursor));
   }
+  if has_ambiguous_symbol {
+    return;
+  }
+  ctx.used_symbol_refs.insert(canonical_ref);
   include_module(ctx, canonical_ref_module);
   canonical_ref_module
     .stmt_infos
@@ -209,6 +217,9 @@ impl LinkStage<'_> {
 
     let mut used_exports_info_vec: IndexVec<NormalModuleId, UsedExportsInfo> =
       oxc::index::index_vec![UsedExportsInfo::default(); self.module_table.normal_modules.len()];
+      oxc_index::index_vec![UsedExportsInfo::default(); self.module_table.normal_modules.len()];
+      oxc::index::index_vec![UsedExportsInfo::default(); self.module_table.normal_modules.len()];
+    let mut top_level_member_expr_resolved_cache = FxHashMap::default();
     let context = &mut Context {
       modules: &self.module_table.normal_modules,
       symbols: &self.symbols,
@@ -218,6 +229,8 @@ impl LinkStage<'_> {
       runtime_id: self.runtime.id(),
       used_exports_info_vec: &mut used_exports_info_vec,
       metas: &self.metas,
+      used_symbol_refs: &mut self.used_symbol_refs,
+      top_level_member_expr_resolved_cache: &mut top_level_member_expr_resolved_cache,
     };
 
     self.entries.iter().for_each(|entry| {
@@ -242,9 +255,11 @@ impl LinkStage<'_> {
     });
 
     self.module_table.normal_modules.iter_mut().for_each(|module| {
-      self.metas[module.id].used_exports =
-        std::mem::take(&mut used_exports_info_vec[module.id].used_exports);
+      self.metas[module.id].used_exports_info =
+        std::mem::take(&mut used_exports_info_vec[module.id]);
     });
+
+    self.top_level_member_expr_resolved_cache = top_level_member_expr_resolved_cache;
 
     tracing::trace!(
       "included statements {:#?}",

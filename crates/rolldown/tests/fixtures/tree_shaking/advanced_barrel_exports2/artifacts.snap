@@ -9,24 +9,12 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/advanced_barrel_exports2
 
 ```js
 
-
 //#region a.js
-var a_ns = {};
-__export(a_ns, {
-	b:() => b
-});
 const b = 500;
 
 //#endregion
-//#region shared.js
-var shared_ns = {};
-__export(shared_ns, {
-	a:() => a_ns
-});
-
-//#endregion
 //#region main.js
-console.log(shared_ns.a.b);
+console.log(b);
 
 //#endregion
 ```

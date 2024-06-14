@@ -3,11 +3,11 @@
 use oxc::{
   allocator,
   ast::{
-    ast::{self, SimpleAssignmentTarget},
+    ast::{self, MemberExpression, SimpleAssignmentTarget},
     visit::walk_mut,
     VisitMut,
   },
-  span::{GetSpan, Span, SPAN},
+  span::{CompactStr, GetSpan, Span, SPAN},
 };
 use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
 use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, IntoIn, StatementExt, TakeIn};
@@ -401,6 +401,58 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     self.try_rewrite_identifier_reference_expr(expr, false);
 
     walk_mut::walk_expression_mut(self, expr);
+    if let Some(e) = self.expr_post_replacement.take() {
+      *expr = e;
+    }
+  }
+
+  fn visit_member_expression(&mut self, expr: &mut MemberExpression<'ast>) {
+    let top_level_member_expr: Option<()> = match expr {
+      MemberExpression::StaticMemberExpression(ref inner_expr) => {
+        let mut chain = vec![];
+        let mut cur = inner_expr;
+        let top_level_symbol = loop {
+          chain.push(cur.property.clone());
+          match cur.object {
+            ast::Expression::StaticMemberExpression(ref expr) => {
+              cur = expr;
+            }
+            ast::Expression::Identifier(ref ident) => {
+              break self.resolve_symbol_from_reference(ident);
+            }
+            _ => break None,
+          }
+        };
+        if let Some(symbol) = top_level_symbol {
+          chain.reverse();
+          let chain: Vec<CompactStr> =
+            chain.into_iter().map(|ident| ident.name.as_str().into()).collect::<Vec<_>>();
+          self
+            .ctx
+            .top_level_cache
+            .get(&(self.ctx.id, symbol).into())
+            .and_then(|map| map.get(&chain.clone().into_boxed_slice()))
+            .map(|(symbol_ref, cursor)| {
+              let replaced_expr = if let Some(name) = self.try_canonical_name_for(*symbol_ref) {
+                self.snippet.member_expr_or_ident_ref(name.as_str(), &chain[*cursor..], SPAN)
+              } else {
+                // Ambiguous symbol, replace the member expr with `undefined`, the runtime semantic
+                // will not change
+                self.snippet.id_ref_expr("undefined", SPAN)
+              };
+
+              self.expr_post_replacement = Some(replaced_expr);
+            })
+        } else {
+          None
+        }
+      }
+      MemberExpression::PrivateFieldExpression(_)
+      | MemberExpression::ComputedMemberExpression(_) => None,
+    };
+    if top_level_member_expr.is_none() {
+      walk_mut::walk_member_expression_mut(self, expr);
+    };
   }
 
   fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {

@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguo
 
 ```js
 
-
 //#region foo.js
 const x = 1;
 
@@ -18,16 +17,8 @@ const x = 1;
 const z = 4;
 
 //#endregion
-//#region common.js
-var common_ns = {};
-__export(common_ns, {
-	x:() => x,
-	z:() => z
-});
-
-//#endregion
 //#region entry.js
-console.log(common_ns.x, common_ns.y, common_ns.z);
+console.log(x, undefined, z);
 
 //#endregion
 ```

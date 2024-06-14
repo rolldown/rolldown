@@ -28,9 +28,6 @@ const shared = defineConfig({
   ],
   resolve: {
     extensions: ['.ts', '.js'],
-    alias: {
-      '@src': nodePath.resolve(import.meta.dirname, 'src'),
-    },
   },
 })
 
@@ -107,6 +104,18 @@ export default defineConfig([
             const fileName = nodePath.basename(file)
             console.log('[build:done] Copying', file, 'to ./dist/shared')
             fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
+          })
+
+          // Copy binding types and rollup types to dist
+          const distTypesDir = nodePath.resolve(outputDir, 'types')
+          fsExtra.ensureDirSync(distTypesDir)
+          const types = globSync(['./src/*.d.ts'], {
+            absolute: true,
+          })
+          types.forEach((file) => {
+            const fileName = nodePath.basename(file)
+            console.log('[build:done] Copying', file, 'to ./dist/shared')
+            fsExtra.copyFileSync(file, nodePath.join(distTypesDir, fileName))
           })
         },
       },

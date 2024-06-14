@@ -23,7 +23,7 @@ use crate::{
   SharedOptions,
 };
 
-use self::wrapping::create_wrapper;
+use self::{tree_shaking::MemberChainToResolvedSymbolRef, wrapping::create_wrapper};
 
 use super::scan_stage::ScanStageOutput;
 
@@ -43,6 +43,8 @@ pub struct LinkStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
   pub errors: Vec<BuildError>,
+  pub used_symbol_refs: FxHashSet<SymbolRef>,
+  pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
 
 #[derive(Debug)]
@@ -58,6 +60,8 @@ pub struct LinkStage<'a> {
   pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub input_options: &'a SharedOptions,
   pub dynamic_import_usage: FxHashMap<NormalModuleId, DynamicImportUse>,
+  pub used_symbol_refs: FxHashSet<SymbolRef>,
+  pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -79,6 +83,8 @@ impl<'a> LinkStage<'a> {
       ast_table: scan_stage_output.ast_table,
       input_options,
       dynamic_import_usage: scan_stage_output.dynamic_import_usage_map,
+      used_symbol_refs: FxHashSet::default(),
+      top_level_member_expr_resolved_cache: FxHashMap::default(),
     }
   }
 
@@ -164,6 +170,8 @@ impl<'a> LinkStage<'a> {
       warnings: self.warnings,
       errors: self.errors,
       ast_table: self.ast_table,
+      used_symbol_refs: self.used_symbol_refs,
+      top_level_member_expr_resolved_cache: self.top_level_member_expr_resolved_cache,
     }
   }
 

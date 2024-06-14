@@ -7,6 +7,7 @@ use serde::Deserialize;
 #[derivative(Debug)]
 pub struct BindingHookResolveIdExtraOptions {
   pub is_entry: bool,
+  #[napi(ts_type = "'import' | 'dynamic-import' | 'require-call'")]
   pub kind: String,
 }
 

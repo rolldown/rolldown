@@ -1,5 +1,5 @@
 import { performance } from 'node:perf_hooks'
-import { rolldown } from '@src/rolldown'
+import { rolldown } from '../../rolldown'
 import type { RolldownOptions, RolldownOutput, RollupOutput } from '../../index'
 import { arraify } from '../../utils/index'
 import { ensureConfig, logger } from '../utils'

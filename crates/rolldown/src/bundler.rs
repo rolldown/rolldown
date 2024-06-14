@@ -40,31 +40,39 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn write(&mut self) -> Result<BundleOutput> {
-    let dir = self.options.cwd.as_path().join(&self.options.dir).to_string_lossy().to_string();
-
     let mut output = self.bundle_up(true).await?;
-
     self.plugin_driver.write_bundle(&mut output.assets).await?;
 
-    self.fs.create_dir_all(dir.as_path()).map_err(|err| {
-      anyhow::anyhow!(
-        "Could not create directory for output chunks: {:?} \ncwd: {}",
-        dir.as_path(),
-        self.options.cwd.display()
-      )
-      .context(err)
-    })?;
-    for chunk in &output.assets {
-      let dest = dir.as_path().join(chunk.filename());
-      if let Some(p) = dest.parent() {
-        if !self.fs.exists(p) {
-          self.fs.create_dir_all(p).unwrap();
-        }
-      };
-      self.fs.write(dest.as_path(), chunk.content_as_bytes()).map_err(|err| {
-        anyhow::anyhow!("Failed to write file in {:?}", dir.as_path().join(chunk.filename()))
-          .context(err)
+    if let Some(dest) = &self.options.file {
+      for chunk in &output.assets {
+        self
+          .fs
+          .write(dest.as_path(), chunk.content_as_bytes())
+          .map_err(|err| anyhow::anyhow!("Failed to write file in {}", dest).context(err))?;
+      }
+    } else {
+      let dir = self.options.cwd.as_path().join(&self.options.dir).to_string_lossy().to_string();
+
+      self.fs.create_dir_all(dir.as_path()).map_err(|err| {
+        anyhow::anyhow!(
+          "Could not create directory for output chunks: {:?} \ncwd: {}",
+          dir.as_path(),
+          self.options.cwd.display()
+        )
+        .context(err)
       })?;
+      for chunk in &output.assets {
+        let dest = dir.as_path().join(chunk.filename());
+        if let Some(p) = dest.parent() {
+          if !self.fs.exists(p) {
+            self.fs.create_dir_all(p).unwrap();
+          }
+        };
+        self.fs.write(dest.as_path(), chunk.content_as_bytes()).map_err(|err| {
+          anyhow::anyhow!("Failed to write file in {:?}", dir.as_path().join(chunk.filename()))
+            .context(err)
+        })?;
+      }
     }
 
     Ok(output)

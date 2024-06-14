@@ -97,6 +97,7 @@ pub fn normalize_binding_options(
     chunk_filenames: output_options.chunk_file_names,
     asset_filenames: output_options.asset_file_names,
     dir: output_options.dir,
+    file: output_options.file,
     sourcemap: output_options.sourcemap.map(Into::into),
     banner: normalize_addon_option(output_options.banner),
     footer: normalize_addon_option(output_options.footer),

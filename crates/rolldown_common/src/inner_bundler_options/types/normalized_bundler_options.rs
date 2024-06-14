@@ -30,6 +30,7 @@ pub struct NormalizedBundlerOptions {
   pub chunk_filenames: FilenameTemplate,
   pub asset_filenames: FilenameTemplate,
   pub dir: String,
+  pub file: Option<String>,
   pub format: OutputFormat,
   pub sourcemap: SourceMapType,
   pub banner: Option<AddonOutputOption>,

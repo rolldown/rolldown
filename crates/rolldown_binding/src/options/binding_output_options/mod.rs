@@ -29,6 +29,7 @@ pub struct BindingOutputOptions {
   // chunkFileNames: string | ((chunkInfo: PreRenderedChunk) => string);
   // compact: boolean;
   pub dir: Option<String>,
+  pub file: Option<String>,
   // pub entry_file_names: String, // | ((chunkInfo: PreRenderedChunk) => string)
   // esModule: boolean;
   #[napi(ts_type = "'default' | 'named' | 'none' | 'auto'")]

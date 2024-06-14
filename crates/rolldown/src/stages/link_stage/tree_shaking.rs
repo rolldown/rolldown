@@ -4,6 +4,8 @@ use crate::types::tree_shake::{UsedExportsInfo, UsedInfo};
 // use crate::utils::extract_member_chain::extract_canonical_symbol_info;
 use oxc::span::CompactStr;
 use oxc_index::IndexVec;
+use oxc_index::IndexVec;
+use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
@@ -206,7 +208,7 @@ impl LinkStage<'_> {
       .collect::<IndexVec<NormalModuleId, _>>();
 
     let mut is_module_included_vec: IndexVec<NormalModuleId, bool> =
-      oxc_index::index_vec![false; self.module_table.normal_modules.len()];
+      oxc::index::index_vec![false; self.module_table.normal_modules.len()];
 
     let mut used_exports_info_vec: IndexVec<NormalModuleId, UsedExportsInfo> =
       oxc_index::index_vec![UsedExportsInfo::default(); self.module_table.normal_modules.len()];
@@ -316,14 +318,14 @@ impl LinkStage<'_> {
     }
 
     let mut index_side_effects_cache =
-      oxc_index::index_vec![None; self.module_table.normal_modules.len()];
+      oxc::index::index_vec![None; self.module_table.normal_modules.len()];
     let index_module_side_effects = self
       .module_table
       .normal_modules
       .iter()
       .map(|module| {
         let mut visited: IndexVisited =
-          oxc_index::index_vec![false; self.module_table.normal_modules.len()];
+          oxc::index::index_vec![false; self.module_table.normal_modules.len()];
         determine_side_effects_for_module(
           &mut visited,
           &mut index_side_effects_cache,

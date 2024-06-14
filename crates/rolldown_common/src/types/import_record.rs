@@ -4,7 +4,7 @@ use rolldown_rstr::Rstr;
 
 use crate::{ModuleId, SymbolRef};
 
-oxc_index::define_index_type! {
+oxc::index::define_index_type! {
   pub struct ImportRecordId = u32;
 }
 

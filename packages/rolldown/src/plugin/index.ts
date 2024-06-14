@@ -10,7 +10,7 @@ import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
 import type { PluginContext } from './plugin-context'
 import type { TransformPluginContext } from './transfrom-plugin-context'
-import type { NormalizedOutputOptions } from '@src/options/normalized-output-options'
+import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import type { LogLevel } from '../log/logging'
 import type { RollupLog } from '../rollup'
 import type { MinimalPluginContext } from '../log/logger'
@@ -24,6 +24,8 @@ export type Hook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> =
   | Handler
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
+
+export type ImportKind = BindingHookResolveIdExtraOptions['kind']
 
 export type ResolveIdResult =
   | string
@@ -110,7 +112,7 @@ export interface Plugin {
       | string
       | {
           code: string
-          map?: string | null | SourceMapInput
+          map?: SourceMapInput
           moduleSideEffects?: ModuleSideEffects
         }
     >
@@ -143,7 +145,7 @@ export interface Plugin {
       | string
       | {
           code: string
-          map?: string | null | SourceMapInput
+          map?: SourceMapInput
         }
     >
   >

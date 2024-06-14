@@ -1,13 +1,15 @@
 use derivative::Derivative;
 use serde::Deserialize;
 
+use crate::types::binding_sourcemap::BindingSourcemap;
+
 #[napi_derive::napi(object)]
 #[derive(Deserialize, Default, Derivative)]
 #[serde(rename_all = "camelCase")]
 #[derivative(Debug)]
 pub struct BindingHookRenderChunkOutput {
   pub code: String,
-  pub map: Option<String>,
+  pub map: Option<BindingSourcemap>,
 }
 
 impl TryFrom<BindingHookRenderChunkOutput> for rolldown_plugin::HookRenderChunkOutput {
@@ -16,13 +18,7 @@ impl TryFrom<BindingHookRenderChunkOutput> for rolldown_plugin::HookRenderChunkO
   fn try_from(value: BindingHookRenderChunkOutput) -> Result<Self, Self::Error> {
     Ok(rolldown_plugin::HookRenderChunkOutput {
       code: value.code,
-      map: value
-        .map
-        .map(|content| {
-          rolldown_sourcemap::SourceMap::from_json_string(&content)
-            .map_err(|e| anyhow::format_err!("SOURCEMAP_ERROR: {:?}", e))
-        })
-        .transpose()?,
+      map: value.map.map(TryInto::try_into).transpose()?,
     })
   }
 }

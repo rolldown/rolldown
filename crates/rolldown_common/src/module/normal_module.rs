@@ -6,8 +6,8 @@ use crate::{
   ImportRecordId, LocalExport, ModuleDefFormat, ModuleId, ModuleInfo, NamedImport, NormalModuleId,
   ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
+use oxc::index::IndexVec;
 use oxc::span::Span;
-use oxc_index::IndexVec;
 use rolldown_rstr::Rstr;
 use rustc_hash::{FxHashMap, FxHashSet};
 

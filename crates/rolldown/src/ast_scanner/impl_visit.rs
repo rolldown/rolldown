@@ -1,7 +1,5 @@
 use std::{borrow::Borrow, collections::hash_map::Entry, sync::Arc};
 
-use std::sync::Arc;
-
 use oxc::{
   ast::{
     ast::{Argument, Expression, FormalParameter, IdentifierReference, MemberExpression},
@@ -11,14 +9,10 @@ use oxc::{
   codegen::{self, Codegen, CodegenOptions, Gen},
   semantic::SymbolId,
   span::CompactStr,
-  semantic::SymbolId,
 };
 use rolldown_common::{ImportKind, SymbolRef};
 use rolldown_error::BuildError;
 use rustc_hash::FxHashSet;
-use rolldown_common::ImportKind;
-use rolldown_error::BuildError;
-use rolldown_common::ImportKind;
 
 use crate::utils::call_expression_ext::{CallExpressionExt, CallExpressionKind};
 
@@ -26,7 +20,6 @@ use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
 impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
-    dbg!(&self.file_path);
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.current_stmt_info.side_effect =
@@ -51,6 +44,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
       self.visit_statement(stmt);
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }
+    dbg!(&self.file_path);
     dbg!(&self.dynamic_import_usage_collector);
   }
 

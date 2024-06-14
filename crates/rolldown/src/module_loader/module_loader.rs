@@ -1,4 +1,5 @@
-use oxc::index::IndexVec;
+use itertools::Itertools;
+use oxc::index::{Idx, IndexVec};
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind, ImportRecordId,
   ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId, ResolvedRequestInfo,
@@ -9,12 +10,14 @@ use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use super::normal_module_task::NormalModuleTask;
 use super::runtime_normal_module_task::RuntimeNormalModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
+use crate::ast_scanner::DynamicImportUse;
 use crate::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
 use crate::runtime::{RuntimeModuleBrief, ROLLDOWN_RUNTIME_RESOURCE_ID};
@@ -64,6 +67,7 @@ pub struct ModuleLoaderOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
   pub errors: Vec<BuildError>,
+  pub dynamic_import_usage_map: FxHashMap<NormalModuleId, DynamicImportUse>,
 }
 
 impl ModuleLoader {
@@ -187,6 +191,7 @@ impl ModuleLoader {
 
     // Store the already consider as entry module
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
+    dbg!(&user_defined_entry_ids);
 
     let mut entry_points = user_defined_entries
       .into_iter()
@@ -201,6 +206,7 @@ impl ModuleLoader {
       .collect::<Vec<_>>();
 
     let mut dynamic_import_entry_ids = FxHashSet::default();
+    let mut dynamic_import_usage_pairs = Vec::default();
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
 
@@ -218,7 +224,7 @@ impl ModuleLoader {
             raw_import_records,
             warnings,
             ast,
-            dynamic_usage,
+            mut dynamic_import_usage,
           } = task_result;
           all_warnings.extend(warnings);
 
@@ -238,6 +244,11 @@ impl ModuleLoader {
                   && !user_defined_entry_ids.contains(&id)
                 {
                   dynamic_import_entry_ids.insert(id);
+                  if let Some(usage) =
+                    dynamic_import_usage.remove(&ImportRecordId::from_usize(import_record_id))
+                  {
+                    dynamic_import_usage_pairs.push((id, usage));
+                  }
                 }
               }
               raw_rec.into_import_record(id)
@@ -289,6 +300,22 @@ impl ModuleLoader {
         module
       })
       .collect();
+    let mut dynamic_import_usage_map = FxHashMap::default();
+    for (k, v) in dynamic_import_usage_pairs.into_iter().group_by(|(id, usage)| *id).into_iter() {
+      let res = v.into_iter().reduce(|(_, acc_usage), (_, usage)| {
+        let merged_usage = match (acc_usage, usage) {
+          (DynamicImportUse::All, _) => DynamicImportUse::All,
+          (_, DynamicImportUse::All) => DynamicImportUse::All,
+          (DynamicImportUse::Partial(acc), DynamicImportUse::Partial(cur)) => {
+            DynamicImportUse::Partial(acc.union(&cur).cloned().collect::<FxHashSet<_>>())
+          }
+        };
+        (k, merged_usage)
+      });
+      if let Some((module_id, usage)) = res {
+        dynamic_import_usage_map.insert(module_id, usage);
+      }
+    }
 
     let ast_table: IndexVec<NormalModuleId, OxcAst> =
       self.intermediate_normal_modules.ast_table.into_iter().flatten().collect();
@@ -296,6 +323,7 @@ impl ModuleLoader {
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
     dynamic_import_entry_ids.sort_by_key(|id| &modules[*id].stable_resource_id);
 
+    dbg!(&dynamic_import_usage_map);
     entry_points.extend(dynamic_import_entry_ids.into_iter().map(|id| EntryPoint {
       name: None,
       id,
@@ -313,6 +341,7 @@ impl ModuleLoader {
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
       errors,
+      dynamic_import_usage_map,
     })
   }
 }

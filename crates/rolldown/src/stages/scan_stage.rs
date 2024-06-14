@@ -9,8 +9,10 @@ use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
+use rustc_hash::FxHashMap;
 
 use crate::{
+  ast_scanner::DynamicImportUse,
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
   runtime::RuntimeModuleBrief,
   types::symbols::Symbols,
@@ -35,6 +37,7 @@ pub struct ScanStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
   pub errors: Vec<BuildError>,
+  pub dynamic_import_usage_map: FxHashMap<NormalModuleId, DynamicImportUse>,
 }
 
 impl ScanStage {
@@ -68,6 +71,7 @@ impl ScanStage {
       warnings,
       errors,
       ast_table,
+      dynamic_import_usage_map,
     } = module_loader.fetch_all_modules(user_entries).await?;
     self.errors.extend(errors);
 
@@ -79,6 +83,7 @@ impl ScanStage {
       warnings,
       ast_table,
       errors: std::mem::take(&mut self.errors),
+      dynamic_import_usage_map,
     })
   }
 

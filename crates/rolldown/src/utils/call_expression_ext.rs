@@ -1,5 +1,5 @@
 use oxc::ast::ast::{self, IdentifierName, ImportExpression, StaticMemberExpression};
-use oxc::span::Span;
+use oxc::span::{GetSpan, Span};
 use rolldown_common::AstScopes;
 
 pub trait CallExpressionExt<'ast> {
@@ -49,7 +49,7 @@ impl<'ast> CallExpressionExt<'ast> for ast::CallExpression<'ast> {
         if matches!(member_expr.object, ast::Expression::ImportExpression { .. })
           && matches!(&member_expr.property, IdentifierName { name, .. } if name == "then")
         {
-          CallExpressionKind::ImportThen(member_expr.span)
+          CallExpressionKind::ImportThen(member_expr.object.span())
         } else {
           CallExpressionKind::Other
         }

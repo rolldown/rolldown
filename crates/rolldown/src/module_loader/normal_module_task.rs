@@ -219,7 +219,7 @@ impl NormalModuleTask {
         module,
         raw_import_records: import_records,
         ast,
-        dynamic_usage: normalized_dynamic_import_usage,
+        dynamic_import_usage: normalized_dynamic_import_usage,
       }))
       .await
       .expect("Send should not fail");

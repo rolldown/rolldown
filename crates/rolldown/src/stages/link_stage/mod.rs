@@ -2,8 +2,8 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
-  NormalizedBundlerOptions, OutputFormat, StmtInfo, WrapKind,
+  EntryPoint, ExportsKind, ImportKind, ImportRecordId, ModuleId, ModuleTable, NormalModule,
+  NormalModuleId, NormalizedBundlerOptions, OutputFormat, StmtInfo, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -11,9 +11,10 @@ use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
   rayon::{ParallelBridge, ParallelIterator},
 };
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
+  ast_scanner::DynamicImportUse,
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
@@ -56,6 +57,7 @@ pub struct LinkStage<'a> {
   pub errors: Vec<BuildError>,
   pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub input_options: &'a SharedOptions,
+  pub dynamic_import_usage: FxHashMap<NormalModuleId, DynamicImportUse>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -76,6 +78,7 @@ impl<'a> LinkStage<'a> {
       errors: scan_stage_output.errors,
       ast_table: scan_stage_output.ast_table,
       input_options,
+      dynamic_import_usage: scan_stage_output.dynamic_import_usage_map,
     }
   }
 
@@ -86,7 +89,14 @@ impl<'a> LinkStage<'a> {
 
       create_wrapper(module, linking_info, &mut self.symbols, &self.runtime);
       if self.entries.iter().any(|entry| entry.id == module.id) {
-        init_entry_point_stmt_info(self.input_options, &self.runtime, module, linking_info);
+        init_entry_point_stmt_info(
+          self.input_options,
+          &self.runtime,
+          module,
+          linking_info,
+          &self.dynamic_import_usage,
+          &self.symbols,
+        );
       }
 
       // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
@@ -365,6 +375,8 @@ pub fn init_entry_point_stmt_info(
   runtime: &RuntimeModuleBrief,
   module: &mut NormalModule,
   meta: &mut LinkingMetadata,
+  dynamic_import_usage: &FxHashMap<NormalModuleId, DynamicImportUse>,
+  symbols: &Symbols,
 ) {
   let mut referenced_symbols = vec![];
 
@@ -375,8 +387,23 @@ pub fn init_entry_point_stmt_info(
     referenced_symbols.push(meta.wrapper_ref.unwrap());
   }
 
+  dbg!(&module.id, meta.has_dynamic_exports);
   // Entry chunk need to generate exports, so we need reference to all exports to make sure they are included in tree-shaking.
-  referenced_symbols.extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref));
+  match dynamic_import_usage.get(&module.id) {
+    Some(DynamicImportUse::Partial(set)) => {
+      referenced_symbols.extend(meta.canonical_exports().filter_map(|(_, export)| {
+        let symbol = symbols.get(export.symbol_ref);
+        if set.contains(&symbol.name) {
+          Some(export.symbol_ref)
+        } else {
+          None
+        }
+      }));
+    }
+    Some(DynamicImportUse::All) | None => {
+      referenced_symbols.extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref));
+    }
+  }
 
   if matches!(module.exports_kind, ExportsKind::Esm) && matches!(options.format, OutputFormat::Cjs)
   {

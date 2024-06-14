@@ -17,5 +17,5 @@ pub struct NormalModuleTaskResult {
   pub warnings: Vec<BuildError>,
   pub module: NormalModule,
   pub ast: OxcAst,
-  pub dynamic_usage: FxHashMap<ImportRecordId, DynamicImportUse>,
+  pub dynamic_import_usage: FxHashMap<ImportRecordId, DynamicImportUse>,
 }

@@ -162,12 +162,14 @@ impl<'me> AstScanner<'me> {
         }
       }
     }
+    dbg!(&self.result.imports);
     let normalized_usage = self
       .dynamic_import_usage_collector
       .dynamic_import_usage_map
       .into_iter()
       .filter_map(|(span, usage)| self.result.imports.get(&span).map(|id| (*id, usage)))
       .collect::<FxHashMap<ImportRecordId, DynamicImportUse>>();
+    dbg!(&normalized_usage);
     self.result.normalized_dynamic_import_usage = normalized_usage;
     self.result.exports_kind = exports_kind;
     self.result

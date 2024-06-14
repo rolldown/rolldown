@@ -20,7 +20,7 @@ import {
 
 import type { Plugin } from './index'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
-import type { NormalizedOutputOptions } from '@src/options/normalized-output-options'
+import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function bindingifyPlugin(

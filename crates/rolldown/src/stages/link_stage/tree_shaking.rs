@@ -1,11 +1,9 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
 use crate::types::tree_shake::{UsedExportsInfo, UsedInfo};
+use oxc::index::IndexVec;
 // use crate::utils::extract_member_chain::extract_canonical_symbol_info;
 use oxc::span::CompactStr;
-use oxc_index::IndexVec;
-use oxc_index::IndexVec;
-use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
@@ -26,7 +24,7 @@ struct Context<'a> {
   runtime_id: NormalModuleId,
   metas: &'a LinkingMetadataVec,
   used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
-  /// Hash list of string is relatively slow, so we use a tow dimension hashmap to cache the resolved symbol.
+  /// Hash list of string is relatively slow, so we use a two dimensions hashmap to cache the resolved symbol.
   /// The first level only store the top level namespace member expr object identifier symbol ref.
   /// With this method, we could avoid the hash calculation of the whole member expr chains.
   /// for the value, the first element is the resolved symbol ref, the second element is how much
@@ -211,7 +209,7 @@ impl LinkStage<'_> {
       oxc::index::index_vec![false; self.module_table.normal_modules.len()];
 
     let mut used_exports_info_vec: IndexVec<NormalModuleId, UsedExportsInfo> =
-      oxc_index::index_vec![UsedExportsInfo::default(); self.module_table.normal_modules.len()];
+      oxc::index::index_vec![UsedExportsInfo::default(); self.module_table.normal_modules.len()];
     let mut top_level_member_expr_resolved_cache = FxHashMap::default();
     let context = &mut Context {
       modules: &self.module_table.normal_modules,

@@ -598,6 +598,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-uhxNPwxJ.mjs
 
+# tests/esbuild/import_star_ts/ts_import_star_and_common_js
+
+- entry_js-!~{000}~.mjs => entry_js-MlVJCuK8.mjs
+
 # tests/esbuild/loader/loader_base64_common_js_and_es6
 
 - entry_js-!~{000}~.mjs => entry_js-29xuUhLE.mjs

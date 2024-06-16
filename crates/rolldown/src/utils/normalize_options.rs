@@ -13,13 +13,15 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   let mut loaders = FxHashMap::from(
     [
-      ("json".to_string(), ModuleType::Json),
       ("js".to_string(), ModuleType::Js),
       ("mjs".to_string(), ModuleType::Js),
       ("cjs".to_string(), ModuleType::Js),
       ("jsx".to_string(), ModuleType::Jsx),
       ("ts".to_string(), ModuleType::Ts),
+      ("mts".to_string(), ModuleType::Ts),
+      ("cts".to_string(), ModuleType::Ts),
       ("tsx".to_string(), ModuleType::Tsx),
+      ("json".to_string(), ModuleType::Json),
       ("txt".to_string(), ModuleType::Text),
     ]
     .into_iter()

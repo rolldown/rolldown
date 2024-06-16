@@ -14,12 +14,12 @@ pub mod load_source;
 pub mod make_ast_symbol_and_scope;
 pub mod normalize_options;
 pub mod parse_to_ast;
+pub mod pre_process_ast;
 pub mod renamer;
 pub mod render_chunks;
 pub mod render_normal_module;
 pub mod resolve_id;
 pub mod transform_source;
-pub mod transformer;
 pub mod tweak_ast_for_scanning;
 
 #[tracing::instrument(level = "trace", skip_all)]

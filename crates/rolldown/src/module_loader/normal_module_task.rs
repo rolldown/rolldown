@@ -24,7 +24,6 @@ use crate::{
   utils::{
     load_source::load_source, make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
     parse_to_ast::parse_to_ast, resolve_id::resolve_id, transform_source::transform_source,
-    tweak_ast_for_scanning::tweak_ast_for_scanning,
   },
   SharedOptions, SharedResolver,
 };
@@ -118,7 +117,6 @@ impl NormalModuleTask {
       module_type,
       Arc::clone(&source),
     )?;
-    tweak_ast_for_scanning(&mut ast);
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);
 

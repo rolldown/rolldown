@@ -23,6 +23,9 @@ export class PluginContext {
   resolve: BindingPluginContext['resolve']
   emitFile: (file: EmittedAsset) => string
   getFileName: (referenceId: string) => string
+  /**
+   * @deprecated This rollup API won't be supported by rolldown. Using this API will cause runtime error.
+   */
   parse: (input: string, options?: any) => any
 
   constructor(
@@ -71,7 +74,7 @@ export class PluginContext {
     }
     this.getFileName = context.getFileName.bind(context)
     this.parse = unsupported(
-      'PluginContext.parse. You could directly using `acorn` as a workaround.',
+      '`PluginContext#parse` is not supported by rolldown.',
     )
   }
 }

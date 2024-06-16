@@ -1,5 +1,5 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
-use crate::types::symbols::Symbols;
+use crate::types::symbols::{self, Symbols};
 use crate::types::tree_shake::{UsedExportsInfo, UsedInfo};
 use oxc::index::IndexVec;
 use oxc::span::CompactStr;
@@ -232,7 +232,6 @@ impl LinkStage<'_> {
       if entry.kind != rolldown_common::EntryPointKind::DynamicImport {
         module.named_exports.iter().for_each(|(name, symbol_ref)| {
           context.used_symbol_refs.insert(symbol_ref.referenced);
-          context.used_exports_info_vec[entry.id].used_exports.insert(name.clone());
         });
       }
       include_module(context, module);
@@ -246,13 +245,16 @@ impl LinkStage<'_> {
     });
     self.module_table.normal_modules.iter_mut().for_each(|module| {
       let mut used_exports_info = std::mem::take(&mut used_exports_info_vec[module.id]);
-      let mut has_commonjs_canonical_export = false;
       used_exports_info.used_exports = self.metas[module.id]
         .sorted_and_non_ambiguous_resolved_exports
         .iter()
         .filter_map(|item| {
           let symbol_ref = self.metas[module.id].resolved_exports.get(item)?.symbol_ref;
-          let canonical_export = self.symbols.par_canonical_ref_for(symbol_ref);
+          let mut canonical_export = self.symbols.par_canonical_ref_for(symbol_ref);
+          let symbol = self.symbols.get(canonical_export);
+          if let Some(ref alias) = symbol.namespace_alias {
+            canonical_export = alias.namespace_ref;
+          }
           if self.used_symbol_refs.contains(&canonical_export) {
             Some(item.clone())
           } else {

@@ -25,6 +25,7 @@ const value = 1;
 //#region foo.js
 var foo_ns = {};
 __export(foo_ns, {
+	bar:() => import_commonjs$1.bar,
 	value:() => value
 });
 __reExport(foo_ns, __toESM(require_commonjs()));

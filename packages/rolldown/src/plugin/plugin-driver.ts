@@ -4,7 +4,7 @@ import { Plugin } from './'
 import { error, logPluginError } from '../log/logs'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { NormalizedOutputOptions } from '../options/normalized-output-options'
-import { RollupError } from '@src/rollup'
+import { RollupError } from '../rollup'
 import { normalizeHook } from '../utils/normalize-hook'
 
 export class PluginDriver {

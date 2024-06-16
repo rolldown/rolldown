@@ -1,4 +1,4 @@
-import { BindingHookSideEffects } from '@src/binding'
+import { BindingHookSideEffects } from '../binding'
 import { ModuleSideEffects } from '../plugin'
 
 export function bindingifySideEffects(

@@ -6,7 +6,7 @@ import type { Plugin } from './index'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
 import { AssetSource, bindingAssetSource } from '../utils/asset-source'
-import { unimplemented } from '@src/utils'
+import { unimplemented } from '../utils/misc'
 
 export interface EmittedAsset {
   type: 'asset'

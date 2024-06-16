@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use oxc::semantic::ScopeId;
-use oxc_syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
+use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};

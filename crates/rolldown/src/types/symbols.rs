@@ -1,5 +1,5 @@
+use oxc::index::IndexVec;
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
-use oxc_index::IndexVec;
 use rolldown_common::{ChunkId, NormalModuleId, SymbolRef};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;

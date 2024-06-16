@@ -1,4 +1,4 @@
-import { getCodeFrame } from '@src/utils/code-frame'
+import { getCodeFrame } from '../utils/code-frame'
 import { locate } from 'locate-character'
 import type { RollupLog } from '../rollup'
 

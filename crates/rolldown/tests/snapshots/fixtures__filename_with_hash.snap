@@ -1385,7 +1385,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/loaders/jsx
 
-- main_jsx-!~{000}~.mjs => main_jsx-2aXoU9Jq.mjs
+- main_jsx-!~{000}~.mjs => main_jsx-UmPHGj5W.mjs
 
 # tests/fixtures/loaders/ts
 
@@ -1393,7 +1393,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/loaders/tsx
 
-- main_tsx-!~{000}~.mjs => main_tsx-WwTEFRUx.mjs
+- main_tsx-!~{000}~.mjs => main_tsx-2wHZwh5U.mjs
 
 # tests/fixtures/loaders/txt/empty
 

@@ -249,8 +249,7 @@ impl ModuleLoader {
           self.symbols.add_ast_symbols(module_id, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeNormalModuleTaskResult { ast_symbol, module, runtime, warnings: _, ast } =
-            task_result;
+          let RuntimeNormalModuleTaskResult { ast_symbol, module, runtime, ast } = task_result;
 
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module);
           self.intermediate_normal_modules.ast_table[self.runtime_id] = Some(ast);

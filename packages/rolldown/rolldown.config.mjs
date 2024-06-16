@@ -1,6 +1,7 @@
+// @ts-check
+
 import { defineConfig } from 'npm-rolldown'
 import pkgJson from './package.json' with { type: 'json' }
-import esbuild from 'esbuild'
 import nodePath from 'node:path'
 import fsExtra from 'fs-extra'
 import { globSync } from 'glob'
@@ -22,36 +23,11 @@ const shared = defineConfig({
     /\.\/rolldown-binding\.wasi\.cjs/,
     ...Object.keys(pkgJson.dependencies).filter(
       (dep) =>
-        // `locate-character` only exports esm, so we have to inline it.
+        // `locate-character` only exports esm. to support emitting rolldown of cjs version, we have to inline it.
         dep !== 'locate-character',
     ),
   ],
-  resolve: {
-    extensions: ['.ts', '.js'],
-  },
 })
-
-/**
- * @returns {import('npm-rolldown').Plugin[]}
- */
-const sharedPlugins = (outputCjs = false) => [
-  {
-    name: 'transpile-ts',
-    async transform(code, id) {
-      if (id.endsWith('.ts')) {
-        const ret = await esbuild.transform(code, {
-          loader: 'ts',
-          define: outputCjs
-            ? {
-                'import.meta.resolve': 'undefined',
-              }
-            : {},
-        })
-        return ret.code
-      }
-    },
-  },
-]
 
 export default defineConfig([
   {
@@ -68,7 +44,6 @@ export default defineConfig([
       ].join('\n'),
     },
     plugins: [
-      ...sharedPlugins(),
       {
         name: 'shim',
         buildEnd() {
@@ -123,7 +98,16 @@ export default defineConfig([
   },
   {
     ...shared,
-    plugins: [...sharedPlugins(true)],
+    plugins: [
+      {
+        name: 'shim-import-meta',
+        transform(code, id) {
+          if (id.endsWith('.ts') && code.includes('import.meta.resolve')) {
+            return code.replace('import.meta.resolve', 'undefined')
+          }
+        },
+      },
+    ],
     output: {
       dir: outputDir,
       format: 'cjs',

@@ -28,7 +28,7 @@
   "license": "MIT",
   "devDependencies": {
     "rolldown": "workspace:*",
-    "npm-rolldown": "npm:rolldown@0.10.4-snapshot-66e8482-20240616163535",
+    "npm-rolldown": "npm:rolldown@0.10.4",
     "@ls-lint/ls-lint": "^2.2.3",
     "@taplo/cli": "^0.7.0",
     "@types/node": "20.14.2",

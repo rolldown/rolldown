@@ -3,7 +3,8 @@
     "input": [{
       "name": "main_tsx",
       "import": "main.tsx"
-    }]
+    }],
+    "external": ["react/jsx-runtime"]
   },
   "expectExecuted": false
 }

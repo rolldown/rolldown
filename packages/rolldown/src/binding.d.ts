@@ -234,13 +234,11 @@ export interface BindingSourcemap {
   inner: string | BindingJSONSourcemap
 }
 
-export function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
-export function registerPlugins(id: number, plugins: PluginsInSingleWorker): void
 export interface BindingTreeshake {
   moduleSideEffects: string
 }
 
-export function registerPlugins(id: number, plugins: PluginsInSingleWorker): void
+export function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 export interface RenderedChunk {
   isEntry: boolean

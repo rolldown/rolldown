@@ -4,7 +4,7 @@ use rolldown_common::{
 };
 
 use rolldown_rstr::Rstr;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   chunk_graph::ChunkGraph,
@@ -29,4 +29,5 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub chunk_graph: &'me ChunkGraph,
   pub options: &'me SharedOptions,
   pub top_level_cache: &'me FxHashMap<SymbolRef, FxHashMap<Box<[CompactStr]>, (SymbolRef, usize)>>,
+  pub used_symbol_refs: &'me FxHashSet<SymbolRef>,
 }

@@ -158,6 +158,7 @@ impl<'link> LinkStage<'link> {
           }
         };
         sorted_and_non_ambiguous_resolved_exports.push(exported_name.clone());
+        let owner = resolved_export.symbol_ref.owner;
       }
       sorted_and_non_ambiguous_resolved_exports.sort_unstable();
       meta.sorted_and_non_ambiguous_resolved_exports = sorted_and_non_ambiguous_resolved_exports;

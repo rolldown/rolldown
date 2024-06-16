@@ -95,6 +95,7 @@ impl<'a> GenerateStage<'a> {
               chunk_graph: &chunk_graph,
               options: self.options,
               top_level_cache: &self.link_output.top_level_member_expr_resolved_cache,
+              used_symbol_refs: &self.link_output.used_symbol_refs,
             },
             ast,
           );

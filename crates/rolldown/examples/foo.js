@@ -1,2 +1,3 @@
-export const x = 1
-export const y = 2
+export * from './commonjs'
+export { bar } from './commonjs'
+export * from './esm'

@@ -12,6 +12,7 @@ mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
+use rustc_hash::FxHashSet;
 
 use crate::types::tree_shake::UsedInfo;
 mod rename;

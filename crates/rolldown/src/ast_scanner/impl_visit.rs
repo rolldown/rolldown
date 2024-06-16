@@ -44,8 +44,8 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
       self.visit_statement(stmt);
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }
-    dbg!(&self.file_path);
-    dbg!(&self.dynamic_import_usage_collector);
+    // dbg!(&self.file_path);
+    // dbg!(&self.dynamic_import_usage_collector);
   }
 
   fn visit_binding_identifier(&mut self, ident: &oxc::ast::ast::BindingIdentifier) {
@@ -200,7 +200,14 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
                   ));
                 });
               }
-              oxc::ast::ast::BindingPatternKind::ObjectPattern(_) => todo!(),
+              oxc::ast::ast::BindingPatternKind::ObjectPattern(_) => {
+                // TODO: support this
+                *self
+                  .dynamic_import_usage_collector
+                  .dynamic_import_usage_map
+                  .entry(import_expression_span)
+                  .or_default() = super::DynamicImportUse::All;
+              }
               oxc::ast::ast::BindingPatternKind::ArrayPattern(_)
               | oxc::ast::ast::BindingPatternKind::AssignmentPattern(_) => {
                 *self

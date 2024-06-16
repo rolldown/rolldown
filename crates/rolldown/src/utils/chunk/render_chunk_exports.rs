@@ -11,6 +11,7 @@ pub fn render_chunk_exports(
   output_options: &SharedOptions,
 ) -> Option<String> {
   let export_items = get_export_items(this, graph);
+  dbg!(&export_items);
 
   if export_items.is_empty() {
     return None;
@@ -88,7 +89,7 @@ fn get_export_items(this: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolR
     ChunkKind::EntryPoint { module, .. } => {
       let meta = &graph.metas[module];
       meta
-        .canonical_exports()
+        .used_canonical_exports()
         .map(|(name, export)| (name.clone(), export.symbol_ref))
         .collect::<Vec<_>>()
     }

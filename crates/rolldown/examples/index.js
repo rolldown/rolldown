@@ -1,5 +1,5 @@
 import('./lib').then(res => {
-  console.log(`res.a: `, res.a)
+  console.log(`res.a: `, res.d)
 })
 // import('./lib').then(res => {
 //   console.log(`res.a: `, res.d)

@@ -8,7 +8,7 @@ import {
   RollupLogSchema,
   RollupLogWithStringSchema,
 } from '../log/logging'
-import { TreeshakingOptionsSchema } from '../treeshake'
+import { TreeshakingOptionsSchema, TreeshakingOptions } from '../treeshake'
 import { BuiltinPlugin } from '../plugin/bindingify-builtin-plugin'
 
 const inputOptionSchema = z
@@ -82,3 +82,7 @@ const inputOptionsSchema = z.strictObject({
 export type InputOptions = z.infer<typeof inputOptionsSchema>
 export type InputOption = z.infer<typeof inputOptionSchema>
 export type ExternalOption = z.infer<typeof externalSchema>
+export type InputOptions = z.infer<typeof inputOptionsSchema>
+export type InputOptions = Omit<z.infer<typeof inputOptionsSchema>, 'treeshake'> & {
+  treeshake?: boolean | TreeshakingOptions
+}

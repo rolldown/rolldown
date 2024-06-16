@@ -5,6 +5,7 @@ use rolldown_oxc_utils::{AstSnippet, OxcAst};
 use super::module_finalizers::scope_hoisting::{
   ScopeHoistingFinalizer, ScopeHoistingFinalizerContext,
 };
+pub mod ast_helper;
 pub mod augment_chunk_hash;
 pub mod call_expression_ext;
 pub mod chunk;

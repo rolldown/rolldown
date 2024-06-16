@@ -55,6 +55,7 @@ impl RuntimeNormalModuleTask {
       import_records: _,
       exports_kind: _,
       warnings: _,
+      normalized_dynamic_import_usage,
     } = scan_result;
 
     let module = NormalModule {

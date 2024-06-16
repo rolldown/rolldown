@@ -1,9 +1,9 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
-use crate::types::symbols::Symbols;
+use crate::types::symbols::{self, Symbols};
 use crate::types::tree_shake::{UsedExportsInfo, UsedInfo};
 use oxc::index::IndexVec;
-// use crate::utils::extract_member_chain::extract_canonical_symbol_info;
 use oxc::span::CompactStr;
+// use crate::utils::extract_member_chain::extract_canonical_symbol_info;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
@@ -108,7 +108,6 @@ fn include_module_as_namespace(ctx: &mut Context, module: &NormalModule) {
   });
 }
 
-#[track_caller]
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr]) {
   let mut cursor = 0;
 
@@ -230,9 +229,11 @@ impl LinkStage<'_> {
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
         include_symbol(context, *symbol_ref, &[]);
       });
-      module.named_exports.iter().for_each(|(name, _)| {
-        context.used_exports_info_vec[entry.id].used_exports.insert(name.clone());
-      });
+      if entry.kind != rolldown_common::EntryPointKind::DynamicImport {
+        module.named_exports.iter().for_each(|(name, symbol_ref)| {
+          context.used_symbol_refs.insert(symbol_ref.referenced);
+        });
+      }
       include_module(context, module);
     });
 
@@ -242,10 +243,26 @@ impl LinkStage<'_> {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });
     });
-
     self.module_table.normal_modules.iter_mut().for_each(|module| {
-      self.metas[module.id].used_exports_info =
-        std::mem::take(&mut used_exports_info_vec[module.id]);
+      let mut used_exports_info = std::mem::take(&mut used_exports_info_vec[module.id]);
+      used_exports_info.used_exports = self.metas[module.id]
+        .sorted_and_non_ambiguous_resolved_exports
+        .iter()
+        .filter_map(|item| {
+          let symbol_ref = self.metas[module.id].resolved_exports.get(item)?.symbol_ref;
+          let mut canonical_export = self.symbols.par_canonical_ref_for(symbol_ref);
+          let symbol = self.symbols.get(canonical_export);
+          if let Some(ref alias) = symbol.namespace_alias {
+            canonical_export = alias.namespace_ref;
+          }
+          if self.used_symbol_refs.contains(&canonical_export) {
+            Some(item.clone())
+          } else {
+            None
+          }
+        })
+        .collect::<FxHashSet<_>>();
+      self.metas[module.id].used_exports_info = used_exports_info;
     });
 
     self.top_level_member_expr_resolved_cache = top_level_member_expr_resolved_cache;

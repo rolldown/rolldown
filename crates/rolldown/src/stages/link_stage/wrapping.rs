@@ -2,8 +2,10 @@ use oxc::index::IndexVec;
 use rolldown_common::{
   ExportsKind, ModuleId, NormalModule, NormalModuleId, NormalModuleVec, StmtInfo, WrapKind,
 };
+use rustc_hash::FxHashMap;
 
 use crate::{
+  ast_scanner::DynamicImportUse,
   runtime::RuntimeModuleBrief,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},

@@ -1,3 +1,10 @@
-import * as m from './shared'
+import('./lib').then(res => {
+  console.log(`res.a: `, res.d)
+})
+// import('./lib').then(res => {
+//   console.log(`res.a: `, res.d)
+// })
+import { a as a2 } from './shared'
+const a = 'index.js'
+console.log(a, a2)
 
-console.log(`a.c.a: `, m.c)

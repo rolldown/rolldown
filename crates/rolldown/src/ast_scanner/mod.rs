@@ -21,7 +21,7 @@ use rolldown_error::BuildError;
 use rolldown_oxc_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::path_ext::PathExt;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
 use sugar_path::SugarPath;
 
@@ -39,6 +39,26 @@ pub struct ScanResult {
   pub imports: FxHashMap<Span, ImportRecordId>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildError>,
+  pub normalized_dynamic_import_usage: FxHashMap<ImportRecordId, DynamicImportUse>,
+}
+
+#[derive(Default, Debug)]
+pub enum DynamicImportUse {
+  #[default]
+  All,
+  Partial(FxHashSet<CompactStr>),
+}
+
+#[derive(Default, Debug)]
+struct DynamicImportUsageCollector {
+  /// Each span is the span of `ImportExpression`, because we visit call_expression before visiting import_expression.
+  /// and we use the span to find the corresponding import record, finally convert it into resolved
+  /// module id
+  pub dynamic_import_usage_map: FxHashMap<Span, DynamicImportUse>,
+  pub in_import_then_body: bool,
+  /// Using span to identify the module id, SymbolRef is used to collect the namespace object
+  /// usage
+  pub dynamic_module_ref: Option<(Span, SymbolRef)>,
 }
 
 pub struct AstScanner<'me> {
@@ -57,6 +77,7 @@ pub struct AstScanner<'me> {
   pub namespace_object_ref: SymbolRef,
   used_exports_ref: bool,
   used_module_ref: bool,
+  dynamic_import_usage_collector: DynamicImportUsageCollector,
 }
 
 impl<'me> AstScanner<'me> {
@@ -95,6 +116,7 @@ impl<'me> AstScanner<'me> {
       imports: FxHashMap::default(),
       exports_kind: ExportsKind::None,
       warnings: Vec::new(),
+      normalized_dynamic_import_usage: Default::default(),
     };
 
     Self {
@@ -112,6 +134,7 @@ impl<'me> AstScanner<'me> {
       source,
       file_path,
       trivias,
+      dynamic_import_usage_collector: DynamicImportUsageCollector::default(),
     }
   }
 
@@ -139,7 +162,13 @@ impl<'me> AstScanner<'me> {
         }
       }
     }
-
+    let normalized_usage = self
+      .dynamic_import_usage_collector
+      .dynamic_import_usage_map
+      .into_iter()
+      .filter_map(|(span, usage)| self.result.imports.get(&span).map(|id| (*id, usage)))
+      .collect::<FxHashMap<ImportRecordId, DynamicImportUse>>();
+    self.result.normalized_dynamic_import_usage = normalized_usage;
     self.result.exports_kind = exports_kind;
     self.result
   }
@@ -469,6 +498,33 @@ impl<'me> AstScanner<'me> {
           );
         }
       }
+    }
+  }
+
+  /// resolve the symbol from the identifier reference, and return if it is a top level symbol
+  fn resolve_identifier_reference(
+    &mut self,
+    symbol_id: Option<SymbolId>,
+    ident: &IdentifierReference,
+  ) -> Option<SymbolId> {
+    match symbol_id {
+      Some(symbol_id) if self.is_top_level(symbol_id) => Some(symbol_id),
+      None => {
+        if ident.name == "module" {
+          self.used_module_ref = true;
+        }
+        if ident.name == "exports" {
+          self.used_exports_ref = true;
+        }
+        if ident.name == "eval" {
+          self.result.warnings.push(
+            BuildError::eval(self.file_path.to_string(), Arc::clone(self.source), ident.span)
+              .with_severity_warning(),
+          );
+        }
+        None
+      }
+      _ => None,
     }
   }
 }

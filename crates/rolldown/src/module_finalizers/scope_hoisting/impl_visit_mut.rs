@@ -362,7 +362,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
   #[allow(clippy::collapsible_else_if)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     if let Some(call_expr) = expr.as_call_expression_mut() {
-      if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_empty() {
+      if call_expr.extract_call_expression_kind(self.scope).is_global_require()
+        && !call_expr.span.is_empty()
+      {
         let rec_id = self.ctx.module.imports[&call_expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         match rec.resolved_module {

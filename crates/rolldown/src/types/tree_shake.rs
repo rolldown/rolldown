@@ -7,6 +7,7 @@ bitflags::bitflags! {
     // If the module is used as a namespace
     const USED_AS_NAMESPACE = 1 << 1;
     const INCLUDED_AS_NAMESPACE = 1 << 2;
+    const HAS_COMMONJS_CANINOCAL_EXPORTS = 1 << 3;
   }
 }
 

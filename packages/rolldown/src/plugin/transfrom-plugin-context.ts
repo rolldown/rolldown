@@ -21,6 +21,7 @@ export class TransformPluginContext {
   getCombinedSourcemap: () => SourceMap
   emitFile: (file: EmittedAsset) => string
   getFileName: (referenceId: string) => string
+  parse: (input: string, options?: any) => any
 
   constructor(
     inner: BindingTransformPluginContext,
@@ -52,6 +53,7 @@ export class TransformPluginContext {
       return context.error(error)
     }
     this.resolve = context.resolve
+    this.parse = context.parse
     this.getCombinedSourcemap = () => JSON.parse(inner.getCombinedSourcemap())
     this.emitFile = context.emitFile
     this.getFileName = context.getFileName

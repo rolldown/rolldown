@@ -1,2 +1,3 @@
-import {a} from './share.mjs'
+import { createApp } from 'vue'
 
+export default createApp({})

@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/loaders/ts
+---
+# Assets
+
+## main_ts.mjs
+
+```js
+
+//#region main.ts
+const A = 'hello';
+const B = function() {
+	console.log(A);
+};
+
+//#endregion
+export { A, B };
+```

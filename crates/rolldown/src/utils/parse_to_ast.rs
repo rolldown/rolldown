@@ -2,7 +2,9 @@ use std::{path::Path, sync::Arc};
 
 use oxc::span::SourceType as OxcSourceType;
 use rolldown_common::{ModuleType, NormalizedBundlerOptions};
-use rolldown_loader_utils::{base64_to_esm, binary_to_esm, json_to_esm, text_to_esm};
+use rolldown_loader_utils::{
+  base64_to_esm, binary_to_esm, dataurl_to_esm, json_to_esm, text_to_esm,
+};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
 use super::pre_process_ast::pre_process_ast;
@@ -24,6 +26,7 @@ pub fn parse_to_ast(
   options: &NormalizedBundlerOptions,
   module_type: ModuleType,
   source: impl Into<Arc<str>>,
+  extension: Option<&str>,
 ) -> anyhow::Result<OxcAst> {
   let source: Arc<str> = source.into();
 
@@ -40,6 +43,7 @@ pub fn parse_to_ast(
       binary_to_esm(&source, options.platform, ROLLDOWN_RUNTIME_RESOURCE_ID).into(),
       OxcParseType::Js,
     ),
+    ModuleType::DataURL => (dataurl_to_esm(extension, &source)?.into(), OxcParseType::Js),
   };
 
   let oxc_source_type = {

@@ -80,10 +80,10 @@ impl NormalModuleTask {
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
+    let extension = self.resolved_path.path.as_path().extension().and_then(|ext| ext.to_str());
+
     let module_type = {
-      let ext =
-        self.resolved_path.path.as_path().extension().and_then(|ext| ext.to_str()).unwrap_or("js");
-      let module_type = self.ctx.input_options.module_types.get(ext);
+      let module_type = self.ctx.input_options.module_types.get(extension.unwrap_or("js"));
 
       // FIXME: Once we support more types, we should return error instead of defaulting to JS.
       module_type.copied().unwrap_or(ModuleType::Js)
@@ -116,6 +116,7 @@ impl NormalModuleTask {
       &self.ctx.input_options,
       module_type,
       Arc::clone(&source),
+      extension,
     )?;
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);

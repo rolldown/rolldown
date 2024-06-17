@@ -1,0 +1,28 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+
+//#region test.svg
+var test_ns, test_default;
+var init_test = __esmMin(() => {
+	test_ns = {};
+	__export(test_ns, {
+		default:() => test_default
+	});
+	test_default = 'data:image/svg+xml;base64,YQBigGP/ZA==';
+});
+
+//#endregion
+//#region entry.js
+console.log((init_test(),__toCommonJS(test_ns)));
+
+//#endregion
+```

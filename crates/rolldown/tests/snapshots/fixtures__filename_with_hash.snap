@@ -602,13 +602,41 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-MlVJCuK8.mjs
 
+# tests/esbuild/loader/auto_detect_mime_type_from_extension
+
+- entry_js-!~{000}~.mjs => entry_js-trFNRfWs.mjs
+
 # tests/esbuild/loader/loader_base64_common_js_and_es6
 
 - entry_js-!~{000}~.mjs => entry_js-29xuUhLE.mjs
 
+# tests/esbuild/loader/loader_data_url_base64_invalid_utf8
+
+- entry_js-!~{000}~.mjs => entry_js-9vpdLnix.mjs
+
+# tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding
+
+- entry_js-!~{000}~.mjs => entry_js-f2edYthF.mjs
+
+# tests/esbuild/loader/loader_data_url_common_js_and_es6
+
+- entry_js-!~{000}~.mjs => entry_js-quMRQIqn.mjs
+
+# tests/esbuild/loader/loader_data_url_escape_percents
+
+- entry_js-!~{000}~.mjs => entry_js-vc5L6f-D.mjs
+
+# tests/esbuild/loader/loader_data_url_extension_based_mime
+
+- entry_foo-!~{000}~.mjs => entry_foo-2_byJzw_.mjs
+
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
 - entry_js-!~{000}~.mjs => entry_js-BypVlh3H.mjs
+
+# tests/esbuild/loader/require_custom_extension_data_url
+
+- entry_js-!~{000}~.mjs => entry_js-UhjYvv_c.mjs
 
 # tests/esbuild/lower/lower_async_es5
 

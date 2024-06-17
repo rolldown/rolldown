@@ -103,7 +103,7 @@ pub fn normalize_binding_options(
     sourcemap_ignore_list,
     sourcemap_path_transform,
     format: output_options.format.map(|format_str| match format_str.as_str() {
-      "esm" => OutputFormat::Esm,
+      "es" => OutputFormat::Esm,
       "cjs" => OutputFormat::Cjs,
       _ => panic!("Invalid format: {format_str}"),
     }),

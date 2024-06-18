@@ -30,6 +30,14 @@ impl ParallelJsPlugin {
     Box::new(Self { plugins, worker_manager })
   }
 
+  pub fn new_shared(
+    plugins: Vec<BindingPluginOptions>,
+    worker_manager: Arc<WorkerManager>,
+  ) -> Arc<dyn Plugin> {
+    let plugins = plugins.into_iter().map(JsPlugin::new).collect::<Vec<_>>().into_boxed_slice();
+    Arc::new(Self { plugins, worker_manager })
+  }
+
   fn first_plugin(&self) -> &JsPlugin {
     &self.plugins[0]
   }

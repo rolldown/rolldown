@@ -14,7 +14,10 @@ use anyhow::Result;
 use rolldown_common::SharedFileEmitter;
 use rolldown_error::BuildError;
 use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
+use rolldown_plugin::{
+  HookBuildEndArgs, HookRenderErrorArgs, PluginDriver, SharedPlugin, SharedPluginDriver,
+};
+use sugar_path::SugarPath;
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
@@ -31,7 +34,7 @@ impl Bundler {
     BundlerBuilder::default().with_options(input_options).build()
   }
 
-  pub fn with_plugins(input_options: BundlerOptions, plugins: Vec<BoxPlugin>) -> Self {
+  pub fn with_plugins(input_options: BundlerOptions, plugins: Vec<SharedPlugin>) -> Self {
     BundlerBuilder::default().with_options(input_options).with_plugins(plugins).build()
   }
 }
@@ -95,8 +98,15 @@ impl Bundler {
     Ok(LinkStage::new(build_info, &self.options).link())
   }
 
+  #[allow(clippy::missing_transmute_annotations)]
   async fn bundle_up(&mut self, is_write: bool) -> Result<BundleOutput> {
     let mut link_stage_output = self.try_build().await?;
+
+    // The plugin_driver is wrapped by `Arc`, make it mutable is difficult, so here replace it to a new one.
+    self.plugin_driver = PluginDriver::new_shared_with_module_table(
+      &self.plugin_driver,
+      &Arc::new(unsafe { std::mem::transmute(&mut link_stage_output.module_table) }),
+    );
 
     self.plugin_driver.render_start().await?;
 

@@ -6,8 +6,9 @@ use crate::{
   worker_manager::WorkerManager,
 };
 use napi::Either;
-use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputFormat, Platform};
-use rolldown_plugin::BoxPlugin;
+use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, OutputFormat, Platform};
+use rolldown_plugin::SharedPlugin;
+use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
@@ -15,7 +16,7 @@ use std::{collections::HashMap, path::PathBuf, str::FromStr};
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct NormalizeBindingOptionsReturn {
   pub bundler_options: BundlerOptions,
-  pub plugins: Vec<BoxPlugin>,
+  pub plugins: Vec<SharedPlugin>,
 }
 
 fn normalize_addon_option(
@@ -131,7 +132,7 @@ pub fn normalize_binding_options(
   let worker_manager = worker_manager.map(Arc::new);
 
   #[cfg(not(target_family = "wasm"))]
-  let plugins: Vec<BoxPlugin> = input_options
+  let plugins: Vec<SharedPlugin> = input_options
     .plugins
     .into_iter()
     .chain(output_options.plugins)
@@ -144,10 +145,10 @@ pub fn normalize_binding_options(
             .and_then(|plugin| plugin.remove(&index))
             .unwrap_or_default();
           let worker_manager = worker_manager.as_ref().unwrap();
-          ParallelJsPlugin::new_boxed(plugins, Arc::clone(worker_manager))
+          ParallelJsPlugin::new_shared(plugins, Arc::clone(worker_manager))
         },
         |plugin| match plugin {
-          Either::A(plugin) => JsPlugin::new_boxed(plugin),
+          Either::A(plugin) => JsPlugin::new_shared(plugin),
           Either::B(plugin) => plugin.into(),
         },
       )
@@ -161,7 +162,7 @@ pub fn normalize_binding_options(
     .chain(output_options.plugins)
     .filter_map(|plugin| {
       plugin.map(|plugin| match plugin {
-        Either::A(plugin) => JsPlugin::new_boxed(plugin),
+        Either::A(plugin) => JsPlugin::new_shared(plugin),
         Either::B(plugin) => plugin.into(),
       })
     })

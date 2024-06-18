@@ -215,6 +215,7 @@ impl<'a> GenerateStage<'a> {
             });
 
             stmt_info.referenced_symbols.iter().for_each(|referenced| {
+              let referenced = referenced.symbol_ref();
               let mut canonical_ref = symbols.par_canonical_ref_for(*referenced);
               if let Some(namespace_alias) = &symbols.get(canonical_ref).namespace_alias {
                 canonical_ref = namespace_alias.namespace_ref;

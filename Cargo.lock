@@ -1750,6 +1750,7 @@ name = "rolldown"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitflags 2.5.0",
  "dunce",
  "futures",
  "glob",

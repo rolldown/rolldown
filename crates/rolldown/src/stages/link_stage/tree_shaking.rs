@@ -1,8 +1,14 @@
+use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
 use oxc::index::IndexVec;
+use oxc::span::CompactStr;
 use rolldown_common::side_effects::DeterminedSideEffects;
-use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolRef};
+use rolldown_common::{
+  NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
+};
+use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use rustc_hash::FxHashSet;
 
 use super::LinkStage;
 
@@ -11,10 +17,26 @@ struct Context<'a> {
   symbols: &'a Symbols,
   is_included_vec: &'a mut IndexVec<NormalModuleId, IndexVec<StmtInfoId, bool>>,
   is_module_included_vec: &'a mut IndexVec<NormalModuleId, bool>,
+  used_exports_info_vec: &'a mut IndexVec<NormalModuleId, UsedExportsInfo>,
   tree_shaking: bool,
   runtime_id: NormalModuleId,
+  metas: &'a LinkingMetadataVec,
 }
 
+bitflags::bitflags! {
+  #[derive(Default, Copy, Clone, Debug)]
+  pub struct UsedInfo: u8 {
+    // If the module is used as a namespace
+    const USED_AS_NAMESPACE = 1 << 1;
+    const INCLUDED_AS_NAMESPACE = 1 << 2;
+  }
+}
+
+#[derive(Default, Clone)]
+struct UsedExportsInfo {
+  used_exports: FxHashSet<Rstr>,
+  used_info: UsedInfo,
+}
 /// if no export is used, and the module has no side effects, the module should not be included
 fn include_module(ctx: &mut Context, module: &NormalModule) {
   fn forcefully_include_all_statements(ctx: &mut Context, module: &NormalModule) {
@@ -29,6 +51,13 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   }
 
   let is_included = ctx.is_module_included_vec[module.id];
+  let used_info = ctx.used_exports_info_vec[module.id].used_info;
+  if used_info.contains(UsedInfo::USED_AS_NAMESPACE)
+    && !used_info.contains(UsedInfo::INCLUDED_AS_NAMESPACE)
+  {
+    ctx.used_exports_info_vec[module.id].used_info |= UsedInfo::INCLUDED_AS_NAMESPACE;
+    include_module_as_namespace(ctx, module);
+  }
   if is_included {
     return;
   }
@@ -56,7 +85,12 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   module.import_records.iter().for_each(|import_record| match import_record.resolved_module {
     rolldown_common::ModuleId::Normal(importee_id) => {
       let importee = &ctx.modules[importee_id];
-      if !ctx.tree_shaking || importee.side_effects.has_side_effects() {
+      let bailout_side_effect = matches!(import_record.kind, rolldown_common::ImportKind::Require)
+        || importee.def_format.is_commonjs();
+      if bailout_side_effect {
+        ctx.used_exports_info_vec[importee_id].used_info |= UsedInfo::USED_AS_NAMESPACE;
+      }
+      if !ctx.tree_shaking || importee.side_effects.has_side_effects() || bailout_side_effect {
         include_module(ctx, importee);
       }
     }
@@ -64,12 +98,66 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   });
 }
 
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
+fn include_module_as_namespace(ctx: &mut Context, module: &NormalModule) {
+  // Collect all the canonical export to avoid violating rustc borrow rules.
+  let canonical_export_list = ctx.metas[module.id]
+    .canonical_exports()
+    .map(|(key, export)| (key.clone(), export.symbol_ref))
+    .collect::<Vec<_>>();
+  canonical_export_list.into_iter().for_each(|(key, symbol_ref)| {
+    ctx.used_exports_info_vec[module.id].used_exports.insert(key);
+    include_symbol(ctx, symbol_ref, &[]);
+  });
+}
+
+fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr]) {
+  let mut cursor = 0;
+
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
-  let canonical_ref_module = &ctx.modules[canonical_ref.owner];
-  let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
-  if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
+  let mut canonical_ref_symbol = ctx.symbols.get(canonical_ref);
+  let mut canonical_ref_module = &ctx.modules[canonical_ref.owner];
+  let is_same_ref = canonical_ref == symbol_ref;
+  let mut ns_symbol_list = vec![];
+  let is_namespace_ref = canonical_ref_module.namespace_object_ref == canonical_ref;
+  while cursor < chains.len() && is_namespace_ref {
+    let name = &chains[cursor];
+    let export_symbol = ctx.metas[canonical_ref_module.id].resolved_exports.get(&name.to_rstr());
+    let Some(export_symbol) = export_symbol else { break };
+    if export_symbol.potentially_ambiguous_symbol_refs.is_some() {
+      return;
+    }
+    if !ctx.modules[export_symbol.symbol_ref.owner].exports_kind.is_esm() {
+      break;
+    }
+    ns_symbol_list.push((canonical_ref, name.to_rstr()));
+    canonical_ref = ctx.symbols.par_canonical_ref_for(export_symbol.symbol_ref);
+    canonical_ref_symbol = ctx.symbols.get(canonical_ref);
+    canonical_ref_module = &ctx.modules[canonical_ref.owner];
+    cursor += 1;
+  }
+
+  let export_name = if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
+    let name = canonical_ref_symbol.name.clone();
     canonical_ref = namespace_alias.namespace_ref;
+    canonical_ref_module = &ctx.modules[canonical_ref.owner];
+    name
+  } else {
+    canonical_ref_symbol.name.clone()
+  };
+
+  let export_name = export_name.to_rstr();
+  let is_namespace_ref = canonical_ref_module.namespace_object_ref == canonical_ref;
+  if is_namespace_ref && !is_same_ref {
+    ctx.used_exports_info_vec[canonical_ref_module.id].used_info |= UsedInfo::USED_AS_NAMESPACE;
+  }
+
+  let id = ns_symbol_list.last().map_or(symbol_ref.owner, |(symbol, _)| symbol.owner);
+  ctx.used_exports_info_vec[id].used_exports.insert(export_name);
+  // Keep the namespace object chain
+  // TODO: remove the chain and related runtime code, after we finish move dependency optimization
+  for (pre_ns_symbol, next_prop) in ns_symbol_list {
+    include_symbol(ctx, pre_ns_symbol, &[]);
+    ctx.used_exports_info_vec[pre_ns_symbol.owner].used_exports.insert(next_prop);
   }
   include_module(ctx, canonical_ref_module);
   canonical_ref_module
@@ -94,14 +182,14 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
   // include the statement itself
   *is_included = true;
 
-  // include statements that are referenced by this statement
-  stmt_info.declared_symbols.iter().chain(stmt_info.referenced_symbols.iter()).for_each(
-    |symbol_ref| {
-      // Notice we also include `declared_symbols`. This for case that import statements declare new symbols, but they are not
-      // really declared by the module itself. We need to include them where they are really declared.
-      include_symbol(ctx, *symbol_ref);
-    },
-  );
+  stmt_info.referenced_symbols.iter().for_each(|reference_ref| match reference_ref {
+    SymbolOrMemberExprRef::Symbol(symbol_ref) => {
+      include_symbol(ctx, *symbol_ref, &[]);
+    }
+    SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+      include_symbol(ctx, member_expr.symbol, &member_expr.chains);
+    }
+  });
 }
 
 impl LinkStage<'_> {
@@ -119,6 +207,8 @@ impl LinkStage<'_> {
     let mut is_module_included_vec: IndexVec<NormalModuleId, bool> =
       oxc::index::index_vec![false; self.module_table.normal_modules.len()];
 
+    let mut used_exports_info_vec: IndexVec<NormalModuleId, UsedExportsInfo> =
+      oxc::index::index_vec![UsedExportsInfo::default(); self.module_table.normal_modules.len()];
     let context = &mut Context {
       modules: &self.module_table.normal_modules,
       symbols: &self.symbols,
@@ -126,13 +216,18 @@ impl LinkStage<'_> {
       is_module_included_vec: &mut is_module_included_vec,
       tree_shaking: self.input_options.treeshake,
       runtime_id: self.runtime.id(),
+      used_exports_info_vec: &mut used_exports_info_vec,
+      metas: &self.metas,
     };
 
     self.entries.iter().for_each(|entry| {
       let module = &self.module_table.normal_modules[entry.id];
       let meta = &self.metas[entry.id];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-        include_symbol(context, *symbol_ref);
+        include_symbol(context, *symbol_ref, &[]);
+      });
+      module.named_exports.iter().for_each(|(name, _)| {
+        context.used_exports_info_vec[entry.id].used_exports.insert(name.clone());
       });
       include_module(context, module);
     });
@@ -142,6 +237,11 @@ impl LinkStage<'_> {
       is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });
+    });
+
+    self.module_table.normal_modules.iter_mut().for_each(|module| {
+      self.metas[module.id].used_exports =
+        std::mem::take(&mut used_exports_info_vec[module.id].used_exports);
     });
 
     tracing::trace!(

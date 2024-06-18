@@ -9,15 +9,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_as
 
 ```js
 
-
-//#region foo.js
-var foo_ns = {};
-__export(foo_ns, {
-	foo:() => foo$1
-});
-const foo$1 = 123;
-
-//#endregion
 //#region entry.js
 let foo = 234;
 console.log(foo);

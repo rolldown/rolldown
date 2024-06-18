@@ -98,6 +98,7 @@ async-channel      = "2.3.1"
 async-scoped       = { version = "0.9.0" }
 async-trait        = "0.1.80"
 base64             = "0.22.1"
+bitflags           = "2.5.0"
 dashmap            = "5.5.3"
 derivative         = "2.2.0"
 dunce              = "1.0.4"                                                                          # Normalize Windows paths to the most compatible format, avoiding UNC where possible
@@ -132,7 +133,6 @@ tracing-chrome     = "0.7.2"
 tracing-subscriber = { version = "0.3.18", default-features = false }
 vfs                = "0.12.0"
 xxhash-rust        = "0.8.10"
-
 # oxc crates share the same version
 oxc = { version = "0.14.0", features = ["sourcemap_concurrent", "transformer"] }
 

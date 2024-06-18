@@ -11,7 +11,7 @@ use oxc::{
     Trivias, Visit,
   },
   semantic::SymbolId,
-  span::{Atom, GetSpan, Span},
+  span::{Atom, CompactStr, GetSpan, Span},
 };
 use rolldown_common::{
   AstScopes, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleDefFormat, NamedImport,
@@ -445,6 +445,10 @@ impl<'me> AstScanner<'me> {
     self.current_stmt_info.referenced_symbols.push((self.idx, id).into());
   }
 
+  pub fn add_member_expr_reference(&mut self, id: SymbolId, chains: Vec<CompactStr>) {
+    self.current_stmt_info.referenced_symbols.push((self.idx, id, chains).into());
+  }
+
   fn is_top_level(&self, symbol_id: SymbolId) -> bool {
     self.scopes.root_scope_id() == self.symbols.scope_id_for(symbol_id)
   }
@@ -465,6 +469,33 @@ impl<'me> AstScanner<'me> {
           );
         }
       }
+    }
+  }
+
+  /// resolve the symbol from the identifier reference, and return if it is a top level symbol
+  fn resolve_identifier_reference(
+    &mut self,
+    symbol_id: Option<SymbolId>,
+    ident: &IdentifierReference,
+  ) -> Option<SymbolId> {
+    match symbol_id {
+      Some(symbol_id) if self.is_top_level(symbol_id) => Some(symbol_id),
+      None => {
+        if ident.name == "module" {
+          self.used_module_ref = true;
+        }
+        if ident.name == "exports" {
+          self.used_exports_ref = true;
+        }
+        if ident.name == "eval" {
+          self.result.warnings.push(
+            BuildError::eval(self.file_path.to_string(), Arc::clone(self.source), ident.span)
+              .with_severity_warning(),
+          );
+        }
+        None
+      }
+      _ => None,
     }
   }
 }

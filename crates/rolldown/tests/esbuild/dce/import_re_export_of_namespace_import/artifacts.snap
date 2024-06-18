@@ -25,7 +25,6 @@ var require_bar = __commonJSMin((exports, module) => {
 //#region node_modules/pkg/index.js
 var pkg_index_ns = {};
 __export(pkg_index_ns, {
-	bar:() => import_bar.default,
 	foo:() => import_foo.default
 });
 var import_foo = __toESM(require_foo());

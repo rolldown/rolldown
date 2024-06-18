@@ -49,8 +49,10 @@ impl<'a> GenerateStage<'a> {
       if !stmt_info.is_included {
         return;
       }
-      stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
-        let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*symbol_ref);
+      stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+        let canonical_ref =
+          self.link_output.symbols.par_canonical_ref_for(*reference_ref.symbol_ref());
+
         self.determine_reachable_modules_for_entry(
           canonical_ref.owner,
           entry_index,

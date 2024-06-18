@@ -29,7 +29,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
-- entry_js-!~{000}~.mjs => entry_js-shQcYh-N.mjs
+- entry_js-!~{000}~.mjs => entry_js-a8fcunwt.mjs
 
 # tests/esbuild/dce/inline_function_call_for_init_decl
 
@@ -145,7 +145,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_import_identifier
 
-- entry_js-!~{000}~.mjs => entry_js-z7-hburz.mjs
+- entry_js-!~{000}~.mjs => entry_js-dr9zLzXi.mjs
 
 # tests/esbuild/dce/tree_shaking_in_esm_wrapper
 
@@ -480,7 +480,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/import_star_export_star_as_unused
 
-- entry_js-!~{000}~.mjs => entry_js-XoP8HNun.mjs
+- entry_js-!~{000}~.mjs => entry_js-gFDuRi8P.mjs
 
 # tests/esbuild/import_star/import_star_export_star_capture
 
@@ -540,7 +540,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/other_file_export_self_as_namespace_unused_es6
 
-- entry_js-!~{000}~.mjs => entry_js-cNMmzF3B.mjs
+- entry_js-!~{000}~.mjs => entry_js-EqHrIcuQ.mjs
 
 # tests/esbuild/import_star/other_file_import_export_self_as_namespace_unused_es6
 
@@ -1495,6 +1495,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/rollup/simplify-with-destructuring
 
 - main-!~{000}~.mjs => main-UZO6P0Cp.mjs
+
+# tests/fixtures/tree_shaking/advanced_barrel_exports
+
+- main-!~{000}~.mjs => main-MAZqdDdR.mjs
+
+# tests/fixtures/tree_shaking/advanced_barrel_exports2
+
+- main-!~{000}~.mjs => main-px1fYsjj.mjs
 
 # tests/fixtures/tree_shaking/derived_side_effects_should_have_high_priority
 

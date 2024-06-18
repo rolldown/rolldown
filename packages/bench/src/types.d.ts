@@ -12,6 +12,8 @@ export interface BenchSuite {
   title: string
   inputs: string[]
   disableBundler?: BundlerName | BundlerName[]
+  // Multiple rolldown options will result in multiple runs with different options.
+  // This is useful for benchmarking different options with the same input in rolldown.
   rolldownOptions?:
     | RolldownOptions
     | { name: string; options: RolldownOptions }[]

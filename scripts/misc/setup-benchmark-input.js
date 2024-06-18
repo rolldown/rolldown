@@ -104,17 +104,36 @@ if (fsExtra.existsSync('./tmp/bench/rome')) {
     ),
   )
 
-  // replace `export default function name()` with `export default function()`
-  // rome uses a same identifier as a type and a value and that chokes babel
-  const files = await glob('./tmp/bench/rome/src/**/*.ts')
+  const files = await glob('./tmp/bench/rome/src/**/*.{ts,tsx}')
   const problematicExportDefaultRE = /export default function \w+\(/
+  const importEqualRE = /import (\w+) = require\('(.+)'\)/
   for (const file of files) {
-    const content = await fsExtra.readFile(file, 'utf8')
-    if (problematicExportDefaultRE.test(content)) {
-      await fsExtra.writeFile(
-        file,
-        content.replace(problematicExportDefaultRE, 'export default function('),
+    let content = await fsExtra.readFile(file, 'utf8')
+    let hasReplaced = false
+
+    // Replace "import fs = require('fs')" with "const fs = require('fs')"
+    // https://github.com/evanw/esbuild/blob/fc37c2fa9de2ad77476a6d4a8f1516196b90187e/Makefile#L1007-L1009
+    if (importEqualRE.test(content)) {
+      hasReplaced = true
+      content = content.replaceAll(
+        /import (\w+) = require\('(.+)'\)/g,
+        "const $1 = require('$2')",
       )
+      console.log('Fixing import equal in', file)
+    }
+
+    // replace `export default function name()` with `export default function()`
+    // rome uses a same identifier as a type and a value and that chokes babel
+    if (problematicExportDefaultRE.test(content)) {
+      hasReplaced = true
+      content = content.replace(
+        problematicExportDefaultRE,
+        'export default function(',
+      )
+    }
+
+    if (hasReplaced) {
+      await fsExtra.writeFile(file, content)
     }
   }
   // also replace some additional things in `@romejs/js-formatter/node/parentheses.ts`

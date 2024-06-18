@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown/tests/fixtures.rs
+assertion_line: 54
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
 # tests/esbuild/dce/base64_loader_remove_unused
@@ -236,6 +237,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/default/forbid_const_assign_when_bundling
 
 - entry_js-!~{000}~.mjs => entry_js-Xnvegfxd.mjs
+
+# tests/esbuild/default/forbid_const_assign_when_lowering_using
+
+- entry_js-!~{000}~.mjs => entry_js-idsVRs5M.mjs
 
 # tests/esbuild/default/import_fs_node_common_js
 

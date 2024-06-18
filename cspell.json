@@ -36,6 +36,7 @@
       "locale": "*",
       // To exclude patterns, add them to "ignoreRegExpList"
       "ignoreRegExpList": ["/import\\s.*/"],
+
       // List of dictionaries to enable by name in `dictionaryDefinitions`
       "dictionaries": [],
       // Dictionary definitions can also be supplied here. They are only used if "languageId" and "locale" match.
@@ -154,6 +155,10 @@
     "Xiangjun",
     "Yinan",
     "Yunfei",
-    "extname"
+    "extname",
+    "fontobject",
+    "hexdigit",
+    "sfnt",
+    "webp"
   ]
 }

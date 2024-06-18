@@ -2,10 +2,8 @@ use oxc::{
   ast::{
     ast::{Expression, IdentifierReference, MemberExpression},
     visit::walk,
-    Visit,
+    Trivias, Visit,
   },
-  ast::{ast::IdentifierReference, visit::walk, Visit},
-  ast::{ast::IdentifierReference, visit::walk, Trivias, Visit},
   codegen::{self, Codegen, CodegenOptions, Gen},
 };
 use rolldown_common::ImportKind;
@@ -51,11 +49,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   }
 
   fn visit_member_expression(&mut self, expr: &MemberExpression<'ast>) {
-    let top_level_member_expr = match expr {
-      MemberExpression::ComputedMemberExpression(expr) => {
-        self.visit_computed_member_expression(expr);
-        None
-      }
+    match expr {
       MemberExpression::StaticMemberExpression(inner_expr) => {
         let mut chain = vec![];
         let mut cur = inner_expr;
@@ -75,21 +69,15 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         };
         chain.reverse();
         let chain = chain.into_iter().map(|ident| ident.name.as_str().into()).collect::<Vec<_>>();
+
         if let Some(symbol_id) = top_level_symbol {
-          Some((symbol_id, chain))
-        } else {
-          self.visit_expression(&cur.object);
-          None
+          self.add_member_expr_reference(symbol_id, chain);
+          return;
         }
       }
-      MemberExpression::PrivateFieldExpression(expr) => {
-        self.visit_private_field_expression(expr);
-        None
-      }
+      _ => {}
     };
-    if let Some((symbol_id, chains)) = top_level_member_expr {
-      self.add_member_expr_reference(symbol_id, chains);
-    }
+    walk::walk_member_expression(self, expr);
   }
 
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {

@@ -26,7 +26,7 @@ impl SymbolOrMemberExprRef {
   /// get the first part of the expression,
   /// e.g. `test.a.b` will return `test`
   /// for identifier, it will return itself
-  pub fn first_part(&self) -> &SymbolRef {
+  pub fn symbol_ref(&self) -> &SymbolRef {
     match self {
       SymbolOrMemberExprRef::Symbol(s) => s,
       SymbolOrMemberExprRef::MemberExpr(expr) => &expr.symbol,
@@ -47,8 +47,6 @@ pub struct MemberExprRef {
   /// `a.b` is the rest chain
   pub chains: Vec<CompactStr>,
 }
-
-impl MemberExprRef {}
 
 impl From<(NormalModuleId, SymbolId)> for SymbolOrMemberExprRef {
   fn from(value: (NormalModuleId, SymbolId)) -> Self {

@@ -1,7 +1,7 @@
 use oxc::index::IndexVec;
 use rolldown_common::{NormalModuleId, ResolvedExport, StmtInfoId, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Module metadata about linking
 #[derive(Debug, Default)]
@@ -35,8 +35,6 @@ pub struct LinkingMetadata {
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<Rstr, ResolvedExport>,
   pub used_exports: FxHashSet<Rstr>,
-  pub re_export_all_names: FxHashSet<Rstr>,
-  pub re_export_all_names: FxHashSet<Rstr>,
   // pub re_export_all_names: FxHashSet<Rstr>,
   // Store the names of exclude ambiguous resolved exports.
   // It will be used to generate chunk exports and module namespace binding.

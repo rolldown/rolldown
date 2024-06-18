@@ -51,7 +51,7 @@ impl<'a> GenerateStage<'a> {
       }
       stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
         let canonical_ref =
-          self.link_output.symbols.par_canonical_ref_for(*reference_ref.first_part());
+          self.link_output.symbols.par_canonical_ref_for(*reference_ref.symbol_ref());
 
         self.determine_reachable_modules_for_entry(
           canonical_ref.owner,

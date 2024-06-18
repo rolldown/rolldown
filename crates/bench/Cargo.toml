@@ -21,7 +21,11 @@ tokio            = { workspace = true, features = ["full"] }
 
 [[bench]]
 harness = false
-name    = "threejs"
+name    = "bundle"
+
+[[bench]]
+harness = false
+name    = "scan"
 
 [features]
 codspeed = ["criterion2/codspeed"]

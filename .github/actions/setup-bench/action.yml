@@ -1,0 +1,23 @@
+name: 'Setup Benchmark Input'
+
+description: 'Setup benchmark input'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache `just tmp/github`
+      id: cache-bench
+      uses: actions/cache@v4
+      with:
+        path: tmp/github
+        key: ${{ runner.os }}-tmp-github-${{ hashFiles('**/scripts/misc/setup-benchmark-input.js') }}
+
+    - run: echo "Hit cache"
+      if: steps.cache-bench.outputs.cache-hit == 'true'
+      shell: bash
+
+    - name: Setup Benchmark Input
+      shell: bash
+      # if: steps.cache-bench.outputs.cache-hit != 'true'
+      # `just setup-bench` will skip downloading the benchmark input internally if the cache hit, so we don't need to check the cache hit here
+      run: just setup-bench

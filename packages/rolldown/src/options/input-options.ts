@@ -79,12 +79,8 @@ const inputOptionsSchema = z.strictObject({
     .optional(),
 })
 
-export type InputOptions = z.infer<typeof inputOptionsSchema>
 export type InputOption = z.infer<typeof inputOptionSchema>
 export type ExternalOption = z.infer<typeof externalSchema>
-export type InputOptions = z.infer<typeof inputOptionsSchema>
-export type InputOptions = Omit<z.infer<typeof inputOptionsSchema>, 'treeshake'> & {
-export type InputOptions = Omit<z.infer<typeof inputOptionsSchema>, 'treeshake'> & {
 export type InputOptions = Omit<
   z.infer<typeof inputOptionsSchema>,
   'treeshake'

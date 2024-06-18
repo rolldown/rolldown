@@ -12,6 +12,7 @@ setup:
   corepack enable
   pnpm install
   just setup-submodule
+  just setup-bench
   echo "✅✅✅ Setup complete!"
 
 setup-submodule:

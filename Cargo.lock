@@ -1925,10 +1925,13 @@ version = "0.0.1"
 dependencies = [
  "jsonschema",
  "once_cell",
+ "rolldown",
+ "rolldown_common",
  "rolldown_testing_config",
  "schemars",
  "serde_json",
  "sugar_path",
+ "tokio",
 ]
 
 [[package]]

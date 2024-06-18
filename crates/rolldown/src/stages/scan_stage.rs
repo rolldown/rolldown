@@ -85,9 +85,7 @@ impl ScanStage {
   /// Resolve `InputOptions.input`
 
   #[tracing::instrument(level = "debug", skip_all)]
-  async fn resolve_user_defined_entries(
-    &mut self,
-  ) -> Result<Vec<(Option<String>, ResolvedRequestInfo)>> {
+  async fn resolve_user_defined_entries(&mut self) -> Result<Vec<(String, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 

@@ -156,7 +156,7 @@ pub fn normalize_binding_options(
     .collect::<Vec<_>>();
 
   #[cfg(target_family = "wasm")]
-  let plugins: Vec<BoxPlugin> = input_options
+  let plugins: Vec<SharedPlugin> = input_options
     .plugins
     .into_iter()
     .chain(output_options.plugins)

@@ -2,6 +2,16 @@
 #![allow(clippy::type_complexity)]
 // Due to the bound of NAPI-RS, we need to use `String` though we only need `&str`.
 #![allow(clippy::needless_pass_by_value)]
+// Most of transmute are just change the lifetime `'a` to `'static`., the annotation, e.g.
+//
+// BindingTransformPluginContext::new(unsafe {
+//   std::mem::transmute::<
+//     &rolldown_plugin::TransformPluginContext<'_>,
+//     &rolldown_plugin::TransformPluginContext<'_>,
+//   >(ctx)
+// }),
+// Looks redundant
+#![allow(clippy::missing_transmute_annotations)]
 
 #[cfg(not(target_family = "wasm"))]
 #[global_allocator]

@@ -1,16 +1,16 @@
 import type {
   BindingPluginContext,
   BindingTransformPluginContext,
-} from '@src/binding'
-import type { SourceMap } from '@src/types/rolldown-output'
+} from '../binding'
+import type { SourceMap } from '../types/rolldown-output'
 import type {
   LoggingFunction,
   LoggingFunctionWithPosition,
   RollupError,
 } from '../rollup'
-import { normalizeLog } from '@src/log/logHandler'
+import { normalizeLog } from '../log/logHandler'
 import type { EmittedAsset, PluginContext } from './plugin-context'
-import { augmentCodeLocation } from '@src/log/logs'
+import { augmentCodeLocation } from '../log/logs'
 
 export class TransformPluginContext {
   debug: LoggingFunction
@@ -21,6 +21,7 @@ export class TransformPluginContext {
   getCombinedSourcemap: () => SourceMap
   emitFile: (file: EmittedAsset) => string
   getFileName: (referenceId: string) => string
+  parse: (input: string, options?: any) => any
 
   constructor(
     inner: BindingTransformPluginContext,
@@ -52,6 +53,7 @@ export class TransformPluginContext {
       return context.error(error)
     }
     this.resolve = context.resolve
+    this.parse = context.parse
     this.getCombinedSourcemap = () => JSON.parse(inner.getCombinedSourcemap())
     this.emitFile = context.emitFile
     this.getFileName = context.getFileName

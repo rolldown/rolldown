@@ -167,7 +167,7 @@ impl ModuleLoader {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn fetch_all_modules(
     mut self,
-    user_defined_entries: Vec<(Option<String>, ResolvedRequestInfo)>,
+    user_defined_entries: Vec<(String, ResolvedRequestInfo)>,
   ) -> anyhow::Result<ModuleLoaderOutput> {
     if self.input_options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
@@ -191,7 +191,7 @@ impl ModuleLoader {
     let mut entry_points = user_defined_entries
       .into_iter()
       .map(|(name, info)| EntryPoint {
-        name,
+        name: Some(name),
         id: self.try_spawn_new_task(info, true).expect_normal(),
         kind: EntryPointKind::UserDefined,
       })
@@ -249,8 +249,7 @@ impl ModuleLoader {
           self.symbols.add_ast_symbols(module_id, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeNormalModuleTaskResult { ast_symbol, module, runtime, warnings: _, ast } =
-            task_result;
+          let RuntimeNormalModuleTaskResult { ast_symbol, module, runtime, ast } = task_result;
 
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module);
           self.intermediate_normal_modules.ast_table[self.runtime_id] = Some(ast);

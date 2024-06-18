@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use oxc::{
+  ast::Trivias,
   codegen::{Codegen, CodegenOptions, CodegenReturn},
   parser::Parser,
   span::SourceType,
@@ -40,12 +41,12 @@ impl OxcCompiler {
     let codegen = Codegen::<false>::new(
       source_name,
       ast.source(),
+      Trivias::default(),
       CodegenOptions {
         enable_typescript: false,
         enable_source_map,
         preserve_annotate_comments: false,
       },
-      None,
     );
     codegen.build(ast.program())
   }

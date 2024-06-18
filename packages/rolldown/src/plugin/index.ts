@@ -10,7 +10,7 @@ import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
 import type { PluginContext } from './plugin-context'
 import type { TransformPluginContext } from './transfrom-plugin-context'
-import type { NormalizedOutputOptions } from '@src/options/normalized-output-options'
+import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import type { LogLevel } from '../log/logging'
 import type { RollupLog } from '../rollup'
 import type { MinimalPluginContext } from '../log/logger'
@@ -19,11 +19,14 @@ type FormalHook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> = {
   handler: Handler
 } & HookOptions
 
-export type Hook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> =
-  | FormalHook<Handler, HookOptions>
-  | Handler
+export type ObjectHook<
+  Handler extends AnyFn,
+  HookOptions extends AnyObj = AnyObj,
+> = FormalHook<Handler, HookOptions> | Handler
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
+
+export type ImportKind = BindingHookResolveIdExtraOptions['kind']
 
 export type ResolveIdResult =
   | string
@@ -35,10 +38,28 @@ export type ResolveIdResult =
       moduleSideEffects?: ModuleSideEffects
     }
 
+export type LoadResult =
+  | NullValue
+  | string
+  | {
+      code: string
+      map?: SourceMapInput
+      moduleSideEffects?: ModuleSideEffects
+    }
+
+export type TransformResult =
+  | NullValue
+  | string
+  | {
+      code: string
+      map?: SourceMapInput
+      moduleSideEffects?: ModuleSideEffects
+    }
+
 export interface Plugin {
   name?: string
 
-  onLog?: Hook<
+  onLog?: ObjectHook<
     (
       this: MinimalPluginContext,
       level: LogLevel,
@@ -46,25 +67,25 @@ export interface Plugin {
     ) => NullValue | boolean
   >
 
-  options?: Hook<
+  options?: ObjectHook<
     (this: MinimalPluginContext, options: NormalizedInputOptions) => NullValue
   >
 
   // TODO find a way to make `this: PluginContext` work.
-  outputOptions?: Hook<
+  outputOptions?: ObjectHook<
     (this: null, options: NormalizedOutputOptions) => NullValue
   >
 
   // --- Build hooks ---
 
-  buildStart?: Hook<
+  buildStart?: ObjectHook<
     (
       this: PluginContext,
       options: NormalizedInputOptions,
     ) => MaybePromise<NullValue>
   >
 
-  resolveId?: Hook<
+  resolveId?: ObjectHook<
     (
       this: PluginContext,
       source: string,
@@ -77,7 +98,7 @@ export interface Plugin {
    * @deprecated
    * This hook is only for rollup plugin compatibility. Please use `resolveId` instead.
    */
-  resolveDynamicImport?: Hook<
+  resolveDynamicImport?: ObjectHook<
     (
       this: PluginContext,
       source: string,
@@ -85,46 +106,29 @@ export interface Plugin {
     ) => MaybePromise<ResolveIdResult>
   >
 
-  load?: Hook<
-    (
-      this: PluginContext,
-      id: string,
-    ) => MaybePromise<
-      | NullValue
-      | string
-      | {
-          code: string
-          map?: SourceMapInput
-          moduleSideEffects?: ModuleSideEffects
-        }
-    >
+  load?: ObjectHook<
+    (this: PluginContext, id: string) => MaybePromise<LoadResult>
   >
 
-  transform?: Hook<
+  transform?: ObjectHook<
     (
       this: TransformPluginContext,
       code: string,
       id: string,
-    ) => MaybePromise<
-      | NullValue
-      | string
-      | {
-          code: string
-          map?: SourceMapInput
-          moduleSideEffects?: ModuleSideEffects
-        }
-    >
+    ) => MaybePromise<TransformResult>
   >
 
-  moduleParsed?: Hook<
+  moduleParsed?: ObjectHook<
     (this: PluginContext, moduleInfo: ModuleInfo) => MaybePromise<NullValue>
   >
 
-  buildEnd?: Hook<(this: PluginContext, err?: Error) => MaybePromise<NullValue>>
+  buildEnd?: ObjectHook<
+    (this: PluginContext, err?: Error) => MaybePromise<NullValue>
+  >
 
   // --- Generate hooks ---
 
-  renderStart?: Hook<
+  renderStart?: ObjectHook<
     (
       this: PluginContext,
       outputOptions: NormalizedOutputOptions,
@@ -132,7 +136,7 @@ export interface Plugin {
     ) => MaybePromise<NullValue>
   >
 
-  renderChunk?: Hook<
+  renderChunk?: ObjectHook<
     (
       this: PluginContext,
       code: string,
@@ -148,15 +152,15 @@ export interface Plugin {
     >
   >
 
-  augmentChunkHash?: Hook<
+  augmentChunkHash?: ObjectHook<
     (this: PluginContext, chunk: RenderedChunk) => MaybePromise<string | void>
   >
 
-  renderError?: Hook<
+  renderError?: ObjectHook<
     (this: PluginContext, error: Error) => MaybePromise<NullValue>
   >
 
-  generateBundle?: Hook<
+  generateBundle?: ObjectHook<
     (
       this: PluginContext,
       outputOptions: NormalizedOutputOptions,
@@ -165,7 +169,7 @@ export interface Plugin {
     ) => MaybePromise<NullValue>
   >
 
-  writeBundle?: Hook<
+  writeBundle?: ObjectHook<
     (
       this: PluginContext,
       outputOptions: NormalizedOutputOptions,

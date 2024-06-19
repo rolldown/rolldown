@@ -179,6 +179,23 @@ impl Plugin for JsPlugin {
     }
   }
 
+  async fn banner(
+    &self,
+    ctx: &rolldown_plugin::SharedPluginContext,
+    args: &rolldown_plugin::HookBannerArgs,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if let Some(cb) = &self.render_chunk {
+      Ok(
+        cb.await_call((Arc::clone(ctx).into(), args.code.to_string(), args.chunk.clone().into()))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()?,
+      )
+    } else {
+      Ok(None)
+    }
+  }
+
   async fn augment_chunk_hash(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,

@@ -7,6 +7,7 @@ use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
   AstScopes, ImportRecordId, ModuleDefFormat, ModuleType, NormalModule, NormalModuleId,
   PackageJson, RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
+  TreeshakeOptions,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -168,17 +169,26 @@ impl NormalModuleTask {
           DeterminedSideEffects::Analyzed(analyzed_side_effects)
         })
     };
-
     let side_effects = match hook_side_effects {
       Some(side_effects) => match side_effects {
         HookSideEffects::True => lazy_check_side_effects(),
         HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
         HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
       },
-      None => lazy_check_side_effects(),
+      // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
+      None => match self.ctx.input_options.treeshake {
+        // Actually this convert is not necessary, just for passing type checking
+        TreeshakeOptions::False => DeterminedSideEffects::NoTreeshake,
+        TreeshakeOptions::Option(ref opt) => {
+          if opt.module_side_effects.resolve(&stable_resource_id) {
+            lazy_check_side_effects()
+          } else {
+            DeterminedSideEffects::UserDefined(false)
+          }
+        }
+      },
     };
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
-
     let module = NormalModule {
       source,
       id: self.module_id,

@@ -427,7 +427,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             chain.into_iter().map(|ident| ident.name.as_str().into()).collect::<Vec<_>>();
           self
             .ctx
-            .top_level_cache
+            .top_level_member_expr_resolved_cache
             .get(&(self.ctx.id, symbol).into())
             .and_then(|map| map.get(&chain.clone().into_boxed_slice()))
             .map(|(symbol_ref, cursor)| {

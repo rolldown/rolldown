@@ -58,7 +58,6 @@ impl Symbols {
     &self.get(refer).name
   }
 
-  #[track_caller]
   pub fn canonical_name_for<'name>(
     &self,
     refer: SymbolRef,

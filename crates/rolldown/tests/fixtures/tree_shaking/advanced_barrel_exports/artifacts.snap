@@ -10,12 +10,6 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/advanced_barrel_exports
 ```js
 
 //#region foo.js
-var foo_ns = {};
-__export(foo_ns, {
-	a:() => a
-});
-var foo_ns = {};
-__export(foo_ns, {a: () => a});
 const a = 100;
 
 //#endregion

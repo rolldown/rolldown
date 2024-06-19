@@ -17,22 +17,6 @@ const x = 1;
 const z = 4;
 
 //#endregion
-//#region common.js
-var common_ns = {};
-__export(common_ns, {
-	x:() => x,
-	z:() => z
-});
-
-//#endregion
-//#region common.js
-var common_ns = {};
-__export(common_ns, {
-	x: () => x,
-	z: () => z
-});
-
-//#endregion
 //#region entry.js
 console.log(x, undefined, z);
 

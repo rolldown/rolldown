@@ -28,5 +28,8 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,
   pub options: &'me SharedOptions,
-  pub top_level_cache: &'me FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
+  /// Used to cache result of top level member expr namespace object ref resolved result
+  /// Avoid to recalculate it when code generation phase.
+  pub top_level_member_expr_resolved_cache:
+    &'me FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }

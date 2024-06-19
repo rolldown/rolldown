@@ -35,7 +35,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.scope.is_unresolved(reference_id)
   }
 
-  #[track_caller]
   pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {
     self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
   }

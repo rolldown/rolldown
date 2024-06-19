@@ -12,17 +12,13 @@ input_file: crates/rolldown/tests/esbuild/default/exports_and_module_format_comm
 
 //#region foo/test.js
 var test_ns$1 = {};
-__export(test_ns$1, {
-	foo:() => foo
-});
+__export(test_ns$1, {foo: () => foo});
 let foo = 123;
 
 //#endregion
 //#region bar/test.js
 var test_ns = {};
-__export(test_ns, {
-	bar:() => bar
-});
+__export(test_ns, {bar: () => bar});
 let bar = 123;
 
 //#endregion

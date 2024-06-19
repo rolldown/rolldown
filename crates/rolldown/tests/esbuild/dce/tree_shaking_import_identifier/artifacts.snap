@@ -12,20 +12,14 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier
 
 //#region b.js
 var b_ns = {};
-__export(b_ns, {
-	Base:() => Base
-});
-class Base {
-}
+__export(b_ns, {Base: () => Base});
+class Base {}
 
 //#endregion
 //#region a.js
 var a_ns = {};
-__export(a_ns, {
-	Keep:() => Keep
-});
-class Keep extends b_ns.Base {
-}
+__export(a_ns, {Keep: () => Keep});
+class Keep extends b_ns.Base {}
 
 //#endregion
 //#region entry.js

@@ -20,7 +20,7 @@ var require_main_browser = __commonJSMin((exports, module) => {
 //#endregion
 //#region src/entry.js
 var import_main_browser = __toESM(require_main_browser());
-console.log((0,import_main_browser.default)());
+console.log((0, import_main_browser.default)());
 
 //#endregion
 ```

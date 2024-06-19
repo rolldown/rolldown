@@ -15,8 +15,7 @@ input_file: crates/rolldown/tests/esbuild/default/nested_scope_bug
 		b();
 	}
 	{
-		var b = () => {
-		};
+		var b = () => {};
 	}
 	a();
 })();

@@ -12,9 +12,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_namespace_import
 
 //#region bar.js
 var bar_ns = {};
-__export(bar_ns, {
-	x:() => x
-});
+__export(bar_ns, {x: () => x});
 const x = 123;
 
 //#endregion

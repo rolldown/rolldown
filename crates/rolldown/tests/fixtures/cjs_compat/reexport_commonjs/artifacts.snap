@@ -12,9 +12,7 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/reexport_commonjs
 
 //#region commonjs.js
 var require_commonjs = __commonJSMin((exports, module) => {
-	module.exports = {
-		bar:1
-	};
+	module.exports = {bar: 1};
 });
 
 //#endregion
@@ -25,8 +23,8 @@ const value = 1;
 //#region foo.js
 var foo_ns = {};
 __export(foo_ns, {
-	bar:() => import_commonjs$1.bar,
-	value:() => value
+	bar: () => import_commonjs$1.bar,
+	value: () => value
 });
 __reExport(foo_ns, __toESM(require_commonjs()));
 var import_commonjs$1 = __toESM(require_commonjs());

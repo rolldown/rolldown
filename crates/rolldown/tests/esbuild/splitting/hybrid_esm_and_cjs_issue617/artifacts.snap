@@ -22,9 +22,7 @@ export { foo };
 var a_ns, foo;
 var init_a = __esmMin(() => {
 	a_ns = {};
-	__export(a_ns, {
-		foo:() => foo
-	});
+	__export(a_ns, {foo: () => foo});
 });
 
 //#endregion
@@ -36,7 +34,7 @@ export { __toCommonJS, a_ns, foo, init_a };
 import { __toCommonJS, a_ns, init_a } from "./a~1.mjs";
 
 //#region b.js
-let bar = (init_a(),__toCommonJS(a_ns));
+let bar = (init_a(), __toCommonJS(a_ns));
 
 //#endregion
 export { bar };

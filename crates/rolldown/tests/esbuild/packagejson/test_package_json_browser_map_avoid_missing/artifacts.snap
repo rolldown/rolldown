@@ -19,10 +19,11 @@ var require_component_indexof_index = __commonJSMin((exports, module) => {
 
 //#endregion
 //#region node_modules/component-classes/index.js
-try{
+try {
 	var index = require_component_indexof_index();
-}catch(err){
+} catch (err) {
 	var index = require_component_indexof_index();
 }
+
 //#endregion
 ```

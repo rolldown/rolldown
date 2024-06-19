@@ -12,12 +12,10 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_super_static_bundl
 //#region entry.js
 class Foo extends Object {
 	static FOO;
-
-	constructor(){
+	constructor() {
 		super();
 	}
 	#foo;
-
 }
 
 //#endregion

@@ -24,7 +24,7 @@ export default require_foo();
 ```js
 
 //#region main.js
-import('./foo.mjs').then(({bar}) => console.log(bar));
+import('./foo.mjs').then(({ bar }) => console.log(bar));
 
 //#endregion
 ```

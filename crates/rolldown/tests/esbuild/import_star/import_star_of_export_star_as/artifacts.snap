@@ -12,17 +12,13 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_of_export_star
 
 //#region bar.js
 var bar_ns = {};
-__export(bar_ns, {
-	bar:() => bar
-});
+__export(bar_ns, {bar: () => bar});
 const bar = 123;
 
 //#endregion
 //#region foo.js
 var foo_ns = {};
-__export(foo_ns, {
-	bar_ns:() => bar_ns
-});
+__export(foo_ns, {bar_ns: () => bar_ns});
 
 //#endregion
 //#region entry.js

@@ -21,7 +21,7 @@ var require_cjs_output = __commonJSMin((exports, module) => {
 
 //#endregion
 //#region main.js
-const {output:requireOutput} = require_cjs_output();
+const { output: requireOutput } = require_cjs_output();
 
 //#endregion
 export { output as importOutput, requireOutput };

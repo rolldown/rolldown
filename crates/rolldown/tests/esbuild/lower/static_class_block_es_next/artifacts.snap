@@ -11,9 +11,8 @@ input_file: crates/rolldown/tests/esbuild/lower/static_class_block_es_next
 
 //#region entry.js
 class A {
-	static{
-	}
-	static{
+	static {}
+	static {
 		this.thisField++;
 		A.classField++;
 		super.superField = super.superField + 1;
@@ -21,9 +20,8 @@ class A {
 	}
 }
 let B = class {
-	static{
-	}
-	static{
+	static {}
+	static {
 		this.thisField++;
 		super.superField = super.superField + 1;
 		super.superField++;

@@ -16,9 +16,7 @@ const abc = undefined;
 //#endregion
 //#region b.js
 var b_ns = {};
-__export(b_ns, {
-	xyz:() => xyz
-});
+__export(b_ns, {xyz: () => xyz});
 const xyz = null;
 
 //#endregion
@@ -27,10 +25,8 @@ var entry_default = 123;
 var v = 234;
 let l = 234;
 const c = 234;
-function Fn() {
-}
-class Class {
-}
+function Fn() {}
+class Class {}
 
 //#endregion
 export { Class as C, Class, Fn, abc, b_ns as b, c, entry_default as default, l, v };

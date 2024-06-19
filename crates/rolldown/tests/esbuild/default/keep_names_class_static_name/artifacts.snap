@@ -12,75 +12,57 @@ input_file: crates/rolldown/tests/esbuild/default/keep_names_class_static_name
 //#region entry.js
 class A {
 	static foo;
-
 }
 class B {
 	static name;
-
 }
 class C {
-	static name(){
-	}
+	static name() {}
 }
 class D {
-	static get name(){
-	}
+	static get name() {}
 }
 class E {
-	static set name(x){
-	}
+	static set name(x) {}
 }
 class F {
-	static ['name']=0;
-
+	static ['name'] = 0;
 }
 let a = class a$1 {
 	static foo;
-
 };
 let b = class b$1 {
 	static name;
-
 };
 let c = class c$1 {
-	static name(){
-	}
+	static name() {}
 };
 let d = class d$1 {
-	static get name(){
-	}
+	static get name() {}
 };
 let e = class e$1 {
-	static set name(x){
-	}
+	static set name(x) {}
 };
 let f = class f$1 {
-	static ['name']=0;
-
+	static ['name'] = 0;
 };
 let a2 = class {
 	static foo;
-
 };
 let b2 = class {
 	static name;
-
 };
 let c2 = class {
-	static name(){
-	}
+	static name() {}
 };
 let d2 = class {
-	static get name(){
-	}
+	static get name() {}
 };
 let e2 = class {
-	static set name(x){
-	}
+	static set name(x) {}
 };
 let f2 = class {
-	static ['name']=0;
-
+	static ['name'] = 0;
 };
 
 //#endregion

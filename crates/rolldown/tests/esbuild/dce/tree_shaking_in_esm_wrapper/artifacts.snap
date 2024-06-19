@@ -22,9 +22,7 @@ var init_lib = __esmMin(() => {
 var cjs_ns, cjs_default;
 var init_cjs = __esmMin(() => {
 	cjs_ns = {};
-	__export(cjs_ns, {
-		default:() => cjs_default
-	});
+	__export(cjs_ns, {default: () => cjs_default});
 	init_lib();
 	cjs_default = keep2();
 });
@@ -32,7 +30,7 @@ var init_cjs = __esmMin(() => {
 //#endregion
 //#region entry.js
 init_lib();
-console.log(keep1(), (init_cjs(),__toCommonJS(cjs_ns)));
+console.log(keep1(), (init_cjs(), __toCommonJS(cjs_ns)));
 
 //#endregion
 ```

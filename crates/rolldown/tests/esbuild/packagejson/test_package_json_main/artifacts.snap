@@ -20,7 +20,7 @@ var require_custom_main = __commonJSMin((exports, module) => {
 //#endregion
 //#region src/entry.js
 var import_custom_main = __toESM(require_custom_main());
-console.log((0,import_custom_main.default)());
+console.log((0, import_custom_main.default)());
 
 //#endregion
 ```

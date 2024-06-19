@@ -10,7 +10,7 @@ export async function normalizeInputOptions(
 ): Promise<NormalizedInputOptions> {
   const { input, ...rest } = config
   const plugins = await normalizePluginOption(config.plugins)
-  const treeshake = await normalizeTreeshakeOptions(config.treeshake)
+  const treeshake = normalizeTreeshakeOptions(config.treeshake)
   const logLevel = config.logLevel || LOG_LEVEL_INFO
   const onLog = getLogger(
     plugins.filter((plugin) => !('_parallel' in plugin)) as Plugin[],

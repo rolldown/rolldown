@@ -1,13 +1,10 @@
-import type { OutputOptions, OutputPlugin } from '../rollup-types'
 import type { InputOptions } from '../options/input-options'
-import { asyncFlatten } from './async-flatten'
-import type { ParallelPlugin, Plugin } from '../plugin'
 import { NormalizedTreeshakingOptions } from '../../src/treeshake'
 import { isRegExp } from 'node:util/types'
 
-export async function normalizeTreeshakeOptions(
+export function normalizeTreeshakeOptions(
   config: InputOptions['treeshake'],
-): Promise<NormalizedTreeshakingOptions | undefined> {
+): NormalizedTreeshakingOptions | undefined {
   if (config === false) {
     return undefined
   }

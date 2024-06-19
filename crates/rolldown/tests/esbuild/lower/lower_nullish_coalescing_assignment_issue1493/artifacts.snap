@@ -12,8 +12,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_nullish_coalescing_assignm
 //#region entry.js
 class A {
 	#a;
-
-	f(){
+	f() {
 		this.#a ??= 1;
 	}
 }

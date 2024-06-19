@@ -11,10 +11,8 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/basic_commonjs
 
 
 //#region esm.js
-function esm_default_fn() {
-}
-function esm_named_fn() {
-}
+function esm_default_fn() {}
+function esm_named_fn() {}
 function hoisted_fn() {
 	const bar = 1;
 }
@@ -22,23 +20,21 @@ var esm_ns, esm_named_var, esm_named_class, hoisted_var, hoisted_class;
 var init_esm = __esmMin(() => {
 	esm_ns = {};
 	__export(esm_ns, {
-		default:() => esm_default_fn,
-		esm_named_class:() => esm_named_class,
-		esm_named_fn:() => esm_named_fn,
-		esm_named_var:() => esm_named_var
+		default: () => esm_default_fn,
+		esm_named_class: () => esm_named_class,
+		esm_named_fn: () => esm_named_fn,
+		esm_named_var: () => esm_named_var
 	});
 	esm_named_var = 1;
-	esm_named_class = class {
-	};
+	esm_named_class = class {};
 	hoisted_var = 1;
-	hoisted_class = class {
-	};
+	hoisted_class = class {};
 });
 
 //#endregion
 //#region commonjs.js
 var require_commonjs$1 = __commonJSMin((exports, module) => {
-	var value = (init_esm(),__toCommonJS(esm_ns));
+	var value = (init_esm(), __toCommonJS(esm_ns));
 	module.exports = value;
 });
 
@@ -47,10 +43,8 @@ var require_commonjs$1 = __commonJSMin((exports, module) => {
 var import_commonjs = __toESM(require_commonjs$1());
 init_esm();
 console.log(import_commonjs.default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class);
-const require_commonjs = () => {
-};
-function esm_default_fn$1() {
-}
+const require_commonjs = () => {};
+function esm_default_fn$1() {}
 console.log(require_commonjs, esm_default_fn$1);
 
 //#endregion

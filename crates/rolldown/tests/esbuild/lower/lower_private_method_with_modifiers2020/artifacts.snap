@@ -11,18 +11,12 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_method_with_modifi
 
 //#region entry.js
 class Foo {
-	*#g(){
-	}
-	async #a(){
-	}
-	async *#ag(){
-	}
-	static *#sg(){
-	}
-	static async #sa(){
-	}
-	static async *#sag(){
-	}
+	*#g() {}
+	async #a() {}
+	async *#ag() {}
+	static *#sg() {}
+	static async #sa() {}
+	static async *#sag() {}
 }
 
 //#endregion

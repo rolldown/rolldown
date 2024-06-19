@@ -11,3 +11,4 @@ pub mod resolve_options;
 pub mod source_map_type;
 pub mod sourcemap_ignore_list;
 pub mod sourcemap_path_transform;
+pub mod treeshake;

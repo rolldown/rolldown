@@ -10,12 +10,11 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_async_this2016_es6
 ```js
 
 //#region other.js
-let bar = async() => {
-};
+let bar = async () => {};
 
 //#endregion
 //#region entry.js
-let foo = async() => this;
+let foo = async () => this;
 
 //#endregion
 export { bar, foo };

@@ -21,8 +21,8 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_other_file_impor
 //#region foo.js
 var foo_ns = {};
 __export(foo_ns, {
-	foo:() => foo,
-	ns:() => foo_ns
+	foo: () => foo,
+	ns: () => foo_ns
 });
 const foo = 123;
 

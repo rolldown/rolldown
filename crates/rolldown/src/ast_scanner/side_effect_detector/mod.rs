@@ -276,8 +276,7 @@ impl<'a> SideEffectDetector<'a> {
             oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
               self.detect_side_effect_of_class(decl)
             }
-            oxc::ast::ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_)
-            | oxc::ast::ast::ExportDefaultDeclarationKind::TSEnumDeclaration(_) => {
+            oxc::ast::ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
               unreachable!("ts should be transpiled")
             }
           }

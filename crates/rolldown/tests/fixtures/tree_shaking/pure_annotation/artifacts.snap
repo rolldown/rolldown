@@ -14,14 +14,12 @@ const a = 100;
 
 //#endregion
 //#region c.js
-function test() {
-}
+function test() {}
 const c = test();
 
 //#endregion
 //#region d.js
-function test2() {
-}
+function test2() {}
 const d = test2(), e = test2();
 
 //#endregion

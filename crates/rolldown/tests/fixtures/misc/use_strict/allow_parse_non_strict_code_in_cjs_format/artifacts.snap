@@ -12,8 +12,7 @@ input_file: crates/rolldown/tests/fixtures/misc/use_strict/allow_parse_non_stric
 
 //#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
-	module.exports = function foo$1(arguments) {
-	};
+	module.exports = function foo$1(arguments) {};
 });
 
 //#endregion

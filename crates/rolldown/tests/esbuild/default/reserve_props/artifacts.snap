@@ -11,8 +11,8 @@ input_file: crates/rolldown/tests/esbuild/default/reserve_props
 
 //#region entry.js
 var entry_default = {
-	foo_:0,
-	_bar_:1
+	foo_: 0,
+	_bar_: 1
 };
 
 //#endregion

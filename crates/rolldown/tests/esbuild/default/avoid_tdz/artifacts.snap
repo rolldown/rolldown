@@ -11,13 +11,11 @@ input_file: crates/rolldown/tests/esbuild/default/avoid_tdz
 
 //#region entry.js
 class Foo {
-	static foo=new Foo();
-
+	static foo = new Foo();
 }
 let foo = Foo.foo;
 console.log(foo);
-class Bar {
-}
+class Bar {}
 let bar = 123;
 
 //#endregion

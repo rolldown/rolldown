@@ -14,7 +14,7 @@ export default function square(x) {
 }
 //#endregion
 //#region cube.js
-var {default:square} = __static_import('square.js');
+var { default: square } = __static_import('square.js');
 export default function cube(x) {
 	return square(x) * x;
 }
@@ -24,13 +24,13 @@ export default function cube(x) {
 
 ```js
 //#region hyper-cube.js
-var {default:cube} = __static_import('cube.js');
+var { default: cube } = __static_import('cube.js');
 export default function hyperCube(x) {
 	return cube(x) * x;
 }
 //#endregion
 //#region main.js
-var {default:hyperCube} = __static_import('hyper-cube.js');
+var { default: hyperCube } = __static_import('hyper-cube.js');
 console.log(hyperCube(5));
 
 //#endregion
@@ -39,7 +39,7 @@ console.log(hyperCube(5));
 
 ```js
 //#region other-entry.js
-var {default:cube} = __static_import('cube.js');
+var { default: cube } = __static_import('cube.js');
 console.log(cube(5));
 
 //#endregion

@@ -12,9 +12,7 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_ke
 
 //#region node_modules/demo-pkg/index.js
 var demo_pkg_index_ns = {};
-__export(demo_pkg_index_ns, {
-	foo:() => foo
-});
+__export(demo_pkg_index_ns, {foo: () => foo});
 const foo = 123;
 console.log('hello');
 

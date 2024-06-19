@@ -381,7 +381,7 @@ impl<'me> AstScanner<'me> {
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => {
         cls_decl.id.as_ref().map(rolldown_oxc_utils::BindingIdentifierExt::expect_symbol_id)
       }
-      _ => unreachable!(),
+      oxc::ast::ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
     };
 
     let final_binding =

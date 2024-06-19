@@ -12,13 +12,9 @@ import { default as assert } from "assert";
 
 //#region main.js
 let result = 'FAIL';
-const unused = {
-	...{
-		get prop(){
-			result = 'PASS';
-		}
-	}
-};
+const unused = {...{get prop() {
+	result = 'PASS';
+}}};
 assert.strictEqual(result, 'PASS');
 
 //#endregion

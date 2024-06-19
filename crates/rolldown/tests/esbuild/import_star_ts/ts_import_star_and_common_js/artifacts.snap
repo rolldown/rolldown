@@ -14,9 +14,7 @@ input_file: crates/rolldown/tests/esbuild/import_star_ts/ts_import_star_and_comm
 var foo_ns, foo;
 var init_foo = __esmMin(() => {
 	foo_ns = {};
-	__export(foo_ns, {
-		foo:() => foo
-	});
+	__export(foo_ns, {foo: () => foo});
 	foo = 123;
 });
 
@@ -25,6 +23,10 @@ var init_foo = __esmMin(() => {
 init_foo();
 const ns2 = (init_foo(),__toCommonJS(foo_ns));
 console.log(foo, ns2.foo);
+const ns2 = (init_foo(),__toCommonJS(foo_ns));
+console.log(foo_ns.foo, ns2.foo);
+const ns2 = (init_foo(), __toCommonJS(foo_ns));
+console.log(foo_ns.foo, ns2.foo);
 
 //#endregion
 ```

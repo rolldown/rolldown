@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use oxc::{
-  ast::Trivias,
-  codegen::{Codegen, CodegenOptions, CodegenReturn},
+  codegen::{CodeGenerator, CodegenReturn},
   parser::Parser,
   span::SourceType,
 };
@@ -38,16 +37,10 @@ impl OxcCompiler {
     })
   }
   pub fn print(ast: &OxcAst, source_name: &str, enable_source_map: bool) -> CodegenReturn {
-    let codegen = Codegen::<false>::new(
-      source_name,
-      ast.source(),
-      Trivias::default(),
-      CodegenOptions {
-        enable_typescript: false,
-        enable_source_map,
-        preserve_annotate_comments: false,
-      },
-    );
+    let mut codegen = CodeGenerator::new().with_capacity(ast.source().len());
+    if enable_source_map {
+      codegen = codegen.enable_source_map(source_name, ast.source());
+    }
     codegen.build(ast.program())
   }
 }

@@ -18,15 +18,13 @@ var y_default = 'y';
 var x_ns, x_default;
 var init_x = __esmMin(() => {
 	x_ns = {};
-	__export(x_ns, {
-		default:() => x_default
-	});
+	__export(x_ns, {default: () => x_default});
 	x_default = 'x';
 });
 
 //#endregion
 //#region entry.js
-const x_txt = (init_x(),__toCommonJS(x_ns));
+const x_txt = (init_x(), __toCommonJS(x_ns));
 console.log(x_txt, y_default);
 
 //#endregion

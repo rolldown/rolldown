@@ -11,9 +11,8 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_accessor_ord
 
 //#region entry.js
 class Foo {
-	bar=this.#foo;
-
-	get #foo(){
+	bar = this.#foo;
+	get #foo() {
 		return 123;
 	}
 }

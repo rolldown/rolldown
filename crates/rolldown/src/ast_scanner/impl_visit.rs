@@ -2,9 +2,9 @@ use oxc::{
   ast::{
     ast::{Expression, IdentifierReference, MemberExpression},
     visit::walk,
-    Trivias, Visit,
+    Visit,
   },
-  codegen::{self, Codegen, CodegenOptions, Gen},
+  codegen::{self, CodeGenerator, Gen},
 };
 use rolldown_common::ImportKind;
 
@@ -21,16 +21,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
           .detect_side_effect_of_stmt(stmt);
 
       if cfg!(debug_assertions) {
-        let mut codegen = Codegen::<false>::new(
-          "",
-          "",
-          Trivias::default(),
-          CodegenOptions {
-            enable_typescript: true,
-            enable_source_map: false,
-            preserve_annotate_comments: false,
-          },
-        );
+        let mut codegen = CodeGenerator::new();
         stmt.gen(&mut codegen, codegen::Context::default());
         self.current_stmt_info.debug_label = Some(codegen.into_source_text());
       }

@@ -12,13 +12,13 @@ input_file: crates/rolldown/tests/esbuild/default/require_with_call_inside_try
 
 //#region entry.js
 var require_entry = __commonJSMin((exports, module) => {
-	try{
+	try {
 		const supportsColor = require('supports-color');
 		if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
 			exports.colors = [];
 		}
-	}catch(error){
-	}});
+	} catch (error) {}
+});
 
 //#endregion
 export default require_entry();

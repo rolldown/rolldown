@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/shared-commonjs-into-es6
 import { require_shared } from "./shared.mjs";
 
 //#region a.js
-const {foo} = require_shared();
+const { foo } = require_shared();
 console.log(foo);
 
 //#endregion
@@ -22,7 +22,7 @@ console.log(foo);
 import { require_shared } from "./shared.mjs";
 
 //#region b.js
-const {foo} = require_shared();
+const { foo } = require_shared();
 console.log(foo);
 
 //#endregion

@@ -14,16 +14,14 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_ke
 var index_module_ns, foo;
 var init_index_module = __esmMin(() => {
 	index_module_ns = {};
-	__export(index_module_ns, {
-		foo:() => foo
-	});
+	__export(index_module_ns, {foo: () => foo});
 	foo = 123;
 	console.log('TEST FAILED');
 });
 
 //#endregion
 //#region src/require-demo-pkg.js
-init_index_module(),__toCommonJS(index_module_ns);
+init_index_module(), __toCommonJS(index_module_ns);
 
 //#endregion
 //#region src/entry.js

@@ -28,7 +28,7 @@ var import_bar = __toESM(require_bar());
 
 //#endregion
 //#region entry.js
-console.log(import_foo);
+console.log(import_foo.default);
 
 //#endregion
 ```

@@ -8,7 +8,7 @@ use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   NormalModule, NormalModuleId, NormalModuleVec, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
 };
-use rolldown_rstr::ToRstr;
+use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -33,7 +33,8 @@ struct Context<'a> {
     &'a mut FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
 
-pub type MemberChainToResolvedSymbolRef = FxHashMap<Box<[CompactStr]>, (SymbolRef, usize)>;
+pub type MemberChainToResolvedSymbolRef =
+  FxHashMap<Box<[CompactStr]>, (SymbolRef, usize, Option<Rstr>)>;
 
 /// if no export is used, and the module has no side effects, the module should not be included
 fn include_module(ctx: &mut Context, module: &NormalModule) {
@@ -133,14 +134,15 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr
     cursor += 1;
   }
 
-  let export_name = if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
-    let name = canonical_ref_symbol.name.clone();
-    canonical_ref = namespace_alias.namespace_ref;
-    canonical_ref_module = &ctx.modules[canonical_ref.owner];
-    name
-  } else {
-    canonical_ref_symbol.name.clone()
-  };
+  let (export_name, namespace_property_name) =
+    if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
+      let name = canonical_ref_symbol.name.clone();
+      canonical_ref = namespace_alias.namespace_ref;
+      canonical_ref_module = &ctx.modules[canonical_ref.owner];
+      (name, Some(namespace_alias.property_name.clone()))
+    } else {
+      (canonical_ref_symbol.name.clone(), None)
+    };
 
   let export_name = export_name.to_rstr();
   let is_namespace_ref = canonical_ref_module.namespace_object_ref == canonical_ref;
@@ -153,7 +155,8 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr
   // Only cache the top level member expr resolved result, if it consume at least one chain element.
   if cursor > 0 {
     let map = ctx.top_level_member_expr_resolved_cache.entry(symbol_ref).or_default();
-    map.insert(chains.to_vec().into_boxed_slice(), (canonical_ref, cursor));
+    let chains = chains.to_vec();
+    map.insert(chains.into_boxed_slice(), (canonical_ref, cursor, namespace_property_name));
   }
   if has_ambiguous_symbol {
     return;

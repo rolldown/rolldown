@@ -430,9 +430,19 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             .top_level_member_expr_resolved_cache
             .get(&(self.ctx.id, symbol).into())
             .and_then(|map| map.get(&chain.clone().into_boxed_slice()))
-            .map(|(symbol_ref, cursor)| {
+            .map(|(symbol_ref, cursor, namespace_property_name)| {
               let replaced_expr = if let Some(name) = self.try_canonical_name_for(*symbol_ref) {
-                self.snippet.member_expr_or_ident_ref(name.as_str(), &chain[*cursor..], SPAN)
+                let namespace_prop_chain =
+                  if let Some(namespace_property_name) = namespace_property_name {
+                    vec![namespace_property_name.as_str().into()]
+                  } else {
+                    vec![]
+                  };
+                self.snippet.member_expr_or_ident_ref(
+                  name.as_str(),
+                  &[&chain[*cursor..], &namespace_prop_chain].concat(),
+                  SPAN,
+                )
               } else {
                 // Ambiguous symbol, replace the member expr with `undefined`, the runtime semantic
                 // will not change

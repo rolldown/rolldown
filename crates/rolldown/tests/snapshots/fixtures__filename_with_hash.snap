@@ -29,7 +29,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
-- entry_js-!~{000}~.mjs => entry_js-rf9rRzcd.mjs
+- entry_js-!~{000}~.mjs => entry_js-zD5Goehk.mjs
 
 # tests/esbuild/dce/inline_function_call_for_init_decl
 

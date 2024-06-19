@@ -37,33 +37,14 @@ impl OxcCompiler {
     })
   }
   pub fn print(ast: &OxcAst, source_name: &str, enable_source_map: bool) -> CodegenReturn {
-    let mut codegen = CodeGenerator::new().with_capacity(ast.source().len());
+    let mut codegen = CodeGenerator::new().with_capacity(ast.source().len()).enable_comment(
+      ast.source(),
+      ast.trivias.clone(),
+      oxc::codegen::CommentOptions { preserve_annotate_comments: true },
+    );
     if enable_source_map {
       codegen = codegen.enable_source_map(source_name, ast.source());
     }
-    let codegen = Codegen::<false>::new(
-      source_name,
-      ast.source(),
-      CodegenOptions {
-        enable_typescript: false,
-        enable_source_map,
-        preserve_annotate_comments: false,
-      },
-      None,
-    );
-    let codegen = Codegen::<false>::new(
-      source_name,
-      ast.source(),
-      CodegenOptions {
-        enable_typescript: false,
-        enable_source_map,
-        preserve_annotate_comments: true,
-      },
-      Some(oxc::codegen::CommentGenRelated {
-        trivials: &ast.trivias,
-        move_comment_map: Default::default(),
-      }),
-    );
     codegen.build(ast.program())
   }
 }

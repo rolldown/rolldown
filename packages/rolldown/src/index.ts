@@ -33,7 +33,11 @@ import { ConfigExport } from './types/config-export'
 import { BuiltinWasmPlugin } from './plugin/bindingify-builtin-plugin'
 import { RolldownBuild } from './rolldown-build'
 import { InternalModuleFormat } from './options/bindingify-output-options'
-import { EmittedFile, PluginContext } from './plugin/plugin-context'
+import {
+  EmittedAsset,
+  EmittedFile,
+  PluginContext,
+} from './plugin/plugin-context'
 import { TransformPluginContext } from './plugin/transfrom-plugin-context'
 import { NormalizedOutputOptions } from './options/normalized-output-options'
 import { RenderedChunk } from './binding'
@@ -84,6 +88,7 @@ export type {
   ModuleInfo,
   MinimalPluginContext,
   EmittedFile,
+  EmittedAsset,
   CustomPluginOptions,
   AsyncPluginHooks,
   ParallelPluginHooks,
@@ -97,5 +102,6 @@ export type {
   RolldownOutput as RollupOutput,
   RolldownOptions as RollupOptions,
   RolldownBuild as RollupBuild,
+  RolldownOutputChunk as OutputChunk,
 }
 export type { RollupError, RollupLog, LoggingFunction } from './rollup'

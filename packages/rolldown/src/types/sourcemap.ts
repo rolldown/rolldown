@@ -1,16 +1,17 @@
 import { BindingSourcemap } from '../binding'
 
-export interface SourceMapInputObject {
+export interface ExistingRawSourceMap {
   file?: string | null
   mappings: string
   names?: string[]
   sources?: (string | null)[]
   sourcesContent?: (string | null)[]
   sourceRoot?: string
-  version: number
+  version?: number // make it optional to compat { mappings: '' }
+  x_google_ignoreList?: number[]
 }
 
-export type SourceMapInput = SourceMapInputObject | string | null
+export type SourceMapInput = ExistingRawSourceMap | string | null
 
 export function bindingifySourcemap(
   map?: SourceMapInput,

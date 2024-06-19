@@ -3,7 +3,13 @@ import type {
   RenderedChunk,
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
-import type { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
+import type {
+  AnyFn,
+  AnyObj,
+  NullValue,
+  MaybePromise,
+  PartialNull,
+} from '../types/utils'
 import type { SourceMapInput } from '../types/sourcemap'
 import { pathToFileURL } from 'node:url'
 import type { ModuleInfo } from '../types/module-info'
@@ -28,33 +34,34 @@ export type ModuleSideEffects = boolean | 'no-treeshake' | null
 
 export type ImportKind = BindingHookResolveIdExtraOptions['kind']
 
-export type ResolveIdResult =
-  | string
-  | NullValue
-  | false
-  | {
-      id: string
-      external?: boolean
-      moduleSideEffects?: ModuleSideEffects
-    }
+export interface CustomPluginOptions {
+  [plugin: string]: any
+}
 
-export type LoadResult =
-  | NullValue
-  | string
-  | {
-      code: string
-      map?: SourceMapInput
-      moduleSideEffects?: ModuleSideEffects
-    }
+export interface ModuleOptions {
+  moduleSideEffects: ModuleSideEffects
+}
 
-export type TransformResult =
-  | NullValue
-  | string
-  | {
-      code: string
-      map?: SourceMapInput
-      moduleSideEffects?: ModuleSideEffects
-    }
+export interface ResolvedId extends ModuleOptions {
+  external: boolean
+  id: string
+}
+
+export interface PartialResolvedId extends Partial<PartialNull<ModuleOptions>> {
+  external?: boolean
+  id: string
+}
+
+export interface SourceDescription extends Partial<PartialNull<ModuleOptions>> {
+  code: string
+  map?: SourceMapInput
+}
+
+export type ResolveIdResult = string | NullValue | false | PartialResolvedId
+
+export type LoadResult = NullValue | string | SourceDescription
+
+export type TransformResult = NullValue | string | SourceDescription
 
 export interface Plugin {
   name?: string
@@ -197,3 +204,43 @@ export function defineParallelPlugin<Options>(
     return { _parallel: { fileUrl: pathToFileURL(pluginPath).href, options } }
   }
 }
+
+export type FunctionPluginHooks = Plugin
+
+export type SyncPluginHooks =
+  | 'augmentChunkHash'
+  | 'onLog'
+  | 'outputOptions'
+  | 'renderDynamicImport'
+  | 'resolveFileUrl'
+  | 'resolveImportMeta'
+
+export type AsyncPluginHooks = Exclude<
+  keyof FunctionPluginHooks,
+  SyncPluginHooks
+>
+
+export type FirstPluginHooks =
+  | 'load'
+  | 'renderDynamicImport'
+  | 'resolveDynamicImport'
+  | 'resolveFileUrl'
+  | 'resolveId'
+  | 'resolveImportMeta'
+  | 'shouldTransformCachedModule'
+
+export type SequentialPluginHooks =
+  | 'augmentChunkHash'
+  | 'generateBundle'
+  | 'onLog'
+  | 'options'
+  | 'outputOptions'
+  | 'renderChunk'
+  | 'transform'
+
+export type AddonHooks = 'banner' | 'footer' | 'intro' | 'outro'
+
+export type ParallelPluginHooks = Exclude<
+  keyof FunctionPluginHooks | AddonHooks,
+  FirstPluginHooks | SequentialPluginHooks
+>

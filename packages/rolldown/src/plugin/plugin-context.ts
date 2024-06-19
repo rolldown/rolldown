@@ -15,6 +15,8 @@ export interface EmittedAsset {
   source: AssetSource
 }
 
+export type EmittedFile = EmittedAsset
+
 export class PluginContext {
   debug: LoggingFunction
   info: LoggingFunction

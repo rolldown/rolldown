@@ -1,4 +1,8 @@
-import { RolldownOutput, RolldownOutputChunk } from './types/rolldown-output'
+import {
+  RolldownOutput,
+  RolldownOutputChunk,
+  SourceMap,
+} from './types/rolldown-output'
 import type {
   ExternalOption,
   InputOption,
@@ -7,11 +11,19 @@ import type {
 import type { ModuleFormat, OutputOptions } from './options/output-options'
 import type { RolldownOptions } from './types/rolldown-options'
 import type {
+  AsyncPluginHooks,
+  CustomPluginOptions,
+  FunctionPluginHooks,
   ImportKind,
   LoadResult,
+  ModuleOptions,
   ObjectHook,
+  ParallelPluginHooks,
+  PartialResolvedId,
   Plugin,
   ResolveIdResult,
+  ResolvedId,
+  SourceDescription,
   TransformResult,
 } from './plugin'
 import { defineParallelPlugin, DefineParallelPluginResult } from './plugin'
@@ -21,8 +33,15 @@ import { ConfigExport } from './types/config-export'
 import { BuiltinWasmPlugin } from './plugin/bindingify-builtin-plugin'
 import { RolldownBuild } from './rolldown-build'
 import { InternalModuleFormat } from './options/bindingify-output-options'
-import { PluginContext } from './plugin/plugin-context'
+import { EmittedFile, PluginContext } from './plugin/plugin-context'
 import { TransformPluginContext } from './plugin/transfrom-plugin-context'
+import { NormalizedOutputOptions } from './options/normalized-output-options'
+import { RenderedChunk } from './binding'
+import { PartialNull } from './types/utils'
+import { NormalizedInputOptions } from './options/normalized-input-options'
+import { ModuleInfo } from './types/module-info'
+import { MinimalPluginContext } from './log/logger'
+import { ExistingRawSourceMap } from './types/sourcemap'
 
 export {
   defineConfig,
@@ -38,7 +57,9 @@ export type {
   RolldownOutput,
   RolldownBuild,
   InputOptions,
+  NormalizedInputOptions,
   OutputOptions,
+  NormalizedOutputOptions,
   Plugin,
   DefineParallelPluginResult,
   ConfigExport,
@@ -53,6 +74,21 @@ export type {
   PluginContext,
   TransformPluginContext,
   ObjectHook,
+  RenderedChunk,
+  SourceMap,
+  SourceDescription,
+  PartialNull,
+  PartialResolvedId,
+  ResolvedId,
+  ModuleOptions,
+  ModuleInfo,
+  MinimalPluginContext,
+  EmittedFile,
+  CustomPluginOptions,
+  AsyncPluginHooks,
+  ParallelPluginHooks,
+  FunctionPluginHooks,
+  ExistingRawSourceMap,
 }
 
 // Exports for compatibility

@@ -156,6 +156,8 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr
   if cursor > 0 {
     let map = ctx.top_level_member_expr_resolved_cache.entry(symbol_ref).or_default();
     let chains = chains.to_vec();
+    // If the last namespace object is a namespace alias, we should add the property name postfix
+    // to the final access chains.
     map.insert(chains.into_boxed_slice(), (canonical_ref, cursor, namespace_property_name));
   }
   if has_ambiguous_symbol {

@@ -14,15 +14,13 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_dual_pac
 var module_ns, module_default;
 var init_module = __esmMin(() => {
 	module_ns = {};
-	__export(module_ns, {
-		default:() => module_default
-	});
+	__export(module_ns, {default: () => module_default});
 	module_default = 'module';
 });
 
 //#endregion
 //#region src/test-main.js
-console.log((init_module(),__toCommonJS(module_ns)));
+console.log((init_module(), __toCommonJS(module_ns)));
 
 //#endregion
 //#region src/test-module.js

@@ -12,7 +12,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_async_this2016_common_js
 
 //#region entry.js
 var require_entry = __commonJSMin((exports, module) => {
-	exports.foo = async() => this;
+	exports.foo = async () => this;
 });
 
 //#endregion

@@ -17,9 +17,7 @@ function foo$1() {
 var foo_ns;
 var init_foo = __esmMin(() => {
 	foo_ns = {};
-	__export(foo_ns, {
-		foo:() => foo$1
-	});
+	__export(foo_ns, {foo: () => foo$1});
 });
 
 //#endregion
@@ -30,16 +28,14 @@ function bar$1() {
 var bar_ns;
 var init_bar = __esmMin(() => {
 	bar_ns = {};
-	__export(bar_ns, {
-		bar:() => bar$1
-	});
+	__export(bar_ns, {bar: () => bar$1});
 });
 
 //#endregion
 //#region entry.js
-const {foo} = (init_foo(),__toCommonJS(foo_ns));
+const { foo } = (init_foo(), __toCommonJS(foo_ns));
 console.log(foo(), bar());
-const {bar} = (init_bar(),__toCommonJS(bar_ns));
+const { bar } = (init_bar(), __toCommonJS(bar_ns));
 
 //#endregion
 ```

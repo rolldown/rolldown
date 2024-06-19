@@ -11,16 +11,12 @@ input_file: crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances
 
 //#region class.js
 class Keep1 {
-	*[Symbol.iterator](){
-	}
+	*[Symbol.iterator]() {}
 	[keep];
-
 }
 class Keep2 {
 	[keep];
-
-	*[Symbol.iterator](){
-	}
+	*[Symbol.iterator]() {}
 }
 
 //#endregion
@@ -30,28 +26,17 @@ class Keep2 {
 ```js
 
 //#region object.js
-let remove2 = {
-	*[Symbol.iterator](){
-	}
-};
-let remove3 = {
-	*[Symbol['iterator']](){
-	}
-};
+let remove2 = {*[Symbol.iterator]() {}};
+let remove3 = {*[Symbol['iterator']]() {}};
 let keep1 = {
-	*[Symbol.iterator](){
-	},
-	[keep]:null
+	*[Symbol.iterator]() {},
+	[keep]: null
 };
 let keep2 = {
-	[keep]:null,
-	*[Symbol.iterator](){
-	}
+	[keep]: null,
+	*[Symbol.iterator]() {}
 };
-let keep3 = {
-	*[Symbol.wtf](){
-	}
-};
+let keep3 = {*[Symbol.wtf]() {}};
 
 //#endregion
 ```

@@ -11,15 +11,14 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_field_static
 
 //#region entry.js
 class T {
-	#a(){
+	#a() {
 		return 'a';
 	}
-	#b(){
+	#b() {
 		return 'b';
 	}
 	static c;
-
-	d(){
+	d() {
 		console.log(this.#a());
 	}
 }

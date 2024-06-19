@@ -21,10 +21,10 @@ console.log(require.resolve('missing-pkg'));
 console.log(require.resolve('external-pkg'));
 console.log(require.resolve('@scope/missing-pkg'));
 console.log(require.resolve('@scope/external-pkg'));
-try{
+try {
 	console.log(require.resolve('inside-try'));
-}catch(e){
-}if (false) {
+} catch (e) {}
+if (false) {
 	console.log(require.resolve('dead-code'));
 }
 console.log(false ? require.resolve('dead-if') : 0);

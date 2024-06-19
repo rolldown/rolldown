@@ -11,8 +11,7 @@ input_file: crates/rolldown/tests/fixtures/function/resolve/browser_filed_false
 
 
 //#region (ignored) node_modules/package/util.js
-var require_util = __commonJSMin((exports, module) => {
-});
+var require_util = __commonJSMin((exports, module) => {});
 
 //#endregion
 //#region node_modules/package/index.js

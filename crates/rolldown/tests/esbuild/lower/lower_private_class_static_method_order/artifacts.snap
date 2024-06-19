@@ -11,17 +11,15 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_static_metho
 
 //#region entry.js
 class Foo {
-	static bar=Foo.#foo();
-
-	static #foo(){
+	static bar = Foo.#foo();
+	static #foo() {
 		return 123;
 	}
 }
 console.log(Foo.bar === 123);
 class FooThis {
-	static bar=this.#foo();
-
-	static #foo(){
+	static bar = this.#foo();
+	static #foo() {
 		return 123;
 	}
 }

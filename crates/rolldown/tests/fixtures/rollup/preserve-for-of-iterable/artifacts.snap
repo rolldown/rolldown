@@ -12,30 +12,25 @@ import { default as assert } from "assert";
 
 //#region iterables.js
 let dirty;
-const zeroToFive = {
-	[Symbol.iterator](){
-		return {
-			current:0,
-			last:5,
-			next(){
-				const ret = this.current < this.last ? {
-					done:false,
-					value:this.current++
-				} : {
-					done:true
-				};
-				dirty = this.current;
-				return ret;
-			}
-		};
-	}
-};
+const zeroToFive = {[Symbol.iterator]() {
+	return {
+		current: 0,
+		last: 5,
+		next() {
+			const ret = this.current < this.last ? {
+				done: false,
+				value: this.current++
+			} : {done: true};
+			dirty = this.current;
+			return ret;
+		}
+	};
+}};
 
 //#endregion
 //#region loops.js
-const iterate = iterable => {
-	for (const value of  iterable) 	{
-	}
+const iterate = (iterable) => {
+	for (const value of iterable) {}
 };
 
 //#endregion

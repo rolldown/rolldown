@@ -11,13 +11,11 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/empty_file_should_be_treat
 
 
 //#region star-empty.js
-var require_star_empty = __commonJSMin((exports, module) => {
-});
+var require_star_empty = __commonJSMin((exports, module) => {});
 
 //#endregion
 //#region default-empty.js
-var require_default_empty = __commonJSMin((exports, module) => {
-});
+var require_default_empty = __commonJSMin((exports, module) => {});
 
 //#endregion
 //#region main.js

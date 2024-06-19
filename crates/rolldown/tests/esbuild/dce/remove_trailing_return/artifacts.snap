@@ -11,30 +11,24 @@ input_file: crates/rolldown/tests/esbuild/dce/remove_trailing_return
 
 //#region entry.js
 function foo() {
-	if (a) 	b();
-
+	if (a) b();
 	return;
 }
 function bar() {
-	if (a) 	b();
-
+	if (a) b();
 	return KEEP_ME;
 }
 var entry_default = [foo, bar, function() {
-	if (a) 	b();
-
+	if (a) b();
 	return;
 }, function() {
-	if (a) 	b();
-
+	if (a) b();
 	return KEEP_ME;
 }, () => {
-	if (a) 	b();
-
+	if (a) b();
 	return;
 }, () => {
-	if (a) 	b();
-
+	if (a) b();
 	return KEEP_ME;
 },];
 

@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3
 
 //#region entry.js
 const myFunc = () => {
-	DROP:	{
+	DROP: {
 		console.log('drop');
 	}
 	console.log('keep');

@@ -31,8 +31,7 @@ console.log(bar());
 
 
 //#region empty.js
-var require_empty = __commonJSMin((exports, module) => {
-});
+var require_empty = __commonJSMin((exports, module) => {});
 
 //#endregion
 //#region common.js

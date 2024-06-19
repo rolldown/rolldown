@@ -12,9 +12,7 @@ input_file: crates/rolldown/tests/fixtures/misc/reexport_star
 
 //#region a.js
 var a_ns = {};
-__export(a_ns, {
-	abc:() => abc
-});
+__export(a_ns, {abc: () => abc});
 const abc = undefined;
 
 //#endregion

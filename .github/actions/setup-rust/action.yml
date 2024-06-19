@@ -1,0 +1,12 @@
+name: 'Setup Rust'
+
+description: 'Setup rust'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Rust
+      uses: moonrepo/setup-rust@v1
+      with:
+        bins: just
+        cache-base: main

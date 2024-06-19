@@ -18,6 +18,7 @@ export const suitesForCI = [
       sourcemap: true,
     },
   },
+  suiteRomeTs,
 ]
 
 /**
@@ -38,7 +39,6 @@ export const suites = [
       sourcemap: true,
     },
   },
-  suiteRomeTs,
   {
     title: 'react-stack',
     inputs: ['react', 'react-dom'],

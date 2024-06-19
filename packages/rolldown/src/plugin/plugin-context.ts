@@ -6,7 +6,7 @@ import type { Plugin } from './index'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
 import { AssetSource, bindingAssetSource } from '../utils/asset-source'
-import { unimplemented } from '../utils/misc'
+import { unimplemented, unsupported } from '../utils/misc'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -23,6 +23,10 @@ export class PluginContext {
   resolve: BindingPluginContext['resolve']
   emitFile: (file: EmittedAsset) => string
   getFileName: (referenceId: string) => string
+  /**
+   * @deprecated This rollup API won't be supported by rolldown. Using this API will cause runtime error.
+   */
+  parse: (input: string, options?: any) => any
 
   constructor(
     options: NormalizedInputOptions,
@@ -69,5 +73,8 @@ export class PluginContext {
       })
     }
     this.getFileName = context.getFileName.bind(context)
+    this.parse = unsupported(
+      '`PluginContext#parse` is not supported by rolldown.',
+    )
   }
 }

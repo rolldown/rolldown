@@ -37,13 +37,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   #[track_caller]
   pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {
-    // dbg!(std::panic::Location::caller());
-    let res = self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names);
-    // dbg!("test it");
-    res
+    self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
   }
 
-  /// Used for member expression accessment with ambiguous name.
+  /// Used for member expression access with ambiguous name.
   pub fn try_canonical_name_for(&self, symbol: SymbolRef) -> Option<&'me Rstr> {
     self.ctx.canonical_names.get(&symbol)
   }

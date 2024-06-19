@@ -10,23 +10,28 @@ import {
 } from '../log/logging'
 import { BuiltinPlugin } from '../plugin/bindingify-builtin-plugin'
 
+const inputOptionSchema = z
+  .string()
+  .or(z.string().array())
+  .or(z.record(z.string()))
+
+const externalSchema = zodExt
+  .stringOrRegExp()
+  .or(zodExt.stringOrRegExp().array())
+  .or(
+    z
+      .function()
+      .args(z.string(), z.string().optional(), z.boolean())
+      .returns(zodExt.voidNullableWith(z.boolean())),
+  )
+
 const inputOptionsSchema = z.strictObject({
-  input: z.string().or(z.string().array()).or(z.record(z.string())).optional(),
+  input: inputOptionSchema.optional(),
   plugins: zodExt
     .phantom<Plugin | ParallelPlugin | BuiltinPlugin>()
     .array()
     .optional(),
-  external: zodExt
-    .stringOrRegExp()
-    .or(zodExt.stringOrRegExp().array())
-    .or(
-      z
-        .function()
-        .args(z.string(), z.string().optional(), z.boolean())
-        .returns(zodExt.voidNullableWith(z.boolean()))
-        .optional(),
-    )
-    .optional(),
+  external: externalSchema.optional(),
   resolve: z
     .strictObject({
       alias: z.record(z.string()).optional(),
@@ -73,3 +78,5 @@ const inputOptionsSchema = z.strictObject({
 })
 
 export type InputOptions = z.infer<typeof inputOptionsSchema>
+export type InputOption = z.infer<typeof inputOptionSchema>
+export type ExternalOption = z.infer<typeof externalSchema>

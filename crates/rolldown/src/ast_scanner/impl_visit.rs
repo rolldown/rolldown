@@ -1,49 +1,16 @@
-use std::sync::Arc;
-
 use oxc::{
   ast::{
     ast::{Expression, IdentifierReference, MemberExpression},
     visit::walk,
-    Visit,
+    Trivias, Visit,
   },
   codegen::{self, Codegen, CodegenOptions, Gen},
-  semantic::SymbolId,
 };
 use rolldown_common::ImportKind;
-use rolldown_error::BuildError;
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
 use super::{side_effect_detector::SideEffectDetector, AstScanner};
-
-impl<'me> AstScanner<'me> {
-  /// resolve the symbol from the identifier reference, and return if it is a top level symbol
-  fn resolve_identifier_reference(
-    &mut self,
-    symbol_id: Option<SymbolId>,
-    ident: &IdentifierReference,
-  ) -> Option<SymbolId> {
-    match symbol_id {
-      Some(symbol_id) if self.is_top_level(symbol_id) => Some(symbol_id),
-      None => {
-        if ident.name == "module" {
-          self.used_module_ref = true;
-        }
-        if ident.name == "exports" {
-          self.used_exports_ref = true;
-        }
-        if ident.name == "eval" {
-          self.result.warnings.push(
-            BuildError::eval(self.file_path.to_string(), Arc::clone(self.source), ident.span)
-              .with_severity_warning(),
-          );
-        }
-        None
-      }
-      _ => None,
-    }
-  }
-}
 
 impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
@@ -57,12 +24,12 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         let mut codegen = Codegen::<false>::new(
           "",
           "",
+          Trivias::default(),
           CodegenOptions {
             enable_typescript: true,
             enable_source_map: false,
             preserve_annotate_comments: false,
           },
-          None,
         );
         stmt.gen(&mut codegen, codegen::Context::default());
         self.current_stmt_info.debug_label = Some(codegen.into_source_text());
@@ -82,11 +49,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   }
 
   fn visit_member_expression(&mut self, expr: &MemberExpression<'ast>) {
-    let top_level_member_expr = match expr {
-      MemberExpression::ComputedMemberExpression(expr) => {
-        self.visit_computed_member_expression(expr);
-        None
-      }
+    match expr {
       MemberExpression::StaticMemberExpression(inner_expr) => {
         let mut chain = vec![];
         let mut cur = inner_expr;
@@ -106,21 +69,15 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
         };
         chain.reverse();
         let chain = chain.into_iter().map(|ident| ident.name.as_str().into()).collect::<Vec<_>>();
+
         if let Some(symbol_id) = top_level_symbol {
-          Some((symbol_id, chain))
-        } else {
-          self.visit_expression(&cur.object);
-          None
+          self.add_member_expr_reference(symbol_id, chain);
+          return;
         }
       }
-      MemberExpression::PrivateFieldExpression(expr) => {
-        self.visit_private_field_expression(expr);
-        None
-      }
+      _ => {}
     };
-    if let Some((symbol_id, chains)) = top_level_member_expr {
-      self.add_member_expr_reference(symbol_id, chains);
-    }
+    walk::walk_member_expression(self, expr);
   }
 
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {

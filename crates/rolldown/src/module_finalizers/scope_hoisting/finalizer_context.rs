@@ -1,4 +1,3 @@
-use oxc::span::CompactStr;
 use rolldown_common::{
   ExternalModuleVec, NormalModule, NormalModuleId, NormalModuleVec, SymbolRef,
 };
@@ -9,6 +8,7 @@ use rustc_hash::FxHashMap;
 use crate::{
   chunk_graph::ChunkGraph,
   runtime::RuntimeModuleBrief,
+  stages::link_stage::tree_shaking::MemberChainToResolvedSymbolRef,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     symbols::Symbols,
@@ -28,5 +28,5 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,
   pub options: &'me SharedOptions,
-  pub top_level_cache: &'me FxHashMap<SymbolRef, FxHashMap<Box<[CompactStr]>, (SymbolRef, usize)>>,
+  pub top_level_cache: &'me FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }

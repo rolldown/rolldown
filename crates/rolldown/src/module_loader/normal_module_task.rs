@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
 use futures::future::join_all;
@@ -24,7 +24,6 @@ use crate::{
   utils::{
     load_source::load_source, make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
     parse_to_ast::parse_to_ast, resolve_id::resolve_id, transform_source::transform_source,
-    tweak_ast_for_scanning::tweak_ast_for_scanning,
   },
   SharedOptions, SharedResolver,
 };
@@ -112,8 +111,12 @@ impl NormalModuleTask {
     .await?
     .into();
 
-    let mut ast = parse_to_ast(&self.ctx.input_options, module_type, Arc::clone(&source))?;
-    tweak_ast_for_scanning(&mut ast);
+    let mut ast = parse_to_ast(
+      Path::new(&self.resolved_path.path.as_ref()),
+      &self.ctx.input_options,
+      module_type,
+      Arc::clone(&source),
+    )?;
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);
 

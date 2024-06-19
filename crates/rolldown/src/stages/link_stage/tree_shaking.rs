@@ -123,7 +123,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr
     let name = &chains[cursor];
     let export_symbol = ctx.metas[canonical_ref_module.id].resolved_exports.get(&name.to_rstr());
     let Some(export_symbol) = export_symbol else { break };
-    has_ambiguous_symbol = export_symbol.potentially_ambiguous_symbol_refs.is_some();
+    has_ambiguous_symbol |= export_symbol.potentially_ambiguous_symbol_refs.is_some();
     if !ctx.modules[export_symbol.symbol_ref.owner].exports_kind.is_esm() {
       break;
     }
@@ -151,7 +151,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, chains: &[CompactStr
 
   let id = ns_symbol_list.last().map_or(symbol_ref.owner, |(symbol, _)| symbol.owner);
   ctx.used_exports_info_vec[id].used_exports.insert(export_name);
-  // Only cache the top level member epxr resolved result, if it consume at least one chain element.
+  // Only cache the top level member expr resolved result, if it consume at least one chain element.
   if cursor > 0 {
     let map = ctx.top_level_member_expr_resolved_cache.entry(symbol_ref).or_default();
     map.insert(chains.to_vec().into_boxed_slice(), (canonical_ref, cursor));

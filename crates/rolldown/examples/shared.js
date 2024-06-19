@@ -1,1 +1,3 @@
-export * as c from './c.js'
+const a = 'shared.js'
+
+export { a }

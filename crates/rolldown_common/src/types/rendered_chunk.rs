@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rustc_hash::FxHashMap;
 
 use crate::{RenderedModule, ResourceId};
@@ -5,6 +7,7 @@ use crate::{RenderedModule, ResourceId};
 #[derive(Debug, Clone)]
 pub struct RenderedChunk {
   // PreRenderedChunk
+  pub name: Arc<str>,
   pub is_entry: bool,
   pub is_dynamic_entry: bool,
   pub facade_module_id: Option<ResourceId>,

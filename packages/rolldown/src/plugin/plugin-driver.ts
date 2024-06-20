@@ -8,7 +8,9 @@ import { RollupError } from '../rollup'
 import { normalizeHook } from '../utils/normalize-hook'
 
 export class PluginDriver {
-  public callOptionsHook(inputOptions: NormalizedInputOptions) {
+  public async callOptionsHook(
+    inputOptions: NormalizedInputOptions,
+  ): Promise<NormalizedInputOptions> {
     const logLevel = inputOptions.logLevel
     const plugins = inputOptions.plugins.filter(
       (plugin) => !('_parallel' in plugin),
@@ -20,7 +22,7 @@ export class PluginDriver {
       const options = plugin.options
       if (options) {
         const [handler, _optionsIgnoredSofar] = normalizeHook(options)
-        handler.call(
+        const result = await handler.call(
           {
             debug: getLogHandler(
               LOG_LEVEL_DEBUG,
@@ -50,8 +52,14 @@ export class PluginDriver {
           // TODO Here only support readonly access to the inputOptions at now
           inputOptions,
         )
+
+        if (result) {
+          inputOptions = result
+        }
       }
     }
+
+    return inputOptions
   }
 
   public callOutputOptionsHook(

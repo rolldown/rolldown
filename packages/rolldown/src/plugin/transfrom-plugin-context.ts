@@ -16,7 +16,10 @@ export class TransformPluginContext {
   debug: LoggingFunction
   info: LoggingFunction
   warn: LoggingFunction
-  error: (error: RollupError | string) => never
+  error: (
+    error: RollupError | string,
+    pos?: number | { column: number; line: number },
+  ) => never
   resolve: BindingPluginContext['resolve']
   getCombinedSourcemap: () => SourceMap
   emitFile: (file: EmittedAsset) => string

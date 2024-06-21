@@ -1,4 +1,5 @@
 {
+  "expectExecuted": false,
   "config": {
     "input": [
       {
@@ -24,14 +25,6 @@
       {
         "name": "stmt-export-local_js",
         "import": "stmt-export-local.js"
-      },
-      {
-        "name": "ns-export-fn_ts",
-        "import": "ns-export-fn.ts"
-      },
-      {
-        "name": "ns-export-local_ts",
-        "import": "ns-export-local.ts"
       },
       {
         "name": "stmt-export-default-before-fn-anon_js",

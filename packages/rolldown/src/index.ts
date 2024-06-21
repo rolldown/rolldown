@@ -1,5 +1,6 @@
 import {
   RolldownOutput,
+  RolldownOutputAsset,
   RolldownOutputChunk,
   SourceMap,
 } from './types/rolldown-output'
@@ -45,7 +46,8 @@ import { PartialNull } from './types/utils'
 import { NormalizedInputOptions } from './options/normalized-input-options'
 import { ModuleInfo } from './types/module-info'
 import { MinimalPluginContext } from './log/logger'
-import { ExistingRawSourceMap } from './types/sourcemap'
+import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
+import { OutputBundle } from './types/output-bundle'
 
 export {
   defineConfig,
@@ -94,6 +96,8 @@ export type {
   ParallelPluginHooks,
   FunctionPluginHooks,
   ExistingRawSourceMap,
+  SourceMapInput,
+  OutputBundle,
 }
 
 // Exports for compatibility
@@ -103,5 +107,6 @@ export type {
   RolldownOptions as RollupOptions,
   RolldownBuild as RollupBuild,
   RolldownOutputChunk as OutputChunk,
+  RolldownOutputAsset as OutputAsset,
 }
 export type { RollupError, RollupLog, LoggingFunction } from './rollup'

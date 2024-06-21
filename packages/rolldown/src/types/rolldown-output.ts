@@ -32,6 +32,7 @@ export interface SourceMap {
 export interface RolldownOutputChunk {
   type: 'chunk'
   code: string
+  name: string
   isEntry: boolean
   exports: string[]
   fileName: string

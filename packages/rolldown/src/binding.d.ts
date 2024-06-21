@@ -39,6 +39,7 @@ export class BindingOutputChunk {
   set map(map: string)
   get sourcemapFileName(): string | null
   get preliminaryFileName(): string
+  get name(): string
 }
 
 /** The `BindingOutputs` owner `Vec<Output>` the mutable reference, it avoid `Clone` at call `writeBundle/generateBundle` hook, and make it mutable. */
@@ -241,6 +242,7 @@ export interface BindingTreeshake {
 export function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 export interface RenderedChunk {
+  name: string
   isEntry: boolean
   isDynamicEntry: boolean
   facadeModuleId?: string

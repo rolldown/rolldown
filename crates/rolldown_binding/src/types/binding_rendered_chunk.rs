@@ -11,6 +11,7 @@ use super::binding_rendered_module::BindingRenderedModule;
 #[derive(Debug)]
 pub struct RenderedChunk {
   // PreRenderedChunk
+  pub name: String,
   pub is_entry: bool,
   pub is_dynamic_entry: bool,
   pub facade_module_id: Option<String>,
@@ -27,6 +28,7 @@ pub struct RenderedChunk {
 impl From<rolldown_common::RenderedChunk> for RenderedChunk {
   fn from(value: rolldown_common::RenderedChunk) -> Self {
     Self {
+      name: value.name.to_string(),
       is_entry: value.is_entry,
       is_dynamic_entry: value.is_dynamic_entry,
       facade_module_id: value.facade_module_id.map(|x| x.to_string()),

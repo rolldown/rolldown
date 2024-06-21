@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 // cSpell:disable
 use crate::{
   ChunkId, ChunkKind, ExternalModuleId, FilenameTemplate, NamedImport, NormalModuleId,
@@ -19,8 +21,9 @@ pub struct Chunk {
   pub exec_order: u32,
   pub kind: ChunkKind,
   pub modules: Vec<NormalModuleId>,
-  pub name: Option<String>,
+  pub user_defined_name: Option<String>,
   pub filename: Option<ResourceId>,
+  pub name: Option<Arc<str>>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Rstr>,
@@ -36,12 +39,12 @@ pub struct Chunk {
 
 impl Chunk {
   pub fn new(
-    name: Option<String>,
+    user_defined_name: Option<String>,
     bits: BitSet,
     modules: Vec<NormalModuleId>,
     kind: ChunkKind,
   ) -> Self {
-    Self { exec_order: u32::MAX, modules, name, bits, kind, ..Self::default() }
+    Self { exec_order: u32::MAX, modules, user_defined_name, bits, kind, ..Self::default() }
   }
 
   pub fn filename_template<'a>(

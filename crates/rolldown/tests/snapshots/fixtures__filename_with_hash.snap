@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown/tests/fixtures.rs
+assertion_line: 54
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
 # tests/esbuild/dce/base64_loader_remove_unused
@@ -38,6 +39,31 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/dce/json_loader_remove_unused
 
 - entry_js-!~{000}~.mjs => entry_js-G8jr1j_W.mjs
+
+# tests/esbuild/dce/no_side_effects_comment
+
+- expr-arrow_js-!~{001}~.mjs => expr-arrow_js-QjhqLgSt.mjs
+- expr-fn_js-!~{000}~.mjs => expr-fn_js--rxcfA_g.mjs
+- stmt-export-default-after-async-fn-anon_js-!~{00i}~.mjs => stmt-export-default-after-async-fn-anon_js-VqiQ4rZ2.mjs
+- stmt-export-default-after-async-fn-name_js-!~{00j}~.mjs => stmt-export-default-after-async-fn-name_js-veIDNMFO.mjs
+- stmt-export-default-after-async-gen-fn-anon_js-!~{00k}~.mjs => stmt-export-default-after-async-gen-fn-anon_js-4tkDg72B.mjs
+- stmt-export-default-after-async-gen-fn-name_js-!~{00l}~.mjs => stmt-export-default-after-async-gen-fn-name_js-OewUjwlN.mjs
+- stmt-export-default-after-fn-anon_js-!~{00e}~.mjs => stmt-export-default-after-fn-anon_js-5BAvLe9p.mjs
+- stmt-export-default-after-fn-name_js-!~{00f}~.mjs => stmt-export-default-after-fn-name_js-6C8jVjN1.mjs
+- stmt-export-default-after-gen-fn-anon_js-!~{00g}~.mjs => stmt-export-default-after-gen-fn-anon_js-HIqHYRxS.mjs
+- stmt-export-default-after-gen-fn-name_js-!~{00h}~.mjs => stmt-export-default-after-gen-fn-name_js-iGWZdGhk.mjs
+- stmt-export-default-before-async-fn-anon_js-!~{00a}~.mjs => stmt-export-default-before-async-fn-anon_js-KlPlY6Zy.mjs
+- stmt-export-default-before-async-fn-name_js-!~{00b}~.mjs => stmt-export-default-before-async-fn-name_js-vYOur1vd.mjs
+- stmt-export-default-before-async-gen-fn-anon_js-!~{00c}~.mjs => stmt-export-default-before-async-gen-fn-anon_js-QzxrgjGw.mjs
+- stmt-export-default-before-async-gen-fn-name_js-!~{00d}~.mjs => stmt-export-default-before-async-gen-fn-name_js--HfYK_48.mjs
+- stmt-export-default-before-fn-anon_js-!~{006}~.mjs => stmt-export-default-before-fn-anon_js-Y3OEMRgq.mjs
+- stmt-export-default-before-fn-name_js-!~{007}~.mjs => stmt-export-default-before-fn-name_js-5N9LZwly.mjs
+- stmt-export-default-before-gen-fn-anon_js-!~{008}~.mjs => stmt-export-default-before-gen-fn-anon_js-4DRYHyMa.mjs
+- stmt-export-default-before-gen-fn-name_js-!~{009}~.mjs => stmt-export-default-before-gen-fn-name_js-pvTIXxqc.mjs
+- stmt-export-fn_js-!~{003}~.mjs => stmt-export-fn_js-Lg5fJ6sh.mjs
+- stmt-export-local_js-!~{005}~.mjs => stmt-export-local_js-U8yWtZ7y.mjs
+- stmt-fn_js-!~{002}~.mjs => stmt-fn_js-nGhExA7J.mjs
+- stmt-local_js-!~{004}~.mjs => stmt-local_js-6z8D7Phz.mjs
 
 # tests/esbuild/dce/package_json_side_effects_array_glob
 
@@ -236,6 +262,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/default/forbid_const_assign_when_bundling
 
 - entry_js-!~{000}~.mjs => entry_js-Xnvegfxd.mjs
+
+# tests/esbuild/default/forbid_const_assign_when_lowering_using
+
+- entry_js-!~{000}~.mjs => entry_js-idsVRs5M.mjs
 
 # tests/esbuild/default/import_fs_node_common_js
 

@@ -33,7 +33,7 @@ jobs:
           tools: just
 
       - name: Setup Benchmark Input
-        uses: ./.github/actions/setup-bench
+        run: just setup-bench
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2

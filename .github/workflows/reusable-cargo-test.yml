@@ -28,7 +28,7 @@ jobs:
           cache-key: debug-build
 
       - name: Setup Benchmark Input
-        uses: ./.github/actions/setup-bench
+        run: just setup-bench
 
       - name: Build
         run: cargo test --no-run

@@ -45,7 +45,7 @@ jobs:
           cache-key: release-build
 
       - name: Setup Benchmark Input
-        uses: ./.github/actions/setup-bench
+        run: just setup-bench
 
       - name: Build the benchmark target(s)
         run: cargo codspeed build -p bench --features codspeed
@@ -81,7 +81,7 @@ jobs:
           cache-key: release-build
 
       - name: Setup Benchmark Input
-        uses: ./.github/actions/setup-bench
+        run: just setup-bench
 
       - name: Run Bench on PR Branch
         run: cargo bench -p bench -- --save-baseline pr

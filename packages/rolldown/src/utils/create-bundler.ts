@@ -13,10 +13,9 @@ export async function createBundler(
   outputOptions: OutputOptions,
 ): Promise<{ bundler: Bundler; stopWorkers?: () => Promise<void> }> {
   const pluginDriver = new PluginDriver()
+  inputOptions = await pluginDriver.callOptionsHook(inputOptions)
   // Convert `InputOptions` to `NormalizedInputOptions`.
   const normalizedInputOptions = await normalizeInputOptions(inputOptions)
-
-  pluginDriver.callOptionsHook(normalizedInputOptions)
 
   const parallelPluginInitResult = await initializeParallelPlugins(
     normalizedInputOptions.plugins,

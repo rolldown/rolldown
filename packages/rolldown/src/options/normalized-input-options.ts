@@ -4,14 +4,13 @@ import type {
   NormalizedInputOptions as RollupNormalizedInputOptions,
 } from '../rollup'
 import type { InputOptions } from './input-options'
-import type { Plugin, ParallelPlugin } from '../plugin'
+import type { RolldownPlugin } from '../plugin'
 import type { LogLevel } from '../log/logging'
-import { BuiltinPlugin } from '../plugin/bindingify-builtin-plugin'
 import { NormalizedTreeshakingOptions } from '../../src/treeshake'
 
 export interface NormalizedInputOptions extends InputOptions {
   input: RollupNormalizedInputOptions['input']
-  plugins: (Plugin | ParallelPlugin | BuiltinPlugin)[]
+  plugins: RolldownPlugin[]
   onLog: (level: LogLevel, log: RollupLog) => void
   logLevel: LogLevelOption
   // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned

@@ -1,4 +1,4 @@
-import type { Plugin, ParallelPlugin } from '../plugin'
+import type { RolldownPlugin } from '../plugin'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
 import {
@@ -9,7 +9,6 @@ import {
   RollupLogWithStringSchema,
 } from '../log/logging'
 import { TreeshakingOptionsSchema, TreeshakingOptions } from '../treeshake'
-import { BuiltinPlugin } from '../plugin/bindingify-builtin-plugin'
 
 const inputOptionSchema = z
   .string()
@@ -28,10 +27,7 @@ const externalSchema = zodExt
 
 const inputOptionsSchema = z.strictObject({
   input: inputOptionSchema.optional(),
-  plugins: zodExt
-    .phantom<Plugin | ParallelPlugin | BuiltinPlugin>()
-    .array()
-    .optional(),
+  plugins: zodExt.phantom<RolldownPlugin>().array().optional(),
   external: externalSchema.optional(),
   resolve: z
     .strictObject({

@@ -1,6 +1,6 @@
 import { getLogHandler, normalizeLog } from '../log/logHandler'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
-import { ParallelPlugin, Plugin } from './'
+import { ParallelPlugin, Plugin, RolldownPlugin } from './'
 import { error, logPluginError } from '../log/logs'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { NormalizedOutputOptions } from '../options/normalized-output-options'
@@ -83,9 +83,7 @@ export class PluginDriver {
   }
 }
 
-export function getObjectPlugins(
-  plugins: (Plugin | ParallelPlugin | BuiltinPlugin)[],
-): Plugin[] {
+export function getObjectPlugins(plugins: RolldownPlugin[]): Plugin[] {
   return plugins.filter((plugin) => {
     if ('_parallel' in plugin) {
       return undefined

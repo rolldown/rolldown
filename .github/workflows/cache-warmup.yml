@@ -25,8 +25,8 @@ jobs:
           cache-key: debug-build
           save-cache: ${{ github.ref_name == 'main' }}
 
-      - name: Debug Build
-        run: cargo build --workspace
+      - run: cargo check --workspace
+      - run: cargo test --workspace --no-run
 
   release-build:
     strategy:
@@ -43,8 +43,8 @@ jobs:
           cache-key: release-build
           save-cache: ${{ github.ref_name == 'main' }}
 
-      - name: Release Build
-        run: cargo build --release --workspace
+      - run: cargo check --release --workspace
+      - run: cargo test --release --workspace --no-run
 
   release-build-wasi:
     strategy:
@@ -64,5 +64,5 @@ jobs:
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
 
-      - name: Release Build
-        run: cargo build --release --workspace
+      - run: cargo check --release --workspace
+      - run: cargo test --release --workspace --no-run

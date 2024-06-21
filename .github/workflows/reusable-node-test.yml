@@ -30,8 +30,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           tools: just
-          cache-key: just-build-native
-          save-cache: ${{ github.ref_name == 'main' }}
+          cache-key: debug-build
 
       - name: Build Native Rolldown
         run: just build native

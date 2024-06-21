@@ -63,8 +63,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           tools: just
-          cache-key: just-build-native-release
-          save-cache: ${{ github.ref_name == 'main' }}
+          cache-key: release-build
 
       - name: Setup Benchmark Input
         uses: ./.github/actions/setup-bench

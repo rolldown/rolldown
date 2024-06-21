@@ -25,8 +25,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           tools: just
-          cache-key: cargo-test
-          save-cache: ${{ github.ref_name == 'main' }}
+          cache-key: debug-build
 
       - name: Setup Benchmark Input
         uses: ./.github/actions/setup-bench

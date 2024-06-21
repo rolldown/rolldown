@@ -15,6 +15,7 @@ export default defineTest({
           expect(opts.input?.length).toBe(0)
           opts.input = [path.join(__dirname, 'main.js')]
           fn()
+          return opts
         },
       },
     ],

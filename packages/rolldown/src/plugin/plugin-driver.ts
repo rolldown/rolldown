@@ -54,7 +54,6 @@ export class PluginDriver {
               logLevel,
             ),
           },
-          // TODO Here only support readonly access to the inputOptions at now
           inputOptions,
         )
 

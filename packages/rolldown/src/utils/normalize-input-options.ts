@@ -1,3 +1,4 @@
+import { getObjectPlugins } from '../plugin/plugin-driver'
 import { getLogger, getOnLog } from '../log/logger'
 import { LOG_LEVEL_INFO } from '../log/logging'
 import type { InputOptions } from '../options/input-options'
@@ -13,7 +14,7 @@ export async function normalizeInputOptions(
   const treeshake = normalizeTreeshakeOptions(config.treeshake)
   const logLevel = config.logLevel || LOG_LEVEL_INFO
   const onLog = getLogger(
-    plugins.filter((plugin) => !('_parallel' in plugin)) as Plugin[],
+    getObjectPlugins(plugins),
     getOnLog(config, logLevel),
     logLevel,
   )

@@ -1,21 +1,26 @@
 import { getLogHandler, normalizeLog } from '../log/logHandler'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
-import { Plugin } from './'
+import { ParallelPlugin, Plugin } from './'
 import { error, logPluginError } from '../log/logs'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { NormalizedOutputOptions } from '../options/normalized-output-options'
 import { RollupError } from '../rollup'
 import { normalizeHook } from '../utils/normalize-hook'
+import { InputOptions } from '..'
+import { getLogger, getOnLog } from '../log/logger'
+import { BuiltinPlugin } from './bindingify-builtin-plugin'
 
 export class PluginDriver {
   public async callOptionsHook(
-    inputOptions: NormalizedInputOptions,
-  ): Promise<NormalizedInputOptions> {
-    const logLevel = inputOptions.logLevel
-    const plugins = inputOptions.plugins.filter(
-      (plugin) => !('_parallel' in plugin),
-    ) as Plugin[]
-    const logger = inputOptions.onLog
+    inputOptions: InputOptions,
+  ): Promise<InputOptions> {
+    const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO
+    const plugins = getObjectPlugins(inputOptions.plugins ?? [])
+    const logger = getLogger(
+      plugins,
+      getOnLog(inputOptions, logLevel),
+      logLevel,
+    )
 
     for (const plugin of plugins) {
       const name = plugin.name || 'unknown'
@@ -66,9 +71,7 @@ export class PluginDriver {
     inputOptions: NormalizedInputOptions,
     outputOptions: NormalizedOutputOptions,
   ) {
-    const plugins = inputOptions.plugins.filter(
-      (plugin) => !('_parallel' in plugin),
-    ) as Plugin[]
+    const plugins = getObjectPlugins(inputOptions.plugins)
 
     for (const plugin of plugins) {
       const options = plugin.outputOptions
@@ -78,4 +81,18 @@ export class PluginDriver {
       }
     }
   }
+}
+
+export function getObjectPlugins(
+  plugins: (Plugin | ParallelPlugin | BuiltinPlugin)[],
+): Plugin[] {
+  return plugins.filter((plugin) => {
+    if ('_parallel' in plugin) {
+      return undefined
+    }
+    if (plugin instanceof BuiltinPlugin) {
+      return undefined
+    }
+    return plugin
+  }) as Plugin[]
 }

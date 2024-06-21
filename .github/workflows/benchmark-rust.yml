@@ -42,7 +42,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           tools: just, cargo-codspeed
-          cache-key: release-build
+          cache-key: cargo-codspeed-build
           save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Setup Benchmark Input
@@ -79,7 +79,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           tools: just, critcmp
-          cache-key: benchmark-rust
+          cache-key: cargo-bench
           save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Setup Benchmark Input

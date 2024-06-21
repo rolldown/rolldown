@@ -36,7 +36,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           tools: just
-          cache-key: debug-build-wasm
+          cache-key: just-build-wasi-release
           save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Add WASI target

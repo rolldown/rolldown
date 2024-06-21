@@ -87,7 +87,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           tools: just, taplo-cli, cargo-shear
-          save-cache: ${{ github.ref_name == 'main' }}
+          cache-key: debug-build
           components: clippy rustfmt
 
       - name: Lint

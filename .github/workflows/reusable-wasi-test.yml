@@ -23,28 +23,23 @@ jobs:
         with:
           submodules: true # Pull submodules for additional files
 
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
-        with:
-          bins: just
-          cache-base: main
-          targets: wasm32-wasip1-threads
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-
-      - name: Pnpm install
+      - name: Prepare pnpm install
         # Node.js wasi runtime has bug with `std::fs::read_link`
         run: |
           touch .npmrc
           echo "node-linker=hoisted" >> .npmrc
-          pnpm install
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          tools: just
+          cache-key: release-build-wasi
+
+      - name: Add WASI target
+        run: rustup target add wasm32-wasip1-threads
 
       - name: Build WASI Rolldown
         run: just build wasi release

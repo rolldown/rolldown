@@ -1,0 +1,68 @@
+name: Cache Warmup
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+jobs:
+  debug-build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    name: Warmup for debug build
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key: debug-build
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - run: cargo check --workspace
+      - run: cargo test --workspace --no-run
+
+  release-build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    name: Warmup for release build
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key: release-build
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - run: cargo check --release --workspace
+      - run: cargo test --release --workspace --no-run
+
+  release-build-wasi:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    name: Warmup for release build with WASI target
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key: release-build-wasi
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - name: Add WASI target
+        run: rustup target add wasm32-wasip1-threads
+
+      - run: cargo check --release --workspace
+      - run: cargo test --release --workspace --no-run

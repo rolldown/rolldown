@@ -23,9 +23,12 @@ jobs:
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
+        with:
+          tools: just
+          cache-key: debug-build
 
       - name: Setup Benchmark Input
-        uses: ./.github/actions/setup-bench
+        run: just setup-bench
 
       - name: Build
         run: cargo test --no-run

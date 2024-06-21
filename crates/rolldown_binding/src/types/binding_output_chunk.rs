@@ -112,4 +112,9 @@ impl BindingOutputChunk {
   pub fn preliminary_file_name(&self) -> String {
     self.inner.preliminary_filename.to_string()
   }
+
+  #[napi(getter)]
+  pub fn name(&self) -> String {
+    self.inner.name.to_string()
+  }
 }

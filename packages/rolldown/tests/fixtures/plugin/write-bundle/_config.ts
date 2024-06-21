@@ -18,6 +18,7 @@ export default defineTest({
           const chunk = bundle['main.js'] as RolldownOutputChunk
           expect(chunk.code.indexOf('console.log') > -1).toBe(true)
           expect(chunk.type).toBe('chunk')
+          expect(chunk.name).toBe('main')
           expect(chunk.fileName).toBe('main.js')
           expect(chunk.isEntry).toBe(true)
           expect(chunk.isDynamicEntry).toBe(false)

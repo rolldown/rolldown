@@ -15,6 +15,7 @@ export default defineTest({
         renderChunk: (code, chunk) => {
           renderChunkFn()
           expect(code.indexOf('console.log') > -1).toBe(true)
+          expect(chunk.name).toBe('main')
           expect(chunk.fileName).toBe('main.js')
           expect(chunk.isEntry).toBe(true)
           expect(chunk.isDynamicEntry).toBe(false)

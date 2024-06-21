@@ -37,7 +37,6 @@ jobs:
         with:
           tools: just
           cache-key: release-build-wasi
-          save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads

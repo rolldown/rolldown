@@ -35,27 +35,17 @@ jobs:
           # Whether Pull submodules for additional files
           submodules: false
 
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          bins: just, cargo-codspeed
-          cache-base: main
-          cache-target: release
+          tools: just, cargo-codspeed
+          cache-key: release-build
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Setup benchmark
-        run: just setup-bench
+      - name: Setup Benchmark Input
+        uses: ./.github/actions/setup-bench
 
       - name: Build the benchmark target(s)
         run: cargo codspeed build -p bench --features codspeed
@@ -81,27 +71,17 @@ jobs:
           # Whether Pull submodules for additional files
           submodules: false
 
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          bins: just, critcmp
-          cache-base: main
-          cache-target: release
+          tools: just, critcmp
+          cache-key: release-build
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Setup benchmark
-        run: just setup-bench
+      - name: Setup Benchmark Input
+        uses: ./.github/actions/setup-bench
 
       - name: Run Bench on PR Branch
         run: cargo bench -p bench -- --save-baseline pr

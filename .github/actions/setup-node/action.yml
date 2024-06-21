@@ -21,10 +21,18 @@ runs:
 
     - uses: actions/cache@v4
       name: Setup pnpm cache
+      if: ${{ github.ref_name == 'main' }}
       with:
         path: ${{ env.STORE_PATH }}
         key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+
+    - uses: actions/cache/restore@v3
+      if: ${{ github.ref_name != 'main' }}
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: |
           ${{ runner.os }}-pnpm-store-
 
     - name: Install dependencies

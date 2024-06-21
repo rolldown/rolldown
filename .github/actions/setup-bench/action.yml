@@ -10,7 +10,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: tmp/github
-        key: ${{ runner.os }}-tmp-github-${{ hashFiles('**/scripts/misc/setup-benchmark-input.js') }}
+        key: tmp-github-${{ hashFiles('**/scripts/misc/setup-benchmark-input.js') }}
 
     - run: echo "Hit cache"
       if: steps.cache-bench.outputs.cache-hit == 'true'

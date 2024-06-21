@@ -56,27 +56,18 @@ jobs:
       - name: List Files
         run: find -maxdepth 2 -ls
 
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          bins: just
-          cache-base: main
-          cache-target: release
+          tools: just
+          cache-key: release-build
+          save-cache: ${{ github.ref_name == 'main' }}
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Setup benchmark
-        run: just setup-bench
+      - name: Setup Benchmark Input
+        uses: ./.github/actions/setup-bench
 
       - name: Build packages
         run: just build native release

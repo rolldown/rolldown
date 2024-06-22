@@ -12,5 +12,5 @@ pub use crate::{
     allocator_ext::AllocatorExt, span_ext::SpanExt, BindingIdentifierExt, BindingPatternExt,
     ExpressionExt, StatementExt,
   },
-  oxc_ast::{OxcAst, WithFieldsMut},
+  oxc_ast::{program_cell::WithMutFields, OxcAst},
 };

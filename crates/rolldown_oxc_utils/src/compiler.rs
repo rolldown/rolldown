@@ -30,7 +30,7 @@ impl OxcCompiler {
         }
       })?;
     Ok(OxcAst {
-      inner,
+      program: inner,
       source_type: ty,
       trivias: trivias.expect("Should be initialized"),
       contains_use_strict: false,

@@ -1,9 +1,9 @@
-use rolldown_oxc_utils::{OxcAst, StatementExt, TakeIn, WithFieldsMut};
+use rolldown_oxc_utils::{OxcAst, StatementExt, TakeIn, WithMutFields};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
 pub fn tweak_ast_for_scanning(ast: &mut OxcAst) {
   let mut contains_use_strict = false;
-  ast.with_mut(|WithFieldsMut { program, allocator, .. }| {
+  ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
     // Remove all `"use strict"` directives.
     program.directives.retain(|directive| {
       let is_use_strict = directive.is_use_strict();

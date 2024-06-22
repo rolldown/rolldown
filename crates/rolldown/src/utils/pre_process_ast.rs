@@ -16,7 +16,7 @@ pub fn pre_process_ast(
   path: &Path,
   source_type: SourceType,
 ) -> anyhow::Result<OxcAst> {
-  if let Err(errors) = ast.with_mut(|fields| {
+  if let Err(errors) = ast.program.with_mut(|fields| {
     let mut transformer_options = TransformOptions::default();
     match parse_type {
       OxcParseType::Js => {
@@ -37,7 +37,7 @@ pub fn pre_process_ast(
       path,
       source_type,
       fields.source,
-      fields.trivias,
+      ast.trivias.clone(),
       transformer_options,
     )
     .build(fields.program)

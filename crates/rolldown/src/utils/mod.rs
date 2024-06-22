@@ -29,7 +29,7 @@ pub fn finalize_normal_module(
   ctx: ScopeHoistingFinalizerContext<'_>,
   ast: &mut OxcAst,
 ) {
-  ast.with_mut(|fields| {
+  ast.program.with_mut(|fields| {
     let (oxc_program, alloc) = (fields.program, fields.allocator);
     let mut finalizer =
       ScopeHoistingFinalizer { alloc, ctx, scope: &module.scope, snippet: AstSnippet::new(alloc) };

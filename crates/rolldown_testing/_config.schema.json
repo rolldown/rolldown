@@ -78,6 +78,12 @@
             "null"
           ]
         },
+        "experimentalDtsGenerating": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "external": {
           "type": [
             "array",

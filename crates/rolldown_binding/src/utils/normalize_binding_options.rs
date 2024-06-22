@@ -111,6 +111,7 @@ pub fn normalize_binding_options(
       _ => panic!("Invalid format: {format_str}"),
     }),
     module_types: None,
+    experimental_dts_generating: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

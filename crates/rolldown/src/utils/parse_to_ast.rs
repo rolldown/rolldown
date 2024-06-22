@@ -54,7 +54,7 @@ pub fn parse_to_ast(
 
   let oxc_ast = OxcCompiler::parse(Arc::clone(&source), oxc_source_type)?;
 
-  let valid_js_ast = pre_process_ast(oxc_ast, &parsed_type, path, oxc_source_type)?;
+  let valid_js_ast = pre_process_ast(oxc_ast, options, &parsed_type, path, oxc_source_type)?;
 
   Ok(valid_js_ast)
 }

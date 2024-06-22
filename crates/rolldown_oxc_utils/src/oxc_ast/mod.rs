@@ -28,7 +28,7 @@ impl OxcAst {
   }
 
   pub fn program(&self) -> &Program {
-    self.program.borrow_dependent()
+    &self.program.borrow_dependent().program
   }
 }
 

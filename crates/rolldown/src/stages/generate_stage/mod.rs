@@ -1,6 +1,6 @@
 use anyhow::Result;
-use oxc::ast::VisitMut;
-use rolldown_oxc_utils::AstSnippet;
+use oxc::{ast::VisitMut, codegen::CodeGenerator};
+use rolldown_oxc_utils::{AstSnippet, OxcCompiler};
 use rustc_hash::FxHashSet;
 
 use futures::future::try_join_all;
@@ -128,7 +128,37 @@ impl<'a> GenerateStage<'a> {
 
     let chunks = finalize_chunks(&mut chunk_graph, chunks);
 
+    let output_dir = self.options.dir.as_path().join("dts");
+    let dts_assets = chunk_graph
+      .chunks
+      .iter()
+      .flat_map(|chunk| {
+        chunk.modules.iter().filter_map(|module_id| {
+          let normal_module = &self.link_output.module_table.normal_modules[*module_id];
+          let ast = &self.link_output.ast_table[*module_id];
+          if let Some(dts_program) = ast.dts_program() {
+            let codegen = CodeGenerator::new();
+
+            let ret = codegen.build(dts_program);
+            Some(Output::Asset(Box::new(OutputAsset {
+              filename: output_dir
+                .join(format!(
+                  "{}.d.ts",
+                  normal_module.stable_resource_id.replace(std::path::MAIN_SEPARATOR_STR, "_")
+                ))
+                .expect_to_str()
+                .to_string(),
+              source: ret.source_text.into(),
+            })))
+          } else {
+            None
+          }
+        })
+      })
+      .collect::<Vec<_>>();
+
     let mut assets = vec![];
+    assets.extend(dts_assets);
     for ChunkRenderReturn {
       mut map,
       rendered_chunk,

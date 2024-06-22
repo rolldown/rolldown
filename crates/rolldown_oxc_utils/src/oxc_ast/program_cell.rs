@@ -8,13 +8,18 @@ pub struct ProgramCellOwner {
   pub allocator: Allocator,
 }
 
+pub struct ProgramCellDependent<'cell> {
+  pub program: Program<'cell>,
+  pub dts_program: Option<Program<'cell>>,
+}
+
 self_cell!(
   /// `ProgramCell` is a wrapper of `Program` that provides a safe way to treat `Program<'ast>` as as owned value without considering the lifetime of `'ast`.
   pub struct ProgramCell {
     owner: ProgramCellOwner,
 
     #[covariant]
-    dependent: Program,
+    dependent: ProgramCellDependent,
   }
 );
 
@@ -36,8 +41,13 @@ impl ProgramCell {
     func: impl for<'inner> ::core::ops::FnOnce(WithMutFields<'outer, 'inner>) -> Ret,
   ) -> Ret {
     self.with_dependent_mut::<'outer, Ret>(
-      |owner: &ProgramCellOwner, program: &'outer mut Program| {
-        func(WithMutFields { source: &owner.source, allocator: &owner.allocator, program })
+      |owner: &ProgramCellOwner, dependent: &'outer mut ProgramCellDependent| {
+        func(WithMutFields {
+          source: &owner.source,
+          allocator: &owner.allocator,
+          program: &mut dependent.program,
+          dts_program: &mut dependent.dts_program,
+        })
       },
     )
   }
@@ -47,4 +57,5 @@ pub struct WithMutFields<'outer, 'inner> {
   pub source: &'inner Arc<str>,
   pub allocator: &'inner Allocator,
   pub program: &'outer mut Program<'inner>,
+  pub dts_program: &'outer mut Option<Program<'inner>>,
 }

@@ -316,7 +316,7 @@ impl<'me> AstScanner<'me> {
     let id = self.add_import_record(&decl.source.value, ImportKind::Import);
     if let Some(exported) = &decl.exported {
       // export * as ns from '...'
-      self.add_star_re_export(exported.name(), id, decl.span);
+      self.add_star_re_export(&exported.name(), id, decl.span);
     } else {
       // export * from '...'
       self.result.star_exports.push(id);
@@ -328,14 +328,14 @@ impl<'me> AstScanner<'me> {
     if let Some(source) = &decl.source {
       let record_id = self.add_import_record(&source.value, ImportKind::Import);
       decl.specifiers.iter().for_each(|spec| {
-        self.add_re_export(spec.exported.name(), spec.local.name(), record_id, spec.local.span());
+        self.add_re_export(&spec.exported.name(), &spec.local.name(), record_id, spec.local.span());
       });
       self.result.imports.insert(decl.span, record_id);
       // `export {} from '...'`
       self.result.import_records[record_id].is_plain_import = decl.specifiers.is_empty();
     } else {
       decl.specifiers.iter().for_each(|spec| {
-        self.add_local_export(spec.exported.name(), self.get_root_binding(spec.local.name()));
+        self.add_local_export(&spec.exported.name(), self.get_root_binding(&spec.local.name()));
       });
       if let Some(decl) = decl.declaration.as_ref() {
         match decl {
@@ -403,7 +403,7 @@ impl<'me> AstScanner<'me> {
       oxc::ast::ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
         let sym = spec.local.expect_symbol_id();
         let imported = spec.imported.name();
-        self.add_named_import(sym, imported, rec_id, spec.imported.span());
+        self.add_named_import(sym, &imported, rec_id, spec.imported.span());
         if imported == "default" {
           self.result.import_records[rec_id].contains_import_default = true;
         }

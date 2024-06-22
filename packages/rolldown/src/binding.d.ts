@@ -56,7 +56,6 @@ export class BindingPluginContext {
 }
 
 export class BindingTransformPluginContext {
-  getCombinedSourcemap(): string
   inner(): BindingPluginContext
 }
 

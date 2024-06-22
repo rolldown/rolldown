@@ -18,5 +18,4 @@ rolldown_common    = { workspace = true }
 rolldown_resolver  = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_utils     = { workspace = true }
-string_wizard      = { workspace = true }
 tracing            = { workspace = true }

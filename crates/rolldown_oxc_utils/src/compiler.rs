@@ -26,7 +26,7 @@ impl OxcCompiler {
           Err(anyhow::format_err!("Parse failed, got {:#?}", ret.errors))
         } else {
           trivias = Some(ret.trivias);
-          Ok(ProgramCellDependent { program: ret.program })
+          Ok(ProgramCellDependent { program: ret.program, dts_program: None })
         }
       })?;
     Ok(OxcAst {

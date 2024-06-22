@@ -1,0 +1,31 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 171
+expression: content
+input_file: crates/rolldown/tests/fixtures/typescript/isolated_declarations/basic
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "node:fs" is imported by "src/index.ts", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## main.mjs
+
+```js
+import { readFile } from "node:fs";
+
+//#region src/foo.ts
+const t = {};
+
+//#endregion
+//#region src/index.ts
+const t2 = {};
+
+//#endregion
+export { readFile, t, t2 };
+```

@@ -30,6 +30,10 @@ impl OxcAst {
   pub fn program(&self) -> &Program {
     &self.program.borrow_dependent().program
   }
+
+  pub fn dts_program(&self) -> Option<&Program> {
+    self.program.borrow_dependent().dts_program.as_ref()
+  }
 }
 
 impl Debug for OxcAst {

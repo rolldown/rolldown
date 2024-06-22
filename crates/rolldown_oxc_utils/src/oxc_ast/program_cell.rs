@@ -10,6 +10,7 @@ pub struct ProgramCellOwner {
 
 pub struct ProgramCellDependent<'cell> {
   pub program: Program<'cell>,
+  pub dts_program: Option<Program<'cell>>,
 }
 
 self_cell!(
@@ -45,6 +46,7 @@ impl ProgramCell {
           source: &owner.source,
           allocator: &owner.allocator,
           program: &mut dependent.program,
+          dts_program: &mut dependent.dts_program,
         })
       },
     )
@@ -55,4 +57,5 @@ pub struct WithMutFields<'outer, 'inner> {
   pub source: &'inner Arc<str>,
   pub allocator: &'inner Allocator,
   pub program: &'outer mut Program<'inner>,
+  pub dts_program: &'outer mut Option<Program<'inner>>,
 }

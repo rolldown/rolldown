@@ -2,6 +2,7 @@ use std::path::Path;
 
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
+use rolldown_common::NormalizedBundlerOptions;
 use rolldown_oxc_utils::OxcAst;
 
 use crate::types::oxc_parse_type::OxcParseType;
@@ -12,6 +13,7 @@ use super::tweak_ast_for_scanning::tweak_ast_for_scanning;
 #[allow(clippy::match_same_arms)]
 pub fn pre_process_ast(
   mut ast: OxcAst,
+  options: &NormalizedBundlerOptions,
   parse_type: &OxcParseType,
   path: &Path,
   source_type: SourceType,
@@ -26,7 +28,14 @@ pub fn pre_process_ast(
       OxcParseType::Jsx => {
         transformer_options.react.jsx_plugin = true;
       }
-      OxcParseType::Ts => {}
+      OxcParseType::Ts => {
+        if options.experimental_dts {
+          let ret = oxc::isolated_declarations::IsolatedDeclarations::new(fields.allocator)
+            .build(fields.program);
+          assert!(ret.errors.is_empty());
+          *fields.dts_program = Some(ret.program);
+        }
+      }
       OxcParseType::Tsx => {
         transformer_options.react.jsx_plugin = true;
       }

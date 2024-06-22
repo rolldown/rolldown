@@ -679,6 +679,8 @@
   "rollup@function@wraps-object-expressions-as-statements: wraps object expressions that have become statements",
   "rollup@function@wraps-simplified-expressions: wraps simplified expressions that have become callees if necessary",
   "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",
+  "rollup@sourcemaps@combined-sourcemap-with-loader: get combined sourcemap in transforming with loader@generates es",
+  "rollup@sourcemaps@combined-sourcemap: get combined sourcemap in transforming@generates es",
   "rollup@sourcemaps@existing-external-sourcemaps-combined: removes sourcemap comments@generates es",
   "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es",
   "rollup@sourcemaps@single-length-segments: handles single-length sourcemap segments@generates es",

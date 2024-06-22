@@ -430,8 +430,10 @@ impl<'me> AstScanner<'me> {
         self.scan_export_all_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
-        self.set_esm_export_keyword(decl.span);
-        self.scan_export_named_decl(decl);
+        if decl.specifiers.len() > 0 {
+          self.set_esm_export_keyword(decl.span);
+          self.scan_export_named_decl(decl);
+        }
       }
       oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
         self.set_esm_export_keyword(decl.span);

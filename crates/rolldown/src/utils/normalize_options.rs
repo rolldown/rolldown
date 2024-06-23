@@ -63,9 +63,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     sourcemap: raw_options.sourcemap.unwrap_or(SourceMapType::Hidden),
     sourcemap_ignore_list: raw_options.sourcemap_ignore_list,
     sourcemap_path_transform: raw_options.sourcemap_path_transform,
-    shim_missing_exports: raw_options.shim_missing_exports.unwrap_or_else(|| {
-      return matches!(loaders.get("empty"), Some(ModuleType::Empty));
-    }),
+    shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types: loaders,
   };
 

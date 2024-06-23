@@ -6,7 +6,7 @@ import { NormalizedInputOptions } from '../options/normalized-input-options'
 import { NormalizedOutputOptions } from '../options/normalized-output-options'
 import { RollupError } from '../rollup'
 import { normalizeHook } from '../utils/normalize-hook'
-import { InputOptions } from '..'
+import { InputOptions, OutputOptions } from '..'
 import { getLogger, getOnLog } from '../log/logger'
 import { BuiltinPlugin } from './bindingify-builtin-plugin'
 
@@ -66,19 +66,25 @@ export class PluginDriver {
     return inputOptions
   }
 
-  public callOutputOptionsHook(
+  public async callOutputOptionsHook(
     inputOptions: NormalizedInputOptions,
-    outputOptions: NormalizedOutputOptions,
-  ) {
+    outputOptions: OutputOptions,
+  ): Promise<OutputOptions> {
     const plugins = getObjectPlugins(inputOptions.plugins)
 
     for (const plugin of plugins) {
       const options = plugin.outputOptions
       if (options) {
         const [handler, _optionsIgnoredSofar] = normalizeHook(options)
-        handler.call(null, outputOptions)
+        const result = await handler.call(null, outputOptions)
+
+        if (result) {
+          outputOptions = result
+        }
       }
     }
+
+    return outputOptions
   }
 }
 

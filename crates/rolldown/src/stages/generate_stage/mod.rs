@@ -101,7 +101,7 @@ impl<'a> GenerateStage<'a> {
             ast,
           );
         } else {
-          ast.with_mut(|fields| {
+          ast.program.with_mut(|fields| {
             let (oxc_program, alloc) = (fields.program, fields.allocator);
             let mut finalizer = IsolatingModuleFinalizer {
               alloc,

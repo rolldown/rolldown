@@ -18,11 +18,11 @@ impl BindingTransformPluginContext {
     Self { inner }
   }
 
-  #[napi]
-  pub fn get_combined_sourcemap(&self) -> napi::Result<String> {
-    let sourcemap = self.inner.get_combined_sourcemap();
-    sourcemap.to_json_string().map_err(|e| napi::Error::from_reason(format!("{e:?}")))
-  }
+  // #[napi]
+  // pub fn get_combined_sourcemap(&self) -> napi::Result<String> {
+  //   let sourcemap = self.inner.get_combined_sourcemap();
+  //   sourcemap.to_json_string().map_err(|e| napi::Error::from_reason(format!("{e:?}")))
+  // }
 
   #[napi]
   pub fn inner(&self) -> BindingPluginContext {

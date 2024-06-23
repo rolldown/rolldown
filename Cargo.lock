@@ -819,12 +819,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "index_vec"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74086667896a940438f2118212f313abba4aff3831fef6f4b17d02add5c8bb60"
-
-[[package]]
 name = "indexmap"
 version = "2.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1904,7 +1898,6 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_utils",
- "string_wizard",
  "tracing",
 ]
 
@@ -2218,18 +2211,6 @@ name = "str_indices"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9557cb6521e8d009c51a8666f09356f4b817ba9ba0981a305bd86aee47bd35c"
-
-[[package]]
-name = "string_wizard"
-version = "0.0.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "039009dc25d078912442e9b4488b6a905f152afce2c129b7305f2d939f4328f2"
-dependencies = [
- "index_vec",
- "once_cell",
- "oxc_sourcemap",
- "rustc-hash 1.1.0",
-]
 
 [[package]]
 name = "sugar_path"

@@ -7,7 +7,7 @@ use oxc::{
 };
 
 use crate::oxc_ast::{
-  program_cell::{ProgramCell, ProgramCellOwner},
+  program_cell::{ProgramCell, ProgramCellDependent, ProgramCellOwner},
   OxcAst,
 };
 pub struct OxcCompiler;
@@ -26,11 +26,11 @@ impl OxcCompiler {
           Err(anyhow::format_err!("Parse failed, got {:#?}", ret.errors))
         } else {
           trivias = Some(ret.trivias);
-          Ok(ret.program)
+          Ok(ProgramCellDependent { program: ret.program })
         }
       })?;
     Ok(OxcAst {
-      inner,
+      program: inner,
       source_type: ty,
       trivias: trivias.expect("Should be initialized"),
       contains_use_strict: false,

@@ -21,7 +21,7 @@ export class TransformPluginContext {
     pos?: number | { column: number; line: number },
   ) => never
   resolve: BindingPluginContext['resolve']
-  getCombinedSourcemap: () => SourceMap
+  // getCombinedSourcemap: () => SourceMap
   emitFile: (file: EmittedAsset) => string
   getFileName: (referenceId: string) => string
   parse: (input: string, options?: any) => any
@@ -57,7 +57,7 @@ export class TransformPluginContext {
     }
     this.resolve = context.resolve
     this.parse = context.parse
-    this.getCombinedSourcemap = () => JSON.parse(inner.getCombinedSourcemap())
+    // this.getCombinedSourcemap = () => JSON.parse(inner.getCombinedSourcemap())
     this.emitFile = context.emitFile
     this.getFileName = context.getFileName
   }

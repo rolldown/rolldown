@@ -29,23 +29,18 @@ impl SymbolOrMemberExprRef {
   pub fn symbol_ref(&self) -> &SymbolRef {
     match self {
       SymbolOrMemberExprRef::Symbol(s) => s,
-      SymbolOrMemberExprRef::MemberExpr(expr) => &expr.symbol,
+      SymbolOrMemberExprRef::MemberExpr(expr) => &expr.object_ref,
     }
   }
 }
 
-/// Crossing module ref between symbols
+/// For member expression, e.g. `foo_ns.bar_ns.c`
+/// - `object_ref` is the `SymbolRef` that represents `foo_ns`
+/// - `props` is `["bar_ns", "c"]`
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberExprRef {
-  pub symbol: SymbolRef,
-  /// rest static member expr chain, e.g.
-  /// ```js
-  /// import {test} frmo './a.js'
-  /// test.a.b
-  /// ```
-  /// `test` stored with `SymbolId`
-  /// `a.b` is the rest chain
-  pub chains: Vec<CompactStr>,
+  pub object_ref: SymbolRef,
+  pub props: Vec<CompactStr>,
 }
 
 impl From<(NormalModuleId, SymbolId)> for SymbolOrMemberExprRef {
@@ -56,7 +51,7 @@ impl From<(NormalModuleId, SymbolId)> for SymbolOrMemberExprRef {
 
 impl From<(NormalModuleId, SymbolId, Vec<CompactStr>)> for SymbolOrMemberExprRef {
   fn from(value: (NormalModuleId, SymbolId, Vec<CompactStr>)) -> Self {
-    Self::MemberExpr(MemberExprRef { symbol: (value.0, value.1).into(), chains: value.2 })
+    Self::MemberExpr(MemberExprRef { object_ref: (value.0, value.1).into(), props: value.2 })
   }
 }
 

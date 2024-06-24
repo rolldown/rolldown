@@ -3,7 +3,7 @@
 use oxc::{
   allocator,
   ast::{
-    ast::{self, MemberExpression, SimpleAssignmentTarget},
+    ast::{self, Expression, SimpleAssignmentTarget},
     visit::walk_mut,
     VisitMut,
   },
@@ -398,15 +398,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
     self.try_rewrite_identifier_reference_expr(expr, false);
 
-    walk_mut::walk_expression_mut(self, expr);
-    if let Some(e) = self.expr_post_replacement.take() {
-      *expr = e;
-    }
-  }
-
-  fn visit_member_expression(&mut self, expr: &mut MemberExpression<'ast>) {
-    let top_level_member_expr: Option<()> = match expr {
-      MemberExpression::StaticMemberExpression(ref inner_expr) => {
+    // rewrite `foo_ns.bar` to `bar` directly
+    match expr {
+      Expression::StaticMemberExpression(ref inner_expr) => {
         let mut chain = vec![];
         let mut cur = inner_expr;
         let top_level_symbol = loop {
@@ -425,7 +419,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           chain.reverse();
           let chain: Vec<CompactStr> =
             chain.into_iter().map(|ident| ident.name.as_str().into()).collect::<Vec<_>>();
-          self
+          let replaced_expr = self
             .ctx
             .top_level_member_expr_resolved_cache
             .get(&(self.ctx.id, symbol).into())
@@ -449,18 +443,17 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 self.snippet.id_ref_expr("undefined", SPAN)
               };
 
-              self.expr_post_replacement = Some(replaced_expr);
-            })
-        } else {
-          None
-        }
+              replaced_expr
+            });
+          if let Some(replaced_expr) = replaced_expr {
+            *expr = replaced_expr;
+          }
+        };
       }
-      MemberExpression::PrivateFieldExpression(_)
-      | MemberExpression::ComputedMemberExpression(_) => None,
+      _ => {}
     };
-    if top_level_member_expr.is_none() {
-      walk_mut::walk_member_expression_mut(self, expr);
-    };
+
+    walk_mut::walk_expression_mut(self, expr);
   }
 
   fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {

@@ -28,7 +28,7 @@ runs:
         restore-keys: |
           ${{ runner.os }}-pnpm-store-
 
-    - uses: actions/cache/restore@v3
+    - uses: actions/cache/restore@v4
       if: ${{ github.ref_name != 'main' }}
       with:
         path: ${{ env.STORE_PATH }}

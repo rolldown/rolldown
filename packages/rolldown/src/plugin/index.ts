@@ -20,7 +20,7 @@ import type { NormalizedOutputOptions } from '../options/normalized-output-optio
 import type { LogLevel } from '../log/logging'
 import type { RollupLog } from '../rollup'
 import type { MinimalPluginContext } from '../log/logger'
-import { InputOptions } from '..'
+import { InputOptions, OutputOptions } from '..'
 import { BuiltinPlugin } from './bindingify-builtin-plugin'
 
 type FormalHook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> = {
@@ -85,7 +85,10 @@ export interface Plugin {
 
   // TODO find a way to make `this: PluginContext` work.
   outputOptions?: ObjectHook<
-    (this: null, options: NormalizedOutputOptions) => NullValue
+    (
+      this: null,
+      options: OutputOptions,
+    ) => MaybePromise<NullValue | OutputOptions>
   >
 
   // --- Build hooks ---

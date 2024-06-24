@@ -23,12 +23,6 @@ jobs:
         with:
           submodules: true # Pull submodules for additional files
 
-      - name: Prepare pnpm install
-        # Node.js wasi runtime has bug with `std::fs::read_link`
-        run: |
-          touch .npmrc
-          echo "node-linker=hoisted" >> .npmrc
-
       - name: Setup Node
         uses: ./.github/actions/setup-node
 

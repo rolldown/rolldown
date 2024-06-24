@@ -22,6 +22,9 @@ pub struct ScopeHoistingFinalizer<'me, 'ast> {
   pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
+  /// After canonicalization, member_expr may be replaced with a new expression other than member_expr. e.g.
+  /// `a.b.c` -> `c`, but we can't replace `a.b.c` with `c` directly because they have different
+  /// type, so we need to store the `Identifier` expression, and replace in parent visitor.
   pub expr_post_replacement: Option<Expression<'ast>>,
 }
 

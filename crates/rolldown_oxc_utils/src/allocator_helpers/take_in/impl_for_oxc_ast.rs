@@ -2,7 +2,7 @@ use std::cell::Cell;
 
 use oxc::{
   allocator::{Allocator, Box},
-  ast::ast::{self, Modifiers},
+  ast::ast::{self},
   semantic::ReferenceFlag,
   span::{Atom, SourceType, SPAN},
 };
@@ -26,7 +26,7 @@ impl<'ast> TakeIn<'ast> for ast::VariableDeclaration<'ast> {
       span: TakeIn::dummy(alloc),
       kind: TakeIn::dummy(alloc),
       declarations: TakeIn::dummy(alloc),
-      modifiers: Modifiers::default(),
+      declare: false,
     }
   }
 }
@@ -72,11 +72,7 @@ impl<'ast> TakeIn<'ast> for ast::ClassType {
     Self::ClassDeclaration
   }
 }
-impl<'ast> TakeIn<'ast> for ast::Modifiers<'ast> {
-  fn dummy(_alloc: &'ast Allocator) -> Self {
-    Self::empty()
-  }
-}
+
 impl<'ast> TakeIn<'ast> for ast::Class<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
     Self {
@@ -89,8 +85,9 @@ impl<'ast> TakeIn<'ast> for ast::Class<'ast> {
       super_type_parameters: TakeIn::dummy(alloc),
       implements: TakeIn::dummy(alloc),
       decorators: TakeIn::dummy(alloc),
-      modifiers: TakeIn::dummy(alloc),
       scope_id: Cell::default(),
+      declare: false,
+      r#abstract: false,
     }
   }
 }
@@ -106,7 +103,7 @@ impl<'ast> TakeIn<'ast> for ast::Function<'ast> {
       body: TakeIn::dummy(alloc),
       type_parameters: TakeIn::dummy(alloc),
       return_type: TakeIn::dummy(alloc),
-      modifiers: Modifiers::default(),
+      declare: false,
       this_param: TakeIn::dummy(alloc),
       scope_id: Cell::default(),
     }
@@ -174,6 +171,7 @@ impl<'ast> TakeIn<'ast> for ast::VariableDeclarator<'ast> {
 impl<'ast> TakeIn<'ast> for ast::BindingPattern<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
     Self {
+      span: TakeIn::dummy(alloc),
       kind: TakeIn::dummy(alloc),
       type_annotation: TakeIn::dummy(alloc),
       optional: TakeIn::dummy(alloc),

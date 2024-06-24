@@ -238,6 +238,14 @@ export interface BindingTreeshake {
   moduleSideEffects: string
 }
 
+/** TypeScript Isolated Declarations for Standalone DTS Emit */
+export function isolatedDeclaration(filename: string, sourceText: string): IsolatedDeclarationsResult
+
+export interface IsolatedDeclarationsResult {
+  sourceText: string
+  errors: Array<string>
+}
+
 export function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 export interface RenderedChunk {

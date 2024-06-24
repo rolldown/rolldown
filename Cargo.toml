@@ -111,7 +111,7 @@ itertools          = "0.13.0"
 jsonschema         = { version = "0.18.0", default-features = false }
 memchr             = "2.7.2"
 mimalloc           = "0.1.42"
-napi               = { version = "3.0.0-alpha", features = ["async"] }
+napi               = { version = "3.0.0-alpha.1", features = ["async"] }
 napi-build         = { version = "2.1.3" }
 napi-derive        = { version = "3.0.0-alpha.1", default-features = false, features = ["type-def"] }
 once_cell          = "1.19.0"
@@ -133,7 +133,7 @@ tracing-subscriber = { version = "0.3.18", default-features = false }
 vfs                = "0.12.0"
 xxhash-rust        = "0.8.10"
 # oxc crates share the same version
-oxc = { version = "0.15.0", features = ["sourcemap_concurrent", "transformer"] }
+oxc = { path = "/Users/likui/Github/oxc/crates/oxc", features = ["sourcemap_concurrent", "transformer"] }
 
 
 [profile.release]

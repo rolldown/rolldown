@@ -66,9 +66,12 @@ impl<F: FileSystem + Default> Resolver<F> {
     };
 
     let resolve_options_with_default_conditions = OxcResolverOptions {
-      tsconfig: raw_resolve.tsconfig_filename.map(|p| TsconfigOptions {
-        config_file: p.into(),
-        references: oxc_resolver::TsconfigReferences::Disabled,
+      tsconfig: raw_resolve.tsconfig_filename.map(|p| {
+        let path = PathBuf::from(&p);
+        TsconfigOptions {
+          config_file: if path.is_relative() { cwd.join(path) } else { path },
+          references: oxc_resolver::TsconfigReferences::Disabled,
+        }
       }),
       alias: raw_resolve
         .alias

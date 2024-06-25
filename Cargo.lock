@@ -1054,6 +1054,19 @@ dependencies = [
 
 [[package]]
 name = "napi"
+version = "2.16.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dfc300228808a0e6aea5a58115c82889240bcf8dab16fc25ad675b33e454b368"
+dependencies = [
+ "bitflags 2.5.0",
+ "ctor",
+ "napi-derive 2.16.5",
+ "napi-sys",
+ "once_cell",
+]
+
+[[package]]
+name = "napi"
 version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d38fbf4cbfd7d2785d153f4dcce374d515d3dabd688504dd9093f8135829d0"
@@ -1073,15 +1086,44 @@ checksum = "e1c0f5d67ee408a4685b61f5ab7e58605c8ae3f2b4189f0127d804ff13d5560a"
 
 [[package]]
 name = "napi-derive"
+version = "2.16.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0e034ddf6155192cf83f267ede763fe6c164dfa9971585436b16173718d94c4"
+dependencies = [
+ "cfg-if",
+ "convert_case",
+ "napi-derive-backend 1.0.67",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.66",
+]
+
+[[package]]
+name = "napi-derive"
 version = "3.0.0-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c230c813bfd4d6c7aafead3c075b37f0cf7fecb38be8f4cf5cfcee0b2c273ad0"
 dependencies = [
  "cfg-if",
  "convert_case",
- "napi-derive-backend",
+ "napi-derive-backend 2.0.0-alpha.1",
  "proc-macro2",
  "quote",
+ "syn 2.0.66",
+]
+
+[[package]]
+name = "napi-derive-backend"
+version = "1.0.67"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bff2c00437f3b3266391eb5e6aa25d0029187daf5caf05b8e3271468fb5ae73e"
+dependencies = [
+ "convert_case",
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "semver",
  "syn 2.0.66",
 ]
 
@@ -1282,12 +1324,12 @@ dependencies = [
 
 [[package]]
 name = "oxc-browserslist"
-version = "0.17.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9d96b978cbca7d108283a10fcfe79e0dc5b2ecaa99e610b5b5488c3c9321295"
+checksum = "0d67676f247b63c0f6a8ed20f6c1faa39ff5e0e4af923284a0857623eec5ab14"
 dependencies = [
  "nom",
- "rustc-hash 1.1.0",
+ "rustc-hash 2.0.0",
  "serde",
  "serde_json",
  "thiserror",
@@ -1326,7 +1368,7 @@ dependencies = [
  "itertools",
  "oxc_syntax",
  "petgraph",
- "rustc-hash 1.1.0",
+ "rustc-hash 2.0.0",
 ]
 
 [[package]]
@@ -1341,7 +1383,7 @@ dependencies = [
  "oxc_sourcemap",
  "oxc_span",
  "oxc_syntax",
- "rustc-hash 1.1.0",
+ "rustc-hash 2.0.0",
 ]
 
 [[package]]
@@ -1367,7 +1409,7 @@ dependencies = [
  "oxc_diagnostics",
  "oxc_span",
  "oxc_syntax",
- "rustc-hash 1.1.0",
+ "rustc-hash 2.0.0",
 ]
 
 [[package]]
@@ -1384,7 +1426,7 @@ dependencies = [
  "oxc_diagnostics",
  "oxc_span",
  "oxc_syntax",
- "rustc-hash 1.1.0",
+ "rustc-hash 2.0.0",
  "seq-macro",
 ]
 
@@ -1420,7 +1462,7 @@ dependencies = [
  "oxc_span",
  "oxc_syntax",
  "phf",
- "rustc-hash 1.1.0",
+ "rustc-hash 2.0.0",
 ]
 
 [[package]]
@@ -1430,7 +1472,7 @@ dependencies = [
  "base64-simd",
  "cfg-if",
  "rayon",
- "rustc-hash 1.1.0",
+ "rustc-hash 2.0.0",
  "serde",
  "serde_json",
 ]
@@ -1452,7 +1494,7 @@ dependencies = [
  "oxc_index",
  "oxc_span",
  "phf",
- "rustc-hash 1.1.0",
+ "rustc-hash 2.0.0",
  "ryu-js",
  "unicode-id-start",
 ]
@@ -1461,14 +1503,15 @@ dependencies = [
 name = "oxc_transform_napi"
 version = "0.0.0"
 dependencies = [
- "napi",
+ "napi 2.16.6",
  "napi-build",
- "napi-derive",
+ "napi-derive 2.16.5",
  "oxc_allocator",
  "oxc_codegen",
  "oxc_isolated_declarations",
  "oxc_parser",
  "oxc_span",
+ "oxc_transformer",
 ]
 
 [[package]]
@@ -1485,7 +1528,7 @@ dependencies = [
  "oxc_syntax",
  "oxc_traverse",
  "ropey",
- "rustc-hash 1.1.0",
+ "rustc-hash 2.0.0",
  "serde",
  "serde_json",
 ]
@@ -1806,9 +1849,9 @@ dependencies = [
  "derivative",
  "futures",
  "mimalloc",
- "napi",
+ "napi 3.0.0-alpha.2",
  "napi-build",
- "napi-derive",
+ "napi-derive 3.0.0-alpha.1",
  "once_cell",
  "oxc_transform_napi",
  "rolldown",
@@ -1850,7 +1893,7 @@ name = "rolldown_error"
 version = "0.0.1"
 dependencies = [
  "ariadne",
- "napi",
+ "napi 3.0.0-alpha.2",
  "oxc",
  "rolldown_resolver",
  "sugar_path",
@@ -2011,6 +2054,12 @@ checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 name = "rustc-hash"
 version = "1.2.0"
 source = "git+https://github.com/rust-lang/rustc-hash#3e39d8ef4d44762bf796a8c0d40b4dbf389be753"
+
+[[package]]
+name = "rustc-hash"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "583034fd73374156e66797ed8e5b0d5690409c9226b22d87cb7f19821c05d152"
 
 [[package]]
 name = "rustversion"

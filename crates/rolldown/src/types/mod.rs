@@ -9,3 +9,4 @@ pub mod linking_metadata;
 pub mod namespace_alias;
 pub mod oxc_parse_type;
 pub mod symbols;
+pub mod tree_shake;

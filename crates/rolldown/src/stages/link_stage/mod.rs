@@ -3,7 +3,7 @@ use std::{ptr::addr_of, sync::Mutex};
 use oxc::index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
-  NormalizedBundlerOptions, OutputFormat, StmtInfo, WrapKind,
+  NormalizedBundlerOptions, OutputFormat, StmtInfo, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -11,7 +11,7 @@ use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
   rayon::{ParallelBridge, ParallelIterator},
 };
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   runtime::RuntimeModuleBrief,
@@ -22,13 +22,13 @@ use crate::{
   SharedOptions,
 };
 
-use self::wrapping::create_wrapper;
+use self::{tree_shaking::MemberChainToResolvedSymbolRef, wrapping::create_wrapper};
 
 use super::scan_stage::ScanStageOutput;
 
 mod bind_imports_and_exports;
 mod sort_modules;
-mod tree_shaking;
+pub(crate) mod tree_shaking;
 mod wrapping;
 
 #[derive(Debug)]
@@ -42,6 +42,8 @@ pub struct LinkStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildError>,
   pub errors: Vec<BuildError>,
+  pub used_symbol_refs: FxHashSet<SymbolRef>,
+  pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
 
 #[derive(Debug)]
@@ -56,6 +58,8 @@ pub struct LinkStage<'a> {
   pub errors: Vec<BuildError>,
   pub ast_table: IndexVec<NormalModuleId, OxcAst>,
   pub input_options: &'a SharedOptions,
+  pub used_symbol_refs: FxHashSet<SymbolRef>,
+  pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -76,6 +80,8 @@ impl<'a> LinkStage<'a> {
       errors: scan_stage_output.errors,
       ast_table: scan_stage_output.ast_table,
       input_options,
+      used_symbol_refs: FxHashSet::default(),
+      top_level_member_expr_resolved_cache: FxHashMap::default(),
     }
   }
 
@@ -154,6 +160,8 @@ impl<'a> LinkStage<'a> {
       warnings: self.warnings,
       errors: self.errors,
       ast_table: self.ast_table,
+      used_symbol_refs: self.used_symbol_refs,
+      top_level_member_expr_resolved_cache: self.top_level_member_expr_resolved_cache,
     }
   }
 

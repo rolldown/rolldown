@@ -363,34 +363,41 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     if let Some(call_expr) = expr.as_call_expression_mut() {
       if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_empty() {
-        let rec_id = self.ctx.module.imports[&call_expr.span];
-        let rec = &self.ctx.module.import_records[rec_id];
-        match rec.resolved_module {
-          // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
-          ModuleId::Normal(importee_id) => {
-            let importee = &self.ctx.modules[importee_id];
-            let importee_linking_info = &self.ctx.linking_infos[importee.id];
-            let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-            if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-              *expr = self.snippet.call_expr_expr(wrap_ref_name);
-            } else {
-              let ns_name = self.canonical_name_for(importee.namespace_object_ref);
-              let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
-              *expr = self.snippet.seq2_in_paren_expr(
-                self.snippet.call_expr_expr(wrap_ref_name),
-                self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+        //  `require` calls that can't be recognized by rolldown are ignored in scanning, so they were not stored in `NomralModule#imports`.
+        //  we just keep these `require` calls as it is
+        if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
+          let rec = &self.ctx.module.import_records[rec_id];
+          match rec.resolved_module {
+            // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
+            ModuleId::Normal(importee_id) => {
+              let importee = &self.ctx.modules[importee_id];
+              let importee_linking_info = &self.ctx.linking_infos[importee.id];
+              let wrap_ref_name =
+                self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+              if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+                *expr = self.snippet.call_expr_expr(wrap_ref_name);
+              } else {
+                let ns_name = self.canonical_name_for(importee.namespace_object_ref);
+                let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
+                *expr = self.snippet.seq2_in_paren_expr(
+                  self.snippet.call_expr_expr(wrap_ref_name),
+                  self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+                );
+              }
+            }
+            ModuleId::External(importee_id) => {
+              let importee = &self.ctx.external_modules[importee_id];
+              let request_path =
+                call_expr.arguments.get_mut(0).expect("require should have an argument");
+
+              // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
+              *request_path = ast::Argument::StringLiteral(
+                self
+                  .snippet
+                  .string_literal(&importee.name, request_path.span())
+                  .into_in(self.alloc),
               );
             }
-          }
-          ModuleId::External(importee_id) => {
-            let importee = &self.ctx.external_modules[importee_id];
-            let request_path =
-              call_expr.arguments.get_mut(0).expect("require should have an argument");
-
-            // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
-            *request_path = ast::Argument::StringLiteral(
-              self.snippet.string_literal(&importee.name, request_path.span()).into_in(self.alloc),
-            );
           }
         }
       }

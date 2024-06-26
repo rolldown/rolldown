@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown/tests/fixtures.rs
-assertion_line: 54
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
 # tests/esbuild/dce/base64_loader_remove_unused
@@ -1388,6 +1387,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - a-!~{000}~.mjs => a-4qebpb0B.mjs
 - b-!~{001}~.mjs => b-5N9UMKWl.mjs
 - c-!~{002}~.mjs => c-49hHscdr.mjs
+
+# tests/fixtures/issues/1443
+
+- main-!~{000}~.mjs => main-nqMd7tJC.mjs
 
 # tests/fixtures/loaders/base64/binary
 

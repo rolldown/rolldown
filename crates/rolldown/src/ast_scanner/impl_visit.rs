@@ -87,7 +87,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
 
   fn visit_import_expression(&mut self, expr: &oxc::ast::ast::ImportExpression<'ast>) {
     if let oxc::ast::ast::Expression::StringLiteral(request) = &expr.source {
-      let id = self.add_import_record(&request.value, ImportKind::DynamicImport);
+      let id = self.add_import_record(request.value.as_str(), ImportKind::DynamicImport);
       self.result.imports.insert(expr.span, id);
     }
     walk::walk_import_expression(self, expr);
@@ -96,7 +96,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   fn visit_call_expression(&mut self, expr: &oxc::ast::ast::CallExpression<'ast>) {
     if expr.is_global_require_call(self.scopes) {
       if let Some(oxc::ast::ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
-        let id = self.add_import_record(&request.value, ImportKind::Require);
+        let id = self.add_import_record(request.value.as_str(), ImportKind::Require);
         self.result.imports.insert(expr.span, id);
       }
     }

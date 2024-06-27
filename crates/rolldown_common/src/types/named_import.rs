@@ -55,3 +55,9 @@ impl From<Rstr> for Specifier {
     Self::Literal(atom)
   }
 }
+
+impl From<&str> for Specifier {
+  fn from(s: &str) -> Self {
+    Self::Literal(Rstr::from(s))
+  }
+}

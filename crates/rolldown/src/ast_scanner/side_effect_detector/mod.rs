@@ -117,7 +117,7 @@ impl<'a> SideEffectDetector<'a> {
       Expression::BooleanLiteral(_)
       | Expression::NullLiteral(_)
       | Expression::NumericLiteral(_)
-      | Expression::BigintLiteral(_)
+      | Expression::BigIntLiteral(_)
       | Expression::RegExpLiteral(_)
       | Expression::FunctionExpression(_)
       | Expression::ArrowFunctionExpression(_)

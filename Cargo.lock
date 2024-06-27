@@ -1268,6 +1268,7 @@ dependencies = [
  "oxc_codegen",
  "oxc_diagnostics",
  "oxc_index",
+ "oxc_minifier",
  "oxc_parser",
  "oxc_semantic",
  "oxc_sourcemap",
@@ -1367,6 +1368,25 @@ name = "oxc_index"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85c463a51782cbc6f7accfae849a3ba4018792d76010c0c0719b2b97e495484c"
+
+[[package]]
+name = "oxc_minifier"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bd35227f0572c896148de4cd554da73e537766157cb8f9bbd0a70666cbaea68"
+dependencies = [
+ "itertools",
+ "num-bigint",
+ "num-traits",
+ "oxc_allocator",
+ "oxc_ast",
+ "oxc_diagnostics",
+ "oxc_index",
+ "oxc_parser",
+ "oxc_semantic",
+ "oxc_span",
+ "oxc_syntax",
+]
 
 [[package]]
 name = "oxc_parser"

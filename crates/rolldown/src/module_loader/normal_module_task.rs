@@ -216,6 +216,7 @@ impl NormalModuleTask {
       imported_ids,
       dynamically_imported_ids,
       side_effects,
+      module_type,
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;

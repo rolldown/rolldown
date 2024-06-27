@@ -3,8 +3,8 @@ use std::sync::Arc;
 use oxc::index::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, ExportsKind, ModuleDefFormat, NormalModule,
-  NormalModuleId, ResourceId, SymbolRef,
+  side_effects::DeterminedSideEffects, AstScopes, ExportsKind, ModuleDefFormat, ModuleType,
+  NormalModule, NormalModuleId, ResourceId, SymbolRef,
 };
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
@@ -84,6 +84,7 @@ impl RuntimeNormalModuleTask {
       imported_ids: vec![],
       dynamically_imported_ids: vec![],
       side_effects: DeterminedSideEffects::Analyzed(false),
+      module_type: ModuleType::Js,
     };
 
     if let Err(_err) =

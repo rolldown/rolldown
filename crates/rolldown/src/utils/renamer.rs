@@ -12,6 +12,23 @@ use crate::types::symbols::Symbols;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
+  /// key is the original name,
+  /// value is the how many same variable name in the top level are used before
+  /// It is also used to calculate the candidate_name e.g.
+  /// ```js
+  /// // index.js
+  /// import {a as b} from './a.js'
+  /// const a = 1; // {a => 0}
+  /// const a$1 = 1000; // {a => 0, a$1 => 0}
+  ///
+  ///
+  /// // a.js
+  /// export const a = 100; // {a => 0, a$1 => 0}, first we try looking up `a`, it is used. So we try the
+  ///                       // candidate_name `a$1`(conflict_index + 1 = 1). Then we try `a$1`,
+  ///                       // it is also used, so we try the candidate_name `a$1$1`(conflict_index of `a$1` + 1), it is not used,
+  ///                       // so the we got the final candidate_name `a$1$1`
+  /// ```
+  ///
   used_canonical_names: FxHashMap<Cow<'name, Rstr>, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
   symbols: &'name Symbols,

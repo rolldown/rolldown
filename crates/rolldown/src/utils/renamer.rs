@@ -1,13 +1,12 @@
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
-use std::collections::HashSet;
 
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use crate::types::symbols::Symbols;
 
@@ -78,8 +77,6 @@ impl<'name> Renamer<'name> {
       stack: &mut Vec<Cow<FxHashMap<Cow<'name, Rstr>, u32>>>,
       canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
     ) {
-      // dbg!(&module.stable_resource_id);
-      // dbg!(&stack);
       let bindings = module.scope.get_bindings(scope_id);
       let mut used_canonical_names_for_this_scope = FxHashMap::default();
       used_canonical_names_for_this_scope.shrink_to(bindings.len());
@@ -99,7 +96,6 @@ impl<'name> Renamer<'name> {
               candidate_name = Cow::Owned(format!("{binding_name}${count}").into());
               count += 1;
             } else {
-              // TODO:
               used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);
               slot.insert(candidate_name.into_owned());
               break;

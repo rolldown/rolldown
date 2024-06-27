@@ -23,11 +23,12 @@ impl<'name> Renamer<'name> {
     Self {
       canonical_names: FxHashMap::default(),
       symbols,
-      used_canonical_names: RESERVED_KEYWORDS
-        .iter()
-        .chain(GLOBAL_OBJECTS.iter())
-        .map(|s| (Cow::Owned(Rstr::new(s)), 0))
-        .collect(),
+      used_canonical_names: FxHashMap::default(),
+      // used_canonical_names: RESERVED_KEYWORDS
+      //   .iter()
+      //   .chain(GLOBAL_OBJECTS.iter())
+      //   .map(|s| (Cow::Owned(Rstr::new(s)), 0))
+      //   .collect(),
     }
   }
 
@@ -44,7 +45,7 @@ impl<'name> Renamer<'name> {
       Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();
         // if it is the first loop and we found the symbol is already used, we would  `()`
-        match self.used_canonical_names.entry(original_name) {
+        match self.used_canonical_names.entry(original_name.clone()) {
           Entry::Occupied(mut occ) => {
             let mut next_index = *occ.get() + 1;
             *occ.get_mut() = next_index;
@@ -53,6 +54,9 @@ impl<'name> Renamer<'name> {
           Entry::Vacant(vac) => {
             vac.insert(0);
           }
+        }
+        if candidate_name != original_name {
+          self.used_canonical_names.insert(candidate_name.clone(), 0);
         }
         vacant.insert(candidate_name.into_owned());
       }
@@ -76,6 +80,8 @@ impl<'name> Renamer<'name> {
       stack: &mut Vec<Cow<FxHashMap<Cow<'name, Rstr>, u32>>>,
       canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
     ) {
+      // dbg!(&module.stable_resource_id);
+      // dbg!(&stack);
       let bindings = module.scope.get_bindings(scope_id);
       let mut used_canonical_names_for_this_scope = FxHashMap::default();
       used_canonical_names_for_this_scope.shrink_to(bindings.len());
@@ -108,6 +114,7 @@ impl<'name> Renamer<'name> {
       });
 
       stack.push(Cow::Owned(used_canonical_names_for_this_scope));
+      // dbg!(&stack);
       let child_scopes = module.scope.get_child_ids(scope_id).cloned().unwrap_or_default();
       child_scopes.into_iter().for_each(|scope_id| {
         rename_symbols_of_nested_scopes(module, scope_id, stack, canonical_names);

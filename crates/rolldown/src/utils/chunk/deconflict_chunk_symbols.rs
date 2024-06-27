@@ -29,7 +29,7 @@ pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput
     .iter()
     .copied()
     // Starts with entry module
-    .rev()
+    // .rev()
     .map(|id| &link_output.module_table.normal_modules[id])
     .for_each(|module| {
       module

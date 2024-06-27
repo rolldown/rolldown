@@ -24,9 +24,6 @@ console.log(require.resolve('@scope/external-pkg'));
 try {
 	console.log(require.resolve('inside-try'));
 } catch (e) {}
-if (false) {
-	console.log(require.resolve('dead-code'));
-}
 console.log(false ? require.resolve('dead-if') : 0);
 console.log(true ? 0 : require.resolve('dead-if'));
 console.log(false && require.resolve('dead-and'));

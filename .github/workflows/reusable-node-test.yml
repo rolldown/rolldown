@@ -23,23 +23,14 @@ jobs:
         with:
           submodules: true # Pull submodules for additional files
 
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          bins: just
-          cache-base: main
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
+          tools: just
+          cache-key: debug-build
 
       - name: Build Native Rolldown
         run: just build native

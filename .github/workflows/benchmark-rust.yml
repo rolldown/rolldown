@@ -35,26 +35,16 @@ jobs:
           # Whether Pull submodules for additional files
           submodules: false
 
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          bins: just, cargo-codspeed
-          cache-base: main
-          cache-target: release
+          tools: just, cargo-codspeed
+          cache-key: release-build
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Setup benchmark
+      - name: Setup Benchmark Input
         run: just setup-bench
 
       - name: Build the benchmark target(s)
@@ -81,26 +71,16 @@ jobs:
           # Whether Pull submodules for additional files
           submodules: false
 
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          bins: just, critcmp
-          cache-base: main
-          cache-target: release
+          tools: just, critcmp
+          cache-key: release-build
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Setup benchmark
+      - name: Setup Benchmark Input
         run: just setup-bench
 
       - name: Run Bench on PR Branch

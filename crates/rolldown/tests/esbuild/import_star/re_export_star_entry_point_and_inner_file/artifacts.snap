@@ -23,8 +23,8 @@ const D = '2';
 //#region inner.js
 var inner_ns = {};
 __export(inner_ns, {
-	C:() => C,
-	D:() => D
+	C: () => C,
+	D: () => D
 });
 
 //#endregion

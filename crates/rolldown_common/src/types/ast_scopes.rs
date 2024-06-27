@@ -1,5 +1,5 @@
+use oxc::index::IndexVec;
 use oxc::semantic::{Reference, ReferenceId, ScopeTree, SymbolId};
-use oxc_index::IndexVec;
 
 #[derive(Debug)]
 pub struct AstScopes {

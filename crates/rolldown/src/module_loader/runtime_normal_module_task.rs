@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
+use oxc::index::IndexVec;
 use oxc::span::SourceType;
-use oxc_index::IndexVec;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, ExportsKind, ModuleDefFormat, NormalModule,
-  NormalModuleId, ResourceId, SymbolRef,
+  side_effects::DeterminedSideEffects, AstScopes, ExportsKind, ModuleDefFormat, ModuleType,
+  NormalModule, NormalModuleId, ResourceId, SymbolRef,
 };
-use rolldown_error::BuildError;
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
 use super::Msg;
@@ -19,20 +18,20 @@ use crate::{
 pub struct RuntimeNormalModuleTask {
   tx: tokio::sync::mpsc::Sender<Msg>,
   module_id: NormalModuleId,
-  warnings: Vec<BuildError>,
+  // warnings: Vec<BuildError>,
 }
 
 pub struct RuntimeNormalModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
   pub ast_symbol: AstSymbols,
   pub ast: OxcAst,
-  pub warnings: Vec<BuildError>,
+  // pub warnings: Vec<BuildError>,
   pub module: NormalModule,
 }
 
 impl RuntimeNormalModuleTask {
   pub fn new(id: NormalModuleId, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
-    Self { module_id: id, tx, warnings: Vec::default() }
+    Self { module_id: id, tx }
   }
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
@@ -85,11 +84,12 @@ impl RuntimeNormalModuleTask {
       imported_ids: vec![],
       dynamically_imported_ids: vec![],
       side_effects: DeterminedSideEffects::Analyzed(false),
+      module_type: ModuleType::Js,
     };
 
     if let Err(_err) =
       self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult {
-        warnings: self.warnings,
+        // warnings: self.warnings,
         ast_symbol: symbol,
         module,
         runtime,

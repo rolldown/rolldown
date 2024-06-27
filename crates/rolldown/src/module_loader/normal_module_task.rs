@@ -1,12 +1,13 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
 use futures::future::join_all;
-use oxc_index::IndexVec;
+use oxc::index::IndexVec;
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
   AstScopes, ImportRecordId, ModuleDefFormat, ModuleType, NormalModule, NormalModuleId,
   PackageJson, RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
+  TreeshakeOptions,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -24,7 +25,6 @@ use crate::{
   utils::{
     load_source::load_source, make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
     parse_to_ast::parse_to_ast, resolve_id::resolve_id, transform_source::transform_source,
-    tweak_ast_for_scanning::tweak_ast_for_scanning,
   },
   SharedOptions, SharedResolver,
 };
@@ -112,8 +112,12 @@ impl NormalModuleTask {
     .await?
     .into();
 
-    let mut ast = parse_to_ast(&self.ctx.input_options, module_type, Arc::clone(&source))?;
-    tweak_ast_for_scanning(&mut ast);
+    let mut ast = parse_to_ast(
+      Path::new(&self.resolved_path.path.as_ref()),
+      &self.ctx.input_options,
+      module_type,
+      Arc::clone(&source),
+    )?;
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);
 
@@ -165,17 +169,26 @@ impl NormalModuleTask {
           DeterminedSideEffects::Analyzed(analyzed_side_effects)
         })
     };
-
     let side_effects = match hook_side_effects {
       Some(side_effects) => match side_effects {
         HookSideEffects::True => lazy_check_side_effects(),
         HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
         HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
       },
-      None => lazy_check_side_effects(),
+      // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
+      None => match self.ctx.input_options.treeshake {
+        // Actually this convert is not necessary, just for passing type checking
+        TreeshakeOptions::False => DeterminedSideEffects::NoTreeshake,
+        TreeshakeOptions::Option(ref opt) => {
+          if opt.module_side_effects.resolve(&stable_resource_id) {
+            lazy_check_side_effects()
+          } else {
+            DeterminedSideEffects::UserDefined(false)
+          }
+        }
+      },
     };
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
-
     let module = NormalModule {
       source,
       id: self.module_id,
@@ -203,6 +216,7 @@ impl NormalModuleTask {
       imported_ids,
       dynamically_imported_ids,
       side_effects,
+      module_type,
     };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;

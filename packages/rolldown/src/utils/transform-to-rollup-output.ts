@@ -29,6 +29,7 @@ function transformToRollupOutputChunk(
       chunk.code = code
     },
     fileName: chunk.fileName,
+    name: chunk.name,
     get modules() {
       return Object.fromEntries(
         Object.entries(chunk.modules).map(([key, _]) => [key, {}]),

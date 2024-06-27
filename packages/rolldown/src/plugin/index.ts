@@ -3,42 +3,72 @@ import type {
   RenderedChunk,
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
-import type { AnyFn, AnyObj, NullValue, MaybePromise } from '../types/utils'
+import type {
+  AnyFn,
+  AnyObj,
+  NullValue,
+  MaybePromise,
+  PartialNull,
+} from '../types/utils'
 import type { SourceMapInput } from '../types/sourcemap'
 import { pathToFileURL } from 'node:url'
 import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
 import type { PluginContext } from './plugin-context'
 import type { TransformPluginContext } from './transfrom-plugin-context'
-import type { NormalizedOutputOptions } from '@src/options/normalized-output-options'
+import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import type { LogLevel } from '../log/logging'
 import type { RollupLog } from '../rollup'
 import type { MinimalPluginContext } from '../log/logger'
+import { InputOptions, OutputOptions } from '..'
+import { BuiltinPlugin } from './bindingify-builtin-plugin'
 
 type FormalHook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> = {
   handler: Handler
 } & HookOptions
 
-export type Hook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> =
-  | FormalHook<Handler, HookOptions>
-  | Handler
+export type ObjectHook<
+  Handler extends AnyFn,
+  HookOptions extends AnyObj = AnyObj,
+> = FormalHook<Handler, HookOptions> | Handler
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
 
-export type ResolveIdResult =
-  | string
-  | NullValue
-  | false
-  | {
-      id: string
-      external?: boolean
-      moduleSideEffects?: ModuleSideEffects
-    }
+export type ImportKind = BindingHookResolveIdExtraOptions['kind']
+
+export interface CustomPluginOptions {
+  [plugin: string]: any
+}
+
+export interface ModuleOptions {
+  moduleSideEffects: ModuleSideEffects
+}
+
+export interface ResolvedId extends ModuleOptions {
+  external: boolean
+  id: string
+}
+
+export interface PartialResolvedId extends Partial<PartialNull<ModuleOptions>> {
+  external?: boolean
+  id: string
+}
+
+export interface SourceDescription extends Partial<PartialNull<ModuleOptions>> {
+  code: string
+  map?: SourceMapInput
+}
+
+export type ResolveIdResult = string | NullValue | false | PartialResolvedId
+
+export type LoadResult = NullValue | string | SourceDescription
+
+export type TransformResult = NullValue | string | SourceDescription
 
 export interface Plugin {
   name?: string
 
-  onLog?: Hook<
+  onLog?: ObjectHook<
     (
       this: MinimalPluginContext,
       level: LogLevel,
@@ -46,25 +76,31 @@ export interface Plugin {
     ) => NullValue | boolean
   >
 
-  options?: Hook<
-    (this: MinimalPluginContext, options: NormalizedInputOptions) => NullValue
+  options?: ObjectHook<
+    (
+      this: MinimalPluginContext,
+      options: InputOptions,
+    ) => MaybePromise<NullValue | InputOptions>
   >
 
   // TODO find a way to make `this: PluginContext` work.
-  outputOptions?: Hook<
-    (this: null, options: NormalizedOutputOptions) => NullValue
+  outputOptions?: ObjectHook<
+    (
+      this: null,
+      options: OutputOptions,
+    ) => MaybePromise<NullValue | OutputOptions>
   >
 
   // --- Build hooks ---
 
-  buildStart?: Hook<
+  buildStart?: ObjectHook<
     (
       this: PluginContext,
       options: NormalizedInputOptions,
     ) => MaybePromise<NullValue>
   >
 
-  resolveId?: Hook<
+  resolveId?: ObjectHook<
     (
       this: PluginContext,
       source: string,
@@ -77,7 +113,7 @@ export interface Plugin {
    * @deprecated
    * This hook is only for rollup plugin compatibility. Please use `resolveId` instead.
    */
-  resolveDynamicImport?: Hook<
+  resolveDynamicImport?: ObjectHook<
     (
       this: PluginContext,
       source: string,
@@ -85,46 +121,29 @@ export interface Plugin {
     ) => MaybePromise<ResolveIdResult>
   >
 
-  load?: Hook<
-    (
-      this: PluginContext,
-      id: string,
-    ) => MaybePromise<
-      | NullValue
-      | string
-      | {
-          code: string
-          map?: SourceMapInput
-          moduleSideEffects?: ModuleSideEffects
-        }
-    >
+  load?: ObjectHook<
+    (this: PluginContext, id: string) => MaybePromise<LoadResult>
   >
 
-  transform?: Hook<
+  transform?: ObjectHook<
     (
       this: TransformPluginContext,
       code: string,
       id: string,
-    ) => MaybePromise<
-      | NullValue
-      | string
-      | {
-          code: string
-          map?: string | null | SourceMapInput
-          moduleSideEffects?: ModuleSideEffects
-        }
-    >
+    ) => MaybePromise<TransformResult>
   >
 
-  moduleParsed?: Hook<
+  moduleParsed?: ObjectHook<
     (this: PluginContext, moduleInfo: ModuleInfo) => MaybePromise<NullValue>
   >
 
-  buildEnd?: Hook<(this: PluginContext, err?: Error) => MaybePromise<NullValue>>
+  buildEnd?: ObjectHook<
+    (this: PluginContext, err?: Error) => MaybePromise<NullValue>
+  >
 
   // --- Generate hooks ---
 
-  renderStart?: Hook<
+  renderStart?: ObjectHook<
     (
       this: PluginContext,
       outputOptions: NormalizedOutputOptions,
@@ -132,7 +151,7 @@ export interface Plugin {
     ) => MaybePromise<NullValue>
   >
 
-  renderChunk?: Hook<
+  renderChunk?: ObjectHook<
     (
       this: PluginContext,
       code: string,
@@ -143,20 +162,20 @@ export interface Plugin {
       | string
       | {
           code: string
-          map?: string | null | SourceMapInput
+          map?: SourceMapInput
         }
     >
   >
 
-  augmentChunkHash?: Hook<
+  augmentChunkHash?: ObjectHook<
     (this: PluginContext, chunk: RenderedChunk) => MaybePromise<string | void>
   >
 
-  renderError?: Hook<
+  renderError?: ObjectHook<
     (this: PluginContext, error: Error) => MaybePromise<NullValue>
   >
 
-  generateBundle?: Hook<
+  generateBundle?: ObjectHook<
     (
       this: PluginContext,
       outputOptions: NormalizedOutputOptions,
@@ -165,7 +184,7 @@ export interface Plugin {
     ) => MaybePromise<NullValue>
   >
 
-  writeBundle?: Hook<
+  writeBundle?: ObjectHook<
     (
       this: PluginContext,
       outputOptions: NormalizedOutputOptions,
@@ -182,6 +201,8 @@ export type ParallelPlugin = {
   }
 }
 
+export type RolldownPlugin = Plugin | ParallelPlugin | BuiltinPlugin
+
 export type DefineParallelPluginResult<Options> = (
   options: Options,
 ) => ParallelPlugin
@@ -193,3 +214,43 @@ export function defineParallelPlugin<Options>(
     return { _parallel: { fileUrl: pathToFileURL(pluginPath).href, options } }
   }
 }
+
+export type FunctionPluginHooks = Plugin
+
+export type SyncPluginHooks =
+  | 'augmentChunkHash'
+  | 'onLog'
+  | 'outputOptions'
+  | 'renderDynamicImport'
+  | 'resolveFileUrl'
+  | 'resolveImportMeta'
+
+export type AsyncPluginHooks = Exclude<
+  keyof FunctionPluginHooks,
+  SyncPluginHooks
+>
+
+export type FirstPluginHooks =
+  | 'load'
+  | 'renderDynamicImport'
+  | 'resolveDynamicImport'
+  | 'resolveFileUrl'
+  | 'resolveId'
+  | 'resolveImportMeta'
+  | 'shouldTransformCachedModule'
+
+export type SequentialPluginHooks =
+  | 'augmentChunkHash'
+  | 'generateBundle'
+  | 'onLog'
+  | 'options'
+  | 'outputOptions'
+  | 'renderChunk'
+  | 'transform'
+
+export type AddonHooks = 'banner' | 'footer' | 'intro' | 'outro'
+
+export type ParallelPluginHooks = Exclude<
+  keyof FunctionPluginHooks | AddonHooks,
+  FirstPluginHooks | SequentialPluginHooks
+>

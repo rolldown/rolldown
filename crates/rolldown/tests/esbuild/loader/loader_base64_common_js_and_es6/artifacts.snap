@@ -18,15 +18,13 @@ var y_default = 'eQ==';
 var x_ns, x_default;
 var init_x = __esmMin(() => {
 	x_ns = {};
-	__export(x_ns, {
-		default:() => x_default
-	});
+	__export(x_ns, {default: () => x_default});
 	x_default = 'eA==';
 });
 
 //#endregion
 //#region entry.js
-const x_b64 = (init_x(),__toCommonJS(x_ns));
+const x_b64 = (init_x(), __toCommonJS(x_ns));
 console.log(x_b64, y_default);
 
 //#endregion

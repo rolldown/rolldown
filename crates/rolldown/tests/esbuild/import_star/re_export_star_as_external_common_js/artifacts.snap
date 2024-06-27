@@ -23,9 +23,7 @@ const out = __toESM(require("foo"));
 
 //#region entry.js
 var entry_ns = {};
-__export(entry_ns, {
-	out:() => out
-});
+__export(entry_ns, {out: () => out});
 
 //#endregion
 module.exports = __toCommonJS(entry_ns)

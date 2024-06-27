@@ -21,7 +21,7 @@ console.log(shared_default);
 import { shared_default } from "./shared.mjs";
 
 //#region src/b.js
-console.log( -shared_default);
+console.log(-shared_default);
 
 //#endregion
 ```

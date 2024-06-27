@@ -79,7 +79,7 @@ impl FromNapiValue for ParallelJsPluginRegistry {
 }
 
 #[napi]
-pub fn register_plugins(id: u16, plugins: PluginsInSingleWorker) {
+pub fn register_plugins(id: u16, plugins: Vec<BindingPluginWithIndex>) {
   if let Some(mut existing_plugins) = PLUGINS_MAP.get_mut(&id) {
     existing_plugins.push(plugins);
   }

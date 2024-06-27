@@ -20,9 +20,15 @@
     },
     {
       "groupName": "oxc",
-      "matchManagers": ["npm"],
+      "matchManagers": ["cargo"],
       "matchPackagePrefixes": ["oxc"],
       "schedule": ["at any time"]
+    },
+    {
+      "groupName": "npm-rolldown",
+      "matchManagers": ["npm"],
+      "automerge": false,
+      "automergeType": "pr"
     }
   ]
 }

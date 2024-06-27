@@ -1,7 +1,9 @@
-use oxc_index::IndexVec;
+use oxc::index::IndexVec;
 use rolldown_common::{NormalModuleId, ResolvedExport, StmtInfoId, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
+
+use super::tree_shake::UsedExportsInfo;
 
 /// Module metadata about linking
 #[derive(Debug, Default)]
@@ -34,7 +36,8 @@ pub struct LinkingMetadata {
   pub wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<Rstr, ResolvedExport>,
-  pub re_export_all_names: FxHashSet<Rstr>,
+  pub used_exports_info: UsedExportsInfo,
+  // pub re_export_all_names: FxHashSet<Rstr>,
   // Store the names of exclude ambiguous resolved exports.
   // It will be used to generate chunk exports and module namespace binding.
   pub sorted_and_non_ambiguous_resolved_exports: Vec<Rstr>,
@@ -57,8 +60,12 @@ impl LinkingMetadata {
       .map(|name| (name, &self.resolved_exports[name]))
   }
 
-  pub fn canonical_exports_len(&self) -> usize {
-    self.sorted_and_non_ambiguous_resolved_exports.len()
+  pub fn used_canonical_exports(&self) -> impl Iterator<Item = (&Rstr, &ResolvedExport)> {
+    self
+      .sorted_and_non_ambiguous_resolved_exports
+      .iter()
+      .filter(|name| self.used_exports_info.used_exports.contains(name))
+      .map(|name| (name, &self.resolved_exports[name]))
   }
 
   pub fn is_canonical_exports_empty(&self) -> bool {

@@ -11,13 +11,12 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_disabled
 
 
 //#region (ignored) 
-var require_test_package_json_disabled_type_module_issue3367 = __commonJSMin((exports, module) => {
-});
+var require_test_package_json_disabled_type_module_issue3367 = __commonJSMin((exports, module) => {});
 
 //#endregion
 //#region entry.js
 var import_test_package_json_disabled_type_module_issue3367 = __toESM(require_test_package_json_disabled_type_module_issue3367());
-(0,import_test_package_json_disabled_type_module_issue3367.default)();
+(0, import_test_package_json_disabled_type_module_issue3367.default)();
 
 //#endregion
 ```

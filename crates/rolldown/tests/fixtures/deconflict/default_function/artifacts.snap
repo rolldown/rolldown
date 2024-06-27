@@ -18,14 +18,12 @@ function foo$1(a$1$1) {
 
 //#endregion
 //#region bar.js
-var bar_default = {
-	foo:foo$1
-};
+var bar_default = {foo: foo$1};
 
 //#endregion
 //#region main.js
 const a = 2;
-const {foo} = bar_default;
+const { foo } = bar_default;
 assert.strictEqual(typeof foo, 'function');
 
 //#endregion
@@ -50,20 +48,20 @@ assert.strictEqual(typeof foo, 'function');
 (4:1-4:2) "}" --> (6:0-10:0) "\n}\n\n//#endregion\n//#region bar.js"
 - ../bar.js
 (0:0-2:15) "import foo from './foo'\n\nexport default" --> (10:0-10:18) "\nvar bar_default ="
-(2:15-2:17) " {" --> (10:18-11:1) " {\n"
-(2:17-2:22) " foo " --> (11:1-12:1) "\tfoo:foo$1\n"
-(2:22-2:23) "}" --> (12:1-16:0) "};\n\n//#endregion\n//#region main.js"
+(2:15-2:17) " {" --> (10:18-10:19) " "
+(2:17-2:22) " foo " --> (10:19-10:29) "{foo: foo$"
+(2:22-2:23) "}" --> (10:29-14:0) "1};\n\n//#endregion\n//#region main.js"
 - ../main.js
-(3:0-3:6) "\nconst" --> (16:0-16:6) "\nconst"
-(3:6-3:10) " a =" --> (16:6-16:10) " a ="
-(3:10-5:0) " 2; // make foo `a` conflict\n" --> (16:10-17:0) " 2;"
-(5:0-5:6) "\nconst" --> (17:0-17:6) "\nconst"
-(5:6-5:8) " {" --> (17:6-17:7) " "
-(5:8-5:13) " foo " --> (17:7-17:11) "{foo"
-(5:13-5:16) "} =" --> (17:11-17:14) "} ="
-(5:16-7:0) " bar\n" --> (17:14-18:0) " bar_default;"
-(7:0-7:7) "\nassert" --> (18:0-18:7) "\nassert"
-(7:7-7:26) ".strictEqual(typeof" --> (18:7-18:26) ".strictEqual(typeof"
-(7:26-7:31) " foo," --> (18:26-18:31) " foo,"
-(7:31-7:42) " 'function'" --> (18:31-18:42) " 'function'"
-(7:42-7:43) ")" --> (18:42-21:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(3:0-3:6) "\nconst" --> (14:0-14:6) "\nconst"
+(3:6-3:10) " a =" --> (14:6-14:10) " a ="
+(3:10-5:0) " 2; // make foo `a` conflict\n" --> (14:10-15:0) " 2;"
+(5:0-5:6) "\nconst" --> (15:0-15:6) "\nconst"
+(5:6-5:8) " {" --> (15:6-15:8) " {"
+(5:8-5:13) " foo " --> (15:8-15:13) " foo "
+(5:13-5:16) "} =" --> (15:13-15:16) "} ="
+(5:16-7:0) " bar\n" --> (15:16-16:0) " bar_default;"
+(7:0-7:7) "\nassert" --> (16:0-16:7) "\nassert"
+(7:7-7:26) ".strictEqual(typeof" --> (16:7-16:26) ".strictEqual(typeof"
+(7:26-7:31) " foo," --> (16:26-16:31) " foo,"
+(7:31-7:42) " 'function'" --> (16:31-16:42) " 'function'"
+(7:42-7:43) ")" --> (16:42-19:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

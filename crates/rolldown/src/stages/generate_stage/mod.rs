@@ -62,7 +62,7 @@ impl<'a> GenerateStage<'a> {
   pub async fn generate(&mut self) -> Result<BundleOutput> {
     let mut chunk_graph = self.generate_chunks();
 
-    self.generate_chunk_preliminary_filenames(&mut chunk_graph);
+    self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph);
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 
@@ -94,15 +94,18 @@ impl<'a> GenerateStage<'a> {
               runtime: &self.link_output.runtime,
               chunk_graph: &chunk_graph,
               options: self.options,
+              top_level_member_expr_resolved_cache: &self
+                .link_output
+                .top_level_member_expr_resolved_cache,
             },
             ast,
           );
         } else {
-          ast.with_mut(|fields| {
+          ast.program.with_mut(|fields| {
             let (oxc_program, alloc) = (fields.program, fields.allocator);
             let mut finalizer = IsolatingModuleFinalizer {
               alloc,
-              scope: &module.scope,
+              // scope: &module.scope,
               ctx: &IsolatingModuleFinalizerContext {
                 module,
                 modules: &self.link_output.module_table.normal_modules,
@@ -202,6 +205,7 @@ impl<'a> GenerateStage<'a> {
       let sourcemap_filename =
         map.as_ref().map(|_| format!("{}.map", rendered_chunk.filename.as_str()));
       assets.push(Output::Chunk(Box::new(OutputChunk {
+        name: rendered_chunk.name,
         filename: rendered_chunk.filename,
         code,
         is_entry: rendered_chunk.is_entry,
@@ -235,7 +239,7 @@ impl<'a> GenerateStage<'a> {
   // Notices:
   // - Should generate filenames that are stable cross builds and os.
   #[tracing::instrument(level = "debug", skip_all)]
-  fn generate_chunk_preliminary_filenames(&self, chunk_graph: &mut ChunkGraph) {
+  fn generate_chunk_name_and_preliminary_filenames(&self, chunk_graph: &mut ChunkGraph) {
     fn ensure_chunk_name(
       chunk: &Chunk,
       runtime_id: NormalModuleId,
@@ -246,7 +250,7 @@ impl<'a> GenerateStage<'a> {
         ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
           if is_user_defined {
             chunk
-              .name
+              .user_defined_name
               .clone()
               .unwrap_or_else(|| panic!("User-defined entry point should always have a name"))
           } else {
@@ -313,6 +317,7 @@ impl<'a> GenerateStage<'a> {
         ..Default::default()
       });
 
+      chunk.name = Some(chunk_name.into());
       chunk.absolute_preliminary_filename =
         Some(preliminary.absolutize_with(&self.options.dir).expect_into_string());
       chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));

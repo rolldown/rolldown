@@ -1,4 +1,4 @@
-import type { Plugin, ParallelPlugin } from '../plugin'
+import type { RolldownPlugin } from '../plugin'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
 import {
@@ -8,21 +8,27 @@ import {
   RollupLogSchema,
   RollupLogWithStringSchema,
 } from '../log/logging'
+import { TreeshakingOptionsSchema, TreeshakingOptions } from '../treeshake'
+
+const inputOptionSchema = z
+  .string()
+  .or(z.string().array())
+  .or(z.record(z.string()))
+
+const externalSchema = zodExt
+  .stringOrRegExp()
+  .or(zodExt.stringOrRegExp().array())
+  .or(
+    z
+      .function()
+      .args(z.string(), z.string().optional(), z.boolean())
+      .returns(zodExt.voidNullableWith(z.boolean())),
+  )
 
 const inputOptionsSchema = z.strictObject({
-  input: z.string().or(z.string().array()).or(z.record(z.string())).optional(),
-  plugins: zodExt.phantom<Plugin | ParallelPlugin>().array().optional(),
-  external: zodExt
-    .stringOrRegExp()
-    .or(zodExt.stringOrRegExp().array())
-    .or(
-      z
-        .function()
-        .args(z.string(), z.string().optional(), z.boolean())
-        .returns(zodExt.voidNullableWith(z.boolean()))
-        .optional(),
-    )
-    .optional(),
+  input: inputOptionSchema.optional(),
+  plugins: zodExt.phantom<RolldownPlugin>().array().optional(),
+  external: externalSchema.optional(),
   resolve: z
     .strictObject({
       alias: z.record(z.string()).optional(),
@@ -44,6 +50,7 @@ const inputOptionsSchema = z.strictObject({
     .or(z.literal('neutral'))
     .optional(),
   shimMissingExports: z.boolean().optional(),
+  treeshake: z.boolean().or(TreeshakingOptionsSchema).optional(),
   logLevel: LogLevelOptionSchema.optional(),
   onLog: z
     .function()
@@ -68,4 +75,11 @@ const inputOptionsSchema = z.strictObject({
     .optional(),
 })
 
-export type InputOptions = z.infer<typeof inputOptionsSchema>
+export type InputOption = z.infer<typeof inputOptionSchema>
+export type ExternalOption = z.infer<typeof externalSchema>
+export type InputOptions = Omit<
+  z.infer<typeof inputOptionsSchema>,
+  'treeshake'
+> & {
+  treeshake?: boolean | TreeshakingOptions
+}

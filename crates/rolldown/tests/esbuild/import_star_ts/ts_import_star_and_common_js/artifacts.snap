@@ -1,0 +1,28 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/import_star_ts/ts_import_star_and_common_js
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+
+//#region foo.ts
+var foo_ns, foo;
+var init_foo = __esmMin(() => {
+	foo_ns = {};
+	__export(foo_ns, {foo: () => foo});
+	foo = 123;
+});
+
+//#endregion
+//#region entry.js
+init_foo();
+const ns2 = (init_foo(), __toCommonJS(foo_ns));
+console.log(foo, ns2.foo);
+
+//#endregion
+```

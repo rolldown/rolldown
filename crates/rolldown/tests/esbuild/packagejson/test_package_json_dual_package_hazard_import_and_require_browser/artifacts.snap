@@ -14,15 +14,13 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_dual_pac
 var module_browser_ns, module_browser_default;
 var init_module_browser = __esmMin(() => {
 	module_browser_ns = {};
-	__export(module_browser_ns, {
-		default:() => module_browser_default
-	});
+	__export(module_browser_ns, {default: () => module_browser_default});
 	module_browser_default = 'browser module';
 });
 
 //#endregion
 //#region src/test-main.js
-console.log((init_module_browser(),__toCommonJS(module_browser_ns)));
+console.log((init_module_browser(), __toCommonJS(module_browser_ns)));
 
 //#endregion
 //#region src/test-module.js

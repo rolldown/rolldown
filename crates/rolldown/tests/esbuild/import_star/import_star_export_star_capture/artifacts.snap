@@ -16,14 +16,12 @@ const foo$1 = 123;
 //#endregion
 //#region bar.js
 var bar_ns = {};
-__export(bar_ns, {
-	foo:() => foo$1
-});
+__export(bar_ns, {foo: () => foo$1});
 
 //#endregion
 //#region entry.js
 let foo = 234;
-console.log(bar_ns, bar_ns.foo, foo);
+console.log(bar_ns, foo$1, foo);
 
 //#endregion
 ```

@@ -1,11 +1,11 @@
-import { bindingifyInputOptions } from '@src/options/bindingify-input-options'
+import { bindingifyInputOptions } from '../options/bindingify-input-options'
 import { Bundler } from '../binding'
 import type { InputOptions } from '../options/input-options'
 import type { OutputOptions } from '../options/output-options'
 import { initializeParallelPlugins } from './initialize-parallel-plugins'
 import { normalizeInputOptions } from './normalize-input-options'
 import { normalizeOutputOptions } from './normalize-output-options'
-import { bindingifyOutputOptions } from '@src/options/bindingify-output-options'
+import { bindingifyOutputOptions } from '../options/bindingify-output-options'
 import { PluginDriver } from '../plugin/plugin-driver'
 
 export async function createBundler(
@@ -13,22 +13,20 @@ export async function createBundler(
   outputOptions: OutputOptions,
 ): Promise<{ bundler: Bundler; stopWorkers?: () => Promise<void> }> {
   const pluginDriver = new PluginDriver()
+  inputOptions = await pluginDriver.callOptionsHook(inputOptions)
   // Convert `InputOptions` to `NormalizedInputOptions`.
   const normalizedInputOptions = await normalizeInputOptions(inputOptions)
-
-  pluginDriver.callOptionsHook(normalizedInputOptions)
 
   const parallelPluginInitResult = await initializeParallelPlugins(
     normalizedInputOptions.plugins,
   )
 
   try {
-    const normalizedOutputOptions = normalizeOutputOptions(outputOptions)
-
-    pluginDriver.callOutputOptionsHook(
+    outputOptions = await pluginDriver.callOutputOptionsHook(
       normalizedInputOptions,
-      normalizedOutputOptions,
+      outputOptions,
     )
+    const normalizedOutputOptions = normalizeOutputOptions(outputOptions)
 
     // Convert `NormalizedInputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(

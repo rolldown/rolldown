@@ -13,14 +13,13 @@ workspace = true
 
 [dependencies]
 anyhow                = { workspace = true }
+bitflags              = { workspace = true }
 dunce                 = { workspace = true }
 futures               = { workspace = true }
 indexmap              = { workspace = true }
 itertools             = { workspace = true }
 once_cell             = { workspace = true }
 oxc                   = { workspace = true }
-oxc_index             = { workspace = true }
-oxc_syntax            = { workspace = true }
 regex                 = { workspace = true }
 rolldown_common       = { workspace = true }
 rolldown_error        = { workspace = true }

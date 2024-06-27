@@ -19,6 +19,7 @@ pub fn generate_pre_rendered_chunk(
   output_options: &SharedOptions,
 ) -> PreRenderedChunk {
   PreRenderedChunk {
+    name: chunk.name.clone().expect("should have name"),
     is_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { is_user_defined, .. } if *is_user_defined),
     is_dynamic_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { is_user_defined, .. } if !*is_user_defined),
     facade_module_id: match &chunk.kind {
@@ -45,6 +46,7 @@ pub fn generate_rendered_chunk(
 ) -> RenderedChunk {
   let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, graph, output_options);
   RenderedChunk {
+    name: pre_rendered_chunk.name,
     is_entry: pre_rendered_chunk.is_entry,
     is_dynamic_entry: pre_rendered_chunk.is_dynamic_entry,
     facade_module_id: pre_rendered_chunk.facade_module_id,

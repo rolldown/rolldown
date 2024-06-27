@@ -24,17 +24,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
 
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          bins: just, taplo-cli
-          cache-base: main
-          components: clippy,rustfmt,llvm-tools-preview
+          tools: just
+
+      - name: Setup Benchmark Input
+        run: just setup-bench
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2

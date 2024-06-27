@@ -1,0 +1,53 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 171
+expression: content
+input_file: crates/rolldown/tests/esbuild/default/forbid_const_assign_when_lowering_using
+---
+# warnings
+
+## ILLEGAL_REASSIGNMENT
+
+```text
+[ILLEGAL_REASSIGNMENT] Warning: Unexpected re-assignment of const variable `x`
+   ╭─[entry.js:3:1]
+   │
+ 1 │ const x = 1
+   │       ┬  
+   │       ╰── `x` is declared here as const
+   │ 
+ 3 │ x = 3
+   │ ┬  
+   │ ╰── `x` is re-assigned here
+───╯
+
+```
+## ILLEGAL_REASSIGNMENT
+
+```text
+[ILLEGAL_REASSIGNMENT] Warning: Unexpected re-assignment of const variable `y`
+   ╭─[entry.js:7:2]
+   │
+ 5 │     const y = 1
+   │           ┬  
+   │           ╰── `y` is declared here as const
+   │ 
+ 7 │     y = 3
+   │     ┬  
+   │     ╰── `y` is re-assigned here
+───╯
+
+```
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+const x = 1;
+using x2 = 2;
+x = 3;
+
+//#endregion
+```

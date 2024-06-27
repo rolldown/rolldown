@@ -2,6 +2,14 @@ import type { RenderedChunk } from '../binding'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
 
+const ModuleFormatSchema = z
+  .literal('es')
+  .or(z.literal('cjs'))
+  .or(z.literal('esm'))
+  .or(z.literal('module'))
+  .or(z.literal('commonjs'))
+  .optional()
+
 const addonFunctionSchema = z
   .function()
   .args(zodExt.phantom<RenderedChunk>())
@@ -10,14 +18,7 @@ const addonFunctionSchema = z
 const outputOptionsSchema = z.strictObject({
   dir: z.string().optional(),
   exports: z.literal('named').optional(),
-  format: z
-    .literal('es')
-    .or(z.literal('cjs'))
-    .or(z.literal('es'))
-    .or(z.literal('esm'))
-    .or(z.literal('module'))
-    .or(z.literal('commonjs'))
-    .optional(),
+  format: ModuleFormatSchema,
   sourcemap: z
     .boolean()
     .or(z.literal('inline'))
@@ -50,3 +51,5 @@ export type SourcemapPathTransformOption = (
 ) => string
 
 type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
+
+export type ModuleFormat = z.infer<typeof ModuleFormatSchema>

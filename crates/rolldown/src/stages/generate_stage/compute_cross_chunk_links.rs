@@ -5,7 +5,7 @@ use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 use indexmap::IndexSet;
 use itertools::{multizip, Itertools};
-use oxc_index::{index_vec, IndexVec};
+use oxc::index::{index_vec, IndexVec};
 use rolldown_common::{
   ChunkId, ChunkKind, CrossChunkImportItem, ExportsKind, ExternalModuleId, ImportKind, ModuleId,
   NamedImport, OutputFormat, SymbolRef, WrapKind,
@@ -215,6 +215,7 @@ impl<'a> GenerateStage<'a> {
             });
 
             stmt_info.referenced_symbols.iter().for_each(|referenced| {
+              let referenced = referenced.symbol_ref();
               let mut canonical_ref = symbols.par_canonical_ref_for(*referenced);
               if let Some(namespace_alias) = &symbols.get(canonical_ref).namespace_alias {
                 canonical_ref = namespace_alias.namespace_ref;
@@ -270,6 +271,9 @@ impl<'a> GenerateStage<'a> {
     chunk_graph.chunks.iter_enumerated().for_each(|(chunk_id, chunk)| {
       let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
       for import_ref in chunk_meta_imports.iter().copied() {
+        if !self.link_output.used_symbol_refs.contains(&import_ref) {
+          continue;
+        }
         let import_symbol = self.link_output.symbols.get(import_ref);
 
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {

@@ -22,9 +22,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_self_common_js
 
 //#region entry.js
 var entry_ns = {};
-__export(entry_ns, {
-	foo:() => foo
-});
+__export(entry_ns, {foo: () => foo});
 const foo = 123;
 
 //#endregion

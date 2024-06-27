@@ -18,9 +18,7 @@ const devil = 'devil';
 //#endregion
 //#region main.js
 var main_ns = {};
-__export(main_ns, {
-	'\u{1f608}':() => devil
-});
+__export(main_ns, {'😈': () => devil});
 
 //#endregion
 module.exports = __toCommonJS(main_ns)

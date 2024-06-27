@@ -13,18 +13,19 @@ import { default as assert } from "assert";
 //#region main.js
 var e = 'failed1', x = 'value';
 (function() {
-	try{
-	}catch(e$1){
+	try {} catch (e$1) {
 		var e$1 = 'failed2';
-	}	assert.strictEqual(e$1, undefined);
+	}
+	assert.strictEqual(e$1, undefined);
 	assert.strictEqual(x$1, undefined);
 	x$1 = 'failed3';
 	return;
-	try{
+	try {
 		not_reached();
-	}catch(x$1){
+	} catch (x$1) {
 		var x$1 = 'failed4';
-	}})();
+	}
+})();
 assert.strictEqual(x, 'value');
 
 //#endregion

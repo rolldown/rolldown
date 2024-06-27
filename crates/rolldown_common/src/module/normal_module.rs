@@ -1,13 +1,14 @@
 use std::{fmt::Debug, sync::Arc};
 
 use crate::side_effects::DeterminedSideEffects;
+use crate::ModuleType;
 use crate::{
   types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
   ImportRecordId, LocalExport, ModuleDefFormat, ModuleId, ModuleInfo, NamedImport, NormalModuleId,
   ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
+use oxc::index::IndexVec;
 use oxc::span::Span;
-use oxc_index::IndexVec;
 use rolldown_rstr::Rstr;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -51,6 +52,7 @@ pub struct NormalModule {
   // the module ids imported by this module via dynamic import()
   pub dynamically_imported_ids: Vec<ResourceId>,
   pub side_effects: DeterminedSideEffects,
+  pub module_type: ModuleType,
 }
 
 impl NormalModule {

@@ -9,30 +9,16 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier
 
 ```js
 
-
 //#region b.js
-var b_ns = {};
-__export(b_ns, {
-	Base:() => Base
-});
-class Base {
-}
+class Base {}
 
 //#endregion
 //#region a.js
-var a_ns = {};
-__export(a_ns, {
-	Keep:() => Keep,
-	REMOVE:() => REMOVE
-});
-class Keep extends b_ns.Base {
-}
-class REMOVE extends b_ns.Base {
-}
+class Keep extends Base {}
 
 //#endregion
 //#region entry.js
-new a_ns.Keep();
+new Keep();
 
 //#endregion
 ```

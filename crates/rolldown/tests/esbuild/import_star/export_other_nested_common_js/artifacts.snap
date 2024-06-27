@@ -22,9 +22,7 @@ var import_foo = __toESM(require_foo());
 //#endregion
 //#region entry.js
 var entry_ns = {};
-__export(entry_ns, {
-	y:() => import_foo.x
-});
+__export(entry_ns, {y: () => import_foo.x});
 
 //#endregion
 module.exports = __toCommonJS(entry_ns)

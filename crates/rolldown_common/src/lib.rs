@@ -15,6 +15,7 @@ pub mod bundler_options {
       is_external::IsExternal,
       module_type::ModuleType,
       normalized_bundler_options::NormalizedBundlerOptions,
+      normalized_input_item::NormalizedInputItem,
       output_format::OutputFormat,
       output_option::{AddonFunction, AddonOutputOption},
       platform::Platform,
@@ -22,6 +23,7 @@ pub mod bundler_options {
       source_map_type::SourceMapType,
       sourcemap_ignore_list::SourceMapIgnoreList,
       sourcemap_path_transform::SourceMapPathTransform,
+      treeshake::{InnerOptions, ModuleSideEffects, TreeshakeOptions},
     },
     BundlerOptions,
   };
@@ -49,6 +51,7 @@ pub use crate::{
   types::external_module_id::ExternalModuleId,
   types::import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},
   types::importer_record::ImporterRecord,
+  types::js_regex,
   types::module_def_format::ModuleDefFormat,
   types::module_id::ModuleId,
   types::module_info::ModuleInfo,
@@ -67,7 +70,7 @@ pub use crate::{
   types::resource_id::ResourceId,
   types::side_effects,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoId, StmtInfos},
-  types::symbol_ref::SymbolRef,
+  types::symbol_ref::{MemberExprRef, SymbolOrMemberExprRef, SymbolRef},
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;

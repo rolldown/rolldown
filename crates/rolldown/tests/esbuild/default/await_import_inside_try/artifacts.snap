@@ -11,10 +11,10 @@ input_file: crates/rolldown/tests/esbuild/default/await_import_inside_try
 
 //#region entry.js
 async function main(name) {
-	try{
+	try {
 		return await import(name);
-	}catch{
-	}}
+	} catch {}
+}
 main('fs');
 
 //#endregion

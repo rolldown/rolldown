@@ -26,7 +26,7 @@ It will help you catch errors locally rather than pushing your changes to GitHub
 
 - `just roll-rust` - Run only Rust checks.
 - `just roll-node` - Run only Node.js checks.
-- `just roll-repo` - Checks for non-code related issues, like file na
+- `just roll-repo` - Checks for non-code related issues, like file name.
 
 :::
 

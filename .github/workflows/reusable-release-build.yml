@@ -80,11 +80,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          cache-base: main
-          targets: ${{ matrix.target }}
+          cache-key: release-build
+
+      - name: Rustup Adds Target
+        run: rustup target add ${{ matrix.target }}
 
       - uses: goto-bus-stop/setup-zig@v2
         if: ${{ contains(matrix.target, 'musl') }}
@@ -101,17 +103,8 @@ jobs:
         run: pip install setuptools
         if: ${{ matrix.os == 'macos-latest' }}
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
 
       - name: Build Binding
         run: ${{ matrix.build }}
@@ -134,17 +127,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
 
       - name: Build Node Packages
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.

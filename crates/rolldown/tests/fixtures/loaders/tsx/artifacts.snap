@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/loaders/tsx
+---
+# Assets
+
+## main_tsx.mjs
+
+```js
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+
+//#region main.tsx
+const Hello = () => _jsx('div', {children: 'Hello'});
+function World() {
+	return _jsxs('div', {children: [_jsx(Hello, {}), 'World']});
+}
+
+//#endregion
+export { World as default };
+```

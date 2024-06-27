@@ -2,7 +2,7 @@ use regex::Regex;
 use std::borrow::Cow;
 
 pub fn is_validate_identifier_name(name: &str) -> bool {
-  oxc_syntax::identifier::is_identifier_name(name)
+  oxc::syntax::identifier::is_identifier_name(name)
 }
 
 pub fn legitimize_identifier_name(name: &str) -> Cow<str> {

@@ -1,0 +1,20 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/tree_shaking/advanced_barrel_exports
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region foo.js
+const a = 100;
+
+//#endregion
+//#region main.js
+console.log(a);
+
+//#endregion
+```

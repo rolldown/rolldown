@@ -2,9 +2,9 @@
   "name": "monorepo",
   "description": "Rollup in Rust",
   "private": true,
-  "packageManager": "pnpm@9.2.0",
+  "packageManager": "pnpm@9.3.0",
   "engines": {
-    "node": ">=18.18.0"
+    "node": ">=18.20.3"
   },
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --import-plugin --jsdoc-plugin --deny-warnings",
@@ -28,17 +28,17 @@
   "license": "MIT",
   "devDependencies": {
     "rolldown": "workspace:*",
-    "npm-rolldown": "npm:rolldown@0.10.4",
-    "@ls-lint/ls-lint": "^2.2.2",
+    "npm-rolldown": "npm:rolldown@0.10.4-snapshot-66e8482-20240616163535",
+    "@ls-lint/ls-lint": "^2.2.3",
     "@taplo/cli": "^0.7.0",
     "@types/node": "20.14.2",
     "conventional-changelog-cli": "^5.0.0",
-    "cspell": "^8.8.1",
+    "cspell": "^8.8.4",
     "husky": "^9.0.11",
-    "lint-staged": "^15.2.2",
-    "oxlint": "0.4.3",
-    "prettier": "^3.3.0",
-    "typescript": "^5.4.2"
+    "lint-staged": "^15.2.5",
+    "oxlint": "0.4.4",
+    "prettier": "^3.3.1",
+    "typescript": "^5.4.5"
   },
   "prettier": {
     "printWidth": 80,

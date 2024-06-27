@@ -11,8 +11,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 
 
 //#region (ignored) node_modules/demo-pkg
-var require_demo_pkg = __commonJSMin((exports, module) => {
-});
+var require_demo_pkg = __commonJSMin((exports, module) => {});
 
 //#endregion
 //#region node_modules/demo-pkg/index.js
@@ -26,7 +25,7 @@ var require_demo_pkg_index = __commonJSMin((exports, module) => {
 //#endregion
 //#region src/entry.js
 var import_demo_pkg_index = __toESM(require_demo_pkg_index());
-console.log((0,import_demo_pkg_index.default)());
+console.log((0, import_demo_pkg_index.default)());
 
 //#endregion
 ```

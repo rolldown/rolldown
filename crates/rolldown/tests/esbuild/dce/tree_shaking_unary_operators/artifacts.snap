@@ -11,8 +11,8 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_unary_operators
 
 //#region entry.js
 let keep;
- ++keep;
- --keep;
+++keep;
+--keep;
 keep++;
 keep--;
 

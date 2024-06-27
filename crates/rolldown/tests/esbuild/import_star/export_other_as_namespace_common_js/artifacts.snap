@@ -18,9 +18,7 @@ var require_foo = __commonJSMin((exports, module) => {
 //#endregion
 //#region entry.js
 var entry_ns = {};
-__export(entry_ns, {
-	ns:() => import_foo
-});
+__export(entry_ns, {ns: () => import_foo});
 var import_foo = __toESM(require_foo());
 
 //#endregion

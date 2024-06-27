@@ -12,9 +12,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_missing_e
 
 //#region foo.js
 var foo_ns = {};
-__export(foo_ns, {
-	x:() => x
-});
+__export(foo_ns, {x: () => x});
 const x = 123;
 
 //#endregion

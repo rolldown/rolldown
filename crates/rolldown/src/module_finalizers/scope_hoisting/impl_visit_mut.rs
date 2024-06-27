@@ -3,14 +3,14 @@
 use oxc::{
   allocator,
   ast::{
-    ast::{self, SimpleAssignmentTarget},
+    ast::{self, Expression, SimpleAssignmentTarget},
     visit::walk_mut,
     VisitMut,
   },
-  span::{GetSpan, Span, SPAN},
+  span::{CompactStr, GetSpan, Span, SPAN},
 };
 use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, IntoIn, SpanExt, StatementExt, TakeIn};
+use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, IntoIn, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -363,40 +363,102 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     if let Some(call_expr) = expr.as_call_expression_mut() {
       if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_empty() {
-        let rec_id = self.ctx.module.imports[&call_expr.span];
-        let rec = &self.ctx.module.import_records[rec_id];
-        match rec.resolved_module {
-          // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
-          ModuleId::Normal(importee_id) => {
-            let importee = &self.ctx.modules[importee_id];
-            let importee_linking_info = &self.ctx.linking_infos[importee.id];
-            let wrap_ref_name = self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-            if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-              *expr = self.snippet.call_expr_expr(wrap_ref_name);
-            } else {
-              let ns_name = self.canonical_name_for(importee.namespace_object_ref);
-              let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
-              *expr = self.snippet.seq2_in_paren_expr(
-                self.snippet.call_expr_expr(wrap_ref_name),
-                self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+        //  `require` calls that can't be recognized by rolldown are ignored in scanning, so they were not stored in `NomralModule#imports`.
+        //  we just keep these `require` calls as it is
+        if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
+          let rec = &self.ctx.module.import_records[rec_id];
+          match rec.resolved_module {
+            // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
+            ModuleId::Normal(importee_id) => {
+              let importee = &self.ctx.modules[importee_id];
+              let importee_linking_info = &self.ctx.linking_infos[importee.id];
+              let wrap_ref_name =
+                self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+              if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+                *expr = self.snippet.call_expr_expr(wrap_ref_name);
+              } else {
+                let ns_name = self.canonical_name_for(importee.namespace_object_ref);
+                let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
+                *expr = self.snippet.seq2_in_paren_expr(
+                  self.snippet.call_expr_expr(wrap_ref_name),
+                  self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+                );
+              }
+            }
+            ModuleId::External(importee_id) => {
+              let importee = &self.ctx.external_modules[importee_id];
+              let request_path =
+                call_expr.arguments.get_mut(0).expect("require should have an argument");
+
+              // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
+              *request_path = ast::Argument::StringLiteral(
+                self
+                  .snippet
+                  .string_literal(&importee.name, request_path.span())
+                  .into_in(self.alloc),
               );
             }
-          }
-          ModuleId::External(importee_id) => {
-            let importee = &self.ctx.external_modules[importee_id];
-            let request_path =
-              call_expr.arguments.get_mut(0).expect("require should have an argument");
-
-            // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
-            *request_path = ast::Argument::StringLiteral(
-              self.snippet.string_literal(&importee.name, request_path.span()).into_in(self.alloc),
-            );
           }
         }
       }
     }
 
     self.try_rewrite_identifier_reference_expr(expr, false);
+
+    // rewrite `foo_ns.bar` to `bar` directly
+    match expr {
+      Expression::StaticMemberExpression(ref inner_expr) => {
+        let mut chain = vec![];
+        let mut cur = inner_expr;
+        let top_level_symbol = loop {
+          chain.push(cur.property.clone());
+          match cur.object {
+            ast::Expression::StaticMemberExpression(ref expr) => {
+              cur = expr;
+            }
+            ast::Expression::Identifier(ref ident) => {
+              break self.resolve_symbol_from_reference(ident);
+            }
+            _ => break None,
+          }
+        };
+        if let Some(symbol) = top_level_symbol {
+          chain.reverse();
+          let chain: Vec<CompactStr> =
+            chain.into_iter().map(|ident| ident.name.as_str().into()).collect::<Vec<_>>();
+          let replaced_expr = self
+            .ctx
+            .top_level_member_expr_resolved_cache
+            .get(&(self.ctx.id, symbol).into())
+            .and_then(|map| map.get(&chain.clone().into_boxed_slice()))
+            .map(|(symbol_ref, cursor, namespace_property_name)| {
+              let replaced_expr = if let Some(name) = self.try_canonical_name_for(*symbol_ref) {
+                let namespace_prop_chain =
+                  if let Some(namespace_property_name) = namespace_property_name {
+                    vec![namespace_property_name.as_str().into()]
+                  } else {
+                    vec![]
+                  };
+                self.snippet.member_expr_or_ident_ref(
+                  name.as_str(),
+                  &[&chain[*cursor..], &namespace_prop_chain].concat(),
+                  SPAN,
+                )
+              } else {
+                // Ambiguous symbol, replace the member expr with `undefined`, the runtime semantic
+                // will not change
+                self.snippet.id_ref_expr("undefined", SPAN)
+              };
+
+              replaced_expr
+            });
+          if let Some(replaced_expr) = replaced_expr {
+            *expr = replaced_expr;
+          }
+        };
+      }
+      _ => {}
+    };
 
     walk_mut::walk_expression_mut(self, expr);
   }

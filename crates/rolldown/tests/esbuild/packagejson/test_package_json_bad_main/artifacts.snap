@@ -20,7 +20,7 @@ var require_demo_pkg_index = __commonJSMin((exports, module) => {
 //#endregion
 //#region src/entry.js
 var import_demo_pkg_index = __toESM(require_demo_pkg_index());
-console.log((0,import_demo_pkg_index.default)());
+console.log((0, import_demo_pkg_index.default)());
 
 //#endregion
 ```

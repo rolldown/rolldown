@@ -14,9 +14,12 @@ workspace = true
 [dependencies]
 jsonschema              = { workspace = true }
 once_cell               = { workspace = true }
+rolldown                = { workspace = true }
+rolldown_common         = { workspace = true }
 rolldown_testing_config = { workspace = true }
 serde_json              = { workspace = true }
 sugar_path              = { workspace = true }
+tokio                   = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 
 [build-dependencies]
 rolldown_testing_config = { workspace = true }

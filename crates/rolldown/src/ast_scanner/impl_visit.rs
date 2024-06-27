@@ -1,11 +1,12 @@
-use std::sync::Arc;
-
 use oxc::{
-  ast::{ast::IdentifierReference, visit::walk, Visit},
-  codegen::{self, Codegen, CodegenOptions, Gen},
+  ast::{
+    ast::{Expression, IdentifierReference, MemberExpression},
+    visit::walk,
+    Visit,
+  },
+  codegen::{self, CodeGenerator, Gen},
 };
 use rolldown_common::ImportKind;
-use rolldown_error::BuildError;
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -20,11 +21,7 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
           .detect_side_effect_of_stmt(stmt);
 
       if cfg!(debug_assertions) {
-        let mut codegen = Codegen::<false>::new(
-          "",
-          "",
-          CodegenOptions { enable_typescript: true, enable_source_map: false },
-        );
+        let mut codegen = CodeGenerator::new();
         stmt.gen(&mut codegen, codegen::Context::default());
         self.current_stmt_info.debug_label = Some(codegen.into_source_text());
       }
@@ -42,28 +39,43 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     self.try_diagnostic_forbid_const_assign(symbol_id);
   }
 
-  fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {
-    let symbol_id = self.resolve_symbol_from_reference(ident);
-    match symbol_id {
-      Some(symbol_id) if self.is_top_level(symbol_id) => {
-        self.add_referenced_symbol(symbol_id);
-      }
-      None => {
-        if ident.name == "module" {
-          self.used_module_ref = true;
-        }
-        if ident.name == "exports" {
-          self.used_exports_ref = true;
-        }
-        if ident.name == "eval" {
-          self.result.warnings.push(
-            BuildError::eval(self.file_path.to_string(), Arc::clone(self.source), ident.span)
-              .with_severity_warning(),
-          );
+  fn visit_member_expression(&mut self, expr: &MemberExpression<'ast>) {
+    match expr {
+      MemberExpression::StaticMemberExpression(inner_expr) => {
+        let mut chain = vec![];
+        let mut cur = inner_expr;
+        let top_level_symbol = loop {
+          chain.push(cur.property.clone());
+          match &cur.object {
+            Expression::StaticMemberExpression(expr) => {
+              cur = expr;
+            }
+            Expression::Identifier(ident) => {
+              let symbol_id = self.resolve_symbol_from_reference(ident);
+              let resolved_top_level = self.resolve_identifier_reference(symbol_id, ident);
+              break resolved_top_level;
+            }
+            _ => break None,
+          }
+        };
+        chain.reverse();
+        let chain = chain.into_iter().map(|ident| ident.name.as_str().into()).collect::<Vec<_>>();
+
+        if let Some(symbol_id) = top_level_symbol {
+          self.add_member_expr_reference(symbol_id, chain);
+          return;
         }
       }
       _ => {}
-    }
+    };
+    walk::walk_member_expression(self, expr);
+  }
+
+  fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {
+    let symbol_id = self.resolve_symbol_from_reference(ident);
+    if let Some(resolved_symbol_id) = self.resolve_identifier_reference(symbol_id, ident) {
+      self.add_referenced_symbol(resolved_symbol_id);
+    };
   }
 
   fn visit_statement(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {

@@ -14,17 +14,15 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_and_common_js
 var foo_ns, foo;
 var init_foo = __esmMin(() => {
 	foo_ns = {};
-	__export(foo_ns, {
-		foo:() => foo
-	});
+	__export(foo_ns, {foo: () => foo});
 	foo = 123;
 });
 
 //#endregion
 //#region entry.js
 init_foo();
-const ns2 = (init_foo(),__toCommonJS(foo_ns));
-console.log(foo_ns.foo, ns2.foo);
+const ns2 = (init_foo(), __toCommonJS(foo_ns));
+console.log(foo, ns2.foo);
 
 //#endregion
 ```

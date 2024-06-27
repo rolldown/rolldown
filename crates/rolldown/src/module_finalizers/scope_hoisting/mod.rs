@@ -1,6 +1,7 @@
 use oxc::{
   allocator::Allocator,
   ast::ast::{self, IdentifierReference, Statement},
+  semantic::SymbolId,
   span::{Atom, SPAN},
 };
 use rolldown_common::{AstScopes, ImportRecordId, ModuleId, SymbolRef, WrapKind};
@@ -11,6 +12,8 @@ mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
+
+use crate::types::tree_shake::UsedInfo;
 mod rename;
 
 /// Finalizer for emitting output code with scope hoisting.
@@ -33,6 +36,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {
     self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
+  }
+
+  /// Used for member expression access with ambiguous name.
+  pub fn try_canonical_name_for(&self, symbol: SymbolRef) -> Option<&'me Rstr> {
+    self.ctx.canonical_names.get(&symbol)
   }
 
   pub fn canonical_name_for_runtime(&self, name: &str) -> &Rstr {
@@ -169,17 +177,31 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .snippet
       .var_decl_stmt(var_name, ast::Expression::ObjectExpression(TakeIn::dummy(self.alloc)));
 
-    let exports_len = self.ctx.linking_info.canonical_exports_len();
-
+    let exports_len = self.ctx.linking_info.used_canonical_exports().count();
     if exports_len == 0 {
-      return vec![decl_stmt];
+      let can_not_be_eliminated =
+        self.ctx.linking_info.used_exports_info.used_info.contains(UsedInfo::USED_AS_NAMESPACE)
+          || self.ctx.module.import_records.iter().any(|record| {
+            let id = record.resolved_module;
+
+            if let Some(normal_module_id) = id.as_normal() {
+              let m = &self.ctx.modules[normal_module_id];
+              !m.exports_kind.is_esm()
+            } else {
+              true
+            }
+          });
+      if can_not_be_eliminated {
+        return vec![decl_stmt];
+      }
+      return vec![];
     }
 
     // construct `{ prop_name: () => returned, ... }`
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
     arg_obj_expr.properties.reserve_exact(exports_len);
 
-    self.ctx.linking_info.canonical_exports().for_each(|(export, resolved_export)| {
+    self.ctx.linking_info.used_canonical_exports().for_each(|(export, resolved_export)| {
       // prop_name: () => returned
       let prop_name = export;
       let returned = self.generate_finalized_expr_for_symbol_ref(resolved_export.symbol_ref);
@@ -216,5 +238,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     );
 
     vec![decl_stmt, export_call_stmt]
+  }
+
+  fn resolve_symbol_from_reference(&self, id_ref: &IdentifierReference) -> Option<SymbolId> {
+    id_ref.reference_id.get().and_then(|ref_id| self.scope.symbol_id_for(ref_id))
   }
 }

@@ -1,10 +1,14 @@
-import type { BindingInputOptions } from '../binding'
+import { BindingInputOptions, BindingLogLevel } from '../binding'
 import nodePath from 'node:path'
 import { bindingifyPlugin } from '../plugin/bindingify-plugin'
 import type { NormalizedInputOptions } from './normalized-input-options'
-import { arraify } from '@src/utils'
+import { arraify } from '../utils/misc'
 import type { NormalizedOutputOptions } from './normalized-output-options'
-import type { LogLevelOption } from '@src/log/logging'
+import type { LogLevelOption } from '../log/logging'
+import {
+  bindingifyBuiltInPlugin,
+  BuiltinPlugin,
+} from '../plugin/bindingify-builtin-plugin'
 
 export function bindingifyInputOptions(
   options: NormalizedInputOptions,
@@ -15,6 +19,9 @@ export function bindingifyInputOptions(
     plugins: options.plugins.map((plugin) => {
       if ('_parallel' in plugin) {
         return undefined
+      }
+      if (plugin instanceof BuiltinPlugin) {
+        return bindingifyBuiltInPlugin(plugin)
       }
       return bindingifyPlugin(plugin, options, outputOptions)
     }),
@@ -61,15 +68,8 @@ export function bindingifyInputOptions(
     onLog: (level, log) => {
       options.onLog(level, { code: log.code, message: log.message })
     },
+    treeshake: options.treeshake,
   }
-}
-
-// TODO The typing should import from binding, but const enum is disabled by `isolatedModules`.
-const enum BindingLogLevel {
-  Silent = 0,
-  Warn = 1,
-  Info = 2,
-  Debug = 3,
 }
 
 function bindingifyLogLevel(

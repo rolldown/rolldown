@@ -20,48 +20,12 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
-   ╭─[main.js:4:8]
-   │
- 4 │ import importedE from "./foo"
-   │        ────┬────  
-   │            ╰────── Missing export
-───╯
-
-```
-## MISSING_EXPORT
-
-```text
 [MISSING_EXPORT] Error: "importedC" is not exported by "foo.js".
    ╭─[main.js:2:10]
    │
  2 │ export { importedC, importedD as d } from "./foo"
    │          ────┬────  
    │              ╰────── Missing export
-───╯
-
-```
-## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "importedA" is not exported by "foo.js".
-   ╭─[main.js:1:10]
-   │
- 1 │ import { importedA, importedB as b } from "./foo"
-   │          ────┬────  
-   │              ╰────── Missing export
-───╯
-
-```
-## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
-   ╭─[main.js:6:10]
-   │
- 6 │ export { default as g } from "./foo"
-   │          ───┬───  
-   │             ╰───── Missing export
 ───╯
 
 ```
@@ -86,6 +50,42 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
  1 │ import { importedA, importedB as b } from "./foo"
    │                     ────┬────  
    │                         ╰────── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "importedA" is not exported by "foo.js".
+   ╭─[main.js:1:10]
+   │
+ 1 │ import { importedA, importedB as b } from "./foo"
+   │          ────┬────  
+   │              ╰────── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+   ╭─[main.js:4:8]
+   │
+ 4 │ import importedE from "./foo"
+   │        ────┬────  
+   │            ╰────── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+   ╭─[main.js:6:10]
+   │
+ 6 │ export { default as g } from "./foo"
+   │          ───┬───  
+   │             ╰───── Missing export
 ───╯
 
 ```

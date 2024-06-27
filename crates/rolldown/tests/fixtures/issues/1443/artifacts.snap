@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/issues/1443
+---
+# Assets
+
+## main.mjs
+
+```js
+
+
+//#region main.js
+var require_main = __commonJSMin((exports, module) => {
+	module.exports = (mod) => require(mod);
+});
+
+//#endregion
+export default require_main();
+
+```

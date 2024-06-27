@@ -26,17 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
 
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install && git reset --hard # fix pnpm install add new line for package.json
+      - name: Git Reset Hard
+        run: git reset --hard # fix pnpm install add new line for package.json
 
       - name: Download Binding Artifacts
         uses: actions/download-artifact@v4

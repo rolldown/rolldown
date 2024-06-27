@@ -83,12 +83,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: moonrepo/setup-rust@v1
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          bins: just, taplo-cli, cargo-shear
-          cache-base: main
-          components: clippy,rustfmt
+          tools: just, taplo-cli, cargo-shear
+          cache-key: debug-build
+          components: clippy rustfmt
 
       - name: Lint
         run: just lint-rust
@@ -134,17 +134,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
 
       - name: Lint Code
         run: pnpm lint-code
@@ -155,17 +146,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
 
       - name: Lint Filename
         run: pnpm lint-filename

@@ -12,8 +12,8 @@ input_file: crates/rolldown/tests/esbuild/dce/dce_of_destructuring
 //#region entry.js
 var KEEP1 = x;
 var [remove3] = [];
-var [remove4,...remove5] = [...[1, 2], 3];
-var [,,remove6] = [, , 3];
+var [remove4, ...remove5] = [...[1, 2], 3];
+var [,, remove6] = [, , 3];
 var [KEEP2] = [x];
 var [KEEP3] = [...{}];
 

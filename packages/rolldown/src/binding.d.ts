@@ -39,6 +39,7 @@ export class BindingOutputChunk {
   set map(map: string)
   get sourcemapFileName(): string | null
   get preliminaryFileName(): string
+  get name(): string
 }
 
 /** The `BindingOutputs` owner `Vec<Output>` the mutable reference, it avoid `Clone` at call `writeBundle/generateBundle` hook, and make it mutable. */
@@ -55,7 +56,6 @@ export class BindingPluginContext {
 }
 
 export class BindingTransformPluginContext {
-  getCombinedSourcemap(): string
   inner(): BindingPluginContext
 }
 
@@ -87,8 +87,16 @@ export interface AliasItem {
 }
 
 export interface BindingAssetSource {
-  type: string
-  source: Uint8Array
+  inner: string | Uint8Array
+}
+
+export interface BindingBuiltinPlugin {
+  name: BindingBuiltinPluginName
+  options?: unknown
+}
+
+export enum BindingBuiltinPluginName {
+  WasmPlugin = 0
 }
 
 export interface BindingEmittedAsset {
@@ -99,18 +107,18 @@ export interface BindingEmittedAsset {
 
 export interface BindingHookLoadOutput {
   code: string
-  map?: string
   sideEffects?: BindingHookSideEffects
+  map?: BindingSourcemap
 }
 
 export interface BindingHookRenderChunkOutput {
   code: string
-  map?: string
+  map?: BindingSourcemap
 }
 
 export interface BindingHookResolveIdExtraOptions {
   isEntry: boolean
-  kind: string
+  kind: 'import' | 'dynamic-import' | 'require-call'
 }
 
 export interface BindingHookResolveIdOutput {
@@ -133,13 +141,23 @@ export interface BindingInputItem {
 export interface BindingInputOptions {
   external?: undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<BindingInputItem>
-  plugins: Array<BindingPluginOrParallelJsPluginPlaceholder>
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
   logLevel?: BindingLogLevel
   onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
+  treeshake?: BindingTreeshake
+}
+
+export interface BindingJsonSourcemap {
+  file?: string
+  mappings?: string
+  sourceRoot?: string
+  sources?: Array<string | undefined | null>
+  sourcesContent?: Array<string | undefined | null>
+  names?: Array<string>
 }
 
 export enum BindingLogLevel {
@@ -157,8 +175,8 @@ export interface BindingOutputOptions {
   dir?: string
   exports?: 'default' | 'named' | 'none' | 'auto'
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
-  format?: 'esm' | 'cjs'
-  plugins: Array<BindingPluginOrParallelJsPluginPlaceholder>
+  format?: 'es' | 'cjs'
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
@@ -212,9 +230,18 @@ export interface BindingResolveOptions {
   tsconfigFilename?: string
 }
 
-export function registerPlugins(id: number, plugins: PluginsInSingleWorker): void
+export interface BindingSourcemap {
+  inner: string | BindingJSONSourcemap
+}
+
+export interface BindingTreeshake {
+  moduleSideEffects: string
+}
+
+export function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 export interface RenderedChunk {
+  name: string
   isEntry: boolean
   isDynamicEntry: boolean
   facadeModuleId?: string

@@ -14,15 +14,13 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/esm_require_esm
 var esm_ns, esm_default;
 var init_esm = __esmMin(() => {
 	esm_ns = {};
-	__export(esm_ns, {
-		default:() => esm_default
-	});
+	__export(esm_ns, {default: () => esm_default});
 	esm_default = 'esm';
 });
 
 //#endregion
 //#region main.js
-const esm = (init_esm(),__toCommonJS(esm_ns));
+const esm = (init_esm(), __toCommonJS(esm_ns));
 
 //#endregion
 export { esm };

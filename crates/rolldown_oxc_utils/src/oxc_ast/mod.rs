@@ -4,13 +4,15 @@ use crate::OxcCompiler;
 use oxc::ast::Trivias;
 use oxc::{allocator::Allocator, ast::ast::Program, span::SourceType};
 
-use self::program_cell::{ProgramCell, ProgramCellOwner};
+use self::program_cell::ProgramCell;
 
 mod helpers;
 pub mod program_cell;
 
+/// - To access `&mut ast::Program`, use `ast.program.with_mut(|fields| { fields.program; })`.
+
 pub struct OxcAst {
-  pub(crate) inner: ProgramCell,
+  pub program: ProgramCell,
   pub trivias: Trivias,
   pub source_type: SourceType,
   pub contains_use_strict: bool,
@@ -18,51 +20,16 @@ pub struct OxcAst {
 
 impl OxcAst {
   pub fn source(&self) -> &Arc<str> {
-    &self.inner.borrow_owner().source
+    &self.program.borrow_owner().source
   }
 
   pub fn allocator(&self) -> &Allocator {
-    &self.inner.borrow_owner().allocator
+    &self.program.borrow_owner().allocator
   }
 
   pub fn program(&self) -> &Program {
-    self.inner.borrow_dependent()
+    &self.program.borrow_dependent().program
   }
-
-  /// Visit all fields including `&mut Program` within a closure.
-  ///
-  /// ## Example
-  ///
-  /// ```ignore
-  /// let mut ast = OxcCompiler::parse("", SourceType::default());
-  /// ast.with_mut(|fields| {
-  ///   fields.source; // &Arc<str>
-  ///   fields.allocator; // &Allocator
-  ///   fields.program; // &mut Program
-  /// });
-  /// ```
-  pub fn with_mut<'outer, Ret>(
-    &'outer mut self,
-    func: impl for<'inner> ::core::ops::FnOnce(WithFieldsMut<'outer, 'inner>) -> Ret,
-  ) -> Ret {
-    self.inner.with_dependent_mut::<'outer, Ret>(
-      |owner: &ProgramCellOwner, program: &'outer mut Program| {
-        func(WithFieldsMut {
-          source: &owner.source,
-          allocator: &owner.allocator,
-          program,
-          trivias: &mut self.trivias,
-        })
-      },
-    )
-  }
-}
-
-pub struct WithFieldsMut<'outer, 'inner> {
-  pub source: &'inner Arc<str>,
-  pub allocator: &'inner Allocator,
-  pub program: &'outer mut Program<'inner>,
-  pub trivias: &'outer mut Trivias,
 }
 
 impl Debug for OxcAst {

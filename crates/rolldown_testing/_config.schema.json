@@ -188,6 +188,9 @@
       "type": "string",
       "enum": [
         "js",
+        "jsx",
+        "ts",
+        "tsx",
         "json",
         "text",
         "base64",

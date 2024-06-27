@@ -18,7 +18,8 @@ anyhow             = { workspace = true }
 dashmap            = { workspace = true }
 glob-match         = { workspace = true }
 oxc                = { workspace = true, features = ["semantic"] }
-oxc_index          = { workspace = true }
+regex              = { workspace = true }
+regress            = "0.10.0"
 rolldown_fs        = { workspace = true }
 rolldown_rstr      = { workspace = true }
 rolldown_sourcemap = { workspace = true }

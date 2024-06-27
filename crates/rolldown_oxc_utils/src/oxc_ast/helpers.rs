@@ -8,7 +8,7 @@ use crate::OxcAst;
 
 impl OxcAst {
   pub fn is_body_empty(&self) -> bool {
-    self.inner.with_dependent(|_, program| program.body.is_empty())
+    self.program().is_empty()
   }
 
   pub fn make_semantic<'ast>(
@@ -21,8 +21,8 @@ impl OxcAst {
   }
 
   pub fn make_symbol_table_and_scope_tree(&self) -> (SymbolTable, ScopeTree) {
-    self.inner.with_dependent(|dep, program| {
-      let semantic = Self::make_semantic(&dep.source, program, self.source_type);
+    self.program.with_dependent(|owner, dep| {
+      let semantic = Self::make_semantic(&owner.source, &dep.program, self.source_type);
       semantic.into_symbol_table_and_scope_tree()
     })
   }

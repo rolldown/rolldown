@@ -1,5 +1,9 @@
-use rolldown_common::{ModuleType, NormalizedBundlerOptions, Platform, SourceMapType};
+use rolldown_common::{
+  ModuleType, NormalizedBundlerOptions, NormalizedInputItem, Platform, SourceMapType,
+};
 use rustc_hash::FxHashMap;
+
+use super::extract_meaningful_input_name_from_path::try_extract_meaningful_input_name_from_path;
 
 pub struct NormalizeOptionsReturn {
   pub options: NormalizedBundlerOptions,
@@ -13,10 +17,15 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   let mut loaders = FxHashMap::from(
     [
-      ("json".to_string(), ModuleType::Json),
       ("js".to_string(), ModuleType::Js),
       ("mjs".to_string(), ModuleType::Js),
       ("cjs".to_string(), ModuleType::Js),
+      ("jsx".to_string(), ModuleType::Jsx),
+      ("ts".to_string(), ModuleType::Ts),
+      ("mts".to_string(), ModuleType::Ts),
+      ("cts".to_string(), ModuleType::Ts),
+      ("tsx".to_string(), ModuleType::Tsx),
+      ("json".to_string(), ModuleType::Json),
       ("txt".to_string(), ModuleType::Text),
     ]
     .into_iter()
@@ -39,13 +48,37 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   loaders.extend(user_defined_loaders);
 
+  let has_only_one_input_item = matches!(&raw_options.input, Some(items) if items.len() == 1);
+  let input = raw_options
+    .input
+    .unwrap_or_default()
+    .into_iter()
+    .enumerate()
+    .map(|(idx, raw)| {
+      let name = raw.name.unwrap_or_else(|| {
+        // We try to give a meaningful name for unnamed input item.
+        let fallback_name =
+          || if has_only_one_input_item { "input".to_string() } else { format!("input~{idx}") };
+
+        // If the input is a data URL, no way we can get a meaningful name. Just fallback to the default.
+        if raw.import.starts_with("data:") {
+          return fallback_name();
+        }
+
+        // If it's a file path, use the file name of it.
+        try_extract_meaningful_input_name_from_path(&raw.import).unwrap_or_else(fallback_name)
+      });
+      NormalizedInputItem { name, import: raw.import }
+    })
+    .collect::<Vec<_>>();
+
   let normalized = NormalizedBundlerOptions {
-    input: raw_options.input.unwrap_or_default(),
+    input,
     cwd: raw_options
       .cwd
       .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),
     external: raw_options.external,
-    treeshake: raw_options.treeshake.unwrap_or(true),
+    treeshake: raw_options.treeshake,
     platform: raw_options.platform.unwrap_or(Platform::Browser),
     entry_filenames: raw_options.entry_filenames.unwrap_or_else(|| "[name].js".to_string()).into(),
     chunk_filenames: raw_options

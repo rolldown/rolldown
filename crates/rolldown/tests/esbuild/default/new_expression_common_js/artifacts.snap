@@ -12,11 +12,8 @@ input_file: crates/rolldown/tests/esbuild/default/new_expression_common_js
 
 //#region foo.js
 var require_foo = __commonJSMin((exports, module) => {
-	class Foo {
-	}
-	module.exports = {
-		Foo
-	};
+	class Foo {}
+	module.exports = {Foo};
 });
 
 //#endregion

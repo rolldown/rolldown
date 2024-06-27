@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use futures::future::join_all;
-use oxc_index::IndexVec;
+use oxc::index::IndexVec;
 use rolldown_common::{EntryPoint, ImportKind, ModuleTable, NormalModuleId, ResolvedRequestInfo};
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -85,9 +85,7 @@ impl ScanStage {
   /// Resolve `InputOptions.input`
 
   #[tracing::instrument(level = "debug", skip_all)]
-  async fn resolve_user_defined_entries(
-    &mut self,
-  ) -> Result<Vec<(Option<String>, ResolvedRequestInfo)>> {
+  async fn resolve_user_defined_entries(&mut self) -> Result<Vec<(String, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 

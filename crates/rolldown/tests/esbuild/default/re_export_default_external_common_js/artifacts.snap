@@ -17,8 +17,8 @@ const { default: bar } = __toESM(require("bar"));
 //#region entry.js
 var entry_ns = {};
 __export(entry_ns, {
-	bar:() => bar,
-	foo:() => foo
+	bar: () => bar,
+	foo: () => foo
 });
 
 //#endregion

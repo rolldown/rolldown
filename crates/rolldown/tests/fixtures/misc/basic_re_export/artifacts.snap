@@ -10,12 +10,12 @@ input_file: crates/rolldown/tests/fixtures/misc/basic_re_export
 ```js
 
 //#region a.js
-const a = 'a.js';
+const a$1 = 'a.js';
 
 //#endregion
 //#region main.js
-const a$1 = 'index.js';
-console.log(a$1, a);
+const a = 'index.js';
+console.log(a, a$1);
 
 //#endregion
 ```

@@ -11,17 +11,17 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_ca
 
 
 //#region foo.js
-const foo = 123;
+const foo$1 = 123;
 
 //#endregion
 //#region bar.js
 var bar_ns = {};
-__export(bar_ns, {foo: () => foo});
+__export(bar_ns, {foo: () => foo$1});
 
 //#endregion
 //#region entry.js
-let foo$1 = 234;
-console.log(bar_ns, foo, foo$1);
+let foo = 234;
+console.log(bar_ns, foo$1, foo);
 
 //#endregion
 ```

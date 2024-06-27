@@ -20,9 +20,9 @@ var require_node_pkg_browser = __commonJSMin((exports, module) => {
 //#endregion
 //#region node_modules/demo-pkg/index.js
 var require_demo_pkg_index = __commonJSMin((exports, module) => {
-	const fn = require_node_pkg_browser();
+	const fn$1 = require_node_pkg_browser();
 	module.exports = function() {
-		return fn();
+		return fn$1();
 	};
 });
 

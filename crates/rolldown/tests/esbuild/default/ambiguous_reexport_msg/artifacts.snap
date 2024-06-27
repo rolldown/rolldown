@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/default/ambiguous_reexport_msg
 ```js
 
 //#region a.js
-let a = 1, x = 2;
+let a = 1, x$1 = 2;
 
 //#endregion
 //#region b.js
@@ -18,7 +18,7 @@ let b = 3;
 
 //#endregion
 //#region c.js
-let c = 4, x$1 = 5;
+let c = 4, x = 5;
 
 //#endregion
 export { a, b, c };

@@ -12,13 +12,13 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_capture
 
 //#region foo.js
 var foo_ns = {};
-__export(foo_ns, {foo: () => foo});
-const foo = 123;
+__export(foo_ns, {foo: () => foo$1});
+const foo$1 = 123;
 
 //#endregion
 //#region entry.js
-let foo$1 = 234;
-console.log(foo_ns, foo, foo$1);
+let foo = 234;
+console.log(foo_ns, foo$1, foo);
 
 //#endregion
 ```

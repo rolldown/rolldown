@@ -81,12 +81,12 @@ var init_e = __esmMin(() => {
 
 //#endregion
 //#region f.js
-function foo() {}
+function foo$1() {}
 var f_ns;
 var init_f = __esmMin(() => {
 	f_ns = {};
-	__export(f_ns, {default: () => foo});
-	foo.prop = 123;
+	__export(f_ns, {default: () => foo$1});
+	foo$1.prop = 123;
 });
 
 //#endregion
@@ -100,12 +100,12 @@ var init_g = __esmMin(() => {
 
 //#endregion
 //#region h.js
-async function foo$1() {}
+async function foo() {}
 var h_ns;
 var init_h = __esmMin(() => {
 	h_ns = {};
-	__export(h_ns, {default: () => foo$1});
-	foo$1.prop = 123;
+	__export(h_ns, {default: () => foo});
+	foo.prop = 123;
 });
 
 //#endregion

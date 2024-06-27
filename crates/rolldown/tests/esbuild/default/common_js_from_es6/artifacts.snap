@@ -11,31 +11,31 @@ input_file: crates/rolldown/tests/esbuild/default/common_js_from_es6
 
 
 //#region foo.js
-function foo() {
+function foo$1() {
 	return 'foo';
 }
 var foo_ns;
 var init_foo = __esmMin(() => {
 	foo_ns = {};
-	__export(foo_ns, {foo: () => foo});
+	__export(foo_ns, {foo: () => foo$1});
 });
 
 //#endregion
 //#region bar.js
-function bar() {
+function bar$1() {
 	return 'bar';
 }
 var bar_ns;
 var init_bar = __esmMin(() => {
 	bar_ns = {};
-	__export(bar_ns, {bar: () => bar});
+	__export(bar_ns, {bar: () => bar$1});
 });
 
 //#endregion
 //#region entry.js
-const { foo: foo$1 } = (init_foo(), __toCommonJS(foo_ns));
-console.log(foo$1(), bar$1());
-const { bar: bar$1 } = (init_bar(), __toCommonJS(bar_ns));
+const { foo } = (init_foo(), __toCommonJS(foo_ns));
+console.log(foo(), bar());
+const { bar } = (init_bar(), __toCommonJS(bar_ns));
 
 //#endregion
 ```

@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 ```js
 
 //#region src/demo-pkg/no-ext-browser.js
-let browser = 'browser';
+let browser$1 = 'browser';
 
 //#endregion
 //#region src/demo-pkg/no-ext.js
@@ -18,14 +18,14 @@ let node = 'node';
 
 //#endregion
 //#region src/demo-pkg/ext-browser.js
-let browser$1 = 'browser';
+let browser = 'browser';
 
 //#endregion
 //#region src/entry.js
-console.log(browser);
+console.log(browser$1);
 console.log(node);
-console.log(browser$1);
-console.log(browser$1);
+console.log(browser);
+console.log(browser);
 
 //#endregion
 ```

@@ -1,19 +1,18 @@
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
-use std::collections::HashSet;
 
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use crate::types::symbols::Symbols;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
-  pub used_canonical_names: FxHashMap<Cow<'name, Rstr>, u32>,
+  used_canonical_names: FxHashMap<Cow<'name, Rstr>, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
   symbols: &'name Symbols,
 }
@@ -39,22 +38,22 @@ impl<'name> Renamer<'name> {
     let canonical_ref = self.symbols.par_canonical_ref_for(symbol_ref);
     let original_name: Cow<'_, Rstr> =
       Cow::Owned(self.symbols.get_original_name(canonical_ref).to_rstr());
-
     match self.canonical_names.entry(canonical_ref) {
       Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();
-        match self.used_canonical_names.entry(original_name.clone()) {
-          Entry::Occupied(mut occ) => {
-            let next_conflict_index = *occ.get() + 1;
-            *occ.get_mut() = next_conflict_index;
-            candidate_name = Cow::Owned(format!("{candidate_name}${next_conflict_index}",).into());
+        loop {
+          match self.used_canonical_names.entry(candidate_name.clone()) {
+            Entry::Occupied(mut occ) => {
+              let next_conflict_index = *occ.get() + 1;
+              *occ.get_mut() = next_conflict_index;
+              candidate_name =
+                Cow::Owned(format!("{candidate_name}${next_conflict_index}",).into());
+            }
+            Entry::Vacant(vac) => {
+              vac.insert(0);
+              break;
+            }
           }
-          Entry::Vacant(vac) => {
-            vac.insert(0);
-          }
-        }
-        if candidate_name != original_name {
-          self.used_canonical_names.insert(candidate_name.clone(), 0);
         }
         vacant.insert(candidate_name.into_owned());
       }
@@ -78,8 +77,6 @@ impl<'name> Renamer<'name> {
       stack: &mut Vec<Cow<FxHashMap<Cow<'name, Rstr>, u32>>>,
       canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
     ) {
-      // dbg!(&module.stable_resource_id);
-      // dbg!(&stack);
       let bindings = module.scope.get_bindings(scope_id);
       let mut used_canonical_names_for_this_scope = FxHashMap::default();
       used_canonical_names_for_this_scope.shrink_to(bindings.len());
@@ -99,7 +96,6 @@ impl<'name> Renamer<'name> {
               candidate_name = Cow::Owned(format!("{binding_name}${count}").into());
               count += 1;
             } else {
-              // TODO:
               used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);
               slot.insert(candidate_name.into_owned());
               break;
@@ -112,7 +108,6 @@ impl<'name> Renamer<'name> {
       });
 
       stack.push(Cow::Owned(used_canonical_names_for_this_scope));
-      // dbg!(&stack);
       let child_scopes = module.scope.get_child_ids(scope_id).cloned().unwrap_or_default();
       child_scopes.into_iter().for_each(|scope_id| {
         rename_symbols_of_nested_scopes(module, scope_id, stack, canonical_names);

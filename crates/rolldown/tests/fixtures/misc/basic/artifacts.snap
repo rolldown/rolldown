@@ -10,12 +10,12 @@ input_file: crates/rolldown/tests/fixtures/misc/basic
 ```js
 
 //#region shared.js
-const a = 'shared.js';
+const a$1 = 'shared.js';
 
 //#endregion
 //#region main.js
-const a$1 = 'index.js';
-console.log(a$1, a);
+const a = 'index.js';
+console.log(a, a$1);
 
 //#endregion
 //# sourceMappingURL=main.mjs.map
@@ -25,14 +25,14 @@ console.log(a$1, a);
 
 - ../shared.js
 (0:0-0:6) "const " --> (2:0-2:6) "\nconst"
-(0:6-0:10) "a = " --> (2:6-2:10) " a ="
-(0:10-2:13) "'shared.js'\n\nexport { a }" --> (2:10-6:0) " 'shared.js';\n\n//#endregion\n//#region main.js"
+(0:6-0:10) "a = " --> (2:6-2:12) " a$1 ="
+(0:10-2:13) "'shared.js'\n\nexport { a }" --> (2:12-6:0) " 'shared.js';\n\n//#endregion\n//#region main.js"
 - ../main.js
 (1:0-1:6) "\nconst" --> (6:0-6:6) "\nconst"
-(1:6-1:10) " a =" --> (6:6-6:12) " a$1 ="
-(1:10-2:0) " 'index.js'" --> (6:12-7:0) " 'index.js';"
+(1:6-1:10) " a =" --> (6:6-6:10) " a ="
+(1:10-2:0) " 'index.js'" --> (6:10-7:0) " 'index.js';"
 (2:0-2:8) "\nconsole" --> (7:0-7:8) "\nconsole"
 (2:8-2:12) ".log" --> (7:8-7:12) ".log"
-(2:12-2:15) "(a," --> (7:12-7:17) "(a$1,"
-(2:15-2:18) " a2" --> (7:17-7:19) " a"
+(2:12-2:15) "(a," --> (7:12-7:15) "(a,"
+(2:15-2:18) " a2" --> (7:15-7:19) " a$1"
 (2:18-3:1) ")\n" --> (7:19-10:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

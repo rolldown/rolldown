@@ -21,6 +21,7 @@ pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput
     });
 
   chunk.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
+    // dbg!("test");
     renamer.add_top_level_symbol(item.import_ref);
   });
 
@@ -38,6 +39,7 @@ pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput
         .filter(|stmt_info| stmt_info.is_included)
         .flat_map(|stmt_info| stmt_info.declared_symbols.iter().copied())
         .for_each(|symbol_ref| {
+          // dbg!(&"test");
           renamer.add_top_level_symbol(symbol_ref);
         });
     });

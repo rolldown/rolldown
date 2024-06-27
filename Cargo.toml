@@ -137,6 +137,7 @@ oxc = { version = "0.15.0", features = ["sourcemap_concurrent", "transformer"] }
 
 
 [profile.release]
+debug = true
 codegen-units = 1
 lto           = true
-strip         = "symbols"
+strip         = false

@@ -1,4 +1,6 @@
 use std::borrow::Cow;
+use std::collections::hash_map::Entry;
+use std::collections::HashSet;
 
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
@@ -11,7 +13,7 @@ use crate::types::symbols::Symbols;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
-  used_canonical_names: FxHashSet<Cow<'name, Rstr>>,
+  used_canonical_names: FxHashMap<Cow<'name, Rstr>, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
   symbols: &'name Symbols,
 }
@@ -24,13 +26,13 @@ impl<'name> Renamer<'name> {
       used_canonical_names: RESERVED_KEYWORDS
         .iter()
         .chain(GLOBAL_OBJECTS.iter())
-        .map(|s| Cow::Owned(Rstr::new(s)))
+        .map(|s| (Cow::Owned(Rstr::new(s)), 0))
         .collect(),
     }
   }
 
   pub fn reserve(&mut self, name: Cow<'name, Rstr>) {
-    self.used_canonical_names.insert(name);
+    self.used_canonical_names.insert(name, 0);
   }
 
   pub fn add_top_level_symbol(&mut self, symbol_ref: SymbolRef) {
@@ -39,17 +41,22 @@ impl<'name> Renamer<'name> {
       Cow::Owned(self.symbols.get_original_name(canonical_ref).to_rstr());
 
     match self.canonical_names.entry(canonical_ref) {
-      std::collections::hash_map::Entry::Vacant(vacant) => {
-        let mut count = 0;
+      Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();
-        while self.used_canonical_names.contains(&candidate_name) {
-          count += 1;
-          candidate_name = Cow::Owned(format!("{original_name}${count}").into());
+        // if it is the first loop and we found the symbol is already used, we would  `()`
+        match self.used_canonical_names.entry(original_name) {
+          Entry::Occupied(mut occ) => {
+            let mut next_index = *occ.get() + 1;
+            *occ.get_mut() = next_index;
+            candidate_name = Cow::Owned(format!("{candidate_name}${next_index}",).into());
+          }
+          Entry::Vacant(vac) => {
+            vac.insert(0);
+          }
         }
-        self.used_canonical_names.insert(candidate_name.clone());
         vacant.insert(candidate_name.into_owned());
       }
-      std::collections::hash_map::Entry::Occupied(_) => {
+      Entry::Occupied(_) => {
         // The symbol is already renamed
       }
     }
@@ -66,34 +73,35 @@ impl<'name> Renamer<'name> {
     fn rename_symbols_of_nested_scopes<'name>(
       module: &'name NormalModule,
       scope_id: ScopeId,
-      stack: &mut Vec<Cow<FxHashSet<Cow<'name, Rstr>>>>,
+      stack: &mut Vec<Cow<FxHashMap<Cow<'name, Rstr>, u32>>>,
       canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
     ) {
       let bindings = module.scope.get_bindings(scope_id);
-      let mut used_canonical_names_for_this_scope = FxHashSet::default();
+      let mut used_canonical_names_for_this_scope = FxHashMap::default();
       used_canonical_names_for_this_scope.shrink_to(bindings.len());
       bindings.iter().for_each(|(binding_name, symbol_id)| {
-        used_canonical_names_for_this_scope.insert(Cow::Owned(binding_name.to_rstr()));
+        used_canonical_names_for_this_scope.insert(Cow::Owned(binding_name.to_rstr()), 0);
         let binding_ref: SymbolRef = (module.id, *symbol_id).into();
 
         let mut count = 1;
         let mut candidate_name = Cow::Owned(binding_name.to_rstr());
         match canonical_names.entry(binding_ref) {
-          std::collections::hash_map::Entry::Vacant(slot) => loop {
+          Entry::Vacant(slot) => loop {
             let is_shadowed = stack
               .iter()
-              .any(|used_canonical_names| used_canonical_names.contains(&candidate_name));
+              .any(|used_canonical_names| used_canonical_names.contains_key(&candidate_name));
 
             if is_shadowed {
               candidate_name = Cow::Owned(format!("{binding_name}${count}").into());
               count += 1;
             } else {
-              used_canonical_names_for_this_scope.insert(candidate_name.clone());
+              // TODO:
+              used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);
               slot.insert(candidate_name.into_owned());
               break;
             }
           },
-          std::collections::hash_map::Entry::Occupied(_) => {
+          Entry::Occupied(_) => {
             // The symbol is already renamed
           }
         }

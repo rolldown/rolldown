@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown/tests/fixtures.rs
-assertion_line: 54
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
 # tests/esbuild/dce/base64_loader_remove_unused
@@ -1274,6 +1273,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - ./chunks/shared.mjs => ./chunks/shared.mjs
 - ./entries/a.mjs => ./entries/a.mjs
 - ./entries/b.mjs => ./entries/b.mjs
+
+# tests/fixtures/function/external/commonjs_reexport_external
+
+- main-!~{000}~.mjs => main-yyEbMiKG.mjs
 
 # tests/fixtures/function/external/export_external
 

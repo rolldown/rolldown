@@ -1,3 +1,5 @@
-import { a as a2 } from './shared'
-const a = 'index.js'
-console.log(a, a2)
+// foo.js
+import {a as b} from './bar'
+const a = 1
+
+console.log(`a: `, a, b)

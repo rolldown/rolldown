@@ -13,7 +13,7 @@ use crate::types::symbols::Symbols;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
-  used_canonical_names: FxHashMap<Cow<'name, Rstr>, u32>,
+  pub used_canonical_names: FxHashMap<Cow<'name, Rstr>, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
   symbols: &'name Symbols,
 }

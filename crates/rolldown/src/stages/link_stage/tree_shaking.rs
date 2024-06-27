@@ -51,10 +51,10 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 
   let is_included = ctx.is_module_included_vec[module.id];
   let used_info = ctx.used_exports_info_vec[module.id].used_info;
-  if used_info.contains(UsedInfo::USED_AS_NAMESPACE)
-    && !used_info.contains(UsedInfo::INCLUDED_AS_NAMESPACE)
+  if used_info.contains(UsedInfo::USED_AS_NAMESPACE_REF)
+    && !used_info.contains(UsedInfo::INCLUDED_AS_NAMESPACE_REF)
   {
-    ctx.used_exports_info_vec[module.id].used_info |= UsedInfo::INCLUDED_AS_NAMESPACE;
+    ctx.used_exports_info_vec[module.id].used_info |= UsedInfo::INCLUDED_AS_NAMESPACE_REF;
     include_module_as_namespace(ctx, module);
   }
   if is_included {
@@ -87,7 +87,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       let bailout_side_effect = matches!(import_record.kind, rolldown_common::ImportKind::Require)
         || importee.def_format.is_commonjs();
       if bailout_side_effect {
-        ctx.used_exports_info_vec[importee_id].used_info |= UsedInfo::USED_AS_NAMESPACE;
+        ctx.used_exports_info_vec[importee_id].used_info |= UsedInfo::USED_AS_NAMESPACE_REF;
       }
       if !ctx.tree_shaking || importee.side_effects.has_side_effects() || bailout_side_effect {
         include_module(ctx, importee);
@@ -97,7 +97,6 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   });
 }
 
-// TODO(hyf0): suspicious namespace should be include normally
 fn include_module_as_namespace(ctx: &mut Context, module: &NormalModule) {
   // Collect all the canonical export to avoid violating rustc borrow rules.
   let canonical_export_list = ctx.metas[module.id]
@@ -118,16 +117,12 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
     canonical_ref = namespace_alias.namespace_ref;
   }
 
-  // TODO(hyf0): suspicious why need `USED_AS_NAMESPACE`
   let is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
   if is_namespace_ref {
-    ctx.used_exports_info_vec[canonical_ref_owner.id].used_info |= UsedInfo::USED_AS_NAMESPACE;
+    ctx.used_exports_info_vec[canonical_ref_owner.id].used_info |= UsedInfo::USED_AS_NAMESPACE_REF;
   }
 
-  // TODO(hyf0): why we need `used_symbol_refs` to make if the symbol is used?
   ctx.used_symbol_refs.insert(canonical_ref);
-
-  // ---
 
   include_module(ctx, canonical_ref_owner);
   canonical_ref_owner.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(
@@ -156,8 +151,7 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
   let mut canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   let mut canonical_ref_owner = &ctx.modules[canonical_ref.owner];
-  let is_same_ref = canonical_ref == symbol_ref;
-  let is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
+  let mut is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
   let mut ns_symbol_list = vec![];
   let mut has_ambiguous_symbol = false;
 
@@ -165,7 +159,6 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
     let name = &props[cursor];
     let export_symbol = ctx.metas[canonical_ref_owner.id].resolved_exports.get(&name.to_rstr());
     let Some(export_symbol) = export_symbol else { break };
-    // TODO(hyf0): suspicious
     has_ambiguous_symbol |= export_symbol.potentially_ambiguous_symbol_refs.is_some();
     // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
     if !ctx.modules[export_symbol.symbol_ref.owner].exports_kind.is_esm() {
@@ -176,7 +169,7 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
     canonical_ref_symbol = ctx.symbols.get(canonical_ref);
     canonical_ref_owner = &ctx.modules[canonical_ref.owner];
     cursor += 1;
-    // TODO(hyf0): suspicious `is_namespace_ref` doesn't get updated
+    is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
   }
 
   let (export_name, namespace_property_name) =
@@ -191,9 +184,8 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
 
   let export_name = export_name.to_rstr();
   let is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
-  // TODO(hyf0): suspicious what does `is_same_ref` do?
-  if is_namespace_ref && !is_same_ref {
-    ctx.used_exports_info_vec[canonical_ref_owner.id].used_info |= UsedInfo::USED_AS_NAMESPACE;
+  if is_namespace_ref {
+    ctx.used_exports_info_vec[canonical_ref_owner.id].used_info |= UsedInfo::USED_AS_NAMESPACE_REF;
   }
 
   let id = ns_symbol_list.last().map_or(symbol_ref.owner, |(symbol, _)| symbol.owner);
@@ -206,7 +198,7 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
     // to the final access chains.
     map.insert(chains.into_boxed_slice(), (canonical_ref, cursor, namespace_property_name));
   }
-  // TODO(hyf0): suspicious
+  // https://github.com/rolldown/rolldown/blob/5fb31d0d254128825df9441b23da58e3f6663060/crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguous_warning/entry.js#L2-L2
   if has_ambiguous_symbol {
     return;
   }

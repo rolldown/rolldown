@@ -283,9 +283,14 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
               fn_stmts.push(stmt);
             }
             ast::Statement::UsingDeclaration(_) => unimplemented!(),
-            ast::match_module_declaration!(Statement) => unreachable!(
-              "At this point, all module declarations should have been removed or transformed"
-            ),
+            ast::match_module_declaration!(Statement) => {
+              if stmt.is_typescript_syntax() {
+                unreachable!(
+                  "At this point, typescript module declarations should have been removed or transformed"
+                )
+              }
+              program.body.push(stmt);
+            }
             _ => {
               stmts_inside_closure.push(stmt);
             }

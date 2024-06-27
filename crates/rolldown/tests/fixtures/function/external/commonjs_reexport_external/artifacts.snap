@@ -1,0 +1,32 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/external/commonjs_reexport_external
+---
+# Assets
+
+## main.mjs
+
+```js
+import "external";
+
+
+//#region foo.js
+import * as import_external from 'external';
+var foo_ns;
+var init_foo = __esmMin(() => {
+	foo_ns = {};
+	__reExport(foo_ns, import_external);
+});
+
+//#endregion
+//#region main.js
+var require_main = __commonJSMin((exports, module) => {
+	const value = (init_foo(), __toCommonJS(foo_ns));
+	module.exports = value;
+});
+
+//#endregion
+export default require_main();
+
+```

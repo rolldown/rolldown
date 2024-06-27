@@ -1274,6 +1274,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - ./entries/a.mjs => ./entries/a.mjs
 - ./entries/b.mjs => ./entries/b.mjs
 
+# tests/fixtures/function/external/commonjs_reexport_external
+
+- main-!~{000}~.mjs => main-yyEbMiKG.mjs
+
 # tests/fixtures/function/external/export_external
 
 - main-!~{000}~.mjs => main-ijx7NJj3.mjs

@@ -149,6 +149,7 @@ export interface BindingInputOptions {
   onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
   treeshake?: BindingTreeshake
+  moduleTypes?: Record<string, string>
 }
 
 export interface BindingJsonSourcemap {

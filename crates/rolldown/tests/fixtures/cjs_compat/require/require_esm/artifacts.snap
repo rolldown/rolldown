@@ -32,4 +32,5 @@ var esm = (init_esm(), __toCommonJS(esm_ns));
 - ../main.js
 (0:0-1:0) "require('./esm.js');" --> (28:0-29:0) "\ninit_esm(), __toCommonJS(esm_ns);"
 (1:0-1:4) "\nvar" --> (29:0-29:4) "\nvar"
-(1:4-2:1) " esm = require('./esm.js');\n" --> (29:4-32:34) " esm = (init_esm(), __toCommonJS(esm_ns));\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(1:4-0:0) "" --> (29:4-29:11) " esm = "
+(0:0-2:1) "require('./esm.js');\nvar esm = require('./esm.js');\n" --> (29:11-32:34) "(init_esm(), __toCommonJS(esm_ns));\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

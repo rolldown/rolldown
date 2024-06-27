@@ -1207,13 +1207,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/deconflict/basic_scoped
 
-- main-!~{000}~.mjs => main-rzcXrTYl.mjs
-- main-rzcXrTYl.mjs.map
+- main-!~{000}~.mjs => main-OwB-_KkK.mjs
+- main-OwB-_KkK.mjs.map
 
 # tests/fixtures/deconflict/complex_params_patterns
 
-- main-!~{000}~.mjs => main-baICbCsL.mjs
-- main-baICbCsL.mjs.map
+- main-!~{000}~.mjs => main-2dUJ5JaD.mjs
+- main-2dUJ5JaD.mjs.map
 
 # tests/fixtures/deconflict/conflict_between_global_and_local_binding
 
@@ -1235,23 +1235,23 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/deconflict/default_function
 
-- main-!~{000}~.mjs => main-wpX03ClU.mjs
-- main-wpX03ClU.mjs.map
+- main-!~{000}~.mjs => main-WknfxOPd.mjs
+- main-WknfxOPd.mjs.map
 
 # tests/fixtures/deconflict/issue_364
 
-- main-!~{000}~.mjs => main-U6qJK-X5.mjs
-- main-U6qJK-X5.mjs.map
+- main-!~{000}~.mjs => main-w6yTSMvA.mjs
+- main-w6yTSMvA.mjs.map
 
 # tests/fixtures/deconflict/wrapped_esm_default_function
 
-- main-!~{000}~.mjs => main--hvdzrOO.mjs
-- main--hvdzrOO.mjs.map
+- main-!~{000}~.mjs => main-KGVZrfES.mjs
+- main-KGVZrfES.mjs.map
 
 # tests/fixtures/deconflict/wrapped_esm_export_named_function
 
-- main-!~{000}~.mjs => main-2mUydJJc.mjs
-- main-2mUydJJc.mjs.map
+- main-!~{000}~.mjs => main-FaEfqo7n.mjs
+- main-FaEfqo7n.mjs.map
 
 # tests/fixtures/errors/missing_export
 

@@ -23,12 +23,11 @@ impl<'name> Renamer<'name> {
     Self {
       canonical_names: FxHashMap::default(),
       symbols,
-      used_canonical_names: FxHashMap::default(),
-      // used_canonical_names: RESERVED_KEYWORDS
-      //   .iter()
-      //   .chain(GLOBAL_OBJECTS.iter())
-      //   .map(|s| (Cow::Owned(Rstr::new(s)), 0))
-      //   .collect(),
+      used_canonical_names: RESERVED_KEYWORDS
+        .iter()
+        .chain(GLOBAL_OBJECTS.iter())
+        .map(|s| (Cow::Owned(Rstr::new(s)), 0))
+        .collect(),
     }
   }
 
@@ -44,12 +43,11 @@ impl<'name> Renamer<'name> {
     match self.canonical_names.entry(canonical_ref) {
       Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();
-        // if it is the first loop and we found the symbol is already used, we would  `()`
         match self.used_canonical_names.entry(original_name.clone()) {
           Entry::Occupied(mut occ) => {
-            let mut next_index = *occ.get() + 1;
-            *occ.get_mut() = next_index;
-            candidate_name = Cow::Owned(format!("{candidate_name}${next_index}",).into());
+            let next_conflict_index = *occ.get() + 1;
+            *occ.get_mut() = next_conflict_index;
+            candidate_name = Cow::Owned(format!("{candidate_name}${next_conflict_index}",).into());
           }
           Entry::Vacant(vac) => {
             vac.insert(0);

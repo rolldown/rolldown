@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use oxc::minifier::{RemoveDeadCode, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
 use rolldown_oxc_utils::OxcAst;
@@ -16,6 +17,24 @@ pub fn pre_process_ast(
   path: &Path,
   source_type: SourceType,
 ) -> anyhow::Result<OxcAst> {
+  // `--define` replacement
+  ast.program.with_mut(|fields| {
+    // TODO: pass in from global config
+    let config = ReplaceGlobalDefinesConfig::new(&[
+      ("XXX", "YYY"),
+      // Not implemented yet, only for demonstration
+      // ("process.env.NODE_ENV", "production"),
+    ])
+    .unwrap();
+    ReplaceGlobalDefines::new(fields.allocator, config).build(fields.program);
+  });
+
+  // DCE (dead code elimination)
+  ast.program.with_mut(|fields| {
+    RemoveDeadCode::new(fields.allocator).build(fields.program);
+  });
+
+  // Transform
   if let Err(errors) = ast.program.with_mut(|fields| {
     let mut transformer_options = TransformOptions::default();
     match parse_type {

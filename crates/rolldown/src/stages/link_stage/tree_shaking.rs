@@ -132,19 +132,18 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   );
 }
 
+/// Try to find the final pointed `SymbolRef` of the member expression.
+/// ```js
+/// // index.js
+/// import * as foo_ns from './foo';
+/// foo_ns.bar_ns.c;
+/// // foo.js
+/// export * as bar_ns from './bar';
+/// // bar.js
+/// export const c = 1;
+/// ```
+/// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
 fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[CompactStr]) {
-  // Try to find the final pointed `SymbolRef` of the member expression.
-  // ```js
-  // // index.js
-  // import * as foo_ns from './foo';
-  // foo_ns.bar_ns.c;
-  // // foo.js
-  // export * as bar_ns from './bar';
-  // // bar.js
-  // export const c = 1;
-  // ```
-  // The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
-
   let mut cursor = 0;
 
   // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
@@ -159,6 +158,7 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
     let name = &props[cursor];
     let export_symbol = ctx.metas[canonical_ref_owner.id].resolved_exports.get(&name.to_rstr());
     let Some(export_symbol) = export_symbol else { break };
+    // TODo: use sorted_names
     has_ambiguous_symbol |= export_symbol.potentially_ambiguous_symbol_refs.is_some();
     // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
     if !ctx.modules[export_symbol.symbol_ref.owner].exports_kind.is_esm() {
@@ -188,6 +188,9 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
     ctx.used_exports_info_vec[canonical_ref_owner.id].used_info |= UsedInfo::USED_AS_NAMESPACE_REF;
   }
 
+  if has_ambiguous_symbol {
+    return;
+  }
   let id = ns_symbol_list.last().map_or(symbol_ref.owner, |(symbol, _)| symbol.owner);
   ctx.used_exports_info_vec[id].used_exports.insert(export_name);
   // Only cache the top level member expr resolved result, if it consume at least one chain element.
@@ -199,9 +202,6 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
     map.insert(chains.into_boxed_slice(), (canonical_ref, cursor, namespace_property_name));
   }
   // https://github.com/rolldown/rolldown/blob/5fb31d0d254128825df9441b23da58e3f6663060/crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguous_warning/entry.js#L2-L2
-  if has_ambiguous_symbol {
-    return;
-  }
   ctx.used_symbol_refs.insert(canonical_ref);
   include_module(ctx, canonical_ref_owner);
   canonical_ref_owner.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(

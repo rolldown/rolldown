@@ -133,7 +133,7 @@ tracing-subscriber = { version = "0.3.18", default-features = false }
 vfs                = "0.12.0"
 xxhash-rust        = "0.8.10"
 # oxc crates share the same version
-oxc = { version = "0.15.0", features = ["sourcemap_concurrent", "transformer"] }
+oxc = { version = "0.16.0", features = ["sourcemap_concurrent", "transformer", "minifier"] }
 
 
 [profile.release]

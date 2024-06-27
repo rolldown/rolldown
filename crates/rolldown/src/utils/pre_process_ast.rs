@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use oxc::minifier::RemoveDeadCode;
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
 use rolldown_oxc_utils::OxcAst;
@@ -44,6 +45,10 @@ pub fn pre_process_ast(
   }) {
     return Err(anyhow::anyhow!("Transform failed, got {:#?}", errors));
   }
+
+  ast.program.with_mut(|fields| {
+    RemoveDeadCode::new(fields.allocator).build(fields.program);
+  });
 
   tweak_ast_for_scanning(&mut ast);
 

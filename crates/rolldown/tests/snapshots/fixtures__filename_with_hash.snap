@@ -21,7 +21,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/dce_type_of_equals_string
 
-- entry_js-!~{000}~.mjs => entry_js-FwFzkJ8L.mjs
+- entry_js-!~{000}~.mjs => entry_js-hcSNdCWj.mjs
 
 # tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 
@@ -214,7 +214,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/const_with_let
 
-- entry_js-!~{000}~.mjs => entry_js-FISXG6PZ.mjs
+- entry_js-!~{000}~.mjs => entry_js-kot5nluf.mjs
 
 # tests/esbuild/default/dot_import
 
@@ -272,11 +272,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/import_missing_common_js
 
-- entry_js-!~{000}~.mjs => entry_js-nYNDdqO8.mjs
+- entry_js-!~{000}~.mjs => entry_js-JZlLcqHP.mjs
 
 # tests/esbuild/default/import_then_catch
 
-- entry_js-!~{000}~.mjs => entry_js-kU45SbSn.mjs
+- entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs
 
 # tests/esbuild/default/keep_names_class_static_name
 
@@ -365,7 +365,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/require_resolve
 
-- entry_js-!~{000}~.mjs => entry_js-HgSQDLIT.mjs
+- entry_js-!~{000}~.mjs => entry_js-ENOTut38.mjs
 
 # tests/esbuild/default/require_with_call_inside_try
 
@@ -373,7 +373,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/require_without_call
 
-- entry_js-!~{000}~.mjs => entry_js-PJmk3t6m.mjs
+- entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs
 
 # tests/esbuild/default/require_without_call_inside_try
 
@@ -409,10 +409,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/var_relocating_bundle
 
-- function-nested_js-!~{004}~.mjs => function-nested_js-bzjRJgAe.mjs
+- function-nested_js-!~{004}~.mjs => function-nested_js-o_vowFTu.mjs
 - function_js-!~{003}~.mjs => function_js-qCnX__e4.mjs
-- let_js-!~{002}~.mjs => let_js-CtXWJWFg.mjs
-- nested_js-!~{001}~.mjs => nested_js-qGoCT9rP.mjs
+- let_js-!~{002}~.mjs => let_js-lSQgoT-J.mjs
+- nested_js-!~{001}~.mjs => nested_js-9dHTQmah.mjs
 - top-level_js-!~{000}~.mjs => top-level_js-aLnr7tad.mjs
 
 # tests/esbuild/import_star/export_other_as_namespace_common_js

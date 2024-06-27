@@ -4,7 +4,8 @@
 use std::sync::Arc;
 
 use rolldown_common::{
-  ExportsKind, ModuleId, NormalModuleId, NormalModuleVec, ResolvedExport, Specifier, SymbolRef,
+  ExportsKind, ModuleId, ModuleType, NormalModuleId, NormalModuleVec, ResolvedExport, Specifier,
+  SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_rstr::Rstr;
@@ -443,7 +444,11 @@ impl<'a> BindImportsAndExportsContext<'a> {
       }
     }
 
-    if self.input_options.shim_missing_exports && matches!(ret, MatchImportKind::NoMatch) {
+    let importee = &self.normal_modules[tracker.importee];
+    if (self.input_options.shim_missing_exports
+      || matches!(importee.module_type, ModuleType::Empty))
+      && matches!(ret, MatchImportKind::NoMatch)
+    {
       match &tracker.imported {
         Specifier::Star => unreachable!("star should always exist, no need to shim"),
         Specifier::Literal(imported) => {

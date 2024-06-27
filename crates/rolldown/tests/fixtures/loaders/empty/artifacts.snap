@@ -1,0 +1,17 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/loaders/empty
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region index.css
+var notExistExport = void 0;
+
+//#endregion
+export { notExistExport };
+```

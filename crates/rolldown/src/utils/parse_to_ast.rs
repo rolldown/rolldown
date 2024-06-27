@@ -40,6 +40,7 @@ pub fn parse_to_ast(
       binary_to_esm(&source, options.platform, ROLLDOWN_RUNTIME_RESOURCE_ID).into(),
       OxcParseType::Js,
     ),
+    ModuleType::Empty => ("export {}".to_string().into(), OxcParseType::Js),
   };
 
   let oxc_source_type = {

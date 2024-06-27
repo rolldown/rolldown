@@ -1420,6 +1420,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-drgRUFMR.mjs
 
+# tests/fixtures/loaders/empty
+
+- main-!~{000}~.mjs => main-b_m0mFIu.mjs
+
 # tests/fixtures/loaders/jsx
 
 - main_jsx-!~{000}~.mjs => main_jsx-TL8s4o_9.mjs

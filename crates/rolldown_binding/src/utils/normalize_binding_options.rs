@@ -6,11 +6,11 @@ use crate::{
   worker_manager::WorkerManager,
 };
 use napi::Either;
-use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, OutputFormat, Platform};
+use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputFormat, Platform};
 use rolldown_plugin::BoxPlugin;
-use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct NormalizeBindingOptionsReturn {
@@ -80,6 +80,19 @@ pub fn normalize_binding_options(
     }))
   });
 
+  let mut module_types = None;
+  if let Some(raw) = input_options.module_types {
+    let mut tmp = HashMap::with_capacity(raw.len());
+    for (k, v) in raw {
+      tmp.insert(
+        k,
+        ModuleType::from_str(&v)
+          .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
+      );
+    }
+    module_types = Some(tmp);
+  }
+
   let bundler_options = BundlerOptions {
     input: Some(input_options.input.into_iter().map(Into::into).collect()),
     cwd: cwd.into(),
@@ -110,7 +123,7 @@ pub fn normalize_binding_options(
       "cjs" => OutputFormat::Cjs,
       _ => panic!("Invalid format: {format_str}"),
     }),
-    module_types: None,
+    module_types,
   };
 
   #[cfg(not(target_family = "wasm"))]

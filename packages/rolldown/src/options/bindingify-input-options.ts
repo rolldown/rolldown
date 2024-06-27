@@ -69,6 +69,7 @@ export function bindingifyInputOptions(
       options.onLog(level, { code: log.code, message: log.message })
     },
     treeshake: options.treeshake,
+    moduleTypes: options.moduleTypes,
   }
 }
 

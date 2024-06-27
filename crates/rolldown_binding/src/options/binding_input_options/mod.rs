@@ -1,5 +1,7 @@
 // cSpell:disable
 
+use std::collections::HashMap;
+
 use crate::types::{binding_log::BindingLog, binding_log_level::BindingLogLevel};
 use derivative::Derivative;
 use napi::threadsafe_function::ThreadsafeFunction;
@@ -68,6 +70,8 @@ pub struct BindingInputOptions {
   pub cwd: String,
   // pub builtins: BuiltinsOptions,
   pub treeshake: Option<treeshake::BindingTreeshake>,
+
+  pub module_types: Option<HashMap<String, String>>,
 }
 
 pub type BindingOnLog = Option<ThreadsafeFunction<(String, BindingLog), (), false>>;

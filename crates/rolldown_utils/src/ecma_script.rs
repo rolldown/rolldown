@@ -1,4 +1,4 @@
-use regex::Regex;
+use oxc::syntax::identifier;
 use std::borrow::Cow;
 
 pub fn is_validate_identifier_name(name: &str) -> bool {
@@ -6,10 +6,40 @@ pub fn is_validate_identifier_name(name: &str) -> bool {
 }
 
 pub fn legitimize_identifier_name(name: &str) -> Cow<str> {
-  static VALID_RE: once_cell::sync::Lazy<Regex> =
-    once_cell::sync::Lazy::new(|| Regex::new(r"[^a-zA-Z0-9_$]").unwrap());
+  let mut legitimized = String::new();
+  let mut have_seen_invalid_char = false;
 
-  VALID_RE.replace_all(name, "_")
+  let mut chars_indices = name.char_indices();
+
+  if let Some((_, first_char)) = chars_indices.next() {
+    if identifier::is_identifier_start(first_char) {
+      // Nothing we need to do
+    } else {
+      legitimized.push('_');
+      have_seen_invalid_char = true;
+    }
+  }
+
+  for (idx, char) in chars_indices {
+    if identifier::is_identifier_part(char) {
+      if have_seen_invalid_char {
+        legitimized.push(char);
+      }
+    } else {
+      if !have_seen_invalid_char {
+        // See a invalid char for the first time
+        have_seen_invalid_char = true;
+        legitimized.push_str(&name[..idx]);
+      }
+      legitimized.push('_');
+    }
+  }
+
+  if have_seen_invalid_char {
+    Cow::Owned(legitimized)
+  } else {
+    Cow::Borrowed(name)
+  }
 }
 
 #[test]

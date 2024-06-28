@@ -20,6 +20,7 @@ use rolldown_common::{
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
@@ -260,6 +261,7 @@ impl<'me> AstScanner<'me> {
             .module_request
             .as_path()
             .representative_file_name();
+          let importee_repr = legitimize_identifier_name(&importee_repr);
           format!("{importee_repr}_default").into()
         } else {
           export_name.into()

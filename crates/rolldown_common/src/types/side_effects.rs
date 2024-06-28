@@ -18,30 +18,28 @@ impl DeterminedSideEffects {
   }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 /// A field in `package.json`
 pub enum SideEffects {
   Bool(bool),
   String(String),
   Array(Vec<String>),
-  #[default]
-  None,
 }
 
-impl From<&serde_json::Value> for SideEffects {
-  fn from(value: &serde_json::Value) -> Self {
+impl SideEffects {
+  pub fn from_json_value(value: &serde_json::Value) -> Option<Self> {
     match value {
-      serde_json::Value::Bool(v) => SideEffects::Bool(*v),
-      serde_json::Value::String(v) => SideEffects::String(v.to_string()),
+      serde_json::Value::Bool(v) => Some(SideEffects::Bool(*v)),
+      serde_json::Value::String(v) => Some(SideEffects::String(v.to_string())),
       serde_json::Value::Array(v) => {
         let mut side_effects = vec![];
         for value in v {
-          let Some(str) = value.as_str() else { return SideEffects::None };
+          let str = value.as_str()?;
           side_effects.push(str.to_string());
         }
-        SideEffects::Array(side_effects)
+        Some(SideEffects::Array(side_effects))
       }
-      _ => SideEffects::None,
+      _ => None,
     }
   }
 }

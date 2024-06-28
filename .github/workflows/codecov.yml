@@ -5,8 +5,8 @@ name: Code Coverage
 on:
   workflow_dispatch:
   push:
-    # branches:
-    #   - main
+    branches:
+      - main
     paths:
       - '**.rs'
       - '.github/workflows/codecov.yml'

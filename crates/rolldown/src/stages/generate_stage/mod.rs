@@ -223,11 +223,8 @@ impl<'a> GenerateStage<'a> {
     }
 
     // Make sure order of assets are deterministic
-    assets.sort_by_cached_key(|item| match item {
-      // TODO: use `preliminary_filename` instead
-      Output::Asset(asset) => asset.filename.to_string(),
-      Output::Chunk(chunk) => chunk.preliminary_filename.to_string(),
-    });
+    // TODO: use `preliminary_filename` on `Output::Asset` instead
+    assets.sort_unstable_by(|a, b| a.filename().cmp(b.filename()));
 
     Ok(BundleOutput {
       assets,

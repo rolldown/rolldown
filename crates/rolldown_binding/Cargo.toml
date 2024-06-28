@@ -35,11 +35,11 @@ rustc-hash           = { workspace = true }
 serde                = { workspace = true }
 tracing              = { workspace = true }
 
-[target.'cfg(all(not(target_os = "linux"), not(target_family = "wasm")))'.dependencies]
-mimalloc = { workspace = true }
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+jemallocator = { workspace = true }
 
-[target.'cfg(all(target_os = "linux"))'.dependencies]
-mimalloc = { workspace = true, features = ["local_dynamic_tls"] }
+[target.'cfg(target_os = "windows")'.dependencies]
+mimalloc = { workspace = true }
 
 [build-dependencies]
 napi-build = { workspace = true }

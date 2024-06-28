@@ -108,6 +108,7 @@ glob-match         = "0.2.1"
 indexmap           = "2.2.6"
 insta              = "1.39.0"
 itertools          = "0.13.0"
+jemallocator       = "0.5.4"
 jsonschema         = { version = "0.18.0", default-features = false }
 memchr             = "2.7.2"
 mimalloc           = "0.1.42"

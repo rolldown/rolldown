@@ -137,7 +137,7 @@ impl<'a> GenerateStage<'a> {
 
     // Sort modules in each chunk by execution order
     chunks.iter_mut().for_each(|chunk| {
-      chunk.modules.sort_by_key(|module_id| {
+      chunk.modules.sort_unstable_by_key(|module_id| {
         self.link_output.module_table.normal_modules[*module_id].exec_order
       });
     });

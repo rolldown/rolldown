@@ -69,11 +69,13 @@ pub struct BindingOutputOptions {
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => boolean")]
-  pub sourcemap_ignore_list: Option<ThreadsafeFunction<(String, String), bool, false>>,
+  pub sourcemap_ignore_list:
+    Option<ThreadsafeFunction<(String, String), bool, (String, String), false>>,
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]
-  pub sourcemap_path_transform: Option<ThreadsafeFunction<(String, String), String, false>>,
+  pub sourcemap_path_transform:
+    Option<ThreadsafeFunction<(String, String), String, (String, String), false>>,
   // sourcemapExcludeSources: boolean;
   // sourcemapFile: string | undefined;
   // strict: boolean;

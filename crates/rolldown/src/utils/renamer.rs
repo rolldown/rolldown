@@ -63,8 +63,7 @@ impl<'name> Renamer<'name> {
             Entry::Occupied(mut occ) => {
               let next_conflict_index = *occ.get() + 1;
               *occ.get_mut() = next_conflict_index;
-              candidate_name =
-                Cow::Owned(format!("{candidate_name}${next_conflict_index}",).into());
+              candidate_name = Cow::Owned(format!("{original_name}${next_conflict_index}",).into());
             }
             Entry::Vacant(vac) => {
               vac.insert(0);

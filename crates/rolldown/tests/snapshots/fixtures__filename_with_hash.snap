@@ -1240,8 +1240,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/deconflict/issue_364
 
-- main-!~{000}~.mjs => main-KQY8YBEU.mjs
-- main-KQY8YBEU.mjs.map
+- main-!~{000}~.mjs => main-U6qJK-X5.mjs
+- main-U6qJK-X5.mjs.map
 
 # tests/fixtures/deconflict/wrapped_esm_default_function
 

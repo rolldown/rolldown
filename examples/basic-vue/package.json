@@ -6,6 +6,7 @@
     "build": "rolldown --config ./rolldown.config.js"
   },
   "devDependencies": {
+    "@rollup/plugin-replace": "^5.0.7",
     "rolldown": "workspace:*"
   },
   "dependencies": {

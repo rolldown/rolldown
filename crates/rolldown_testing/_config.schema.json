@@ -87,6 +87,12 @@
             "type": "string"
           }
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "footer": {
           "type": [
             "string",

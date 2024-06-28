@@ -1,2 +1,4 @@
+import assert from "node:assert"
 import {foo} from "demo-pkg"
-console.log(foo)
+
+assert.equal(foo, 123)

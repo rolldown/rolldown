@@ -41,7 +41,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
-- entry_js-!~{000}~.mjs => entry_js-zD5Goehk.mjs
+- entry_js-!~{000}~.mjs => entry_js-wp6SI_j3.mjs
 
 # tests/esbuild/dce/inline_function_call_for_init_decl
 
@@ -118,15 +118,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_named_import_es6
 
-- src_entry_js-!~{000}~.mjs => src_entry_js--LxxPw3k.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-JsimTsqf.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_star_import_common_js
 
-- src_entry_js-!~{000}~.mjs => src_entry_js-BY2i0dH8.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-uMwHYkla.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6
 
-- src_entry_js-!~{000}~.mjs => src_entry_js-V1ZmN4ix.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-ssi9pWAb.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_no_warning_in_node_modules_issue999
 
@@ -186,7 +186,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_in_esm_wrapper
 
-- entry_js-!~{000}~.mjs => entry_js-uZmNhAH0.mjs
+- entry_js-!~{000}~.mjs => entry_js-lf_CaNyu.mjs
 
 # tests/esbuild/dce/tree_shaking_no_bundle_cjs
 

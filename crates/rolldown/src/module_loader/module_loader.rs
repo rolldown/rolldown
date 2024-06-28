@@ -174,16 +174,11 @@ impl ModuleLoader {
     }
 
     let mut errors = vec![];
-    let mut all_warnings: Vec<BuildError> = Vec::new();
+    let mut all_warnings: Vec<BuildError> = vec![];
 
-    self
-      .intermediate_normal_modules
-      .modules
-      .reserve(user_defined_entries.len() + 1 /* runtime */);
-    self
-      .intermediate_normal_modules
-      .ast_table
-      .reserve(user_defined_entries.len() + 1 /* runtime */);
+    let entries_count = user_defined_entries.len() + /* runtime */ 1;
+    self.intermediate_normal_modules.modules.reserve(entries_count);
+    self.intermediate_normal_modules.ast_table.reserve(entries_count);
 
     // Store the already consider as entry module
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
@@ -192,7 +187,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name: Some(name),
-        id: self.try_spawn_new_task(info, true).expect_normal(),
+        id: self.try_spawn_new_task(info, /* is_user_defined_entry */ true).expect_normal(),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {

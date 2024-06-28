@@ -49,12 +49,14 @@ impl ScanStage {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn scan(&mut self) -> anyhow::Result<ScanStageOutput> {
-    assert!(!self.input_options.input.is_empty(), "You must supply options.input to rolldown");
+    if self.input_options.input.is_empty() {
+      return Err(anyhow::format_err!("You must supply options.input to rolldown"));
+    }
 
     let module_loader = ModuleLoader::new(
       Arc::clone(&self.input_options),
       Arc::clone(&self.plugin_driver),
-      self.fs.clone(),
+      self.fs,
       Arc::clone(&self.resolver),
     );
 

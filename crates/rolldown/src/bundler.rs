@@ -67,36 +67,32 @@ impl Bundler {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> Result<BundleOutput> {
-    self.bundle_up(false).await
+    self.bundle_up(/* is_write */ false).await
   }
 
   pub async fn scan(&mut self) -> Result<ScanStageOutput> {
     self.plugin_driver.build_start().await?;
 
-    let ret = ScanStage::new(
+    let scan_stage_output = ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
-      self.fs.clone(),
+      self.fs,
       Arc::clone(&self.resolver),
     )
     .scan()
     .await;
 
-    {
-      let args =
-        Self::normalize_error(&ret, |ret| &ret.errors).map(|error| HookBuildEndArgs { error });
+    let args = Self::normalize_error(&scan_stage_output, |ret| &ret.errors)
+      .map(|error| HookBuildEndArgs { error });
 
-      self.plugin_driver.build_end(args.as_ref()).await?;
-    }
+    self.plugin_driver.build_end(args.as_ref()).await?;
 
-    ret
+    scan_stage_output
   }
 
   async fn try_build(&mut self) -> Result<LinkStageOutput> {
     let build_info = self.scan().await?;
-
-    let link_stage = LinkStage::new(build_info, &self.options);
-    Ok(link_stage.link())
+    Ok(LinkStage::new(build_info, &self.options).link())
   }
 
   async fn bundle_up(&mut self, is_write: bool) -> Result<BundleOutput> {
@@ -104,17 +100,17 @@ impl Bundler {
 
     self.plugin_driver.render_start().await?;
 
-    let mut generate_stage =
-      GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver);
-
     let mut output = {
-      let ret = generate_stage.generate().await;
+      let bundle_output =
+        GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
+          .generate()
+          .await;
 
-      if let Some(error) = Self::normalize_error(&ret, |ret| &ret.errors) {
+      if let Some(error) = Self::normalize_error(&bundle_output, |ret| &ret.errors) {
         self.plugin_driver.render_error(&HookRenderErrorArgs { error }).await?;
       }
 
-      ret?
+      bundle_output?
     };
 
     // Add additional files from build plugins.

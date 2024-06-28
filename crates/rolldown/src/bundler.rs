@@ -15,7 +15,6 @@ use rolldown_common::SharedFileEmitter;
 use rolldown_error::BuildError;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{BoxPlugin, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
-use sugar_path::SugarPath;
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
@@ -40,31 +39,27 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn write(&mut self) -> Result<BundleOutput> {
-    let dir = self.options.cwd.as_path().join(&self.options.dir).to_string_lossy().to_string();
+    let dir = self.options.cwd.join(&self.options.dir);
 
-    let mut output = self.bundle_up(true).await?;
+    let mut output = self.bundle_up(/* is_write */ true).await?;
 
     self.plugin_driver.write_bundle(&mut output.assets).await?;
 
-    self.fs.create_dir_all(dir.as_path()).map_err(|err| {
-      anyhow::anyhow!(
-        "Could not create directory for output chunks: {:?} \ncwd: {}",
-        dir.as_path(),
-        self.options.cwd.display()
-      )
-      .context(err)
+    self.fs.create_dir_all(&dir).map_err(|err| {
+      anyhow::anyhow!("Could not create directory for output chunks: {:?}", dir).context(err)
     })?;
+
     for chunk in &output.assets {
-      let dest = dir.as_path().join(chunk.filename());
+      let dest = dir.join(chunk.filename());
       if let Some(p) = dest.parent() {
         if !self.fs.exists(p) {
           self.fs.create_dir_all(p).unwrap();
         }
       };
-      self.fs.write(dest.as_path(), chunk.content_as_bytes()).map_err(|err| {
-        anyhow::anyhow!("Failed to write file in {:?}", dir.as_path().join(chunk.filename()))
-          .context(err)
-      })?;
+      self
+        .fs
+        .write(&dest, chunk.content_as_bytes())
+        .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
     }
 
     Ok(output)

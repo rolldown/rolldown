@@ -2,8 +2,6 @@ use std::{borrow::Cow, ffi::OsStr, path::Path};
 
 use sugar_path::SugarPath;
 
-use crate::ecma_script::legitimize_identifier_name;
-
 pub trait PathExt {
   fn expect_to_str(&self) -> &str;
 
@@ -26,6 +24,7 @@ impl PathExt for std::path::Path {
       .into_owned()
   }
 
+  /// It doesn't ensure the file name is a valid identifier in JS.
   fn representative_file_name(&self) -> Cow<str> {
     let file_name =
       self.file_stem().map_or_else(|| self.to_string_lossy(), |stem| stem.to_string_lossy());
@@ -45,12 +44,7 @@ impl PathExt for std::path::Path {
       _ => file_name,
     };
 
-    let legal = legitimize_identifier_name(&file_name);
-    match legal {
-      // No changes. Just return the original file name.
-      Cow::Borrowed(_) => file_name,
-      Cow::Owned(v) => Cow::Owned(v),
-    }
+    file_name
   }
 }
 

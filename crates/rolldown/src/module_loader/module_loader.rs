@@ -7,6 +7,7 @@ use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
 
@@ -179,6 +180,9 @@ impl ModuleLoader {
     self.intermediate_normal_modules.modules.reserve(entries_count);
     self.intermediate_normal_modules.ast_table.reserve(entries_count);
 
+    // Store the already consider as entry module
+    let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
+
     let mut entry_points = user_defined_entries
       .into_iter()
       .map(|(name, info)| EntryPoint {
@@ -186,11 +190,10 @@ impl ModuleLoader {
         id: self.try_spawn_new_task(info, /* is_user_defined_entry */ true).expect_normal(),
         kind: EntryPointKind::UserDefined,
       })
+      .inspect(|e| {
+        user_defined_entry_ids.insert(e.id);
+      })
       .collect::<Vec<_>>();
-
-    // Store the already consider as entry module
-    let user_defined_entry_ids: FxHashSet<NormalModuleId> =
-      entry_points.iter().map(|e| e.id).collect();
 
     let mut dynamic_import_entry_ids = FxHashSet::default();
 

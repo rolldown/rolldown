@@ -24,9 +24,9 @@ pub struct Renamer<'name> {
   ///
   /// // a.js
   /// export const a = 100; // {a => 0, a$1 => 0}, first we try looking up `a`, it is used. So we try the
-  ///                       // candidate_name `a$1`(conflict_index + 1 = 1). Then we try `a$1`,
-  ///                       // it is also used, so we try the candidate_name `a$1$1`(conflict_index of `a$1` + 1), it is not used,
-  ///                       // so the we got the final candidate_name `a$1$1`
+  ///                       // candidate_name `a$1`(conflict_index + 1 = 1). Then we try `a$2`, so
+  ///                       // on and so forth. Until we find a name that is not used. In this case, `a$2` is not used
+  ///                       // so we rename `a` to `a$2`
   /// ```
   ///
   used_canonical_names: FxHashMap<Cow<'name, Rstr>, u32>,

@@ -18,7 +18,7 @@ impl DeterminedSideEffects {
   }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 /// A field in `package.json`
 pub enum SideEffects {
   Bool(bool),
@@ -27,8 +27,8 @@ pub enum SideEffects {
 }
 
 impl SideEffects {
-  pub fn from_description(description: &serde_json::Value) -> Option<Self> {
-    description.get("sideEffects").and_then(|value| match value {
+  pub fn from_json_value(value: &serde_json::Value) -> Option<Self> {
+    match value {
       serde_json::Value::Bool(v) => Some(SideEffects::Bool(*v)),
       serde_json::Value::String(v) => Some(SideEffects::String(v.to_string())),
       serde_json::Value::Array(v) => {
@@ -40,7 +40,7 @@ impl SideEffects {
         Some(SideEffects::Array(side_effects))
       }
       _ => None,
-    })
+    }
   }
 }
 

@@ -207,9 +207,11 @@ impl<F: FileSystem + Default> Resolver<F> {
     if let Some(v) = self.package_json_cache.get(&oxc_pkg_json.realpath) {
       Arc::clone(v.value())
     } else {
-      let pkg_json =
-        PackageJson::new(Arc::clone(oxc_pkg_json.raw_json()), oxc_pkg_json.path.clone());
-      let pkg_json = Arc::new(pkg_json);
+      let pkg_json = Arc::new(
+        PackageJson::new(oxc_pkg_json.path.clone())
+          .with_type(oxc_pkg_json.r#type.as_ref())
+          .with_side_effects(oxc_pkg_json.side_effects.as_ref()),
+      );
       self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
       pkg_json
     }
@@ -225,7 +227,7 @@ fn calc_module_type(info: &Resolution) -> ModuleDefFormat {
     }
   }
   if let Some(package_json) = info.package_json() {
-    let type_value = package_json.raw_json().get("type").and_then(|v| v.as_str());
+    let type_value = package_json.r#type.as_ref().and_then(|v| v.as_str());
     if type_value == Some("module") {
       return ModuleDefFormat::EsmPackageJson;
     } else if type_value == Some("commonjs") {

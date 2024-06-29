@@ -1396,62 +1396,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-nqMd7tJC.mjs
 
-# tests/fixtures/loaders/base64/binary
-
-- main-!~{000}~.mjs => main-AUjXRnmQ.mjs
-
-# tests/fixtures/loaders/base64/empty
-
-- main-!~{000}~.mjs => main-bVuzikkm.mjs
-
-# tests/fixtures/loaders/base64/text
-
-- main-!~{000}~.mjs => main-mRR340KN.mjs
-
-# tests/fixtures/loaders/binary/binary
-
-- main-!~{000}~.mjs => main-4PHReuFV.mjs
-
-# tests/fixtures/loaders/binary/empty
-
-- main-!~{000}~.mjs => main-TmnkNVxQ.mjs
-
-# tests/fixtures/loaders/binary/node
-
-- main-!~{000}~.mjs => main-x3iEGR_f.mjs
-
-# tests/fixtures/loaders/binary/text
-
-- main-!~{000}~.mjs => main-drgRUFMR.mjs
-
-# tests/fixtures/loaders/empty
-
-- main-!~{000}~.mjs => main-b_m0mFIu.mjs
-
-# tests/fixtures/loaders/json/correct_semantic_of_import_and_require
-
-- main-!~{000}~.mjs => main-ff4jEo8M.mjs
-
-# tests/fixtures/loaders/jsx
-
-- main_jsx-!~{000}~.mjs => main_jsx-TL8s4o_9.mjs
-
-# tests/fixtures/loaders/ts
-
-- main_ts-!~{000}~.mjs => main_ts-NyiJuHHI.mjs
-
-# tests/fixtures/loaders/tsx
-
-- main_tsx-!~{000}~.mjs => main_tsx-7hnq3HXl.mjs
-
-# tests/fixtures/loaders/txt/empty
-
-- main-!~{000}~.mjs => main-mjp40V8P.mjs
-
-# tests/fixtures/loaders/txt/escape_quote
-
-- main-!~{000}~.mjs => main-cXnpf8T7.mjs
-
 # tests/fixtures/misc/ambiguous_star_export
 
 - main-!~{000}~.mjs => main-EYnPJQvV.mjs
@@ -1516,6 +1460,62 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-RWNqGvY8.mjs
 - main-RWNqGvY8.mjs.map
+
+# tests/fixtures/module_types/base64/binary
+
+- main-!~{000}~.mjs => main-AUjXRnmQ.mjs
+
+# tests/fixtures/module_types/base64/empty
+
+- main-!~{000}~.mjs => main-bVuzikkm.mjs
+
+# tests/fixtures/module_types/base64/text
+
+- main-!~{000}~.mjs => main-mRR340KN.mjs
+
+# tests/fixtures/module_types/binary/binary
+
+- main-!~{000}~.mjs => main-4PHReuFV.mjs
+
+# tests/fixtures/module_types/binary/empty
+
+- main-!~{000}~.mjs => main-TmnkNVxQ.mjs
+
+# tests/fixtures/module_types/binary/node
+
+- main-!~{000}~.mjs => main-x3iEGR_f.mjs
+
+# tests/fixtures/module_types/binary/text
+
+- main-!~{000}~.mjs => main-drgRUFMR.mjs
+
+# tests/fixtures/module_types/empty
+
+- main-!~{000}~.mjs => main-b_m0mFIu.mjs
+
+# tests/fixtures/module_types/json/correct_semantic_of_import_and_require
+
+- main-!~{000}~.mjs => main-ff4jEo8M.mjs
+
+# tests/fixtures/module_types/jsx
+
+- main_jsx-!~{000}~.mjs => main_jsx-TL8s4o_9.mjs
+
+# tests/fixtures/module_types/ts
+
+- main_ts-!~{000}~.mjs => main_ts-NyiJuHHI.mjs
+
+# tests/fixtures/module_types/tsx
+
+- main_tsx-!~{000}~.mjs => main_tsx-7hnq3HXl.mjs
+
+# tests/fixtures/module_types/txt/empty
+
+- main-!~{000}~.mjs => main-mjp40V8P.mjs
+
+# tests/fixtures/module_types/txt/escape_quote
+
+- main-!~{000}~.mjs => main-cXnpf8T7.mjs
 
 # tests/fixtures/rollup/assignment-patterns
 

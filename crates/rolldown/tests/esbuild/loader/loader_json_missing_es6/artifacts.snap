@@ -1,0 +1,19 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/loader_json_missing_es6
+---
+# Errors
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "missing" is not exported by "test.json".
+   ╭─[entry.js:1:9]
+   │
+ 1 │ import {missing} from './test.json'
+   │         ───┬───  
+   │            ╰───── Missing export
+───╯
+
+```

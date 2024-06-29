@@ -6,5 +6,7 @@
         "import": "entry.js"
       }
     ]
-  }
+  },
+  "expectError": true,
+  "expectExecuted": false
 }

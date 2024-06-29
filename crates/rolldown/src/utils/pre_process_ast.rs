@@ -7,7 +7,7 @@ use rolldown_oxc_utils::OxcAst;
 
 use crate::types::oxc_parse_type::OxcParseType;
 
-use super::fold_const_value::InlineBinaryValueLight;
+use super::fold_const_value::BasicInlineBinaryValue;
 use super::tweak_ast_for_scanning::tweak_ast_for_scanning;
 
 // #[allow(clippy::match_same_arms)]: `OxcParseType::Tsx` will have special logic to deal with ts compared to `OxcParseType::Jsx`
@@ -49,7 +49,7 @@ pub fn pre_process_ast(
 
   ast.program.with_mut(|fields| {
     // Inline binary value . e.g. `process.env.NODE_ENV === "production"` -> `true` or `false`
-    InlineBinaryValueLight::new(fields.allocator).build(fields.program);
+    BasicInlineBinaryValue::new(fields.allocator).build(fields.program);
     RemoveDeadCode::new(fields.allocator).build(fields.program);
   });
 

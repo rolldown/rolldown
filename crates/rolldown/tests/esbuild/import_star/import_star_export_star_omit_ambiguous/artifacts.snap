@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_om
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region foo.js
@@ -27,7 +28,10 @@ __export(common_ns, {
 
 //#endregion
 //#region entry.js
-console.log(common_ns);
+assert.deepEqual(common_ns, {
+	x: 1,
+	z: 4
+});
 
 //#endregion
 ```

@@ -3,21 +3,13 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/exports_and_module_format_common_js
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "assert" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
 ## entry.cjs
 
 ```js
 
-const { default: assert } = __toESM(require("assert"));
+const { default: assert } = __toESM(require("node:assert"));
 
 //#region foo/test.js
 var test_ns$1 = {};

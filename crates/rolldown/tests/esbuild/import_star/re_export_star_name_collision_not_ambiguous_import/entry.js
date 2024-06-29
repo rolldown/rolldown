@@ -1,2 +1,3 @@
+import { assert } from 'console'
 import {x, y} from './common'
-console.log(x, y)
+assert(x === 1 && y === 2)

@@ -16,13 +16,14 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_self_common_js
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region entry.js
 var require_entry = __commonJSMin((exports, module) => {
 	var import_entry = __toESM(require_entry());
 	exports.foo = 123;
-	console.log(import_entry.foo);
+	assert.equal(import_entry.foo, undefined);
 });
 
 //#endregion

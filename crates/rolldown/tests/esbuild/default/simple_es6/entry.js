@@ -1,3 +1,3 @@
-import assert from 'assert'
+import assert from 'node:assert'
 import {fn} from './foo'
 assert(fn() === 123)

@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_no_capture
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region foo.js
 const foo$1 = 123;
@@ -15,7 +16,8 @@ const foo$1 = 123;
 //#endregion
 //#region entry.js
 let foo = 234;
-console.log(foo$1, foo$1, foo);
+assert.equal(foo$1, 123);
+assert.equal(foo, 234);
 
 //#endregion
 ```

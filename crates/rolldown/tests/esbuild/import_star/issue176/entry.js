@@ -1,2 +1,3 @@
+import assert from 'node:assert'
 import * as things from './folders'
-console.log(JSON.stringify(things))
+assert(Object.keys(JSON.stringify(things)), 2)

@@ -1,3 +1,5 @@
+import assert from 'node:assert'
 import * as ns from './foo'
 let foo = 234
-console.log(ns.foo, ns.foo, foo)
+assert.equal(ns.foo, 123)
+assert.equal(foo, 234)

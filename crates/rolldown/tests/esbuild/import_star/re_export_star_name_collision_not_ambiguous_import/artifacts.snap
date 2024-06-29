@@ -3,18 +3,27 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_import
 ---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "console" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
 # Assets
 
 ## entry_js.mjs
 
 ```js
+import { assert } from "console";
 
 //#region c.js
 let x = 1, y = 2;
 
 //#endregion
 //#region entry.js
-console.log(x, y);
+assert(x === 1 && y === 2);
 
 //#endregion
 ```

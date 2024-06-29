@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_common_js_capt
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region foo.js
@@ -19,7 +20,12 @@ var require_foo = __commonJSMin((exports, module) => {
 //#region entry.js
 var import_foo = __toESM(require_foo());
 let foo = 234;
-console.log(import_foo, import_foo.foo, foo);
+assert.deepEqual(import_foo, {
+	default: {foo: 123},
+	foo: 123
+});
+assert.equal(import_foo.foo, 123);
+assert.equal(foo, 234);
 
 //#endregion
 ```

@@ -364,12 +364,12 @@ impl<'ast> AstSnippet<'ast> {
   /// ```js
   /// 42
   /// ```
-  pub fn number_expr(&self, value: f64) -> ast::Expression<'ast> {
+  pub fn number_expr(&self, value: f64, raw: &str) -> ast::Expression<'ast> {
     ast::Expression::NumericLiteral(
       ast::NumericLiteral {
         span: TakeIn::dummy(self.alloc),
         value,
-        raw: self.alloc.alloc(value.to_string()),
+        raw: self.alloc.alloc_str(raw),
         base: oxc::syntax::number::NumberBase::Decimal,
       }
       .into_in(self.alloc),
@@ -411,7 +411,7 @@ impl<'ast> AstSnippet<'ast> {
     ast::Expression::UnaryExpression(
       ast::UnaryExpression {
         operator: UnaryOperator::Void,
-        argument: self.number_expr(0.0),
+        argument: self.number_expr(0.0, "0"),
         ..TakeIn::dummy(self.alloc)
       }
       .into_in(self.alloc),

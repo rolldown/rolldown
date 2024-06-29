@@ -1,0 +1,33 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/loaders/json/correct_semantic_of_import_and_require
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+
+//#region codes.json
+var codes_ns, foo, codes_default;
+var init_codes = __esmMin(() => {
+	codes_ns = {};
+	__export(codes_ns, {
+		default: () => codes_default,
+		foo: () => foo
+	});
+	foo = 'bar';
+	codes_default = {foo};
+});
+
+//#endregion
+//#region main.js
+init_codes();
+const codes2 = (init_codes(), __toCommonJS(codes_ns).default);
+assert.strictEqual(codes_default, codes2);
+
+//#endregion
+```

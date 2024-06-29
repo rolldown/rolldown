@@ -9,7 +9,7 @@ use oxc::{
   },
   span::{CompactStr, GetSpan, Span, SPAN},
 };
-use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
+use rolldown_common::{ExportsKind, ModuleId, ModuleType, SymbolRef, WrapKind};
 use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, IntoIn, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
@@ -364,7 +364,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     walk_mut::walk_call_expression_mut(self, expr);
   }
 
-  #[allow(clippy::collapsible_else_if)]
+  #[allow(clippy::collapsible_else_if, clippy::too_many_lines)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     if let Some(call_expr) = expr.as_call_expression_mut() {
       if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_empty() {
@@ -373,21 +373,53 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
           let rec = &self.ctx.module.import_records[rec_id];
           match rec.resolved_module {
-            // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
             ModuleId::Normal(importee_id) => {
               let importee = &self.ctx.modules[importee_id];
-              let importee_linking_info = &self.ctx.linking_infos[importee.id];
-              let wrap_ref_name =
-                self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-              if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-                *expr = self.snippet.call_expr_expr(wrap_ref_name);
-              } else {
-                let ns_name = self.canonical_name_for(importee.namespace_object_ref);
-                let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
-                *expr = self.snippet.seq2_in_paren_expr(
-                  self.snippet.call_expr_expr(wrap_ref_name),
-                  self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
-                );
+              match importee.module_type {
+                ModuleType::Json => {
+                  // Nodejs treats json files as an esm module with a default export and rolldown follows this behavior.
+                  // And to make sure the runtime behavior is correct, we need to rewrite `require('xxx.json')` to `require('xxx.json').default` to align with the runtime behavior of nodejs.
+
+                  // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports).default)`
+                  let importee_linking_info = &self.ctx.linking_infos[importee.id];
+                  let wrap_ref_name =
+                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                  if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+                    *expr = self.snippet.call_expr_expr(wrap_ref_name);
+                  } else {
+                    let ns_name = self.canonical_name_for(importee.namespace_object_ref);
+                    let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
+                    *expr = self.snippet.seq2_in_paren_expr(
+                      self.snippet.call_expr_expr(wrap_ref_name),
+                      ast::Expression::StaticMemberExpression(
+                        ast::StaticMemberExpression {
+                          object: self
+                            .snippet
+                            .call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+                          property: self.snippet.id_name("default", SPAN),
+                          ..TakeIn::dummy(self.alloc)
+                        }
+                        .into_in(self.alloc),
+                      ),
+                    );
+                  }
+                }
+                _ => {
+                  // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
+                  let importee_linking_info = &self.ctx.linking_infos[importee.id];
+                  let wrap_ref_name =
+                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                  if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+                    *expr = self.snippet.call_expr_expr(wrap_ref_name);
+                  } else {
+                    let ns_name = self.canonical_name_for(importee.namespace_object_ref);
+                    let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
+                    *expr = self.snippet.seq2_in_paren_expr(
+                      self.snippet.call_expr_expr(wrap_ref_name),
+                      self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+                    );
+                  }
+                }
               }
             }
             ModuleId::External(importee_id) => {

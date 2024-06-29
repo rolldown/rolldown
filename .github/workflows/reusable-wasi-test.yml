@@ -31,7 +31,8 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
         with:
           workspace-copy: true
-          drive-size: 8GB
+          drive-size: 8G
+          drive-format: NTFS
 
       - name: Setup Node
         uses: ./.github/actions/setup-node

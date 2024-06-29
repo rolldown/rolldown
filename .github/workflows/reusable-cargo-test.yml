@@ -27,6 +27,7 @@ jobs:
         with:
           workspace-copy: true
           drive-size: 8GB
+          drive-format: NTFS
 
       - name: Setup Node
         uses: ./.github/actions/setup-node

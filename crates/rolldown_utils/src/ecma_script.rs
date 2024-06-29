@@ -7,39 +7,38 @@ pub fn is_validate_identifier_name(name: &str) -> bool {
 
 pub fn legitimize_identifier_name(name: &str) -> Cow<str> {
   let mut legitimized = String::new();
-  let mut have_seen_invalid_char = false;
-
   let mut chars_indices = name.char_indices();
 
-  if let Some((_, first_char)) = chars_indices.next() {
+  let mut first_invalid_char_index = None;
+
+  if let Some((idx, first_char)) = chars_indices.next() {
     if identifier::is_identifier_start(first_char) {
       // Nothing we need to do
     } else {
-      legitimized.push('_');
-      have_seen_invalid_char = true;
+      first_invalid_char_index = Some(idx);
     }
   }
 
-  for (idx, char) in chars_indices {
-    if identifier::is_identifier_part(char) {
-      if have_seen_invalid_char {
+  if first_invalid_char_index.is_none() {
+    first_invalid_char_index =
+      chars_indices.find(|(_idx, char)| !identifier::is_identifier_part(*char)).map(|(idx, _)| idx);
+  }
+
+  if let Some(first_invalid_char_index) = first_invalid_char_index {
+    let (first_valid_part, rest_part) = name.split_at(first_invalid_char_index);
+    legitimized.push_str(first_valid_part);
+    for char in rest_part.chars() {
+      if identifier::is_identifier_part(char) {
         legitimized.push(char);
+      } else {
+        legitimized.push('_');
       }
-    } else {
-      if !have_seen_invalid_char {
-        // See a invalid char for the first time
-        have_seen_invalid_char = true;
-        legitimized.push_str(&name[..idx]);
-      }
-      legitimized.push('_');
     }
+
+    return Cow::Owned(legitimized);
   }
 
-  if have_seen_invalid_char {
-    Cow::Owned(legitimized)
-  } else {
-    Cow::Borrowed(name)
-  }
+  Cow::Borrowed(name)
 }
 
 #[test]

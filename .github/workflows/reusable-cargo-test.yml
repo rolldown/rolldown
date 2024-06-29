@@ -18,17 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Unsung heros of the internet, who led me here to speed up window's slowness:
-      # https://github.com/actions/cache/issues/752#issuecomment-1847036770
-      # https://github.com/astral-sh/uv/blob/502e04200d52de30d3159894833b3db4f0d6644d/.github/workflows/ci.yml#L158
-      - name: Setup Dev Drive for Windows
-        uses: samypr100/setup-dev-drive@v3
-        if: ${{ runner.os == 'Windows' }}
-        with:
-          workspace-copy: true
-          drive-size: 8GB
-          drive-format: NTFS
-
       - name: Setup Node
         uses: ./.github/actions/setup-node
 

@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/common_js_from_es6
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region foo.js
@@ -34,7 +35,8 @@ var init_bar = __esmMin(() => {
 //#endregion
 //#region entry.js
 const { foo } = (init_foo(), __toCommonJS(foo_ns));
-console.log(foo(), bar());
+assert.equal(foo(), 'foo');
+assert.equal(bar(), 'bar');
 const { bar } = (init_bar(), __toCommonJS(bar_ns));
 
 //#endregion

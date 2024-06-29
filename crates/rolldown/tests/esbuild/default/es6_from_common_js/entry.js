@@ -1,3 +1,5 @@
+import assert from 'assert'
 import {foo} from './foo'
-console.log(foo(), bar())
-import {bar} from './bar' // This should be hoisted
+assert(foo() === 'foo' && bar() === 'bar');
+import {bar} from './bar'
+ // This should be hoisted

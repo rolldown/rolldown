@@ -1,5 +1,7 @@
+import assert from 'node:assert'
+
 function nestedScope() {
 	const fn = require('./foo')
-	console.log(fn())
+  assert(fn() === 123)
 }
 nestedScope()

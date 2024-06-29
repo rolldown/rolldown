@@ -1,2 +1,3 @@
+import assert from 'assert'
 import value from './dir'
-console.log(value)
+assert.equal(value, 123)

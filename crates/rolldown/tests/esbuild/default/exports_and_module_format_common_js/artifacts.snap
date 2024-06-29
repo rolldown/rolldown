@@ -3,12 +3,21 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/exports_and_module_format_common_js
 ---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "assert" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
 # Assets
 
 ## entry.cjs
 
 ```js
 
+const { default: assert } = __toESM(require("assert"));
 
 //#region foo/test.js
 var test_ns$1 = {};
@@ -23,7 +32,9 @@ let bar = 123;
 
 //#endregion
 //#region entry.js
-console.log(exports, module.exports, test_ns$1, test_ns);
+assert.deepEqual(test_ns$1, {foo: 123});
+assert.deepEqual(test_ns, {bar: 123});
+console.log(exports, module.exports);
 
 //#endregion
 ```

@@ -1,2 +1,3 @@
+import { assert } from 'console'
 import {x} from '.'
-console.log(x)
+assert(x === 123)

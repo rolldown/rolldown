@@ -1,2 +1,3 @@
+import assert from 'assert'
 import {fn} from './foo'
-console.log(fn())
+assert(fn() === 123)

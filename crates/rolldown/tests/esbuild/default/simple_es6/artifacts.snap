@@ -3,11 +3,20 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/simple_es6
 ---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "assert" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
 # Assets
 
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "assert";
 
 //#region foo.js
 function fn() {
@@ -16,7 +25,7 @@ function fn() {
 
 //#endregion
 //#region entry.js
-console.log(fn());
+assert(fn() === 123);
 
 //#endregion
 ```

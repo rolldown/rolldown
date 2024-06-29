@@ -1,4 +1,5 @@
 import {fn} from './foo'
+import assert from 'node:assert'
 (() => {
-	console.log(fn())
+	assert.equal(fn(), 123)
 })()

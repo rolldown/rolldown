@@ -2,6 +2,10 @@
 source: crates/rolldown/tests/fixtures.rs
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
+# tests/esbuild/bundler_ts/ts_declare_const
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
 # tests/esbuild/bundler_ts/ts_declare_let
 
 - entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs

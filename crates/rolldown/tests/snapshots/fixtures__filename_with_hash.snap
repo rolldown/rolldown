@@ -631,6 +631,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-G8TYUU0L.mjs
 
+# tests/esbuild/loader/empty_loader_js
+
+- entry_js-!~{000}~.mjs => entry_js-5GpJI8S7.mjs
+
 # tests/esbuild/loader/loader_base64_common_js_and_es6
 
 - entry_js-!~{000}~.mjs => entry_js-IGf0n5gA.mjs

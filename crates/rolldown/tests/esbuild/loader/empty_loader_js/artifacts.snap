@@ -1,0 +1,28 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/empty_loader_js
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region b.empty
+var b_ns = {};
+
+//#endregion
+//#region c.empty
+var default$1 = void 0;
+
+//#endregion
+//#region d.empty
+var named = void 0;
+
+//#endregion
+//#region entry.js
+console.log(b_ns, default$1, named);
+
+//#endregion
+```

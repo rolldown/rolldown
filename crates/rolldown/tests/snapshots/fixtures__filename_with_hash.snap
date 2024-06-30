@@ -1419,11 +1419,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/loaders/data_url/png
 
-- main-!~{000}~.mjs => main-VRF9C_Oc.mjs
+- main-!~{000}~.mjs => main-OGKbrs_p.mjs
 
 # tests/fixtures/loaders/data_url/svg
 
-- main-!~{000}~.mjs => main-P1hufKA8.mjs
+- main-!~{000}~.mjs => main-uZ476jX2.mjs
 
 # tests/fixtures/loaders/data_url/without-extension
 

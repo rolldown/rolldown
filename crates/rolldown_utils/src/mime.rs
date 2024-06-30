@@ -13,7 +13,7 @@ pub fn get_data_url_mime_by_extension(extension: &str) -> Option<Mime> {
 
 pub fn get_data_url_mime_by_data(data: &[u8]) -> Option<Mime> {
   let mime = get(data).expect("Failed to infer mime type from data.").mime_type();
-  let mime = Mime::from_str(&mime).expect("Failed to parse mime type.");
+  let mime = Mime::from_str(mime).expect("Failed to parse mime type.");
   if valid_mime_for_data_url(&mime) {
     Some(mime)
   } else {

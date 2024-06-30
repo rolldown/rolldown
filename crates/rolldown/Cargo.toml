@@ -20,6 +20,7 @@ indexmap              = { workspace = true }
 itertools             = { workspace = true }
 once_cell             = { workspace = true }
 oxc                   = { workspace = true }
+mime                  = { workspace = true }
 regex                 = { workspace = true }
 rolldown_common       = { workspace = true }
 rolldown_error        = { workspace = true }

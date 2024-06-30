@@ -1,8 +1,9 @@
 use rolldown_common::{side_effects::HookSideEffects, ModuleType, ResolvedPath};
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
-use rolldown_utils::url_encoding::url_encode;
+use rolldown_utils::{url_encoding::url_encode, mime::{get_data_url_mime_by_extension, get_data_url_mime_by_data}};
 use sugar_path::SugarPath;
+
 
 pub async fn load_source(
   plugin_driver: &PluginDriver,
@@ -31,11 +32,13 @@ pub async fn load_source(
         ModuleType::DataUrl => {
           // let extension: &str = resolved_path.path.extension().unwrap().to_str().unwrap(); DO NOT USE `extension` method
           let extension: &str = resolved_path.path.split('.').last().unwrap();
-          let mime =
-            rolldown_utils::mime::get_data_url_mime_by_extension(extension).ok_or_else(|| {
-              anyhow::anyhow!("Unsupported extension for Data URL format: {}", extension)
-            })?;
-          let content: String = if extension == "svg" {
+          let mime = get_data_url_mime_by_extension(extension).unwrap_or_else(|| {
+            let data = fs.read(resolved_path.path.as_path()).expect("Failed to read data.");
+            get_data_url_mime_by_data(&data).expect("Failed to infer mime type from data.")
+          });
+          // If you cannot infer mime type with ext, try to infer with data
+
+          let content: String = if matches!(mime.type_(), mime::TEXT) {
             let content = fs.read_to_string(resolved_path.path.as_path())?;
             url_encode(&content)
           } else {

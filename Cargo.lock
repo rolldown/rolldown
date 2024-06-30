@@ -178,9 +178,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitflags"
-version = "2.5.0"
+version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
+checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
 
 [[package]]
 name = "bpaf"
@@ -1052,7 +1052,7 @@ version = "3.0.0-alpha.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "53112614847625adf534655b35b7adcc66c4f6ca407284cca73fd5bb0cf8cde5"
 dependencies = [
- "bitflags 2.5.0",
+ "bitflags 2.6.0",
  "ctor",
  "napi-build",
  "napi-sys",
@@ -1308,7 +1308,7 @@ version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b02f6b79b7ea1e71fb92a5589c5203c350fbd153d744d8cf5dac9d18817b007"
 dependencies = [
- "bitflags 2.5.0",
+ "bitflags 2.6.0",
  "num-bigint",
  "oxc_allocator",
  "oxc_ast_macros",
@@ -1328,7 +1328,7 @@ version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "afc6b10dccacb7ba5f028b35eb111407085b21c14bc485e8c9eca5dec4a7ca39"
 dependencies = [
- "bitflags 2.5.0",
+ "bitflags 2.6.0",
  "itertools",
  "oxc_syntax",
  "petgraph",
@@ -1341,7 +1341,7 @@ version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98475d1a8ae3aa7cafad42313c43fd2498f4db6c738d1b0b781f4830e2b36081"
 dependencies = [
- "bitflags 2.5.0",
+ "bitflags 2.6.0",
  "daachorse",
  "once_cell",
  "oxc_allocator",
@@ -1396,7 +1396,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9cfc59669c252076a55b6f3309294214ac228147a7effa8194e076edbf09b715"
 dependencies = [
  "assert-unchecked",
- "bitflags 2.5.0",
+ "bitflags 2.6.0",
  "memchr",
  "num-bigint",
  "num-traits",
@@ -1476,7 +1476,7 @@ version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c55e68d427b47c59d1e5a7f1ae7845787d4caca79ef66eff772b052035fc0ad"
 dependencies = [
- "bitflags 2.5.0",
+ "bitflags 2.6.0",
  "dashmap",
  "oxc_index",
  "oxc_span",
@@ -1715,7 +1715,7 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "469052894dcb553421e483e4209ee581a45100d31b4018de03e5a7ad86374a7e"
 dependencies = [
- "bitflags 2.5.0",
+ "bitflags 2.6.0",
 ]
 
 [[package]]
@@ -1783,7 +1783,7 @@ name = "rolldown"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bitflags 2.5.0",
+ "bitflags 2.6.0",
  "dunce",
  "futures",
  "glob",
@@ -2133,9 +2133,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.117"
+version = "1.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "455182ea6142b14f93f4bc5320a2b31c1f266b66a4a5c858b013302a5d8cbfc3"
+checksum = "d947f6b3163d8857ea16c4fa0dd4840d52f3041039a85decd46867eb1abef2e4"
 dependencies = [
  "indexmap",
  "itoa",

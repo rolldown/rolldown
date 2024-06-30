@@ -99,7 +99,7 @@ async-scoped       = { version = "0.9.0" }
 async-trait        = "0.1.80"
 base64             = "0.22.1"
 bitflags           = "2.5.0"
-dashmap            = "5.5.3"
+dashmap            = "6.0.0"
 derivative         = "2.2.0"
 dunce              = "1.0.4"                                                                          # Normalize Windows paths to the most compatible format, avoiding UNC where possible
 futures            = "0.3.30"

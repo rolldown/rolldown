@@ -230,7 +230,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/dot_import
 
-- entry_js-!~{000}~.mjs => entry_js-6n_Y4W8h.mjs
+- entry_js-!~{000}~.mjs => entry_js-5HLNuSqj.mjs
 
 # tests/esbuild/default/duplicate_entry_point
 
@@ -629,7 +629,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_import
 
-- entry_js-!~{000}~.mjs => entry_js-tD7OM1ED.mjs
+- entry_js-!~{000}~.mjs => entry_js-KN_NiUL-.mjs
 
 # tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous
 

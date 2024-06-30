@@ -1413,33 +1413,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{001}~.mjs => b-5N9UMKWl.mjs
 - c-!~{002}~.mjs => c-49hHscdr.mjs
 
-# tests/fixtures/loaders/base64/binary
+# tests/fixtures/issues/1443
 
-- main-!~{000}~.mjs => main-AUjXRnmQ.mjs
-
-# tests/fixtures/loaders/base64/empty
-
-- main-!~{000}~.mjs => main-bVuzikkm.mjs
-
-# tests/fixtures/loaders/base64/text
-
-- main-!~{000}~.mjs => main-mRR340KN.mjs
-
-# tests/fixtures/loaders/binary/binary
-
-- main-!~{000}~.mjs => main-CmAMqcrz.mjs
-
-# tests/fixtures/loaders/binary/empty
-
-- main-!~{000}~.mjs => main-C77p5x1M.mjs
-
-# tests/fixtures/loaders/binary/node
-
-- main-!~{000}~.mjs => main-k2Ntq9Fb.mjs
-
-# tests/fixtures/loaders/binary/text
-
-- main-!~{000}~.mjs => main-HOErwbTT.mjs
+- main-!~{000}~.mjs => main-nqMd7tJC.mjs
 
 # tests/fixtures/loaders/data_url/png
 
@@ -1448,14 +1424,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/loaders/data_url/svg
 
 - main-!~{000}~.mjs => main-c3DZIWeK.mjs
-
-# tests/fixtures/loaders/txt/empty
-
-- main-!~{000}~.mjs => main-mjp40V8P.mjs
-
-# tests/fixtures/loaders/txt/escape_quote
-
-- main-!~{000}~.mjs => main-nqMd7tJC.mjs
 
 # tests/fixtures/misc/ambiguous_star_export
 

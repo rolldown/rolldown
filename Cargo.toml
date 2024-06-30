@@ -106,6 +106,7 @@ futures            = "0.3.30"
 glob               = "0.3.1"
 glob-match         = "0.2.1"
 indexmap           = "2.2.6"
+infer              = "0.16.0"
 insta              = "1.39.0"
 itertools          = "0.13.0"
 jsonschema         = { version = "0.18.0", default-features = false }

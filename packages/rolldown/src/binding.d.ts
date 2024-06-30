@@ -239,7 +239,7 @@ export interface BindingTreeshake {
   moduleSideEffects: string
 }
 
-export function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 export interface RenderedChunk {
   name: string

@@ -1,9 +1,11 @@
 use rolldown_common::{side_effects::HookSideEffects, ModuleType, ResolvedPath};
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
-use rolldown_utils::{url_encoding::url_encode, mime::{get_data_url_mime_by_extension, get_data_url_mime_by_data}};
+use rolldown_utils::{
+  mime::{get_data_url_mime_by_data, get_data_url_mime_by_extension},
+  url_encoding::url_encode,
+};
 use sugar_path::SugarPath;
-
 
 pub async fn load_source(
   plugin_driver: &PluginDriver,

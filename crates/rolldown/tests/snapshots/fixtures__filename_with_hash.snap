@@ -1423,7 +1423,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/loaders/data_url/svg
 
-- main-!~{000}~.mjs => main-c3DZIWeK.mjs
+- main-!~{000}~.mjs => main-P1hufKA8.mjs
+
+# tests/fixtures/loaders/data_url/without-extension
+
+- main-!~{000}~.mjs => main-fgU5m-Tk.mjs
 
 # tests/fixtures/misc/ambiguous_star_export
 

@@ -110,7 +110,7 @@ impl Fixture {
     let test_config = self.test_config();
 
     let mut bundle_options = self.test_config().config;
-    if let None = bundle_options.external {
+    if bundle_options.external.is_none() {
       bundle_options.external = Some(IsExternal::from_vec(vec!["node:assert".to_string()]));
     }
 

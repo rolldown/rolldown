@@ -8,12 +8,12 @@ pub struct ExtractedHashPattern<'a> {
 pub fn extract_hash_pattern(pattern: &str) -> Option<ExtractedHashPattern<'_>> {
   let start = pattern.find("[hash")?;
   let end = pattern[start + 5..].find(']')?;
-  let len = if let Some(n) = pattern[start + 5..start + 5 + end].strip_prefix(":") {
+  let len = if let Some(n) = pattern[start + 5..start + 5 + end].strip_prefix(':') {
     Some(n.parse::<usize>().ok()?)
   } else {
     None
   };
-  let pattern = &pattern[start..start + 5 + end + 1];
+  let pattern = &pattern[start..=start + 5 + end];
   Some(ExtractedHashPattern { pattern, len })
 }
 

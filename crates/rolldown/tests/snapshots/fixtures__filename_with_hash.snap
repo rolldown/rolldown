@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown/tests/fixtures.rs
+assertion_line: 54
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
 # tests/esbuild/bundler_ts/ts_declare_const
@@ -1412,7 +1413,47 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - b-!~{001}~.mjs => b-5N9UMKWl.mjs
 - c-!~{002}~.mjs => c-49hHscdr.mjs
 
-# tests/fixtures/issues/1443
+# tests/fixtures/loaders/base64/binary
+
+- main-!~{000}~.mjs => main-AUjXRnmQ.mjs
+
+# tests/fixtures/loaders/base64/empty
+
+- main-!~{000}~.mjs => main-bVuzikkm.mjs
+
+# tests/fixtures/loaders/base64/text
+
+- main-!~{000}~.mjs => main-mRR340KN.mjs
+
+# tests/fixtures/loaders/binary/binary
+
+- main-!~{000}~.mjs => main-CmAMqcrz.mjs
+
+# tests/fixtures/loaders/binary/empty
+
+- main-!~{000}~.mjs => main-C77p5x1M.mjs
+
+# tests/fixtures/loaders/binary/node
+
+- main-!~{000}~.mjs => main-k2Ntq9Fb.mjs
+
+# tests/fixtures/loaders/binary/text
+
+- main-!~{000}~.mjs => main-HOErwbTT.mjs
+
+# tests/fixtures/loaders/data_url/png
+
+- main-!~{000}~.mjs => main-VRF9C_Oc.mjs
+
+# tests/fixtures/loaders/data_url/svg
+
+- main-!~{000}~.mjs => main-c3DZIWeK.mjs
+
+# tests/fixtures/loaders/txt/empty
+
+- main-!~{000}~.mjs => main-mjp40V8P.mjs
+
+# tests/fixtures/loaders/txt/escape_quote
 
 - main-!~{000}~.mjs => main-nqMd7tJC.mjs
 

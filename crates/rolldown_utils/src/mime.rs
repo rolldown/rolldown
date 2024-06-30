@@ -1,0 +1,25 @@
+pub fn get_data_url_mime_by_extension(extension: &str) -> Option<&'static str> {
+  match extension {
+    "bmp" => Some("image/bmp"),
+    "gif" => Some("image/gif"),
+    "jpg" | "jpeg" => Some("image/jpeg"),
+    "png" => Some("image/png"),
+    "svg" => Some("image/svg+xml"),
+    "webp" => Some("image/webp"),
+    "ico" => Some("image/x-icon"),
+    "pdf" => Some("application/pdf"),
+    "woff" | "woff2" => Some("font/woff"),
+    "otf" => Some("font/otf"),
+    "ttf" => Some("font/ttf"),
+    "mp3" => Some("audio/mpeg"),
+    "wav" => Some("audio/wav"),
+    "webm" => Some("video/webm"),
+    "mp4" => Some("video/mp4"),
+    "ogv" | "ogg" => Some("video/ogg"),
+    "css" => Some("text/css"),
+    "html" => Some("text/html"),
+    "txt" => Some("text/plain"),
+    "csv" => Some("text/csv"),
+    _ => None,
+  }
+}

@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+assertion_line: 171
+expression: content
+input_file: crates/rolldown/tests/fixtures/loaders/data_url/svg
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region lightning-down.svg
+var lightning_down_default = 'data:image/svg+xml;%3Csvg%20width%3D%22230%22%20height%3D%22249%22%20viewBox%3D%220%200%20230%20249%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Cpath%20d%3D%22M215.093%2084.9549H135.319L147.615%2068.3044L59.4748%2068.1026L16.4174%20127.78H100.093L63.1354%20183.569H0L76.6667%20249L230%20183.569H154.121L215.093%2084.9549Z%22%20fill%3D%22url%28%23paint0_linear_18_3%29%22%2F%3E%0A%3Cpath%20d%3D%22M198.056%200H108.611L96.327%2017.0256H185.483L198.056%200Z%22%20fill%3D%22url%28%23paint1_linear_18_3%29%22%2F%3E%0A%3Cpath%20d%3D%22M173.695%2032.9872H84.8107L71.3426%2051.6539H159.911L173.695%2032.9872Z%22%20fill%3D%22url%28%23paint2_linear_18_3%29%22%2F%3E%0A%3Cdefs%3E%0A%3ClinearGradient%20id%3D%22paint0_linear_18_3%22%20x1%3D%22115%22%20y1%3D%220%22%20x2%3D%22115%22%20y2%3D%22249%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%0A%3Cstop%20offset%3D%220.3125%22%20stop-color%3D%22%23F0DB4F%22%2F%3E%0A%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23FF5B12%22%2F%3E%0A%3C%2FlinearGradient%3E%0A%3ClinearGradient%20id%3D%22paint1_linear_18_3%22%20x1%3D%22115%22%20y1%3D%220%22%20x2%3D%22115%22%20y2%3D%22249%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%0A%3Cstop%20offset%3D%220.3125%22%20stop-color%3D%22%23F0DB4F%22%2F%3E%0A%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23FF5B12%22%2F%3E%0A%3C%2FlinearGradient%3E%0A%3ClinearGradient%20id%3D%22paint2_linear_18_3%22%20x1%3D%22115%22%20y1%3D%220%22%20x2%3D%22115%22%20y2%3D%22249%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%0A%3Cstop%20offset%3D%220.3125%22%20stop-color%3D%22%23F0DB4F%22%2F%3E%0A%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23FF5B12%22%2F%3E%0A%3C%2FlinearGradient%3E%0A%3C%2Fdefs%3E%0A%3C%2Fsvg%3E%0A';
+
+//#endregion
+//#region main.js
+console.log(lightning_down_default);
+
+//#endregion
+```

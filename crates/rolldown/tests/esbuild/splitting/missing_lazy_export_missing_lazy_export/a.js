@@ -1,2 +1,3 @@
+import assert from 'assert'
 import {foo} from './common.js'
-console.log(foo())
+assert.deepEqual(foo(), [{default: {}}, undefined])

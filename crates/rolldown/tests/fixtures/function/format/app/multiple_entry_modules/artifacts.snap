@@ -9,29 +9,44 @@ input_file: crates/rolldown/tests/fixtures/function/format/app/multiple_entry_mo
 
 ```js
 //#region square.js
-export default function square(x) {
-	return x * x;
-}
+__rolldown_define__('square.js', (module, exports) => {
+	var __rolldown_default_export__ = function square(x) {
+		return x * x;
+	};
+	module.exports = {default: __rolldown_default_export__};
+});
+
 //#endregion
 //#region cube.js
-var { default: square } = __static_import('square.js');
-export default function cube(x) {
-	return square(x) * x;
-}
+__rolldown_define__('cube.js', (module, exports) => {
+	var { default: square } = __static_import('square.js');
+	var __rolldown_default_export__ = function cube(x) {
+		return square(x) * x;
+	};
+	module.exports = {default: __rolldown_default_export__};
+});
+
 //#endregion
 ```
 ## main.mjs
 
 ```js
 //#region hyper-cube.js
-var { default: cube } = __static_import('cube.js');
-export default function hyperCube(x) {
-	return cube(x) * x;
-}
+__rolldown_define__('hyper-cube.js', (module, exports, __rolldown_runtime__) => {
+	var { default: cube } = __rolldown_runtime__.__static_import('cube.js');
+	var __rolldown_default_export__ = function hyperCube(x) {
+		return cube(x) * x;
+	};
+	module.exports = {default: __rolldown_default_export__};
+});
+
 //#endregion
 //#region main.js
-var { default: hyperCube } = __static_import('hyper-cube.js');
-console.log(hyperCube(5));
+__rolldown_define__('main.js', (module, exports) => {
+	var { default: hyperCube } = __static_import('hyper-cube.js');
+	console.log(hyperCube(5));
+	module.exports = {};
+});
 
 //#endregion
 ```
@@ -39,8 +54,11 @@ console.log(hyperCube(5));
 
 ```js
 //#region other-entry.js
-var { default: cube } = __static_import('cube.js');
-console.log(cube(5));
+__rolldown_define__('other-entry.js', (module, exports) => {
+	var { default: cube } = __static_import('cube.js');
+	console.log(cube(5));
+	module.exports = {};
+});
 
 //#endregion
 ```

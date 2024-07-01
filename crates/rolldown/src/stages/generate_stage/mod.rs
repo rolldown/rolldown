@@ -109,6 +109,7 @@ impl<'a> GenerateStage<'a> {
               ctx: &IsolatingModuleFinalizerContext {
                 module,
                 modules: &self.link_output.module_table.normal_modules,
+                symbols: &self.link_output.symbols,
               },
               snippet: AstSnippet::new(alloc),
             };

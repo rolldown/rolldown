@@ -18,33 +18,33 @@ pub fn pre_process_ast(
   path: &Path,
   source_type: SourceType,
 ) -> anyhow::Result<OxcAst> {
-  if let Err(errors) = ast.program.with_mut(|fields| {
-    let mut transformer_options = TransformOptions::default();
-    match parse_type {
-      OxcParseType::Js => {
-        // Bailout because there are no enabled features that need to pre process the js ast.
-        return Ok(());
+  if !matches!(parse_type, OxcParseType::Js) {
+    let result = ast.program.with_mut(|fields| {
+      let mut transformer_options = TransformOptions::default();
+      match parse_type {
+        OxcParseType::Js => unreachable!("Should not reach here"),
+        OxcParseType::Jsx => {
+          transformer_options.react.jsx_plugin = true;
+        }
+        OxcParseType::Ts => {}
+        OxcParseType::Tsx => {
+          transformer_options.react.jsx_plugin = true;
+        }
       }
-      OxcParseType::Jsx => {
-        transformer_options.react.jsx_plugin = true;
-      }
-      OxcParseType::Ts => {}
-      OxcParseType::Tsx => {
-        transformer_options.react.jsx_plugin = true;
-      }
-    }
 
-    Transformer::new(
-      fields.allocator,
-      path,
-      source_type,
-      fields.source,
-      ast.trivias.clone(),
-      transformer_options,
-    )
-    .build(fields.program)
-  }) {
-    return Err(anyhow::anyhow!("Transform failed, got {:#?}", errors));
+      Transformer::new(
+        fields.allocator,
+        path,
+        source_type,
+        fields.source,
+        ast.trivias.clone(),
+        transformer_options,
+      )
+      .build(fields.program)
+    });
+    if !result.errors.is_empty() {
+      return Err(anyhow::anyhow!("Transform failed, got {:#?}", result.errors));
+    }
   }
 
   ast.program.with_mut(|fields| {

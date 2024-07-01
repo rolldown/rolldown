@@ -23,3 +23,4 @@ pub mod parallel_js_plugin_registry;
 pub mod types;
 pub mod utils;
 mod worker_manager;
+pub use oxc_transform_napi;

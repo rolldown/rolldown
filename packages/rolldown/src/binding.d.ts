@@ -86,6 +86,10 @@ export interface AliasItem {
   replacements: Array<string>
 }
 
+export interface ArrowFunctionsBindingOptions {
+  spec: boolean
+}
+
 export interface BindingAssetSource {
   inner: string | Uint8Array
 }
@@ -239,7 +243,31 @@ export interface BindingTreeshake {
   moduleSideEffects: string
 }
 
-export function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+export interface Es2015BindingOptions {
+  arrowFunction?: ArrowFunctionsBindingOptions
+}
+
+/** TypeScript Isolated Declarations for Standalone DTS Emit */
+function isolatedDeclaration(filename: string, sourceText: string): IsolatedDeclarationsResult
+
+export interface IsolatedDeclarationsResult {
+  sourceText: string
+  errors: Array<string>
+}
+
+export interface ReactBindingOptions {
+  runtime: 'classic' | 'automatic'
+  development: boolean
+  throwIfNamespace: boolean
+  pure: boolean
+  importSource?: string
+  pragma?: string
+  pragmaFrag?: string
+  useBuiltIns?: boolean
+  useSpread?: boolean
+}
+
+function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 export interface RenderedChunk {
   name: string
@@ -252,5 +280,45 @@ export interface RenderedChunk {
   modules: Record<string, BindingRenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
+}
+
+export interface Sourcemap {
+  file?: string
+  mappings?: string
+  sourceRoot?: string
+  sources?: Array<string | undefined | null>
+  sourcesContent?: Array<string | undefined | null>
+  names?: Array<string>
+}
+
+function transform(filename: string, sourceText: string, options: TransformBindingOptions): TransformResult
+
+export interface TransformBindingOptions {
+  typescript: TypeScriptBindingOptions
+  react: ReactBindingOptions
+  es2015: Es2015BindingOptions
+  /**
+   * Enable Sourcemaps
+   *
+   * * `true` to generate a sourcemap for the code and include it in the result object.
+   *
+   * Default: false
+   */
+  sourcemaps: boolean
+}
+
+export interface TransformResult {
+  sourceText: string
+  /** Sourcemap */
+  map?: Sourcemap
+  errors: Array<string>
+}
+
+export interface TypeScriptBindingOptions {
+  jsxPragma: string
+  jsxPragmaFrag: string
+  onlyRemoveTypeImports: boolean
+  allowNamespaces: boolean
+  allowDeclareFields: boolean
 }
 

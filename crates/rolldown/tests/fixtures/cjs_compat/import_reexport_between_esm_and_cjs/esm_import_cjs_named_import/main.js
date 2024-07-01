@@ -1,2 +1,3 @@
+import assert from 'node:assert'
 import { a } from './commonjs.js'
-console.log(a, 1)
+assert.equal(a, 1)

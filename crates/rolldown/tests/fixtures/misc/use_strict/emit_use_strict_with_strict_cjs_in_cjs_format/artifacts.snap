@@ -3,6 +3,14 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 ---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "assert" is imported by "main.js", but could not be resolved – treating it as an external dependency.
+
+```
 # Assets
 
 ## main.cjs
@@ -11,6 +19,7 @@ input_file: crates/rolldown/tests/fixtures/misc/use_strict/emit_use_strict_with_
 "use strict";
 
 
+const { default: assert } = __toESM(require("assert"));
 
 //#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
@@ -22,7 +31,7 @@ var require_cjs = __commonJSMin((exports, module) => {
 //#region main.js
 var main_ns = {};
 var import_cjs = __toESM(require_cjs());
-console.log(import_cjs.default);
+assert.deepEqual(import_cjs.default, {default: {}});
 
 //#endregion
 ```

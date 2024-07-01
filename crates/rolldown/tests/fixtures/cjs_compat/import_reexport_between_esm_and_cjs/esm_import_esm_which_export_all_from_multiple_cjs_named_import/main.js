@@ -1,2 +1,4 @@
+import assert from 'node:assert'
 import { a } from './proxy.js'
-console.log(a, 1)
+assert.equal(a, 1)
+

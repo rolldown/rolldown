@@ -3,18 +3,27 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/tree_shaking/advanced_barrel_exports2
 ---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "node:assert" is imported by "main.js", but could not be resolved – treating it as an external dependency.
+
+```
 # Assets
 
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region a.js
 const b = 500;
 
 //#endregion
 //#region main.js
-console.log(b);
+assert.equal(b, 500);
 
 //#endregion
 ```

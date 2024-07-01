@@ -1,20 +1,29 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/loaders/base64/empty
+input_file: crates/rolldown/tests/fixtures/module_types/base64/empty
 ---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "node:assert" is imported by "main.js", but could not be resolved – treating it as an external dependency.
+
+```
 # Assets
 
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region example.base64
 var example_default = '';
 
 //#endregion
 //#region main.js
-console.log(example_default);
+assert(typeof example_default === 'string');
 
 //#endregion
 ```

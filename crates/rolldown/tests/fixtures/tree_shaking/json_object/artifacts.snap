@@ -8,13 +8,14 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/json_object
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region foo.json
 const shouldBeReserved = 'shouldBeReserved';
 
 //#endregion
 //#region main.js
-console.log(shouldBeReserved);
+assert.equal(shouldBeReserved, 'shouldBeReserved');
 
 //#endregion
 ```

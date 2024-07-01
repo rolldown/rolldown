@@ -1,3 +1,4 @@
+import assert from 'node:assert';
 import * as ns from './shared'
 
-console.log(ns.a.b);
+assert.equal(ns.a.b, 500)

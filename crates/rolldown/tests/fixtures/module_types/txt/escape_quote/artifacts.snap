@@ -1,20 +1,29 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/loaders/txt/escape_quote
+input_file: crates/rolldown/tests/fixtures/module_types/txt/escape_quote
 ---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "node:assert" is imported by "main.js", but could not be resolved – treating it as an external dependency.
+
+```
 # Assets
 
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region x.txt
 var x_default = '\'"`';
 
 //#endregion
 //#region main.js
-console.log(x_default);
+assert(typeof x_default === 'string' && x_default.length > 0);
 
 //#endregion
 ```

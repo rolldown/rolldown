@@ -1137,19 +1137,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
 
-- main-!~{000}~.mjs => main-NLCcSopU.mjs
+- main-!~{000}~.mjs => main-TNyfEkBb.mjs
 
 # tests/fixtures/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_cjs_named_import
 
-- main-!~{000}~.mjs => main-Dr9p9yBw.mjs
+- main-!~{000}~.mjs => main-OzdqY0jf.mjs
 
 # tests/fixtures/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_cjs_named_import
 
-- main-!~{000}~.mjs => main-IkKHoJ4O.mjs
+- main-!~{000}~.mjs => main-wGBL5z1r.mjs
 
 # tests/fixtures/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_multiple_cjs_named_import
 
-- main-!~{000}~.mjs => main-w_TwZxKN.mjs
+- main-!~{000}~.mjs => main-QwbsrcBW.mjs
 
 # tests/fixtures/cjs_compat/import_reexport_between_esm_and_cjs/esm_reexport_cjs_default
 
@@ -1165,8 +1165,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_compat/mix-cjs-esm
 
-- main-!~{000}~.mjs => main-dwlfdTUw.mjs
-- main-dwlfdTUw.mjs.map
+- main-!~{000}~.mjs => main-pfOm9b-A.mjs
+- main-pfOm9b-A.mjs.map
 
 # tests/fixtures/cjs_compat/multiple_circle_cjs_entries
 
@@ -1176,7 +1176,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_compat/reexport_commonjs
 
-- main-!~{000}~.mjs => main-8PrZ63l1.mjs
+- main-!~{000}~.mjs => main-h-dyoc4I.mjs
 
 # tests/fixtures/cjs_compat/require/create_require
 
@@ -1261,8 +1261,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/deconflict/wrapped_esm_default_function
 
-- main-!~{000}~.mjs => main--hvdzrOO.mjs
-- main--hvdzrOO.mjs.map
+- main-!~{000}~.mjs => main-HDWXOo06.mjs
+- main-HDWXOo06.mjs.map
 
 # tests/fixtures/deconflict/wrapped_esm_export_named_function
 
@@ -1312,7 +1312,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/external/splitting_with_external_module
 
-- entry-!~{001}~.mjs => entry-zBlVk_iQ.mjs
+- entry-!~{001}~.mjs => entry-dQP7YHi-.mjs
 - main-!~{000}~.mjs => main-tpPmcJCn.mjs
 - share-!~{002}~.mjs => share-Ak_TT_yj.mjs
 
@@ -1418,12 +1418,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/basic
 
-- main-!~{000}~.mjs => main-MTS1n440.mjs
-- main-MTS1n440.mjs.map
+- main-!~{000}~.mjs => main-bL_xg4Dl.mjs
+- main-bL_xg4Dl.mjs.map
 
 # tests/fixtures/misc/basic_re_export
 
-- main-!~{000}~.mjs => main-O92-rEbe.mjs
+- main-!~{000}~.mjs => main-xdc9Tw-d.mjs
 
 # tests/fixtures/misc/cjs_entry_as_dependency
 
@@ -1462,15 +1462,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 
-- main-!~{000}~.cjs => main-EY7fsQDE.cjs
+- main-!~{000}~.cjs => main-Be1DpZj_.cjs
 
 # tests/fixtures/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 
-- main-!~{000}~.cjs => main-RiVA5Cbd.cjs
+- main-!~{000}~.cjs => main-mzifVXpq.cjs
 
 # tests/fixtures/misc/use_strict/no_use_strict_with_non_strict_cjs_in_cjs_format
 
-- main-!~{000}~.cjs => main-HlLtm-H3.cjs
+- main-!~{000}~.cjs => main-D3NFX7L9.cjs
 
 # tests/fixtures/misc/wrapped_esm
 
@@ -1479,31 +1479,31 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/module_types/base64/binary
 
-- main-!~{000}~.mjs => main-AUjXRnmQ.mjs
+- main-!~{000}~.mjs => main-FpJt4isR.mjs
 
 # tests/fixtures/module_types/base64/empty
 
-- main-!~{000}~.mjs => main-bVuzikkm.mjs
+- main-!~{000}~.mjs => main-3YTd5kU3.mjs
 
 # tests/fixtures/module_types/base64/text
 
-- main-!~{000}~.mjs => main-mRR340KN.mjs
+- main-!~{000}~.mjs => main-Lc-Bygs9.mjs
 
 # tests/fixtures/module_types/binary/binary
 
-- main-!~{000}~.mjs => main-4PHReuFV.mjs
+- main-!~{000}~.mjs => main-Vg9jPllE.mjs
 
 # tests/fixtures/module_types/binary/empty
 
-- main-!~{000}~.mjs => main-TmnkNVxQ.mjs
+- main-!~{000}~.mjs => main-E1UrB3n2.mjs
 
 # tests/fixtures/module_types/binary/node
 
-- main-!~{000}~.mjs => main-x3iEGR_f.mjs
+- main-!~{000}~.mjs => main-G9TJ511N.mjs
 
 # tests/fixtures/module_types/binary/text
 
-- main-!~{000}~.mjs => main-drgRUFMR.mjs
+- main-!~{000}~.mjs => main-G4LOQ3Fw.mjs
 
 # tests/fixtures/module_types/empty
 
@@ -1527,11 +1527,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/module_types/txt/empty
 
-- main-!~{000}~.mjs => main-mjp40V8P.mjs
+- main-!~{000}~.mjs => main-vIcpJ6tZ.mjs
 
 # tests/fixtures/module_types/txt/escape_quote
 
-- main-!~{000}~.mjs => main-cXnpf8T7.mjs
+- main-!~{000}~.mjs => main-CY_40pJJ.mjs
 
 # tests/fixtures/rollup/assignment-patterns
 
@@ -1559,15 +1559,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/tree_shaking/advanced_barrel_exports
 
-- main-!~{000}~.mjs => main-nvTJaXaR.mjs
+- main-!~{000}~.mjs => main-4-jCZSLp.mjs
 
 # tests/fixtures/tree_shaking/advanced_barrel_exports2
 
-- main-!~{000}~.mjs => main-e0IvAD54.mjs
+- main-!~{000}~.mjs => main-Ncrg1Qi1.mjs
 
 # tests/fixtures/tree_shaking/derived_side_effects_should_have_high_priority
 
-- main-!~{000}~.mjs => main-j_yWcNhD.mjs
+- main-!~{000}~.mjs => main-WlVJrkq9.mjs
 
 # tests/fixtures/tree_shaking/indirect_module_side_effect
 
@@ -1575,7 +1575,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/tree_shaking/json_object
 
-- main-!~{000}~.mjs => main-Jyimp7LR.mjs
+- main-!~{000}~.mjs => main-17B-XCVQ.mjs
 
 # tests/fixtures/tree_shaking/pure_annotation
 

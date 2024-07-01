@@ -1,2 +1,3 @@
+import assert from 'node:assert';
 import x_txt from './x.txt';
-console.log(x_txt)
+assert.equal(x_txt, '')

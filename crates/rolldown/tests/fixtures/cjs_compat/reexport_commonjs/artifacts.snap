@@ -3,11 +3,20 @@ source: crates/rolldown/tests/common/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/cjs_compat/reexport_commonjs
 ---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "node:assert" is imported by "main.js", but could not be resolved – treating it as an external dependency.
+
+```
 # Assets
 
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region commonjs.js
@@ -32,7 +41,10 @@ var import_commonjs$1 = __toESM(require_commonjs());
 //#endregion
 //#region main.js
 var import_commonjs = __toESM(require_commonjs());
-console.log(foo_ns, import_commonjs$1.bar, value, foo_ns.foo);
+assert.equal(import_commonjs$1.bar, 1);
+assert.equal(value, 1);
+assert.equal(foo_ns.foo, undefined);
+assert.equal(Object.keys(foo_ns).length, 2);
 
 //#endregion
 var bar = import_commonjs.bar;

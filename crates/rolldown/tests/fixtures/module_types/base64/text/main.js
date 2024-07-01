@@ -1,3 +1,4 @@
+import assert from 'node:assert';
 import value from './text.data'
 
-console.log(value);
+assert(typeof value === 'string')

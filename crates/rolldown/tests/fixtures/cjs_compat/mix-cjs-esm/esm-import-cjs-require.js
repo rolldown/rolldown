@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import { a } from './cjs'
 require('./foo')
-console.log(a)
+assert.equal(a, undefined)

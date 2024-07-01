@@ -1,3 +1,4 @@
+import assert from 'node:assert';
 import value from './example.base64'
 
-console.log(value);
+assert(typeof value === 'string')

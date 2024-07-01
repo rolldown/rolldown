@@ -21,7 +21,7 @@ var init_module = __esmMin(() => {
 
 //#endregion
 //#region src/test-main.js
-assert$1.deepEqual((init_module(), __toCommonJS(module_ns)), {default: 'main'});
+assert$1.deepEqual((init_module(), __toCommonJS(module_ns)), {default: 'module'});
 
 //#endregion
 //#region src/test-module.js

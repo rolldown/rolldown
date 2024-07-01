@@ -8,18 +8,19 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_static_field
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region entry.js
 class Foo {
 	static #foo = 123;
 	static bar = Foo.#foo;
 }
-console.log(Foo.bar === 123);
+assert.equal(Foo.bar, 123);
 class FooThis {
 	static #foo = 123;
 	static bar = this.#foo;
 }
-console.log(FooThis.bar === 123);
+assert.equal(FooThis.bar, 123);
 
 //#endregion
 ```

@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_ca
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region foo.js
@@ -21,7 +22,9 @@ __export(bar_ns, {foo: () => foo$1});
 //#endregion
 //#region entry.js
 let foo = 234;
-console.log(bar_ns, foo$1, foo);
+assert.deepEqual(bar_ns, {foo: 123});
+assert.equal(foo$1, 123);
+assert.equal(foo, 234);
 
 //#endregion
 ```

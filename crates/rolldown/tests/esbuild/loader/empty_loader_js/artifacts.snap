@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/loader/empty_loader_js
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region b.empty
 var b_ns = {};
@@ -23,6 +24,9 @@ var named = void 0;
 //#endregion
 //#region entry.js
 console.log(b_ns, default$1, named);
+assert.deepEqual(b_ns, {});
+assert.equal(default$1, undefined);
+assert.equal(named, undefined);
 
 //#endregion
 ```

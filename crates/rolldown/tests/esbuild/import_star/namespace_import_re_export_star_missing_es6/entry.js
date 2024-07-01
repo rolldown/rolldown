@@ -1,2 +1,6 @@
+import assert from 'node:assert'
 import * as ns from './foo'
-console.log(ns, ns.foo)
+assert.deepEqual(ns, {
+  x: 123
+})
+assert.equal(ns.foo, undefined)

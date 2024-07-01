@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/simple_common_js
 ## entry_js.mjs
 
 ```js
+import * as assert from "node:assert";
 
 
 //#region foo.js
@@ -20,7 +21,7 @@ var require_foo = __commonJSMin((exports, module) => {
 //#endregion
 //#region entry.js
 const fn = require_foo();
-console.log(fn());
+assert.equal(fn(), 123);
 
 //#endregion
 ```

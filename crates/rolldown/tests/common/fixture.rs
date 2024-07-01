@@ -4,7 +4,7 @@ use std::{
   process::Command,
 };
 
-use rolldown::{BundleOutput, Bundler, OutputFormat, SourceMapType};
+use rolldown::{BundleOutput, Bundler, IsExternal, OutputFormat, SourceMapType};
 use rolldown_testing::test_config::{read_test_config, TestConfig};
 
 fn default_test_input_item() -> rolldown::InputItem {
@@ -110,6 +110,9 @@ impl Fixture {
     let test_config = self.test_config();
 
     let mut bundle_options = self.test_config().config;
+    if bundle_options.external.is_none() {
+      bundle_options.external = Some(IsExternal::from_vec(vec!["node:assert".to_string()]));
+    }
 
     if bundle_options.input.is_none() {
       bundle_options.input = Some(vec![default_test_input_item()]);

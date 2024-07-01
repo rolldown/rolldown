@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 ## entry.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region node_modules/demo-pkg/browser.js
@@ -20,7 +21,7 @@ var require_browser = __commonJSMin((exports, module) => {
 //#endregion
 //#region src/entry.js
 var import_browser = __toESM(require_browser());
-console.log((0, import_browser.default)());
+assert.equal((0, import_browser.default)(), 123);
 
 //#endregion
 ```

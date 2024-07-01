@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_main_fie
 ## entry.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region node_modules/demo-pkg/a.js
@@ -19,6 +20,7 @@ var require_a = __commonJSMin((exports, module) => {
 //#region src/entry.js
 var import_a = __toESM(require_a());
 console.log(import_a.default);
+assert.equal(import_a.default, 'a');
 
 //#endregion
 ```

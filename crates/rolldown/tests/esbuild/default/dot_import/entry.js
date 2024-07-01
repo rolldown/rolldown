@@ -1,2 +1,4 @@
+import assert from 'node:assert'
 import {x} from '.'
-console.log(x)
+assert(x === 123)
+

@@ -1,2 +1,7 @@
+import assert from 'node:assert'
 import * as ns from 'pkg'
-console.log(ns.foo)
+
+assert.deepEqual(ns, {
+  foo: 123,
+  bar: 'abc'
+})

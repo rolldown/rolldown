@@ -8,13 +8,14 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_shadow
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region a.js
 let x = 1;
 
 //#endregion
 //#region entry.js
-console.log(x);
+assert.equal(x, 1);
 
 //#endregion
 ```

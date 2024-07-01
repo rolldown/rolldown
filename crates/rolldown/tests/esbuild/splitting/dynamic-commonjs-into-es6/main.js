@@ -1,1 +1,5 @@
-import("./foo.js").then(({bar}) => console.log(bar))
+import assert from 'node:assert'
+
+import("./foo.js").then(({bar}) => {
+  assert.equal(bar, undefined)
+})

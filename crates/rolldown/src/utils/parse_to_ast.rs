@@ -1,6 +1,9 @@
 use std::{path::Path, sync::Arc};
 
-use oxc::span::SourceType as OxcSourceType;
+use oxc::{
+  semantic::{ScopeTree, SymbolTable},
+  span::SourceType as OxcSourceType,
+};
 use rolldown_common::{ModuleType, NormalizedBundlerOptions};
 use rolldown_loader_utils::{base64_to_esm, binary_to_esm, json_to_esm, text_to_esm};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
@@ -24,7 +27,7 @@ pub fn parse_to_ast(
   options: &NormalizedBundlerOptions,
   module_type: ModuleType,
   source: impl Into<Arc<str>>,
-) -> anyhow::Result<OxcAst> {
+) -> anyhow::Result<(OxcAst, SymbolTable, ScopeTree)> {
   let source: Arc<str> = source.into();
 
   // 1. Transform the source to the type that rolldown supported.
@@ -55,7 +58,5 @@ pub fn parse_to_ast(
 
   let oxc_ast = OxcCompiler::parse(Arc::clone(&source), oxc_source_type)?;
 
-  let valid_js_ast = pre_process_ast(oxc_ast, &parsed_type, path, oxc_source_type)?;
-
-  Ok(valid_js_ast)
+  pre_process_ast(oxc_ast, &parsed_type, path, oxc_source_type)
 }

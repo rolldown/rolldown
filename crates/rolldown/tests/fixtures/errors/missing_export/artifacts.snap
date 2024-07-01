@@ -8,18 +8,6 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "importedD" is not exported by "foo.js".
-   ╭─[main.js:2:21]
-   │
- 2 │ export { importedC, importedD as d } from "./foo"
-   │                     ────┬────  
-   │                         ╰────── Missing export
-───╯
-
-```
-## MISSING_EXPORT
-
-```text
 [MISSING_EXPORT] Error: "importedC" is not exported by "foo.js".
    ╭─[main.js:2:10]
    │
@@ -32,12 +20,24 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
-   ╭─[main.js:5:10]
+[MISSING_EXPORT] Error: "importedD" is not exported by "foo.js".
+   ╭─[main.js:2:21]
    │
- 5 │ import { default as f } from "./foo"
-   │          ───┬───  
-   │             ╰───── Missing export
+ 2 │ export { importedC, importedD as d } from "./foo"
+   │                     ────┬────  
+   │                         ╰────── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+   ╭─[main.js:4:8]
+   │
+ 4 │ import importedE from "./foo"
+   │        ────┬────  
+   │            ╰────── Missing export
 ───╯
 
 ```
@@ -69,11 +69,11 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
 
 ```text
 [MISSING_EXPORT] Error: "default" is not exported by "foo.js".
-   ╭─[main.js:4:8]
+   ╭─[main.js:5:10]
    │
- 4 │ import importedE from "./foo"
-   │        ────┬────  
-   │            ╰────── Missing export
+ 5 │ import { default as f } from "./foo"
+   │          ───┬───  
+   │             ╰───── Missing export
 ───╯
 
 ```

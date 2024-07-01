@@ -935,7 +935,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.5",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -1439,9 +1439,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "1.9.1"
+version = "1.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02d6eee239cc57f1321ffb5560ecc7e602f824b0bc7a9d72fe995e8635a6463e"
+checksum = "2ab1983fbc16c3aa9b476be4b6da19bc6728efc9e4564313ef15210bcfa4a070"
 dependencies = [
  "dashmap 5.5.3",
  "dunce",

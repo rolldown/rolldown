@@ -26,8 +26,8 @@ var init_x = __esmMin(() => {
 //#endregion
 //#region entry.js
 const x_b64 = (init_x(), __toCommonJS(x_ns));
-assert.equal(x_b64, 'x');
-assert.equal(y_default, 'y');
+assert.deepEqual(x_b64, {default: 'eA=='});
+assert.equal(y_default, 'eQ==');
 
 //#endregion
 ```

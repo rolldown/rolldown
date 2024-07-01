@@ -26,7 +26,7 @@ var init_x = __esmMin(() => {
 //#endregion
 //#region entry.js
 const x_txt = (init_x(), __toCommonJS(x_ns));
-assert.deepEqual(x_txt, {});
+assert.deepEqual(x_txt, {default: 'x'});
 assert.equal(y_default, 'y');
 
 //#endregion

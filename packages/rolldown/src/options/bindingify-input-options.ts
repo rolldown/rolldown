@@ -70,6 +70,7 @@ export function bindingifyInputOptions(
     },
     treeshake: options.treeshake,
     moduleTypes: options.moduleTypes,
+    define: options.define,
   }
 }
 

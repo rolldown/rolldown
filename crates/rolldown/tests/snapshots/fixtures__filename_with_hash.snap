@@ -1460,6 +1460,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-rZhRsjrh.mjs
 
+# tests/fixtures/misc/replace_global_defines
+
+- main-!~{000}~.mjs => main-mOV9sYjn.mjs
+
 # tests/fixtures/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 
 - main-!~{000}~.cjs => main-EY7fsQDE.cjs

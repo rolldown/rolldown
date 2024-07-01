@@ -74,6 +74,7 @@ pub struct BindingInputOptions {
   pub treeshake: Option<treeshake::BindingTreeshake>,
 
   pub module_types: Option<HashMap<String, String>>,
+  pub define: Option<HashMap<String, String>>,
 }
 
 pub type BindingOnLog =

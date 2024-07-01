@@ -1322,9 +1322,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/format/app/multiple_entry_modules
 
-- cube-!~{002}~.mjs => cube-74o3GFwX.mjs
-- main-!~{000}~.mjs => main-G8-t-q8H.mjs
-- other-entry-!~{001}~.mjs => other-entry-8Uj6sds0.mjs
+- cube-!~{002}~.mjs => cube-Z3mJvYp1.mjs
+- main-!~{000}~.mjs => main-IrGm9hH9.mjs
+- other-entry-!~{001}~.mjs => other-entry-DM866shg.mjs
 
 # tests/fixtures/function/format/cjs/import_export_unicode
 

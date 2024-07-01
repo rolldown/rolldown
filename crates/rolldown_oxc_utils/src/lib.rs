@@ -3,6 +3,7 @@ mod ast_snippet;
 mod compiler;
 mod ext;
 mod oxc_ast;
+pub mod quote;
 
 pub use crate::{
   allocator_helpers::{from_in::FromIn, into_in::IntoIn, take_in::TakeIn},

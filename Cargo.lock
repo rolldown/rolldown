@@ -407,6 +407,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashmap"
+version = "6.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "804c8821570c3f8b70230c2ba75ffa5c0f9a4189b9a432b6656c536712acae28"
+dependencies = [
+ "cfg-if",
+ "crossbeam-utils",
+ "hashbrown",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core",
+]
+
+[[package]]
 name = "deranged"
 version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -921,7 +935,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.5",
 ]
 
 [[package]]
@@ -1415,7 +1429,7 @@ version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02d6eee239cc57f1321ffb5560ecc7e602f824b0bc7a9d72fe995e8635a6463e"
 dependencies = [
- "dashmap",
+ "dashmap 5.5.3",
  "dunce",
  "indexmap",
  "json-strip-comments",
@@ -1477,7 +1491,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c55e68d427b47c59d1e5a7f1ae7845787d4caca79ef66eff772b052035fc0ad"
 dependencies = [
  "bitflags 2.6.0",
- "dashmap",
+ "dashmap 5.5.3",
  "oxc_index",
  "oxc_span",
  "phf",
@@ -1492,7 +1506,7 @@ version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4419373e8d449e2f1644252d92396dcfdbc478c27a1891273c6f8c9df8920e01"
 dependencies = [
- "dashmap",
+ "dashmap 5.5.3",
  "indexmap",
  "oxc-browserslist",
  "oxc_allocator",
@@ -1821,7 +1835,7 @@ dependencies = [
  "anyhow",
  "async-channel",
  "async-trait",
- "dashmap",
+ "dashmap 6.0.1",
  "derivative",
  "futures",
  "mimalloc",
@@ -1847,7 +1861,7 @@ name = "rolldown_common"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "dashmap",
+ "dashmap 6.0.1",
  "glob-match",
  "oxc",
  "regex",
@@ -1930,7 +1944,7 @@ name = "rolldown_resolver"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "dashmap",
+ "dashmap 6.0.1",
  "itertools",
  "oxc_resolver",
  "rolldown_common",
@@ -2133,9 +2147,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.118"
+version = "1.0.119"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d947f6b3163d8857ea16c4fa0dd4840d52f3041039a85decd46867eb1abef2e4"
+checksum = "e8eddb61f0697cc3989c5d64b452f5488e2b8a60fd7d5076a3045076ffef8cb0"
 dependencies = [
  "indexmap",
  "itoa",

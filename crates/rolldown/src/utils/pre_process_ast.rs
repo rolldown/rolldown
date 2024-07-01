@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use oxc::minifier::RemoveDeadCode;
+use oxc::semantic::{ScopeTree, SymbolTable};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
 use rolldown_oxc_utils::OxcAst;
@@ -17,9 +18,12 @@ pub fn pre_process_ast(
   parse_type: &OxcParseType,
   path: &Path,
   source_type: SourceType,
-) -> anyhow::Result<OxcAst> {
+) -> anyhow::Result<(OxcAst, SymbolTable, ScopeTree)> {
+  let (mut symbols, mut scopes) = ast.make_symbol_table_and_scope_tree();
+
   if !matches!(parse_type, OxcParseType::Js) {
-    let result = ast.program.with_mut(|fields| {
+    let trivias = ast.trivias.clone();
+    let ret = ast.program.with_mut(move |fields| {
       let mut transformer_options = TransformOptions::default();
       match parse_type {
         OxcParseType::Js => unreachable!("Should not reach here"),
@@ -37,14 +41,18 @@ pub fn pre_process_ast(
         path,
         source_type,
         fields.source,
-        ast.trivias.clone(),
+        trivias,
         transformer_options,
       )
-      .build(fields.program)
+      .build_with_symbols_and_scopes(symbols, scopes, fields.program)
     });
-    if !result.errors.is_empty() {
-      return Err(anyhow::anyhow!("Transform failed, got {:#?}", result.errors));
+
+    if !ret.errors.is_empty() {
+      return Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors));
     }
+
+    symbols = ret.symbols;
+    scopes = ret.scopes;
   }
 
   ast.program.with_mut(|fields| {
@@ -55,5 +63,5 @@ pub fn pre_process_ast(
 
   tweak_ast_for_scanning(&mut ast);
 
-  Ok(ast)
+  Ok((ast, symbols, scopes))
 }

@@ -643,6 +643,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-OuT73FkU.mjs
 
+# tests/esbuild/loader/auto_detect_mime_type_from_extension
+
+- entry_js-!~{000}~.mjs => entry_js-0GYuohub.mjs
+
 # tests/esbuild/loader/empty_loader_js
 
 - entry_js-!~{000}~.mjs => entry_js-FoV7L20n.mjs
@@ -658,6 +662,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
 - entry_js-!~{000}~.mjs => entry_js-t91zTbmV.mjs
+
+# tests/esbuild/loader/require_custom_extension_data_url
+
+- entry_js-!~{000}~.mjs => entry_js-eE0oZtAD.mjs
 
 # tests/esbuild/lower/lower_async_es5
 

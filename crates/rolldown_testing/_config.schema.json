@@ -194,6 +194,7 @@
         "json",
         "text",
         "base64",
+        "dataurl",
         "binary",
         "empty"
       ]

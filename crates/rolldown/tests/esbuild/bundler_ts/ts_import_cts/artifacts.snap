@@ -1,0 +1,23 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_import_cts
+---
+# Assets
+
+## entry_ts.mjs
+
+```js
+
+
+//#region required.cjs
+var require_required = __commonJSMin((exports, module) => {
+	console.log('works');
+});
+
+//#endregion
+//#region entry.ts
+require_required();
+
+//#endregion
+```

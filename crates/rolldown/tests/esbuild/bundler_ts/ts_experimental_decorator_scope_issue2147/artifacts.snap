@@ -1,0 +1,12 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_experimental_decorator_scope_issue2147
+---
+# Assets
+
+## entry_ts.mjs
+
+```js
+
+```

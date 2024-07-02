@@ -15,6 +15,7 @@ workspace = true
 anyhow             = { workspace = true }
 async-trait        = { workspace = true }
 rolldown_common    = { workspace = true }
+rolldown_oxc_utils = { workspace = true }
 rolldown_resolver  = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_utils     = { workspace = true }

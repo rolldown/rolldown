@@ -1880,6 +1880,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_plugin",
+ "rolldown_plugin_glob_import",
  "rolldown_plugin_wasm",
  "rolldown_sourcemap",
  "rolldown_tracing",
@@ -1957,10 +1958,23 @@ dependencies = [
  "anyhow",
  "async-trait",
  "rolldown_common",
+ "rolldown_oxc_utils",
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_utils",
  "tracing",
+]
+
+[[package]]
+name = "rolldown_plugin_glob_import"
+version = "0.0.1"
+dependencies = [
+ "async-trait",
+ "glob",
+ "oxc",
+ "rolldown_common",
+ "rolldown_plugin",
+ "sugar_path",
 ]
 
 [[package]]

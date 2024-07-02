@@ -31,7 +31,10 @@ import { defineParallelPlugin, DefineParallelPluginResult } from './plugin'
 import { defineConfig } from './utils/define-config'
 import { rolldown, experimental_scan } from './rolldown'
 import { ConfigExport } from './types/config-export'
-import { BuiltinWasmPlugin } from './plugin/bindingify-builtin-plugin'
+import {
+  BuiltinGlobImportPlugin,
+  BuiltinWasmPlugin,
+} from './plugin/bindingify-builtin-plugin'
 import { RolldownBuild } from './rolldown-build'
 import { InternalModuleFormat } from './options/bindingify-output-options'
 import {
@@ -56,6 +59,7 @@ export {
   experimental_scan,
   transform,
   BuiltinWasmPlugin,
+  BuiltinGlobImportPlugin,
 }
 
 export type {

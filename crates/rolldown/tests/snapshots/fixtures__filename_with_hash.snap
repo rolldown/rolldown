@@ -41,7 +41,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
-- entry_js-!~{000}~.mjs => entry_js-wp6SI_j3.mjs
+- entry_js-!~{000}~.mjs => entry_js-ndFjXqfO.mjs
 
 # tests/esbuild/dce/inline_function_call_for_init_decl
 

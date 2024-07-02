@@ -8,13 +8,14 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/advanced_barrel_exports2
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region a.js
 const b = 500;
 
 //#endregion
 //#region main.js
-console.log(b);
+assert.equal(b, 500);
 
 //#endregion
 ```

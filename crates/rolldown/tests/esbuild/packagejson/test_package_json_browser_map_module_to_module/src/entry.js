@@ -1,3 +1,4 @@
+import assert from 'assert'
 import fn from 'demo-pkg'
 
-console.log(fn())
+assert.equal(fn(), 123)

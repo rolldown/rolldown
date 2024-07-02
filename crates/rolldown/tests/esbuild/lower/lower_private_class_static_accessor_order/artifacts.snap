@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_static_acces
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region entry.js
 class Foo {
@@ -16,14 +17,14 @@ class Foo {
 		return 123;
 	}
 }
-console.log(Foo.bar === 123);
+assert.equal(Foo.bar, 123);
 class FooThis {
 	static bar = this.#foo;
 	static get #foo() {
 		return 123;
 	}
 }
-console.log(FooThis.bar === 123);
+assert.equal(FooThis.bar, 123);
 
 //#endregion
 ```

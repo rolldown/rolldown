@@ -8,10 +8,11 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_un
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region entry.js
 let foo = 234;
-console.log(foo);
+assert.equal(foo, 234);
 
 //#endregion
 ```

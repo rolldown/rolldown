@@ -2,7 +2,10 @@ use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
 use futures::future::join_all;
-use oxc::index::IndexVec;
+use oxc::{
+  index::IndexVec,
+  semantic::{ScopeTree, SymbolTable},
+};
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
   AstScopes, ImportRecordId, ModuleDefFormat, ModuleType, NormalModule, NormalModuleId,
@@ -112,14 +115,15 @@ impl NormalModuleTask {
     .await?
     .into();
 
-    let mut ast = parse_to_ast(
+    let (mut ast, symbols, scopes) = parse_to_ast(
       Path::new(&self.resolved_path.path.as_ref()),
       &self.ctx.input_options,
       module_type,
       Arc::clone(&source),
     )?;
 
-    let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);
+    let (scope, scan_result, ast_symbol, namespace_object_ref) =
+      self.scan(&mut ast, &source, symbols, scopes);
 
     let resolved_deps =
       self.resolve_dependencies(&scan_result.import_records, &mut warnings).await?;
@@ -242,8 +246,10 @@ impl NormalModuleTask {
     &self,
     ast: &mut OxcAst,
     source: &Arc<str>,
+    symbols: SymbolTable,
+    scopes: ScopeTree,
   ) -> (AstScopes, ScanResult, AstSymbols, SymbolRef) {
-    let (ast_scopes, mut ast_symbols) = make_ast_scopes_and_symbols(ast);
+    let (mut ast_symbols, ast_scopes) = make_ast_scopes_and_symbols(symbols, scopes);
     let file_path: ResourceId = Arc::<str>::clone(&self.resolved_path.path).into();
     let repr_name = file_path.as_path().representative_file_name();
     let repr_name = legitimize_identifier_name(&repr_name);

@@ -1,15 +1,18 @@
+use oxc::semantic::{ScopeTree, SymbolTable};
 use rolldown_common::AstScopes;
-use rolldown_oxc_utils::OxcAst;
 
 use crate::types::ast_symbols::AstSymbols;
 
-pub fn make_ast_scopes_and_symbols(ast: &OxcAst) -> (AstScopes, AstSymbols) {
-  let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
+pub fn make_ast_scopes_and_symbols(
+  symbols: SymbolTable,
+  scopes: ScopeTree,
+) -> (AstSymbols, AstScopes) {
+  let mut symbols = symbols;
   let ast_scope = AstScopes::new(
-    scope,
-    std::mem::take(&mut symbol_table.references),
-    std::mem::take(&mut symbol_table.resolved_references),
+    scopes,
+    std::mem::take(&mut symbols.references),
+    std::mem::take(&mut symbols.resolved_references),
   );
-  let ast_symbols = AstSymbols::from_symbol_table(symbol_table);
-  (ast_scope, ast_symbols)
+  let ast_symbols = AstSymbols::from_symbol_table(symbols);
+  (ast_symbols, ast_scope)
 }

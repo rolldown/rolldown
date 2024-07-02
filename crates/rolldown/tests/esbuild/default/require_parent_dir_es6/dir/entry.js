@@ -1,2 +1,3 @@
+import assert from 'node:assert'
 import value from '..'
-console.log(value)
+assert.equal(value, 123)

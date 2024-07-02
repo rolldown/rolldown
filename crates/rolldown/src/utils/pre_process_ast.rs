@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use oxc::minifier::RemoveDeadCode;
+use oxc::semantic::{ScopeTree, SymbolTable};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
 use rolldown_oxc_utils::OxcAst;
@@ -17,34 +18,41 @@ pub fn pre_process_ast(
   parse_type: &OxcParseType,
   path: &Path,
   source_type: SourceType,
-) -> anyhow::Result<OxcAst> {
-  if let Err(errors) = ast.program.with_mut(|fields| {
-    let mut transformer_options = TransformOptions::default();
-    match parse_type {
-      OxcParseType::Js => {
-        // Bailout because there are no enabled features that need to pre process the js ast.
-        return Ok(());
+) -> anyhow::Result<(OxcAst, SymbolTable, ScopeTree)> {
+  let (mut symbols, mut scopes) = ast.make_symbol_table_and_scope_tree();
+
+  if !matches!(parse_type, OxcParseType::Js) {
+    let trivias = ast.trivias.clone();
+    let ret = ast.program.with_mut(move |fields| {
+      let mut transformer_options = TransformOptions::default();
+      match parse_type {
+        OxcParseType::Js => unreachable!("Should not reach here"),
+        OxcParseType::Jsx => {
+          transformer_options.react.jsx_plugin = true;
+        }
+        OxcParseType::Ts => {}
+        OxcParseType::Tsx => {
+          transformer_options.react.jsx_plugin = true;
+        }
       }
-      OxcParseType::Jsx => {
-        transformer_options.react.jsx_plugin = true;
-      }
-      OxcParseType::Ts => {}
-      OxcParseType::Tsx => {
-        transformer_options.react.jsx_plugin = true;
-      }
+
+      Transformer::new(
+        fields.allocator,
+        path,
+        source_type,
+        fields.source,
+        trivias,
+        transformer_options,
+      )
+      .build_with_symbols_and_scopes(symbols, scopes, fields.program)
+    });
+
+    if !ret.errors.is_empty() {
+      return Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors));
     }
 
-    Transformer::new(
-      fields.allocator,
-      path,
-      source_type,
-      fields.source,
-      ast.trivias.clone(),
-      transformer_options,
-    )
-    .build(fields.program)
-  }) {
-    return Err(anyhow::anyhow!("Transform failed, got {:#?}", errors));
+    symbols = ret.symbols;
+    scopes = ret.scopes;
   }
 
   ast.program.with_mut(|fields| {
@@ -55,5 +63,5 @@ pub fn pre_process_ast(
 
   tweak_ast_for_scanning(&mut ast);
 
-  Ok(ast)
+  Ok((ast, symbols, scopes))
 }

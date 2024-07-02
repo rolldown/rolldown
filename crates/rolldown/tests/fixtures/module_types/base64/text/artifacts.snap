@@ -1,20 +1,21 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/loaders/base64/text
+input_file: crates/rolldown/tests/fixtures/module_types/base64/text
 ---
 # Assets
 
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region text.data
 var text_default = 'IidgKz0vQCMkJCVeJiooCuS9oOWlve+8jOS4lueVjArQn9GA0LjQstC10YIg0LzQuNGACuOBk+OCk+OBq+OBoeOBr+S4lueVjAo=';
 
 //#endregion
 //#region main.js
-console.log(text_default);
+assert(typeof text_default === 'string');
 
 //#endregion
 ```

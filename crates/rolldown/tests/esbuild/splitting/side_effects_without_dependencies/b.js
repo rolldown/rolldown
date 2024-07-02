@@ -1,2 +1,3 @@
+import assert from "node:assert"
 import {b} from "./shared.js"
-console.log(b)
+assert.equal(b, 2)

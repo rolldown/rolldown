@@ -1,2 +1,3 @@
+import assert from 'assert'
 import value from 'demo-pkg'
-console.log(value)
+assert.equal(value, 'module')

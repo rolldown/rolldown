@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region y.txt
@@ -25,7 +26,8 @@ var init_x = __esmMin(() => {
 //#endregion
 //#region entry.js
 const x_txt = (init_x(), __toCommonJS(x_ns));
-console.log(x_txt, y_default);
+assert.deepEqual(x_txt, {default: 'x'});
+assert.equal(y_default, 'y');
 
 //#endregion
 ```

@@ -41,7 +41,7 @@ import {
 } from './plugin/plugin-context'
 import { TransformPluginContext } from './plugin/transfrom-plugin-context'
 import { NormalizedOutputOptions } from './options/normalized-output-options'
-import { RenderedChunk } from './binding'
+import { RenderedChunk, transform } from './binding'
 import { PartialNull } from './types/utils'
 import { NormalizedInputOptions } from './options/normalized-input-options'
 import { ModuleInfo } from './types/module-info'
@@ -54,6 +54,7 @@ export {
   defineParallelPlugin,
   rolldown,
   experimental_scan,
+  transform,
   BuiltinWasmPlugin,
 }
 

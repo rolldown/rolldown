@@ -9,10 +9,11 @@ input_file: crates/rolldown/tests/esbuild/splitting/assign-to-local
 
 ```js
 import { foo, setFoo } from "./shared.mjs";
+import { default as assert } from "node:assert";
 
 //#region a.js
 setFoo(123);
-console.log(foo);
+assert.equal(foo, 123);
 
 //#endregion
 ```
@@ -20,9 +21,10 @@ console.log(foo);
 
 ```js
 import { foo } from "./shared.mjs";
+import { default as assert } from "node:assert";
 
 //#region b.js
-console.log(foo);
+assert.equal(foo, 123);
 
 //#endregion
 ```

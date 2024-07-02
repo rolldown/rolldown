@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/dce/import_re_export_of_namespace_impo
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region node_modules/pkg/foo.js
@@ -28,7 +29,7 @@ var import_bar = __toESM(require_bar());
 
 //#endregion
 //#region entry.js
-console.log(import_foo.default);
+assert.equal(import_foo.default, 123);
 
 //#endregion
 ```

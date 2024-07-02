@@ -1,2 +1,3 @@
+import assert from 'node:assert'
 import {bar} from './common.js'
-console.log(bar())
+assert.deepEqual(bar(), [undefined])

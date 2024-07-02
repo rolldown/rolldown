@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_dual_pac
 ## entry.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region node_modules/demo-pkg/module.js
@@ -25,7 +26,7 @@ console.log((init_module(), __toCommonJS(module_ns)));
 //#endregion
 //#region src/test-module.js
 init_module();
-console.log(module_default);
+assert.equal(module_default, 'module');
 
 //#endregion
 ```

@@ -1,3 +1,3 @@
 import assert from 'node:assert'
 import value from 'demo-pkg'
-assert.equal(value, 'module')
+assert.equal(value, 'browser module')

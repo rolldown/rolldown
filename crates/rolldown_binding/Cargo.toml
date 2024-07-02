@@ -23,6 +23,7 @@ futures              = { workspace = true }
 napi                 = { workspace = true }
 napi-derive          = { workspace = true }
 once_cell            = { workspace = true }
+oxc_transform_napi   = { workspace = true }
 rolldown             = { workspace = true }
 rolldown_common      = { workspace = true }
 rolldown_error       = { workspace = true, features = ["napi"] }

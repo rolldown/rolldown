@@ -1,2 +1,3 @@
+import assert from 'node:assert'
 import {x} from './a'
-console.log(x)
+assert.equal(x, 1)

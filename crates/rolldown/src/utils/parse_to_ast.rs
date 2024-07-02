@@ -58,5 +58,5 @@ pub fn parse_to_ast(
 
   let oxc_ast = OxcCompiler::parse(Arc::clone(&source), oxc_source_type)?;
 
-  pre_process_ast(oxc_ast, &parsed_type, path, oxc_source_type)
+  pre_process_ast(oxc_ast, &parsed_type, path, oxc_source_type, options)
 }

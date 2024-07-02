@@ -1,9 +1,10 @@
 use std::path::Path;
 
-use oxc::minifier::RemoveDeadCode;
+use oxc::minifier::{RemoveDeadCode, ReplaceGlobalDefines};
 use oxc::semantic::{ScopeTree, SymbolTable};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
+use rolldown_common::NormalizedBundlerOptions;
 use rolldown_oxc_utils::OxcAst;
 
 use crate::types::oxc_parse_type::OxcParseType;
@@ -18,7 +19,12 @@ pub fn pre_process_ast(
   parse_type: &OxcParseType,
   path: &Path,
   source_type: SourceType,
+  options: &NormalizedBundlerOptions,
 ) -> anyhow::Result<(OxcAst, SymbolTable, ScopeTree)> {
+  ast.program.with_mut(|fields| {
+    ReplaceGlobalDefines::new(fields.allocator, options.defines.clone()).build(fields.program);
+  });
+
   let (mut symbols, mut scopes) = ast.make_symbol_table_and_scope_tree();
 
   if !matches!(parse_type, OxcParseType::Js) {

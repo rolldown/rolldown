@@ -1,0 +1,8 @@
+{
+  "config": {
+    "define": {
+      "TEST": "replaced",
+      "process.env.INLINE_THIS_VARIABLE": "replaced2"
+    }
+  }
+}

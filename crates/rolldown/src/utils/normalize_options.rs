@@ -1,3 +1,4 @@
+use oxc::minifier::ReplaceGlobalDefinesConfig;
 use rolldown_common::{
   ModuleType, NormalizedBundlerOptions, NormalizedInputItem, Platform, SourceMapType,
 };
@@ -98,6 +99,10 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     sourcemap_path_transform: raw_options.sourcemap_path_transform,
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types: loaders,
+    defines: ReplaceGlobalDefinesConfig::new(
+      &raw_options.define.unwrap_or_default().into_iter().collect::<Vec<_>>(),
+    )
+    .expect("Failed to parse defines"),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }

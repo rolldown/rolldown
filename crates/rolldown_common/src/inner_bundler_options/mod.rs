@@ -76,6 +76,8 @@ pub struct BundlerOptions {
     schemars(with = "Option<bool>")
   )]
   pub treeshake: TreeshakeOptions,
+
+  pub define: Option<HashMap<String, String>>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

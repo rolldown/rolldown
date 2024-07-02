@@ -124,6 +124,7 @@ pub fn normalize_binding_options(
       _ => panic!("Invalid format: {format_str}"),
     }),
     module_types,
+    define: input_options.define,
   };
 
   #[cfg(not(target_family = "wasm"))]

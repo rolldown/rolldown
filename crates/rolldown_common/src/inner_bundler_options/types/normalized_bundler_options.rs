@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 
+use oxc::minifier::ReplaceGlobalDefinesConfig;
 use rustc_hash::FxHashMap;
 
 use crate::ModuleType;
@@ -38,4 +39,5 @@ pub struct NormalizedBundlerOptions {
   pub footer: Option<AddonOutputOption>,
   pub sourcemap_ignore_list: Option<SourceMapIgnoreList>,
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
+  pub defines: ReplaceGlobalDefinesConfig,
 }

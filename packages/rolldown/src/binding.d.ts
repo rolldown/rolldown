@@ -154,6 +154,7 @@ export interface BindingInputOptions {
   cwd: string
   treeshake?: BindingTreeshake
   moduleTypes?: Record<string, string>
+  define?: Record<string, string>
 }
 
 export interface BindingJsonSourcemap {

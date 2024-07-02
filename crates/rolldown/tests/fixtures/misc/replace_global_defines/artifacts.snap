@@ -1,0 +1,17 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/misc/replace_global_defines
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region main.js
+const foo = replaced;
+const bar = replaced2;
+
+//#endregion
+```

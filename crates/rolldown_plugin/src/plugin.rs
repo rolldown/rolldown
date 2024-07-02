@@ -3,8 +3,9 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 use super::plugin_context::SharedPluginContext;
 use crate::{
   transform_plugin_context::TransformPluginContext, types::hook_render_error::HookRenderErrorArgs,
-  HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput,
-  HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
+  HookBannerArgs, HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs,
+  HookRenderChunkOutput, HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdOutput,
+  HookTransformArgs,
 };
 use anyhow::Result;
 use rolldown_common::{ModuleInfo, Output, RenderedChunk};
@@ -15,6 +16,7 @@ pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
 pub type HookNoopReturn = Result<()>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
 pub type HookAugmentChunkHashReturn = Result<Option<String>>;
+pub type HookBannerOutputReturn = Result<Option<String>>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
@@ -79,6 +81,14 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   async fn render_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
     Ok(())
+  }
+
+  async fn banner(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookBannerArgs,
+  ) -> HookBannerOutputReturn {
+    Ok(None)
   }
 
   async fn render_chunk(

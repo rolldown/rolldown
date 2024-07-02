@@ -1,0 +1,32 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_declare_class_fields
+---
+# Assets
+
+## entry_ts.mjs
+
+```js
+
+//#region define-false/index.ts
+class Foo {
+	a;
+	[(() => null, c)];
+	static A;
+	static [(() => null, C)];
+}
+(() => new Foo())();
+
+//#endregion
+//#region define-true/index.ts
+class Bar {
+	a;
+	[(() => null, c)];
+	static A;
+	static [(() => null, C)];
+}
+(() => new Bar())();
+
+//#endregion
+```

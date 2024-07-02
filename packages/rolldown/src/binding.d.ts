@@ -53,6 +53,8 @@ export class BindingPluginContext {
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset): string
   getFileName(referenceId: string): string
+  getModuleInfo(moduleId: string): BindingModuleInfo | null
+  getModuleIds(): Array<string> | null
 }
 
 export class BindingTransformPluginContext {

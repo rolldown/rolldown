@@ -1,6 +1,6 @@
 use std::sync::{Arc, Weak};
 
-use rolldown_common::{ResolvedRequestInfo, SharedFileEmitter};
+use rolldown_common::{ModuleTable, ResolvedRequestInfo, SharedFileEmitter};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
@@ -15,6 +15,8 @@ pub struct PluginContext {
   pub(crate) resolver: Arc<Resolver>,
   pub(crate) plugin_driver: Weak<PluginDriver>,
   pub(crate) file_emitter: SharedFileEmitter,
+  #[allow(clippy::redundant_allocation)]
+  pub(crate) module_table: Option<Arc<&'static mut ModuleTable>>,
 }
 
 impl PluginContext {
@@ -45,5 +47,31 @@ impl PluginContext {
 
   pub fn get_file_name(&self, reference_id: &str) -> String {
     self.file_emitter.get_file_name(reference_id)
+  }
+
+  pub fn get_module_info(&self, module_id: &str) -> Option<rolldown_common::ModuleInfo> {
+    self.module_table.as_ref().and_then(|module_table| {
+      for normal_module in &module_table.normal_modules {
+        if normal_module.resource_id.as_str() == module_id {
+          return Some(normal_module.to_module_info());
+        }
+      }
+      // TODO external module
+      None
+    })
+  }
+
+  pub fn get_module_ids(&self) -> Option<Vec<String>> {
+    if let Some(module_table) = self.module_table.as_ref() {
+      let mut ids =
+        Vec::with_capacity(module_table.normal_modules.len() + module_table.external_modules.len());
+      for normal_module in &module_table.normal_modules {
+        ids.push(normal_module.resource_id.to_string());
+      }
+      // TODO external module
+      Some(ids)
+    } else {
+      None
+    }
   }
 }

@@ -2,7 +2,7 @@ use crate::types::{
   binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
   js_callback::MaybeAsyncJsCallbackExt,
 };
-use rolldown_plugin::Plugin;
+use rolldown_plugin::{Plugin, SharedPlugin};
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 
 use super::{binding_transform_context::BindingTransformPluginContext, BindingPluginOptions};
@@ -26,8 +26,8 @@ impl JsPlugin {
     Self { inner }
   }
 
-  pub(crate) fn new_boxed(inner: BindingPluginOptions) -> Box<dyn Plugin> {
-    Box::new(Self { inner })
+  pub(crate) fn new_shared(inner: BindingPluginOptions) -> SharedPlugin {
+    Arc::new(Self { inner })
   }
 }
 

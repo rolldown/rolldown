@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use rolldown_common::FileEmitter;
 use rolldown_fs::OsFileSystem;
-use rolldown_plugin::{BoxPlugin, PluginDriver};
+use rolldown_plugin::{PluginDriver, SharedPlugin};
 use rolldown_resolver::Resolver;
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct BundlerBuilder {
   input_options: BundlerOptions,
-  plugins: Vec<BoxPlugin>,
+  plugins: Vec<SharedPlugin>,
 }
 
 impl BundlerBuilder {
@@ -46,7 +46,7 @@ impl BundlerBuilder {
   }
 
   #[must_use]
-  pub fn with_plugins(mut self, plugins: Vec<BoxPlugin>) -> Self {
+  pub fn with_plugins(mut self, plugins: Vec<SharedPlugin>) -> Self {
     self.plugins = plugins;
     self
   }

@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use napi_derive::napi;
 
 use rolldown_plugin::SharedPluginContext;
 
-use crate::utils::napi_error;
+use crate::{types::binding_module_info::BindingModuleInfo, utils::napi_error};
 
 use super::types::{
   binding_emitted_asset::BindingEmittedAsset,
@@ -48,6 +50,16 @@ impl BindingPluginContext {
   #[napi]
   pub fn get_file_name(&self, reference_id: String) -> String {
     self.inner.get_file_name(reference_id.as_str())
+  }
+
+  #[napi]
+  pub fn get_module_info(&self, module_id: String) -> Option<BindingModuleInfo> {
+    self.inner.get_module_info(&module_id).map(|info| BindingModuleInfo::new(Arc::new(info)))
+  }
+
+  #[napi]
+  pub fn get_module_ids(&self) -> Option<Vec<String>> {
+    self.inner.get_module_ids()
   }
 }
 

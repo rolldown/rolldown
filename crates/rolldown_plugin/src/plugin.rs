@@ -124,3 +124,4 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 }
 
 pub type BoxPlugin = Box<dyn Plugin>;
+pub type SharedPlugin = Arc<dyn Plugin>;

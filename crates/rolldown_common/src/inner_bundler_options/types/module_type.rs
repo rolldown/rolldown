@@ -19,6 +19,7 @@ pub enum ModuleType {
   Json,
   Text,
   Base64,
+  DataUrl,
   Binary,
   Empty,
 }

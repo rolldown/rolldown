@@ -1,5 +1,6 @@
+import assert from 'node:assert';
 import value from './text.data'
 
-console.log(value);
+assert(value instanceof Uint8Array)
 
 export default value;

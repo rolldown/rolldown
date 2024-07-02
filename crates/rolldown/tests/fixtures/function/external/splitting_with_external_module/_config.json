@@ -12,7 +12,7 @@
       }
     ],
     "external": [
-      "assert"
+      "node:assert"
     ]
   }
 }

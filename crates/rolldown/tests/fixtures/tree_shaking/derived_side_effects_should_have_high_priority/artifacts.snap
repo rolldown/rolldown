@@ -8,13 +8,14 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/derived_side_effects_sho
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region another/b/index.js
 const b = 100;
 
 //#endregion
 //#region main.js
-console.log(b);
+assert.equal(b, 100);
 
 //#endregion
 ```

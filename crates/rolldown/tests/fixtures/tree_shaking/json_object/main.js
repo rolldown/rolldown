@@ -1,2 +1,3 @@
+import assert from 'node:assert'
 import { shouldBeReserved } from './foo.json'
-console.log(shouldBeReserved)
+assert.equal(shouldBeReserved, 'shouldBeReserved')

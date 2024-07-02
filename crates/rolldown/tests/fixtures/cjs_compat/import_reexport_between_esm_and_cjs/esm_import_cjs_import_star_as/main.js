@@ -1,2 +1,8 @@
+import assert from 'node:assert'
 import * as ns from './commonjs.js'
-console.log(ns)
+assert.deepEqual(ns, {
+  default: {
+    a: 1
+  },
+  a: 1
+})

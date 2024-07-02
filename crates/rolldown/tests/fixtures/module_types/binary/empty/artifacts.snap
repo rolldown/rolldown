@@ -1,13 +1,14 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/loaders/binary/empty
+input_file: crates/rolldown/tests/fixtures/module_types/binary/empty
 ---
 # Assets
 
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region example.data
@@ -15,7 +16,7 @@ var example_default = __toBinary('');
 
 //#endregion
 //#region main.js
-console.log(example_default);
+assert(example_default instanceof Uint8Array);
 
 //#endregion
 ```

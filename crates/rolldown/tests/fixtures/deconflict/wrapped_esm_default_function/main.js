@@ -1,4 +1,4 @@
-import assert from 'assert'
+import assert from 'node:assert'
 import bar from './bar'
 
 const a = 2; // make foo `a` conflict

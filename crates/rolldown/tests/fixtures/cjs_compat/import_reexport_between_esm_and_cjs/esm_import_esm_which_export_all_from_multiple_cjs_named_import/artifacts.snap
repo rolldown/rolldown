@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/import_reexport_between_es
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region commonjs.js
@@ -29,7 +30,7 @@ __reExport(proxy_ns, __toESM(require_commonjs2()));
 
 //#endregion
 //#region main.js
-console.log(proxy_ns.a, 1);
+assert.equal(proxy_ns.a, 1);
 
 //#endregion
 ```

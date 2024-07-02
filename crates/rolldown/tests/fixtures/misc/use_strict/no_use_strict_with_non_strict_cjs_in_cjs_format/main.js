@@ -1,4 +1,7 @@
+import assert from 'node:assert'
 import foo from './cjs'
-console.log(foo)
+assert.deepEqual(foo, {
+  default: {}
+})
 
 export {}

@@ -1,13 +1,14 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/loaders/binary/binary
+input_file: crates/rolldown/tests/fixtures/module_types/binary/binary
 ---
 # Assets
 
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region rolldown.webp
@@ -15,7 +16,7 @@ var rolldown_default = __toBinary('UklGRgoKAABXRUJQVlA4WAoAAAAQAAAAXwAAXwAAQUxQS
 
 //#endregion
 //#region main.js
-console.log(rolldown_default);
+assert(rolldown_default instanceof Uint8Array);
 
 //#endregion
 ```

@@ -2,7 +2,7 @@
   "visualizeSourcemap": true,
   "config": {
     "external": [
-      "assert"
+      "node:assert"
     ],
     "treeshake": false
   }

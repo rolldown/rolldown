@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/fixtures/misc/basic_re_export
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region a.js
 const a$1 = 'a.js';
@@ -15,7 +16,8 @@ const a$1 = 'a.js';
 //#endregion
 //#region main.js
 const a = 'index.js';
-console.log(a, a$1);
+assert.equal(a, 'index.js');
+assert.equal(a$1, 'a.js');
 
 //#endregion
 ```

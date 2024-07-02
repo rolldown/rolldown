@@ -180,7 +180,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let exports_len = self.ctx.linking_info.used_canonical_exports().count();
     if exports_len == 0 {
       let can_not_be_eliminated =
-        self.ctx.linking_info.used_exports_info.used_info.contains(UsedInfo::USED_AS_NAMESPACE)
+        self.ctx.linking_info.used_exports_info.used_info.contains(UsedInfo::USED_AS_NAMESPACE_REF)
           || self.ctx.module.import_records.iter().any(|record| {
             let id = record.resolved_module;
 

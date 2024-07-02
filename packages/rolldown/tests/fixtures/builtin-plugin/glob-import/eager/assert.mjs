@@ -1,3 +1,4 @@
+// @ts-nocheck
 import assert from 'node:assert'
 import { modules1, modules2, modules3, modules4 } from './dist/main'
 

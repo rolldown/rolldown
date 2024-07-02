@@ -17,7 +17,6 @@ use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, PluginDriver, SharedPlugin, SharedPluginDriver,
 };
-use sugar_path::SugarPath;
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {

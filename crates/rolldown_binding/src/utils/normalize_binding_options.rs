@@ -6,12 +6,12 @@ use crate::{
   worker_manager::WorkerManager,
 };
 use napi::Either;
-use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, OutputFormat, Platform};
+use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputFormat, Platform};
 use rolldown_plugin::SharedPlugin;
 use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, str::FromStr};
 
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct NormalizeBindingOptionsReturn {

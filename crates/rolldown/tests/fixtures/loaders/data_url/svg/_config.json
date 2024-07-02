@@ -1,7 +1,0 @@
-{
-  "config": {
-    "moduleTypes": {
-      ".svg": "dataUrl"
-    }
-  }
-}

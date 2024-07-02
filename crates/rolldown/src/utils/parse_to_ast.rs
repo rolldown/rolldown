@@ -38,7 +38,7 @@ pub fn parse_to_ast(
     ModuleType::Tsx => (source, OxcParseType::Tsx),
     ModuleType::Json => (json_to_esm(&source)?.into(), OxcParseType::Js),
     ModuleType::Text => (text_to_esm(&source)?.into(), OxcParseType::Js),
-    ModuleType::Base64 | ModuleType::DataUrl => (raw_text_to_esm(&source).into(), OxcParseType::Js),
+    ModuleType::Base64 | ModuleType::Dataurl => (raw_text_to_esm(&source).into(), OxcParseType::Js),
     ModuleType::Binary => (
       binary_to_esm(&source, options.platform, ROLLDOWN_RUNTIME_RESOURCE_ID).into(),
       OxcParseType::Js,

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown/tests/fixtures.rs
-assertion_line: 54
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
 # tests/esbuild/bundler_ts/ts_declare_const
@@ -644,6 +643,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-OuT73FkU.mjs
 
+# tests/esbuild/loader/auto_detect_mime_type_from_extension
+
+- entry_js-!~{000}~.mjs => entry_js-0GYuohub.mjs
+
 # tests/esbuild/loader/empty_loader_js
 
 - entry_js-!~{000}~.mjs => entry_js-FoV7L20n.mjs
@@ -659,6 +662,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
 - entry_js-!~{000}~.mjs => entry_js-t91zTbmV.mjs
+
+# tests/esbuild/loader/require_custom_extension_data_url
+
+- entry_js-!~{000}~.mjs => entry_js-eE0oZtAD.mjs
 
 # tests/esbuild/lower/lower_async_es5
 
@@ -1412,18 +1419,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/issues/1443
 
 - main-!~{000}~.mjs => main-nqMd7tJC.mjs
-
-# tests/fixtures/loaders/data_url/png
-
-- main-!~{000}~.mjs => main-OGKbrs_p.mjs
-
-# tests/fixtures/loaders/data_url/svg
-
-- main-!~{000}~.mjs => main-uZ476jX2.mjs
-
-# tests/fixtures/loaders/data_url/without-extension
-
-- main-!~{000}~.mjs => main-fgU5m-Tk.mjs
 
 # tests/fixtures/misc/ambiguous_star_export
 

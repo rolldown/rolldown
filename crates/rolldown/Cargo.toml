@@ -38,6 +38,7 @@ sugar_path            = { workspace = true }
 tokio                 = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing               = { workspace = true }
 tracing-chrome        = { workspace = true }
+urlencoding           = { workspace = true }
 xxhash-rust           = { workspace = true, features = ["xxh3"] }
 
 

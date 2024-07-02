@@ -1769,6 +1769,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-chrome",
+ "urlencoding",
  "xxhash-rust",
 ]
 
@@ -1949,6 +1950,7 @@ dependencies = [
 name = "rolldown_utils"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "async-scoped",
  "base64",
  "futures",
@@ -1962,7 +1964,6 @@ dependencies = [
  "regex",
  "rustc-hash",
  "sugar_path",
- "urlencoding",
  "xxhash-rust",
 ]
 

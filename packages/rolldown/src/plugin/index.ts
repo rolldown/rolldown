@@ -12,7 +12,7 @@ import type {
 import type { SourceMapInput } from '../types/sourcemap'
 import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
-import type { PluginContext } from './plugin-context'
+import { PluginContext } from './plugin-context'
 import type { TransformPluginContext } from './transfrom-plugin-context'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import type { LogLevel } from '../log/logging'
@@ -127,6 +127,8 @@ export interface FunctionPluginHooks {
         code: string
         map?: SourceMapInput
       }
+
+  banner?: ObjectHook<(this: PluginContext) => MaybePromise<NullValue>>
 
   augmentChunkHash: (this: PluginContext, chunk: RenderedChunk) => string | void
 

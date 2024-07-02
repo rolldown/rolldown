@@ -1,6 +1,6 @@
 use crate::types::hook_render_error::HookRenderErrorArgs;
-use crate::PluginDriver;
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
+use crate::{HookBannerArgs, PluginDriver};
 use anyhow::Result;
 use rolldown_common::{Output, RollupRenderedChunk};
 use rolldown_sourcemap::SourceMap;
@@ -11,6 +11,15 @@ impl PluginDriver {
       plugin.render_start(ctx).await?;
     }
     Ok(())
+  }
+
+  pub async fn banner(&self, mut args: HookBannerArgs) -> Result<String> {
+    for (plugin, ctx) in &self.plugins {
+      if let Some(r) = plugin.banner(ctx, &args).await? {
+        args.code = r;
+      }
+    }
+    Ok(args.code)
   }
 
   pub async fn render_chunk(

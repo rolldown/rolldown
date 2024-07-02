@@ -26,6 +26,7 @@ pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
 pub type HookNoopReturn = Result<()>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
 pub type HookAugmentChunkHashReturn = Result<Option<String>>;
+pub type HookBannerOutputReturn = Result<Option<String>>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
@@ -100,16 +101,20 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     Ok(())
   }
 
+  async fn banner(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookBannerArgs,
+  ) -> HookBannerOutputReturn {
+    Ok(None)
+  }
+
   async fn render_chunk(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookRenderChunkArgs,
   ) -> HookRenderChunkReturn {
     Ok(None)
-  }
-
-  async fn banner(&self, _ctx: &SharedPluginContext, _args: &HookBannerArgs) -> HookNoopReturn {
-    Ok(())
   }
 
   async fn augment_chunk_hash(

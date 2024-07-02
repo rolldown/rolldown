@@ -36,7 +36,7 @@ impl From<BindingBuiltinPlugin> for Arc<dyn Plugin> {
   fn from(plugin: BindingBuiltinPlugin) -> Self {
     match plugin.name {
       BindingBuiltinPluginName::WasmPlugin => Arc::new(WasmPlugin {}),
-      BindingBuiltinPluginName::GlobImportPlugin => Box::new(GlobImportPlugin {}),
+      BindingBuiltinPluginName::GlobImportPlugin => Arc::new(GlobImportPlugin {}),
     }
   }
 }

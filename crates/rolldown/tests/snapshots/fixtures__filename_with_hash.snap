@@ -1261,8 +1261,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/deconflict/wrapped_esm_default_function
 
-- main-!~{000}~.mjs => main-HDWXOo06.mjs
-- main-HDWXOo06.mjs.map
+- main-!~{000}~.mjs => main-3y1KCuH-.mjs
+- main-3y1KCuH-.mjs.map
 
 # tests/fixtures/deconflict/wrapped_esm_export_named_function
 
@@ -1313,7 +1313,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/function/external/splitting_with_external_module
 
 - entry-!~{001}~.mjs => entry-dQP7YHi-.mjs
-- main-!~{000}~.mjs => main-tpPmcJCn.mjs
+- main-!~{000}~.mjs => main-91SdaZrf.mjs
 - share-!~{002}~.mjs => share-Ak_TT_yj.mjs
 
 # tests/fixtures/function/format/app/multiple_entry_modules
@@ -1466,7 +1466,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 
-- main-!~{000}~.cjs => main-mzifVXpq.cjs
+- main-!~{000}~.cjs => main-RiVA5Cbd.cjs
 
 # tests/fixtures/misc/use_strict/no_use_strict_with_non_strict_cjs_in_cjs_format
 

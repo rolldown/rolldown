@@ -7,6 +7,7 @@ use oxc::{
 use rolldown_common::{ModuleType, NormalizedBundlerOptions};
 use rolldown_loader_utils::{base64_to_esm, binary_to_esm, json_to_esm, text_to_esm};
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
+use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
 
 use super::pre_process_ast::pre_process_ast;
 
@@ -23,6 +24,7 @@ fn pure_esm_js_oxc_source_type() -> OxcSourceType {
 }
 
 pub fn parse_to_ast(
+  plugin_driver: &PluginDriver,
   path: &Path,
   options: &NormalizedBundlerOptions,
   module_type: ModuleType,
@@ -56,7 +58,10 @@ pub fn parse_to_ast(
     }
   };
 
-  let oxc_ast = OxcCompiler::parse(Arc::clone(&source), oxc_source_type)?;
+  let mut oxc_ast = OxcCompiler::parse(Arc::clone(&source), oxc_source_type)?;
+
+  oxc_ast =
+    plugin_driver.transform_ast(HookTransformAstArgs { cwd: &options.cwd, ast: oxc_ast })?;
 
   pre_process_ast(oxc_ast, &parsed_type, path, oxc_source_type)
 }

@@ -21,7 +21,7 @@ function main() {
           testConfig,
         )
         if (testConfig.afterTest) {
-          testConfig.afterTest(output)
+          await testConfig.afterTest(output)
         }
       } catch (err) {
         throw new Error(`Failed in ${testConfigPath}`, { cause: err })

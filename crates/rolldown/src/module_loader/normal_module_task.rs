@@ -116,6 +116,7 @@ impl NormalModuleTask {
     .into();
 
     let (mut ast, symbols, scopes) = parse_to_ast(
+      &self.ctx.plugin_driver,
       Path::new(&self.resolved_path.path.as_ref()),
       &self.ctx.input_options,
       module_type,

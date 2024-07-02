@@ -127,7 +127,8 @@ impl NormalModuleTask {
       .plugin_driver
       .transform_ast(HookTransformAstArgs { cwd: &self.ctx.input_options.cwd, ast })?;
 
-    let (scope, scan_result, ast_symbol, namespace_object_ref) = self.scan(&mut ast, &source);
+    let (scope, scan_result, ast_symbol, namespace_object_ref) =
+      self.scan(&mut ast, &source, symbols, scopes);
 
     let resolved_deps =
       self.resolve_dependencies(&scan_result.import_records, &mut warnings).await?;

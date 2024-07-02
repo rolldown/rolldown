@@ -14,7 +14,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
-use rolldown_plugin::{HookResolveIdExtraOptions, HookTransformAstArgs, SharedPluginDriver};
+use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
 use sugar_path::SugarPath;
@@ -116,16 +116,12 @@ impl NormalModuleTask {
     .into();
 
     let (mut ast, symbols, scopes) = parse_to_ast(
+      &self.ctx.plugin_driver,
       Path::new(&self.resolved_path.path.as_ref()),
       &self.ctx.input_options,
       module_type,
       Arc::clone(&source),
     )?;
-
-    ast = self
-      .ctx
-      .plugin_driver
-      .transform_ast(HookTransformAstArgs { cwd: &self.ctx.input_options.cwd, ast })?;
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) =
       self.scan(&mut ast, &source, symbols, scopes);

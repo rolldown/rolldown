@@ -89,7 +89,7 @@ export interface AliasItem {
 }
 
 export interface ArrowFunctionsBindingOptions {
-  spec: boolean
+  spec?: boolean
 }
 
 export interface BindingAssetSource {
@@ -259,10 +259,10 @@ export interface IsolatedDeclarationsResult {
 }
 
 export interface ReactBindingOptions {
-  runtime: 'classic' | 'automatic'
-  development: boolean
-  throwIfNamespace: boolean
-  pure: boolean
+  runtime?: 'classic' | 'automatic'
+  development?: boolean
+  throwIfNamespace?: boolean
+  pure?: boolean
   importSource?: string
   pragma?: string
   pragmaFrag?: string
@@ -294,34 +294,33 @@ export interface Sourcemap {
   names?: Array<string>
 }
 
-function transform(filename: string, sourceText: string, options: TransformBindingOptions): TransformResult
+function transform(filename: string, sourceText: string, options?: TransformBindingOptions | undefined | null): TransformResult
 
 export interface TransformBindingOptions {
-  typescript: TypeScriptBindingOptions
-  react: ReactBindingOptions
-  es2015: Es2015BindingOptions
+  typescript?: TypeScriptBindingOptions
+  react?: ReactBindingOptions
+  es2015?: Es2015BindingOptions
   /**
-   * Enable Sourcemaps
+   * Enable Sourcemap
    *
    * * `true` to generate a sourcemap for the code and include it in the result object.
    *
    * Default: false
    */
-  sourcemaps: boolean
+  sourcemap?: boolean
 }
 
 export interface TransformResult {
   sourceText: string
-  /** Sourcemap */
   map?: Sourcemap
   errors: Array<string>
 }
 
 export interface TypeScriptBindingOptions {
-  jsxPragma: string
-  jsxPragmaFrag: string
-  onlyRemoveTypeImports: boolean
-  allowNamespaces: boolean
-  allowDeclareFields: boolean
+  jsxPragma?: string
+  jsxPragmaFrag?: string
+  onlyRemoveTypeImports?: boolean
+  allowNamespaces?: boolean
+  allowDeclareFields?: boolean
 }
 

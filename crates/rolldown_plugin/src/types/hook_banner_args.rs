@@ -1,4 +1,4 @@
 #[derive(Debug)]
 pub struct HookBannerArgs {
-  pub banner: String,
+  pub code: String,
 }

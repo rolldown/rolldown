@@ -14,7 +14,7 @@ import type { SourceMapInput } from '../types/sourcemap'
 import { pathToFileURL } from 'node:url'
 import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
-import type { PluginContext } from './plugin-context'
+import { PluginContext } from './plugin-context'
 import type { TransformPluginContext } from './transfrom-plugin-context'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import type { LogLevel } from '../log/logging'
@@ -142,6 +142,8 @@ export interface Plugin {
       inputOptions: NormalizedInputOptions,
     ) => MaybePromise<NullValue>
   >
+
+  banner?: ObjectHook<(this: PluginContext) => MaybePromise<NullValue>>
 
   renderChunk?: ObjectHook<
     (

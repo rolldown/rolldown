@@ -162,28 +162,23 @@ impl Plugin for JsPlugin {
     Ok(())
   }
 
-  async fn render_chunk(
+  async fn banner(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookRenderChunkArgs,
-  ) -> rolldown_plugin::HookRenderChunkReturn {
-    if let Some(cb) = &self.render_chunk {
-      Ok(
-        cb.await_call((Arc::clone(ctx).into(), args.code.to_string(), args.chunk.clone().into()))
-          .await?
-          .map(TryInto::try_into)
-          .transpose()?,
-      )
+    _args: &rolldown_plugin::HookBannerArgs,
+  ) -> rolldown_plugin::HookBannerOutputReturn {
+    if let Some(cb) = &self.banner {
+      Ok(cb.await_call(Arc::clone(ctx).into()).await?.map(TryInto::try_into).transpose()?)
     } else {
       Ok(None)
     }
   }
 
-  async fn banner(
+  async fn render_chunk(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookBannerArgs,
-  ) -> rolldown_plugin::HookNoopReturn {
+    args: &rolldown_plugin::HookRenderChunkArgs,
+  ) -> rolldown_plugin::HookRenderChunkReturn {
     if let Some(cb) = &self.render_chunk {
       Ok(
         cb.await_call((Arc::clone(ctx).into(), args.code.to_string(), args.chunk.clone().into()))

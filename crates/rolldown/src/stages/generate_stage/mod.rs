@@ -27,6 +27,7 @@ use crate::{
   type_alias::IndexNormalModules,
   utils::{
     augment_chunk_hash::augment_chunk_hash,
+    banner::banner,
     chunk::{
       deconflict_chunk_symbols::deconflict_chunk_symbols,
       finalize_chunks::finalize_chunks,
@@ -121,6 +122,10 @@ impl<'a> GenerateStage<'a> {
         .map(|c| async { render_chunk(c, self.options, self.link_output, &chunk_graph).await }),
     )
     .await?;
+
+    // TODO: Call banner
+
+    let chunks = banner(self.plugin_driver, chunks).await?;
 
     let chunks = render_chunks(self.plugin_driver, chunks).await?;
 

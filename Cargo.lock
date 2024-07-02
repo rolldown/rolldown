@@ -1972,7 +1972,6 @@ dependencies = [
  "async-trait",
  "glob",
  "oxc",
- "rolldown_common",
  "rolldown_plugin",
  "sugar_path",
 ]

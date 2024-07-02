@@ -1,4 +1,4 @@
-import { BuiltinGlobImportPlugin } from '../../../../../'
+import { BuiltinGlobImportPlugin } from 'rolldown'
 import { defineTest } from '@tests'
 
 export default defineTest({

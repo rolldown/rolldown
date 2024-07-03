@@ -1,0 +1,22 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_minified_bundle_es6
+---
+# Assets
+
+## entry_ts.mjs
+
+```js
+
+//#region a.ts
+function foo() {
+	return 123;
+}
+
+//#endregion
+//#region entry.ts
+console.log(foo());
+
+//#endregion
+```

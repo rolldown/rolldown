@@ -1,0 +1,25 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_import_missing_file
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "./doesNotExist.ts" is imported by "entry.ts", but could not be resolved – treating it as an external dependency.
+
+```
+# Assets
+
+## entry_ts.mjs
+
+```js
+import { Something } from "./doesNotExist.ts";
+
+//#region entry.ts
+let foo = new Something();
+
+//#endregion
+```

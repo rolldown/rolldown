@@ -14,6 +14,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
 
+# tests/esbuild/bundler_ts/ts_declare_const_enum
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
 # tests/esbuild/bundler_ts/ts_declare_enum
 
 - entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
@@ -26,9 +30,37 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
 
+# tests/esbuild/bundler_ts/ts_declare_namespace
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
 # tests/esbuild/bundler_ts/ts_declare_var
 
 - entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/bundler_ts/ts_experimental_decorators_mangle_props_assign_semantics
+
+- entry_ts-!~{000}~.mjs => entry_ts-XuDJ8QAX.mjs
+
+# tests/esbuild/bundler_ts/ts_experimental_decorators_mangle_props_define_semantics
+
+- entry_ts-!~{000}~.mjs => entry_ts-XuDJ8QAX.mjs
+
+# tests/esbuild/bundler_ts/ts_experimental_decorators_mangle_props_methods
+
+- entry_ts-!~{000}~.mjs => entry_ts-XuDJ8QAX.mjs
+
+# tests/esbuild/bundler_ts/ts_experimental_decorators_mangle_props_static_assign_semantics
+
+- entry_ts-!~{000}~.mjs => entry_ts-XuDJ8QAX.mjs
+
+# tests/esbuild/bundler_ts/ts_experimental_decorators_mangle_props_static_define_semantics
+
+- entry_ts-!~{000}~.mjs => entry_ts-XuDJ8QAX.mjs
+
+# tests/esbuild/bundler_ts/ts_experimental_decorators_mangle_props_static_methods
+
+- entry_ts-!~{000}~.mjs => entry_ts-XuDJ8QAX.mjs
 
 # tests/esbuild/bundler_ts/ts_import_cts
 
@@ -37,6 +69,34 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/bundler_ts/ts_import_empty_namespace
 
 - entry_ts-!~{000}~.mjs => entry_ts-9NBZIX5i.mjs
+
+# tests/esbuild/bundler_ts/ts_import_missing_unused_es6
+
+- entry_ts-!~{000}~.mjs => entry_ts-XuDJ8QAX.mjs
+
+# tests/esbuild/bundler_ts/ts_import_type_only_file
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
+# tests/esbuild/bundler_ts/ts_minified_bundle_common_js
+
+- entry_ts-!~{000}~.mjs => entry_ts-dycM2mPo.mjs
+
+# tests/esbuild/bundler_ts/ts_minified_bundle_es6
+
+- entry_ts-!~{000}~.mjs => entry_ts-PP9ThVZ1.mjs
+
+# tests/esbuild/bundler_ts/ts_minify_derived_class
+
+- entry_ts-!~{000}~.mjs => entry_ts-XuDJ8QAX.mjs
+
+# tests/esbuild/bundler_ts/ts_prefer_js_over_ts_inside_node_modules
+
+- src_main_ts-!~{000}~.mjs => src_main_ts-RuDOVX6Z.mjs
+
+# tests/esbuild/bundler_ts/ts_side_effects_false_warning_type_declarations
+
+- entry_ts-!~{000}~.mjs => entry_ts-XuDJ8QAX.mjs
 
 # tests/esbuild/dce/base64_loader_remove_unused
 

@@ -412,19 +412,6 @@ checksum = "63b7ef7a4be509357f4804d0a22e830daddb48f19fd604e4ad32ddce04a94c36"
 
 [[package]]
 name = "dashmap"
-version = "5.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "978747c1d849a7d2ee5e8adc0159961c48fb7e5db2f06af6723b80123bb53856"
-dependencies = [
- "cfg-if",
- "hashbrown",
- "lock_api",
- "once_cell",
- "parking_lot_core",
-]
-
-[[package]]
-name = "dashmap"
 version = "6.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "804c8821570c3f8b70230c2ba75ffa5c0f9a4189b9a432b6656c536712acae28"
@@ -836,7 +823,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e310b3a6b5907f99202fcdb4960ff45b93735d7c7d96b760fcff8db2dc0e103d"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.5",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -1350,11 +1337,11 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "1.9.2"
+version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ab1983fbc16c3aa9b476be4b6da19bc6728efc9e4564313ef15210bcfa4a070"
+checksum = "ee5850e737373628dfd9db8be5a0e85f1c816985fbb9cda58387b7f4b1f571d6"
 dependencies = [
- "dashmap 5.5.3",
+ "dashmap",
  "dunce",
  "indexmap",
  "json-strip-comments",
@@ -1416,7 +1403,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a2909d1da9949782e08d633f46a4f3a52dcd3ef539b7a0ebfc5d02d7f6eb159"
 dependencies = [
  "bitflags 2.6.0",
- "dashmap 6.0.1",
+ "dashmap",
  "oxc_index",
  "oxc_span",
  "phf",
@@ -1448,7 +1435,7 @@ version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d9c01204c52cb4ad49233050be47fc55f95d51cb41f1af538c7f8288526f7d9"
 dependencies = [
- "dashmap 6.0.1",
+ "dashmap",
  "indexmap",
  "oxc-browserslist",
  "oxc_allocator",
@@ -1780,7 +1767,7 @@ dependencies = [
  "anyhow",
  "async-channel",
  "async-trait",
- "dashmap 6.0.1",
+ "dashmap",
  "derivative",
  "futures",
  "mimalloc",
@@ -1808,7 +1795,7 @@ name = "rolldown_common"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "dashmap 6.0.1",
+ "dashmap",
  "glob-match",
  "oxc",
  "regex",
@@ -1903,7 +1890,7 @@ name = "rolldown_resolver"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "dashmap 6.0.1",
+ "dashmap",
  "itertools",
  "oxc_resolver",
  "rolldown_common",

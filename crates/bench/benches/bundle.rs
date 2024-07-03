@@ -8,24 +8,24 @@ fn criterion_benchmark(c: &mut Criterion) {
   let derive_options = DeriveOptions { sourcemap: true };
 
   let items = [
-    // derive_benchmark_items(
-    //   &derive_options,
-    //   "threejs".to_string(),
-    //   rolldown_testing::bundler_options_presets::threejs,
-    // ),
-    // derive_benchmark_items(
-    //   &derive_options,
-    //   "threejs10x".to_string(),
-    //   rolldown_testing::bundler_options_presets::threejs10x,
-    // ),
-    // derive_benchmark_items(
-    //   &derive_options,
-    //   "rome-ts".to_string(),
-    //   rolldown_testing::bundler_options_presets::rome_ts,
-    // ),
     derive_benchmark_items(
       &derive_options,
-      "multi-duplicated-symbol".to_string(),
+      "threejs".to_string(),
+      rolldown_testing::bundler_options_presets::threejs,
+    ),
+    derive_benchmark_items(
+      &derive_options,
+      "threejs10x".to_string(),
+      rolldown_testing::bundler_options_presets::threejs10x,
+    ),
+    derive_benchmark_items(
+      &derive_options,
+      "rome-ts".to_string(),
+      rolldown_testing::bundler_options_presets::rome_ts,
+    ),
+    derive_benchmark_items(
+      &derive_options,
+      "multi-duplicated-top-level-symbol".to_string(),
       rolldown_testing::bundler_options_presets::multi_duplicated_symbol,
     ),
   ]

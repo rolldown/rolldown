@@ -9,6 +9,16 @@ export async function cloneThreeJsIfNotExists() {
   }
 }
 
+
+export async function cloneMultiDuplicatedSymbolsIfNotExists() {
+  if (!fsExtra.existsSync('./tmp/github/multi-duplicated-symbol')) {
+    fsExtra.ensureDirSync('./tmp/github')
+    await $`git clone https://github.com/rolldown/multi-duplicated-symbol.git ./tmp/github/multi-duplicated-symbol`
+  } else {
+    console.log('[skip] multi-duplicated-symbol already cloned')
+  }
+}
+
 export async function fetchRomeIfNotExists() {
   if (!fsExtra.existsSync('./tmp/github/rome')) {
     fsExtra.ensureDirSync('./tmp/github/rome')

@@ -14,6 +14,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
 
+# tests/esbuild/bundler_ts/ts_declare_enum
+
+- entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
+
 # tests/esbuild/bundler_ts/ts_declare_function
 
 - entry_ts-!~{000}~.mjs => entry_ts-zS7JJC82.mjs
@@ -29,6 +33,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/bundler_ts/ts_import_cts
 
 - entry_ts-!~{000}~.mjs => entry_ts-A1VV1VTk.mjs
+
+# tests/esbuild/bundler_ts/ts_import_empty_namespace
+
+- entry_ts-!~{000}~.mjs => entry_ts-9NBZIX5i.mjs
 
 # tests/esbuild/dce/base64_loader_remove_unused
 

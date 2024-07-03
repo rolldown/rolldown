@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use rolldown::ModuleType;
-use rolldown_common::{BundlerOptions, InputItem, ResolveOptions};
+use rolldown_common::{BundlerOptions, InputItem};
 
 use crate::workspace::root_dir;
 

@@ -9,7 +9,6 @@ export async function cloneThreeJsIfNotExists() {
   }
 }
 
-
 export async function cloneMultiDuplicatedSymbolsIfNotExists() {
   if (!fsExtra.existsSync('./tmp/github/multi-duplicated-symbol')) {
     fsExtra.ensureDirSync('./tmp/github')

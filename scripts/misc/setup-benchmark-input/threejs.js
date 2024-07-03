@@ -1,7 +1,6 @@
 import fsExtra from 'fs-extra'
 // setup three-js
 
-
 if (fsExtra.existsSync('./tmp/bench/three')) {
   console.log('[skip] setup three already')
 } else {

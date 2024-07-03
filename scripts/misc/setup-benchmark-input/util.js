@@ -9,7 +9,6 @@ export async function cloneThreeJsIfNotExists() {
   }
 }
 
-
 export async function fetchRomeIfNotExists() {
   if (!fsExtra.existsSync('./tmp/github/rome')) {
     fsExtra.ensureDirSync('./tmp/github/rome')

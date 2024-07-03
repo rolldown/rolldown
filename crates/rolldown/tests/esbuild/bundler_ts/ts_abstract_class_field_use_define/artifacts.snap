@@ -1,0 +1,21 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_abstract_class_field_use_define
+---
+# Assets
+
+## entry_ts.mjs
+
+```js
+
+//#region entry.ts
+const keepThisToo = Symbol('keepThisToo');
+class Foo {
+	keepThis;
+	[keepThisToo];
+}
+(() => new Foo())();
+
+//#endregion
+```

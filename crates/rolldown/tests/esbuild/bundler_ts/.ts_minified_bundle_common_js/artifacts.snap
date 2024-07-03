@@ -1,0 +1,39 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_minified_bundle_common_js
+---
+# Assets
+
+## entry_ts.mjs
+
+```js
+
+
+//#region a.ts
+var require_a = __commonJSMin((exports, module) => {
+	exports.foo = function() {
+		return 123;
+	};
+});
+
+//#endregion
+//#region j.json
+var j_ns, test, j_default;
+var init_j = __esmMin(() => {
+	j_ns = {};
+	__export(j_ns, {
+		default: () => j_default,
+		test: () => test
+	});
+	test = true;
+	j_default = {test};
+});
+
+//#endregion
+//#region entry.ts
+const { foo } = require_a();
+console.log(foo(), (init_j(), __toCommonJS(j_ns).default));
+
+//#endregion
+```

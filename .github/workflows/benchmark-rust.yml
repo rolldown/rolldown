@@ -10,6 +10,7 @@ on:
       - '.github/workflows/**'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+      - 'scripts/misc/setup-benchmark-input/**'
   pull_request:
     types: [opened, synchronize]
     paths:

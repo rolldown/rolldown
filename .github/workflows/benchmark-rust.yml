@@ -3,7 +3,7 @@ name: Benchmarks Rust
 on:
   push:
     branches:
-      - 'main' # or "master"
+      - 'main'
     paths:
       - '**/*.rs'
       - '**/*.toml'

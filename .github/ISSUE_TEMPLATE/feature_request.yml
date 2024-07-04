@@ -1,15 +1,15 @@
 name: "\U0001F680 New feature"
 description: Suggest an idea for Rolldown
-labels: [":sparkles: feature request"]
+labels: [':sparkles: feature request']
 body:
   - type: markdown
     attributes:
       value: |
-       **Before You Start...**
+        **Before You Start...**
 
-        This form is only for submitting feature requests. If you have a usage question
-        or are unsure if this is really a bug, make sure to:
-        Also try to search for your issue - another user may have already requested something similar!
+         This form is only for submitting feature requests. If you have a usage question
+         or are unsure if this is really a bug, make sure to:
+         Also try to search for your issue - another user may have already requested something similar!
 
   - type: textarea
     id: problem-description

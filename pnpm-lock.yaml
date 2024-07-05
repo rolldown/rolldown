@@ -146,21 +146,6 @@ importers:
 
   packages/rolldown:
     dependencies:
-      citty:
-        specifier: ^0.1.6
-        version: 0.1.6
-      colorette:
-        specifier: ^2.0.20
-        version: 2.0.20
-      consola:
-        specifier: ^3.2.3
-        version: 3.2.3
-      locate-character:
-        specifier: ^3.0.0
-        version: 3.0.0
-      mri:
-        specifier: ^1.2.0
-        version: 1.2.0
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -208,6 +193,15 @@ importers:
       '@rolldown/testing':
         specifier: workspace:*
         version: link:../testing
+      citty:
+        specifier: ^0.1.6
+        version: 0.1.6
+      colorette:
+        specifier: ^2.0.20
+        version: 2.0.20
+      consola:
+        specifier: ^3.2.3
+        version: 3.2.3
       emnapi:
         specifier: ^1.2.0
         version: 1.2.0(node-addon-api@7.1.0)
@@ -220,6 +214,12 @@ importers:
       glob:
         specifier: ^10.4.1
         version: 10.4.2
+      locate-character:
+        specifier: ^3.0.0
+        version: 3.0.0
+      mri:
+        specifier: ^1.2.0
+        version: 1.2.0
       npm-run-all2:
         specifier: ^6.2.0
         version: 6.2.0
@@ -1962,7 +1962,6 @@ packages:
 
   '@ls-lint/ls-lint@2.2.3':
     resolution: {integrity: sha512-ekM12jNm/7O2I/hsRv9HvYkRdfrHpiV1epVuI2NP+eTIcEgdIdKkKCs9KgQydu/8R5YXTov9aHdOgplmCHLupw==}
-    cpu: [x64, arm64, s390x]
     os: [darwin, linux, win32]
     hasBin: true
 

@@ -21,11 +21,9 @@ const shared = defineConfig({
     /rolldown-binding\..*\.wasm/,
     /@rolldown\/binding-.*/,
     /\.\/rolldown-binding\.wasi\.cjs/,
-    ...Object.keys(pkgJson.dependencies).filter(
-      (dep) =>
-        // `locate-character` only exports esm. to support emitting rolldown of cjs version, we have to inline it.
-        dep !== 'locate-character',
-    ),
+    // some dependencies, e.g. zod, cannot be inlined because their types
+    // are used in public APIs
+    ...Object.keys(pkgJson.dependencies),
   ],
 })
 

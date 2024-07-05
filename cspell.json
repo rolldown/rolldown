@@ -48,6 +48,7 @@
     "bindgen",
     "bindingify",
     "binstall",
+    "bitflags",
     "bools",
     "Boshen",
     "Brooooooklyn",
@@ -129,6 +130,7 @@
     "serde",
     "smallvec",
     "sourcemaps",
+    "stackblitz",
     "Stmts",
     "struct",
     "structs",
@@ -147,8 +149,8 @@
     "typeofs",
     "underfin",
     "UNKEYED",
-    "usize",
     "urlencoding",
+    "usize",
     "vecmap",
     "vite",
     "vitepress",
@@ -156,8 +158,6 @@
     "WASI",
     "Xiangjun",
     "Yinan",
-    "Yunfei",
-    "extname",
-    "bitflags"
+    "Yunfei"
   ]
 }

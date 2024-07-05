@@ -26,6 +26,12 @@
 
 </div>
 
+<div align="center">
+
+[![rolldown-starter-stackblitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/rolldown/rolldown-starter-stackblitz)
+
+</div>
+
 > 🚧 **Work in Progress**
 >
 > Rolldown is currently in active development and not usable for production yet.

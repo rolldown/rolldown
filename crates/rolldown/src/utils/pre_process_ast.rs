@@ -19,8 +19,6 @@ pub fn pre_process_ast(
   path: &Path,
   source_type: SourceType,
 ) -> anyhow::Result<(OxcAst, SymbolTable, ScopeTree)> {
-  let (mut symbols, mut scopes) = ast.make_symbol_table_and_scope_tree();
-
   if !matches!(parse_type, OxcParseType::Js) {
     let trivias = ast.trivias.clone();
     let ret = ast.program.with_mut(move |fields| {
@@ -44,15 +42,14 @@ pub fn pre_process_ast(
         trivias,
         transformer_options,
       )
-      .build_with_symbols_and_scopes(symbols, scopes, fields.program)
+      .build(fields.program)
     });
 
     if !ret.errors.is_empty() {
       return Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors));
     }
-
-    symbols = ret.symbols;
-    scopes = ret.scopes;
+    // symbols = ret.symbols;
+    // scopes = ret.scopes;
   }
 
   ast.program.with_mut(|fields| {
@@ -62,6 +59,9 @@ pub fn pre_process_ast(
   });
 
   tweak_ast_for_scanning(&mut ast);
+
+  // We have to re-create the symbol table and scope tree after the transformation so far to make sure they are up-to-date.
+  let (symbols, scopes) = ast.make_symbol_table_and_scope_tree();
 
   Ok((ast, symbols, scopes))
 }

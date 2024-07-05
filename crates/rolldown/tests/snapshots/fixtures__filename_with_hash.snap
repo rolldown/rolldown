@@ -1577,9 +1577,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main_jsx-!~{000}~.mjs => main_jsx-TL8s4o_9.mjs
 
-# tests/fixtures/module_types/ts
+# tests/fixtures/module_types/ts/basic
 
 - main_ts-!~{000}~.mjs => main_ts-NyiJuHHI.mjs
+
+# tests/fixtures/module_types/ts/enum_reference_id_not_exist_after_transform
+
+- main_ts-!~{000}~.mjs => main_ts-m4kmDcdH.mjs
 
 # tests/fixtures/module_types/tsx
 

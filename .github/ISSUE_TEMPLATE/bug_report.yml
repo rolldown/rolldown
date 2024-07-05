@@ -11,24 +11,16 @@ body:
 
         Prerequisites
 
-        - Rust >= 1.75
         - Node.js >= 18.18.0
-        - Yarn >= 4
         - Git
 
         - Read the [docs](https://rolldown.rs/)
-        - Ask on [Discord Chat](https://chat.rolldown.rs)
+        # - Ask on [Discord Chat](https://chat.rolldown.rs)
         - Ask on [GitHub Discussions](https://github.com/rolldown/rolldown/discussions)
-        
+
         Also try to search for your issue - it may have already been answered or even fixed in the development branch.
         However, if you find that an old, closed issue still persists in the latest version,
         you should open a new issue using the form below instead of commenting on the old issue.
-  - type: input
-    id: version
-    attributes:
-      label: Rolldown version
-    validations:
-      required: true
   - type: textarea
     id: steps-to-reproduce
     attributes:

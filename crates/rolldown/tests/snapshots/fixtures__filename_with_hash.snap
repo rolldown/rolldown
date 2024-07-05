@@ -93,7 +93,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/no_side_effects_comment
 
-- expr-arrow_js-!~{001}~.mjs => expr-arrow_js-QjhqLgSt.mjs
+- expr-arrow_js-!~{001}~.mjs => expr-arrow_js-2Gk33-L5.mjs
 - expr-fn_js-!~{000}~.mjs => expr-fn_js--rxcfA_g.mjs
 - stmt-export-default-after-async-fn-anon_js-!~{00i}~.mjs => stmt-export-default-after-async-fn-anon_js-VqiQ4rZ2.mjs
 - stmt-export-default-after-async-fn-name_js-!~{00j}~.mjs => stmt-export-default-after-async-fn-name_js-veIDNMFO.mjs
@@ -126,7 +126,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 
-- src_entry_js-!~{000}~.mjs => src_entry_js-9USr1Cve.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-LaOLxa9M.mjs
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_module
 
@@ -246,7 +246,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/arrow_fn_scope
 
-- entry_js-!~{000}~.mjs => entry_js-2HCIbYNz.mjs
+- entry_js-!~{000}~.mjs => entry_js-H-CTHTMr.mjs
 
 # tests/esbuild/default/auto_external
 
@@ -296,7 +296,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/export_forms_common_js
 
-- entry_js-!~{000}~.mjs => entry_js-9gjw7WH0.mjs
+- entry_js-!~{000}~.mjs => entry_js-EgFUPEc8.mjs
 
 # tests/esbuild/default/export_forms_es6
 
@@ -1181,7 +1181,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_compat/esm_require_esm_unused
 
-- main-!~{000}~.mjs => main-iLHE0RP-.mjs
+- main-!~{000}~.mjs => main-EvB0tfKW.mjs
 
 # tests/fixtures/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
 
@@ -1237,8 +1237,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_compat/require/require_esm
 
-- main-!~{000}~.mjs => main-d85F8ByK.mjs
-- main-d85F8ByK.mjs.map
+- main-!~{000}~.mjs => main-mzN_M2zb.mjs
+- main-mzN_M2zb.mjs.map
 
 # tests/fixtures/cjs_module_lexer_compat/basic
 
@@ -1321,13 +1321,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/deconflict/wrapped_esm_default_function
 
-- main-!~{000}~.mjs => main-3y1KCuH-.mjs
-- main-3y1KCuH-.mjs.map
+- main-!~{000}~.mjs => main-KAJpuAYo.mjs
+- main-KAJpuAYo.mjs.map
 
 # tests/fixtures/deconflict/wrapped_esm_export_named_function
 
-- main-!~{000}~.mjs => main-2mUydJJc.mjs
-- main-2mUydJJc.mjs.map
+- main-!~{000}~.mjs => main-nwEo9Ghg.mjs
+- main-nwEo9Ghg.mjs.map
 
 # tests/fixtures/errors/missing_export
 
@@ -1446,7 +1446,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/shim_missing_exports/basic_wrapped_esm
 
-- main-!~{000}~.mjs => main-n4iWrFp0.mjs
+- main-!~{000}~.mjs => main-7DKu14UZ.mjs
 
 # tests/fixtures/function/shim_missing_exports/shake_unused_shimmed_exports
 
@@ -1534,8 +1534,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/wrapped_esm
 
-- main-!~{000}~.mjs => main-RWNqGvY8.mjs
-- main-RWNqGvY8.mjs.map
+- main-!~{000}~.mjs => main-CJpsNFqZ.mjs
+- main-CJpsNFqZ.mjs.map
 
 # tests/fixtures/module_types/base64/binary
 
@@ -1551,11 +1551,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/module_types/binary/binary
 
-- main-!~{000}~.mjs => main-Vg9jPllE.mjs
+- main-!~{000}~.mjs => main-NlO64avp.mjs
 
 # tests/fixtures/module_types/binary/empty
 
-- main-!~{000}~.mjs => main-E1UrB3n2.mjs
+- main-!~{000}~.mjs => main-fEuuH-nL.mjs
 
 # tests/fixtures/module_types/binary/node
 
@@ -1563,7 +1563,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/module_types/binary/text
 
-- main-!~{000}~.mjs => main-G4LOQ3Fw.mjs
+- main-!~{000}~.mjs => main-Fp4mS0f7.mjs
 
 # tests/fixtures/module_types/empty
 

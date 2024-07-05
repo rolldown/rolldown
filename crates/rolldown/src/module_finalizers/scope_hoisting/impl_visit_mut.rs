@@ -238,7 +238,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       }
     });
 
-    walk_mut::walk_program_mut(self, program);
+    walk_mut::walk_program(self, program);
 
     // check if we need to add wrapper
     let needs_wrapper = self
@@ -361,7 +361,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
   fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
     self.try_rewrite_identifier_reference_expr(&mut expr.callee, true);
 
-    walk_mut::walk_call_expression_mut(self, expr);
+    walk_mut::walk_call_expression(self, expr);
   }
 
   #[allow(clippy::collapsible_else_if, clippy::too_many_lines)]
@@ -497,7 +497,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       _ => {}
     };
 
-    walk_mut::walk_expression_mut(self, expr);
+    walk_mut::walk_expression(self, expr);
   }
 
   fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {
@@ -514,7 +514,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       _ => {}
     }
 
-    walk_mut::walk_object_property_mut(self, prop);
+    walk_mut::walk_object_property(self, prop);
   }
 
   fn visit_object_pattern(&mut self, pat: &mut ast::ObjectPattern<'ast>) {
@@ -560,7 +560,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
 
-    walk_mut::walk_object_pattern_mut(self, pat);
+    walk_mut::walk_object_pattern(self, pat);
   }
 
   fn visit_import_expression(&mut self, expr: &mut ast::ImportExpression<'ast>) {
@@ -591,7 +591,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       _ => {}
     }
 
-    walk_mut::walk_import_expression_mut(self, expr);
+    walk_mut::walk_import_expression(self, expr);
   }
 
   fn visit_assignment_target_property(
@@ -628,12 +628,12 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
 
-    walk_mut::walk_assignment_target_property_mut(self, property);
+    walk_mut::walk_assignment_target_property(self, property);
   }
 
   fn visit_simple_assignment_target(&mut self, target: &mut SimpleAssignmentTarget<'ast>) {
     self.rewrite_simple_assignment_target(target);
 
-    walk_mut::walk_simple_assignment_target_mut(self, target);
+    walk_mut::walk_simple_assignment_target(self, target);
   }
 }

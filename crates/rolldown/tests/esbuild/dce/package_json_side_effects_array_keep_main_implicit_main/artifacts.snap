@@ -21,7 +21,7 @@ var init_index_module = __esmMin(() => {
 
 //#endregion
 //#region src/require-demo-pkg.js
-init_index_module(), __toCommonJS(index_module_ns);
+(init_index_module(), __toCommonJS(index_module_ns));
 
 //#endregion
 //#region src/entry.js

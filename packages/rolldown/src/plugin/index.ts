@@ -42,6 +42,7 @@ export interface CustomPluginOptions {
 
 export interface ModuleOptions {
   moduleSideEffects: ModuleSideEffects
+  meta: CustomPluginOptions
 }
 
 export interface ResolvedId extends ModuleOptions {

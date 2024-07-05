@@ -1,4 +1,6 @@
-export interface ModuleInfo {
+import { ModuleOptions } from '..'
+
+export interface ModuleInfo extends ModuleOptions {
   /**
    *  Unsupported at rolldown
    */

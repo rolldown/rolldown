@@ -2,13 +2,14 @@ import type { RollupError, LoggingFunction } from '../rollup'
 import type { BindingPluginContext } from '../binding'
 import { getLogHandler, normalizeLog } from '../log/logHandler'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
-import type { Plugin } from './index'
+import type { CustomPluginOptions, ModuleOptions, Plugin } from './index'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
 import { AssetSource, bindingAssetSource } from '../utils/asset-source'
 import { unimplemented, unsupported } from '../utils/misc'
 import { ModuleInfo } from '../types/module-info'
 import { transformModuleInfo } from '../utils'
+import { PluginContextData } from './plugin-context-data'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -34,12 +35,11 @@ export class PluginContext {
    */
   parse: (input: string, options?: any) => any
 
-  modules = new Map<string, ModuleInfo>()
-  moduleIds: Array<string> | null = null
   constructor(
     options: NormalizedInputOptions,
     context: BindingPluginContext,
     plugin: Plugin,
+    data: PluginContextData,
   ) {
     const onLog = options.onLog
     const pluginName = plugin.name || 'unknown'
@@ -81,29 +81,8 @@ export class PluginContext {
       })
     }
     this.getFileName = context.getFileName.bind(context)
-    this.getModuleInfo = (id: string) => {
-      if (this.modules.has(id)) {
-        return this.modules.get(id) ?? null
-      }
-      const bindingInfo = context.getModuleInfo(id)
-      if (bindingInfo) {
-        const info = transformModuleInfo(bindingInfo)
-        this.modules.set(id, info)
-        return info
-      }
-      return null
-    }
-    this.getModuleIds = () => {
-      if (this.moduleIds) {
-        return this.moduleIds.values()
-      }
-      const moduleIds = context.getModuleIds()
-      if (moduleIds) {
-        this.moduleIds = moduleIds
-        return moduleIds.values()
-      }
-      return [].values()
-    }
+    this.getModuleInfo = (id: string) => data.getModuleInfo(id, context)
+    this.getModuleIds = () => data.getModuleIds(context)
     this.parse = unsupported(
       '`PluginContext#parse` is not supported by rolldown.',
     )

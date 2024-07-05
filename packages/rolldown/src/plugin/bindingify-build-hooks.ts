@@ -1,6 +1,5 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type {
-  BindingHookLoadOutput,
   BindingHookResolveIdOutput,
   BindingPluginOptions,
 } from '../binding'
@@ -14,10 +13,12 @@ import { bindingifySourcemap, ExistingRawSourceMap } from '../types/sourcemap'
 import { PluginContext } from './plugin-context'
 import { TransformPluginContext } from './transfrom-plugin-context'
 import { bindingifySideEffects } from '../utils/transform-side-effects'
+import { PluginContextData } from './plugin-context-data'
 
 export function bindingifyBuildStart(
   plugin: Plugin,
   options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
 ): BindingPluginOptions['buildStart'] {
   const hook = plugin.buildStart
   if (!hook) {
@@ -26,13 +27,17 @@ export function bindingifyBuildStart(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx) => {
-    await handler.call(new PluginContext(options, ctx, plugin), options)
+    await handler.call(
+      new PluginContext(options, ctx, plugin, pluginContextData),
+      options,
+    )
   }
 }
 
 export function bindingifyBuildEnd(
   plugin: Plugin,
   options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
 ): BindingPluginOptions['buildEnd'] {
   const hook = plugin.buildEnd
   if (!hook) {
@@ -42,7 +47,7 @@ export function bindingifyBuildEnd(
 
   return async (ctx, err) => {
     await handler.call(
-      new PluginContext(options, ctx, plugin),
+      new PluginContext(options, ctx, plugin, pluginContextData),
       err ? new Error(err) : undefined,
     )
   }
@@ -51,6 +56,7 @@ export function bindingifyBuildEnd(
 export function bindingifyResolveId(
   plugin: Plugin,
   options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
 ): BindingPluginOptions['resolveId'] {
   const hook = plugin.resolveId
   if (!hook) {
@@ -60,7 +66,7 @@ export function bindingifyResolveId(
 
   return async (ctx, specifier, importer, extraOptions) => {
     const ret = await handler.call(
-      new PluginContext(options, ctx, plugin),
+      new PluginContext(options, ctx, plugin, pluginContextData),
       specifier,
       importer ?? undefined,
       extraOptions,
@@ -84,6 +90,11 @@ export function bindingifyResolveId(
       result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
     }
 
+    pluginContextData.updateModuleOption(ret.id, {
+      meta: ret.meta || {},
+      moduleSideEffects: ret.moduleSideEffects || null,
+    })
+
     return result
   }
 }
@@ -91,6 +102,7 @@ export function bindingifyResolveId(
 export function bindingifyResolveDynamicImport(
   plugin: Plugin,
   options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
 ): BindingPluginOptions['resolveDynamicImport'] {
   const hook = plugin.resolveDynamicImport
   if (!hook) {
@@ -100,7 +112,7 @@ export function bindingifyResolveDynamicImport(
 
   return async (ctx, specifier, importer) => {
     const ret = await handler.call(
-      new PluginContext(options, ctx, plugin),
+      new PluginContext(options, ctx, plugin, pluginContextData),
       specifier,
       importer ?? undefined,
     )
@@ -123,6 +135,11 @@ export function bindingifyResolveDynamicImport(
       result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
     }
 
+    pluginContextData.updateModuleOption(ret.id, {
+      meta: ret.meta || {},
+      moduleSideEffects: ret.moduleSideEffects || null,
+    })
+
     return result
   }
 }
@@ -130,6 +147,7 @@ export function bindingifyResolveDynamicImport(
 export function bindingifyTransform(
   plugin: Plugin,
   options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
 ): BindingPluginOptions['transform'] {
   const hook = plugin.transform
   if (!hook) {
@@ -141,7 +159,7 @@ export function bindingifyTransform(
     const ret = await handler.call(
       new TransformPluginContext(
         ctx,
-        new PluginContext(options, ctx.inner(), plugin),
+        new PluginContext(options, ctx.inner(), plugin, pluginContextData),
         id,
         code,
       ),
@@ -157,6 +175,11 @@ export function bindingifyTransform(
       return { code: ret }
     }
 
+    pluginContextData.updateModuleOption(id, {
+      meta: ret.meta || {},
+      moduleSideEffects: ret.moduleSideEffects || null,
+    })
+
     return {
       code: ret.code,
       map: bindingifySourcemap(ret.map),
@@ -168,6 +191,7 @@ export function bindingifyTransform(
 export function bindingifyLoad(
   plugin: Plugin,
   options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
 ): BindingPluginOptions['load'] {
   const hook = plugin.load
   if (!hook) {
@@ -176,7 +200,10 @@ export function bindingifyLoad(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, id) => {
-    const ret = await handler.call(new PluginContext(options, ctx, plugin), id)
+    const ret = await handler.call(
+      new PluginContext(options, ctx, plugin, pluginContextData),
+      id,
+    )
 
     if (ret == null) {
       return
@@ -214,6 +241,11 @@ export function bindingifyLoad(
       result.sideEffects = bindingifySideEffects(ret.moduleSideEffects)
     }
 
+    pluginContextData.updateModuleOption(id, {
+      meta: ret.meta || {},
+      moduleSideEffects: ret.moduleSideEffects || null,
+    })
+
     return result
   }
 }
@@ -221,6 +253,7 @@ export function bindingifyLoad(
 export function bindingifyModuleParsed(
   plugin: Plugin,
   options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
 ): BindingPluginOptions['moduleParsed'] {
   const hook = plugin.moduleParsed
   if (!hook) {
@@ -230,8 +263,11 @@ export function bindingifyModuleParsed(
 
   return async (ctx, moduleInfo) => {
     await handler.call(
-      new PluginContext(options, ctx, plugin),
-      transformModuleInfo(moduleInfo),
+      new PluginContext(options, ctx, plugin, pluginContextData),
+      transformModuleInfo(
+        moduleInfo,
+        pluginContextData.moduleOptionMap.get(moduleInfo.id)!,
+      ),
     )
   }
 }

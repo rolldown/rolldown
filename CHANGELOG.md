@@ -1,3 +1,36 @@
+# [0.11.0](https://github.com/rolldown/rolldown/compare/v0.10.5...v0.11.0) (2024-07-05)
+
+
+### Bug Fixes
+
+* **json:** align the behavior of `require` json modules with nodejs ([#1483](https://github.com/rolldown/rolldown/issues/1483)) ([8bf75ba](https://github.com/rolldown/rolldown/commit/8bf75ba849d08734da6ee28af1bdaf3ba1fd5f00))
+
+
+### Features
+
+* add issues template ([#564](https://github.com/rolldown/rolldown/issues/564)) ([4f0a484](https://github.com/rolldown/rolldown/commit/4f0a484f6b822febac048058b38e47f99812cb99))
+* **cjs:** make output compatible with cjs-module-lexer ([#1525](https://github.com/rolldown/rolldown/issues/1525)) ([f0de5f8](https://github.com/rolldown/rolldown/commit/f0de5f88227397091ad30e4fe042d98b2f4199d3))
+* **core:** make sure `Semantic` up-to-date after transforming ([#1531](https://github.com/rolldown/rolldown/issues/1531)) ([a660554](https://github.com/rolldown/rolldown/commit/a6605546a3aaf5fd1ce25132df8eda0c2fa0da4b))
+* export tranform for oxc transformer ([#1502](https://github.com/rolldown/rolldown/issues/1502)) ([679a8cb](https://github.com/rolldown/rolldown/commit/679a8cb54d6f9f4e40307471e561d3782cef50be))
+* glob import plugin ([#1510](https://github.com/rolldown/rolldown/issues/1510)) ([0aaa5ce](https://github.com/rolldown/rolldown/commit/0aaa5ce35fe8c846fa69d51644552aed1dae7d69))
+* simple binary expr folder ([#1470](https://github.com/rolldown/rolldown/issues/1470)) ([ef8709a](https://github.com/rolldown/rolldown/commit/ef8709ab233e76b5b05430e9abbabf9c5f3c9cd8))
+* support `dataurl` module type. ([#1367](https://github.com/rolldown/rolldown/issues/1367)) ([b27b0b0](https://github.com/rolldown/rolldown/commit/b27b0b0cb44eb5c958f8812854b722c49604d1cb)), closes [#1299](https://github.com/rolldown/rolldown/issues/1299) [#1406](https://github.com/rolldown/rolldown/issues/1406)
+* support constant folding ([#1401](https://github.com/rolldown/rolldown/issues/1401)) ([5df84a8](https://github.com/rolldown/rolldown/commit/5df84a8ca4a93579221cd387799523cce2ad0e12))
+* support PluginContext#getModuleInfo ([#1408](https://github.com/rolldown/rolldown/issues/1408)) ([ab7d550](https://github.com/rolldown/rolldown/commit/ab7d5503ff8e9714146a989c7168141f6225b5e5))
+
+
+### Performance Improvements
+
+* **rolldown:** avoid calling `f64.to_string()` ([#1481](https://github.com/rolldown/rolldown/issues/1481)) ([f90969a](https://github.com/rolldown/rolldown/commit/f90969a4ec764aa2fde17c586d9a99dc19d30e8a))
+* **rolldown:** build oxc semantic data only once ([#1506](https://github.com/rolldown/rolldown/issues/1506)) ([fa347b3](https://github.com/rolldown/rolldown/commit/fa347b3a44d7fee7f3edeb1f7b6b26e1fdef2ee2))
+* **rolldown:** replace `HASH_PLACEHOLDER_RE` with simple string parsing ([#1496](https://github.com/rolldown/rolldown/issues/1496)) ([aa347f5](https://github.com/rolldown/rolldown/commit/aa347f52690622d15cb473e629866e148e482870))
+* **rolldown:** use `sort_unstable` variants ([#1469](https://github.com/rolldown/rolldown/issues/1469)) ([151d8c7](https://github.com/rolldown/rolldown/commit/151d8c7a93657981e000d9513ee64f3a1e33f781))
+* **rust/renamer:** new deconflict strategy ([#1461](https://github.com/rolldown/rolldown/issues/1461)) ([fa866eb](https://github.com/rolldown/rolldown/commit/fa866eb68de39bd174ec79bf411e149c5d9ef609))
+* **rust:** don't use regex on `legitimize_identifier_name` ([#1477](https://github.com/rolldown/rolldown/issues/1477)) ([18bc668](https://github.com/rolldown/rolldown/commit/18bc6688b0696e7a924794985938f59b22e6411e))
+* **rust:** reduce operations `legitimize_identifier_name` ([#1478](https://github.com/rolldown/rolldown/issues/1478)) ([3d816d5](https://github.com/rolldown/rolldown/commit/3d816d5399897cf9d25f2c47fa522fb24768e957))
+
+
+
 ## [0.10.5](https://github.com/rolldown/rolldown/compare/v0.10.4...v0.10.5) (2024-06-27)
 
 

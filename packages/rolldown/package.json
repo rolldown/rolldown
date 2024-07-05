@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "0.10.5",
+  "version": "0.11.0",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",
   "repository": {
@@ -101,12 +101,12 @@
     "citty": "^0.1.6",
     "colorette": "^2.0.20",
     "consola": "^3.2.3",
-    "locate-character": "^3.0.0",
-    "mri": "^1.2.0",
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",
     "fs-extra": "^11.2.0",
     "glob": "^10.4.1",
+    "locate-character": "^3.0.0",
+    "mri": "^1.2.0",
     "npm-run-all2": "^6.2.0",
     "rolldown": "workspace:*",
     "rollup": "^4.18.0",

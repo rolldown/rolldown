@@ -31,14 +31,12 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 	value: mod,
 	enumerable: true
 }) : target, mod));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, '__esModule', {value: true}), mod);
 
 //#endregion
 const fs = __toESM(require("fs"));
 const { default: defaultValue, readFileSync } = __toESM(require("fs"));
 
 //#region entry.js
-var entry_ns = {};
 console.log(fs, readFileSync, defaultValue);
 
 //#endregion

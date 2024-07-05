@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown/tests/common/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/function/format/cjs/import_export_unicode
+input_file: crates/rolldown/tests/fixtures/cjs_module_lexer_compat/basic
 ---
 # Assets
 
@@ -11,10 +11,14 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/import_export_uni
 "use strict";
 
 
-//#region foo.js
+//#region demo.js
+const a = 'a';
+const b = 'b';
 const devil = 'devil';
 
 //#endregion
 Object.defineProperty(exports, '__esModule', { value: true });
+exports.a = a;
+exports.b = b;
 exports['😈'] = devil;
 ```

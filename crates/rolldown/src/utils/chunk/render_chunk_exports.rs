@@ -1,4 +1,4 @@
-use rolldown_common::{Chunk, ChunkKind, OutputFormat, SymbolRef, WrapKind};
+use rolldown_common::{Chunk, ChunkKind, ExportsKind, OutputFormat, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
 
@@ -6,7 +6,7 @@ use crate::{runtime::RuntimeModuleBrief, stages::link_stage::LinkStageOutput, Sh
 
 pub fn render_chunk_exports(
   this: &Chunk,
-  runtime: &RuntimeModuleBrief,
+  _runtime: &RuntimeModuleBrief,
   graph: &LinkStageOutput,
   output_options: &SharedOptions,
 ) -> Option<String> {
@@ -47,14 +47,32 @@ pub fn render_chunk_exports(
       let mut s = String::new();
       match this.kind {
         ChunkKind::EntryPoint { module, .. } => {
-          let to_commonjs_ref_name = &this.canonical_names[&runtime.resolve_symbol("__toCommonJS")];
           let module = &graph.module_table.normal_modules[module];
-          let namespace_ref_name = &this.canonical_names[&module.namespace_object_ref];
-          s.push_str(&format!(
-            "module.exports = {}({})",
-            to_commonjs_ref_name.as_str(),
-            namespace_ref_name.as_str()
-          ));
+          if matches!(module.exports_kind, ExportsKind::Esm) {
+            s.push_str("Object.defineProperty(exports, '__esModule', { value: true });\n");
+            let rendered_items = export_items
+              .into_iter()
+              .map(|(exported_name, export_ref)| {
+                let canonical_ref = graph.symbols.par_canonical_ref_for(export_ref);
+                let symbol = graph.symbols.get(canonical_ref);
+                let canonical_name = &this.canonical_names[&canonical_ref];
+                if let Some(ns_alias) = &symbol.namespace_alias {
+                  let canonical_ns_name = &this.canonical_names[&ns_alias.namespace_ref];
+                  let property_name = &ns_alias.property_name;
+                  s.push_str(&format!(
+                    "var {canonical_name} = {canonical_ns_name}.{property_name};\n"
+                  ));
+                }
+
+                if is_validate_identifier_name(&exported_name) {
+                  format!("exports.{exported_name} = {canonical_name};")
+                } else {
+                  format!("exports['{exported_name}'] = {canonical_name};")
+                }
+              })
+              .collect::<Vec<_>>();
+            s.push_str(&rendered_items.join("\n"));
+          }
         }
         ChunkKind::Common => {
           export_items.into_iter().for_each(|(exported_name, export_ref)| {

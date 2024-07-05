@@ -29,5 +29,7 @@ __export(entry_ns, {
 const foo = 123;
 
 //#endregion
-module.exports = __toCommonJS(entry_ns)
+Object.defineProperty(exports, '__esModule', { value: true });
+exports.foo = foo;
+exports.ns = entry_ns;
 ```

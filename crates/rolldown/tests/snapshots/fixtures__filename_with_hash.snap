@@ -320,7 +320,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/import_fs_node_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-aITEk-gU.cjs
+- entry_js-!~{000}~.cjs => entry_js-4s_cSQ1v.cjs
 
 # tests/esbuild/default/import_missing_common_js
 
@@ -377,7 +377,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/re_export_default_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-Jeq5j1xy.cjs
+- entry_js-!~{000}~.cjs => entry_js-1USdpzC_.cjs
 
 # tests/esbuild/default/re_export_default_external_es6
 
@@ -469,19 +469,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_other_as_namespace_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-oJcil4iW.cjs
+- entry_js-!~{000}~.cjs => entry_js-Gz81RBm2.cjs
 
 # tests/esbuild/import_star/export_other_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-O3dI2Mf3.cjs
+- entry_js-!~{000}~.cjs => entry_js-LQ-zEEll.cjs
 
 # tests/esbuild/import_star/export_other_nested_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-eZt3aXpU.cjs
+- entry_js-!~{000}~.cjs => entry_js-n7S8XfdO.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-MZ55OZmg.cjs
+- entry_js-!~{000}~.cjs => entry_js-Q9D7lDEt.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_es6
 
@@ -489,7 +489,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_self_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-9_4BoGi1.cjs
+- entry_js-!~{000}~.cjs => entry_js-Ss0VD8Ty.cjs
 
 # tests/esbuild/import_star/export_self_es6
 
@@ -645,7 +645,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_as_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-6g3wjd17.cjs
+- entry_js-!~{000}~.cjs => entry_js-Me_eAYqP.cjs
 
 # tests/esbuild/import_star/re_export_star_as_external_es6
 
@@ -657,7 +657,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-OR9q3erY.cjs
+- entry_js-!~{000}~.cjs => entry_js-dmnXSR2b.cjs
 
 # tests/esbuild/import_star/re_export_star_external_es6
 
@@ -1240,6 +1240,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-d85F8ByK.mjs
 - main-d85F8ByK.mjs.map
 
+# tests/fixtures/cjs_module_lexer_compat/basic
+
+- main-!~{000}~.cjs => main-0epkoBCN.cjs
+
+# tests/fixtures/cjs_module_lexer_compat/external
+
+- main-!~{000}~.cjs => main-nSrPAr7k.cjs
+
+# tests/fixtures/cjs_module_lexer_compat/re_export
+
+- main-!~{000}~.cjs => main-0epkoBCN.cjs
+
 # tests/fixtures/code_splitting/basic
 
 - dynamic-!~{003}~.mjs => dynamic-wHOpCO8a.mjs
@@ -1372,17 +1384,17 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/format/cjs/import_export_unicode
 
-- main-!~{000}~.cjs => main-spI-Wym2.cjs
+- main-!~{000}~.cjs => main-qN7Xj6DO.cjs
 
 # tests/fixtures/function/format/cjs/plain_import_should_not_introduce_to_esm
 
-- main-!~{000}~.cjs => main-DC7p4jOK.cjs
+- main-!~{000}~.cjs => main-3pDEUHkP.cjs
 
 # tests/fixtures/function/format/cjs/shared_entry_modules
 
-- entry1-!~{000}~.cjs => entry1-bvP2oGc9.cjs
-- entry2-!~{001}~.cjs => entry2-ji5JSQXb.cjs
-- main-!~{002}~.cjs => main-IrlLIxtN.cjs
+- entry1-!~{000}~.cjs => entry1-Cv77LIiN.cjs
+- entry2-!~{001}~.cjs => entry2-34nvIdxH.cjs
+- main-!~{002}~.cjs => main-3KDsO5SD.cjs
 
 # tests/fixtures/function/format/esm/import_export_unicode
 
@@ -1510,15 +1522,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 
-- main-!~{000}~.cjs => main-Be1DpZj_.cjs
+- main-!~{000}~.cjs => main--ZSQHWbF.cjs
 
 # tests/fixtures/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 
-- main-!~{000}~.cjs => main-RiVA5Cbd.cjs
+- main-!~{000}~.cjs => main-5t9eAmp0.cjs
 
 # tests/fixtures/misc/use_strict/no_use_strict_with_non_strict_cjs_in_cjs_format
 
-- main-!~{000}~.cjs => main-D3NFX7L9.cjs
+- main-!~{000}~.cjs => main-8q-KLc9h.cjs
 
 # tests/fixtures/misc/wrapped_esm
 

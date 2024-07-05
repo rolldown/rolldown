@@ -27,17 +27,18 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "rolldown": "workspace:*",
-    "npm-rolldown": "npm:rolldown@0.10.5",
     "@ls-lint/ls-lint": "^2.2.3",
     "@taplo/cli": "^0.7.0",
     "@types/node": "20.14.9",
+    "cjs-module-lexer": "^1.3.1",
     "conventional-changelog-cli": "^5.0.0",
     "cspell": "^8.8.4",
     "husky": "^9.0.11",
     "lint-staged": "^15.2.5",
+    "npm-rolldown": "npm:rolldown@0.10.5",
     "oxlint": "0.5.1",
     "prettier": "^3.3.1",
+    "rolldown": "workspace:*",
     "typescript": "^5.4.5"
   },
   "prettier": {

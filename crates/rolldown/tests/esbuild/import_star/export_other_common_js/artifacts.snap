@@ -17,10 +17,10 @@ var require_foo = __commonJSMin((exports, module) => {
 
 //#endregion
 //#region entry.js
-var entry_ns = {};
-__export(entry_ns, {bar: () => import_foo.bar});
 var import_foo = __toESM(require_foo());
 
 //#endregion
-module.exports = __toCommonJS(entry_ns)
+Object.defineProperty(exports, '__esModule', { value: true });
+var bar = import_foo.bar;
+exports.bar = bar;
 ```

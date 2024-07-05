@@ -19,12 +19,10 @@ input_file: crates/rolldown/tests/esbuild/import_star/export_self_common_js
 "use strict";
 
 
-
 //#region entry.js
-var entry_ns = {};
-__export(entry_ns, {foo: () => foo});
 const foo = 123;
 
 //#endregion
-module.exports = __toCommonJS(entry_ns)
+Object.defineProperty(exports, '__esModule', { value: true });
+exports.foo = foo;
 ```

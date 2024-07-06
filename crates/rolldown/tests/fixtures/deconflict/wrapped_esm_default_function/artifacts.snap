@@ -33,7 +33,7 @@ var bar_default = {foo: foo$1};
 const a = 2;
 const { foo } = bar_default;
 assert.strictEqual(typeof foo, 'function');
-init_foo(), __toCommonJS(foo_ns);
+(init_foo(), __toCommonJS(foo_ns));
 
 //#endregion
 //# sourceMappingURL=main.mjs.map
@@ -80,5 +80,5 @@ init_foo(), __toCommonJS(foo_ns);
 (7:26-7:31) " foo," --> (48:26-48:31) " foo,"
 (7:31-7:42) " 'function'" --> (48:31-48:42) " 'function'"
 (7:42-9:0) ")\n" --> (48:42-49:0) ");"
-(9:0-0:0) "" --> (49:0-49:0) ""
-(0:0-10:1) "import assert from 'node:assert'\nimport bar from './bar'\n\nconst a = 2; // make foo `a` conflict\n\nconst { foo } = bar\n\nassert.strictEqual(typeof foo, 'function')\n\nrequire('./foo')\n" --> (49:0-52:34) "\ninit_foo(), __toCommonJS(foo_ns);\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(9:0-0:0) "" --> (49:0-49:1) "\n"
+(0:0-10:1) "import assert from 'node:assert'\nimport bar from './bar'\n\nconst a = 2; // make foo `a` conflict\n\nconst { foo } = bar\n\nassert.strictEqual(typeof foo, 'function')\n\nrequire('./foo')\n" --> (49:1-52:34) "(init_foo(), __toCommonJS(foo_ns));\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

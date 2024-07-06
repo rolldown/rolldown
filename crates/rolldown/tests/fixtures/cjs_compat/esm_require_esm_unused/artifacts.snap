@@ -20,7 +20,7 @@ var init_esm = __esmMin(() => {
 
 //#endregion
 //#region main.js
-init_esm(), __toCommonJS(esm_ns);
+(init_esm(), __toCommonJS(esm_ns));
 
 //#endregion
 ```

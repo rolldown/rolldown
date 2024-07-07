@@ -1918,10 +1918,15 @@ dependencies = [
 name = "rolldown_testing"
 version = "0.0.1"
 dependencies = [
+ "dunce",
+ "insta",
  "jsonschema",
  "once_cell",
+ "regex",
  "rolldown",
  "rolldown_common",
+ "rolldown_error",
+ "rolldown_sourcemap",
  "rolldown_testing_config",
  "schemars",
  "serde_json",

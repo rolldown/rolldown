@@ -158,8 +158,11 @@ export function bindingifyTransform(
   return async (ctx, code, id) => {
     const ret = await handler.call(
       new TransformPluginContext(
+        options,
+        ctx.inner(),
+        plugin,
+        pluginContextData,
         ctx,
-        new PluginContext(options, ctx.inner(), plugin, pluginContextData),
         id,
         code,
       ),

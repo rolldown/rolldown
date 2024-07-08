@@ -9,6 +9,15 @@ export async function cloneThreeJsIfNotExists() {
   }
 }
 
+export async function cloneRolldownBenchcasesIfNotExists() {
+  if (!fsExtra.existsSync('./tmp/github/rolldown-benchcases')) {
+    fsExtra.ensureDirSync('./tmp/github')
+    await $`git clone https://github.com/rolldown/benchcases.git ./tmp/github/rolldown-benchcases`
+  } else {
+    console.log('[skip] rolldown-benchcases already cloned')
+  }
+}
+
 export async function fetchRomeIfNotExists() {
   if (!fsExtra.existsSync('./tmp/github/rome')) {
     fsExtra.ensureDirSync('./tmp/github/rome')

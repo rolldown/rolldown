@@ -36,6 +36,7 @@ impl FromStr for ModuleType {
       "json" => Ok(Self::Json),
       "text" => Ok(Self::Text),
       "base64" => Ok(Self::Base64),
+      "dataurl" => Ok(Self::Dataurl),
       "binary" => Ok(Self::Binary),
       "empty" => Ok(Self::Empty),
       _ => Err(format!("Unknown module type: {s}")),

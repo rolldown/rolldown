@@ -2,36 +2,31 @@ import type {
   BindingPluginContext,
   BindingTransformPluginContext,
 } from '../binding'
-import type { SourceMap } from '../types/rolldown-output'
-import type {
-  LoggingFunction,
-  LoggingFunctionWithPosition,
-  RollupError,
-} from '../rollup'
+import type { LoggingFunctionWithPosition, RollupError } from '../rollup'
 import { normalizeLog } from '../log/logHandler'
-import type { EmittedAsset, PluginContext } from './plugin-context'
+import { PluginContext } from './plugin-context'
 import { augmentCodeLocation } from '../log/logs'
+import { PluginContextData } from './plugin-context-data'
+import { NormalizedInputOptions } from '..'
+import type { Plugin } from './index'
 
-export class TransformPluginContext {
-  debug: LoggingFunction
-  info: LoggingFunction
-  warn: LoggingFunction
+export class TransformPluginContext extends PluginContext {
   error: (
     error: RollupError | string,
     pos?: number | { column: number; line: number },
   ) => never
-  resolve: BindingPluginContext['resolve']
   // getCombinedSourcemap: () => SourceMap
-  emitFile: (file: EmittedAsset) => string
-  getFileName: (referenceId: string) => string
-  parse: (input: string, options?: any) => any
 
   constructor(
+    options: NormalizedInputOptions,
+    context: BindingPluginContext,
+    plugin: Plugin,
+    data: PluginContextData,
     inner: BindingTransformPluginContext,
-    context: PluginContext,
     moduleId: string,
     moduleSource: string,
   ) {
+    super(options, context, plugin, data)
     const getLogHandler =
       (handler: LoggingFunctionWithPosition): LoggingFunctionWithPosition =>
       (log, pos) => {
@@ -42,9 +37,9 @@ export class TransformPluginContext {
         handler(log)
       }
 
-    this.debug = getLogHandler(context.debug)
-    this.warn = getLogHandler(context.warn)
-    this.info = getLogHandler(context.info)
+    this.debug = getLogHandler(this.debug)
+    this.warn = getLogHandler(this.warn)
+    this.info = getLogHandler(this.info)
     this.error = (
       error: RollupError | string,
       pos?: number | { column: number; line: number },
@@ -53,12 +48,8 @@ export class TransformPluginContext {
       if (pos) augmentCodeLocation(error, pos, moduleSource, moduleId)
       error.id = moduleId
       error.hook = 'transform'
-      return context.error(error)
+      return this.error(error)
     }
-    this.resolve = context.resolve
-    this.parse = context.parse
     // this.getCombinedSourcemap = () => JSON.parse(inner.getCombinedSourcemap())
-    this.emitFile = context.emitFile
-    this.getFileName = context.getFileName
   }
 }

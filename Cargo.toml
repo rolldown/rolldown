@@ -138,8 +138,10 @@ urlencoding        = "2.1.3"
 vfs                = "0.12.0"
 xxhash-rust        = "0.8.10"
 # oxc crates share the same version
+lightningcss       = { version = "1.0.0-alpha.57" }
 oxc                = { version = "0.17.1", features = ["sourcemap_concurrent", "transformer", "minifier"] }
 oxc_transform_napi = { version = "0.17.1" }
+
 
 [profile.release]
 codegen-units = 1

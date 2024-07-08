@@ -17,6 +17,7 @@ workspace = true
 anyhow             = { workspace = true }
 dashmap            = { workspace = true }
 glob-match         = { workspace = true }
+lightningcss       = { workspace = true }
 oxc                = { workspace = true, features = ["semantic"] }
 regex              = { workspace = true }
 regress            = "0.10.0"

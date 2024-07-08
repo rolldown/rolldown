@@ -3,7 +3,6 @@ pub mod ast_scopes;
 pub mod bundler_file_system;
 pub mod chunk_idx;
 pub mod chunk_kind;
-pub mod ecma_module_id;
 pub mod entry_point;
 pub mod exports_kind;
 pub mod external_module_idx;

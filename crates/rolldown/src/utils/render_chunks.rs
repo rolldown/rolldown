@@ -15,15 +15,17 @@ pub async fn render_chunks<'a>(
       .await
       .map(|(code, render_chunk_sourcemap_chain)| ChunkRenderReturn {
         code,
-        map: if render_chunk_sourcemap_chain.is_empty() {
-          chunk.map
-        } else {
-          let mut sourcemap_chain = Vec::with_capacity(render_chunk_sourcemap_chain.len() + 1);
-          if let Some(sourcemap) = chunk.map.as_ref() {
+        map: if let Some(sourcemap) = chunk.map.as_ref() {
+          if render_chunk_sourcemap_chain.is_empty() {
+            chunk.map
+          } else {
+            let mut sourcemap_chain = Vec::with_capacity(render_chunk_sourcemap_chain.len() + 1);
             sourcemap_chain.push(sourcemap);
+            sourcemap_chain.extend(render_chunk_sourcemap_chain.iter());
+            collapse_sourcemaps(sourcemap_chain)
           }
-          sourcemap_chain.extend(render_chunk_sourcemap_chain.iter());
-          collapse_sourcemaps(sourcemap_chain)
+        } else {
+          None
         },
         rendered_chunk: chunk.rendered_chunk,
         augment_chunk_hash: None,

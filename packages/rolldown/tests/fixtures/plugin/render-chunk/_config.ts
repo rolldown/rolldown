@@ -28,9 +28,12 @@ export default defineTest({
         },
       },
     ],
+    output: {
+      sourcemap: true,
+    },
   },
   afterTest: (output) => {
     expect(renderChunkFn).toHaveBeenCalledTimes(1)
-    expect(output.output[0].code).toBe('render-chunk-code')
+    expect(output.output[0].code.includes('render-chunk-code')).toBe(true)
   },
 })

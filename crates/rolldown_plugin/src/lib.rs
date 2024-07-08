@@ -29,5 +29,6 @@ pub use crate::{
   types::hook_resolve_id_output::HookResolveIdOutput,
   types::hook_transform_args::HookTransformArgs,
   types::hook_transform_ast_args::HookTransformAstArgs,
+  types::hook_transform_output::HookTransformOutput,
   types::plugin_context_resolve_options::PluginContextResolveOptions,
 };

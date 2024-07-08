@@ -64,7 +64,7 @@ export type ResolveIdResult = string | NullValue | false | PartialResolvedId
 
 export type LoadResult = NullValue | string | SourceDescription
 
-export type TransformResult = NullValue | string | SourceDescription
+export type TransformResult = NullValue | string | Partial<SourceDescription>
 
 export interface Plugin {
   name?: string

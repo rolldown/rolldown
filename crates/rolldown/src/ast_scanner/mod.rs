@@ -17,8 +17,8 @@ use rolldown_common::{
   AstScopes, EcmaModuleIdx, ExportsKind, ImportKind, ImportRecordIdx, LocalExport, ModuleDefFormat,
   NamedImport, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
+use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
@@ -389,10 +389,10 @@ impl<'me> AstScanner<'me> {
         None
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
-        fn_decl.id.as_ref().map(rolldown_oxc_utils::BindingIdentifierExt::expect_symbol_id)
+        fn_decl.id.as_ref().map(rolldown_ecmascript::BindingIdentifierExt::expect_symbol_id)
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => {
-        cls_decl.id.as_ref().map(rolldown_oxc_utils::BindingIdentifierExt::expect_symbol_id)
+        cls_decl.id.as_ref().map(rolldown_ecmascript::BindingIdentifierExt::expect_symbol_id)
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
     };

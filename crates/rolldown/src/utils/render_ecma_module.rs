@@ -1,12 +1,12 @@
 use rolldown_common::EcmaModule;
-use rolldown_oxc_utils::{OxcAst, OxcCompiler};
+use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_sourcemap::{collapse_sourcemaps, lines_count, RawSource, Source, SourceMapSource};
 
 use crate::SharedOptions;
 
 pub fn render_ecma_module(
   module: &EcmaModule,
-  ast: &OxcAst,
+  ast: &EcmaAst,
   source_name: &str,
   options: &SharedOptions,
 ) -> Option<Vec<Box<dyn Source + Send>>> {
@@ -24,7 +24,7 @@ pub fn render_ecma_module(
     // Because oxc codegen sourcemap is last of sourcemap chain,
     // If here no extra sourcemap need remapping, we using it as final module sourcemap.
     // So here make sure using correct `source_name` and `source_content.
-    let render_output = OxcCompiler::print(ast, source_name, enable_sourcemap);
+    let render_output = EcmaCompiler::print(ast, source_name, enable_sourcemap);
 
     if enable_sourcemap {
       let sourcemap = if module.sourcemap_chain.is_empty() {

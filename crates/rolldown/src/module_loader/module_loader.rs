@@ -4,9 +4,9 @@ use rolldown_common::{
   ImportRecordIdx, ImporterRecord, IndexExternalModules, ModuleIdx, ModuleTable,
   ResolvedRequestInfo,
 };
+use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
-use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -25,18 +25,18 @@ use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<EcmaModuleIdx, Option<EcmaModule>>,
-  pub ast_table: IndexVec<EcmaModuleIdx, Option<OxcAst>>,
+  pub index_ecma_ast: IndexVec<EcmaModuleIdx, Option<EcmaAst>>,
   pub importers: IndexVec<EcmaModuleIdx, Vec<ImporterRecord>>,
 }
 
 impl IntermediateNormalModules {
   pub fn new() -> Self {
-    Self { modules: IndexVec::new(), ast_table: IndexVec::new(), importers: IndexVec::new() }
+    Self { modules: IndexVec::new(), index_ecma_ast: IndexVec::new(), importers: IndexVec::new() }
   }
 
   pub fn alloc_ecma_module_idx(&mut self, symbols: &mut Symbols) -> EcmaModuleIdx {
     let id = self.modules.push(None);
-    self.ast_table.push(None);
+    self.index_ecma_ast.push(None);
     self.importers.push(Vec::new());
     symbols.alloc_one();
     id
@@ -58,7 +58,7 @@ pub struct ModuleLoader {
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
-  pub ast_table: IndexVec<EcmaModuleIdx, OxcAst>,
+  pub index_ecma_ast: IndexVec<EcmaModuleIdx, EcmaAst>,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -179,7 +179,7 @@ impl ModuleLoader {
 
     let entries_count = user_defined_entries.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);
-    self.intermediate_normal_modules.ast_table.reserve(entries_count);
+    self.intermediate_normal_modules.index_ecma_ast.reserve(entries_count);
 
     // Store the already consider as entry module
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
@@ -240,7 +240,7 @@ impl ModuleLoader {
           module.import_records = import_records;
 
           self.intermediate_normal_modules.modules[module_id] = Some(module);
-          self.intermediate_normal_modules.ast_table[module_id] = Some(ast);
+          self.intermediate_normal_modules.index_ecma_ast[module_id] = Some(ast);
 
           self.symbols.add_ast_symbols(module_id, ast_symbol);
         }
@@ -248,7 +248,7 @@ impl ModuleLoader {
           let RuntimeEcmaModuleTaskResult { ast_symbol, module, runtime, ast } = task_result;
 
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module);
-          self.intermediate_normal_modules.ast_table[self.runtime_id] = Some(ast);
+          self.intermediate_normal_modules.index_ecma_ast[self.runtime_id] = Some(ast);
 
           self.symbols.add_ast_symbols(self.runtime_id, ast_symbol);
           runtime_brief = Some(runtime);
@@ -283,8 +283,8 @@ impl ModuleLoader {
       })
       .collect();
 
-    let ast_table: IndexVec<EcmaModuleIdx, OxcAst> =
-      self.intermediate_normal_modules.ast_table.into_iter().flatten().collect();
+    let index_ecma_ast: IndexVec<EcmaModuleIdx, EcmaAst> =
+      self.intermediate_normal_modules.index_ecma_ast.into_iter().flatten().collect();
 
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
     dynamic_import_entry_ids.sort_unstable_by_key(|id| &modules[*id].stable_resource_id);
@@ -298,7 +298,7 @@ impl ModuleLoader {
     Ok(ModuleLoaderOutput {
       module_table: ModuleTable { ecma_modules: modules, external_modules: self.external_modules },
       symbols: self.symbols,
-      ast_table,
+      index_ecma_ast,
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,

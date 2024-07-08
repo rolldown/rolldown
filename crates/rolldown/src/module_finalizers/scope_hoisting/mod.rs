@@ -5,7 +5,7 @@ use oxc::{
   span::{Atom, SPAN},
 };
 use rolldown_common::{AstScopes, ImportRecordIdx, ModuleIdx, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, IntoIn, TakeIn};
+use rolldown_ecmascript::{AstSnippet, BindingPatternExt, IntoIn, TakeIn};
 
 mod finalizer_context;
 mod impl_visit_mut;

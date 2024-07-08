@@ -1,6 +1,6 @@
 use anyhow::Result;
 use oxc::ast::VisitMut;
-use rolldown_oxc_utils::AstSnippet;
+use rolldown_ecmascript::AstSnippet;
 use rustc_hash::FxHashSet;
 
 use futures::future::try_join_all;

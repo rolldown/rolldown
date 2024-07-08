@@ -1,7 +1,7 @@
 import 'zx/globals'
 import { assertRunningScriptFromRepoRoot } from '../../meta/utils.js'
 import {
-  cloneMultiDuplicatedSymbolsIfNotExists,
+  cloneRolldownBenchcasesIfNotExists,
   cloneThreeJsIfNotExists,
   fetchRomeIfNotExists,
 } from './util.js'
@@ -9,9 +9,9 @@ assertRunningScriptFromRepoRoot()
 
 await cloneThreeJsIfNotExists()
 await fetchRomeIfNotExists()
-await cloneMultiDuplicatedSymbolsIfNotExists()
+await cloneRolldownBenchcasesIfNotExists()
 
 await import('./threejs.js')
 await import('./threejs-10x.js')
 await import('./rome.js')
-await import('./multi-duplicated-symbol.js')
+await import('./rolldown-benchcases.js')

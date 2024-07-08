@@ -9,12 +9,12 @@ export async function cloneThreeJsIfNotExists() {
   }
 }
 
-export async function cloneMultiDuplicatedSymbolsIfNotExists() {
-  if (!fsExtra.existsSync('./tmp/github/multi-duplicated-symbol')) {
+export async function cloneRolldownBenchcasesIfNotExists() {
+  if (!fsExtra.existsSync('./tmp/github/rolldown-benchcases')) {
     fsExtra.ensureDirSync('./tmp/github')
-    await $`git clone https://github.com/rolldown/multi-duplicated-symbol.git ./tmp/github/multi-duplicated-symbol`
+    await $`git clone https://github.com/rolldown/benchcases.git ./tmp/github/rolldown-benchcases`
   } else {
-    console.log('[skip] multi-duplicated-symbol already cloned')
+    console.log('[skip] rolldown-benchcases already cloned')
   }
 }
 

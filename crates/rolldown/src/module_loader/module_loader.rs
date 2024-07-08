@@ -1,7 +1,7 @@
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EntryPoint, EntryPointKind, ExternalModule, ExternalModuleVec, ImportKind, ImportRecordId,
-  ImporterRecord, ModuleId, ModuleTable, NormalModule, NormalModuleId, ResolvedRequestInfo,
+  EcmaModule, EcmaModuleId, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordId,
+  ImporterRecord, IndexExternalModules, ModuleId, ModuleTable, ResolvedRequestInfo,
 };
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -11,11 +11,11 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
 
-use super::normal_module_task::NormalModuleTask;
-use super::runtime_normal_module_task::RuntimeNormalModuleTask;
+use super::ecma_module_task::EcmaModuleTask;
+use super::runtime_ecma_module_task::RuntimeEcmaModuleTask;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
-use crate::module_loader::runtime_normal_module_task::RuntimeNormalModuleTaskResult;
+use crate::module_loader::runtime_ecma_module_task::RuntimeEcmaModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
 use crate::runtime::{RuntimeModuleBrief, ROLLDOWN_RUNTIME_RESOURCE_ID};
 use crate::types::symbols::Symbols;
@@ -23,9 +23,9 @@ use crate::types::symbols::Symbols;
 use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
-  pub modules: IndexVec<NormalModuleId, Option<NormalModule>>,
-  pub ast_table: IndexVec<NormalModuleId, Option<OxcAst>>,
-  pub importers: IndexVec<NormalModuleId, Vec<ImporterRecord>>,
+  pub modules: IndexVec<EcmaModuleId, Option<EcmaModule>>,
+  pub ast_table: IndexVec<EcmaModuleId, Option<OxcAst>>,
+  pub importers: IndexVec<EcmaModuleId, Vec<ImporterRecord>>,
 }
 
 impl IntermediateNormalModules {
@@ -33,7 +33,7 @@ impl IntermediateNormalModules {
     Self { modules: IndexVec::new(), ast_table: IndexVec::new(), importers: IndexVec::new() }
   }
 
-  pub fn alloc_module_id(&mut self, symbols: &mut Symbols) -> NormalModuleId {
+  pub fn alloc_module_id(&mut self, symbols: &mut Symbols) -> EcmaModuleId {
     let id = self.modules.push(None);
     self.ast_table.push(None);
     self.importers.push(Vec::new());
@@ -47,17 +47,17 @@ pub struct ModuleLoader {
   shared_context: Arc<TaskContext>,
   rx: tokio::sync::mpsc::Receiver<Msg>,
   visited: FxHashMap<Arc<str>, ModuleId>,
-  runtime_id: NormalModuleId,
+  runtime_id: EcmaModuleId,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
-  external_modules: ExternalModuleVec,
+  external_modules: IndexExternalModules,
   symbols: Symbols,
 }
 
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
-  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
+  pub ast_table: IndexVec<EcmaModuleId, OxcAst>,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -91,7 +91,7 @@ impl ModuleLoader {
     let mut symbols = Symbols::default();
     let runtime_id = intermediate_normal_modules.alloc_module_id(&mut symbols);
 
-    let task = RuntimeNormalModuleTask::new(runtime_id, tx_to_runtime_module);
+    let task = RuntimeEcmaModuleTask::new(runtime_id, tx_to_runtime_module);
 
     #[cfg(target_family = "wasm")]
     {
@@ -139,7 +139,7 @@ impl ModuleLoader {
           self.remaining += 1;
           let module_path = info.path.clone();
 
-          let task = NormalModuleTask::new(
+          let task = EcmaModuleTask::new(
             Arc::clone(&self.shared_context),
             id,
             module_path,
@@ -187,7 +187,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name: Some(name),
-        id: self.try_spawn_new_task(info, /* is_user_defined_entry */ true).expect_normal(),
+        id: self.try_spawn_new_task(info, /* is_user_defined_entry */ true).expect_ecma(),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -244,7 +244,7 @@ impl ModuleLoader {
           self.symbols.add_ast_symbols(module_id, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeNormalModuleTaskResult { ast_symbol, module, runtime, ast } = task_result;
+          let RuntimeEcmaModuleTaskResult { ast_symbol, module, runtime, ast } = task_result;
 
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module);
           self.intermediate_normal_modules.ast_table[self.runtime_id] = Some(ast);
@@ -262,7 +262,7 @@ impl ModuleLoader {
       self.remaining -= 1;
     }
 
-    let modules: IndexVec<NormalModuleId, NormalModule> = self
+    let modules: IndexVec<EcmaModuleId, EcmaModule> = self
       .intermediate_normal_modules
       .modules
       .into_iter()
@@ -282,7 +282,7 @@ impl ModuleLoader {
       })
       .collect();
 
-    let ast_table: IndexVec<NormalModuleId, OxcAst> =
+    let ast_table: IndexVec<EcmaModuleId, OxcAst> =
       self.intermediate_normal_modules.ast_table.into_iter().flatten().collect();
 
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
@@ -295,10 +295,7 @@ impl ModuleLoader {
     }));
 
     Ok(ModuleLoaderOutput {
-      module_table: ModuleTable {
-        normal_modules: modules,
-        external_modules: self.external_modules,
-      },
+      module_table: ModuleTable { ecma_modules: modules, external_modules: self.external_modules },
       symbols: self.symbols,
       ast_table,
       entry_points,

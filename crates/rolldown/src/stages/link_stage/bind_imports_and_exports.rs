@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use rolldown_common::{
-  ExportsKind, ModuleId, ModuleType, NormalModuleId, NormalModuleVec, ResolvedExport, Specifier,
+  EcmaModuleId, ExportsKind, IndexEcmaModules, ModuleId, ModuleType, ResolvedExport, Specifier,
   SymbolRef,
 };
 use rolldown_error::BuildError;
@@ -23,8 +23,8 @@ use super::LinkStage;
 
 #[derive(Clone)]
 struct ImportTracker {
-  pub importer: NormalModuleId,
-  pub importee: NormalModuleId,
+  pub importer: EcmaModuleId,
+  pub importee: EcmaModuleId,
   pub imported: Specifier,
   pub imported_as: SymbolRef,
 }
@@ -104,7 +104,7 @@ impl<'link> LinkStage<'link> {
   pub fn bind_imports_and_exports(&mut self) {
     // Initialize `resolved_exports` to prepare for matching imports with exports
     self.metas.iter_mut_enumerated().par_bridge().for_each(|(module_id, meta)| {
-      let module = &self.module_table.normal_modules[module_id];
+      let module = &self.module_table.ecma_modules[module_id];
       let mut resolved_exports = module
         .named_exports
         .iter()
@@ -120,7 +120,7 @@ impl<'link> LinkStage<'link> {
       let mut module_stack = vec![];
       if !module.star_exports.is_empty() {
         Self::add_exports_for_export_star(
-          &self.module_table.normal_modules,
+          &self.module_table.ecma_modules,
           &mut resolved_exports,
           module_id,
           &mut module_stack,
@@ -130,14 +130,14 @@ impl<'link> LinkStage<'link> {
     });
 
     let mut binding_ctx = BindImportsAndExportsContext {
-      normal_modules: &self.module_table.normal_modules,
+      normal_modules: &self.module_table.ecma_modules,
       metas: &mut self.metas,
       symbols: &mut self.symbols,
       input_options: self.input_options,
       errors: Vec::default(),
     };
 
-    self.module_table.normal_modules.iter().for_each(|module| {
+    self.module_table.ecma_modules.iter().for_each(|module| {
       binding_ctx.match_imports_with_exports(module.id);
     });
 
@@ -166,10 +166,10 @@ impl<'link> LinkStage<'link> {
   }
 
   pub fn add_exports_for_export_star(
-    normal_modules: &NormalModuleVec,
+    normal_modules: &IndexEcmaModules,
     resolve_exports: &mut FxHashMap<Rstr, ResolvedExport>,
-    module_id: NormalModuleId,
-    module_stack: &mut Vec<NormalModuleId>,
+    module_id: EcmaModuleId,
+    module_stack: &mut Vec<EcmaModuleId>,
   ) {
     if module_stack.contains(&module_id) {
       return;
@@ -179,7 +179,7 @@ impl<'link> LinkStage<'link> {
 
     let module = &normal_modules[module_id];
 
-    for dep_id in module.star_export_module_ids().filter_map(ModuleId::as_normal) {
+    for dep_id in module.star_export_module_ids().filter_map(ModuleId::as_ecma) {
       let dep_module = &normal_modules[dep_id];
       if matches!(dep_module.exports_kind, ExportsKind::CommonJs) {
         continue;
@@ -224,7 +224,7 @@ impl<'link> LinkStage<'link> {
 }
 
 struct BindImportsAndExportsContext<'a> {
-  pub normal_modules: &'a NormalModuleVec,
+  pub normal_modules: &'a IndexEcmaModules,
   pub metas: &'a mut LinkingMetadataVec,
   pub symbols: &'a mut Symbols,
   pub input_options: &'a SharedOptions,
@@ -232,7 +232,7 @@ struct BindImportsAndExportsContext<'a> {
 }
 
 impl<'a> BindImportsAndExportsContext<'a> {
-  fn match_imports_with_exports(&mut self, module_id: NormalModuleId) {
+  fn match_imports_with_exports(&mut self, module_id: EcmaModuleId) {
     let module = &self.normal_modules[module_id];
     for (imported_as_ref, named_import) in &module.named_imports {
       let match_import_span = tracing::trace_span!(
@@ -270,7 +270,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
             Some(NamespaceAlias { property_name: alias, namespace_ref });
         }
         MatchImportKind::NoMatch => {
-          let importee = &self.normal_modules[rec.resolved_module.as_normal().unwrap()];
+          let importee = &self.normal_modules[rec.resolved_module.as_ecma().unwrap()];
           self.errors.push(BuildError::missing_export(
             module.stable_resource_id.clone(),
             importee.stable_resource_id.clone(),
@@ -332,7 +332,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
   #[allow(clippy::too_many_lines)]
   fn match_import_with_export(
     &mut self,
-    normal_modules: &NormalModuleVec,
+    normal_modules: &IndexEcmaModules,
     ctx: &mut MatchingContext,
     mut tracker: ImportTracker,
   ) -> MatchImportKind {

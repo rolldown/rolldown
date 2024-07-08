@@ -1,6 +1,6 @@
+mod ecma_module_task;
 pub mod module_loader;
-mod normal_module_task;
-mod runtime_normal_module_task;
+mod runtime_ecma_module_task;
 pub mod task_context;
 mod task_result;
 
@@ -8,11 +8,11 @@ pub use module_loader::ModuleLoader;
 use rolldown_error::BuildError;
 
 use self::{
-  runtime_normal_module_task::RuntimeNormalModuleTaskResult, task_result::NormalModuleTaskResult,
+  runtime_ecma_module_task::RuntimeEcmaModuleTaskResult, task_result::NormalModuleTaskResult,
 };
 pub enum Msg {
   NormalModuleDone(NormalModuleTaskResult),
-  RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult),
+  RuntimeNormalModuleDone(RuntimeEcmaModuleTaskResult),
   BuildErrors(Vec<BuildError>),
   Panics(anyhow::Error),
 }

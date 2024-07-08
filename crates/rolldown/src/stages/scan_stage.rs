@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::future::join_all;
 use oxc::index::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, ModuleTable, NormalModuleId, ResolvedRequestInfo};
+use rolldown_common::{EcmaModuleId, EntryPoint, ImportKind, ModuleTable, ResolvedRequestInfo};
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
 use rolldown_oxc_utils::OxcAst;
@@ -29,7 +29,7 @@ pub struct ScanStage {
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub module_table: ModuleTable,
-  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
+  pub ast_table: IndexVec<EcmaModuleId, OxcAst>,
   pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,

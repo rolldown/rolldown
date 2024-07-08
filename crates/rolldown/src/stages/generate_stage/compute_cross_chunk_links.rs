@@ -73,7 +73,7 @@ impl<'a> GenerateStage<'a> {
           let mut resource_ids = chunk_graph.chunks[*chunk_id]
             .modules
             .iter()
-            .map(|id| self.link_output.module_table.normal_modules[*id].resource_id.as_str())
+            .map(|id| self.link_output.module_table.ecma_modules[*id].resource_id.as_str())
             .collect::<Vec<_>>();
           resource_ids.sort_unstable();
           resource_ids
@@ -158,13 +158,13 @@ impl<'a> GenerateStage<'a> {
         cross_chunk_dynamic_imports,
       )| {
         chunk.modules.iter().copied().for_each(|module_id| {
-          let module = &self.link_output.module_table.normal_modules[module_id];
+          let module = &self.link_output.module_table.ecma_modules[module_id];
           module
             .import_records
             .iter()
             .inspect(|rec| {
               if let ModuleId::Normal(importee_id) = rec.resolved_module {
-                let importee_module = &self.link_output.module_table.normal_modules[importee_id];
+                let importee_module = &self.link_output.module_table.ecma_modules[importee_id];
                 // the the resolved module is not included in module graph, skip
                 // TODO: Is that possible that the module of the record is a external module?
                 if !importee_module.is_included {
@@ -226,7 +226,7 @@ impl<'a> GenerateStage<'a> {
         });
 
         if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
-          let entry = &self.link_output.module_table.normal_modules[*entry_id];
+          let entry = &self.link_output.module_table.ecma_modules[*entry_id];
           let entry_meta = &self.link_output.metas[entry.id];
 
           if !matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
@@ -277,7 +277,7 @@ impl<'a> GenerateStage<'a> {
         let import_symbol = self.link_output.symbols.get(import_ref);
 
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
-          let symbol_owner = &self.link_output.module_table.normal_modules[import_ref.owner];
+          let symbol_owner = &self.link_output.module_table.ecma_modules[import_ref.owner];
           let symbol_name = self.link_output.symbols.get_original_name(import_ref);
           panic!(
             "Symbol {:?} in {:?} should belong to a chunk",

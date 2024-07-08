@@ -1,5 +1,5 @@
 use oxc::ast::VisitMut;
-use rolldown_common::NormalModule;
+use rolldown_common::EcmaModule;
 use rolldown_oxc_utils::{AstSnippet, OxcAst};
 
 use super::module_finalizers::scope_hoisting::{
@@ -19,14 +19,14 @@ pub mod parse_to_ast;
 pub mod pre_process_ast;
 pub mod renamer;
 pub mod render_chunks;
-pub mod render_normal_module;
+pub mod render_ecma_module;
 pub mod resolve_id;
 pub mod transform_source;
 pub mod tweak_ast_for_scanning;
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn finalize_normal_module(
-  module: &NormalModule,
+  module: &EcmaModule,
   ctx: ScopeHoistingFinalizerContext<'_>,
   ast: &mut OxcAst,
 ) {

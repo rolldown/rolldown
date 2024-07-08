@@ -3,7 +3,7 @@ use std::collections::hash_map::Entry;
 
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
-use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, SymbolRef};
+use rolldown_common::{EcmaModule, EcmaModuleId, IndexEcmaModules, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -83,12 +83,12 @@ impl<'name> Renamer<'name> {
   #[tracing::instrument(level = "trace", skip_all)]
   pub fn rename_non_top_level_symbol(
     &mut self,
-    modules_in_chunk: &[NormalModuleId],
-    modules: &NormalModuleVec,
+    modules_in_chunk: &[EcmaModuleId],
+    modules: &IndexEcmaModules,
   ) {
     #[tracing::instrument(level = "trace", skip_all)]
     fn rename_symbols_of_nested_scopes<'name>(
-      module: &'name NormalModule,
+      module: &'name EcmaModule,
       scope_id: ScopeId,
       stack: &mut Vec<Cow<FxHashMap<Cow<'name, Rstr>, u32>>>,
       canonical_names: &mut FxHashMap<SymbolRef, Rstr>,

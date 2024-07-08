@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 // cSpell:disable
 use crate::{
-  ChunkId, ChunkKind, ExternalModuleId, FilenameTemplate, NamedImport, NormalModuleId,
+  ChunkId, ChunkKind, EcmaModuleId, ExternalModuleId, FilenameTemplate, NamedImport,
   NormalizedBundlerOptions, ResourceId, SymbolRef,
 };
 pub mod types;
@@ -20,7 +20,7 @@ use self::types::{
 pub struct Chunk {
   pub exec_order: u32,
   pub kind: ChunkKind,
-  pub modules: Vec<NormalModuleId>,
+  pub modules: Vec<EcmaModuleId>,
   pub user_defined_name: Option<String>,
   pub filename: Option<ResourceId>,
   pub name: Option<Arc<str>>,
@@ -41,7 +41,7 @@ impl Chunk {
   pub fn new(
     user_defined_name: Option<String>,
     bits: BitSet,
-    modules: Vec<NormalModuleId>,
+    modules: Vec<EcmaModuleId>,
     kind: ChunkKind,
   ) -> Self {
     Self { exec_order: u32::MAX, modules, user_defined_name, bits, kind, ..Self::default() }
@@ -58,7 +58,7 @@ impl Chunk {
     }
   }
 
-  pub fn has_side_effect(&self, runtime_id: NormalModuleId) -> bool {
+  pub fn has_side_effect(&self, runtime_id: EcmaModuleId) -> bool {
     // TODO: remove this special case, once `NormalModule#side_effect` is implemented. Runtime module should always not have side effect
     if self.modules.len() == 1 && self.modules[0] == runtime_id {
       return false;

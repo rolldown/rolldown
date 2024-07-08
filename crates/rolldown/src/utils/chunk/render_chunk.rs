@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
   chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
-  utils::render_normal_module::render_normal_module, SharedOptions,
+  utils::render_ecma_module::render_ecma_module, SharedOptions,
 };
 
 use anyhow::Result;
@@ -44,9 +44,9 @@ pub async fn render_chunk(
         .modules
         .par_iter()
         .copied()
-        .map(|id| &graph.module_table.normal_modules[id])
+        .map(|id| &graph.module_table.ecma_modules[id])
         .filter_map(|m| {
-          render_normal_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
+          render_ecma_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
             .map(|rendered| (m.id, &m.resource_id, rendered))
         })
         .collect::<Vec<_>>()
@@ -102,9 +102,9 @@ pub async fn render_chunk(
         .modules
         .par_iter()
         .copied()
-        .map(|id| &graph.module_table.normal_modules[id])
+        .map(|id| &graph.module_table.ecma_modules[id])
         .filter_map(|m| {
-          render_normal_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
+          render_ecma_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
             .map(|rendered| (&m.resource_id, rendered))
         })
         .collect::<Vec<_>>()
@@ -136,7 +136,7 @@ pub async fn render_chunk(
   // Add `use strict` directive if needed. This must come before the banner, because users might use banner to add hashbang.
   if matches!(options.format, OutputFormat::Cjs) {
     let are_modules_all_strict = this.modules.iter().all(|id| {
-      let is_esm = matches!(graph.module_table.normal_modules[*id].exports_kind, ExportsKind::Esm);
+      let is_esm = matches!(graph.module_table.ecma_modules[*id].exports_kind, ExportsKind::Esm);
       if is_esm {
         true
       } else {

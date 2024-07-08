@@ -8,9 +8,8 @@ use oxc::{
 };
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, ImportRecordId, ModuleDefFormat, ModuleType, NormalModule, NormalModuleId,
-  PackageJson, RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef,
-  TreeshakeOptions,
+  AstScopes, EcmaModule, EcmaModuleId, ImportRecordId, ModuleDefFormat, ModuleType, PackageJson,
+  RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef, TreeshakeOptions,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -31,9 +30,9 @@ use crate::{
   },
   SharedOptions, SharedResolver,
 };
-pub struct NormalModuleTask {
+pub struct EcmaModuleTask {
   ctx: Arc<TaskContext>,
-  module_id: NormalModuleId,
+  module_id: EcmaModuleId,
   resolved_path: ResolvedPath,
   package_json: Option<Arc<PackageJson>>,
   module_type: ModuleDefFormat,
@@ -42,10 +41,10 @@ pub struct NormalModuleTask {
   side_effects: Option<HookSideEffects>,
 }
 
-impl NormalModuleTask {
+impl EcmaModuleTask {
   pub fn new(
     ctx: Arc<TaskContext>,
-    id: NormalModuleId,
+    id: EcmaModuleId,
     path: ResolvedPath,
     module_type: ModuleDefFormat,
     is_user_defined_entry: bool,
@@ -194,7 +193,7 @@ impl NormalModuleTask {
       },
     };
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
-    let module = NormalModule {
+    let module = EcmaModule {
       source,
       id: self.module_id,
       repr_name,

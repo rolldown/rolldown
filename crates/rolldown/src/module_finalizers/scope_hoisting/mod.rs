@@ -184,7 +184,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           || self.ctx.module.import_records.iter().any(|record| {
             let id = record.resolved_module;
 
-            if let Some(normal_module_id) = id.as_normal() {
+            if let Some(normal_module_id) = id.as_ecma() {
               let m = &self.ctx.modules[normal_module_id];
               !m.exports_kind.is_esm()
             } else {

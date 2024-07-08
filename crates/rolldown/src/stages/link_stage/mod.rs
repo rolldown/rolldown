@@ -2,8 +2,8 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModuleId, OutputFormat,
-  StmtInfo, SymbolRef, WrapKind,
+  EcmaModuleId, EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, OutputFormat, StmtInfo,
+  SymbolRef, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -35,7 +35,7 @@ mod wrapping;
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
   pub entries: Vec<EntryPoint>,
-  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
+  pub ast_table: IndexVec<EcmaModuleId, OxcAst>,
   // pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub symbols: Symbols,
@@ -52,11 +52,11 @@ pub struct LinkStage<'a> {
   pub entries: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
-  pub sorted_modules: Vec<NormalModuleId>,
+  pub sorted_modules: Vec<EcmaModuleId>,
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildError>,
   pub errors: Vec<BuildError>,
-  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
+  pub ast_table: IndexVec<EcmaModuleId, OxcAst>,
   pub input_options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
@@ -68,10 +68,10 @@ impl<'a> LinkStage<'a> {
       sorted_modules: Vec::new(),
       metas: scan_stage_output
         .module_table
-        .normal_modules
+        .ecma_modules
         .iter()
         .map(|_| LinkingMetadata::default())
-        .collect::<IndexVec<NormalModuleId, _>>(),
+        .collect::<IndexVec<EcmaModuleId, _>>(),
       module_table: scan_stage_output.module_table,
       entries: scan_stage_output.entry_points,
       symbols: scan_stage_output.symbols,
@@ -87,7 +87,7 @@ impl<'a> LinkStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   fn create_exports_for_modules(&mut self) {
-    self.module_table.normal_modules.iter_mut().for_each(|module| {
+    self.module_table.ecma_modules.iter_mut().for_each(|module| {
       let linking_info = &mut self.metas[module.id];
 
       create_wrapper(module, linking_info, &mut self.symbols, &self.runtime);
@@ -170,12 +170,12 @@ impl<'a> LinkStage<'a> {
     // Maximize the compatibility with commonjs
     let compat_mode = true;
     let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
-    self.module_table.normal_modules.iter().for_each(|importer| {
+    self.module_table.ecma_modules.iter().for_each(|importer| {
       importer.import_records.iter().for_each(|rec| {
         let ModuleId::Normal(importee_id) = rec.resolved_module else {
           return;
         };
-        let importee = &self.module_table.normal_modules[importee_id];
+        let importee = &self.module_table.ecma_modules[importee_id];
 
         match rec.kind {
           ImportKind::Import => {
@@ -240,7 +240,7 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
-    self.module_table.normal_modules.iter().par_bridge().for_each(|importer| {
+    self.module_table.ecma_modules.iter().par_bridge().for_each(|importer| {
       // safety: No race conditions here:
       // - Mutating on `stmt_infos` is isolated in threads for each module
       // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
@@ -311,7 +311,7 @@ impl<'a> LinkStage<'a> {
                           .referenced_symbols
                           .push(self.runtime.resolve_symbol("__toESM").into());
                         stmt_info.declared_symbols.push(rec.namespace_ref);
-                        let importee = &self.module_table.normal_modules[importee_id];
+                        let importee = &self.module_table.ecma_modules[importee_id];
                         symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                           format!("import_{}", &importee.repr_name).into();
                       }
@@ -330,7 +330,7 @@ impl<'a> LinkStage<'a> {
                           .referenced_symbols
                           .push(self.runtime.resolve_symbol("__reExport").into());
                         stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
-                        let importee = &self.module_table.normal_modules[importee_id];
+                        let importee = &self.module_table.ecma_modules[importee_id];
                         stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                       }
                     }
@@ -354,7 +354,7 @@ impl<'a> LinkStage<'a> {
                     stmt_info
                       .referenced_symbols
                       .push(self.runtime.resolve_symbol("__toCommonJS").into());
-                    let importee = &self.module_table.normal_modules[importee_id];
+                    let importee = &self.module_table.ecma_modules[importee_id];
                     stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                   }
                 },

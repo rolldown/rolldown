@@ -31,4 +31,3 @@ This directory contains scripts that are used to automate various tasks for the 
 This directory contains some websites related to the project.
 
 - `/docs` Documentation for the project.
-- `/playground` A web playground using wasm version of rolldown.

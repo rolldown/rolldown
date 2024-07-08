@@ -1,5 +1,5 @@
 use rolldown_common::{
-  EcmaModule, EcmaModuleId, IndexEcmaModules, IndexExternalModules, SymbolRef,
+  EcmaModule, EcmaModuleIdx, IndexEcmaModules, IndexExternalModules, SymbolRef,
 };
 
 use rolldown_rstr::Rstr;
@@ -17,7 +17,7 @@ use crate::{
 };
 
 pub struct ScopeHoistingFinalizerContext<'me> {
-  pub id: EcmaModuleId,
+  pub id: EcmaModuleIdx,
   pub module: &'me EcmaModule,
   pub modules: &'me IndexEcmaModules,
   pub external_modules: &'me IndexExternalModules,

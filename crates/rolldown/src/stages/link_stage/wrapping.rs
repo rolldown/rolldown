@@ -1,6 +1,6 @@
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EcmaModule, EcmaModuleId, ExportsKind, IndexEcmaModules, ModuleId, StmtInfo, WrapKind,
+  EcmaModule, EcmaModuleIdx, ExportsKind, IndexEcmaModules, ModuleIdx, StmtInfo, WrapKind,
 };
 
 use crate::{
@@ -14,12 +14,12 @@ use crate::{
 use super::LinkStage;
 
 struct Context<'a> {
-  pub visited_modules: &'a mut IndexVec<EcmaModuleId, bool>,
+  pub visited_modules: &'a mut IndexVec<EcmaModuleIdx, bool>,
   pub linking_infos: &'a mut LinkingMetadataVec,
   pub modules: &'a IndexEcmaModules,
 }
 
-fn wrap_module_recursively(ctx: &mut Context, target: EcmaModuleId) {
+fn wrap_module_recursively(ctx: &mut Context, target: EcmaModuleIdx) {
   let is_visited = &mut ctx.visited_modules[target];
   if *is_visited {
     return;
@@ -43,10 +43,10 @@ fn wrap_module_recursively(ctx: &mut Context, target: EcmaModuleId) {
 }
 
 fn has_dynamic_exports_due_to_export_star(
-  target: EcmaModuleId,
+  target: EcmaModuleIdx,
   modules: &IndexEcmaModules,
   linking_infos: &mut LinkingMetadataVec,
-  visited_modules: &mut IndexVec<EcmaModuleId, bool>,
+  visited_modules: &mut IndexVec<EcmaModuleIdx, bool>,
 ) -> bool {
   if visited_modules[target] {
     return linking_infos[target].has_dynamic_exports;
@@ -61,7 +61,7 @@ fn has_dynamic_exports_due_to_export_star(
   }
 
   let has_dynamic_exports = module.star_export_module_ids().any(|importee_id| match importee_id {
-    rolldown_common::ModuleId::Normal(importee_id) => {
+    rolldown_common::ModuleIdx::Ecma(importee_id) => {
       target != importee_id
         && has_dynamic_exports_due_to_export_star(
           importee_id,
@@ -70,7 +70,7 @@ fn has_dynamic_exports_due_to_export_star(
           visited_modules,
         )
     }
-    rolldown_common::ModuleId::External(_) => true,
+    rolldown_common::ModuleIdx::External(_) => true,
   });
   if has_dynamic_exports {
     linking_infos[target].has_dynamic_exports = true;
@@ -88,7 +88,7 @@ impl LinkStage<'_> {
       oxc::index::index_vec![false; self.module_table.ecma_modules.len()];
 
     for module in &self.module_table.ecma_modules {
-      let module_id = module.id;
+      let module_id = module.idx;
       let linking_info = &self.metas[module_id];
 
       match linking_info.wrap_kind {
@@ -115,7 +115,7 @@ impl LinkStage<'_> {
       }
 
       module.import_records.iter().for_each(|rec| {
-        let ModuleId::Normal(importee_id) = rec.resolved_module else {
+        let ModuleIdx::Ecma(importee_id) = rec.resolved_module else {
           return;
         };
         let importee = &self.module_table.ecma_modules[importee_id];
@@ -126,7 +126,7 @@ impl LinkStage<'_> {
               linking_infos: &mut self.metas,
               modules: &self.module_table.ecma_modules,
             },
-            importee.id,
+            importee.idx,
           );
         }
       });
@@ -150,7 +150,7 @@ pub fn create_wrapper(
     //
     WrapKind::Cjs => {
       let wrapper_ref =
-        symbols.create_symbol(module.id, format!("require_{}", &module.repr_name).into());
+        symbols.create_symbol(module.idx, format!("require_{}", &module.repr_name).into());
 
       let stmt_info = StmtInfo {
         stmt_idx: None,
@@ -175,7 +175,7 @@ pub fn create_wrapper(
     //
     WrapKind::Esm => {
       let wrapper_ref =
-        symbols.create_symbol(module.id, format!("init_{}", &module.repr_name).into());
+        symbols.create_symbol(module.idx, format!("init_{}", &module.repr_name).into());
 
       let stmt_info = StmtInfo {
         stmt_idx: None,

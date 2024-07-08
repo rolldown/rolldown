@@ -7,7 +7,7 @@ use indexmap::IndexSet;
 use itertools::{multizip, Itertools};
 use oxc::index::{index_vec, IndexVec};
 use rolldown_common::{
-  ChunkId, ChunkKind, CrossChunkImportItem, ExportsKind, ExternalModuleId, ImportKind, ModuleId,
+  ChunkIdx, ChunkKind, CrossChunkImportItem, ExportsKind, ExternalModuleIdx, ImportKind, ModuleIdx,
   NamedImport, OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
@@ -16,14 +16,15 @@ use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::{FxHashMap, FxHashSet, FxHasher};
 
-type IndexChunkDependedSymbols = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
+type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
-  IndexVec<ChunkId, FxHashMap<ExternalModuleId, Vec<NamedImport>>>;
-type IndexChunkExportedSymbols = IndexVec<ChunkId, FxHashSet<SymbolRef>>;
-type IndexCrossChunkImports = IndexVec<ChunkId, FxHashSet<ChunkId>>;
+  IndexVec<ChunkIdx, FxHashMap<ExternalModuleIdx, Vec<NamedImport>>>;
+type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
+type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
 type IndexCrossChunkDynamicImports =
-  IndexVec<ChunkId, IndexSet<ChunkId, BuildHasherDefault<FxHasher>>>;
-type IndexImportsFromOtherChunks = IndexVec<ChunkId, FxHashMap<ChunkId, Vec<CrossChunkImportItem>>>;
+  IndexVec<ChunkIdx, IndexSet<ChunkIdx, BuildHasherDefault<FxHasher>>>;
+type IndexImportsFromOtherChunks =
+  IndexVec<ChunkIdx, FxHashMap<ChunkIdx, Vec<CrossChunkImportItem>>>;
 
 impl<'a> GenerateStage<'a> {
   #[allow(clippy::too_many_lines)]
@@ -33,9 +34,9 @@ impl<'a> GenerateStage<'a> {
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
-    let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ExternalModuleId, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
+    let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ExternalModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
 
-    let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkId, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunks.len()];
+    let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkIdx, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunks.len()];
     let mut index_cross_chunk_imports: IndexCrossChunkImports =
       index_vec![FxHashSet::default(); chunk_graph.chunks.len()];
     let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
@@ -163,7 +164,7 @@ impl<'a> GenerateStage<'a> {
             .import_records
             .iter()
             .inspect(|rec| {
-              if let ModuleId::Normal(importee_id) = rec.resolved_module {
+              if let ModuleIdx::Ecma(importee_id) = rec.resolved_module {
                 let importee_module = &self.link_output.module_table.ecma_modules[importee_id];
                 // the the resolved module is not included in module graph, skip
                 // TODO: Is that possible that the module of the record is a external module?
@@ -186,12 +187,12 @@ impl<'a> GenerateStage<'a> {
             })
             .for_each(|importee| {
               // Ensure the external module is imported in case it has side effects.
-              imports_from_external_modules.entry(importee.id).or_default();
+              imports_from_external_modules.entry(importee.idx).or_default();
             });
 
           module.named_imports.iter().for_each(|(_, import)| {
             let rec = &module.import_records[import.record_id];
-            if let ModuleId::External(importee_id) = rec.resolved_module {
+            if let ModuleIdx::External(importee_id) = rec.resolved_module {
               imports_from_external_modules.entry(importee_id).or_default().push(import.clone());
             }
           });
@@ -227,7 +228,7 @@ impl<'a> GenerateStage<'a> {
 
         if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
           let entry = &self.link_output.module_table.ecma_modules[*entry_id];
-          let entry_meta = &self.link_output.metas[entry.id];
+          let entry_meta = &self.link_output.metas[entry.idx];
 
           if !matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
             let symbols = symbols.lock().expect("ignore poison error");

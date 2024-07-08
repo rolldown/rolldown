@@ -3,7 +3,7 @@ use std::collections::hash_map::Entry;
 
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
-use rolldown_common::{EcmaModule, EcmaModuleId, IndexEcmaModules, SymbolRef};
+use rolldown_common::{EcmaModule, EcmaModuleIdx, IndexEcmaModules, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -83,7 +83,7 @@ impl<'name> Renamer<'name> {
   #[tracing::instrument(level = "trace", skip_all)]
   pub fn rename_non_top_level_symbol(
     &mut self,
-    modules_in_chunk: &[EcmaModuleId],
+    modules_in_chunk: &[EcmaModuleIdx],
     modules: &IndexEcmaModules,
   ) {
     #[tracing::instrument(level = "trace", skip_all)]
@@ -98,7 +98,7 @@ impl<'name> Renamer<'name> {
       used_canonical_names_for_this_scope.shrink_to(bindings.len());
       bindings.iter().for_each(|(binding_name, symbol_id)| {
         used_canonical_names_for_this_scope.insert(Cow::Owned(binding_name.to_rstr()), 0);
-        let binding_ref: SymbolRef = (module.id, *symbol_id).into();
+        let binding_ref: SymbolRef = (module.idx, *symbol_id).into();
 
         let mut count = 1;
         let mut candidate_name = Cow::Owned(binding_name.to_rstr());

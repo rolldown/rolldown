@@ -12,10 +12,10 @@ use crate::{
 };
 use anyhow::Result;
 use rolldown_common::{ModuleInfo, Output, RenderedChunk};
-use rolldown_oxc_utils::OxcAst;
+use rolldown_ecmascript::EcmaAst;
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
-pub type HookTransformAstReturn = Result<OxcAst>;
+pub type HookTransformAstReturn = Result<EcmaAst>;
 pub type HookTransformReturn = Result<Option<HookTransformOutput>>;
 pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
 pub type HookNoopReturn = Result<()>;

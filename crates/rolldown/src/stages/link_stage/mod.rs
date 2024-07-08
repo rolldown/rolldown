@@ -5,8 +5,8 @@ use rolldown_common::{
   EcmaModuleIdx, EntryPoint, ExportsKind, ImportKind, ModuleIdx, ModuleTable, OutputFormat,
   StmtInfo, SymbolRef, WrapKind,
 };
+use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::OxcAst;
 use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
   rayon::{ParallelBridge, ParallelIterator},
@@ -35,7 +35,7 @@ mod wrapping;
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
   pub entries: Vec<EntryPoint>,
-  pub ast_table: IndexVec<EcmaModuleIdx, OxcAst>,
+  pub ast_table: IndexVec<EcmaModuleIdx, EcmaAst>,
   // pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub symbols: Symbols,
@@ -56,7 +56,7 @@ pub struct LinkStage<'a> {
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildError>,
   pub errors: Vec<BuildError>,
-  pub ast_table: IndexVec<EcmaModuleIdx, OxcAst>,
+  pub ast_table: IndexVec<EcmaModuleIdx, EcmaAst>,
   pub input_options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
@@ -78,7 +78,7 @@ impl<'a> LinkStage<'a> {
       runtime: scan_stage_output.runtime,
       warnings: scan_stage_output.warnings,
       errors: scan_stage_output.errors,
-      ast_table: scan_stage_output.ast_table,
+      ast_table: scan_stage_output.index_ecma_ast,
       input_options,
       used_symbol_refs: FxHashSet::default(),
       top_level_member_expr_resolved_cache: FxHashMap::default(),

@@ -11,8 +11,8 @@ use rolldown_common::{
   AstScopes, EcmaModule, EcmaModuleIdx, ImportRecordIdx, ModuleDefFormat, ModuleType, PackageJson,
   RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef, TreeshakeOptions,
 };
+use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
@@ -26,7 +26,8 @@ use crate::{
   types::ast_symbols::AstSymbols,
   utils::{
     load_source::load_source, make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
-    parse_to_ast::parse_to_ast, resolve_id::resolve_id, transform_source::transform_source,
+    parse_to_ecma_ast::parse_to_ecma_ast, resolve_id::resolve_id,
+    transform_source::transform_source,
   },
   SharedOptions, SharedResolver,
 };
@@ -114,7 +115,7 @@ impl EcmaModuleTask {
     .await?
     .into();
 
-    let (mut ast, symbols, scopes) = parse_to_ast(
+    let (mut ast, symbols, scopes) = parse_to_ecma_ast(
       &self.ctx.plugin_driver,
       Path::new(&self.resolved_path.path.as_ref()),
       &self.ctx.input_options,
@@ -244,7 +245,7 @@ impl EcmaModuleTask {
 
   fn scan(
     &self,
-    ast: &mut OxcAst,
+    ast: &mut EcmaAst,
     source: &Arc<str>,
     symbols: SymbolTable,
     scopes: ScopeTree,

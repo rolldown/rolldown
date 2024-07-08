@@ -6,7 +6,7 @@ use rolldown_common::{
   side_effects::DeterminedSideEffects, AstScopes, EcmaModule, EcmaModuleIdx, ExportsKind,
   ModuleDefFormat, ModuleType, ResourceId, SymbolRef,
 };
-use rolldown_oxc_utils::{OxcAst, OxcCompiler};
+use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
 use super::Msg;
 use crate::{
@@ -24,7 +24,7 @@ pub struct RuntimeEcmaModuleTask {
 pub struct RuntimeEcmaModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
   pub ast_symbol: AstSymbols,
-  pub ast: OxcAst,
+  pub ast: EcmaAst,
   // pub warnings: Vec<BuildError>,
   pub module: EcmaModule,
 }
@@ -103,9 +103,9 @@ impl RuntimeEcmaModuleTask {
   fn make_ast(
     &self,
     source: &Arc<str>,
-  ) -> anyhow::Result<(OxcAst, AstScopes, ScanResult, AstSymbols, SymbolRef)> {
+  ) -> anyhow::Result<(EcmaAst, AstScopes, ScanResult, AstSymbols, SymbolRef)> {
     let source_type = SourceType::default();
-    let mut ast = OxcCompiler::parse(Arc::clone(source), source_type)?;
+    let mut ast = EcmaCompiler::parse(Arc::clone(source), source_type)?;
     tweak_ast_for_scanning(&mut ast);
 
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();

@@ -357,7 +357,7 @@ impl<'a> SideEffectDetector<'a> {
 mod test {
   use oxc::span::SourceType;
   use rolldown_common::AstScopes;
-  use rolldown_oxc_utils::{OxcAst, OxcCompiler};
+  use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
 
@@ -367,9 +367,9 @@ mod test {
       .with_module(true)
       .with_jsx(true)
       .with_typescript(false);
-    let ast = OxcCompiler::parse(code, source_type).unwrap();
+    let ast = EcmaCompiler::parse(code, source_type).unwrap();
     let ast_scope = {
-      let semantic = OxcAst::make_semantic(ast.source(), ast.program(), source_type);
+      let semantic = EcmaAst::make_semantic(ast.source(), ast.program(), source_type);
       let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
       AstScopes::new(
         scope,

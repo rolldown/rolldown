@@ -5,11 +5,11 @@ use oxc::{
   span::SourceType as OxcSourceType,
 };
 use rolldown_common::{ModuleType, NormalizedBundlerOptions};
+use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_esm};
-use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
 
-use super::pre_process_ast::pre_process_ast;
+use super::pre_process_ecma_ast::pre_process_ecma_ast;
 
 use crate::{runtime::ROLLDOWN_RUNTIME_RESOURCE_ID, types::oxc_parse_type::OxcParseType};
 
@@ -23,13 +23,13 @@ fn pure_esm_js_oxc_source_type() -> OxcSourceType {
   pure_esm_js
 }
 
-pub fn parse_to_ast(
+pub fn parse_to_ecma_ast(
   plugin_driver: &PluginDriver,
   path: &Path,
   options: &NormalizedBundlerOptions,
   module_type: ModuleType,
   source: impl Into<Arc<str>>,
-) -> anyhow::Result<(OxcAst, SymbolTable, ScopeTree)> {
+) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
   let source: Arc<str> = source.into();
 
   // 1. Transform the source to the type that rolldown supported.
@@ -58,10 +58,10 @@ pub fn parse_to_ast(
     }
   };
 
-  let mut oxc_ast = OxcCompiler::parse(Arc::clone(&source), oxc_source_type)?;
+  let mut ecma_ast = EcmaCompiler::parse(Arc::clone(&source), oxc_source_type)?;
 
-  oxc_ast =
-    plugin_driver.transform_ast(HookTransformAstArgs { cwd: &options.cwd, ast: oxc_ast })?;
+  ecma_ast =
+    plugin_driver.transform_ast(HookTransformAstArgs { cwd: &options.cwd, ast: ecma_ast })?;
 
-  pre_process_ast(oxc_ast, &parsed_type, path, oxc_source_type)
+  pre_process_ecma_ast(ecma_ast, &parsed_type, path, oxc_source_type)
 }

@@ -1,6 +1,6 @@
 use oxc::ast::ast::{self, Statement};
 use oxc::ast::VisitMut;
-use rolldown_oxc_utils::TakeIn;
+use rolldown_ecmascript::TakeIn;
 
 use super::IsolatingModuleFinalizer;
 

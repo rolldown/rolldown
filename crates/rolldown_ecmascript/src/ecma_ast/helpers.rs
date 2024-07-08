@@ -4,9 +4,9 @@ use oxc::{
   span::SourceType,
 };
 
-use crate::OxcAst;
+use crate::EcmaAst;
 
-impl OxcAst {
+impl EcmaAst {
   pub fn is_body_empty(&self) -> bool {
     self.program().is_empty()
   }

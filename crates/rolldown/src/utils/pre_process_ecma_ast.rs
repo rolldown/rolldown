@@ -4,7 +4,7 @@ use oxc::minifier::RemoveDeadCode;
 use oxc::semantic::{ScopeTree, SymbolTable};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
-use rolldown_oxc_utils::OxcAst;
+use rolldown_ecmascript::EcmaAst;
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -13,12 +13,12 @@ use super::tweak_ast_for_scanning::tweak_ast_for_scanning;
 
 // #[allow(clippy::match_same_arms)]: `OxcParseType::Tsx` will have special logic to deal with ts compared to `OxcParseType::Jsx`
 #[allow(clippy::match_same_arms)]
-pub fn pre_process_ast(
-  mut ast: OxcAst,
+pub fn pre_process_ecma_ast(
+  mut ast: EcmaAst,
   parse_type: &OxcParseType,
   path: &Path,
   source_type: SourceType,
-) -> anyhow::Result<(OxcAst, SymbolTable, ScopeTree)> {
+) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
   if !matches!(parse_type, OxcParseType::Js) {
     let trivias = ast.trivias.clone();
     let ret = ast.program.with_mut(move |fields| {

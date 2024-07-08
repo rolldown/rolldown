@@ -2130,10 +2130,10 @@ dependencies = [
  "oxc",
  "regex",
  "rolldown_common",
+ "rolldown_ecmascript",
  "rolldown_error",
  "rolldown_fs",
  "rolldown_loader_utils",
- "rolldown_oxc_utils",
  "rolldown_plugin",
  "rolldown_resolver",
  "rolldown_rstr",
@@ -2204,6 +2204,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_ecmascript"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oxc",
+ "self_cell",
+ "smallvec",
+]
+
+[[package]]
 name = "rolldown_error"
 version = "0.0.1"
 dependencies = [
@@ -2234,23 +2244,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_oxc_utils"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "oxc",
- "self_cell",
- "smallvec",
-]
-
-[[package]]
 name = "rolldown_plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
  "rolldown_common",
- "rolldown_oxc_utils",
+ "rolldown_ecmascript",
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_utils",

@@ -11,15 +11,10 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/import_export_uni
 "use strict";
 
 
-
 //#region foo.js
 const devil = 'devil';
 
 //#endregion
-//#region main.js
-var main_ns = {};
-__export(main_ns, {'😈': () => devil});
-
-//#endregion
-module.exports = __toCommonJS(main_ns)
+Object.defineProperty(exports, '__esModule', { value: true });
+exports['😈'] = devil;
 ```

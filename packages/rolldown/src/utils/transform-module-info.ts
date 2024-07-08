@@ -1,8 +1,12 @@
 import type { ModuleInfo } from '../types/module-info'
 import type { BindingModuleInfo } from '../binding'
 import { unsupported } from './misc'
+import { ModuleOptions } from '..'
 
-export function transformModuleInfo(info: BindingModuleInfo): ModuleInfo {
+export function transformModuleInfo(
+  info: BindingModuleInfo,
+  option: ModuleOptions,
+): ModuleInfo {
   return {
     get ast() {
       return unsupported('ModuleInfo#ast')
@@ -16,5 +20,6 @@ export function transformModuleInfo(info: BindingModuleInfo): ModuleInfo {
     importedIds: info.importedIds,
     dynamicallyImportedIds: info.dynamicallyImportedIds,
     isEntry: info.isEntry,
+    ...option,
   }
 }

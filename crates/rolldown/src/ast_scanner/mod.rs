@@ -373,7 +373,12 @@ impl<'me> AstScanner<'me> {
 
   // If the reference is a global variable, `None` will be returned.
   fn resolve_symbol_from_reference(&self, id_ref: &IdentifierReference) -> Option<SymbolId> {
-    let ref_id = id_ref.reference_id.get().expect("must have reference id");
+    let ref_id = id_ref.reference_id.get().unwrap_or_else(|| {
+      panic!(
+        "{id_ref:#?} must have reference id in code```\n{}\n```\n",
+        self.current_stmt_info.debug_label.as_deref().unwrap_or("<None>")
+      )
+    });
     self.scopes.symbol_id_for(ref_id)
   }
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {

@@ -21,10 +21,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_as_external
 
 const out = __toESM(require("foo"));
 
-//#region entry.js
-var entry_ns = {};
-__export(entry_ns, {out: () => out});
-
-//#endregion
-module.exports = __toCommonJS(entry_ns)
+Object.defineProperty(exports, '__esModule', { value: true });
+exports.out = out;
 ```

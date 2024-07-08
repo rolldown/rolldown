@@ -101,7 +101,9 @@ impl PluginDriver {
         if let Some(v) = r.side_effects {
           *side_effects = Some(v);
         }
-        code = r.code;
+        if let Some(v) = r.code {
+          code = v;
+        }
       }
     }
     Ok(code)

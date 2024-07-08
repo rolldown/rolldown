@@ -2,8 +2,8 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModule, NormalModuleId,
-  NormalizedBundlerOptions, OutputFormat, StmtInfo, SymbolRef, WrapKind,
+  EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, NormalModuleId, OutputFormat,
+  StmtInfo, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::OxcAst;
@@ -92,7 +92,7 @@ impl<'a> LinkStage<'a> {
 
       create_wrapper(module, linking_info, &mut self.symbols, &self.runtime);
       if self.entries.iter().any(|entry| entry.id == module.id) {
-        init_entry_point_stmt_info(self.input_options, &self.runtime, module, linking_info);
+        init_entry_point_stmt_info(linking_info);
       }
 
       // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
@@ -368,12 +368,7 @@ impl<'a> LinkStage<'a> {
   }
 }
 
-pub fn init_entry_point_stmt_info(
-  options: &NormalizedBundlerOptions,
-  runtime: &RuntimeModuleBrief,
-  module: &mut NormalModule,
-  meta: &mut LinkingMetadata,
-) {
+pub fn init_entry_point_stmt_info(meta: &mut LinkingMetadata) {
   let mut referenced_symbols = vec![];
 
   // Include the wrapper if present
@@ -385,14 +380,6 @@ pub fn init_entry_point_stmt_info(
 
   // Entry chunk need to generate exports, so we need reference to all exports to make sure they are included in tree-shaking.
   referenced_symbols.extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref));
-
-  if matches!(module.exports_kind, ExportsKind::Esm) && matches!(options.format, OutputFormat::Cjs)
-  {
-    // We will generate `module.exports = __toCommonJS(exports);` for esm modules that are entry points
-    // Include the namespace statement
-    referenced_symbols.push(module.namespace_object_ref);
-    referenced_symbols.push(runtime.resolve_symbol("__toCommonJS"));
-  }
 
   meta.referenced_symbols_by_entry_point_chunk.extend(referenced_symbols);
 }

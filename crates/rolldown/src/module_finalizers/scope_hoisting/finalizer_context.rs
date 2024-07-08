@@ -1,5 +1,5 @@
 use rolldown_common::{
-  ExternalModuleVec, NormalModule, NormalModuleId, NormalModuleVec, SymbolRef,
+  EcmaModule, EcmaModuleId, IndexEcmaModules, IndexExternalModules, SymbolRef,
 };
 
 use rolldown_rstr::Rstr;
@@ -17,10 +17,10 @@ use crate::{
 };
 
 pub struct ScopeHoistingFinalizerContext<'me> {
-  pub id: NormalModuleId,
-  pub module: &'me NormalModule,
-  pub modules: &'me NormalModuleVec,
-  pub external_modules: &'me ExternalModuleVec,
+  pub id: EcmaModuleId,
+  pub module: &'me EcmaModule,
+  pub modules: &'me IndexEcmaModules,
+  pub external_modules: &'me IndexExternalModules,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub symbols: &'me Symbols,

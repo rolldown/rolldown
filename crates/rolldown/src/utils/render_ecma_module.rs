@@ -1,11 +1,11 @@
-use rolldown_common::NormalModule;
+use rolldown_common::EcmaModule;
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 use rolldown_sourcemap::{collapse_sourcemaps, lines_count, RawSource, Source, SourceMapSource};
 
 use crate::SharedOptions;
 
-pub fn render_normal_module(
-  module: &NormalModule,
+pub fn render_ecma_module(
+  module: &EcmaModule,
   ast: &OxcAst,
   source_name: &str,
   options: &SharedOptions,

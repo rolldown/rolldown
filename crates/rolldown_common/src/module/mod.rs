@@ -1,2 +1,2 @@
+pub mod ecma_module;
 pub mod external_module;
-pub mod normal_module;

@@ -14,8 +14,8 @@ use oxc::{
   span::{CompactStr, GetSpan, Span},
 };
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleDefFormat, NamedImport,
-  NormalModuleId, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos, SymbolRef,
+  AstScopes, EcmaModuleId, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleDefFormat,
+  NamedImport, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_error::BuildError;
 use rolldown_oxc_utils::{BindingIdentifierExt, BindingPatternExt};
@@ -43,7 +43,7 @@ pub struct ScanResult {
 }
 
 pub struct AstScanner<'me> {
-  idx: NormalModuleId,
+  idx: EcmaModuleId,
   source: &'me Arc<str>,
   module_type: ModuleDefFormat,
   file_path: &'me ResourceId,
@@ -63,7 +63,7 @@ pub struct AstScanner<'me> {
 impl<'me> AstScanner<'me> {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
-    idx: NormalModuleId,
+    idx: EcmaModuleId,
     scope: &'me AstScopes,
     symbols: &'me mut AstSymbols,
     repr_name: String,

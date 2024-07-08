@@ -1,22 +1,22 @@
-use crate::NormalModuleId;
+use crate::EcmaModuleId;
 
 use super::external_module_id::ExternalModuleId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ModuleId {
-  Normal(NormalModuleId),
+  Normal(EcmaModuleId),
   External(ExternalModuleId),
 }
 
 impl ModuleId {
-  pub fn expect_normal(self) -> NormalModuleId {
+  pub fn expect_ecma(self) -> EcmaModuleId {
     match self {
       Self::Normal(id) => id,
       Self::External(_) => panic!("Expected a normal module id"),
     }
   }
 
-  pub fn as_normal(self) -> Option<NormalModuleId> {
+  pub fn as_ecma(self) -> Option<EcmaModuleId> {
     match self {
       Self::Normal(id) => Some(id),
       Self::External(_) => None,
@@ -31,8 +31,8 @@ impl ModuleId {
   }
 }
 
-impl From<NormalModuleId> for ModuleId {
-  fn from(v: NormalModuleId) -> Self {
+impl From<EcmaModuleId> for ModuleId {
+  fn from(v: EcmaModuleId) -> Self {
     Self::Normal(v)
   }
 }

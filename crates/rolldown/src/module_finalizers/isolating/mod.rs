@@ -1,12 +1,12 @@
 use oxc::allocator::Allocator;
-use rolldown_common::{NormalModule, NormalModuleVec};
+use rolldown_common::{EcmaModule, IndexEcmaModules};
 use rolldown_oxc_utils::AstSnippet;
 
 mod impl_visit_mut;
 
 pub struct IsolatingModuleFinalizerContext<'me> {
-  pub module: &'me NormalModule,
-  pub modules: &'me NormalModuleVec,
+  pub module: &'me EcmaModule,
+  pub modules: &'me IndexEcmaModules,
 }
 
 pub struct IsolatingModuleFinalizer<'me, 'ast> {

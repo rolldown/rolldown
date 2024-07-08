@@ -3,8 +3,8 @@ use std::sync::Arc;
 use oxc::index::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, ExportsKind, ModuleDefFormat, ModuleType,
-  NormalModule, NormalModuleId, ResourceId, SymbolRef,
+  side_effects::DeterminedSideEffects, AstScopes, EcmaModule, EcmaModuleId, ExportsKind,
+  ModuleDefFormat, ModuleType, ResourceId, SymbolRef,
 };
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
 
@@ -15,22 +15,22 @@ use crate::{
   types::ast_symbols::AstSymbols,
   utils::tweak_ast_for_scanning::tweak_ast_for_scanning,
 };
-pub struct RuntimeNormalModuleTask {
+pub struct RuntimeEcmaModuleTask {
   tx: tokio::sync::mpsc::Sender<Msg>,
-  module_id: NormalModuleId,
+  module_id: EcmaModuleId,
   // warnings: Vec<BuildError>,
 }
 
-pub struct RuntimeNormalModuleTaskResult {
+pub struct RuntimeEcmaModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
   pub ast_symbol: AstSymbols,
   pub ast: OxcAst,
   // pub warnings: Vec<BuildError>,
-  pub module: NormalModule,
+  pub module: EcmaModule,
 }
 
-impl RuntimeNormalModuleTask {
-  pub fn new(id: NormalModuleId, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
+impl RuntimeEcmaModuleTask {
+  pub fn new(id: EcmaModuleId, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
     Self { module_id: id, tx }
   }
 
@@ -56,7 +56,7 @@ impl RuntimeNormalModuleTask {
       warnings: _,
     } = scan_result;
 
-    let module = NormalModule {
+    let module = EcmaModule {
       source,
       id: self.module_id,
       repr_name,
@@ -87,15 +87,13 @@ impl RuntimeNormalModuleTask {
       module_type: ModuleType::Js,
     };
 
-    if let Err(_err) =
-      self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeNormalModuleTaskResult {
-        // warnings: self.warnings,
-        ast_symbol: symbol,
-        module,
-        runtime,
-        ast,
-      }))
-    {
+    if let Err(_err) = self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeEcmaModuleTaskResult {
+      // warnings: self.warnings,
+      ast_symbol: symbol,
+      module,
+      runtime,
+      ast,
+    })) {
       // hyf0: If main thread is dead, we should handle errors of main thread. So we just ignore the error here.
     };
 

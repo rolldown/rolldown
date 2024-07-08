@@ -3,7 +3,7 @@ use std::sync::Arc;
 use oxc::index::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaModule, EcmaModuleId, ExportsKind,
+  side_effects::DeterminedSideEffects, AstScopes, EcmaModule, EcmaModuleIdx, ExportsKind,
   ModuleDefFormat, ModuleType, ResourceId, SymbolRef,
 };
 use rolldown_oxc_utils::{OxcAst, OxcCompiler};
@@ -17,7 +17,7 @@ use crate::{
 };
 pub struct RuntimeEcmaModuleTask {
   tx: tokio::sync::mpsc::Sender<Msg>,
-  module_id: EcmaModuleId,
+  module_id: EcmaModuleIdx,
   // warnings: Vec<BuildError>,
 }
 
@@ -30,7 +30,7 @@ pub struct RuntimeEcmaModuleTaskResult {
 }
 
 impl RuntimeEcmaModuleTask {
-  pub fn new(id: EcmaModuleId, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
+  pub fn new(id: EcmaModuleIdx, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
     Self { module_id: id, tx }
   }
 
@@ -58,7 +58,7 @@ impl RuntimeEcmaModuleTask {
 
     let module = EcmaModule {
       source,
-      id: self.module_id,
+      idx: self.module_id,
       repr_name,
       stable_resource_id: ROLLDOWN_RUNTIME_RESOURCE_ID.to_string(),
       resource_id: ResourceId::new(ROLLDOWN_RUNTIME_RESOURCE_ID),

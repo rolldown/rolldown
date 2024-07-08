@@ -1,6 +1,6 @@
 use std::iter;
 
-use rolldown_common::ModuleId;
+use rolldown_common::ModuleIdx;
 use rolldown_error::BuildError;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -8,8 +8,8 @@ use super::LinkStage;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 enum Status {
-  ToBeExecuted(ModuleId),
-  WaitForExit(ModuleId),
+  ToBeExecuted(ModuleIdx),
+  WaitForExit(ModuleIdx),
 }
 
 impl<'a> LinkStage<'a> {
@@ -75,7 +75,7 @@ impl<'a> LinkStage<'a> {
             );
             stack_indexes_of_executing_id.insert(id, execution_stack.len() - 1);
 
-            if let ModuleId::Normal(module_id) = id {
+            if let ModuleIdx::Ecma(module_id) = id {
               let module = &self.module_table.ecma_modules[module_id];
               execution_stack.extend(
                 module
@@ -92,13 +92,13 @@ impl<'a> LinkStage<'a> {
         Status::WaitForExit(id) => {
           executed_ids.insert(id);
           match id {
-            ModuleId::Normal(id) => {
+            ModuleIdx::Ecma(id) => {
               let module = &mut self.module_table.ecma_modules[id];
               debug_assert!(module.exec_order == u32::MAX);
               module.exec_order = next_exec_order;
               sorted_modules.push(id);
             }
-            ModuleId::External(id) => {
+            ModuleIdx::External(id) => {
               let module = &mut self.module_table.external_modules[id];
               debug_assert!(module.exec_order == u32::MAX);
               module.exec_order = next_exec_order;

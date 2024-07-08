@@ -6,7 +6,7 @@ use oxc::index::IndexVec;
 use oxc::span::CompactStr;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
-  EcmaModule, EcmaModuleId, IndexEcmaModules, StmtInfoId, SymbolOrMemberExprRef, SymbolRef,
+  EcmaModule, EcmaModuleIdx, IndexEcmaModules, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
@@ -17,11 +17,11 @@ use super::LinkStage;
 struct Context<'a> {
   modules: &'a IndexEcmaModules,
   symbols: &'a Symbols,
-  is_included_vec: &'a mut IndexVec<EcmaModuleId, IndexVec<StmtInfoId, bool>>,
-  is_module_included_vec: &'a mut IndexVec<EcmaModuleId, bool>,
-  used_exports_info_vec: &'a mut IndexVec<EcmaModuleId, UsedExportsInfo>,
+  is_included_vec: &'a mut IndexVec<EcmaModuleIdx, IndexVec<StmtInfoIdx, bool>>,
+  is_module_included_vec: &'a mut IndexVec<EcmaModuleIdx, bool>,
+  used_exports_info_vec: &'a mut IndexVec<EcmaModuleIdx, UsedExportsInfo>,
   tree_shaking: bool,
-  runtime_id: EcmaModuleId,
+  runtime_id: EcmaModuleIdx,
   metas: &'a LinkingMetadataVec,
   used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
   /// Hash list of string is relatively slow, so we use a two dimensions hashmap to cache the resolved symbol.
@@ -49,20 +49,20 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
     });
   }
 
-  let is_included = ctx.is_module_included_vec[module.id];
-  let used_info = ctx.used_exports_info_vec[module.id].used_info;
+  let is_included = ctx.is_module_included_vec[module.idx];
+  let used_info = ctx.used_exports_info_vec[module.idx].used_info;
   if used_info.contains(UsedInfo::USED_AS_NAMESPACE)
     && !used_info.contains(UsedInfo::INCLUDED_AS_NAMESPACE)
   {
-    ctx.used_exports_info_vec[module.id].used_info |= UsedInfo::INCLUDED_AS_NAMESPACE;
+    ctx.used_exports_info_vec[module.idx].used_info |= UsedInfo::INCLUDED_AS_NAMESPACE;
     include_module_as_namespace(ctx, module);
   }
   if is_included {
     return;
   }
-  ctx.is_module_included_vec[module.id] = true;
+  ctx.is_module_included_vec[module.idx] = true;
 
-  if module.id == ctx.runtime_id {
+  if module.idx == ctx.runtime_id {
     // runtime module has no side effects and it's statements should be included
     // by other modules's references.
     return;
@@ -82,7 +82,7 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
 
   // Include imported modules for its side effects
   module.import_records.iter().for_each(|import_record| match import_record.resolved_module {
-    rolldown_common::ModuleId::Normal(importee_id) => {
+    rolldown_common::ModuleIdx::Ecma(importee_id) => {
       let importee = &ctx.modules[importee_id];
       let bailout_side_effect = matches!(import_record.kind, rolldown_common::ImportKind::Require)
         || importee.def_format.is_commonjs();
@@ -93,19 +93,19 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
         include_module(ctx, importee);
       }
     }
-    rolldown_common::ModuleId::External(_) => {}
+    rolldown_common::ModuleIdx::External(_) => {}
   });
 }
 
 // TODO(hyf0): suspicious namespace should be include normally
 fn include_module_as_namespace(ctx: &mut Context, module: &EcmaModule) {
   // Collect all the canonical export to avoid violating rustc borrow rules.
-  let canonical_export_list = ctx.metas[module.id]
+  let canonical_export_list = ctx.metas[module.idx]
     .canonical_exports()
     .map(|(key, export)| (key.clone(), export.symbol_ref))
     .collect::<Vec<_>>();
   canonical_export_list.into_iter().for_each(|(key, symbol_ref)| {
-    ctx.used_exports_info_vec[module.id].used_exports.insert(key);
+    ctx.used_exports_info_vec[module.idx].used_exports.insert(key);
     include_symbol(ctx, symbol_ref);
   });
 }
@@ -121,7 +121,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   // TODO(hyf0): suspicious why need `USED_AS_NAMESPACE`
   let is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
   if is_namespace_ref {
-    ctx.used_exports_info_vec[canonical_ref_owner.id].used_info |= UsedInfo::USED_AS_NAMESPACE;
+    ctx.used_exports_info_vec[canonical_ref_owner.idx].used_info |= UsedInfo::USED_AS_NAMESPACE;
   }
 
   // TODO(hyf0): why we need `used_symbol_refs` to make if the symbol is used?
@@ -163,7 +163,7 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
 
   while cursor < props.len() && is_namespace_ref {
     let name = &props[cursor];
-    let export_symbol = ctx.metas[canonical_ref_owner.id].resolved_exports.get(&name.to_rstr());
+    let export_symbol = ctx.metas[canonical_ref_owner.idx].resolved_exports.get(&name.to_rstr());
     let Some(export_symbol) = export_symbol else { break };
     // TODO(hyf0): suspicious
     has_ambiguous_symbol |= export_symbol.potentially_ambiguous_symbol_refs.is_some();
@@ -193,7 +193,7 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
   let is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
   // TODO(hyf0): suspicious what does `is_same_ref` do?
   if is_namespace_ref && !is_same_ref {
-    ctx.used_exports_info_vec[canonical_ref_owner.id].used_info |= UsedInfo::USED_AS_NAMESPACE;
+    ctx.used_exports_info_vec[canonical_ref_owner.idx].used_info |= UsedInfo::USED_AS_NAMESPACE;
   }
 
   let id = ns_symbol_list.last().map_or(symbol_ref.owner, |(symbol, _)| symbol.owner);
@@ -219,8 +219,8 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
   );
 }
 
-fn include_statement(ctx: &mut Context, module: &EcmaModule, stmt_info_id: StmtInfoId) {
-  let is_included = &mut ctx.is_included_vec[module.id][stmt_info_id];
+fn include_statement(ctx: &mut Context, module: &EcmaModule, stmt_info_id: StmtInfoIdx) {
+  let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_id];
 
   if *is_included {
     return;
@@ -246,17 +246,17 @@ impl LinkStage<'_> {
   pub fn include_statements(&mut self) {
     self.determine_side_effects();
 
-    let mut is_included_vec: IndexVec<EcmaModuleId, IndexVec<StmtInfoId, bool>> = self
+    let mut is_included_vec: IndexVec<EcmaModuleIdx, IndexVec<StmtInfoIdx, bool>> = self
       .module_table
       .ecma_modules
       .iter()
-      .map(|m| m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoId, _>>())
-      .collect::<IndexVec<EcmaModuleId, _>>();
+      .map(|m| m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoIdx, _>>())
+      .collect::<IndexVec<EcmaModuleIdx, _>>();
 
-    let mut is_module_included_vec: IndexVec<EcmaModuleId, bool> =
+    let mut is_module_included_vec: IndexVec<EcmaModuleIdx, bool> =
       oxc::index::index_vec![false; self.module_table.ecma_modules.len()];
 
-    let mut used_exports_info_vec: IndexVec<EcmaModuleId, UsedExportsInfo> =
+    let mut used_exports_info_vec: IndexVec<EcmaModuleIdx, UsedExportsInfo> =
       oxc::index::index_vec![UsedExportsInfo::default(); self.module_table.ecma_modules.len()];
     let mut top_level_member_expr_resolved_cache = FxHashMap::default();
     let context = &mut Context {
@@ -285,15 +285,15 @@ impl LinkStage<'_> {
     });
 
     self.module_table.ecma_modules.iter_mut().par_bridge().for_each(|module| {
-      module.is_included = is_module_included_vec[module.id];
-      is_included_vec[module.id].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
+      module.is_included = is_module_included_vec[module.idx];
+      is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });
     });
 
     self.module_table.ecma_modules.iter_mut().for_each(|module| {
-      self.metas[module.id].used_exports_info =
-        std::mem::take(&mut used_exports_info_vec[module.id]);
+      self.metas[module.idx].used_exports_info =
+        std::mem::take(&mut used_exports_info_vec[module.idx]);
     });
 
     self.top_level_member_expr_resolved_cache = top_level_member_expr_resolved_cache;
@@ -310,13 +310,13 @@ impl LinkStage<'_> {
   }
 
   fn determine_side_effects(&mut self) {
-    type IndexVisited = IndexVec<EcmaModuleId, bool>;
-    type IndexSideEffectsCache = IndexVec<EcmaModuleId, Option<DeterminedSideEffects>>;
+    type IndexVisited = IndexVec<EcmaModuleIdx, bool>;
+    type IndexSideEffectsCache = IndexVec<EcmaModuleIdx, Option<DeterminedSideEffects>>;
 
     fn determine_side_effects_for_module(
       visited: &mut IndexVisited,
       cache: &mut IndexSideEffectsCache,
-      module_id: EcmaModuleId,
+      module_id: EcmaModuleIdx,
       normal_modules: &IndexEcmaModules,
     ) -> DeterminedSideEffects {
       let module = &normal_modules[module_id];
@@ -344,11 +344,11 @@ impl LinkStage<'_> {
         DeterminedSideEffects::Analyzed(_) => {
           let has_side_effects_in_dep =
             module.import_records.iter().any(|import_record| match import_record.resolved_module {
-              rolldown_common::ModuleId::Normal(importee_id) => {
+              rolldown_common::ModuleIdx::Ecma(importee_id) => {
                 determine_side_effects_for_module(visited, cache, importee_id, normal_modules)
                   .has_side_effects()
               }
-              rolldown_common::ModuleId::External(_) => {
+              rolldown_common::ModuleIdx::External(_) => {
                 // External module is currently treated as always having side effects, but
                 // it's ensured by `render_chunk_imports`. So here we consider it as no side effects.
                 DeterminedSideEffects::Analyzed(false).has_side_effects()
@@ -375,7 +375,7 @@ impl LinkStage<'_> {
         determine_side_effects_for_module(
           &mut visited,
           &mut index_side_effects_cache,
-          module.id,
+          module.idx,
           &self.module_table.ecma_modules,
         )
       })

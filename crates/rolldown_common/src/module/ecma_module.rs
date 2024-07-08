@@ -3,8 +3,8 @@ use std::{fmt::Debug, sync::Arc};
 use crate::side_effects::DeterminedSideEffects;
 use crate::ModuleType;
 use crate::{
-  types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, EcmaModuleId, ExportsKind,
-  ImportRecord, ImportRecordId, LocalExport, ModuleDefFormat, ModuleId, ModuleInfo, NamedImport,
+  types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, EcmaModuleIdx, ExportsKind,
+  ImportRecord, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleIdx, ModuleInfo, NamedImport,
   ResourceId, StmtInfo, StmtInfos, SymbolRef,
 };
 use oxc::index::IndexVec;
@@ -16,7 +16,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 pub struct EcmaModule {
   pub exec_order: u32,
   pub source: Arc<str>,
-  pub id: EcmaModuleId,
+  pub idx: EcmaModuleIdx,
   pub is_user_defined_entry: bool,
   pub resource_id: ResourceId,
   /// `stable_resource_id` is calculated based on `resource_id` to be stable across machine and os.
@@ -32,12 +32,12 @@ pub struct EcmaModule {
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   /// `stmt_infos[0]` represents the namespace binding statement
   pub stmt_infos: StmtInfos,
-  pub import_records: IndexVec<ImportRecordId, ImportRecord>,
+  pub import_records: IndexVec<ImportRecordIdx, ImportRecord>,
   /// The key is the `Span` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`
   /// and `CallExpression`(only when the callee is `require`).
-  pub imports: FxHashMap<Span, ImportRecordId>,
+  pub imports: FxHashMap<Span, ImportRecordIdx>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
-  pub star_exports: Vec<ImportRecordId>,
+  pub star_exports: Vec<ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub scope: AstScopes,
   pub default_export_ref: SymbolRef,
@@ -56,7 +56,7 @@ pub struct EcmaModule {
 }
 
 impl EcmaModule {
-  pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleId> + '_ {
+  pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
     self.star_exports.iter().map(|rec_id| {
       let rec = &self.import_records[*rec_id];
       rec.resolved_module
@@ -103,20 +103,20 @@ impl EcmaModule {
   // https://tc39.es/ecma262/#sec-getexportednames
   pub fn get_exported_names<'modules>(
     &'modules self,
-    export_star_set: &mut FxHashSet<EcmaModuleId>,
-    modules: &'modules IndexVec<EcmaModuleId, EcmaModule>,
+    export_star_set: &mut FxHashSet<EcmaModuleIdx>,
+    modules: &'modules IndexVec<EcmaModuleIdx, EcmaModule>,
     include_default: bool,
     ret: &mut FxHashSet<&'modules Rstr>,
   ) {
-    if export_star_set.contains(&self.id) {
+    if export_star_set.contains(&self.idx) {
       return;
     }
 
-    export_star_set.insert(self.id);
+    export_star_set.insert(self.idx);
 
     self
       .star_export_module_ids()
-      .filter_map(ModuleId::as_ecma)
+      .filter_map(ModuleIdx::as_ecma)
       .for_each(|id| modules[id].get_exported_names(export_star_set, modules, false, ret));
     if include_default {
       ret.extend(self.named_exports.keys());

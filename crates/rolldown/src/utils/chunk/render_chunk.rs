@@ -46,8 +46,8 @@ pub async fn render_chunk(
         .copied()
         .map(|id| &graph.module_table.ecma_modules[id])
         .filter_map(|m| {
-          render_ecma_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
-            .map(|rendered| (m.id, &m.resource_id, rendered))
+          render_ecma_module(m, &graph.ast_table[m.idx], m.resource_id.as_ref(), options)
+            .map(|rendered| (m.idx, &m.resource_id, rendered))
         })
         .collect::<Vec<_>>()
         .into_iter()
@@ -104,7 +104,7 @@ pub async fn render_chunk(
         .copied()
         .map(|id| &graph.module_table.ecma_modules[id])
         .filter_map(|m| {
-          render_ecma_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
+          render_ecma_module(m, &graph.ast_table[m.idx], m.resource_id.as_ref(), options)
             .map(|rendered| (&m.resource_id, rendered))
         })
         .collect::<Vec<_>>()

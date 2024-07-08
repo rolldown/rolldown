@@ -9,7 +9,7 @@ use oxc::{
   },
   span::{CompactStr, GetSpan, Span, SPAN},
 };
-use rolldown_common::{ExportsKind, ModuleId, ModuleType, SymbolRef, WrapKind};
+use rolldown_common::{ExportsKind, ModuleIdx, ModuleType, SymbolRef, WrapKind};
 use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, IntoIn, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
@@ -55,7 +55,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             // "export * from 'path'"
             let rec = &self.ctx.module.import_records[rec_id];
             match rec.resolved_module {
-              ModuleId::Normal(importee_id) => {
+              ModuleIdx::Ecma(importee_id) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee_id];
                 let importee = &self.ctx.modules[importee_id];
                 if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
@@ -110,7 +110,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   ExportsKind::None => {}
                 }
               }
-              ModuleId::External(importee_id) => {
+              ModuleIdx::External(importee_id) => {
                 match self.ctx.options.format {
                   rolldown_common::OutputFormat::Esm => {
                     let importee = &self.ctx.external_modules[importee_id];
@@ -373,7 +373,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
           let rec = &self.ctx.module.import_records[rec_id];
           match rec.resolved_module {
-            ModuleId::Normal(importee_id) => {
+            ModuleIdx::Ecma(importee_id) => {
               let importee = &self.ctx.modules[importee_id];
               match importee.module_type {
                 ModuleType::Json => {
@@ -381,7 +381,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   // And to make sure the runtime behavior is correct, we need to rewrite `require('xxx.json')` to `require('xxx.json').default` to align with the runtime behavior of nodejs.
 
                   // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports).default)`
-                  let importee_linking_info = &self.ctx.linking_infos[importee.id];
+                  let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                   let wrap_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
                   if matches!(importee.exports_kind, ExportsKind::CommonJs) {
@@ -406,7 +406,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 }
                 _ => {
                   // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
-                  let importee_linking_info = &self.ctx.linking_infos[importee.id];
+                  let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                   let wrap_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
                   if matches!(importee.exports_kind, ExportsKind::CommonJs) {
@@ -422,7 +422,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 }
               }
             }
-            ModuleId::External(importee_id) => {
+            ModuleIdx::External(importee_id) => {
               let importee = &self.ctx.external_modules[importee_id];
               let request_path =
                 call_expr.arguments.get_mut(0).expect("require should have an argument");
@@ -571,8 +571,8 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
         match importee_id {
-          ModuleId::Normal(importee_id) => {
-            let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.id]
+          ModuleIdx::Ecma(importee_id) => {
+            let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx]
               .expect("Normal module should belong to a chunk");
             let importer_chunk = &self.ctx.chunk_graph.chunks[importer_chunk_id];
 
@@ -583,7 +583,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
             str.value = self.snippet.atom(&import_path);
           }
-          ModuleId::External(_) => {
+          ModuleIdx::External(_) => {
             // external module doesn't belong to any chunk, just keep this as it is
           }
         }

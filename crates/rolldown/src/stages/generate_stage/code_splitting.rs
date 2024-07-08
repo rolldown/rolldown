@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{Chunk, ChunkId, ChunkKind, EcmaModuleId, ImportKind, ModuleId};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, EcmaModuleIdx, ImportKind, ModuleIdx};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
 
@@ -13,9 +13,9 @@ use super::GenerateStage;
 impl<'a> GenerateStage<'a> {
   fn determine_reachable_modules_for_entry(
     &self,
-    module_id: EcmaModuleId,
+    module_id: EcmaModuleIdx,
     entry_index: u32,
-    module_to_bits: &mut IndexVec<EcmaModuleId, BitSet>,
+    module_to_bits: &mut IndexVec<EcmaModuleIdx, BitSet>,
   ) {
     let module = &self.link_output.module_table.ecma_modules[module_id];
     let meta = &self.link_output.metas[module_id];
@@ -30,7 +30,7 @@ impl<'a> GenerateStage<'a> {
     module_to_bits[module_id].set_bit(entry_index);
 
     module.import_records.iter().for_each(|rec| {
-      if let ModuleId::Normal(importee_id) = rec.resolved_module {
+      if let ModuleIdx::Ecma(importee_id) = rec.resolved_module {
         // Module imported dynamically will be considered as an entry,
         // so we don't need to include it in this chunk
         if !matches!(rec.kind, ImportKind::DynamicImport) {
@@ -72,8 +72,8 @@ impl<'a> GenerateStage<'a> {
     let mut module_to_bits = oxc::index::index_vec![BitSet::new(entries_len); self.link_output.module_table.ecma_modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
     let mut chunks = IndexChunks::with_capacity(self.link_output.entries.len());
-    let mut user_defined_entry_chunk_ids: Vec<ChunkId> = Vec::new();
-    let mut entry_module_to_entry_chunk: FxHashMap<EcmaModuleId, ChunkId> =
+    let mut user_defined_entry_chunk_ids: Vec<ChunkIdx> = Vec::new();
+    let mut entry_module_to_entry_chunk: FxHashMap<EcmaModuleIdx, ChunkIdx> =
       FxHashMap::with_capacity(self.link_output.entries.len());
     // Create chunk for each static and dynamic entry
     for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
@@ -107,7 +107,7 @@ impl<'a> GenerateStage<'a> {
       );
     });
 
-    let mut module_to_chunk: IndexVec<EcmaModuleId, Option<ChunkId>> = oxc::index::index_vec![
+    let mut module_to_chunk: IndexVec<EcmaModuleIdx, Option<ChunkIdx>> = oxc::index::index_vec![
       None;
       self.link_output.module_table.ecma_modules.len()
     ];
@@ -119,18 +119,18 @@ impl<'a> GenerateStage<'a> {
         continue;
       }
 
-      let bits = &module_to_bits[normal_module.id];
+      let bits = &module_to_bits[normal_module.idx];
       debug_assert!(
         !bits.is_empty(),
         "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_resource_id
       );
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
-        chunks[chunk_id].modules.push(normal_module.id);
-        module_to_chunk[normal_module.id] = Some(chunk_id);
+        chunks[chunk_id].modules.push(normal_module.idx);
+        module_to_chunk[normal_module.idx] = Some(chunk_id);
       } else {
-        let chunk = Chunk::new(None, bits.clone(), vec![normal_module.id], ChunkKind::Common);
+        let chunk = Chunk::new(None, bits.clone(), vec![normal_module.idx], ChunkKind::Common);
         let chunk_id = chunks.push(chunk);
-        module_to_chunk[normal_module.id] = Some(chunk_id);
+        module_to_chunk[normal_module.idx] = Some(chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);
       }
     }
@@ -191,12 +191,12 @@ impl<'a> GenerateStage<'a> {
         chunk.exec_order = i.try_into().expect("Too many chunks, u32 overflowed.");
       });
 
-    let sorted_chunk_ids =
+    let sorted_chunk_idx_vec =
       chunks.indices().sorted_by_key(|id| &chunks[*id].bits).collect::<Vec<_>>();
 
     ChunkGraph {
       chunks,
-      sorted_chunk_ids,
+      sorted_chunk_idx_vec,
       module_to_chunk,
       entry_module_to_entry_chunk,
       user_defined_entry_chunk_ids,

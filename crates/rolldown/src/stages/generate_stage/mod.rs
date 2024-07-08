@@ -5,7 +5,7 @@ use rustc_hash::FxHashSet;
 
 use futures::future::try_join_all;
 use rolldown_common::{
-  Chunk, ChunkKind, EcmaModuleId, FileNameRenderOptions, Output, OutputAsset, OutputChunk,
+  Chunk, ChunkKind, EcmaModuleIdx, FileNameRenderOptions, Output, OutputAsset, OutputChunk,
   PreliminaryFilename, SourceMapType,
 };
 use rolldown_error::BuildError;
@@ -76,15 +76,15 @@ impl<'a> GenerateStage<'a> {
       .filter(|(id, _)| self.link_output.module_table.ecma_modules[*id].is_included)
       .for_each(|(id, ast)| {
         let module = &self.link_output.module_table.ecma_modules[id];
-        let chunk_id = chunk_graph.module_to_chunk[module.id].unwrap();
+        let chunk_id = chunk_graph.module_to_chunk[module.idx].unwrap();
         let chunk = &chunk_graph.chunks[chunk_id];
-        let linking_info = &self.link_output.metas[module.id];
+        let linking_info = &self.link_output.metas[module.idx];
         if self.options.format.requires_scope_hoisting() {
           finalize_normal_module(
             module,
             ScopeHoistingFinalizerContext {
               canonical_names: &chunk.canonical_names,
-              id: module.id,
+              id: module.idx,
               symbols: &self.link_output.symbols,
               linking_info,
               module,
@@ -239,7 +239,7 @@ impl<'a> GenerateStage<'a> {
   fn generate_chunk_name_and_preliminary_filenames(&self, chunk_graph: &mut ChunkGraph) {
     fn ensure_chunk_name(
       chunk: &Chunk,
-      runtime_id: EcmaModuleId,
+      runtime_id: EcmaModuleIdx,
       normal_modules: &IndexNormalModules,
     ) -> String {
       // User-defined entry point should always have a name that given by the user
@@ -282,7 +282,7 @@ impl<'a> GenerateStage<'a> {
       .user_defined_entry_chunk_ids
       .iter()
       .copied()
-      .chain(chunk_graph.sorted_chunk_ids.iter().copied())
+      .chain(chunk_graph.sorted_chunk_idx_vec.iter().copied())
       .collect::<Vec<_>>();
 
     chunk_ids.into_iter().for_each(|chunk_id| {

@@ -3,10 +3,9 @@ use oxc::{
   allocator::Vec,
   ast::{
     ast::{
-      Argument, ArrayExpressionElement, ArrowFunctionExpression, BindingIdentifier, Expression,
-      FormalParameterKind, ImportDeclarationSpecifier, ImportDefaultSpecifier,
-      ImportNamespaceSpecifier, ImportOrExportKind, ImportSpecifier, ModuleDeclaration,
-      ModuleExportName, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
+      Argument, ArrayExpressionElement, BindingRestElement, Expression, FormalParameterKind,
+      ImportOrExportKind, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
+      TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
     },
     AstBuilder, VisitMut,
   },
@@ -35,12 +34,8 @@ impl Plugin for GlobImportPlugin {
   ) -> HookTransformAstReturn {
     args.ast.program.with_mut(|fields| {
       let ast_builder = AstBuilder::new(fields.allocator);
-      let mut visitor = GlobImportVisit {
-        cwd: args.cwd,
-        import_decls: ast_builder.new_vec(),
-        ast_builder,
-        current: 0,
-      };
+      let mut visitor =
+        GlobImportVisit { cwd: args.cwd, import_decls: ast_builder.vec(), ast_builder, current: 0 };
       visitor.visit_program(fields.program);
       if !visitor.import_decls.is_empty() {
         fields.program.body.extend(visitor.import_decls);
@@ -154,161 +149,157 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                       let name = format!("__glob__{}_{index}_", self.current);
 
                       let module_specifier = match opts.import.as_deref() {
-                        Some("default") => ImportDeclarationSpecifier::ImportDefaultSpecifier(
-                          self.ast_builder.alloc(ImportDefaultSpecifier {
-                            span: SPAN,
-                            local: BindingIdentifier::new(SPAN, self.ast_builder.new_atom(&name)),
-                          }),
-                        ),
-                        Some("*") | None => ImportDeclarationSpecifier::ImportNamespaceSpecifier(
-                          self.ast_builder.alloc(ImportNamespaceSpecifier {
-                            span: SPAN,
-                            local: BindingIdentifier::new(SPAN, self.ast_builder.new_atom(&name)),
-                          }),
-                        ),
-                        Some(import) => ImportDeclarationSpecifier::ImportSpecifier(
-                          self.ast_builder.alloc(ImportSpecifier {
-                            span: SPAN,
-                            local: BindingIdentifier::new(SPAN, self.ast_builder.new_atom(&name)),
-                            imported: ModuleExportName::IdentifierReference(
-                              self.ast_builder.identifier_reference(SPAN, import),
-                            ),
-                            import_kind: ImportOrExportKind::Value,
-                          }),
-                        ),
+                        Some("default") => {
+                          self.ast_builder.import_declaration_specifier_import_default_specifier(
+                            SPAN,
+                            self.ast_builder.binding_identifier(SPAN, &name),
+                          )
+                        }
+                        Some("*") | None => {
+                          self.ast_builder.import_declaration_specifier_import_namespace_specifier(
+                            SPAN,
+                            self.ast_builder.binding_identifier(SPAN, &name),
+                          )
+                        }
+                        Some(import) => {
+                          self.ast_builder.import_declaration_specifier_import_specifier(
+                            SPAN,
+                            self.ast_builder.module_export_name_identifier_reference(SPAN, import),
+                            self.ast_builder.binding_identifier(SPAN, &name),
+                            ImportOrExportKind::Value,
+                          )
+                        }
                       };
 
-                      self.import_decls.push(self.ast_builder.module_declaration(
-                        ModuleDeclaration::ImportDeclaration(self.ast_builder.import_declaration(
+                      self.import_decls.push(self.ast_builder.statement_module_declaration(
+                        self.ast_builder.module_declaration_import_declaration(
                           SPAN,
-                          Some(self.ast_builder.new_vec_single(module_specifier)),
+                          Some(self.ast_builder.vec1(module_specifier)),
                           self.ast_builder.string_literal(Span::default(), file),
                           None,
                           ImportOrExportKind::Value,
-                        )),
+                        ),
                       ));
 
-                      self.ast_builder.identifier_reference_expression(
-                        self.ast_builder.identifier_reference(SPAN, &name),
-                      )
+                      self.ast_builder.expression_identifier_reference(SPAN, &name)
                     } else {
                       // import('./dir/bar.js')
-                      let mut import_expression = self.ast_builder.import_expression(
+                      let mut import_expression = self.ast_builder.expression_import(
                         SPAN,
-                        self.ast_builder.literal_string_expression(
-                          self.ast_builder.string_literal(Span::default(), file),
-                        ),
-                        self.ast_builder.new_vec(),
+                        self.ast_builder.expression_string_literal(Span::default(), file),
+                        self.ast_builder.vec(),
                       );
                       // import('./dir/foo.js').then((m) => m.setup)
                       if let Some(import) = &opts.import {
                         if import != "*" {
-                          import_expression = self.ast_builder.call_expression(
+                          import_expression = self.ast_builder.expression_call(
                             SPAN,
-                            self.ast_builder.static_member_expression(
-                              SPAN,
-                              import_expression,
-                              self.ast_builder.identifier_name(SPAN, "then"),
-                              false,
-                            ),
-                            self.ast_builder.new_vec_single(Argument::ArrowFunctionExpression(
-                              self.ast_builder.alloc(ArrowFunctionExpression::new(
-                                SPAN,
-                                true,
-                                false,
-                                self.ast_builder.formal_parameters(
+                            self.ast_builder.vec1(
+                              self
+                                .ast_builder
+                                .expression_arrow_function(
                                   SPAN,
-                                  FormalParameterKind::ArrowFormalParameters,
-                                  self.ast_builder.new_vec_single(
-                                    self.ast_builder.formal_parameter(
-                                      SPAN,
-                                      self.ast_builder.binding_pattern(
-                                        self.ast_builder.binding_pattern_identifier(
-                                          BindingIdentifier::new(
-                                            SPAN,
-                                            self.ast_builder.new_atom("m"),
-                                          ),
+                                  true,
+                                  false,
+                                  self.ast_builder.formal_parameters(
+                                    SPAN,
+                                    FormalParameterKind::ArrowFormalParameters,
+                                    self.ast_builder.vec1(
+                                      self.ast_builder.formal_parameter(
+                                        SPAN,
+                                        self.ast_builder.binding_pattern(
+                                          self
+                                            .ast_builder
+                                            .binding_pattern_kind_binding_identifier(SPAN, "m"),
+                                          Option::<TSTypeAnnotation>::None,
+                                          false,
                                         ),
                                         None,
                                         false,
-                                      ),
-                                      None,
-                                      false,
-                                      false,
-                                      self.ast_builder.new_vec(),
-                                    ),
-                                  ),
-                                  None,
-                                ),
-                                self.ast_builder.function_body(
-                                  SPAN,
-                                  self.ast_builder.new_vec(),
-                                  self.ast_builder.new_vec_single(
-                                    self.ast_builder.expression_statement(
-                                      SPAN,
-                                      self.ast_builder.static_member_expression(
-                                        SPAN,
-                                        self.ast_builder.identifier_reference_expression(
-                                          self.ast_builder.identifier_reference(SPAN, "m"),
-                                        ),
-                                        self.ast_builder.identifier_name(SPAN, import),
                                         false,
+                                        self.ast_builder.vec(),
+                                      ),
+                                    ),
+                                    Option::<BindingRestElement>::None,
+                                  ),
+                                  self.ast_builder.function_body(
+                                    SPAN,
+                                    self.ast_builder.vec(),
+                                    self.ast_builder.vec1(
+                                      self.ast_builder.statement_expression(
+                                        SPAN,
+                                        self.ast_builder.expression_member(
+                                          self.ast_builder.member_expression_static(
+                                            SPAN,
+                                            self
+                                              .ast_builder
+                                              .expression_identifier_reference(SPAN, "m"),
+                                            self.ast_builder.identifier_name(SPAN, import),
+                                            false,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                None,
-                                None,
-                              )),
-                            )),
+                                  Option::<TSTypeParameterDeclaration>::None,
+                                  Option::<TSTypeAnnotation>::None,
+                                )
+                                .into(),
+                            ),
+                            self.ast_builder.expression_member(
+                              self.ast_builder.member_expression_static(
+                                SPAN,
+                                import_expression,
+                                self.ast_builder.identifier_name(SPAN, "then"),
+                                false,
+                              ),
+                            ),
+                            Option::<TSTypeParameterInstantiation>::None,
                             false,
-                            None,
                           );
                         }
                       }
 
                       // () => import('./dir/bar.js') or () => import('./dir/foo.js').then((m) => m.setup)
-                      self.ast_builder.arrow_function_expression(
+                      self.ast_builder.expression_arrow_function(
                         SPAN,
                         true,
                         false,
                         self.ast_builder.formal_parameters(
                           SPAN,
                           FormalParameterKind::ArrowFormalParameters,
-                          self.ast_builder.new_vec(),
-                          None,
+                          self.ast_builder.vec(),
+                          Option::<BindingRestElement>::None,
                         ),
                         self.ast_builder.function_body(
                           SPAN,
-                          self.ast_builder.new_vec(),
-                          self.ast_builder.new_vec_from_iter(vec![self
+                          self.ast_builder.vec(),
+                          self
                             .ast_builder
-                            .expression_statement(SPAN, import_expression)]),
+                            .vec1(self.ast_builder.statement_expression(SPAN, import_expression)),
                         ),
-                        None,
-                        None,
+                        Option::<TSTypeParameterDeclaration>::None,
+                        Option::<TSTypeAnnotation>::None,
                       )
                     };
 
-                    ObjectPropertyKind::ObjectProperty(self.ast_builder.object_property(
+                    self.ast_builder.object_property_kind_object_property(
                       SPAN,
                       PropertyKind::Init,
                       self.ast_builder.property_key_expression(
-                        self.ast_builder.literal_string_expression(
-                          self.ast_builder.string_literal(Span::default(), file),
-                        ),
+                        self.ast_builder.expression_string_literal(Span::default(), file),
                       ),
                       value,
                       None,
                       false,
                       false,
                       false,
-                    ))
+                    )
                   });
 
-                  *expr = self.ast_builder.object_expression(
+                  *expr = self.ast_builder.expression_object(
                     call_expr.span,
-                    self.ast_builder.new_vec_from_iter(properties),
+                    self.ast_builder.vec_from(properties),
                     None,
                   );
                   self.current += 1;

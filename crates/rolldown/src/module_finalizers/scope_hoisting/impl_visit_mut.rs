@@ -1,7 +1,7 @@
 // cSpell:disable
 
 use oxc::{
-  allocator,
+  allocator::{self, IntoIn},
   ast::{
     ast::{self, Expression, SimpleAssignmentTarget},
     visit::walk_mut,
@@ -10,7 +10,7 @@ use oxc::{
   span::{CompactStr, GetSpan, Span, SPAN},
 };
 use rolldown_common::{ExportsKind, ModuleId, ModuleType, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, IntoIn, StatementExt, TakeIn};
+use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 

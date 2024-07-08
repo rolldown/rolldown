@@ -1,6 +1,7 @@
+use oxc::allocator::IntoIn;
 use oxc::ast::ast::{self, IdentifierReference};
 use rolldown_common::SymbolRef;
-use rolldown_oxc_utils::{ExpressionExt, IntoIn};
+use rolldown_oxc_utils::ExpressionExt;
 
 use super::ScopeHoistingFinalizer;
 

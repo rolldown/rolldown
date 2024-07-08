@@ -52,7 +52,7 @@ impl<'a> VisitMut<'a> for BasicInlineBinaryValue<'a> {
       return;
     }
     if let Some(v) = Self::is_two_expr_equal_in_literal(&bin.left, &bin.right) {
-      *expr = Expression::BooleanLiteral(self.ast.alloc(self.ast.boolean_literal(SPAN, v)));
+      *expr = self.ast.expression_boolean_literal(SPAN, v);
     }
   }
 }

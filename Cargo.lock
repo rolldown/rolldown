@@ -1172,22 +1172,21 @@ checksum = "caff54706df99d2a78a5a4e3455ff45448d81ef1bb63c22cd14052ca0e993a3f"
 
 [[package]]
 name = "oxc"
-version = "0.17.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4f2a4acaa4451d33a47ae4ae0e1e1fdfccf02ec1a45b24f7f9f549491a4563d"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
 dependencies = [
- "oxc_allocator",
- "oxc_ast",
- "oxc_codegen",
- "oxc_diagnostics",
- "oxc_index",
+ "oxc_allocator 0.17.2",
+ "oxc_ast 0.17.2",
+ "oxc_codegen 0.17.2",
+ "oxc_diagnostics 0.17.2",
+ "oxc_index 0.17.2",
  "oxc_minifier",
- "oxc_parser",
- "oxc_semantic",
- "oxc_sourcemap",
- "oxc_span",
- "oxc_syntax",
- "oxc_transformer",
+ "oxc_parser 0.17.2",
+ "oxc_semantic 0.17.2",
+ "oxc_sourcemap 0.17.2",
+ "oxc_span 0.17.2",
+ "oxc_syntax 0.17.2",
+ "oxc_transformer 0.17.2",
 ]
 
 [[package]]
@@ -1215,6 +1214,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_allocator"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+dependencies = [
+ "allocator-api2",
+ "bumpalo",
+]
+
+[[package]]
 name = "oxc_ast"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1222,10 +1230,23 @@ checksum = "5f3fbc49e9ca3f75bd8e4eb5f66a05708eef53d1e65ccde66bc14a3db0c21a65"
 dependencies = [
  "bitflags 2.6.0",
  "num-bigint",
- "oxc_allocator",
- "oxc_ast_macros",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.17.1",
+ "oxc_ast_macros 0.17.1",
+ "oxc_span 0.17.1",
+ "oxc_syntax 0.17.1",
+]
+
+[[package]]
+name = "oxc_ast"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+dependencies = [
+ "bitflags 2.6.0",
+ "num-bigint",
+ "oxc_allocator 0.17.2",
+ "oxc_ast_macros 0.17.2",
+ "oxc_span 0.17.2",
+ "oxc_syntax 0.17.2",
 ]
 
 [[package]]
@@ -1235,6 +1256,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "005fbdb91079c0bdc37fbebdd1a38a290edc1d9381efabad21b5cb1e5fc0f37f"
 
 [[package]]
+name = "oxc_ast_macros"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+
+[[package]]
 name = "oxc_cfg"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1242,7 +1268,19 @@ checksum = "d7cae1366c6356ee17ff6eb9fba2462f4d5ee08ee8310fdf492c3e0ab822a4df"
 dependencies = [
  "bitflags 2.6.0",
  "itertools",
- "oxc_syntax",
+ "oxc_syntax 0.17.1",
+ "petgraph",
+ "rustc-hash",
+]
+
+[[package]]
+name = "oxc_cfg"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+dependencies = [
+ "bitflags 2.6.0",
+ "itertools",
+ "oxc_syntax 0.17.2",
  "petgraph",
  "rustc-hash",
 ]
@@ -1256,11 +1294,27 @@ dependencies = [
  "bitflags 2.6.0",
  "daachorse",
  "once_cell",
- "oxc_allocator",
- "oxc_ast",
- "oxc_sourcemap",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.17.1",
+ "oxc_ast 0.17.1",
+ "oxc_sourcemap 0.17.1",
+ "oxc_span 0.17.1",
+ "oxc_syntax 0.17.1",
+ "rustc-hash",
+]
+
+[[package]]
+name = "oxc_codegen"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+dependencies = [
+ "bitflags 2.6.0",
+ "daachorse",
+ "once_cell",
+ "oxc_allocator 0.17.2",
+ "oxc_ast 0.17.2",
+ "oxc_sourcemap 0.17.2",
+ "oxc_span 0.17.2",
+ "oxc_syntax 0.17.2",
  "rustc-hash",
 ]
 
@@ -1277,10 +1331,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_diagnostics"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+dependencies = [
+ "miette",
+ "owo-colors",
+ "textwrap",
+ "unicode-width",
+]
+
+[[package]]
 name = "oxc_index"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "003e12546c81c37b54d0ef6a438d4f3774bbe11a07c98e466febe33fe879bfd9"
+
+[[package]]
+name = "oxc_index"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
 
 [[package]]
 name = "oxc_isolated_declarations"
@@ -1288,31 +1358,30 @@ version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "865db0ebf557f7b69f8fc54434b422a5d0f61e7939dbbee62a47e5bd84fe3421"
 dependencies = [
- "oxc_allocator",
- "oxc_ast",
- "oxc_diagnostics",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.17.1",
+ "oxc_ast 0.17.1",
+ "oxc_diagnostics 0.17.1",
+ "oxc_span 0.17.1",
+ "oxc_syntax 0.17.1",
  "rustc-hash",
 ]
 
 [[package]]
 name = "oxc_minifier"
-version = "0.17.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cde0c7049ec78340ee15d8200f5e30b3d0077cffe21df6c9bd68a32a243437e"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
 dependencies = [
  "itertools",
  "num-bigint",
  "num-traits",
- "oxc_allocator",
- "oxc_ast",
- "oxc_diagnostics",
- "oxc_index",
- "oxc_parser",
- "oxc_semantic",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.17.2",
+ "oxc_ast 0.17.2",
+ "oxc_diagnostics 0.17.2",
+ "oxc_index 0.17.2",
+ "oxc_parser 0.17.2",
+ "oxc_semantic 0.17.2",
+ "oxc_span 0.17.2",
+ "oxc_syntax 0.17.2",
 ]
 
 [[package]]
@@ -1326,11 +1395,30 @@ dependencies = [
  "memchr",
  "num-bigint",
  "num-traits",
- "oxc_allocator",
- "oxc_ast",
- "oxc_diagnostics",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.17.1",
+ "oxc_ast 0.17.1",
+ "oxc_diagnostics 0.17.1",
+ "oxc_span 0.17.1",
+ "oxc_syntax 0.17.1",
+ "rustc-hash",
+ "seq-macro",
+]
+
+[[package]]
+name = "oxc_parser"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+dependencies = [
+ "assert-unchecked",
+ "bitflags 2.6.0",
+ "memchr",
+ "num-bigint",
+ "num-traits",
+ "oxc_allocator 0.17.2",
+ "oxc_ast 0.17.2",
+ "oxc_diagnostics 0.17.2",
+ "oxc_span 0.17.2",
+ "oxc_syntax 0.17.2",
  "rustc-hash",
  "seq-macro",
 ]
@@ -1361,13 +1449,31 @@ checksum = "b9baac919c952fa79f364de704ebe449d81cddd0def20635aae38bedb17220b8"
 dependencies = [
  "indexmap",
  "itertools",
- "oxc_allocator",
- "oxc_ast",
- "oxc_cfg",
- "oxc_diagnostics",
- "oxc_index",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.17.1",
+ "oxc_ast 0.17.1",
+ "oxc_cfg 0.17.1",
+ "oxc_diagnostics 0.17.1",
+ "oxc_index 0.17.1",
+ "oxc_span 0.17.1",
+ "oxc_syntax 0.17.1",
+ "phf",
+ "rustc-hash",
+]
+
+[[package]]
+name = "oxc_semantic"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+dependencies = [
+ "indexmap",
+ "itertools",
+ "oxc_allocator 0.17.2",
+ "oxc_ast 0.17.2",
+ "oxc_cfg 0.17.2",
+ "oxc_diagnostics 0.17.2",
+ "oxc_index 0.17.2",
+ "oxc_span 0.17.2",
+ "oxc_syntax 0.17.2",
  "phf",
  "rustc-hash",
 ]
@@ -1377,6 +1483,18 @@ name = "oxc_sourcemap"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c169ea3262805980a1fd47346a555ba17ad827f11241a5739d7aab09310ccd"
+dependencies = [
+ "base64-simd",
+ "cfg-if",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "oxc_sourcemap"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
 dependencies = [
  "base64-simd",
  "cfg-if",
@@ -1397,6 +1515,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_span"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+dependencies = [
+ "compact_str",
+ "miette",
+ "oxc_allocator 0.17.2",
+]
+
+[[package]]
 name = "oxc_syntax"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1404,8 +1532,23 @@ checksum = "e7d8dc17ca7b5837f1187a241418e9d58fcf3a269b254a0e0965ec8f7421cc84"
 dependencies = [
  "bitflags 2.6.0",
  "dashmap",
- "oxc_index",
- "oxc_span",
+ "oxc_index 0.17.1",
+ "oxc_span 0.17.1",
+ "phf",
+ "rustc-hash",
+ "ryu-js",
+ "unicode-id-start",
+]
+
+[[package]]
+name = "oxc_syntax"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+dependencies = [
+ "bitflags 2.6.0",
+ "dashmap",
+ "oxc_index 0.17.2",
+ "oxc_span 0.17.2",
  "phf",
  "rustc-hash",
  "ryu-js",
@@ -1421,13 +1564,13 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "oxc_allocator",
- "oxc_codegen",
- "oxc_diagnostics",
+ "oxc_allocator 0.17.1",
+ "oxc_codegen 0.17.1",
+ "oxc_diagnostics 0.17.1",
  "oxc_isolated_declarations",
- "oxc_parser",
- "oxc_span",
- "oxc_transformer",
+ "oxc_parser 0.17.1",
+ "oxc_span 0.17.1",
+ "oxc_transformer 0.17.1",
 ]
 
 [[package]]
@@ -1439,13 +1582,34 @@ dependencies = [
  "dashmap",
  "indexmap",
  "oxc-browserslist",
- "oxc_allocator",
- "oxc_ast",
- "oxc_diagnostics",
- "oxc_semantic",
- "oxc_span",
- "oxc_syntax",
- "oxc_traverse",
+ "oxc_allocator 0.17.1",
+ "oxc_ast 0.17.1",
+ "oxc_diagnostics 0.17.1",
+ "oxc_semantic 0.17.1",
+ "oxc_span 0.17.1",
+ "oxc_syntax 0.17.1",
+ "oxc_traverse 0.17.1",
+ "ropey",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "oxc_transformer"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+dependencies = [
+ "dashmap",
+ "indexmap",
+ "oxc-browserslist",
+ "oxc_allocator 0.17.2",
+ "oxc_ast 0.17.2",
+ "oxc_diagnostics 0.17.2",
+ "oxc_semantic 0.17.2",
+ "oxc_span 0.17.2",
+ "oxc_syntax 0.17.2",
+ "oxc_traverse 0.17.2",
  "ropey",
  "rustc-hash",
  "serde",
@@ -1460,11 +1624,25 @@ checksum = "510d6c0313de7d501623afc7dcc5f044176b28561a21b97f493defb4a48c4d4e"
 dependencies = [
  "compact_str",
  "memoffset",
- "oxc_allocator",
- "oxc_ast",
- "oxc_semantic",
- "oxc_span",
- "oxc_syntax",
+ "oxc_allocator 0.17.1",
+ "oxc_ast 0.17.1",
+ "oxc_semantic 0.17.1",
+ "oxc_span 0.17.1",
+ "oxc_syntax 0.17.1",
+]
+
+[[package]]
+name = "oxc_traverse"
+version = "0.17.2"
+source = "git+https://github.com/oxc-project/oxc.git?branch=07-08-feat_ast_allow_conversion_between_expressionstatement_and_statement_with_fromin_trait#bf33017c3e46c0258dcb1cdc2005b0a8bdfb355b"
+dependencies = [
+ "compact_str",
+ "memoffset",
+ "oxc_allocator 0.17.2",
+ "oxc_ast 0.17.2",
+ "oxc_semantic 0.17.2",
+ "oxc_span 0.17.2",
+ "oxc_syntax 0.17.2",
 ]
 
 [[package]]

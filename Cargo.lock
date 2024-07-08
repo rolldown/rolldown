@@ -1930,7 +1930,6 @@ dependencies = [
  "rolldown_testing_config",
  "schemars",
  "serde_json",
- "sugar_path",
  "tokio",
 ]
 

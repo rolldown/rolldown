@@ -1,4 +1,6 @@
 mod chunk;
+mod css;
+mod ecmascript;
 mod file_emitter;
 mod inner_bundler_options;
 mod module;
@@ -38,15 +40,15 @@ pub use crate::{
     },
     Chunk,
   },
+  css::{css_module::CssModule, css_module_idx::CssModuleIdx},
+  ecmascript::{ecma_module::EcmaModule, ecma_module_idx::EcmaModuleIdx},
   file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
-  module::ecma_module::EcmaModule,
   module::external_module::ExternalModule,
   types::asset_source::AssetSource,
   types::ast_scopes::AstScopes,
   types::bundler_file_system::BundlerFileSystem,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
-  types::ecma_module_id::EcmaModuleIdx,
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,
   types::external_module_idx::ExternalModuleIdx,

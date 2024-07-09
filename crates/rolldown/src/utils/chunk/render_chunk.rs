@@ -137,11 +137,7 @@ pub async fn render_chunk(
   if matches!(options.format, OutputFormat::Cjs) {
     let are_modules_all_strict = this.modules.iter().all(|id| {
       let is_esm = matches!(graph.module_table.ecma_modules[*id].exports_kind, ExportsKind::Esm);
-      if is_esm {
-        true
-      } else {
-        graph.ast_table[*id].contains_use_strict
-      }
+      is_esm || graph.ast_table[*id].contains_use_strict
     });
 
     if are_modules_all_strict {

@@ -159,6 +159,7 @@ pub fn render_chunk_imports(
         }
       }
     } else if !is_importee_imported {
+      // Ensure the side effect
       if external_module_side_effects.has_side_effects() {
         render_plain_import(&importee.name, &mut s);
       }

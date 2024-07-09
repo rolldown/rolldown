@@ -1,4 +1,4 @@
-use crate::side_effects::{self, DeterminedSideEffects};
+use crate::side_effects::DeterminedSideEffects;
 use crate::{ExternalModuleIdx, ImportRecord, ImportRecordIdx};
 use oxc::index::IndexVec;
 

@@ -1,6 +1,4 @@
-use rolldown_common::{
-  EcmaModule, EcmaModuleIdx, IndexEcmaModules, IndexExternalModules, SymbolRef,
-};
+use rolldown_common::{EcmaModule, IndexModules, ModuleIdx, SymbolRef};
 
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
@@ -17,10 +15,9 @@ use crate::{
 };
 
 pub struct ScopeHoistingFinalizerContext<'me> {
-  pub id: EcmaModuleIdx,
+  pub id: ModuleIdx,
   pub module: &'me EcmaModule,
-  pub modules: &'me IndexEcmaModules,
-  pub external_modules: &'me IndexExternalModules,
+  pub modules: &'me IndexModules,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub symbols: &'me Symbols,

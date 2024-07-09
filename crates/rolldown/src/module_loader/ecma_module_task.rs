@@ -8,7 +8,7 @@ use oxc::{
 };
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaModule, EcmaModuleIdx, ImportRecordIdx, ModuleDefFormat, ModuleType, PackageJson,
+  AstScopes, EcmaModule, ImportRecordIdx, ModuleDefFormat, ModuleIdx, ModuleType, PackageJson,
   RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
@@ -33,7 +33,7 @@ use crate::{
 };
 pub struct EcmaModuleTask {
   ctx: Arc<TaskContext>,
-  module_id: EcmaModuleIdx,
+  module_id: ModuleIdx,
   resolved_path: ResolvedPath,
   package_json: Option<Arc<PackageJson>>,
   module_type: ModuleDefFormat,
@@ -45,7 +45,7 @@ pub struct EcmaModuleTask {
 impl EcmaModuleTask {
   pub fn new(
     ctx: Arc<TaskContext>,
-    id: EcmaModuleIdx,
+    id: ModuleIdx,
     path: ResolvedPath,
     module_type: ModuleDefFormat,
     is_user_defined_entry: bool,

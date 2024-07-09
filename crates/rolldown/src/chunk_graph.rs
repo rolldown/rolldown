@@ -1,5 +1,5 @@
 use oxc::index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, EcmaModuleIdx};
+use rolldown_common::{Chunk, ChunkIdx, ModuleIdx};
 use rustc_hash::FxHashMap;
 
 use crate::type_alias::IndexChunks;
@@ -10,8 +10,8 @@ pub struct ChunkGraph {
   pub sorted_chunk_idx_vec: Vec<ChunkIdx>,
   pub user_defined_entry_chunk_ids: Vec<ChunkIdx>,
   /// Module to chunk that contains the module
-  pub module_to_chunk: IndexVec<EcmaModuleIdx, Option<ChunkIdx>>,
-  pub entry_module_to_entry_chunk: FxHashMap<EcmaModuleIdx, ChunkIdx>,
+  pub module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>>,
+  pub entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx>,
 }
 
 impl ChunkGraph {

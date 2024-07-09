@@ -1,8 +1,8 @@
-use crate::EcmaModuleIdx;
+use crate::ModuleIdx;
 
 #[derive(Debug)]
 pub enum ChunkKind {
-  EntryPoint { is_user_defined: bool, bit: u32, module: EcmaModuleIdx },
+  EntryPoint { is_user_defined: bool, bit: u32, module: ModuleIdx },
   Common,
 }
 

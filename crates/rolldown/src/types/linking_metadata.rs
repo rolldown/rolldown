@@ -1,5 +1,5 @@
 use oxc::index::IndexVec;
-use rolldown_common::{EcmaModuleIdx, ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind};
+use rolldown_common::{ModuleIdx, ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
@@ -73,4 +73,4 @@ impl LinkingMetadata {
   }
 }
 
-pub type LinkingMetadataVec = IndexVec<EcmaModuleIdx, LinkingMetadata>;
+pub type LinkingMetadataVec = IndexVec<ModuleIdx, LinkingMetadata>;

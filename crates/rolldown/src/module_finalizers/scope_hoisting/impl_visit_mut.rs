@@ -9,7 +9,7 @@ use oxc::{
   },
   span::{CompactStr, GetSpan, Span, SPAN},
 };
-use rolldown_common::{ExportsKind, ModuleIdx, ModuleType, SymbolRef, WrapKind};
+use rolldown_common::{ExportsKind, Module, ModuleType, SymbolRef, WrapKind};
 use rolldown_ecmascript::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
@@ -54,10 +54,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           } else {
             // "export * from 'path'"
             let rec = &self.ctx.module.import_records[rec_id];
-            match rec.resolved_module {
-              ModuleIdx::Ecma(importee_id) => {
-                let importee_linking_info = &self.ctx.linking_infos[importee_id];
-                let importee = &self.ctx.modules[importee_id];
+            match &self.ctx.modules[rec.resolved_module] {
+              Module::Ecma(importee) => {
+                let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                 if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
@@ -110,10 +109,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   ExportsKind::None => {}
                 }
               }
-              ModuleIdx::External(importee_id) => {
+              Module::External(importee) => {
                 match self.ctx.options.format {
                   rolldown_common::OutputFormat::Esm => {
-                    let importee = &self.ctx.external_modules[importee_id];
                     // Insert `import * as ns from 'ext'`
                     // Insert `__reExport(exports, ns)`
                     let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
@@ -135,7 +133,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                     );
                   }
                   rolldown_common::OutputFormat::Cjs => {
-                    let importee = &self.ctx.external_modules[importee_id];
                     // Insert `__reExport(exports, require('ext'))`
                     let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
                     let importer_namespace_name =
@@ -372,9 +369,8 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         //  we just keep these `require` calls as it is
         if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
           let rec = &self.ctx.module.import_records[rec_id];
-          match rec.resolved_module {
-            ModuleIdx::Ecma(importee_id) => {
-              let importee = &self.ctx.modules[importee_id];
+          match &self.ctx.modules[rec.resolved_module] {
+            Module::Ecma(importee) => {
               match importee.module_type {
                 ModuleType::Json => {
                   // Nodejs treats json files as an esm module with a default export and rolldown follows this behavior.
@@ -422,8 +418,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 }
               }
             }
-            ModuleIdx::External(importee_id) => {
-              let importee = &self.ctx.external_modules[importee_id];
+            Module::External(importee) => {
               let request_path =
                 call_expr.arguments.get_mut(0).expect("require should have an argument");
 
@@ -570,8 +565,8 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         let rec_id = self.ctx.module.imports[&expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
-        match importee_id {
-          ModuleIdx::Ecma(importee_id) => {
+        match &self.ctx.modules[importee_id] {
+          Module::Ecma(_importee) => {
             let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx]
               .expect("Normal module should belong to a chunk");
             let importer_chunk = &self.ctx.chunk_graph.chunks[importer_chunk_id];
@@ -583,7 +578,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
             str.value = self.snippet.atom(&import_path);
           }
-          ModuleIdx::External(_) => {
+          Module::External(_) => {
             // external module doesn't belong to any chunk, just keep this as it is
           }
         }

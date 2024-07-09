@@ -3,8 +3,8 @@ use std::sync::Arc;
 use oxc::index::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaModule, EcmaModuleIdx, ExportsKind,
-  ModuleDefFormat, ModuleType, ResourceId, SymbolRef,
+  side_effects::DeterminedSideEffects, AstScopes, EcmaModule, ExportsKind, ModuleDefFormat,
+  ModuleIdx, ModuleType, ResourceId, SymbolRef,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
@@ -17,7 +17,7 @@ use crate::{
 };
 pub struct RuntimeEcmaModuleTask {
   tx: tokio::sync::mpsc::Sender<Msg>,
-  module_id: EcmaModuleIdx,
+  module_id: ModuleIdx,
   // warnings: Vec<BuildError>,
 }
 
@@ -30,7 +30,7 @@ pub struct RuntimeEcmaModuleTaskResult {
 }
 
 impl RuntimeEcmaModuleTask {
-  pub fn new(id: EcmaModuleIdx, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
+  pub fn new(id: ModuleIdx, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
     Self { module_id: id, tx }
   }
 

@@ -51,9 +51,11 @@ impl PluginContext {
 
   pub fn get_module_info(&self, module_id: &str) -> Option<rolldown_common::ModuleInfo> {
     self.module_table.as_ref().and_then(|module_table| {
-      for normal_module in &module_table.ecma_modules {
-        if normal_module.resource_id.as_str() == module_id {
-          return Some(normal_module.to_module_info());
+      for normal_module in &module_table.modules {
+        if let Some(ecma_module) = normal_module.as_ecma() {
+          if ecma_module.resource_id.as_str() == module_id {
+            return Some(ecma_module.to_module_info());
+          }
         }
       }
       // TODO external module
@@ -63,10 +65,9 @@ impl PluginContext {
 
   pub fn get_module_ids(&self) -> Option<Vec<String>> {
     if let Some(module_table) = self.module_table.as_ref() {
-      let mut ids =
-        Vec::with_capacity(module_table.ecma_modules.len() + module_table.external_modules.len());
-      for normal_module in &module_table.ecma_modules {
-        ids.push(normal_module.resource_id.to_string());
+      let mut ids = Vec::with_capacity(module_table.modules.len());
+      for normal_module in &module_table.modules {
+        ids.push(normal_module.resource_id().to_string());
       }
       // TODO external module
       Some(ids)

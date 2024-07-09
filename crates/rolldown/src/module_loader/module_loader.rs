@@ -1,7 +1,8 @@
 use oxc::index::IndexVec;
+use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   EcmaModule, EcmaModuleIdx, EntryPoint, EntryPointKind, ExternalModule, ImportKind,
-  ImportRecordIdx, ImporterRecord, IndexExternalModules, ModuleIdx, ModuleTable,
+  ImportRecordIdx, ImporterRecord, IndexExternalModules, InnerOptions, ModuleIdx, ModuleTable,
   ResolvedRequestInfo,
 };
 use rolldown_ecmascript::EcmaAst;
@@ -131,7 +132,17 @@ impl ModuleLoader {
         if info.is_external {
           let id = self.external_modules.len_idx();
           not_visited.insert(id.into());
-          let ext = ExternalModule::new(id, info.path.path.to_string());
+          let external_module_side_effects = match self.input_options.treeshake {
+            rolldown_common::TreeshakeOptions::False => DeterminedSideEffects::NoTreeshake,
+            rolldown_common::TreeshakeOptions::Option(ref opt) => match opt.module_side_effects {
+              rolldown_common::ModuleSideEffects::Boolean(false) => {
+                DeterminedSideEffects::UserDefined(false)
+              }
+              _ => DeterminedSideEffects::NoTreeshake,
+            },
+          };
+          let ext =
+            ExternalModule::new(id, info.path.path.to_string(), external_module_side_effects);
           self.external_modules.push(ext);
           id.into()
         } else {

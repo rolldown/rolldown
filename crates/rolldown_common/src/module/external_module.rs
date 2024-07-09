@@ -1,3 +1,4 @@
+use crate::side_effects::{self, DeterminedSideEffects};
 use crate::{ExternalModuleIdx, ImportRecord, ImportRecordIdx};
 use oxc::index::IndexVec;
 
@@ -7,10 +8,22 @@ pub struct ExternalModule {
   pub exec_order: u32,
   pub name: String,
   pub import_records: IndexVec<ImportRecordIdx, ImportRecord>,
+  pub side_effects: DeterminedSideEffects,
 }
 
 impl ExternalModule {
-  pub fn new(id: ExternalModuleIdx, resource_id: String) -> Self {
-    Self { idx: id, exec_order: u32::MAX, name: resource_id, import_records: IndexVec::default() }
+  pub fn new(
+    id: ExternalModuleIdx,
+    resource_id: String,
+    side_effects: DeterminedSideEffects,
+  ) -> Self {
+    Self {
+      idx: id,
+      exec_order: u32::MAX,
+      name: resource_id,
+      import_records: IndexVec::default(),
+      // By default each external module is considered to have side effects
+      side_effects,
+    }
   }
 }

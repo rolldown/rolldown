@@ -2,7 +2,7 @@ use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   EcmaModule, EcmaModuleIdx, EntryPoint, EntryPointKind, ExternalModule, ImportKind,
-  ImportRecordIdx, ImporterRecord, IndexExternalModules, InnerOptions, ModuleIdx, ModuleTable,
+  ImportRecordIdx, ImporterRecord, IndexExternalModules, ModuleIdx, ModuleTable,
   ResolvedRequestInfo,
 };
 use rolldown_ecmascript::EcmaAst;

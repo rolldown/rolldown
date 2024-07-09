@@ -7,6 +7,7 @@ use super::IsolatingModuleFinalizer;
 impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     let original_body = program.body.take_in(self.alloc);
+
     for stmt in original_body {
       match &stmt {
         // // rewrite:

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/cjs_compat/require/require_esm
 ---
@@ -30,7 +30,6 @@ var esm = (init_esm(), __toCommonJS(esm_ns));
 - ../esm.js
 (0:0-1:1) "export { }\n" --> (21:0-28:0) "\nvar esm_ns;\nvar init_esm = __esmMin(() => {\n\tesm_ns = {};\n});\n\n//#endregion\n//#region main.js"
 - ../main.js
-(0:0-1:0) "require('./esm.js');" --> (28:0-29:0) "\n(init_esm(), __toCommonJS(esm_ns));"
-(1:0-1:4) "\nvar" --> (29:0-29:4) "\nvar"
+(0:0-1:4) "require('./esm.js');\nvar" --> (28:0-29:4) "\n(init_esm(), __toCommonJS(esm_ns));\nvar"
 (1:4-0:0) "" --> (29:4-29:11) " esm = "
 (0:0-2:1) "require('./esm.js');\nvar esm = require('./esm.js');\n" --> (29:11-32:34) "(init_esm(), __toCommonJS(esm_ns));\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

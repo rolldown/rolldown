@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/deconflict/complex_params_patterns
 ---
@@ -120,8 +120,8 @@ export { a, b, c, d, e };
 (15:33-15:37) " e$1" --> (12:39-12:45) " e$1$1"
 (15:37-16:3) "],\n  " --> (12:45-13:1) "]\n"
 (16:3-17:1) "}\n" --> (13:1-14:0) "\t};"
-(17:1-19:0) "}\n" --> (14:0-15:0) "\n}"
-(19:0-19:6) "\nconst" --> (15:0-15:6) "\nconst"
+(17:1-0:0) "" --> (14:0-15:0) "\n}"
+(0:0-19:6) "import assert from 'assert'\nimport {\n  a as a2,\n  b as b2,\n  c as c2,\n  d as d2,\n  e as e2,\n} from './names.js'\n\nexport const [a, b, c, d, e] = ['a', 'b', 'c', 'd', 'e']\n\nfunction foo(a$1, { b$1 }, { c$1 = 'c$1' }, { d$1 } = { d$1: 'd$1' }, { e$1 = '' } = { e$1: 'e$1' }) {\n  return {\n    main: [a, b, c, d, e],\n    names: [a2, b2, c2, d2, e2],\n    params: [a$1, b$1, c$1, d$1, e$1],\n  }\n}\n\nconst" --> (15:0-15:6) "\nconst"
 (19:6-19:12) " ret =" --> (15:6-15:12) " ret ="
 (19:12-19:16) " foo" --> (15:12-15:16) " foo"
 (19:16-19:23) "('a$1'," --> (15:16-15:23) "('a$1',"

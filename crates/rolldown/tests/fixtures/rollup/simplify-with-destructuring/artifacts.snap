@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/rollup/simplify-with-destructuring
 ---
@@ -11,7 +11,8 @@ input_file: crates/rolldown/tests/fixtures/rollup/simplify-with-destructuring
 import { default as assert } from "assert";
 
 //#region main.js
-let foo, unused;
+let foo;
+let unused;
 null, {foo} = {foo: 'bar'};
 assert.strictEqual(foo, 'bar');
 const assign = () => unused = {foo} = {foo: 'baz'};

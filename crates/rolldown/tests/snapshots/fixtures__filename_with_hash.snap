@@ -218,7 +218,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_binary_operators
 
-- entry_js-!~{000}~.mjs => entry_js-Rv2eq7sm.mjs
+- entry_js-!~{000}~.mjs => entry_js-eZyFIJQb.mjs
 
 # tests/esbuild/dce/tree_shaking_import_identifier
 
@@ -1603,7 +1603,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/rollup/catch-scope-shadowing
 
-- main-!~{000}~.mjs => main-Xc6QSF4r.mjs
+- main-!~{000}~.mjs => main-JqduKqsQ.mjs
 
 # tests/fixtures/rollup/object-spread-side-effect
 
@@ -1619,7 +1619,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/rollup/simplify-with-destructuring
 
-- main-!~{000}~.mjs => main-mknmzGCv.mjs
+- main-!~{000}~.mjs => main-N2dibMii.mjs
 
 # tests/fixtures/tree_shaking/advanced_barrel_exports
 

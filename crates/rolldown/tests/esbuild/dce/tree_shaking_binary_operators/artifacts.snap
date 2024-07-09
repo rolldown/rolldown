@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators
 ---
@@ -10,7 +10,8 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_binary_operators
 ```js
 
 //#region entry.js
-let keep, keep2;
+let keep;
+let keep2;
 keep = keep2;
 keep += keep2;
 keep -= keep2;

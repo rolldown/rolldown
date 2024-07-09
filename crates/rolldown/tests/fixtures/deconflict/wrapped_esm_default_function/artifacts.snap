@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/deconflict/wrapped_esm_default_function
 ---
@@ -67,7 +67,7 @@ assert.strictEqual(typeof foo, 'function');
 (2:17-2:22) " foo " --> (42:19-42:29) "{foo: foo$"
 (2:22-2:23) "}" --> (42:29-46:0) "1};\n\n//#endregion\n//#region main.js"
 - ../main.js
-(3:0-3:6) "\nconst" --> (46:0-46:6) "\nconst"
+(0:0-3:6) "import assert from 'node:assert'\nimport bar from './bar'\n\nconst" --> (46:0-46:6) "\nconst"
 (3:6-3:10) " a =" --> (46:6-46:10) " a ="
 (3:10-5:0) " 2; // make foo `a` conflict\n" --> (46:10-47:0) " 2;"
 (5:0-5:6) "\nconst" --> (47:0-47:6) "\nconst"

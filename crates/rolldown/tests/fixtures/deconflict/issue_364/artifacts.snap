@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/deconflict/issue_364
 ---
@@ -32,10 +32,10 @@ assert.equal(a$1, 'a$1');
 (0:6-0:10) "a = " --> (3:6-3:12) " a$2 ="
 (0:10-2:13) "'shared.js'\n\nexport { a }" --> (3:12-7:0) " 'shared.js';\n\n//#endregion\n//#region main.js"
 - ../main.js
-(2:0-2:6) "\nconst" --> (7:0-7:6) "\nconst"
+(0:0-2:6) "import assert from 'node:assert'\nimport { a as a2 } from './shared'\nconst" --> (7:0-7:6) "\nconst"
 (2:6-2:10) " a =" --> (7:6-7:10) " a ="
-(2:10-3:0) " 'a'" --> (7:10-8:0) " 'a';"
-(3:0-3:6) "\nconst" --> (8:0-8:6) "\nconst"
+(2:10-0:0) "" --> (7:10-8:0) " 'a';"
+(0:0-3:6) "import assert from 'node:assert'\nimport { a as a2 } from './shared'\nconst a = 'a'\nconst" --> (8:0-8:6) "\nconst"
 (3:6-3:12) " a$1 =" --> (8:6-8:12) " a$1 ="
 (3:12-5:0) " 'a$1'\n" --> (8:12-9:0) " 'a$1';"
 (5:0-5:7) "\nassert" --> (9:0-9:7) "\nassert"

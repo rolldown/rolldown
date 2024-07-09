@@ -112,7 +112,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - stmt-export-default-before-gen-fn-anon_js-!~{008}~.mjs => stmt-export-default-before-gen-fn-anon_js-4DRYHyMa.mjs
 - stmt-export-default-before-gen-fn-name_js-!~{009}~.mjs => stmt-export-default-before-gen-fn-name_js-pvTIXxqc.mjs
 - stmt-export-fn_js-!~{003}~.mjs => stmt-export-fn_js-Lg5fJ6sh.mjs
-- stmt-export-local_js-!~{005}~.mjs => stmt-export-local_js-U8yWtZ7y.mjs
+- stmt-export-local_js-!~{005}~.mjs => stmt-export-local_js-uHmpXE13.mjs
 - stmt-fn_js-!~{002}~.mjs => stmt-fn_js-nGhExA7J.mjs
 - stmt-local_js-!~{004}~.mjs => stmt-local_js-6z8D7Phz.mjs
 
@@ -218,7 +218,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_binary_operators
 
-- entry_js-!~{000}~.mjs => entry_js-eZyFIJQb.mjs
+- entry_js-!~{000}~.mjs => entry_js-Rv2eq7sm.mjs
 
 # tests/esbuild/dce/tree_shaking_import_identifier
 
@@ -242,7 +242,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/ambiguous_reexport_msg
 
-- entry_js-!~{000}~.mjs => entry_js-d-KXVwHL.mjs
+- entry_js-!~{000}~.mjs => entry_js-X93-Yroa.mjs
 
 # tests/esbuild/default/arrow_fn_scope
 
@@ -665,11 +665,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_export
 
-- entry_js-!~{000}~.mjs => entry_js-pr_HOC1A.mjs
+- entry_js-!~{000}~.mjs => entry_js-U6_C9pII.mjs
 
 # tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_import
 
-- entry_js-!~{000}~.mjs => entry_js-KN_NiUL-.mjs
+- entry_js-!~{000}~.mjs => entry_js-5FiuY4N2.mjs
 
 # tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous
 
@@ -1603,7 +1603,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/rollup/catch-scope-shadowing
 
-- main-!~{000}~.mjs => main-JqduKqsQ.mjs
+- main-!~{000}~.mjs => main-Xc6QSF4r.mjs
 
 # tests/fixtures/rollup/object-spread-side-effect
 
@@ -1619,7 +1619,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/rollup/simplify-with-destructuring
 
-- main-!~{000}~.mjs => main-N2dibMii.mjs
+- main-!~{000}~.mjs => main-mknmzGCv.mjs
 
 # tests/fixtures/tree_shaking/advanced_barrel_exports
 
@@ -1641,9 +1641,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-17B-XCVQ.mjs
 
+# tests/fixtures/tree_shaking/multi-declarator
+
+- main-!~{000}~.mjs => main-u_YdORVe.mjs
+- main-u_YdORVe.mjs.map
+
 # tests/fixtures/tree_shaking/pure_annotation
 
-- main-!~{000}~.mjs => main-fSMGN7x4.mjs
+- main-!~{000}~.mjs => main-XCncN_Yu.mjs
 
 # tests/fixtures/tree_shaking/unused_import_external
 

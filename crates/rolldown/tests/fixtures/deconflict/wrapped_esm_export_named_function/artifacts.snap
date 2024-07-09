@@ -61,7 +61,7 @@ assert.strictEqual(typeof foo, 'function');
 (2:17-2:22) " foo " --> (41:19-41:29) "{foo: foo$"
 (2:22-2:23) "}" --> (41:29-45:0) "1};\n\n//#endregion\n//#region main.js"
 - ../main.js
-(0:0-3:6) "import assert from 'assert'\nimport bar from './bar'\n\nconst" --> (45:0-45:6) "\nconst"
+(3:0-3:6) "\nconst" --> (45:0-45:6) "\nconst"
 (3:6-3:10) " a =" --> (45:6-45:10) " a ="
 (3:10-5:0) " 2; // make foo `a` conflict\n" --> (45:10-46:0) " 2;"
 (5:0-5:6) "\nconst" --> (46:0-46:6) "\nconst"

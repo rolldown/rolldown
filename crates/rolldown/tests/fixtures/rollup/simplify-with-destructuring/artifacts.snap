@@ -11,8 +11,7 @@ input_file: crates/rolldown/tests/fixtures/rollup/simplify-with-destructuring
 import { default as assert } from "assert";
 
 //#region main.js
-let foo;
-let unused;
+let foo, unused;
 null, {foo} = {foo: 'bar'};
 assert.strictEqual(foo, 'bar');
 const assign = () => unused = {foo} = {foo: 'baz'};

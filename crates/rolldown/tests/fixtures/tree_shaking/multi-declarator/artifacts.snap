@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/tree_shaking/multi-declarator
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+//#region foo.js
+const foo = 'foo';
+const [c, d] = [1, 2];
+
+//#endregion
+//#region main.js
+assert.equal(foo, 'foo');
+assert.equal(c, 1);
+
+//#endregion
+//# sourceMappingURL=main.mjs.map
+```
+
+# Sourcemap Visualizer
+
+- ../foo.js
+(0:0-0:13) "export const " --> (3:0-3:6) "\nconst"
+(0:13-0:19) "foo = " --> (3:6-3:12) " foo ="
+(0:19-1:7) "'foo', bar = 'bar'\nexport" --> (3:12-4:0) " 'foo';"
+(1:7-1:13) " const" --> (4:0-4:6) "\nconst"
+(1:13-1:14) " " --> (4:6-4:7) " "
+(1:14-1:17) "[c," --> (4:7-4:10) "[c,"
+(1:17-1:19) " d" --> (4:10-4:12) " d"
+(1:19-1:22) "] =" --> (4:12-4:15) "] ="
+(1:22-1:23) " " --> (4:15-4:16) " "
+(1:23-1:26) "[1," --> (4:16-4:19) "[1,"
+(1:26-1:28) " 2" --> (4:19-4:21) " 2"
+(1:28-2:1) "]\n" --> (4:21-8:0) "];\n\n//#endregion\n//#region main.js"
+- ../main.js
+(4:0-4:7) "\nassert" --> (8:0-8:7) "\nassert"
+(4:7-4:13) ".equal" --> (8:7-8:13) ".equal"
+(4:13-4:18) "(foo," --> (8:13-8:18) "(foo,"
+(4:18-4:24) " 'foo'" --> (8:18-8:24) " 'foo'"
+(4:24-5:0) ")" --> (8:24-9:0) ");"
+(5:0-5:7) "\nassert" --> (9:0-9:7) "\nassert"
+(5:7-5:13) ".equal" --> (9:7-9:13) ".equal"
+(5:13-5:16) "(c," --> (9:13-9:16) "(c,"
+(5:16-5:18) " 1" --> (9:16-9:18) " 1"
+(5:18-6:1) ")\n" --> (9:18-12:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

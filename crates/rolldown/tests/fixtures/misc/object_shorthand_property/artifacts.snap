@@ -28,7 +28,7 @@ assert.strictEqual(value.foo, 'foo');
 (0:0-0:15) "export default " --> (3:0-3:18) "\nvar foo_default ="
 (0:15-0:20) "'foo'" --> (3:18-7:0) " 'foo';\n\n//#endregion\n//#region main.js"
 - ../main.js
-(0:0-3:6) "import foo from './foo'\nimport assert from 'assert'\n\nconst" --> (7:0-7:6) "\nconst"
+(3:0-3:6) "\nconst" --> (7:0-7:6) "\nconst"
 (3:6-3:14) " value =" --> (7:6-7:14) " value ="
 (3:14-3:16) " {" --> (7:14-7:15) " "
 (3:16-3:21) " foo " --> (7:15-7:31) "{foo: foo_defaul"

@@ -30,7 +30,7 @@ assert.equal(a$1, 'shared.js');
 (0:6-0:10) "a = " --> (3:6-3:12) " a$1 ="
 (0:10-2:13) "'shared.js'\n\nexport { a }" --> (3:12-7:0) " 'shared.js';\n\n//#endregion\n//#region main.js"
 - ../main.js
-(0:0-2:6) "import assert from 'node:assert'\nimport { a as a2 } from './shared'\nconst" --> (7:0-7:6) "\nconst"
+(2:0-2:6) "\nconst" --> (7:0-7:6) "\nconst"
 (2:6-2:10) " a =" --> (7:6-7:10) " a ="
 (2:10-3:0) " 'index.js'" --> (7:10-8:0) " 'index.js';"
 (3:0-3:7) "\nassert" --> (8:0-8:7) "\nassert"

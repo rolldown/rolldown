@@ -32,7 +32,7 @@ assert.deepEqual(foo('foo'), ['foo', 'main.js', 'a.js']);
 (0:6-0:10) "a = " --> (3:6-3:12) " a$1 ="
 (0:10-3:1) "'a.js'\n\nexport { a }\n" --> (3:12-7:0) " 'a.js';\n\n//#endregion\n//#region main.js"
 - ../main.js
-(0:0-2:6) "import assert from 'assert'\nimport { a as aJs } from './a'\nconst" --> (7:0-7:6) "\nconst"
+(2:0-2:6) "\nconst" --> (7:0-7:6) "\nconst"
 (2:6-2:10) " a =" --> (7:6-7:10) " a ="
 (2:10-5:0) " 'main.js'\n\n" --> (7:10-8:0) " 'main.js';"
 (5:0-5:9) "\nfunction" --> (8:0-8:9) "\nfunction"

@@ -1,11 +1,11 @@
 use oxc::{
-  allocator::{self, Allocator, Box},
+  allocator::{self, Allocator, Box, IntoIn},
   ast::ast::{self, Statement, StaticMemberExpression},
   span::{Atom, CompactStr, Span, SPAN},
   syntax::operator::UnaryOperator,
 };
 
-use crate::allocator_helpers::{into_in::IntoIn, take_in::TakeIn};
+use crate::allocator_helpers::take_in::TakeIn;
 
 type PassedStr<'a> = &'a str;
 

@@ -1,11 +1,11 @@
 use oxc::{
-  allocator::Allocator,
+  allocator::{Allocator, IntoIn},
   ast::ast::{self, IdentifierReference, Statement},
   semantic::SymbolId,
   span::{Atom, SPAN},
 };
 use rolldown_common::{AstScopes, ImportRecordIdx, ModuleIdx, SymbolRef, WrapKind};
-use rolldown_ecmascript::{AstSnippet, BindingPatternExt, IntoIn, TakeIn};
+use rolldown_ecmascript::{AstSnippet, BindingPatternExt, TakeIn};
 
 mod finalizer_context;
 mod impl_visit_mut;

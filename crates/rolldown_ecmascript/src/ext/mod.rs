@@ -1,10 +1,9 @@
-use oxc::allocator::{Allocator, Box};
+use oxc::allocator::{Allocator, Box, IntoIn};
 use oxc::ast::ast;
 use oxc::semantic::SymbolId;
 use oxc::span::SPAN;
 use smallvec::SmallVec;
 
-use crate::allocator_helpers::into_in::IntoIn;
 use crate::allocator_helpers::take_in::TakeIn;
 use crate::AstSnippet;
 

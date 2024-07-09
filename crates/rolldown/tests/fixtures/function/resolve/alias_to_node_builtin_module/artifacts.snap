@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/function/resolve/alias_to_node_builtin_module
 ---
@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/function/resolve/alias_to_node_builti
 ## main.mjs
 
 ```js
-import { readFile } from "node:fs";
+import "node:fs";
 
 //#region main.js
 require('node:fs');

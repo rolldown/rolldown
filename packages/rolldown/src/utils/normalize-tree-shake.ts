@@ -13,12 +13,15 @@ export function normalizeTreeshakeOptions(
       moduleSideEffects: 'true',
     }
   }
-  if (config.moduleSideEffects === undefined) {
-    config.moduleSideEffects = 'true'
-  } else if (isRegExp(config.moduleSideEffects)) {
-    config.moduleSideEffects = config.moduleSideEffects.source
-  } else {
-    config.moduleSideEffects = config.moduleSideEffects.toString()
+  let normalizedConfig: NormalizedTreeshakingOptions = {
+    moduleSideEffects: '',
   }
-  return config as NormalizedTreeshakingOptions
+  if (config.moduleSideEffects === undefined) {
+    normalizedConfig.moduleSideEffects = 'true'
+  } else if (isRegExp(config.moduleSideEffects)) {
+    normalizedConfig.moduleSideEffects = config.moduleSideEffects.source
+  } else {
+    normalizedConfig.moduleSideEffects = config.moduleSideEffects.toString()
+  }
+  return normalizedConfig
 }

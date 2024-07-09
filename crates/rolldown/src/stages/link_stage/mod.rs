@@ -253,7 +253,8 @@ impl<'a> LinkStage<'a> {
           match rec.resolved_module {
             ModuleIdx::External(importee_id) => {
               // Make sure symbols from external modules are included and de_conflicted
-              stmt_info.side_effect = true;
+              stmt_info.side_effect =
+                self.module_table.external_modules[importee_id].side_effects.has_side_effects();
               match rec.kind {
                 ImportKind::Import => {
                   if matches!(self.input_options.format, OutputFormat::Cjs) && !rec.is_plain_import

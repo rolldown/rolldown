@@ -1,6 +1,6 @@
 use oxc::allocator::Allocator;
 use rolldown_common::{EcmaModule, IndexEcmaModules};
-use rolldown_oxc_utils::AstSnippet;
+use rolldown_ecmascript::AstSnippet;
 
 mod impl_visit_mut;
 

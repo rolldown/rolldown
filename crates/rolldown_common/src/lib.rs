@@ -1,4 +1,6 @@
 mod chunk;
+mod css;
+mod ecmascript;
 mod file_emitter;
 mod inner_bundler_options;
 mod module;
@@ -38,23 +40,23 @@ pub use crate::{
     },
     Chunk,
   },
+  css::{css_module::CssModule, css_module_idx::CssModuleIdx},
+  ecmascript::{ecma_module::EcmaModule, ecma_module_idx::EcmaModuleIdx},
   file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
-  module::ecma_module::EcmaModule,
   module::external_module::ExternalModule,
   types::asset_source::AssetSource,
   types::ast_scopes::AstScopes,
   types::bundler_file_system::BundlerFileSystem,
-  types::chunk_id::ChunkId,
+  types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
-  types::ecma_module_id::EcmaModuleId,
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,
-  types::external_module_id::ExternalModuleId,
-  types::import_record::{ImportKind, ImportRecord, ImportRecordId, RawImportRecord},
+  types::external_module_idx::ExternalModuleIdx,
+  types::import_record::{ImportKind, ImportRecord, ImportRecordIdx, RawImportRecord},
   types::importer_record::ImporterRecord,
   types::js_regex,
   types::module_def_format::ModuleDefFormat,
-  types::module_id::ModuleId,
+  types::module_idx::ModuleIdx,
   types::module_info::ModuleInfo,
   types::module_table::{IndexEcmaModules, IndexExternalModules, ModuleTable},
   types::named_export::LocalExport,
@@ -69,7 +71,7 @@ pub use crate::{
   types::resolved_request_info::ResolvedRequestInfo,
   types::resource_id::ResourceId,
   types::side_effects,
-  types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoId, StmtInfos},
+  types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfos},
   types::symbol_ref::{MemberExprRef, SymbolOrMemberExprRef, SymbolRef},
   types::wrap_kind::WrapKind,
 };

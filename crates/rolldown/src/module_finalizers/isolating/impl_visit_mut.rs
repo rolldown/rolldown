@@ -1,6 +1,6 @@
 use oxc::ast::ast::{self, Statement};
 use oxc::ast::VisitMut;
-use rolldown_oxc_utils::TakeIn;
+use rolldown_ecmascript::TakeIn;
 
 use super::IsolatingModuleFinalizer;
 
@@ -20,7 +20,7 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
           let mut named_specifiers = vec![];
           let mut star_specifier = None;
           match rec.resolved_module {
-            rolldown_common::ModuleId::Normal(importee_id) => {
+            rolldown_common::ModuleIdx::Ecma(importee_id) => {
               if let Some(specifiers) = &import_decl.specifiers {
                 for specifier in specifiers {
                   match specifier {
@@ -58,7 +58,7 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
               ));
               continue;
             }
-            rolldown_common::ModuleId::External(_) => unimplemented!(),
+            rolldown_common::ModuleIdx::External(_) => unimplemented!(),
           }
         }
         // TODO: rewrite `export default xxx` to `var __rolldown_default_export__ = xxx`

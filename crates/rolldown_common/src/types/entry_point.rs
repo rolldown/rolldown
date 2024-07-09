@@ -1,9 +1,9 @@
-use crate::EcmaModuleId;
+use crate::EcmaModuleIdx;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct EntryPoint {
   pub name: Option<String>,
-  pub id: EcmaModuleId,
+  pub id: EcmaModuleIdx,
   pub kind: EntryPointKind,
 }
 

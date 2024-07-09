@@ -1,18 +1,18 @@
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EcmaModule, EcmaModuleId, ImportRecordId, RawImportRecord, ResolvedRequestInfo,
+  EcmaModule, EcmaModuleIdx, ImportRecordIdx, RawImportRecord, ResolvedRequestInfo,
 };
+use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::OxcAst;
 
 use crate::types::ast_symbols::AstSymbols;
 
 pub struct NormalModuleTaskResult {
-  pub module_id: EcmaModuleId,
+  pub module_id: EcmaModuleIdx,
   pub ast_symbol: AstSymbols,
-  pub resolved_deps: IndexVec<ImportRecordId, ResolvedRequestInfo>,
-  pub raw_import_records: IndexVec<ImportRecordId, RawImportRecord>,
+  pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedRequestInfo>,
+  pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub warnings: Vec<BuildError>,
   pub module: EcmaModule,
-  pub ast: OxcAst,
+  pub ast: EcmaAst,
 }

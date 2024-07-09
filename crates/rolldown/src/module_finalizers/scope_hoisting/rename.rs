@@ -1,7 +1,7 @@
 use oxc::allocator::IntoIn;
 use oxc::ast::ast::{self, IdentifierReference};
 use rolldown_common::SymbolRef;
-use rolldown_oxc_utils::ExpressionExt;
+use rolldown_ecmascript::ExpressionExt;
 
 use super::ScopeHoistingFinalizer;
 

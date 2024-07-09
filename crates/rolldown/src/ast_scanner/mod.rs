@@ -14,11 +14,11 @@ use oxc::{
   span::{CompactStr, GetSpan, Span},
 };
 use rolldown_common::{
-  AstScopes, EcmaModuleId, ExportsKind, ImportKind, ImportRecordId, LocalExport, ModuleDefFormat,
+  AstScopes, EcmaModuleIdx, ExportsKind, ImportKind, ImportRecordIdx, LocalExport, ModuleDefFormat,
   NamedImport, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
+use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
@@ -34,16 +34,16 @@ pub struct ScanResult {
   pub named_imports: FxHashMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
   pub stmt_infos: StmtInfos,
-  pub import_records: IndexVec<ImportRecordId, RawImportRecord>,
-  pub star_exports: Vec<ImportRecordId>,
+  pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
+  pub star_exports: Vec<ImportRecordIdx>,
   pub default_export_ref: SymbolRef,
-  pub imports: FxHashMap<Span, ImportRecordId>,
+  pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildError>,
 }
 
 pub struct AstScanner<'me> {
-  idx: EcmaModuleId,
+  idx: EcmaModuleIdx,
   source: &'me Arc<str>,
   module_type: ModuleDefFormat,
   file_path: &'me ResourceId,
@@ -63,7 +63,7 @@ pub struct AstScanner<'me> {
 impl<'me> AstScanner<'me> {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
-    idx: EcmaModuleId,
+    idx: EcmaModuleIdx,
     scope: &'me AstScopes,
     symbols: &'me mut AstSymbols,
     repr_name: String,
@@ -157,7 +157,7 @@ impl<'me> AstScanner<'me> {
     self.scopes.get_root_binding(name).expect("must have")
   }
 
-  fn add_import_record(&mut self, module_request: &str, kind: ImportKind) -> ImportRecordId {
+  fn add_import_record(&mut self, module_request: &str, kind: ImportKind) -> ImportRecordIdx {
     // If 'foo' in `import ... from 'foo'` is finally a commonjs module, we will convert the import statement
     // to `var import_foo = __toESM(require_foo())`, so we create a symbol for `import_foo` here. Notice that we
     // just create the symbol. If the symbol is finally used would be determined in the linking stage.
@@ -181,7 +181,7 @@ impl<'me> AstScanner<'me> {
     &mut self,
     local: SymbolId,
     imported: &str,
-    record_id: ImportRecordId,
+    record_id: ImportRecordIdx,
     span_imported: Span,
   ) {
     self.result.named_imports.insert(
@@ -195,7 +195,7 @@ impl<'me> AstScanner<'me> {
     );
   }
 
-  fn add_star_import(&mut self, local: SymbolId, record_id: ImportRecordId, span_imported: Span) {
+  fn add_star_import(&mut self, local: SymbolId, record_id: ImportRecordIdx, span_imported: Span) {
     self.result.named_imports.insert(
       (self.idx, local).into(),
       NamedImport {
@@ -249,7 +249,7 @@ impl<'me> AstScanner<'me> {
     &mut self,
     export_name: &str,
     imported: &str,
-    record_id: ImportRecordId,
+    record_id: ImportRecordIdx,
     span_imported: Span,
   ) {
     // We will pretend `export { [imported] as [export_name] }` to be `import `
@@ -291,7 +291,7 @@ impl<'me> AstScanner<'me> {
   fn add_star_re_export(
     &mut self,
     export_name: &str,
-    record_id: ImportRecordId,
+    record_id: ImportRecordIdx,
     span_for_export_name: Span,
   ) {
     let generated_imported_as_ref =
@@ -389,10 +389,10 @@ impl<'me> AstScanner<'me> {
         None
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
-        fn_decl.id.as_ref().map(rolldown_oxc_utils::BindingIdentifierExt::expect_symbol_id)
+        fn_decl.id.as_ref().map(rolldown_ecmascript::BindingIdentifierExt::expect_symbol_id)
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => {
-        cls_decl.id.as_ref().map(rolldown_oxc_utils::BindingIdentifierExt::expect_symbol_id)
+        cls_decl.id.as_ref().map(rolldown_ecmascript::BindingIdentifierExt::expect_symbol_id)
       }
       oxc::ast::ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
     };

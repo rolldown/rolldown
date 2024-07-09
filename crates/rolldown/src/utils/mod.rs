@@ -1,6 +1,6 @@
 use oxc::ast::VisitMut;
 use rolldown_common::EcmaModule;
-use rolldown_oxc_utils::{AstSnippet, OxcAst};
+use rolldown_ecmascript::{AstSnippet, EcmaAst};
 
 use super::module_finalizers::scope_hoisting::{
   ScopeHoistingFinalizer, ScopeHoistingFinalizerContext,
@@ -10,13 +10,12 @@ pub mod call_expression_ext;
 pub mod chunk;
 pub mod extract_hash_pattern;
 pub mod extract_meaningful_input_name_from_path;
-pub mod fold_const_value;
 pub mod hash_placeholder;
 pub mod load_source;
 pub mod make_ast_symbol_and_scope;
 pub mod normalize_options;
-pub mod parse_to_ast;
-pub mod pre_process_ast;
+pub mod parse_to_ecma_ast;
+pub mod pre_process_ecma_ast;
 pub mod renamer;
 pub mod render_chunks;
 pub mod render_ecma_module;
@@ -28,7 +27,7 @@ pub mod tweak_ast_for_scanning;
 pub fn finalize_normal_module(
   module: &EcmaModule,
   ctx: ScopeHoistingFinalizerContext<'_>,
-  ast: &mut OxcAst,
+  ast: &mut EcmaAst,
 ) {
   ast.program.with_mut(|fields| {
     let (oxc_program, alloc) = (fields.program, fields.allocator);

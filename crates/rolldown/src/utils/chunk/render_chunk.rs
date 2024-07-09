@@ -46,8 +46,8 @@ pub async fn render_chunk(
         .copied()
         .map(|id| &graph.module_table.ecma_modules[id])
         .filter_map(|m| {
-          render_ecma_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
-            .map(|rendered| (m.id, &m.resource_id, rendered))
+          render_ecma_module(m, &graph.ast_table[m.idx], m.resource_id.as_ref(), options)
+            .map(|rendered| (m.idx, &m.resource_id, rendered))
         })
         .collect::<Vec<_>>()
         .into_iter()
@@ -104,7 +104,7 @@ pub async fn render_chunk(
         .copied()
         .map(|id| &graph.module_table.ecma_modules[id])
         .filter_map(|m| {
-          render_ecma_module(m, &graph.ast_table[m.id], m.resource_id.as_ref(), options)
+          render_ecma_module(m, &graph.ast_table[m.idx], m.resource_id.as_ref(), options)
             .map(|rendered| (&m.resource_id, rendered))
         })
         .collect::<Vec<_>>()
@@ -137,11 +137,7 @@ pub async fn render_chunk(
   if matches!(options.format, OutputFormat::Cjs) {
     let are_modules_all_strict = this.modules.iter().all(|id| {
       let is_esm = matches!(graph.module_table.ecma_modules[*id].exports_kind, ExportsKind::Esm);
-      if is_esm {
-        true
-      } else {
-        graph.ast_table[*id].contains_use_strict
-      }
+      is_esm || graph.ast_table[*id].contains_use_strict
     });
 
     if are_modules_all_strict {

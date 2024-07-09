@@ -2,10 +2,10 @@ use std::fmt::Display;
 
 use rolldown_rstr::Rstr;
 
-use crate::{ModuleId, SymbolRef};
+use crate::{ModuleIdx, SymbolRef};
 
 oxc::index::define_index_type! {
-  pub struct ImportRecordId = u32;
+  pub struct ImportRecordIdx = u32;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -67,7 +67,7 @@ impl RawImportRecord {
     }
   }
 
-  pub fn into_import_record(self, resolved_module: ModuleId) -> ImportRecord {
+  pub fn into_import_record(self, resolved_module: ModuleIdx) -> ImportRecord {
     ImportRecord {
       module_request: self.module_request,
       resolved_module,
@@ -84,7 +84,7 @@ impl RawImportRecord {
 pub struct ImportRecord {
   // Module Request
   pub module_request: Rstr,
-  pub resolved_module: ModuleId,
+  pub resolved_module: ModuleIdx,
   pub kind: ImportKind,
   pub namespace_ref: SymbolRef,
   pub contains_import_star: bool,

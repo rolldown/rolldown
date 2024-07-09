@@ -8,11 +8,11 @@ use oxc::{
 };
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaModule, EcmaModuleId, ImportRecordId, ModuleDefFormat, ModuleType, PackageJson,
+  AstScopes, EcmaModule, EcmaModuleIdx, ImportRecordIdx, ModuleDefFormat, ModuleType, PackageJson,
   RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef, TreeshakeOptions,
 };
+use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
@@ -26,13 +26,14 @@ use crate::{
   types::ast_symbols::AstSymbols,
   utils::{
     load_source::load_source, make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
-    parse_to_ast::parse_to_ast, resolve_id::resolve_id, transform_source::transform_source,
+    parse_to_ecma_ast::parse_to_ecma_ast, resolve_id::resolve_id,
+    transform_source::transform_source,
   },
   SharedOptions, SharedResolver,
 };
 pub struct EcmaModuleTask {
   ctx: Arc<TaskContext>,
-  module_id: EcmaModuleId,
+  module_id: EcmaModuleIdx,
   resolved_path: ResolvedPath,
   package_json: Option<Arc<PackageJson>>,
   module_type: ModuleDefFormat,
@@ -44,7 +45,7 @@ pub struct EcmaModuleTask {
 impl EcmaModuleTask {
   pub fn new(
     ctx: Arc<TaskContext>,
-    id: EcmaModuleId,
+    id: EcmaModuleIdx,
     path: ResolvedPath,
     module_type: ModuleDefFormat,
     is_user_defined_entry: bool,
@@ -114,7 +115,7 @@ impl EcmaModuleTask {
     .await?
     .into();
 
-    let (mut ast, symbols, scopes) = parse_to_ast(
+    let (mut ast, symbols, scopes) = parse_to_ecma_ast(
       &self.ctx.plugin_driver,
       Path::new(&self.resolved_path.path.as_ref()),
       &self.ctx.input_options,
@@ -195,7 +196,7 @@ impl EcmaModuleTask {
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
     let module = EcmaModule {
       source,
-      id: self.module_id,
+      idx: self.module_id,
       repr_name,
       stable_resource_id,
       resource_id,
@@ -244,7 +245,7 @@ impl EcmaModuleTask {
 
   fn scan(
     &self,
-    ast: &mut OxcAst,
+    ast: &mut EcmaAst,
     source: &Arc<str>,
     symbols: SymbolTable,
     scopes: ScopeTree,
@@ -321,9 +322,9 @@ impl EcmaModuleTask {
 
   async fn resolve_dependencies(
     &mut self,
-    dependencies: &IndexVec<ImportRecordId, RawImportRecord>,
+    dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
     warnings: &mut Vec<BuildError>,
-  ) -> Result<IndexVec<ImportRecordId, ResolvedRequestInfo>> {
+  ) -> Result<IndexVec<ImportRecordIdx, ResolvedRequestInfo>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let input_options = Arc::clone(&self.ctx.input_options);

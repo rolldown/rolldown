@@ -2,11 +2,11 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EcmaModuleId, EntryPoint, ExportsKind, ImportKind, ModuleId, ModuleTable, OutputFormat, StmtInfo,
-  SymbolRef, WrapKind,
+  EcmaModuleIdx, EntryPoint, ExportsKind, ImportKind, ModuleIdx, ModuleTable, OutputFormat,
+  StmtInfo, SymbolRef, WrapKind,
 };
+use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
-use rolldown_oxc_utils::OxcAst;
 use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
   rayon::{ParallelBridge, ParallelIterator},
@@ -35,7 +35,7 @@ mod wrapping;
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
   pub entries: Vec<EntryPoint>,
-  pub ast_table: IndexVec<EcmaModuleId, OxcAst>,
+  pub ast_table: IndexVec<EcmaModuleIdx, EcmaAst>,
   // pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub symbols: Symbols,
@@ -52,11 +52,11 @@ pub struct LinkStage<'a> {
   pub entries: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
-  pub sorted_modules: Vec<EcmaModuleId>,
+  pub sorted_modules: Vec<EcmaModuleIdx>,
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildError>,
   pub errors: Vec<BuildError>,
-  pub ast_table: IndexVec<EcmaModuleId, OxcAst>,
+  pub ast_table: IndexVec<EcmaModuleIdx, EcmaAst>,
   pub input_options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
@@ -71,14 +71,14 @@ impl<'a> LinkStage<'a> {
         .ecma_modules
         .iter()
         .map(|_| LinkingMetadata::default())
-        .collect::<IndexVec<EcmaModuleId, _>>(),
+        .collect::<IndexVec<EcmaModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,
       entries: scan_stage_output.entry_points,
       symbols: scan_stage_output.symbols,
       runtime: scan_stage_output.runtime,
       warnings: scan_stage_output.warnings,
       errors: scan_stage_output.errors,
-      ast_table: scan_stage_output.ast_table,
+      ast_table: scan_stage_output.index_ecma_ast,
       input_options,
       used_symbol_refs: FxHashSet::default(),
       top_level_member_expr_resolved_cache: FxHashMap::default(),
@@ -88,10 +88,10 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   fn create_exports_for_modules(&mut self) {
     self.module_table.ecma_modules.iter_mut().for_each(|module| {
-      let linking_info = &mut self.metas[module.id];
+      let linking_info = &mut self.metas[module.idx];
 
       create_wrapper(module, linking_info, &mut self.symbols, &self.runtime);
-      if self.entries.iter().any(|entry| entry.id == module.id) {
+      if self.entries.iter().any(|entry| entry.id == module.idx) {
         init_entry_point_stmt_info(linking_info);
       }
 
@@ -117,7 +117,7 @@ impl<'a> LinkStage<'a> {
       // real statement to construct the Module Namespace Object and assign it to a variable.
       // This is only a concept of esm, so no need to care about this in commonjs.
       if matches!(module.exports_kind, ExportsKind::Esm) {
-        let meta = &self.metas[module.id];
+        let meta = &self.metas[module.idx];
         let mut referenced_symbols = vec![];
         if !meta.is_canonical_exports_empty() {
           referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
@@ -172,7 +172,7 @@ impl<'a> LinkStage<'a> {
     let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
     self.module_table.ecma_modules.iter().for_each(|importer| {
       importer.import_records.iter().for_each(|rec| {
-        let ModuleId::Normal(importee_id) = rec.resolved_module else {
+        let ModuleIdx::Ecma(importee_id) = rec.resolved_module else {
           return;
         };
         let importee = &self.module_table.ecma_modules[importee_id];
@@ -183,7 +183,7 @@ impl<'a> LinkStage<'a> {
               if compat_mode {
                 // See https://github.com/evanw/esbuild/issues/447
                 if rec.contains_import_default || rec.contains_import_star {
-                  self.metas[importee.id].wrap_kind = WrapKind::Cjs;
+                  self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
                   // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
                   unsafe {
                     let importee_mut = addr_of!(*importee).cast_mut();
@@ -191,7 +191,7 @@ impl<'a> LinkStage<'a> {
                   }
                 }
               } else {
-                self.metas[importee.id].wrap_kind = WrapKind::Esm;
+                self.metas[importee.idx].wrap_kind = WrapKind::Esm;
                 unsafe {
                   let importee_mut = addr_of!(*importee).cast_mut();
                   (*importee_mut).exports_kind = ExportsKind::Esm;
@@ -201,14 +201,14 @@ impl<'a> LinkStage<'a> {
           }
           ImportKind::Require => match importee.exports_kind {
             ExportsKind::Esm => {
-              self.metas[importee.id].wrap_kind = WrapKind::Esm;
+              self.metas[importee.idx].wrap_kind = WrapKind::Esm;
             }
             ExportsKind::CommonJs => {
-              self.metas[importee.id].wrap_kind = WrapKind::Cjs;
+              self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
             }
             ExportsKind::None => {
               if compat_mode {
-                self.metas[importee.id].wrap_kind = WrapKind::Cjs;
+                self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
                 // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
                 // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
                 unsafe {
@@ -216,7 +216,7 @@ impl<'a> LinkStage<'a> {
                   (*importee_mut).exports_kind = ExportsKind::CommonJs;
                 }
               } else {
-                self.metas[importee.id].wrap_kind = WrapKind::Esm;
+                self.metas[importee.idx].wrap_kind = WrapKind::Esm;
                 unsafe {
                   let importee_mut = addr_of!(*importee).cast_mut();
                   (*importee_mut).exports_kind = ExportsKind::Esm;
@@ -228,11 +228,11 @@ impl<'a> LinkStage<'a> {
         }
       });
 
-      let is_entry = entry_ids_set.contains(&importer.id);
+      let is_entry = entry_ids_set.contains(&importer.idx);
       if matches!(importer.exports_kind, ExportsKind::CommonJs)
         && (!is_entry || matches!(self.input_options.format, OutputFormat::Esm))
       {
-        self.metas[importer.id].wrap_kind = WrapKind::Cjs;
+        self.metas[importer.idx].wrap_kind = WrapKind::Cjs;
       }
     });
   }
@@ -251,7 +251,7 @@ impl<'a> LinkStage<'a> {
         stmt_info.import_records.iter().for_each(|rec_id| {
           let rec = &importer.import_records[*rec_id];
           match rec.resolved_module {
-            ModuleId::External(importee_id) => {
+            ModuleIdx::External(importee_id) => {
               // Make sure symbols from external modules are included and de_conflicted
               stmt_info.side_effect = true;
               match rec.kind {
@@ -277,7 +277,7 @@ impl<'a> LinkStage<'a> {
                 _ => {}
               }
             }
-            ModuleId::Normal(importee_id) => {
+            ModuleIdx::Ecma(importee_id) => {
               let importee_linking_info = &self.metas[importee_id];
               match rec.kind {
                 ImportKind::Import => {

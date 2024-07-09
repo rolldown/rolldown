@@ -4,8 +4,8 @@ use oxc::{
   semantic::SymbolId,
   span::{Atom, SPAN},
 };
-use rolldown_common::{AstScopes, ImportRecordId, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, TakeIn};
+use rolldown_common::{AstScopes, ImportRecordIdx, ModuleIdx, SymbolRef, WrapKind};
+use rolldown_ecmascript::{AstSnippet, BindingPatternExt, TakeIn};
 
 mod finalizer_context;
 mod impl_visit_mut;
@@ -51,10 +51,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   fn should_remove_import_export_stmt(
     &self,
     stmt: &mut Statement<'ast>,
-    rec_id: ImportRecordId,
+    rec_id: ImportRecordIdx,
   ) -> bool {
     let rec = &self.ctx.module.import_records[rec_id];
-    let ModuleId::Normal(importee_id) = rec.resolved_module else {
+    let ModuleIdx::Ecma(importee_id) = rec.resolved_module else {
       return true;
     };
     let importee_linking_info = &self.ctx.linking_infos[importee_id];

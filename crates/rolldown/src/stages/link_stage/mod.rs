@@ -146,10 +146,6 @@ impl<'a> LinkStage<'a> {
     self.wrap_modules();
     self.bind_imports_and_exports();
     self.create_exports_for_modules();
-
-    // should finalize side_effects for each module before reference_needed_symbols, so we could get correct
-    // module side_effects in `reference_needed_symbols` phase, ref: https://github.com/rolldown/rolldown/blob/9704e796ad7a705487485346e194c6d7baffd727/crates/rolldown/src/stages/link_stage/mod.rs#L256
-    self.determine_side_effects();
     self.reference_needed_symbols();
     self.include_statements();
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
@@ -243,7 +239,6 @@ impl<'a> LinkStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   fn reference_needed_symbols(&mut self) {
-    // self.input_options.treeshake;
     let symbols = Mutex::new(&mut self.symbols);
     self.module_table.ecma_modules.iter().par_bridge().for_each(|importer| {
       // safety: No race conditions here:
@@ -258,7 +253,8 @@ impl<'a> LinkStage<'a> {
           match rec.resolved_module {
             ModuleIdx::External(importee_id) => {
               // Make sure symbols from external modules are included and de_conflicted
-              stmt_info.side_effect = false;
+              stmt_info.side_effect =
+                self.module_table.external_modules[importee_id].side_effects.has_side_effects();
               match rec.kind {
                 ImportKind::Import => {
                   if matches!(self.input_options.format, OutputFormat::Cjs) && !rec.is_plain_import

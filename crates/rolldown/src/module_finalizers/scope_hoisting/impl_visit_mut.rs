@@ -31,18 +31,14 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     let mut stmt_infos = self.ctx.module.stmt_infos.iter();
     // Skip the first statement info, which is the namespace variable declaration
     stmt_infos.next();
-    let is_virtual = self.ctx.module.is_virtual();
+
     old_body.into_iter().enumerate().zip(stmt_infos).for_each(
       |((_top_stmt_idx, mut top_stmt), stmt_info)| {
         debug_assert!(matches!(stmt_info.stmt_idx, Some(_top_stmt_idx)));
-
         if !stmt_info.is_included {
           return;
         }
 
-        if !is_virtual {
-          dbg!(&stmt_info.debug_label, stmt_info.is_included);
-        }
         if let Some(import_decl) = top_stmt.as_import_declaration() {
           let rec_id = self.ctx.module.imports[&import_decl.span];
           if self.should_remove_import_export_stmt(&mut top_stmt, rec_id) {

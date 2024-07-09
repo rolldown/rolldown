@@ -79,6 +79,7 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
   } else {
     forcefully_include_all_statements(ctx, module);
   }
+
   // Include imported modules for its side effects
   module.import_records.iter().for_each(|import_record| match import_record.resolved_module {
     rolldown_common::ModuleIdx::Ecma(importee_id) => {
@@ -218,10 +219,7 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
   );
 }
 
-#[track_caller]
 fn include_statement(ctx: &mut Context, module: &EcmaModule, stmt_info_id: StmtInfoIdx) {
-  dbg!(std::panic::Location::caller(), &module.stmt_infos[stmt_info_id].debug_label);
-
   let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_id];
 
   if *is_included {
@@ -246,13 +244,14 @@ fn include_statement(ctx: &mut Context, module: &EcmaModule, stmt_info_id: StmtI
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
+    self.determine_side_effects();
+
     let mut is_included_vec: IndexVec<EcmaModuleIdx, IndexVec<StmtInfoIdx, bool>> = self
       .module_table
       .ecma_modules
       .iter()
       .map(|m| m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoIdx, _>>())
       .collect::<IndexVec<EcmaModuleIdx, _>>();
-    dbg!(&is_included_vec);
 
     let mut is_module_included_vec: IndexVec<EcmaModuleIdx, bool> =
       oxc::index::index_vec![false; self.module_table.ecma_modules.len()];
@@ -260,7 +259,6 @@ impl LinkStage<'_> {
     let mut used_exports_info_vec: IndexVec<EcmaModuleIdx, UsedExportsInfo> =
       oxc::index::index_vec![UsedExportsInfo::default(); self.module_table.ecma_modules.len()];
     let mut top_level_member_expr_resolved_cache = FxHashMap::default();
-
     let context = &mut Context {
       modules: &self.module_table.ecma_modules,
       symbols: &self.symbols,
@@ -288,13 +286,8 @@ impl LinkStage<'_> {
 
     self.module_table.ecma_modules.iter_mut().par_bridge().for_each(|module| {
       module.is_included = is_module_included_vec[module.idx];
-      let is_runtime = module.is_virtual();
       is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
-        let stmt = module.stmt_infos.get_mut(stmt_info_id);
-        if !is_runtime {
-          dbg!(&stmt.debug_label);
-        }
-        stmt.is_included = *is_included;
+        module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });
     });
 
@@ -316,11 +309,11 @@ impl LinkStage<'_> {
     );
   }
 
-  pub fn determine_side_effects(&mut self) {
+  fn determine_side_effects(&mut self) {
     type IndexVisited = IndexVec<EcmaModuleIdx, bool>;
     type IndexSideEffectsCache = IndexVec<EcmaModuleIdx, Option<DeterminedSideEffects>>;
 
-    fn determine_side_effects_for_ecma_module(
+    fn determine_side_effects_for_module(
       visited: &mut IndexVisited,
       cache: &mut IndexSideEffectsCache,
       module_id: EcmaModuleIdx,
@@ -352,10 +345,10 @@ impl LinkStage<'_> {
           let has_side_effects_in_dep =
             module.import_records.iter().any(|import_record| match import_record.resolved_module {
               rolldown_common::ModuleIdx::Ecma(importee_id) => {
-                determine_side_effects_for_ecma_module(visited, cache, importee_id, normal_modules)
+                determine_side_effects_for_module(visited, cache, importee_id, normal_modules)
                   .has_side_effects()
               }
-              rolldown_common::ModuleIdx::External(external) => {
+              rolldown_common::ModuleIdx::External(_) => {
                 // External module is currently treated as always having side effects, but
                 // it's ensured by `render_chunk_imports`. So here we consider it as no side effects.
                 DeterminedSideEffects::Analyzed(false).has_side_effects()
@@ -379,7 +372,7 @@ impl LinkStage<'_> {
       .map(|module| {
         let mut visited: IndexVisited =
           oxc::index::index_vec![false; self.module_table.ecma_modules.len()];
-        determine_side_effects_for_ecma_module(
+        determine_side_effects_for_module(
           &mut visited,
           &mut index_side_effects_cache,
           module.idx,

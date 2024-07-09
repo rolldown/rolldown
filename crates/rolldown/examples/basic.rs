@@ -15,7 +15,7 @@ async fn main() {
     cwd: cwd.into(),
     sourcemap: Some(SourceMapType::File),
     treeshake: rolldown::TreeshakeOptions::Option(rolldown::InnerOptions {
-      module_side_effects: rolldown::ModuleSideEffects::Boolean(true),
+      module_side_effects: rolldown::ModuleSideEffects::Boolean(false),
     }),
     ..Default::default()
   });

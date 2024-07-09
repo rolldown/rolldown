@@ -125,9 +125,6 @@ impl<'a> GenerateStage<'a> {
     )
     .await?;
 
-    chunks.iter().for_each(|chunk| {
-      println!("{}", &chunk.code);
-    });
     let chunks = render_chunks(self.plugin_driver, chunks).await?;
 
     let chunks = augment_chunk_hash(self.plugin_driver, chunks).await?;

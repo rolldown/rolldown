@@ -1,5 +1,4 @@
 use rolldown_common::{Chunk, OutputFormat, Specifier};
-use tokio::fs::write;
 
 use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput, SharedOptions};
 
@@ -108,8 +107,6 @@ pub fn render_chunk_imports(
       .iter()
       .filter_map(|item| {
         let canonical_ref = graph.symbols.par_canonical_ref_for(item.imported_as);
-        dbg!(&&graph.module_table.ecma_modules[canonical_ref.owner].stable_resource_id);
-        dbg!(&graph.used_symbol_refs.contains(&canonical_ref));
         if !graph.used_symbol_refs.contains(&canonical_ref) {
           return None;
         };

@@ -22,7 +22,6 @@ impl ExternalModule {
       exec_order: u32::MAX,
       name: resource_id,
       import_records: IndexVec::default(),
-      // By default each external module is considered to have side effects
       side_effects,
     }
   }

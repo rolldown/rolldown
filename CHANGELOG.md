@@ -1,3 +1,22 @@
+## [0.11.1](https://github.com/rolldown/rolldown/compare/v0.11.0...v0.11.1) (2024-07-09)
+
+
+### Bug Fixes
+
+*  `treeshake.moduleSideEffects` treeshake typing ([#1559](https://github.com/rolldown/rolldown/issues/1559)) ([5ce9f67](https://github.com/rolldown/rolldown/commit/5ce9f670ca106cdc3840be61b9e7161d8e66d00a))
+* add `dataurl` in json config syntax. ([#1536](https://github.com/rolldown/rolldown/issues/1536)) ([ddee952](https://github.com/rolldown/rolldown/commit/ddee9528db97b9bbd6f2911c17321d68993aaf6f))
+* eliminate unused external module import stmt ([#1558](https://github.com/rolldown/rolldown/issues/1558)) ([cdd83fd](https://github.com/rolldown/rolldown/commit/cdd83fd5a7beef4fd05a8052e78e3585d9fe8c81))
+* optional TransformResult#code ([#1544](https://github.com/rolldown/rolldown/issues/1544)) ([15ce3ae](https://github.com/rolldown/rolldown/commit/15ce3aef4f885d600f535cd1c387422681c10bc8))
+* **sourcemap:** avoid remapping if renderChunk hook not return map ([#1545](https://github.com/rolldown/rolldown/issues/1545)) ([3e13785](https://github.com/rolldown/rolldown/commit/3e137853aecf92e2ff0c21b8949e9182926379fe))
+
+
+### Features
+
+* module option meta ([#1532](https://github.com/rolldown/rolldown/issues/1532)) ([077bf3b](https://github.com/rolldown/rolldown/commit/077bf3b1098c8784e2fe99efd4ec9a3c20249140))
+* **wip/css:** add `CssModule` ([#1551](https://github.com/rolldown/rolldown/issues/1551)) ([06bd429](https://github.com/rolldown/rolldown/commit/06bd4297ae67ea89d6e8f6dbd89f9fd29a5af99c))
+
+
+
 # [0.11.0](https://github.com/rolldown/rolldown/compare/v0.10.5...v0.11.0) (2024-07-05)
 
 

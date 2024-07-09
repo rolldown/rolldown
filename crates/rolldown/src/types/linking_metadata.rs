@@ -1,5 +1,5 @@
 use oxc::index::IndexVec;
-use rolldown_common::{NormalModuleId, ResolvedExport, StmtInfoId, SymbolRef, WrapKind};
+use rolldown_common::{EcmaModuleIdx, ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
@@ -32,7 +32,7 @@ pub struct LinkingMetadata {
   ///
   /// `wrapper_ref` is the `require_cjs` identifier in above example.
   pub wrapper_ref: Option<SymbolRef>,
-  pub wrapper_stmt_info: Option<StmtInfoId>,
+  pub wrapper_stmt_info: Option<StmtInfoIdx>,
   pub wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<Rstr, ResolvedExport>,
@@ -73,4 +73,4 @@ impl LinkingMetadata {
   }
 }
 
-pub type LinkingMetadataVec = IndexVec<NormalModuleId, LinkingMetadata>;
+pub type LinkingMetadataVec = IndexVec<EcmaModuleIdx, LinkingMetadata>;

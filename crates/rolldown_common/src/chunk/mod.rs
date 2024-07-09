@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 // cSpell:disable
 use crate::{
-  ChunkId, ChunkKind, ExternalModuleId, FilenameTemplate, NamedImport, NormalModuleId,
+  ChunkIdx, ChunkKind, EcmaModuleIdx, ExternalModuleIdx, FilenameTemplate, NamedImport,
   NormalizedBundlerOptions, ResourceId, SymbolRef,
 };
 pub mod types;
@@ -20,7 +20,7 @@ use self::types::{
 pub struct Chunk {
   pub exec_order: u32,
   pub kind: ChunkKind,
-  pub modules: Vec<NormalModuleId>,
+  pub modules: Vec<EcmaModuleIdx>,
   pub user_defined_name: Option<String>,
   pub filename: Option<ResourceId>,
   pub name: Option<Arc<str>>,
@@ -28,11 +28,11 @@ pub struct Chunk {
   pub absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Rstr>,
   // Sorted by resource_id of modules in the chunk
-  pub cross_chunk_imports: Vec<ChunkId>,
-  pub cross_chunk_dynamic_imports: Vec<ChunkId>,
+  pub cross_chunk_imports: Vec<ChunkIdx>,
+  pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
   pub bits: BitSet,
-  pub imports_from_other_chunks: Vec<(ChunkId, Vec<CrossChunkImportItem>)>,
-  pub imports_from_external_modules: Vec<(ExternalModuleId, Vec<NamedImport>)>,
+  pub imports_from_other_chunks: Vec<(ChunkIdx, Vec<CrossChunkImportItem>)>,
+  pub imports_from_external_modules: Vec<(ExternalModuleIdx, Vec<NamedImport>)>,
   // meaningless if the chunk is an entrypoint
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Rstr>,
 }
@@ -41,7 +41,7 @@ impl Chunk {
   pub fn new(
     user_defined_name: Option<String>,
     bits: BitSet,
-    modules: Vec<NormalModuleId>,
+    modules: Vec<EcmaModuleIdx>,
     kind: ChunkKind,
   ) -> Self {
     Self { exec_order: u32::MAX, modules, user_defined_name, bits, kind, ..Self::default() }
@@ -58,7 +58,7 @@ impl Chunk {
     }
   }
 
-  pub fn has_side_effect(&self, runtime_id: NormalModuleId) -> bool {
+  pub fn has_side_effect(&self, runtime_id: EcmaModuleIdx) -> bool {
     // TODO: remove this special case, once `NormalModule#side_effect` is implemented. Runtime module should always not have side effect
     if self.modules.len() == 1 && self.modules[0] == runtime_id {
       return false;

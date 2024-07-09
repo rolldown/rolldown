@@ -1,9 +1,7 @@
-mod common;
-
 use std::path::{Component, PathBuf};
 
-use common::{Case, Fixture};
 use rolldown_common::Output;
+use rolldown_testing::case::{Case, Fixture};
 use sugar_path::SugarPath;
 use testing_macros::fixture;
 

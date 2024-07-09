@@ -3,17 +3,20 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 use super::plugin_context::SharedPluginContext;
 use crate::{
   transform_plugin_context::TransformPluginContext,
-  types::{hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs},
+  types::{
+    hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
+    hook_transform_output::HookTransformOutput,
+  },
   HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput,
   HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
 };
 use anyhow::Result;
 use rolldown_common::{ModuleInfo, Output, RenderedChunk};
-use rolldown_oxc_utils::OxcAst;
+use rolldown_ecmascript::EcmaAst;
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
-pub type HookTransformAstReturn = Result<OxcAst>;
-pub type HookTransformReturn = Result<Option<HookLoadOutput>>;
+pub type HookTransformAstReturn = Result<EcmaAst>;
+pub type HookTransformReturn = Result<Option<HookTransformOutput>>;
 pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
 pub type HookNoopReturn = Result<()>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;

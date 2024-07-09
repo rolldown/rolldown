@@ -1,7 +1,7 @@
-use rolldown_oxc_utils::{OxcAst, StatementExt, TakeIn, WithMutFields};
+use rolldown_ecmascript::{EcmaAst, StatementExt, TakeIn, WithMutFields};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
-pub fn tweak_ast_for_scanning(ast: &mut OxcAst) {
+pub fn tweak_ast_for_scanning(ast: &mut EcmaAst) {
   let mut contains_use_strict = false;
   ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
     // Remove all `"use strict"` directives.

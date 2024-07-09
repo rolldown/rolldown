@@ -78,10 +78,10 @@ single_match_else = "allow"
 [workspace.dependencies]
 rolldown                    = { version = "0.1.0", path = "./crates/rolldown" }
 rolldown_common             = { version = "0.0.1", path = "./crates/rolldown_common" }
+rolldown_ecmascript         = { version = "0.1.0", path = "./crates/rolldown_ecmascript" }
 rolldown_error              = { version = "0.0.1", path = "./crates/rolldown_error" }
 rolldown_fs                 = { version = "0.1.0", path = "./crates/rolldown_fs" }
 rolldown_loader_utils       = { version = "0.1.0", path = "./crates/rolldown_loader_utils" }
-rolldown_oxc_utils          = { version = "0.1.0", path = "./crates/rolldown_oxc_utils" }
 rolldown_plugin             = { version = "0.1.0", path = "./crates/rolldown_plugin" }
 rolldown_plugin_glob_import = { version = "0.0.1", path = "./crates/rolldown_plugin_glob_import" }
 rolldown_plugin_wasm        = { version = "0.0.1", path = "./crates/rolldown_plugin_wasm" }
@@ -138,8 +138,10 @@ urlencoding        = "2.1.3"
 vfs                = "0.12.0"
 xxhash-rust        = "0.8.10"
 # oxc crates share the same version
+lightningcss       = { version = "1.0.0-alpha.57" }
 oxc                = { version = "0.17.1", features = ["sourcemap_concurrent", "transformer", "minifier"] }
 oxc_transform_napi = { version = "0.17.1" }
+
 
 [profile.release]
 codegen-units = 1

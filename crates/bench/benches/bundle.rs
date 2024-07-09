@@ -23,6 +23,11 @@ fn criterion_benchmark(c: &mut Criterion) {
       "rome-ts".to_string(),
       rolldown_testing::bundler_options_presets::rome_ts,
     ),
+    derive_benchmark_items(
+      &derive_options,
+      "multi-duplicated-top-level-symbol".to_string(),
+      rolldown_testing::bundler_options_presets::multi_duplicated_symbol,
+    ),
   ]
   .into_iter()
   .flatten()

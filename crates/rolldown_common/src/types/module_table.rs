@@ -1,11 +1,11 @@
-use crate::{ExternalModule, ExternalModuleId, NormalModule, NormalModuleId};
+use crate::{EcmaModule, EcmaModuleIdx, ExternalModule, ExternalModuleIdx};
 use oxc::index::IndexVec;
 
-pub type NormalModuleVec = IndexVec<NormalModuleId, NormalModule>;
-pub type ExternalModuleVec = IndexVec<ExternalModuleId, ExternalModule>;
+pub type IndexEcmaModules = IndexVec<EcmaModuleIdx, EcmaModule>;
+pub type IndexExternalModules = IndexVec<ExternalModuleIdx, ExternalModule>;
 
 #[derive(Debug)]
 pub struct ModuleTable {
-  pub normal_modules: NormalModuleVec,
-  pub external_modules: ExternalModuleVec,
+  pub ecma_modules: IndexEcmaModules,
+  pub external_modules: IndexExternalModules,
 }

@@ -1,28 +1,28 @@
 use oxc::index::IndexVec;
 use rustc_hash::FxHashMap;
 
-use crate::{ImportRecordId, SymbolRef};
+use crate::{ImportRecordIdx, SymbolRef};
 
 use super::symbol_ref::SymbolOrMemberExprRef;
 
 #[derive(Debug, Default)]
 pub struct StmtInfos {
-  infos: IndexVec<StmtInfoId, StmtInfo>,
+  infos: IndexVec<StmtInfoIdx, StmtInfo>,
   // only for top level symbols
-  symbol_ref_to_declared_stmt_idx: FxHashMap<SymbolRef, Vec<StmtInfoId>>,
+  symbol_ref_to_declared_stmt_idx: FxHashMap<SymbolRef, Vec<StmtInfoIdx>>,
   pub has_export_used: bool,
 }
 
 impl StmtInfos {
-  pub fn get(&self, id: StmtInfoId) -> &StmtInfo {
+  pub fn get(&self, id: StmtInfoIdx) -> &StmtInfo {
     &self.infos[id]
   }
 
-  pub fn get_mut(&mut self, id: StmtInfoId) -> &mut StmtInfo {
+  pub fn get_mut(&mut self, id: StmtInfoIdx) -> &mut StmtInfo {
     &mut self.infos[id]
   }
 
-  pub fn add_stmt_info(&mut self, info: StmtInfo) -> StmtInfoId {
+  pub fn add_stmt_info(&mut self, info: StmtInfo) -> StmtInfoIdx {
     let id = self.infos.push(info);
     for symbol_ref in &self.infos[id].declared_symbols {
       self.symbol_ref_to_declared_stmt_idx.entry(*symbol_ref).or_default().push(id);
@@ -30,25 +30,25 @@ impl StmtInfos {
     id
   }
 
-  pub fn replace_namespace_stmt_info(&mut self, info: StmtInfo) -> StmtInfoId {
+  pub fn replace_namespace_stmt_info(&mut self, info: StmtInfo) -> StmtInfoIdx {
     self.infos[0] = info;
     for symbol_ref in &self.infos[0].declared_symbols {
       self
         .symbol_ref_to_declared_stmt_idx
         .entry(*symbol_ref)
         .or_default()
-        .push(StmtInfoId::from_raw(0));
+        .push(StmtInfoIdx::from_raw(0));
     }
-    StmtInfoId::from_raw(0)
+    StmtInfoIdx::from_raw(0)
   }
 
-  pub fn declared_stmts_by_symbol(&self, symbol_ref: &SymbolRef) -> &[StmtInfoId] {
+  pub fn declared_stmts_by_symbol(&self, symbol_ref: &SymbolRef) -> &[StmtInfoIdx] {
     self.symbol_ref_to_declared_stmt_idx.get(symbol_ref).map_or(&[], Vec::as_slice)
   }
 }
 
 impl std::ops::Deref for StmtInfos {
-  type Target = IndexVec<StmtInfoId, StmtInfo>;
+  type Target = IndexVec<StmtInfoIdx, StmtInfo>;
 
   fn deref(&self) -> &Self::Target {
     &self.infos
@@ -62,7 +62,7 @@ impl std::ops::DerefMut for StmtInfos {
 }
 
 oxc::index::define_index_type! {
-  pub struct StmtInfoId = u32;
+  pub struct StmtInfoIdx = u32;
 }
 
 #[derive(Default, Debug)]
@@ -81,7 +81,7 @@ pub struct StmtInfo {
   pub referenced_symbols: Vec<SymbolOrMemberExprRef>,
   pub side_effect: bool,
   pub is_included: bool,
-  pub import_records: Vec<ImportRecordId>,
+  pub import_records: Vec<ImportRecordIdx>,
   pub debug_label: Option<String>,
 }
 

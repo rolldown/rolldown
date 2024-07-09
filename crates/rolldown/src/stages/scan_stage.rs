@@ -3,10 +3,10 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::future::join_all;
 use oxc::index::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, ModuleTable, NormalModuleId, ResolvedRequestInfo};
+use rolldown_common::{EcmaModuleIdx, EntryPoint, ImportKind, ModuleTable, ResolvedRequestInfo};
+use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
-use rolldown_oxc_utils::OxcAst;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
 
@@ -29,7 +29,7 @@ pub struct ScanStage {
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub module_table: ModuleTable,
-  pub ast_table: IndexVec<NormalModuleId, OxcAst>,
+  pub index_ecma_ast: IndexVec<EcmaModuleIdx, EcmaAst>,
   pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
@@ -69,7 +69,7 @@ impl ScanStage {
       runtime,
       warnings,
       errors,
-      ast_table,
+      index_ecma_ast,
     } = module_loader.fetch_all_modules(user_entries).await?;
     self.errors.extend(errors);
 
@@ -79,7 +79,7 @@ impl ScanStage {
       symbols,
       runtime,
       warnings,
-      ast_table,
+      index_ecma_ast,
       errors: std::mem::take(&mut self.errors),
     })
   }

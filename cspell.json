@@ -45,6 +45,7 @@
   "words": [
     "arraify",
     "astro",
+    "benchcases",
     "bindgen",
     "bindingify",
     "binstall",
@@ -95,6 +96,7 @@
     "justfile",
     "Kawaii",
     "libc",
+    "lightningcss",
     "Lukas",
     "memchr",
     "memfs",
@@ -134,6 +136,7 @@
     "Stmts",
     "struct",
     "structs",
+    "stylesheet",
     "systemjs",
     "Taegert",
     "taplo",

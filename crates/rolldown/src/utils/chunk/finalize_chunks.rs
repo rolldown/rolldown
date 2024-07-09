@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{ChunkId, ResourceId};
+use rolldown_common::{ChunkIdx, ResourceId};
 use rolldown_utils::{
   base64::to_url_safe_base64,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
@@ -36,7 +36,7 @@ pub fn finalize_chunks(
     })
     .collect::<FxHashMap<_, _>>();
 
-  let index_chunk_dependencies: IndexVec<ChunkId, Vec<ChunkId>> = chunks
+  let index_chunk_dependencies: IndexVec<ChunkIdx, Vec<ChunkIdx>> = chunks
     .par_iter()
     .map(|chunk| {
       extract_hash_placeholders(&chunk.code)
@@ -47,7 +47,7 @@ pub fn finalize_chunks(
     .collect::<Vec<_>>()
     .into();
 
-  let index_standalone_content_hashes: IndexVec<ChunkId, String> = chunks
+  let index_standalone_content_hashes: IndexVec<ChunkIdx, String> = chunks
     .par_iter()
     .map(|chunk| {
       let mut content = chunk.code.as_bytes().to_vec();
@@ -59,10 +59,10 @@ pub fn finalize_chunks(
     .collect::<Vec<_>>()
     .into();
 
-  let mut index_chunk_hashers: IndexVec<ChunkId, Xxh3> =
+  let mut index_chunk_hashers: IndexVec<ChunkIdx, Xxh3> =
     oxc::index::index_vec![Xxh3::default(); chunks.len()];
 
-  let index_final_hashes: IndexVec<ChunkId, String> = index_chunk_hashers
+  let index_final_hashes: IndexVec<ChunkIdx, String> = index_chunk_hashers
     .iter_mut_enumerated()
     // FIXME: Extra traversing. This is a workaround due to `par_bridge` doesn't ensure order https://github.com/rayon-rs/rayon/issues/551#issuecomment-882069261
     .collect::<Vec<_>>()

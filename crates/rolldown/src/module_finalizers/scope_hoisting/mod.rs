@@ -4,8 +4,8 @@ use oxc::{
   semantic::SymbolId,
   span::{Atom, SPAN},
 };
-use rolldown_common::{AstScopes, ImportRecordId, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{AstSnippet, BindingPatternExt, IntoIn, TakeIn};
+use rolldown_common::{AstScopes, ImportRecordIdx, ModuleIdx, SymbolRef, WrapKind};
+use rolldown_ecmascript::{AstSnippet, BindingPatternExt, IntoIn, TakeIn};
 
 mod finalizer_context;
 mod impl_visit_mut;
@@ -51,10 +51,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   fn should_remove_import_export_stmt(
     &self,
     stmt: &mut Statement<'ast>,
-    rec_id: ImportRecordId,
+    rec_id: ImportRecordIdx,
   ) -> bool {
     let rec = &self.ctx.module.import_records[rec_id];
-    let ModuleId::Normal(importee_id) = rec.resolved_module else {
+    let ModuleIdx::Ecma(importee_id) = rec.resolved_module else {
       return true;
     };
     let importee_linking_info = &self.ctx.linking_infos[importee_id];
@@ -184,7 +184,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           || self.ctx.module.import_records.iter().any(|record| {
             let id = record.resolved_module;
 
-            if let Some(normal_module_id) = id.as_normal() {
+            if let Some(normal_module_id) = id.as_ecma() {
               let m = &self.ctx.modules[normal_module_id];
               !m.exports_kind.is_esm()
             } else {

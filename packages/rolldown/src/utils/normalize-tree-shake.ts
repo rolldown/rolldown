@@ -14,7 +14,7 @@ export function normalizeTreeshakeOptions(
     }
   }
   let normalizedConfig: NormalizedTreeshakingOptions = {
-    moduleSideEffects: ""
+    moduleSideEffects: '',
   }
   if (config.moduleSideEffects === undefined) {
     normalizedConfig.moduleSideEffects = 'true'

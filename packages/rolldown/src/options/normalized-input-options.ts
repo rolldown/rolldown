@@ -8,7 +8,8 @@ import type { RolldownPlugin } from '../plugin'
 import type { LogLevel } from '../log/logging'
 import { NormalizedTreeshakingOptions } from '../../src/treeshake'
 
-export interface NormalizedInputOptions extends Omit<InputOptions, 'treeshake'> {
+export interface NormalizedInputOptions
+  extends Omit<InputOptions, 'treeshake'> {
   input: RollupNormalizedInputOptions['input']
   plugins: RolldownPlugin[]
   onLog: (level: LogLevel, log: RollupLog) => void

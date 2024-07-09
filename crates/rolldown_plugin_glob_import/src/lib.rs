@@ -299,7 +299,7 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
 
                   *expr = self.ast_builder.expression_object(
                     call_expr.span,
-                    self.ast_builder.vec_from(properties),
+                    self.ast_builder.vec_from_iter(properties),
                     None,
                   );
                   self.current += 1;

@@ -4,7 +4,7 @@ use oxc::{
   semantic::SymbolId,
   span::{Atom, SPAN},
 };
-use rolldown_common::{AstScopes, ImportRecordIdx, ModuleIdx, SymbolRef, WrapKind};
+use rolldown_common::{AstScopes, ImportRecordIdx, Module, SymbolRef, WrapKind};
 use rolldown_ecmascript::{AstSnippet, BindingPatternExt, TakeIn};
 
 mod finalizer_context;
@@ -54,10 +54,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     rec_id: ImportRecordIdx,
   ) -> bool {
     let rec = &self.ctx.module.import_records[rec_id];
-    let ModuleIdx::Ecma(importee_id) = rec.resolved_module else {
+    let Module::Ecma(importee) = &self.ctx.modules[rec.resolved_module] else {
       return true;
     };
-    let importee_linking_info = &self.ctx.linking_infos[importee_id];
+    let importee_linking_info = &self.ctx.linking_infos[importee.idx];
     match importee_linking_info.wrap_kind {
       WrapKind::None => {
         // Remove this statement by ignoring it
@@ -184,8 +184,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           || self.ctx.module.import_records.iter().any(|record| {
             let id = record.resolved_module;
 
-            if let Some(normal_module_id) = id.as_ecma() {
-              let m = &self.ctx.modules[normal_module_id];
+            if let Some(m) = self.ctx.modules[id].as_ecma() {
               !m.exports_kind.is_esm()
             } else {
               true

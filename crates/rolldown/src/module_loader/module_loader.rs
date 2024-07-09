@@ -1,9 +1,8 @@
 use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
-  EcmaModule, EcmaModuleIdx, EntryPoint, EntryPointKind, ExternalModule, ImportKind,
-  ImportRecordIdx, ImporterRecord, IndexExternalModules, ModuleIdx, ModuleTable,
-  ResolvedRequestInfo,
+  EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
+  ModuleIdx, ModuleTable, ResolvedRequestInfo,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
@@ -25,9 +24,9 @@ use crate::types::symbols::Symbols;
 use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
-  pub modules: IndexVec<EcmaModuleIdx, Option<EcmaModule>>,
-  pub index_ecma_ast: IndexVec<EcmaModuleIdx, Option<EcmaAst>>,
-  pub importers: IndexVec<EcmaModuleIdx, Vec<ImporterRecord>>,
+  pub modules: IndexVec<ModuleIdx, Option<Module>>,
+  pub index_ecma_ast: IndexVec<ModuleIdx, Option<EcmaAst>>,
+  pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
 }
 
 impl IntermediateNormalModules {
@@ -35,7 +34,7 @@ impl IntermediateNormalModules {
     Self { modules: IndexVec::new(), index_ecma_ast: IndexVec::new(), importers: IndexVec::new() }
   }
 
-  pub fn alloc_ecma_module_idx(&mut self, symbols: &mut Symbols) -> EcmaModuleIdx {
+  pub fn alloc_ecma_module_idx(&mut self, symbols: &mut Symbols) -> ModuleIdx {
     let id = self.modules.push(None);
     self.index_ecma_ast.push(None);
     self.importers.push(Vec::new());
@@ -49,17 +48,16 @@ pub struct ModuleLoader {
   shared_context: Arc<TaskContext>,
   rx: tokio::sync::mpsc::Receiver<Msg>,
   visited: FxHashMap<Arc<str>, ModuleIdx>,
-  runtime_id: EcmaModuleIdx,
+  runtime_id: ModuleIdx,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
-  external_modules: IndexExternalModules,
   symbols: Symbols,
 }
 
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
-  pub index_ecma_ast: IndexVec<EcmaModuleIdx, EcmaAst>,
+  pub index_ecma_ast: IndexVec<ModuleIdx, EcmaAst>,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -111,12 +109,11 @@ impl ModuleLoader {
       shared_context: common_data,
       rx,
       input_options,
-      visited: FxHashMap::from_iter([(ROLLDOWN_RUNTIME_RESOURCE_ID.into(), runtime_id.into())]),
+      visited: FxHashMap::from_iter([(ROLLDOWN_RUNTIME_RESOURCE_ID.into(), runtime_id)]),
       runtime_id,
       // runtime module is always there
       remaining: 1,
       intermediate_normal_modules,
-      external_modules: IndexVec::new(),
       symbols,
     }
   }
@@ -130,8 +127,8 @@ impl ModuleLoader {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         if info.is_external {
-          let id = self.external_modules.len_idx();
-          not_visited.insert(id.into());
+          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
+          not_visited.insert(idx);
           let external_module_side_effects = match self.input_options.treeshake {
             rolldown_common::TreeshakeOptions::False => DeterminedSideEffects::NoTreeshake,
             rolldown_common::TreeshakeOptions::Option(ref opt) => match opt.module_side_effects {
@@ -142,12 +139,13 @@ impl ModuleLoader {
             },
           };
           let ext =
-            ExternalModule::new(id, info.path.path.to_string(), external_module_side_effects);
-          self.external_modules.push(ext);
-          id.into()
+            ExternalModule::new(idx, info.path.path.to_string(), external_module_side_effects);
+          self.intermediate_normal_modules.modules[idx] = Some(ext.into());
+          self.intermediate_normal_modules.index_ecma_ast[idx] = Some(EcmaAst::default());
+          idx
         } else {
           let id = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
-          not_visited.insert(id.into());
+          not_visited.insert(id);
           self.remaining += 1;
           let module_path = info.path.clone();
 
@@ -170,7 +168,7 @@ impl ModuleLoader {
           }
           #[cfg(not(target_family = "wasm"))]
           tokio::spawn(task.run());
-          id.into()
+          id
         }
       }
     }
@@ -199,7 +197,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name: Some(name),
-        id: self.try_spawn_new_task(info, /* is_user_defined_entry */ true).expect_ecma(),
+        id: self.try_spawn_new_task(info, /* is_user_defined_entry */ true),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -234,23 +232,21 @@ impl ModuleLoader {
             .map(|(raw_rec, info)| {
               let id = self.try_spawn_new_task(info, false);
               // Dynamic imported module will be considered as an entry
-              if let ModuleIdx::Ecma(id) = id {
-                self.intermediate_normal_modules.importers[id].push(ImporterRecord {
-                  kind: raw_rec.kind,
-                  importer_path: module.resource_id.clone(),
-                });
-                if matches!(raw_rec.kind, ImportKind::DynamicImport)
-                  && !user_defined_entry_ids.contains(&id)
-                {
-                  dynamic_import_entry_ids.insert(id);
-                }
+              self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+                kind: raw_rec.kind,
+                importer_path: module.resource_id.clone(),
+              });
+              if matches!(raw_rec.kind, ImportKind::DynamicImport)
+                && !user_defined_entry_ids.contains(&id)
+              {
+                dynamic_import_entry_ids.insert(id);
               }
               raw_rec.into_import_record(id)
             })
             .collect::<IndexVec<ImportRecordIdx, _>>();
           module.import_records = import_records;
 
-          self.intermediate_normal_modules.modules[module_id] = Some(module);
+          self.intermediate_normal_modules.modules[module_id] = Some(module.into());
           self.intermediate_normal_modules.index_ecma_ast[module_id] = Some(ast);
 
           self.symbols.add_ast_symbols(module_id, ast_symbol);
@@ -258,7 +254,7 @@ impl ModuleLoader {
         Msg::RuntimeNormalModuleDone(task_result) => {
           let RuntimeEcmaModuleTaskResult { ast_symbol, module, runtime, ast } = task_result;
 
-          self.intermediate_normal_modules.modules[self.runtime_id] = Some(module);
+          self.intermediate_normal_modules.modules[self.runtime_id] = Some(module.into());
           self.intermediate_normal_modules.index_ecma_ast[self.runtime_id] = Some(ast);
 
           self.symbols.add_ast_symbols(self.runtime_id, ast_symbol);
@@ -274,31 +270,33 @@ impl ModuleLoader {
       self.remaining -= 1;
     }
 
-    let modules: IndexVec<EcmaModuleIdx, EcmaModule> = self
+    let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules
       .modules
       .into_iter()
       .flatten()
       .enumerate()
       .map(|(id, mut module)| {
-        // Note: (Compat to rollup)
-        // The `dynamic_importers/importers` should be added after `module_parsed` hook.
-        for importer in std::mem::take(&mut self.intermediate_normal_modules.importers[id]) {
-          if importer.kind.is_static() {
-            module.importers.push(importer.importer_path);
-          } else {
-            module.dynamic_importers.push(importer.importer_path);
+        if let Some(module) = module.as_ecma_mut() {
+          // Note: (Compat to rollup)
+          // The `dynamic_importers/importers` should be added after `module_parsed` hook.
+          for importer in std::mem::take(&mut self.intermediate_normal_modules.importers[id]) {
+            if importer.kind.is_static() {
+              module.importers.push(importer.importer_path);
+            } else {
+              module.dynamic_importers.push(importer.importer_path);
+            }
           }
         }
         module
       })
       .collect();
 
-    let index_ecma_ast: IndexVec<EcmaModuleIdx, EcmaAst> =
+    let index_ecma_ast: IndexVec<ModuleIdx, EcmaAst> =
       self.intermediate_normal_modules.index_ecma_ast.into_iter().flatten().collect();
 
     let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
-    dynamic_import_entry_ids.sort_unstable_by_key(|id| &modules[*id].stable_resource_id);
+    dynamic_import_entry_ids.sort_unstable_by_key(|id| modules[*id].stable_resource_id());
 
     entry_points.extend(dynamic_import_entry_ids.into_iter().map(|id| EntryPoint {
       name: None,
@@ -307,7 +305,7 @@ impl ModuleLoader {
     }));
 
     Ok(ModuleLoaderOutput {
-      module_table: ModuleTable { ecma_modules: modules, external_modules: self.external_modules },
+      module_table: ModuleTable { modules },
       symbols: self.symbols,
       index_ecma_ast,
       entry_points,

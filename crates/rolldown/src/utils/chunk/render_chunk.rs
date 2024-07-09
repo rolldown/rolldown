@@ -44,7 +44,7 @@ pub async fn render_chunk(
         .modules
         .par_iter()
         .copied()
-        .map(|id| &graph.module_table.ecma_modules[id])
+        .filter_map(|id| graph.module_table.modules[id].as_ecma())
         .filter_map(|m| {
           render_ecma_module(m, &graph.ast_table[m.idx], m.resource_id.as_ref(), options)
             .map(|rendered| (m.idx, &m.resource_id, rendered))
@@ -102,7 +102,7 @@ pub async fn render_chunk(
         .modules
         .par_iter()
         .copied()
-        .map(|id| &graph.module_table.ecma_modules[id])
+        .filter_map(|id| graph.module_table.modules[id].as_ecma())
         .filter_map(|m| {
           render_ecma_module(m, &graph.ast_table[m.idx], m.resource_id.as_ref(), options)
             .map(|rendered| (&m.resource_id, rendered))
@@ -135,10 +135,13 @@ pub async fn render_chunk(
 
   // Add `use strict` directive if needed. This must come before the banner, because users might use banner to add hashbang.
   if matches!(options.format, OutputFormat::Cjs) {
-    let are_modules_all_strict = this.modules.iter().all(|id| {
-      let is_esm = matches!(graph.module_table.ecma_modules[*id].exports_kind, ExportsKind::Esm);
-      is_esm || graph.ast_table[*id].contains_use_strict
-    });
+    let are_modules_all_strict =
+      this.modules.iter().filter_map(|id| graph.module_table.modules[*id].as_ecma()).all(
+        |ecma_module| {
+          let is_esm = matches!(&ecma_module.exports_kind, ExportsKind::Esm);
+          is_esm || graph.ast_table[ecma_module.idx].contains_use_strict
+        },
+      );
 
     if are_modules_all_strict {
       concat_source.add_prepend_source(Box::new(RawSource::new("\"use strict\";\n".to_string())));

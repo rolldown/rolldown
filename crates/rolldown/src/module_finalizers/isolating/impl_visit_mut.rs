@@ -1,5 +1,6 @@
 use oxc::ast::ast::{self, Statement};
 use oxc::ast::VisitMut;
+use rolldown_common::Module;
 use rolldown_ecmascript::TakeIn;
 
 use super::IsolatingModuleFinalizer;
@@ -19,8 +20,8 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
           let rec = &self.ctx.module.import_records[rec_id];
           let mut named_specifiers = vec![];
           let mut star_specifier = None;
-          match rec.resolved_module {
-            rolldown_common::ModuleIdx::Ecma(importee_id) => {
+          match &self.ctx.modules[rec.resolved_module] {
+            Module::Ecma(importee) => {
               if let Some(specifiers) = &import_decl.specifiers {
                 for specifier in specifiers {
                   match specifier {
@@ -38,27 +39,27 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
               }
               let is_plain_import =
                 import_decl.specifiers.as_ref().map_or(false, |specifiers| specifiers.is_empty());
-              let importee = &self.ctx.modules[importee_id];
+              let importee = &self.ctx.modules[importee.idx];
               if is_plain_import {
                 program.body.push(self.snippet.app_static_import_call_multiple_specifiers_stmt(
                   &[],
-                  &importee.stable_resource_id,
+                  importee.stable_resource_id(),
                 ));
                 continue;
               } else if let Some(star_spec) = star_specifier {
                 program.body.push(self.snippet.app_static_import_star_call_stmt(
                   &star_spec.local.name,
-                  &importee.stable_resource_id,
+                  importee.stable_resource_id(),
                 ));
                 continue;
               }
               program.body.push(self.snippet.app_static_import_call_multiple_specifiers_stmt(
                 &named_specifiers,
-                &importee.stable_resource_id,
+                importee.stable_resource_id(),
               ));
               continue;
             }
-            rolldown_common::ModuleIdx::External(_) => unimplemented!(),
+            Module::External(_) => unimplemented!(),
           }
         }
         // TODO: rewrite `export default xxx` to `var __rolldown_default_export__ = xxx`

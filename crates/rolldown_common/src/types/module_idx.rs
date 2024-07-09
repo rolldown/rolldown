@@ -1,22 +1,22 @@
-use crate::EcmaModuleIdx;
+use crate::ModuleIdx;
 
 use super::external_module_idx::ExternalModuleIdx;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ModuleIdx {
-  Ecma(EcmaModuleIdx),
+pub enum LegacyModuleIdx {
+  Ecma(ModuleIdx),
   External(ExternalModuleIdx),
 }
 
-impl ModuleIdx {
-  pub fn expect_ecma(self) -> EcmaModuleIdx {
+impl LegacyModuleIdx {
+  pub fn expect_ecma(self) -> ModuleIdx {
     match self {
       Self::Ecma(id) => id,
       Self::External(_) => panic!("Expected a normal module id"),
     }
   }
 
-  pub fn as_ecma(self) -> Option<EcmaModuleIdx> {
+  pub fn as_ecma(self) -> Option<ModuleIdx> {
     match self {
       Self::Ecma(id) => Some(id),
       Self::External(_) => None,
@@ -31,13 +31,13 @@ impl ModuleIdx {
   }
 }
 
-impl From<EcmaModuleIdx> for ModuleIdx {
-  fn from(v: EcmaModuleIdx) -> Self {
+impl From<ModuleIdx> for LegacyModuleIdx {
+  fn from(v: ModuleIdx) -> Self {
     Self::Ecma(v)
   }
 }
 
-impl From<ExternalModuleIdx> for ModuleIdx {
+impl From<ExternalModuleIdx> for LegacyModuleIdx {
   fn from(v: ExternalModuleIdx) -> Self {
     Self::External(v)
   }

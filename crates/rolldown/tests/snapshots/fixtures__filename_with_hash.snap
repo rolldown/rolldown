@@ -1422,7 +1422,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/resolve/alias_to_node_builtin_module
 
-- main-!~{000}~.mjs => main-zRNVp0mn.mjs
+- main-!~{000}~.mjs => main-As8SC51Q.mjs
 
 # tests/fixtures/function/resolve/browser_filed_false
 
@@ -1647,7 +1647,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/tree_shaking/unused_import_external
 
-- main-!~{000}~.mjs => main-Ix9nDVBV.mjs
+- main-!~{000}~.mjs => main-iWtN5GMm.mjs
 
 # tests/fixtures/tree_shaking/unused_import_named
 

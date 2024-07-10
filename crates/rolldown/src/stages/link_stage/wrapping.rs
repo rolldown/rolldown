@@ -92,10 +92,7 @@ impl LinkStage<'_> {
       let linking_info = &self.metas[module_id];
 
       let need_to_wrap = self.input_options.experimental.is_strict_execution_order_enabled()
-        || match linking_info.wrap_kind {
-          WrapKind::Cjs | WrapKind::Esm => true,
-          WrapKind::None => false,
-        };
+        || matches!(linking_info.wrap_kind, WrapKind::Cjs | WrapKind::Esm);
 
       if need_to_wrap {
         wrap_module_recursively(

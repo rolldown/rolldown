@@ -100,12 +100,19 @@ pub fn render_chunk_imports(
   }
 
   imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
-    let importee = &graph.module_table.external_modules[*importee_id];
+    let importee = &graph.module_table.modules[*importee_id]
+      .as_external()
+      .expect("Should be external module here");
+
+    let external_module_side_effects = &importee.side_effects;
     let mut is_importee_imported = false;
     let mut import_items = named_imports
       .iter()
       .filter_map(|item| {
         let canonical_ref = graph.symbols.par_canonical_ref_for(item.imported_as);
+        if !graph.used_symbol_refs.contains(&canonical_ref) {
+          return None;
+        };
         let alias = &chunk.canonical_names[&canonical_ref];
         match &item.imported {
           Specifier::Star => {
@@ -156,7 +163,9 @@ pub fn render_chunk_imports(
       }
     } else if !is_importee_imported {
       // Ensure the side effect
-      render_plain_import(&importee.name, &mut s);
+      if external_module_side_effects.has_side_effects() {
+        render_plain_import(&importee.name, &mut s);
+      }
     }
   });
   s

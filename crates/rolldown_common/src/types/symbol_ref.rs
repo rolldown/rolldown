@@ -1,17 +1,17 @@
 use oxc::semantic::SymbolId;
 use oxc::span::CompactStr;
 
-use crate::EcmaModuleIdx;
+use crate::ModuleIdx;
 
 /// Crossing module ref between symbols
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SymbolRef {
-  pub owner: EcmaModuleIdx,
+  pub owner: ModuleIdx,
   pub symbol: SymbolId,
 }
 
-impl From<(EcmaModuleIdx, SymbolId)> for SymbolRef {
-  fn from(value: (EcmaModuleIdx, SymbolId)) -> Self {
+impl From<(ModuleIdx, SymbolId)> for SymbolRef {
+  fn from(value: (ModuleIdx, SymbolId)) -> Self {
     Self { owner: value.0, symbol: value.1 }
   }
 }
@@ -43,14 +43,14 @@ pub struct MemberExprRef {
   pub props: Vec<CompactStr>,
 }
 
-impl From<(EcmaModuleIdx, SymbolId)> for SymbolOrMemberExprRef {
-  fn from(value: (EcmaModuleIdx, SymbolId)) -> Self {
+impl From<(ModuleIdx, SymbolId)> for SymbolOrMemberExprRef {
+  fn from(value: (ModuleIdx, SymbolId)) -> Self {
     Self::Symbol(SymbolRef { owner: value.0, symbol: value.1 })
   }
 }
 
-impl From<(EcmaModuleIdx, SymbolId, Vec<CompactStr>)> for SymbolOrMemberExprRef {
-  fn from(value: (EcmaModuleIdx, SymbolId, Vec<CompactStr>)) -> Self {
+impl From<(ModuleIdx, SymbolId, Vec<CompactStr>)> for SymbolOrMemberExprRef {
+  fn from(value: (ModuleIdx, SymbolId, Vec<CompactStr>)) -> Self {
     Self::MemberExpr(MemberExprRef { object_ref: (value.0, value.1).into(), props: value.2 })
   }
 }

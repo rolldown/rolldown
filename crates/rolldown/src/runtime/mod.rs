@@ -1,22 +1,22 @@
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
-use rolldown_common::{AstScopes, EcmaModuleIdx, SymbolRef};
+use rolldown_common::{AstScopes, ModuleIdx, SymbolRef};
 use rustc_hash::FxHashMap;
 
 #[derive(Debug)]
 pub struct RuntimeModuleBrief {
-  id: EcmaModuleIdx,
+  id: ModuleIdx,
   name_to_symbol: FxHashMap<CompactString, SymbolId>,
 }
 
 impl RuntimeModuleBrief {
-  pub fn new(id: EcmaModuleIdx, scope: &AstScopes) -> Self {
+  pub fn new(id: ModuleIdx, scope: &AstScopes) -> Self {
     Self {
       id,
       name_to_symbol: scope.get_bindings(scope.root_scope_id()).clone().into_iter().collect(),
     }
   }
 
-  pub fn id(&self) -> EcmaModuleIdx {
+  pub fn id(&self) -> ModuleIdx {
     self.id
   }
 

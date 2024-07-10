@@ -1,6 +1,6 @@
 use oxc::index::IndexVec;
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
-use rolldown_common::{ChunkIdx, EcmaModuleIdx, SymbolRef};
+use rolldown_common::{ChunkIdx, ModuleIdx, SymbolRef};
 use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
@@ -22,14 +22,14 @@ pub struct Symbol {
 // Information about symbols for all modules
 #[derive(Debug, Default)]
 pub struct Symbols {
-  inner: IndexVec<EcmaModuleIdx, IndexVec<SymbolId, Symbol>>,
+  inner: IndexVec<ModuleIdx, IndexVec<SymbolId, Symbol>>,
 }
 
 impl Symbols {
   pub fn alloc_one(&mut self) {
     self.inner.push(IndexVec::default());
   }
-  pub fn add_ast_symbols(&mut self, module_id: EcmaModuleIdx, ast_symbols: AstSymbols) {
+  pub fn add_ast_symbols(&mut self, module_id: ModuleIdx, ast_symbols: AstSymbols) {
     self.inner[module_id] = ast_symbols
       .names
       .into_iter()
@@ -37,7 +37,7 @@ impl Symbols {
       .collect();
   }
 
-  pub fn create_symbol(&mut self, owner: EcmaModuleIdx, name: CompactString) -> SymbolRef {
+  pub fn create_symbol(&mut self, owner: ModuleIdx, name: CompactString) -> SymbolRef {
     let symbol_id =
       self.inner[owner].push(Symbol { name, link: None, chunk_id: None, namespace_alias: None });
     SymbolRef { owner, symbol: symbol_id }

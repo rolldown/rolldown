@@ -7,7 +7,7 @@ use indexmap::IndexSet;
 use itertools::{multizip, Itertools};
 use oxc::index::{index_vec, IndexVec};
 use rolldown_common::{
-  ChunkIdx, ChunkKind, CrossChunkImportItem, ExportsKind, ExternalModuleIdx, ImportKind, ModuleIdx,
+  ChunkIdx, ChunkKind, CrossChunkImportItem, ExportsKind, ImportKind, Module, ModuleIdx,
   NamedImport, OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
@@ -18,7 +18,7 @@ use rustc_hash::{FxHashMap, FxHashSet, FxHasher};
 
 type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
-  IndexVec<ChunkIdx, FxHashMap<ExternalModuleIdx, Vec<NamedImport>>>;
+  IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<NamedImport>>>;
 type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
 type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
 type IndexCrossChunkDynamicImports =
@@ -34,7 +34,8 @@ impl<'a> GenerateStage<'a> {
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunks.len()];
-    let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ExternalModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
+    let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules =
+      index_vec![FxHashMap::<ModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunks.len()];
 
     let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkIdx, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunks.len()];
     let mut index_cross_chunk_imports: IndexCrossChunkImports =
@@ -74,7 +75,7 @@ impl<'a> GenerateStage<'a> {
           let mut resource_ids = chunk_graph.chunks[*chunk_id]
             .modules
             .iter()
-            .map(|id| self.link_output.module_table.ecma_modules[*id].resource_id.as_str())
+            .map(|id| self.link_output.module_table.modules[*id].resource_id())
             .collect::<Vec<_>>();
           resource_ids.sort_unstable();
           resource_ids
@@ -101,7 +102,7 @@ impl<'a> GenerateStage<'a> {
         imports_from_external_modules
           .into_iter()
           .sorted_by_key(|(external_module_id, _)| {
-            self.link_output.module_table.external_modules[*external_module_id].exec_order
+            self.link_output.module_table.modules[*external_module_id].exec_order()
           })
           .collect_vec()
       })
@@ -159,31 +160,31 @@ impl<'a> GenerateStage<'a> {
         cross_chunk_dynamic_imports,
       )| {
         chunk.modules.iter().copied().for_each(|module_id| {
-          let module = &self.link_output.module_table.ecma_modules[module_id];
+          let Module::Ecma(module) = &self.link_output.module_table.modules[module_id] else {
+            return;
+          };
           module
             .import_records
             .iter()
             .inspect(|rec| {
-              if let ModuleIdx::Ecma(importee_id) = rec.resolved_module {
-                let importee_module = &self.link_output.module_table.ecma_modules[importee_id];
+              if let Module::Ecma(importee_module) =
+                &self.link_output.module_table.modules[rec.resolved_module]
+              {
                 // the the resolved module is not included in module graph, skip
                 // TODO: Is that possible that the module of the record is a external module?
                 if !importee_module.is_included {
                   return;
                 }
                 if matches!(rec.kind, ImportKind::DynamicImport) {
-                  let importee_chunk =
-                    chunk_graph.module_to_chunk[importee_id].expect("importee chunk should exist");
+                  let importee_chunk = chunk_graph.module_to_chunk[importee_module.idx]
+                    .expect("importee chunk should exist");
                   cross_chunk_dynamic_imports.insert(importee_chunk);
                 }
               }
             })
             .filter(|rec| matches!(rec.kind, ImportKind::Import))
             .filter_map(|rec| {
-              rec
-                .resolved_module
-                .as_external()
-                .map(|id| &self.link_output.module_table.external_modules[id])
+              self.link_output.module_table.modules[rec.resolved_module].as_external()
             })
             .for_each(|importee| {
               // Ensure the external module is imported in case it has side effects.
@@ -192,8 +193,10 @@ impl<'a> GenerateStage<'a> {
 
           module.named_imports.iter().for_each(|(_, import)| {
             let rec = &module.import_records[import.record_id];
-            if let ModuleIdx::External(importee_id) = rec.resolved_module {
-              imports_from_external_modules.entry(importee_id).or_default().push(import.clone());
+            if let Module::External(importee) =
+              &self.link_output.module_table.modules[rec.resolved_module]
+            {
+              imports_from_external_modules.entry(importee.idx).or_default().push(import.clone());
             }
           });
 
@@ -227,7 +230,7 @@ impl<'a> GenerateStage<'a> {
         });
 
         if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
-          let entry = &self.link_output.module_table.ecma_modules[*entry_id];
+          let entry = &self.link_output.module_table.modules[*entry_id].as_ecma().unwrap();
           let entry_meta = &self.link_output.metas[entry.idx];
 
           if !matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
@@ -278,11 +281,12 @@ impl<'a> GenerateStage<'a> {
         let import_symbol = self.link_output.symbols.get(import_ref);
 
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
-          let symbol_owner = &self.link_output.module_table.ecma_modules[import_ref.owner];
+          let symbol_owner = &self.link_output.module_table.modules[import_ref.owner];
           let symbol_name = self.link_output.symbols.get_original_name(import_ref);
           panic!(
             "Symbol {:?} in {:?} should belong to a chunk",
-            symbol_name, symbol_owner.resource_id
+            symbol_name,
+            symbol_owner.resource_id()
           )
         });
         // Check if the import is from another chunk

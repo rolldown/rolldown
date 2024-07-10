@@ -49,7 +49,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_class(&mut self, cls: &oxc::ast::ast::Class) -> bool {
-    use oxc::ast::ast::{ClassElement, PropertyKey};
+    use oxc::ast::ast::ClassElement;
     cls.body.body.iter().any(|elm| match elm {
       ClassElement::StaticBlock(static_block) => {
         static_block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))

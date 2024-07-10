@@ -1,12 +1,12 @@
 type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
-export class BindingLog {
+export declare class BindingLog {
   code: string
   message: string
 }
 
-export class BindingModuleInfo {
+export declare class BindingModuleInfo {
   id: string
   importers: Array<string>
   dynamicImporters: Array<string>
@@ -16,13 +16,13 @@ export class BindingModuleInfo {
   get code(): string | null
 }
 
-export class BindingOutputAsset {
+export declare class BindingOutputAsset {
   get fileName(): string
   get source(): BindingAssetSource
   set source(source: BindingAssetSource)
 }
 
-export class BindingOutputChunk {
+export declare class BindingOutputChunk {
   get isEntry(): boolean
   get isDynamicEntry(): boolean
   get facadeModuleId(): string | null
@@ -43,13 +43,13 @@ export class BindingOutputChunk {
 }
 
 /** The `BindingOutputs` owner `Vec<Output>` the mutable reference, it avoid `Clone` at call `writeBundle/generateBundle` hook, and make it mutable. */
-export class BindingOutputs {
+export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
   delete(fileName: string): void
 }
 
-export class BindingPluginContext {
+export declare class BindingPluginContext {
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset): string
   getFileName(referenceId: string): string
@@ -57,11 +57,11 @@ export class BindingPluginContext {
   getModuleIds(): Array<string> | null
 }
 
-export class BindingTransformPluginContext {
+export declare class BindingTransformPluginContext {
   inner(): BindingPluginContext
 }
 
-export class Bundler {
+export declare class Bundler {
   constructor(inputOptions: BindingInputOptions, outputOptions: BindingOutputOptions, parallelPluginsRegistry?: ParallelJsPluginRegistry | undefined | null)
   write(): Promise<FinalBindingOutputs>
   generate(): Promise<FinalBindingOutputs>
@@ -72,12 +72,12 @@ export class Bundler {
  * The `FinalBindingOutputs` is used at `write()` or `generate()`, it is similar to `BindingOutputs`, if using `BindingOutputs` has unexpected behavior.
  * TODO find a way to export it gracefully.
  */
-export class FinalBindingOutputs {
+export declare class FinalBindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
 }
 
-export class ParallelJsPluginRegistry {
+export declare class ParallelJsPluginRegistry {
   id: number
   workerCount: number
   constructor(workerCount: number)
@@ -101,7 +101,7 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export enum BindingBuiltinPluginName {
+export declare enum BindingBuiltinPluginName {
   WasmPlugin = 0,
   GlobImportPlugin = 1
 }
@@ -134,7 +134,7 @@ export interface BindingHookResolveIdOutput {
   sideEffects?: BindingHookSideEffects
 }
 
-export enum BindingHookSideEffects {
+export declare enum BindingHookSideEffects {
   True = 0,
   False = 1,
   NoTreeshake = 2
@@ -174,7 +174,7 @@ export interface BindingJsonSourcemap {
   names?: Array<string>
 }
 
-export enum BindingLogLevel {
+export declare enum BindingLogLevel {
   Silent = 0,
   Warn = 1,
   Info = 2,
@@ -257,7 +257,7 @@ export interface Es2015BindingOptions {
 }
 
 /** TypeScript Isolated Declarations for Standalone DTS Emit */
-function isolatedDeclaration(filename: string, sourceText: string): IsolatedDeclarationsResult
+export declare function isolatedDeclaration(filename: string, sourceText: string): IsolatedDeclarationsResult
 
 export interface IsolatedDeclarationsResult {
   sourceText: string
@@ -276,7 +276,7 @@ export interface ReactBindingOptions {
   useSpread?: boolean
 }
 
-function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 export interface RenderedChunk {
   name: string
@@ -300,9 +300,10 @@ export interface Sourcemap {
   names?: Array<string>
 }
 
-function transform(filename: string, sourceText: string, options?: TransformBindingOptions | undefined | null): TransformResult
+export declare function transform(filename: string, sourceText: string, options?: TransformOptions | undefined | null): TransformResult
 
-export interface TransformBindingOptions {
+export interface TransformOptions {
+  sourceType?: 'script' | 'module' | 'unambiguous' | undefined
   typescript?: TypeScriptBindingOptions
   react?: ReactBindingOptions
   es2015?: Es2015BindingOptions

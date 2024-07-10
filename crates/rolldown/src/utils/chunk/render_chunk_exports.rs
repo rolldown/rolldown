@@ -47,7 +47,7 @@ pub fn render_chunk_exports(
       let mut s = String::new();
       match this.kind {
         ChunkKind::EntryPoint { module, .. } => {
-          let module = &graph.module_table.ecma_modules[module];
+          let module = &graph.module_table.modules[module].as_ecma().unwrap();
           if matches!(module.exports_kind, ExportsKind::Esm) {
             s.push_str("Object.defineProperty(exports, '__esModule', { value: true });\n");
             let rendered_items = export_items

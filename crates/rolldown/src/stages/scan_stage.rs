@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::future::join_all;
 use oxc::index::IndexVec;
-use rolldown_common::{EcmaModuleIdx, EntryPoint, ImportKind, ModuleTable, ResolvedRequestInfo};
+use rolldown_common::{EntryPoint, ImportKind, ModuleIdx, ModuleTable, ResolvedRequestInfo};
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -29,7 +29,7 @@ pub struct ScanStage {
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub module_table: ModuleTable,
-  pub index_ecma_ast: IndexVec<EcmaModuleIdx, EcmaAst>,
+  pub index_ecma_ast: IndexVec<ModuleIdx, EcmaAst>,
   pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,

@@ -1,12 +1,12 @@
 use std::{fmt::Debug, sync::Arc};
 
 use crate::side_effects::DeterminedSideEffects;
-use crate::ModuleType;
 use crate::{
-  types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, EcmaModuleIdx, ExportsKind,
-  ImportRecord, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleIdx, ModuleInfo, NamedImport,
-  ResourceId, StmtInfo, StmtInfos, SymbolRef,
+  types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
+  ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleIdx, ModuleInfo, NamedImport, ResourceId,
+  StmtInfo, StmtInfos, SymbolRef,
 };
+use crate::{IndexModules, ModuleType};
 use oxc::index::IndexVec;
 use oxc::span::Span;
 use rolldown_rstr::Rstr;
@@ -16,7 +16,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 pub struct EcmaModule {
   pub exec_order: u32,
   pub source: Arc<str>,
-  pub idx: EcmaModuleIdx,
+  pub idx: ModuleIdx,
   pub is_user_defined_entry: bool,
   pub resource_id: ResourceId,
   /// `stable_resource_id` is calculated based on `resource_id` to be stable across machine and os.
@@ -103,8 +103,8 @@ impl EcmaModule {
   // https://tc39.es/ecma262/#sec-getexportednames
   pub fn get_exported_names<'modules>(
     &'modules self,
-    export_star_set: &mut FxHashSet<EcmaModuleIdx>,
-    modules: &'modules IndexVec<EcmaModuleIdx, EcmaModule>,
+    export_star_set: &mut FxHashSet<ModuleIdx>,
+    modules: &'modules IndexModules,
     include_default: bool,
     ret: &mut FxHashSet<&'modules Rstr>,
   ) {
@@ -116,8 +116,8 @@ impl EcmaModule {
 
     self
       .star_export_module_ids()
-      .filter_map(ModuleIdx::as_ecma)
-      .for_each(|id| modules[id].get_exported_names(export_star_set, modules, false, ret));
+      .filter_map(|id| modules[id].as_ecma())
+      .for_each(|module| module.get_exported_names(export_star_set, modules, false, ret));
     if include_default {
       ret.extend(self.named_exports.keys());
     } else {

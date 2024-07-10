@@ -5,7 +5,7 @@ use rustc_hash::FxHashSet;
 
 use futures::future::try_join_all;
 use rolldown_common::{
-  Chunk, ChunkKind, EcmaModuleIdx, FileNameRenderOptions, Output, OutputAsset, OutputChunk,
+  Chunk, ChunkKind, FileNameRenderOptions, Module, ModuleIdx, Output, OutputAsset, OutputChunk,
   PreliminaryFilename, SourceMapType,
 };
 use rolldown_error::BuildError;
@@ -73,9 +73,13 @@ impl<'a> GenerateStage<'a> {
     let ast_table_iter = self.link_output.ast_table.iter_mut_enumerated();
     ast_table_iter
       .par_bridge()
-      .filter(|(id, _)| self.link_output.module_table.ecma_modules[*id].is_included)
+      .filter(|(id, _)| {
+        self.link_output.module_table.modules[*id].as_ecma().map_or(false, |m| m.is_included)
+      })
       .for_each(|(id, ast)| {
-        let module = &self.link_output.module_table.ecma_modules[id];
+        let Module::Ecma(module) = &self.link_output.module_table.modules[id] else {
+          return;
+        };
         let chunk_id = chunk_graph.module_to_chunk[module.idx].unwrap();
         let chunk = &chunk_graph.chunks[chunk_id];
         let linking_info = &self.link_output.metas[module.idx];
@@ -88,8 +92,7 @@ impl<'a> GenerateStage<'a> {
               symbols: &self.link_output.symbols,
               linking_info,
               module,
-              modules: &self.link_output.module_table.ecma_modules,
-              external_modules: &self.link_output.module_table.external_modules,
+              modules: &self.link_output.module_table.modules,
               linking_infos: &self.link_output.metas,
               runtime: &self.link_output.runtime,
               chunk_graph: &chunk_graph,
@@ -108,7 +111,7 @@ impl<'a> GenerateStage<'a> {
               // scope: &module.scope,
               ctx: &IsolatingModuleFinalizerContext {
                 module,
-                modules: &self.link_output.module_table.ecma_modules,
+                modules: &self.link_output.module_table.modules,
               },
               snippet: AstSnippet::new(alloc),
             };
@@ -239,7 +242,7 @@ impl<'a> GenerateStage<'a> {
   fn generate_chunk_name_and_preliminary_filenames(&self, chunk_graph: &mut ChunkGraph) {
     fn ensure_chunk_name(
       chunk: &Chunk,
-      runtime_id: EcmaModuleIdx,
+      runtime_id: ModuleIdx,
       normal_modules: &IndexNormalModules,
     ) -> String {
       // User-defined entry point should always have a name that given by the user
@@ -253,7 +256,7 @@ impl<'a> GenerateStage<'a> {
           } else {
             let module_id = entry_module_id;
             let module = &normal_modules[module_id];
-            module.resource_id.as_path().representative_file_name().into_owned()
+            module.resource_id().as_path().representative_file_name().into_owned()
           }
         }
         ChunkKind::Common => {
@@ -266,7 +269,7 @@ impl<'a> GenerateStage<'a> {
             || "chunk".to_string(),
             |module_id| {
               let module = &normal_modules[*module_id];
-              module.resource_id.as_path().representative_file_name().into_owned()
+              module.resource_id().as_path().representative_file_name().into_owned()
             },
           )
         }
@@ -295,7 +298,7 @@ impl<'a> GenerateStage<'a> {
       let filename_template = chunk.filename_template(self.options);
 
       let mut chunk_name =
-        ensure_chunk_name(chunk, runtime_id, &self.link_output.module_table.ecma_modules);
+        ensure_chunk_name(chunk, runtime_id, &self.link_output.module_table.modules);
       let mut next_count = 1;
       while used_names.contains(&chunk_name) {
         chunk_name = format!("{chunk_name}~{next_count}");

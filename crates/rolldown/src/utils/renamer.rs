@@ -3,7 +3,7 @@ use std::collections::hash_map::Entry;
 
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
-use rolldown_common::{EcmaModule, EcmaModuleIdx, IndexEcmaModules, SymbolRef};
+use rolldown_common::{EcmaModule, IndexModules, ModuleIdx, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -83,8 +83,8 @@ impl<'name> Renamer<'name> {
   #[tracing::instrument(level = "trace", skip_all)]
   pub fn rename_non_top_level_symbol(
     &mut self,
-    modules_in_chunk: &[EcmaModuleIdx],
-    modules: &IndexEcmaModules,
+    modules_in_chunk: &[ModuleIdx],
+    modules: &IndexModules,
   ) {
     #[tracing::instrument(level = "trace", skip_all)]
     fn rename_symbols_of_nested_scopes<'name>(
@@ -132,22 +132,24 @@ impl<'name> Renamer<'name> {
     }
 
     let copied_scope_iter =
-      modules_in_chunk.par_iter().copied().map(|id| &modules[id]).flat_map(|module| {
-        let child_scopes: &[ScopeId] =
-          module.scope.get_child_ids(module.scope.root_scope_id()).map_or(&[], Vec::as_slice);
+      modules_in_chunk.par_iter().copied().filter_map(|id| modules[id].as_ecma()).flat_map(
+        |module| {
+          let child_scopes: &[ScopeId] =
+            module.scope.get_child_ids(module.scope.root_scope_id()).map_or(&[], Vec::as_slice);
 
-        child_scopes.into_par_iter().map(|child_scope_id| {
-          let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];
-          let mut canonical_names = FxHashMap::default();
-          rename_symbols_of_nested_scopes(
-            module,
-            *child_scope_id,
-            &mut stack,
-            &mut canonical_names,
-          );
-          canonical_names
-        })
-      });
+          child_scopes.into_par_iter().map(|child_scope_id| {
+            let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];
+            let mut canonical_names = FxHashMap::default();
+            rename_symbols_of_nested_scopes(
+              module,
+              *child_scope_id,
+              &mut stack,
+              &mut canonical_names,
+            );
+            canonical_names
+          })
+        },
+      );
 
     #[cfg(not(target_family = "wasm"))]
     let canonical_names_of_nested_scopes =

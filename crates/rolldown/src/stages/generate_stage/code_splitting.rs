@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, EcmaModuleIdx, ImportKind, ModuleIdx};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, ImportKind, Module, ModuleIdx};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
 
@@ -13,11 +13,13 @@ use super::GenerateStage;
 impl<'a> GenerateStage<'a> {
   fn determine_reachable_modules_for_entry(
     &self,
-    module_id: EcmaModuleIdx,
+    module_id: ModuleIdx,
     entry_index: u32,
-    module_to_bits: &mut IndexVec<EcmaModuleIdx, BitSet>,
+    module_to_bits: &mut IndexVec<ModuleIdx, BitSet>,
   ) {
-    let module = &self.link_output.module_table.ecma_modules[module_id];
+    let Module::Ecma(module) = &self.link_output.module_table.modules[module_id] else {
+      return;
+    };
     let meta = &self.link_output.metas[module_id];
 
     if !module.is_included {
@@ -30,11 +32,11 @@ impl<'a> GenerateStage<'a> {
     module_to_bits[module_id].set_bit(entry_index);
 
     module.import_records.iter().for_each(|rec| {
-      if let ModuleIdx::Ecma(importee_id) = rec.resolved_module {
+      if let Module::Ecma(importee) = &self.link_output.module_table.modules[rec.resolved_module] {
         // Module imported dynamically will be considered as an entry,
         // so we don't need to include it in this chunk
         if !matches!(rec.kind, ImportKind::DynamicImport) {
-          self.determine_reachable_modules_for_entry(importee_id, entry_index, module_to_bits);
+          self.determine_reachable_modules_for_entry(importee.idx, entry_index, module_to_bits);
         }
       }
     });
@@ -69,18 +71,21 @@ impl<'a> GenerateStage<'a> {
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,
     // we create a facade entry point for it.
 
-    let mut module_to_bits = oxc::index::index_vec![BitSet::new(entries_len); self.link_output.module_table.ecma_modules.len()];
+    let mut module_to_bits =
+      oxc::index::index_vec![BitSet::new(entries_len); self.link_output.module_table.modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
     let mut chunks = IndexChunks::with_capacity(self.link_output.entries.len());
     let mut user_defined_entry_chunk_ids: Vec<ChunkIdx> = Vec::new();
-    let mut entry_module_to_entry_chunk: FxHashMap<EcmaModuleIdx, ChunkIdx> =
+    let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
       FxHashMap::with_capacity(self.link_output.entries.len());
     // Create chunk for each static and dynamic entry
     for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
-      let module = &self.link_output.module_table.ecma_modules[entry_point.id];
+      let Module::Ecma(module) = &self.link_output.module_table.modules[entry_point.id] else {
+        continue;
+      };
       let chunk = chunks.push(Chunk::new(
         entry_point.name.clone(),
         bits.clone(),
@@ -107,14 +112,14 @@ impl<'a> GenerateStage<'a> {
       );
     });
 
-    let mut module_to_chunk: IndexVec<EcmaModuleIdx, Option<ChunkIdx>> = oxc::index::index_vec![
+    let mut module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>> = oxc::index::index_vec![
       None;
-      self.link_output.module_table.ecma_modules.len()
+      self.link_output.module_table.modules.len()
     ];
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
-    for normal_module in &self.link_output.module_table.ecma_modules {
+    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_ecma) {
       if !normal_module.is_included {
         continue;
       }
@@ -138,7 +143,7 @@ impl<'a> GenerateStage<'a> {
     // Sort modules in each chunk by execution order
     chunks.iter_mut().for_each(|chunk| {
       chunk.modules.sort_unstable_by_key(|module_id| {
-        self.link_output.module_table.ecma_modules[*module_id].exec_order
+        self.link_output.module_table.modules[*module_id].exec_order()
       });
     });
 
@@ -152,14 +157,14 @@ impl<'a> GenerateStage<'a> {
           (
             ChunkKind::EntryPoint { module: a_module_id, .. },
             ChunkKind::EntryPoint { module: b_module_id, .. },
-          ) => self.link_output.module_table.ecma_modules[*a_module_id]
-            .exec_order
-            .cmp(&self.link_output.module_table.ecma_modules[*b_module_id].exec_order),
+          ) => self.link_output.module_table.modules[*a_module_id]
+            .exec_order()
+            .cmp(&self.link_output.module_table.modules[*b_module_id].exec_order()),
           (ChunkKind::EntryPoint { module: a_module_id, .. }, ChunkKind::Common) => {
             let a_module_exec_order =
-              self.link_output.module_table.ecma_modules[*a_module_id].exec_order;
+              self.link_output.module_table.modules[*a_module_id].exec_order();
             let b_chunk_first_module_exec_order =
-              self.link_output.module_table.ecma_modules[b.modules[0]].exec_order;
+              self.link_output.module_table.modules[b.modules[0]].exec_order();
             if a_module_exec_order == b_chunk_first_module_exec_order {
               a_should_be_first
             } else {
@@ -168,9 +173,9 @@ impl<'a> GenerateStage<'a> {
           }
           (ChunkKind::Common, ChunkKind::EntryPoint { module: b_module_id, .. }) => {
             let b_module_exec_order =
-              self.link_output.module_table.ecma_modules[*b_module_id].exec_order;
+              self.link_output.module_table.modules[*b_module_id].exec_order();
             let a_chunk_first_module_exec_order =
-              self.link_output.module_table.ecma_modules[a.modules[0]].exec_order;
+              self.link_output.module_table.modules[a.modules[0]].exec_order();
             if a_chunk_first_module_exec_order == b_module_exec_order {
               b_should_be_first
             } else {
@@ -179,9 +184,9 @@ impl<'a> GenerateStage<'a> {
           }
           (ChunkKind::Common, ChunkKind::Common) => {
             let a_chunk_first_module_exec_order =
-              self.link_output.module_table.ecma_modules[a.modules[0]].exec_order;
+              self.link_output.module_table.modules[a.modules[0]].exec_order();
             let b_chunk_first_module_exec_order =
-              self.link_output.module_table.ecma_modules[b.modules[0]].exec_order;
+              self.link_output.module_table.modules[b.modules[0]].exec_order();
             a_chunk_first_module_exec_order.cmp(&b_chunk_first_module_exec_order)
           }
         }

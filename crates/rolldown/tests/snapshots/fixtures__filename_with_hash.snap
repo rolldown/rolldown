@@ -60,7 +60,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/dce_of_destructuring
 
-- entry_js-!~{000}~.mjs => entry_js-CYFFtEfA.mjs
+- entry_js-!~{000}~.mjs => entry_js-11fABjup.mjs
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
@@ -1643,8 +1643,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/tree_shaking/multi-declarator
 
-- main-!~{000}~.mjs => main-u_YdORVe.mjs
-- main-u_YdORVe.mjs.map
+- main-!~{000}~.mjs => main-msZyidbG.mjs
+- main-msZyidbG.mjs.map
 
 # tests/fixtures/tree_shaking/pure_annotation
 

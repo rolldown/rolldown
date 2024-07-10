@@ -230,8 +230,13 @@ impl<'a> SideEffectDetector<'a> {
           }
         }
       }
+      let is_destructuring = matches!(
+        declarator.id.kind,
+        BindingPatternKind::ArrayPattern(_) | BindingPatternKind::ObjectPattern(_)
+      );
 
-      declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
+      is_destructuring
+        || declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
     })
   }
 

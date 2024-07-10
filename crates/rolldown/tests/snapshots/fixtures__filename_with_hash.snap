@@ -1336,6 +1336,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/errors/unresolved_entry
 
 
+# tests/fixtures/format/iife
+
+- main-!~{000}~.mjs => main-ak-eGAeR.mjs
+
 # tests/fixtures/function/dir/should_generate_correct_relative_import_path
 
 - ./chunks/async.mjs => ./chunks/async.mjs

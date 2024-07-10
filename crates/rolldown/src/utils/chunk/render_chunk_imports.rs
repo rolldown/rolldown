@@ -27,7 +27,7 @@ pub fn render_chunk_imports(
         format!("{imported}: {alias}")
       }
     }
-    OutputFormat::App => {
+    OutputFormat::App | OutputFormat::Iife => {
       unreachable!("App format doesn't need to generate imports")
     }
   };
@@ -47,7 +47,7 @@ pub fn render_chunk_imports(
         import_items.join(", "),
       ));
     }
-    OutputFormat::App => {
+    OutputFormat::App | OutputFormat::Iife => {
       unreachable!("App format doesn't need to generate imports")
     }
   };
@@ -60,7 +60,7 @@ pub fn render_chunk_imports(
       OutputFormat::Cjs => {
         output.push_str(&format!("require(\"{importee_module_specifier}\");\n"));
       }
-      OutputFormat::App => {
+      OutputFormat::App | OutputFormat::Iife => {
         unreachable!("App format doesn't need to generate imports")
       }
     };
@@ -129,7 +129,7 @@ pub fn render_chunk_imports(
                   "const {alias} = {to_esm_fn_name}(require(\"{importee_name}\"));\n",
                 ));
               }
-              OutputFormat::App => {}
+              OutputFormat::App | OutputFormat::Iife => {}
             }
 
             None
@@ -157,7 +157,7 @@ pub fn render_chunk_imports(
             importee_module_specifier = &importee.name
           ));
         }
-        OutputFormat::App => {
+        OutputFormat::App | OutputFormat::Iife => {
           unreachable!("App format doesn't need to generate imports")
         }
       }

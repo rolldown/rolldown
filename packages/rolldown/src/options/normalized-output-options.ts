@@ -6,7 +6,7 @@ import type { OutputOptions } from './output-options'
 import type { Plugin, ParallelPlugin } from '../plugin'
 import type { RenderedChunk } from '../binding'
 
-type InternalModuleFormat = 'es' | 'cjs'
+type InternalModuleFormat = 'es' | 'cjs' | 'iife'
 
 type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 

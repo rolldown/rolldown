@@ -39,7 +39,7 @@ pub async fn render_chunk(
   let mut concat_source = ConcatSource::default();
 
   let rendered_chunk = match options.format {
-    OutputFormat::Esm | OutputFormat::Cjs => {
+    OutputFormat::Esm | OutputFormat::Cjs | OutputFormat::Iife => {
       let mut rendered_iter = this
         .modules
         .par_iter()
@@ -83,6 +83,11 @@ pub async fn render_chunk(
         }
       }
 
+      // TODO indent chunk content for iife format
+      if matches!(options.format, OutputFormat::Iife) {
+        concat_source.add_source(Box::new(RawSource::new("(function() {\n".to_string())));
+      }
+
       rendered_iter.for_each(|(_id, module_resource_id, module_render_output)| {
         let emitted_sources = module_render_output;
         for source in emitted_sources {
@@ -94,6 +99,10 @@ pub async fn render_chunk(
           rendered_modules.insert(module_resource_id.clone(), RenderedModule { code: None });
         }
       });
+
+      if matches!(options.format, OutputFormat::Iife) {
+        concat_source.add_source(Box::new(RawSource::new("});".to_string())));
+      }
 
       generate_rendered_chunk(this, graph, options, rendered_modules, chunk_graph)
     }
@@ -171,18 +180,12 @@ pub async fn render_chunk(
         }
         WrapKind::None => {}
       },
-      OutputFormat::Cjs | OutputFormat::App => {}
+      OutputFormat::Cjs | OutputFormat::App | OutputFormat::Iife => {}
     }
   }
 
-  match options.format {
-    OutputFormat::Esm | OutputFormat::Cjs => {
-      if let Some(exports) = render_chunk_exports(this, &graph.runtime, graph, options) {
-        concat_source.add_source(Box::new(RawSource::new(exports)));
-      }
-    }
-
-    OutputFormat::App => {}
+  if let Some(exports) = render_chunk_exports(this, &graph.runtime, graph, options) {
+    concat_source.add_source(Box::new(RawSource::new(exports)));
   }
 
   // add footer

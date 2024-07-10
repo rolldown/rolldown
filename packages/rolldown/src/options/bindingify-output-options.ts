@@ -27,6 +27,8 @@ export function bindingifyOutputOptions(
           return 'es'
         case 'cjs':
           return 'cjs'
+        case 'iife':
+          return 'iife'
       }
     })(),
     exports,

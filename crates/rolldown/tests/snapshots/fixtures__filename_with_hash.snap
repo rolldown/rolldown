@@ -1534,8 +1534,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/wrapped_esm
 
-- main-!~{000}~.mjs => main-CJpsNFqZ.mjs
-- main-CJpsNFqZ.mjs.map
+- main-!~{000}~.mjs => main-kk05wHMv.mjs
+- main-kk05wHMv.mjs.map
 
 # tests/fixtures/module_types/base64/binary
 

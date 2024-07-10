@@ -62,7 +62,7 @@ fn split_top_level_variable_declaration<'a>(
         .iter()
         // TODO: support nested destructuring tree shake, `export const {a, b} = obj; export const
         // [a, b] = arr;`
-        .all(|declarator| matches!(declarator.id.kind, BindingPatternKind::BindingIdentifier(_)))
+        .any(|declarator| matches!(declarator.id.kind, BindingPatternKind::BindingIdentifier(_)))
       {
         var_decl
           .declarations

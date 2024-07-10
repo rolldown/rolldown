@@ -505,6 +505,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             let importee_linking_info = &self.ctx.linking_infos[importee_id];
             match importee_linking_info.wrap_kind {
               WrapKind::Esm => {
+                // `(init_foo(), j)`
                 let importee_linking_info = &self.ctx.linking_infos[importee_id];
                 let importee_wrapper_ref_name =
                   self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
@@ -521,6 +522,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 );
               }
               WrapKind::Cjs => {
+                //  `__toESM(require_foo())`
                 let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
                 let importee_wrapper_ref_name =
                   self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());

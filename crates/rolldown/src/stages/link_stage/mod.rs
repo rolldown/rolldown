@@ -283,7 +283,7 @@ impl<'a> LinkStage<'a> {
             match &self.module_table.modules[rec.resolved_module] {
               Module::External(importee) => {
                 // Make sure symbols from external modules are included and de_conflicted
-                stmt_info.side_effect = true;
+                stmt_info.side_effect = importee.side_effects.has_side_effects();
                 match rec.kind {
                   ImportKind::Import => {
                     if matches!(self.input_options.format, OutputFormat::Cjs)
@@ -385,7 +385,29 @@ impl<'a> LinkStage<'a> {
                       stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                     }
                   },
-                  ImportKind::DynamicImport => {}
+                  ImportKind::DynamicImport => {
+                    if matches!(self.input_options.format, OutputFormat::Iife) {
+                      match importee_linking_info.wrap_kind {
+                        WrapKind::None => {}
+                        WrapKind::Cjs => {
+                          //  `__toESM(require_foo())`
+                          stmt_info
+                            .referenced_symbols
+                            .push(importee_linking_info.wrapper_ref.unwrap().into());
+                          stmt_info
+                            .referenced_symbols
+                            .push(self.runtime.resolve_symbol("__toESM").into());
+                        }
+                        WrapKind::Esm => {
+                          // `(init_foo(), foo_exports)`
+                          stmt_info
+                            .referenced_symbols
+                            .push(importee_linking_info.wrapper_ref.unwrap().into());
+                          stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }

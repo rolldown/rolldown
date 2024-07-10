@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_export
 ---
@@ -10,7 +10,8 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_name_collis
 ```js
 
 //#region c.js
-let x = 1, y = 2;
+let x = 1;
+let y = 2;
 
 //#endregion
 export { x, y };

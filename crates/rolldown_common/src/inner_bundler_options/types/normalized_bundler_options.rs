@@ -7,6 +7,7 @@ use rustc_hash::FxHashMap;
 
 use crate::ModuleType;
 
+use super::experimental_options::ExperimentalOptions;
 use super::treeshake::TreeshakeOptions;
 use super::{
   filename_template::FilenameTemplate, is_external::IsExternal,
@@ -38,4 +39,5 @@ pub struct NormalizedBundlerOptions {
   pub footer: Option<AddonOutputOption>,
   pub sourcemap_ignore_list: Option<SourceMapIgnoreList>,
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
+  pub experimental: ExperimentalOptions,
 }

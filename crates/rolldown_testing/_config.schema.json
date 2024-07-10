@@ -78,6 +78,16 @@
             "null"
           ]
         },
+        "experimental": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ExperimentalOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "external": {
           "type": [
             "array",
@@ -159,6 +169,18 @@
           ]
         },
         "treeshake": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExperimentalOptions": {
+      "type": "object",
+      "properties": {
+        "strictExecutionOrder": {
           "type": [
             "boolean",
             "null"

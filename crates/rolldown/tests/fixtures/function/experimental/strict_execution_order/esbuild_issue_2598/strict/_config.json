@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "experimental": {
+      "strictExecutionOrder": true
+    }
+  },
+  "expectExecuted": false
+}

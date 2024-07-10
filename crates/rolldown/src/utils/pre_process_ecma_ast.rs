@@ -24,13 +24,10 @@ pub fn pre_process_ecma_ast(
       let mut transformer_options = TransformOptions::default();
       match parse_type {
         OxcParseType::Js => unreachable!("Should not reach here"),
-        OxcParseType::Jsx => {
+        OxcParseType::Jsx | OxcParseType::Tsx => {
           transformer_options.react.jsx_plugin = true;
         }
         OxcParseType::Ts => {}
-        OxcParseType::Tsx => {
-          transformer_options.react.jsx_plugin = true;
-        }
       }
 
       Transformer::new(

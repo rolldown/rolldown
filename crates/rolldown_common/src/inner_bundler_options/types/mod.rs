@@ -1,3 +1,4 @@
+pub mod experimental_options;
 pub mod filename_template;
 pub mod input_item;
 pub mod is_external;

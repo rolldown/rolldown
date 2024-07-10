@@ -60,7 +60,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/dce_of_destructuring
 
-- entry_js-!~{000}~.mjs => entry_js-CYFFtEfA.mjs
+- entry_js-!~{000}~.mjs => entry_js-11fABjup.mjs
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
@@ -112,7 +112,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - stmt-export-default-before-gen-fn-anon_js-!~{008}~.mjs => stmt-export-default-before-gen-fn-anon_js-4DRYHyMa.mjs
 - stmt-export-default-before-gen-fn-name_js-!~{009}~.mjs => stmt-export-default-before-gen-fn-name_js-pvTIXxqc.mjs
 - stmt-export-fn_js-!~{003}~.mjs => stmt-export-fn_js-Lg5fJ6sh.mjs
-- stmt-export-local_js-!~{005}~.mjs => stmt-export-local_js-U8yWtZ7y.mjs
+- stmt-export-local_js-!~{005}~.mjs => stmt-export-local_js-uHmpXE13.mjs
 - stmt-fn_js-!~{002}~.mjs => stmt-fn_js-nGhExA7J.mjs
 - stmt-local_js-!~{004}~.mjs => stmt-local_js-6z8D7Phz.mjs
 
@@ -242,7 +242,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/ambiguous_reexport_msg
 
-- entry_js-!~{000}~.mjs => entry_js-d-KXVwHL.mjs
+- entry_js-!~{000}~.mjs => entry_js-X93-Yroa.mjs
 
 # tests/esbuild/default/arrow_fn_scope
 
@@ -665,11 +665,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_export
 
-- entry_js-!~{000}~.mjs => entry_js-pr_HOC1A.mjs
+- entry_js-!~{000}~.mjs => entry_js-U6_C9pII.mjs
 
 # tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_import
 
-- entry_js-!~{000}~.mjs => entry_js-KN_NiUL-.mjs
+- entry_js-!~{000}~.mjs => entry_js-5FiuY4N2.mjs
 
 # tests/esbuild/import_star/re_export_star_name_shadowing_not_ambiguous
 
@@ -1350,6 +1350,30 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - ./entries/a.mjs => ./entries/a.mjs
 - ./entries/b.mjs => ./entries/b.mjs
 
+# tests/fixtures/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
+
+- lazy-chunk-!~{001}~.mjs => lazy-chunk-2BiCHA4p.mjs
+- main-!~{000}~.mjs => main-iG_FUyGI.mjs
+- user-lib-!~{002}~.mjs => user-lib-l9uk7Ws7.mjs
+
+# tests/fixtures/function/experimental/strict_execution_order/esbuild_issue_2598/strict
+
+- lazy-chunk-!~{001}~.mjs => lazy-chunk-h-AaJoYY.mjs
+- main-!~{000}~.mjs => main-qa6GIi2S.mjs
+- user-lib-!~{002}~.mjs => user-lib-3ek3ZFYL.mjs
+
+# tests/fixtures/function/experimental/strict_execution_order/esbuild_issue_399/non_strict
+
+- entry1-!~{000}~.mjs => entry1-yxVw-efc.mjs
+- entry2-!~{001}~.mjs => entry2-pCX9P-TF.mjs
+- run-dep-!~{002}~.mjs => run-dep-lAZRbUty.mjs
+
+# tests/fixtures/function/experimental/strict_execution_order/esbuild_issue_399/strict
+
+- entry1-!~{000}~.mjs => entry1-WkksSQeJ.mjs
+- entry2-!~{001}~.mjs => entry2-5fmw0cWc.mjs
+- run-dep-!~{002}~.mjs => run-dep-IYK8t2Cy.mjs
+
 # tests/fixtures/function/external/commonjs_reexport_external
 
 - main-!~{000}~.mjs => main-yyEbMiKG.mjs
@@ -1534,8 +1558,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/wrapped_esm
 
-- main-!~{000}~.mjs => main-CJpsNFqZ.mjs
-- main-CJpsNFqZ.mjs.map
+- main-!~{000}~.mjs => main-kk05wHMv.mjs
+- main-kk05wHMv.mjs.map
 
 # tests/fixtures/module_types/base64/binary
 
@@ -1641,9 +1665,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-17B-XCVQ.mjs
 
+# tests/fixtures/tree_shaking/multi-declarator
+
+- main-!~{000}~.mjs => main-msZyidbG.mjs
+- main-msZyidbG.mjs.map
+
 # tests/fixtures/tree_shaking/pure_annotation
 
-- main-!~{000}~.mjs => main-fSMGN7x4.mjs
+- main-!~{000}~.mjs => main-XCncN_Yu.mjs
 
 # tests/fixtures/tree_shaking/unused_import_external
 

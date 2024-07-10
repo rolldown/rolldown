@@ -26,9 +26,9 @@ assert.equal(c, 1);
 # Sourcemap Visualizer
 
 - ../foo.js
-(0:0-0:13) "export const " --> (3:0-3:6) "\nconst"
-(0:13-0:19) "foo = " --> (3:6-3:12) " foo ="
-(0:19-1:7) "'foo', bar = 'bar'\nexport" --> (3:12-4:0) " 'foo';"
+(0:0-0:39) "export const { baz } = { baz: 'baz' }, " --> (3:0-3:6) "\nconst"
+(0:39-0:45) "foo = " --> (3:6-3:12) " foo ="
+(0:45-1:7) "'foo', bar = 'bar';\nexport" --> (3:12-4:0) " 'foo';"
 (1:7-1:13) " const" --> (4:0-4:6) "\nconst"
 (1:13-1:14) " " --> (4:6-4:7) " "
 (1:14-1:17) "[c," --> (4:7-4:10) "[c,"

@@ -1,11 +1,9 @@
-use std::default;
-
 use oxc::{
   allocator::{self, Allocator, Box, IntoIn},
   ast::{
     ast::{
-      self, BindingRestElement, ImportOrExportKind, Statement, StaticMemberExpression,
-      TSTypeAnnotation, TSTypeParameterDeclaration,
+      self, BindingRestElement, ImportOrExportKind, Statement, TSTypeAnnotation,
+      TSTypeParameterDeclaration,
     },
     AstBuilder,
   },
@@ -182,7 +180,7 @@ impl<'ast> AstSnippet<'ast> {
     name: PassedStr,
     init: ast::Expression<'ast>,
   ) -> ast::Declaration<'ast> {
-    let mut declarations = self.builder.vec1(self.builder.variable_declarator(
+    let declarations = self.builder.vec1(self.builder.variable_declarator(
       SPAN,
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
@@ -208,7 +206,7 @@ impl<'ast> AstSnippet<'ast> {
     name: PassedStr,
     init: ast::Expression<'ast>,
   ) -> Box<'ast, ast::VariableDeclaration<'ast>> {
-    let mut declarations = self.builder.vec1(self.builder.variable_declarator(
+    let declarations = self.builder.vec1(self.builder.variable_declarator(
       SPAN,
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
@@ -222,7 +220,7 @@ impl<'ast> AstSnippet<'ast> {
     self.builder.alloc_variable_declaration(
       SPAN,
       ast::VariableDeclarationKind::Var,
-      self.builder.vec(),
+      declarations,
       false,
     )
   }
@@ -414,7 +412,7 @@ impl<'ast> AstSnippet<'ast> {
   /// () => xx
   /// ```
   pub fn only_return_arrow_expr(&self, expr: ast::Expression<'ast>) -> ast::Expression<'ast> {
-    let mut statements = self.builder.vec1(ast::Statement::ExpressionStatement(
+    let statements = self.builder.vec1(ast::Statement::ExpressionStatement(
       self.builder.alloc_expression_statement(SPAN, expr),
     ));
     ast::Expression::ArrowFunctionExpression(self.builder.alloc_arrow_function_expression(
@@ -451,15 +449,14 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   pub fn import_star_stmt(&self, source: PassedStr, as_name: PassedStr) -> ast::Statement<'ast> {
-    let mut specifiers =
-      self.builder.vec1(ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(
-        self.builder.alloc_import_namespace_specifier(SPAN, self.id(as_name, SPAN)),
-      ));
+    let specifiers = self.builder.vec1(ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(
+      self.builder.alloc_import_namespace_specifier(SPAN, self.id(as_name, SPAN)),
+    ));
     ast::Statement::ImportDeclaration(self.builder.alloc_import_declaration(
       SPAN,
       Some(specifiers),
       self.string_literal(source, SPAN),
-      Default::default(),
+      None,
       ImportOrExportKind::Value,
     ))
   }

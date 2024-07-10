@@ -151,7 +151,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                         .into_in(self.alloc),
                     );
                   }
-                  rolldown_common::OutputFormat::App => unreachable!(),
+                  rolldown_common::OutputFormat::App | rolldown_common::OutputFormat::Iife => {
+                    unreachable!()
+                  }
                 }
               }
             }
@@ -491,6 +493,59 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       }
       _ => {}
     };
+
+    // iife inline dynamic import
+    if matches!(self.ctx.options.format, rolldown_common::OutputFormat::Iife) {
+      if let Expression::ImportExpression(import_expr) = expr {
+        let rec_id = self.ctx.module.imports[&import_expr.span];
+        let rec = &self.ctx.module.import_records[rec_id];
+        let importee_id = rec.resolved_module;
+        match importee_id {
+          ModuleIdx::Ecma(importee_id) => {
+            let importee = &self.ctx.modules[importee_id];
+            let importee_linking_info = &self.ctx.linking_infos[importee_id];
+            match importee_linking_info.wrap_kind {
+              WrapKind::Esm => {
+                let importee_linking_info = &self.ctx.linking_infos[importee_id];
+                let importee_wrapper_ref_name =
+                  self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                let importee_namespace_name =
+                  self.canonical_name_for(importee.namespace_object_ref);
+                *expr = self.snippet.promise_resolve_then_call_expr(
+                  expr.span(),
+                  self.snippet.new_vec_single(self.snippet.return_stmt(
+                    self.snippet.seq2_in_paren_expr(
+                      self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                      self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+                    ),
+                  )),
+                );
+              }
+              WrapKind::Cjs => {
+                let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
+                let importee_wrapper_ref_name =
+                  self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+
+                *expr = self.snippet.promise_resolve_then_call_expr(
+                  expr.span(),
+                  self.snippet.new_vec_single(self.snippet.return_stmt(
+                    self.snippet.call_expr_with_arg_expr_expr(
+                      to_esm_fn_name,
+                      self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                    ),
+                  )),
+                );
+              }
+              WrapKind::None => {}
+            }
+          }
+          ModuleIdx::External(_) => {
+            // iife format doesn't support external module
+          }
+        }
+        return;
+      }
+    }
 
     walk_mut::walk_expression(self, expr);
   }

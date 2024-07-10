@@ -8,6 +8,7 @@ const ModuleFormatSchema = z
   .or(z.literal('esm'))
   .or(z.literal('module'))
   .or(z.literal('commonjs'))
+  .or(z.literal('iife'))
   .optional()
 
 const addonFunctionSchema = z

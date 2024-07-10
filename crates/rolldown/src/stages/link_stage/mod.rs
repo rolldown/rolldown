@@ -223,7 +223,37 @@ impl<'a> LinkStage<'a> {
               }
             }
           },
-          ImportKind::DynamicImport => {}
+          ImportKind::DynamicImport => {
+            if matches!(self.input_options.format, OutputFormat::Iife) {
+              // For iife, then import() is just a require() that
+              // returns a promise, so the imported file must also be wrapped
+              match importee.exports_kind {
+                ExportsKind::Esm => {
+                  self.metas[importee.idx].wrap_kind = WrapKind::Esm;
+                }
+                ExportsKind::CommonJs => {
+                  self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+                }
+                ExportsKind::None => {
+                  if compat_mode {
+                    self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+                    // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
+                    // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
+                    unsafe {
+                      let importee_mut = addr_of!(*importee).cast_mut();
+                      (*importee_mut).exports_kind = ExportsKind::CommonJs;
+                    }
+                  } else {
+                    self.metas[importee.idx].wrap_kind = WrapKind::Esm;
+                    unsafe {
+                      let importee_mut = addr_of!(*importee).cast_mut();
+                      (*importee_mut).exports_kind = ExportsKind::Esm;
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       });
 
@@ -250,10 +280,10 @@ impl<'a> LinkStage<'a> {
         stmt_infos.iter_mut().for_each(|stmt_info| {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
-            match &self.module_table.modules[rec.resolved_module] {
-              Module::External(importee) => {
+            match rec.resolved_module {
+              ModuleIdx::External(importee_id) => {
                 // Make sure symbols from external modules are included and de_conflicted
-                stmt_info.side_effect = importee.side_effects.has_side_effects();
+                stmt_info.side_effect = true;
                 match rec.kind {
                   ImportKind::Import => {
                     if matches!(self.input_options.format, OutputFormat::Cjs)
@@ -265,6 +295,7 @@ impl<'a> LinkStage<'a> {
                     }
                     let is_reexport_all = importer.star_exports.contains(rec_id);
                     if is_reexport_all {
+                      let importee = &self.module_table.external_modules[importee_id];
                       symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                         format!("import_{}", legitimize_identifier_name(&importee.name)).into();
                       stmt_info.declared_symbols.push(rec.namespace_ref);
@@ -277,8 +308,8 @@ impl<'a> LinkStage<'a> {
                   _ => {}
                 }
               }
-              Module::Ecma(importee) => {
-                let importee_linking_info = &self.metas[importee.idx];
+              ModuleIdx::Ecma(importee_id) => {
+                let importee_linking_info = &self.metas[importee_id];
                 match rec.kind {
                   ImportKind::Import => {
                     let is_reexport_all = importer.star_exports.contains(rec_id);
@@ -311,6 +342,7 @@ impl<'a> LinkStage<'a> {
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__toESM").into());
                           stmt_info.declared_symbols.push(rec.namespace_ref);
+                          let importee = &self.module_table.ecma_modules[importee_id];
                           symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                             format!("import_{}", &importee.repr_name).into();
                         }
@@ -329,6 +361,7 @@ impl<'a> LinkStage<'a> {
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__reExport").into());
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
+                          let importee = &self.module_table.ecma_modules[importee_id];
                           stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                         }
                       }
@@ -352,6 +385,7 @@ impl<'a> LinkStage<'a> {
                       stmt_info
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__toCommonJS").into());
+                      let importee = &self.module_table.ecma_modules[importee_id];
                       stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                     }
                   },

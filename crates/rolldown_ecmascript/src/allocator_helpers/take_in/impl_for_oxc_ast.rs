@@ -404,3 +404,9 @@ impl<'ast> TakeIn<'ast> for ast::BindingProperty<'ast> {
     }
   }
 }
+
+impl<'ast> TakeIn<'ast> for ast::ReturnStatement<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self { span: TakeIn::dummy(alloc), argument: TakeIn::dummy(alloc) }
+  }
+}

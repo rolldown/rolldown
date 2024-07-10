@@ -54,6 +54,10 @@ function getFormat(
       return 'cjs'
     }
 
+    case 'iife': {
+      return 'iife'
+    }
+
     default:
       unimplemented(`output.format: ${format}`)
   }

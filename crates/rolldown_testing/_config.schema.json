@@ -204,7 +204,8 @@
       "enum": [
         "esm",
         "cjs",
-        "app"
+        "app",
+        "iife"
       ]
     },
     "Platform": {

@@ -2,13 +2,9 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use oxc::index::IndexVec;
-<<<<<<< HEAD
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, ImportKind, Module, ModuleIdx};
-=======
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, EcmaModuleIdx, EntryPointKind, ImportKind, ModuleIdx, OutputFormat,
+  Chunk, ChunkIdx, ChunkKind, EntryPointKind, ImportKind, Module, ModuleIdx, OutputFormat,
 };
->>>>>>> 076b949a (feat: support format iife for single entry)
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
 
@@ -41,16 +37,11 @@ impl<'a> GenerateStage<'a> {
       if let Module::Ecma(importee) = &self.link_output.module_table.modules[rec.resolved_module] {
         // Module imported dynamically will be considered as an entry,
         // so we don't need to include it in this chunk
-<<<<<<< HEAD
-        if !matches!(rec.kind, ImportKind::DynamicImport) {
-          self.determine_reachable_modules_for_entry(importee.idx, entry_index, module_to_bits);
-=======
         if !matches!(rec.kind, ImportKind::DynamicImport)
       // IIFE format should inline dynamic imports
           || matches!(self.options.format, OutputFormat::Iife)
         {
-          self.determine_reachable_modules_for_entry(importee_id, entry_index, module_to_bits);
->>>>>>> 076b949a (feat: support format iife for single entry)
+          self.determine_reachable_modules_for_entry(importee.idx, entry_index, module_to_bits);
         }
       }
     });

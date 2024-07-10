@@ -500,9 +500,8 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         let rec_id = self.ctx.module.imports[&import_expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
-        match importee_id {
-          ModuleIdx::Ecma(importee_id) => {
-            let importee = &self.ctx.modules[importee_id];
+        match &self.ctx.modules[importee_id] {
+          Module::Ecma(importee) => {
             let importee_linking_info = &self.ctx.linking_infos[importee_id];
             match importee_linking_info.wrap_kind {
               WrapKind::Esm => {
@@ -539,7 +538,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
               WrapKind::None => {}
             }
           }
-          ModuleIdx::External(_) => {
+          Module::External(_) => {
             // iife format doesn't support external module
           }
         }

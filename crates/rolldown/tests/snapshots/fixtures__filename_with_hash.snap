@@ -1338,7 +1338,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/format/iife
 
-- main-!~{000}~.mjs => main-TFddYbNz.mjs
+- main-!~{000}~.mjs => main-ak-eGAeR.mjs
 
 # tests/fixtures/function/dir/should_generate_correct_relative_import_path
 

@@ -24,6 +24,10 @@ Promise.resolve().then(function() {
 });
 
 //#endregion
+//#region foo.js
+var require_foo = __commonJSMin((exports, module) => {});
+
+//#endregion
 //#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
 	module.exports = 1;
@@ -37,10 +41,6 @@ var init_esm = __esmMin(() => {
 	__export(esm_ns, {value: () => value});
 	value = 1;
 });
-
-//#endregion
-//#region foo.js
-var require_foo = __commonJSMin((exports, module) => {});
 
 //#endregion
 });

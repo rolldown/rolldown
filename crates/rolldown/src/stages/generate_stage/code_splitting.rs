@@ -2,9 +2,7 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, EntryPointKind, ImportKind, Module, ModuleIdx, OutputFormat,
-};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, ImportKind, Module, ModuleIdx, OutputFormat};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
 
@@ -90,13 +88,6 @@ impl<'a> GenerateStage<'a> {
       FxHashMap::with_capacity(self.link_output.entries.len());
     // Create chunk for each static and dynamic entry
     for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
-      // IIFE format should inline dynamic imports
-      if matches!(self.options.format, OutputFormat::Iife)
-        && matches!(entry_point.kind, EntryPointKind::DynamicImport)
-      {
-        continue;
-      }
-
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
@@ -122,12 +113,6 @@ impl<'a> GenerateStage<'a> {
 
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
-      // IIFE format should inline dynamic imports
-      if matches!(self.options.format, OutputFormat::Iife)
-        && matches!(entry_point.kind, EntryPointKind::DynamicImport)
-      {
-        return;
-      }
       self.determine_reachable_modules_for_entry(
         entry_point.id,
         i.try_into().expect("Too many entries, u32 overflowed."),

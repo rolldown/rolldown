@@ -1,6 +1,5 @@
 {
   "config": {
      "format": "iife"
-  },
-  "expectExecuted": true
+  }
 }

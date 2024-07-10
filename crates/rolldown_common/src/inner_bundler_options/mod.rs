@@ -4,6 +4,7 @@ use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
+use types::experimental_options::ExperimentalOptions;
 
 use crate::{ModuleType, SourceMapIgnoreList};
 
@@ -76,6 +77,7 @@ pub struct BundlerOptions {
     schemars(with = "Option<bool>")
   )]
   pub treeshake: TreeshakeOptions,
+  pub experimental: Option<ExperimentalOptions>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

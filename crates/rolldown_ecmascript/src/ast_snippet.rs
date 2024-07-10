@@ -2,8 +2,8 @@ use oxc::{
   allocator::{self, Allocator, Box, IntoIn},
   ast::{
     ast::{
-      self, BindingRestElement, ImportOrExportKind, Statement, TSTypeAnnotation,
-      TSTypeParameterDeclaration,
+      self, Argument, BindingIdentifier, BindingRestElement, ImportOrExportKind, Statement,
+      TSThisParameter, TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
     },
     AstBuilder,
   },
@@ -24,13 +24,6 @@ pub struct AstSnippet<'ast> {
 impl<'ast> AstSnippet<'ast> {
   pub fn new(alloc: &'ast Allocator) -> Self {
     Self { alloc, builder: AstBuilder::new(alloc) }
-  }
-
-  #[inline]
-  pub fn new_vec_single<T>(&self, value: T) -> allocator::Vec<'ast, T> {
-    let mut vec = allocator::Vec::with_capacity_in(1, self.alloc);
-    vec.push(value);
-    vec
   }
 
   pub fn atom(&self, value: &str) -> Atom<'ast> {
@@ -546,59 +539,55 @@ impl<'ast> AstSnippet<'ast> {
     ))
   }
 
-  // Promise.resolve().then(function() {})
+  /// Promise.resolve().then(function() {})
   pub fn promise_resolve_then_call_expr(
     &self,
     span: Span,
     statements: allocator::Vec<'ast, Statement<'ast>>,
   ) -> ast::Expression<'ast> {
-    ast::Expression::CallExpression(Box::new_in(
-      CallExpression {
-        span,
-        arguments: self.new_vec_single(Argument::FunctionExpression(Box::new_in(
-          Function {
-            r#type: ast::FunctionType::FunctionExpression,
-            params: Box::new_in(
-              FormalParameters {
-                kind: FormalParameterKind::FormalParameter,
-                items: allocator::Vec::new_in(self.alloc),
-                ..TakeIn::dummy(self.alloc)
-              },
-              self.alloc,
-            ),
-            body: Some(Box::new_in(
-              FunctionBody { statements, ..TakeIn::dummy(self.alloc) },
-              self.alloc,
-            )),
-            ..TakeIn::dummy(self.alloc)
-          },
-          self.alloc,
-        ))),
-        callee: ast::Expression::StaticMemberExpression(
-          StaticMemberExpression {
-            object: ast::Expression::CallExpression(
-              ast::CallExpression {
-                callee: ast::Expression::StaticMemberExpression(Box::new_in(
-                  StaticMemberExpression {
-                    object: self.id_ref_expr("Promise", SPAN),
-                    property: self.id_name("resolve", SPAN),
-                    ..TakeIn::dummy(self.alloc)
-                  },
-                  self.alloc,
-                )),
-                ..TakeIn::dummy(self.alloc)
-              }
-              .into_in(self.alloc),
-            ),
-            property: self.id_name("then", SPAN),
-            ..TakeIn::dummy(self.alloc)
-          }
-          .into_in(self.alloc),
-        ),
-        type_parameters: None,
-        optional: false,
-      },
-      self.alloc,
+    let arguments = self.builder.vec1(Argument::FunctionExpression(self.builder.alloc_function(
+      ast::FunctionType::FunctionExpression,
+      SPAN,
+      None::<BindingIdentifier<'_>>,
+      false,
+      false,
+      false,
+      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
+      None::<TSThisParameter<'_>>,
+      self.builder.formal_parameters(
+        SPAN,
+        ast::FormalParameterKind::Signature,
+        self.builder.vec_with_capacity(2),
+        None::<Box<'_, BindingRestElement<'_>>>,
+      ),
+      Some(self.builder.function_body(SPAN, self.builder.vec(), statements)),
+      None::<Box<'_, TSTypeAnnotation<'_>>>,
+    )));
+
+    let callee =
+      ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+        SPAN,
+        ast::Expression::CallExpression(self.builder.alloc_call_expression(
+          SPAN,
+          self.builder.vec(),
+          ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+            SPAN,
+            self.id_ref_expr("Promise", SPAN),
+            self.id_name("resolve", SPAN),
+            false,
+          )),
+          None::<Box<'_, TSTypeParameterInstantiation<'_>>>,
+          false,
+        )),
+        self.id_name("then", SPAN),
+        false,
+      ));
+    ast::Expression::CallExpression(self.builder.alloc_call_expression(
+      span,
+      arguments,
+      callee,
+      None::<Box<'_, TSTypeParameterInstantiation<'_>>>,
+      false,
     ))
   }
 

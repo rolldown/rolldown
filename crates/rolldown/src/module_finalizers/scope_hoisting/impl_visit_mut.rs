@@ -513,7 +513,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   self.canonical_name_for(importee.namespace_object_ref);
                 *expr = self.snippet.promise_resolve_then_call_expr(
                   expr.span(),
-                  self.snippet.new_vec_single(self.snippet.return_stmt(
+                  self.snippet.builder.vec1(self.snippet.return_stmt(
                     self.snippet.seq2_in_paren_expr(
                       self.snippet.call_expr_expr(importee_wrapper_ref_name),
                       self.snippet.id_ref_expr(importee_namespace_name, SPAN),
@@ -529,7 +529,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
                 *expr = self.snippet.promise_resolve_then_call_expr(
                   expr.span(),
-                  self.snippet.new_vec_single(self.snippet.return_stmt(
+                  self.snippet.builder.vec1(self.snippet.return_stmt(
                     self.snippet.call_expr_with_arg_expr_expr(
                       to_esm_fn_name,
                       self.snippet.call_expr_expr(importee_wrapper_ref_name),

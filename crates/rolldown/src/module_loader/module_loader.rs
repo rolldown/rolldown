@@ -2,7 +2,7 @@ use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleIdx, ModuleTable, ResolvedRequestInfo,
+  ModuleIdx, ModuleTable, OutputFormat, ResolvedRequestInfo,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
@@ -295,14 +295,17 @@ impl ModuleLoader {
     let index_ecma_ast: IndexVec<ModuleIdx, EcmaAst> =
       self.intermediate_normal_modules.index_ecma_ast.into_iter().flatten().collect();
 
-    let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
-    dynamic_import_entry_ids.sort_unstable_by_key(|id| modules[*id].stable_resource_id());
+    // IIFE format should inline dynamic imports, so here not put dynamic imports to entries
+    if !matches!(self.input_options.format, OutputFormat::Iife) {
+      let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
+      dynamic_import_entry_ids.sort_unstable_by_key(|id| modules[*id].stable_resource_id());
 
-    entry_points.extend(dynamic_import_entry_ids.into_iter().map(|id| EntryPoint {
-      name: None,
-      id,
-      kind: EntryPointKind::DynamicImport,
-    }));
+      entry_points.extend(dynamic_import_entry_ids.into_iter().map(|id| EntryPoint {
+        name: None,
+        id,
+        kind: EntryPointKind::DynamicImport,
+      }));
+    }
 
     Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },

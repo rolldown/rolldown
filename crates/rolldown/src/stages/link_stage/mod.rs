@@ -223,7 +223,37 @@ impl<'a> LinkStage<'a> {
               }
             }
           },
-          ImportKind::DynamicImport => {}
+          ImportKind::DynamicImport => {
+            if matches!(self.input_options.format, OutputFormat::Iife) {
+              // For iife, then import() is just a require() that
+              // returns a promise, so the imported file must also be wrapped
+              match importee.exports_kind {
+                ExportsKind::Esm => {
+                  self.metas[importee.idx].wrap_kind = WrapKind::Esm;
+                }
+                ExportsKind::CommonJs => {
+                  self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+                }
+                ExportsKind::None => {
+                  if compat_mode {
+                    self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+                    // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
+                    // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
+                    unsafe {
+                      let importee_mut = addr_of!(*importee).cast_mut();
+                      (*importee_mut).exports_kind = ExportsKind::CommonJs;
+                    }
+                  } else {
+                    self.metas[importee.idx].wrap_kind = WrapKind::Esm;
+                    unsafe {
+                      let importee_mut = addr_of!(*importee).cast_mut();
+                      (*importee_mut).exports_kind = ExportsKind::Esm;
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       });
 
@@ -355,7 +385,29 @@ impl<'a> LinkStage<'a> {
                       stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                     }
                   },
-                  ImportKind::DynamicImport => {}
+                  ImportKind::DynamicImport => {
+                    if matches!(self.input_options.format, OutputFormat::Iife) {
+                      match importee_linking_info.wrap_kind {
+                        WrapKind::None => {}
+                        WrapKind::Cjs => {
+                          //  `__toESM(require_foo())`
+                          stmt_info
+                            .referenced_symbols
+                            .push(importee_linking_info.wrapper_ref.unwrap().into());
+                          stmt_info
+                            .referenced_symbols
+                            .push(self.runtime.resolve_symbol("__toESM").into());
+                        }
+                        WrapKind::Esm => {
+                          // `(init_foo(), foo_exports)`
+                          stmt_info
+                            .referenced_symbols
+                            .push(importee_linking_info.wrapper_ref.unwrap().into());
+                          stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }

@@ -27,6 +27,12 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   #[inline]
+  pub fn new_vec_single<T>(&self, value: T) -> allocator::Vec<'ast, T> {
+    let mut vec = allocator::Vec::with_capacity_in(1, self.alloc);
+    vec.push(value);
+    vec
+  }
+
   pub fn atom(&self, value: &str) -> Atom<'ast> {
     self.builder.atom(value)
   }
@@ -538,5 +544,69 @@ impl<'ast> AstSnippet<'ast> {
       declarations,
       false,
     ))
+  }
+
+  // Promise.resolve().then(function() {})
+  pub fn promise_resolve_then_call_expr(
+    &self,
+    span: Span,
+    statements: allocator::Vec<'ast, Statement<'ast>>,
+  ) -> ast::Expression<'ast> {
+    ast::Expression::CallExpression(Box::new_in(
+      CallExpression {
+        span,
+        arguments: self.new_vec_single(Argument::FunctionExpression(Box::new_in(
+          Function {
+            r#type: ast::FunctionType::FunctionExpression,
+            params: Box::new_in(
+              FormalParameters {
+                kind: FormalParameterKind::FormalParameter,
+                items: allocator::Vec::new_in(self.alloc),
+                ..TakeIn::dummy(self.alloc)
+              },
+              self.alloc,
+            ),
+            body: Some(Box::new_in(
+              FunctionBody { statements, ..TakeIn::dummy(self.alloc) },
+              self.alloc,
+            )),
+            ..TakeIn::dummy(self.alloc)
+          },
+          self.alloc,
+        ))),
+        callee: ast::Expression::StaticMemberExpression(
+          StaticMemberExpression {
+            object: ast::Expression::CallExpression(
+              ast::CallExpression {
+                callee: ast::Expression::StaticMemberExpression(Box::new_in(
+                  StaticMemberExpression {
+                    object: self.id_ref_expr("Promise", SPAN),
+                    property: self.id_name("resolve", SPAN),
+                    ..TakeIn::dummy(self.alloc)
+                  },
+                  self.alloc,
+                )),
+                ..TakeIn::dummy(self.alloc)
+              }
+              .into_in(self.alloc),
+            ),
+            property: self.id_name("then", SPAN),
+            ..TakeIn::dummy(self.alloc)
+          }
+          .into_in(self.alloc),
+        ),
+        type_parameters: None,
+        optional: false,
+      },
+      self.alloc,
+    ))
+  }
+
+  // return xxx
+  pub fn return_stmt(&self, argument: ast::Expression<'ast>) -> ast::Statement<'ast> {
+    ast::Statement::ReturnStatement(
+      ast::ReturnStatement { argument: Some(argument), ..TakeIn::dummy(self.alloc) }
+        .into_in(self.alloc),
+    )
   }
 }

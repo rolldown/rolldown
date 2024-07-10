@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, ImportKind, Module, ModuleIdx};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, ImportKind, Module, ModuleIdx, OutputFormat};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
 
@@ -35,7 +35,10 @@ impl<'a> GenerateStage<'a> {
       if let Module::Ecma(importee) = &self.link_output.module_table.modules[rec.resolved_module] {
         // Module imported dynamically will be considered as an entry,
         // so we don't need to include it in this chunk
-        if !matches!(rec.kind, ImportKind::DynamicImport) {
+        if !matches!(rec.kind, ImportKind::DynamicImport)
+      // IIFE format should inline dynamic imports
+          || matches!(self.options.format, OutputFormat::Iife)
+        {
           self.determine_reachable_modules_for_entry(importee.idx, entry_index, module_to_bits);
         }
       }
@@ -66,6 +69,11 @@ impl<'a> GenerateStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn generate_chunks(&self) -> ChunkGraph {
+    if matches!(self.options.format, OutputFormat::Iife) {
+      let user_defined_entry_count =
+        self.link_output.entries.iter().filter(|entry| entry.kind.is_user_defined()).count();
+      debug_assert!(user_defined_entry_count == 1, "IIFE format only supports one entry point");
+    }
     let entries_len: u32 =
       self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,

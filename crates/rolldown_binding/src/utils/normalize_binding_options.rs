@@ -122,6 +122,7 @@ pub fn normalize_binding_options(
     format: output_options.format.map(|format_str| match format_str.as_str() {
       "es" => OutputFormat::Esm,
       "cjs" => OutputFormat::Cjs,
+      "iife" => OutputFormat::Iife,
       _ => panic!("Invalid format: {format_str}"),
     }),
     module_types,

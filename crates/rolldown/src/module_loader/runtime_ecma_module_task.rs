@@ -36,8 +36,7 @@ impl RuntimeEcmaModuleTask {
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
   pub fn run(self) -> anyhow::Result<()> {
-    let source: Arc<str> =
-      include_str!("../runtime/runtime-without-comments.js").to_string().into();
+    let source: Arc<str> = include_str!("../runtime/runtime-without-comments.js").into();
 
     let (ast, scope, scan_result, symbol, namespace_object_ref) = self.make_ast(&source)?;
 

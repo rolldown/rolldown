@@ -95,6 +95,11 @@ impl<'a> LinkStage<'a> {
               module.exec_order = next_exec_order;
               sorted_modules.push(id);
             }
+            Module::Css(module) => {
+              debug_assert!(module.exec_order == u32::MAX);
+              module.exec_order = next_exec_order;
+              sorted_modules.push(id);
+            }
             Module::External(module) => {
               debug_assert!(module.exec_order == u32::MAX);
               module.exec_order = next_exec_order;

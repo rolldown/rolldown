@@ -1,3 +1,3 @@
 oxc::index::define_index_type! {
-  pub struct CssModuleIdx = u32;
+  pub struct ModuleIdx = u32;
 }

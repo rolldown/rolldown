@@ -254,6 +254,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
 
       let ret = match &self.normal_modules[rec.resolved_module] {
         Module::External(_) => MatchImportKind::Normal { symbol: *imported_as_ref },
+        Module::Css(_) => todo!(),
         Module::Ecma(importee) => self.match_import_with_export(
           self.normal_modules,
           &mut MatchingContext { tracker_stack: Vec::default() },
@@ -302,6 +303,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
     let importee_id = importer.import_records[named_import.record_id].resolved_module;
     let importee_id = match &self.normal_modules[importee_id] {
       Module::Ecma(importee) => importee.idx,
+      Module::Css(_) => todo!(),
       Module::External(_) => return ImportStatus::External,
     };
 
@@ -410,6 +412,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
                     imported_as: another_named_import.imported_as,
                   },
                 ),
+                Module::Css(_) => todo!(),
                 Module::External(_) => {
                   MatchImportKind::Normal { symbol: another_named_import.imported_as }
                 }
@@ -436,6 +439,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
                 tracker.imported_as = another_named_import.imported_as;
                 continue;
               }
+              Module::Css(_) => todo!(),
             }
           }
 

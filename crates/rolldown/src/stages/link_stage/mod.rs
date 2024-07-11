@@ -410,6 +410,7 @@ impl<'a> LinkStage<'a> {
                   }
                 }
               }
+              Module::Css(_) => todo!(),
             }
           });
         });

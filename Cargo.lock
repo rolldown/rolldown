@@ -2205,6 +2205,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_css"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lightningcss",
+]
+
+[[package]]
 name = "rolldown_ecmascript"
 version = "0.1.0"
 dependencies = [

@@ -69,6 +69,7 @@ fn has_dynamic_exports_due_to_export_star(
         })
       }
     }
+    Module::Css(_) => todo!(),
     Module::External(_) => true,
   };
 

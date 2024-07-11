@@ -60,6 +60,7 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
               continue;
             }
             Module::External(_) => unimplemented!(),
+            Module::Css(_) => unimplemented!(),
           }
         }
         // TODO: rewrite `export default xxx` to `var __rolldown_default_export__ = xxx`

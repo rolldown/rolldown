@@ -156,6 +156,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   }
                 }
               }
+              Module::Css(_) => todo!(),
             }
 
             return;
@@ -432,6 +433,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   .into_in(self.alloc),
               );
             }
+            Module::Css(_) => todo!(),
           }
         }
       }
@@ -543,6 +545,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           Module::External(_) => {
             // iife format doesn't support external module
           }
+          Module::Css(_) => {
+            // iife format doesn't support css module
+          }
         }
         return;
       }
@@ -637,6 +642,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           Module::External(_) => {
             // external module doesn't belong to any chunk, just keep this as it is
           }
+          Module::Css(_) => todo!(),
         }
       }
       _ => {}

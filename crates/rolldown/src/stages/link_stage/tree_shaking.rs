@@ -94,6 +94,7 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
           include_module(ctx, importee);
         }
       }
+      Module::Css(_) => todo!(),
       Module::External(_) => {}
     }
   });
@@ -281,6 +282,7 @@ impl LinkStage<'_> {
     self.entries.iter().for_each(|entry| {
       let module = match &self.module_table.modules[entry.id] {
         Module::Ecma(module) => module,
+        Module::Css(_) => todo!(),
         Module::External(_module) => {
           // Case: import('external').
           return;
@@ -368,6 +370,7 @@ impl LinkStage<'_> {
               .has_side_effects()
             }))
           }
+          Module::Css(module) => module.side_effects,
           Module::External(module) => module.side_effects,
         },
       };

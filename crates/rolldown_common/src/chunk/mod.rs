@@ -21,7 +21,6 @@ pub struct Chunk {
   pub exec_order: u32,
   pub kind: ChunkKind,
   pub modules: Vec<ModuleIdx>,
-  pub user_defined_name: Option<String>,
   pub filename: Option<ResourceId>,
   pub name: Option<Arc<str>>,
   pub preliminary_filename: Option<PreliminaryFilename>,
@@ -38,13 +37,15 @@ pub struct Chunk {
 }
 
 impl Chunk {
-  pub fn new(
-    user_defined_name: Option<String>,
-    bits: BitSet,
-    modules: Vec<ModuleIdx>,
-    kind: ChunkKind,
-  ) -> Self {
-    Self { exec_order: u32::MAX, modules, user_defined_name, bits, kind, ..Self::default() }
+  pub fn new(name: Option<String>, bits: BitSet, modules: Vec<ModuleIdx>, kind: ChunkKind) -> Self {
+    Self {
+      exec_order: u32::MAX,
+      modules,
+      name: name.map(Into::into),
+      bits,
+      kind,
+      ..Self::default()
+    }
   }
 
   pub fn filename_template<'a>(

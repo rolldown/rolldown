@@ -5,13 +5,12 @@ use std::path::PathBuf;
 
 use rustc_hash::FxHashMap;
 
-use crate::ModuleType;
+use crate::{InputItem, ModuleType};
 
 use super::experimental_options::ExperimentalOptions;
 use super::treeshake::TreeshakeOptions;
 use super::{
-  filename_template::FilenameTemplate, is_external::IsExternal,
-  normalized_input_item::NormalizedInputItem, output_format::OutputFormat,
+  filename_template::FilenameTemplate, is_external::IsExternal, output_format::OutputFormat,
   output_option::AddonOutputOption, platform::Platform, source_map_type::SourceMapType,
   sourcemap_ignore_list::SourceMapIgnoreList, sourcemap_path_transform::SourceMapPathTransform,
 };
@@ -19,7 +18,7 @@ use super::{
 #[derive(Debug)]
 pub struct NormalizedBundlerOptions {
   // --- Input
-  pub input: Vec<NormalizedInputItem>,
+  pub input: Vec<InputItem>,
   pub cwd: PathBuf,
   pub external: Option<IsExternal>,
   /// corresponding to `false | NormalizedTreeshakeOption`

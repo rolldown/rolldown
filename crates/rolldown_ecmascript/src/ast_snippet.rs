@@ -291,6 +291,7 @@ impl<'ast> AstSnippet<'ast> {
     );
     arrow_expr.params.items.push(self.builder.formal_parameter(
       SPAN,
+      self.builder.vec(),
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, "exports"),
         None::<Box<'_, TSTypeAnnotation<'_>>>,
@@ -299,11 +300,11 @@ impl<'ast> AstSnippet<'ast> {
       None,
       false,
       false,
-      self.builder.vec(),
     ));
 
     arrow_expr.params.items.push(self.builder.formal_parameter(
       SPAN,
+      self.builder.vec(),
       self.builder.binding_pattern(
         self.builder.binding_pattern_kind_binding_identifier(SPAN, "module"),
         None::<Box<'_, TSTypeAnnotation<'_>>>,
@@ -312,7 +313,6 @@ impl<'ast> AstSnippet<'ast> {
       None,
       false,
       false,
-      self.builder.vec(),
     ));
 
     //  __commonJS(...)

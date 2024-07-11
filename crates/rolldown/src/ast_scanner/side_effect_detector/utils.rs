@@ -25,16 +25,14 @@ impl<'a> SideEffectDetector<'a> {
   /// ```
   /// Derived from https://github.com/oxc-project/oxc/blob/147864cfeb112df526bb83d5b8671b465c005066/crates/oxc_linter/src/utils/tree_shaking.rs#L204
   pub fn leading_comment_for(&self, span: Span) -> Option<(&Comment, &str)> {
-    let (start, comment) = self.trivias.comments_range(..span.start).next_back()?;
+    let comment = self.trivias.comments_range(..span.start).next_back()?;
 
-    let comment_text = {
-      let span = Span::new(*start, comment.end);
-      span.source_text(self.source)
-    };
+    let comment_text = comment.span.source_text(self.source);
 
     // If there are non-whitespace characters between the `comment`` and the `span`,
     // we treat the `comment` not belongs to the `span`.
-    let only_whitespace = self.source[comment.end as usize..span.start as usize]
+    let only_whitespace = Span::new(comment.span.end, span.start)
+      .source_text(self.source)
       .strip_prefix("*/") // for multi-line comment
       .is_some_and(|s| s.trim().is_empty());
 
@@ -55,8 +53,9 @@ impl<'a> SideEffectDetector<'a> {
       return None;
     };
 
-    if comment.end < current_line_start {
-      let previous_line = self.source[..comment.end as usize].lines().next_back().unwrap_or("");
+    if comment.span.end < current_line_start {
+      let previous_line =
+        self.source[..comment.span.end as usize].lines().next_back().unwrap_or("");
       let nothing_before_comment = previous_line
         .trim()
         .strip_prefix(if comment.kind == CommentKind::SingleLine { "//" } else { "/*" })

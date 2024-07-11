@@ -1,5 +1,4 @@
 use oxc::index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, Module, ModuleIdx};
+use rolldown_common::{Chunk, ChunkIdx};
 
 pub type IndexChunks = IndexVec<ChunkIdx, Chunk>;
-pub type IndexNormalModules = IndexVec<ModuleIdx, Module>;

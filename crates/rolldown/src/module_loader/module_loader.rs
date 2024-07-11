@@ -177,7 +177,7 @@ impl ModuleLoader {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn fetch_all_modules(
     mut self,
-    user_defined_entries: Vec<(String, ResolvedRequestInfo)>,
+    user_defined_entries: Vec<(Option<String>, ResolvedRequestInfo)>,
   ) -> anyhow::Result<ModuleLoaderOutput> {
     if self.input_options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
@@ -196,7 +196,7 @@ impl ModuleLoader {
     let mut entry_points = user_defined_entries
       .into_iter()
       .map(|(name, info)| EntryPoint {
-        name: Some(name),
+        name,
         id: self.try_spawn_new_task(info, /* is_user_defined_entry */ true),
         kind: EntryPointKind::UserDefined,
       })

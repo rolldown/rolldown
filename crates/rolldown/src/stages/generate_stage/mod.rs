@@ -1,11 +1,12 @@
 use anyhow::Result;
-use oxc::ast::VisitMut;
+use indexmap::IndexSet;
+use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript::AstSnippet;
 use rustc_hash::FxHashSet;
 
 use futures::future::try_join_all;
 use rolldown_common::{
-  Chunk, ChunkKind, FileNameRenderOptions, Module, ModuleIdx, Output, OutputAsset, OutputChunk,
+  ChunkIdx, ChunkKind, FileNameRenderOptions, Module, Output, OutputAsset, OutputChunk,
   PreliminaryFilename, SourceMapType,
 };
 use rolldown_error::BuildError;
@@ -13,7 +14,7 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
   path_buf_ext::PathBufExt,
   path_ext::PathExt,
-  rayon::{ParallelBridge, ParallelIterator},
+  rayon::{IntoParallelRefIterator, ParallelBridge, ParallelIterator},
 };
 use sugar_path::SugarPath;
 
@@ -24,7 +25,6 @@ use crate::{
     scope_hoisting::ScopeHoistingFinalizerContext,
   },
   stages::link_stage::LinkStageOutput,
-  type_alias::IndexNormalModules,
   utils::{
     augment_chunk_hash::augment_chunk_hash,
     chunk::{
@@ -33,6 +33,7 @@ use crate::{
       render_chunk::{render_chunk, ChunkRenderReturn},
     },
     extract_hash_pattern::extract_hash_pattern,
+    extract_meaningful_input_name_from_path::try_extract_meaningful_input_name_from_path,
     finalize_normal_module,
     hash_placeholder::HashPlaceholderGenerator,
     render_chunks::render_chunks,
@@ -62,7 +63,7 @@ impl<'a> GenerateStage<'a> {
   pub async fn generate(&mut self) -> Result<BundleOutput> {
     let mut chunk_graph = self.generate_chunks();
 
-    self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph);
+    self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph)?;
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 
@@ -238,74 +239,97 @@ impl<'a> GenerateStage<'a> {
 
   // Notices:
   // - Should generate filenames that are stable cross builds and os.
-  #[tracing::instrument(level = "debug", skip_all)]
-  fn generate_chunk_name_and_preliminary_filenames(&self, chunk_graph: &mut ChunkGraph) {
-    fn ensure_chunk_name(
-      chunk: &Chunk,
-      runtime_id: ModuleIdx,
-      normal_modules: &IndexNormalModules,
-    ) -> String {
-      // User-defined entry point should always have a name that given by the user
-      match chunk.kind {
-        ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
-          if is_user_defined {
-            chunk
-              .user_defined_name
-              .clone()
-              .unwrap_or_else(|| panic!("User-defined entry point should always have a name"))
-          } else {
-            let module_id = entry_module_id;
-            let module = &normal_modules[module_id];
-            module.resource_id().as_path().representative_file_name().into_owned()
-          }
-        }
-        ChunkKind::Common => {
-          // - rollup use the first entered/last executed module as the name of the common chunk.
-          // - esbuild always use 'chunk' as the name. However we try to make the name more meaningful here.
-          let first_executed_non_runtime_module =
-            chunk.modules.iter().rev().find(|each| **each != runtime_id);
-
-          first_executed_non_runtime_module.map_or_else(
-            || "chunk".to_string(),
-            |module_id| {
-              let module = &normal_modules[*module_id];
-              module.resource_id().as_path().representative_file_name().into_owned()
-            },
-          )
-        }
-      }
+  // #[tracing::instrument(level = "debug", skip_all)]
+  fn generate_chunk_name_and_preliminary_filenames(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+  ) -> anyhow::Result<()> {
+    struct ChunkNameInfo {
+      pub name: String,
+      pub explicit: bool,
     }
 
-    let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
-    let mut used_names = FxHashSet::default();
+    let modules = &self.link_output.module_table.modules;
 
-    // First ensure names of user-defined entry chunks aren't shadowed by other chunks
+    let mut index_pre_generated_names: IndexVec<ChunkIdx, ChunkNameInfo> = chunk_graph
+      .chunks
+      .as_vec()
+      .par_iter()
+      .map(|chunk| {
+        match chunk.kind {
+          ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
+            if let Some(name) = &chunk.name {
+              ChunkNameInfo { name: name.to_string(), explicit: true }
+            } else {
+              let module = &modules[entry_module_id];
+              let generated = if is_user_defined {
+                try_extract_meaningful_input_name_from_path(module.resource_id())
+                  .unwrap_or("input".to_string())
+              } else {
+                module.resource_id().as_path().representative_file_name().into_owned()
+              };
+              ChunkNameInfo { name: generated, explicit: false }
+            }
+          }
+          ChunkKind::Common => {
+            // - rollup use the first entered/last executed module as the `[name]` of common chunks.
+            // - esbuild always use 'chunk' as the `[name]`. However we try to make the name more meaningful here.
+            let first_executed_non_runtime_module =
+              chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id());
+            ChunkNameInfo {
+              name: first_executed_non_runtime_module.map_or_else(
+                || "chunk".to_string(),
+                |module_id| {
+                  let module = &modules[*module_id];
+                  module.resource_id().as_path().representative_file_name().into_owned()
+                },
+              ),
+              explicit: false,
+            }
+          }
+        }
+      })
+      .collect::<Vec<_>>()
+      .into();
 
+    // We make entries listed first to ensure names of user-defined entries chunks aren't shadowed by other chunks
     let chunk_ids = chunk_graph
       .user_defined_entry_chunk_ids
       .iter()
       .copied()
       .chain(chunk_graph.sorted_chunk_idx_vec.iter().copied())
-      .collect::<Vec<_>>();
+      .collect::<IndexSet<_>>();
 
-    chunk_ids.into_iter().for_each(|chunk_id| {
+    let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
+    let mut used_names: FxHashSet<String> = FxHashSet::default();
+
+    chunk_ids.into_iter().try_for_each(|chunk_id| -> anyhow::Result<()> {
       let chunk = &mut chunk_graph.chunks[chunk_id];
       if chunk.preliminary_filename.is_some() {
-        return;
+        // Already generated
+        return Ok(());
       }
-      let runtime_id = self.link_output.runtime.id();
 
-      let filename_template = chunk.filename_template(self.options);
+      let chunk_name_info = &mut index_pre_generated_names[chunk_id];
 
-      let mut chunk_name =
-        ensure_chunk_name(chunk, runtime_id, &self.link_output.module_table.modules);
-      let mut next_count = 1;
-      while used_names.contains(&chunk_name) {
-        chunk_name = format!("{chunk_name}~{next_count}");
-        next_count += 1;
-      }
+      let chunk_name = if chunk_name_info.explicit {
+        if used_names.contains(&chunk_name_info.name) {
+          return Err(anyhow::anyhow!("Chunk name `{}` is already used", chunk_name_info.name));
+        }
+        chunk_name_info.name.clone()
+      } else {
+        let mut chunk_name = chunk_name_info.name.clone();
+        let mut next_count = 1;
+        while used_names.contains(&chunk_name) {
+          chunk_name = format!("{chunk_name}~{next_count}");
+          next_count += 1;
+        }
+        chunk_name
+      };
+
       used_names.insert(chunk_name.clone());
 
+      let filename_template = chunk.filename_template(self.options);
       let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
 
       let hash_placeholder =
@@ -321,6 +345,9 @@ impl<'a> GenerateStage<'a> {
       chunk.absolute_preliminary_filename =
         Some(preliminary.absolutize_with(&self.options.dir).expect_into_string());
       chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));
-    });
+      Ok(())
+    })?;
+
+    Ok(())
   }
 }

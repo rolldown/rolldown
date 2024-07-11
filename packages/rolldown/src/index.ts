@@ -42,7 +42,10 @@ import {
   PluginContext,
 } from './plugin/plugin-context'
 import { TransformPluginContext } from './plugin/transfrom-plugin-context'
-import { InternalModuleFormat, NormalizedOutputOptions } from './options/normalized-output-options'
+import {
+  InternalModuleFormat,
+  NormalizedOutputOptions,
+} from './options/normalized-output-options'
 import { RenderedChunk, transform } from './binding'
 import { PartialNull } from './types/utils'
 import { NormalizedInputOptions } from './options/normalized-input-options'

@@ -4,12 +4,14 @@ import type { RolldownOutputChunk } from '../../../../src'
 import { defineTest } from '@tests'
 
 const entry = path.join(__dirname, './main.js')
+const foo = path.join(__dirname, './foo.js')
 
 const writeBundleFn = vi.fn()
 
 export default defineTest({
   config: {
     input: entry,
+    treeshake: false,
     plugins: [
       {
         name: 'test-plugin',
@@ -25,8 +27,9 @@ export default defineTest({
           expect(chunk.facadeModuleId).toBe(entry)
           expect(chunk.exports.length).toBe(0)
           expect(chunk.imports).length(0)
-          expect(chunk.moduleIds).toStrictEqual([entry])
-          expect(Object.keys(chunk.modules).length).toBe(1)
+          // The `foo.js` should be include `modules/moduleIds` even it is empty.
+          expect(chunk.moduleIds).toStrictEqual([foo, entry])
+          expect(Object.keys(chunk.modules)).toStrictEqual([entry, foo])
         },
       },
     ],

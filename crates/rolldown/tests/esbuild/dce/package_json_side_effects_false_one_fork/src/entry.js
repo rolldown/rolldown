@@ -1,1 +1,1 @@
-import("a").then(x => console.log(x.foo === "feefoo"))
+import("a").then(x => assert(x.foo === "foo"))

@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/dead_code_following_jump
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+function testReturn() {
+	return y + z();
+	var y;
+}
+function testThrow() {
+	throw y + z();
+	var y;
+}
+function testBreak() {
+	while (true) {
+		{
+			y + z$1();
+			break;
+		}
+		if (FAIL) return FAIL;
+		if (x) {
+			var y;
+		}
+		function z$1() {
+			KEEP_ME();
+		}
+		return FAIL;
+	}
+}
+function testContinue() {
+	while (true) {
+		{
+			y + z$1();
+			continue;
+		}
+		if (FAIL) return FAIL;
+		if (x) {
+			var y;
+		}
+		function z$1() {
+			KEEP_ME();
+		}
+		return FAIL;
+	}
+}
+function testStmts() {
+	return [a, b, c, d, e, f, g, h, i];
+	var a, b, c, d, e, f, g, h, i;
+}
+testReturn();
+testThrow();
+testBreak();
+testContinue();
+testStmts();
+
+//#endregion
+```

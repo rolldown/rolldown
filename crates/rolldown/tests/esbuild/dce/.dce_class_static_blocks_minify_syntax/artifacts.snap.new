@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+assertion_line: 171
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.ts
+class A_keep {
+	static {
+		foo;
+	}
+}
+class B_keep {
+	static {
+		this.foo;
+	}
+}
+class C_keep {
+	static {
+		try {
+			foo;
+		} catch {}
+	}
+}
+class D_keep {
+	static {
+		try {} finally {
+			foo;
+		}
+	}
+}
+
+//#endregion
+```

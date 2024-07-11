@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::test_config::{read_test_config, TestConfig};
-use rolldown::{BundleOutput, Bundler, IsExternal, OutputFormat, SourceMapType};
+use rolldown::{BundleOutput, Bundler, IsExternal, ModuleType, OutputFormat, SourceMapType};
 
 fn default_test_input_item() -> rolldown::InputItem {
   rolldown::InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }

@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+let remove14 = class {
+	static [undefined] = 'x';
+};
+let keep1 = class {
+	static x = x;
+};
+let keep2 = class {
+	static ['x'] = x;
+};
+let keep3 = class {
+	static [x] = 'x';
+};
+
+//#endregion
+```

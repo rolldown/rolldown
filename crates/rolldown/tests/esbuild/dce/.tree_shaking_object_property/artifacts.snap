@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_object_property
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+let remove13 = {[undefined]: 'x'};
+let keep1 = {x};
+let keep2 = {x: x};
+let keep3 = {...x};
+let keep4 = {[x]: 'x'};
+let keep5 = {[x]() {}};
+let keep6 = {get [x]() {}};
+let keep7 = {set [x](_) {}};
+let keep8 = {async [x]() {}};
+
+//#endregion
+```

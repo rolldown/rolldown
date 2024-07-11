@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/pure_calls_with_spread
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+/* @__PURE__ */ foo(...args);
+/* @__PURE__ */ new foo(...args);
+
+//#endregion
+```

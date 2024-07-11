@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_use_main
 ---
@@ -8,9 +8,13 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_ke
 ## src_entry_js.mjs
 
 ```js
-// node_modules/demo-pkg/index-module.js
+
+//#region node_modules/demo-pkg/index-module.js
 console.log('TEST FAILED');
 
-// src/entry.js
+//#endregion
+//#region src/entry.js
 console.log('unused import');
+
+//#endregion
 ```

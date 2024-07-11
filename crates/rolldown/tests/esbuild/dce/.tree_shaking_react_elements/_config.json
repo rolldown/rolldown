@@ -5,6 +5,10 @@
         "name": "entry_jsx",
         "import": "entry.jsx"
       }
+    ],
+    "external": [
+      "react"
     ]
-  }
+  },
+  "expectExecuted": false
 }

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one
 ---
@@ -8,9 +8,13 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_in
 ## src_entry_js.mjs
 
 ```js
-// node_modules/d/index.js
+
+//#region node_modules/d/index.js
 const foo = 123;
 
-// src/entry.js
+//#endregion
+//#region src/entry.js
 console.log(foo);
+
+//#endregion
 ```

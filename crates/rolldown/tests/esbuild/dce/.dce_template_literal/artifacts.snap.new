@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+assertion_line: 171
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/dce_template_literal
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region entry.js
+var a = `${keep}`;
+var c = `${keep ? 1 : 2n}`;
+
+//#endregion
+```

@@ -104,7 +104,7 @@ pub async fn render_chunk(
       });
 
       if matches!(options.format, OutputFormat::Iife) {
-        concat_source.add_source(Box::new(RawSource::new("});".to_string())));
+        concat_source.add_source(Box::new(RawSource::new("})();".to_string())));
       }
 
       generate_rendered_chunk(this, graph, options, rendered_modules, chunk_graph)

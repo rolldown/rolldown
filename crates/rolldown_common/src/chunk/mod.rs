@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 // cSpell:disable
 use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, NamedImport, NormalizedBundlerOptions,
@@ -7,6 +5,7 @@ use crate::{
 };
 pub mod types;
 
+use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
 use rolldown_utils::{path_ext::PathExt, BitSet};
 use rustc_hash::FxHashMap;
@@ -22,7 +21,7 @@ pub struct Chunk {
   pub kind: ChunkKind,
   pub modules: Vec<ModuleIdx>,
   pub filename: Option<ResourceId>,
-  pub name: Option<Arc<str>>,
+  pub name: Option<ArcStr>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Rstr>,
@@ -37,7 +36,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
-  pub fn new(name: Option<String>, bits: BitSet, modules: Vec<ModuleIdx>, kind: ChunkKind) -> Self {
+  pub fn new(name: Option<ArcStr>, bits: BitSet, modules: Vec<ModuleIdx>, kind: ChunkKind) -> Self {
     Self {
       exec_order: u32::MAX,
       modules,

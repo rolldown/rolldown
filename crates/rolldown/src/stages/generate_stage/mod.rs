@@ -1,4 +1,5 @@
 use anyhow::Result;
+use arcstr::ArcStr;
 use indexmap::IndexSet;
 use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript::AstSnippet;
@@ -245,7 +246,7 @@ impl<'a> GenerateStage<'a> {
     chunk_graph: &mut ChunkGraph,
   ) -> anyhow::Result<()> {
     struct ChunkNameInfo {
-      pub name: String,
+      pub name: ArcStr,
       pub explicit: bool,
     }
 
@@ -259,14 +260,15 @@ impl<'a> GenerateStage<'a> {
         match chunk.kind {
           ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
             if let Some(name) = &chunk.name {
-              ChunkNameInfo { name: name.to_string(), explicit: true }
+              ChunkNameInfo { name: name.clone(), explicit: true }
             } else {
               let module = &modules[entry_module_id];
               let generated = if is_user_defined {
                 try_extract_meaningful_input_name_from_path(module.resource_id())
-                  .unwrap_or("input".to_string())
+                  .map(ArcStr::from)
+                  .unwrap_or(arcstr::literal!("input"))
               } else {
-                module.resource_id().as_path().representative_file_name().into_owned()
+                ArcStr::from(module.resource_id().as_path().representative_file_name().into_owned())
               };
               ChunkNameInfo { name: generated, explicit: false }
             }
@@ -278,10 +280,12 @@ impl<'a> GenerateStage<'a> {
               chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id());
             ChunkNameInfo {
               name: first_executed_non_runtime_module.map_or_else(
-                || "chunk".to_string(),
+                || arcstr::literal!("chunk"),
                 |module_id| {
                   let module = &modules[*module_id];
-                  module.resource_id().as_path().representative_file_name().into_owned()
+                  ArcStr::from(
+                    module.resource_id().as_path().representative_file_name().into_owned(),
+                  )
                 },
               ),
               explicit: false,
@@ -301,7 +305,7 @@ impl<'a> GenerateStage<'a> {
       .collect::<IndexSet<_>>();
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
-    let mut used_names: FxHashSet<String> = FxHashSet::default();
+    let mut used_names: FxHashSet<ArcStr> = FxHashSet::default();
 
     chunk_ids.into_iter().try_for_each(|chunk_id| -> anyhow::Result<()> {
       let chunk = &mut chunk_graph.chunks[chunk_id];
@@ -320,8 +324,9 @@ impl<'a> GenerateStage<'a> {
       } else {
         let mut chunk_name = chunk_name_info.name.clone();
         let mut next_count = 1;
+        // TODO: use `FxHashMap<ArcStr, u32>` to find conflict-less name in one go.
         while used_names.contains(&chunk_name) {
-          chunk_name = format!("{chunk_name}~{next_count}");
+          chunk_name = ArcStr::from(format!("{chunk_name}~{next_count}"));
           next_count += 1;
         }
         chunk_name
@@ -341,7 +346,7 @@ impl<'a> GenerateStage<'a> {
         ..Default::default()
       });
 
-      chunk.name = Some(chunk_name.into());
+      chunk.name = Some(chunk_name);
       chunk.absolute_preliminary_filename =
         Some(preliminary.absolutize_with(&self.options.dir).expect_into_string());
       chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));

@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use arcstr::ArcStr;
 use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxHashMap;
 
@@ -10,7 +9,7 @@ use super::rendered_module::RenderedModule;
 #[derive(Debug)]
 pub struct OutputChunk {
   // PreRenderedChunk
-  pub name: Arc<str>,
+  pub name: ArcStr,
   pub is_entry: bool,
   pub is_dynamic_entry: bool,
   pub facade_module_id: Option<ResourceId>,

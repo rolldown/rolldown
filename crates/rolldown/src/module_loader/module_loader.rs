@@ -1,3 +1,4 @@
+use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
@@ -177,7 +178,7 @@ impl ModuleLoader {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn fetch_all_modules(
     mut self,
-    user_defined_entries: Vec<(Option<String>, ResolvedRequestInfo)>,
+    user_defined_entries: Vec<(Option<ArcStr>, ResolvedRequestInfo)>,
   ) -> anyhow::Result<ModuleLoaderOutput> {
     if self.input_options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));

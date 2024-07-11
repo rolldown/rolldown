@@ -304,6 +304,8 @@ export declare function transform(filename: string, sourceText: string, options?
 
 export interface TransformOptions {
   sourceType?: 'script' | 'module' | 'unambiguous' | undefined
+  /** Force jsx parsing, */
+  jsx?: boolean
   typescript?: TypeScriptBindingOptions
   react?: ReactBindingOptions
   es2015?: Es2015BindingOptions

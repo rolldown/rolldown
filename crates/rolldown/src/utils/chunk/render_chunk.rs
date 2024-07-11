@@ -45,9 +45,12 @@ pub async fn render_chunk(
         .par_iter()
         .copied()
         .filter_map(|id| graph.module_table.modules[id].as_ecma())
-        .filter_map(|m| {
-          render_ecma_module(m, &graph.ast_table[m.idx], m.resource_id.as_ref(), options)
-            .map(|rendered| (m.idx, &m.resource_id, rendered))
+        .map(|m| {
+          (
+            m.idx,
+            &m.resource_id,
+            render_ecma_module(m, &graph.ast_table[m.idx], m.resource_id.as_ref(), options),
+          )
         })
         .collect::<Vec<_>>()
         .into_iter()
@@ -60,8 +63,7 @@ pub async fn render_chunk(
           if *id == graph.runtime.id() && matches!(options.format, OutputFormat::Cjs) =>
         {
           let maybe_runtime_module = rendered_iter.next();
-          if let Some((_, _module_resource_id, module_render_output)) = maybe_runtime_module {
-            let emitted_sources = module_render_output;
+          if let Some((_, _module_resource_id, Some(emitted_sources))) = maybe_runtime_module {
             for source in emitted_sources {
               concat_source.add_source(source);
             }
@@ -89,9 +91,10 @@ pub async fn render_chunk(
       }
 
       rendered_iter.for_each(|(_id, module_resource_id, module_render_output)| {
-        let emitted_sources = module_render_output;
-        for source in emitted_sources {
-          concat_source.add_source(source);
+        if let Some(emitted_sources) = module_render_output {
+          for source in emitted_sources {
+            concat_source.add_source(source);
+          }
         }
 
         // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.

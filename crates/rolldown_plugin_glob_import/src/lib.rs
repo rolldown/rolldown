@@ -207,6 +207,7 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                                     self.ast_builder.vec1(
                                       self.ast_builder.formal_parameter(
                                         SPAN,
+                                        self.ast_builder.vec(),
                                         self.ast_builder.binding_pattern(
                                           self
                                             .ast_builder
@@ -217,7 +218,6 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                                         None,
                                         false,
                                         false,
-                                        self.ast_builder.vec(),
                                       ),
                                     ),
                                     Option::<BindingRestElement>::None,

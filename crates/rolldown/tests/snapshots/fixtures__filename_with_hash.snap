@@ -231,7 +231,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/dce/package_json_side_effects_false_one_fork
 
 - a_index-!~{001}~.mjs => a_index-FrqrZUM1.mjs
-- src_entry_js-!~{000}~.mjs => src_entry_js-9j5e7FJU.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-s8yAI1MC.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_es6
 

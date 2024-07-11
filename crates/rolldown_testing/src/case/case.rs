@@ -45,8 +45,13 @@ impl Case {
 
   fn render_assets_to_snapshot(&mut self, outputs: BundleOutput) {
     let mut assets = outputs.assets;
-    let warnings = outputs.warnings;
-
+    // Make the snapshot consistent
+    let mut warnings = outputs.warnings;
+    warnings.sort_by(|a, b| {
+      let a = a.to_string();
+      let b = b.to_string();
+      a.cmp(&b)
+    });
     if !warnings.is_empty() {
       self.snapshot.push_str("# warnings\n\n");
       let diagnostics = warnings.into_iter().map(|e| {

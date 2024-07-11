@@ -11,6 +11,7 @@ export interface RolldownOutputAsset {
   type: 'asset'
   fileName: string
   source: AssetSource
+  name: string | undefined
 }
 
 function _assertRolldownOutputAsset() {

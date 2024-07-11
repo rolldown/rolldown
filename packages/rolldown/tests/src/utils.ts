@@ -1,4 +1,8 @@
-import { RollupOutput, RolldownOutputChunk } from '../../src'
+import {
+  RollupOutput,
+  RolldownOutputChunk,
+  RolldownOutputAsset,
+} from '../../src'
 import nodePath from 'node:path'
 import nodeUrl from 'node:url'
 import assert from 'node:assert'
@@ -15,6 +19,12 @@ export function getOutputChunk(output: RollupOutput): RolldownOutputChunk[] {
   return output.output.filter(
     (chunk) => chunk.type === 'chunk',
   ) as RolldownOutputChunk[]
+}
+
+export function getOutputAsset(output: RollupOutput): RolldownOutputAsset[] {
+  return output.output.filter(
+    (chunk) => chunk.type === 'asset',
+  ) as RolldownOutputAsset[]
 }
 
 export function getOutputFileNames(output: RollupOutput) {

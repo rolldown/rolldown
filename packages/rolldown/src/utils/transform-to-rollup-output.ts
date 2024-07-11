@@ -74,6 +74,7 @@ function transformToRollupOutputAsset(
     set source(source: AssetSource) {
       asset.source = bindingAssetSource(source)
     },
+    name: asset.name ?? undefined,
   }
 }
 

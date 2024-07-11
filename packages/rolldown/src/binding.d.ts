@@ -20,6 +20,7 @@ export declare class BindingOutputAsset {
   get fileName(): string
   get source(): BindingAssetSource
   set source(source: BindingAssetSource)
+  get name(): string | null
 }
 
 export declare class BindingOutputChunk {

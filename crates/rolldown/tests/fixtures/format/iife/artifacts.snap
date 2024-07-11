@@ -43,5 +43,5 @@ var init_esm = __esmMin(() => {
 });
 
 //#endregion
-});
+})();
 ```

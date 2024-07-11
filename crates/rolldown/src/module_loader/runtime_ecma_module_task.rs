@@ -23,10 +23,18 @@ pub struct RuntimeEcmaModuleTask {
 
 pub struct RuntimeEcmaModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
-  pub ast_symbol: AstSymbols,
+  pub ast_symbols: AstSymbols,
   pub ast: EcmaAst,
   // pub warnings: Vec<BuildError>,
   pub module: EcmaModule,
+}
+
+pub struct MakeEcmaAstResult {
+  ast: EcmaAst,
+  ast_scope: AstScopes,
+  scan_result: ScanResult,
+  ast_symbols: AstSymbols,
+  namespace_object_ref: SymbolRef,
 }
 
 impl RuntimeEcmaModuleTask {
@@ -38,9 +46,10 @@ impl RuntimeEcmaModuleTask {
   pub fn run(self) -> anyhow::Result<()> {
     let source: Arc<str> = include_str!("../runtime/runtime-without-comments.js").into();
 
-    let (ast, scope, scan_result, symbol, namespace_object_ref) = self.make_ast(&source)?;
+    let MakeEcmaAstResult { ast, ast_scope, scan_result, ast_symbols, namespace_object_ref } =
+      self.make_ecma_ast(&source)?;
 
-    let runtime = RuntimeModuleBrief::new(self.module_id, &scope);
+    let runtime = RuntimeModuleBrief::new(self.module_id, &ast_scope);
 
     let ScanResult {
       named_imports,
@@ -67,7 +76,7 @@ impl RuntimeEcmaModuleTask {
       imports,
       star_exports,
       default_export_ref,
-      scope,
+      scope: ast_scope,
       exports_kind: ExportsKind::Esm,
       namespace_object_ref,
       def_format: ModuleDefFormat::EsmMjs,
@@ -88,7 +97,7 @@ impl RuntimeEcmaModuleTask {
 
     if let Err(_err) = self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeEcmaModuleTaskResult {
       // warnings: self.warnings,
-      ast_symbol: symbol,
+      ast_symbols,
       module,
       runtime,
       ast,
@@ -99,10 +108,7 @@ impl RuntimeEcmaModuleTask {
     Ok(())
   }
 
-  fn make_ast(
-    &self,
-    source: &Arc<str>,
-  ) -> anyhow::Result<(EcmaAst, AstScopes, ScanResult, AstSymbols, SymbolRef)> {
+  fn make_ecma_ast(&self, source: &Arc<str>) -> anyhow::Result<MakeEcmaAstResult> {
     let source_type = SourceType::default();
     let mut ast = EcmaCompiler::parse(Arc::clone(source), source_type)?;
     tweak_ast_for_scanning(&mut ast);
@@ -113,21 +119,21 @@ impl RuntimeEcmaModuleTask {
       std::mem::take(&mut symbol_table.references),
       std::mem::take(&mut symbol_table.resolved_references),
     );
-    let mut symbol_for_module = AstSymbols::from_symbol_table(symbol_table);
+    let mut ast_symbols = AstSymbols::from_symbol_table(symbol_table);
     let facade_path = ResourceId::new("runtime");
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,
-      &mut symbol_for_module,
+      &mut ast_symbols,
       "runtime".to_string(),
       ModuleDefFormat::EsmMjs,
       source,
       &facade_path,
       &ast.trivias,
     );
-    let namespace_symbol = scanner.namespace_object_ref;
+    let namespace_object_ref = scanner.namespace_object_ref;
     let scan_result = scanner.scan(ast.program());
 
-    Ok((ast, ast_scope, scan_result, symbol_for_module, namespace_symbol))
+    Ok(MakeEcmaAstResult { ast, ast_scope, scan_result, ast_symbols, namespace_object_ref })
   }
 }

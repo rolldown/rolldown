@@ -252,12 +252,12 @@ impl ModuleLoader {
           self.symbols.add_ast_symbols(module_id, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeEcmaModuleTaskResult { ast_symbol, module, runtime, ast } = task_result;
+          let RuntimeEcmaModuleTaskResult { ast_symbols, module, runtime, ast } = task_result;
 
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module.into());
           self.intermediate_normal_modules.index_ecma_ast[self.runtime_id] = Some(ast);
 
-          self.symbols.add_ast_symbols(self.runtime_id, ast_symbol);
+          self.symbols.add_ast_symbols(self.runtime_id, ast_symbols);
           runtime_brief = Some(runtime);
         }
         Msg::BuildErrors(e) => {

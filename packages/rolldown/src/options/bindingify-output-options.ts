@@ -1,8 +1,6 @@
 import type { BindingOutputOptions } from '../binding'
 import type { NormalizedOutputOptions } from './normalized-output-options'
 
-export type InternalModuleFormat = 'es' | 'cjs'
-
 export function bindingifyOutputOptions(
   outputOptions: NormalizedOutputOptions,
 ): BindingOutputOptions {

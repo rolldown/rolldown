@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc::index::IndexVec;
 use rolldown_common::{EntryPoint, ImportKind, ModuleIdx, ModuleTable, ResolvedRequestInfo};
@@ -89,7 +90,7 @@ impl ScanStage {
   #[tracing::instrument(level = "debug", skip_all)]
   async fn resolve_user_defined_entries(
     &mut self,
-  ) -> Result<Vec<(Option<String>, ResolvedRequestInfo)>> {
+  ) -> Result<Vec<(Option<ArcStr>, ResolvedRequestInfo)>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 
@@ -107,7 +108,8 @@ impl ScanStage {
       )
       .await;
 
-      resolved.map(|info| (args, info.map(|info| (input_item.name.clone(), info))))
+      resolved
+        .map(|info| (args, info.map(|info| ((input_item.name.clone().map(ArcStr::from)), info))))
     }))
     .await;
 

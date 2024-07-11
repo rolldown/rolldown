@@ -15,6 +15,7 @@ workspace = true
 
 [dependencies]
 anyhow             = { workspace = true }
+arcstr             = { workspace = true }
 dashmap            = { workspace = true }
 glob-match         = { workspace = true }
 lightningcss       = { workspace = true }

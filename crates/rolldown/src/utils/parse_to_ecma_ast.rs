@@ -39,14 +39,14 @@ pub fn parse_to_ecma_ast(
     ModuleType::Ts => (source, OxcParseType::Ts),
     ModuleType::Tsx => (source, OxcParseType::Tsx),
     ModuleType::Json => (json_to_esm(&source)?.into(), OxcParseType::Js),
-    ModuleType::Text => (text_to_esm(&source)?.into(), OxcParseType::Js),
-    ModuleType::Base64 | ModuleType::Dataurl => (text_to_esm(&source)?.into(), OxcParseType::Js),
+    ModuleType::Base64 | ModuleType::Dataurl | ModuleType::Text => {
+      (text_to_esm(&source)?.into(), OxcParseType::Js)
+    }
     ModuleType::Binary => (
       binary_to_esm(&source, options.platform, ROLLDOWN_RUNTIME_RESOURCE_ID).into(),
       OxcParseType::Js,
     ),
-    ModuleType::Empty => ("export {}".to_string().into(), OxcParseType::Js),
-    ModuleType::Css => ("".to_string().into(), OxcParseType::Js),
+    ModuleType::Empty | ModuleType::Css => ("export {}".to_string().into(), OxcParseType::Js), // We can regard CSS as an empty module in Ecma bundling.
   };
 
   let oxc_source_type = {

@@ -546,7 +546,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             // iife format doesn't support external module
           }
           Module::Css(_) => {
-            // iife format doesn't support css module
+            todo!()
           }
         }
         return;

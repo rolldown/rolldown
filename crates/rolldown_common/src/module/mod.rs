@@ -65,48 +65,42 @@ impl Module {
   pub fn as_ecma(&self) -> Option<&EcmaModule> {
     match self {
       Module::Ecma(v) => Some(v),
-      Module::Css(_) => None,
-      Module::External(_) => None,
+      _ => None,
     }
   }
 
   pub fn as_css(&self) -> Option<&CssModule> {
     match self {
       Module::Css(v) => Some(v),
-      Module::Ecma(_) => None,
-      Module::External(_) => None,
+      _ => None,
     }
   }
 
   pub fn as_external(&self) -> Option<&ExternalModule> {
     match self {
       Module::External(v) => Some(v),
-      Module::Css(_) => None,
-      Module::Ecma(_) => None,
+      _ => None,
     }
   }
 
   pub fn as_ecma_mut(&mut self) -> Option<&mut EcmaModule> {
     match self {
       Module::Ecma(v) => Some(v),
-      Module::Css(_) => None,
-      Module::External(_) => None,
+      _ => None,
     }
   }
 
   pub fn as_css_mut(&mut self) -> Option<&mut CssModule> {
     match self {
       Module::Css(v) => Some(v),
-      Module::Ecma(_) => None,
-      Module::External(_) => None,
+      _ => None,
     }
   }
 
   pub fn as_external_mut(&mut self) -> Option<&mut ExternalModule> {
     match self {
       Module::External(v) => Some(v),
-      Module::Css(_) => None,
-      Module::Ecma(_) => None,
+      _ => None,
     }
   }
 }

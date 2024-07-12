@@ -152,7 +152,13 @@ impl ModuleLoader {
           // Because we should still regard css as a module importing, so we should still run following code.
           // And we should process it as Css.
           if let Some("css") = ext {
-            let loader = &self.shared_context.input_options.module_types.get("css").unwrap();
+            // FIXME reduce check times to improve performance (in `EcmaModuleTask`, it checks again).
+            let loader = &self
+              .shared_context
+              .input_options
+              .module_types
+              .get("css")
+              .unwrap_or(&ModuleType::Css);
             if matches!(loader, &&ModuleType::Css) {
               todo!()
             }

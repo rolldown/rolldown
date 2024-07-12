@@ -1,8 +1,7 @@
 import { Worker } from 'node:worker_threads'
 import { availableParallelism } from 'node:os'
-import type { ParallelPlugin, Plugin } from '../plugin'
+import type { RolldownPlugin } from '../plugin'
 import { ParallelJsPluginRegistry } from '../binding'
-import { BuiltinPlugin } from '../plugin/bindingify-builtin-plugin'
 
 export type WorkerData = {
   registryId: number
@@ -16,9 +15,7 @@ type ParallelPluginInfo = {
   options: unknown
 }
 
-export async function initializeParallelPlugins(
-  plugins: (Plugin | ParallelPlugin | BuiltinPlugin)[],
-) {
+export async function initializeParallelPlugins(plugins: RolldownPlugin[]) {
   const pluginInfos: ParallelPluginInfo[] = []
   for (const [index, plugin] of plugins.entries()) {
     if ('_parallel' in plugin) {

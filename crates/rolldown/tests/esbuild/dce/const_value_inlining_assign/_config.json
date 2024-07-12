@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "const-assign_js",
+        "import": "const-assign.js"
+      },
+      {
+        "name": "const-update_js",
+        "import": "const-update.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

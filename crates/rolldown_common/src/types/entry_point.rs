@@ -1,8 +1,10 @@
+use arcstr::ArcStr;
+
 use crate::ModuleIdx;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct EntryPoint {
-  pub name: Option<String>,
+  pub name: Option<ArcStr>,
   pub id: ModuleIdx,
   pub kind: EntryPointKind,
 }

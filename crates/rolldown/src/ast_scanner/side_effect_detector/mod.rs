@@ -8,6 +8,8 @@ use oxc::ast::Trivias;
 use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
 
+use self::utils::{known_primitive_type, PrimitiveType};
+
 mod annotation;
 mod utils;
 
@@ -44,7 +46,7 @@ impl<'a> SideEffectDetector<'a> {
     Self { scope, source, trivias }
   }
 
-  fn is_unresolved_reference(&mut self, ident_ref: &IdentifierReference) -> bool {
+  fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
     self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
   }
 
@@ -158,9 +160,13 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.is_unresolved_reference(ident),
-      Expression::TemplateLiteral(literal) => {
-        literal.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
-      }
+      // https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2576-L2588
+      Expression::TemplateLiteral(literal) => literal.expressions.iter().any(|expr| {
+        // Primitive type detection is more strict and faster than side_effects detection of
+        // `Expr`, put it first to fail fast.
+        known_primitive_type(self.scope, expr) == PrimitiveType::Unknown
+          || self.detect_side_effect_of_expr(expr)
+      }),
       Expression::LogicalExpression(logic_expr) => {
         self.detect_side_effect_of_expr(&logic_expr.left)
           || self.detect_side_effect_of_expr(&logic_expr.right)
@@ -248,13 +254,28 @@ impl<'a> SideEffectDetector<'a> {
       Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
       // Currently, using a fallback value to make the bundle correct,
       // finishing the implementation after we carefully read the spec
-      Declaration::UsingDeclaration(_) => true,
+      Declaration::UsingDeclaration(decl) => {
+        decl.is_await || self.detect_side_effect_of_using_declarators(&decl.declarations)
+      }
       Declaration::TSTypeAliasDeclaration(_)
       | Declaration::TSInterfaceDeclaration(_)
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
       | Declaration::TSImportEqualsDeclaration(_) => unreachable!("ts should be transpiled"),
     }
+  }
+
+  fn detect_side_effect_of_using_declarators(
+    &self,
+    declarators: &[oxc::ast::ast::VariableDeclarator],
+  ) -> bool {
+    declarators.iter().any(|decl| {
+      decl.init.as_ref().map_or(false, |init| match init {
+        Expression::NullLiteral(_) => false,
+        Expression::Identifier(id) => !(id.name == "undefined" && self.is_unresolved_reference(id)),
+        _ => true,
+      })
+    })
   }
 
   pub fn detect_side_effect_of_stmt(&mut self, stmt: &oxc::ast::ast::Statement) -> bool {
@@ -432,7 +453,7 @@ mod test {
   #[test]
   fn test_template_literal() {
     assert!(!get_statements_side_effect("`hello`"));
-    assert!(!get_statements_side_effect("const foo = ''; `hello${foo}`"));
+    assert!(get_statements_side_effect("const foo = ''; `hello${foo}`"));
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("`hello${foo}`"));
     assert!(get_statements_side_effect("const foo = {}; `hello${foo.bar}`"));

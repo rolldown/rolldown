@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/remove_unused_imports
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+import "a";
+import "b";
+import "c";
+
+```

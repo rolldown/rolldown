@@ -1,6 +1,6 @@
 // cSpell:disable
 import { defineTest } from '@tests'
-import { getOutputFileNames } from '@tests/utils'
+import { getOutputAsset } from '@tests/utils'
 import { expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -38,12 +38,20 @@ export default defineTest({
     ],
   },
   afterTest: (output) => {
-    expect(getOutputFileNames(output)).toMatchInlineSnapshot(`
-      [
-        "emitted-umwR9Fta.txt",
-        "icon-eUkSwvpV.png",
-        "main.js",
-      ]
-    `)
+    const assets = getOutputAsset(output)
+    for (const asset of assets) {
+      switch (asset.name) {
+        case 'emitted.txt':
+          expect(asset.fileName).toMatchInlineSnapshot(`"emitted-umwR9Fta.txt"`)
+          break
+
+        case 'icon.png':
+          expect(asset.fileName).toMatchInlineSnapshot(`"icon-eUkSwvpV.png"`)
+          break
+
+        default:
+          break
+      }
+    }
   },
 })

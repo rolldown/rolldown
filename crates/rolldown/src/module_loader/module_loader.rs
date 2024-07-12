@@ -1,10 +1,7 @@
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
-use rolldown_common::{
-  EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleIdx, ModuleTable, OutputFormat, ResolvedRequestInfo,
-};
+use rolldown_common::{EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module, ModuleIdx, ModuleTable, OutputFormat, ResolvedRequestInfo, ModuleType};
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;
@@ -149,8 +146,13 @@ impl ModuleLoader {
 
           let ext = rolldown_utils::extension::get_ext_from_str(&module_path.path);
 
+          // Because we should still regard css as a module importing, so we should still run following code.
+          // And we should process it as Css.
           if let Some("css") = ext {
-            todo!()
+            let loader = &self.shared_context.input_options.module_types.get("css").unwrap();
+            if matches!(loader, &&ModuleType::Css) {
+              todo!()
+            }
           }
 
           let id = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);

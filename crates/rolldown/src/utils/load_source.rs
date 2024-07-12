@@ -1,10 +1,9 @@
-use std::sync::Arc;
-
 use anyhow::Context;
 use rolldown_common::{side_effects::HookSideEffects, ModuleType, ResolvedPath};
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::mime::guess_mime;
+use std::sync::Arc;
 use sugar_path::SugarPath;
 
 pub async fn load_source(
@@ -47,6 +46,7 @@ pub async fn load_source(
           format!("data:{mime};base64,{encoded}")
         }
       }
+      ModuleType::Empty | ModuleType::Css => String::new(),
       _ => fs.read_to_string(resolved_path.path.as_path())?,
     }
   };

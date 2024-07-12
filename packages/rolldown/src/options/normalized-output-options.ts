@@ -3,7 +3,7 @@ import type {
   SourcemapPathTransformOption,
 } from '../rollup'
 import type { OutputOptions } from './output-options'
-import type { Plugin, ParallelPlugin } from '../plugin'
+import type { RolldownPlugin } from '../plugin'
 import type { RenderedChunk } from '../binding'
 
 export type InternalModuleFormat = 'es' | 'cjs' | 'iife'
@@ -11,7 +11,7 @@ export type InternalModuleFormat = 'es' | 'cjs' | 'iife'
 type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 
 export interface NormalizedOutputOptions extends OutputOptions {
-  plugins: (Plugin | ParallelPlugin)[]
+  plugins: RolldownPlugin[]
   dir: string | undefined
   format: InternalModuleFormat
   exports: 'named'

@@ -8,7 +8,7 @@ import type { LogLevelOption } from '../log/logging'
 import {
   bindingifyBuiltInPlugin,
   BuiltinPlugin,
-} from '../plugin/bindingify-builtin-plugin'
+} from '../plugin/builtin-plugin'
 
 export function bindingifyInputOptions(
   options: NormalizedInputOptions,

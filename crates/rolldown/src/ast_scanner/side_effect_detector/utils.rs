@@ -182,13 +182,13 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
           PrimitiveType::String
         } else if left == PrimitiveType::BigInt && right == PrimitiveType::BigInt {
           PrimitiveType::BigInt
-        } else if left != PrimitiveType::Unknown
-          && left != PrimitiveType::Mixed
-          && left != PrimitiveType::BigInt
-          && right != PrimitiveType::Unknown
-          && right != PrimitiveType::Mixed
-          && right != PrimitiveType::BigInt
-        {
+        } else if !matches!(
+          left,
+          PrimitiveType::Unknown | PrimitiveType::Mixed | PrimitiveType::BigInt
+        ) && !matches!(
+          right,
+          PrimitiveType::Unknown | PrimitiveType::Mixed | PrimitiveType::BigInt
+        ) {
           PrimitiveType::Number
         } else {
           PrimitiveType::Mixed // Can be number or bigint or string (or an exception)

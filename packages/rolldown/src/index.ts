@@ -65,6 +65,7 @@ export {
 }
 
 export type {
+  RolldownOutputAsset,
   RolldownOutputChunk,
   RolldownOptions,
   RolldownOutput,

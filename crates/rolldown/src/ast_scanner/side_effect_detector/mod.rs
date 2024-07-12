@@ -57,15 +57,32 @@ impl<'a> SideEffectDetector<'a> {
       ClassElement::StaticBlock(static_block) => {
         static_block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
       }
-      ClassElement::MethodDefinition(_) => false,
+      ClassElement::MethodDefinition(def) => match &def.key {
+        PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
+        key @ oxc::ast::match_expression!(PropertyKey) => {
+          def.computed
+            && (known_primitive_type(self.scope, key.to_expression()) == PrimitiveType::Unknown
+              || self.detect_side_effect_of_expr(key.to_expression()))
+        }
+      },
       ClassElement::PropertyDefinition(def) => {
-        (match &def.key {
+        dbg!(&def);
+        let key_side_effect = match &def.key {
           // FIXME: this is wrong, we should also always check the `def.value`.
           PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
           key @ oxc::ast::match_expression!(PropertyKey) => {
-            self.detect_side_effect_of_expr(key.to_expression())
+            def.computed
+              && (known_primitive_type(self.scope, key.to_expression()) == PrimitiveType::Unknown
+                || self.detect_side_effect_of_expr(key.to_expression()))
           }
-        } || def.value.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init)))
+        };
+        if key_side_effect {
+          return true;
+        }
+
+        let value_side_effect = (def.r#static
+          && def.value.as_ref().map_or(false, |init| self.detect_side_effect_of_expr(init)));
+        value_side_effect
       }
       ClassElement::AccessorProperty(def) => {
         (match &def.key {
@@ -160,7 +177,13 @@ impl<'a> SideEffectDetector<'a> {
       }
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
-      Expression::Identifier(ident) => self.is_unresolved_reference(ident),
+      Expression::Identifier(ident) => {
+        if self.is_unresolved_reference(ident) {
+          ident.name != "undefined"
+        } else {
+          false
+        }
+      }
       // https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2576-L2588
       Expression::TemplateLiteral(literal) => literal.expressions.iter().any(|expr| {
         // Primitive type detection is more strict and faster than side_effects detection of

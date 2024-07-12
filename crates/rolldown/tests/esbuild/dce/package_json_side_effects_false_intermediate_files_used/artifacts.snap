@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used
+---
+# Assets
+
+## src_entry_js.mjs
+
+```js
+
+//#region node_modules/demo-pkg/foo.js
+const foo = 123;
+
+//#endregion
+//#region src/entry.js
+console.log(foo);
+
+//#endregion
+```

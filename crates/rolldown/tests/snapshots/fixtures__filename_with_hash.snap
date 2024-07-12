@@ -58,6 +58,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-G8jr1j_W.mjs
 
+# tests/esbuild/dce/const_value_inlining_assign
+
+- const-assign_js-!~{000}~.mjs => const-assign_js-HdoE_V08.mjs
+- const-update_js-!~{001}~.mjs => const-update_js-EjXlLtDz.mjs
+
+# tests/esbuild/dce/data_url_loader_remove_unused
+
+- entry_js-!~{000}~.mjs => entry_js-G8jr1j_W.mjs
+
+# tests/esbuild/dce/dce_class_static_blocks
+
+- entry_js-!~{000}~.mjs => entry_js-5berjFJC.mjs
+
 # tests/esbuild/dce/dce_of_destructuring
 
 - entry_js-!~{000}~.mjs => entry_js-11fABjup.mjs
@@ -75,6 +88,17 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-hcSNdCWj.mjs
 
+# tests/esbuild/dce/dce_var_exports
+
+- a_js-!~{000}~.mjs => a_js-qLHI9fGd.mjs
+- b_js-!~{001}~.mjs => b_js-inveJgqr.mjs
+- c_js-!~{002}~.mjs => c_js-wm_SqeAu.mjs
+- chunk-!~{003}~.mjs => chunk-QxMLzDSb.mjs
+
+# tests/esbuild/dce/disable_tree_shaking
+
+- entry_jsx-!~{000}~.mjs => entry_jsx-rGLod2SF.mjs
+
 # tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 
 - entry_js-!~{000}~.mjs => entry_js-E6ZBmi5J.mjs
@@ -90,6 +114,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/dce/json_loader_remove_unused
 
 - entry_js-!~{000}~.mjs => entry_js-G8jr1j_W.mjs
+
+# tests/esbuild/dce/multiple_declaration_tree_shaking
+
+- function2_js-!~{002}~.mjs => function2_js-Kq5hd7IL.mjs
+- function3_js-!~{003}~.mjs => function3_js-F1RckUBF.mjs
+- var2_js-!~{000}~.mjs => var2_js-MWROqWbu.mjs
+- var3_js-!~{001}~.mjs => var3_js-Xb9YUCVA.mjs
 
 # tests/esbuild/dce/no_side_effects_comment
 
@@ -115,6 +146,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - stmt-export-local_js-!~{005}~.mjs => stmt-export-local_js-uHmpXE13.mjs
 - stmt-fn_js-!~{002}~.mjs => stmt-fn_js-nGhExA7J.mjs
 - stmt-local_js-!~{004}~.mjs => stmt-local_js-6z8D7Phz.mjs
+
+# tests/esbuild/dce/no_side_effects_comment_type_script_declare
+
+- entry_ts-!~{000}~.mjs => entry_ts-XuDJ8QAX.mjs
 
 # tests/esbuild/dce/package_json_side_effects_array_glob
 
@@ -148,9 +183,30 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-9O6WDuxh.mjs
 
+# tests/esbuild/dce/package_json_side_effects_false_all_fork
+
+- a_index-!~{001}~.mjs => a_index-FrqrZUM1.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-s8yAI1MC.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_all
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-gzsgei6H.mjs
+
 # tests/esbuild/dce/package_json_side_effects_false_intermediate_files_unused
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-h5EtpwH6.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_intermediate_files_used
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-fB-6pXf3.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_common_js
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-jv1DsZdh.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6
+
+- src_entry_js-!~{000}~.mjs => src_entry_js-ijOhp_0p.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_named_import_common_js
 
@@ -171,6 +227,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/dce/package_json_side_effects_false_no_warning_in_node_modules_issue999
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-1KMa-Imt.mjs
+
+# tests/esbuild/dce/package_json_side_effects_false_one_fork
+
+- a_index-!~{001}~.mjs => a_index-FrqrZUM1.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-s8yAI1MC.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_es6
 
@@ -200,6 +261,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - src_entry_js-!~{000}~.mjs => src_entry_js-o76MrlIs.mjs
 
+# tests/esbuild/dce/preserve_directives_minify_pass_through
+
+- entry_js-!~{000}~.mjs => entry_js-kD8aXYJv.mjs
+
 # tests/esbuild/dce/remove_code_after_label_with_return
 
 - entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs
@@ -211,6 +276,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/dce/remove_unused_import_meta
 
 - entry_js-!~{000}~.mjs => entry_js-bQpE9RDN.mjs
+
+# tests/esbuild/dce/remove_unused_imports
+
+- entry_js-!~{000}~.mjs => entry_js-BIn6p0ye.mjs
 
 # tests/esbuild/dce/text_loader_remove_unused
 
@@ -235,6 +304,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/dce/tree_shaking_no_bundle_esm
 
 - entry_js-!~{000}~.mjs => entry_js-DfC8X1IV.mjs
+
+# tests/esbuild/dce/tree_shaking_no_bundle_iife
+
+- entry_js-!~{000}~.mjs => entry_js-uNaywliE.mjs
 
 # tests/esbuild/dce/tree_shaking_unary_operators
 

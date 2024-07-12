@@ -84,6 +84,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-wcrpmSWn.mjs
 
+# tests/esbuild/dce/dce_template_literal
+
+- entry_js-!~{000}~.mjs => entry_js-HpxJd0Pb.mjs
+
 # tests/esbuild/dce/dce_type_of
 
 - entry_js-!~{000}~.mjs => entry_js-qZjSwIEn.mjs

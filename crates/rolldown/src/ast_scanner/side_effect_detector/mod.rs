@@ -8,6 +8,8 @@ use oxc::ast::Trivias;
 use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
 
+use self::utils::{known_primitive_type, PrimitiveType};
+
 mod annotation;
 mod utils;
 
@@ -158,9 +160,11 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.is_unresolved_reference(ident),
-      Expression::TemplateLiteral(literal) => {
-        literal.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
-      }
+      // https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2576-L2588
+      Expression::TemplateLiteral(literal) => literal.expressions.iter().any(|expr| {
+        self.detect_side_effect_of_expr(expr)
+          || known_primitive_type(self.scope, expr) == PrimitiveType::PrimitiveUnknown
+      }),
       Expression::LogicalExpression(logic_expr) => {
         self.detect_side_effect_of_expr(&logic_expr.left)
           || self.detect_side_effect_of_expr(&logic_expr.right)

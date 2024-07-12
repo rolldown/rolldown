@@ -44,7 +44,7 @@ impl<'a> SideEffectDetector<'a> {
     Self { scope, source, trivias }
   }
 
-  fn is_unresolved_reference(&mut self, ident_ref: &IdentifierReference) -> bool {
+  fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
     self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
   }
 
@@ -248,13 +248,28 @@ impl<'a> SideEffectDetector<'a> {
       Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
       // Currently, using a fallback value to make the bundle correct,
       // finishing the implementation after we carefully read the spec
-      Declaration::UsingDeclaration(_) => true,
+      Declaration::UsingDeclaration(decl) => {
+        decl.is_await || self.detect_side_effect_of_using_declarators(&decl.declarations)
+      }
       Declaration::TSTypeAliasDeclaration(_)
       | Declaration::TSInterfaceDeclaration(_)
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
       | Declaration::TSImportEqualsDeclaration(_) => unreachable!("ts should be transpiled"),
     }
+  }
+
+  fn detect_side_effect_of_using_declarators(
+    &self,
+    declarators: &[oxc::ast::ast::VariableDeclarator],
+  ) -> bool {
+    declarators.iter().any(|decl| {
+      decl.init.as_ref().map_or(false, |init| match init {
+        Expression::NullLiteral(_) => false,
+        Expression::Identifier(id) => !(id.name == "undefined" && self.is_unresolved_reference(id)),
+        _ => true,
+      })
+    })
   }
 
   pub fn detect_side_effect_of_stmt(&mut self, stmt: &oxc::ast::ast::Statement) -> bool {

@@ -1,7 +1,10 @@
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
-use rolldown_common::{EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module, ModuleIdx, ModuleTable, OutputFormat, ResolvedRequestInfo, ModuleType};
+use rolldown_common::{
+  EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
+  ModuleIdx, ModuleTable, ModuleType, OutputFormat, ResolvedRequestInfo,
+};
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
 use rolldown_fs::OsFileSystem;

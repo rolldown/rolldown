@@ -1,9 +1,9 @@
+mod css_module_task;
 mod ecma_module_task;
 pub mod module_loader;
 mod runtime_ecma_module_task;
 pub mod task_context;
 mod task_result;
-mod css_module_task;
 
 pub use module_loader::ModuleLoader;
 use rolldown_error::BuildError;

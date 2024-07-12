@@ -1,10 +1,14 @@
+use daachorse::DoubleArrayAhoCorasick;
 use once_cell::sync::Lazy;
 use oxc::span::Span;
 
 use super::SideEffectDetector;
 
-static PURE_COMMENTS: Lazy<regex::Regex> =
-  Lazy::new(|| regex::Regex::new("^\\s*(#|@)__PURE__\\s*$").expect("Should create the regex"));
+static PURE_COMMENTS: Lazy<DoubleArrayAhoCorasick<usize>> = Lazy::new(|| {
+  let patterns = vec!["@__PURE__", "#__PURE__"];
+
+  DoubleArrayAhoCorasick::new(patterns).unwrap()
+});
 
 impl<'a> SideEffectDetector<'a> {
   /// Comments containing @__PURE__ or #__PURE__ mark a specific function call
@@ -21,6 +25,8 @@ impl<'a> SideEffectDetector<'a> {
   pub fn is_pure_function_or_constructor_call(&self, span: Span) -> bool {
     let leading_comment = self.leading_comment_for(span);
 
-    leading_comment.map_or(false, |(_comment, comment_text)| PURE_COMMENTS.is_match(comment_text))
+    leading_comment.map_or(false, |(_comment, comment_text)| {
+      PURE_COMMENTS.find_iter(comment_text).next().is_some()
+    })
   }
 }

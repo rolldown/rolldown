@@ -15,6 +15,7 @@ workspace = true
 anyhow                = { workspace = true }
 arcstr                = { workspace = true }
 bitflags              = { workspace = true }
+daachorse             = { workspace = true }
 dunce                 = { workspace = true }
 futures               = { workspace = true }
 indexmap              = { workspace = true }
@@ -41,7 +42,6 @@ tracing               = { workspace = true }
 tracing-chrome        = { workspace = true }
 urlencoding           = { workspace = true }
 xxhash-rust           = { workspace = true, features = ["xxh3"] }
-
 
 [dev-dependencies]
 glob             = { workspace = true }

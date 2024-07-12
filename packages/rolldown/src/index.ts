@@ -27,14 +27,17 @@ import type {
   SourceDescription,
   TransformResult,
 } from './plugin'
-import { defineParallelPlugin, DefineParallelPluginResult } from './plugin'
+import {
+  defineParallelPlugin,
+  DefineParallelPluginResult,
+} from './plugin/parallel-plugin'
 import { defineConfig } from './utils/define-config'
 import { rolldown, experimental_scan } from './rolldown'
 import { ConfigExport } from './types/config-export'
 import {
   BuiltinGlobImportPlugin,
   BuiltinWasmPlugin,
-} from './plugin/bindingify-builtin-plugin'
+} from './plugin/builtin-plugin'
 import { RolldownBuild } from './rolldown-build'
 import {
   EmittedAsset,

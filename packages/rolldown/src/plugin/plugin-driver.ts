@@ -1,14 +1,13 @@
 import { getLogHandler, normalizeLog } from '../log/logHandler'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
-import { ParallelPlugin, Plugin, RolldownPlugin } from './'
+import { Plugin, RolldownPlugin } from './'
 import { error, logPluginError } from '../log/logs'
 import { NormalizedInputOptions } from '../options/normalized-input-options'
-import { NormalizedOutputOptions } from '../options/normalized-output-options'
 import { RollupError } from '../rollup'
 import { normalizeHook } from '../utils/normalize-hook'
 import { InputOptions, OutputOptions } from '..'
 import { getLogger, getOnLog } from '../log/logger'
-import { BuiltinPlugin } from './bindingify-builtin-plugin'
+import { BuiltinPlugin } from './builtin-plugin'
 
 export class PluginDriver {
   public async callOptionsHook(
@@ -66,17 +65,17 @@ export class PluginDriver {
     return inputOptions
   }
 
-  public async callOutputOptionsHook(
+  public callOutputOptionsHook(
     inputOptions: NormalizedInputOptions,
     outputOptions: OutputOptions,
-  ): Promise<OutputOptions> {
+  ): OutputOptions {
     const plugins = getObjectPlugins(inputOptions.plugins)
 
     for (const plugin of plugins) {
       const options = plugin.outputOptions
       if (options) {
         const [handler, _optionsIgnoredSofar] = normalizeHook(options)
-        const result = await handler.call(null, outputOptions)
+        const result = handler.call(null, outputOptions)
 
         if (result) {
           outputOptions = result

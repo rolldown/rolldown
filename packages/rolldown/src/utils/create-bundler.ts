@@ -22,7 +22,7 @@ export async function createBundler(
   )
 
   try {
-    outputOptions = await pluginDriver.callOutputOptionsHook(
+    outputOptions = pluginDriver.callOutputOptionsHook(
       normalizedInputOptions,
       outputOptions,
     )

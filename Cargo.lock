@@ -2127,6 +2127,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "bitflags 2.6.0",
+ "daachorse",
  "dunce",
  "futures",
  "glob",

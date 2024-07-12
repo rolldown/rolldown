@@ -2,9 +2,10 @@ use std::sync::Arc;
 
 use once_cell::sync::Lazy;
 use oxc::ast::ast::{
-  BindingPatternKind, Expression, IdentifierReference, MemberExpression, PropertyKey,
+  Argument, ArrayExpressionElement, BindingPatternKind, Expression, IdentifierReference,
+  MemberExpression, PropertyKey,
 };
-use oxc::ast::Trivias;
+use oxc::ast::{match_expression, Trivias};
 use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
 
@@ -197,24 +198,40 @@ impl<'a> SideEffectDetector<'a> {
       }
       // TODO: Implement these
       Expression::Super(_)
-      | Expression::ArrayExpression(_)
       | Expression::AssignmentExpression(_)
       | Expression::AwaitExpression(_)
       | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
-      | Expression::NewExpression(_)
       | Expression::TaggedTemplateExpression(_)
       | Expression::UpdateExpression(_)
       | Expression::YieldExpression(_)
       | Expression::JSXElement(_)
       | Expression::JSXFragment(_) => true,
+
+      Expression::ArrayExpression(expr) => expr.elements.iter().any(|elem| match elem {
+        ArrayExpressionElement::SpreadElement(_) => true,
+        ArrayExpressionElement::Elision(_) => false,
+        match_expression!(ArrayExpressionElement) => {
+          self.detect_side_effect_of_expr(elem.to_expression())
+        }
+      }),
+      Expression::NewExpression(expr) => {
+        let is_pure = self.is_pure_function_or_constructor_call(expr.span);
+        if is_pure {
+          expr.arguments.iter().any(|arg| match arg {
+            Argument::SpreadElement(_) => true,
+            _ => self.detect_side_effect_of_expr(arg.to_expression()),
+          })
+        } else {
+          true
+        }
+      }
       Expression::CallExpression(expr) => {
         let is_pure = self.is_pure_function_or_constructor_call(expr.span);
         if is_pure {
           expr.arguments.iter().any(|arg| match arg {
-            oxc::ast::ast::Argument::SpreadElement(_) => true,
-            // TODO: implement this
-            _ => false,
+            Argument::SpreadElement(_) => true,
+            _ => self.detect_side_effect_of_expr(arg.to_expression()),
           })
         } else {
           true

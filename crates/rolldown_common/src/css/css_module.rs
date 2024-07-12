@@ -12,3 +12,22 @@ pub struct CssModule {
   pub side_effects: DeterminedSideEffects,
   pub ast: StyleSheet<'static, 'static>,
 }
+
+impl CssModule {
+  pub fn new(
+    source: ArcStr,
+    name: String,
+    idx: ModuleIdx,
+    side_effects: DeterminedSideEffects,
+  ) -> Self {
+    let ast = rolldown_css::ast::parse_to_css_ast(&source);
+    Self {
+      exec_order: u32::MAX,
+      source,
+      name,
+      idx,
+      side_effects,
+      ast,
+    }
+  }
+}

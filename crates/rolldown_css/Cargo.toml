@@ -12,6 +12,7 @@ repository.workspace = true
 [dependencies]
 anyhow       = { workspace = true }
 lightningcss = { workspace = true }
+arcstr       = { workspace = true }
 
 [lints]
 workspace = true

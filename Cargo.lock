@@ -2202,6 +2202,7 @@ dependencies = [
  "oxc",
  "regex",
  "regress",
+ "rolldown_css",
  "rolldown_fs",
  "rolldown_rstr",
  "rolldown_sourcemap",
@@ -2218,6 +2219,7 @@ name = "rolldown_css"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "lightningcss",
 ]
 

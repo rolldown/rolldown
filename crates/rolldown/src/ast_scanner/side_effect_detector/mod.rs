@@ -162,8 +162,10 @@ impl<'a> SideEffectDetector<'a> {
       Expression::Identifier(ident) => self.is_unresolved_reference(ident),
       // https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2576-L2588
       Expression::TemplateLiteral(literal) => literal.expressions.iter().any(|expr| {
-        self.detect_side_effect_of_expr(expr)
-          || known_primitive_type(self.scope, expr) == PrimitiveType::Unknown
+        // Primitive type detection is more strict and faster than side_effects detection of
+        // `Expr`, put it first to fail fast.
+        known_primitive_type(self.scope, expr) == PrimitiveType::Unknown
+          || self.detect_side_effect_of_expr(expr)
       }),
       Expression::LogicalExpression(logic_expr) => {
         self.detect_side_effect_of_expr(&logic_expr.left)

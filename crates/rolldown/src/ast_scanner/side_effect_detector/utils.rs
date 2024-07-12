@@ -106,7 +106,9 @@ fn merged_known_primitive_types(
 pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> PrimitiveType {
   match expr {
     Expression::NullLiteral(_) => PrimitiveType::Null,
-    Expression::Identifier(id) if scope.is_unresolved(id.reference_id.get().unwrap()) => {
+    Expression::Identifier(id)
+      if id.name == "undefined" && scope.is_unresolved(id.reference_id.get().unwrap()) =>
+    {
       PrimitiveType::Undefined
     }
     Expression::BooleanLiteral(_) => PrimitiveType::Boolean,

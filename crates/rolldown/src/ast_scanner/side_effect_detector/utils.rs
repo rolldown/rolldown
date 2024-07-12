@@ -33,9 +33,13 @@ impl<'a> SideEffectDetector<'a> {
     // If there are non-whitespace characters between the `comment` and the `span`,
     // we treat the `comment` not belongs to the `span`.
     let range_text = Span::new(comment.span.end, span.start).source_text(self.source);
-    let only_whitespace = match range_text.strip_prefix("*/") {
-      Some(str) => str.trim().is_empty(),
-      None => range_text.trim().is_empty(),
+    let only_whitespace = match comment.kind {
+      CommentKind::SingleLine => range_text.trim().is_empty(),
+      CommentKind::MultiLine => {
+        range_text
+          .strip_prefix("*/") // for multi-line comment
+          .is_some_and(|s| s.trim().is_empty())
+      }
     };
     if !only_whitespace {
       return None;

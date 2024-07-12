@@ -209,7 +209,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::JSXFragment(_) => true,
 
       Expression::ArrayExpression(expr) => expr.elements.iter().any(|elem| match elem {
-        ArrayExpressionElement::SpreadElement(expr) => true,
+        ArrayExpressionElement::SpreadElement(_) => true,
         ArrayExpressionElement::Elision(_) => false,
         match_expression!(ArrayExpressionElement) => {
           self.detect_side_effect_of_expr(elem.to_expression())

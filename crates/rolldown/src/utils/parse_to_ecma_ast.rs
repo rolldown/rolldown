@@ -46,6 +46,7 @@ pub fn parse_to_ecma_ast(
       OxcParseType::Js,
     ),
     ModuleType::Empty => ("export {}".to_string().into(), OxcParseType::Js),
+    ModuleType::Css => ("".to_string().into(), OxcParseType::Js)
   };
 
   let oxc_source_type = {

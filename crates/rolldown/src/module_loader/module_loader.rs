@@ -145,10 +145,17 @@ impl ModuleLoader {
           self.intermediate_normal_modules.index_ecma_ast[idx] = Some(EcmaAst::default());
           idx
         } else {
+          let module_path = info.path.clone();
+
+          let ext = rolldown_utils::extension::get_ext_from_str(&module_path.path);
+
+          if let Some("css") = ext {
+            todo!()
+          }
+
           let id = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
           not_visited.insert(id);
           self.remaining += 1;
-          let module_path = info.path.clone();
 
           let task = EcmaModuleTask::new(
             Arc::clone(&self.shared_context),

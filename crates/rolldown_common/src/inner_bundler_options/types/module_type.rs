@@ -22,6 +22,7 @@ pub enum ModuleType {
   Dataurl,
   Binary,
   Empty,
+  Css, // Because we always write `import "*.css"`, so Css should also be recognized, even though it should be regarded as `Css` Module instead of `Ecma` module.
 }
 
 impl FromStr for ModuleType {
@@ -39,6 +40,7 @@ impl FromStr for ModuleType {
       "dataurl" => Ok(Self::Dataurl),
       "binary" => Ok(Self::Binary),
       "empty" => Ok(Self::Empty),
+      "css" => Ok(Self::Css),
       _ => Err(format!("Unknown module type: {s}")),
     }
   }

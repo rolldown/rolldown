@@ -67,14 +67,19 @@ impl<'a> SideEffectDetector<'a> {
         if !def.decorators.is_empty() {
           return true;
         }
-        (match &def.key {
+        let key_side_effect = match &def.key {
           PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
           key @ oxc::ast::match_expression!(PropertyKey) => {
             def.computed
               && (!is_primitive_literal(self.scope, key.to_expression())
                 || self.detect_side_effect_of_expr(key.to_expression()))
           }
-        }) || def.value.params.items.iter().any(|item| !item.decorators.is_empty())
+        };
+        if key_side_effect {
+          return true;
+        }
+
+        def.value.params.items.iter().any(|item| !item.decorators.is_empty())
       }
       ClassElement::PropertyDefinition(def) => {
         if !def.decorators.is_empty() {

@@ -215,3 +215,19 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
     _ => PrimitiveType::Unknown,
   }
 }
+
+pub fn is_primitive_literal(scope: &AstScopes, expr: &Expression) -> bool {
+  match expr {
+    Expression::NullLiteral(_)
+    | Expression::BooleanLiteral(_)
+    | Expression::NumericLiteral(_)
+    | Expression::StringLiteral(_)
+    | Expression::BigIntLiteral(_) => true,
+    Expression::Identifier(id)
+      if id.name == "undefined" && scope.is_unresolved(id.reference_id.get().unwrap()) =>
+    {
+      true
+    }
+    _ => false,
+  }
+}

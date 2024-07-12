@@ -9,6 +9,8 @@ use oxc::ast::{match_expression, Trivias};
 use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
 
+use crate::ast_scanner::side_effect_detector::utils::is_primitive_literal;
+
 use self::utils::{known_primitive_type, PrimitiveType};
 
 mod annotation;
@@ -53,26 +55,36 @@ impl<'a> SideEffectDetector<'a> {
 
   fn detect_side_effect_of_class(&mut self, cls: &oxc::ast::ast::Class) -> bool {
     use oxc::ast::ast::ClassElement;
+    if !cls.decorators.is_empty() {
+      return true;
+    }
     cls.body.body.iter().any(|elm| match elm {
       ClassElement::StaticBlock(static_block) => {
         static_block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
       }
-      ClassElement::MethodDefinition(def) => match &def.key {
-        PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
-        key @ oxc::ast::match_expression!(PropertyKey) => {
-          def.computed
-            && (known_primitive_type(self.scope, key.to_expression()) == PrimitiveType::Unknown
-              || self.detect_side_effect_of_expr(key.to_expression()))
+      // TODO: isSymbolInstance
+      ClassElement::MethodDefinition(def) => {
+        if !def.decorators.is_empty() {
+          return true;
         }
-      },
-      ClassElement::PropertyDefinition(def) => {
-        dbg!(&def);
-        let key_side_effect = match &def.key {
-          // FIXME: this is wrong, we should also always check the `def.value`.
+        (match &def.key {
           PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
           key @ oxc::ast::match_expression!(PropertyKey) => {
             def.computed
-              && (known_primitive_type(self.scope, key.to_expression()) == PrimitiveType::Unknown
+              && (!is_primitive_literal(self.scope, key.to_expression())
+                || self.detect_side_effect_of_expr(key.to_expression()))
+          }
+        }) || def.value.params.items.iter().any(|item| !item.decorators.is_empty())
+      }
+      ClassElement::PropertyDefinition(def) => {
+        if !def.decorators.is_empty() {
+          return true;
+        }
+        let key_side_effect = match &def.key {
+          PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
+          key @ oxc::ast::match_expression!(PropertyKey) => {
+            def.computed
+              && (!is_primitive_literal(self.scope, key.to_expression())
                 || self.detect_side_effect_of_expr(key.to_expression()))
           }
         };
@@ -80,8 +92,8 @@ impl<'a> SideEffectDetector<'a> {
           return true;
         }
 
-        let value_side_effect = (def.r#static
-          && def.value.as_ref().map_or(false, |init| self.detect_side_effect_of_expr(init)));
+        let value_side_effect = def.r#static
+          && def.value.as_ref().map_or(false, |init| self.detect_side_effect_of_expr(init));
         value_side_effect
       }
       ClassElement::AccessorProperty(def) => {

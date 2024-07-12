@@ -163,7 +163,7 @@ impl<'a> SideEffectDetector<'a> {
       // https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2576-L2588
       Expression::TemplateLiteral(literal) => literal.expressions.iter().any(|expr| {
         self.detect_side_effect_of_expr(expr)
-          || known_primitive_type(self.scope, expr) == PrimitiveType::PrimitiveUnknown
+          || known_primitive_type(self.scope, expr) == PrimitiveType::Unknown
       }),
       Expression::LogicalExpression(logic_expr) => {
         self.detect_side_effect_of_expr(&logic_expr.left)
@@ -451,7 +451,7 @@ mod test {
   #[test]
   fn test_template_literal() {
     assert!(!get_statements_side_effect("`hello`"));
-    assert!(!get_statements_side_effect("const foo = ''; `hello${foo}`"));
+    assert!(get_statements_side_effect("const foo = ''; `hello${foo}`"));
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("`hello${foo}`"));
     assert!(get_statements_side_effect("const foo = {}; `hello${foo.bar}`"));

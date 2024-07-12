@@ -1,10 +1,7 @@
 use oxc::{
   ast::{ast::Expression, Comment, CommentKind},
   span::Span,
-  syntax::{
-    module_record::ExportExportName,
-    operator::{BinaryOperator, LogicalOperator, UnaryOperator, UpdateOperator},
-  },
+  syntax::operator::{BinaryOperator, LogicalOperator, UnaryOperator, UpdateOperator},
 };
 use rolldown_common::AstScopes;
 
@@ -76,14 +73,14 @@ impl<'a> SideEffectDetector<'a> {
 
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub(crate) enum PrimitiveType {
-  PrimitiveNull,
-  PrimitiveUndefined,
-  PrimitiveBoolean,
-  PrimitiveNumber,
-  PrimitiveString,
-  PrimitiveBigInt,
-  PrimitiveMixed,
-  PrimitiveUnknown,
+  Null,
+  Undefined,
+  Boolean,
+  Number,
+  String,
+  BigInt,
+  Mixed,
+  Unknown,
 }
 
 fn merged_known_primitive_types(
@@ -92,57 +89,58 @@ fn merged_known_primitive_types(
   right: &Expression,
 ) -> PrimitiveType {
   let left_type = known_primitive_type(scope, left);
-  if left_type == PrimitiveType::PrimitiveUnknown {
-    return PrimitiveType::PrimitiveUnknown;
+  if left_type == PrimitiveType::Unknown {
+    return PrimitiveType::Unknown;
   }
-  let right_type = known_primitive_type(scope, left);
-  if right_type == PrimitiveType::PrimitiveUnknown {
-    return PrimitiveType::PrimitiveUnknown;
+  let right_type = known_primitive_type(scope, right);
+  if right_type == PrimitiveType::Unknown {
+    return PrimitiveType::Unknown;
   }
   if right_type == left_type {
     return right_type;
   }
-  PrimitiveType::PrimitiveMixed
+  PrimitiveType::Mixed
 }
 
+#[allow(clippy::too_many_lines)]
 pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> PrimitiveType {
   match expr {
-    Expression::NullLiteral(_) => PrimitiveType::PrimitiveNull,
+    Expression::NullLiteral(_) => PrimitiveType::Null,
     Expression::Identifier(id) if scope.is_unresolved(id.reference_id.get().unwrap()) => {
-      PrimitiveType::PrimitiveUndefined
+      PrimitiveType::Undefined
     }
-    Expression::BooleanLiteral(b) => PrimitiveType::PrimitiveBoolean,
-    Expression::NumericLiteral(_) => PrimitiveType::PrimitiveNumber,
-    Expression::StringLiteral(_) => PrimitiveType::PrimitiveString,
-    Expression::BigIntLiteral(_) => PrimitiveType::PrimitiveBigInt,
+    Expression::BooleanLiteral(_) => PrimitiveType::Boolean,
+    Expression::NumericLiteral(_) => PrimitiveType::Number,
+    Expression::StringLiteral(_) => PrimitiveType::String,
+    Expression::BigIntLiteral(_) => PrimitiveType::BigInt,
     Expression::TemplateLiteral(e) => {
       if e.expressions.is_empty() {
-        PrimitiveType::PrimitiveString
+        PrimitiveType::String
       } else {
-        PrimitiveType::PrimitiveUnknown
+        PrimitiveType::Unknown
       }
     }
     Expression::UpdateExpression(e) => {
       match e.operator {
         UpdateOperator::Increment | UpdateOperator::Decrement => {
-          PrimitiveType::PrimitiveMixed // Can be number or bigint
+          PrimitiveType::Mixed // Can be number or bigint
         }
       }
     }
     Expression::UnaryExpression(e) => match e.operator {
-      UnaryOperator::Void => PrimitiveType::PrimitiveUndefined,
-      UnaryOperator::Typeof => PrimitiveType::PrimitiveString,
-      UnaryOperator::LogicalNot | UnaryOperator::Delete => PrimitiveType::PrimitiveBoolean,
-      UnaryOperator::UnaryPlus => PrimitiveType::PrimitiveNumber, // Cannot be bigint because that throws an exception
+      UnaryOperator::Void => PrimitiveType::Undefined,
+      UnaryOperator::Typeof => PrimitiveType::String,
+      UnaryOperator::LogicalNot | UnaryOperator::Delete => PrimitiveType::Boolean,
+      UnaryOperator::UnaryPlus => PrimitiveType::Number, // Cannot be bigint because that throws an exception
       UnaryOperator::UnaryNegation | UnaryOperator::BitwiseNot => {
         let value = known_primitive_type(scope, &e.argument);
-        if value == PrimitiveType::PrimitiveBigInt {
-          return PrimitiveType::PrimitiveBigInt;
+        if value == PrimitiveType::BigInt {
+          return PrimitiveType::BigInt;
         }
-        if value != PrimitiveType::PrimitiveUnknown && value != PrimitiveType::PrimitiveMixed {
-          return PrimitiveType::PrimitiveNumber;
+        if value != PrimitiveType::Unknown && value != PrimitiveType::Mixed {
+          return PrimitiveType::Number;
         }
-        PrimitiveType::PrimitiveMixed // Can be number or bigint
+        PrimitiveType::Mixed // Can be number or bigint
       }
     },
     Expression::LogicalExpression(e) => match e.operator {
@@ -152,18 +150,18 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
       LogicalOperator::Coalesce => {
         let left = known_primitive_type(scope, &e.left);
         let right = known_primitive_type(scope, &e.right);
-        if left == PrimitiveType::PrimitiveNull || left == PrimitiveType::PrimitiveUndefined {
+        if left == PrimitiveType::Null || left == PrimitiveType::Undefined {
           return right;
         }
-        if left != PrimitiveType::PrimitiveUnknown {
-          if left != PrimitiveType::PrimitiveMixed {
+        if left != PrimitiveType::Unknown {
+          if left != PrimitiveType::Mixed {
             return left; // Definitely not null or undefined
           }
-          if right != PrimitiveType::PrimitiveUnknown {
-            return PrimitiveType::PrimitiveMixed; // Definitely some kind of primitive
+          if right != PrimitiveType::Unknown {
+            return PrimitiveType::Mixed; // Definitely some kind of primitive
           }
         }
-        PrimitiveType::PrimitiveUnknown
+        PrimitiveType::Unknown
       }
     },
     Expression::BinaryExpression(e) => match e.operator {
@@ -173,29 +171,27 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
       | BinaryOperator::Inequality
       | BinaryOperator::LessThan
       | BinaryOperator::GreaterThan
-      | BinaryOperator::LessThan
       | BinaryOperator::GreaterEqualThan
       | BinaryOperator::LessEqualThan
       | BinaryOperator::Instanceof
-      | BinaryOperator::In => PrimitiveType::PrimitiveBoolean,
+      | BinaryOperator::In => PrimitiveType::Boolean,
       BinaryOperator::Addition => {
         let left = known_primitive_type(scope, &e.left);
         let right = known_primitive_type(scope, &e.right);
-        if left == PrimitiveType::PrimitiveString || right == PrimitiveType::PrimitiveString {
-          PrimitiveType::PrimitiveString
-        } else if left == PrimitiveType::PrimitiveBigInt && right == PrimitiveType::PrimitiveBigInt
+        if left == PrimitiveType::String || right == PrimitiveType::String {
+          PrimitiveType::String
+        } else if left == PrimitiveType::BigInt && right == PrimitiveType::BigInt {
+          PrimitiveType::BigInt
+        } else if left != PrimitiveType::Unknown
+          && left != PrimitiveType::Mixed
+          && left != PrimitiveType::BigInt
+          && right != PrimitiveType::Unknown
+          && right != PrimitiveType::Mixed
+          && right != PrimitiveType::BigInt
         {
-          PrimitiveType::PrimitiveBigInt
-        } else if left != PrimitiveType::PrimitiveUnknown
-          && left != PrimitiveType::PrimitiveMixed
-          && left != PrimitiveType::PrimitiveBigInt
-          && right != PrimitiveType::PrimitiveUnknown
-          && right != PrimitiveType::PrimitiveMixed
-          && right != PrimitiveType::PrimitiveBigInt
-        {
-          PrimitiveType::PrimitiveNumber
+          PrimitiveType::Number
         } else {
-          PrimitiveType::PrimitiveMixed // Can be number or bigint or string (or an exception)
+          PrimitiveType::Mixed // Can be number or bigint or string (or an exception)
         }
       }
       BinaryOperator::Subtraction
@@ -208,17 +204,17 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
       | BinaryOperator::ShiftRight
       | BinaryOperator::ShiftLeft
       | BinaryOperator::ShiftRightZeroFill
-      | BinaryOperator::BitwiseXOR => PrimitiveType::PrimitiveMixed,
+      | BinaryOperator::BitwiseXOR => PrimitiveType::Mixed,
     },
 
     Expression::AssignmentExpression(e) => match e.operator {
       oxc::syntax::operator::AssignmentOperator::Assign => known_primitive_type(scope, &e.right),
       oxc::syntax::operator::AssignmentOperator::Addition => {
         let right = known_primitive_type(scope, &e.right);
-        if right == PrimitiveType::PrimitiveString {
-          PrimitiveType::PrimitiveString
+        if right == PrimitiveType::String {
+          PrimitiveType::String
         } else {
-          PrimitiveType::PrimitiveMixed // Can be number or bigint or string (or an exception)
+          PrimitiveType::Mixed // Can be number or bigint or string (or an exception)
         }
       }
       oxc::syntax::operator::AssignmentOperator::Subtraction
@@ -234,8 +230,8 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
       | oxc::syntax::operator::AssignmentOperator::LogicalAnd
       | oxc::syntax::operator::AssignmentOperator::LogicalOr
       | oxc::syntax::operator::AssignmentOperator::LogicalNullish
-      | oxc::syntax::operator::AssignmentOperator::Exponential => PrimitiveType::PrimitiveMixed,
+      | oxc::syntax::operator::AssignmentOperator::Exponential => PrimitiveType::Mixed,
     },
-    _ => PrimitiveType::PrimitiveUnknown,
+    _ => PrimitiveType::Unknown,
   }
 }

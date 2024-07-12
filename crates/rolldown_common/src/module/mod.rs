@@ -54,6 +54,10 @@ impl Module {
     Module::Ecma(Box::new(v))
   }
 
+  pub fn css(v: CssModule) -> Self {
+    Module::Css(Box::new(v))
+  }
+
   pub fn external(v: ExternalModule) -> Self {
     Module::External(Box::new(v))
   }
@@ -62,6 +66,14 @@ impl Module {
     match self {
       Module::Ecma(v) => Some(v),
       Module::Css(_) => None,
+      Module::External(_) => None,
+    }
+  }
+
+  pub fn as_css(&self) -> Option<&CssModule> {
+    match self {
+      Module::Css(v) => Some(v),
+      Module::Ecma(_) => None,
       Module::External(_) => None,
     }
   }
@@ -78,6 +90,14 @@ impl Module {
     match self {
       Module::Ecma(v) => Some(v),
       Module::Css(_) => None,
+      Module::External(_) => None,
+    }
+  }
+
+  pub fn as_css_mut(&mut self) -> Option<&mut CssModule> {
+    match self {
+      Module::Css(v) => Some(v),
+      Module::Ecma(_) => None,
       Module::External(_) => None,
     }
   }
@@ -100,5 +120,11 @@ impl From<EcmaModule> for Module {
 impl From<ExternalModule> for Module {
   fn from(module: ExternalModule) -> Self {
     Module::External(Box::new(module))
+  }
+}
+
+impl From<CssModule> for Module {
+  fn from(module: CssModule) -> Self {
+    Module::Css(Box::new(module))
   }
 }

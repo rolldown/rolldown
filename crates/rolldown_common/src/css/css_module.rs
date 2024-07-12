@@ -1,13 +1,14 @@
 use crate::side_effects::DeterminedSideEffects;
-use crate::ModuleIdx;
-use std::sync::Arc;
+use crate::{ModuleIdx};
+use arcstr::ArcStr;
+use lightningcss::stylesheet::StyleSheet;
 
 #[derive(Debug)]
 pub struct CssModule {
   pub exec_order: u32,
-  pub source: Arc<str>,
+  pub source: ArcStr,
   pub name: String,
   pub idx: ModuleIdx,
   pub side_effects: DeterminedSideEffects,
-  pub ast: lightningcss::stylesheet::StyleSheet<'static, 'static>,
+  pub ast: StyleSheet<'static, 'static>,
 }

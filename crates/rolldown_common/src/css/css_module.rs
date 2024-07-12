@@ -1,5 +1,5 @@
 use crate::side_effects::DeterminedSideEffects;
-use crate::{ModuleIdx};
+use crate::ModuleIdx;
 use arcstr::ArcStr;
 use lightningcss::stylesheet::StyleSheet;
 

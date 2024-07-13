@@ -1,12 +1,12 @@
 name: Metric and Commit Results
 
 on:
-  workflow_dispatch:     # Allows manual triggering of the workflow
+  workflow_dispatch: # Allows manual triggering of the workflow
   push:
-      branches:
-        - main
-      paths-ignore:
-        - '**/*.md'
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
 
 jobs:
   compile-time:
@@ -32,7 +32,7 @@ jobs:
           echo "COMPILE_TIME=$COMPILE_TIME" >> $GITHUB_OUTPUT
 
   metric:
-    name: Metric 
+    name: Metric
     needs: [compile-time]
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +41,7 @@ jobs:
         with:
           repository: 'rolldown/metric'
           ref: 'main'
-          token:  ${{ secrets.METRIC_SECRET_KEY }}
+          token: ${{ secrets.METRIC_SECRET_KEY }}
 
       - name: Setup Pnpm
         uses: pnpm/action-setup@v2
@@ -51,7 +51,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'  # Specify the Node.js version you need
+          node-version: '20' # Specify the Node.js version you need
           cache: 'pnpm'
 
       - name: Install dependencies and push metric
@@ -69,4 +69,3 @@ jobs:
           COMPILE_TIME: ${{ needs.compile-time.outputs.time }}
           COMMIT_HASH: ${{ github.sha }}
           GIT_REPOSITORY_URL: ${{ github.repository }}
-

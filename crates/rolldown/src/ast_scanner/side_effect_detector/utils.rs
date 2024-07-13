@@ -1,8 +1,6 @@
-use std::os::unix::process::ExitStatusExt;
-
 use oxc::{
   ast::{
-    ast::{ComputedMemberExpression, Expression, MemberExpression, StaticMemberExpression},
+    ast::{Expression, MemberExpression},
     Comment, CommentKind,
   },
   semantic::ReferenceId,

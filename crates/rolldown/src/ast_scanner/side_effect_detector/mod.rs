@@ -3,7 +3,7 @@ use std::sync::Arc;
 use once_cell::sync::Lazy;
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, BindingPatternKind, Expression, IdentifierReference,
-  MemberExpression, PropertyKey,
+  PropertyKey,
 };
 use oxc::ast::{match_expression, Trivias};
 use rolldown_common::AstScopes;
@@ -27,6 +27,7 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_2: Lazy<FxHashSet<(&'static str, &'static st
       ("Object", "getOwnPropertyDescriptor"),
       ("Object", "getPrototypeOf"),
       ("Object", "getOwnPropertyNames"),
+      ("Symbol", "iterator"),
     ]
     .into_iter()
     .collect()
@@ -87,7 +88,6 @@ impl<'a> SideEffectDetector<'a> {
       ClassElement::StaticBlock(static_block) => {
         static_block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
       }
-      // TODO: isSymbolInstance
       ClassElement::MethodDefinition(def) => {
         if !def.decorators.is_empty() {
           return true;
@@ -123,11 +123,15 @@ impl<'a> SideEffectDetector<'a> {
     })
   }
 
-  fn detect_side_effect_of_member_expr(expr: &oxc::ast::ast::MemberExpression) -> bool {
+  fn detect_side_effect_of_member_expr(&self, expr: &oxc::ast::ast::MemberExpression) -> bool {
     // MemberExpression is considered having side effect by default, unless it's some builtin global variables.
     let Some((ref_id, chains)) = extract_member_expr_chain(expr, 3) else {
       return true;
     };
+    // If the global variable is overrided, we considered it has side effect.
+    if !self.scope.is_unresolved(ref_id) {
+      return true;
+    }
     match chains.as_slice() {
       [a, b] => !SIDE_EFFECT_FREE_MEMBER_EXPR_2.contains(&(a.as_str(), b.as_str())),
       [a, b, c] => !SIDE_EFFECT_FREE_MEMBER_EXPR_3.contains(&(a.as_str(), b.as_str(), c.as_str())),
@@ -177,7 +181,7 @@ impl<'a> SideEffectDetector<'a> {
         self.detect_side_effect_of_expr(&unary_expr.argument)
       }
       oxc::ast::match_member_expression!(Expression) => {
-        Self::detect_side_effect_of_member_expr(expr.to_member_expression())
+        self.detect_side_effect_of_member_expr(expr.to_member_expression())
       }
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
@@ -296,8 +300,6 @@ impl<'a> SideEffectDetector<'a> {
       Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
       Declaration::FunctionDeclaration(_) => false,
       Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
-      // Currently, using a fallback value to make the bundle correct,
-      // finishing the implementation after we carefully read the spec
       Declaration::UsingDeclaration(decl) => {
         decl.is_await || self.detect_side_effect_of_using_declarators(&decl.declarations)
       }

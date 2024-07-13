@@ -2,7 +2,7 @@ use crate::types::hook_render_error::HookRenderErrorArgs;
 use crate::PluginDriver;
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
 use anyhow::Result;
-use rolldown_common::{Output, RenderedChunk};
+use rolldown_common::{Output, RollupRenderedChunk};
 use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {
@@ -29,7 +29,10 @@ impl PluginDriver {
     Ok((args.code, sourcemap_chain))
   }
 
-  pub async fn augment_chunk_hash(&self, chunk: &RenderedChunk) -> HookAugmentChunkHashReturn {
+  pub async fn augment_chunk_hash(
+    &self,
+    chunk: &RollupRenderedChunk,
+  ) -> HookAugmentChunkHashReturn {
     let mut hash = String::new();
     for (plugin, ctx) in &self.plugins {
       if let Some(plugin_hash) = plugin.augment_chunk_hash(ctx, chunk).await? {

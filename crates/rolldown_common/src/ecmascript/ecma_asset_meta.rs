@@ -1,5 +1,5 @@
-use crate::RenderedChunk;
+use crate::RollupRenderedChunk;
 
 pub struct EcmaAssetMeta {
-  pub rendered_chunk: RenderedChunk,
+  pub rendered_chunk: RollupRenderedChunk,
 }

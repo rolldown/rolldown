@@ -1,5 +1,5 @@
 use rolldown_common::{
-  Chunk, ChunkKind, PreRenderedChunk, RenderedChunk, RenderedModule, ResourceId,
+  Chunk, ChunkKind, PreRenderedChunk, RenderedModule, ResourceId, RollupRenderedChunk,
 };
 use rustc_hash::FxHashMap;
 
@@ -43,9 +43,9 @@ pub fn generate_rendered_chunk(
   output_options: &SharedOptions,
   render_modules: FxHashMap<ResourceId, RenderedModule>,
   chunk_graph: &ChunkGraph,
-) -> RenderedChunk {
+) -> RollupRenderedChunk {
   let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, graph, output_options);
-  RenderedChunk {
+  RollupRenderedChunk {
     name: pre_rendered_chunk.name,
     is_entry: pre_rendered_chunk.is_entry,
     is_dynamic_entry: pre_rendered_chunk.is_dynamic_entry,

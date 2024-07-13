@@ -11,7 +11,7 @@ use crate::{
   HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
 };
 use anyhow::Result;
-use rolldown_common::{ModuleInfo, Output, RenderedChunk};
+use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk};
 use rolldown_ecmascript::EcmaAst;
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
@@ -106,7 +106,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   async fn augment_chunk_hash(
     &self,
     _ctx: &SharedPluginContext,
-    _chunk: &RenderedChunk,
+    _chunk: &RollupRenderedChunk,
   ) -> HookAugmentChunkHashReturn {
     Ok(None)
   }

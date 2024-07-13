@@ -79,6 +79,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
+  /// ref: https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2298-L2393
   fn detect_side_effect_of_class(&mut self, cls: &oxc::ast::ast::Class) -> bool {
     use oxc::ast::ast::ClassElement;
     if !cls.decorators.is_empty() {

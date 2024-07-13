@@ -46,7 +46,8 @@ impl<'a> GenerateStage<'a> {
       ..
     } in chunks
     {
-      if let AssetMeta::Ecma(rendered_chunk) = rendered_chunk {
+      if let AssetMeta::Ecma(ecma_meta) = rendered_chunk {
+        let rendered_chunk = ecma_meta.rendered_chunk;
         if let Some(map) = map.as_mut() {
           map.set_file(&rendered_chunk.filename);
 

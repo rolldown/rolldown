@@ -107,7 +107,7 @@ pub fn finalize_chunks(
           .into();
       chunk.filename = Some(filename.clone());
       if let AssetMeta::Ecma(ecma_meta) = &mut chunk_render_return.meta {
-        ecma_meta.filename = filename;
+        ecma_meta.rendered_chunk.filename = filename;
       }
       chunk_render_return.content = replace_facade_hash_replacement(
         std::mem::take(&mut chunk_render_return.content),
@@ -120,12 +120,12 @@ pub fn finalize_chunks(
   chunk_graph.chunks.iter().zip(chunks.iter_mut()).par_bridge().for_each(
     |(chunk, chunk_render_return)| {
       if let AssetMeta::Ecma(ecma_meta) = &mut chunk_render_return.meta {
-        ecma_meta.imports = chunk
+        ecma_meta.rendered_chunk.imports = chunk
           .cross_chunk_imports
           .iter()
           .map(|id| chunk_graph.chunks[*id].filename.clone().expect("should have file name"))
           .collect();
-        ecma_meta.dynamic_imports = chunk
+        ecma_meta.rendered_chunk.dynamic_imports = chunk
           .cross_chunk_dynamic_imports
           .iter()
           .map(|id| chunk_graph.chunks[*id].filename.clone().expect("should have file name"))

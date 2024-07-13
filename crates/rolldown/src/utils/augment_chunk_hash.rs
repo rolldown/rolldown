@@ -10,7 +10,7 @@ pub async fn augment_chunk_hash<'a>(
 ) -> Result<Vec<PreliminaryAsset>> {
   try_join_all(chunks.into_iter().map(|mut asset| async move {
     let augment_chunk_hash = if let AssetMeta::Ecma(ecma_meta) = &asset.meta {
-      plugin_driver.augment_chunk_hash(ecma_meta).await
+      plugin_driver.augment_chunk_hash(&ecma_meta.rendered_chunk).await
     } else {
       Ok(None)
     }?;

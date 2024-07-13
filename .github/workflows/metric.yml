@@ -22,7 +22,7 @@ jobs:
       - uses: Boshen/setup-rust@main
       - run: |
           cargo fetch
-          cargo clean # build from scatch using local system cache to avoid download from crates.io
+          cargo clean # build from scratch using local system cache to avoid download from crates.io
       - id: run
         run: |
           /usr/bin/time -f "%e" -o output cargo build --release

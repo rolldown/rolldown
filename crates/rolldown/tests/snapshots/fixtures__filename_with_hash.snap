@@ -77,8 +77,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
-- class_js-!~{000}~.mjs => class_js-BmSKsDZS.mjs
-- object_js-!~{001}~.mjs => object_js-uQIwRJHu.mjs
+- class_js-!~{000}~.mjs => class_js-agEgCpt5.mjs
+- object_js-!~{001}~.mjs => object_js-WXUV5QqJ.mjs
 
 # tests/esbuild/dce/dce_of_using_declarations
 

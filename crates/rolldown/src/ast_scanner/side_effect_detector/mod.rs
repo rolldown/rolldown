@@ -186,13 +186,7 @@ impl<'a> SideEffectDetector<'a> {
       }
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
-      Expression::Identifier(ident) => {
-        if self.is_unresolved_reference(ident) {
-          ident.name != "undefined"
-        } else {
-          false
-        }
-      }
+      Expression::Identifier(ident) => self.detect_side_effect_of_identifer(ident),
       // https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2576-L2588
       Expression::TemplateLiteral(literal) => literal.expressions.iter().any(|expr| {
         // Primitive type detection is more strict and faster than side_effects detection of
@@ -319,10 +313,16 @@ impl<'a> SideEffectDetector<'a> {
     declarators.iter().any(|decl| {
       decl.init.as_ref().map_or(false, |init| match init {
         Expression::NullLiteral(_) => false,
+        // Side effect detection of identifier as initialization of using declaration is different with other position.
         Expression::Identifier(id) => !(id.name == "undefined" && self.is_unresolved_reference(id)),
         _ => true,
       })
     })
+  }
+
+  #[inline]
+  fn detect_side_effect_of_identifer(&self, ident_ref: &IdentifierReference) -> bool {
+    self.is_unresolved_reference(ident_ref) && ident_ref.name != "undefined"
   }
 
   pub fn detect_side_effect_of_stmt(&mut self, stmt: &oxc::ast::ast::Statement) -> bool {

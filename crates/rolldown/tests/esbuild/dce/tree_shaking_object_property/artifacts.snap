@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/case/case.rs
-assertion_line: 176
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_object_property
 ---
@@ -19,7 +18,6 @@ let keep5 = {[x]() {}};
 let keep6 = {get [x]() {}};
 let keep7 = {set [x](_) {}};
 let keep8 = {async [x]() {}};
-let keep9 = {[{toString() {}}]: 'x'};
 
 //#endregion
 ```

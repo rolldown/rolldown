@@ -16,7 +16,6 @@ jobs:
     outputs:
       time: ${{ steps.run.outputs.COMPILE_TIME }}
     steps:
-      - uses: taiki-e/checkout-action@v1
       - name: Checkout repo
         uses: actions/checkout@v4
       - uses: Boshen/setup-rust@main

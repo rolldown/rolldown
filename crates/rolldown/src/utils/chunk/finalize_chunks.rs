@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{ChunkIdx, PreliminaryAsset, ResourceId};
+use rolldown_common::{AssetMeta, ChunkIdx, PreliminaryAsset, ResourceId};
 use rolldown_utils::{
   base64::to_url_safe_base64,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
@@ -37,7 +37,7 @@ pub fn finalize_chunks(
   let index_chunk_dependencies: IndexVec<ChunkIdx, Vec<ChunkIdx>> = chunks
     .par_iter()
     .map(|chunk| {
-      extract_hash_placeholders(&chunk.code)
+      extract_hash_placeholders(&chunk.content)
         .iter()
         .map(|placeholder| chunk_id_by_placeholder[placeholder])
         .collect_vec()
@@ -48,7 +48,7 @@ pub fn finalize_chunks(
   let index_standalone_content_hashes: IndexVec<ChunkIdx, String> = chunks
     .par_iter()
     .map(|chunk| {
-      let mut content = chunk.code.as_bytes().to_vec();
+      let mut content = chunk.content.as_bytes().to_vec();
       if let Some(augment_chunk_hash) = &chunk.augment_chunk_hash {
         content.extend(augment_chunk_hash.as_bytes());
       }
@@ -106,9 +106,11 @@ pub fn finalize_chunks(
         replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder)
           .into();
       chunk.filename = Some(filename.clone());
-      chunk_render_return.rendered_chunk.filename = filename;
-      chunk_render_return.code = replace_facade_hash_replacement(
-        std::mem::take(&mut chunk_render_return.code),
+      if let AssetMeta::Ecma(ecma_meta) = &mut chunk_render_return.meta {
+        ecma_meta.filename = filename;
+      }
+      chunk_render_return.content = replace_facade_hash_replacement(
+        std::mem::take(&mut chunk_render_return.content),
         &final_hashes_by_placeholder,
       );
     },
@@ -117,16 +119,18 @@ pub fn finalize_chunks(
   // Replace hash placeholder in `imports`
   chunk_graph.chunks.iter().zip(chunks.iter_mut()).par_bridge().for_each(
     |(chunk, chunk_render_return)| {
-      chunk_render_return.rendered_chunk.imports = chunk
-        .cross_chunk_imports
-        .iter()
-        .map(|id| chunk_graph.chunks[*id].filename.clone().expect("should have file name"))
-        .collect();
-      chunk_render_return.rendered_chunk.dynamic_imports = chunk
-        .cross_chunk_dynamic_imports
-        .iter()
-        .map(|id| chunk_graph.chunks[*id].filename.clone().expect("should have file name"))
-        .collect();
+      if let AssetMeta::Ecma(ecma_meta) = &mut chunk_render_return.meta {
+        ecma_meta.imports = chunk
+          .cross_chunk_imports
+          .iter()
+          .map(|id| chunk_graph.chunks[*id].filename.clone().expect("should have file name"))
+          .collect();
+        ecma_meta.dynamic_imports = chunk
+          .cross_chunk_dynamic_imports
+          .iter()
+          .map(|id| chunk_graph.chunks[*id].filename.clone().expect("should have file name"))
+          .collect();
+      }
     },
   );
 

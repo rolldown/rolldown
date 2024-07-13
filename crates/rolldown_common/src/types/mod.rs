@@ -1,4 +1,5 @@
 pub mod asset;
+pub mod asset_meta;
 pub mod asset_source;
 pub mod ast_scopes;
 pub mod bundler_file_system;

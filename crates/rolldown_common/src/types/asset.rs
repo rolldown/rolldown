@@ -2,12 +2,12 @@ use std::path::PathBuf;
 
 use rolldown_sourcemap::SourceMap;
 
-use crate::{RenderedChunk, ResourceId};
+use crate::{AssetMeta, ResourceId};
 
 pub struct PreliminaryAsset {
-  pub code: String,
+  pub content: String,
   pub map: Option<SourceMap>,
-  pub rendered_chunk: RenderedChunk,
+  pub meta: AssetMeta,
   pub augment_chunk_hash: Option<String>,
   pub file_dir: PathBuf,
   pub preliminary_filename: ResourceId,
@@ -18,9 +18,9 @@ impl PreliminaryAsset {
   #[allow(unused)]
   fn finalize(self) -> Asset {
     Asset {
-      code: self.code,
+      content: self.content,
       map: self.map,
-      rendered_chunk: self.rendered_chunk,
+      meta: self.meta,
       augment_chunk_hash: self.augment_chunk_hash,
       file_dir: self.file_dir,
       preliminary_filename: self.preliminary_filename,
@@ -30,9 +30,9 @@ impl PreliminaryAsset {
 
 /// Assets is final output of the bundling process. Inputs -> Modules -> Chunks -> Assets
 pub struct Asset {
-  pub code: String,
+  pub content: String,
   pub map: Option<SourceMap>,
-  pub rendered_chunk: RenderedChunk,
+  pub meta: AssetMeta,
   pub augment_chunk_hash: Option<String>,
   pub file_dir: PathBuf,
   pub preliminary_filename: ResourceId,

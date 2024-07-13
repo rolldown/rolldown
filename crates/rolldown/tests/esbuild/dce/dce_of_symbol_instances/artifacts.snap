@@ -10,12 +10,6 @@ input_file: crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances
 ```js
 
 //#region class.js
-class Remove2 {
-	*[Symbol.iterator]() {}
-}
-class Remove3 {
-	*[Symbol['iterator']]() {}
-}
 class Keep1 {
 	*[Symbol.iterator]() {}
 	[keep];

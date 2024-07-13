@@ -9,7 +9,9 @@ use oxc::ast::{match_expression, Trivias};
 use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
 
-use crate::ast_scanner::side_effect_detector::utils::is_primitive_literal;
+use crate::ast_scanner::side_effect_detector::utils::{
+  extract_member_expr_chain, is_primitive_literal,
+};
 
 use self::utils::{known_primitive_type, PrimitiveType};
 
@@ -53,6 +55,29 @@ impl<'a> SideEffectDetector<'a> {
     self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
   }
 
+  fn detect_side_effect_of_property_key(&self, key: &PropertyKey, is_computed: bool) -> bool {
+    match key {
+      PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
+      key @ oxc::ast::match_expression!(PropertyKey) => {
+        is_computed && {
+          let key_expr = key.to_expression();
+          match key_expr {
+            Expression::StaticMemberExpression(_) | Expression::ComputedMemberExpression(_) => {
+              if let Some((ref_id, chain)) =
+                extract_member_expr_chain(key.to_member_expression(), 2)
+              {
+                !(chain == ["Symbol", "iterator"] && self.scope.is_unresolved(ref_id))
+              } else {
+                true
+              }
+            }
+            _ => !is_primitive_literal(self.scope, key_expr),
+          }
+        }
+      }
+    }
+  }
+
   fn detect_side_effect_of_class(&mut self, cls: &oxc::ast::ast::Class) -> bool {
     use oxc::ast::ast::ClassElement;
     if !cls.decorators.is_empty() {
@@ -67,15 +92,7 @@ impl<'a> SideEffectDetector<'a> {
         if !def.decorators.is_empty() {
           return true;
         }
-        let key_side_effect = match &def.key {
-          PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
-          key @ oxc::ast::match_expression!(PropertyKey) => {
-            def.computed
-              && (!is_primitive_literal(self.scope, key.to_expression())
-                || self.detect_side_effect_of_expr(key.to_expression()))
-          }
-        };
-        if key_side_effect {
+        if self.detect_side_effect_of_property_key(&def.key, def.computed) {
           return true;
         }
 
@@ -85,15 +102,7 @@ impl<'a> SideEffectDetector<'a> {
         if !def.decorators.is_empty() {
           return true;
         }
-        let key_side_effect = match &def.key {
-          PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
-          key @ oxc::ast::match_expression!(PropertyKey) => {
-            def.computed
-              && (!is_primitive_literal(self.scope, key.to_expression())
-                || self.detect_side_effect_of_expr(key.to_expression()))
-          }
-        };
-        if key_side_effect {
+        if self.detect_side_effect_of_property_key(&def.key, def.computed) {
           return true;
         }
 
@@ -116,34 +125,12 @@ impl<'a> SideEffectDetector<'a> {
 
   fn detect_side_effect_of_member_expr(expr: &oxc::ast::ast::MemberExpression) -> bool {
     // MemberExpression is considered having side effect by default, unless it's some builtin global variables.
-    let MemberExpression::StaticMemberExpression(member_expr) = expr else {
+    let Some((ref_id, chains)) = extract_member_expr_chain(expr, 3) else {
       return true;
     };
-
-    let prop_name = &member_expr.property.name;
-    match &member_expr.object {
-      Expression::Identifier(ident) => {
-        let object_name = &ident.name;
-        // Check if `object_name.prop_name` is pure
-        !SIDE_EFFECT_FREE_MEMBER_EXPR_2.contains(&(object_name.as_str(), prop_name.as_str()))
-      }
-      expr @ oxc::ast::match_member_expression!(Expression) => {
-        let mem_expr = expr.to_member_expression();
-        let MemberExpression::StaticMemberExpression(mem_expr) = mem_expr else {
-          return true;
-        };
-        let mid_prop = &mem_expr.property.name;
-        let Expression::Identifier(obj_ident) = &mem_expr.object else {
-          return true;
-        };
-        let object_name = &obj_ident.name;
-        // Check if `object_name.mid_prop.prop_name` is pure
-        !SIDE_EFFECT_FREE_MEMBER_EXPR_3.contains(&(
-          object_name.as_str(),
-          mid_prop.as_str(),
-          prop_name.as_str(),
-        ))
-      }
+    match chains.as_slice() {
+      [a, b] => !SIDE_EFFECT_FREE_MEMBER_EXPR_2.contains(&(a.as_str(), b.as_str())),
+      [a, b, c] => !SIDE_EFFECT_FREE_MEMBER_EXPR_3.contains(&(a.as_str(), b.as_str(), c.as_str())),
       _ => true,
     }
   }

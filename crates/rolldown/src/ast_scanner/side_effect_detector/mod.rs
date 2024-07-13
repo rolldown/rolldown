@@ -156,14 +156,7 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ObjectExpression(obj_expr) => {
         obj_expr.properties.iter().any(|obj_prop| match obj_prop {
           oxc::ast::ast::ObjectPropertyKind::ObjectProperty(prop) => {
-            let key_side_effect = match &prop.key {
-              oxc::ast::ast::PropertyKey::StaticIdentifier(_)
-              | oxc::ast::ast::PropertyKey::PrivateIdentifier(_) => false,
-              key @ oxc::ast::match_expression!(PropertyKey) => {
-                // SAFETY: since we already check if key is an expression
-                prop.computed && !is_primitive_literal(self.scope, key.as_expression().unwrap())
-              }
-            };
+            let key_side_effect = self.detect_side_effect_of_property_key(&prop.key, prop.computed);
             if key_side_effect {
               return true;
             }

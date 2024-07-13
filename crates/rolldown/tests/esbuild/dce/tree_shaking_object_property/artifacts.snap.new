@@ -20,6 +20,7 @@ let keep6 = {get [x]() {}};
 let keep7 = {set [x](_) {}};
 let keep8 = {async [x]() {}};
 let keep9 = {[{toString() {}}]: 'x'};
+let keep10 = {[Symbol.iteratr]: 'x'};
 
 //#endregion
 ```

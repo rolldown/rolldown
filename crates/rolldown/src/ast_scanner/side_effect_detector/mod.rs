@@ -313,7 +313,8 @@ impl<'a> SideEffectDetector<'a> {
     declarators.iter().any(|decl| {
       decl.init.as_ref().map_or(false, |init| match init {
         Expression::NullLiteral(_) => false,
-        // Side effect detection of identifier as initialization of using declaration is different with other position.
+        // Side effect detection of identifier is different with other position when as initialization of using declaration.
+        // Only global variable `undefined` is considered as side effect free.
         Expression::Identifier(id) => !(id.name == "undefined" && self.is_unresolved_reference(id)),
         _ => true,
       })

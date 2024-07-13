@@ -160,16 +160,21 @@ impl<'a> SideEffectDetector<'a> {
               oxc::ast::ast::PropertyKey::StaticIdentifier(_)
               | oxc::ast::ast::PropertyKey::PrivateIdentifier(_) => false,
               key @ oxc::ast::match_expression!(PropertyKey) => {
-                self.detect_side_effect_of_expr(key.to_expression())
+                // SAFETY: since we already check if key is an expression
+                prop.computed && !is_primitive_literal(self.scope, key.as_expression().unwrap())
               }
             };
+            if key_side_effect {
+              return true;
+            }
 
             let prop_init_side_effect =
               prop.init.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr));
 
-            let value_side_effect = self.detect_side_effect_of_expr(&prop.value);
-
-            key_side_effect || prop_init_side_effect || value_side_effect
+            if prop_init_side_effect {
+              return true;
+            }
+            self.detect_side_effect_of_expr(&prop.value)
           }
           oxc::ast::ast::ObjectPropertyKind::SpreadProperty(_) => {
             // ...[expression] is considered as having side effect.

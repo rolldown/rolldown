@@ -1,6 +1,10 @@
 use oxc::{
-  ast::{ast::Expression, Comment, CommentKind},
-  span::Span,
+  ast::{
+    ast::{Expression, MemberExpression},
+    Comment, CommentKind,
+  },
+  semantic::ReferenceId,
+  span::{Atom, Span},
   syntax::operator::{BinaryOperator, LogicalOperator, UnaryOperator, UpdateOperator},
 };
 use rolldown_common::AstScopes;
@@ -214,4 +218,81 @@ pub(crate) fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> Prim
     },
     _ => PrimitiveType::Unknown,
   }
+}
+
+pub fn is_primitive_literal(scope: &AstScopes, expr: &Expression) -> bool {
+  match expr {
+    Expression::NullLiteral(_)
+    | Expression::BooleanLiteral(_)
+    | Expression::NumericLiteral(_)
+    | Expression::StringLiteral(_)
+    | Expression::BigIntLiteral(_) => true,
+    Expression::Identifier(id)
+      if id.name == "undefined" && scope.is_unresolved(id.reference_id.get().unwrap()) =>
+    {
+      true
+    }
+    _ => false,
+  }
+}
+
+pub fn extract_member_expr_chain<'a>(
+  expr: &'a MemberExpression,
+  max_len: usize,
+) -> Option<(ReferenceId, Vec<Atom<'a>>)> {
+  if max_len == 0 {
+    return None;
+  }
+  let mut chain = vec![];
+  match expr {
+    MemberExpression::ComputedMemberExpression(computed_expr) => {
+      let Expression::StringLiteral(ref str) = computed_expr.expression else {
+        return None;
+      };
+      chain.push(str.value.clone());
+      let mut cur = &computed_expr.object;
+      extract_rest_member_expr_chain(&mut cur, &mut chain, max_len).map(|ref_id| (ref_id, chain))
+    }
+    MemberExpression::StaticMemberExpression(static_expr) => {
+      let mut cur = &static_expr.object;
+      chain.push(static_expr.property.name.clone());
+      extract_rest_member_expr_chain(&mut cur, &mut chain, max_len).map(|ref_id| (ref_id, chain))
+    }
+    MemberExpression::PrivateFieldExpression(_) => None,
+  }
+}
+
+fn extract_rest_member_expr_chain<'a>(
+  cur: &mut &'a Expression,
+  chain: &mut Vec<Atom<'a>>,
+  max_len: usize,
+) -> Option<ReferenceId> {
+  loop {
+    match &cur {
+      Expression::StaticMemberExpression(expr) => {
+        *cur = &expr.object;
+        chain.push(expr.property.name.clone());
+      }
+      Expression::ComputedMemberExpression(expr) => {
+        let Expression::StringLiteral(ref str) = expr.expression else {
+          break;
+        };
+        chain.push(str.value.clone());
+        *cur = &expr.object;
+      }
+      Expression::Identifier(ident) => {
+        chain.push(ident.name.clone());
+        let ref_id = ident.reference_id.get().expect("should have reference_id");
+        chain.reverse();
+        return Some(ref_id);
+      }
+      _ => break,
+    }
+    // If chain exceeds the max length, that means we are not interest in this member expression.
+    // return `None`
+    if chain.len() >= max_len {
+      return None;
+    }
+  }
+  None
 }

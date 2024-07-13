@@ -77,8 +77,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
-- class_js-!~{000}~.mjs => class_js-0lKo5UE5.mjs
-- object_js-!~{001}~.mjs => object_js-uQIwRJHu.mjs
+- class_js-!~{000}~.mjs => class_js-agEgCpt5.mjs
+- object_js-!~{001}~.mjs => object_js-WXUV5QqJ.mjs
 
 # tests/esbuild/dce/dce_of_using_declarations
 
@@ -300,6 +300,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/dce/tree_shaking_binary_operators
 
 - entry_js-!~{000}~.mjs => entry_js-Rv2eq7sm.mjs
+
+# tests/esbuild/dce/tree_shaking_class_property
+
+- entry_js-!~{000}~.mjs => entry_js-1msBEEUP.mjs
+
+# tests/esbuild/dce/tree_shaking_class_static_property
+
+- entry_js-!~{000}~.mjs => entry_js-d1jZjAFG.mjs
 
 # tests/esbuild/dce/tree_shaking_import_identifier
 

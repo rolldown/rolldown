@@ -18,6 +18,9 @@ class Keep2 {
 	[keep];
 	*[Symbol.iterator]() {}
 }
+class Keep3 {
+	*[Symbol.wtf]() {}
+}
 
 //#endregion
 ```
@@ -26,8 +29,6 @@ class Keep2 {
 ```js
 
 //#region object.js
-let remove2 = {*[Symbol.iterator]() {}};
-let remove3 = {*[Symbol['iterator']]() {}};
 let keep1 = {
 	*[Symbol.iterator]() {},
 	[keep]: null

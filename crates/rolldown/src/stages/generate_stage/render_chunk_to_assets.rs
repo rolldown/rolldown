@@ -1,5 +1,5 @@
 use futures::future::try_join_all;
-use rolldown_common::{Output, OutputAsset, OutputChunk, SourceMapType};
+use rolldown_common::{Output, OutputAsset, OutputChunk, PreliminaryAsset, SourceMapType};
 use rolldown_error::BuildError;
 use sugar_path::SugarPath;
 
@@ -7,10 +7,7 @@ use crate::{
   chunk_graph::ChunkGraph,
   utils::{
     augment_chunk_hash::augment_chunk_hash,
-    chunk::{
-      finalize_chunks::finalize_chunks,
-      render_chunk::{render_chunk, ChunkRenderReturn},
-    },
+    chunk::{finalize_chunks::finalize_chunks, render_chunk::render_chunk},
     render_chunks::render_chunks,
   },
 };
@@ -37,7 +34,7 @@ impl<'a> GenerateStage<'a> {
     let chunks = finalize_chunks(chunk_graph, chunks);
 
     let mut assets = vec![];
-    for ChunkRenderReturn {
+    for PreliminaryAsset {
       mut map,
       rendered_chunk,
       mut code,

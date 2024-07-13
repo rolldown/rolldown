@@ -44,6 +44,7 @@ pub use crate::{
   file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
   module::external_module::ExternalModule,
   module::Module,
+  types::asset::{Asset, PreliminaryAsset},
   types::asset_source::AssetSource,
   types::ast_scopes::AstScopes,
   types::bundler_file_system::BundlerFileSystem,

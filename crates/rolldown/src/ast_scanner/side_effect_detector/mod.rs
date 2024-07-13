@@ -128,7 +128,7 @@ impl<'a> SideEffectDetector<'a> {
     let Some((ref_id, chains)) = extract_member_expr_chain(expr, 3) else {
       return true;
     };
-    // If the global variable is overrided, we considered it has side effect.
+    // If the global variable is override, we considered it has side effect.
     if !self.scope.is_unresolved(ref_id) {
       return true;
     }

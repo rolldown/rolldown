@@ -251,18 +251,18 @@ pub fn extract_member_expr_chain<'a>(
       };
       chain.push(str.value.clone());
       let mut cur = &computed_expr.object;
-      extract_rest_member_epxr_chain(&mut cur, &mut chain, max_len).map(|ref_id| (ref_id, chain))
+      extract_rest_member_expr_chain(&mut cur, &mut chain, max_len).map(|ref_id| (ref_id, chain))
     }
     MemberExpression::StaticMemberExpression(static_expr) => {
       let mut cur = &static_expr.object;
       chain.push(static_expr.property.name.clone());
-      extract_rest_member_epxr_chain(&mut cur, &mut chain, max_len).map(|ref_id| (ref_id, chain))
+      extract_rest_member_expr_chain(&mut cur, &mut chain, max_len).map(|ref_id| (ref_id, chain))
     }
     MemberExpression::PrivateFieldExpression(_) => None,
   }
 }
 
-fn extract_rest_member_epxr_chain<'a>(
+fn extract_rest_member_expr_chain<'a>(
   cur: &mut &'a Expression,
   chain: &mut Vec<Atom<'a>>,
   max_len: usize,

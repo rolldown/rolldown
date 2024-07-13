@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{ChunkIdx, ResourceId};
+use rolldown_common::{ChunkIdx, PreliminaryAsset, ResourceId};
 use rolldown_utils::{
   base64::to_url_safe_base64,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
@@ -16,13 +16,11 @@ use crate::{
   utils::hash_placeholder::{extract_hash_placeholders, replace_facade_hash_replacement},
 };
 
-use super::render_chunk::ChunkRenderReturn;
-
 #[tracing::instrument(level = "debug", skip_all)]
 pub fn finalize_chunks(
   chunk_graph: &mut ChunkGraph,
-  mut chunks: Vec<ChunkRenderReturn>,
-) -> Vec<ChunkRenderReturn> {
+  mut chunks: Vec<PreliminaryAsset>,
+) -> Vec<PreliminaryAsset> {
   let chunk_id_by_placeholder = chunk_graph
     .chunks
     .iter_enumerated()

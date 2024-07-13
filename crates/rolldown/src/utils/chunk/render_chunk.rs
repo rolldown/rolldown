@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::{
   chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
   utils::render_ecma_module::render_ecma_module, SharedOptions,
@@ -7,21 +5,12 @@ use crate::{
 
 use anyhow::Result;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, OutputFormat, RenderedChunk, RenderedModule, ResourceId, WrapKind,
+  Chunk, ChunkKind, ExportsKind, OutputFormat, PreliminaryAsset, RenderedModule, WrapKind,
 };
-use rolldown_sourcemap::{ConcatSource, RawSource, SourceMap};
+use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
-
-pub struct ChunkRenderReturn {
-  pub code: String,
-  pub map: Option<SourceMap>,
-  pub rendered_chunk: RenderedChunk,
-  pub augment_chunk_hash: Option<String>,
-  pub file_dir: PathBuf,
-  pub preliminary_filename: ResourceId,
-}
 
 use super::{
   generate_rendered_chunk, render_chunk_exports::render_chunk_exports,
@@ -34,7 +23,7 @@ pub async fn render_chunk(
   options: &SharedOptions,
   graph: &LinkStageOutput,
   chunk_graph: &ChunkGraph,
-) -> Result<ChunkRenderReturn> {
+) -> Result<PreliminaryAsset> {
   let mut rendered_modules = FxHashMap::default();
   let mut concat_source = ConcatSource::default();
 
@@ -221,7 +210,7 @@ pub async fn render_chunk(
     map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
   }
 
-  Ok(ChunkRenderReturn {
+  Ok(PreliminaryAsset {
     code: content,
     map,
     rendered_chunk,

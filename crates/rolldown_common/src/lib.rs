@@ -40,7 +40,7 @@ pub use crate::{
     Chunk,
   },
   css::{css_module::CssModule, css_module_idx::CssModuleIdx},
-  ecmascript::{ecma_module::EcmaModule, module_idx::ModuleIdx},
+  ecmascript::{ecma_asset_meta::EcmaAssetMeta, ecma_module::EcmaModule, module_idx::ModuleIdx},
   file_emitter::{EmittedAsset, FileEmitter, SharedFileEmitter},
   module::external_module::ExternalModule,
   module::Module,

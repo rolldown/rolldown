@@ -15,7 +15,10 @@ pub async fn render_chunks<'a>(
     // - plugin_driver.render_chunk should return Option<...> to be able to see if there is a return value by the plugin
     let render_chunk_ret = if let AssetMeta::Ecma(ecma_meta) = &asset.meta {
       plugin_driver
-        .render_chunk(HookRenderChunkArgs { code: asset.content.clone(), chunk: ecma_meta })
+        .render_chunk(HookRenderChunkArgs {
+          code: asset.content.clone(),
+          chunk: &ecma_meta.rendered_chunk,
+        })
         .await
     } else {
       Ok((asset.content.clone(), vec![]))

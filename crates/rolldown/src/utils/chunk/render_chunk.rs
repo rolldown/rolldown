@@ -5,8 +5,8 @@ use crate::{
 
 use anyhow::Result;
 use rolldown_common::{
-  AssetMeta, Chunk, ChunkKind, ExportsKind, OutputFormat, PreliminaryAsset, RenderedModule,
-  WrapKind,
+  AssetMeta, Chunk, ChunkKind, EcmaAssetMeta, ExportsKind, OutputFormat, PreliminaryAsset,
+  RenderedModule, WrapKind,
 };
 use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -214,7 +214,7 @@ pub async fn render_chunk(
   Ok(PreliminaryAsset {
     content,
     map,
-    meta: AssetMeta::Ecma(rendered_chunk),
+    meta: AssetMeta::from(EcmaAssetMeta { rendered_chunk }),
     augment_chunk_hash: None,
     file_dir: file_dir.to_path_buf(),
     preliminary_filename: this

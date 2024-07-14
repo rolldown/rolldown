@@ -40,6 +40,7 @@ export function bindingifyOutputOptions(
     assetFileNames,
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
+    minify: outputOptions.minify,
   }
 }
 

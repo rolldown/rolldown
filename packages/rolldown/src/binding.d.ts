@@ -195,6 +195,7 @@ export interface BindingOutputOptions {
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
+  minify?: boolean
 }
 
 export interface BindingPluginContextResolvedId {

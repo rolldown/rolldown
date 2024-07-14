@@ -1,3 +1,35 @@
+# [0.12.0](https://github.com/rolldown/rolldown/compare/v0.11.1...v0.12.0) (2024-07-14)
+
+
+### Bug Fixes
+
+*  align using declaration side effects detection with esbuild. ([#1593](https://github.com/rolldown/rolldown/issues/1593)) ([e7747fc](https://github.com/rolldown/rolldown/commit/e7747fc8c59721bd0bcad86bdc913682368ebaab))
+*  class property and object key side effects detection ([#1599](https://github.com/rolldown/rolldown/issues/1599)) ([46f0ec9](https://github.com/rolldown/rolldown/commit/46f0ec9489788a9925e02a2df7f6a2c7727fa391))
+* chunk modules should include empty module ([#1583](https://github.com/rolldown/rolldown/issues/1583)) ([4790d46](https://github.com/rolldown/rolldown/commit/4790d46f81c37e387c1c852ff16b8729a188cc1c))
+* iife wrapper ([#1584](https://github.com/rolldown/rolldown/issues/1584)) ([593e87e](https://github.com/rolldown/rolldown/commit/593e87e63949e0223970e4140750be24e4dd53eb))
+* InternalModuleFormat typing ([#1580](https://github.com/rolldown/rolldown/issues/1580)) ([c166094](https://github.com/rolldown/rolldown/commit/c1660942967a4dee4199e3269c55dfc800b1a43e))
+* mixed multi declarator tree shake ([#1566](https://github.com/rolldown/rolldown/issues/1566)) ([1971e3b](https://github.com/rolldown/rolldown/commit/1971e3b3788fbd2ca7ad68ef2868e2e9ae196882))
+* multi declarator tree shake ([#1564](https://github.com/rolldown/rolldown/issues/1564)) ([0cf1c22](https://github.com/rolldown/rolldown/commit/0cf1c225b64cfdad45c2d26bd35b67c3a5010200))
+* object property tree shake ([#1608](https://github.com/rolldown/rolldown/issues/1608)) ([3536f00](https://github.com/rolldown/rolldown/commit/3536f00054822e5a814b25b541d486daa302ec82))
+* remove unused pure comment call ([#1597](https://github.com/rolldown/rolldown/issues/1597)) ([42becf0](https://github.com/rolldown/rolldown/commit/42becf062de1d7d4e137ff1541390a11b2ba07c0))
+* template literal side effects ([#1594](https://github.com/rolldown/rolldown/issues/1594)) ([7b011df](https://github.com/rolldown/rolldown/commit/7b011df0372d7a9186253c89882dec4172f846e6))
+
+
+### Features
+
+* **experimental:** support strict execution order ([#1568](https://github.com/rolldown/rolldown/issues/1568)) ([0303f1f](https://github.com/rolldown/rolldown/commit/0303f1fdee8447c7ee65f1fe3c5e7b151d77e290))
+* **node:** support `OutputOptions#minify` to minify js output ([#1617](https://github.com/rolldown/rolldown/issues/1617)) ([bcc4edc](https://github.com/rolldown/rolldown/commit/bcc4edce8831c1c31f30f9dc04d91a7fedc1f499))
+* **output:** support emit output of iife format ([#1570](https://github.com/rolldown/rolldown/issues/1570)) ([7c9d537](https://github.com/rolldown/rolldown/commit/7c9d5374811d10dccaea9e54b1bd74d7d84eff88)), closes [/esbuild.github.io/try/#YgAwLjIzLjAALS1mb3JtYXQ9aWlmZSAtLWJ1bmRsZSAtLW91dGRpcj0iZGlzdCIAZQBlbnRyeS5qcwBpbXBvcnQoIi4vY2pzIikKaW1wb3J0KCIuL2VzbSIpLnRoZW4oKG0pID0](https://github.com//esbuild.github.io/try//issues/YgAwLjIzLjAALS1mb3JtYXQ9aWlmZSAtLWJ1bmRsZSAtLW91dGRpcj0iZGlzdCIAZQBlbnRyeS5qcwBpbXBvcnQoIi4vY2pzIikKaW1wb3J0KCIuL2VzbSIpLnRoZW4oKG0pID0)
+* support OutputAsset#name ([#1586](https://github.com/rolldown/rolldown/issues/1586)) ([39a47dc](https://github.com/rolldown/rolldown/commit/39a47dc34ae6ee7e092a643c09d0882024c5e5bf))
+
+
+### Performance Improvements
+
+* avoid unnecessary allocation ([#1576](https://github.com/rolldown/rolldown/issues/1576)) ([c609929](https://github.com/rolldown/rolldown/commit/c609929583a32e4a00ad2793fbb3fcad4dec09d6))
+* don't clone the content while hashing ([#1613](https://github.com/rolldown/rolldown/issues/1613)) ([11dc8d8](https://github.com/rolldown/rolldown/commit/11dc8d82dc4c4b6fcc67f884c2ab7dfe13304829))
+
+
+
 ## [0.11.1](https://github.com/rolldown/rolldown/compare/v0.11.0...v0.11.1) (2024-07-09)
 
 

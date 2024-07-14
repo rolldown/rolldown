@@ -122,6 +122,12 @@
             "$ref": "#/definitions/InputItem"
           }
         },
+        "minify": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "moduleTypes": {
           "description": "Key is the file extension. The extension should start with a `.`. E.g. `\".txt\"`.",
           "type": [

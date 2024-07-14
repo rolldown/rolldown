@@ -1541,6 +1541,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-MXoXgssy.mjs
 
+# tests/fixtures/function/minify/basic
+
+- main-!~{000}~.mjs => main-bL_xg4Dl.mjs
+- main-bL_xg4Dl.mjs.map
+
 # tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
 - main-!~{000}~.mjs => main-Epcg7SRV.mjs

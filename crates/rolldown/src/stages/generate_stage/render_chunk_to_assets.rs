@@ -31,9 +31,11 @@ impl<'a> GenerateStage<'a> {
 
     augment_chunk_hash(self.plugin_driver, &mut preliminary_assets).await?;
 
-    let chunks = finalize_assets(chunk_graph, preliminary_assets, &index_chunk_to_assets);
+    let mut assets = finalize_assets(chunk_graph, preliminary_assets, &index_chunk_to_assets);
 
-    let mut assets = vec![];
+    self.minify_assets(&mut assets)?;
+
+    let mut outputs = vec![];
     for Asset {
       mut map,
       meta: rendered_chunk,
@@ -41,7 +43,7 @@ impl<'a> GenerateStage<'a> {
       file_dir,
       preliminary_filename,
       ..
-    } in chunks
+    } in assets
     {
       if let AssetMeta::Ecma(ecma_meta) = rendered_chunk {
         let rendered_chunk = ecma_meta.rendered_chunk;
@@ -88,7 +90,7 @@ impl<'a> GenerateStage<'a> {
                   continue;
                 }
               };
-              assets.push(Output::Asset(Box::new(OutputAsset {
+              outputs.push(Output::Asset(Box::new(OutputAsset {
                 filename: map_filename.clone(),
                 source: source.into(),
                 name: None,
@@ -110,7 +112,7 @@ impl<'a> GenerateStage<'a> {
         }
         let sourcemap_filename =
           map.as_ref().map(|_| format!("{}.map", rendered_chunk.filename.as_str()));
-        assets.push(Output::Chunk(Box::new(OutputChunk {
+        outputs.push(Output::Chunk(Box::new(OutputChunk {
           name: rendered_chunk.name,
           filename: rendered_chunk.filename,
           code,
@@ -129,7 +131,7 @@ impl<'a> GenerateStage<'a> {
       }
     }
 
-    Ok(assets)
+    Ok(outputs)
   }
 
   async fn render_preliminary_assets(

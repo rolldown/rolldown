@@ -32,6 +32,7 @@ use crate::{
 
 mod code_splitting;
 mod compute_cross_chunk_links;
+mod minify_assets;
 mod render_chunk_to_assets;
 
 pub struct GenerateStage<'a> {

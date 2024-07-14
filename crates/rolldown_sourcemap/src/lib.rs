@@ -6,6 +6,7 @@ mod lines_count;
 pub use lines_count::lines_count;
 mod concat_sourcemap;
 
+// TODO: should return `SourceMap` directly without `Option`
 pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> Option<SourceMap> {
   debug_assert!(sourcemap_chain.len() > 1);
   let last_map = sourcemap_chain.pop()?;
@@ -49,6 +50,10 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> Option<Sourc
   }
 
   Some(sourcemap_builder.into_sourcemap())
+}
+
+pub fn collapse_sourcemap2(prev: &SourceMap, next: &SourceMap) -> SourceMap {
+  collapse_sourcemaps(vec![prev, next]).expect("collapse_sourcemaps should not fail")
 }
 
 #[cfg(test)]

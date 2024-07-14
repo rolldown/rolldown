@@ -18,6 +18,7 @@ let keep5 = {[x]() {}};
 let keep6 = {get [x]() {}};
 let keep7 = {set [x](_) {}};
 let keep8 = {async [x]() {}};
+let keep9 = {[{toString() {}}]: 'x'};
 
 //#endregion
 ```

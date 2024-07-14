@@ -329,6 +329,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-uNaywliE.mjs
 
+# tests/esbuild/dce/tree_shaking_object_property
+
+- entry_js-!~{000}~.mjs => entry_js-WQ54s_vT.mjs
+
 # tests/esbuild/dce/tree_shaking_unary_operators
 
 - entry_js-!~{000}~.mjs => entry_js-mG_EK2pI.mjs

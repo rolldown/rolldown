@@ -1,7 +1,7 @@
 // cSpell:disable
 use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, NamedImport, NormalizedBundlerOptions,
-  ResourceId, SymbolRef,
+  SymbolRef,
 };
 pub mod types;
 
@@ -20,7 +20,6 @@ pub struct Chunk {
   pub exec_order: u32,
   pub kind: ChunkKind,
   pub modules: Vec<ModuleIdx>,
-  pub filename: Option<ResourceId>,
   pub name: Option<ArcStr>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,

@@ -1,8 +1,9 @@
-use rolldown_common::{Chunk, NormalizedBundlerOptions, PreliminaryAsset};
+use rolldown_common::{Chunk, ChunkIdx, NormalizedBundlerOptions, PreliminaryAsset};
 
 use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
 pub struct GenerateContext<'a> {
+  pub chunk_idx: ChunkIdx,
   pub chunk: &'a Chunk,
   pub options: &'a NormalizedBundlerOptions,
   pub link_output: &'a LinkStageOutput,

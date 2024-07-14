@@ -1,8 +1,8 @@
 use std::hash::Hash;
 
 use itertools::Itertools;
-use oxc::index::IndexVec;
-use rolldown_common::{AssetMeta, ChunkIdx, PreliminaryAsset, ResourceId};
+use oxc::index::{index_vec, IndexVec};
+use rolldown_common::{AssetIdx, AssetMeta, ResourceId};
 use rolldown_utils::{
   base64::to_url_safe_base64,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
@@ -13,39 +13,40 @@ use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
   chunk_graph::ChunkGraph,
+  type_alias::{IndexAssets, IndexChunkToAssets, IndexPreliminaryAssets},
   utils::hash_placeholder::{extract_hash_placeholders, replace_facade_hash_replacement},
 };
 
 #[tracing::instrument(level = "debug", skip_all)]
-pub fn finalize_chunks(
+pub fn finalize_assets(
   chunk_graph: &mut ChunkGraph,
-  mut chunks: Vec<PreliminaryAsset>,
-) -> Vec<PreliminaryAsset> {
-  let chunk_id_by_placeholder = chunk_graph
-    .chunks
+  preliminary_assets: IndexPreliminaryAssets,
+  index_chunk_to_assets: &IndexChunkToAssets,
+) -> IndexAssets {
+  let asset_idx_by_placeholder = preliminary_assets
     .iter_enumerated()
-    .filter_map(|(chunk_id, chunk)| {
-      chunk
+    .filter_map(|(asset_idx, asset)| {
+      asset
         .preliminary_filename
-        .as_ref()
-        .unwrap()
         .hash_placeholder()
-        .map(|hash_placeholder| (hash_placeholder.to_string(), chunk_id))
+        .map(|hash_placeholder| (hash_placeholder.to_string(), asset_idx))
     })
     .collect::<FxHashMap<_, _>>();
 
-  let index_chunk_dependencies: IndexVec<ChunkIdx, Vec<ChunkIdx>> = chunks
+  let index_asset_dependencies: IndexVec<AssetIdx, Vec<AssetIdx>> = preliminary_assets
+    .as_vec()
     .par_iter()
-    .map(|chunk| {
-      extract_hash_placeholders(&chunk.content)
+    .map(|asset| {
+      extract_hash_placeholders(&asset.content)
         .iter()
-        .map(|placeholder| chunk_id_by_placeholder[placeholder])
+        .map(|placeholder| asset_idx_by_placeholder[placeholder])
         .collect_vec()
     })
     .collect::<Vec<_>>()
     .into();
 
-  let index_standalone_content_hashes: IndexVec<ChunkIdx, String> = chunks
+  let index_standalone_content_hashes: IndexVec<AssetIdx, String> = preliminary_assets
+    .as_vec()
     .par_iter()
     .map(|chunk| {
       let mut content = chunk.content.as_bytes().to_vec();
@@ -57,28 +58,25 @@ pub fn finalize_chunks(
     .collect::<Vec<_>>()
     .into();
 
-  let mut index_chunk_hashers: IndexVec<ChunkIdx, Xxh3> =
-    oxc::index::index_vec![Xxh3::default(); chunks.len()];
+  let index_asset_hashers: IndexVec<AssetIdx, Xxh3> =
+    index_vec![Xxh3::default(); preliminary_assets.len()];
 
-  let index_final_hashes: IndexVec<ChunkIdx, String> = index_chunk_hashers
-    .iter_mut_enumerated()
+  let index_final_hashes: IndexVec<AssetIdx, String> = index_asset_hashers
+    .into_iter_enumerated()
     // FIXME: Extra traversing. This is a workaround due to `par_bridge` doesn't ensure order https://github.com/rayon-rs/rayon/issues/551#issuecomment-882069261
     .collect::<Vec<_>>()
     .into_par_iter()
-    .map(|(chunk_id, state)| {
+    .map(|(asset_idx, mut hasher)| {
       // hash itself
-      index_standalone_content_hashes[chunk_id].hash(state);
+      index_standalone_content_hashes[asset_idx].hash(&mut hasher);
       // hash itself's preliminary filename to prevent different chunks that have the same content from having the same hash
-      chunk_graph.chunks[chunk_id]
-        .preliminary_filename
-        .as_ref()
-        .expect("must have preliminary_filename")
-        .hash(state);
-      let dependencies = &index_chunk_dependencies[chunk_id];
+      preliminary_assets[asset_idx].preliminary_filename.hash(&mut hasher);
+
+      let dependencies = &index_asset_dependencies[asset_idx];
       dependencies.iter().copied().for_each(|dep_id| {
-        index_standalone_content_hashes[dep_id].hash(state);
+        index_standalone_content_hashes[dep_id].hash(&mut hasher);
       });
-      let digested = state.digest128();
+      let digested = hasher.digest128();
       to_url_safe_base64(digested.to_le_bytes())
     })
     .collect::<Vec<_>>()
@@ -98,41 +96,53 @@ pub fn finalize_chunks(
     })
     .collect::<FxHashMap<_, _>>();
 
-  chunk_graph.chunks.iter_mut().zip(chunks.iter_mut()).par_bridge().for_each(
-    |(chunk, chunk_render_return)| {
-      let preliminary_filename_raw =
-        chunk.preliminary_filename.as_deref().expect("should have file name").to_string();
+  let mut assets: IndexAssets = preliminary_assets
+    .into_iter()
+    // FIXME: Extra traversing. This is a workaround due to `par_bridge` doesn't ensure order https://github.com/rayon-rs/rayon/issues/551#issuecomment-882069261
+    .collect::<Vec<_>>()
+    .into_par_iter()
+    .map(|mut asset| {
+      let preliminary_filename_raw = asset.preliminary_filename.to_string();
       let filename: ResourceId =
         replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder)
           .into();
-      chunk.filename = Some(filename.clone());
-      if let AssetMeta::Ecma(ecma_meta) = &mut chunk_render_return.meta {
-        ecma_meta.rendered_chunk.filename = filename;
+
+      if let AssetMeta::Ecma(ecma_meta) = &mut asset.meta {
+        ecma_meta.rendered_chunk.filename = filename.clone();
       }
-      chunk_render_return.content = replace_facade_hash_replacement(
-        std::mem::take(&mut chunk_render_return.content),
+
+      // TODO: PERF: should check if this asset has dependencies/placeholders to be replaced
+      asset.content = replace_facade_hash_replacement(
+        std::mem::take(&mut asset.content),
         &final_hashes_by_placeholder,
       );
-    },
-  );
 
-  // Replace hash placeholder in `imports`
-  chunk_graph.chunks.iter().zip(chunks.iter_mut()).par_bridge().for_each(
-    |(chunk, chunk_render_return)| {
-      if let AssetMeta::Ecma(ecma_meta) = &mut chunk_render_return.meta {
-        ecma_meta.rendered_chunk.imports = chunk
-          .cross_chunk_imports
-          .iter()
-          .map(|id| chunk_graph.chunks[*id].filename.clone().expect("should have file name"))
-          .collect();
-        ecma_meta.rendered_chunk.dynamic_imports = chunk
-          .cross_chunk_dynamic_imports
-          .iter()
-          .map(|id| chunk_graph.chunks[*id].filename.clone().expect("should have file name"))
-          .collect();
-      }
-    },
-  );
+      asset.finalize(filename.to_string())
+    })
+    .collect::<Vec<_>>()
+    .into();
 
-  chunks
+  let index_asset_to_filename: IndexVec<AssetIdx, String> =
+    assets.iter().map(|asset| asset.filename.clone()).collect::<Vec<_>>().into();
+
+  assets.iter_mut().par_bridge().for_each(|asset| {
+    if let AssetMeta::Ecma(ecma_meta) = &mut asset.meta {
+      let chunk = &chunk_graph.chunks[asset.origin_chunk];
+      ecma_meta.rendered_chunk.imports = chunk
+        .cross_chunk_imports
+        .iter()
+        .flat_map(|importee_idx| &index_chunk_to_assets[*importee_idx])
+        .map(|importee_asset_idx| index_asset_to_filename[*importee_asset_idx].clone().into())
+        .collect();
+
+      ecma_meta.rendered_chunk.dynamic_imports = chunk
+        .cross_chunk_dynamic_imports
+        .iter()
+        .flat_map(|importee_idx| &index_chunk_to_assets[*importee_idx])
+        .map(|importee_asset_idx| index_asset_to_filename[*importee_asset_idx].clone().into())
+        .collect();
+    }
+  });
+
+  assets
 }

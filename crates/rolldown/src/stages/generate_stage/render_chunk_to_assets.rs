@@ -1,16 +1,17 @@
 use futures::future::try_join_all;
-use rolldown_common::{
-  AssetMeta, Output, OutputAsset, OutputChunk, PreliminaryAsset, SourceMapType,
-};
+use indexmap::IndexSet;
+use oxc::index::{index_vec, IndexVec};
+use rolldown_common::{Asset, AssetMeta, Output, OutputAsset, OutputChunk, SourceMapType};
 use rolldown_error::BuildError;
 use sugar_path::SugarPath;
 
 use crate::{
   chunk_graph::ChunkGraph,
   ecmascript::ecma_generator::EcmaGenerator,
+  type_alias::{IndexChunkToAssets, IndexPreliminaryAssets},
   types::generator::{GenerateContext, Generator},
   utils::{
-    augment_chunk_hash::augment_chunk_hash, chunk::finalize_chunks::finalize_chunks,
+    augment_chunk_hash::augment_chunk_hash, chunk::finalize_chunks::finalize_assets,
     render_chunks::render_chunks,
   },
 };
@@ -23,16 +24,17 @@ impl<'a> GenerateStage<'a> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
   ) -> anyhow::Result<Vec<Output>> {
-    let preliminary_assets = self.render_preliminary_assets(chunk_graph).await?;
+    let (mut preliminary_assets, index_chunk_to_assets) =
+      self.render_preliminary_assets(chunk_graph).await?;
 
-    let chunks = render_chunks(self.plugin_driver, preliminary_assets).await?;
+    render_chunks(self.plugin_driver, &mut preliminary_assets).await?;
 
-    let chunks = augment_chunk_hash(self.plugin_driver, chunks).await?;
+    augment_chunk_hash(self.plugin_driver, &mut preliminary_assets).await?;
 
-    let chunks = finalize_chunks(chunk_graph, chunks);
+    let chunks = finalize_assets(chunk_graph, preliminary_assets, &index_chunk_to_assets);
 
     let mut assets = vec![];
-    for PreliminaryAsset {
+    for Asset {
       mut map,
       meta: rendered_chunk,
       content: mut code,
@@ -133,9 +135,14 @@ impl<'a> GenerateStage<'a> {
   async fn render_preliminary_assets(
     &self,
     chunk_graph: &ChunkGraph,
-  ) -> anyhow::Result<Vec<PreliminaryAsset>> {
-    let assets = try_join_all(chunk_graph.chunks.iter().map(|chunk| async {
+  ) -> anyhow::Result<(IndexPreliminaryAssets, IndexChunkToAssets)> {
+    let mut index_chunk_to_assets: IndexChunkToAssets =
+      index_vec![IndexSet::default(); chunk_graph.chunks.len()];
+    let mut index_preliminary_assets: IndexPreliminaryAssets =
+      IndexVec::with_capacity(chunk_graph.chunks.len());
+    try_join_all(chunk_graph.chunks.iter_enumerated().map(|(chunk_idx, chunk)| async move {
       let ctx = GenerateContext {
+        chunk_idx,
         chunk,
         options: self.options,
         link_output: self.link_output,
@@ -146,8 +153,18 @@ impl<'a> GenerateStage<'a> {
     .await?
     .into_iter()
     .flatten()
-    .collect::<Vec<_>>();
+    .for_each(|asset| {
+      let origin_chunk = asset.origin_chunk;
+      let asset_idx = index_preliminary_assets.push(asset);
+      index_chunk_to_assets[origin_chunk].insert(asset_idx);
+    });
 
-    Ok(assets)
+    index_chunk_to_assets.iter_mut().for_each(|assets| {
+      assets.sort_by_cached_key(|asset_idx| {
+        index_preliminary_assets[*asset_idx].preliminary_filename.as_str()
+      });
+    });
+
+    Ok((index_preliminary_assets, index_chunk_to_assets))
   }
 }

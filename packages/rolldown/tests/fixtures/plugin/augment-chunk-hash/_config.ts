@@ -35,7 +35,7 @@ export default defineTest({
           break
 
         case path.join(__dirname, 'entry.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-iOHezbUo.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-LZxEycPx.js"`)
           break
 
         default:

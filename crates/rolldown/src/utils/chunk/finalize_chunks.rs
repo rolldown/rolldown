@@ -48,13 +48,7 @@ pub fn finalize_assets(
   let index_standalone_content_hashes: IndexVec<AssetIdx, String> = preliminary_assets
     .as_vec()
     .par_iter()
-    .map(|chunk| {
-      let mut content = chunk.content.as_bytes().to_vec();
-      if let Some(augment_chunk_hash) = &chunk.augment_chunk_hash {
-        content.extend(augment_chunk_hash.as_bytes());
-      }
-      xxhash_base64_url(&content)
-    })
+    .map(|chunk| xxhash_base64_url(chunk.content.as_bytes()))
     .collect::<Vec<_>>()
     .into();
 
@@ -67,8 +61,9 @@ pub fn finalize_assets(
     .collect::<Vec<_>>()
     .into_par_iter()
     .map(|(asset_idx, mut hasher)| {
-      // hash itself
+      // Start to calculate hash, first we hash itself
       index_standalone_content_hashes[asset_idx].hash(&mut hasher);
+
       // hash itself's preliminary filename to prevent different chunks that have the same content from having the same hash
       preliminary_assets[asset_idx].preliminary_filename.hash(&mut hasher);
 
@@ -76,6 +71,12 @@ pub fn finalize_assets(
       dependencies.iter().copied().for_each(|dep_id| {
         index_standalone_content_hashes[dep_id].hash(&mut hasher);
       });
+
+      // Hash content that provided by users if it's exist
+      if let Some(augment_chunk_hash) = &preliminary_assets[asset_idx].augment_chunk_hash {
+        augment_chunk_hash.as_bytes().hash(&mut hasher);
+      }
+
       let digested = hasher.digest128();
       to_url_safe_base64(digested.to_le_bytes())
     })

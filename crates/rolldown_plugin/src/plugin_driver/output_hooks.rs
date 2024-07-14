@@ -33,13 +33,13 @@ impl PluginDriver {
     &self,
     chunk: &RollupRenderedChunk,
   ) -> HookAugmentChunkHashReturn {
-    let mut hash = String::new();
+    let mut hash = None;
     for (plugin, ctx) in &self.plugins {
       if let Some(plugin_hash) = plugin.augment_chunk_hash(ctx, chunk).await? {
-        hash.push_str(&plugin_hash);
+        hash.get_or_insert_with(String::default).push_str(&plugin_hash);
       }
     }
-    Ok(Some(hash))
+    Ok(hash)
   }
 
   pub async fn render_error(&self, args: &HookRenderErrorArgs) -> HookNoopReturn {

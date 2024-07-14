@@ -7,9 +7,10 @@ use sugar_path::SugarPath;
 
 use crate::{
   chunk_graph::ChunkGraph,
+  ecmascript::ecma_generator::EcmaGenerator,
+  types::generator::{GenerateContext, Generator},
   utils::{
-    augment_chunk_hash::augment_chunk_hash,
-    chunk::{finalize_chunks::finalize_chunks, render_chunk::render_chunk},
+    augment_chunk_hash::augment_chunk_hash, chunk::finalize_chunks::finalize_chunks,
     render_chunks::render_chunks,
   },
 };
@@ -22,15 +23,9 @@ impl<'a> GenerateStage<'a> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
   ) -> anyhow::Result<Vec<Output>> {
-    let chunks = try_join_all(
-      chunk_graph
-        .chunks
-        .iter()
-        .map(|c| async { render_chunk(c, self.options, self.link_output, chunk_graph).await }),
-    )
-    .await?;
+    let preliminary_assets = self.render_preliminary_assets(chunk_graph).await?;
 
-    let chunks = render_chunks(self.plugin_driver, chunks).await?;
+    let chunks = render_chunks(self.plugin_driver, preliminary_assets).await?;
 
     let chunks = augment_chunk_hash(self.plugin_driver, chunks).await?;
 
@@ -131,6 +126,27 @@ impl<'a> GenerateStage<'a> {
         })));
       }
     }
+
+    Ok(assets)
+  }
+
+  async fn render_preliminary_assets(
+    &self,
+    chunk_graph: &ChunkGraph,
+  ) -> anyhow::Result<Vec<PreliminaryAsset>> {
+    let assets = try_join_all(chunk_graph.chunks.iter().map(|chunk| async {
+      let ctx = GenerateContext {
+        chunk,
+        options: self.options,
+        link_output: self.link_output,
+        chunk_graph,
+      };
+      EcmaGenerator::render_preliminary_assets(&ctx).await
+    }))
+    .await?
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>();
 
     Ok(assets)
   }

@@ -1,22 +1,22 @@
 use rolldown_common::{
-  Chunk, ChunkKind, PreRenderedChunk, RenderedModule, ResourceId, RollupRenderedChunk,
+  Chunk, ChunkKind, NormalizedBundlerOptions, PreRenderedChunk, RenderedModule, ResourceId,
+  RollupRenderedChunk,
 };
 use rustc_hash::FxHashMap;
 
-use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput, SharedOptions};
+use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
 use self::render_chunk_exports::get_chunk_export_names;
 
 pub mod deconflict_chunk_symbols;
 pub mod finalize_chunks;
-pub mod render_chunk;
 pub mod render_chunk_exports;
 pub mod render_chunk_imports;
 
 pub fn generate_pre_rendered_chunk(
   chunk: &Chunk,
   graph: &LinkStageOutput,
-  output_options: &SharedOptions,
+  output_options: &NormalizedBundlerOptions,
 ) -> PreRenderedChunk {
   PreRenderedChunk {
     name: chunk.name.clone().expect("should have name"),
@@ -40,7 +40,7 @@ pub fn generate_pre_rendered_chunk(
 pub fn generate_rendered_chunk(
   chunk: &Chunk,
   graph: &LinkStageOutput,
-  output_options: &SharedOptions,
+  output_options: &NormalizedBundlerOptions,
   render_modules: FxHashMap<ResourceId, RenderedModule>,
   chunk_graph: &ChunkGraph,
 ) -> RollupRenderedChunk {

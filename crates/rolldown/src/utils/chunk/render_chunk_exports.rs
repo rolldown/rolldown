@@ -1,14 +1,16 @@
-use rolldown_common::{Chunk, ChunkKind, ExportsKind, OutputFormat, SymbolRef, WrapKind};
+use rolldown_common::{
+  Chunk, ChunkKind, ExportsKind, NormalizedBundlerOptions, OutputFormat, SymbolRef, WrapKind,
+};
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
 
-use crate::{runtime::RuntimeModuleBrief, stages::link_stage::LinkStageOutput, SharedOptions};
+use crate::{runtime::RuntimeModuleBrief, stages::link_stage::LinkStageOutput};
 
 pub fn render_chunk_exports(
   this: &Chunk,
   _runtime: &RuntimeModuleBrief,
   graph: &LinkStageOutput,
-  output_options: &SharedOptions,
+  output_options: &NormalizedBundlerOptions,
 ) -> Option<String> {
   let export_items = get_export_items(this, graph);
 
@@ -127,7 +129,7 @@ fn get_export_items(this: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolR
 pub fn get_chunk_export_names(
   this: &Chunk,
   graph: &LinkStageOutput,
-  options: &SharedOptions,
+  options: &NormalizedBundlerOptions,
 ) -> Vec<String> {
   if matches!(options.format, OutputFormat::Esm) {
     if let ChunkKind::EntryPoint { module: entry_id, .. } = &this.kind {

@@ -1,14 +1,12 @@
-use rolldown_common::EcmaModule;
+use rolldown_common::{EcmaModule, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_sourcemap::{collapse_sourcemaps, lines_count, RawSource, Source, SourceMapSource};
-
-use crate::SharedOptions;
 
 pub fn render_ecma_module(
   module: &EcmaModule,
   ast: &EcmaAst,
   source_name: &str,
-  options: &SharedOptions,
+  options: &NormalizedBundlerOptions,
 ) -> Option<Vec<Box<dyn Source + Send>>> {
   if ast.is_body_empty() {
     None

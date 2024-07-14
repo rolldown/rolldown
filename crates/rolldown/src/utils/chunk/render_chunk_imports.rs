@@ -1,6 +1,6 @@
-use rolldown_common::{Chunk, OutputFormat, Specifier};
+use rolldown_common::{Chunk, NormalizedBundlerOptions, OutputFormat, Specifier};
 
-use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput, SharedOptions};
+use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
 // clippy::too_many_lines: TODO(hyf0): refactor this function
 #[allow(clippy::too_many_lines)]
@@ -8,7 +8,7 @@ pub fn render_chunk_imports(
   chunk: &Chunk,
   graph: &LinkStageOutput,
   chunk_graph: &ChunkGraph,
-  options: &SharedOptions,
+  options: &NormalizedBundlerOptions,
 ) -> String {
   let mut s = String::new();
 

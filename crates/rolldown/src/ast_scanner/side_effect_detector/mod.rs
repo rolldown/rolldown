@@ -156,20 +156,18 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ObjectExpression(obj_expr) => {
         obj_expr.properties.iter().any(|obj_prop| match obj_prop {
           oxc::ast::ast::ObjectPropertyKind::ObjectProperty(prop) => {
-            let key_side_effect = match &prop.key {
-              oxc::ast::ast::PropertyKey::StaticIdentifier(_)
-              | oxc::ast::ast::PropertyKey::PrivateIdentifier(_) => false,
-              key @ oxc::ast::match_expression!(PropertyKey) => {
-                self.detect_side_effect_of_expr(key.to_expression())
-              }
-            };
+            let key_side_effect = self.detect_side_effect_of_property_key(&prop.key, prop.computed);
+            if key_side_effect {
+              return true;
+            }
 
             let prop_init_side_effect =
               prop.init.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr));
 
-            let value_side_effect = self.detect_side_effect_of_expr(&prop.value);
-
-            key_side_effect || prop_init_side_effect || value_side_effect
+            if prop_init_side_effect {
+              return true;
+            }
+            self.detect_side_effect_of_expr(&prop.value)
           }
           oxc::ast::ast::ObjectPropertyKind::SpreadProperty(_) => {
             // ...[expression] is considered as having side effect.

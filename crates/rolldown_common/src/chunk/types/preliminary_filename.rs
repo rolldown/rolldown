@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use crate::ResourceId;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Represents a filename that might contains hash placeholder.
 pub struct PreliminaryFilename {
   /// Might contains preliminary hash

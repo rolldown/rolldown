@@ -45,6 +45,7 @@ pub use crate::{
   module::external_module::ExternalModule,
   module::Module,
   types::asset::{Asset, PreliminaryAsset},
+  types::asset_idx::AssetIdx,
   types::asset_meta::AssetMeta,
   types::asset_source::AssetSource,
   types::ast_scopes::AstScopes,

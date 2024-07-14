@@ -243,6 +243,7 @@ impl Generator for EcmaGenerator {
     }
 
     Ok(vec![PreliminaryAsset {
+      origin_chunk: ctx.chunk_idx,
       content,
       map,
       meta: AssetMeta::from(EcmaAssetMeta { rendered_chunk }),
@@ -251,9 +252,8 @@ impl Generator for EcmaGenerator {
       preliminary_filename: ctx
         .chunk
         .preliminary_filename
-        .as_deref()
-        .expect("should have preliminary filename")
-        .clone(),
+        .clone()
+        .expect("should have preliminary filename"),
     }])
   }
 }

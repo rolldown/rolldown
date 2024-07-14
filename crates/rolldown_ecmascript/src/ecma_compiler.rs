@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
 use oxc::{
-  codegen::{CodeGenerator, CodegenReturn},
+  allocator::Allocator,
+  codegen::{CodeGenerator, Codegen, CodegenReturn},
+  minifier::{Minifier, MinifierOptions},
   parser::Parser,
+  sourcemap::SourceMap,
   span::SourceType,
 };
 
@@ -46,6 +49,24 @@ impl EcmaCompiler {
       codegen = codegen.enable_source_map(source_name, ast.source());
     }
     codegen.build(ast.program())
+  }
+
+  pub fn minify(
+    source_text: &str,
+    enable_sourcemap: bool,
+    filename: &str,
+  ) -> anyhow::Result<(String, Option<SourceMap>)> {
+    let allocator = Allocator::default();
+    let program = Parser::new(&allocator, source_text, SourceType::default()).parse().program;
+    let program = allocator.alloc(program);
+    let options = MinifierOptions { mangle: true, ..MinifierOptions::default() };
+    Minifier::new(options).build(&allocator, program);
+    let codegen = Codegen::<true>::new();
+    let codegen =
+      if enable_sourcemap { codegen.enable_source_map(filename, source_text) } else { codegen };
+
+    let ret = codegen.build(program);
+    Ok((ret.source_text, ret.source_map))
   }
 }
 

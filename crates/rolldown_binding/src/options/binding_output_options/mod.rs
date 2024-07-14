@@ -82,5 +82,5 @@ pub struct BindingOutputOptions {
   // systemNullSetters: boolean;
   // validate: boolean;
   // --- Enhanced options
-  // pub minify: bool,
+  pub minify: Option<bool>,
 }

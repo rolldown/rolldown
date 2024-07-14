@@ -35,6 +35,7 @@ export function normalizeOutputOptions(
     chunkFileNames: chunkFileNames ?? '[name]-[hash].js',
     assetFileNames: assetFileNames ?? 'assets/[name]-[hash][extname]',
     plugins: [],
+    minify: opts.minify,
   }
 }
 

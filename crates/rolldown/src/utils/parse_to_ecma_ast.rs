@@ -28,7 +28,7 @@ pub fn parse_to_ecma_ast(
   plugin_driver: &PluginDriver,
   path: &Path,
   options: &NormalizedBundlerOptions,
-  module_type: ModuleType,
+  module_type: &ModuleType,
   source: ArcStr,
 ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
   // 1. Transform the source to the type that rolldown supported.

@@ -88,17 +88,17 @@ impl EcmaModuleTask {
     let module_type = {
       let ext =
         self.resolved_path.path.as_path().extension().and_then(|ext| ext.to_str()).unwrap_or("js");
-      let module_type = self.ctx.input_options.module_types.get(ext);
+      let module_type = self.ctx.input_options.module_types.get(ext).cloned();
 
       // FIXME: Once we support more types, we should return error instead of defaulting to JS.
-      module_type.copied().unwrap_or(ModuleType::Js)
+      module_type.unwrap_or(ModuleType::Js)
     };
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
     let source = load_source(
       &self.ctx.plugin_driver,
       &self.resolved_path,
-      module_type,
+      module_type.clone(),
       &self.ctx.fs,
       &mut sourcemap_chain,
       &mut hook_side_effects,
@@ -120,7 +120,7 @@ impl EcmaModuleTask {
       &self.ctx.plugin_driver,
       Path::new(&self.resolved_path.path.as_ref()),
       &self.ctx.input_options,
-      module_type,
+      &module_type,
       source.clone(),
     )?;
 

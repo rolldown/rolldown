@@ -110,6 +110,7 @@ pub fn normalize_binding_options(
       .transpose()
       .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
     shim_missing_exports: input_options.shim_missing_exports,
+    name: output_options.name,
     entry_filenames: output_options.entry_file_names,
     chunk_filenames: output_options.chunk_file_names,
     asset_filenames: output_options.asset_file_names,

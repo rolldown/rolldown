@@ -23,4 +23,5 @@ export interface NormalizedOutputOptions extends OutputOptions {
   entryFileNames: string
   chunkFileNames: string
   assetFileNames: string
+  name: string | undefined
 }

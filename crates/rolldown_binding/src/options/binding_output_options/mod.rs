@@ -17,6 +17,7 @@ pub struct BindingOutputOptions {
   // --- Options Rolldown doesn't need to be supported
   // /** @deprecated Use the "renderDynamicImport" plugin hook instead. */
   // dynamicImportFunction: string | undefined;
+  pub name: Option<String>,
   pub entry_file_names: Option<String>,
   pub chunk_file_names: Option<String>,
   pub asset_file_names: Option<String>,
@@ -52,7 +53,6 @@ pub struct BindingOutputOptions {
   // intro: () => string | Promise<string>;
   // manualChunks: ManualChunksOption;
   // minifyInternalExports: boolean;
-  // name: string | undefined;
   // namespaceToStringTag: boolean;
   // noConflict: boolean;
   // outro: () => string | Promise<string>;

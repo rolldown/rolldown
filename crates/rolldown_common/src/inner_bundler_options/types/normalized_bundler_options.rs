@@ -28,6 +28,7 @@ pub struct NormalizedBundlerOptions {
   /// The key is the extension. Unlike `BundlerOptions`, the extension doesn't start with a dot.
   pub module_types: FxHashMap<String, ModuleType>,
   // --- Output
+  pub name: Option<String>,
   pub entry_filenames: FilenameTemplate,
   pub chunk_filenames: FilenameTemplate,
   pub asset_filenames: FilenameTemplate,

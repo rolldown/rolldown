@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/format/iife-with-name
+---
+# Assets
+
+## main.mjs
+
+```js
+
+var myModule = (function(exports) {
+
+//#region foo.js
+const value = 1;
+
+//#endregion
+Object.defineProperty(exports, '__esModule', { value: true });
+exports.value = value;
+return exports;
+})({});
+```

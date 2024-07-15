@@ -138,6 +138,12 @@
             "$ref": "#/definitions/ModuleType"
           }
         },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "platform": {
           "anyOf": [
             {

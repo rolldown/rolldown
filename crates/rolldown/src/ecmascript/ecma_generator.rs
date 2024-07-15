@@ -2,7 +2,8 @@ use crate::{
   types::generator::{GenerateContext, Generator},
   utils::{
     chunk::{
-      generate_rendered_chunk, render_chunk_exports::render_chunk_exports,
+      generate_rendered_chunk,
+      render_chunk_exports::{get_export_items, render_chunk_exports},
       render_chunk_imports::render_chunk_imports,
     },
     render_ecma_module::render_ecma_module,
@@ -91,7 +92,15 @@ impl Generator for EcmaGenerator {
 
         // TODO indent chunk content for iife format
         if matches!(ctx.options.format, OutputFormat::Iife) {
-          concat_source.add_source(Box::new(RawSource::new("(function() {\n".to_string())));
+          let has_exports = !get_export_items(ctx.chunk, ctx.link_output).is_empty();
+          if let Some(name) = &ctx.options.name {
+            concat_source.add_source(Box::new(RawSource::new(format!(
+              "var {name} = (function({}) {{\n",
+              if has_exports { "exports" } else { "" }
+            ))));
+          } else {
+            concat_source.add_source(Box::new(RawSource::new("(function() {\n".to_string())));
+          }
         }
 
         rendered_iter.for_each(|(_id, module_resource_id, module_render_output)| {
@@ -106,10 +115,6 @@ impl Generator for EcmaGenerator {
             rendered_modules.insert(module_resource_id.clone(), RenderedModule { code: None });
           }
         });
-
-        if matches!(ctx.options.format, OutputFormat::Iife) {
-          concat_source.add_source(Box::new(RawSource::new("})();".to_string())));
-        }
 
         generate_rendered_chunk(
           ctx.chunk,
@@ -215,6 +220,17 @@ impl Generator for EcmaGenerator {
       render_chunk_exports(ctx.chunk, &ctx.link_output.runtime, ctx.link_output, ctx.options)
     {
       concat_source.add_source(Box::new(RawSource::new(exports)));
+      if matches!(ctx.options.format, OutputFormat::Iife) {
+        concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
+      }
+    }
+
+    if matches!(ctx.options.format, OutputFormat::Iife) {
+      let has_exports = !get_export_items(ctx.chunk, ctx.link_output).is_empty();
+      concat_source.add_source(Box::new(RawSource::new(format!(
+        "}})({});",
+        if has_exports { "{}" } else { "" }
+      ))));
     }
 
     // add footer

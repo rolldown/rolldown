@@ -183,6 +183,7 @@ export declare enum BindingLogLevel {
 }
 
 export interface BindingOutputOptions {
+  name?: string
   entryFileNames?: string
   chunkFileNames?: string
   assetFileNames?: string

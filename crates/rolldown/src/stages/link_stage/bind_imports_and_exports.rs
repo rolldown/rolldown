@@ -1,8 +1,6 @@
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 
-use std::sync::Arc;
-
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, ResolvedExport, Specifier, SymbolRef,
 };
@@ -283,7 +281,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
           self.errors.push(BuildError::missing_export(
             module.stable_resource_id.to_string(),
             importee.stable_resource_id().to_string(),
-            Arc::clone(&module.source),
+            module.source.clone(),
             named_import.imported.to_string(),
             named_import.span_imported,
           ));

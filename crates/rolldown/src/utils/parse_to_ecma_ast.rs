@@ -1,5 +1,6 @@
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
+use arcstr::ArcStr;
 use oxc::{
   semantic::{ScopeTree, SymbolTable},
   span::SourceType as OxcSourceType,
@@ -28,10 +29,8 @@ pub fn parse_to_ecma_ast(
   path: &Path,
   options: &NormalizedBundlerOptions,
   module_type: ModuleType,
-  source: impl Into<Arc<str>>,
+  source: ArcStr,
 ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
-  let source: Arc<str> = source.into();
-
   // 1. Transform the source to the type that rolldown supported.
   let (source, parsed_type) = match module_type {
     ModuleType::Js => (source, OxcParseType::Js),
@@ -58,7 +57,7 @@ pub fn parse_to_ecma_ast(
     }
   };
 
-  let mut ecma_ast = EcmaCompiler::parse(Arc::clone(&source), oxc_source_type)?;
+  let mut ecma_ast = EcmaCompiler::parse(&source, oxc_source_type)?;
 
   ecma_ast =
     plugin_driver.transform_ast(HookTransformAstArgs { cwd: &options.cwd, ast: ecma_ast })?;

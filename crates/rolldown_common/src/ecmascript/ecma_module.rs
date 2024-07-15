@@ -1,4 +1,4 @@
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 use crate::side_effects::DeterminedSideEffects;
 use crate::{
@@ -7,6 +7,7 @@ use crate::{
   StmtInfo, StmtInfos, SymbolRef,
 };
 use crate::{IndexModules, ModuleType};
+use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::span::Span;
 use rolldown_rstr::Rstr;
@@ -15,7 +16,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 #[derive(Debug)]
 pub struct EcmaModule {
   pub exec_order: u32,
-  pub source: Arc<str>,
+  pub source: ArcStr,
   pub idx: ModuleIdx,
   pub is_user_defined_entry: bool,
   pub resource_id: ResourceId,
@@ -77,7 +78,7 @@ impl EcmaModule {
 
   pub fn to_module_info(&self) -> ModuleInfo {
     ModuleInfo {
-      code: Some(Arc::clone(&self.source)),
+      code: Some(self.source.clone()),
       id: self.resource_id.clone(),
       is_entry: self.is_user_defined_entry,
       importers: {

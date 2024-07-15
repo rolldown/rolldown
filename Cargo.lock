@@ -2218,6 +2218,7 @@ name = "rolldown_ecmascript"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "oxc",
  "self_cell",
  "smallvec",
@@ -2227,6 +2228,7 @@ dependencies = [
 name = "rolldown_error"
 version = "0.0.1"
 dependencies = [
+ "arcstr",
  "ariadne",
  "napi",
  "oxc",

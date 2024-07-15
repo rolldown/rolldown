@@ -1,8 +1,6 @@
-use std::{
-  path::{Path, PathBuf},
-  sync::Arc,
-};
+use std::path::{Path, PathBuf};
 
+use arcstr::ArcStr;
 use oxc::span::Span;
 use rolldown_resolver::ResolveError;
 
@@ -59,7 +57,7 @@ impl BuildError {
   pub fn missing_export(
     stable_importer: String,
     stable_importee: String,
-    importer_source: Arc<str>,
+    importer_source: ArcStr,
     imported_specifier: String,
     imported_specifier_span: Span,
   ) -> Self {
@@ -76,7 +74,7 @@ impl BuildError {
 
   pub fn forbid_const_assign(
     filename: String,
-    source: Arc<str>,
+    source: ArcStr,
     name: String,
     reference_span: Span,
     re_assign_span: Span,
@@ -88,7 +86,7 @@ impl BuildError {
     Self::new_inner(NapiError { status, reason })
   }
 
-  pub fn eval(filename: String, source: Arc<str>, span: Span) -> Self {
+  pub fn eval(filename: String, source: ArcStr, span: Span) -> Self {
     Self::new_inner(Eval { filename, span, source })
   }
 }

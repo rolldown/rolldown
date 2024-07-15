@@ -265,7 +265,18 @@ impl<'a> BindImportsAndExportsContext<'a> {
       };
       tracing::trace!("Got match result {:?}", ret);
       match ret {
-        MatchImportKind::_Ignore | MatchImportKind::Ambiguous | MatchImportKind::Cycle => {}
+        MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
+        MatchImportKind::Ambiguous => {
+          let importee = &self.normal_modules[rec.resolved_module];
+          self.errors.push(BuildError::ambiguous_external_namespace(
+            "".to_string(),
+            vec!["".to_string()],
+            Arc::clone(&module.source),
+            module.stable_resource_id.to_string(),
+            named_import.imported.to_string(),
+            named_import.span_imported,
+          ))
+        }
         MatchImportKind::Normal { symbol } => {
           self.symbols.union(*imported_as_ref, symbol);
         }

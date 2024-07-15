@@ -4,6 +4,7 @@ use crate::{
   diagnostic::Diagnostic, event_kind::EventKind, types::diagnostic_options::DiagnosticOptions,
 };
 
+pub mod ambiguous_external_namespace;
 pub mod circular_dependency;
 pub mod eval;
 pub mod external_entry;

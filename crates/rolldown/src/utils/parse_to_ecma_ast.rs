@@ -45,6 +45,11 @@ pub fn parse_to_ecma_ast(
       OxcParseType::Js,
     ),
     ModuleType::Empty => ("export {}".to_string().into(), OxcParseType::Js),
+    ModuleType::Custom(custom_type) => {
+      // TODO: should provide friendly error message to say that this type is not supported by rolldown.
+      // Users should handle this type in load/transform hooks
+      return Err(anyhow::format_err!("Unknown module type: {custom_type}"));
+    }
   };
 
   let oxc_source_type = {

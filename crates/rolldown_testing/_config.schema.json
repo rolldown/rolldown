@@ -219,18 +219,34 @@
       }
     },
     "ModuleType": {
-      "type": "string",
-      "enum": [
-        "js",
-        "jsx",
-        "ts",
-        "tsx",
-        "json",
-        "text",
-        "base64",
-        "dataurl",
-        "binary",
-        "empty"
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "js",
+            "jsx",
+            "ts",
+            "tsx",
+            "json",
+            "text",
+            "base64",
+            "dataurl",
+            "binary",
+            "empty"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "custom"
+          ],
+          "properties": {
+            "custom": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
     },
     "OutputFormat": {

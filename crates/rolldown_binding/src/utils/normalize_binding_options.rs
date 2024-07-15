@@ -8,10 +8,10 @@ use crate::{
 use napi::Either;
 use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputFormat, Platform};
 use rolldown_plugin::SharedPlugin;
+use std::collections::HashMap;
 use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
-use std::{collections::HashMap, str::FromStr};
 
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct NormalizeBindingOptionsReturn {
@@ -87,7 +87,7 @@ pub fn normalize_binding_options(
     for (k, v) in raw {
       tmp.insert(
         k,
-        ModuleType::from_str(&v)
+        ModuleType::from_known_str(&v)
           .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
       );
     }

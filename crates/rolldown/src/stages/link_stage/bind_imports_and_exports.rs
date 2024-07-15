@@ -480,12 +480,11 @@ impl<'a> BindImportsAndExportsContext<'a> {
             symbol_ref: symbol,
             potentially_ambiguous_symbol_refs: ambiguous_results
               .iter()
-              .filter_map(|kind| {
-                if let MatchImportKind::Normal { symbol } = *kind {
-                  Some(symbol)
-                } else {
-                  None
-                }
+              .filter_map(|kind| match *kind {
+                MatchImportKind::Normal { symbol } => Some(symbol),
+                MatchImportKind::Namespace { namespace_ref } => Some(namespace_ref),
+                MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
+                _ => None,
               })
               .collect(),
           };

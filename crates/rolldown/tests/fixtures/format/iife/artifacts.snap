@@ -8,7 +8,6 @@ input_file: crates/rolldown/tests/fixtures/format/iife
 ## main.mjs
 
 ```js
-
 (function() {
 
 

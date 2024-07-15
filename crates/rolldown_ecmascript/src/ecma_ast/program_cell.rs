@@ -1,10 +1,9 @@
-use std::sync::Arc;
-
+use arcstr::ArcStr;
 use oxc::{allocator::Allocator, ast::ast::Program};
 use self_cell::self_cell;
 
 pub struct ProgramCellOwner {
-  pub source: Arc<str>,
+  pub source: ArcStr,
   pub allocator: Allocator,
 }
 
@@ -52,7 +51,7 @@ impl ProgramCell {
 }
 
 pub struct WithMutFields<'outer, 'inner> {
-  pub source: &'inner Arc<str>,
+  pub source: &'inner ArcStr,
   pub allocator: &'inner Allocator,
   pub program: &'outer mut Program<'inner>,
 }

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use once_cell::sync::Lazy;
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, BindingPatternKind, Expression, IdentifierReference,
@@ -43,12 +41,12 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_3: Lazy<FxHashSet<(&'static str, &'static st
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScopes,
-  pub source: &'a Arc<str>,
+  pub source: &'a str,
   pub trivias: &'a Trivias,
 }
 
 impl<'a> SideEffectDetector<'a> {
-  pub fn new(scope: &'a AstScopes, source: &'a Arc<str>, trivias: &'a Trivias) -> Self {
+  pub fn new(scope: &'a AstScopes, source: &'a str, trivias: &'a Trivias) -> Self {
     Self { scope, source, trivias }
   }
 

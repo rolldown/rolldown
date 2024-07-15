@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
   codegen::{CodeGenerator, Codegen, CodegenReturn},
@@ -16,22 +15,22 @@ use crate::ecma_ast::{
 pub struct EcmaCompiler;
 
 impl EcmaCompiler {
-  pub fn parse(source: impl Into<Arc<str>>, ty: SourceType) -> anyhow::Result<EcmaAst> {
+  pub fn parse(source: impl Into<ArcStr>, ty: SourceType) -> anyhow::Result<EcmaAst> {
+    let source = source.into();
     let allocator = oxc::allocator::Allocator::default();
     let mut trivias = None;
-    let inner =
-      ProgramCell::try_new(ProgramCellOwner { source: source.into(), allocator }, |owner| {
-        let parser =
-          Parser::new(&owner.allocator, &owner.source, ty).allow_return_outside_function(true);
-        let ret = parser.parse();
-        if ret.panicked || !ret.errors.is_empty() {
-          // TODO: more dx friendly error message
-          Err(anyhow::format_err!("Parse failed, got {:#?}", ret.errors))
-        } else {
-          trivias = Some(ret.trivias);
-          Ok(ProgramCellDependent { program: ret.program })
-        }
-      })?;
+    let inner = ProgramCell::try_new(ProgramCellOwner { source, allocator }, |owner| {
+      let parser =
+        Parser::new(&owner.allocator, &owner.source, ty).allow_return_outside_function(true);
+      let ret = parser.parse();
+      if ret.panicked || !ret.errors.is_empty() {
+        // TODO: more dx friendly error message
+        Err(anyhow::format_err!("Parse failed, got {:#?}", ret.errors))
+      } else {
+        trivias = Some(ret.trivias);
+        Ok(ProgramCellDependent { program: ret.program })
+      }
+    })?;
     Ok(EcmaAst {
       program: inner,
       source_type: ty,

@@ -1,21 +1,22 @@
 use crate::build_error::severity::Severity;
+use arcstr::ArcStr;
 use ariadne::{sources, Config, Label, Report, ReportBuilder, ReportKind};
-use std::{fmt::Display, ops::Range, sync::Arc};
+use std::{fmt::Display, ops::Range};
 
 #[derive(Debug, Clone)]
-pub struct DiagnosticFileId(Arc<str>);
+pub struct DiagnosticFileId(ArcStr);
 
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
   pub(crate) kind: String,
   pub(crate) title: String,
-  pub(crate) files: Vec<(/* filename */ Arc<str>, /* file content */ Arc<str>)>,
-  pub(crate) labels: Vec<Label<(/* filename */ Arc<str>, Range<usize>)>>,
+  pub(crate) files: Vec<(/* filename */ ArcStr, /* file content */ ArcStr)>,
+  pub(crate) labels: Vec<Label<(/* filename */ ArcStr, Range<usize>)>>,
   pub(crate) severity: Severity,
 }
 
-type AriadneReportBuilder = ReportBuilder<'static, (Arc<str>, Range<usize>)>;
-type AriadneReport = Report<'static, (Arc<str>, Range<usize>)>;
+type AriadneReportBuilder = ReportBuilder<'static, (ArcStr, Range<usize>)>;
+type AriadneReport = Report<'static, (ArcStr, Range<usize>)>;
 
 impl Diagnostic {
   pub(crate) fn new(kind: String, summary: String, severity: Severity) -> Self {
@@ -24,13 +25,13 @@ impl Diagnostic {
 
   pub(crate) fn add_file(
     &mut self,
-    filename: impl Into<Arc<str>>,
-    content: impl Into<Arc<str>>,
+    filename: impl Into<ArcStr>,
+    content: impl Into<ArcStr>,
   ) -> DiagnosticFileId {
     let filename = filename.into();
     let content = content.into();
     debug_assert!(self.files.iter().all(|(id, _)| id != &filename));
-    self.files.push((Arc::clone(&filename), content));
+    self.files.push((filename.clone(), content));
     DiagnosticFileId(filename)
   }
 
@@ -42,7 +43,7 @@ impl Diagnostic {
   ) -> &mut Self {
     let range = range.into();
     let range = range.start as usize..range.end as usize;
-    let label = Label::new((Arc::clone(&file_id.0), range)).with_message(message);
+    let label = Label::new((file_id.0.clone(), range)).with_message(message);
     self.labels.push(label);
     self
   }

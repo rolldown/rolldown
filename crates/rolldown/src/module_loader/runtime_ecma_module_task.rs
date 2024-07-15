@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
@@ -44,7 +43,7 @@ impl RuntimeEcmaModuleTask {
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
   pub fn run(self) -> anyhow::Result<()> {
-    let source: Arc<str> = include_str!("../runtime/runtime-without-comments.js").into();
+    let source: ArcStr = arcstr::literal!(include_str!("../runtime/runtime-without-comments.js"));
 
     let MakeEcmaAstResult { ast, ast_scope, scan_result, ast_symbols, namespace_object_ref } =
       self.make_ecma_ast(&source)?;
@@ -108,9 +107,9 @@ impl RuntimeEcmaModuleTask {
     Ok(())
   }
 
-  fn make_ecma_ast(&self, source: &Arc<str>) -> anyhow::Result<MakeEcmaAstResult> {
+  fn make_ecma_ast(&self, source: &ArcStr) -> anyhow::Result<MakeEcmaAstResult> {
     let source_type = SourceType::default();
-    let mut ast = EcmaCompiler::parse(Arc::clone(source), source_type)?;
+    let mut ast = EcmaCompiler::parse(source, source_type)?;
     tweak_ast_for_scanning(&mut ast);
 
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();

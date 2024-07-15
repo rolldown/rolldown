@@ -1,6 +1,7 @@
 pub mod impl_visit;
 pub mod side_effect_detector;
 
+use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::{
   ast::{
@@ -23,7 +24,6 @@ use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
 use rustc_hash::FxHashMap;
-use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use super::types::ast_symbols::AstSymbols;
@@ -44,7 +44,7 @@ pub struct ScanResult {
 
 pub struct AstScanner<'me> {
   idx: ModuleIdx,
-  source: &'me Arc<str>,
+  source: &'me ArcStr,
   module_type: ModuleDefFormat,
   file_path: &'me ResourceId,
   scopes: &'me AstScopes,
@@ -68,7 +68,7 @@ impl<'me> AstScanner<'me> {
     symbols: &'me mut AstSymbols,
     repr_name: String,
     module_type: ModuleDefFormat,
-    source: &'me Arc<str>,
+    source: &'me ArcStr,
     file_path: &'me ResourceId,
     trivias: &'me Trivias,
   ) -> Self {
@@ -473,7 +473,7 @@ impl<'me> AstScanner<'me> {
           self.result.warnings.push(
             BuildError::forbid_const_assign(
               self.file_path.to_string(),
-              Arc::clone(self.source),
+              self.source.clone(),
               self.symbols.get_name(symbol_id).into(),
               self.symbols.get_span(symbol_id),
               reference.span(),
@@ -502,7 +502,7 @@ impl<'me> AstScanner<'me> {
         }
         if ident.name == "eval" {
           self.result.warnings.push(
-            BuildError::eval(self.file_path.to_string(), Arc::clone(self.source), ident.span)
+            BuildError::eval(self.file_path.to_string(), self.source.clone(), ident.span)
               .with_severity_warning(),
           );
         }

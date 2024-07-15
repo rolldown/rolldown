@@ -1,6 +1,7 @@
 use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
+use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc::{
   index::IndexVec,
@@ -105,7 +106,7 @@ impl EcmaModuleTask {
     .await?;
 
     // Run plugin transform.
-    let source: Arc<str> = transform_source(
+    let source: ArcStr = transform_source(
       &self.ctx.plugin_driver,
       &self.resolved_path,
       source,
@@ -120,7 +121,7 @@ impl EcmaModuleTask {
       Path::new(&self.resolved_path.path.as_ref()),
       &self.ctx.input_options,
       module_type,
-      Arc::clone(&source),
+      source.clone(),
     )?;
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) =
@@ -246,7 +247,7 @@ impl EcmaModuleTask {
   fn scan(
     &self,
     ast: &mut EcmaAst,
-    source: &Arc<str>,
+    source: &ArcStr,
     symbols: SymbolTable,
     scopes: ScopeTree,
   ) -> (AstScopes, ScanResult, AstSymbols, SymbolRef) {

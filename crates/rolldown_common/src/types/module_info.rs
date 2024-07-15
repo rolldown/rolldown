@@ -1,10 +1,10 @@
-use std::sync::Arc;
+use arcstr::ArcStr;
 
 use crate::ResourceId;
 
 #[derive(Debug)]
 pub struct ModuleInfo {
-  pub code: Option<Arc<str>>,
+  pub code: Option<ArcStr>,
   pub id: ResourceId,
   pub is_entry: bool,
   pub importers: Vec<ResourceId>,

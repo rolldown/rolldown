@@ -1,7 +1,7 @@
+use arcstr::ArcStr;
 use oxc::span::Span;
 
 use crate::{event_kind::EventKind, types::diagnostic_options::DiagnosticOptions};
-use std::sync::Arc;
 
 use super::BuildEvent;
 
@@ -9,7 +9,7 @@ use super::BuildEvent;
 pub struct MissingExport {
   pub stable_importer: String,
   pub stable_importee: String,
-  pub importer_source: Arc<str>,
+  pub importer_source: ArcStr,
   pub imported_specifier: String,
   pub imported_specifier_span: Span,
 }
@@ -32,7 +32,7 @@ impl BuildEvent for MissingExport {
     _opts: &DiagnosticOptions,
   ) {
     let importer_file =
-      diagnostic.add_file(self.stable_importer.clone(), Arc::clone(&self.importer_source));
+      diagnostic.add_file(self.stable_importer.clone(), self.importer_source.clone());
 
     diagnostic.title =
       format!(r#""{}" is not exported by "{}"."#, self.imported_specifier, &self.stable_importee);

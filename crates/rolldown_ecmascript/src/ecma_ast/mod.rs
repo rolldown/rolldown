@@ -1,6 +1,7 @@
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 use crate::EcmaCompiler;
+use arcstr::ArcStr;
 use oxc::ast::Trivias;
 use oxc::{allocator::Allocator, ast::ast::Program, span::SourceType};
 
@@ -19,7 +20,7 @@ pub struct EcmaAst {
 }
 
 impl EcmaAst {
-  pub fn source(&self) -> &Arc<str> {
+  pub fn source(&self) -> &ArcStr {
     &self.program.borrow_owner().source
   }
 

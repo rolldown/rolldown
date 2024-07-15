@@ -45,7 +45,7 @@ pub fn render_chunk_exports(
       s.push_str(&format!("export {{ {} }};", rendered_items.join(", "),));
       Some(s)
     }
-    OutputFormat::Cjs => {
+    OutputFormat::Cjs | OutputFormat::Iife => {
       let mut s = String::new();
       match this.kind {
         ChunkKind::EntryPoint { module, .. } => {
@@ -99,11 +99,11 @@ pub fn render_chunk_exports(
 
       Some(s)
     }
-    OutputFormat::App | OutputFormat::Iife => None,
+    OutputFormat::App => None,
   }
 }
 
-fn get_export_items(this: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolRef)> {
+pub fn get_export_items(this: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolRef)> {
   match this.kind {
     ChunkKind::EntryPoint { module, .. } => {
       let meta = &graph.metas[module];

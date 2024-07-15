@@ -1441,6 +1441,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-_QyxBx4O.mjs
 
+# tests/fixtures/format/iife-with-name
+
+- main-!~{000}~.mjs => main-VYJo3mZR.mjs
+
 # tests/fixtures/function/dir/should_generate_correct_relative_import_path
 
 - ./chunks/async.mjs => ./chunks/async.mjs

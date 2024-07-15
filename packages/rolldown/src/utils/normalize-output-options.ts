@@ -15,6 +15,7 @@ export function normalizeOutputOptions(
     entryFileNames,
     chunkFileNames,
     assetFileNames,
+    name,
   } = opts
   return {
     dir: dir,
@@ -36,6 +37,7 @@ export function normalizeOutputOptions(
     assetFileNames: assetFileNames ?? 'assets/[name]-[hash][extname]',
     plugins: [],
     minify: opts.minify,
+    name,
   }
 }
 

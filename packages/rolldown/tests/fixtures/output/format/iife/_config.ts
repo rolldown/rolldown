@@ -5,11 +5,12 @@ export default defineTest({
   config: {
     output: {
       format: 'iife',
+      name: 'myModule',
     },
   },
   afterTest: (output) => {
     expect(output.output[0].code).toMatchInlineSnapshot(`
-      "(function() {
+      "var myModule = (function() {
 
       })();"
     `)

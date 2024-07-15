@@ -38,6 +38,7 @@ const outputOptionsSchema = z.strictObject({
   chunkFileNames: z.string().optional(),
   assetFileNames: z.string().optional(),
   minify: z.boolean().optional(),
+  name: z.string().optional(),
 })
 
 export type OutputOptions = z.infer<typeof outputOptionsSchema>

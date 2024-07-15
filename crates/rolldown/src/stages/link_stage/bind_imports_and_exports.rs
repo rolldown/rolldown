@@ -49,7 +49,7 @@ pub enum MatchImportKind {
   // The import could not be evaluated due to a cycle
   Cycle,
   // The import resolved to multiple symbols via "export * from"
-  Ambiguous,
+  Ambiguous { symbol_ref: SymbolRef, potentially_ambiguous_symbol_refs: Vec<SymbolRef> },
   NoMatch,
 }
 
@@ -266,11 +266,24 @@ impl<'a> BindImportsAndExportsContext<'a> {
       tracing::trace!("Got match result {:?}", ret);
       match ret {
         MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
-        MatchImportKind::Ambiguous => {
-          let importee = &self.normal_modules[rec.resolved_module];
+        MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
+          let importer = self.normal_modules[rec.resolved_module].stable_resource_id().to_string();
+
+          let mut importee =
+            Vec::<String>::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
+          importee.push(self.normal_modules[symbol_ref.owner].stable_resource_id().to_string());
+          importee.extend(
+            potentially_ambiguous_symbol_refs
+              .iter()
+              .map(|&symbol_ref| {
+                self.normal_modules[symbol_ref.owner].stable_resource_id().to_string()
+              })
+              .collect::<Vec<_>>(),
+          );
+
           self.errors.push(BuildError::ambiguous_external_namespace(
-            "".to_string(),
-            vec!["".to_string()],
+            importer,
+            importee,
             Arc::clone(&module.source),
             module.stable_resource_id.to_string(),
             named_import.imported.to_string(),
@@ -460,9 +473,25 @@ impl<'a> BindImportsAndExportsContext<'a> {
     tracing::trace!("ambiguous_results {:#?}", ambiguous_results);
     tracing::trace!("ret {:#?}", ret);
 
-    for ambiguous_result in ambiguous_results {
-      if ambiguous_result != ret {
-        return MatchImportKind::Ambiguous;
+    for ambiguous_result in &ambiguous_results {
+      if *ambiguous_result != ret {
+        if let MatchImportKind::Normal { symbol } = ret {
+          return MatchImportKind::Ambiguous {
+            symbol_ref: symbol,
+            potentially_ambiguous_symbol_refs: ambiguous_results
+              .iter()
+              .filter_map(|kind| {
+                if let MatchImportKind::Normal { symbol } = *kind {
+                  Some(symbol)
+                } else {
+                  None
+                }
+              })
+              .collect(),
+          };
+        }
+
+        unreachable!("symbol should always exist");
       }
     }
 

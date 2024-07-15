@@ -1,7 +1,6 @@
 use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
-use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc::{
   index::IndexVec,
@@ -9,8 +8,8 @@ use oxc::{
 };
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaModule, ImportRecordIdx, ModuleDefFormat, ModuleIdx, ModuleType, PackageJson,
-  RawImportRecord, ResolvedPath, ResolvedRequestInfo, ResourceId, SymbolRef, TreeshakeOptions,
+  AstScopes, EcmaModule, ImportRecordIdx, ModuleDefFormat, ModuleIdx, PackageJson, RawImportRecord,
+  ResolvedPath, ResolvedRequestInfo, ResourceId, StrOrBytes, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildError;
@@ -85,47 +84,50 @@ impl EcmaModuleTask {
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
-    let module_type = {
-      let ext =
-        self.resolved_path.path.as_path().extension().and_then(|ext| ext.to_str()).unwrap_or("js");
-      let module_type = self.ctx.input_options.module_types.get(ext).cloned();
-
-      // FIXME: Once we support more types, we should return error instead of defaulting to JS.
-      module_type.unwrap_or(ModuleType::Js)
-    };
-
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let source = load_source(
+    let (source, module_type) = load_source(
       &self.ctx.plugin_driver,
       &self.resolved_path,
-      module_type.clone(),
       &self.ctx.fs,
       &mut sourcemap_chain,
       &mut hook_side_effects,
+      &self.ctx.input_options,
     )
     .await?;
 
-    // Run plugin transform.
-    let source: ArcStr = transform_source(
-      &self.ctx.plugin_driver,
-      &self.resolved_path,
-      source,
-      &mut sourcemap_chain,
-      &mut hook_side_effects,
-    )
-    .await?
-    .into();
+    let source = match source {
+      StrOrBytes::Str(source) => {
+        // Run plugin transform.
+        let source = transform_source(
+          &self.ctx.plugin_driver,
+          &self.resolved_path,
+          source,
+          &mut sourcemap_chain,
+          &mut hook_side_effects,
+        )
+        .await?;
+        source.into()
+      }
+      StrOrBytes::Bytes(_) => source,
+    };
+
+    let Some(module_type) = module_type else {
+      return Err(anyhow::format_err!(
+        "[{:?}] is not specified module type, rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
+        self.resolved_path.path
+      ));
+    };
 
     let (mut ast, symbols, scopes) = parse_to_ecma_ast(
       &self.ctx.plugin_driver,
       Path::new(&self.resolved_path.path.as_ref()),
       &self.ctx.input_options,
       &module_type,
-      source.clone(),
+      source,
     )?;
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) =
-      self.scan(&mut ast, &source, symbols, scopes);
+      self.scan(&mut ast, symbols, scopes);
 
     let resolved_deps =
       self.resolve_dependencies(&scan_result.import_records, &mut warnings).await?;
@@ -196,7 +198,7 @@ impl EcmaModuleTask {
     };
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
     let module = EcmaModule {
-      source,
+      source: ast.source().clone(),
       idx: self.module_id,
       repr_name,
       stable_resource_id,
@@ -247,7 +249,6 @@ impl EcmaModuleTask {
   fn scan(
     &self,
     ast: &mut EcmaAst,
-    source: &ArcStr,
     symbols: SymbolTable,
     scopes: ScopeTree,
   ) -> (AstScopes, ScanResult, AstSymbols, SymbolRef) {
@@ -262,7 +263,7 @@ impl EcmaModuleTask {
       &mut ast_symbols,
       repr_name.into_owned(),
       self.module_type,
-      source,
+      ast.source(),
       &file_path,
       &ast.trivias,
     );

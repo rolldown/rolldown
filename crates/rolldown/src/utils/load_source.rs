@@ -1,54 +1,69 @@
-use std::sync::Arc;
-
-use anyhow::Context;
-use rolldown_common::{side_effects::HookSideEffects, ModuleType, ResolvedPath};
+use rolldown_common::{
+  side_effects::HookSideEffects, ModuleType, NormalizedBundlerOptions, ResolvedPath, StrOrBytes,
+};
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
-use rolldown_utils::mime::guess_mime;
 use sugar_path::SugarPath;
 
 pub async fn load_source(
   plugin_driver: &PluginDriver,
   resolved_path: &ResolvedPath,
-  module_type: ModuleType,
   fs: &dyn rolldown_fs::FileSystem,
   sourcemap_chain: &mut Vec<SourceMap>,
   side_effects: &mut Option<HookSideEffects>,
-) -> anyhow::Result<String> {
-  let source = if let Some(r) =
+  options: &NormalizedBundlerOptions,
+) -> anyhow::Result<(StrOrBytes, Option<ModuleType>)> {
+  let (maybe_source, maybe_module_type) = if let Some(load_hook_output) =
     plugin_driver.load(&HookLoadArgs { id: &resolved_path.path }).await?
   {
-    if let Some(map) = r.map {
-      sourcemap_chain.push(map);
-    }
-    if let Some(v) = r.side_effects {
+    sourcemap_chain.extend(load_hook_output.map);
+    if let Some(v) = load_hook_output.side_effects {
       *side_effects = Some(v);
     }
-    r.code
+
+    (Some(load_hook_output.code), load_hook_output.module_type)
   } else if resolved_path.ignored {
-    String::new()
+    (Some(String::new()), Some(ModuleType::Js))
   } else {
-    match module_type {
-      ModuleType::Base64 | ModuleType::Binary => {
-        rolldown_utils::base64::to_standard_base64(fs.read(resolved_path.path.as_path())?)
-      }
-      ModuleType::Dataurl => {
-        let data =
-          fs.read(resolved_path.path.as_path()).with_context(|| Arc::clone(&resolved_path.path))?;
-        let mime = guess_mime(resolved_path.path.as_path(), &data)?;
-        let is_plain_text = mime.type_() == mime::TEXT;
-        if is_plain_text {
-          let text = String::from_utf8(data)?;
-          let text = urlencoding::encode(&text);
-          // TODO: should we support non-utf8 text?
-          format!("data:{mime};charset=utf-8,{text}")
-        } else {
-          let encoded = rolldown_utils::base64::to_url_safe_base64(&data);
-          format!("data:{mime};base64,{encoded}")
-        }
-      }
-      _ => fs.read_to_string(resolved_path.path.as_path())?,
-    }
+    (None, None)
   };
-  Ok(source)
+
+  match (maybe_source, maybe_module_type) {
+    (Some(source), Some(module_type)) => Ok((source.into(), Some(module_type))),
+    (Some(source), None) => {
+      // The `load` hook returns content without specifying the module type, we consider it as `Js` by default.
+      // - This makes the behavior consistent with Rollup.
+      // - It's also not friendly to make users have to specify the module type in the `load` hook.
+      // - Why don't we jump into the guessing logic? Because guessing by extension is not reliable in the rollup's ecosystem.
+      Ok((source.into(), Some(ModuleType::Js)))
+    }
+    (None, None) => {
+      let guessed = resolved_path
+        .path
+        .as_path()
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .and_then(|ext| options.module_types.get(ext).cloned());
+      if let Some(guessed) = guessed {
+        match &guessed {
+          ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => {
+            Ok((StrOrBytes::Bytes(fs.read(resolved_path.path.as_path())?), Some(guessed)))
+          }
+          ModuleType::Js
+          | ModuleType::Jsx
+          | ModuleType::Ts
+          | ModuleType::Tsx
+          | ModuleType::Json
+          | ModuleType::Text
+          | ModuleType::Empty
+          | ModuleType::Custom(_) => {
+            Ok((StrOrBytes::Str(fs.read_to_string(resolved_path.path.as_path())?), Some(guessed)))
+          }
+        }
+      } else {
+        Err(anyhow::format_err!("Fail to guess module type for {:?}. So rolldown could load this asset correctly. Please use the load hook to load the resource", resolved_path.path))
+      }
+    }
+    (None, Some(_)) => unreachable!("Invalid state"),
+  }
 }

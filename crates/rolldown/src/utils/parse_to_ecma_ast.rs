@@ -5,10 +5,11 @@ use oxc::{
   semantic::{ScopeTree, SymbolTable},
   span::SourceType as OxcSourceType,
 };
-use rolldown_common::{ModuleType, NormalizedBundlerOptions};
+use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_esm};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
+use rolldown_utils::mime::guess_mime;
 
 use super::pre_process_ecma_ast::pre_process_ecma_ast;
 
@@ -29,22 +30,48 @@ pub fn parse_to_ecma_ast(
   path: &Path,
   options: &NormalizedBundlerOptions,
   module_type: &ModuleType,
-  source: ArcStr,
+  source: StrOrBytes,
 ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
   // 1. Transform the source to the type that rolldown supported.
   let (source, parsed_type) = match module_type {
-    ModuleType::Js => (source, OxcParseType::Js),
-    ModuleType::Jsx => (source, OxcParseType::Jsx),
-    ModuleType::Ts => (source, OxcParseType::Ts),
-    ModuleType::Tsx => (source, OxcParseType::Tsx),
-    ModuleType::Json => (json_to_esm(&source)?.into(), OxcParseType::Js),
-    ModuleType::Text => (text_to_esm(&source)?.into(), OxcParseType::Js),
-    ModuleType::Base64 | ModuleType::Dataurl => (text_to_esm(&source)?.into(), OxcParseType::Js),
-    ModuleType::Binary => (
-      binary_to_esm(&source, options.platform, ROLLDOWN_RUNTIME_RESOURCE_ID).into(),
-      OxcParseType::Js,
-    ),
-    ModuleType::Empty => ("export {}".to_string().into(), OxcParseType::Js),
+    ModuleType::Js => (source.try_into_string()?, OxcParseType::Js),
+    ModuleType::Jsx => (source.try_into_string()?, OxcParseType::Jsx),
+    ModuleType::Ts => (source.try_into_string()?, OxcParseType::Ts),
+    ModuleType::Tsx => (source.try_into_string()?, OxcParseType::Tsx),
+    ModuleType::Json => {
+      let content = json_to_esm(&source.try_into_string()?)?;
+      (content, OxcParseType::Js)
+    }
+    ModuleType::Text => {
+      let content = text_to_esm(&source.try_into_string()?)?;
+      (content, OxcParseType::Js)
+    }
+    ModuleType::Base64 => {
+      let source = source.try_into_bytes()?;
+      let encoded = rolldown_utils::base64::to_standard_base64(source);
+      (text_to_esm(&encoded)?, OxcParseType::Js)
+    }
+    ModuleType::Dataurl => {
+      let data = source.try_into_bytes()?;
+      let mime = guess_mime(path, &data)?;
+      let is_plain_text = mime.type_() == mime::TEXT;
+      let source = if is_plain_text {
+        let text = String::from_utf8(data)?;
+        let text = urlencoding::encode(&text);
+        // TODO: should we support non-utf8 text?
+        format!("data:{mime};charset=utf-8,{text}")
+      } else {
+        let encoded = rolldown_utils::base64::to_url_safe_base64(&data);
+        format!("data:{mime};base64,{encoded}")
+      };
+      (text_to_esm(&source)?, OxcParseType::Js)
+    }
+    ModuleType::Binary => {
+      let source = source.try_into_bytes()?;
+      let encoded = rolldown_utils::base64::to_standard_base64(source);
+      (binary_to_esm(&encoded, options.platform, ROLLDOWN_RUNTIME_RESOURCE_ID), OxcParseType::Js)
+    }
+    ModuleType::Empty => ("export {}".to_string(), OxcParseType::Js),
     ModuleType::Custom(custom_type) => {
       // TODO: should provide friendly error message to say that this type is not supported by rolldown.
       // Users should handle this type in load/transform hooks
@@ -61,6 +88,8 @@ pub fn parse_to_ecma_ast(
       OxcParseType::Tsx => default.with_typescript(true).with_jsx(true),
     }
   };
+
+  let source = ArcStr::from(source);
 
   let mut ecma_ast = EcmaCompiler::parse(&source, oxc_source_type)?;
 

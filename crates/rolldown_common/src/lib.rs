@@ -75,6 +75,7 @@ pub use crate::{
   types::rollup_rendered_chunk::RollupRenderedChunk,
   types::side_effects,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfos},
+  types::str_or_bytes::StrOrBytes,
   types::symbol_ref::{MemberExprRef, SymbolOrMemberExprRef, SymbolRef},
   types::wrap_kind::WrapKind,
 };

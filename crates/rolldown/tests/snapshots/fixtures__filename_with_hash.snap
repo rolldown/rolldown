@@ -1437,19 +1437,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-3zhSvh-N.mjs
 
-<<<<<<< HEAD
 # tests/fixtures/format/iife/external_modules
 
 - main-!~{000}~.mjs => main-_QyxBx4O.mjs
-=======
+
 # tests/fixtures/format/iife-with-name
 
-<<<<<<< HEAD
-- main-!~{000}~.mjs => main--9fCIfgN.mjs
->>>>>>> 1b879fe0 (feat: support output.name for iife)
-=======
 - main-!~{000}~.mjs => main-VYJo3mZR.mjs
->>>>>>> f7e12ee8 (chore: rebase)
 
 # tests/fixtures/function/dir/should_generate_correct_relative_import_path
 

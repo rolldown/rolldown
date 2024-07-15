@@ -22,6 +22,7 @@ impl TryFrom<BindingHookLoadOutput> for rolldown_plugin::HookLoadOutput {
       code: value.code,
       map: value.map.map(TryInto::try_into).transpose()?,
       side_effects: value.side_effects.map(Into::into),
+      module_type: None,
     })
   }
 }

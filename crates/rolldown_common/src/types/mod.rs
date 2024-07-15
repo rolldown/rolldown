@@ -29,5 +29,6 @@ pub mod resource_id;
 pub mod rollup_rendered_chunk;
 pub mod side_effects;
 pub mod stmt_info;
+pub mod str_or_bytes;
 pub mod symbol_ref;
 pub mod wrap_kind;

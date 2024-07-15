@@ -8,7 +8,6 @@ input_file: crates/rolldown/tests/fixtures/format/iife-with-name
 ## main.mjs
 
 ```js
-
 var myModule = (function(exports) {
 
 //#region foo.js

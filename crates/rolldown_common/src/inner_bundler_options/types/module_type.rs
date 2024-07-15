@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -22,12 +20,11 @@ pub enum ModuleType {
   Dataurl,
   Binary,
   Empty,
+  Custom(String),
 }
 
-impl FromStr for ModuleType {
-  type Err = String;
-
-  fn from_str(s: &str) -> Result<Self, Self::Err> {
+impl ModuleType {
+  pub fn from_known_str(s: &str) -> anyhow::Result<Self> {
     match s {
       "js" => Ok(Self::Js),
       "jsx" => Ok(Self::Jsx),
@@ -39,7 +36,7 @@ impl FromStr for ModuleType {
       "dataurl" => Ok(Self::Dataurl),
       "binary" => Ok(Self::Binary),
       "empty" => Ok(Self::Empty),
-      _ => Err(format!("Unknown module type: {s}")),
+      _ => Err(anyhow::format_err!("Unknown module type: {s}")),
     }
   }
 }

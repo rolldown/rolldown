@@ -53,17 +53,23 @@ impl Generator for EcmaGenerator {
           .into_iter()
           .peekable();
 
-        let maybe_runtime_module = rendered_iter.peek();
-
-        match maybe_runtime_module {
-          Some((id, _, _))
-            if *id == ctx.link_output.runtime.id()
-              && matches!(ctx.options.format, OutputFormat::Cjs) =>
-          {
-            let maybe_runtime_module = rendered_iter.next();
-            if let Some((_, _module_resource_id, Some(emitted_sources))) = maybe_runtime_module {
-              for source in emitted_sources {
-                concat_source.add_source(source);
+        // Render imports from other chunks
+        match ctx.options.format {
+          OutputFormat::Esm | OutputFormat::Cjs => {
+            if matches!(ctx.options.format, OutputFormat::Cjs) {
+              // Runtime module should be placed before the generated `requires` in CJS format.
+              // Because, we might need to generate `__toESM(require(...))` that relies on the runtime module.
+              match rendered_iter.peek() {
+                Some((id, _, _)) if *id == ctx.link_output.runtime.id() => {
+                  if let (_, _module_resource_id, Some(emitted_sources)) =
+                    rendered_iter.next().expect("Must have module")
+                  {
+                    for source in emitted_sources {
+                      concat_source.add_source(source);
+                    }
+                  }
+                }
+                _ => {}
               }
             }
             concat_source.add_source(Box::new(RawSource::new(render_chunk_imports(
@@ -73,13 +79,13 @@ impl Generator for EcmaGenerator {
               ctx.options,
             ))));
           }
-          _ => {
-            concat_source.add_source(Box::new(RawSource::new(render_chunk_imports(
-              ctx.chunk,
-              ctx.link_output,
-              ctx.chunk_graph,
-              ctx.options,
-            ))));
+          OutputFormat::Iife => {
+            // IIFE format should not have imports from other chunks
+          }
+          OutputFormat::App => {
+            return Err(anyhow::format_err!(
+              "unreachable: app format should be handled in the previous stage"
+            ));
           }
         }
 

@@ -327,7 +327,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_no_bundle_iife
 
-- entry_js-!~{000}~.mjs => entry_js-uNaywliE.mjs
+- entry_js-!~{000}~.mjs => entry_js-GGqT8yME.mjs
 
 # tests/esbuild/dce/tree_shaking_object_property
 
@@ -1435,7 +1435,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/format/iife
 
-- main-!~{000}~.mjs => main-0-EQkNWe.mjs
+- main-!~{000}~.mjs => main-3zhSvh-N.mjs
 
 # tests/fixtures/function/dir/should_generate_correct_relative_import_path
 

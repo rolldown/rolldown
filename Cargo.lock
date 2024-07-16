@@ -2327,6 +2327,7 @@ version = "0.1.0"
 dependencies = [
  "memchr",
  "oxc",
+ "rolldown_utils",
 ]
 
 [[package]]

@@ -55,7 +55,10 @@ pub enum MatchImportKind {
   // The import could not be evaluated due to a cycle
   Cycle,
   // The import resolved to multiple symbols via "export * from"
-  Ambiguous { symbol_ref: SymbolRef, potentially_ambiguous_symbol_refs: Vec<SymbolRef> },
+  Ambiguous {
+    symbol_ref: SymbolRef,
+    potentially_ambiguous_symbol_refs: Vec<SymbolRef>,
+  },
   NoMatch,
 }
 
@@ -238,8 +241,8 @@ struct BindImportsAndExportsContext<'a> {
   pub metas: &'a mut LinkingMetadataVec,
   pub symbols: &'a mut Symbols,
   pub input_options: &'a SharedOptions,
-  pub errors: Vec<BuildError>,
-  pub warnings: Vec<BuildError>,
+  pub errors: Vec<BuildDiagnostic>,
+  pub warnings: Vec<BuildDiagnostic>,
 }
 
 impl<'a> BindImportsAndExportsContext<'a> {
@@ -289,7 +292,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
           );
 
           self.warnings.push(
-            BuildError::ambiguous_external_namespace(
+            BuildDiagnostic::ambiguous_external_namespace(
               importer,
               importee,
               module.source.clone(),

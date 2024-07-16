@@ -4,9 +4,10 @@ use arcstr::ArcStr;
 use oxc::span::Span;
 use rolldown_resolver::ResolveError;
 
-use super::BuildError;
+use super::BuildDiagnostic;
 
 use crate::events::{
+  ambiguous_external_namespace::AmbiguousExternalNamespace,
   circular_dependency::CircularDependency, eval::Eval, external_entry::ExternalEntry,
   forbid_const_assign::ForbidConstAssign, missing_export::MissingExport,
   sourcemap_error::SourceMapError, unresolved_entry::UnresolvedEntry,
@@ -14,10 +15,28 @@ use crate::events::{
   unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal, NapiError,
 };
 
-impl BuildError {
+impl BuildDiagnostic {
   // --- Rollup related
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
     Self::new_inner(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })
+  }
+
+  pub fn ambiguous_external_namespace(
+    importer: String,
+    importee: Vec<String>,
+    importer_source: ArcStr,
+    importer_filename: String,
+    imported_specifier: String,
+    imported_specifier_span: Span,
+  ) -> Self {
+    Self::new_inner(AmbiguousExternalNamespace {
+      importer,
+      importee,
+      importer_source,
+      importer_filename,
+      imported_specifier,
+      imported_specifier_span,
+    })
   }
 
   pub fn unresolved_entry(

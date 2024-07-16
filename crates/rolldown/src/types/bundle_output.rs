@@ -1,9 +1,9 @@
 use rolldown_common::Output;
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 
 #[derive(Default)]
 pub struct BundleOutput {
-  pub warnings: Vec<BuildError>,
-  pub errors: Vec<BuildError>,
+  pub warnings: Vec<BuildDiagnostic>,
+  pub errors: Vec<BuildDiagnostic>,
   pub assets: Vec<Output>,
 }

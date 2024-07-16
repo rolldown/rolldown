@@ -1,7 +1,7 @@
 use std::iter;
 
 use rolldown_common::{Module, ModuleIdx};
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::LinkStage;
@@ -116,7 +116,7 @@ impl<'a> LinkStage<'a> {
           .filter_map(|id| self.module_table.modules[id].as_ecma())
           .map(|module| module.resource_id.to_string())
           .collect::<Vec<_>>();
-        self.warnings.push(BuildError::circular_dependency(paths).with_severity_warning());
+        self.warnings.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
       }
     }
 

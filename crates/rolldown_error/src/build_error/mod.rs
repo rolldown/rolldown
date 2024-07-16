@@ -9,7 +9,7 @@ use crate::{
 use self::severity::Severity;
 
 #[derive(Debug)]
-pub struct BuildError {
+pub struct BuildDiagnostic {
   inner: Box<dyn BuildEvent>,
   source: Option<Box<dyn std::error::Error + 'static + Send + Sync>>,
   severity: Severity,
@@ -17,16 +17,16 @@ pub struct BuildError {
 
 fn _assert_build_error_send_sync() {
   fn _assert_send_sync<T: Send + Sync>() {}
-  _assert_send_sync::<BuildError>();
+  _assert_send_sync::<BuildDiagnostic>();
 }
 
-impl Display for BuildError {
+impl Display for BuildDiagnostic {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     self.inner.message(&DiagnosticOptions::default()).fmt(f)
   }
 }
 
-impl BuildError {
+impl BuildDiagnostic {
   pub fn kind(&self) -> crate::event_kind::EventKind {
     self.inner.kind()
   }
@@ -64,17 +64,17 @@ impl BuildError {
   }
 }
 
-impl From<std::io::Error> for BuildError {
+impl From<std::io::Error> for BuildDiagnostic {
   fn from(e: std::io::Error) -> Self {
     Self::new_inner(e)
   }
 }
 
 #[cfg(feature = "napi")]
-impl From<napi::Error> for BuildError {
+impl From<napi::Error> for BuildDiagnostic {
   fn from(e: napi::Error) -> Self {
-    BuildError::napi_error(e.status.to_string(), e.reason)
+    BuildDiagnostic::napi_error(e.status.to_string(), e.reason)
   }
 }
 
-pub type BuildResult<T> = std::result::Result<T, BuildError>;
+pub type BuildResult<T> = std::result::Result<T, BuildDiagnostic>;

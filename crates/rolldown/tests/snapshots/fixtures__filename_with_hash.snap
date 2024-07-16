@@ -1796,6 +1796,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-nyQrEnyN.mjs
 
+# tests/fixtures/warnings/ambiguous_external_namespace
+
+- main-!~{000}~.mjs => main-07HwCbF6.mjs
+
 # tests/fixtures/warnings/eval
 
 - main-!~{000}~.mjs => main-SHxh3snY.mjs

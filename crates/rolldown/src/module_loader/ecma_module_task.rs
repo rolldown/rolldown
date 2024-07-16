@@ -12,7 +12,7 @@ use rolldown_common::{
   ResolvedPath, ResolvedRequestInfo, ResourceId, StrOrBytes, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
@@ -37,7 +37,7 @@ pub struct EcmaModuleTask {
   resolved_path: ResolvedPath,
   package_json: Option<Arc<PackageJson>>,
   module_type: ModuleDefFormat,
-  errors: Vec<BuildError>,
+  errors: Vec<BuildDiagnostic>,
   is_user_defined_entry: bool,
   side_effects: Option<HookSideEffects>,
 }
@@ -325,7 +325,7 @@ impl EcmaModuleTask {
   async fn resolve_dependencies(
     &mut self,
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
-    warnings: &mut Vec<BuildError>,
+    warnings: &mut Vec<BuildDiagnostic>,
   ) -> Result<IndexVec<ImportRecordIdx, ResolvedRequestInfo>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
@@ -363,7 +363,7 @@ impl EcmaModuleTask {
         Err(e) => match &e {
           ResolveError::NotFound(..) => {
             warnings.push(
-              BuildError::unresolved_import_treated_as_external(
+              BuildDiagnostic::unresolved_import_treated_as_external(
                 specifier.to_string(),
                 self.resolved_path.path.to_string(),
                 Some(e),

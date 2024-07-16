@@ -2,7 +2,7 @@ use futures::future::try_join_all;
 use indexmap::IndexSet;
 use oxc::index::{index_vec, IndexVec};
 use rolldown_common::{Asset, AssetMeta, Output, OutputAsset, OutputChunk, SourceMapType};
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 use sugar_path::SugarPath;
 
 use crate::{
@@ -83,7 +83,7 @@ impl<'a> GenerateStage<'a> {
 
           match self.options.sourcemap {
             SourceMapType::File => {
-              let source = match map.to_json_string().map_err(BuildError::sourcemap_error) {
+              let source = match map.to_json_string().map_err(BuildDiagnostic::sourcemap_error) {
                 Ok(source) => source,
                 Err(e) => {
                   self.link_output.errors.push(e);
@@ -98,7 +98,7 @@ impl<'a> GenerateStage<'a> {
               code.push_str(&format!("\n//# sourceMappingURL={map_filename}"));
             }
             SourceMapType::Inline => {
-              let data_url = match map.to_data_url().map_err(BuildError::sourcemap_error) {
+              let data_url = match map.to_data_url().map_err(BuildDiagnostic::sourcemap_error) {
                 Ok(data_url) => data_url,
                 Err(e) => {
                   self.link_output.errors.push(e);

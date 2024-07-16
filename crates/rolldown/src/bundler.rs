@@ -12,7 +12,7 @@ use crate::{
 };
 use anyhow::Result;
 use rolldown_common::SharedFileEmitter;
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, PluginDriver, SharedPlugin, SharedPluginDriver,
@@ -132,7 +132,7 @@ impl Bundler {
 
   fn normalize_error<T>(
     ret: &Result<T>,
-    errors_fn: impl Fn(&T) -> &[BuildError],
+    errors_fn: impl Fn(&T) -> &[BuildDiagnostic],
   ) -> Option<String> {
     ret.as_ref().map_or_else(
       |error| Some(error.to_string()),

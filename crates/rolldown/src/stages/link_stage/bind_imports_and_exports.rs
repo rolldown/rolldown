@@ -1,10 +1,9 @@
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
-
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, ResolvedExport, Specifier, SymbolRef,
 };
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 use rolldown_rstr::Rstr;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -38,50 +37,58 @@ impl MatchingContext {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum MatchImportKind {
-  // The import is either external or undefined
+  /// The import is either external or not defined.
   _Ignore,
   // "sourceIndex" and "ref" are in use
-  Normal { symbol: SymbolRef },
+  Normal {
+    symbol: SymbolRef,
+  },
   // "namespaceRef" and "alias" are in use
-  Namespace { namespace_ref: SymbolRef },
+  Namespace {
+    namespace_ref: SymbolRef,
+  },
   // Both "matchImportNormal" and "matchImportNamespace"
-  NormalAndNamespace { namespace_ref: SymbolRef, alias: Rstr },
+  NormalAndNamespace {
+    namespace_ref: SymbolRef,
+    alias: Rstr,
+  },
   // The import could not be evaluated due to a cycle
   Cycle,
   // The import resolved to multiple symbols via "export * from"
-  Ambiguous,
+  Ambiguous {
+    symbol_ref: SymbolRef,
+    potentially_ambiguous_symbol_refs: Vec<SymbolRef>,
+  },
   NoMatch,
 }
 
 #[derive(Debug)]
 pub enum ImportStatus {
-  // The imported file has no matching export
+  /// The imported file has no matching export
   NoMatch {
     // importee_id: NormalModuleId,
   },
 
-  // The imported file has a matching export
+  /// The imported file has a matching export
   Found {
     // owner: NormalModuleId,
     symbol: SymbolRef,
     potentially_ambiguous_export_star_refs: Vec<SymbolRef>,
   },
 
-  // The imported file is CommonJS and has unknown exports
+  /// The imported file is CommonJS and has unknown exports
   CommonJS,
 
-  // The import is missing but there is a dynamic fallback object
-  DynamicFallback {
-    namespace_ref: SymbolRef,
-  },
+  /// The import is missing but there is a dynamic fallback object
+  DynamicFallback { namespace_ref: SymbolRef },
 
-  // The import was treated as a CommonJS import but the file is known to have no exports
+  /// The import was treated as a CommonJS import but the file is known to have no exports
   _CommonJSWithoutExports,
 
-  // The imported file was disabled by mapping it to false in the "browser" field of package.json
+  /// The imported file was disabled by mapping it to false in the "browser" field of package.json
   _Disabled,
 
-  // The imported file is external and has unknown exports
+  /// The imported file is external and has unknown exports
   External,
 }
 
@@ -134,6 +141,7 @@ impl<'link> LinkStage<'link> {
       symbols: &mut self.symbols,
       input_options: self.input_options,
       errors: Vec::default(),
+      warnings: Vec::default(),
     };
 
     self.module_table.modules.iter().for_each(|module| {
@@ -141,6 +149,7 @@ impl<'link> LinkStage<'link> {
     });
 
     self.errors.extend(binding_ctx.errors);
+    self.warnings.extend(binding_ctx.warnings);
 
     self.metas.iter_mut().par_bridge().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
@@ -232,7 +241,8 @@ struct BindImportsAndExportsContext<'a> {
   pub metas: &'a mut LinkingMetadataVec,
   pub symbols: &'a mut Symbols,
   pub input_options: &'a SharedOptions,
-  pub errors: Vec<BuildError>,
+  pub errors: Vec<BuildDiagnostic>,
+  pub warnings: Vec<BuildDiagnostic>,
 }
 
 impl<'a> BindImportsAndExportsContext<'a> {
@@ -265,7 +275,34 @@ impl<'a> BindImportsAndExportsContext<'a> {
       };
       tracing::trace!("Got match result {:?}", ret);
       match ret {
-        MatchImportKind::_Ignore | MatchImportKind::Ambiguous | MatchImportKind::Cycle => {}
+        MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
+        MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
+          let importer = self.normal_modules[rec.resolved_module].stable_resource_id().to_string();
+
+          let mut importee =
+            Vec::<String>::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
+          importee.push(self.normal_modules[symbol_ref.owner].stable_resource_id().to_string());
+          importee.extend(
+            potentially_ambiguous_symbol_refs
+              .iter()
+              .map(|&symbol_ref| {
+                self.normal_modules[symbol_ref.owner].stable_resource_id().to_string()
+              })
+              .collect::<Vec<_>>(),
+          );
+
+          self.warnings.push(
+            BuildDiagnostic::ambiguous_external_namespace(
+              importer,
+              importee,
+              module.source.clone(),
+              module.stable_resource_id.to_string(),
+              named_import.imported.to_string(),
+              named_import.span_imported,
+            )
+            .with_severity_warning(),
+          );
+        }
         MatchImportKind::Normal { symbol } => {
           self.symbols.union(*imported_as_ref, symbol);
         }
@@ -278,7 +315,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
         }
         MatchImportKind::NoMatch => {
           let importee = &self.normal_modules[rec.resolved_module];
-          self.errors.push(BuildError::missing_export(
+          self.errors.push(BuildDiagnostic::missing_export(
             module.stable_resource_id.to_string(),
             importee.stable_resource_id().to_string(),
             module.source.clone(),
@@ -449,9 +486,24 @@ impl<'a> BindImportsAndExportsContext<'a> {
     tracing::trace!("ambiguous_results {:#?}", ambiguous_results);
     tracing::trace!("ret {:#?}", ret);
 
-    for ambiguous_result in ambiguous_results {
-      if ambiguous_result != ret {
-        return MatchImportKind::Ambiguous;
+    for ambiguous_result in &ambiguous_results {
+      if *ambiguous_result != ret {
+        if let MatchImportKind::Normal { symbol } = ret {
+          return MatchImportKind::Ambiguous {
+            symbol_ref: symbol,
+            potentially_ambiguous_symbol_refs: ambiguous_results
+              .iter()
+              .filter_map(|kind| match *kind {
+                MatchImportKind::Normal { symbol } => Some(symbol),
+                MatchImportKind::Namespace { namespace_ref }
+                | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
+                _ => None,
+              })
+              .collect(),
+          };
+        }
+
+        unreachable!("symbol should always exist");
       }
     }
 

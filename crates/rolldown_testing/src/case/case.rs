@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use rolldown::BundleOutput;
 use rolldown_common::Output;
-use rolldown_error::{BuildError, DiagnosticOptions};
+use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
 use rolldown_sourcemap::SourcemapVisualizer;
 
 pub struct Case {
@@ -124,7 +124,7 @@ impl Case {
     self.snapshot.push_str(&stats);
   }
 
-  fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildError>) {
+  fn render_errors_to_snapshot(&mut self, mut errors: Vec<BuildDiagnostic>) {
     self.snapshot.push_str("# Errors\n\n");
     errors.sort_by_key(|e| e.kind().to_string());
     let diagnostics = errors.into_iter().map(|e| {

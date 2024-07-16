@@ -176,7 +176,9 @@ name = "bench"
 version = "0.1.0"
 dependencies = [
  "criterion2",
+ "oxc",
  "rolldown",
+ "rolldown_sourcemap",
  "rolldown_testing",
  "tokio",
 ]
@@ -1563,9 +1565,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "1.10.1"
+version = "1.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e2fc58fc48a15b0c7222d28b41ddb64b14517ad0ce435255ef48e55162ee301"
+checksum = "b5f862ee8e1ba728378ac7e007de195ae00fbb21337ef152380c052cc07e2ee2"
 dependencies = [
  "dashmap 6.0.1",
  "dunce",
@@ -2325,6 +2327,7 @@ version = "0.1.0"
 dependencies = [
  "memchr",
  "oxc",
+ "rolldown_utils",
 ]
 
 [[package]]

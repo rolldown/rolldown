@@ -24,7 +24,7 @@ impl BuildError {
   pub fn ambiguous_external_namespace(
     importer: String,
     importee: Vec<String>,
-    importer_source: Arc<str>,
+    importer_source: ArcStr,
     importer_filename: String,
     imported_specifier: String,
     imported_specifier_span: Span,

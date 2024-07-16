@@ -1,15 +1,17 @@
-use std::sync::Arc;
-
 use super::BuildEvent;
+use arcstr::ArcStr;
 use oxc::span::Span;
 
-use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions, EventKind};
+use crate::{
+  build_error::severity::Severity, diagnostic::Diagnostic,
+  types::diagnostic_options::DiagnosticOptions, EventKind,
+};
 
 #[derive(Debug)]
 pub struct AmbiguousExternalNamespace {
   pub importer: String,
   pub importee: Vec<String>,
-  pub importer_source: Arc<str>,
+  pub importer_source: ArcStr,
   pub importer_filename: String,
   pub imported_specifier: String,
   pub imported_specifier_span: Span,
@@ -30,8 +32,7 @@ impl BuildEvent for AmbiguousExternalNamespace {
   }
 
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {
-    let file_id =
-      diagnostic.add_file(self.importer_filename.clone(), Arc::clone(&self.importer_source));
+    let file_id = diagnostic.add_file(self.importer_filename.clone(), self.importer_source.clone());
 
     diagnostic.title = "Found ambiguous export.".to_string();
     diagnostic.severity = Severity::Warning;

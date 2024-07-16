@@ -9,6 +9,9 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
+  treeshake: {
+    moduleSideEffects: false,
+  },
   plugins: [
     replace({
       'process.env.NODE_ENV': JSON.stringify('production'),

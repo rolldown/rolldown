@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use rolldown_rstr::Rstr;
 
-use crate::{ModuleIdx, StmtInfoIdx, SymbolRef};
+use crate::{ModuleIdx, SymbolRef};
 
 oxc::index::define_index_type! {
   pub struct ImportRecordIdx = u32;
@@ -58,16 +58,10 @@ pub struct RawImportRecord {
   pub contains_import_default: bool,
   /// See [ImportRecord] for more details.
   pub is_plain_import: bool,
-  pub stmt_id: StmtInfoIdx,
 }
 
 impl RawImportRecord {
-  pub fn new(
-    specifier: Rstr,
-    kind: ImportKind,
-    namespace_ref: SymbolRef,
-    stmt_id: StmtInfoIdx,
-  ) -> Self {
+  pub fn new(specifier: Rstr, kind: ImportKind, namespace_ref: SymbolRef) -> Self {
     Self {
       module_request: specifier,
       kind,
@@ -75,7 +69,6 @@ impl RawImportRecord {
       contains_import_default: false,
       contains_import_star: false,
       is_plain_import: false,
-      stmt_id,
     }
   }
 
@@ -88,7 +81,6 @@ impl RawImportRecord {
       contains_import_star: self.contains_import_star,
       contains_import_default: self.contains_import_default,
       is_plain_import: self.is_plain_import,
-      stmt_id: self.stmt_id,
     }
   }
 }
@@ -108,5 +100,4 @@ pub struct ImportRecord {
   pub contains_import_default: bool,
   /// If it is `import {} from '...'` or `import '...'`
   pub is_plain_import: bool,
-  pub stmt_id: StmtInfoIdx,
 }

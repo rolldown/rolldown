@@ -94,9 +94,7 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
           include_module(ctx, importee);
         }
       }
-      Module::External(_) => {
-        include_statement(ctx, module, import_record.stmt_id);
-      }
+      Module::External(_) => {}
     }
   });
 }
@@ -117,9 +115,10 @@ fn include_module_as_namespace(ctx: &mut Context, module: &EcmaModule) {
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
-  let canonical_ref_owner = &ctx.modules[canonical_ref.owner].as_ecma().unwrap();
+  let mut canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
+    canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
   }
 
   // TODO(hyf0): suspicious why need `USED_AS_NAMESPACE`
@@ -127,7 +126,6 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   if is_namespace_ref {
     ctx.used_exports_info_vec[canonical_ref_owner.idx].used_info |= UsedInfo::USED_AS_NAMESPACE;
   }
-
   // TODO(hyf0): why we need `used_symbol_refs` to make if the symbol is used?
   ctx.used_symbol_refs.insert(canonical_ref);
 

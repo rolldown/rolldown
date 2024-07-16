@@ -170,12 +170,7 @@ impl<'me> AstScanner<'me> {
       ),
     )
       .into();
-    let rec = RawImportRecord::new(
-      Rstr::from(module_request),
-      kind,
-      namespace_ref,
-      self.current_stmt_info.stmt_idx.expect("should have stmt idx").into(),
-    );
+    let rec = RawImportRecord::new(Rstr::from(module_request), kind, namespace_ref);
 
     let id = self.result.import_records.push(rec);
     self.current_stmt_info.import_records.push(id);

@@ -22,7 +22,7 @@ pub async fn render_chunks<'a>(
           chunk: &ecma_meta.rendered_chunk,
         })
         .await?;
-      println!("{}", &render_chunk_ret.0);
+
       asset.content = render_chunk_ret.0;
       if let Some(asset_map) = &asset.map {
         if !render_chunk_ret.1.is_empty() {

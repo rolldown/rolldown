@@ -5,6 +5,7 @@ pub use oxc::sourcemap::{JSONSourceMap, SourceMap, SourcemapVisualizer};
 mod lines_count;
 pub use lines_count::lines_count;
 mod concat_sourcemap;
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 
 // TODO: should return `SourceMap` directly without `Option`
 pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> Option<SourceMap> {
@@ -14,18 +15,32 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> Option<Sourc
   let mut sourcemap_builder = SourceMapBuilder::default();
 
   let sourcemap_and_lookup_table = sourcemap_chain
-    .iter()
+    .par_iter()
     .map(|sourcemap| (sourcemap, sourcemap.generate_lookup_table()))
     .collect::<Vec<_>>();
 
-  for token in last_map.get_source_view_tokens() {
-    let original_token = sourcemap_and_lookup_table.iter().rev().try_fold(
-      token,
-      |token, (sourcemap, lookup_table)| {
-        sourcemap.lookup_source_view_token(lookup_table, token.get_src_line(), token.get_src_col())
-      },
-    );
+  let source_view_tokens = last_map.get_source_view_tokens().collect::<Vec<_>>();
 
+  let token_pairs = source_view_tokens
+    .par_iter()
+    .map(|token| {
+      (
+        token,
+        sourcemap_and_lookup_table.iter().rev().try_fold(
+          *token,
+          |token, (sourcemap, lookup_table)| {
+            sourcemap.lookup_source_view_token(
+              lookup_table,
+              token.get_src_line(),
+              token.get_src_col(),
+            )
+          },
+        ),
+      )
+    })
+    .collect::<Vec<_>>();
+
+  for (token, original_token) in token_pairs {
     if let Some(original_token) = original_token {
       token
         .get_name_id()

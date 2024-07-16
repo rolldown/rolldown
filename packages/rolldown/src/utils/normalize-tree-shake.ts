@@ -1,5 +1,5 @@
 import type { InputOptions } from '../options/input-options'
-import { NormalizedTreeshakingOptions } from '../../src/treeshake'
+import { NormalizedTreeshakingOptions } from '../treeshake'
 import { isRegExp } from 'node:util/types'
 
 export function normalizeTreeshakeOptions(

@@ -6,10 +6,10 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug, Derivative)]
 pub struct BindingSourcemap {
   #[serde(skip_deserializing, default = "default_sourcemap")]
-  pub inner: Either<String, BindingJSONSourcemap>,
+  pub inner: Either<String, BindingJsonSourcemap>,
 }
 
-fn default_sourcemap() -> Either<String, BindingJSONSourcemap> {
+fn default_sourcemap() -> Either<String, BindingJsonSourcemap> {
   Either::A(String::default())
 }
 
@@ -27,7 +27,7 @@ impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
 
 #[derive(Deserialize, Debug, Default, Derivative)]
 #[napi_derive::napi(object)]
-pub struct BindingJSONSourcemap {
+pub struct BindingJsonSourcemap {
   pub file: Option<String>,
   pub mappings: Option<String>,
   pub source_root: Option<String>,
@@ -36,10 +36,10 @@ pub struct BindingJSONSourcemap {
   pub names: Option<Vec<String>>,
 }
 
-impl TryFrom<BindingJSONSourcemap> for rolldown_sourcemap::SourceMap {
+impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
   type Error = anyhow::Error;
 
-  fn try_from(value: BindingJSONSourcemap) -> Result<Self, Self::Error> {
+  fn try_from(value: BindingJsonSourcemap) -> Result<Self, Self::Error> {
     rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
       file: value.file,
       mappings: value.mappings,

@@ -179,7 +179,7 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingRenderedModule_struct_79']?.()
   __napiInstance.exports['__napi_register__AliasItem_struct_80']?.()
   __napiInstance.exports['__napi_register__BindingSourcemap_struct_81']?.()
-  __napiInstance.exports['__napi_register__BindingJSONSourcemap_struct_82']?.()
+  __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_82']?.()
 }
 module.exports.BindingLog = __napiModule.exports.BindingLog
 module.exports.BindingModuleInfo = __napiModule.exports.BindingModuleInfo

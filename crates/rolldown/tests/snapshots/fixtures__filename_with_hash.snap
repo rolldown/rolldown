@@ -105,7 +105,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/disable_tree_shaking
 
-- entry_jsx-!~{000}~.mjs => entry_jsx-rGLod2SF.mjs
+- entry_jsx-!~{000}~.mjs => entry_jsx-8P-TK3Ki.mjs
 
 # tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 
@@ -1795,6 +1795,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/tree_shaking/unused_import_named
 
 - main-!~{000}~.mjs => main-nyQrEnyN.mjs
+
+# tests/fixtures/warnings/ambiguous_external_namespace
+
+- main-!~{000}~.mjs => main-07HwCbF6.mjs
 
 # tests/fixtures/warnings/eval
 

@@ -35,6 +35,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     old_body.into_iter().enumerate().zip(stmt_infos).for_each(
       |((_top_stmt_idx, mut top_stmt), stmt_info)| {
         debug_assert!(matches!(stmt_info.stmt_idx, Some(_top_stmt_idx)));
+        dbg!(&stmt_info.debug_label, stmt_info.is_included);
         if !stmt_info.is_included {
           return;
         }

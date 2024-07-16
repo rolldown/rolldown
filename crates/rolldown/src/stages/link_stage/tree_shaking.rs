@@ -94,7 +94,9 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
           include_module(ctx, importee);
         }
       }
-      Module::External(_) => {}
+      Module::External(_) => {
+        include_statement(ctx, module, import_record.stmt_id);
+      }
     }
   });
 }

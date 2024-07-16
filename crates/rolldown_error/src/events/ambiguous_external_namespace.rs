@@ -3,7 +3,7 @@ use arcstr::ArcStr;
 use oxc::span::Span;
 
 use crate::{
-  build_error::severity::Severity, diagnostic::Diagnostic,
+  diagnostic::Diagnostic,
   types::diagnostic_options::DiagnosticOptions, EventKind,
 };
 

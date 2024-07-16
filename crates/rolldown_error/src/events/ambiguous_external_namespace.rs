@@ -2,10 +2,7 @@ use super::BuildEvent;
 use arcstr::ArcStr;
 use oxc::span::Span;
 
-use crate::{
-  diagnostic::Diagnostic,
-  types::diagnostic_options::DiagnosticOptions, EventKind,
-};
+use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions, EventKind};
 
 #[derive(Debug)]
 pub struct AmbiguousExternalNamespace {
@@ -23,11 +20,16 @@ impl BuildEvent for AmbiguousExternalNamespace {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
+    let mut importee = self.importee.iter().map(|v| format!(r#""{v}""#));
+
+    let last = importee.next_back().unwrap();
+
     format!(
-      r#""{}" re-exports "{}" from one of the modules {} (will be ignored)."#,
+      r#""{}" re-exports "{}" from one of the modules {} and {} (will be ignored)."#,
       self.importer,
       self.imported_specifier,
-      self.importee.iter().map(|v| format!(r#""{v}""#)).collect::<Vec<_>>().join(" and ")
+      importee.collect::<Vec<_>>().join(", "),
+      last
     )
   }
 

@@ -290,7 +290,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
               named_import.span_imported,
             )
             .with_severity_warning(),
-          )
+          );
         }
         MatchImportKind::Normal { symbol } => {
           self.symbols.union(*imported_as_ref, symbol);
@@ -484,8 +484,8 @@ impl<'a> BindImportsAndExportsContext<'a> {
               .iter()
               .filter_map(|kind| match *kind {
                 MatchImportKind::Normal { symbol } => Some(symbol),
-                MatchImportKind::Namespace { namespace_ref } => Some(namespace_ref),
-                MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
+                MatchImportKind::Namespace { namespace_ref }
+                | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
                 _ => None,
               })
               .collect(),

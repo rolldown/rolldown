@@ -14,7 +14,7 @@ input_file: crates/rolldown/tests/fixtures/errors/ambiguous_external_namespace
    │
  1 │ import { value } from "./foo";
    │          ──┬──  
-   │            ╰──── "foo.js" re-exports "value" from one of the modules "a.js" and "b.js" and "c.js" (will be ignored).
+   │            ╰──── "foo.js" re-exports "value" from one of the modules "a.js", "b.js" and "c.js" (will be ignored).
 ───╯
 
 ```

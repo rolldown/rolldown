@@ -33,7 +33,8 @@ impl BuildEvent for AmbiguousExternalNamespace {
     let file_id =
       diagnostic.add_file(self.importer_filename.clone(), Arc::clone(&self.importer_source));
 
-    diagnostic.title = "Warning: Found ambiguous export.".to_string();
+    diagnostic.title = "Found ambiguous export.".to_string();
+    diagnostic.severity = Severity::Warning;
 
     diagnostic.add_label(
       &file_id,

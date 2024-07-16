@@ -129,8 +129,6 @@ impl<'a> GenerateStage<'a> {
     )
     .await?;
 
-    // TODO: Call banner
-
     let chunks = banner(self.plugin_driver, chunks).await?;
 
     let chunks = render_chunks(self.plugin_driver, chunks).await?;

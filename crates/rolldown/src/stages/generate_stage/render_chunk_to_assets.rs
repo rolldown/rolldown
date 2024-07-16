@@ -11,8 +11,8 @@ use crate::{
   type_alias::{IndexChunkToAssets, IndexPreliminaryAssets},
   types::generator::{GenerateContext, Generator},
   utils::{
-    augment_chunk_hash::augment_chunk_hash, chunk::finalize_chunks::finalize_assets,
-    render_chunks::render_chunks,
+    augment_chunk_hash::augment_chunk_hash, banner::banner,
+    chunk::finalize_chunks::finalize_assets, render_chunks::render_chunks,
   },
 };
 
@@ -26,6 +26,8 @@ impl<'a> GenerateStage<'a> {
   ) -> anyhow::Result<Vec<Output>> {
     let (mut preliminary_assets, index_chunk_to_assets) =
       self.render_preliminary_assets(chunk_graph).await?;
+
+    banner(self.plugin_driver, &mut preliminary_assets).await?;
 
     render_chunks(self.plugin_driver, &mut preliminary_assets).await?;
 

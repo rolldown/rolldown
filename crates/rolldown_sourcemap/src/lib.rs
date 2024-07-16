@@ -19,15 +19,15 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> Option<Sourc
     .map(|sourcemap| (sourcemap, sourcemap.generate_lookup_table()))
     .collect::<Vec<_>>();
 
-  let token_pairs = last_map
-    .get_source_view_tokens()
-    .collect::<Vec<_>>()
+  let source_view_tokens = last_map.get_source_view_tokens().collect::<Vec<_>>();
+
+  let token_pairs = source_view_tokens
     .par_iter()
     .map(|token| {
       (
         token,
         sourcemap_and_lookup_table.iter().rev().try_fold(
-          token,
+          *token,
           |token, (sourcemap, lookup_table)| {
             sourcemap.lookup_source_view_token(
               lookup_table,

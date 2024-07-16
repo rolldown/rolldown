@@ -280,14 +280,17 @@ impl<'a> BindImportsAndExportsContext<'a> {
               .collect::<Vec<_>>(),
           );
 
-          self.errors.push(BuildError::ambiguous_external_namespace(
-            importer,
-            importee,
-            module.source.clone(),
-            module.stable_resource_id.to_string(),
-            named_import.imported.to_string(),
-            named_import.span_imported,
-          ))
+          self.errors.push(
+            BuildError::ambiguous_external_namespace(
+              importer,
+              importee,
+              module.source.clone(),
+              module.stable_resource_id.to_string(),
+              named_import.imported.to_string(),
+              named_import.span_imported,
+            )
+            .with_severity_warning(),
+          )
         }
         MatchImportKind::Normal { symbol } => {
           self.symbols.union(*imported_as_ref, symbol);

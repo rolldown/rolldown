@@ -35,7 +35,6 @@ impl BuildEvent for AmbiguousExternalNamespace {
     let file_id = diagnostic.add_file(self.importer_filename.clone(), self.importer_source.clone());
 
     diagnostic.title = "Found ambiguous export.".to_string();
-    diagnostic.severity = Severity::Warning;
 
     diagnostic.add_label(
       &file_id,

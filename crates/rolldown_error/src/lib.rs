@@ -5,7 +5,7 @@ mod events;
 mod types;
 
 pub use crate::{
-  build_error::{BuildError, BuildResult},
+  build_error::{BuildDiagnostic, BuildResult},
   event_kind::EventKind,
   types::diagnostic_options::DiagnosticOptions,
 };

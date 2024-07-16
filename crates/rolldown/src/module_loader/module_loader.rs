@@ -6,7 +6,7 @@ use rolldown_common::{
   ModuleIdx, ModuleTable, OutputFormat, ResolvedRequestInfo,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -63,8 +63,8 @@ pub struct ModuleLoaderOutput {
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
-  pub warnings: Vec<BuildError>,
-  pub errors: Vec<BuildError>,
+  pub warnings: Vec<BuildDiagnostic>,
+  pub errors: Vec<BuildDiagnostic>,
 }
 
 impl ModuleLoader {
@@ -185,7 +185,7 @@ impl ModuleLoader {
     }
 
     let mut errors = vec![];
-    let mut all_warnings: Vec<BuildError> = vec![];
+    let mut all_warnings: Vec<BuildDiagnostic> = vec![];
 
     let entries_count = user_defined_entries.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);

@@ -5,7 +5,7 @@ pub mod task_context;
 mod task_result;
 
 pub use module_loader::ModuleLoader;
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 
 use self::{
   runtime_ecma_module_task::RuntimeEcmaModuleTaskResult, task_result::NormalModuleTaskResult,
@@ -13,6 +13,6 @@ use self::{
 pub enum Msg {
   NormalModuleDone(NormalModuleTaskResult),
   RuntimeNormalModuleDone(RuntimeEcmaModuleTaskResult),
-  BuildErrors(Vec<BuildError>),
+  BuildErrors(Vec<BuildDiagnostic>),
   Panics(anyhow::Error),
 }

@@ -14,7 +14,7 @@ use crate::{
 use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
-use rolldown_error::{BuildError, DiagnosticOptions};
+use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
 
 #[napi]
 pub struct Bundler {
@@ -146,7 +146,7 @@ impl Bundler {
     result.map_err(|e| napi::Error::from_reason(format!("Rolldown internal error: {e}")))
   }
 
-  fn handle_errors(&self, errs: Vec<BuildError>) -> napi::Error {
+  fn handle_errors(&self, errs: Vec<BuildDiagnostic>) -> napi::Error {
     errs.into_iter().for_each(|err| {
       eprintln!(
         "{}",
@@ -157,7 +157,7 @@ impl Bundler {
   }
 
   #[allow(clippy::print_stdout, unused_must_use)]
-  async fn handle_warnings(&self, warnings: Vec<BuildError>) {
+  async fn handle_warnings(&self, warnings: Vec<BuildDiagnostic>) {
     if let Some(log_level) = self.log_level {
       if log_level == BindingLogLevel::Silent {
         return;

@@ -3,7 +3,7 @@
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, ResolvedExport, Specifier, SymbolRef,
 };
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 use rolldown_rstr::Rstr;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -37,14 +37,21 @@ impl MatchingContext {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum MatchImportKind {
-  // The import is either external or undefined
+  /// The import is either external or not defined.
   _Ignore,
   // "sourceIndex" and "ref" are in use
-  Normal { symbol: SymbolRef },
+  Normal {
+    symbol: SymbolRef,
+  },
   // "namespaceRef" and "alias" are in use
-  Namespace { namespace_ref: SymbolRef },
+  Namespace {
+    namespace_ref: SymbolRef,
+  },
   // Both "matchImportNormal" and "matchImportNamespace"
-  NormalAndNamespace { namespace_ref: SymbolRef, alias: Rstr },
+  NormalAndNamespace {
+    namespace_ref: SymbolRef,
+    alias: Rstr,
+  },
   // The import could not be evaluated due to a cycle
   Cycle,
   // The import resolved to multiple symbols via "export * from"
@@ -54,33 +61,31 @@ pub enum MatchImportKind {
 
 #[derive(Debug)]
 pub enum ImportStatus {
-  // The imported file has no matching export
+  /// The imported file has no matching export
   NoMatch {
     // importee_id: NormalModuleId,
   },
 
-  // The imported file has a matching export
+  /// The imported file has a matching export
   Found {
     // owner: NormalModuleId,
     symbol: SymbolRef,
     potentially_ambiguous_export_star_refs: Vec<SymbolRef>,
   },
 
-  // The imported file is CommonJS and has unknown exports
+  /// The imported file is CommonJS and has unknown exports
   CommonJS,
 
-  // The import is missing but there is a dynamic fallback object
-  DynamicFallback {
-    namespace_ref: SymbolRef,
-  },
+  /// The import is missing but there is a dynamic fallback object
+  DynamicFallback { namespace_ref: SymbolRef },
 
-  // The import was treated as a CommonJS import but the file is known to have no exports
+  /// The import was treated as a CommonJS import but the file is known to have no exports
   _CommonJSWithoutExports,
 
-  // The imported file was disabled by mapping it to false in the "browser" field of package.json
+  /// The imported file was disabled by mapping it to false in the "browser" field of package.json
   _Disabled,
 
-  // The imported file is external and has unknown exports
+  /// The imported file is external and has unknown exports
   External,
 }
 
@@ -307,7 +312,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
         }
         MatchImportKind::NoMatch => {
           let importee = &self.normal_modules[rec.resolved_module];
-          self.errors.push(BuildError::missing_export(
+          self.errors.push(BuildDiagnostic::missing_export(
             module.stable_resource_id.to_string(),
             importee.stable_resource_id().to_string(),
             module.source.clone(),

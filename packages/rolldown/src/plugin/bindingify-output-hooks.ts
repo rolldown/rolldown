@@ -148,6 +148,7 @@ export function bindingifyWriteBundle(
   }
 }
 
+
 export function bindingifyBanner(
   plugin: Plugin,
   options: NormalizedInputOptions,

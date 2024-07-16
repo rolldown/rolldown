@@ -15,5 +15,5 @@
     // check only package exports
     "dist/types/index.d.ts",
     "dist/types/parallel-plugin.d.ts"
-  ],
+  ]
 }

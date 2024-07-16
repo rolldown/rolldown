@@ -151,6 +151,8 @@ export function bindingifyWriteBundle(
 export function bindingifyBanner(
   plugin: Plugin,
   options: NormalizedInputOptions,
+  outputOptions: NormalizedOutputOptions,
+  pluginContextData: PluginContextData,
 ): BindingPluginOptions['banner'] {
   const hook = plugin.banner
   if (!hook) {
@@ -159,6 +161,6 @@ export function bindingifyBanner(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return (ctx) => {
-    handler.call(new PluginContext(options, ctx, plugin))
+    handler.call(new PluginContext(options, ctx, plugin, pluginContextData))
   }
 }

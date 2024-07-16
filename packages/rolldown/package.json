@@ -58,6 +58,7 @@
     "bak_build-node": "unbuild",
     "build-node": "node ../../node_modules/npm-rolldown/bin/cli.js -c ./rolldown.config.mjs",
     "build-types": "tsc -p ./tsconfig.dts.json",
+    "build-types-check": "tsc -p ./tsconfig.check.json",
     "build-native:debug": "run-s build-binding build-types build-node",
     "build-native:release": "run-s build-binding:release build-types build-node",
     "build-wasi:debug": "run-s build-binding:wasi build-node",

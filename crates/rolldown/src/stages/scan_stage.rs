@@ -6,7 +6,7 @@ use futures::future::join_all;
 use oxc::index::IndexVec;
 use rolldown_common::{EntryPoint, ImportKind, ModuleIdx, ModuleTable, ResolvedRequestInfo};
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
@@ -24,7 +24,7 @@ pub struct ScanStage {
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
-  pub errors: Vec<BuildError>,
+  pub errors: Vec<BuildDiagnostic>,
 }
 
 #[derive(Debug)]
@@ -34,8 +34,8 @@ pub struct ScanStageOutput {
   pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
-  pub warnings: Vec<BuildError>,
-  pub errors: Vec<BuildError>,
+  pub warnings: Vec<BuildDiagnostic>,
+  pub errors: Vec<BuildDiagnostic>,
 }
 
 impl ScanStage {
@@ -124,10 +124,10 @@ impl ScanStage {
         }
         Err(e) => match e {
           ResolveError::NotFound(..) => {
-            self.errors.push(BuildError::unresolved_entry(args.specifier, None));
+            self.errors.push(BuildDiagnostic::unresolved_entry(args.specifier, None));
           }
           ResolveError::PackagePathNotExported(..) => {
-            self.errors.push(BuildError::unresolved_entry(args.specifier, Some(e)));
+            self.errors.push(BuildDiagnostic::unresolved_entry(args.specifier, Some(e)));
           }
           _ => {
             return Err(e.into());

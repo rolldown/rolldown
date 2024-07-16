@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use oxc::span::Span;
 use rolldown_resolver::ResolveError;
 
-use super::BuildError;
+use super::BuildDiagnostic;
 
 use crate::events::{
   ambiguous_external_namespace::AmbiguousExternalNamespace,
@@ -15,7 +15,7 @@ use crate::events::{
   unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal, NapiError,
 };
 
-impl BuildError {
+impl BuildDiagnostic {
   // --- Rollup related
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
     Self::new_inner(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })

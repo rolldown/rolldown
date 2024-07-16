@@ -6,7 +6,7 @@ use rolldown_common::{
   SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
   rayon::{ParallelBridge, ParallelIterator},
@@ -40,8 +40,8 @@ pub struct LinkStageOutput {
   pub metas: LinkingMetadataVec,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,
-  pub warnings: Vec<BuildError>,
-  pub errors: Vec<BuildError>,
+  pub warnings: Vec<BuildDiagnostic>,
+  pub errors: Vec<BuildDiagnostic>,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
@@ -54,8 +54,8 @@ pub struct LinkStage<'a> {
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleIdx>,
   pub metas: LinkingMetadataVec,
-  pub warnings: Vec<BuildError>,
-  pub errors: Vec<BuildError>,
+  pub warnings: Vec<BuildDiagnostic>,
+  pub errors: Vec<BuildDiagnostic>,
   pub ast_table: IndexVec<ModuleIdx, EcmaAst>,
   pub input_options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,

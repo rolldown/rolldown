@@ -19,7 +19,7 @@ use rolldown_common::{
   NamedImport, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
-use rolldown_error::BuildError;
+use rolldown_error::BuildDiagnostic;
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
@@ -39,7 +39,7 @@ pub struct ScanResult {
   pub default_export_ref: SymbolRef,
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
-  pub warnings: Vec<BuildError>,
+  pub warnings: Vec<BuildDiagnostic>,
 }
 
 pub struct AstScanner<'me> {
@@ -471,7 +471,7 @@ impl<'me> AstScanner<'me> {
       for reference in self.scopes.get_resolved_references(symbol_id) {
         if reference.is_write() {
           self.result.warnings.push(
-            BuildError::forbid_const_assign(
+            BuildDiagnostic::forbid_const_assign(
               self.file_path.to_string(),
               self.source.clone(),
               self.symbols.get_name(symbol_id).into(),
@@ -502,7 +502,7 @@ impl<'me> AstScanner<'me> {
         }
         if ident.name == "eval" {
           self.result.warnings.push(
-            BuildError::eval(self.file_path.to_string(), self.source.clone(), ident.span)
+            BuildDiagnostic::eval(self.file_path.to_string(), self.source.clone(), ident.span)
               .with_severity_warning(),
           );
         }

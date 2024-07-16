@@ -11,12 +11,14 @@ pub mod inner {
 
 pub use crate::{
   plugin::{
-    BoxPlugin, HookAugmentChunkHashReturn, HookLoadReturn, HookNoopReturn, HookRenderChunkReturn,
-    HookResolveIdReturn, HookTransformAstReturn, HookTransformReturn, Plugin, SharedPlugin,
+    BoxPlugin, HookAugmentChunkHashReturn, HookBannerOutputReturn, HookLoadReturn, HookNoopReturn,
+    HookRenderChunkReturn, HookResolveIdReturn, HookTransformAstReturn, HookTransformReturn,
+    Plugin, SharedPlugin,
   },
   plugin_context::{PluginContext, SharedPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},
   transform_plugin_context::TransformPluginContext,
+  types::hook_banner_args::HookBannerArgs,
   types::hook_build_end_args::HookBuildEndArgs,
   types::hook_load_args::HookLoadArgs,
   types::hook_load_output::HookLoadOutput,

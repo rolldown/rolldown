@@ -1,3 +1,4 @@
+pub mod hook_banner_args;
 pub mod hook_build_end_args;
 pub mod hook_load_args;
 pub mod hook_load_output;

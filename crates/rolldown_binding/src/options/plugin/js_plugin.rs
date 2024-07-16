@@ -162,6 +162,23 @@ impl Plugin for JsPlugin {
     Ok(())
   }
 
+  async fn banner(
+    &self,
+    ctx: &rolldown_plugin::SharedPluginContext,
+    args: &rolldown_plugin::HookBannerArgs,
+  ) -> rolldown_plugin::HookBannerOutputReturn {
+    if let Some(cb) = &self.banner {
+      Ok(
+        cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()?,
+      )
+    } else {
+      Ok(None)
+    }
+  }
+
   async fn render_chunk(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,

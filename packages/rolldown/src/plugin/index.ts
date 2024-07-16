@@ -12,7 +12,7 @@ import type {
 import type { SourceMapInput } from '../types/sourcemap'
 import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
-import type { PluginContext } from './plugin-context'
+import { PluginContext } from './plugin-context'
 import type { TransformPluginContext } from './transfrom-plugin-context'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import type { LogLevel } from '../log/logging'
@@ -178,7 +178,7 @@ export type SequentialPluginHooks =
   | 'renderChunk'
   | 'transform'
 
-export type AddonHooks = '' /* 'banner' | 'footer' | 'intro' | 'outro' */
+export type AddonHooks = 'banner' /*| 'footer' | 'intro' | 'outro' */
 
 export type OutputPluginHooks =
   | 'augmentChunkHash'
@@ -213,7 +213,7 @@ export type AddonHookFunction = (
   chunk: RenderedChunk,
 ) => string | Promise<string>
 
-export type AddonHook = string | AddonHookFunction
+export type AddonHook = AddonHookFunction
 
 export interface OutputPlugin
   extends Partial<{ [K in OutputPluginHooks]: PluginHooks[K] }>,

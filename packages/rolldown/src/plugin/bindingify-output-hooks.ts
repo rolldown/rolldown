@@ -147,3 +147,23 @@ export function bindingifyWriteBundle(
     )
   }
 }
+
+export function bindingifyBanner(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
+): BindingPluginOptions['banner'] {
+  const hook = plugin.banner
+  if (!hook) {
+    return undefined
+  }
+
+  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+
+  return async (ctx, chunk) => {
+    return handler.call(
+      new PluginContext(options, ctx, plugin, pluginContextData),
+      chunk,
+    )
+  }
+}

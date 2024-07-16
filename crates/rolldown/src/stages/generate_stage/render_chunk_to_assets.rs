@@ -149,6 +149,7 @@ impl<'a> GenerateStage<'a> {
         options: self.options,
         link_output: self.link_output,
         chunk_graph,
+        plugin_driver: self.plugin_driver,
       };
       EcmaGenerator::render_preliminary_assets(&ctx).await
     }))

@@ -21,13 +21,17 @@ rolldown_sourcemap = { workspace = true }
 rolldown_testing   = { workspace = true }
 tokio              = { workspace = true, features = ["full"] }
 
-[[bench]]
-harness = false
-name    = "bundle"
+# [[bench]]
+# harness = false
+# name    = "bundle"
+
+# [[bench]]
+# harness = false
+# name    = "scan"
 
 [[bench]]
 harness = false
-name    = "scan"
+name    = "remapping"
 
 [features]
 codspeed = ["criterion2/codspeed"]

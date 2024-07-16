@@ -1,4 +1,4 @@
-// @ts-expect-error
+// @ts-nocheck
 import followRedirects from 'follow-redirects'
 import fsExtra from 'fs-extra'
 
@@ -7,7 +7,6 @@ if (fsExtra.existsSync('./tmp/bench/antd')) {
   console.log('[skip] setup antd already')
 } else {
   console.log('Setup `antd` in tmp/bench')
-  // @ts-expect-error
   followRedirects.http.get(
     'http://cdn.jsdelivr.net/npm/antd@5.12.5/dist/antd.js',
     (res) => {

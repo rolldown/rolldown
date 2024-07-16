@@ -20,7 +20,8 @@
     "fast-glob": "^3.3.2",
     "fs-extra": "^11.2.0",
     "semver": "^7.6.2",
-    "zx": "^8.1.2"
+    "zx": "^8.1.2",
+    "follow-redirects": "^1.15.6"
   },
   "devDependencies": {
     "web-tree-sitter": "^0.22.6"

@@ -1,6 +1,5 @@
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
-
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, ResolvedExport, Specifier, SymbolRef,
 };
@@ -49,7 +48,7 @@ pub enum MatchImportKind {
   // The import could not be evaluated due to a cycle
   Cycle,
   // The import resolved to multiple symbols via "export * from"
-  Ambiguous,
+  Ambiguous { symbol_ref: SymbolRef, potentially_ambiguous_symbol_refs: Vec<SymbolRef> },
   NoMatch,
 }
 
@@ -134,6 +133,7 @@ impl<'link> LinkStage<'link> {
       symbols: &mut self.symbols,
       input_options: self.input_options,
       errors: Vec::default(),
+      warnings: Vec::default(),
     };
 
     self.module_table.modules.iter().for_each(|module| {
@@ -141,6 +141,7 @@ impl<'link> LinkStage<'link> {
     });
 
     self.errors.extend(binding_ctx.errors);
+    self.warnings.extend(binding_ctx.warnings);
 
     self.metas.iter_mut().par_bridge().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
@@ -233,6 +234,7 @@ struct BindImportsAndExportsContext<'a> {
   pub symbols: &'a mut Symbols,
   pub input_options: &'a SharedOptions,
   pub errors: Vec<BuildError>,
+  pub warnings: Vec<BuildError>,
 }
 
 impl<'a> BindImportsAndExportsContext<'a> {
@@ -265,7 +267,34 @@ impl<'a> BindImportsAndExportsContext<'a> {
       };
       tracing::trace!("Got match result {:?}", ret);
       match ret {
-        MatchImportKind::_Ignore | MatchImportKind::Ambiguous | MatchImportKind::Cycle => {}
+        MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
+        MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
+          let importer = self.normal_modules[rec.resolved_module].stable_resource_id().to_string();
+
+          let mut importee =
+            Vec::<String>::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
+          importee.push(self.normal_modules[symbol_ref.owner].stable_resource_id().to_string());
+          importee.extend(
+            potentially_ambiguous_symbol_refs
+              .iter()
+              .map(|&symbol_ref| {
+                self.normal_modules[symbol_ref.owner].stable_resource_id().to_string()
+              })
+              .collect::<Vec<_>>(),
+          );
+
+          self.warnings.push(
+            BuildError::ambiguous_external_namespace(
+              importer,
+              importee,
+              module.source.clone(),
+              module.stable_resource_id.to_string(),
+              named_import.imported.to_string(),
+              named_import.span_imported,
+            )
+            .with_severity_warning(),
+          );
+        }
         MatchImportKind::Normal { symbol } => {
           self.symbols.union(*imported_as_ref, symbol);
         }
@@ -449,9 +478,24 @@ impl<'a> BindImportsAndExportsContext<'a> {
     tracing::trace!("ambiguous_results {:#?}", ambiguous_results);
     tracing::trace!("ret {:#?}", ret);
 
-    for ambiguous_result in ambiguous_results {
-      if ambiguous_result != ret {
-        return MatchImportKind::Ambiguous;
+    for ambiguous_result in &ambiguous_results {
+      if *ambiguous_result != ret {
+        if let MatchImportKind::Normal { symbol } = ret {
+          return MatchImportKind::Ambiguous {
+            symbol_ref: symbol,
+            potentially_ambiguous_symbol_refs: ambiguous_results
+              .iter()
+              .filter_map(|kind| match *kind {
+                MatchImportKind::Normal { symbol } => Some(symbol),
+                MatchImportKind::Namespace { namespace_ref }
+                | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
+                _ => None,
+              })
+              .collect(),
+          };
+        }
+
+        unreachable!("symbol should always exist");
       }
     }
 

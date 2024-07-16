@@ -133,6 +133,7 @@ impl<'link> LinkStage<'link> {
       symbols: &mut self.symbols,
       input_options: self.input_options,
       errors: Vec::default(),
+      warnings: Vec::default(),
     };
 
     self.module_table.modules.iter().for_each(|module| {
@@ -140,6 +141,7 @@ impl<'link> LinkStage<'link> {
     });
 
     self.errors.extend(binding_ctx.errors);
+    self.warnings.extend(binding_ctx.warnings);
 
     self.metas.iter_mut().par_bridge().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
@@ -232,6 +234,7 @@ struct BindImportsAndExportsContext<'a> {
   pub symbols: &'a mut Symbols,
   pub input_options: &'a SharedOptions,
   pub errors: Vec<BuildError>,
+  pub warnings: Vec<BuildError>,
 }
 
 impl<'a> BindImportsAndExportsContext<'a> {
@@ -280,7 +283,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
               .collect::<Vec<_>>(),
           );
 
-          self.errors.push(
+          self.warnings.push(
             BuildError::ambiguous_external_namespace(
               importer,
               importee,

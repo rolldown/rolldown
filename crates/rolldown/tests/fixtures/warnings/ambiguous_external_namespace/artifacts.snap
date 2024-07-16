@@ -2,9 +2,9 @@
 source: crates/rolldown_testing/src/case/case.rs
 assertion_line: 176
 expression: content
-input_file: crates/rolldown/tests/fixtures/errors/ambiguous_external_namespace
+input_file: crates/rolldown/tests/fixtures/warnings/ambiguous_external_namespace
 ---
-# Errors
+# warnings
 
 ## AMBIGUOUS_EXTERNAL_NAMESPACES
 
@@ -17,4 +17,15 @@ input_file: crates/rolldown/tests/fixtures/errors/ambiguous_external_namespace
    │            ╰──── "foo.js" re-exports "value" from one of the modules "a.js", "b.js" and "c.js" (will be ignored).
 ───╯
 
+```
+# Assets
+
+## main.mjs
+
+```js
+
+//#region main.js
+console.log(value);
+
+//#endregion
 ```

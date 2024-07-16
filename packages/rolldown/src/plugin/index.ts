@@ -128,8 +128,6 @@ export interface FunctionPluginHooks {
         map?: SourceMapInput
       }
 
-  banner?: ObjectHook<(this: PluginContext) => MaybePromise<NullValue>>
-
   augmentChunkHash: (this: PluginContext, chunk: RenderedChunk) => string | void
 
   renderError: (this: PluginContext, error: Error) => void
@@ -180,7 +178,7 @@ export type SequentialPluginHooks =
   | 'renderChunk'
   | 'transform'
 
-export type AddonHooks = '' /* 'banner' | 'footer' | 'intro' | 'outro' */
+export type AddonHooks = 'banner' /*| 'footer' | 'intro' | 'outro' */
 
 export type OutputPluginHooks =
   | 'augmentChunkHash'
@@ -215,7 +213,7 @@ export type AddonHookFunction = (
   chunk: RenderedChunk,
 ) => string | Promise<string>
 
-export type AddonHook = string | AddonHookFunction
+export type AddonHook = AddonHookFunction
 
 export interface OutputPlugin
   extends Partial<{ [K in OutputPluginHooks]: PluginHooks[K] }>,

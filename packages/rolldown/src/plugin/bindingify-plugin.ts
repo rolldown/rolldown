@@ -16,6 +16,7 @@ import {
   bindingifyWriteBundle,
   bindingifyRenderError,
   bindingifyAugmentChunkHash,
+  bindingifyBanner,
 } from './bindingify-output-hooks'
 
 import type { Plugin } from './index'
@@ -73,5 +74,6 @@ export function bindingifyPlugin(
       outputOptions,
       pluginContextData,
     ),
+    banner: bindingifyBanner(plugin, options, pluginContextData),
   }
 }

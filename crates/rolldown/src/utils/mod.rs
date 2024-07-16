@@ -6,7 +6,6 @@ use super::module_finalizers::scope_hoisting::{
   ScopeHoistingFinalizer, ScopeHoistingFinalizerContext,
 };
 pub mod augment_chunk_hash;
-pub mod banner;
 pub mod call_expression_ext;
 pub mod chunk;
 pub mod extract_hash_pattern;

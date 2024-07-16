@@ -15,6 +15,7 @@ use rolldown_common::{
   AssetMeta, ChunkKind, EcmaAssetMeta, ExportsKind, OutputFormat, PreliminaryAsset, RenderedModule,
   WrapKind,
 };
+use rolldown_plugin::HookBannerArgs;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -164,12 +165,16 @@ impl Generator for EcmaGenerator {
     };
 
     // add banner
-    if let Some(banner) = ctx.options.banner.as_ref() {
-      if let Some(banner_txt) = banner.call(&rendered_chunk).await? {
-        if !banner_txt.is_empty() {
-          concat_source.add_prepend_source(Box::new(RawSource::new(banner_txt)));
-        }
-      }
+    let banner = match ctx.options.banner.as_ref() {
+      Some(banner) => banner.call(&rendered_chunk).await?,
+      None => None,
+    };
+    if let Some(banner) = ctx
+      .plugin_driver
+      .banner(HookBannerArgs { chunk: &rendered_chunk }, banner.unwrap_or_default())
+      .await?
+    {
+      concat_source.add_prepend_source(Box::new(RawSource::new(banner)));
     }
 
     // Add `use strict` directive if needed. This must come before the banner, because users might use banner to add hashbang.

@@ -248,7 +248,7 @@ export interface BindingResolveOptions {
 }
 
 export interface BindingSourcemap {
-  inner: string | BindingJSONSourcemap
+  inner: string | BindingJsonSourcemap
 }
 
 export interface BindingTreeshake {

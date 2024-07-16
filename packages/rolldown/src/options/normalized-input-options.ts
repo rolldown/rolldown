@@ -6,7 +6,7 @@ import type {
 import type { InputOptions } from './input-options'
 import type { RolldownPlugin } from '../plugin'
 import type { LogLevel } from '../log/logging'
-import { NormalizedTreeshakingOptions } from '../../src/treeshake'
+import { NormalizedTreeshakingOptions } from '../treeshake'
 
 export interface NormalizedInputOptions
   extends Omit<InputOptions, 'treeshake'> {

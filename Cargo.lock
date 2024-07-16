@@ -176,7 +176,9 @@ name = "bench"
 version = "0.1.0"
 dependencies = [
  "criterion2",
+ "oxc",
  "rolldown",
+ "rolldown_sourcemap",
  "rolldown_testing",
  "tokio",
 ]

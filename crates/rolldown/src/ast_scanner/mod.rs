@@ -15,8 +15,8 @@ use oxc::{
   span::{CompactStr, GetSpan, Span},
 };
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleIdx,
-  NamedImport, RawImportRecord, ResourceId, Specifier, StmtInfo, StmtInfos, SymbolRef,
+  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId,
+  ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::BuildDiagnostic;
@@ -46,7 +46,7 @@ pub struct AstScanner<'me> {
   idx: ModuleIdx,
   source: &'me ArcStr,
   module_type: ModuleDefFormat,
-  file_path: &'me ResourceId,
+  file_path: &'me ModuleId,
   scopes: &'me AstScopes,
   trivias: &'me Trivias,
   symbols: &'me mut AstSymbols,
@@ -69,7 +69,7 @@ impl<'me> AstScanner<'me> {
     repr_name: String,
     module_type: ModuleDefFormat,
     source: &'me ArcStr,
-    file_path: &'me ResourceId,
+    file_path: &'me ModuleId,
     trivias: &'me Trivias,
   ) -> Self {
     // This is used for converting "export default foo;" => "var default_symbol = foo;"

@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use itertools::Itertools;
 use oxc::index::{index_vec, IndexVec};
-use rolldown_common::{AssetIdx, AssetMeta, ResourceId};
+use rolldown_common::{AssetIdx, AssetMeta, ModuleId};
 use rolldown_utils::{
   base64::to_url_safe_base64,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
@@ -104,7 +104,7 @@ pub fn finalize_assets(
     .into_par_iter()
     .map(|mut asset| {
       let preliminary_filename_raw = asset.preliminary_filename.to_string();
-      let filename: ResourceId =
+      let filename: ModuleId =
         replace_facade_hash_replacement(preliminary_filename_raw, &final_hashes_by_placeholder)
           .into();
 

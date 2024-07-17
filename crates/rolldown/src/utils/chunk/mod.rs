@@ -1,5 +1,5 @@
 use rolldown_common::{
-  Chunk, ChunkKind, NormalizedBundlerOptions, PreRenderedChunk, RenderedModule, ResourceId,
+  Chunk, ChunkKind, ModuleId, NormalizedBundlerOptions, PreRenderedChunk, RenderedModule,
   RollupRenderedChunk,
 };
 use rustc_hash::FxHashMap;
@@ -24,14 +24,14 @@ pub fn generate_pre_rendered_chunk(
     is_dynamic_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { is_user_defined, .. } if !*is_user_defined),
     facade_module_id: match &chunk.kind {
       ChunkKind::EntryPoint { module, .. } => {
-        Some(graph.module_table.modules[*module].resource_id().to_string().into())
+        Some(graph.module_table.modules[*module].id().to_string().into())
       }
       ChunkKind::Common => None,
     },
     module_ids: chunk
       .modules
       .iter()
-      .map(|id| graph.module_table.modules[*id].resource_id().to_string().into())
+      .map(|id| graph.module_table.modules[*id].id().to_string().into())
       .collect(),
     exports: get_chunk_export_names(chunk, graph, output_options),
   }
@@ -41,7 +41,7 @@ pub fn generate_rendered_chunk(
   chunk: &Chunk,
   graph: &LinkStageOutput,
   output_options: &NormalizedBundlerOptions,
-  render_modules: FxHashMap<ResourceId, RenderedModule>,
+  render_modules: FxHashMap<ModuleId, RenderedModule>,
   chunk_graph: &ChunkGraph,
 ) -> RollupRenderedChunk {
   let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, graph, output_options);

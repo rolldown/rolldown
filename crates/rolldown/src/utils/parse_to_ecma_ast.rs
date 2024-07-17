@@ -13,7 +13,7 @@ use rolldown_utils::mime::guess_mime;
 
 use super::pre_process_ecma_ast::pre_process_ecma_ast;
 
-use crate::{runtime::ROLLDOWN_RUNTIME_RESOURCE_ID, types::oxc_parse_type::OxcParseType};
+use crate::{runtime::RUNTIME_MODULE_ID, types::oxc_parse_type::OxcParseType};
 
 fn pure_esm_js_oxc_source_type() -> OxcSourceType {
   let pure_esm_js = OxcSourceType::default().with_module(true);
@@ -69,7 +69,7 @@ pub fn parse_to_ecma_ast(
     ModuleType::Binary => {
       let source = source.try_into_bytes()?;
       let encoded = rolldown_utils::base64::to_standard_base64(source);
-      (binary_to_esm(&encoded, options.platform, ROLLDOWN_RUNTIME_RESOURCE_ID), OxcParseType::Js)
+      (binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID), OxcParseType::Js)
     }
     ModuleType::Empty => ("export {}".to_string(), OxcParseType::Js),
     ModuleType::Custom(custom_type) => {

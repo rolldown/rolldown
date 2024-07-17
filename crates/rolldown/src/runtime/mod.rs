@@ -27,4 +27,4 @@ impl RuntimeModuleBrief {
   }
 }
 
-pub static ROLLDOWN_RUNTIME_RESOURCE_ID: &str = "rolldown:runtime";
+pub static RUNTIME_MODULE_ID: &str = "rolldown:runtime";

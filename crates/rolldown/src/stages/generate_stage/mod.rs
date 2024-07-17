@@ -151,11 +151,11 @@ impl<'a> GenerateStage<'a> {
             } else {
               let module = &modules[entry_module_id];
               let generated = if is_user_defined {
-                try_extract_meaningful_input_name_from_path(module.resource_id())
+                try_extract_meaningful_input_name_from_path(module.id())
                   .map(ArcStr::from)
                   .unwrap_or(arcstr::literal!("input"))
               } else {
-                ArcStr::from(module.resource_id().as_path().representative_file_name().into_owned())
+                ArcStr::from(module.id().as_path().representative_file_name().into_owned())
               };
               ChunkNameInfo { name: generated, explicit: false }
             }
@@ -170,9 +170,7 @@ impl<'a> GenerateStage<'a> {
                 || arcstr::literal!("chunk"),
                 |module_id| {
                   let module = &modules[*module_id];
-                  ArcStr::from(
-                    module.resource_id().as_path().representative_file_name().into_owned(),
-                  )
+                  ArcStr::from(module.id().as_path().representative_file_name().into_owned())
                 },
               ),
               explicit: false,

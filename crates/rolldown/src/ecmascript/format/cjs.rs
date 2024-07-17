@@ -44,7 +44,7 @@ pub fn render_cjs(
   let mut module_sources_peekable = module_sources.into_iter().peekable();
   match module_sources_peekable.peek() {
     Some((id, _, _)) if *id == ctx.link_output.runtime.id() => {
-      if let (_, _module_resource_id, Some(emitted_sources)) =
+      if let (_, _module_id, Some(emitted_sources)) =
         module_sources_peekable.next().expect("Must have module")
       {
         for source in emitted_sources {

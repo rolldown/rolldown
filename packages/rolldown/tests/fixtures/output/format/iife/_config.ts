@@ -12,7 +12,8 @@ export default defineTest({
     expect(output.output[0].code).toMatchInlineSnapshot(`
       "var myModule = (function() {
 
-      })();"
+      })();
+      "
     `)
   },
 })

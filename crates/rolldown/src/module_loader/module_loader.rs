@@ -119,11 +119,15 @@ impl ModuleLoader {
     }
   }
 
-  fn try_spawn_new_task(&mut self, info: ResolvedId, is_user_defined_entry: bool) -> ModuleIdx {
-    match self.visited.entry(Arc::<str>::clone(&info.id.path)) {
+  fn try_spawn_new_task(
+    &mut self,
+    resolved_id: ResolvedId,
+    is_user_defined_entry: bool,
+  ) -> ModuleIdx {
+    match self.visited.entry(Arc::<str>::clone(&resolved_id.id.path)) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
-        if info.is_external {
+        if resolved_id.is_external {
           let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
           not_visited.insert(idx);
           let external_module_side_effects = match self.input_options.treeshake {
@@ -136,24 +140,20 @@ impl ModuleLoader {
             },
           };
           let ext =
-            ExternalModule::new(idx, info.id.path.to_string(), external_module_side_effects);
+            ExternalModule::new(idx, resolved_id.id.path.to_string(), external_module_side_effects);
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
           self.intermediate_normal_modules.index_ecma_ast[idx] = Some(EcmaAst::default());
           idx
         } else {
-          let id = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
-          not_visited.insert(id);
+          let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
+          not_visited.insert(idx);
           self.remaining += 1;
-          let module_path = info.id.clone();
 
           let task = EcmaModuleTask::new(
             Arc::clone(&self.shared_context),
-            id,
-            module_path,
-            info.module_def_format,
+            idx,
+            resolved_id,
             is_user_defined_entry,
-            info.package_json,
-            info.side_effects,
           );
           #[cfg(target_family = "wasm")]
           {
@@ -165,7 +165,7 @@ impl ModuleLoader {
           }
           #[cfg(not(target_family = "wasm"))]
           tokio::spawn(task.run());
-          id
+          idx
         }
       }
     }

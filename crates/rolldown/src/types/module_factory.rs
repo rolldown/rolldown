@@ -1,0 +1,176 @@
+use std::sync::Arc;
+
+use futures::future::join_all;
+use oxc::index::IndexVec;
+use rolldown_common::{
+  side_effects::HookSideEffects, EcmaModule, ImportRecordIdx, ModuleDefFormat, ModuleIdx,
+  ModuleType, RawImportRecord, ResolvedId, StrOrBytes,
+};
+use rolldown_ecmascript::EcmaAst;
+use rolldown_error::BuildDiagnostic;
+use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
+use rolldown_resolver::ResolveError;
+use rolldown_sourcemap::SourceMap;
+
+use crate::{runtime::RUNTIME_MODULE_ID, utils::resolve_id, SharedOptions, SharedResolver};
+
+use super::ast_symbols::AstSymbols;
+
+pub struct CreateModuleContext<'a> {
+  pub module_index: ModuleIdx,
+  pub plugin_driver: &'a SharedPluginDriver,
+  pub resolved_id: &'a ResolvedId,
+  pub options: &'a SharedOptions,
+  pub module_type: ModuleType,
+  pub warnings: &'a mut Vec<BuildDiagnostic>,
+  pub resolver: &'a SharedResolver,
+  pub is_user_defined_entry: bool,
+}
+
+impl<'a> CreateModuleContext<'a> {
+  pub(crate) async fn resolve_id(
+    input_options: &SharedOptions,
+    resolver: &SharedResolver,
+    plugin_driver: &SharedPluginDriver,
+    importer: &str,
+    specifier: &str,
+    options: HookResolveIdExtraOptions,
+  ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
+    // Check external with unresolved path
+    if let Some(is_external) = input_options.external.as_ref() {
+      if is_external(specifier, Some(importer), false).await? {
+        return Ok(Ok(ResolvedId {
+          id: specifier.to_string().into(),
+          ignored: false,
+          module_def_format: ModuleDefFormat::Unknown,
+          is_external: true,
+          package_json: None,
+          side_effects: None,
+        }));
+      }
+    }
+
+    // Check runtime module
+    if specifier == RUNTIME_MODULE_ID {
+      return Ok(Ok(ResolvedId {
+        id: specifier.to_string().into(),
+        ignored: false,
+        module_def_format: ModuleDefFormat::EsmMjs,
+        is_external: false,
+        package_json: None,
+        side_effects: None,
+      }));
+    }
+
+    let resolved_id =
+      resolve_id::resolve_id(resolver, plugin_driver, specifier, Some(importer), options).await?;
+
+    match resolved_id {
+      Ok(mut resolved_id) => {
+        if !resolved_id.is_external {
+          // Check external with resolved path
+          if let Some(is_external) = input_options.external.as_ref() {
+            resolved_id.is_external = is_external(specifier, Some(importer), true).await?;
+          }
+        }
+        Ok(Ok(resolved_id))
+      }
+      Err(e) => Ok(Err(e)),
+    }
+  }
+
+  pub async fn resolve_dependencies(
+    &mut self,
+    dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
+  ) -> anyhow::Result<IndexVec<ImportRecordIdx, ResolvedId>> {
+    let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
+      let specifier = item.module_request.clone();
+      let input_options = Arc::clone(self.options);
+      // FIXME(hyf0): should not use `Arc<Resolver>` here
+      let resolver = Arc::clone(self.resolver);
+      let plugin_driver = Arc::clone(self.plugin_driver);
+      let importer = &self.resolved_id.id;
+      let kind = item.kind;
+      async move {
+        Self::resolve_id(
+          &input_options,
+          &resolver,
+          &plugin_driver,
+          importer,
+          &specifier,
+          HookResolveIdExtraOptions { is_entry: false, kind },
+        )
+        .await
+        .map(|id| (specifier, idx, id))
+      }
+    });
+
+    let resolved_ids = join_all(jobs).await;
+
+    let mut ret = IndexVec::with_capacity(dependencies.len());
+    let mut build_errors = vec![];
+    for resolved_id in resolved_ids {
+      let (specifier, idx, resolved_id) = resolved_id?;
+
+      match resolved_id {
+        Ok(info) => {
+          ret.push(info);
+        }
+        Err(e) => match &e {
+          ResolveError::NotFound(..) => {
+            self.warnings.push(
+              BuildDiagnostic::unresolved_import_treated_as_external(
+                specifier.to_string(),
+                self.resolved_id.id.to_string(),
+                Some(e),
+              )
+              .with_severity_warning(),
+            );
+            ret.push(ResolvedId {
+              id: specifier.to_string().into(),
+              ignored: false,
+              module_def_format: ModuleDefFormat::Unknown,
+              is_external: true,
+              package_json: None,
+              side_effects: None,
+            });
+          }
+          _ => {
+            build_errors.push((&dependencies[idx], e));
+          }
+        },
+      }
+    }
+
+    if build_errors.is_empty() {
+      Ok(ret)
+    } else {
+      let resolved_err = anyhow::format_err!(
+        "Unexpectedly failed to resolve dependencies of {importer}. Got errors {build_errors:#?}",
+        importer = self.resolved_id.id,
+      );
+      Err(resolved_err)
+    }
+  }
+}
+
+pub struct CreateModuleArgs {
+  pub source: StrOrBytes,
+  pub sourcemap_chain: Vec<SourceMap>,
+  pub hook_side_effects: Option<HookSideEffects>,
+}
+
+pub struct CreateModuleReturn {
+  pub module: EcmaModule,
+  pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,
+  pub ast_symbol: AstSymbols,
+  pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
+  pub ecma_ast: EcmaAst,
+}
+
+pub trait ModuleFactory {
+  async fn create_module(
+    ctx: &mut CreateModuleContext,
+    args: CreateModuleArgs,
+  ) -> anyhow::Result<CreateModuleReturn>;
+}

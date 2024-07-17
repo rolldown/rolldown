@@ -1,35 +1,17 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use futures::future::join_all;
-use oxc::{
-  index::IndexVec,
-  semantic::{ScopeTree, SymbolTable},
-};
-use rolldown_common::{
-  side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaModule, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, RawImportRecord,
-  ResolvedId, StrOrBytes, SymbolRef, TreeshakeOptions,
-};
-use rolldown_ecmascript::EcmaAst;
+use rolldown_common::{ModuleIdx, ResolvedId, StrOrBytes};
 use rolldown_error::BuildDiagnostic;
-use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
-use rolldown_resolver::ResolveError;
-use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
-use sugar_path::SugarPath;
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
-  ast_scanner::{AstScanner, ScanResult},
+  ecmascript::ecma_module_factory::EcmaModuleFactory,
   module_loader::NormalModuleTaskResult,
-  runtime::RUNTIME_MODULE_ID,
-  types::ast_symbols::AstSymbols,
-  utils::{
-    load_source::load_source, make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
-    parse_to_ecma_ast::parse_to_ecma_ast, resolve_id::resolve_id,
-    transform_source::transform_source,
+  types::module_factory::{
+    CreateModuleArgs, CreateModuleContext, CreateModuleReturn, ModuleFactory,
   },
-  SharedOptions, SharedResolver,
+  utils::{load_source::load_source, transform_source::transform_source},
 };
 pub struct EcmaModuleTask {
   ctx: Arc<TaskContext>,
@@ -63,7 +45,6 @@ impl EcmaModuleTask {
     }
   }
 
-  #[allow(clippy::too_many_lines)]
   async fn run_inner(&mut self) -> Result<()> {
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let mut sourcemap_chain = vec![];
@@ -103,113 +84,21 @@ impl EcmaModuleTask {
       ));
     };
 
-    let (mut ast, symbols, scopes) = parse_to_ecma_ast(
-      &self.ctx.plugin_driver,
-      self.resolved_id.id.as_path(),
-      &self.ctx.input_options,
-      &module_type,
-      source,
-    )?;
-
-    let (scope, scan_result, ast_symbol, namespace_object_ref) =
-      self.scan(&mut ast, symbols, scopes);
-
-    let resolved_deps =
-      self.resolve_dependencies(&scan_result.import_records, &mut warnings).await?;
-
-    let ScanResult {
-      named_imports,
-      named_exports,
-      stmt_infos,
-      import_records,
-      star_exports,
-      default_export_ref,
-      imports,
-      exports_kind,
-      repr_name,
-      warnings: scan_warnings,
-    } = scan_result;
-    warnings.extend(scan_warnings);
-
-    let mut imported_ids = vec![];
-    let mut dynamically_imported_ids = vec![];
-
-    for (record, info) in import_records.iter().zip(&resolved_deps) {
-      if record.kind.is_static() {
-        imported_ids.push(Arc::clone(&info.id).into());
-      } else {
-        dynamically_imported_ids.push(Arc::clone(&info.id).into());
-      }
-    }
-
-    let id = ModuleId::new(Arc::clone(&self.resolved_id.id));
-    let stable_id = id.stabilize(&self.ctx.input_options.cwd);
-
-    // The side effects priority is:
-    // 1. Hook side effects
-    // 2. Package.json side effects
-    // 3. Analyzed side effects
-    // We should skip the `check_side_effects_for` if the hook side effects is not `None`.
-    let lazy_check_side_effects = || {
-      self
-        .resolved_id
-        .package_json
-        .as_ref()
-        .and_then(|p| p.check_side_effects_for(&stable_id).map(DeterminedSideEffects::UserDefined))
-        .unwrap_or_else(|| {
-          let analyzed_side_effects = stmt_infos.iter().any(|stmt_info| stmt_info.side_effect);
-          DeterminedSideEffects::Analyzed(analyzed_side_effects)
-        })
-    };
-    let side_effects = match hook_side_effects {
-      Some(side_effects) => match side_effects {
-        HookSideEffects::True => lazy_check_side_effects(),
-        HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
-        HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
-      },
-      // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
-      None => match self.ctx.input_options.treeshake {
-        // Actually this convert is not necessary, just for passing type checking
-        TreeshakeOptions::False => DeterminedSideEffects::NoTreeshake,
-        TreeshakeOptions::Option(ref opt) => {
-          if opt.module_side_effects.resolve(&stable_id) {
-            lazy_check_side_effects()
-          } else {
-            DeterminedSideEffects::UserDefined(false)
-          }
-        }
-      },
-    };
-    // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
-    let module = EcmaModule {
-      source: ast.source().clone(),
-      idx: self.module_idx,
-      repr_name,
-      stable_id,
-      id,
-      named_imports,
-      named_exports,
-      stmt_infos,
-      imports,
-      star_exports,
-      default_export_ref,
-      scope,
-      exports_kind,
-      namespace_object_ref,
-      def_format: self.resolved_id.module_def_format,
-      debug_id: self.resolved_id.debug_id(&self.ctx.input_options.cwd),
-      sourcemap_chain,
-      exec_order: u32::MAX,
-      is_user_defined_entry: self.is_user_defined_entry,
-      import_records: IndexVec::default(),
-      is_included: false,
-      importers: vec![],
-      dynamic_importers: vec![],
-      imported_ids,
-      dynamically_imported_ids,
-      side_effects,
-      module_type,
-    };
+    let CreateModuleReturn { module, resolved_deps, ast_symbol, raw_import_records, ecma_ast } =
+      EcmaModuleFactory::create_module(
+        &mut CreateModuleContext {
+          module_index: self.module_idx,
+          plugin_driver: &self.ctx.plugin_driver,
+          resolved_id: &self.resolved_id,
+          options: &self.ctx.input_options,
+          warnings: &mut warnings,
+          module_type: module_type.clone(),
+          resolver: &self.ctx.resolver,
+          is_user_defined_entry: self.is_user_defined_entry,
+        },
+        CreateModuleArgs { source, sourcemap_chain, hook_side_effects },
+      )
+      .await?;
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
 
@@ -222,164 +111,11 @@ impl EcmaModuleTask {
         warnings,
         ast_symbol,
         module,
-        raw_import_records: import_records,
-        ast,
+        raw_import_records,
+        ast: ecma_ast,
       }))
       .await
       .expect("Send should not fail");
     Ok(())
-  }
-
-  fn scan(
-    &self,
-    ast: &mut EcmaAst,
-    symbols: SymbolTable,
-    scopes: ScopeTree,
-  ) -> (AstScopes, ScanResult, AstSymbols, SymbolRef) {
-    let (mut ast_symbols, ast_scopes) = make_ast_scopes_and_symbols(symbols, scopes);
-    let file_path: ModuleId = Arc::<str>::clone(&self.resolved_id.id).into();
-    let repr_name = file_path.as_path().representative_file_name();
-    let repr_name = legitimize_identifier_name(&repr_name);
-
-    let scanner = AstScanner::new(
-      self.module_idx,
-      &ast_scopes,
-      &mut ast_symbols,
-      repr_name.into_owned(),
-      self.resolved_id.module_def_format,
-      ast.source(),
-      &file_path,
-      &ast.trivias,
-    );
-    let namespace_object_ref = scanner.namespace_object_ref;
-    let scan_result = scanner.scan(ast.program());
-
-    (ast_scopes, scan_result, ast_symbols, namespace_object_ref)
-  }
-
-  pub(crate) async fn resolve_id(
-    input_options: &SharedOptions,
-    resolver: &SharedResolver,
-    plugin_driver: &SharedPluginDriver,
-    importer: &str,
-    specifier: &str,
-    options: HookResolveIdExtraOptions,
-  ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
-    // Check external with unresolved path
-    if let Some(is_external) = input_options.external.as_ref() {
-      if is_external(specifier, Some(importer), false).await? {
-        return Ok(Ok(ResolvedId {
-          id: specifier.to_string().into(),
-          ignored: false,
-          module_def_format: ModuleDefFormat::Unknown,
-          is_external: true,
-          package_json: None,
-          side_effects: None,
-        }));
-      }
-    }
-
-    // Check runtime module
-    if specifier == RUNTIME_MODULE_ID {
-      return Ok(Ok(ResolvedId {
-        id: specifier.to_string().into(),
-        ignored: false,
-        module_def_format: ModuleDefFormat::EsmMjs,
-        is_external: false,
-        package_json: None,
-        side_effects: None,
-      }));
-    }
-
-    let resolved_id =
-      resolve_id(resolver, plugin_driver, specifier, Some(importer), options).await?;
-
-    match resolved_id {
-      Ok(mut resolved_id) => {
-        if !resolved_id.is_external {
-          // Check external with resolved path
-          if let Some(is_external) = input_options.external.as_ref() {
-            resolved_id.is_external = is_external(specifier, Some(importer), true).await?;
-          }
-        }
-        Ok(Ok(resolved_id))
-      }
-      Err(e) => Ok(Err(e)),
-    }
-  }
-
-  async fn resolve_dependencies(
-    &mut self,
-    dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
-    warnings: &mut Vec<BuildDiagnostic>,
-  ) -> Result<IndexVec<ImportRecordIdx, ResolvedId>> {
-    let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
-      let specifier = item.module_request.clone();
-      let input_options = Arc::clone(&self.ctx.input_options);
-      // FIXME(hyf0): should not use `Arc<Resolver>` here
-      let resolver = Arc::clone(&self.ctx.resolver);
-      let plugin_driver = Arc::clone(&self.ctx.plugin_driver);
-      let importer = &self.resolved_id.id;
-      let kind = item.kind;
-      async move {
-        Self::resolve_id(
-          &input_options,
-          &resolver,
-          &plugin_driver,
-          importer,
-          &specifier,
-          HookResolveIdExtraOptions { is_entry: false, kind },
-        )
-        .await
-        .map(|id| (specifier, idx, id))
-      }
-    });
-
-    let resolved_ids = join_all(jobs).await;
-
-    let mut ret = IndexVec::with_capacity(dependencies.len());
-    let mut build_errors = vec![];
-    for resolved_id in resolved_ids {
-      let (specifier, idx, resolved_id) = resolved_id?;
-
-      match resolved_id {
-        Ok(info) => {
-          ret.push(info);
-        }
-        Err(e) => match &e {
-          ResolveError::NotFound(..) => {
-            warnings.push(
-              BuildDiagnostic::unresolved_import_treated_as_external(
-                specifier.to_string(),
-                self.resolved_id.id.to_string(),
-                Some(e),
-              )
-              .with_severity_warning(),
-            );
-            ret.push(ResolvedId {
-              id: specifier.to_string().into(),
-              ignored: false,
-              module_def_format: ModuleDefFormat::Unknown,
-              is_external: true,
-              package_json: None,
-              side_effects: None,
-            });
-          }
-          _ => {
-            build_errors.push((&dependencies[idx], e));
-          }
-        },
-      }
-    }
-
-    if build_errors.is_empty() {
-      Ok(ret)
-    } else {
-      let resolved_err = anyhow::format_err!(
-        "Unexpectedly failed to resolve dependencies of {importer}. Got errors {build_errors:#?}",
-        importer = self.resolved_id.id,
-      );
-      Err(resolved_err)
-    }
   }
 }

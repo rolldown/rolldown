@@ -154,7 +154,7 @@ impl ModuleLoader {
             Arc::clone(&self.shared_context),
             id,
             module_path,
-            info.module_type,
+            info.module_def_format,
             is_user_defined_entry,
             info.package_json,
             info.side_effects,

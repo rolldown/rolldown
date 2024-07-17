@@ -70,7 +70,7 @@ pub use crate::{
   types::rendered_module::RenderedModule,
   types::resolved_export::ResolvedExport,
   types::resolved_path::ResolvedPath,
-  types::resolved_request_info::ResolvedRequestInfo,
+  types::resolved_request_info::ResolvedId,
   types::resource_id::ResourceId,
   types::rollup_rendered_chunk::RollupRenderedChunk,
   types::side_effects,

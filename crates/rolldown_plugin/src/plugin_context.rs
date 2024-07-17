@@ -1,6 +1,6 @@
 use std::sync::{Arc, Weak};
 
-use rolldown_common::{ModuleTable, ResolvedRequestInfo, SharedFileEmitter};
+use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
@@ -25,7 +25,7 @@ impl PluginContext {
     specifier: &str,
     importer: Option<&str>,
     extra_options: &PluginContextResolveOptions,
-  ) -> anyhow::Result<Result<ResolvedRequestInfo, ResolveError>> {
+  ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
     let plugin_driver = self
       .plugin_driver
       .upgrade()

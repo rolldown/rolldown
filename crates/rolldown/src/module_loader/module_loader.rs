@@ -3,7 +3,7 @@ use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
-  ModuleIdx, ModuleTable, OutputFormat, ResolvedRequestInfo,
+  ModuleIdx, ModuleTable, OutputFormat, ResolvedId,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
@@ -119,12 +119,8 @@ impl ModuleLoader {
     }
   }
 
-  fn try_spawn_new_task(
-    &mut self,
-    info: ResolvedRequestInfo,
-    is_user_defined_entry: bool,
-  ) -> ModuleIdx {
-    match self.visited.entry(Arc::<str>::clone(&info.path.path)) {
+  fn try_spawn_new_task(&mut self, info: ResolvedId, is_user_defined_entry: bool) -> ModuleIdx {
+    match self.visited.entry(Arc::<str>::clone(&info.id.path)) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         if info.is_external {
@@ -140,7 +136,7 @@ impl ModuleLoader {
             },
           };
           let ext =
-            ExternalModule::new(idx, info.path.path.to_string(), external_module_side_effects);
+            ExternalModule::new(idx, info.id.path.to_string(), external_module_side_effects);
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
           self.intermediate_normal_modules.index_ecma_ast[idx] = Some(EcmaAst::default());
           idx
@@ -148,7 +144,7 @@ impl ModuleLoader {
           let id = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
           not_visited.insert(id);
           self.remaining += 1;
-          let module_path = info.path.clone();
+          let module_path = info.id.clone();
 
           let task = EcmaModuleTask::new(
             Arc::clone(&self.shared_context),
@@ -178,7 +174,7 @@ impl ModuleLoader {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn fetch_all_modules(
     mut self,
-    user_defined_entries: Vec<(Option<ArcStr>, ResolvedRequestInfo)>,
+    user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
   ) -> anyhow::Result<ModuleLoaderOutput> {
     if self.input_options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
@@ -217,7 +213,7 @@ impl ModuleLoader {
       match msg {
         Msg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
-            module_id,
+            module_idx,
             ast_symbol,
             resolved_deps,
             mut module,
@@ -247,10 +243,10 @@ impl ModuleLoader {
             .collect::<IndexVec<ImportRecordIdx, _>>();
           module.import_records = import_records;
 
-          self.intermediate_normal_modules.modules[module_id] = Some(module.into());
-          self.intermediate_normal_modules.index_ecma_ast[module_id] = Some(ast);
+          self.intermediate_normal_modules.modules[module_idx] = Some(module.into());
+          self.intermediate_normal_modules.index_ecma_ast[module_idx] = Some(ast);
 
-          self.symbols.add_ast_symbols(module_id, ast_symbol);
+          self.symbols.add_ast_symbols(module_idx, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
           let RuntimeEcmaModuleTaskResult { ast_symbols, module, runtime, ast } = task_result;

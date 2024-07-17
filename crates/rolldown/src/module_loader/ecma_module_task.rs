@@ -9,7 +9,7 @@ use oxc::{
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
   AstScopes, EcmaModule, ImportRecordIdx, ModuleDefFormat, ModuleIdx, PackageJson, RawImportRecord,
-  ResolvedPath, ResolvedRequestInfo, ResourceId, StrOrBytes, SymbolRef, TreeshakeOptions,
+  ResolvedId, ResolvedPath, ResourceId, StrOrBytes, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
@@ -151,9 +151,9 @@ impl EcmaModuleTask {
 
     for (record, info) in import_records.iter().zip(&resolved_deps) {
       if record.kind.is_static() {
-        imported_ids.push(Arc::clone(&info.path.path).into());
+        imported_ids.push(Arc::clone(&info.id.path).into());
       } else {
-        dynamically_imported_ids.push(Arc::clone(&info.path.path).into());
+        dynamically_imported_ids.push(Arc::clone(&info.id.path).into());
       }
     }
 
@@ -234,7 +234,7 @@ impl EcmaModuleTask {
       .tx
       .send(Msg::NormalModuleDone(NormalModuleTaskResult {
         resolved_deps,
-        module_id: self.module_id,
+        module_idx: self.module_id,
         warnings,
         ast_symbol,
         module,
@@ -280,12 +280,12 @@ impl EcmaModuleTask {
     importer: &str,
     specifier: &str,
     options: HookResolveIdExtraOptions,
-  ) -> anyhow::Result<Result<ResolvedRequestInfo, ResolveError>> {
+  ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
     // Check external with unresolved path
     if let Some(is_external) = input_options.external.as_ref() {
       if is_external(specifier, Some(importer), false).await? {
-        return Ok(Ok(ResolvedRequestInfo {
-          path: specifier.to_string().into(),
+        return Ok(Ok(ResolvedId {
+          id: specifier.to_string().into(),
           module_def_format: ModuleDefFormat::Unknown,
           is_external: true,
           package_json: None,
@@ -296,8 +296,8 @@ impl EcmaModuleTask {
 
     // Check runtime module
     if specifier == ROLLDOWN_RUNTIME_RESOURCE_ID {
-      return Ok(Ok(ResolvedRequestInfo {
-        path: specifier.to_string().into(),
+      return Ok(Ok(ResolvedId {
+        id: specifier.to_string().into(),
         module_def_format: ModuleDefFormat::EsmMjs,
         is_external: false,
         package_json: None,
@@ -326,7 +326,7 @@ impl EcmaModuleTask {
     &mut self,
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
     warnings: &mut Vec<BuildDiagnostic>,
-  ) -> Result<IndexVec<ImportRecordIdx, ResolvedRequestInfo>> {
+  ) -> Result<IndexVec<ImportRecordIdx, ResolvedId>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
       let input_options = Arc::clone(&self.ctx.input_options);
@@ -370,8 +370,8 @@ impl EcmaModuleTask {
               )
               .with_severity_warning(),
             );
-            ret.push(ResolvedRequestInfo {
-              path: specifier.to_string().into(),
+            ret.push(ResolvedId {
+              id: specifier.to_string().into(),
               module_def_format: ModuleDefFormat::Unknown,
               is_external: true,
               package_json: None,

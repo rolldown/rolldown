@@ -37,7 +37,7 @@ impl BindingPluginContext {
       .map_err(|program_err| napi_error::resolve_error(&specifier, program_err))?
       .ok();
     Ok(ret.map(|info| BindingPluginContextResolvedId {
-      id: info.path.path.to_string(),
+      id: info.id.path.to_string(),
       external: info.is_external,
     }))
   }

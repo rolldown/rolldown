@@ -5,7 +5,7 @@ use crate::{side_effects::HookSideEffects, ModuleDefFormat, PackageJson, Resolve
 #[derive(Debug)]
 pub struct ResolvedRequestInfo {
   pub path: ResolvedPath,
-  pub module_type: ModuleDefFormat,
+  pub module_def_format: ModuleDefFormat,
   pub is_external: bool,
   pub package_json: Option<Arc<PackageJson>>,
   pub side_effects: Option<HookSideEffects>,

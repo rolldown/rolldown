@@ -141,7 +141,7 @@ impl<F: FileSystem + Default> Resolver<F> {
 #[derive(Debug)]
 pub struct ResolveReturn {
   pub path: ResolvedPath,
-  pub module_type: ModuleDefFormat,
+  pub module_def_format: ModuleDefFormat,
   pub package_json: Option<Arc<PackageJson>>,
 }
 
@@ -243,5 +243,9 @@ fn build_resolve_ret(
   module_type: ModuleDefFormat,
   package_json: Option<Arc<PackageJson>>,
 ) -> ResolveReturn {
-  ResolveReturn { path: ResolvedPath { path: path.into(), ignored }, module_type, package_json }
+  ResolveReturn {
+    path: ResolvedPath { path: path.into(), ignored },
+    module_def_format: module_type,
+    package_json,
+  }
 }

@@ -36,7 +36,7 @@ pub struct EcmaModuleTask {
   module_id: ModuleIdx,
   resolved_path: ResolvedPath,
   package_json: Option<Arc<PackageJson>>,
-  module_type: ModuleDefFormat,
+  module_def_format: ModuleDefFormat,
   errors: Vec<BuildDiagnostic>,
   is_user_defined_entry: bool,
   side_effects: Option<HookSideEffects>,
@@ -47,7 +47,7 @@ impl EcmaModuleTask {
     ctx: Arc<TaskContext>,
     id: ModuleIdx,
     path: ResolvedPath,
-    module_type: ModuleDefFormat,
+    module_def_format: ModuleDefFormat,
     is_user_defined_entry: bool,
     package_json: Option<Arc<PackageJson>>,
     side_effects: Option<HookSideEffects>,
@@ -56,7 +56,7 @@ impl EcmaModuleTask {
       ctx,
       module_id: id,
       resolved_path: path,
-      module_type,
+      module_def_format,
       errors: vec![],
       is_user_defined_entry,
       package_json,
@@ -212,7 +212,7 @@ impl EcmaModuleTask {
       scope,
       exports_kind,
       namespace_object_ref,
-      def_format: self.module_type,
+      def_format: self.module_def_format,
       debug_resource_id: self.resolved_path.debug_display(&self.ctx.input_options.cwd),
       sourcemap_chain,
       exec_order: u32::MAX,
@@ -262,7 +262,7 @@ impl EcmaModuleTask {
       &ast_scopes,
       &mut ast_symbols,
       repr_name.into_owned(),
-      self.module_type,
+      self.module_def_format,
       ast.source(),
       &file_path,
       &ast.trivias,
@@ -286,7 +286,7 @@ impl EcmaModuleTask {
       if is_external(specifier, Some(importer), false).await? {
         return Ok(Ok(ResolvedRequestInfo {
           path: specifier.to_string().into(),
-          module_type: ModuleDefFormat::Unknown,
+          module_def_format: ModuleDefFormat::Unknown,
           is_external: true,
           package_json: None,
           side_effects: None,
@@ -298,7 +298,7 @@ impl EcmaModuleTask {
     if specifier == ROLLDOWN_RUNTIME_RESOURCE_ID {
       return Ok(Ok(ResolvedRequestInfo {
         path: specifier.to_string().into(),
-        module_type: ModuleDefFormat::EsmMjs,
+        module_def_format: ModuleDefFormat::EsmMjs,
         is_external: false,
         package_json: None,
         side_effects: None,
@@ -372,7 +372,7 @@ impl EcmaModuleTask {
             );
             ret.push(ResolvedRequestInfo {
               path: specifier.to_string().into(),
-              module_type: ModuleDefFormat::Unknown,
+              module_def_format: ModuleDefFormat::Unknown,
               is_external: true,
               package_json: None,
               side_effects: None,

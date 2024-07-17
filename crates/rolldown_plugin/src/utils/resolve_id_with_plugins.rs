@@ -89,11 +89,22 @@ fn resolve_id(
         package_json: None,
         side_effects: None,
       })),
+      ResolveError::Ignored(p) => Ok(Ok(ResolvedRequestInfo {
+        path: ResolvedPath {
+          //(hyf0) TODO: This `p` doesn't seem to contains `query` or `fragment` of the input. We need to make sure this is ok
+          path: p.to_str().expect("Should be valid utf8").into(),
+          ignored: true,
+        },
+        is_external: false,
+        module_def_format: ModuleDefFormat::Unknown,
+        package_json: None,
+        side_effects: None,
+      })),
       _ => Ok(Err(err)),
     }
   } else {
     Ok(resolved.map(|resolved| ResolvedRequestInfo {
-      path: resolved.path,
+      path: ResolvedPath { path: resolved.path, ignored: false },
       module_def_format: resolved.module_def_format,
       is_external: false,
       package_json: resolved.package_json,

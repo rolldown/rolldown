@@ -124,7 +124,7 @@ impl ModuleLoader {
     resolved_id: ResolvedId,
     is_user_defined_entry: bool,
   ) -> ModuleIdx {
-    match self.visited.entry(Arc::<str>::clone(&resolved_id.id.path)) {
+    match self.visited.entry(Arc::<str>::clone(&resolved_id.id)) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         if resolved_id.is_external {
@@ -140,7 +140,7 @@ impl ModuleLoader {
             },
           };
           let ext =
-            ExternalModule::new(idx, resolved_id.id.path.to_string(), external_module_side_effects);
+            ExternalModule::new(idx, resolved_id.id.to_string(), external_module_side_effects);
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
           self.intermediate_normal_modules.index_ecma_ast[idx] = Some(EcmaAst::default());
           idx

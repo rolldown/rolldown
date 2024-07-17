@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId, ResolvedPath};
+use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
@@ -33,6 +33,7 @@ pub async fn resolve_id_with_plugins(
     {
       return Ok(Ok(ResolvedId {
         module_def_format: ModuleDefFormat::from_path(&r.id),
+        ignored: false,
         id: r.id.into(),
         is_external: matches!(r.external, Some(true)),
         package_json: None,
@@ -51,6 +52,7 @@ pub async fn resolve_id_with_plugins(
   {
     return Ok(Ok(ResolvedId {
       module_def_format: ModuleDefFormat::from_path(&r.id),
+      ignored: false,
       id: r.id.into(),
       is_external: matches!(r.external, Some(true)),
       package_json: None,
@@ -63,6 +65,7 @@ pub async fn resolve_id_with_plugins(
     return Ok(Ok(ResolvedId {
       id: request.to_string().into(),
       module_def_format: ModuleDefFormat::Unknown,
+      ignored: false,
       is_external: true,
       package_json: None,
       side_effects: None,
@@ -83,18 +86,17 @@ fn resolve_id(
   if let Err(err) = resolved {
     match err {
       ResolveError::Builtin(specifier) => Ok(Ok(ResolvedId {
-        id: ResolvedPath { path: specifier.into(), ignored: false },
+        id: specifier.into(),
+        ignored: false,
         is_external: true,
         module_def_format: ModuleDefFormat::Unknown,
         package_json: None,
         side_effects: None,
       })),
       ResolveError::Ignored(p) => Ok(Ok(ResolvedId {
-        id: ResolvedPath {
-          //(hyf0) TODO: This `p` doesn't seem to contains `query` or `fragment` of the input. We need to make sure this is ok
-          path: p.to_str().expect("Should be valid utf8").into(),
-          ignored: true,
-        },
+        //(hyf0) TODO: This `p` doesn't seem to contains `query` or `fragment` of the input. We need to make sure this is ok
+        id: p.to_str().expect("Should be valid utf8").into(),
+        ignored: true,
         is_external: false,
         module_def_format: ModuleDefFormat::Unknown,
         package_json: None,
@@ -104,7 +106,8 @@ fn resolve_id(
     }
   } else {
     Ok(resolved.map(|resolved| ResolvedId {
-      id: ResolvedPath { path: resolved.path, ignored: false },
+      id: resolved.path,
+      ignored: false,
       module_def_format: resolved.module_def_format,
       is_external: false,
       package_json: resolved.package_json,

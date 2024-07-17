@@ -4,7 +4,7 @@ use anyhow::Result;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc::index::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, ModuleIdx, ModuleTable, ResolvedRequestInfo};
+use rolldown_common::{EntryPoint, ImportKind, ModuleIdx, ModuleTable, ResolvedId};
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
 use rolldown_fs::OsFileSystem;
@@ -88,9 +88,7 @@ impl ScanStage {
   /// Resolve `InputOptions.input`
 
   #[tracing::instrument(level = "debug", skip_all)]
-  async fn resolve_user_defined_entries(
-    &mut self,
-  ) -> Result<Vec<(Option<ArcStr>, ResolvedRequestInfo)>> {
+  async fn resolve_user_defined_entries(&mut self) -> Result<Vec<(Option<ArcStr>, ResolvedId)>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 

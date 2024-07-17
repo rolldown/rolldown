@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::Result;
 use futures::future::join_all;
@@ -8,8 +8,8 @@ use oxc::{
 };
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaModule, ImportRecordIdx, ModuleDefFormat, ModuleIdx, PackageJson, RawImportRecord,
-  ResolvedId, ResolvedPath, ResourceId, StrOrBytes, SymbolRef, TreeshakeOptions,
+  AstScopes, EcmaModule, ImportRecordIdx, ModuleDefFormat, ModuleIdx, RawImportRecord, ResolvedId,
+  ResourceId, StrOrBytes, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
@@ -33,38 +33,23 @@ use crate::{
 };
 pub struct EcmaModuleTask {
   ctx: Arc<TaskContext>,
-  module_id: ModuleIdx,
-  resolved_path: ResolvedPath,
-  package_json: Option<Arc<PackageJson>>,
-  module_def_format: ModuleDefFormat,
+  module_idx: ModuleIdx,
+  resolved_id: ResolvedId,
   errors: Vec<BuildDiagnostic>,
   is_user_defined_entry: bool,
-  side_effects: Option<HookSideEffects>,
 }
 
 impl EcmaModuleTask {
   pub fn new(
     ctx: Arc<TaskContext>,
-    id: ModuleIdx,
-    path: ResolvedPath,
-    module_def_format: ModuleDefFormat,
+    idx: ModuleIdx,
+    resolved_id: ResolvedId,
     is_user_defined_entry: bool,
-    package_json: Option<Arc<PackageJson>>,
-    side_effects: Option<HookSideEffects>,
   ) -> Self {
-    Self {
-      ctx,
-      module_id: id,
-      resolved_path: path,
-      module_def_format,
-      errors: vec![],
-      is_user_defined_entry,
-      package_json,
-      side_effects,
-    }
+    Self { ctx, module_idx: idx, resolved_id, errors: vec![], is_user_defined_entry }
   }
 
-  #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_path = ?self.resolved_path))]
+  #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
   pub async fn run(mut self) {
     match self.run_inner().await {
       Ok(()) => {
@@ -80,14 +65,14 @@ impl EcmaModuleTask {
 
   #[allow(clippy::too_many_lines)]
   async fn run_inner(&mut self) -> Result<()> {
-    let mut hook_side_effects = self.side_effects.take();
+    let mut hook_side_effects = self.resolved_id.side_effects.take();
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
     let (source, module_type) = load_source(
       &self.ctx.plugin_driver,
-      &self.resolved_path,
+      &self.resolved_id.id,
       &self.ctx.fs,
       &mut sourcemap_chain,
       &mut hook_side_effects,
@@ -100,7 +85,7 @@ impl EcmaModuleTask {
         // Run plugin transform.
         let source = transform_source(
           &self.ctx.plugin_driver,
-          &self.resolved_path,
+          &self.resolved_id.id,
           source,
           &mut sourcemap_chain,
           &mut hook_side_effects,
@@ -114,13 +99,13 @@ impl EcmaModuleTask {
     let Some(module_type) = module_type else {
       return Err(anyhow::format_err!(
         "[{:?}] is not specified module type, rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
-        self.resolved_path.path
+        self.resolved_id.id
       ));
     };
 
     let (mut ast, symbols, scopes) = parse_to_ecma_ast(
       &self.ctx.plugin_driver,
-      Path::new(&self.resolved_path.path.as_ref()),
+      self.resolved_id.id.path.as_path(),
       &self.ctx.input_options,
       &module_type,
       source,
@@ -157,7 +142,7 @@ impl EcmaModuleTask {
       }
     }
 
-    let resource_id = ResourceId::new(Arc::clone(&self.resolved_path.path));
+    let resource_id = ResourceId::new(Arc::clone(&self.resolved_id.id.path));
     let stable_resource_id = resource_id.stabilize(&self.ctx.input_options.cwd);
 
     // The side effects priority is:
@@ -167,6 +152,7 @@ impl EcmaModuleTask {
     // We should skip the `check_side_effects_for` if the hook side effects is not `None`.
     let lazy_check_side_effects = || {
       self
+        .resolved_id
         .package_json
         .as_ref()
         .and_then(|p| {
@@ -199,7 +185,7 @@ impl EcmaModuleTask {
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
     let module = EcmaModule {
       source: ast.source().clone(),
-      idx: self.module_id,
+      idx: self.module_idx,
       repr_name,
       stable_resource_id,
       resource_id,
@@ -212,8 +198,8 @@ impl EcmaModuleTask {
       scope,
       exports_kind,
       namespace_object_ref,
-      def_format: self.module_def_format,
-      debug_resource_id: self.resolved_path.debug_display(&self.ctx.input_options.cwd),
+      def_format: self.resolved_id.module_def_format,
+      debug_resource_id: self.resolved_id.id.debug_display(&self.ctx.input_options.cwd),
       sourcemap_chain,
       exec_order: u32::MAX,
       is_user_defined_entry: self.is_user_defined_entry,
@@ -234,7 +220,7 @@ impl EcmaModuleTask {
       .tx
       .send(Msg::NormalModuleDone(NormalModuleTaskResult {
         resolved_deps,
-        module_idx: self.module_id,
+        module_idx: self.module_idx,
         warnings,
         ast_symbol,
         module,
@@ -253,16 +239,16 @@ impl EcmaModuleTask {
     scopes: ScopeTree,
   ) -> (AstScopes, ScanResult, AstSymbols, SymbolRef) {
     let (mut ast_symbols, ast_scopes) = make_ast_scopes_and_symbols(symbols, scopes);
-    let file_path: ResourceId = Arc::<str>::clone(&self.resolved_path.path).into();
+    let file_path: ResourceId = Arc::<str>::clone(&self.resolved_id.id.path).into();
     let repr_name = file_path.as_path().representative_file_name();
     let repr_name = legitimize_identifier_name(&repr_name);
 
     let scanner = AstScanner::new(
-      self.module_id,
+      self.module_idx,
       &ast_scopes,
       &mut ast_symbols,
       repr_name.into_owned(),
-      self.module_def_format,
+      self.resolved_id.module_def_format,
       ast.source(),
       &file_path,
       &ast.trivias,
@@ -333,7 +319,7 @@ impl EcmaModuleTask {
       // FIXME(hyf0): should not use `Arc<Resolver>` here
       let resolver = Arc::clone(&self.ctx.resolver);
       let plugin_driver = Arc::clone(&self.ctx.plugin_driver);
-      let importer = self.resolved_path.clone();
+      let importer = self.resolved_id.id.clone();
       let kind = item.kind;
       async move {
         Self::resolve_id(
@@ -365,7 +351,7 @@ impl EcmaModuleTask {
             warnings.push(
               BuildDiagnostic::unresolved_import_treated_as_external(
                 specifier.to_string(),
-                self.resolved_path.path.to_string(),
+                self.resolved_id.id.path.to_string(),
                 Some(e),
               )
               .with_severity_warning(),
@@ -390,7 +376,7 @@ impl EcmaModuleTask {
     } else {
       let resolved_err = anyhow::format_err!(
         "Unexpectedly failed to resolve dependencies of {importer}. Got errors {build_errors:#?}",
-        importer = self.resolved_path.path,
+        importer = self.resolved_id.id.path,
       );
       Err(resolved_err)
     }

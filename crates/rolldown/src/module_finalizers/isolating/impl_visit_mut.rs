@@ -41,21 +41,23 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
                 import_decl.specifiers.as_ref().map_or(false, |specifiers| specifiers.is_empty());
               let importee = &self.ctx.modules[importee.idx];
               if is_plain_import {
-                program.body.push(self.snippet.app_static_import_call_multiple_specifiers_stmt(
-                  &[],
-                  importee.stable_resource_id(),
-                ));
+                program.body.push(
+                  self
+                    .snippet
+                    .app_static_import_call_multiple_specifiers_stmt(&[], importee.stable_id()),
+                );
                 continue;
               } else if let Some(star_spec) = star_specifier {
-                program.body.push(self.snippet.app_static_import_star_call_stmt(
-                  &star_spec.local.name,
-                  importee.stable_resource_id(),
-                ));
+                program.body.push(
+                  self
+                    .snippet
+                    .app_static_import_star_call_stmt(&star_spec.local.name, importee.stable_id()),
+                );
                 continue;
               }
               program.body.push(self.snippet.app_static_import_call_multiple_specifiers_stmt(
                 &named_specifiers,
-                importee.stable_resource_id(),
+                importee.stable_id(),
               ));
               continue;
             }

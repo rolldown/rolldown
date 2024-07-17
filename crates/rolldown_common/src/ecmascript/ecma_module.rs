@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use crate::side_effects::DeterminedSideEffects;
 use crate::{
   types::ast_scopes::AstScopes, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecord,
-  ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleIdx, ModuleInfo, NamedImport, ResourceId,
+  ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo, NamedImport,
   StmtInfo, StmtInfos, SymbolRef,
 };
 use crate::{IndexModules, ModuleType};
@@ -19,12 +19,11 @@ pub struct EcmaModule {
   pub source: ArcStr,
   pub idx: ModuleIdx,
   pub is_user_defined_entry: bool,
-  pub resource_id: ResourceId,
-  /// `stable_resource_id` is calculated based on `resource_id` to be stable across machine and os.
-  pub stable_resource_id: String,
+  pub id: ModuleId,
+  /// `stable_id` is calculated based on `id` to be stable across machine and os.
+  pub stable_id: String,
   // Pretty resource id for debug
-  pub debug_resource_id: String,
-  /// Representative name of `FilePath`, which is created by `FilePath#representative_name` belong to `resource_id`
+  pub debug_id: String,
   pub repr_name: String,
   pub def_format: ModuleDefFormat,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
@@ -45,13 +44,13 @@ pub struct EcmaModule {
   pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
   pub is_included: bool,
   // the ids of all modules that statically import this module
-  pub importers: Vec<ResourceId>,
+  pub importers: Vec<ModuleId>,
   // the ids of all modules that import this module via dynamic import()
-  pub dynamic_importers: Vec<ResourceId>,
+  pub dynamic_importers: Vec<ModuleId>,
   // the module ids statically imported by this module
-  pub imported_ids: Vec<ResourceId>,
+  pub imported_ids: Vec<ModuleId>,
   // the module ids imported by this module via dynamic import()
-  pub dynamically_imported_ids: Vec<ResourceId>,
+  pub dynamically_imported_ids: Vec<ModuleId>,
   pub side_effects: DeterminedSideEffects,
   pub module_type: ModuleType,
 }
@@ -79,7 +78,7 @@ impl EcmaModule {
   pub fn to_module_info(&self) -> ModuleInfo {
     ModuleInfo {
       code: Some(self.source.clone()),
-      id: self.resource_id.clone(),
+      id: self.id.clone(),
       is_entry: self.is_user_defined_entry,
       importers: {
         let mut value = self.importers.clone();
@@ -98,7 +97,7 @@ impl EcmaModule {
 
   // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
   pub fn is_virtual(&self) -> bool {
-    self.resource_id.starts_with('\0') || self.resource_id.starts_with("rolldown:")
+    self.id.starts_with('\0') || self.id.starts_with("rolldown:")
   }
 
   // https://tc39.es/ecma262/#sec-getexportednames

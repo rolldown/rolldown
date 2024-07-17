@@ -2,7 +2,7 @@ use std::{path::Path, sync::Arc};
 
 use crate::{side_effects::HookSideEffects, ModuleDefFormat, PackageJson};
 
-use super::resource_id::stabilize_resource_id;
+use super::module_id::stabilize_module_id;
 
 #[derive(Debug)]
 pub struct ResolvedId {
@@ -20,7 +20,7 @@ impl ResolvedId {
   /// 1. doesn't guarantee to be unique
   /// 2. relative to the cwd, so it could show stable path across different machines
   pub fn debug_id(&self, cwd: impl AsRef<Path>) -> String {
-    let stable = stabilize_resource_id(&self.id, cwd.as_ref());
+    let stable = stabilize_module_id(&self.id, cwd.as_ref());
     if self.ignored {
       format!("(ignored) {stable}")
     } else {

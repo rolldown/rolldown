@@ -53,7 +53,7 @@ impl PluginContext {
     self.module_table.as_ref().and_then(|module_table| {
       for normal_module in &module_table.modules {
         if let Some(ecma_module) = normal_module.as_ecma() {
-          if ecma_module.resource_id.as_str() == module_id {
+          if ecma_module.id.as_str() == module_id {
             return Some(ecma_module.to_module_info());
           }
         }
@@ -67,7 +67,7 @@ impl PluginContext {
     if let Some(module_table) = self.module_table.as_ref() {
       let mut ids = Vec::with_capacity(module_table.modules.len());
       for normal_module in &module_table.modules {
-        ids.push(normal_module.resource_id().to_string());
+        ids.push(normal_module.id().to_string());
       }
       // TODO external module
       Some(ids)

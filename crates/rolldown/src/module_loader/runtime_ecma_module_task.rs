@@ -3,14 +3,14 @@ use oxc::index::IndexVec;
 use oxc::span::SourceType;
 use rolldown_common::{
   side_effects::DeterminedSideEffects, AstScopes, EcmaModule, ExportsKind, ModuleDefFormat,
-  ModuleIdx, ModuleType, ResourceId, SymbolRef,
+  ModuleId, ModuleIdx, ModuleType, SymbolRef,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
 use super::Msg;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
-  runtime::{RuntimeModuleBrief, ROLLDOWN_RUNTIME_RESOURCE_ID},
+  runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID},
   types::ast_symbols::AstSymbols,
   utils::tweak_ast_for_scanning::tweak_ast_for_scanning,
 };
@@ -67,8 +67,8 @@ impl RuntimeEcmaModuleTask {
       source,
       idx: self.module_id,
       repr_name,
-      stable_resource_id: ROLLDOWN_RUNTIME_RESOURCE_ID.to_string(),
-      resource_id: ResourceId::new(ROLLDOWN_RUNTIME_RESOURCE_ID),
+      stable_id: RUNTIME_MODULE_ID.to_string(),
+      id: ModuleId::new(RUNTIME_MODULE_ID),
       named_imports,
       named_exports,
       stmt_infos,
@@ -79,7 +79,7 @@ impl RuntimeEcmaModuleTask {
       exports_kind: ExportsKind::Esm,
       namespace_object_ref,
       def_format: ModuleDefFormat::EsmMjs,
-      debug_resource_id: ROLLDOWN_RUNTIME_RESOURCE_ID.to_string(),
+      debug_id: RUNTIME_MODULE_ID.to_string(),
       exec_order: u32::MAX,
       is_user_defined_entry: false,
       import_records: IndexVec::default(),
@@ -119,7 +119,7 @@ impl RuntimeEcmaModuleTask {
       std::mem::take(&mut symbol_table.resolved_references),
     );
     let mut ast_symbols = AstSymbols::from_symbol_table(symbol_table);
-    let facade_path = ResourceId::new("runtime");
+    let facade_path = ModuleId::new("runtime");
     let scanner = AstScanner::new(
       self.module_id,
       &ast_scope,

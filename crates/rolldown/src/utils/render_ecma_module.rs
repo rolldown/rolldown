@@ -13,8 +13,8 @@ pub fn render_ecma_module(
   } else {
     let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send>> = vec![];
     sources.push(Box::new(RawSource::new(format!(
-      "//#region {debug_resource_id}",
-      debug_resource_id = module.debug_resource_id
+      "//#region {debug_module_id}",
+      debug_module_id = module.debug_id
     ))));
 
     let enable_sourcemap = !options.sourcemap.is_hidden() && !module.is_virtual();

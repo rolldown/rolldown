@@ -253,7 +253,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
     for (imported_as_ref, named_import) in &module.named_imports {
       let match_import_span = tracing::trace_span!(
         "MATCH_IMPORT",
-        module_id = module.stable_resource_id,
+        module_id = module.stable_id,
         imported_specifier = format!("{}", named_import.imported)
       );
       let _enter = match_import_span.enter();
@@ -277,17 +277,15 @@ impl<'a> BindImportsAndExportsContext<'a> {
       match ret {
         MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
         MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
-          let importer = self.normal_modules[rec.resolved_module].stable_resource_id().to_string();
+          let importer = self.normal_modules[rec.resolved_module].stable_id().to_string();
 
           let mut importee =
             Vec::<String>::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
-          importee.push(self.normal_modules[symbol_ref.owner].stable_resource_id().to_string());
+          importee.push(self.normal_modules[symbol_ref.owner].stable_id().to_string());
           importee.extend(
             potentially_ambiguous_symbol_refs
               .iter()
-              .map(|&symbol_ref| {
-                self.normal_modules[symbol_ref.owner].stable_resource_id().to_string()
-              })
+              .map(|&symbol_ref| self.normal_modules[symbol_ref.owner].stable_id().to_string())
               .collect::<Vec<_>>(),
           );
 
@@ -296,7 +294,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
               importer,
               importee,
               module.source.clone(),
-              module.stable_resource_id.to_string(),
+              module.stable_id.to_string(),
               named_import.imported.to_string(),
               named_import.span_imported,
             )
@@ -316,8 +314,8 @@ impl<'a> BindImportsAndExportsContext<'a> {
         MatchImportKind::NoMatch => {
           let importee = &self.normal_modules[rec.resolved_module];
           self.errors.push(BuildDiagnostic::missing_export(
-            module.stable_resource_id.to_string(),
-            importee.stable_resource_id().to_string(),
+            module.stable_id.to_string(),
+            importee.stable_id().to_string(),
             module.source.clone(),
             named_import.imported.to_string(),
             named_import.span_imported,
@@ -384,8 +382,8 @@ impl<'a> BindImportsAndExportsContext<'a> {
   ) -> MatchImportKind {
     let tracking_span = tracing::trace_span!(
       "TRACKING_MATCH_IMPORT",
-      importer = normal_modules[tracker.importer].stable_resource_id(),
-      importee = normal_modules[tracker.importee].stable_resource_id(),
+      importer = normal_modules[tracker.importer].stable_id(),
+      importee = normal_modules[tracker.importee].stable_id(),
       imported_specifier = format!("{}", tracker.imported)
     );
     let _enter = tracking_span.enter();

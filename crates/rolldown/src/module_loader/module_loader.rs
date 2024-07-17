@@ -19,7 +19,7 @@ use super::task_result::NormalModuleTaskResult;
 use super::Msg;
 use crate::module_loader::runtime_ecma_module_task::RuntimeEcmaModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
-use crate::runtime::{RuntimeModuleBrief, ROLLDOWN_RUNTIME_RESOURCE_ID};
+use crate::runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID};
 use crate::types::symbols::Symbols;
 
 use crate::{SharedOptions, SharedResolver};
@@ -110,7 +110,7 @@ impl ModuleLoader {
       shared_context: common_data,
       rx,
       input_options,
-      visited: FxHashMap::from_iter([(ROLLDOWN_RUNTIME_RESOURCE_ID.into(), runtime_id)]),
+      visited: FxHashMap::from_iter([(RUNTIME_MODULE_ID.into(), runtime_id)]),
       runtime_id,
       // runtime module is always there
       remaining: 1,
@@ -229,10 +229,8 @@ impl ModuleLoader {
             .map(|(raw_rec, info)| {
               let id = self.try_spawn_new_task(info, false);
               // Dynamic imported module will be considered as an entry
-              self.intermediate_normal_modules.importers[id].push(ImporterRecord {
-                kind: raw_rec.kind,
-                importer_path: module.resource_id.clone(),
-              });
+              self.intermediate_normal_modules.importers[id]
+                .push(ImporterRecord { kind: raw_rec.kind, importer_path: module.id.clone() });
               if matches!(raw_rec.kind, ImportKind::DynamicImport)
                 && !user_defined_entry_ids.contains(&id)
               {
@@ -295,7 +293,7 @@ impl ModuleLoader {
     // IIFE format should inline dynamic imports, so here not put dynamic imports to entries
     if !matches!(self.input_options.format, OutputFormat::Iife) {
       let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
-      dynamic_import_entry_ids.sort_unstable_by_key(|id| modules[*id].stable_resource_id());
+      dynamic_import_entry_ids.sort_unstable_by_key(|id| modules[*id].stable_id());
 
       entry_points.extend(dynamic_import_entry_ids.into_iter().map(|id| EntryPoint {
         name: None,

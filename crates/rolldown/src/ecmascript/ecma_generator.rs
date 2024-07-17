@@ -5,7 +5,7 @@ use crate::{
 
 use anyhow::Result;
 use rolldown_common::{
-  AssetMeta, EcmaAssetMeta, ModuleIdx, OutputFormat, PreliminaryAsset, RenderedModule, ResourceId,
+  AssetMeta, EcmaAssetMeta, ModuleId, ModuleIdx, OutputFormat, PreliminaryAsset, RenderedModule,
 };
 use rolldown_plugin::HookBannerArgs;
 use rolldown_sourcemap::Source;
@@ -15,7 +15,7 @@ use sugar_path::SugarPath;
 
 use super::format::{app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife};
 
-pub type RenderedModuleSources = Vec<(ModuleIdx, ResourceId, Option<Vec<Box<dyn Source + Send>>>)>;
+pub type RenderedModuleSources = Vec<(ModuleIdx, ModuleId, Option<Vec<Box<dyn Source + Send>>>)>;
 
 pub struct EcmaGenerator;
 
@@ -35,21 +35,16 @@ impl Generator for EcmaGenerator {
       .map(|m| {
         (
           m.idx,
-          m.resource_id.clone(),
-          render_ecma_module(
-            m,
-            &ctx.link_output.ast_table[m.idx],
-            m.resource_id.as_ref(),
-            ctx.options,
-          ),
+          m.id.clone(),
+          render_ecma_module(m, &ctx.link_output.ast_table[m.idx], m.id.as_ref(), ctx.options),
         )
       })
       .collect::<Vec<_>>();
 
-    rendered_module_sources.iter().for_each(|(_, module_resource_id, _)| {
+    rendered_module_sources.iter().for_each(|(_, module_id, _)| {
       // FIXME: NAPI-RS used CStr under the hood, so it can't handle null byte in the string.
-      if !module_resource_id.starts_with('\0') {
-        rendered_modules.insert(module_resource_id.clone(), RenderedModule { code: None });
+      if !module_id.starts_with('\0') {
+        rendered_modules.insert(module_id.clone(), RenderedModule { code: None });
       }
     });
 

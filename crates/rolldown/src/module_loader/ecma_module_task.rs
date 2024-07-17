@@ -8,8 +8,8 @@ use oxc::{
 };
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaModule, ImportRecordIdx, ModuleDefFormat, ModuleIdx, RawImportRecord, ResolvedId,
-  ResourceId, StrOrBytes, SymbolRef, TreeshakeOptions,
+  AstScopes, EcmaModule, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, RawImportRecord,
+  ResolvedId, StrOrBytes, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
@@ -22,7 +22,7 @@ use super::{task_context::TaskContext, Msg};
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   module_loader::NormalModuleTaskResult,
-  runtime::ROLLDOWN_RUNTIME_RESOURCE_ID,
+  runtime::RUNTIME_MODULE_ID,
   types::ast_symbols::AstSymbols,
   utils::{
     load_source::load_source, make_ast_symbol_and_scope::make_ast_scopes_and_symbols,
@@ -142,8 +142,8 @@ impl EcmaModuleTask {
       }
     }
 
-    let resource_id = ResourceId::new(Arc::clone(&self.resolved_id.id));
-    let stable_resource_id = resource_id.stabilize(&self.ctx.input_options.cwd);
+    let id = ModuleId::new(Arc::clone(&self.resolved_id.id));
+    let stable_id = id.stabilize(&self.ctx.input_options.cwd);
 
     // The side effects priority is:
     // 1. Hook side effects
@@ -155,9 +155,7 @@ impl EcmaModuleTask {
         .resolved_id
         .package_json
         .as_ref()
-        .and_then(|p| {
-          p.check_side_effects_for(&stable_resource_id).map(DeterminedSideEffects::UserDefined)
-        })
+        .and_then(|p| p.check_side_effects_for(&stable_id).map(DeterminedSideEffects::UserDefined))
         .unwrap_or_else(|| {
           let analyzed_side_effects = stmt_infos.iter().any(|stmt_info| stmt_info.side_effect);
           DeterminedSideEffects::Analyzed(analyzed_side_effects)
@@ -174,7 +172,7 @@ impl EcmaModuleTask {
         // Actually this convert is not necessary, just for passing type checking
         TreeshakeOptions::False => DeterminedSideEffects::NoTreeshake,
         TreeshakeOptions::Option(ref opt) => {
-          if opt.module_side_effects.resolve(&stable_resource_id) {
+          if opt.module_side_effects.resolve(&stable_id) {
             lazy_check_side_effects()
           } else {
             DeterminedSideEffects::UserDefined(false)
@@ -187,8 +185,8 @@ impl EcmaModuleTask {
       source: ast.source().clone(),
       idx: self.module_idx,
       repr_name,
-      stable_resource_id,
-      resource_id,
+      stable_id,
+      id,
       named_imports,
       named_exports,
       stmt_infos,
@@ -199,7 +197,7 @@ impl EcmaModuleTask {
       exports_kind,
       namespace_object_ref,
       def_format: self.resolved_id.module_def_format,
-      debug_resource_id: self.resolved_id.debug_id(&self.ctx.input_options.cwd),
+      debug_id: self.resolved_id.debug_id(&self.ctx.input_options.cwd),
       sourcemap_chain,
       exec_order: u32::MAX,
       is_user_defined_entry: self.is_user_defined_entry,
@@ -239,7 +237,7 @@ impl EcmaModuleTask {
     scopes: ScopeTree,
   ) -> (AstScopes, ScanResult, AstSymbols, SymbolRef) {
     let (mut ast_symbols, ast_scopes) = make_ast_scopes_and_symbols(symbols, scopes);
-    let file_path: ResourceId = Arc::<str>::clone(&self.resolved_id.id).into();
+    let file_path: ModuleId = Arc::<str>::clone(&self.resolved_id.id).into();
     let repr_name = file_path.as_path().representative_file_name();
     let repr_name = legitimize_identifier_name(&repr_name);
 
@@ -282,7 +280,7 @@ impl EcmaModuleTask {
     }
 
     // Check runtime module
-    if specifier == ROLLDOWN_RUNTIME_RESOURCE_ID {
+    if specifier == RUNTIME_MODULE_ID {
       return Ok(Ok(ResolvedId {
         id: specifier.to_string().into(),
         ignored: false,

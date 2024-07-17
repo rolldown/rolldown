@@ -12,11 +12,11 @@ pub struct ExternalModule {
 }
 
 impl ExternalModule {
-  pub fn new(idx: ModuleIdx, resource_id: String, side_effects: DeterminedSideEffects) -> Self {
+  pub fn new(idx: ModuleIdx, module_id: String, side_effects: DeterminedSideEffects) -> Self {
     Self {
       idx,
       exec_order: u32::MAX,
-      name: resource_id,
+      name: module_id,
       import_records: IndexVec::default(),
       side_effects,
     }

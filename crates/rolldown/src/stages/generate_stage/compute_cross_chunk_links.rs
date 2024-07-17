@@ -72,13 +72,13 @@ impl<'a> GenerateStage<'a> {
       .map(|cross_chunk_imports| {
         let mut cross_chunk_imports = cross_chunk_imports.into_iter().collect::<Vec<_>>();
         cross_chunk_imports.sort_by_cached_key(|chunk_id| {
-          let mut resource_ids = chunk_graph.chunks[*chunk_id]
+          let mut module_ids = chunk_graph.chunks[*chunk_id]
             .modules
             .iter()
-            .map(|id| self.link_output.module_table.modules[*id].resource_id())
+            .map(|id| self.link_output.module_table.modules[*id].id())
             .collect::<Vec<_>>();
-          resource_ids.sort_unstable();
-          resource_ids
+          module_ids.sort_unstable();
+          module_ids
         });
         cross_chunk_imports
       })
@@ -212,7 +212,7 @@ impl<'a> GenerateStage<'a> {
                 "Symbol: {:?}, {:?} in {:?} should only belong to one chunk",
                 symbol.name,
                 declared,
-                module.resource_id,
+                module.id,
               );
 
               symbol.chunk_id = Some(chunk_id);
@@ -283,11 +283,7 @@ impl<'a> GenerateStage<'a> {
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
           let symbol_owner = &self.link_output.module_table.modules[import_ref.owner];
           let symbol_name = self.link_output.symbols.get_original_name(import_ref);
-          panic!(
-            "Symbol {:?} in {:?} should belong to a chunk",
-            symbol_name,
-            symbol_owner.resource_id()
-          )
+          panic!("Symbol {:?} in {:?} should belong to a chunk", symbol_name, symbol_owner.id())
         });
         // Check if the import is from another chunk
         if chunk_id != importee_chunk_id {

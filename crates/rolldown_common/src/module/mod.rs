@@ -23,9 +23,9 @@ impl Module {
     }
   }
 
-  pub fn resource_id(&self) -> &str {
+  pub fn id(&self) -> &str {
     match self {
-      Module::Ecma(v) => &v.resource_id,
+      Module::Ecma(v) => &v.id,
       Module::External(v) => &v.name,
     }
   }
@@ -37,9 +37,9 @@ impl Module {
     }
   }
 
-  pub fn stable_resource_id(&self) -> &str {
+  pub fn stable_id(&self) -> &str {
     match self {
-      Module::Ecma(v) => &v.stable_resource_id,
+      Module::Ecma(v) => &v.stable_id,
       Module::External(v) => &v.name,
     }
   }

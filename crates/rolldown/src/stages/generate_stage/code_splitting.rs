@@ -135,7 +135,7 @@ impl<'a> GenerateStage<'a> {
       let bits = &module_to_bits[normal_module.idx];
       debug_assert!(
         !bits.is_empty(),
-        "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_resource_id
+        "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_id
       );
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunks[chunk_id].modules.push(normal_module.idx);

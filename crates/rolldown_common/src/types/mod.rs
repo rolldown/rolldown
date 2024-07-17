@@ -23,7 +23,6 @@ pub mod output_chunk;
 pub mod package_json;
 pub mod rendered_module;
 pub mod resolved_export;
-pub mod resolved_path;
 pub mod resolved_request_info;
 pub mod resource_id;
 pub mod rollup_rendered_chunk;

@@ -72,7 +72,7 @@ impl EcmaModuleTask {
     // Run plugin load to get content first, if it is None using read fs as fallback.
     let (source, module_type) = load_source(
       &self.ctx.plugin_driver,
-      &self.resolved_id.id,
+      &self.resolved_id,
       &self.ctx.fs,
       &mut sourcemap_chain,
       &mut hook_side_effects,
@@ -85,7 +85,7 @@ impl EcmaModuleTask {
         // Run plugin transform.
         let source = transform_source(
           &self.ctx.plugin_driver,
-          &self.resolved_id.id,
+          &self.resolved_id,
           source,
           &mut sourcemap_chain,
           &mut hook_side_effects,
@@ -105,7 +105,7 @@ impl EcmaModuleTask {
 
     let (mut ast, symbols, scopes) = parse_to_ecma_ast(
       &self.ctx.plugin_driver,
-      self.resolved_id.id.path.as_path(),
+      self.resolved_id.id.as_path(),
       &self.ctx.input_options,
       &module_type,
       source,
@@ -136,13 +136,13 @@ impl EcmaModuleTask {
 
     for (record, info) in import_records.iter().zip(&resolved_deps) {
       if record.kind.is_static() {
-        imported_ids.push(Arc::clone(&info.id.path).into());
+        imported_ids.push(Arc::clone(&info.id).into());
       } else {
-        dynamically_imported_ids.push(Arc::clone(&info.id.path).into());
+        dynamically_imported_ids.push(Arc::clone(&info.id).into());
       }
     }
 
-    let resource_id = ResourceId::new(Arc::clone(&self.resolved_id.id.path));
+    let resource_id = ResourceId::new(Arc::clone(&self.resolved_id.id));
     let stable_resource_id = resource_id.stabilize(&self.ctx.input_options.cwd);
 
     // The side effects priority is:
@@ -199,7 +199,7 @@ impl EcmaModuleTask {
       exports_kind,
       namespace_object_ref,
       def_format: self.resolved_id.module_def_format,
-      debug_resource_id: self.resolved_id.id.debug_display(&self.ctx.input_options.cwd),
+      debug_resource_id: self.resolved_id.debug_id(&self.ctx.input_options.cwd),
       sourcemap_chain,
       exec_order: u32::MAX,
       is_user_defined_entry: self.is_user_defined_entry,
@@ -239,7 +239,7 @@ impl EcmaModuleTask {
     scopes: ScopeTree,
   ) -> (AstScopes, ScanResult, AstSymbols, SymbolRef) {
     let (mut ast_symbols, ast_scopes) = make_ast_scopes_and_symbols(symbols, scopes);
-    let file_path: ResourceId = Arc::<str>::clone(&self.resolved_id.id.path).into();
+    let file_path: ResourceId = Arc::<str>::clone(&self.resolved_id.id).into();
     let repr_name = file_path.as_path().representative_file_name();
     let repr_name = legitimize_identifier_name(&repr_name);
 
@@ -272,6 +272,7 @@ impl EcmaModuleTask {
       if is_external(specifier, Some(importer), false).await? {
         return Ok(Ok(ResolvedId {
           id: specifier.to_string().into(),
+          ignored: false,
           module_def_format: ModuleDefFormat::Unknown,
           is_external: true,
           package_json: None,
@@ -284,6 +285,7 @@ impl EcmaModuleTask {
     if specifier == ROLLDOWN_RUNTIME_RESOURCE_ID {
       return Ok(Ok(ResolvedId {
         id: specifier.to_string().into(),
+        ignored: false,
         module_def_format: ModuleDefFormat::EsmMjs,
         is_external: false,
         package_json: None,
@@ -319,14 +321,14 @@ impl EcmaModuleTask {
       // FIXME(hyf0): should not use `Arc<Resolver>` here
       let resolver = Arc::clone(&self.ctx.resolver);
       let plugin_driver = Arc::clone(&self.ctx.plugin_driver);
-      let importer = self.resolved_id.id.clone();
+      let importer = &self.resolved_id.id;
       let kind = item.kind;
       async move {
         Self::resolve_id(
           &input_options,
           &resolver,
           &plugin_driver,
-          &importer.path,
+          importer,
           &specifier,
           HookResolveIdExtraOptions { is_entry: false, kind },
         )
@@ -351,13 +353,14 @@ impl EcmaModuleTask {
             warnings.push(
               BuildDiagnostic::unresolved_import_treated_as_external(
                 specifier.to_string(),
-                self.resolved_id.id.path.to_string(),
+                self.resolved_id.id.to_string(),
                 Some(e),
               )
               .with_severity_warning(),
             );
             ret.push(ResolvedId {
               id: specifier.to_string().into(),
+              ignored: false,
               module_def_format: ModuleDefFormat::Unknown,
               is_external: true,
               package_json: None,
@@ -376,7 +379,7 @@ impl EcmaModuleTask {
     } else {
       let resolved_err = anyhow::format_err!(
         "Unexpectedly failed to resolve dependencies of {importer}. Got errors {build_errors:#?}",
-        importer = self.resolved_id.id.path,
+        importer = self.resolved_id.id,
       );
       Err(resolved_err)
     }

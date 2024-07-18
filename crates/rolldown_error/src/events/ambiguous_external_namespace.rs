@@ -5,7 +5,7 @@ use oxc::span::Span;
 use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions, EventKind};
 
 #[derive(Debug)]
-pub struct Namespace {
+pub struct AmbiguousExternalNamespaceModule {
   pub span: Span,
   pub source: ArcStr,
   pub filename: String,

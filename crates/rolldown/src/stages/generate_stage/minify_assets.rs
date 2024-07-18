@@ -1,5 +1,5 @@
 use rolldown_ecmascript::EcmaCompiler;
-use rolldown_sourcemap::collapse_sourcemap2;
+use rolldown_sourcemap::collapse_sourcemaps;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 
 use crate::type_alias::IndexAssets;
@@ -18,7 +18,7 @@ impl<'a> GenerateStage<'a> {
             asset.content = minified_content;
             match (&asset.map, &new_map) {
               (Some(origin_map), Some(new_map)) => {
-                asset.map = Some(collapse_sourcemap2(origin_map, new_map));
+                asset.map = Some(collapse_sourcemaps(vec![origin_map, new_map]));
               }
               _ => {
                 // TODO: Map is dirty. Should we reset the `asset.map` to `None`?

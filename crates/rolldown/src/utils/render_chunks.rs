@@ -29,8 +29,7 @@ pub async fn render_chunks<'a>(
           let mut sourcemap_chain = Vec::with_capacity(render_chunk_ret.1.len() + 1);
           sourcemap_chain.push(asset_map);
           sourcemap_chain.extend(render_chunk_ret.1.iter());
-          let new_source_map = collapse_sourcemaps(sourcemap_chain);
-          asset.map = new_source_map;
+          asset.map = Some(collapse_sourcemaps(sourcemap_chain));
         }
       }
     }

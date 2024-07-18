@@ -30,7 +30,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   group.sample_size(20);
   group.bench_with_input("remapping", &sourcemap_chain, move |b, sourcemap_chain| {
     b.iter(|| {
-      let map = collapse_sourcemaps(sourcemap_chain.to_vec()).unwrap();
+      let map = collapse_sourcemaps(sourcemap_chain.to_vec());
       map.to_json_string().unwrap();
     });
   });

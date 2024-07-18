@@ -32,7 +32,7 @@ pub fn render_ecma_module(
         if let Some(sourcemap) = render_output.source_map.as_ref() {
           sourcemap_chain.push(sourcemap);
         }
-        collapse_sourcemaps(sourcemap_chain)
+        Some(collapse_sourcemaps(sourcemap_chain))
       };
 
       if let Some(sourcemap) = sourcemap {

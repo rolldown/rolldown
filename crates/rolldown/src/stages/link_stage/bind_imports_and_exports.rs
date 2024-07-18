@@ -3,7 +3,7 @@
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, ResolvedExport, Specifier, SymbolRef,
 };
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::Rstr;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -277,29 +277,50 @@ impl<'a> BindImportsAndExportsContext<'a> {
       match ret {
         MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
         MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
-          let importer = self.normal_modules[rec.resolved_module].stable_id().to_string();
+          let importee = self.normal_modules[rec.resolved_module].stable_id().to_string();
 
-          let mut importee =
-            Vec::<String>::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
-          importee.push(self.normal_modules[symbol_ref.owner].stable_id().to_string());
-          importee.extend(
+          let mut exporter = Vec::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
+          if let Some(owner) = self.normal_modules[symbol_ref.owner].as_ecma() {
+            if let Specifier::Literal(name) = &named_import.imported {
+              let named_export = &owner.named_exports[name];
+              exporter.push(AmbiguousExternalNamespaceModule {
+                source: owner.source.clone(),
+                filename: owner.stable_id.to_string(),
+                span_of_identifier: named_export.span,
+              });
+            }
+          }
+
+          exporter.extend(
             potentially_ambiguous_symbol_refs
               .iter()
-              .map(|&symbol_ref| self.normal_modules[symbol_ref.owner].stable_id().to_string())
+              .filter_map(|&symbol_ref| {
+                if let Some(owner) = self.normal_modules[symbol_ref.owner].as_ecma() {
+                  if let Specifier::Literal(name) = &named_import.imported {
+                    let named_export = &owner.named_exports[name];
+                    return Some(AmbiguousExternalNamespaceModule {
+                      source: owner.source.clone(),
+                      filename: owner.stable_id.to_string(),
+                      span_of_identifier: named_export.span,
+                    });
+                  }
+                }
+
+                None
+              })
               .collect::<Vec<_>>(),
           );
 
-          self.warnings.push(
-            BuildDiagnostic::ambiguous_external_namespace(
-              importer,
-              importee,
-              module.source.clone(),
-              module.stable_id.to_string(),
-              named_import.imported.to_string(),
-              named_import.span_imported,
-            )
-            .with_severity_warning(),
-          );
+          self.errors.push(BuildDiagnostic::ambiguous_external_namespace(
+            named_import.imported.to_string(),
+            importee,
+            AmbiguousExternalNamespaceModule {
+              source: module.source.clone(),
+              filename: module.stable_id.to_string(),
+              span_of_identifier: named_import.span_imported,
+            },
+            exporter,
+          ));
         }
         MatchImportKind::Normal { symbol } => {
           self.symbols.union(*imported_as_ref, symbol);

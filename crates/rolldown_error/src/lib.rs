@@ -7,5 +7,6 @@ mod types;
 pub use crate::{
   build_error::{BuildDiagnostic, BuildResult},
   event_kind::EventKind,
+  events::ambiguous_external_namespace::AmbiguousExternalNamespaceModule,
   types::diagnostic_options::DiagnosticOptions,
 };

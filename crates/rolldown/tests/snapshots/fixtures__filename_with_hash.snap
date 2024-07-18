@@ -1426,6 +1426,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-CwjRHsne.mjs
 - main-CwjRHsne.mjs.map
 
+# tests/fixtures/errors/ambiguous_external_namespace
+
+- main-!~{000}~.mjs => main-07HwCbF6.mjs
+
 # tests/fixtures/errors/missing_export
 
 - main-!~{000}~.mjs => main-MsirdRn5.mjs
@@ -1795,10 +1799,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/tree_shaking/unused_import_named
 
 - main-!~{000}~.mjs => main-nyQrEnyN.mjs
-
-# tests/fixtures/warnings/ambiguous_external_namespace
-
-- main-!~{000}~.mjs => main-07HwCbF6.mjs
 
 # tests/fixtures/warnings/eval
 

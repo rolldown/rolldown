@@ -7,12 +7,17 @@ use rolldown_resolver::ResolveError;
 use super::BuildDiagnostic;
 
 use crate::events::{
-  ambiguous_external_namespace::AmbiguousExternalNamespace,
-  circular_dependency::CircularDependency, eval::Eval, external_entry::ExternalEntry,
-  forbid_const_assign::ForbidConstAssign, missing_export::MissingExport,
-  sourcemap_error::SourceMapError, unresolved_entry::UnresolvedEntry,
+  ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
+  circular_dependency::CircularDependency,
+  eval::Eval,
+  external_entry::ExternalEntry,
+  forbid_const_assign::ForbidConstAssign,
+  missing_export::MissingExport,
+  sourcemap_error::SourceMapError,
+  unresolved_entry::UnresolvedEntry,
   unresolved_import::UnresolvedImport,
-  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal, NapiError,
+  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
+  NapiError,
 };
 
 impl BuildDiagnostic {
@@ -22,20 +27,16 @@ impl BuildDiagnostic {
   }
 
   pub fn ambiguous_external_namespace(
-    importer: String,
-    importee: Vec<String>,
-    importer_source: ArcStr,
-    importer_filename: String,
-    imported_specifier: String,
-    imported_specifier_span: Span,
+    ambiguous_export_name: String,
+    importee: String,
+    importer: AmbiguousExternalNamespaceModule,
+    exporter: Vec<AmbiguousExternalNamespaceModule>,
   ) -> Self {
     Self::new_inner(AmbiguousExternalNamespace {
-      importer,
+      ambiguous_export_name,
       importee,
-      importer_source,
-      importer_filename,
-      imported_specifier,
-      imported_specifier_span,
+      importer,
+      exporter,
     })
   }
 

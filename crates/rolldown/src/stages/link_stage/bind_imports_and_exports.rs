@@ -289,17 +289,14 @@ impl<'a> BindImportsAndExportsContext<'a> {
               .collect::<Vec<_>>(),
           );
 
-          self.warnings.push(
-            BuildDiagnostic::ambiguous_external_namespace(
-              importer,
-              importee,
-              module.source.clone(),
-              module.stable_id.to_string(),
-              named_import.imported.to_string(),
-              named_import.span_imported,
-            )
-            .with_severity_warning(),
-          );
+          self.errors.push(BuildDiagnostic::ambiguous_external_namespace(
+            importer,
+            importee,
+            module.source.clone(),
+            module.stable_id.to_string(),
+            named_import.imported.to_string(),
+            named_import.span_imported,
+          ));
         }
         MatchImportKind::Normal { symbol } => {
           self.symbols.union(*imported_as_ref, symbol);

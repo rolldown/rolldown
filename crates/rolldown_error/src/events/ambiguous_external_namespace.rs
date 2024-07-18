@@ -13,7 +13,7 @@ pub struct Namespace {
 
 #[derive(Debug)]
 pub struct AmbiguousExternalNamespace {
-  pub symbol: String,
+  pub ambiguous_export_name: String,
   pub importee: String,
   pub importer: Namespace,
   pub exporter: Vec<Namespace>,

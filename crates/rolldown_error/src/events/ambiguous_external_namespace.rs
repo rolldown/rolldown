@@ -6,7 +6,8 @@ use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions
 
 #[derive(Debug)]
 pub struct AmbiguousExternalNamespaceModule {
-  pub span: Span,
+  // Point to `import { [identifier] } from ...` or `export [identifier]`
+  pub span_of_ identifier: Span,
   pub source: ArcStr,
   pub filename: String,
 }

@@ -53,6 +53,4 @@ export type SourcemapPathTransformOption = (
   sourcemapPath: string,
 ) => string
 
-type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
-
 export type ModuleFormat = z.infer<typeof ModuleFormatSchema>

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/require_main_cache_common_js
 ---
@@ -18,9 +18,9 @@ var require_is_main = __commonJSMin((exports, module) => {
 //#endregion
 //#region entry.js
 var require_entry = __commonJSMin((exports, module) => {
-	console.log('is main:', require.main === module);
+	console.log("is main:", require.main === module);
 	console.log(require_is_main());
-	console.log('cache:', require.cache);
+	console.log("cache:", require.cache);
 });
 
 //#endregion

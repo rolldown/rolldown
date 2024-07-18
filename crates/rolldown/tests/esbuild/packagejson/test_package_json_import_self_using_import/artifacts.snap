@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_import_self_using_import
 ---
@@ -18,11 +18,11 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_import_s
 ```js
 
 //#region src/foo-import.js
-var foo_import_default = 'foo';
+var foo_import_default = "foo";
 
 //#endregion
 //#region src/index.js
-var src_index_default = 'index';
+var src_index_default = "index";
 console.log(src_index_default, foo_import_default);
 
 //#endregion

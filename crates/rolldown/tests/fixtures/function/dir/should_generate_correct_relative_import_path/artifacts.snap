@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/function/dir/should_generate_correct_relative_import_path
 ---
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/function/dir/should_generate_correct_
 ```js
 
 //#region async.js
-const value = 'async';
+const value = "async";
 
 //#endregion
 export { value };
@@ -20,7 +20,7 @@ export { value };
 ```js
 
 //#region shared.js
-const value = 'shared';
+const value = "shared";
 
 //#endregion
 export { value };
@@ -31,7 +31,7 @@ export { value };
 import { value } from "../chunks/shared.mjs";
 
 //#region a.js
-const asyncValue = import('../chunks/async.mjs');
+const asyncValue = import("../chunks/async.mjs");
 
 //#endregion
 export { asyncValue, value };
@@ -42,7 +42,7 @@ export { asyncValue, value };
 import { value } from "../chunks/shared.mjs";
 
 //#region b.js
-const asyncValue = import('../chunks/async.mjs');
+const asyncValue = import("../chunks/async.mjs");
 
 //#endregion
 export { asyncValue, value };

@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_class_property
 
 //#region entry.js
 let keep1 = class {
-	[x] = 'x';
+	[x] = "x";
 };
 let keep2 = class {
 	[x]() {}
@@ -26,7 +26,7 @@ let keep5 = class {
 	async [x]() {}
 };
 let keep6 = class {
-	[{toString() {}}] = 'x';
+	[{toString() {}}] = "x";
 };
 
 //#endregion

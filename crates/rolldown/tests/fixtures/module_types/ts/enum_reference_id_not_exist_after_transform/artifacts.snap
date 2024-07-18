@@ -1,7 +1,7 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/module_types/ts/reference_id_not_exist_after_transform
+input_file: crates/rolldown/tests/fixtures/module_types/ts/enum_reference_id_not_exist_after_transform
 ---
 # Assets
 
@@ -11,9 +11,9 @@ input_file: crates/rolldown/tests/fixtures/module_types/ts/reference_id_not_exis
 
 //#region main.ts
 var LexerState = function(LexerState$1) {
-	LexerState$1[LexerState$1['inParens'] = 0] = 'inParens';
-	LexerState$1[LexerState$1['inSingleQuoteString'] = 1] = 'inSingleQuoteString';
-	LexerState$1[LexerState$1['inDoubleQuoteString'] = 2] = 'inDoubleQuoteString';
+	LexerState$1[LexerState$1["inParens"] = 0] = "inParens";
+	LexerState$1[LexerState$1["inSingleQuoteString"] = 1] = "inSingleQuoteString";
+	LexerState$1[LexerState$1["inDoubleQuoteString"] = 2] = "inDoubleQuoteString";
 	return LexerState$1;
 }(LexerState || {});
 

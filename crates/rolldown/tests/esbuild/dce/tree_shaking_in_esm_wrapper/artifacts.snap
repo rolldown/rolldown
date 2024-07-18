@@ -14,8 +14,8 @@ import { default as assert } from "node:assert";
 //#region lib.js
 var keep1, keep2;
 var init_lib = __esmMin(() => {
-	keep1 = () => 'keep1';
-	keep2 = () => 'keep2';
+	keep1 = () => "keep1";
+	keep2 = () => "keep2";
 });
 
 //#endregion
@@ -31,8 +31,8 @@ var init_cjs = __esmMin(() => {
 //#endregion
 //#region entry.js
 init_lib();
-assert.equal(keep1(), 'keep1');
-assert.deepEqual((init_cjs(), __toCommonJS(cjs_ns)).default, 'keep2');
+assert.equal(keep1(), "keep1");
+assert.deepEqual((init_cjs(), __toCommonJS(cjs_ns)).default, "keep2");
 
 //#endregion
 ```

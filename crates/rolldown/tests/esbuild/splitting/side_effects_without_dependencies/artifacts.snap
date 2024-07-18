@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/side_effects_without_dependencies
 ---
@@ -34,7 +34,7 @@ assert.equal(b, 2);
 //#region shared.js
 let a = 1;
 let b = 2;
-console.log('side effect');
+console.log("side effect");
 
 //#endregion
 export { a, b };

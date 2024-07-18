@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/shared-commonjs-into-es6
 ---
@@ -24,7 +24,7 @@ import { require_shared } from "./shared.mjs";
 import { default as assert } from "node:assert";
 
 //#region b.js
-const { foo } = require_shared();
+const { foo: foo } = require_shared();
 assert.equal(foo, 123);
 
 //#endregion

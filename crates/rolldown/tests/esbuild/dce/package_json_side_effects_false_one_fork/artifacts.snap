@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_on
 ```js
 
 //#region node_modules/c/index.js
-let foo = 'foo';
+let foo = "foo";
 
 //#endregion
 export { foo };
@@ -20,7 +20,7 @@ export { foo };
 ```js
 
 //#region src/entry.js
-import('./a_index.mjs').then((x) => assert(x.foo === 'foo'));
+(import("./a_index.mjs")).then((x) => assert(x.foo === "foo"));
 
 //#endregion
 ```

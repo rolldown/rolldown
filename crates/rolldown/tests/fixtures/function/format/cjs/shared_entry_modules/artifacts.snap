@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/function/format/cjs/shared_entry_modules
 ---
@@ -32,7 +32,7 @@ exports.value = value;
 
 
 //#region main.js
-const value = 'main';
+const value = "main";
 
 //#endregion
 exports.value = value;

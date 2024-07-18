@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/deconflict/conflict_between_global_and_local_binding
 ---
@@ -13,7 +13,7 @@ import { default as assert } from "node:assert";
 
 //#region main.js
 var require_main = __commonJSMin((exports, module) => {
-	module.exports = 'main';
+	module.exports = "main";
 	globalThis.__commonJS = 0;
 	__commonJS = 1;
 	assert.equal(__commonJS, 1);

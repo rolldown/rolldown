@@ -1,7 +1,7 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/loaders/ts
+input_file: crates/rolldown/tests/fixtures/module_types/ts/basic
 ---
 # Assets
 
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/loaders/ts
 ```js
 
 //#region main.ts
-const A = 'hello';
+const A = "hello";
 const B = function() {
 	console.log(A);
 };

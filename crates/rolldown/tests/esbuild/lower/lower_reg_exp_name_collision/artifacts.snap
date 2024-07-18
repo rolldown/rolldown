@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/lower/lower_reg_exp_name_collision
 ---
@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_reg_exp_name_collision
 
 //#region entry.js
 function foo(RegExp) {
-	return new RegExp(/./d, 'd');
+	return new RegExp(/./d, "d");
 }
 
 //#endregion

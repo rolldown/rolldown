@@ -11,13 +11,13 @@ input_file: crates/rolldown/tests/fixtures/misc/basic
 import { default as assert } from "node:assert";
 
 //#region shared.js
-const a$1 = 'shared.js';
+const a$1 = "shared.js";
 
 //#endregion
 //#region main.js
-const a = 'index.js';
-assert.equal(a, 'index.js');
-assert.equal(a$1, 'shared.js');
+const a = "index.js";
+assert.equal(a, "index.js");
+assert.equal(a$1, "shared.js");
 
 //#endregion
 //# sourceMappingURL=main.mjs.map
@@ -28,18 +28,18 @@ assert.equal(a$1, 'shared.js');
 - ../shared.js
 (0:0-0:6) "const " --> (3:0-3:6) "\nconst"
 (0:6-0:10) "a = " --> (3:6-3:12) " a$1 ="
-(0:10-2:13) "'shared.js'\n\nexport { a }" --> (3:12-7:0) " 'shared.js';\n\n//#endregion\n//#region main.js"
+(0:10-2:13) "'shared.js'\n\nexport { a }" --> (3:12-7:0) " \"shared.js\";\n\n//#endregion\n//#region main.js"
 - ../main.js
 (2:0-2:6) "\nconst" --> (7:0-7:6) "\nconst"
 (2:6-2:10) " a =" --> (7:6-7:10) " a ="
-(2:10-3:0) " 'index.js'" --> (7:10-8:0) " 'index.js';"
+(2:10-3:0) " 'index.js'" --> (7:10-8:0) " \"index.js\";"
 (3:0-3:7) "\nassert" --> (8:0-8:7) "\nassert"
 (3:7-3:13) ".equal" --> (8:7-8:13) ".equal"
 (3:13-3:16) "(a," --> (8:13-8:16) "(a,"
-(3:16-3:27) " 'index.js'" --> (8:16-8:27) " 'index.js'"
+(3:16-3:27) " 'index.js'" --> (8:16-8:27) " \"index.js\""
 (3:27-4:0) ")" --> (8:27-9:0) ");"
 (4:0-4:7) "\nassert" --> (9:0-9:7) "\nassert"
 (4:7-4:13) ".equal" --> (9:7-9:13) ".equal"
 (4:13-4:17) "(a2," --> (9:13-9:18) "(a$1,"
-(4:17-4:29) " 'shared.js'" --> (9:18-9:30) " 'shared.js'"
+(4:17-4:29) " 'shared.js'" --> (9:18-9:30) " \"shared.js\""
 (4:29-6:1) ")\n\n" --> (9:30-12:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

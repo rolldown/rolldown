@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/cjs_module_lexer_compat/external
 ---
@@ -12,9 +12,9 @@ input_file: crates/rolldown/tests/fixtures/cjs_module_lexer_compat/external
 //#region main.js
 function foo() {
 	if (Math.random() > 0.5) {
-		module.exports = require('ext');
+		module.exports = require("ext");
 	} else {
-		module.exports = require('./ext.js');
+		module.exports = require("./ext.js");
 	}
 }
 console.log(foo);

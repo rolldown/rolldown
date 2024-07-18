@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/issue176
 ---
@@ -12,7 +12,7 @@ import { default as assert } from "node:assert";
 
 
 //#region folders/child/foo.js
-const foo = () => 'hi there';
+const foo = () => "hi there";
 
 //#endregion
 //#region folders/index.js

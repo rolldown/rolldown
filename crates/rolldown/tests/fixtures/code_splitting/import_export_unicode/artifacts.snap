@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/code_splitting/import_export_unicode
 ---
@@ -17,7 +17,7 @@ export { devil as '😈' };
 ```js
 
 //#region foo.js
-const devil = 'devil';
+const devil = "devil";
 
 //#endregion
 export { devil };
@@ -28,7 +28,7 @@ export { devil };
 import { devil } from "./foo~1.mjs";
 
 //#region main.js
-const moduleFoo = import('./foo.mjs');
+const moduleFoo = import("./foo.mjs");
 
 //#endregion
 export { moduleFoo, devil as '😈' };

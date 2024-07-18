@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/cjs_compat/require/create_require
 ---
@@ -12,7 +12,7 @@ import { createRequire } from "node:module";
 
 //#region main.js
 const require = createRequire(import.meta.url);
-const assert = require('node:assert');
+const assert = require("node:assert");
 assert.equal(1, 1);
 
 //#endregion

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/cjs_compat/reexport_commonjs
 ---
@@ -36,7 +36,7 @@ var import_commonjs = __toESM(require_commonjs());
 assert.equal(import_commonjs$1.bar, 1);
 assert.equal(value, 1);
 assert.equal(foo_ns.foo, undefined);
-assert.equal(Object.keys(foo_ns).length, 2);
+assert.equal((Object.keys(foo_ns)).length, 2);
 
 //#endregion
 var bar = import_commonjs.bar;

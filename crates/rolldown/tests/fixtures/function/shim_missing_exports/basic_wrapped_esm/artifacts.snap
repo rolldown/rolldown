@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/function/shim_missing_exports/basic_wrapped_esm
 ---
@@ -20,7 +20,7 @@ var init_foo = __esmMin(() => {
 //#endregion
 //#region main.js
 init_foo();
-(init_foo(), __toCommonJS(foo_ns));
+init_foo(), __toCommonJS(foo_ns);
 
 //#endregion
 export { missing };

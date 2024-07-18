@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_entry_point_and_inner_file
 ---
@@ -12,12 +12,12 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_entry_point
 
 //#region a.js
 const A = 1;
-const B = '2';
+const B = "2";
 
 //#endregion
 //#region b.js
 const C = 1;
-const D = '2';
+const D = "2";
 
 //#endregion
 //#region inner.js

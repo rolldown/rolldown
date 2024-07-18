@@ -23,8 +23,8 @@ var bar_default = {foo: foo$1};
 //#endregion
 //#region main.js
 const a = 2;
-const { foo } = bar_default;
-assert.strictEqual(typeof foo, 'function');
+const { foo: foo } = bar_default;
+assert.strictEqual(typeof foo, "function");
 
 //#endregion
 //# sourceMappingURL=main.mjs.map
@@ -57,11 +57,11 @@ assert.strictEqual(typeof foo, 'function');
 (3:10-5:0) " 2; // make foo `a` conflict\n" --> (14:10-15:0) " 2;"
 (5:0-5:6) "\nconst" --> (15:0-15:6) "\nconst"
 (5:6-5:8) " {" --> (15:6-15:8) " {"
-(5:8-5:13) " foo " --> (15:8-15:13) " foo "
-(5:13-5:16) "} =" --> (15:13-15:16) "} ="
-(5:16-7:0) " bar\n" --> (15:16-16:0) " bar_default;"
+(5:8-5:13) " foo " --> (15:8-15:18) " foo: foo "
+(5:13-5:16) "} =" --> (15:18-15:21) "} ="
+(5:16-7:0) " bar\n" --> (15:21-16:0) " bar_default;"
 (7:0-7:7) "\nassert" --> (16:0-16:7) "\nassert"
 (7:7-7:26) ".strictEqual(typeof" --> (16:7-16:26) ".strictEqual(typeof"
 (7:26-7:31) " foo," --> (16:26-16:31) " foo,"
-(7:31-7:42) " 'function'" --> (16:31-16:42) " 'function'"
+(7:31-7:42) " 'function'" --> (16:31-16:42) " \"function\""
 (7:42-7:43) ")" --> (16:42-19:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

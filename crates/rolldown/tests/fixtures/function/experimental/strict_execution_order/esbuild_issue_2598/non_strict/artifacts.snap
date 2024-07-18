@@ -36,7 +36,7 @@ foo();
 //#region user-lib.js
 Object.somePolyfilledFunction();
 async function foo() {
-	return import('./lazy-chunk.mjs');
+	return import("./lazy-chunk.mjs");
 }
 
 //#endregion

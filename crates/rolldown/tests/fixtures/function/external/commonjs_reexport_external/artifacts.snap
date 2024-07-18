@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/function/external/commonjs_reexport_external
 ---
@@ -12,7 +12,7 @@ import "external";
 
 
 //#region foo.js
-import * as import_external from 'external';
+import * as import_external from "external";
 var foo_ns;
 var init_foo = __esmMin(() => {
 	foo_ns = {};

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_field_order
 ---
@@ -15,7 +15,7 @@ class Foo {
 	#foo = 123;
 	bar = this.#foo;
 }
-assert.equal(new Foo().bar, 123);
+assert.equal((new Foo()).bar, 123);
 
 //#endregion
 ```

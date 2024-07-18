@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/function/format/cjs/import_export_unicode
 ---
@@ -12,7 +12,7 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/import_export_uni
 
 
 //#region foo.js
-const devil = 'devil';
+const devil = "devil";
 
 //#endregion
 Object.defineProperty(exports, '__esModule', { value: true });

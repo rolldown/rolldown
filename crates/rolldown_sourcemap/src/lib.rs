@@ -8,6 +8,7 @@ mod concat_sourcemap;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 
 pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
+  debug_assert!(sourcemap_chain.len() > 1);
   let last_map = sourcemap_chain.pop().expect("sourcemap_chain should not be empty");
 
   let mut sourcemap_builder = SourceMapBuilder::default();

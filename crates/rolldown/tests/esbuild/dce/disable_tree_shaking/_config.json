@@ -8,7 +8,7 @@
     ],
     "treeshake": false,
     "external": [
-      "react"
+      "react/jsx-runtime"
     ]
   },
   "expectExecuted": false

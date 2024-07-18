@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_import_self_using_import_scoped
 ---
@@ -19,13 +19,13 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_import_s
 import { default as assert } from "node:assert";
 
 //#region src/foo-import.js
-var foo_import_default = 'foo';
+var foo_import_default = "foo";
 
 //#endregion
 //#region src/index.js
-var src_index_default = 'index';
-assert.equal(src_index_default, 'index');
-assert.equal(foo_import_default, 'foo');
+var src_index_default = "index";
+assert.equal(src_index_default, "index");
+assert.equal(foo_import_default, "foo");
 
 //#endregion
 export { src_index_default as default };

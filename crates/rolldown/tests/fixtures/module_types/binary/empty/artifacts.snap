@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/module_types/binary/empty
 ---
@@ -12,7 +12,7 @@ import { default as assert } from "node:assert";
 
 
 //#region example.data
-var example_default = __toBinary('');
+var example_default = __toBinary("");
 
 //#endregion
 //#region main.js

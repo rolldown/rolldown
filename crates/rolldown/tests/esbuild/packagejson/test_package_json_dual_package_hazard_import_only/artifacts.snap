@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_only
 ---
@@ -11,11 +11,11 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_dual_pac
 import { default as assert } from "node:assert";
 
 //#region node_modules/demo-pkg/module.js
-var module_default = 'module';
+var module_default = "module";
 
 //#endregion
 //#region src/entry.js
-assert.equal(module_default, 'module');
+assert.equal(module_default, "module");
 
 //#endregion
 ```

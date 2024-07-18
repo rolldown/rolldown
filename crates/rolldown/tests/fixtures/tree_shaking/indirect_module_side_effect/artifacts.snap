@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/tree_shaking/indirect_module_side_effect
 ---
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/indirect_module_side_eff
 ```js
 
 //#region indirect-side-effect.js
-console.log('should be kept');
+console.log("should be kept");
 
 //#endregion
 ```

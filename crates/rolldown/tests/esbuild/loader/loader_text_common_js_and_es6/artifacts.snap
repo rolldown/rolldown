@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6
 ---
@@ -12,7 +12,7 @@ import { default as assert } from "node:assert";
 
 
 //#region y.txt
-var y_default = 'y';
+var y_default = "y";
 
 //#endregion
 //#region x.txt
@@ -20,14 +20,14 @@ var x_ns, x_default;
 var init_x = __esmMin(() => {
 	x_ns = {};
 	__export(x_ns, {default: () => x_default});
-	x_default = 'x';
+	x_default = "x";
 });
 
 //#endregion
 //#region entry.js
 const x_txt = (init_x(), __toCommonJS(x_ns));
-assert.deepEqual(x_txt, {default: 'x'});
-assert.equal(y_default, 'y');
+assert.deepEqual(x_txt, {default: "x"});
+assert.equal(y_default, "y");
 
 //#endregion
 ```

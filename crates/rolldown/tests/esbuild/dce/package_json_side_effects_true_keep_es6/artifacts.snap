@@ -10,11 +10,11 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_true_kee
 ```js
 
 //#region node_modules/demo-pkg/index.js
-console.log('hello');
+console.log("hello");
 
 //#endregion
 //#region src/entry.js
-console.log('unused import');
+console.log("unused import");
 
 //#endregion
 ```

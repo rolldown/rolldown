@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/fixtures/function/resolve/alias_to_node_builti
 import "node:fs";
 
 //#region main.js
-require('node:fs');
+require("node:fs");
 
 //#endregion
 ```

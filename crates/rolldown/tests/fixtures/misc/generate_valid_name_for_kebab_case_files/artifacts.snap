@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/misc/generate_valid_name_for_kebab_case_files
 ---
@@ -12,7 +12,7 @@ input_file: crates/rolldown/tests/fixtures/misc/generate_valid_name_for_kebab_ca
 
 //#region react-dom.js
 var require_react_dom = __commonJSMin((exports, module) => {
-	module.exports = 'react-dom';
+	module.exports = "react-dom";
 });
 
 //#endregion

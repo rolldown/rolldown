@@ -47,7 +47,7 @@ init_main();
 
 //#region user-lib.js
 async function foo() {
-	return import('./lazy-chunk.mjs');
+	return import("./lazy-chunk.mjs");
 }
 var init_user_lib = __esmMin(() => {
 	Object.somePolyfilledFunction();

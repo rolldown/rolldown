@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/common_js_from_es6
 ---
@@ -13,7 +13,7 @@ import { default as assert } from "node:assert";
 
 //#region foo.js
 function foo$1() {
-	return 'foo';
+	return "foo";
 }
 var foo_ns;
 var init_foo = __esmMin(() => {
@@ -24,7 +24,7 @@ var init_foo = __esmMin(() => {
 //#endregion
 //#region bar.js
 function bar$1() {
-	return 'bar';
+	return "bar";
 }
 var bar_ns;
 var init_bar = __esmMin(() => {
@@ -34,10 +34,10 @@ var init_bar = __esmMin(() => {
 
 //#endregion
 //#region entry.js
-const { foo } = (init_foo(), __toCommonJS(foo_ns));
-assert.equal(foo(), 'foo');
-assert.equal(bar(), 'bar');
-const { bar } = (init_bar(), __toCommonJS(bar_ns));
+const { foo: foo } = (init_foo(), __toCommonJS(foo_ns));
+assert.equal(foo(), "foo");
+assert.equal(bar(), "bar");
+const { bar: bar } = (init_bar(), __toCommonJS(bar_ns));
 
 //#endregion
 ```

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/lower/lower_private_method_next
 ---
@@ -14,27 +14,27 @@ class Foo {
 	#field;
 	#method() {}
 	baseline() {
-		a().foo;
-		b().foo(x);
-		c()?.foo(x);
-		d().foo?.(x);
-		e()?.foo?.(x);
+		(a()).foo;
+		(b()).foo(x);
+		(c())?.foo(x);
+		(d()).foo?.(x);
+		(e())?.foo?.(x);
 	}
 	privateField() {
-		a().#field;
-		b().#field(x);
-		c()?.#field(x);
-		d().#field?.(x);
-		e()?.#field?.(x);
-		f()?.foo.#field(x).bar();
+		(a()).#field;
+		(b()).#field(x);
+		(c())?.#field(x);
+		(d()).#field?.(x);
+		(e())?.#field?.(x);
+		((f())?.foo.#field(x)).bar();
 	}
 	privateMethod() {
-		a().#method;
-		b().#method(x);
-		c()?.#method(x);
-		d().#method?.(x);
-		e()?.#method?.(x);
-		f()?.foo.#method(x).bar();
+		(a()).#method;
+		(b()).#method(x);
+		(c())?.#method(x);
+		(d()).#method?.(x);
+		(e())?.#method?.(x);
+		((f())?.foo.#method(x)).bar();
 	}
 }
 

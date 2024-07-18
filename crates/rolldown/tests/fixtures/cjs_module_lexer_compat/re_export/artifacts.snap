@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/cjs_module_lexer_compat/re_export
 ---
@@ -12,9 +12,9 @@ input_file: crates/rolldown/tests/fixtures/cjs_module_lexer_compat/re_export
 
 
 //#region demo.js
-const a = 'a';
-const b = 'b';
-const devil = 'devil';
+const a = "a";
+const b = "b";
+const devil = "devil";
 
 //#endregion
 Object.defineProperty(exports, '__esModule', { value: true });

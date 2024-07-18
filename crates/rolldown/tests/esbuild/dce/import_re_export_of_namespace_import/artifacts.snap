@@ -19,7 +19,7 @@ var require_foo = __commonJSMin((exports, module) => {
 //#endregion
 //#region node_modules/pkg/bar.js
 var require_bar = __commonJSMin((exports, module) => {
-	module.exports = 'abc';
+	module.exports = "abc";
 });
 
 //#endregion

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/outbase
 ---
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/default/outbase
 ```js
 
 //#region c.js
-console.log('c');
+console.log("c");
 
 //#endregion
 ```
@@ -19,7 +19,7 @@ console.log('c');
 ```js
 
 //#region d.js
-console.log('d');
+console.log("d");
 
 //#endregion
 ```

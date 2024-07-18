@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/tree_shaking/json_object
 ---
@@ -11,11 +11,11 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/json_object
 import { default as assert } from "node:assert";
 
 //#region foo.json
-const shouldBeReserved = 'shouldBeReserved';
+const shouldBeReserved = "shouldBeReserved";
 
 //#endregion
 //#region main.js
-assert.equal(shouldBeReserved, 'shouldBeReserved');
+assert.equal(shouldBeReserved, "shouldBeReserved");
 
 //#endregion
 ```

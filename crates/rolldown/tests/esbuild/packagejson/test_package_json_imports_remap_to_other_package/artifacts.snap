@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_imports_remap_to_other_package
 ---
@@ -10,19 +10,19 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_imports_
 ```js
 
 //#region src/node_modules/pkg/a.js
-console.log('a.js');
+console.log("a.js");
 
 //#endregion
 //#region src/node_modules/pkg/b.js
-console.log('b.js');
+console.log("b.js");
 
 //#endregion
 //#region src/node_modules/pkg/some-star/c.js
-console.log('c.js');
+console.log("c.js");
 
 //#endregion
 //#region src/node_modules/pkg/some-slash/d.js
-console.log('d.js');
+console.log("d.js");
 
 //#endregion
 ```

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/function/loaders/json/array
 ---
@@ -11,11 +11,11 @@ input_file: crates/rolldown/tests/fixtures/function/loaders/json/array
 import { default as assert } from "node:assert";
 
 //#region foo.json
-var foo_default = ['foo'];
+var foo_default = ["foo"];
 
 //#endregion
 //#region main.js
-assert.deepStrictEqual(foo_default, ['foo']);
+assert.deepStrictEqual(foo_default, ["foo"]);
 
 //#endregion
 ```

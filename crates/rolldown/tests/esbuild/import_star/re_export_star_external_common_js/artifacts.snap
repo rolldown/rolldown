@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_external_common_js
 ---
@@ -23,7 +23,7 @@ require("foo");
 
 //#region entry.js
 var entry_ns = {};
-__reExport(entry_ns, require('foo'));
+__reExport(entry_ns, require("foo"));
 
 //#endregion
 ```

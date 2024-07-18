@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/forbid_const_assign_when_bundling
 ---
@@ -49,7 +49,7 @@ try {
 } catch (e) {
 	err = e;
 }
-assert(typeof err !== 'undefined');
+assert(typeof err !== "undefined");
 function foo() {
 	let err$1;
 	try {
@@ -58,7 +58,7 @@ function foo() {
 	} catch (e) {
 		err$1 = e;
 	}
-	assert(typeof err$1 !== 'undefined');
+	assert(typeof err$1 !== "undefined");
 }
 foo();
 

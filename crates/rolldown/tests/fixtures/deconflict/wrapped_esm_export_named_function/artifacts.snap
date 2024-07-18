@@ -30,9 +30,9 @@ var bar_default = {foo: foo$1};
 //#endregion
 //#region main.js
 const a = 2;
-const { foo } = bar_default;
-assert.strictEqual(typeof foo, 'function');
-(init_foo(), __toCommonJS(foo_ns));
+const { foo: foo } = bar_default;
+assert.strictEqual(typeof foo, "function");
+init_foo(), __toCommonJS(foo_ns);
 
 //#endregion
 //# sourceMappingURL=main.mjs.map
@@ -66,13 +66,13 @@ assert.strictEqual(typeof foo, 'function');
 (3:10-5:0) " 2; // make foo `a` conflict\n" --> (45:10-46:0) " 2;"
 (5:0-5:6) "\nconst" --> (46:0-46:6) "\nconst"
 (5:6-5:8) " {" --> (46:6-46:8) " {"
-(5:8-5:13) " foo " --> (46:8-46:13) " foo "
-(5:13-5:16) "} =" --> (46:13-46:16) "} ="
-(5:16-7:0) " bar\n" --> (46:16-47:0) " bar_default;"
+(5:8-5:13) " foo " --> (46:8-46:18) " foo: foo "
+(5:13-5:16) "} =" --> (46:18-46:21) "} ="
+(5:16-7:0) " bar\n" --> (46:21-47:0) " bar_default;"
 (7:0-7:7) "\nassert" --> (47:0-47:7) "\nassert"
 (7:7-7:26) ".strictEqual(typeof" --> (47:7-47:26) ".strictEqual(typeof"
 (7:26-7:31) " foo," --> (47:26-47:31) " foo,"
-(7:31-7:42) " 'function'" --> (47:31-47:42) " 'function'"
+(7:31-7:42) " 'function'" --> (47:31-47:42) " \"function\""
 (7:42-9:0) ")\n" --> (47:42-48:0) ");"
-(9:0-0:0) "" --> (48:0-48:1) "\n"
-(0:0-9:17) "import assert from 'assert'\nimport bar from './bar'\n\nconst a = 2; // make foo `a` conflict\n\nconst { foo } = bar\n\nassert.strictEqual(typeof foo, 'function')\n\nrequire('./foo')" --> (48:1-51:34) "(init_foo(), __toCommonJS(foo_ns));\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(9:0-0:0) "" --> (48:0-48:0) ""
+(0:0-9:17) "import assert from 'assert'\nimport bar from './bar'\n\nconst a = 2; // make foo `a` conflict\n\nconst { foo } = bar\n\nassert.strictEqual(typeof foo, 'function')\n\nrequire('./foo')" --> (48:0-51:34) "\ninit_foo(), __toCommonJS(foo_ns);\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

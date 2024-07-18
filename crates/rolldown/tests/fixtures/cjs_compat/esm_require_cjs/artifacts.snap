@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/cjs_compat/esm_require_cjs
 ---
@@ -12,7 +12,7 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/esm_require_cjs
 
 //#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
-	module.exports = 'cjs';
+	module.exports = "cjs";
 });
 
 //#endregion

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_import_cts
 ---
@@ -12,7 +12,7 @@ input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_import_cts
 
 //#region required.cjs
 var require_required = __commonJSMin((exports, module) => {
-	console.log('works');
+	console.log("works");
 });
 
 //#endregion

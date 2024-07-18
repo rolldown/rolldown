@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_abstract_class_field_use_define
 ---
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_abstract_class_field_use
 ```js
 
 //#region entry.ts
-const keepThisToo = Symbol('keepThisToo');
+const keepThisToo = Symbol("keepThisToo");
 class Foo {
 	keepThis;
 	[keepThisToo];

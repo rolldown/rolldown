@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/misc/issue_376
 ---
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/misc/issue_376
 ```js
 
 //#region main.js
-const test = 'hello world';
+const test = "hello world";
 var main_default = test;
 
 //#endregion

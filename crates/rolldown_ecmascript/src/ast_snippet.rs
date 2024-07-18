@@ -560,8 +560,8 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.vec_with_capacity(2),
         None::<Box<'_, BindingRestElement<'_>>>,
       ),
-      Some(self.builder.function_body(SPAN, self.builder.vec(), statements)),
       None::<Box<'_, TSTypeAnnotation<'_>>>,
+      Some(self.builder.function_body(SPAN, self.builder.vec(), statements)),
     )));
 
     let callee =

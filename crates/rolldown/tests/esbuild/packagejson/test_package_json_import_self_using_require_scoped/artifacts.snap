@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_import_self_using_require_scoped
 ---
@@ -20,13 +20,13 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_import_s
 
 //#region src/foo-require.js
 var require_foo_require = __commonJSMin((exports, module) => {
-	module.exports = 'foo';
+	module.exports = "foo";
 });
 
 //#endregion
 //#region src/index.js
 var require_src_index = __commonJSMin((exports, module) => {
-	module.exports = 'index';
+	module.exports = "index";
 	console.log(require_src_index(), require_foo_require());
 });
 

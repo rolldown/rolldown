@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/case/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/format/iife
+input_file: crates/rolldown/tests/fixtures/format/iife/basic
 ---
 # Assets
 
@@ -12,14 +12,14 @@ input_file: crates/rolldown/tests/fixtures/format/iife
 
 
 //#region main.js
-Promise.resolve().then(function() {
+(Promise.resolve()).then(function() {
 	return __toESM(require_foo());
 });
-Promise.resolve().then(function() {
+(Promise.resolve()).then(function() {
 	return __toESM(require_cjs());
 });
-Promise.resolve().then(function() {
-	return (init_esm(), esm_ns);
+(Promise.resolve()).then(function() {
+	return init_esm(), esm_ns;
 });
 
 //#endregion

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension
 ---
@@ -15,7 +15,7 @@ var test_ns, test_default;
 var init_test = __esmMin(() => {
 	test_ns = {};
 	__export(test_ns, {default: () => test_default});
-	test_default = 'data:image/svg+xml;base64,YVx4MDBiXHg4MGNceEZGZA';
+	test_default = "data:image/svg+xml;base64,YVx4MDBiXHg4MGNceEZGZA";
 });
 
 //#endregion

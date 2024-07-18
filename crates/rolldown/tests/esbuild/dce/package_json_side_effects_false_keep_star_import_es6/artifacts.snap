@@ -15,7 +15,7 @@ import { default as assert } from "node:assert";
 var demo_pkg_index_ns = {};
 __export(demo_pkg_index_ns, {foo: () => foo});
 const foo = 123;
-console.log('hello');
+console.log("hello");
 
 //#endregion
 //#region src/entry.js

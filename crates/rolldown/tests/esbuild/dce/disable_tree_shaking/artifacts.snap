@@ -18,7 +18,7 @@ var remove_me_default = "unused";
 console.log("side effects");
 
 //#endregion
-//#region ../../../../../../node_modules/react/cjs/react-jsx-runtime.production.min.js
+//#region ../../../../../../../../node_modules/react/cjs/react-jsx-runtime.production.min.js
 var require_react_jsx_runtime_production_min = __commonJSMin((exports, module) => {
 	var f = require("react"), k = Symbol.for("react.element"), l = Symbol.for("react.fragment"), m = Object.prototype.hasOwnProperty, n = f.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentOwner, p = {
 		key: !0,
@@ -48,7 +48,7 @@ var require_react_jsx_runtime_production_min = __commonJSMin((exports, module) =
 });
 
 //#endregion
-//#region ../../../../../../node_modules/react/cjs/react-jsx-runtime.development.js
+//#region ../../../../../../../../node_modules/react/cjs/react-jsx-runtime.development.js
 var require_react_jsx_runtime_development = __commonJSMin((exports, module) => {
 	if (process.env.NODE_ENV !== "production") {
 		(function() {
@@ -894,7 +894,7 @@ var require_react_jsx_runtime_development = __commonJSMin((exports, module) => {
 });
 
 //#endregion
-//#region ../../../../../../node_modules/react/jsx-runtime.js
+//#region ../../../../../../../../node_modules/react/jsx-runtime.js
 var require_jsx_runtime = __commonJSMin((exports, module) => {
 	if (process.env.NODE_ENV === "production") {
 		module.exports = require_react_jsx_runtime_production_min();

@@ -3,13 +3,11 @@ import { defineTest } from '@tests'
 import { expect } from 'vitest'
 
 const footerTxt = '// footer test\n'
-const footer = () => Promise.resolve().then(() => footerTxt)
 
 export default defineTest({
   config: {
-    external: [/external/, 'external-a'],
     output: {
-      footer,
+      footer: footerTxt,
     },
   },
   afterTest: (output) => {

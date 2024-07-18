@@ -70,10 +70,11 @@ const getAddon = <T extends 'banner' | 'footer'>(
   config: OutputOptions,
   name: T,
 ): NormalizedOutputOptions[T] => {
-  const configAddon = config[name]
-  if (typeof configAddon === 'function') {
-    return configAddon as NormalizedOutputOptions[T]
+  return async (chunk) => {
+    const configAddon = config[name]
+    if (typeof configAddon === 'function') {
+      return configAddon(chunk)
+    }
+    return configAddon || ''
   }
-  // TODO Here should be remove async
-  return async () => configAddon || ''
 }

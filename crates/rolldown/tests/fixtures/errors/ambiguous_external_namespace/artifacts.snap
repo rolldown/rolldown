@@ -19,19 +19,19 @@ input_file: crates/rolldown/tests/fixtures/errors/ambiguous_external_namespace
    │
  1 │ export const value = 1
    │              ──┬──  
-   │                ╰──── One matching export is here:
+   │                ╰──── One matching export is here.
    │
    ├─[b.js:1:14]
    │
  1 │ export const value = 1
    │              ──┬──  
-   │                ╰──── One matching export is here:
+   │                ╰──── One matching export is here.
    │
    ├─[c.js:1:14]
    │
  1 │ export const value = 1
    │              ──┬──  
-   │                ╰──── One matching export is here:
+   │                ╰──── One matching export is here.
 ───╯
 
 ```

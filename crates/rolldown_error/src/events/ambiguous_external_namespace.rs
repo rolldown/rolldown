@@ -54,7 +54,7 @@ impl BuildEvent for AmbiguousExternalNamespace {
       diagnostic.add_label(
         &file_id,
         exporter.span.start..exporter.span.end,
-        "One matching export is here:".to_owned(),
+        "One matching export is here.".to_owned(),
       );
     });
   }

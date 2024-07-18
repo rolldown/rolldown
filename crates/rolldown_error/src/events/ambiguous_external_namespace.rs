@@ -7,17 +7,17 @@ use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions
 #[derive(Debug)]
 pub struct AmbiguousExternalNamespaceModule {
   // Point to `import { [identifier] } from ...` or `export [identifier]`
-  pub span_of_ identifier: Span,
   pub source: ArcStr,
   pub filename: String,
+  pub span_of_identifier: Span,
 }
 
 #[derive(Debug)]
 pub struct AmbiguousExternalNamespace {
   pub ambiguous_export_name: String,
   pub importee: String,
-  pub importer: Namespace,
-  pub exporter: Vec<Namespace>,
+  pub importer: AmbiguousExternalNamespaceModule,
+  pub exporter: Vec<AmbiguousExternalNamespaceModule>,
 }
 
 impl BuildEvent for AmbiguousExternalNamespace {
@@ -33,7 +33,7 @@ impl BuildEvent for AmbiguousExternalNamespace {
     format!(
       r#""{}" re-exports "{}" from one of the modules {} and {} (will be ignored)."#,
       self.importee,
-      self.symbol,
+      self.ambiguous_export_name,
       exporter.collect::<Vec<_>>().join(", "),
       last
     )
@@ -46,15 +46,15 @@ impl BuildEvent for AmbiguousExternalNamespace {
 
     diagnostic.add_label(
       &file_id,
-      self.importer.span.start..self.importer.span.end,
-      format!(r#""{}" re-exports "{}"#, self.importee, self.symbol),
+      self.importer.span_of_identifier.start..self.importer.span_of_identifier.end,
+      format!(r#""{}" re-exports "{}"#, self.importee, self.ambiguous_export_name),
     );
 
     self.exporter.iter().for_each(|exporter| {
       let file_id = diagnostic.add_file(exporter.filename.clone(), exporter.source.clone());
       diagnostic.add_label(
         &file_id,
-        exporter.span.start..exporter.span.end,
+        exporter.span_of_identifier.start..exporter.span_of_identifier.end,
         "One matching export is here.".to_owned(),
       );
     });

@@ -3,7 +3,7 @@
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, ResolvedExport, Specifier, SymbolRef,
 };
-use rolldown_error::{BuildDiagnostic, Namespace};
+use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::Rstr;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -282,11 +282,11 @@ impl<'a> BindImportsAndExportsContext<'a> {
           let mut exporter = Vec::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
           if let Some(owner) = self.normal_modules[symbol_ref.owner].as_ecma() {
             if let Specifier::Literal(name) = &named_import.imported {
-              let named_export = owner.named_exports.get(name).unwrap();
-              exporter.push(Namespace {
-                span: named_export.span,
+              let named_export = &owner.named_exports[name];
+              exporter.push(AmbiguousExternalNamespaceModule {
                 source: owner.source.clone(),
                 filename: owner.stable_id.to_string(),
+                span_of_identifier: named_export.span,
               });
             }
           }
@@ -297,11 +297,11 @@ impl<'a> BindImportsAndExportsContext<'a> {
               .filter_map(|&symbol_ref| {
                 if let Some(owner) = self.normal_modules[symbol_ref.owner].as_ecma() {
                   if let Specifier::Literal(name) = &named_import.imported {
-                    let named_export = owner.named_exports.get(name).unwrap();
-                    return Some(Namespace {
-                      span: named_export.span,
+                    let named_export = &owner.named_exports[name];
+                    return Some(AmbiguousExternalNamespaceModule {
                       source: owner.source.clone(),
                       filename: owner.stable_id.to_string(),
+                      span_of_identifier: named_export.span,
                     });
                   }
                 }
@@ -314,10 +314,10 @@ impl<'a> BindImportsAndExportsContext<'a> {
           self.errors.push(BuildDiagnostic::ambiguous_external_namespace(
             named_import.imported.to_string(),
             importee,
-            Namespace {
-              span: named_import.span_imported,
-              source: module.source.to_owned(),
+            AmbiguousExternalNamespaceModule {
+              source: module.source.clone(),
               filename: module.stable_id.to_string(),
+              span_of_identifier: named_import.span_imported,
             },
             exporter,
           ));

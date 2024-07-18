@@ -7,7 +7,7 @@ use rolldown_resolver::ResolveError;
 use super::BuildDiagnostic;
 
 use crate::events::{
-  ambiguous_external_namespace::{AmbiguousExternalNamespace, Namespace},
+  ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
   eval::Eval,
   external_entry::ExternalEntry,
@@ -27,12 +27,17 @@ impl BuildDiagnostic {
   }
 
   pub fn ambiguous_external_namespace(
-    symbol: String,
+    ambiguous_export_name: String,
     importee: String,
-    importer: Namespace,
-    exporter: Vec<Namespace>,
+    importer: AmbiguousExternalNamespaceModule,
+    exporter: Vec<AmbiguousExternalNamespaceModule>,
   ) -> Self {
-    Self::new_inner(AmbiguousExternalNamespace { symbol, importee, importer, exporter })
+    Self::new_inner(AmbiguousExternalNamespace {
+      ambiguous_export_name,
+      importee,
+      importer,
+      exporter,
+    })
   }
 
   pub fn unresolved_entry(

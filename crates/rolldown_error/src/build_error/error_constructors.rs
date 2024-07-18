@@ -7,12 +7,17 @@ use rolldown_resolver::ResolveError;
 use super::BuildDiagnostic;
 
 use crate::events::{
-  ambiguous_external_namespace::AmbiguousExternalNamespace,
-  circular_dependency::CircularDependency, eval::Eval, external_entry::ExternalEntry,
-  forbid_const_assign::ForbidConstAssign, missing_export::MissingExport,
-  sourcemap_error::SourceMapError, unresolved_entry::UnresolvedEntry,
+  ambiguous_external_namespace::{AmbiguousExternalNamespace, Namespace},
+  circular_dependency::CircularDependency,
+  eval::Eval,
+  external_entry::ExternalEntry,
+  forbid_const_assign::ForbidConstAssign,
+  missing_export::MissingExport,
+  sourcemap_error::SourceMapError,
+  unresolved_entry::UnresolvedEntry,
   unresolved_import::UnresolvedImport,
-  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal, NapiError,
+  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
+  NapiError,
 };
 
 impl BuildDiagnostic {
@@ -22,21 +27,12 @@ impl BuildDiagnostic {
   }
 
   pub fn ambiguous_external_namespace(
-    importer: String,
-    importee: Vec<String>,
-    importer_source: ArcStr,
-    importer_filename: String,
-    imported_specifier: String,
-    imported_specifier_span: Span,
+    symbol: String,
+    importee: String,
+    importer: Namespace,
+    exporter: Vec<Namespace>,
   ) -> Self {
-    Self::new_inner(AmbiguousExternalNamespace {
-      importer,
-      importee,
-      importer_source,
-      importer_filename,
-      imported_specifier,
-      imported_specifier_span,
-    })
+    Self::new_inner(AmbiguousExternalNamespace { symbol, importee, importer, exporter })
   }
 
   pub fn unresolved_entry(

@@ -5,13 +5,18 @@ use oxc::span::Span;
 use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions, EventKind};
 
 #[derive(Debug)]
+pub struct Namespace {
+  pub span: Span,
+  pub source: ArcStr,
+  pub filename: String,
+}
+
+#[derive(Debug)]
 pub struct AmbiguousExternalNamespace {
-  pub importer: String,
-  pub importee: Vec<String>,
-  pub importer_source: ArcStr,
-  pub importer_filename: String,
-  pub imported_specifier: String,
-  pub imported_specifier_span: Span,
+  pub symbol: String,
+  pub importee: String,
+  pub importer: Namespace,
+  pub exporter: Vec<Namespace>,
 }
 
 impl BuildEvent for AmbiguousExternalNamespace {
@@ -20,28 +25,37 @@ impl BuildEvent for AmbiguousExternalNamespace {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    let mut importee = self.importee.iter().map(|v| format!(r#""{v}""#));
+    let mut exporter = self.exporter.iter().map(|v| format!(r#""{0}""#, v.filename));
 
-    let last = importee.next_back().unwrap();
+    let last = exporter.next_back().unwrap();
 
     format!(
       r#""{}" re-exports "{}" from one of the modules {} and {} (will be ignored)."#,
-      self.importer,
-      self.imported_specifier,
-      importee.collect::<Vec<_>>().join(", "),
+      self.importee,
+      self.symbol,
+      exporter.collect::<Vec<_>>().join(", "),
       last
     )
   }
 
-  fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {
-    let file_id = diagnostic.add_file(self.importer_filename.clone(), self.importer_source.clone());
-
+  fn on_diagnostic(&self, diagnostic: &mut Diagnostic, _opts: &DiagnosticOptions) {
     diagnostic.title = "Found ambiguous export.".to_string();
+
+    let file_id = diagnostic.add_file(self.importer.filename.clone(), self.importer.source.clone());
 
     diagnostic.add_label(
       &file_id,
-      self.imported_specifier_span.start..self.imported_specifier_span.end,
-      self.message(opts),
+      self.importer.span.start..self.importer.span.end,
+      format!(r#""{}" re-exports "{}"#, self.importee, self.symbol),
     );
+
+    self.exporter.iter().for_each(|exporter| {
+      let file_id = diagnostic.add_file(exporter.filename.clone(), exporter.source.clone());
+      diagnostic.add_label(
+        &file_id,
+        exporter.span.start..exporter.span.end,
+        "One matching export is here:".to_owned(),
+      );
+    });
   }
 }

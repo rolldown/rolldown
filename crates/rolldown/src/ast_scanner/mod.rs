@@ -207,18 +207,18 @@ impl<'me> AstScanner<'me> {
     );
   }
 
-  fn add_local_export(&mut self, export_name: &str, local: SymbolId) {
+  fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
     self
       .result
       .named_exports
-      .insert(export_name.into(), LocalExport { referenced: (self.idx, local).into() });
+      .insert(export_name.into(), LocalExport { referenced: (self.idx, local).into(), span });
   }
 
-  fn add_local_default_export(&mut self, local: SymbolId) {
+  fn add_local_default_export(&mut self, local: SymbolId, span: Span) {
     self
       .result
       .named_exports
-      .insert("default".into(), LocalExport { referenced: (self.idx, local).into() });
+      .insert("default".into(), LocalExport { referenced: (self.idx, local).into(), span });
   }
 
   /// Record `export { [imported] as [export_name] } from ...` statement.
@@ -281,11 +281,11 @@ impl<'me> AstScanner<'me> {
     if name_import.imported.is_default() {
       self.result.import_records[record_id].contains_import_default = true;
     }
+    self.result.named_exports.insert(
+      export_name.into(),
+      LocalExport { referenced: generated_imported_as_ref, span: name_import.span_imported },
+    );
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
-    self
-      .result
-      .named_exports
-      .insert(export_name.into(), LocalExport { referenced: generated_imported_as_ref });
   }
 
   fn add_star_re_export(
@@ -304,12 +304,12 @@ impl<'me> AstScanner<'me> {
       imported_as: generated_imported_as_ref,
       record_id,
     };
-    self.result.named_imports.insert(generated_imported_as_ref, name_import);
     self.result.import_records[record_id].contains_import_star = true;
-    self
-      .result
-      .named_exports
-      .insert(export_name.into(), LocalExport { referenced: generated_imported_as_ref });
+    self.result.named_exports.insert(
+      export_name.into(),
+      LocalExport { referenced: generated_imported_as_ref, span: name_import.span_imported },
+    );
+    self.result.named_imports.insert(generated_imported_as_ref, name_import);
   }
 
   fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration) {
@@ -343,6 +343,7 @@ impl<'me> AstScanner<'me> {
         self.add_local_export(
           spec.exported.name().as_str(),
           self.get_root_binding(spec.local.name().as_str()),
+          spec.span,
         );
       });
       if let Some(decl) = decl.declaration.as_ref() {
@@ -352,18 +353,21 @@ impl<'me> AstScanner<'me> {
               decl.id.binding_identifiers().into_iter().for_each(|id| {
                 self.result.named_exports.insert(
                   id.name.to_rstr(),
-                  LocalExport { referenced: (self.idx, id.expect_symbol_id()).into() },
+                  LocalExport {
+                    referenced: (self.idx, id.expect_symbol_id()).into(),
+                    span: id.span,
+                  },
                 );
               });
             });
           }
           oxc::ast::ast::Declaration::FunctionDeclaration(fn_decl) => {
             let id = fn_decl.id.as_ref().unwrap();
-            self.add_local_export(id.name.as_str(), id.expect_symbol_id());
+            self.add_local_export(id.name.as_str(), id.expect_symbol_id(), id.span);
           }
           oxc::ast::ast::Declaration::ClassDeclaration(cls_decl) => {
             let id = cls_decl.id.as_ref().unwrap();
-            self.add_local_export(id.name.as_str(), id.expect_symbol_id());
+            self.add_local_export(id.name.as_str(), id.expect_symbol_id(), id.span);
           }
           _ => unreachable!("doesn't support ts now"),
         }
@@ -384,24 +388,23 @@ impl<'me> AstScanner<'me> {
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
-      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
-        // `export default [expression]` pattern
-        None
-      }
-      oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
-        fn_decl.id.as_ref().map(rolldown_ecmascript::BindingIdentifierExt::expect_symbol_id)
-      }
-      oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => {
-        cls_decl.id.as_ref().map(rolldown_ecmascript::BindingIdentifierExt::expect_symbol_id)
-      }
+      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
+      oxc::ast::ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => fn_decl
+        .id
+        .as_ref()
+        .map(|id| (rolldown_ecmascript::BindingIdentifierExt::expect_symbol_id(id), id.span)),
+      oxc::ast::ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => cls_decl
+        .id
+        .as_ref()
+        .map(|id| (rolldown_ecmascript::BindingIdentifierExt::expect_symbol_id(id), id.span)),
       oxc::ast::ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
     };
 
-    let final_binding =
-      local_binding_for_default_export.unwrap_or(self.result.default_export_ref.symbol);
+    let (reference, span) = local_binding_for_default_export
+      .unwrap_or((self.result.default_export_ref.symbol, Span::default()));
 
-    self.add_declared_id(final_binding);
-    self.add_local_default_export(final_binding);
+    self.add_declared_id(reference);
+    self.add_local_default_export(reference, span);
   }
 
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {

@@ -13,7 +13,25 @@ input_file: crates/rolldown/tests/fixtures/errors/ambiguous_external_namespace
    │
  1 │ import { value } from "./foo";
    │          ──┬──  
-   │            ╰──── "foo.js" re-exports "value" from one of the modules "a.js", "b.js" and "c.js" (will be ignored).
+   │            ╰──── "foo.js" re-exports "value
+   │
+   ├─[a.js:1:14]
+   │
+ 1 │ export const value = 1
+   │              ──┬──  
+   │                ╰──── One matching export is here:
+   │
+   ├─[b.js:1:14]
+   │
+ 1 │ export const value = 1
+   │              ──┬──  
+   │                ╰──── One matching export is here:
+   │
+   ├─[c.js:1:14]
+   │
+ 1 │ export const value = 1
+   │              ──┬──  
+   │                ╰──── One matching export is here:
 ───╯
 
 ```

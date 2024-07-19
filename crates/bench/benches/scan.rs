@@ -4,7 +4,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 fn criterion_benchmark(c: &mut Criterion) {
   let mut group = c.benchmark_group("scan");
 
-  let derive_options = DeriveOptions { sourcemap: true };
+  let derive_options = DeriveOptions { sourcemap: false, minify: false };
 
   let items = [
     derive_benchmark_items(

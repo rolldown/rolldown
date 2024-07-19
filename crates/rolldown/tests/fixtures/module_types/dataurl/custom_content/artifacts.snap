@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/module_types/dataurl/custom_content
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+//#region data.custom
+var data_default = "data:application/octet-stream;base64,EmFhstuXNHQ";
+
+//#endregion
+//#region main.js
+assert(typeof data_default === "string" && data_default.startsWith("data:application/octet-stream;base64,"));
+
+//#endregion
+```

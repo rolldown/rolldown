@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/module_types/dataurl/text
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+//#region text.txt
+var text_default = "data:text/plain;charset=utf-8,%22%27%60%2B%3D%2F%40%23%24%24%25%5E%26%2A%28%0A%E4%BD%A0%E5%A5%BD%EF%BC%8C%E4%B8%96%E7%95%8C%0A%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82%20%D0%BC%D0%B8%D1%80%0A%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF%E4%B8%96%E7%95%8C%0A%3Cscript%3E";
+
+//#endregion
+//#region main.js
+assert(typeof text_default === "string" && text_default.startsWith("data:text/plain;charset=utf-8,"));
+
+//#endregion
+```

@@ -802,7 +802,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/require_custom_extension_data_url
 
-- entry_js-!~{000}~.mjs => entry_js-uma7PpQm.mjs
+- entry_js-!~{000}~.mjs => entry_js-L0sVgNY_.mjs
 
 # tests/esbuild/lower/lower_async_es5
 
@@ -1706,6 +1706,26 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/module_types/binary/text
 
 - main-!~{000}~.mjs => main-YNsEPKxL.mjs
+
+# tests/fixtures/module_types/dataurl/abnormal_extension
+
+- main-!~{000}~.mjs => main-pcRGLyas.mjs
+
+# tests/fixtures/module_types/dataurl/binary
+
+- main-!~{000}~.mjs => main-2EGnpHKS.mjs
+
+# tests/fixtures/module_types/dataurl/custom_content
+
+- main-!~{000}~.mjs => main-ImqW-S5n.mjs
+
+# tests/fixtures/module_types/dataurl/empty
+
+- main-!~{000}~.mjs => main-FtuAjfKq.mjs
+
+# tests/fixtures/module_types/dataurl/text
+
+- main-!~{000}~.mjs => main-ZvTSjJQe.mjs
 
 # tests/fixtures/module_types/empty
 

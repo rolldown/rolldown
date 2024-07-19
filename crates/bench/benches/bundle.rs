@@ -5,7 +5,7 @@ use rolldown_testing::utils::assert_bundled;
 fn criterion_benchmark(c: &mut Criterion) {
   let mut group = c.benchmark_group("bundle");
 
-  let derive_options = DeriveOptions { sourcemap: true };
+  let derive_options = DeriveOptions { sourcemap: true, minify: true };
 
   let items = [
     derive_benchmark_items(

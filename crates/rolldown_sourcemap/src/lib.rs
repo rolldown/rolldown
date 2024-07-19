@@ -1,17 +1,19 @@
 // cSpell:disable
 pub use concat_sourcemap::{ConcatSource, RawSource, Source, SourceMapSource};
 pub use oxc::sourcemap::SourceMapBuilder;
+use oxc::sourcemap::Token;
 pub use oxc::sourcemap::{JSONSourceMap, SourceMap, SourcemapVisualizer};
 mod lines_count;
 pub use lines_count::lines_count;
 mod concat_sourcemap;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rustc_hash::FxHashMap;
 
+#[allow(clippy::from_iter_instead_of_collect, clippy::cast_possible_truncation)]
 pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
   debug_assert!(sourcemap_chain.len() > 1);
   let last_map = sourcemap_chain.pop().expect("sourcemap_chain should not be empty");
-
-  let mut sourcemap_builder = SourceMapBuilder::default();
+  let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
 
   let sourcemap_and_lookup_table = sourcemap_chain
     .par_iter()
@@ -20,50 +22,53 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
 
   let source_view_tokens = last_map.get_source_view_tokens().collect::<Vec<_>>();
 
-  let token_pairs = source_view_tokens
+  let names_map =
+    FxHashMap::from_iter(first_map.get_names().enumerate().map(|(i, name)| (name, i as u32)));
+
+  let sources_map =
+    FxHashMap::from_iter(first_map.get_sources().enumerate().map(|(i, source)| (source, i as u32)));
+
+  let tokens = source_view_tokens
     .par_iter()
-    .map(|token| {
-      (
-        token,
-        sourcemap_and_lookup_table.iter().rev().try_fold(
-          *token,
-          |token, (sourcemap, lookup_table)| {
-            sourcemap.lookup_source_view_token(
-              lookup_table,
-              token.get_src_line(),
-              token.get_src_col(),
-            )
-          },
-        ),
-      )
+    .filter_map(|token| {
+      let original_token = sourcemap_and_lookup_table.iter().rev().try_fold(
+        *token,
+        |token, (sourcemap, lookup_table)| {
+          sourcemap.lookup_source_view_token(
+            lookup_table,
+            token.get_src_line(),
+            token.get_src_col(),
+          )
+        },
+      );
+      original_token.map(|original_token| {
+        Token::new(
+          token.get_dst_line(),
+          token.get_dst_col(),
+          original_token.get_src_line(),
+          original_token.get_src_col(),
+          original_token
+            .get_source_id()
+            .and_then(|source_id| first_map.get_source(source_id))
+            .and_then(|source| sources_map.get(source).copied()),
+          original_token
+            .get_name_id()
+            .and_then(|name_id| first_map.get_name(name_id))
+            .and_then(|name| names_map.get(name).copied()),
+        )
+      })
     })
     .collect::<Vec<_>>();
 
-  for (token, original_token) in token_pairs {
-    if let Some(original_token) = original_token {
-      token
-        .get_name_id()
-        .and_then(|id| last_map.get_name(id))
-        .map(|name| sourcemap_builder.add_name(name));
-
-      let name_id = original_token.get_name().map(|name| sourcemap_builder.add_name(name));
-
-      let source_id = original_token.get_source_and_content().map(|(source, source_content)| {
-        sourcemap_builder.add_source_and_content(source, source_content)
-      });
-
-      sourcemap_builder.add_token(
-        token.get_dst_line(),
-        token.get_dst_col(),
-        original_token.get_src_line(),
-        original_token.get_src_col(),
-        source_id,
-        name_id,
-      );
-    }
-  }
-
-  sourcemap_builder.into_sourcemap()
+  SourceMap::new(
+    None,
+    first_map.get_names().map(Into::into).collect::<Vec<_>>(),
+    None,
+    first_map.get_sources().map(Into::into).collect::<Vec<_>>(),
+    first_map.get_source_contents().map(|x| x.map(Into::into).collect::<Vec<_>>()),
+    tokens,
+    None,
+  )
 }
 
 #[cfg(test)]
@@ -102,7 +107,7 @@ mod tests {
       map.to_json_string().unwrap()
     };
 
-    let expected = "{\"version\":3,\"names\":[\"add\"],\"sources\":[\"project/foo.js\"],\"sourcesContent\":[\"\\n\\n  1 + 1;\"],\"mappings\":\"AAEE\"}";
+    let expected = "{\"version\":3,\"names\":[],\"sources\":[\"/project/foo.js\"],\"sourcesContent\":[\"\\n\\n  1 + 1;\"],\"mappings\":\"AAEE\"}";
 
     assert_eq!(&result, expected);
   }

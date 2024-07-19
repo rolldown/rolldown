@@ -1,11 +1,8 @@
 use mime::Mime;
 use std::{path::Path, str::FromStr};
 
-// TODO implement it in a better way
-pub fn is_texture(data: &[u8]) -> bool {
-  data.iter().all(|&byte| {
-    byte.is_ascii_graphic() || byte.is_ascii_whitespace() || byte == b'\n' || byte == b'\r'
-  })
+fn is_texture(data: &[u8]) -> bool {
+  std::str::from_utf8(data).is_ok()
 }
 
 pub fn guess_mime(path: &Path, data: &[u8]) -> anyhow::Result<Mime> {

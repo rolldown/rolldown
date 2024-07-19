@@ -1,7 +1,7 @@
 {
   "config": {
     "moduleTypes": {
-      ".txt": "dataurl"
+      ".data": "dataurl"
     }
   }
 }

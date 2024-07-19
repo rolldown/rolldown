@@ -2344,6 +2344,7 @@ dependencies = [
  "memchr",
  "oxc",
  "rolldown_utils",
+ "rustc-hash",
 ]
 
 [[package]]

@@ -1717,7 +1717,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/module_types/dataurl/custom_content
 
-- main-!~{000}~.mjs => main-OHyAmu2_.mjs
+- main-!~{000}~.mjs => main-sRS7QOzX.mjs
 
 # tests/fixtures/module_types/dataurl/empty
 

@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/fixtures/module_types/dataurl/custom_content
 import { default as assert } from "node:assert";
 
 //#region data.custom
-var data_default = "data:application/octet-stream;base64,EmFhstuXNHQ";
+var data_default = "data:image/png;base64,iVBORwoaCgAAAA1JSERSAAAAAQAAAAMIAAAAAHe2Ol4AAAAOSURBVAgdY2BkYGRgBgAAEQAGOeS79gAAAABJRU5ErkJggg";
 
 //#endregion
 //#region main.js

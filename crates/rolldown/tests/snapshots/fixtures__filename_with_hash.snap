@@ -1707,17 +1707,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-YNsEPKxL.mjs
 
-# tests/fixtures/module_types/dataurl/abnormal_extension
-
-- main-!~{000}~.mjs => main-pcRGLyas.mjs
-
 # tests/fixtures/module_types/dataurl/binary
 
 - main-!~{000}~.mjs => main-2EGnpHKS.mjs
-
-# tests/fixtures/module_types/dataurl/custom_content
-
-- main-!~{000}~.mjs => main-sRS7QOzX.mjs
 
 # tests/fixtures/module_types/dataurl/empty
 

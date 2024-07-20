@@ -7,7 +7,7 @@ use oxc::{
 };
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::DiagnosableResult;
 use rolldown_loader_utils::{binary_to_esm, json_to_esm, text_to_esm};
 use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
 use rolldown_utils::mime::guess_mime;
@@ -32,9 +32,8 @@ pub fn parse_to_ecma_ast(
   stable_id: &str,
   options: &NormalizedBundlerOptions,
   module_type: &ModuleType,
-  errors: &mut Vec<BuildDiagnostic>,
   source: StrOrBytes,
-) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
+) -> anyhow::Result<DiagnosableResult<(EcmaAst, SymbolTable, ScopeTree)>> {
   // 1. Transform the source to the type that rolldown supported.
   let (source, parsed_type) = match module_type {
     ModuleType::Js => (source.try_into_string()?, OxcParseType::Js),
@@ -95,15 +94,15 @@ pub fn parse_to_ecma_ast(
   let source = ArcStr::from(source);
   let parse_result = EcmaCompiler::parse(stable_id, &source, oxc_source_type);
 
-  if let Err(parse_errors) = parse_result {
-    (*errors).extend(parse_errors);
-    return Err(anyhow::anyhow!("Parse failed."));
-  }
-
-  let mut ecma_ast = parse_result.unwrap();
+  let mut ecma_ast = match parse_result {
+    Ok(ecma_ast) => ecma_ast,
+    Err(errs) => {
+      return Ok(Err(errs));
+    }
+  };
 
   ecma_ast =
     plugin_driver.transform_ast(HookTransformAstArgs { cwd: &options.cwd, ast: ecma_ast })?;
 
-  pre_process_ecma_ast(ecma_ast, &parsed_type, path, oxc_source_type)
+  pre_process_ecma_ast(ecma_ast, &parsed_type, path, oxc_source_type).map(Ok)
 }

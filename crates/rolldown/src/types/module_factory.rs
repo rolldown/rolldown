@@ -7,7 +7,7 @@ use rolldown_common::{
   ModuleType, RawImportRecord, ResolvedId, StrOrBytes,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
 use rolldown_sourcemap::SourceMap;
@@ -22,7 +22,6 @@ pub struct CreateModuleContext<'a> {
   pub resolved_id: &'a ResolvedId,
   pub options: &'a SharedOptions,
   pub module_type: ModuleType,
-  pub errors: &'a mut Vec<BuildDiagnostic>,
   pub warnings: &'a mut Vec<BuildDiagnostic>,
   pub resolver: &'a SharedResolver,
   pub is_user_defined_entry: bool,
@@ -173,5 +172,5 @@ pub trait ModuleFactory {
   async fn create_module(
     ctx: &mut CreateModuleContext,
     args: CreateModuleArgs,
-  ) -> anyhow::Result<CreateModuleReturn>;
+  ) -> anyhow::Result<DiagnosableResult<CreateModuleReturn>>;
 }

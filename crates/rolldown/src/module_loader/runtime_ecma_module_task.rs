@@ -6,7 +6,7 @@ use rolldown_common::{
   ModuleId, ModuleIdx, ModuleType, SymbolRef,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 
 use super::Msg;
 use crate::{
@@ -48,16 +48,16 @@ impl RuntimeEcmaModuleTask {
 
     let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source);
 
-    if let Err(error) = ecma_ast_result {
-      if !self.errors.is_empty() {
-        self.tx.try_send(Msg::BuildErrors(self.errors)).expect("Send should not fail");
+    let ecma_ast_result = match ecma_ast_result {
+      Ok(ecma_ast_result) => ecma_ast_result,
+      Err(errs) => {
+        self.errors.extend(errs);
         return Ok(());
       }
-      return Err(error);
-    }
+    };
 
     let MakeEcmaAstResult { ast, ast_scope, scan_result, ast_symbols, namespace_object_ref } =
-      ecma_ast_result.unwrap();
+      ecma_ast_result;
 
     let runtime = RuntimeModuleBrief::new(self.module_id, &ast_scope);
 
@@ -122,17 +122,17 @@ impl RuntimeEcmaModuleTask {
     &mut self,
     filename: &str,
     source: &ArcStr,
-  ) -> anyhow::Result<MakeEcmaAstResult> {
+  ) -> DiagnosableResult<MakeEcmaAstResult> {
     let source_type = SourceType::default();
 
     let parse_result = EcmaCompiler::parse(filename, source, source_type);
 
-    if let Err(errors) = parse_result {
-      self.errors.extend(errors);
-      return Err(anyhow::anyhow!("Parse failed."));
-    }
-
-    let mut ast = parse_result.unwrap();
+    let mut ast = match parse_result {
+      Ok(ast) => ast,
+      Err(errs) => {
+        return Err(errs);
+      }
+    };
     tweak_ast_for_scanning(&mut ast);
 
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();

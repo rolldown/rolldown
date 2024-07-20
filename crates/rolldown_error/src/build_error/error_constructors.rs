@@ -41,16 +41,6 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn parse_error(
-    source: ArcStr,
-    filename: String,
-    error_help: String,
-    error_message: String,
-    error_labels: Vec<LabeledSpan>,
-  ) -> Self {
-    Self::new_inner(ParseError { source, filename, error_help, error_message, error_labels })
-  }
-
   pub fn unresolved_entry(
     unresolved_id: impl AsRef<Path>,
     resolve_error: Option<ResolveError>,
@@ -102,6 +92,16 @@ impl BuildDiagnostic {
   }
 
   // --- Rolldown related
+
+  pub fn oxc_parse_error(
+    source: ArcStr,
+    filename: String,
+    error_help: String,
+    error_message: String,
+    error_labels: Vec<LabeledSpan>,
+  ) -> Self {
+    Self::new_inner(ParseError { source, filename, error_help, error_message, error_labels })
+  }
 
   pub fn forbid_const_assign(
     filename: String,

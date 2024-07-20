@@ -99,11 +99,14 @@ impl Bundler {
 
     let output = Self::handle_result(bundler_core.scan().await)?;
 
-    if !output.errors.is_empty() {
-      return Err(self.handle_errors(output.errors));
+    match output {
+      Ok(output) => {
+        self.handle_warnings(output.warnings).await;
+      }
+      Err(errs) => {
+        return Err(self.handle_errors(errs));
+      }
     }
-
-    self.handle_warnings(output.warnings).await;
 
     Ok(())
   }

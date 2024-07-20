@@ -7,7 +7,7 @@ use oxc::{
   sourcemap::SourceMap,
   span::SourceType,
 };
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 
 use crate::ecma_ast::{
   program_cell::{ProgramCell, ProgramCellDependent, ProgramCellOwner},
@@ -20,7 +20,7 @@ impl EcmaCompiler {
     filename: &str,
     source: impl Into<ArcStr>,
     ty: SourceType,
-  ) -> Result<EcmaAst, Vec<BuildDiagnostic>> {
+  ) -> DiagnosableResult<EcmaAst> {
     let source = source.into();
     let allocator = oxc::allocator::Allocator::default();
     let mut trivias = None;
@@ -35,7 +35,7 @@ impl EcmaCompiler {
               .errors
               .iter()
               .map(|error| {
-                BuildDiagnostic::parse_error(
+                BuildDiagnostic::oxc_parse_error(
                   source.clone(),
                   filename.to_string(),
                   error.help.clone().unwrap_or_default().into(),

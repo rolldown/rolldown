@@ -90,7 +90,6 @@ impl EcmaModuleTask {
         plugin_driver: &self.ctx.plugin_driver,
         resolved_id: &self.resolved_id,
         options: &self.ctx.input_options,
-        errors: &mut self.errors,
         warnings: &mut warnings,
         module_type: module_type.clone(),
         resolver: &self.ctx.resolver,
@@ -98,17 +97,16 @@ impl EcmaModuleTask {
       },
       CreateModuleArgs { source, sourcemap_chain, hook_side_effects },
     )
-    .await;
-
-    if let Err(error) = ret {
-      if !self.errors.is_empty() {
-        return Ok(());
-      }
-      return Err(error);
-    }
+    .await?;
 
     let CreateModuleReturn { module, resolved_deps, ast_symbol, raw_import_records, ecma_ast } =
-      ret.unwrap();
+      match ret {
+        Ok(ret) => ret,
+        Err(errs) => {
+          self.errors.extend(errs);
+          return Ok(());
+        }
+      };
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
 

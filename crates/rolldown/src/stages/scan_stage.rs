@@ -6,7 +6,7 @@ use futures::future::join_all;
 use oxc::index::IndexVec;
 use rolldown_common::{EntryPoint, ImportKind, ModuleIdx, ModuleTable, ResolvedId};
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
@@ -49,7 +49,7 @@ impl ScanStage {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn scan(&mut self) -> anyhow::Result<ScanStageOutput> {
+  pub async fn scan(&mut self) -> anyhow::Result<DiagnosableResult<ScanStageOutput>> {
     if self.input_options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
@@ -69,20 +69,23 @@ impl ScanStage {
       symbols,
       runtime,
       warnings,
-      errors,
       index_ecma_ast,
-    } = module_loader.fetch_all_modules(user_entries).await?;
-    self.errors.extend(errors);
+    } = match module_loader.fetch_all_modules(user_entries).await? {
+      Ok(output) => output,
+      Err(errors) => {
+        return Ok(Err(errors));
+      }
+    };
 
-    Ok(ScanStageOutput {
+    Ok(Ok(ScanStageOutput {
       module_table,
       entry_points,
       symbols,
       runtime,
       warnings,
       index_ecma_ast,
-      errors: std::mem::take(&mut self.errors),
-    })
+      errors: vec![],
+    }))
   }
 
   /// Resolve `InputOptions.input`

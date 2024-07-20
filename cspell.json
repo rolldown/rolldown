@@ -41,6 +41,7 @@
     }
   ],
   "words": [
+    "antd",
     "arcstr",
     "arraify",
     "astro",
@@ -62,7 +63,9 @@
     "compat",
     "concat",
     "consola",
+    "Corasick",
     "corepack",
+    "daachorse",
     "dashmap",
     "dataurl",
     "deconflict",
@@ -150,6 +153,7 @@
     "typeof",
     "typeofs",
     "underfin",
+    "unhandleable",
     "UNKEYED",
     "urlencoding",
     "usize",
@@ -160,9 +164,6 @@
     "WASI",
     "Xiangjun",
     "Yinan",
-    "Yunfei",
-    "daachorse",
-    "Corasick",
-    "antd"
+    "Yunfei"
   ]
 }

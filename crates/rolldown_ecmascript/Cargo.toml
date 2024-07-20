@@ -12,14 +12,11 @@ repository.workspace = true
 [lints]
 workspace = true
 
-[package.metadata.cargo-shear]
-ignored = ["rolldown_fs"]
 
 [dependencies]
 anyhow         = { workspace = true }
 arcstr         = { workspace = true }
 oxc            = { workspace = true, features = ["semantic", "codegen"] }
 rolldown_error = { workspace = true }
-rolldown_fs    = { workspace = true, features = ["os"] }
 self_cell      = { workspace = true }
 smallvec       = { workspace = true }

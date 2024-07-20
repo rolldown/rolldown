@@ -12,6 +12,9 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[package.metadata.cargo-shear]
+ignored = ["rolldown_fs"]
+
 [dependencies]
 anyhow         = { workspace = true }
 arcstr         = { workspace = true }

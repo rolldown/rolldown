@@ -24,7 +24,6 @@ pub struct ScanStage {
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
-  pub errors: Vec<BuildDiagnostic>,
 }
 
 #[derive(Debug)]
@@ -45,7 +44,7 @@ impl ScanStage {
     fs: OsFileSystem,
     resolver: SharedResolver,
   ) -> Self {
-    Self { input_options, plugin_driver, fs, resolver, errors: vec![] }
+    Self { input_options, plugin_driver, fs, resolver }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -61,7 +60,12 @@ impl ScanStage {
       Arc::clone(&self.resolver),
     );
 
-    let user_entries = self.resolve_user_defined_entries().await?;
+    let user_entries = match self.resolve_user_defined_entries().await? {
+      Ok(entries) => entries,
+      Err(errors) => {
+        return Ok(Err(errors));
+      }
+    };
 
     let ModuleLoaderOutput {
       module_table,
@@ -91,7 +95,10 @@ impl ScanStage {
   /// Resolve `InputOptions.input`
 
   #[tracing::instrument(level = "debug", skip_all)]
-  async fn resolve_user_defined_entries(&mut self) -> Result<Vec<(Option<ArcStr>, ResolvedId)>> {
+  #[allow(clippy::type_complexity)]
+  async fn resolve_user_defined_entries(
+    &mut self,
+  ) -> Result<DiagnosableResult<Vec<(Option<ArcStr>, ResolvedId)>>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 
@@ -116,6 +123,8 @@ impl ScanStage {
 
     let mut ret = Vec::with_capacity(self.input_options.input.len());
 
+    let mut errors = vec![];
+
     for resolve_id in resolved_ids {
       let (args, resolve_id) = resolve_id?;
 
@@ -125,10 +134,10 @@ impl ScanStage {
         }
         Err(e) => match e {
           ResolveError::NotFound(..) => {
-            self.errors.push(BuildDiagnostic::unresolved_entry(args.specifier, None));
+            errors.push(BuildDiagnostic::unresolved_entry(args.specifier, None));
           }
           ResolveError::PackagePathNotExported(..) => {
-            self.errors.push(BuildDiagnostic::unresolved_entry(args.specifier, Some(e)));
+            errors.push(BuildDiagnostic::unresolved_entry(args.specifier, Some(e)));
           }
           _ => {
             return Err(e.into());
@@ -136,6 +145,11 @@ impl ScanStage {
         },
       }
     }
-    Ok(ret)
+
+    if !errors.is_empty() {
+      return Ok(Err(errors));
+    }
+
+    Ok(Ok(ret))
   }
 }

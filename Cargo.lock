@@ -2248,6 +2248,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "oxc",
+ "rolldown_error",
  "self_cell",
  "smallvec",
 ]
@@ -2256,6 +2257,7 @@ dependencies = [
 name = "rolldown_error"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "arcstr",
  "ariadne",
  "napi",

@@ -9,6 +9,7 @@ use rolldown_common::{
   AstScopes, EcmaModule, ModuleDefFormat, ModuleId, ModuleIdx, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
+use rolldown_error::DiagnosableResult;
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
 use sugar_path::SugarPath;
 
@@ -61,14 +62,25 @@ impl ModuleFactory for EcmaModuleFactory {
   async fn create_module<'any>(
     ctx: &mut CreateModuleContext<'any>,
     args: CreateModuleArgs,
-  ) -> anyhow::Result<CreateModuleReturn> {
-    let (mut ast, symbols, scopes) = parse_to_ecma_ast(
+  ) -> anyhow::Result<DiagnosableResult<CreateModuleReturn>> {
+    let id = ModuleId::new(Arc::clone(&ctx.resolved_id.id));
+    let stable_id = id.stabilize(&ctx.options.cwd);
+
+    let parse_result = parse_to_ecma_ast(
       ctx.plugin_driver,
       ctx.resolved_id.id.as_path(),
+      &stable_id,
       ctx.options,
       &ctx.module_type,
       args.source,
     )?;
+
+    let (mut ast, symbols, scopes) = match parse_result {
+      Ok(parse_result) => parse_result,
+      Err(errs) => {
+        return Ok(Err(errs));
+      }
+    };
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) = Self::scan_ast(
       ctx.module_index,
@@ -105,9 +117,6 @@ impl ModuleFactory for EcmaModuleFactory {
         dynamically_imported_ids.push(Arc::clone(&info.id).into());
       }
     }
-
-    let id = ModuleId::new(Arc::clone(&ctx.resolved_id.id));
-    let stable_id = id.stabilize(&ctx.options.cwd);
 
     // The side effects priority is:
     // 1. Hook side effects
@@ -175,12 +184,12 @@ impl ModuleFactory for EcmaModuleFactory {
       module_type: ctx.module_type.clone(),
     };
 
-    Ok(CreateModuleReturn {
+    Ok(Ok(CreateModuleReturn {
       module,
       resolved_deps,
       raw_import_records: import_records,
       ecma_ast: ast,
       ast_symbol,
-    })
+    }))
   }
 }

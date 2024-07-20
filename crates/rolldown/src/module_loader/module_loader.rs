@@ -6,7 +6,7 @@ use rolldown_common::{
   ModuleIdx, ModuleTable, OutputFormat, ResolvedId,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -64,7 +64,6 @@ pub struct ModuleLoaderOutput {
   pub entry_points: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
-  pub errors: Vec<BuildDiagnostic>,
 }
 
 impl ModuleLoader {
@@ -175,7 +174,7 @@ impl ModuleLoader {
   pub async fn fetch_all_modules(
     mut self,
     user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
-  ) -> anyhow::Result<ModuleLoaderOutput> {
+  ) -> anyhow::Result<DiagnosableResult<ModuleLoaderOutput>> {
     if self.input_options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
@@ -265,6 +264,10 @@ impl ModuleLoader {
       self.remaining -= 1;
     }
 
+    if !errors.is_empty() {
+      return Ok(Err(errors));
+    }
+
     let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules
       .modules
@@ -302,14 +305,13 @@ impl ModuleLoader {
       }));
     }
 
-    Ok(ModuleLoaderOutput {
+    Ok(Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },
       symbols: self.symbols,
       index_ecma_ast,
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
-      errors,
-    })
+    }))
   }
 }

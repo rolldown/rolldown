@@ -5,6 +5,7 @@ pub enum EventKind {
   UnresolvedEntry,
   UnresolvedImport,
   AmbiguousExternalNamespace,
+  ParseError,
 
   Eval,
   CircularDependency,
@@ -26,6 +27,7 @@ impl Display for EventKind {
       EventKind::UnresolvedEntry => write!(f, "UNRESOLVED_ENTRY"),
       EventKind::UnresolvedImport => write!(f, "UNRESOLVED_IMPORT"),
       EventKind::AmbiguousExternalNamespace => write!(f, "AMBIGUOUS_EXTERNAL_NAMESPACES"),
+      EventKind::ParseError => write!(f, "PARSE_ERROR"),
       EventKind::IllegalReassignment => write!(f, "ILLEGAL_REASSIGNMENT"),
       EventKind::Eval => write!(f, "EVAL"),
       EventKind::SourcemapError => write!(f, "SOURCEMAP_ERROR"),

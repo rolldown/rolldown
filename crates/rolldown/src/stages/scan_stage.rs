@@ -6,7 +6,7 @@ use futures::future::join_all;
 use oxc::index::IndexVec;
 use rolldown_common::{EntryPoint, ImportKind, ModuleIdx, ModuleTable, ResolvedId};
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
@@ -24,7 +24,6 @@ pub struct ScanStage {
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
-  pub errors: Vec<BuildDiagnostic>,
 }
 
 #[derive(Debug)]
@@ -45,11 +44,11 @@ impl ScanStage {
     fs: OsFileSystem,
     resolver: SharedResolver,
   ) -> Self {
-    Self { input_options, plugin_driver, fs, resolver, errors: vec![] }
+    Self { input_options, plugin_driver, fs, resolver }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn scan(&mut self) -> anyhow::Result<ScanStageOutput> {
+  pub async fn scan(&mut self) -> anyhow::Result<DiagnosableResult<ScanStageOutput>> {
     if self.input_options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
@@ -61,7 +60,12 @@ impl ScanStage {
       Arc::clone(&self.resolver),
     );
 
-    let user_entries = self.resolve_user_defined_entries().await?;
+    let user_entries = match self.resolve_user_defined_entries().await? {
+      Ok(entries) => entries,
+      Err(errors) => {
+        return Ok(Err(errors));
+      }
+    };
 
     let ModuleLoaderOutput {
       module_table,
@@ -69,26 +73,32 @@ impl ScanStage {
       symbols,
       runtime,
       warnings,
-      errors,
       index_ecma_ast,
-    } = module_loader.fetch_all_modules(user_entries).await?;
-    self.errors.extend(errors);
+    } = match module_loader.fetch_all_modules(user_entries).await? {
+      Ok(output) => output,
+      Err(errors) => {
+        return Ok(Err(errors));
+      }
+    };
 
-    Ok(ScanStageOutput {
+    Ok(Ok(ScanStageOutput {
       module_table,
       entry_points,
       symbols,
       runtime,
       warnings,
       index_ecma_ast,
-      errors: std::mem::take(&mut self.errors),
-    })
+      errors: vec![],
+    }))
   }
 
   /// Resolve `InputOptions.input`
 
   #[tracing::instrument(level = "debug", skip_all)]
-  async fn resolve_user_defined_entries(&mut self) -> Result<Vec<(Option<ArcStr>, ResolvedId)>> {
+  #[allow(clippy::type_complexity)]
+  async fn resolve_user_defined_entries(
+    &mut self,
+  ) -> Result<DiagnosableResult<Vec<(Option<ArcStr>, ResolvedId)>>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 
@@ -113,6 +123,8 @@ impl ScanStage {
 
     let mut ret = Vec::with_capacity(self.input_options.input.len());
 
+    let mut errors = vec![];
+
     for resolve_id in resolved_ids {
       let (args, resolve_id) = resolve_id?;
 
@@ -122,10 +134,10 @@ impl ScanStage {
         }
         Err(e) => match e {
           ResolveError::NotFound(..) => {
-            self.errors.push(BuildDiagnostic::unresolved_entry(args.specifier, None));
+            errors.push(BuildDiagnostic::unresolved_entry(args.specifier, None));
           }
           ResolveError::PackagePathNotExported(..) => {
-            self.errors.push(BuildDiagnostic::unresolved_entry(args.specifier, Some(e)));
+            errors.push(BuildDiagnostic::unresolved_entry(args.specifier, Some(e)));
           }
           _ => {
             return Err(e.into());
@@ -133,6 +145,11 @@ impl ScanStage {
         },
       }
     }
-    Ok(ret)
+
+    if !errors.is_empty() {
+      return Ok(Err(errors));
+    }
+
+    Ok(Ok(ret))
   }
 }

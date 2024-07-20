@@ -1434,6 +1434,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-MsirdRn5.mjs
 
+# tests/fixtures/errors/parse_error/jsx
+
+
+# tests/fixtures/errors/parse_error/normal
+
+
 # tests/fixtures/errors/unresolved_entry
 
 

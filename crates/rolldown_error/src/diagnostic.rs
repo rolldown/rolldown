@@ -12,6 +12,7 @@ pub struct Diagnostic {
   pub(crate) title: String,
   pub(crate) files: Vec<(/* filename */ ArcStr, /* file content */ ArcStr)>,
   pub(crate) labels: Vec<Label<(/* filename */ ArcStr, Range<usize>)>>,
+  pub(crate) help: Option<String>,
   pub(crate) severity: Severity,
 }
 
@@ -20,7 +21,14 @@ type AriadneReport = Report<'static, (ArcStr, Range<usize>)>;
 
 impl Diagnostic {
   pub(crate) fn new(kind: String, summary: String, severity: Severity) -> Self {
-    Self { kind, title: summary, files: Vec::default(), labels: Vec::default(), severity }
+    Self {
+      kind,
+      title: summary,
+      files: Vec::default(),
+      labels: Vec::default(),
+      help: None,
+      severity,
+    }
   }
 
   pub(crate) fn add_file(
@@ -33,6 +41,11 @@ impl Diagnostic {
     debug_assert!(self.files.iter().all(|(id, _)| id != &filename));
     self.files.push((filename.clone(), content));
     DiagnosticFileId(filename)
+  }
+
+  pub(crate) fn add_help(&mut self, message: String) -> &mut Self {
+    self.help = Some(message);
+    self
   }
 
   pub(crate) fn add_label(
@@ -62,6 +75,10 @@ impl Diagnostic {
 
     for label in self.labels.clone() {
       builder = builder.with_label(label);
+    }
+
+    if let Some(help) = &self.help {
+      builder = builder.with_help(help);
     }
 
     builder

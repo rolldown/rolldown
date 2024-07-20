@@ -62,11 +62,16 @@ impl ModuleFactory for EcmaModuleFactory {
     ctx: &mut CreateModuleContext<'any>,
     args: CreateModuleArgs,
   ) -> anyhow::Result<CreateModuleReturn> {
+    let id = ModuleId::new(Arc::clone(&ctx.resolved_id.id));
+    let stable_id = id.stabilize(&ctx.options.cwd);
+
     let (mut ast, symbols, scopes) = parse_to_ecma_ast(
       ctx.plugin_driver,
       ctx.resolved_id.id.as_path(),
+      &stable_id,
       ctx.options,
       &ctx.module_type,
+      ctx.errors,
       args.source,
     )?;
 
@@ -105,9 +110,6 @@ impl ModuleFactory for EcmaModuleFactory {
         dynamically_imported_ids.push(Arc::clone(&info.id).into());
       }
     }
-
-    let id = ModuleId::new(Arc::clone(&ctx.resolved_id.id));
-    let stable_id = id.stabilize(&ctx.options.cwd);
 
     // The side effects priority is:
     // 1. Hook side effects

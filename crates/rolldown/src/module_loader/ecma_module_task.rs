@@ -84,21 +84,31 @@ impl EcmaModuleTask {
       ));
     };
 
+    let ret = EcmaModuleFactory::create_module(
+      &mut CreateModuleContext {
+        module_index: self.module_idx,
+        plugin_driver: &self.ctx.plugin_driver,
+        resolved_id: &self.resolved_id,
+        options: &self.ctx.input_options,
+        errors: &mut self.errors,
+        warnings: &mut warnings,
+        module_type: module_type.clone(),
+        resolver: &self.ctx.resolver,
+        is_user_defined_entry: self.is_user_defined_entry,
+      },
+      CreateModuleArgs { source, sourcemap_chain, hook_side_effects },
+    )
+    .await;
+
+    if let Err(error) = ret {
+      if !self.errors.is_empty() {
+        return Ok(());
+      }
+      return Err(error);
+    }
+
     let CreateModuleReturn { module, resolved_deps, ast_symbol, raw_import_records, ecma_ast } =
-      EcmaModuleFactory::create_module(
-        &mut CreateModuleContext {
-          module_index: self.module_idx,
-          plugin_driver: &self.ctx.plugin_driver,
-          resolved_id: &self.resolved_id,
-          options: &self.ctx.input_options,
-          warnings: &mut warnings,
-          module_type: module_type.clone(),
-          resolver: &self.ctx.resolver,
-          is_user_defined_entry: self.is_user_defined_entry,
-        },
-        CreateModuleArgs { source, sourcemap_chain, hook_side_effects },
-      )
-      .await?;
+      ret.unwrap();
 
     self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
 

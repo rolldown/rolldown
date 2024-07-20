@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/errors/parse_error/jsx
+---
+# Errors
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Expected corresponding JSX closing tag for 'b'.
+   ╭─[main.jsx:5:6]
+   │
+ 5 │     <b>
+   │      ┬  
+   │      ╰── 
+   │ 
+ 7 │     </a>
+   │       ┬  
+   │       ╰── 
+───╯
+
+```
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Expected `,` but found `class`
+   ╭─[main.jsx:8:8]
+   │
+ 8 │     <a class="the">
+   │        ──┬──  
+   │          ╰──── `,` expected
+───╯
+
+```

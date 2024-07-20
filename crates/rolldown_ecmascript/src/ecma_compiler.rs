@@ -7,6 +7,7 @@ use oxc::{
   sourcemap::SourceMap,
   span::SourceType,
 };
+use rolldown_error::BuildDiagnostic;
 
 use crate::ecma_ast::{
   program_cell::{ProgramCell, ProgramCellDependent, ProgramCellOwner},
@@ -15,22 +16,40 @@ use crate::ecma_ast::{
 pub struct EcmaCompiler;
 
 impl EcmaCompiler {
-  pub fn parse(source: impl Into<ArcStr>, ty: SourceType) -> anyhow::Result<EcmaAst> {
+  pub fn parse(
+    filename: &str,
+    source: impl Into<ArcStr>,
+    ty: SourceType,
+  ) -> Result<EcmaAst, Vec<BuildDiagnostic>> {
     let source = source.into();
     let allocator = oxc::allocator::Allocator::default();
     let mut trivias = None;
-    let inner = ProgramCell::try_new(ProgramCellOwner { source, allocator }, |owner| {
-      let parser =
-        Parser::new(&owner.allocator, &owner.source, ty).allow_return_outside_function(true);
-      let ret = parser.parse();
-      if ret.panicked || !ret.errors.is_empty() {
-        // TODO: more dx friendly error message
-        Err(anyhow::format_err!("Parse failed, got {:#?}", ret.errors))
-      } else {
-        trivias = Some(ret.trivias);
-        Ok(ProgramCellDependent { program: ret.program })
-      }
-    })?;
+    let inner =
+      ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
+        let parser =
+          Parser::new(&owner.allocator, &owner.source, ty).allow_return_outside_function(true);
+        let ret = parser.parse();
+        if ret.panicked || !ret.errors.is_empty() {
+          Err(
+            ret
+              .errors
+              .iter()
+              .map(|error| {
+                BuildDiagnostic::parse_error(
+                  source.clone(),
+                  filename.to_string(),
+                  error.help.clone().unwrap_or_default().into(),
+                  error.message.to_string(),
+                  error.labels.clone().unwrap_or_default(),
+                )
+              })
+              .collect::<Vec<_>>(),
+          )
+        } else {
+          trivias = Some(ret.trivias);
+          Ok(ProgramCellDependent { program: ret.program })
+        }
+      })?;
     Ok(EcmaAst {
       program: inner,
       source_type: ty,
@@ -71,7 +90,7 @@ impl EcmaCompiler {
 
 #[test]
 fn basic_test() {
-  let ast = EcmaCompiler::parse("const a = 1;".to_string(), SourceType::default()).unwrap();
+  let ast = EcmaCompiler::parse("", "const a = 1;".to_string(), SourceType::default()).unwrap();
   let code = EcmaCompiler::print(&ast, "", false).source_text;
   assert_eq!(code, "const a = 1;\n");
 }

@@ -13,8 +13,10 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-anyhow    = { workspace = true }
-arcstr    = { workspace = true }
-oxc       = { workspace = true, features = ["semantic", "codegen"] }
-self_cell = { workspace = true }
-smallvec  = { workspace = true }
+anyhow         = { workspace = true }
+arcstr         = { workspace = true }
+oxc            = { workspace = true, features = ["semantic", "codegen"] }
+rolldown_error = { workspace = true }
+rolldown_fs    = { workspace = true, features = ["os"] }
+self_cell      = { workspace = true }
+smallvec       = { workspace = true }

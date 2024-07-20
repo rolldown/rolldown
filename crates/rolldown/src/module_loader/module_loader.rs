@@ -302,6 +302,8 @@ impl ModuleLoader {
       }));
     }
 
+    entry_points.retain(|e| modules.get(e.id).is_some());
+
     Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },
       symbols: self.symbols,

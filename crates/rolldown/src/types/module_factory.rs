@@ -22,6 +22,7 @@ pub struct CreateModuleContext<'a> {
   pub resolved_id: &'a ResolvedId,
   pub options: &'a SharedOptions,
   pub module_type: ModuleType,
+  pub errors: &'a mut Vec<BuildDiagnostic>,
   pub warnings: &'a mut Vec<BuildDiagnostic>,
   pub resolver: &'a SharedResolver,
   pub is_user_defined_entry: bool,

@@ -41,7 +41,7 @@ impl Debug for EcmaAst {
 
 impl Default for EcmaAst {
   fn default() -> Self {
-    EcmaCompiler::parse("", SourceType::default()).unwrap()
+    EcmaCompiler::parse("", "", SourceType::default()).unwrap()
   }
 }
 

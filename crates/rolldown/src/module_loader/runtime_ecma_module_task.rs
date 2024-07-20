@@ -6,6 +6,7 @@ use rolldown_common::{
   ModuleId, ModuleIdx, ModuleType, SymbolRef,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
+use rolldown_error::BuildDiagnostic;
 
 use super::Msg;
 use crate::{
@@ -17,7 +18,7 @@ use crate::{
 pub struct RuntimeEcmaModuleTask {
   tx: tokio::sync::mpsc::Sender<Msg>,
   module_id: ModuleIdx,
-  // warnings: Vec<BuildError>,
+  errors: Vec<BuildDiagnostic>,
 }
 
 pub struct RuntimeEcmaModuleTaskResult {
@@ -38,15 +39,25 @@ pub struct MakeEcmaAstResult {
 
 impl RuntimeEcmaModuleTask {
   pub fn new(id: ModuleIdx, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
-    Self { module_id: id, tx }
+    Self { module_id: id, tx, errors: Vec::new() }
   }
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
-  pub fn run(self) -> anyhow::Result<()> {
+  pub fn run(mut self) -> anyhow::Result<()> {
     let source: ArcStr = arcstr::literal!(include_str!("../runtime/runtime-without-comments.js"));
 
+    let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source);
+
+    if let Err(error) = ecma_ast_result {
+      if !self.errors.is_empty() {
+        self.tx.try_send(Msg::BuildErrors(self.errors)).expect("Send should not fail");
+        return Ok(());
+      }
+      return Err(error);
+    }
+
     let MakeEcmaAstResult { ast, ast_scope, scan_result, ast_symbols, namespace_object_ref } =
-      self.make_ecma_ast(&source)?;
+      ecma_ast_result.unwrap();
 
     let runtime = RuntimeModuleBrief::new(self.module_id, &ast_scope);
 
@@ -107,9 +118,21 @@ impl RuntimeEcmaModuleTask {
     Ok(())
   }
 
-  fn make_ecma_ast(&self, source: &ArcStr) -> anyhow::Result<MakeEcmaAstResult> {
+  fn make_ecma_ast(
+    &mut self,
+    filename: &str,
+    source: &ArcStr,
+  ) -> anyhow::Result<MakeEcmaAstResult> {
     let source_type = SourceType::default();
-    let mut ast = EcmaCompiler::parse(source, source_type)?;
+
+    let parse_result = EcmaCompiler::parse(filename, source, source_type);
+
+    if let Err(errors) = parse_result {
+      self.errors.extend(errors);
+      return Err(anyhow::anyhow!("Parse failed."));
+    }
+
+    let mut ast = parse_result.unwrap();
     tweak_ast_for_scanning(&mut ast);
 
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();

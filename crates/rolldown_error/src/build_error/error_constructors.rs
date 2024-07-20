@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use arcstr::ArcStr;
-use oxc::span::Span;
+use oxc::{diagnostics::LabeledSpan, span::Span};
 use rolldown_resolver::ResolveError;
 
 use super::BuildDiagnostic;
@@ -13,6 +13,7 @@ use crate::events::{
   external_entry::ExternalEntry,
   forbid_const_assign::ForbidConstAssign,
   missing_export::MissingExport,
+  parse_error::ParseError,
   sourcemap_error::SourceMapError,
   unresolved_entry::UnresolvedEntry,
   unresolved_import::UnresolvedImport,
@@ -38,6 +39,16 @@ impl BuildDiagnostic {
       importer,
       exporter,
     })
+  }
+
+  pub fn parse_error(
+    source: ArcStr,
+    filename: String,
+    error_help: String,
+    error_message: String,
+    error_labels: Vec<LabeledSpan>,
+  ) -> Self {
+    Self::new_inner(ParseError { source, filename, error_help, error_message, error_labels })
   }
 
   pub fn unresolved_entry(

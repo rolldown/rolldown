@@ -84,8 +84,21 @@ impl Bundler {
       Arc::clone(&self.resolver),
     )
     .scan()
-    .await?
+    .await
     {
+      Ok(v) => v,
+      Err(err) => {
+        // TODO: So far we even call build end hooks on unhandleable errors . But should we call build end hook even for unhandleable errors?
+        error_for_build_end_hook = Some(err.to_string());
+        self
+          .plugin_driver
+          .build_end(error_for_build_end_hook.map(|error| HookBuildEndArgs { error }).as_ref())
+          .await?;
+        return Err(err);
+      }
+    };
+
+    let scan_stage_output = match scan_stage_output {
       Ok(v) => v,
       Err(errs) => {
         if let Some(err_msg) = errs.first().map(ToString::to_string) {

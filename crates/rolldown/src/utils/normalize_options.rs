@@ -66,6 +66,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     footer: raw_options.footer,
     dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
     format: raw_options.format.unwrap_or(crate::OutputFormat::Esm),
+    exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
     sourcemap: raw_options.sourcemap.unwrap_or(SourceMapType::Hidden),
     sourcemap_ignore_list: raw_options.sourcemap_ignore_list,
     sourcemap_path_transform: raw_options.sourcemap_path_transform,

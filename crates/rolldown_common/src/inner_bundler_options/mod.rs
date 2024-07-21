@@ -10,9 +10,10 @@ use crate::{ModuleType, SourceMapIgnoreList};
 
 use self::types::treeshake::TreeshakeOptions;
 use self::types::{
-  input_item::InputItem, is_external::IsExternal, output_format::OutputFormat,
-  output_option::AddonOutputOption, platform::Platform, resolve_options::ResolveOptions,
-  source_map_type::SourceMapType, sourcemap_path_transform::SourceMapPathTransform,
+  input_item::InputItem, is_external::IsExternal, output_exports::OutputExports,
+  output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
+  resolve_options::ResolveOptions, source_map_type::SourceMapType,
+  sourcemap_path_transform::SourceMapPathTransform,
 };
 
 pub mod types;
@@ -42,6 +43,7 @@ pub struct BundlerOptions {
   pub asset_filenames: Option<String>,
   pub dir: Option<String>,
   pub format: Option<OutputFormat>,
+  pub exports: Option<OutputExports>,
   pub sourcemap: Option<SourceMapType>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",

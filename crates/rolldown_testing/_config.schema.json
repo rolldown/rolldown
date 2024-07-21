@@ -88,6 +88,16 @@
             }
           ]
         },
+        "exports": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/OutputExports"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "external": {
           "type": [
             "array",
@@ -247,6 +257,15 @@
           },
           "additionalProperties": false
         }
+      ]
+    },
+    "OutputExports": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "default",
+        "named",
+        "none"
       ]
     },
     "OutputFormat": {

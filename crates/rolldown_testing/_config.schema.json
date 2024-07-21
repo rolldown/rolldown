@@ -70,6 +70,18 @@
             "null"
           ]
         },
+        "cssChunkFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cssEntryFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "cwd": {
           "type": [
             "string",

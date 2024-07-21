@@ -1206,9 +1206,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - a-!~{000}~.mjs => a-S8Phwe4_.mjs
 - ab-!~{004}~.mjs => ab-P6qnXG7s.mjs
 - b-!~{001}~.mjs => b-Cfj63ou-.mjs
-- c-!~{002}~.mjs => c-93Mg2Flh.mjs
-- d-!~{003}~.mjs => d-RMSqXibr.mjs
-- d~1-!~{005}~.mjs => d~1-xVe4ksNZ.mjs
+- c-!~{002}~.mjs => c-typAVFSG.mjs
+- d-!~{003}~.mjs => d-L_kdIPvd.mjs
+- d~1-!~{006}~.mjs => d~1-OHeb9gJw.mjs
 
 # tests/esbuild/splitting/dynamic-commonjs-into-es6
 
@@ -1222,15 +1222,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/splitting/dynamic_and_not_dynamic_commonjs_into_es6
 
-- foo-!~{001}~.mjs => foo-F8SnUEwv.mjs
-- foo~1-!~{002}~.mjs => foo~1-0STtZaWV.mjs
-- main-!~{000}~.mjs => main-KdiA-7_V.mjs
+- foo-!~{001}~.mjs => foo-bcMfcoTk.mjs
+- foo~1-!~{003}~.mjs => foo~1-GHDfbT69.mjs
+- main-!~{000}~.mjs => main-T5HWIm2o.mjs
 
 # tests/esbuild/splitting/dynamic_and_not_dynamic_es6_into_es6
 
-- foo-!~{001}~.mjs => foo-CS7CHgr9.mjs
-- foo~1-!~{002}~.mjs => foo~1-5VDnW9zX.mjs
-- main-!~{000}~.mjs => main-J4YTXHVL.mjs
+- foo-!~{001}~.mjs => foo-FH-aBb5m.mjs
+- foo~1-!~{003}~.mjs => foo~1-NnQaXjY5.mjs
+- main-!~{000}~.mjs => main-pBqAE1Do.mjs
 
 # tests/esbuild/splitting/dynamic_import_issue_272
 
@@ -1375,8 +1375,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/code_splitting/basic
 
-- dynamic-!~{003}~.mjs => dynamic-HWUNIxCZ.mjs
-- main1-!~{000}~.mjs => main1-rhlY1e0x.mjs
+- dynamic-!~{004}~.mjs => dynamic-VF2TGUn6.mjs
+- main1-!~{000}~.mjs => main1-rIQjdWv-.mjs
 - main2-!~{001}~.mjs => main2-9lXyDNHK.mjs
 - share-!~{002}~.mjs => share-p7WNRG2n.mjs
 
@@ -1394,9 +1394,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/code_splitting/import_export_unicode
 
-- foo-!~{001}~.mjs => foo-qsRrmZ88.mjs
-- foo~1-!~{002}~.mjs => foo~1-2UxlmrF1.mjs
-- main-!~{000}~.mjs => main-1SR_XaSO.mjs
+- foo-!~{001}~.mjs => foo-6KtgwBs8.mjs
+- foo~1-!~{003}~.mjs => foo~1-SAQ2emDX.mjs
+- main-!~{000}~.mjs => main-Iuj6QrqP.mjs
 
 # tests/rolldown/errors/ambiguous_external_namespace
 
@@ -1467,15 +1467,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
-- lazy-chunk-!~{001}~.mjs => lazy-chunk-J-MH5Fxj.mjs
-- main-!~{000}~.mjs => main-yiKTx6Xh.mjs
-- user-lib-!~{002}~.mjs => user-lib-WvmTODzy.mjs
+- lazy-chunk-!~{001}~.mjs => lazy-chunk-J1hzVBvk.mjs
+- main-!~{000}~.mjs => main-CBS75r_P.mjs
+- user-lib-!~{003}~.mjs => user-lib-r-8uXvh3.mjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/strict
 
-- lazy-chunk-!~{001}~.mjs => lazy-chunk-PHRl1iN_.mjs
-- main-!~{000}~.mjs => main-X0WOTJjQ.mjs
-- user-lib-!~{002}~.mjs => user-lib-_zuNgdH7.mjs
+- lazy-chunk-!~{001}~.mjs => lazy-chunk--4nEtOLs.mjs
+- main-!~{000}~.mjs => main-knHvaFWt.mjs
+- user-lib-!~{003}~.mjs => user-lib-nzh2V7Pn.mjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_399/non_strict
 
@@ -1747,18 +1747,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/issues/122/a
 
 - b-!~{003}~.mjs => b-yd-qNhBj.mjs
-- c-!~{004}~.mjs => c-wjeapSAL.mjs
-- entry1-!~{000}~.mjs => entry1-FXLlf7dp.mjs
-- entry2-!~{001}~.mjs => entry2-NdqhyN06.mjs
-- entry3-!~{002}~.mjs => entry3-h4Zgh5ZR.mjs
+- c-!~{005}~.mjs => c-XVgXQcRd.mjs
+- entry1-!~{000}~.mjs => entry1-27-uXeft.mjs
+- entry2-!~{001}~.mjs => entry2-muN8TekG.mjs
+- entry3-!~{002}~.mjs => entry3-wh3Pk6rw.mjs
 
 # tests/rolldown/issues/122/b
 
-- 1-!~{004}~.mjs => 1-gOnRQYC3.mjs
+- 1-!~{005}~.mjs => 1-cfAryLZn.mjs
 - 2-!~{003}~.mjs => 2-cUdSqz08.mjs
-- a-!~{000}~.mjs => a-CkTTyzB-.mjs
-- b-!~{001}~.mjs => b-YHTcy7uz.mjs
-- c-!~{002}~.mjs => c-4I3nBJuY.mjs
+- a-!~{000}~.mjs => a-UJeerxdy.mjs
+- b-!~{001}~.mjs => b-NGDwuXrn.mjs
+- c-!~{002}~.mjs => c-iWl5yRnj.mjs
 
 # tests/rolldown/issues/1443
 
@@ -1967,15 +1967,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks
 
-- async-entry-!~{001}~.mjs => async-entry-KPjI4-Wo.mjs
-- main-!~{000}~.mjs => main-D2Sgh11x.mjs
-- shared-!~{002}~.mjs => shared-x38TbtaP.mjs
+- async-entry-!~{001}~.mjs => async-entry-vk1CvgVD.mjs
+- main-!~{000}~.mjs => main-FGi5yxGe.mjs
+- shared-!~{003}~.mjs => shared--GTZNyb6.mjs
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- async-entry-!~{001}~.cjs => async-entry-t9ilMDdn.cjs
-- main-!~{000}~.cjs => main-E765J0dI.cjs
-- shared-!~{002}~.cjs => shared-6fkygxiT.cjs
+- async-entry-!~{001}~.cjs => async-entry-JSulq17A.cjs
+- main-!~{000}~.cjs => main-uhoDhOaQ.cjs
+- shared-!~{003}~.cjs => shared-R7vFlqQk.cjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export
 

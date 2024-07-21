@@ -3,9 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use arcstr::ArcStr;
 use futures::future::join_all;
-use oxc::index::IndexVec;
-use rolldown_common::{EntryPoint, ImportKind, ModuleIdx, ModuleTable, ResolvedId};
-use rolldown_ecmascript::EcmaAst;
+use rolldown_common::{EntryPoint, ImportKind, ModuleTable, ResolvedId};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
@@ -14,6 +12,7 @@ use rolldown_resolver::ResolveError;
 use crate::{
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
   runtime::RuntimeModuleBrief,
+  type_alias::IndexEcmaAst,
   types::symbols::Symbols,
   utils::resolve_id::resolve_id,
   SharedOptions, SharedResolver,
@@ -29,7 +28,7 @@ pub struct ScanStage {
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub module_table: ModuleTable,
-  pub index_ecma_ast: IndexVec<ModuleIdx, EcmaAst>,
+  pub index_ecma_ast: IndexEcmaAst,
   pub entry_points: Vec<EntryPoint>,
   pub symbols: Symbols,
   pub runtime: RuntimeModuleBrief,

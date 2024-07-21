@@ -77,6 +77,7 @@ impl RuntimeEcmaModuleTask {
     let module = EcmaModule {
       source,
       idx: self.module_id,
+      ecma_ast_idx: None,
       repr_name,
       stable_id: RUNTIME_MODULE_ID.to_string(),
       id: ModuleId::new(RUNTIME_MODULE_ID),

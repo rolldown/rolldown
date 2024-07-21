@@ -6,7 +6,7 @@ use crate::{
   ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo, NamedImport,
   StmtInfo, StmtInfos, SymbolRef,
 };
-use crate::{IndexModules, ModuleType};
+use crate::{EcmaAstIdx, IndexModules, ModuleType};
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::span::Span;
@@ -18,6 +18,7 @@ pub struct EcmaModule {
   pub exec_order: u32,
   pub source: ArcStr,
   pub idx: ModuleIdx,
+  pub ecma_ast_idx: Option<EcmaAstIdx>,
   pub is_user_defined_entry: bool,
   pub id: ModuleId,
   /// `stable_id` is calculated based on `id` to be stable across machine and os.
@@ -145,6 +146,10 @@ impl EcmaModule {
   //     });
   //   }
   // }
+
+  pub fn ecma_ast_idx(&self) -> EcmaAstIdx {
+    self.ecma_ast_idx.expect("ecma_ast_idx should be set in this stage")
+  }
 }
 
 #[derive(Debug)]

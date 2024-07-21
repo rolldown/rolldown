@@ -5,7 +5,6 @@ use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, Module, ModuleIdx, ModuleTable, OutputFormat, StmtInfo,
   SymbolRef, WrapKind,
 };
-use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
@@ -15,6 +14,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   runtime::RuntimeModuleBrief,
+  type_alias::IndexEcmaAst,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     symbols::Symbols,
@@ -35,7 +35,7 @@ mod wrapping;
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
   pub entries: Vec<EntryPoint>,
-  pub ast_table: IndexVec<ModuleIdx, EcmaAst>,
+  pub ast_table: IndexEcmaAst,
   // pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub symbols: Symbols,
@@ -56,7 +56,7 @@ pub struct LinkStage<'a> {
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
-  pub ast_table: IndexVec<ModuleIdx, EcmaAst>,
+  pub ast_table: IndexEcmaAst,
   pub input_options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,

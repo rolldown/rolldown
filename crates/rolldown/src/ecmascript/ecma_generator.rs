@@ -36,7 +36,12 @@ impl Generator for EcmaGenerator {
         (
           m.idx,
           m.id.clone(),
-          render_ecma_module(m, &ctx.link_output.ast_table[m.idx], m.id.as_ref(), ctx.options),
+          render_ecma_module(
+            m,
+            &ctx.link_output.ast_table[m.ecma_ast_idx()].0,
+            m.id.as_ref(),
+            ctx.options,
+          ),
         )
       })
       .collect::<Vec<_>>();

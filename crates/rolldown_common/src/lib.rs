@@ -52,6 +52,7 @@ pub use crate::{
   types::bundler_file_system::BundlerFileSystem,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
+  types::ecma_ast_idx::EcmaAstIdx,
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,
   types::external_module_idx::ExternalModuleIdx,

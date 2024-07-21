@@ -22,7 +22,7 @@ lightningcss       = { workspace = true }
 oxc                = { workspace = true, features = ["semantic"] }
 regex              = { workspace = true }
 regress            = "0.10.0"
-rolldown_fs        = { workspace = true, features = ["os"] }
+rolldown_fs        = { workspace = true }
 rolldown_rstr      = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_utils     = { workspace = true }

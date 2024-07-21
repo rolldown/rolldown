@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use rolldown_common::{ModuleIdx, ResolvedId, StrOrBytes};
+use rolldown_common::{Module, ModuleIdx, ResolvedId, StrOrBytes};
 use rolldown_error::BuildDiagnostic;
 
 use super::{task_context::TaskContext, Msg};
@@ -99,16 +99,17 @@ impl EcmaModuleTask {
     )
     .await?;
 
-    let CreateModuleReturn { module, resolved_deps, ast_symbol, raw_import_records, ecma_ast } =
-      match ret {
-        Ok(ret) => ret,
-        Err(errs) => {
-          self.errors.extend(errs);
-          return Ok(());
-        }
-      };
+    let CreateModuleReturn { module, resolved_deps, ecma_related, raw_import_records } = match ret {
+      Ok(ret) => ret,
+      Err(errs) => {
+        self.errors.extend(errs);
+        return Ok(());
+      }
+    };
 
-    self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
+    if let Module::Ecma(module) = &module {
+      self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
+    }
 
     self
       .ctx
@@ -117,10 +118,9 @@ impl EcmaModuleTask {
         resolved_deps,
         module_idx: self.module_idx,
         warnings,
-        ast_symbol,
+        ecma_related,
         module,
         raw_import_records,
-        ast: ecma_ast,
       }))
       .await
       .expect("Send should not fail");

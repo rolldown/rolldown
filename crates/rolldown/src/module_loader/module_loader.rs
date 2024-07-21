@@ -215,12 +215,11 @@ impl ModuleLoader {
         Msg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
             module_idx,
-            ast_symbol,
             resolved_deps,
             mut module,
             raw_import_records,
             warnings,
-            ast,
+            ecma_related,
           } = task_result;
           all_warnings.extend(warnings);
 
@@ -230,8 +229,10 @@ impl ModuleLoader {
             .map(|(raw_rec, info)| {
               let id = self.try_spawn_new_task(info, false);
               // Dynamic imported module will be considered as an entry
-              self.intermediate_normal_modules.importers[id]
-                .push(ImporterRecord { kind: raw_rec.kind, importer_path: module.id.clone() });
+              self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+                kind: raw_rec.kind,
+                importer_path: module.id().to_string().into(),
+              });
               if matches!(raw_rec.kind, ImportKind::DynamicImport)
                 && !user_defined_entry_ids.contains(&id)
               {
@@ -240,12 +241,14 @@ impl ModuleLoader {
               raw_rec.into_import_record(id)
             })
             .collect::<IndexVec<ImportRecordIdx, _>>();
-          module.import_records = import_records;
-          let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
-          module.ecma_ast_idx = Some(ast_idx);
-          self.intermediate_normal_modules.modules[module_idx] = Some(module.into());
 
-          self.symbols.add_ast_symbols(module_idx, ast_symbol);
+          module.set_import_records(import_records);
+          if let Some((ast, ast_symbol)) = ecma_related {
+            let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx()));
+            module.set_ecma_ast_idx(ast_idx);
+            self.symbols.add_ast_symbols(module_idx, ast_symbol);
+          }
+          self.intermediate_normal_modules.modules[module_idx] = Some(module);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
           let RuntimeEcmaModuleTaskResult { ast_symbols, mut module, runtime, ast } = task_result;

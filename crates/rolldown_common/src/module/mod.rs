@@ -1,6 +1,8 @@
 pub mod external_module;
 
-use crate::{EcmaModule, ExternalModule, ModuleIdx};
+use oxc::index::IndexVec;
+
+use crate::{EcmaAstIdx, EcmaModule, ExternalModule, ImportRecord, ImportRecordIdx, ModuleIdx};
 
 #[derive(Debug)]
 pub enum Module {
@@ -77,6 +79,20 @@ impl Module {
     match self {
       Module::External(v) => Some(v),
       Module::Ecma(_) => None,
+    }
+  }
+
+  pub fn set_import_records(&mut self, records: IndexVec<ImportRecordIdx, ImportRecord>) {
+    match self {
+      Module::Ecma(v) => v.import_records = records,
+      Module::External(v) => v.import_records = records,
+    }
+  }
+
+  pub fn set_ecma_ast_idx(&mut self, idx: EcmaAstIdx) {
+    match self {
+      Module::Ecma(v) => v.ecma_ast_idx = Some(idx),
+      Module::External(_) => panic!("set_ecma_ast_idx should be called on EcmaModule"),
     }
   }
 }

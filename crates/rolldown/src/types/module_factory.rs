@@ -3,8 +3,8 @@ use std::sync::Arc;
 use futures::future::join_all;
 use oxc::index::IndexVec;
 use rolldown_common::{
-  side_effects::HookSideEffects, EcmaModule, ImportRecordIdx, ModuleDefFormat, ModuleIdx,
-  ModuleType, RawImportRecord, ResolvedId, StrOrBytes,
+  side_effects::HookSideEffects, ImportRecordIdx, Module, ModuleDefFormat, ModuleIdx, ModuleType,
+  RawImportRecord, ResolvedId, StrOrBytes,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
@@ -161,11 +161,10 @@ pub struct CreateModuleArgs {
 }
 
 pub struct CreateModuleReturn {
-  pub module: EcmaModule,
+  pub module: Module,
   pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,
-  pub ast_symbol: AstSymbols,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
-  pub ecma_ast: EcmaAst,
+  pub ecma_related: Option<(EcmaAst, AstSymbols)>,
 }
 
 pub trait ModuleFactory {

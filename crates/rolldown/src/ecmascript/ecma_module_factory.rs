@@ -186,11 +186,10 @@ impl ModuleFactory for EcmaModuleFactory {
     };
 
     Ok(Ok(CreateModuleReturn {
-      module,
+      module: module.into(),
       resolved_deps,
       raw_import_records: import_records,
-      ecma_ast: ast,
-      ast_symbol,
+      ecma_related: Some((ast, ast_symbol)),
     }))
   }
 }

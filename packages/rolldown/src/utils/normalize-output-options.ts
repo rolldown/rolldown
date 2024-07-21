@@ -20,7 +20,7 @@ export function normalizeOutputOptions(
   return {
     dir: dir,
     format: getFormat(format),
-    exports: exports ?? 'named',
+    exports: exports ?? 'auto',
     sourcemap: sourcemap ?? false,
     sourcemapIgnoreList:
       typeof sourcemapIgnoreList === 'function'

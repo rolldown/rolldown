@@ -156,6 +156,7 @@ impl ModuleFactory for EcmaModuleFactory {
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
     let module = EcmaModule {
       source: ast.source().clone(),
+      ecma_ast_idx: None,
       idx: ctx.module_index,
       repr_name,
       stable_id,

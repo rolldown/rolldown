@@ -5,7 +5,6 @@ use rolldown_common::{
   EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx, ImporterRecord, Module,
   ModuleIdx, ModuleTable, OutputFormat, ResolvedId,
 };
-use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
@@ -20,24 +19,28 @@ use super::Msg;
 use crate::module_loader::runtime_ecma_module_task::RuntimeEcmaModuleTaskResult;
 use crate::module_loader::task_context::TaskContext;
 use crate::runtime::{RuntimeModuleBrief, RUNTIME_MODULE_ID};
+use crate::type_alias::IndexEcmaAst;
 use crate::types::symbols::Symbols;
 
 use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<ModuleIdx, Option<Module>>,
-  pub index_ecma_ast: IndexVec<ModuleIdx, Option<EcmaAst>>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
+  pub index_ecma_ast: IndexEcmaAst,
 }
 
 impl IntermediateNormalModules {
   pub fn new() -> Self {
-    Self { modules: IndexVec::new(), index_ecma_ast: IndexVec::new(), importers: IndexVec::new() }
+    Self {
+      modules: IndexVec::new(),
+      importers: IndexVec::new(),
+      index_ecma_ast: IndexVec::default(),
+    }
   }
 
   pub fn alloc_ecma_module_idx(&mut self, symbols: &mut Symbols) -> ModuleIdx {
     let id = self.modules.push(None);
-    self.index_ecma_ast.push(None);
     self.importers.push(Vec::new());
     symbols.alloc_one();
     id
@@ -58,7 +61,7 @@ pub struct ModuleLoader {
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
-  pub index_ecma_ast: IndexVec<ModuleIdx, EcmaAst>,
+  pub index_ecma_ast: IndexEcmaAst,
   pub symbols: Symbols,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -141,7 +144,6 @@ impl ModuleLoader {
           let ext =
             ExternalModule::new(idx, resolved_id.id.to_string(), external_module_side_effects);
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
-          self.intermediate_normal_modules.index_ecma_ast[idx] = Some(EcmaAst::default());
           idx
         } else {
           let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
@@ -239,17 +241,17 @@ impl ModuleLoader {
             })
             .collect::<IndexVec<ImportRecordIdx, _>>();
           module.import_records = import_records;
-
+          let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
+          module.ecma_ast_idx = Some(ast_idx);
           self.intermediate_normal_modules.modules[module_idx] = Some(module.into());
-          self.intermediate_normal_modules.index_ecma_ast[module_idx] = Some(ast);
 
           self.symbols.add_ast_symbols(module_idx, ast_symbol);
         }
         Msg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeEcmaModuleTaskResult { ast_symbols, module, runtime, ast } = task_result;
-
+          let RuntimeEcmaModuleTaskResult { ast_symbols, mut module, runtime, ast } = task_result;
+          let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
+          module.ecma_ast_idx = Some(ast_idx);
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module.into());
-          self.intermediate_normal_modules.index_ecma_ast[self.runtime_id] = Some(ast);
 
           self.symbols.add_ast_symbols(self.runtime_id, ast_symbols);
           runtime_brief = Some(runtime);
@@ -290,9 +292,6 @@ impl ModuleLoader {
       })
       .collect();
 
-    let index_ecma_ast: IndexVec<ModuleIdx, EcmaAst> =
-      self.intermediate_normal_modules.index_ecma_ast.into_iter().flatten().collect();
-
     // IIFE format should inline dynamic imports, so here not put dynamic imports to entries
     if !matches!(self.input_options.format, OutputFormat::Iife) {
       let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
@@ -308,7 +307,7 @@ impl ModuleLoader {
     Ok(Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },
       symbols: self.symbols,
-      index_ecma_ast,
+      index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,

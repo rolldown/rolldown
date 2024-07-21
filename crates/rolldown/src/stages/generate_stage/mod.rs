@@ -62,14 +62,14 @@ impl<'a> GenerateStage<'a> {
       deconflict_chunk_symbols(chunk, self.link_output);
     });
 
-    let ast_table_iter = self.link_output.ast_table.iter_mut_enumerated();
+    let ast_table_iter = self.link_output.ast_table.iter_mut();
     ast_table_iter
       .par_bridge()
-      .filter(|(id, _)| {
-        self.link_output.module_table.modules[*id].as_ecma().map_or(false, |m| m.is_included)
+      .filter(|(_ast, owner)| {
+        self.link_output.module_table.modules[*owner].as_ecma().map_or(false, |m| m.is_included)
       })
-      .for_each(|(id, ast)| {
-        let Module::Ecma(module) = &self.link_output.module_table.modules[id] else {
+      .for_each(|(ast, owner)| {
+        let Module::Ecma(module) = &self.link_output.module_table.modules[*owner] else {
           return;
         };
         let chunk_id = chunk_graph.module_to_chunk[module.idx].unwrap();

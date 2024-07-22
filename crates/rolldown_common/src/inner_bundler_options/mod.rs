@@ -118,7 +118,7 @@ where
       let module_side_effects = obj.get("moduleSideEffects").map_or_else(
         || Ok(types::treeshake::ModuleSideEffects::Boolean(true)),
         |v| match v {
-          Value::Bool(b) => return Ok(types::treeshake::ModuleSideEffects::Boolean(*b)),
+          Value::Bool(b) => Ok(types::treeshake::ModuleSideEffects::Boolean(*b)),
           _ => Err(serde::de::Error::custom("moduleSideEffects should be a `true` or `false`")),
         },
       )?;

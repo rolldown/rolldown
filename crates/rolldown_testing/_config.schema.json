@@ -191,10 +191,7 @@
           ]
         },
         "treeshake": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "$ref": "#/definitions/TreeshakeOptions"
         }
       },
       "additionalProperties": false
@@ -203,6 +200,18 @@
       "type": "object",
       "properties": {
         "strictExecutionOrder": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "InnerOptions": {
+      "type": "object",
+      "properties": {
+        "moduleSideEffects": {
           "type": [
             "boolean",
             "null"
@@ -411,6 +420,16 @@
         "File",
         "Inline",
         "Hidden"
+      ]
+    },
+    "TreeshakeOptions": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/InnerOptions"
+        }
       ]
     }
   }

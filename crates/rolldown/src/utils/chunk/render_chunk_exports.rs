@@ -77,12 +77,7 @@ pub fn render_chunk_exports(
                     }
                   }
                   ExportMode::Default => {
-                    if module.exports_kind.is_commonjs() {
-                      format!("module.exports = {canonical_name};")
-                    } else {
-                      // IIFE doesn't have `module` but we will return "exports"'s value.
-                      format!("exports = {canonical_name};")
-                    }
+                    format!("module.exports = {canonical_name};")
                   }
                   ExportMode::None => String::new(),
                 }

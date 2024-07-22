@@ -1443,6 +1443,26 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/errors/unresolved_entry
 
 
+# tests/fixtures/export_mode/cjs/auto/default
+
+- main-!~{000}~.cjs => main-5pGXs8yV.cjs
+
+# tests/fixtures/export_mode/cjs/auto/named
+
+- main-!~{000}~.cjs => main-k_wpYhgx.cjs
+
+# tests/fixtures/export_mode/cjs/auto/none
+
+- main-!~{000}~.cjs => main-8iCoImED.cjs
+
+# tests/fixtures/export_mode/cjs/default
+
+- main-!~{000}~.cjs => main-7QqxDU_U.cjs
+
+# tests/fixtures/export_mode/cjs/named
+
+- main-!~{000}~.cjs => main-kb0yDvp0.cjs
+
 # tests/fixtures/format/iife/basic
 
 - main-!~{000}~.mjs => main-6h1ciOdZ.mjs

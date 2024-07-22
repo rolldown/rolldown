@@ -1,3 +1,1 @@
-export function a() {
-  return 'named'
-}
+console.log('none')

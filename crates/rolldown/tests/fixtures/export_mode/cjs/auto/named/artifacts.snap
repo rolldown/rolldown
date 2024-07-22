@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/case/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/export_mode/cjs/auto-named
+input_file: crates/rolldown/tests/fixtures/export_mode/cjs/auto/named
 ---
 # Assets
 
@@ -12,11 +12,11 @@ input_file: crates/rolldown/tests/fixtures/export_mode/cjs/auto-named
 
 
 //#region main.js
-function main_default() {
-	return "default";
+function a() {
+	return "named";
 }
 
 //#endregion
 Object.defineProperty(exports, '__esModule', { value: true });
-module.exports = main_default;
+exports.a = a;
 ```

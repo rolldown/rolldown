@@ -1,6 +1,6 @@
 use crate::OutputExports;
 
-/// This is the result after determining what the exports mode is for a module, and the keypoint is to handle with the `auto` mode.
+/// This is the result after determining what the exports mode is for a module, and the key point is to handle with the `auto` mode.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ExportMode {
   Default,

@@ -4,6 +4,6 @@
     "external": [
       "node:assert"
     ],
-    "treeshake": false
+    "treeshake": "False"
   }
 }

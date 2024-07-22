@@ -1,5 +1,5 @@
 {
   "config": {
-    "treeshake": false
+    "treeshake": "False"
   }
 }

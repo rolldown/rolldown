@@ -1,5 +1,9 @@
 {
   "config": {
-    "treeshake": true
+    "treeshake": {
+      "Option": {
+        "module_side_effects": true
+      }
+    }
   }
 }

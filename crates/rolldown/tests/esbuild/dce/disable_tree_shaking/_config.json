@@ -6,7 +6,7 @@
         "import": "entry.jsx"
       }
     ],
-    "treeshake": false,
+    "treeshake": "False",
     "external": [
       "react/jsx-runtime"
     ]

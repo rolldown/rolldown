@@ -4,6 +4,6 @@
     "external": [
       "external"
     ],
-    "treeshake": false
+    "treeshake": "False"
   }
 }

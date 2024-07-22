@@ -181,10 +181,7 @@
           ]
         },
         "treeshake": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "$ref": "#/definitions/TreeshakeOptions"
         }
       },
       "additionalProperties": false
@@ -200,6 +197,17 @@
         }
       },
       "additionalProperties": false
+    },
+    "InnerOptions": {
+      "type": "object",
+      "properties": {
+        "module_side_effects": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
     },
     "InputItem": {
       "type": "object",
@@ -392,6 +400,28 @@
         "File",
         "Inline",
         "Hidden"
+      ]
+    },
+    "TreeshakeOptions": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "False"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "Option"
+          ],
+          "properties": {
+            "Option": {
+              "$ref": "#/definitions/InnerOptions"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
     }
   }

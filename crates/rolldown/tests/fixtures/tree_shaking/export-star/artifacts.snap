@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/case/case.rs
-assertion_line: 176
 expression: content
 input_file: crates/rolldown/tests/fixtures/tree_shaking/export-star
 ---

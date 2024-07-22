@@ -9,6 +9,7 @@ pub mod chunk_kind;
 pub mod ecma_ast_idx;
 pub mod entry_point;
 pub mod exports_kind;
+pub mod export_mode;
 pub mod external_module_idx;
 pub mod import_record;
 pub mod importer_record;

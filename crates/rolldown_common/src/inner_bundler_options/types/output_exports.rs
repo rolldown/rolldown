@@ -15,3 +15,9 @@ pub enum OutputExports {
   Named,
   None,
 }
+
+impl Default for OutputExports {
+  fn default() -> Self {
+    Self::Auto
+  }
+}

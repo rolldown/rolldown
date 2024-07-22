@@ -56,6 +56,7 @@ pub use crate::{
   types::ecma_ast_idx::EcmaAstIdx,
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,
+  types::export_mode::ExportMode,
   types::external_module_idx::ExternalModuleIdx,
   types::import_record::{ImportKind, ImportRecord, ImportRecordIdx, RawImportRecord},
   types::importer_record::ImporterRecord,

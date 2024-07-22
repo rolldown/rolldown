@@ -42,7 +42,6 @@ const {
         type: 'module',
       },
     )
-
     worker.addEventListener('message', __wasmCreateOnMessageForFsProxy(__fs))
 
     return worker

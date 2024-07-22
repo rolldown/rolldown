@@ -76,7 +76,7 @@ pub struct BundlerOptions {
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(deserialize_with = "deserialize_treeshake", default),
-    schemars(with = "Option<bool>")
+    schemars(skip)
   )]
   pub treeshake: TreeshakeOptions,
   pub experimental: Option<ExperimentalOptions>,

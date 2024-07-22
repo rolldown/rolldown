@@ -77,7 +77,12 @@ pub fn render_chunk_exports(
                     }
                   }
                   ExportMode::Default => {
-                    format!("exports.default = {canonical_name};")
+                    if module.exports_kind.is_commonjs() {
+                      format!("module.exports = {canonical_name};")
+                    } else {
+                      // IIFE doesn't have `module` but we will return "exports"'s value.
+                      format!("exports = {canonical_name};")
+                    }
                   }
                   ExportMode::None => String::new(),
                 }
@@ -164,6 +169,7 @@ pub fn determine_export_mode(
   let export_items = get_export_items(this, graph);
 
   match export_mode {
+    OutputExports::Named => Ok(ExportMode::Named),
     OutputExports::Default => {
       if export_items.len() != 1 || export_items[0].0.as_str() != "default" {
         // TODO improve the backtrace
@@ -174,7 +180,7 @@ pub fn determine_export_mode(
       Ok(ExportMode::Default)
     }
     OutputExports::None => {
-      if export_items.len() > 1 {
+      if !export_items.is_empty() {
         // TODO improve the backtrace
         anyhow::bail!(
           "Chunk was specified for `output.exports`, but entry module has invalid exports"
@@ -192,6 +198,5 @@ pub fn determine_export_mode(
         Ok(ExportMode::Named)
       }
     }
-    OutputExports::Named => Ok(ExportMode::Named),
   }
 }

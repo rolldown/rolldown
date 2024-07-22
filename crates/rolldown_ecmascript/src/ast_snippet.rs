@@ -279,15 +279,15 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       false,
       false,
+      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec_with_capacity(2),
         None::<Box<'_, BindingRestElement<'_>>>,
       ),
-      self.builder.function_body(SPAN, self.builder.vec(), statements),
-      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
       None::<Box<'_, TSTypeAnnotation<'_>>>,
+      self.builder.function_body(SPAN, self.builder.vec(), statements),
     );
     arrow_expr.params.items.push(self.builder.formal_parameter(
       SPAN,
@@ -344,15 +344,15 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       false,
       false,
+      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
         self.builder.vec(),
         None::<Box<'_, BindingRestElement<'_>>>,
       ),
-      self.builder.function_body(SPAN, self.builder.vec(), statements),
-      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
       None::<Box<'_, TSTypeAnnotation<'_>>>,
+      self.builder.function_body(SPAN, self.builder.vec(), statements),
     );
 
     //  __esm(...)
@@ -418,6 +418,7 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       true,
       false,
+      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
       self.builder.formal_parameters(
         SPAN,
         ast::FormalParameterKind::Signature,
@@ -425,7 +426,6 @@ impl<'ast> AstSnippet<'ast> {
         None::<Box<'_, BindingRestElement<'_>>>,
       ),
       self.builder.function_body(SPAN, self.builder.vec(), statements),
-      None::<Box<'_, TSTypeParameterDeclaration<'_>>>,
       None::<Box<'_, TSTypeAnnotation<'_>>>,
     ))
   }

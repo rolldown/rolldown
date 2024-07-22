@@ -79,7 +79,7 @@ pub fn render_chunk_exports(
                   ExportMode::Default => {
                     format!("exports.default = {canonical_name};")
                   }
-                  ExportMode::None => "".to_string(),
+                  ExportMode::None => String::new(),
                 }
               })
               .collect::<Vec<_>>();
@@ -165,14 +165,13 @@ pub fn determine_export_mode(
 
   match export_mode {
     OutputExports::Default => {
-      if export_items.len() == 1 || export_items[0].0.as_str() == "default" {
+      if export_items.len() != 1 || export_items[0].0.as_str() != "default" {
         // TODO improve the backtrace
         anyhow::bail!(
           "Chunk was specified for `output.exports`, but entry module has invalid exports"
         );
-      } else {
-        Ok(ExportMode::Default)
       }
+      Ok(ExportMode::Default)
     }
     OutputExports::None => {
       if export_items.len() > 1 {
@@ -180,12 +179,11 @@ pub fn determine_export_mode(
         anyhow::bail!(
           "Chunk was specified for `output.exports`, but entry module has invalid exports"
         );
-      } else {
-        Ok(ExportMode::None)
       }
+      Ok(ExportMode::None)
     }
     OutputExports::Auto => {
-      if export_items.len() == 0 {
+      if export_items.is_empty() {
         Ok(ExportMode::None)
       } else if export_items.len() == 1 && export_items[0].0.as_str() == "default" {
         Ok(ExportMode::Default)

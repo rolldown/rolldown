@@ -1,4 +1,7 @@
-use rolldown_common::{Chunk, ChunkKind, ExportMode, ExportsKind, NormalizedBundlerOptions, OutputExports, OutputFormat, SymbolRef, WrapKind};
+use rolldown_common::{
+  Chunk, ChunkKind, ExportMode, ExportsKind, NormalizedBundlerOptions, OutputExports, OutputFormat,
+  SymbolRef, WrapKind,
+};
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
 
@@ -49,6 +52,7 @@ pub fn render_chunk_exports(
         ChunkKind::EntryPoint { module, .. } => {
           let module = &graph.module_table.modules[module].as_ecma().unwrap();
           if matches!(module.exports_kind, ExportsKind::Esm) {
+            let export_mode = determine_export_mode(this, &output_options.exports, graph).unwrap();
             s.push_str("Object.defineProperty(exports, '__esModule', { value: true });\n");
             let rendered_items = export_items
               .into_iter()
@@ -64,10 +68,18 @@ pub fn render_chunk_exports(
                   ));
                 }
 
-                if is_validate_identifier_name(&exported_name) {
-                  format!("exports.{exported_name} = {canonical_name};")
-                } else {
-                  format!("exports['{exported_name}'] = {canonical_name};")
+                match export_mode {
+                  ExportMode::Named => {
+                    if is_validate_identifier_name(&exported_name) {
+                      format!("exports.{exported_name} = {canonical_name};")
+                    } else {
+                      format!("exports['{exported_name}'] = {canonical_name};")
+                    }
+                  }
+                  ExportMode::Default => {
+                    format!("exports.default = {canonical_name};")
+                  }
+                  ExportMode::None => "".to_string(),
                 }
               })
               .collect::<Vec<_>>();
@@ -144,21 +156,33 @@ pub fn get_chunk_export_names(
     .collect::<Vec<_>>()
 }
 
-pub fn determine_export_mode(this: &Chunk, export_mode: OutputExports, graph: &LinkStageOutput) -> anyhow::Result<ExportMode> {
+pub fn determine_export_mode(
+  this: &Chunk,
+  export_mode: &OutputExports,
+  graph: &LinkStageOutput,
+) -> anyhow::Result<ExportMode> {
   let export_items = get_export_items(this, graph);
 
   match export_mode {
     OutputExports::Default => {
       if export_items.len() == 1 || export_items[0].0.as_str() == "default" {
         // TODO improve the backtrace
-        anyhow::bail!("Chunk was specified for `output.exports`, but entry module has invalid exports");
-      } else { Ok(ExportMode::Default) }
+        anyhow::bail!(
+          "Chunk was specified for `output.exports`, but entry module has invalid exports"
+        );
+      } else {
+        Ok(ExportMode::Default)
+      }
     }
     OutputExports::None => {
       if export_items.len() > 1 {
         // TODO improve the backtrace
-        anyhow::bail!("Chunk was specified for `output.exports`, but entry module has invalid exports");
-      } else { Ok(ExportMode::None) }
+        anyhow::bail!(
+          "Chunk was specified for `output.exports`, but entry module has invalid exports"
+        );
+      } else {
+        Ok(ExportMode::None)
+      }
     }
     OutputExports::Auto => {
       if export_items.len() == 0 {
@@ -170,8 +194,6 @@ pub fn determine_export_mode(this: &Chunk, export_mode: OutputExports, graph: &L
         Ok(ExportMode::Named)
       }
     }
-    OutputExports::Named => {
-      Ok(ExportMode::Named)
-    }
+    OutputExports::Named => Ok(ExportMode::Named),
   }
 }

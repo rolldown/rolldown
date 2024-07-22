@@ -1,6 +1,6 @@
 use rolldown_common::{
-  Chunk, ChunkKind, ExportMode, ExportsKind, NormalizedBundlerOptions, OutputExports, OutputFormat,
-  SymbolRef, WrapKind,
+  Chunk, ChunkKind, ExportsKind, NormalizedBundlerOptions, OutputExports, OutputFormat, SymbolRef,
+  WrapKind,
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
@@ -69,17 +69,18 @@ pub fn render_chunk_exports(
                 }
 
                 match export_mode {
-                  ExportMode::Named => {
+                  OutputExports::Named => {
                     if is_validate_identifier_name(&exported_name) {
                       format!("exports.{exported_name} = {canonical_name};")
                     } else {
                       format!("exports['{exported_name}'] = {canonical_name};")
                     }
                   }
-                  ExportMode::Default => {
+                  OutputExports::Default => {
                     format!("module.exports = {canonical_name};")
                   }
-                  ExportMode::None => String::new(),
+                  OutputExports::None => String::new(),
+                  OutputExports::Auto => unreachable!(),
                 }
               })
               .collect::<Vec<_>>();
@@ -160,11 +161,11 @@ pub fn determine_export_mode(
   this: &Chunk,
   export_mode: &OutputExports,
   graph: &LinkStageOutput,
-) -> anyhow::Result<ExportMode> {
+) -> anyhow::Result<OutputExports> {
   let export_items = get_export_items(this, graph);
 
   match export_mode {
-    OutputExports::Named => Ok(ExportMode::Named),
+    OutputExports::Named => Ok(OutputExports::Named),
     OutputExports::Default => {
       if export_items.len() != 1 || export_items[0].0.as_str() != "default" {
         // TODO improve the backtrace
@@ -172,7 +173,7 @@ pub fn determine_export_mode(
           "Chunk was specified for `output.exports`, but entry module has invalid exports"
         );
       }
-      Ok(ExportMode::Default)
+      Ok(OutputExports::Default)
     }
     OutputExports::None => {
       if !export_items.is_empty() {
@@ -181,16 +182,16 @@ pub fn determine_export_mode(
           "Chunk was specified for `output.exports`, but entry module has invalid exports"
         );
       }
-      Ok(ExportMode::None)
+      Ok(OutputExports::None)
     }
     OutputExports::Auto => {
       if export_items.is_empty() {
-        Ok(ExportMode::None)
+        Ok(OutputExports::None)
       } else if export_items.len() == 1 && export_items[0].0.as_str() == "default" {
-        Ok(ExportMode::Default)
+        Ok(OutputExports::Default)
       } else {
         // TODO add warnings
-        Ok(ExportMode::Named)
+        Ok(OutputExports::Named)
       }
     }
   }

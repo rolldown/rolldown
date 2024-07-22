@@ -55,7 +55,6 @@ pub use crate::{
   types::chunk_kind::ChunkKind,
   types::ecma_ast_idx::EcmaAstIdx,
   types::entry_point::{EntryPoint, EntryPointKind},
-  types::export_mode::ExportMode,
   types::exports_kind::ExportsKind,
   types::external_module_idx::ExternalModuleIdx,
   types::import_record::{ImportKind, ImportRecord, ImportRecordIdx, RawImportRecord},

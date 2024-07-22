@@ -8,7 +8,6 @@ pub mod chunk_idx;
 pub mod chunk_kind;
 pub mod ecma_ast_idx;
 pub mod entry_point;
-pub mod export_mode;
 pub mod exports_kind;
 pub mod external_module_idx;
 pub mod import_record;

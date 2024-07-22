@@ -147,21 +147,31 @@ pub fn get_chunk_export_names(
 pub fn determine_export_mode(this: &Chunk, export_mode: OutputExports, graph: &LinkStageOutput) -> anyhow::Result<ExportMode> {
   let export_items = get_export_items(this, graph);
 
-  if matches!(export_mode, OutputExports::Default) {
-    if export_items.len() == 1 || export_items[0].0.as_str() == "default" {
-      // TODO improve the backtrace
-      anyhow::anyhow!("Chunk was specified for `output.exports`, but entry module has invalid exports");
+  match export_mode {
+    OutputExports::Default => {
+      if export_items.len() == 1 || export_items[0].0.as_str() == "default" {
+        // TODO improve the backtrace
+        anyhow::bail!("Chunk was specified for `output.exports`, but entry module has invalid exports");
+      } else { Ok(ExportMode::Default) }
     }
-  } else if matches!(export_mode, OutputExports::None) && export_items.len() > 1 {
-    // TODO improve the backtrace
-    anyhow::anyhow!("Chunk was specified for `output.exports`, but entry module has invalid exports");
-  }
-  if matches!(export_mode, OutputExports::Auto) && export_items.len() == 0 {
-    Ok(ExportMode::None)
-  } else if export_items.len() == 1 && export_items[0].0.as_str() == "default" {
-    Ok(ExportMode::Default)
-  } else {
-    // TODO add warnings
-    Ok(ExportMode::Named)
+    OutputExports::None => {
+      if export_items.len() > 1 {
+        // TODO improve the backtrace
+        anyhow::bail!("Chunk was specified for `output.exports`, but entry module has invalid exports");
+      } else { Ok(ExportMode::None) }
+    }
+    OutputExports::Auto => {
+      if export_items.len() == 0 {
+        Ok(ExportMode::None)
+      } else if export_items.len() == 1 && export_items[0].0.as_str() == "default" {
+        Ok(ExportMode::Default)
+      } else {
+        // TODO add warnings
+        Ok(ExportMode::Named)
+      }
+    }
+    OutputExports::Named => {
+      Ok(ExportMode::Named)
+    }
   }
 }

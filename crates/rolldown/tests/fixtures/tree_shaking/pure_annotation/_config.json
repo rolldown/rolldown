@@ -2,7 +2,7 @@
   "config": {
     "treeshake": {
       "Option": {
-        "module_side_effects": true
+        "moduleSideEffects": true
       }
     }
   }

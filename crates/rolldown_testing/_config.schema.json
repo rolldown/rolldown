@@ -201,13 +201,14 @@
     "InnerOptions": {
       "type": "object",
       "properties": {
-        "module_side_effects": {
+        "moduleSideEffects": {
           "type": [
             "boolean",
             "null"
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "InputItem": {
       "type": "object",

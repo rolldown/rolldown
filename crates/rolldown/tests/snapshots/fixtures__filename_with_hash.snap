@@ -1793,6 +1793,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-WlVJrkq9.mjs
 
+# tests/fixtures/tree_shaking/external-export-star1
+
+- main-!~{000}~.mjs => main-0iPGFsZ0.mjs
+
 # tests/fixtures/tree_shaking/indirect_module_side_effect
 
 - main-!~{000}~.mjs => main-s6CT5oDy.mjs

@@ -1,3 +1,4 @@
+#[cfg(feature = "deserialize_bundler_options")]
 use serde_json::Value;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 

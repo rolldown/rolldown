@@ -190,6 +190,7 @@ impl ModuleFactory for EcmaModuleFactory {
       resolved_deps,
       raw_import_records: import_records,
       ecma_related: Some((ast, ast_symbol)),
+      css_related: None,
     }))
   }
 }

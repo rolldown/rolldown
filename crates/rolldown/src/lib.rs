@@ -2,6 +2,7 @@ mod ast_scanner;
 mod bundler;
 mod bundler_builder;
 mod chunk_graph;
+mod css;
 mod ecmascript;
 mod module_finalizers;
 mod module_loader;

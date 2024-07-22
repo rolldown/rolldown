@@ -56,6 +56,7 @@ pub async fn load_source(
           | ModuleType::Json
           | ModuleType::Text
           | ModuleType::Empty
+          | ModuleType::Css
           | ModuleType::Custom(_) => {
             Ok((StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?), Some(guessed)))
           }

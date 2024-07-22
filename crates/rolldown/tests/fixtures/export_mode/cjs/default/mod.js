@@ -1,3 +1,3 @@
-export function exported() {
+export default function example() {
   return 'named';
 }

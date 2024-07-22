@@ -1,4 +1,3 @@
-// cSpell:disable
 use oxc::sourcemap::{ConcatSourceMapBuilder, SourceMap};
 
 use crate::lines_count;

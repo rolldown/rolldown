@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+assertion_line: 176
+expression: content
+input_file: crates/rolldown/tests/fixtures/export_mode/cjs/auto-default
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region main.js
+function main_default() {
+	return "default";
+}
+
+//#endregion
+export { main_default as default };
+```

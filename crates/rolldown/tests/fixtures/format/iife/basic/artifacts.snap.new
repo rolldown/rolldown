@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+assertion_line: 176
+expression: content
+input_file: crates/rolldown/tests/fixtures/format/iife/basic
+---
+# Assets
+
+## cjs.mjs
+
+```js
+
+
+//#region cjs.js
+var require_cjs = __commonJSMin((exports, module) => {
+	module.exports = 1;
+});
+
+//#endregion
+export default require_cjs();
+
+```
+## esm.mjs
+
+```js
+
+//#region esm.js
+const value = 1;
+
+//#endregion
+export { value };
+```
+## foo.mjs
+
+```js
+
+```
+## main.mjs
+
+```js
+
+//#region main.js
+import("./foo.mjs");
+import("./cjs.mjs");
+import("./esm.mjs");
+
+//#endregion
+```

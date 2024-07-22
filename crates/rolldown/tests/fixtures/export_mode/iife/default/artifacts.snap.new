@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+assertion_line: 176
+expression: content
+input_file: crates/rolldown/tests/fixtures/export_mode/iife/default
+---
+# Assets
+
+## main.mjs
+
+```js
+(function() {
+
+//#region mod.js
+function default_mod_default() {
+	return "default";
+}
+
+//#endregion
+//#region main.js
+var main_default = default_mod_default;
+
+//#endregion
+Object.defineProperty(exports, '__esModule', { value: true });
+module.exports = main_default;
+return exports;
+})({});
+```

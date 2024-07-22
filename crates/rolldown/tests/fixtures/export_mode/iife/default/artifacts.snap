@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/export_mode/cjs/default
+---
+# Assets
+
+## main.cjs
+
+```js
+"use strict";
+
+
+//#region mod.js
+function default_mod_default() {
+	return "default";
+}
+
+//#endregion
+//#region main.js
+var main_default = default_mod_default;
+
+//#endregion
+Object.defineProperty(exports, '__esModule', { value: true });
+module.exports = main_default;
+```

@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+assertion_line: 176
+expression: content
+input_file: crates/rolldown/tests/fixtures/export_mode/cjs/auto/none
+---
+# Assets
+
+## main.cjs
+
+```js
+
+//#region main.js
+console.log("none");
+
+//#endregion
+```

@@ -425,8 +425,8 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.vec(),
         None::<Box<'_, BindingRestElement<'_>>>,
       ),
-      self.builder.function_body(SPAN, self.builder.vec(), statements),
       None::<Box<'_, TSTypeAnnotation<'_>>>,
+      self.builder.function_body(SPAN, self.builder.vec(), statements),
     ))
   }
 

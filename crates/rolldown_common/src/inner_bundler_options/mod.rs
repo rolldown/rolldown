@@ -76,8 +76,7 @@ pub struct BundlerOptions {
   pub resolve: Option<ResolveOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
-    serde(deserialize_with = "deserialize_treeshake", default),
-    schemars(skip)
+    serde(deserialize_with = "deserialize_treeshake", default)
   )]
   pub treeshake: TreeshakeOptions,
   pub experimental: Option<ExperimentalOptions>,
@@ -109,8 +108,8 @@ where
 {
   let value = Option::<Value>::deserialize(deserializer)?;
   match value {
-    Some(Value::Bool(false)) => Ok(TreeshakeOptions::False),
-    Some(Value::Bool(true)) | None => {
+    Some(Value::Bool(false)) => Ok(TreeshakeOptions::Boolean(false)),
+    None | Some(Value::Bool(true)) => {
       Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
         module_side_effects: types::treeshake::ModuleSideEffects::Boolean(true),
       }))

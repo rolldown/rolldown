@@ -133,7 +133,8 @@ impl ModuleLoader {
           let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
           not_visited.insert(idx);
           let external_module_side_effects = match self.input_options.treeshake {
-            rolldown_common::TreeshakeOptions::False => DeterminedSideEffects::NoTreeshake,
+            rolldown_common::TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
+            rolldown_common::TreeshakeOptions::Boolean(true) => unreachable!(),
             rolldown_common::TreeshakeOptions::Option(ref opt) => match opt.module_side_effects {
               rolldown_common::ModuleSideEffects::Boolean(false) => {
                 DeterminedSideEffects::UserDefined(false)

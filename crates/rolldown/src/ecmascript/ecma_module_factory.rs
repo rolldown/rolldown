@@ -143,7 +143,8 @@ impl ModuleFactory for EcmaModuleFactory {
       // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
       None => match ctx.options.treeshake {
         // Actually this convert is not necessary, just for passing type checking
-        TreeshakeOptions::False => DeterminedSideEffects::NoTreeshake,
+        TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
+        TreeshakeOptions::Boolean(true) => unreachable!(),
         TreeshakeOptions::Option(ref opt) => {
           if opt.module_side_effects.resolve(&stable_id) {
             lazy_check_side_effects()

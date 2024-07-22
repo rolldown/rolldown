@@ -1402,21 +1402,21 @@ checksum = "caff54706df99d2a78a5a4e3455ff45448d81ef1bb63c22cd14052ca0e993a3f"
 [[package]]
 name = "oxc"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
- "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_codegen 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_diagnostics 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_index 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_mangler 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_codegen 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_diagnostics 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_index 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_mangler 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
  "oxc_minifier",
- "oxc_parser 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_semantic 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_sourcemap 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_transformer 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_parser 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_semantic 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_sourcemap 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_transformer 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
 ]
 
 [[package]]
@@ -1446,7 +1446,7 @@ dependencies = [
 [[package]]
 name = "oxc_allocator"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "allocator-api2",
  "bumpalo",
@@ -1469,14 +1469,14 @@ dependencies = [
 [[package]]
 name = "oxc_ast"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "bitflags 2.6.0",
  "num-bigint",
- "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_ast_macros 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_ast_macros 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
 ]
 
 [[package]]
@@ -1488,7 +1488,7 @@ checksum = "5719d91d173521f09acdb3ae334311721e132e69d7ab165d124d5e54379a63ea"
 [[package]]
 name = "oxc_ast_macros"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 
 [[package]]
 name = "oxc_cfg"
@@ -1506,11 +1506,11 @@ dependencies = [
 [[package]]
 name = "oxc_cfg"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "bitflags 2.6.0",
  "itertools 0.13.0",
- "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
  "petgraph",
  "rustc-hash",
 ]
@@ -1536,17 +1536,17 @@ dependencies = [
 [[package]]
 name = "oxc_codegen"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "bitflags 2.6.0",
  "daachorse",
  "once_cell",
- "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_mangler 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_sourcemap 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_mangler 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_sourcemap 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
  "rustc-hash",
 ]
 
@@ -1565,7 +1565,7 @@ dependencies = [
 [[package]]
 name = "oxc_diagnostics"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "miette",
  "owo-colors",
@@ -1582,7 +1582,7 @@ checksum = "5d38dcb7b8fe88315624afd7f0e365a7a8b368603eeb831ea6ec09bc6e1aba91"
 [[package]]
 name = "oxc_index"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 
 [[package]]
 name = "oxc_isolated_declarations"
@@ -1614,31 +1614,31 @@ dependencies = [
 [[package]]
 name = "oxc_mangler"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "itertools 0.13.0",
- "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_index 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_semantic 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_index 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_semantic 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
 ]
 
 [[package]]
 name = "oxc_minifier"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "num-bigint",
  "num-traits",
- "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_codegen 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_diagnostics 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_mangler 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_parser 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_semantic 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_codegen 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_diagnostics 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_mangler 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_parser 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_semantic 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
 ]
 
 [[package]]
@@ -1664,18 +1664,18 @@ dependencies = [
 [[package]]
 name = "oxc_parser"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "assert-unchecked",
  "bitflags 2.6.0",
  "memchr",
  "num-bigint",
  "num-traits",
- "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_diagnostics 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_diagnostics 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
  "rustc-hash",
  "seq-macro",
 ]
@@ -1720,17 +1720,18 @@ dependencies = [
 [[package]]
 name = "oxc_semantic"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
+ "assert-unchecked",
  "indexmap",
  "itertools 0.13.0",
- "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_cfg 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_diagnostics 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_index 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_cfg 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_diagnostics 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_index 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
  "phf 0.11.2",
  "rustc-hash",
 ]
@@ -1751,7 +1752,7 @@ dependencies = [
 [[package]]
 name = "oxc_sourcemap"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "base64-simd 0.8.0",
  "cfg-if",
@@ -1775,11 +1776,11 @@ dependencies = [
 [[package]]
 name = "oxc_span"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "compact_str",
  "miette",
- "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
 ]
 
 [[package]]
@@ -1801,12 +1802,12 @@ dependencies = [
 [[package]]
 name = "oxc_syntax"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "bitflags 2.6.0",
  "dashmap 6.0.1",
- "oxc_index 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_index 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
  "phf 0.11.2",
  "rustc-hash",
  "ryu-js",
@@ -1856,18 +1857,18 @@ dependencies = [
 [[package]]
 name = "oxc_transformer"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "dashmap 6.0.1",
  "indexmap",
  "oxc-browserslist",
- "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_diagnostics 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_semantic 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_traverse 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_diagnostics 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_semantic 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_traverse 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
  "ropey",
  "rustc-hash",
  "serde",
@@ -1892,15 +1893,15 @@ dependencies = [
 [[package]]
 name = "oxc_traverse"
 version = "0.21.0"
-source = "git+https://github.com/oxc-project/oxc?branch=test-visit#753c64d6322a7d54d4e7de2070cf3045621af02f"
+source = "git+https://github.com/oxc-project/oxc?branch=main#bc8d4e58763a5921cb28ca7cf6e18f331de14284"
 dependencies = [
  "compact_str",
  "memoffset",
- "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_semantic 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
- "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=test-visit)",
+ "oxc_allocator 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_ast 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_semantic 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_span 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_syntax 0.21.0 (git+https://github.com/oxc-project/oxc?branch=main)",
 ]
 
 [[package]]

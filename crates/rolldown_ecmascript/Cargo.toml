@@ -16,7 +16,7 @@ workspace = true
 [dependencies]
 anyhow         = { workspace = true }
 arcstr         = { workspace = true }
-oxc            = { workspace = true, features = ["semantic", "codegen"] }
+oxc            = { workspace = true }
 rolldown_error = { workspace = true }
 self_cell      = { workspace = true }
 smallvec       = { workspace = true }

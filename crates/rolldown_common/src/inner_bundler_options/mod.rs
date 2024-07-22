@@ -1,3 +1,4 @@
+use serde_json::Value;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -105,11 +106,24 @@ fn deserialize_treeshake<'de, D>(deserializer: D) -> Result<TreeshakeOptions, D:
 where
   D: Deserializer<'de>,
 {
-  let deserialized = Option::<bool>::deserialize(deserializer)?;
-  match deserialized {
-    Some(false) => Ok(TreeshakeOptions::False),
-    Some(true) | None => Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
-      module_side_effects: types::treeshake::ModuleSideEffects::Boolean(true),
-    })),
+  let value = Option::<Value>::deserialize(deserializer)?;
+  match value {
+    Some(Value::Bool(false)) => Ok(TreeshakeOptions::False),
+    Some(Value::Bool(true)) | None => {
+      Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
+        module_side_effects: types::treeshake::ModuleSideEffects::Boolean(true),
+      }))
+    }
+    Some(Value::Object(obj)) => {
+      let module_side_effects = obj.get("moduleSideEffects").map_or_else(
+        || Ok(types::treeshake::ModuleSideEffects::Boolean(true)),
+        |v| match v {
+          Value::Bool(b) => return Ok(types::treeshake::ModuleSideEffects::Boolean(*b)),
+          _ => Err(serde::de::Error::custom("moduleSideEffects should be a `true` or `false`")),
+        },
+      )?;
+      Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions { module_side_effects }))
+    }
+    _ => Err(serde::de::Error::custom("treeshake should be a boolean or an object")),
   }
 }

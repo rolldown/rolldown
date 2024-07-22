@@ -181,9 +181,28 @@
           ]
         },
         "treeshake": {
+          "anyOf": [
+            {
+              "type": "boolean"
+              
+            },
+            {
+              "$ref": "#/definitions/TreeshakeOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "TreeshakeOptions": {
+      "type": "object",
+      "properties": {
+        "moduleSideEffects": {
           "type": [
-            "boolean",
-            "null"
+            "boolean"
           ]
         }
       },

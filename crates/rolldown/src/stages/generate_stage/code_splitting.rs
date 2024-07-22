@@ -22,14 +22,14 @@ impl<'a> GenerateStage<'a> {
     };
     let meta = &self.link_output.metas[module_id];
 
-    if !module.is_included {
-      return;
+    // Here if the module only has re-export statements, the `is_included` is false at `module_side_effects: false`.
+    // But we also need to include it's dependencies.
+    if module.is_included {
+      if module_to_bits[module_id].has_bit(entry_index) {
+        return;
+      }
+      module_to_bits[module_id].set_bit(entry_index);
     }
-
-    if module_to_bits[module_id].has_bit(entry_index) {
-      return;
-    }
-    module_to_bits[module_id].set_bit(entry_index);
 
     module.import_records.iter().for_each(|rec| {
       if let Module::Ecma(importee) = &self.link_output.module_table.modules[rec.resolved_module] {

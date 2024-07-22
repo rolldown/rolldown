@@ -25,6 +25,7 @@ itertools                = { workspace = true }
 oxc                      = { workspace = true }
 regex                    = { workspace = true }
 rolldown_common          = { workspace = true }
+rolldown_css             = { workspace = true }
 rolldown_ecmascript      = { workspace = true }
 rolldown_error           = { workspace = true }
 rolldown_fs              = { workspace = true, features = ["os"] }

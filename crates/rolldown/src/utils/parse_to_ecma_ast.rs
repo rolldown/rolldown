@@ -36,6 +36,11 @@ pub fn parse_to_ecma_ast(
 ) -> anyhow::Result<DiagnosableResult<(EcmaAst, SymbolTable, ScopeTree)>> {
   // 1. Transform the source to the type that rolldown supported.
   let (source, parsed_type) = match module_type {
+    ModuleType::Css => {
+      return Err(anyhow::format_err!(
+        "unreachable: CSS module type should not be handed to parse_to_ecma_ast"
+      ))
+    }
     ModuleType::Js => (source.try_into_string()?, OxcParseType::Js),
     ModuleType::Jsx => (source.try_into_string()?, OxcParseType::Jsx),
     ModuleType::Ts => (source.try_into_string()?, OxcParseType::Ts),

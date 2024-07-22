@@ -4,7 +4,7 @@ homepage.workspace   = true
 license.workspace    = true
 name                 = "rolldown_css"
 repository.workspace = true
-version              = "0.1.0"
+version              = "0.0.1"
 
 [lib]
 doctest = false

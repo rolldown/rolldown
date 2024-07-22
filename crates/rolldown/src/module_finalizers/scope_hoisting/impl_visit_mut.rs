@@ -432,6 +432,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   .into_in(self.alloc),
               );
             }
+            Module::Css(_) => {
+              unimplemented!("Require css is supported so far");
+            }
           }
         }
       }
@@ -510,6 +513,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           }
           Module::External(_) => {
             // iife format doesn't support external module
+          }
+          Module::Css(_) => {
+            // iife format doesn't support css module
+            // TODO: should return error here to indicate that css module is not supported in iife format
           }
         }
         return;
@@ -606,6 +613,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             if str.value != importee.name {
               str.value = self.snippet.atom(&importee.name);
             }
+          }
+          Module::Css(_) => {
+            unimplemented!("Dynamic import css is not supported so far");
           }
         }
       }

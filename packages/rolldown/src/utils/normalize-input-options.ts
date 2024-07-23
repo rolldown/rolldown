@@ -5,12 +5,16 @@ import type { InputOptions } from '../options/input-options'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import { normalizePluginOption } from './normalize-plugin-option'
 import { normalizeTreeshakeOptions } from './normalize-tree-shake'
+import { composeJsPlugins } from './compose-js-plugins'
 
 export async function normalizeInputOptions(
   config: InputOptions,
 ): Promise<NormalizedInputOptions> {
   const { input, ...rest } = config
-  const plugins = await normalizePluginOption(config.plugins)
+  let plugins = await normalizePluginOption(config.plugins)
+  if (rest.experimental?.enableComposingJsPlugins ?? false) {
+    plugins = composeJsPlugins(plugins)
+  }
   const treeshake = normalizeTreeshakeOptions(config.treeshake)
   const logLevel = config.logLevel || LOG_LEVEL_INFO
   const onLog = getLogger(

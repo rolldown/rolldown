@@ -20,6 +20,5 @@ function example() {
 }
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 module.exports = default_mod_ns;
 ```

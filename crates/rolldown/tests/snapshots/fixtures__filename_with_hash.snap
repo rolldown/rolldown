@@ -1445,7 +1445,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/export_mode/cjs/auto/default
 
-- main-!~{000}~.cjs => main-5pGXs8yV.cjs
+- main-!~{000}~.cjs => main-Gpruowt5.cjs
 
 # tests/fixtures/export_mode/cjs/auto/named
 
@@ -1457,11 +1457,23 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/export_mode/cjs/default
 
-- main-!~{000}~.cjs => main-7QqxDU_U.cjs
+- main-!~{000}~.cjs => main-GKXsT_v-.cjs
 
 # tests/fixtures/export_mode/cjs/named
 
 - main-!~{000}~.cjs => main-kb0yDvp0.cjs
+
+# tests/fixtures/export_mode/iife/auto/none
+
+- main-!~{000}~.mjs => main-i3A7VQCp.mjs
+
+# tests/fixtures/export_mode/iife/default
+
+- main-!~{000}~.mjs => main-NX6zjtAS.mjs
+
+# tests/fixtures/export_mode/iife/named
+
+- main-!~{000}~.mjs => main-4V7Vil83.mjs
 
 # tests/fixtures/format/iife/basic
 

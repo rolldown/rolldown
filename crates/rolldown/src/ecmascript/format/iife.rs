@@ -1,10 +1,12 @@
-use rolldown_sourcemap::{ConcatSource, RawSource};
-
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
-  utils::chunk::render_chunk_exports::{get_export_items, render_chunk_exports},
+  utils::chunk::render_chunk_exports::{
+    determine_export_mode, get_export_items, render_chunk_exports,
+  },
 };
+use rolldown_common::OutputExports;
+use rolldown_sourcemap::{ConcatSource, RawSource};
 
 pub fn render_iife(
   ctx: &GenerateContext<'_>,
@@ -19,14 +21,19 @@ pub fn render_iife(
   }
   // iife wrapper start
   let has_exports = !get_export_items(ctx.chunk, ctx.link_output).is_empty();
-  if let Some(name) = &ctx.options.name {
-    concat_source.add_source(Box::new(RawSource::new(format!(
-      "var {name} = (function({}) {{\n",
-      if has_exports { "exports" } else { "" }
-    ))));
-  } else {
-    concat_source.add_source(Box::new(RawSource::new("(function() {\n".to_string())));
-  }
+  // Since before rendering the `determine_export_mode` runs, `unwrap` here won't cause panic.
+  // FIXME do not call `determine_export_mode` twice
+  let named_exports = matches!(
+    determine_export_mode(ctx.chunk, &ctx.options.exports, ctx.link_output).unwrap(),
+    OutputExports::Named
+  );
+
+  concat_source.add_source(Box::new(RawSource::new(format!(
+    "{}(function({}) {{\n",
+    if let Some(name) = &ctx.options.name { format!("var {name} = ") } else { String::new() },
+    // TODO handle external imports here.
+    if has_exports && named_exports { "exports" } else { "" }
+  ))));
 
   // TODO iife imports
 
@@ -45,12 +52,17 @@ pub fn render_iife(
     render_chunk_exports(ctx.chunk, &ctx.link_output.runtime, ctx.link_output, ctx.options)
   {
     concat_source.add_source(Box::new(RawSource::new(exports)));
-    concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
+    if named_exports {
+      // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
+      concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
+    }
   }
 
   // iife wrapper end
-  concat_source
-    .add_source(Box::new(RawSource::new(format!("}})({});", if has_exports { "{}" } else { "" }))));
+  concat_source.add_source(Box::new(RawSource::new(format!(
+    "}})({});",
+    if has_exports && named_exports { "{}" } else { "" }
+  ))));
 
   if let Some(footer) = footer {
     concat_source.add_source(Box::new(RawSource::new(footer)));

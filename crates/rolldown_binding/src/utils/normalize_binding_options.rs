@@ -96,15 +96,6 @@ pub fn normalize_binding_options(
     module_types = Some(tmp);
   }
 
-  let mut globals = None;
-  if let Some(raw) = output_options.globals {
-    let mut tmp = HashMap::with_capacity(raw.len());
-    for (k, v) in raw {
-      tmp.insert(k, v);
-    }
-    globals = Some(tmp);
-  }
-
   let bundler_options = BundlerOptions {
     input: Some(input_options.input.into_iter().map(Into::into).collect()),
     cwd: cwd.into(),
@@ -145,7 +136,7 @@ pub fn normalize_binding_options(
       "iife" => OutputFormat::Iife,
       _ => panic!("Invalid format: {format_str}"),
     }),
-    globals,
+    globals: output_options.globals,
     module_types,
     experimental: None,
     minify: output_options.minify,

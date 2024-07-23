@@ -162,8 +162,8 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
     let meta = &ctx.metas[canonical_ref_owner.idx];
     let export_symbol = meta.resolved_exports.get(&name.to_rstr());
     let Some(export_symbol) = export_symbol else { break };
-    has_ambiguous_symbol |=
-      !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr());
+    // TODO: use sorted_names
+    has_ambiguous_symbol |= meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr());
     // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
     if !ctx.modules[export_symbol.symbol_ref.owner].as_ecma().unwrap().exports_kind.is_esm() {
       break;

@@ -1,0 +1,34 @@
+{
+  "name": "@rolldown/binding-freebsd-x64",
+  "version": "0.12.1",
+  "cpu": [
+    "x64"
+  ],
+  "main": "rolldown-binding.freebsd-x64.node",
+  "files": [
+    "rolldown-binding.freebsd-x64.node"
+  ],
+  "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
+  "keywords": [
+    "webpack",
+    "parcel",
+    "esbuild",
+    "rollup",
+    "bundler",
+    "rolldown"
+  ],
+  "homepage": "https://rolldown.rs/",
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rolldown/rolldown.git",
+    "directory": "packages/rolldown"
+  },
+  "os": [
+    "freebsd"
+  ]
+}

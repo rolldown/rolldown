@@ -100,7 +100,7 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
   let externals: Vec<String> = render_import_stmts
     .iter()
     .filter_map(|stmt| {
-      let require_path_str = format!("{}", &stmt.path);
+      let require_path_str = legitimize_identifier_name(&stmt.path).to_string();
       match &stmt.specifiers {
         RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
           // Empty specifiers can be ignored in IIFE.
@@ -120,7 +120,7 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
             s.push_str(&format!(
               "const {{ {} }} = {};\n",
               specifiers.join(", "),
-              legitimize_identifier_name(require_path_str.as_str())
+              require_path_str
             ));
             Some(require_path_str)
           }

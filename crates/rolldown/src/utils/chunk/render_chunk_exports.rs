@@ -53,7 +53,9 @@ pub fn render_chunk_exports(
           let module = &graph.module_table.modules[module].as_ecma().unwrap();
           if matches!(module.exports_kind, ExportsKind::Esm) {
             let export_mode = determine_export_mode(this, &output_options.exports, graph).unwrap();
-            s.push_str("Object.defineProperty(exports, '__esModule', { value: true });\n");
+            if matches!(export_mode, OutputExports::Named) {
+              s.push_str("Object.defineProperty(exports, '__esModule', { value: true });\n");
+            }
             let rendered_items = export_items
               .into_iter()
               .map(|(exported_name, export_ref)| {
@@ -77,7 +79,11 @@ pub fn render_chunk_exports(
                     }
                   }
                   OutputExports::Default => {
-                    format!("module.exports = {canonical_name};")
+                    if matches!(output_options.format, OutputFormat::Cjs) {
+                      format!("module.exports = {canonical_name};")
+                    } else {
+                      format!("return {canonical_name};")
+                    }
                   }
                   OutputExports::None => String::new(),
                   OutputExports::Auto => unreachable!(),

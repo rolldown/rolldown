@@ -76,6 +76,7 @@
       "x86_64-pc-windows-msvc",
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-linux-musl",
+      "x86_64-unknown-freebsd",
       "i686-pc-windows-msvc",
       "armv7-unknown-linux-gnueabihf",
       "aarch64-unknown-linux-gnu",
@@ -96,7 +97,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0-alpha.57",
+    "@napi-rs/cli": "^3.0.0-alpha.60",
     "@napi-rs/wasm-runtime": "^0.2.4",
     "@rolldown/testing": "workspace:*",
     "citty": "^0.1.6",
@@ -120,6 +121,7 @@
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "workspace:*",
     "@rolldown/binding-darwin-x64": "workspace:*",
+    "@rolldown/binding-freebsd-x64": "workspace:*",
     "@rolldown/binding-linux-arm-gnueabihf": "workspace:*",
     "@rolldown/binding-linux-arm64-gnu": "workspace:*",
     "@rolldown/binding-linux-arm64-musl": "workspace:*",

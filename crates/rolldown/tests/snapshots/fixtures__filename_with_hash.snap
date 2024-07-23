@@ -73,7 +73,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/dce_of_destructuring
 
-- entry_js-!~{000}~.mjs => entry_js-T7Qt4GDW.mjs
+- entry_js-!~{000}~.mjs => entry_js-11fABjup.mjs
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
@@ -331,7 +331,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_object_property
 
-- entry_js-!~{000}~.mjs => entry_js-bhJjT-1C.mjs
+- entry_js-!~{000}~.mjs => entry_js-9gya-BrZ.mjs
 
 # tests/esbuild/dce/tree_shaking_unary_operators
 
@@ -359,7 +359,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/common_js_from_es6
 
-- entry_js-!~{000}~.mjs => entry_js-YT6SYrAC.mjs
+- entry_js-!~{000}~.mjs => entry_js-X3s2FEEy.mjs
 
 # tests/esbuild/default/const_with_let
 
@@ -558,11 +558,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/var_relocating_bundle
 
-- function-nested_js-!~{004}~.mjs => function-nested_js-awxvVc0U.mjs
-- function_js-!~{003}~.mjs => function_js-j2Vc3rXL.mjs
-- let_js-!~{002}~.mjs => let_js-FRErUOcV.mjs
-- nested_js-!~{001}~.mjs => nested_js-uft_MiMK.mjs
-- top-level_js-!~{000}~.mjs => top-level_js-kYa0ga29.mjs
+- function-nested_js-!~{004}~.mjs => function-nested_js-o_vowFTu.mjs
+- function_js-!~{003}~.mjs => function_js-qCnX__e4.mjs
+- let_js-!~{002}~.mjs => let_js-lSQgoT-J.mjs
+- nested_js-!~{001}~.mjs => nested_js-9dHTQmah.mjs
+- top-level_js-!~{000}~.mjs => top-level_js-aLnr7tad.mjs
 
 # tests/esbuild/import_star/export_other_as_namespace_common_js
 
@@ -1177,12 +1177,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/splitting/dynamic-commonjs-into-es6
 
 - foo-!~{001}~.mjs => foo-XxOeNT8-.mjs
-- main-!~{000}~.mjs => main-ZYuGz6qw.mjs
+- main-!~{000}~.mjs => main-4io4PEkK.mjs
 
 # tests/esbuild/splitting/dynamic-es6-into-es6
 
 - foo-!~{001}~.mjs => foo-cYs4pBjO.mjs
-- main-!~{000}~.mjs => main-tDa5UY2i.mjs
+- main-!~{000}~.mjs => main-pS2z_KiE.mjs
 
 # tests/esbuild/splitting/dynamic_and_not_dynamic_commonjs_into_es6
 
@@ -1232,7 +1232,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/splitting/shared-commonjs-into-es6
 
 - a-!~{000}~.mjs => a-VmEwuNLa.mjs
-- b-!~{001}~.mjs => b-iYaGc-2w.mjs
+- b-!~{001}~.mjs => b-xScJ2Dek.mjs
 - shared-!~{002}~.mjs => shared-bxzd_Hqs.mjs
 
 # tests/esbuild/splitting/shared-es6-into-es6
@@ -1398,8 +1398,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/deconflict/decl_complex_patterns
 
-- main-!~{000}~.mjs => main-lWEapUz8.mjs
-- main-lWEapUz8.mjs.map
+- main-!~{000}~.mjs => main-pfW6MMcw.mjs
+- main-pfW6MMcw.mjs.map
 
 # tests/fixtures/deconflict/decl_nested_assign_pattern
 
@@ -1408,8 +1408,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/deconflict/default_function
 
-- main-!~{000}~.mjs => main-iza3pl_m.mjs
-- main-iza3pl_m.mjs.map
+- main-!~{000}~.mjs => main-yZO72dUc.mjs
+- main-yZO72dUc.mjs.map
 
 # tests/fixtures/deconflict/issue_364
 
@@ -1418,13 +1418,13 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/deconflict/wrapped_esm_default_function
 
-- main-!~{000}~.mjs => main-UAARWVJz.mjs
-- main-UAARWVJz.mjs.map
+- main-!~{000}~.mjs => main-lXA1Y5Dk.mjs
+- main-lXA1Y5Dk.mjs.map
 
 # tests/fixtures/deconflict/wrapped_esm_export_named_function
 
-- main-!~{000}~.mjs => main-CwjRHsne.mjs
-- main-CwjRHsne.mjs.map
+- main-!~{000}~.mjs => main-oVua3WUf.mjs
+- main-oVua3WUf.mjs.map
 
 # tests/fixtures/errors/ambiguous_external_namespace
 
@@ -1547,7 +1547,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/loaders/json/object
 
-- main-!~{000}~.mjs => main-O9ABWqaL.mjs
+- main-!~{000}~.mjs => main-gg0VttYW.mjs
 
 # tests/fixtures/function/loaders/json/object_with_invalid_key
 
@@ -1785,8 +1785,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/tree_shaking/multi-declarator
 
-- main-!~{000}~.mjs => main-Mo_R0O9m.mjs
-- main-Mo_R0O9m.mjs.map
+- main-!~{000}~.mjs => main-8FzHMTbG.mjs
+- main-8FzHMTbG.mjs.map
 
 # tests/fixtures/tree_shaking/pure_annotation
 

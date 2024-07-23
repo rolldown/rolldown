@@ -120,16 +120,13 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
             s.push_str(&format!(
               "const {{ {} }} = {};\n",
               specifiers.join(", "),
-              legitimize_identifier_name(&stmt.path).to_string()
+              legitimize_identifier_name(&stmt.path)
             ));
             Some(require_path_str.to_string())
           }
         }
         RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
-          s.push_str(&format!(
-            "const {alias} = {};\n",
-            legitimize_identifier_name(&stmt.path).to_string()
-          ));
+          s.push_str(&format!("const {alias} = {};\n", legitimize_identifier_name(&stmt.path)));
           Some(require_path_str.to_string())
         }
       }

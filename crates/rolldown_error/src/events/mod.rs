@@ -9,6 +9,7 @@ pub mod circular_dependency;
 pub mod eval;
 pub mod external_entry;
 pub mod forbid_const_assign;
+pub mod invalid_export_option;
 pub mod missing_export;
 pub mod parse_error;
 pub mod sourcemap_error;

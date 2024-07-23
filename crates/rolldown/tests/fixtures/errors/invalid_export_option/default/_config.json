@@ -1,0 +1,7 @@
+{
+  "config": {
+    "exports": "default",
+    "format": "cjs"
+  },
+  "expectError": true
+}

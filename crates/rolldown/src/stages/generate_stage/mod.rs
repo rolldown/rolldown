@@ -112,17 +112,7 @@ impl<'a> GenerateStage<'a> {
         }
       });
 
-    let mut assets = self.render_chunk_to_assets(&mut chunk_graph).await?;
-
-    // Make sure order of assets are deterministic
-    // TODO: use `preliminary_filename` on `Output::Asset` instead
-    assets.sort_unstable_by(|a, b| a.filename().cmp(b.filename()));
-
-    Ok(BundleOutput {
-      assets,
-      warnings: std::mem::take(&mut self.link_output.warnings),
-      errors: std::mem::take(&mut self.link_output.errors),
-    })
+    self.render_chunk_to_assets(&mut chunk_graph).await
   }
 
   // Notices:

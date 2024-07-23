@@ -22,6 +22,7 @@ pub fn render_iife(
   // iife wrapper start
   let has_exports = !get_export_items(ctx.chunk, ctx.link_output).is_empty();
   // Since before rendering the `determine_export_mode` runs, `unwrap` here won't cause panic.
+  // FIXME do not call `determine_export_mode` twice
   let named_exports = matches!(
     determine_export_mode(ctx.chunk, &ctx.options.exports, ctx.link_output).unwrap(),
     OutputExports::Named

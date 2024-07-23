@@ -11,10 +11,6 @@ pnpm-lock.yaml
 CHANGELOG.md
 packages/rolldown/src/binding.d.ts
 packages/rolldown/src/binding.js
-packages/rolldown/rolldown-binding.wasi-browser.js
-packages/rolldown/rolldown-binding.wasi.cjs
-packages/rolldown/wasi-worker-browser.mjs
-packages/rolldown/wasi-worker.mjs
 
 packages/rolldown/src/rolldown-binding.wasi-browser.js
 packages/rolldown/src/rolldown-binding.wasi.cjs

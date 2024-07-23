@@ -240,7 +240,7 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
     return false
   }
 
-  if (Object.keys(plugin).some(unsupportedHooks.has)) {
+  if (Object.keys(plugin).some((k) => unsupportedHooks.has(k))) {
     return false
   }
 

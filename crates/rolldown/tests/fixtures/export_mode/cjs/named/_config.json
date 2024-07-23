@@ -1,0 +1,6 @@
+{
+  "config": {
+    "exports": "auto",
+    "format": "cjs"
+  }
+}

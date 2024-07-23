@@ -6,7 +6,9 @@ use crate::{
   worker_manager::WorkerManager,
 };
 use napi::Either;
-use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputFormat, Platform};
+use rolldown::{
+  AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputExports, OutputFormat, Platform,
+};
 use rolldown_plugin::SharedPlugin;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -120,9 +122,17 @@ pub fn normalize_binding_options(
     footer: normalize_addon_option(output_options.footer),
     sourcemap_ignore_list,
     sourcemap_path_transform,
+    exports: output_options.exports.map(|format_str| match format_str.as_str() {
+      "auto" => OutputExports::Auto,
+      "default" => OutputExports::Default,
+      "named" => OutputExports::Named,
+      "none" => OutputExports::None,
+      _ => panic!("Invalid exports: {format_str}"),
+    }),
     format: output_options.format.map(|format_str| match format_str.as_str() {
       "es" => OutputFormat::Esm,
       "cjs" => OutputFormat::Cjs,
+      "app" => OutputFormat::App,
       "iife" => OutputFormat::Iife,
       _ => panic!("Invalid format: {format_str}"),
     }),

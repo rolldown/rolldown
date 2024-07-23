@@ -159,21 +159,22 @@ impl<'a> GenerateStage<'a> {
         link_output: self.link_output,
         chunk_graph,
         plugin_driver: self.plugin_driver,
-        errors: vec![],
         warnings: vec![],
       };
       EcmaGenerator::render_preliminary_assets(&mut ctx).await
     }))
     .await?
     .into_iter()
-    .for_each(|generate_output| {
-      generate_output.assets.into_iter().for_each(|asset| {
-        let origin_chunk = asset.origin_chunk;
-        let asset_idx = index_preliminary_assets.push(asset);
-        index_chunk_to_assets[origin_chunk].insert(asset_idx);
-      });
-      errors.extend(generate_output.errors);
-      warnings.extend(generate_output.warnings);
+    .for_each(|result| match result {
+      Ok(generate_output) => {
+        generate_output.assets.into_iter().for_each(|asset| {
+          let origin_chunk = asset.origin_chunk;
+          let asset_idx = index_preliminary_assets.push(asset);
+          index_chunk_to_assets[origin_chunk].insert(asset_idx);
+        });
+        warnings.extend(generate_output.warnings);
+      }
+      Err(e) => errors.extend(e),
     });
 
     index_chunk_to_assets.iter_mut().for_each(|assets| {

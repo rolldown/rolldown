@@ -1,4 +1,5 @@
 use rolldown_common::ExportsKind;
+use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
 use crate::{
@@ -17,7 +18,7 @@ pub fn render_cjs(
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
-) -> ConcatSource {
+) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
   // Add `use strict` directive if needed. This must come before the banner, because users might use banner to add hashbang.
@@ -66,7 +67,7 @@ pub fn render_cjs(
     }
   });
 
-  if let Some(exports) = render_chunk_exports(ctx) {
+  if let Some(exports) = render_chunk_exports(ctx)? {
     concat_source.add_source(Box::new(RawSource::new(exports)));
   }
 
@@ -74,7 +75,7 @@ pub fn render_cjs(
     concat_source.add_source(Box::new(RawSource::new(footer)));
   }
 
-  concat_source
+  Ok(concat_source)
 }
 
 fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {

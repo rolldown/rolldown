@@ -1432,11 +1432,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/errors/invalid_export_option/default
 
-- main-!~{000}~.cjs => main-7m2R9ZCz.cjs
 
 # tests/fixtures/errors/invalid_export_option/none
 
-- main-!~{000}~.cjs => main-O74eNlgq.cjs
 
 # tests/fixtures/errors/missing_export
 

@@ -6,6 +6,7 @@ use crate::{
   },
 };
 use rolldown_common::{ChunkKind, OutputExports};
+use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
 pub fn render_iife(
@@ -13,7 +14,7 @@ pub fn render_iife(
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
-) -> ConcatSource {
+) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
   if let Some(banner) = banner {
@@ -31,7 +32,7 @@ pub fn render_iife(
     ChunkKind::Common => unreachable!("iife should be entry point chunk"),
   };
   let named_exports = matches!(
-    determine_export_mode(&mut ctx.errors, &ctx.options.exports, entry_module, &export_items),
+    determine_export_mode(&ctx.options.exports, entry_module, &export_items)?,
     OutputExports::Named
   );
 
@@ -55,7 +56,7 @@ pub fn render_iife(
   });
 
   // iife exports
-  if let Some(exports) = render_chunk_exports(ctx) {
+  if let Some(exports) = render_chunk_exports(ctx)? {
     concat_source.add_source(Box::new(RawSource::new(exports)));
     if named_exports {
       // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
@@ -73,5 +74,5 @@ pub fn render_iife(
     concat_source.add_source(Box::new(RawSource::new(footer)));
   }
 
-  concat_source
+  Ok(concat_source)
 }

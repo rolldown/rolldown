@@ -117,11 +117,7 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
                 }
               })
               .collect::<Vec<_>>();
-            s.push_str(&format!(
-              "const {{ {} }} = {};\n",
-              specifiers.join(", "),
-              require_path_str
-            ));
+            s.push_str(&format!("const {{ {} }} = {};\n", specifiers.join(", "), require_path_str));
             Some(require_path_str)
           }
         }

@@ -11,6 +11,7 @@ input_file: crates/rolldown/tests/fixtures/export_mode/iife/named
 var module = (function(exports) {
 
 
+
 //#region mod.js
 var named_mod_ns = {};
 __export(named_mod_ns, {

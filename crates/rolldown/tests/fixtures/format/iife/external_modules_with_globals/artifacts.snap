@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/case/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/format/iife/external_modules
+input_file: crates/rolldown/tests/fixtures/format/iife/external_modules_with_globals
 ---
 # Assets
 
@@ -16,5 +16,5 @@ const { default: nodePath } = node_path;
 console.log(nodePath);
 
 //#endregion
-})(node_path);
+})(path);
 ```

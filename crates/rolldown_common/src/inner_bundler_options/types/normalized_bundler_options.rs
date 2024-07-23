@@ -35,6 +35,7 @@ pub struct NormalizedBundlerOptions {
   pub dir: String,
   pub format: OutputFormat,
   pub exports: OutputExports,
+  pub globals: FxHashMap<String, String>,
   pub sourcemap: SourceMapType,
   pub banner: Option<AddonOutputOption>,
   pub footer: Option<AddonOutputOption>,

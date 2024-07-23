@@ -11,6 +11,7 @@ input_file: crates/rolldown/tests/fixtures/export_mode/iife/default
 (function() {
 
 
+
 //#region mod.js
 var default_mod_ns = {};
 __export(default_mod_ns, {

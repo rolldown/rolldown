@@ -1,3 +1,35 @@
+## [0.12.2](https://github.com/rolldown/rolldown/compare/v0.12.1...v0.12.2) (2024-07-23)
+
+
+### Bug Fixes
+
+*  external warning in dce/disable-tree-shaking ([#1659](https://github.com/rolldown/rolldown/issues/1659)) ([401dd61](https://github.com/rolldown/rolldown/commit/401dd61e7baa3cf5ddec36a386e301ad5ff5859f))
+* correct the behavior in texture or empty extension-customized file. ([#1668](https://github.com/rolldown/rolldown/issues/1668)) ([c6fccc8](https://github.com/rolldown/rolldown/commit/c6fccc8713624579ee85543ac3e7ef2e51db9e5d)), closes [/developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs#datatexthtml3cscript3ealert2827hi27293b3c2fscript3](https://github.com//developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs/issues/datatexthtml3cscript3ealert2827hi27293b3c2fscript3)
+* **node:** fix type errors ([#1642](https://github.com/rolldown/rolldown/issues/1642)) ([f6a8d51](https://github.com/rolldown/rolldown/commit/f6a8d5137b1e796b622976bc5f40f2509f085a59))
+* reexport star of a external module should be considered have side effect. ([#1675](https://github.com/rolldown/rolldown/issues/1675)) ([ab8dda5](https://github.com/rolldown/rolldown/commit/ab8dda501664c71477f17e43a4bcf1230b3e8f67))
+* should include the dependencies if the module only has re-export… ([#1683](https://github.com/rolldown/rolldown/issues/1683)) ([60348ee](https://github.com/rolldown/rolldown/commit/60348ee06eebb580ede1498c460bc48c8e0a7c47))
+* support banner/footer sync function ([#1657](https://github.com/rolldown/rolldown/issues/1657)) ([42d9241](https://github.com/rolldown/rolldown/commit/42d92417b75deb50219a85ef3d256c93a03ba6be))
+* the crate rolldown_ecmascript's test can't pass ([#1672](https://github.com/rolldown/rolldown/issues/1672)) ([627e81f](https://github.com/rolldown/rolldown/commit/627e81ffc494a10de17fc5947b767afd2b0fe04c)), closes [#1671](https://github.com/rolldown/rolldown/issues/1671)
+
+
+### Features
+
+* better error report for ambiguous export ([#1661](https://github.com/rolldown/rolldown/issues/1661)) ([6e53db7](https://github.com/rolldown/rolldown/commit/6e53db7794ba1e6818a8b0713f2c7f166ee22bd7)), closes [#1643](https://github.com/rolldown/rolldown/issues/1643)
+* convert parsing errors of oxc to rolldown's errors with friendly messages ([#1670](https://github.com/rolldown/rolldown/issues/1670)) ([44e29cd](https://github.com/rolldown/rolldown/commit/44e29cd837f1a13ae8ccf9240781da6b838069cb)), closes [#1630](https://github.com/rolldown/rolldown/issues/1630)
+* **rust:** Support accepting custom `ModuleType` ([#1632](https://github.com/rolldown/rolldown/issues/1632)) ([9f244db](https://github.com/rolldown/rolldown/commit/9f244dbce66e26396f2f6d9d44942ad295cc5ccb))
+* support `output.exports` option. ([#1680](https://github.com/rolldown/rolldown/issues/1680)) ([72abdfc](https://github.com/rolldown/rolldown/commit/72abdfcf9bd6ad97cc74ffa1bf6018a522078a79)), closes [#1628](https://github.com/rolldown/rolldown/issues/1628)
+* support banner hook ([#1419](https://github.com/rolldown/rolldown/issues/1419)) ([0631292](https://github.com/rolldown/rolldown/commit/0631292b3c6336a964f9e80f679f5de14d97eb1a))
+* support output.name for iife ([#1627](https://github.com/rolldown/rolldown/issues/1627)) ([159d4ad](https://github.com/rolldown/rolldown/commit/159d4ad1071412a1422a680aa85b6ece06b2e280)), closes [/github.com/rollup/rollup/blob/master/src/finalisers/index.ts#L36](https://github.com//github.com/rollup/rollup/blob/master/src/finalisers/index.ts/issues/L36)
+* throw friendly warning message for ambiguous export ([#1634](https://github.com/rolldown/rolldown/issues/1634)) ([d03e15b](https://github.com/rolldown/rolldown/commit/d03e15b1fa3d2c45acd8ace66f149105c8b176b3)), closes [#1621](https://github.com/rolldown/rolldown/issues/1621) [#397](https://github.com/rolldown/rolldown/issues/397)
+* **wip/css:** use lightningcss as css compiler ([#1629](https://github.com/rolldown/rolldown/issues/1629)) ([08aecad](https://github.com/rolldown/rolldown/commit/08aecadf77530f167aca01fee499f4a7bab0db17))
+
+
+### Performance Improvements
+
+* **sourcemap:** lookup original token in parallel ([#1596](https://github.com/rolldown/rolldown/issues/1596)) ([e038205](https://github.com/rolldown/rolldown/commit/e038205641e16012d760ca37f04ad5f8495f239c))
+
+
+
 # [0.12.0](https://github.com/rolldown/rolldown/compare/v0.11.1...v0.12.0) (2024-07-14)
 
 

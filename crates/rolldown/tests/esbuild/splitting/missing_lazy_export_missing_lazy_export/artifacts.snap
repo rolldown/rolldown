@@ -1,23 +1,15 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/missing_lazy_export_missing_lazy_export
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "assert" is imported by "a.js", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
 ## a.mjs
 
 ```js
 import { foo } from "./common.mjs";
-import { default as assert } from "assert";
+import { default as assert } from "node:assert";
 
 //#region a.js
 assert.deepEqual(foo(), [{default: {}}, undefined]);

@@ -7,6 +7,9 @@
         "import": "entry.js"
       }
     ],
-    "format": "cjs"
+    "format": "cjs",
+    "external": [
+      "foo"
+    ]
   }
 }

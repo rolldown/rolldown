@@ -12,6 +12,7 @@ use crate::events::{
   eval::Eval,
   external_entry::ExternalEntry,
   forbid_const_assign::ForbidConstAssign,
+  invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
   parse_error::ParseError,
   sourcemap_error::SourceMapError,
@@ -89,6 +90,14 @@ impl BuildDiagnostic {
       imported_specifier,
       imported_specifier_span,
     })
+  }
+
+  pub fn invalid_export_option(
+    export_mode: ArcStr,
+    entry_module: ArcStr,
+    export_keys: Vec<ArcStr>,
+  ) -> Self {
+    Self::new_inner(InvalidExportOption { export_mode, export_keys, entry_module })
   }
 
   // --- Rolldown related

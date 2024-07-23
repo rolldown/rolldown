@@ -5,11 +5,11 @@ use crate::{
     determine_export_mode, get_export_items, render_chunk_exports,
   },
 };
-use rolldown_common::OutputExports;
+use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
 pub fn render_iife(
-  ctx: &GenerateContext<'_>,
+  ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
@@ -20,11 +20,18 @@ pub fn render_iife(
     concat_source.add_source(Box::new(RawSource::new(banner)));
   }
   // iife wrapper start
-  let has_exports = !get_export_items(ctx.chunk, ctx.link_output).is_empty();
+  let export_items = get_export_items(ctx.chunk, ctx.link_output);
+  let has_exports = !export_items.is_empty();
   // Since before rendering the `determine_export_mode` runs, `unwrap` here won't cause panic.
   // FIXME do not call `determine_export_mode` twice
+  let entry_module = match ctx.chunk.kind {
+    ChunkKind::EntryPoint { module, .. } => {
+      &ctx.link_output.module_table.modules[module].as_ecma().expect("should be ecma module")
+    }
+    ChunkKind::Common => unreachable!("iife should be entry point chunk"),
+  };
   let named_exports = matches!(
-    determine_export_mode(ctx.chunk, &ctx.options.exports, ctx.link_output).unwrap(),
+    determine_export_mode(&mut ctx.errors, &ctx.options.exports, entry_module, &export_items),
     OutputExports::Named
   );
 
@@ -48,9 +55,7 @@ pub fn render_iife(
   });
 
   // iife exports
-  if let Some(exports) =
-    render_chunk_exports(ctx.chunk, &ctx.link_output.runtime, ctx.link_output, ctx.options)
-  {
+  if let Some(exports) = render_chunk_exports(ctx) {
     concat_source.add_source(Box::new(RawSource::new(exports)));
     if named_exports {
       // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.

@@ -1430,6 +1430,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-07HwCbF6.mjs
 
+# tests/fixtures/errors/invalid_export_option/default
+
+- main-!~{000}~.cjs => main-7m2R9ZCz.cjs
+
+# tests/fixtures/errors/invalid_export_option/none
+
+- main-!~{000}~.cjs => main-O74eNlgq.cjs
+
 # tests/fixtures/errors/missing_export
 
 - main-!~{000}~.mjs => main-MsirdRn5.mjs

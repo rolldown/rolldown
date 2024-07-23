@@ -14,6 +14,7 @@ use crate::{
     augment_chunk_hash::augment_chunk_hash, chunk::finalize_chunks::finalize_assets,
     render_chunks::render_chunks,
   },
+  BundleOutput,
 };
 
 use super::GenerateStage;
@@ -23,9 +24,11 @@ impl<'a> GenerateStage<'a> {
   pub async fn render_chunk_to_assets(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-  ) -> anyhow::Result<Vec<Output>> {
+  ) -> anyhow::Result<BundleOutput> {
+    let mut errors = std::mem::take(&mut self.link_output.errors);
+    let mut warnings = std::mem::take(&mut self.link_output.warnings);
     let (mut preliminary_assets, index_chunk_to_assets) =
-      self.render_preliminary_assets(chunk_graph).await?;
+      self.render_preliminary_assets(chunk_graph, &mut errors, &mut warnings).await?;
 
     render_chunks(self.plugin_driver, &mut preliminary_assets).await?;
 
@@ -86,7 +89,7 @@ impl<'a> GenerateStage<'a> {
               let source = match map.to_json_string().map_err(BuildDiagnostic::sourcemap_error) {
                 Ok(source) => source,
                 Err(e) => {
-                  self.link_output.errors.push(e);
+                  errors.push(e);
                   continue;
                 }
               };
@@ -101,7 +104,7 @@ impl<'a> GenerateStage<'a> {
               let data_url = match map.to_data_url().map_err(BuildDiagnostic::sourcemap_error) {
                 Ok(data_url) => data_url,
                 Err(e) => {
-                  self.link_output.errors.push(e);
+                  errors.push(e);
                   continue;
                 }
               };
@@ -131,35 +134,46 @@ impl<'a> GenerateStage<'a> {
       }
     }
 
-    Ok(outputs)
+    // Make sure order of assets are deterministic
+    // TODO: use `preliminary_filename` on `Output::Asset` instead
+    outputs.sort_unstable_by(|a, b| a.filename().cmp(b.filename()));
+
+    Ok(BundleOutput { assets: outputs, errors, warnings })
   }
 
   async fn render_preliminary_assets(
     &self,
     chunk_graph: &ChunkGraph,
+    errors: &mut Vec<BuildDiagnostic>,
+    warnings: &mut Vec<BuildDiagnostic>,
   ) -> anyhow::Result<(IndexPreliminaryAssets, IndexChunkToAssets)> {
     let mut index_chunk_to_assets: IndexChunkToAssets =
       index_vec![IndexSet::default(); chunk_graph.chunks.len()];
     let mut index_preliminary_assets: IndexPreliminaryAssets =
       IndexVec::with_capacity(chunk_graph.chunks.len());
     try_join_all(chunk_graph.chunks.iter_enumerated().map(|(chunk_idx, chunk)| async move {
-      let ctx = GenerateContext {
+      let mut ctx = GenerateContext {
         chunk_idx,
         chunk,
         options: self.options,
         link_output: self.link_output,
         chunk_graph,
         plugin_driver: self.plugin_driver,
+        errors: vec![],
+        warnings: vec![],
       };
-      EcmaGenerator::render_preliminary_assets(&ctx).await
+      EcmaGenerator::render_preliminary_assets(&mut ctx).await
     }))
     .await?
     .into_iter()
-    .flatten()
-    .for_each(|asset| {
-      let origin_chunk = asset.origin_chunk;
-      let asset_idx = index_preliminary_assets.push(asset);
-      index_chunk_to_assets[origin_chunk].insert(asset_idx);
+    .for_each(|generate_output| {
+      generate_output.assets.into_iter().for_each(|asset| {
+        let origin_chunk = asset.origin_chunk;
+        let asset_idx = index_preliminary_assets.push(asset);
+        index_chunk_to_assets[origin_chunk].insert(asset_idx);
+      });
+      errors.extend(generate_output.errors);
+      warnings.extend(generate_output.warnings);
     });
 
     index_chunk_to_assets.iter_mut().for_each(|assets| {

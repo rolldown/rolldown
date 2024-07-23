@@ -1,5 +1,5 @@
 use crate::{
-  types::generator::{GenerateContext, Generator},
+  types::generator::{GenerateContext, GenerateOutput, Generator},
   utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
 };
 
@@ -21,9 +21,7 @@ pub struct EcmaGenerator;
 
 impl Generator for EcmaGenerator {
   #[allow(clippy::too_many_lines)]
-  async fn render_preliminary_assets<'a>(
-    ctx: &GenerateContext<'a>,
-  ) -> Result<Vec<PreliminaryAsset>> {
+  async fn render_preliminary_assets<'a>(ctx: &mut GenerateContext<'a>) -> Result<GenerateOutput> {
     let mut rendered_modules = FxHashMap::default();
 
     let rendered_module_sources = ctx
@@ -106,18 +104,22 @@ impl Generator for EcmaGenerator {
       map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
     }
 
-    Ok(vec![PreliminaryAsset {
-      origin_chunk: ctx.chunk_idx,
-      content,
-      map,
-      meta: AssetMeta::from(EcmaAssetMeta { rendered_chunk }),
-      augment_chunk_hash: None,
-      file_dir: file_dir.to_path_buf(),
-      preliminary_filename: ctx
-        .chunk
-        .preliminary_filename
-        .clone()
-        .expect("should have preliminary filename"),
-    }])
+    Ok(GenerateOutput {
+      assets: vec![PreliminaryAsset {
+        origin_chunk: ctx.chunk_idx,
+        content,
+        map,
+        meta: AssetMeta::from(EcmaAssetMeta { rendered_chunk }),
+        augment_chunk_hash: None,
+        file_dir: file_dir.to_path_buf(),
+        preliminary_filename: ctx
+          .chunk
+          .preliminary_filename
+          .clone()
+          .expect("should have preliminary filename"),
+      }],
+      errors: std::mem::take(&mut ctx.errors),
+      warnings: std::mem::take(&mut ctx.warnings),
+    })
   }
 }

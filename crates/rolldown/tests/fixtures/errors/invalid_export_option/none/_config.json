@@ -1,0 +1,7 @@
+{
+  "config": {
+    "exports": "none",
+    "format": "cjs"
+  },
+  "expectError": true
+}

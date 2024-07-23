@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub fn render_esm(
-  ctx: &GenerateContext<'_>,
+  ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
@@ -57,9 +57,7 @@ pub fn render_esm(
     }
   }
 
-  if let Some(exports) =
-    render_chunk_exports(ctx.chunk, &ctx.link_output.runtime, ctx.link_output, ctx.options)
-  {
+  if let Some(exports) = render_chunk_exports(ctx) {
     concat_source.add_source(Box::new(RawSource::new(exports)));
   }
 

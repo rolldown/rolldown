@@ -14,6 +14,7 @@ use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
 
+// TODO refactor it to `wrap.rs` to reuse it for other formats (e.g. amd, umd).
 pub fn render_iife(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,

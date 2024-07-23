@@ -1,8 +1,8 @@
-import { Plugin, RolldownPlugin } from '@src/plugin'
+import { Plugin, RolldownPlugin } from '../plugin'
 import _ from 'lodash-es'
 import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
-import { BuiltinPlugin } from '@src/plugin/builtin-plugin'
+import { BuiltinPlugin } from '../plugin/builtin-plugin'
 
 const unsupportedHooks = new Set([
   'augmentChunkHash',

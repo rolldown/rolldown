@@ -1,4 +1,4 @@
-import { Plugin, RolldownPlugin } from '../plugin'
+import { ModuleSideEffects, Plugin, RolldownPlugin } from '../plugin'
 import _ from 'lodash-es'
 import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
@@ -144,13 +144,33 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         case 'transform': {
           if (batchedHooks.transform) {
             const batchedHandlers = batchedHooks.transform
-            composed.transform = async function (code, id) {
+            composed.transform = async function (initialCode, id) {
+              let code = initialCode
+              let moduleSideEffects: ModuleSideEffects | undefined = undefined
+              // TODO: we should deal with the returned sourcemap too.
+              function updateOutput(
+                newCode: string,
+                newModuleSideEffects?: ModuleSideEffects,
+              ) {
+                code = newCode
+                moduleSideEffects = newModuleSideEffects ?? undefined
+              }
               for (const handler of batchedHandlers) {
                 const [handlerFn, _handlerOptions] = normalizeHook(handler)
                 const result = await handlerFn.call(this, code, id)
                 if (!isNullish(result)) {
-                  return result
+                  if (typeof result === 'string') {
+                    updateOutput(result)
+                  } else {
+                    if (result.code) {
+                      updateOutput(result.code, result.moduleSideEffects)
+                    }
+                  }
                 }
+              }
+              return {
+                code,
+                moduleSideEffects,
               }
             }
           }

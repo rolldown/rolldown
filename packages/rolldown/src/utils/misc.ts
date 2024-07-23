@@ -2,7 +2,7 @@ export function arraify<T>(value: T | T[]): T[] {
   return Array.isArray(value) ? value : [value]
 }
 
-export function isNullish(value: any): value is null | undefined {
+export function isNullish(value: any): value is null | undefined | void {
   return value === null || value === undefined
 }
 

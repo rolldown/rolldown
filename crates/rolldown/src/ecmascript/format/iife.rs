@@ -1,3 +1,6 @@
+use crate::utils::chunk::collect_render_chunk_imports::{
+  collect_render_chunk_imports, RenderImportDeclarationSpecifier,
+};
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
@@ -7,6 +10,7 @@ use crate::{
 };
 use rolldown_common::OutputExports;
 use rolldown_sourcemap::{ConcatSource, RawSource};
+use rustc_hash::FxHashMap;
 
 pub fn render_iife(
   ctx: &GenerateContext<'_>,
@@ -28,12 +32,19 @@ pub fn render_iife(
     OutputExports::Named
   );
 
+  let (import_code, externals) = render_iife_chunk_imports(ctx);
+
+  let (input_args, output_args) =
+    render_iife_arguments(&externals, &ctx.options.globals, has_exports && named_exports);
+
   concat_source.add_source(Box::new(RawSource::new(format!(
     "{}(function({}) {{\n",
     if let Some(name) = &ctx.options.name { format!("var {name} = ") } else { String::new() },
     // TODO handle external imports here.
-    if has_exports && named_exports { "exports" } else { "" }
+    input_args
   ))));
+
+  concat_source.add_source(Box::new(RawSource::new(import_code)));
 
   // TODO iife imports
 
@@ -59,14 +70,75 @@ pub fn render_iife(
   }
 
   // iife wrapper end
-  concat_source.add_source(Box::new(RawSource::new(format!(
-    "}})({});",
-    if has_exports && named_exports { "{}" } else { "" }
-  ))));
+  concat_source.add_source(Box::new(RawSource::new(format!("}})({});", output_args))));
 
   if let Some(footer) = footer {
     concat_source.add_source(Box::new(RawSource::new(footer)));
   }
 
   concat_source
+}
+
+// Handling external imports needs to modify the arguments of the wrapper function.
+fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>) {
+  let render_import_stmts =
+    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
+
+  let mut s = String::new();
+  let externals: Vec<String> = render_import_stmts
+    .iter()
+    .filter_map(|stmt| {
+      let require_path_str = format!("{}", &stmt.path);
+      match &stmt.specifiers {
+        RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
+          // Empty specifiers can be ignored in IIFE.
+          if !specifiers.is_empty() {
+            let specifiers = specifiers
+              .iter()
+              .map(|specifier| {
+                if let Some(alias) = &specifier.alias {
+                  format!("{}: {alias}", specifier.imported)
+                } else {
+                  specifier.imported.to_string()
+                }
+              })
+              .collect::<Vec<_>>();
+            s.push_str(&format!("const {{ {} }} = {};\n", specifiers.join(", "), require_path_str));
+            Some(require_path_str)
+          } else {
+            None
+          }
+        }
+        RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
+          s.push_str(&format!("const {alias} = {};\n", require_path_str));
+          Some(require_path_str)
+        }
+      }
+    })
+    .collect();
+
+  (s, externals)
+}
+
+fn render_iife_arguments(
+  externals: &Vec<String>,
+  globals: &FxHashMap<String, String>,
+  exports_key: bool,
+) -> (String, String) {
+  let mut input_args = if exports_key { vec!["exports".to_string()] } else { vec![] };
+  let mut output_args = if exports_key { vec!["{}".to_string()] } else { vec![] };
+  externals.iter().for_each(|external| {
+    input_args.push(normalize_name(external));
+    if let Some(global) = globals.get(external) {
+      output_args.push(normalize_name(global));
+    } else {
+      // TODO add warning for missing global
+      output_args.push(normalize_name(external));
+    }
+  });
+  (input_args.join(", "), output_args.join(", "))
+}
+
+fn normalize_name(global: &str) -> String {
+  global.replace("-", "_").replace(":", "_").replace(" ", "_").replace("/", "_")
 }

@@ -10,6 +10,7 @@ input_file: crates/rolldown/tests/fixtures/export_mode/iife/auto/none
 ```js
 var MyLibrary = (function() {
 
+
 //#region main.js
 console.log("none");
 

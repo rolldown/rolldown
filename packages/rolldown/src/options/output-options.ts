@@ -44,6 +44,7 @@ const outputOptionsSchema = z.strictObject({
   assetFileNames: z.string().optional(),
   minify: z.boolean().optional(),
   name: z.string().optional(),
+  globals: z.record(z.string()).optional(),
 })
 
 export type OutputOptions = z.infer<typeof outputOptionsSchema>

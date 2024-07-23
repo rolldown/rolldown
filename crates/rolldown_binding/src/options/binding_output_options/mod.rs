@@ -1,4 +1,5 @@
 use crate::types::js_callback::MaybeAsyncJsCallback;
+use std::collections::HashMap;
 
 use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
@@ -45,7 +46,7 @@ pub struct BindingOutputOptions {
   pub format: Option<String>,
   // freeze: boolean;
   // generatedCode: NormalizedGeneratedCodeOptions;
-  // globals: GlobalsOption;
+  pub globals: Option<HashMap<String, String>>,
   // hoistTransitiveImports: boolean;
   // indent: true | string;
   // inlineDynamicImports: boolean;

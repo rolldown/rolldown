@@ -71,44 +71,75 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
   )
 }
 
-#[cfg(test)]
-mod tests {
-  use crate::SourceMap;
-  #[test]
-  fn it_works() {
-    let sourcemaps = vec![
-      SourceMap::from_json_string(
-        r#"{
-        "mappings": ";CAEE",
-        "names": [],
-        "sources": ["/project/foo.js"],
-        "sourcesContent": ["\n\n  1 + 1;"],
-        "version": 3,
-        "ignoreList": []
-      }"#,
-      )
-      .unwrap(),
-      SourceMap::from_json_string(
-        r#"{
-        "file": "transpiled.min.js",
-        "mappings": "AACCA",
-        "names": ["add"],
-        "sources": ["/project/foo_transform.js"],
-        "sourcesContent": ["1+1"],
-        "version": 3,
-        "ignoreList": []
-      }"#,
-      )
-      .unwrap(),
-    ];
+#[test]
+fn test_collapse_sourcemaps() {
+  use crate::{collapse_sourcemaps, ConcatSource, SourceMapSource};
+  use oxc::{
+    allocator::Allocator,
+    codegen::{CodeGenerator, CodegenReturn},
+    parser::Parser,
+    sourcemap::SourcemapVisualizer,
+    span::SourceType,
+  };
 
-    let result = {
-      let map = super::collapse_sourcemaps(sourcemaps.iter().collect::<Vec<_>>());
-      map.to_json_string().unwrap()
-    };
+  let allocator = Allocator::default();
 
-    let expected = "{\"version\":3,\"names\":[],\"sources\":[\"/project/foo.js\"],\"sourcesContent\":[\"\\n\\n  1 + 1;\"],\"mappings\":\"AAEE\"}";
+  let mut concat_source = ConcatSource::default();
 
-    assert_eq!(&result, expected);
-  }
+  let filename = "foo.js".to_string();
+  let source_text = "const foo = 1; console.log(foo);\n".to_string();
+  let source_type = SourceType::from_path(&filename).unwrap();
+  let ret1 = Parser::new(&allocator, &source_text, source_type).parse();
+  let CodegenReturn { source_map, source_text } =
+    CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret1.program);
+  concat_source.add_source(Box::new(SourceMapSource::new(
+    source_text.clone(),
+    source_map.unwrap(),
+    source_text.matches('\n').count() as u32,
+  )));
+
+  let filename = "bar.js".to_string();
+  let source_text = "const bar = 2; console.log(bar);\n".to_string();
+  let ret2: oxc::parser::ParserReturn = Parser::new(&allocator, &source_text, source_type).parse();
+  let CodegenReturn { source_map, source_text } =
+    CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret2.program);
+  concat_source.add_source(Box::new(SourceMapSource::new(
+    source_text.clone(),
+    source_map.unwrap(),
+    source_text.matches('\n').count() as u32,
+  )));
+
+  let (source_text, source_map) = concat_source.content_and_sourcemap();
+
+  let mut sourcemap_chain = vec![];
+
+  sourcemap_chain.push(source_map.as_ref().unwrap());
+
+  let filename = "chunk.js".to_string();
+  let ret3 = Parser::new(&allocator, &source_text, source_type).parse();
+  let CodegenReturn { source_map, source_text } =
+    CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret3.program);
+  sourcemap_chain.push(source_map.as_ref().unwrap());
+
+  let map = collapse_sourcemaps(sourcemap_chain);
+  assert_eq!(
+    SourcemapVisualizer::new(&source_text, &map).into_visualizer_text(),
+    r#"- foo.js
+(0:0-0:6) "const " --> (0:0-0:6) "const "
+(0:6-0:12) "foo = " --> (0:6-0:12) "foo = "
+(0:12-0:15) "1; " --> (0:12-1:0) "1;"
+(0:15-0:23) "console." --> (1:0-1:8) "\nconsole"
+(0:23-0:27) "log(" --> (1:8-1:12) ".log"
+(0:27-0:31) "foo)" --> (1:12-1:16) "(foo"
+(0:31-1:1) ";\n" --> (1:16-2:0) ");"
+- bar.js
+(0:0-0:6) "const " --> (2:0-2:6) "\nconst"
+(0:6-0:12) "bar = " --> (2:6-2:12) " bar ="
+(0:12-0:15) "2; " --> (2:12-3:0) " 2;"
+(0:15-0:23) "console." --> (3:0-3:8) "\nconsole"
+(0:23-0:27) "log(" --> (3:8-3:12) ".log"
+(0:27-0:31) "bar)" --> (3:12-3:16) "(bar"
+(0:31-1:1) ";\n" --> (3:16-4:1) ");\n"
+"#
+  );
 }

@@ -1,4 +1,3 @@
-// cSpell:disable
 use oxc::sourcemap::{ConcatSourceMapBuilder, SourceMap};
 
 use crate::lines_count;
@@ -128,42 +127,48 @@ impl ConcatSource {
   }
 }
 
-#[cfg(test)]
-mod tests {
-  pub use crate::SourceMap;
-
+#[test]
+fn test_concat_sourcemaps() {
   use crate::{ConcatSource, RawSource, SourceMapSource};
-  #[test]
-  fn concat_sourcemaps_works() {
-    let mut concat_source = ConcatSource::default();
-    concat_source.add_source(Box::new(RawSource::new("\nconsole.log()".to_string())));
-    concat_source.add_prepend_source(Box::new(RawSource::new("// banner".to_string())));
+  use oxc::{
+    allocator::Allocator,
+    codegen::{CodeGenerator, CodegenReturn},
+    parser::Parser,
+    sourcemap::SourcemapVisualizer,
+    span::SourceType,
+  };
 
-    concat_source.add_source(Box::new(SourceMapSource::new(
-      "function sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n".to_string(),
-      SourceMap::from_json_string(
-        r#"{
-          "version":3,
-          "sourceRoot":"",
-          "mappings":"AAAA,SAAS,QAAQ,CAAC,IAAY;IAC5B,OAAO,CAAC,GAAG,CAAC,iBAAU,IAAI,CAAE,CAAC,CAAC;AAChC,CAAC",
-          "sources":["index.ts"],
-          "sourcesContent":["function sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n"],
-          "names":[]
-        }"#
-    )
-    .unwrap().into(),3
-    )));
+  let mut concat_source = ConcatSource::default();
+  concat_source.add_source(Box::new(RawSource::new("\nconsole.log()".to_string())));
+  concat_source.add_prepend_source(Box::new(RawSource::new("// banner".to_string())));
 
-    let (content, map) = {
-      let (content, map) = concat_source.content_and_sourcemap();
-      (content, map.expect("should have sourcemap").to_json_string().unwrap())
-    };
+  let filename = "foo.js".to_string();
+  let allocator = Allocator::default();
+  let source_text = "const foo = 1; console.log(foo);\n".to_string();
+  let source_type = SourceType::from_path(&filename).unwrap();
+  let ret1 = Parser::new(&allocator, &source_text, source_type).parse();
+  let CodegenReturn { source_map, source_text } =
+    CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret1.program);
+  concat_source.add_source(Box::new(SourceMapSource::new(
+    source_text.clone(),
+    source_map.unwrap(),
+    source_text.matches('\n').count() as u32,
+  )));
 
-    assert_eq!(
-      content,
-      "// banner\n\nconsole.log()\nfunction sayHello(name: string) {\n  console.log(`Hello, ${name}`);\n}\n"
-    );
-    let expected = "{\"version\":3,\"names\":[],\"sources\":[\"index.ts\"],\"sourcesContent\":[\"function sayHello(name: string) {\\n  console.log(`Hello, ${name}`);\\n}\\n\"],\"mappings\":\";;;AAAA,SAAS,QAAQ,CAAC,IAAY;IAC5B,OAAO,CAAC,GAAG,CAAC,iBAAU,IAAI,CAAE,CAAC,CAAC;AAChC,CAAC\"}";
-    assert_eq!(map, expected);
-  }
+  let (content, map) = concat_source.content_and_sourcemap();
+
+  assert_eq!(content, "// banner\n\nconsole.log()\nconst foo = 1;\nconsole.log(foo);\n");
+
+  assert_eq!(
+    SourcemapVisualizer::new(&content, &map.unwrap()).into_visualizer_text(),
+    r#"- foo.js
+(0:0-0:6) "const " --> (3:0-3:6) "\nconst"
+(0:6-0:12) "foo = " --> (3:6-3:12) " foo ="
+(0:12-0:15) "1; " --> (3:12-4:0) " 1;"
+(0:15-0:23) "console." --> (4:0-4:8) "\nconsole"
+(0:23-0:27) "log(" --> (4:8-4:12) ".log"
+(0:27-0:31) "foo)" --> (4:12-4:16) "(foo"
+(0:31-1:1) ";\n" --> (4:16-5:1) ");\n"
+"#
+  );
 }

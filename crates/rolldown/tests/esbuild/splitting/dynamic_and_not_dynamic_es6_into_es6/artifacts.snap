@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/dynamic_and_not_dynamic_es6_into_es6
 ---
@@ -26,9 +26,13 @@ export { bar };
 
 ```js
 import { bar } from "./foo~1.mjs";
+import { default as assert } from "node:assert";
 
 //#region main.js
-import('./foo.mjs').then(({ bar: b }) => console.log(bar, b));
+(import("./foo.mjs")).then(({ bar: b }) => {
+	assert.equal(bar, 123);
+	assert.equal(b, 123);
+});
 
 //#endregion
 ```

@@ -1,12 +1,12 @@
 type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
-export class BindingLog {
+export declare class BindingLog {
   code: string
   message: string
 }
 
-export class BindingModuleInfo {
+export declare class BindingModuleInfo {
   id: string
   importers: Array<string>
   dynamicImporters: Array<string>
@@ -16,13 +16,14 @@ export class BindingModuleInfo {
   get code(): string | null
 }
 
-export class BindingOutputAsset {
+export declare class BindingOutputAsset {
   get fileName(): string
   get source(): BindingAssetSource
   set source(source: BindingAssetSource)
+  get name(): string | null
 }
 
-export class BindingOutputChunk {
+export declare class BindingOutputChunk {
   get isEntry(): boolean
   get isDynamicEntry(): boolean
   get facadeModuleId(): string | null
@@ -43,23 +44,25 @@ export class BindingOutputChunk {
 }
 
 /** The `BindingOutputs` owner `Vec<Output>` the mutable reference, it avoid `Clone` at call `writeBundle/generateBundle` hook, and make it mutable. */
-export class BindingOutputs {
+export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
   delete(fileName: string): void
 }
 
-export class BindingPluginContext {
+export declare class BindingPluginContext {
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset): string
   getFileName(referenceId: string): string
+  getModuleInfo(moduleId: string): BindingModuleInfo | null
+  getModuleIds(): Array<string> | null
 }
 
-export class BindingTransformPluginContext {
+export declare class BindingTransformPluginContext {
   inner(): BindingPluginContext
 }
 
-export class Bundler {
+export declare class Bundler {
   constructor(inputOptions: BindingInputOptions, outputOptions: BindingOutputOptions, parallelPluginsRegistry?: ParallelJsPluginRegistry | undefined | null)
   write(): Promise<FinalBindingOutputs>
   generate(): Promise<FinalBindingOutputs>
@@ -70,12 +73,12 @@ export class Bundler {
  * The `FinalBindingOutputs` is used at `write()` or `generate()`, it is similar to `BindingOutputs`, if using `BindingOutputs` has unexpected behavior.
  * TODO find a way to export it gracefully.
  */
-export class FinalBindingOutputs {
+export declare class FinalBindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
 }
 
-export class ParallelJsPluginRegistry {
+export declare class ParallelJsPluginRegistry {
   id: number
   workerCount: number
   constructor(workerCount: number)
@@ -84,6 +87,10 @@ export class ParallelJsPluginRegistry {
 export interface AliasItem {
   find: string
   replacements: Array<string>
+}
+
+export interface ArrowFunctionsBindingOptions {
+  spec?: boolean
 }
 
 export interface BindingAssetSource {
@@ -95,8 +102,9 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export enum BindingBuiltinPluginName {
-  WasmPlugin = 0
+export declare enum BindingBuiltinPluginName {
+  WasmPlugin = 0,
+  GlobImportPlugin = 1
 }
 
 export interface BindingEmittedAsset {
@@ -127,10 +135,16 @@ export interface BindingHookResolveIdOutput {
   sideEffects?: BindingHookSideEffects
 }
 
-export enum BindingHookSideEffects {
+export declare enum BindingHookSideEffects {
   True = 0,
   False = 1,
   NoTreeshake = 2
+}
+
+export interface BindingHookTransformOutput {
+  code?: string
+  sideEffects?: BindingHookSideEffects
+  map?: BindingSourcemap
 }
 
 export interface BindingInputItem {
@@ -149,6 +163,7 @@ export interface BindingInputOptions {
   onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
   treeshake?: BindingTreeshake
+  moduleTypes?: Record<string, string>
 }
 
 export interface BindingJsonSourcemap {
@@ -160,7 +175,7 @@ export interface BindingJsonSourcemap {
   names?: Array<string>
 }
 
-export enum BindingLogLevel {
+export declare enum BindingLogLevel {
   Silent = 0,
   Warn = 1,
   Info = 2,
@@ -168,6 +183,7 @@ export enum BindingLogLevel {
 }
 
 export interface BindingOutputOptions {
+  name?: string
   entryFileNames?: string
   chunkFileNames?: string
   assetFileNames?: string
@@ -175,11 +191,12 @@ export interface BindingOutputOptions {
   dir?: string
   exports?: 'default' | 'named' | 'none' | 'auto'
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
-  format?: 'es' | 'cjs'
+  format?: 'es' | 'cjs' | 'iife'
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
+  minify?: boolean
 }
 
 export interface BindingPluginContextResolvedId {
@@ -197,7 +214,7 @@ export interface BindingPluginOptions {
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraOptions) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   load?: (ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
-  transform?: (ctx:  BindingTransformPluginContext, id: string, code: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  transform?: (ctx:  BindingTransformPluginContext, id: string, code: string) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   buildEnd?: (ctx: BindingPluginContext, error: Nullable<string>) => MaybePromise<VoidNullable>
   renderChunk?: (ctx: BindingPluginContext, code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
@@ -206,6 +223,7 @@ export interface BindingPluginOptions {
   renderError?: (ctx: BindingPluginContext, error: string) => void
   generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
+  banner?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
 }
 
 export interface BindingPluginWithIndex {
@@ -231,14 +249,38 @@ export interface BindingResolveOptions {
 }
 
 export interface BindingSourcemap {
-  inner: string | BindingJSONSourcemap
+  inner: string | BindingJsonSourcemap
 }
 
 export interface BindingTreeshake {
   moduleSideEffects: string
 }
 
-export function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+export interface Es2015BindingOptions {
+  arrowFunction?: ArrowFunctionsBindingOptions
+}
+
+/** TypeScript Isolated Declarations for Standalone DTS Emit */
+export declare function isolatedDeclaration(filename: string, sourceText: string): IsolatedDeclarationsResult
+
+export interface IsolatedDeclarationsResult {
+  sourceText: string
+  errors: Array<string>
+}
+
+export interface ReactBindingOptions {
+  runtime?: 'classic' | 'automatic'
+  development?: boolean
+  throwIfNamespace?: boolean
+  pure?: boolean
+  importSource?: string
+  pragma?: string
+  pragmaFrag?: string
+  useBuiltIns?: boolean
+  useSpread?: boolean
+}
+
+export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 export interface RenderedChunk {
   name: string
@@ -251,5 +293,47 @@ export interface RenderedChunk {
   modules: Record<string, BindingRenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
+}
+
+export interface Sourcemap {
+  file?: string
+  mappings?: string
+  sourceRoot?: string
+  sources?: Array<string | undefined | null>
+  sourcesContent?: Array<string | undefined | null>
+  names?: Array<string>
+}
+
+export declare function transform(filename: string, sourceText: string, options?: TransformOptions | undefined | null): TransformResult
+
+export interface TransformOptions {
+  sourceType?: 'script' | 'module' | 'unambiguous' | undefined
+  /** Force jsx parsing, */
+  jsx?: boolean
+  typescript?: TypeScriptBindingOptions
+  react?: ReactBindingOptions
+  es2015?: Es2015BindingOptions
+  /**
+   * Enable Sourcemap
+   *
+   * * `true` to generate a sourcemap for the code and include it in the result object.
+   *
+   * Default: false
+   */
+  sourcemap?: boolean
+}
+
+export interface TransformResult {
+  sourceText: string
+  map?: Sourcemap
+  errors: Array<string>
+}
+
+export interface TypeScriptBindingOptions {
+  jsxPragma?: string
+  jsxPragmaFrag?: string
+  onlyRemoveTypeImports?: boolean
+  allowNamespaces?: boolean
+  allowDeclareFields?: boolean
 }
 

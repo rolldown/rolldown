@@ -1,6 +1,6 @@
 use rolldown_common::Platform;
 
-pub fn binary_to_esm(base64: &str, platform: Platform, runtime_resource_id: &str) -> String {
+pub fn binary_to_esm(base64: &str, platform: Platform, runtime_module_id: &str) -> String {
   let to_binary = match platform {
     Platform::Node => "__toBinaryNode",
     _ => "__toBinary",
@@ -9,7 +9,7 @@ pub fn binary_to_esm(base64: &str, platform: Platform, runtime_resource_id: &str
     "import {",
     to_binary,
     "} from '",
-    runtime_resource_id,
+    runtime_module_id,
     "'; export default ",
     to_binary,
     "('",

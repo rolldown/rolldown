@@ -12,16 +12,24 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+dunce                   = { workspace = true }
+insta                   = { workspace = true }
 jsonschema              = { workspace = true }
 once_cell               = { workspace = true }
+regex                   = { workspace = true }
 rolldown                = { workspace = true }
 rolldown_common         = { workspace = true }
+rolldown_error          = { workspace = true }
+rolldown_sourcemap      = { workspace = true }
 rolldown_testing_config = { workspace = true }
 serde_json              = { workspace = true }
-sugar_path              = { workspace = true }
 tokio                   = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 
 [build-dependencies]
 rolldown_testing_config = { workspace = true }
 schemars                = { workspace = true }
 serde_json              = { workspace = true }
+
+[[bin]]
+name = "run-fixture"
+path = "./bin/run-fixture.rs"

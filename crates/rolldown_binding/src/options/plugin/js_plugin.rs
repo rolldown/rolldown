@@ -2,7 +2,7 @@ use crate::types::{
   binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
   js_callback::MaybeAsyncJsCallbackExt,
 };
-use rolldown_plugin::Plugin;
+use rolldown_plugin::{Plugin, SharedPlugin};
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 
 use super::{binding_transform_context::BindingTransformPluginContext, BindingPluginOptions};
@@ -26,8 +26,8 @@ impl JsPlugin {
     Self { inner }
   }
 
-  pub(crate) fn new_boxed(inner: BindingPluginOptions) -> Box<dyn Plugin> {
-    Box::new(Self { inner })
+  pub(crate) fn new_shared(inner: BindingPluginOptions) -> SharedPlugin {
+    Arc::new(Self { inner })
   }
 }
 
@@ -162,6 +162,23 @@ impl Plugin for JsPlugin {
     Ok(())
   }
 
+  async fn banner(
+    &self,
+    ctx: &rolldown_plugin::SharedPluginContext,
+    args: &rolldown_plugin::HookBannerArgs,
+  ) -> rolldown_plugin::HookBannerOutputReturn {
+    if let Some(cb) = &self.banner {
+      Ok(
+        cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()?,
+      )
+    } else {
+      Ok(None)
+    }
+  }
+
   async fn render_chunk(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
@@ -182,7 +199,7 @@ impl Plugin for JsPlugin {
   async fn augment_chunk_hash(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    chunk: &rolldown_common::RenderedChunk,
+    chunk: &rolldown_common::RollupRenderedChunk,
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     if let Some(cb) = &self.augment_chunk_hash {
       Ok(cb.await_call((Arc::clone(ctx).into(), chunk.clone().into())).await?)

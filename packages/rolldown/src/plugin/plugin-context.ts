@@ -7,6 +7,8 @@ import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
 import { AssetSource, bindingAssetSource } from '../utils/asset-source'
 import { unimplemented, unsupported } from '../utils/misc'
+import { ModuleInfo } from '../types/module-info'
+import { PluginContextData } from './plugin-context-data'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -25,6 +27,8 @@ export class PluginContext {
   resolve: BindingPluginContext['resolve']
   emitFile: (file: EmittedAsset) => string
   getFileName: (referenceId: string) => string
+  getModuleInfo: (id: string) => ModuleInfo | null
+  getModuleIds: () => IterableIterator<string>
   /**
    * @deprecated This rollup API won't be supported by rolldown. Using this API will cause runtime error.
    */
@@ -34,6 +38,7 @@ export class PluginContext {
     options: NormalizedInputOptions,
     context: BindingPluginContext,
     plugin: Plugin,
+    data: PluginContextData,
   ) {
     const onLog = options.onLog
     const pluginName = plugin.name || 'unknown'
@@ -75,6 +80,8 @@ export class PluginContext {
       })
     }
     this.getFileName = context.getFileName.bind(context)
+    this.getModuleInfo = (id: string) => data.getModuleInfo(id, context)
+    this.getModuleIds = () => data.getModuleIds(context)
     this.parse = unsupported(
       '`PluginContext#parse` is not supported by rolldown.',
     )

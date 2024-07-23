@@ -46,7 +46,6 @@ const main = defineCommand({
       }
       await bundle(argConfig)
       process.exit(0)
-      return
     }
 
     showUsage(main)

@@ -1,8 +1,6 @@
-mod common;
-
 use std::path::PathBuf;
 
-use common::Case;
+use rolldown_testing::case::Case;
 use testing_macros::fixture;
 
 #[allow(clippy::needless_pass_by_value)]

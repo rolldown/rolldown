@@ -1,7 +1,7 @@
 // cSpell:disable
 
 use oxc::{
-  allocator,
+  allocator::{self, IntoIn},
   ast::{
     ast::{self, Expression, SimpleAssignmentTarget},
     visit::walk_mut,
@@ -9,8 +9,8 @@ use oxc::{
   },
   span::{CompactStr, GetSpan, Span, SPAN},
 };
-use rolldown_common::{ExportsKind, ModuleId, SymbolRef, WrapKind};
-use rolldown_oxc_utils::{AllocatorExt, ExpressionExt, IntoIn, StatementExt, TakeIn};
+use rolldown_common::{ExportsKind, Module, ModuleType, SymbolRef, WrapKind};
+use rolldown_ecmascript::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
 
@@ -54,10 +54,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           } else {
             // "export * from 'path'"
             let rec = &self.ctx.module.import_records[rec_id];
-            match rec.resolved_module {
-              ModuleId::Normal(importee_id) => {
-                let importee_linking_info = &self.ctx.linking_infos[importee_id];
-                let importee = &self.ctx.modules[importee_id];
+            match &self.ctx.modules[rec.resolved_module] {
+              Module::Ecma(importee) => {
+                let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                 if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
@@ -110,10 +109,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   ExportsKind::None => {}
                 }
               }
-              ModuleId::External(importee_id) => {
+              Module::External(importee) => {
                 match self.ctx.options.format {
                   rolldown_common::OutputFormat::Esm => {
-                    let importee = &self.ctx.external_modules[importee_id];
                     // Insert `import * as ns from 'ext'`
                     // Insert `__reExport(exports, ns)`
                     let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
@@ -135,7 +133,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                     );
                   }
                   rolldown_common::OutputFormat::Cjs => {
-                    let importee = &self.ctx.external_modules[importee_id];
                     // Insert `__reExport(exports, require('ext'))`
                     let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
                     let importer_namespace_name =
@@ -154,7 +151,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                         .into_in(self.alloc),
                     );
                   }
-                  rolldown_common::OutputFormat::App => unreachable!(),
+                  rolldown_common::OutputFormat::App | rolldown_common::OutputFormat::Iife => {
+                    unreachable!()
+                  }
                 }
               }
             }
@@ -222,7 +221,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut shimmed_exports =
       self.ctx.linking_info.shimmed_missing_exports.iter().collect::<Vec<_>>();
-    shimmed_exports.sort_by_key(|(name, _)| name.as_str());
+    shimmed_exports.sort_unstable_by_key(|(name, _)| name.as_str());
     shimmed_exports.into_iter().for_each(|(_name, symbol_ref)| {
       debug_assert!(!self.ctx.module.stmt_infos.declared_stmts_by_symbol(symbol_ref).is_empty());
       let is_included: bool = self
@@ -238,7 +237,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       }
     });
 
-    walk_mut::walk_program_mut(self, program);
+    walk_mut::walk_program(self, program);
 
     // check if we need to add wrapper
     let needs_wrapper = self
@@ -283,9 +282,14 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
               fn_stmts.push(stmt);
             }
             ast::Statement::UsingDeclaration(_) => unimplemented!(),
-            ast::match_module_declaration!(Statement) => unreachable!(
-              "At this point, all module declarations should have been removed or transformed"
-            ),
+            ast::match_module_declaration!(Statement) => {
+              if stmt.is_typescript_syntax() {
+                unreachable!(
+                  "At this point, typescript module declarations should have been removed or transformed"
+                )
+              }
+              program.body.push(stmt);
+            }
             _ => {
               stmts_inside_closure.push(stmt);
             }
@@ -356,10 +360,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
   fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
     self.try_rewrite_identifier_reference_expr(&mut expr.callee, true);
 
-    walk_mut::walk_call_expression_mut(self, expr);
+    walk_mut::walk_call_expression(self, expr);
   }
 
-  #[allow(clippy::collapsible_else_if)]
+  #[allow(clippy::collapsible_else_if, clippy::too_many_lines)]
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     if let Some(call_expr) = expr.as_call_expression_mut() {
       if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_empty() {
@@ -367,26 +371,56 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         //  we just keep these `require` calls as it is
         if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
           let rec = &self.ctx.module.import_records[rec_id];
-          match rec.resolved_module {
-            // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
-            ModuleId::Normal(importee_id) => {
-              let importee = &self.ctx.modules[importee_id];
-              let importee_linking_info = &self.ctx.linking_infos[importee.id];
-              let wrap_ref_name =
-                self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-              if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-                *expr = self.snippet.call_expr_expr(wrap_ref_name);
-              } else {
-                let ns_name = self.canonical_name_for(importee.namespace_object_ref);
-                let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
-                *expr = self.snippet.seq2_in_paren_expr(
-                  self.snippet.call_expr_expr(wrap_ref_name),
-                  self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
-                );
+          match &self.ctx.modules[rec.resolved_module] {
+            Module::Ecma(importee) => {
+              match importee.module_type {
+                ModuleType::Json => {
+                  // Nodejs treats json files as an esm module with a default export and rolldown follows this behavior.
+                  // And to make sure the runtime behavior is correct, we need to rewrite `require('xxx.json')` to `require('xxx.json').default` to align with the runtime behavior of nodejs.
+
+                  // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports).default)`
+                  let importee_linking_info = &self.ctx.linking_infos[importee.idx];
+                  let wrap_ref_name =
+                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                  if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+                    *expr = self.snippet.call_expr_expr(wrap_ref_name);
+                  } else {
+                    let ns_name = self.canonical_name_for(importee.namespace_object_ref);
+                    let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
+                    *expr = self.snippet.seq2_in_paren_expr(
+                      self.snippet.call_expr_expr(wrap_ref_name),
+                      ast::Expression::StaticMemberExpression(
+                        ast::StaticMemberExpression {
+                          object: self
+                            .snippet
+                            .call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+                          property: self.snippet.id_name("default", SPAN),
+                          ..TakeIn::dummy(self.alloc)
+                        }
+                        .into_in(self.alloc),
+                      ),
+                    );
+                  }
+                }
+                _ => {
+                  // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
+                  let importee_linking_info = &self.ctx.linking_infos[importee.idx];
+                  let wrap_ref_name =
+                    self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                  if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+                    *expr = self.snippet.call_expr_expr(wrap_ref_name);
+                  } else {
+                    let ns_name = self.canonical_name_for(importee.namespace_object_ref);
+                    let to_commonjs_ref_name = self.canonical_name_for_runtime("__toCommonJS");
+                    *expr = self.snippet.seq2_in_paren_expr(
+                      self.snippet.call_expr_expr(wrap_ref_name),
+                      self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+                    );
+                  }
+                }
               }
             }
-            ModuleId::External(importee_id) => {
-              let importee = &self.ctx.external_modules[importee_id];
+            Module::External(importee) => {
               let request_path =
                 call_expr.arguments.get_mut(0).expect("require should have an argument");
 
@@ -460,7 +494,61 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       _ => {}
     };
 
-    walk_mut::walk_expression_mut(self, expr);
+    // iife inline dynamic import
+    if matches!(self.ctx.options.format, rolldown_common::OutputFormat::Iife) {
+      if let Expression::ImportExpression(import_expr) = expr {
+        let rec_id = self.ctx.module.imports[&import_expr.span];
+        let rec = &self.ctx.module.import_records[rec_id];
+        let importee_id = rec.resolved_module;
+        match &self.ctx.modules[importee_id] {
+          Module::Ecma(importee) => {
+            let importee_linking_info = &self.ctx.linking_infos[importee_id];
+            match importee_linking_info.wrap_kind {
+              WrapKind::Esm => {
+                // `(init_foo(), j)`
+                let importee_linking_info = &self.ctx.linking_infos[importee_id];
+                let importee_wrapper_ref_name =
+                  self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+                let importee_namespace_name =
+                  self.canonical_name_for(importee.namespace_object_ref);
+                *expr = self.snippet.promise_resolve_then_call_expr(
+                  expr.span(),
+                  self.snippet.builder.vec1(self.snippet.return_stmt(
+                    self.snippet.seq2_in_paren_expr(
+                      self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                      self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+                    ),
+                  )),
+                );
+              }
+              WrapKind::Cjs => {
+                //  `__toESM(require_foo())`
+                let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
+                let importee_wrapper_ref_name =
+                  self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
+
+                *expr = self.snippet.promise_resolve_then_call_expr(
+                  expr.span(),
+                  self.snippet.builder.vec1(self.snippet.return_stmt(
+                    self.snippet.call_expr_with_arg_expr_expr(
+                      to_esm_fn_name,
+                      self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                    ),
+                  )),
+                );
+              }
+              WrapKind::None => {}
+            }
+          }
+          Module::External(_) => {
+            // iife format doesn't support external module
+          }
+        }
+        return;
+      }
+    }
+
+    walk_mut::walk_expression(self, expr);
   }
 
   fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {
@@ -477,7 +565,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       _ => {}
     }
 
-    walk_mut::walk_object_property_mut(self, prop);
+    walk_mut::walk_object_property(self, prop);
   }
 
   fn visit_object_pattern(&mut self, pat: &mut ast::ObjectPattern<'ast>) {
@@ -523,7 +611,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
 
-    walk_mut::walk_object_pattern_mut(self, pat);
+    walk_mut::walk_object_pattern(self, pat);
   }
 
   fn visit_import_expression(&mut self, expr: &mut ast::ImportExpression<'ast>) {
@@ -533,9 +621,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         let rec_id = self.ctx.module.imports[&expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
-        match importee_id {
-          ModuleId::Normal(importee_id) => {
-            let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.id]
+        match &self.ctx.modules[importee_id] {
+          Module::Ecma(_importee) => {
+            let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx]
               .expect("Normal module should belong to a chunk");
             let importer_chunk = &self.ctx.chunk_graph.chunks[importer_chunk_id];
 
@@ -546,7 +634,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
             str.value = self.snippet.atom(&import_path);
           }
-          ModuleId::External(_) => {
+          Module::External(_) => {
             // external module doesn't belong to any chunk, just keep this as it is
           }
         }
@@ -554,7 +642,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       _ => {}
     }
 
-    walk_mut::walk_import_expression_mut(self, expr);
+    walk_mut::walk_import_expression(self, expr);
   }
 
   fn visit_assignment_target_property(
@@ -591,12 +679,12 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
 
-    walk_mut::walk_assignment_target_property_mut(self, property);
+    walk_mut::walk_assignment_target_property(self, property);
   }
 
   fn visit_simple_assignment_target(&mut self, target: &mut SimpleAssignmentTarget<'ast>) {
     self.rewrite_simple_assignment_target(target);
 
-    walk_mut::walk_simple_assignment_target_mut(self, target);
+    walk_mut::walk_simple_assignment_target(self, target);
   }
 }

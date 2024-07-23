@@ -17,6 +17,7 @@ pub struct BindingOutputOptions {
   // --- Options Rolldown doesn't need to be supported
   // /** @deprecated Use the "renderDynamicImport" plugin hook instead. */
   // dynamicImportFunction: string | undefined;
+  pub name: Option<String>,
   pub entry_file_names: Option<String>,
   pub chunk_file_names: Option<String>,
   pub asset_file_names: Option<String>,
@@ -40,7 +41,7 @@ pub struct BindingOutputOptions {
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>")]
   pub footer: Option<AddonOutputOption>,
-  #[napi(ts_type = "'es' | 'cjs'")]
+  #[napi(ts_type = "'es' | 'cjs' | 'iife'")]
   pub format: Option<String>,
   // freeze: boolean;
   // generatedCode: NormalizedGeneratedCodeOptions;
@@ -52,7 +53,6 @@ pub struct BindingOutputOptions {
   // intro: () => string | Promise<string>;
   // manualChunks: ManualChunksOption;
   // minifyInternalExports: boolean;
-  // name: string | undefined;
   // namespaceToStringTag: boolean;
   // noConflict: boolean;
   // outro: () => string | Promise<string>;
@@ -69,16 +69,18 @@ pub struct BindingOutputOptions {
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => boolean")]
-  pub sourcemap_ignore_list: Option<ThreadsafeFunction<(String, String), bool, false>>,
+  pub sourcemap_ignore_list:
+    Option<ThreadsafeFunction<(String, String), bool, (String, String), false>>,
   #[derivative(Debug = "ignore")]
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]
-  pub sourcemap_path_transform: Option<ThreadsafeFunction<(String, String), String, false>>,
+  pub sourcemap_path_transform:
+    Option<ThreadsafeFunction<(String, String), String, (String, String), false>>,
   // sourcemapExcludeSources: boolean;
   // sourcemapFile: string | undefined;
   // strict: boolean;
   // systemNullSetters: boolean;
   // validate: boolean;
   // --- Enhanced options
-  // pub minify: bool,
+  pub minify: Option<bool>,
 }

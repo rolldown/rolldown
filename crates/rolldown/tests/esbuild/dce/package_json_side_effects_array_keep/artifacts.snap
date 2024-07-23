@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep
 ---
@@ -10,11 +10,11 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_ke
 ```js
 
 //#region node_modules/demo-pkg/index.js
-console.log('hello');
+console.log("hello");
 
 //#endregion
 //#region src/entry.js
-console.log('unused import');
+console.log("unused import");
 
 //#endregion
 ```

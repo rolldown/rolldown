@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_field_static_issue1424
 ---
@@ -8,21 +8,22 @@ input_file: crates/rolldown/tests/esbuild/lower/lower_private_class_field_static
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region entry.js
 class T {
 	#a() {
-		return 'a';
+		return "a";
 	}
 	#b() {
-		return 'b';
+		return "b";
 	}
 	static c;
 	d() {
-		console.log(this.#a());
+		assert.equal(this.#a(), "a");
 	}
 }
-new T().d();
+(new T()).d();
 
 //#endregion
 ```

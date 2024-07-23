@@ -1,8 +1,6 @@
 import type { BindingOutputOptions } from '../binding'
 import type { NormalizedOutputOptions } from './normalized-output-options'
 
-export type InternalModuleFormat = 'es' | 'cjs'
-
 export function bindingifyOutputOptions(
   outputOptions: NormalizedOutputOptions,
 ): BindingOutputOptions {
@@ -13,6 +11,7 @@ export function bindingifyOutputOptions(
     sourcemap,
     sourcemapIgnoreList,
     sourcemapPathTransform,
+    name,
     entryFileNames,
     chunkFileNames,
     assetFileNames,
@@ -27,6 +26,8 @@ export function bindingifyOutputOptions(
           return 'es'
         case 'cjs':
           return 'cjs'
+        case 'iife':
+          return 'iife'
       }
     })(),
     exports,
@@ -35,11 +36,13 @@ export function bindingifyOutputOptions(
     sourcemapPathTransform,
     banner,
     footer,
+    name,
     entryFileNames,
     chunkFileNames,
     assetFileNames,
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
+    minify: outputOptions.minify,
   }
 }
 

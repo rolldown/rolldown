@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 ---
@@ -14,13 +14,12 @@ input_file: crates/rolldown/tests/fixtures/misc/use_strict/emit_use_strict_with_
 
 //#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
-	console.log('This chunk should have "use strict" at the top.');
+	console.log("This chunk should have \"use strict\" at the top.");
 	module.exports = {};
 });
 
 //#endregion
 //#region main.js
-var main_ns = {};
 var import_cjs = __toESM(require_cjs());
 console.log(import_cjs.default);
 

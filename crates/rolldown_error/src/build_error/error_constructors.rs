@@ -1,25 +1,44 @@
-use std::{
-  path::{Path, PathBuf},
-  sync::Arc,
-};
+use std::path::{Path, PathBuf};
 
-use oxc::span::Span;
+use arcstr::ArcStr;
+use oxc::{diagnostics::LabeledSpan, span::Span};
 use rolldown_resolver::ResolveError;
 
-use super::BuildError;
+use super::BuildDiagnostic;
 
 use crate::events::{
-  circular_dependency::CircularDependency, eval::Eval, external_entry::ExternalEntry,
-  forbid_const_assign::ForbidConstAssign, missing_export::MissingExport,
-  sourcemap_error::SourceMapError, unresolved_entry::UnresolvedEntry,
+  ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
+  circular_dependency::CircularDependency,
+  eval::Eval,
+  external_entry::ExternalEntry,
+  forbid_const_assign::ForbidConstAssign,
+  missing_export::MissingExport,
+  parse_error::ParseError,
+  sourcemap_error::SourceMapError,
+  unresolved_entry::UnresolvedEntry,
   unresolved_import::UnresolvedImport,
-  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal, NapiError,
+  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
+  NapiError,
 };
 
-impl BuildError {
+impl BuildDiagnostic {
   // --- Rollup related
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
     Self::new_inner(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })
+  }
+
+  pub fn ambiguous_external_namespace(
+    ambiguous_export_name: String,
+    importee: String,
+    importer: AmbiguousExternalNamespaceModule,
+    exporter: Vec<AmbiguousExternalNamespaceModule>,
+  ) -> Self {
+    Self::new_inner(AmbiguousExternalNamespace {
+      ambiguous_export_name,
+      importee,
+      importer,
+      exporter,
+    })
   }
 
   pub fn unresolved_entry(
@@ -59,7 +78,7 @@ impl BuildError {
   pub fn missing_export(
     stable_importer: String,
     stable_importee: String,
-    importer_source: Arc<str>,
+    importer_source: ArcStr,
     imported_specifier: String,
     imported_specifier_span: Span,
   ) -> Self {
@@ -74,9 +93,19 @@ impl BuildError {
 
   // --- Rolldown related
 
+  pub fn oxc_parse_error(
+    source: ArcStr,
+    filename: String,
+    error_help: String,
+    error_message: String,
+    error_labels: Vec<LabeledSpan>,
+  ) -> Self {
+    Self::new_inner(ParseError { source, filename, error_help, error_message, error_labels })
+  }
+
   pub fn forbid_const_assign(
     filename: String,
-    source: Arc<str>,
+    source: ArcStr,
     name: String,
     reference_span: Span,
     re_assign_span: Span,
@@ -88,7 +117,7 @@ impl BuildError {
     Self::new_inner(NapiError { status, reason })
   }
 
-  pub fn eval(filename: String, source: Arc<str>, span: Span) -> Self {
+  pub fn eval(filename: String, source: ArcStr, span: Span) -> Self {
     Self::new_inner(Eval { filename, span, source })
   }
 }

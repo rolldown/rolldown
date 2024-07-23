@@ -1,44 +1,95 @@
-use crate::NormalModuleId;
+use std::{
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 
-use super::external_module_id::ExternalModuleId;
+use rolldown_utils::path_ext::PathExt;
+use sugar_path::SugarPath;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ModuleId {
-  Normal(NormalModuleId),
-  External(ExternalModuleId),
+/// `ModuleId` is the unique string identifier for each module.
+/// - It will be used to identify the module in the whole bundle.
+/// - Users could stored the `ModuleId` to track the module in different stages/hooks.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct ModuleId(Arc<str>);
+
+impl ModuleId {
+  pub fn new(value: impl Into<Arc<str>>) -> Self {
+    Self(value.into())
+  }
+
+  pub fn as_str(&self) -> &str {
+    &self.0
+  }
+
+  pub fn stabilize(&self, cwd: &Path) -> String {
+    stabilize_module_id(&self.0, cwd)
+  }
+}
+
+impl AsRef<str> for ModuleId {
+  fn as_ref(&self) -> &str {
+    &self.0
+  }
+}
+
+impl std::ops::Deref for ModuleId {
+  type Target = str;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+impl From<String> for ModuleId {
+  fn from(value: String) -> Self {
+    Self::new(value)
+  }
+}
+
+impl From<Arc<str>> for ModuleId {
+  fn from(value: Arc<str>) -> Self {
+    Self(value)
+  }
 }
 
 impl ModuleId {
-  pub fn expect_normal(self) -> NormalModuleId {
-    match self {
-      Self::Normal(id) => id,
-      Self::External(_) => panic!("Expected a normal module id"),
-    }
-  }
-
-  pub fn as_normal(self) -> Option<NormalModuleId> {
-    match self {
-      Self::Normal(id) => Some(id),
-      Self::External(_) => None,
-    }
-  }
-
-  pub fn as_external(self) -> Option<ExternalModuleId> {
-    match self {
-      Self::Normal(_) => None,
-      Self::External(id) => Some(id),
-    }
+  pub fn relative_path(&self, root: impl AsRef<Path>) -> PathBuf {
+    let path = self.0.as_path();
+    path.relative(root)
   }
 }
 
-impl From<NormalModuleId> for ModuleId {
-  fn from(v: NormalModuleId) -> Self {
-    Self::Normal(v)
+pub(crate) fn stabilize_module_id(module_id: &str, cwd: &Path) -> String {
+  if module_id.as_path().is_absolute() {
+    module_id.relative(cwd).as_path().expect_to_slash()
+  } else if module_id.starts_with('\0') {
+    // handle virtual modules
+    module_id.replace('\0', "\\0")
+  } else {
+    module_id.to_string()
   }
 }
 
-impl From<ExternalModuleId> for ModuleId {
-  fn from(v: ExternalModuleId) -> Self {
-    Self::External(v)
-  }
+#[test]
+fn test_stabilize_module_id() {
+  let cwd = std::env::current_dir().unwrap();
+  // absolute path
+  assert_eq!(
+    stabilize_module_id(cwd.join("src").join("main.js").expect_to_str(), &cwd),
+    "src/main.js"
+  );
+  assert_eq!(
+    stabilize_module_id(cwd.join("..").join("src").join("main.js").expect_to_str(), &cwd),
+    "../src/main.js"
+  );
+
+  // non-path specifier
+  assert_eq!(stabilize_module_id("fs", &cwd), "fs");
+  assert_eq!(
+    stabilize_module_id("https://deno.land/x/oak/mod.ts", &cwd),
+    "https://deno.land/x/oak/mod.ts"
+  );
+
+  // virtual module
+  assert_eq!(stabilize_module_id("\0foo", &cwd), "\\0foo");
 }

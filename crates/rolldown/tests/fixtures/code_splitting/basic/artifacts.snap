@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/code_splitting/basic
 ---
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/code_splitting/basic
 ```js
 
 //#region dynamic.js
-console.log('dynamic');
+console.log("dynamic");
 
 //#endregion
 ```
@@ -20,7 +20,7 @@ console.log('dynamic');
 import "./share.mjs";
 
 //#region main1.js
-import('./dynamic.mjs');
+import("./dynamic.mjs");
 
 //#endregion
 ```
@@ -35,7 +35,7 @@ import "./share.mjs";
 ```js
 
 //#region share.js
-console.log('shared');
+console.log("shared");
 
 //#endregion
 ```

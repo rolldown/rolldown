@@ -5,7 +5,7 @@ use rolldown_testing::utils::assert_bundled;
 fn criterion_benchmark(c: &mut Criterion) {
   let mut group = c.benchmark_group("bundle");
 
-  let derive_options = DeriveOptions { sourcemap: true };
+  let derive_options = DeriveOptions { sourcemap: true, minify: true };
 
   let items = [
     derive_benchmark_items(
@@ -22,6 +22,11 @@ fn criterion_benchmark(c: &mut Criterion) {
       &derive_options,
       "rome-ts".to_string(),
       rolldown_testing::bundler_options_presets::rome_ts,
+    ),
+    derive_benchmark_items(
+      &derive_options,
+      "multi-duplicated-top-level-symbol".to_string(),
+      rolldown_testing::bundler_options_presets::multi_duplicated_symbol,
     ),
   ]
   .into_iter()

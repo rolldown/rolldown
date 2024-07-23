@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string
 ---
@@ -10,8 +10,7 @@ input_file: crates/rolldown/tests/esbuild/dce/dce_type_of_equals_string
 ```js
 
 //#region entry.js
-var hasBar = typeof bar !== 'undefined';
-if (false) console.log(hasBar);
+var hasBar = typeof bar !== "undefined";
 
 //#endregion
 ```

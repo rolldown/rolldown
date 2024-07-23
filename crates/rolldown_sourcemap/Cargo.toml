@@ -18,5 +18,7 @@ doctest = false
 test    = false
 
 [dependencies]
-memchr = { workspace = true }
-oxc    = { workspace = true }
+memchr         = { workspace = true }
+oxc            = { workspace = true }
+rolldown_utils = { workspace = true }
+rustc-hash     = { workspace = true }

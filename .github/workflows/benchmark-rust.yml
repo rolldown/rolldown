@@ -3,13 +3,14 @@ name: Benchmarks Rust
 on:
   push:
     branches:
-      - 'main' # or "master"
+      - 'main'
     paths:
       - '**/*.rs'
       - '**/*.toml'
       - '.github/workflows/**'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+      - 'scripts/misc/setup-benchmark-input/**'
   pull_request:
     types: [opened, synchronize]
     paths:

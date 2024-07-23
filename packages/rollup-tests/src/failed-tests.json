@@ -601,6 +601,7 @@
   "rollup@function@reuse-resolve-meta: does not modify meta objects passed in resolveId",
   "rollup@function@rewrite-member-expressions: rewrites identifiers at the head of member expressions",
   "rollup@function@self-referencing-namespace: supports dynamic namespaces that reference themselves",
+  "rollup@function@sequence-expressions-template-tag: uses corrrect \"this\" for tagged template expressions in simplified sequences",
   "rollup@function@shadowed-external-export: external modules are not shadowed",
   "rollup@function@shadowed-variables: renames shadowed variables correctly",
   "rollup@function@shims-missing-exports: shims missing exports",

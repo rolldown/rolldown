@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_named_import_common_js
 ---
@@ -13,7 +13,7 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_ke
 //#region node_modules/demo-pkg/index.js
 var require_demo_pkg_index = __commonJSMin((exports, module) => {
 	exports.foo = 123;
-	console.log('hello');
+	console.log("hello");
 });
 
 //#endregion

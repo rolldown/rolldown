@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/no_side_effects_comment
 ---
@@ -201,12 +201,18 @@ export { a, b, c, d };
 ```js
 
 //#region stmt-export-local.js
-var v0 = function() {}, v1 = function() {};
-let l0 = function() {}, l1 = function() {};
-const c0 = function() {}, c1 = function() {};
-var v2 = () => {}, v3 = () => {};
-let l2 = () => {}, l3 = () => {};
-const c2 = () => {}, c3 = () => {};
+var v0 = function() {};
+var v1 = function() {};
+let l0 = function() {};
+let l1 = function() {};
+const c0 = function() {};
+const c1 = function() {};
+var v2 = () => {};
+var v3 = () => {};
+let l2 = () => {};
+let l3 = () => {};
+const c2 = () => {};
+const c3 = () => {};
 
 //#endregion
 export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };

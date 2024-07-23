@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/deconflict/basic
 ---
@@ -11,13 +11,13 @@ input_file: crates/rolldown/tests/fixtures/deconflict/basic
 import { default as assert } from "assert";
 
 //#region a.js
-const a$1 = 'a.js';
+const a$1 = "a.js";
 
 //#endregion
 //#region main.js
-const a = 'main.js';
-assert.equal(a, 'main.js');
-assert.equal(a$1, 'a.js');
+const a = "main.js";
+assert.equal(a, "main.js");
+assert.equal(a$1, "a.js");
 
 //#endregion
 ```

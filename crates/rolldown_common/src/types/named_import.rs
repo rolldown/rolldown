@@ -5,7 +5,7 @@ use rolldown_rstr::Rstr;
 
 use crate::SymbolRef;
 
-use super::import_record::ImportRecordId;
+use super::import_record::ImportRecordIdx;
 
 /// This is a representation for statements like
 /// - Case A: `import { foo } from 'foo'`
@@ -22,7 +22,7 @@ pub struct NamedImport {
   /// For case B, the `imported_as` is a `SymbolRef` from `fooNs`.
   /// For case C, the `imported_as` is a `SymbolRef` from `foo2`.
   pub imported_as: SymbolRef,
-  pub record_id: ImportRecordId,
+  pub record_id: ImportRecordIdx,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -53,5 +53,11 @@ impl Display for Specifier {
 impl From<Rstr> for Specifier {
   fn from(atom: Rstr) -> Self {
     Self::Literal(atom)
+  }
+}
+
+impl From<&str> for Specifier {
+  fn from(s: &str) -> Self {
+    Self::Literal(Rstr::from(s))
   }
 }

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 ---
@@ -9,6 +9,7 @@ input_file: crates/rolldown/tests/fixtures/misc/use_strict/allow_parse_non_stric
 
 ```js
 
+const { default: assert } = __toESM(require("node:assert"));
 
 //#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
@@ -17,9 +18,8 @@ var require_cjs = __commonJSMin((exports, module) => {
 
 //#endregion
 //#region main.js
-var main_ns = {};
 var import_cjs = __toESM(require_cjs());
-console.log(import_cjs.default);
+assert(typeof import_cjs.default === "function");
 
 //#endregion
 ```

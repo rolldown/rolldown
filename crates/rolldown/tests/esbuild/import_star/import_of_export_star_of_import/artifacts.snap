@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_of_export_star_of_i
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region baz.js
 const value = 123;
@@ -21,7 +22,7 @@ statement();
 
 //#endregion
 //#region entry.js
-console.log(value);
+assert.equal(value, 123);
 
 //#endregion
 ```

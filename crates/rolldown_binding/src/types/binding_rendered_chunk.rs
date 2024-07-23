@@ -25,8 +25,8 @@ pub struct RenderedChunk {
   pub dynamic_imports: Vec<String>,
 }
 
-impl From<rolldown_common::RenderedChunk> for RenderedChunk {
-  fn from(value: rolldown_common::RenderedChunk) -> Self {
+impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
+  fn from(value: rolldown_common::RollupRenderedChunk) -> Self {
     Self {
       name: value.name.to_string(),
       is_entry: value.is_entry,

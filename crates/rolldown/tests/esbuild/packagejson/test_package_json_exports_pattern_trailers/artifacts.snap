@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_pattern_trailers
 ---
@@ -10,15 +10,15 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_
 ```js
 
 //#region node_modules/pkg/dir/baz-foo.js
-console.log('works');
+console.log("works");
 
 //#endregion
 //#region node_modules/pkg2/public/abc.js
-console.log('abc');
+console.log("abc");
 
 //#endregion
 //#region node_modules/pkg2/public/xyz.js
-console.log('xyz');
+console.log("xyz");
 
 //#endregion
 ```

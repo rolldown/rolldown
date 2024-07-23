@@ -1,7 +1,10 @@
+use std::sync::Arc;
+
 use derivative::Derivative;
 use napi::JsUnknown;
 use napi_derive::napi;
 use rolldown_plugin::Plugin;
+use rolldown_plugin_glob_import::GlobImportPlugin;
 use rolldown_plugin_wasm::WasmPlugin;
 use serde::Deserialize;
 
@@ -26,12 +29,14 @@ impl std::fmt::Debug for BindingBuiltinPlugin {
 #[napi]
 pub enum BindingBuiltinPluginName {
   WasmPlugin,
+  GlobImportPlugin,
 }
 
-impl From<BindingBuiltinPlugin> for Box<dyn Plugin> {
+impl From<BindingBuiltinPlugin> for Arc<dyn Plugin> {
   fn from(plugin: BindingBuiltinPlugin) -> Self {
     match plugin.name {
-      BindingBuiltinPluginName::WasmPlugin => Box::new(WasmPlugin {}),
+      BindingBuiltinPluginName::WasmPlugin => Arc::new(WasmPlugin {}),
+      BindingBuiltinPluginName::GlobImportPlugin => Arc::new(GlobImportPlugin {}),
     }
   }
 }

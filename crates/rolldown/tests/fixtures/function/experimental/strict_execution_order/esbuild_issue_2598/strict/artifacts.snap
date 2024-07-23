@@ -1,0 +1,58 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/experimental/strict_execution_order/esbuild_issue_2598/strict
+---
+# Assets
+
+## lazy-chunk.mjs
+
+```js
+import { __esmMin, foo, init_user_lib } from "./user-lib.mjs";
+
+//#region lazy-chunk.js
+var init_lazy_chunk = __esmMin(() => {
+	init_user_lib();
+	foo();
+});
+
+//#endregion
+init_lazy_chunk();
+```
+## main.mjs
+
+```js
+import { __esmMin, foo, init_user_lib } from "./user-lib.mjs";
+
+//#region polyfill.js
+var init_polyfill = __esmMin(() => {
+	Object.somePolyfilledFunction = () => {};
+});
+
+//#endregion
+//#region main.js
+var init_main = __esmMin(() => {
+	init_polyfill();
+	init_user_lib();
+	foo();
+});
+
+//#endregion
+init_main();
+```
+## user-lib.mjs
+
+```js
+
+
+//#region user-lib.js
+async function foo() {
+	return import("./lazy-chunk.mjs");
+}
+var init_user_lib = __esmMin(() => {
+	Object.somePolyfilledFunction();
+});
+
+//#endregion
+export { __esmMin, foo, init_user_lib };
+```

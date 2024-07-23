@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/import_reexport_between_es
 ## main.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region commonjs.js
@@ -18,7 +19,7 @@ var require_commonjs = __commonJSMin((exports, module) => {
 //#endregion
 //#region main.js
 var import_commonjs = __toESM(require_commonjs());
-console.log(import_commonjs.a, 1);
+assert.equal(import_commonjs.a, 1);
 
 //#endregion
 ```

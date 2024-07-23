@@ -73,6 +73,21 @@ const inputOptionsSchema = z.strictObject({
         ),
     )
     .optional(),
+  moduleTypes: z
+    .record(
+      z
+        .literal('js')
+        .or(z.literal('jsx'))
+        .or(z.literal('ts'))
+        .or(z.literal('tsx'))
+        .or(z.literal('json'))
+        .or(z.literal('text'))
+        .or(z.literal('base64'))
+        .or(z.literal('dataurl'))
+        .or(z.literal('binary'))
+        .or(z.literal('empty')),
+    )
+    .optional(),
 })
 
 export type InputOption = z.infer<typeof inputOptionSchema>

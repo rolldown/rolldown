@@ -1,21 +1,21 @@
 use std::iter;
 
-use rolldown_common::ModuleId;
-use rolldown_error::BuildError;
+use rolldown_common::{Module, ModuleIdx};
+use rolldown_error::BuildDiagnostic;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::LinkStage;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 enum Status {
-  ToBeExecuted(ModuleId),
-  WaitForExit(ModuleId),
+  ToBeExecuted(ModuleIdx),
+  WaitForExit(ModuleIdx),
 }
 
 impl<'a> LinkStage<'a> {
   /// Some notes about the module execution order:
   /// - We assume user-defined entries are always executed orderly.
-  /// - Async entries is sorted by `resource_id` of entry module to ensure deterministic output.
+  /// - Async entries is sorted by `Module#debug_id` of entry module to ensure deterministic output.
   /// - `require(...)` is treated as implicit static `import`, which required modules are executed before the module that requires them.
   /// - Since import statements are hoisted, `require(...)` is always placed after static `import` statements.
   /// - Order of `require(...)` is determined by who shows up first while scanning ast. For such code
@@ -35,16 +35,15 @@ impl<'a> LinkStage<'a> {
       .entries
       .iter()
       .rev()
-      .map(|entry| Status::ToBeExecuted(entry.id.into()))
-      .chain(iter::once(Status::ToBeExecuted(self.runtime.id().into())))
+      .map(|entry| Status::ToBeExecuted(entry.id))
+      .chain(iter::once(Status::ToBeExecuted(self.runtime.id())))
       .collect::<Vec<_>>();
 
     let mut stack_indexes_of_executing_id = FxHashMap::default();
     let mut executed_ids = FxHashSet::default();
-    executed_ids
-      .shrink_to(self.module_table.normal_modules.len() + self.module_table.external_modules.len());
+    executed_ids.shrink_to(self.module_table.modules.len());
 
-    let mut sorted_modules = Vec::with_capacity(self.module_table.normal_modules.len());
+    let mut sorted_modules = Vec::with_capacity(self.module_table.modules.len());
     let mut next_exec_order = 0;
     let mut circular_dependencies = FxHashSet::default();
     while let Some(status) = execution_stack.pop() {
@@ -75,8 +74,7 @@ impl<'a> LinkStage<'a> {
             );
             stack_indexes_of_executing_id.insert(id, execution_stack.len() - 1);
 
-            if let ModuleId::Normal(module_id) = id {
-              let module = &self.module_table.normal_modules[module_id];
+            if let Module::Ecma(module) = &self.module_table.modules[id] {
               execution_stack.extend(
                 module
                   .import_records
@@ -91,15 +89,13 @@ impl<'a> LinkStage<'a> {
         }
         Status::WaitForExit(id) => {
           executed_ids.insert(id);
-          match id {
-            ModuleId::Normal(id) => {
-              let module = &mut self.module_table.normal_modules[id];
+          match &mut self.module_table.modules[id] {
+            Module::Ecma(module) => {
               debug_assert!(module.exec_order == u32::MAX);
               module.exec_order = next_exec_order;
               sorted_modules.push(id);
             }
-            ModuleId::External(id) => {
-              let module = &mut self.module_table.external_modules[id];
+            Module::External(module) => {
               debug_assert!(module.exec_order == u32::MAX);
               module.exec_order = next_exec_order;
             }
@@ -116,10 +112,11 @@ impl<'a> LinkStage<'a> {
       for cycle in cycles {
         let paths = cycle
           .iter()
-          .filter_map(|id| id.as_normal())
-          .map(|id| self.module_table.normal_modules[id].resource_id.to_string())
+          .copied()
+          .filter_map(|id| self.module_table.modules[id].as_ecma())
+          .map(|module| module.id.to_string())
           .collect::<Vec<_>>();
-        self.warnings.push(BuildError::circular_dependency(paths).with_severity_warning());
+        self.warnings.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
       }
     }
 

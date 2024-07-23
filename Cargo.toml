@@ -76,21 +76,22 @@ single_match      = "allow"
 single_match_else = "allow"
 
 [workspace.dependencies]
-rolldown                = { version = "0.1.0", path = "./crates/rolldown" }
-rolldown_common         = { version = "0.0.1", path = "./crates/rolldown_common" }
-rolldown_error          = { version = "0.0.1", path = "./crates/rolldown_error" }
-rolldown_fs             = { version = "0.1.0", path = "./crates/rolldown_fs" }
-rolldown_loader_utils   = { version = "0.1.0", path = "./crates/rolldown_loader_utils" }
-rolldown_oxc_utils      = { version = "0.1.0", path = "./crates/rolldown_oxc_utils" }
-rolldown_plugin         = { version = "0.1.0", path = "./crates/rolldown_plugin" }
-rolldown_plugin_wasm    = { version = "0.0.1", path = "./crates/rolldown_plugin_wasm" }
-rolldown_resolver       = { version = "0.0.1", path = "./crates/rolldown_resolver" }
-rolldown_rstr           = { version = "0.0.1", path = "./crates/rolldown_rstr" }
-rolldown_sourcemap      = { version = "0.1.0", path = "./crates/rolldown_sourcemap" }
-rolldown_testing        = { version = "0.0.1", path = "./crates/rolldown_testing" }
-rolldown_testing_config = { version = "0.0.1", path = "./crates/rolldown_testing_config" }
-rolldown_tracing        = { version = "0.0.1", path = "./crates/rolldown_tracing" }
-rolldown_utils          = { version = "0.0.1", path = "./crates/rolldown_utils" }
+rolldown                    = { version = "0.1.0", path = "./crates/rolldown" }
+rolldown_common             = { version = "0.0.1", path = "./crates/rolldown_common" }
+rolldown_ecmascript         = { version = "0.1.0", path = "./crates/rolldown_ecmascript" }
+rolldown_error              = { version = "0.0.1", path = "./crates/rolldown_error" }
+rolldown_fs                 = { version = "0.1.0", path = "./crates/rolldown_fs" }
+rolldown_loader_utils       = { version = "0.1.0", path = "./crates/rolldown_loader_utils" }
+rolldown_plugin             = { version = "0.1.0", path = "./crates/rolldown_plugin" }
+rolldown_plugin_glob_import = { version = "0.0.1", path = "./crates/rolldown_plugin_glob_import" }
+rolldown_plugin_wasm        = { version = "0.0.1", path = "./crates/rolldown_plugin_wasm" }
+rolldown_resolver           = { version = "0.0.1", path = "./crates/rolldown_resolver" }
+rolldown_rstr               = { version = "0.0.1", path = "./crates/rolldown_rstr" }
+rolldown_sourcemap          = { version = "0.1.0", path = "./crates/rolldown_sourcemap" }
+rolldown_testing            = { version = "0.0.1", path = "./crates/rolldown_testing" }
+rolldown_testing_config     = { version = "0.0.1", path = "./crates/rolldown_testing_config" }
+rolldown_tracing            = { version = "0.0.1", path = "./crates/rolldown_tracing" }
+rolldown_utils              = { version = "0.0.1", path = "./crates/rolldown_utils" }
 
 anyhow             = "1.0.86"
 ariadne            = "0.4.1"
@@ -99,23 +100,27 @@ async-scoped       = { version = "0.9.0" }
 async-trait        = "0.1.80"
 base64             = "0.22.1"
 bitflags           = "2.5.0"
-dashmap            = "5.5.3"
+daachorse          = "1.0.0"
+dashmap            = "6.0.0"
 derivative         = "2.2.0"
-dunce              = "1.0.4"                                                                          # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+dunce              = "1.0.4"                                                                        # Normalize Windows paths to the most compatible format, avoiding UNC where possible
 futures            = "0.3.30"
 glob               = "0.3.1"
 glob-match         = "0.2.1"
 indexmap           = "2.2.6"
+infer              = "0.16.0"
 insta              = "1.39.0"
 itertools          = "0.13.0"
 jsonschema         = { version = "0.18.0", default-features = false }
 memchr             = "2.7.2"
 mimalloc           = "0.1.42"
+mime               = "0.3.17"
+mime_guess         = "2.0.5"
 napi               = { version = "3.0.0-alpha", features = ["async"] }
 napi-build         = { version = "2.1.3" }
-napi-derive        = { version = "3.0.0-alpha.1", default-features = false, features = ["type-def"] }
+napi-derive        = { version = "3.0.0-alpha", default-features = false, features = ["type-def"] }
 once_cell          = "1.19.0"
-oxc_resolver       = { version = "1.8.1", features = ["package_json_raw_json_api"] }
+oxc_resolver       = { version = "1.9.0" }
 rayon              = "1.10.0"
 regex              = "1.10.5"
 rustc-hash         = "2.0.0"
@@ -130,11 +135,14 @@ tokio              = { version = "1.38.0", default-features = false }
 tracing            = "0.1.40"
 tracing-chrome     = "0.7.2"
 tracing-subscriber = { version = "0.3.18", default-features = false }
+urlencoding        = "2.1.3"
 vfs                = "0.12.0"
 xxhash-rust        = "0.8.10"
 # oxc crates share the same version
-oxc = { version = "0.15.0", features = ["sourcemap_concurrent", "transformer"] }
-
+arcstr             = "1.2.0"
+lightningcss       = { version = "1.0.0-alpha.57" }
+oxc                = { version = "0.21.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
+oxc_transform_napi = { version = "0.21.0" }
 
 [profile.release]
 codegen-units = 1

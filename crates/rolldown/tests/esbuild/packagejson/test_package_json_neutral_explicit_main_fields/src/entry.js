@@ -1,2 +1,3 @@
+import assert from 'node:assert'
 import fn from 'demo-pkg/main'
-console.log(fn())
+assert.equal(fn(), 123)

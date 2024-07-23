@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/cjs_compat/require/require_cjs
 ---
@@ -30,8 +30,10 @@ var cjs = require_cjs();
 (0:0-0:7) "module." --> (6:0-7:8) "\nvar require_cjs = __commonJSMin((exports, module) => {\n\tmodule"
 (0:7-0:17) "exports = " --> (7:8-7:18) ".exports ="
 (0:17-0:19) "{}" --> (7:18-7:19) " "
-(0:19-1:1) "\n" --> (7:19-12:0) "{};\n});\n\n//#endregion\n//#region main.js"
+(0:19-0:0) "module.exports = {}" --> (7:19-8:0) "{};"
+(0:0-1:1) "module.exports = {}\n" --> (8:0-12:0) "\n});\n\n//#endregion\n//#region main.js"
 - ../main.js
 (0:0-1:0) "require('./cjs.js');" --> (12:0-13:0) "\nrequire_cjs();"
 (1:0-1:4) "\nvar" --> (13:0-13:4) "\nvar"
-(1:4-2:1) " cjs = require('./cjs.js');\n" --> (13:4-16:34) " cjs = require_cjs();\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(1:4-0:0) "" --> (13:4-13:10) " cjs ="
+(0:0-2:1) "require('./cjs.js');\nvar cjs = require('./cjs.js');\n" --> (13:10-16:34) " require_cjs();\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

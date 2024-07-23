@@ -1,5 +1,5 @@
 import type { InputOptions } from '../options/input-options'
-import { NormalizedTreeshakingOptions } from '../../src/treeshake'
+import { NormalizedTreeshakingOptions } from '../treeshake'
 import { isRegExp } from 'node:util/types'
 
 export function normalizeTreeshakeOptions(
@@ -13,12 +13,15 @@ export function normalizeTreeshakeOptions(
       moduleSideEffects: 'true',
     }
   }
-  if (config.moduleSideEffects === undefined) {
-    config.moduleSideEffects = 'true'
-  } else if (isRegExp(config.moduleSideEffects)) {
-    config.moduleSideEffects = config.moduleSideEffects.source
-  } else {
-    config.moduleSideEffects = config.moduleSideEffects.toString()
+  let normalizedConfig: NormalizedTreeshakingOptions = {
+    moduleSideEffects: '',
   }
-  return config as NormalizedTreeshakingOptions
+  if (config.moduleSideEffects === undefined) {
+    normalizedConfig.moduleSideEffects = 'true'
+  } else if (isRegExp(config.moduleSideEffects)) {
+    normalizedConfig.moduleSideEffects = config.moduleSideEffects.source
+  } else {
+    normalizedConfig.moduleSideEffects = config.moduleSideEffects.toString()
+  }
+  return normalizedConfig
 }

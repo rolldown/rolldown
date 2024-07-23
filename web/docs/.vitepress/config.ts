@@ -63,6 +63,10 @@ export default defineConfig({
       '/contrib-guide/': [
         { text: 'Overview', link: '/contrib-guide/' },
         {
+          text: 'Etiquette',
+          link: 'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
+        },
+        {
           text: 'Development',
           items: [
             {
@@ -81,6 +85,10 @@ export default defineConfig({
             },
             { text: 'Docs', link: '/contrib-guide/docs.md' },
           ],
+        },
+        {
+          text: 'Coding Style',
+          link: '/contrib-guide/coding-style.md',
         },
         {
           text: 'Misc',

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/rollup/object-spread-side-effect
 ---
@@ -11,11 +11,11 @@ input_file: crates/rolldown/tests/fixtures/rollup/object-spread-side-effect
 import { default as assert } from "assert";
 
 //#region main.js
-let result = 'FAIL';
+let result = "FAIL";
 const unused = {...{get prop() {
-	result = 'PASS';
+	result = "PASS";
 }}};
-assert.strictEqual(result, 'PASS');
+assert.strictEqual(result, "PASS");
 
 //#endregion
 ```

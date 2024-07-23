@@ -27,21 +27,29 @@ import type {
   SourceDescription,
   TransformResult,
 } from './plugin'
-import { defineParallelPlugin, DefineParallelPluginResult } from './plugin'
+import {
+  defineParallelPlugin,
+  DefineParallelPluginResult,
+} from './plugin/parallel-plugin'
 import { defineConfig } from './utils/define-config'
 import { rolldown, experimental_scan } from './rolldown'
 import { ConfigExport } from './types/config-export'
-import { BuiltinWasmPlugin } from './plugin/bindingify-builtin-plugin'
+import {
+  BuiltinGlobImportPlugin,
+  BuiltinWasmPlugin,
+} from './plugin/builtin-plugin'
 import { RolldownBuild } from './rolldown-build'
-import { InternalModuleFormat } from './options/bindingify-output-options'
 import {
   EmittedAsset,
   EmittedFile,
   PluginContext,
 } from './plugin/plugin-context'
 import { TransformPluginContext } from './plugin/transfrom-plugin-context'
-import { NormalizedOutputOptions } from './options/normalized-output-options'
-import { RenderedChunk } from './binding'
+import {
+  InternalModuleFormat,
+  NormalizedOutputOptions,
+} from './options/normalized-output-options'
+import { RenderedChunk, transform } from './binding'
 import { PartialNull } from './types/utils'
 import { NormalizedInputOptions } from './options/normalized-input-options'
 import { ModuleInfo } from './types/module-info'
@@ -54,10 +62,13 @@ export {
   defineParallelPlugin,
   rolldown,
   experimental_scan,
+  transform,
   BuiltinWasmPlugin,
+  BuiltinGlobImportPlugin,
 }
 
 export type {
+  RolldownOutputAsset,
   RolldownOutputChunk,
   RolldownOptions,
   RolldownOutput,

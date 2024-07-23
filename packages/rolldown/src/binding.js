@@ -336,7 +336,7 @@ if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
     nativeBinding = require('./rolldown-binding.wasi.cjs')
   } catch (err) {
     if (process.env.NAPI_RS_FORCE_WASI) {
-      console.error(err)
+      loadErrors.push(err)
     }
   }
   if (!nativeBinding) {
@@ -344,7 +344,7 @@ if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
       nativeBinding = require('@rolldown/binding-wasm32-wasi')
     } catch (err) {
       if (process.env.NAPI_RS_FORCE_WASI) {
-        console.error(err)
+        loadErrors.push(err)
       }
     }
   }
@@ -374,4 +374,6 @@ module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
 module.exports.BindingBuiltinPluginName = nativeBinding.BindingBuiltinPluginName
 module.exports.BindingHookSideEffects = nativeBinding.BindingHookSideEffects
 module.exports.BindingLogLevel = nativeBinding.BindingLogLevel
+module.exports.isolatedDeclaration = nativeBinding.isolatedDeclaration
 module.exports.registerPlugins = nativeBinding.registerPlugins
+module.exports.transform = nativeBinding.transform

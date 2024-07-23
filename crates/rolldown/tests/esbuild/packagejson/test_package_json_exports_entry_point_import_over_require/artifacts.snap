@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_entry_point_import_over_require
 ---
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_exports_
 ```js
 
 //#region node_modules/pkg/import.js
-console.log('SUCCESS');
+console.log("SUCCESS");
 
 //#endregion
 ```

@@ -1,0 +1,59 @@
+name: "\U0001F41E Bug report"
+description: Create a report to help us improve
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before You Start...**
+
+        This form is only for submitting bug reports. If you have a usage question
+        or are unsure if this is really a bug, make sure to:
+
+        Prerequisites
+
+        - Node.js >= 18.18.0
+        - Git
+
+        - Read the [docs](https://rolldown.rs/)
+        # - Ask on [Discord Chat](https://chat.rolldown.rs)
+        - Ask on [GitHub Discussions](https://github.com/rolldown/rolldown/discussions)
+
+        Also try to search for your issue - it may have already been answered or even fixed in the development branch.
+        However, if you find that an old, closed issue still persists in the latest version,
+        you should open a new issue using the form below instead of commenting on the old issue.
+  - type: textarea
+    id: reproduction-link-or-steps
+    attributes:
+      label: Reproduction link or steps
+      description: |
+        - Use [stackblitz](https://stackblitz.com/github/rolldown/rolldown-starter-stackblitz) to create a minimal reproduction and share the link.
+        - Or provide a minimal repository on GitHub that can reproduce the issue. You could use [this template](https://github.com/rolldown/rolldown-starter-stackblitz).
+      placeholder: Reproduction link or steps
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What is expected?
+    validations:
+      required: true
+  - type: textarea
+    id: actually-happening
+    attributes:
+      label: What is actually happening?
+    validations:
+      required: true
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System Info
+      description: Output of `npx envinfo --system --npmPackages rolldown --binaries --browsers`
+      render: Shell
+      placeholder: System, Binaries, Browsers
+    validations:
+      required: true
+  - type: textarea
+    id: additional-comments
+    attributes:
+      label: Any additional comments?
+      description: e.g. some background/context of how you ran into this bug.

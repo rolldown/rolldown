@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/shared-commonjs-into-es6
 ---
@@ -8,11 +8,12 @@ input_file: crates/rolldown/tests/esbuild/splitting/shared-commonjs-into-es6
 ## a.mjs
 
 ```js
-import { require_shared } from "./shared.mjs";
+import { __toESM, require_shared } from "./shared.mjs";
+import { default as assert } from "node:assert";
 
 //#region a.js
-const { foo } = require_shared();
-console.log(foo);
+var import_shared = __toESM(require_shared());
+assert.equal(import_shared.foo, 123);
 
 //#endregion
 ```
@@ -20,10 +21,11 @@ console.log(foo);
 
 ```js
 import { require_shared } from "./shared.mjs";
+import { default as assert } from "node:assert";
 
 //#region b.js
-const { foo } = require_shared();
-console.log(foo);
+const { foo: foo } = require_shared();
+assert.equal(foo, 123);
 
 //#endregion
 ```
@@ -38,5 +40,5 @@ var require_shared = __commonJSMin((exports, module) => {
 });
 
 //#endregion
-export { require_shared };
+export { __toESM, require_shared };
 ```

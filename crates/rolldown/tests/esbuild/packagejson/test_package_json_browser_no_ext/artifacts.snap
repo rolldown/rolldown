@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_no_ext
 ---
@@ -8,24 +8,25 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 ## entry.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region src/demo-pkg/no-ext-browser.js
-let browser$1 = 'browser';
+let browser$1 = "browser";
 
 //#endregion
 //#region src/demo-pkg/no-ext.js
-let node = 'node';
+let node = "node";
 
 //#endregion
 //#region src/demo-pkg/ext-browser.js
-let browser = 'browser';
+let browser = "browser";
 
 //#endregion
 //#region src/entry.js
-console.log(browser$1);
-console.log(node);
-console.log(browser);
-console.log(browser);
+assert.equal(browser$1, "browser");
+assert.equal(node, "node");
+assert.equal(browser, "browser");
+assert.equal(browser, "browser");
 
 //#endregion
 ```

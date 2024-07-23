@@ -1,12 +1,11 @@
-use std::sync::Arc;
-
 // cSpell:disable
 use crate::{
-  ChunkId, ChunkKind, ExternalModuleId, FilenameTemplate, NamedImport, NormalModuleId,
-  NormalizedBundlerOptions, ResourceId, SymbolRef,
+  ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, NamedImport, NormalizedBundlerOptions,
+  SymbolRef,
 };
 pub mod types;
 
+use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
 use rolldown_utils::{path_ext::PathExt, BitSet};
 use rustc_hash::FxHashMap;
@@ -20,31 +19,31 @@ use self::types::{
 pub struct Chunk {
   pub exec_order: u32,
   pub kind: ChunkKind,
-  pub modules: Vec<NormalModuleId>,
-  pub user_defined_name: Option<String>,
-  pub filename: Option<ResourceId>,
-  pub name: Option<Arc<str>>,
+  pub modules: Vec<ModuleIdx>,
+  pub name: Option<ArcStr>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Rstr>,
-  // Sorted by resource_id of modules in the chunk
-  pub cross_chunk_imports: Vec<ChunkId>,
-  pub cross_chunk_dynamic_imports: Vec<ChunkId>,
+  // Sorted by Module#stable_id of modules in the chunk
+  pub cross_chunk_imports: Vec<ChunkIdx>,
+  pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
   pub bits: BitSet,
-  pub imports_from_other_chunks: Vec<(ChunkId, Vec<CrossChunkImportItem>)>,
-  pub imports_from_external_modules: Vec<(ExternalModuleId, Vec<NamedImport>)>,
+  pub imports_from_other_chunks: Vec<(ChunkIdx, Vec<CrossChunkImportItem>)>,
+  pub imports_from_external_modules: Vec<(ModuleIdx, Vec<NamedImport>)>,
   // meaningless if the chunk is an entrypoint
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Rstr>,
 }
 
 impl Chunk {
-  pub fn new(
-    user_defined_name: Option<String>,
-    bits: BitSet,
-    modules: Vec<NormalModuleId>,
-    kind: ChunkKind,
-  ) -> Self {
-    Self { exec_order: u32::MAX, modules, user_defined_name, bits, kind, ..Self::default() }
+  pub fn new(name: Option<ArcStr>, bits: BitSet, modules: Vec<ModuleIdx>, kind: ChunkKind) -> Self {
+    Self {
+      exec_order: u32::MAX,
+      modules,
+      name: name.map(Into::into),
+      bits,
+      kind,
+      ..Self::default()
+    }
   }
 
   pub fn filename_template<'a>(
@@ -58,7 +57,7 @@ impl Chunk {
     }
   }
 
-  pub fn has_side_effect(&self, runtime_id: NormalModuleId) -> bool {
+  pub fn has_side_effect(&self, runtime_id: ModuleIdx) -> bool {
     // TODO: remove this special case, once `NormalModule#side_effect` is implemented. Runtime module should always not have side effect
     if self.modules.len() == 1 && self.modules[0] == runtime_id {
       return false;

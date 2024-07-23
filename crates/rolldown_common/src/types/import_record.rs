@@ -2,10 +2,10 @@ use std::fmt::Display;
 
 use rolldown_rstr::Rstr;
 
-use crate::{ModuleId, SymbolRef};
+use crate::{ModuleIdx, SymbolRef};
 
 oxc::index::define_index_type! {
-  pub struct ImportRecordId = u32;
+  pub struct ImportRecordIdx = u32;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -44,14 +44,19 @@ impl Display for ImportKind {
   }
 }
 
+/// See [ImportRecord] for more details.
 #[derive(Debug)]
 pub struct RawImportRecord {
   // Module Request
   pub module_request: Rstr,
   pub kind: ImportKind,
+  /// See [ImportRecord] for more details.
   pub namespace_ref: SymbolRef,
+  /// See [ImportRecord] for more details.
   pub contains_import_star: bool,
+  /// See [ImportRecord] for more details.
   pub contains_import_default: bool,
+  /// See [ImportRecord] for more details.
   pub is_plain_import: bool,
 }
 
@@ -67,7 +72,7 @@ impl RawImportRecord {
     }
   }
 
-  pub fn into_import_record(self, resolved_module: ModuleId) -> ImportRecord {
+  pub fn into_import_record(self, resolved_module: ModuleIdx) -> ImportRecord {
     ImportRecord {
       module_request: self.module_request,
       resolved_module,
@@ -84,10 +89,15 @@ impl RawImportRecord {
 pub struct ImportRecord {
   // Module Request
   pub module_request: Rstr,
-  pub resolved_module: ModuleId,
+  pub resolved_module: ModuleIdx,
   pub kind: ImportKind,
+  /// We will turn `import { foo } from './cjs.js'; console.log(foo);` to `var import_foo = require_cjs(); console.log(importcjs.foo)`;
+  /// `namespace_ref` represent the potential `import_foo` in above example. It's useless if we imported n esm module.
   pub namespace_ref: SymbolRef,
+  /// If it is `import * as ns from '...'` or `export * as ns from '...'`
   pub contains_import_star: bool,
+  /// If it is `import def from '...'`, `import { default as def }`, `export { default as def }` or `export { default } from '...'`
   pub contains_import_default: bool,
+  /// If it is `import {} from '...'` or `import '...'`
   pub is_plain_import: bool,
 }

@@ -1,0 +1,16 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_declare_let
+---
+# Assets
+
+## entry_ts.mjs
+
+```js
+
+//#region entry.ts
+let foo = bar();
+
+//#endregion
+```

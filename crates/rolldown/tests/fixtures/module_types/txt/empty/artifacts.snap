@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/module_types/txt/empty
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+//#region x.txt
+var x_default = "";
+
+//#endregion
+//#region main.js
+assert.equal(x_default, "");
+
+//#endregion
+```

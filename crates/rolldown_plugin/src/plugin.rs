@@ -2,19 +2,27 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
 use super::plugin_context::SharedPluginContext;
 use crate::{
-  transform_plugin_context::TransformPluginContext, types::hook_render_error::HookRenderErrorArgs,
-  HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput,
-  HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdOutput, HookTransformArgs,
+  transform_plugin_context::TransformPluginContext,
+  types::hook_render_error::HookRenderErrorArgs,
+  types::{
+    hook_transform_ast_args::HookTransformAstArgs, hook_transform_output::HookTransformOutput,
+  },
+  HookBannerArgs, HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs,
+  HookRenderChunkOutput, HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdOutput,
+  HookTransformArgs,
 };
 use anyhow::Result;
-use rolldown_common::{ModuleInfo, Output, RenderedChunk};
+use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk};
+use rolldown_ecmascript::EcmaAst;
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
-pub type HookTransformReturn = Result<Option<HookLoadOutput>>;
+pub type HookTransformAstReturn = Result<EcmaAst>;
+pub type HookTransformReturn = Result<Option<HookTransformOutput>>;
 pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
 pub type HookNoopReturn = Result<()>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
 pub type HookAugmentChunkHashReturn = Result<Option<String>>;
+pub type HookBannerOutputReturn = Result<Option<String>>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
@@ -59,6 +67,14 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     Ok(None)
   }
 
+  fn transform_ast(
+    &self,
+    _ctx: &SharedPluginContext,
+    args: HookTransformAstArgs,
+  ) -> HookTransformAstReturn {
+    Ok(args.ast)
+  }
+
   async fn module_parsed(
     &self,
     _ctx: &SharedPluginContext,
@@ -81,6 +97,14 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     Ok(())
   }
 
+  async fn banner(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookBannerArgs,
+  ) -> HookBannerOutputReturn {
+    Ok(None)
+  }
+
   async fn render_chunk(
     &self,
     _ctx: &SharedPluginContext,
@@ -92,7 +116,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   async fn augment_chunk_hash(
     &self,
     _ctx: &SharedPluginContext,
-    _chunk: &RenderedChunk,
+    _chunk: &RollupRenderedChunk,
   ) -> HookAugmentChunkHashReturn {
     Ok(None)
   }
@@ -124,3 +148,4 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 }
 
 pub type BoxPlugin = Box<dyn Plugin>;
+pub type SharedPlugin = Arc<dyn Plugin>;

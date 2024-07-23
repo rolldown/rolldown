@@ -1,22 +1,22 @@
 use rolldown_common::{
-  Chunk, ChunkKind, PreRenderedChunk, RenderedChunk, RenderedModule, ResourceId,
+  Chunk, ChunkKind, ModuleId, NormalizedBundlerOptions, PreRenderedChunk, RenderedModule,
+  RollupRenderedChunk,
 };
 use rustc_hash::FxHashMap;
 
-use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput, SharedOptions};
+use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
 
 use self::render_chunk_exports::get_chunk_export_names;
 
+pub mod collect_render_chunk_imports;
 pub mod deconflict_chunk_symbols;
 pub mod finalize_chunks;
-pub mod render_chunk;
 pub mod render_chunk_exports;
-pub mod render_chunk_imports;
 
 pub fn generate_pre_rendered_chunk(
   chunk: &Chunk,
   graph: &LinkStageOutput,
-  output_options: &SharedOptions,
+  output_options: &NormalizedBundlerOptions,
 ) -> PreRenderedChunk {
   PreRenderedChunk {
     name: chunk.name.clone().expect("should have name"),
@@ -24,14 +24,14 @@ pub fn generate_pre_rendered_chunk(
     is_dynamic_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { is_user_defined, .. } if !*is_user_defined),
     facade_module_id: match &chunk.kind {
       ChunkKind::EntryPoint { module, .. } => {
-        Some(graph.module_table.normal_modules[*module].resource_id.clone())
+        Some(graph.module_table.modules[*module].id().to_string().into())
       }
       ChunkKind::Common => None,
     },
     module_ids: chunk
       .modules
       .iter()
-      .map(|id| graph.module_table.normal_modules[*id].resource_id.clone())
+      .map(|id| graph.module_table.modules[*id].id().to_string().into())
       .collect(),
     exports: get_chunk_export_names(chunk, graph, output_options),
   }
@@ -40,12 +40,12 @@ pub fn generate_pre_rendered_chunk(
 pub fn generate_rendered_chunk(
   chunk: &Chunk,
   graph: &LinkStageOutput,
-  output_options: &SharedOptions,
-  render_modules: FxHashMap<ResourceId, RenderedModule>,
+  output_options: &NormalizedBundlerOptions,
+  render_modules: FxHashMap<ModuleId, RenderedModule>,
   chunk_graph: &ChunkGraph,
-) -> RenderedChunk {
+) -> RollupRenderedChunk {
   let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, graph, output_options);
-  RenderedChunk {
+  RollupRenderedChunk {
     name: pre_rendered_chunk.name,
     is_entry: pre_rendered_chunk.is_entry,
     is_dynamic_entry: pre_rendered_chunk.is_dynamic_entry,

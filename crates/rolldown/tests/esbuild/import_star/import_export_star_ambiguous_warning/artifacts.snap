@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguo
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region foo.js
 const x = 1;
@@ -18,7 +19,9 @@ const z = 4;
 
 //#endregion
 //#region entry.js
-console.log(x, undefined, z);
+assert.equal(x, 1);
+assert.equal(undefined, undefined);
+assert.equal(z, 4);
 
 //#endregion
 ```

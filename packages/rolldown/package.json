@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "0.10.4",
+  "version": "0.12.2",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",
   "repository": {
@@ -58,8 +58,9 @@
     "bak_build-node": "unbuild",
     "build-node": "node ../../node_modules/npm-rolldown/bin/cli.js -c ./rolldown.config.mjs",
     "build-types": "tsc -p ./tsconfig.dts.json",
-    "build-native:debug": "run-s build-binding build-types build-node",
-    "build-native:release": "run-s build-binding:release build-types build-node",
+    "build-types-check": "tsc -p ./tsconfig.check.json",
+    "build-native:debug": "run-s build-binding build-types build-node build-types-check",
+    "build-native:release": "run-s build-binding:release build-types build-node build-types-check",
     "build-wasi:debug": "run-s build-binding:wasi build-node",
     "build-wasi:release": "run-s build-binding:wasi:release build-node",
     "# Scrips for checking #": "_",
@@ -75,6 +76,7 @@
       "x86_64-pc-windows-msvc",
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-linux-musl",
+      "x86_64-unknown-freebsd",
       "i686-pc-windows-msvc",
       "armv7-unknown-linux-gnueabihf",
       "aarch64-unknown-linux-gnu",
@@ -92,21 +94,21 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\n"
   },
   "dependencies": {
-    "citty": "^0.1.6",
-    "colorette": "^2.0.20",
-    "consola": "^3.2.3",
-    "locate-character": "^3.0.0",
-    "mri": "^1.2.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0-alpha.55",
+    "@napi-rs/cli": "^3.0.0-alpha.60",
     "@napi-rs/wasm-runtime": "^0.2.4",
     "@rolldown/testing": "workspace:*",
+    "citty": "^0.1.6",
+    "colorette": "^2.0.20",
+    "consola": "^3.2.3",
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",
     "fs-extra": "^11.2.0",
     "glob": "^10.4.1",
+    "locate-character": "^3.0.0",
+    "mri": "^1.2.0",
     "npm-run-all2": "^6.2.0",
     "rolldown": "workspace:*",
     "rollup": "^4.18.0",
@@ -119,6 +121,7 @@
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "workspace:*",
     "@rolldown/binding-darwin-x64": "workspace:*",
+    "@rolldown/binding-freebsd-x64": "workspace:*",
     "@rolldown/binding-linux-arm-gnueabihf": "workspace:*",
     "@rolldown/binding-linux-arm64-gnu": "workspace:*",
     "@rolldown/binding-linux-arm64-musl": "workspace:*",

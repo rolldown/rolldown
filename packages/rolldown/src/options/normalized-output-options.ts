@@ -3,18 +3,18 @@ import type {
   SourcemapPathTransformOption,
 } from '../rollup'
 import type { OutputOptions } from './output-options'
-import type { Plugin, ParallelPlugin } from '../plugin'
+import type { RolldownPlugin } from '../plugin'
 import type { RenderedChunk } from '../binding'
 
-type InternalModuleFormat = 'es' | 'cjs'
+export type InternalModuleFormat = 'es' | 'cjs' | 'iife'
 
 type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 
 export interface NormalizedOutputOptions extends OutputOptions {
-  plugins: (Plugin | ParallelPlugin)[]
+  plugins: RolldownPlugin[]
   dir: string | undefined
   format: InternalModuleFormat
-  exports: 'named'
+  exports: 'auto' | 'named' | 'default' | 'none'
   sourcemap: boolean | 'inline' | 'hidden'
   sourcemapIgnoreList: SourcemapIgnoreListOption
   sourcemapPathTransform: SourcemapPathTransformOption | undefined
@@ -23,4 +23,5 @@ export interface NormalizedOutputOptions extends OutputOptions {
   entryFileNames: string
   chunkFileNames: string
   assetFileNames: string
+  name: string | undefined
 }

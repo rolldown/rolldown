@@ -1,2 +1,3 @@
+import assert from 'node:assert'
 import * as ns from './foo'
-console.log(ns.foo)
+assert.equal(ns.foo, undefined)

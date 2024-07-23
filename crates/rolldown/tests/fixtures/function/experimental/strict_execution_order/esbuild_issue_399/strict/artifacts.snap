@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/experimental/strict_execution_order/esbuild_issue_399/strict
+---
+# Assets
+
+## entry1.mjs
+
+```js
+import { __esmMin, init_run_dep } from "./run-dep.mjs";
+
+//#region init-dep-1.js
+var init_init_dep_1 = __esmMin(() => {
+	global.foo = {log: () => console.log("foo.log() (from entry 1) called")};
+});
+
+//#endregion
+//#region entry1.js
+var init_entry1 = __esmMin(() => {
+	init_init_dep_1();
+	init_run_dep();
+});
+
+//#endregion
+init_entry1();
+```
+## entry2.mjs
+
+```js
+import { __esmMin, init_run_dep } from "./run-dep.mjs";
+
+//#region init-dep-2.js
+var init_init_dep_2 = __esmMin(() => {
+	global.foo = {log: () => console.log("foo.log() (from entry 2) called")};
+});
+
+//#endregion
+//#region entry2.js
+var init_entry2 = __esmMin(() => {
+	init_init_dep_2();
+	init_run_dep();
+});
+
+//#endregion
+init_entry2();
+```
+## run-dep.mjs
+
+```js
+
+
+//#region run-dep.js
+var init_run_dep = __esmMin(() => {
+	global.foo.log();
+});
+
+//#endregion
+export { __esmMin, init_run_dep };
+```

@@ -27,4 +27,9 @@ impl BindingOutputAsset {
   pub fn set_source(&mut self, source: BindingAssetSource) {
     self.inner.source = source.into();
   }
+
+  #[napi(getter)]
+  pub fn name(&self) -> Option<String> {
+    self.inner.name.clone()
+  }
 }

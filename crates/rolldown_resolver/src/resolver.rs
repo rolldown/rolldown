@@ -1,8 +1,6 @@
 use dashmap::DashMap;
 use itertools::Itertools;
-use rolldown_common::{
-  ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions, ResolvedPath,
-};
+use rolldown_common::{ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use std::{
   path::{Path, PathBuf},
@@ -140,8 +138,8 @@ impl<F: FileSystem + Default> Resolver<F> {
 
 #[derive(Debug)]
 pub struct ResolveReturn {
-  pub path: ResolvedPath,
-  pub module_type: ModuleDefFormat,
+  pub path: Arc<str>,
+  pub module_def_format: ModuleDefFormat,
   pub package_json: Option<Arc<PackageJson>>,
 }
 
@@ -186,20 +184,11 @@ impl<F: FileSystem + Default> Resolver<F> {
         let module_type = calc_module_type(&info);
         Ok(Ok(build_resolve_ret(
           info.full_path().to_str().expect("Should be valid utf8").to_string(),
-          false,
           module_type,
           package_json,
         )))
       }
-      Err(err) => match err {
-        ResolveError::Ignored(p) => Ok(Ok(build_resolve_ret(
-          p.to_str().expect("Should be valid utf8").to_string(),
-          true,
-          ModuleDefFormat::Unknown,
-          None,
-        ))),
-        _ => Ok(Err(err)),
-      },
+      Err(err) => Ok(Err(err)),
     }
   }
 
@@ -207,9 +196,11 @@ impl<F: FileSystem + Default> Resolver<F> {
     if let Some(v) = self.package_json_cache.get(&oxc_pkg_json.realpath) {
       Arc::clone(v.value())
     } else {
-      let pkg_json =
-        PackageJson::new(Arc::clone(oxc_pkg_json.raw_json()), oxc_pkg_json.path.clone());
-      let pkg_json = Arc::new(pkg_json);
+      let pkg_json = Arc::new(
+        PackageJson::new(oxc_pkg_json.path.clone())
+          .with_type(oxc_pkg_json.r#type.as_ref())
+          .with_side_effects(oxc_pkg_json.side_effects.as_ref()),
+      );
       self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
       pkg_json
     }
@@ -225,7 +216,7 @@ fn calc_module_type(info: &Resolution) -> ModuleDefFormat {
     }
   }
   if let Some(package_json) = info.package_json() {
-    let type_value = package_json.raw_json().get("type").and_then(|v| v.as_str());
+    let type_value = package_json.r#type.as_ref().and_then(|v| v.as_str());
     if type_value == Some("module") {
       return ModuleDefFormat::EsmPackageJson;
     } else if type_value == Some("commonjs") {
@@ -237,9 +228,8 @@ fn calc_module_type(info: &Resolution) -> ModuleDefFormat {
 
 fn build_resolve_ret(
   path: String,
-  ignored: bool,
   module_type: ModuleDefFormat,
   package_json: Option<Arc<PackageJson>>,
 ) -> ResolveReturn {
-  ResolveReturn { path: ResolvedPath { path: path.into(), ignored }, module_type, package_json }
+  ResolveReturn { path: path.into(), module_def_format: module_type, package_json }
 }

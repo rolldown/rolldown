@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_unused_mi
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region foo.js
@@ -17,7 +18,7 @@ const x = 123;
 
 //#endregion
 //#region entry.js
-console.log(foo_ns.foo);
+assert.equal(foo_ns.foo, undefined);
 
 //#endregion
 ```

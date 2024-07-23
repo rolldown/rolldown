@@ -1,6 +1,6 @@
 use futures::Future;
 use napi::{
-  bindgen_prelude::{FromNapiValue, Promise},
+  bindgen_prelude::{FromNapiValue, JsValuesTupleIntoVec, Promise},
   threadsafe_function::{ThreadsafeFunction, UnknownReturnValue},
   Either,
 };
@@ -65,11 +65,12 @@ use rolldown_utils::debug::pretty_type_name;
 /// - Rust(Simplified): `MaybeAsyncJsCallback<(Option<String>, i32), Option<i32>>`
 /// - Js: `(a: string | null | undefined, b: number) => Promise<number | null | undefined | void> | number | null | undefined | void`
 /// - Js(Simplified): `(a: Nullable<string>, b: number) => MaybePromise<VoidNullable<number>>`
-pub type JsCallback<Args, Ret> = ThreadsafeFunction<Args, Either<Ret, UnknownReturnValue>, false>;
+pub type JsCallback<Args, Ret> =
+  ThreadsafeFunction<Args, Either<Ret, UnknownReturnValue>, Args, false>;
 
 /// Shortcut for `JsCallback<..., Either<Promise<Ret>, Ret>>`, which could be simplified to `MaybeAsyncJsCallback<..., Ret>`.
 pub type MaybeAsyncJsCallback<Args, Ret> =
-  ThreadsafeFunction<Args, Either<Either<Promise<Ret>, Ret>, UnknownReturnValue>, false>;
+  ThreadsafeFunction<Args, Either<Either<Promise<Ret>, Ret>, UnknownReturnValue>, Args, false>;
 
 pub trait MaybeAsyncJsCallbackExt<Args, Ret> {
   /// Call Js function asynchronously in rust. If the Js function returns `Promise<T>`, it will unwrap/await the promise and return `T`.
@@ -78,7 +79,7 @@ pub trait MaybeAsyncJsCallbackExt<Args, Ret> {
 
 impl<Args, Ret> MaybeAsyncJsCallbackExt<Args, Ret> for JsCallback<Args, Either<Promise<Ret>, Ret>>
 where
-  Args: 'static + Send,
+  Args: 'static + Send + JsValuesTupleIntoVec,
   Ret: 'static + Send + FromNapiValue,
   napi::Either<napi::Either<Promise<Ret>, Ret>, UnknownReturnValue>: FromNapiValue,
 {

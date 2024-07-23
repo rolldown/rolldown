@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/text_loader_remove_unused
 ---
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/dce/text_loader_remove_unused
 ```js
 
 //#region entry.js
-console.log('unused import');
+console.log("unused import");
 
 //#endregion
 ```

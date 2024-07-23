@@ -16,11 +16,13 @@ import {
   bindingifyWriteBundle,
   bindingifyRenderError,
   bindingifyAugmentChunkHash,
+  bindingifyBanner,
 } from './bindingify-output-hooks'
 
 import type { Plugin } from './index'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
+import { PluginContextData } from './plugin-context-data'
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
 export function bindingifyPlugin(
@@ -28,20 +30,50 @@ export function bindingifyPlugin(
   options: NormalizedInputOptions,
   outputOptions: NormalizedOutputOptions,
 ): BindingPluginOptions {
+  const pluginContextData = new PluginContextData()
   return {
     name: plugin.name ?? 'unknown',
-    buildStart: bindingifyBuildStart(plugin, options),
-    resolveId: bindingifyResolveId(plugin, options),
-    resolveDynamicImport: bindingifyResolveDynamicImport(plugin, options),
-    buildEnd: bindingifyBuildEnd(plugin, options),
-    transform: bindingifyTransform(plugin, options),
-    moduleParsed: bindingifyModuleParsed(plugin, options),
-    load: bindingifyLoad(plugin, options),
-    renderChunk: bindingifyRenderChunk(plugin, options, outputOptions),
-    augmentChunkHash: bindingifyAugmentChunkHash(plugin, options),
-    renderStart: bindingifyRenderStart(plugin, options, outputOptions),
-    renderError: bindingifyRenderError(plugin, options),
-    generateBundle: bindingifyGenerateBundle(plugin, options, outputOptions),
-    writeBundle: bindingifyWriteBundle(plugin, options, outputOptions),
+    buildStart: bindingifyBuildStart(plugin, options, pluginContextData),
+    resolveId: bindingifyResolveId(plugin, options, pluginContextData),
+    resolveDynamicImport: bindingifyResolveDynamicImport(
+      plugin,
+      options,
+      pluginContextData,
+    ),
+    buildEnd: bindingifyBuildEnd(plugin, options, pluginContextData),
+    transform: bindingifyTransform(plugin, options, pluginContextData),
+    moduleParsed: bindingifyModuleParsed(plugin, options, pluginContextData),
+    load: bindingifyLoad(plugin, options, pluginContextData),
+    renderChunk: bindingifyRenderChunk(
+      plugin,
+      options,
+      outputOptions,
+      pluginContextData,
+    ),
+    augmentChunkHash: bindingifyAugmentChunkHash(
+      plugin,
+      options,
+      pluginContextData,
+    ),
+    renderStart: bindingifyRenderStart(
+      plugin,
+      options,
+      outputOptions,
+      pluginContextData,
+    ),
+    renderError: bindingifyRenderError(plugin, options, pluginContextData),
+    generateBundle: bindingifyGenerateBundle(
+      plugin,
+      options,
+      outputOptions,
+      pluginContextData,
+    ),
+    writeBundle: bindingifyWriteBundle(
+      plugin,
+      options,
+      outputOptions,
+      pluginContextData,
+    ),
+    banner: bindingifyBanner(plugin, options, pluginContextData),
   }
 }

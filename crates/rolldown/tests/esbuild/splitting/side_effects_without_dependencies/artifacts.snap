@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/side_effects_without_dependencies
 ---
@@ -9,9 +9,10 @@ input_file: crates/rolldown/tests/esbuild/splitting/side_effects_without_depende
 
 ```js
 import { a } from "./shared.mjs";
+import { default as assert } from "node:assert";
 
 //#region a.js
-console.log(a);
+assert.equal(a, 1);
 
 //#endregion
 ```
@@ -19,9 +20,10 @@ console.log(a);
 
 ```js
 import { b } from "./shared.mjs";
+import { default as assert } from "node:assert";
 
 //#region b.js
-console.log(b);
+assert.equal(b, 2);
 
 //#endregion
 ```
@@ -32,7 +34,7 @@ console.log(b);
 //#region shared.js
 let a = 1;
 let b = 2;
-console.log('side effect');
+console.log("side effect");
 
 //#endregion
 export { a, b };

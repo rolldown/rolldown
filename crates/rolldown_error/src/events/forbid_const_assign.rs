@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use arcstr::ArcStr;
 use oxc::span::Span;
 
 use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions};
@@ -9,7 +8,7 @@ use super::BuildEvent;
 #[derive(Debug)]
 pub struct ForbidConstAssign {
   pub filename: String,
-  pub source: Arc<str>,
+  pub source: ArcStr,
   pub name: String,
   pub reference_span: Span,
   pub re_assign_span: Span,
@@ -27,7 +26,7 @@ impl BuildEvent for ForbidConstAssign {
     let filename = opts.stabilize_path(&self.filename);
     diagnostic.title = format!("Unexpected re-assignment of const variable `{0}`", self.name);
 
-    let file_id = diagnostic.add_file(filename, Arc::clone(&self.source));
+    let file_id = diagnostic.add_file(filename, self.source.clone());
     diagnostic
       .add_label(
         &file_id,

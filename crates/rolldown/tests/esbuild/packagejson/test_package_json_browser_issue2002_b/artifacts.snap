@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_issue2002_b
 ---
@@ -20,7 +20,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 
 //#region src/node_modules/pkg/sub/foo.js
 var require_foo = __commonJSMin((exports, module) => {
-	require('sub');
+	require("sub");
 });
 
 //#endregion

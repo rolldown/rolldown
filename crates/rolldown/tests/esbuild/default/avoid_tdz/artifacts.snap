@@ -8,13 +8,14 @@ input_file: crates/rolldown/tests/esbuild/default/avoid_tdz
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region entry.js
 class Foo {
 	static foo = new Foo();
 }
 let foo = Foo.foo;
-console.log(foo);
+assert(foo instanceof Foo);
 class Bar {}
 let bar = 123;
 

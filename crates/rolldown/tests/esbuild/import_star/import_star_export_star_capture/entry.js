@@ -1,3 +1,8 @@
+import assert from 'node:assert'
 import * as ns from './bar'
 let foo = 234
-console.log(ns, ns.foo, foo)
+assert.deepEqual(ns, {
+  foo: 123
+})
+assert.equal(ns.foo, 123)
+assert.equal(foo, 234)

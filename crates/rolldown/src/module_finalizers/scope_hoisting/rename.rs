@@ -1,6 +1,7 @@
+use oxc::allocator::IntoIn;
 use oxc::ast::ast::{self, IdentifierReference};
 use rolldown_common::SymbolRef;
-use rolldown_oxc_utils::{ExpressionExt, IntoIn};
+use rolldown_ecmascript::ExpressionExt;
 
 use super::ScopeHoistingFinalizer;
 
@@ -34,7 +35,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // `foo()` might be transformed to `xxx.foo()`. To keep the semantic of callee's `this` binding,
         // we need to wrap the transformed callee. Make it like `(0, xxx.foo)()`.
         let wrapped_callee =
-          self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0), access_expr);
+          self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0, "0"), access_expr);
         wrapped_callee
       } else {
         access_expr

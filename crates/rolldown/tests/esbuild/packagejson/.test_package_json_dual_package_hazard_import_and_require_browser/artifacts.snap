@@ -1,0 +1,32 @@
+---
+source: crates/rolldown/tests/common/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_browser
+---
+# Assets
+
+## entry.mjs
+
+```js
+import { default as assert, default as assert$1 } from "node:assert";
+
+
+//#region node_modules/demo-pkg/module.browser.js
+var module_browser_ns, module_browser_default;
+var init_module_browser = __esmMin(() => {
+	module_browser_ns = {};
+	__export(module_browser_ns, {default: () => module_browser_default});
+	module_browser_default = 'browser module';
+});
+
+//#endregion
+//#region src/test-main.js
+assert$1.deepEqual((init_module_browser(), __toCommonJS(module_browser_ns)), {default: 'browser main'});
+
+//#endregion
+//#region src/test-module.js
+init_module_browser();
+assert.equal(module_browser_default, 'browser module');
+
+//#endregion
+```

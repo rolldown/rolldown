@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/function/external/keep_import_external_order
 ---
@@ -12,7 +12,7 @@ import "ext1";
 import "ext2";
 
 //#region foo.js
-const a = 'foo';
+const a = "foo";
 
 //#endregion
 //#region main.js

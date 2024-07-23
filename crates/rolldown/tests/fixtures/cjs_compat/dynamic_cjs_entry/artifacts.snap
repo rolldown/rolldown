@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/cjs_compat/dynamic_cjs_entry
 ---
@@ -12,7 +12,7 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/dynamic_cjs_entry
 
 //#region cjs.js
 var require_cjs = __commonJSMin((exports, module) => {
-	module.exports = 'cjs';
+	module.exports = "cjs";
 });
 
 //#endregion
@@ -24,7 +24,7 @@ export default require_cjs();
 ```js
 
 //#region main.js
-var main_default = import('./cjs.mjs');
+var main_default = import("./cjs.mjs");
 
 //#endregion
 export { main_default as default };

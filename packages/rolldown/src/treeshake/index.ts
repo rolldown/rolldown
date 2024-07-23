@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import {
   ModuleSideEffectsOptionSchema,
   NormalizedTreeshakingOptionsSchema,
@@ -10,6 +9,7 @@ export const TreeshakingOptionsSchema =
   })
 
 export interface TreeshakingOptions {
-  moduleSideEffects?: string | RegExp
+  moduleSideEffects?: boolean | RegExp
 }
+
 export * from './module-side-effects'

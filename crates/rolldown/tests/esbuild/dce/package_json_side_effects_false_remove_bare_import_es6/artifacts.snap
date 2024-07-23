@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_es6
 ---
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_re
 ```js
 
 //#region src/entry.js
-console.log('unused import');
+console.log("unused import");
 
 //#endregion
 ```

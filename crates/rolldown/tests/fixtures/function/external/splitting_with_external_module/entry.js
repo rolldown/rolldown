@@ -1,4 +1,4 @@
-
+import assert from "node:assert"
 import { value } from "./share"
 
-console.log(value)
+assert.equal(value, 1)

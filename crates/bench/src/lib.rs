@@ -14,6 +14,7 @@ pub struct BenchItem {
 
 pub struct DeriveOptions {
   pub sourcemap: bool,
+  pub minify: bool,
 }
 
 pub fn derive_benchmark_items(
@@ -25,11 +26,36 @@ pub fn derive_benchmark_items(
     vec![BenchItem { name: name.clone(), options: Box::new(create_bundler_options.clone()) }];
 
   if derive_options.sourcemap {
+    let create_bundler_options = create_bundler_options.clone();
     ret.push(BenchItem {
       name: format!("{}-sourcemap", name),
       options: Box::new(move || {
         let mut options = create_bundler_options();
         options.sourcemap = Some(rolldown::SourceMapType::File);
+        options
+      }),
+    });
+  }
+
+  if derive_options.minify {
+    let create_bundler_options = create_bundler_options.clone();
+    ret.push(BenchItem {
+      name: format!("{}-minify", name),
+      options: Box::new(move || {
+        let mut options = create_bundler_options();
+        options.minify = Some(true);
+        options
+      }),
+    });
+  }
+
+  if derive_options.sourcemap && derive_options.minify {
+    ret.push(BenchItem {
+      name: format!("{}-minify-sourcemap", name),
+      options: Box::new(move || {
+        let mut options = create_bundler_options();
+        options.sourcemap = Some(rolldown::SourceMapType::File);
+        options.minify = Some(true);
         options
       }),
     });

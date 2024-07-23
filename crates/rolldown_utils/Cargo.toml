@@ -13,9 +13,13 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+anyhow      = { workspace = true }
 base64      = { workspace = true }
 futures     = { workspace = true }
 indexmap    = { workspace = true }
+infer       = { workspace = true }
+mime        = { workspace = true }
+mime_guess  = { workspace = true }
 once_cell   = { workspace = true }
 oxc         = { workspace = true }
 regex       = { workspace = true }

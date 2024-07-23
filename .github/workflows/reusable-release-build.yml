@@ -16,11 +16,6 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             build: |
-              sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*;
-              export CC=$(xcrun -f clang);
-              export CXX=$(xcrun -f clang++);
-              SYSROOT=$(xcrun --sdk macosx --show-sdk-path);
-              export CFLAGS="-isysroot $SYSROOT -isystem $SYSROOT";
               export CARGO_BUILD_TARGET=aarch64-apple-darwin;
               pnpm ci:build-release-binding --target aarch64-apple-darwin
 
@@ -91,10 +86,12 @@ jobs:
       - uses: goto-bus-stop/setup-zig@v2
         if: ${{ contains(matrix.target, 'musl') }}
         with:
-          version: 0.11.0
+          version: 0.13.0
 
       - uses: taiki-e/install-action@v2
         if: ${{ contains(matrix.target, 'musl') }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           tool: cargo-zigbuild
 
@@ -118,6 +115,49 @@ jobs:
           path: |
             packages/rolldown/src/rolldown-binding.*.node
             packages/rolldown/src/rolldown-binding.*.wasm
+
+  build-freebsd:
+    name: Build FreeBSD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        id: build
+        uses: cross-platform-actions/action@v0.25.0
+        env:
+          DEBUG: napi:*
+          RUSTUP_IO_THREADS: 1
+        with:
+          operating_system: freebsd
+          version: '14.1'
+          memory: 8G
+          cpu_count: 3
+          environment_variables: 'DEBUG RUSTUP_IO_THREADS'
+          shell: bash
+          run: |
+            sudo pkg install -y -f curl node libnghttp2 npm
+            curl https://sh.rustup.rs -sSf --output rustup.sh
+            sh rustup.sh -y --profile minimal --default-toolchain stable
+            source "$HOME/.cargo/env"
+            echo "~~~~ rustc --version ~~~~"
+            rustc --version
+            echo "~~~~ node -v ~~~~"
+            node -v
+            pwd
+            ls -lah
+            whoami
+            env
+            sudo corepack enable
+            pnpm install
+            pnpm ci:build-release-binding --target x86_64-unknown-freebsd
+            rm -rf node_modules
+            rm -rf target
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-x86_64-unknown-freebsd
+          path: ./packages/rolldown/src/rolldown-binding.*.node
+          if-no-files-found: error
 
   build-node-packages:
     strategy:

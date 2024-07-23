@@ -1,1 +1,4 @@
-console.log(require('./types.mjs'))
+import assert from 'node:assert'
+assert.deepEqual(require('./types.mjs'), {
+
+})

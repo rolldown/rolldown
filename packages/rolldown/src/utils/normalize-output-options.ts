@@ -15,11 +15,12 @@ export function normalizeOutputOptions(
     entryFileNames,
     chunkFileNames,
     assetFileNames,
+    name,
   } = opts
   return {
     dir: dir,
     format: getFormat(format),
-    exports: exports ?? 'named',
+    exports: exports ?? 'auto',
     sourcemap: sourcemap ?? false,
     sourcemapIgnoreList:
       typeof sourcemapIgnoreList === 'function'
@@ -35,6 +36,8 @@ export function normalizeOutputOptions(
     chunkFileNames: chunkFileNames ?? '[name]-[hash].js',
     assetFileNames: assetFileNames ?? 'assets/[name]-[hash][extname]',
     plugins: [],
+    minify: opts.minify,
+    name,
   }
 }
 
@@ -54,6 +57,10 @@ function getFormat(
       return 'cjs'
     }
 
+    case 'iife': {
+      return 'iife'
+    }
+
     default:
       unimplemented(`output.format: ${format}`)
   }
@@ -63,10 +70,11 @@ const getAddon = <T extends 'banner' | 'footer'>(
   config: OutputOptions,
   name: T,
 ): NormalizedOutputOptions[T] => {
-  const configAddon = config[name]
-  if (typeof configAddon === 'function') {
-    return configAddon as NormalizedOutputOptions[T]
+  return async (chunk) => {
+    const configAddon = config[name]
+    if (typeof configAddon === 'function') {
+      return configAddon(chunk)
+    }
+    return configAddon || ''
   }
-  // TODO Here should be remove async
-  return async () => configAddon || ''
 }

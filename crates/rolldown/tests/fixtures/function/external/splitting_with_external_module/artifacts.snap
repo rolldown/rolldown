@@ -9,9 +9,10 @@ input_file: crates/rolldown/tests/fixtures/function/external/splitting_with_exte
 
 ```js
 import { value } from "./share.mjs";
+import { default as assert } from "node:assert";
 
 //#region entry.js
-console.log(value);
+assert.equal(value, 1);
 
 //#endregion
 ```
@@ -19,7 +20,7 @@ console.log(value);
 
 ```js
 import { value } from "./share.mjs";
-import { default as assert } from "assert";
+import { default as assert } from "node:assert";
 
 //#region main.js
 assert(value === 1);

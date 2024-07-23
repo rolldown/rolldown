@@ -6,8 +6,11 @@ use crate::{
   worker_manager::WorkerManager,
 };
 use napi::Either;
-use rolldown::{AddonOutputOption, BundlerOptions, IsExternal, OutputFormat, Platform};
-use rolldown_plugin::BoxPlugin;
+use rolldown::{
+  AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputExports, OutputFormat, Platform,
+};
+use rolldown_plugin::SharedPlugin;
+use std::collections::HashMap;
 use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
@@ -15,7 +18,7 @@ use std::sync::Arc;
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct NormalizeBindingOptionsReturn {
   pub bundler_options: BundlerOptions,
-  pub plugins: Vec<BoxPlugin>,
+  pub plugins: Vec<SharedPlugin>,
 }
 
 fn normalize_addon_option(
@@ -80,13 +83,26 @@ pub fn normalize_binding_options(
     }))
   });
 
+  let mut module_types = None;
+  if let Some(raw) = input_options.module_types {
+    let mut tmp = HashMap::with_capacity(raw.len());
+    for (k, v) in raw {
+      tmp.insert(
+        k,
+        ModuleType::from_known_str(&v)
+          .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
+      );
+    }
+    module_types = Some(tmp);
+  }
+
   let bundler_options = BundlerOptions {
     input: Some(input_options.input.into_iter().map(Into::into).collect()),
     cwd: cwd.into(),
     external,
     treeshake: match input_options.treeshake {
       Some(v) => v.try_into().map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
-      None => rolldown::TreeshakeOptions::False,
+      None => rolldown::TreeshakeOptions::Boolean(false),
     },
     resolve: input_options.resolve.map(Into::into),
     platform: input_options
@@ -96,6 +112,7 @@ pub fn normalize_binding_options(
       .transpose()
       .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
     shim_missing_exports: input_options.shim_missing_exports,
+    name: output_options.name,
     entry_filenames: output_options.entry_file_names,
     chunk_filenames: output_options.chunk_file_names,
     asset_filenames: output_options.asset_file_names,
@@ -105,12 +122,23 @@ pub fn normalize_binding_options(
     footer: normalize_addon_option(output_options.footer),
     sourcemap_ignore_list,
     sourcemap_path_transform,
+    exports: output_options.exports.map(|format_str| match format_str.as_str() {
+      "auto" => OutputExports::Auto,
+      "default" => OutputExports::Default,
+      "named" => OutputExports::Named,
+      "none" => OutputExports::None,
+      _ => panic!("Invalid exports: {format_str}"),
+    }),
     format: output_options.format.map(|format_str| match format_str.as_str() {
       "es" => OutputFormat::Esm,
       "cjs" => OutputFormat::Cjs,
+      "app" => OutputFormat::App,
+      "iife" => OutputFormat::Iife,
       _ => panic!("Invalid format: {format_str}"),
     }),
-    module_types: None,
+    module_types,
+    experimental: None,
+    minify: output_options.minify,
   };
 
   #[cfg(not(target_family = "wasm"))]
@@ -118,7 +146,7 @@ pub fn normalize_binding_options(
   let worker_manager = worker_manager.map(Arc::new);
 
   #[cfg(not(target_family = "wasm"))]
-  let plugins: Vec<BoxPlugin> = input_options
+  let plugins: Vec<SharedPlugin> = input_options
     .plugins
     .into_iter()
     .chain(output_options.plugins)
@@ -131,10 +159,10 @@ pub fn normalize_binding_options(
             .and_then(|plugin| plugin.remove(&index))
             .unwrap_or_default();
           let worker_manager = worker_manager.as_ref().unwrap();
-          ParallelJsPlugin::new_boxed(plugins, Arc::clone(worker_manager))
+          ParallelJsPlugin::new_shared(plugins, Arc::clone(worker_manager))
         },
         |plugin| match plugin {
-          Either::A(plugin) => JsPlugin::new_boxed(plugin),
+          Either::A(plugin) => JsPlugin::new_shared(plugin),
           Either::B(plugin) => plugin.into(),
         },
       )
@@ -142,13 +170,13 @@ pub fn normalize_binding_options(
     .collect::<Vec<_>>();
 
   #[cfg(target_family = "wasm")]
-  let plugins: Vec<BoxPlugin> = input_options
+  let plugins: Vec<SharedPlugin> = input_options
     .plugins
     .into_iter()
     .chain(output_options.plugins)
     .filter_map(|plugin| {
       plugin.map(|plugin| match plugin {
-        Either::A(plugin) => JsPlugin::new_boxed(plugin),
+        Either::A(plugin) => JsPlugin::new_shared(plugin),
         Either::B(plugin) => plugin.into(),
       })
     })

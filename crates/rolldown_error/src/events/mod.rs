@@ -4,11 +4,13 @@ use crate::{
   diagnostic::Diagnostic, event_kind::EventKind, types::diagnostic_options::DiagnosticOptions,
 };
 
+pub mod ambiguous_external_namespace;
 pub mod circular_dependency;
 pub mod eval;
 pub mod external_entry;
 pub mod forbid_const_assign;
 pub mod missing_export;
+pub mod parse_error;
 pub mod sourcemap_error;
 pub mod unresolved_entry;
 pub mod unresolved_import;

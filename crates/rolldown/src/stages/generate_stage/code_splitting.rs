@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{Chunk, ChunkId, ChunkKind, ImportKind, ModuleId, NormalModuleId};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, ImportKind, Module, ModuleIdx, OutputFormat};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
 
@@ -13,28 +13,33 @@ use super::GenerateStage;
 impl<'a> GenerateStage<'a> {
   fn determine_reachable_modules_for_entry(
     &self,
-    module_id: NormalModuleId,
+    module_id: ModuleIdx,
     entry_index: u32,
-    module_to_bits: &mut IndexVec<NormalModuleId, BitSet>,
+    module_to_bits: &mut IndexVec<ModuleIdx, BitSet>,
   ) {
-    let module = &self.link_output.module_table.normal_modules[module_id];
+    let Module::Ecma(module) = &self.link_output.module_table.modules[module_id] else {
+      return;
+    };
     let meta = &self.link_output.metas[module_id];
 
-    if !module.is_included {
-      return;
+    // Here if the module only has re-export statements, the `is_included` is false at `module_side_effects: false`.
+    // But we also need to determine it's dependencies.
+    if module.is_included {
+      if module_to_bits[module_id].has_bit(entry_index) {
+        return;
+      }
+      module_to_bits[module_id].set_bit(entry_index);
     }
-
-    if module_to_bits[module_id].has_bit(entry_index) {
-      return;
-    }
-    module_to_bits[module_id].set_bit(entry_index);
 
     module.import_records.iter().for_each(|rec| {
-      if let ModuleId::Normal(importee_id) = rec.resolved_module {
+      if let Module::Ecma(importee) = &self.link_output.module_table.modules[rec.resolved_module] {
         // Module imported dynamically will be considered as an entry,
         // so we don't need to include it in this chunk
-        if !matches!(rec.kind, ImportKind::DynamicImport) {
-          self.determine_reachable_modules_for_entry(importee_id, entry_index, module_to_bits);
+        if !matches!(rec.kind, ImportKind::DynamicImport)
+      // IIFE format should inline dynamic imports
+          || matches!(self.options.format, OutputFormat::Iife)
+        {
+          self.determine_reachable_modules_for_entry(importee.idx, entry_index, module_to_bits);
         }
       }
     });
@@ -64,23 +69,31 @@ impl<'a> GenerateStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn generate_chunks(&self) -> ChunkGraph {
+    if matches!(self.options.format, OutputFormat::Iife) {
+      let user_defined_entry_count =
+        self.link_output.entries.iter().filter(|entry| entry.kind.is_user_defined()).count();
+      debug_assert!(user_defined_entry_count == 1, "IIFE format only supports one entry point");
+    }
     let entries_len: u32 =
       self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,
     // we create a facade entry point for it.
 
-    let mut module_to_bits = oxc::index::index_vec![BitSet::new(entries_len); self.link_output.module_table.normal_modules.len()];
+    let mut module_to_bits =
+      oxc::index::index_vec![BitSet::new(entries_len); self.link_output.module_table.modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
     let mut chunks = IndexChunks::with_capacity(self.link_output.entries.len());
-    let mut user_defined_entry_chunk_ids: Vec<ChunkId> = Vec::new();
-    let mut entry_module_to_entry_chunk: FxHashMap<NormalModuleId, ChunkId> =
+    let mut user_defined_entry_chunk_ids: Vec<ChunkIdx> = Vec::new();
+    let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
       FxHashMap::with_capacity(self.link_output.entries.len());
     // Create chunk for each static and dynamic entry
     for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
-      let module = &self.link_output.module_table.normal_modules[entry_point.id];
+      let Module::Ecma(module) = &self.link_output.module_table.modules[entry_point.id] else {
+        continue;
+      };
       let chunk = chunks.push(Chunk::new(
         entry_point.name.clone(),
         bits.clone(),
@@ -107,38 +120,38 @@ impl<'a> GenerateStage<'a> {
       );
     });
 
-    let mut module_to_chunk: IndexVec<NormalModuleId, Option<ChunkId>> = oxc::index::index_vec![
+    let mut module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>> = oxc::index::index_vec![
       None;
-      self.link_output.module_table.normal_modules.len()
+      self.link_output.module_table.modules.len()
     ];
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
-    for normal_module in &self.link_output.module_table.normal_modules {
+    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_ecma) {
       if !normal_module.is_included {
         continue;
       }
 
-      let bits = &module_to_bits[normal_module.id];
+      let bits = &module_to_bits[normal_module.idx];
       debug_assert!(
         !bits.is_empty(),
-        "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_resource_id
+        "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_id
       );
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
-        chunks[chunk_id].modules.push(normal_module.id);
-        module_to_chunk[normal_module.id] = Some(chunk_id);
+        chunks[chunk_id].modules.push(normal_module.idx);
+        module_to_chunk[normal_module.idx] = Some(chunk_id);
       } else {
-        let chunk = Chunk::new(None, bits.clone(), vec![normal_module.id], ChunkKind::Common);
+        let chunk = Chunk::new(None, bits.clone(), vec![normal_module.idx], ChunkKind::Common);
         let chunk_id = chunks.push(chunk);
-        module_to_chunk[normal_module.id] = Some(chunk_id);
+        module_to_chunk[normal_module.idx] = Some(chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);
       }
     }
 
     // Sort modules in each chunk by execution order
     chunks.iter_mut().for_each(|chunk| {
-      chunk.modules.sort_by_key(|module_id| {
-        self.link_output.module_table.normal_modules[*module_id].exec_order
+      chunk.modules.sort_unstable_by_key(|module_id| {
+        self.link_output.module_table.modules[*module_id].exec_order()
       });
     });
 
@@ -152,14 +165,14 @@ impl<'a> GenerateStage<'a> {
           (
             ChunkKind::EntryPoint { module: a_module_id, .. },
             ChunkKind::EntryPoint { module: b_module_id, .. },
-          ) => self.link_output.module_table.normal_modules[*a_module_id]
-            .exec_order
-            .cmp(&self.link_output.module_table.normal_modules[*b_module_id].exec_order),
+          ) => self.link_output.module_table.modules[*a_module_id]
+            .exec_order()
+            .cmp(&self.link_output.module_table.modules[*b_module_id].exec_order()),
           (ChunkKind::EntryPoint { module: a_module_id, .. }, ChunkKind::Common) => {
             let a_module_exec_order =
-              self.link_output.module_table.normal_modules[*a_module_id].exec_order;
+              self.link_output.module_table.modules[*a_module_id].exec_order();
             let b_chunk_first_module_exec_order =
-              self.link_output.module_table.normal_modules[b.modules[0]].exec_order;
+              self.link_output.module_table.modules[b.modules[0]].exec_order();
             if a_module_exec_order == b_chunk_first_module_exec_order {
               a_should_be_first
             } else {
@@ -168,9 +181,9 @@ impl<'a> GenerateStage<'a> {
           }
           (ChunkKind::Common, ChunkKind::EntryPoint { module: b_module_id, .. }) => {
             let b_module_exec_order =
-              self.link_output.module_table.normal_modules[*b_module_id].exec_order;
+              self.link_output.module_table.modules[*b_module_id].exec_order();
             let a_chunk_first_module_exec_order =
-              self.link_output.module_table.normal_modules[a.modules[0]].exec_order;
+              self.link_output.module_table.modules[a.modules[0]].exec_order();
             if a_chunk_first_module_exec_order == b_module_exec_order {
               b_should_be_first
             } else {
@@ -179,9 +192,9 @@ impl<'a> GenerateStage<'a> {
           }
           (ChunkKind::Common, ChunkKind::Common) => {
             let a_chunk_first_module_exec_order =
-              self.link_output.module_table.normal_modules[a.modules[0]].exec_order;
+              self.link_output.module_table.modules[a.modules[0]].exec_order();
             let b_chunk_first_module_exec_order =
-              self.link_output.module_table.normal_modules[b.modules[0]].exec_order;
+              self.link_output.module_table.modules[b.modules[0]].exec_order();
             a_chunk_first_module_exec_order.cmp(&b_chunk_first_module_exec_order)
           }
         }
@@ -191,12 +204,12 @@ impl<'a> GenerateStage<'a> {
         chunk.exec_order = i.try_into().expect("Too many chunks, u32 overflowed.");
       });
 
-    let sorted_chunk_ids =
+    let sorted_chunk_idx_vec =
       chunks.indices().sorted_by_key(|id| &chunks[*id].bits).collect::<Vec<_>>();
 
     ChunkGraph {
       chunks,
-      sorted_chunk_ids,
+      sorted_chunk_idx_vec,
       module_to_chunk,
       entry_module_to_entry_chunk,
       user_defined_entry_chunk_ids,

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/function/resolve/should_resolve_to_different_target_for_import_and_require
 ---
@@ -11,12 +11,12 @@ input_file: crates/rolldown/tests/fixtures/function/resolve/should_resolve_to_di
 
 
 //#region node_modules/package/esm-output.js
-const output = 'esm';
+const output = "esm";
 
 //#endregion
 //#region node_modules/package/cjs-output.js
 var require_cjs_output = __commonJSMin((exports, module) => {
-	module.exports.output = 'cjs';
+	module.exports.output = "cjs";
 });
 
 //#endregion

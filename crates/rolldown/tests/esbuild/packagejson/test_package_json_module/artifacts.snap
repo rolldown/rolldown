@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_module
 ## entry.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 //#region node_modules/demo-pkg/main.esm.js
 function main_esm_default() {
@@ -16,7 +17,7 @@ function main_esm_default() {
 
 //#endregion
 //#region src/entry.js
-console.log(main_esm_default());
+assert.equal(main_esm_default(), 123);
 
 //#endregion
 ```

@@ -1,8 +1,8 @@
 use crate::types::hook_render_error::HookRenderErrorArgs;
-use crate::PluginDriver;
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
-use anyhow::Result;
-use rolldown_common::{Output, RenderedChunk};
+use crate::{HookBannerArgs, PluginDriver};
+use anyhow::{Ok, Result};
+use rolldown_common::{Output, RollupRenderedChunk};
 use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {
@@ -11,6 +11,23 @@ impl PluginDriver {
       plugin.render_start(ctx).await?;
     }
     Ok(())
+  }
+
+  pub async fn banner(
+    &self,
+    args: HookBannerArgs<'_>,
+    mut banner: String,
+  ) -> Result<Option<String>> {
+    for (plugin, ctx) in &self.plugins {
+      if let Some(r) = plugin.banner(ctx, &args).await? {
+        banner.push('\n');
+        banner.push_str(r.as_str());
+      }
+    }
+    if banner.is_empty() {
+      return Ok(None);
+    }
+    Ok(Some(banner))
   }
 
   pub async fn render_chunk(
@@ -29,14 +46,17 @@ impl PluginDriver {
     Ok((args.code, sourcemap_chain))
   }
 
-  pub async fn augment_chunk_hash(&self, chunk: &RenderedChunk) -> HookAugmentChunkHashReturn {
-    let mut hash = String::new();
+  pub async fn augment_chunk_hash(
+    &self,
+    chunk: &RollupRenderedChunk,
+  ) -> HookAugmentChunkHashReturn {
+    let mut hash = None;
     for (plugin, ctx) in &self.plugins {
       if let Some(plugin_hash) = plugin.augment_chunk_hash(ctx, chunk).await? {
-        hash.push_str(&plugin_hash);
+        hash.get_or_insert_with(String::default).push_str(&plugin_hash);
       }
     }
-    Ok(Some(hash))
+    Ok(hash)
   }
 
   pub async fn render_error(&self, args: &HookRenderErrorArgs) -> HookNoopReturn {

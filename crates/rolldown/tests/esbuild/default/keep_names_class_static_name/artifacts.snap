@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/keep_names_class_static_name
 ---
@@ -26,7 +26,7 @@ class E {
 	static set name(x) {}
 }
 class F {
-	static ['name'] = 0;
+	static ["name"] = 0;
 }
 let a = class a$1 {
 	static foo;
@@ -44,7 +44,7 @@ let e = class e$1 {
 	static set name(x) {}
 };
 let f = class f$1 {
-	static ['name'] = 0;
+	static ["name"] = 0;
 };
 let a2 = class {
 	static foo;
@@ -62,7 +62,7 @@ let e2 = class {
 	static set name(x) {}
 };
 let f2 = class {
-	static ['name'] = 0;
+	static ["name"] = 0;
 };
 
 //#endregion

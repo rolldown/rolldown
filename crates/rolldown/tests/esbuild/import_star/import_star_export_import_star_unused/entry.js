@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import {ns} from './bar'
 let foo = 234
-console.log(foo)
+assert.equal(foo, 234)

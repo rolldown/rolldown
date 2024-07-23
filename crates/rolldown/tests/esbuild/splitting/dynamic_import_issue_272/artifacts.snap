@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/splitting/dynamic_import_issue_272
 ---
@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/splitting/dynamic_import_issue_272
 ```js
 
 //#region a.js
-import('./b.mjs');
+import("./b.mjs");
 
 //#endregion
 ```

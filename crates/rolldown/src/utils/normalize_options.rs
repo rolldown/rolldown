@@ -1,9 +1,5 @@
-use rolldown_common::{
-  ModuleType, NormalizedBundlerOptions, NormalizedInputItem, Platform, SourceMapType,
-};
+use rolldown_common::{ModuleType, NormalizedBundlerOptions, Platform, SourceMapType};
 use rustc_hash::FxHashMap;
-
-use super::extract_meaningful_input_name_from_path::try_extract_meaningful_input_name_from_path;
 
 pub struct NormalizeOptionsReturn {
   pub options: NormalizedBundlerOptions,
@@ -48,38 +44,15 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   loaders.extend(user_defined_loaders);
 
-  let has_only_one_input_item = matches!(&raw_options.input, Some(items) if items.len() == 1);
-  let input = raw_options
-    .input
-    .unwrap_or_default()
-    .into_iter()
-    .enumerate()
-    .map(|(idx, raw)| {
-      let name = raw.name.unwrap_or_else(|| {
-        // We try to give a meaningful name for unnamed input item.
-        let fallback_name =
-          || if has_only_one_input_item { "input".to_string() } else { format!("input~{idx}") };
-
-        // If the input is a data URL, no way we can get a meaningful name. Just fallback to the default.
-        if raw.import.starts_with("data:") {
-          return fallback_name();
-        }
-
-        // If it's a file path, use the file name of it.
-        try_extract_meaningful_input_name_from_path(&raw.import).unwrap_or_else(fallback_name)
-      });
-      NormalizedInputItem { name, import: raw.import }
-    })
-    .collect::<Vec<_>>();
-
   let normalized = NormalizedBundlerOptions {
-    input,
+    input: raw_options.input.unwrap_or_default(),
     cwd: raw_options
       .cwd
       .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),
     external: raw_options.external,
     treeshake: raw_options.treeshake,
     platform: raw_options.platform.unwrap_or(Platform::Browser),
+    name: raw_options.name,
     entry_filenames: raw_options.entry_filenames.unwrap_or_else(|| "[name].js".to_string()).into(),
     chunk_filenames: raw_options
       .chunk_filenames
@@ -93,11 +66,14 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     footer: raw_options.footer,
     dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
     format: raw_options.format.unwrap_or(crate::OutputFormat::Esm),
+    exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
     sourcemap: raw_options.sourcemap.unwrap_or(SourceMapType::Hidden),
     sourcemap_ignore_list: raw_options.sourcemap_ignore_list,
     sourcemap_path_transform: raw_options.sourcemap_path_transform,
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types: loaders,
+    experimental: raw_options.experimental.unwrap_or_default(),
+    minify: raw_options.minify.unwrap_or(false),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve }

@@ -1,4 +1,4 @@
+import assert from 'node:assert'
 import foo from './cjs'
-console.log(foo)
-
+assert(typeof foo === 'function')
 export {}

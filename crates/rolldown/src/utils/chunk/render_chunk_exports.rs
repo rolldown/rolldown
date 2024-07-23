@@ -1,14 +1,17 @@
-use rolldown_common::{Chunk, ChunkKind, OutputFormat, SymbolRef, WrapKind};
+use rolldown_common::{
+  Chunk, ChunkKind, ExportsKind, NormalizedBundlerOptions, OutputExports, OutputFormat, SymbolRef,
+  WrapKind,
+};
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
 
-use crate::{runtime::RuntimeModuleBrief, stages::link_stage::LinkStageOutput, SharedOptions};
+use crate::{runtime::RuntimeModuleBrief, stages::link_stage::LinkStageOutput};
 
 pub fn render_chunk_exports(
   this: &Chunk,
-  runtime: &RuntimeModuleBrief,
+  _runtime: &RuntimeModuleBrief,
   graph: &LinkStageOutput,
-  output_options: &SharedOptions,
+  output_options: &NormalizedBundlerOptions,
 ) -> Option<String> {
   let export_items = get_export_items(this, graph);
 
@@ -43,18 +46,46 @@ pub fn render_chunk_exports(
       s.push_str(&format!("export {{ {} }};", rendered_items.join(", "),));
       Some(s)
     }
-    OutputFormat::Cjs => {
+    OutputFormat::Cjs | OutputFormat::Iife => {
       let mut s = String::new();
       match this.kind {
         ChunkKind::EntryPoint { module, .. } => {
-          let to_commonjs_ref_name = &this.canonical_names[&runtime.resolve_symbol("__toCommonJS")];
-          let module = &graph.module_table.normal_modules[module];
-          let namespace_ref_name = &this.canonical_names[&module.namespace_object_ref];
-          s.push_str(&format!(
-            "module.exports = {}({})",
-            to_commonjs_ref_name.as_str(),
-            namespace_ref_name.as_str()
-          ));
+          let module = &graph.module_table.modules[module].as_ecma().unwrap();
+          if matches!(module.exports_kind, ExportsKind::Esm) {
+            let export_mode = determine_export_mode(this, &output_options.exports, graph).unwrap();
+            s.push_str("Object.defineProperty(exports, '__esModule', { value: true });\n");
+            let rendered_items = export_items
+              .into_iter()
+              .map(|(exported_name, export_ref)| {
+                let canonical_ref = graph.symbols.par_canonical_ref_for(export_ref);
+                let symbol = graph.symbols.get(canonical_ref);
+                let canonical_name = &this.canonical_names[&canonical_ref];
+                if let Some(ns_alias) = &symbol.namespace_alias {
+                  let canonical_ns_name = &this.canonical_names[&ns_alias.namespace_ref];
+                  let property_name = &ns_alias.property_name;
+                  s.push_str(&format!(
+                    "var {canonical_name} = {canonical_ns_name}.{property_name};\n"
+                  ));
+                }
+
+                match export_mode {
+                  OutputExports::Named => {
+                    if is_validate_identifier_name(&exported_name) {
+                      format!("exports.{exported_name} = {canonical_name};")
+                    } else {
+                      format!("exports['{exported_name}'] = {canonical_name};")
+                    }
+                  }
+                  OutputExports::Default => {
+                    format!("module.exports = {canonical_name};")
+                  }
+                  OutputExports::None => String::new(),
+                  OutputExports::Auto => unreachable!(),
+                }
+              })
+              .collect::<Vec<_>>();
+            s.push_str(&rendered_items.join("\n"));
+          }
         }
         ChunkKind::Common => {
           export_items.into_iter().for_each(|(exported_name, export_ref)| {
@@ -83,7 +114,7 @@ pub fn render_chunk_exports(
   }
 }
 
-fn get_export_items(this: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolRef)> {
+pub fn get_export_items(this: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolRef)> {
   match this.kind {
     ChunkKind::EntryPoint { module, .. } => {
       let meta = &graph.metas[module];
@@ -109,7 +140,7 @@ fn get_export_items(this: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolR
 pub fn get_chunk_export_names(
   this: &Chunk,
   graph: &LinkStageOutput,
-  options: &SharedOptions,
+  options: &NormalizedBundlerOptions,
 ) -> Vec<String> {
   if matches!(options.format, OutputFormat::Esm) {
     if let ChunkKind::EntryPoint { module: entry_id, .. } = &this.kind {
@@ -124,4 +155,45 @@ pub fn get_chunk_export_names(
     .into_iter()
     .map(|(exported_name, _)| exported_name.to_string())
     .collect::<Vec<_>>()
+}
+
+// Port from https://github.com/rollup/rollup/blob/master/src/utils/getExportMode.ts
+pub fn determine_export_mode(
+  this: &Chunk,
+  export_mode: &OutputExports,
+  graph: &LinkStageOutput,
+) -> anyhow::Result<OutputExports> {
+  let export_items = get_export_items(this, graph);
+
+  match export_mode {
+    OutputExports::Named => Ok(OutputExports::Named),
+    OutputExports::Default => {
+      if export_items.len() != 1 || export_items[0].0.as_str() != "default" {
+        // TODO improve the backtrace
+        anyhow::bail!(
+          "Chunk was specified for `output.exports`, but entry module has invalid exports"
+        );
+      }
+      Ok(OutputExports::Default)
+    }
+    OutputExports::None => {
+      if !export_items.is_empty() {
+        // TODO improve the backtrace
+        anyhow::bail!(
+          "Chunk was specified for `output.exports`, but entry module has invalid exports"
+        );
+      }
+      Ok(OutputExports::None)
+    }
+    OutputExports::Auto => {
+      if export_items.is_empty() {
+        Ok(OutputExports::None)
+      } else if export_items.len() == 1 && export_items[0].0.as_str() == "default" {
+        Ok(OutputExports::Default)
+      } else {
+        // TODO add warnings
+        Ok(OutputExports::Named)
+      }
+    }
+  }
 }

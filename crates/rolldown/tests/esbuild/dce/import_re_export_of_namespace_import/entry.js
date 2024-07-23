@@ -1,2 +1,4 @@
+import assert from 'node:assert'
 import * as ns from 'pkg'
-console.log(ns.foo)
+
+assert.equal(ns.foo, 123)

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/misc/object_shorthand_property
 ---
@@ -11,12 +11,12 @@ input_file: crates/rolldown/tests/fixtures/misc/object_shorthand_property
 import { default as assert } from "assert";
 
 //#region foo.js
-var foo_default = 'foo';
+var foo_default = "foo";
 
 //#endregion
 //#region main.js
 const value = {foo: foo_default};
-assert.strictEqual(value.foo, 'foo');
+assert.strictEqual(value.foo, "foo");
 
 //#endregion
 //# sourceMappingURL=main.mjs.map
@@ -26,7 +26,7 @@ assert.strictEqual(value.foo, 'foo');
 
 - ../foo.js
 (0:0-0:15) "export default " --> (3:0-3:18) "\nvar foo_default ="
-(0:15-0:20) "'foo'" --> (3:18-7:0) " 'foo';\n\n//#endregion\n//#region main.js"
+(0:15-0:20) "'foo'" --> (3:18-7:0) " \"foo\";\n\n//#endregion\n//#region main.js"
 - ../main.js
 (3:0-3:6) "\nconst" --> (7:0-7:6) "\nconst"
 (3:6-3:14) " value =" --> (7:6-7:14) " value ="
@@ -37,5 +37,5 @@ assert.strictEqual(value.foo, 'foo');
 (5:7-5:19) ".strictEqual" --> (8:7-8:19) ".strictEqual"
 (5:19-5:25) "(value" --> (8:19-8:25) "(value"
 (5:25-5:30) ".foo," --> (8:25-8:30) ".foo,"
-(5:30-5:36) " 'foo'" --> (8:30-8:36) " 'foo'"
+(5:30-5:36) " 'foo'" --> (8:30-8:36) " \"foo\""
 (5:36-5:37) ")" --> (8:36-11:34) ");\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

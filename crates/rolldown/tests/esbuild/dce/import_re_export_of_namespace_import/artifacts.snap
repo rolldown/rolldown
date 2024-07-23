@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/import_re_export_of_namespace_import
 ---
@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/dce/import_re_export_of_namespace_impo
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region node_modules/pkg/foo.js
@@ -18,7 +19,7 @@ var require_foo = __commonJSMin((exports, module) => {
 //#endregion
 //#region node_modules/pkg/bar.js
 var require_bar = __commonJSMin((exports, module) => {
-	module.exports = 'abc';
+	module.exports = "abc";
 });
 
 //#endregion
@@ -28,7 +29,7 @@ var import_bar = __toESM(require_bar());
 
 //#endregion
 //#region entry.js
-console.log(import_foo.default);
+assert.equal(import_foo.default, 123);
 
 //#endregion
 ```

@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_common_js
+---
+# Assets
+
+## src_entry_js.mjs
+
+```js
+
+
+//#region node_modules/demo-pkg/index.js
+var require_demo_pkg_index = __commonJSMin((exports, module) => {
+	exports.foo = 123;
+	console.log("hello");
+});
+
+//#endregion
+//#region src/entry.js
+var import_demo_pkg_index = __toESM(require_demo_pkg_index());
+require_demo_pkg_index();
+console.log("unused import");
+
+//#endregion
+```

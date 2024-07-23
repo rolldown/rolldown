@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/external_packages
 ---
@@ -12,11 +12,11 @@ import "pkg1";
 import "pkg2";
 
 //#region file.js
-console.log('file');
+console.log("file");
 
 //#endregion
 //#region libs/pkg3.js
-console.log('pkg3');
+console.log("pkg3");
 
 //#endregion
 ```

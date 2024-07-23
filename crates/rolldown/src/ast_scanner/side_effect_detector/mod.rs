@@ -1,12 +1,17 @@
-use std::sync::Arc;
-
 use once_cell::sync::Lazy;
 use oxc::ast::ast::{
-  BindingPatternKind, Expression, IdentifierReference, MemberExpression, PropertyKey,
+  Argument, ArrayExpressionElement, BindingPatternKind, Expression, IdentifierReference,
+  PropertyKey,
 };
-use oxc::ast::Trivias;
+use oxc::ast::{match_expression, Trivias};
 use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
+
+use crate::ast_scanner::side_effect_detector::utils::{
+  extract_member_expr_chain, is_primitive_literal,
+};
+
+use self::utils::{known_primitive_type, PrimitiveType};
 
 mod annotation;
 mod utils;
@@ -20,6 +25,7 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_2: Lazy<FxHashSet<(&'static str, &'static st
       ("Object", "getOwnPropertyDescriptor"),
       ("Object", "getPrototypeOf"),
       ("Object", "getOwnPropertyNames"),
+      ("Symbol", "iterator"),
     ]
     .into_iter()
     .collect()
@@ -35,34 +41,73 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_3: Lazy<FxHashSet<(&'static str, &'static st
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScopes,
-  pub source: &'a Arc<str>,
+  pub source: &'a str,
   pub trivias: &'a Trivias,
 }
 
 impl<'a> SideEffectDetector<'a> {
-  pub fn new(scope: &'a AstScopes, source: &'a Arc<str>, trivias: &'a Trivias) -> Self {
+  pub fn new(scope: &'a AstScopes, source: &'a str, trivias: &'a Trivias) -> Self {
     Self { scope, source, trivias }
   }
 
-  fn is_unresolved_reference(&mut self, ident_ref: &IdentifierReference) -> bool {
+  fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
     self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
   }
 
+  fn detect_side_effect_of_property_key(&self, key: &PropertyKey, is_computed: bool) -> bool {
+    match key {
+      PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
+      key @ oxc::ast::match_expression!(PropertyKey) => {
+        is_computed && {
+          let key_expr = key.to_expression();
+          match key_expr {
+            Expression::StaticMemberExpression(_) | Expression::ComputedMemberExpression(_) => {
+              if let Some((ref_id, chain)) =
+                extract_member_expr_chain(key.to_member_expression(), 2)
+              {
+                !(chain == ["Symbol", "iterator"] && self.scope.is_unresolved(ref_id))
+              } else {
+                true
+              }
+            }
+            _ => !is_primitive_literal(self.scope, key_expr),
+          }
+        }
+      }
+    }
+  }
+
+  /// ref: https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2298-L2393
   fn detect_side_effect_of_class(&mut self, cls: &oxc::ast::ast::Class) -> bool {
-    use oxc::ast::ast::{ClassElement, PropertyKey};
+    use oxc::ast::ast::ClassElement;
+    if !cls.decorators.is_empty() {
+      return true;
+    }
     cls.body.body.iter().any(|elm| match elm {
       ClassElement::StaticBlock(static_block) => {
         static_block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
       }
-      ClassElement::MethodDefinition(_) => false,
+      ClassElement::MethodDefinition(def) => {
+        if !def.decorators.is_empty() {
+          return true;
+        }
+        if self.detect_side_effect_of_property_key(&def.key, def.computed) {
+          return true;
+        }
+
+        def.value.params.items.iter().any(|item| !item.decorators.is_empty())
+      }
       ClassElement::PropertyDefinition(def) => {
-        (match &def.key {
-          // FIXME: this is wrong, we should also always check the `def.value`.
-          PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
-          key @ oxc::ast::match_expression!(PropertyKey) => {
-            self.detect_side_effect_of_expr(key.to_expression())
-          }
-        } || def.value.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init)))
+        if !def.decorators.is_empty() {
+          return true;
+        }
+        if self.detect_side_effect_of_property_key(&def.key, def.computed) {
+          return true;
+        }
+
+        let value_side_effect = def.r#static
+          && def.value.as_ref().map_or(false, |init| self.detect_side_effect_of_expr(init));
+        value_side_effect
       }
       ClassElement::AccessorProperty(def) => {
         (match &def.key {
@@ -77,36 +122,18 @@ impl<'a> SideEffectDetector<'a> {
     })
   }
 
-  fn detect_side_effect_of_member_expr(expr: &oxc::ast::ast::MemberExpression) -> bool {
+  fn detect_side_effect_of_member_expr(&self, expr: &oxc::ast::ast::MemberExpression) -> bool {
     // MemberExpression is considered having side effect by default, unless it's some builtin global variables.
-    let MemberExpression::StaticMemberExpression(member_expr) = expr else {
+    let Some((ref_id, chains)) = extract_member_expr_chain(expr, 3) else {
       return true;
     };
-
-    let prop_name = &member_expr.property.name;
-    match &member_expr.object {
-      Expression::Identifier(ident) => {
-        let object_name = &ident.name;
-        // Check if `object_name.prop_name` is pure
-        !SIDE_EFFECT_FREE_MEMBER_EXPR_2.contains(&(object_name.as_str(), prop_name.as_str()))
-      }
-      expr @ oxc::ast::match_member_expression!(Expression) => {
-        let mem_expr = expr.to_member_expression();
-        let MemberExpression::StaticMemberExpression(mem_expr) = mem_expr else {
-          return true;
-        };
-        let mid_prop = &mem_expr.property.name;
-        let Expression::Identifier(obj_ident) = &mem_expr.object else {
-          return true;
-        };
-        let object_name = &obj_ident.name;
-        // Check if `object_name.mid_prop.prop_name` is pure
-        !SIDE_EFFECT_FREE_MEMBER_EXPR_3.contains(&(
-          object_name.as_str(),
-          mid_prop.as_str(),
-          prop_name.as_str(),
-        ))
-      }
+    // If the global variable is override, we considered it has side effect.
+    if !self.scope.is_unresolved(ref_id) {
+      return true;
+    }
+    match chains.as_slice() {
+      [a, b] => !SIDE_EFFECT_FREE_MEMBER_EXPR_2.contains(&(a.as_str(), b.as_str())),
+      [a, b, c] => !SIDE_EFFECT_FREE_MEMBER_EXPR_3.contains(&(a.as_str(), b.as_str(), c.as_str())),
       _ => true,
     }
   }
@@ -117,7 +144,7 @@ impl<'a> SideEffectDetector<'a> {
       Expression::BooleanLiteral(_)
       | Expression::NullLiteral(_)
       | Expression::NumericLiteral(_)
-      | Expression::BigintLiteral(_)
+      | Expression::BigIntLiteral(_)
       | Expression::RegExpLiteral(_)
       | Expression::FunctionExpression(_)
       | Expression::ArrowFunctionExpression(_)
@@ -127,20 +154,18 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ObjectExpression(obj_expr) => {
         obj_expr.properties.iter().any(|obj_prop| match obj_prop {
           oxc::ast::ast::ObjectPropertyKind::ObjectProperty(prop) => {
-            let key_side_effect = match &prop.key {
-              oxc::ast::ast::PropertyKey::StaticIdentifier(_)
-              | oxc::ast::ast::PropertyKey::PrivateIdentifier(_) => false,
-              key @ oxc::ast::match_expression!(PropertyKey) => {
-                self.detect_side_effect_of_expr(key.to_expression())
-              }
-            };
+            let key_side_effect = self.detect_side_effect_of_property_key(&prop.key, prop.computed);
+            if key_side_effect {
+              return true;
+            }
 
             let prop_init_side_effect =
               prop.init.as_ref().map_or(false, |expr| self.detect_side_effect_of_expr(expr));
 
-            let value_side_effect = self.detect_side_effect_of_expr(&prop.value);
-
-            key_side_effect || prop_init_side_effect || value_side_effect
+            if prop_init_side_effect {
+              return true;
+            }
+            self.detect_side_effect_of_expr(&prop.value)
           }
           oxc::ast::ast::ObjectPropertyKind::SpreadProperty(_) => {
             // ...[expression] is considered as having side effect.
@@ -153,14 +178,18 @@ impl<'a> SideEffectDetector<'a> {
         self.detect_side_effect_of_expr(&unary_expr.argument)
       }
       oxc::ast::match_member_expression!(Expression) => {
-        Self::detect_side_effect_of_member_expr(expr.to_member_expression())
+        self.detect_side_effect_of_member_expr(expr.to_member_expression())
       }
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
-      Expression::Identifier(ident) => self.is_unresolved_reference(ident),
-      Expression::TemplateLiteral(literal) => {
-        literal.expressions.iter().any(|expr| self.detect_side_effect_of_expr(expr))
-      }
+      Expression::Identifier(ident) => self.detect_side_effect_of_identifier(ident),
+      // https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2576-L2588
+      Expression::TemplateLiteral(literal) => literal.expressions.iter().any(|expr| {
+        // Primitive type detection is more strict and faster than side_effects detection of
+        // `Expr`, put it first to fail fast.
+        known_primitive_type(self.scope, expr) == PrimitiveType::Unknown
+          || self.detect_side_effect_of_expr(expr)
+      }),
       Expression::LogicalExpression(logic_expr) => {
         self.detect_side_effect_of_expr(&logic_expr.left)
           || self.detect_side_effect_of_expr(&logic_expr.right)
@@ -191,24 +220,40 @@ impl<'a> SideEffectDetector<'a> {
       }
       // TODO: Implement these
       Expression::Super(_)
-      | Expression::ArrayExpression(_)
       | Expression::AssignmentExpression(_)
       | Expression::AwaitExpression(_)
       | Expression::ChainExpression(_)
       | Expression::ImportExpression(_)
-      | Expression::NewExpression(_)
       | Expression::TaggedTemplateExpression(_)
       | Expression::UpdateExpression(_)
       | Expression::YieldExpression(_)
       | Expression::JSXElement(_)
       | Expression::JSXFragment(_) => true,
+
+      Expression::ArrayExpression(expr) => expr.elements.iter().any(|elem| match elem {
+        ArrayExpressionElement::SpreadElement(_) => true,
+        ArrayExpressionElement::Elision(_) => false,
+        match_expression!(ArrayExpressionElement) => {
+          self.detect_side_effect_of_expr(elem.to_expression())
+        }
+      }),
+      Expression::NewExpression(expr) => {
+        let is_pure = self.is_pure_function_or_constructor_call(expr.span);
+        if is_pure {
+          expr.arguments.iter().any(|arg| match arg {
+            Argument::SpreadElement(_) => true,
+            _ => self.detect_side_effect_of_expr(arg.to_expression()),
+          })
+        } else {
+          true
+        }
+      }
       Expression::CallExpression(expr) => {
         let is_pure = self.is_pure_function_or_constructor_call(expr.span);
         if is_pure {
           expr.arguments.iter().any(|arg| match arg {
-            oxc::ast::ast::Argument::SpreadElement(_) => true,
-            // TODO: implement this
-            _ => false,
+            Argument::SpreadElement(_) => true,
+            _ => self.detect_side_effect_of_expr(arg.to_expression()),
           })
         } else {
           true
@@ -230,8 +275,13 @@ impl<'a> SideEffectDetector<'a> {
           }
         }
       }
+      let is_destructuring = matches!(
+        declarator.id.kind,
+        BindingPatternKind::ArrayPattern(_) | BindingPatternKind::ObjectPattern(_)
+      );
 
-      declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
+      is_destructuring
+        || declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
     })
   }
 
@@ -241,15 +291,35 @@ impl<'a> SideEffectDetector<'a> {
       Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
       Declaration::FunctionDeclaration(_) => false,
       Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
-      // Currently, using a fallback value to make the bundle correct,
-      // finishing the implementation after we carefully read the spec
-      Declaration::UsingDeclaration(_) => true,
+      Declaration::UsingDeclaration(decl) => {
+        decl.is_await || self.detect_side_effect_of_using_declarators(&decl.declarations)
+      }
       Declaration::TSTypeAliasDeclaration(_)
       | Declaration::TSInterfaceDeclaration(_)
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
       | Declaration::TSImportEqualsDeclaration(_) => unreachable!("ts should be transpiled"),
     }
+  }
+
+  fn detect_side_effect_of_using_declarators(
+    &self,
+    declarators: &[oxc::ast::ast::VariableDeclarator],
+  ) -> bool {
+    declarators.iter().any(|decl| {
+      decl.init.as_ref().map_or(false, |init| match init {
+        Expression::NullLiteral(_) => false,
+        // Side effect detection of identifier is different with other position when as initialization of using declaration.
+        // Only global variable `undefined` is considered as side effect free.
+        Expression::Identifier(id) => !(id.name == "undefined" && self.is_unresolved_reference(id)),
+        _ => true,
+      })
+    })
+  }
+
+  #[inline]
+  fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> bool {
+    self.is_unresolved_reference(ident_ref) && ident_ref.name != "undefined"
   }
 
   pub fn detect_side_effect_of_stmt(&mut self, stmt: &oxc::ast::ast::Statement) -> bool {
@@ -357,7 +427,7 @@ impl<'a> SideEffectDetector<'a> {
 mod test {
   use oxc::span::SourceType;
   use rolldown_common::AstScopes;
-  use rolldown_oxc_utils::{OxcAst, OxcCompiler};
+  use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
 
@@ -367,9 +437,9 @@ mod test {
       .with_module(true)
       .with_jsx(true)
       .with_typescript(false);
-    let ast = OxcCompiler::parse(code, source_type).unwrap();
+    let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let ast_scope = {
-      let semantic = OxcAst::make_semantic(ast.source(), ast.program(), source_type);
+      let semantic = EcmaAst::make_semantic(ast.source(), ast.program(), source_type);
       let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
       AstScopes::new(
         scope,
@@ -427,7 +497,7 @@ mod test {
   #[test]
   fn test_template_literal() {
     assert!(!get_statements_side_effect("`hello`"));
-    assert!(!get_statements_side_effect("const foo = ''; `hello${foo}`"));
+    assert!(get_statements_side_effect("const foo = ''; `hello${foo}`"));
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("`hello${foo}`"));
     assert!(get_statements_side_effect("const foo = {}; `hello${foo.bar}`"));

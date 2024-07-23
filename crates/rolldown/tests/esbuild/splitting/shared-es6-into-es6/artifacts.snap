@@ -9,9 +9,10 @@ input_file: crates/rolldown/tests/esbuild/splitting/shared-es6-into-es6
 
 ```js
 import { foo } from "./shared.mjs";
+import { default as assert } from "node:assert";
 
 //#region a.js
-console.log(foo);
+assert.equal(foo, 123);
 
 //#endregion
 ```
@@ -19,9 +20,10 @@ console.log(foo);
 
 ```js
 import { foo } from "./shared.mjs";
+import { default as assert } from "node:assert";
 
 //#region b.js
-console.log(foo);
+assert.equal(foo, 123);
 
 //#endregion
 ```

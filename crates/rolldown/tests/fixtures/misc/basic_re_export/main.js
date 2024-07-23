@@ -1,3 +1,5 @@
+import assert from 'node:assert'
 import { a as a2 } from './proxy'
 const a = 'index.js'
-console.log(a, a2)
+assert.equal(a, 'index.js')
+assert.equal(a2, 'a.js')

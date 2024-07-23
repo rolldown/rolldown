@@ -8,6 +8,7 @@ input_file: crates/rolldown/tests/esbuild/default/dot_import
 ## entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region index.js
@@ -18,7 +19,7 @@ var require_dot_import_index = __commonJSMin((exports, module) => {
 //#endregion
 //#region entry.js
 var import_dot_import_index = __toESM(require_dot_import_index());
-console.log(import_dot_import_index.x);
+assert(import_dot_import_index.x === 123);
 
 //#endregion
 ```

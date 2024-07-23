@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
+  plugin::HookTransformAstReturn, types::hook_transform_ast_args::HookTransformAstArgs,
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveDynamicImportArgs,
   HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver, TransformPluginContext,
 };
@@ -100,10 +101,20 @@ impl PluginDriver {
         if let Some(v) = r.side_effects {
           *side_effects = Some(v);
         }
-        code = r.code;
+        if let Some(v) = r.code {
+          code = v;
+        }
       }
     }
     Ok(code)
+  }
+
+  pub fn transform_ast(&self, mut args: HookTransformAstArgs) -> HookTransformAstReturn {
+    for (plugin, ctx) in &self.plugins {
+      args.ast =
+        plugin.transform_ast(ctx, HookTransformAstArgs { cwd: args.cwd, ast: args.ast })?;
+    }
+    Ok(args.ast)
   }
 
   pub async fn module_parsed(&self, module_info: Arc<ModuleInfo>) -> HookNoopReturn {

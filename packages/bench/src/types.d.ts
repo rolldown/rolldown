@@ -8,6 +8,7 @@ export interface BenchSuite {
   derived?: {
     // Whether to have an extra round for benchmarking with enabling sourcemap
     sourcemap?: boolean
+    minify?: boolean
   }
   title: string
   inputs: string[]

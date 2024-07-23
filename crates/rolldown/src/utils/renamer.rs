@@ -1,17 +1,35 @@
 use std::borrow::Cow;
+use std::collections::hash_map::Entry;
 
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
-use rolldown_common::{NormalModule, NormalModuleId, NormalModuleVec, SymbolRef};
+use rolldown_common::{EcmaModule, IndexModules, ModuleIdx, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use crate::types::symbols::Symbols;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
-  used_canonical_names: FxHashSet<Cow<'name, Rstr>>,
+  /// key is the original name,
+  /// value is the how many same variable name in the top level are used before
+  /// It is also used to calculate the candidate_name e.g.
+  /// ```js
+  /// // index.js
+  /// import {a as b} from './a.js'
+  /// const a = 1; // {a => 0}
+  /// const a$1 = 1000; // {a => 0, a$1 => 0}
+  ///
+  ///
+  /// // a.js
+  /// export const a = 100; // {a => 0, a$1 => 0}, first we try looking up `a`, it is used. So we try the
+  ///                       // candidate_name `a$1`(conflict_index + 1 = 1). Then we try `a$2`, so
+  ///                       // on and so forth. Until we find a name that is not used. In this case, `a$2` is not used
+  ///                       // so we rename `a` to `a$2`
+  /// ```
+  ///
+  used_canonical_names: FxHashMap<Cow<'name, Rstr>, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
   symbols: &'name Symbols,
 }
@@ -24,32 +42,38 @@ impl<'name> Renamer<'name> {
       used_canonical_names: RESERVED_KEYWORDS
         .iter()
         .chain(GLOBAL_OBJECTS.iter())
-        .map(|s| Cow::Owned(Rstr::new(s)))
+        .map(|s| (Cow::Owned(Rstr::new(s)), 0))
         .collect(),
     }
   }
 
   pub fn reserve(&mut self, name: Cow<'name, Rstr>) {
-    self.used_canonical_names.insert(name);
+    self.used_canonical_names.insert(name, 0);
   }
 
   pub fn add_top_level_symbol(&mut self, symbol_ref: SymbolRef) {
     let canonical_ref = self.symbols.par_canonical_ref_for(symbol_ref);
     let original_name: Cow<'_, Rstr> =
       Cow::Owned(self.symbols.get_original_name(canonical_ref).to_rstr());
-
     match self.canonical_names.entry(canonical_ref) {
-      std::collections::hash_map::Entry::Vacant(vacant) => {
-        let mut count = 0;
+      Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();
-        while self.used_canonical_names.contains(&candidate_name) {
-          count += 1;
-          candidate_name = Cow::Owned(format!("{original_name}${count}").into());
+        loop {
+          match self.used_canonical_names.entry(candidate_name.clone()) {
+            Entry::Occupied(mut occ) => {
+              let next_conflict_index = *occ.get() + 1;
+              *occ.get_mut() = next_conflict_index;
+              candidate_name = Cow::Owned(format!("{original_name}${next_conflict_index}",).into());
+            }
+            Entry::Vacant(vac) => {
+              vac.insert(0);
+              break;
+            }
+          }
         }
-        self.used_canonical_names.insert(candidate_name.clone());
         vacant.insert(candidate_name.into_owned());
       }
-      std::collections::hash_map::Entry::Occupied(_) => {
+      Entry::Occupied(_) => {
         // The symbol is already renamed
       }
     }
@@ -59,41 +83,41 @@ impl<'name> Renamer<'name> {
   #[tracing::instrument(level = "trace", skip_all)]
   pub fn rename_non_top_level_symbol(
     &mut self,
-    modules_in_chunk: &[NormalModuleId],
-    modules: &NormalModuleVec,
+    modules_in_chunk: &[ModuleIdx],
+    modules: &IndexModules,
   ) {
     #[tracing::instrument(level = "trace", skip_all)]
     fn rename_symbols_of_nested_scopes<'name>(
-      module: &'name NormalModule,
+      module: &'name EcmaModule,
       scope_id: ScopeId,
-      stack: &mut Vec<Cow<FxHashSet<Cow<'name, Rstr>>>>,
+      stack: &mut Vec<Cow<FxHashMap<Cow<'name, Rstr>, u32>>>,
       canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
     ) {
       let bindings = module.scope.get_bindings(scope_id);
-      let mut used_canonical_names_for_this_scope = FxHashSet::default();
+      let mut used_canonical_names_for_this_scope = FxHashMap::default();
       used_canonical_names_for_this_scope.shrink_to(bindings.len());
       bindings.iter().for_each(|(binding_name, symbol_id)| {
-        used_canonical_names_for_this_scope.insert(Cow::Owned(binding_name.to_rstr()));
-        let binding_ref: SymbolRef = (module.id, *symbol_id).into();
+        used_canonical_names_for_this_scope.insert(Cow::Owned(binding_name.to_rstr()), 0);
+        let binding_ref: SymbolRef = (module.idx, *symbol_id).into();
 
         let mut count = 1;
         let mut candidate_name = Cow::Owned(binding_name.to_rstr());
         match canonical_names.entry(binding_ref) {
-          std::collections::hash_map::Entry::Vacant(slot) => loop {
+          Entry::Vacant(slot) => loop {
             let is_shadowed = stack
               .iter()
-              .any(|used_canonical_names| used_canonical_names.contains(&candidate_name));
+              .any(|used_canonical_names| used_canonical_names.contains_key(&candidate_name));
 
             if is_shadowed {
               candidate_name = Cow::Owned(format!("{binding_name}${count}").into());
               count += 1;
             } else {
-              used_canonical_names_for_this_scope.insert(candidate_name.clone());
+              used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);
               slot.insert(candidate_name.into_owned());
               break;
             }
           },
-          std::collections::hash_map::Entry::Occupied(_) => {
+          Entry::Occupied(_) => {
             // The symbol is already renamed
           }
         }
@@ -108,22 +132,24 @@ impl<'name> Renamer<'name> {
     }
 
     let copied_scope_iter =
-      modules_in_chunk.par_iter().copied().map(|id| &modules[id]).flat_map(|module| {
-        let child_scopes: &[ScopeId] =
-          module.scope.get_child_ids(module.scope.root_scope_id()).map_or(&[], Vec::as_slice);
+      modules_in_chunk.par_iter().copied().filter_map(|id| modules[id].as_ecma()).flat_map(
+        |module| {
+          let child_scopes: &[ScopeId] =
+            module.scope.get_child_ids(module.scope.root_scope_id()).map_or(&[], Vec::as_slice);
 
-        child_scopes.into_par_iter().map(|child_scope_id| {
-          let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];
-          let mut canonical_names = FxHashMap::default();
-          rename_symbols_of_nested_scopes(
-            module,
-            *child_scope_id,
-            &mut stack,
-            &mut canonical_names,
-          );
-          canonical_names
-        })
-      });
+          child_scopes.into_par_iter().map(|child_scope_id| {
+            let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];
+            let mut canonical_names = FxHashMap::default();
+            rename_symbols_of_nested_scopes(
+              module,
+              *child_scope_id,
+              &mut stack,
+              &mut canonical_names,
+            );
+            canonical_names
+          })
+        },
+      );
 
     #[cfg(not(target_family = "wasm"))]
     let canonical_names_of_nested_scopes =

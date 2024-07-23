@@ -1,3 +1,4 @@
+import assert from 'node:assert';
 import * as ns from './foo'
 
-console.log(ns.a);
+assert.equal(ns.a, 100)

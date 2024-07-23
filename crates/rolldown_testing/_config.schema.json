@@ -78,6 +78,26 @@
             "null"
           ]
         },
+        "experimental": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ExperimentalOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exports": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/OutputExports"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "external": {
           "type": [
             "array",
@@ -112,6 +132,12 @@
             "$ref": "#/definitions/InputItem"
           }
         },
+        "minify": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "moduleTypes": {
           "description": "Key is the file extension. The extension should start with a `.`. E.g. `\".txt\"`.",
           "type": [
@@ -121,6 +147,12 @@
           "additionalProperties": {
             "$ref": "#/definitions/ModuleType"
           }
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "platform": {
           "anyOf": [
@@ -159,6 +191,27 @@
           ]
         },
         "treeshake": {
+          "$ref": "#/definitions/TreeshakeOptions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExperimentalOptions": {
+      "type": "object",
+      "properties": {
+        "strictExecutionOrder": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "InnerOptions": {
+      "type": "object",
+      "properties": {
+        "moduleSideEffects": {
           "type": [
             "boolean",
             "null"
@@ -185,16 +238,43 @@
       }
     },
     "ModuleType": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "js",
+            "jsx",
+            "ts",
+            "tsx",
+            "json",
+            "text",
+            "base64",
+            "dataurl",
+            "binary",
+            "empty"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "custom"
+          ],
+          "properties": {
+            "custom": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "OutputExports": {
       "type": "string",
       "enum": [
-        "js",
-        "jsx",
-        "ts",
-        "tsx",
-        "json",
-        "text",
-        "base64",
-        "binary"
+        "auto",
+        "default",
+        "named",
+        "none"
       ]
     },
     "OutputFormat": {
@@ -202,7 +282,8 @@
       "enum": [
         "esm",
         "cjs",
-        "app"
+        "app",
+        "iife"
       ]
     },
     "Platform": {
@@ -339,6 +420,16 @@
         "File",
         "Inline",
         "Hidden"
+      ]
+    },
+    "TreeshakeOptions": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/InnerOptions"
+        }
       ]
     }
   }

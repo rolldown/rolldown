@@ -10,13 +10,8 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/plain_import_shou
 ```js
 "use strict";
 
-
 require("foo");
 require("bar");
 require("baz");
 
-//#region main.js
-var main_ns = {};
-
-//#endregion
 ```

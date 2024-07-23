@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/cjs_compat/esm_require_esm_unused
 ---
@@ -15,7 +15,7 @@ var esm_ns, esm_default;
 var init_esm = __esmMin(() => {
 	esm_ns = {};
 	__export(esm_ns, {default: () => esm_default});
-	esm_default = 'esm';
+	esm_default = "esm";
 });
 
 //#endregion

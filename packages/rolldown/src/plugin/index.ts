@@ -4,33 +4,23 @@ import type {
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
 import type {
-  AnyFn,
-  AnyObj,
   NullValue,
   MaybePromise,
   PartialNull,
+  MakeAsync,
 } from '../types/utils'
 import type { SourceMapInput } from '../types/sourcemap'
-import { pathToFileURL } from 'node:url'
 import type { ModuleInfo } from '../types/module-info'
 import type { OutputBundle } from '../types/output-bundle'
-import type { PluginContext } from './plugin-context'
+import { PluginContext } from './plugin-context'
 import type { TransformPluginContext } from './transfrom-plugin-context'
 import type { NormalizedOutputOptions } from '../options/normalized-output-options'
 import type { LogLevel } from '../log/logging'
 import type { RollupLog } from '../rollup'
 import type { MinimalPluginContext } from '../log/logger'
 import { InputOptions, OutputOptions } from '..'
-import { BuiltinPlugin } from './bindingify-builtin-plugin'
-
-type FormalHook<Handler extends AnyFn, HookOptions extends AnyObj = AnyObj> = {
-  handler: Handler
-} & HookOptions
-
-export type ObjectHook<
-  Handler extends AnyFn,
-  HookOptions extends AnyObj = AnyObj,
-> = FormalHook<Handler, HookOptions> | Handler
+import { BuiltinPlugin } from './builtin-plugin'
+import { ParallelPlugin } from './parallel-plugin'
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
 
@@ -42,6 +32,7 @@ export interface CustomPluginOptions {
 
 export interface ModuleOptions {
   moduleSideEffects: ModuleSideEffects
+  meta: CustomPluginOptions
 }
 
 export interface ResolvedId extends ModuleOptions {
@@ -63,167 +54,106 @@ export type ResolveIdResult = string | NullValue | false | PartialResolvedId
 
 export type LoadResult = NullValue | string | SourceDescription
 
-export type TransformResult = NullValue | string | SourceDescription
+export type TransformResult = NullValue | string | Partial<SourceDescription>
 
-export interface Plugin {
-  name?: string
+export interface FunctionPluginHooks {
+  onLog: (
+    this: MinimalPluginContext,
+    level: LogLevel,
+    log: RollupLog,
+  ) => NullValue | boolean
 
-  onLog?: ObjectHook<
-    (
-      this: MinimalPluginContext,
-      level: LogLevel,
-      log: RollupLog,
-    ) => NullValue | boolean
-  >
-
-  options?: ObjectHook<
-    (
-      this: MinimalPluginContext,
-      options: InputOptions,
-    ) => MaybePromise<NullValue | InputOptions>
-  >
+  options: (
+    this: MinimalPluginContext,
+    options: InputOptions,
+  ) => NullValue | InputOptions
 
   // TODO find a way to make `this: PluginContext` work.
-  outputOptions?: ObjectHook<
-    (
-      this: null,
-      options: OutputOptions,
-    ) => MaybePromise<NullValue | OutputOptions>
-  >
+  outputOptions: (
+    this: null,
+    options: OutputOptions,
+  ) => NullValue | OutputOptions
 
   // --- Build hooks ---
 
-  buildStart?: ObjectHook<
-    (
-      this: PluginContext,
-      options: NormalizedInputOptions,
-    ) => MaybePromise<NullValue>
-  >
+  buildStart: (this: PluginContext, options: NormalizedInputOptions) => void
 
-  resolveId?: ObjectHook<
-    (
-      this: PluginContext,
-      source: string,
-      importer: string | undefined,
-      extraOptions: BindingHookResolveIdExtraOptions,
-    ) => MaybePromise<ResolveIdResult>
-  >
+  resolveId: (
+    this: PluginContext,
+    source: string,
+    importer: string | undefined,
+    extraOptions: BindingHookResolveIdExtraOptions,
+  ) => ResolveIdResult
 
   /**
    * @deprecated
    * This hook is only for rollup plugin compatibility. Please use `resolveId` instead.
    */
-  resolveDynamicImport?: ObjectHook<
-    (
-      this: PluginContext,
-      source: string,
-      importer: string | undefined,
-    ) => MaybePromise<ResolveIdResult>
-  >
+  resolveDynamicImport: (
+    this: PluginContext,
+    source: string,
+    importer: string | undefined,
+  ) => ResolveIdResult
 
-  load?: ObjectHook<
-    (this: PluginContext, id: string) => MaybePromise<LoadResult>
-  >
+  load: (this: PluginContext, id: string) => MaybePromise<LoadResult>
 
-  transform?: ObjectHook<
-    (
-      this: TransformPluginContext,
-      code: string,
-      id: string,
-    ) => MaybePromise<TransformResult>
-  >
+  transform: (
+    this: TransformPluginContext,
+    code: string,
+    id: string,
+  ) => TransformResult
 
-  moduleParsed?: ObjectHook<
-    (this: PluginContext, moduleInfo: ModuleInfo) => MaybePromise<NullValue>
-  >
+  moduleParsed: (this: PluginContext, moduleInfo: ModuleInfo) => void
 
-  buildEnd?: ObjectHook<
-    (this: PluginContext, err?: Error) => MaybePromise<NullValue>
-  >
+  buildEnd: (this: PluginContext, err?: Error) => void
 
   // --- Generate hooks ---
 
-  renderStart?: ObjectHook<
-    (
-      this: PluginContext,
-      outputOptions: NormalizedOutputOptions,
-      inputOptions: NormalizedInputOptions,
-    ) => MaybePromise<NullValue>
-  >
+  renderStart: (
+    this: PluginContext,
+    outputOptions: NormalizedOutputOptions,
+    inputOptions: NormalizedInputOptions,
+  ) => void
 
-  renderChunk?: ObjectHook<
-    (
-      this: PluginContext,
-      code: string,
-      chunk: RenderedChunk,
-      outputOptions: NormalizedOutputOptions,
-    ) => MaybePromise<
-      | NullValue
-      | string
-      | {
-          code: string
-          map?: SourceMapInput
-        }
-    >
-  >
+  renderChunk: (
+    this: PluginContext,
+    code: string,
+    chunk: RenderedChunk,
+    outputOptions: NormalizedOutputOptions,
+  ) =>
+    | NullValue
+    | string
+    | {
+        code: string
+        map?: SourceMapInput
+      }
 
-  augmentChunkHash?: ObjectHook<
-    (this: PluginContext, chunk: RenderedChunk) => MaybePromise<string | void>
-  >
+  augmentChunkHash: (this: PluginContext, chunk: RenderedChunk) => string | void
 
-  renderError?: ObjectHook<
-    (this: PluginContext, error: Error) => MaybePromise<NullValue>
-  >
+  renderError: (this: PluginContext, error: Error) => void
 
-  generateBundle?: ObjectHook<
-    (
-      this: PluginContext,
-      outputOptions: NormalizedOutputOptions,
-      bundle: OutputBundle,
-      isWrite: boolean,
-    ) => MaybePromise<NullValue>
-  >
+  generateBundle: (
+    this: PluginContext,
+    outputOptions: NormalizedOutputOptions,
+    bundle: OutputBundle,
+    isWrite: boolean,
+  ) => void
 
-  writeBundle?: ObjectHook<
-    (
-      this: PluginContext,
-      outputOptions: NormalizedOutputOptions,
-      bundle: OutputBundle,
-    ) => MaybePromise<NullValue>
-  >
+  writeBundle: (
+    this: PluginContext,
+    outputOptions: NormalizedOutputOptions,
+    bundle: OutputBundle,
+  ) => void
 }
 
-export type ParallelPlugin = {
-  /** @internal */
-  _parallel: {
-    fileUrl: string
-    options: unknown
-  }
-}
+export type ObjectHook<T, O = {}> =
+  | T
+  | ({ handler: T /* TODO order?: 'pre' | 'post' | null  */ } & O)
 
-export type RolldownPlugin = Plugin | ParallelPlugin | BuiltinPlugin
-
-export type DefineParallelPluginResult<Options> = (
-  options: Options,
-) => ParallelPlugin
-
-export function defineParallelPlugin<Options>(
-  pluginPath: string,
-): DefineParallelPluginResult<Options> {
-  return (options) => {
-    return { _parallel: { fileUrl: pathToFileURL(pluginPath).href, options } }
-  }
-}
-
-export type FunctionPluginHooks = Plugin
-
-export type SyncPluginHooks =
-  | 'augmentChunkHash'
-  | 'onLog'
-  | 'outputOptions'
-  | 'renderDynamicImport'
-  | 'resolveFileUrl'
-  | 'resolveImportMeta'
+export type SyncPluginHooks = 'augmentChunkHash' | 'onLog' | 'outputOptions'
+// | 'renderDynamicImport'
+// | 'resolveFileUrl'
+// | 'resolveImportMeta'
 
 export type AsyncPluginHooks = Exclude<
   keyof FunctionPluginHooks,
@@ -234,10 +164,10 @@ export type FirstPluginHooks =
   | 'load'
   | 'renderDynamicImport'
   | 'resolveDynamicImport'
-  | 'resolveFileUrl'
+  // | 'resolveFileUrl'
   | 'resolveId'
-  | 'resolveImportMeta'
-  | 'shouldTransformCachedModule'
+// | 'resolveImportMeta'
+// | 'shouldTransformCachedModule'
 
 export type SequentialPluginHooks =
   | 'augmentChunkHash'
@@ -248,9 +178,54 @@ export type SequentialPluginHooks =
   | 'renderChunk'
   | 'transform'
 
-export type AddonHooks = 'banner' | 'footer' | 'intro' | 'outro'
+export type AddonHooks = 'banner' /*| 'footer' | 'intro' | 'outro' */
+
+export type OutputPluginHooks =
+  | 'augmentChunkHash'
+  | 'generateBundle'
+  | 'outputOptions'
+  | 'renderChunk'
+  // | 'renderDynamicImport'
+  | 'renderError'
+  | 'renderStart'
+  // | 'resolveFileUrl'
+  // | 'resolveImportMeta'
+  | 'writeBundle'
 
 export type ParallelPluginHooks = Exclude<
   keyof FunctionPluginHooks | AddonHooks,
   FirstPluginHooks | SequentialPluginHooks
 >
+
+export type PluginHooks = {
+  [K in keyof FunctionPluginHooks]: ObjectHook<
+    K extends AsyncPluginHooks
+      ? MakeAsync<FunctionPluginHooks[K]>
+      : FunctionPluginHooks[K]
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    // TODO
+    // K extends ParallelPluginHooks ? { sequential?: boolean } : {}
+  >
+}
+
+export type AddonHookFunction = (
+  this: PluginContext,
+  chunk: RenderedChunk,
+) => string | Promise<string>
+
+export type AddonHook = AddonHookFunction
+
+export interface OutputPlugin
+  extends Partial<{ [K in OutputPluginHooks]: PluginHooks[K] }>,
+    Partial<{ [K in AddonHooks]: ObjectHook<AddonHook> }> {
+  // cacheKey?: string
+  name?: string
+  // version?: string
+}
+
+export interface Plugin<A = any> extends OutputPlugin, Partial<PluginHooks> {
+  // TODO for inter-plugin communication
+  // api?: A
+}
+
+export type RolldownPlugin<A = any> = Plugin<A> | ParallelPlugin | BuiltinPlugin

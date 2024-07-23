@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_common_js
 ---
@@ -8,18 +8,22 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_ke
 ## src_entry_js.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region node_modules/demo-pkg/index.js
 var require_demo_pkg_index = __commonJSMin((exports, module) => {
 	exports.foo = 123;
-	console.log('hello');
+	console.log("hello");
 });
 
 //#endregion
 //#region src/entry.js
 var import_demo_pkg_index = __toESM(require_demo_pkg_index());
-console.log(import_demo_pkg_index);
+assert.deepEqual(import_demo_pkg_index, {
+	default: {foo: 123},
+	foo: 123
+});
 
 //#endregion
 ```

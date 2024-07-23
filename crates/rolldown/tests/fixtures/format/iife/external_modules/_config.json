@@ -1,0 +1,7 @@
+{
+  "config": {
+     "format": "iife",
+     "external": ["node:path"]
+  },
+  "expectExecuted": false
+}

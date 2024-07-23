@@ -1,0 +1,12 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/dce/no_side_effects_comment_type_script_declare
+---
+# Assets
+
+## entry_ts.mjs
+
+```js
+
+```

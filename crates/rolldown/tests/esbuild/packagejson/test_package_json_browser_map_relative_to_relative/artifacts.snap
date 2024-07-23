@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_map_relative_to_relative
 ---
@@ -8,11 +8,12 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_
 ## entry.mjs
 
 ```js
+import { default as assert } from "node:assert";
 
 
 //#region node_modules/demo-pkg/lib/util-browser.js
 var require_util_browser = __commonJSMin((exports, module) => {
-	module.exports = 'util-browser';
+	module.exports = "util-browser";
 });
 
 //#endregion
@@ -20,14 +21,14 @@ var require_util_browser = __commonJSMin((exports, module) => {
 var require_main_browser = __commonJSMin((exports, module) => {
 	const util = require_util_browser();
 	module.exports = function() {
-		return ['main-browser', util];
+		return ["main-browser", util];
 	};
 });
 
 //#endregion
 //#region src/entry.js
 var import_main_browser = __toESM(require_main_browser());
-console.log((0, import_main_browser.default)());
+assert.deepEqual((0, import_main_browser.default)(), ["main-browser", "util-browser"]);
 
 //#endregion
 ```

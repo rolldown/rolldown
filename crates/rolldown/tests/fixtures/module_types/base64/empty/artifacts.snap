@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/module_types/base64/empty
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+//#region example.base64
+var example_default = "";
+
+//#endregion
+//#region main.js
+assert(typeof example_default === "string");
+
+//#endregion
+```

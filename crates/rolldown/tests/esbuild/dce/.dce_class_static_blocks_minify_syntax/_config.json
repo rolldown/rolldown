@@ -3,7 +3,7 @@
     "input": [
       {
         "name": "entry_js",
-        "import": "entry.js"
+        "import": "entry.ts"
       }
     ]
   }

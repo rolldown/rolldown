@@ -16,6 +16,7 @@ export const suitesForCI = [
     },
     derived: {
       sourcemap: true,
+      minify: true,
     },
   },
   suiteRomeTs,
@@ -65,6 +66,34 @@ export function expandSuitesWithDerived(suites) {
       _.set(derived, 'esbuildOptions.sourcemap', true)
       _.set(derived, 'rolldownOptions.output.sourcemap', true)
       _.set(derived, 'rollupOptions.output.sourcemap', true)
+      expanded.push(derived)
+    }
+    if (suite.derived?.minify) {
+      const derived = _.cloneDeepWith(suite, (value) => {
+        // We should pay attention to this while using singletons in config
+        if (typeof value === 'function') {
+          return value
+        }
+      })
+      derived.title = `${suite.title}-minify`
+      delete derived.derived
+      _.set(derived, 'esbuildOptions.minify', true)
+      _.set(derived, 'rolldownOptions.output.minify', true)
+      expanded.push(derived)
+    }
+    if (suite.derived?.minify && suite.derived?.sourcemap) {
+      const derived = _.cloneDeepWith(suite, (value) => {
+        // We should pay attention to this while using singletons in config
+        if (typeof value === 'function') {
+          return value
+        }
+      })
+      derived.title = `${suite.title}-minify-sourcemap`
+      delete derived.derived
+      _.set(derived, 'esbuildOptions.sourcemap', true)
+      _.set(derived, 'rolldownOptions.output.sourcemap', true)
+      _.set(derived, 'esbuildOptions.minify', true)
+      _.set(derived, 'rolldownOptions.output.minify', true)
       expanded.push(derived)
     }
     return expanded

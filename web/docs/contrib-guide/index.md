@@ -24,6 +24,12 @@ We accept pull requests for all bugs, fixes, improvements, and new features. Bef
 
 For setting up the project's development environment, see [Project Setup](./setup-the-project.md).
 
+:::info
+
+Please read the [Etiquette](https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette) chapter before submitting a pull request.
+
+:::
+
 ### Branch organization
 
 Submit all pull requests directly to the `main` branch. We only use separate branches for upcoming releases / breaking changes, otherwise, everything points to main.

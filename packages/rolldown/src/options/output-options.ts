@@ -8,6 +8,7 @@ const ModuleFormatSchema = z
   .or(z.literal('esm'))
   .or(z.literal('module'))
   .or(z.literal('commonjs'))
+  .or(z.literal('iife'))
   .optional()
 
 const addonFunctionSchema = z
@@ -17,7 +18,12 @@ const addonFunctionSchema = z
 
 const outputOptionsSchema = z.strictObject({
   dir: z.string().optional(),
-  exports: z.literal('named').optional(),
+  exports: z
+    .literal('auto')
+    .or(z.literal('named'))
+    .or(z.literal('default'))
+    .or(z.literal('none'))
+    .optional(),
   format: ModuleFormatSchema,
   sourcemap: z
     .boolean()
@@ -36,6 +42,8 @@ const outputOptionsSchema = z.strictObject({
   entryFileNames: z.string().optional(),
   chunkFileNames: z.string().optional(),
   assetFileNames: z.string().optional(),
+  minify: z.boolean().optional(),
+  name: z.string().optional(),
 })
 
 export type OutputOptions = z.infer<typeof outputOptionsSchema>
@@ -49,7 +57,5 @@ export type SourcemapPathTransformOption = (
   relativeSourcePath: string,
   sourcemapPath: string,
 ) => string
-
-type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 
 export type ModuleFormat = z.infer<typeof ModuleFormatSchema>

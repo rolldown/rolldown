@@ -1,2 +1,3 @@
+import * as assert from "node:assert";
 const fn = require('./foo')
-console.log(fn())
+assert.equal(fn(), 123)

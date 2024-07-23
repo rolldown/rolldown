@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 ---
@@ -16,7 +16,7 @@ var init_index_module = __esmMin(() => {
 	index_module_ns = {};
 	__export(index_module_ns, {foo: () => foo});
 	foo = 123;
-	console.log('TEST FAILED');
+	console.log("TEST FAILED");
 });
 
 //#endregion
@@ -26,7 +26,7 @@ init_index_module(), __toCommonJS(index_module_ns);
 //#endregion
 //#region src/entry.js
 init_index_module();
-console.log('unused import');
+console.log("unused import");
 
 //#endregion
 ```

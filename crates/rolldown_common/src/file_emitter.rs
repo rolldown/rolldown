@@ -74,9 +74,11 @@ impl FileEmitter {
         continue;
       }
       self.emitted_files.insert(key.clone());
+      // TODO avoid clone asset
       bundle.push(Output::Asset(Box::new(OutputAsset {
         filename: value.file_name.clone().expect("should have file name"),
         source: value.source.clone(),
+        name: value.name.clone(),
       })));
     }
   }

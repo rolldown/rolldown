@@ -1,9 +1,10 @@
+pub mod experimental_options;
 pub mod filename_template;
 pub mod input_item;
 pub mod is_external;
 pub mod module_type;
 pub mod normalized_bundler_options;
-pub mod normalized_input_item;
+pub mod output_exports;
 pub mod output_format;
 pub mod output_option;
 pub mod platform;

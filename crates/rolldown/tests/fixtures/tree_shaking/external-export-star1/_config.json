@@ -1,0 +1,9 @@
+{
+  "config": {
+    "external": ["fs"],
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  }
+}
+

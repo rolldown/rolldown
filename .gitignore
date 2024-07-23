@@ -163,3 +163,5 @@ packages/**/THIRD-PARTY-LICENSE
 # node_modules in tests
 !/crates/rolldown/tests/esbuild/**/node_modules
 !/crates/rolldown/tests/esbuild/**/pkg
+
+.spr.yml

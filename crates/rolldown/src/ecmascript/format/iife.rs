@@ -10,6 +10,7 @@ use crate::{
 };
 use rolldown_common::OutputExports;
 use rolldown_sourcemap::{ConcatSource, RawSource};
+use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
 
 pub fn render_iife(
@@ -105,7 +106,11 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
                 }
               })
               .collect::<Vec<_>>();
-            s.push_str(&format!("const {{ {} }} = {};\n", specifiers.join(", "), require_path_str));
+            s.push_str(&format!(
+              "const {{ {} }} = {};\n",
+              specifiers.join(", "),
+              legitimize_identifier_name(require_path_str.as_str())
+            ));
             Some(require_path_str)
           }
         }
@@ -128,17 +133,13 @@ fn render_iife_arguments(
   let mut input_args = if exports_key { vec!["exports".to_string()] } else { vec![] };
   let mut output_args = if exports_key { vec!["{}".to_string()] } else { vec![] };
   externals.iter().for_each(|external| {
-    input_args.push(normalize_name(external));
+    input_args.push(legitimize_identifier_name(external).to_string());
     if let Some(global) = globals.get(external) {
-      output_args.push(normalize_name(global));
+      output_args.push(legitimize_identifier_name(global).to_string());
     } else {
       // TODO add warning for missing global
-      output_args.push(normalize_name(external));
+      output_args.push(legitimize_identifier_name(external).to_string());
     }
   });
   (input_args.join(", "), output_args.join(", "))
-}
-
-fn normalize_name(global: &str) -> String {
-  global.replace(['-', ':', ' ', '/'], "_")
 }

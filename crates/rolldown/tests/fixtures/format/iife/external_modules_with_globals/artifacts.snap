@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/format/iife/external_modules_with_glo
 ```js
 (function(node_path) {
 
-const { default: nodePath } = node:path;
+const { default: nodePath } = node_path;
 
 //#region main.js
 console.log(nodePath);

@@ -1481,11 +1481,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/format/iife/external_modules
 
-- main-!~{000}~.mjs => main-OcuYfhTj.mjs
+- main-!~{000}~.mjs => main-BBs_LVjj.mjs
 
 # tests/fixtures/format/iife/external_modules_with_globals
 
-- main-!~{000}~.mjs => main-FQqzttPs.mjs
+- main-!~{000}~.mjs => main-0mbu-Y_o.mjs
 
 # tests/fixtures/format/iife-with-name
 

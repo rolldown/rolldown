@@ -191,9 +191,6 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
     ctx.used_exports_info_vec[canonical_ref_owner.idx].used_info |= UsedInfo::USED_AS_NAMESPACE_REF;
   }
 
-  if has_ambiguous_symbol {
-    return;
-  }
   let id = ns_symbol_list.last().map_or(symbol_ref.owner, |(symbol, _)| symbol.owner);
   ctx.used_exports_info_vec[id].used_exports.insert(export_name);
   // Only cache the top level member expr resolved result, if it consume at least one chain element.
@@ -205,6 +202,9 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
     map.insert(chains.into_boxed_slice(), (canonical_ref, cursor, namespace_property_name));
   }
   // https://github.com/rolldown/rolldown/blob/5fb31d0d254128825df9441b23da58e3f6663060/crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguous_warning/entry.js#L2-L2
+  if has_ambiguous_symbol {
+    return;
+  }
   ctx.used_symbol_refs.insert(canonical_ref);
   include_module(ctx, canonical_ref_owner);
   canonical_ref_owner.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(

@@ -19,6 +19,7 @@ pub fn render_iife(
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
+  invoke: bool,
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
@@ -77,7 +78,11 @@ pub fn render_iife(
   }
 
   // iife wrapper end
-  concat_source.add_source(Box::new(RawSource::new(format!("}})({output_args});"))));
+  if invoke {
+    concat_source.add_source(Box::new(RawSource::new(format!("}})({output_args});"))));
+  } else {
+    concat_source.add_source(Box::new(RawSource::new("})".to_string())));
+  }
 
   if let Some(footer) = footer {
     concat_source.add_source(Box::new(RawSource::new(footer)));

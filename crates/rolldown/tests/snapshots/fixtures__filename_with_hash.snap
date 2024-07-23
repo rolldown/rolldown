@@ -802,7 +802,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/require_custom_extension_data_url
 
-- entry_js-!~{000}~.mjs => entry_js-uma7PpQm.mjs
+- entry_js-!~{000}~.mjs => entry_js-L0sVgNY_.mjs
 
 # tests/esbuild/lower/lower_async_es5
 
@@ -1434,6 +1434,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-MsirdRn5.mjs
 
+# tests/fixtures/errors/parse_error/jsx
+
+
+# tests/fixtures/errors/parse_error/normal
+
+
 # tests/fixtures/errors/unresolved_entry
 
 
@@ -1707,6 +1713,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-YNsEPKxL.mjs
 
+# tests/fixtures/module_types/dataurl/binary
+
+- main-!~{000}~.mjs => main-2EGnpHKS.mjs
+
+# tests/fixtures/module_types/dataurl/empty
+
+- main-!~{000}~.mjs => main-FtuAjfKq.mjs
+
+# tests/fixtures/module_types/dataurl/text
+
+- main-!~{000}~.mjs => main-PTxgbiOl.mjs
+
 # tests/fixtures/module_types/empty
 
 - main-!~{000}~.mjs => main-b_m0mFIu.mjs
@@ -1774,6 +1792,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/tree_shaking/derived_side_effects_should_have_high_priority
 
 - main-!~{000}~.mjs => main-WlVJrkq9.mjs
+
+# tests/fixtures/tree_shaking/external-export-star1
+
+- main-!~{000}~.mjs => main-0iPGFsZ0.mjs
 
 # tests/fixtures/tree_shaking/indirect_module_side_effect
 

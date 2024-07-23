@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/module_types/dataurl/empty
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+//#region empty.empty
+var empty_default = "data:text/plain;charset=utf-8,";
+
+//#endregion
+//#region main.js
+assert(empty_default === "data:text/plain;charset=utf-8,");
+
+//#endregion
+```

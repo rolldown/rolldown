@@ -12,7 +12,7 @@ use crate::{
 };
 use anyhow::Result;
 use rolldown_common::SharedFileEmitter;
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, PluginDriver, SharedPlugin, SharedPluginDriver,
@@ -72,34 +72,68 @@ impl Bundler {
     self.bundle_up(/* is_write */ false).await
   }
 
-  pub async fn scan(&mut self) -> Result<ScanStageOutput> {
+  pub async fn scan(&mut self) -> Result<DiagnosableResult<ScanStageOutput>> {
     self.plugin_driver.build_start().await?;
 
-    let scan_stage_output = ScanStage::new(
+    let mut error_for_build_end_hook = None;
+
+    let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
     )
     .scan()
-    .await;
+    .await
+    {
+      Ok(v) => v,
+      Err(err) => {
+        // TODO: So far we even call build end hooks on unhandleable errors . But should we call build end hook even for unhandleable errors?
+        error_for_build_end_hook = Some(err.to_string());
+        self
+          .plugin_driver
+          .build_end(error_for_build_end_hook.map(|error| HookBuildEndArgs { error }).as_ref())
+          .await?;
+        return Err(err);
+      }
+    };
 
-    let args = Self::normalize_error(&scan_stage_output, |ret| &ret.errors)
-      .map(|error| HookBuildEndArgs { error });
+    let scan_stage_output = match scan_stage_output {
+      Ok(v) => v,
+      Err(errs) => {
+        if let Some(err_msg) = errs.first().map(ToString::to_string) {
+          error_for_build_end_hook = Some(err_msg.clone());
+        }
+        self
+          .plugin_driver
+          .build_end(error_for_build_end_hook.map(|error| HookBuildEndArgs { error }).as_ref())
+          .await?;
+        return Ok(Err(errs));
+      }
+    };
 
-    self.plugin_driver.build_end(args.as_ref()).await?;
+    self
+      .plugin_driver
+      .build_end(error_for_build_end_hook.map(|error| HookBuildEndArgs { error }).as_ref())
+      .await?;
 
-    scan_stage_output
+    Ok(Ok(scan_stage_output))
   }
 
-  async fn try_build(&mut self) -> Result<LinkStageOutput> {
-    let build_info = self.scan().await?;
-    Ok(LinkStage::new(build_info, &self.options).link())
+  async fn try_build(&mut self) -> Result<DiagnosableResult<LinkStageOutput>> {
+    let build_info = match self.scan().await? {
+      Ok(scan_stage_output) => scan_stage_output,
+      Err(errors) => return Ok(Err(errors)),
+    };
+    Ok(Ok(LinkStage::new(build_info, &self.options).link()))
   }
 
   #[allow(clippy::missing_transmute_annotations)]
   async fn bundle_up(&mut self, is_write: bool) -> Result<BundleOutput> {
-    let mut link_stage_output = self.try_build().await?;
+    let mut link_stage_output = match self.try_build().await? {
+      Ok(v) => v,
+      Err(errors) => return Ok(BundleOutput { assets: vec![], warnings: vec![], errors }),
+    };
 
     // The plugin_driver is wrapped by `Arc`, make it mutable is difficult, so here replace it to a new one.
     self.plugin_driver = PluginDriver::new_shared_with_module_table(

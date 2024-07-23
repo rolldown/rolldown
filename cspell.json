@@ -10,6 +10,7 @@
     "*.toml",
     "*.css",
     "*.svg",
+    "*.data",
     "/rollup",
     "/packages/rollup-tests/test",
     "/target",
@@ -20,9 +21,6 @@
     "/CHANGELOG.md",
     "/packages/rolldown/src/rollup.d.ts",
     "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
-    "/crates/rolldown/tests/fixtures/module_types/base64/text/text.data",
-    "./crates/rolldown/tests/fixtures/module_types/binary/node/text.data",
-    "./crates/rolldown/tests/fixtures/module_types/binary/text/text.data",
     "/pnpm-lock.yaml",
     "*.wasm"
   ],
@@ -43,6 +41,7 @@
     }
   ],
   "words": [
+    "antd",
     "arcstr",
     "arraify",
     "astro",
@@ -64,7 +63,9 @@
     "compat",
     "concat",
     "consola",
+    "Corasick",
     "corepack",
+    "daachorse",
     "dashmap",
     "dataurl",
     "deconflict",
@@ -152,6 +153,7 @@
     "typeof",
     "typeofs",
     "underfin",
+    "unhandleable",
     "UNKEYED",
     "urlencoding",
     "usize",
@@ -162,9 +164,6 @@
     "WASI",
     "Xiangjun",
     "Yinan",
-    "Yunfei",
-    "daachorse",
-    "Corasick",
-    "antd"
+    "Yunfei"
   ]
 }

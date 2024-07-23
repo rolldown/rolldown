@@ -9,6 +9,7 @@ use rolldown_common::{
   AstScopes, EcmaModule, ModuleDefFormat, ModuleId, ModuleIdx, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
+use rolldown_error::DiagnosableResult;
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
 use sugar_path::SugarPath;
 
@@ -61,14 +62,25 @@ impl ModuleFactory for EcmaModuleFactory {
   async fn create_module<'any>(
     ctx: &mut CreateModuleContext<'any>,
     args: CreateModuleArgs,
-  ) -> anyhow::Result<CreateModuleReturn> {
-    let (mut ast, symbols, scopes) = parse_to_ecma_ast(
+  ) -> anyhow::Result<DiagnosableResult<CreateModuleReturn>> {
+    let id = ModuleId::new(Arc::clone(&ctx.resolved_id.id));
+    let stable_id = id.stabilize(&ctx.options.cwd);
+
+    let parse_result = parse_to_ecma_ast(
       ctx.plugin_driver,
       ctx.resolved_id.id.as_path(),
+      &stable_id,
       ctx.options,
       &ctx.module_type,
       args.source,
     )?;
+
+    let (mut ast, symbols, scopes) = match parse_result {
+      Ok(parse_result) => parse_result,
+      Err(errs) => {
+        return Ok(Err(errs));
+      }
+    };
 
     let (scope, scan_result, ast_symbol, namespace_object_ref) = Self::scan_ast(
       ctx.module_index,
@@ -106,9 +118,6 @@ impl ModuleFactory for EcmaModuleFactory {
       }
     }
 
-    let id = ModuleId::new(Arc::clone(&ctx.resolved_id.id));
-    let stable_id = id.stabilize(&ctx.options.cwd);
-
     // The side effects priority is:
     // 1. Hook side effects
     // 2. Package.json side effects
@@ -134,7 +143,8 @@ impl ModuleFactory for EcmaModuleFactory {
       // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
       None => match ctx.options.treeshake {
         // Actually this convert is not necessary, just for passing type checking
-        TreeshakeOptions::False => DeterminedSideEffects::NoTreeshake,
+        TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
+        TreeshakeOptions::Boolean(true) => unreachable!(),
         TreeshakeOptions::Option(ref opt) => {
           if opt.module_side_effects.resolve(&stable_id) {
             lazy_check_side_effects()
@@ -147,6 +157,7 @@ impl ModuleFactory for EcmaModuleFactory {
     // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
     let module = EcmaModule {
       source: ast.source().clone(),
+      ecma_ast_idx: None,
       idx: ctx.module_index,
       repr_name,
       stable_id,
@@ -175,12 +186,11 @@ impl ModuleFactory for EcmaModuleFactory {
       module_type: ctx.module_type.clone(),
     };
 
-    Ok(CreateModuleReturn {
-      module,
+    Ok(Ok(CreateModuleReturn {
+      module: module.into(),
       resolved_deps,
       raw_import_records: import_records,
-      ecma_ast: ast,
-      ast_symbol,
-    })
+      ecma_related: Some((ast, ast_symbol)),
+    }))
   }
 }

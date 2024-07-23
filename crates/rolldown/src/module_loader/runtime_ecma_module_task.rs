@@ -6,6 +6,7 @@ use rolldown_common::{
   ModuleId, ModuleIdx, ModuleType, SymbolRef,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
+use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 
 use super::Msg;
 use crate::{
@@ -17,7 +18,7 @@ use crate::{
 pub struct RuntimeEcmaModuleTask {
   tx: tokio::sync::mpsc::Sender<Msg>,
   module_id: ModuleIdx,
-  // warnings: Vec<BuildError>,
+  errors: Vec<BuildDiagnostic>,
 }
 
 pub struct RuntimeEcmaModuleTaskResult {
@@ -38,15 +39,25 @@ pub struct MakeEcmaAstResult {
 
 impl RuntimeEcmaModuleTask {
   pub fn new(id: ModuleIdx, tx: tokio::sync::mpsc::Sender<Msg>) -> Self {
-    Self { module_id: id, tx }
+    Self { module_id: id, tx, errors: Vec::new() }
   }
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
-  pub fn run(self) -> anyhow::Result<()> {
+  pub fn run(mut self) -> anyhow::Result<()> {
     let source: ArcStr = arcstr::literal!(include_str!("../runtime/runtime-without-comments.js"));
 
+    let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source);
+
+    let ecma_ast_result = match ecma_ast_result {
+      Ok(ecma_ast_result) => ecma_ast_result,
+      Err(errs) => {
+        self.errors.extend(errs);
+        return Ok(());
+      }
+    };
+
     let MakeEcmaAstResult { ast, ast_scope, scan_result, ast_symbols, namespace_object_ref } =
-      self.make_ecma_ast(&source)?;
+      ecma_ast_result;
 
     let runtime = RuntimeModuleBrief::new(self.module_id, &ast_scope);
 
@@ -66,6 +77,7 @@ impl RuntimeEcmaModuleTask {
     let module = EcmaModule {
       source,
       idx: self.module_id,
+      ecma_ast_idx: None,
       repr_name,
       stable_id: RUNTIME_MODULE_ID.to_string(),
       id: ModuleId::new(RUNTIME_MODULE_ID),
@@ -107,9 +119,21 @@ impl RuntimeEcmaModuleTask {
     Ok(())
   }
 
-  fn make_ecma_ast(&self, source: &ArcStr) -> anyhow::Result<MakeEcmaAstResult> {
+  fn make_ecma_ast(
+    &mut self,
+    filename: &str,
+    source: &ArcStr,
+  ) -> DiagnosableResult<MakeEcmaAstResult> {
     let source_type = SourceType::default();
-    let mut ast = EcmaCompiler::parse(source, source_type)?;
+
+    let parse_result = EcmaCompiler::parse(filename, source, source_type);
+
+    let mut ast = match parse_result {
+      Ok(ast) => ast,
+      Err(errs) => {
+        return Err(errs);
+      }
+    };
     tweak_ast_for_scanning(&mut ast);
 
     let (mut symbol_table, scope) = ast.make_symbol_table_and_scope_tree();

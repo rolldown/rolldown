@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use rolldown_common::{ModuleIdx, ResolvedId, StrOrBytes};
+use rolldown_common::{Module, ModuleIdx, ResolvedId, StrOrBytes};
 use rolldown_error::BuildDiagnostic;
 
 use super::{task_context::TaskContext, Msg};
@@ -84,23 +84,32 @@ impl EcmaModuleTask {
       ));
     };
 
-    let CreateModuleReturn { module, resolved_deps, ast_symbol, raw_import_records, ecma_ast } =
-      EcmaModuleFactory::create_module(
-        &mut CreateModuleContext {
-          module_index: self.module_idx,
-          plugin_driver: &self.ctx.plugin_driver,
-          resolved_id: &self.resolved_id,
-          options: &self.ctx.input_options,
-          warnings: &mut warnings,
-          module_type: module_type.clone(),
-          resolver: &self.ctx.resolver,
-          is_user_defined_entry: self.is_user_defined_entry,
-        },
-        CreateModuleArgs { source, sourcemap_chain, hook_side_effects },
-      )
-      .await?;
+    let ret = EcmaModuleFactory::create_module(
+      &mut CreateModuleContext {
+        module_index: self.module_idx,
+        plugin_driver: &self.ctx.plugin_driver,
+        resolved_id: &self.resolved_id,
+        options: &self.ctx.input_options,
+        warnings: &mut warnings,
+        module_type: module_type.clone(),
+        resolver: &self.ctx.resolver,
+        is_user_defined_entry: self.is_user_defined_entry,
+      },
+      CreateModuleArgs { source, sourcemap_chain, hook_side_effects },
+    )
+    .await?;
 
-    self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
+    let CreateModuleReturn { module, resolved_deps, ecma_related, raw_import_records } = match ret {
+      Ok(ret) => ret,
+      Err(errs) => {
+        self.errors.extend(errs);
+        return Ok(());
+      }
+    };
+
+    if let Module::Ecma(module) = &module {
+      self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
+    }
 
     self
       .ctx
@@ -109,10 +118,9 @@ impl EcmaModuleTask {
         resolved_deps,
         module_idx: self.module_idx,
         warnings,
-        ast_symbol,
+        ecma_related,
         module,
         raw_import_records,
-        ast: ecma_ast,
       }))
       .await
       .expect("Send should not fail");

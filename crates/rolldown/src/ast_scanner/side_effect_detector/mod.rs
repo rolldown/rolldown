@@ -437,7 +437,7 @@ mod test {
       .with_module(true)
       .with_jsx(true)
       .with_typescript(false);
-    let ast = EcmaCompiler::parse(code, source_type).unwrap();
+    let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let ast_scope = {
       let semantic = EcmaAst::make_semantic(ast.source(), ast.program(), source_type);
       let (mut symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();

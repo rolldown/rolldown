@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/errors/parse_error/normal
+---
+# Errors
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
+   ╭─[main.js:1:5]
+   │
+ 1 │ cons a = 1;
+   │     │ 
+   │     ╰─ 
+   │ 
+   │ Help: Try insert a semicolon here
+───╯
+
+```

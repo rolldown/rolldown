@@ -5,7 +5,6 @@ use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, Module, ModuleIdx, ModuleTable, OutputFormat, StmtInfo,
   SymbolRef, WrapKind,
 };
-use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
@@ -15,6 +14,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   runtime::RuntimeModuleBrief,
+  type_alias::IndexEcmaAst,
   types::{
     linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     symbols::Symbols,
@@ -35,7 +35,7 @@ mod wrapping;
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
   pub entries: Vec<EntryPoint>,
-  pub ast_table: IndexVec<ModuleIdx, EcmaAst>,
+  pub ast_table: IndexEcmaAst,
   // pub sorted_modules: Vec<NormalModuleId>,
   pub metas: LinkingMetadataVec,
   pub symbols: Symbols,
@@ -56,7 +56,7 @@ pub struct LinkStage<'a> {
   pub metas: LinkingMetadataVec,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
-  pub ast_table: IndexVec<ModuleIdx, EcmaAst>,
+  pub ast_table: IndexEcmaAst,
   pub input_options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
@@ -283,8 +283,7 @@ impl<'a> LinkStage<'a> {
             match &self.module_table.modules[rec.resolved_module] {
               Module::External(importee) => {
                 // Make sure symbols from external modules are included and de_conflicted
-                stmt_info.side_effect = importee.side_effects.has_side_effects();
-                match rec.kind {
+                let is_reexport_all = match rec.kind {
                   ImportKind::Import => {
                     if matches!(self.input_options.format, OutputFormat::Cjs)
                       && !rec.is_plain_import
@@ -303,9 +302,11 @@ impl<'a> LinkStage<'a> {
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__reExport").into());
                     }
+                    is_reexport_all
                   }
-                  _ => {}
-                }
+                  _ => false,
+                };
+                stmt_info.side_effect = importee.side_effects.has_side_effects() || is_reexport_all;
               }
               Module::Ecma(importee) => {
                 let importee_linking_info = &self.metas[importee.idx];

@@ -18,5 +18,5 @@ dashmap         = { workspace = true }
 itertools       = { workspace = true }
 oxc_resolver    = { workspace = true }
 rolldown_common = { workspace = true }
-rolldown_fs     = { workspace = true }
+rolldown_fs     = { workspace = true, features = ["os"] }
 sugar_path      = { workspace = true }

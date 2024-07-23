@@ -28,7 +28,7 @@ pub fn render_cjs(
     .filter_map(|id| ctx.link_output.module_table.modules[*id].as_ecma())
     .all(|ecma_module| {
       let is_esm = matches!(&ecma_module.exports_kind, ExportsKind::Esm);
-      is_esm || ctx.link_output.ast_table[ecma_module.idx].contains_use_strict
+      is_esm || ctx.link_output.ast_table[ecma_module.ecma_ast_idx()].0.contains_use_strict
     });
 
   if are_modules_all_strict {

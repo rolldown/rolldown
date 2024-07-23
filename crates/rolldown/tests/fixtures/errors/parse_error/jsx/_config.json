@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [{
+      "name": "main_jsx",
+      "import": "main.jsx"
+    }],
+    "external": ["react/jsx-runtime"]
+  },
+  "expectError": true
+}

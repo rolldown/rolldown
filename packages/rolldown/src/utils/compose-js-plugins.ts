@@ -133,9 +133,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
               for (const handler of batchedHandlers) {
                 const [handlerFn, _handlerOptions] = normalizeHook(handler)
                 const result = await handlerFn.call(this, id)
-                if (isNullish(result)) {
-                  continue
-                } else {
+                if (!isNullish(result)) {
                   return result
                 }
               }
@@ -150,9 +148,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
               for (const handler of batchedHandlers) {
                 const [handlerFn, _handlerOptions] = normalizeHook(handler)
                 const result = await handlerFn.call(this, code, id)
-                if (isNullish(result)) {
-                  continue
-                } else {
+                if (!isNullish(result)) {
                   return result
                 }
               }
@@ -172,9 +168,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
                   importer,
                   options,
                 )
-                if (isNullish(result)) {
-                  continue
-                } else {
+                if (!isNullish(result)) {
                   return result
                 }
               }
@@ -203,9 +197,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
               for (const handler of batchedHandlers) {
                 const [handlerFn, _handlerOptions] = normalizeHook(handler)
                 const result = await handlerFn.call(this, code, chunk, options)
-                if (isNullish(result)) {
-                  continue
-                } else {
+                if (!isNullish(result)) {
                   return result
                 }
               }
@@ -248,7 +240,7 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
     return false
   }
 
-  if (Object.keys(plugin).some((key) => unsupportedHooks.has(key))) {
+  if (Object.keys(plugin).some(unsupportedHooks.has)) {
     return false
   }
 
@@ -271,6 +263,12 @@ export function composeJsPlugins(plugins: RolldownPlugin[]): RolldownPlugin[] {
       newPlugins.push(plugin)
     }
   })
+  // Considering the case,
+  // p = [c, c, c, c]
+  if (toBeComposed.length > 0) {
+    newPlugins.push(createComposedPlugin(toBeComposed))
+    toBeComposed.length = 0
+  }
 
   return newPlugins
 }

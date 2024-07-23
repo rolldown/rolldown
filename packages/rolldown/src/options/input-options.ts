@@ -88,6 +88,11 @@ const inputOptionsSchema = z.strictObject({
         .or(z.literal('empty')),
     )
     .optional(),
+  experimental: z
+    .strictObject({
+      enableComposingJsPlugins: z.boolean().optional(),
+    })
+    .optional(),
 })
 
 export type InputOption = z.infer<typeof inputOptionSchema>

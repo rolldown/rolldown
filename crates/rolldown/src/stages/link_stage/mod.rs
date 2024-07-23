@@ -60,10 +60,13 @@ pub struct LinkStage<'a> {
   pub input_options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
+  pub entry_idx_set: FxHashSet<ModuleIdx>,
 }
 
 impl<'a> LinkStage<'a> {
   pub fn new(scan_stage_output: ScanStageOutput, input_options: &'a SharedOptions) -> Self {
+    let entry_module_idx =
+      scan_stage_output.entry_points.iter().map(|entry| entry.id).collect::<FxHashSet<_>>();
     Self {
       sorted_modules: Vec::new(),
       metas: scan_stage_output
@@ -82,6 +85,7 @@ impl<'a> LinkStage<'a> {
       input_options,
       used_symbol_refs: FxHashSet::default(),
       top_level_member_expr_resolved_cache: FxHashMap::default(),
+      entry_idx_set: entry_module_idx,
     }
   }
 
@@ -168,7 +172,6 @@ impl<'a> LinkStage<'a> {
   fn determine_module_exports_kind(&mut self) {
     // Maximize the compatibility with commonjs
     let compat_mode = true;
-    let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
     self.module_table.modules.iter().filter_map(Module::as_ecma).for_each(|importer| {
       importer.import_records.iter().for_each(|rec| {
         let importee_id = rec.resolved_module;
@@ -257,7 +260,7 @@ impl<'a> LinkStage<'a> {
         }
       });
 
-      let is_entry = entry_ids_set.contains(&importer.idx);
+      let is_entry = self.entry_idx_set.contains(&importer.idx);
       if matches!(importer.exports_kind, ExportsKind::CommonJs)
         && (!is_entry || matches!(self.input_options.format, OutputFormat::Esm))
       {
@@ -276,6 +279,7 @@ impl<'a> LinkStage<'a> {
         // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
         // - Mutating and parallel reading is in different memory locations
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
+        let is_entry = self.entry_idx_set.contains(&importer.idx);
 
         stmt_infos.iter_mut().for_each(|stmt_info| {
           stmt_info.import_records.iter().for_each(|rec_id| {
@@ -293,7 +297,9 @@ impl<'a> LinkStage<'a> {
                         .push(self.runtime.resolve_symbol("__toESM").into());
                     }
                     let is_reexport_all = importer.star_exports.contains(rec_id);
-                    if is_reexport_all {
+                    if is_reexport_all
+                      && (!is_entry || matches!(self.input_options.format, OutputFormat::Cjs))
+                    {
                       symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                         format!("import_{}", legitimize_identifier_name(&importee.name)).into();
                       stmt_info.declared_symbols.push(rec.namespace_ref);
@@ -337,7 +343,6 @@ impl<'a> LinkStage<'a> {
                           stmt_info
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
-                          // dbg!(&importee_linking_info.wrapper_ref);
                           stmt_info
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__toESM").into());

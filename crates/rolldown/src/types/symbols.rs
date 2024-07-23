@@ -1,3 +1,5 @@
+use core::panic;
+
 use oxc::index::IndexVec;
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
 use rolldown_common::{ChunkIdx, ModuleIdx, SymbolRef};
@@ -58,13 +60,18 @@ impl Symbols {
     &self.get(refer).name
   }
 
+  #[track_caller]
   pub fn canonical_name_for<'name>(
     &self,
     refer: SymbolRef,
     canonical_names: &'name FxHashMap<SymbolRef, Rstr>,
   ) -> &'name Rstr {
     let canonical_ref = self.par_canonical_ref_for(refer);
-    &canonical_names[&canonical_ref]
+    dbg!(&std::panic::Location::caller());
+    &canonical_names.get(&canonical_ref).unwrap_or_else(|| {
+      let symbol = self.get(canonical_ref);
+      panic!("{:?}", symbol)
+    })
   }
 
   pub fn get(&self, refer: SymbolRef) -> &Symbol {

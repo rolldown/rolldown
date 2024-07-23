@@ -1,9 +1,4 @@
-import {
-  instantiateNapiModuleSync,
-  MessageHandler,
-  WASI,
-  createFsProxy,
-} from '@napi-rs/wasm-runtime'
+import { instantiateNapiModuleSync, MessageHandler, WASI, createFsProxy } from '@napi-rs/wasm-runtime'
 import { memfsExported as __memfsExported } from '@napi-rs/wasm-runtime/fs'
 
 const fs = createFsProxy(__memfsExported)
@@ -19,7 +14,7 @@ const handler = new MessageHandler({
         // eslint-disable-next-line no-console
         console.log.apply(console, arguments)
       },
-      printErr: function () {
+      printErr: function() {
         // eslint-disable-next-line no-console
         console.error.apply(console, arguments)
       },

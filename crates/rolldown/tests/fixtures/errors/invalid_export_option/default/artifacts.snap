@@ -1,0 +1,13 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/errors/invalid_export_option/default
+---
+# Errors
+
+## INVALID_EXPORT_OPTION
+
+```text
+[INVALID_EXPORT_OPTION] Error: "default" was specified for "output.exports", but entry module "main.js" has the following exports: "value".
+
+```

@@ -157,6 +157,7 @@ pub fn get_chunk_export_names(
     .collect::<Vec<_>>()
 }
 
+// Port from https://github.com/rollup/rollup/blob/master/src/utils/getExportMode.ts
 pub fn determine_export_mode(
   this: &Chunk,
   export_mode: &OutputExports,

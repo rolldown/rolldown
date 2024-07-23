@@ -70,7 +70,7 @@ pub fn render_iife(
   }
 
   // iife wrapper end
-  concat_source.add_source(Box::new(RawSource::new(format!("}})({});", output_args))));
+  concat_source.add_source(Box::new(RawSource::new(format!("}})({output_args});"))));
 
   if let Some(footer) = footer {
     concat_source.add_source(Box::new(RawSource::new(footer)));
@@ -92,7 +92,9 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
       match &stmt.specifiers {
         RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
           // Empty specifiers can be ignored in IIFE.
-          if !specifiers.is_empty() {
+          if specifiers.is_empty() {
+            None
+          } else {
             let specifiers = specifiers
               .iter()
               .map(|specifier| {
@@ -105,12 +107,10 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
               .collect::<Vec<_>>();
             s.push_str(&format!("const {{ {} }} = {};\n", specifiers.join(", "), require_path_str));
             Some(require_path_str)
-          } else {
-            None
           }
         }
         RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
-          s.push_str(&format!("const {alias} = {};\n", require_path_str));
+          s.push_str(&format!("const {alias} = {require_path_str};\n"));
           Some(require_path_str)
         }
       }
@@ -121,7 +121,7 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
 }
 
 fn render_iife_arguments(
-  externals: &Vec<String>,
+  externals: &[String],
   globals: &FxHashMap<String, String>,
   exports_key: bool,
 ) -> (String, String) {
@@ -140,5 +140,5 @@ fn render_iife_arguments(
 }
 
 fn normalize_name(global: &str) -> String {
-  global.replace("-", "_").replace(":", "_").replace(" ", "_").replace("/", "_")
+  global.replace(['-', ':', ' ', '/'], "_")
 }

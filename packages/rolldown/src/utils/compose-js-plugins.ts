@@ -263,8 +263,10 @@ export function composeJsPlugins(plugins: RolldownPlugin[]): RolldownPlugin[] {
       newPlugins.push(plugin)
     }
   })
-  // Considering the case,
+  // Considering the case:
   // p = [c, c, c, c]
+  // after the loop, toBeComposed = [c, c, c, c], plugins = []
+  // we should consume all the toBeComposed plugins at the end
   if (toBeComposed.length > 0) {
     newPlugins.push(createComposedPlugin(toBeComposed))
     toBeComposed.length = 0

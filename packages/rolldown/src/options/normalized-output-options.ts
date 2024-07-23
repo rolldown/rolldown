@@ -14,7 +14,7 @@ export interface NormalizedOutputOptions extends OutputOptions {
   plugins: RolldownPlugin[]
   dir: string | undefined
   format: InternalModuleFormat
-  exports: 'named'
+  exports: 'auto' | 'named' | 'default' | 'none'
   sourcemap: boolean | 'inline' | 'hidden'
   sourcemapIgnoreList: SourcemapIgnoreListOption
   sourcemapPathTransform: SourcemapPathTransformOption | undefined

@@ -17,6 +17,7 @@ pub mod bundler_options {
       is_external::IsExternal,
       module_type::ModuleType,
       normalized_bundler_options::NormalizedBundlerOptions,
+      output_exports::OutputExports,
       output_format::OutputFormat,
       output_option::{AddonFunction, AddonOutputOption},
       platform::Platform,

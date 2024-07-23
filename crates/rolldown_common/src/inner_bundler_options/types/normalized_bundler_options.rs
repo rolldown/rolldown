@@ -5,15 +5,15 @@ use std::path::PathBuf;
 
 use rustc_hash::FxHashMap;
 
-use crate::{InputItem, ModuleType};
-
 use super::experimental_options::ExperimentalOptions;
 use super::treeshake::TreeshakeOptions;
 use super::{
-  filename_template::FilenameTemplate, is_external::IsExternal, output_format::OutputFormat,
-  output_option::AddonOutputOption, platform::Platform, source_map_type::SourceMapType,
-  sourcemap_ignore_list::SourceMapIgnoreList, sourcemap_path_transform::SourceMapPathTransform,
+  filename_template::FilenameTemplate, is_external::IsExternal, output_exports::OutputExports,
+  output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
+  source_map_type::SourceMapType, sourcemap_ignore_list::SourceMapIgnoreList,
+  sourcemap_path_transform::SourceMapPathTransform,
 };
+use crate::{InputItem, ModuleType};
 
 #[derive(Debug)]
 pub struct NormalizedBundlerOptions {
@@ -34,6 +34,7 @@ pub struct NormalizedBundlerOptions {
   pub asset_filenames: FilenameTemplate,
   pub dir: String,
   pub format: OutputFormat,
+  pub exports: OutputExports,
   pub sourcemap: SourceMapType,
   pub banner: Option<AddonOutputOption>,
   pub footer: Option<AddonOutputOption>,

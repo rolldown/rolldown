@@ -7,7 +7,7 @@ export default defineTest({
       format: 'iife',
       globals: {
         'node:path': 'path',
-      }
-    }
+      },
+    },
   },
 })

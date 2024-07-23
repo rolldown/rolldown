@@ -5,7 +5,7 @@ export default defineTest({
     external: /node:path/,
     output: {
       exports: 'named',
-      format: 'iife'
-    }
+      format: 'iife',
+    },
   },
 })

@@ -946,7 +946,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/packagejson/test_package_json_browser_map_module_to_module
 
-- entry-!~{000}~.mjs => entry-2HhhJyRd.mjs
+- entry-!~{000}~.mjs => entry-wyJiIiyi.mjs
 
 # tests/esbuild/packagejson/test_package_json_browser_map_module_to_relative
 
@@ -1014,7 +1014,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_implicit_main_force_module_before_main
 
-- entry-!~{000}~.mjs => entry-MrwnQfYO.mjs
+- entry-!~{000}~.mjs => entry-nUH0JZ6C.mjs
 
 # tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_same_file
 
@@ -1213,7 +1213,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/splitting/missing_lazy_export_missing_lazy_export
 
-- a-!~{000}~.mjs => a-co9mCZ1-.mjs
+- a-!~{000}~.mjs => a-qyhKV3La.mjs
 - b-!~{001}~.mjs => b-75EtqDbN.mjs
 - common-!~{002}~.mjs => common-4ywkZ6tD.mjs
 

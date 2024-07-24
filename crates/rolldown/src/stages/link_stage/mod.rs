@@ -70,7 +70,24 @@ impl<'a> LinkStage<'a> {
         .module_table
         .modules
         .iter()
-        .map(|_| LinkingMetadata::default())
+        .map(|module| LinkingMetadata {
+          dependencies: module
+            .import_records()
+            .iter()
+            .filter_map(|rec| match input_options.format {
+              OutputFormat::Cjs | OutputFormat::App | OutputFormat::Esm => {
+                if matches!(rec.kind, ImportKind::DynamicImport) {
+                  None
+                } else {
+                  Some(rec.resolved_module)
+                }
+              }
+              // IIFE format will inline dynamic imported modules
+              OutputFormat::Iife => Some(rec.resolved_module),
+            })
+            .collect(),
+          ..LinkingMetadata::default()
+        })
         .collect::<IndexVec<ModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,
       entries: scan_stage_output.entry_points,

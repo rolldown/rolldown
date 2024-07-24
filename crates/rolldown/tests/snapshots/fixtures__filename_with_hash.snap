@@ -417,7 +417,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/import_fs_node_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-nKrk5dd4.cjs
+- entry_js-!~{000}~.cjs => entry_js-gpVdSROP.cjs
 
 # tests/esbuild/default/import_missing_common_js
 
@@ -474,7 +474,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/re_export_default_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-oX_fmeIz.cjs
+- entry_js-!~{000}~.cjs => entry_js-Nw39dNML.cjs
 
 # tests/esbuild/default/re_export_default_external_es6
 
@@ -578,7 +578,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_self_as_namespace_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-Q9D7lDEt.cjs
+- entry_js-!~{000}~.cjs => entry_js-u7JI2_4f.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_es6
 
@@ -586,7 +586,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_self_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-Ss0VD8Ty.cjs
+- entry_js-!~{000}~.cjs => entry_js-4jUq9PFk.cjs
 
 # tests/esbuild/import_star/export_self_es6
 
@@ -742,7 +742,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_as_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-0-SBOhvX.cjs
+- entry_js-!~{000}~.cjs => entry_js-rsh34VHE.cjs
 
 # tests/esbuild/import_star/re_export_star_as_external_es6
 
@@ -754,7 +754,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-9zwsdmTH.cjs
+- entry_js-!~{000}~.cjs => entry_js-DpNrQDub.cjs
 
 # tests/esbuild/import_star/re_export_star_external_es6
 
@@ -1339,7 +1339,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_module_lexer_compat/basic
 
-- main-!~{000}~.cjs => main-rh2ELQYz.cjs
+- main-!~{000}~.cjs => main-GvhJO7uA.cjs
 
 # tests/fixtures/cjs_module_lexer_compat/external
 
@@ -1347,7 +1347,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_module_lexer_compat/re_export
 
-- main-!~{000}~.cjs => main-rh2ELQYz.cjs
+- main-!~{000}~.cjs => main-GvhJO7uA.cjs
 
 # tests/fixtures/code_splitting/basic
 
@@ -1451,11 +1451,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/export_mode/cjs/auto/default
 
-- main-!~{000}~.cjs => main-Gpruowt5.cjs
+- main-!~{000}~.cjs => main-9hSrl4LQ.cjs
 
 # tests/fixtures/export_mode/cjs/auto/named
 
-- main-!~{000}~.cjs => main-k_wpYhgx.cjs
+- main-!~{000}~.cjs => main-kdT5vSll.cjs
 
 # tests/fixtures/export_mode/cjs/auto/none
 
@@ -1463,11 +1463,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/export_mode/cjs/default
 
-- main-!~{000}~.cjs => main-GKXsT_v-.cjs
+- main-!~{000}~.cjs => main-vdmL7D4P.cjs
 
 # tests/fixtures/export_mode/cjs/named
 
-- main-!~{000}~.cjs => main-kb0yDvp0.cjs
+- main-!~{000}~.cjs => main-RgMnAxkB.cjs
 
 # tests/fixtures/export_mode/iife/auto/none
 
@@ -1569,17 +1569,17 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/format/cjs/import_export_unicode
 
-- main-!~{000}~.cjs => main-I6asRT7N.cjs
+- main-!~{000}~.cjs => main-3DjdU1we.cjs
 
 # tests/fixtures/function/format/cjs/plain_import_should_not_introduce_to_esm
 
-- main-!~{000}~.cjs => main-3pDEUHkP.cjs
+- main-!~{000}~.cjs => main-P0_yQQlj.cjs
 
 # tests/fixtures/function/format/cjs/shared_entry_modules
 
-- entry1-!~{000}~.cjs => entry1-gI4jPDGo.cjs
-- entry2-!~{001}~.cjs => entry2-ooX2Ke1V.cjs
-- main-!~{002}~.cjs => main-PfIAD0EX.cjs
+- entry1-!~{000}~.cjs => entry1-9x6wwgGx.cjs
+- entry2-!~{001}~.cjs => entry2-A0lk3x3N.cjs
+- main-!~{002}~.cjs => main-BkdPPeQZ.cjs
 
 # tests/fixtures/function/format/esm/import_export_unicode
 
@@ -1666,6 +1666,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-EYnPJQvV.mjs
 
+# tests/fixtures/misc/banner/cjs
+
+- main-!~{000}~.cjs => main-oGV081ye.cjs
+
+# tests/fixtures/misc/banner/iife
+
+- main-!~{000}~.mjs => main-xSRQid4O.mjs
+
 # tests/fixtures/misc/basic
 
 - main-!~{000}~.mjs => main-GSae7Hz6.mjs
@@ -1716,7 +1724,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 
-- main-!~{000}~.cjs => main-MNGN_tww.cjs
+- main-!~{000}~.cjs => main-cSFz1jjq.cjs
 
 # tests/fixtures/misc/use_strict/no_use_strict_with_non_strict_cjs_in_cjs_format
 

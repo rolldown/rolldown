@@ -10,7 +10,6 @@ input_file: crates/rolldown/tests/fixtures/cjs_module_lexer_compat/basic
 ```js
 "use strict";
 
-
 //#region demo.js
 const a = "a";
 const b = "b";

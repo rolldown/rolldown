@@ -21,13 +21,12 @@ pub fn render_cjs(
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
-  // Add `use strict` directive if needed. This must come before the banner, because users might use banner to add hashbang.
-  if determine_use_strict(ctx) {
-    concat_source.add_source(Box::new(RawSource::new("\"use strict\";\n".to_string())));
-  }
-
   if let Some(banner) = banner {
     concat_source.add_source(Box::new(RawSource::new(banner)));
+  }
+
+  if determine_use_strict(ctx) {
+    concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
   }
 
   // Runtime module should be placed before the generated `requires` in CJS format.

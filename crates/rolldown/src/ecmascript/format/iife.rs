@@ -28,6 +28,7 @@ pub fn render_iife(
   if let Some(banner) = banner {
     concat_source.add_source(Box::new(RawSource::new(banner)));
   }
+
   // iife wrapper start
   let export_items = get_export_items(ctx.chunk, ctx.link_output);
   let has_exports = !export_items.is_empty();

@@ -84,11 +84,6 @@ impl Generator for EcmaGenerator {
         .await?
     };
 
-    // let footer = match ctx.options.footer.as_ref() {
-    //   Some(footer) => footer.call(&rendered_chunk).await?,
-    //   None => None,
-    // };
-
     let concat_source = match ctx.options.format {
       OutputFormat::Esm => match render_esm(ctx, rendered_module_sources, banner, footer) {
         Ok(concat_source) => concat_source,

@@ -22,14 +22,15 @@ impl<'a> GenerateStage<'a> {
     };
     let meta = &self.link_output.metas[module_id];
 
-    // Here if the module only has re-export statements, the `is_included` is false at `module_side_effects: false`.
-    // But we also need to determine it's dependencies.
-    if module.is_included {
-      if module_to_bits[module_id].has_bit(entry_index) {
-        return;
-      }
-      module_to_bits[module_id].set_bit(entry_index);
+    if !module.is_included {
+      return;
     }
+
+    if module_to_bits[module_id].has_bit(entry_index) {
+      return;
+    }
+
+    module_to_bits[module_id].set_bit(entry_index);
 
     meta.dependencies.iter().copied().for_each(|dep_idx| {
       self.determine_reachable_modules_for_entry(dep_idx, entry_index, module_to_bits);

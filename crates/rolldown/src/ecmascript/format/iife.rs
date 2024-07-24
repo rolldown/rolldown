@@ -57,8 +57,7 @@ pub fn render_iife(
     input_args
   ))));
 
-  // Rollup also enables `use strict` in empty IIFE contents.
-  if determine_use_strict(ctx) || matches!(ctx.options.exports, OutputExports::None) {
+  if determine_use_strict(ctx) {
     concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
   }
 

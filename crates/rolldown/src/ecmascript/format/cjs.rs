@@ -25,7 +25,6 @@ pub fn render_cjs(
     concat_source.add_source(Box::new(RawSource::new(banner)));
   }
 
-  // Add `use strict` directive if needed. This must come before the banner, because users might use banner to add hashbang.
   if determine_use_strict(ctx) {
     concat_source.add_source(Box::new(RawSource::new("\"use strict\";\n".to_string())));
   }

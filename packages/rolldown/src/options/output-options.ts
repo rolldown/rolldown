@@ -39,6 +39,8 @@ const outputOptionsSchema = z.strictObject({
     .optional(),
   banner: z.string().or(addonFunctionSchema).optional(),
   footer: z.string().or(addonFunctionSchema).optional(),
+  intro: z.string().or(addonFunctionSchema).optional(),
+  outro: z.string().or(addonFunctionSchema).optional(),
   entryFileNames: z.string().optional(),
   chunkFileNames: z.string().optional(),
   assetFileNames: z.string().optional(),

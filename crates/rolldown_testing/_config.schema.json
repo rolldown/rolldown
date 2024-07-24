@@ -199,6 +199,13 @@
             }
           ]
         },
+        "sourcemapIgnoreList": {
+          "readOnly": true,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "treeshake": {
           "$ref": "#/definitions/TreeshakeOptions"
         }

@@ -183,7 +183,7 @@ impl Plugin for JsPlugin {
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookFooterArgs,
-  ) -> rolldown_plugin::HookBannerOutputReturn {
+  ) -> rolldown_plugin::HookFooterOutputReturn {
     if let Some(cb) = &self.footer {
       Ok(
         cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))

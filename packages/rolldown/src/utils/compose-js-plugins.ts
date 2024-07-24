@@ -1,5 +1,5 @@
 import { ModuleSideEffects, Plugin, RolldownPlugin } from '../plugin'
-import _ from 'lodash-es'
+// import * as _ from 'lodash-es'
 import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'

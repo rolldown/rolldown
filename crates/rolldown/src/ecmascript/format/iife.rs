@@ -57,7 +57,7 @@ pub fn render_iife(
   ))));
 
   if determine_use_strict(ctx) {
-    concat_source.add_source(Box::new(RawSource::new("\"use strict\";\n".to_string())));
+    concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
   }
 
   concat_source.add_source(Box::new(RawSource::new(import_code)));

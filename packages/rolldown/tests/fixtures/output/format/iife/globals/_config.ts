@@ -16,7 +16,6 @@ export default defineTest({
       "(function(node_path) {
 
       "use strict";
-
       const { join } = node_path;
 
       //#region main.js

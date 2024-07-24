@@ -21,7 +21,7 @@ pub fn render_esm(
   if let Some(banner) = banner {
     concat_source.add_source(Box::new(RawSource::new(banner)));
   }
-  
+
   if let Some(intro) = intro {
     if !intro.is_empty() {
       concat_source.add_source(Box::new(RawSource::new(intro)));

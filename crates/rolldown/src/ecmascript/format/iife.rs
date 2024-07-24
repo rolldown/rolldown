@@ -49,7 +49,7 @@ pub fn render_iife(
     &export_mode,
     determine_use_strict(ctx) || matches!(export_mode, OutputExports::None),
     intro,
-    outro
+    outro,
   )?;
 
   let begging = format!("{assignee}{begin_wrapper}");

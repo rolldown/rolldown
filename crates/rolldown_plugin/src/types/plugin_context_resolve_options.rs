@@ -7,9 +7,6 @@ pub struct PluginContextResolveOptions {
 
 impl Default for PluginContextResolveOptions {
   fn default() -> Self {
-    Self {
-      import_kind: ImportKind::Import,
-      skip_self: true,
-    }
+    Self { import_kind: ImportKind::Import, skip_self: true }
   }
 }

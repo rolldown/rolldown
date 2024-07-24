@@ -4,7 +4,9 @@ use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
-  types::plugin_context_resolve_options::PluginContextResolveOptions, utils::resolve_id_with_plugins::resolve_id_with_plugins, HookResolveIdExtraOptions, Plugin, PluginDriver
+  types::plugin_context_resolve_options::PluginContextResolveOptions,
+  utils::resolve_id_with_plugins::resolve_id_with_plugins, HookResolveIdExtraOptions, Plugin,
+  PluginDriver,
 };
 
 pub type SharedPluginContext = std::sync::Arc<PluginContext>;
@@ -39,11 +41,7 @@ impl PluginContext {
       HookResolveIdExtraOptions {
         is_entry: false,
         kind: extra_options.import_kind,
-        skip_plugin: if extra_options.skip_self {
-          Some(Arc::clone(&self.plugin))
-        } else {
-          None
-        },
+        skip_plugin: if extra_options.skip_self { Some(Arc::clone(&self.plugin)) } else { None },
       },
     )
     .await

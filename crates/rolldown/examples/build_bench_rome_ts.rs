@@ -1,6 +1,8 @@
 use rolldown::{Bundler, BundlerOptions, InputItem, ResolveOptions, SourceMapType};
 use rolldown_testing::workspace;
 
+// cargo run --example build_bench_rome_ts
+
 #[tokio::main]
 async fn main() {
   // Make sure that you have already run `just setup-bench`

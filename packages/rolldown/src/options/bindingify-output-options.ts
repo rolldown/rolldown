@@ -17,6 +17,8 @@ export function bindingifyOutputOptions(
     assetFileNames,
     banner,
     footer,
+    intro,
+    outro,
   } = outputOptions
   return {
     dir,
@@ -36,6 +38,8 @@ export function bindingifyOutputOptions(
     sourcemapPathTransform,
     banner,
     footer,
+    intro,
+    outro,
     name,
     entryFileNames,
     chunkFileNames,

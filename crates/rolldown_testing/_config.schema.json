@@ -141,6 +141,12 @@
             "$ref": "#/definitions/InputItem"
           }
         },
+        "intro": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "minify": {
           "type": [
             "boolean",
@@ -158,6 +164,12 @@
           }
         },
         "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "outro": {
           "type": [
             "string",
             "null"

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/default/re_export_default_external_common_js
 ---
@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/esbuild/default/re_export_default_external_com
 
 ```js
 "use strict";
-
 
 const { default: foo } = __toESM(require("foo"));
 const { default: bar } = __toESM(require("bar"));

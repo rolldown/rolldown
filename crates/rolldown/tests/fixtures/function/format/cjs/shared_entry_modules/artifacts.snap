@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/shared_entry_modu
 
 ```js
 "use strict";
-
 const { value } = require("./main.cjs");
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -19,7 +18,6 @@ exports.value = value;
 
 ```js
 "use strict";
-
 const { value } = require("./main.cjs");
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -29,7 +27,6 @@ exports.value = value;
 
 ```js
 "use strict";
-
 
 //#region main.js
 const value = "main";

@@ -12,7 +12,6 @@ input_file: crates/rolldown/tests/fixtures/misc/banner/cjs
 
 "use strict";
 
-
 //#region main.js
 var main_default = "banner";
 

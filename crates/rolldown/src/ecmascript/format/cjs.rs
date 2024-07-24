@@ -26,7 +26,7 @@ pub fn render_cjs(
   }
 
   if determine_use_strict(ctx) {
-    concat_source.add_source(Box::new(RawSource::new("\"use strict\";\n".to_string())));
+    concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
   }
 
   // Runtime module should be placed before the generated `requires` in CJS format.

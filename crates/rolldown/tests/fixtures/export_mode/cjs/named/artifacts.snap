@@ -10,7 +10,6 @@ input_file: crates/rolldown/tests/fixtures/export_mode/cjs/named
 ```js
 "use strict";
 
-
 //#region mod.js
 function example() {
 	return "named";

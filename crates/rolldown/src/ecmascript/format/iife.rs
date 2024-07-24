@@ -21,6 +21,8 @@ pub fn render_iife(
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
+  intro: Option<String>,
+  outro: Option<String>,
   invoke: bool,
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
@@ -61,6 +63,12 @@ pub fn render_iife(
     concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
   }
 
+  if let Some(intro) = intro {
+    if !intro.is_empty() {
+      concat_source.add_source(Box::new(RawSource::new(intro)));
+    }
+  }
+
   concat_source.add_source(Box::new(RawSource::new(import_code)));
 
   // chunk content
@@ -79,6 +87,12 @@ pub fn render_iife(
     if named_exports {
       // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
       concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
+    }
+  }
+
+  if let Some(outro) = outro {
+    if !outro.is_empty() {
+      concat_source.add_source(Box::new(RawSource::new(outro)));
     }
   }
 

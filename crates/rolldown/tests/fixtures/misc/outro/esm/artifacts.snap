@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/misc/outro/esm
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region main.js
+var main_default = "banner";
+
+//#endregion
+export { main_default as default };
+console.log('hello world');
+```

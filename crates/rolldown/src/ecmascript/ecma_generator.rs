@@ -78,20 +78,36 @@ impl Generator for EcmaGenerator {
       None => None,
     };
 
+    let intro = match ctx.options.intro.as_ref() {
+      Some(intro) => intro.call(&rendered_chunk).await?,
+      None => None,
+    };
+
+    let outro = match ctx.options.outro.as_ref() {
+      Some(outro) => outro.call(&rendered_chunk).await?,
+      None => None,
+    };
+
     let concat_source = match ctx.options.format {
-      OutputFormat::Esm => match render_esm(ctx, rendered_module_sources, banner, footer) {
-        Ok(concat_source) => concat_source,
-        Err(errors) => return Ok(Err(errors)),
-      },
-      OutputFormat::Cjs => match render_cjs(ctx, rendered_module_sources, banner, footer) {
-        Ok(concat_source) => concat_source,
-        Err(errors) => return Ok(Err(errors)),
-      },
-      OutputFormat::App => render_app(ctx, rendered_module_sources, banner, footer),
-      OutputFormat::Iife => match render_iife(ctx, rendered_module_sources, banner, footer, true) {
-        Ok(concat_source) => concat_source,
-        Err(errors) => return Ok(Err(errors)),
-      },
+      OutputFormat::Esm => {
+        match render_esm(ctx, rendered_module_sources, banner, footer, intro, outro) {
+          Ok(concat_source) => concat_source,
+          Err(errors) => return Ok(Err(errors)),
+        }
+      }
+      OutputFormat::Cjs => {
+        match render_cjs(ctx, rendered_module_sources, banner, footer, intro, outro) {
+          Ok(concat_source) => concat_source,
+          Err(errors) => return Ok(Err(errors)),
+        }
+      }
+      OutputFormat::App => render_app(ctx, rendered_module_sources, banner, footer, intro, outro),
+      OutputFormat::Iife => {
+        match render_iife(ctx, rendered_module_sources, banner, footer, intro, outro, true) {
+          Ok(concat_source) => concat_source,
+          Err(errors) => return Ok(Err(errors)),
+        }
+      }
     };
 
     let (content, mut map) = concat_source.content_and_sourcemap();

@@ -1,0 +1,6 @@
+{
+  "config": {
+    "format": "iife",
+    "intro": "console.log('hello world');"
+  }
+}

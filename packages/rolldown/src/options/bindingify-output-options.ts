@@ -30,6 +30,10 @@ export function bindingifyOutputOptions(
           return 'cjs'
         case 'iife':
           return 'iife'
+        case 'umd':
+          return 'umd'
+        case 'amd':
+          return 'amd'
       }
     })(),
     exports,

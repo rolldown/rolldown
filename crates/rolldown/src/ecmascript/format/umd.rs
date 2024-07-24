@@ -43,7 +43,7 @@ pub fn render_umd(
   let (head, tail) =
     render_umd_wrapper(ctx, &externals, has_exports && matches!(export_mode, OutputExports::Named));
 
-  let begging = format!("{begin_wrapper}{head}");
+  let begging = format!("{head}{begin_wrapper}");
 
   concat_source.add_source(Box::new(RawSource::new(begging)));
 
@@ -79,10 +79,10 @@ pub fn render_umd_wrapper(
 
   (
     format!(
-      "(function (global, factory) {{\
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory({cjs_args}) :\
-	typeof define === 'function' && define.amd ? define({amd_args}, factory) :\
-	(global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory({iife_args}));\
+      "(function (global, factory) {{\n\
+    typeof exports === 'object' && typeof module !== 'undefined' ? factory({cjs_args}) :\n\
+	typeof define === 'function' && define.amd ? define([{amd_args}], factory) :\n\
+	(global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory({iife_args}));\n\
 }})(this, "
     ),
     ");".to_string(),

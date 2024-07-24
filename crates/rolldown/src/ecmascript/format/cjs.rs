@@ -1,10 +1,13 @@
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
-use crate::utils::chunk::render_chunk_imports::render_chunk_imports;
 use crate::{
-  ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
-  utils::chunk::render_chunk_exports::render_chunk_exports,
+  ecmascript::ecma_generator::RenderedModuleSources,
+  types::generator::GenerateContext,
+  utils::chunk::{
+    determine_use_strict::determine_use_strict, render_chunk_exports::render_chunk_exports,
+    render_chunk_imports::render_chunk_imports,
+  },
 };
 
 pub fn render_cjs(

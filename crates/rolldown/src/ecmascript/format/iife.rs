@@ -2,11 +2,12 @@ use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
   utils::chunk::{
+    determine_use_strict::determine_use_strict,
     render_chunk_exports::{determine_export_mode, get_export_items},
     render_wrapper::render_wrapper,
   },
 };
-use rolldown_common::ChunkKind;
+use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
@@ -21,9 +22,6 @@ pub fn render_iife(
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
-  if let Some(banner) = banner {
-    concat_source.add_source(Box::new(RawSource::new(banner)));
-  }
   // iife wrapper start
   let export_items = get_export_items(ctx.chunk, ctx.link_output);
   let has_exports = !export_items.is_empty();
@@ -40,11 +38,17 @@ pub fn render_iife(
   let assignee =
     if let Some(name) = &ctx.options.name { format!("var {name} = ") } else { String::new() };
 
-  let (begin_wrapper, end_wrapper, externals) = render_wrapper(ctx, &export_mode, true)?;
+  let (begin_wrapper, end_wrapper, externals) =
+    render_wrapper(ctx, &export_mode, determine_use_strict(ctx) || matches!(export_mode, OutputExports::None))?;
 
   let begging = format!("{assignee}{begin_wrapper}");
 
   concat_source.add_source(Box::new(RawSource::new(begging)));
+
+  if let Some(banner) = banner {
+    // According to #1705, the banner should be placed after the `use strict` directive.
+    concat_source.add_source(Box::new(RawSource::new(banner)));
+  }
 
   // TODO indent chunk content for the wrapper function
   module_sources.into_iter().for_each(|(_, _, module_render_output)| {

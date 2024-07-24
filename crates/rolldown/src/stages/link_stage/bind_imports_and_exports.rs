@@ -260,8 +260,8 @@ impl<'a> BindImportsAndExportsContext<'a> {
 
       let rec = &module.import_records[named_import.record_id];
 
-      let ret = match &self.normal_modules[rec.resolved_module] {
-        Module::External(_) => MatchImportKind::Normal { symbol: *imported_as_ref },
+      let (ret, deps) = match &self.normal_modules[rec.resolved_module] {
+        Module::External(_) => (MatchImportKind::Normal { symbol: *imported_as_ref }, vec![]),
         Module::Ecma(importee) => self.match_import_with_export(
           self.normal_modules,
           &mut MatchingContext { tracker_stack: Vec::default() },
@@ -323,12 +323,14 @@ impl<'a> BindImportsAndExportsContext<'a> {
           ));
         }
         MatchImportKind::Normal { symbol } => {
+          self.metas[module_id].dependencies.extend(deps);
           self.symbols.union(*imported_as_ref, symbol);
         }
         MatchImportKind::Namespace { namespace_ref } => {
           self.symbols.union(*imported_as_ref, namespace_ref);
         }
         MatchImportKind::NormalAndNamespace { namespace_ref, alias } => {
+          self.metas[module_id].dependencies.extend(deps);
           self.symbols.get_mut(*imported_as_ref).namespace_alias =
             Some(NamespaceAlias { property_name: alias, namespace_ref });
         }
@@ -400,7 +402,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
     normal_modules: &IndexModules,
     ctx: &mut MatchingContext,
     mut tracker: ImportTracker,
-  ) -> MatchImportKind {
+  ) -> (MatchImportKind, Vec<ModuleIdx>) {
     let tracking_span = tracing::trace_span!(
       "TRACKING_MATCH_IMPORT",
       importer = normal_modules[tracker.importer].stable_id(),
@@ -408,7 +410,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
       imported_specifier = format!("{}", tracker.imported)
     );
     let _enter = tracking_span.enter();
-
+    let mut dependencies_due_to_reexport = vec![];
     let mut ambiguous_results = vec![];
     let ret = loop {
       for prev_tracker in ctx.tracker_stack.iter().rev() {
@@ -416,7 +418,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
           && prev_tracker.imported_as == tracker.imported_as
         {
           // Cycle import. No need to continue, just return
-          return MatchImportKind::Cycle;
+          return (MatchImportKind::Cycle, vec![]);
         }
       }
       ctx.tracker_stack.push(tracker.clone());
@@ -454,16 +456,20 @@ impl<'a> BindImportsAndExportsContext<'a> {
               let rec = &ambiguous_ref_owner.as_ecma().unwrap().import_records
                 [another_named_import.record_id];
               let ambiguous_result = match &self.normal_modules[rec.resolved_module] {
-                Module::Ecma(importee) => self.match_import_with_export(
-                  normal_modules,
-                  &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
-                  ImportTracker {
-                    importer: ambiguous_ref_owner.idx(),
-                    importee: importee.idx,
-                    imported: another_named_import.imported.clone(),
-                    imported_as: another_named_import.imported_as,
-                  },
-                ),
+                Module::Ecma(importee) => {
+                  let (ret, deps) = self.match_import_with_export(
+                    normal_modules,
+                    &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
+                    ImportTracker {
+                      importer: ambiguous_ref_owner.idx(),
+                      importee: importee.idx,
+                      imported: another_named_import.imported.clone(),
+                      imported_as: another_named_import.imported_as,
+                    },
+                  );
+                  dependencies_due_to_reexport.extend(deps);
+                  ret
+                }
                 Module::External(_) => {
                   MatchImportKind::Normal { symbol: another_named_import.imported_as }
                 }
@@ -474,6 +480,8 @@ impl<'a> BindImportsAndExportsContext<'a> {
             }
           }
 
+          // Make sure to add owner the symbol to the dependencies list.
+          dependencies_due_to_reexport.push(symbol.owner);
           // If this is a re-export of another import, continue for another
           // iteration of the loop to resolve that import as well
           let owner = &normal_modules[symbol.owner];
@@ -508,18 +516,23 @@ impl<'a> BindImportsAndExportsContext<'a> {
     for ambiguous_result in &ambiguous_results {
       if *ambiguous_result != ret {
         if let MatchImportKind::Normal { symbol } = ret {
-          return MatchImportKind::Ambiguous {
-            symbol_ref: symbol,
-            potentially_ambiguous_symbol_refs: ambiguous_results
-              .iter()
-              .filter_map(|kind| match *kind {
-                MatchImportKind::Normal { symbol } => Some(symbol),
-                MatchImportKind::Namespace { namespace_ref }
-                | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
-                _ => None,
-              })
-              .collect(),
-          };
+          return (
+            MatchImportKind::Ambiguous {
+              symbol_ref: symbol,
+              potentially_ambiguous_symbol_refs: ambiguous_results
+                .iter()
+                .filter_map(|kind| match *kind {
+                  MatchImportKind::Normal { symbol } => Some(symbol),
+                  MatchImportKind::Namespace { namespace_ref }
+                  | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => {
+                    Some(namespace_ref)
+                  }
+                  _ => None,
+                })
+                .collect(),
+            },
+            vec![],
+          );
         }
 
         unreachable!("symbol should always exist");
@@ -540,12 +553,12 @@ impl<'a> BindImportsAndExportsContext<'a> {
               .or_insert_with(|| {
                 self.symbols.create_symbol(tracker.importee, imported.clone().to_string().into())
               });
-            return MatchImportKind::Normal { symbol: *shimmed_symbol_ref };
+            return (MatchImportKind::Normal { symbol: *shimmed_symbol_ref }, vec![]);
           }
         }
       }
     }
 
-    ret
+    (ret, dependencies_due_to_reexport)
   }
 }

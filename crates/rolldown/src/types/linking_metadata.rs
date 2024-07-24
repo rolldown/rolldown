@@ -1,6 +1,7 @@
 use oxc::index::IndexVec;
 use rolldown_common::{ModuleIdx, ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind};
 use rolldown_rstr::Rstr;
+use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashMap;
 
 use super::tree_shake::UsedExportsInfo;
@@ -52,7 +53,7 @@ pub struct LinkingMetadata {
   pub referenced_symbols_by_entry_point_chunk: Vec<SymbolRef>,
 
   /// The dependencies of the module. It means if you want include this module, you need to include these dependencies too.
-  pub dependencies: Vec<ModuleIdx>,
+  pub dependencies: FxIndexSet<ModuleIdx>,
 }
 
 impl LinkingMetadata {

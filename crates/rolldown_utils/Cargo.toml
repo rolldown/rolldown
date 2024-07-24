@@ -14,7 +14,7 @@ workspace = true
 
 [dependencies]
 anyhow      = { workspace = true }
-base64      = { workspace = true }
+base64-simd      = { workspace = true }
 futures     = { workspace = true }
 indexmap    = { workspace = true }
 infer       = { workspace = true }

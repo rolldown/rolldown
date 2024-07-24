@@ -343,6 +343,7 @@ impl<'a> LinkStage<'a> {
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__toESM").into());
                           stmt_info.declared_symbols.push(rec.namespace_ref);
+                          dbg!(&rec.stmt_idx);
                           symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                             format!("import_{}", &importee.repr_name).into();
                         }

@@ -1,3 +1,5 @@
+use core::panic;
+
 use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
 use crate::types::tree_shake::{UsedExportsInfo, UsedInfo};
@@ -83,6 +85,7 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
 
   // Include imported modules for its side effects
   module.import_records.iter().for_each(|import_record| {
+    dbg!(&module.stmt_infos[import_record.stmt_idx].debug_label);
     match &ctx.modules[import_record.resolved_module] {
       Module::Ecma(importee) => {
         let bailout_side_effect =
@@ -113,26 +116,28 @@ fn include_module_as_namespace(ctx: &mut Context, module: &EcmaModule) {
 }
 
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
+  dbg!(&ctx.symbols.get(symbol_ref));
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   let mut canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
-
+  dbg!(canonical_ref, symbol_ref);
+  dbg!(canonical_ref_symbol, &canonical_ref_owner.named_imports);
   dbg!(&canonical_ref, &canonical_ref_owner.stable_id);
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     if let Some(named_import) = canonical_ref_owner.named_imports.get(&canonical_ref) {
       let import = &canonical_ref_owner.import_records[named_import.record_id];
-      let resolved_module = &ctx.modules[import.resolved_module];
-      if let Some(ecma) = resolved_module.as_ecma() {
-        include_module(ctx, ecma);
-        include_symbol(ctx, import.namespace_ref);
-      }
+      include_statement(ctx, canonical_ref_owner, import.stmt_idx + 1);
     };
     canonical_ref = namespace_alias.namespace_ref;
     canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
+  } else {
+    if let Some(named_import) = canonical_ref_owner.named_imports.get(&symbol_ref) {
+      let import = &canonical_ref_owner.import_records[named_import.record_id];
+      include_statement(ctx, canonical_ref_owner, import.stmt_idx + 1);
+    };
   }
 
   let is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
-  dbg!(&is_namespace_ref, canonical_ref_symbol);
   if is_namespace_ref {
     ctx.used_exports_info_vec[canonical_ref_owner.idx].used_info |= UsedInfo::USED_AS_NAMESPACE_REF;
   }
@@ -190,11 +195,19 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
 
   let (export_name, namespace_property_name) =
     if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
+      if let Some(named_import) = canonical_ref_owner.named_imports.get(&canonical_ref) {
+        let import = &canonical_ref_owner.import_records[named_import.record_id];
+        include_statement(ctx, canonical_ref_owner, import.stmt_idx + 1);
+      };
       let name = canonical_ref_symbol.name.clone();
       canonical_ref = namespace_alias.namespace_ref;
       canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
       (name, Some(namespace_alias.property_name.clone()))
     } else {
+      // if let Some(named_import) = canonical_ref_owner.named_imports.get(&canonical_ref) {
+      //   let import = &canonical_ref_owner.import_records[named_import.record_id];
+      //   include_statement(ctx, canonical_ref_owner, import.stmt_idx + 1);
+      // };
       (canonical_ref_symbol.name.clone(), None)
     };
 

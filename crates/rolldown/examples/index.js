@@ -1,4 +1,4 @@
-import foo from 'foo'
+import  * as foo from 'foo'
 // const foo = require('foo')
 
 // console.log(`foo: `, foo)

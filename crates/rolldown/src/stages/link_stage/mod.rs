@@ -316,7 +316,6 @@ impl<'a> LinkStage<'a> {
                     match importee_linking_info.wrap_kind {
                       WrapKind::None => {}
                       WrapKind::Cjs => {
-                        dbg!(&stmt_info.debug_label, "cjs ");
                         stmt_info.side_effect = importee.side_effects.has_side_effects();
                         if is_reexport_all {
                           // Turn `export * from 'bar_cjs'` into `__reExport(foo_exports, __toESM(require_bar_cjs()))`
@@ -338,12 +337,10 @@ impl<'a> LinkStage<'a> {
                           stmt_info
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
-                          dbg!(&importee_linking_info.wrapper_ref);
                           stmt_info
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__toESM").into());
                           stmt_info.declared_symbols.push(rec.namespace_ref);
-                          dbg!(&rec.stmt_idx);
                           symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                             format!("import_{}", &importee.repr_name).into();
                         }

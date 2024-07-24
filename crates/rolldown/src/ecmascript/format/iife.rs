@@ -1,6 +1,4 @@
-use crate::utils::chunk::collect_render_chunk_imports::{
-  collect_render_chunk_imports, RenderImportDeclarationSpecifier,
-};
+use crate::utils::chunk::render_chunk_imports::render_chunk_imports;
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
@@ -43,7 +41,7 @@ pub fn render_iife(
     OutputExports::Named
   );
 
-  let (import_code, externals) = render_iife_chunk_imports(ctx);
+  let (import_code, externals) = render_chunk_imports(ctx);
 
   let (input_args, output_args) =
     render_iife_arguments(&externals, &ctx.options.globals, has_exports && named_exports);
@@ -90,51 +88,6 @@ pub fn render_iife(
   }
 
   Ok(concat_source)
-}
-
-// Handling external imports needs to modify the arguments of the wrapper function.
-fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>) {
-  let render_import_stmts =
-    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
-
-  let mut s = String::new();
-  let externals: Vec<String> = render_import_stmts
-    .iter()
-    .filter_map(|stmt| {
-      let require_path_str = &stmt.path;
-      match &stmt.specifiers {
-        RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
-          // Empty specifiers can be ignored in IIFE.
-          if specifiers.is_empty() {
-            None
-          } else {
-            let specifiers = specifiers
-              .iter()
-              .map(|specifier| {
-                if let Some(alias) = &specifier.alias {
-                  format!("{}: {alias}", specifier.imported)
-                } else {
-                  specifier.imported.to_string()
-                }
-              })
-              .collect::<Vec<_>>();
-            s.push_str(&format!(
-              "const {{ {} }} = {};\n",
-              specifiers.join(", "),
-              legitimize_identifier_name(&stmt.path)
-            ));
-            Some(require_path_str.to_string())
-          }
-        }
-        RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
-          s.push_str(&format!("const {alias} = {};\n", legitimize_identifier_name(&stmt.path)));
-          Some(require_path_str.to_string())
-        }
-      }
-    })
-    .collect();
-
-  (s, externals)
 }
 
 fn render_iife_arguments(

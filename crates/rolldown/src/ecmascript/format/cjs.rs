@@ -2,15 +2,10 @@ use rolldown_common::ExportsKind;
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
+use crate::utils::chunk::render_chunk_imports::render_chunk_imports;
 use crate::{
-  ecmascript::ecma_generator::RenderedModuleSources,
-  types::generator::GenerateContext,
-  utils::chunk::{
-    collect_render_chunk_imports::{
-      collect_render_chunk_imports, RenderImportDeclarationSpecifier,
-    },
-    render_chunk_exports::render_chunk_exports,
-  },
+  ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
+  utils::chunk::render_chunk_exports::render_chunk_exports,
 };
 
 pub fn render_cjs(
@@ -56,7 +51,9 @@ pub fn render_cjs(
     _ => {}
   }
 
-  concat_source.add_source(Box::new(RawSource::new(render_cjs_chunk_imports(ctx))));
+  let (imports, _) = render_chunk_imports(ctx);
+
+  concat_source.add_source(Box::new(RawSource::new(imports)));
 
   // chunk content
   module_sources_peekable.for_each(|(_, _, module_render_output)| {
@@ -76,63 +73,4 @@ pub fn render_cjs(
   }
 
   Ok(concat_source)
-}
-
-fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
-  let render_import_stmts =
-    collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
-
-  let mut s = String::new();
-  render_import_stmts.iter().for_each(|stmt| {
-    let require_path_str = format!("require(\"{}\")", &stmt.path);
-    match &stmt.specifiers {
-      RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
-        if specifiers.is_empty() {
-          s.push_str(&format!("{require_path_str};\n"));
-        } else {
-          let specifiers = specifiers
-            .iter()
-            .map(|specifier| {
-              if let Some(alias) = &specifier.alias {
-                format!("{}: {alias}", specifier.imported)
-              } else {
-                specifier.imported.to_string()
-              }
-            })
-            .collect::<Vec<_>>();
-          s.push_str(&format!(
-            "const {{ {} }} = {};\n",
-            specifiers.join(", "),
-            if stmt.is_external {
-              let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
-                .link_output
-                .symbols
-                .par_canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
-
-              format!("{to_esm_fn_name}({require_path_str})")
-            } else {
-              require_path_str
-            }
-          ));
-        }
-      }
-      RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
-        s.push_str(&format!(
-          "const {alias} = {};\n",
-          if stmt.is_external {
-            let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
-              .link_output
-              .symbols
-              .par_canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
-
-            format!("{to_esm_fn_name}({require_path_str})")
-          } else {
-            require_path_str
-          }
-        ));
-      }
-    }
-  });
-
-  s
 }

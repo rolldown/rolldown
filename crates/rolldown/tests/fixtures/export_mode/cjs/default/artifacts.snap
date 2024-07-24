@@ -11,7 +11,6 @@ input_file: crates/rolldown/tests/fixtures/export_mode/cjs/default
 "use strict";
 
 
-
 //#region mod.js
 var default_mod_ns = {};
 __export(default_mod_ns, {default: () => example});

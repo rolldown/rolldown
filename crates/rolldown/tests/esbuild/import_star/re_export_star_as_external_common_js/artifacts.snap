@@ -10,7 +10,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_as_external
 ```js
 "use strict";
 
-
 const out = __toESM(require("foo"));
 
 Object.defineProperty(exports, '__esModule', { value: true });

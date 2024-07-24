@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/fixtures/function/format/cjs/plain_import_should_not_introduce_to_esm
 ---
@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/plain_import_shou
 
 ```js
 "use strict";
-
 require("foo");
 require("bar");
 require("baz");

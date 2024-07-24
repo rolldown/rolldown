@@ -10,7 +10,6 @@ input_file: crates/rolldown/tests/fixtures/export_mode/cjs/auto/named
 ```js
 "use strict";
 
-
 //#region main.js
 function a() {
 	return "named";

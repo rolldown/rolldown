@@ -22,6 +22,10 @@ pub fn render_iife(
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
+  if let Some(banner) = banner {
+    concat_source.add_source(Box::new(RawSource::new(banner)));
+  }
+
   // iife wrapper start
   let export_items = get_export_items(ctx.chunk, ctx.link_output);
   let has_exports = !export_items.is_empty();
@@ -47,11 +51,6 @@ pub fn render_iife(
   let begging = format!("{assignee}{begin_wrapper}");
 
   concat_source.add_source(Box::new(RawSource::new(begging)));
-
-  if let Some(banner) = banner {
-    // According to #1705, the banner should be placed after the `use strict` directive.
-    concat_source.add_source(Box::new(RawSource::new(banner)));
-  }
 
   // TODO indent chunk content for the wrapper function
   module_sources.into_iter().for_each(|(_, _, module_render_output)| {

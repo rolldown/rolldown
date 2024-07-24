@@ -13,11 +13,19 @@ pub fn render_esm(
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
+  intro: Option<String>,
+  outro: Option<String>,
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
   if let Some(banner) = banner {
     concat_source.add_source(Box::new(RawSource::new(banner)));
+  }
+  
+  if let Some(intro) = intro {
+    if !intro.is_empty() {
+      concat_source.add_source(Box::new(RawSource::new(intro)));
+    }
   }
 
   let (imports, _) = render_chunk_imports(ctx);
@@ -56,7 +64,16 @@ pub fn render_esm(
   }
 
   if let Some(exports) = render_chunk_exports(ctx)? {
-    concat_source.add_source(Box::new(RawSource::new(exports)));
+    if exports.is_empty() {
+    } else {
+      concat_source.add_source(Box::new(RawSource::new(exports)));
+    }
+  }
+
+  if let Some(outro) = outro {
+    if !outro.is_empty() {
+      concat_source.add_source(Box::new(RawSource::new(outro)));
+    }
   }
 
   if let Some(footer) = footer {

@@ -19,6 +19,8 @@ pub fn render_iife(
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
+  intro: Option<String>,
+  outro: Option<String>,
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
@@ -49,7 +51,14 @@ pub fn render_iife(
   )?;
 
   let begging = format!("{assignee}{begin_wrapper}");
-
+  
+  
+  if let Some(intro) = intro {
+    if !intro.is_empty() {
+      concat_source.add_source(Box::new(RawSource::new(intro)));
+    }
+  }
+  
   concat_source.add_source(Box::new(RawSource::new(begging)));
 
   // TODO indent chunk content for the wrapper function
@@ -66,6 +75,22 @@ pub fn render_iife(
     &ctx.options.globals,
     has_exports && matches!(export_mode, rolldown_common::OutputExports::Named),
   );
+  
+  // iife exports
+  if let Some(exports) = render_chunk_exports(ctx)? {
+    concat_source.add_source(Box::new(RawSource::new(exports)));
+  }
+  
+  if let Some(outro) = outro {
+    if !outro.is_empty() {
+      concat_source.add_source(Box::new(RawSource::new(outro)));
+    }
+  }
+
+  if named_exports {
+    // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
+    concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
+  }
 
   let ending = format!("{end_wrapper}({arguments});");
 

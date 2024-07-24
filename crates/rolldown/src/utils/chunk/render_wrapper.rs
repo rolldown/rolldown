@@ -25,7 +25,7 @@ pub fn render_wrapper(
 
   let input_args = render_wrapper_arguments(&externals, has_exports && named_exports);
 
-  beginning.push_str(format!("(function({}) {{\n", input_args).as_str());
+  beginning.push_str(format!("(function({input_args}) {{\n").as_str());
 
   if use_strict {
     beginning.push_str("\"use strict\";\n");

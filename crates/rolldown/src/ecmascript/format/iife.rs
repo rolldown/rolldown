@@ -38,7 +38,7 @@ pub fn render_iife(
   let export_mode = determine_export_mode(&ctx.options.exports, entry_module, &export_items)?;
 
   let assignee =
-    if let Some(name) = &ctx.options.name { format!("var {} = ", name) } else { "".to_string() };
+    if let Some(name) = &ctx.options.name { format!("var {name} = ") } else { String::new() };
 
   let (begin_wrapper, end_wrapper, externals) = render_wrapper(ctx, &export_mode, true)?;
 

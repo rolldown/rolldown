@@ -217,18 +217,6 @@
       },
       "additionalProperties": false
     },
-    "InnerOptions": {
-      "type": "object",
-      "properties": {
-        "moduleSideEffects": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
     "InputItem": {
       "type": "object",
       "required": [
@@ -431,13 +419,25 @@
         "Hidden"
       ]
     },
+    "TreeshakeInnerOptions": {
+      "type": "object",
+      "properties": {
+        "moduleSideEffects": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "TreeshakeOptions": {
       "anyOf": [
         {
           "type": "boolean"
         },
         {
-          "$ref": "#/definitions/InnerOptions"
+          "$ref": "#/definitions/TreeshakeInnerOptions"
         }
       ]
     }

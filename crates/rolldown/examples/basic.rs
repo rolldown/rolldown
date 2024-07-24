@@ -1,4 +1,4 @@
-use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
+use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType, TreeshakeOptions};
 use rolldown_testing::workspace;
 use sugar_path::SugarPath;
 
@@ -8,10 +8,13 @@ async fn main() {
   let cwd = root.join("./examples").normalize();
   let mut bundler = Bundler::new(BundlerOptions {
     input: Some(vec![
-      InputItem { name: Some("react-dom".to_string()), import: "react-dom".to_string() },
-      InputItem { name: Some("react".to_string()), import: "react".to_string() },
+      InputItem { name: Some("react-dom".to_string()), import: "./index.js".to_string() },
+      // InputItem { name: Some("react".to_string()), import: "react".to_string() },
     ]),
     cwd: cwd.into(),
+    treeshake: rolldown::TreeshakeOptions::Option(rolldown::TreeshakeInnerOptions {
+      module_side_effects: rolldown::ModuleSideEffects::Boolean(true),
+    }),
     sourcemap: Some(SourceMapType::File),
     ..Default::default()
   });

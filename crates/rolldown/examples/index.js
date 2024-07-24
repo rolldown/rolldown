@@ -1,3 +1,6 @@
-import { a as a2 } from './shared'
-const a = 'index.js'
-console.log(a, a2)
+import foo from 'foo'
+// const foo = require('foo')
+
+// console.log(`foo: `, foo)
+export const x = true && foo
+

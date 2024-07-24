@@ -1,4 +1,4 @@
-use rolldown::{InnerOptions, ModuleSideEffects};
+use rolldown::{ModuleSideEffects, TreeshakeInnerOptions};
 use rolldown_common::js_regex::HybridRegex;
 use serde::Deserialize;
 
@@ -12,15 +12,17 @@ pub struct BindingTreeshake {
 impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
   fn try_from(value: BindingTreeshake) -> anyhow::Result<Self> {
     match value.module_side_effects.as_str() {
-      "true" => {
-        Ok(Self::Option(InnerOptions { module_side_effects: ModuleSideEffects::Boolean(true) }))
-      }
-      "false" => {
-        Ok(Self::Option(InnerOptions { module_side_effects: ModuleSideEffects::Boolean(false) }))
-      }
+      "true" => Ok(Self::Option(TreeshakeInnerOptions {
+        module_side_effects: ModuleSideEffects::Boolean(true),
+      })),
+      "false" => Ok(Self::Option(TreeshakeInnerOptions {
+        module_side_effects: ModuleSideEffects::Boolean(false),
+      })),
       _ => {
         let regex = HybridRegex::new(&value.module_side_effects)?;
-        Ok(Self::Option(InnerOptions { module_side_effects: ModuleSideEffects::Regex(regex) }))
+        Ok(Self::Option(TreeshakeInnerOptions {
+          module_side_effects: ModuleSideEffects::Regex(regex),
+        }))
       }
     }
   }

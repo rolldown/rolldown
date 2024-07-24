@@ -72,6 +72,7 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
   if ctx.tree_shaking && !forced_no_treeshake {
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
       // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
+      dbg!(&stmt_info.debug_label, stmt_info.side_effect);
       if stmt_info.side_effect {
         include_statement(ctx, module, stmt_info_id);
       }
@@ -115,12 +116,23 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   let mut canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
+
+  dbg!(&canonical_ref, &canonical_ref_owner.stable_id);
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
+    if let Some(named_import) = canonical_ref_owner.named_imports.get(&canonical_ref) {
+      let import = &canonical_ref_owner.import_records[named_import.record_id];
+      let resolved_module = &ctx.modules[import.resolved_module];
+      if let Some(ecma) = resolved_module.as_ecma() {
+        include_module(ctx, ecma);
+        include_symbol(ctx, import.namespace_ref);
+      }
+    };
     canonical_ref = namespace_alias.namespace_ref;
     canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
   }
 
   let is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
+  dbg!(&is_namespace_ref, canonical_ref_symbol);
   if is_namespace_ref {
     ctx.used_exports_info_vec[canonical_ref_owner.idx].used_info |= UsedInfo::USED_AS_NAMESPACE_REF;
   }
@@ -215,6 +227,7 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
   );
 }
 
+#[track_caller]
 fn include_statement(ctx: &mut Context, module: &EcmaModule, stmt_info_id: StmtInfoIdx) {
   let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_id];
 
@@ -223,6 +236,10 @@ fn include_statement(ctx: &mut Context, module: &EcmaModule, stmt_info_id: StmtI
   }
 
   let stmt_info = module.stmt_infos.get(stmt_info_id);
+  if !module.is_virtual() {
+    dbg!(&std::panic::Location::caller());
+    dbg!(&stmt_info.debug_label);
+  }
 
   // include the statement itself
   *is_included = true;

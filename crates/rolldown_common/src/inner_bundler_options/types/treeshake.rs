@@ -12,13 +12,15 @@ use serde::{Deserialize, Deserializer};
 )]
 pub enum TreeshakeOptions {
   Boolean(bool),
-  Option(InnerOptions),
+  Option(TreeshakeInnerOptions),
 }
 
 impl Default for TreeshakeOptions {
   /// Used for snapshot testing
   fn default() -> Self {
-    TreeshakeOptions::Option(InnerOptions { module_side_effects: ModuleSideEffects::Boolean(true) })
+    TreeshakeOptions::Option(TreeshakeInnerOptions {
+      module_side_effects: ModuleSideEffects::Boolean(true),
+    })
   }
 }
 
@@ -49,7 +51,7 @@ impl TreeshakeOptions {
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
-pub struct InnerOptions {
+pub struct TreeshakeInnerOptions {
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(deserialize_with = "deserialize_module_side_effects"),

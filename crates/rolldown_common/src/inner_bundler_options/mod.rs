@@ -113,7 +113,7 @@ where
   match value {
     Some(Value::Bool(false)) => Ok(TreeshakeOptions::Boolean(false)),
     None | Some(Value::Bool(true)) => {
-      Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
+      Ok(TreeshakeOptions::Option(types::treeshake::TreeshakeInnerOptions {
         module_side_effects: types::treeshake::ModuleSideEffects::Boolean(true),
       }))
     }
@@ -125,7 +125,7 @@ where
           _ => Err(serde::de::Error::custom("moduleSideEffects should be a `true` or `false`")),
         },
       )?;
-      Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions { module_side_effects }))
+      Ok(TreeshakeOptions::Option(types::treeshake::TreeshakeInnerOptions { module_side_effects }))
     }
     _ => Err(serde::de::Error::custom("treeshake should be a boolean or an object")),
   }

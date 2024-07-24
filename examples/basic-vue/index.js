@@ -1,3 +1,5 @@
-import foo from 'foo'
-
-export const x = false && foo
+if (process.env.NODE_ENV === 'development') {
+  console.log('development')
+} else {
+  console.log('production')
+}

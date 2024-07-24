@@ -327,7 +327,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_no_bundle_iife
 
-- entry_js-!~{000}~.mjs => entry_js-k-4tRlGF.mjs
+- entry_js-!~{000}~.mjs => entry_js--TkETgS2.mjs
 
 # tests/esbuild/dce/tree_shaking_object_property
 
@@ -1471,31 +1471,31 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/export_mode/iife/auto/none
 
-- main-!~{000}~.mjs => main-MXkFYr18.mjs
+- main-!~{000}~.mjs => main-jae-4tR0.mjs
 
 # tests/fixtures/export_mode/iife/default
 
-- main-!~{000}~.mjs => main-BrUsoNkw.mjs
+- main-!~{000}~.mjs => main-hgytnGLC.mjs
 
 # tests/fixtures/export_mode/iife/named
 
-- main-!~{000}~.mjs => main-jnVxPvdX.mjs
+- main-!~{000}~.mjs => main-miDzTTts.mjs
 
 # tests/fixtures/format/iife/basic
 
-- main-!~{000}~.mjs => main-Z44yy_wa.mjs
+- main-!~{000}~.mjs => main-GwWbAmhW.mjs
 
 # tests/fixtures/format/iife/external_modules
 
-- main-!~{000}~.mjs => main-BBs_LVjj.mjs
+- main-!~{000}~.mjs => main-cuI6FGIL.mjs
 
 # tests/fixtures/format/iife/external_modules_with_globals
 
-- main-!~{000}~.mjs => main-0mbu-Y_o.mjs
+- main-!~{000}~.mjs => main-YsBV8YwF.mjs
 
 # tests/fixtures/format/iife-with-name
 
-- main-!~{000}~.mjs => main-XwjODux8.mjs
+- main-!~{000}~.mjs => main-MXjzayTW.mjs
 
 # tests/fixtures/function/dir/should_generate_correct_relative_import_path
 

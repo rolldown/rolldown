@@ -56,6 +56,7 @@ pub fn render_cjs(
   concat_source.add_source(Box::new(RawSource::new(imports)));
 
   // chunk content
+  // TODO add indents
   module_sources_peekable.for_each(|(_, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
       for source in emitted_sources {

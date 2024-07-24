@@ -7,6 +7,7 @@ use arcstr::ArcStr;
 use rolldown_common::OutputFormat;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
+/// Render chunk imports and return the import statements and the external imports.
 pub fn render_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>) {
   let render_import_stmts =
     collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
@@ -15,7 +16,11 @@ pub fn render_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>) 
   let externals: Vec<String> = render_import_stmts
     .iter()
     .filter_map(|stmt| {
-      let require_path_str = if matches!(ctx.options.format, OutputFormat::Cjs) { format!("require(\"{}\")", &stmt.path) } else { stmt.path.to_string() };
+      let require_path_str = if matches!(ctx.options.format, OutputFormat::Cjs) {
+        format!("require(\"{}\")", &stmt.path)
+      } else {
+        stmt.path.to_string()
+      };
       let require_path_str = require_path_str.as_str();
       match &stmt.specifiers {
         RenderImportDeclarationSpecifier::ImportSpecifier(specifiers) => {
@@ -115,6 +120,7 @@ fn handle_import_star_specifier(
   require_path_str.to_string()
 }
 
+/// Handle UMD-related import syntax, including CJS, IIFE, and (planing) AMD, UMD.
 fn handle_umd_import_syntax(
   ctx: &GenerateContext<'_>,
   stmt: &RenderImportStmt,

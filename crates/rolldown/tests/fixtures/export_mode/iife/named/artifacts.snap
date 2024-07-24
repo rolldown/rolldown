@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/fixtures/export_mode/iife/named
 
 ```js
 var module = (function(exports) {
-
+"use strict";
 
 
 //#region mod.js

@@ -9,7 +9,7 @@ input_file: crates/rolldown/tests/fixtures/format/iife/basic
 
 ```js
 (function() {
-
+"use strict";
 
 
 //#region main.js
@@ -43,5 +43,6 @@ var init_esm = __esmMin(() => {
 });
 
 //#endregion
+
 })();
 ```

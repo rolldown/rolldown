@@ -1,12 +1,12 @@
-use crate::utils::chunk::render_chunk_imports::render_chunk_imports;
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
-  utils::chunk::render_chunk_exports::{
-    determine_export_mode, get_export_items, render_chunk_exports,
+  utils::chunk::{
+    render_chunk_exports::{determine_export_mode, get_export_items},
+    render_wrapper::render_wrapper,
   },
 };
-use rolldown_common::{ChunkKind, OutputExports};
+use rolldown_common::ChunkKind;
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
@@ -18,7 +18,6 @@ pub fn render_iife(
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
-  invoke: bool,
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
@@ -36,29 +35,18 @@ pub fn render_iife(
     }
     ChunkKind::Common => unreachable!("iife should be entry point chunk"),
   };
-  let named_exports = matches!(
-    determine_export_mode(&ctx.options.exports, entry_module, &export_items)?,
-    OutputExports::Named
-  );
+  let export_mode = determine_export_mode(&ctx.options.exports, entry_module, &export_items)?;
 
-  let (import_code, externals) = render_chunk_imports(ctx);
+  let assignee =
+    if let Some(name) = &ctx.options.name { format!("var {} = ", name) } else { "".to_string() };
 
-  let (input_args, output_args) =
-    render_iife_arguments(&externals, &ctx.options.globals, has_exports && named_exports);
+  let (begin_wrapper, end_wrapper, externals) = render_wrapper(ctx, &export_mode, true)?;
 
-  concat_source.add_source(Box::new(RawSource::new(format!(
-    "{}(function({}) {{\n",
-    if let Some(name) = &ctx.options.name { format!("var {name} = ") } else { String::new() },
-    // TODO handle external imports here.
-    input_args
-  ))));
+  let begging = format!("{assignee}{begin_wrapper}");
 
-  concat_source.add_source(Box::new(RawSource::new(import_code)));
+  concat_source.add_source(Box::new(RawSource::new(begging)));
 
-  // TODO iife imports
-
-  // chunk content
-  // TODO indent chunk content for iife format
+  // TODO indent chunk content for the wrapper function
   module_sources.into_iter().for_each(|(_, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
       for source in emitted_sources {
@@ -67,21 +55,15 @@ pub fn render_iife(
     }
   });
 
-  // iife exports
-  if let Some(exports) = render_chunk_exports(ctx)? {
-    concat_source.add_source(Box::new(RawSource::new(exports)));
-    if named_exports {
-      // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
-      concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
-    }
-  }
+  let arguments = render_iife_arguments(
+    &externals,
+    &ctx.options.globals,
+    has_exports && matches!(export_mode, rolldown_common::OutputExports::Named),
+  );
 
-  // iife wrapper end
-  if invoke {
-    concat_source.add_source(Box::new(RawSource::new(format!("}})({output_args});"))));
-  } else {
-    concat_source.add_source(Box::new(RawSource::new("})".to_string())));
-  }
+  let ending = format!("{end_wrapper}({arguments});");
+
+  concat_source.add_source(Box::new(RawSource::new(ending)));
 
   if let Some(footer) = footer {
     concat_source.add_source(Box::new(RawSource::new(footer)));
@@ -94,11 +76,9 @@ fn render_iife_arguments(
   externals: &[String],
   globals: &FxHashMap<String, String>,
   exports_key: bool,
-) -> (String, String) {
-  let mut input_args = if exports_key { vec!["exports".to_string()] } else { vec![] };
+) -> String {
   let mut output_args = if exports_key { vec!["{}".to_string()] } else { vec![] };
   externals.iter().for_each(|external| {
-    input_args.push(legitimize_identifier_name(external).to_string());
     if let Some(global) = globals.get(external) {
       output_args.push(legitimize_identifier_name(global).to_string());
     } else {
@@ -106,5 +86,5 @@ fn render_iife_arguments(
       output_args.push(legitimize_identifier_name(external).to_string());
     }
   });
-  (input_args.join(", "), output_args.join(", "))
+  output_args.join(", ")
 }

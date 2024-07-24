@@ -12,7 +12,7 @@ export default defineTest({
   afterTest: (output) => {
     expect(output.output[0].code).toMatchInlineSnapshot(`
       "(function(exports, node_path) {
-
+      \"use strict\";
       const { join } = node_path;
 
       //#region main.js

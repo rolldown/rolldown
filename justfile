@@ -2,8 +2,7 @@ set windows-shell := ["powershell"]
 set shell := ["bash", "-cu"]
 
 _default:
-    cargo re basic
-    # just --list -u
+    just --list -u
 
 setup:
   # Rust related setup

@@ -1666,6 +1666,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-EYnPJQvV.mjs
 
+# tests/fixtures/misc/banner/cjs
+
+- main-!~{000}~.cjs => main-LjYDhh27.cjs
+
+# tests/fixtures/misc/banner/iife
+
+- main-!~{000}~.mjs => main-vtptMUau.mjs
+
+# tests/fixtures/misc/banner/inline
+
+- main-!~{000}~.mjs => main-vtptMUau.mjs
+
 # tests/fixtures/misc/basic
 
 - main-!~{000}~.mjs => main-GSae7Hz6.mjs

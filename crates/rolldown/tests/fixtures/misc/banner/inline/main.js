@@ -1,0 +1,2 @@
+// banner
+export default "banner"

@@ -1,5 +1,5 @@
 use crate::{
-  types::generator::{GenerateContext, Generator},
+  types::generator::{GenerateContext, GenerateOutput, Generator},
   utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
 };
 
@@ -7,6 +7,7 @@ use anyhow::Result;
 use rolldown_common::{
   AssetMeta, EcmaAssetMeta, ModuleId, ModuleIdx, OutputFormat, PreliminaryAsset, RenderedModule,
 };
+use rolldown_error::DiagnosableResult;
 use rolldown_plugin::HookBannerArgs;
 use rolldown_sourcemap::Source;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -22,8 +23,8 @@ pub struct EcmaGenerator;
 impl Generator for EcmaGenerator {
   #[allow(clippy::too_many_lines)]
   async fn render_preliminary_assets<'a>(
-    ctx: &GenerateContext<'a>,
-  ) -> Result<Vec<PreliminaryAsset>> {
+    ctx: &mut GenerateContext<'a>,
+  ) -> Result<DiagnosableResult<GenerateOutput>> {
     let mut rendered_modules = FxHashMap::default();
 
     let rendered_module_sources = ctx
@@ -78,10 +79,19 @@ impl Generator for EcmaGenerator {
     };
 
     let concat_source = match ctx.options.format {
-      OutputFormat::Esm => render_esm(ctx, rendered_module_sources, banner, footer),
-      OutputFormat::Cjs => render_cjs(ctx, rendered_module_sources, banner, footer),
+      OutputFormat::Esm => match render_esm(ctx, rendered_module_sources, banner, footer) {
+        Ok(concat_source) => concat_source,
+        Err(errors) => return Ok(Err(errors)),
+      },
+      OutputFormat::Cjs => match render_cjs(ctx, rendered_module_sources, banner, footer) {
+        Ok(concat_source) => concat_source,
+        Err(errors) => return Ok(Err(errors)),
+      },
       OutputFormat::App => render_app(ctx, rendered_module_sources, banner, footer),
-      OutputFormat::Iife => render_iife(ctx, rendered_module_sources, banner, footer),
+      OutputFormat::Iife => match render_iife(ctx, rendered_module_sources, banner, footer, true) {
+        Ok(concat_source) => concat_source,
+        Err(errors) => return Ok(Err(errors)),
+      },
     };
 
     let (content, mut map) = concat_source.content_and_sourcemap();
@@ -106,18 +116,21 @@ impl Generator for EcmaGenerator {
       map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
     }
 
-    Ok(vec![PreliminaryAsset {
-      origin_chunk: ctx.chunk_idx,
-      content,
-      map,
-      meta: AssetMeta::from(EcmaAssetMeta { rendered_chunk }),
-      augment_chunk_hash: None,
-      file_dir: file_dir.to_path_buf(),
-      preliminary_filename: ctx
-        .chunk
-        .preliminary_filename
-        .clone()
-        .expect("should have preliminary filename"),
-    }])
+    Ok(Ok(GenerateOutput {
+      assets: vec![PreliminaryAsset {
+        origin_chunk: ctx.chunk_idx,
+        content,
+        map,
+        meta: AssetMeta::from(EcmaAssetMeta { rendered_chunk }),
+        augment_chunk_hash: None,
+        file_dir: file_dir.to_path_buf(),
+        preliminary_filename: ctx
+          .chunk
+          .preliminary_filename
+          .clone()
+          .expect("should have preliminary filename"),
+      }],
+      warnings: std::mem::take(&mut ctx.warnings),
+    }))
   }
 }

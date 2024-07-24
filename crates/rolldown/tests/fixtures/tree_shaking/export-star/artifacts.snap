@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/tree_shaking/export-star
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region foo.js
+const foo = 1;
+
+//#endregion
+//#region main.js
+console.log(foo);
+
+//#endregion
+```

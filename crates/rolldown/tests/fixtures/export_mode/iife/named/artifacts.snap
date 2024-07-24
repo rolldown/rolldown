@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/export_mode/iife/named
+---
+# Assets
+
+## main.mjs
+
+```js
+var module = (function(exports) {
+
+
+
+//#region mod.js
+var named_mod_ns = {};
+__export(named_mod_ns, {
+	add: () => add,
+	subtract: () => subtract
+});
+function add(a, b) {
+	return a + b;
+}
+function subtract(a, b) {
+	return a - b;
+}
+
+//#endregion
+//#region main.js
+function aaa() {
+	return "aaa";
+}
+
+//#endregion
+Object.defineProperty(exports, '__esModule', { value: true });
+exports.aaa = aaa;
+exports.default = named_mod_ns;
+return exports;
+})({});
+```

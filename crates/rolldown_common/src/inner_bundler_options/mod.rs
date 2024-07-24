@@ -46,6 +46,7 @@ pub struct BundlerOptions {
   pub dir: Option<String>,
   pub format: Option<OutputFormat>,
   pub exports: Option<OutputExports>,
+  pub globals: Option<HashMap<String, String>>,
   pub sourcemap: Option<SourceMapType>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",

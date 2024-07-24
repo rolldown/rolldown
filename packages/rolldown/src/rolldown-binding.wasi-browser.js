@@ -39,7 +39,6 @@ const {
     const worker = new Worker(new URL('./wasi-worker-browser.mjs', import.meta.url), {
       type: 'module',
     })
-    
     worker.addEventListener('message', __wasmCreateOnMessageForFsProxy(__fs))
 
     return worker

@@ -123,6 +123,15 @@
             }
           ]
         },
+        "globals": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "input": {
           "type": [
             "array",

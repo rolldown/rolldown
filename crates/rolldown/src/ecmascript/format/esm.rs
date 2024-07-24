@@ -1,4 +1,5 @@
 use rolldown_common::{ChunkKind, WrapKind};
+use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
 use crate::{
@@ -13,11 +14,11 @@ use crate::{
 };
 
 pub fn render_esm(
-  ctx: &GenerateContext<'_>,
+  ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
-) -> ConcatSource {
+) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
   if let Some(banner) = banner {
@@ -57,9 +58,7 @@ pub fn render_esm(
     }
   }
 
-  if let Some(exports) =
-    render_chunk_exports(ctx.chunk, &ctx.link_output.runtime, ctx.link_output, ctx.options)
-  {
+  if let Some(exports) = render_chunk_exports(ctx)? {
     concat_source.add_source(Box::new(RawSource::new(exports)));
   }
 
@@ -67,7 +66,7 @@ pub fn render_esm(
     concat_source.add_source(Box::new(RawSource::new(footer)));
   }
 
-  concat_source
+  Ok(concat_source)
 }
 
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {

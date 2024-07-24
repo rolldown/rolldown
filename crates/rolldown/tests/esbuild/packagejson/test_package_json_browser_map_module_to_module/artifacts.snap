@@ -1,22 +1,14 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_browser_map_module_to_module
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "assert" is imported by "src/entry.js", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
 ## entry.mjs
 
 ```js
-import { default as assert } from "assert";
+import { default as assert } from "node:assert";
 
 
 //#region node_modules/node-pkg-browser/index.js

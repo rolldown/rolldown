@@ -8,11 +8,13 @@ input_file: crates/rolldown/tests/fixtures/format/iife/external_modules
 ## main.mjs
 
 ```js
-(function() {
+(function(node_path) {
+
+const { default: nodePath } = node_path;
 
 //#region main.js
 console.log(nodePath);
 
 //#endregion
-})();
+})(node_path);
 ```

@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/export_mode/iife/auto/none
+---
+# Assets
+
+## main.mjs
+
+```js
+var MyLibrary = (function() {
+
+
+//#region main.js
+console.log("none");
+
+//#endregion
+})();
+```

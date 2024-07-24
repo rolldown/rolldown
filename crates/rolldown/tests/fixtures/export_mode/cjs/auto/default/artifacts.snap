@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/case/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/export_mode/cjs/auto-default
+input_file: crates/rolldown/tests/fixtures/export_mode/cjs/auto/default
 ---
 # Assets
 
@@ -17,6 +17,5 @@ function main_default() {
 }
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 module.exports = main_default;
 ```

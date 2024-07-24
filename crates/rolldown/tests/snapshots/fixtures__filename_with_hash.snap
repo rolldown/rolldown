@@ -327,7 +327,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_no_bundle_iife
 
-- entry_js-!~{000}~.mjs => entry_js-GGqT8yME.mjs
+- entry_js-!~{000}~.mjs => entry_js-k-4tRlGF.mjs
 
 # tests/esbuild/dce/tree_shaking_object_property
 
@@ -946,7 +946,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/packagejson/test_package_json_browser_map_module_to_module
 
-- entry-!~{000}~.mjs => entry-2HhhJyRd.mjs
+- entry-!~{000}~.mjs => entry-wyJiIiyi.mjs
 
 # tests/esbuild/packagejson/test_package_json_browser_map_module_to_relative
 
@@ -1014,7 +1014,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_implicit_main_force_module_before_main
 
-- entry-!~{000}~.mjs => entry-MrwnQfYO.mjs
+- entry-!~{000}~.mjs => entry-nUH0JZ6C.mjs
 
 # tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_same_file
 
@@ -1213,7 +1213,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/splitting/missing_lazy_export_missing_lazy_export
 
-- a-!~{000}~.mjs => a-co9mCZ1-.mjs
+- a-!~{000}~.mjs => a-qyhKV3La.mjs
 - b-!~{001}~.mjs => b-75EtqDbN.mjs
 - common-!~{002}~.mjs => common-4ywkZ6tD.mjs
 
@@ -1430,6 +1430,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-07HwCbF6.mjs
 
+# tests/fixtures/errors/invalid_export_option/default
+
+
+# tests/fixtures/errors/invalid_export_option/none
+
+
 # tests/fixtures/errors/missing_export
 
 - main-!~{000}~.mjs => main-MsirdRn5.mjs
@@ -1445,7 +1451,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/export_mode/cjs/auto/default
 
-- main-!~{000}~.cjs => main-5pGXs8yV.cjs
+- main-!~{000}~.cjs => main-Gpruowt5.cjs
 
 # tests/fixtures/export_mode/cjs/auto/named
 
@@ -1457,23 +1463,39 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/export_mode/cjs/default
 
-- main-!~{000}~.cjs => main-7QqxDU_U.cjs
+- main-!~{000}~.cjs => main-GKXsT_v-.cjs
 
 # tests/fixtures/export_mode/cjs/named
 
 - main-!~{000}~.cjs => main-kb0yDvp0.cjs
 
+# tests/fixtures/export_mode/iife/auto/none
+
+- main-!~{000}~.mjs => main-MXkFYr18.mjs
+
+# tests/fixtures/export_mode/iife/default
+
+- main-!~{000}~.mjs => main-BrUsoNkw.mjs
+
+# tests/fixtures/export_mode/iife/named
+
+- main-!~{000}~.mjs => main-jnVxPvdX.mjs
+
 # tests/fixtures/format/iife/basic
 
-- main-!~{000}~.mjs => main-6h1ciOdZ.mjs
+- main-!~{000}~.mjs => main-Z44yy_wa.mjs
 
 # tests/fixtures/format/iife/external_modules
 
-- main-!~{000}~.mjs => main-_QyxBx4O.mjs
+- main-!~{000}~.mjs => main-BBs_LVjj.mjs
+
+# tests/fixtures/format/iife/external_modules_with_globals
+
+- main-!~{000}~.mjs => main-0mbu-Y_o.mjs
 
 # tests/fixtures/format/iife-with-name
 
-- main-!~{000}~.mjs => main-VYJo3mZR.mjs
+- main-!~{000}~.mjs => main-XwjODux8.mjs
 
 # tests/fixtures/function/dir/should_generate_correct_relative_import_path
 
@@ -1812,6 +1834,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/tree_shaking/derived_side_effects_should_have_high_priority
 
 - main-!~{000}~.mjs => main-WlVJrkq9.mjs
+
+# tests/fixtures/tree_shaking/export-star
+
+- main-!~{000}~.mjs => main-Ll-xem_E.mjs
 
 # tests/fixtures/tree_shaking/external-export-star1
 

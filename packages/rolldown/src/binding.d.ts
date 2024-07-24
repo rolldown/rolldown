@@ -192,6 +192,7 @@ export interface BindingOutputOptions {
   exports?: 'default' | 'named' | 'none' | 'auto'
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife'
+  globals?: Record<string, string>
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean

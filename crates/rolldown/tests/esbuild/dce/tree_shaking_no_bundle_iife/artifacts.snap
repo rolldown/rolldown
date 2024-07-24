@@ -10,6 +10,7 @@ input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_iife
 ```js
 (function() {
 
+
 //#region entry.js
 function keep() {}
 keep();

@@ -136,6 +136,7 @@ pub fn normalize_binding_options(
       "iife" => OutputFormat::Iife,
       _ => panic!("Invalid format: {format_str}"),
     }),
+    globals: output_options.globals,
     module_types,
     experimental: None,
     minify: output_options.minify,

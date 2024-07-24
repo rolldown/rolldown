@@ -31,7 +31,7 @@ var bar_default = {foo: foo$1};
 //#endregion
 //#region main.js
 const a = 2;
-const { foo: foo } = bar_default;
+const { foo } = bar_default;
 assert.strictEqual(typeof foo, "function");
 init_foo(), __toCommonJS(foo_ns);
 
@@ -72,9 +72,9 @@ init_foo(), __toCommonJS(foo_ns);
 (3:10-5:0) " 2; // make foo `a` conflict\n" --> (46:10-47:0) " 2;"
 (5:0-5:6) "\nconst" --> (47:0-47:6) "\nconst"
 (5:6-5:8) " {" --> (47:6-47:8) " {"
-(5:8-5:13) " foo " --> (47:8-47:18) " foo: foo "
-(5:13-5:16) "} =" --> (47:18-47:21) "} ="
-(5:16-7:0) " bar\n" --> (47:21-48:0) " bar_default;"
+(5:8-5:13) " foo " --> (47:8-47:13) " foo "
+(5:13-5:16) "} =" --> (47:13-47:16) "} ="
+(5:16-7:0) " bar\n" --> (47:16-48:0) " bar_default;"
 (7:0-7:7) "\nassert" --> (48:0-48:7) "\nassert"
 (7:7-7:26) ".strictEqual(typeof" --> (48:7-48:26) ".strictEqual(typeof"
 (7:26-7:31) " foo," --> (48:26-48:31) " foo,"

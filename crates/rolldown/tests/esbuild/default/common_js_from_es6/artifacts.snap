@@ -34,10 +34,10 @@ var init_bar = __esmMin(() => {
 
 //#endregion
 //#region entry.js
-const { foo: foo } = (init_foo(), __toCommonJS(foo_ns));
+const { foo } = (init_foo(), __toCommonJS(foo_ns));
 assert.equal(foo(), "foo");
 assert.equal(bar(), "bar");
-const { bar: bar } = (init_bar(), __toCommonJS(bar_ns));
+const { bar } = (init_bar(), __toCommonJS(bar_ns));
 
 //#endregion
 ```

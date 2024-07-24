@@ -13,7 +13,6 @@ use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
 
-// TODO refactor it to `wrap.rs` to reuse it for other formats (e.g. amd, umd).
 pub fn render_iife(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
@@ -31,8 +30,7 @@ pub fn render_iife(
   // iife wrapper start
   let export_items = get_export_items(ctx.chunk, ctx.link_output);
   let has_exports = !export_items.is_empty();
-  // Since before rendering the `determine_export_mode` runs, `unwrap` here won't cause panic.
-  // FIXME do not call `determine_export_mode` twice
+
   let entry_module = match ctx.chunk.kind {
     ChunkKind::EntryPoint { module, .. } => {
       &ctx.link_output.module_table.modules[module].as_ecma().expect("should be ecma module")
@@ -44,13 +42,8 @@ pub fn render_iife(
   let assignee =
     if let Some(name) = &ctx.options.name { format!("var {name} = ") } else { String::new() };
 
-  let (begin_wrapper, end_wrapper, externals) = render_wrapper(
-    ctx,
-    &export_mode,
-    determine_use_strict(ctx) || matches!(export_mode, OutputExports::None),
-    intro,
-    outro,
-  )?;
+  let (begin_wrapper, end_wrapper, externals) =
+    render_wrapper(ctx, &export_mode, determine_use_strict(ctx), intro, outro);
 
   let begging = format!("{assignee}{begin_wrapper}");
 
@@ -68,7 +61,7 @@ pub fn render_iife(
   let arguments = render_iife_arguments(
     &externals,
     &ctx.options.globals,
-    has_exports && matches!(export_mode, rolldown_common::OutputExports::Named),
+    has_exports && matches!(export_mode, OutputExports::Named),
   );
 
   let ending = format!("{end_wrapper}({arguments});");
@@ -82,18 +75,20 @@ pub fn render_iife(
   Ok(concat_source)
 }
 
-fn render_iife_arguments(
-  externals: &[String],
+pub fn render_iife_arguments(
+  externals: &[(String, bool)],
   globals: &FxHashMap<String, String>,
   exports_key: bool,
 ) -> String {
   let mut output_args = if exports_key { vec!["{}".to_string()] } else { vec![] };
-  externals.iter().for_each(|external| {
-    if let Some(global) = globals.get(external) {
-      output_args.push(legitimize_identifier_name(global).to_string());
-    } else {
-      // TODO add warning for missing global
-      output_args.push(legitimize_identifier_name(external).to_string());
+  externals.iter().for_each(|(external, non_empty)| {
+    if *non_empty {
+      if let Some(global) = globals.get(external) {
+        output_args.push(legitimize_identifier_name(global).to_string());
+      } else {
+        // TODO add warning for missing global
+        output_args.push(legitimize_identifier_name(external).to_string());
+      }
     }
   });
   output_args.join(", ")

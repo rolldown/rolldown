@@ -8,14 +8,14 @@ use rolldown_common::OutputFormat;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
 /// Render chunk imports and return the import statements and the external imports.
-pub fn render_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>) {
+pub fn render_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<(String, bool)>) {
   let render_import_stmts =
     collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
 
   let mut s = String::new();
-  let externals: Vec<String> = render_import_stmts
+  let externals: Vec<(String, bool)> = render_import_stmts
     .iter()
-    .filter_map(|stmt| {
+    .map(|stmt| {
       let require_path_str = if matches!(ctx.options.format, OutputFormat::Cjs) {
         format!("require(\"{}\")", &stmt.path)
       } else {
@@ -27,7 +27,7 @@ pub fn render_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>) 
           handle_import_specifier(ctx, specifiers, stmt, require_path_str, &mut s)
         }
         RenderImportDeclarationSpecifier::ImportStarSpecifier(alias) => {
-          Some(handle_import_star_specifier(ctx, alias, stmt, require_path_str, &mut s))
+          (handle_import_star_specifier(ctx, alias, stmt, require_path_str, &mut s), true)
         }
       }
     })
@@ -47,7 +47,7 @@ fn handle_import_empty_specifier(
     OutputFormat::Cjs => {
       s.push_str(&format!("{require_path_str};\n"));
     }
-    OutputFormat::Iife => {}
+    OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Amd => {}
     OutputFormat::App => {
       unreachable!("App format is not supported for import specifiers")
     }
@@ -61,10 +61,10 @@ fn handle_import_specifier(
   stmt: &RenderImportStmt,
   require_path_str: &str,
   s: &mut String,
-) -> Option<String> {
+) -> (String, bool) {
   if specifiers.is_empty() {
     handle_import_empty_specifier(ctx, require_path_str, s);
-    None
+    (require_path_str.to_string(), false)
   } else {
     let specifiers = specifiers
       .iter()
@@ -72,7 +72,9 @@ fn handle_import_specifier(
         if let Some(alias) = &specifier.alias {
           match ctx.options.format {
             OutputFormat::Esm => format!("{} as {alias}", specifier.imported),
-            OutputFormat::Cjs | OutputFormat::Iife => format!("{}: {alias}", specifier.imported),
+            OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Amd => {
+              format!("{}: {alias}", specifier.imported)
+            }
             OutputFormat::App => unreachable!("App format is not supported for import specifiers"),
           }
         } else {
@@ -84,17 +86,19 @@ fn handle_import_specifier(
       OutputFormat::Esm => {
         format!("import {{ {} }} from \"{require_path_str}\";\n", specifiers.join(", "))
       }
-      OutputFormat::Cjs | OutputFormat::Iife => handle_umd_import_syntax(
-        ctx,
-        stmt,
-        &ctx.options.format,
-        &require_path_str.to_string().into(),
-        format!("{{ {} }}", specifiers.join(", ")).as_str(),
-      ),
+      OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Amd | OutputFormat::Umd => {
+        handle_umd_import_syntax(
+          ctx,
+          stmt,
+          &ctx.options.format,
+          &require_path_str.to_string().into(),
+          format!("{{ {} }}", specifiers.join(", ")).as_str(),
+        )
+      }
       OutputFormat::App => unreachable!("App format is not supported for import specifiers"),
     };
     s.push_str(syntax.as_str());
-    Some(require_path_str.to_string())
+    (require_path_str.to_string(), true)
   }
 }
 
@@ -107,13 +111,15 @@ fn handle_import_star_specifier(
 ) -> String {
   let syntax = match ctx.options.format {
     OutputFormat::Esm => format!("import * as {alias} from \"{require_path_str}\";\n",),
-    OutputFormat::Cjs | OutputFormat::Iife => handle_umd_import_syntax(
-      ctx,
-      stmt,
-      &ctx.options.format,
-      &require_path_str.to_string().into(),
-      alias,
-    ),
+    OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Amd | OutputFormat::Umd => {
+      handle_umd_import_syntax(
+        ctx,
+        stmt,
+        &ctx.options.format,
+        &require_path_str.to_string().into(),
+        alias,
+      )
+    }
     OutputFormat::App => unreachable!("App format is not supported for import specifiers"),
   };
   s.push_str(syntax.as_str());

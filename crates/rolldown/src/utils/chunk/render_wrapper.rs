@@ -4,8 +4,9 @@ use crate::{
   utils::chunk::render_chunk_exports::{get_export_items, render_chunk_exports},
 };
 use rolldown_common::OutputExports;
-use rolldown_error::DiagnosableResult;
 use rolldown_utils::ecma_script::legitimize_identifier_name;
+
+pub type RenderWrapperResult = (String, String, Vec<(String, bool)>);
 
 pub fn render_wrapper(
   ctx: &mut GenerateContext<'_>,
@@ -13,7 +14,8 @@ pub fn render_wrapper(
   use_strict: bool,
   intro: Option<String>,
   outro: Option<String>,
-) -> DiagnosableResult<(String, String, Vec<String>)> {
+) -> RenderWrapperResult {
+  // The `bool` means whether the module is empty
   let mut beginning = String::new();
   let mut ending = String::new();
 
@@ -41,8 +43,8 @@ pub fn render_wrapper(
 
   beginning.push_str(import_code.as_str());
 
-  // iife exports
-  if let Some(exports) = render_chunk_exports(ctx)? {
+  // wrapper exports
+  if let Some(exports) = render_chunk_exports(ctx, export_mode) {
     ending.push_str(exports.as_str());
   }
 
@@ -59,13 +61,15 @@ pub fn render_wrapper(
 
   ending.push_str("\n})");
 
-  Ok((beginning, ending, externals))
+  (beginning, ending, externals)
 }
 
-fn render_wrapper_arguments(externals: &[String], exports_key: bool) -> String {
+fn render_wrapper_arguments(externals: &[(String, bool)], exports_key: bool) -> String {
   let mut input_args = if exports_key { vec!["exports".to_string()] } else { vec![] };
-  externals.iter().for_each(|external| {
-    input_args.push(legitimize_identifier_name(external).to_string());
+  externals.iter().for_each(|(external, non_empty)| {
+    if *non_empty {
+      input_args.push(legitimize_identifier_name(external).to_string());
+    }
   });
   input_args.join(", ")
 }

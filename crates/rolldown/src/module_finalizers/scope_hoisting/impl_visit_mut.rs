@@ -151,7 +151,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                         .into_in(self.alloc),
                     );
                   }
-                  rolldown_common::OutputFormat::App | rolldown_common::OutputFormat::Iife => {
+                  rolldown_common::OutputFormat::App
+                  | rolldown_common::OutputFormat::Iife
+                  | rolldown_common::OutputFormat::Amd
+                  | rolldown_common::OutputFormat::Umd => {
                     unreachable!()
                   }
                 }

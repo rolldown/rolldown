@@ -3,6 +3,8 @@ use crate::{
   utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
 };
 
+use super::format::{app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife};
+use crate::ecmascript::format::umd::render_umd;
 use anyhow::Result;
 use rolldown_common::{
   AssetMeta, EcmaAssetMeta, ModuleId, ModuleIdx, OutputFormat, PreliminaryAsset, RenderedModule,
@@ -13,8 +15,6 @@ use rolldown_sourcemap::Source;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
-
-use super::format::{app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife};
 
 pub type RenderedModuleSources = Vec<(ModuleIdx, ModuleId, Option<Vec<Box<dyn Source + Send>>>)>;
 
@@ -89,12 +89,7 @@ impl Generator for EcmaGenerator {
     };
 
     let concat_source = match ctx.options.format {
-      OutputFormat::Esm => {
-        match render_esm(ctx, rendered_module_sources, banner, footer, intro, outro) {
-          Ok(concat_source) => concat_source,
-          Err(errors) => return Ok(Err(errors)),
-        }
-      }
+      OutputFormat::Esm => render_esm(ctx, rendered_module_sources, banner, footer, intro, outro),
       OutputFormat::Cjs => {
         match render_cjs(ctx, rendered_module_sources, banner, footer, intro, outro) {
           Ok(concat_source) => concat_source,
@@ -108,6 +103,13 @@ impl Generator for EcmaGenerator {
           Err(errors) => return Ok(Err(errors)),
         }
       }
+      OutputFormat::Umd => {
+        match render_umd(ctx, rendered_module_sources, banner, footer, intro, outro) {
+          Ok(concat_source) => concat_source,
+          Err(errors) => return Ok(Err(errors)),
+        }
+      }
+      OutputFormat::Amd => unimplemented!("AMD is not planned to be support yet"),
     };
 
     let (content, mut map) = concat_source.content_and_sourcemap();

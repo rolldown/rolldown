@@ -66,6 +66,14 @@ function getFormat(
       return 'iife'
     }
 
+    case 'umd': {
+      return 'umd'
+    }
+
+    case 'amd': {
+      return unimplemented('AMD format is not planned to be fully supported')
+    }
+
     default:
       unimplemented(`output.format: ${format}`)
   }

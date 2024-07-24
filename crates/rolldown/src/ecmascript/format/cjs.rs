@@ -1,6 +1,8 @@
+use rolldown_common::{ChunkKind, ExportsKind};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
+use crate::utils::chunk::render_chunk_exports::{determine_export_mode, get_export_items};
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
@@ -34,6 +36,21 @@ pub fn render_cjs(
     }
   }
 
+  let GenerateContext { chunk, link_output, .. } = ctx;
+
+  let export_mode = match chunk.kind {
+    ChunkKind::EntryPoint { module, .. } => {
+      let module =
+        &link_output.module_table.modules[module].as_ecma().expect("should be ecma module");
+      if matches!(module.exports_kind, ExportsKind::Esm) {
+        &determine_export_mode(&ctx.options.exports, module, &get_export_items(chunk, link_output))?
+      } else {
+        &ctx.options.exports
+      }
+    }
+    ChunkKind::Common => &ctx.options.exports,
+  };
+
   // Runtime module should be placed before the generated `requires` in CJS format.
   // Because, we might need to generate `__toESM(require(...))` that relies on the runtime module.
   let mut module_sources_peekable = module_sources.into_iter().peekable();
@@ -64,7 +81,7 @@ pub fn render_cjs(
     }
   });
 
-  if let Some(exports) = render_chunk_exports(ctx)? {
+  if let Some(exports) = render_chunk_exports(ctx, export_mode) {
     concat_source.add_source(Box::new(RawSource::new(exports)));
   }
 

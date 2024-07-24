@@ -59,7 +59,7 @@ pub fn render_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>) 
                 OutputFormat::Cjs | OutputFormat::Iife => &format!(
                     "const {{ {} }} = {};\n",
                     specifiers.join(", "),
-                    if stmt.is_external || matches!(format, OutputFormat::Iife) {
+                    if stmt.is_external && matches!(format, OutputFormat::Cjs) {
                         let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
                             .link_output
                             .symbols

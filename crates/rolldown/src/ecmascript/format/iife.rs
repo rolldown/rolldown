@@ -1,6 +1,7 @@
 use crate::utils::chunk::collect_render_chunk_imports::{
   collect_render_chunk_imports, RenderImportDeclarationSpecifier,
 };
+use crate::utils::chunk::determine_use_strict::determine_use_strict;
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
@@ -55,9 +56,11 @@ pub fn render_iife(
     input_args
   ))));
 
-  concat_source.add_source(Box::new(RawSource::new(import_code)));
+  if determine_use_strict(ctx) {
+    concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
+  }
 
-  // TODO iife imports
+  concat_source.add_source(Box::new(RawSource::new(import_code)));
 
   // chunk content
   // TODO indent chunk content for iife format

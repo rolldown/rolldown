@@ -1,6 +1,8 @@
 use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
 use rolldown_testing::workspace;
 
+// cargo run --example build_bench_threejs10x
+
 #[tokio::main]
 async fn main() {
   // Make sure that you have already run `just setup-bench`

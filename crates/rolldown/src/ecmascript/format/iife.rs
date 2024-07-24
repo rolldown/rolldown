@@ -38,8 +38,11 @@ pub fn render_iife(
   let assignee =
     if let Some(name) = &ctx.options.name { format!("var {name} = ") } else { String::new() };
 
-  let (begin_wrapper, end_wrapper, externals) =
-    render_wrapper(ctx, &export_mode, determine_use_strict(ctx) || matches!(export_mode, OutputExports::None))?;
+  let (begin_wrapper, end_wrapper, externals) = render_wrapper(
+    ctx,
+    &export_mode,
+    determine_use_strict(ctx) || matches!(export_mode, OutputExports::None),
+  )?;
 
   let begging = format!("{assignee}{begin_wrapper}");
 

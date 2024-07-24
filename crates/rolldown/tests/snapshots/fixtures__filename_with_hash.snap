@@ -1475,11 +1475,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/export_mode/iife/default
 
-- main-!~{000}~.mjs => main-hgytnGLC.mjs
+- main-!~{000}~.mjs => main-9upwMAGj.mjs
 
 # tests/fixtures/export_mode/iife/named
 
-- main-!~{000}~.mjs => main-miDzTTts.mjs
+- main-!~{000}~.mjs => main-Qm6ECnO4.mjs
 
 # tests/fixtures/format/iife/basic
 
@@ -1487,15 +1487,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/format/iife/external_modules
 
-- main-!~{000}~.mjs => main-cuI6FGIL.mjs
+- main-!~{000}~.mjs => main-Ss0NlRCd.mjs
 
 # tests/fixtures/format/iife/external_modules_with_globals
 
-- main-!~{000}~.mjs => main-YsBV8YwF.mjs
+- main-!~{000}~.mjs => main-MwWasrct.mjs
 
 # tests/fixtures/format/iife-with-name
 
-- main-!~{000}~.mjs => main-MXjzayTW.mjs
+- main-!~{000}~.mjs => main-Hbb8oQ-i.mjs
 
 # tests/fixtures/function/dir/should_generate_correct_relative_import_path
 

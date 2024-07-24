@@ -28,6 +28,7 @@ pub async fn resolve_id_with_plugins(
       .resolve_dynamic_import(&HookResolveDynamicImportArgs {
         importer: importer.map(std::convert::AsRef::as_ref),
         source: request,
+        options: &options,
       })
       .await?
     {

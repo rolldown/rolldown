@@ -98,7 +98,7 @@ impl<'a> CreateModuleContext<'a> {
           &plugin_driver,
           importer,
           &specifier,
-          HookResolveIdExtraOptions { is_entry: false, kind },
+          HookResolveIdExtraOptions { is_entry: false, kind, skip_plugin: None },
         )
         .await
         .map(|id| (specifier, idx, id))

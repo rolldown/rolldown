@@ -41,6 +41,11 @@ impl PluginDriver {
 
   pub async fn resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
     for (plugin, ctx) in &self.plugins {
+      if let Some(p) = args.options.skip_plugin.as_ref() {
+        if Arc::ptr_eq(p, plugin) {
+          continue;
+        }
+      }
       if let Some(r) = plugin.resolve_id(ctx, args).await? {
         return Ok(Some(r));
       }
@@ -55,6 +60,11 @@ impl PluginDriver {
     args: &HookResolveDynamicImportArgs<'_>,
   ) -> HookResolveIdReturn {
     for (plugin, ctx) in &self.plugins {
+      if let Some(p) = args.options.skip_plugin.as_ref() {
+        if Arc::ptr_eq(p, plugin) {
+          continue;
+        }
+      }
       if let Some(r) = plugin.resolve_dynamic_import(ctx, args).await? {
         return Ok(Some(r));
       }

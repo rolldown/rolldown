@@ -25,8 +25,9 @@ impl PluginDriver {
         .into_iter()
         .map(|plugin| {
           (
-            plugin,
+            Arc::clone(&plugin),
             PluginContext {
+              plugin,
               plugin_driver: Weak::clone(plugin_driver),
               resolver: Arc::clone(resolver),
               file_emitter: Arc::clone(file_emitter),
@@ -53,6 +54,7 @@ impl PluginDriver {
           (
             Arc::clone(plugin),
             PluginContext {
+              plugin: Arc::clone(plugin),
               plugin_driver: Weak::clone(plugin_driver),
               resolver: Arc::clone(&ctx.resolver),
               file_emitter: Arc::clone(&ctx.file_emitter),

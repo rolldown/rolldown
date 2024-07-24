@@ -11,6 +11,8 @@ pub fn render_wrapper(
   ctx: &mut GenerateContext<'_>,
   export_mode: &OutputExports, // Won't be `OutputExports::Auto`
   use_strict: bool,
+  intro: Option<String>,
+  outro: Option<String>,
 ) -> DiagnosableResult<(String, String, Vec<String>)> {
   let mut beginning = String::new();
   let mut ending = String::new();
@@ -31,15 +33,28 @@ pub fn render_wrapper(
     beginning.push_str("\"use strict\";\n");
   }
 
+  if let Some(intro) = intro {
+    if !intro.is_empty() {
+      beginning.push_str(format!("\n{intro}\n").as_str());
+    }
+  }
+
   beginning.push_str(import_code.as_str());
 
   // iife exports
   if let Some(exports) = render_chunk_exports(ctx)? {
     ending.push_str(exports.as_str());
-    if named_exports {
-      // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
-      ending.push_str("\nreturn exports;");
+  }
+
+  if let Some(outro) = outro {
+    if !outro.is_empty() {
+      ending.push_str(format!("\n{outro}\n").as_str());
     }
+  }
+
+  if named_exports {
+    // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
+    ending.push_str("\nreturn exports;");
   }
 
   ending.push_str("\n})");

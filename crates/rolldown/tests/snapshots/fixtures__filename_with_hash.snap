@@ -1709,7 +1709,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/intro/iife
 
-- main-!~{000}~.mjs => main-s5GQ6pv_.mjs
+- main-!~{000}~.mjs => main-fGgbFVxT.mjs
 
 # tests/fixtures/misc/issue_376
 
@@ -1730,7 +1730,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/outro/iife
 
-- main-!~{000}~.mjs => main-svvw3JyV.mjs
+- main-!~{000}~.mjs => main-Cu-rkOda.mjs
 
 # tests/fixtures/misc/reexport_star
 

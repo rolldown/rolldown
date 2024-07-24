@@ -9,8 +9,8 @@ input_file: crates/rolldown/tests/fixtures/misc/intro/iife
 
 ```js
 (function() {
-
 "use strict";
+
 // intro
 
 //#region main.js

@@ -21,7 +21,7 @@ export { bar };
 import { default as assert } from "node:assert";
 
 //#region main.js
-(import("./foo.mjs")).then(({ bar: bar }) => {
+(import("./foo.mjs")).then(({ bar }) => {
 	assert.equal(bar, 123);
 });
 

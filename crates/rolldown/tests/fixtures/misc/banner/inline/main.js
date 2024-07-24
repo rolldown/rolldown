@@ -1,2 +1,0 @@
-// banner
-export default "banner"

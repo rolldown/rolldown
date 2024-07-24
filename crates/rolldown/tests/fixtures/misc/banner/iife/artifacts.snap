@@ -8,11 +8,11 @@ input_file: crates/rolldown/tests/fixtures/misc/banner/iife
 ## main.mjs
 
 ```js
+// Banner
+
 (function() {
 
 "use strict";
-// Banner
-
 
 //#region main.js
 var main_default = "banner";

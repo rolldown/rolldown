@@ -8,9 +8,9 @@ input_file: crates/rolldown/tests/fixtures/misc/banner/cjs
 ## main.cjs
 
 ```js
-"use strict";
-
 // Banner
+
+"use strict";
 
 
 //#region main.js

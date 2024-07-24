@@ -25,6 +25,10 @@ pub fn render_iife(
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
+  if let Some(banner) = banner {
+    concat_source.add_source(Box::new(RawSource::new(banner)));
+  }
+
   // iife wrapper start
   let export_items = get_export_items(ctx.chunk, ctx.link_output);
   let has_exports = !export_items.is_empty();
@@ -56,10 +60,6 @@ pub fn render_iife(
   // Rollup also enables `use strict` in empty IIFE contents.
   if determine_use_strict(ctx) || matches!(ctx.options.exports, OutputExports::None) {
     concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
-  }
-
-  if let Some(banner) = banner {
-    concat_source.add_source(Box::new(RawSource::new(banner)));
   }
 
   concat_source.add_source(Box::new(RawSource::new(import_code)));

@@ -10,6 +10,8 @@ input_file: crates/rolldown/tests/fixtures/format/iife-with-name
 ```js
 var myModule = (function(exports) {
 
+"use strict";
+
 
 //#region foo.js
 const value = 1;

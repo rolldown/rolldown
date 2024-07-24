@@ -10,6 +10,8 @@ input_file: crates/rolldown/tests/fixtures/format/iife/external_modules
 ```js
 (function(node_path) {
 
+"use strict";
+
 const { default: nodePath } = node_path;
 
 //#region main.js

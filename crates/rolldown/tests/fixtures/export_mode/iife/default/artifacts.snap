@@ -10,6 +10,8 @@ input_file: crates/rolldown/tests/fixtures/export_mode/iife/default
 ```js
 (function() {
 
+"use strict";
+
 
 
 //#region mod.js

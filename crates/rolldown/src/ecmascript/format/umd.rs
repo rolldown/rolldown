@@ -40,36 +40,48 @@ pub fn render_umd(
   let (begin_wrapper, end_wrapper, externals) =
     render_wrapper(ctx, &export_mode, determine_use_strict(ctx), intro, outro);
 
-  let (head, tail) =
-    render_umd_wrapper(ctx, &externals, has_exports && matches!(export_mode, OutputExports::Named));
+  let name = &ctx.options.name;
 
-  let begging = format!("{head}{begin_wrapper}");
+  if let Some(name) = name {
+    let (head, tail) = render_umd_wrapper(
+      ctx,
+      &externals,
+      name,
+      has_exports && matches!(export_mode, OutputExports::Named),
+    );
 
-  concat_source.add_source(Box::new(RawSource::new(begging)));
+    let begging = format!("{head}{begin_wrapper}");
 
-  // TODO indent chunk content for the wrapper function
-  module_sources.into_iter().for_each(|(_, _, module_render_output)| {
-    if let Some(emitted_sources) = module_render_output {
-      for source in emitted_sources {
-        concat_source.add_source(source);
+    concat_source.add_source(Box::new(RawSource::new(begging)));
+
+    // TODO indent chunk content for the wrapper function
+    module_sources.into_iter().for_each(|(_, _, module_render_output)| {
+      if let Some(emitted_sources) = module_render_output {
+        for source in emitted_sources {
+          concat_source.add_source(source);
+        }
       }
+    });
+
+    let ending = format!("{end_wrapper}{tail}");
+
+    concat_source.add_source(Box::new(RawSource::new(ending)));
+
+    if let Some(footer) = footer {
+      concat_source.add_source(Box::new(RawSource::new(footer)));
     }
-  });
 
-  let ending = format!("{end_wrapper}{tail}");
-
-  concat_source.add_source(Box::new(RawSource::new(ending)));
-
-  if let Some(footer) = footer {
-    concat_source.add_source(Box::new(RawSource::new(footer)));
+    Ok(concat_source)
+  } else {
+    // TODO use `Diagnostic` to report error
+    panic!("`output.name` should be specified for umd output");
   }
-
-  Ok(concat_source)
 }
 
 pub fn render_umd_wrapper(
   ctx: &GenerateContext<'_>,
   externals: &[(String, bool)],
+  name: &str,
   exports_key: bool,
 ) -> (String, String) {
   let cjs_args = render_cjs_arguments_umd(externals, exports_key);
@@ -82,8 +94,8 @@ pub fn render_umd_wrapper(
       "(function (global, factory) {{\n\
     typeof exports === 'object' && typeof module !== 'undefined' ? factory({cjs_args}) :\n\
 	typeof define === 'function' && define.amd ? define([{amd_args}], factory) :\n\
-	(global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory({iife_args}));\n\
-}})(this, "
+	(global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.{name} = factory({iife_args}));\n\
+}})(this, ",
     ),
     ");".to_string(),
   )

@@ -15,5 +15,5 @@ var main_default = "banner";
 
 //#endregion
 module.exports = main_default;
-console.log('hello world');
+// outro
 ```

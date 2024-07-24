@@ -8,7 +8,7 @@ input_file: crates/rolldown/tests/fixtures/misc/intro/esm
 ## main.mjs
 
 ```js
-console.log('hello world');
+// intro
 
 //#region main.js
 var main_default = "banner";

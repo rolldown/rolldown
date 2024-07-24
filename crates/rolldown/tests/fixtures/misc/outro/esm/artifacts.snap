@@ -14,5 +14,5 @@ var main_default = "banner";
 
 //#endregion
 export { main_default as default };
-console.log('hello world');
+// outro
 ```

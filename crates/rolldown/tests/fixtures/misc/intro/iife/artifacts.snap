@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/fixtures/misc/intro/iife
 (function() {
 
 "use strict";
-console.log('hello world');
+// intro
 
 //#region main.js
 var main_default = "banner";

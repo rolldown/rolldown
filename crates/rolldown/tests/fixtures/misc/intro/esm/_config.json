@@ -1,6 +1,6 @@
 {
   "config": {
     "format": "esm",
-    "intro": "console.log('hello world');"
+    "intro": "// intro"
   }
 }

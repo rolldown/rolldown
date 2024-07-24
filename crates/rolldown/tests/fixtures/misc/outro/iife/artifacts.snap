@@ -16,7 +16,7 @@ input_file: crates/rolldown/tests/fixtures/misc/outro/iife
 var main_default = "banner";
 
 //#endregion
+// outro
 return main_default;
-console.log('hello world');
 })();
 ```

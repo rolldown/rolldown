@@ -201,6 +201,7 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                                   SPAN,
                                   true,
                                   false,
+                                  Option::<TSTypeParameterDeclaration>::None,
                                   self.ast_builder.formal_parameters(
                                     SPAN,
                                     FormalParameterKind::ArrowFormalParameters,
@@ -222,6 +223,7 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                                     ),
                                     Option::<BindingRestElement>::None,
                                   ),
+                                  Option::<TSTypeAnnotation>::None,
                                   self.ast_builder.function_body(
                                     SPAN,
                                     self.ast_builder.vec(),
@@ -241,8 +243,6 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                                       ),
                                     ),
                                   ),
-                                  Option::<TSTypeParameterDeclaration>::None,
-                                  Option::<TSTypeAnnotation>::None,
                                 )
                                 .into(),
                             ),
@@ -265,12 +265,14 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                         SPAN,
                         true,
                         false,
+                        Option::<TSTypeParameterDeclaration>::None,
                         self.ast_builder.formal_parameters(
                           SPAN,
                           FormalParameterKind::ArrowFormalParameters,
                           self.ast_builder.vec(),
                           Option::<BindingRestElement>::None,
                         ),
+                        Option::<TSTypeAnnotation>::None,
                         self.ast_builder.function_body(
                           SPAN,
                           self.ast_builder.vec(),
@@ -278,8 +280,6 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                             .ast_builder
                             .vec1(self.ast_builder.statement_expression(SPAN, import_expression)),
                         ),
-                        Option::<TSTypeParameterDeclaration>::None,
-                        Option::<TSTypeAnnotation>::None,
                       )
                     };
 

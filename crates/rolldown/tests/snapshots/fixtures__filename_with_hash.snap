@@ -1699,6 +1699,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-TnUhQsWi.mjs
 
+# tests/fixtures/misc/intro/cjs
+
+- main-!~{000}~.cjs => main-qFgh1E_v.cjs
+
+# tests/fixtures/misc/intro/esm
+
+- main-!~{000}~.mjs => main-7xnGS4Bc.mjs
+
+# tests/fixtures/misc/intro/iife
+
+- main-!~{000}~.mjs => main-s5GQ6pv_.mjs
+
 # tests/fixtures/misc/issue_376
 
 - main-!~{000}~.mjs => main-EXizxPDM.mjs
@@ -1707,6 +1719,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-Ak8YfHWG.mjs
 - main-Ak8YfHWG.mjs.map
+
+# tests/fixtures/misc/outro/cjs
+
+- main-!~{000}~.cjs => main-rUVReNhA.cjs
+
+# tests/fixtures/misc/outro/esm
+
+- main-!~{000}~.mjs => main-M2gHFdT3.mjs
+
+# tests/fixtures/misc/outro/iife
+
+- main-!~{000}~.mjs => main-svvw3JyV.mjs
 
 # tests/fixtures/misc/reexport_star
 

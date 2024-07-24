@@ -20,6 +20,8 @@ export interface NormalizedOutputOptions extends OutputOptions {
   sourcemapPathTransform: SourcemapPathTransformOption | undefined
   banner: AddonFunction
   footer: AddonFunction
+  intro: AddonFunction
+  outro: AddonFunction
   entryFileNames: string
   chunkFileNames: string
   assetFileNames: string

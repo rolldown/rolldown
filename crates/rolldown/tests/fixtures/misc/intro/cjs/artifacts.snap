@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/misc/intro/cjs
+---
+# Assets
+
+## main.cjs
+
+```js
+"use strict";
+// intro
+
+//#region main.js
+var main_default = "banner";
+
+//#endregion
+module.exports = main_default;
+```

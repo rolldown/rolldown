@@ -39,6 +39,8 @@ pub struct NormalizedBundlerOptions {
   pub sourcemap: SourceMapType,
   pub banner: Option<AddonOutputOption>,
   pub footer: Option<AddonOutputOption>,
+  pub intro: Option<AddonOutputOption>,
+  pub outro: Option<AddonOutputOption>,
   pub sourcemap_ignore_list: Option<SourceMapIgnoreList>,
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
   pub experimental: ExperimentalOptions,

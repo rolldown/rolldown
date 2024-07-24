@@ -120,6 +120,8 @@ pub fn normalize_binding_options(
     sourcemap: output_options.sourcemap.map(Into::into),
     banner: normalize_addon_option(output_options.banner),
     footer: normalize_addon_option(output_options.footer),
+    intro: normalize_addon_option(output_options.intro),
+    outro: normalize_addon_option(output_options.outro),
     sourcemap_ignore_list,
     sourcemap_path_transform,
     exports: output_options.exports.map(|format_str| match format_str.as_str() {

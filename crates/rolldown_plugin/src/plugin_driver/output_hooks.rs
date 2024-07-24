@@ -1,5 +1,5 @@
 use crate::types::hook_render_error::HookRenderErrorArgs;
-use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
+use crate::{HookAugmentChunkHashReturn, HookFooterArgs, HookNoopReturn, HookRenderChunkArgs};
 use crate::{HookBannerArgs, PluginDriver};
 use anyhow::{Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk};
@@ -20,14 +20,31 @@ impl PluginDriver {
   ) -> Result<Option<String>> {
     for (plugin, ctx) in &self.plugins {
       if let Some(r) = plugin.banner(ctx, &args).await? {
-        banner.push('\n');
         banner.push_str(r.as_str());
+        banner.push('\n');
       }
     }
     if banner.is_empty() {
       return Ok(None);
     }
     Ok(Some(banner))
+  }
+
+  pub async fn footer(
+    &self,
+    args: HookFooterArgs<'_>,
+    mut footer: String,
+  ) -> Result<Option<String>> {
+    for (plugin, ctx) in &self.plugins {
+      if let Some(r) = plugin.footer(ctx, &args).await? {
+        footer.push('\n');
+        footer.push_str(r.as_str());
+      }
+    }
+    if footer.is_empty() {
+      return Ok(None);
+    }
+    Ok(Some(footer))
   }
 
   pub async fn render_chunk(

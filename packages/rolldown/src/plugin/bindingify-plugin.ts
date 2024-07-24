@@ -75,5 +75,6 @@ export function bindingifyPlugin(
       pluginContextData,
     ),
     banner: bindingifyBanner(plugin, options, pluginContextData),
+    footer: bindingifyBanner(plugin, options, pluginContextData),
   }
 }

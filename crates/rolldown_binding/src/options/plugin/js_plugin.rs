@@ -179,6 +179,23 @@ impl Plugin for JsPlugin {
     }
   }
 
+  async fn footer(
+    &self,
+    ctx: &rolldown_plugin::SharedPluginContext,
+    args: &rolldown_plugin::HookFooterArgs,
+  ) -> rolldown_plugin::HookBannerOutputReturn {
+    if let Some(cb) = &self.footer {
+      Ok(
+        cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()?,
+      )
+    } else {
+      Ok(None)
+    }
+  }
+
   async fn render_chunk(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,

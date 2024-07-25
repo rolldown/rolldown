@@ -56,21 +56,8 @@ pub fn parse_to_ecma_ast(
     ModuleType::Dataurl => {
       let data = source.try_into_bytes()?;
       let guessed_mime = guess_mime(path, &data)?;
-      let is_plain_text = guessed_mime.type_() == mime::TEXT;
-      let source = if is_plain_text {
-        let text = String::from_utf8(data)?;
-        if guessed_mime.type_() == mime::TEXT {
-          format!("data:{guessed_mime};charset=utf-8,{text}")
-        } else {
-          let text = urlencoding::encode(&text);
-          format!("data:{guessed_mime};charset=utf-8,{text}")
-        }
-        // TODO: should we support non-utf8 text?
-      } else {
-        let encoded = rolldown_utils::base64::to_standard_base64(&data);
-        format!("data:{guessed_mime};base64,{encoded}")
-      };
-      (text_to_esm(&source)?, OxcParseType::Js)
+      let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, &data);
+      (text_to_esm(&dataurl)?, OxcParseType::Js)
     }
     ModuleType::Binary => {
       let source = source.try_into_bytes()?;

@@ -14,8 +14,7 @@ export default defineTest({
       \"use strict\";
 
 
-      })();
-      "
+      })();"
     `)
   },
 })

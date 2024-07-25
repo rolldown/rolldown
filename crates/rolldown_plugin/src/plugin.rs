@@ -3,8 +3,8 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 use super::plugin_context::SharedPluginContext;
 use crate::{
   transform_plugin_context::TransformPluginContext,
-  types::hook_render_error::HookRenderErrorArgs,
   types::{
+    hook_footer_args::HookFooterArgs, hook_render_error::HookRenderErrorArgs,
     hook_transform_ast_args::HookTransformAstArgs, hook_transform_output::HookTransformOutput,
   },
   HookBannerArgs, HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs,
@@ -23,6 +23,7 @@ pub type HookNoopReturn = Result<()>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
 pub type HookAugmentChunkHashReturn = Result<Option<String>>;
 pub type HookBannerOutputReturn = Result<Option<String>>;
+pub type HookFooterOutputReturn = Result<Option<String>>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
@@ -102,6 +103,14 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     _ctx: &SharedPluginContext,
     _args: &HookBannerArgs,
   ) -> HookBannerOutputReturn {
+    Ok(None)
+  }
+
+  async fn footer(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookFooterArgs,
+  ) -> HookFooterOutputReturn {
     Ok(None)
   }
 

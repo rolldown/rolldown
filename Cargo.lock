@@ -2393,7 +2393,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "async-scoped",
- "base64",
+ "base64-simd 0.8.0",
  "futures",
  "indexmap",
  "infer",

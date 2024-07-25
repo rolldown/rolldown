@@ -18,6 +18,8 @@ pub fn render_cjs(
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
+  intro: Option<String>,
+  outro: Option<String>,
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
@@ -27,6 +29,12 @@ pub fn render_cjs(
 
   if determine_use_strict(ctx) {
     concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
+  }
+
+  if let Some(intro) = intro {
+    if !intro.is_empty() {
+      concat_source.add_source(Box::new(RawSource::new(intro)));
+    }
   }
 
   // Runtime module should be placed before the generated `requires` in CJS format.
@@ -58,6 +66,12 @@ pub fn render_cjs(
 
   if let Some(exports) = render_chunk_exports(ctx)? {
     concat_source.add_source(Box::new(RawSource::new(exports)));
+  }
+
+  if let Some(outro) = outro {
+    if !outro.is_empty() {
+      concat_source.add_source(Box::new(RawSource::new(outro)));
+    }
   }
 
   if let Some(footer) = footer {

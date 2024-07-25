@@ -8,7 +8,7 @@ use rolldown_common::{
   AssetMeta, EcmaAssetMeta, ModuleId, ModuleIdx, OutputFormat, PreliminaryAsset, RenderedModule,
 };
 use rolldown_error::DiagnosableResult;
-use rolldown_plugin::HookBannerArgs;
+use rolldown_plugin::{HookBannerArgs, HookFooterArgs};
 use rolldown_sourcemap::Source;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -73,25 +73,47 @@ impl Generator for EcmaGenerator {
         .await?
     };
 
-    let footer = match ctx.options.footer.as_ref() {
-      Some(footer) => footer.call(&rendered_chunk).await?,
+    let footer = {
+      let footer = match ctx.options.footer.as_ref() {
+        Some(footer) => footer.call(&rendered_chunk).await?,
+        None => None,
+      };
+      ctx
+        .plugin_driver
+        .footer(HookFooterArgs { chunk: &rendered_chunk }, footer.unwrap_or_default())
+        .await?
+    };
+
+    let intro = match ctx.options.intro.as_ref() {
+      Some(intro) => intro.call(&rendered_chunk).await?,
+      None => None,
+    };
+
+    let outro = match ctx.options.outro.as_ref() {
+      Some(outro) => outro.call(&rendered_chunk).await?,
       None => None,
     };
 
     let concat_source = match ctx.options.format {
-      OutputFormat::Esm => match render_esm(ctx, rendered_module_sources, banner, footer) {
-        Ok(concat_source) => concat_source,
-        Err(errors) => return Ok(Err(errors)),
-      },
-      OutputFormat::Cjs => match render_cjs(ctx, rendered_module_sources, banner, footer) {
-        Ok(concat_source) => concat_source,
-        Err(errors) => return Ok(Err(errors)),
-      },
-      OutputFormat::App => render_app(ctx, rendered_module_sources, banner, footer),
-      OutputFormat::Iife => match render_iife(ctx, rendered_module_sources, banner, footer, true) {
-        Ok(concat_source) => concat_source,
-        Err(errors) => return Ok(Err(errors)),
-      },
+      OutputFormat::Esm => {
+        match render_esm(ctx, rendered_module_sources, banner, footer, intro, outro) {
+          Ok(concat_source) => concat_source,
+          Err(errors) => return Ok(Err(errors)),
+        }
+      }
+      OutputFormat::Cjs => {
+        match render_cjs(ctx, rendered_module_sources, banner, footer, intro, outro) {
+          Ok(concat_source) => concat_source,
+          Err(errors) => return Ok(Err(errors)),
+        }
+      }
+      OutputFormat::App => render_app(ctx, rendered_module_sources, banner, footer, intro, outro),
+      OutputFormat::Iife => {
+        match render_iife(ctx, rendered_module_sources, banner, footer, intro, outro, true) {
+          Ok(concat_source) => concat_source,
+          Err(errors) => return Ok(Err(errors)),
+        }
+      }
     };
 
     let (content, mut map) = concat_source.content_and_sourcemap();

@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/case/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/tree_shaking/export-star
+input_file: crates/rolldown/tests/fixtures/misc/outro/esm
 ---
 # Assets
 
@@ -9,12 +9,10 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/export-star
 
 ```js
 
-//#region foo.js
-const foo = 1;
-
-//#endregion
 //#region main.js
-console.log(foo);
+var main_default = "banner";
 
 //#endregion
+export { main_default as default };
+// outro
 ```

@@ -194,6 +194,8 @@ export interface BindingOutputOptions {
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife'
   globals?: Record<string, string>
+  intro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
+  outro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
@@ -226,6 +228,7 @@ export interface BindingPluginOptions {
   generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
   banner?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+  footer?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
 }
 
 export interface BindingPluginWithIndex {

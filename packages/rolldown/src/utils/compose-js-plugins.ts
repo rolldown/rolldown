@@ -1,5 +1,5 @@
 import { ModuleSideEffects, Plugin, RolldownPlugin } from '../plugin'
-import _ from 'lodash-es'
+// import * as _ from 'lodash-es'
 import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'
@@ -83,6 +83,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         }
         case 'augmentChunkHash':
         case 'banner':
+        case 'footer':
         case 'generateBundle':
         case 'moduleParsed':
         case 'onLog':
@@ -228,6 +229,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         case 'name':
         case 'augmentChunkHash':
         case 'banner':
+        case 'footer':
         case 'generateBundle':
         case 'moduleParsed':
         case 'onLog':

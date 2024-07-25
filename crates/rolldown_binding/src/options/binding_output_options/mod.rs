@@ -51,12 +51,18 @@ pub struct BindingOutputOptions {
   // indent: true | string;
   // inlineDynamicImports: boolean;
   // interop: GetInterop;
-  // intro: () => string | Promise<string>;
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>")]
+  pub intro: Option<AddonOutputOption>,
   // manualChunks: ManualChunksOption;
   // minifyInternalExports: boolean;
   // namespaceToStringTag: boolean;
   // noConflict: boolean;
-  // outro: () => string | Promise<string>;
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>")]
+  pub outro: Option<AddonOutputOption>,
   // paths: OptionsPaths;
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]

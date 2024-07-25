@@ -23,8 +23,7 @@ export default defineTest({
 
       //#endregion
       return main_default;
-      })(node_path);
-      "
+      })(node_path);"
     `)
   },
 })

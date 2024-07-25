@@ -128,6 +128,10 @@ pub struct BindingPluginOptions {
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
   pub banner: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
+
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
+  pub footer: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
 }
 
 impl Debug for BindingPluginOptions {

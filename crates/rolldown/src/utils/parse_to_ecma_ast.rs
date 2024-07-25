@@ -67,7 +67,7 @@ pub fn parse_to_ecma_ast(
         }
         // TODO: should we support non-utf8 text?
       } else {
-        let encoded = rolldown_utils::base64::to_url_safe_base64(&data);
+        let encoded = rolldown_utils::base64::to_standard_base64(&data);
         format!("data:{guessed_mime};base64,{encoded}")
       };
       (text_to_esm(&source)?, OxcParseType::Js)

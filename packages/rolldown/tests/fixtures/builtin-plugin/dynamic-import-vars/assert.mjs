@@ -19,5 +19,8 @@ multiDirs('b', 'module-b-1').then((m) => {
 })
 
 noFile('module-c-1').catch((e) => {
-  assert.strictEqual(e.message, 'Unknown variable dynamic import: ./dir/c/module-c-1.js')
+  assert.strictEqual(
+    e.message,
+    'Unknown variable dynamic import: ./dir/c/module-c-1.js',
+  )
 })

@@ -39,11 +39,7 @@ impl<'name> Renamer<'name> {
     Self {
       canonical_names: FxHashMap::default(),
       symbols,
-      used_canonical_names: RESERVED_KEYWORDS
-        .iter()
-        .chain(GLOBAL_OBJECTS.iter())
-        .map(|s| (Cow::Owned(Rstr::new(s)), 0))
-        .collect(),
+      used_canonical_names: FxHashMap::default(),
     }
   }
 
@@ -66,8 +62,15 @@ impl<'name> Renamer<'name> {
               candidate_name = Cow::Owned(format!("{original_name}${next_conflict_index}",).into());
             }
             Entry::Vacant(vac) => {
-              vac.insert(0);
-              break;
+              if RESERVED_KEYWORDS.contains(candidate_name.as_ref())
+                || GLOBAL_OBJECTS.contains(candidate_name.as_ref())
+              {
+                vac.insert(1);
+                candidate_name = Cow::Owned(format!("{original_name}$1",).into());
+              } else {
+                vac.insert(0);
+                break;
+              }
             }
           }
         }

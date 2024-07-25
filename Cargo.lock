@@ -2201,6 +2201,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_plugin",
+ "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_glob_import",
  "rolldown_plugin_wasm",
  "rolldown_sourcemap",
@@ -2298,6 +2299,19 @@ dependencies = [
  "rolldown_sourcemap",
  "rolldown_utils",
  "tracing",
+]
+
+[[package]]
+name = "rolldown_plugin_dynamic_import_vars"
+version = "0.0.1"
+dependencies = [
+ "async-trait",
+ "glob",
+ "once_cell",
+ "oxc",
+ "regex",
+ "rolldown_plugin",
+ "sugar_path",
 ]
 
 [[package]]

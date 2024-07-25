@@ -4,6 +4,7 @@ use derivative::Derivative;
 use napi::JsUnknown;
 use napi_derive::napi;
 use rolldown_plugin::Plugin;
+use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_glob_import::GlobImportPlugin;
 use rolldown_plugin_wasm::WasmPlugin;
 use serde::Deserialize;
@@ -30,6 +31,7 @@ impl std::fmt::Debug for BindingBuiltinPlugin {
 pub enum BindingBuiltinPluginName {
   WasmPlugin,
   GlobImportPlugin,
+  DynamicImportVarsPlugin,
 }
 
 impl From<BindingBuiltinPlugin> for Arc<dyn Plugin> {
@@ -37,6 +39,7 @@ impl From<BindingBuiltinPlugin> for Arc<dyn Plugin> {
     match plugin.name {
       BindingBuiltinPluginName::WasmPlugin => Arc::new(WasmPlugin {}),
       BindingBuiltinPluginName::GlobImportPlugin => Arc::new(GlobImportPlugin {}),
+      BindingBuiltinPluginName::DynamicImportVarsPlugin => Arc::new(DynamicImportVarsPlugin {}),
     }
   }
 }

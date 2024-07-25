@@ -83,7 +83,7 @@ impl<'ast, 'a> VisitMut<'ast> for DynamicImportVarsVisit<'ast, 'a> {
           }
         }
 
-        assert!(!(self.error_when_no_files_found && files.is_empty()), "No files found in {pattern:?} when trying to dynamically load concatted string from {:?}", self.cwd);
+        assert!(!(self.error_when_no_files_found && files.is_empty()), "No files found in {pattern:?} when trying to dynamically load concatenated string from {:?}", self.cwd);
 
         let name = format!("__variableDynamicImportRuntime{}__", self.current);
         let import_arg = import_expr.arguments.first();

@@ -327,7 +327,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_no_bundle_iife
 
-- entry_js-!~{000}~.mjs => entry_js--TkETgS2.mjs
+- entry_js-!~{000}~.mjs => entry_js-7dEORIHG.mjs
 
 # tests/esbuild/dce/tree_shaking_object_property
 
@@ -1525,7 +1525,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/export_mode/iife/auto/none
 
-- main-!~{000}~.mjs => main-jae-4tR0.mjs
+- main-!~{000}~.mjs => main-2neOl8lu.mjs
 
 # tests/fixtures/function/export_mode/iife/default
 
@@ -1587,7 +1587,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/format/iife/basic
 
-- main-!~{000}~.mjs => main-GwWbAmhW.mjs
+- main-!~{000}~.mjs => main-djskTpsV.mjs
 
 # tests/fixtures/function/format/iife/external_modules
 

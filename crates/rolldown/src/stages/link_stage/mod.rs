@@ -83,7 +83,9 @@ impl<'a> LinkStage<'a> {
                 }
               }
               // IIFE format will inline dynamic imported modules
-              OutputFormat::Iife | OutputFormat::Amd | OutputFormat::Umd => Some(rec.resolved_module),
+              OutputFormat::Iife | OutputFormat::Amd | OutputFormat::Umd => {
+                Some(rec.resolved_module)
+              }
             })
             .collect(),
           ..LinkingMetadata::default()

@@ -20,7 +20,6 @@ dunce                 = { workspace = true }
 futures               = { workspace = true }
 indexmap              = { workspace = true }
 itertools             = { workspace = true }
-mime                  = { workspace = true }
 once_cell             = { workspace = true }
 oxc                   = { workspace = true }
 regex                 = { workspace = true }
@@ -40,7 +39,6 @@ sugar_path            = { workspace = true }
 tokio                 = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing               = { workspace = true }
 tracing-chrome        = { workspace = true }
-urlencoding           = { workspace = true }
 xxhash-rust           = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]

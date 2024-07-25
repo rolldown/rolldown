@@ -6,6 +6,7 @@ use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{EcmaModule, IndexModules, ModuleIdx, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::FxHashMap;
 
 use crate::types::symbols::Symbols;
@@ -35,11 +36,11 @@ pub struct Renamer<'name> {
 }
 
 impl<'name> Renamer<'name> {
-  pub fn new(symbols: &'name Symbols, _modules_len: usize) -> Self {
+  pub fn new(symbols: &'name Symbols, _modules_len: usize, capacity: usize) -> Self {
     Self {
-      canonical_names: FxHashMap::default(),
+      canonical_names: FxHashMap::with_capacity(capacity),
       symbols,
-      used_canonical_names: FxHashMap::default(),
+      used_canonical_names: FxHashMap::with_capacity(capacity),
     }
   }
 

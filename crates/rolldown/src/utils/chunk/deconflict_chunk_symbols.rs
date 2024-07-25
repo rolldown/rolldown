@@ -6,7 +6,24 @@ use rolldown_rstr::ToRstr;
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput) {
-  let mut renamer = Renamer::new(&link_output.symbols, link_output.module_table.modules.len());
+  let capacity =
+    chunk.imports_from_other_chunks.iter().fold(0, |acc, (_, items)| acc + items.len())
+      + chunk
+        .modules
+        .iter()
+        .copied()
+        .filter_map(|id| link_output.module_table.modules[id].as_ecma())
+        .fold(0, |acc, module| {
+          acc
+            + module
+              .stmt_infos
+              .iter()
+              .filter(|stmt_info| stmt_info.is_included)
+              .fold(0, |acc, stmt_info| acc + stmt_info.declared_symbols.len())
+        });
+
+  let mut renamer =
+    Renamer::new(&link_output.symbols, link_output.module_table.modules.len(), capacity);
 
   chunk
     .modules

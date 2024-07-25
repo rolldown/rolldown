@@ -70,7 +70,24 @@ impl<'a> LinkStage<'a> {
         .module_table
         .modules
         .iter()
-        .map(|_| LinkingMetadata::default())
+        .map(|module| LinkingMetadata {
+          dependencies: module
+            .import_records()
+            .iter()
+            .filter_map(|rec| match input_options.format {
+              OutputFormat::Cjs | OutputFormat::App | OutputFormat::Esm => {
+                if matches!(rec.kind, ImportKind::DynamicImport) {
+                  None
+                } else {
+                  Some(rec.resolved_module)
+                }
+              }
+              // IIFE format will inline dynamic imported modules
+              OutputFormat::Iife => Some(rec.resolved_module),
+            })
+            .collect(),
+          ..LinkingMetadata::default()
+        })
         .collect::<IndexVec<ModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,
       entries: scan_stage_output.entry_points,
@@ -121,6 +138,8 @@ impl<'a> LinkStage<'a> {
         if !meta.is_canonical_exports_empty() {
           referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
         }
+        referenced_symbols
+          .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
         // Corresponding AST for this statement will be created by the finalizer.
         let namespace_stmt_info = StmtInfo {

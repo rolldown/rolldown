@@ -2,6 +2,7 @@
 
 pub mod base64;
 mod bitset;
+pub mod dataurl;
 pub mod debug;
 pub mod ecma_script;
 pub mod futures;
@@ -13,6 +14,5 @@ pub mod percent_encoding;
 pub mod rayon;
 pub mod rustc_hash;
 pub mod xxhash;
-pub mod dataurl;
 
 pub use bitset::BitSet;

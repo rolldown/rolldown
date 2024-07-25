@@ -53,40 +53,28 @@ mod tests {
       let char_str = String::from_utf8(vec![i]).unwrap();
 
       if trailing_escape {
-        check(&char_str, &format!("data:text/plain,%{i:02X}"));
-        check(&format!("foo{char_str}"), &format!("data:text/plain,foo%{i:02X}"));
+        check(&char_str, &format!("%{i:02X}"));
+        check(&format!("foo{char_str}"), &format!("foo%{i:02X}"));
       } else {
-        check(&char_str, &format!("data:text/plain,{char_str}"));
-        check(&format!("foo{char_str}"), &format!("data:text/plain,foo{char_str}"));
+        check(&char_str, &format!("{char_str}"));
+        check(&format!("foo{char_str}"), &format!("foo{char_str}"));
       }
 
       if always_escape {
-        check(&format!("{char_str}foo"), &format!("data:text/plain,%{i:02X}foo"));
+        check(&format!("{char_str}foo"), &format!("%{i:02X}foo"));
       } else {
-        check(&format!("{char_str}foo"), &format!("data:text/plain,{char_str}foo"));
+        check(&format!("{char_str}foo"), &format!("{char_str}foo"));
       }
     }
 
     // Test leading vs. trailing
-    check(" \t ", "data:text/plain, %09%20");
-    check(" \n ", "data:text/plain, %0A%20");
-    check(" \r ", "data:text/plain, %0D%20");
-    check(" # ", "data:text/plain, %23%20");
-    check("\x08#\x08", "data:text/plain,\x08%23%08");
+    check(" \t ", " %09%20");
+    check(" \n ", " %0A%20");
+    check(" \r ", " %0D%20");
+    check(" # ", " %23%20");
+    check("\x08#\x08", "\x08%23%08");
 
     // Only "%" symbols that could form an escape need to be escaped
-    check("%, %3, %33, %333", "data:text/plain,%, %3, %2533, %25333");
-  }
-
-  #[test]
-  fn test_shortest() {
-    assert_eq!(
-      encode_as_percent_escaped("\n\n\n\n\n".as_bytes()).unwrap(),
-      "base64,CgoKCgo="
-    );
-    assert_eq!(
-      encode_as_percent_escaped("\n\n\n".as_bytes()).unwrap(),
-      "%0A%0A%0A"
-    );
+    check("%, %3, %33, %333", "%, %3, %2533, %25333");
   }
 }

@@ -48,7 +48,7 @@ pub async fn load_source(
         match &guessed {
           ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => {
             Ok((StrOrBytes::Bytes(fs.read(resolved_id.id.as_path())?), Some(guessed)))
-        }
+          }
           ModuleType::Js
           | ModuleType::Jsx
           | ModuleType::Ts

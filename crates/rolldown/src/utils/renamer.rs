@@ -52,9 +52,13 @@ impl<'name> Renamer<'name> {
   }
 
   pub fn add_top_level_symbol(&mut self, symbol_ref: SymbolRef) {
+    let symbol = self.symbols.get(symbol_ref);
     let canonical_ref = self.symbols.par_canonical_ref_for(symbol_ref);
     let original_name: Cow<'_, Rstr> =
       Cow::Owned(self.symbols.get_original_name(canonical_ref).to_rstr());
+    if (original_name.as_str() == "bar") {
+      dbg!(&symbol_ref, symbol);
+    }
     match self.canonical_names.entry(canonical_ref) {
       Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();

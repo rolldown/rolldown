@@ -1321,7 +1321,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_compat/reexport_commonjs
 
-- main-!~{000}~.mjs => main-KaO09Ub1.mjs
+- main-!~{000}~.mjs => main-uEkP8GUr.mjs
 
 # tests/fixtures/cjs_compat/require/create_require
 

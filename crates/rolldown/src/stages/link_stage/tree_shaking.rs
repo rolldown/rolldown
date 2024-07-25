@@ -1,6 +1,7 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
 use crate::types::tree_shake::{UsedExportsInfo, UsedInfo};
+use itertools::Itertools;
 use oxc::index::IndexVec;
 // use crate::utils::extract_member_chain::extract_canonical_symbol_info;
 use oxc::span::CompactStr;
@@ -112,14 +113,28 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   let mut canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
-    if let Some(named_import) = canonical_ref_owner.named_imports.get(&canonical_ref) {
+    let before_owner = canonical_ref.owner;
+    let stmt_idx = if let Some(named_import) = canonical_ref_owner.named_imports.get(&canonical_ref)
+    {
       let import = &canonical_ref_owner.import_records[named_import.record_id];
-      include_statement(ctx, canonical_ref_owner, import.stmt_idx + 1);
+      dbg!(&canonical_ref_owner.stmt_infos[import.stmt_idx + 1].debug_label);
+      // include_statement(ctx, canonical_ref_owner, import.stmt_idx + 1);
+      Some(import.stmt_idx + 1)
+    } else {
+      None
     };
+
     canonical_ref = namespace_alias.namespace_ref;
     canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
+    if before_owner == canonical_ref.owner {
+      if let Some(stmt_idx) = stmt_idx {
+        println!("----------------------xxx-------------------");
+        include_statement(ctx, &ctx.modules[before_owner].as_ecma().unwrap(), stmt_idx);
+      }
+    }
   } else if let Some(named_import) = canonical_ref_owner.named_imports.get(&symbol_ref) {
     let import = &canonical_ref_owner.import_records[named_import.record_id];
+    dbg!(&import);
     include_statement(ctx, canonical_ref_owner, import.stmt_idx + 1);
   }
 
@@ -252,6 +267,15 @@ impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
     self.determine_side_effects();
+    for ele in self.module_table.modules.iter() {
+      let Some(m) = ele.as_ecma() else {
+        continue;
+      };
+      if m.is_virtual() {
+        continue;
+      }
+      dbg!(&m.stable_id, &m.side_effects.has_side_effects());
+    }
 
     let mut is_included_vec: IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>> = self
       .module_table
@@ -301,6 +325,21 @@ impl LinkStage<'_> {
       include_module(context, module);
     });
 
+    // for (k, v) in &context.used_symbol_refs.iter().chunk_by(|symbol_ref| symbol_ref.owner) {
+    //   let m = &context.modules[k];
+    //   let m = if let Some(m) = m.as_ecma() {
+    //     m
+    //   } else {
+    //     continue;
+    //   };
+    //   if m.is_virtual() {
+    //     continue;
+    //   }
+    //   dbg!(&m.stable_id);
+    //   for s in v {
+    //     dbg!(&s, context.symbols.get(*s));
+    //   }
+    // }
     self.module_table.modules.iter_mut().par_bridge().filter_map(Module::as_ecma_mut).for_each(
       |module| {
         module.is_included = is_module_included_vec[module.idx];

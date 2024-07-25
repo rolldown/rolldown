@@ -11,7 +11,7 @@ use std::path::Path;
 
 // Disallow ./*.ext
 static OWN_DIRECTORY_STAR_REGEX: Lazy<Regex> = Lazy::new(|| {
-  let pattern: &str = "^\\.\\/\\*\\.[\\w]+$";
+  let pattern = r"^\./\*\.\w+$";
   Regex::new(pattern).expect("failed to compile regex")
 });
 

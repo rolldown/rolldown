@@ -782,7 +782,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/auto_detect_mime_type_from_extension
 
-- entry_js-!~{000}~.mjs => entry_js-uqI2MJE0.mjs
+- entry_js-!~{000}~.mjs => entry_js-oRNaoqab.mjs
 
 # tests/esbuild/loader/empty_loader_js
 
@@ -802,7 +802,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/require_custom_extension_data_url
 
-- entry_js-!~{000}~.mjs => entry_js-n3eu7nOK.mjs
+- entry_js-!~{000}~.mjs => entry_js-MxhJgWWG.mjs
 
 # tests/esbuild/lower/lower_async_es5
 
@@ -1789,7 +1789,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/module_types/dataurl/binary
 
-- main-!~{000}~.mjs => main-2EGnpHKS.mjs
+- main-!~{000}~.mjs => main-bdrX174S.mjs
 
 # tests/fixtures/module_types/dataurl/empty
 

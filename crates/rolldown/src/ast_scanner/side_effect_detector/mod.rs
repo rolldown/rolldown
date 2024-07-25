@@ -1,4 +1,3 @@
-use once_cell::sync::Lazy;
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, BindingPatternKind, Expression, IdentifierReference,
   PropertyKey,
@@ -6,6 +5,7 @@ use oxc::ast::ast::{
 use oxc::ast::{match_expression, Trivias};
 use rolldown_common::AstScopes;
 use rustc_hash::FxHashSet;
+use std::sync::LazyLock;
 
 use crate::ast_scanner::side_effect_detector::utils::{
   extract_member_expr_chain, is_primitive_literal,
@@ -17,8 +17,8 @@ mod annotation;
 mod utils;
 
 // Probably we should generate this using macros.
-static SIDE_EFFECT_FREE_MEMBER_EXPR_2: Lazy<FxHashSet<(&'static str, &'static str)>> =
-  Lazy::new(|| {
+static SIDE_EFFECT_FREE_MEMBER_EXPR_2: LazyLock<FxHashSet<(&'static str, &'static str)>> =
+  LazyLock::new(|| {
     [
       ("Object", "create"),
       ("Object", "defineProperty"),
@@ -31,12 +31,13 @@ static SIDE_EFFECT_FREE_MEMBER_EXPR_2: Lazy<FxHashSet<(&'static str, &'static st
     .collect()
   });
 
-static SIDE_EFFECT_FREE_MEMBER_EXPR_3: Lazy<FxHashSet<(&'static str, &'static str, &'static str)>> =
-  Lazy::new(|| {
-    [("Object", "prototype", "hasOwnProperty"), ("Object", "prototype", "constructor")]
-      .into_iter()
-      .collect()
-  });
+static SIDE_EFFECT_FREE_MEMBER_EXPR_3: LazyLock<
+  FxHashSet<(&'static str, &'static str, &'static str)>,
+> = LazyLock::new(|| {
+  [("Object", "prototype", "hasOwnProperty"), ("Object", "prototype", "constructor")]
+    .into_iter()
+    .collect()
+});
 
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {

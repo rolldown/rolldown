@@ -1,12 +1,12 @@
 use std::{borrow::Cow, path::Path};
 
+use crate::utils::RUNTIME_MODULE_OUTPUT_RE;
+
 use super::fixture::Fixture;
-use regex::Regex;
 use rolldown::BundleOutput;
 use rolldown_common::Output;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
 use rolldown_sourcemap::SourcemapVisualizer;
-use std::sync::LazyLock;
 
 pub struct Case {
   fixture: Fixture,
@@ -177,8 +177,3 @@ impl Case {
     });
   }
 }
-
-static RUNTIME_MODULE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
-  Regex::new(r"(//#region rolldown:runtime[\s\S]*?//#endregion)")
-    .expect("invalid runtime module output regex")
-});

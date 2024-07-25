@@ -1,0 +1,17 @@
+---
+source: crates/rolldown/tests/fixtures/issues/./1733/mod.rs
+expression: "rolldown_testing::utils::stringify_bundle_output(output, &cwd)"
+---
+# Assets
+
+## entry.js
+
+```js
+import "rewritten-./static.css";
+
+//#region entry.js
+import("./dynamic.css");
+require("rewritten-./some.css");
+
+//#endregion
+```

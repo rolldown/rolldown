@@ -1,7 +1,8 @@
 /// Authored by @ikkz and adapted by @7086cmd.
-use std::fmt::Write;
 use std::str;
 
+const HEX: [char; 16] =
+  ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
 // adapted from "https://github.com/evanw/esbuild/blob/67cbf87a4909d87a902ca8c3b69ab5330defab0a/scripts/dataurl-escapes.html" for how this was derived
 pub fn encode_as_percent_escaped(buf: &[u8]) -> Option<String> {
   if let Ok(text) = str::from_utf8(buf) {
@@ -23,7 +24,9 @@ pub fn encode_as_percent_escaped(buf: &[u8]) -> Option<String> {
           && chars[i + 1].is_ascii_hexdigit()
           && chars[i + 2].is_ascii_hexdigit())
       {
-        write!(url, "%{:02X}", c as u32).unwrap();
+        url.push('%');
+        url.push(HEX[c as usize >> 4]);
+        url.push(HEX[c as usize & 15]);
       } else {
         url.push(c);
       }

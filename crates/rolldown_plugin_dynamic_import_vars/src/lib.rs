@@ -27,7 +27,7 @@ mod to_glob;
 
 #[derive(Debug)]
 pub struct DynamicImportVarsPlugin {
-  error_when_no_files_found: bool,
+  pub error_when_no_files_found: bool,
 }
 
 #[async_trait::async_trait]
@@ -58,14 +58,6 @@ impl Plugin for DynamicImportVarsPlugin {
     Ok(args.ast)
   }
 }
-
-// #[derive(Debug, Default)]
-// pub struct DynamicImportVarsOptions<'a> {
-//   include: Option<&'a [&'a str]>,
-//   exclude: Option<&'a [&'a str]>,
-//   error_when_no_files_found: Option<bool>,
-//   warn_on_error: Option<bool>,
-// }
 
 pub struct DynamicImportVarsVisit<'ast, 'a> {
   cwd: &'a PathBuf,

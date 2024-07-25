@@ -16,6 +16,12 @@ export class BuiltinWasmPlugin extends BuiltinPlugin {
   }
 }
 
+export class BuiltinDynamicImportVarsPlugin extends BuiltinPlugin {
+  constructor(options?: unknown) {
+    super(BindingBuiltinPluginName.DynamicImportVarsPlugin, options)
+  }
+}
+
 export class BuiltinGlobImportPlugin extends BuiltinPlugin {
   constructor(options?: unknown) {
     super(BindingBuiltinPluginName.GlobImportPlugin, options)

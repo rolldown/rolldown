@@ -35,6 +35,7 @@ import { defineConfig } from './utils/define-config'
 import { rolldown, experimental_scan } from './rolldown'
 import { ConfigExport } from './types/config-export'
 import {
+  BuiltinDynamicImportVarsPlugin,
   BuiltinGlobImportPlugin,
   BuiltinWasmPlugin,
 } from './plugin/builtin-plugin'
@@ -65,6 +66,7 @@ export {
   transform,
   BuiltinWasmPlugin,
   BuiltinGlobImportPlugin,
+  BuiltinDynamicImportVarsPlugin,
 }
 
 export type {

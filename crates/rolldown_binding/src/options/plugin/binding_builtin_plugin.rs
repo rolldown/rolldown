@@ -39,7 +39,7 @@ impl From<BindingBuiltinPlugin> for Arc<dyn Plugin> {
     match plugin.name {
       BindingBuiltinPluginName::WasmPlugin => Arc::new(WasmPlugin {}),
       BindingBuiltinPluginName::GlobImportPlugin => Arc::new(GlobImportPlugin {}),
-      BindingBuiltinPluginName::DynamicImportVarsPlugin => Arc::new(DynamicImportVarsPlugin {}),
+      BindingBuiltinPluginName::DynamicImportVarsPlugin => Arc::new(DynamicImportVarsPlugin { error_when_no_files_found: false }),
     }
   }
 }

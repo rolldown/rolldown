@@ -104,7 +104,8 @@ export interface BindingBuiltinPlugin {
 
 export declare enum BindingBuiltinPluginName {
   WasmPlugin = 0,
-  GlobImportPlugin = 1
+  GlobImportPlugin = 1,
+  DynamicImportVarsPlugin = 2
 }
 
 export interface BindingEmittedAsset {

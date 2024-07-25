@@ -82,6 +82,13 @@ impl Module {
     }
   }
 
+  pub fn import_records(&self) -> &IndexVec<ImportRecordIdx, ImportRecord> {
+    match self {
+      Module::Ecma(v) => &v.import_records,
+      Module::External(v) => &v.import_records,
+    }
+  }
+
   pub fn set_import_records(&mut self, records: IndexVec<ImportRecordIdx, ImportRecord>) {
     match self {
       Module::Ecma(v) => v.import_records = records,

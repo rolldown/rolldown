@@ -80,17 +80,13 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
     forcefully_include_all_statements(ctx, module);
   }
 
+  let module_meta = &ctx.metas[module.idx];
+
   // Include imported modules for its side effects
-  module.import_records.iter().for_each(|import_record| {
-    match &ctx.modules[import_record.resolved_module] {
+  module_meta.dependencies.iter().copied().for_each(|dependency_idx| {
+    match &ctx.modules[dependency_idx] {
       Module::Ecma(importee) => {
-        let bailout_side_effect =
-          matches!(import_record.kind, rolldown_common::ImportKind::Require)
-            || importee.def_format.is_commonjs();
-        if bailout_side_effect {
-          ctx.used_exports_info_vec[importee.idx].used_info |= UsedInfo::USED_AS_NAMESPACE_REF;
-        }
-        if !ctx.tree_shaking || importee.side_effects.has_side_effects() || bailout_side_effect {
+        if !ctx.tree_shaking || importee.side_effects.has_side_effects() {
           include_module(ctx, importee);
         }
       }

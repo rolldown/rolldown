@@ -23,8 +23,7 @@ export default defineTest({
       Object.defineProperty(exports, '__esModule', { value: true });
       exports.default = main_default;
       return exports;
-      })({}, node_path);
-      "
+      })({}, node_path);"
     `)
   },
 })

@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region binary.txt
+var binary_default = "data:text/plain;base64,/w==";
+
+//#endregion
+//#region entry.js
+console.log(binary_default);
+
+//#endregion
+```

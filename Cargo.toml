@@ -99,7 +99,7 @@ ariadne            = "0.4.1"
 async-channel      = "2.3.1"
 async-scoped       = { version = "0.9.0" }
 async-trait        = "0.1.80"
-base64             = "0.22.1"
+base64-simd        = "0.8.0"
 bitflags           = "2.5.0"
 daachorse          = "1.0.0"
 dashmap            = "6.0.0"
@@ -137,7 +137,6 @@ tokio              = { version = "1.38.0", default-features = false }
 tracing            = "0.1.40"
 tracing-chrome     = "0.7.2"
 tracing-subscriber = { version = "0.3.18", default-features = false }
-urlencoding        = "2.1.3"
 vfs                = "0.12.0"
 xxhash-rust        = "0.8.10"
 # oxc crates share the same version

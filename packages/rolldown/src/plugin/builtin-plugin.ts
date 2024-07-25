@@ -12,19 +12,19 @@ export class BuiltinPlugin {
 
 export class BuiltinWasmPlugin extends BuiltinPlugin {
   constructor(options?: unknown) {
-    super(BindingBuiltinPluginName.WasmPlugin, options)
+    super(BindingBuiltinPluginName.Wasm, options)
   }
 }
 
 export class BuiltinDynamicImportVarsPlugin extends BuiltinPlugin {
   constructor(options?: unknown) {
-    super(BindingBuiltinPluginName.DynamicImportVarsPlugin, options)
+    super(BindingBuiltinPluginName.DynamicImportVars, options)
   }
 }
 
 export class BuiltinGlobImportPlugin extends BuiltinPlugin {
   constructor(options?: unknown) {
-    super(BindingBuiltinPluginName.GlobImportPlugin, options)
+    super(BindingBuiltinPluginName.GlobImport, options)
   }
 }
 

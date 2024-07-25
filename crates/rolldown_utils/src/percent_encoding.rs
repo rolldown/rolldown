@@ -2,6 +2,11 @@
 use std::fmt::Write;
 use std::str;
 
+fn to_four_hex(c: char) -> String {
+  let target = c as u32;
+  format!("\\u{:04X}", target)
+}
+
 // adapted from "https://github.com/evanw/esbuild/blob/67cbf87a4909d87a902ca8c3b69ab5330defab0a/scripts/dataurl-escapes.html" for how this was derived
 pub fn encode_as_percent_escaped(buf: &[u8]) -> Option<String> {
   if let Ok(text) = str::from_utf8(buf) {
@@ -24,8 +29,12 @@ pub fn encode_as_percent_escaped(buf: &[u8]) -> Option<String> {
           && chars[i + 2].is_ascii_hexdigit())
       {
         write!(url, "%{:02X}", c as u32).unwrap();
-      } else {
+      }
+      // handle non-ASCII characters to \u
+      else if c.is_ascii() {
         url.push(c);
+      } else {
+
       }
     }
     Some(url)

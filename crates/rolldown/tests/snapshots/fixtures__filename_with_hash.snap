@@ -792,6 +792,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-ROps9euc.mjs
 
+# tests/esbuild/loader/loader_data_url_base64_invalid_utf8
+
+- entry_js-!~{000}~.mjs => entry_js-DEF4KQbK.mjs
+
 # tests/esbuild/loader/loader_json_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs
@@ -1797,7 +1801,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/module_types/dataurl/text
 
-- main-!~{000}~.mjs => main-rgdPJkwQ.mjs
+- main-!~{000}~.mjs => main-yMC_IgT3.mjs
 
 # tests/fixtures/module_types/empty
 

@@ -806,7 +806,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/loader_data_url_escape_percents
 
-- entry_js-!~{000}~.mjs => entry_js-fXYh5EO3.mjs
+- entry_js-!~{000}~.mjs => entry_js-UfCMc73Z.mjs
 
 # tests/esbuild/loader/loader_json_missing_es6
 

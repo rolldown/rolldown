@@ -21,7 +21,6 @@ use std::{
 use sugar_path::SugarPath;
 use to_glob::to_glob_pattern;
 mod clone_expr;
-mod sanitize;
 mod should_ignore;
 mod to_glob;
 
@@ -85,7 +84,7 @@ impl<'ast, 'a> VisitMut<'ast> for DynamicImportVarsVisit<'ast, 'a> {
         }
 
         if self.error_when_no_files_found && files.is_empty() {
-          // `No files found in ${glob} when trying to dynamically load concatted string from ${id}`
+          panic!("No files found in {pattern:?} when trying to dynamically load concatted string from {:?}", self.cwd)
         }
 
         let name = format!("__variableDynamicImportRuntime{}__", self.current);
@@ -105,13 +104,14 @@ impl<'ast, 'a> VisitMut<'ast> for DynamicImportVarsVisit<'ast, 'a> {
           Option::<TSTypeParameterInstantiation>::None,
           false,
         );
+        self.current += 1;
       }
-      self.current += 1;
     }
   }
 }
 
 impl<'ast, 'a> DynamicImportVarsVisit<'ast, 'a> {
+  /// generates helper function declaration
   fn helper_func(
     &self,
     name: &String,
@@ -157,6 +157,10 @@ impl<'ast, 'a> DynamicImportVarsVisit<'ast, 'a> {
     )
   }
 
+  /// generates:
+  /// ```js
+  /// case "./file.js": return import("./file.js");
+  /// ```
   fn switch_cases(
     &self,
     files: std::vec::Vec<String>,
@@ -184,11 +188,14 @@ impl<'ast, 'a> DynamicImportVarsVisit<'ast, 'a> {
     items
   }
 
-  // default: return new Promise(function(resolve, reject) {
-  //   (typeof queueMicrotask === 'function' ? queueMicrotask : setTimeout)(
-  //     reject.bind(null, new Error("Unknown variable dynamic import: " + path))
-  //   );
-  // })
+  /// generates:
+  /// ```js
+  /// default: return new Promise(function(resolve, reject) {
+  ///   (typeof queueMicrotask === 'function' ? queueMicrotask : setTimeout)(
+  ///     reject.bind(null, new Error("Unknown variable dynamic import: " + path))
+  ///   );
+  /// })
+  /// ```
   fn default_case(&self) -> SwitchCase<'ast> {
     self.ast_builder.switch_case(
       SPAN,
@@ -219,7 +226,10 @@ impl<'ast, 'a> DynamicImportVarsVisit<'ast, 'a> {
     )
   }
 
-  // resolve, reject
+  /// generates:
+  /// ```js
+  /// resolve, reject
+  /// ```
   fn promise_cb_params(&self) -> FormalParameters<'ast> {
     let mut items = self.ast_builder.vec_with_capacity(2);
     for name in &["resolve", "reject"] {
@@ -248,9 +258,12 @@ impl<'ast, 'a> DynamicImportVarsVisit<'ast, 'a> {
     )
   }
 
-  // (typeof queueMicrotask === 'function' ? queueMicrotask : setTimeout)(
-  //   reject.bind(null, new Error("Unknown variable dynamic import: " + path))
-  // );
+  /// generates:
+  /// ```js
+  /// (typeof queueMicrotask === 'function' ? queueMicrotask : setTimeout)(
+  ///   reject.bind(null, new Error("Unknown variable dynamic import: " + path))
+  /// );
+  /// ```
   fn promise_cb_body(&self) -> FunctionBody<'ast> {
     self.ast_builder.function_body(
       SPAN,
@@ -295,15 +308,14 @@ impl<'ast, 'a> DynamicImportVarsVisit<'ast, 'a> {
     )
   }
 
-  // null, new Error("Unknown variable dynamic import: " + path)
+  /// generates:
+  /// ```js
+  /// null, new Error("Unknown variable dynamic import: " + path)
+  /// ```
   fn reject_fn_bind_args(&self) -> Vec<'ast, Argument<'ast>> {
     let mut items = self.ast_builder.vec_with_capacity(2);
-
-    // null
     items
       .push(self.ast_builder.argument_expression(self.ast_builder.expression_null_literal(SPAN)));
-
-    // new Error("Unknown variable dynamic import: " + path)
     items.push(self.ast_builder.argument_expression(self.ast_builder.expression_new(
       SPAN,
       self.ast_builder.expression_identifier_reference(SPAN, "Error"),

@@ -1,15 +1,15 @@
-use std::path::Path;
+// Ported from https://github.com/rollup/plugins/blob/944e7d3ec4375371a2e70a55ac07cab4c61dc8b6/packages/dynamic-import-vars/src/dynamic-import-to-glob.js
 
+use crate::should_ignore::should_ignore;
+use anyhow;
+use glob;
 use once_cell::sync::Lazy;
 use oxc::{
   ast::ast::{Argument, BinaryExpression, CallExpression, Expression, TemplateLiteral},
   syntax::operator::BinaryOperator,
 };
 use regex::Regex;
-use anyhow;
-
-use crate::sanitize::sanitize_string;
-use crate::should_ignore::should_ignore;
+use std::path::Path;
 
 // Disallow ./*.ext
 static OWN_DIRECTORY_STAR_REGEX: Lazy<Regex> = Lazy::new(|| {
@@ -110,4 +110,14 @@ fn binary_expr_to_glob<'ast>(node: &BinaryExpression<'ast>) -> anyhow::Result<St
   }
 
   Ok(expr_to_glob(&node.left)? + &expr_to_glob(&node.right)?)
+}
+
+pub fn sanitize_string(s: &str) -> anyhow::Result<String> {
+  if s == "" {
+    return Ok(s.to_string());
+  }
+  if s.contains("*") {
+    return Err(anyhow::format_err!("A dynamic import cannot contain * characters."));
+  }
+  Ok(glob::Pattern::escape(s))
 }

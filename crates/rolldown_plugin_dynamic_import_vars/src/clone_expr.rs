@@ -5,6 +5,7 @@ use oxc::{
   span::SourceType,
 };
 
+// A workaround to clone an expression AST.
 pub fn clone_expr<'ast>(
   ast_builder: &AstBuilder<'ast>,
   expr: &Expression<'ast>,

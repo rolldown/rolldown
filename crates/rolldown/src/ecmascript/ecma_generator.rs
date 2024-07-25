@@ -8,7 +8,7 @@ use rolldown_common::{
   AssetMeta, EcmaAssetMeta, ModuleId, ModuleIdx, OutputFormat, PreliminaryAsset, RenderedModule,
 };
 use rolldown_error::DiagnosableResult;
-use rolldown_plugin::HookBannerArgs;
+use rolldown_plugin::{HookBannerArgs, HookFooterArgs};
 use rolldown_sourcemap::Source;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -73,9 +73,15 @@ impl Generator for EcmaGenerator {
         .await?
     };
 
-    let footer = match ctx.options.footer.as_ref() {
-      Some(footer) => footer.call(&rendered_chunk).await?,
-      None => None,
+    let footer = {
+      let footer = match ctx.options.footer.as_ref() {
+        Some(footer) => footer.call(&rendered_chunk).await?,
+        None => None,
+      };
+      ctx
+        .plugin_driver
+        .footer(HookFooterArgs { chunk: &rendered_chunk }, footer.unwrap_or_default())
+        .await?
     };
 
     let intro = match ctx.options.intro.as_ref() {

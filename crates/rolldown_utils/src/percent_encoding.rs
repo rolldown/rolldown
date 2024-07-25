@@ -56,7 +56,7 @@ mod tests {
         check(&char_str, &format!("%{i:02X}"));
         check(&format!("foo{char_str}"), &format!("foo%{i:02X}"));
       } else {
-        check(&char_str, &format!("{char_str}"));
+        check(&char_str, char_str.as_str());
         check(&format!("foo{char_str}"), &format!("foo{char_str}"));
       }
 

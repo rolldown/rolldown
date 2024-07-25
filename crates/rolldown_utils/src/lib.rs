@@ -14,5 +14,4 @@ pub mod percent_encoding;
 pub mod rayon;
 pub mod rustc_hash;
 pub mod xxhash;
-
 pub use bitset::BitSet;

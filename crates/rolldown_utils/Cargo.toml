@@ -20,7 +20,6 @@ indexmap    = { workspace = true }
 infer       = { workspace = true }
 mime        = { workspace = true }
 mime_guess  = { workspace = true }
-once_cell   = { workspace = true }
 oxc         = { workspace = true }
 regex       = { workspace = true }
 rustc-hash  = { workspace = true }

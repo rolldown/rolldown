@@ -20,8 +20,8 @@ impl PluginDriver {
   ) -> Result<Option<String>> {
     for (plugin, ctx) in &self.plugins {
       if let Some(r) = plugin.banner(ctx, &args).await? {
-        banner.push_str(r.as_str());
         banner.push('\n');
+        banner.push_str(r.as_str());
       }
     }
     if banner.is_empty() {

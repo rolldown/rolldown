@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_
 ```js
 
 //#region binary.txt
-var binary_default = "ÿ";
+var binary_default = "data:text/plain;charset=utf-8,ÿ";
 
 //#endregion
 //#region entry.js

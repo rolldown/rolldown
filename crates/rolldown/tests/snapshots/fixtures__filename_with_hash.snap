@@ -794,7 +794,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
-- entry_js-!~{000}~.mjs => entry_js-DEF4KQbK.mjs
+- entry_js-!~{000}~.mjs => entry_js-UDN4p1un.mjs
 
 # tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding
 

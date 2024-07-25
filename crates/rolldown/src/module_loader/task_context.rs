@@ -7,7 +7,7 @@ use super::Msg;
 
 /// Used to store common data shared between all tasks.
 pub struct TaskContext {
-  pub input_options: SharedOptions,
+  pub options: SharedOptions,
   pub tx: tokio::sync::mpsc::Sender<Msg>,
   pub resolver: SharedResolver,
   pub fs: OsFileSystem,

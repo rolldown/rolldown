@@ -1,8 +1,6 @@
 // Ported from https://github.com/rollup/plugins/blob/944e7d3ec4375371a2e70a55ac07cab4c61dc8b6/packages/dynamic-import-vars/src/dynamic-import-to-glob.js
 
 use crate::should_ignore::should_ignore;
-use anyhow;
-use glob;
 use once_cell::sync::Lazy;
 use oxc::{
   ast::ast::{Argument, BinaryExpression, CallExpression, Expression, TemplateLiteral},
@@ -19,7 +17,7 @@ static OWN_DIRECTORY_STAR_REGEX: Lazy<Regex> = Lazy::new(|| {
 
 static EXAMPLE_CODE: &str = "For example: import(`./foo/${bar}.js`).";
 
-pub fn to_glob_pattern<'ast>(expr: &Expression<'ast>) -> anyhow::Result<Option<String>> {
+pub fn to_glob_pattern(expr: &Expression) -> anyhow::Result<Option<String>> {
   let glob = expr_to_glob(expr)?;
 
   if should_ignore(&glob) {
@@ -57,7 +55,7 @@ pub fn to_glob_pattern<'ast>(expr: &Expression<'ast>) -> anyhow::Result<Option<S
   Ok(Some(glob))
 }
 
-fn expr_to_glob<'ast>(expr: &Expression<'ast>) -> anyhow::Result<String> {
+fn expr_to_glob(expr: &Expression) -> anyhow::Result<String> {
   Ok(match expr {
     Expression::TemplateLiteral(node) => template_literal_to_glob(node)?,
     Expression::CallExpression(node) => call_expr_to_glob(node)?,
@@ -67,7 +65,7 @@ fn expr_to_glob<'ast>(expr: &Expression<'ast>) -> anyhow::Result<String> {
   })
 }
 
-fn arg_to_glob<'ast>(arg: &Argument<'ast>) -> anyhow::Result<String> {
+fn arg_to_glob(arg: &Argument) -> anyhow::Result<String> {
   Ok(match arg {
     Argument::TemplateLiteral(node) => template_literal_to_glob(node)?,
     Argument::CallExpression(node) => call_expr_to_glob(node)?,
@@ -77,7 +75,7 @@ fn arg_to_glob<'ast>(arg: &Argument<'ast>) -> anyhow::Result<String> {
   })
 }
 
-fn template_literal_to_glob<'ast>(node: &TemplateLiteral<'ast>) -> anyhow::Result<String> {
+fn template_literal_to_glob(node: &TemplateLiteral) -> anyhow::Result<String> {
   let mut glob = String::new();
 
   for (index, quasi) in node.quasis.iter().enumerate() {
@@ -90,7 +88,7 @@ fn template_literal_to_glob<'ast>(node: &TemplateLiteral<'ast>) -> anyhow::Resul
   Ok(glob)
 }
 
-fn call_expr_to_glob<'ast>(node: &CallExpression<'ast>) -> anyhow::Result<String> {
+fn call_expr_to_glob(node: &CallExpression) -> anyhow::Result<String> {
   if let Expression::StaticMemberExpression(member_expr) = &node.callee {
     if member_expr.property.name == "concat" {
       let mut arg_glob = String::new();
@@ -104,7 +102,7 @@ fn call_expr_to_glob<'ast>(node: &CallExpression<'ast>) -> anyhow::Result<String
   Ok(String::from("*"))
 }
 
-fn binary_expr_to_glob<'ast>(node: &BinaryExpression<'ast>) -> anyhow::Result<String> {
+fn binary_expr_to_glob(node: &BinaryExpression) -> anyhow::Result<String> {
   if !matches!(node.operator, BinaryOperator::Addition) {
     return Err(anyhow::format_err!("{:?} operator is not supported.", node.operator));
   }
@@ -113,10 +111,10 @@ fn binary_expr_to_glob<'ast>(node: &BinaryExpression<'ast>) -> anyhow::Result<St
 }
 
 pub fn sanitize_string(s: &str) -> anyhow::Result<String> {
-  if s == "" {
+  if s.is_empty() {
     return Ok(s.to_string());
   }
-  if s.contains("*") {
+  if s.contains('*') {
     return Err(anyhow::format_err!("A dynamic import cannot contain * characters."));
   }
   Ok(glob::Pattern::escape(s))

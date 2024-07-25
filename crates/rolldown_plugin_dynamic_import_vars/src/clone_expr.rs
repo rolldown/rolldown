@@ -7,7 +7,7 @@ use oxc::{
 
 // A workaround to clone an expression AST.
 pub fn clone_expr<'ast>(
-  ast_builder: &AstBuilder<'ast>,
+  ast_builder: AstBuilder<'ast>,
   expr: &Expression<'ast>,
 ) -> Expression<'ast> {
   let a = ast_builder.allocator;

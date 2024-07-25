@@ -83,9 +83,7 @@ impl<'ast, 'a> VisitMut<'ast> for DynamicImportVarsVisit<'ast, 'a> {
           }
         }
 
-        if self.error_when_no_files_found && files.is_empty() {
-          panic!("No files found in {pattern:?} when trying to dynamically load concatted string from {:?}", self.cwd)
-        }
+        assert!(!(self.error_when_no_files_found && files.is_empty()), "No files found in {pattern:?} when trying to dynamically load concatted string from {:?}", self.cwd);
 
         let name = format!("__variableDynamicImportRuntime{}__", self.current);
         let import_arg = import_expr.arguments.first();
@@ -96,9 +94,7 @@ impl<'ast, 'a> VisitMut<'ast> for DynamicImportVarsVisit<'ast, 'a> {
         *expr = self.ast_builder.expression_call(
           import_expr.span,
           self.ast_builder.vec1(
-            self
-              .ast_builder
-              .argument_expression(clone_expr(&self.ast_builder, &import_expr.source)),
+            self.ast_builder.argument_expression(clone_expr(self.ast_builder, &import_expr.source)),
           ),
           self.ast_builder.expression_identifier_reference(SPAN, name),
           Option::<TSTypeParameterInstantiation>::None,
@@ -178,7 +174,7 @@ impl<'ast, 'a> DynamicImportVarsVisit<'ast, 'a> {
             self.ast_builder.expression_string_literal(SPAN, file),
             import_arg.map_or_else(
               || self.ast_builder.vec(),
-              |arg: &Expression<'ast>| self.ast_builder.vec1(clone_expr(&self.ast_builder, arg)),
+              |arg: &Expression<'ast>| self.ast_builder.vec1(clone_expr(self.ast_builder, arg)),
             ),
           )),
         )),

@@ -29,17 +29,19 @@ impl std::fmt::Debug for BindingBuiltinPlugin {
 #[derive(Debug, Deserialize)]
 #[napi]
 pub enum BindingBuiltinPluginName {
-  WasmPlugin,
-  GlobImportPlugin,
-  DynamicImportVarsPlugin,
+  Wasm,
+  GlobImport,
+  DynamicImportVars,
 }
 
 impl From<BindingBuiltinPlugin> for Arc<dyn Plugin> {
   fn from(plugin: BindingBuiltinPlugin) -> Self {
     match plugin.name {
-      BindingBuiltinPluginName::WasmPlugin => Arc::new(WasmPlugin {}),
-      BindingBuiltinPluginName::GlobImportPlugin => Arc::new(GlobImportPlugin {}),
-      BindingBuiltinPluginName::DynamicImportVarsPlugin => Arc::new(DynamicImportVarsPlugin { error_when_no_files_found: false }),
+      BindingBuiltinPluginName::Wasm => Arc::new(WasmPlugin {}),
+      BindingBuiltinPluginName::GlobImport => Arc::new(GlobImportPlugin {}),
+      BindingBuiltinPluginName::DynamicImportVars => {
+        Arc::new(DynamicImportVarsPlugin { error_when_no_files_found: false })
+      }
     }
   }
 }

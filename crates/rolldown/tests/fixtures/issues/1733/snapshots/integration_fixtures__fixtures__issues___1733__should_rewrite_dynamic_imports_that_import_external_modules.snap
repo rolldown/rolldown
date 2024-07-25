@@ -10,7 +10,7 @@ expression: "rolldown_testing::utils::stringify_bundle_output(output, &cwd)"
 import "rewritten-./static.css";
 
 //#region entry.js
-import("./dynamic.css");
+import("rewritten-./dynamic.css");
 require("rewritten-./some.css");
 
 //#endregion

@@ -15,7 +15,7 @@ var test_ns, test_default;
 var init_test = __esmMin(() => {
 	test_ns = {};
 	__export(test_ns, {default: () => test_default});
-	test_default = "data:text/plain;charset=utf-8,a%5Cx00b%5Cx80c%5CxFFd";
+	test_default = "data:text/plain;charset=utf-8,a\\x00b\\x80c\\xFFd";
 });
 
 //#endregion

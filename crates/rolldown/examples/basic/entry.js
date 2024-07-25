@@ -1,4 +1,5 @@
 // MULTIPLE ENTRY MODULES
 import hyperCube from './hyper-cube.js';
+import foo from './foo.custom'
 
-console.log(hyperCube(5));
+console.log(`foo: `, foo)

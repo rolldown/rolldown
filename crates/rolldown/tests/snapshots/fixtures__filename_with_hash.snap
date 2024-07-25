@@ -1867,9 +1867,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-WlVJrkq9.mjs
 
-# tests/fixtures/tree_shaking/export-star
+# tests/fixtures/tree_shaking/export_star
 
-- main-!~{000}~.mjs => main-Ll-xem_E.mjs
+- main-!~{000}~.mjs => main-D_8Z2hmK.mjs
 
 # tests/fixtures/tree_shaking/external-export-star1
 

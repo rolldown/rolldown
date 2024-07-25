@@ -2305,6 +2305,7 @@ dependencies = [
 name = "rolldown_plugin_dynamic_import_vars"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "async-trait",
  "glob",
  "once_cell",

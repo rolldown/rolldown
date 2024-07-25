@@ -1,3 +1,4 @@
+use clone_expr::clone_expr;
 use glob::glob;
 use oxc::{
   allocator::Vec,
@@ -19,6 +20,7 @@ use std::{
 };
 use sugar_path::SugarPath;
 use to_glob::to_glob_pattern;
+mod clone_expr;
 mod sanitize;
 mod should_ignore;
 mod to_glob;
@@ -77,7 +79,7 @@ impl<'ast, 'a> VisitMut<'ast> for DynamicImportVarsVisit<'ast, 'a> {
   #[allow(clippy::too_many_lines)]
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
     if let Expression::ImportExpression(import_expr) = expr {
-      let pattern = to_glob_pattern(&import_expr.source);
+      let pattern = to_glob_pattern(&import_expr.source).unwrap();
       if let Some(pattern) = pattern {
         let path = Path::new(self.cwd).join(Path::new(&pattern));
         let mut files = vec![];
@@ -94,16 +96,19 @@ impl<'ast, 'a> VisitMut<'ast> for DynamicImportVarsVisit<'ast, 'a> {
           // `No files found in ${glob} when trying to dynamically load concatted string from ${id}`
         }
 
-        let import_arg = import_expr.arguments.first(); // TODO:
-
         let name = format!("__variableDynamicImportRuntime{}__", self.current);
+        let import_arg = import_expr.arguments.first();
 
         let helper_decl = self.helper_func(&name, files, import_arg);
         self.helper_decls.push(self.ast_builder.statement_declaration(helper_decl));
 
         *expr = self.ast_builder.expression_call(
           import_expr.span,
-          self.ast_builder.vec1(self.ast_builder.argument_expression(import_expr.source)),
+          self.ast_builder.vec1(
+            self
+              .ast_builder
+              .argument_expression(clone_expr(&self.ast_builder, &import_expr.source)),
+          ),
           self.ast_builder.expression_identifier_reference(SPAN, name),
           Option::<TSTypeParameterInstantiation>::None,
           false,
@@ -177,9 +182,7 @@ impl<'ast, 'a> DynamicImportVarsVisit<'ast, 'a> {
             self.ast_builder.expression_string_literal(SPAN, file),
             import_arg.map_or_else(
               || self.ast_builder.vec(),
-              |arg: &Expression<'ast>| {
-                self.ast_builder.vec1((arg.clone()))
-              },
+              |arg: &Expression<'ast>| self.ast_builder.vec1(clone_expr(&self.ast_builder, arg)),
             ),
           )),
         )),

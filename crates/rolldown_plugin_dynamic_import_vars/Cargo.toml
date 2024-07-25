@@ -12,6 +12,7 @@ version              = "0.0.1"
 workspace = true
 
 [dependencies]
+anyhow          = { workspace = true }
 async-trait     = { workspace = true }
 glob            = { workspace = true }
 once_cell       = { workspace = true }

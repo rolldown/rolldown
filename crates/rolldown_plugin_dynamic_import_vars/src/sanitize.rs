@@ -1,11 +1,11 @@
 use glob;
 
-pub fn sanitize_string(s: &str) -> String {
+pub fn sanitize_string(s: &str) -> anyhow::Result<String> {
   if s == "" {
-    return s.to_string();
+    return Ok(s.to_string());
   }
   if s.contains("*") {
-    panic!("A dynamic import cannot contain * characters.");
+    return Err(anyhow::format_err!("A dynamic import cannot contain * characters."));
   }
-  glob::Pattern::escape(s)
+  Ok(glob::Pattern::escape(s))
 }

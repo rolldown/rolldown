@@ -634,8 +634,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
             str.value = self.snippet.atom(&import_path);
           }
-          Module::External(_) => {
-            // external module doesn't belong to any chunk, just keep this as it is
+          Module::External(importee) => {
+            if str.value != importee.name {
+              str.value = self.snippet.atom(&importee.name);
+            }
           }
         }
       }

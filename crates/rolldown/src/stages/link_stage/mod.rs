@@ -138,6 +138,8 @@ impl<'a> LinkStage<'a> {
         if !meta.is_canonical_exports_empty() {
           referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
         }
+        referenced_symbols
+          .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
         // Corresponding AST for this statement will be created by the finalizer.
         let namespace_stmt_info = StmtInfo {

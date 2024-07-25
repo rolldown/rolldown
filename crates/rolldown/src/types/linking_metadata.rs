@@ -50,6 +50,9 @@ pub struct LinkingMetadata {
   // Entry chunks need to generate code that doesn't belong to any module. This is the list of symbols are referenced by the
   // generated code. Tree-shaking will cares about these symbols to make sure they are not removed.
   pub referenced_symbols_by_entry_point_chunk: Vec<SymbolRef>,
+
+  /// The dependencies of the module. It means if you want include this module, you need to include these dependencies too.
+  pub dependencies: Vec<ModuleIdx>,
 }
 
 impl LinkingMetadata {

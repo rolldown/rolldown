@@ -782,7 +782,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/auto_detect_mime_type_from_extension
 
-- entry_js-!~{000}~.mjs => entry_js-uqI2MJE0.mjs
+- entry_js-!~{000}~.mjs => entry_js-oRNaoqab.mjs
 
 # tests/esbuild/loader/empty_loader_js
 
@@ -791,6 +791,22 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/loader/loader_base64_common_js_and_es6
 
 - entry_js-!~{000}~.mjs => entry_js-ROps9euc.mjs
+
+# tests/esbuild/loader/loader_data_url_base64_invalid_utf8
+
+- entry_js-!~{000}~.mjs => entry_js-RU-xmDm_.mjs
+
+# tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding
+
+- entry_js-!~{000}~.mjs => entry_js-7teuLPXq.mjs
+
+# tests/esbuild/loader/loader_data_url_common_js_and_es6
+
+- entry_js-!~{000}~.mjs => entry_js-JDw4UXoj.mjs
+
+# tests/esbuild/loader/loader_data_url_escape_percents
+
+- entry_js-!~{000}~.mjs => entry_js-UfCMc73Z.mjs
 
 # tests/esbuild/loader/loader_json_missing_es6
 
@@ -802,7 +818,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/require_custom_extension_data_url
 
-- entry_js-!~{000}~.mjs => entry_js-n3eu7nOK.mjs
+- entry_js-!~{000}~.mjs => entry_js-MxhJgWWG.mjs
 
 # tests/esbuild/lower/lower_async_es5
 
@@ -1449,54 +1465,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/errors/unresolved_entry
 
 
-# tests/fixtures/export_mode/cjs/auto/default
-
-- main-!~{000}~.cjs => main-9hSrl4LQ.cjs
-
-# tests/fixtures/export_mode/cjs/auto/named
-
-- main-!~{000}~.cjs => main-kdT5vSll.cjs
-
-# tests/fixtures/export_mode/cjs/auto/none
-
-- main-!~{000}~.cjs => main-8iCoImED.cjs
-
-# tests/fixtures/export_mode/cjs/default
-
-- main-!~{000}~.cjs => main-vdmL7D4P.cjs
-
-# tests/fixtures/export_mode/cjs/named
-
-- main-!~{000}~.cjs => main-RgMnAxkB.cjs
-
-# tests/fixtures/export_mode/iife/auto/none
-
-- main-!~{000}~.mjs => main-jae-4tR0.mjs
-
-# tests/fixtures/export_mode/iife/default
-
-- main-!~{000}~.mjs => main-hgytnGLC.mjs
-
-# tests/fixtures/export_mode/iife/named
-
-- main-!~{000}~.mjs => main-miDzTTts.mjs
-
-# tests/fixtures/format/iife/basic
-
-- main-!~{000}~.mjs => main-GwWbAmhW.mjs
-
-# tests/fixtures/format/iife/external_modules
-
-- main-!~{000}~.mjs => main-cuI6FGIL.mjs
-
-# tests/fixtures/format/iife/external_modules_with_globals
-
-- main-!~{000}~.mjs => main-YsBV8YwF.mjs
-
-# tests/fixtures/format/iife-with-name
-
-- main-!~{000}~.mjs => main-MXjzayTW.mjs
-
 # tests/fixtures/function/dir/should_generate_correct_relative_import_path
 
 - ./chunks/async.mjs => ./chunks/async.mjs
@@ -1534,6 +1502,38 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - entry1-!~{000}~.mjs => entry1-6U9XsAQ4.mjs
 - entry2-!~{001}~.mjs => entry2-_TIAIKYT.mjs
 - run-dep-!~{002}~.mjs => run-dep-IYK8t2Cy.mjs
+
+# tests/fixtures/function/export_mode/cjs/auto/default
+
+- main-!~{000}~.cjs => main-9hSrl4LQ.cjs
+
+# tests/fixtures/function/export_mode/cjs/auto/named
+
+- main-!~{000}~.cjs => main-kdT5vSll.cjs
+
+# tests/fixtures/function/export_mode/cjs/auto/none
+
+- main-!~{000}~.cjs => main-8iCoImED.cjs
+
+# tests/fixtures/function/export_mode/cjs/default
+
+- main-!~{000}~.cjs => main-vdmL7D4P.cjs
+
+# tests/fixtures/function/export_mode/cjs/named
+
+- main-!~{000}~.cjs => main-RgMnAxkB.cjs
+
+# tests/fixtures/function/export_mode/iife/auto/none
+
+- main-!~{000}~.mjs => main-jae-4tR0.mjs
+
+# tests/fixtures/function/export_mode/iife/default
+
+- main-!~{000}~.mjs => main-hgytnGLC.mjs
+
+# tests/fixtures/function/export_mode/iife/named
+
+- main-!~{000}~.mjs => main-miDzTTts.mjs
 
 # tests/fixtures/function/external/commonjs_reexport_external
 
@@ -1585,26 +1585,138 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-QsUUVrUj.mjs
 
-# tests/fixtures/function/loaders/customize
+# tests/fixtures/function/format/iife/basic
 
-- main-!~{000}~.mjs => main-Yno7eu42.mjs
+- main-!~{000}~.mjs => main-GwWbAmhW.mjs
 
-# tests/fixtures/function/loaders/json/array
+# tests/fixtures/function/format/iife/external_modules
 
-- main-!~{000}~.mjs => main-o5kDyV6h.mjs
+- main-!~{000}~.mjs => main-cuI6FGIL.mjs
 
-# tests/fixtures/function/loaders/json/object
+# tests/fixtures/function/format/iife/external_modules_with_globals
 
-- main-!~{000}~.mjs => main-gg0VttYW.mjs
+- main-!~{000}~.mjs => main-YsBV8YwF.mjs
 
-# tests/fixtures/function/loaders/json/object_with_invalid_key
+# tests/fixtures/function/format/iife/iife-with-name
 
-- main-!~{000}~.mjs => main-5HiW7lhv.mjs
+- main-!~{000}~.mjs => main-MXjzayTW.mjs
+
+# tests/fixtures/function/intro/cjs
+
+- main-!~{000}~.cjs => main-qFgh1E_v.cjs
+
+# tests/fixtures/function/intro/esm
+
+- main-!~{000}~.mjs => main-7xnGS4Bc.mjs
+
+# tests/fixtures/function/intro/iife
+
+- main-!~{000}~.mjs => main-fGgbFVxT.mjs
 
 # tests/fixtures/function/minify/basic
 
 - main-!~{000}~.mjs => main-GSae7Hz6.mjs
 - main-GSae7Hz6.mjs.map
+
+# tests/fixtures/function/module_types/base64/binary
+
+- main-!~{000}~.mjs => main-5R2nzB52.mjs
+
+# tests/fixtures/function/module_types/base64/empty
+
+- main-!~{000}~.mjs => main-Uhcu4FLE.mjs
+
+# tests/fixtures/function/module_types/base64/text
+
+- main-!~{000}~.mjs => main-JhtENCsZ.mjs
+
+# tests/fixtures/function/module_types/binary/binary
+
+- main-!~{000}~.mjs => main-lFkAWa7s.mjs
+
+# tests/fixtures/function/module_types/binary/empty
+
+- main-!~{000}~.mjs => main-MNw0OkcG.mjs
+
+# tests/fixtures/function/module_types/binary/node
+
+- main-!~{000}~.mjs => main-aCthQ2At.mjs
+
+# tests/fixtures/function/module_types/binary/text
+
+- main-!~{000}~.mjs => main-YNsEPKxL.mjs
+
+# tests/fixtures/function/module_types/dataurl/binary
+
+- main-!~{000}~.mjs => main-bdrX174S.mjs
+
+# tests/fixtures/function/module_types/dataurl/empty
+
+- main-!~{000}~.mjs => main-FtuAjfKq.mjs
+
+# tests/fixtures/function/module_types/dataurl/text
+
+- main-!~{000}~.mjs => main-MbTRZwnq.mjs
+
+# tests/fixtures/function/module_types/empty
+
+- main-!~{000}~.mjs => main-b_m0mFIu.mjs
+
+# tests/fixtures/function/module_types/json/array
+
+- main-!~{000}~.mjs => main-o5kDyV6h.mjs
+
+# tests/fixtures/function/module_types/json/correct_semantic_of_import_and_require
+
+- main-!~{000}~.mjs => main-yHCDwOsZ.mjs
+
+# tests/fixtures/function/module_types/json/customize
+
+- main-!~{000}~.mjs => main-Yno7eu42.mjs
+
+# tests/fixtures/function/module_types/json/object
+
+- main-!~{000}~.mjs => main-gg0VttYW.mjs
+
+# tests/fixtures/function/module_types/json/object_with_invalid_key
+
+- main-!~{000}~.mjs => main-5HiW7lhv.mjs
+
+# tests/fixtures/function/module_types/jsx
+
+- main_jsx-!~{000}~.mjs => main_jsx-dCgJAQBP.mjs
+
+# tests/fixtures/function/module_types/ts/basic
+
+- main_ts-!~{000}~.mjs => main_ts-a3IP9Dk0.mjs
+
+# tests/fixtures/function/module_types/ts/enum_reference_id_not_exist_after_transform
+
+- main_ts-!~{000}~.mjs => main_ts-wiHg4AwE.mjs
+
+# tests/fixtures/function/module_types/tsx
+
+- main_tsx-!~{000}~.mjs => main_tsx-nm2SobPf.mjs
+
+# tests/fixtures/function/module_types/txt/empty
+
+- main-!~{000}~.mjs => main-VREmsGPl.mjs
+
+# tests/fixtures/function/module_types/txt/escape_quote
+
+- main-!~{000}~.mjs => main-Q2P-82U8.mjs
+
+# tests/fixtures/function/outro/cjs
+
+- main-!~{000}~.cjs => main-rUVReNhA.cjs
+
+# tests/fixtures/function/outro/esm
+
+- main-!~{000}~.mjs => main-M2gHFdT3.mjs
+
+# tests/fixtures/function/outro/iife
+
+- main-!~{000}~.mjs => main-Cu-rkOda.mjs
 
 # tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
@@ -1662,6 +1774,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-nqMd7tJC.mjs
 
+# tests/fixtures/issues/376
+
+- main-!~{000}~.mjs => main-EXizxPDM.mjs
+
 # tests/fixtures/misc/ambiguous_star_export
 
 - main-!~{000}~.mjs => main-EYnPJQvV.mjs
@@ -1699,38 +1815,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-TnUhQsWi.mjs
 
-# tests/fixtures/misc/intro/cjs
-
-- main-!~{000}~.cjs => main-qFgh1E_v.cjs
-
-# tests/fixtures/misc/intro/esm
-
-- main-!~{000}~.mjs => main-7xnGS4Bc.mjs
-
-# tests/fixtures/misc/intro/iife
-
-- main-!~{000}~.mjs => main-fGgbFVxT.mjs
-
-# tests/fixtures/misc/issue_376
-
-- main-!~{000}~.mjs => main-EXizxPDM.mjs
-
 # tests/fixtures/misc/object_shorthand_property
 
 - main-!~{000}~.mjs => main-Ak8YfHWG.mjs
 - main-Ak8YfHWG.mjs.map
-
-# tests/fixtures/misc/outro/cjs
-
-- main-!~{000}~.cjs => main-rUVReNhA.cjs
-
-# tests/fixtures/misc/outro/esm
-
-- main-!~{000}~.mjs => main-M2gHFdT3.mjs
-
-# tests/fixtures/misc/outro/iife
-
-- main-!~{000}~.mjs => main-Cu-rkOda.mjs
 
 # tests/fixtures/misc/reexport_star
 
@@ -1758,78 +1846,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-h0jWXwVM.mjs
 - main-h0jWXwVM.mjs.map
-
-# tests/fixtures/module_types/base64/binary
-
-- main-!~{000}~.mjs => main-5R2nzB52.mjs
-
-# tests/fixtures/module_types/base64/empty
-
-- main-!~{000}~.mjs => main-Uhcu4FLE.mjs
-
-# tests/fixtures/module_types/base64/text
-
-- main-!~{000}~.mjs => main-JhtENCsZ.mjs
-
-# tests/fixtures/module_types/binary/binary
-
-- main-!~{000}~.mjs => main-lFkAWa7s.mjs
-
-# tests/fixtures/module_types/binary/empty
-
-- main-!~{000}~.mjs => main-MNw0OkcG.mjs
-
-# tests/fixtures/module_types/binary/node
-
-- main-!~{000}~.mjs => main-aCthQ2At.mjs
-
-# tests/fixtures/module_types/binary/text
-
-- main-!~{000}~.mjs => main-YNsEPKxL.mjs
-
-# tests/fixtures/module_types/dataurl/binary
-
-- main-!~{000}~.mjs => main-2EGnpHKS.mjs
-
-# tests/fixtures/module_types/dataurl/empty
-
-- main-!~{000}~.mjs => main-FtuAjfKq.mjs
-
-# tests/fixtures/module_types/dataurl/text
-
-- main-!~{000}~.mjs => main-rgdPJkwQ.mjs
-
-# tests/fixtures/module_types/empty
-
-- main-!~{000}~.mjs => main-b_m0mFIu.mjs
-
-# tests/fixtures/module_types/json/correct_semantic_of_import_and_require
-
-- main-!~{000}~.mjs => main-yHCDwOsZ.mjs
-
-# tests/fixtures/module_types/jsx
-
-- main_jsx-!~{000}~.mjs => main_jsx-dCgJAQBP.mjs
-
-# tests/fixtures/module_types/ts/basic
-
-- main_ts-!~{000}~.mjs => main_ts-a3IP9Dk0.mjs
-
-# tests/fixtures/module_types/ts/enum_reference_id_not_exist_after_transform
-
-- main_ts-!~{000}~.mjs => main_ts-wiHg4AwE.mjs
-
-# tests/fixtures/module_types/tsx
-
-- main_tsx-!~{000}~.mjs => main_tsx-nm2SobPf.mjs
-
-# tests/fixtures/module_types/txt/empty
-
-- main-!~{000}~.mjs => main-VREmsGPl.mjs
-
-# tests/fixtures/module_types/txt/escape_quote
-
-- main-!~{000}~.mjs => main-Q2P-82U8.mjs
 
 # tests/fixtures/rollup/assignment-patterns
 
@@ -1867,9 +1883,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-WlVJrkq9.mjs
 
-# tests/fixtures/tree_shaking/export-star
+# tests/fixtures/tree_shaking/export_star
 
-- main-!~{000}~.mjs => main-Ll-xem_E.mjs
+- main-!~{000}~.mjs => main-D_8Z2hmK.mjs
 
 # tests/fixtures/tree_shaking/external-export-star1
 

@@ -8,7 +8,7 @@ pub fn encode_as_shortest_dataurl(mime: &Mime, buf: &[u8]) -> String {
     let base64_url = format!("base64,{base64}");
 
     let body = match encode_as_percent_escaped(buf) {
-        Some(percent_url) => format!("charset=utf-8,{percent_url}"),
+        Some(percent_url) if percent_url.len() < base64_url.len() => format!("charset=utf-8,{percent_url}"),
         _ => base64_url,
     };
 

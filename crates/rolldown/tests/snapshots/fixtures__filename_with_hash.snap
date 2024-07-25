@@ -796,6 +796,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-DEF4KQbK.mjs
 
+# tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding
+
+- entry_js-!~{000}~.mjs => entry_js-7teuLPXq.mjs
+
+# tests/esbuild/loader/loader_data_url_common_js_and_es6
+
+- entry_js-!~{000}~.mjs => entry_js-JDw4UXoj.mjs
+
+# tests/esbuild/loader/loader_data_url_escape_percents
+
+- entry_js-!~{000}~.mjs => entry_js-fXYh5EO3.mjs
+
 # tests/esbuild/loader/loader_json_missing_es6
 
 - entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs
@@ -1801,7 +1813,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/module_types/dataurl/text
 
-- main-!~{000}~.mjs => main-yMC_IgT3.mjs
+- main-!~{000}~.mjs => main-MbTRZwnq.mjs
 
 # tests/fixtures/module_types/empty
 

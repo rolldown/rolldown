@@ -11,7 +11,7 @@ input_file: crates/rolldown/tests/fixtures/module_types/dataurl/text
 import { default as assert } from "node:assert";
 
 //#region text.data
-var text_default = "data:text/plain;charset=utf-8,\"'`+=/@%23$$%^&*(%0A\\u4F60\\u597D\\uFF0C\\u4E16\\u754C%0A\\u041F\\u0440\\u0438\\u0432\\u0435\\u0442 \\u043C\\u0438\\u0440%0A\\u3053\\u3093\\u306B\\u3061\\u306F\\u4E16\\u754C%0A<script>";
+var text_default = "data:text/plain;charset=utf-8,\"'`+=/@%23$$%^&*(%0A你好，世界%0AПривет мир%0Aこんにちは世界%0A<script>";
 
 //#endregion
 //#region main.js

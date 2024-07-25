@@ -163,7 +163,7 @@ impl<'ast, 'a> DynamicImportVarsVisit<'ast, 'a> {
     import_arg: Option<&Expression<'ast>>,
   ) -> Vec<'ast, SwitchCase<'ast>> {
     let mut items = self.ast_builder.vec_with_capacity(files.len() + 1);
-    for file in files {
+    files.into_iter().for_each(|file| {
       items.push(self.ast_builder.switch_case(
         SPAN,
         Some(self.ast_builder.expression_string_literal(SPAN, file.clone())),
@@ -179,7 +179,7 @@ impl<'ast, 'a> DynamicImportVarsVisit<'ast, 'a> {
           )),
         )),
       ));
-    }
+    });
     items.push(self.default_case());
     items
   }

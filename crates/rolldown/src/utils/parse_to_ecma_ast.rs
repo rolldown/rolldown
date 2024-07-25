@@ -55,16 +55,20 @@ pub fn parse_to_ecma_ast(
     }
     ModuleType::Dataurl => {
       let data = source.try_into_bytes()?;
-      let mime = guess_mime(path, &data)?;
-      let is_plain_text = mime.type_() == mime::TEXT;
+      let guessed_mime = guess_mime(path, &data)?;
+      let is_plain_text = guessed_mime.type_() == mime::TEXT;
       let source = if is_plain_text {
         let text = String::from_utf8(data)?;
-        let text = urlencoding::encode(&text);
+        if guessed_mime.type_() == mime::TEXT {
+          format!("data:{guessed_mime};charset=utf-8,{text}")
+        } else {
+          let text = urlencoding::encode(&text);
+          format!("data:{guessed_mime};charset=utf-8,{text}")
+        }
         // TODO: should we support non-utf8 text?
-        format!("data:{mime};charset=utf-8,{text}")
       } else {
         let encoded = rolldown_utils::base64::to_url_safe_base64(&data);
-        format!("data:{mime};base64,{encoded}")
+        format!("data:{guessed_mime};base64,{encoded}")
       };
       (text_to_esm(&source)?, OxcParseType::Js)
     }

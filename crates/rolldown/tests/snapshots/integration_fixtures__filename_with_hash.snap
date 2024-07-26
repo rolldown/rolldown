@@ -1908,10 +1908,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-nyQrEnyN.mjs
 
-# tests/fixtures/tree_shaking/unused_import_named copy
-
-- main-!~{000}~.mjs => main-nyQrEnyN.mjs
-
 # tests/fixtures/warnings/eval
 
 - main-!~{000}~.mjs => main-SHxh3snY.mjs

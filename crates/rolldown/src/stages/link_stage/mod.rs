@@ -296,7 +296,9 @@ impl<'a> LinkStage<'a> {
         // - Mutating and parallel reading is in different memory locations
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
 
-        stmt_infos.infos.iter_mut_enumerated().for_each(|(idx, stmt_info)| {
+        // store the symbol reference to the declared statement index
+        let mut declared_symbol_for_stmt_pairs = vec![];
+        stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_idx, stmt_info)| {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
             match &self.module_table.modules[rec.resolved_module] {
@@ -313,7 +315,8 @@ impl<'a> LinkStage<'a> {
                     if is_reexport_all {
                       symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                         format!("import_{}", legitimize_identifier_name(&importee.name)).into();
-                      stmt_info.declared_symbols.push(rec.namespace_ref);
+                      // TODO:
+                      declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
                       stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                       stmt_info
                         .referenced_symbols
@@ -359,12 +362,7 @@ impl<'a> LinkStage<'a> {
                           stmt_info
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__toESM").into());
-                          stmt_info.declared_symbols.push(rec.namespace_ref);
-                          stmt_infos
-                            .symbol_ref_to_declared_stmt_idx
-                            .entry(rec.namespace_ref)
-                            .or_default()
-                            .push(idx);
+                          declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
                           symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                             format!("import_{}", &importee.repr_name).into();
                         }
@@ -437,6 +435,9 @@ impl<'a> LinkStage<'a> {
             }
           });
         });
+        for (stmt_idx, symbol_ref) in declared_symbol_for_stmt_pairs {
+          stmt_infos.declare_symbol_for_stmt(stmt_idx, symbol_ref);
+        }
       },
     );
   }

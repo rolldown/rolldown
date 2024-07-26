@@ -4,6 +4,7 @@ use rolldown_common::Output;
 use rolldown_testing::case::{Case, Fixture};
 use sugar_path::SugarPath;
 use testing_macros::fixture;
+mod fixtures;
 
 #[allow(clippy::needless_pass_by_value)]
 #[fixture("./tests/fixtures/**/_config.json")]

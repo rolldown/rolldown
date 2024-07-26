@@ -15,7 +15,6 @@ workspace = true
 dunce                   = { workspace = true }
 insta                   = { workspace = true }
 jsonschema              = { workspace = true }
-once_cell               = { workspace = true }
 regex                   = { workspace = true }
 rolldown                = { workspace = true }
 rolldown_common         = { workspace = true }

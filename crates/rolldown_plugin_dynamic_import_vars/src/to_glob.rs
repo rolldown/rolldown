@@ -1,16 +1,16 @@
 // Ported from https://github.com/rollup/plugins/blob/944e7d3ec4375371a2e70a55ac07cab4c61dc8b6/packages/dynamic-import-vars/src/dynamic-import-to-glob.js
 
 use crate::should_ignore::should_ignore;
-use once_cell::sync::Lazy;
 use oxc::{
   ast::ast::{Argument, BinaryExpression, CallExpression, Expression, TemplateLiteral},
   syntax::operator::BinaryOperator,
 };
 use regex::Regex;
 use std::path::Path;
+use std::sync::LazyLock;
 
 // Disallow ./*.ext
-static OWN_DIRECTORY_STAR_REGEX: Lazy<Regex> = Lazy::new(|| {
+static OWN_DIRECTORY_STAR_REGEX: LazyLock<Regex> = LazyLock::new(|| {
   let pattern = r"^\./\*\.\w+$";
   Regex::new(pattern).expect("failed to compile regex")
 });

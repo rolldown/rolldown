@@ -29,7 +29,7 @@ pub struct CreateModuleContext<'a> {
 
 impl<'a> CreateModuleContext<'a> {
   pub(crate) async fn resolve_id(
-    input_options: &SharedOptions,
+    bundle_options: &SharedOptions,
     resolver: &SharedResolver,
     plugin_driver: &SharedPluginDriver,
     importer: &str,
@@ -37,7 +37,7 @@ impl<'a> CreateModuleContext<'a> {
     options: HookResolveIdExtraOptions,
   ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
     // Check external with unresolved path
-    if let Some(is_external) = input_options.external.as_ref() {
+    if let Some(is_external) = bundle_options.external.as_ref() {
       if is_external(specifier, Some(importer), false).await? {
         return Ok(Ok(ResolvedId {
           id: specifier.to_string().into(),
@@ -69,7 +69,7 @@ impl<'a> CreateModuleContext<'a> {
       Ok(mut resolved_id) => {
         if !resolved_id.is_external {
           // Check external with resolved path
-          if let Some(is_external) = input_options.external.as_ref() {
+          if let Some(is_external) = bundle_options.external.as_ref() {
             resolved_id.is_external = is_external(specifier, Some(importer), true).await?;
           }
         }
@@ -85,7 +85,7 @@ impl<'a> CreateModuleContext<'a> {
   ) -> anyhow::Result<IndexVec<ImportRecordIdx, ResolvedId>> {
     let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
       let specifier = item.module_request.clone();
-      let input_options = Arc::clone(self.options);
+      let bundle_options = Arc::clone(self.options);
       // FIXME(hyf0): should not use `Arc<Resolver>` here
       let resolver = Arc::clone(self.resolver);
       let plugin_driver = Arc::clone(self.plugin_driver);
@@ -93,7 +93,7 @@ impl<'a> CreateModuleContext<'a> {
       let kind = item.kind;
       async move {
         Self::resolve_id(
-          &input_options,
+          &bundle_options,
           &resolver,
           &plugin_driver,
           importer,

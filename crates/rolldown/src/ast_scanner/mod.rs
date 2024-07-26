@@ -19,7 +19,7 @@ use rolldown_common::{
   ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, UnhandleableResult};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
@@ -116,7 +116,7 @@ impl<'me> AstScanner<'me> {
     }
   }
 
-  pub fn scan(mut self, program: &Program<'_>) -> ScanResult {
+  pub fn scan(mut self, program: &Program<'_>) -> UnhandleableResult<ScanResult> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
@@ -142,7 +142,32 @@ impl<'me> AstScanner<'me> {
     }
 
     self.result.exports_kind = exports_kind;
-    self.result
+
+    if cfg!(debug_assertions) {
+      use rustc_hash::FxHashSet;
+      let mut scanned_top_level_symbols = self
+        .result
+        .stmt_infos
+        .iter()
+        .flat_map(|stmt_info| stmt_info.declared_symbols.iter())
+        .collect::<FxHashSet<_>>();
+      for (name, symbol_id) in self.scopes.get_bindings(self.scopes.root_scope_id()) {
+        let symbol_ref: SymbolRef = (self.idx, *symbol_id).into();
+        let scope_id = self.symbols.scope_id_for(*symbol_id);
+        if !scanned_top_level_symbols.remove(&symbol_ref) {
+          return Err(anyhow::format_err!(
+            "Symbol ({name:?}, {symbol_id:?}, {scope_id:?}) is declared in the top-level scope but doesn't get scanned by the scanner",
+          ));
+        }
+      }
+      // if !scanned_top_level_symbols.is_empty() {
+      //   return Err(anyhow::format_err!(
+      //     "Some top-level symbols are scanned by the scanner but not declared in the top-level scope: {scanned_top_level_symbols:?}",
+      //   ));
+      // }
+    }
+
+    Ok(self.result)
   }
 
   fn set_esm_export_keyword(&mut self, span: Span) {

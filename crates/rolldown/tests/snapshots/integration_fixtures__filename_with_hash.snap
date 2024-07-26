@@ -1686,6 +1686,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-5HiW7lhv.mjs
 
+# tests/fixtures/function/module_types/json/object_with_reserved_key
+
+- main-!~{000}~.mjs => main-g9LzgJGd.mjs
+
 # tests/fixtures/function/module_types/jsx
 
 - main_jsx-!~{000}~.mjs => main_jsx-dCgJAQBP.mjs

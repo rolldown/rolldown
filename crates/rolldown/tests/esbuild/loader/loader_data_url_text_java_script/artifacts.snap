@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region <data:text/javascript,console.log('%31%32%33')>
+console.log("123");
+
+//#endregion
+//#region <data:text/javascript;base64,Y29uc29sZS5sb2coMjM0KQ==>
+console.log(234);
+
+//#endregion
+//#region <data:text/javascript;charset=UTF-8,console.log(%31%32%33)>
+console.log(123);
+
+//#endregion
+//#region <data:text/javascript;charset=UTF-8;base64,Y29uc29sZS5sb2coMjM0KQ==>
+console.log(234);
+
+//#endregion
+```

@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/loader_data_url_unknown_mime
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region <data:some/thing;what,someData%31%32%33>
+var thing_what_someData_31_32_33__default = "data:some/thing;what,someData%31%32%33";
+
+//#endregion
+//#region <data:other/thing;stuff;base64,c29tZURhdGEyMzQ=>
+var thing_stuff_base64_c29tZURhdGEyMzQ___default = "data:other/thing;stuff;base64,c29tZURhdGEyMzQ=";
+
+//#endregion
+//#region entry.js
+console.log(thing_what_someData_31_32_33__default, thing_stuff_base64_c29tZURhdGEyMzQ___default);
+
+//#endregion
+```

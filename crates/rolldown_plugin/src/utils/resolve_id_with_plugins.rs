@@ -61,12 +61,23 @@ pub async fn resolve_id_with_plugins(
   }
 
   // Auto external http url or data url
-  if is_http_url(request) || is_data_url(request) {
+  if is_http_url(request) {
     return Ok(Ok(ResolvedId {
       id: request.to_string().into(),
       module_def_format: ModuleDefFormat::Unknown,
       ignored: false,
       is_external: true,
+      package_json: None,
+      side_effects: None,
+    }));
+  }
+
+  if is_data_url(request) {
+    return Ok(Ok(ResolvedId {
+      id: format!("<{request}>").into(),
+      module_def_format: ModuleDefFormat::Unknown,
+      ignored: false,
+      is_external: false,
       package_json: None,
       side_effects: None,
     }));

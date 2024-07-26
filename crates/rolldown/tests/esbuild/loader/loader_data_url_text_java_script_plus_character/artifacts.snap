@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script_plus_character
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region <data:text/javascript,console.log(1+2)>
+console.log(1 + 2);
+
+//#endregion
+```

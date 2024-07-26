@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/fixtures.rs
+source: crates/rolldown/tests/integration_fixtures.rs
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
 # tests/esbuild/bundler_ts/ts_abstract_class_field_use_define
@@ -347,7 +347,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/auto_external
 
-- entry_js-!~{000}~.mjs => entry_js-tYfXLfpU.mjs
+- entry_js-!~{000}~.mjs => entry_js-_oEqHbtk.mjs
 
 # tests/esbuild/default/avoid_tdz
 
@@ -807,6 +807,22 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/loader/loader_data_url_escape_percents
 
 - entry_js-!~{000}~.mjs => entry_js-UfCMc73Z.mjs
+
+# tests/esbuild/loader/loader_data_url_text_java_script
+
+- entry_js-!~{000}~.mjs => entry_js-B8hnNNVd.mjs
+
+# tests/esbuild/loader/loader_data_url_text_java_script_cannot_import
+
+- entry_js-!~{000}~.mjs => entry_js-ZD5W1ZFp.mjs
+
+# tests/esbuild/loader/loader_data_url_text_java_script_plus_character
+
+- entry_js-!~{000}~.mjs => entry_js-KkOuFAbd.mjs
+
+# tests/esbuild/loader/loader_data_url_unknown_mime
+
+- entry_js-!~{000}~.mjs => entry_js-06b4TfR8.mjs
 
 # tests/esbuild/loader/loader_json_missing_es6
 

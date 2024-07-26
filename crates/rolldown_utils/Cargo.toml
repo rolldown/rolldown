@@ -19,8 +19,8 @@ futures     = { workspace = true }
 indexmap    = { workspace = true }
 infer       = { workspace = true }
 mime        = { workspace = true }
-mime_guess  = { workspace = true }
 oxc         = { workspace = true }
+phf         = { workspace = true }
 regex       = { workspace = true }
 rustc-hash  = { workspace = true }
 sugar_path  = { workspace = true }

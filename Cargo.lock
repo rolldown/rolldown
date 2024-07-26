@@ -1398,21 +1398,21 @@ checksum = "caff54706df99d2a78a5a4e3455ff45448d81ef1bb63c22cd14052ca0e993a3f"
 [[package]]
 name = "oxc"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
- "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_codegen 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_diagnostics 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_index 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_mangler 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_codegen 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_diagnostics 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_index 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_mangler 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
  "oxc_minifier",
- "oxc_parser 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_semantic 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_sourcemap 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_transformer 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_parser 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_semantic 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_sourcemap 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_transformer 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
 ]
 
 [[package]]
@@ -1442,7 +1442,7 @@ dependencies = [
 [[package]]
 name = "oxc_allocator"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "allocator-api2",
  "bumpalo",
@@ -1465,14 +1465,14 @@ dependencies = [
 [[package]]
 name = "oxc_ast"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "bitflags 2.6.0",
  "num-bigint",
- "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_ast_macros 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_ast_macros 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
 ]
 
 [[package]]
@@ -1484,7 +1484,7 @@ checksum = "4751921819368c33939d442dac82de0b9a3e6dc77f47c3075d34dcd59f5eb661"
 [[package]]
 name = "oxc_ast_macros"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 
 [[package]]
 name = "oxc_cfg"
@@ -1502,11 +1502,11 @@ dependencies = [
 [[package]]
 name = "oxc_cfg"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "bitflags 2.6.0",
  "itertools 0.13.0",
- "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
  "petgraph",
  "rustc-hash",
 ]
@@ -1532,17 +1532,17 @@ dependencies = [
 [[package]]
 name = "oxc_codegen"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "bitflags 2.6.0",
  "daachorse",
  "once_cell",
- "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_mangler 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_sourcemap 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_mangler 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_sourcemap 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
  "rustc-hash",
 ]
 
@@ -1561,7 +1561,7 @@ dependencies = [
 [[package]]
 name = "oxc_diagnostics"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "miette",
  "owo-colors",
@@ -1578,7 +1578,7 @@ checksum = "da26f52ef092ca200d009c838eab9c3cb0aa8784e0accc7c909ed232bab52356"
 [[package]]
 name = "oxc_index"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 
 [[package]]
 name = "oxc_isolated_declarations"
@@ -1610,31 +1610,31 @@ dependencies = [
 [[package]]
 name = "oxc_mangler"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "itertools 0.13.0",
- "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_index 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_semantic 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_index 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_semantic 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
 ]
 
 [[package]]
 name = "oxc_minifier"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "num-bigint",
  "num-traits",
- "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_codegen 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_diagnostics 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_mangler 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_parser 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_semantic 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_codegen 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_diagnostics 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_mangler 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_parser 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_semantic 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
 ]
 
 [[package]]
@@ -1660,18 +1660,18 @@ dependencies = [
 [[package]]
 name = "oxc_parser"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "assert-unchecked",
  "bitflags 2.6.0",
  "memchr",
  "num-bigint",
  "num-traits",
- "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_diagnostics 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_diagnostics 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
  "rustc-hash",
  "seq-macro",
 ]
@@ -1717,18 +1717,18 @@ dependencies = [
 [[package]]
 name = "oxc_semantic"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "assert-unchecked",
  "indexmap",
  "itertools 0.13.0",
- "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_cfg 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_diagnostics 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_index 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_cfg 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_diagnostics 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_index 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
  "phf 0.11.2",
  "rustc-hash",
 ]
@@ -1749,7 +1749,7 @@ dependencies = [
 [[package]]
 name = "oxc_sourcemap"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "base64-simd 0.8.0",
  "cfg-if",
@@ -1773,11 +1773,11 @@ dependencies = [
 [[package]]
 name = "oxc_span"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "compact_str",
  "miette",
- "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
 ]
 
 [[package]]
@@ -1799,13 +1799,13 @@ dependencies = [
 [[package]]
 name = "oxc_syntax"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "bitflags 2.6.0",
  "dashmap 6.0.1",
  "nonmax",
- "oxc_index 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_index 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
  "phf 0.11.2",
  "rustc-hash",
  "ryu-js",
@@ -1855,18 +1855,18 @@ dependencies = [
 [[package]]
 name = "oxc_transformer"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "dashmap 6.0.1",
  "indexmap",
  "oxc-browserslist",
- "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_diagnostics 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_semantic 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_traverse 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_diagnostics 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_semantic 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_traverse 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
  "ropey",
  "rustc-hash",
  "serde",
@@ -1891,15 +1891,15 @@ dependencies = [
 [[package]]
 name = "oxc_traverse"
 version = "0.22.0"
-source = "git+https://github.com/oxc-project/oxc?branch=main#0c134422bacb1986b080ca5ea4103e5cedc12012"
+source = "git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding#f7fae077805de4813a4cc80034ffa980398ff174"
 dependencies = [
  "compact_str",
  "memoffset",
- "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_semantic 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
- "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=main)",
+ "oxc_allocator 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_ast 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_semantic 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_span 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
+ "oxc_syntax 0.22.0 (git+https://github.com/oxc-project/oxc?branch=07-26-perf_sourcemap_pre_allocate_string_buf_while_encoding)",
 ]
 
 [[package]]

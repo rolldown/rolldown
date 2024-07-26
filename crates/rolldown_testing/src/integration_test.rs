@@ -1,7 +1,10 @@
 use std::{borrow::Cow, path::Path, process::Command};
 
 use anyhow::Context;
-use rolldown::{BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat, SourceMapType};
+use rolldown::{
+  plugin::SharedPlugin, BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat,
+  SourceMapType,
+};
 use rolldown_common::Output;
 use rolldown_error::DiagnosticOptions;
 use rolldown_sourcemap::SourcemapVisualizer;
@@ -41,17 +44,22 @@ impl IntegrationTest {
     }
   }
 
-  pub async fn run(&self, mut options: BundlerOptions) {
+  pub async fn run(&self, options: BundlerOptions) {
+    self.run_with_plugins(options, vec![]).await;
+  }
+
+  pub async fn run_with_plugins(&self, mut options: BundlerOptions, plugins: Vec<SharedPlugin>) {
     self.apply_test_defaults(&mut options);
 
-    let mut bundler = Bundler::new(options);
+    let mut bundler = Bundler::with_plugins(options, plugins);
 
     let cwd = bundler.options().cwd.clone();
 
     let bundle_output = if self.test_meta.write_to_disk {
-      if bundler.options().dir.as_path().is_dir() {
-        std::fs::remove_dir_all(&bundler.options().dir)
-          .context(bundler.options().dir.clone())
+      let abs_output_dir = cwd.join(&bundler.options().dir);
+      if abs_output_dir.is_dir() {
+        std::fs::remove_dir_all(&abs_output_dir)
+          .context(format!("{abs_output_dir:?}"))
           .expect("Failed to clean the output directory");
       }
       bundler.write().await.unwrap()

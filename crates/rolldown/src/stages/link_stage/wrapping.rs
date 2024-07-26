@@ -91,7 +91,7 @@ impl LinkStage<'_> {
       let module_id = module.idx;
       let linking_info = &self.metas[module_id];
 
-      let need_to_wrap = self.input_options.experimental.is_strict_execution_order_enabled()
+      let need_to_wrap = self.options.experimental.is_strict_execution_order_enabled()
         || matches!(linking_info.wrap_kind, WrapKind::Cjs | WrapKind::Esm);
 
       if need_to_wrap {

@@ -19,7 +19,7 @@ use crate::{
 };
 
 pub struct ScanStage {
-  input_options: SharedOptions,
+  options: SharedOptions,
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
@@ -38,22 +38,22 @@ pub struct ScanStageOutput {
 
 impl ScanStage {
   pub fn new(
-    input_options: SharedOptions,
+    options: SharedOptions,
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
   ) -> Self {
-    Self { input_options, plugin_driver, fs, resolver }
+    Self { options, plugin_driver, fs, resolver }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn scan(&mut self) -> anyhow::Result<DiagnosableResult<ScanStageOutput>> {
-    if self.input_options.input.is_empty() {
+    if self.options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
 
     let module_loader = ModuleLoader::new(
-      Arc::clone(&self.input_options),
+      Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
@@ -101,7 +101,7 @@ impl ScanStage {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 
-    let resolved_ids = join_all(self.input_options.input.iter().map(|input_item| async move {
+    let resolved_ids = join_all(self.options.input.iter().map(|input_item| async move {
       struct Args<'a> {
         specifier: &'a str,
       }
@@ -120,7 +120,7 @@ impl ScanStage {
     }))
     .await;
 
-    let mut ret = Vec::with_capacity(self.input_options.input.len());
+    let mut ret = Vec::with_capacity(self.options.input.len());
 
     let mut errors = vec![];
 

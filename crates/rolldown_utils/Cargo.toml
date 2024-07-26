@@ -19,7 +19,6 @@ futures     = { workspace = true }
 indexmap    = { workspace = true }
 infer       = { workspace = true }
 mime        = { workspace = true }
-once_cell   = { workspace = true }
 oxc         = { workspace = true }
 phf         = { workspace = true }
 regex       = { workspace = true }

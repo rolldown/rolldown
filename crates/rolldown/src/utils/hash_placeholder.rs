@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 
-use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashMap;
+use std::sync::LazyLock;
 
 const HASH_PLACEHOLDER_LEFT: &str = "!~{";
 const HASH_PLACEHOLDER_RIGHT: &str = "}~";
@@ -13,7 +13,7 @@ const HASH_PLACEHOLDER_OVERHEAD: usize = HASH_PLACEHOLDER_LEFT.len() + HASH_PLAC
 const MAX_HASH_SIZE: usize = 22;
 // const DEFAULT_HASH_SIZE: usize = 8;
 
-static REPLACER_REGEX: Lazy<Regex> = Lazy::new(|| {
+static REPLACER_REGEX: LazyLock<Regex> = LazyLock::new(|| {
   let pattern = "!~\\{[0-9a-zA-Z_$]{1,17}\\}~";
   Regex::new(pattern).expect("failed to compile regex")
 });

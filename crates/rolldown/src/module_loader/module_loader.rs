@@ -48,7 +48,7 @@ impl IntermediateNormalModules {
 }
 
 pub struct ModuleLoader {
-  input_options: SharedOptions,
+  options: SharedOptions,
   shared_context: Arc<TaskContext>,
   rx: tokio::sync::mpsc::Receiver<Msg>,
   visited: FxHashMap<Arc<str>, ModuleIdx>,
@@ -71,7 +71,7 @@ pub struct ModuleLoaderOutput {
 
 impl ModuleLoader {
   pub fn new(
-    input_options: SharedOptions,
+    options: SharedOptions,
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
@@ -82,13 +82,8 @@ impl ModuleLoader {
 
     let tx_to_runtime_module = tx.clone();
 
-    let common_data = Arc::new(TaskContext {
-      input_options: Arc::clone(&input_options),
-      tx,
-      resolver,
-      fs,
-      plugin_driver,
-    });
+    let common_data =
+      Arc::new(TaskContext { options: Arc::clone(&options), tx, resolver, fs, plugin_driver });
 
     let mut intermediate_normal_modules = IntermediateNormalModules::new();
     let mut symbols = Symbols::default();
@@ -111,7 +106,7 @@ impl ModuleLoader {
     Self {
       shared_context: common_data,
       rx,
-      input_options,
+      options,
       visited: FxHashMap::from_iter([(RUNTIME_MODULE_ID.into(), runtime_id)]),
       runtime_id,
       // runtime module is always there
@@ -132,7 +127,7 @@ impl ModuleLoader {
         if resolved_id.is_external {
           let idx = self.intermediate_normal_modules.alloc_ecma_module_idx(&mut self.symbols);
           not_visited.insert(idx);
-          let external_module_side_effects = match self.input_options.treeshake {
+          let external_module_side_effects = match self.options.treeshake {
             rolldown_common::TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
             rolldown_common::TreeshakeOptions::Boolean(true) => unreachable!(),
             rolldown_common::TreeshakeOptions::Option(ref opt) => match opt.module_side_effects {
@@ -178,7 +173,7 @@ impl ModuleLoader {
     mut self,
     user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
   ) -> anyhow::Result<DiagnosableResult<ModuleLoaderOutput>> {
-    if self.input_options.input.is_empty() {
+    if self.options.input.is_empty() {
       return Err(anyhow::format_err!("You must supply options.input to rolldown"));
     }
 
@@ -297,7 +292,7 @@ impl ModuleLoader {
       .collect();
 
     // IIFE format should inline dynamic imports, so here not put dynamic imports to entries
-    if !matches!(self.input_options.format, OutputFormat::Iife) {
+    if !matches!(self.options.format, OutputFormat::Iife) {
       let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
       dynamic_import_entry_ids.sort_unstable_by_key(|id| modules[*id].stable_id());
 

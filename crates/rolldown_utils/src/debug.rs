@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 
-use once_cell::sync::Lazy;
 use regex::Regex;
+use std::sync::LazyLock;
 
-static MODULE_MATCHER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?:\w+::)").unwrap());
+static MODULE_MATCHER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?:\w+::)").unwrap());
 
 pub fn pretty_type_name<T: ?Sized>() -> Cow<'static, str> {
   let type_name = std::any::type_name::<T>();

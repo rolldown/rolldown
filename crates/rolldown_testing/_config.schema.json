@@ -21,6 +21,11 @@
       "default": true,
       "type": "boolean"
     },
+    "hashInFilename": {
+      "description": "If `true`, the `[hash]` pattern will be inserted in the `xxxxFilenames`.",
+      "default": false,
+      "type": "boolean"
+    },
     "hiddenRuntimeModule": {
       "description": "Default is `true`. If `false`, the runtime module will not be hidden.",
       "default": true,
@@ -34,6 +39,11 @@
     "visualizeSourcemap": {
       "description": "If `true`, the sourcemap visualizer will be snapshot.",
       "default": false,
+      "type": "boolean"
+    },
+    "writeToDisk": {
+      "description": "If `true`, the bundle will be called with `write()` instead of `generate()`.",
+      "default": true,
       "type": "boolean"
     }
   },

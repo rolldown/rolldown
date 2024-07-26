@@ -1,6 +1,6 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
 input_file: crates/rolldown/tests/fixtures/errors/missing_export
 ---
 # Errors
@@ -88,4 +88,11 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
    │             ╰───── Missing export
 ───╯
 
+```# Assets
+
+## main.mjs
+
+```js
+
+export { d, g, importedC };
 ```

@@ -1,5 +1,6 @@
 pub mod bundler_options_presets;
-pub mod case;
+pub mod fixture;
+pub mod integration_test;
 pub mod test_config;
 pub mod utils;
 pub mod workspace;

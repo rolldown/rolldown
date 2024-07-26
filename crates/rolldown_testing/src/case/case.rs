@@ -1,8 +1,8 @@
 use std::{borrow::Cow, path::Path};
 
+use crate::utils::RUNTIME_MODULE_OUTPUT_RE;
+
 use super::fixture::Fixture;
-use once_cell::sync::Lazy;
-use regex::Regex;
 use rolldown::BundleOutput;
 use rolldown_common::Output;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
@@ -177,8 +177,3 @@ impl Case {
     });
   }
 }
-
-static RUNTIME_MODULE_OUTPUT_RE: Lazy<Regex> = Lazy::new(|| {
-  Regex::new(r"(//#region rolldown:runtime[\s\S]*?//#endregion)")
-    .expect("invalid runtime module output regex")
-});

@@ -5,16 +5,16 @@ use napi::{
   Env, JsUnknown,
 };
 use napi_derive::napi;
-use once_cell::sync::Lazy;
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::FxHashMap;
 use std::sync::atomic::{self, AtomicU16};
+use std::sync::LazyLock;
 
 type PluginsInSingleWorker = Vec<BindingPluginWithIndex>;
 type PluginsList = Vec<PluginsInSingleWorker>;
 pub(crate) type PluginValues = FxHashMap<usize, Vec<BindingPluginOptions>>;
 
-static PLUGINS_MAP: Lazy<DashMap<u16, PluginsList>> = Lazy::new(DashMap::default);
+static PLUGINS_MAP: LazyLock<DashMap<u16, PluginsList>> = LazyLock::new(DashMap::default);
 static NEXT_ID: AtomicU16 = AtomicU16::new(1);
 
 #[napi(custom_finalize)]

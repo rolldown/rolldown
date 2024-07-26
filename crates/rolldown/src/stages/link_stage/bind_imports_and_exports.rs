@@ -139,7 +139,7 @@ impl<'link> LinkStage<'link> {
       normal_modules: &self.module_table.modules,
       metas: &mut self.metas,
       symbols: &mut self.symbols,
-      input_options: self.input_options,
+      options: self.options,
       errors: Vec::default(),
       warnings: Vec::default(),
     };
@@ -240,7 +240,7 @@ struct BindImportsAndExportsContext<'a> {
   pub normal_modules: &'a IndexModules,
   pub metas: &'a mut LinkingMetadataVec,
   pub symbols: &'a mut Symbols,
-  pub input_options: &'a SharedOptions,
+  pub options: &'a SharedOptions,
   pub errors: Vec<BuildDiagnostic>,
   pub warnings: Vec<BuildDiagnostic>,
 }
@@ -527,8 +527,7 @@ impl<'a> BindImportsAndExportsContext<'a> {
     }
 
     if let Module::Ecma(importee) = &self.normal_modules[tracker.importee] {
-      if (self.input_options.shim_missing_exports
-        || matches!(importee.module_type, ModuleType::Empty))
+      if (self.options.shim_missing_exports || matches!(importee.module_type, ModuleType::Empty))
         && matches!(ret, MatchImportKind::NoMatch)
       {
         match &tracker.imported {

@@ -20,7 +20,6 @@ dunce                 = { workspace = true }
 futures               = { workspace = true }
 indexmap              = { workspace = true }
 itertools             = { workspace = true }
-once_cell             = { workspace = true }
 oxc                   = { workspace = true }
 regex                 = { workspace = true }
 rolldown_common       = { workspace = true }
@@ -42,6 +41,7 @@ tracing-chrome        = { workspace = true }
 xxhash-rust           = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
+async-trait      = { workspace = true }
 glob             = { workspace = true }
 insta            = { workspace = true }
 rolldown_testing = { workspace = true }

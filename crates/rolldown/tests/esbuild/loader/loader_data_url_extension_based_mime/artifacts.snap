@@ -14,7 +14,7 @@ var example_default = "data:text/css;charset=utf-8,css";
 
 //#endregion
 //#region example.eot
-var example_default$1 = "data:text/plain;charset=utf-8,eot";
+var example_default$1 = "data:application/vnd.ms-fontobject;charset=utf-8,eot";
 
 //#endregion
 //#region example.gif
@@ -62,7 +62,7 @@ var example_default$12 = "data:image/png;charset=utf-8,png";
 
 //#endregion
 //#region example.sfnt
-var example_default$13 = "data:text/plain;charset=utf-8,sfnt";
+var example_default$13 = "data:font/sfnt;charset=utf-8,sfnt";
 
 //#endregion
 //#region example.svg

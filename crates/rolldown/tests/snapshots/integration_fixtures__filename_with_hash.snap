@@ -814,7 +814,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/loader_data_url_extension_based_mime
 
-- entry_foo-!~{000}~.mjs => entry_foo-4j7qqO7y.mjs
+- entry_foo-!~{000}~.mjs => entry_foo-DZXP6m3E.mjs
 
 # tests/esbuild/loader/loader_data_url_text_java_script
 

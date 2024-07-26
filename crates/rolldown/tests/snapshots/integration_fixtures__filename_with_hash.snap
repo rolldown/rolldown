@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/fixtures.rs
+source: crates/rolldown/tests/integration_fixtures.rs
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
 # tests/esbuild/bundler_ts/ts_abstract_class_field_use_define
@@ -524,10 +524,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs
 
-# tests/esbuild/default/require_without_call_inside_try
-
-- entry_js-!~{000}~.mjs => entry_js-wpvkSN5P.mjs
-
 # tests/esbuild/default/reserve_props
 
 - entry_js-!~{000}~.mjs => entry_js-DoXwYv20.mjs
@@ -555,14 +551,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/default/use_strict_directive_bundle_issue1837
 
 - entry_js-!~{000}~.mjs => entry_js-7OYhheTB.mjs
-
-# tests/esbuild/default/var_relocating_bundle
-
-- function-nested_js-!~{004}~.mjs => function-nested_js-o_vowFTu.mjs
-- function_js-!~{003}~.mjs => function_js-qCnX__e4.mjs
-- let_js-!~{002}~.mjs => let_js-lSQgoT-J.mjs
-- nested_js-!~{001}~.mjs => nested_js-9dHTQmah.mjs
-- top-level_js-!~{000}~.mjs => top-level_js-aLnr7tad.mjs
 
 # tests/esbuild/import_star/export_other_as_namespace_common_js
 
@@ -951,10 +939,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/packagejson/test_package_json_browser_issue2002_c
 
 - entry-!~{000}~.mjs => entry-jNBYvyGA.mjs
-
-# tests/esbuild/packagejson/test_package_json_browser_map_avoid_missing
-
-- entry-!~{000}~.mjs => entry-z_E1oTUq.mjs
 
 # tests/esbuild/packagejson/test_package_json_browser_map_module_disabled
 

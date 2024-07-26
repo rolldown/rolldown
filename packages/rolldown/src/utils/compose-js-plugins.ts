@@ -1,5 +1,5 @@
-import { Plugin, RolldownPlugin } from '../plugin'
-import _ from 'lodash-es'
+import { ModuleSideEffects, Plugin, RolldownPlugin } from '../plugin'
+// import * as _ from 'lodash-es'
 import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'
@@ -83,6 +83,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         }
         case 'augmentChunkHash':
         case 'banner':
+        case 'footer':
         case 'generateBundle':
         case 'moduleParsed':
         case 'onLog':
@@ -133,9 +134,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
               for (const handler of batchedHandlers) {
                 const [handlerFn, _handlerOptions] = normalizeHook(handler)
                 const result = await handlerFn.call(this, id)
-                if (isNullish(result)) {
-                  continue
-                } else {
+                if (!isNullish(result)) {
                   return result
                 }
               }
@@ -146,15 +145,33 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         case 'transform': {
           if (batchedHooks.transform) {
             const batchedHandlers = batchedHooks.transform
-            composed.transform = async function (code, id) {
+            composed.transform = async function (initialCode, id) {
+              let code = initialCode
+              let moduleSideEffects: ModuleSideEffects | undefined = undefined
+              // TODO: we should deal with the returned sourcemap too.
+              function updateOutput(
+                newCode: string,
+                newModuleSideEffects?: ModuleSideEffects,
+              ) {
+                code = newCode
+                moduleSideEffects = newModuleSideEffects ?? undefined
+              }
               for (const handler of batchedHandlers) {
                 const [handlerFn, _handlerOptions] = normalizeHook(handler)
                 const result = await handlerFn.call(this, code, id)
-                if (isNullish(result)) {
-                  continue
-                } else {
-                  return result
+                if (!isNullish(result)) {
+                  if (typeof result === 'string') {
+                    updateOutput(result)
+                  } else {
+                    if (result.code) {
+                      updateOutput(result.code, result.moduleSideEffects)
+                    }
+                  }
                 }
+              }
+              return {
+                code,
+                moduleSideEffects,
               }
             }
           }
@@ -172,9 +189,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
                   importer,
                   options,
                 )
-                if (isNullish(result)) {
-                  continue
-                } else {
+                if (!isNullish(result)) {
                   return result
                 }
               }
@@ -203,9 +218,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
               for (const handler of batchedHandlers) {
                 const [handlerFn, _handlerOptions] = normalizeHook(handler)
                 const result = await handlerFn.call(this, code, chunk, options)
-                if (isNullish(result)) {
-                  continue
-                } else {
+                if (!isNullish(result)) {
                   return result
                 }
               }
@@ -216,6 +229,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         case 'name':
         case 'augmentChunkHash':
         case 'banner':
+        case 'footer':
         case 'generateBundle':
         case 'moduleParsed':
         case 'onLog':
@@ -248,7 +262,7 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
     return false
   }
 
-  if (Object.keys(plugin).some((key) => unsupportedHooks.has(key))) {
+  if (Object.keys(plugin).some((k) => unsupportedHooks.has(k))) {
     return false
   }
 
@@ -271,6 +285,14 @@ export function composeJsPlugins(plugins: RolldownPlugin[]): RolldownPlugin[] {
       newPlugins.push(plugin)
     }
   })
+  // Considering the case:
+  // p = [c, c, c, c]
+  // after the loop, toBeComposed = [c, c, c, c], plugins = []
+  // we should consume all the toBeComposed plugins at the end
+  if (toBeComposed.length > 0) {
+    newPlugins.push(createComposedPlugin(toBeComposed))
+    toBeComposed.length = 0
+  }
 
   return newPlugins
 }

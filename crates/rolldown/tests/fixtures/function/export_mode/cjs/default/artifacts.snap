@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/export_mode/cjs/default
+---
+# Assets
+
+## main.cjs
+
+```js
+"use strict";
+
+
+//#region mod.js
+var default_mod_ns = {};
+__export(default_mod_ns, {default: () => example});
+function example() {
+	return "default";
+}
+
+//#endregion
+module.exports = default_mod_ns;
+```

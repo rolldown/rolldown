@@ -12,6 +12,7 @@ export function normalizeOutputOptions(
     sourcemap,
     sourcemapIgnoreList,
     sourcemapPathTransform,
+    globals,
     entryFileNames,
     chunkFileNames,
     assetFileNames,
@@ -32,6 +33,10 @@ export function normalizeOutputOptions(
     sourcemapPathTransform,
     banner: getAddon(opts, 'banner'),
     footer: getAddon(opts, 'footer'),
+    intro: getAddon(opts, 'intro'),
+    outro: getAddon(opts, 'outro'),
+    // TODO support functions
+    globals: globals ?? {},
     entryFileNames: entryFileNames ?? '[name].js',
     chunkFileNames: chunkFileNames ?? '[name]-[hash].js',
     assetFileNames: assetFileNames ?? 'assets/[name]-[hash][extname]',
@@ -66,7 +71,7 @@ function getFormat(
   }
 }
 
-const getAddon = <T extends 'banner' | 'footer'>(
+const getAddon = <T extends 'banner' | 'footer' | 'intro' | 'outro'>(
   config: OutputOptions,
   name: T,
 ): NormalizedOutputOptions[T] => {

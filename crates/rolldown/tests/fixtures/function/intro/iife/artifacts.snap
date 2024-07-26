@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/misc/intro/iife
+---
+# Assets
+
+## main.mjs
+
+```js
+(function() {
+
+"use strict";
+// intro
+
+//#region main.js
+var main_default = "banner";
+
+//#endregion
+return main_default;
+})();
+```

@@ -1,10 +1,10 @@
 use daachorse::DoubleArrayAhoCorasick;
-use once_cell::sync::Lazy;
 use oxc::span::Span;
+use std::sync::LazyLock;
 
 use super::SideEffectDetector;
 
-static PURE_COMMENTS: Lazy<DoubleArrayAhoCorasick<usize>> = Lazy::new(|| {
+static PURE_COMMENTS: LazyLock<DoubleArrayAhoCorasick<usize>> = LazyLock::new(|| {
   let patterns = vec!["@__PURE__", "#__PURE__"];
 
   DoubleArrayAhoCorasick::new(patterns).unwrap()

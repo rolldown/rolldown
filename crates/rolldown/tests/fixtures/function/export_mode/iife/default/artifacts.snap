@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/export_mode/iife/default
+---
+# Assets
+
+## main.mjs
+
+```js
+(function() {
+
+"use strict";
+
+
+//#region mod.js
+var default_mod_ns = {};
+__export(default_mod_ns, {
+	add: () => add,
+	subtract: () => subtract
+});
+function add(a, b) {
+	return a + b;
+}
+function subtract(a, b) {
+	return a - b;
+}
+
+//#endregion
+return default_mod_ns;
+})();
+```

@@ -1,23 +1,14 @@
 ---
-source: crates/rolldown/tests/common/case.rs
+source: crates/rolldown_testing/src/case/case.rs
 expression: content
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_as_external_common_js
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: "foo" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
-
-```
 # Assets
 
 ## entry_js.cjs
 
 ```js
 "use strict";
-
 
 const out = __toESM(require("foo"));
 

@@ -46,6 +46,7 @@ pub struct BundlerOptions {
   pub dir: Option<String>,
   pub format: Option<OutputFormat>,
   pub exports: Option<OutputExports>,
+  pub globals: Option<HashMap<String, String>>,
   pub sourcemap: Option<SourceMapType>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
@@ -59,6 +60,18 @@ pub struct BundlerOptions {
     schemars(with = "Option<String>")
   )]
   pub footer: Option<AddonOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_addon"),
+    schemars(with = "Option<String>")
+  )]
+  pub intro: Option<AddonOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_addon"),
+    schemars(with = "Option<String>")
+  )]
+  pub outro: Option<AddonOutputOption>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, skip_deserializing),

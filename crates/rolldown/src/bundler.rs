@@ -29,12 +29,12 @@ pub struct Bundler {
 }
 
 impl Bundler {
-  pub fn new(input_options: BundlerOptions) -> Self {
-    BundlerBuilder::default().with_options(input_options).build()
+  pub fn new(options: BundlerOptions) -> Self {
+    BundlerBuilder::default().with_options(options).build()
   }
 
-  pub fn with_plugins(input_options: BundlerOptions, plugins: Vec<SharedPlugin>) -> Self {
-    BundlerBuilder::default().with_options(input_options).with_plugins(plugins).build()
+  pub fn with_plugins(options: BundlerOptions, plugins: Vec<SharedPlugin>) -> Self {
+    BundlerBuilder::default().with_options(options).with_plugins(plugins).build()
   }
 }
 

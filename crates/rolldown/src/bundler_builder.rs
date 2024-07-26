@@ -12,7 +12,7 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct BundlerBuilder {
-  input_options: BundlerOptions,
+  options: BundlerOptions,
   plugins: Vec<SharedPlugin>,
 }
 
@@ -20,7 +20,7 @@ impl BundlerBuilder {
   pub fn build(self) -> Bundler {
     let maybe_guard = rolldown_tracing::try_init_tracing();
 
-    let NormalizeOptionsReturn { options, resolve_options } = normalize_options(self.input_options);
+    let NormalizeOptionsReturn { options, resolve_options } = normalize_options(self.options);
 
     let resolver: SharedResolver =
       Resolver::new(resolve_options, options.platform, options.cwd.clone(), OsFileSystem).into();
@@ -40,8 +40,8 @@ impl BundlerBuilder {
   }
 
   #[must_use]
-  pub fn with_options(mut self, input_options: BundlerOptions) -> Self {
-    self.input_options = input_options;
+  pub fn with_options(mut self, options: BundlerOptions) -> Self {
+    self.options = options;
     self
   }
 

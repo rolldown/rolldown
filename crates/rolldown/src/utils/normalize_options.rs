@@ -44,6 +44,9 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   loaders.extend(user_defined_loaders);
 
+  let globals: FxHashMap<String, String> =
+    raw_options.globals.map(|globals| globals.into_iter().collect()).unwrap_or_default();
+
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     cwd: raw_options
@@ -64,9 +67,12 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .into(),
     banner: raw_options.banner,
     footer: raw_options.footer,
+    intro: raw_options.intro,
+    outro: raw_options.outro,
     dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
     format: raw_options.format.unwrap_or(crate::OutputFormat::Esm),
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
+    globals,
     sourcemap: raw_options.sourcemap.unwrap_or(SourceMapType::Hidden),
     sourcemap_ignore_list: raw_options.sourcemap_ignore_list,
     sourcemap_path_transform: raw_options.sourcemap_path_transform,

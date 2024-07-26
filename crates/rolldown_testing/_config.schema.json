@@ -123,6 +123,15 @@
             }
           ]
         },
+        "globals": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "input": {
           "type": [
             "array",
@@ -131,6 +140,12 @@
           "items": {
             "$ref": "#/definitions/InputItem"
           }
+        },
+        "intro": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "minify": {
           "type": [
@@ -149,6 +164,12 @@
           }
         },
         "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "outro": {
           "type": [
             "string",
             "null"

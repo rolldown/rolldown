@@ -1,4 +1,5 @@
 use crate::types::js_callback::MaybeAsyncJsCallback;
+use std::collections::HashMap;
 
 use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
@@ -45,17 +46,23 @@ pub struct BindingOutputOptions {
   pub format: Option<String>,
   // freeze: boolean;
   // generatedCode: NormalizedGeneratedCodeOptions;
-  // globals: GlobalsOption;
+  pub globals: Option<HashMap<String, String>>,
   // hoistTransitiveImports: boolean;
   // indent: true | string;
   // inlineDynamicImports: boolean;
   // interop: GetInterop;
-  // intro: () => string | Promise<string>;
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>")]
+  pub intro: Option<AddonOutputOption>,
   // manualChunks: ManualChunksOption;
   // minifyInternalExports: boolean;
   // namespaceToStringTag: boolean;
   // noConflict: boolean;
-  // outro: () => string | Promise<string>;
+  #[derivative(Debug = "ignore")]
+  #[serde(skip_deserializing)]
+  #[napi(ts_type = "(chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>")]
+  pub outro: Option<AddonOutputOption>,
   // paths: OptionsPaths;
   #[serde(skip_deserializing)]
   #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]

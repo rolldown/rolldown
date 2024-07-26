@@ -1,0 +1,6 @@
+{
+  "config": {
+    "format": "cjs",
+    "outro": "// outro"
+  }
+}

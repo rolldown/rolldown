@@ -111,7 +111,7 @@ impl EcmaModuleTask {
       self.ctx.plugin_driver.module_parsed(Arc::new(module.to_module_info())).await?;
     }
 
-    self
+    if let Err(_err) = self
       .ctx
       .tx
       .send(Msg::NormalModuleDone(NormalModuleTaskResult {
@@ -123,7 +123,10 @@ impl EcmaModuleTask {
         raw_import_records,
       }))
       .await
-      .expect("Send should not fail");
+    {
+      // The main thread is dead, nothing we can do to handle these send failures.
+    }
+
     Ok(())
   }
 }

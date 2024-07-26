@@ -6,7 +6,7 @@ use rolldown_common::{
   ModuleId, ModuleIdx, ModuleType, SymbolRef,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
+use rolldown_error::{BuildDiagnostic, DiagnosableResult, UnhandleableResult};
 
 use super::Msg;
 use crate::{
@@ -46,7 +46,7 @@ impl RuntimeEcmaModuleTask {
   pub fn run(mut self) -> anyhow::Result<()> {
     let source: ArcStr = arcstr::literal!(include_str!("../runtime/runtime-without-comments.js"));
 
-    let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source);
+    let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source)?;
 
     let ecma_ast_result = match ecma_ast_result {
       Ok(ecma_ast_result) => ecma_ast_result,
@@ -123,7 +123,7 @@ impl RuntimeEcmaModuleTask {
     &mut self,
     filename: &str,
     source: &ArcStr,
-  ) -> DiagnosableResult<MakeEcmaAstResult> {
+  ) -> UnhandleableResult<DiagnosableResult<MakeEcmaAstResult>> {
     let source_type = SourceType::default();
 
     let parse_result = EcmaCompiler::parse(filename, source, source_type);
@@ -131,7 +131,7 @@ impl RuntimeEcmaModuleTask {
     let mut ast = match parse_result {
       Ok(ast) => ast,
       Err(errs) => {
-        return Err(errs);
+        return Ok(Err(errs));
       }
     };
     tweak_ast_for_scanning(&mut ast);
@@ -155,8 +155,8 @@ impl RuntimeEcmaModuleTask {
       &ast.trivias,
     );
     let namespace_object_ref = scanner.namespace_object_ref;
-    let scan_result = scanner.scan(ast.program());
+    let scan_result = scanner.scan(ast.program())?;
 
-    Ok(MakeEcmaAstResult { ast, ast_scope, scan_result, ast_symbols, namespace_object_ref })
+    Ok(Ok(MakeEcmaAstResult { ast, ast_scope, scan_result, ast_symbols, namespace_object_ref }))
   }
 }

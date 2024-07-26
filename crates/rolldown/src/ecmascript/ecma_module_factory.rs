@@ -9,7 +9,7 @@ use rolldown_common::{
   AstScopes, EcmaModule, ModuleDefFormat, ModuleId, ModuleIdx, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::DiagnosableResult;
+use rolldown_error::{DiagnosableResult, UnhandleableResult};
 use rolldown_utils::{ecma_script::legitimize_identifier_name, path_ext::PathExt};
 use sugar_path::SugarPath;
 
@@ -34,7 +34,7 @@ impl EcmaModuleFactory {
     symbols: SymbolTable,
     scopes: ScopeTree,
     module_def_format: ModuleDefFormat,
-  ) -> (AstScopes, ScanResult, AstSymbols, SymbolRef) {
+  ) -> UnhandleableResult<(AstScopes, ScanResult, AstSymbols, SymbolRef)> {
     let (mut ast_symbols, ast_scopes) = make_ast_scopes_and_symbols(symbols, scopes);
     let module_id = ModuleId::new(Arc::clone(id));
     let repr_name = module_id.as_path().representative_file_name();
@@ -51,9 +51,9 @@ impl EcmaModuleFactory {
       &ast.trivias,
     );
     let namespace_object_ref = scanner.namespace_object_ref;
-    let scan_result = scanner.scan(ast.program());
+    let scan_result = scanner.scan(ast.program())?;
 
-    (ast_scopes, scan_result, ast_symbols, namespace_object_ref)
+    Ok((ast_scopes, scan_result, ast_symbols, namespace_object_ref))
   }
 }
 
@@ -89,7 +89,7 @@ impl ModuleFactory for EcmaModuleFactory {
       symbols,
       scopes,
       ctx.resolved_id.module_def_format,
-    );
+    )?;
 
     let resolved_deps = ctx.resolve_dependencies(&scan_result.import_records).await?;
 

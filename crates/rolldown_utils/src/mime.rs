@@ -1,3 +1,4 @@
+use crate::light_guess;
 use mime::Mime;
 use std::{path::Path, str::FromStr};
 
@@ -6,7 +7,7 @@ fn is_texture(data: &[u8]) -> bool {
 }
 
 pub fn guess_mime(path: &Path, data: &[u8]) -> anyhow::Result<Mime> {
-  if let Some(guessed) = mime_guess::from_path(path).first() {
+  if let Ok(guessed) = light_guess::try_from_path(path) {
     return Ok(guessed);
   }
 

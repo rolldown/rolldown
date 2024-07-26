@@ -57,14 +57,14 @@ pub struct LinkStage<'a> {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub ast_table: IndexEcmaAst,
-  pub input_options: &'a SharedOptions,
+  pub options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
   pub rec_namespace_ref_to_stmt_idx: FxHashMap<SymbolRef, (ModuleIdx, StmtInfoIdx)>,
 }
 
 impl<'a> LinkStage<'a> {
-  pub fn new(scan_stage_output: ScanStageOutput, input_options: &'a SharedOptions) -> Self {
+  pub fn new(scan_stage_output: ScanStageOutput, options: &'a SharedOptions) -> Self {
     Self {
       sorted_modules: Vec::new(),
       metas: scan_stage_output
@@ -75,7 +75,7 @@ impl<'a> LinkStage<'a> {
           dependencies: module
             .import_records()
             .iter()
-            .filter_map(|rec| match input_options.format {
+            .filter_map(|rec| match options.format {
               OutputFormat::Cjs | OutputFormat::App | OutputFormat::Esm => {
                 if matches!(rec.kind, ImportKind::DynamicImport) {
                   None
@@ -97,7 +97,7 @@ impl<'a> LinkStage<'a> {
       warnings: scan_stage_output.warnings,
       errors: scan_stage_output.errors,
       ast_table: scan_stage_output.index_ecma_ast,
-      input_options,
+      options,
       used_symbol_refs: FxHashSet::default(),
       top_level_member_expr_resolved_cache: FxHashMap::default(),
       rec_namespace_ref_to_stmt_idx: FxHashMap::default(),
@@ -140,6 +140,8 @@ impl<'a> LinkStage<'a> {
         if !meta.is_canonical_exports_empty() {
           referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
         }
+        referenced_symbols
+          .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
         // Corresponding AST for this statement will be created by the finalizer.
         let namespace_stmt_info = StmtInfo {
@@ -243,7 +245,7 @@ impl<'a> LinkStage<'a> {
             }
           },
           ImportKind::DynamicImport => {
-            if matches!(self.input_options.format, OutputFormat::Iife) {
+            if matches!(self.options.format, OutputFormat::Iife) {
               // For iife, then import() is just a require() that
               // returns a promise, so the imported file must also be wrapped
               match importee.exports_kind {
@@ -278,7 +280,7 @@ impl<'a> LinkStage<'a> {
 
       let is_entry = entry_ids_set.contains(&importer.idx);
       if matches!(importer.exports_kind, ExportsKind::CommonJs)
-        && (!is_entry || matches!(self.input_options.format, OutputFormat::Esm))
+        && (!is_entry || matches!(self.options.format, OutputFormat::Esm))
       {
         self.metas[importer.idx].wrap_kind = WrapKind::Cjs;
       }
@@ -305,9 +307,7 @@ impl<'a> LinkStage<'a> {
                 // Make sure symbols from external modules are included and de_conflicted
                 let is_reexport_all = match rec.kind {
                   ImportKind::Import => {
-                    if matches!(self.input_options.format, OutputFormat::Cjs)
-                      && !rec.is_plain_import
-                    {
+                    if matches!(self.options.format, OutputFormat::Cjs) && !rec.is_plain_import {
                       stmt_info
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__toESM").into());
@@ -413,7 +413,7 @@ impl<'a> LinkStage<'a> {
                     }
                   },
                   ImportKind::DynamicImport => {
-                    if matches!(self.input_options.format, OutputFormat::Iife) {
+                    if matches!(self.options.format, OutputFormat::Iife) {
                       match importee_linking_info.wrap_kind {
                         WrapKind::None => {}
                         WrapKind::Cjs => {

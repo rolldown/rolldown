@@ -117,12 +117,11 @@ lightningcss       = { version = "1.0.0-alpha.57" }
 memchr             = "2.7.2"
 mimalloc           = "0.1.42"
 mime               = "0.3.17"
-mime_guess         = "2.0.5"
 napi               = { version = "3.0.0-alpha", features = ["async"] }
 napi-build         = { version = "2.1.3" }
 napi-derive        = { version = "3.0.0-alpha", default-features = false, features = ["type-def"] }
-once_cell          = "1.19.0"
 oxc_resolver       = { version = "1.9.0" }
+phf                = "0.11.2"
 rayon              = "1.10.0"
 regex              = "1.10.5"
 rustc-hash         = "2.0.0"
@@ -137,7 +136,6 @@ tokio              = { version = "1.38.0", default-features = false }
 tracing            = "0.1.40"
 tracing-chrome     = "0.7.2"
 tracing-subscriber = { version = "0.3.18", default-features = false }
-urlencoding        = "2.1.3"
 vfs                = "0.12.0"
 xxhash-rust        = "0.8.10"
 # oxc crates share the same version

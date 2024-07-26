@@ -57,7 +57,7 @@ impl EcmaModuleTask {
       &self.ctx.fs,
       &mut sourcemap_chain,
       &mut hook_side_effects,
-      &self.ctx.input_options,
+      &self.ctx.options,
     )
     .await?;
 
@@ -89,7 +89,7 @@ impl EcmaModuleTask {
         module_index: self.module_idx,
         plugin_driver: &self.ctx.plugin_driver,
         resolved_id: &self.resolved_id,
-        options: &self.ctx.input_options,
+        options: &self.ctx.options,
         warnings: &mut warnings,
         module_type: module_type.clone(),
         resolver: &self.ctx.resolver,

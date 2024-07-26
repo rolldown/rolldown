@@ -796,9 +796,37 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-UfCMc73Z.mjs
 
-# tests/esbuild/loader/loader_json_missing_es6
+# tests/esbuild/loader/loader_json_common_js_and_es6
 
-- entry_js-!~{000}~.mjs => entry_js-768RV9YH.mjs
+- entry_js-!~{000}~.mjs => entry_js-akZphmOp.mjs
+
+# tests/esbuild/loader/loader_json_invalid_identifier_es6
+
+- entry_js-!~{000}~.mjs => entry_js-SM7ZfaBc.mjs
+
+# tests/esbuild/loader/loader_json_no_bundle
+
+- test_json-!~{000}~.mjs => test_json-OGMoJDmt.mjs
+
+# tests/esbuild/loader/loader_json_no_bundle_common_js
+
+- test_json-!~{000}~.cjs => test_json-m8BWLrK-.cjs
+
+# tests/esbuild/loader/loader_json_no_bundle_es6
+
+- test_json-!~{000}~.mjs => test_json-OGMoJDmt.mjs
+
+# tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names
+
+- test_json-!~{000}~.mjs => test_json-OGMoJDmt.mjs
+
+# tests/esbuild/loader/loader_json_no_bundle_iife
+
+- test_json-!~{000}~.mjs => test_json-UOQWDUUT.mjs
+
+# tests/esbuild/loader/loader_json_prototype
+
+- entry_js-!~{000}~.mjs => entry_js-WMoUSAo8.mjs
 
 # tests/esbuild/loader/loader_text_common_js_and_es6
 

@@ -5,6 +5,7 @@
         "name": "test_json",
         "import": "test.json"
       }
-    ]
+    ],
+    "format": "cjs"
   }
 }

@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/loader_json_prototype
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region data.json
+const key_0 = "The property below should be converted to a computed property:";
+const __proto__ = {"foo": "bar"};
+var data_default = {
+	"": key_0,
+	__proto__
+};
+
+//#endregion
+//#region entry.js
+console.log(data_default);
+
+//#endregion
+```

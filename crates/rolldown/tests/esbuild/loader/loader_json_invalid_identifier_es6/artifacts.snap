@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+
+//#region test.json
+var test_ns = {};
+__export(test_ns, {
+	default: () => test_default,
+	"invalid-identifier": () => key_0$1
+});
+const key_0$1 = true;
+var test_default = {"invalid-identifier": key_0$1};
+
+//#endregion
+//#region test2.json
+var test2_ns = {};
+__export(test2_ns, {
+	default: () => test2_default,
+	"invalid-identifier": () => key_0
+});
+const key_0 = true;
+var test2_default = {"invalid-identifier": key_0};
+
+//#endregion
+//#region entry.js
+console.log(test_ns["invalid-identifier"], test2_ns);
+
+//#endregion
+```

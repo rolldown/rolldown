@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6
+---
+# Assets
+
+## test_json.mjs
+
+```js
+
+//#region test.json
+const test = 123;
+const key_1 = true;
+var test_default = {
+	test,
+	"invalid-identifier": key_1
+};
+
+//#endregion
+export { test_default as default, key_1 as 'invalid-identifier', test };
+```

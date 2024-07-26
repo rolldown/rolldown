@@ -31,6 +31,7 @@ struct Context<'a> {
   /// chain element does this member expr consume.
   top_level_member_expr_resolved_cache:
     &'a mut FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
+  rec_namespace_ref_to_stmt_idx: &'a FxHashMap<SymbolRef, (ModuleIdx, StmtInfoIdx)>,
 }
 
 pub type MemberChainToResolvedSymbolRef =
@@ -112,29 +113,16 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   let mut canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
-    let before_owner = canonical_ref.owner;
-    let stmt_idx = if let Some(named_import) = canonical_ref_owner.named_imports.get(&canonical_ref)
-    {
-      let import = &canonical_ref_owner.import_records[named_import.record_id];
-      Some(import.stmt_idx + 1)
-    } else {
-      None
-    };
-
     canonical_ref = namespace_alias.namespace_ref;
     canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
-    if before_owner == canonical_ref.owner {
-      // for case like `import {foo} from './foo'; `
-      // `export {foo } from './bar.js`
-      // Avoid include same symbol twice which case renaming
-      // in deconflict phase
-      if let Some(stmt_idx) = stmt_idx {
-        include_statement(ctx, ctx.modules[before_owner].as_ecma().unwrap(), stmt_idx);
-      }
+
+    if let Some((mi, si)) = ctx.rec_namespace_ref_to_stmt_idx.get(&canonical_ref) {
+      let m = ctx.modules[*mi].as_ecma().unwrap();
+      include_statement(ctx, m, *si + 1);
     }
-  } else if let Some(named_import) = canonical_ref_owner.named_imports.get(&symbol_ref) {
-    let import = &canonical_ref_owner.import_records[named_import.record_id];
-    include_statement(ctx, canonical_ref_owner, import.stmt_idx + 1);
+  } else if let Some((mi, si)) = ctx.rec_namespace_ref_to_stmt_idx.get(&canonical_ref) {
+    let m = ctx.modules[*mi].as_ecma().unwrap();
+    include_statement(ctx, m, *si + 1);
   }
 
   let is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
@@ -195,18 +183,19 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
 
   let (export_name, namespace_property_name) =
     if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
-      if let Some(named_import) = canonical_ref_owner.named_imports.get(&canonical_ref) {
-        let import = &canonical_ref_owner.import_records[named_import.record_id];
-        include_statement(ctx, canonical_ref_owner, import.stmt_idx + 1);
-      };
       let name = canonical_ref_symbol.name.clone();
       canonical_ref = namespace_alias.namespace_ref;
       canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
+
+      if let Some((mi, si)) = ctx.rec_namespace_ref_to_stmt_idx.get(&canonical_ref) {
+        let m = ctx.modules[*mi].as_ecma().unwrap();
+        include_statement(ctx, m, *si + 1);
+      }
       (name, Some(namespace_alias.property_name.clone()))
     } else {
-      if let Some(named_import) = canonical_ref_owner.named_imports.get(&symbol_ref) {
-        let import = &canonical_ref_owner.import_records[named_import.record_id];
-        include_statement(ctx, canonical_ref_owner, import.stmt_idx + 1);
+      if let Some((mi, si)) = ctx.rec_namespace_ref_to_stmt_idx.get(&canonical_ref) {
+        let m = ctx.modules[*mi].as_ecma().unwrap();
+        include_statement(ctx, m, *si + 1);
       };
       (canonical_ref_symbol.name.clone(), None)
     };
@@ -295,6 +284,7 @@ impl LinkStage<'_> {
       metas: &self.metas,
       used_symbol_refs: &mut self.used_symbol_refs,
       top_level_member_expr_resolved_cache: &mut top_level_member_expr_resolved_cache,
+      rec_namespace_ref_to_stmt_idx: &self.rec_namespace_ref_to_stmt_idx,
     };
 
     self.entries.iter().for_each(|entry| {

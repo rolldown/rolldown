@@ -3,7 +3,7 @@ use std::{ptr::addr_of, sync::Mutex};
 use oxc::index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportKind, Module, ModuleIdx, ModuleTable, OutputFormat, StmtInfo,
-  SymbolRef, WrapKind,
+  StmtInfoIdx, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -60,6 +60,7 @@ pub struct LinkStage<'a> {
   pub input_options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
+  pub rec_namespace_ref_to_stmt_idx: FxHashMap<SymbolRef, (ModuleIdx, StmtInfoIdx)>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -99,6 +100,7 @@ impl<'a> LinkStage<'a> {
       input_options,
       used_symbol_refs: FxHashSet::default(),
       top_level_member_expr_resolved_cache: FxHashMap::default(),
+      rec_namespace_ref_to_stmt_idx: FxHashMap::default(),
     }
   }
 
@@ -286,6 +288,7 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);
+    let rec_namespace_ref_to_stmt_idx = Mutex::new(&mut self.rec_namespace_ref_to_stmt_idx);
     self.module_table.modules.iter().par_bridge().filter_map(Module::as_ecma).for_each(
       |importer| {
         // safety: No race conditions here:
@@ -358,6 +361,13 @@ impl<'a> LinkStage<'a> {
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__toESM").into());
                           stmt_info.declared_symbols.push(rec.namespace_ref);
+                          rec_namespace_ref_to_stmt_idx.lock().expect("should locked").insert(
+                            rec.namespace_ref,
+                            (
+                              importer.idx,
+                              stmt_info.stmt_idx.expect("should have stmt idx ").into(),
+                            ),
+                          );
                           symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                             format!("import_{}", &importee.repr_name).into();
                         }

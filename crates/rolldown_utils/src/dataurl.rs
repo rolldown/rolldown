@@ -1,6 +1,15 @@
 use crate::percent_encoding::encode_as_percent_escaped;
 use mime::Mime;
+use regex::{Captures, Regex};
 use std::str::FromStr;
+use std::sync::LazyLock;
+
+fn parse_dataurl(dataurl: &str) -> Option<Captures> {
+  static RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^data:([^/]+\\/[^;]+)(;charset=[^;]+)?(;base64)?,([\\s\\S]*)$").unwrap()
+  });
+  RE.captures(dataurl)
+}
 
 /// Returns shorter of either a base64-encoded or percent-escaped data URL
 // adapted from https://github.com/evanw/esbuild/blob/67cbf87a4909d87a902ca8c3b69ab5330defab0a/internal/helpers/dataurl.go by @ikkz
@@ -23,9 +32,7 @@ pub fn deserialize_dataurl(s: &str) -> anyhow::Result<(Mime, Vec<u8>)> {
   if !s.starts_with("data:") {
     return Err(anyhow::anyhow!("Invalid dataurl"));
   }
-  let data_url_re =
-    regex::Regex::new("^data:([^/]+\\/[^;]+)(;charset=[^;]+)?(;base64)?,([\\s\\S]*)$").unwrap();
-  let captures = data_url_re.captures(s).ok_or_else(|| anyhow::anyhow!("Invalid dataurl"))?;
+  let captures = parse_dataurl(s).ok_or_else(|| anyhow::anyhow!("Invalid dataurl"))?;
   let mime = captures.get(1).unwrap().as_str();
   let is_base64 = captures.get(3).is_some();
   let data = captures.get(4).unwrap().as_str();

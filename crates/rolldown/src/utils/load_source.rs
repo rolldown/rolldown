@@ -64,21 +64,14 @@ pub async fn load_source(
       } else if resolved_id.id.starts_with("<data:") {
         // should be Data URL
         let dataurl = resolved_id.id.replace(['<', '>'], "");
-        match deserialize_dataurl(&dataurl) {
-          Ok((mime_type, body)) => {
-            let body = String::from_utf8(body)?;
-            match mime_type.subtype() {
-              mime::JSON => Ok((StrOrBytes::Str(body), Some(ModuleType::Json))),
-              mime::JAVASCRIPT => Ok((StrOrBytes::Str(body), Some(ModuleType::Js))),
-              // TODO wait for CSS to be supported
-              // mime::CSS => Ok((StrOrBytes::Str(body), Some(ModuleType::Css))),
-              _ => Ok((StrOrBytes::Str(body), Some(ModuleType::Text))),
-            }
-          }
-          Err(_) => {
-            // (@7086cmd) FIXME should be regarded as external import instead of string
-            Ok((StrOrBytes::Str(dataurl), Some(ModuleType::Text)))
-          }
+        let (mime_type, body) = deserialize_dataurl(&dataurl).expect("Invalid data URL");
+        let body = String::from_utf8(body)?;
+        match mime_type.subtype() {
+          mime::JSON => Ok((StrOrBytes::Str(body), Some(ModuleType::Json))),
+          mime::JAVASCRIPT => Ok((StrOrBytes::Str(body), Some(ModuleType::Js))),
+          // TODO wait for CSS to be supported
+          // mime::CSS => Ok((StrOrBytes::Str(body), Some(ModuleType::Css))),
+          _ => anyhow::bail!("Unsupported MIME type: {:?}", mime_type),
         }
       } else {
         Err(anyhow::format_err!("Fail to guess module type for {:?}. So rolldown could load this asset correctly. Please use the load hook to load the resource", resolved_id.id))

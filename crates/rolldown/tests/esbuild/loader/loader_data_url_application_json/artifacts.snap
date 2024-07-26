@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/esbuild/loader/loader_data_url_application_json
+---
+# Assets
+
+## entry_js.mjs
+
+```js
+
+//#region <data:application/json,"%31%32%33">
+var json___31_32_33___default = "123";
+
+//#endregion
+//#region <data:application/json;base64,eyJ3b3JrcyI6dHJ1ZX0=>
+const works$1 = true;
+var json_base64_eyJ3b3JrcyI6dHJ1ZX0___default = {works: works$1};
+
+//#endregion
+//#region <data:application/json;charset=UTF-8,%31%32%33>
+var json_charset_UTF_8__31_32_33__default = 123;
+
+//#endregion
+//#region <data:application/json;charset=UTF-8;base64,eyJ3b3JrcyI6dHJ1ZX0=>
+const works = true;
+var json_charset_UTF_8_base64_eyJ3b3JrcyI6dHJ1ZX0___default = {works};
+
+//#endregion
+//#region entry.js
+console.log([json___31_32_33___default, json_base64_eyJ3b3JrcyI6dHJ1ZX0___default, json_charset_UTF_8__31_32_33__default, json_charset_UTF_8_base64_eyJ3b3JrcyI6dHJ1ZX0___default,]);
+
+//#endregion
+```

@@ -113,7 +113,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
-- entry_js-!~{000}~.mjs => entry_js-gPYt0uV5.mjs
+- entry_js-!~{000}~.mjs => entry_js-jOnV_cTP.mjs
 
 # tests/esbuild/dce/inline_function_call_for_init_decl
 
@@ -210,7 +210,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_common_js
 
-- src_entry_js-!~{000}~.mjs => src_entry_js-iLz03Xmo.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-J6lzFTVO.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6
 
@@ -1310,8 +1310,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_compat/mix-cjs-esm
 
-- main-!~{000}~.mjs => main-FpLC6N2Q.mjs
-- main-FpLC6N2Q.mjs.map
+- main-!~{000}~.mjs => main-sz7vGbzO.mjs
+- main-sz7vGbzO.mjs.map
 
 # tests/fixtures/cjs_compat/multiple_circle_cjs_entries
 
@@ -1896,11 +1896,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-XCncN_Yu.mjs
 
+# tests/fixtures/tree_shaking/unused_import_cjs
+
+- main-!~{000}~.mjs => main-nyQrEnyN.mjs
+
 # tests/fixtures/tree_shaking/unused_import_external
 
 - main-!~{000}~.mjs => main-iWtN5GMm.mjs
 
 # tests/fixtures/tree_shaking/unused_import_named
+
+- main-!~{000}~.mjs => main-nyQrEnyN.mjs
+
+# tests/fixtures/tree_shaking/unused_import_named copy
 
 - main-!~{000}~.mjs => main-nyQrEnyN.mjs
 

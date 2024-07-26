@@ -67,11 +67,8 @@ fn expr_to_glob(expr: &Expression) -> anyhow::Result<String> {
 
 fn arg_to_glob(arg: &Argument) -> anyhow::Result<String> {
   Ok(match arg {
-    Argument::TemplateLiteral(node) => template_literal_to_glob(node)?,
-    Argument::CallExpression(node) => call_expr_to_glob(node)?,
-    Argument::BinaryExpression(node) => binary_expr_to_glob(node)?,
-    Argument::StringLiteral(node) => sanitize_string(&node.value)?,
-    _ => String::from("*"),
+    Argument::SpreadElement(_) => String::from("*"),
+    node => expr_to_glob(node.to_expression())?,
   })
 }
 

@@ -47,12 +47,13 @@ pub fn deserialize_dataurl(s: &str) -> anyhow::Result<(Mime, Vec<u8>)> {
 }
 
 pub fn is_valid_for_loading(s: &str) -> bool {
-  match deserialize_dataurl(s) {
-    Ok((mime_type, _)) => {
-      matches!(mime_type.to_string().as_str(), "application/json" | "text/javascript" | "text/css")
+  parse_dataurl(s).is_some_and(|result| {
+    if let Some(mime) = result.get(1) {
+      matches!(mime.as_str(), "text/javascript" | "text/css" | "application/json")
+    } else {
+      false
     }
-    Err(_) => false,
-  }
+  })
 }
 
 #[cfg(test)]

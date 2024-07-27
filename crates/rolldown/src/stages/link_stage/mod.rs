@@ -315,7 +315,6 @@ impl<'a> LinkStage<'a> {
                     if is_reexport_all {
                       symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                         format!("import_{}", legitimize_identifier_name(&importee.name)).into();
-                      // TODO:
                       declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
                       stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                       stmt_info

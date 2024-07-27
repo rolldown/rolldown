@@ -6,5 +6,5 @@ use rolldown_plugin::SharedPlugin;
 /// are implemented via plugins, users could not feel the existence of these plugins. And to do so,
 /// we need to apply these plugins after user's plugins to control the final order of plugins.
 pub fn apply_inner_plugins(user_plugins: &mut Vec<SharedPlugin>) {
-  user_plugins.push(Arc::new(rolldown_plugin_data_url::DataUrlPlugin));
+  user_plugins.push(Arc::new(rolldown_plugin_data_url::DataUrlPlugin::default()));
 }

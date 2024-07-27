@@ -782,7 +782,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/loader/loader_data_url_application_json
 
-- entry_js-!~{000}~.mjs => entry_js-CiEl2Jww.mjs
+- entry_js-!~{000}~.mjs => entry_js-4o98-4xk.mjs
 
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 

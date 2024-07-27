@@ -2294,9 +2294,11 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "base64-simd 0.8.0",
+ "dashmap 6.0.1",
  "regex",
  "rolldown_common",
  "rolldown_plugin",
+ "rustc-hash",
  "urlencoding",
 ]
 

@@ -1,11 +1,11 @@
-use std::path::Path;
-
 use crate::{
   HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdExtraOptions, PluginDriver,
 };
 use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId};
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dataurl::is_valid_for_loading;
+use std::borrow::Cow;
+use std::path::Path;
 
 fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")
@@ -75,7 +75,7 @@ pub async fn resolve_id_with_plugins(
   if is_data_url(request) {
     let valid = is_valid_for_loading(request);
     return Ok(Ok(ResolvedId {
-      id: if valid { format!("<{request}>") } else { request.to_string() }.into(),
+      id: if valid { Cow::Owned(format!("<{request}>")) } else { Cow::Borrowed(request) }.into(),
       module_def_format: ModuleDefFormat::EsmMjs,
       ignored: false,
       is_external: !valid,

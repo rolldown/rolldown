@@ -38,17 +38,13 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   // --- Build hooks ---
 
-  async fn call_build_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
-    Ok(())
-  }
+  async fn call_build_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn;
 
   async fn call_resolve_id(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookResolveIdArgs,
-  ) -> HookResolveIdReturn {
-    Ok(None)
-  }
+  ) -> HookResolveIdReturn;
 
   #[deprecated(
     note = "This hook is only for rollup compatibility, please use `resolve_id` instead."
@@ -57,108 +53,80 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookResolveDynamicImportArgs,
-  ) -> HookResolveIdReturn {
-    Ok(None)
-  }
+  ) -> HookResolveIdReturn;
 
-  async fn call_load(&self, _ctx: &SharedPluginContext, _args: &HookLoadArgs) -> HookLoadReturn {
-    Ok(None)
-  }
+  async fn call_load(&self, _ctx: &SharedPluginContext, _args: &HookLoadArgs) -> HookLoadReturn;
 
   async fn call_transform(
     &self,
     _ctx: &TransformPluginContext<'_>,
     _args: &HookTransformArgs,
-  ) -> HookTransformReturn {
-    Ok(None)
-  }
+  ) -> HookTransformReturn;
 
   fn call_transform_ast(
     &self,
     _ctx: &SharedPluginContext,
     args: HookTransformAstArgs,
-  ) -> HookTransformAstReturn {
-    Ok(args.ast)
-  }
+  ) -> HookTransformAstReturn;
 
   async fn call_module_parsed(
     &self,
     _ctx: &SharedPluginContext,
     _module_info: Arc<ModuleInfo>,
-  ) -> HookNoopReturn {
-    Ok(())
-  }
+  ) -> HookNoopReturn;
 
   async fn call_build_end(
     &self,
     _ctx: &SharedPluginContext,
     _args: Option<&HookBuildEndArgs>,
-  ) -> HookNoopReturn {
-    Ok(())
-  }
+  ) -> HookNoopReturn;
 
   // --- Generate hooks ---
 
-  async fn call_render_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
-    Ok(())
-  }
+  async fn call_render_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn;
 
   async fn call_banner(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookBannerArgs,
-  ) -> HookBannerOutputReturn {
-    Ok(None)
-  }
+  ) -> HookBannerOutputReturn;
 
   async fn call_footer(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookFooterArgs,
-  ) -> HookFooterOutputReturn {
-    Ok(None)
-  }
+  ) -> HookFooterOutputReturn;
 
   async fn call_render_chunk(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookRenderChunkArgs,
-  ) -> HookRenderChunkReturn {
-    Ok(None)
-  }
+  ) -> HookRenderChunkReturn;
 
   async fn call_augment_chunk_hash(
     &self,
     _ctx: &SharedPluginContext,
     _chunk: &RollupRenderedChunk,
-  ) -> HookAugmentChunkHashReturn {
-    Ok(None)
-  }
+  ) -> HookAugmentChunkHashReturn;
 
   async fn call_render_error(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookRenderErrorArgs,
-  ) -> HookNoopReturn {
-    Ok(())
-  }
+  ) -> HookNoopReturn;
 
   async fn call_generate_bundle(
     &self,
     _ctx: &SharedPluginContext,
     _bundle: &mut Vec<Output>,
     _is_write: bool,
-  ) -> HookNoopReturn {
-    Ok(())
-  }
+  ) -> HookNoopReturn;
 
   async fn call_write_bundle(
     &self,
     _ctx: &SharedPluginContext,
     _bundle: &mut Vec<Output>,
-  ) -> HookNoopReturn {
-    Ok(())
-  }
+  ) -> HookNoopReturn;
 }
 
 #[async_trait::async_trait]

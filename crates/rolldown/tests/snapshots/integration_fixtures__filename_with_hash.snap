@@ -347,7 +347,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/auto_external
 
-- entry_js-!~{000}~.mjs => entry_js-_oEqHbtk.mjs
+- entry_js-!~{000}~.mjs => entry_js-tYfXLfpU.mjs
 
 # tests/esbuild/default/avoid_tdz
 

@@ -46,6 +46,15 @@ pub fn deserialize_dataurl(s: &str) -> anyhow::Result<(Mime, Vec<u8>)> {
   Ok((mime, data))
 }
 
+pub fn is_valid_for_loading(s: &str) -> bool {
+  match deserialize_dataurl(s) {
+    Ok((mime_type, _)) => {
+      matches!(mime_type.to_string().as_str(), "application/json" | "text/javascript" | "text/css")
+    }
+    Err(_) => false,
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

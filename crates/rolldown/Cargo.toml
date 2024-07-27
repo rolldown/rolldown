@@ -44,7 +44,9 @@ xxhash-rust              = { workspace = true, features = ["xxh3"] }
 [dev-dependencies]
 glob             = { workspace = true }
 insta            = { workspace = true }
+reqwest          = { workspace = true }
 rolldown_testing = { workspace = true }
 sugar_path       = { workspace = true }
 testing_macros   = { workspace = true }
 tokio            = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+url              = { workspace = true }

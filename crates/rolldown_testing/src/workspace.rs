@@ -10,3 +10,9 @@ pub fn crate_dir(crate_name: &str) -> PathBuf {
   let root = root_dir();
   root.join("crates").join(crate_name)
 }
+
+#[test]
+fn test_root_dir() {
+  let root_dir = root_dir();
+  assert!(root_dir.join("pnpm-workspace.yaml").exists(), "Incorrect root directory detected. Expected to find `pnpm-workspace.yaml` in the root directory. But got {root_dir:?}");
+}

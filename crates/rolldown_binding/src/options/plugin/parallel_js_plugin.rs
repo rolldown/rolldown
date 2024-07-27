@@ -5,7 +5,7 @@ use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
 use futures::future::{self, BoxFuture};
 #[cfg(not(target_family = "wasm"))]
-use rolldown_plugin::Plugin;
+use rolldown_plugin::__inner::Pluginable;
 
 use crate::worker_manager::WorkerManager;
 
@@ -25,7 +25,7 @@ impl ParallelJsPlugin {
   pub fn new_boxed(
     plugins: Vec<BindingPluginOptions>,
     worker_manager: Arc<WorkerManager>,
-  ) -> Box<dyn Plugin> {
+  ) -> Box<dyn Pluginable> {
     let plugins = plugins.into_iter().map(JsPlugin::new).collect::<Vec<_>>().into_boxed_slice();
     Box::new(Self { plugins, worker_manager })
   }
@@ -33,7 +33,7 @@ impl ParallelJsPlugin {
   pub fn new_shared(
     plugins: Vec<BindingPluginOptions>,
     worker_manager: Arc<WorkerManager>,
-  ) -> Arc<dyn Plugin> {
+  ) -> Arc<dyn Pluginable> {
     let plugins = plugins.into_iter().map(JsPlugin::new).collect::<Vec<_>>().into_boxed_slice();
     Arc::new(Self { plugins, worker_manager })
   }
@@ -66,7 +66,7 @@ impl ParallelJsPlugin {
 
 #[cfg(not(target_family = "wasm"))]
 #[async_trait::async_trait]
-impl Plugin for ParallelJsPlugin {
+impl Pluginable for ParallelJsPlugin {
   fn name(&self) -> Cow<'static, str> {
     self.first_plugin().name()
   }

@@ -121,6 +121,7 @@
     "oxlint",
     "oxlintignore",
     "peekable",
+    "Pluginable",
     "proto",
     "realpath",
     "Renamer",
@@ -137,6 +138,7 @@
     "schemars",
     "serde",
     "sfnt",
+    "simd",
     "smallvec",
     "sourcemaps",
     "stackblitz",
@@ -170,7 +172,6 @@
     "webp",
     "Xiangjun",
     "Yinan",
-    "Yunfei",
-    "simd"
+    "Yunfei"
   ]
 }

@@ -2137,7 +2137,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
- "async-trait",
  "bitflags 2.6.0",
  "daachorse",
  "dunce",
@@ -2292,7 +2291,6 @@ dependencies = [
 name = "rolldown_plugin_data_url"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "base64-simd 0.8.0",
  "dashmap 6.0.1",
  "regex",
@@ -2306,7 +2304,6 @@ dependencies = [
 name = "rolldown_plugin_glob_import"
 version = "0.0.1"
 dependencies = [
- "async-trait",
  "glob",
  "oxc",
  "rolldown_plugin",
@@ -2317,7 +2314,6 @@ dependencies = [
 name = "rolldown_plugin_wasm"
 version = "0.0.1"
 dependencies = [
- "async-trait",
  "rolldown_common",
  "rolldown_plugin",
 ]

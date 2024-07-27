@@ -5,7 +5,6 @@ name    = "rolldown_plugin_data_url"
 version = "0.1.0"
 
 [dependencies]
-async-trait     = { workspace = true }
 base64-simd     = { workspace = true }
 dashmap         = { workspace = true }
 regex           = { workspace = true }

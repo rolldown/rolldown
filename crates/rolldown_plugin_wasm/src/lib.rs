@@ -22,7 +22,7 @@ impl Plugin for WasmPlugin {
     _ctx: &SharedPluginContext,
     args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn {
-    if args.source == WASM_RUNTIME {
+    if args.specifier == WASM_RUNTIME {
       Ok(Some(HookResolveIdOutput { id: WASM_RUNTIME.to_string(), ..Default::default() }))
     } else {
       Ok(None)

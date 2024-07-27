@@ -11,7 +11,7 @@ use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
-use rolldown_common::SharedFileEmitter;
+use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
@@ -172,6 +172,10 @@ impl Bundler {
       |error| Some(error.to_string()),
       |ret| errors_fn(ret).first().map(ToString::to_string),
     )
+  }
+
+  pub fn options(&self) -> &NormalizedBundlerOptions {
+    &self.options
   }
 }
 

@@ -315,8 +315,13 @@ impl LinkStage<'_> {
   }
 
   fn determine_side_effects(&mut self) {
-    type IndexVisited = IndexVec<ModuleIdx, bool>;
-    type IndexSideEffectsCache = IndexVec<ModuleIdx, Option<DeterminedSideEffects>>;
+    #[derive(Debug, Clone, Copy)]
+    enum SideEffectCache {
+      None,
+      Visited,
+      Cache(DeterminedSideEffects),
+    }
+    type IndexSideEffectsCache = IndexVec<ModuleIdx, SideEffectCache>;
 
     fn determine_side_effects_for_module(
       cache: &mut IndexSideEffectsCache,
@@ -325,8 +330,16 @@ impl LinkStage<'_> {
     ) -> DeterminedSideEffects {
       let module = &normal_modules[module_id];
 
-      if let Some(ret) = cache[module_id] {
-        return ret;
+      match &mut cache[module_id] {
+        SideEffectCache::None => {
+          cache[module_id] = SideEffectCache::Visited;
+        }
+        SideEffectCache::Visited => {
+          return *module.side_effects();
+        }
+        SideEffectCache::Cache(v) => {
+          return *v;
+        }
       }
 
       let ret = match *module.side_effects() {
@@ -352,20 +365,18 @@ impl LinkStage<'_> {
         },
       };
 
-      cache[module_id] = Some(ret);
+      cache[module_id] = SideEffectCache::Cache(ret);
 
       ret
     }
 
     let mut index_side_effects_cache =
-      oxc::index::index_vec![None; self.module_table.modules.len()];
+      oxc::index::index_vec![SideEffectCache::None; self.module_table.modules.len()];
     let index_module_side_effects = self
       .module_table
       .modules
       .iter()
       .map(|module| {
-        let mut visited: IndexVisited =
-          oxc::index::index_vec![false; self.module_table.modules.len()];
         determine_side_effects_for_module(
           &mut index_side_effects_cache,
           module.idx(),

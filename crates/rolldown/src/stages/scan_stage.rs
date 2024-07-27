@@ -129,6 +129,10 @@ impl ScanStage {
 
       match resolve_id {
         Ok(item) => {
+          if item.1.is_external {
+            errors.push(BuildDiagnostic::entry_cannot_be_external(item.1.id.to_string()));
+            continue;
+          }
           ret.push(item);
         }
         Err(e) => match e {

@@ -45,7 +45,7 @@ pub async fn resolve_id_with_plugins(
   if let Some(r) = plugin_driver
     .resolve_id(&HookResolveIdArgs {
       importer: importer.map(std::convert::AsRef::as_ref),
-      source: request,
+      specifier: request,
       options,
     })
     .await?

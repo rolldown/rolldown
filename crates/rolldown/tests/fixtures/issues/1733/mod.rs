@@ -4,7 +4,7 @@ use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
   HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, SharedPluginContext,
 };
-use rolldown_testing::{integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
 use sugar_path::SugarPath;
 
 #[derive(Debug)]
@@ -21,8 +21,8 @@ impl Plugin for ExternalCss {
     _ctx: &SharedPluginContext,
     args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn {
-    if args.source.as_path().extension().map_or(false, |ext| ext.eq_ignore_ascii_case("css")) {
-      let path = format!("rewritten-{}", args.source);
+    if args.specifier.as_path().extension().map_or(false, |ext| ext.eq_ignore_ascii_case("css")) {
+      let path = format!("rewritten-{}", args.specifier);
       return Ok(Some(HookResolveIdOutput {
         id: path,
         external: Some(true),
@@ -35,12 +35,7 @@ impl Plugin for ExternalCss {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn should_rewrite_dynamic_imports_that_import_external_modules() {
-  let cwd = file!()
-    .as_path()
-    .parent()
-    .unwrap()
-    .to_path_buf()
-    .absolutize_with(env!("WORKSPACE_DIR").as_path());
+  let cwd = abs_file_dir!();
 
   IntegrationTest::new(TestMeta { expect_executed: false, ..Default::default() })
     .run_with_plugins(
@@ -49,7 +44,7 @@ async fn should_rewrite_dynamic_imports_that_import_external_modules() {
           name: Some("entry".to_string()),
           import: "./entry.js".to_string(),
         }]),
-        cwd: Some(cwd.clone()),
+        cwd: Some(cwd),
         ..Default::default()
       },
       vec![Arc::new(ExternalCss)],

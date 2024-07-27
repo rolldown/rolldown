@@ -58,7 +58,7 @@ impl Plugin for JsPlugin {
       Ok(
         cb.await_call((
           Arc::clone(ctx).into(),
-          args.source.to_string(),
+          args.specifier.to_string(),
           args.importer.map(str::to_string),
           args.options.clone().into(),
         ))

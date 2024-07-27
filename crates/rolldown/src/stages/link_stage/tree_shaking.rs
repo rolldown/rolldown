@@ -319,20 +319,11 @@ impl LinkStage<'_> {
     type IndexSideEffectsCache = IndexVec<ModuleIdx, Option<DeterminedSideEffects>>;
 
     fn determine_side_effects_for_module(
-      visited: &mut IndexVisited,
       cache: &mut IndexSideEffectsCache,
       module_id: ModuleIdx,
       normal_modules: &IndexModules,
     ) -> DeterminedSideEffects {
       let module = &normal_modules[module_id];
-
-      let is_visited = &mut visited[module_id];
-
-      if *is_visited {
-        return *module.side_effects();
-      }
-
-      *is_visited = true;
 
       if let Some(ret) = cache[module_id] {
         return ret;
@@ -350,7 +341,6 @@ impl LinkStage<'_> {
           Module::Ecma(module) => {
             DeterminedSideEffects::Analyzed(module.import_records.iter().any(|import_record| {
               determine_side_effects_for_module(
-                visited,
                 cache,
                 import_record.resolved_module,
                 normal_modules,
@@ -377,7 +367,6 @@ impl LinkStage<'_> {
         let mut visited: IndexVisited =
           oxc::index::index_vec![false; self.module_table.modules.len()];
         determine_side_effects_for_module(
-          &mut visited,
           &mut index_side_effects_cache,
           module.idx(),
           &self.module_table.modules,

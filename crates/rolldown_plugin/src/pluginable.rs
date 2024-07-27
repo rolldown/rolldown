@@ -32,17 +32,17 @@ pub type SharedPluginable = Arc<dyn Pluginable>;
 /// provide a good auto-completion experience.
 #[async_trait::async_trait]
 pub trait Pluginable: Any + Debug + Send + Sync + 'static {
-  fn name(&self) -> Cow<'static, str>;
+  fn call_name(&self) -> Cow<'static, str>;
 
   // The `option` hook consider call at node side.
 
   // --- Build hooks ---
 
-  async fn build_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
+  async fn call_build_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
     Ok(())
   }
 
-  async fn resolve_id(
+  async fn call_resolve_id(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookResolveIdArgs,
@@ -53,7 +53,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   #[deprecated(
     note = "This hook is only for rollup compatibility, please use `resolve_id` instead."
   )]
-  async fn resolve_dynamic_import(
+  async fn call_resolve_dynamic_import(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookResolveDynamicImportArgs,
@@ -61,11 +61,11 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     Ok(None)
   }
 
-  async fn load(&self, _ctx: &SharedPluginContext, _args: &HookLoadArgs) -> HookLoadReturn {
+  async fn call_load(&self, _ctx: &SharedPluginContext, _args: &HookLoadArgs) -> HookLoadReturn {
     Ok(None)
   }
 
-  async fn transform(
+  async fn call_transform(
     &self,
     _ctx: &TransformPluginContext<'_>,
     _args: &HookTransformArgs,
@@ -73,7 +73,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     Ok(None)
   }
 
-  fn transform_ast(
+  fn call_transform_ast(
     &self,
     _ctx: &SharedPluginContext,
     args: HookTransformAstArgs,
@@ -81,7 +81,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     Ok(args.ast)
   }
 
-  async fn module_parsed(
+  async fn call_module_parsed(
     &self,
     _ctx: &SharedPluginContext,
     _module_info: Arc<ModuleInfo>,
@@ -89,7 +89,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     Ok(())
   }
 
-  async fn build_end(
+  async fn call_build_end(
     &self,
     _ctx: &SharedPluginContext,
     _args: Option<&HookBuildEndArgs>,
@@ -99,11 +99,11 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   // --- Generate hooks ---
 
-  async fn render_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
+  async fn call_render_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
     Ok(())
   }
 
-  async fn banner(
+  async fn call_banner(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookBannerArgs,
@@ -111,7 +111,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     Ok(None)
   }
 
-  async fn footer(
+  async fn call_footer(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookFooterArgs,
@@ -119,7 +119,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     Ok(None)
   }
 
-  async fn render_chunk(
+  async fn call_render_chunk(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookRenderChunkArgs,
@@ -127,7 +127,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     Ok(None)
   }
 
-  async fn augment_chunk_hash(
+  async fn call_augment_chunk_hash(
     &self,
     _ctx: &SharedPluginContext,
     _chunk: &RollupRenderedChunk,
@@ -135,7 +135,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     Ok(None)
   }
 
-  async fn render_error(
+  async fn call_render_error(
     &self,
     _ctx: &SharedPluginContext,
     _args: &HookRenderErrorArgs,
@@ -143,7 +143,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     Ok(())
   }
 
-  async fn generate_bundle(
+  async fn call_generate_bundle(
     &self,
     _ctx: &SharedPluginContext,
     _bundle: &mut Vec<Output>,
@@ -152,7 +152,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     Ok(())
   }
 
-  async fn write_bundle(
+  async fn call_write_bundle(
     &self,
     _ctx: &SharedPluginContext,
     _bundle: &mut Vec<Output>,
@@ -163,15 +163,15 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
 #[async_trait::async_trait]
 impl<T: Plugin> Pluginable for T {
-  fn name(&self) -> Cow<'static, str> {
+  fn call_name(&self) -> Cow<'static, str> {
     Plugin::name(self)
   }
 
-  async fn build_start(&self, ctx: &SharedPluginContext) -> HookNoopReturn {
+  async fn call_build_start(&self, ctx: &SharedPluginContext) -> HookNoopReturn {
     Plugin::build_start(self, ctx).await
   }
 
-  async fn resolve_id(
+  async fn call_resolve_id(
     &self,
     ctx: &SharedPluginContext,
     args: &HookResolveIdArgs,
@@ -180,7 +180,7 @@ impl<T: Plugin> Pluginable for T {
   }
 
   #[allow(deprecated)]
-  async fn resolve_dynamic_import(
+  async fn call_resolve_dynamic_import(
     &self,
     ctx: &SharedPluginContext,
     args: &HookResolveDynamicImportArgs,
@@ -188,11 +188,11 @@ impl<T: Plugin> Pluginable for T {
     Plugin::resolve_dynamic_import(self, ctx, args).await
   }
 
-  async fn load(&self, ctx: &SharedPluginContext, args: &HookLoadArgs) -> HookLoadReturn {
+  async fn call_load(&self, ctx: &SharedPluginContext, args: &HookLoadArgs) -> HookLoadReturn {
     Plugin::load(self, ctx, args).await
   }
 
-  async fn transform(
+  async fn call_transform(
     &self,
     ctx: &TransformPluginContext<'_>,
     args: &HookTransformArgs,
@@ -200,7 +200,7 @@ impl<T: Plugin> Pluginable for T {
     Plugin::transform(self, ctx, args).await
   }
 
-  async fn module_parsed(
+  async fn call_module_parsed(
     &self,
     ctx: &SharedPluginContext,
     module_info: Arc<ModuleInfo>,
@@ -208,7 +208,7 @@ impl<T: Plugin> Pluginable for T {
     Plugin::module_parsed(self, ctx, module_info).await
   }
 
-  async fn build_end(
+  async fn call_build_end(
     &self,
     ctx: &SharedPluginContext,
     args: Option<&HookBuildEndArgs>,
@@ -216,11 +216,11 @@ impl<T: Plugin> Pluginable for T {
     Plugin::build_end(self, ctx, args).await
   }
 
-  async fn render_start(&self, ctx: &SharedPluginContext) -> HookNoopReturn {
+  async fn call_render_start(&self, ctx: &SharedPluginContext) -> HookNoopReturn {
     Plugin::render_start(self, ctx).await
   }
 
-  async fn banner(
+  async fn call_banner(
     &self,
     ctx: &SharedPluginContext,
     args: &HookBannerArgs,
@@ -228,7 +228,7 @@ impl<T: Plugin> Pluginable for T {
     Plugin::banner(self, ctx, args).await
   }
 
-  async fn footer(
+  async fn call_footer(
     &self,
     ctx: &SharedPluginContext,
     args: &HookFooterArgs,
@@ -236,7 +236,7 @@ impl<T: Plugin> Pluginable for T {
     Plugin::footer(self, ctx, args).await
   }
 
-  async fn render_chunk(
+  async fn call_render_chunk(
     &self,
     ctx: &SharedPluginContext,
     args: &HookRenderChunkArgs,
@@ -244,7 +244,7 @@ impl<T: Plugin> Pluginable for T {
     Plugin::render_chunk(self, ctx, args).await
   }
 
-  async fn augment_chunk_hash(
+  async fn call_augment_chunk_hash(
     &self,
     ctx: &SharedPluginContext,
     chunk: &RollupRenderedChunk,
@@ -252,7 +252,7 @@ impl<T: Plugin> Pluginable for T {
     Plugin::augment_chunk_hash(self, ctx, chunk).await
   }
 
-  async fn render_error(
+  async fn call_render_error(
     &self,
     ctx: &SharedPluginContext,
     args: &HookRenderErrorArgs,
@@ -260,7 +260,7 @@ impl<T: Plugin> Pluginable for T {
     Plugin::render_error(self, ctx, args).await
   }
 
-  async fn generate_bundle(
+  async fn call_generate_bundle(
     &self,
     ctx: &SharedPluginContext,
     bundle: &mut Vec<Output>,
@@ -269,7 +269,7 @@ impl<T: Plugin> Pluginable for T {
     Plugin::generate_bundle(self, ctx, bundle, is_write).await
   }
 
-  async fn write_bundle(
+  async fn call_write_bundle(
     &self,
     ctx: &SharedPluginContext,
     bundle: &mut Vec<Output>,
@@ -277,7 +277,7 @@ impl<T: Plugin> Pluginable for T {
     Plugin::write_bundle(self, ctx, bundle).await
   }
 
-  fn transform_ast(
+  fn call_transform_ast(
     &self,
     ctx: &SharedPluginContext,
     args: HookTransformAstArgs,

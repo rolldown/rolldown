@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-  plugin::HookTransformAstReturn, types::hook_transform_ast_args::HookTransformAstArgs,
+  pluginable::HookTransformAstReturn, types::hook_transform_ast_args::HookTransformAstArgs,
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveDynamicImportArgs,
   HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver, TransformPluginContext,
 };

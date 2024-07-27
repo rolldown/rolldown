@@ -12,7 +12,6 @@ version              = "0.0.1"
 workspace = true
 
 [dependencies]
-async-trait     = { workspace = true }
 glob            = { workspace = true }
 oxc             = { workspace = true }
 rolldown_plugin = { workspace = true }

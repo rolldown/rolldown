@@ -25,7 +25,6 @@ pub type HookAugmentChunkHashReturn = Result<Option<String>>;
 pub type HookBannerOutputReturn = Result<Option<String>>;
 pub type HookFooterOutputReturn = Result<Option<String>>;
 
-#[async_trait::async_trait]
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn name(&self) -> Cow<'static, str>;
 
@@ -33,40 +32,131 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   // --- Build hooks ---
 
-  async fn build_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
-    Ok(())
-  }
-
-  async fn resolve_id(
+  fn build_start(
     &self,
     _ctx: &SharedPluginContext,
-    _args: &HookResolveIdArgs,
-  ) -> HookResolveIdReturn {
-    Ok(None)
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async { Ok(()) }
+  }
+
+  fn resolve_id(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookResolveIdArgs<'_>,
+  ) -> impl std::future::Future<Output = HookResolveIdReturn> + Send {
+    async { Ok(None) }
   }
 
   #[deprecated(
     note = "This hook is only for rollup compatibility, please use `resolve_id` instead."
   )]
-  async fn resolve_dynamic_import(
+  fn resolve_dynamic_import(
     &self,
     _ctx: &SharedPluginContext,
-    _args: &HookResolveDynamicImportArgs,
-  ) -> HookResolveIdReturn {
-    Ok(None)
+    _args: &HookResolveDynamicImportArgs<'_>,
+  ) -> impl std::future::Future<Output = HookResolveIdReturn> + Send {
+    async { Ok(None) }
   }
 
-  async fn load(&self, _ctx: &SharedPluginContext, _args: &HookLoadArgs) -> HookLoadReturn {
-    Ok(None)
+  fn load(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookLoadArgs<'_>,
+  ) -> impl std::future::Future<Output = HookLoadReturn> + Send {
+    async { Ok(None) }
   }
 
-  async fn transform(
+  fn transform(
     &self,
     _ctx: &TransformPluginContext<'_>,
-    _args: &HookTransformArgs,
-  ) -> HookTransformReturn {
-    Ok(None)
+    _args: &HookTransformArgs<'_>,
+  ) -> impl std::future::Future<Output = HookTransformReturn> + Send {
+    async { Ok(None) }
   }
+
+  fn module_parsed(
+    &self,
+    _ctx: &SharedPluginContext,
+    _module_info: Arc<ModuleInfo>,
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async { Ok(()) }
+  }
+
+  fn build_end(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: Option<&HookBuildEndArgs>,
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async { Ok(()) }
+  }
+
+  // --- Generate hooks ---
+
+  fn render_start(
+    &self,
+    _ctx: &SharedPluginContext,
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async { Ok(()) }
+  }
+
+  fn banner(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookBannerArgs<'_>,
+  ) -> impl std::future::Future<Output = HookBannerOutputReturn> + Send {
+    async { Ok(None) }
+  }
+
+  fn footer(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookFooterArgs<'_>,
+  ) -> impl std::future::Future<Output = HookFooterOutputReturn> + Send {
+    async { Ok(None) }
+  }
+
+  fn render_chunk(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookRenderChunkArgs<'_>,
+  ) -> impl std::future::Future<Output = HookRenderChunkReturn> + Send {
+    async { Ok(None) }
+  }
+
+  fn augment_chunk_hash(
+    &self,
+    _ctx: &SharedPluginContext,
+    _chunk: &RollupRenderedChunk,
+  ) -> impl std::future::Future<Output = HookAugmentChunkHashReturn> + Send {
+    async { Ok(None) }
+  }
+
+  fn render_error(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookRenderErrorArgs,
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async { Ok(()) }
+  }
+
+  fn generate_bundle(
+    &self,
+    _ctx: &SharedPluginContext,
+    _bundle: &mut Vec<Output>,
+    _is_write: bool,
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async { Ok(()) }
+  }
+
+  fn write_bundle(
+    &self,
+    _ctx: &SharedPluginContext,
+    _bundle: &mut Vec<Output>,
+  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
+    async { Ok(()) }
+  }
+
+  // --- experimental hooks ---
 
   fn transform_ast(
     &self,
@@ -75,86 +165,4 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   ) -> HookTransformAstReturn {
     Ok(args.ast)
   }
-
-  async fn module_parsed(
-    &self,
-    _ctx: &SharedPluginContext,
-    _module_info: Arc<ModuleInfo>,
-  ) -> HookNoopReturn {
-    Ok(())
-  }
-
-  async fn build_end(
-    &self,
-    _ctx: &SharedPluginContext,
-    _args: Option<&HookBuildEndArgs>,
-  ) -> HookNoopReturn {
-    Ok(())
-  }
-
-  // --- Generate hooks ---
-
-  async fn render_start(&self, _ctx: &SharedPluginContext) -> HookNoopReturn {
-    Ok(())
-  }
-
-  async fn banner(
-    &self,
-    _ctx: &SharedPluginContext,
-    _args: &HookBannerArgs,
-  ) -> HookBannerOutputReturn {
-    Ok(None)
-  }
-
-  async fn footer(
-    &self,
-    _ctx: &SharedPluginContext,
-    _args: &HookFooterArgs,
-  ) -> HookFooterOutputReturn {
-    Ok(None)
-  }
-
-  async fn render_chunk(
-    &self,
-    _ctx: &SharedPluginContext,
-    _args: &HookRenderChunkArgs,
-  ) -> HookRenderChunkReturn {
-    Ok(None)
-  }
-
-  async fn augment_chunk_hash(
-    &self,
-    _ctx: &SharedPluginContext,
-    _chunk: &RollupRenderedChunk,
-  ) -> HookAugmentChunkHashReturn {
-    Ok(None)
-  }
-
-  async fn render_error(
-    &self,
-    _ctx: &SharedPluginContext,
-    _args: &HookRenderErrorArgs,
-  ) -> HookNoopReturn {
-    Ok(())
-  }
-
-  async fn generate_bundle(
-    &self,
-    _ctx: &SharedPluginContext,
-    _bundle: &mut Vec<Output>,
-    _is_write: bool,
-  ) -> HookNoopReturn {
-    Ok(())
-  }
-
-  async fn write_bundle(
-    &self,
-    _ctx: &SharedPluginContext,
-    _bundle: &mut Vec<Output>,
-  ) -> HookNoopReturn {
-    Ok(())
-  }
 }
-
-pub type BoxPlugin = Box<dyn Plugin>;
-pub type SharedPlugin = Arc<dyn Plugin>;

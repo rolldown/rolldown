@@ -21,7 +21,6 @@ use sugar_path::SugarPath;
 #[derive(Debug)]
 pub struct GlobImportPlugin {}
 
-#[async_trait::async_trait]
 impl Plugin for GlobImportPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("glob_import_plugin")

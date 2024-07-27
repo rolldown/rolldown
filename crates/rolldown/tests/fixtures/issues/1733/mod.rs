@@ -10,7 +10,6 @@ use sugar_path::SugarPath;
 #[derive(Debug)]
 struct ExternalCss;
 
-#[async_trait::async_trait]
 impl Plugin for ExternalCss {
   fn name(&self) -> Cow<'static, str> {
     "external-css".into()
@@ -19,7 +18,7 @@ impl Plugin for ExternalCss {
   async fn resolve_id(
     &self,
     _ctx: &SharedPluginContext,
-    args: &HookResolveIdArgs,
+    args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier.as_path().extension().map_or(false, |ext| ext.eq_ignore_ascii_case("css")) {
       let path = format!("rewritten-{}", args.specifier);

@@ -1,3 +1,4 @@
+#[allow(clippy::manual_async_fn)]
 mod data_url_plugin;
 mod utils;
 

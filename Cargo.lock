@@ -2175,7 +2175,6 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "async-channel",
- "async-trait",
  "dashmap 6.0.1",
  "derivative",
  "futures",

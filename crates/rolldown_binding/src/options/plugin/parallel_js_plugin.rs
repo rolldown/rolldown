@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 #[cfg(not(target_family = "wasm"))]
 use futures::future::{self, BoxFuture};
+use rolldown_plugin::Plugin;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_plugin::__inner::Pluginable;
 
@@ -65,15 +66,14 @@ impl ParallelJsPlugin {
 }
 
 #[cfg(not(target_family = "wasm"))]
-#[async_trait::async_trait]
-impl Pluginable for ParallelJsPlugin {
-  fn call_name(&self) -> Cow<'static, str> {
+impl Plugin for ParallelJsPlugin {
+  fn name(&self) -> Cow<'static, str> {
     self.first_plugin().call_name()
   }
 
   // --- Build hooks ---
 
-  async fn call_build_start(
+  async fn build_start(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
@@ -83,10 +83,10 @@ impl Pluginable for ParallelJsPlugin {
     Ok(())
   }
 
-  async fn call_resolve_id(
+  async fn resolve_id(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookResolveIdArgs,
+    args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if self.first_plugin().resolve_id.is_some() {
       self.run_single(|plugin| plugin.call_resolve_id(ctx, args)).await
@@ -95,10 +95,10 @@ impl Pluginable for ParallelJsPlugin {
     }
   }
 
-  async fn call_load(
+  async fn load(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookLoadArgs,
+    args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     if self.first_plugin().load.is_some() {
       self.run_single(|plugin| plugin.call_load(ctx, args)).await
@@ -107,10 +107,10 @@ impl Pluginable for ParallelJsPlugin {
     }
   }
 
-  async fn call_transform(
+  async fn transform(
     &self,
     ctx: &rolldown_plugin::TransformPluginContext<'_>,
-    args: &rolldown_plugin::HookTransformArgs,
+    args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     if self.first_plugin().transform.is_some() {
       self.run_single(|plugin| plugin.call_transform(ctx, args)).await
@@ -119,7 +119,7 @@ impl Pluginable for ParallelJsPlugin {
     }
   }
 
-  async fn call_build_end(
+  async fn build_end(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
     args: Option<&rolldown_plugin::HookBuildEndArgs>,
@@ -130,10 +130,10 @@ impl Pluginable for ParallelJsPlugin {
     Ok(())
   }
 
-  async fn call_render_chunk(
+  async fn render_chunk(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookRenderChunkArgs,
+    args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     if self.first_plugin().render_chunk.is_some() {
       self.run_single(|plugin| plugin.call_render_chunk(ctx, args)).await
@@ -144,7 +144,7 @@ impl Pluginable for ParallelJsPlugin {
 
   // --- Output hooks ---
 
-  async fn call_generate_bundle(
+  async fn generate_bundle(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
     bundle: &mut Vec<rolldown_common::Output>,
@@ -157,7 +157,7 @@ impl Pluginable for ParallelJsPlugin {
     }
   }
 
-  async fn call_write_bundle(
+  async fn write_bundle(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
     bundle: &mut Vec<rolldown_common::Output>,

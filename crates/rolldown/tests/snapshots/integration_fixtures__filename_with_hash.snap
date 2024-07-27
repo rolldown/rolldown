@@ -796,10 +796,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-UfCMc73Z.mjs
 
-# tests/esbuild/loader/loader_json_common_js_and_es6
-
-- entry_js-!~{000}~.mjs => entry_js-akZphmOp.mjs
-
 # tests/esbuild/loader/loader_json_invalid_identifier_es6
 
 - entry_js-!~{000}~.mjs => entry_js-SM7ZfaBc.mjs

@@ -2342,6 +2342,7 @@ dependencies = [
 name = "rolldown_testing"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "dunce",
  "insta",
  "jsonschema",
@@ -2353,6 +2354,7 @@ dependencies = [
  "rolldown_testing_config",
  "schemars",
  "serde_json",
+ "sugar_path",
  "tokio",
 ]
 
@@ -2363,6 +2365,7 @@ dependencies = [
  "rolldown_common",
  "schemars",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

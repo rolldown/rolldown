@@ -21,8 +21,8 @@ impl Plugin for ExternalCss {
     _ctx: &SharedPluginContext,
     args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn {
-    if args.source.as_path().extension().map_or(false, |ext| ext.eq_ignore_ascii_case("css")) {
-      let path = format!("rewritten-{}", args.source);
+    if args.specifier.as_path().extension().map_or(false, |ext| ext.eq_ignore_ascii_case("css")) {
+      let path = format!("rewritten-{}", args.specifier);
       return Ok(Some(HookResolveIdOutput {
         id: path,
         external: Some(true),

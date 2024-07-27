@@ -12,34 +12,34 @@ version              = "0.1.0"
 workspace = true
 
 [dependencies]
-anyhow                = { workspace = true }
-arcstr                = { workspace = true }
-bitflags              = { workspace = true }
-daachorse             = { workspace = true }
-dunce                 = { workspace = true }
-futures               = { workspace = true }
-indexmap              = { workspace = true }
-itertools             = { workspace = true }
-mime                  = { workspace = true }
-oxc                   = { workspace = true }
-regex                 = { workspace = true }
-rolldown_common       = { workspace = true }
-rolldown_ecmascript   = { workspace = true }
-rolldown_error        = { workspace = true }
-rolldown_fs           = { workspace = true, features = ["os"] }
-rolldown_loader_utils = { workspace = true }
-rolldown_plugin       = { workspace = true }
-rolldown_resolver     = { workspace = true }
-rolldown_rstr         = { workspace = true }
-rolldown_sourcemap    = { workspace = true }
-rolldown_tracing      = { workspace = true }
-rolldown_utils        = { workspace = true }
-rustc-hash            = { workspace = true }
-sugar_path            = { workspace = true }
-tokio                 = { workspace = true, features = ["rt", "macros", "sync"] }
-tracing               = { workspace = true }
-tracing-chrome        = { workspace = true }
-xxhash-rust           = { workspace = true, features = ["xxh3"] }
+anyhow                   = { workspace = true }
+arcstr                   = { workspace = true }
+bitflags                 = { workspace = true }
+daachorse                = { workspace = true }
+dunce                    = { workspace = true }
+futures                  = { workspace = true }
+indexmap                 = { workspace = true }
+itertools                = { workspace = true }
+oxc                      = { workspace = true }
+regex                    = { workspace = true }
+rolldown_common          = { workspace = true }
+rolldown_ecmascript      = { workspace = true }
+rolldown_error           = { workspace = true }
+rolldown_fs              = { workspace = true, features = ["os"] }
+rolldown_loader_utils    = { workspace = true }
+rolldown_plugin          = { workspace = true }
+rolldown_plugin_data_url = { workspace = true }
+rolldown_resolver        = { workspace = true }
+rolldown_rstr            = { workspace = true }
+rolldown_sourcemap       = { workspace = true }
+rolldown_tracing         = { workspace = true }
+rolldown_utils           = { workspace = true }
+rustc-hash               = { workspace = true }
+sugar_path               = { workspace = true }
+tokio                    = { workspace = true, features = ["rt", "macros", "sync"] }
+tracing                  = { workspace = true }
+tracing-chrome           = { workspace = true }
+xxhash-rust              = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
 async-trait      = { workspace = true }

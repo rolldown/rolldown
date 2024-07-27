@@ -2146,7 +2146,6 @@ dependencies = [
  "indexmap",
  "insta",
  "itertools 0.13.0",
- "mime",
  "oxc",
  "regex",
  "rolldown_common",
@@ -2155,6 +2154,7 @@ dependencies = [
  "rolldown_fs",
  "rolldown_loader_utils",
  "rolldown_plugin",
+ "rolldown_plugin_data_url",
  "rolldown_resolver",
  "rolldown_rstr",
  "rolldown_sourcemap",
@@ -2289,6 +2289,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_plugin_data_url"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base64-simd 0.8.0",
+ "regex",
+ "rolldown_common",
+ "rolldown_plugin",
+ "urlencoding",
+]
+
+[[package]]
 name = "rolldown_plugin_glob_import"
 version = "0.0.1"
 dependencies = [
@@ -2394,7 +2406,6 @@ dependencies = [
  "regex",
  "rustc-hash",
  "sugar_path",
- "urlencoding",
  "xxhash-rust",
 ]
 

@@ -24,7 +24,6 @@ phf         = { workspace = true }
 regex       = { workspace = true }
 rustc-hash  = { workspace = true }
 sugar_path  = { workspace = true }
-urlencoding = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]

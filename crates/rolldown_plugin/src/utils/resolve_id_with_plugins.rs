@@ -3,8 +3,6 @@ use crate::{
 };
 use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId};
 use rolldown_resolver::{ResolveError, Resolver};
-use rolldown_utils::dataurl::is_valid_for_loading;
-use std::borrow::Cow;
 use std::path::Path;
 
 fn is_http_url(s: &str) -> bool {
@@ -61,24 +59,12 @@ pub async fn resolve_id_with_plugins(
   }
 
   // Auto external http url or data url
-  if is_http_url(request) {
+  if is_http_url(request) || is_data_url(request) {
     return Ok(Ok(ResolvedId {
       id: request.to_string().into(),
       module_def_format: ModuleDefFormat::Unknown,
       ignored: false,
       is_external: true,
-      package_json: None,
-      side_effects: None,
-    }));
-  }
-
-  if is_data_url(request) {
-    let valid = is_valid_for_loading(request);
-    return Ok(Ok(ResolvedId {
-      id: if valid { Cow::Owned(format!("<{request}>")) } else { Cow::Borrowed(request) }.into(),
-      module_def_format: ModuleDefFormat::EsmMjs,
-      ignored: false,
-      is_external: !valid,
       package_json: None,
       side_effects: None,
     }));

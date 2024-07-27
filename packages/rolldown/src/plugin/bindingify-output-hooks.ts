@@ -187,3 +187,43 @@ export function bindingifyFooter(
     )
   }
 }
+
+export function bindingifyIntro(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
+): BindingPluginOptions['intro'] {
+  const hook = plugin.intro
+  if (!hook) {
+    return undefined
+  }
+
+  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+
+  return async (ctx, chunk) => {
+    return handler.call(
+      new PluginContext(options, ctx, plugin, pluginContextData),
+      chunk,
+    )
+  }
+}
+
+export function bindingifyOutro(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
+): BindingPluginOptions['outro'] {
+  const hook = plugin.outro
+  if (!hook) {
+    return undefined
+  }
+
+  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+
+  return async (ctx, chunk) => {
+    return handler.call(
+      new PluginContext(options, ctx, plugin, pluginContextData),
+      chunk,
+    )
+  }
+}

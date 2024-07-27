@@ -4,10 +4,10 @@ use super::plugin_context::SharedPluginContext;
 use crate::{
   transform_plugin_context::TransformPluginContext,
   types::{
-    hook_footer_args::HookFooterArgs, hook_render_error::HookRenderErrorArgs,
-    hook_transform_ast_args::HookTransformAstArgs, hook_transform_output::HookTransformOutput,
+    hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
+    hook_transform_output::HookTransformOutput,
   },
-  HookBannerArgs, HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs,
+  HookBuildEndArgs, HookInjectionArgs, HookLoadArgs, HookLoadOutput, HookRenderChunkArgs,
   HookRenderChunkOutput, HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdOutput,
   HookTransformArgs,
 };
@@ -22,8 +22,7 @@ pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
 pub type HookNoopReturn = Result<()>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
 pub type HookAugmentChunkHashReturn = Result<Option<String>>;
-pub type HookBannerOutputReturn = Result<Option<String>>;
-pub type HookFooterOutputReturn = Result<Option<String>>;
+pub type HookInjectionOutputReturn = Result<Option<String>>;
 
 #[async_trait::async_trait]
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
@@ -98,19 +97,36 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     Ok(())
   }
 
+  // TODO use macros to
   async fn banner(
     &self,
     _ctx: &SharedPluginContext,
-    _args: &HookBannerArgs,
-  ) -> HookBannerOutputReturn {
+    _args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn {
     Ok(None)
   }
 
   async fn footer(
     &self,
     _ctx: &SharedPluginContext,
-    _args: &HookFooterArgs,
-  ) -> HookFooterOutputReturn {
+    _args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn {
+    Ok(None)
+  }
+
+  async fn intro(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn {
+    Ok(None)
+  }
+
+  async fn outro(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn {
     Ok(None)
   }
 

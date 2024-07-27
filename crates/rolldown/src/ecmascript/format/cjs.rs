@@ -2,6 +2,7 @@ use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
 use crate::{
+  append_injection,
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
   utils::chunk::{
@@ -23,19 +24,13 @@ pub fn render_cjs(
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
-  if let Some(banner) = banner {
-    concat_source.add_source(Box::new(RawSource::new(banner)));
-  }
+  append_injection!(concat_source, banner);
 
   if determine_use_strict(ctx) {
     concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
   }
 
-  if let Some(intro) = intro {
-    if !intro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(intro)));
-    }
-  }
+  append_injection!(concat_source, intro);
 
   // Runtime module should be placed before the generated `requires` in CJS format.
   // Because, we might need to generate `__toESM(require(...))` that relies on the runtime module.
@@ -68,15 +63,7 @@ pub fn render_cjs(
     concat_source.add_source(Box::new(RawSource::new(exports)));
   }
 
-  if let Some(outro) = outro {
-    if !outro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(outro)));
-    }
-  }
-
-  if let Some(footer) = footer {
-    concat_source.add_source(Box::new(RawSource::new(footer)));
-  }
+  append_injection!(concat_source, outro, footer);
 
   Ok(concat_source)
 }

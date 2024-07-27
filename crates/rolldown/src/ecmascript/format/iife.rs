@@ -3,6 +3,7 @@ use crate::utils::chunk::collect_render_chunk_imports::{
 };
 use crate::utils::chunk::determine_use_strict::determine_use_strict;
 use crate::{
+  append_injection,
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
   utils::chunk::render_chunk_exports::{
@@ -27,9 +28,7 @@ pub fn render_iife(
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
-  if let Some(banner) = banner {
-    concat_source.add_source(Box::new(RawSource::new(banner)));
-  }
+  append_injection!(concat_source, banner);
 
   // iife wrapper start
   let export_items = get_export_items(ctx.chunk, ctx.link_output);
@@ -63,11 +62,7 @@ pub fn render_iife(
     concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
   }
 
-  if let Some(intro) = intro {
-    if !intro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(intro)));
-    }
-  }
+  append_injection!(concat_source, intro);
 
   concat_source.add_source(Box::new(RawSource::new(import_code)));
 
@@ -81,19 +76,16 @@ pub fn render_iife(
     }
   });
 
-  if let Some(outro) = outro {
-    if !outro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(outro)));
-    }
-  }
-
   // iife exports
   if let Some(exports) = render_chunk_exports(ctx)? {
     concat_source.add_source(Box::new(RawSource::new(exports)));
-    if named_exports {
-      // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
-      concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
-    }
+  }
+
+  append_injection!(concat_source, outro);
+
+  if named_exports && has_exports {
+    // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
+    concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
   }
 
   // iife wrapper end
@@ -103,9 +95,7 @@ pub fn render_iife(
     concat_source.add_source(Box::new(RawSource::new("})".to_string())));
   }
 
-  if let Some(footer) = footer {
-    concat_source.add_source(Box::new(RawSource::new(footer)));
-  }
+  append_injection!(concat_source, footer);
 
   Ok(concat_source)
 }

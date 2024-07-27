@@ -1,6 +1,7 @@
+use crate::define_injection_hooks;
 use crate::types::hook_render_error::HookRenderErrorArgs;
-use crate::{HookAugmentChunkHashReturn, HookFooterArgs, HookNoopReturn, HookRenderChunkArgs};
-use crate::{HookBannerArgs, PluginDriver};
+use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
+use crate::{HookInjectionArgs, PluginDriver};
 use anyhow::{Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk};
 use rolldown_sourcemap::SourceMap;
@@ -13,39 +14,7 @@ impl PluginDriver {
     Ok(())
   }
 
-  pub async fn banner(
-    &self,
-    args: HookBannerArgs<'_>,
-    mut banner: String,
-  ) -> Result<Option<String>> {
-    for (plugin, ctx) in &self.plugins {
-      if let Some(r) = plugin.banner(ctx, &args).await? {
-        banner.push('\n');
-        banner.push_str(r.as_str());
-      }
-    }
-    if banner.is_empty() {
-      return Ok(None);
-    }
-    Ok(Some(banner))
-  }
-
-  pub async fn footer(
-    &self,
-    args: HookFooterArgs<'_>,
-    mut footer: String,
-  ) -> Result<Option<String>> {
-    for (plugin, ctx) in &self.plugins {
-      if let Some(r) = plugin.footer(ctx, &args).await? {
-        footer.push('\n');
-        footer.push_str(r.as_str());
-      }
-    }
-    if footer.is_empty() {
-      return Ok(None);
-    }
-    Ok(Some(footer))
-  }
+  define_injection_hooks!(banner, footer, intro, outro);
 
   pub async fn render_chunk(
     &self,

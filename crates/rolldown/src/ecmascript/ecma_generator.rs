@@ -8,13 +8,33 @@ use rolldown_common::{
   AssetMeta, EcmaAssetMeta, ModuleId, ModuleIdx, OutputFormat, PreliminaryAsset, RenderedModule,
 };
 use rolldown_error::DiagnosableResult;
-use rolldown_plugin::{HookBannerArgs, HookFooterArgs};
+use rolldown_plugin::HookInjectionArgs;
 use rolldown_sourcemap::Source;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
 use super::format::{app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife};
+
+macro_rules! hook_injection {
+  ($ctx:ident, $rendered_chunk:ident, $( $injection_name:ident ),*) => {
+    $(
+      let $injection_name = {
+        let $injection_name = match $ctx.options.$injection_name.as_ref() {
+          Some(hook) => hook.call(&$rendered_chunk).await?,
+          None => None,
+        };
+        $ctx
+          .plugin_driver
+          .$injection_name(
+            HookInjectionArgs { chunk: &$rendered_chunk },
+            $injection_name.unwrap_or_default(),
+          )
+          .await?
+      };
+    )*
+  };
+}
 
 pub type RenderedModuleSources = Vec<(ModuleIdx, ModuleId, Option<Vec<Box<dyn Source + Send>>>)>;
 
@@ -62,37 +82,7 @@ impl Generator for EcmaGenerator {
       ctx.chunk_graph,
     );
 
-    let banner = {
-      let banner = match ctx.options.banner.as_ref() {
-        Some(banner) => banner.call(&rendered_chunk).await?,
-        None => None,
-      };
-      ctx
-        .plugin_driver
-        .banner(HookBannerArgs { chunk: &rendered_chunk }, banner.unwrap_or_default())
-        .await?
-    };
-
-    let footer = {
-      let footer = match ctx.options.footer.as_ref() {
-        Some(footer) => footer.call(&rendered_chunk).await?,
-        None => None,
-      };
-      ctx
-        .plugin_driver
-        .footer(HookFooterArgs { chunk: &rendered_chunk }, footer.unwrap_or_default())
-        .await?
-    };
-
-    let intro = match ctx.options.intro.as_ref() {
-      Some(intro) => intro.call(&rendered_chunk).await?,
-      None => None,
-    };
-
-    let outro = match ctx.options.outro.as_ref() {
-      Some(outro) => outro.call(&rendered_chunk).await?,
-      None => None,
-    };
+    hook_injection!(ctx, rendered_chunk, banner, intro, outro, footer);
 
     let concat_source = match ctx.options.format {
       OutputFormat::Esm => {

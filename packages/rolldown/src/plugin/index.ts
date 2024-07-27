@@ -178,7 +178,7 @@ export type SequentialPluginHooks =
   | 'renderChunk'
   | 'transform'
 
-export type AddonHooks = 'banner' | 'footer' /* | 'intro' | 'outro' */
+export type AddonHooks = 'banner' | 'footer' | 'intro' | 'outro'
 
 export type OutputPluginHooks =
   | 'augmentChunkHash'

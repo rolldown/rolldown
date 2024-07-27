@@ -3,6 +3,7 @@ mod plugin_context;
 mod plugin_driver;
 mod transform_plugin_context;
 mod types;
+#[macro_use]
 mod utils;
 /// For internal usage only
 pub mod inner {
@@ -11,16 +12,15 @@ pub mod inner {
 
 pub use crate::{
   plugin::{
-    BoxPlugin, HookAugmentChunkHashReturn, HookBannerOutputReturn, HookFooterOutputReturn,
-    HookLoadReturn, HookNoopReturn, HookRenderChunkReturn, HookResolveIdReturn,
-    HookTransformAstReturn, HookTransformReturn, Plugin, SharedPlugin,
+    BoxPlugin, HookAugmentChunkHashReturn, HookInjectionOutputReturn, HookLoadReturn,
+    HookNoopReturn, HookRenderChunkReturn, HookResolveIdReturn, HookTransformAstReturn,
+    HookTransformReturn, Plugin, SharedPlugin,
   },
   plugin_context::{PluginContext, SharedPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},
   transform_plugin_context::TransformPluginContext,
-  types::hook_banner_args::HookBannerArgs,
   types::hook_build_end_args::HookBuildEndArgs,
-  types::hook_footer_args::HookFooterArgs,
+  types::hook_injection_args::HookInjectionArgs,
   types::hook_load_args::HookLoadArgs,
   types::hook_load_output::HookLoadOutput,
   types::hook_render_chunk_args::HookRenderChunkArgs,

@@ -3,6 +3,7 @@ use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
 use crate::{
+  append_injection,
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
   utils::chunk::{
@@ -23,15 +24,7 @@ pub fn render_esm(
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
-  if let Some(banner) = banner {
-    concat_source.add_source(Box::new(RawSource::new(banner)));
-  }
-
-  if let Some(intro) = intro {
-    if !intro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(intro)));
-    }
-  }
+  append_injection!(concat_source, banner, intro);
 
   concat_source.add_source(Box::new(RawSource::new(render_esm_chunk_imports(ctx))));
 
@@ -73,15 +66,7 @@ pub fn render_esm(
     }
   }
 
-  if let Some(outro) = outro {
-    if !outro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(outro)));
-    }
-  }
-
-  if let Some(footer) = footer {
-    concat_source.add_source(Box::new(RawSource::new(footer)));
-  }
+  append_injection!(concat_source, outro, footer);
 
   Ok(concat_source)
 }

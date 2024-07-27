@@ -10,7 +10,6 @@ pub struct StmtInfos {
   pub infos: IndexVec<StmtInfoIdx, StmtInfo>,
   // only for top level symbols
   symbol_ref_to_declared_stmt_idx: FxHashMap<SymbolRef, Vec<StmtInfoIdx>>,
-  pub has_export_used: bool,
 }
 
 impl StmtInfos {

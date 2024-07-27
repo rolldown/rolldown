@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
-use rolldown_testing::case::Case;
+use rolldown_testing::fixture::Fixture;
 use testing_macros::fixture;
 
 #[allow(clippy::needless_pass_by_value)]
 #[fixture("./tests/esbuild/**/_config.json")]
 fn test(path: PathBuf) {
-  Case::new(path.parent().unwrap()).run();
+  Fixture::new(path.parent().unwrap()).run_integration_test();
 }

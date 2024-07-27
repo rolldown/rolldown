@@ -1,9 +1,10 @@
 use std::{borrow::Cow, sync::Arc};
 
-use rolldown::{Bundler, BundlerOptions};
+use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
   HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, SharedPluginContext,
 };
+use rolldown_testing::{integration_test::IntegrationTest, test_config::TestMeta};
 use sugar_path::SugarPath;
 
 #[derive(Debug)]
@@ -40,18 +41,18 @@ async fn should_rewrite_dynamic_imports_that_import_external_modules() {
     .unwrap()
     .to_path_buf()
     .absolutize_with(env!("WORKSPACE_DIR").as_path());
-  let mut bundler = Bundler::with_plugins(
-    BundlerOptions {
-      input: Some(vec!["./entry.js".to_string().into()]),
-      cwd: Some(cwd.clone()),
-      ..Default::default()
-    },
-    vec![Arc::new(ExternalCss)],
-  );
 
-  let output = bundler.write().await.unwrap();
-
-  assert!(output.errors.is_empty(), "{:?}", output.errors);
-
-  insta::assert_snapshot!(rolldown_testing::utils::stringify_bundle_output(output, &cwd));
+  IntegrationTest::new(TestMeta { expect_executed: false, ..Default::default() })
+    .run_with_plugins(
+      BundlerOptions {
+        input: Some(vec![InputItem {
+          name: Some("entry".to_string()),
+          import: "./entry.js".to_string(),
+        }]),
+        cwd: Some(cwd.clone()),
+        ..Default::default()
+      },
+      vec![Arc::new(ExternalCss)],
+    )
+    .await;
 }

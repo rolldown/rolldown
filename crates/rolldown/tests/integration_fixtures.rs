@@ -1,7 +1,11 @@
 use std::path::{Component, PathBuf};
 
 use rolldown_common::Output;
-use rolldown_testing::case::{Case, Fixture};
+use rolldown_testing::{
+  fixture::Fixture,
+  integration_test::IntegrationTest,
+  test_config::{read_test_config, TestConfig, TestMeta},
+};
 use sugar_path::SugarPath;
 use testing_macros::fixture;
 mod fixtures;
@@ -9,7 +13,7 @@ mod fixtures;
 #[allow(clippy::needless_pass_by_value)]
 #[fixture("./tests/fixtures/**/_config.json")]
 fn fixture_with_config(config_path: PathBuf) {
-  Case::new(config_path.parent().unwrap()).run();
+  Fixture::new(config_path.parent().unwrap()).run_integration_test();
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -28,12 +32,19 @@ async fn filename_with_hash() {
     let mut snapshot_output = String::new();
     let config_path = path.canonicalize().unwrap();
     let config_path = dunce::simplified(&config_path);
+    let fixture_path = config_path.parent().unwrap();
 
-    let mut fixture = Fixture::new(config_path.parent().unwrap().to_path_buf());
-    snapshot_output
-      .push_str(&format!("# {}\n\n", fixture.dir_path().relative(&cwd).to_slash_lossy()));
+    let TestConfig { config: mut options, meta } = read_test_config(config_path);
 
-    let assets = fixture.bundle(false, true).await;
+    if options.cwd.is_none() {
+      options.cwd = Some(fixture_path.to_path_buf());
+    }
+
+    let integration_test =
+      IntegrationTest::new(TestMeta { write_to_disk: false, hash_in_filename: true, ..meta });
+    let assets = integration_test.bundle(options).await;
+
+    snapshot_output.push_str(&format!("# {}\n\n", fixture_path.relative(&cwd).to_slash_lossy()));
 
     assets.assets.iter().for_each(|asset| match asset {
       Output::Asset(asset) => {

@@ -1,6 +1,7 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+assertion_line: 258
+expression: snapshot
 input_file: crates/rolldown/tests/fixtures/errors/missing_export
 ---
 # Errors
@@ -12,7 +13,7 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
    ╭─[main.js:4:8]
    │
  4 │ import importedE from "./foo"
-   │        ────┬────
+   │        ────┬────  
    │            ╰────── Missing export
 ───╯
 
@@ -24,7 +25,7 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
    ╭─[main.js:2:10]
    │
  2 │ export { importedC, importedD as d } from "./foo"
-   │          ────┬────
+   │          ────┬────  
    │              ╰────── Missing export
 ───╯
 
@@ -36,7 +37,7 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
    ╭─[main.js:2:21]
    │
  2 │ export { importedC, importedD as d } from "./foo"
-   │                     ────┬────
+   │                     ────┬────  
    │                         ╰────── Missing export
 ───╯
 
@@ -48,7 +49,7 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
    ╭─[main.js:5:10]
    │
  5 │ import { default as f } from "./foo"
-   │          ───┬───
+   │          ───┬───  
    │             ╰───── Missing export
 ───╯
 
@@ -60,7 +61,7 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
    ╭─[main.js:6:10]
    │
  6 │ export { default as g } from "./foo"
-   │          ───┬───
+   │          ───┬───  
    │             ╰───── Missing export
 ───╯
 
@@ -72,7 +73,7 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
    ╭─[main.js:1:10]
    │
  1 │ import { importedA, importedB as b } from "./foo"
-   │          ────┬────
+   │          ────┬────  
    │              ╰────── Missing export
 ───╯
 
@@ -84,8 +85,15 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
    ╭─[main.js:1:21]
    │
  1 │ import { importedA, importedB as b } from "./foo"
-   │                     ────┬────
+   │                     ────┬────  
    │                         ╰────── Missing export
 ───╯
 
+```# Assets
+
+## main.mjs
+
+```js
+
+export { d, g, importedC };
 ```

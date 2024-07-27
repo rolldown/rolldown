@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/case/case.rs
 expression: content
-input_file: crates/rolldown/tests/fixtures/module_types/json/correct_semantic_of_import_and_require
+input_file: crates/rolldown/tests/fixtures/function/module_types/json/correct_semantic_of_import_and_require
 ---
 # Assets
 

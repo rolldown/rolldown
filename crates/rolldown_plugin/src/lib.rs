@@ -35,3 +35,5 @@ pub use crate::{
   types::hook_transform_output::HookTransformOutput,
   types::plugin_context_resolve_options::PluginContextResolveOptions,
 };
+
+pub use async_trait;

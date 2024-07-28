@@ -1,7 +1,7 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/export_mode/iife/default
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/function/export_mode/iife/default
 ---
 # Assets
 
@@ -10,23 +10,22 @@ input_file: crates/rolldown/tests/fixtures/export_mode/iife/default
 ```js
 (function() {
 
-"use strict";
+  "use strict";
 
-
-//#region mod.js
-var default_mod_ns = {};
-__export(default_mod_ns, {
-	add: () => add,
-	subtract: () => subtract
-});
-function add(a, b) {
-	return a + b;
-}
-function subtract(a, b) {
-	return a - b;
-}
-
-//#endregion
-return default_mod_ns;
+  
+  //#region mod.js
+  var default_mod_ns = {};
+  __export(default_mod_ns, {
+  	add: () => add,
+  	subtract: () => subtract
+  });
+  function add(a, b) {
+  	return a + b;
+  }
+  function subtract(a, b) {
+  	return a - b;
+  }
+  //#endregion
+  return default_mod_ns;
 })();
 ```

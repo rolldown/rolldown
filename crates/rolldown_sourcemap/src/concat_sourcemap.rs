@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use oxc::sourcemap::{ConcatSourceMapBuilder, SourceMap};
 
 use crate::lines_count;
@@ -13,6 +14,7 @@ pub trait Source {
     sourcemap_builder: &mut Option<ConcatSourceMapBuilder>,
     line_offset: u32,
   );
+  fn indent(&mut self, indent: usize);
 }
 
 pub struct RawSource {
@@ -45,6 +47,12 @@ impl Source for RawSource {
     _line_offset: u32,
   ) {
     final_source.push_str(&self.content);
+  }
+
+  fn indent(&mut self, indent: usize) {
+    let content: Vec<_> =
+      self.content.lines().map(|line| format!("{}{}", " ".repeat(indent), line)).collect();
+    self.content = content.join("\n");
   }
 }
 
@@ -84,6 +92,18 @@ impl Source for SourceMapSource {
     }
 
     final_source.push_str(&self.content);
+  }
+
+  fn indent(&mut self, indent: usize) {
+    let content: Vec<_> =
+        self.content.lines().map(|line| {
+          if line.is_empty() {
+            Cow::Borrowed(line)
+          } else {
+            Cow::Owned(format!("{}{}", " ".repeat(indent), line))
+          }
+        }).collect();
+    self.content = content.join("\n").to_string();
   }
 }
 

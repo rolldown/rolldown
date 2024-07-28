@@ -1,7 +1,7 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/misc/intro/iife
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/function/intro/iife
 ---
 # Assets
 
@@ -10,13 +10,12 @@ input_file: crates/rolldown/tests/fixtures/misc/intro/iife
 ```js
 (function() {
 
-"use strict";
-// intro
+  "use strict";
+  // intro
 
-//#region main.js
-var main_default = "banner";
-
-//#endregion
-return main_default;
+  //#region main.js
+  var main_default = "banner";
+  //#endregion
+  return main_default;
 })();
 ```

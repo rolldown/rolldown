@@ -327,7 +327,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_no_bundle_iife
 
-- entry_js-!~{000}~.mjs => entry_js-k-4tRlGF.mjs
+- entry_js-!~{000}~.mjs => entry_js-QhBvnd0x.mjs
 
 # tests/esbuild/dce/tree_shaking_object_property
 
@@ -1529,15 +1529,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/export_mode/iife/auto/none
 
-- main-!~{000}~.mjs => main-MXkFYr18.mjs
+- main-!~{000}~.mjs => main-fB--U6HU.mjs
 
 # tests/fixtures/function/export_mode/iife/default
 
-- main-!~{000}~.mjs => main-9upwMAGj.mjs
+- main-!~{000}~.mjs => main-BPQlXjyo.mjs
 
 # tests/fixtures/function/export_mode/iife/named
 
-- main-!~{000}~.mjs => main-Qm6ECnO4.mjs
+- main-!~{000}~.mjs => main-qw8WbVSw.mjs
 
 # tests/fixtures/function/external/commonjs_reexport_external
 
@@ -1591,19 +1591,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/format/iife/basic
 
-- main-!~{000}~.mjs => main-Z44yy_wa.mjs
+- main-!~{000}~.mjs => main-ZEWk38QI.mjs
 
 # tests/fixtures/function/format/iife/external_modules
 
-- main-!~{000}~.mjs => main-Ss0NlRCd.mjs
+- main-!~{000}~.mjs => main-na63a4BU.mjs
 
 # tests/fixtures/function/format/iife/external_modules_with_globals
 
-- main-!~{000}~.mjs => main-MwWasrct.mjs
+- main-!~{000}~.mjs => main-KENpaA7B.mjs
 
 # tests/fixtures/function/format/iife/iife-with-name
 
-- main-!~{000}~.mjs => main-Hbb8oQ-i.mjs
+- main-!~{000}~.mjs => main-BQpXbxaN.mjs
 
 # tests/fixtures/function/intro/cjs
 
@@ -1615,7 +1615,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/intro/iife
 
-- main-!~{000}~.mjs => main-s5GQ6pv_.mjs
+- main-!~{000}~.mjs => main-_QfgqJC0.mjs
 
 # tests/fixtures/function/minify/basic
 
@@ -1724,7 +1724,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/outro/iife
 
-- main-!~{000}~.mjs => main-rzBDQzY9.mjs
+- main-!~{000}~.mjs => main-QSCNh2F_.mjs
 
 # tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
@@ -1796,7 +1796,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/misc/banner/iife
 
-- main-!~{000}~.mjs => main-xSRQid4O.mjs
+- main-!~{000}~.mjs => main-mNjEp1n_.mjs
 
 # tests/fixtures/misc/basic
 

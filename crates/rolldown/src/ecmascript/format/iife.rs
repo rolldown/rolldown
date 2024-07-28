@@ -11,7 +11,7 @@ use crate::{
 };
 use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::DiagnosableResult;
-use rolldown_sourcemap::{ConcatSource, RawSource};
+use rolldown_sourcemap::{ConcatSource, RawSource, Source};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
 
@@ -60,20 +60,29 @@ pub fn render_iife(
   ))));
 
   if determine_use_strict(ctx) {
-    concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
+    let mut source= RawSource::new("\"use strict\";".to_string());
+    source.indent(2);
+    concat_source.add_source(Box::new(source));
   }
 
   if let Some(intro) = intro {
-    concat_source.add_source(Box::new(RawSource::new(intro)));
+    let mut intro = RawSource::new(intro);
+    intro.indent(2);
+    concat_source.add_source(Box::new(intro));
   }
 
-  concat_source.add_source(Box::new(RawSource::new(import_code)));
+  concat_source.add_source(Box::new({
+    let mut source = RawSource::new(import_code);
+    source.indent(2);
+    source
+  }));
 
   // chunk content
-  // TODO indent chunk content for iife format
   module_sources.into_iter().for_each(|(_, _, module_render_output)| {
     if let Some(emitted_sources) = module_render_output {
       for source in emitted_sources {
+        let mut source = source;
+        source.indent(2);
         concat_source.add_source(source);
       }
     }
@@ -81,16 +90,22 @@ pub fn render_iife(
 
   // iife exports
   if let Some(exports) = render_chunk_exports(ctx)? {
-    concat_source.add_source(Box::new(RawSource::new(exports)));
+    let mut exports = RawSource::new(exports);
+    exports.indent(2);
+    concat_source.add_source(Box::new(exports));
   }
 
   if let Some(outro) = outro {
-    concat_source.add_source(Box::new(RawSource::new(outro)));
+    let mut outro = RawSource::new(outro);
+    outro.indent(2);
+    concat_source.add_source(Box::new(outro));
   }
 
   if named_exports && has_exports {
+    let mut source = RawSource::new("return exports;".to_string());
+    source.indent(2);
     // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
-    concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
+    concat_source.add_source(Box::new(source));
   }
 
   // iife wrapper end

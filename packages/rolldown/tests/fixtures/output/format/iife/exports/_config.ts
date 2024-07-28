@@ -13,16 +13,14 @@ export default defineTest({
     expect(output.output[0].code).toMatchInlineSnapshot(`
       "(function(exports, node_path) {
 
-      "use strict";
-      const { join } = node_path;
-
-      //#region main.js
-      var main_default = join;
-
-      //#endregion
-      Object.defineProperty(exports, '__esModule', { value: true });
-      exports.default = main_default;
-      return exports;
+        "use strict";
+        const { join } = node_path;
+        //#region main.js
+        var main_default = join;
+        //#endregion
+        Object.defineProperty(exports, '__esModule', { value: true });
+        exports.default = main_default;
+        return exports;
       })({}, node_path);"
     `)
   },

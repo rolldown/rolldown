@@ -10,13 +10,12 @@ input_file: crates/rolldown/tests/fixtures/function/outro/iife
 ```js
 (function() {
 
-"use strict";
+  "use strict";
 
-//#region main.js
-var main_default = "banner";
-
-//#endregion
-return main_default;
-// outro
+  //#region main.js
+  var main_default = "banner";
+  //#endregion
+  return main_default;
+  // outro
 })();
 ```

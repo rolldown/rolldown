@@ -96,7 +96,7 @@ fn test_collapse_sourcemaps() {
     source_text.clone(),
     source_map.unwrap(),
     source_text.matches('\n').count() as u32,
-  )));
+  )), 0);
 
   let filename = "bar.js".to_string();
   let source_text = "const bar = 2; console.log(bar);\n".to_string();
@@ -107,7 +107,7 @@ fn test_collapse_sourcemaps() {
     source_text.clone(),
     source_map.unwrap(),
     source_text.matches('\n').count() as u32,
-  )));
+  )), 0);
 
   let (source_text, source_map) = concat_source.content_and_sourcemap();
 

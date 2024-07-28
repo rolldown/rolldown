@@ -1,7 +1,7 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/export_mode/iife/auto/none
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/function/export_mode/iife/auto/none
 ---
 # Assets
 
@@ -11,9 +11,8 @@ input_file: crates/rolldown/tests/fixtures/export_mode/iife/auto/none
 var MyLibrary = (function() {
 
 
-//#region main.js
-console.log("none");
-
-//#endregion
+  //#region main.js
+  console.log("none");
+  //#endregion
 })();
 ```

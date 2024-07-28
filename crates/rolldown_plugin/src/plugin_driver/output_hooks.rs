@@ -1,4 +1,3 @@
-use crate::define_injection_hooks;
 use crate::types::hook_render_error::HookRenderErrorArgs;
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
 use crate::{HookInjectionArgs, PluginDriver};
@@ -14,7 +13,73 @@ impl PluginDriver {
     Ok(())
   }
 
-  define_injection_hooks!(banner, footer, intro, outro);
+  pub async fn banner(
+    &self,
+    args: HookInjectionArgs<'_>,
+    mut banner: String,
+  ) -> Result<Option<String>> {
+    for (plugin, ctx) in &self.plugins {
+      if let Some(r) = plugin.banner(ctx, &args).await? {
+        banner.push('\n');
+        banner.push_str(r.as_str());
+      }
+    }
+    if banner.is_empty() {
+      return Ok(None);
+    }
+    Ok(Some(banner))
+  }
+
+  pub async fn footer(
+    &self,
+    args: HookInjectionArgs<'_>,
+    mut footer: String,
+  ) -> Result<Option<String>> {
+    for (plugin, ctx) in &self.plugins {
+      if let Some(r) = plugin.banner(ctx, &args).await? {
+        footer.push('\n');
+        footer.push_str(r.as_str());
+      }
+    }
+    if footer.is_empty() {
+      return Ok(None);
+    }
+    Ok(Some(footer))
+  }
+
+  pub async fn intro(
+    &self,
+    args: HookInjectionArgs<'_>,
+    mut intro: String,
+  ) -> Result<Option<String>> {
+    for (plugin, ctx) in &self.plugins {
+      if let Some(r) = plugin.banner(ctx, &args).await? {
+        intro.push('\n');
+        intro.push_str(r.as_str());
+      }
+    }
+    if intro.is_empty() {
+      return Ok(None);
+    }
+    Ok(Some(intro))
+  }
+
+  pub async fn outro(
+    &self,
+    args: HookInjectionArgs<'_>,
+    mut outro: String,
+  ) -> Result<Option<String>> {
+    for (plugin, ctx) in &self.plugins {
+      if let Some(r) = plugin.banner(ctx, &args).await? {
+        outro.push('\n');
+        outro.push_str(r.as_str());
+      }
+    }
+    if outro.is_empty() {
+      return Ok(None);
+    }
+    Ok(Some(outro))
+  }
 
   pub async fn render_chunk(
     &self,

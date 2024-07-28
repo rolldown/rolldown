@@ -16,26 +16,6 @@ use sugar_path::SugarPath;
 
 use super::format::{app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife};
 
-macro_rules! hook_injection {
-  ($ctx:ident, $rendered_chunk:ident, $( $injection_name:ident ),*) => {
-    $(
-      let $injection_name = {
-        let $injection_name = match $ctx.options.$injection_name.as_ref() {
-          Some(hook) => hook.call(&$rendered_chunk).await?,
-          None => None,
-        };
-        $ctx
-          .plugin_driver
-          .$injection_name(
-            HookInjectionArgs { chunk: &$rendered_chunk },
-            $injection_name.unwrap_or_default(),
-          )
-          .await?
-      };
-    )*
-  };
-}
-
 pub type RenderedModuleSources = Vec<(ModuleIdx, ModuleId, Option<Vec<Box<dyn Source + Send>>>)>;
 
 pub struct EcmaGenerator;
@@ -82,7 +62,49 @@ impl Generator for EcmaGenerator {
       ctx.chunk_graph,
     );
 
-    hook_injection!(ctx, rendered_chunk, banner, intro, outro, footer);
+    let banner = {
+      let injection = match ctx.options.banner.as_ref() {
+        Some(hook) => hook.call(&rendered_chunk).await?,
+        None => None,
+      };
+      ctx
+        .plugin_driver
+        .banner(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .await?
+    };
+
+    let intro = {
+      let injection = match ctx.options.banner.as_ref() {
+        Some(hook) => hook.call(&rendered_chunk).await?,
+        None => None,
+      };
+      ctx
+          .plugin_driver
+          .intro(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+          .await?
+    };
+
+    let outro = {
+      let injection = match ctx.options.banner.as_ref() {
+        Some(hook) => hook.call(&rendered_chunk).await?,
+        None => None,
+      };
+      ctx
+          .plugin_driver
+          .outro(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+          .await?
+    };
+
+    let footer = {
+      let injection = match ctx.options.banner.as_ref() {
+        Some(hook) => hook.call(&rendered_chunk).await?,
+        None => None,
+      };
+      ctx
+          .plugin_driver
+          .footer(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+          .await?
+    };
 
     let concat_source = match ctx.options.format {
       OutputFormat::Esm => {

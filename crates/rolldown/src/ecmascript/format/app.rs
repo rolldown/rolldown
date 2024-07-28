@@ -1,9 +1,6 @@
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
-use crate::{
-  append_injection, ecmascript::ecma_generator::RenderedModuleSources,
-  types::generator::GenerateContext,
-};
+use crate::{ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext};
 
 pub fn render_app(
   _ctx: &GenerateContext<'_>,
@@ -15,7 +12,13 @@ pub fn render_app(
 ) -> ConcatSource {
   let mut concat_source = ConcatSource::default();
 
-  append_injection!(concat_source, banner, intro);
+  if let Some(banner) = banner {
+    concat_source.add_source(Box::new(RawSource::new(banner)));
+  }
+
+  if let Some(intro) = intro {
+    concat_source.add_source(Box::new(RawSource::new(intro)));
+  }
 
   // chunk content
   module_sources.into_iter().for_each(|(_, _, module_render_output)| {
@@ -26,7 +29,13 @@ pub fn render_app(
     }
   });
 
-  append_injection!(concat_source, footer, outro);
+  if let Some(outro) = outro {
+    concat_source.add_source(Box::new(RawSource::new(outro)));
+  }
+
+  if let Some(footer) = footer {
+    concat_source.add_source(Box::new(RawSource::new(footer)));
+  }
 
   concat_source
 }

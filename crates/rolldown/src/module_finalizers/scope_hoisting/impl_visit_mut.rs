@@ -34,12 +34,14 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
 
     old_body.into_iter().enumerate().zip(stmt_infos).for_each(
       |((_top_stmt_idx, mut top_stmt), stmt_info)| {
+        dbg!(&stmt_info.debug_label);
         debug_assert!(matches!(stmt_info.stmt_idx, Some(_top_stmt_idx)));
         if !stmt_info.is_included {
           return;
         }
 
         if let Some(import_decl) = top_stmt.as_import_declaration() {
+          dbg!(&stmt_info.debug_label);
           let rec_id = self.ctx.module.imports[&import_decl.span];
           if self.should_remove_import_export_stmt(&mut top_stmt, rec_id) {
             return;
@@ -110,6 +112,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                 }
               }
               Module::External(importee) => {
+                dbg!(&stmt_info.debug_label);
                 match self.ctx.options.format {
                   rolldown_common::OutputFormat::Esm => {
                     // Insert `import * as ns from 'ext'`
@@ -220,6 +223,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
           }
         }
 
+        dbg!(&top_stmt);
         program.body.push(top_stmt);
       },
     );

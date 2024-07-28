@@ -15,9 +15,9 @@ async fn main() {
     cwd: Some(workspace::crate_dir("rolldown").join("./examples/basic").normalize()),
     sourcemap: Some(SourceMapType::File),
     // format: Some(rolldown::OutputFormat::Cjs),
-    treeshake: TreeshakeOptions::Option(rolldown::InnerOptions {
-      module_side_effects: rolldown::ModuleSideEffects::Boolean(false),
-    }),
+    // treeshake: TreeshakeOptions::Option(rolldown::InnerOptions {
+    //   module_side_effects: rolldown::ModuleSideEffects::Boolean(false),
+    // }),
     ..Default::default()
   });
 

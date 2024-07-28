@@ -22,6 +22,7 @@ impl<'a> GenerateStage<'a> {
     };
     let meta = &self.link_output.metas[module_id];
 
+    dbg!(&module.stable_id, &module.is_included);
     if !module.is_included {
       return;
     }
@@ -33,6 +34,7 @@ impl<'a> GenerateStage<'a> {
     module_to_bits[module_id].set_bit(entry_index);
 
     meta.dependencies.iter().copied().for_each(|dep_idx| {
+      dbg!(&self.link_output.module_table.modules[dep_idx].as_ecma().unwrap().stable_id);
       self.determine_reachable_modules_for_entry(dep_idx, entry_index, module_to_bits);
     });
 
@@ -50,8 +52,21 @@ impl<'a> GenerateStage<'a> {
       // We need this step to include the runtime module, if there are symbols of it.
       // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.
       stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-        let canonical_ref =
-          self.link_output.symbols.par_canonical_ref_for(*reference_ref.symbol_ref());
+        let canonical_ref = match reference_ref {
+          rolldown_common::SymbolOrMemberExprRef::Symbol(s) => {
+            self.link_output.symbols.par_canonical_ref_for(*s)
+          }
+          rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => self
+            .link_output
+            .top_level_member_expr_resolved_cache
+            .get(&member_expr.object_ref)
+            .and_then(|map| map.get(&member_expr.props.clone().into_boxed_slice()))
+            .map(|(symbol, _, _)| {
+              dbg!(&self.link_output.symbols.get(*symbol));
+              *symbol
+            })
+            .unwrap_or(member_expr.object_ref),
+        };
 
         self.determine_reachable_modules_for_entry(
           canonical_ref.owner,

@@ -137,7 +137,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                     }
                   }
                   rolldown_common::OutputFormat::Cjs => {
-                    // TODO: check if it is entry
                     // Insert `__reExport(exports, require('ext'))`
                     let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
                     let importer_namespace_name =

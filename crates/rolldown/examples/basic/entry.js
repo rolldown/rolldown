@@ -1,3 +1,4 @@
-// import { test } from './cube'
+// MULTIPLE ENTRY MODULES
+import hyperCube from './hyper-cube.js';
 
-export * from 'fs'
+console.log(hyperCube(5));

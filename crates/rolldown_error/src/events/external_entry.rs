@@ -14,6 +14,6 @@ impl BuildEvent for ExternalEntry {
   }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {
-    format!("Entry module {} cannot be external.", opts.stabilize_path(&self.id))
+    format!("Entry module {:?} cannot be external.", opts.stabilize_path(&self.id))
   }
 }

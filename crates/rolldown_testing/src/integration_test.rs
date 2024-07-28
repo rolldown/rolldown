@@ -2,8 +2,8 @@ use std::{borrow::Cow, path::Path, process::Command};
 
 use anyhow::Context;
 use rolldown::{
-  plugin::SharedPlugin, BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat,
-  SourceMapType,
+  plugin::__inner::SharedPluginable, BundleOutput, Bundler, BundlerOptions, IsExternal,
+  OutputFormat, SourceMapType,
 };
 use rolldown_common::Output;
 use rolldown_error::DiagnosticOptions;
@@ -48,7 +48,11 @@ impl IntegrationTest {
     self.run_with_plugins(options, vec![]).await;
   }
 
-  pub async fn run_with_plugins(&self, mut options: BundlerOptions, plugins: Vec<SharedPlugin>) {
+  pub async fn run_with_plugins(
+    &self,
+    mut options: BundlerOptions,
+    plugins: Vec<SharedPluginable>,
+  ) {
     self.apply_test_defaults(&mut options);
 
     let mut bundler = Bundler::with_plugins(options, plugins);

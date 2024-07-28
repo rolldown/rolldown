@@ -74,36 +74,36 @@ impl Generator for EcmaGenerator {
     };
 
     let intro = {
-      let injection = match ctx.options.banner.as_ref() {
+      let injection = match ctx.options.intro.as_ref() {
         Some(hook) => hook.call(&rendered_chunk).await?,
         None => None,
       };
       ctx
-          .plugin_driver
-          .intro(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
-          .await?
+        .plugin_driver
+        .intro(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .await?
     };
 
     let outro = {
-      let injection = match ctx.options.banner.as_ref() {
+      let injection = match ctx.options.outro.as_ref() {
         Some(hook) => hook.call(&rendered_chunk).await?,
         None => None,
       };
       ctx
-          .plugin_driver
-          .outro(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
-          .await?
+        .plugin_driver
+        .outro(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .await?
     };
 
     let footer = {
-      let injection = match ctx.options.banner.as_ref() {
+      let injection = match ctx.options.footer.as_ref() {
         Some(hook) => hook.call(&rendered_chunk).await?,
         None => None,
       };
       ctx
-          .plugin_driver
-          .footer(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
-          .await?
+        .plugin_driver
+        .footer(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .await?
     };
 
     let concat_source = match ctx.options.format {

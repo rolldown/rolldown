@@ -780,6 +780,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-ROps9euc.mjs
 
+# tests/esbuild/loader/loader_data_url_application_json
+
+- entry_js-!~{000}~.mjs => entry_js-4o98-4xk.mjs
+
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
 - entry_js-!~{000}~.mjs => entry_js-RU-xmDm_.mjs
@@ -795,6 +799,22 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/loader/loader_data_url_escape_percents
 
 - entry_js-!~{000}~.mjs => entry_js-UfCMc73Z.mjs
+
+# tests/esbuild/loader/loader_data_url_extension_based_mime
+
+- entry_foo-!~{000}~.mjs => entry_foo-DZXP6m3E.mjs
+
+# tests/esbuild/loader/loader_data_url_text_java_script
+
+- entry_js-!~{000}~.mjs => entry_js-B8hnNNVd.mjs
+
+# tests/esbuild/loader/loader_data_url_text_java_script_cannot_import
+
+- entry_js-!~{000}~.mjs => entry_js-ZD5W1ZFp.mjs
+
+# tests/esbuild/loader/loader_data_url_text_java_script_plus_character
+
+- entry_js-!~{000}~.mjs => entry_js-KkOuFAbd.mjs
 
 # tests/esbuild/loader/loader_json_missing_es6
 

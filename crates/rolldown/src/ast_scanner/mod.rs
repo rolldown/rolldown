@@ -494,9 +494,10 @@ impl<'me> AstScanner<'me> {
     self.scopes.root_scope_id() == self.symbols.scope_id_for(symbol_id)
   }
 
-  fn try_diagnostic_forbid_const_assign(&mut self, symbol_id: SymbolId) {
-    if self.symbols.get_flag(symbol_id).is_const_variable() {
-      for reference in self.scopes.get_resolved_references(symbol_id) {
+  fn try_diagnostic_forbid_const_assign(&mut self, id_ref: &IdentifierReference) {
+    match (self.resolve_symbol_from_reference(id_ref), id_ref.reference_id.get()) {
+      (Some(symbol_id), Some(ref_id)) if self.symbols.get_flag(symbol_id).is_const_variable() => {
+        let reference = &self.scopes.references[ref_id];
         if reference.is_write() {
           self.result.warnings.push(
             BuildDiagnostic::forbid_const_assign(
@@ -504,12 +505,13 @@ impl<'me> AstScanner<'me> {
               self.source.clone(),
               self.symbols.get_name(symbol_id).into(),
               self.symbols.get_span(symbol_id),
-              reference.span(),
+              id_ref.span(),
             )
             .with_severity_warning(),
           );
         }
       }
+      _ => {}
     }
   }
 

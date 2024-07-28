@@ -164,9 +164,43 @@ impl Plugin for JsPlugin {
   async fn banner(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookBannerArgs<'_>,
-  ) -> rolldown_plugin::HookBannerOutputReturn {
+    args: &rolldown_plugin::HookInjectionArgs<'_>,
+  ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.banner {
+      Ok(
+        cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()?,
+      )
+    } else {
+      Ok(None)
+    }
+  }
+
+  async fn intro(
+    &self,
+    ctx: &rolldown_plugin::SharedPluginContext,
+    args: &rolldown_plugin::HookInjectionArgs<'_>,
+  ) -> rolldown_plugin::HookInjectionOutputReturn {
+    if let Some(cb) = &self.intro {
+      Ok(
+        cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()?,
+      )
+    } else {
+      Ok(None)
+    }
+  }
+
+  async fn outro(
+    &self,
+    ctx: &rolldown_plugin::SharedPluginContext,
+    args: &rolldown_plugin::HookInjectionArgs<'_>,
+  ) -> rolldown_plugin::HookInjectionOutputReturn {
+    if let Some(cb) = &self.outro {
       Ok(
         cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))
           .await?
@@ -181,8 +215,8 @@ impl Plugin for JsPlugin {
   async fn footer(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookFooterArgs<'_>,
-  ) -> rolldown_plugin::HookFooterOutputReturn {
+    args: &rolldown_plugin::HookInjectionArgs<'_>,
+  ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.footer {
       Ok(
         cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))

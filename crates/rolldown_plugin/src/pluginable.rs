@@ -3,18 +3,13 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 use super::plugin_context::SharedPluginContext;
 use crate::{
   transform_plugin_context::TransformPluginContext,
-  types::{
-    hook_footer_args::HookFooterArgs, hook_render_error::HookRenderErrorArgs,
-    hook_transform_ast_args::HookTransformAstArgs,
-  },
-  HookBannerArgs, HookBuildEndArgs, HookLoadArgs, HookRenderChunkArgs,
-  HookResolveDynamicImportArgs, HookResolveIdArgs, HookTransformArgs, Plugin,
+  types::{hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs},
+  HookBuildEndArgs, HookInjectionArgs, HookInjectionOutputReturn, HookLoadArgs,
+  HookRenderChunkArgs, HookResolveDynamicImportArgs, HookResolveIdArgs, HookTransformArgs, Plugin,
 };
 use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk};
 
 pub use crate::plugin::HookAugmentChunkHashReturn;
-pub use crate::plugin::HookBannerOutputReturn;
-pub use crate::plugin::HookFooterOutputReturn;
 pub use crate::plugin::HookLoadReturn;
 pub use crate::plugin::HookNoopReturn;
 pub use crate::plugin::HookRenderChunkReturn;
@@ -88,14 +83,26 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   async fn call_banner(
     &self,
     _ctx: &SharedPluginContext,
-    _args: &HookBannerArgs,
-  ) -> HookBannerOutputReturn;
+    _args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn;
 
   async fn call_footer(
     &self,
     _ctx: &SharedPluginContext,
-    _args: &HookFooterArgs,
-  ) -> HookFooterOutputReturn;
+    _args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn;
+
+  async fn call_intro(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn;
+
+  async fn call_outro(
+    &self,
+    _ctx: &SharedPluginContext,
+    _args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn;
 
   async fn call_render_chunk(
     &self,
@@ -191,17 +198,33 @@ impl<T: Plugin> Pluginable for T {
   async fn call_banner(
     &self,
     ctx: &SharedPluginContext,
-    args: &HookBannerArgs,
-  ) -> HookBannerOutputReturn {
+    args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn {
     Plugin::banner(self, ctx, args).await
   }
 
   async fn call_footer(
     &self,
     ctx: &SharedPluginContext,
-    args: &HookFooterArgs,
-  ) -> HookFooterOutputReturn {
+    args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn {
     Plugin::footer(self, ctx, args).await
+  }
+
+  async fn call_intro(
+    &self,
+    ctx: &SharedPluginContext,
+    args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn {
+    Plugin::intro(self, ctx, args).await
+  }
+
+  async fn call_outro(
+    &self,
+    ctx: &SharedPluginContext,
+    args: &HookInjectionArgs,
+  ) -> HookInjectionOutputReturn {
+    Plugin::outro(self, ctx, args).await
   }
 
   async fn call_render_chunk(

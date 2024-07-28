@@ -228,6 +228,8 @@ export interface BindingPluginOptions {
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
   banner?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
   footer?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+  intro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+  outro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
 }
 
 export interface BindingPluginWithIndex {

@@ -1,6 +1,6 @@
 use crate::types::hook_render_error::HookRenderErrorArgs;
-use crate::{HookAugmentChunkHashReturn, HookFooterArgs, HookNoopReturn, HookRenderChunkArgs};
-use crate::{HookBannerArgs, PluginDriver};
+use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
+use crate::{HookInjectionArgs, PluginDriver};
 use anyhow::{Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk};
 use rolldown_sourcemap::SourceMap;
@@ -15,7 +15,7 @@ impl PluginDriver {
 
   pub async fn banner(
     &self,
-    args: HookBannerArgs<'_>,
+    args: HookInjectionArgs<'_>,
     mut banner: String,
   ) -> Result<Option<String>> {
     for (plugin, ctx) in &self.plugins {
@@ -32,7 +32,7 @@ impl PluginDriver {
 
   pub async fn footer(
     &self,
-    args: HookFooterArgs<'_>,
+    args: HookInjectionArgs<'_>,
     mut footer: String,
   ) -> Result<Option<String>> {
     for (plugin, ctx) in &self.plugins {
@@ -45,6 +45,40 @@ impl PluginDriver {
       return Ok(None);
     }
     Ok(Some(footer))
+  }
+
+  pub async fn intro(
+    &self,
+    args: HookInjectionArgs<'_>,
+    mut intro: String,
+  ) -> Result<Option<String>> {
+    for (plugin, ctx) in &self.plugins {
+      if let Some(r) = plugin.call_intro(ctx, &args).await? {
+        intro.push('\n');
+        intro.push_str(r.as_str());
+      }
+    }
+    if intro.is_empty() {
+      return Ok(None);
+    }
+    Ok(Some(intro))
+  }
+
+  pub async fn outro(
+    &self,
+    args: HookInjectionArgs<'_>,
+    mut outro: String,
+  ) -> Result<Option<String>> {
+    for (plugin, ctx) in &self.plugins {
+      if let Some(r) = plugin.call_outro(ctx, &args).await? {
+        outro.push('\n');
+        outro.push_str(r.as_str());
+      }
+    }
+    if outro.is_empty() {
+      return Ok(None);
+    }
+    Ok(Some(outro))
   }
 
   pub async fn render_chunk(

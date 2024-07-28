@@ -1724,7 +1724,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/outro/iife
 
-- main-!~{000}~.mjs => main-svvw3JyV.mjs
+- main-!~{000}~.mjs => main-rzBDQzY9.mjs
 
 # tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 

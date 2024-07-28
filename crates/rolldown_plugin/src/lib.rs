@@ -15,16 +15,15 @@ pub mod __inner {
 
 pub use crate::{
   plugin::{
-    HookAugmentChunkHashReturn, HookBannerOutputReturn, HookFooterOutputReturn, HookLoadReturn,
-    HookNoopReturn, HookRenderChunkReturn, HookResolveIdReturn, HookTransformAstReturn,
-    HookTransformReturn, Plugin,
+    HookAugmentChunkHashReturn, HookInjectionOutputReturn, HookLoadReturn, HookNoopReturn,
+    HookRenderChunkReturn, HookResolveIdReturn, HookTransformAstReturn, HookTransformReturn,
+    Plugin,
   },
   plugin_context::{PluginContext, SharedPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},
   transform_plugin_context::TransformPluginContext,
-  types::hook_banner_args::HookBannerArgs,
   types::hook_build_end_args::HookBuildEndArgs,
-  types::hook_footer_args::HookFooterArgs,
+  types::hook_injection_args::HookInjectionArgs,
   types::hook_load_args::HookLoadArgs,
   types::hook_load_output::HookLoadOutput,
   types::hook_render_chunk_args::HookRenderChunkArgs,

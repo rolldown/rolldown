@@ -84,6 +84,8 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         case 'augmentChunkHash':
         case 'banner':
         case 'footer':
+        case 'intro':
+        case 'outro':
         case 'generateBundle':
         case 'moduleParsed':
         case 'onLog':
@@ -230,6 +232,8 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         case 'augmentChunkHash':
         case 'banner':
         case 'footer':
+        case 'intro':
+        case 'outro':
         case 'generateBundle':
         case 'moduleParsed':
         case 'onLog':

@@ -32,6 +32,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
     ;(Object.keys(plugin) as (keyof typeof plugin)[]).forEach((pluginProp) => {
       switch (pluginProp) {
         case 'name':
+        case 'api':
           break
         case 'buildStart': {
           const handlers = batchedHooks.buildStart ?? []
@@ -227,6 +228,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           break
         }
         case 'name':
+        case 'api':
         case 'augmentChunkHash':
         case 'banner':
         case 'footer':

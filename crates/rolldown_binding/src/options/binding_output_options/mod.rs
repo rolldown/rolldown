@@ -49,7 +49,7 @@ pub struct BindingOutputOptions {
   pub globals: Option<HashMap<String, String>>,
   // hoistTransitiveImports: boolean;
   #[napi(ts_type = "string")]
-  pub indent: Option<String>,
+  pub indent: String,
   // inlineDynamicImports: boolean;
   // interop: GetInterop;
   #[derivative(Debug = "ignore")]

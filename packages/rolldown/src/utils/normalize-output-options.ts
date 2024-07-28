@@ -17,6 +17,7 @@ export function normalizeOutputOptions(
     chunkFileNames,
     assetFileNames,
     name,
+    indent,
   } = opts
   // @ts-ignore
   return {
@@ -36,7 +37,7 @@ export function normalizeOutputOptions(
     footer: getAddon(opts, 'footer'),
     intro: getAddon(opts, 'intro'),
     outro: getAddon(opts, 'outro'),
-    indent: getIndent(opts.indent),
+    indent: getIndent(indent),
     // TODO support functions
     globals: globals ?? {},
     entryFileNames: entryFileNames ?? '[name].js',

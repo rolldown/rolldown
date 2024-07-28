@@ -122,7 +122,7 @@ pub fn normalize_binding_options(
     footer: normalize_addon_option(output_options.footer),
     intro: normalize_addon_option(output_options.intro),
     outro: normalize_addon_option(output_options.outro),
-    indent: output_options.indent,
+    indent: Some(output_options.indent),
     sourcemap_ignore_list,
     sourcemap_path_transform,
     exports: output_options.exports.map(|format_str| match format_str.as_str() {

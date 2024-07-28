@@ -19,6 +19,7 @@ export function bindingifyOutputOptions(
     footer,
     intro,
     outro,
+    indent
   } = outputOptions
   return {
     dir,
@@ -40,6 +41,7 @@ export function bindingifyOutputOptions(
     footer,
     intro,
     outro,
+    indent,
     name,
     entryFileNames,
     chunkFileNames,

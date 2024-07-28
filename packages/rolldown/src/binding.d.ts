@@ -193,7 +193,7 @@ export interface BindingOutputOptions {
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife'
   globals?: Record<string, string>
-  indent?: string
+  indent: string
   intro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   outro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]

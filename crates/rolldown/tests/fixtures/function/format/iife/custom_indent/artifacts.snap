@@ -21,4 +21,17 @@ input_file: crates/rolldown/tests/fixtures/function/format/iife/custom_indent
    exports.test = test;
    return exports;
 })({});
+//# sourceMappingURL=main.mjs.map
 ```
+
+# Sourcemap Visualizer
+
+- ../main.js
+(0:0-0:9) "function " --> (5:0-5:9) "\n   funct"
+(0:9-0:16) "test() " --> (5:9-5:16) "ion tes"
+(0:16-1:2) "{\n " --> (5:16-6:0) "t() {"
+(1:2-1:10) " console" --> (6:0-6:9) "\n   \tcons"
+(1:10-1:14) ".log" --> (6:9-6:13) "ole."
+(1:14-1:30) "('Hello, world!'" --> (6:13-6:29) "log(\"Hello, worl"
+(1:30-2:1) ");\n" --> (6:29-7:0) "d!\");"
+(2:1-5:1) "}\n\nexport { test }\n" --> (7:0-13:34) "\n   }\n   //#endregion\n   Object.defineProperty(exports, '__esModule', { value: true });\n   exports.test = test;\n   return exports;\n})({});\n//# sourceMappingURL=main.mjs.map"

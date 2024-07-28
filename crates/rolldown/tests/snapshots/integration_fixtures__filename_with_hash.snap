@@ -1612,6 +1612,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/function/format/iife/custom_indent
 
 - main-!~{000}~.mjs => main-0_43bfGz.mjs
+- main-0_43bfGz.mjs.map
 
 # tests/fixtures/function/format/iife/external_modules
 

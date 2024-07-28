@@ -1,4 +1,5 @@
 {
+  "visualizeSourcemap": true,
   "config": {
     "format": "iife",
     "indent": "   "

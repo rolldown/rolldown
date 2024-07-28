@@ -7,7 +7,7 @@ export default defineTest({
     output: {
       exports: 'named',
       format: 'iife',
-      indent: '****'
+      indent: '****',
     },
   },
   afterTest: (output) => {

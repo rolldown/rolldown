@@ -19,7 +19,7 @@ export function bindingifyOutputOptions(
     footer,
     intro,
     outro,
-    indent
+    indent,
   } = outputOptions
   return {
     dir,

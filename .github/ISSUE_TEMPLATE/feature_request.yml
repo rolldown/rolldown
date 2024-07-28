@@ -1,7 +1,7 @@
 name: "\U0001F680 New feature"
-title: "[Feature Request]: "
+title: '[Feature Request]: '
 description: Suggest an idea for Rolldown
-labels: ["needs-triage"]
+labels: ['needs-triage']
 body:
   - type: markdown
     attributes:

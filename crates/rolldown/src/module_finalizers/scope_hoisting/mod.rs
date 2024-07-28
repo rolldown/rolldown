@@ -34,9 +34,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.scope.is_unresolved(reference_id)
   }
 
-  #[track_caller]
   pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {
-    dbg!(&std::panic::Location::caller());
     self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
   }
 
@@ -45,7 +43,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.ctx.canonical_names.get(&symbol)
   }
 
-  #[track_caller]
   pub fn canonical_name_for_runtime(&self, name: &str) -> &Rstr {
     let symbol = self.ctx.runtime.resolve_symbol(name);
     self.canonical_name_for(symbol)

@@ -114,7 +114,9 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   rolldown_common::OutputFormat::Esm => {
                     // Insert `import * as ns from 'ext'`
                     // Insert `__reExport(exports, ns)`
-                    if !self.ctx.module.is_user_defined_entry {
+                    if self.ctx.module.is_user_defined_entry {
+                      program.body.push(top_stmt);
+                    } else {
                       let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
                       let importer_namespace_name =
                         self.canonical_name_for(self.ctx.module.namespace_object_ref);
@@ -132,8 +134,6 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                           )
                           .into_in(self.alloc),
                       );
-                    } else {
-                      program.body.push(top_stmt);
                     }
                   }
                   rolldown_common::OutputFormat::Cjs => {

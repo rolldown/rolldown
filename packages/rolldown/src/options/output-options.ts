@@ -41,10 +41,7 @@ const outputOptionsSchema = z.strictObject({
   footer: z.string().or(addonFunctionSchema).optional(),
   intro: z.string().or(addonFunctionSchema).optional(),
   outro: z.string().or(addonFunctionSchema).optional(),
-  indent: z.literal(true)
-    .or(z.string())
-    .or(z.boolean())
-    .optional(),
+  indent: z.literal(true).or(z.string()).or(z.boolean()).optional(),
   entryFileNames: z.string().optional(),
   chunkFileNames: z.string().optional(),
   assetFileNames: z.string().optional(),

@@ -1593,6 +1593,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-ZEWk38QI.mjs
 
+# tests/fixtures/function/format/iife/custom_indent
+
+- main-!~{000}~.mjs => main-0_43bfGz.mjs
+
 # tests/fixtures/function/format/iife/external_modules
 
 - main-!~{000}~.mjs => main-na63a4BU.mjs
@@ -1604,6 +1608,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/function/format/iife/iife-with-name
 
 - main-!~{000}~.mjs => main-BQpXbxaN.mjs
+
+# tests/fixtures/function/format/iife/no_indent
+
+- main-!~{000}~.mjs => main-H1coa2SL.mjs
 
 # tests/fixtures/function/intro/cjs
 

@@ -50,9 +50,18 @@ impl Source for RawSource {
   }
 
   fn indent(&mut self, indent: &str) {
-    let content: Vec<_> =
-      self.content.lines().map(|line| format!("{}{}", indent, line)).collect();
-    self.content = content.join("\n");
+    let content: Vec<_> = self
+      .content
+      .lines()
+      .map(|line| {
+        if line.is_empty() {
+          Cow::Borrowed(line)
+        } else {
+          Cow::Owned(format!("{indent}{line}"))
+        }
+      })
+      .collect();
+    self.content = content.join("\n").to_string();
   }
 }
 
@@ -102,7 +111,7 @@ impl Source for SourceMapSource {
         if line.is_empty() {
           Cow::Borrowed(line)
         } else {
-          Cow::Owned(format!("{}{}", indent, line))
+          Cow::Owned(format!("{indent}{line}"))
         }
       })
       .collect();

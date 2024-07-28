@@ -22,7 +22,7 @@ export interface NormalizedOutputOptions extends OutputOptions {
   footer: AddonFunction
   intro: AddonFunction
   outro: AddonFunction
-  indent: string,
+  indent: string
   entryFileNames: string
   chunkFileNames: string
   assetFileNames: string

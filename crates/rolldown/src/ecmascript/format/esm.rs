@@ -65,8 +65,7 @@ pub fn render_esm(
   }
 
   if let Some(exports) = render_chunk_exports(ctx)? {
-    if exports.is_empty() {
-    } else {
+    if !exports.is_empty() {
       concat_source.add_source(Box::new(RawSource::new(exports)));
     }
   }

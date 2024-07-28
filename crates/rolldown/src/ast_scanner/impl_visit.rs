@@ -36,7 +36,6 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
     if self.is_top_level(symbol_id) {
       self.add_declared_id(symbol_id);
     }
-    self.try_diagnostic_forbid_const_assign(symbol_id);
   }
 
   fn visit_member_expression(&mut self, expr: &MemberExpression<'ast>) {
@@ -91,6 +90,16 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
       self.result.imports.insert(expr.span, id);
     }
     walk::walk_import_expression(self, expr);
+  }
+
+  fn visit_assignment_expression(&mut self, node: &oxc::ast::ast::AssignmentExpression<'ast>) {
+    match &node.left {
+      oxc::ast::ast::AssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
+        self.try_diagnostic_forbid_const_assign(id_ref);
+      }
+      _ => {}
+    }
+    walk::walk_assignment_expression(self, node);
   }
 
   fn visit_call_expression(&mut self, expr: &oxc::ast::ast::CallExpression<'ast>) {

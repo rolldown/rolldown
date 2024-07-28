@@ -1,6 +1,6 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
 input_file: crates/rolldown/tests/fixtures/errors/ambiguous_external_namespace
 ---
 # Errors
@@ -34,4 +34,14 @@ input_file: crates/rolldown/tests/fixtures/errors/ambiguous_external_namespace
    │                ╰──── One matching export is here.
 ───╯
 
+```# Assets
+
+## main.mjs
+
+```js
+
+//#region main.js
+console.log(value);
+
+//#endregion
 ```

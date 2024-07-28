@@ -1,10 +1,11 @@
 ---
-source: crates/rolldown/tests/fixtures/issues/./1733/mod.rs
-expression: "rolldown_testing::utils::stringify_bundle_output(output, &cwd)"
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/issues/1733
 ---
 # Assets
 
-## entry.js
+## entry.mjs
 
 ```js
 import "rewritten-./static.css";

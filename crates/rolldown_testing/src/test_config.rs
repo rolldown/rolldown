@@ -3,7 +3,7 @@ use std::fs;
 use jsonschema::{Draft, JSONSchema};
 use std::sync::LazyLock;
 
-pub use rolldown_testing_config::TestConfig;
+pub use rolldown_testing_config::{TestConfig, TestMeta};
 
 use crate::workspace;
 

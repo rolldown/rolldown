@@ -5,6 +5,7 @@ use rolldown_ecmascript::{AstSnippet, EcmaAst};
 use super::module_finalizers::scope_hoisting::{
   ScopeHoistingFinalizer, ScopeHoistingFinalizerContext,
 };
+pub mod apply_inner_plugins;
 pub mod augment_chunk_hash;
 pub mod call_expression_ext;
 pub mod chunk;

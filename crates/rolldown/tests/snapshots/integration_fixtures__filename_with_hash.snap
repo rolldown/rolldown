@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/fixtures.rs
+source: crates/rolldown/tests/integration_fixtures.rs
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
 # tests/esbuild/bundler_ts/ts_abstract_class_field_use_define
@@ -113,7 +113,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
-- entry_js-!~{000}~.mjs => entry_js-gPYt0uV5.mjs
+- entry_js-!~{000}~.mjs => entry_js-jOnV_cTP.mjs
 
 # tests/esbuild/dce/inline_function_call_for_init_decl
 
@@ -210,7 +210,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_common_js
 
-- src_entry_js-!~{000}~.mjs => src_entry_js-iLz03Xmo.mjs
+- src_entry_js-!~{000}~.mjs => src_entry_js-J6lzFTVO.mjs
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6
 
@@ -792,6 +792,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-ROps9euc.mjs
 
+# tests/esbuild/loader/loader_data_url_application_json
+
+- entry_js-!~{000}~.mjs => entry_js-4o98-4xk.mjs
+
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
 - entry_js-!~{000}~.mjs => entry_js-RU-xmDm_.mjs
@@ -807,6 +811,22 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/esbuild/loader/loader_data_url_escape_percents
 
 - entry_js-!~{000}~.mjs => entry_js-UfCMc73Z.mjs
+
+# tests/esbuild/loader/loader_data_url_extension_based_mime
+
+- entry_foo-!~{000}~.mjs => entry_foo-DZXP6m3E.mjs
+
+# tests/esbuild/loader/loader_data_url_text_java_script
+
+- entry_js-!~{000}~.mjs => entry_js-B8hnNNVd.mjs
+
+# tests/esbuild/loader/loader_data_url_text_java_script_cannot_import
+
+- entry_js-!~{000}~.mjs => entry_js-ZD5W1ZFp.mjs
+
+# tests/esbuild/loader/loader_data_url_text_java_script_plus_character
+
+- entry_js-!~{000}~.mjs => entry_js-KkOuFAbd.mjs
 
 # tests/esbuild/loader/loader_json_missing_es6
 
@@ -1326,8 +1346,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_compat/mix-cjs-esm
 
-- main-!~{000}~.mjs => main-FpLC6N2Q.mjs
-- main-FpLC6N2Q.mjs.map
+- main-!~{000}~.mjs => main-sz7vGbzO.mjs
+- main-sz7vGbzO.mjs.map
 
 # tests/fixtures/cjs_compat/multiple_circle_cjs_entries
 
@@ -1682,6 +1702,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-5HiW7lhv.mjs
 
+# tests/fixtures/function/module_types/json/object_with_reserved_key
+
+- main-!~{000}~.mjs => main-g9LzgJGd.mjs
+
 # tests/fixtures/function/module_types/jsx
 
 - main_jsx-!~{000}~.mjs => main_jsx-dCgJAQBP.mjs
@@ -1716,11 +1740,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/outro/iife
 
-- main-!~{000}~.mjs => main-svvw3JyV.mjs
+- main-!~{000}~.mjs => main-rzBDQzY9.mjs
 
 # tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
-- main-!~{000}~.mjs => main-d2wU9DtR.mjs
+- main-!~{000}~.mjs => main-a4Jpj7IC.mjs
 
 # tests/fixtures/function/resolve/alias_to_node_builtin_module
 
@@ -1851,6 +1875,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-qtHUcC2z.mjs
 
+# tests/fixtures/rollup/catch-block-scope
+
+- main-!~{000}~.mjs => main-mbNM55qi.mjs
+
 # tests/fixtures/rollup/catch-scope-shadowing
 
 - main-!~{000}~.mjs => main-CyzdkzSW.mjs
@@ -1907,6 +1935,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/tree_shaking/pure_annotation
 
 - main-!~{000}~.mjs => main-XCncN_Yu.mjs
+
+# tests/fixtures/tree_shaking/unused_import_cjs
+
+- main-!~{000}~.mjs => main-nyQrEnyN.mjs
 
 # tests/fixtures/tree_shaking/unused_import_external
 

@@ -20,6 +20,10 @@ impl ResolvedId {
   /// 1. doesn't guarantee to be unique
   /// 2. relative to the cwd, so it could show stable path across different machines
   pub fn debug_id(&self, cwd: impl AsRef<Path>) -> String {
+    if self.id.trim_start().starts_with("data:") {
+      return format!("<{}>", self.id);
+    }
+
     let stable = stabilize_module_id(&self.id, cwd.as_ref());
     if self.ignored {
       format!("(ignored) {stable}")

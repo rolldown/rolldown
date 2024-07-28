@@ -1,0 +1,14 @@
+[package]
+edition = "2021"
+license = "MIT"
+name    = "rolldown_plugin_data_url"
+version = "0.1.0"
+
+[dependencies]
+base64-simd     = { workspace = true }
+dashmap         = { workspace = true }
+regex           = { workspace = true }
+rolldown_common = { workspace = true }
+rolldown_plugin = { workspace = true }
+rustc-hash      = { workspace = true }
+urlencoding     = { workspace = true }

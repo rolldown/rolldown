@@ -1,6 +1,6 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
 input_file: crates/rolldown/tests/esbuild/loader/loader_json_missing_es6
 ---
 # Errors
@@ -15,5 +15,11 @@ input_file: crates/rolldown/tests/esbuild/loader/loader_json_missing_es6
    │         ───┬───  
    │            ╰───── Missing export
 ───╯
+
+```# Assets
+
+## entry_js.mjs
+
+```js
 
 ```

@@ -40,12 +40,14 @@ impl Plugin for HttpImportPlugin {
     Ok(None)
   }
 
+  #[allow(clippy::print_stdout)]
   async fn load(
     &self,
     _ctx: &rolldown_plugin::SharedPluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     if args.id.starts_with("http") {
+      println!("Downloading: {}", args.id);
       let content = reqwest::get(args.id).await?.text().await?;
       return Ok(Some(rolldown_plugin::HookLoadOutput {
         code: content,
@@ -59,6 +61,7 @@ impl Plugin for HttpImportPlugin {
 }
 
 #[tokio::main]
+#[allow(clippy::print_stdout)]
 async fn main() {
   let mut bundler = Bundler::with_plugins(
     BundlerOptions {
@@ -73,8 +76,13 @@ async fn main() {
     },
     vec![Arc::new(HttpImportPlugin)],
   );
+  bundler.options().input.iter().for_each(|input| println!("Bundle {}", input.import));
 
   let result = bundler.write().await.unwrap();
+
+  for asset in result.assets {
+    println!("Emit {:?}", asset.filename());
+  }
 
   for err in result.errors {
     eprintln!("{}", err.into_diagnostic());

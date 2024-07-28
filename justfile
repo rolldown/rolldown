@@ -2,8 +2,7 @@ set windows-shell := ["powershell"]
 set shell := ["bash", "-cu"]
 
 _default:
-    cargo r crates/rolldown/tests/fixtures/tree_shaking/export_star2/_config.json
-
+    just --list -u
 
 setup:
   # Rust related setup

@@ -5,14 +5,13 @@ use rolldown_plugin::{
   HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, SharedPluginContext,
 };
 use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
-use sugar_path::SugarPath;
 
 #[derive(Debug)]
-struct ExternalCss;
+struct TestPlugin;
 
-impl Plugin for ExternalCss {
+impl Plugin for TestPlugin {
   fn name(&self) -> Cow<'static, str> {
-    "external-css".into()
+    "test-plugin".into()
   }
 
   async fn resolve_id(
@@ -20,10 +19,9 @@ impl Plugin for ExternalCss {
     _ctx: &SharedPluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
-    if args.specifier.as_path().extension().map_or(false, |ext| ext.eq_ignore_ascii_case("css")) {
-      let path = format!("rewritten-{}", args.specifier);
+    if args.specifier == "ext" {
       return Ok(Some(HookResolveIdOutput {
-        id: path,
+        id: "ext".to_string(),
         external: Some(true),
         ..Default::default()
       }));
@@ -33,20 +31,17 @@ impl Plugin for ExternalCss {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn should_rewrite_dynamic_imports_that_import_external_modules() {
+async fn test() {
   let cwd = abs_file_dir!();
 
-  IntegrationTest::new(TestMeta { expect_executed: false, ..Default::default() })
+  IntegrationTest::new(TestMeta { expect_error: true, ..Default::default() })
     .run_with_plugins(
       BundlerOptions {
-        input: Some(vec![InputItem {
-          name: Some("entry".to_string()),
-          import: "./entry.js".to_string(),
-        }]),
+        input: Some(vec![InputItem { name: Some("ext".to_string()), import: "ext".to_string() }]),
         cwd: Some(cwd),
         ..Default::default()
       },
-      vec![Arc::new(ExternalCss)],
+      vec![Arc::new(TestPlugin)],
     )
     .await;
 }

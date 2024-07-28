@@ -97,6 +97,7 @@
     "Itertools",
     "iwanabethatguy",
     "izip",
+    "Jrcy",
     "jsonschema",
     "justfile",
     "Kawaii",
@@ -120,6 +121,7 @@
     "oxlint",
     "oxlintignore",
     "peekable",
+    "Pluginable",
     "proto",
     "realpath",
     "Renamer",
@@ -135,6 +137,8 @@
     "sapphi-red",
     "schemars",
     "serde",
+    "sfnt",
+    "simd",
     "smallvec",
     "sourcemaps",
     "stackblitz",
@@ -165,9 +169,9 @@
     "vitepress",
     "wasi",
     "WASI",
+    "webp",
     "Xiangjun",
     "Yinan",
-    "Yunfei",
-    "simd"
+    "Yunfei"
   ]
 }

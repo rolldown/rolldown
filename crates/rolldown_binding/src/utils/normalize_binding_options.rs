@@ -9,7 +9,7 @@ use napi::Either;
 use rolldown::{
   AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputExports, OutputFormat, Platform,
 };
-use rolldown_plugin::SharedPlugin;
+use rolldown_plugin::__inner::SharedPluginable;
 use std::collections::HashMap;
 use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
@@ -18,7 +18,7 @@ use std::sync::Arc;
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct NormalizeBindingOptionsReturn {
   pub bundler_options: BundlerOptions,
-  pub plugins: Vec<SharedPlugin>,
+  pub plugins: Vec<SharedPluginable>,
 }
 
 fn normalize_addon_option(
@@ -149,7 +149,7 @@ pub fn normalize_binding_options(
   let worker_manager = worker_manager.map(Arc::new);
 
   #[cfg(not(target_family = "wasm"))]
-  let plugins: Vec<SharedPlugin> = input_options
+  let plugins: Vec<SharedPluginable> = input_options
     .plugins
     .into_iter()
     .chain(output_options.plugins)
@@ -173,7 +173,7 @@ pub fn normalize_binding_options(
     .collect::<Vec<_>>();
 
   #[cfg(target_family = "wasm")]
-  let plugins: Vec<SharedPlugin> = input_options
+  let plugins: Vec<SharedPluginable> = input_options
     .plugins
     .into_iter()
     .chain(output_options.plugins)

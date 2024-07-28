@@ -13,7 +13,6 @@ pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
 
-use crate::types::tree_shake::UsedInfo;
 mod rename;
 
 /// Finalizer for emitting output code with scope hoisting.
@@ -177,30 +176,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .snippet
       .var_decl_stmt(var_name, ast::Expression::ObjectExpression(TakeIn::dummy(self.alloc)));
 
-    let exports_len = self.ctx.linking_info.used_canonical_exports().count();
-    if exports_len == 0 {
-      let can_not_be_eliminated =
-        self.ctx.linking_info.used_exports_info.used_info.contains(UsedInfo::USED_AS_NAMESPACE_REF)
-          || self.ctx.module.import_records.iter().any(|record| {
-            let id = record.resolved_module;
+    let exports_len = self.ctx.linking_info.canonical_exports().count();
 
-            if let Some(m) = self.ctx.modules[id].as_ecma() {
-              !m.exports_kind.is_esm()
-            } else {
-              true
-            }
-          });
-      if can_not_be_eliminated {
-        return vec![decl_stmt];
-      }
-      return vec![];
+    if exports_len == 0 {
+      return vec![decl_stmt];
     }
 
     // construct `{ prop_name: () => returned, ... }`
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
     arg_obj_expr.properties.reserve_exact(exports_len);
 
-    self.ctx.linking_info.used_canonical_exports().for_each(|(export, resolved_export)| {
+    self.ctx.linking_info.canonical_exports().for_each(|(export, resolved_export)| {
       // prop_name: () => returned
       let prop_name = export;
       let returned = self.generate_finalized_expr_for_symbol_ref(resolved_export.symbol_ref);

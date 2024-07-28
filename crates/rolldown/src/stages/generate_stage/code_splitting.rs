@@ -22,7 +22,6 @@ impl<'a> GenerateStage<'a> {
     };
     let meta = &self.link_output.metas[module_id];
 
-    dbg!(&module.stable_id, &module.is_included);
     if !module.is_included {
       return;
     }
@@ -34,7 +33,6 @@ impl<'a> GenerateStage<'a> {
     module_to_bits[module_id].set_bit(entry_index);
 
     meta.dependencies.iter().copied().for_each(|dep_idx| {
-      dbg!(&self.link_output.module_table.modules[dep_idx].as_ecma().unwrap().stable_id);
       self.determine_reachable_modules_for_entry(dep_idx, entry_index, module_to_bits);
     });
 
@@ -56,15 +54,14 @@ impl<'a> GenerateStage<'a> {
           rolldown_common::SymbolOrMemberExprRef::Symbol(s) => {
             self.link_output.symbols.par_canonical_ref_for(*s)
           }
+          // try to resolve member expression to the pointed symbol
+          // fallback to namespace_ref if not found
           rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => self
             .link_output
             .top_level_member_expr_resolved_cache
             .get(&member_expr.object_ref)
             .and_then(|map| map.get(&member_expr.props.clone().into_boxed_slice()))
-            .map(|(symbol, _, _)| {
-              dbg!(&self.link_output.symbols.get(*symbol));
-              *symbol
-            })
+            .map(|(finalized_symbol_ref, _, _)| *finalized_symbol_ref)
             .unwrap_or(member_expr.object_ref),
         };
 

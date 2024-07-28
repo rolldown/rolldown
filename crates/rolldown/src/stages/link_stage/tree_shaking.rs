@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
 use crate::types::tree_shake::{UsedExportsInfo, UsedInfo};

@@ -60,7 +60,7 @@ pub fn render_iife(
   ))));
 
   if determine_use_strict(ctx) {
-    let mut source= RawSource::new("\"use strict\";".to_string());
+    let mut source = RawSource::new("\"use strict\";".to_string());
     source.indent(2);
     concat_source.add_source(Box::new(source));
   }

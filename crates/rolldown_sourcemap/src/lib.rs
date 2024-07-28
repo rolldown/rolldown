@@ -92,22 +92,28 @@ fn test_collapse_sourcemaps() {
   let ret1 = Parser::new(&allocator, &source_text, source_type).parse();
   let CodegenReturn { source_map, source_text } =
     CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret1.program);
-  concat_source.add_source(Box::new(SourceMapSource::new(
-    source_text.clone(),
-    source_map.unwrap(),
-    source_text.matches('\n').count() as u32,
-  )), 0);
+  concat_source.add_source(
+    Box::new(SourceMapSource::new(
+      source_text.clone(),
+      source_map.unwrap(),
+      source_text.matches('\n').count() as u32,
+    )),
+    0,
+  );
 
   let filename = "bar.js".to_string();
   let source_text = "const bar = 2; console.log(bar);\n".to_string();
   let ret2: oxc::parser::ParserReturn = Parser::new(&allocator, &source_text, source_type).parse();
   let CodegenReturn { source_map, source_text } =
     CodeGenerator::new().enable_source_map(&filename, &source_text).build(&ret2.program);
-  concat_source.add_source(Box::new(SourceMapSource::new(
-    source_text.clone(),
-    source_map.unwrap(),
-    source_text.matches('\n').count() as u32,
-  )), 0);
+  concat_source.add_source(
+    Box::new(SourceMapSource::new(
+      source_text.clone(),
+      source_map.unwrap(),
+      source_text.matches('\n').count() as u32,
+    )),
+    0,
+  );
 
   let (source_text, source_map) = concat_source.content_and_sourcemap();
 

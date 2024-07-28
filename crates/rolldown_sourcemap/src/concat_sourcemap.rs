@@ -1,5 +1,5 @@
-use std::borrow::Cow;
 use oxc::sourcemap::{ConcatSourceMapBuilder, SourceMap};
+use std::borrow::Cow;
 
 use crate::lines_count;
 
@@ -95,14 +95,17 @@ impl Source for SourceMapSource {
   }
 
   fn indent(&mut self, indent: usize) {
-    let content: Vec<_> =
-        self.content.lines().map(|line| {
-          if line.is_empty() {
-            Cow::Borrowed(line)
-          } else {
-            Cow::Owned(format!("{}{}", " ".repeat(indent), line))
-          }
-        }).collect();
+    let content: Vec<_> = self
+      .content
+      .lines()
+      .map(|line| {
+        if line.is_empty() {
+          Cow::Borrowed(line)
+        } else {
+          Cow::Owned(format!("{}{}", " ".repeat(indent), line))
+        }
+      })
+      .collect();
     self.content = content.join("\n").to_string();
   }
 }

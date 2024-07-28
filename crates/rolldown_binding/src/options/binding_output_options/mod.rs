@@ -48,7 +48,8 @@ pub struct BindingOutputOptions {
   // generatedCode: NormalizedGeneratedCodeOptions;
   pub globals: Option<HashMap<String, String>>,
   // hoistTransitiveImports: boolean;
-  // indent: true | string;
+  #[napi(ts_type = "string")]
+  pub indent: Option<String>,
   // inlineDynamicImports: boolean;
   // interop: GetInterop;
   #[derivative(Debug = "ignore")]

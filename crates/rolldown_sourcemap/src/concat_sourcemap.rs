@@ -14,7 +14,7 @@ pub trait Source {
     sourcemap_builder: &mut Option<ConcatSourceMapBuilder>,
     line_offset: u32,
   );
-  fn indent(&mut self, indent: usize);
+  fn indent(&mut self, indent: &str);
 }
 
 pub struct RawSource {
@@ -49,9 +49,9 @@ impl Source for RawSource {
     final_source.push_str(&self.content);
   }
 
-  fn indent(&mut self, indent: usize) {
+  fn indent(&mut self, indent: &str) {
     let content: Vec<_> =
-      self.content.lines().map(|line| format!("{}{}", " ".repeat(indent), line)).collect();
+      self.content.lines().map(|line| format!("{}{}", indent, line)).collect();
     self.content = content.join("\n");
   }
 }
@@ -94,7 +94,7 @@ impl Source for SourceMapSource {
     final_source.push_str(&self.content);
   }
 
-  fn indent(&mut self, indent: usize) {
+  fn indent(&mut self, indent: &str) {
     let content: Vec<_> = self
       .content
       .lines()
@@ -102,7 +102,7 @@ impl Source for SourceMapSource {
         if line.is_empty() {
           Cow::Borrowed(line)
         } else {
-          Cow::Owned(format!("{}{}", " ".repeat(indent), line))
+          Cow::Owned(format!("{}{}", indent, line))
         }
       })
       .collect();

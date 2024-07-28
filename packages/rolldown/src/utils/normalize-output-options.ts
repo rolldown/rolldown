@@ -18,6 +18,7 @@ export function normalizeOutputOptions(
     assetFileNames,
     name,
   } = opts
+  // @ts-ignore
   return {
     dir: dir,
     format: getFormat(format),
@@ -35,6 +36,7 @@ export function normalizeOutputOptions(
     footer: getAddon(opts, 'footer'),
     intro: getAddon(opts, 'intro'),
     outro: getAddon(opts, 'outro'),
+    indent: getIndent(opts.indent),
     // TODO support functions
     globals: globals ?? {},
     entryFileNames: entryFileNames ?? '[name].js',
@@ -82,4 +84,14 @@ const getAddon = <T extends 'banner' | 'footer' | 'intro' | 'outro'>(
     }
     return configAddon || ''
   }
+}
+
+function getIndent(indent: OutputOptions['indent']) {
+  if (indent === false) {
+    return ''
+  }
+  if (typeof indent === 'string') {
+    return indent
+  }
+  return '  '
 }

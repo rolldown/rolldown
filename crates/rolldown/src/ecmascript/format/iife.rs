@@ -61,19 +61,19 @@ pub fn render_iife(
 
   if determine_use_strict(ctx) {
     let mut source = RawSource::new("\"use strict\";".to_string());
-    source.indent(2);
+    source.indent(&ctx.options.indent);
     concat_source.add_source(Box::new(source));
   }
 
   if let Some(intro) = intro {
     let mut intro = RawSource::new(intro);
-    intro.indent(2);
+    intro.indent(&ctx.options.indent);
     concat_source.add_source(Box::new(intro));
   }
 
   concat_source.add_source(Box::new({
     let mut source = RawSource::new(import_code);
-    source.indent(2);
+    source.indent(&ctx.options.indent);
     source
   }));
 
@@ -82,7 +82,7 @@ pub fn render_iife(
     if let Some(emitted_sources) = module_render_output {
       for source in emitted_sources {
         let mut source = source;
-        source.indent(2);
+        source.indent(&ctx.options.indent);
         concat_source.add_source(source);
       }
     }
@@ -91,19 +91,19 @@ pub fn render_iife(
   // iife exports
   if let Some(exports) = render_chunk_exports(ctx)? {
     let mut exports = RawSource::new(exports);
-    exports.indent(2);
+    exports.indent(&ctx.options.indent);
     concat_source.add_source(Box::new(exports));
   }
 
   if let Some(outro) = outro {
     let mut outro = RawSource::new(outro);
-    outro.indent(2);
+    outro.indent(&ctx.options.indent);
     concat_source.add_source(Box::new(outro));
   }
 
   if named_exports && has_exports {
     let mut source = RawSource::new("return exports;".to_string());
-    source.indent(2);
+    source.indent(&ctx.options.indent);
     // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
     concat_source.add_source(Box::new(source));
   }

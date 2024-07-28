@@ -69,6 +69,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     footer: raw_options.footer,
     intro: raw_options.intro,
     outro: raw_options.outro,
+    indent: raw_options.indent.unwrap_or("  ".to_string()),
     dir: raw_options.dir.unwrap_or_else(|| "dist".to_string()),
     format: raw_options.format.unwrap_or(crate::OutputFormat::Esm),
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),

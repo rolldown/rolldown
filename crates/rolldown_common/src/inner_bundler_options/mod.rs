@@ -48,6 +48,7 @@ pub struct BundlerOptions {
   pub exports: Option<OutputExports>,
   pub globals: Option<HashMap<String, String>>,
   pub sourcemap: Option<SourceMapType>,
+  pub indent: Option<String>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_addon"),

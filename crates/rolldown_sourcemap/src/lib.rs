@@ -6,6 +6,7 @@ pub use oxc::sourcemap::{JSONSourceMap, SourceMap, SourcemapVisualizer};
 mod lines_count;
 pub use lines_count::lines_count;
 mod concat_sourcemap;
+mod concat_sourcemap_builder;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 

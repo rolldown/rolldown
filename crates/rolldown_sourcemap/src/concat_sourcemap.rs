@@ -1,6 +1,6 @@
-use oxc::sourcemap::{ConcatSourceMapBuilder, SourceMap};
+use oxc::sourcemap::SourceMap;
 
-use crate::lines_count;
+use crate::{concat_sourcemap_builder::ConcatSourceMapBuilder, lines_count};
 
 pub trait Source {
   fn sourcemap(&self) -> Option<&SourceMap>;
@@ -92,26 +92,37 @@ pub struct ConcatSource {
   inner: Vec<Box<dyn Source + Send>>,
   prepend_source: Vec<Box<dyn Source + Send>>,
   enable_sourcemap: bool,
+  names_len: usize,
+  sources_len: usize,
+  tokens_len: usize,
 }
 
 impl ConcatSource {
   pub fn add_source(&mut self, source: Box<dyn Source + Send>) {
-    if source.sourcemap().is_some() {
+    if let Some(sourcemap) = source.sourcemap() {
       self.enable_sourcemap = true;
+      self.names_len += sourcemap.get_names().count();
+      self.sources_len += sourcemap.get_sources().count();
+      self.tokens_len += sourcemap.get_tokens().count();
     }
     self.inner.push(source);
   }
 
   pub fn add_prepend_source(&mut self, source: Box<dyn Source + Send>) {
-    if source.sourcemap().is_some() {
+    if let Some(sourcemap) = source.sourcemap() {
       self.enable_sourcemap = true;
+      self.names_len += sourcemap.get_names().count();
+      self.sources_len += sourcemap.get_sources().count();
+      self.tokens_len += sourcemap.get_tokens().count();
     }
     self.prepend_source.push(source);
   }
 
   pub fn content_and_sourcemap(self) -> (String, Option<SourceMap>) {
     let mut final_source = String::new();
-    let mut sourcemap_builder = self.enable_sourcemap.then_some(ConcatSourceMapBuilder::default());
+    let mut sourcemap_builder = self.enable_sourcemap.then_some(
+      ConcatSourceMapBuilder::with_capacity(self.names_len, self.sources_len, self.tokens_len),
+    );
     let mut line_offset = 0;
     let source_len = self.prepend_source.len() + self.inner.len();
 

@@ -114,6 +114,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   rolldown_common::OutputFormat::Esm => {
                     // Insert `import * as ns from 'ext'`
                     // Insert `__reExport(exports, ns)`
+                    // If the export start stmt is not in an user defined entry
                     if self.ctx.module.is_user_defined_entry {
                       program.body.push(top_stmt);
                     } else {

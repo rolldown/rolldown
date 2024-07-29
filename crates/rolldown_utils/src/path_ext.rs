@@ -44,6 +44,11 @@ impl PathExt for std::path::Path {
       _ => file_name,
     };
 
+    // Avoid file name contained an unexpected NUL byte.
+    if let Some(stripped) = file_name.strip_prefix('\0') {
+      return stripped.to_owned().into();
+    }
+
     file_name
   }
 }
@@ -59,4 +64,7 @@ fn test_representative_file_name() {
 
   let path = cwd.join("vue").join("mod.ts");
   assert_eq!(path.representative_file_name(), "vue_mod");
+
+  let path = cwd.join("\0mod.ts");
+  assert_eq!(path.representative_file_name(), "mod");
 }

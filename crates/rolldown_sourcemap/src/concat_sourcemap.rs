@@ -103,20 +103,7 @@ impl Source for SourceMapSource {
     final_source.push_str(&self.content);
   }
 
-  fn indent(&mut self, indent: &str) {
-    let content: Vec<_> = self
-      .content
-      .lines()
-      .map(|line| {
-        if line.is_empty() {
-          Cow::Borrowed(line)
-        } else {
-          Cow::Owned(format!("{indent}{line}"))
-        }
-      })
-      .collect();
-    self.content = content.join("\n").to_string();
-  }
+  fn indent(&mut self, _: &str) {}
 }
 
 #[derive(Default)]

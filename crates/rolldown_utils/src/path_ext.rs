@@ -26,6 +26,11 @@ impl PathExt for std::path::Path {
 
   /// It doesn't ensure the file name is a valid identifier in JS.
   fn representative_file_name(&self) -> Cow<str> {
+    // Avoid file name contained an unexpected NUL byte.
+    if let Some(stripped) = self.to_string_lossy().strip_prefix('\0') {
+      return stripped.to_owned().into();
+    }
+
     let file_name =
       self.file_stem().map_or_else(|| self.to_string_lossy(), |stem| stem.to_string_lossy());
 
@@ -44,11 +49,6 @@ impl PathExt for std::path::Path {
       _ => file_name,
     };
 
-    // Avoid file name contained an unexpected NUL byte.
-    if let Some(stripped) = file_name.strip_prefix('\0') {
-      return stripped.to_owned().into();
-    }
-
     file_name
   }
 }
@@ -65,6 +65,6 @@ fn test_representative_file_name() {
   let path = cwd.join("vue").join("mod.ts");
   assert_eq!(path.representative_file_name(), "vue_mod");
 
-  let path = cwd.join("\0mod.ts");
+  let path = Path::new("\0/project/mod.ts");
   assert_eq!(path.representative_file_name(), "mod");
 }

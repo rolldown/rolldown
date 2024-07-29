@@ -3,7 +3,7 @@ export default (
   glob,
   path,
 ) => {
-  const v = glob[path]
+  const v = glob[path] ?? glob['./' + path]
   if (v) {
     return typeof v === 'function' ? v() : Promise.resolve(v)
   }

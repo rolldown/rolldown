@@ -79,9 +79,10 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
   #[allow(clippy::too_many_lines)]
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
     if let Expression::ImportExpression(import_expr) = expr {
+      // TODO: Support @/path via options.createResolver
       let pattern = to_glob_pattern(&import_expr.source).unwrap();
       if let Some(pattern) = pattern {
-        let DynamicImportPattern { glob_params, user_pattern, raw_pattern } =
+        let DynamicImportPattern { glob_params, user_pattern, raw_pattern: _ } =
           parse_pattern(pattern.as_str());
         self.need_helper = true;
         *expr = self.call_helper(

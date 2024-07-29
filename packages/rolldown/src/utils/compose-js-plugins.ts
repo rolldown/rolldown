@@ -286,9 +286,13 @@ export function composeJsPlugins(plugins: RolldownPlugin[]): RolldownPlugin[] {
       if (toBeComposed.length > 0) {
         if (toBeComposed.length > 1) {
           newPlugins.push(createComposedPlugin(toBeComposed))
+        } else {
+          // push the only plugin in toBeComposed
+          newPlugins.push(toBeComposed[0])
         }
         toBeComposed.length = 0
       }
+      // push the plugin that is not composable
       newPlugins.push(plugin)
     }
   })

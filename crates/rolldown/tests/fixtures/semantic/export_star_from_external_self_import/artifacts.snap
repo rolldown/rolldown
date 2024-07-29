@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/semantic/export_star_from_external_self_import
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "node:assert" is imported by "main.js", but could not be resolved – treating it as an external dependency.
+
+```
+## CIRCULAR_DEPENDENCY
+
+```text
+[CIRCULAR_DEPENDENCY] Warning: Circular dependency: main.js -> main.js.
+
+```
+# Assets
+
+## main.mjs
+
+```js
+import "node:fs";
+import { default as assert } from "node:assert";
+
+//#region main.js
+var main_ns = {};
+export * from "node:fs";
+assert(main_ns.readFile instanceof Function);
+
+//#endregion
+```

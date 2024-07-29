@@ -112,6 +112,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
   const composed: Plugin = {
     name: `Composed(${names.join(', ')})`,
   }
+
   ;(Object.keys(batchedHooks) as (keyof typeof batchedHooks)[]).forEach(
     (hookName) => {
       switch (hookName) {

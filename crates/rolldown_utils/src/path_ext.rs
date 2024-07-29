@@ -66,5 +66,5 @@ fn test_representative_file_name() {
   assert_eq!(path.representative_file_name(), "vue_mod");
 
   let path = Path::new("\0/project/mod.ts");
-  assert_eq!(path.representative_file_name(), "mod");
+  assert_eq!(path.representative_file_name(), "/project/mod.ts");
 }

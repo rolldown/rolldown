@@ -4,23 +4,17 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 const REQUEST_QUERY_MAYBE_ESCAPED_SPLIT_RE: LazyLock<Regex> = LazyLock::new(|| {
+  // Originally "\\?\?(?!.*[/|}])"
   let pattern = r"\\?\?";
   Regex::new(pattern).expect("failed to compile regex")
 });
 const REQUEST_QUERY_SPLIT_RE: LazyLock<Regex> = LazyLock::new(|| {
+  // Originally "\?(?!.*[/|}])"
   let pattern = r"\?";
   Regex::new(pattern).expect("failed to compile regex")
 });
-const URL_RE: LazyLock<Regex> = LazyLock::new(|| {
-  let pattern = r"(\?|&)url(?:&|$)";
-  Regex::new(pattern).expect("failed to compile regex")
-});
-const RAW_RE: LazyLock<Regex> = LazyLock::new(|| {
-  let pattern = r"(\?|&)raw(?:&|$)";
-  Regex::new(pattern).expect("failed to compile regex")
-});
-const WORKER_OR_SHARED_WORKER_RE: LazyLock<Regex> = LazyLock::new(|| {
-  let pattern = r"(?:\?|&)(worker|sharedworker)(?:&|$)";
+const SPECIAL_QUERY_RE: LazyLock<Regex> = LazyLock::new(|| {
+  let pattern = r"(\?|&)(url|raw|worker|sharedworker)(?:&|$)";
   Regex::new(pattern).expect("failed to compile regex")
 });
 
@@ -52,9 +46,7 @@ pub(crate) fn parse_pattern(pattern: &str) -> DynamicImportPattern {
     } else {
       Some(DynamicImportRequest {
         query: search.to_string(),
-        import: URL_RE.is_match(search)
-          || RAW_RE.is_match(search)
-          || WORKER_OR_SHARED_WORKER_RE.is_match(search),
+        import: SPECIAL_QUERY_RE.is_match(search),
       })
     },
     user_pattern: user_pattern.to_string(),
@@ -92,19 +84,18 @@ mod tests {
   }
 
   #[test]
-  fn with_raw_query() {
+  fn with_special_query() {
     assert_eq!(
-      super::parse_pattern("./mods/*.js?raw"),
+      super::parse_pattern("./mods/*.js?foo=bar&raw"),
       super::DynamicImportPattern {
-        glob_params: Some(super::DynamicImportRequest { query: "?raw".to_string(), import: true }),
+        glob_params: Some(super::DynamicImportRequest {
+          query: "?foo=bar&raw".to_string(),
+          import: true,
+        }),
         user_pattern: "./mods/*.js".to_string(),
         raw_pattern: "./mods/*.js".to_string(),
       }
     );
-  }
-
-  #[test]
-  fn with_url_query() {
     assert_eq!(
       super::parse_pattern("./mods/*.js?url"),
       super::DynamicImportPattern {
@@ -113,26 +104,11 @@ mod tests {
         raw_pattern: "./mods/*.js".to_string(),
       }
     );
-  }
-
-  #[test]
-  fn with_worker_query() {
     assert_eq!(
-      super::parse_pattern("./mods/*.js?worker"),
+      super::parse_pattern("./mods/*.js?worker&c=d"),
       super::DynamicImportPattern {
         glob_params: Some(super::DynamicImportRequest {
-          query: "?worker".to_string(),
-          import: true,
-        }),
-        user_pattern: "./mods/*.js".to_string(),
-        raw_pattern: "./mods/*.js".to_string(),
-      }
-    );
-    assert_eq!(
-      super::parse_pattern("./mods/*.js?sharedworker"),
-      super::DynamicImportPattern {
-        glob_params: Some(super::DynamicImportRequest {
-          query: "?sharedworker".to_string(),
+          query: "?worker&c=d".to_string(),
           import: true,
         }),
         user_pattern: "./mods/*.js".to_string(),

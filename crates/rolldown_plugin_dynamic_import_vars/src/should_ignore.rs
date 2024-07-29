@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 
 static IGNORED_PROTOCOLS: LazyLock<Vec<&str>> = LazyLock::new(|| vec!["data:", "http:", "https:"]);
 
-pub fn should_ignore(glob: &str) -> bool {
+pub(crate) fn should_ignore(glob: &str) -> bool {
   if !glob.contains('*') {
     return true;
   }

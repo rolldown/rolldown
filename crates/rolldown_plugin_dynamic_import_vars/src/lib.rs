@@ -1,12 +1,13 @@
 use clone_expr::clone_expr;
 use oxc::{
   ast::{
-    ast::{Expression, ImportOrExportKind, Statement, TSTypeParameterInstantiation},
+    ast::{Expression, ImportOrExportKind, PropertyKind, Statement, TSTypeParameterInstantiation},
     AstBuilder, VisitMut,
   },
   span::{Span, SPAN},
   syntax::number::NumberBase,
 };
+use parse_pattern::{parse_pattern, DynamicImportPattern, DynamicImportRequest};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, Plugin, SharedPluginContext,
@@ -14,6 +15,7 @@ use rolldown_plugin::{
 use std::borrow::Cow;
 use to_glob::to_glob_pattern;
 mod clone_expr;
+mod parse_pattern;
 mod should_ignore;
 mod to_glob;
 
@@ -79,8 +81,15 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
     if let Expression::ImportExpression(import_expr) = expr {
       let pattern = to_glob_pattern(&import_expr.source).unwrap();
       if let Some(pattern) = pattern {
+        let DynamicImportPattern { glob_params, user_pattern, raw_pattern } =
+          parse_pattern(pattern.as_str());
         self.need_helper = true;
-        *expr = self.call_helper(import_expr.span, pattern.as_str(), &import_expr.source);
+        *expr = self.call_helper(
+          import_expr.span,
+          user_pattern.as_str(),
+          &import_expr.source,
+          glob_params,
+        );
       }
     }
   }
@@ -89,41 +98,82 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
 impl<'ast> DynamicImportVarsVisit<'ast> {
   /// generates:
   /// ```js
-  /// __variableDynamicImportRuntimeHelper((import.meta.glob(pattern)), expr, segs)
+  /// __variableDynamicImportRuntimeHelper((import.meta.glob(pattern, params)), expr, segs)
   /// ```
-  fn call_helper(&self, span: Span, pattern: &str, expr: &Expression<'ast>) -> Expression<'ast> {
-    let segments = pattern.find('/').map_or(1, |i| i + 1);
+  fn call_helper(
+    &self,
+    span: Span,
+    pattern: &str,
+    expr: &Expression<'ast>,
+    params: Option<DynamicImportRequest>,
+  ) -> Expression<'ast> {
+    let segments = pattern.split('/').count();
     self.ast_builder.expression_call(
       span,
       {
         let mut items = self.ast_builder.vec();
-        items.push(
-          self.ast_builder.argument_expression(
-            self.ast_builder.expression_parenthesized(
+        items.push(self.ast_builder.argument_expression(
+          self.ast_builder.expression_parenthesized(
+            SPAN,
+            self.ast_builder.expression_call(
               SPAN,
-              self.ast_builder.expression_call(
+              {
+                let mut arguments =
+                  self.ast_builder.vec1(self.ast_builder.argument_expression(
+                    self.ast_builder.expression_string_literal(SPAN, pattern),
+                  ));
+                if let Some(params) = params {
+                  arguments.push(self.ast_builder.argument_expression(
+                    self.ast_builder.expression_object(
+                      SPAN,
+                      {
+                        let mut items = self.ast_builder.vec1(
+                          self.ast_builder.object_property_kind_object_property(
+                            SPAN,
+                            PropertyKind::Init,
+                            self.ast_builder.property_key_identifier_name(SPAN, "query"),
+                            self.ast_builder.expression_string_literal(SPAN, params.query),
+                            None,
+                            false,
+                            false,
+                            false,
+                          ),
+                        );
+                        if params.import {
+                          items.push(self.ast_builder.object_property_kind_object_property(
+                            SPAN,
+                            PropertyKind::Init,
+                            self.ast_builder.property_key_identifier_name(SPAN, "import"),
+                            self.ast_builder.expression_string_literal(SPAN, "*"),
+                            None,
+                            false,
+                            false,
+                            false,
+                          ));
+                        }
+                        items
+                      },
+                      None,
+                    ),
+                  ));
+                }
+                arguments
+              },
+              self.ast_builder.expression_member(self.ast_builder.member_expression_static(
                 SPAN,
-                self.ast_builder.vec1(
-                  self
-                    .ast_builder
-                    .argument_expression(self.ast_builder.expression_string_literal(SPAN, pattern)),
-                ),
-                self.ast_builder.expression_member(self.ast_builder.member_expression_static(
+                self.ast_builder.expression_meta_property(
                   SPAN,
-                  self.ast_builder.expression_meta_property(
-                    SPAN,
-                    self.ast_builder.identifier_name(SPAN, "import"),
-                    self.ast_builder.identifier_name(SPAN, "meta"),
-                  ),
-                  self.ast_builder.identifier_name(SPAN, "glob"),
-                  false,
-                )),
-                Option::<TSTypeParameterInstantiation>::None,
+                  self.ast_builder.identifier_name(SPAN, "import"),
+                  self.ast_builder.identifier_name(SPAN, "meta"),
+                ),
+                self.ast_builder.identifier_name(SPAN, "glob"),
                 false,
-              ),
+              )),
+              Option::<TSTypeParameterInstantiation>::None,
+              false,
             ),
           ),
-        );
+        ));
         items.push(self.ast_builder.argument_expression(
           // TODO: Remove clone_expr once `Expression` can be cloned.
           clone_expr(self.ast_builder, expr),

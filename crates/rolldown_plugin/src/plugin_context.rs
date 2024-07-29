@@ -1,6 +1,6 @@
 use std::sync::{Arc, Weak};
 
-use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter};
+use rolldown_common::{Metric, ModuleTable, ResolvedId, SharedFileEmitter};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
@@ -17,6 +17,7 @@ pub struct PluginContext {
   pub(crate) file_emitter: SharedFileEmitter,
   #[allow(clippy::redundant_allocation)]
   pub(crate) module_table: Option<Arc<&'static mut ModuleTable>>,
+  pub(crate) metrics: Arc<Vec<Metric>>,
 }
 
 impl PluginContext {

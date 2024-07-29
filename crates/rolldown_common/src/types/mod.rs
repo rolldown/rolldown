@@ -29,6 +29,7 @@ pub mod resolved_export;
 pub mod resolved_request_info;
 pub mod rollup_rendered_chunk;
 pub mod side_effects;
+pub mod stats;
 pub mod stmt_info;
 pub mod str_or_bytes;
 pub mod symbol_or_member_expr_ref;

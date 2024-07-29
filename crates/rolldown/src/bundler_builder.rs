@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use rolldown_common::FileEmitter;
+use itertools::Itertools;
+use rolldown_common::{FileEmitter, Metric};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{PluginDriver, __inner::SharedPluginable};
 use rolldown_resolver::Resolver;
@@ -33,14 +34,26 @@ impl BundlerBuilder {
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
 
     apply_inner_plugins(&mut self.plugins);
+    let metrics = Arc::new(
+      self
+        .plugins
+        .iter()
+        .map(|item| {
+          let mut metric = Metric::default();
+          metric.name = item.call_name().to_string();
+          metric
+        })
+        .collect_vec(),
+    );
 
     Bundler {
-      plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter),
+      plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter, &metrics),
       file_emitter,
       resolver,
       options,
       fs: OsFileSystem,
       _log_guard: maybe_guard,
+      metrics,
     }
   }
 

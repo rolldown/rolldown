@@ -16,7 +16,7 @@ mod clone_expr;
 mod should_ignore;
 mod to_glob;
 
-const DYNAMIC_IMPORT_HELPER_ID: &str = "\0rolldown/dynamic-import-helper.js";
+const DYNAMIC_IMPORT_HELPER_ID: &str = "\0rolldown_dynamic-import-helper.js";
 
 #[derive(Debug)]
 pub struct DynamicImportVarsPlugin {}

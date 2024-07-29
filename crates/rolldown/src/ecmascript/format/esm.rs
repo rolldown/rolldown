@@ -28,9 +28,7 @@ pub fn render_esm(
   }
 
   if let Some(intro) = intro {
-    if !intro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(intro)));
-    }
+    concat_source.add_source(Box::new(RawSource::new(intro)));
   }
 
   concat_source.add_source(Box::new(RawSource::new(render_esm_chunk_imports(ctx))));
@@ -67,16 +65,13 @@ pub fn render_esm(
   }
 
   if let Some(exports) = render_chunk_exports(ctx)? {
-    if exports.is_empty() {
-    } else {
+    if !exports.is_empty() {
       concat_source.add_source(Box::new(RawSource::new(exports)));
     }
   }
 
   if let Some(outro) = outro {
-    if !outro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(outro)));
-    }
+    concat_source.add_source(Box::new(RawSource::new(outro)));
   }
 
   if let Some(footer) = footer {

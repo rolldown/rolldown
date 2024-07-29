@@ -1,10 +1,22 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
 input_file: crates/rolldown/tests/fixtures/errors/missing_export
 ---
 # Errors
 
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+   ╭─[main.js:4:8]
+   │
+ 4 │ import importedE from "./foo"
+   │        ────┬────  
+   │            ╰────── Missing export
+───╯
+
+```
 ## MISSING_EXPORT
 
 ```text
@@ -33,42 +45,6 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
 
 ```text
 [MISSING_EXPORT] Error: "default" is not exported by "foo.js".
-   ╭─[main.js:4:8]
-   │
- 4 │ import importedE from "./foo"
-   │        ────┬────  
-   │            ╰────── Missing export
-───╯
-
-```
-## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "importedB" is not exported by "foo.js".
-   ╭─[main.js:1:21]
-   │
- 1 │ import { importedA, importedB as b } from "./foo"
-   │                     ────┬────  
-   │                         ╰────── Missing export
-───╯
-
-```
-## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "importedA" is not exported by "foo.js".
-   ╭─[main.js:1:10]
-   │
- 1 │ import { importedA, importedB as b } from "./foo"
-   │          ────┬────  
-   │              ╰────── Missing export
-───╯
-
-```
-## MISSING_EXPORT
-
-```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
    ╭─[main.js:5:10]
    │
  5 │ import { default as f } from "./foo"
@@ -88,4 +64,35 @@ input_file: crates/rolldown/tests/fixtures/errors/missing_export
    │             ╰───── Missing export
 ───╯
 
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "importedA" is not exported by "foo.js".
+   ╭─[main.js:1:10]
+   │
+ 1 │ import { importedA, importedB as b } from "./foo"
+   │          ────┬────  
+   │              ╰────── Missing export
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Error: "importedB" is not exported by "foo.js".
+   ╭─[main.js:1:21]
+   │
+ 1 │ import { importedA, importedB as b } from "./foo"
+   │                     ────┬────  
+   │                         ╰────── Missing export
+───╯
+
+```# Assets
+
+## main.mjs
+
+```js
+
+export { d, g, importedC };
 ```

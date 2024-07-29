@@ -1,6 +1,5 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
-use crate::types::tree_shake::{UsedExportsInfo, UsedInfo};
 use oxc::index::IndexVec;
 // use crate::utils::extract_member_chain::extract_canonical_symbol_info;
 use oxc::span::CompactStr;
@@ -19,7 +18,6 @@ struct Context<'a> {
   symbols: &'a Symbols,
   is_included_vec: &'a mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
   is_module_included_vec: &'a mut IndexVec<ModuleIdx, bool>,
-  used_exports_info_vec: &'a mut IndexVec<ModuleIdx, UsedExportsInfo>,
   tree_shaking: bool,
   runtime_id: ModuleIdx,
   metas: &'a LinkingMetadataVec,
@@ -50,13 +48,6 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
   }
 
   let is_included = ctx.is_module_included_vec[module.idx];
-  let used_info = ctx.used_exports_info_vec[module.idx].used_info;
-  if used_info.contains(UsedInfo::USED_AS_NAMESPACE_REF)
-    && !used_info.contains(UsedInfo::INCLUDED_AS_NAMESPACE_REF)
-  {
-    ctx.used_exports_info_vec[module.idx].used_info |= UsedInfo::INCLUDED_AS_NAMESPACE_REF;
-    include_module_as_namespace(ctx, module);
-  }
   if is_included {
     return;
   }
@@ -95,18 +86,6 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
   });
 }
 
-fn include_module_as_namespace(ctx: &mut Context, module: &EcmaModule) {
-  // Collect all the canonical export to avoid violating rustc borrow rules.
-  let canonical_export_list = ctx.metas[module.idx]
-    .canonical_exports()
-    .map(|(key, export)| (key.clone(), export.symbol_ref))
-    .collect::<Vec<_>>();
-  canonical_export_list.into_iter().for_each(|(key, symbol_ref)| {
-    ctx.used_exports_info_vec[module.idx].used_exports.insert(key);
-    include_symbol(ctx, symbol_ref);
-  });
-}
-
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
@@ -114,11 +93,6 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
     canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
-  }
-
-  let is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
-  if is_namespace_ref {
-    ctx.used_exports_info_vec[canonical_ref_owner.idx].used_info |= UsedInfo::USED_AS_NAMESPACE_REF;
   }
 
   ctx.used_symbol_refs.insert(canonical_ref);
@@ -172,7 +146,7 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
     is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
   }
 
-  let (export_name, namespace_property_name) =
+  let (_export_name, namespace_property_name) =
     if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
       let name = canonical_ref_symbol.name.clone();
       canonical_ref = namespace_alias.namespace_ref;
@@ -182,14 +156,6 @@ fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[Co
       (canonical_ref_symbol.name.clone(), None)
     };
 
-  let export_name = export_name.to_rstr();
-  let is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
-  if is_namespace_ref {
-    ctx.used_exports_info_vec[canonical_ref_owner.idx].used_info |= UsedInfo::USED_AS_NAMESPACE_REF;
-  }
-
-  let id = ns_symbol_list.last().map_or(symbol_ref.owner, |(symbol, _)| symbol.owner);
-  ctx.used_exports_info_vec[id].used_exports.insert(export_name);
   // Only cache the top level member expr resolved result, if it consume at least one chain element.
   if cursor > 0 {
     let map = ctx.top_level_member_expr_resolved_cache.entry(symbol_ref).or_default();
@@ -252,8 +218,6 @@ impl LinkStage<'_> {
     let mut is_module_included_vec: IndexVec<ModuleIdx, bool> =
       oxc::index::index_vec![false; self.module_table.modules.len()];
 
-    let mut used_exports_info_vec: IndexVec<ModuleIdx, UsedExportsInfo> =
-      oxc::index::index_vec![UsedExportsInfo::default(); self.module_table.modules.len()];
     let mut top_level_member_expr_resolved_cache = FxHashMap::default();
     let context = &mut Context {
       modules: &self.module_table.modules,
@@ -262,7 +226,7 @@ impl LinkStage<'_> {
       is_module_included_vec: &mut is_module_included_vec,
       tree_shaking: self.options.treeshake.enabled(),
       runtime_id: self.runtime.id(),
-      used_exports_info_vec: &mut used_exports_info_vec,
+      // used_exports_info_vec: &mut used_exports_info_vec,
       metas: &self.metas,
       used_symbol_refs: &mut self.used_symbol_refs,
       top_level_member_expr_resolved_cache: &mut top_level_member_expr_resolved_cache,
@@ -280,9 +244,9 @@ impl LinkStage<'_> {
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
         include_symbol(context, *symbol_ref);
       });
-      module.named_exports.iter().for_each(|(name, _)| {
-        context.used_exports_info_vec[entry.id].used_exports.insert(name.clone());
-      });
+      // module.named_exports.iter().for_each(|(name, _)| {
+      //   context.used_exports_info_vec[entry.id].used_exports.insert(name.clone());
+      // });
       include_module(context, module);
     });
 
@@ -294,11 +258,6 @@ impl LinkStage<'_> {
         });
       },
     );
-
-    self.module_table.modules.iter_mut().filter_map(Module::as_ecma_mut).for_each(|module| {
-      self.metas[module.idx].used_exports_info =
-        std::mem::take(&mut used_exports_info_vec[module.idx]);
-    });
 
     self.top_level_member_expr_resolved_cache = top_level_member_expr_resolved_cache;
 
@@ -315,27 +274,31 @@ impl LinkStage<'_> {
   }
 
   fn determine_side_effects(&mut self) {
-    type IndexVisited = IndexVec<ModuleIdx, bool>;
-    type IndexSideEffectsCache = IndexVec<ModuleIdx, Option<DeterminedSideEffects>>;
+    #[derive(Debug, Clone, Copy)]
+    enum SideEffectCache {
+      None,
+      Visited,
+      Cache(DeterminedSideEffects),
+    }
+    type IndexSideEffectsCache = IndexVec<ModuleIdx, SideEffectCache>;
 
     fn determine_side_effects_for_module(
-      visited: &mut IndexVisited,
       cache: &mut IndexSideEffectsCache,
       module_id: ModuleIdx,
       normal_modules: &IndexModules,
     ) -> DeterminedSideEffects {
       let module = &normal_modules[module_id];
 
-      let is_visited = &mut visited[module_id];
-
-      if *is_visited {
-        return *module.side_effects();
-      }
-
-      *is_visited = true;
-
-      if let Some(ret) = cache[module_id] {
-        return ret;
+      match &mut cache[module_id] {
+        SideEffectCache::None => {
+          cache[module_id] = SideEffectCache::Visited;
+        }
+        SideEffectCache::Visited => {
+          return *module.side_effects();
+        }
+        SideEffectCache::Cache(v) => {
+          return *v;
+        }
       }
 
       let ret = match *module.side_effects() {
@@ -350,7 +313,6 @@ impl LinkStage<'_> {
           Module::Ecma(module) => {
             DeterminedSideEffects::Analyzed(module.import_records.iter().any(|import_record| {
               determine_side_effects_for_module(
-                visited,
                 cache,
                 import_record.resolved_module,
                 normal_modules,
@@ -362,22 +324,19 @@ impl LinkStage<'_> {
         },
       };
 
-      cache[module_id] = Some(ret);
+      cache[module_id] = SideEffectCache::Cache(ret);
 
       ret
     }
 
     let mut index_side_effects_cache =
-      oxc::index::index_vec![None; self.module_table.modules.len()];
+      oxc::index::index_vec![SideEffectCache::None; self.module_table.modules.len()];
     let index_module_side_effects = self
       .module_table
       .modules
       .iter()
       .map(|module| {
-        let mut visited: IndexVisited =
-          oxc::index::index_vec![false; self.module_table.modules.len()];
         determine_side_effects_for_module(
-          &mut visited,
           &mut index_side_effects_cache,
           module.idx(),
           &self.module_table.modules,

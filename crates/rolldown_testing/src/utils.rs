@@ -93,3 +93,19 @@ pub(crate) static RUNTIME_MODULE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(r"(//#region rolldown:runtime[\s\S]*?//#endregion)")
     .expect("invalid runtime module output regex")
 });
+
+#[macro_export]
+/// `std::file!` alternative that returns an absolute path.
+macro_rules! abs_file {
+  () => {
+    std::path::Path::new(env!("WORKSPACE_DIR")).join(file!())
+  };
+}
+
+/// Sugar macro for `abs_file!().parent().unwrap()`
+#[macro_export]
+macro_rules! abs_file_dir {
+  () => {
+    std::path::Path::new(env!("WORKSPACE_DIR")).join(file!()).parent().unwrap().to_path_buf()
+  };
+}

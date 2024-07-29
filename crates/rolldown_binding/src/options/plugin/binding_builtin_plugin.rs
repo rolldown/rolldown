@@ -4,6 +4,7 @@ use derivative::Derivative;
 use napi::JsUnknown;
 use napi_derive::napi;
 use rolldown_plugin::Plugin;
+use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_glob_import::GlobImportPlugin;
 use rolldown_plugin_wasm::WasmPlugin;
@@ -34,7 +35,7 @@ pub enum BindingBuiltinPluginName {
   DynamicImportVars,
 }
 
-impl From<BindingBuiltinPlugin> for Arc<dyn Plugin> {
+impl From<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
   fn from(plugin: BindingBuiltinPlugin) -> Self {
     match plugin.name {
       BindingBuiltinPluginName::Wasm => Arc::new(WasmPlugin {}),

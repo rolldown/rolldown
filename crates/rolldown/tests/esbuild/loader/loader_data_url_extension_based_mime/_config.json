@@ -1,0 +1,34 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry_foo",
+        "import": "entry.foo"
+      }
+    ],
+    "moduleTypes": {
+      ".foo": "js",
+      ".css": "dataurl",
+      ".eot": "dataurl",
+      ".gif": "dataurl",
+      ".htm": "dataurl",
+      ".html": "dataurl",
+      ".jpeg": "dataurl",
+      ".jpg": "dataurl",
+      ".js": "dataurl",
+      ".json": "dataurl",
+      ".mjs": "dataurl",
+      ".otf": "dataurl",
+      ".pdf": "dataurl",
+      ".png": "dataurl",
+      ".sfnt": "dataurl",
+      ".svg": "dataurl",
+      ".ttf": "dataurl",
+      ".wasm": "dataurl",
+      ".webp": "dataurl",
+      ".woff": "dataurl",
+      ".woff2": "dataurl",
+      ".xml": "dataurl"
+    }
+  }
+}

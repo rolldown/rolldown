@@ -2,7 +2,7 @@ use crate::types::{
   binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
   js_callback::MaybeAsyncJsCallbackExt,
 };
-use rolldown_plugin::{Plugin, SharedPlugin};
+use rolldown_plugin::{Plugin, __inner::SharedPluginable};
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 
 use super::{binding_transform_context::BindingTransformPluginContext, BindingPluginOptions};
@@ -26,12 +26,11 @@ impl JsPlugin {
     Self { inner }
   }
 
-  pub(crate) fn new_shared(inner: BindingPluginOptions) -> SharedPlugin {
+  pub(crate) fn new_shared(inner: BindingPluginOptions) -> SharedPluginable {
     Arc::new(Self { inner })
   }
 }
 
-#[async_trait::async_trait]
 impl Plugin for JsPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Owned(self.name.clone())
@@ -52,13 +51,13 @@ impl Plugin for JsPlugin {
   async fn resolve_id(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookResolveIdArgs,
+    args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id {
       Ok(
         cb.await_call((
           Arc::clone(ctx).into(),
-          args.source.to_string(),
+          args.specifier.to_string(),
           args.importer.map(str::to_string),
           args.options.clone().into(),
         ))
@@ -73,7 +72,7 @@ impl Plugin for JsPlugin {
   async fn resolve_dynamic_import(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookResolveDynamicImportArgs,
+    args: &rolldown_plugin::HookResolveDynamicImportArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_dynamic_import {
       Ok(
@@ -93,7 +92,7 @@ impl Plugin for JsPlugin {
   async fn load(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookLoadArgs,
+    args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     if let Some(cb) = &self.load {
       Ok(
@@ -110,7 +109,7 @@ impl Plugin for JsPlugin {
   async fn transform(
     &self,
     ctx: &rolldown_plugin::TransformPluginContext<'_>,
-    args: &rolldown_plugin::HookTransformArgs,
+    args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     if let Some(cb) = &self.transform {
       Ok(
@@ -165,9 +164,43 @@ impl Plugin for JsPlugin {
   async fn banner(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookBannerArgs,
-  ) -> rolldown_plugin::HookBannerOutputReturn {
+    args: &rolldown_plugin::HookInjectionArgs<'_>,
+  ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.banner {
+      Ok(
+        cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()?,
+      )
+    } else {
+      Ok(None)
+    }
+  }
+
+  async fn intro(
+    &self,
+    ctx: &rolldown_plugin::SharedPluginContext,
+    args: &rolldown_plugin::HookInjectionArgs<'_>,
+  ) -> rolldown_plugin::HookInjectionOutputReturn {
+    if let Some(cb) = &self.intro {
+      Ok(
+        cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()?,
+      )
+    } else {
+      Ok(None)
+    }
+  }
+
+  async fn outro(
+    &self,
+    ctx: &rolldown_plugin::SharedPluginContext,
+    args: &rolldown_plugin::HookInjectionArgs<'_>,
+  ) -> rolldown_plugin::HookInjectionOutputReturn {
+    if let Some(cb) = &self.outro {
       Ok(
         cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))
           .await?
@@ -182,8 +215,8 @@ impl Plugin for JsPlugin {
   async fn footer(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookFooterArgs,
-  ) -> rolldown_plugin::HookFooterOutputReturn {
+    args: &rolldown_plugin::HookInjectionArgs<'_>,
+  ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.footer {
       Ok(
         cb.await_call((Arc::clone(ctx).into(), args.chunk.clone().into()))
@@ -199,7 +232,7 @@ impl Plugin for JsPlugin {
   async fn render_chunk(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookRenderChunkArgs,
+    args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     if let Some(cb) = &self.render_chunk {
       Ok(

@@ -64,9 +64,7 @@ pub fn render_iife(
   }
 
   if let Some(intro) = intro {
-    if !intro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(intro)));
-    }
+    concat_source.add_source(Box::new(RawSource::new(intro)));
   }
 
   concat_source.add_source(Box::new(RawSource::new(import_code)));
@@ -81,19 +79,18 @@ pub fn render_iife(
     }
   });
 
-  if let Some(outro) = outro {
-    if !outro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(outro)));
-    }
-  }
-
   // iife exports
   if let Some(exports) = render_chunk_exports(ctx)? {
     concat_source.add_source(Box::new(RawSource::new(exports)));
-    if named_exports {
-      // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
-      concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
-    }
+  }
+
+  if let Some(outro) = outro {
+    concat_source.add_source(Box::new(RawSource::new(outro)));
+  }
+
+  if named_exports && has_exports {
+    // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
+    concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
   }
 
   // iife wrapper end

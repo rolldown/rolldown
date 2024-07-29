@@ -21,6 +21,7 @@
     "/CHANGELOG.md",
     "/packages/rolldown/src/rollup.d.ts",
     "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
+    "/crates/rolldown_utils/src/light_guess.rs",
     "/pnpm-lock.yaml",
     "*.wasm"
   ],
@@ -96,6 +97,7 @@
     "Itertools",
     "iwanabethatguy",
     "izip",
+    "Jrcy",
     "jsonschema",
     "justfile",
     "Kawaii",
@@ -120,6 +122,7 @@
     "oxlint",
     "oxlintignore",
     "peekable",
+    "Pluginable",
     "proto",
     "quasis",
     "realpath",
@@ -136,6 +139,8 @@
     "sapphi-red",
     "schemars",
     "serde",
+    "sfnt",
+    "simd",
     "smallvec",
     "sourcemaps",
     "stackblitz",
@@ -166,9 +171,9 @@
     "vitepress",
     "wasi",
     "WASI",
+    "webp",
     "Xiangjun",
     "Yinan",
-    "Yunfei",
-    "simd"
+    "Yunfei"
   ]
 }

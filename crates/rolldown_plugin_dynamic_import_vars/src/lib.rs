@@ -4,7 +4,7 @@ use oxc::{
     ast::{Expression, ImportOrExportKind, Statement, TSTypeParameterInstantiation},
     AstBuilder, VisitMut,
   },
-  span::SPAN,
+  span::{Span, SPAN},
 };
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -16,7 +16,7 @@ mod clone_expr;
 mod should_ignore;
 mod to_glob;
 
-const DYNAMIC_IMPORT_HELPER_ID: &str = "\0rolldown_dynamic_import_helper.js";
+const DYNAMIC_IMPORT_HELPER: &str = "\0rolldown_dynamic_import_helper.js";
 
 #[derive(Debug)]
 pub struct DynamicImportVarsPlugin {}
@@ -31,21 +31,17 @@ impl Plugin for DynamicImportVarsPlugin {
     _ctx: &SharedPluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
-    if args.specifier == DYNAMIC_IMPORT_HELPER_ID {
-      Ok(Some(HookResolveIdOutput {
-        id: DYNAMIC_IMPORT_HELPER_ID.to_string(),
-        external: Some(true),
-        ..Default::default()
-      }))
+    if args.specifier == DYNAMIC_IMPORT_HELPER {
+      Ok(Some(HookResolveIdOutput { id: DYNAMIC_IMPORT_HELPER.to_string(), ..Default::default() }))
     } else {
       Ok(None)
     }
   }
 
   async fn load(&self, _ctx: &SharedPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    if args.id == DYNAMIC_IMPORT_HELPER_ID {
+    if args.id == DYNAMIC_IMPORT_HELPER {
       Ok(Some(HookLoadOutput {
-        code: include_str!("./dynamic_import_helper.js").to_string(),
+        code: include_str!("dynamic_import_helper.js").to_string(),
         ..Default::default()
       }))
     } else {
@@ -83,7 +79,7 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
       let pattern = to_glob_pattern(&import_expr.source).unwrap();
       if let Some(pattern) = pattern {
         self.need_helper = true;
-        *expr = self.call_helper(pattern.as_str(), &import_expr.source);
+        *expr = self.call_helper(import_expr.span, pattern.as_str(), &import_expr.source);
       }
     }
   }
@@ -94,9 +90,9 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
   /// ```js
   /// __variableDynamicImportRuntimeHelper((import.meta.glob(pattern)), expr)
   /// ```
-  fn call_helper(&self, pattern: &str, expr: &Expression<'ast>) -> Expression<'ast> {
+  fn call_helper(&self, span: Span, pattern: &str, expr: &Expression<'ast>) -> Expression<'ast> {
     self.ast_builder.expression_call(
-      SPAN,
+      span,
       {
         let mut items = self.ast_builder.vec();
         items.push(
@@ -151,7 +147,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
             self.ast_builder.binding_identifier(SPAN, "__variableDynamicImportRuntimeHelper"),
           ),
         )),
-        self.ast_builder.string_literal(SPAN, DYNAMIC_IMPORT_HELPER_ID),
+        self.ast_builder.string_literal(SPAN, DYNAMIC_IMPORT_HELPER),
         None,
         ImportOrExportKind::Value,
       ),

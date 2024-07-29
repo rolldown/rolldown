@@ -5,6 +5,7 @@ use oxc::{
     AstBuilder, VisitMut,
   },
   span::{Span, SPAN},
+  syntax::number::NumberBase,
 };
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -88,9 +89,10 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
 impl<'ast> DynamicImportVarsVisit<'ast> {
   /// generates:
   /// ```js
-  /// __variableDynamicImportRuntimeHelper((import.meta.glob(pattern)), expr)
+  /// __variableDynamicImportRuntimeHelper((import.meta.glob(pattern)), expr, segs)
   /// ```
   fn call_helper(&self, span: Span, pattern: &str, expr: &Expression<'ast>) -> Expression<'ast> {
+    let segments = pattern.find('/').map_or(1, |i| i + 1);
     self.ast_builder.expression_call(
       span,
       {
@@ -122,7 +124,18 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
             ),
           ),
         );
-        items.push(self.ast_builder.argument_expression(clone_expr(self.ast_builder, expr)));
+        items.push(self.ast_builder.argument_expression(
+          // TODO: Remove clone_expr once `Expression` can be cloned.
+          clone_expr(self.ast_builder, expr),
+        ));
+        items.push(self.ast_builder.argument_expression(
+          self.ast_builder.expression_numeric_literal(
+            SPAN,
+            segments as f64,
+            segments.to_string(),
+            NumberBase::Decimal,
+          ),
+        ));
         items
       },
       self

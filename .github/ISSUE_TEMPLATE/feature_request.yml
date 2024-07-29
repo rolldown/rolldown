@@ -1,6 +1,7 @@
 name: "\U0001F680 New feature"
+title: '[Feature Request]: '
 description: Suggest an idea for Rolldown
-labels: [':sparkles: feature request']
+labels: ['needs-triage']
 body:
   - type: markdown
     attributes:

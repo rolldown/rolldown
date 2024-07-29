@@ -14,7 +14,6 @@ workspace = true
 [dependencies]
 anyhow                   = { workspace = true }
 arcstr                   = { workspace = true }
-bitflags                 = { workspace = true }
 daachorse                = { workspace = true }
 dunce                    = { workspace = true }
 futures                  = { workspace = true }

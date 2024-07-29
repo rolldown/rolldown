@@ -1807,6 +1807,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-nqMd7tJC.mjs
 
+# tests/fixtures/issues/1769
+
+- main-!~{000}~.mjs => main-40SKkhvQ.mjs
+
 # tests/fixtures/issues/376
 
 - main-!~{000}~.mjs => main-EXizxPDM.mjs
@@ -1923,6 +1927,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/tree_shaking/export_star
 
 - main-!~{000}~.mjs => main-D_8Z2hmK.mjs
+
+# tests/fixtures/tree_shaking/export_star2
+
+- main-!~{000}~.mjs => main-Ll-xem_E.mjs
 
 # tests/fixtures/tree_shaking/external-export-star1
 

@@ -64,7 +64,12 @@ impl Symbols {
     canonical_names: &'name FxHashMap<SymbolRef, Rstr>,
   ) -> &'name Rstr {
     let canonical_ref = self.par_canonical_ref_for(refer);
-    &canonical_names[&canonical_ref]
+    canonical_names.get(&canonical_ref).unwrap_or_else(|| {
+      panic!(
+        "canonical name not found for {canonical_ref:?}, original_name: {:?}",
+        self.get_original_name(refer)
+      );
+    })
   }
 
   pub fn get(&self, refer: SymbolRef) -> &Symbol {

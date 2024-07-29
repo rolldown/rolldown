@@ -6,6 +6,7 @@ use oxc::{
 };
 
 // A workaround to clone an expression AST.
+// TODO: Remove this function once `Expression` can be cloned.
 pub fn clone_expr<'ast>(
   ast_builder: AstBuilder<'ast>,
   expr: &Expression<'ast>,

@@ -3,7 +3,6 @@ use std::sync::Arc;
 use derivative::Derivative;
 use napi::JsUnknown;
 use napi_derive::napi;
-use rolldown_plugin::Plugin;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_glob_import::GlobImportPlugin;
@@ -40,9 +39,7 @@ impl From<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
     match plugin.name {
       BindingBuiltinPluginName::Wasm => Arc::new(WasmPlugin {}),
       BindingBuiltinPluginName::GlobImport => Arc::new(GlobImportPlugin {}),
-      BindingBuiltinPluginName::DynamicImportVars => {
-        Arc::new(DynamicImportVarsPlugin { error_when_no_files_found: false })
-      }
+      BindingBuiltinPluginName::DynamicImportVars => Arc::new(DynamicImportVarsPlugin {}),
     }
   }
 }

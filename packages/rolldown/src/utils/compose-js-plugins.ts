@@ -112,7 +112,6 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
   const composed: Plugin = {
     name: `Composed(${names.join(', ')})`,
   }
-
   ;(Object.keys(batchedHooks) as (keyof typeof batchedHooks)[]).forEach(
     (hookName) => {
       switch (hookName) {
@@ -285,7 +284,9 @@ export function composeJsPlugins(plugins: RolldownPlugin[]): RolldownPlugin[] {
       toBeComposed.push(plugin)
     } else {
       if (toBeComposed.length > 0) {
-        newPlugins.push(createComposedPlugin(toBeComposed))
+        if (toBeComposed.length > 1) {
+          newPlugins.push(createComposedPlugin(toBeComposed))
+        }
         toBeComposed.length = 0
       }
       newPlugins.push(plugin)
@@ -296,7 +297,11 @@ export function composeJsPlugins(plugins: RolldownPlugin[]): RolldownPlugin[] {
   // after the loop, toBeComposed = [c, c, c, c], plugins = []
   // we should consume all the toBeComposed plugins at the end
   if (toBeComposed.length > 0) {
-    newPlugins.push(createComposedPlugin(toBeComposed))
+    if (toBeComposed.length > 1) {
+      newPlugins.push(createComposedPlugin(toBeComposed))
+    } else {
+      newPlugins.push(toBeComposed[0])
+    }
     toBeComposed.length = 0
   }
 

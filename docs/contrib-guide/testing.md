@@ -33,6 +33,13 @@ For all available options, you could refer to
 
 Rolldown will bundle the input into `/dist`, and using the same `node` instance to execute every entry file in `/dist` orderly. If `_test.mjs` is found in test case folder, it will be executed after all entry points are executed.
 
+### Function-complete tests in rust
+
+`_config.json` has it's limitations, so we also support writing tests in rust directly. You could refer to
+
+- https://github.com/rolldown/rolldown/blob/main/crates/rolldown/tests/fixtures/issues/1733/mod.rs
+- https://github.com/rolldown/rolldown/blob/main/crates/rolldown/tests/fixtures/errors/entry_cannot_be_external/mod.rs
+
 #### Snapshot testing
 
 Rolldown uses [insta](https://insta.rs/docs/cli/) for rust snapshot testing. You could use

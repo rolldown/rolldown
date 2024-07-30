@@ -9,6 +9,13 @@ input_file: crates/rolldown/tests/fixtures/semantic/export_star_from_external_as
 
 ```js
 "use strict";
+Object.keys(require("node:fs")).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return require("node:fs")[k]; }
+	});
+});
+
 const { main_ns } = require("./main.cjs");
 
 ```
@@ -16,6 +23,13 @@ const { main_ns } = require("./main.cjs");
 
 ```js
 "use strict";
+Object.keys(require("node:fs")).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return require("node:fs")[k]; }
+	});
+});
+
 const { main_ns } = require("./main.cjs");
 
 ```

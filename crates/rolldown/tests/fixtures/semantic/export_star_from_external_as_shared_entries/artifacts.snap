@@ -26,11 +26,4 @@ export * from "node:fs"
 ```js
 import "node:fs";
 
-
-//#region main.js
-var main_ns = {};
-import * as import_node_fs from "node:fs";
-__reExport(main_ns, import_node_fs);
-
-//#endregion
 ```

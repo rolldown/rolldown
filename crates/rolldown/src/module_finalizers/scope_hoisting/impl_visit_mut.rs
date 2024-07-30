@@ -114,23 +114,25 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
                   rolldown_common::OutputFormat::Esm => {
                     // Insert `import * as ns from 'ext'`
                     // Insert `__reExport(exports, ns)`
-                    let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
-                    let importer_namespace_name =
-                      self.canonical_name_for(self.ctx.module.namespace_object_ref);
-                    let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
-                    program
-                      .body
-                      .push(self.snippet.import_star_stmt(&importee.name, importee_namespace_name));
-                    program.body.push(
-                      self
-                        .snippet
-                        .call_expr_with_2arg_expr(
-                          re_export_fn_name,
-                          importer_namespace_name,
-                          importee_namespace_name,
-                        )
-                        .into_in(self.alloc),
-                    );
+                    if !self.ctx.module.is_user_defined_entry {
+                      let re_export_fn_name = self.canonical_name_for_runtime("__reExport");
+                      let importer_namespace_name =
+                        self.canonical_name_for(self.ctx.module.namespace_object_ref);
+                      let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
+                      program.body.push(
+                        self.snippet.import_star_stmt(&importee.name, importee_namespace_name),
+                      );
+                      program.body.push(
+                        self
+                          .snippet
+                          .call_expr_with_2arg_expr(
+                            re_export_fn_name,
+                            importer_namespace_name,
+                            importee_namespace_name,
+                          )
+                          .into_in(self.alloc),
+                      );
+                    }
                   }
                   rolldown_common::OutputFormat::Cjs => {
                     // Insert `__reExport(exports, require('ext'))`

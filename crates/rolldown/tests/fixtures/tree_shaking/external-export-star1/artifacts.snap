@@ -11,11 +11,4 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/external-export-star1
 
 export * from "fs"
 
-
-//#region main.js
-var main_ns = {};
-import * as import_fs from "fs";
-__reExport(main_ns, import_fs);
-
-//#endregion
 ```

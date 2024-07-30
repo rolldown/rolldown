@@ -287,7 +287,9 @@ impl<'a> LinkStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   fn reference_needed_symbols(&mut self) {
+    let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
     let symbols = Mutex::new(&mut self.symbols);
+
     self.module_table.modules.iter().par_bridge().filter_map(Module::as_ecma).for_each(
       |importer| {
         // safety: No race conditions here:
@@ -312,7 +314,10 @@ impl<'a> LinkStage<'a> {
                         .push(self.runtime.resolve_symbol("__toESM").into());
                     }
                     let is_reexport_all = importer.star_exports.contains(rec_id);
-                    if is_reexport_all {
+                    if is_reexport_all
+                      && (!entry_ids_set.contains(&importer.idx)
+                        || matches!(self.options.format, OutputFormat::Cjs))
+                    {
                       symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                         format!("import_{}", legitimize_identifier_name(&importee.name)).into();
                       declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));

@@ -1931,6 +1931,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.cjs => main-GxxA_HM4.cjs
 
+# tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped
+
+- main-!~{000}~.mjs => main-G-5DXUYT.mjs
+
 # tests/fixtures/tree_shaking/advanced_barrel_exports
 
 - main-!~{000}~.mjs => main-4-jCZSLp.mjs

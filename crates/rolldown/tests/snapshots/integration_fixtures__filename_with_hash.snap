@@ -1927,28 +1927,51 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-4c_NDWJw.mjs
 
+# tests/fixtures/topics/live_bindings/default_export_binding_cjs
+
+- main-!~{000}~.cjs => main-Ke36bV_e.cjs
+
 # tests/fixtures/topics/live_bindings/default_export_binding_in_common_chunks
 
 - async-entry-!~{001}~.mjs => async-entry-Y28H9Ff5.mjs
 - main-!~{000}~.mjs => main-41XdRZn4.mjs
 
+# tests/fixtures/topics/live_bindings/default_export_binding_in_common_chunks_cjs
+
+- async-entry-!~{001}~.cjs => async-entry-mcIs-nh2.cjs
+- main-!~{000}~.cjs => main-_ihEPCH9.cjs
+
 # tests/fixtures/topics/live_bindings/default_export_expr
 
 - main-!~{000}~.mjs => main-VUsEj3zV.mjs
+
+# tests/fixtures/topics/live_bindings/default_export_expr_cjs
+
+- main-!~{000}~.cjs => main-RWC0LZkv.cjs
 
 # tests/fixtures/topics/live_bindings/default_export_expr_in_common_chunks
 
 - async-entry-!~{001}~.mjs => async-entry-XkZZEAkg.mjs
 - main-!~{000}~.mjs => main-yxqWM9Ln.mjs
 
+# tests/fixtures/topics/live_bindings/default_export_expr_in_common_chunks_cjs
+
+- async-entry-!~{001}~.cjs => async-entry-zT3FQMt7.cjs
+- main-!~{000}~.cjs => main-ZaOd1dbH.cjs
+
 # tests/fixtures/topics/live_bindings/named_exports
 
 - main-!~{000}~.mjs => main-T1cNcGUw.mjs
 
+# tests/fixtures/topics/live_bindings/named_exports_cjs
+
+- main-!~{000}~.cjs => main-KBkaigN_.cjs
+
 # tests/fixtures/topics/live_bindings/named_exports_in_common_chunks
 
-- async-entry-!~{001}~.mjs => async-entry-vWTdj660.mjs
-- main-!~{000}~.mjs => main-Lekeeirp.mjs
+- async-entry-!~{001}~.mjs => async-entry-KPjI4-Wo.mjs
+- main-!~{000}~.mjs => main-D2Sgh11x.mjs
+- shared-!~{002}~.mjs => shared-x38TbtaP.mjs
 
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export
 

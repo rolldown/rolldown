@@ -8,18 +8,9 @@ input_file: crates/rolldown/tests/fixtures/topics/live_bindings/named_exports_in
 ## async-entry.mjs
 
 ```js
+import { count, inc, reset } from "./shared.mjs";
 import { default as assert } from "node:assert";
 
-//#region shared.js
-let count = 0;
-function reset() {
-	count = 0;
-}
-function inc() {
-	count += 1;
-}
-
-//#endregion
 //#region async-entry.js
 reset();
 assert.strictEqual(count, 0);
@@ -36,9 +27,27 @@ assert.strictEqual(count, count);
 ## main.mjs
 
 ```js
+import { count, inc, reset } from "./shared.mjs";
 
 //#region main.js
 import("./async-entry.mjs");
 
 //#endregion
+export { count, inc, reset };
+```
+## shared.mjs
+
+```js
+
+//#region shared.js
+let count = 0;
+function reset() {
+	count = 0;
+}
+function inc() {
+	count += 1;
+}
+
+//#endregion
+export { count, inc, reset };
 ```

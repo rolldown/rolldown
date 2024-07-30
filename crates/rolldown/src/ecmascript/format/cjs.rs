@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use rolldown_common::{ChunkKind, ExportsKind, Module};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
@@ -39,10 +40,13 @@ pub fn render_cjs(
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
       if matches!(entry_module.exports_kind, ExportsKind::Esm) {
-        entry_module.star_export_module_ids().for_each(|importee| {
+        entry_module.star_export_module_ids().filter_map(|importee| {
           let importee = &ctx.link_output.module_table.modules[importee];
           match importee {
-            Module::External(ext) => {
+            Module::External(ext) => Some(&ext.name),
+            Module::Ecma(_) => {None}
+          }
+        }).dedup().for_each(|ext_name| {
               let import_stmt =
 "Object.keys($NAME).forEach(function (k) {
 	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
@@ -50,12 +54,9 @@ pub fn render_cjs(
 		get: function () { return $NAME[k]; }
 	});
 });
-".replace("$NAME", &format!("require(\"{}\")", &ext.name));
+".replace("$NAME", &format!("require(\"{}\")", &ext_name));
               concat_source.add_source(Box::new(RawSource::new(import_stmt)));
-            }
-            Module::Ecma(_) => {}
-          }
-        });
+          });
       }
     }
   }

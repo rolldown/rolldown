@@ -1905,15 +1905,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/semantic/export_star_from_external_as_shared_entries
 
-- entry-!~{000}~.mjs => entry-c61vpyqb.mjs
-- entry2-!~{001}~.mjs => entry2-oXEPkV4v.mjs
-- main-!~{002}~.mjs => main-XrDqIwyl.mjs
+- entry-!~{000}~.mjs => entry-jIqHsZcS.mjs
+- entry2-!~{001}~.mjs => entry2-OO8ElAwz.mjs
+- main-!~{002}~.mjs => main-Kn5mo1aH.mjs
 
 # tests/fixtures/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-VQVfKOis.cjs
-- entry2-!~{001}~.cjs => entry2-HT8WMCSX.cjs
-- main-!~{002}~.cjs => main-Tw7ebfOb.cjs
+- entry-!~{000}~.cjs => entry-al3l3j8F.cjs
+- entry2-!~{001}~.cjs => entry2-aFmfONRk.cjs
+- main-!~{002}~.cjs => main-VIHnCF1_.cjs
 
 # tests/fixtures/semantic/export_star_from_external_as_wrapped_entry
 

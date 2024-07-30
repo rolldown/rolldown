@@ -43,6 +43,7 @@ require("node:fs");
 //#region main.js
 var main_ns = {};
 __reExport(main_ns, require("node:fs"));
+__reExport(main_ns, require("node:fs"));
 
 //#endregion
 exports.main_ns = main_ns;

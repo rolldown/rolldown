@@ -19,6 +19,9 @@ pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput
       renamer.reserve(Cow::Owned(name.to_rstr()));
     });
 
+  // Though, those symbols in `imports_from_other_chunks` doesn't belong to this chunk, we still need to reserve them because we need to generate cross-chunk import
+  // statements. Those `import {...} from './other-chunk.js'` will crate symbols in this chunk. These symbols also need to avoid conflicts.
+  // So we add those in the deconflict process to generate conflict-less names in this chunk, and use these names to generate import statements.
   chunk.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
     renamer.add_top_level_symbol(item.import_ref);
   });

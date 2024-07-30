@@ -1,6 +1,6 @@
 packages:
   - packages/*
   - packages/rolldown/npm/*
-  - web/*
+  - docs
   - examples/*
   - scripts

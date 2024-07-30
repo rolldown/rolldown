@@ -1947,6 +1947,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-G-5DXUYT.mjs
 
+# tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped_and_shared_entries
+
+- entry-!~{000}~.mjs => entry--4BUJ2yJ.mjs
+- entry2-!~{001}~.mjs => entry2-ECOtWpfw.mjs
+- main-!~{002}~.mjs => main-CskDtby4.mjs
+
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped_cjs
 
 - main-!~{000}~.cjs => main-r8r46VsZ.cjs

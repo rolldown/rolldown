@@ -1935,6 +1935,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-WlVJrkq9.mjs
 
+# tests/fixtures/tree_shaking/export_default
+
+- main-!~{000}~.mjs => main-hAcQbq3h.mjs
+
 # tests/fixtures/tree_shaking/export_star
 
 - main-!~{000}~.mjs => main-D_8Z2hmK.mjs

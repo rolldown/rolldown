@@ -1923,6 +1923,33 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry-!~{000}~.cjs => entry-Iurj-Vig.cjs
 
+# tests/fixtures/topics/live_bindings/default_export_binding
+
+- main-!~{000}~.mjs => main-4c_NDWJw.mjs
+
+# tests/fixtures/topics/live_bindings/default_export_binding_in_common_chunks
+
+- async-entry-!~{001}~.mjs => async-entry-Y28H9Ff5.mjs
+- main-!~{000}~.mjs => main-41XdRZn4.mjs
+
+# tests/fixtures/topics/live_bindings/default_export_expr
+
+- main-!~{000}~.mjs => main-VUsEj3zV.mjs
+
+# tests/fixtures/topics/live_bindings/default_export_expr_in_common_chunks
+
+- async-entry-!~{001}~.mjs => async-entry-XkZZEAkg.mjs
+- main-!~{000}~.mjs => main-yxqWM9Ln.mjs
+
+# tests/fixtures/topics/live_bindings/named_exports
+
+- main-!~{000}~.mjs => main-T1cNcGUw.mjs
+
+# tests/fixtures/topics/live_bindings/named_exports_in_common_chunks
+
+- async-entry-!~{001}~.mjs => async-entry-vWTdj660.mjs
+- main-!~{000}~.mjs => main-Lekeeirp.mjs
+
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export
 
 - main-!~{000}~.mjs => main--h98FdGL.mjs

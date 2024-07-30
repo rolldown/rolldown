@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/topics/live_bindings/named_exports
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region main.js
+let count = 0;
+function reset() {
+	count = 0;
+}
+function inc() {
+	count += 1;
+}
+
+//#endregion
+export { count, inc, reset };
+```

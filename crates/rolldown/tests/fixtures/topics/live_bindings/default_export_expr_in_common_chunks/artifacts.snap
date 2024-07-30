@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/topics/live_bindings/default_export_expr_in_common_chunks
+---
+# Assets
+
+## async-entry.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+//#region shared.js
+let count = 0;
+function reset() {
+	count = 0;
+}
+function inc() {
+	count += 1;
+}
+var shared_default = count;
+
+//#endregion
+//#region async-entry.js
+reset();
+assert.strictEqual(shared_default, 0);
+assert.strictEqual(shared_default, shared_default);
+inc();
+assert.strictEqual(shared_default, 0);
+assert.strictEqual(shared_default, shared_default);
+
+//#endregion
+```
+## main.mjs
+
+```js
+
+//#region main.js
+import("./async-entry.mjs");
+
+//#endregion
+```

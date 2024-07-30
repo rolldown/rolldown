@@ -1,4 +1,4 @@
-use rolldown_common::{ChunkKind, WrapKind};
+use rolldown_common::{ChunkKind, ExportsKind, Module, WrapKind};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
@@ -32,6 +32,23 @@ pub fn render_esm(
   }
 
   concat_source.add_source(Box::new(RawSource::new(render_esm_chunk_imports(ctx))));
+
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+    if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
+      if matches!(entry_module.exports_kind, ExportsKind::Esm) {
+        entry_module.star_export_module_ids().for_each(|importee| {
+          let importee = &ctx.link_output.module_table.modules[importee];
+          match importee {
+            Module::External(ext) => {
+              let import_stmt = format!("export * from \"{}\"\n", &ext.name);
+              concat_source.add_source(Box::new(RawSource::new(import_stmt)));
+            }
+            Module::Ecma(_) => {}
+          }
+        });
+      }
+    }
+  }
 
   // chunk content
   module_sources.into_iter().for_each(|(_, _, module_render_output)| {

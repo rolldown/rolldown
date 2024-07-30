@@ -758,7 +758,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_external_es6
 
-- entry_js-!~{000}~.mjs => entry_js-bYORVDTk.mjs
+- entry_js-!~{000}~.mjs => entry_js-ld-aEeRS.mjs
 
 # tests/esbuild/import_star/re_export_star_name_collision_not_ambiguous_export
 
@@ -1903,6 +1903,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-GtK9_LrE.mjs
 
+# tests/fixtures/semantic/export_star_from_external_as_shared_entries
+
+- entry-!~{000}~.mjs => entry-c61vpyqb.mjs
+- entry2-!~{001}~.mjs => entry2-oXEPkV4v.mjs
+- main-!~{002}~.mjs => main-XrDqIwyl.mjs
+
+# tests/fixtures/semantic/export_star_from_external_as_shared_entries_cjs
+
+- entry-!~{000}~.cjs => entry-MqYy87gl.cjs
+- entry2-!~{001}~.cjs => entry2-S-8D_mfF.cjs
+- main-!~{002}~.cjs => main-Tw7ebfOb.cjs
+
 # tests/fixtures/tree_shaking/advanced_barrel_exports
 
 - main-!~{000}~.mjs => main-4-jCZSLp.mjs
@@ -1925,7 +1937,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/tree_shaking/external-export-star1
 
-- main-!~{000}~.mjs => main-0iPGFsZ0.mjs
+- main-!~{000}~.mjs => main-8uHpWVXe.mjs
 
 # tests/fixtures/tree_shaking/indirect_module_side_effect
 

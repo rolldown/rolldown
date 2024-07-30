@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-assertion_line: 262
 expression: snapshot
 input_file: crates/rolldown/tests/fixtures/semantic/export_star_from_external_as_shared_entries
 ---
@@ -11,11 +10,15 @@ input_file: crates/rolldown/tests/fixtures/semantic/export_star_from_external_as
 ```js
 import "./main.mjs";
 
+export * from "node:fs"
+
 ```
 ## entry2.mjs
 
 ```js
 import "./main.mjs";
+
+export * from "node:fs"
 
 ```
 ## main.mjs

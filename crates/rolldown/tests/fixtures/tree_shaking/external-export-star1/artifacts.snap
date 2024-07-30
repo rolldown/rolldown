@@ -1,6 +1,6 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
 input_file: crates/rolldown/tests/fixtures/tree_shaking/external-export-star1
 ---
 # Assets
@@ -8,6 +8,8 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/external-export-star1
 ## main.mjs
 
 ```js
+
+export * from "fs"
 
 
 //#region main.js

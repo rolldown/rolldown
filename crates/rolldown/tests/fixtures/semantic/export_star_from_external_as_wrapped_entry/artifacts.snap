@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/semantic/export_star_from_external_as_wrapped_entry
+---
+# warnings
+
+## CIRCULAR_DEPENDENCY
+
+```text
+[CIRCULAR_DEPENDENCY] Warning: Circular dependency: main.js -> main.js.
+
+```
+# Assets
+
+## entry.mjs
+
+```js
+import "node:fs";
+
+export * from "node:fs"
+
+
+//#region main.js
+import * as import_node_fs from "node:fs";
+var main_ns;
+var init_main = __esmMin(() => {
+	main_ns = {};
+	__reExport(main_ns, import_node_fs);
+	console.log((init_main(), __toCommonJS(main_ns)));
+});
+
+//#endregion
+init_main();
+```

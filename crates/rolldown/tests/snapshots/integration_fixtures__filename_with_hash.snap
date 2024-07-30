@@ -1915,6 +1915,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - entry2-!~{001}~.cjs => entry2-S-8D_mfF.cjs
 - main-!~{002}~.cjs => main-Tw7ebfOb.cjs
 
+# tests/fixtures/semantic/export_star_from_external_as_wrapped_entry
+
+- entry-!~{000}~.mjs => entry-e8JkPjUM.mjs
+
 # tests/fixtures/tree_shaking/advanced_barrel_exports
 
 - main-!~{000}~.mjs => main-4-jCZSLp.mjs

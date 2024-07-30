@@ -1923,6 +1923,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry-!~{000}~.cjs => entry-UJgHXded.cjs
 
+# tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export
+
+- main-!~{000}~.mjs => main--h98FdGL.mjs
+
+# tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_cjs
+
+- main-!~{000}~.cjs => main-GxxA_HM4.cjs
+
 # tests/fixtures/tree_shaking/advanced_barrel_exports
 
 - main-!~{000}~.mjs => main-4-jCZSLp.mjs

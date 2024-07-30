@@ -43,7 +43,7 @@ pub fn render_cjs(
           let importee = &ctx.link_output.module_table.modules[importee];
           match importee {
             Module::External(ext) => {
-              let import_stmt = 
+              let import_stmt =
 "Object.keys($NAME).forEach(function (k) {
 	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,

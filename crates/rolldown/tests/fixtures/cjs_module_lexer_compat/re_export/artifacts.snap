@@ -1,6 +1,6 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
 input_file: crates/rolldown/tests/fixtures/cjs_module_lexer_compat/re_export
 ---
 # Assets
@@ -17,7 +17,22 @@ const devil = "devil";
 
 //#endregion
 Object.defineProperty(exports, '__esModule', { value: true });
-exports.a = a;
-exports.b = b;
-exports['😈'] = devil;
+Object.defineProperty(exports, 'a', {
+  enumerable: true,
+  get: function () {
+    return a;
+  }
+});
+Object.defineProperty(exports, 'b', {
+  enumerable: true,
+  get: function () {
+    return b;
+  }
+});
+Object.defineProperty(exports, '😈', {
+  enumerable: true,
+  get: function () {
+    return devil;
+  }
+});
 ```

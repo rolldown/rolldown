@@ -1,7 +1,7 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/export_mode/cjs/named
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/function/export_mode/cjs/named
 ---
 # Assets
 
@@ -24,6 +24,16 @@ var main_default = example();
 
 //#endregion
 Object.defineProperty(exports, '__esModule', { value: true });
-exports.a = a;
-exports.default = main_default;
+Object.defineProperty(exports, 'a', {
+  enumerable: true,
+  get: function () {
+    return a;
+  }
+});
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+});
 ```

@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/topics/live_bindings/default_export_binding_in_common_chunks_cjs
+---
+# Assets
+
+## async-entry.cjs
+
+```js
+"use strict";
+
+const { default: assert } = __toESM(require("node:assert"));
+
+//#region shared.js
+let count = 0;
+function reset() {
+	count = 0;
+}
+function inc() {
+	count += 1;
+}
+
+//#endregion
+//#region async-entry.js
+reset();
+assert.strictEqual(count, 0);
+assert.strictEqual(count, count);
+inc();
+assert.strictEqual(count, 1);
+assert.strictEqual(count, count);
+
+//#endregion
+```
+## main.cjs
+
+```js
+
+//#region main.js
+import("./async-entry.cjs");
+
+//#endregion
+```

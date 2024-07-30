@@ -16,6 +16,16 @@ var main_default = "main";
 
 //#endregion
 Object.defineProperty(exports, '__esModule', { value: true });
-exports.default = main_default;
-exports.foo = foo;
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+});
+Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+});
 ```

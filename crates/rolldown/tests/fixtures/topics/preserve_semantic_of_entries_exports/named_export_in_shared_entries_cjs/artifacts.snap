@@ -12,8 +12,18 @@ input_file: crates/rolldown/tests/fixtures/topics/preserve_semantic_of_entries_e
 const { foo, main_default } = require("./main.cjs");
 
 Object.defineProperty(exports, '__esModule', { value: true });
-exports.default = main_default;
-exports.foo = foo;
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+});
+Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+});
 ```
 ## entry2.cjs
 
@@ -22,8 +32,18 @@ exports.foo = foo;
 const { foo, main_default } = require("./main.cjs");
 
 Object.defineProperty(exports, '__esModule', { value: true });
-exports.default = main_default;
-exports.foo = foo;
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+});
+Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+});
 ```
 ## main.cjs
 
@@ -35,7 +55,15 @@ const foo = "foo";
 var main_default = "main";
 
 //#endregion
-exports.foo = foo;
-exports.main_default = main_default;
-
+Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+  });Object.defineProperty(exports, 'main_default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+  });
 ```

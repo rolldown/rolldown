@@ -1,6 +1,6 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
 input_file: crates/rolldown/tests/fixtures/function/format/cjs/shared_entry_modules
 ---
 # Assets
@@ -12,7 +12,12 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/shared_entry_modu
 const { value } = require("./main.cjs");
 
 Object.defineProperty(exports, '__esModule', { value: true });
-exports.value = value;
+Object.defineProperty(exports, 'value', {
+  enumerable: true,
+  get: function () {
+    return value;
+  }
+});
 ```
 ## entry2.cjs
 
@@ -21,7 +26,12 @@ exports.value = value;
 const { value } = require("./main.cjs");
 
 Object.defineProperty(exports, '__esModule', { value: true });
-exports.value = value;
+Object.defineProperty(exports, 'value', {
+  enumerable: true,
+  get: function () {
+    return value;
+  }
+});
 ```
 ## main.cjs
 
@@ -32,6 +42,10 @@ exports.value = value;
 const value = "main";
 
 //#endregion
-exports.value = value;
-
+Object.defineProperty(exports, 'value', {
+  enumerable: true,
+  get: function () {
+    return value;
+  }
+  });
 ```

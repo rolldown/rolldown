@@ -474,7 +474,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/re_export_default_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-Nw39dNML.cjs
+- entry_js-!~{000}~.cjs => entry_js-zbszWBpu.cjs
 
 # tests/esbuild/default/re_export_default_external_es6
 
@@ -566,19 +566,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_other_as_namespace_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-ETW3xWbh.cjs
+- entry_js-!~{000}~.cjs => entry_js-T4ELM-Gr.cjs
 
 # tests/esbuild/import_star/export_other_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-boP4zDJq.cjs
+- entry_js-!~{000}~.cjs => entry_js-pRYKj07v.cjs
 
 # tests/esbuild/import_star/export_other_nested_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-NSsy5QEB.cjs
+- entry_js-!~{000}~.cjs => entry_js-CDd861z4.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-u7JI2_4f.cjs
+- entry_js-!~{000}~.cjs => entry_js-bVZnyXqF.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_es6
 
@@ -586,7 +586,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_self_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-4jUq9PFk.cjs
+- entry_js-!~{000}~.cjs => entry_js-vEw3YIhe.cjs
 
 # tests/esbuild/import_star/export_self_es6
 
@@ -742,7 +742,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_as_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-rsh34VHE.cjs
+- entry_js-!~{000}~.cjs => entry_js-7CeHkGln.cjs
 
 # tests/esbuild/import_star/re_export_star_as_external_es6
 
@@ -1375,7 +1375,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_module_lexer_compat/basic
 
-- main-!~{000}~.cjs => main-GvhJO7uA.cjs
+- main-!~{000}~.cjs => main-PwtOAeiY.cjs
 
 # tests/fixtures/cjs_module_lexer_compat/external
 
@@ -1383,7 +1383,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/cjs_module_lexer_compat/re_export
 
-- main-!~{000}~.cjs => main-GvhJO7uA.cjs
+- main-!~{000}~.cjs => main-PwtOAeiY.cjs
 
 # tests/fixtures/code_splitting/basic
 
@@ -1529,7 +1529,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/export_mode/cjs/auto/named
 
-- main-!~{000}~.cjs => main-kdT5vSll.cjs
+- main-!~{000}~.cjs => main-B4wi3FO3.cjs
 
 # tests/fixtures/function/export_mode/cjs/auto/none
 
@@ -1541,7 +1541,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/export_mode/cjs/named
 
-- main-!~{000}~.cjs => main-RgMnAxkB.cjs
+- main-!~{000}~.cjs => main-Wgg1aBuS.cjs
 
 # tests/fixtures/function/export_mode/iife/auto/none
 
@@ -1553,7 +1553,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/export_mode/iife/named
 
-- main-!~{000}~.mjs => main-Qm6ECnO4.mjs
+- main-!~{000}~.mjs => main-4Eu_qm7c.mjs
 
 # tests/fixtures/function/external/commonjs_reexport_external
 
@@ -1589,7 +1589,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/format/cjs/import_export_unicode
 
-- main-!~{000}~.cjs => main-3DjdU1we.cjs
+- main-!~{000}~.cjs => main-E0ujG9CO.cjs
 
 # tests/fixtures/function/format/cjs/plain_import_should_not_introduce_to_esm
 
@@ -1597,9 +1597,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/format/cjs/shared_entry_modules
 
-- entry1-!~{000}~.cjs => entry1-9x6wwgGx.cjs
-- entry2-!~{001}~.cjs => entry2-A0lk3x3N.cjs
-- main-!~{002}~.cjs => main-BkdPPeQZ.cjs
+- entry1-!~{000}~.cjs => entry1-sMfKx0sx.cjs
+- entry2-!~{001}~.cjs => entry2-jtZCAB5B.cjs
+- main-!~{002}~.cjs => main-oEEH6Bm-.cjs
 
 # tests/fixtures/function/format/esm/import_export_unicode
 
@@ -1619,7 +1619,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/function/format/iife/iife-with-name
 
-- main-!~{000}~.mjs => main-Hbb8oQ-i.mjs
+- main-!~{000}~.mjs => main-2WhEoear.mjs
 
 # tests/fixtures/function/intro/cjs
 
@@ -1911,9 +1911,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-al3l3j8F.cjs
-- entry2-!~{001}~.cjs => entry2-aFmfONRk.cjs
-- main-!~{002}~.cjs => main-VIHnCF1_.cjs
+- entry-!~{000}~.cjs => entry-xjEWKRNK.cjs
+- entry2-!~{001}~.cjs => entry2-f2OiS1uL.cjs
+- main-!~{002}~.cjs => main-j1Gp3SFm.cjs
 
 # tests/fixtures/semantic/export_star_from_external_as_wrapped_entry
 
@@ -1921,7 +1921,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/semantic/export_star_from_external_as_wrapped_entry_cjs
 
-- entry-!~{000}~.cjs => entry-_7zisNXa.cjs
+- entry-!~{000}~.cjs => entry-Iurj-Vig.cjs
 
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export
 
@@ -1929,7 +1929,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_cjs
 
-- main-!~{000}~.cjs => main-GxxA_HM4.cjs
+- main-!~{000}~.cjs => main-LlG01ZB2.cjs
 
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries
 
@@ -1939,9 +1939,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-gqBX5LOD.cjs
-- entry2-!~{001}~.cjs => entry2-XBbIzskY.cjs
-- main-!~{002}~.cjs => main-gZTUV6Cq.cjs
+- entry-!~{000}~.cjs => entry-Mksr4MM4.cjs
+- entry2-!~{001}~.cjs => entry2-dZLcQCHG.cjs
+- main-!~{002}~.cjs => main-wLzsKKmx.cjs
 
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped
 
@@ -1955,7 +1955,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped_cjs
 
-- main-!~{000}~.cjs => main-r8r46VsZ.cjs
+- main-!~{000}~.cjs => main-BDJt0xwN.cjs
 
 # tests/fixtures/tree_shaking/advanced_barrel_exports
 

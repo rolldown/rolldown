@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries_cjs
+---
+# Assets
+
+## entry.cjs
+
+```js
+"use strict";
+const { foo, main_default } = require("./main.cjs");
+
+Object.defineProperty(exports, '__esModule', { value: true });
+exports.default = main_default;
+exports.foo = foo;
+```
+## entry2.cjs
+
+```js
+"use strict";
+const { foo, main_default } = require("./main.cjs");
+
+Object.defineProperty(exports, '__esModule', { value: true });
+exports.default = main_default;
+exports.foo = foo;
+```
+## main.cjs
+
+```js
+"use strict";
+
+//#region main.js
+const foo = "foo";
+var main_default = "main";
+
+//#endregion
+exports.foo = foo;
+exports.main_default = main_default;
+
+```

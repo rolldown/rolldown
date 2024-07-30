@@ -1931,6 +1931,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.cjs => main-GxxA_HM4.cjs
 
+# tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries
+
+- entry-!~{000}~.mjs => entry-Y-RDbzBd.mjs
+- entry2-!~{001}~.mjs => entry2-Im-kL3TM.mjs
+- main-!~{002}~.mjs => main-tLfW5JrW.mjs
+
+# tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries_cjs
+
+- entry-!~{000}~.cjs => entry-gqBX5LOD.cjs
+- entry2-!~{001}~.cjs => entry2-XBbIzskY.cjs
+- main-!~{002}~.cjs => main-gZTUV6Cq.cjs
+
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped
 
 - main-!~{000}~.mjs => main-G-5DXUYT.mjs

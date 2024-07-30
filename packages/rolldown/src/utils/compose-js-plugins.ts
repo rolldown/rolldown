@@ -285,9 +285,15 @@ export function composeJsPlugins(plugins: RolldownPlugin[]): RolldownPlugin[] {
       toBeComposed.push(plugin)
     } else {
       if (toBeComposed.length > 0) {
-        newPlugins.push(createComposedPlugin(toBeComposed))
+        if (toBeComposed.length > 1) {
+          newPlugins.push(createComposedPlugin(toBeComposed))
+        } else {
+          // push the only plugin in toBeComposed
+          newPlugins.push(toBeComposed[0])
+        }
         toBeComposed.length = 0
       }
+      // push the plugin that is not composable
       newPlugins.push(plugin)
     }
   })
@@ -296,7 +302,11 @@ export function composeJsPlugins(plugins: RolldownPlugin[]): RolldownPlugin[] {
   // after the loop, toBeComposed = [c, c, c, c], plugins = []
   // we should consume all the toBeComposed plugins at the end
   if (toBeComposed.length > 0) {
-    newPlugins.push(createComposedPlugin(toBeComposed))
+    if (toBeComposed.length > 1) {
+      newPlugins.push(createComposedPlugin(toBeComposed))
+    } else {
+      newPlugins.push(toBeComposed[0])
+    }
     toBeComposed.length = 0
   }
 

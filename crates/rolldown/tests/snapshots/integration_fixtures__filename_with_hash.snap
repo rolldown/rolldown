@@ -754,7 +754,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-DpNrQDub.cjs
+- entry_js-!~{000}~.cjs => entry_js-vbOU9bsn.cjs
 
 # tests/esbuild/import_star/re_export_star_external_es6
 
@@ -1911,13 +1911,17 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-MqYy87gl.cjs
-- entry2-!~{001}~.cjs => entry2-S-8D_mfF.cjs
+- entry-!~{000}~.cjs => entry-VQVfKOis.cjs
+- entry2-!~{001}~.cjs => entry2-HT8WMCSX.cjs
 - main-!~{002}~.cjs => main-Tw7ebfOb.cjs
 
 # tests/fixtures/semantic/export_star_from_external_as_wrapped_entry
 
-- entry-!~{000}~.mjs => entry-wolHhuLc.mjs
+- entry-!~{000}~.mjs => entry-jfs_WbWV.mjs
+
+# tests/fixtures/semantic/export_star_from_external_as_wrapped_entry_cjs
+
+- entry-!~{000}~.cjs => entry-UJgHXded.cjs
 
 # tests/fixtures/tree_shaking/advanced_barrel_exports
 

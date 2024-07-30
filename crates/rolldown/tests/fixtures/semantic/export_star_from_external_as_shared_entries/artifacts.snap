@@ -12,15 +12,11 @@ import "./main.mjs";
 
 export * from "node:fs"
 
-export * from "node:fs"
-
 ```
 ## entry2.mjs
 
 ```js
 import "./main.mjs";
-
-export * from "node:fs"
 
 export * from "node:fs"
 

@@ -1921,7 +1921,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/semantic/export_star_from_external_as_wrapped_entry_cjs
 
-- entry-!~{000}~.cjs => entry-UJgHXded.cjs
+- entry-!~{000}~.cjs => entry-_7zisNXa.cjs
 
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export
 
@@ -1934,6 +1934,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped
 
 - main-!~{000}~.mjs => main-G-5DXUYT.mjs
+
+# tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped_cjs
+
+- main-!~{000}~.cjs => main-r8r46VsZ.cjs
 
 # tests/fixtures/tree_shaking/advanced_barrel_exports
 

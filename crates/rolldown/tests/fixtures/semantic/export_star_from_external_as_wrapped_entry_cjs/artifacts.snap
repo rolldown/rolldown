@@ -38,6 +38,7 @@ var init_main = __esmMin(() => {
 });
 
 //#endregion
+init_main();
 Object.defineProperty(exports, '__esModule', { value: true });
 exports.main = main;
 ```

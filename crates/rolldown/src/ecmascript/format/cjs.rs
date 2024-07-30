@@ -1,3 +1,4 @@
+use rolldown_common::{ChunkKind, ExportsKind, Module};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
@@ -33,6 +34,30 @@ pub fn render_cjs(
 
   if let Some(intro) = intro {
     concat_source.add_source(Box::new(RawSource::new(intro)));
+  }
+
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+    if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
+      if matches!(entry_module.exports_kind, ExportsKind::Esm) {
+        entry_module.star_export_module_ids().for_each(|importee| {
+          let importee = &ctx.link_output.module_table.modules[importee];
+          match importee {
+            Module::External(ext) => {
+              let import_stmt =
+"Object.keys($NAME).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return $NAME[k]; }
+	});
+});
+".replace("$NAME", &format!("require(\"{}\")", &ext.name));
+              concat_source.add_source(Box::new(RawSource::new(import_stmt)));
+            }
+            Module::Ecma(_) => {}
+          }
+        });
+      }
+    }
   }
 
   // Runtime module should be placed before the generated `requires` in CJS format.

@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/semantic/export_star_from_external_as_shared_entries
+---
+# Assets
+
+## entry.mjs
+
+```js
+import "./main.mjs";
+
+export * from "node:fs"
+
+```
+## entry2.mjs
+
+```js
+import "./main.mjs";
+
+export * from "node:fs"
+
+```
+## main.mjs
+
+```js
+import "node:fs";
+
+
+//#region main.js
+var main_ns = {};
+import * as import_node_fs from "node:fs";
+__reExport(main_ns, import_node_fs);
+
+//#endregion
+```

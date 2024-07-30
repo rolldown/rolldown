@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/semantic/export_star_from_external_as_shared_entries_cjs
+---
+# Assets
+
+## entry.cjs
+
+```js
+"use strict";
+Object.keys(require("node:fs")).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return require("node:fs")[k]; }
+	});
+});
+
+const { main_ns } = require("./main.cjs");
+
+```
+## entry2.cjs
+
+```js
+"use strict";
+Object.keys(require("node:fs")).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return require("node:fs")[k]; }
+	});
+});
+
+const { main_ns } = require("./main.cjs");
+
+```
+## main.cjs
+
+```js
+"use strict";
+
+require("node:fs");
+
+//#region main.js
+var main_ns = {};
+__reExport(main_ns, require("node:fs"));
+
+//#endregion
+exports.main_ns = main_ns;
+
+```

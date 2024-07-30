@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown/tests/integration_fixtures.rs
+assertion_line: 64
 expression: "snapshot_outputs.join(\"\\n\")"
 ---
 # tests/esbuild/bundler_ts/ts_abstract_class_field_use_define
@@ -1911,8 +1912,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/fixtures/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-HomBvP1-.cjs
-- entry2-!~{001}~.cjs => entry2-xEHXIr-J.cjs
+- entry-!~{000}~.cjs => entry-al3l3j8F.cjs
+- entry2-!~{001}~.cjs => entry2-aFmfONRk.cjs
 - main-!~{002}~.cjs => main-VIHnCF1_.cjs
 
 # tests/fixtures/semantic/export_star_from_external_as_wrapped_entry

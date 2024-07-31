@@ -1,10 +1,14 @@
 use std::sync::Arc;
 
 use itertools::Itertools;
-use rolldown_common::{FileEmitter, HookMetric};
+use rolldown_common::FileEmitter;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{PluginDriver, __inner::SharedPluginable};
 use rolldown_resolver::Resolver;
+use rolldown_stats::{
+  hook_metric::{HookMetric},
+  Stats,
+};
 
 use crate::{
   utils::{
@@ -34,26 +38,25 @@ impl BundlerBuilder {
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
 
     apply_inner_plugins(&mut self.plugins);
-    let metrics = Arc::new(
-      self
-        .plugins
-        .iter()
-        .map(|item| {
-          let mut metric = HookMetric::default();
-          metric.name = item.call_name().to_string();
-          metric
-        })
-        .collect_vec(),
-    );
+    let hook_metric = self
+      .plugins
+      .iter()
+      .map(|item| {
+        let mut metric = HookMetric::default();
+        metric.name = item.call_name().to_string();
+        metric
+      })
+      .collect_vec();
+    let stats = Arc::new(Stats { hook_metric });
 
     Bundler {
-      plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter, &metrics),
+      plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter, &stats),
       file_emitter,
       resolver,
       options,
       fs: OsFileSystem,
       _log_guard: maybe_guard,
-      metrics,
+      stats,
     }
   }
 

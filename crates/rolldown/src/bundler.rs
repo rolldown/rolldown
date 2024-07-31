@@ -11,7 +11,7 @@ use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
-use rolldown_common::{HookMetric, NormalizedBundlerOptions, SharedFileEmitter};
+use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
@@ -27,7 +27,8 @@ pub struct Bundler {
   pub(crate) resolver: SharedResolver,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) _log_guard: Option<FlushGuard>,
-  pub(crate) stats: rolldown_stats::Stats,
+  #[allow(unused)]
+  pub(crate) stats: Arc<rolldown_stats::Stats>,
 }
 
 impl Bundler {
@@ -161,9 +162,9 @@ impl Bundler {
     self.file_emitter.add_additional_files(&mut output.assets);
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
-    for ele in self.metrics.iter() {
-      dbg!(ele.clone().to_ms());
-    }
+    // for ele in self.metrics.iter() {
+    //   dbg!(ele.clone().to_ms());
+    // }
 
     Ok(output)
   }

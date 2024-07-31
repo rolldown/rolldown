@@ -5,10 +5,7 @@ use rolldown_common::FileEmitter;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{PluginDriver, __inner::SharedPluginable};
 use rolldown_resolver::Resolver;
-use rolldown_stats::{
-  hook_metric::{HookMetric},
-  Stats,
-};
+use rolldown_stats::{hook_metric::HookMetric, Stats};
 
 use crate::{
   utils::{

@@ -12,7 +12,6 @@ use serde::Deserialize;
 #[napi(object)]
 #[derive(Debug)]
 pub struct BindingBuiltinGlobImportPlugin {
-  pub name: &'static str,
   pub config: Option<BindingGlobImportPluginConfig>,
 }
 

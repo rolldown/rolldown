@@ -98,7 +98,6 @@ export interface BindingAssetSource {
 }
 
 export interface BindingBuiltinGlobImportPlugin {
-  name: string
   config?: BindingGlobImportPluginConfig
 }
 

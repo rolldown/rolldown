@@ -10,7 +10,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        outro: () => '/* Outro */',
+        outro: { handler: '/* Outro */' },
       },
     ],
   },

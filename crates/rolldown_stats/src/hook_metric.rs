@@ -18,12 +18,6 @@ pub struct MsMetric {
   pub name: String,
 }
 
-pub enum MetricType {
-  Transform,
-  Resolve,
-  Load,
-}
-
 impl HookMetric {
   pub fn guard(&self, ty: MetricType) -> Guard {
     let counter = match ty {
@@ -43,6 +37,18 @@ impl HookMetric {
       name: self.name,
     }
   }
+}
+
+impl MsMetric {
+  pub fn total(&self) -> f64 {
+    self.transform + self.resolve + self.load
+  }
+}
+
+pub enum MetricType {
+  Transform,
+  Resolve,
+  Load,
 }
 
 pub struct Guard {

@@ -42,25 +42,3 @@ impl From<BindingBuiltinWasmPlugin> for Arc<dyn Pluginable> {
     Arc::new(WasmPlugin {})
   }
 }
-
-// fn try_convert_builting_plugin_options(
-//   options: Option<JsObject>,
-// ) -> Result<GlobImportPluginConfig, napi::Error> {
-//   let mut config = GlobImportPluginConfig::default();
-//   match options {
-//     Some(options) => {
-//       // let obj: BindingGlobImportPluginConfig = options.&mut();
-//       // from_js_object(obj, &mut config)?;
-//       // if options.has_named_property("root")? {
-//       //   let root = options.get_named_property::<JsString>("root")?.into_utf8()?;
-//       //   config.root = Some(root.as_str()?.to_string());
-//       // }
-//       // if options.has_named_property("restoreQueryExtension")? {
-//       //   let root = options.get_named_property::<JsBoolean>("restoreQueryExtension")?;
-//       //   config.restore_query_extension = root.get_value()?;
-//       // }
-//     }
-//     None => {}
-//   }
-//   Ok(config)
-// }

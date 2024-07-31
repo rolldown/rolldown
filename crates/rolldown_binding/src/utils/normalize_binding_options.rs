@@ -180,8 +180,9 @@ pub fn normalize_binding_options(
     .chain(output_options.plugins)
     .filter_map(|plugin| {
       plugin.map(|plugin| match plugin {
-        Either::A(plugin) => JsPlugin::new_shared(plugin),
-        Either::B(plugin) => plugin.into(),
+        Either3::A(plugin_options) => JsPlugin::new_shared(plugin_options),
+        Either3::B(glob_import) => glob_import.into(),
+        Either3::C(wasm) => wasm.into(),
       })
     })
     .collect::<Vec<_>>();

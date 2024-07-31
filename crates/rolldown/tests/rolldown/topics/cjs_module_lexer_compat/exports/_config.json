@@ -1,6 +1,6 @@
 {
   "config": {
     "format": "cjs",
-    "esModule": "True"
+    "esModule": "Always"
   }
 }

@@ -240,8 +240,8 @@
     "EsModuleType": {
       "type": "string",
       "enum": [
-        "True",
-        "False",
+        "Always",
+        "Never",
         "IfDefaultProp"
       ]
     },

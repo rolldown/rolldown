@@ -12,7 +12,7 @@ var module = (function(exports) {
 
 "use strict";
 
-Object.defineProperty(exports, '__esModule', { value: true })
+Object.defineProperty(exports, '__esModule', { value: true });
 
 
 //#region mod.js

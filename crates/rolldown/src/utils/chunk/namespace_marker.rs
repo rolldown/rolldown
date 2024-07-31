@@ -10,11 +10,11 @@ pub fn determine_es_module(es_module_type: &EsModuleType, has_default_export: bo
 
 fn render_marker(es_module: bool, to_string_tag: bool) -> String {
   if es_module && to_string_tag {
-    format!("Object.defineProperties(exports, {{ __esModule: {{ value: true }}, [Symbol.toStringTag]: {{ value: 'Module' }} }})")
+    format!("Object.defineProperties(exports, {{ __esModule: {{ value: true }}, [Symbol.toStringTag]: {{ value: 'Module' }} }});")
   } else if es_module {
-    format!("Object.defineProperty(exports, '__esModule', {{ value: true }})")
+    format!("Object.defineProperty(exports, '__esModule', {{ value: true }});")
   } else if to_string_tag {
-    format!("Object.defineProperty(exports, Symbol.toStringTag, {{ value: 'Module' }})")
+    format!("Object.defineProperty(exports, Symbol.toStringTag, {{ value: 'Module' }});")
   } else {
     String::new()
   }

@@ -18,7 +18,7 @@ input_file: crates/rolldown/tests/rolldown/topics/preserve_semantic_of_entries_e
 ```js
 "use strict";
 
-Object.defineProperty(exports, '__esModule', { value: true })
+Object.defineProperty(exports, '__esModule', { value: true });
 
 
 //#region main.js

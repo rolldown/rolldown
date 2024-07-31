@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/rolldown/topics/live_bindings/default_export_b
 ```js
 "use strict";
 
-Object.defineProperty(exports, '__esModule', { value: true })
+Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region main.js
 let count = 0;

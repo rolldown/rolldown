@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/rolldown/function/export_mode/cjs/named
 ```js
 "use strict";
 
-Object.defineProperty(exports, '__esModule', { value: true })
+Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region mod.js
 function example() {

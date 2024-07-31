@@ -10,7 +10,7 @@ input_file: crates/rolldown/tests/rolldown/topics/cjs_module_lexer_compat/export
 ```js
 "use strict";
 
-Object.defineProperty(exports, '__esModule', { value: true })
+Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region main.js
 const a = "a";

@@ -1,11 +1,14 @@
-import { BuiltinDynamicImportVarsPlugin, BuiltinGlobImportPlugin } from 'rolldown'
+import { dynamicImportVarsPlugin, globImportPlugin } from 'rolldown'
 import { defineTest } from '@tests'
+import path from 'path'
 
 export default defineTest({
   config: {
     plugins: [
-      new BuiltinDynamicImportVarsPlugin(),
-      new BuiltinGlobImportPlugin(),
+      dynamicImportVarsPlugin(),
+      globImportPlugin({
+        root: path.resolve(import.meta.dirname),
+      }),
     ],
   },
   async afterTest() {

@@ -2,6 +2,7 @@
 export default (
   glob,
   path,
+  segs,
 ) => {
   const v = glob[path] ?? glob['./' + path]
   if (v) {

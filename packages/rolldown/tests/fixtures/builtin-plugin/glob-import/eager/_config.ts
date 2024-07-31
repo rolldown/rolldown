@@ -1,9 +1,9 @@
-import { BuiltinGlobImportPlugin } from 'rolldown'
+import { globImportPlugin } from 'rolldown'
 import { defineTest } from '@tests'
 
 export default defineTest({
   config: {
-    plugins: [new BuiltinGlobImportPlugin()],
+    plugins: [globImportPlugin()],
   },
   async afterTest() {
     await import('./assert.mjs')

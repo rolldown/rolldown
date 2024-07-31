@@ -1,8 +1,4 @@
-import {
-  BindingInputOptions,
-  BindingLogLevel,
-  BindingBuiltinGlobImportPlugin,
-} from '../binding'
+import { BindingInputOptions, BindingLogLevel } from '../binding'
 import nodePath from 'node:path'
 import { bindingifyPlugin } from '../plugin/bindingify-plugin'
 import type { NormalizedInputOptions } from './normalized-input-options'

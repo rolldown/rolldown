@@ -159,8 +159,11 @@ export function bindingifyBanner(
   }
 
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
-
   return async (ctx, chunk) => {
+    if (typeof handler !== 'function') {
+      return handler
+    }
+
     return handler.call(
       new PluginContext(options, ctx, plugin, pluginContextData),
       chunk,

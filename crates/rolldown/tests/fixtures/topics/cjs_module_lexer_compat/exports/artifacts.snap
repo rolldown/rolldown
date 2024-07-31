@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 expression: snapshot
-input_file: crates/rolldown/tests/fixtures/cjs_module_lexer_compat/re_export
+input_file: crates/rolldown/tests/fixtures/topics/cjs_module_lexer_compat/exports
 ---
 # Assets
 
@@ -10,10 +10,11 @@ input_file: crates/rolldown/tests/fixtures/cjs_module_lexer_compat/re_export
 ```js
 "use strict";
 
-//#region demo.js
+//#region main.js
 const a = "a";
 const b = "b";
 const devil = "devil";
+var main_default = "default";
 
 //#endregion
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -27,6 +28,12 @@ Object.defineProperty(exports, 'b', {
   enumerable: true,
   get: function () {
     return b;
+  }
+});
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
   }
 });
 Object.defineProperty(exports, '😈', {

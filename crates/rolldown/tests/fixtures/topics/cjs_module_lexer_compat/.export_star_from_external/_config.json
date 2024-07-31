@@ -1,6 +1,6 @@
 {
   "config": {
     "format": "cjs",
-    "external": ["./ext.js", "ext"]
+    "external": ["node:fs", "node:path"]
   }
 }

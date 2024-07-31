@@ -1373,18 +1373,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-3438XufY.mjs
 - main-3438XufY.mjs.map
 
-# tests/fixtures/cjs_module_lexer_compat/basic
-
-- main-!~{000}~.cjs => main-PwtOAeiY.cjs
-
-# tests/fixtures/cjs_module_lexer_compat/external
-
-- main-!~{000}~.cjs => main-XZjx2vag.cjs
-
-# tests/fixtures/cjs_module_lexer_compat/re_export
-
-- main-!~{000}~.cjs => main-PwtOAeiY.cjs
-
 # tests/fixtures/code_splitting/basic
 
 - dynamic-!~{003}~.mjs => dynamic-HWUNIxCZ.mjs
@@ -1870,6 +1858,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/fixtures/semantic/export_star_from_external_as_wrapped_entry_cjs
 
 - entry-!~{000}~.cjs => entry-Iurj-Vig.cjs
+
+# tests/fixtures/topics/cjs_module_lexer_compat/exports
+
+- main-!~{000}~.cjs => main-Xz-0tgMZ.cjs
 
 # tests/fixtures/topics/deconflict/basic
 

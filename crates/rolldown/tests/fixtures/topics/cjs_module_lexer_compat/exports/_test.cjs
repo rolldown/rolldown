@@ -4,6 +4,8 @@ const path = require('node:path');
 const { parse } = require('cjs-module-lexer');
 
 const parsed = parse(fs.readFileSync(path.resolve(__dirname, 'dist/main.cjs'), 'utf8'));
-
-assert(parsed.exports.length === 0)
-assert.deepStrictEqual(parsed.reexports, ['./ext.js'])
+parsed.exports.sort();
+assert.deepStrictEqual(parsed, {
+  exports: [ '__esModule', 'a', 'b', '😈', 'default'].sort(),
+  reexports: [],
+})

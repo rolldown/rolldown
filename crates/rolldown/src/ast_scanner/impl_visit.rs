@@ -52,22 +52,24 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
               cur_member_expr = expr;
             }
             Expression::Identifier(id) => {
-              // TODO: only imported symbols can possibly point to another module's top-level symbol
               break self.resolve_identifier_to_top_level_symbol(id);
             }
             _ => break None,
           }
         };
-
-        if let Some(sym_ref) = object_symbol_in_top_level {
-          let props = props_in_reverse_order
-            .into_iter()
-            .rev()
-            .map(|ident| ident.name.as_str().into())
-            .collect::<Vec<_>>();
-          self.add_member_expr_reference(sym_ref, props);
-          // Don't walk again, otherwise we will add the `object_symbol_in_top_level` again in `visit_identifier_reference`
-          return;
+        match object_symbol_in_top_level {
+          // import statements are hoisted to the top of the module, so in this time being, all imports scanned.
+          Some(sym_ref) if self.result.named_imports.contains_key(&sym_ref) => {
+            let props = props_in_reverse_order
+              .into_iter()
+              .rev()
+              .map(|ident| ident.name.as_str().into())
+              .collect::<Vec<_>>();
+            self.add_member_expr_reference(sym_ref, props);
+            // Don't walk again, otherwise we will add the `object_symbol_in_top_level` again in `visit_identifier_reference`
+            return;
+          }
+          _ => {}
         }
       }
       _ => {}

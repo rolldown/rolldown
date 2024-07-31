@@ -3,7 +3,7 @@ import { BindingBuiltinPlugin, BindingBuiltinPluginName } from '../binding'
 export class BuiltinPlugin {
   constructor(
     public name: BindingBuiltinPluginName,
-    public options?: unknown,
+    public options?: object,
   ) {
     this.name = name
     this.options = options
@@ -11,13 +11,13 @@ export class BuiltinPlugin {
 }
 
 export class BuiltinWasmPlugin extends BuiltinPlugin {
-  constructor(options?: unknown) {
+  constructor(options?: object) {
     super(BindingBuiltinPluginName.WasmPlugin, options)
   }
 }
 
 export class BuiltinGlobImportPlugin extends BuiltinPlugin {
-  constructor(options?: unknown) {
+  constructor(options?:object) {
     super(BindingBuiltinPluginName.GlobImportPlugin, options)
   }
 }

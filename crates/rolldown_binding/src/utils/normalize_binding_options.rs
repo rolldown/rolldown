@@ -10,10 +10,11 @@ use rolldown::{
   AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputExports, OutputFormat, Platform,
 };
 use rolldown_plugin::__inner::SharedPluginable;
-use std::collections::HashMap;
+use rolldown_plugin_glob_import::GlobImportPlugin;
 use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
+use std::{collections::HashMap, fmt::Debug};
 
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct NormalizeBindingOptionsReturn {

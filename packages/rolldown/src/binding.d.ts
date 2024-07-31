@@ -97,12 +97,14 @@ export interface BindingAssetSource {
   inner: string | Uint8Array
 }
 
-export interface BindingBuiltinGlobImportPlugin {
-  config?: BindingGlobImportPluginConfig
+export interface BindingBuiltinPlugin {
+  __name: BindingBuiltinPluginName
+  options?: unknown
 }
 
-export interface BindingBuiltinWasmPlugin {
-
+export declare enum BindingBuiltinPluginName {
+  WasmPlugin = 0,
+  GlobImportPlugin = 1
 }
 
 export interface BindingEmittedAsset {
@@ -158,7 +160,7 @@ export interface BindingInputItem {
 export interface BindingInputOptions {
   external?: undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<BindingInputItem>
-  plugins: (BindingBuiltinGlobImportPlugin | BindingPluginOptions | BindingBuiltinWasmPlugin | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
@@ -199,7 +201,7 @@ export interface BindingOutputOptions {
   globals?: Record<string, string>
   intro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   outro?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
-  plugins: (BindingBuiltinGlobImportPlugin | BindingPluginOptions | BindingBuiltinWasmPlugin | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
@@ -230,7 +232,7 @@ export interface BindingPluginOptions {
   renderError?: (ctx: BindingPluginContext, error: string) => void
   generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
-  banner?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+  banner?: ((ctx: BindingPluginContext, chunk: RenderedChunk) => void) | string
   footer?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
   intro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
   outro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void

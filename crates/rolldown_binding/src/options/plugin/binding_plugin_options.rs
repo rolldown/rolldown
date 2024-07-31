@@ -1,4 +1,4 @@
-use napi::bindgen_prelude::Either3;
+use napi::bindgen_prelude::Either;
 use serde::Deserialize;
 use std::fmt::Debug;
 
@@ -8,7 +8,7 @@ use crate::types::{
 };
 
 use super::{
-  binding_builtin_plugin::{BindingBuiltinGlobImportPlugin, BindingBuiltinWasmPlugin},
+  binding_builtin_plugin::BindingBuiltinPlugin,
   binding_plugin_context::BindingPluginContext,
   binding_transform_context::BindingTransformPluginContext,
   types::{
@@ -22,7 +22,7 @@ use super::{
 
 /// none is parallel js plugin
 pub type BindingPluginOrParallelJsPluginPlaceholder =
-  Option<Either3<BindingPluginOptions, BindingBuiltinGlobImportPlugin, BindingBuiltinWasmPlugin>>;
+  Option<Either<BindingPluginOptions, BindingBuiltinPlugin>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default)]
@@ -126,7 +126,7 @@ pub struct BindingPluginOptions {
   pub write_bundle: Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingOutputs), ()>>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
+  #[napi(ts_type = "((ctx: BindingPluginContext, chunk: RenderedChunk) => void) | string")]
   pub banner: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
 
   #[serde(skip_deserializing)]

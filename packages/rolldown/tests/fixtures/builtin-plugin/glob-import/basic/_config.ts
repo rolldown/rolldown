@@ -1,11 +1,11 @@
-import { BuiltinGlobImportPlugin } from 'rolldown'
+import { globImportPlugin } from 'rolldown'
 import { defineTest } from '@tests'
 import * as path from 'path'
 
 export default defineTest({
   config: {
     plugins: [
-      new BuiltinGlobImportPlugin({
+      globImportPlugin({
         root: path.resolve(import.meta.dirname),
       }),
     ],

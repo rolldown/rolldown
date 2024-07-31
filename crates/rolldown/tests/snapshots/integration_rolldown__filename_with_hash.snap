@@ -1533,9 +1533,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/cjs/shared_entry_modules
 
-- entry1-!~{000}~.cjs => entry1-aB0Bk2Tp.cjs
-- entry2-!~{001}~.cjs => entry2-Omc89auR.cjs
-- main-!~{002}~.cjs => main-oEEH6Bm-.cjs
+- entry1-!~{000}~.cjs => entry1-irrXhulZ.cjs
+- entry2-!~{001}~.cjs => entry2-H7JupQaW.cjs
+- main-!~{002}~.cjs => main-g4RbwWfd.cjs
 
 # tests/rolldown/function/format/esm/import_export_unicode
 
@@ -1819,9 +1819,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-xjEWKRNK.cjs
-- entry2-!~{001}~.cjs => entry2-f2OiS1uL.cjs
-- main-!~{002}~.cjs => main-j1Gp3SFm.cjs
+- entry-!~{000}~.cjs => entry-TthyG8LP.cjs
+- entry2-!~{001}~.cjs => entry2-Oxl3tivO.cjs
+- main-!~{002}~.cjs => main-XDF8DtJv.cjs
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry
 
@@ -1953,9 +1953,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-IIoGs4Pw.cjs
-- entry2-!~{001}~.cjs => entry2-4uApjQ7J.cjs
-- main-!~{002}~.cjs => main-wLzsKKmx.cjs
+- entry-!~{000}~.cjs => entry-LH300KFl.cjs
+- entry2-!~{001}~.cjs => entry2-t-ZwD6sl.cjs
+- main-!~{002}~.cjs => main--L-FB-fk.cjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped
 

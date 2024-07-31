@@ -58,10 +58,10 @@ Object.defineProperty(exports, 'foo', {
   get: function () {
     return foo;
   }
-  });Object.defineProperty(exports, 'main_default', {
+});Object.defineProperty(exports, 'main_default', {
   enumerable: true,
   get: function () {
     return main_default;
   }
-  });
+});
 ```

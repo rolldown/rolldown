@@ -45,5 +45,5 @@ Object.defineProperty(exports, 'value', {
   get: function () {
     return value;
   }
-  });
+});
 ```

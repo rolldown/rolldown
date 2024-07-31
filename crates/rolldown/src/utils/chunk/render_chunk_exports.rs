@@ -117,7 +117,7 @@ pub fn render_chunk_exports(
   get: function () {{
     return {canonical_name};
   }}
-  }});"
+}});"
               ));
             };
           });

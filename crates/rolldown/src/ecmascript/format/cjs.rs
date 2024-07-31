@@ -129,10 +129,10 @@ pub fn render_cjs(
     }
   }
 
-  if let Some(export_mode) = export_mode {
-    if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {
-      concat_source.add_source(Box::new(RawSource::new(exports)));
-    }
+  let export_mode = export_mode.unwrap_or(OutputExports::Auto);
+
+  if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {
+    concat_source.add_source(Box::new(RawSource::new(exports)));
   }
 
   if let Some(outro) = outro {

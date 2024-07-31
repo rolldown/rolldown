@@ -5,7 +5,6 @@ use rolldown_common::{
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
-use crate::utils::chunk::determine_export_mode::determine_export_mode;
 
 #[allow(clippy::too_many_lines)]
 pub fn render_chunk_exports(
@@ -48,6 +47,7 @@ pub fn render_chunk_exports(
     }
     OutputFormat::Cjs | OutputFormat::Iife => {
       let mut s = String::new();
+      println!("{:?}", chunk.kind);
       match chunk.kind {
         ChunkKind::EntryPoint { module, .. } => {
           let module =
@@ -108,7 +108,7 @@ pub fn render_chunk_exports(
   get: function () {{
     return {canonical_ns_name}.{property_name};
   }}
-}});"
+}});\n"
               ));
             } else {
               s.push_str(&format!(

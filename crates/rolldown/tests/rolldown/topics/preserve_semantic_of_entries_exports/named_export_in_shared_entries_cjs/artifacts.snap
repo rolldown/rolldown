@@ -53,4 +53,15 @@ const foo = "foo";
 var main_default = "main";
 
 //#endregion
+Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+  });Object.defineProperty(exports, 'main_default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+  });
 ```

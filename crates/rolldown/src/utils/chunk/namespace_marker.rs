@@ -15,7 +15,9 @@ fn render_marker(es_module: bool, to_string_tag: bool) -> String {
     format!("Object.defineProperty(exports, '__esModule', {{ value: true }})")
   } else if to_string_tag {
     format!("Object.defineProperty(exports, Symbol.toStringTag, {{ value: 'Module' }})")
-  } else { String::new() }
+  } else {
+    String::new()
+  }
 }
 
 pub fn render_namespace_markers(

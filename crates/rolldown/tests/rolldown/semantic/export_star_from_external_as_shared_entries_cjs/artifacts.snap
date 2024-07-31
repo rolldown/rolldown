@@ -46,4 +46,10 @@ __reExport(main_ns, require("node:fs"));
 __reExport(main_ns, require("node:fs"));
 
 //#endregion
+Object.defineProperty(exports, 'main_ns', {
+  enumerable: true,
+  get: function () {
+    return main_ns;
+  }
+  });
 ```

@@ -40,4 +40,10 @@ Object.defineProperty(exports, 'value', {
 const value = "main";
 
 //#endregion
+Object.defineProperty(exports, 'value', {
+  enumerable: true,
+  get: function () {
+    return value;
+  }
+  });
 ```

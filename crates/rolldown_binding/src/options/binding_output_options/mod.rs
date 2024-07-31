@@ -65,7 +65,9 @@ pub struct BindingOutputOptions {
   pub outro: Option<AddonOutputOption>,
   // paths: OptionsPaths;
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
+  #[napi(
+    ts_type = "(BindingBuiltinGlobImportPlugin | BindingPluginOptions | BindingBuiltinWasmPlugin | undefined)[]"
+  )]
   pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder>,
   // preferConst: boolean;
   // preserveModules: boolean;

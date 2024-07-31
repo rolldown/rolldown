@@ -1,42 +1,44 @@
 use std::sync::Arc;
 
-use derivative::Derivative;
-use napi::JsUnknown;
 use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
-use rolldown_plugin_glob_import::GlobImportPlugin;
+use rolldown_plugin_glob_import::{GlobImportPlugin, GlobImportPluginConfig};
 use rolldown_plugin_wasm::WasmPlugin;
 use serde::Deserialize;
 
 #[napi(object)]
-#[derive(Deserialize, Derivative)]
-pub struct BindingBuiltinPlugin {
-  pub name: BindingBuiltinPluginName,
-  #[serde(skip_deserializing)]
-  pub options: Option<JsUnknown>,
+#[derive(Debug)]
+pub struct BindingBuiltinGlobImportPlugin {
+  pub config: Option<BindingGlobImportPluginConfig>,
 }
 
-impl std::fmt::Debug for BindingBuiltinPlugin {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("BindingBuiltinPlugin")
-      .field("name", &self.name)
-      .field("options", &"<JsUnknown>")
-      .finish()
+#[napi_derive::napi(object)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingGlobImportPluginConfig {
+  pub root: Option<String>,
+  pub restore_query_extension: Option<bool>,
+}
+impl From<BindingGlobImportPluginConfig> for GlobImportPluginConfig {
+  fn from(value: BindingGlobImportPluginConfig) -> Self {
+    GlobImportPluginConfig {
+      root: value.root,
+      restore_query_extension: value.restore_query_extension.unwrap_or_default(),
+    }
   }
 }
 
-#[derive(Debug, Deserialize)]
-#[napi]
-pub enum BindingBuiltinPluginName {
-  WasmPlugin,
-  GlobImportPlugin,
+impl From<BindingBuiltinGlobImportPlugin> for Arc<dyn Pluginable> {
+  fn from(value: BindingBuiltinGlobImportPlugin) -> Self {
+    Arc::new(GlobImportPlugin { config: value.config.map(Into::into).unwrap_or_default() })
+  }
 }
 
-impl From<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
-  fn from(plugin: BindingBuiltinPlugin) -> Self {
-    match plugin.name {
-      BindingBuiltinPluginName::WasmPlugin => Arc::new(WasmPlugin {}),
-      BindingBuiltinPluginName::GlobImportPlugin => Arc::new(GlobImportPlugin {}),
-    }
+#[napi(object)]
+#[derive(Debug)]
+pub struct BindingBuiltinWasmPlugin {}
+impl From<BindingBuiltinWasmPlugin> for Arc<dyn Pluginable> {
+  fn from(_: BindingBuiltinWasmPlugin) -> Self {
+    Arc::new(WasmPlugin {})
   }
 }

@@ -1811,34 +1811,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-h0jWXwVM.mjs
 - main-h0jWXwVM.mjs.map
 
-# tests/rolldown/rollup/assignment-patterns
-
-- main-!~{000}~.mjs => main-qtHUcC2z.mjs
-
-# tests/rolldown/rollup/catch-block-scope
-
-- main-!~{000}~.mjs => main-mbNM55qi.mjs
-
-# tests/rolldown/rollup/catch-scope-shadowing
-
-- main-!~{000}~.mjs => main-CyzdkzSW.mjs
-
-# tests/rolldown/rollup/object-spread-side-effect
-
-- main-!~{000}~.mjs => main-E9JjDL27.mjs
-
-# tests/rolldown/rollup/preserve-for-of-iterable
-
-- main-!~{000}~.mjs => main-nTnJULF5.mjs
-
-# tests/rolldown/rollup/same-binding
-
-- main-!~{000}~.mjs => main-0m7j4hVb.mjs
-
-# tests/rolldown/rollup/simplify-with-destructuring
-
-- main-!~{000}~.mjs => main-GtK9_LrE.mjs
-
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries
 
 - entry-!~{000}~.mjs => entry-jIqHsZcS.mjs
@@ -2063,3 +2035,31 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/warnings/unresolved_import_treated_as_external
 
 - main-!~{000}~.mjs => main-xG8X-m9p.mjs
+
+# tests/rollup/assignment-patterns
+
+- main-!~{000}~.mjs => main-qtHUcC2z.mjs
+
+# tests/rollup/catch-block-scope
+
+- main-!~{000}~.mjs => main-mbNM55qi.mjs
+
+# tests/rollup/catch-scope-shadowing
+
+- main-!~{000}~.mjs => main-CyzdkzSW.mjs
+
+# tests/rollup/object-spread-side-effect
+
+- main-!~{000}~.mjs => main-E9JjDL27.mjs
+
+# tests/rollup/preserve-for-of-iterable
+
+- main-!~{000}~.mjs => main-nTnJULF5.mjs
+
+# tests/rollup/same-binding
+
+- main-!~{000}~.mjs => main-0m7j4hVb.mjs
+
+# tests/rollup/simplify-with-destructuring
+
+- main-!~{000}~.mjs => main-GtK9_LrE.mjs

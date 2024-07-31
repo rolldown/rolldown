@@ -2154,6 +2154,7 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_rstr",
  "rolldown_sourcemap",
+ "rolldown_stats",
  "rolldown_testing",
  "rolldown_tracing",
  "rolldown_utils",
@@ -2376,6 +2377,10 @@ dependencies = [
  "rolldown_utils",
  "rustc-hash",
 ]
+
+[[package]]
+name = "rolldown_stats"
+version = "0.1.0"
 
 [[package]]
 name = "rolldown_testing"

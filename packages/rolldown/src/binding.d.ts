@@ -89,6 +89,10 @@ export interface AliasItem {
   replacements: Array<string>
 }
 
+export interface ArrowFunctionsBindingOptions {
+  spec?: boolean
+}
+
 export interface BindingAssetSource {
   inner: string | Uint8Array
 }
@@ -151,7 +155,7 @@ export interface BindingInputItem {
 export interface BindingInputOptions {
   external?: undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<BindingInputItem>
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  plugins: (BindingBuiltinGlobImportPlugin | BindingPluginOptions | undefined)[]
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
@@ -258,6 +262,30 @@ export interface BindingTreeshake {
   moduleSideEffects: string
 }
 
+export interface Es2015BindingOptions {
+  arrowFunction?: ArrowFunctionsBindingOptions
+}
+
+/** TypeScript Isolated Declarations for Standalone DTS Emit */
+export declare function isolatedDeclaration(filename: string, sourceText: string): IsolatedDeclarationsResult
+
+export interface IsolatedDeclarationsResult {
+  sourceText: string
+  errors: Array<string>
+}
+
+export interface ReactBindingOptions {
+  runtime?: 'classic' | 'automatic'
+  development?: boolean
+  throwIfNamespace?: boolean
+  pure?: boolean
+  importSource?: string
+  pragma?: string
+  pragmaFrag?: string
+  useBuiltIns?: boolean
+  useSpread?: boolean
+}
+
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 export interface RenderedChunk {
@@ -271,5 +299,47 @@ export interface RenderedChunk {
   modules: Record<string, BindingRenderedModule>
   imports: Array<string>
   dynamicImports: Array<string>
+}
+
+export interface Sourcemap {
+  file?: string
+  mappings?: string
+  sourceRoot?: string
+  sources?: Array<string | undefined | null>
+  sourcesContent?: Array<string | undefined | null>
+  names?: Array<string>
+}
+
+export declare function transform(filename: string, sourceText: string, options?: TransformOptions | undefined | null): TransformResult
+
+export interface TransformOptions {
+  sourceType?: 'script' | 'module' | 'unambiguous' | undefined
+  /** Force jsx parsing, */
+  jsx?: boolean
+  typescript?: TypeScriptBindingOptions
+  react?: ReactBindingOptions
+  es2015?: Es2015BindingOptions
+  /**
+   * Enable Sourcemap
+   *
+   * * `true` to generate a sourcemap for the code and include it in the result object.
+   *
+   * Default: false
+   */
+  sourcemap?: boolean
+}
+
+export interface TransformResult {
+  sourceText: string
+  map?: Sourcemap
+  errors: Array<string>
+}
+
+export interface TypeScriptBindingOptions {
+  jsxPragma?: string
+  jsxPragmaFrag?: string
+  onlyRemoveTypeImports?: boolean
+  allowNamespaces?: boolean
+  allowDeclareFields?: boolean
 }
 

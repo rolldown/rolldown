@@ -12,8 +12,14 @@ export function normalizeHook<H extends ObjectHook<AnyFn, AnyObj>>(
     // @ts-expect-error
     return [hook, {}]
   }
-  const { handler, ...options } = hook
+
+  if (typeof hook === 'object') {
+    const { handler, ...options } = hook
+
+    // @ts-expect-error
+    return [handler, options]
+  }
 
   // @ts-expect-error
-  return [handler, options]
+  return [hook, {}]
 }

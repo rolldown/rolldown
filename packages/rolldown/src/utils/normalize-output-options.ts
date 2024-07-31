@@ -17,6 +17,7 @@ export function normalizeOutputOptions(
     chunkFileNames,
     assetFileNames,
     name,
+    esModule,
   } = opts
   return {
     dir: dir,
@@ -35,6 +36,7 @@ export function normalizeOutputOptions(
     footer: getAddon(opts, 'footer'),
     intro: getAddon(opts, 'intro'),
     outro: getAddon(opts, 'outro'),
+    esModule: esModule ?? 'if-default-prop',
     // TODO support functions
     globals: globals ?? {},
     entryFileNames: entryFileNames ?? '[name].js',

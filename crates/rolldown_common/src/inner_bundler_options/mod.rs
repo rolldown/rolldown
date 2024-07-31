@@ -8,15 +8,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer};
 use types::experimental_options::ExperimentalOptions;
 
-use crate::{ModuleType, SourceMapIgnoreList};
-
 use self::types::treeshake::TreeshakeOptions;
 use self::types::{
-  input_item::InputItem, is_external::IsExternal, output_exports::OutputExports,
-  output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
-  resolve_options::ResolveOptions, source_map_type::SourceMapType,
+  es_module::EsModuleType, input_item::InputItem, is_external::IsExternal,
+  output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
+  platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
   sourcemap_path_transform::SourceMapPathTransform,
 };
+use crate::{ModuleType, SourceMapIgnoreList};
 
 pub mod types;
 
@@ -48,6 +47,7 @@ pub struct BundlerOptions {
   pub exports: Option<OutputExports>,
   pub globals: Option<HashMap<String, String>>,
   pub sourcemap: Option<SourceMapType>,
+  pub es_module: Option<EsModuleType>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_addon"),

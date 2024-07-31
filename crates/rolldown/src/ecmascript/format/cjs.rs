@@ -3,6 +3,9 @@ use rolldown_common::{ChunkKind, ExportsKind, Module, WrapKind};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
+use crate::utils::chunk::determine_export_mode::determine_export_mode;
+use crate::utils::chunk::namespace_marker::render_namespace_markers;
+use crate::utils::chunk::render_chunk_exports::get_export_items;
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
@@ -37,9 +40,14 @@ pub fn render_cjs(
     concat_source.add_source(Box::new(RawSource::new(intro)));
   }
 
-  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+  let export_mode = if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
       if matches!(entry_module.exports_kind, ExportsKind::Esm) {
+        let export_items = get_export_items(ctx.chunk, ctx.link_output);
+        let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
+        let export_mode = determine_export_mode(&ctx.options.exports, entry_module, &export_items)?;
+        let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
+        concat_source.add_source(Box::new(RawSource::new(marker)));
         entry_module.star_export_module_ids().filter_map(|importee| {
           let importee = &ctx.link_output.module_table.modules[importee];
           match importee {
@@ -57,9 +65,16 @@ pub fn render_cjs(
 ".replace("$NAME", &format!("require(\"{}\")", &ext_name));
               concat_source.add_source(Box::new(RawSource::new(import_stmt)));
           });
+        Some(export_mode)
+      } else {
+        None
       }
+    } else {
+      None
     }
-  }
+  } else {
+    None
+  };
 
   // Runtime module should be placed before the generated `requires` in CJS format.
   // Because, we might need to generate `__toESM(require(...))` that relies on the runtime module.
@@ -110,8 +125,10 @@ pub fn render_cjs(
     }
   }
 
-  if let Some(exports) = render_chunk_exports(ctx)? {
-    concat_source.add_source(Box::new(RawSource::new(exports)));
+  if let Some(export_mode) = export_mode {
+    if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {
+      concat_source.add_source(Box::new(RawSource::new(exports)));
+    }
   }
 
   if let Some(outro) = outro {

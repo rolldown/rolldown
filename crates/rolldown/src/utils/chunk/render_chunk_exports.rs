@@ -1,20 +1,21 @@
+use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 use rolldown_common::{
-  Chunk, ChunkKind, EcmaModule, ExportsKind, NormalizedBundlerOptions, OutputExports, OutputFormat,
-  SymbolRef, WrapKind,
+  Chunk, ChunkKind, ExportsKind, NormalizedBundlerOptions, OutputExports, OutputFormat, SymbolRef,
+  WrapKind,
 };
-use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
 
-use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
-
 #[allow(clippy::too_many_lines)]
-pub fn render_chunk_exports(ctx: &mut GenerateContext<'_>) -> DiagnosableResult<Option<String>> {
+pub fn render_chunk_exports(
+  ctx: &mut GenerateContext<'_>,
+  export_mode: Option<&OutputExports>,
+) -> Option<String> {
   let GenerateContext { chunk, link_output, options, .. } = ctx;
   let export_items = get_export_items(chunk, link_output);
 
   if export_items.is_empty() {
-    return Ok(None);
+    return None;
   }
 
   match options.format {
@@ -42,7 +43,7 @@ pub fn render_chunk_exports(ctx: &mut GenerateContext<'_>) -> DiagnosableResult<
         })
         .collect::<Vec<_>>();
       s.push_str(&format!("export {{ {} }};", rendered_items.join(", "),));
-      Ok(Some(s))
+      Some(s)
     }
     OutputFormat::Cjs | OutputFormat::Iife => {
       let mut s = String::new();
@@ -51,10 +52,6 @@ pub fn render_chunk_exports(ctx: &mut GenerateContext<'_>) -> DiagnosableResult<
           let module =
             &link_output.module_table.modules[module].as_ecma().expect("should be ecma module");
           if matches!(module.exports_kind, ExportsKind::Esm) {
-            let export_mode = determine_export_mode(&options.exports, module, &export_items)?;
-            if matches!(export_mode, OutputExports::Named) {
-              s.push_str("Object.defineProperty(exports, '__esModule', { value: true });\n");
-            }
             let rendered_items = export_items
               .into_iter()
               .map(|(exported_name, export_ref)| {
@@ -70,7 +67,7 @@ pub fn render_chunk_exports(ctx: &mut GenerateContext<'_>) -> DiagnosableResult<
                 }
 
                 match export_mode {
-                  OutputExports::Named => {
+                  Some(OutputExports::Named) => {
                     format!(
                       "Object.defineProperty(exports, '{exported_name}', {{
   enumerable: true,
@@ -80,15 +77,15 @@ pub fn render_chunk_exports(ctx: &mut GenerateContext<'_>) -> DiagnosableResult<
 }});"
                     )
                   }
-                  OutputExports::Default => {
+                  Some(OutputExports::Default) => {
                     if matches!(options.format, OutputFormat::Cjs) {
                       format!("module.exports = {canonical_name};")
                     } else {
                       format!("return {canonical_name};")
                     }
                   }
-                  OutputExports::None => String::new(),
-                  OutputExports::Auto => unreachable!(),
+                  Some(OutputExports::None) => String::new(),
+                  _ => unreachable!(),
                 }
               })
               .collect::<Vec<_>>();
@@ -126,9 +123,9 @@ pub fn render_chunk_exports(ctx: &mut GenerateContext<'_>) -> DiagnosableResult<
         }
       }
 
-      Ok(Some(s))
+      Some(s)
     }
-    OutputFormat::App => Ok(None),
+    OutputFormat::App => None,
   }
 }
 
@@ -173,45 +170,4 @@ pub fn get_chunk_export_names(
     .into_iter()
     .map(|(exported_name, _)| exported_name.to_string())
     .collect::<Vec<_>>()
-}
-
-// Port from https://github.com/rollup/rollup/blob/master/src/utils/getExportMode.ts
-pub fn determine_export_mode(
-  export_mode: &OutputExports,
-  module: &EcmaModule,
-  exports: &[(Rstr, SymbolRef)],
-) -> DiagnosableResult<OutputExports> {
-  match export_mode {
-    OutputExports::Named => Ok(OutputExports::Named),
-    OutputExports::Default => {
-      if exports.len() != 1 || exports[0].0.as_str() != "default" {
-        return Err(vec![BuildDiagnostic::invalid_export_option(
-          "default".into(),
-          module.stable_id.as_str().into(),
-          exports.iter().map(|(name, _)| name.as_str().into()).collect(),
-        )]);
-      }
-      Ok(OutputExports::Default)
-    }
-    OutputExports::None => {
-      if !exports.is_empty() {
-        return Err(vec![BuildDiagnostic::invalid_export_option(
-          "none".into(),
-          module.stable_id.as_str().into(),
-          exports.iter().map(|(name, _)| name.as_str().into()).collect(),
-        )]);
-      }
-      Ok(OutputExports::None)
-    }
-    OutputExports::Auto => {
-      if exports.is_empty() {
-        Ok(OutputExports::None)
-      } else if exports.len() == 1 && exports[0].0.as_str() == "default" {
-        Ok(OutputExports::Default)
-      } else {
-        // TODO add warnings
-        Ok(OutputExports::Named)
-      }
-    }
-  }
 }

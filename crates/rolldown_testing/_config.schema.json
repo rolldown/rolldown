@@ -88,6 +88,16 @@
             "null"
           ]
         },
+        "esModule": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EsModuleType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "experimental": {
           "anyOf": [
             {
@@ -226,6 +236,14 @@
         }
       },
       "additionalProperties": false
+    },
+    "EsModuleType": {
+      "type": "string",
+      "enum": [
+        "True",
+        "False",
+        "IfDefaultProp"
+      ]
     },
     "ExperimentalOptions": {
       "type": "object",

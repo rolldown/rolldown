@@ -15,8 +15,9 @@ use oxc::{
   span::{CompactStr, GetSpan, Span},
 };
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
+  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, LocalExport, MemberExprRef, ModuleDefFormat,
+  ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos,
+  SymbolOrMemberExprRef, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, UnhandleableResult};
@@ -482,12 +483,15 @@ impl<'me> AstScanner<'me> {
     }
   }
 
-  pub fn add_referenced_symbol(&mut self, id: SymbolId) {
-    self.current_stmt_info.referenced_symbols.push((self.idx, id).into());
+  pub fn add_referenced_symbol(&mut self, sym_ref: SymbolRef) {
+    self.current_stmt_info.referenced_symbols.push(sym_ref.into());
   }
 
-  pub fn add_member_expr_reference(&mut self, id: SymbolId, props: Vec<CompactStr>) {
-    self.current_stmt_info.referenced_symbols.push((self.idx, id, props).into());
+  pub fn add_member_expr_reference(&mut self, object_ref: SymbolRef, props: Vec<CompactStr>) {
+    self
+      .current_stmt_info
+      .referenced_symbols
+      .push(SymbolOrMemberExprRef::MemberExpr(MemberExprRef { object_ref, props }));
   }
 
   fn is_top_level(&self, symbol_id: SymbolId) -> bool {
@@ -519,10 +523,16 @@ impl<'me> AstScanner<'me> {
   fn resolve_identifier_to_top_level_symbol(
     &mut self,
     ident: &IdentifierReference,
-  ) -> Option<SymbolId> {
+  ) -> Option<SymbolRef> {
     let symbol_id = self.resolve_symbol_from_reference(ident);
     match symbol_id {
-      Some(symbol_id) if self.is_top_level(symbol_id) => Some(symbol_id),
+      Some(symbol_id) => {
+        if self.is_top_level(symbol_id) {
+          Some((self.idx, symbol_id).into())
+        } else {
+          None
+        }
+      }
       None => {
         if ident.name == "module" {
           self.used_module_ref = true;
@@ -538,7 +548,6 @@ impl<'me> AstScanner<'me> {
         }
         None
       }
-      _ => None,
     }
   }
 }

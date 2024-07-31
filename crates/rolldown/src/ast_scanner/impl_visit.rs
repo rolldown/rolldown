@@ -59,13 +59,13 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
           }
         };
 
-        if let Some(symbol_id) = object_symbol_in_top_level {
+        if let Some(sym_ref) = object_symbol_in_top_level {
           let props = props_in_reverse_order
             .into_iter()
             .rev()
             .map(|ident| ident.name.as_str().into())
             .collect::<Vec<_>>();
-          self.add_member_expr_reference(symbol_id, props);
+          self.add_member_expr_reference(sym_ref, props);
           // Don't walk again, otherwise we will add the `object_symbol_in_top_level` again in `visit_identifier_reference`
           return;
         }

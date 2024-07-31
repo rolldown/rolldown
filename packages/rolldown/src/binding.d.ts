@@ -113,7 +113,7 @@ export interface BindingEmittedAsset {
 
 export interface BindingGlobImportPluginConfig {
   root?: string
-  restoreQueryExtension: boolean
+  restoreQueryExtension?: boolean
 }
 
 export interface BindingHookLoadOutput {

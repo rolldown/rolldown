@@ -1,5 +1,4 @@
 use napi::bindgen_prelude::Either3;
-use rolldown_plugin_glob_import::GlobImportPluginConfig;
 use serde::Deserialize;
 use std::fmt::Debug;
 

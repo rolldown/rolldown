@@ -6,7 +6,6 @@ export default defineTest({
   config: {
     plugins: [new BuiltinGlobImportPlugin({
       root: path.resolve(import.meta.dirname),
-      restoreQueryExtension: false
     })],
   },
   async afterTest() {

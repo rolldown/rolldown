@@ -1,8 +1,5 @@
-use std::option;
 use std::sync::Arc;
 
-use derivative::Derivative;
-use napi::{JsBoolean, JsObject, JsString, JsUnknown};
 use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_glob_import::{GlobImportPlugin, GlobImportPluginConfig};
@@ -20,14 +17,13 @@ pub struct BindingBuiltinGlobImportPlugin {
 #[serde(rename_all = "camelCase")]
 pub struct BindingGlobImportPluginConfig {
   pub root: Option<String>,
-  pub restore_query_extension: bool,
+  pub restore_query_extension: Option<bool>,
 }
-
-impl Into<GlobImportPluginConfig> for BindingGlobImportPluginConfig {
-  fn into(self) -> GlobImportPluginConfig {
+impl From<BindingGlobImportPluginConfig> for GlobImportPluginConfig {
+  fn from(value: BindingGlobImportPluginConfig) -> Self {
     GlobImportPluginConfig {
-      root: self.root,
-      restore_query_extension: self.restore_query_extension,
+      root: value.root,
+      restore_query_extension: value.restore_query_extension.unwrap_or_default(),
     }
   }
 }

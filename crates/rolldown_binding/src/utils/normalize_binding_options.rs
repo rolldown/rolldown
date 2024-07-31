@@ -5,16 +5,15 @@ use crate::{
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
   worker_manager::WorkerManager,
 };
-use napi::{bindgen_prelude::Either3, Either};
+use napi::bindgen_prelude::Either3;
 use rolldown::{
   AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputExports, OutputFormat, Platform,
 };
 use rolldown_plugin::__inner::SharedPluginable;
-use rolldown_plugin_glob_import::GlobImportPlugin;
+use std::collections::HashMap;
 use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
-use std::{collections::HashMap, fmt::Debug};
 
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct NormalizeBindingOptionsReturn {

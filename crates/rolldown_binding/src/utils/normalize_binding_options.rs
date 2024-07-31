@@ -165,9 +165,9 @@ pub fn normalize_binding_options(
           ParallelJsPlugin::new_shared(plugins, Arc::clone(worker_manager))
         },
         |plugin| match plugin {
-          Either3::A(plugin) => JsPlugin::new_shared(plugin),
-          Either3::B(plugin) => plugin.into(),
-          Either3::C(plugin) => plugin.into(),
+          Either3::A(plugin_options) => JsPlugin::new_shared(plugin_options),
+          Either3::B(glob_import) => glob_import.into(),
+          Either3::C(wasm) => wasm.into(),
         },
       )
     })

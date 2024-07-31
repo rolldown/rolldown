@@ -10,7 +10,9 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        banner: '/* Banner */',
+        banner: {
+          handler: '/* Banner */',
+        },
       },
     ],
   },

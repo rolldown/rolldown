@@ -1,4 +1,4 @@
-use napi::Either;
+use napi::bindgen_prelude::Either;
 use serde::Deserialize;
 use std::fmt::Debug;
 

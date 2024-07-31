@@ -1,4 +1,8 @@
-import { BindingBuiltinPlugin, BindingBuiltinPluginName } from '../binding'
+import {
+  BindingBuiltinPluginName,
+  BindingGlobImportPluginConfig,
+  BindingBuiltinPlugin,
+} from '../binding'
 
 export class BuiltinPlugin {
   constructor(
@@ -10,29 +14,41 @@ export class BuiltinPlugin {
   }
 }
 
-export class BuiltinWasmPlugin extends BuiltinPlugin {
-  constructor(options?: unknown) {
-    super(BindingBuiltinPluginName.Wasm, options)
+export class DynamicImportVarsPlugin extends BuiltinPlugin {
+  constructor() {
+    super(BindingBuiltinPluginName.DynamicImportVarsPlugin)
   }
 }
 
-export class BuiltinDynamicImportVarsPlugin extends BuiltinPlugin {
-  constructor(options?: unknown) {
-    super(BindingBuiltinPluginName.DynamicImportVars, options)
+export class GlobImportPlugin extends BuiltinPlugin {
+  constructor(config?: BindingGlobImportPluginConfig) {
+    super(BindingBuiltinPluginName.GlobImportPlugin, config)
   }
 }
 
-export class BuiltinGlobImportPlugin extends BuiltinPlugin {
-  constructor(options?: unknown) {
-    super(BindingBuiltinPluginName.GlobImport, options)
+export class WasmPlugin extends BuiltinPlugin {
+  constructor() {
+    super(BindingBuiltinPluginName.WasmPlugin)
   }
+}
+
+export function dynamicImportVarsPlugin() {
+  return new DynamicImportVarsPlugin()
+}
+
+export function globImportPlugin(config?: BindingGlobImportPluginConfig) {
+  return new GlobImportPlugin(config)
+}
+
+export function wasmPlugin() {
+  return new WasmPlugin()
 }
 
 export function bindingifyBuiltInPlugin(
   plugin: BuiltinPlugin,
 ): BindingBuiltinPlugin {
   return {
-    name: plugin.name,
+    __name: plugin.name,
     options: plugin.options,
   }
 }

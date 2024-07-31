@@ -1,6 +1,0 @@
-{
-  "config": {
-    "format": "cjs",
-    "external": ["./ext.js", "ext"]
-  }
-}

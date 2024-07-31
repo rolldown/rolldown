@@ -1,6 +1,6 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
 input_file: crates/rolldown/tests/esbuild/import_star/export_self_as_namespace_common_js
 ---
 # warnings
@@ -29,6 +29,16 @@ const foo = 123;
 
 //#endregion
 Object.defineProperty(exports, '__esModule', { value: true });
-exports.foo = foo;
-exports.ns = entry_ns;
+Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+});
+Object.defineProperty(exports, 'ns', {
+  enumerable: true,
+  get: function () {
+    return entry_ns;
+  }
+});
 ```

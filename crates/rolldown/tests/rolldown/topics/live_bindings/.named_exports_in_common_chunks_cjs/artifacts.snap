@@ -1,0 +1,90 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/topics/live_bindings/named_exports_in_common_chunks_cjs
+---
+# Assets
+
+## async-entry.cjs
+
+```js
+"use strict";
+
+const { count, inc, reset } = require("./shared.cjs");
+const { default: assert } = __toESM(require("node:assert"));
+
+//#region async-entry.js
+reset();
+assert.strictEqual(count, 0);
+assert.strictEqual(count, count);
+inc();
+assert.strictEqual(count, 1);
+assert.strictEqual(count, count);
+inc();
+assert.strictEqual(count, 2);
+assert.strictEqual(count, count);
+
+//#endregion
+```
+## main.cjs
+
+```js
+"use strict";
+const { count, inc, reset } = require("./shared.cjs");
+
+//#region main.js
+import("./async-entry.cjs");
+
+//#endregion
+Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperty(exports, 'count', {
+  enumerable: true,
+  get: function () {
+    return count;
+  }
+});
+Object.defineProperty(exports, 'inc', {
+  enumerable: true,
+  get: function () {
+    return inc;
+  }
+});
+Object.defineProperty(exports, 'reset', {
+  enumerable: true,
+  get: function () {
+    return reset;
+  }
+});
+```
+## shared.cjs
+
+```js
+"use strict";
+
+//#region shared.js
+let count = 0;
+function reset() {
+	count = 0;
+}
+function inc() {
+	count += 1;
+}
+
+//#endregion
+Object.defineProperty(exports, 'count', {
+  enumerable: true,
+  get: function () {
+    return count;
+  }
+  });Object.defineProperty(exports, 'inc', {
+  enumerable: true,
+  get: function () {
+    return inc;
+  }
+  });Object.defineProperty(exports, 'reset', {
+  enumerable: true,
+  get: function () {
+    return reset;
+  }
+  });
+```

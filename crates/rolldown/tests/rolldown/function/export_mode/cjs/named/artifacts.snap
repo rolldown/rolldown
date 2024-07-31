@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/function/export_mode/cjs/named
+---
+# Assets
+
+## main.cjs
+
+```js
+"use strict";
+
+//#region mod.js
+function example() {
+	return "named";
+}
+
+//#endregion
+//#region main.js
+function a() {
+	return "named";
+}
+var main_default = example();
+
+//#endregion
+Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperty(exports, 'a', {
+  enumerable: true,
+  get: function () {
+    return a;
+  }
+});
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+});
+```

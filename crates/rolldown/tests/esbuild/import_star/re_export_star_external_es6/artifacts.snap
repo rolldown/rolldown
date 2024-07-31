@@ -1,6 +1,6 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_external_es6
 ---
 # Assets
@@ -9,6 +9,8 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_external_es
 
 ```js
 import "foo";
+
+export * from "foo"
 
 
 //#region entry.js

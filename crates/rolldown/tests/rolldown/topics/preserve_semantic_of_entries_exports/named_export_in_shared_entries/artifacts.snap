@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries
+---
+# Assets
+
+## entry.mjs
+
+```js
+import { foo, main_default } from "./main.mjs";
+
+export { main_default as default, foo };
+```
+## entry2.mjs
+
+```js
+import { foo, main_default } from "./main.mjs";
+
+export { main_default as default, foo };
+```
+## main.mjs
+
+```js
+
+//#region main.js
+const foo = "foo";
+var main_default = "main";
+
+//#endregion
+export { foo, main_default };
+```

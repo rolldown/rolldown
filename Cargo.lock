@@ -2168,7 +2168,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_binding"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -2197,7 +2197,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_common"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2240,7 +2240,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_error"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2312,7 +2312,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_glob_import"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "glob",
  "oxc",
@@ -2322,7 +2322,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_wasm"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "rolldown_common",
  "rolldown_plugin",
@@ -2330,7 +2330,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_resolver"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "dashmap 6.0.1",
@@ -2343,7 +2343,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_rstr"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "oxc",
 ]
@@ -2360,7 +2360,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_testing"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "dunce",
@@ -2380,7 +2380,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_testing_config"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "rolldown_common",
  "schemars",
@@ -2390,7 +2390,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_tracing"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "tracing",
  "tracing-chrome",
@@ -2399,7 +2399,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_utils"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-scoped",

@@ -61,7 +61,10 @@ impl<'a> GenerateStage<'a> {
             .top_level_member_expr_resolved_cache
             .get(&member_expr.object_ref)
             .and_then(|map| map.get(&member_expr.props.clone().into_boxed_slice()))
-            .map_or(member_expr.object_ref, |(finalized_symbol_ref, _, _)| *finalized_symbol_ref),
+            .map_or_else(
+              || self.link_output.symbols.par_canonical_ref_for(member_expr.object_ref),
+              |(finalized_symbol_ref, _, _)| *finalized_symbol_ref,
+            ),
         };
 
         self.determine_reachable_modules_for_entry(

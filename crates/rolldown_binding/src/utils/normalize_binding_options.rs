@@ -5,7 +5,7 @@ use crate::{
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
   worker_manager::WorkerManager,
 };
-use napi::Either;
+use napi::bindgen_prelude::Either;
 use rolldown::{
   AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputExports, OutputFormat, Platform,
 };
@@ -165,8 +165,14 @@ pub fn normalize_binding_options(
           ParallelJsPlugin::new_shared(plugins, Arc::clone(worker_manager))
         },
         |plugin| match plugin {
-          Either::A(plugin) => JsPlugin::new_shared(plugin),
-          Either::B(plugin) => plugin.into(),
+          Either::A(plugin_options) => JsPlugin::new_shared(plugin_options),
+          Either::B(builtin) => {
+            // Needs to save the name, since `try_into` will consume the ownership
+            let name = format!("{:?}", builtin.__name);
+            builtin
+              .try_into()
+              .unwrap_or_else(|err| panic!("Should convert to builtin plugin: {name} \n {err}"))
+          }
         },
       )
     })
@@ -179,8 +185,14 @@ pub fn normalize_binding_options(
     .chain(output_options.plugins)
     .filter_map(|plugin| {
       plugin.map(|plugin| match plugin {
-        Either::A(plugin) => JsPlugin::new_shared(plugin),
-        Either::B(plugin) => plugin.into(),
+        Either::A(plugin_options) => JsPlugin::new_shared(plugin_options),
+        Either::B(builtin) => {
+          // Needs to save the name, since `try_into` will consume the ownership
+          let name = format!("{:?}", builtin.__name);
+          builtin
+            .try_into()
+            .unwrap_or_else(|err| panic!("Should convert to builtin plugin: {name} \n {err}"))
+        }
       })
     })
     .collect::<Vec<_>>();

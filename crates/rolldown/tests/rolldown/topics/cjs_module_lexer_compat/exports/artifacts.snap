@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/topics/cjs_module_lexer_compat/exports
+---
+# Assets
+
+## main.cjs
+
+```js
+"use strict";
+
+//#region main.js
+const a = "a";
+const b = "b";
+const devil = "devil";
+var main_default = "default";
+
+//#endregion
+Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperty(exports, 'a', {
+  enumerable: true,
+  get: function () {
+    return a;
+  }
+});
+Object.defineProperty(exports, 'b', {
+  enumerable: true,
+  get: function () {
+    return b;
+  }
+});
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+});
+Object.defineProperty(exports, '😈', {
+  enumerable: true,
+  get: function () {
+    return devil;
+  }
+});
+```

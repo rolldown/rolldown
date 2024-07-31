@@ -98,20 +98,25 @@ export interface BindingAssetSource {
 }
 
 export interface BindingBuiltinPlugin {
-  name: BindingBuiltinPluginName
+  __name: BindingBuiltinPluginName
   options?: unknown
 }
 
 export declare enum BindingBuiltinPluginName {
-  Wasm = 0,
-  GlobImport = 1,
-  DynamicImportVars = 2
+  WasmPlugin = 0,
+  GlobImportPlugin = 1,
+  DynamicImportVarsPlugin = 2
 }
 
 export interface BindingEmittedAsset {
   name?: string
   fileName?: string
   source: BindingAssetSource
+}
+
+export interface BindingGlobImportPluginConfig {
+  root?: string
+  restoreQueryExtension?: boolean
 }
 
 export interface BindingHookLoadOutput {

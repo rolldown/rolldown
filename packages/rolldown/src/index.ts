@@ -35,9 +35,12 @@ import { defineConfig } from './utils/define-config'
 import { rolldown, experimental_scan } from './rolldown'
 import { ConfigExport } from './types/config-export'
 import {
-  BuiltinDynamicImportVarsPlugin,
-  BuiltinGlobImportPlugin,
-  BuiltinWasmPlugin,
+  dynamicImportVarsPlugin,
+  DynamicImportVarsPlugin,
+  globImportPlugin,
+  GlobImportPlugin,
+  wasmPlugin,
+  WasmPlugin,
 } from './plugin/builtin-plugin'
 import { RolldownBuild } from './rolldown-build'
 import {
@@ -64,11 +67,11 @@ export {
   rolldown,
   experimental_scan,
   transform,
-  BuiltinWasmPlugin,
-  BuiltinGlobImportPlugin,
-  BuiltinDynamicImportVarsPlugin,
 }
-
+// Builtin plugin class
+export { DynamicImportVarsPlugin, WasmPlugin, GlobImportPlugin }
+// Builtin plugin factory
+export { dynamicImportVarsPlugin, wasmPlugin, globImportPlugin }
 export type {
   RolldownOutputAsset,
   RolldownOutputChunk,

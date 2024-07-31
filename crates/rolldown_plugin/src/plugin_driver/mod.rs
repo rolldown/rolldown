@@ -1,6 +1,6 @@
 use std::sync::{Arc, Weak};
 
-use rolldown_common::{Metric, ModuleTable, SharedFileEmitter};
+use rolldown_common::{ModuleTable, SharedFileEmitter};
 use rolldown_resolver::Resolver;
 
 use crate::{__inner::SharedPluginable, plugin_context::SharedPluginContext, PluginContext};
@@ -19,7 +19,7 @@ impl PluginDriver {
     plugins: Vec<SharedPluginable>,
     resolver: &Arc<Resolver>,
     file_emitter: &SharedFileEmitter,
-    metrics: &Arc<Vec<Metric>>,
+    metrics: &Arc<Vec<HookMetric>>,
   ) -> SharedPluginDriver {
     Arc::new_cyclic(|plugin_driver| {
       let with_context = plugins

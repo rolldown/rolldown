@@ -77,7 +77,6 @@ pub use crate::{
   types::resolved_request_info::ResolvedId,
   types::rollup_rendered_chunk::RollupRenderedChunk,
   types::side_effects,
-  types::stats::{Metric, MetricType, MsMetric},
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfos},
   types::str_or_bytes::StrOrBytes,
   types::symbol_or_member_expr_ref::SymbolOrMemberExprRef,

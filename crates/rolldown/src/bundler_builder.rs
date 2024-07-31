@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use itertools::Itertools;
-use rolldown_common::{FileEmitter, Metric};
+use rolldown_common::{FileEmitter, HookMetric};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{PluginDriver, __inner::SharedPluginable};
 use rolldown_resolver::Resolver;
@@ -39,7 +39,7 @@ impl BundlerBuilder {
         .plugins
         .iter()
         .map(|item| {
-          let mut metric = Metric::default();
+          let mut metric = HookMetric::default();
           metric.name = item.call_name().to_string();
           metric
         })

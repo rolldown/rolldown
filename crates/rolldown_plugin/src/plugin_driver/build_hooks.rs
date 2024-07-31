@@ -42,7 +42,7 @@ impl PluginDriver {
 
   pub async fn resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
     for (i, (plugin, ctx)) in self.plugins.iter().enumerate() {
-      let _guard = ctx.metrics[i].guard(rolldown_common::MetricType::Resolve);
+      let _guard = ctx.metrics[i].guard(MetricType::Resolve);
       if let Some(r) = plugin.call_resolve_id(ctx, args).await? {
         return Ok(Some(r));
       }

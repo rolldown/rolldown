@@ -11,7 +11,7 @@ use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
-use rolldown_common::{Metric, NormalizedBundlerOptions, SharedFileEmitter};
+use rolldown_common::{HookMetric, NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
@@ -27,7 +27,7 @@ pub struct Bundler {
   pub(crate) resolver: SharedResolver,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) _log_guard: Option<FlushGuard>,
-  pub(crate) metrics: Arc<Vec<Metric>>,
+  pub(crate) stats: rolldown_stats::Stats,
 }
 
 impl Bundler {

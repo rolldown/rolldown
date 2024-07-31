@@ -5,7 +5,7 @@ use crate::{
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
   worker_manager::WorkerManager,
 };
-use napi::Either;
+use napi::{bindgen_prelude::Either3, Either};
 use rolldown::{
   AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputExports, OutputFormat, Platform,
 };
@@ -166,8 +166,9 @@ pub fn normalize_binding_options(
           ParallelJsPlugin::new_shared(plugins, Arc::clone(worker_manager))
         },
         |plugin| match plugin {
-          Either::A(plugin) => JsPlugin::new_shared(plugin),
-          Either::B(plugin) => plugin.into(),
+          Either3::A(plugin) => JsPlugin::new_shared(plugin),
+          Either3::B(plugin) => plugin.into(),
+          Either3::C(plugin) => plugin.into(),
         },
       )
     })

@@ -38,6 +38,15 @@ impl From<BindingBuiltinGlobImportPlugin> for Arc<dyn Pluginable> {
   }
 }
 
+#[napi(object)]
+#[derive(Debug)]
+pub struct BindingBuiltinWasmPlugin {}
+impl From<BindingBuiltinWasmPlugin> for Arc<dyn Pluginable> {
+  fn from(_: BindingBuiltinWasmPlugin) -> Self {
+    Arc::new(WasmPlugin {})
+  }
+}
+
 // fn try_convert_builting_plugin_options(
 //   options: Option<JsObject>,
 // ) -> Result<GlobImportPluginConfig, napi::Error> {

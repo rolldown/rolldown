@@ -1,4 +1,4 @@
-use napi::Either;
+use napi::bindgen_prelude::Either3;
 use rolldown_plugin_glob_import::GlobImportPluginConfig;
 use serde::Deserialize;
 use std::fmt::Debug;
@@ -9,7 +9,7 @@ use crate::types::{
 };
 
 use super::{
-  binding_builtin_plugin::BindingBuiltinGlobImportPlugin,
+  binding_builtin_plugin::{BindingBuiltinGlobImportPlugin, BindingBuiltinWasmPlugin},
   binding_plugin_context::BindingPluginContext,
   binding_transform_context::BindingTransformPluginContext,
   types::{
@@ -23,7 +23,7 @@ use super::{
 
 /// none is parallel js plugin
 pub type BindingPluginOrParallelJsPluginPlaceholder =
-  Option<Either<BindingPluginOptions, BindingBuiltinGlobImportPlugin>>;
+  Option<Either3<BindingPluginOptions, BindingBuiltinGlobImportPlugin, BindingBuiltinWasmPlugin>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Deserialize, Default)]

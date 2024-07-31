@@ -36,7 +36,7 @@ import { rolldown, experimental_scan } from './rolldown'
 import { ConfigExport } from './types/config-export'
 import {
   BuiltinGlobImportPlugin,
-  // BuiltinWasmPlugin,
+  BuiltinWasmPlugin,
 } from './plugin/builtin-plugin'
 import { RolldownBuild } from './rolldown-build'
 import {
@@ -63,7 +63,7 @@ export {
   rolldown,
   experimental_scan,
   transform,
-  // BuiltinWasmPlugin,
+  BuiltinWasmPlugin,
   BuiltinGlobImportPlugin,
 }
 

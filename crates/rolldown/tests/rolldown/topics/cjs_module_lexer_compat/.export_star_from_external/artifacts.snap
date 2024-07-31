@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/topics/cjs_module_lexer_compat/export_star_from_external
+---
+# Assets
+
+## main.cjs
+
+```js
+"use strict";
+Object.keys(require("node:fs")).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return require("node:fs")[k]; }
+	});
+});
+
+Object.keys(require("node:path")).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return require("node:path")[k]; }
+	});
+});
+
+
+require("node:fs");
+require("node:path");
+
+//#region main.js
+var main_ns = {};
+__reExport(main_ns, require("node:fs"));
+__reExport(main_ns, require("node:path"));
+
+//#endregion
+```

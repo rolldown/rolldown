@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/issues/1733
+---
+# Assets
+
+## entry.mjs
+
+```js
+import "rewritten-./static.css";
+
+//#region entry.js
+import("rewritten-./dynamic.css");
+require("rewritten-./some.css");
+
+//#endregion
+```

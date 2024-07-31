@@ -13,6 +13,7 @@ export default defineTest({
     expect(output.output[0].code).toMatchInlineSnapshot(`
       "(function(exports, node_path) {
 
+      "use strict";
       const { join } = node_path;
 
       //#region main.js
@@ -20,10 +21,14 @@ export default defineTest({
 
       //#endregion
       Object.defineProperty(exports, '__esModule', { value: true });
-      exports.default = main_default;
+      Object.defineProperty(exports, 'default', {
+        enumerable: true,
+        get: function () {
+          return main_default;
+        }
+      });
       return exports;
-      })({}, node_path);
-      "
+      })({}, node_path);"
     `)
   },
 })

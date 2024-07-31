@@ -1,4 +1,5 @@
-use rolldown_common::ExportsKind;
+use itertools::Itertools;
+use rolldown_common::{ChunkKind, ExportsKind, Module, WrapKind};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
@@ -9,6 +10,7 @@ use crate::{
     collect_render_chunk_imports::{
       collect_render_chunk_imports, RenderImportDeclarationSpecifier,
     },
+    determine_use_strict::determine_use_strict,
     render_chunk_exports::render_chunk_exports,
   },
 };
@@ -18,26 +20,45 @@ pub fn render_cjs(
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
+  intro: Option<String>,
+  outro: Option<String>,
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
 
-  // Add `use strict` directive if needed. This must come before the banner, because users might use banner to add hashbang.
-  let are_modules_all_strict = ctx
-    .chunk
-    .modules
-    .iter()
-    .filter_map(|id| ctx.link_output.module_table.modules[*id].as_ecma())
-    .all(|ecma_module| {
-      let is_esm = matches!(&ecma_module.exports_kind, ExportsKind::Esm);
-      is_esm || ctx.link_output.ast_table[ecma_module.ecma_ast_idx()].0.contains_use_strict
-    });
-
-  if are_modules_all_strict {
-    concat_source.add_source(Box::new(RawSource::new("\"use strict\";\n".to_string())));
-  }
-
   if let Some(banner) = banner {
     concat_source.add_source(Box::new(RawSource::new(banner)));
+  }
+
+  if determine_use_strict(ctx) {
+    concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
+  }
+
+  if let Some(intro) = intro {
+    concat_source.add_source(Box::new(RawSource::new(intro)));
+  }
+
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+    if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
+      if matches!(entry_module.exports_kind, ExportsKind::Esm) {
+        entry_module.star_export_module_ids().filter_map(|importee| {
+          let importee = &ctx.link_output.module_table.modules[importee];
+          match importee {
+            Module::External(ext) => Some(&ext.name),
+            Module::Ecma(_) => {None}
+          }
+        }).dedup().for_each(|ext_name| {
+              let import_stmt =
+"Object.keys($NAME).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return $NAME[k]; }
+	});
+});
+".replace("$NAME", &format!("require(\"{}\")", &ext_name));
+              concat_source.add_source(Box::new(RawSource::new(import_stmt)));
+          });
+      }
+    }
   }
 
   // Runtime module should be placed before the generated `requires` in CJS format.
@@ -67,8 +88,34 @@ pub fn render_cjs(
     }
   });
 
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+    let entry_meta = &ctx.link_output.metas[entry_id];
+    match entry_meta.wrap_kind {
+      WrapKind::Esm => {
+        // init_xxx()
+        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+        let wrapper_ref_name =
+          ctx.link_output.symbols.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
+        concat_source.add_source(Box::new(RawSource::new(format!("{wrapper_ref_name}();",))));
+      }
+      WrapKind::Cjs => {
+        // "export default require_xxx();"
+        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+        let wrapper_ref_name =
+          ctx.link_output.symbols.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
+        concat_source
+          .add_source(Box::new(RawSource::new(format!("export default {wrapper_ref_name}();\n"))));
+      }
+      WrapKind::None => {}
+    }
+  }
+
   if let Some(exports) = render_chunk_exports(ctx)? {
     concat_source.add_source(Box::new(RawSource::new(exports)));
+  }
+
+  if let Some(outro) = outro {
+    concat_source.add_source(Box::new(RawSource::new(outro)));
   }
 
   if let Some(footer) = footer {

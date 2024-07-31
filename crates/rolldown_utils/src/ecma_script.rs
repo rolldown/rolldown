@@ -1,8 +1,16 @@
-use oxc::syntax::identifier;
+use oxc::syntax::{identifier, keyword};
 use std::borrow::Cow;
 
 pub fn is_validate_identifier_name(name: &str) -> bool {
-  oxc::syntax::identifier::is_identifier_name(name)
+  identifier::is_identifier_name(name)
+}
+
+pub fn is_validate_assignee_identifier_name(name: &str) -> bool {
+  // Because of the mistake in oxc (related: oxc-project/oxc#4484, we need to use separated functions in `keyword`.
+  // TODO use `is_reserved_keyword_or_global_object` after the fix
+  identifier::is_identifier_name(name)
+    && !keyword::is_reserved_keyword(name)
+    && !keyword::is_global_object(name)
 }
 
 pub fn legitimize_identifier_name(name: &str) -> Cow<str> {

@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/format/iife/external_modules
+---
+# Assets
+
+## main.mjs
+
+```js
+(function(node_path) {
+
+"use strict";
+const { default: nodePath } = node_path;
+
+//#region main.js
+console.log(nodePath);
+
+//#endregion
+})(node_path);
+```

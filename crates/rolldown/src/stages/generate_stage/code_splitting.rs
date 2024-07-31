@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use oxc::index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, ImportKind, Module, ModuleIdx, OutputFormat};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::FxHashMap;
 
@@ -22,26 +22,18 @@ impl<'a> GenerateStage<'a> {
     };
     let meta = &self.link_output.metas[module_id];
 
-    // Here if the module only has re-export statements, the `is_included` is false at `module_side_effects: false`.
-    // But we also need to determine it's dependencies.
-    if module.is_included {
-      if module_to_bits[module_id].has_bit(entry_index) {
-        return;
-      }
-      module_to_bits[module_id].set_bit(entry_index);
+    if !module.is_included {
+      return;
     }
 
-    module.import_records.iter().for_each(|rec| {
-      if let Module::Ecma(importee) = &self.link_output.module_table.modules[rec.resolved_module] {
-        // Module imported dynamically will be considered as an entry,
-        // so we don't need to include it in this chunk
-        if !matches!(rec.kind, ImportKind::DynamicImport)
-      // IIFE format should inline dynamic imports
-          || matches!(self.options.format, OutputFormat::Iife)
-        {
-          self.determine_reachable_modules_for_entry(importee.idx, entry_index, module_to_bits);
-        }
-      }
+    if module_to_bits[module_id].has_bit(entry_index) {
+      return;
+    }
+
+    module_to_bits[module_id].set_bit(entry_index);
+
+    meta.dependencies.iter().copied().for_each(|dep_idx| {
+      self.determine_reachable_modules_for_entry(dep_idx, entry_index, module_to_bits);
     });
 
     // Symbols from runtime are referenced by bundler not import statements.
@@ -54,9 +46,26 @@ impl<'a> GenerateStage<'a> {
       if !stmt_info.is_included {
         return;
       }
+
+      // We need this step to include the runtime module, if there are symbols of it.
+      // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.
       stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-        let canonical_ref =
-          self.link_output.symbols.par_canonical_ref_for(*reference_ref.symbol_ref());
+        let canonical_ref = match reference_ref {
+          rolldown_common::SymbolOrMemberExprRef::Symbol(s) => {
+            self.link_output.symbols.par_canonical_ref_for(*s)
+          }
+          // try to resolve member expression to the pointed symbol
+          // fallback to namespace_ref if not found
+          rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => self
+            .link_output
+            .top_level_member_expr_resolved_cache
+            .get(&member_expr.object_ref)
+            .and_then(|map| map.get(&member_expr.props.clone().into_boxed_slice()))
+            .map_or_else(
+              || self.link_output.symbols.par_canonical_ref_for(member_expr.object_ref),
+              |(finalized_symbol_ref, _, _)| *finalized_symbol_ref,
+            ),
+        };
 
         self.determine_reachable_modules_for_entry(
           canonical_ref.owner,

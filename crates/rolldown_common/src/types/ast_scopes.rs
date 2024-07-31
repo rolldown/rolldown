@@ -4,7 +4,7 @@ use oxc::semantic::{Reference, ReferenceId, ScopeTree, SymbolId};
 #[derive(Debug)]
 pub struct AstScopes {
   inner: ScopeTree,
-  references: IndexVec<ReferenceId, Reference>,
+  pub references: IndexVec<ReferenceId, Reference>,
   resolved_references: IndexVec<SymbolId, Vec<ReferenceId>>,
 }
 

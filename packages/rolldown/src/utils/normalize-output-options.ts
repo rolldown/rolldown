@@ -28,11 +28,13 @@ export function normalizeOutputOptions(
         ? sourcemapIgnoreList
         : sourcemapIgnoreList === false
           ? () => false
-          : (relativeSourcePath: string, sourcemapPath: string) =>
+          : (relativeSourcePath: string, _sourcemapPath: string) =>
               relativeSourcePath.includes('node_modules'),
     sourcemapPathTransform,
     banner: getAddon(opts, 'banner'),
     footer: getAddon(opts, 'footer'),
+    intro: getAddon(opts, 'intro'),
+    outro: getAddon(opts, 'outro'),
     // TODO support functions
     globals: globals ?? {},
     entryFileNames: entryFileNames ?? '[name].js',
@@ -69,7 +71,7 @@ function getFormat(
   }
 }
 
-const getAddon = <T extends 'banner' | 'footer'>(
+const getAddon = <T extends 'banner' | 'footer' | 'intro' | 'outro'>(
   config: OutputOptions,
   name: T,
 ): NormalizedOutputOptions[T] => {

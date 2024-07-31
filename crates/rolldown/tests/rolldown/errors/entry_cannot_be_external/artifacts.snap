@@ -1,0 +1,13 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/errors/entry_cannot_be_external
+---
+# Errors
+
+## UNRESOLVED_ENTRY
+
+```text
+[UNRESOLVED_ENTRY] Error: Entry module "ext" cannot be external.
+
+```

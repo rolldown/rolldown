@@ -57,20 +57,37 @@ pub struct LinkStage<'a> {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub ast_table: IndexEcmaAst,
-  pub input_options: &'a SharedOptions,
+  pub options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
 
 impl<'a> LinkStage<'a> {
-  pub fn new(scan_stage_output: ScanStageOutput, input_options: &'a SharedOptions) -> Self {
+  pub fn new(scan_stage_output: ScanStageOutput, options: &'a SharedOptions) -> Self {
     Self {
       sorted_modules: Vec::new(),
       metas: scan_stage_output
         .module_table
         .modules
         .iter()
-        .map(|_| LinkingMetadata::default())
+        .map(|module| LinkingMetadata {
+          dependencies: module
+            .import_records()
+            .iter()
+            .filter_map(|rec| match options.format {
+              OutputFormat::Cjs | OutputFormat::App | OutputFormat::Esm => {
+                if matches!(rec.kind, ImportKind::DynamicImport) {
+                  None
+                } else {
+                  Some(rec.resolved_module)
+                }
+              }
+              // IIFE format will inline dynamic imported modules
+              OutputFormat::Iife => Some(rec.resolved_module),
+            })
+            .collect(),
+          ..LinkingMetadata::default()
+        })
         .collect::<IndexVec<ModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,
       entries: scan_stage_output.entry_points,
@@ -79,7 +96,7 @@ impl<'a> LinkStage<'a> {
       warnings: scan_stage_output.warnings,
       errors: scan_stage_output.errors,
       ast_table: scan_stage_output.index_ecma_ast,
-      input_options,
+      options,
       used_symbol_refs: FxHashSet::default(),
       top_level_member_expr_resolved_cache: FxHashMap::default(),
     }
@@ -121,6 +138,8 @@ impl<'a> LinkStage<'a> {
         if !meta.is_canonical_exports_empty() {
           referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
         }
+        referenced_symbols
+          .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
         // Corresponding AST for this statement will be created by the finalizer.
         let namespace_stmt_info = StmtInfo {
@@ -224,7 +243,7 @@ impl<'a> LinkStage<'a> {
             }
           },
           ImportKind::DynamicImport => {
-            if matches!(self.input_options.format, OutputFormat::Iife) {
+            if matches!(self.options.format, OutputFormat::Iife) {
               // For iife, then import() is just a require() that
               // returns a promise, so the imported file must also be wrapped
               match importee.exports_kind {
@@ -259,7 +278,7 @@ impl<'a> LinkStage<'a> {
 
       let is_entry = entry_ids_set.contains(&importer.idx);
       if matches!(importer.exports_kind, ExportsKind::CommonJs)
-        && (!is_entry || matches!(self.input_options.format, OutputFormat::Esm))
+        && (!is_entry || matches!(self.options.format, OutputFormat::Esm))
       {
         self.metas[importer.idx].wrap_kind = WrapKind::Cjs;
       }
@@ -277,7 +296,9 @@ impl<'a> LinkStage<'a> {
         // - Mutating and parallel reading is in different memory locations
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
 
-        stmt_infos.iter_mut().for_each(|stmt_info| {
+        // store the symbol reference to the declared statement index
+        let mut declared_symbol_for_stmt_pairs = vec![];
+        stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_idx, stmt_info)| {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
             match &self.module_table.modules[rec.resolved_module] {
@@ -285,9 +306,7 @@ impl<'a> LinkStage<'a> {
                 // Make sure symbols from external modules are included and de_conflicted
                 let is_reexport_all = match rec.kind {
                   ImportKind::Import => {
-                    if matches!(self.input_options.format, OutputFormat::Cjs)
-                      && !rec.is_plain_import
-                    {
+                    if matches!(self.options.format, OutputFormat::Cjs) && !rec.is_plain_import {
                       stmt_info
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__toESM").into());
@@ -296,7 +315,7 @@ impl<'a> LinkStage<'a> {
                     if is_reexport_all {
                       symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                         format!("import_{}", legitimize_identifier_name(&importee.name)).into();
-                      stmt_info.declared_symbols.push(rec.namespace_ref);
+                      declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
                       stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                       stmt_info
                         .referenced_symbols
@@ -316,8 +335,8 @@ impl<'a> LinkStage<'a> {
                     match importee_linking_info.wrap_kind {
                       WrapKind::None => {}
                       WrapKind::Cjs => {
-                        stmt_info.side_effect = true;
                         if is_reexport_all {
+                          stmt_info.side_effect = true;
                           // Turn `export * from 'bar_cjs'` into `__reExport(foo_exports, __toESM(require_bar_cjs()))`
                           // Reference to `require_bar_cjs`
                           stmt_info
@@ -331,6 +350,7 @@ impl<'a> LinkStage<'a> {
                             .push(self.runtime.resolve_symbol("__reExport").into());
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                         } else {
+                          stmt_info.side_effect = importee.side_effects.has_side_effects();
                           // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
                           // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
                           // Reference to `require_bar_cjs`
@@ -341,7 +361,7 @@ impl<'a> LinkStage<'a> {
                           stmt_info
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__toESM").into());
-                          stmt_info.declared_symbols.push(rec.namespace_ref);
+                          declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
                           symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                             format!("import_{}", &importee.repr_name).into();
                         }
@@ -387,7 +407,7 @@ impl<'a> LinkStage<'a> {
                     }
                   },
                   ImportKind::DynamicImport => {
-                    if matches!(self.input_options.format, OutputFormat::Iife) {
+                    if matches!(self.options.format, OutputFormat::Iife) {
                       match importee_linking_info.wrap_kind {
                         WrapKind::None => {}
                         WrapKind::Cjs => {
@@ -414,6 +434,9 @@ impl<'a> LinkStage<'a> {
             }
           });
         });
+        for (stmt_idx, symbol_ref) in declared_symbol_for_stmt_pairs {
+          stmt_infos.declare_symbol_for_stmt(stmt_idx, symbol_ref);
+        }
       },
     );
   }

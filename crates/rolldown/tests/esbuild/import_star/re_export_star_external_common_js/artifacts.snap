@@ -1,6 +1,6 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
 input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_external_common_js
 ---
 # Assets
@@ -9,6 +9,12 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_external_co
 
 ```js
 "use strict";
+Object.keys(require("foo")).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return require("foo")[k]; }
+	});
+});
 
 
 require("foo");

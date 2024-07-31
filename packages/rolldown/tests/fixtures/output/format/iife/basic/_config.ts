@@ -13,8 +13,7 @@ export default defineTest({
       "var myModule = (function() {
 
 
-      })();
-      "
+      })();"
     `)
   },
 })

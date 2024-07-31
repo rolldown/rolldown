@@ -37,7 +37,6 @@ export const pluginAsync = () => {
     name: '@rolldown/plugin-esbuild',
     async transform(code, id) {
       const ext = nodePath.extname(id)
-      const now = performance.now()
       if (ext === '.ts' || ext === '.tsx') {
         const ret = await esbuild.transform(code, {
           platform: 'node',

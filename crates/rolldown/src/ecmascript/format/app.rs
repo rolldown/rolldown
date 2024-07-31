@@ -7,11 +7,17 @@ pub fn render_app(
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
+  intro: Option<String>,
+  outro: Option<String>,
 ) -> ConcatSource {
   let mut concat_source = ConcatSource::default();
 
   if let Some(banner) = banner {
     concat_source.add_source(Box::new(RawSource::new(banner)));
+  }
+
+  if let Some(intro) = intro {
+    concat_source.add_source(Box::new(RawSource::new(intro)));
   }
 
   // chunk content
@@ -22,6 +28,10 @@ pub fn render_app(
       }
     }
   });
+
+  if let Some(outro) = outro {
+    concat_source.add_source(Box::new(RawSource::new(outro)));
+  }
 
   if let Some(footer) = footer {
     concat_source.add_source(Box::new(RawSource::new(footer)));

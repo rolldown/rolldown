@@ -1,0 +1,16 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./main.js"
+      },
+      {
+        "name": "entry2",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["node:fs"],
+    "format": "cjs"
+  }
+}

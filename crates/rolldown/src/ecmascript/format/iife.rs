@@ -1,6 +1,7 @@
 use crate::utils::chunk::collect_render_chunk_imports::{
   collect_render_chunk_imports, RenderImportDeclarationSpecifier,
 };
+use crate::utils::chunk::determine_use_strict::determine_use_strict;
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
@@ -20,6 +21,8 @@ pub fn render_iife(
   module_sources: RenderedModuleSources,
   banner: Option<String>,
   footer: Option<String>,
+  intro: Option<String>,
+  outro: Option<String>,
   invoke: bool,
 ) -> DiagnosableResult<ConcatSource> {
   let mut concat_source = ConcatSource::default();
@@ -27,6 +30,7 @@ pub fn render_iife(
   if let Some(banner) = banner {
     concat_source.add_source(Box::new(RawSource::new(banner)));
   }
+
   // iife wrapper start
   let export_items = get_export_items(ctx.chunk, ctx.link_output);
   let has_exports = !export_items.is_empty();
@@ -55,9 +59,15 @@ pub fn render_iife(
     input_args
   ))));
 
-  concat_source.add_source(Box::new(RawSource::new(import_code)));
+  if determine_use_strict(ctx) {
+    concat_source.add_source(Box::new(RawSource::new("\"use strict\";".to_string())));
+  }
 
-  // TODO iife imports
+  if let Some(intro) = intro {
+    concat_source.add_source(Box::new(RawSource::new(intro)));
+  }
+
+  concat_source.add_source(Box::new(RawSource::new(import_code)));
 
   // chunk content
   // TODO indent chunk content for iife format
@@ -72,10 +82,15 @@ pub fn render_iife(
   // iife exports
   if let Some(exports) = render_chunk_exports(ctx)? {
     concat_source.add_source(Box::new(RawSource::new(exports)));
-    if named_exports {
-      // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
-      concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
-    }
+  }
+
+  if let Some(outro) = outro {
+    concat_source.add_source(Box::new(RawSource::new(outro)));
+  }
+
+  if named_exports && has_exports {
+    // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
+    concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
   }
 
   // iife wrapper end

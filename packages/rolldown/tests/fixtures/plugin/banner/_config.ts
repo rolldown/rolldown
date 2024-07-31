@@ -16,6 +16,5 @@ export default defineTest({
   },
   afterTest: (output) => {
     expect(output.output[0].code).toContain('/* Lorem ipsum */')
-    // expect(true).toBe(true)
   },
 })

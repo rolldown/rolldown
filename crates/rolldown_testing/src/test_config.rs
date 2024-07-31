@@ -1,12 +1,13 @@
 use std::fs;
 
 use jsonschema::{Draft, JSONSchema};
-use once_cell::sync::Lazy;
-pub use rolldown_testing_config::TestConfig;
+use std::sync::LazyLock;
+
+pub use rolldown_testing_config::{TestConfig, TestMeta};
 
 use crate::workspace;
 
-static COMPILED_SCHEMA: Lazy<JSONSchema> = Lazy::new(|| {
+static COMPILED_SCHEMA: LazyLock<JSONSchema> = LazyLock::new(|| {
   let schema_path = workspace::crate_dir("rolldown_testing").join("_config.schema.json");
 
   let schema_str = fs::read_to_string(&schema_path)

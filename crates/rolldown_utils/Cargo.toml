@@ -1,6 +1,6 @@
 [package]
 name    = "rolldown_utils"
-version = "0.0.1"
+version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -14,14 +14,13 @@ workspace = true
 
 [dependencies]
 anyhow      = { workspace = true }
-base64      = { workspace = true }
+base64-simd = { workspace = true }
 futures     = { workspace = true }
 indexmap    = { workspace = true }
 infer       = { workspace = true }
 mime        = { workspace = true }
-mime_guess  = { workspace = true }
-once_cell   = { workspace = true }
 oxc         = { workspace = true }
+phf         = { workspace = true }
 regex       = { workspace = true }
 rustc-hash  = { workspace = true }
 sugar_path  = { workspace = true }

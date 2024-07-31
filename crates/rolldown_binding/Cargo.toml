@@ -1,6 +1,6 @@
 [package]
 name    = "rolldown_binding"
-version = "0.0.1"
+version = "0.1.0"
 
 edition.workspace    = true
 homepage.workspace   = true
@@ -16,13 +16,11 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow                      = { workspace = true }
 async-channel               = { workspace = true }
-async-trait                 = { workspace = true }
 dashmap                     = { workspace = true }
 derivative                  = { workspace = true }
 futures                     = { workspace = true }
 napi                        = { workspace = true }
 napi-derive                 = { workspace = true }
-once_cell                   = { workspace = true }
 oxc_transform_napi          = { workspace = true }
 rolldown                    = { workspace = true }
 rolldown_common             = { workspace = true }

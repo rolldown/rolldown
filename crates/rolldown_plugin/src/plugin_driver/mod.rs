@@ -3,7 +3,7 @@ use std::sync::{Arc, Weak};
 use rolldown_common::{ModuleTable, SharedFileEmitter};
 use rolldown_resolver::Resolver;
 
-use crate::{plugin_context::SharedPluginContext, PluginContext, SharedPlugin};
+use crate::{__inner::SharedPluginable, plugin_context::SharedPluginContext, PluginContext};
 
 mod build_hooks;
 mod output_hooks;
@@ -11,12 +11,12 @@ mod output_hooks;
 pub type SharedPluginDriver = Arc<PluginDriver>;
 
 pub struct PluginDriver {
-  plugins: Vec<(SharedPlugin, SharedPluginContext)>,
+  plugins: Vec<(SharedPluginable, SharedPluginContext)>,
 }
 
 impl PluginDriver {
   pub fn new_shared(
-    plugins: Vec<SharedPlugin>,
+    plugins: Vec<SharedPluginable>,
     resolver: &Arc<Resolver>,
     file_emitter: &SharedFileEmitter,
   ) -> SharedPluginDriver {

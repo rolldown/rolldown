@@ -1,25 +1,29 @@
 mod plugin;
 mod plugin_context;
 mod plugin_driver;
+mod pluginable;
 mod transform_plugin_context;
 mod types;
 mod utils;
-/// For internal usage only
-pub mod inner {
+
+/// Only for usage by the rolldown's crate. Do not use this directly.
+#[cfg(feature = "inner")]
+pub mod __inner {
   pub use super::utils::resolve_id_with_plugins::resolve_id_with_plugins;
+  pub use crate::pluginable::{BoxPluginable, Pluginable, SharedPluginable};
 }
 
 pub use crate::{
   plugin::{
-    BoxPlugin, HookAugmentChunkHashReturn, HookBannerOutputReturn, HookLoadReturn, HookNoopReturn,
+    HookAugmentChunkHashReturn, HookInjectionOutputReturn, HookLoadReturn, HookNoopReturn,
     HookRenderChunkReturn, HookResolveIdReturn, HookTransformAstReturn, HookTransformReturn,
-    Plugin, SharedPlugin,
+    Plugin,
   },
   plugin_context::{PluginContext, SharedPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},
   transform_plugin_context::TransformPluginContext,
-  types::hook_banner_args::HookBannerArgs,
   types::hook_build_end_args::HookBuildEndArgs,
+  types::hook_injection_args::HookInjectionArgs,
   types::hook_load_args::HookLoadArgs,
   types::hook_load_output::HookLoadOutput,
   types::hook_render_chunk_args::HookRenderChunkArgs,

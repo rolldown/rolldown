@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
-use rolldown_testing::case::Case;
-use rolldown_testing::workspace;
+use rolldown_testing::{fixture::Fixture, workspace};
 
 fn main() {
   let args = std::env::args().skip(1).collect::<Vec<_>>();
@@ -15,5 +14,5 @@ fn main() {
     let workspace_dir = workspace::root_dir();
     path = workspace_dir.join(path);
   }
-  Case::new(path.parent().unwrap()).run();
+  Fixture::new(path.parent().unwrap()).run_integration_test();
 }

@@ -1,0 +1,12 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/tree_shaking/unused_import_cjs
+---
+# Assets
+
+## main.mjs
+
+```js
+
+```

@@ -9,7 +9,7 @@ async function buildWithPlugin(plugin: Plugin) {
       plugins: [plugin],
     })
     await build.write({})
-  } catch (error) {
+  } catch {
     // Here `renderError` test will crash it, here avoid bubble it.
     // console.log(error)
   }

@@ -26,3 +26,5 @@ pub use crate::{
 pub use rolldown_common::bundler_options::*;
 
 pub use rolldown_resolver::ResolveOptions;
+
+pub use rolldown_plugin as plugin;

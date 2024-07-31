@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/function/format/cjs/plain_import_should_not_introduce_to_esm
+---
+# Assets
+
+## main.cjs
+
+```js
+"use strict";
+require("foo");
+require("bar");
+require("baz");
+
+```

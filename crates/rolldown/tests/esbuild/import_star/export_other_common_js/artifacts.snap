@@ -1,6 +1,6 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
 input_file: crates/rolldown/tests/esbuild/import_star/export_other_common_js
 ---
 # Assets
@@ -22,5 +22,10 @@ var import_foo = __toESM(require_foo());
 //#endregion
 Object.defineProperty(exports, '__esModule', { value: true });
 var bar = import_foo.bar;
-exports.bar = bar;
+Object.defineProperty(exports, 'bar', {
+  enumerable: true,
+  get: function () {
+    return bar;
+  }
+});
 ```

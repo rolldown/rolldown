@@ -9,7 +9,6 @@ input_file: crates/rolldown/tests/esbuild/default/import_fs_node_common_js
 
 ```js
 "use strict";
-
 //#region rolldown:runtime
 var __create = Object.create;
 var __defProp = Object.defineProperty;

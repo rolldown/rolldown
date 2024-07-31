@@ -474,7 +474,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/default/re_export_default_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-zbszWBpu.cjs
+- entry_js-!~{000}~.cjs => entry_js-5RdSZ2gb.cjs
 
 # tests/esbuild/default/re_export_default_external_es6
 
@@ -566,19 +566,19 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_other_as_namespace_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-T4ELM-Gr.cjs
+- entry_js-!~{000}~.cjs => entry_js-s9l9sW9e.cjs
 
 # tests/esbuild/import_star/export_other_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-pRYKj07v.cjs
+- entry_js-!~{000}~.cjs => entry_js-ec0KFVOA.cjs
 
 # tests/esbuild/import_star/export_other_nested_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-CDd861z4.cjs
+- entry_js-!~{000}~.cjs => entry_js-dFhlQElo.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-bVZnyXqF.cjs
+- entry_js-!~{000}~.cjs => entry_js-krfd71h4.cjs
 
 # tests/esbuild/import_star/export_self_as_namespace_es6
 
@@ -586,7 +586,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/export_self_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-vEw3YIhe.cjs
+- entry_js-!~{000}~.cjs => entry_js-mKIoiJrd.cjs
 
 # tests/esbuild/import_star/export_self_es6
 
@@ -742,7 +742,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_as_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-7CeHkGln.cjs
+- entry_js-!~{000}~.cjs => entry_js-k_XF-EgE.cjs
 
 # tests/esbuild/import_star/re_export_star_as_external_es6
 
@@ -1465,7 +1465,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/export_mode/cjs/auto/named
 
-- main-!~{000}~.cjs => main-B4wi3FO3.cjs
+- main-!~{000}~.cjs => main-5VkOU269.cjs
 
 # tests/rolldown/function/export_mode/cjs/auto/none
 
@@ -1477,7 +1477,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/export_mode/cjs/named
 
-- main-!~{000}~.cjs => main-Wgg1aBuS.cjs
+- main-!~{000}~.cjs => main-eguyxmgt.cjs
 
 # tests/rolldown/function/export_mode/iife/auto/none
 
@@ -1489,7 +1489,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/export_mode/iife/named
 
-- main-!~{000}~.mjs => main-4Eu_qm7c.mjs
+- main-!~{000}~.mjs => main-OX7jHdKZ.mjs
 
 # tests/rolldown/function/external/commonjs_reexport_external
 
@@ -1525,7 +1525,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/cjs/import_export_unicode
 
-- main-!~{000}~.cjs => main-E0ujG9CO.cjs
+- main-!~{000}~.cjs => main-7KKR3ylp.cjs
 
 # tests/rolldown/function/format/cjs/plain_import_should_not_introduce_to_esm
 
@@ -1533,9 +1533,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/cjs/shared_entry_modules
 
-- entry1-!~{000}~.cjs => entry1-sMfKx0sx.cjs
-- entry2-!~{001}~.cjs => entry2-jtZCAB5B.cjs
-- main-!~{002}~.cjs => main-oEEH6Bm-.cjs
+- entry1-!~{000}~.cjs => entry1-qPud48K7.cjs
+- entry2-!~{001}~.cjs => entry2-vh5DucvK.cjs
+- main-!~{002}~.cjs => main-EGDB-igr.cjs
 
 # tests/rolldown/function/format/esm/import_export_unicode
 
@@ -1555,7 +1555,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/iife/iife-with-name
 
-- main-!~{000}~.mjs => main-2WhEoear.mjs
+- main-!~{000}~.mjs => main-I-ndoLMs.mjs
 
 # tests/rolldown/function/intro/cjs
 
@@ -1819,9 +1819,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-xjEWKRNK.cjs
-- entry2-!~{001}~.cjs => entry2-f2OiS1uL.cjs
-- main-!~{002}~.cjs => main-j1Gp3SFm.cjs
+- entry-!~{000}~.cjs => entry--sz1Shj-.cjs
+- entry2-!~{001}~.cjs => entry2-loJob6Kz.cjs
+- main-!~{002}~.cjs => main-6tXzTDGY.cjs
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry
 
@@ -1829,11 +1829,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry_cjs
 
-- entry-!~{000}~.cjs => entry-Iurj-Vig.cjs
+- entry-!~{000}~.cjs => entry-G1oat3bi.cjs
 
 # tests/rolldown/topics/cjs_module_lexer_compat/exports
 
-- main-!~{000}~.cjs => main-Xz-0tgMZ.cjs
+- main-!~{000}~.cjs => main-CjkCIgko.cjs
 
 # tests/rolldown/topics/deconflict/basic
 
@@ -1893,7 +1893,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/live_bindings/default_export_binding_cjs
 
-- main-!~{000}~.cjs => main-Ke36bV_e.cjs
+- main-!~{000}~.cjs => main-emy8pCCN.cjs
 
 # tests/rolldown/topics/live_bindings/default_export_binding_in_common_chunks
 
@@ -1911,7 +1911,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/live_bindings/default_export_expr_cjs
 
-- main-!~{000}~.cjs => main-RWC0LZkv.cjs
+- main-!~{000}~.cjs => main-YfLDxCON.cjs
 
 # tests/rolldown/topics/live_bindings/default_export_expr_in_common_chunks
 
@@ -1929,7 +1929,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/live_bindings/named_exports_cjs
 
-- main-!~{000}~.cjs => main-KBkaigN_.cjs
+- main-!~{000}~.cjs => main-QjzSNBfw.cjs
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks
 
@@ -1943,7 +1943,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_cjs
 
-- main-!~{000}~.cjs => main-LlG01ZB2.cjs
+- main-!~{000}~.cjs => main-45MYNaeX.cjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries
 
@@ -1953,9 +1953,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-Mksr4MM4.cjs
-- entry2-!~{001}~.cjs => entry2-dZLcQCHG.cjs
-- main-!~{002}~.cjs => main-wLzsKKmx.cjs
+- entry-!~{000}~.cjs => entry-JEJmJaLi.cjs
+- entry2-!~{001}~.cjs => entry2-tfYsFACe.cjs
+- main-!~{002}~.cjs => main-jBAa08os.cjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped
 
@@ -1969,7 +1969,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped_cjs
 
-- main-!~{000}~.cjs => main-BDJt0xwN.cjs
+- main-!~{000}~.cjs => main-pEauW4ui.cjs
 
 # tests/rolldown/tree_shaking/advanced_barrel_exports
 

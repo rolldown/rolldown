@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 expression: snapshot
-input_file: crates/rolldown/tests/fixtures/function/export_mode/cjs/auto/named
+input_file: crates/rolldown/tests/rolldown/function/export_mode/cjs/auto/named
 ---
 # Assets
 
@@ -16,7 +16,6 @@ function a() {
 }
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'a', {
   enumerable: true,
   get: function () {

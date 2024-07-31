@@ -5,6 +5,7 @@ use rolldown_common::{
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecma_script::is_validate_identifier_name;
+use crate::utils::chunk::determine_export_mode::determine_export_mode;
 
 #[allow(clippy::too_many_lines)]
 pub fn render_chunk_exports(

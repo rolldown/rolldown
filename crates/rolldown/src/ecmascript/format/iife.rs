@@ -68,9 +68,13 @@ pub fn render_iife(
     concat_source.add_source(Box::new(RawSource::new(intro)));
   }
 
-  let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
+  if named_exports {
+    let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
 
-  concat_source.add_source(Box::new(RawSource::new(marker)));
+    if !marker.is_empty() {
+      concat_source.add_source(Box::new(RawSource::new(marker)));
+    }
+  }
 
   concat_source.add_source(Box::new(RawSource::new(import_code)));
 

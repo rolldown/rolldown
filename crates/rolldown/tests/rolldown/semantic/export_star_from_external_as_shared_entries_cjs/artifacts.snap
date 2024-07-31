@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 expression: snapshot
-input_file: crates/rolldown/tests/fixtures/semantic/export_star_from_external_as_shared_entries_cjs
+input_file: crates/rolldown/tests/rolldown/semantic/export_star_from_external_as_shared_entries_cjs
 ---
 # Assets
 
@@ -46,10 +46,4 @@ __reExport(main_ns, require("node:fs"));
 __reExport(main_ns, require("node:fs"));
 
 //#endregion
-Object.defineProperty(exports, 'main_ns', {
-  enumerable: true,
-  get: function () {
-    return main_ns;
-  }
-  });
 ```

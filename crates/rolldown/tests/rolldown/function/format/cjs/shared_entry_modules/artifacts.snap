@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 expression: snapshot
-input_file: crates/rolldown/tests/fixtures/function/format/cjs/shared_entry_modules
+input_file: crates/rolldown/tests/rolldown/function/format/cjs/shared_entry_modules
 ---
 # Assets
 
@@ -11,7 +11,6 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/shared_entry_modu
 "use strict";
 const { value } = require("./main.cjs");
 
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'value', {
   enumerable: true,
   get: function () {
@@ -25,7 +24,6 @@ Object.defineProperty(exports, 'value', {
 "use strict";
 const { value } = require("./main.cjs");
 
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'value', {
   enumerable: true,
   get: function () {
@@ -42,10 +40,4 @@ Object.defineProperty(exports, 'value', {
 const value = "main";
 
 //#endregion
-Object.defineProperty(exports, 'value', {
-  enumerable: true,
-  get: function () {
-    return value;
-  }
-  });
 ```

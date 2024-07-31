@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 expression: snapshot
-input_file: crates/rolldown/tests/fixtures/function/format/iife/iife-with-name
+input_file: crates/rolldown/tests/rolldown/function/format/iife/iife-with-name
 ---
 # Assets
 
@@ -16,7 +16,6 @@ var myModule = (function(exports) {
 const value = 1;
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'value', {
   enumerable: true,
   get: function () {

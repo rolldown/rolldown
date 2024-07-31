@@ -9,14 +9,13 @@ pub fn determine_es_module(es_module_type: &EsModuleType, has_default_export: bo
 }
 
 fn render_marker(es_module: bool, to_string_tag: bool) -> String {
-  if es_module {
-    format!(
-      "{{ '__esModule': {{ value: true }}{} }}",
-      if to_string_tag { ", [Symbol.toStringTag]: { value: 'Module' }" } else { "" }
-    )
-  } else {
-    if to_string_tag { "({ [Symbol.toStringTag]: 'Module' })" } else { "({})" }.to_string()
-  }
+  if es_module && to_string_tag {
+    format!("Object.defineProperties(exports, {{ __esModule: {{ value: true }}, [Symbol.toStringTag]: {{ value: 'Module' }} }})")
+  } else if es_module {
+    format!("Object.defineProperty(exports, '__esModule', {{ value: true }})")
+  } else if to_string_tag {
+    format!("Object.defineProperty(exports, Symbol.toStringTag, {{ value: 'Module' }})")
+  } else { String::new() }
 }
 
 pub fn render_namespace_markers(
@@ -29,6 +28,6 @@ pub fn render_namespace_markers(
   if result.is_empty() {
     String::new()
   } else {
-    format!("\n\nObject..defineProperty(exports, {result})\n\n")
+    format!("\n{result}")
   }
 }

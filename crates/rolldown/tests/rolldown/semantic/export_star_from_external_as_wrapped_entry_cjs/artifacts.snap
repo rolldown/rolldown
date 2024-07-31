@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 expression: snapshot
-input_file: crates/rolldown/tests/fixtures/semantic/export_star_from_external_as_wrapped_entry_cjs
+input_file: crates/rolldown/tests/rolldown/semantic/export_star_from_external_as_wrapped_entry_cjs
 ---
 # warnings
 
@@ -39,7 +39,6 @@ var init_main = __esmMin(() => {
 
 //#endregion
 init_main();
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'main', {
   enumerable: true,
   get: function () {

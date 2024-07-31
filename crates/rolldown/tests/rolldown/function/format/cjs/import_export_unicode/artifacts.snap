@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 expression: snapshot
-input_file: crates/rolldown/tests/fixtures/function/format/cjs/import_export_unicode
+input_file: crates/rolldown/tests/rolldown/function/format/cjs/import_export_unicode
 ---
 # Assets
 
@@ -14,7 +14,6 @@ input_file: crates/rolldown/tests/fixtures/function/format/cjs/import_export_uni
 const devil = "devil";
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, '😈', {
   enumerable: true,
   get: function () {

@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 expression: snapshot
-input_file: crates/rolldown/tests/fixtures/topics/live_bindings/default_export_expr_cjs
+input_file: crates/rolldown/tests/rolldown/topics/live_bindings/default_export_expr_cjs
 ---
 # Assets
 
@@ -9,6 +9,8 @@ input_file: crates/rolldown/tests/fixtures/topics/live_bindings/default_export_e
 
 ```js
 "use strict";
+
+Object.defineProperty(exports, '__esModule', { value: true })
 
 //#region main.js
 let count = 0;
@@ -21,7 +23,6 @@ function inc() {
 var main_default = count;
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'default', {
   enumerable: true,
   get: function () {

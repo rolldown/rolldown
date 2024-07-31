@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 expression: snapshot
-input_file: crates/rolldown/tests/fixtures/function/export_mode/iife/named
+input_file: crates/rolldown/tests/rolldown/function/export_mode/iife/named
 ---
 # Assets
 
@@ -11,6 +11,8 @@ input_file: crates/rolldown/tests/fixtures/function/export_mode/iife/named
 var module = (function(exports) {
 
 "use strict";
+
+Object.defineProperty(exports, '__esModule', { value: true })
 
 
 //#region mod.js
@@ -33,7 +35,6 @@ function aaa() {
 }
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'aaa', {
   enumerable: true,
   get: function () {

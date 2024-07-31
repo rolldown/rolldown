@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 expression: snapshot
-input_file: crates/rolldown/tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_cjs
+input_file: crates/rolldown/tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_cjs
 ---
 # Assets
 
@@ -10,12 +10,13 @@ input_file: crates/rolldown/tests/fixtures/topics/preserve_semantic_of_entries_e
 ```js
 "use strict";
 
+Object.defineProperty(exports, '__esModule', { value: true })
+
 //#region main.js
 const foo = "foo";
 var main_default = "main";
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'default', {
   enumerable: true,
   get: function () {

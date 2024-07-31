@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rolldown_common::{ChunkKind, ExportsKind, Module, WrapKind};
+use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
@@ -46,8 +46,12 @@ pub fn render_cjs(
         let export_items = get_export_items(ctx.chunk, ctx.link_output);
         let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
         let export_mode = determine_export_mode(&ctx.options.exports, entry_module, &export_items)?;
-        let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
-        concat_source.add_source(Box::new(RawSource::new(marker)));
+        if matches!(&export_mode, OutputExports::Named) {
+          let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
+          if !marker.is_empty() {
+            concat_source.add_source(Box::new(RawSource::new(marker)));
+          }
+        }
         entry_module.star_export_module_ids().filter_map(|importee| {
           let importee = &ctx.link_output.module_table.modules[importee];
           match importee {

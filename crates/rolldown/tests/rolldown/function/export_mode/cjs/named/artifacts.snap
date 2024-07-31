@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 expression: snapshot
-input_file: crates/rolldown/tests/fixtures/function/export_mode/cjs/named
+input_file: crates/rolldown/tests/rolldown/function/export_mode/cjs/named
 ---
 # Assets
 
@@ -9,6 +9,8 @@ input_file: crates/rolldown/tests/fixtures/function/export_mode/cjs/named
 
 ```js
 "use strict";
+
+Object.defineProperty(exports, '__esModule', { value: true })
 
 //#region mod.js
 function example() {
@@ -23,7 +25,6 @@ function a() {
 var main_default = example();
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'a', {
   enumerable: true,
   get: function () {

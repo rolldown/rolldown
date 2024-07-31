@@ -12,7 +12,6 @@ input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_as_external
 
 const out = __toESM(require("foo"));
 
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'out', {
   enumerable: true,
   get: function () {

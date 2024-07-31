@@ -1435,6 +1435,30 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - ./entries/a.mjs => ./entries/a.mjs
 - ./entries/b.mjs => ./entries/b.mjs
 
+# tests/rolldown/function/es_module/false
+
+- main-!~{000}~.mjs => main--AmBLPNH.mjs
+
+# tests/rolldown/function/es_module/if_default_prop_cjs_false
+
+- main-!~{000}~.cjs => main-T0mAU_XW.cjs
+
+# tests/rolldown/function/es_module/if_default_prop_cjs_true
+
+- main-!~{000}~.cjs => main-zjD7s5ha.cjs
+
+# tests/rolldown/function/es_module/if_default_prop_iife_false
+
+- main-!~{000}~.mjs => main--AmBLPNH.mjs
+
+# tests/rolldown/function/es_module/if_default_prop_iife_true
+
+- main-!~{000}~.mjs => main-7WaCWgTB.mjs
+
+# tests/rolldown/function/es_module/true
+
+- main-!~{000}~.mjs => main-xQAX6gLW.mjs
+
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
 - lazy-chunk-!~{001}~.mjs => lazy-chunk-J-MH5Fxj.mjs

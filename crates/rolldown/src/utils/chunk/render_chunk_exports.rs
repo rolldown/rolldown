@@ -47,7 +47,6 @@ pub fn render_chunk_exports(
     }
     OutputFormat::Cjs | OutputFormat::Iife => {
       let mut s = String::new();
-      println!("{:?}", chunk.kind);
       match chunk.kind {
         ChunkKind::EntryPoint { module, .. } => {
           let module =

@@ -1,0 +1,7 @@
+{
+  "config": {
+    "exports": "named",
+    "esModule": "IfDefaultProp",
+    "format": "iife"
+  }
+}

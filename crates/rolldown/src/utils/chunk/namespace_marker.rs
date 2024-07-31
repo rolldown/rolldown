@@ -2,7 +2,7 @@ use rolldown_common::EsModuleType;
 
 pub fn determine_es_module(es_module_type: &EsModuleType, has_default_export: bool) -> bool {
   match es_module_type {
-    EsModuleType::True => true,
+    EsModuleType::Always => true,
     EsModuleType::IfDefaultProp if has_default_export => true,
     _ => false,
   }
@@ -10,14 +10,14 @@ pub fn determine_es_module(es_module_type: &EsModuleType, has_default_export: bo
 
 fn render_marker(es_module: bool, to_string_tag: bool) -> String {
   if es_module && to_string_tag {
-    format!("Object.defineProperties(exports, {{ __esModule: {{ value: true }}, [Symbol.toStringTag]: {{ value: 'Module' }} }});")
+    "Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });"
   } else if es_module {
-    format!("Object.defineProperty(exports, '__esModule', {{ value: true }});")
+    "Object.defineProperty(exports, '__esModule', { value: true });"
   } else if to_string_tag {
-    format!("Object.defineProperty(exports, Symbol.toStringTag, {{ value: 'Module' }});")
+    "Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });"
   } else {
-    String::new()
-  }
+    ""
+  }.to_string()
 }
 
 pub fn render_namespace_markers(

@@ -22,7 +22,7 @@ export interface NormalizedOutputOptions extends OutputOptions {
   footer: AddonFunction
   intro: AddonFunction
   outro: AddonFunction
-  esModule: 'if-default-prop' | boolean
+  esModule: 'always' | 'never' | 'if-default-prop' | boolean
   entryFileNames: string
   chunkFileNames: string
   assetFileNames: string

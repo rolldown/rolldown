@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/rolldown/function/es_module/false
+---
+# Assets
+
+## main.mjs
+
+```js
+(function(exports) {
+
+"use strict";
+
+//#region main.js
+const validator = "if_default_prop_false";
+const value = true;
+
+//#endregion
+Object.defineProperty(exports, 'validator', {
+  enumerable: true,
+  get: function () {
+    return validator;
+  }
+});
+Object.defineProperty(exports, 'value', {
+  enumerable: true,
+  get: function () {
+    return value;
+  }
+});
+return exports;
+})({});
+```

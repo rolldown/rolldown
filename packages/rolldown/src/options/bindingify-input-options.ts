@@ -26,9 +26,8 @@ export function bindingifyInputOptions(
       }
       if (plugin instanceof BuiltinPlugin) {
         return bindingifyBuiltInPlugin(plugin)
-      } else {
-        return bindingifyPlugin(plugin, options, outputOptions)
       }
+      return bindingifyPlugin(plugin, options, outputOptions)
     }),
     cwd: options.cwd ?? process.cwd(),
     external: options.external

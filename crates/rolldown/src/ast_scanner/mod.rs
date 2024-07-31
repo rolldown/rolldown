@@ -486,8 +486,8 @@ impl<'me> AstScanner<'me> {
     self.current_stmt_info.referenced_symbols.push((self.idx, id).into());
   }
 
-  pub fn add_member_expr_reference(&mut self, id: SymbolId, chains: Vec<CompactStr>) {
-    self.current_stmt_info.referenced_symbols.push((self.idx, id, chains).into());
+  pub fn add_member_expr_reference(&mut self, id: SymbolId, props: Vec<CompactStr>) {
+    self.current_stmt_info.referenced_symbols.push((self.idx, id, props).into());
   }
 
   fn is_top_level(&self, symbol_id: SymbolId) -> bool {
@@ -516,11 +516,11 @@ impl<'me> AstScanner<'me> {
   }
 
   /// resolve the symbol from the identifier reference, and return if it is a top level symbol
-  fn resolve_identifier_reference(
+  fn resolve_identifier_to_top_level_symbol(
     &mut self,
-    symbol_id: Option<SymbolId>,
     ident: &IdentifierReference,
   ) -> Option<SymbolId> {
+    let symbol_id = self.resolve_symbol_from_reference(ident);
     match symbol_id {
       Some(symbol_id) if self.is_top_level(symbol_id) => Some(symbol_id),
       None => {

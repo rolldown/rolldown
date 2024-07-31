@@ -40,28 +40,33 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
 
   fn visit_member_expression(&mut self, expr: &MemberExpression<'ast>) {
     match expr {
-      MemberExpression::StaticMemberExpression(inner_expr) => {
-        let mut chain = vec![];
-        let mut cur = inner_expr;
-        let top_level_symbol = loop {
-          chain.push(cur.property.clone());
-          match &cur.object {
+      MemberExpression::StaticMemberExpression(member_expr) => {
+        // For member expression like `a.b.c.d`, we will first enter the (object: `a.b.c`, property: `d`) expression.
+        // So we add these properties with order `d`, `c`, `b`.
+        let mut props_in_reverse_order = vec![];
+        let mut cur_member_expr = member_expr;
+        let object_symbol_in_top_level = loop {
+          props_in_reverse_order.push(&cur_member_expr.property);
+          match &cur_member_expr.object {
             Expression::StaticMemberExpression(expr) => {
-              cur = expr;
+              cur_member_expr = expr;
             }
-            Expression::Identifier(ident) => {
-              let symbol_id = self.resolve_symbol_from_reference(ident);
-              let resolved_top_level = self.resolve_identifier_reference(symbol_id, ident);
-              break resolved_top_level;
+            Expression::Identifier(id) => {
+              // TODO: only imported symbols can possibly point to another module's top-level symbol
+              break self.resolve_identifier_to_top_level_symbol(id);
             }
             _ => break None,
           }
         };
-        chain.reverse();
-        let chain = chain.into_iter().map(|ident| ident.name.as_str().into()).collect::<Vec<_>>();
 
-        if let Some(symbol_id) = top_level_symbol {
-          self.add_member_expr_reference(symbol_id, chain);
+        if let Some(symbol_id) = object_symbol_in_top_level {
+          let props = props_in_reverse_order
+            .into_iter()
+            .rev()
+            .map(|ident| ident.name.as_str().into())
+            .collect::<Vec<_>>();
+          self.add_member_expr_reference(symbol_id, props);
+          // Don't walk again, otherwise we will add the `object_symbol_in_top_level` again in `visit_identifier_reference`
           return;
         }
       }
@@ -71,10 +76,9 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   }
 
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference) {
-    let symbol_id = self.resolve_symbol_from_reference(ident);
-    if let Some(resolved_symbol_id) = self.resolve_identifier_reference(symbol_id, ident) {
-      self.add_referenced_symbol(resolved_symbol_id);
-    };
+    if let Some(top_level_symbol_id) = self.resolve_identifier_to_top_level_symbol(ident) {
+      self.add_referenced_symbol(top_level_symbol_id);
+    }
   }
 
   fn visit_statement(&mut self, stmt: &oxc::ast::ast::Statement<'ast>) {

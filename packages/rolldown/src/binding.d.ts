@@ -232,8 +232,13 @@ export interface BindingPluginOptions {
   generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
   banner?: ((ctx: BindingPluginContext, chunk: RenderedChunk) => void) | string
+<<<<<<< HEAD
   footer?: ((ctx: BindingPluginContext, chunk: RenderedChunk) => void) | string
   intro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+=======
+  footer?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+  intro?: ((ctx: BindingPluginContext, chunk: RenderedChunk) => void) | string
+>>>>>>> a4749b09 (Add support for intro as str)
   outro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
 }
 

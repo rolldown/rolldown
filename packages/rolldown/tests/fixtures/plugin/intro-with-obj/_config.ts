@@ -10,7 +10,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        intro: () => '/* Intro */',
+        intro: { handler: '/* Intro */' },
       },
     ],
   },

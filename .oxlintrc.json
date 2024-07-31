@@ -1,5 +1,9 @@
 {
   "rules": {
+    "no-unused-vars": [
+      "warn",
+      { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }
+    ],
     "unicorn/prefer-node-protocol": "error",
     "import/namespace": [
       "error",

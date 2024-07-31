@@ -115,9 +115,9 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingHookSideEffects_30']?.()
   __napiInstance.exports['__napi_register__BindingHookTransformOutput_struct_31']?.()
   __napiInstance.exports['__napi_register__BindingPluginContextResolveOptions_struct_32']?.()
-  __napiInstance.exports['__napi_register__BindingBuiltinGlobImportPlugin_struct_33']?.()
-  __napiInstance.exports['__napi_register__BindingGlobImportPluginConfig_struct_34']?.()
-  __napiInstance.exports['__napi_register__BindingBuiltinWasmPlugin_struct_35']?.()
+  __napiInstance.exports['__napi_register__BindingBuiltinPlugin_struct_33']?.()
+  __napiInstance.exports['__napi_register__BindingBuiltinPluginName_34']?.()
+  __napiInstance.exports['__napi_register__BindingGlobImportPluginConfig_struct_35']?.()
   __napiInstance.exports['__napi_register__ParallelJsPluginRegistry_struct_36']?.()
   __napiInstance.exports['__napi_register__ParallelJsPluginRegistry_impl_38']?.()
   __napiInstance.exports['__napi_register__register_plugins_39']?.()
@@ -149,6 +149,7 @@ module.exports.BindingTransformPluginContext = __napiModule.exports.BindingTrans
 module.exports.Bundler = __napiModule.exports.Bundler
 module.exports.FinalBindingOutputs = __napiModule.exports.FinalBindingOutputs
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
+module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 module.exports.BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects
 module.exports.BindingLogLevel = __napiModule.exports.BindingLogLevel
 module.exports.isolatedDeclaration = __napiModule.exports.isolatedDeclaration

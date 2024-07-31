@@ -1,53 +1,43 @@
 import {
-  BindingBuiltinGlobImportPlugin,
+  BindingBuiltinPluginName,
   BindingGlobImportPluginConfig,
-  BindingBuiltinWasmPlugin,
+  BindingBuiltinPlugin,
 } from '../binding'
 
-interface ToBindingBuiltinPlugin {
-  toBuiltIn: () => any
-}
 export class BuiltinPlugin {
-  constructor(public config?: any) {
-    this.config = config
-  }
-  toBuiltIn(): any {
-    throw new Error('Method not implemented.')
+  constructor(
+    public name: BindingBuiltinPluginName,
+    public options?: unknown,
+  ) {
+    this.name = name
+    this.options = options
   }
 }
-
-export class BuiltinGlobImportPlugin
-  extends BuiltinPlugin
-  implements ToBindingBuiltinPlugin
-{
+export class GlobImportPlugin extends BuiltinPlugin {
   constructor(config?: BindingGlobImportPluginConfig) {
-    super(config)
-  }
-  toBuiltIn() {
-    return {
-      config: this.config,
-    }
+    super(BindingBuiltinPluginName.GlobImportPlugin, config)
   }
 }
 
-export class BuiltinWasmPlugin
-  extends BuiltinPlugin
-  implements ToBindingBuiltinPlugin
-{
+export class WasmPlugin extends BuiltinPlugin {
   constructor() {
-    super()
-  }
-  toBuiltIn(): BindingBuiltinWasmPlugin {
-    return {}
+    super(BindingBuiltinPluginName.WasmPlugin)
   }
 }
 
-/**
- * @param plugin
- * @returns could be any built plugin
- * */
+export function globImportPlugin(config?: BindingGlobImportPluginConfig) {
+  return new GlobImportPlugin(config)
+}
+
+export function wasmPlugin() {
+  return new WasmPlugin()
+}
+
 export function bindingifyBuiltInPlugin(
   plugin: BuiltinPlugin,
-): BindingBuiltinGlobImportPlugin | BindingBuiltinWasmPlugin {
-  return plugin.toBuiltIn()
+): BindingBuiltinPlugin {
+  return {
+    __name: plugin.name,
+    options: plugin.options,
+  }
 }

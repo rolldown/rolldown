@@ -49,9 +49,7 @@ pub struct BindingInputOptions {
   // onwarn?: WarningHandlerWithDefault;
   // perf?: boolean;
   #[serde(skip_deserializing)]
-  #[napi(
-    ts_type = "(BindingBuiltinGlobImportPlugin | BindingPluginOptions | BindingBuiltinWasmPlugin | undefined)[]"
-  )]
+  #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
   pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder>,
   pub resolve: Option<BindingResolveOptions>,
   // preserveEntrySignatures?: PreserveEntrySignaturesOption;

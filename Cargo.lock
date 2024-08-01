@@ -2323,7 +2323,6 @@ dependencies = [
 name = "rolldown_plugin_manifest"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "rolldown_common",
  "rolldown_plugin",
  "rustc-hash",

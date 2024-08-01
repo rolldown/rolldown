@@ -10,16 +10,16 @@ export default defineTest({
         outPath: path.resolve(import.meta.dirname, 'dist/manifest.json'),
       }),
       {
-        name: "test",
+        name: 'test',
         buildStart() {
           this.emitFile({
             type: 'asset',
             name: 'asset.txt',
             source: 'test',
-          });
+          })
         },
-      }
-    ]
+      },
+    ],
   },
   async afterTest() {
     await import('./assert.mjs')

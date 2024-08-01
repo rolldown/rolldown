@@ -1,1 +1,1 @@
-export default "dynamically imported chunk"
+export default 'dynamically imported chunk'

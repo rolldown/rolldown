@@ -1,5 +1,4 @@
 use arcstr::ArcStr;
-use oxc::span::Span;
 
 use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions};
 
@@ -14,8 +13,7 @@ pub enum CjsExportStartOffset {
 impl CjsExportStartOffset {
   pub fn start(&self) -> u32 {
     match self {
-      CjsExportStartOffset::Module(start) => *start,
-      CjsExportStartOffset::Exports(start) => *start,
+      CjsExportStartOffset::Module(start) | CjsExportStartOffset::Exports(start) => *start,
     }
   }
 
@@ -45,7 +43,7 @@ impl BuildEvent for CommonJsVariableInEsm {
       CjsExportStartOffset::Module(_) => "module",
       CjsExportStartOffset::Exports(_) => "exports",
     };
-    format!("The CommonJS `{}` variable is treated as a global variable in an ECMAScript module and may not work as expected", variable)
+    format!("The CommonJS `{variable}` variable is treated as a global variable in an ECMAScript module and may not work as expected")
   }
 
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {
@@ -55,7 +53,7 @@ impl BuildEvent for CommonJsVariableInEsm {
     diagnostic.add_label(
       &file_id,
       self.cjs_export_ident_start.start()..self.cjs_export_ident_start.end(),
-      "".to_string(),
+      String::new(),
     );
 
     diagnostic.add_label(

@@ -132,7 +132,7 @@ impl<'me> AstScanner<'me> {
             CjsExportStartOffset::Module(start),
           )
           .with_severity_warning(),
-        )
+        );
       }
       if let Some(start) = self.cjs_exports_ident_start {
         self.result.warnings.push(
@@ -144,7 +144,7 @@ impl<'me> AstScanner<'me> {
             CjsExportStartOffset::Exports(start),
           )
           .with_severity_warning(),
-        )
+        );
       }
     } else if self.cjs_exports_ident_start.is_some() || self.cjs_module_ident_start.is_some() {
       exports_kind = ExportsKind::CommonJs;

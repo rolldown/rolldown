@@ -2,7 +2,7 @@ use rolldown_common::{EmittedAsset, ModuleId, Output, OutputAsset, OutputChunk};
 use rolldown_plugin::{HookNoopReturn, Plugin, SharedPluginContext};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
-use std::{borrow::Cow, path::Path, rc::Rc, sync::LazyLock};
+use std::{borrow::Cow, collections::BTreeMap, path::Path, rc::Rc, sync::LazyLock};
 
 #[derive(Debug)]
 pub struct ManifestPlugin {
@@ -36,8 +36,8 @@ impl Plugin for ManifestPlugin {
     bundle: &mut Vec<Output>,
     _is_write: bool,
   ) -> HookNoopReturn {
-    let mut manifest = FxHashMap::default();
-    let mut output_count = 0;
+    // Use BTreeMap to make the result sorted
+    let mut manifest = BTreeMap::default();
     let mut file_name_to_asset = FxHashMap::default();
     let mut file_name_to_asset_meta = FxHashMap::default();
     let assets: &FxHashMap<String, GeneratedAssetMeta> = &GENERATED_ASSETS;
@@ -87,6 +87,9 @@ impl Plugin for ManifestPlugin {
 
     // Add deduplicated assets to the manifest
     for (reference_id, asset) in assets {
+      if skip_assets.contains(reference_id) {
+        continue;
+      }
       let original_name = &asset.original_name;
       if !manifest.contains_key(original_name) {
         let filename = ctx.get_file_name(reference_id.as_str());
@@ -97,18 +100,18 @@ impl Plugin for ManifestPlugin {
       }
     }
 
-    output_count += 1;
     // TODO: uncomment these when multiple outputs are supported
+    // output_count += 1;
     // let output = config.build.rollupOptions?.output
     // let outputLength = Array.isArray(output) ? output.length : 1
     // if output_count >= outputLength {
-    if output_count >= 1 {
-      ctx.emit_file(EmittedAsset {
-        file_name: Some(self.config.out_path.clone()),
-        name: None,
-        source: (serde_json::to_string_pretty(&manifest).unwrap()).into(),
-      });
-    }
+    ctx.emit_file(EmittedAsset {
+      file_name: Some(self.config.out_path.clone()),
+      name: None,
+      source: (serde_json::to_string_pretty(&manifest).unwrap()).into(),
+    });
+    // }
+
     Ok(())
   }
 }
@@ -183,16 +186,16 @@ impl ManifestPlugin {
 fn get_chunk_original_file_name(chunk: &OutputChunk, root: &str) -> String {
   if let Some(facade_module_id) = &chunk.facade_module_id {
     let name = facade_module_id.relative_path(root);
-    let mut name_str = name.to_string_lossy().to_string();
-    // TODO: Exclude System format
-    if !chunk.name.as_str().contains("-legacy") {
-      name_str = if let Some(ext) = name.extension() {
-        let end = name_str.len() - ext.len();
-        format!("{}-legacy.{}", &name_str[0..end], ext.to_string_lossy())
-      } else {
-        format!("{name_str}-legacy")
-      }
-    }
+    let name_str = name.to_string_lossy().to_string();
+    // TODO: Support System format
+    // if format == 'system' && !chunk.name.as_str().contains("-legacy") {
+    //   name_str = if let Some(ext) = name.extension() {
+    //     let end = name_str.len() - ext.len() - 1;
+    //     format!("{}-legacy.{}", &name_str[0..end], ext.to_string_lossy())
+    //   } else {
+    //     format!("{name_str}-legacy")
+    //   }
+    // }
     name_str.replace('\0', "")
   } else {
     format!("_{}", Path::new(chunk.filename.as_str()).file_name().unwrap().to_string_lossy())

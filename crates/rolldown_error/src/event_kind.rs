@@ -19,6 +19,8 @@ pub enum EventKind {
   // TODO remove following kinds
   NapiError,
   IoError,
+  // Derive from esbuild
+  CommonJsVariableInEsm,
 }
 
 impl Display for EventKind {
@@ -38,6 +40,7 @@ impl Display for EventKind {
       // --- Rolldown specific
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
       EventKind::IoError => write!(f, "IO_ERROR"),
+      EventKind::CommonJsVariableInEsm => write!(f, "COMMONJS_VARIABLE_IN_ESM"),
     }
   }
 }

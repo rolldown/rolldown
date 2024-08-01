@@ -61,6 +61,7 @@ pub use crate::{
   types::import_record::{ImportKind, ImportRecord, ImportRecordIdx, RawImportRecord},
   types::importer_record::ImporterRecord,
   types::js_regex,
+  types::member_expr_ref::MemberExprRef,
   types::module_def_format::ModuleDefFormat,
   types::module_id::ModuleId,
   types::module_idx::LegacyModuleIdx,
@@ -78,7 +79,8 @@ pub use crate::{
   types::side_effects,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfos},
   types::str_or_bytes::StrOrBytes,
-  types::symbol_ref::{MemberExprRef, SymbolOrMemberExprRef, SymbolRef},
+  types::symbol_or_member_expr_ref::SymbolOrMemberExprRef,
+  types::symbol_ref::SymbolRef,
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;

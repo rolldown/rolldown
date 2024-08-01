@@ -15,14 +15,14 @@
     {
       "groupName": "oxlint",
       "matchManagers": ["npm"],
-      "matchDepNames": ["oxlint"],
+      "matchPackageNames": ["oxlint"],
       "schedule": ["at any time"]
     },
     {
       "groupName": "oxc",
       "matchManagers": ["cargo"],
-      "matchPackagePrefixes": ["oxc"],
-      "schedule": ["at any time"]
+      "matchPackageNames": ["oxc"],
+      "enabled": false
     },
     {
       "groupName": "npm-rolldown",

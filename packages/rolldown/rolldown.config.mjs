@@ -14,6 +14,7 @@ const shared = defineConfig({
     cli: './src/cli/index',
     'parallel-plugin': './src/parallel-plugin',
     'parallel-plugin-worker': './src/parallel-plugin-worker',
+    'experimental-index': './src/experimental-index',
   },
   platform: 'node',
   external: [

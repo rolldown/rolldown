@@ -10,12 +10,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 export default function square(x) {
 	return x * x;
 }
+
 //#endregion
 //#region cube.js
 var { default: square } = __static_import("square.js");
 export default function cube(x) {
 	return square(x) * x;
 }
+
 //#endregion
 ```
 ## main.mjs
@@ -26,6 +28,7 @@ var { default: cube } = __static_import("cube.js");
 export default function hyperCube(x) {
 	return cube(x) * x;
 }
+
 //#endregion
 //#region main.js
 var { default: hyperCube } = __static_import("hyper-cube.js");

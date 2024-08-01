@@ -14,7 +14,7 @@ const abc = undefined;
 //#endregion
 //#region b.js
 var b_ns = {};
-__export(b_ns, {xyz: () => xyz});
+__export(b_ns, { xyz: () => xyz });
 const xyz = null;
 
 //#endregion

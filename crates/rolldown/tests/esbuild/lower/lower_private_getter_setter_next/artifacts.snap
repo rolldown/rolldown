@@ -22,34 +22,34 @@ class Foo {
 		this.prop = val;
 	}
 	foo(fn) {
-		(fn()).#foo;
-		(fn()).#bar = 1;
-		(fn()).#prop;
-		(fn()).#prop = 2;
+		fn().#foo;
+		fn().#bar = 1;
+		fn().#prop;
+		fn().#prop = 2;
 	}
 	unary(fn) {
-		(fn()).#prop++;
-		(fn()).#prop--;
-		++(fn()).#prop;
-		--(fn()).#prop;
+		fn().#prop++;
+		fn().#prop--;
+		++fn().#prop;
+		--fn().#prop;
 	}
 	binary(fn) {
-		(fn()).#prop = 1;
-		(fn()).#prop += 1;
-		(fn()).#prop -= 1;
-		(fn()).#prop *= 1;
-		(fn()).#prop /= 1;
-		(fn()).#prop %= 1;
-		(fn()).#prop **= 1;
-		(fn()).#prop <<= 1;
-		(fn()).#prop >>= 1;
-		(fn()).#prop >>>= 1;
-		(fn()).#prop &= 1;
-		(fn()).#prop |= 1;
-		(fn()).#prop ^= 1;
-		(fn()).#prop &&= 1;
-		(fn()).#prop ||= 1;
-		(fn()).#prop ??= 1;
+		fn().#prop = 1;
+		fn().#prop += 1;
+		fn().#prop -= 1;
+		fn().#prop *= 1;
+		fn().#prop /= 1;
+		fn().#prop %= 1;
+		fn().#prop **= 1;
+		fn().#prop <<= 1;
+		fn().#prop >>= 1;
+		fn().#prop >>>= 1;
+		fn().#prop &= 1;
+		fn().#prop |= 1;
+		fn().#prop ^= 1;
+		fn().#prop &&= 1;
+		fn().#prop ||= 1;
+		fn().#prop ??= 1;
 	}
 }
 

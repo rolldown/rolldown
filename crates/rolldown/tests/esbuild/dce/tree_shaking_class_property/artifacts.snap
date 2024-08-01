@@ -24,7 +24,7 @@ let keep5 = class {
 	async [x]() {}
 };
 let keep6 = class {
-	[{toString() {}}] = "x";
+	[{ toString() {} }] = "x";
 };
 
 //#endregion

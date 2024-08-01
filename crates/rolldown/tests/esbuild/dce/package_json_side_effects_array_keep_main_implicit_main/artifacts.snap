@@ -12,7 +12,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var index_module_ns, foo;
 var init_index_module = __esmMin(() => {
 	index_module_ns = {};
-	__export(index_module_ns, {foo: () => foo});
+	__export(index_module_ns, { foo: () => foo });
 	foo = 123;
 	console.log("TEST FAILED");
 });

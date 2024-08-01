@@ -31,7 +31,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   group.bench_with_input("remapping", &sourcemap_chain, move |b, sourcemap_chain| {
     b.iter(|| {
       let map = collapse_sourcemaps(sourcemap_chain.to_vec());
-      map.to_json_string().unwrap();
+      map.to_json_string();
     });
   });
 
@@ -61,7 +61,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   group.bench_with_input("render-chunk-remapping", &sourcemap_chain, move |b, sourcemap_chain| {
     b.iter(|| {
       let map = collapse_sourcemaps(sourcemap_chain.to_vec());
-      map.to_json_string().unwrap();
+      map.to_json_string();
     });
   });
 }

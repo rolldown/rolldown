@@ -30,7 +30,7 @@ let keep7 = class {
 	static async [x]() {}
 };
 let keep8 = class {
-	static [{toString() {}}] = "x";
+	static [{ toString() {} }] = "x";
 };
 
 //#endregion

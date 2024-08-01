@@ -12,7 +12,7 @@ var foo_default = 1;
 
 //#endregion
 //#region export.js
-var export_default = {foo: foo_default};
+var export_default = { foo: foo_default };
 
 //#endregion
 //#region main.js

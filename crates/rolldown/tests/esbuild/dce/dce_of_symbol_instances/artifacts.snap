@@ -35,7 +35,7 @@ let keep2 = {
 	[keep]: null,
 	*[Symbol.iterator]() {}
 };
-let keep3 = {*[Symbol.wtf]() {}};
+let keep3 = { *[Symbol.wtf]() {} };
 
 //#endregion
 ```

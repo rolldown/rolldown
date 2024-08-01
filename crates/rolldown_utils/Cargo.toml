@@ -9,6 +9,9 @@ homepage.workspace   = true
 license.workspace    = true
 repository.workspace = true
 
+[lib]
+doctest = false
+
 [lints]
 workspace = true
 

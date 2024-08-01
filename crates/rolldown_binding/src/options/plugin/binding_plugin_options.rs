@@ -126,19 +126,19 @@ pub struct BindingPluginOptions {
   pub write_bundle: Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingOutputs), ()>>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "((ctx: BindingPluginContext, chunk: RenderedChunk) => void)")]
+  #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
   pub banner: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "((ctx: BindingPluginContext, chunk: RenderedChunk) => void)")]
+  #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
   pub footer: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "((ctx: BindingPluginContext, chunk: RenderedChunk) => void)")]
+  #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
   pub intro: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "((ctx: BindingPluginContext, chunk: RenderedChunk) => void)")]
+  #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
   pub outro: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
 }
 

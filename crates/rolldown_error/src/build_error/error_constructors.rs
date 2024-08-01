@@ -9,7 +9,7 @@ use super::BuildDiagnostic;
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
-  commonjs_variable_in_esm::{CjsExportStartOffset, CommonJsVariableInEsm},
+  commonjs_variable_in_esm::{CjsExportSpan, CommonJsVariableInEsm},
   eval::Eval,
   external_entry::ExternalEntry,
   forbid_const_assign::ForbidConstAssign,
@@ -104,14 +104,14 @@ impl BuildDiagnostic {
   pub fn commonjs_variable_in_esm(
     filename: String,
     source: ArcStr,
-    esm_export_span_start: u32,
-    cjs_export_ident_start: CjsExportStartOffset,
+    esm_export_span: Span,
+    cjs_export_ident_span: CjsExportSpan,
   ) -> Self {
     Self::new_inner(CommonJsVariableInEsm {
       filename,
       source,
-      esm_export_span_start,
-      cjs_export_ident_start,
+      esm_export_span,
+      cjs_export_ident_span,
     })
   }
 

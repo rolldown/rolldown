@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+use oxc::span::Span;
 
 use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions};
 
@@ -6,21 +7,20 @@ use super::BuildEvent;
 
 /// Only record start offset for efficiency and simplicity
 #[derive(Debug)]
-pub enum CjsExportStartOffset {
-  Module(u32),
-  Exports(u32),
+pub enum CjsExportSpan {
+  Module(Span),
+  Exports(Span),
 }
-impl CjsExportStartOffset {
+impl CjsExportSpan {
   pub fn start(&self) -> u32 {
     match self {
-      CjsExportStartOffset::Module(start) | CjsExportStartOffset::Exports(start) => *start,
+      CjsExportSpan::Module(span) | CjsExportSpan::Exports(span) => span.start,
     }
   }
 
   pub fn end(&self) -> u32 {
     match self {
-      CjsExportStartOffset::Module(start) => *start + 6,
-      CjsExportStartOffset::Exports(start) => *start + 7,
+      CjsExportSpan::Module(span) | CjsExportSpan::Exports(span) => span.end,
     }
   }
 }
@@ -29,8 +29,8 @@ impl CjsExportStartOffset {
 pub struct CommonJsVariableInEsm {
   pub filename: String,
   pub source: ArcStr,
-  pub esm_export_span_start: u32,
-  pub cjs_export_ident_start: CjsExportStartOffset,
+  pub esm_export_span: Span,
+  pub cjs_export_ident_span: CjsExportSpan,
 }
 
 impl BuildEvent for CommonJsVariableInEsm {
@@ -39,9 +39,9 @@ impl BuildEvent for CommonJsVariableInEsm {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    let variable = match self.cjs_export_ident_start {
-      CjsExportStartOffset::Module(_) => "module",
-      CjsExportStartOffset::Exports(_) => "exports",
+    let variable = match self.cjs_export_ident_span {
+      CjsExportSpan::Module(_) => "module",
+      CjsExportSpan::Exports(_) => "exports",
     };
     format!("The CommonJS `{variable}` variable is treated as a global variable in an ECMAScript module and may not work as expected")
   }
@@ -52,13 +52,13 @@ impl BuildEvent for CommonJsVariableInEsm {
     let file_id = diagnostic.add_file(filename, self.source.clone());
     diagnostic.add_label(
       &file_id,
-      self.cjs_export_ident_start.start()..self.cjs_export_ident_start.end(),
+      self.cjs_export_ident_span.start()..self.cjs_export_ident_span.end(),
       String::new(),
     );
 
     diagnostic.add_label(
       &file_id,
-      self.esm_export_span_start..self.esm_export_span_start + /* length of `export` */6,
+      self.esm_export_span.start..self.esm_export_span.end,
       "This file is considered to be an ECMAScript module because of the `export` keyword here:"
         .to_string(),
     );

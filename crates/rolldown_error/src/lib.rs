@@ -9,7 +9,7 @@ pub use crate::{
   build_error::{BuildDiagnostic, BuildResult},
   event_kind::EventKind,
   events::ambiguous_external_namespace::AmbiguousExternalNamespaceModule,
-  events::commonjs_variable_in_esm::CjsExportStartOffset,
+  events::commonjs_variable_in_esm::CjsExportSpan,
   type_aliases::{DiagnosableResult, UnhandleableResult},
   types::diagnostic_options::DiagnosticOptions,
 };

@@ -19,7 +19,7 @@ use rolldown_common::{
   ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
-use rolldown_error::{BuildDiagnostic, CjsExportStartOffset, UnhandleableResult};
+use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
@@ -52,12 +52,12 @@ pub struct AstScanner<'me> {
   symbols: &'me mut AstSymbols,
   current_stmt_info: StmtInfo,
   result: ScanResult,
-  esm_export_keyword_start: Option<u32>,
-  esm_import_keyword_start: Option<u32>,
+  esm_export_keyword_start: Option<Span>,
+  esm_import_keyword_start: Option<Span>,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
-  cjs_exports_ident_start: Option<u32>,
-  cjs_module_ident_start: Option<u32>,
+  cjs_exports_ident_start: Option<Span>,
+  cjs_module_ident_start: Option<Span>,
 }
 
 impl<'me> AstScanner<'me> {
@@ -129,7 +129,7 @@ impl<'me> AstScanner<'me> {
             self.source.clone(),
             // SAFETY: we checked at the beginning
             self.esm_export_keyword_start.expect("should have start offset"),
-            CjsExportStartOffset::Module(start),
+            CjsExportSpan::Module(start),
           )
           .with_severity_warning(),
         );
@@ -141,7 +141,7 @@ impl<'me> AstScanner<'me> {
             self.source.clone(),
             // SAFETY: we checked at the beginning
             self.esm_export_keyword_start.expect("should have start offset"),
-            CjsExportStartOffset::Exports(start),
+            CjsExportSpan::Exports(start),
           )
           .with_severity_warning(),
         );
@@ -194,8 +194,8 @@ impl<'me> AstScanner<'me> {
     Ok(self.result)
   }
 
-  fn set_esm_export_keyword(&mut self, start_offset: u32) {
-    self.esm_export_keyword_start.get_or_insert(start_offset);
+  fn set_esm_export_keyword(&mut self, span: Span) {
+    self.esm_export_keyword_start.get_or_insert(span);
   }
 
   fn add_declared_id(&mut self, id: SymbolId) {
@@ -486,19 +486,21 @@ impl<'me> AstScanner<'me> {
   fn scan_module_decl(&mut self, decl: &ModuleDeclaration) {
     match decl {
       oxc::ast::ast::ModuleDeclaration::ImportDeclaration(decl) => {
-        self.esm_import_keyword_start.get_or_insert(decl.span.start);
+        self
+          .esm_import_keyword_start
+          .get_or_insert(Span::new(decl.span.start, decl.span.start + 6));
         self.scan_import_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(decl) => {
-        self.set_esm_export_keyword(decl.span.start);
+        self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
         self.scan_export_all_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
-        self.set_esm_export_keyword(decl.span.start);
+        self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
         self.scan_export_named_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
-        self.set_esm_export_keyword(decl.span.start);
+        self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
         self.scan_export_default_decl(decl);
       }
       _ => {}
@@ -562,10 +564,14 @@ impl<'me> AstScanner<'me> {
       }
       None => {
         if ident.name == "module" {
-          self.cjs_module_ident_start.get_or_insert(ident.span.start);
+          self
+            .cjs_module_ident_start
+            .get_or_insert(Span::new(ident.span.start, ident.span.start + 6));
         }
         if ident.name == "exports" {
-          self.cjs_exports_ident_start.get_or_insert(ident.span.start);
+          self
+            .cjs_exports_ident_start
+            .get_or_insert(Span::new(ident.span.start, ident.span.start + 7));
         }
         if ident.name == "eval" {
           self.result.warnings.push(

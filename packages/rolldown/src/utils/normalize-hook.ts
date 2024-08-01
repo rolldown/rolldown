@@ -1,25 +1,18 @@
 import type { ObjectHook } from '../plugin'
 import type { AnyFn, AnyObj } from '../types/utils'
 
-type NotFn<T> = T extends AnyFn ? never : T
-
-export function normalizeHook<H extends ObjectHook<AnyFn, AnyObj>>(
-  hook: H,
-): H extends ObjectHook<infer Handler, infer Options>
-  ? [Handler, NotFn<Options>]
-  : never {
+export function normalizeHook<T extends AnyFn | string>(
+  hook: ObjectHook<T, AnyObj>,
+): [T, AnyObj] {
   if (typeof hook === 'function') {
-    // @ts-expect-error
     return [hook, {}]
   }
 
   if (typeof hook === 'object') {
     const { handler, ...options } = hook
 
-    // @ts-expect-error
     return [handler, options]
   }
 
-  // @ts-expect-error
   return [hook, {}]
 }

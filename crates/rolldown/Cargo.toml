@@ -39,6 +39,7 @@ tokio                    = { workspace = true, features = ["rt", "macros", "sync
 tracing                  = { workspace = true }
 tracing-chrome           = { workspace = true }
 xxhash-rust              = { workspace = true, features = ["xxh3"] }
+bitflags = {workspace = true}
 
 [dev-dependencies]
 glob             = { workspace = true }

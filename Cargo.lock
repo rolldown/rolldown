@@ -2135,6 +2135,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
+ "bitflags 2.6.0",
  "daachorse",
  "dunce",
  "futures",

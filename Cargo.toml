@@ -143,6 +143,7 @@ xxhash-rust        = "0.8.10"
 # oxc crates share the same version
 oxc                = { version = "0.22.1", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
 oxc_transform_napi = { version = "0.22.1" }
+bitflags = {version = "2.6.0"}
 
 [profile.release]
 codegen-units = 1

@@ -42,6 +42,16 @@ pub struct ScanResult {
   pub warnings: Vec<BuildDiagnostic>,
 }
 
+bitflags::bitflags! {
+    /// Represents a set of flags.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    struct EsmKeywords: u8 {
+        /// The value `A`, at bit position `0`.
+        const EXPORT = 1;
+        /// The value `B`, at bit position `1`.
+        const IMPORT = 1 << 1;
+    }
+}
 pub struct AstScanner<'me> {
   idx: ModuleIdx,
   source: &'me ArcStr,
@@ -52,8 +62,7 @@ pub struct AstScanner<'me> {
   symbols: &'me mut AstSymbols,
   current_stmt_info: StmtInfo,
   result: ScanResult,
-  esm_export_keyword: Option<Span>,
-  esm_import_keyword: Option<Span>,
+  esm_keywrod_usage: EsmKeywords,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
   used_exports_ref: bool,
@@ -104,8 +113,7 @@ impl<'me> AstScanner<'me> {
       symbols,
       current_stmt_info: StmtInfo::default(),
       result,
-      esm_export_keyword: None,
-      esm_import_keyword: None,
+      esm_keywrod_usage: EsmKeywords::empty(),
       module_type,
       namespace_object_ref,
       used_exports_ref: false,
@@ -120,7 +128,7 @@ impl<'me> AstScanner<'me> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
-    if self.esm_export_keyword.is_some() {
+    if self.esm_keywrod_usage.contains(EsmKeywords::EXPORT) {
       exports_kind = ExportsKind::Esm;
     } else if self.used_exports_ref || self.used_module_ref {
       exports_kind = ExportsKind::CommonJs;
@@ -134,7 +142,7 @@ impl<'me> AstScanner<'me> {
           exports_kind = ExportsKind::Esm;
         }
         ModuleDefFormat::Unknown => {
-          if self.esm_import_keyword.is_some() {
+          if self.esm_keywrod_usage.contains(EsmKeywords::IMPORT) {
             exports_kind = ExportsKind::Esm;
           }
         }
@@ -170,8 +178,9 @@ impl<'me> AstScanner<'me> {
     Ok(self.result)
   }
 
-  fn set_esm_export_keyword(&mut self, span: Span) {
-    self.esm_export_keyword.get_or_insert(span);
+  #[inline]
+  fn set_esm_export_keyword(&mut self) {
+    self.esm_keywrod_usage.insert(EsmKeywords::EXPORT);
   }
 
   fn add_declared_id(&mut self, id: SymbolId) {
@@ -462,20 +471,19 @@ impl<'me> AstScanner<'me> {
   fn scan_module_decl(&mut self, decl: &ModuleDeclaration) {
     match decl {
       oxc::ast::ast::ModuleDeclaration::ImportDeclaration(decl) => {
-        // TODO: this should be the span of `import` keyword, while now it is the span of the whole import declaration.
-        self.esm_import_keyword.get_or_insert(decl.span);
+        self.esm_keywrod_usage.insert(EsmKeywords::IMPORT);
         self.scan_import_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(decl) => {
-        self.set_esm_export_keyword(decl.span);
+        self.set_esm_export_keyword();
         self.scan_export_all_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
-        self.set_esm_export_keyword(decl.span);
+        self.set_esm_export_keyword();
         self.scan_export_named_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
-        self.set_esm_export_keyword(decl.span);
+        self.set_esm_export_keyword();
         self.scan_export_default_decl(decl);
       }
       _ => {}

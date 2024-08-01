@@ -1,0 +1,6 @@
+{
+  "config": {
+     "format": "iife",
+    "exports": "named"
+  }
+}

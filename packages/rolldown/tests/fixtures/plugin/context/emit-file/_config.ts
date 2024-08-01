@@ -42,7 +42,9 @@ export default defineTest({
     for (const asset of assets) {
       switch (asset.name) {
         case '+emitted.txt':
-          expect(asset.fileName).toMatchInlineSnapshot(`"_emitted-umwR9Fta.txt"`)
+          expect(asset.fileName).toMatchInlineSnapshot(
+            `"_emitted-umwR9Fta.txt"`,
+          )
           break
 
         case 'icon.png':

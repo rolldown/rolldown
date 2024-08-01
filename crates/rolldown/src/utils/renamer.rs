@@ -1,9 +1,8 @@
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
-
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
-use rolldown_common::{EcmaModule, IndexModules, ModuleIdx, SymbolRef};
+use rolldown_common::{EcmaModule, IndexModules, ModuleIdx, OutputFormat, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -35,12 +34,13 @@ pub struct Renamer<'name> {
 }
 
 impl<'name> Renamer<'name> {
-  pub fn new(symbols: &'name Symbols, _modules_len: usize) -> Self {
+  pub fn new(symbols: &'name Symbols, _modules_len: usize, format: &OutputFormat) -> Self {
+    let manual_reserved = if matches!(format, OutputFormat::Esm) { vec![] } else { vec!["exports"] };
     Self {
       canonical_names: FxHashMap::default(),
       symbols,
-      used_canonical_names: RESERVED_KEYWORDS
-        .iter()
+      used_canonical_names: manual_reserved.iter()
+        .chain(RESERVED_KEYWORDS.iter())
         .chain(GLOBAL_OBJECTS.iter())
         .map(|s| (Cow::Owned(Rstr::new(s)), 0))
         .collect(),

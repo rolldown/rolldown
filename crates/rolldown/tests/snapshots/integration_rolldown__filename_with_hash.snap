@@ -1545,6 +1545,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main--9MFXZs-.mjs
 
+# tests/rolldown/function/format/iife/conflict_exports_key
+
+- main-!~{000}~.mjs => main-70UEVRnQ.mjs
+
 # tests/rolldown/function/format/iife/external_modules
 
 - main-!~{000}~.mjs => main-Ss0NlRCd.mjs

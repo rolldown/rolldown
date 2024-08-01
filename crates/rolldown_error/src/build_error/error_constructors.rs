@@ -9,6 +9,7 @@ use super::BuildDiagnostic;
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
+  commonjs_variable_in_esm::{CjsExportStartOffset, CommonJsVariableInEsm},
   eval::Eval,
   external_entry::ExternalEntry,
   forbid_const_assign::ForbidConstAssign,
@@ -98,6 +99,20 @@ impl BuildDiagnostic {
     export_keys: Vec<ArcStr>,
   ) -> Self {
     Self::new_inner(InvalidExportOption { export_mode, export_keys, entry_module })
+  }
+  // Esbuild
+  pub fn commonjs_variable_in_esm(
+    filename: String,
+    source: ArcStr,
+    esm_export_span_start: u32,
+    cjs_export_ident_start: CjsExportStartOffset,
+  ) -> Self {
+    Self::new_inner(CommonJsVariableInEsm {
+      filename,
+      source,
+      esm_export_span_start,
+      cjs_export_ident_start,
+    })
   }
 
   // --- Rolldown related

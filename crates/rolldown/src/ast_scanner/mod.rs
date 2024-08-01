@@ -19,7 +19,7 @@ use rolldown_common::{
   ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
-use rolldown_error::{BuildDiagnostic, UnhandleableResult};
+use rolldown_error::{BuildDiagnostic, CjsExportStartOffset, UnhandleableResult};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
@@ -52,12 +52,12 @@ pub struct AstScanner<'me> {
   symbols: &'me mut AstSymbols,
   current_stmt_info: StmtInfo,
   result: ScanResult,
-  esm_export_keyword: Option<Span>,
-  esm_import_keyword: Option<Span>,
+  esm_export_keyword_start: Option<u32>,
+  esm_import_keyword_start: Option<u32>,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
-  used_exports_ref: bool,
-  used_module_ref: bool,
+  cjs_exports_ident_start: Option<u32>,
+  cjs_module_ident_start: Option<u32>,
 }
 
 impl<'me> AstScanner<'me> {
@@ -104,12 +104,12 @@ impl<'me> AstScanner<'me> {
       symbols,
       current_stmt_info: StmtInfo::default(),
       result,
-      esm_export_keyword: None,
-      esm_import_keyword: None,
+      esm_export_keyword_start: None,
+      esm_import_keyword_start: None,
       module_type,
       namespace_object_ref,
-      used_exports_ref: false,
-      used_module_ref: false,
+      cjs_module_ident_start: None,
+      cjs_exports_ident_start: None,
       source,
       file_path,
       trivias,
@@ -120,9 +120,27 @@ impl<'me> AstScanner<'me> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
-    if self.esm_export_keyword.is_some() {
+    if self.esm_export_keyword_start.is_some() {
       exports_kind = ExportsKind::Esm;
-    } else if self.used_exports_ref || self.used_module_ref {
+      if let Some(start) = self.cjs_module_ident_start {
+        self.result.warnings.push(BuildDiagnostic::commonjs_variable_in_esm(
+          self.file_path.to_string(),
+          self.source.clone(),
+          // SAFETY: we checked at the beginning
+          self.esm_export_keyword_start.expect("should have start offset"),
+          CjsExportStartOffset::Module(start),
+        ))
+      }
+      if let Some(start) = self.cjs_exports_ident_start {
+        self.result.warnings.push(BuildDiagnostic::commonjs_variable_in_esm(
+          self.file_path.to_string(),
+          self.source.clone(),
+          // SAFETY: we checked at the beginning
+          self.esm_export_keyword_start.expect("should have start offset"),
+          CjsExportStartOffset::Exports(start),
+        ))
+      }
+    } else if self.cjs_exports_ident_start.is_some() || self.cjs_module_ident_start.is_some() {
       exports_kind = ExportsKind::CommonJs;
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
@@ -134,7 +152,7 @@ impl<'me> AstScanner<'me> {
           exports_kind = ExportsKind::Esm;
         }
         ModuleDefFormat::Unknown => {
-          if self.esm_import_keyword.is_some() {
+          if self.esm_import_keyword_start.is_some() {
             exports_kind = ExportsKind::Esm;
           }
         }
@@ -170,8 +188,8 @@ impl<'me> AstScanner<'me> {
     Ok(self.result)
   }
 
-  fn set_esm_export_keyword(&mut self, span: Span) {
-    self.esm_export_keyword.get_or_insert(span);
+  fn set_esm_export_keyword(&mut self, start_offset: u32) {
+    self.esm_export_keyword_start.get_or_insert(start_offset);
   }
 
   fn add_declared_id(&mut self, id: SymbolId) {
@@ -462,20 +480,19 @@ impl<'me> AstScanner<'me> {
   fn scan_module_decl(&mut self, decl: &ModuleDeclaration) {
     match decl {
       oxc::ast::ast::ModuleDeclaration::ImportDeclaration(decl) => {
-        // TODO: this should be the span of `import` keyword, while now it is the span of the whole import declaration.
-        self.esm_import_keyword.get_or_insert(decl.span);
+        self.esm_import_keyword_start.get_or_insert(decl.span.start);
         self.scan_import_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(decl) => {
-        self.set_esm_export_keyword(decl.span);
+        self.set_esm_export_keyword(decl.span.start);
         self.scan_export_all_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
-        self.set_esm_export_keyword(decl.span);
+        self.set_esm_export_keyword(decl.span.start);
         self.scan_export_named_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
-        self.set_esm_export_keyword(decl.span);
+        self.set_esm_export_keyword(decl.span.start);
         self.scan_export_default_decl(decl);
       }
       _ => {}
@@ -539,10 +556,10 @@ impl<'me> AstScanner<'me> {
       }
       None => {
         if ident.name == "module" {
-          self.used_module_ref = true;
+          self.cjs_module_ident_start.get_or_insert(ident.span.start);
         }
         if ident.name == "exports" {
-          self.used_exports_ref = true;
+          self.cjs_exports_ident_start.get_or_insert(ident.span.start);
         }
         if ident.name == "eval" {
           self.result.warnings.push(

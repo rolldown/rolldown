@@ -1,4 +1,4 @@
-// MULTIPLE ENTRY MODULES
-import hyperCube from './hyper-cube.js';
+export const a = 1
 
-console.log(hyperCube(5));
+export const e = 1
+module.exports = {}

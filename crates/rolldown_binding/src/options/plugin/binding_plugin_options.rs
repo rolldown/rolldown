@@ -134,7 +134,7 @@ pub struct BindingPluginOptions {
   pub footer: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
 
   #[serde(skip_deserializing)]
-  #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
+  #[napi(ts_type = "((ctx: BindingPluginContext, chunk: RenderedChunk) => void) | string")]
   pub intro: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
 
   #[serde(skip_deserializing)]

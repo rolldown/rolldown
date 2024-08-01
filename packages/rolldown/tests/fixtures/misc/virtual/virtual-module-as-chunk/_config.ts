@@ -24,6 +24,7 @@ export default defineTest({
     ],
   },
   afterTest(output) {
+    // cSpell:disable
     expect(getOutputChunkNames(output)).toMatchInlineSnapshot(`
       [
         "_module-KtCeJTRH.js",

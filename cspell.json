@@ -140,6 +140,7 @@
     "schemars",
     "serde",
     "sfnt",
+    "sharedworker",
     "simd",
     "smallvec",
     "sourcemaps",

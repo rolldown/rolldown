@@ -99,7 +99,7 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
 impl<'ast> DynamicImportVarsVisit<'ast> {
   /// generates:
   /// ```js
-  /// __variableDynamicImportRuntimeHelper((import.meta.glob(pattern, params)), expr, segs)
+  /// __variableDynamicImportRuntimeHelper((import.meta.glob(pattern, params)), expr, segments)
   /// ```
   fn call_helper(
     &self,

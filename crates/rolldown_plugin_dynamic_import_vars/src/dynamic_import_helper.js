@@ -2,7 +2,7 @@
 export default (
   glob,
   path,
-  segs,
+  segments,
 ) => {
   const v = glob[path] ?? glob['./' + path]
   if (v) {
@@ -15,7 +15,7 @@ export default (
         new Error(
           'Unknown variable dynamic import: ' +
             path +
-            (path.split('/').length !== segs
+            (path.split('/').length !== segments
               ? '. Note that variables only represent file names one level deep.'
               : ''),
         ),

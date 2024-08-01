@@ -68,10 +68,7 @@ pub struct BindingManifestPluginConfig {
 
 impl From<BindingManifestPluginConfig> for ManifestPluginConfig {
   fn from(value: BindingManifestPluginConfig) -> Self {
-    ManifestPluginConfig {
-      root: value.root,
-      out_path: value.out_path,
-    }
+    ManifestPluginConfig { root: value.root, out_path: value.out_path }
   }
 }
 

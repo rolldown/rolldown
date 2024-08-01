@@ -17,7 +17,7 @@ pub struct GeneratedAssetMeta {
 
 // TODO: Link this with assets plugin
 static GENERATED_ASSETS: LazyLock<FxHashMap<String, GeneratedAssetMeta>> =
-  LazyLock::new(|| FxHashMap::default());
+  LazyLock::new(FxHashMap::default);
 
 #[derive(Debug, Default)]
 pub struct ManifestPluginConfig {
@@ -30,6 +30,7 @@ impl Plugin for ManifestPlugin {
     Cow::Borrowed("manifest_plugin")
   }
 
+  #[allow(clippy::case_sensitive_file_extension_comparisons)]
   async fn generate_bundle(
     &self,
     ctx: &SharedPluginContext,
@@ -63,7 +64,7 @@ impl Plugin for ManifestPlugin {
           if let Some(name) = &asset.name {
             let asset_meta = file_name_to_asset_meta.remove(&asset.filename);
             let src = asset_meta.map_or(name, |m| &m.original_name);
-            let asset_manifest = Rc::new(self.create_asset(
+            let asset_manifest = Rc::new(Self::create_asset(
               asset,
               src.clone(),
               asset_meta.map_or(false, |m| m.is_entry),
@@ -73,12 +74,13 @@ impl Plugin for ManifestPlugin {
             // prioritize JS chunk as it contains more information
             if let Some(m) = manifest.get(src) {
               let file = &m.file;
+
               if file.ends_with(".js") || file.ends_with(".cjs") || file.ends_with(".mjs") {
                 continue;
               }
             }
 
-            manifest.insert(src.clone(), asset_manifest.clone());
+            manifest.insert(src.clone(), Rc::<ManifestChunk>::clone(&asset_manifest));
             file_name_to_asset.insert(asset.filename.clone(), asset_manifest);
           }
         }
@@ -116,7 +118,8 @@ impl Plugin for ManifestPlugin {
   }
 }
 
-fn is_false(b: &bool) -> bool{
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_false(b: &bool) -> bool {
   !b
 }
 
@@ -131,10 +134,10 @@ pub struct ManifestChunk {
   pub is_entry: bool,
   #[serde(skip_serializing_if = "is_false")]
   pub is_dynamic_entry: bool,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub imports: Option<Vec<String>>,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub dynamic_imports: Option<Vec<String>>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  pub imports: Vec<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  pub dynamic_imports: Vec<String>,
   // TODO:
   // #[serde(skip_serializing_if = "Option::is_none")]
   // pub css: Option<Vec<String>>,
@@ -149,7 +152,7 @@ impl ManifestPlugin {
   fn get_internal_imports(&self, bundle: &Vec<Output>, imports: &Vec<ModuleId>) -> Vec<String> {
     let mut filtered_imports = vec![];
     for file in imports {
-      for chunk in bundle.iter() {
+      for chunk in bundle {
         if let Output::Chunk(output_chunk) = chunk {
           if output_chunk.filename == *file {
             filtered_imports.push(self.get_chunk_name(output_chunk));
@@ -167,25 +170,11 @@ impl ManifestPlugin {
       src: if chunk.facade_module_id.is_some() { Some(src) } else { None },
       is_entry: chunk.is_entry,
       is_dynamic_entry: chunk.is_dynamic_entry,
-      imports: {
-        let internal_imports = self.get_internal_imports(bundle, &chunk.imports);
-        if !internal_imports.is_empty() {
-          Some(internal_imports)
-        } else {
-          None
-        }
-      },
-      dynamic_imports: {
-        let internal_imports = self.get_internal_imports(bundle, &chunk.dynamic_imports);
-        if !internal_imports.is_empty() {
-          Some(internal_imports)
-        } else {
-          None
-        }
-      },
+      imports: self.get_internal_imports(bundle, &chunk.imports),
+      dynamic_imports: self.get_internal_imports(bundle, &chunk.dynamic_imports),
     }
   }
-  fn create_asset(&self, asset: &OutputAsset, src: String, is_entry: bool) -> ManifestChunk {
+  fn create_asset(asset: &OutputAsset, src: String, is_entry: bool) -> ManifestChunk {
     ManifestChunk {
       file: asset.filename.to_string(),
       src: Some(src),

@@ -5,8 +5,13 @@ use rolldown_common::{Chunk, OutputFormat};
 use rolldown_rstr::ToRstr;
 
 #[tracing::instrument(level = "trace", skip_all)]
-pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput, format: &OutputFormat) {
-  let mut renamer = Renamer::new(&link_output.symbols, link_output.module_table.modules.len(), format);
+pub fn deconflict_chunk_symbols(
+  chunk: &mut Chunk,
+  link_output: &LinkStageOutput,
+  format: &OutputFormat,
+) {
+  let mut renamer =
+    Renamer::new(&link_output.symbols, link_output.module_table.modules.len(), format);
 
   chunk
     .modules

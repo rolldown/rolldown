@@ -13,9 +13,7 @@ workspace = true
 
 [dependencies]
 anyhow          = { workspace = true }
-async-trait     = { workspace = true }
 glob            = { workspace = true }
 oxc             = { workspace = true }
 regex           = { workspace = true }
 rolldown_plugin = { workspace = true }
-sugar_path      = { workspace = true }

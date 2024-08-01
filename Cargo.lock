@@ -2302,12 +2302,10 @@ name = "rolldown_plugin_dynamic_import_vars"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "async-trait",
  "glob",
  "oxc",
  "regex",
  "rolldown_plugin",
- "sugar_path",
 ]
 
 [[package]]

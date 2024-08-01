@@ -123,22 +123,28 @@ impl<'me> AstScanner<'me> {
     if self.esm_export_keyword_start.is_some() {
       exports_kind = ExportsKind::Esm;
       if let Some(start) = self.cjs_module_ident_start {
-        self.result.warnings.push(BuildDiagnostic::commonjs_variable_in_esm(
-          self.file_path.to_string(),
-          self.source.clone(),
-          // SAFETY: we checked at the beginning
-          self.esm_export_keyword_start.expect("should have start offset"),
-          CjsExportStartOffset::Module(start),
-        ))
+        self.result.warnings.push(
+          BuildDiagnostic::commonjs_variable_in_esm(
+            self.file_path.to_string(),
+            self.source.clone(),
+            // SAFETY: we checked at the beginning
+            self.esm_export_keyword_start.expect("should have start offset"),
+            CjsExportStartOffset::Module(start),
+          )
+          .with_severity_warning(),
+        )
       }
       if let Some(start) = self.cjs_exports_ident_start {
-        self.result.warnings.push(BuildDiagnostic::commonjs_variable_in_esm(
-          self.file_path.to_string(),
-          self.source.clone(),
-          // SAFETY: we checked at the beginning
-          self.esm_export_keyword_start.expect("should have start offset"),
-          CjsExportStartOffset::Exports(start),
-        ))
+        self.result.warnings.push(
+          BuildDiagnostic::commonjs_variable_in_esm(
+            self.file_path.to_string(),
+            self.source.clone(),
+            // SAFETY: we checked at the beginning
+            self.esm_export_keyword_start.expect("should have start offset"),
+            CjsExportStartOffset::Exports(start),
+          )
+          .with_severity_warning(),
+        )
       }
     } else if self.cjs_exports_ident_start.is_some() || self.cjs_module_ident_start.is_some() {
       exports_kind = ExportsKind::CommonJs;

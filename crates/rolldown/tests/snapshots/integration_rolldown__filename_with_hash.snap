@@ -1523,6 +1523,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-soihLkqo.mjs
 - other-entry-!~{001}~.mjs => other-entry-coajbluq.mjs
 
+# tests/rolldown/function/format/cjs/conflict_exports_key
+
+- main-!~{000}~.cjs => main-t6Oaael5.cjs
+
 # tests/rolldown/function/format/cjs/import_export_unicode
 
 - main-!~{000}~.cjs => main-E0ujG9CO.cjs
@@ -1548,6 +1552,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/function/format/iife/conflict_exports_key
 
 - main-!~{000}~.mjs => main-70UEVRnQ.mjs
+
+# tests/rolldown/function/format/iife/conflict_exports_key_loop
+
+- main-!~{000}~.mjs => main-OWAwJUSO.mjs
 
 # tests/rolldown/function/format/iife/external_modules
 

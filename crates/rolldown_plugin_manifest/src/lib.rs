@@ -116,17 +116,29 @@ impl Plugin for ManifestPlugin {
   }
 }
 
+fn is_false(b: &bool) -> bool{
+  !b
+}
+
 #[derive(Debug, Default, Serialize)]
 pub struct ManifestChunk {
   pub file: String,
-  pub name: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub name: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub src: Option<String>,
+  #[serde(skip_serializing_if = "is_false")]
   pub is_entry: bool,
+  #[serde(skip_serializing_if = "is_false")]
   pub is_dynamic_entry: bool,
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub imports: Option<Vec<String>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub dynamic_imports: Option<Vec<String>>,
   // TODO:
+  // #[serde(skip_serializing_if = "Option::is_none")]
   // pub css: Option<Vec<String>>,
+  // #[serde(skip_serializing_if = "Option::is_none")]
   // pub assets: Option<Vec<String>>,
 }
 
@@ -151,7 +163,7 @@ impl ManifestPlugin {
   fn create_chunk(&self, bundle: &Vec<Output>, chunk: &OutputChunk, src: String) -> ManifestChunk {
     ManifestChunk {
       file: chunk.filename.to_string(),
-      name: chunk.name.to_string(),
+      name: Some(chunk.name.to_string()),
       src: if chunk.facade_module_id.is_some() { Some(src) } else { None },
       is_entry: chunk.is_entry,
       is_dynamic_entry: chunk.is_dynamic_entry,

@@ -19,10 +19,7 @@ export default defineTest({
           });
         },
       }
-    ],
-    output: {
-      minify: false
-    }
+    ]
   },
   async afterTest() {
     await import('./assert.mjs')

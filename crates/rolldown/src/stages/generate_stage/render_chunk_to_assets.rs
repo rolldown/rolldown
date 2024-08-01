@@ -86,13 +86,7 @@ impl<'a> GenerateStage<'a> {
 
           match self.options.sourcemap {
             SourceMapType::File => {
-              let source = match map.to_json_string().map_err(BuildDiagnostic::sourcemap_error) {
-                Ok(source) => source,
-                Err(e) => {
-                  errors.push(e);
-                  continue;
-                }
-              };
+              let source = map.to_json_string();
               outputs.push(Output::Asset(Box::new(OutputAsset {
                 filename: map_filename.clone(),
                 source: source.into(),
@@ -101,13 +95,7 @@ impl<'a> GenerateStage<'a> {
               code.push_str(&format!("\n//# sourceMappingURL={map_filename}"));
             }
             SourceMapType::Inline => {
-              let data_url = match map.to_data_url().map_err(BuildDiagnostic::sourcemap_error) {
-                Ok(data_url) => data_url,
-                Err(e) => {
-                  errors.push(e);
-                  continue;
-                }
-              };
+              let data_url = map.to_data_url();
               code.push_str(&format!("\n//# sourceMappingURL={data_url}"));
             }
             SourceMapType::Hidden => {}

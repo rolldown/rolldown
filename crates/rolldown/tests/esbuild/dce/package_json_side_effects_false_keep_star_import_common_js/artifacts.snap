@@ -19,7 +19,7 @@ var require_demo_pkg_index = __commonJSMin((exports, module) => {
 //#region src/entry.js
 var import_demo_pkg_index = __toESM(require_demo_pkg_index());
 assert.deepEqual(import_demo_pkg_index, {
-	default: {foo: 123},
+	default: { foo: 123 },
 	foo: 123
 });
 

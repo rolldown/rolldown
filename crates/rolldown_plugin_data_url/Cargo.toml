@@ -4,6 +4,9 @@ license = "MIT"
 name    = "rolldown_plugin_data_url"
 version = "0.1.0"
 
+[lib]
+doctest = false
+
 [dependencies]
 base64-simd     = { workspace = true }
 dashmap         = { workspace = true }

@@ -19,7 +19,7 @@ var init_a = __esmMin(() => {
 var b_ns, xyz;
 var init_b = __esmMin(() => {
 	b_ns = {};
-	__export(b_ns, {xyz: () => xyz});
+	__export(b_ns, { xyz: () => xyz });
 	xyz = null;
 });
 
@@ -54,7 +54,7 @@ var init_commonjs = __esmMin(() => {
 var c_ns, c_default;
 var init_c = __esmMin(() => {
 	c_ns = {};
-	__export(c_ns, {default: () => c_default});
+	__export(c_ns, { default: () => c_default });
 	c_default = class {};
 });
 
@@ -63,7 +63,7 @@ var init_c = __esmMin(() => {
 var d_ns, Foo;
 var init_d = __esmMin(() => {
 	d_ns = {};
-	__export(d_ns, {default: () => Foo});
+	__export(d_ns, { default: () => Foo });
 	Foo = class {};
 	Foo.prop = 123;
 });
@@ -74,7 +74,7 @@ function e_default() {}
 var e_ns;
 var init_e = __esmMin(() => {
 	e_ns = {};
-	__export(e_ns, {default: () => e_default});
+	__export(e_ns, { default: () => e_default });
 });
 
 //#endregion
@@ -83,7 +83,7 @@ function foo$1() {}
 var f_ns;
 var init_f = __esmMin(() => {
 	f_ns = {};
-	__export(f_ns, {default: () => foo$1});
+	__export(f_ns, { default: () => foo$1 });
 	foo$1.prop = 123;
 });
 
@@ -93,7 +93,7 @@ async function g_default() {}
 var g_ns;
 var init_g = __esmMin(() => {
 	g_ns = {};
-	__export(g_ns, {default: () => g_default});
+	__export(g_ns, { default: () => g_default });
 });
 
 //#endregion
@@ -102,7 +102,7 @@ async function foo() {}
 var h_ns;
 var init_h = __esmMin(() => {
 	h_ns = {};
-	__export(h_ns, {default: () => foo});
+	__export(h_ns, { default: () => foo });
 	foo.prop = 123;
 });
 

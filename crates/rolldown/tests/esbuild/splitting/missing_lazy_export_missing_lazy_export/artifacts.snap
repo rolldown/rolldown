@@ -10,7 +10,7 @@ import { foo } from "./common.mjs";
 import { default as assert } from "node:assert";
 
 //#region a.js
-assert.deepEqual(foo(), [{default: {}}, undefined]);
+assert.deepEqual(foo(), [{ default: {} }, undefined]);
 
 //#endregion
 ```

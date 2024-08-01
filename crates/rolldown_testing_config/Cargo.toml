@@ -8,6 +8,10 @@ version              = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+doctest = false
+test    = false
+
 [dependencies]
 rolldown_common = { workspace = true, features = ["deserialize_bundler_options"] }
 schemars        = { workspace = true }

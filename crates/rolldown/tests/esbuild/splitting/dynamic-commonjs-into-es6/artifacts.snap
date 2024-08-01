@@ -23,7 +23,7 @@ export default require_foo();
 import { default as assert } from "node:assert";
 
 //#region main.js
-(import("./foo.mjs")).then(({ bar }) => {
+import("./foo.mjs").then(({ bar }) => {
 	assert.equal(bar, undefined);
 });
 

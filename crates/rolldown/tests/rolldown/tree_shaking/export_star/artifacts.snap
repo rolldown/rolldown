@@ -14,7 +14,7 @@ const foo = 1;
 //#endregion
 //#region export-star.js
 var export_star_ns = {};
-__export(export_star_ns, {foo: () => foo});
+__export(export_star_ns, { foo: () => foo });
 
 //#endregion
 //#region main.js

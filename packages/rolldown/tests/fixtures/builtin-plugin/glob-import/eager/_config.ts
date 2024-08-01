@@ -1,4 +1,4 @@
-import { globImportPlugin } from 'rolldown'
+import { globImportPlugin } from 'rolldown/experimental'
 import { defineTest } from '@tests'
 
 export default defineTest({

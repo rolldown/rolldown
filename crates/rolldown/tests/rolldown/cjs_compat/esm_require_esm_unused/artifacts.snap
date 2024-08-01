@@ -12,7 +12,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var esm_ns, esm_default;
 var init_esm = __esmMin(() => {
 	esm_ns = {};
-	__export(esm_ns, {default: () => esm_default});
+	__export(esm_ns, { default: () => esm_default });
 	esm_default = "esm";
 });
 

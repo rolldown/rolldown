@@ -2028,6 +2028,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-nyQrEnyN.mjs
 
+# tests/rolldown/warnings/commonjs_variable_in_esm
+
+- main-!~{000}~.mjs => main-hHhgdFpM.mjs
+
 # tests/rolldown/warnings/eval
 
 - main-!~{000}~.mjs => main-SHxh3snY.mjs

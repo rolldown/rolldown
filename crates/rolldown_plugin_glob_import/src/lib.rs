@@ -4,7 +4,7 @@ use oxc::{
   ast::{
     ast::{
       Argument, ArrayExpressionElement, BindingRestElement, Expression, FormalParameterKind,
-      ImportOrExportKind, ObjectPropertyKind, PropertyKey, PropertyKind, Statement, StringLiteral,
+      ImportOrExportKind, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
       TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
     },
     visit::walk_mut,
@@ -69,6 +69,7 @@ pub struct ImportGlobOptions {
   query: Option<QueryOption>,
 }
 
+#[allow(unused)]
 #[derive(Debug)]
 enum QueryOption {
   String(String),
@@ -345,7 +346,7 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
                 Expression::StringLiteral(v) => v.value.to_string(),
                 Expression::BooleanLiteral(v) => v.value.to_string(),
                 Expression::NumericLiteral(v) => v.value.to_string(),
-                Expression::NullLiteral(v) => "null".to_string(),
+                Expression::NullLiteral(_) => "null".to_string(),
                 _ => return None,
               };
               Some((key, value.to_string()))

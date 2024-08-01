@@ -105,7 +105,6 @@ impl ModuleFactory for EcmaModuleFactory {
       repr_name,
       warnings: scan_warnings,
     } = scan_result;
-    dbg!(&scan_warnings);
     ctx.warnings.extend(scan_warnings);
 
     let mut imported_ids = vec![];

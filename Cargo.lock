@@ -2184,6 +2184,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_plugin",
+ "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_glob_import",
  "rolldown_plugin_wasm",
  "rolldown_sourcemap",
@@ -2294,6 +2295,17 @@ dependencies = [
  "rolldown_plugin",
  "rustc-hash",
  "urlencoding",
+]
+
+[[package]]
+name = "rolldown_plugin_dynamic_import_vars"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "glob",
+ "oxc",
+ "regex",
+ "rolldown_plugin",
 ]
 
 [[package]]

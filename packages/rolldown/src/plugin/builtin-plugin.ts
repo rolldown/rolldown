@@ -13,6 +13,13 @@ export class BuiltinPlugin {
     this.options = options
   }
 }
+
+export class DynamicImportVarsPlugin extends BuiltinPlugin {
+  constructor() {
+    super(BindingBuiltinPluginName.DynamicImportVarsPlugin)
+  }
+}
+
 export class GlobImportPlugin extends BuiltinPlugin {
   constructor(config?: BindingGlobImportPluginConfig) {
     super(BindingBuiltinPluginName.GlobImportPlugin, config)
@@ -23,6 +30,10 @@ export class WasmPlugin extends BuiltinPlugin {
   constructor() {
     super(BindingBuiltinPluginName.WasmPlugin)
   }
+}
+
+export function dynamicImportVarsPlugin() {
+  return new DynamicImportVarsPlugin()
 }
 
 export function globImportPlugin(config?: BindingGlobImportPluginConfig) {

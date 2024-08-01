@@ -1,0 +1,19 @@
+[package]
+edition.workspace    = true
+homepage.workspace   = true
+license.workspace    = true
+name                 = "rolldown_plugin_dynamic_import_vars"
+repository.workspace = true
+version              = "0.0.1"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow          = { workspace = true }
+glob            = { workspace = true }
+oxc             = { workspace = true }
+regex           = { workspace = true }
+rolldown_plugin = { workspace = true }

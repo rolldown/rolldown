@@ -3,6 +3,7 @@ use napi::bindgen_prelude::FromNapiValue;
 use napi::JsUnknown;
 use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
+use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_glob_import::{GlobImportPlugin, GlobImportPluginConfig};
 use rolldown_plugin_wasm::WasmPlugin;
 use serde::Deserialize;
@@ -27,11 +28,13 @@ impl std::fmt::Debug for BindingBuiltinPlugin {
   }
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Deserialize)]
 #[napi]
 pub enum BindingBuiltinPluginName {
   WasmPlugin,
   GlobImportPlugin,
+  DynamicImportVarsPlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -65,6 +68,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(GlobImportPlugin { config })
       }
+      BindingBuiltinPluginName::DynamicImportVarsPlugin => Arc::new(DynamicImportVarsPlugin {}),
     })
   }
 }

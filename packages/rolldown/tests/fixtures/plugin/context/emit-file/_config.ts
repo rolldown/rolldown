@@ -19,13 +19,13 @@ export default defineTest({
           // emit asset string source
           referenceId = this.emitFile({
             type: 'asset',
-            name: 'emitted.txt',
+            name: '+emitted.txt',
             source: 'emitted',
           })
         },
         generateBundle() {
           expect(this.getFileName(referenceId)).toMatchInlineSnapshot(
-            `"emitted-umwR9Fta.txt"`,
+            `"_emitted-umwR9Fta.txt"`,
           )
           // emit asset buffer source
           this.emitFile({
@@ -41,8 +41,8 @@ export default defineTest({
     const assets = getOutputAsset(output)
     for (const asset of assets) {
       switch (asset.name) {
-        case 'emitted.txt':
-          expect(asset.fileName).toMatchInlineSnapshot(`"emitted-umwR9Fta.txt"`)
+        case '+emitted.txt':
+          expect(asset.fileName).toMatchInlineSnapshot(`"_emitted-umwR9Fta.txt"`)
           break
 
         case 'icon.png':

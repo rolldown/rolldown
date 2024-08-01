@@ -10,11 +10,13 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        outro: () => '/* Outro */',
+        banner: {
+          handler: '/* Banner */',
+        },
       },
     ],
   },
   afterTest: (output) => {
-    expect(output.output[0].code).toContain('/* Outro */')
+    expect(output.output[0].code).toContain('/* Banner */')
   },
 })

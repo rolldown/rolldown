@@ -1,9 +1,7 @@
 use oxc::index::IndexVec;
 use rustc_hash::FxHashMap;
 
-use crate::{ImportRecordIdx, SymbolRef};
-
-use super::symbol_ref::SymbolOrMemberExprRef;
+use crate::{ImportRecordIdx, SymbolOrMemberExprRef, SymbolRef};
 
 #[derive(Debug, Default)]
 pub struct StmtInfos {

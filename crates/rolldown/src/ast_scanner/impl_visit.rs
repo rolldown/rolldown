@@ -5,6 +5,7 @@ use oxc::{
     Visit,
   },
   codegen::{self, CodeGenerator, Gen},
+  span::GetSpan,
 };
 use rolldown_common::ImportKind;
 
@@ -58,14 +59,17 @@ impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
           }
         };
         match object_symbol_in_top_level {
-          // import statements are hoisted to the top of the module, so in this time being, all imports scanned.
-          Some(sym_ref) if self.result.named_imports.contains_key(&sym_ref) => {
+          // - Import statements are hoisted to the top of the module, so in this time being, all imports are scanned.
+          // - Having empty span will also results to bailout since we rely on span to identify ast nodes.
+          Some(sym_ref)
+            if self.result.named_imports.contains_key(&sym_ref) && !expr.span().is_unspanned() =>
+          {
             let props = props_in_reverse_order
               .into_iter()
               .rev()
               .map(|ident| ident.name.as_str().into())
               .collect::<Vec<_>>();
-            self.add_member_expr_reference(sym_ref, props);
+            self.add_member_expr_reference(sym_ref, props, expr.span());
             // Don't walk again, otherwise we will add the `object_symbol_in_top_level` again in `visit_identifier_reference`
             return;
           }

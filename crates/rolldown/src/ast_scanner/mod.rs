@@ -16,8 +16,7 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, ExportsKind, ImportKind, ImportRecordIdx, LocalExport, MemberExprRef, ModuleDefFormat,
-  ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos,
-  SymbolOrMemberExprRef, SymbolRef,
+  ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, UnhandleableResult};
@@ -487,11 +486,16 @@ impl<'me> AstScanner<'me> {
     self.current_stmt_info.referenced_symbols.push(sym_ref.into());
   }
 
-  pub fn add_member_expr_reference(&mut self, object_ref: SymbolRef, props: Vec<CompactStr>) {
+  pub fn add_member_expr_reference(
+    &mut self,
+    object_ref: SymbolRef,
+    props: Vec<CompactStr>,
+    span: Span,
+  ) {
     self
       .current_stmt_info
       .referenced_symbols
-      .push(SymbolOrMemberExprRef::MemberExpr(MemberExprRef { object_ref, props }));
+      .push(MemberExprRef::new(object_ref, props, span).into());
   }
 
   fn is_top_level(&self, symbol_id: SymbolId) -> bool {

@@ -89,9 +89,6 @@ impl<'a> GenerateStage<'a> {
               runtime: &self.link_output.runtime,
               chunk_graph: &chunk_graph,
               options: self.options,
-              top_level_member_expr_resolved_cache: &self
-                .link_output
-                .top_level_member_expr_resolved_cache,
             },
             ast,
           );

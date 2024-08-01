@@ -10,7 +10,7 @@ use rolldown_utils::{
   ecma_script::legitimize_identifier_name,
   rayon::{ParallelBridge, ParallelIterator},
 };
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 
 use crate::{
   runtime::RuntimeModuleBrief,
@@ -22,7 +22,7 @@ use crate::{
   SharedOptions,
 };
 
-use self::{tree_shaking::MemberChainToResolvedSymbolRef, wrapping::create_wrapper};
+use self::wrapping::create_wrapper;
 
 use super::scan_stage::ScanStageOutput;
 
@@ -43,7 +43,6 @@ pub struct LinkStageOutput {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
-  pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
 
 #[derive(Debug)]
@@ -59,7 +58,6 @@ pub struct LinkStage<'a> {
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
-  pub top_level_member_expr_resolved_cache: FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -98,7 +96,6 @@ impl<'a> LinkStage<'a> {
       ast_table: scan_stage_output.index_ecma_ast,
       options,
       used_symbol_refs: FxHashSet::default(),
-      top_level_member_expr_resolved_cache: FxHashMap::default(),
     }
   }
 
@@ -179,7 +176,6 @@ impl<'a> LinkStage<'a> {
       errors: self.errors,
       ast_table: self.ast_table,
       used_symbol_refs: self.used_symbol_refs,
-      top_level_member_expr_resolved_cache: self.top_level_member_expr_resolved_cache,
     }
   }
 

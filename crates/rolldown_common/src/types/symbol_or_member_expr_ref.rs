@@ -1,6 +1,4 @@
-use oxc::{semantic::SymbolId, span::CompactStr};
-
-use crate::{ModuleIdx, SymbolRef};
+use crate::SymbolRef;
 
 use super::member_expr_ref::MemberExprRef;
 
@@ -22,15 +20,9 @@ impl SymbolOrMemberExprRef {
   }
 }
 
-impl From<(ModuleIdx, SymbolId)> for SymbolOrMemberExprRef {
-  fn from(value: (ModuleIdx, SymbolId)) -> Self {
-    Self::Symbol(SymbolRef { owner: value.0, symbol: value.1 })
-  }
-}
-
-impl From<(ModuleIdx, SymbolId, Vec<CompactStr>)> for SymbolOrMemberExprRef {
-  fn from(value: (ModuleIdx, SymbolId, Vec<CompactStr>)) -> Self {
-    Self::MemberExpr(MemberExprRef { object_ref: (value.0, value.1).into(), props: value.2 })
+impl From<MemberExprRef> for SymbolOrMemberExprRef {
+  fn from(value: MemberExprRef) -> Self {
+    Self::MemberExpr(value)
   }
 }
 

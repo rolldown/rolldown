@@ -1,4 +1,5 @@
-use oxc::span::CompactStr;
+use oxc::span::{CompactStr, Span};
+use rustc_hash::FxHashMap;
 
 use crate::SymbolRef;
 
@@ -9,4 +10,32 @@ use crate::SymbolRef;
 pub struct MemberExprRef {
   pub object_ref: SymbolRef,
   pub props: Vec<CompactStr>,
+  // Span of the whole member expression
+  pub span: Span,
+}
+
+impl MemberExprRef {
+  pub fn new(object_ref: SymbolRef, props: Vec<CompactStr>, span: Span) -> Self {
+    Self { object_ref, props, span }
+  }
+
+  // #[allow(clippy::manual_map)]: Current code is more readable.
+  #[allow(clippy::manual_map)]
+  pub fn resolved_symbol_ref(
+    &self,
+    resolved_map: &FxHashMap<Span, Option<(SymbolRef, Vec<CompactStr>)>>,
+  ) -> Option<SymbolRef> {
+    if let Some(resolved) = resolved_map.get(&self.span) {
+      match resolved {
+        Some((sym_ref, _)) => Some(*sym_ref),
+        None => {
+          // This member expression resolve to a ambiguous export, which means it actually resolve to nothing.
+          // It would be rewrite to `undefined` in the final code.
+          None
+        }
+      }
+    } else {
+      Some(self.object_ref)
+    }
+  }
 }

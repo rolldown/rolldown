@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/default/re_export_common_js_as_es6
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

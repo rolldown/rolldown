@@ -1,7 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-expression: snapshot
-input_file: crates/rolldown/tests/fixtures/topics/live_bindings/named_exports_cjs
 ---
 # Assets
 

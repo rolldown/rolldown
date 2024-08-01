@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/misc/generate_valid_name_for_kebab_case_files
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

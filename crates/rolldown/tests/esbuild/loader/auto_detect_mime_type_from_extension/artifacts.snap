@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

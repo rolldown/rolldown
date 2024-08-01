@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_star_import_es6
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

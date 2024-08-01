@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/function/external/splitting_with_external_module
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

@@ -1,7 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-expression: snapshot
-input_file: crates/rolldown/tests/fixtures/semantic/export_star_from_external_as_wrapped_entry
 ---
 # warnings
 

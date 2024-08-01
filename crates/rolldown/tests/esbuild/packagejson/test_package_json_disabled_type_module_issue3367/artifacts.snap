@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_disabled_type_module_issue3367
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

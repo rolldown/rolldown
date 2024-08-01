@@ -52,7 +52,7 @@ pub struct AstScanner<'me> {
   symbols: &'me mut AstSymbols,
   current_stmt_info: StmtInfo,
   result: ScanResult,
-  esm_export_keyword_start: Option<Span>,
+  esm_export_keyword: Option<Span>,
   esm_import_keyword_start: Option<Span>,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,

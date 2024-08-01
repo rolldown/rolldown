@@ -39,6 +39,8 @@ import {
   DynamicImportVarsPlugin,
   globImportPlugin,
   GlobImportPlugin,
+  manifestPlugin,
+  ManifestPlugin,
   wasmPlugin,
   WasmPlugin,
 } from './plugin/builtin-plugin'
@@ -69,9 +71,9 @@ export {
   transform,
 }
 // Builtin plugin class
-export { DynamicImportVarsPlugin, WasmPlugin, GlobImportPlugin }
+export { DynamicImportVarsPlugin, WasmPlugin, GlobImportPlugin, ManifestPlugin }
 // Builtin plugin factory
-export { dynamicImportVarsPlugin, wasmPlugin, globImportPlugin }
+export { dynamicImportVarsPlugin, wasmPlugin, globImportPlugin, manifestPlugin }
 export type {
   RolldownOutputAsset,
   RolldownOutputChunk,

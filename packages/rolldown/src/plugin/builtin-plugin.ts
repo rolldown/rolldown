@@ -2,6 +2,7 @@ import {
   BindingBuiltinPluginName,
   BindingGlobImportPluginConfig,
   BindingBuiltinPlugin,
+  BindingManifestPluginConfig,
 } from '../binding'
 
 export class BuiltinPlugin {
@@ -26,6 +27,12 @@ export class GlobImportPlugin extends BuiltinPlugin {
   }
 }
 
+export class ManifestPlugin extends BuiltinPlugin {
+  constructor(config?: BindingManifestPluginConfig) {
+    super(BindingBuiltinPluginName.ManifestPlugin, config)
+  }
+}
+
 export class WasmPlugin extends BuiltinPlugin {
   constructor() {
     super(BindingBuiltinPluginName.WasmPlugin)
@@ -38,6 +45,10 @@ export function dynamicImportVarsPlugin() {
 
 export function globImportPlugin(config?: BindingGlobImportPluginConfig) {
   return new GlobImportPlugin(config)
+}
+
+export function manifestPlugin(config?: BindingManifestPluginConfig) {
+  return new ManifestPlugin(config)
 }
 
 export function wasmPlugin() {

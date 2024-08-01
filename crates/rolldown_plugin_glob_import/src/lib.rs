@@ -4,7 +4,7 @@ use oxc::{
   ast::{
     ast::{
       Argument, ArrayExpressionElement, BindingRestElement, Expression, FormalParameterKind,
-      ImportOrExportKind, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
+      ImportOrExportKind, ObjectPropertyKind, PropertyKey, PropertyKind, Statement, StringLiteral,
       TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
     },
     visit::walk_mut,
@@ -13,6 +13,7 @@ use oxc::{
   span::{Span, SPAN},
 };
 use rolldown_plugin::{HookTransformAstArgs, HookTransformAstReturn, Plugin, SharedPluginContext};
+use rustc_hash::FxHashMap;
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
@@ -65,6 +66,13 @@ impl Plugin for GlobImportPlugin {
 pub struct ImportGlobOptions {
   import: Option<String>,
   eager: Option<bool>,
+  query: Option<QueryOption>,
+}
+
+#[derive(Debug)]
+enum QueryOption {
+  String(String),
+  Map(FxHashMap<String, String>),
 }
 
 pub struct GlobImportVisit<'ast, 'a> {
@@ -88,69 +96,20 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                   let mut files = vec![];
                   // import.meta.glob('./dir/*.js')
                   // import.meta.glob(['./dir/*.js', './dir2/*.js'])
-                  if let Some(expr) = call_expr.arguments.first() {
-                    let mut glob_exprs = vec![];
-                    match expr {
-                      Argument::StringLiteral(str) => {
-                        glob_exprs.push(str.value.as_str());
-                      }
-                      Argument::ArrayExpression(array_expr) => {
-                        for expr in &array_expr.elements {
-                          if let ArrayExpressionElement::StringLiteral(str) = expr {
-                            glob_exprs.push(str.value.as_str());
-                          }
-                        }
-                      }
-                      _ => {}
-                    }
 
-                    for glob_expr in glob_exprs {
-                      let path = Path::new(self.cwd).join(Path::new(glob_expr));
-                      if path.is_absolute() {
-                        if let Some(path) = path.to_str() {
-                          // TODO handle error
-                          for file in glob(path).unwrap() {
-                            let file = file
-                              .unwrap()
-                              .as_path()
-                              .relative(self.cwd)
-                              .to_slash_lossy()
-                              .to_string();
-                            files.push(format!("./{file}"));
-                          }
-                        }
-                      }
-                    }
-                  }
-
-                  // import.meta.glob('./dir/*.js', { import: 'setup' })
                   let mut opts = ImportGlobOptions::default();
-                  if let Some(Argument::ObjectExpression(obj)) = call_expr.arguments.get(1) {
-                    for prop in &obj.properties {
-                      if let ObjectPropertyKind::ObjectProperty(p) = prop {
-                        if let PropertyKind::Init = p.kind {
-                          if let Some(key) = match &p.key {
-                            PropertyKey::StringLiteral(str) => Some(str.value.as_str()),
-                            PropertyKey::StaticIdentifier(id) => Some(id.name.as_str()),
-                            _ => None,
-                          } {
-                            match key {
-                              "import" => {
-                                if let Expression::StringLiteral(str) = &p.value {
-                                  opts.import = Some(str.value.as_str().to_string());
-                                }
-                              }
-                              "eager" => {
-                                if let Expression::BooleanLiteral(bool) = &p.value {
-                                  opts.eager = Some(bool.value);
-                                }
-                              }
-                              _ => {}
-                            }
-                          }
-                        }
-                      }
+                  match call_expr.arguments.as_slice() {
+                    [first] => self.eval_glob_expr(first, &mut files),
+                    // import.meta.glob('./dir/*.js', { import: 'setup' })
+                    [first, second] => {
+                      self.eval_glob_expr(first, &mut files);
+                      extract_import_glob_options(second, &mut opts);
                     }
+                    [first, second, _rest @ ..] => {
+                      self.eval_glob_expr(first, &mut files);
+                      extract_import_glob_options(second, &mut opts);
+                    }
+                    [] => {}
                   }
 
                   // {
@@ -333,5 +292,104 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
     }
 
     walk_mut::walk_expression(self, expr);
+  }
+}
+
+fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
+  let Argument::ObjectExpression(obj) = arg else {
+    return;
+  };
+
+  for prop in &obj.properties {
+    let ObjectPropertyKind::ObjectProperty(p) = prop else {
+      continue;
+    };
+
+    let PropertyKind::Init = p.kind else {
+      continue;
+    };
+
+    let key = match &p.key {
+      PropertyKey::StringLiteral(str) => str.value.as_str(),
+      PropertyKey::StaticIdentifier(id) => id.name.as_str(),
+      _ => continue,
+    };
+
+    match key {
+      "import" => {
+        if let Expression::StringLiteral(str) = &p.value {
+          opts.import = Some(str.value.as_str().to_string());
+        }
+      }
+      "eager" => {
+        if let Expression::BooleanLiteral(bool) = &p.value {
+          opts.eager = Some(bool.value);
+        }
+      }
+      "query" => match &p.value {
+        Expression::StringLiteral(str) => {
+          opts.query = Some(QueryOption::String(str.value.as_str().to_string()));
+        }
+        Expression::ObjectExpression(expr) => {
+          let map = expr
+            .properties
+            .iter()
+            .filter_map(|prop| {
+              let ObjectPropertyKind::ObjectProperty(p) = prop else { return None };
+              let key = match &p.key {
+                PropertyKey::StringLiteral(key) => key.value.to_string(),
+                PropertyKey::StaticIdentifier(ident) => ident.name.to_string(),
+                _ => return None,
+              };
+              let value = match &p.value {
+                Expression::StringLiteral(v) => v.value.to_string(),
+                Expression::BooleanLiteral(v) => v.value.to_string(),
+                Expression::NumericLiteral(v) => v.value.to_string(),
+                Expression::NullLiteral(v) => "null".to_string(),
+                _ => return None,
+              };
+              Some((key, value.to_string()))
+            })
+            .collect::<FxHashMap<String, String>>();
+          if !map.is_empty() {
+            opts.query = Some(QueryOption::Map(map));
+          }
+        }
+        _ => {}
+      },
+      _ => {}
+    }
+  }
+}
+
+impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
+  fn eval_glob_expr(&mut self, arg: &Argument, files: &mut std::vec::Vec<String>) {
+    let mut glob_exprs = vec![];
+    match arg {
+      Argument::StringLiteral(str) => {
+        glob_exprs.push(str.value.as_str());
+      }
+      Argument::ArrayExpression(array_expr) => {
+        for expr in &array_expr.elements {
+          if let ArrayExpressionElement::StringLiteral(str) = expr {
+            glob_exprs.push(str.value.as_str());
+          }
+        }
+      }
+      _ => {}
+    }
+
+    for glob_expr in glob_exprs {
+      let path = Path::new(self.cwd).join(Path::new(glob_expr));
+      if path.is_absolute() {
+        if let Some(path) = path.to_str() {
+          // TODO handle error
+          for file in glob(path).unwrap() {
+            let file = file.unwrap().as_path().relative(self.cwd).to_slash_lossy().to_string();
+            files.push(format!("./{file}"));
+          }
+        }
+      }
+    }
   }
 }

@@ -2316,6 +2316,7 @@ dependencies = [
  "glob",
  "oxc",
  "rolldown_plugin",
+ "rustc-hash",
  "sugar_path",
 ]
 

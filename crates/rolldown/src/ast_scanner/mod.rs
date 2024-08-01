@@ -44,7 +44,7 @@ pub struct ScanResult {
 
 bitflags::bitflags! {
     /// Represents a set of flags.
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     struct EsmKeywords: u8 {
         /// The value `A`, at bit position `0`.
         const EXPORT = 1;

@@ -14,6 +14,7 @@ workspace = true
 [dependencies]
 anyhow                   = { workspace = true }
 arcstr                   = { workspace = true }
+bitflags                 = { workspace = true }
 daachorse                = { workspace = true }
 dunce                    = { workspace = true }
 futures                  = { workspace = true }
@@ -39,7 +40,6 @@ tokio                    = { workspace = true, features = ["rt", "macros", "sync
 tracing                  = { workspace = true }
 tracing-chrome           = { workspace = true }
 xxhash-rust              = { workspace = true, features = ["xxh3"] }
-bitflags = {workspace = true}
 
 [dev-dependencies]
 glob             = { workspace = true }

@@ -1,4 +1,5 @@
-use rolldown_common::{ChunkKind, WrapKind};
+use itertools::Itertools;
+use rolldown_common::{ChunkKind, ExportsKind, Module, WrapKind};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
@@ -23,14 +24,33 @@ pub fn render_esm(
   }
 
   if let Some(intro) = intro {
-    if !intro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(intro)));
-    }
+    concat_source.add_source(Box::new(RawSource::new(intro)));
   }
 
   let (imports, _) = render_chunk_imports(ctx);
 
   concat_source.add_source(Box::new(RawSource::new(imports)));
+
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+    if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
+      if matches!(entry_module.exports_kind, ExportsKind::Esm) {
+        entry_module
+          .star_export_module_ids()
+          .filter_map(|importee| {
+            let importee = &ctx.link_output.module_table.modules[importee];
+            match importee {
+              Module::External(ext) => Some(&ext.name),
+              Module::Ecma(_) => None,
+            }
+          })
+          .dedup()
+          .for_each(|ext_name| {
+            let import_stmt = format!("export * from \"{}\"\n", &ext_name);
+            concat_source.add_source(Box::new(RawSource::new(import_stmt)));
+          });
+      }
+    }
+  }
 
   // chunk content
   module_sources.into_iter().for_each(|(_, _, module_render_output)| {
@@ -64,16 +84,13 @@ pub fn render_esm(
   }
 
   if let Some(exports) = render_chunk_exports(ctx)? {
-    if exports.is_empty() {
-    } else {
+    if !exports.is_empty() {
       concat_source.add_source(Box::new(RawSource::new(exports)));
     }
   }
 
   if let Some(outro) = outro {
-    if !outro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(outro)));
-    }
+    concat_source.add_source(Box::new(RawSource::new(outro)));
   }
 
   if let Some(footer) = footer {

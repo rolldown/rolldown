@@ -8,7 +8,7 @@ use rolldown_common::{
   AssetMeta, EcmaAssetMeta, ModuleId, ModuleIdx, OutputFormat, PreliminaryAsset, RenderedModule,
 };
 use rolldown_error::DiagnosableResult;
-use rolldown_plugin::{HookBannerArgs, HookFooterArgs};
+use rolldown_plugin::HookInjectionArgs;
 use rolldown_sourcemap::Source;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -63,35 +63,47 @@ impl Generator for EcmaGenerator {
     );
 
     let banner = {
-      let banner = match ctx.options.banner.as_ref() {
-        Some(banner) => banner.call(&rendered_chunk).await?,
+      let injection = match ctx.options.banner.as_ref() {
+        Some(hook) => hook.call(&rendered_chunk).await?,
         None => None,
       };
       ctx
         .plugin_driver
-        .banner(HookBannerArgs { chunk: &rendered_chunk }, banner.unwrap_or_default())
+        .banner(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .await?
+    };
+
+    let intro = {
+      let injection = match ctx.options.intro.as_ref() {
+        Some(hook) => hook.call(&rendered_chunk).await?,
+        None => None,
+      };
+      ctx
+        .plugin_driver
+        .intro(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .await?
+    };
+
+    let outro = {
+      let injection = match ctx.options.outro.as_ref() {
+        Some(hook) => hook.call(&rendered_chunk).await?,
+        None => None,
+      };
+      ctx
+        .plugin_driver
+        .outro(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
         .await?
     };
 
     let footer = {
-      let footer = match ctx.options.footer.as_ref() {
-        Some(footer) => footer.call(&rendered_chunk).await?,
+      let injection = match ctx.options.footer.as_ref() {
+        Some(hook) => hook.call(&rendered_chunk).await?,
         None => None,
       };
       ctx
         .plugin_driver
-        .footer(HookFooterArgs { chunk: &rendered_chunk }, footer.unwrap_or_default())
+        .footer(HookInjectionArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
         .await?
-    };
-
-    let intro = match ctx.options.intro.as_ref() {
-      Some(intro) => intro.call(&rendered_chunk).await?,
-      None => None,
-    };
-
-    let outro = match ctx.options.outro.as_ref() {
-      Some(outro) => outro.call(&rendered_chunk).await?,
-      None => None,
     };
 
     let concat_source = match ctx.options.format {

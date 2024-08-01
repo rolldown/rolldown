@@ -296,7 +296,9 @@ impl<'a> LinkStage<'a> {
         // - Mutating and parallel reading is in different memory locations
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
 
-        stmt_infos.iter_mut().for_each(|stmt_info| {
+        // store the symbol reference to the declared statement index
+        let mut declared_symbol_for_stmt_pairs = vec![];
+        stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_idx, stmt_info)| {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
             match &self.module_table.modules[rec.resolved_module] {
@@ -313,7 +315,7 @@ impl<'a> LinkStage<'a> {
                     if is_reexport_all {
                       symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                         format!("import_{}", legitimize_identifier_name(&importee.name)).into();
-                      stmt_info.declared_symbols.push(rec.namespace_ref);
+                      declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
                       stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                       stmt_info
                         .referenced_symbols
@@ -333,8 +335,8 @@ impl<'a> LinkStage<'a> {
                     match importee_linking_info.wrap_kind {
                       WrapKind::None => {}
                       WrapKind::Cjs => {
-                        stmt_info.side_effect = true;
                         if is_reexport_all {
+                          stmt_info.side_effect = true;
                           // Turn `export * from 'bar_cjs'` into `__reExport(foo_exports, __toESM(require_bar_cjs()))`
                           // Reference to `require_bar_cjs`
                           stmt_info
@@ -348,6 +350,7 @@ impl<'a> LinkStage<'a> {
                             .push(self.runtime.resolve_symbol("__reExport").into());
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                         } else {
+                          stmt_info.side_effect = importee.side_effects.has_side_effects();
                           // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
                           // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
                           // Reference to `require_bar_cjs`
@@ -358,7 +361,7 @@ impl<'a> LinkStage<'a> {
                           stmt_info
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__toESM").into());
-                          stmt_info.declared_symbols.push(rec.namespace_ref);
+                          declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
                           symbols.lock().unwrap().get_mut(rec.namespace_ref).name =
                             format!("import_{}", &importee.repr_name).into();
                         }
@@ -431,6 +434,9 @@ impl<'a> LinkStage<'a> {
             }
           });
         });
+        for (stmt_idx, symbol_ref) in declared_symbol_for_stmt_pairs {
+          stmt_infos.declare_symbol_for_stmt(stmt_idx, symbol_ref);
+        }
       },
     );
   }

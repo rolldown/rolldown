@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/issues/1769
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region lib.js
+const a = 1000;
+
+//#endregion
+//#region main.js
+console.log(a);
+
+//#endregion
+```

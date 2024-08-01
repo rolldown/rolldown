@@ -20,7 +20,12 @@ export default defineTest({
 
       //#endregion
       Object.defineProperty(exports, '__esModule', { value: true });
-      exports.default = main_default;
+      Object.defineProperty(exports, 'default', {
+        enumerable: true,
+        get: function () {
+          return main_default;
+        }
+      });
       return exports;
       })({}, node_path);"
     `)

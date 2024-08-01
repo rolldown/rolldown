@@ -38,6 +38,8 @@ pub static MIME_TYPES: Map<&'static str, &'static str> = phf_map! {
     "ttc" => "font/collection",
     "woff" => "font/woff",
     "woff2" => "font/woff2",
+    "eot" => "application/vnd.ms-fontobject",
+    "sfnt" => "font/sfnt",
     // Audios
     "aac" => "audio/aac",
     "midi" => "audio/midi",

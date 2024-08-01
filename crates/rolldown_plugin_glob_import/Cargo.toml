@@ -4,7 +4,7 @@ homepage.workspace   = true
 license.workspace    = true
 name                 = "rolldown_plugin_glob_import"
 repository.workspace = true
-version              = "0.0.1"
+version              = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,7 +12,6 @@ version              = "0.0.1"
 workspace = true
 
 [dependencies]
-async-trait     = { workspace = true }
 glob            = { workspace = true }
 oxc             = { workspace = true }
 rolldown_plugin = { workspace = true }

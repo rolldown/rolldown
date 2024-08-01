@@ -1,5 +1,5 @@
 use anyhow::Ok;
-use rolldown_utils::ecma_script::is_validate_identifier_name;
+use rolldown_utils::ecma_script::is_validate_assignee_identifier_name;
 use serde_json::Value;
 // TODO: handling https://github.com/tc39/proposal-json-superset
 
@@ -12,7 +12,7 @@ pub fn json_to_esm(json: &str) -> anyhow::Result<String> {
       let mut source = String::new();
       let mut exported_items_for_default_export = Vec::with_capacity(map.len());
       for (idx, (key, value)) in map.iter().enumerate() {
-        if is_validate_identifier_name(key) {
+        if is_validate_assignee_identifier_name(key) {
           source
             .push_str(&format!("export const {key} = {};\n", serde_json::to_string_pretty(value)?));
           exported_items_for_default_export.push(key.to_string());

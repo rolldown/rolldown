@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/topics/live_bindings/named_exports_in_common_chunks
+---
+# Assets
+
+## async-entry.mjs
+
+```js
+import { count, inc, reset } from "./shared.mjs";
+import { default as assert } from "node:assert";
+
+//#region async-entry.js
+reset();
+assert.strictEqual(count, 0);
+assert.strictEqual(count, count);
+inc();
+assert.strictEqual(count, 1);
+assert.strictEqual(count, count);
+inc();
+assert.strictEqual(count, 2);
+assert.strictEqual(count, count);
+
+//#endregion
+```
+## main.mjs
+
+```js
+import { count, inc, reset } from "./shared.mjs";
+
+//#region main.js
+import("./async-entry.mjs");
+
+//#endregion
+export { count, inc, reset };
+```
+## shared.mjs
+
+```js
+
+//#region shared.js
+let count = 0;
+function reset() {
+	count = 0;
+}
+function inc() {
+	count += 1;
+}
+
+//#endregion
+export { count, inc, reset };
+```

@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/function/export_mode/cjs/auto/named
+---
+# Assets
+
+## main.cjs
+
+```js
+"use strict";
+
+//#region main.js
+function a() {
+	return "named";
+}
+
+//#endregion
+Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperty(exports, 'a', {
+  enumerable: true,
+  get: function () {
+    return a;
+  }
+});
+```

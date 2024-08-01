@@ -1,11 +1,9 @@
-use std::path::Path;
-
-use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId};
-use rolldown_resolver::{ResolveError, Resolver};
-
 use crate::{
   HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdExtraOptions, PluginDriver,
 };
+use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId};
+use rolldown_resolver::{ResolveError, Resolver};
+use std::path::Path;
 
 fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")
@@ -45,7 +43,7 @@ pub async fn resolve_id_with_plugins(
   if let Some(r) = plugin_driver
     .resolve_id(&HookResolveIdArgs {
       importer: importer.map(std::convert::AsRef::as_ref),
-      source: request,
+      specifier: request,
       options,
     })
     .await?

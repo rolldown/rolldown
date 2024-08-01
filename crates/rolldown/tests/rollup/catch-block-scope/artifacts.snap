@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/case/case.rs
+expression: content
+input_file: crates/rolldown/tests/fixtures/rollup/catch-block-scope
+---
+# Assets
+
+## main.mjs
+
+```js
+
+//#region main.js
+try {
+	throw "FAIL";
+} catch (t) {
+	var t = "PASS";
+	assert.strictEqual(t, "PASS");
+}
+let a = 1;
+let def = "PASS2";
+try {
+	throw ["FAIL2", "PASS1"];
+} catch ({ [a]: b, 3: d = def }) {
+	let a$1 = 0, def$1 = "FAIL3";
+	assert.strictEqual(b, "PASS1");
+	assert.strictEqual(d, "PASS2");
+}
+
+//#endregion
+```

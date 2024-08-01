@@ -1,16 +1,13 @@
 use oxc::index::IndexVec;
 use rustc_hash::FxHashMap;
 
-use crate::{ImportRecordIdx, SymbolRef};
-
-use super::symbol_ref::SymbolOrMemberExprRef;
+use crate::{ImportRecordIdx, SymbolOrMemberExprRef, SymbolRef};
 
 #[derive(Debug, Default)]
 pub struct StmtInfos {
-  infos: IndexVec<StmtInfoIdx, StmtInfo>,
+  pub infos: IndexVec<StmtInfoIdx, StmtInfo>,
   // only for top level symbols
   symbol_ref_to_declared_stmt_idx: FxHashMap<SymbolRef, Vec<StmtInfoIdx>>,
-  pub has_export_used: bool,
 }
 
 impl StmtInfos {
@@ -24,15 +21,22 @@ impl StmtInfos {
 
   pub fn add_stmt_info(&mut self, info: StmtInfo) -> StmtInfoIdx {
     let id = self.infos.push(info);
-    for symbol_ref in &self.infos[id].declared_symbols {
+    for symbol_ref in &*self.infos[id].declared_symbols {
       self.symbol_ref_to_declared_stmt_idx.entry(*symbol_ref).or_default().push(id);
     }
     id
   }
 
+  /// # Panic
+  /// Caller should guarantee the stmt is included in `stmts` before, or it will panic.
+  pub fn declare_symbol_for_stmt(&mut self, id: StmtInfoIdx, symbol_ref: SymbolRef) {
+    self.infos[id].declared_symbols.push(symbol_ref);
+    self.symbol_ref_to_declared_stmt_idx.entry(symbol_ref).or_default().push(id);
+  }
+
   pub fn replace_namespace_stmt_info(&mut self, info: StmtInfo) -> StmtInfoIdx {
     self.infos[0] = info;
-    for symbol_ref in &self.infos[0].declared_symbols {
+    for symbol_ref in &*self.infos[0].declared_symbols {
       self
         .symbol_ref_to_declared_stmt_idx
         .entry(*symbol_ref)

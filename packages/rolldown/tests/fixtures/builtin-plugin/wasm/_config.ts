@@ -1,8 +1,8 @@
-import { BuiltinWasmPlugin } from '../../../../'
+import { wasmPlugin } from '../../../../'
 import { defineTest } from '@tests'
 
 export default defineTest({
   config: {
-    plugins: [new BuiltinWasmPlugin()],
+    plugins: [wasmPlugin()],
   },
 })

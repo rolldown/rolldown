@@ -98,7 +98,7 @@ export interface BindingAssetSource {
 }
 
 export interface BindingBuiltinPlugin {
-  name: BindingBuiltinPluginName
+  __name: BindingBuiltinPluginName
   options?: unknown
 }
 
@@ -111,6 +111,11 @@ export interface BindingEmittedAsset {
   name?: string
   fileName?: string
   source: BindingAssetSource
+}
+
+export interface BindingGlobImportPluginConfig {
+  root?: string
+  restoreQueryExtension?: boolean
 }
 
 export interface BindingHookLoadOutput {
@@ -228,6 +233,8 @@ export interface BindingPluginOptions {
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
   banner?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
   footer?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+  intro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
+  outro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
 }
 
 export interface BindingPluginWithIndex {

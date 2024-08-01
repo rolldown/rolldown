@@ -159,8 +159,11 @@ export function bindingifyBanner(
   }
 
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
-
   return async (ctx, chunk) => {
+    if (typeof handler === 'string') {
+      return handler
+    }
+
     return handler.call(
       new PluginContext(options, ctx, plugin, pluginContextData),
       chunk,
@@ -181,6 +184,58 @@ export function bindingifyFooter(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, chunk) => {
+    if (typeof handler === 'string') {
+      return handler
+    }
+
+    return handler.call(
+      new PluginContext(options, ctx, plugin, pluginContextData),
+      chunk,
+    )
+  }
+}
+
+export function bindingifyIntro(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
+): BindingPluginOptions['intro'] {
+  const hook = plugin.intro
+  if (!hook) {
+    return undefined
+  }
+
+  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+
+  return async (ctx, chunk) => {
+    if (typeof handler === 'string') {
+      return handler
+    }
+
+    return handler.call(
+      new PluginContext(options, ctx, plugin, pluginContextData),
+      chunk,
+    )
+  }
+}
+
+export function bindingifyOutro(
+  plugin: Plugin,
+  options: NormalizedInputOptions,
+  pluginContextData: PluginContextData,
+): BindingPluginOptions['outro'] {
+  const hook = plugin.outro
+  if (!hook) {
+    return undefined
+  }
+
+  const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
+
+  return async (ctx, chunk) => {
+    if (typeof handler === 'string') {
+      return handler
+    }
+
     return handler.call(
       new PluginContext(options, ctx, plugin, pluginContextData),
       chunk,

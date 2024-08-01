@@ -28,7 +28,7 @@ export function normalizeOutputOptions(
         ? sourcemapIgnoreList
         : sourcemapIgnoreList === false
           ? () => false
-          : (relativeSourcePath: string, sourcemapPath: string) =>
+          : (relativeSourcePath: string, _sourcemapPath: string) =>
               relativeSourcePath.includes('node_modules'),
     sourcemapPathTransform,
     banner: getAddon(opts, 'banner'),

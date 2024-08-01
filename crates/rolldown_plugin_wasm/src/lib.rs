@@ -11,7 +11,6 @@ const WASM_RUNTIME: &str = "\0rolldown_wasm_runtime.js";
 #[derive(Debug)]
 pub struct WasmPlugin {}
 
-#[async_trait::async_trait]
 impl Plugin for WasmPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("wasm_plugin")
@@ -20,16 +19,16 @@ impl Plugin for WasmPlugin {
   async fn resolve_id(
     &self,
     _ctx: &SharedPluginContext,
-    args: &HookResolveIdArgs,
+    args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
-    if args.source == WASM_RUNTIME {
+    if args.specifier == WASM_RUNTIME {
       Ok(Some(HookResolveIdOutput { id: WASM_RUNTIME.to_string(), ..Default::default() }))
     } else {
       Ok(None)
     }
   }
 
-  async fn load(&self, ctx: &SharedPluginContext, args: &HookLoadArgs) -> HookLoadReturn {
+  async fn load(&self, ctx: &SharedPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if args.id == WASM_RUNTIME {
       return Ok(Some(HookLoadOutput {
         code: include_str!("wasm_runtime.js").to_string(),

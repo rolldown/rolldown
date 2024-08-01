@@ -178,7 +178,7 @@ export type SequentialPluginHooks =
   | 'renderChunk'
   | 'transform'
 
-export type AddonHooks = 'banner' | 'footer' /* | 'intro' | 'outro' */
+export type AddonHooks = 'banner' | 'footer' | 'intro' | 'outro'
 
 export type OutputPluginHooks =
   | 'augmentChunkHash'
@@ -213,7 +213,7 @@ export type AddonHookFunction = (
   chunk: RenderedChunk,
 ) => string | Promise<string>
 
-export type AddonHook = AddonHookFunction
+export type AddonHook = string | AddonHookFunction
 
 export interface OutputPlugin
   extends Partial<{ [K in OutputPluginHooks]: PluginHooks[K] }>,
@@ -224,8 +224,8 @@ export interface OutputPlugin
 }
 
 export interface Plugin<A = any> extends OutputPlugin, Partial<PluginHooks> {
-  // TODO for inter-plugin communication
-  // api?: A
+  // for inter-plugin communication
+  api?: A
 }
 
 export type RolldownPlugin<A = any> = Plugin<A> | ParallelPlugin | BuiltinPlugin

@@ -19,9 +19,18 @@ use std::{
 use sugar_path::SugarPath;
 
 #[derive(Debug)]
-pub struct GlobImportPlugin {}
+pub struct GlobImportPlugin {
+  pub config: GlobImportPluginConfig,
+}
 
-#[async_trait::async_trait]
+#[derive(Debug, Default)]
+/// vite also support `source_map` config, but we can't support it now.
+/// Since the source map now follow the codegen option.
+pub struct GlobImportPluginConfig {
+  pub root: Option<String>,
+  pub restore_query_extension: bool,
+}
+
 impl Plugin for GlobImportPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("glob_import_plugin")
@@ -34,8 +43,13 @@ impl Plugin for GlobImportPlugin {
   ) -> HookTransformAstReturn {
     args.ast.program.with_mut(|fields| {
       let ast_builder = AstBuilder::new(fields.allocator);
-      let mut visitor =
-        GlobImportVisit { cwd: args.cwd, import_decls: ast_builder.vec(), ast_builder, current: 0 };
+      let cwd = self.config.root.as_ref().map(PathBuf::from);
+      let mut visitor = GlobImportVisit {
+        cwd: cwd.as_ref().unwrap_or(args.cwd),
+        import_decls: ast_builder.vec(),
+        ast_builder,
+        current: 0,
+      };
       visitor.visit_program(fields.program);
       if !visitor.import_decls.is_empty() {
         fields.program.body.extend(visitor.import_decls);

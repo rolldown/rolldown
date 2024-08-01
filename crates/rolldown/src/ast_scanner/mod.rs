@@ -15,8 +15,9 @@ use oxc::{
   span::{CompactStr, GetSpan, Span},
 };
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef,
+  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, LocalExport, MemberExprRef, ModuleDefFormat,
+  ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos,
+  SymbolOrMemberExprRef, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, UnhandleableResult};
@@ -482,21 +483,25 @@ impl<'me> AstScanner<'me> {
     }
   }
 
-  pub fn add_referenced_symbol(&mut self, id: SymbolId) {
-    self.current_stmt_info.referenced_symbols.push((self.idx, id).into());
+  pub fn add_referenced_symbol(&mut self, sym_ref: SymbolRef) {
+    self.current_stmt_info.referenced_symbols.push(sym_ref.into());
   }
 
-  pub fn add_member_expr_reference(&mut self, id: SymbolId, chains: Vec<CompactStr>) {
-    self.current_stmt_info.referenced_symbols.push((self.idx, id, chains).into());
+  pub fn add_member_expr_reference(&mut self, object_ref: SymbolRef, props: Vec<CompactStr>) {
+    self
+      .current_stmt_info
+      .referenced_symbols
+      .push(SymbolOrMemberExprRef::MemberExpr(MemberExprRef { object_ref, props }));
   }
 
   fn is_top_level(&self, symbol_id: SymbolId) -> bool {
     self.scopes.root_scope_id() == self.symbols.scope_id_for(symbol_id)
   }
 
-  fn try_diagnostic_forbid_const_assign(&mut self, symbol_id: SymbolId) {
-    if self.symbols.get_flag(symbol_id).is_const_variable() {
-      for reference in self.scopes.get_resolved_references(symbol_id) {
+  fn try_diagnostic_forbid_const_assign(&mut self, id_ref: &IdentifierReference) {
+    match (self.resolve_symbol_from_reference(id_ref), id_ref.reference_id.get()) {
+      (Some(symbol_id), Some(ref_id)) if self.symbols.get_flag(symbol_id).is_const_variable() => {
+        let reference = &self.scopes.references[ref_id];
         if reference.is_write() {
           self.result.warnings.push(
             BuildDiagnostic::forbid_const_assign(
@@ -504,23 +509,30 @@ impl<'me> AstScanner<'me> {
               self.source.clone(),
               self.symbols.get_name(symbol_id).into(),
               self.symbols.get_span(symbol_id),
-              reference.span(),
+              id_ref.span(),
             )
             .with_severity_warning(),
           );
         }
       }
+      _ => {}
     }
   }
 
   /// resolve the symbol from the identifier reference, and return if it is a top level symbol
-  fn resolve_identifier_reference(
+  fn resolve_identifier_to_top_level_symbol(
     &mut self,
-    symbol_id: Option<SymbolId>,
     ident: &IdentifierReference,
-  ) -> Option<SymbolId> {
+  ) -> Option<SymbolRef> {
+    let symbol_id = self.resolve_symbol_from_reference(ident);
     match symbol_id {
-      Some(symbol_id) if self.is_top_level(symbol_id) => Some(symbol_id),
+      Some(symbol_id) => {
+        if self.is_top_level(symbol_id) {
+          Some((self.idx, symbol_id).into())
+        } else {
+          None
+        }
+      }
       None => {
         if ident.name == "module" {
           self.used_module_ref = true;
@@ -536,7 +548,6 @@ impl<'me> AstScanner<'me> {
         }
         None
       }
-      _ => None,
     }
   }
 }

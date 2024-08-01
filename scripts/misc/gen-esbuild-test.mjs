@@ -8,7 +8,6 @@ import chalk from 'chalk'
 import * as dedent from 'dedent'
 import { fileURLToPath } from 'node:url'
 import { URL } from 'node:url'
-import { warn } from 'node:console'
 import * as nodeHttps from 'node:https'
 import * as nodeFs from 'node:fs'
 import * as fsExtra from 'fs-extra'
@@ -161,7 +160,7 @@ async function readTestSuiteSource(testSuiteName) {
   const sourcePath = path.resolve(__dirname, testSuite.sourcePath)
   try {
     return fs.readFileSync(sourcePath).toString()
-  } catch (err1) {
+  } catch {
     console.log(`Could not read .go source file from ${sourcePath}.`)
     console.log(`Attempting to download it from ${testSuite.sourceGithubUrl}.`)
     console.log('...')

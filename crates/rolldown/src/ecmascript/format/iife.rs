@@ -68,7 +68,7 @@ pub fn render_iife(
   let arguments = render_iife_arguments(
     &externals,
     &ctx.options.globals,
-    has_exports && matches!(export_mode, rolldown_common::OutputExports::Named),
+    has_exports && matches!(export_mode, OutputExports::Named),
   );
 
   let ending = format!("{end_wrapper}({arguments});");

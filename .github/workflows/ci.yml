@@ -43,7 +43,6 @@ jobs:
             node-changes:
               - *rust-changes
               - 'packages/**'
-              - 'web/playground'
               - 'examples/**'
               - 'scripts/**'
               - 'package.json'

@@ -1,0 +1,104 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+expression: snapshot
+input_file: crates/rolldown/tests/fixtures/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped_and_shared_entries_cjs
+---
+# warnings
+
+## CIRCULAR_DEPENDENCY
+
+```text
+[CIRCULAR_DEPENDENCY] Warning: Circular dependency: main.js -> main.js.
+
+```
+# Assets
+
+## entry.cjs
+
+```js
+"use strict";
+const { __toCommonJS, foo, init_main, main_default, main_ns } = require("./main.cjs");
+
+init_main();
+Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+});
+Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+});
+```
+## entry2.cjs
+
+```js
+"use strict";
+const { __toCommonJS, foo, init_main, main_default, main_ns } = require("./main.cjs");
+
+init_main();
+Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+});
+Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+});
+```
+## main.cjs
+
+```js
+"use strict";
+
+
+//#region main.js
+var main_ns, foo, main_default;
+var init_main = __esmMin(() => {
+	main_ns = {};
+	__export(main_ns, {
+		default: () => main_default,
+		foo: () => foo
+	});
+	foo = "foo";
+	main_default = "main";
+	console.log((init_main(), __toCommonJS(main_ns)));
+});
+
+//#endregion
+Object.defineProperty(exports, '__toCommonJS', {
+  enumerable: true,
+  get: function () {
+    return __toCommonJS;
+  }
+  });Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+  });Object.defineProperty(exports, 'init_main', {
+  enumerable: true,
+  get: function () {
+    return init_main;
+  }
+  });Object.defineProperty(exports, 'main_default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+  });Object.defineProperty(exports, 'main_ns', {
+  enumerable: true,
+  get: function () {
+    return main_ns;
+  }
+  });
+```

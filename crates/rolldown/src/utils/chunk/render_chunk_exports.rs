@@ -71,11 +71,14 @@ pub fn render_chunk_exports(ctx: &mut GenerateContext<'_>) -> DiagnosableResult<
 
                 match export_mode {
                   OutputExports::Named => {
-                    if is_validate_identifier_name(&exported_name) {
-                      format!("exports.{exported_name} = {canonical_name};")
-                    } else {
-                      format!("exports['{exported_name}'] = {canonical_name};")
-                    }
+                    format!(
+                      "Object.defineProperty(exports, '{exported_name}', {{
+  enumerable: true,
+  get: function () {{
+    return {canonical_name};
+  }}
+}});"
+                    )
                   }
                   OutputExports::Default => {
                     if matches!(options.format, OutputFormat::Cjs) {
@@ -97,18 +100,28 @@ pub fn render_chunk_exports(ctx: &mut GenerateContext<'_>) -> DiagnosableResult<
             let canonical_ref = link_output.symbols.par_canonical_ref_for(export_ref);
             let symbol = link_output.symbols.get(canonical_ref);
             let canonical_name = &chunk.canonical_names[&canonical_ref];
-            let assignee_name = if is_validate_identifier_name(&exported_name) {
-              format!("exports.{exported_name}")
-            } else {
-              format!("exports['{exported_name}']")
-            };
+
             if let Some(ns_alias) = &symbol.namespace_alias {
               let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
               let property_name = &ns_alias.property_name;
-              s.push_str(&format!("{assignee_name} = {canonical_ns_name}.{property_name};;\n"));
+              s.push_str(&format!(
+                "Object.defineProperty(exports, '{exported_name}', {{
+  enumerable: true,
+  get: function () {{
+    return {canonical_ns_name}.{property_name};
+  }}
+}});"
+              ));
             } else {
-              s.push_str(&format!("{assignee_name} = {canonical_name};\n"));
-            }
+              s.push_str(&format!(
+                "Object.defineProperty(exports, '{exported_name}', {{
+  enumerable: true,
+  get: function () {{
+    return {canonical_name};
+  }}
+  }});"
+              ));
+            };
           });
         }
       }

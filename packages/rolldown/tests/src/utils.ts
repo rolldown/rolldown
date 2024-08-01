@@ -4,7 +4,6 @@ import {
   RolldownOutputAsset,
 } from '../../src'
 import nodePath from 'node:path'
-import nodeUrl from 'node:url'
 import assert from 'node:assert'
 import { workspaceRoot } from '@rolldown/testing'
 

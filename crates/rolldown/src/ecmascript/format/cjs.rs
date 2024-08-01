@@ -1,3 +1,5 @@
+use itertools::Itertools;
+use rolldown_common::{ChunkKind, ExportsKind, Module, WrapKind};
 use rolldown_error::DiagnosableResult;
 use rolldown_sourcemap::{ConcatSource, RawSource};
 
@@ -29,8 +31,30 @@ pub fn render_cjs(
   }
 
   if let Some(intro) = intro {
-    if !intro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(intro)));
+    concat_source.add_source(Box::new(RawSource::new(intro)));
+  }
+
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+    if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
+      if matches!(entry_module.exports_kind, ExportsKind::Esm) {
+        entry_module.star_export_module_ids().filter_map(|importee| {
+          let importee = &ctx.link_output.module_table.modules[importee];
+          match importee {
+            Module::External(ext) => Some(&ext.name),
+            Module::Ecma(_) => {None}
+          }
+        }).dedup().for_each(|ext_name| {
+              let import_stmt =
+"Object.keys($NAME).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return $NAME[k]; }
+	});
+});
+".replace("$NAME", &format!("require(\"{}\")", &ext_name));
+              concat_source.add_source(Box::new(RawSource::new(import_stmt)));
+          });
+      }
     }
   }
 
@@ -64,14 +88,34 @@ pub fn render_cjs(
     }
   });
 
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+    let entry_meta = &ctx.link_output.metas[entry_id];
+    match entry_meta.wrap_kind {
+      WrapKind::Esm => {
+        // init_xxx()
+        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+        let wrapper_ref_name =
+          ctx.link_output.symbols.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
+        concat_source.add_source(Box::new(RawSource::new(format!("{wrapper_ref_name}();",))));
+      }
+      WrapKind::Cjs => {
+        // "export default require_xxx();"
+        let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
+        let wrapper_ref_name =
+          ctx.link_output.symbols.canonical_name_for(*wrapper_ref, &ctx.chunk.canonical_names);
+        concat_source
+          .add_source(Box::new(RawSource::new(format!("export default {wrapper_ref_name}();\n"))));
+      }
+      WrapKind::None => {}
+    }
+  }
+
   if let Some(exports) = render_chunk_exports(ctx)? {
     concat_source.add_source(Box::new(RawSource::new(exports)));
   }
 
   if let Some(outro) = outro {
-    if !outro.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(outro)));
-    }
+    concat_source.add_source(Box::new(RawSource::new(outro)));
   }
 
   if let Some(footer) = footer {

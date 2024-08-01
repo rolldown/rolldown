@@ -1,7 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-expression: snapshot
-input_file: crates/rolldown/tests/rolldown/function/es_module/if_default_prop_cjs_true
 ---
 # Assets
 

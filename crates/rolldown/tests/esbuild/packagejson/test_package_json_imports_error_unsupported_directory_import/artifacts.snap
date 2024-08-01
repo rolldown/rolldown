@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_imports_error_unsupported_directory_import
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

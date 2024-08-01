@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/cjs_compat/empty_file_should_be_treated_as_cjs/re_export
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

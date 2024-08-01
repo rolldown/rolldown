@@ -1,11 +1,12 @@
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, ResolvedExport, Specifier, SymbolRef,
+  ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, ResolvedExport, Specifier,
+  SymbolOrMemberExprRef, SymbolRef,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
-use rolldown_rstr::Rstr;
-use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
+use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashMap;
 
 use crate::{
@@ -171,9 +172,11 @@ impl<'link> LinkStage<'link> {
       sorted_and_non_ambiguous_resolved_exports.sort_unstable();
       meta.sorted_and_non_ambiguous_resolved_exports = sorted_and_non_ambiguous_resolved_exports;
     });
+
+    self.resolve_member_expr_refs();
   }
 
-  pub fn add_exports_for_export_star(
+  fn add_exports_for_export_star(
     normal_modules: &IndexModules,
     resolve_exports: &mut FxHashMap<Rstr, ResolvedExport>,
     module_id: ModuleIdx,
@@ -233,6 +236,89 @@ impl<'link> LinkStage<'link> {
     }
 
     module_stack.pop();
+  }
+
+  /// Try to find the final pointed `SymbolRef` of the member expression.
+  /// ```js
+  /// // index.js
+  /// import * as foo_ns from './foo';
+  /// foo_ns.bar_ns.c;
+  /// // foo.js
+  /// export * as bar_ns from './bar';
+  /// // bar.js
+  /// export const c = 1;
+  /// ```
+  /// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
+  fn resolve_member_expr_refs(&mut self) {
+    let resolved_maps = self
+      .module_table
+      .modules
+      .as_vec()
+      .par_iter()
+      .map(|module| match module {
+        Module::Ecma(module) => {
+          let mut resolved = FxHashMap::default();
+          module.stmt_infos.iter().for_each(|stmt_info| {
+            stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
+              if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
+                // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
+                let mut canonical_ref =
+                  self.symbols.par_canonical_ref_for(member_expr_ref.object_ref);
+                let mut canonical_ref_owner = self.module_table.modules[canonical_ref.owner]
+                  .as_ecma()
+                  .expect("only ecma module");
+                let mut is_namespace_ref =
+                  canonical_ref_owner.namespace_object_ref == canonical_ref;
+                let mut ns_symbol_list = vec![];
+                let mut cursor = 0;
+                while cursor < member_expr_ref.props.len() && is_namespace_ref {
+                  let name = &member_expr_ref.props[cursor];
+                  let meta = &self.metas[canonical_ref_owner.idx];
+                  let export_symbol = meta.resolved_exports.get(&name.to_rstr());
+                  let Some(export_symbol) = export_symbol else { break };
+                  if !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr()) {
+                    resolved.insert(member_expr_ref.span, None);
+                    return;
+                  };
+
+                  // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
+                  if !self.module_table.modules[export_symbol.symbol_ref.owner]
+                    .as_ecma()
+                    .unwrap()
+                    .exports_kind
+                    .is_esm()
+                  {
+                    break;
+                  }
+                  ns_symbol_list.push((canonical_ref, name.to_rstr()));
+                  canonical_ref = self.symbols.par_canonical_ref_for(export_symbol.symbol_ref);
+                  canonical_ref_owner =
+                    self.module_table.modules[canonical_ref.owner].as_ecma().unwrap();
+                  cursor += 1;
+                  is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
+                }
+                if cursor > 0 {
+                  resolved.insert(
+                    member_expr_ref.span,
+                    Some((canonical_ref, member_expr_ref.props[cursor..].to_vec())),
+                  );
+                }
+              }
+            });
+          });
+
+          resolved
+        }
+        Module::External(_) => FxHashMap::default(),
+      })
+      .collect::<Vec<_>>();
+
+    debug_assert_eq!(self.metas.len(), resolved_maps.len());
+    self.metas.as_mut_vec().iter_mut().zip(resolved_maps).par_bridge().for_each(
+      |(meta, resolved_map)| {
+        meta.resolved_member_expr_refs = resolved_map;
+      },
+    );
   }
 }
 

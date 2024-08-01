@@ -1,7 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-expression: snapshot
-input_file: crates/rolldown/tests/rolldown/topics/cjs_module_lexer_compat/exports
 ---
 # Assets
 

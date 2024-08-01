@@ -160,7 +160,7 @@ export function bindingifyBanner(
 
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
   return async (ctx, chunk) => {
-    if (typeof handler !== 'function') {
+    if (typeof handler === 'string') {
       return handler
     }
 
@@ -184,6 +184,10 @@ export function bindingifyFooter(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, chunk) => {
+    if (typeof handler === 'string') {
+      return handler
+    }
+
     return handler.call(
       new PluginContext(options, ctx, plugin, pluginContextData),
       chunk,
@@ -204,6 +208,10 @@ export function bindingifyIntro(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, chunk) => {
+    if (typeof handler === 'string') {
+      return handler
+    }
+
     return handler.call(
       new PluginContext(options, ctx, plugin, pluginContextData),
       chunk,
@@ -224,6 +232,10 @@ export function bindingifyOutro(
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
   return async (ctx, chunk) => {
+    if (typeof handler === 'string') {
+      return handler
+    }
+
     return handler.call(
       new PluginContext(options, ctx, plugin, pluginContextData),
       chunk,

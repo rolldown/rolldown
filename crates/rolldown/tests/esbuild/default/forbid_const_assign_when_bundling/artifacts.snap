@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/default/forbid_const_assign_when_bundling
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 

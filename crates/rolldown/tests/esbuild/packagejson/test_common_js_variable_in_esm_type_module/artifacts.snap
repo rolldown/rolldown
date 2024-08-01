@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/packagejson/test_common_js_variable_in_esm_type_module
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

@@ -1,7 +1,6 @@
 use oxc::{
   allocator::{Allocator, IntoIn},
   ast::ast::{self, IdentifierReference, Statement},
-  semantic::SymbolId,
   span::{Atom, SPAN},
 };
 use rolldown_common::{AstScopes, ImportRecordIdx, Module, SymbolRef, WrapKind};
@@ -223,9 +222,5 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     );
 
     vec![decl_stmt, export_call_stmt]
-  }
-
-  fn resolve_symbol_from_reference(&self, id_ref: &IdentifierReference) -> Option<SymbolId> {
-    id_ref.reference_id.get().and_then(|ref_id| self.scope.symbol_id_for(ref_id))
   }
 }

@@ -1,7 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-expression: snapshot
-input_file: crates/rolldown/tests/rolldown/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 ---
 # Assets
 

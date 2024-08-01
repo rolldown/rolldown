@@ -1,8 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-assertion_line: 171
-expression: content
-input_file: crates/rolldown/tests/esbuild/default/forbid_const_assign_when_lowering_using
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 

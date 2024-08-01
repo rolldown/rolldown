@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/cjs_compat/import_the_same_cjs_twice
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

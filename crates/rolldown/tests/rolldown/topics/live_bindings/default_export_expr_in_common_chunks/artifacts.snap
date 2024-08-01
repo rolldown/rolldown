@@ -1,7 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-expression: snapshot
-input_file: crates/rolldown/tests/fixtures/topics/live_bindings/default_export_expr_in_common_chunks
 ---
 # Assets
 

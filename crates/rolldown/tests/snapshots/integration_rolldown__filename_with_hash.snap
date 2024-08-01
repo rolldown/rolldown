@@ -602,7 +602,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/import_export_star_ambiguous_warning
 
-- entry_js-!~{000}~.mjs => entry_js-P1n8pGoa.mjs
+- entry_js-!~{000}~.mjs => entry_js-E-ikmnlw.mjs
 
 # tests/esbuild/import_star/import_of_export_star
 

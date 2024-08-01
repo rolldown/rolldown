@@ -1,15 +1,12 @@
 use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::types::symbols::Symbols;
 use oxc::index::IndexVec;
-// use crate::utils::extract_member_chain::extract_canonical_symbol_info;
-use oxc::span::CompactStr;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   EcmaModule, IndexModules, Module, ModuleIdx, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
 };
-use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 
 use super::LinkStage;
 
@@ -22,17 +19,7 @@ struct Context<'a> {
   runtime_id: ModuleIdx,
   metas: &'a LinkingMetadataVec,
   used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
-  /// Hash list of string is relatively slow, so we use a two dimensions hashmap to cache the resolved symbol.
-  /// The first level only store the top level namespace member expr object identifier symbol ref.
-  /// With this method, we could avoid the hash calculation of the whole member expr chains.
-  /// for the value, the first element is the resolved symbol ref, the second element is how much
-  /// chain element does this member expr consume.
-  top_level_member_expr_resolved_cache:
-    &'a mut FxHashMap<SymbolRef, MemberChainToResolvedSymbolRef>,
 }
-
-pub type MemberChainToResolvedSymbolRef =
-  FxHashMap<Box<[CompactStr]>, (SymbolRef, usize, Option<Rstr>)>;
 
 /// if no export is used, and the module has no side effects, the module should not be included
 fn include_module(ctx: &mut Context, module: &EcmaModule) {
@@ -105,78 +92,6 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   );
 }
 
-/// Try to find the final pointed `SymbolRef` of the member expression.
-/// ```js
-/// // index.js
-/// import * as foo_ns from './foo';
-/// foo_ns.bar_ns.c;
-/// // foo.js
-/// export * as bar_ns from './bar';
-/// // bar.js
-/// export const c = 1;
-/// ```
-/// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
-fn include_member_expr_ref(ctx: &mut Context, symbol_ref: SymbolRef, props: &[CompactStr]) {
-  let mut cursor = 0;
-
-  // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
-  let mut canonical_ref = ctx.symbols.par_canonical_ref_for(symbol_ref);
-  let mut canonical_ref_symbol = ctx.symbols.get(canonical_ref);
-  let mut canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
-  let mut is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
-  let mut ns_symbol_list = vec![];
-  let mut has_ambiguous_symbol = false;
-
-  while cursor < props.len() && is_namespace_ref {
-    let name = &props[cursor];
-    let meta = &ctx.metas[canonical_ref_owner.idx];
-    let export_symbol = meta.resolved_exports.get(&name.to_rstr());
-    let Some(export_symbol) = export_symbol else { break };
-    has_ambiguous_symbol |=
-      !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr());
-    // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
-    if !ctx.modules[export_symbol.symbol_ref.owner].as_ecma().unwrap().exports_kind.is_esm() {
-      break;
-    }
-    ns_symbol_list.push((canonical_ref, name.to_rstr()));
-    canonical_ref = ctx.symbols.par_canonical_ref_for(export_symbol.symbol_ref);
-    canonical_ref_symbol = ctx.symbols.get(canonical_ref);
-    canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
-    cursor += 1;
-    is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
-  }
-
-  let (_export_name, namespace_property_name) =
-    if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
-      let name = canonical_ref_symbol.name.clone();
-      canonical_ref = namespace_alias.namespace_ref;
-      canonical_ref_owner = ctx.modules[canonical_ref.owner].as_ecma().unwrap();
-      (name, Some(namespace_alias.property_name.clone()))
-    } else {
-      (canonical_ref_symbol.name.clone(), None)
-    };
-
-  // Only cache the top level member expr resolved result, if it consume at least one chain element.
-  if cursor > 0 {
-    let map = ctx.top_level_member_expr_resolved_cache.entry(symbol_ref).or_default();
-    let chains = props.to_vec();
-    // If the last namespace object is a namespace alias, we should add the property name postfix
-    // to the final access chains.
-    map.insert(chains.into_boxed_slice(), (canonical_ref, cursor, namespace_property_name));
-  }
-  // https://github.com/rolldown/rolldown/blob/5fb31d0d254128825df9441b23da58e3f6663060/crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguous_warning/entry.js#L2-L2
-  if has_ambiguous_symbol {
-    return;
-  }
-  ctx.used_symbol_refs.insert(canonical_ref);
-  include_module(ctx, canonical_ref_owner);
-  canonical_ref_owner.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(
-    |stmt_info_id| {
-      include_statement(ctx, canonical_ref_owner, stmt_info_id);
-    },
-  );
-}
-
 fn include_statement(ctx: &mut Context, module: &EcmaModule, stmt_info_id: StmtInfoIdx) {
   let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_id];
 
@@ -194,7 +109,11 @@ fn include_statement(ctx: &mut Context, module: &EcmaModule, stmt_info_id: StmtI
       include_symbol(ctx, *symbol_ref);
     }
     SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-      include_member_expr_ref(ctx, member_expr.object_ref, &member_expr.props);
+      if let Some(symbol) =
+        member_expr.resolved_symbol_ref(&ctx.metas[module.idx].resolved_member_expr_refs)
+      {
+        include_symbol(ctx, symbol);
+      }
     }
   });
 }
@@ -218,7 +137,6 @@ impl LinkStage<'_> {
     let mut is_module_included_vec: IndexVec<ModuleIdx, bool> =
       oxc::index::index_vec![false; self.module_table.modules.len()];
 
-    let mut top_level_member_expr_resolved_cache = FxHashMap::default();
     let context = &mut Context {
       modules: &self.module_table.modules,
       symbols: &self.symbols,
@@ -229,7 +147,6 @@ impl LinkStage<'_> {
       // used_exports_info_vec: &mut used_exports_info_vec,
       metas: &self.metas,
       used_symbol_refs: &mut self.used_symbol_refs,
-      top_level_member_expr_resolved_cache: &mut top_level_member_expr_resolved_cache,
     };
 
     self.entries.iter().for_each(|entry| {
@@ -244,9 +161,6 @@ impl LinkStage<'_> {
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
         include_symbol(context, *symbol_ref);
       });
-      // module.named_exports.iter().for_each(|(name, _)| {
-      //   context.used_exports_info_vec[entry.id].used_exports.insert(name.clone());
-      // });
       include_module(context, module);
     });
 
@@ -258,8 +172,6 @@ impl LinkStage<'_> {
         });
       },
     );
-
-    self.top_level_member_expr_resolved_cache = top_level_member_expr_resolved_cache;
 
     tracing::trace!(
       "included statements {:#?}",

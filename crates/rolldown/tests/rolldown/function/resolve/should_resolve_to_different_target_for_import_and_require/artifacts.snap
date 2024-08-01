@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/function/resolve/should_resolve_to_different_target_for_import_and_require
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

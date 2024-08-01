@@ -10,11 +10,11 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        outro: () => '/* Lorem ipsum */',
+        outro: () => '/* Outro */',
       },
     ],
   },
   afterTest: (output) => {
-    expect(output.output[0].code).toContain('/* Lorem ipsum */')
+    expect(output.output[0].code).toContain('/* Outro */')
   },
 })

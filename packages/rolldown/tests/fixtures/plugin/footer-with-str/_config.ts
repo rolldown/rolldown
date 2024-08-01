@@ -10,7 +10,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        footer: () => '/* Footer */',
+        footer: '/* Footer */',
       },
     ],
   },

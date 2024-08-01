@@ -65,6 +65,7 @@ impl Plugin for GlobImportPlugin {
 pub struct ImportGlobOptions {
   import: Option<String>,
   eager: Option<bool>,
+  query: Option<String>,
 }
 
 pub struct GlobImportVisit<'ast, 'a> {
@@ -156,6 +157,48 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
           opts.eager = Some(bool.value);
         }
       }
+      "query" => match &p.value {
+        Expression::StringLiteral(str) => {
+          opts.query = Some(str.value.to_string());
+        }
+        Expression::ObjectExpression(expr) => {
+          let map = expr
+            .properties
+            .iter()
+            .filter_map(|prop| {
+              let ObjectPropertyKind::ObjectProperty(p) = prop else { return None };
+              let key = match &p.key {
+                PropertyKey::StringLiteral(key) => key.value.to_string(),
+                PropertyKey::StaticIdentifier(ident) => ident.name.to_string(),
+                _ => return None,
+              };
+              dbg!(&key);
+              let value = match &p.value {
+                Expression::StringLiteral(v) => v.value.to_string(),
+                Expression::BooleanLiteral(v) => v.value.to_string(),
+                Expression::NumericLiteral(v) => v.value.to_string(),
+                Expression::NullLiteral(_) => "null".to_string(),
+                _ => return None,
+              };
+              Some((key, value.to_string()))
+            })
+            .collect::<FxHashMap<String, String>>();
+          dbg!(&map);
+          if !map.is_empty() {
+            let mut query_string = String::from("?");
+
+            for (i, (k, v)) in map.iter().enumerate() {
+              if i != 0 {
+                query_string.push_str("&")
+              }
+              query_string.push_str(&format!("{k}={v}"));
+            }
+            dbg!(&query_string);
+            opts.query = Some(query_string);
+          }
+        }
+        _ => {}
+      },
       _ => {}
     }
   }

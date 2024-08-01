@@ -213,7 +213,7 @@ export type AddonHookFunction = (
   chunk: RenderedChunk,
 ) => string | Promise<string>
 
-export type AddonHook = AddonHookFunction
+export type AddonHook = string | AddonHookFunction
 
 export interface OutputPlugin
   extends Partial<{ [K in OutputPluginHooks]: PluginHooks[K] }>,

@@ -3,17 +3,17 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-const REQUEST_QUERY_MAYBE_ESCAPED_SPLIT_RE: LazyLock<Regex> = LazyLock::new(|| {
+static REQUEST_QUERY_MAYBE_ESCAPED_SPLIT_RE: LazyLock<Regex> = LazyLock::new(|| {
   // Originally "\\?\?(?!.*[/|}])"
   let pattern = r"\\?\?";
   Regex::new(pattern).expect("failed to compile regex")
 });
-const REQUEST_QUERY_SPLIT_RE: LazyLock<Regex> = LazyLock::new(|| {
+static REQUEST_QUERY_SPLIT_RE: LazyLock<Regex> = LazyLock::new(|| {
   // Originally "\?(?!.*[/|}])"
   let pattern = r"\?";
   Regex::new(pattern).expect("failed to compile regex")
 });
-const SPECIAL_QUERY_RE: LazyLock<Regex> = LazyLock::new(|| {
+static SPECIAL_QUERY_RE: LazyLock<Regex> = LazyLock::new(|| {
   let pattern = r"(\?|&)(url|raw|worker|sharedworker)(?:&|$)";
   Regex::new(pattern).expect("failed to compile regex")
 });

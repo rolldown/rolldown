@@ -101,6 +101,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
   /// ```js
   /// __variableDynamicImportRuntimeHelper((import.meta.glob(pattern, params)), expr, segments)
   /// ```
+  #[allow(clippy::cast_precision_loss)]
   fn call_helper(
     &self,
     span: Span,

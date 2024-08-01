@@ -6,6 +6,9 @@ name                 = "rolldown_css"
 repository.workspace = true
 version              = "0.1.0"
 
+[lib]
+doctest = false
+
 [dependencies]
 anyhow       = { workspace = true }
 lightningcss = { workspace = true, features = ["into_owned"] }

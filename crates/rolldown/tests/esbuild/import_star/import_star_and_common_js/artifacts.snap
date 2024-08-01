@@ -13,7 +13,7 @@ import { default as assert } from "node:assert";
 var foo_ns, foo;
 var init_foo = __esmMin(() => {
 	foo_ns = {};
-	__export(foo_ns, {foo: () => foo});
+	__export(foo_ns, { foo: () => foo });
 	foo = 123;
 });
 

@@ -13,7 +13,7 @@ class Foo {
 	#foo = 123;
 	bar = this.#foo;
 }
-assert.equal((new Foo()).bar, 123);
+assert.equal(new Foo().bar, 123);
 
 //#endregion
 ```

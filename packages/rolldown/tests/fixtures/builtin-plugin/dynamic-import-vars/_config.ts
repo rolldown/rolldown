@@ -1,4 +1,7 @@
-import { dynamicImportVarsPlugin, globImportPlugin } from 'rolldown'
+import {
+  dynamicImportVarsPlugin,
+  globImportPlugin,
+} from 'rolldown/experimental'
 import { defineTest } from '@tests'
 import path from 'path'
 

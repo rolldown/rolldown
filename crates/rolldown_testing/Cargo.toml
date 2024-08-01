@@ -8,6 +8,10 @@ homepage.workspace   = true
 license.workspace    = true
 repository.workspace = true
 
+[lib]
+doctest = false
+test    = false
+
 [lints]
 workspace = true
 
@@ -32,5 +36,7 @@ schemars                = { workspace = true }
 serde_json              = { workspace = true }
 
 [[bin]]
-name = "run-fixture"
-path = "./bin/run-fixture.rs"
+doctest = false
+name    = "run-fixture"
+path    = "./bin/run-fixture.rs"
+test    = false

@@ -34,6 +34,11 @@
       "require": "./dist/cjs/index.cjs",
       "import": "./dist/esm/index.mjs"
     },
+    "./experimental": {
+      "types": "./dist/types/experimental-index.d.ts",
+      "require": "./dist/cjs/experimental-index.cjs",
+      "import": "./dist/esm/experimental-index.mjs"
+    },
     "./parallel-plugin": {
       "types": "./dist/types/parallel-plugin.d.ts",
       "require": "./dist/cjs/parallel-plugin.cjs",

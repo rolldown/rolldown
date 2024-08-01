@@ -18,7 +18,7 @@ export { foo };
 ```js
 
 //#region src/entry.js
-(import("./a_index.mjs")).then((x) => assert(x.foo === "foo"));
+import("./a_index.mjs").then((x) => assert(x.foo === "foo"));
 
 //#endregion
 ```

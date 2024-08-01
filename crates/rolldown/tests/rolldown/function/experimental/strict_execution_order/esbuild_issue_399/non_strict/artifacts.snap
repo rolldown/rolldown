@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import "./run-dep.mjs";
 
 //#region init-dep-1.js
-global.foo = {log: () => console.log("foo.log() (from entry 1) called")};
+global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
 
 //#endregion
 ```
@@ -19,7 +19,7 @@ global.foo = {log: () => console.log("foo.log() (from entry 1) called")};
 import "./run-dep.mjs";
 
 //#region init-dep-2.js
-global.foo = {log: () => console.log("foo.log() (from entry 2) called")};
+global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 
 //#endregion
 ```

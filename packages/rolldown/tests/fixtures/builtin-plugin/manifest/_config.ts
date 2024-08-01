@@ -1,4 +1,4 @@
-import { manifestPlugin } from 'rolldown'
+import { manifestPlugin } from 'rolldown/experimental'
 import { defineTest } from '../../../src/index'
 import path from 'path'
 

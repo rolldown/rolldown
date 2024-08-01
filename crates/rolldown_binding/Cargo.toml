@@ -12,6 +12,7 @@ workspace = true
 
 [lib]
 crate-type = ["cdylib"]
+doctest    = false
 
 [dependencies]
 anyhow                              = { workspace = true }

@@ -20,7 +20,7 @@ export { foo };
 var a_ns, foo;
 var init_a = __esmMin(() => {
 	a_ns = {};
-	__export(a_ns, {foo: () => foo});
+	__export(a_ns, { foo: () => foo });
 });
 
 //#endregion

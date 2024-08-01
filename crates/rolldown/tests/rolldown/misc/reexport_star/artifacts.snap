@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region a.js
 var a_ns = {};
-__export(a_ns, {abc: () => abc});
+__export(a_ns, { abc: () => abc });
 const abc = undefined;
 
 //#endregion

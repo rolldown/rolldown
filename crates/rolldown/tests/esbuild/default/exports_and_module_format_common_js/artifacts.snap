@@ -11,19 +11,19 @@ const { default: assert } = __toESM(require("node:assert"));
 
 //#region foo/test.js
 var test_ns$1 = {};
-__export(test_ns$1, {foo: () => foo});
+__export(test_ns$1, { foo: () => foo });
 let foo = 123;
 
 //#endregion
 //#region bar/test.js
 var test_ns = {};
-__export(test_ns, {bar: () => bar});
+__export(test_ns, { bar: () => bar });
 let bar = 123;
 
 //#endregion
 //#region entry.js
-assert.deepEqual(test_ns$1, {foo: 123});
-assert.deepEqual(test_ns, {bar: 123});
+assert.deepEqual(test_ns$1, { foo: 123 });
+assert.deepEqual(test_ns, { bar: 123 });
 console.log(exports, module.exports);
 
 //#endregion

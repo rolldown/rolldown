@@ -53,11 +53,11 @@ pub struct AstScanner<'me> {
   current_stmt_info: StmtInfo,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
-  esm_import_keyword_start: Option<Span>,
+  esm_import_keyword: Option<Span>,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
-  cjs_exports_ident_start: Option<Span>,
-  cjs_module_ident_start: Option<Span>,
+  cjs_exports_ident: Option<Span>,
+  cjs_module_ident: Option<Span>,
 }
 
 impl<'me> AstScanner<'me> {
@@ -104,12 +104,12 @@ impl<'me> AstScanner<'me> {
       symbols,
       current_stmt_info: StmtInfo::default(),
       result,
-      esm_export_keyword_start: None,
-      esm_import_keyword_start: None,
+      esm_export_keyword: None,
+      esm_import_keyword: None,
       module_type,
       namespace_object_ref,
-      cjs_module_ident_start: None,
-      cjs_exports_ident_start: None,
+      cjs_module_ident: None,
+      cjs_exports_ident: None,
       source,
       file_path,
       trivias,
@@ -120,33 +120,33 @@ impl<'me> AstScanner<'me> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
-    if self.esm_export_keyword_start.is_some() {
+    if self.esm_export_keyword.is_some() {
       exports_kind = ExportsKind::Esm;
-      if let Some(start) = self.cjs_module_ident_start {
+      if let Some(start) = self.cjs_module_ident {
         self.result.warnings.push(
           BuildDiagnostic::commonjs_variable_in_esm(
             self.file_path.to_string(),
             self.source.clone(),
             // SAFETY: we checked at the beginning
-            self.esm_export_keyword_start.expect("should have start offset"),
+            self.esm_export_keyword.expect("should have start offset"),
             CjsExportSpan::Module(start),
           )
           .with_severity_warning(),
         );
       }
-      if let Some(start) = self.cjs_exports_ident_start {
+      if let Some(start) = self.cjs_exports_ident {
         self.result.warnings.push(
           BuildDiagnostic::commonjs_variable_in_esm(
             self.file_path.to_string(),
             self.source.clone(),
             // SAFETY: we checked at the beginning
-            self.esm_export_keyword_start.expect("should have start offset"),
+            self.esm_export_keyword.expect("should have start offset"),
             CjsExportSpan::Exports(start),
           )
           .with_severity_warning(),
         );
       }
-    } else if self.cjs_exports_ident_start.is_some() || self.cjs_module_ident_start.is_some() {
+    } else if self.cjs_exports_ident.is_some() || self.cjs_module_ident.is_some() {
       exports_kind = ExportsKind::CommonJs;
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
@@ -158,7 +158,7 @@ impl<'me> AstScanner<'me> {
           exports_kind = ExportsKind::Esm;
         }
         ModuleDefFormat::Unknown => {
-          if self.esm_import_keyword_start.is_some() {
+          if self.esm_import_keyword.is_some() {
             exports_kind = ExportsKind::Esm;
           }
         }
@@ -195,7 +195,7 @@ impl<'me> AstScanner<'me> {
   }
 
   fn set_esm_export_keyword(&mut self, span: Span) {
-    self.esm_export_keyword_start.get_or_insert(span);
+    self.esm_export_keyword.get_or_insert(span);
   }
 
   fn add_declared_id(&mut self, id: SymbolId) {
@@ -486,9 +486,7 @@ impl<'me> AstScanner<'me> {
   fn scan_module_decl(&mut self, decl: &ModuleDeclaration) {
     match decl {
       oxc::ast::ast::ModuleDeclaration::ImportDeclaration(decl) => {
-        self
-          .esm_import_keyword_start
-          .get_or_insert(Span::new(decl.span.start, decl.span.start + 6));
+        self.esm_import_keyword.get_or_insert(Span::new(decl.span.start, decl.span.start + 6));
         self.scan_import_decl(decl);
       }
       oxc::ast::ast::ModuleDeclaration::ExportAllDeclaration(decl) => {
@@ -564,14 +562,10 @@ impl<'me> AstScanner<'me> {
       }
       None => {
         if ident.name == "module" {
-          self
-            .cjs_module_ident_start
-            .get_or_insert(Span::new(ident.span.start, ident.span.start + 6));
+          self.cjs_module_ident.get_or_insert(Span::new(ident.span.start, ident.span.start + 6));
         }
         if ident.name == "exports" {
-          self
-            .cjs_exports_ident_start
-            .get_or_insert(Span::new(ident.span.start, ident.span.start + 7));
+          self.cjs_exports_ident.get_or_insert(Span::new(ident.span.start, ident.span.start + 7));
         }
         if ident.name == "eval" {
           self.result.warnings.push(

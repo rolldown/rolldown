@@ -1,4 +1,3 @@
-use clone_expr::clone_expr;
 use oxc::{
   ast::{
     ast::{Expression, ImportOrExportKind, PropertyKind, Statement, TSTypeParameterInstantiation},
@@ -14,7 +13,6 @@ use rolldown_plugin::{
 };
 use std::borrow::Cow;
 use to_glob::to_glob_pattern;
-mod clone_expr;
 mod parse_pattern;
 mod should_ignore;
 mod to_glob;
@@ -80,6 +78,7 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
     if let Expression::ImportExpression(import_expr) = expr {
       // TODO: Support @/path via options.createResolver
+      // TODO: handle error
       let pattern = to_glob_pattern(&import_expr.source).unwrap();
       if let Some(pattern) = pattern {
         let DynamicImportPattern { glob_params, user_pattern, raw_pattern: _ } =
@@ -88,7 +87,10 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
         *expr = self.call_helper(
           import_expr.span,
           user_pattern.as_str(),
-          &import_expr.source,
+          std::mem::replace(
+            &mut import_expr.source,
+            self.ast_builder.expression_null_literal(SPAN),
+          ),
           glob_params,
         );
       }
@@ -106,7 +108,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
     &self,
     span: Span,
     pattern: &str,
-    expr: &Expression<'ast>,
+    expr: Expression<'ast>,
     params: Option<DynamicImportRequest>,
   ) -> Expression<'ast> {
     let segments = pattern.split('/').count();
@@ -176,10 +178,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
             ),
           ),
         ));
-        items.push(self.ast_builder.argument_expression(
-          // TODO: Remove clone_expr once `Expression` can be cloned.
-          clone_expr(self.ast_builder, expr),
-        ));
+        items.push(self.ast_builder.argument_expression(expr));
         items.push(self.ast_builder.argument_expression(
           self.ast_builder.expression_numeric_literal(
             SPAN,

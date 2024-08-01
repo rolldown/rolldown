@@ -7,6 +7,7 @@ use oxc::{
       ImportOrExportKind, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
       TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
     },
+    visit::walk_mut,
     AstBuilder, VisitMut,
   },
   span::{Span, SPAN},
@@ -49,6 +50,7 @@ impl Plugin for GlobImportPlugin {
         import_decls: ast_builder.vec(),
         ast_builder,
         current: 0,
+        source_len: fields.source.len(),
       };
       visitor.visit_program(fields.program);
       if !visitor.import_decls.is_empty() {
@@ -70,10 +72,11 @@ pub struct GlobImportVisit<'ast, 'a> {
   ast_builder: AstBuilder<'ast>,
   import_decls: Vec<'ast, Statement<'ast>>,
   current: usize,
+  source_len: usize,
 }
 
 impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
-  #[allow(clippy::too_many_lines)]
+  #[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
     if let Expression::CallExpression(call_expr) = expr {
       match &call_expr.callee {
@@ -105,6 +108,7 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                       let path = Path::new(self.cwd).join(Path::new(glob_expr));
                       if path.is_absolute() {
                         if let Some(path) = path.to_str() {
+                          // TODO handle error
                           for file in glob(path).unwrap() {
                             let file = file
                               .unwrap()
@@ -199,7 +203,8 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                     } else {
                       // import('./dir/bar.js')
                       let mut import_expression = self.ast_builder.expression_import(
-                        SPAN,
+                        // Crate a different span for each import expression
+                        Span::new((self.source_len + self.current) as u32, index as u32),
                         self.ast_builder.expression_string_literal(Span::default(), file),
                         self.ast_builder.vec(),
                       );
@@ -326,5 +331,7 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
         _ => {}
       }
     }
+
+    walk_mut::walk_expression(self, expr);
   }
 }

@@ -232,15 +232,9 @@ export interface BindingPluginOptions {
   generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean) => MaybePromise<VoidNullable>
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs) => MaybePromise<VoidNullable>
   banner?: ((ctx: BindingPluginContext, chunk: RenderedChunk) => void) | string
-<<<<<<< HEAD
   footer?: ((ctx: BindingPluginContext, chunk: RenderedChunk) => void) | string
   intro?: ((ctx: BindingPluginContext, chunk: RenderedChunk) => void) | string
-  outro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
-=======
-  footer?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
-  intro?: (ctx: BindingPluginContext, chunk: RenderedChunk) => void
   outro?: ((ctx: BindingPluginContext, chunk: RenderedChunk) => void) | string
->>>>>>> 029a8562 (Add support for outro as str)
 }
 
 export interface BindingPluginWithIndex {

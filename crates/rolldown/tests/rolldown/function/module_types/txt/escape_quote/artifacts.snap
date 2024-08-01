@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/module_types/txt/escape_quote
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/import_star/re_export_star_entry_point_and_inner_file
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

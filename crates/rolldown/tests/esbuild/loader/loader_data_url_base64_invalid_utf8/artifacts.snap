@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/function/shim_missing_exports/shake_unused_shimmed_exports
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/function/external/keep_import_external_order
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

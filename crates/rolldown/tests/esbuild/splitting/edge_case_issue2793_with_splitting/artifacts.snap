@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/splitting/edge_case_issue2793_with_splitting
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

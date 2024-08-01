@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/import_star/re_export_namespace_import_missing_es6
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

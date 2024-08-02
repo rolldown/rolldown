@@ -195,6 +195,10 @@ export interface BindingManifestPluginConfig {
   outPath: string
 }
 
+export interface BindingModulePreloadPolyfillPluginConfig {
+  skip?: boolean
+}
+
 export interface BindingOutputOptions {
   name?: string
   entryFileNames?: string

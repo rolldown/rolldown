@@ -3,7 +3,7 @@ import {
   BindingGlobImportPluginConfig,
   BindingBuiltinPlugin,
   BindingManifestPluginConfig,
-  BindingModulePreloadPolyfillPluginConfig
+  BindingModulePreloadPolyfillPluginConfig,
 } from '../binding'
 
 export class BuiltinPlugin {
@@ -46,7 +46,9 @@ export class WasmPlugin extends BuiltinPlugin {
   }
 }
 
-export function modulePreloadPolyfillPlugin(config?: BindingModulePreloadPolyfillPluginConfig) {
+export function modulePreloadPolyfillPlugin(
+  config?: BindingModulePreloadPolyfillPluginConfig,
+) {
   return new ModulePreloadPolyfillPlugin(config)
 }
 

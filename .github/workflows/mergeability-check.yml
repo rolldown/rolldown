@@ -1,0 +1,26 @@
+name: 'Mergeability check'
+on:
+  # https://github.com/actions/labeler?tab=readme-ov-file#permissions
+  pull_request:
+    types: [opened, synchronize, assigned, unassigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  require-assignee-approval:
+    name: Check assignees' approval
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Check assignees' approval
+        uses: hyf0/action-require-assignee-approval@v1
+        with:
+          allow-no-assign: true # optional, default is `true`
+          bypass-by: github-actions[bot]
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

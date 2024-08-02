@@ -2,7 +2,7 @@ name: 'Mergeability check'
 on:
   # https://github.com/actions/labeler?tab=readme-ov-file#permissions
   pull_request:
-    types: [assigned, unassigned]
+    types: [opened, synchronize, assigned, unassigned]
   pull_request_review:
     types: [submitted]
 

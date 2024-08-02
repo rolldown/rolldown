@@ -1,8 +1,8 @@
-const m1 = import.meta.glob("./dir/*.js", {
-	query: {
+const m1 = import.meta.glob('./dir/*.js', {
+  query: {
     a: 1000,
-    b: "test",
+    b: 'test',
   },
-});
+})
 
-export { m1};
+export { m1 }

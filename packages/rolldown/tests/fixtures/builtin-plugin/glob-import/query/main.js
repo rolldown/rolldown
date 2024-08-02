@@ -1,5 +1,5 @@
-const m1 = import.meta.glob("./dir/*.js", {
-	query: "?raw",
-});
+const m1 = import.meta.glob('./dir/*.js', {
+  query: '?raw',
+})
 
-export { m1};
+export { m1 }

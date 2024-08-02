@@ -13,7 +13,6 @@ use oxc::{
   span::{Span, SPAN},
 };
 use rolldown_plugin::{HookTransformAstArgs, HookTransformAstReturn, Plugin, SharedPluginContext};
-use rustc_hash::FxHashMap;
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
@@ -66,14 +65,6 @@ impl Plugin for GlobImportPlugin {
 pub struct ImportGlobOptions {
   import: Option<String>,
   eager: Option<bool>,
-  query: Option<QueryOption>,
-}
-
-#[allow(unused)]
-#[derive(Debug)]
-enum QueryOption {
-  String(String),
-  Map(FxHashMap<String, String>),
 }
 
 pub struct GlobImportVisit<'ast, 'a> {
@@ -85,7 +76,6 @@ pub struct GlobImportVisit<'ast, 'a> {
 }
 
 impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
-  #[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
     if let Expression::CallExpression(call_expr) = expr {
       match &call_expr.callee {
@@ -118,169 +108,8 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                   //   './dir/foo.js': () => import('./dir/foo.js'),
                   //   './dir/bar.js': () => import('./dir/bar.js').then((m) => m.setup),
                   // }
-                  let properties = files.iter().enumerate().map(|(index, file)| {
-                    let value = if opts.eager.unwrap_or_default() {
-                      // import * as __glob__0 from './dir/foo.js'
-                      // const modules = {
-                      //   './dir/foo.js': __glob__0,
-                      // }
-                      let name = format!("__glob__{}_{index}_", self.current);
 
-                      let module_specifier = match opts.import.as_deref() {
-                        Some("default") => {
-                          self.ast_builder.import_declaration_specifier_import_default_specifier(
-                            SPAN,
-                            self.ast_builder.binding_identifier(SPAN, &name),
-                          )
-                        }
-                        Some("*") | None => {
-                          self.ast_builder.import_declaration_specifier_import_namespace_specifier(
-                            SPAN,
-                            self.ast_builder.binding_identifier(SPAN, &name),
-                          )
-                        }
-                        Some(import) => {
-                          self.ast_builder.import_declaration_specifier_import_specifier(
-                            SPAN,
-                            self.ast_builder.module_export_name_identifier_reference(SPAN, import),
-                            self.ast_builder.binding_identifier(SPAN, &name),
-                            ImportOrExportKind::Value,
-                          )
-                        }
-                      };
-
-                      self.import_decls.push(self.ast_builder.statement_module_declaration(
-                        self.ast_builder.module_declaration_import_declaration(
-                          SPAN,
-                          Some(self.ast_builder.vec1(module_specifier)),
-                          self.ast_builder.string_literal(Span::default(), file),
-                          None,
-                          ImportOrExportKind::Value,
-                        ),
-                      ));
-
-                      self.ast_builder.expression_identifier_reference(SPAN, &name)
-                    } else {
-                      // import('./dir/bar.js')
-                      let mut import_expression = self.ast_builder.expression_import(
-                        // Crate a different span for each import expression
-                        Span::new((self.source_len + self.current) as u32, index as u32),
-                        self.ast_builder.expression_string_literal(Span::default(), file),
-                        self.ast_builder.vec(),
-                      );
-                      // import('./dir/foo.js').then((m) => m.setup)
-                      if let Some(import) = &opts.import {
-                        if import != "*" {
-                          import_expression = self.ast_builder.expression_call(
-                            SPAN,
-                            self.ast_builder.vec1(
-                              self
-                                .ast_builder
-                                .expression_arrow_function(
-                                  SPAN,
-                                  true,
-                                  false,
-                                  Option::<TSTypeParameterDeclaration>::None,
-                                  self.ast_builder.formal_parameters(
-                                    SPAN,
-                                    FormalParameterKind::ArrowFormalParameters,
-                                    self.ast_builder.vec1(
-                                      self.ast_builder.formal_parameter(
-                                        SPAN,
-                                        self.ast_builder.vec(),
-                                        self.ast_builder.binding_pattern(
-                                          self
-                                            .ast_builder
-                                            .binding_pattern_kind_binding_identifier(SPAN, "m"),
-                                          Option::<TSTypeAnnotation>::None,
-                                          false,
-                                        ),
-                                        None,
-                                        false,
-                                        false,
-                                      ),
-                                    ),
-                                    Option::<BindingRestElement>::None,
-                                  ),
-                                  Option::<TSTypeAnnotation>::None,
-                                  self.ast_builder.function_body(
-                                    SPAN,
-                                    self.ast_builder.vec(),
-                                    self.ast_builder.vec1(
-                                      self.ast_builder.statement_expression(
-                                        SPAN,
-                                        self.ast_builder.expression_member(
-                                          self.ast_builder.member_expression_static(
-                                            SPAN,
-                                            self
-                                              .ast_builder
-                                              .expression_identifier_reference(SPAN, "m"),
-                                            self.ast_builder.identifier_name(SPAN, import),
-                                            false,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                )
-                                .into(),
-                            ),
-                            self.ast_builder.expression_member(
-                              self.ast_builder.member_expression_static(
-                                SPAN,
-                                import_expression,
-                                self.ast_builder.identifier_name(SPAN, "then"),
-                                false,
-                              ),
-                            ),
-                            Option::<TSTypeParameterInstantiation>::None,
-                            false,
-                          );
-                        }
-                      }
-
-                      // () => import('./dir/bar.js') or () => import('./dir/foo.js').then((m) => m.setup)
-                      self.ast_builder.expression_arrow_function(
-                        SPAN,
-                        true,
-                        false,
-                        Option::<TSTypeParameterDeclaration>::None,
-                        self.ast_builder.formal_parameters(
-                          SPAN,
-                          FormalParameterKind::ArrowFormalParameters,
-                          self.ast_builder.vec(),
-                          Option::<BindingRestElement>::None,
-                        ),
-                        Option::<TSTypeAnnotation>::None,
-                        self.ast_builder.function_body(
-                          SPAN,
-                          self.ast_builder.vec(),
-                          self
-                            .ast_builder
-                            .vec1(self.ast_builder.statement_expression(SPAN, import_expression)),
-                        ),
-                      )
-                    };
-
-                    self.ast_builder.object_property_kind_object_property(
-                      SPAN,
-                      PropertyKind::Init,
-                      self.ast_builder.property_key_expression(
-                        self.ast_builder.expression_string_literal(Span::default(), file),
-                      ),
-                      value,
-                      None,
-                      false,
-                      false,
-                      false,
-                    )
-                  });
-
-                  *expr = self.ast_builder.expression_object(
-                    call_expr.span,
-                    self.ast_builder.vec_from_iter(properties),
-                    None,
-                  );
+                  *expr = self.generate_glob_object_expression(files, &opts, call_expr.span);
                   self.current += 1;
                 }
               }
@@ -327,37 +156,6 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
           opts.eager = Some(bool.value);
         }
       }
-      "query" => match &p.value {
-        Expression::StringLiteral(str) => {
-          opts.query = Some(QueryOption::String(str.value.as_str().to_string()));
-        }
-        Expression::ObjectExpression(expr) => {
-          let map = expr
-            .properties
-            .iter()
-            .filter_map(|prop| {
-              let ObjectPropertyKind::ObjectProperty(p) = prop else { return None };
-              let key = match &p.key {
-                PropertyKey::StringLiteral(key) => key.value.to_string(),
-                PropertyKey::StaticIdentifier(ident) => ident.name.to_string(),
-                _ => return None,
-              };
-              let value = match &p.value {
-                Expression::StringLiteral(v) => v.value.to_string(),
-                Expression::BooleanLiteral(v) => v.value.to_string(),
-                Expression::NumericLiteral(v) => v.value.to_string(),
-                Expression::NullLiteral(_) => "null".to_string(),
-                _ => return None,
-              };
-              Some((key, value.to_string()))
-            })
-            .collect::<FxHashMap<String, String>>();
-          if !map.is_empty() {
-            opts.query = Some(QueryOption::Map(map));
-          }
-        }
-        _ => {}
-      },
       _ => {}
     }
   }
@@ -392,5 +190,160 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
         }
       }
     }
+  }
+
+  #[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
+  fn generate_glob_object_expression(
+    &mut self,
+    files: std::vec::Vec<String>,
+    opts: &ImportGlobOptions,
+    call_expr_span: Span,
+  ) -> Expression<'ast> {
+    let properties = files.into_iter().enumerate().map(|(index, file)| {
+      let value = if opts.eager.unwrap_or_default() {
+        // import * as __glob__0 from './dir/foo.js'
+        // const modules = {
+        //   './dir/foo.js': __glob__0,
+        // }
+        let name = format!("__glob__{}_{index}_", self.current);
+
+        let module_specifier = match opts.import.as_deref() {
+          Some("default") => {
+            self.ast_builder.import_declaration_specifier_import_default_specifier(
+              SPAN,
+              self.ast_builder.binding_identifier(SPAN, &name),
+            )
+          }
+          Some("*") | None => {
+            self.ast_builder.import_declaration_specifier_import_namespace_specifier(
+              SPAN,
+              self.ast_builder.binding_identifier(SPAN, &name),
+            )
+          }
+          Some(import) => self.ast_builder.import_declaration_specifier_import_specifier(
+            SPAN,
+            self.ast_builder.module_export_name_identifier_reference(SPAN, import),
+            self.ast_builder.binding_identifier(SPAN, &name),
+            ImportOrExportKind::Value,
+          ),
+        };
+
+        self.import_decls.push(self.ast_builder.statement_module_declaration(
+          self.ast_builder.module_declaration_import_declaration(
+            SPAN,
+            Some(self.ast_builder.vec1(module_specifier)),
+            self.ast_builder.string_literal(Span::default(), file.as_str()),
+            None,
+            ImportOrExportKind::Value,
+          ),
+        ));
+
+        self.ast_builder.expression_identifier_reference(SPAN, &name)
+      } else {
+        // import('./dir/bar.js')
+        let mut import_expression = self.ast_builder.expression_import(
+          // Crate a different span for each import expression
+          Span::new((self.source_len + self.current) as u32, index as u32),
+          self.ast_builder.expression_string_literal(Span::default(), file.as_str()),
+          self.ast_builder.vec(),
+        );
+        // import('./dir/foo.js').then((m) => m.setup)
+        if let Some(import) = &opts.import {
+          if import != "*" {
+            import_expression = self.ast_builder.expression_call(
+              SPAN,
+              self.ast_builder.vec1(
+                self
+                  .ast_builder
+                  .expression_arrow_function(
+                    SPAN,
+                    true,
+                    false,
+                    Option::<TSTypeParameterDeclaration>::None,
+                    self.ast_builder.formal_parameters(
+                      SPAN,
+                      FormalParameterKind::ArrowFormalParameters,
+                      self.ast_builder.vec1(self.ast_builder.formal_parameter(
+                        SPAN,
+                        self.ast_builder.vec(),
+                        self.ast_builder.binding_pattern(
+                          self.ast_builder.binding_pattern_kind_binding_identifier(SPAN, "m"),
+                          Option::<TSTypeAnnotation>::None,
+                          false,
+                        ),
+                        None,
+                        false,
+                        false,
+                      )),
+                      Option::<BindingRestElement>::None,
+                    ),
+                    Option::<TSTypeAnnotation>::None,
+                    self.ast_builder.function_body(
+                      SPAN,
+                      self.ast_builder.vec(),
+                      self.ast_builder.vec1(self.ast_builder.statement_expression(
+                        SPAN,
+                        self.ast_builder.expression_member(
+                          self.ast_builder.member_expression_static(
+                            SPAN,
+                            self.ast_builder.expression_identifier_reference(SPAN, "m"),
+                            self.ast_builder.identifier_name(SPAN, import),
+                            false,
+                          ),
+                        ),
+                      )),
+                    ),
+                  )
+                  .into(),
+              ),
+              self.ast_builder.expression_member(self.ast_builder.member_expression_static(
+                SPAN,
+                import_expression,
+                self.ast_builder.identifier_name(SPAN, "then"),
+                false,
+              )),
+              Option::<TSTypeParameterInstantiation>::None,
+              false,
+            );
+          }
+        }
+
+        // () => import('./dir/bar.js') or () => import('./dir/foo.js').then((m) => m.setup)
+        self.ast_builder.expression_arrow_function(
+          SPAN,
+          true,
+          false,
+          Option::<TSTypeParameterDeclaration>::None,
+          self.ast_builder.formal_parameters(
+            SPAN,
+            FormalParameterKind::ArrowFormalParameters,
+            self.ast_builder.vec(),
+            Option::<BindingRestElement>::None,
+          ),
+          Option::<TSTypeAnnotation>::None,
+          self.ast_builder.function_body(
+            SPAN,
+            self.ast_builder.vec(),
+            self.ast_builder.vec1(self.ast_builder.statement_expression(SPAN, import_expression)),
+          ),
+        )
+      };
+
+      self.ast_builder.object_property_kind_object_property(
+        SPAN,
+        PropertyKind::Init,
+        self.ast_builder.property_key_expression(
+          self.ast_builder.expression_string_literal(Span::default(), file),
+        ),
+        value,
+        None,
+        false,
+        false,
+        false,
+      )
+    });
+
+    let properties = self.ast_builder.vec_from_iter(properties);
+    self.ast_builder.expression_object(call_expr_span, properties, None)
   }
 }

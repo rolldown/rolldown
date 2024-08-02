@@ -18,4 +18,5 @@ workspace = true
 glob            = { workspace = true }
 oxc             = { workspace = true }
 rolldown_plugin = { workspace = true }
+rustc-hash      = { workspace = true }
 sugar_path      = { workspace = true }

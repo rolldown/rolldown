@@ -183,7 +183,6 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
               Some((key, value.to_string()))
             })
             .collect::<FxHashMap<String, String>>();
-          dbg!(&map);
           if !map.is_empty() {
             let mut query_string = String::from("?");
 
@@ -390,3 +389,4 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
     self.ast_builder.expression_object(call_expr_span, properties, None)
   }
 }
+

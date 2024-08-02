@@ -46,8 +46,6 @@ impl Bundler {
 
     let mut output = self.bundle_up(/* is_write */ true).await?;
 
-    self.plugin_driver.write_bundle(&mut output.assets).await?;
-
     self.fs.create_dir_all(&dir).map_err(|err| {
       anyhow::anyhow!("Could not create directory for output chunks: {:?}", dir).context(err)
     })?;
@@ -64,6 +62,8 @@ impl Bundler {
         .write(&dest, chunk.content_as_bytes())
         .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
     }
+
+    self.plugin_driver.write_bundle(&mut output.assets).await?;
 
     Ok(output)
   }

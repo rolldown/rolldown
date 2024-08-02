@@ -1,5 +1,6 @@
 import { expect, vi } from 'vitest'
 import path from 'node:path'
+import fs from 'node:fs'
 import type { RolldownOutputChunk } from '../../../../src'
 import { defineTest } from '@tests'
 
@@ -17,6 +18,9 @@ export default defineTest({
         name: 'test-plugin',
         writeBundle: (_options, bundle) => {
           writeBundleFn()
+          // Make sure the bundle already write to disk.
+          expect(fs.existsSync(path.resolve(__dirname, 'main.js'))).toBe(true)
+
           const chunk = bundle['main.js'] as RolldownOutputChunk
           expect(chunk.code.indexOf('console.log') > -1).toBe(true)
           expect(chunk.type).toBe('chunk')

@@ -24,14 +24,18 @@ export default defineTest({
 			if (chunk.type === "chunk") {
 				switch (chunk.name) {
 					case "b": {
-						expect(chunk.code).toMatchFileSnapshot(path.resolve(import.meta.dirname, "dir/b.js.snap"));
+						expect(chunk.code).toMatchFileSnapshot(
+							path.resolve(import.meta.dirname, "dir/b.js.snap"),
+						);
+						break;
 					}
 					case "dir_index": {
-						expect(chunk.code).toMatchFileSnapshot(path.resolve(import.meta.dirname, "dir/index.js.snap"));
+						expect(chunk.code).toMatchFileSnapshot(
+							path.resolve(import.meta.dirname, "dir/index.js.snap"),
+						);
+						break;
 					}
 				}
-			} else {
-				console.log("fuck");
 			}
 		});
 		await import("./assert.mjs");

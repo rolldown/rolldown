@@ -8,7 +8,9 @@ import * as path from "path";
 export default defineTest({
 	config: {
 		plugins: [
-			globImportPlugin({}),
+			globImportPlugin({
+				restoreQueryExtension: true,
+			}),
 			{
 				name: "load-file-with-query",
 				load(id: string) {
@@ -22,15 +24,14 @@ export default defineTest({
 	async afterTest(output: RolldownOutput) {
 		output.output.forEach((chunk) => {
 			if (chunk.type === "chunk") {
-				switch (chunk.name) {
-					case "b": {
-						expect(chunk.code).toMatchFileSnapshot(path.resolve(import.meta.dirname, "dir/b.js.snap"));
-            break;
-					}
-					case "dir_index": {
-						expect(chunk.code).toMatchFileSnapshot(path.resolve(import.meta.dirname, "dir/index.js.snap"));
-            break;
-					}
+				if (chunk.name?.startsWith("index_js")) {
+					expect(chunk.code).toMatchFileSnapshot(
+						path.resolve(import.meta.dirname, "dir/index.js.snap"),
+					);
+				} else if (chunk.name?.startsWith("b_js")) {
+					expect(chunk.code).toMatchFileSnapshot(
+						path.resolve(import.meta.dirname, "dir/b.js.snap"),
+					);
 				}
 			}
 		});

@@ -242,11 +242,6 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
     opts: &ImportGlobOptions,
     call_expr_span: Span,
   ) -> Expression<'ast> {
-    // if (importQuery && importQuery !== '?raw') {
-    //   const fileExtension = basename(file).split('.').slice(-1)[0]
-    //   if (fileExtension && restoreQueryExtension)
-    //     importQuery = `${importQuery}&lang.${fileExtension}`
-    // }
     let properties = files.iter().enumerate().map(|(index, file)| {
       let formatted_file = if let Some(query) = &opts.query {
         let normalized_query = if query != "?raw" {

@@ -1,8 +1,8 @@
-name: 'Automation'
+name: 'Mergeability check'
 on:
   # https://github.com/actions/labeler?tab=readme-ov-file#permissions
   pull_request:
-    types: [opened, assigned, unassigned]
+    types: [assigned, unassigned]
   pull_request_review:
     types: [submitted]
 

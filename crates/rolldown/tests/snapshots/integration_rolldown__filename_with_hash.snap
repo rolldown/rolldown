@@ -1435,9 +1435,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - ./entries/a.mjs => ./entries/a.mjs
 - ./entries/b.mjs => ./entries/b.mjs
 
-# tests/rolldown/function/es_module/false
+# tests/rolldown/function/es_module/always
 
-- main-!~{000}~.mjs => main--AmBLPNH.mjs
+- main-!~{000}~.mjs => main-xQAX6gLW.mjs
 
 # tests/rolldown/function/es_module/if_default_prop_cjs_false
 
@@ -1455,9 +1455,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-7WaCWgTB.mjs
 
-# tests/rolldown/function/es_module/true
+# tests/rolldown/function/es_module/never
 
-- main-!~{000}~.mjs => main-xQAX6gLW.mjs
+- main-!~{000}~.mjs => main--AmBLPNH.mjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 

@@ -4,7 +4,11 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 #[derive(Debug, Default)]
-#[cfg_attr(feature = "deserialize_bundler_options", derive(Deserialize, JsonSchema))]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(rename_all = "kebab-case", deny_unknown_fields)
+)]
 pub enum EsModuleType {
   Always,
   Never,

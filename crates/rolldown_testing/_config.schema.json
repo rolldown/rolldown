@@ -240,9 +240,9 @@
     "EsModuleType": {
       "type": "string",
       "enum": [
-        "Always",
-        "Never",
-        "IfDefaultProp"
+        "always",
+        "never",
+        "if-default-prop"
       ]
     },
     "ExperimentalOptions": {

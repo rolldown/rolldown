@@ -107,13 +107,15 @@ impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
                     [] => {}
                   }
 
+                  // generate:
+                  //
                   // {
                   //   './dir/ind.js': __glob__0_0_,
                   //   './dir/foo.js': () => import('./dir/foo.js'),
                   //   './dir/bar.js': () => import('./dir/bar.js').then((m) => m.setup),
                   // }
 
-                  *expr = self.generate_glob_object_expression(files, &opts, call_expr.span);
+                  *expr = self.generate_glob_object_expression(&files, &opts, call_expr.span);
                   self.current += 1;
                 }
               }
@@ -190,7 +192,7 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
 
             for (i, (k, v)) in map.iter().enumerate() {
               if i != 0 {
-                query_string.push_str("&")
+                query_string.push('&');
               }
               query_string.push_str(&format!("{k}={v}"));
             }
@@ -238,13 +240,15 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
   #[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
   fn generate_glob_object_expression(
     &mut self,
-    files: std::vec::Vec<String>,
+    files: &[String],
     opts: &ImportGlobOptions,
     call_expr_span: Span,
   ) -> Expression<'ast> {
     let properties = files.iter().enumerate().map(|(index, file)| {
       let formatted_file = if let Some(query) = &opts.query {
-        let normalized_query = if query != "?raw" {
+        let normalized_query = if query == "?raw" {
+          query
+        } else {
           let file_extension =
             Path::new(&file).extension().unwrap_or_default().to_str().unwrap_or_default();
           if !file_extension.is_empty() && self.restore_query_extension {
@@ -252,8 +256,6 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
           } else {
             query
           }
-        } else {
-          query
         };
         Cow::Owned(format!("{file}{normalized_query}"))
       } else {

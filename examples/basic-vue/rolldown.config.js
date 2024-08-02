@@ -7,5 +7,5 @@ export default defineConfig({
     // assume default exports conditions. Rolldown will ship with a default that
     // aligns with Vite in the future.
     conditionNames: ['import'],
-  }
+  },
 })

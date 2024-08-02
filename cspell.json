@@ -63,6 +63,7 @@
     "codspeed",
     "compat",
     "concat",
+    "conflictless",
     "consola",
     "Corasick",
     "corepack",

@@ -7,12 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 "use strict";
-const { value } = require("./main.cjs");
+const require_main = require('./main.cjs');
 
 Object.defineProperty(exports, 'value', {
   enumerable: true,
   get: function () {
-    return value;
+    return require_main.value;
   }
 });
 ```
@@ -20,12 +20,12 @@ Object.defineProperty(exports, 'value', {
 
 ```js
 "use strict";
-const { value } = require("./main.cjs");
+const require_main = require('./main.cjs');
 
 Object.defineProperty(exports, 'value', {
   enumerable: true,
   get: function () {
-    return value;
+    return require_main.value;
   }
 });
 ```

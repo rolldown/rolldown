@@ -1557,8 +1557,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/cjs/shared_entry_modules
 
-- entry1-!~{000}~.cjs => entry1-irrXhulZ.cjs
-- entry2-!~{001}~.cjs => entry2-H7JupQaW.cjs
+- entry1-!~{000}~.cjs => entry1-i7oOHHhW.cjs
+- entry2-!~{001}~.cjs => entry2-TTCbXWhM.cjs
 - main-!~{002}~.cjs => main-g4RbwWfd.cjs
 
 # tests/rolldown/function/format/esm/import_export_unicode
@@ -1843,8 +1843,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-TthyG8LP.cjs
-- entry2-!~{001}~.cjs => entry2-Oxl3tivO.cjs
+- entry-!~{000}~.cjs => entry-Y95N3n1y.cjs
+- entry2-!~{001}~.cjs => entry2-zCuWRjjO.cjs
 - main-!~{002}~.cjs => main-XDF8DtJv.cjs
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry
@@ -1961,6 +1961,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-D2Sgh11x.mjs
 - shared-!~{002}~.mjs => shared-x38TbtaP.mjs
 
+# tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
+
+- async-entry-!~{001}~.cjs => async-entry-t9ilMDdn.cjs
+- main-!~{000}~.cjs => main-E765J0dI.cjs
+- shared-!~{002}~.cjs => shared-6fkygxiT.cjs
+
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export
 
 - main-!~{000}~.mjs => main--h98FdGL.mjs
@@ -1977,8 +1983,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry-LH300KFl.cjs
-- entry2-!~{001}~.cjs => entry2-t-ZwD6sl.cjs
+- entry-!~{000}~.cjs => entry-Mw6RYPz7.cjs
+- entry2-!~{001}~.cjs => entry2-gf69CcN4.cjs
 - main-!~{002}~.cjs => main--L-FB-fk.cjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped

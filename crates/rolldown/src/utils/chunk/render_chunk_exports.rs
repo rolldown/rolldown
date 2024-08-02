@@ -1,4 +1,6 @@
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
+use std::borrow::Cow;
+
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, NormalizedBundlerOptions, OutputExports, OutputFormat, SymbolRef,
   WrapKind,
@@ -57,13 +59,25 @@ pub fn render_chunk_exports(
               .map(|(exported_name, export_ref)| {
                 let canonical_ref = link_output.symbols.par_canonical_ref_for(export_ref);
                 let symbol = link_output.symbols.get(canonical_ref);
-                let canonical_name = &chunk.canonical_names[&canonical_ref];
+                let mut canonical_name = Cow::Borrowed(&chunk.canonical_names[&canonical_ref]);
                 if let Some(ns_alias) = &symbol.namespace_alias {
                   let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
                   let property_name = &ns_alias.property_name;
                   s.push_str(&format!(
                     "var {canonical_name} = {canonical_ns_name}.{property_name};\n"
                   ));
+                } else {
+                  let cur_chunk_idx = ctx.chunk_idx;
+                  let canonical_ref_owner_chunk_idx =
+                    link_output.symbols.get(canonical_ref).chunk_id.unwrap();
+                  let is_this_symbol_point_to_other_chunk =
+                    cur_chunk_idx != canonical_ref_owner_chunk_idx;
+                  if is_this_symbol_point_to_other_chunk {
+                    let require_binding = &ctx.chunk.require_binding_names_for_other_chunks
+                      [&canonical_ref_owner_chunk_idx];
+                    canonical_name =
+                      Cow::Owned(Rstr::new(&format!("{require_binding}.{canonical_name}")));
+                  }
                 }
 
                 match export_mode {

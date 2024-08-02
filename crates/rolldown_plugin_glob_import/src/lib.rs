@@ -175,7 +175,6 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
                 PropertyKey::StaticIdentifier(ident) => ident.name.to_string(),
                 _ => return None,
               };
-              dbg!(&key);
               let value = match &p.value {
                 Expression::StringLiteral(v) => v.value.to_string(),
                 Expression::BooleanLiteral(v) => v.value.to_string(),
@@ -195,7 +194,6 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
               }
               query_string.push_str(&format!("{k}={v}"));
             }
-            dbg!(&query_string);
             opts.query = Some(query_string);
           }
         }

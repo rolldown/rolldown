@@ -3,6 +3,7 @@ import { experimental_scan } from './rolldown'
 import {
   dynamicImportVarsPlugin,
   globImportPlugin,
+  manifestPlugin,
   wasmPlugin,
 } from './plugin/builtin-plugin'
 import { transform } from './binding'
@@ -10,4 +11,4 @@ import { transform } from './binding'
 export { defineParallelPlugin, experimental_scan as scan, transform }
 
 // Builtin plugin factory
-export { dynamicImportVarsPlugin, wasmPlugin, globImportPlugin }
+export { dynamicImportVarsPlugin, wasmPlugin, globImportPlugin, manifestPlugin }

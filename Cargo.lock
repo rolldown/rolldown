@@ -2335,7 +2335,6 @@ dependencies = [
 name = "rolldown_plugin_module_preload_polyfill"
 version = "0.1.0"
 dependencies = [
- "rolldown_common",
  "rolldown_plugin",
 ]
 

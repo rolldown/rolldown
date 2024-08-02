@@ -59,7 +59,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
       // ep marker = processed
       return
     link.ep = true
-    // prepopulate the load record
+    // pre populate the load record
     const fetchOpts = getFetchOpts(link)
     fetch(link.href, fetchOpts)
   }

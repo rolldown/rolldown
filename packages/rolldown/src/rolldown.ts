@@ -1,6 +1,6 @@
 import type { InputOptions } from './options/input-options'
 import { RolldownBuild } from './rolldown-build'
-import { createBundler } from './utils'
+import { createBundler } from './utils/create-bundler'
 
 // Compat to `rollup.rollup`, it is included scan module graph and linker.
 export const rolldown = async (input: InputOptions): Promise<RolldownBuild> => {

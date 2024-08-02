@@ -1,6 +1,6 @@
 import { BindingPluginContext } from '../binding'
 import { ModuleInfo, ModuleOptions } from '..'
-import { transformModuleInfo } from '../utils'
+import { transformModuleInfo } from '../utils/transform-module-info'
 
 export class PluginContextData {
   modules = new Map<string, ModuleInfo>()

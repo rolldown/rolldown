@@ -29,7 +29,7 @@ import type {
 } from './plugin'
 import { DefineParallelPluginResult } from './plugin/parallel-plugin'
 import { defineConfig } from './utils/define-config'
-import { rolldown, experimental_scan } from './rolldown'
+import { rolldown } from './rolldown'
 import { ConfigExport } from './types/config-export'
 import { RolldownBuild } from './rolldown-build'
 import {

@@ -13,6 +13,7 @@ use oxc::{
   span::{Span, SPAN},
 };
 use rolldown_plugin::{HookTransformAstArgs, HookTransformAstReturn, Plugin, SharedPluginContext};
+use rustc_hash::FxHashMap;
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
@@ -51,6 +52,7 @@ impl Plugin for GlobImportPlugin {
         ast_builder,
         current: 0,
         source_len: fields.source.len(),
+        restore_query_extension: self.config.restore_query_extension,
       };
       visitor.visit_program(fields.program);
       if !visitor.import_decls.is_empty() {
@@ -74,6 +76,7 @@ pub struct GlobImportVisit<'ast, 'a> {
   import_decls: Vec<'ast, Statement<'ast>>,
   current: usize,
   source_len: usize,
+  restore_query_extension: bool,
 }
 
 impl<'ast, 'a> VisitMut<'ast> for GlobImportVisit<'ast, 'a> {
@@ -241,7 +244,28 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
     opts: &ImportGlobOptions,
     call_expr_span: Span,
   ) -> Expression<'ast> {
-    let properties = files.into_iter().enumerate().map(|(index, file)| {
+    // if (importQuery && importQuery !== '?raw') {
+    //   const fileExtension = basename(file).split('.').slice(-1)[0]
+    //   if (fileExtension && restoreQueryExtension)
+    //     importQuery = `${importQuery}&lang.${fileExtension}`
+    // }
+    let properties = files.iter().enumerate().map(|(index, file)| {
+      let formatted_file = if let Some(query) = &opts.query {
+        let normalized_query = if query != "?raw" {
+          let file_extension =
+            Path::new(&file).extension().unwrap_or_default().to_str().unwrap_or_default();
+          if !file_extension.is_empty() && self.restore_query_extension {
+            &format!("{query}&lang.{file_extension}")
+          } else {
+            query
+          }
+        } else {
+          query
+        };
+        Cow::Owned(format!("{file}{normalized_query}"))
+      } else {
+        Cow::Borrowed(file)
+      };
       let value = if opts.eager.unwrap_or_default() {
         // import * as __glob__0 from './dir/foo.js'
         // const modules = {
@@ -274,7 +298,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
           self.ast_builder.module_declaration_import_declaration(
             SPAN,
             Some(self.ast_builder.vec1(module_specifier)),
-            self.ast_builder.string_literal(Span::default(), file.as_str()),
+            self.ast_builder.string_literal(Span::default(), formatted_file.as_str()),
             None,
             ImportOrExportKind::Value,
           ),
@@ -286,7 +310,7 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
         let mut import_expression = self.ast_builder.expression_import(
           // Crate a different span for each import expression
           Span::new((self.source_len + self.current) as u32, index as u32),
-          self.ast_builder.expression_string_literal(Span::default(), file.as_str()),
+          self.ast_builder.expression_string_literal(Span::default(), formatted_file.as_str()),
           self.ast_builder.vec(),
         );
         // import('./dir/foo.js').then((m) => m.setup)
@@ -389,4 +413,3 @@ impl<'ast, 'a> GlobImportVisit<'ast, 'a> {
     self.ast_builder.expression_object(call_expr_span, properties, None)
   }
 }
-

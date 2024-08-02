@@ -1,6 +1,23 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## COMMONJS_VARIABLE_IN_ESM
+
+```text
+[COMMONJS_VARIABLE_IN_ESM] Warning: The CommonJS `module` variable is treated as a global variable in an ECMAScript module and may not work as expected
+   ╭─[esm-export-cjs-export.js:1:1]
+   │
+ 1 │ module.exports = 1;
+   │ ───┬──  
+   │    ╰──── 
+ 2 │ export const value = 1;
+   │ ───┬──  
+   │    ╰──── This file is considered to be an ECMAScript module because of the `export` keyword here:
+───╯
+
+```
 # Assets
 
 ## main.mjs

@@ -5,6 +5,7 @@ use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_glob_import::{GlobImportPlugin, GlobImportPluginConfig};
+use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_wasm::WasmPlugin;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -35,6 +36,7 @@ pub enum BindingBuiltinPluginName {
   WasmPlugin,
   GlobImportPlugin,
   DynamicImportVarsPlugin,
+  ManifestPlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -54,6 +56,22 @@ impl From<BindingGlobImportPluginConfig> for GlobImportPluginConfig {
   }
 }
 
+#[napi_derive::napi(object)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingManifestPluginConfig {
+  pub root: String,
+  pub out_path: String,
+  // TODO: Link this with assets plugin
+  // pub generated_assets: Option<Map<String,  GeneratedAssetMeta>>,
+}
+
+impl From<BindingManifestPluginConfig> for ManifestPluginConfig {
+  fn from(value: BindingManifestPluginConfig) -> Self {
+    ManifestPluginConfig { root: value.root, out_path: value.out_path }
+  }
+}
+
 impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
   type Error = napi::Error;
 
@@ -69,6 +87,14 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         Arc::new(GlobImportPlugin { config })
       }
       BindingBuiltinPluginName::DynamicImportVarsPlugin => Arc::new(DynamicImportVarsPlugin {}),
+      BindingBuiltinPluginName::ManifestPlugin => {
+        let config = if let Some(options) = plugin.options {
+          BindingManifestPluginConfig::from_unknown(options)?.into()
+        } else {
+          ManifestPluginConfig::default()
+        };
+        Arc::new(ManifestPlugin { config })
+      }
     })
   }
 }

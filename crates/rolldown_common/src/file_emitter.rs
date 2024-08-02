@@ -40,11 +40,16 @@ impl FileEmitter {
     reference_id
   }
 
+  pub fn try_get_file_name(&self, reference_id: &str) -> Result<String, String> {
+    let file = self
+      .files
+      .get(reference_id)
+      .ok_or(format!("Unable to get file name for unknown file: {reference_id}"))?;
+    file.file_name.clone().ok_or(format!("{reference_id} should have file name"))
+  }
+
   pub fn get_file_name(&self, reference_id: &str) -> String {
-    self.files.get(reference_id).map_or_else(
-      || panic!("Unable to get file name for unknown file: {reference_id}"),
-      |file| file.file_name.clone().expect(" should have file name"),
-    )
+    self.try_get_file_name(reference_id).unwrap()
   }
 
   pub fn assign_reference_id(&self, filename: Option<String>) -> String {

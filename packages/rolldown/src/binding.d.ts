@@ -105,7 +105,8 @@ export interface BindingBuiltinPlugin {
 export declare enum BindingBuiltinPluginName {
   WasmPlugin = 0,
   GlobImportPlugin = 1,
-  DynamicImportVarsPlugin = 2
+  DynamicImportVarsPlugin = 2,
+  ManifestPlugin = 3
 }
 
 export interface BindingEmittedAsset {
@@ -186,6 +187,11 @@ export declare enum BindingLogLevel {
   Warn = 1,
   Info = 2,
   Debug = 3
+}
+
+export interface BindingManifestPluginConfig {
+  root: string
+  outPath: string
 }
 
 export interface BindingOutputOptions {

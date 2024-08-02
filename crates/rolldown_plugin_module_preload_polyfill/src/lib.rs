@@ -5,7 +5,12 @@ use rolldown_plugin::{
 };
 use std::borrow::Cow;
 
-const MODULE_PRELOAD_POLYFILL: &str = "\0rolldown_module_preload_polyfill.js";
+const MODULE_PRELOAD_POLYFILL: &str = "vite/modulepreload-polyfill";
+// TODO: vite use `\0` to prefix MODULE_PRELOAD_POLYFILL, but because `napi` impl, it will raise
+// `Caused by: Error: Rolldown internal error: file name contained an unexpected NUL byte`
+// so here use `\t` instead, use `\0` instead when the issue is fixed.
+
+const RESOLVED_MODULE_PRELOAD_POLYFILL_ID: &str = "\tvite/modulepreload-polyfill.js";
 
 const IS_MODERN_FLAG: &'static str = "__VITE_IS_MODERN__";
 
@@ -25,16 +30,16 @@ impl Plugin for ModulePreloadPolyfillPlugin {
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     Ok((args.specifier == MODULE_PRELOAD_POLYFILL).then(|| HookResolveIdOutput {
-      id: MODULE_PRELOAD_POLYFILL.to_string(),
+      id: RESOLVED_MODULE_PRELOAD_POLYFILL_ID.to_string(),
       ..Default::default()
     }))
   }
 
   async fn load(&self, _ctx: &SharedPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if self.skip {
-      return Ok(None);
+      return Ok(Some(HookLoadOutput::default()));
     }
-    Ok((args.id == MODULE_PRELOAD_POLYFILL).then(|| HookLoadOutput {
+    Ok((args.id == RESOLVED_MODULE_PRELOAD_POLYFILL_ID).then(|| HookLoadOutput {
       code: format!("{IS_MODERN_FLAG}&&{}", include_str!("module_preload_polyfill.js")),
       side_effects: Some(HookSideEffects::True),
       ..Default::default()

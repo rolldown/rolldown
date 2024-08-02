@@ -28,6 +28,10 @@ pub fn deconflict_chunk_symbols(chunk: &mut Chunk, link_output: &LinkStageOutput
     renamer.add_top_level_symbol(item.import_ref);
   });
 
+  chunk.require_binding_names_for_other_chunks.values_mut().for_each(|name_hint| {
+    *name_hint = renamer.create_conflictless_top_level_name(&format!("require_{name_hint}"));
+  });
+
   chunk
     .modules
     .iter()

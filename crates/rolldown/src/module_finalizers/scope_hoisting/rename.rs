@@ -22,32 +22,27 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-    let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
-    let symbol = self.ctx.symbols.get(canonical_ref);
+    let mut expr = self.finalized_expr_for_symbol_ref(symbol_ref, is_callee);
 
-    if let Some(ns_alias) = &symbol.namespace_alias {
-      let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
-      let prop_name = &ns_alias.property_name;
-      let access_expr =
-        self.snippet.literal_prop_access_member_expr_expr(canonical_ns_name, prop_name);
+    // See https://github.com/oxc-project/oxc/issues/4606
 
-      return Some(if is_callee {
-        // `foo()` might be transformed to `xxx.foo()`. To keep the semantic of callee's `this` binding,
-        // we need to wrap the transformed callee. Make it like `(0, xxx.foo)()`.
-        let wrapped_callee =
-          self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0, "0"), access_expr);
-        wrapped_callee
-      } else {
-        access_expr
-      });
+    match &mut expr {
+      ast::Expression::Identifier(it) => {
+        it.span = id_ref.span;
+      }
+      ast::Expression::StaticMemberExpression(it) => {
+        it.span = id_ref.span;
+      }
+      _ => {}
     }
 
-    let canonical_name = self.canonical_name_for(canonical_ref);
-    if id_ref.name != canonical_name.as_str() {
-      return Some(self.snippet.id_ref_expr(canonical_name, id_ref.span));
-    }
+    Some(expr)
 
-    None
+    // let canonical_name = self.canonical_name_for(canonical_ref);
+    // if id_ref.name != canonical_name.as_str() {
+    //   return Some(self.snippet.id_ref_expr(canonical_name, id_ref.span));
+    // }
+    // None
   }
 
   /// return `None` if

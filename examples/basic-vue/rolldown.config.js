@@ -1,5 +1,4 @@
 import { defineConfig } from 'rolldown'
-import replace from '@rollup/plugin-replace'
 
 export default defineConfig({
   input: './index.js',
@@ -9,9 +8,4 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
-  plugins: [
-    replace({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-    }),
-  ],
 })

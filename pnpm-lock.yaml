@@ -66,9 +66,6 @@ importers:
         specifier: ^3.4.21
         version: 3.4.34(typescript@5.5.4)
     devDependencies:
-      '@rollup/plugin-replace':
-        specifier: ^5.0.7
-        version: 5.0.7(rollup@4.19.1)
       rolldown:
         specifier: workspace:*
         version: link:../../packages/rolldown
@@ -7743,13 +7740,6 @@ snapshots:
       magic-string: 0.30.10
     optionalDependencies:
       rollup: 3.29.4
-
-  '@rollup/plugin-replace@5.0.7(rollup@4.19.1)':
-    dependencies:
-      '@rollup/pluginutils': 5.1.0(rollup@4.19.1)
-      magic-string: 0.30.10
-    optionalDependencies:
-      rollup: 4.19.1
 
   '@rollup/pluginutils@5.1.0(rollup@3.29.4)':
     dependencies:

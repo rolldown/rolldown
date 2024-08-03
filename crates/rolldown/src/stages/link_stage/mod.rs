@@ -99,60 +99,6 @@ impl<'a> LinkStage<'a> {
     }
   }
 
-  fn create_exports_for_ecma_modules(&mut self) {
-    self.module_table.modules.iter_mut().filter_map(|m| m.as_ecma_mut()).for_each(|ecma_module| {
-      let linking_info = &mut self.metas[ecma_module.idx];
-
-      create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime);
-      if self.entries.iter().any(|entry| entry.id == ecma_module.idx) {
-        init_entry_point_stmt_info(linking_info);
-      }
-
-      // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
-      // tree-shaking process.
-      linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
-        let stmt_info = StmtInfo {
-          stmt_idx: None,
-          declared_symbols: vec![*symbol_ref],
-          referenced_symbols: vec![],
-          side_effect: false,
-          is_included: false,
-          import_records: Vec::new(),
-          debug_label: None,
-        };
-        ecma_module.stmt_infos.add_stmt_info(stmt_info);
-      });
-
-      // Generate export of Module Namespace Object for Namespace Import
-      // - Namespace import: https://tc39.es/ecma262/#prod-NameSpaceImport
-      // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
-      // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
-      // real statement to construct the Module Namespace Object and assign it to a variable.
-      // This is only a concept of esm, so no need to care about this in commonjs.
-      if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
-        let meta = &self.metas[ecma_module.idx];
-        let mut referenced_symbols = vec![];
-        if !meta.is_canonical_exports_empty() {
-          referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
-        }
-        referenced_symbols
-          .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
-        // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
-        // Corresponding AST for this statement will be created by the finalizer.
-        let namespace_stmt_info = StmtInfo {
-          stmt_idx: None,
-          declared_symbols: vec![ecma_module.namespace_object_ref],
-          referenced_symbols,
-          side_effect: false,
-          is_included: false,
-          import_records: Vec::new(),
-          debug_label: None,
-        };
-        ecma_module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
-      }
-    });
-  }
-
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> LinkStageOutput {
     self.sort_modules();
@@ -435,6 +381,60 @@ impl<'a> LinkStage<'a> {
         }
       },
     );
+  }
+
+  fn create_exports_for_ecma_modules(&mut self) {
+    self.module_table.modules.iter_mut().filter_map(|m| m.as_ecma_mut()).for_each(|ecma_module| {
+      let linking_info = &mut self.metas[ecma_module.idx];
+
+      create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime);
+      if self.entries.iter().any(|entry| entry.id == ecma_module.idx) {
+        init_entry_point_stmt_info(linking_info);
+      }
+
+      // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
+      // tree-shaking process.
+      linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
+        let stmt_info = StmtInfo {
+          stmt_idx: None,
+          declared_symbols: vec![*symbol_ref],
+          referenced_symbols: vec![],
+          side_effect: false,
+          is_included: false,
+          import_records: Vec::new(),
+          debug_label: None,
+        };
+        ecma_module.stmt_infos.add_stmt_info(stmt_info);
+      });
+
+      // Generate export of Module Namespace Object for Namespace Import
+      // - Namespace import: https://tc39.es/ecma262/#prod-NameSpaceImport
+      // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
+      // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
+      // real statement to construct the Module Namespace Object and assign it to a variable.
+      // This is only a concept of esm, so no need to care about this in commonjs.
+      if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
+        let meta = &self.metas[ecma_module.idx];
+        let mut referenced_symbols = vec![];
+        if !meta.is_canonical_exports_empty() {
+          referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
+        }
+        referenced_symbols
+          .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
+        // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
+        // Corresponding AST for this statement will be created by the finalizer.
+        let namespace_stmt_info = StmtInfo {
+          stmt_idx: None,
+          declared_symbols: vec![ecma_module.namespace_object_ref],
+          referenced_symbols,
+          side_effect: false,
+          is_included: false,
+          import_records: Vec::new(),
+          debug_label: None,
+        };
+        ecma_module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
+      }
+    });
   }
 }
 

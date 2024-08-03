@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -32,7 +30,7 @@ let keep7 = class {
 	static async [x]() {}
 };
 let keep8 = class {
-	static [{toString() {}}] = "x";
+	static [{ toString() {} }] = "x";
 };
 
 //#endregion

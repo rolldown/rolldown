@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

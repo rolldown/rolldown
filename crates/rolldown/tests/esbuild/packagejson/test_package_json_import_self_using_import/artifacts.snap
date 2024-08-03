@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_import_self_using_import
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 

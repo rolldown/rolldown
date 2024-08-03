@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -23,7 +21,7 @@ var init_lib = __esmMin(() => {
 var cjs_ns, cjs_default;
 var init_cjs = __esmMin(() => {
 	cjs_ns = {};
-	__export(cjs_ns, {default: () => cjs_default});
+	__export(cjs_ns, { default: () => cjs_default });
 	init_lib();
 	cjs_default = keep2();
 });

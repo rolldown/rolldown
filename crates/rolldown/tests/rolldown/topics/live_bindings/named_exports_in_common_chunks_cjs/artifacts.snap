@@ -1,7 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-expression: snapshot
-input_file: crates/rolldown/tests/fixtures/topics/live_bindings/named_exports_in_common_chunks_cjs
 ---
 # Assets
 
@@ -10,19 +8,19 @@ input_file: crates/rolldown/tests/fixtures/topics/live_bindings/named_exports_in
 ```js
 "use strict";
 
-const { count, inc, reset } = require("./shared.cjs");
+const require_shared = require('./shared.cjs');
 const { default: assert } = __toESM(require("node:assert"));
 
 //#region async-entry.js
-reset();
-assert.strictEqual(count, 0);
-assert.strictEqual(count, count);
-inc();
-assert.strictEqual(count, 1);
-assert.strictEqual(count, count);
-inc();
-assert.strictEqual(count, 2);
-assert.strictEqual(count, count);
+require_shared.reset();
+assert.strictEqual(require_shared.count, 0);
+assert.strictEqual(require_shared.count, require_shared.count);
+require_shared.inc();
+assert.strictEqual(require_shared.count, 1);
+assert.strictEqual(require_shared.count, require_shared.count);
+require_shared.inc();
+assert.strictEqual(require_shared.count, 2);
+assert.strictEqual(require_shared.count, require_shared.count);
 
 //#endregion
 ```
@@ -30,7 +28,7 @@ assert.strictEqual(count, count);
 
 ```js
 "use strict";
-const { count, inc, reset } = require("./shared.cjs");
+const require_shared = require('./shared.cjs');
 
 //#region main.js
 import("./async-entry.cjs");
@@ -40,19 +38,19 @@ Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'count', {
   enumerable: true,
   get: function () {
-    return count;
+    return require_shared.count;
   }
 });
 Object.defineProperty(exports, 'inc', {
   enumerable: true,
   get: function () {
-    return inc;
+    return require_shared.inc;
   }
 });
 Object.defineProperty(exports, 'reset', {
   enumerable: true,
   get: function () {
-    return reset;
+    return require_shared.reset;
   }
 });
 ```

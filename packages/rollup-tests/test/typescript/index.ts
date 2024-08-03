@@ -12,7 +12,6 @@ const plugin: rollup.PluginImpl<Options> = (options = {}) => {
 		name: 'my-plugin',
 		resolveId: {
 			handler(source, _importer, _options) {
-				// @ts-expect-error source is typed as string
 				const _s: number = source;
 			}
 		}
@@ -28,7 +27,6 @@ const _pluginHooks: rollup.Plugin = {
 		sequential: true
 	},
 	async load(id) {
-		// @ts-expect-error id is typed as string
 		const _index: number = id;
 		await this.resolve('rollup');
 	},
@@ -36,10 +34,8 @@ const _pluginHooks: rollup.Plugin = {
 	resolveId: {
 		async handler(source, _importer, _options) {
 			await this.resolve('rollup');
-			// @ts-expect-error source is typed as string
 			const _s: number = source;
 		},
-		// @ts-expect-error sequential is only supported for parallel hooks
 		sequential: true
 	}
 };
@@ -64,24 +60,18 @@ const _amdOutputOptions: rollup.OutputOptions['amd'][] = [
 		autoId: false
 	},
 	{
-		// @ts-expect-error for "basePath", "autoId" needs to be true
 		autoId: false,
 		basePath: '',
-		// @ts-expect-error cannot combine "id" and "basePath"
 		id: 'a'
 	},
 	{
-		// @ts-expect-error cannot combine "id" and "autoId"
 		autoId: true,
-		// @ts-expect-error cannot combine "id" and "autoId"
 		id: 'a'
 	},
 	{
 		basePath: '',
-		// @ts-expect-error cannot combine "id" and "basePath"
 		id: 'a'
 	},
-	// @ts-expect-error needs "autoId" for "basePath"
 	{
 		basePath: ''
 	}

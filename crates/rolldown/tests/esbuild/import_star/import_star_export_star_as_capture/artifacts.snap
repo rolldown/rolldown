@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/import_star/import_star_export_star_as_capture
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -13,13 +11,13 @@ import { default as assert } from "node:assert";
 
 //#region foo.js
 var foo_ns = {};
-__export(foo_ns, {foo: () => foo$1});
+__export(foo_ns, { foo: () => foo$1 });
 const foo$1 = 123;
 
 //#endregion
 //#region entry.js
 let foo = 234;
-assert.deepEqual(foo_ns, {foo: 123});
+assert.deepEqual(foo_ns, { foo: 123 });
 assert.equal(foo$1, 123);
 assert.equal(foo, 234);
 

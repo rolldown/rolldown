@@ -24,11 +24,12 @@ export default defineTest({
     ],
   },
   afterTest(output) {
+    // cSpell:disable
     expect(getOutputChunkNames(output)).toMatchInlineSnapshot(`
       [
+        "_module-KtCeJTRH.js",
         "entry.js",
         "main.js",
-        "module-NZqqXNZ9.js",
       ]
     `)
   },

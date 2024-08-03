@@ -1,6 +1,8 @@
 import { Bundler } from './binding'
 import type { OutputOptions } from './options/output-options'
-import { createBundler, transformToRollupOutput } from './utils'
+import { transformToRollupOutput } from './utils/transform-to-rollup-output'
+import { createBundler } from './utils/create-bundler'
+
 import type { RolldownOutput } from './types/rolldown-output'
 import type { HasProperty, TypeAssert } from './utils/type-assert'
 import type { InputOptions } from './options/input-options'

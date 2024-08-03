@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/import_star/import_star_common_js_capture
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -21,7 +19,7 @@ var require_foo = __commonJSMin((exports, module) => {
 var import_foo = __toESM(require_foo());
 let foo = 234;
 assert.deepEqual(import_foo, {
-	default: {foo: 123},
+	default: { foo: 123 },
 	foo: 123
 });
 assert.equal(import_foo.foo, 123);

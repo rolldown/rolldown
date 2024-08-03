@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/import_star/import_export_star_ambiguous_warning
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -20,7 +18,7 @@ const z = 4;
 //#endregion
 //#region entry.js
 assert.equal(x, 1);
-assert.equal(undefined, undefined);
+assert.equal(void 0, undefined);
 assert.equal(z, 4);
 
 //#endregion

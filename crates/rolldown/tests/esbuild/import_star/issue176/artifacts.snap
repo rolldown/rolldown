@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/import_star/issue176
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -17,7 +15,7 @@ const foo = () => "hi there";
 //#endregion
 //#region folders/index.js
 var folders_index_ns = {};
-__export(folders_index_ns, {foo: () => foo});
+__export(folders_index_ns, { foo: () => foo });
 
 //#endregion
 //#region entry.js

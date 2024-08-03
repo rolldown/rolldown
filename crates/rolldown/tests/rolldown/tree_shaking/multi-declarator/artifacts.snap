@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/tree_shaking/multi-declarator
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -11,7 +9,7 @@ input_file: crates/rolldown/tests/fixtures/tree_shaking/multi-declarator
 import { default as assert } from "node:assert";
 
 //#region foo.js
-const { baz } = {baz: "baz"};
+const { baz } = { baz: "baz" };
 const foo = "foo";
 const [c, d] = [1, 2];
 
@@ -31,10 +29,10 @@ assert.equal(c, 1);
 (0:13-0:15) "{ " --> (3:6-3:8) " {"
 (0:15-0:20) "baz }" --> (3:8-3:13) " baz "
 (0:20-0:23) " = " --> (3:13-3:16) "} ="
-(0:23-0:25) "{ " --> (3:16-3:17) " "
-(0:25-0:30) "baz: " --> (3:17-3:22) "{baz:"
-(0:30-0:37) "'baz' }" --> (3:22-3:27) " \"baz"
-(0:37-0:0) "export const { baz } = { baz: 'baz' }" --> (3:27-4:0) "\"};"
+(0:23-0:25) "{ " --> (3:16-3:18) " {"
+(0:25-0:30) "baz: " --> (3:18-3:23) " baz:"
+(0:30-0:37) "'baz' }" --> (3:23-3:29) " \"baz\""
+(0:37-0:0) "export const { baz } = { baz: 'baz' }" --> (3:29-4:0) " };"
 (0:0-0:39) "export const { baz } = { baz: 'baz' }, " --> (4:0-4:6) "\nconst"
 (0:39-0:45) "foo = " --> (4:6-4:12) " foo ="
 (0:45-1:7) "'foo', bar = 'bar';\nexport" --> (4:12-5:0) " \"foo\";"

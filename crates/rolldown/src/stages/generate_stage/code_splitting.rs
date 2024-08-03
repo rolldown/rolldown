@@ -50,28 +50,30 @@ impl<'a> GenerateStage<'a> {
       // We need this step to include the runtime module, if there are symbols of it.
       // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.
       stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-        let canonical_ref = match reference_ref {
-          rolldown_common::SymbolOrMemberExprRef::Symbol(s) => {
-            self.link_output.symbols.par_canonical_ref_for(*s)
+        match reference_ref {
+          rolldown_common::SymbolOrMemberExprRef::Symbol(sym_ref) => {
+            let canonical_ref = self.link_output.symbols.par_canonical_ref_for(*sym_ref);
+            self.determine_reachable_modules_for_entry(
+              canonical_ref.owner,
+              entry_index,
+              module_to_bits,
+            );
           }
-          // try to resolve member expression to the pointed symbol
-          // fallback to namespace_ref if not found
-          rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => self
-            .link_output
-            .top_level_member_expr_resolved_cache
-            .get(&member_expr.object_ref)
-            .and_then(|map| map.get(&member_expr.props.clone().into_boxed_slice()))
-            .map_or_else(
-              || self.link_output.symbols.par_canonical_ref_for(member_expr.object_ref),
-              |(finalized_symbol_ref, _, _)| *finalized_symbol_ref,
-            ),
+          rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+            if let Some(sym_ref) = member_expr.resolved_symbol_ref(&meta.resolved_member_expr_refs)
+            {
+              let canonical_ref = self.link_output.symbols.par_canonical_ref_for(sym_ref);
+              self.determine_reachable_modules_for_entry(
+                canonical_ref.owner,
+                entry_index,
+                module_to_bits,
+              );
+            } else {
+              // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
+              // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+            }
+          }
         };
-
-        self.determine_reachable_modules_for_entry(
-          canonical_ref.owner,
-          entry_index,
-          module_to_bits,
-        );
       });
     });
   }

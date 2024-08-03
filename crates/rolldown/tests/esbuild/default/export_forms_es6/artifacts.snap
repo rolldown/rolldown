@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/default/export_forms_es6
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -16,7 +14,7 @@ const abc = undefined;
 //#endregion
 //#region b.js
 var b_ns = {};
-__export(b_ns, {xyz: () => xyz});
+__export(b_ns, { xyz: () => xyz });
 const xyz = null;
 
 //#endregion

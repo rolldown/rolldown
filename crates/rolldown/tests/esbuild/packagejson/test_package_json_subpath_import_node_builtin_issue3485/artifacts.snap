@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_subpath_import_node_builtin_issue3485
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/splitting/hybrid_esm_and_cjs_issue617
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -22,7 +20,7 @@ export { foo };
 var a_ns, foo;
 var init_a = __esmMin(() => {
 	a_ns = {};
-	__export(a_ns, {foo: () => foo});
+	__export(a_ns, { foo: () => foo });
 });
 
 //#endregion

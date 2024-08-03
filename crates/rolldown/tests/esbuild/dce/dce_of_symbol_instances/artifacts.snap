@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -37,7 +35,7 @@ let keep2 = {
 	[keep]: null,
 	*[Symbol.iterator]() {}
 };
-let keep3 = {*[Symbol.wtf]() {}};
+let keep3 = { *[Symbol.wtf]() {} };
 
 //#endregion
 ```

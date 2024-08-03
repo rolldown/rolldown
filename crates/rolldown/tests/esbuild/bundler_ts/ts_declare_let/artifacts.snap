@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/bundler_ts/ts_declare_let
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

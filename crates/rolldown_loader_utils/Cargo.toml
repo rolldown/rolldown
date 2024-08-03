@@ -6,6 +6,9 @@ name                 = "rolldown_loader_utils"
 repository.workspace = true
 version              = "0.1.0"
 
+[lib]
+doctest = false
+
 [dependencies]
 anyhow          = { workspace = true }
 rolldown_common = { workspace = true }

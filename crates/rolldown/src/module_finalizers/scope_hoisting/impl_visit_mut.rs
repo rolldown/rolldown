@@ -7,7 +7,7 @@ use oxc::{
     visit::walk_mut,
     VisitMut,
   },
-  span::{CompactStr, GetSpan, Span, SPAN},
+  span::{GetSpan, Span, SPAN},
 };
 use rolldown_common::{ExportsKind, Module, ModuleType, SymbolRef, WrapKind};
 use rolldown_ecmascript::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
@@ -442,52 +442,20 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
     // rewrite `foo_ns.bar` to `bar` directly
     match expr {
       Expression::StaticMemberExpression(ref inner_expr) => {
-        let mut chain = vec![];
-        let mut cur = inner_expr;
-        let top_level_symbol = loop {
-          chain.push(cur.property.clone());
-          match cur.object {
-            ast::Expression::StaticMemberExpression(ref expr) => {
-              cur = expr;
-            }
-            ast::Expression::Identifier(ref ident) => {
-              break self.resolve_symbol_from_reference(ident);
-            }
-            _ => break None,
-          }
-        };
-        if let Some(symbol) = top_level_symbol {
-          chain.reverse();
-          let chain: Vec<CompactStr> =
-            chain.into_iter().map(|ident| ident.name.as_str().into()).collect::<Vec<_>>();
-          let replaced_expr = self
-            .ctx
-            .top_level_member_expr_resolved_cache
-            .get(&(self.ctx.id, symbol).into())
-            .and_then(|map| map.get(&chain.clone().into_boxed_slice()))
-            .map(|(symbol_ref, cursor, namespace_property_name)| {
-              let replaced_expr = if let Some(name) = self.try_canonical_name_for(*symbol_ref) {
-                let namespace_prop_chain =
-                  if let Some(namespace_property_name) = namespace_property_name {
-                    vec![namespace_property_name.as_str().into()]
-                  } else {
-                    vec![]
-                  };
-                self.snippet.member_expr_or_ident_ref(
-                  name.as_str(),
-                  &[&chain[*cursor..], &namespace_prop_chain].concat(),
-                  SPAN,
-                )
-              } else {
-                // Ambiguous symbol, replace the member expr with `undefined`, the runtime semantic
-                // will not change
-                self.snippet.id_ref_expr("undefined", SPAN)
-              };
+        if let Some(resolved) =
+          self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
+        {
+          match resolved {
+            Some((object_ref, props)) => {
+              let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false);
 
-              replaced_expr
-            });
-          if let Some(replaced_expr) = replaced_expr {
-            *expr = replaced_expr;
+              let replaced_expr =
+                self.snippet.member_expr_or_ident_ref(object_ref_expr, props, inner_expr.span);
+              *expr = replaced_expr;
+            }
+            None => {
+              *expr = self.snippet.void_zero();
+            }
           }
         };
       }

@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/deconflict/default_function
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -18,7 +16,7 @@ function foo$1(a$1$1) {
 
 //#endregion
 //#region bar.js
-var bar_default = {foo: foo$1};
+var bar_default = { foo: foo$1 };
 
 //#endregion
 //#region main.js
@@ -48,9 +46,9 @@ assert.strictEqual(typeof foo, "function");
 (4:1-5:1) "}\n" --> (6:0-10:0) "\n}\n\n//#endregion\n//#region bar.js"
 - ../bar.js
 (0:0-2:15) "import foo from './foo'\n\nexport default" --> (10:0-10:18) "\nvar bar_default ="
-(2:15-2:17) " {" --> (10:18-10:19) " "
-(2:17-2:22) " foo " --> (10:19-10:29) "{foo: foo$"
-(2:22-2:23) "}" --> (10:29-14:0) "1};\n\n//#endregion\n//#region main.js"
+(2:15-2:17) " {" --> (10:18-10:20) " {"
+(2:17-2:22) " foo " --> (10:20-10:31) " foo: foo$1"
+(2:22-2:23) "}" --> (10:31-14:0) " };\n\n//#endregion\n//#region main.js"
 - ../main.js
 (3:0-3:6) "\nconst" --> (14:0-14:6) "\nconst"
 (3:6-3:10) " a =" --> (14:6-14:10) " a ="

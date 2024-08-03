@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/dce/dce_var_exports
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -12,7 +10,7 @@ import { __commonJSMin } from "./chunk.mjs";
 
 //#region a.js
 var require_a = __commonJSMin((exports, module) => {
-	var foo = {bar: 123};
+	var foo = { bar: 123 };
 	module.exports = foo;
 });
 
@@ -27,7 +25,7 @@ import { __commonJSMin } from "./chunk.mjs";
 
 //#region b.js
 var require_b = __commonJSMin((exports, module) => {
-	var exports = {bar: 123};
+	var exports = { bar: 123 };
 	module.exports = exports;
 });
 
@@ -42,7 +40,7 @@ import { __commonJSMin } from "./chunk.mjs";
 
 //#region c.js
 var require_c = __commonJSMin((exports, module) => {
-	var module = {bar: 123};
+	var module = { bar: 123 };
 	exports.foo = module;
 });
 

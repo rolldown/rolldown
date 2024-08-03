@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/splitting/dynamic-es6-into-es6
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -21,7 +19,7 @@ export { bar };
 import { default as assert } from "node:assert";
 
 //#region main.js
-(import("./foo.mjs")).then(({ bar }) => {
+import("./foo.mjs").then(({ bar }) => {
 	assert.equal(bar, 123);
 });
 

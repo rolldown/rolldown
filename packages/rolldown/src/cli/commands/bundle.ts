@@ -1,7 +1,7 @@
 import { performance } from 'node:perf_hooks'
 import { rolldown } from '../../rolldown'
 import type { RolldownOptions, RolldownOutput, RollupOutput } from '../../index'
-import { arraify } from '../../utils/index'
+import { arraify } from '../../utils/misc'
 import { ensureConfig, logger } from '../utils'
 import * as colors from '../colors'
 

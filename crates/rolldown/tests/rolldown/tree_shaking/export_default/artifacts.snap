@@ -1,7 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-expression: snapshot
-input_file: crates/rolldown/tests/fixtures/tree_shaking/export_default
 ---
 # Assets
 
@@ -14,7 +12,7 @@ var foo_default = 1;
 
 //#endregion
 //#region export.js
-var export_default = {foo: foo_default};
+var export_default = { foo: foo_default };
 
 //#endregion
 //#region main.js

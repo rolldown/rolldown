@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_dual_package_hazard_import_and_require_same_file
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -14,7 +12,7 @@ input_file: crates/rolldown/tests/esbuild/packagejson/test_package_json_dual_pac
 var module_ns, module_default;
 var init_module = __esmMin(() => {
 	module_ns = {};
-	__export(module_ns, {default: () => module_default});
+	__export(module_ns, { default: () => module_default });
 	module_default = "module";
 });
 

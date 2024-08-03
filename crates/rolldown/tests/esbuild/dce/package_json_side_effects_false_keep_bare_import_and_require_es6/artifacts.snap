@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -14,7 +12,7 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_ke
 var demo_pkg_index_ns, foo;
 var init_demo_pkg_index = __esmMin(() => {
 	demo_pkg_index_ns = {};
-	__export(demo_pkg_index_ns, {foo: () => foo});
+	__export(demo_pkg_index_ns, { foo: () => foo });
 	foo = 123;
 	console.log("hello");
 });

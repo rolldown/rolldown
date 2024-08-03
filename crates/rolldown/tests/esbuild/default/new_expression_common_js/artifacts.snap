@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/default/new_expression_common_js
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -13,7 +11,7 @@ input_file: crates/rolldown/tests/esbuild/default/new_expression_common_js
 //#region foo.js
 var require_foo = __commonJSMin((exports, module) => {
 	class Foo {}
-	module.exports = {Foo};
+	module.exports = { Foo };
 });
 
 //#endregion

@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/misc/use_strict/no_use_strict_with_non_strict_cjs_in_cjs_format
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -20,7 +18,7 @@ var require_cjs = __commonJSMin((exports, module) => {
 //#endregion
 //#region main.js
 var import_cjs = __toESM(require_cjs());
-assert.deepEqual(import_cjs.default, {default: {}});
+assert.deepEqual(import_cjs.default, { default: {} });
 
 //#endregion
 ```

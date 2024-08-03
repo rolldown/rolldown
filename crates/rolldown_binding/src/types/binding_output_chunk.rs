@@ -86,12 +86,7 @@ impl BindingOutputChunk {
 
   #[napi(getter)]
   pub fn map(&self) -> napi::Result<Option<String>> {
-    self
-      .inner
-      .map
-      .as_ref()
-      .map(|v| v.to_json_string().map_err(|e| napi::Error::from_reason(format!("{e:?}"))))
-      .transpose()
+    Ok(self.inner.map.as_ref().map(SourceMap::to_json_string))
   }
 
   #[napi(setter, js_name = "map")]

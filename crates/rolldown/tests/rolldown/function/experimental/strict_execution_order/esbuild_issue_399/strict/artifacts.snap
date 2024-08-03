@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/function/experimental/strict_execution_order/esbuild_issue_399/strict
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -12,7 +10,7 @@ import { __esmMin, init_run_dep } from "./run-dep.mjs";
 
 //#region init-dep-1.js
 var init_init_dep_1 = __esmMin(() => {
-	global.foo = {log: () => console.log("foo.log() (from entry 1) called")};
+	global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
 });
 
 //#endregion
@@ -32,7 +30,7 @@ import { __esmMin, init_run_dep } from "./run-dep.mjs";
 
 //#region init-dep-2.js
 var init_init_dep_2 = __esmMin(() => {
-	global.foo = {log: () => console.log("foo.log() (from entry 2) called")};
+	global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 });
 
 //#endregion

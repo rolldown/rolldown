@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -13,13 +11,13 @@ import { default as assert } from "node:assert";
 
 //#region node_modules/demo-pkg/index.js
 var demo_pkg_index_ns = {};
-__export(demo_pkg_index_ns, {foo: () => foo});
+__export(demo_pkg_index_ns, { foo: () => foo });
 const foo = 123;
 console.log("hello");
 
 //#endregion
 //#region src/entry.js
-assert.deepEqual(demo_pkg_index_ns, {foo: 123});
+assert.deepEqual(demo_pkg_index_ns, { foo: 123 });
 
 //#endregion
 ```

@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/import_star/namespace_import_unused_missing_es6
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -13,7 +11,7 @@ import { default as assert } from "node:assert";
 
 //#region foo.js
 var foo_ns = {};
-__export(foo_ns, {x: () => x});
+__export(foo_ns, { x: () => x });
 const x = 123;
 
 //#endregion

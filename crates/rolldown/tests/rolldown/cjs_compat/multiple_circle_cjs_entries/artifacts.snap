@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/cjs_compat/multiple_circle_cjs_entries
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 

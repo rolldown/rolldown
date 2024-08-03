@@ -1,5 +1,6 @@
 use crate::{AssetSource, FileNameRenderOptions, NormalizedBundlerOptions, Output, OutputAsset};
 use dashmap::{DashMap, DashSet};
+use rolldown_utils::sanitize_file_name::sanitize_file_name;
 use rolldown_utils::xxhash::xxhash_base64_url;
 use std::ffi::OsStr;
 use std::path::Path;
@@ -39,11 +40,16 @@ impl FileEmitter {
     reference_id
   }
 
+  pub fn try_get_file_name(&self, reference_id: &str) -> Result<String, String> {
+    let file = self
+      .files
+      .get(reference_id)
+      .ok_or(format!("Unable to get file name for unknown file: {reference_id}"))?;
+    file.file_name.clone().ok_or(format!("{reference_id} should have file name"))
+  }
+
   pub fn get_file_name(&self, reference_id: &str) -> String {
-    self.files.get(reference_id).map_or_else(
-      || panic!("Unable to get file name for unknown file: {reference_id}"),
-      |file| file.file_name.clone().expect(" should have file name"),
-    )
+    self.try_get_file_name(reference_id).unwrap()
   }
 
   pub fn assign_reference_id(&self, filename: Option<String>) -> String {
@@ -58,8 +64,11 @@ impl FileEmitter {
     if file.file_name.is_none() {
       let path = file.name.as_deref().map(Path::new);
       let extension = path.and_then(|x| x.extension().and_then(OsStr::to_str));
+      let name = path
+        .and_then(|x| x.file_stem().and_then(OsStr::to_str))
+        .map(|x| sanitize_file_name(x.into()));
       let file_name = self.options.asset_filenames.render(&FileNameRenderOptions {
-        name: path.and_then(|x| x.file_stem().and_then(OsStr::to_str)),
+        name: name.as_deref(),
         hash: Some(&xxhash_base64_url(file.source.as_bytes()).as_str()[..8]),
         ext: extension,
       });

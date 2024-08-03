@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -14,7 +12,7 @@ input_file: crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_ke
 var index_module_ns, foo;
 var init_index_module = __esmMin(() => {
 	index_module_ns = {};
-	__export(index_module_ns, {foo: () => foo});
+	__export(index_module_ns, { foo: () => foo });
 	foo = 123;
 	console.log("TEST FAILED");
 });

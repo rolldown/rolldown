@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/rollup/simplify-with-destructuring
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -12,9 +10,9 @@ import { default as assert } from "assert";
 
 //#region main.js
 let foo, unused;
-null, {foo} = {foo: "bar"};
+null, {foo} = { foo: "bar" };
 assert.strictEqual(foo, "bar");
-const assign = () => unused = {foo} = {foo: "baz"};
+const assign = () => unused = {foo} = { foo: "baz" };
 assign();
 assert.strictEqual(foo, "baz");
 

@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/lower/lower_private_super_static_bundle_issue2158
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/misc/reexport_star
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -12,7 +10,7 @@ input_file: crates/rolldown/tests/fixtures/misc/reexport_star
 
 //#region a.js
 var a_ns = {};
-__export(a_ns, {abc: () => abc});
+__export(a_ns, { abc: () => abc });
 const abc = undefined;
 
 //#endregion

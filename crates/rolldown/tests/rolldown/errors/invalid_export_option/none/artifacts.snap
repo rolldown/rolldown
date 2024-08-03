@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/errors/invalid_export_option/none
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Errors
 

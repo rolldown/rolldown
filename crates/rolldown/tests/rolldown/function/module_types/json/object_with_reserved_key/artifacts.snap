@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/function/module_types/json/object_with_reserved_key
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -12,11 +10,11 @@ import { default as assert } from "node:assert";
 
 //#region foo.json
 const key_0 = null;
-var foo_default = {"null": key_0};
+var foo_default = { "null": key_0 };
 
 //#endregion
 //#region main.js
-assert.deepStrictEqual(foo_default, {"null": null});
+assert.deepStrictEqual(foo_default, { "null": null });
 
 //#endregion
 ```

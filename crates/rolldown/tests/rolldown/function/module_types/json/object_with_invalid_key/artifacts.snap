@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/function/loaders/json/object_with_invalid_key
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -12,11 +10,11 @@ import { default as assert } from "node:assert";
 
 //#region foo.json
 const key_0 = 1;
-var foo_default = {"😈": key_0};
+var foo_default = { "😈": key_0 };
 
 //#endregion
 //#region main.js
-assert.deepStrictEqual(foo_default, {"😈": key_0});
+assert.deepStrictEqual(foo_default, { "😈": key_0 });
 
 //#endregion
 ```

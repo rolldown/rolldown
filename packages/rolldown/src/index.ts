@@ -27,19 +27,10 @@ import type {
   SourceDescription,
   TransformResult,
 } from './plugin'
-import {
-  defineParallelPlugin,
-  DefineParallelPluginResult,
-} from './plugin/parallel-plugin'
+import { DefineParallelPluginResult } from './plugin/parallel-plugin'
 import { defineConfig } from './utils/define-config'
-import { rolldown, experimental_scan } from './rolldown'
+import { rolldown } from './rolldown'
 import { ConfigExport } from './types/config-export'
-import {
-  globImportPlugin,
-  GlobImportPlugin,
-  wasmPlugin,
-  WasmPlugin,
-} from './plugin/builtin-plugin'
 import { RolldownBuild } from './rolldown-build'
 import {
   EmittedAsset,
@@ -59,17 +50,8 @@ import { MinimalPluginContext } from './log/logger'
 import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
 import { OutputBundle } from './types/output-bundle'
 
-export {
-  defineConfig,
-  defineParallelPlugin,
-  rolldown,
-  experimental_scan,
-  transform,
-}
-// Builtin plugin class
-export { WasmPlugin, GlobImportPlugin }
-// Builtin plugin factory
-export { wasmPlugin, globImportPlugin }
+export { defineConfig, rolldown }
+
 export type {
   RolldownOutputAsset,
   RolldownOutputChunk,

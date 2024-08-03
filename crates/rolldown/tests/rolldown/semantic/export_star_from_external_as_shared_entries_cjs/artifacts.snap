@@ -1,7 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-expression: snapshot
-input_file: crates/rolldown/tests/fixtures/semantic/export_star_from_external_as_shared_entries_cjs
 ---
 # Assets
 
@@ -16,7 +14,7 @@ Object.keys(require("node:fs")).forEach(function (k) {
 	});
 });
 
-const { main_ns } = require("./main.cjs");
+const require_main = require('./main.cjs');
 
 ```
 ## entry2.cjs
@@ -30,7 +28,7 @@ Object.keys(require("node:fs")).forEach(function (k) {
 	});
 });
 
-const { main_ns } = require("./main.cjs");
+const require_main = require('./main.cjs');
 
 ```
 ## main.cjs

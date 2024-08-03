@@ -1,7 +1,6 @@
 use oxc::{
   allocator::{Allocator, IntoIn},
   ast::ast::{self, IdentifierReference, Statement},
-  semantic::SymbolId,
   span::{Atom, SPAN},
 };
 use rolldown_common::{AstScopes, ImportRecordIdx, Module, SymbolRef, WrapKind};
@@ -43,8 +42,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   pub fn canonical_name_for_runtime(&self, name: &str) -> &Rstr {
-    let symbol = self.ctx.runtime.resolve_symbol(name);
-    self.canonical_name_for(symbol)
+    let sym_ref = self.ctx.runtime.resolve_symbol(name);
+    self.canonical_name_for(sym_ref)
   }
 
   fn should_remove_import_export_stmt(
@@ -85,21 +84,75 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     true
   }
 
-  fn generate_finalized_expr_for_symbol_ref(&self, symbol_ref: SymbolRef) -> ast::Expression<'ast> {
-    let canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
-    let symbol = self.ctx.symbols.get(canonical_ref);
-
-    if let Some(ns_alias) = &symbol.namespace_alias {
-      let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
-      let prop_name = &ns_alias.property_name;
-      let access_expr =
-        self.snippet.literal_prop_access_member_expr_expr(canonical_ns_name, prop_name);
-
-      access_expr
-    } else {
-      let canonical_name = self.canonical_name_for(canonical_ref);
-      self.snippet.id_ref_expr(canonical_name, SPAN)
+  fn finalized_expr_for_symbol_ref(
+    &self,
+    symbol_ref: SymbolRef,
+    preserve_this_semantic_if_needed: bool,
+  ) -> ast::Expression<'ast> {
+    let mut canonical_ref = self.ctx.symbols.par_canonical_ref_for(symbol_ref);
+    let mut canonical_symbol = self.ctx.symbols.get(canonical_ref);
+    let namespace_alias = &canonical_symbol.namespace_alias;
+    if let Some(ns_alias) = namespace_alias {
+      canonical_ref = ns_alias.namespace_ref;
+      canonical_symbol = self.ctx.symbols.get(canonical_ref);
     }
+
+    let mut expr = match self.ctx.options.format {
+      rolldown_common::OutputFormat::Cjs => {
+        if canonical_symbol.chunk_id.is_none() {
+          // Scoped scopes must belong to its own chunk, so they don't get assigned to a chunk.
+          self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+        } else {
+          let chunk_idx_of_canonical_symbol =
+            canonical_symbol.chunk_id.unwrap_or_else(|| {
+              let symbol_name = self.ctx.symbols.get_original_name(canonical_ref);
+              eprintln!(
+                "{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected",
+              );
+              panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
+            });
+          let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
+            .expect("This module should be in a chunk");
+          let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
+          if is_symbol_in_other_chunk {
+            // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
+            // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
+            // instead of keeping `console.log(foo)` as we did in esm output. The reason here is wee need to keep live binding in cjs output.
+
+            let exported_name = &self.ctx.chunk_graph.chunks[chunk_idx_of_canonical_symbol]
+              .exports_to_other_chunks[&canonical_ref];
+
+            let require_binding = &self.ctx.chunk_graph.chunks[cur_chunk_idx]
+              .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
+
+            self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
+          } else {
+            self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+          }
+        }
+      }
+      _ => self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN),
+    };
+
+    if let Some(ns_alias) = namespace_alias {
+      expr = ast::Expression::StaticMemberExpression(
+        self
+          .snippet
+          .builder
+          .static_member_expression(
+            SPAN,
+            expr,
+            self.snippet.id_name(&ns_alias.property_name, SPAN),
+            false,
+          )
+          .into_in(self.alloc),
+      );
+      if preserve_this_semantic_if_needed {
+        expr = self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0, "0"), expr);
+      }
+    }
+
+    expr
   }
 
   fn convert_decl_to_assignment(
@@ -189,7 +242,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.ctx.linking_info.canonical_exports().for_each(|(export, resolved_export)| {
       // prop_name: () => returned
       let prop_name = export;
-      let returned = self.generate_finalized_expr_for_symbol_ref(resolved_export.symbol_ref);
+      let returned = self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false);
       arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
         ast::ObjectProperty {
           key: if is_validate_identifier_name(prop_name) {
@@ -223,9 +276,5 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     );
 
     vec![decl_stmt, export_call_stmt]
-  }
-
-  fn resolve_symbol_from_reference(&self, id_ref: &IdentifierReference) -> Option<SymbolId> {
-    id_ref.reference_id.get().and_then(|ref_id| self.scope.symbol_id_for(ref_id))
   }
 }

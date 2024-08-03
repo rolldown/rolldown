@@ -77,6 +77,10 @@ impl PluginContext {
     self.file_emitter.emit_file(file)
   }
 
+  pub fn try_get_file_name(&self, reference_id: &str) -> Result<String, String> {
+    self.file_emitter.try_get_file_name(reference_id)
+  }
+
   pub fn get_file_name(&self, reference_id: &str) -> String {
     self.file_emitter.get_file_name(reference_id)
   }

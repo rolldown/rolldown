@@ -2,6 +2,7 @@ import {
   BindingBuiltinPluginName,
   BindingGlobImportPluginConfig,
   BindingBuiltinPlugin,
+  BindingManifestPluginConfig,
 } from '../binding'
 
 export class BuiltinPlugin {
@@ -13,9 +14,28 @@ export class BuiltinPlugin {
     this.options = options
   }
 }
+
+export class ModulePreloadPolyfillPlugin extends BuiltinPlugin {
+  constructor() {
+    super(BindingBuiltinPluginName.ModulePreloadPolyfillPlugin)
+  }
+}
+
+export class DynamicImportVarsPlugin extends BuiltinPlugin {
+  constructor() {
+    super(BindingBuiltinPluginName.DynamicImportVarsPlugin)
+  }
+}
+
 export class GlobImportPlugin extends BuiltinPlugin {
   constructor(config?: BindingGlobImportPluginConfig) {
     super(BindingBuiltinPluginName.GlobImportPlugin, config)
+  }
+}
+
+export class ManifestPlugin extends BuiltinPlugin {
+  constructor(config?: BindingManifestPluginConfig) {
+    super(BindingBuiltinPluginName.ManifestPlugin, config)
   }
 }
 
@@ -25,8 +45,20 @@ export class WasmPlugin extends BuiltinPlugin {
   }
 }
 
+export function modulePreloadPolyfillPlugin() {
+  return new ModulePreloadPolyfillPlugin()
+}
+
+export function dynamicImportVarsPlugin() {
+  return new DynamicImportVarsPlugin()
+}
+
 export function globImportPlugin(config?: BindingGlobImportPluginConfig) {
   return new GlobImportPlugin(config)
+}
+
+export function manifestPlugin(config?: BindingManifestPluginConfig) {
+  return new ManifestPlugin(config)
 }
 
 export function wasmPlugin() {

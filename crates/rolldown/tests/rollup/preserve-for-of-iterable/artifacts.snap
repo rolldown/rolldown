@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/rollup/preserve-for-of-iterable
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -12,7 +10,7 @@ import { default as assert } from "assert";
 
 //#region iterables.js
 let dirty;
-const zeroToFive = {[Symbol.iterator]() {
+const zeroToFive = { [Symbol.iterator]() {
 	return {
 		current: 0,
 		last: 5,
@@ -20,12 +18,12 @@ const zeroToFive = {[Symbol.iterator]() {
 			const ret = this.current < this.last ? {
 				done: false,
 				value: this.current++
-			} : {done: true};
+			} : { done: true };
 			dirty = this.current;
 			return ret;
 		}
 	};
-}};
+} };
 
 //#endregion
 //#region loops.js

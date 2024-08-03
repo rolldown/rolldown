@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -14,7 +12,7 @@ input_file: crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_exte
 var test_ns, test_default;
 var init_test = __esmMin(() => {
 	test_ns = {};
-	__export(test_ns, {default: () => test_default});
+	__export(test_ns, { default: () => test_default });
 	test_default = "data:image/svg+xml;base64,YQBigGP/ZA==";
 });
 

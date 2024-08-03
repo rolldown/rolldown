@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/warnings/unresolved_import_treated_as_external
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 

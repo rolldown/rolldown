@@ -1,0 +1,6 @@
+
+//#region dir/b.js?raw
+const a = 1000;
+
+//#endregion
+export { a };

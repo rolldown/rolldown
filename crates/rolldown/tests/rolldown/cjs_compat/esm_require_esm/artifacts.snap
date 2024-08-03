@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown_testing/src/case/case.rs
-expression: content
-input_file: crates/rolldown/tests/fixtures/cjs_compat/esm_require_esm
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
@@ -14,7 +12,7 @@ input_file: crates/rolldown/tests/fixtures/cjs_compat/esm_require_esm
 var esm_ns, esm_default;
 var init_esm = __esmMin(() => {
 	esm_ns = {};
-	__export(esm_ns, {default: () => esm_default});
+	__export(esm_ns, { default: () => esm_default });
 	esm_default = "esm";
 });
 

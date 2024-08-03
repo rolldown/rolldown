@@ -1,7 +1,5 @@
 ---
-source: crates/rolldown/tests/common/case.rs
-expression: content
-input_file: crates/rolldown/tests/esbuild/default/no_overwrite_input_file_error
+source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 

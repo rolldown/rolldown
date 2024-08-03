@@ -14,7 +14,7 @@ Object.keys(require("node:fs")).forEach(function (k) {
 	});
 });
 
-const { main_ns } = require("./main.cjs");
+const require_main = require('./main.cjs');
 
 ```
 ## entry2.cjs
@@ -28,7 +28,7 @@ Object.keys(require("node:fs")).forEach(function (k) {
 	});
 });
 
-const { main_ns } = require("./main.cjs");
+const require_main = require('./main.cjs');
 
 ```
 ## main.cjs

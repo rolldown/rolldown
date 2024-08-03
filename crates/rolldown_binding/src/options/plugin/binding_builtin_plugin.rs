@@ -6,6 +6,7 @@ use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_glob_import::{GlobImportPlugin, GlobImportPluginConfig};
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
+use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_wasm::WasmPlugin;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -36,6 +37,7 @@ pub enum BindingBuiltinPluginName {
   WasmPlugin,
   GlobImportPlugin,
   DynamicImportVarsPlugin,
+  ModulePreloadPolyfillPlugin,
   ManifestPlugin,
 }
 
@@ -87,6 +89,9 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         Arc::new(GlobImportPlugin { config })
       }
       BindingBuiltinPluginName::DynamicImportVarsPlugin => Arc::new(DynamicImportVarsPlugin {}),
+      BindingBuiltinPluginName::ModulePreloadPolyfillPlugin => {
+        Arc::new(ModulePreloadPolyfillPlugin {})
+      }
       BindingBuiltinPluginName::ManifestPlugin => {
         let config = if let Some(options) = plugin.options {
           BindingManifestPluginConfig::from_unknown(options)?.into()

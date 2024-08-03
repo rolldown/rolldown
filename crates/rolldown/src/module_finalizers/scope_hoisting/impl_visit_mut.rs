@@ -1,7 +1,5 @@
 // cSpell:disable
 
-use std::borrow::Cow;
-
 use oxc::{
   allocator::{self, IntoIn},
   ast::{
@@ -449,17 +447,10 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         {
           match resolved {
             Some((object_ref, props)) => {
-              let canonical_ref = self.ctx.symbols.par_canonical_ref_for(*object_ref);
-              let canonical_symbol = self.ctx.symbols.get(canonical_ref);
-              let object_name = if let Some(ns_alias) = &canonical_symbol.namespace_alias {
-                let ns_name = self.canonical_name_for(ns_alias.namespace_ref);
-                // TODO(hyf0): should use ast instead of string
-                Cow::Owned(format!("{}.{}", ns_name, ns_alias.property_name).into())
-              } else {
-                Cow::Borrowed(self.canonical_name_for(canonical_ref))
-              };
+              let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false);
+
               let replaced_expr =
-                self.snippet.member_expr_or_ident_ref(object_name.as_str(), props, inner_expr.span);
+                self.snippet.member_expr_or_ident_ref(object_ref_expr, props, inner_expr.span);
               *expr = replaced_expr;
             }
             None => {

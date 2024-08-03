@@ -81,6 +81,25 @@ impl<'name> Renamer<'name> {
     }
   }
 
+  pub fn create_conflictless_top_level_name(&mut self, hint: &str) -> String {
+    let hint: Cow<Rstr> = Cow::Owned(Rstr::new(hint));
+    let mut conflictless_name = hint.clone();
+    loop {
+      match self.used_canonical_names.entry(conflictless_name.clone()) {
+        Entry::Occupied(mut occ) => {
+          let next_conflict_index = *occ.get() + 1;
+          *occ.get_mut() = next_conflict_index;
+          conflictless_name = Cow::Owned(format!("{hint}${next_conflict_index}",).into());
+        }
+        Entry::Vacant(vac) => {
+          vac.insert(0);
+          break;
+        }
+      }
+    }
+    conflictless_name.into_owned().to_string()
+  }
+
   // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
   #[tracing::instrument(level = "trace", skip_all)]
   pub fn rename_non_top_level_symbol(

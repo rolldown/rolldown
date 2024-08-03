@@ -84,6 +84,16 @@ impl<'a> GenerateStage<'a> {
       })
       .collect::<Vec<_>>();
 
+    index_imports_from_other_chunks.iter_enumerated().for_each(|(chunk_id, importee_map)| {
+      chunk_graph.chunks[chunk_id].require_binding_names_for_other_chunks = importee_map
+        .keys()
+        .map(|id| {
+          let chunk = &chunk_graph.chunks[*id];
+          (*id, chunk.name.clone().unwrap().to_string())
+        })
+        .collect();
+    });
+
     let index_sorted_imports_from_other_chunks = index_imports_from_other_chunks
       .into_iter_enumerated()
       .collect_vec()

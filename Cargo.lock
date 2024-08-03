@@ -2187,6 +2187,7 @@ dependencies = [
  "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_glob_import",
  "rolldown_plugin_manifest",
+ "rolldown_plugin_module_preload_polyfill",
  "rolldown_plugin_wasm",
  "rolldown_sourcemap",
  "rolldown_tracing",
@@ -2316,6 +2317,7 @@ dependencies = [
  "glob",
  "oxc",
  "rolldown_plugin",
+ "rustc-hash",
  "sugar_path",
 ]
 
@@ -2328,6 +2330,13 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "rolldown_plugin_module_preload_polyfill"
+version = "0.1.0"
+dependencies = [
+ "rolldown_plugin",
 ]
 
 [[package]]

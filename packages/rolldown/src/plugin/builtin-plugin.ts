@@ -15,6 +15,12 @@ export class BuiltinPlugin {
   }
 }
 
+export class ModulePreloadPolyfillPlugin extends BuiltinPlugin {
+  constructor() {
+    super(BindingBuiltinPluginName.ModulePreloadPolyfillPlugin)
+  }
+}
+
 export class DynamicImportVarsPlugin extends BuiltinPlugin {
   constructor() {
     super(BindingBuiltinPluginName.DynamicImportVarsPlugin)
@@ -37,6 +43,10 @@ export class WasmPlugin extends BuiltinPlugin {
   constructor() {
     super(BindingBuiltinPluginName.WasmPlugin)
   }
+}
+
+export function modulePreloadPolyfillPlugin() {
+  return new ModulePreloadPolyfillPlugin()
 }
 
 export function dynamicImportVarsPlugin() {

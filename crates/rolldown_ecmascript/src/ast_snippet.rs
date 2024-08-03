@@ -52,12 +52,12 @@ impl<'ast> AstSnippet<'ast> {
 
   pub fn member_expr_or_ident_ref(
     &self,
-    object: PassedStr,
+    object: ast::Expression<'ast>,
     names: &[CompactStr],
     span: Span,
   ) -> ast::Expression<'ast> {
     match names {
-      [] => self.id_ref_expr(object, span),
+      [] => object,
       _ => ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
         span,
         self.member_expr_or_ident_ref(object, &names[0..names.len() - 1], span),

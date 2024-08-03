@@ -38,8 +38,6 @@ pub fn render_iife(
   let export_items = get_export_items(ctx.chunk, ctx.link_output);
   let has_exports = !export_items.is_empty();
   let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
-  // Since before rendering the `determine_export_mode` runs, `unwrap` here won't cause panic.
-  // FIXME do not call `determine_export_mode` twice
   let entry_module = match ctx.chunk.kind {
     ChunkKind::EntryPoint { module, .. } => {
       &ctx.link_output.module_table.modules[module].as_ecma().expect("should be ecma module")
@@ -56,7 +54,12 @@ pub fn render_iife(
 
   concat_source.add_source(Box::new(RawSource::new(format!(
     "{}(function({}) {{\n",
-    if let Some(name) = &ctx.options.name { format!("var {name} = ") } else { String::new() },
+    if let Some(name) = &ctx.options.name {
+      format!("var {name} = ")
+    } else {
+      ctx.warnings.push(BuildDiagnostic::missing_name_option_for_iife_export());
+      String::new()
+    },
     // TODO handle external imports here.
     input_args
   ))));

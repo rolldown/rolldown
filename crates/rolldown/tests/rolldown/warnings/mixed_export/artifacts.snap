@@ -11,23 +11,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 # Assets
 
-## main.cjs
+## main.mjs
 
 ```js
+var bundle = (function(exports) {
+
 "use strict";
 Object.defineProperty(exports, '__esModule', { value: true });
 
-//#region mod.js
-function example() {
-	return "named";
-}
-
-//#endregion
 //#region main.js
-function a() {
-	return "named";
-}
-var main_default = example();
+var main_default = 1;
+const a = 2;
 
 //#endregion
 Object.defineProperty(exports, 'a', {
@@ -42,4 +36,6 @@ Object.defineProperty(exports, 'default', {
     return main_default;
   }
 });
+return exports;
+})({});
 ```

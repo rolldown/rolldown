@@ -14,14 +14,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
-(function(node_path) {
+(function() {
 
 "use strict";
-const { default: nodePath } = node_path;
 
 //#region main.js
-console.log(nodePath);
+var main_default = 1;
 
 //#endregion
-})(path);
+return main_default;
+})();
 ```

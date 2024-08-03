@@ -2076,6 +2076,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-SHxh3snY.mjs
 
+# tests/rolldown/warnings/missing_global_name
+
+- main-!~{000}~.mjs => main-Nrqe9YQk.mjs
+
+# tests/rolldown/warnings/missing_name_option_for_iife_export
+
+- main-!~{000}~.mjs => main-Or0NsqB1.mjs
+
+# tests/rolldown/warnings/mixed_export
+
+- main-!~{000}~.mjs => main-1v1Ck7af.mjs
+
 # tests/rolldown/warnings/unresolved_import_treated_as_external
 
 - main-!~{000}~.mjs => main-xG8X-m9p.mjs

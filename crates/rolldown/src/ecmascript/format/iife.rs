@@ -57,7 +57,9 @@ pub fn render_iife(
     if let Some(name) = &ctx.options.name {
       format!("var {name} = ")
     } else {
-      ctx.warnings.push(BuildDiagnostic::missing_name_option_for_iife_export());
+      ctx
+        .warnings
+        .push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());
       String::new()
     },
     // TODO handle external imports here.
@@ -179,9 +181,10 @@ fn render_iife_arguments(
       output_args.push(legitimize_identifier_name(global).to_string());
     } else {
       let target = legitimize_identifier_name(external).to_string();
-      ctx
-        .warnings
-        .push(BuildDiagnostic::missing_global_name(ArcStr::from(external), ArcStr::from(&target)));
+      ctx.warnings.push(
+        BuildDiagnostic::missing_global_name(ArcStr::from(external), ArcStr::from(&target))
+          .with_severity_warning(),
+      );
       output_args.push(target.to_string());
     }
   });

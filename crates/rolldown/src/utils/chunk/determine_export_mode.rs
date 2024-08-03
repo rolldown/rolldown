@@ -44,11 +44,14 @@ pub fn determine_export_mode(
           let name = &ctx.chunk.name;
           let chunk = ArcStr::from("chunk");
           let name = name.as_ref().unwrap_or(&chunk);
-          ctx.warnings.push(BuildDiagnostic::mixed_export(
-            ArcStr::from(module.stable_id.as_str()),
-            ArcStr::from(name),
-            exports.iter().map(|(name, _)| name.as_str().into()).collect(),
-          ));
+          ctx.warnings.push(
+            BuildDiagnostic::mixed_export(
+              ArcStr::from(module.stable_id.as_str()),
+              ArcStr::from(name),
+              exports.iter().map(|(name, _)| name.as_str().into()).collect(),
+            )
+            .with_severity_warning(),
+          );
         }
         Ok(OutputExports::Named)
       }

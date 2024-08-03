@@ -40,7 +40,7 @@ impl PluginContext {
     let skip = if extra_options.skip_self {
       Some(Arc::new(HookResolveIdSkipped {
         plugin: Arc::clone(&self.plugin),
-        importer: importer.map(|s| s.to_string()),
+        importer: importer.map(ToString::to_string),
         specifier: specifier.to_string(),
       }))
     } else {

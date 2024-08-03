@@ -1,9 +1,10 @@
-use std::{ops::Deref, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
   pluginable::HookTransformAstReturn, types::hook_transform_ast_args::HookTransformAstArgs,
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveDynamicImportArgs,
-  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver, TransformPluginContext, __inner::Pluginable,
+  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver, TransformPluginContext,
+  __inner::Pluginable,
 };
 use anyhow::Result;
 use rolldown_common::{side_effects::HookSideEffects, ModuleInfo};
@@ -42,8 +43,8 @@ impl PluginDriver {
 
   fn get_skipped(&self, specifier: &str, importer: Option<&str>) -> Vec<Arc<dyn Pluginable>> {
     let mut skipped = vec![];
-    for skip in self.resolve_skip.read().unwrap().deref() {
-      if skip.specifier == specifier && skip.importer.as_ref().map(|s| s.as_str()) == importer {
+    for skip in &*self.resolve_skip.read().unwrap() {
+      if skip.specifier == specifier && skip.importer.as_deref() == importer {
         skipped.push(Arc::clone(&skip.plugin));
       }
     }

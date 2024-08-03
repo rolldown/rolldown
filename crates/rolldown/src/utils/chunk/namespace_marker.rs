@@ -32,6 +32,6 @@ pub fn render_namespace_markers(
   if result.is_empty() {
     String::new()
   } else {
-    format!("{result}")
+    result.to_string()
   }
 }

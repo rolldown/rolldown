@@ -32,7 +32,8 @@ pub struct BindingOutputOptions {
   // compact: boolean;
   pub dir: Option<String>,
   // pub entry_file_names: String, // | ((chunkInfo: PreRenderedChunk) => string)
-  // esModule: boolean;
+  #[napi(ts_type = "'always' | 'never' | 'if-default-prop'")]
+  pub es_module: Option<String>,
   #[napi(ts_type = "'default' | 'named' | 'none' | 'auto'")]
   pub exports: Option<String>,
   // extend: boolean;

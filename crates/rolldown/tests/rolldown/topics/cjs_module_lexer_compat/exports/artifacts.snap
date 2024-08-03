@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 "use strict";
+Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region main.js
 const a = "a";
@@ -15,7 +16,6 @@ const devil = "devil";
 var main_default = "default";
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'a', {
   enumerable: true,
   get: function () {

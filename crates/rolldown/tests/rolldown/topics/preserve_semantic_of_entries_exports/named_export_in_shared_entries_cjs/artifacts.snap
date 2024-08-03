@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 "use strict";
 const require_main = require('./main.cjs');
 
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'default', {
   enumerable: true,
   get: function () {
@@ -29,7 +28,6 @@ Object.defineProperty(exports, 'foo', {
 "use strict";
 const require_main = require('./main.cjs');
 
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'default', {
   enumerable: true,
   get: function () {
@@ -58,10 +56,10 @@ Object.defineProperty(exports, 'foo', {
   get: function () {
     return foo;
   }
-  });Object.defineProperty(exports, 'main_default', {
+});Object.defineProperty(exports, 'main_default', {
   enumerable: true,
   get: function () {
     return main_default;
   }
-  });
+});
 ```

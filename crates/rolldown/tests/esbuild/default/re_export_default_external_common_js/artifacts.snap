@@ -11,7 +11,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 const { default: foo } = __toESM(require("foo"));
 const { default: bar } = __toESM(require("bar"));
 
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'bar', {
   enumerable: true,
   get: function () {

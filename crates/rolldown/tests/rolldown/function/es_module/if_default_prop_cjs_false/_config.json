@@ -1,0 +1,7 @@
+{
+  "config": {
+    "exports": "named",
+    "esModule": "if-default-prop",
+    "format": "cjs"
+  }
+}

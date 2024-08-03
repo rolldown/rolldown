@@ -224,6 +224,28 @@ impl<'a> LinkStage<'a> {
       {
         self.metas[importer.idx].wrap_kind = WrapKind::Cjs;
       }
+
+      // TODO: should have a better place to put this
+      if is_entry && matches!(self.options.format, OutputFormat::Cjs) {
+        importer.star_exports.iter().for_each(|rec_idx| {
+          let rec = &importer.import_records[*rec_idx];
+          match &self.module_table.modules[rec.resolved_module] {
+            Module::Ecma(_) => {}
+            Module::External(ext) => {
+              self.metas[importer.idx]
+                .require_bindings_for_star_exports
+                .entry(rec.resolved_module)
+                .or_insert_with(|| {
+                  // Created `SymbolRef` is only join the de-conflict process to avoid conflict with other symbols.
+                  self.symbols.create_symbol(
+                    importer.idx,
+                    legitimize_identifier_name(&ext.name).into_owned().into(),
+                  )
+                });
+            }
+          }
+        });
+      };
     });
   }
 

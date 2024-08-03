@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
-use rolldown_common::{Chunk, OutputFormat};
+use rolldown_common::{Chunk, ChunkKind, OutputFormat};
 use rolldown_rstr::ToRstr;
 
 #[tracing::instrument(level = "trace", skip_all)]
@@ -36,6 +36,16 @@ pub fn deconflict_chunk_symbols(
   chunk.require_binding_names_for_other_chunks.values_mut().for_each(|name_hint| {
     *name_hint = renamer.create_conflictless_top_level_name(&format!("require_{name_hint}"));
   });
+  match chunk.kind {
+    ChunkKind::EntryPoint { module, .. } => {
+      let meta = &link_output.metas[module];
+      meta
+        .require_bindings_for_star_exports
+        .iter()
+        .for_each(|(_module, binding_ref)| renamer.add_top_level_symbol(*binding_ref));
+    }
+    ChunkKind::Common => {}
+  }
 
   chunk
     .modules

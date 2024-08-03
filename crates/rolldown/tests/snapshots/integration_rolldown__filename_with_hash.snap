@@ -754,7 +754,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/import_star/re_export_star_external_common_js
 
-- entry_js-!~{000}~.cjs => entry_js-vbOU9bsn.cjs
+- entry_js-!~{000}~.cjs => entry_js-thBqv2Ua.cjs
 
 # tests/esbuild/import_star/re_export_star_external_es6
 
@@ -1831,8 +1831,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.cjs => entry--edQlK0T.cjs
-- entry2-!~{001}~.cjs => entry2-_Ecr96ES.cjs
+- entry-!~{000}~.cjs => entry-jtLYNAmt.cjs
+- entry2-!~{001}~.cjs => entry2-TRBE9xZU.cjs
 - main-!~{002}~.cjs => main-j1Gp3SFm.cjs
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry
@@ -1841,7 +1841,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry_cjs
 
-- entry-!~{000}~.cjs => entry-xjPBN9yi.cjs
+- entry-!~{000}~.cjs => entry-kDEnEDWl.cjs
+
+# tests/rolldown/topics/cjs_module_lexer_compat/export_star_from_external
+
+- main-!~{000}~.cjs => main-CghQHSuN.cjs
 
 # tests/rolldown/topics/cjs_module_lexer_compat/exports
 

@@ -17,21 +17,17 @@ pub fn determine_es_module(es_module_flag: &EsModuleFlag, has_default_export: bo
 pub fn render_namespace_markers(
   es_module_flag: &EsModuleFlag,
   has_default_export: bool,
+  // TODO namespace_to_string_tag
   namespace_to_string_tag: bool,
-) -> String {
+) -> Option<&str> {
   let es_module = determine_es_module(es_module_flag, has_default_export);
-  let result = if es_module && namespace_to_string_tag {
-    "Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });"
+  if es_module && namespace_to_string_tag {
+    Some("Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });")
   } else if es_module {
-    "Object.defineProperty(exports, '__esModule', { value: true });"
+    Some("Object.defineProperty(exports, '__esModule', { value: true });")
   } else if namespace_to_string_tag {
-    "Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });"
+    Some("Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });")
   } else {
-    ""
-  }.to_string();
-  if result.is_empty() {
-    String::new()
-  } else {
-    result.to_string()
+    None
   }
 }

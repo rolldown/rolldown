@@ -49,9 +49,10 @@ pub fn render_cjs(
         let export_mode = determine_export_mode(&ctx.options.exports, entry_module, &export_items)?;
         // Only `named` export can we render the namespace markers.
         if matches!(&export_mode, OutputExports::Named) {
-          let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
-          if !marker.is_empty() {
-            concat_source.add_source(Box::new(RawSource::new(marker)));
+          if let Some(marker) =
+            render_namespace_markers(&ctx.options.es_module, has_default_export, false)
+          {
+            concat_source.add_source(Box::new(RawSource::new(marker.into())));
           }
         }
         let meta = &ctx.link_output.metas[entry_id];

@@ -1443,7 +1443,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/es_module/always
 
-- main-!~{000}~.mjs => main-xQAX6gLW.mjs
+- main-!~{000}~.mjs => main-hfZMxSfK.mjs
 
 # tests/rolldown/function/es_module/if_default_prop_cjs_false
 
@@ -1451,7 +1451,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/es_module/if_default_prop_cjs_true
 
-- main-!~{000}~.cjs => main-zjD7s5ha.cjs
+- main-!~{000}~.cjs => main-yN0ScSi8.cjs
 
 # tests/rolldown/function/es_module/if_default_prop_iife_false
 
@@ -1459,7 +1459,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/es_module/if_default_prop_iife_true
 
-- main-!~{000}~.mjs => main-7WaCWgTB.mjs
+- main-!~{000}~.mjs => main-7ac-m6lM.mjs
 
 # tests/rolldown/function/es_module/never
 
@@ -1507,7 +1507,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/export_mode/cjs/named
 
-- main-!~{000}~.cjs => main-x1Dy2A7f.cjs
+- main-!~{000}~.cjs => main-sFhd45Xb.cjs
 
 # tests/rolldown/function/export_mode/iife/auto/none
 
@@ -1519,7 +1519,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/export_mode/iife/named
 
-- main-!~{000}~.mjs => main-ICBzjaKh.mjs
+- main-!~{000}~.mjs => main-sCXhT0Sa.mjs
 
 # tests/rolldown/function/external/commonjs_reexport_external
 
@@ -1867,7 +1867,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/cjs_module_lexer_compat/exports
 
-- main-!~{000}~.cjs => main-J42WoJ3E.cjs
+- main-!~{000}~.cjs => main-HEXq7EWu.cjs
 
 # tests/rolldown/topics/deconflict/basic
 
@@ -1927,7 +1927,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/live_bindings/default_export_binding_cjs
 
-- main-!~{000}~.cjs => main-jlXktZmF.cjs
+- main-!~{000}~.cjs => main-M49-3Ili.cjs
 
 # tests/rolldown/topics/live_bindings/default_export_binding_in_common_chunks
 
@@ -1945,7 +1945,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/live_bindings/default_export_expr_cjs
 
-- main-!~{000}~.cjs => main-ifJdHpK6.cjs
+- main-!~{000}~.cjs => main-uib-aQoT.cjs
 
 # tests/rolldown/topics/live_bindings/default_export_expr_in_common_chunks
 
@@ -1983,7 +1983,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_cjs
 
-- main-!~{000}~.cjs => main-6f1filJD.cjs
+- main-!~{000}~.cjs => main-XnUXw2Fp.cjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries
 
@@ -2009,7 +2009,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped_cjs
 
-- main-!~{000}~.cjs => main-pGQny1I-.cjs
+- main-!~{000}~.cjs => main-mPfHqQYZ.cjs
 
 # tests/rolldown/tree_shaking/advanced_barrel_exports
 

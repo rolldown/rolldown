@@ -69,10 +69,10 @@ pub fn render_iife(
   }
 
   if named_exports {
-    let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
-
-    if !marker.is_empty() {
-      concat_source.add_source(Box::new(RawSource::new(marker)));
+    if let Some(marker) =
+      render_namespace_markers(&ctx.options.es_module, has_default_export, false)
+    {
+      concat_source.add_source(Box::new(RawSource::new(marker.into())));
     }
   }
 

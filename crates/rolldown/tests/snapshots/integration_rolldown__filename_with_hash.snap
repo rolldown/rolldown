@@ -1402,6 +1402,12 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-07HwCbF6.mjs
 
+# tests/rolldown/errors/invalid_export_mode/should_not_be_default
+
+
+# tests/rolldown/errors/invalid_export_mode/should_not_be_none
+
+
 # tests/rolldown/errors/invalid_export_option/default
 
 

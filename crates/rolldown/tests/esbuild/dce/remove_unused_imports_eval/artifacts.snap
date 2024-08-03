@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[entry.js:4:1]
+   │
+ 4 │ eval('foo(a, b, c)')
+   │ ──┬─  
+   │   ╰─── Used `eval` function here.
+───╯
+
+```
+# Assets
+
+## entry_js.mjs
+
+```js
+import { default as a } from "a";
+import * as b from "b";
+import { c } from "c";
+
+//#region entry.js
+var entry_ns = {};
+eval("foo(a, b, c)");
+
+//#endregion
+```

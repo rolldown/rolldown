@@ -72,6 +72,7 @@ impl RuntimeEcmaModuleTask {
       import_records: _,
       exports_kind: _,
       warnings: _,
+      has_eval,
     } = scan_result;
 
     let module = EcmaModule {
@@ -104,6 +105,7 @@ impl RuntimeEcmaModuleTask {
       dynamically_imported_ids: vec![],
       side_effects: DeterminedSideEffects::Analyzed(false),
       module_type: ModuleType::Js,
+      has_eval,
     };
 
     if let Err(_err) = self.tx.try_send(Msg::RuntimeNormalModuleDone(RuntimeEcmaModuleTaskResult {

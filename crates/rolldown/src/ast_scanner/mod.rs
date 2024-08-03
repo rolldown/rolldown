@@ -3,6 +3,7 @@ pub mod side_effect_detector;
 
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
+use oxc::semantic::ScopeId;
 use oxc::{
   ast::{
     ast::{
@@ -23,7 +24,7 @@ use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use super::types::ast_symbols::AstSymbols;
@@ -40,6 +41,7 @@ pub struct ScanResult {
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildDiagnostic>,
+  pub has_eval: bool,
 }
 
 pub struct AstScanner<'me> {
@@ -96,6 +98,7 @@ impl<'me> AstScanner<'me> {
       imports: FxHashMap::default(),
       exports_kind: ExportsKind::None,
       warnings: Vec::new(),
+      has_eval: false,
     };
 
     Self {
@@ -568,6 +571,7 @@ impl<'me> AstScanner<'me> {
           self.cjs_exports_ident.get_or_insert(Span::new(ident.span.start, ident.span.start + 7));
         }
         if ident.name == "eval" {
+          self.result.has_eval = true;
           self.result.warnings.push(
             BuildDiagnostic::eval(self.file_path.to_string(), self.source.clone(), ident.span)
               .with_severity_warning(),

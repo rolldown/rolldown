@@ -2,7 +2,7 @@ set windows-shell := ["powershell"]
 set shell := ["bash", "-cu"]
 
 _default:
-    just --list -u
+    cargo r crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval/_config.json
 
 setup:
   # Rust related setup

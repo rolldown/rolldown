@@ -1,4 +1,4 @@
-pub mod es_module;
+pub mod es_module_flag;
 pub mod experimental_options;
 pub mod filename_template;
 pub mod input_item;

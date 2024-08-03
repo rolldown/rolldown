@@ -13,7 +13,7 @@ use super::{
   source_map_type::SourceMapType, sourcemap_ignore_list::SourceMapIgnoreList,
   sourcemap_path_transform::SourceMapPathTransform,
 };
-use crate::{EsModuleType, InputItem, ModuleType};
+use crate::{EsModuleFlag, InputItem, ModuleType};
 
 #[derive(Debug)]
 pub struct NormalizedBundlerOptions {
@@ -35,7 +35,7 @@ pub struct NormalizedBundlerOptions {
   pub dir: String,
   pub format: OutputFormat,
   pub exports: OutputExports,
-  pub es_module: EsModuleType,
+  pub es_module: EsModuleFlag,
   pub globals: FxHashMap<String, String>,
   pub sourcemap: SourceMapType,
   pub banner: Option<AddonOutputOption>,

@@ -1,9 +1,9 @@
-use rolldown_common::EsModuleType;
+use rolldown_common::EsModuleFlag;
 
-pub fn determine_es_module(es_module_type: &EsModuleType, has_default_export: bool) -> bool {
+pub fn determine_es_module(es_module_type: &EsModuleFlag, has_default_export: bool) -> bool {
   match es_module_type {
-    EsModuleType::Always => true,
-    EsModuleType::IfDefaultProp if has_default_export => true,
+    EsModuleFlag::Always => true,
+    EsModuleFlag::IfDefaultProp if has_default_export => true,
     _ => false,
   }
 }
@@ -21,7 +21,7 @@ fn render_marker(es_module: bool, to_string_tag: bool) -> String {
 }
 
 pub fn render_namespace_markers(
-  es_module: &EsModuleType,
+  es_module: &EsModuleFlag,
   has_default_export: bool,
   namespace_to_string_tag: bool,
 ) -> String {

@@ -91,7 +91,7 @@
         "esModule": {
           "anyOf": [
             {
-              "$ref": "#/definitions/EsModuleType"
+              "$ref": "#/definitions/EsModuleFlag"
             },
             {
               "type": "null"
@@ -237,12 +237,30 @@
       },
       "additionalProperties": false
     },
-    "EsModuleType": {
-      "type": "string",
-      "enum": [
-        "always",
-        "never",
-        "if-default-prop"
+    "EsModuleFlag": {
+      "description": "This configuration determines how the bundler should handle the synthetic `__esModule` property in the CJS and IIFE format. It is rollup-capable, and the rollup's default is `IfDefaultProp`. You may find rollup's explanation [here](https://rollupjs.org/configuration-options/#output-esmodule).",
+      "oneOf": [
+        {
+          "description": "Always generate `Object.defineProperty(exports, \"__esModule\", { value: true });` in the CJS and IIFE format.",
+          "type": "string",
+          "enum": [
+            "always"
+          ]
+        },
+        {
+          "description": "Never generate the synthetic `__esModule` property in the CJS and IIFE format.",
+          "type": "string",
+          "enum": [
+            "never"
+          ]
+        },
+        {
+          "description": "Generate the synthetic `__esModule` property in the CJS and IIFE format only if the module has a default export.",
+          "type": "string",
+          "enum": [
+            "if-default-prop"
+          ]
+        }
       ]
     },
     "ExperimentalOptions": {

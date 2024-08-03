@@ -10,7 +10,7 @@ use types::experimental_options::ExperimentalOptions;
 
 use self::types::treeshake::TreeshakeOptions;
 use self::types::{
-  es_module::EsModuleType, input_item::InputItem, is_external::IsExternal,
+  es_module_flag::EsModuleFlag, input_item::InputItem, is_external::IsExternal,
   output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
   platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
   sourcemap_path_transform::SourceMapPathTransform,
@@ -47,7 +47,7 @@ pub struct BundlerOptions {
   pub exports: Option<OutputExports>,
   pub globals: Option<HashMap<String, String>>,
   pub sourcemap: Option<SourceMapType>,
-  pub es_module: Option<EsModuleType>,
+  pub es_module: Option<EsModuleFlag>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_addon"),

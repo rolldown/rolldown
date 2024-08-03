@@ -11,8 +11,9 @@ use crate::{
     render_chunk_exports::{get_export_items, render_chunk_exports},
   },
 };
+use arcstr::ArcStr;
 use rolldown_common::{ChunkKind, OutputExports};
-use rolldown_error::DiagnosableResult;
+use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
@@ -45,13 +46,13 @@ pub fn render_iife(
     }
     ChunkKind::Common => unreachable!("iife should be entry point chunk"),
   };
-  let export_mode = determine_export_mode(&ctx.options.exports, entry_module, &export_items)?;
+  let export_mode = determine_export_mode(ctx, entry_module, &export_items)?;
   let named_exports = matches!(&export_mode, OutputExports::Named);
 
   let (import_code, externals) = render_iife_chunk_imports(ctx);
 
   let (input_args, output_args) =
-    render_iife_arguments(&externals, &ctx.options.globals, has_exports && named_exports);
+    render_iife_arguments(ctx, &externals, &ctx.options.globals, has_exports && named_exports);
 
   concat_source.add_source(Box::new(RawSource::new(format!(
     "{}(function({}) {{\n",
@@ -162,6 +163,7 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
 }
 
 fn render_iife_arguments(
+  ctx: &mut GenerateContext<'_>,
   externals: &[String],
   globals: &FxHashMap<String, String>,
   exports_key: bool,
@@ -173,8 +175,11 @@ fn render_iife_arguments(
     if let Some(global) = globals.get(external) {
       output_args.push(legitimize_identifier_name(global).to_string());
     } else {
-      // TODO add warning for missing global
-      output_args.push(legitimize_identifier_name(external).to_string());
+      let target = legitimize_identifier_name(external).to_string();
+      ctx
+        .warnings
+        .push(BuildDiagnostic::missing_global_name(ArcStr::from(external), ArcStr::from(&target)));
+      output_args.push(target.to_string());
     }
   });
   (input_args.join(", "), output_args.join(", "))

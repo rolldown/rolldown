@@ -3,53 +3,34 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry.cjs
-
-```js
-"use strict";
-var node_fs = require("node:fs");
-Object.keys(node_fs).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return node_fs[k]; }
-  });
-});
-            
-const require_main = require('./main.cjs');
-
-```
-## entry2.cjs
-
-```js
-"use strict";
-var node_fs = require("node:fs");
-Object.keys(node_fs).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return node_fs[k]; }
-  });
-});
-            
-const require_main = require('./main.cjs');
-
-```
 ## main.cjs
 
 ```js
 "use strict";
+var node_path = require("node:path");
+Object.keys(node_path).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return node_path[k]; }
+  });
+});
+            
+var node_fs = require("node:fs");
+Object.keys(node_fs).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return node_fs[k]; }
+  });
+});
+            
 
 require("node:fs");
+require("node:path");
 
 //#region main.js
 var main_ns = {};
 __reExport(main_ns, require("node:fs"));
-__reExport(main_ns, require("node:fs"));
+__reExport(main_ns, require("node:path"));
 
 //#endregion
-Object.defineProperty(exports, 'main_ns', {
-  enumerable: true,
-  get: function () {
-    return main_ns;
-  }
-});
 ```

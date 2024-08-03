@@ -1,8 +1,3 @@
-use itertools::Itertools;
-use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
-use rolldown_error::DiagnosableResult;
-use rolldown_sourcemap::{ConcatSource, RawSource};
-
 use crate::utils::chunk::determine_export_mode::determine_export_mode;
 use crate::utils::chunk::namespace_marker::render_namespace_markers;
 use crate::utils::chunk::render_chunk_exports::get_export_items;
@@ -17,6 +12,9 @@ use crate::{
     render_chunk_exports::render_chunk_exports,
   },
 };
+use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
+use rolldown_error::DiagnosableResult;
+use rolldown_sourcemap::{ConcatSource, RawSource};
 
 pub fn render_cjs(
   ctx: &mut GenerateContext<'_>,
@@ -56,24 +54,23 @@ pub fn render_cjs(
             concat_source.add_source(Box::new(RawSource::new(marker)));
           }
         }
-        // This is the part where we handle the external modules that are imported in the entry module.
-        entry_module.star_export_module_ids().filter_map(|importee| {
-          let importee = &ctx.link_output.module_table.modules[importee];
-          match importee {
-            Module::External(ext) => Some(&ext.name),
-            Module::Ecma(_) => {None}
-          }
-        }).dedup().for_each(|ext_name| {
-              let import_stmt =
+        let meta = &ctx.link_output.metas[entry_id];
+        meta.require_bindings_for_star_exports.iter().for_each(|(importee_idx, binding_ref)| {
+          let importee = &ctx.link_output.module_table.modules[*importee_idx];
+          let binding_ref_name =
+            ctx.link_output.symbols.canonical_name_for(*binding_ref, &ctx.chunk.canonical_names);
+            let import_stmt =
 "Object.keys($NAME).forEach(function (k) {
-	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-		enumerable: true,
-		get: function () { return $NAME[k]; }
-	});
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return $NAME[k]; }
+  });
 });
-".replace("$NAME", &format!("require(\"{}\")", &ext_name));
-              concat_source.add_source(Box::new(RawSource::new(import_stmt)));
-          });
+            ".replace("$NAME", binding_ref_name);
+            concat_source.add_source(Box::new(RawSource::new(format!("var {} = require(\"{}\");", binding_ref_name,&importee.stable_id()))));
+                          concat_source.add_source(Box::new(RawSource::new(import_stmt)));
+
+        });
         Some(export_mode)
       } else {
         // There is no need for a non-ESM export kind for determining the export mode.

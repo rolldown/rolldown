@@ -87,7 +87,6 @@
   "rollup@function@consistent-renaming-d: consistent renaming test d",
   "rollup@function@consistent-renaming-e: consistent renaming test e",
   "rollup@function@consistent-renaming-f: consistent renaming test f",
-  "rollup@function@context-resolve-skipself: allows a plugin to skip its own resolveId hook when using this.resolve",
   "rollup@function@context-resolve: returns the correct results for the context resolve helper",
   "rollup@function@create-undefined-export-property-compact: creates an export as an exports property even if is has no initializer",
   "rollup@function@create-undefined-export-property: creates an export as an exports property even if is has no initializer",

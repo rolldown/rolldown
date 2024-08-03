@@ -111,7 +111,7 @@ impl ScanStage {
         plugin_driver,
         args.specifier,
         None,
-        HookResolveIdExtraOptions { is_entry: true, kind: ImportKind::Import, skip_plugin: None },
+        HookResolveIdExtraOptions { is_entry: true, kind: ImportKind::Import },
       )
       .await;
 

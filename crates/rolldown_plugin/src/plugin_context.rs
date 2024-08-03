@@ -4,16 +4,20 @@ use rolldown_common::{ModuleTable, ResolvedId, SharedFileEmitter};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
-  types::plugin_context_resolve_options::PluginContextResolveOptions,
-  utils::resolve_id_with_plugins::resolve_id_with_plugins, HookResolveIdExtraOptions, Plugin,
-  PluginDriver,
+  types::{
+    hook_resolve_id_skipped::HookResolveIdSkipped,
+    plugin_context_resolve_options::PluginContextResolveOptions,
+  },
+  utils::resolve_id_with_plugins::resolve_id_with_plugins,
+  HookResolveIdExtraOptions, PluginDriver,
+  __inner::Pluginable,
 };
 
 pub type SharedPluginContext = std::sync::Arc<PluginContext>;
 
 #[derive(Debug)]
 pub struct PluginContext {
-  pub(crate) plugin: Arc<dyn Plugin>,
+  pub(crate) plugin: Arc<dyn Pluginable>,
   pub(crate) resolver: Arc<Resolver>,
   pub(crate) plugin_driver: Weak<PluginDriver>,
   pub(crate) file_emitter: SharedFileEmitter,
@@ -33,18 +37,40 @@ impl PluginContext {
       .upgrade()
       .ok_or_else(|| anyhow::format_err!("Plugin driver is already dropped."))?;
 
-    resolve_id_with_plugins(
+    let skip = if extra_options.skip_self {
+      Some(Arc::new(HookResolveIdSkipped {
+        plugin: Arc::clone(&self.plugin),
+        importer: importer.map(|s| s.to_string()),
+        specifier: specifier.to_string(),
+      }))
+    } else {
+      None
+    };
+
+    // Push skip to the list
+    if let Some(skip) = skip.as_ref() {
+      plugin_driver.resolve_skip.write().unwrap().push(Arc::clone(skip));
+    }
+
+    let result = resolve_id_with_plugins(
       &self.resolver,
       &plugin_driver,
       specifier,
       importer,
-      HookResolveIdExtraOptions {
-        is_entry: false,
-        kind: extra_options.import_kind,
-        skip_plugin: if extra_options.skip_self { Some(Arc::clone(&self.plugin)) } else { None },
-      },
+      HookResolveIdExtraOptions { is_entry: false, kind: extra_options.import_kind },
     )
-    .await
+    .await;
+
+    // Remove skip from the list
+    if let Some(skip) = skip {
+      let mut skip_list = plugin_driver.resolve_skip.write().unwrap();
+      let index = skip_list.iter().position(|s| Arc::ptr_eq(s, &skip));
+      if let Some(index) = index {
+        skip_list.remove(index);
+      }
+    }
+
+    result
   }
 
   pub fn emit_file(&self, file: rolldown_common::EmittedAsset) -> String {

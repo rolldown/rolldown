@@ -1,9 +1,9 @@
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
 use crate::{
   pluginable::HookTransformAstReturn, types::hook_transform_ast_args::HookTransformAstArgs,
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveDynamicImportArgs,
-  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver, TransformPluginContext,
+  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver, TransformPluginContext, __inner::Pluginable,
 };
 use anyhow::Result;
 use rolldown_common::{side_effects::HookSideEffects, ModuleInfo};
@@ -40,12 +40,21 @@ impl PluginDriver {
     Ok(())
   }
 
+  fn get_skipped(&self, specifier: &str, importer: Option<&str>) -> Vec<Arc<dyn Pluginable>> {
+    let mut skipped = vec![];
+    for skip in self.resolve_skip.read().unwrap().deref() {
+      if skip.specifier == specifier && skip.importer.as_ref().map(|s| s.as_str()) == importer {
+        skipped.push(Arc::clone(&skip.plugin));
+      }
+    }
+    skipped
+  }
+
   pub async fn resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
+    let skipped = self.get_skipped(args.specifier, args.importer);
     for (plugin, ctx) in &self.plugins {
-      if let Some(p) = args.options.skip_plugin.as_ref() {
-        if Arc::ptr_eq(p, plugin) {
-          continue;
-        }
+      if skipped.iter().any(|p| Arc::ptr_eq(p, plugin)) {
+        continue;
       }
       if let Some(r) = plugin.call_resolve_id(ctx, args).await? {
         return Ok(Some(r));
@@ -60,11 +69,10 @@ impl PluginDriver {
     &self,
     args: &HookResolveDynamicImportArgs<'_>,
   ) -> HookResolveIdReturn {
+    let skipped = self.get_skipped(args.source, args.importer);
     for (plugin, ctx) in &self.plugins {
-      if let Some(p) = args.options.skip_plugin.as_ref() {
-        if Arc::ptr_eq(p, plugin) {
-          continue;
-        }
+      if skipped.iter().any(|p| Arc::ptr_eq(p, plugin)) {
+        continue;
       }
       if let Some(r) = plugin.call_resolve_dynamic_import(ctx, args).await? {
         return Ok(Some(r));

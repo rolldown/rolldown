@@ -14,7 +14,6 @@ export default defineTest({
       "(function(exports, node_path) {
 
       "use strict";
-      
       Object.defineProperty(exports, '__esModule', { value: true });
       const { join } = node_path;
 

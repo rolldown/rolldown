@@ -40,18 +40,23 @@ pub fn render_cjs(
     concat_source.add_source(Box::new(RawSource::new(intro)));
   }
 
+  /// Note that the determined `export_mode` should be used in `render_chunk_exports` to render exports.
+  /// We also need to get the export mode for rendering the namespace markers.
+  /// So we determine the export mode (from auto) here and use it in the following code.
   let export_mode = if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
       if matches!(entry_module.exports_kind, ExportsKind::Esm) {
         let export_items = get_export_items(ctx.chunk, ctx.link_output);
         let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
         let export_mode = determine_export_mode(&ctx.options.exports, entry_module, &export_items)?;
+        /// Only `named` export can we render the namespace markers.
         if matches!(&export_mode, OutputExports::Named) {
           let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
           if !marker.is_empty() {
             concat_source.add_source(Box::new(RawSource::new(marker)));
           }
         }
+        /// This is the part where we handle the external modules that are imported in the entry module.
         entry_module.star_export_module_ids().filter_map(|importee| {
           let importee = &ctx.link_output.module_table.modules[importee];
           match importee {
@@ -71,12 +76,19 @@ pub fn render_cjs(
           });
         Some(export_mode)
       } else {
+        /// There is no need for a non-ESM export kind for determining the export mode.
         None
       }
     } else {
+      /// The entry module should always be an ECMAScript module, so it is unreachable.
       None
     }
   } else {
+    /// No need for common chunks to determine the export mode.
+    /// Because the export mode is used to handle the exports in the entry module,
+    /// deciding whether we use `exports[key]` or `module.exports` (for default as the only export).
+    /// The common chunks' exports is used in other related code, so we shouldn't determine the export mode
+    /// for common chunks.
     None
   };
 

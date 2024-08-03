@@ -24,7 +24,8 @@ fn render_marker(es_module: bool, to_string_tag: bool) -> String {
 
 /// Render namespace markers for the module.
 /// It contains the `__esModule` and `Symbol.toStringTag` properties.
-/// Since rolldown doesn't support `generatedCode.symbol` yet, it's not possible to use `Symbol.toStringTag` in the output.
+/// Since rolldown doesn't support `generatedCode.symbol` yet,
+/// it's not possible to use `Symbol.toStringTag` in the output.
 pub fn render_namespace_markers(
   es_module_flag: &EsModuleFlag,
   has_default_export: bool,

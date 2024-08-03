@@ -1,5 +1,5 @@
 import('./shared').then((imported) => {
-  assert.strictEqual(imported.shared, 'shared');
-});
+  assert.strictEqual(imported.shared, 'shared')
+})
 
-export const main = 'main';
+export const main = 'main'

@@ -16,7 +16,6 @@ use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
-use rustc_hash::FxHashMap;
 
 // TODO refactor it to `wrap.rs` to reuse it for other formats (e.g. amd, umd).
 pub fn render_iife(
@@ -50,7 +49,7 @@ pub fn render_iife(
   let (import_code, externals) = render_iife_chunk_imports(ctx);
 
   let (input_args, output_args) =
-    render_iife_arguments(ctx, &externals, &ctx.options.globals, has_exports && named_exports);
+    render_iife_arguments(ctx, &externals, has_exports && named_exports);
 
   concat_source.add_source(Box::new(RawSource::new(format!(
     "{}(function({}) {{\n",
@@ -62,7 +61,6 @@ pub fn render_iife(
         .push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());
       String::new()
     },
-    // TODO handle external imports here.
     input_args
   ))));
 
@@ -170,11 +168,11 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
 fn render_iife_arguments(
   ctx: &mut GenerateContext<'_>,
   externals: &[String],
-  globals: &FxHashMap<String, String>,
   exports_key: bool,
 ) -> (String, String) {
   let mut input_args = if exports_key { vec!["exports".to_string()] } else { vec![] };
   let mut output_args = if exports_key { vec!["{}".to_string()] } else { vec![] };
+  let globals = &ctx.options.globals;
   externals.iter().for_each(|external| {
     input_args.push(legitimize_identifier_name(external).to_string());
     if let Some(global) = globals.get(external) {

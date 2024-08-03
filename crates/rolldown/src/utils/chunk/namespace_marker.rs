@@ -10,18 +10,6 @@ pub fn determine_es_module(es_module_flag: &EsModuleFlag, has_default_export: bo
   }
 }
 
-fn render_marker(es_module: bool, to_string_tag: bool) -> String {
-  if es_module && to_string_tag {
-    "Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });"
-  } else if es_module {
-    "Object.defineProperty(exports, '__esModule', { value: true });"
-  } else if to_string_tag {
-    "Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });"
-  } else {
-    ""
-  }.to_string()
-}
-
 /// Render namespace markers for the module.
 /// It contains the `__esModule` and `Symbol.toStringTag` properties.
 /// Since rolldown doesn't support `generatedCode.symbol` yet,
@@ -32,7 +20,15 @@ pub fn render_namespace_markers(
   namespace_to_string_tag: bool,
 ) -> String {
   let es_module = determine_es_module(es_module_flag, has_default_export);
-  let result = render_marker(es_module, namespace_to_string_tag);
+  let result = if es_module && namespace_to_string_tag {
+    "Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });"
+  } else if es_module {
+    "Object.defineProperty(exports, '__esModule', { value: true });"
+  } else if namespace_to_string_tag {
+    "Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });"
+  } else {
+    ""
+  }.to_string();
   if result.is_empty() {
     String::new()
   } else {

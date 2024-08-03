@@ -48,7 +48,7 @@ pub fn render_cjs(
         let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
         let export_mode = determine_export_mode(&ctx.options.exports, entry_module, &export_items)?;
         // Only `named` export can we render the namespace markers.
-        if matches!(&export_mode, OutputExports::Named) {
+        if matches!(&export_mode, OutputExports::Named) && ctx.chunk.exports_to_other_chunks.is_empty() {
           let marker = render_namespace_markers(&ctx.options.es_module, has_default_export, false);
           if !marker.is_empty() {
             concat_source.add_source(Box::new(RawSource::new(marker)));

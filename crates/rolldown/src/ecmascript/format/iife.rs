@@ -1,3 +1,4 @@
+use crate::ecmascript::format::utils::generate_identifier;
 use crate::utils::chunk::collect_render_chunk_imports::{
   collect_render_chunk_imports, RenderImportDeclarationSpecifier,
 };
@@ -15,10 +16,7 @@ use arcstr::ArcStr;
 use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_sourcemap::{ConcatSource, RawSource};
-use rolldown_utils::ecma_script::{
-  legitimize_identifier_name,
-};
-use crate::ecmascript::format::utils::generate_identifier;
+use rolldown_utils::ecma_script::legitimize_identifier_name;
 
 // TODO refactor it to `wrap.rs` to reuse it for other formats (e.g. amd, umd).
 pub fn render_iife(
@@ -57,10 +55,7 @@ pub fn render_iife(
   let (definition, assignment) = generate_identifier(ctx)?;
 
   concat_source.add_source(Box::new(RawSource::new(format!(
-    "{}{} = (function({}) {{\n",
-    definition,
-    assignment,
-    input_args
+    "{definition}{assignment} = (function({input_args}) {{\n",
   ))));
 
   if determine_use_strict(ctx) {

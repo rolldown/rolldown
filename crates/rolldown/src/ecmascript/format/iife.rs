@@ -19,6 +19,29 @@ use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
 // TODO refactor it to `wrap.rs` to reuse it for other formats (e.g. amd, umd).
+/// This is the render function for IIFE format.
+/// It wraps the chunk content in an IIFE.
+///
+/// 1. Render the banner if it exists.
+/// 2. Start the wrapper function, and determine the export mode (from auto or manual exports).
+/// 3. Render the imports and modify the arguments of the wrapper function.
+///    Including:
+///       - Render the arguments including the function arguments and the external imports,
+///         according to the `output.globals`, or if you are using named export,
+///         the function will pass the `exports` argument with default `{}` as the first argument.
+///       - Generate the statement for a namespace level-by-level and define the IIFE wrapper
+///         function name if `output.extends` is false, or the export mode isn't `named`.
+///
+///    Note that in IIFE, the external imports are directly assigned to the global variables.
+///    And in the wrapper function, the global variables are passed as arguments.
+/// 4. Check if the chunk is suitable for strict mode, and add `"use strict";` if necessary.
+/// 5. Render the intro if it exists.
+/// 6. Render the chunk content.
+/// 7. Render the exports if it exists. If you are using named export, it will modify the `exports` object.
+///    If you are using default export, it will return the default value.
+/// 8. Render the outro if it exists.
+/// 9. The wrapper function ends with `})({output_args});` if `invoke` is true, otherwise, it ends with `})`. (for UMD capability)
+/// 10. Render the footer if it exists.
 pub fn render_iife(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
@@ -35,37 +58,56 @@ pub fn render_iife(
   }
 
   // iife wrapper start
+
+  // Analyze the export information of the chunk.
   let export_items = get_export_items(ctx.chunk, ctx.link_output);
   let has_exports = !export_items.is_empty();
   let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
+
   let entry_module = match ctx.chunk.kind {
     ChunkKind::EntryPoint { module, .. } => {
       &ctx.link_output.module_table.modules[module].as_ecma().expect("should be ecma module")
     }
     ChunkKind::Common => unreachable!("iife should be entry point chunk"),
   };
+
   let export_mode = determine_export_mode(ctx, entry_module, &export_items)?;
+
   let named_exports = matches!(&export_mode, OutputExports::Named);
 
+  // It is similar to CJS.
   let (import_code, externals) = render_iife_chunk_imports(ctx);
 
+  // Generate the identifier for the IIFE wrapper function.
+  // You can refer to the function for more details.
   let (definition, assignment) = generate_identifier(ctx, &export_mode)?;
 
+  // The function argument and the external imports are passed as arguments to the wrapper function.
   let (input_args, output_args) = render_iife_arguments(
     ctx,
     &externals,
     if has_exports && named_exports && ctx.options.extend {
+      // If using `output.extend`, the first caller argument should be `name = name || {}`,
+      // then the result will be assigned to `name`.
       Some(assignment.as_str())
     } else if has_exports && named_exports {
+      // If not using `output.extend`, the first caller argument should be `{}`,
+      // then the result will be assigned to `exports`.
       Some("{}")
     } else {
+      // If there is no export or not using named export,
+      // there shouldn't be an argument shouldn't be related to the export.
       None
     },
   );
 
   concat_source.add_source(Box::new(RawSource::new(format!(
     "{definition}{}(function({input_args}) {{\n",
-    if ctx.options.extend && named_exports || !has_exports || assignment.is_empty() {
+    if (ctx.options.extend && named_exports) || !has_exports || assignment.is_empty() {
+      // If facing situations following, there shouldn't an assignment for the wrapper function:
+      // - Using `output.extend` and named export.
+      // - No export.
+      // - the `assignment` is empty.
       String::new()
     } else {
       format!("{assignment} = ")

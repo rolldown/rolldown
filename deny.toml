@@ -67,15 +67,9 @@ feature-depth = 1
 db-path = "~/.cargo/advisory-db"
 # The url(s) of the advisory databases to use
 db-urls = ["https://github.com/rustsec/advisory-db"]
-yanked  = "warn"
-# The lint level for crates with security notices. Note that as of
-# 2019-12-17 there are no security notice advisories in
-# https://github.com/rustsec/advisory-db
-# notice = "warn"rue, then cargo deny will use the git executable to fetch advisory database.
-# If this is false, then it uses a built-in git library.
-# Setting this to true can be helpful if you have special authentication requirements that cargo-deny does not support.
-# See Git Authentication for more information about setting up git authentication.
-# git-fetch-with-cli = true
+# The lint level for crates that have been yanked from their source registry	
+yanked = "warn"
+
 # This section is considered when running `cargo deny check licenses`
 # More documentation for the licenses section can be found here:
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
@@ -124,8 +118,10 @@ exceptions = [
 # adding a clarification entry for it allows you to manually specify the
 # licensing information
 [[licenses.clarify]]
-# The package spec the clarification applies to
-crate = "ring"
+# The name of the crate the clarification applies to	# The package spec the clarification applies to
+name = "ring"
+# The optional version constraint for the crate	
+version = "*"
 # The SPDX expression for the license requirements of the crate
 expression = "MIT AND ISC AND OpenSSL"
 # One or more files in the crate's source used as the "source of truth" for

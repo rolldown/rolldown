@@ -44,6 +44,7 @@ export function normalizeOutputOptions(
     assetFileNames: assetFileNames ?? 'assets/[name]-[hash][extname]',
     plugins: [],
     minify: opts.minify,
+    extend: opts.extend,
     name,
   }
 }

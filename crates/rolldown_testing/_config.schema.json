@@ -118,6 +118,12 @@
             }
           ]
         },
+        "extend": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "external": {
           "type": [
             "array",

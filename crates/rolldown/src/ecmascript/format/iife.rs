@@ -15,7 +15,10 @@ use arcstr::ArcStr;
 use rolldown_common::{ChunkKind, OutputExports};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_sourcemap::{ConcatSource, RawSource};
-use rolldown_utils::ecma_script::legitimize_identifier_name;
+use rolldown_utils::ecma_script::{
+  legitimize_identifier_name,
+};
+use crate::ecmascript::format::utils::generate_identifier;
 
 // TODO refactor it to `wrap.rs` to reuse it for other formats (e.g. amd, umd).
 pub fn render_iife(
@@ -51,21 +54,12 @@ pub fn render_iife(
   let (input_args, output_args) =
     render_iife_arguments(ctx, &externals, has_exports && named_exports);
 
+  let (definition, assignment) = generate_identifier(ctx)?;
+
   concat_source.add_source(Box::new(RawSource::new(format!(
-    "{}(function({}) {{\n",
-    if let Some(name) = &ctx.options.name {
-      if name.contains('.') {
-        let definition = generate_namespace_definition(name);
-        format!("{}this.{} = ", definition, name)
-      } else {
-        format!("var {name} = ")
-      }
-    } else {
-        ctx
-            .warnings
-            .push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());
-        String::new()
-    },
+    "{}{} = (function({}) {{\n",
+    definition,
+    assignment,
     input_args
   ))));
 
@@ -192,40 +186,4 @@ fn render_iife_arguments(
     }
   });
   (input_args.join(", "), output_args.join(", "))
-}
-
-fn generate_namespace_definition(name: &str) -> String {
-  let parts: Vec<&str> = name.split('.').collect();
-
-  parts
-    .iter()
-    .enumerate()
-    .scan(String::new(), |state, (i, part)| {
-      if i > 0 {
-        state.push('.');
-      }
-      state.push_str(part);
-      let line = if i < parts.len() - 1 {
-        Some(format!("this.{} = this.{} || {{}};\n", state, state))
-      } else {
-        None
-      };
-      Some(line)
-    })
-    .flatten()
-    .collect::<String>()
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn test_generate_namespace_definition() {
-    assert_eq!(
-      generate_namespace_definition("a.b.c"),
-      "this.a = this.a || {};\nthis.a.b = this.a.b || {};\n"
-    );
-    assert_eq!(generate_namespace_definition("a"), "");
-  }
 }

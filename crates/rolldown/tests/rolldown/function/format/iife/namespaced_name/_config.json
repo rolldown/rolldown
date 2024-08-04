@@ -1,0 +1,8 @@
+{
+  "config": {
+    "format": "iife",
+    "name": "namespace.module",
+    "banner": "import assert from \"node:assert\"\nclass A {\n  constructor() {",
+    "footer": "  }\n}\nlet a = new A();\nassert(a instanceof A);\nassert(typeof a.namespace.module === \"object\");"
+  }
+}

@@ -143,6 +143,7 @@ pub fn normalize_binding_options(
     module_types,
     experimental: None,
     minify: output_options.minify,
+    extend: output_options.extend,
   };
 
   #[cfg(not(target_family = "wasm"))]

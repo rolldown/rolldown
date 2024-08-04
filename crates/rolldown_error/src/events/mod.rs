@@ -10,6 +10,7 @@ pub mod commonjs_variable_in_esm;
 pub mod eval;
 pub mod external_entry;
 pub mod forbid_const_assign;
+pub mod illegal_identifier_as_name;
 pub mod invalid_export_option;
 pub mod missing_export;
 pub mod missing_global_name;

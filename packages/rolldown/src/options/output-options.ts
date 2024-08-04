@@ -47,6 +47,7 @@ const outputOptionsSchema = z.strictObject({
     .or(z.literal('never'))
     .or(z.boolean())
     .optional(),
+  extend: z.boolean().optional(),
   entryFileNames: z.string().optional(),
   chunkFileNames: z.string().optional(),
   assetFileNames: z.string().optional(),

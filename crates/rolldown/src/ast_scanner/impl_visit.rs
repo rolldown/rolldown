@@ -15,6 +15,7 @@ use super::{side_effect_detector::SideEffectDetector, AstScanner};
 
 impl<'me, 'ast> Visit<'ast> for AstScanner<'me> {
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
+    // dbg!(&program);
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.current_stmt_info.side_effect =

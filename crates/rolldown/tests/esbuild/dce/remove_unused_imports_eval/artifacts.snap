@@ -3,13 +3,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: "d" is imported by "entry.js", but could not be resolved – treating it as an external dependency.
+
+```
 ## EVAL
 
 ```text
 [EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
-   ╭─[entry.js:4:1]
+   ╭─[entry.js:5:1]
    │
- 4 │ eval('foo(a, b, c)')
+ 5 │ eval('foo(a, b, c)')
    │ ──┬─  
    │   ╰─── Used `eval` function here.
 ───╯
@@ -23,9 +29,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { default as a } from "a";
 import * as b from "b";
 import { c } from "c";
+import "d";
 
 //#region entry.js
-var entry_ns = {};
 eval("foo(a, b, c)");
 
 //#endregion

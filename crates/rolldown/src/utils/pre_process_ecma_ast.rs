@@ -20,6 +20,7 @@ pub fn pre_process_ecma_ast(
 ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
   if !matches!(parse_type, OxcParseType::Js) {
     let trivias = ast.trivias.clone();
+
     let ret = ast.program.with_mut(move |fields| {
       let mut transformer_options = TransformOptions::default();
       match parse_type {

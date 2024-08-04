@@ -3,7 +3,6 @@ pub mod side_effect_detector;
 
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
-use oxc::semantic::ScopeId;
 use oxc::{
   ast::{
     ast::{
@@ -24,7 +23,7 @@ use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 use rolldown_utils::path_ext::PathExt;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
 use super::types::ast_symbols::AstSymbols;

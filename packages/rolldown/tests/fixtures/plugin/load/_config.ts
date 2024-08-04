@@ -33,5 +33,6 @@ export default defineTest({
   },
   afterTest: (output) => {
     expect(loadFn).toHaveBeenCalledTimes(2)
+    loadFn.mockReset()
   },
 })

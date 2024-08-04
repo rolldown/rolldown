@@ -24,5 +24,6 @@ export default defineTest({
     expect.assertions(3)
     expect(transformFn).toHaveBeenCalledTimes(2)
     expect(output.output[0].code).contains('transformed')
+    transformFn.mockReset()
   },
 })

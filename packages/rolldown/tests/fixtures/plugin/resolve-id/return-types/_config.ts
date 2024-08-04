@@ -58,5 +58,9 @@ export default defineTest({
     expect(returnUndefined).toBeCalledTimes(3)
     expect(returnString).toHaveBeenCalledOnce()
     expect(returnObjId).toHaveBeenCalledOnce()
+    returnNull.mockReset()
+    returnUndefined.mockReset()
+    returnString.mockReset()
+    returnObjId.mockReset()
   },
 })

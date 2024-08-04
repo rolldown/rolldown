@@ -22,5 +22,6 @@ export default defineTest({
     expect(fn).toHaveBeenCalledTimes(1)
     const chunk = getOutputChunk(output)[0]
     expect(chunk.code.includes('banner')).toBe(true)
+    fn.mockReset()
   },
 })

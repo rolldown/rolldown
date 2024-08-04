@@ -61,5 +61,6 @@ export default defineTest({
   },
   afterTest: (output) => {
     expect(resolveIdFn).toHaveBeenCalledTimes(3)
+    resolveIdFn.mockReset()
   },
 })

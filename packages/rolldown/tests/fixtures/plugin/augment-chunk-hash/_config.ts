@@ -42,5 +42,6 @@ export default defineTest({
           break
       }
     }
+    fn.mockReset()
   },
 })

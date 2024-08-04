@@ -23,5 +23,6 @@ export default defineTest({
   afterTest: (output) => {
     expect(fn).toHaveBeenCalledTimes(1)
     expect(getOutputChunk(output).length).toBe(1)
+    fn.mockReset()
   },
 })

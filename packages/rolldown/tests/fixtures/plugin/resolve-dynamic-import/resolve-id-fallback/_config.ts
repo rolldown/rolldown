@@ -26,5 +26,6 @@ export default defineTest({
   },
   afterTest: () => {
     expect(resolveId).toHaveBeenCalledTimes(2)
+    resolveId.mockReset()
   },
 })

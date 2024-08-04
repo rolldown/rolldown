@@ -25,5 +25,7 @@ export default defineTest({
   afterTest: (_output) => {
     expect(buildStartFn).toHaveBeenCalledTimes(1)
     expect(buildStartFn2).toHaveBeenCalledTimes(1)
+    buildStartFn.mockReset()
+    buildStartFn2.mockReset()
   },
 })

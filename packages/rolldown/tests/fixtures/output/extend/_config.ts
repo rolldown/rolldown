@@ -6,7 +6,7 @@ export default defineTest({
       exports: 'named',
       format: 'iife',
       name: 'module',
-      extend: true
+      extend: true,
     },
   },
 })

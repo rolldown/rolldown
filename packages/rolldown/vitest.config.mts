@@ -6,6 +6,7 @@ export default defineConfig({
     testTimeout: 20000,
     // Disabled, Because the error printed by rust cannot be seen
     disableConsoleIntercept: true,
+    mockReset: true,
   },
   resolve: {
     alias: {

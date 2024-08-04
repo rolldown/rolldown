@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry_js.mjs
 
 ```js
-var module = (function() {
+(function() {
 
 
 //#region entry.js

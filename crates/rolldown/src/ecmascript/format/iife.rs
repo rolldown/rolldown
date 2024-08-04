@@ -49,13 +49,27 @@ pub fn render_iife(
 
   let (import_code, externals) = render_iife_chunk_imports(ctx);
 
-  let (input_args, output_args) =
-    render_iife_arguments(ctx, &externals, has_exports && named_exports);
+  let (definition, assignment) = generate_identifier(ctx, &export_mode)?;
 
-  let (definition, assignment) = generate_identifier(ctx)?;
+  let (input_args, output_args) = render_iife_arguments(
+    ctx,
+    &externals,
+    if has_exports && named_exports && ctx.options.extend {
+      Some(assignment.as_str())
+    } else if has_exports && named_exports {
+      Some("{}")
+    } else {
+      None
+    },
+  );
 
   concat_source.add_source(Box::new(RawSource::new(format!(
-    "{definition}{assignment} = (function({input_args}) {{\n",
+    "{definition}{}(function({input_args}) {{\n",
+    if ctx.options.extend && named_exports || !has_exports || assignment.is_empty() {
+      String::new()
+    } else {
+      format!("{assignment} = ")
+    }
   ))));
 
   if determine_use_strict(ctx) {
@@ -162,10 +176,11 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
 fn render_iife_arguments(
   ctx: &mut GenerateContext<'_>,
   externals: &[String],
-  exports_key: bool,
+  exports_prefix: Option<&str>,
 ) -> (String, String) {
-  let mut input_args = if exports_key { vec!["exports".to_string()] } else { vec![] };
-  let mut output_args = if exports_key { vec!["{}".to_string()] } else { vec![] };
+  let mut input_args = if exports_prefix.is_some() { vec!["exports".to_string()] } else { vec![] };
+  let mut output_args =
+    if exports_prefix.is_some() { vec![exports_prefix.unwrap().to_string()] } else { vec![] };
   let globals = &ctx.options.globals;
   externals.iter().for_each(|external| {
     input_args.push(legitimize_identifier_name(external).to_string());

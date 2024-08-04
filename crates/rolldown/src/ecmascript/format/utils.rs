@@ -50,21 +50,25 @@ fn generate_namespace_definition(name: &str) -> (String, String) {
 /// This function generates a namespace definition for the given name, especially for IIFE format or UMD format.
 /// If the name contains a dot, it will be regarded as a namespace definition.
 /// Otherwise, it will be regarded as a variable definition.
-pub fn generate_identifier(ctx: &mut GenerateContext<'_>) -> DiagnosableResult<(String, String)> {
+pub fn generate_identifier(
+  ctx: &mut GenerateContext<'_>,
+  export_mode: &OutputExports,
+) -> DiagnosableResult<(String, String)> {
   if let Some(name) = &ctx.options.name {
     // It is same as Rollup.
     if name.contains('.') {
       let (decl, expr) = generate_namespace_definition(name);
       Ok((
         decl,
-        if ctx.options.extend && matches!(&ctx.options.exports, OutputExports::Named) {
+        if ctx.options.extend && matches!(export_mode, OutputExports::Named) {
           format!("{expr} = {expr} || {{}}")
         } else {
           expr
         },
       ))
     } else if ctx.options.extend {
-      if matches!(ctx.options.exports, OutputExports::Named) {
+      let name = generate_callee(name.as_str());
+      if matches!(export_mode, OutputExports::Named) {
         Ok((String::new(), format!("this{name} = this{name} || {{}}")))
       } else {
         Ok((String::new(), format!("this{name}")))

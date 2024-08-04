@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+import assert from "node:assert"
+class A {
+  constructor() {
+this.module = (function() {
+
+"use strict";
+
+//#region main.js
+var main_default = "default";
+
+//#endregion
+return main_default;
+})();
+  }
+}
+let a = new A();
+assert(a instanceof A);
+assert(a.module === "default");
+```

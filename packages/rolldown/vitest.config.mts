@@ -6,6 +6,7 @@ export default defineConfig({
     testTimeout: 20000,
     // Disabled, Because the error printed by rust cannot be seen
     disableConsoleIntercept: true,
+    // https://vitest.dev/api/mock.html#mockreset, since we run each test twice, so we need to reset the mockset for each run
     mockReset: true,
   },
   resolve: {

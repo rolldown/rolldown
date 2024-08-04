@@ -8,11 +8,7 @@ import path from 'node:path'
 let referenceId: string
 
 export default defineTest({
-  skipComposingJsPlugin: true,
   config: {
-    experimental: {
-      enableComposingJsPlugins: true,
-    },
     output: {
       assetFileNames: '[name]-[hash].[ext]',
     },

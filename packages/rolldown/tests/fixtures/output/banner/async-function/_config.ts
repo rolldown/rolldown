@@ -6,7 +6,6 @@ const bannerTxt = '// banner test\n'
 const banner = async () => bannerTxt
 
 export default defineTest({
-  skipComposingJsPlugin: true,
   config: {
     output: {
       banner,

@@ -4,7 +4,6 @@ import { getOutputFileNames } from '@tests/utils'
 import { defineTest } from '@tests'
 
 export default defineTest({
-  skipComposingJsPlugin: true,
   config: {
     input: ['main.js'],
     output: {

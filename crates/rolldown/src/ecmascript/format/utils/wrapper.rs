@@ -28,8 +28,8 @@ fn generate_namespace_definition(name: &str) -> (String, String) {
     .enumerate()
     .scan(String::new(), |state, (i, part)| {
       // We use `scan` to generate the declaration sentence level-by-level.
-      let callee = generate_callee(part);
-      state.push_str(&callee);
+      let caller = generate_caller(part);
+      state.push_str(&caller);
       let line = if i < parts.len() - 1 {
         Some(format!("this{state} = this{state} || {{}};\n"))
       } else {
@@ -40,9 +40,9 @@ fn generate_namespace_definition(name: &str) -> (String, String) {
     .flatten()
     .collect::<String>();
 
-  // TODO do not call the `generate_callee` function twice.
+  // TODO do not call the `generate_caller` function twice.
   let final_code =
-    format!("this{}", parts.iter().map(|&part| generate_callee(part)).collect::<String>());
+    format!("this{}", parts.iter().map(|&part| generate_caller(part)).collect::<String>());
 
   (initialization_code, final_code)
 }
@@ -50,6 +50,17 @@ fn generate_namespace_definition(name: &str) -> (String, String) {
 /// This function generates a namespace definition for the given name, especially for IIFE format or UMD format.
 /// If the name contains a dot, it will be regarded as a namespace definition.
 /// Otherwise, it will be regarded as a variable definition.
+///
+/// - If you are using `extend: false` with a name, it will generate a variable definition (using `default` as an example):
+///    ```js
+///    var name = (function() { ... })();
+///    ```
+/// - If you are using `extend: true` with a name, it will generate an object definition (using `named` as an example):
+///    ```js
+///    (function(exports) { ... })(this.named = this.named || {});
+///    ```
+///
+/// As for the namespaced name (including `.`), please refer to the `generate_namespace_definition` function.
 pub fn generate_identifier(
   ctx: &mut GenerateContext<'_>,
   export_mode: &OutputExports,
@@ -68,18 +79,18 @@ pub fn generate_identifier(
         },
       ))
     } else if ctx.options.extend {
-      let callee = generate_callee(name.as_str());
+      let caller = generate_caller(name.as_str());
       if matches!(export_mode, OutputExports::Named) {
         // In named exports, the `extend` option will make the assignment disappear and
         // the modification will be done extending the existed object (the `name` option).
-        Ok((String::new(), format!("this{callee} = this{callee} || {{}}")))
+        Ok((String::new(), format!("this{caller} = this{caller} || {{}}")))
       } else {
         Ok((
           String::new(),
           // If there isn't a name in default export, we shouldn't assign the function to `this[""]`.
           // If there is, we should assign the function to `this["name"]`,
           // because there isn't an object that we can extend.
-          if name.is_empty() { String::new() } else { format!("this{callee}") },
+          if name.is_empty() { String::new() } else { format!("this{caller}") },
         ))
       }
     } else if is_validate_assignee_identifier_name(name) {
@@ -101,8 +112,11 @@ pub fn generate_identifier(
   }
 }
 
-// It is a helper function to generate a callee for the given name.
-fn generate_callee(name: &str) -> String {
+/// It is a helper function to generate a caller for the given name.
+///
+/// - If the name is not a reserved word and not an invalid identifier, it will generate a caller like `.name`.
+/// - Otherwise, it will generate a caller like `["if"]`.
+fn generate_caller(name: &str) -> String {
   if is_validate_assignee_identifier_name(name) {
     format!(".{name}")
   } else {

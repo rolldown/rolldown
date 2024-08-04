@@ -120,13 +120,12 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           if (batchedHooks.buildStart) {
             const batchedHandlers = batchedHooks.buildStart
             composed.buildStart = async function (options) {
-                let hooks = batchedHandlers.map((handler) => {
+              await Promise.all(
+                batchedHandlers.map((handler) => {
                   const [handlerFn, _handlerOptions] = normalizeHook(handler)
                   return handlerFn.call(this, options)
-                });
-                for (let hook of hooks) {
-                  await hook;
-              }
+                }),
+              )
             }
           }
           break

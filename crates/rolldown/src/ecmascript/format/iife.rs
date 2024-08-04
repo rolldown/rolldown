@@ -151,7 +151,7 @@ pub fn render_iife(
     concat_source.add_source(Box::new(RawSource::new(outro)));
   }
 
-  if named_exports && has_exports {
+  if named_exports && has_exports && !ctx.options.extend {
     // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
     concat_source.add_source(Box::new(RawSource::new("return exports;".to_string())));
   }

@@ -1527,7 +1527,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/extend/iife/namespace_named
 
-- main-!~{000}~.mjs => main-8BL01-zr.mjs
+- main-!~{000}~.mjs => main-qFuUsGqX.mjs
+
+# tests/rolldown/function/extend/iife/no_name_default
+
+- main-!~{000}~.mjs => main-NeziNoEp.mjs
+
+# tests/rolldown/function/extend/iife/no_name_named
+
+- main-!~{000}~.mjs => main-tJ5KtzCN.mjs
 
 # tests/rolldown/function/extend/iife/non_namespace_default
 
@@ -1535,7 +1543,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/extend/iife/non_namespace_named
 
-- main-!~{000}~.mjs => main-Csod9aTZ.mjs
+- main-!~{000}~.mjs => main-4I1iemMj.mjs
 
 # tests/rolldown/function/external/commonjs_reexport_external
 

@@ -6,9 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
-import assert from "node:assert"
-class A {
-  constructor() {
 (function(exports) {
 
 "use strict";
@@ -30,10 +27,5 @@ Object.defineProperty(exports, 'b', {
     return b;
   }
 });
-})(this.module = this.module || {});
-  }
-}
-let a = new A();
-assert(a instanceof A);
-assert(a.module.a === 1);
+})(this[""] = this[""] || {});
 ```

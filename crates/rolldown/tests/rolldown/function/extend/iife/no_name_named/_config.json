@@ -1,0 +1,9 @@
+{
+  "config": {
+    "format": "iife",
+    "name": "",
+    "extend": true,
+    "exports": "named"
+  },
+  "expectExecuted": false
+}

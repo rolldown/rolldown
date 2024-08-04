@@ -12,7 +12,7 @@ const MODULE_PRELOAD_POLYFILL: &str = "vite/modulepreload-polyfill";
 
 const RESOLVED_MODULE_PRELOAD_POLYFILL_ID: &str = "\tvite/modulepreload-polyfill.js";
 
-const IS_MODERN_FLAG: &'static str = "__VITE_IS_MODERN__";
+const IS_MODERN_FLAG: &str = "__VITE_IS_MODERN__";
 
 #[derive(Debug)]
 pub struct ModulePreloadPolyfillPlugin {

@@ -60,8 +60,12 @@ pub fn render_iife(
       } else {
         format!("var {name} = ")
       }
-    } else { String::new() },
-    // TODO handle external imports here.
+    } else {
+        ctx
+            .warnings
+            .push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());
+        String::new()
+    },
     input_args
   ))));
 

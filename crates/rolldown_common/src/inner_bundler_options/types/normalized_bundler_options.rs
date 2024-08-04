@@ -31,6 +31,8 @@ pub struct NormalizedBundlerOptions {
   pub name: Option<String>,
   pub entry_filenames: FilenameTemplate,
   pub chunk_filenames: FilenameTemplate,
+  pub css_entry_filenames: FilenameTemplate,
+  pub css_chunk_filenames: FilenameTemplate,
   pub asset_filenames: FilenameTemplate,
   pub dir: String,
   pub format: OutputFormat,

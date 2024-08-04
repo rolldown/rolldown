@@ -23,6 +23,8 @@ pub struct Chunk {
   pub name: Option<ArcStr>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
+  pub css_preliminary_filename: Option<PreliminaryFilename>,
+  pub css_absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, Rstr>,
   // Sorted by Module#stable_id of modules in the chunk
   pub cross_chunk_imports: Vec<ChunkIdx>,
@@ -56,6 +58,17 @@ impl Chunk {
       &options.entry_filenames
     } else {
       &options.chunk_filenames
+    }
+  }
+
+  pub fn css_filename_template<'a>(
+    &mut self,
+    options: &'a NormalizedBundlerOptions,
+  ) -> &'a FilenameTemplate {
+    if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined) {
+      &options.css_entry_filenames
+    } else {
+      &options.css_chunk_filenames
     }
   }
 

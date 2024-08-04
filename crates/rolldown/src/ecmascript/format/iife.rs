@@ -1,4 +1,28 @@
-use crate::ecmascript::format::utils::generate_identifier;
+//! This is the render function for IIFE format.
+//! It wraps the chunk content in an IIFE.
+//!
+//! 1. Render the banner if it exists.
+//! 2. Start the wrapper function, and determine the export mode (from auto or manual exports).
+//! 3. Render the imports and modify the arguments of the wrapper function.
+//!    Including:
+//!       - Render the arguments including the function arguments and the external imports,
+//!         according to the `output.globals`, or if you are using named export,
+//!         the function will pass the `exports` argument with default `{}` as the first argument.
+//!       - Generate the statement for a namespace level-by-level and define the IIFE wrapper
+//!         function name if `output.extends` is false, or the export mode isn't `named`.
+//!
+//!    Note that in IIFE, the external imports are directly assigned to the global variables.
+//!    And in the wrapper function, the global variables are passed as arguments.
+//! 4. Check if the chunk is suitable for strict mode, and add `"use strict";` if necessary.
+//! 5. Render the intro if it exists.
+//! 6. Render the chunk content.
+//! 7. Render the exports if it exists. If you are using named export, it will modify the `exports` object.
+//!    If you are using default export, it will return the default value.
+//! 8. Render the outro if it exists.
+//! 9. The wrapper function ends with `})({output_args});` if `invoke` is true, otherwise, it ends with `})`. (for UMD capability)
+//! 10. Render the footer if it exists.
+
+use crate::ecmascript::format::utils::wrapper::generate_identifier;
 use crate::utils::chunk::collect_render_chunk_imports::{
   collect_render_chunk_imports, RenderImportDeclarationSpecifier,
 };
@@ -19,29 +43,7 @@ use rolldown_sourcemap::{ConcatSource, RawSource};
 use rolldown_utils::ecma_script::legitimize_identifier_name;
 
 // TODO refactor it to `wrap.rs` to reuse it for other formats (e.g. amd, umd).
-/// This is the render function for IIFE format.
-/// It wraps the chunk content in an IIFE.
-///
-/// 1. Render the banner if it exists.
-/// 2. Start the wrapper function, and determine the export mode (from auto or manual exports).
-/// 3. Render the imports and modify the arguments of the wrapper function.
-///    Including:
-///       - Render the arguments including the function arguments and the external imports,
-///         according to the `output.globals`, or if you are using named export,
-///         the function will pass the `exports` argument with default `{}` as the first argument.
-///       - Generate the statement for a namespace level-by-level and define the IIFE wrapper
-///         function name if `output.extends` is false, or the export mode isn't `named`.
-///
-///    Note that in IIFE, the external imports are directly assigned to the global variables.
-///    And in the wrapper function, the global variables are passed as arguments.
-/// 4. Check if the chunk is suitable for strict mode, and add `"use strict";` if necessary.
-/// 5. Render the intro if it exists.
-/// 6. Render the chunk content.
-/// 7. Render the exports if it exists. If you are using named export, it will modify the `exports` object.
-///    If you are using default export, it will return the default value.
-/// 8. Render the outro if it exists.
-/// 9. The wrapper function ends with `})({output_args});` if `invoke` is true, otherwise, it ends with `})`. (for UMD capability)
-/// 10. Render the footer if it exists.
+/// The main function for rendering the IIFE format chunks.
 pub fn render_iife(
   ctx: &mut GenerateContext<'_>,
   module_sources: RenderedModuleSources,
@@ -71,6 +73,7 @@ pub fn render_iife(
     ChunkKind::Common => unreachable!("iife should be entry point chunk"),
   };
 
+  // We need to transform the `OutputExports::Auto` to suitable `OutputExports`.
   let export_mode = determine_export_mode(ctx, entry_module, &export_items)?;
 
   let named_exports = matches!(&export_mode, OutputExports::Named);
@@ -170,7 +173,7 @@ pub fn render_iife(
   Ok(concat_source)
 }
 
-// Handling external imports needs to modify the arguments of the wrapper function.
+/// Handling external imports needs to modify the arguments of the wrapper function.
 fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>) {
   let render_import_stmts =
     collect_render_chunk_imports(ctx.chunk, ctx.link_output, ctx.chunk_graph);
@@ -215,6 +218,17 @@ fn render_iife_chunk_imports(ctx: &GenerateContext<'_>) -> (String, Vec<String>)
   (s, externals)
 }
 
+/// Rendering the arguments of the wrapper function, including the function arguments and calling arguments.
+/// - If `output.exports` is `named`, the first argument is `exports`.
+///    - If you are using `extend: true`, the inputted argument will be extended;
+///    - If you aren't using it, the wrapper function will return the `exports` object as the result.
+///
+///    If `output.exports` is `default`, there is no need to pass the `exports` argument.
+///    The return value of the wrapper function will be the default export value.
+/// - The rest of the arguments are the external imports, which are directly assigned to the global variables.
+///    - If the global variable is not defined in `output.globals`,
+///      you will be warned and rolldown will use the defined name after legitimizing it.
+///    - If the global variable is defined in `output.globals`, the global variable will be used directly (after legitimizing it).
 fn render_iife_arguments(
   ctx: &mut GenerateContext<'_>,
   externals: &[String],

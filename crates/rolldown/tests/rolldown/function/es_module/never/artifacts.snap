@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
-(function(exports) {
+var module = (function(exports) {
 
 "use strict";
 

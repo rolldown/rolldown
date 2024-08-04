@@ -74,7 +74,7 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
       Module::External(_) => {}
     }
   });
-  if module.has_eval || matches!(module.module_type, ModuleType::Ts | ModuleType::Tsx) {
+  if module.has_eval && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     module.named_imports.keys().for_each(|symbol| {
       include_symbol(ctx, *symbol);
     });

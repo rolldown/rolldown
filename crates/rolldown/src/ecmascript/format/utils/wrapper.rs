@@ -1,3 +1,9 @@
+//! Items related to wrapper function. Related parameters:
+//! - The `export_mode`: `named` or `default`;
+//! - The `name`: whether includes a dot or not, and whether is a valid identifier or not;
+//!    - If it is a namespaced name;
+//!    - If it is a valid identifier;
+//! - The `extend`: whether extends the object or not.
 use crate::types::generator::GenerateContext;
 use arcstr::ArcStr;
 use rolldown_common::OutputExports;

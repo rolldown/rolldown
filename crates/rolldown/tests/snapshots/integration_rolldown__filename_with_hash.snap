@@ -1573,7 +1573,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/iife/basic
 
-- main-!~{000}~.mjs => main--9MFXZs-.mjs
+- main-!~{000}~.mjs => main-gnapIq9Q.mjs
 
 # tests/rolldown/function/format/iife/external_modules
 
@@ -1586,6 +1586,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/function/format/iife/iife_with_name
 
 - main-!~{000}~.mjs => main--FmiP1j0.mjs
+
+# tests/rolldown/function/format/iife/namespaced_name
+
+- main-!~{000}~.mjs => main-ELPzdqJs.mjs
+
+# tests/rolldown/function/format/iife/namespaced_name_reserved
+
+- main-!~{000}~.mjs => main-i2p4fCcn.mjs
 
 # tests/rolldown/function/intro/cjs
 
@@ -2090,7 +2098,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/warnings/missing_name_option_for_iife_export
 
-- main-!~{000}~.mjs => main-Or0NsqB1.mjs
+- main-!~{000}~.mjs => main-jCkmEsT2.mjs
 
 # tests/rolldown/warnings/mixed_export
 

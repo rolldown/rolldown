@@ -214,6 +214,7 @@ export interface BindingOutputOptions {
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   minify?: boolean
+  extend?: boolean
 }
 
 export interface BindingPluginContextResolvedId {

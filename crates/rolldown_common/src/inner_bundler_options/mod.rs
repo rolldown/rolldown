@@ -98,6 +98,7 @@ pub struct BundlerOptions {
   pub treeshake: TreeshakeOptions,
   pub experimental: Option<ExperimentalOptions>,
   pub minify: Option<bool>,
+  pub extend: Option<bool>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

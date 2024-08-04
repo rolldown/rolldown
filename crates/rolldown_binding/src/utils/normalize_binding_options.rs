@@ -145,6 +145,7 @@ pub fn normalize_binding_options(
     minify: output_options.minify,
     css_entry_filenames: None,
     css_chunk_filenames: None,
+    extend: output_options.extend,
   };
 
   #[cfg(not(target_family = "wasm"))]

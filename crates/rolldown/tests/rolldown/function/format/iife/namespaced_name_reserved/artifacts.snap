@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+import assert from "node:assert"
+class A {
+  constructor() {
+this["1"] = this["1"] || {};
+this["1"]["2"] = (function(exports) {
+
+"use strict";
+
+//#region foo.js
+const value = 1;
+
+//#endregion
+Object.defineProperty(exports, 'value', {
+  enumerable: true,
+  get: function () {
+    return value;
+  }
+});
+return exports;
+})({});
+  }
+}
+let a = new A();
+assert(a instanceof A);
+assert(typeof a["1"]["2"] === "object");
+```

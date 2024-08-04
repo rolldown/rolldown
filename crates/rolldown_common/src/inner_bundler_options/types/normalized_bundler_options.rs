@@ -48,4 +48,5 @@ pub struct NormalizedBundlerOptions {
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
   pub experimental: ExperimentalOptions,
   pub minify: bool,
+  pub extend: bool,
 }

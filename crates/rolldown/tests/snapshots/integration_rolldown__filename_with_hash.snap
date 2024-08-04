@@ -327,7 +327,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_no_bundle_iife
 
-- entry_js-!~{000}~.mjs => entry_js-RCe4bw0b.mjs
+- entry_js-!~{000}~.mjs => entry_js-k-4tRlGF.mjs
 
 # tests/esbuild/dce/tree_shaking_object_property
 
@@ -1511,7 +1511,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/export_mode/iife/auto/none
 
-- main-!~{000}~.mjs => main-A37QOJSD.mjs
+- main-!~{000}~.mjs => main-0fNgrTo8.mjs
 
 # tests/rolldown/function/export_mode/iife/default
 
@@ -1520,6 +1520,22 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/function/export_mode/iife/named
 
 - main-!~{000}~.mjs => main-sCXhT0Sa.mjs
+
+# tests/rolldown/function/extend/iife/namespace_default
+
+- main-!~{000}~.mjs => main-dXn5CYMX.mjs
+
+# tests/rolldown/function/extend/iife/namespace_named
+
+- main-!~{000}~.mjs => main-8BL01-zr.mjs
+
+# tests/rolldown/function/extend/iife/non_namespace_default
+
+- main-!~{000}~.mjs => main-oQMDGLaS.mjs
+
+# tests/rolldown/function/extend/iife/non_namespace_named
+
+- main-!~{000}~.mjs => main-Csod9aTZ.mjs
 
 # tests/rolldown/function/external/commonjs_reexport_external
 
@@ -1573,15 +1589,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/iife/basic
 
-- main-!~{000}~.mjs => main-gnapIq9Q.mjs
+- main-!~{000}~.mjs => main--9MFXZs-.mjs
 
 # tests/rolldown/function/format/iife/external_modules
 
-- main-!~{000}~.mjs => main--fT_EYD7.mjs
+- main-!~{000}~.mjs => main-Ss0NlRCd.mjs
 
 # tests/rolldown/function/format/iife/external_modules_with_globals
 
-- main-!~{000}~.mjs => main-HGvX_g3V.mjs
+- main-!~{000}~.mjs => main-MwWasrct.mjs
 
 # tests/rolldown/function/format/iife/iife_with_name
 
@@ -2094,11 +2110,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/warnings/missing_global_name
 
-- main-!~{000}~.mjs => main-Nrqe9YQk.mjs
+- main-!~{000}~.mjs => main-o85_mt9N.mjs
 
 # tests/rolldown/warnings/missing_name_option_for_iife_export
 
-- main-!~{000}~.mjs => main-jCkmEsT2.mjs
+- main-!~{000}~.mjs => main-Or0NsqB1.mjs
 
 # tests/rolldown/warnings/mixed_export
 

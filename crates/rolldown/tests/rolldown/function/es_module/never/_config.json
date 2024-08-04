@@ -2,6 +2,7 @@
   "config": {
     "exports": "named",
     "esModule": "never",
-    "format": "iife"
+    "format": "iife",
+    "name": "module"
   }
 }

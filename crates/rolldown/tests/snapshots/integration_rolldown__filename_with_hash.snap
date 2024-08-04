@@ -327,7 +327,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_no_bundle_iife
 
-- entry_js-!~{000}~.mjs => entry_js-k-4tRlGF.mjs
+- entry_js-!~{000}~.mjs => entry_js-RCe4bw0b.mjs
 
 # tests/esbuild/dce/tree_shaking_object_property
 
@@ -1443,7 +1443,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/es_module/always
 
-- main-!~{000}~.mjs => main-hfZMxSfK.mjs
+- main-!~{000}~.mjs => main-GMcEoSM-.mjs
 
 # tests/rolldown/function/es_module/if_default_prop_cjs_false
 
@@ -1455,15 +1455,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/es_module/if_default_prop_iife_false
 
-- main-!~{000}~.mjs => main--AmBLPNH.mjs
+- main-!~{000}~.mjs => main-MTVu9T3l.mjs
 
 # tests/rolldown/function/es_module/if_default_prop_iife_true
 
-- main-!~{000}~.mjs => main-7ac-m6lM.mjs
+- main-!~{000}~.mjs => main-6o0sUXXk.mjs
 
 # tests/rolldown/function/es_module/never
 
-- main-!~{000}~.mjs => main--AmBLPNH.mjs
+- main-!~{000}~.mjs => main-MTVu9T3l.mjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
@@ -1511,11 +1511,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/export_mode/iife/auto/none
 
-- main-!~{000}~.mjs => main-MXkFYr18.mjs
+- main-!~{000}~.mjs => main-A37QOJSD.mjs
 
 # tests/rolldown/function/export_mode/iife/default
 
-- main-!~{000}~.mjs => main-9upwMAGj.mjs
+- main-!~{000}~.mjs => main-iElRRI9C.mjs
 
 # tests/rolldown/function/export_mode/iife/named
 
@@ -1583,7 +1583,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - main-!~{000}~.mjs => main-MwWasrct.mjs
 
-# tests/rolldown/function/format/iife/iife-with-name
+# tests/rolldown/function/format/iife/iife_with_name
 
 - main-!~{000}~.mjs => main-I-ndoLMs.mjs
 

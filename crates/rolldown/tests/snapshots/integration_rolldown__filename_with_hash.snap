@@ -1805,14 +1805,6 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main2-!~{001}~.mjs => main2-XXyPpS8r.mjs
 - main~1-!~{002}~.mjs => main~1-BBAm393b.mjs
 
-# tests/rolldown/misc/footer/cjs
-
-- main-!~{000}~.cjs => main-YL1tdpU7.cjs
-
-# tests/rolldown/misc/footer/iife
-
-- main-!~{000}~.mjs => main-grrFKEuE.mjs
-
 # tests/rolldown/misc/generate_valid_name_for_kebab_case_files
 
 - main-!~{000}~.mjs => main-Nnl0Ev65.mjs

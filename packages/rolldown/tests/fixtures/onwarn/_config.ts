@@ -13,6 +13,5 @@ export default defineTest({
   },
   afterTest: () => {
     expect(fn).toHaveBeenCalledTimes(1)
-    fn.mockReset()
   },
 })

@@ -35,6 +35,5 @@ export default defineTest({
   afterTest: (output) => {
     expect(renderChunkFn).toHaveBeenCalledTimes(1)
     expect(output.output[0].code.includes('render-chunk-code')).toBe(true)
-    renderChunkFn.mockReset()
   },
 })

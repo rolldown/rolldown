@@ -29,8 +29,4 @@ export default defineTest({
       },
     ],
   },
-  afterTest: (_) => {
-    buildStartFn.mockReset()
-    buildStartFn2.mockReset()
-  }
 })

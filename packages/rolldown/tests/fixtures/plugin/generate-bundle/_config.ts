@@ -42,6 +42,5 @@ export default defineTest({
     const chunks = getOutputChunk(output)
     expect(chunks.length).toBe(1)
     expect(chunks[0].code).toBe('console.error()')
-    generateBundleFn.mockReset()
   },
 })

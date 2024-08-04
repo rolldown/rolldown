@@ -26,6 +26,5 @@ export default defineTest({
   },
   afterTest: (output) => {
     expect(resolveDynamicImport).toHaveBeenCalledTimes(1)
-    resolveDynamicImport.mockReset()
   },
 })

@@ -40,6 +40,5 @@ export default defineTest({
   },
   afterTest: () => {
     expect(writeBundleFn).toHaveBeenCalledTimes(1)
-    writeBundleFn.mockReset()
   },
 })

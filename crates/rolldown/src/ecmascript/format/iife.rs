@@ -107,7 +107,7 @@ pub fn render_iife(
   concat_source.add_source(Box::new(RawSource::new(format!(
     "{definition}{}(function({input_args}) {{\n",
     if (ctx.options.extend && named_exports) || !has_exports || assignment.is_empty() {
-      // If facing situations following, there shouldn't an assignment for the wrapper function:
+      // If facing following situations, there shouldn't an assignment for the wrapper function:
       // - Using `output.extend` and named export.
       // - No export.
       // - the `assignment` is empty.

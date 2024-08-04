@@ -1,7 +1,6 @@
-use rolldown_common::{ChunkKind, ExportsKind, Module, WrapKind};
-use rolldown_error::DiagnosableResult;
-use rolldown_sourcemap::{ConcatSource, RawSource};
-
+use crate::utils::chunk::determine_export_mode::determine_export_mode;
+use crate::utils::chunk::namespace_marker::render_namespace_markers;
+use crate::utils::chunk::render_chunk_exports::get_export_items;
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
@@ -13,6 +12,9 @@ use crate::{
     render_chunk_exports::render_chunk_exports,
   },
 };
+use rolldown_common::{ChunkKind, ExportsKind, Module, OutputExports, WrapKind};
+use rolldown_error::DiagnosableResult;
+use rolldown_sourcemap::{ConcatSource, RawSource};
 
 pub fn render_cjs(
   ctx: &mut GenerateContext<'_>,
@@ -36,9 +38,23 @@ pub fn render_cjs(
     concat_source.add_source(Box::new(RawSource::new(intro)));
   }
 
-  if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
+  // Note that the determined `export_mode` should be used in `render_chunk_exports` to render exports.
+  // We also need to get the export mode for rendering the namespace markers.
+  // So we determine the export mode (from auto) here and use it in the following code.
+  let export_mode = if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     if let Module::Ecma(entry_module) = &ctx.link_output.module_table.modules[entry_id] {
       if matches!(entry_module.exports_kind, ExportsKind::Esm) {
+        let export_items = get_export_items(ctx.chunk, ctx.link_output);
+        let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
+        let export_mode = determine_export_mode(&ctx.options.exports, entry_module, &export_items)?;
+        // Only `named` export can we render the namespace markers.
+        if matches!(&export_mode, OutputExports::Named) {
+          if let Some(marker) =
+            render_namespace_markers(&ctx.options.es_module, has_default_export, false)
+          {
+            concat_source.add_source(Box::new(RawSource::new(marker.into())));
+          }
+        }
         let meta = &ctx.link_output.metas[entry_id];
         meta.require_bindings_for_star_exports.iter().for_each(|(importee_idx, binding_ref)| {
           let importee = &ctx.link_output.module_table.modules[*importee_idx];
@@ -56,9 +72,19 @@ pub fn render_cjs(
                           concat_source.add_source(Box::new(RawSource::new(import_stmt)));
 
         });
+        Some(export_mode)
+      } else {
+        // There is no need for a non-ESM export kind for determining the export mode.
+        None
       }
+    } else {
+      // The entry module should always be an ECMAScript module, so it is unreachable.
+      None
     }
-  }
+  } else {
+    // No need for common chunks to determine the export mode.
+    None
+  };
 
   // Runtime module should be placed before the generated `requires` in CJS format.
   // Because, we might need to generate `__toESM(require(...))` that relies on the runtime module.
@@ -109,7 +135,9 @@ pub fn render_cjs(
     }
   }
 
-  if let Some(exports) = render_chunk_exports(ctx)? {
+  let export_mode = export_mode.unwrap_or(OutputExports::Auto);
+
+  if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {
     concat_source.add_source(Box::new(RawSource::new(exports)));
   }
 

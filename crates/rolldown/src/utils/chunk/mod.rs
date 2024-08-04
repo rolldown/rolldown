@@ -10,8 +10,10 @@ use self::render_chunk_exports::get_chunk_export_names;
 
 pub mod collect_render_chunk_imports;
 pub mod deconflict_chunk_symbols;
+pub mod determine_export_mode;
 pub mod determine_use_strict;
 pub mod finalize_chunks;
+pub mod namespace_marker;
 pub mod render_chunk_exports;
 
 pub fn generate_pre_rendered_chunk(

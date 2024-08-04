@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var module = (function(exports) {
 
 "use strict";
+Object.defineProperty(exports, '__esModule', { value: true });
 
 
 //#region mod.js
@@ -31,7 +32,6 @@ function aaa() {
 }
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'aaa', {
   enumerable: true,
   get: function () {

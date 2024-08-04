@@ -12,6 +12,7 @@ mod types;
 pub mod bundler_options {
   pub use crate::inner_bundler_options::{
     types::{
+      es_module_flag::EsModuleFlag,
       filename_template::{FileNameRenderOptions, FilenameTemplate},
       input_item::InputItem,
       is_external::IsExternal,

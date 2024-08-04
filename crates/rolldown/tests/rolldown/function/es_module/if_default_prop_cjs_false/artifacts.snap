@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.cjs
+
+```js
+"use strict";
+
+//#region main.js
+const validator = "if_default_prop_false";
+const value = true;
+
+//#endregion
+Object.defineProperty(exports, 'validator', {
+  enumerable: true,
+  get: function () {
+    return validator;
+  }
+});
+Object.defineProperty(exports, 'value', {
+  enumerable: true,
+  get: function () {
+    return value;
+  }
+});
+```

@@ -10,7 +10,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 const out = __toESM(require("foo"));
 
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'out', {
   enumerable: true,
   get: function () {

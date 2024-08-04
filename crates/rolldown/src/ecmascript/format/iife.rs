@@ -1,12 +1,14 @@
 use crate::utils::chunk::collect_render_chunk_imports::{
   collect_render_chunk_imports, RenderImportDeclarationSpecifier,
 };
-use crate::utils::chunk::determine_use_strict::determine_use_strict;
+use crate::utils::chunk::namespace_marker::render_namespace_markers;
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
-  utils::chunk::render_chunk_exports::{
-    determine_export_mode, get_export_items, render_chunk_exports,
+  utils::chunk::{
+    determine_export_mode::determine_export_mode,
+    determine_use_strict::determine_use_strict,
+    render_chunk_exports::{get_export_items, render_chunk_exports},
   },
 };
 use rolldown_common::{ChunkKind, OutputExports};
@@ -34,6 +36,7 @@ pub fn render_iife(
   // iife wrapper start
   let export_items = get_export_items(ctx.chunk, ctx.link_output);
   let has_exports = !export_items.is_empty();
+  let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
   // Since before rendering the `determine_export_mode` runs, `unwrap` here won't cause panic.
   // FIXME do not call `determine_export_mode` twice
   let entry_module = match ctx.chunk.kind {
@@ -42,10 +45,8 @@ pub fn render_iife(
     }
     ChunkKind::Common => unreachable!("iife should be entry point chunk"),
   };
-  let named_exports = matches!(
-    determine_export_mode(&ctx.options.exports, entry_module, &export_items)?,
-    OutputExports::Named
-  );
+  let export_mode = determine_export_mode(&ctx.options.exports, entry_module, &export_items)?;
+  let named_exports = matches!(&export_mode, OutputExports::Named);
 
   let (import_code, externals) = render_iife_chunk_imports(ctx);
 
@@ -67,6 +68,14 @@ pub fn render_iife(
     concat_source.add_source(Box::new(RawSource::new(intro)));
   }
 
+  if named_exports {
+    if let Some(marker) =
+      render_namespace_markers(&ctx.options.es_module, has_default_export, false)
+    {
+      concat_source.add_source(Box::new(RawSource::new(marker.into())));
+    }
+  }
+
   concat_source.add_source(Box::new(RawSource::new(import_code)));
 
   // chunk content
@@ -80,7 +89,7 @@ pub fn render_iife(
   });
 
   // iife exports
-  if let Some(exports) = render_chunk_exports(ctx)? {
+  if let Some(exports) = render_chunk_exports(ctx, Some(&export_mode)) {
     concat_source.add_source(Box::new(RawSource::new(exports)));
   }
 

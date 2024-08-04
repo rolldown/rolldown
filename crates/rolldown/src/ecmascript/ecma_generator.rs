@@ -107,12 +107,7 @@ impl Generator for EcmaGenerator {
     };
 
     let concat_source = match ctx.options.format {
-      OutputFormat::Esm => {
-        match render_esm(ctx, rendered_module_sources, banner, footer, intro, outro) {
-          Ok(concat_source) => concat_source,
-          Err(errors) => return Ok(Err(errors)),
-        }
-      }
+      OutputFormat::Esm => render_esm(ctx, rendered_module_sources, banner, footer, intro, outro),
       OutputFormat::Cjs => {
         match render_cjs(ctx, rendered_module_sources, banner, footer, intro, outro) {
           Ok(concat_source) => concat_source,

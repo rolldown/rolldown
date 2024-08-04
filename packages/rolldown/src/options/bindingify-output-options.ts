@@ -19,6 +19,7 @@ export function bindingifyOutputOptions(
     footer,
     intro,
     outro,
+    esModule,
   } = outputOptions
   return {
     dir,
@@ -40,6 +41,7 @@ export function bindingifyOutputOptions(
     footer,
     intro,
     outro,
+    esModule: bindingifyEsModule(esModule),
     name,
     entryFileNames,
     chunkFileNames,
@@ -67,5 +69,26 @@ function bindingifySourcemap(
 
     default:
       throw new Error(`unknown sourcemap: ${sourcemap}`)
+  }
+}
+
+function bindingifyEsModule(
+  esModule: NormalizedOutputOptions['esModule'],
+): BindingOutputOptions['esModule'] {
+  switch (esModule) {
+    case 'always':
+    case true:
+      return 'always'
+
+    case 'never':
+    case false:
+      return 'never'
+
+    case 'if-default-prop':
+    case undefined:
+      return 'if-default-prop'
+
+    default:
+      throw new Error(`unknown esModule: ${esModule}`)
   }
 }

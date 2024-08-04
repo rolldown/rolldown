@@ -1,0 +1,11 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## INVALID_EXPORT_OPTION
+
+```text
+[INVALID_EXPORT_OPTION] Error: "none" was specified for "output.exports", but entry module "main.js" has the following exports: "should_not_be_default".
+
+```

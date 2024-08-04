@@ -18,7 +18,6 @@ function inc() {
 }
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'count', {
   enumerable: true,
   get: function () {

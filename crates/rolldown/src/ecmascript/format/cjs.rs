@@ -46,7 +46,7 @@ pub fn render_cjs(
       if matches!(entry_module.exports_kind, ExportsKind::Esm) {
         let export_items = get_export_items(ctx.chunk, ctx.link_output);
         let has_default_export = export_items.iter().any(|(name, _)| name.as_str() == "default");
-        let export_mode = determine_export_mode(&ctx.options.exports, entry_module, &export_items)?;
+        let export_mode = determine_export_mode(ctx, entry_module, &export_items)?;
         // Only `named` export can we render the namespace markers.
         if matches!(&export_mode, OutputExports::Named) {
           if let Some(marker) =

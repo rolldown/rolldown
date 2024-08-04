@@ -6,8 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
-// Banner
-
 var module = (function() {
 
 "use strict";
@@ -18,4 +16,6 @@ var main_default = "banner";
 //#endregion
 return main_default;
 })();
+// Footer
+
 ```

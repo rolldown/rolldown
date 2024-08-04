@@ -3,19 +3,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main.mjs
+## main.cjs
 
 ```js
-// Banner
-
-var module = (function() {
-
 "use strict";
 
 //#region main.js
 var main_default = "banner";
 
 //#endregion
-return main_default;
-})();
+module.exports = main_default;
+// Footer
+
 ```

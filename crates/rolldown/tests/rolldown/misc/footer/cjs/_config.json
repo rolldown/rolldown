@@ -1,6 +1,6 @@
 {
   "config": {
     "format": "cjs",
-    "exports": "named"
+    "footer": "// Footer\n"
   }
 }

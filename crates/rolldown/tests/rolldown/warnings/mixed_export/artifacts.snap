@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## MIXED_EXPORT
+
+```text
+[MIXED_EXPORT] Warning: Entry module "main" is using named (including "a", "default") and default exports together. Consumers of your bundle will have to use `main.js.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+
+```
+# Assets
+
+## main.mjs
+
+```js
+var bundle = (function(exports) {
+
+"use strict";
+Object.defineProperty(exports, '__esModule', { value: true });
+
+//#region main.js
+var main_default = 1;
+const a = 2;
+
+//#endregion
+Object.defineProperty(exports, 'a', {
+  enumerable: true,
+  get: function () {
+    return a;
+  }
+});
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return main_default;
+  }
+});
+return exports;
+})({});
+```

@@ -1,6 +1,7 @@
 {
   "config": {
     "format": "iife",
-    "outro": "// outro"
+    "outro": "// outro",
+    "name": "module"
   }
 }

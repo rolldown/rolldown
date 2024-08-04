@@ -14,13 +14,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
-var module = (function(node_path) {
+var bundle = (function(node_path) {
 
 "use strict";
-const { default: nodePath } = node_path;
+const { join } = node_path;
 
 //#region main.js
-console.log(nodePath);
+console.log(join("a", "b"));
 
 //#endregion
 })(node_path);

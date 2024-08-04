@@ -68,18 +68,18 @@ pub fn generate_identifier(
         },
       ))
     } else if ctx.options.extend {
-      let name = generate_callee(name.as_str());
+      let callee = generate_callee(name.as_str());
       if matches!(export_mode, OutputExports::Named) {
         // In named exports, the `extend` option will make the assignment disappear and
         // the modification will be done extending the existed object (the `name` option).
-        Ok((String::new(), format!("this{name} = this{name} || {{}}")))
+        Ok((String::new(), format!("this{callee} = this{callee} || {{}}")))
       } else {
         Ok((
           String::new(),
           // If there isn't a name in default export, we shouldn't assign the function to `this[""]`.
           // If there is, we should assign the function to `this["name"]`,
           // because there isn't an object that we can extend.
-          if ctx.options.name.is_some() { format!("this{name}") } else { String::new() },
+          if name.is_empty() { String::new() } else { format!("this{callee}") },
         ))
       }
     } else if is_validate_assignee_identifier_name(name) {

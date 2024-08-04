@@ -23,13 +23,13 @@
 # dependencies not shared by any other crates, would be ignored, as the target
 # list here is effectively saying which targets you are building for.
 targets = [
-    # The triple can be any string, but only the target triples built in to
-    # rustc (as of 1.40) can be checked against actual config expressions
-    # { triple = "x86_64-unknown-linux-musl" },
-    # You can also specify which target_features you promise are enabled for a
-    # particular target. target_features are currently not validated against
-    # the actual valid features supported by the target architecture.
-    # { triple = "wasm32-unknown-unknown", features = ["atomics"] },
+  # The triple can be any string, but only the target triples built in to
+  # rustc (as of 1.40) can be checked against actual config expressions
+  # { triple = "x86_64-unknown-linux-musl" },
+  # You can also specify which target_features you promise are enabled for a
+  # particular target. target_features are currently not validated against
+  # the actual valid features supported by the target architecture.
+  # { triple = "wasm32-unknown-unknown", features = ["atomics"] },
 ]
 # When creating the dependency graph used as the source of truth when checks are
 # executed, this field can be used to prune crates from the graph, removing them
@@ -67,7 +67,7 @@ feature-depth = 1
 db-path = "~/.cargo/advisory-db"
 # The url(s) of the advisory databases to use
 db-urls = ["https://github.com/rustsec/advisory-db"]
-yanked = "warn"
+yanked  = "warn"
 # The lint level for crates with security notices. Note that as of
 # 2019-12-17 there are no security notice advisories in
 # https://github.com/rustsec/advisory-db
@@ -95,7 +95,7 @@ allow = [
   "Unicode-3.0",
   "MPL-2.0",
   #"Apache-2.0 WITH LLVM-exception",
-] 
+]
 # Lint level for licenses considered copyleft
 # Blanket approval or denial for OSI-approved or FSF Free/Libre licenses
 # * both - The license will be approved if it is both OSI-approved *AND* FSF
@@ -115,28 +115,28 @@ confidence-threshold = 0.8
 # Allow 1 or more licenses on a per-crate basis, so that particular licenses
 # aren't accepted for every possible crate as with the normal allow list
 exceptions = [
-    # Each entry is the crate and version constraint, and its specific allow
-    # list
-    #{ allow = ["Zlib"], crate = "adler32" },
+  # Each entry is the crate and version constraint, and its specific allow
+  # list
+  #{ allow = ["Zlib"], crate = "adler32" },
 ]
 
 # Some crates don't have (easily) machine readable licensing information,
 # adding a clarification entry for it allows you to manually specify the
 # licensing information
-#[[licenses.clarify]]
+[[licenses.clarify]]
 # The package spec the clarification applies to
-#crate = "ring"
+crate = "ring"
 # The SPDX expression for the license requirements of the crate
-#expression = "MIT AND ISC AND OpenSSL"
+expression = "MIT AND ISC AND OpenSSL"
 # One or more files in the crate's source used as the "source of truth" for
 # the license expression. If the contents match, the clarification will be used
 # when running the license check, otherwise the clarification will be ignored
 # and the crate will be checked normally, which may produce warnings or errors
 # depending on the rest of your configuration
-#license-files = [
-# Each entry is a crate relative path, and the (opaque) hash of its contents
-#{ path = "LICENSE", hash = 0xbd0eed23 }
-#]
+license-files = [
+  # Each entry is a crate relative path, and the (opaque) hash of its contents
+  { path = "LICENSE", hash = 0xbd0eed23 },
+]
 
 [licenses.private]
 # If true, ignores workspace crates that aren't published, or are only
@@ -148,7 +148,7 @@ ignore = false
 # is only published to private registries, and ignore is true, the crate will
 # not have its license(s) checked
 registries = [
-    #"https://sekretz.com/registry
+  #"https://sekretz.com/registry
 ]
 
 # This section is considered when running `cargo deny check bans`.
@@ -175,16 +175,16 @@ workspace-default-features = "allow"
 external-default-features = "allow"
 # List of crates that are allowed. Use with care!
 allow = [
-    #"ansi_term@0.11.0",
-    #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason it is allowed" },
+  #"ansi_term@0.11.0",
+  #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason it is allowed" },
 ]
 # List of crates to deny
 deny = [
-    #"ansi_term@0.11.0",
-    #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason it is banned" },
-    # Wrapper crates can optionally be specified to allow the crate when it
-    # is a direct dependency of the otherwise banned crate
-    #{ crate = "ansi_term@0.11.0", wrappers = ["this-crate-directly-depends-on-ansi_term"] },
+  #"ansi_term@0.11.0",
+  #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason it is banned" },
+  # Wrapper crates can optionally be specified to allow the crate when it
+  # is a direct dependency of the otherwise banned crate
+  #{ crate = "ansi_term@0.11.0", wrappers = ["this-crate-directly-depends-on-ansi_term"] },
 ]
 
 # List of features to allow/deny
@@ -212,16 +212,16 @@ deny = [
 
 # Certain crates/versions that will be skipped when doing duplicate detection.
 skip = [
-    #"ansi_term@0.11.0",
-    #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason why it can't be updated/removed" },
+  #"ansi_term@0.11.0",
+  #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason why it can't be updated/removed" },
 ]
 # Similarly to `skip` allows you to skip certain crates during duplicate
 # detection. Unlike skip, it also includes the entire tree of transitive
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite.
 skip-tree = [
-    #"ansi_term@0.11.0", # will be skipped along with _all_ of its direct and transitive dependencies
-    #{ crate = "ansi_term@0.11.0", depth = 20 },
+  #"ansi_term@0.11.0", # will be skipped along with _all_ of its direct and transitive dependencies
+  #{ crate = "ansi_term@0.11.0", depth = 20 },
 ]
 
 # This section is considered when running `cargo deny check sources`.

@@ -3,12 +3,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
-## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
-
-```text
-[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
-
-```
 ## MISSING_GLOBAL_NAME
 
 ```text
@@ -20,7 +14,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
-(function(node_path) {
+var module = (function(node_path) {
 
 "use strict";
 const { default: nodePath } = node_path;

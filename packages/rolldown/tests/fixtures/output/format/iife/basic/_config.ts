@@ -9,8 +9,9 @@ export default defineTest({
     },
   },
   afterTest: (output) => {
+    // In rollup, the without any input, the output is an empty IIFE, without the assignment.
     expect(output.output[0].code).toMatchInlineSnapshot(`
-      "var myModule = (function() {
+      "(function() {
 
 
       })();"

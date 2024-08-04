@@ -31,7 +31,6 @@ Object.defineProperty(exports, 'b', {
     return b;
   }
 });
-return exports;
 })(this.test.module = this.test.module || {});
   }
 }

@@ -60,6 +60,7 @@ pub fn generate_identifier(
       let (decl, expr) = generate_namespace_definition(name);
       Ok((
         decl,
+        // Extend the object if the `extend` option is enabled.
         if ctx.options.extend && matches!(export_mode, OutputExports::Named) {
           format!("{expr} = {expr} || {{}}")
         } else {
@@ -69,11 +70,20 @@ pub fn generate_identifier(
     } else if ctx.options.extend {
       let name = generate_callee(name.as_str());
       if matches!(export_mode, OutputExports::Named) {
+        // In named exports, the `extend` option will make the assignment disappear and
+        // the modification will be done extending the existed object (the `name` option).
         Ok((String::new(), format!("this{name} = this{name} || {{}}")))
       } else {
-        Ok((String::new(), format!("this{name}")))
+        Ok((
+          String::new(),
+          // If there isn't a name in default export, we shouldn't assign the function to `this[""]`.
+          // If there is, we should assign the function to `this["name"]`,
+          // because there isn't an object that we can extend.
+          if ctx.options.name.is_some() { format!("this{name}") } else { String::new() },
+        ))
       }
     } else if is_validate_assignee_identifier_name(name) {
+      // If valid, we can use the `var` statement to declare the variable.
       Ok((String::new(), format!("var {name}")))
     } else {
       // This behavior is aligned with Rollup. If using `output.extend: true`, this error won't be triggered.

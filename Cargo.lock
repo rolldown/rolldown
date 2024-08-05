@@ -2277,7 +2277,9 @@ name = "rolldown_plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "async-trait",
+ "oxc_index",
  "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_resolver",
@@ -2336,6 +2338,7 @@ dependencies = [
 name = "rolldown_plugin_module_preload_polyfill"
 version = "0.1.0"
 dependencies = [
+ "rolldown_common",
  "rolldown_plugin",
 ]
 
@@ -2352,6 +2355,7 @@ name = "rolldown_resolver"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "dashmap 6.0.1",
  "itertools 0.13.0",
  "oxc_resolver",

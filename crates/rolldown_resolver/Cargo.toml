@@ -17,6 +17,7 @@ workspace = true
 
 [dependencies]
 anyhow          = { workspace = true }
+arcstr          = { workspace = true }
 dashmap         = { workspace = true }
 itertools       = { workspace = true }
 oxc_resolver    = { workspace = true }

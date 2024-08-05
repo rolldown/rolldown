@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use arcstr::ArcStr;
 use oxc::{
   index::IndexVec,
   semantic::{ScopeTree, SymbolTable},
@@ -29,14 +28,14 @@ pub struct EcmaModuleFactory;
 impl EcmaModuleFactory {
   fn scan_ast(
     module_idx: ModuleIdx,
-    id: &Arc<str>,
+    id: &ArcStr,
     ast: &mut EcmaAst,
     symbols: SymbolTable,
     scopes: ScopeTree,
     module_def_format: ModuleDefFormat,
   ) -> UnhandleableResult<(AstScopes, ScanResult, AstSymbols, SymbolRef)> {
     let (mut ast_symbols, ast_scopes) = make_ast_scopes_and_symbols(symbols, scopes);
-    let module_id = ModuleId::new(Arc::clone(id));
+    let module_id = ModuleId::new(ArcStr::clone(id));
     let repr_name = module_id.as_path().representative_file_name();
     let repr_name = legitimize_identifier_name(&repr_name);
 
@@ -63,7 +62,7 @@ impl ModuleFactory for EcmaModuleFactory {
     ctx: &mut CreateModuleContext<'any>,
     args: CreateModuleArgs,
   ) -> anyhow::Result<DiagnosableResult<CreateModuleReturn>> {
-    let id = ModuleId::new(Arc::clone(&ctx.resolved_id.id));
+    let id = ModuleId::new(ArcStr::clone(&ctx.resolved_id.id));
     let stable_id = id.stabilize(&ctx.options.cwd);
 
     let parse_result = parse_to_ecma_ast(
@@ -104,6 +103,7 @@ impl ModuleFactory for EcmaModuleFactory {
       exports_kind,
       repr_name,
       warnings: scan_warnings,
+      has_eval,
     } = scan_result;
     ctx.warnings.extend(scan_warnings);
 
@@ -112,9 +112,9 @@ impl ModuleFactory for EcmaModuleFactory {
 
     for (record, info) in import_records.iter().zip(&resolved_deps) {
       if record.kind.is_static() {
-        imported_ids.push(Arc::clone(&info.id).into());
+        imported_ids.push(ArcStr::clone(&info.id).into());
       } else {
-        dynamically_imported_ids.push(Arc::clone(&info.id).into());
+        dynamically_imported_ids.push(ArcStr::clone(&info.id).into());
       }
     }
 
@@ -184,6 +184,7 @@ impl ModuleFactory for EcmaModuleFactory {
       dynamically_imported_ids,
       side_effects,
       module_type: ctx.module_type.clone(),
+      has_eval,
     };
 
     Ok(Ok(CreateModuleReturn {

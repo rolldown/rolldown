@@ -15,4 +15,5 @@ doctest = false
 workspace = true
 
 [dependencies]
+rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }

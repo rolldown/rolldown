@@ -1,9 +1,10 @@
 use crate::{
-  HookResolveDynamicImportArgs, HookResolveIdArgs, HookResolveIdExtraOptions, PluginDriver,
+  types::hook_resolve_id_skipped::HookResolveIdSkipped, HookResolveDynamicImportArgs,
+  HookResolveIdArgs, HookResolveIdExtraOptions, PluginDriver,
 };
 use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId};
 use rolldown_resolver::{ResolveError, Resolver};
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")
@@ -19,14 +20,19 @@ pub async fn resolve_id_with_plugins(
   request: &str,
   importer: Option<&str>,
   options: HookResolveIdExtraOptions,
+  skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   let import_kind = options.kind;
   if matches!(import_kind, ImportKind::DynamicImport) {
     if let Some(r) = plugin_driver
-      .resolve_dynamic_import(&HookResolveDynamicImportArgs {
-        importer: importer.map(std::convert::AsRef::as_ref),
-        source: request,
-      })
+      .resolve_dynamic_import(
+        &HookResolveDynamicImportArgs {
+          importer: importer.map(std::convert::AsRef::as_ref),
+          source: request,
+          options: &options,
+        },
+        skipped_resolve_calls.as_ref(),
+      )
       .await?
     {
       return Ok(Ok(ResolvedId {
@@ -41,11 +47,14 @@ pub async fn resolve_id_with_plugins(
   }
   // Run plugin resolve_id first, if it is None use internal resolver as fallback
   if let Some(r) = plugin_driver
-    .resolve_id(&HookResolveIdArgs {
-      importer: importer.map(std::convert::AsRef::as_ref),
-      specifier: request,
-      options,
-    })
+    .resolve_id(
+      &HookResolveIdArgs {
+        importer: importer.map(std::convert::AsRef::as_ref),
+        specifier: request,
+        options,
+      },
+      skipped_resolve_calls.as_ref(),
+    )
     .await?
   {
     return Ok(Ok(ResolvedId {

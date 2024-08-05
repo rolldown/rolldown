@@ -3,6 +3,7 @@ mod plugin_context;
 mod plugin_driver;
 mod pluginable;
 mod transform_plugin_context;
+mod type_aliases;
 mod types;
 mod utils;
 

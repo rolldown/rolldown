@@ -195,6 +195,10 @@ export interface BindingManifestPluginConfig {
   outPath: string
 }
 
+export interface BindingModulePreloadPolyfillPluginConfig {
+  skip?: boolean
+}
+
 export interface BindingOutputOptions {
   name?: string
   entryFileNames?: string
@@ -223,6 +227,7 @@ export interface BindingPluginContextResolvedId {
 
 export interface BindingPluginContextResolveOptions {
   importKind?: 'import' | 'dynamic-import' | 'require-call'
+  skipSelf?: boolean
 }
 
 export interface BindingPluginOptions {

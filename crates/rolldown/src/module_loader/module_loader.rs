@@ -51,7 +51,7 @@ pub struct ModuleLoader {
   options: SharedOptions,
   shared_context: Arc<TaskContext>,
   rx: tokio::sync::mpsc::Receiver<Msg>,
-  visited: FxHashMap<Arc<str>, ModuleIdx>,
+  visited: FxHashMap<ArcStr, ModuleIdx>,
   runtime_id: ModuleIdx,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
@@ -121,7 +121,7 @@ impl ModuleLoader {
     resolved_id: ResolvedId,
     is_user_defined_entry: bool,
   ) -> ModuleIdx {
-    match self.visited.entry(Arc::<str>::clone(&resolved_id.id)) {
+    match self.visited.entry(resolved_id.id.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
         if resolved_id.is_external {
@@ -138,7 +138,7 @@ impl ModuleLoader {
             },
           };
           let ext =
-            ExternalModule::new(idx, resolved_id.id.to_string(), external_module_side_effects);
+            ExternalModule::new(idx, ArcStr::clone(&resolved_id.id), external_module_side_effects);
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
           idx
         } else {

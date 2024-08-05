@@ -1,3 +1,4 @@
+use arcstr::ArcStr;
 use dashmap::DashMap;
 use itertools::Itertools;
 use rolldown_common::{ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions};
@@ -138,7 +139,7 @@ impl<F: FileSystem + Default> Resolver<F> {
 
 #[derive(Debug)]
 pub struct ResolveReturn {
-  pub path: Arc<str>,
+  pub path: ArcStr,
   pub module_def_format: ModuleDefFormat,
   pub package_json: Option<Arc<PackageJson>>,
 }

@@ -52,23 +52,35 @@ pub struct RawImportRecord {
   pub kind: ImportKind,
   /// See [ImportRecord] for more details.
   pub namespace_ref: SymbolRef,
-  /// See [ImportRecord] for more details.
-  pub contains_import_star: bool,
-  /// See [ImportRecord] for more details.
-  pub contains_import_default: bool,
-  /// See [ImportRecord] for more details.
-  pub is_plain_import: bool,
+  pub module_request_start: u32,
+  pub import_record_meta: ImportRecordMeta,
+}
+
+bitflags::bitflags! {
+  #[derive(Debug)]
+  pub struct ImportRecordMeta: u8 {
+    /// See [ImportRecord] for more details.
+    const CONTAINS_IMPORT_STAR = 1;
+    /// See [ImportRecord] for more details.
+    const CONTAINS_IMPORT_DEFAULT = 1 << 1;
+    /// See [ImportRecord] for more details.
+    const IS_PLAIN_IMPORT = 1 << 2;
+  }
 }
 
 impl RawImportRecord {
-  pub fn new(specifier: Rstr, kind: ImportKind, namespace_ref: SymbolRef) -> Self {
+  pub fn new(
+    specifier: Rstr,
+    kind: ImportKind,
+    namespace_ref: SymbolRef,
+    module_request_start: u32,
+  ) -> Self {
     Self {
       module_request: specifier,
       kind,
       namespace_ref,
-      contains_import_default: false,
-      contains_import_star: false,
-      is_plain_import: false,
+      module_request_start,
+      import_record_meta: ImportRecordMeta::empty(),
     }
   }
 
@@ -78,9 +90,13 @@ impl RawImportRecord {
       resolved_module,
       kind: self.kind,
       namespace_ref: self.namespace_ref,
-      contains_import_star: self.contains_import_star,
-      contains_import_default: self.contains_import_default,
-      is_plain_import: self.is_plain_import,
+      contains_import_star: self
+        .import_record_meta
+        .contains(ImportRecordMeta::CONTAINS_IMPORT_STAR),
+      contains_import_default: self
+        .import_record_meta
+        .contains(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT),
+      is_plain_import: self.import_record_meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT),
     }
   }
 }

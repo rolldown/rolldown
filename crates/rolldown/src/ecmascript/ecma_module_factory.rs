@@ -104,6 +104,7 @@ impl ModuleFactory for EcmaModuleFactory {
       exports_kind,
       repr_name,
       warnings: scan_warnings,
+      has_eval,
     } = scan_result;
     ctx.warnings.extend(scan_warnings);
 
@@ -184,6 +185,7 @@ impl ModuleFactory for EcmaModuleFactory {
       dynamically_imported_ids,
       side_effects,
       module_type: ctx.module_type.clone(),
+      has_eval,
     };
 
     Ok(Ok(CreateModuleReturn {

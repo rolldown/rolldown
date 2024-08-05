@@ -20,6 +20,7 @@ pub struct EcmaModule {
   pub idx: ModuleIdx,
   pub ecma_ast_idx: Option<EcmaAstIdx>,
   pub is_user_defined_entry: bool,
+  pub has_eval: bool,
   pub id: ModuleId,
   /// `stable_id` is calculated based on `id` to be stable across machine and os.
   pub stable_id: String,

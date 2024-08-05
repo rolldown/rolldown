@@ -289,6 +289,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 - entry_js-!~{000}~.mjs => entry_js-BIn6p0ye.mjs
 
+# tests/esbuild/dce/remove_unused_imports_eval
+
+- entry_js-!~{000}~.mjs => entry_js-SWd28jIV.mjs
+
+# tests/esbuild/dce/remove_unused_imports_eval_ts
+
+- entry_js-!~{000}~.mjs => entry_js-0R20SjjQ.mjs
+
 # tests/esbuild/dce/remove_unused_pure_comment_calls
 
 - entry_js-!~{000}~.mjs => entry_js-Tk6Vfya3.mjs

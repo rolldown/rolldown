@@ -87,8 +87,9 @@ impl RawImportRecord {
     }
   }
 
+  #[allow(clippy::cast_possible_truncation)]
   pub fn module_request_end(&self) -> u32 {
-    self.module_request_start + self.module_request.len() as u32 + 2 // +2 for quotes
+    self.module_request_start + self.module_request.len() as u32 + 2u32 // +2 for quotes
   }
 
   pub fn into_import_record(self, resolved_module: ModuleIdx) -> ImportRecord {

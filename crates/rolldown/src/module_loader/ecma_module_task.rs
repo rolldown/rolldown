@@ -1,3 +1,4 @@
+use arcstr::ArcStr;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -17,7 +18,7 @@ pub struct EcmaModuleTask {
   ctx: Arc<TaskContext>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
-  importer_id: Option<String>,
+  importer_id: Option<ArcStr>,
   errors: Vec<BuildDiagnostic>,
   is_user_defined_entry: bool,
 }
@@ -27,7 +28,7 @@ impl EcmaModuleTask {
     ctx: Arc<TaskContext>,
     idx: ModuleIdx,
     resolved_id: ResolvedId,
-    importer_id: Option<String>,
+    importer_id: Option<ArcStr>,
   ) -> Self {
     let is_user_defined_entry = importer_id.is_none();
     Self { ctx, module_idx: idx, resolved_id, importer_id, errors: vec![], is_user_defined_entry }
@@ -66,9 +67,9 @@ impl EcmaModuleTask {
       Ok(ret) => ret,
       Err(err) => {
         self.errors.push(BuildDiagnostic::unresolved_import(
-          self.resolved_id.id.to_string(),
+          self.resolved_id.id.clone(),
           self.importer_id.clone(),
-          err.to_string(),
+          err.to_string().into(),
         ));
         return Ok(());
       }

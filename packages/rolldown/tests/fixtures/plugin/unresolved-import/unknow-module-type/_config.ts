@@ -13,7 +13,7 @@ export default defineTest({
       {
         resolveId(id: string) {
           resolveIdFn()
-          if (id === 'test.js') {
+          if (id === 'test.javascript') {
             return id
           }
         },

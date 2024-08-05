@@ -119,7 +119,7 @@ impl ModuleLoader {
   fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
-    importer_id: Option<String>,
+    importer_id: Option<ArcStr>,
   ) -> ModuleIdx {
     match self.visited.entry(resolved_id.id.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),

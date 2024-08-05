@@ -55,7 +55,7 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn unresolved_import(resolved: String, importer: Option<String>, reason: String) -> Self {
+  pub fn unresolved_import(resolved: ArcStr, importer: Option<ArcStr>, reason: ArcStr) -> Self {
     Self::new_inner(UnresolvedImport { resolved, importer, reason })
   }
 

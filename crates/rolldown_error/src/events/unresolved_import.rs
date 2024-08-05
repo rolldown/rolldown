@@ -1,12 +1,14 @@
+use arcstr::ArcStr;
+
 use crate::types::diagnostic_options::DiagnosticOptions;
 
 use super::BuildEvent;
 
 #[derive(Debug)]
 pub struct UnresolvedImport {
-  pub(crate) resolved: String,
-  pub(crate) importer: Option<String>,
-  pub(crate) reason: String,
+  pub(crate) resolved: ArcStr,
+  pub(crate) importer: Option<ArcStr>,
+  pub(crate) reason: ArcStr,
 }
 
 impl BuildEvent for UnresolvedImport {

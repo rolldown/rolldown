@@ -1,7 +1,7 @@
-import { test } from 'vitest'
-import type { TestConfig } from './src/types'
-import { InputOptions, OutputOptions, rolldown } from 'rolldown'
 import nodePath from 'node:path'
+import { test } from 'vitest'
+import { InputOptions, OutputOptions, rolldown } from 'rolldown'
+import type { TestConfig } from './src/types'
 
 main()
 
@@ -24,7 +24,11 @@ function main() {
           await testConfig.afterTest(output)
         }
       } catch (err) {
-        throw new Error(`Failed in ${testConfigPath}`, { cause: err })
+        if (typeof testConfig.onerror !== 'function') {
+          throw new Error(`Failed in ${testConfigPath}`, { cause: err })
+        } else {
+          testConfig.onerror(err as Error)
+        }
       }
     })
   }
@@ -49,7 +53,11 @@ function main() {
             await testConfig.afterTest(output)
           }
         } catch (err) {
-          throw new Error(`Failed in ${testConfigPath}`, { cause: err })
+          if (typeof testConfig.onerror !== 'function') {
+            throw new Error(`Failed in ${testConfigPath}`, { cause: err })
+          } else {
+            testConfig.onerror(err as Error)
+          }
         }
       },
     )

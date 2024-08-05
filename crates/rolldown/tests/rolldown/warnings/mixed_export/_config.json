@@ -1,0 +1,6 @@
+{
+  "config": {
+    "format": "iife",
+    "name": "bundle"
+  }
+}

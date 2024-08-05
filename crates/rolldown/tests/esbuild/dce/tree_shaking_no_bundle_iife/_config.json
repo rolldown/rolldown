@@ -6,6 +6,7 @@
         "import": "entry.js"
       }
     ],
-    "format": "iife"
+    "format": "iife",
+    "name": "module"
   }
 }

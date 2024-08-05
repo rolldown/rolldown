@@ -327,7 +327,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/dce/tree_shaking_no_bundle_iife
 
-- entry_js-!~{000}~.mjs => entry_js-k-4tRlGF.mjs
+- entry_js-!~{000}~.mjs => entry_js-RCe4bw0b.mjs
 
 # tests/esbuild/dce/tree_shaking_object_property
 
@@ -1206,9 +1206,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - a-!~{000}~.mjs => a-S8Phwe4_.mjs
 - ab-!~{004}~.mjs => ab-P6qnXG7s.mjs
 - b-!~{001}~.mjs => b-Cfj63ou-.mjs
-- c-!~{002}~.mjs => c-93Mg2Flh.mjs
-- d-!~{003}~.mjs => d-RMSqXibr.mjs
-- d~1-!~{005}~.mjs => d~1-xVe4ksNZ.mjs
+- c-!~{002}~.mjs => c-typAVFSG.mjs
+- d-!~{003}~.mjs => d-L_kdIPvd.mjs
+- d~1-!~{006}~.mjs => d~1-OHeb9gJw.mjs
 
 # tests/esbuild/splitting/dynamic-commonjs-into-es6
 
@@ -1222,15 +1222,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/esbuild/splitting/dynamic_and_not_dynamic_commonjs_into_es6
 
-- foo-!~{001}~.mjs => foo-F8SnUEwv.mjs
-- foo~1-!~{002}~.mjs => foo~1-0STtZaWV.mjs
-- main-!~{000}~.mjs => main-KdiA-7_V.mjs
+- foo-!~{001}~.mjs => foo-bcMfcoTk.mjs
+- foo~1-!~{003}~.mjs => foo~1-GHDfbT69.mjs
+- main-!~{000}~.mjs => main-T5HWIm2o.mjs
 
 # tests/esbuild/splitting/dynamic_and_not_dynamic_es6_into_es6
 
-- foo-!~{001}~.mjs => foo-CS7CHgr9.mjs
-- foo~1-!~{002}~.mjs => foo~1-5VDnW9zX.mjs
-- main-!~{000}~.mjs => main-J4YTXHVL.mjs
+- foo-!~{001}~.mjs => foo-FH-aBb5m.mjs
+- foo~1-!~{003}~.mjs => foo~1-NnQaXjY5.mjs
+- main-!~{000}~.mjs => main-pBqAE1Do.mjs
 
 # tests/esbuild/splitting/dynamic_import_issue_272
 
@@ -1375,8 +1375,8 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/code_splitting/basic
 
-- dynamic-!~{003}~.mjs => dynamic-HWUNIxCZ.mjs
-- main1-!~{000}~.mjs => main1-rhlY1e0x.mjs
+- dynamic-!~{004}~.mjs => dynamic-VF2TGUn6.mjs
+- main1-!~{000}~.mjs => main1-rIQjdWv-.mjs
 - main2-!~{001}~.mjs => main2-9lXyDNHK.mjs
 - share-!~{002}~.mjs => share-p7WNRG2n.mjs
 
@@ -1394,9 +1394,9 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/code_splitting/import_export_unicode
 
-- foo-!~{001}~.mjs => foo-qsRrmZ88.mjs
-- foo~1-!~{002}~.mjs => foo~1-2UxlmrF1.mjs
-- main-!~{000}~.mjs => main-1SR_XaSO.mjs
+- foo-!~{001}~.mjs => foo-6KtgwBs8.mjs
+- foo~1-!~{003}~.mjs => foo~1-SAQ2emDX.mjs
+- main-!~{000}~.mjs => main-Iuj6QrqP.mjs
 
 # tests/rolldown/errors/ambiguous_external_namespace
 
@@ -1443,7 +1443,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/es_module/always
 
-- main-!~{000}~.mjs => main-hfZMxSfK.mjs
+- main-!~{000}~.mjs => main-GMcEoSM-.mjs
 
 # tests/rolldown/function/es_module/if_default_prop_cjs_false
 
@@ -1455,27 +1455,27 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/es_module/if_default_prop_iife_false
 
-- main-!~{000}~.mjs => main--AmBLPNH.mjs
+- main-!~{000}~.mjs => main-MTVu9T3l.mjs
 
 # tests/rolldown/function/es_module/if_default_prop_iife_true
 
-- main-!~{000}~.mjs => main-7ac-m6lM.mjs
+- main-!~{000}~.mjs => main-6o0sUXXk.mjs
 
 # tests/rolldown/function/es_module/never
 
-- main-!~{000}~.mjs => main--AmBLPNH.mjs
+- main-!~{000}~.mjs => main-MTVu9T3l.mjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
-- lazy-chunk-!~{001}~.mjs => lazy-chunk-J-MH5Fxj.mjs
-- main-!~{000}~.mjs => main-yiKTx6Xh.mjs
-- user-lib-!~{002}~.mjs => user-lib-WvmTODzy.mjs
+- lazy-chunk-!~{001}~.mjs => lazy-chunk-J1hzVBvk.mjs
+- main-!~{000}~.mjs => main-CBS75r_P.mjs
+- user-lib-!~{003}~.mjs => user-lib-r-8uXvh3.mjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/strict
 
-- lazy-chunk-!~{001}~.mjs => lazy-chunk-PHRl1iN_.mjs
-- main-!~{000}~.mjs => main-X0WOTJjQ.mjs
-- user-lib-!~{002}~.mjs => user-lib-_zuNgdH7.mjs
+- lazy-chunk-!~{001}~.mjs => lazy-chunk--4nEtOLs.mjs
+- main-!~{000}~.mjs => main-knHvaFWt.mjs
+- user-lib-!~{003}~.mjs => user-lib-nzh2V7Pn.mjs
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_399/non_strict
 
@@ -1511,11 +1511,11 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/export_mode/iife/auto/none
 
-- main-!~{000}~.mjs => main-MXkFYr18.mjs
+- main-!~{000}~.mjs => main-A37QOJSD.mjs
 
 # tests/rolldown/function/export_mode/iife/default
 
-- main-!~{000}~.mjs => main-9upwMAGj.mjs
+- main-!~{000}~.mjs => main-iElRRI9C.mjs
 
 # tests/rolldown/function/export_mode/iife/named
 
@@ -1589,15 +1589,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/format/iife/external_modules
 
-- main-!~{000}~.mjs => main-Ss0NlRCd.mjs
+- main-!~{000}~.mjs => main--fT_EYD7.mjs
 
 # tests/rolldown/function/format/iife/external_modules_with_globals
 
-- main-!~{000}~.mjs => main-MwWasrct.mjs
+- main-!~{000}~.mjs => main-HGvX_g3V.mjs
 
-# tests/rolldown/function/format/iife/iife-with-name
+# tests/rolldown/function/format/iife/iife_with_name
 
-- main-!~{000}~.mjs => main-I-ndoLMs.mjs
+- main-!~{000}~.mjs => main--FmiP1j0.mjs
 
 # tests/rolldown/function/intro/cjs
 
@@ -1609,7 +1609,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/intro/iife
 
-- main-!~{000}~.mjs => main-s5GQ6pv_.mjs
+- main-!~{000}~.mjs => main-vkJUr68A.mjs
 
 # tests/rolldown/function/minify/basic
 
@@ -1718,7 +1718,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/function/outro/iife
 
-- main-!~{000}~.mjs => main-rzBDQzY9.mjs
+- main-!~{000}~.mjs => main-9Wmw8Qyq.mjs
 
 # tests/rolldown/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
@@ -1759,18 +1759,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/issues/122/a
 
 - b-!~{003}~.mjs => b-yd-qNhBj.mjs
-- c-!~{004}~.mjs => c-wjeapSAL.mjs
-- entry1-!~{000}~.mjs => entry1-FXLlf7dp.mjs
-- entry2-!~{001}~.mjs => entry2-NdqhyN06.mjs
-- entry3-!~{002}~.mjs => entry3-h4Zgh5ZR.mjs
+- c-!~{005}~.mjs => c-XVgXQcRd.mjs
+- entry1-!~{000}~.mjs => entry1-27-uXeft.mjs
+- entry2-!~{001}~.mjs => entry2-muN8TekG.mjs
+- entry3-!~{002}~.mjs => entry3-wh3Pk6rw.mjs
 
 # tests/rolldown/issues/122/b
 
-- 1-!~{004}~.mjs => 1-gOnRQYC3.mjs
+- 1-!~{005}~.mjs => 1-cfAryLZn.mjs
 - 2-!~{003}~.mjs => 2-cUdSqz08.mjs
-- a-!~{000}~.mjs => a-CkTTyzB-.mjs
-- b-!~{001}~.mjs => b-YHTcy7uz.mjs
-- c-!~{002}~.mjs => c-4I3nBJuY.mjs
+- a-!~{000}~.mjs => a-UJeerxdy.mjs
+- b-!~{001}~.mjs => b-NGDwuXrn.mjs
+- c-!~{002}~.mjs => c-iWl5yRnj.mjs
 
 # tests/rolldown/issues/1443
 
@@ -1794,7 +1794,7 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/misc/banner/iife
 
-- main-!~{000}~.mjs => main-xSRQid4O.mjs
+- main-!~{000}~.mjs => main-BeOND2MM.mjs
 
 # tests/rolldown/misc/basic
 
@@ -1979,15 +1979,15 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks
 
-- async-entry-!~{001}~.mjs => async-entry-KPjI4-Wo.mjs
-- main-!~{000}~.mjs => main-D2Sgh11x.mjs
-- shared-!~{002}~.mjs => shared-x38TbtaP.mjs
+- async-entry-!~{001}~.mjs => async-entry-vk1CvgVD.mjs
+- main-!~{000}~.mjs => main-FGi5yxGe.mjs
+- shared-!~{003}~.mjs => shared--GTZNyb6.mjs
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- async-entry-!~{001}~.cjs => async-entry-t9ilMDdn.cjs
-- main-!~{000}~.cjs => main-E765J0dI.cjs
-- shared-!~{002}~.cjs => shared-6fkygxiT.cjs
+- async-entry-!~{001}~.cjs => async-entry-JSulq17A.cjs
+- main-!~{000}~.cjs => main-uhoDhOaQ.cjs
+- shared-!~{003}~.cjs => shared-R7vFlqQk.cjs
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export
 
@@ -2087,6 +2087,18 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/warnings/eval
 
 - main-!~{000}~.mjs => main-SHxh3snY.mjs
+
+# tests/rolldown/warnings/missing_global_name
+
+- main-!~{000}~.mjs => main-Nrqe9YQk.mjs
+
+# tests/rolldown/warnings/missing_name_option_for_iife_export
+
+- main-!~{000}~.mjs => main-Or0NsqB1.mjs
+
+# tests/rolldown/warnings/mixed_export
+
+- main-!~{000}~.mjs => main-1v1Ck7af.mjs
 
 # tests/rolldown/warnings/unresolved_import_treated_as_external
 

@@ -6,7 +6,8 @@
     ],
     "globals": {
       "node:path": "path"
-    }
+    },
+    "name": "module"
   },
   "expectExecuted": false
 }

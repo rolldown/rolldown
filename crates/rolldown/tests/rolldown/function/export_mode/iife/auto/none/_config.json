@@ -2,6 +2,6 @@
   "config": {
     "exports": "auto",
     "format": "iife",
-    "name": "MyLibrary"
+    "name": "module"
   }
 }

@@ -1,6 +1,7 @@
 {
   "config": {
     "format": "cjs",
-    "esModule": "always"
+    "esModule": "always",
+    "exports": "named"
   }
 }

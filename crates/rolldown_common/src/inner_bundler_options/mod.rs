@@ -41,6 +41,8 @@ pub struct BundlerOptions {
   pub name: Option<String>,
   pub entry_filenames: Option<String>,
   pub chunk_filenames: Option<String>,
+  pub css_entry_filenames: Option<String>,
+  pub css_chunk_filenames: Option<String>,
   pub asset_filenames: Option<String>,
   pub dir: Option<String>,
   pub format: Option<OutputFormat>,

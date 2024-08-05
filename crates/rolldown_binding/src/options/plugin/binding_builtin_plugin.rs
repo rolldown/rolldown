@@ -74,6 +74,13 @@ impl From<BindingManifestPluginConfig> for ManifestPluginConfig {
   }
 }
 
+#[napi_derive::napi(object)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BindingModulePreloadPolyfillPluginConfig {
+  pub skip: Option<bool>,
+}
+
 impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
   type Error = napi::Error;
 
@@ -90,7 +97,13 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
       }
       BindingBuiltinPluginName::DynamicImportVarsPlugin => Arc::new(DynamicImportVarsPlugin {}),
       BindingBuiltinPluginName::ModulePreloadPolyfillPlugin => {
-        Arc::new(ModulePreloadPolyfillPlugin {})
+        let skip = if let Some(options) = plugin.options {
+          let config = BindingModulePreloadPolyfillPluginConfig::from_unknown(options)?;
+          config.skip.unwrap_or_default()
+        } else {
+          false
+        };
+        Arc::new(ModulePreloadPolyfillPlugin { skip })
       }
       BindingBuiltinPluginName::ManifestPlugin => {
         let config = if let Some(options) = plugin.options {

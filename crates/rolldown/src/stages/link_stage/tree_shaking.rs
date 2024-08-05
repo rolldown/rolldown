@@ -3,7 +3,8 @@ use crate::types::symbols::Symbols;
 use oxc::index::IndexVec;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
-  EcmaModule, IndexModules, Module, ModuleIdx, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
+  EcmaModule, IndexModules, Module, ModuleIdx, ModuleType, StmtInfoIdx, SymbolOrMemberExprRef,
+  SymbolRef,
 };
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::FxHashSet;
@@ -50,7 +51,9 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
   if ctx.tree_shaking && !forced_no_treeshake {
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
       // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
-      if stmt_info.side_effect {
+      let bail_eval =
+        module.has_eval && !stmt_info.declared_symbols.is_empty() && stmt_info_id.index() != 0;
+      if stmt_info.side_effect || bail_eval {
         include_statement(ctx, module, stmt_info_id);
       }
     });
@@ -71,6 +74,11 @@ fn include_module(ctx: &mut Context, module: &EcmaModule) {
       Module::External(_) => {}
     }
   });
+  if module.has_eval && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
+    module.named_imports.keys().for_each(|symbol| {
+      include_symbol(ctx, *symbol);
+    });
+  }
 }
 
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {

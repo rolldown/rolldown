@@ -1,12 +1,14 @@
 use std::{path::Path, sync::Arc};
 
+use arcstr::ArcStr;
+
 use crate::{side_effects::HookSideEffects, ModuleDefFormat, PackageJson};
 
 use super::module_id::stabilize_module_id;
 
 #[derive(Debug)]
 pub struct ResolvedId {
-  pub id: Arc<str>,
+  pub id: ArcStr,
   // https://github.com/defunctzombie/package-browser-field-spec/blob/8c4869f6a5cb0de26d208de804ad0a62473f5a03/README.md?plain=1#L62-L77
   pub ignored: bool,
   pub module_def_format: ModuleDefFormat,

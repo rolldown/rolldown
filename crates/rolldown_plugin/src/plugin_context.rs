@@ -17,6 +17,7 @@ pub type SharedPluginContext = std::sync::Arc<PluginContext>;
 
 #[derive(Debug)]
 pub struct PluginContext {
+  pub(crate) skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
   pub(crate) plugin: Arc<dyn Pluginable>,
   pub(crate) resolver: Arc<Resolver>,
   pub(crate) plugin_driver: Weak<PluginDriver>,
@@ -26,51 +27,55 @@ pub struct PluginContext {
 }
 
 impl PluginContext {
+  pub fn new_shared_with_skipped_resolve_calls(
+    &self,
+    skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
+  ) -> SharedPluginContext {
+    Arc::new(PluginContext {
+      skipped_resolve_calls,
+      plugin: Arc::clone(&self.plugin),
+      plugin_driver: Weak::clone(&self.plugin_driver),
+      resolver: Arc::clone(&self.resolver),
+      file_emitter: Arc::clone(&self.file_emitter),
+      module_table: self.module_table.as_ref().map(Arc::clone),
+    })
+  }
+
   pub async fn resolve(
     &self,
     specifier: &str,
     importer: Option<&str>,
-    extra_options: &PluginContextResolveOptions,
+    extra_options: Option<PluginContextResolveOptions>,
   ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
     let plugin_driver = self
       .plugin_driver
       .upgrade()
       .ok_or_else(|| anyhow::format_err!("Plugin driver is already dropped."))?;
 
-    let skip = if extra_options.skip_self {
-      Some(Arc::new(HookResolveIdSkipped {
-        plugin: Arc::clone(&self.plugin),
-        importer: importer.map(ToString::to_string),
-        specifier: specifier.to_string(),
-      }))
-    } else {
-      None
-    };
+    let normalized_extra_options = extra_options.unwrap_or_default();
 
-    // Push skip to the list
-    if let Some(skip) = skip.as_ref() {
-      plugin_driver.resolve_skip.write().unwrap().push(Arc::clone(skip));
-    }
-
-    let result = resolve_id_with_plugins(
+    resolve_id_with_plugins(
       &self.resolver,
       &plugin_driver,
       specifier,
       importer,
-      HookResolveIdExtraOptions { is_entry: false, kind: extra_options.import_kind },
+      HookResolveIdExtraOptions { is_entry: false, kind: normalized_extra_options.import_kind },
+      if normalized_extra_options.skip_self {
+        let mut skipped_resolve_calls = Vec::with_capacity(self.skipped_resolve_calls.len() + 1);
+        skipped_resolve_calls.extend(self.skipped_resolve_calls.clone());
+        skipped_resolve_calls.push(Arc::new(HookResolveIdSkipped {
+          plugin: Arc::clone(&self.plugin),
+          importer: importer.map(Into::into),
+          specifier: specifier.into(),
+        }));
+        Some(skipped_resolve_calls)
+      } else if !self.skipped_resolve_calls.is_empty() {
+        Some(self.skipped_resolve_calls.clone())
+      } else {
+        None
+      },
     )
-    .await;
-
-    // Remove skip from the list
-    if let Some(skip) = skip {
-      let mut skip_list = plugin_driver.resolve_skip.write().unwrap();
-      let index = skip_list.iter().position(|s| Arc::ptr_eq(s, &skip));
-      if let Some(index) = index {
-        skip_list.remove(index);
-      }
-    }
-
-    result
+    .await
   }
 
   pub fn emit_file(&self, file: rolldown_common::EmittedAsset) -> String {

@@ -2277,6 +2277,7 @@ name = "rolldown_plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "async-trait",
  "rolldown_common",
  "rolldown_ecmascript",

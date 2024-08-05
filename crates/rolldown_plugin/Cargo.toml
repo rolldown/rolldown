@@ -19,6 +19,7 @@ workspace = true
 
 [dependencies]
 anyhow              = { workspace = true }
+arcstr              = { workspace = true }
 async-trait         = { workspace = true }
 rolldown_common     = { workspace = true }
 rolldown_ecmascript = { workspace = true }

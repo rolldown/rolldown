@@ -1,9 +1,13 @@
 use std::sync::Arc;
 
 use crate::{
-  pluginable::HookTransformAstReturn, types::hook_transform_ast_args::HookTransformAstArgs,
+  pluginable::HookTransformAstReturn,
+  types::{
+    hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
+  },
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveDynamicImportArgs,
-  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginDriver, TransformPluginContext,
+  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver,
+  TransformPluginContext,
   __inner::Pluginable,
 };
 use anyhow::Result;
@@ -41,23 +45,50 @@ impl PluginDriver {
     Ok(())
   }
 
-  fn get_skipped(&self, specifier: &str, importer: Option<&str>) -> Vec<Arc<dyn Pluginable>> {
-    let mut skipped = vec![];
-    for skip in &*self.resolve_skip.read().unwrap() {
-      if skip.specifier == specifier && skip.importer.as_deref() == importer {
-        skipped.push(Arc::clone(&skip.plugin));
+  #[inline]
+  fn get_resolve_call_skipped_plugins(
+    specifier: &str,
+    importer: Option<&str>,
+    skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
+  ) -> Vec<Arc<dyn Pluginable>> {
+    let mut skipped_plugins = vec![];
+    if let Some(skipped_resolve_calls) = skipped_resolve_calls {
+      for skip_resolve_call in skipped_resolve_calls {
+        if skip_resolve_call.specifier == specifier
+          && skip_resolve_call.importer.as_deref() == importer
+        {
+          skipped_plugins.push(Arc::clone(&skip_resolve_call.plugin));
+        }
       }
     }
-    skipped
+    skipped_plugins
   }
 
-  pub async fn resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
-    let skipped = self.get_skipped(args.specifier, args.importer);
+  pub async fn resolve_id(
+    &self,
+    args: &HookResolveIdArgs<'_>,
+    skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
+  ) -> HookResolveIdReturn {
+    let skipped_plugins =
+      Self::get_resolve_call_skipped_plugins(args.specifier, args.importer, skipped_resolve_calls);
     for (plugin, ctx) in &self.plugins {
-      if skipped.iter().any(|p| Arc::ptr_eq(p, plugin)) {
+      if skipped_plugins.iter().any(|p| Arc::ptr_eq(p, plugin)) {
         continue;
       }
-      if let Some(r) = plugin.call_resolve_id(ctx, args).await? {
+      if let Some(r) = plugin
+        .call_resolve_id(
+          &skipped_resolve_calls
+            .map(|skipped_resolve_calls| {
+              PluginContext::new_shared_with_skipped_resolve_calls(
+                ctx,
+                skipped_resolve_calls.clone(),
+              )
+            })
+            .unwrap_or(Arc::clone(ctx)),
+          args,
+        )
+        .await?
+      {
         return Ok(Some(r));
       }
     }
@@ -69,13 +100,28 @@ impl PluginDriver {
   pub async fn resolve_dynamic_import(
     &self,
     args: &HookResolveDynamicImportArgs<'_>,
+    skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
   ) -> HookResolveIdReturn {
-    let skipped = self.get_skipped(args.source, args.importer);
+    let skipped_plugins =
+      Self::get_resolve_call_skipped_plugins(args.source, args.importer, skipped_resolve_calls);
     for (plugin, ctx) in &self.plugins {
-      if skipped.iter().any(|p| Arc::ptr_eq(p, plugin)) {
+      if skipped_plugins.iter().any(|p| Arc::ptr_eq(p, plugin)) {
         continue;
       }
-      if let Some(r) = plugin.call_resolve_dynamic_import(ctx, args).await? {
+      if let Some(r) = plugin
+        .call_resolve_dynamic_import(
+          &skipped_resolve_calls
+            .map(|skipped_resolve_calls| {
+              PluginContext::new_shared_with_skipped_resolve_calls(
+                ctx,
+                skipped_resolve_calls.clone(),
+              )
+            })
+            .unwrap_or(Arc::clone(ctx)),
+          args,
+        )
+        .await?
+      {
         return Ok(Some(r));
       }
     }

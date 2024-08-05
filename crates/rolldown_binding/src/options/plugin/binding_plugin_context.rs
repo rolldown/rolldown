@@ -31,7 +31,7 @@ impl BindingPluginContext {
       .resolve(
         &specifier,
         importer.as_deref(),
-        &extra_options.unwrap_or_default().try_into().map_err(napi::Error::from_reason)?,
+        extra_options.map(TryInto::try_into).transpose().map_err(napi::Error::from_reason)?,
       )
       .await
       .map_err(|program_err| napi_error::resolve_error(&specifier, program_err))?

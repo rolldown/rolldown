@@ -112,6 +112,7 @@ impl ScanStage {
         args.specifier,
         None,
         HookResolveIdExtraOptions { is_entry: true, kind: ImportKind::Import },
+        None,
       )
       .await;
 

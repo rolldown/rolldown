@@ -1,12 +1,9 @@
-use std::sync::{Arc, RwLock, Weak};
+use std::sync::{Arc, Weak};
 
 use rolldown_common::{ModuleTable, SharedFileEmitter};
 use rolldown_resolver::Resolver;
 
-use crate::{
-  __inner::SharedPluginable, plugin_context::SharedPluginContext,
-  types::hook_resolve_id_skipped::HookResolveIdSkipped, PluginContext,
-};
+use crate::{__inner::SharedPluginable, plugin_context::SharedPluginContext, PluginContext};
 
 mod build_hooks;
 mod output_hooks;
@@ -15,7 +12,6 @@ pub type SharedPluginDriver = Arc<PluginDriver>;
 
 pub struct PluginDriver {
   plugins: Vec<(SharedPluginable, SharedPluginContext)>,
-  pub(crate) resolve_skip: RwLock<Vec<Arc<HookResolveIdSkipped>>>,
 }
 
 impl PluginDriver {
@@ -31,6 +27,7 @@ impl PluginDriver {
           (
             Arc::clone(&plugin),
             PluginContext {
+              skipped_resolve_calls: vec![],
               plugin: Arc::clone(&plugin),
               plugin_driver: Weak::clone(plugin_driver),
               resolver: Arc::clone(resolver),
@@ -42,7 +39,7 @@ impl PluginDriver {
         })
         .collect::<Vec<_>>();
 
-      Self { plugins: with_context, resolve_skip: RwLock::new(Vec::new()) }
+      Self { plugins: with_context }
     })
   }
 
@@ -58,6 +55,7 @@ impl PluginDriver {
           (
             Arc::clone(plugin),
             PluginContext {
+              skipped_resolve_calls: vec![],
               plugin: Arc::clone(plugin),
               plugin_driver: Weak::clone(plugin_driver),
               resolver: Arc::clone(&ctx.resolver),
@@ -69,7 +67,7 @@ impl PluginDriver {
         })
         .collect::<Vec<_>>();
 
-      Self { plugins: with_context, resolve_skip: RwLock::new(Vec::new()) }
+      Self { plugins: with_context }
     })
   }
 }

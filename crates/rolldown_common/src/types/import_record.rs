@@ -53,17 +53,17 @@ pub struct RawImportRecord {
   /// See [ImportRecord] for more details.
   pub namespace_ref: SymbolRef,
   pub module_request_start: u32,
-  pub import_record_meta: ImportRecordMeta,
+  pub meta: ImportRecordMeta,
 }
 
 bitflags::bitflags! {
   #[derive(Debug)]
   pub struct ImportRecordMeta: u8 {
-    /// See [ImportRecord] for more details.
+    /// If it is `import * as ns from '...'` or `export * as ns from '...'`
     const CONTAINS_IMPORT_STAR = 1;
-    /// See [ImportRecord] for more details.
+    /// If it is `import def from '...'`, `import { default as def }`, `export { default as def }` or `export { default } from '...'`
     const CONTAINS_IMPORT_DEFAULT = 1 << 1;
-    /// See [ImportRecord] for more details.
+    /// If it is `import {} from '...'` or `import '...'`
     const IS_PLAIN_IMPORT = 1 << 2;
   }
 }
@@ -80,7 +80,7 @@ impl RawImportRecord {
       kind,
       namespace_ref,
       module_request_start,
-      import_record_meta: ImportRecordMeta::empty(),
+      meta: ImportRecordMeta::empty(),
     }
   }
 
@@ -90,13 +90,7 @@ impl RawImportRecord {
       resolved_module,
       kind: self.kind,
       namespace_ref: self.namespace_ref,
-      contains_import_star: self
-        .import_record_meta
-        .contains(ImportRecordMeta::CONTAINS_IMPORT_STAR),
-      contains_import_default: self
-        .import_record_meta
-        .contains(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT),
-      is_plain_import: self.import_record_meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT),
+      meta: self.meta,
     }
   }
 }
@@ -110,10 +104,5 @@ pub struct ImportRecord {
   /// We will turn `import { foo } from './cjs.js'; console.log(foo);` to `var import_foo = require_cjs(); console.log(importcjs.foo)`;
   /// `namespace_ref` represent the potential `import_foo` in above example. It's useless if we imported n esm module.
   pub namespace_ref: SymbolRef,
-  /// If it is `import * as ns from '...'` or `export * as ns from '...'`
-  pub contains_import_star: bool,
-  /// If it is `import def from '...'`, `import { default as def }`, `export { default as def }` or `export { default } from '...'`
-  pub contains_import_default: bool,
-  /// If it is `import {} from '...'` or `import '...'`
-  pub is_plain_import: bool,
+  pub meta: ImportRecordMeta,
 }

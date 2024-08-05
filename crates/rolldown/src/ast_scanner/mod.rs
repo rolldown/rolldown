@@ -15,9 +15,9 @@ use oxc::{
   span::{CompactStr, GetSpan, Span},
 };
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, ImporterRecord,
-  LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  Specifier, StmtInfo, StmtInfos, SymbolRef,
+  AstScopes, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport,
+  MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier,
+  StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
@@ -337,9 +337,7 @@ impl<'me> AstScanner<'me> {
       span_imported,
     };
     if name_import.imported.is_default() {
-      self.result.import_records[record_id]
-        .import_record_meta
-        .insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
+      self.result.import_records[record_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
     }
     self.result.named_exports.insert(
       export_name.into(),
@@ -365,9 +363,7 @@ impl<'me> AstScanner<'me> {
       record_id,
     };
 
-    self.result.import_records[record_id]
-      .import_record_meta
-      .insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
+    self.result.import_records[record_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
     self.result.named_exports.insert(
       export_name.into(),
       LocalExport { referenced: generated_imported_as_ref, span: name_import.span_imported },
@@ -406,9 +402,7 @@ impl<'me> AstScanner<'me> {
       self.result.imports.insert(decl.span, record_id);
       // `export {} from '...'`
       if decl.specifiers.is_empty() {
-        self.result.import_records[record_id]
-          .import_record_meta
-          .insert(ImportRecordMeta::IS_PLAIN_IMPORT);
+        self.result.import_records[record_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
       }
     } else {
       decl.specifiers.iter().for_each(|spec| {
@@ -488,9 +482,7 @@ impl<'me> AstScanner<'me> {
     self.result.imports.insert(decl.span, rec_id);
     // // `import '...'` or `import {} from '...'`
     if decl.specifiers.as_ref().map_or(true, |s| s.is_empty()) {
-      self.result.import_records[rec_id]
-        .import_record_meta
-        .insert(ImportRecordMeta::IS_PLAIN_IMPORT);
+      self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
     }
 
     let Some(specifiers) = &decl.specifiers else { return };
@@ -500,22 +492,16 @@ impl<'me> AstScanner<'me> {
         let imported = spec.imported.name();
         self.add_named_import(sym, imported.as_str(), rec_id, spec.imported.span());
         if imported == "default" {
-          self.result.import_records[rec_id]
-            .import_record_meta
-            .insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
+          self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
         }
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
         self.add_named_import(spec.local.expect_symbol_id(), "default", rec_id, spec.span);
-        self.result.import_records[rec_id]
-          .import_record_meta
-          .insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
+        self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_DEFAULT);
       }
       oxc::ast::ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
         self.add_star_import(spec.local.expect_symbol_id(), rec_id, spec.span);
-        self.result.import_records[rec_id]
-          .import_record_meta
-          .insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
+        self.result.import_records[rec_id].meta.insert(ImportRecordMeta::CONTAINS_IMPORT_STAR);
       }
     });
   }

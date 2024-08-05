@@ -2,8 +2,8 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use oxc::index::IndexVec;
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportKind, Module, ModuleIdx, ModuleTable, OutputFormat, StmtInfo,
-  SymbolRef, WrapKind,
+  EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
+  OutputFormat, StmtInfo, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -142,7 +142,10 @@ impl<'a> LinkStage<'a> {
             if matches!(importee.exports_kind, ExportsKind::None) {
               if compat_mode {
                 // See https://github.com/evanw/esbuild/issues/447
-                if rec.contains_import_default || rec.contains_import_star {
+                if rec.meta.intersects(
+                  ImportRecordMeta::CONTAINS_IMPORT_DEFAULT
+                    | ImportRecordMeta::CONTAINS_IMPORT_STAR,
+                ) {
                   self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
                   // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
                   unsafe {
@@ -270,7 +273,9 @@ impl<'a> LinkStage<'a> {
                 // Make sure symbols from external modules are included and de_conflicted
                 let is_reexport_all = match rec.kind {
                   ImportKind::Import => {
-                    if matches!(self.options.format, OutputFormat::Cjs) && !rec.is_plain_import {
+                    if matches!(self.options.format, OutputFormat::Cjs)
+                      && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
+                    {
                       stmt_info
                         .referenced_symbols
                         .push(self.runtime.resolve_symbol("__toESM").into());

@@ -4,11 +4,11 @@ use crate::{
   pluginable::HookTransformAstReturn,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
+    plugin_idx::PluginIdx,
   },
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveDynamicImportArgs,
   HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver,
   TransformPluginContext,
-  __inner::Pluginable,
 };
 use anyhow::Result;
 use rolldown_common::{side_effects::HookSideEffects, ModuleInfo};
@@ -21,8 +21,10 @@ impl PluginDriver {
     let ret = {
       #[cfg(not(target_arch = "wasm32"))]
       {
-        block_on_spawn_all(self.plugins.iter().map(|(plugin, ctx)| plugin.call_build_start(ctx)))
-          .await
+        block_on_spawn_all(
+          self.iter_plugin_with_context().map(|(plugin, ctx)| plugin.call_build_start(ctx)),
+        )
+        .await
       }
       #[cfg(target_arch = "wasm32")]
       {
@@ -31,7 +33,7 @@ impl PluginDriver {
         // `implementation of `std::marker::Send` is not general enough`. It seems to be the problem related to HRTB, async and iterator.
         // I guess we need some rust experts here.
         let mut futures = vec![];
-        for (plugin, ctx) in &self.plugins {
+        for (plugin, ctx) in self.iter_plugin_with_context() {
           futures.push(plugin.call_build_start(ctx));
         }
         block_on_spawn_all(futures.into_iter()).await
@@ -50,14 +52,14 @@ impl PluginDriver {
     specifier: &str,
     importer: Option<&str>,
     skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
-  ) -> Vec<Arc<dyn Pluginable>> {
+  ) -> Vec<PluginIdx> {
     let mut skipped_plugins = vec![];
     if let Some(skipped_resolve_calls) = skipped_resolve_calls {
       for skip_resolve_call in skipped_resolve_calls {
         if skip_resolve_call.specifier == specifier
           && skip_resolve_call.importer.as_deref() == importer
         {
-          skipped_plugins.push(Arc::clone(&skip_resolve_call.plugin));
+          skipped_plugins.push(skip_resolve_call.plugin_idx);
         }
       }
     }
@@ -71,8 +73,8 @@ impl PluginDriver {
   ) -> HookResolveIdReturn {
     let skipped_plugins =
       Self::get_resolve_call_skipped_plugins(args.specifier, args.importer, skipped_resolve_calls);
-    for (plugin, ctx) in &self.plugins {
-      if skipped_plugins.iter().any(|p| Arc::ptr_eq(p, plugin)) {
+    for (plugin_idx, plugin, ctx) in self.iter_enumerated_plugin_with_context() {
+      if skipped_plugins.iter().any(|p| *p == plugin_idx) {
         continue;
       }
       if let Some(r) = plugin
@@ -104,8 +106,8 @@ impl PluginDriver {
   ) -> HookResolveIdReturn {
     let skipped_plugins =
       Self::get_resolve_call_skipped_plugins(args.source, args.importer, skipped_resolve_calls);
-    for (plugin, ctx) in &self.plugins {
-      if skipped_plugins.iter().any(|p| Arc::ptr_eq(p, plugin)) {
+    for (plugin_idx, plugin, ctx) in self.iter_enumerated_plugin_with_context() {
+      if skipped_plugins.iter().any(|p| *p == plugin_idx) {
         continue;
       }
       if let Some(r) = plugin
@@ -129,7 +131,7 @@ impl PluginDriver {
   }
 
   pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    for (plugin, ctx) in &self.plugins {
+    for (plugin, ctx) in self.iter_plugin_with_context() {
       if let Some(r) = plugin.call_load(ctx, args).await? {
         return Ok(Some(r));
       }
@@ -145,7 +147,7 @@ impl PluginDriver {
     original_code: &str,
   ) -> Result<String> {
     let mut code = args.code.to_string();
-    for (plugin, ctx) in &self.plugins {
+    for (plugin, ctx) in self.iter_plugin_with_context() {
       if let Some(r) = plugin
         .call_transform(
           &TransformPluginContext::new(Arc::clone(ctx), sourcemap_chain, original_code, args.id),
@@ -176,7 +178,7 @@ impl PluginDriver {
   }
 
   pub fn transform_ast(&self, mut args: HookTransformAstArgs) -> HookTransformAstReturn {
-    for (plugin, ctx) in &self.plugins {
+    for (plugin, ctx) in self.iter_plugin_with_context() {
       args.ast =
         plugin.call_transform_ast(ctx, HookTransformAstArgs { cwd: args.cwd, ast: args.ast })?;
     }
@@ -184,14 +186,14 @@ impl PluginDriver {
   }
 
   pub async fn module_parsed(&self, module_info: Arc<ModuleInfo>) -> HookNoopReturn {
-    for (plugin, ctx) in &self.plugins {
+    for (plugin, ctx) in self.iter_plugin_with_context() {
       plugin.call_module_parsed(ctx, Arc::clone(&module_info)).await?;
     }
     Ok(())
   }
 
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs>) -> HookNoopReturn {
-    for (plugin, ctx) in &self.plugins {
+    for (plugin, ctx) in self.iter_plugin_with_context() {
       plugin.call_build_end(ctx, args).await?;
     }
     Ok(())

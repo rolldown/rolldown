@@ -6,11 +6,10 @@ use rolldown_resolver::{ResolveError, Resolver};
 use crate::{
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped,
-    plugin_context_resolve_options::PluginContextResolveOptions,
+    plugin_context_resolve_options::PluginContextResolveOptions, plugin_idx::PluginIdx,
   },
   utils::resolve_id_with_plugins::resolve_id_with_plugins,
   HookResolveIdExtraOptions, PluginDriver,
-  __inner::Pluginable,
 };
 
 pub type SharedPluginContext = std::sync::Arc<PluginContext>;
@@ -18,7 +17,7 @@ pub type SharedPluginContext = std::sync::Arc<PluginContext>;
 #[derive(Debug)]
 pub struct PluginContext {
   pub(crate) skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
-  pub(crate) plugin: Arc<dyn Pluginable>,
+  pub(crate) plugin_idx: PluginIdx,
   pub(crate) resolver: Arc<Resolver>,
   pub(crate) plugin_driver: Weak<PluginDriver>,
   pub(crate) file_emitter: SharedFileEmitter,
@@ -33,7 +32,7 @@ impl PluginContext {
   ) -> SharedPluginContext {
     Arc::new(PluginContext {
       skipped_resolve_calls,
-      plugin: Arc::clone(&self.plugin),
+      plugin_idx: self.plugin_idx,
       plugin_driver: Weak::clone(&self.plugin_driver),
       resolver: Arc::clone(&self.resolver),
       file_emitter: Arc::clone(&self.file_emitter),
@@ -64,7 +63,7 @@ impl PluginContext {
         let mut skipped_resolve_calls = Vec::with_capacity(self.skipped_resolve_calls.len() + 1);
         skipped_resolve_calls.extend(self.skipped_resolve_calls.clone());
         skipped_resolve_calls.push(Arc::new(HookResolveIdSkipped {
-          plugin: Arc::clone(&self.plugin),
+          plugin_idx: self.plugin_idx,
           importer: importer.map(Into::into),
           specifier: specifier.into(),
         }));

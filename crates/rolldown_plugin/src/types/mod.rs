@@ -14,3 +14,4 @@ pub mod hook_transform_args;
 pub mod hook_transform_ast_args;
 pub mod hook_transform_output;
 pub mod plugin_context_resolve_options;
+pub mod plugin_idx;

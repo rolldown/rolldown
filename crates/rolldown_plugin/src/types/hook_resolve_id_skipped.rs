@@ -1,11 +1,10 @@
 use arcstr::ArcStr;
 
-use crate::__inner::Pluginable;
-use std::sync::Arc;
+use super::plugin_idx::PluginIdx;
 
 #[derive(Debug, Clone)]
 pub struct HookResolveIdSkipped {
   pub importer: Option<ArcStr>,
-  pub plugin: Arc<dyn Pluginable>,
+  pub plugin_idx: PluginIdx,
   pub specifier: ArcStr,
 }

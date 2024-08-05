@@ -18,7 +18,7 @@ impl BuildEvent for UnresolvedImport {
     format!(
       "Could not resolve {}{} - {}.",
       self.resolved,
-      self.importer.as_ref().map(|i| format!(" (imported by {})", i)).unwrap_or_default(),
+      self.importer.as_ref().map(|i| format!(" (imported by {i})")).unwrap_or_default(),
       self.reason
     )
   }

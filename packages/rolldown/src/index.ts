@@ -42,7 +42,7 @@ import {
   InternalModuleFormat,
   NormalizedOutputOptions,
 } from './options/normalized-output-options'
-import { RenderedChunk, transform } from './binding'
+import { RenderedChunk } from './binding'
 import { PartialNull } from './types/utils'
 import { NormalizedInputOptions } from './options/normalized-input-options'
 import { ModuleInfo } from './types/module-info'

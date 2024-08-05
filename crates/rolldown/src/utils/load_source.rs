@@ -47,7 +47,13 @@ pub async fn load_source(
       if let Some(guessed) = guessed {
         match &guessed {
           ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => {
-            Ok((StrOrBytes::Bytes(fs.read(resolved_id.id.as_path())?), Some(guessed)))
+            match fs.read(resolved_id.id.as_path()) {
+              Ok(source) => Ok((StrOrBytes::Bytes(source), Some(guessed))),
+              Err(_) => Err(anyhow::format_err!(
+                "No such file or directory, open '{}'",
+                resolved_id.id.as_path().absolutize().display()
+              )),
+            }
           }
           ModuleType::Js
           | ModuleType::Jsx
@@ -56,9 +62,13 @@ pub async fn load_source(
           | ModuleType::Json
           | ModuleType::Text
           | ModuleType::Empty
-          | ModuleType::Custom(_) => {
-            Ok((StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?), Some(guessed)))
-          }
+          | ModuleType::Custom(_) => match fs.read_to_string(resolved_id.id.as_path()) {
+            Ok(source) => Ok((StrOrBytes::Str(source), Some(guessed))),
+            Err(_) => Err(anyhow::format_err!(
+              "No such file or directory, open '{}'",
+              resolved_id.id.as_path().absolutize().display()
+            )),
+          },
         }
       } else {
         Err(anyhow::format_err!("Fail to guess module type for {:?}. So rolldown could load this asset correctly. Please use the load hook to load the resource", resolved_id.id))

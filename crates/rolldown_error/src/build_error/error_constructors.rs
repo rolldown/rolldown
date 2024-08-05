@@ -55,8 +55,8 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn unresolved_import(specifier: impl Into<String>, importer: impl Into<PathBuf>) -> Self {
-    Self::new_inner(UnresolvedImport { specifier: specifier.into(), importer: importer.into() })
+  pub fn unresolved_import(resolved: String, importer: Option<String>, reason: String) -> Self {
+    Self::new_inner(UnresolvedImport { resolved, importer, reason })
   }
 
   pub fn sourcemap_error(error: oxc::sourcemap::Error) -> Self {

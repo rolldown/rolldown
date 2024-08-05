@@ -17,6 +17,7 @@ pub struct EcmaModuleTask {
   ctx: Arc<TaskContext>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
+  importer_id: Option<String>,
   errors: Vec<BuildDiagnostic>,
   is_user_defined_entry: bool,
 }
@@ -26,9 +27,10 @@ impl EcmaModuleTask {
     ctx: Arc<TaskContext>,
     idx: ModuleIdx,
     resolved_id: ResolvedId,
-    is_user_defined_entry: bool,
+    importer_id: Option<String>,
   ) -> Self {
-    Self { ctx, module_idx: idx, resolved_id, errors: vec![], is_user_defined_entry }
+    let is_user_defined_entry = importer_id.is_none();
+    Self { ctx, module_idx: idx, resolved_id, importer_id, errors: vec![], is_user_defined_entry }
   }
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
@@ -51,7 +53,7 @@ impl EcmaModuleTask {
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let (source, module_type) = load_source(
+    let (source, module_type) = match load_source(
       &self.ctx.plugin_driver,
       &self.resolved_id,
       &self.ctx.fs,
@@ -59,7 +61,18 @@ impl EcmaModuleTask {
       &mut hook_side_effects,
       &self.ctx.options,
     )
-    .await?;
+    .await
+    {
+      Ok(ret) => ret,
+      Err(err) => {
+        self.errors.push(BuildDiagnostic::unresolved_import(
+          self.resolved_id.id.to_string(),
+          self.importer_id.clone(),
+          err.to_string(),
+        ));
+        return Ok(());
+      }
+    };
 
     let source = match source {
       StrOrBytes::Str(source) => {

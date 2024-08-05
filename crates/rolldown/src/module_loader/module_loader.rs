@@ -119,7 +119,7 @@ impl ModuleLoader {
   fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
-    is_user_defined_entry: bool,
+    importer_id: Option<String>,
   ) -> ModuleIdx {
     match self.visited.entry(resolved_id.id.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
@@ -146,12 +146,8 @@ impl ModuleLoader {
           not_visited.insert(idx);
           self.remaining += 1;
 
-          let task = EcmaModuleTask::new(
-            Arc::clone(&self.shared_context),
-            idx,
-            resolved_id,
-            is_user_defined_entry,
-          );
+          let task =
+            EcmaModuleTask::new(Arc::clone(&self.shared_context), idx, resolved_id, importer_id);
           #[cfg(target_family = "wasm")]
           {
             let handle = tokio::runtime::Handle::current();
@@ -191,7 +187,7 @@ impl ModuleLoader {
       .into_iter()
       .map(|(name, info)| EntryPoint {
         name,
-        id: self.try_spawn_new_task(info, /* is_user_defined_entry */ true),
+        id: self.try_spawn_new_task(info, /* is_user_defined_entry */ None),
         kind: EntryPointKind::UserDefined,
       })
       .inspect(|e| {
@@ -223,7 +219,7 @@ impl ModuleLoader {
             .into_iter()
             .zip(resolved_deps)
             .map(|(raw_rec, info)| {
-              let id = self.try_spawn_new_task(info, false);
+              let id = self.try_spawn_new_task(info, Some(module.stable_id().into()));
               // Dynamic imported module will be considered as an entry
               self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                 kind: raw_rec.kind,

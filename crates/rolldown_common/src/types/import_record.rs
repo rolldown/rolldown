@@ -52,6 +52,9 @@ pub struct RawImportRecord {
   pub kind: ImportKind,
   /// See [ImportRecord] for more details.
   pub namespace_ref: SymbolRef,
+  /// Why use start_offset instead of `Span`? Cause, directly pass `Span` will increase the type
+  /// size from `40` to `48`(8 bytes alignment). Since the `RawImportRecord` will be created multiple time,
+  /// Using this trick could save some memory.
   pub module_request_start: u32,
   pub meta: ImportRecordMeta,
 }
@@ -82,6 +85,10 @@ impl RawImportRecord {
       module_request_start,
       meta: ImportRecordMeta::empty(),
     }
+  }
+
+  pub fn module_request_end(&self) -> u32 {
+    self.module_request_start + self.module_request.len() as u32 + 2 // +2 for quotes
   }
 
   pub fn into_import_record(self, resolved_module: ModuleIdx) -> ImportRecord {

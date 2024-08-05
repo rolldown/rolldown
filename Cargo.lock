@@ -2353,6 +2353,7 @@ name = "rolldown_resolver"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "dashmap 6.0.1",
  "itertools 0.13.0",
  "oxc_resolver",

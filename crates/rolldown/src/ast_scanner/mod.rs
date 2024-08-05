@@ -570,6 +570,8 @@ impl<'me> AstScanner<'me> {
           self.cjs_exports_ident.get_or_insert(Span::new(ident.span.start, ident.span.start + 7));
         }
         if ident.name == "eval" {
+          // TODO: esbuild track has_eval for each scope this could reduce bailout range, and may
+          // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
           self.result.has_eval = true;
           self.result.warnings.push(
             BuildDiagnostic::eval(self.file_path.to_string(), self.source.clone(), ident.span)

@@ -16,6 +16,7 @@ const unsupportedHooks = new Set([
   'renderStart',
   'resolveDynamicImport',
   'writeBundle',
+  'resolveId',
 ])
 
 function createComposedPlugin(plugins: Plugin[]): Plugin {
@@ -59,11 +60,12 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           break
         }
         case 'resolveId': {
-          const handlers = batchedHooks.resolveId ?? []
-          batchedHooks.resolveId = handlers
-          if (plugin.resolveId) {
-            handlers.push(plugin.resolveId)
-          }
+          // TODO: support skipSelf in resolveId hook
+          // const handlers = batchedHooks.resolveId ?? []
+          // batchedHooks.resolveId = handlers
+          // if (plugin.resolveId) {
+          //   handlers.push(plugin.resolveId)
+          // }
           break
         }
         case 'buildEnd': {

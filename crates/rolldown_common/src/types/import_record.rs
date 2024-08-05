@@ -52,24 +52,44 @@ pub struct RawImportRecord {
   pub kind: ImportKind,
   /// See [ImportRecord] for more details.
   pub namespace_ref: SymbolRef,
-  /// See [ImportRecord] for more details.
-  pub contains_import_star: bool,
-  /// See [ImportRecord] for more details.
-  pub contains_import_default: bool,
-  /// See [ImportRecord] for more details.
-  pub is_plain_import: bool,
+  /// Why use start_offset instead of `Span`? Cause, directly pass `Span` will increase the type
+  /// size from `40` to `48`(8 bytes alignment). Since the `RawImportRecord` will be created multiple time,
+  /// Using this trick could save some memory.
+  pub module_request_start: u32,
+  pub meta: ImportRecordMeta,
+}
+
+bitflags::bitflags! {
+  #[derive(Debug)]
+  pub struct ImportRecordMeta: u8 {
+    /// If it is `import * as ns from '...'` or `export * as ns from '...'`
+    const CONTAINS_IMPORT_STAR = 1;
+    /// If it is `import def from '...'`, `import { default as def }`, `export { default as def }` or `export { default } from '...'`
+    const CONTAINS_IMPORT_DEFAULT = 1 << 1;
+    /// If it is `import {} from '...'` or `import '...'`
+    const IS_PLAIN_IMPORT = 1 << 2;
+  }
 }
 
 impl RawImportRecord {
-  pub fn new(specifier: Rstr, kind: ImportKind, namespace_ref: SymbolRef) -> Self {
+  pub fn new(
+    specifier: Rstr,
+    kind: ImportKind,
+    namespace_ref: SymbolRef,
+    module_request_start: u32,
+  ) -> Self {
     Self {
       module_request: specifier,
       kind,
       namespace_ref,
-      contains_import_default: false,
-      contains_import_star: false,
-      is_plain_import: false,
+      module_request_start,
+      meta: ImportRecordMeta::empty(),
     }
+  }
+
+  #[allow(clippy::cast_possible_truncation)]
+  pub fn module_request_end(&self) -> u32 {
+    self.module_request_start + self.module_request.len() as u32 + 2u32 // +2 for quotes
   }
 
   pub fn into_import_record(self, resolved_module: ModuleIdx) -> ImportRecord {
@@ -78,9 +98,7 @@ impl RawImportRecord {
       resolved_module,
       kind: self.kind,
       namespace_ref: self.namespace_ref,
-      contains_import_star: self.contains_import_star,
-      contains_import_default: self.contains_import_default,
-      is_plain_import: self.is_plain_import,
+      meta: self.meta,
     }
   }
 }
@@ -94,10 +112,5 @@ pub struct ImportRecord {
   /// We will turn `import { foo } from './cjs.js'; console.log(foo);` to `var import_foo = require_cjs(); console.log(importcjs.foo)`;
   /// `namespace_ref` represent the potential `import_foo` in above example. It's useless if we imported n esm module.
   pub namespace_ref: SymbolRef,
-  /// If it is `import * as ns from '...'` or `export * as ns from '...'`
-  pub contains_import_star: bool,
-  /// If it is `import def from '...'`, `import { default as def }`, `export { default as def }` or `export { default } from '...'`
-  pub contains_import_default: bool,
-  /// If it is `import {} from '...'` or `import '...'`
-  pub is_plain_import: bool,
+  pub meta: ImportRecordMeta,
 }

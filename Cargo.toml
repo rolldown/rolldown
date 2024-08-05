@@ -144,6 +144,7 @@ vfs                = "0.12.0"
 xxhash-rust        = "0.8.10"
 # oxc crates share the same version
 oxc                = { version = "0.23.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
+oxc_index          = { version = "0.23.0" }
 oxc_transform_napi = { version = "0.23.0" }
 
 [profile.release]

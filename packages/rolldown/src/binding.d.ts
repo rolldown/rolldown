@@ -227,6 +227,7 @@ export interface BindingPluginContextResolvedId {
 
 export interface BindingPluginContextResolveOptions {
   importKind?: 'import' | 'dynamic-import' | 'require-call'
+  skipSelf?: boolean
 }
 
 export interface BindingPluginOptions {

@@ -16,6 +16,7 @@ const unsupportedHooks = new Set([
   'renderStart',
   'resolveDynamicImport',
   'writeBundle',
+  'resolveId',
 ])
 
 function createComposedPlugin(plugins: Plugin[]): Plugin {
@@ -265,6 +266,12 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
   }
 
   if ('_parallel' in plugin) {
+    return false
+  }
+
+  if ('resolveId' in plugin) {
+    // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
+    // we have to bailout all plugins with `resolveId` hook.
     return false
   }
 

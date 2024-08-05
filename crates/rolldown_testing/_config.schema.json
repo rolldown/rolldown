@@ -330,7 +330,8 @@
             "base64",
             "dataurl",
             "binary",
-            "empty"
+            "empty",
+            "css"
           ]
         },
         {

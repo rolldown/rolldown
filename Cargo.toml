@@ -78,6 +78,7 @@ single_match_else = "allow"
 [workspace.dependencies]
 rolldown                                = { version = "0.1.0", path = "./crates/rolldown" }
 rolldown_common                         = { version = "0.1.0", path = "./crates/rolldown_common" }
+rolldown_css                            = { version = "0.1.0", path = "./crates/rolldown_css" }
 rolldown_ecmascript                     = { version = "0.1.0", path = "./crates/rolldown_ecmascript" }
 rolldown_error                          = { version = "0.1.0", path = "./crates/rolldown_error" }
 rolldown_fs                             = { version = "0.1.0", path = "./crates/rolldown_fs" }

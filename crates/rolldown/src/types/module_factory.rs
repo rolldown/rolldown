@@ -6,6 +6,7 @@ use rolldown_common::{
   side_effects::HookSideEffects, ImportRecordIdx, Module, ModuleDefFormat, ModuleIdx, ModuleType,
   RawImportRecord, ResolvedId, StrOrBytes,
 };
+use rolldown_css::CssAst;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
@@ -165,6 +166,7 @@ pub struct CreateModuleReturn {
   pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub ecma_related: Option<(EcmaAst, AstSymbols)>,
+  pub css_related: Option<CssAst>,
 }
 
 pub trait ModuleFactory {

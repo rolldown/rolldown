@@ -2,12 +2,15 @@ pub mod external_module;
 
 use oxc::index::IndexVec;
 
-use crate::{EcmaAstIdx, EcmaModule, ExternalModule, ImportRecord, ImportRecordIdx, ModuleIdx};
+use crate::{
+  CssModule, EcmaAstIdx, EcmaModule, ExternalModule, ImportRecord, ImportRecordIdx, ModuleIdx,
+};
 
 #[derive(Debug)]
 pub enum Module {
   Ecma(Box<EcmaModule>),
   External(Box<ExternalModule>),
+  Css(Box<CssModule>),
 }
 
 impl Module {
@@ -15,6 +18,7 @@ impl Module {
     match self {
       Module::Ecma(v) => v.idx,
       Module::External(v) => v.idx,
+      Module::Css(v) => v.idx,
     }
   }
 
@@ -22,6 +26,7 @@ impl Module {
     match self {
       Module::Ecma(v) => v.exec_order,
       Module::External(v) => v.exec_order,
+      Module::Css(v) => v.exec_order,
     }
   }
 
@@ -29,6 +34,7 @@ impl Module {
     match self {
       Module::Ecma(v) => &v.id,
       Module::External(v) => &v.name,
+      Module::Css(v) => &v.id,
     }
   }
 
@@ -36,6 +42,7 @@ impl Module {
     match self {
       Module::Ecma(v) => &v.side_effects,
       Module::External(v) => &v.side_effects,
+      Module::Css(v) => &v.side_effects,
     }
   }
 
@@ -43,6 +50,7 @@ impl Module {
     match self {
       Module::Ecma(v) => &v.stable_id,
       Module::External(v) => &v.name,
+      Module::Css(v) => &v.stable_id,
     }
   }
 
@@ -58,6 +66,7 @@ impl Module {
     match self {
       Module::Ecma(v) => Some(v),
       Module::External(_) => None,
+      Module::Css(_) => None,
     }
   }
 
@@ -65,6 +74,7 @@ impl Module {
     match self {
       Module::External(v) => Some(v),
       Module::Ecma(_) => None,
+      Module::Css(_) => None,
     }
   }
 
@@ -72,6 +82,7 @@ impl Module {
     match self {
       Module::Ecma(v) => Some(v),
       Module::External(_) => None,
+      Module::Css(_) => None,
     }
   }
 
@@ -79,6 +90,7 @@ impl Module {
     match self {
       Module::External(v) => Some(v),
       Module::Ecma(_) => None,
+      Module::Css(_) => None,
     }
   }
 
@@ -93,13 +105,15 @@ impl Module {
     match self {
       Module::Ecma(v) => v.import_records = records,
       Module::External(v) => v.import_records = records,
+      Module::Css(v) => v.import_records = records,
     }
   }
 
   pub fn set_ecma_ast_idx(&mut self, idx: EcmaAstIdx) {
     match self {
       Module::Ecma(v) => v.ecma_ast_idx = Some(idx),
-      Module::External(_) => panic!("set_ecma_ast_idx should be called on EcmaModule"),
+      Module::External(_) => panic!("set_ecma_ast_idx should be called on ExternalModule"),
+      Module::Css(_) => panic!("set_ecma_ast_idx should be called on CssModule"),
     }
   }
 }
@@ -113,5 +127,11 @@ impl From<EcmaModule> for Module {
 impl From<ExternalModule> for Module {
   fn from(module: ExternalModule) -> Self {
     Module::External(Box::new(module))
+  }
+}
+
+impl From<CssModule> for Module {
+  fn from(module: CssModule) -> Self {
+    Module::Css(Box::new(module))
   }
 }

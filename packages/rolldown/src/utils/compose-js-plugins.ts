@@ -60,12 +60,11 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           break
         }
         case 'resolveId': {
-          // TODO: support skipSelf in resolveId hook
-          // const handlers = batchedHooks.resolveId ?? []
-          // batchedHooks.resolveId = handlers
-          // if (plugin.resolveId) {
-          //   handlers.push(plugin.resolveId)
-          // }
+          const handlers = batchedHooks.resolveId ?? []
+          batchedHooks.resolveId = handlers
+          if (plugin.resolveId) {
+            handlers.push(plugin.resolveId)
+          }
           break
         }
         case 'buildEnd': {
@@ -267,6 +266,12 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
   }
 
   if ('_parallel' in plugin) {
+    return false
+  }
+
+  if ('resolveId' in plugin) {
+    // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
+    // we have to bailout all plugins with `resolveId` hook.
     return false
   }
 

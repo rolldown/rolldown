@@ -10,6 +10,10 @@ export default defineConfig({
       },
     }),
   ],
+  moduleTypes: {
+    ".css": "empty",
+    ".svg": "empty",
+  },
   resolve: {
     extensions: ['.ts', '.js', '.svg'],
   },

@@ -2154,6 +2154,7 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_rstr",
  "rolldown_sourcemap",
+ "rolldown_stats",
  "rolldown_testing",
  "rolldown_tracing",
  "rolldown_utils",
@@ -2282,6 +2283,7 @@ dependencies = [
  "rolldown_ecmascript",
  "rolldown_resolver",
  "rolldown_sourcemap",
+ "rolldown_stats",
  "rolldown_utils",
  "tracing",
 ]
@@ -2301,7 +2303,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_dynamic_import_vars"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "glob",
@@ -2378,6 +2380,10 @@ dependencies = [
  "rolldown_utils",
  "rustc-hash",
 ]
+
+[[package]]
+name = "rolldown_stats"
+version = "0.1.0"
 
 [[package]]
 name = "rolldown_testing"

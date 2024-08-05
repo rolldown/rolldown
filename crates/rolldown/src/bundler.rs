@@ -11,6 +11,7 @@ use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
+use itertools::Itertools;
 use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
@@ -18,6 +19,7 @@ use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, PluginDriver, SharedPluginDriver,
   __inner::SharedPluginable,
 };
+use rolldown_stats::hook_metric::{print_metrics, MsMetric};
 use tracing_chrome::FlushGuard;
 
 pub struct Bundler {
@@ -27,6 +29,8 @@ pub struct Bundler {
   pub(crate) resolver: SharedResolver,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) _log_guard: Option<FlushGuard>,
+  #[allow(unused)]
+  pub(crate) stats: Arc<rolldown_stats::Stats>,
 }
 
 impl Bundler {
@@ -117,7 +121,6 @@ impl Bundler {
       .plugin_driver
       .build_end(error_for_build_end_hook.map(|error| HookBuildEndArgs { error }).as_ref())
       .await?;
-
     Ok(Ok(scan_stage_output))
   }
 
@@ -161,6 +164,8 @@ impl Bundler {
     self.file_emitter.add_additional_files(&mut output.assets);
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
+    let res = self.stats.hook_metric.clone().into_iter().map(|item| item.to_ms()).collect_vec();
+    print_metrics(res);
 
     Ok(output)
   }

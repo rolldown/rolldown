@@ -8,6 +8,7 @@ use crate::{
 use anyhow::Result;
 use rolldown_common::{side_effects::HookSideEffects, ModuleInfo};
 use rolldown_sourcemap::SourceMap;
+use rolldown_stats::hook_metric::MetricType;
 use rolldown_utils::futures::block_on_spawn_all;
 
 impl PluginDriver {
@@ -41,7 +42,8 @@ impl PluginDriver {
   }
 
   pub async fn resolve_id(&self, args: &HookResolveIdArgs<'_>) -> HookResolveIdReturn {
-    for (plugin, ctx) in &self.plugins {
+    for (i, (plugin, ctx)) in self.plugins.iter().enumerate() {
+      let _guard = ctx.stats.hook_metric[i].guard(MetricType::Resolve);
       if let Some(r) = plugin.call_resolve_id(ctx, args).await? {
         return Ok(Some(r));
       }
@@ -64,7 +66,8 @@ impl PluginDriver {
   }
 
   pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    for (plugin, ctx) in &self.plugins {
+    for (i, (plugin, ctx)) in self.plugins.iter().enumerate() {
+      let _guard = ctx.stats.hook_metric[i].guard(MetricType::Load);
       if let Some(r) = plugin.call_load(ctx, args).await? {
         return Ok(Some(r));
       }
@@ -80,7 +83,8 @@ impl PluginDriver {
     original_code: &str,
   ) -> Result<String> {
     let mut code = args.code.to_string();
-    for (plugin, ctx) in &self.plugins {
+    for (i, (plugin, ctx)) in self.plugins.iter().enumerate() {
+      let _guard = ctx.stats.hook_metric[i].guard(MetricType::Transform);
       if let Some(r) = plugin
         .call_transform(
           &TransformPluginContext::new(Arc::clone(ctx), sourcemap_chain, original_code, args.id),

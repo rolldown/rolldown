@@ -165,7 +165,7 @@ impl Bundler {
 
     self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
     let res = self.stats.hook_metric.clone().into_iter().map(|item| item.to_ms()).collect_vec();
-    // print_metrics(res);
+    print_metrics(res);
 
     Ok(output)
   }

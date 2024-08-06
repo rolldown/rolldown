@@ -29,7 +29,8 @@
   },
   "files.associations": {
     "*.snap": "markdown",
-    "*.snap.new": "markdown"
+    "*.snap.new": "markdown",
+    "_config.json": "jsonc"
   },
   "git.ignoreLimitWarning": true,
   "json.schemas": [

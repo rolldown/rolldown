@@ -963,9 +963,12 @@ dependencies = [
 
 [[package]]
 name = "json-strip-comments"
-version = "1.0.2"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3d129799327c8f80861e467c59b825ba24c277dba6ad0d71a141dc98f9e04ee"
+checksum = "b271732a960335e715b6b2ae66a086f115c74eb97360e996d2bd809bfc063bba"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "jsonschema"
@@ -2399,6 +2402,7 @@ dependencies = [
  "anyhow",
  "dunce",
  "insta",
+ "json-strip-comments",
  "jsonschema",
  "regex",
  "rolldown",

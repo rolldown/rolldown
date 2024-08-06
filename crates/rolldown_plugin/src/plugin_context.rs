@@ -60,6 +60,7 @@ impl PluginContext {
       importer,
       false,
       normalized_extra_options.import_kind,
+      normalized_extra_options.custom,
       if normalized_extra_options.skip_self {
         let mut skipped_resolve_calls = Vec::with_capacity(self.skipped_resolve_calls.len() + 1);
         skipped_resolve_calls.extend(self.skipped_resolve_calls.clone());

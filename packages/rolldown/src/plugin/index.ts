@@ -50,6 +50,12 @@ export interface SourceDescription extends Partial<PartialNull<ModuleOptions>> {
   map?: SourceMapInput
 }
 
+interface ResolveIdExtraOptions {
+  custom?: CustomPluginOptions
+  isEntry: boolean
+  kind: 'import' | 'dynamic-import' | 'require-call'
+}
+
 export type ResolveIdResult = string | NullValue | false | PartialResolvedId
 
 export type LoadResult = NullValue | string | SourceDescription
@@ -82,7 +88,7 @@ export interface FunctionPluginHooks {
     this: PluginContext,
     source: string,
     importer: string | undefined,
-    extraOptions: BindingHookResolveIdExtraOptions,
+    extraOptions: ResolveIdExtraOptions,
   ) => ResolveIdResult
 
   /**

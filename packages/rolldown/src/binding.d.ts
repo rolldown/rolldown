@@ -133,6 +133,7 @@ export interface BindingHookRenderChunkOutput {
 }
 
 export interface BindingHookResolveIdExtraOptions {
+  custom?: number
   isEntry: boolean
   kind: 'import' | 'dynamic-import' | 'require-call'
 }
@@ -228,6 +229,7 @@ export interface BindingPluginContextResolvedId {
 export interface BindingPluginContextResolveOptions {
   importKind?: 'import' | 'dynamic-import' | 'require-call'
   skipSelf?: boolean
+  custom?: number
 }
 
 export interface BindingPluginOptions {

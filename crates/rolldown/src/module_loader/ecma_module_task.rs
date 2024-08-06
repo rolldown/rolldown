@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use rolldown_common::{Module, ModuleIdx, ResolvedId, StrOrBytes};
-use rolldown_error::{BuildDiagnostic, UnresolvedImportImporter};
+use rolldown_error::{BuildDiagnostic, UnloadableDependencyImporter};
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
@@ -20,12 +20,12 @@ use crate::{
 pub struct EcmaModuleTaskOwner {
   source: ArcStr,
   importer_id: Rstr,
-  importer_id_span: Span,
+  importee_span: Span,
 }
 
 impl EcmaModuleTaskOwner {
-  pub fn new(source: ArcStr, importer_id: Rstr, importer_id_span: Span) -> Self {
-    EcmaModuleTaskOwner { source, importer_id, importer_id_span }
+  pub fn new(source: ArcStr, importer_id: Rstr, importee_span: Span) -> Self {
+    EcmaModuleTaskOwner { source, importer_id, importee_span }
   }
 }
 
@@ -81,11 +81,11 @@ impl EcmaModuleTask {
     {
       Ok(ret) => ret,
       Err(err) => {
-        self.errors.push(BuildDiagnostic::unresolved_import(
-          self.resolved_id.debug_id(self.ctx.options.cwd.clone()).into(),
-          self.owner.as_ref().map(|owner| UnresolvedImportImporter {
+        self.errors.push(BuildDiagnostic::unloadable_dependency(
+          self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
+          self.owner.as_ref().map(|owner| UnloadableDependencyImporter {
             id: owner.importer_id.as_str().into(),
-            span: owner.importer_id_span,
+            span: owner.importee_span,
             source: owner.source.clone(),
           }),
           err.to_string().into(),

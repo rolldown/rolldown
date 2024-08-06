@@ -3,9 +3,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Errors
 
-## UNRESOLVED_IMPORT
+## UNLOADABLE_DEPENDENCY
 
 ```text
-[UNRESOLVED_IMPORT] Error: Could not resolve entry.javascript - Fail to guess module type for "entry.javascript". So rolldown could load this asset correctly. Please use the load hook to load the resource.
+[UNLOADABLE_DEPENDENCY] Error: Could not resolve entry.javascript - Fail to guess module type for "entry.javascript". So rolldown could not load this asset correctly. Please use the load hook to load the resource.
 
 ```

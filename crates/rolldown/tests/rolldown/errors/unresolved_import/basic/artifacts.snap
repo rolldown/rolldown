@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Errors
 
-## UNRESOLVED_IMPORT
+## UNLOADABLE_DEPENDENCY
 
 ```text
-[UNRESOLVED_IMPORT] Error: Could not resolve test.js
+[UNLOADABLE_DEPENDENCY] Error: Could not resolve test.js
    ╭─[entry.js:1:18]
    │
  1 │ import test from 'test.js'

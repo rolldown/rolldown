@@ -31,7 +31,7 @@ impl Plugin for UnknownModuleType {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn should_rewrite_dynamic_imports_that_import_external_modules() {
+async fn should_failed_to_guess_module_type_with_diagnostic() {
   let cwd = abs_file_dir!();
 
   IntegrationTest::new(TestMeta { expect_error: true, ..Default::default() })

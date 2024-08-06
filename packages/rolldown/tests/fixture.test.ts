@@ -1,7 +1,7 @@
-import nodePath from 'node:path'
 import { test } from 'vitest'
-import { InputOptions, OutputOptions, rolldown } from 'rolldown'
 import type { TestConfig } from './src/types'
+import { InputOptions, OutputOptions, rolldown } from 'rolldown'
+import nodePath from 'node:path'
 
 main()
 

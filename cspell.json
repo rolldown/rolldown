@@ -11,6 +11,7 @@
     "*.css",
     "*.svg",
     "*.data",
+    "*.d.ts",
     "/rollup",
     "/packages/rollup-tests/test",
     "/target",

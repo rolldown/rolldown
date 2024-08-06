@@ -51,15 +51,17 @@ pub fn pre_process_ecma_ast(
   }
 
   ast.program.with_mut(|fields| -> anyhow::Result<()> {
-    let define_config =
-      ReplaceGlobalDefinesConfig::new(&bundle_options.define).map_err(|errs| {
-        anyhow::format_err!(
-          "Failed to generate defines config from {:?}. Got {:#?}",
-          bundle_options.define,
-          errs
-        )
-      })?;
-    ReplaceGlobalDefines::new(fields.allocator, define_config).build(fields.program);
+    if !bundle_options.define.is_empty() {
+      let define_config =
+        ReplaceGlobalDefinesConfig::new(&bundle_options.define).map_err(|errs| {
+          anyhow::format_err!(
+            "Failed to generate defines config from {:?}. Got {:#?}",
+            bundle_options.define,
+            errs
+          )
+        })?;
+      ReplaceGlobalDefines::new(fields.allocator, define_config).build(fields.program);
+    }
     let options = CompressOptions::dead_code_elimination();
     Compressor::new(fields.allocator, options).build(fields.program);
 

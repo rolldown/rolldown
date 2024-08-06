@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.mjs
 
 ```js
-(function(exports) {
+var module = (function(exports) {
 
 "use strict";
 
@@ -15,7 +15,6 @@ const exports$1 = "exports";
 const exports$1$1 = "exports$1";
 
 //#endregion
-Object.defineProperty(exports, '__esModule', { value: true });
 Object.defineProperty(exports, 'exports', {
   enumerable: true,
   get: function () {

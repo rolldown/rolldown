@@ -6,9 +6,8 @@ use crate::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
     plugin_idx::PluginIdx,
   },
-  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveDynamicImportArgs,
-  HookResolveIdArgs, HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver,
-  TransformPluginContext,
+  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
+  HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
 };
 use anyhow::Result;
 use rolldown_common::{side_effects::HookSideEffects, ModuleInfo};
@@ -101,11 +100,11 @@ impl PluginDriver {
   // Only for rollup compatibility
   pub async fn resolve_dynamic_import(
     &self,
-    args: &HookResolveDynamicImportArgs<'_>,
+    args: &HookResolveIdArgs<'_>,
     skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
   ) -> HookResolveIdReturn {
     let skipped_plugins =
-      Self::get_resolve_call_skipped_plugins(args.source, args.importer, skipped_resolve_calls);
+      Self::get_resolve_call_skipped_plugins(args.specifier, args.importer, skipped_resolve_calls);
     for (plugin_idx, plugin, ctx) in self.iter_enumerated_plugin_with_context() {
       if skipped_plugins.iter().any(|p| *p == plugin_idx) {
         continue;

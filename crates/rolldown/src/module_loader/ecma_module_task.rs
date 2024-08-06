@@ -82,7 +82,7 @@ impl EcmaModuleTask {
       Ok(ret) => ret,
       Err(err) => {
         self.errors.push(BuildDiagnostic::unresolved_import(
-          self.resolved_id.id.clone(),
+          self.resolved_id.debug_id(self.ctx.options.cwd.clone()).into(),
           self.owner.as_ref().map(|owner| UnresolvedImportImporter {
             id: owner.importer_id.as_str().into(),
             span: owner.importer_id_span,

@@ -24,11 +24,7 @@ function main() {
           await testConfig.afterTest(output)
         }
       } catch (err) {
-        if (typeof testConfig.onerror !== 'function') {
-          throw new Error(`Failed in ${testConfigPath}`, { cause: err })
-        } else {
-          testConfig.onerror(err as Error)
-        }
+        throw new Error(`Failed in ${testConfigPath}`, { cause: err })
       }
     })
   }
@@ -53,11 +49,7 @@ function main() {
             await testConfig.afterTest(output)
           }
         } catch (err) {
-          if (typeof testConfig.onerror !== 'function') {
-            throw new Error(`Failed in ${testConfigPath}`, { cause: err })
-          } else {
-            testConfig.onerror(err as Error)
-          }
+          throw new Error(`Failed in ${testConfigPath}`, { cause: err })
         }
       },
     )

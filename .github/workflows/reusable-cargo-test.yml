@@ -32,6 +32,9 @@ jobs:
 
       - name: Build
         run: cargo test --no-run
+        env:
+          # Reject updated snapshots https://insta.rs/docs/advanced/#controlling-snapshot-updating
+          INSTA_UPDATE: no
 
       - name: Run Test
         run: just test-rust

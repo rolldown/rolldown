@@ -2,7 +2,7 @@ use crate::types::{
   binding_module_info::BindingModuleInfo, binding_outputs::BindingOutputs,
   js_callback::MaybeAsyncJsCallbackExt,
 };
-use rolldown_plugin::{Plugin, __inner::SharedPluginable};
+use rolldown_plugin::{Plugin, __inner::SharedPluginable, typedmap::TypedMapKey};
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 
 use super::{
@@ -10,6 +10,13 @@ use super::{
   types::binding_hook_resolve_id_extra_options::BindingHookResolveIdExtraOptions,
   BindingPluginOptions,
 };
+
+#[derive(Hash, Debug, PartialEq, Eq)]
+pub(crate) struct JsPluginContextResolveCustomArgId;
+
+impl TypedMapKey for JsPluginContextResolveCustomArgId {
+  type Value = u32;
+}
 
 #[derive(Debug)]
 pub struct JsPlugin {
@@ -58,6 +65,10 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_id {
+      let custom = args
+        .custom
+        .get::<JsPluginContextResolveCustomArgId>(&JsPluginContextResolveCustomArgId)
+        .map(|v| *v);
       Ok(
         cb.await_call((
           Arc::clone(ctx).into(),
@@ -66,7 +77,7 @@ impl Plugin for JsPlugin {
           BindingHookResolveIdExtraOptions {
             is_entry: args.is_entry,
             kind: args.kind.to_string(),
-            custom: args.custom,
+            custom,
           },
         ))
         .await?

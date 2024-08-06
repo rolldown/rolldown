@@ -147,6 +147,7 @@ bitflags           = { version = "2.6.0" }
 oxc                = { version = "0.23.0", features = ["sourcemap_concurrent", "transformer", "minifier", "semantic", "codegen"] }
 oxc_index          = { version = "0.23.0" }
 oxc_transform_napi = { version = "0.23.0" }
+typedmap           = "0.5.0"
 [profile.release]
 codegen-units = 1
 lto           = true

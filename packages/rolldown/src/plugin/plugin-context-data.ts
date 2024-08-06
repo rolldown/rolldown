@@ -61,4 +61,8 @@ export class PluginContextData {
   getResolveCustom(index: number) {
     return this.resolveCustomMap.get(index)
   }
+
+  removeResolveCustom(index: number) {
+    this.resolveCustomMap.delete(index)
+  }
 }

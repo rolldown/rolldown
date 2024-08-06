@@ -91,10 +91,12 @@ export class PluginContext {
         skipSelf?: boolean
       },
     ) => {
+      let custom = options?.custom && data.setResolveCustom(options.custom)
       const res = await context.resolve(source, importer, {
-        custom: options?.custom && data.setResolveCustom(options.custom),
+        custom,
         skipSelf: options?.skipSelf,
       })
+      typeof custom === 'number' && data.removeResolveCustom(custom)
       if (res == null) return null
       const info = data.getModuleOption(res.id) || ({} as ModuleOptions)
       return { ...res, ...info }

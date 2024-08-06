@@ -28,3 +28,4 @@ rolldown_resolver   = { workspace = true }
 rolldown_sourcemap  = { workspace = true }
 rolldown_utils      = { workspace = true }
 tracing             = { workspace = true }
+typedmap            = { workspace = true, features = ["dashmap"] }

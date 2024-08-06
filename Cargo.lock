@@ -2287,6 +2287,7 @@ dependencies = [
  "rolldown_sourcemap",
  "rolldown_utils",
  "tracing",
+ "typedmap",
 ]
 
 [[package]]
@@ -2932,6 +2933,15 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "typedmap"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb0a883093b9d4733a7a5ceb14b05bc2c51c21d8bbf1fd3d9de72a0821f4b910"
+dependencies = [
+ "dashmap 5.5.3",
 ]
 
 [[package]]

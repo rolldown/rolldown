@@ -62,9 +62,17 @@ impl<'a> CreateModuleContext<'a> {
       }));
     }
 
-    let resolved_id =
-      resolve_id::resolve_id(resolver, plugin_driver, specifier, Some(importer), false, kind, None)
-        .await?;
+    let resolved_id = resolve_id::resolve_id(
+      resolver,
+      plugin_driver,
+      specifier,
+      Some(importer),
+      false,
+      kind,
+      None,
+      None,
+    )
+    .await?;
 
     match resolved_id {
       Ok(mut resolved_id) => {

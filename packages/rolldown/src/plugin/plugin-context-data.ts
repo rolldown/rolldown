@@ -1,11 +1,12 @@
 import { BindingPluginContext } from '../binding'
-import { ModuleInfo, ModuleOptions } from '..'
+import { CustomPluginOptions, ModuleInfo, ModuleOptions } from '..'
 import { transformModuleInfo } from '../utils/transform-module-info'
 
 export class PluginContextData {
   modules = new Map<string, ModuleInfo>()
   moduleIds: Array<string> | null = null
   moduleOptionMap = new Map<string, ModuleOptions>()
+  resolveCustomMap = new Map<number, CustomPluginOptions>()
 
   updateModuleOption(id: string, option: ModuleOptions) {
     const existing = this.moduleOptionMap.get(id)
@@ -17,6 +18,10 @@ export class PluginContextData {
     } else {
       this.moduleOptionMap.set(id, option)
     }
+  }
+
+  getModuleOption(id: string) {
+    return this.moduleOptionMap.get(id)
   }
 
   getModuleInfo(id: string, context: BindingPluginContext) {
@@ -45,5 +50,15 @@ export class PluginContextData {
       return moduleIds.values()
     }
     return [].values()
+  }
+
+  setResolveCustom(custom: CustomPluginOptions): number {
+    const index = Object.keys(this.resolveCustomMap).length
+    this.resolveCustomMap.set(index, custom)
+    return index
+  }
+
+  getResolveCustom(index: number) {
+    return this.resolveCustomMap.get(index)
   }
 }

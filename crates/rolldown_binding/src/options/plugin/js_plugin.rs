@@ -63,7 +63,11 @@ impl Plugin for JsPlugin {
           Arc::clone(ctx).into(),
           args.specifier.to_string(),
           args.importer.map(str::to_string),
-          BindingHookResolveIdExtraOptions { is_entry: args.is_entry, kind: args.kind.to_string() },
+          BindingHookResolveIdExtraOptions {
+            is_entry: args.is_entry,
+            kind: args.kind.to_string(),
+            custom: args.custom,
+          },
         ))
         .await?
         .map(Into::into),

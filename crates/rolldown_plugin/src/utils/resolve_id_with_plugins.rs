@@ -13,6 +13,7 @@ fn is_data_url(s: &str) -> bool {
   s.trim_start().starts_with("data:")
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn resolve_id_with_plugins(
   resolver: &Resolver,
   plugin_driver: &PluginDriver,
@@ -20,6 +21,7 @@ pub async fn resolve_id_with_plugins(
   importer: Option<&str>,
   is_entry: bool,
   import_kind: ImportKind,
+  custom: Option<u32>,
   skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   if matches!(import_kind, ImportKind::DynamicImport) {
@@ -29,6 +31,7 @@ pub async fn resolve_id_with_plugins(
           importer: importer.map(std::convert::AsRef::as_ref),
           specifier: request,
           is_entry,
+          custom,
           kind: import_kind,
         },
         skipped_resolve_calls.as_ref(),
@@ -52,6 +55,7 @@ pub async fn resolve_id_with_plugins(
         importer: importer.map(std::convert::AsRef::as_ref),
         specifier: request,
         is_entry,
+        custom,
         kind: import_kind,
       },
       skipped_resolve_calls.as_ref(),

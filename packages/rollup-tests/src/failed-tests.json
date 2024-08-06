@@ -102,7 +102,6 @@
   "rollup@function@custom-path-resolver-plural-b: resolver error is not caught",
   "rollup@function@custom-path-resolver-plural: uses custom path resolvers (plural)",
   "rollup@function@custom-path-resolver-sync: uses a custom path resolver (synchronous)",
-  "rollup@function@custom-resolve-options: supports custom resolve options",
   "rollup@function@cycles-default-anonymous-function-hoisted: Anonymous function declarations are hoisted",
   "rollup@function@cycles-defaults: cycles work with default exports",
   "rollup@function@cycles-export-star: does not stack overflow on `export * from X` cycles",

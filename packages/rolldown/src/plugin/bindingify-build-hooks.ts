@@ -69,7 +69,13 @@ export function bindingifyResolveId(
       new PluginContext(options, ctx, plugin, pluginContextData),
       specifier,
       importer ?? undefined,
-      extraOptions,
+      {
+        ...extraOptions,
+        custom:
+          typeof extraOptions.custom === 'number'
+            ? pluginContextData.getResolveCustom(extraOptions.custom)
+            : undefined,
+      },
     )
     if (ret == false || ret == null) {
       return

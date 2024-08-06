@@ -37,8 +37,7 @@ Rolldown will bundle the input into `/dist`, and using the same `node` instance 
 
 `_config.json` has it's limitations, so we also support writing tests in rust directly. You could refer to
 
-- https://github.com/rolldown/rolldown/blob/main/crates/rolldown/tests/fixtures/issues/1733/mod.rs
-- https://github.com/rolldown/rolldown/blob/main/crates/rolldown/tests/fixtures/errors/entry_cannot_be_external/mod.rs
+- https://github.com/rolldown/rolldown/commit/7d32cc70e194c52fa932cefbd4f926a9c3e3315f
 
 #### Snapshot testing
 

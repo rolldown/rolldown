@@ -1406,6 +1406,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - foo~1-!~{003}~.mjs => foo~1-SAQ2emDX.mjs
 - main-!~{000}~.mjs => main-Iuj6QrqP.mjs
 
+# tests/rolldown/dce/conditional_exports
+
+- main-!~{000}~.mjs => main-QSRhG9S4.mjs
+
 # tests/rolldown/errors/ambiguous_external_namespace
 
 - main-!~{000}~.mjs => main-07HwCbF6.mjs

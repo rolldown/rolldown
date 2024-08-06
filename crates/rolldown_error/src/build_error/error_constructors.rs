@@ -7,6 +7,7 @@ use rolldown_resolver::ResolveError;
 
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
+use crate::events::unresolved_import::UnresolvedImportImporter;
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -55,7 +56,11 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn unresolved_import(resolved: ArcStr, importer: Option<ArcStr>, reason: ArcStr) -> Self {
+  pub fn unresolved_import(
+    resolved: ArcStr,
+    importer: Option<UnresolvedImportImporter>,
+    reason: ArcStr,
+  ) -> Self {
     Self::new_inner(UnresolvedImport { resolved, importer, reason })
   }
 

@@ -1,9 +1,11 @@
 use arcstr::ArcStr;
+use oxc::span::Span;
+use rolldown_rstr::Rstr;
 use std::sync::Arc;
 
 use anyhow::Result;
 use rolldown_common::{Module, ModuleIdx, ResolvedId, StrOrBytes};
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, UnresolvedImportImporter};
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
@@ -14,11 +16,24 @@ use crate::{
   },
   utils::{load_source::load_source, transform_source::transform_source},
 };
+
+pub struct EcmaModuleTaskOwner {
+  source: ArcStr,
+  importer_id: Rstr,
+  importer_id_span: Span,
+}
+
+impl EcmaModuleTaskOwner {
+  pub fn new(source: ArcStr, importer_id: Rstr, importer_id_span: Span) -> Self {
+    EcmaModuleTaskOwner { source, importer_id, importer_id_span }
+  }
+}
+
 pub struct EcmaModuleTask {
   ctx: Arc<TaskContext>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
-  importer_id: Option<ArcStr>,
+  owner: Option<EcmaModuleTaskOwner>,
   errors: Vec<BuildDiagnostic>,
   is_user_defined_entry: bool,
 }
@@ -28,10 +43,10 @@ impl EcmaModuleTask {
     ctx: Arc<TaskContext>,
     idx: ModuleIdx,
     resolved_id: ResolvedId,
-    importer_id: Option<ArcStr>,
+    owner: Option<EcmaModuleTaskOwner>,
   ) -> Self {
-    let is_user_defined_entry = importer_id.is_none();
-    Self { ctx, module_idx: idx, resolved_id, importer_id, errors: vec![], is_user_defined_entry }
+    let is_user_defined_entry = owner.is_none();
+    Self { ctx, module_idx: idx, resolved_id, owner, errors: vec![], is_user_defined_entry }
   }
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
@@ -68,7 +83,11 @@ impl EcmaModuleTask {
       Err(err) => {
         self.errors.push(BuildDiagnostic::unresolved_import(
           self.resolved_id.id.clone(),
-          self.importer_id.clone(),
+          self.owner.as_ref().map(|owner| UnresolvedImportImporter {
+            id: owner.importer_id.as_str().into(),
+            span: owner.importer_id_span,
+            source: owner.source.clone(),
+          }),
           err.to_string().into(),
         ));
         return Ok(());

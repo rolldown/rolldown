@@ -9,7 +9,7 @@ use crate::{
     plugin_context_resolve_options::PluginContextResolveOptions, plugin_idx::PluginIdx,
   },
   utils::resolve_id_with_plugins::resolve_id_with_plugins,
-  HookResolveIdExtraOptions, PluginDriver,
+  PluginDriver,
 };
 
 pub type SharedPluginContext = std::sync::Arc<PluginContext>;
@@ -58,7 +58,8 @@ impl PluginContext {
       &plugin_driver,
       specifier,
       importer,
-      HookResolveIdExtraOptions { is_entry: false, kind: normalized_extra_options.import_kind },
+      false,
+      normalized_extra_options.import_kind,
       if normalized_extra_options.skip_self {
         let mut skipped_resolve_calls = Vec::with_capacity(self.skipped_resolve_calls.len() + 1);
         skipped_resolve_calls.extend(self.skipped_resolve_calls.clone());

@@ -1,6 +1,5 @@
 use crate::{
-  types::hook_resolve_id_skipped::HookResolveIdSkipped, HookResolveDynamicImportArgs,
-  HookResolveIdArgs, HookResolveIdExtraOptions, PluginDriver,
+  types::hook_resolve_id_skipped::HookResolveIdSkipped, HookResolveIdArgs, PluginDriver,
 };
 use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId};
 use rolldown_resolver::{ResolveError, Resolver};
@@ -19,17 +18,18 @@ pub async fn resolve_id_with_plugins(
   plugin_driver: &PluginDriver,
   request: &str,
   importer: Option<&str>,
-  options: HookResolveIdExtraOptions,
+  is_entry: bool,
+  import_kind: ImportKind,
   skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
-  let import_kind = options.kind;
   if matches!(import_kind, ImportKind::DynamicImport) {
     if let Some(r) = plugin_driver
       .resolve_dynamic_import(
-        &HookResolveDynamicImportArgs {
+        &HookResolveIdArgs {
           importer: importer.map(std::convert::AsRef::as_ref),
-          source: request,
-          options: &options,
+          specifier: request,
+          is_entry,
+          kind: import_kind,
         },
         skipped_resolve_calls.as_ref(),
       )
@@ -51,7 +51,8 @@ pub async fn resolve_id_with_plugins(
       &HookResolveIdArgs {
         importer: importer.map(std::convert::AsRef::as_ref),
         specifier: request,
-        options,
+        is_entry,
+        kind: import_kind,
       },
       skipped_resolve_calls.as_ref(),
     )

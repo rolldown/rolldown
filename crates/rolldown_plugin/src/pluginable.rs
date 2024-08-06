@@ -5,7 +5,7 @@ use crate::{
   transform_plugin_context::TransformPluginContext,
   types::{hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs},
   HookBuildEndArgs, HookInjectionArgs, HookInjectionOutputReturn, HookLoadArgs,
-  HookRenderChunkArgs, HookResolveDynamicImportArgs, HookResolveIdArgs, HookTransformArgs, Plugin,
+  HookRenderChunkArgs, HookResolveIdArgs, HookTransformArgs, Plugin,
 };
 use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk};
 
@@ -47,7 +47,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   async fn call_resolve_dynamic_import(
     &self,
     _ctx: &SharedPluginContext,
-    _args: &HookResolveDynamicImportArgs,
+    _args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn;
 
   async fn call_load(&self, _ctx: &SharedPluginContext, _args: &HookLoadArgs) -> HookLoadReturn;
@@ -158,7 +158,7 @@ impl<T: Plugin> Pluginable for T {
   async fn call_resolve_dynamic_import(
     &self,
     ctx: &SharedPluginContext,
-    args: &HookResolveDynamicImportArgs,
+    args: &HookResolveIdArgs,
   ) -> HookResolveIdReturn {
     Plugin::resolve_dynamic_import(self, ctx, args).await
   }

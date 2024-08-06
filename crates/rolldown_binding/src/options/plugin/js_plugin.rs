@@ -5,7 +5,11 @@ use crate::types::{
 use rolldown_plugin::{Plugin, __inner::SharedPluginable};
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 
-use super::{binding_transform_context::BindingTransformPluginContext, BindingPluginOptions};
+use super::{
+  binding_transform_context::BindingTransformPluginContext,
+  types::binding_hook_resolve_id_extra_options::BindingHookResolveIdExtraOptions,
+  BindingPluginOptions,
+};
 
 #[derive(Debug)]
 pub struct JsPlugin {
@@ -59,7 +63,7 @@ impl Plugin for JsPlugin {
           Arc::clone(ctx).into(),
           args.specifier.to_string(),
           args.importer.map(str::to_string),
-          args.options.clone().into(),
+          BindingHookResolveIdExtraOptions { is_entry: args.is_entry, kind: args.kind.to_string() },
         ))
         .await?
         .map(Into::into),
@@ -72,13 +76,13 @@ impl Plugin for JsPlugin {
   async fn resolve_dynamic_import(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    args: &rolldown_plugin::HookResolveDynamicImportArgs<'_>,
+    args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_dynamic_import {
       Ok(
         cb.await_call((
           Arc::clone(ctx).into(),
-          args.source.to_string(),
+          args.specifier.to_string(),
           args.importer.map(str::to_string),
         ))
         .await?

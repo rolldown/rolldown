@@ -9,7 +9,7 @@ use oxc::{
   },
   span::{GetSpan, Span, SPAN},
 };
-use rolldown_common::{ExportsKind, Module, ModuleType, SymbolRef, WrapKind};
+use rolldown_common::{ExportsKind, Module, TempModuleDeclSpan, ModuleType, SymbolRef, WrapKind};
 use rolldown_ecmascript::{AllocatorExt, ExpressionExt, StatementExt, TakeIn};
 
 use crate::utils::call_expression_ext::CallExpressionExt;
@@ -40,12 +40,12 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
         }
 
         if let Some(import_decl) = top_stmt.as_import_declaration() {
-          let rec_id = self.ctx.module.imports[&import_decl.span];
+          let rec_id = self.ctx.module.module_declarations[&TempModuleDeclSpan(import_decl.span)];
           if self.should_remove_import_export_stmt(&mut top_stmt, rec_id) {
             return;
           }
         } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
-          let rec_id = self.ctx.module.imports[&export_all_decl.span];
+          let rec_id = self.ctx.module.module_declarations[&TempModuleDeclSpan(export_all_decl.span)];
           // "export * as ns from 'path'"
           if let Some(_alias) = &export_all_decl.exported {
             if self.should_remove_import_export_stmt(&mut top_stmt, rec_id) {
@@ -208,7 +208,7 @@ impl<'me, 'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'me, 'ast> {
             }
           } else {
             // `export { foo } from 'path'`
-            let rec_id = self.ctx.module.imports[&named_decl.span];
+            let rec_id = self.ctx.module.module_declarations[&TempModuleDeclSpan(named_decl.span)];
             if self.should_remove_import_export_stmt(&mut top_stmt, rec_id) {
               return;
             }

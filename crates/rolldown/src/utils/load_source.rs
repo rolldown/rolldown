@@ -61,7 +61,7 @@ pub async fn load_source(
           }
         }
       } else {
-        Err(anyhow::format_err!("Fail to guess module type for {:?}. So rolldown could load this asset correctly. Please use the load hook to load the resource", resolved_id.id))
+        Err(anyhow::format_err!("Fail to guess module type for {:?}. So rolldown could load this asset correctly. Please use the load hook to load the resource", resolved_id.debug_id(options.cwd.clone())))
       }
     }
     (None, Some(_)) => unreachable!("Invalid state"),

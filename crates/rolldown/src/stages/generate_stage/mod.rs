@@ -60,7 +60,7 @@ impl<'a> GenerateStage<'a> {
     self.compute_cross_chunk_links(&mut chunk_graph);
 
     chunk_graph.chunks.iter_mut().par_bridge().for_each(|chunk| {
-      deconflict_chunk_symbols(chunk, self.link_output);
+      deconflict_chunk_symbols(chunk, self.link_output, &self.options.format);
     });
 
     let ast_table_iter = self.link_output.ast_table.iter_mut();

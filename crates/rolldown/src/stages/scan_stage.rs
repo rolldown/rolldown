@@ -6,7 +6,7 @@ use futures::future::join_all;
 use rolldown_common::{EntryPoint, ImportKind, ModuleTable, ResolvedId};
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
 use rolldown_fs::OsFileSystem;
-use rolldown_plugin::{HookResolveIdExtraOptions, SharedPluginDriver};
+use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
 
 use crate::{
@@ -106,15 +106,9 @@ impl ScanStage {
         specifier: &'a str,
       }
       let args = Args { specifier: &input_item.import };
-      let resolved = resolve_id(
-        resolver,
-        plugin_driver,
-        args.specifier,
-        None,
-        HookResolveIdExtraOptions { is_entry: true, kind: ImportKind::Import },
-        None,
-      )
-      .await;
+      let resolved =
+        resolve_id(resolver, plugin_driver, args.specifier, None, true, ImportKind::Import, None)
+          .await;
 
       resolved
         .map(|info| (args, info.map(|info| ((input_item.name.clone().map(ArcStr::from)), info))))

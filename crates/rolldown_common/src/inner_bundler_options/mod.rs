@@ -1,3 +1,4 @@
+use rolldown_utils::indexmap::FxIndexMap;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde_json::Value;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
@@ -98,6 +99,11 @@ pub struct BundlerOptions {
   pub treeshake: TreeshakeOptions,
   pub experimental: Option<ExperimentalOptions>,
   pub minify: Option<bool>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    schemars(with = "Option<HashMap<String, String>>")
+  )]
+  pub define: Option<FxIndexMap<String, String>>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

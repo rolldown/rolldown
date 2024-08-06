@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as assert } from "node:assert";
+
+//#region main.js
+const id = "ok";
+const objProp = "ok";
+assert.strictEqual(id, "ok");
+assert.strictEqual(objProp, "ok");
+
+//#endregion
+```

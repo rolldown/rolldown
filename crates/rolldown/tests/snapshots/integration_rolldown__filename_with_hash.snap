@@ -1435,6 +1435,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/errors/unresolved_entry
 
 
+# tests/rolldown/function/define/node_env
+
+- main-!~{000}~.mjs => main-zmFhpGWu.mjs
+
+# tests/rolldown/function/define/patterns
+
+- main-!~{000}~.mjs => main-alEkff5H.mjs
+
 # tests/rolldown/function/dir/should_generate_correct_relative_import_path
 
 - ./chunks/async.mjs => ./chunks/async.mjs

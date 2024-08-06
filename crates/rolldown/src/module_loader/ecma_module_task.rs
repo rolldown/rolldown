@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use rolldown_common::{Module, ModuleIdx, ResolvedId, StrOrBytes};
-use rolldown_error::{BuildDiagnostic, UnloadableDependencyImporter};
+use rolldown_error::{BuildDiagnostic, UnloadableDependencyContext};
 
 use super::{task_context::TaskContext, Msg};
 use crate::{
@@ -83,9 +83,9 @@ impl EcmaModuleTask {
       Err(err) => {
         self.errors.push(BuildDiagnostic::unloadable_dependency(
           self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
-          self.owner.as_ref().map(|owner| UnloadableDependencyImporter {
-            id: owner.importer_id.as_str().into(),
-            span: owner.importee_span,
+          self.owner.as_ref().map(|owner| UnloadableDependencyContext {
+            importer_id: owner.importer_id.as_str().into(),
+            importee_span: owner.importee_span,
             source: owner.source.clone(),
           }),
           err.to_string().into(),

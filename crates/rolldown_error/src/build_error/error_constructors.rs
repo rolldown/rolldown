@@ -7,7 +7,7 @@ use rolldown_resolver::ResolveError;
 
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
-use crate::events::unloadable_dependency::UnloadableDependency;
+use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -25,7 +25,6 @@ use crate::events::{
   unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
   NapiError,
 };
-use crate::UnloadableDependencyImporter;
 
 impl BuildDiagnostic {
   // --- Rollup related
@@ -62,10 +61,10 @@ impl BuildDiagnostic {
   }
   pub fn unloadable_dependency(
     resolved: ArcStr,
-    importer: Option<UnloadableDependencyImporter>,
+    context: Option<UnloadableDependencyContext>,
     reason: ArcStr,
   ) -> Self {
-    Self::new_inner(UnloadableDependency { resolved, importer, reason })
+    Self::new_inner(UnloadableDependency { resolved, context, reason })
   }
 
   pub fn sourcemap_error(error: oxc::sourcemap::Error) -> Self {

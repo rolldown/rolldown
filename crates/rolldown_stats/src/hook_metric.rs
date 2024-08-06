@@ -8,6 +8,7 @@ pub struct HookMetric {
   transform: Arc<AtomicU64>,
   resolve: Arc<AtomicU64>,
   load: Arc<AtomicU64>,
+  transform_ast: Arc<AtomicU64>,
   pub name: String,
 }
 
@@ -19,6 +20,7 @@ impl HookMetric {
         TaggedMsMetric::Transform(self.transform.load(Ordering::Relaxed) as f64 / 1000.0),
         TaggedMsMetric::Resolve(self.resolve.load(Ordering::Relaxed) as f64 / 1000.0),
         TaggedMsMetric::Load(self.load.load(Ordering::Relaxed) as f64 / 1000.0),
+        TaggedMsMetric::TransformAst(self.transform_ast.load(Ordering::Relaxed) as f64 / 1000.0),
       ],
     }
   }
@@ -28,6 +30,7 @@ impl HookMetric {
       MetricType::Transform => Arc::clone(&self.transform),
       MetricType::Resolve => Arc::clone(&self.resolve),
       MetricType::Load => Arc::clone(&self.load),
+      MetricType::TransformAst => Arc::clone(&self.transform_ast),
     };
     Guard { start: Instant::now(), counter }
   }
@@ -59,6 +62,7 @@ impl Debug for MsMetric {
 
 enum TaggedMsMetric {
   Transform(f64),
+  TransformAst(f64),
   Resolve(f64),
   Load(f64),
 }
@@ -69,6 +73,7 @@ impl Debug for TaggedMsMetric {
       TaggedMsMetric::Transform(v) => write!(f, "transform: {:.2}ms", *v),
       TaggedMsMetric::Resolve(v) => write!(f, "resolve: {:.2}ms", *v),
       TaggedMsMetric::Load(v) => write!(f, "load: {:.2}ms", *v),
+      TaggedMsMetric::TransformAst(v) => write!(f, "transform_ast: {:.2}ms", *v),
     }
   }
 }
@@ -76,15 +81,17 @@ impl Debug for TaggedMsMetric {
 impl TaggedMsMetric {
   pub fn value(&self) -> f64 {
     match self {
-      TaggedMsMetric::Transform(ms) => *ms,
-      TaggedMsMetric::Resolve(ms) => *ms,
-      TaggedMsMetric::Load(ms) => *ms,
+      TaggedMsMetric::Transform(ms)
+      | TaggedMsMetric::Resolve(ms)
+      | TaggedMsMetric::Load(ms)
+      | TaggedMsMetric::TransformAst(ms) => *ms,
     }
   }
 }
 
 pub enum MetricType {
   Transform,
+  TransformAst,
   Resolve,
   Load,
 }

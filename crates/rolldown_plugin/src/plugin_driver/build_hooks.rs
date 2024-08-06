@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::{
   pluginable::HookTransformAstReturn, types::hook_transform_ast_args::HookTransformAstArgs,
@@ -115,7 +116,8 @@ impl PluginDriver {
   }
 
   pub fn transform_ast(&self, mut args: HookTransformAstArgs) -> HookTransformAstReturn {
-    for (plugin, ctx) in &self.plugins {
+    for (i, (plugin, ctx)) in self.plugins.iter().enumerate() {
+      let _guard = ctx.stats.hook_metric[i].guard(MetricType::TransformAst);
       args.ast =
         plugin.call_transform_ast(ctx, HookTransformAstArgs { cwd: args.cwd, ast: args.ast })?;
     }

@@ -4,6 +4,7 @@ use crate::{
 use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId};
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};
+use typedmap::TypedDashMap;
 
 fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")
@@ -13,6 +14,7 @@ fn is_data_url(s: &str) -> bool {
   s.trim_start().starts_with("data:")
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn resolve_id_with_plugins(
   resolver: &Resolver,
   plugin_driver: &PluginDriver,
@@ -21,6 +23,7 @@ pub async fn resolve_id_with_plugins(
   is_entry: bool,
   import_kind: ImportKind,
   skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
+  custom: Arc<TypedDashMap>,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   if matches!(import_kind, ImportKind::DynamicImport) {
     if let Some(r) = plugin_driver
@@ -30,6 +33,7 @@ pub async fn resolve_id_with_plugins(
           specifier: request,
           is_entry,
           kind: import_kind,
+          custom: Arc::clone(&custom),
         },
         skipped_resolve_calls.as_ref(),
       )
@@ -53,6 +57,7 @@ pub async fn resolve_id_with_plugins(
         specifier: request,
         is_entry,
         kind: import_kind,
+        custom: Arc::clone(&custom),
       },
       skipped_resolve_calls.as_ref(),
     )

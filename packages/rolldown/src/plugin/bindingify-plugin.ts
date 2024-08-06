@@ -32,8 +32,8 @@ export function bindingifyPlugin(
   plugin: Plugin,
   options: NormalizedInputOptions,
   outputOptions: NormalizedOutputOptions,
+  pluginContextData: PluginContextData,
 ): BindingPluginOptions {
-  const pluginContextData = new PluginContextData()
   return {
     name: plugin.name ?? 'unknown',
     buildStart: bindingifyBuildStart(plugin, options, pluginContextData),

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use oxc::minifier::RemoveDeadCode;
+use oxc::minifier::{CompressOptions, Compressor};
 use oxc::semantic::{ScopeTree, SymbolTable};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
@@ -44,12 +44,11 @@ pub fn pre_process_ecma_ast(
     if !ret.errors.is_empty() {
       return Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors));
     }
-    // symbols = ret.symbols;
-    // scopes = ret.scopes;
   }
 
   ast.program.with_mut(|fields| {
-    RemoveDeadCode::new(fields.allocator).build(fields.program);
+    let options = CompressOptions::dead_code_elimination();
+    Compressor::new(fields.allocator, options).build(fields.program);
   });
 
   tweak_ast_for_scanning(&mut ast);

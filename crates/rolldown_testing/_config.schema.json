@@ -88,6 +88,15 @@
             "null"
           ]
         },
+        "define": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "dir": {
           "type": [
             "string",

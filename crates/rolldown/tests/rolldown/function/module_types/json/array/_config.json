@@ -1,5 +1,1 @@
-{
-  "config": {
-    "external": ["node:assert"]
-  }
-}
+{}

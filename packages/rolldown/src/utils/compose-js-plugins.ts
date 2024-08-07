@@ -98,7 +98,6 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           throw new Error(
             `Failed to compose js plugins. Plugin ${pluginName} has an unsupported hook: ${pluginProp}`,
           )
-          break
         }
         default: {
           // All known hooks should be handled above. We allow plugin to have unknown properties and we just ignore them.

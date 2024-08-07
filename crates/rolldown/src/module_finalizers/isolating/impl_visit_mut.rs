@@ -1,6 +1,6 @@
 use oxc::ast::ast::{self, Statement};
 use oxc::ast::VisitMut;
-use rolldown_common::{Module, TempModuleDeclSpan};
+use rolldown_common::{MemoryAddress, Module};
 use rolldown_ecmascript::TakeIn;
 
 use super::IsolatingModuleFinalizer;
@@ -16,7 +16,7 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
         // - `import foo from 'xxx'` to `const { default: foo } = __static_import('xxx')`
         // - `import * as star from 'xxx'` to `const star = __static_import_star('xxx')`
         Statement::ImportDeclaration(import_decl) => {
-          let rec_id = self.ctx.module.module_declarations[&TempModuleDeclSpan(import_decl.span)];
+          let rec_id = self.ctx.module.module_declarations[&MemoryAddress::from_box(import_decl)];
           let rec = &self.ctx.module.import_records[rec_id];
           let mut named_specifiers = vec![];
           let mut star_specifier = None;

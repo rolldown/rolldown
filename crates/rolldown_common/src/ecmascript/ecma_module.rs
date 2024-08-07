@@ -6,7 +6,7 @@ use crate::{
   ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo, NamedImport,
   StmtInfo, StmtInfos, SymbolRef,
 };
-use crate::{EcmaAstIdx, IndexModules, TempModuleDeclSpan, ModuleType};
+use crate::{EcmaAstIdx, IndexModules, MemoryAddress, ModuleType};
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::span::Span;
@@ -38,7 +38,7 @@ pub struct EcmaModule {
   /// The key is the `Span` of `ImportExpression` and `CallExpression`(only when the callee is `require`).
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   /// The key is the `Span` of `ImportDeclaration`, `ExportNamedDeclaration`, `ExportAllDeclaration`
-  pub module_declarations: FxHashMap<TempModuleDeclSpan, ImportRecordIdx>,
+  pub module_declarations: FxHashMap<MemoryAddress, ImportRecordIdx>,
   // [[StarExportEntries]] in https://tc39.es/ecma262/#sec-source-text-module-records
   pub star_exports: Vec<ImportRecordIdx>,
   pub exports_kind: ExportsKind,

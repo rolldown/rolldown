@@ -86,7 +86,18 @@ pub use crate::{
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;
-use oxc::span::Span;
+use oxc::allocator::Box as OxcBox;
 
+/// Memory address of an AST node in Oxc arena.
+/// `MemoryAddress` is generated from an `oxc::allocator::Box<T>`.
+/// AST nodes in a `Box` in an Oxc arena are guaranteed to never move in memory,
+/// so this address acts as a unique identifier for the duration that arena exists.
 #[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
-pub struct TempModuleDeclSpan(pub Span);
+pub struct MemoryAddress(usize);
+
+impl MemoryAddress {
+  #[inline]
+  pub fn from_box<T>(boxed: &OxcBox<T>) -> Self {
+    Self(&**boxed as *const T as usize)
+  }
+}

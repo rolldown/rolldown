@@ -4,6 +4,7 @@ pub mod side_effect_detector;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
 use oxc::{
+  allocator::Box as OxcBox,
   ast::{
     ast::{
       ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
@@ -16,8 +17,8 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport,
-  MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier,
-  StmtInfo, StmtInfos, SymbolRef, TempModuleDeclSpan,
+  MemberExprRef, MemoryAddress, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
+  Specifier, StmtInfo, StmtInfos, SymbolRef,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
@@ -39,7 +40,7 @@ pub struct ScanResult {
   pub star_exports: Vec<ImportRecordIdx>,
   pub default_export_ref: SymbolRef,
   pub imports: FxHashMap<Span, ImportRecordIdx>,
-  pub module_declarations: FxHashMap<TempModuleDeclSpan, ImportRecordIdx>,
+  pub module_declarations: FxHashMap<MemoryAddress, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildDiagnostic>,
   pub has_eval: bool,
@@ -373,7 +374,7 @@ impl<'me> AstScanner<'me> {
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
   }
 
-  fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration) {
+  fn scan_export_all_decl(&mut self, decl: &OxcBox<ExportAllDeclaration>) {
     let id = self.add_import_record(
       decl.source.value.as_str(),
       ImportKind::Import,
@@ -386,10 +387,10 @@ impl<'me> AstScanner<'me> {
       // export * from '...'
       self.result.star_exports.push(id);
     }
-    self.result.module_declarations.insert(TempModuleDeclSpan(decl.span), id);
+    self.result.module_declarations.insert(MemoryAddress::from_box(decl), id);
   }
 
-  fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration) {
+  fn scan_export_named_decl(&mut self, decl: &OxcBox<ExportNamedDeclaration>) {
     if let Some(source) = &decl.source {
       let record_id =
         self.add_import_record(source.value.as_str(), ImportKind::Import, source.span().start);
@@ -401,7 +402,7 @@ impl<'me> AstScanner<'me> {
           spec.local.span(),
         );
       });
-      self.result.module_declarations.insert(TempModuleDeclSpan(decl.span), record_id);
+      self.result.module_declarations.insert(MemoryAddress::from_box(decl), record_id);
       // `export {} from '...'`
       if decl.specifiers.is_empty() {
         self.result.import_records[record_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
@@ -475,13 +476,13 @@ impl<'me> AstScanner<'me> {
     self.add_local_default_export(reference, span);
   }
 
-  fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
+  fn scan_import_decl(&mut self, decl: &OxcBox<ImportDeclaration>) {
     let rec_id = self.add_import_record(
       decl.source.value.as_str(),
       ImportKind::Import,
       decl.source.span().start,
     );
-    self.result.module_declarations.insert(TempModuleDeclSpan(decl.span), rec_id);
+    self.result.module_declarations.insert(MemoryAddress::from_box(decl), rec_id);
     // // `import '...'` or `import {} from '...'`
     if decl.specifiers.as_ref().map_or(true, |s| s.is_empty()) {
       self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);

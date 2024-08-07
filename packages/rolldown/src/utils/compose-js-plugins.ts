@@ -23,7 +23,6 @@ const unsupportedHookName = [
   // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
   // we have to bailout all plugins with `resolveId` hook.
   'resolveId',
-  'footer',
   'intro',
   'outro',
 ] as const

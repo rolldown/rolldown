@@ -318,6 +318,7 @@ impl<'a> GenerateStage<'a> {
               && importee_chunk.has_side_effect(self.link_output.runtime.id())
           })
           .for_each(|(importee_chunk_id, _)| {
+            index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
             let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
             imports_from_other_chunks.entry(importee_chunk_id).or_default();
           });

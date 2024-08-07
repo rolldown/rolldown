@@ -56,14 +56,14 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           }
           break
         }
-        // case 'resolveId': {
-        //   const handlers = batchedHooks.resolveId ?? []
-        //   batchedHooks.resolveId = handlers
-        //   if (plugin.resolveId) {
-        //     handlers.push(plugin.resolveId)
-        //   }
-        //   break
-        // }
+        case 'resolveId': {
+          const handlers = batchedHooks.resolveId ?? []
+          batchedHooks.resolveId = handlers
+          if (plugin.resolveId) {
+            handlers.push(plugin.resolveId)
+          }
+          break
+        }
         case 'buildEnd': {
           const handlers = batchedHooks.buildEnd ?? []
           batchedHooks.buildEnd = handlers
@@ -102,7 +102,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         }
         default: {
           // All known hooks should be handled above. We allow plugin to have unknown properties and we just ignore them.
-          const _executiveCheck: never = pluginProp
+          const _exhaustiveCheck: never = pluginProp
         }
       }
     })

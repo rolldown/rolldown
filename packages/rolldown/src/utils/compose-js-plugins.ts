@@ -3,10 +3,11 @@ import { ModuleSideEffects, Plugin, RolldownPlugin } from '../plugin'
 import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'
+import { TupleToUnion } from 'type-fest'
 
-// FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
-// we have to bailout all plugins with `resolveId` hook.
-const unsupportedHooks = new Set([
+type UnsupportedHookNameUnion = TupleToUnion<typeof unsupportedHookName>
+
+const unsupportedHookName = [
   'augmentChunkHash',
   'banner',
   'footer',
@@ -19,8 +20,21 @@ const unsupportedHooks = new Set([
   'renderStart',
   'resolveDynamicImport',
   'writeBundle',
+  // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
+  // we have to bailout all plugins with `resolveId` hook.
   'resolveId',
-])
+  'footer',
+  'intro',
+  'outro',
+] as const
+
+const unsupportedHooks: Set<string> = new Set(unsupportedHookName)
+
+// Only used for type checking
+function unsupportedHooksCheck(_: UnsupportedHookNameUnion) {}
+function unsupportedBatchHooksCheck(
+  _: UnsupportedHookNameUnion | 'name' | 'api',
+) {}
 
 function createComposedPlugin(plugins: Plugin[]): Plugin {
   // Throw errors if we try to merge plugins with unsupported hooks
@@ -100,10 +114,10 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         case 'renderStart':
         case 'resolveDynamicImport':
         case 'writeBundle': {
+          unsupportedHooksCheck(pluginProp)
           throw new Error(
             `Failed to compose js plugins. Plugin ${pluginName} has an unsupported hook: ${pluginProp}`,
           )
-          break
         }
         default: {
           // All known hooks should be handled above. We allow plugin to have unknown properties and we just ignore them.
@@ -116,7 +130,6 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
   const composed: Plugin = {
     name: `Composed(${names.join(', ')})`,
   }
-
   ;(Object.keys(batchedHooks) as (keyof typeof batchedHooks)[]).forEach(
     (hookName) => {
       switch (hookName) {
@@ -249,6 +262,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         case 'renderStart':
         case 'resolveDynamicImport':
         case 'writeBundle': {
+          unsupportedBatchHooksCheck(hookName)
           throw new Error(`Unsupported prop detected: ${hookName}`)
         }
         default: {

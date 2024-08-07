@@ -4,9 +4,8 @@ import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'
 
-
-    // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
-    // we have to bailout all plugins with `resolveId` hook.
+// FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
+// we have to bailout all plugins with `resolveId` hook.
 const unsupportedHooks = new Set([
   'augmentChunkHash',
   'banner',

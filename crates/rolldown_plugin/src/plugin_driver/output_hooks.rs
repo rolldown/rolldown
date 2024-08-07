@@ -3,7 +3,8 @@ use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
 use crate::{HookInjectionArgs, PluginDriver};
 use anyhow::{Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk};
-use rolldown_sourcemap::SourceMap;
+use rolldown_error::BuildDiagnostic;
+use rolldown_sourcemap::{SourceMap, SourceMapOrMissing};
 
 impl PluginDriver {
   pub async fn render_start(&self) -> HookNoopReturn {
@@ -84,16 +85,26 @@ impl PluginDriver {
   pub async fn render_chunk(
     &self,
     mut args: HookRenderChunkArgs<'_>,
+    warnings: &mut Vec<BuildDiagnostic>,
   ) -> Result<(String, Vec<SourceMap>)> {
     let mut sourcemap_chain = vec![];
+
     for (plugin, ctx) in self.iter_plugin_with_context() {
       if let Some(r) = plugin.call_render_chunk(ctx, &args).await? {
         args.code = r.code;
         if let Some(map) = r.map {
-          sourcemap_chain.push(map);
+          match map {
+            SourceMapOrMissing::ExistingSourceMap(sourcemap) => {
+              sourcemap_chain.push(sourcemap);
+            }
+            SourceMapOrMissing::MissingSourceMap(sourcemap) => {
+              warnings.push(BuildDiagnostic::sourcemap_broken(sourcemap.plugin_name));
+            }
+          }
         }
       }
     }
+
     Ok((args.code, sourcemap_chain))
   }
 

@@ -30,7 +30,7 @@ impl<'a> GenerateStage<'a> {
     let (mut preliminary_assets, index_chunk_to_assets) =
       self.render_preliminary_assets(chunk_graph, &mut errors, &mut warnings).await?;
 
-    render_chunks(self.plugin_driver, &mut preliminary_assets).await?;
+    render_chunks(self.plugin_driver, &mut preliminary_assets, &mut warnings).await?;
 
     augment_chunk_hash(self.plugin_driver, &mut preliminary_assets).await?;
 

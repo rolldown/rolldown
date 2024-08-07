@@ -11,7 +11,8 @@ use crate::{
 };
 use anyhow::Result;
 use rolldown_common::{side_effects::HookSideEffects, ModuleInfo};
-use rolldown_sourcemap::SourceMap;
+use rolldown_error::BuildDiagnostic;
+use rolldown_sourcemap::{SourceMap, SourceMapOrMissing};
 use rolldown_utils::futures::block_on_spawn_all;
 
 impl PluginDriver {
@@ -144,8 +145,10 @@ impl PluginDriver {
     sourcemap_chain: &mut Vec<SourceMap>,
     side_effects: &mut Option<HookSideEffects>,
     original_code: &str,
+    warnings: &mut Vec<BuildDiagnostic>,
   ) -> Result<String> {
     let mut code = args.code.to_string();
+
     for (plugin, ctx) in self.iter_plugin_with_context() {
       if let Some(r) = plugin
         .call_transform(
@@ -154,16 +157,23 @@ impl PluginDriver {
         )
         .await?
       {
-        if let Some(mut map) = r.map {
-          // If sourcemap  hasn't `sources`, using original id to fill it.
-          if map.get_source(0).map_or(true, str::is_empty) {
-            map.set_sources(vec![args.id]);
+        if let Some(map) = r.map {
+          match map {
+            SourceMapOrMissing::ExistingSourceMap(mut sourcemap) => {
+              // If sourcemap  hasn't `sources`, using original id to fill it.
+              if sourcemap.get_source(0).map_or(true, str::is_empty) {
+                sourcemap.set_sources(vec![args.id]);
+              }
+              // If sourcemap hasn't `sourcesContent`, using original code to fill it.
+              if sourcemap.get_source_content(0).map_or(true, str::is_empty) {
+                sourcemap.set_source_contents(vec![&code]);
+              }
+              sourcemap_chain.push(sourcemap);
+            }
+            SourceMapOrMissing::MissingSourceMap(sourcemap) => {
+              warnings.push(BuildDiagnostic::sourcemap_broken(sourcemap.plugin_name));
+            }
           }
-          // If sourcemap hasn't `sourcesContent`, using original code to fill it.
-          if map.get_source_content(0).map_or(true, str::is_empty) {
-            map.set_source_contents(vec![&code]);
-          }
-          sourcemap_chain.push(map);
         }
         if let Some(v) = r.side_effects {
           *side_effects = Some(v);
@@ -173,6 +183,7 @@ impl PluginDriver {
         }
       }
     }
+
     Ok(code)
   }
 

@@ -229,9 +229,6 @@ importers:
       locate-character:
         specifier: ^3.0.0
         version: 3.0.0
-      mri:
-        specifier: ^1.2.0
-        version: 1.2.0
       npm-run-all2:
         specifier: ^6.2.0
         version: 6.2.2

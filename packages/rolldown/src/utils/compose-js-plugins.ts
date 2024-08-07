@@ -12,6 +12,8 @@ const supportedHooks = new Set([
   'transform',
   'buildEnd',
   'renderChunk',
+  'name',
+  'api',
 ])
 
 function createComposedPlugin(plugins: Plugin[]): Plugin {
@@ -54,6 +56,14 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           }
           break
         }
+        // case 'resolveId': {
+        //   const handlers = batchedHooks.resolveId ?? []
+        //   batchedHooks.resolveId = handlers
+        //   if (plugin.resolveId) {
+        //     handlers.push(plugin.resolveId)
+        //   }
+        //   break
+        // }
         case 'buildEnd': {
           const handlers = batchedHooks.buildEnd ?? []
           batchedHooks.buildEnd = handlers

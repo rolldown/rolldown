@@ -115,7 +115,8 @@ export declare enum BindingBuiltinPluginName {
   GlobImportPlugin = 1,
   DynamicImportVarsPlugin = 2,
   ModulePreloadPolyfillPlugin = 3,
-  ManifestPlugin = 4
+  ManifestPlugin = 4,
+  LoadFallbackPlugin = 5
 }
 
 export interface BindingEmittedAsset {

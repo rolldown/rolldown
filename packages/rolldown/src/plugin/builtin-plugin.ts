@@ -46,6 +46,12 @@ export class WasmPlugin extends BuiltinPlugin {
   }
 }
 
+export class LoadFallbackPlugin extends BuiltinPlugin {
+  constructor() {
+    super(BindingBuiltinPluginName.LoadFallbackPlugin)
+  }
+}
+
 export function modulePreloadPolyfillPlugin(
   config?: BindingModulePreloadPolyfillPluginConfig,
 ) {
@@ -66,6 +72,10 @@ export function manifestPlugin(config?: BindingManifestPluginConfig) {
 
 export function wasmPlugin() {
   return new WasmPlugin()
+}
+
+export function loadFallbackPlugin() {
+  return new LoadFallbackPlugin()
 }
 
 export function bindingifyBuiltInPlugin(

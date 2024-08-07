@@ -6,6 +6,7 @@ import {
   globImportPlugin,
   manifestPlugin,
   wasmPlugin,
+  loadFallbackPlugin
 } from './plugin/builtin-plugin'
 import { transform } from './binding'
 
@@ -18,4 +19,5 @@ export {
   wasmPlugin,
   globImportPlugin,
   manifestPlugin,
+  loadFallbackPlugin
 }

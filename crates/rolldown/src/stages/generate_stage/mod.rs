@@ -1,11 +1,14 @@
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use arcstr::ArcStr;
+use futures::future::try_join_all;
 use indexmap::IndexSet;
 use oxc::{ast::VisitMut, index::IndexVec};
 use rolldown_ecmascript::AstSnippet;
 use rustc_hash::FxHashSet;
 
-use rolldown_common::{ChunkIdx, ChunkKind, FileNameRenderOptions, Module, PreliminaryFilename};
+use rolldown_common::{
+  ChunkIdx, ChunkKind, FileNameRenderOptions, FilenameTemplate, Module, PreliminaryFilename,
+};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{
   path_buf_ext::PathBufExt,
@@ -23,10 +26,11 @@ use crate::{
   },
   stages::link_stage::LinkStageOutput,
   utils::{
-    chunk::deconflict_chunk_symbols::deconflict_chunk_symbols,
+    chunk::{deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk},
     extract_hash_pattern::extract_hash_pattern,
     extract_meaningful_input_name_from_path::try_extract_meaningful_input_name_from_path,
-    finalize_normal_module, hash_placeholder::HashPlaceholderGenerator,
+    finalize_normal_module,
+    hash_placeholder::HashPlaceholderGenerator,
   },
   BundleOutput, SharedOptions,
 };
@@ -55,7 +59,7 @@ impl<'a> GenerateStage<'a> {
   pub async fn generate(&mut self) -> Result<BundleOutput> {
     let mut chunk_graph = self.generate_chunks();
 
-    self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph)?;
+    self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 
@@ -117,7 +121,7 @@ impl<'a> GenerateStage<'a> {
   // - Should generate filenames that are stable cross builds and os.
   // #[tracing::instrument(level = "debug", skip_all)]
   #[allow(clippy::too_many_lines)]
-  fn generate_chunk_name_and_preliminary_filenames(
+  async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
   ) -> anyhow::Result<()> {
@@ -181,11 +185,12 @@ impl<'a> GenerateStage<'a> {
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
     let mut used_names: FxHashSet<ArcStr> = FxHashSet::default();
 
-    chunk_ids.into_iter().try_for_each(|chunk_id| -> anyhow::Result<()> {
+    let mut template_tasks = vec![];
+    for chunk_id in chunk_ids {
       let chunk = &mut chunk_graph.chunks[chunk_id];
       if chunk.preliminary_filename.is_some() {
         // Already generated
-        return Ok(());
+        continue;
       }
 
       let chunk_name_info = &mut index_pre_generated_names[chunk_id];
@@ -207,42 +212,58 @@ impl<'a> GenerateStage<'a> {
       };
 
       used_names.insert(chunk_name.clone());
-
-      let filename_template = chunk.filename_template(self.options);
-      let css_filename_template = chunk.css_filename_template(self.options);
-      let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
-      let extracted_css_hash_pattern = extract_hash_pattern(css_filename_template.template());
-
-      let hash_placeholder =
-        extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
-
-      let css_hash_placeholder =
-        extracted_css_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
-
-      let preliminary = filename_template.render(&FileNameRenderOptions {
-        name: Some(&chunk_name),
-        hash: hash_placeholder.as_deref(),
-        ..Default::default()
-      });
-
-      let css_preliminary = css_filename_template.render(&FileNameRenderOptions {
-        name: Some(&chunk_name),
-        hash: hash_placeholder.as_deref(),
-        ..Default::default()
-      });
-
       chunk.name = Some(chunk_name);
-      chunk.absolute_preliminary_filename =
-        Some(preliminary.absolutize_with(&self.options.dir).expect_into_string());
-      chunk.css_absolute_preliminary_filename =
-        Some(css_preliminary.absolutize_with(&self.options.dir).expect_into_string());
-      chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));
-      chunk.css_preliminary_filename =
-        Some(PreliminaryFilename::new(css_preliminary, css_hash_placeholder));
+      let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output, self.options);
 
-      Ok(())
-    })?;
+      let (filenames_option, css_filenames_option) = if pre_rendered_chunk.is_entry {
+        (&self.options.entry_filenames, &self.options.css_entry_filenames)
+      } else {
+        (&self.options.chunk_filenames, &self.options.css_chunk_filenames)
+      };
 
+      template_tasks.push(async move {
+        let filename_template =
+          FilenameTemplate::new(filenames_option.call(&pre_rendered_chunk).await?);
+        let css_filename_template =
+          FilenameTemplate::new(css_filenames_option.call(&pre_rendered_chunk).await?);
+        anyhow::Ok((chunk_id, filename_template, css_filename_template, pre_rendered_chunk))
+      });
+    }
+
+    try_join_all(template_tasks).await?.into_iter().for_each(
+      |(chunk_id, filename_template, css_filename_template, pre_rendered_chunk)| {
+        let chunk = &mut chunk_graph.chunks[chunk_id];
+        let extracted_hash_pattern = extract_hash_pattern(filename_template.template());
+        let extracted_css_hash_pattern = extract_hash_pattern(css_filename_template.template());
+
+        let hash_placeholder =
+          extracted_hash_pattern.map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+
+        let css_hash_placeholder = extracted_css_hash_pattern
+          .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+
+        let preliminary = filename_template.render(&FileNameRenderOptions {
+          name: Some(&pre_rendered_chunk.name),
+          hash: hash_placeholder.as_deref(),
+          ..Default::default()
+        });
+
+        let css_preliminary = css_filename_template.render(&FileNameRenderOptions {
+          name: Some(&pre_rendered_chunk.name),
+          hash: hash_placeholder.as_deref(),
+          ..Default::default()
+        });
+
+        chunk.absolute_preliminary_filename =
+          Some(preliminary.absolutize_with(&self.options.dir).expect_into_string());
+        chunk.css_absolute_preliminary_filename =
+          Some(css_preliminary.absolutize_with(&self.options.dir).expect_into_string());
+        chunk.preliminary_filename = Some(PreliminaryFilename::new(preliminary, hash_placeholder));
+        chunk.css_preliminary_filename =
+          Some(PreliminaryFilename::new(css_preliminary, css_hash_placeholder));
+        chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
+      },
+    );
     Ok(())
   }
 }

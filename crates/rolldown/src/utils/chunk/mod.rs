@@ -1,5 +1,5 @@
 use rolldown_common::{
-  Chunk, ChunkKind, ModuleId, NormalizedBundlerOptions, PreRenderedChunk, RenderedModule,
+  Chunk, ChunkKind, ModuleId, NormalizedBundlerOptions, RenderedModule, RollupPreRenderedChunk,
   RollupRenderedChunk,
 };
 use rustc_hash::FxHashMap;
@@ -20,8 +20,8 @@ pub fn generate_pre_rendered_chunk(
   chunk: &Chunk,
   graph: &LinkStageOutput,
   output_options: &NormalizedBundlerOptions,
-) -> PreRenderedChunk {
-  PreRenderedChunk {
+) -> RollupPreRenderedChunk {
+  RollupPreRenderedChunk {
     name: chunk.name.clone().expect("should have name"),
     is_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { is_user_defined, .. } if *is_user_defined),
     is_dynamic_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { is_user_defined, .. } if !*is_user_defined),
@@ -42,19 +42,17 @@ pub fn generate_pre_rendered_chunk(
 
 pub fn generate_rendered_chunk(
   chunk: &Chunk,
-  graph: &LinkStageOutput,
-  output_options: &NormalizedBundlerOptions,
   render_modules: FxHashMap<ModuleId, RenderedModule>,
+  pre_rendered_chunk: &RollupPreRenderedChunk,
   chunk_graph: &ChunkGraph,
 ) -> RollupRenderedChunk {
-  let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, graph, output_options);
   RollupRenderedChunk {
-    name: pre_rendered_chunk.name,
+    name: pre_rendered_chunk.name.clone(),
     is_entry: pre_rendered_chunk.is_entry,
     is_dynamic_entry: pre_rendered_chunk.is_dynamic_entry,
-    facade_module_id: pre_rendered_chunk.facade_module_id,
-    module_ids: pre_rendered_chunk.module_ids,
-    exports: pre_rendered_chunk.exports,
+    facade_module_id: pre_rendered_chunk.facade_module_id.clone(),
+    module_ids: pre_rendered_chunk.module_ids.clone(),
+    exports: pre_rendered_chunk.exports.clone(),
     filename: chunk
       .preliminary_filename
       .as_deref()

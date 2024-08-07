@@ -114,17 +114,17 @@ impl IntegrationTest {
 
     if options.entry_filenames.is_none() {
       if self.test_meta.hash_in_filename {
-        options.entry_filenames = Some(format!("[name]-[hash].{output_ext}"));
+        options.entry_filenames = Some(format!("[name]-[hash].{output_ext}").into());
       } else {
-        options.entry_filenames = Some(format!("[name].{output_ext}"));
+        options.entry_filenames = Some(format!("[name].{output_ext}").into());
       }
     }
 
     if options.chunk_filenames.is_none() {
       if self.test_meta.hash_in_filename {
-        options.chunk_filenames = Some(format!("[name]-[hash].{output_ext}"));
+        options.chunk_filenames = Some(format!("[name]-[hash].{output_ext}").into());
       } else {
-        options.chunk_filenames = Some(format!("[name].{output_ext}"));
+        options.chunk_filenames = Some(format!("[name].{output_ext}").into());
       }
     }
 

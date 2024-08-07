@@ -6,14 +6,6 @@ import {
   description,
 } from '../../package.json' assert { type: 'json' }
 
-interface ParsedArgs {
-  config?: string | true
-  c?: string | true
-  // `citty` intercept the help option, so we don't need to deal with it
-  // help?: boolean
-  // h?: boolean
-}
-
 const main = defineCommand({
   meta: {
     name: 'rolldown',

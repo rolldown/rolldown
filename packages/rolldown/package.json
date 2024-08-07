@@ -114,7 +114,6 @@
     "fs-extra": "^11.2.0",
     "glob": "^10.4.1",
     "locate-character": "^3.0.0",
-    "mri": "^1.2.0",
     "npm-run-all2": "^6.2.0",
     "remeda": "^2.10.0",
     "rolldown": "workspace:*",

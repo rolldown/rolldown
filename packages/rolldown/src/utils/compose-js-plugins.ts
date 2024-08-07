@@ -4,16 +4,23 @@ import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'
 
-// FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
-// we have to bailout all plugins with `resolveId` hook.
-const supportedHooks = new Set([
-  'buildStart',
-  'load',
-  'transform',
-  'buildEnd',
-  'renderChunk',
-  'name',
-  'api',
+
+    // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
+    // we have to bailout all plugins with `resolveId` hook.
+const unsupportedHooks = new Set([
+  'augmentChunkHash',
+  'banner',
+  'footer',
+  'generateBundle',
+  'moduleParsed',
+  'onLog',
+  'options',
+  'outputOptions',
+  'renderError',
+  'renderStart',
+  'resolveDynamicImport',
+  'writeBundle',
+  'resolveId',
 ])
 
 function createComposedPlugin(plugins: Plugin[]): Plugin {
@@ -81,7 +88,6 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           break
         }
         case 'augmentChunkHash':
-        case 'resolveId':
         case 'banner':
         case 'footer':
         case 'intro':
@@ -98,10 +104,11 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           throw new Error(
             `Failed to compose js plugins. Plugin ${pluginName} has an unsupported hook: ${pluginProp}`,
           )
+          break
         }
         default: {
           // All known hooks should be handled above. We allow plugin to have unknown properties and we just ignore them.
-          const _exhaustiveCheck: never = pluginProp
+          const _executiveCheck: never = pluginProp
         }
       }
     })
@@ -244,11 +251,10 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         case 'resolveDynamicImport':
         case 'writeBundle': {
           throw new Error(`Unsupported prop detected: ${hookName}`)
-          break
         }
         default: {
           // All known hooks should be handled above. We allow plugin to have unknown properties and we just ignore them.
-          const _executiveCheck: never = hookName
+          const _exhaustiveCheck: never = hookName
         }
       }
     },
@@ -266,7 +272,7 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
     return false
   }
 
-  if (Object.keys(plugin).every(supportedHooks.has)) {
+  if (Object.keys(plugin).some((k) => unsupportedHooks.has(k))) {
     return false
   }
 

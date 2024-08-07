@@ -1,7 +1,7 @@
 {
   "config": {
     "exports": "named",
-    "esModule": "always",
+    "esModule": true,
     "format": "iife",
     "name": "module"
   }

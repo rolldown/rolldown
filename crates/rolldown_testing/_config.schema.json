@@ -262,17 +262,17 @@
       "description": "This configuration determines how the bundler should handle the synthetic `__esModule` property in the CJS and IIFE format. It is rollup-capable, and the rollup default is `IfDefaultProp`. You may find rollup explanation [here](https://rollupjs.org/configuration-options/#output-esmodule).\n\n> Whether to add a `__esModule: true` property when generating exports for non-ES formats. > This property signifies that the exported value is the namespace of an ES module and that the default > export of this module corresponds to the `.default` property of the exported object. > > *From rollupjs.org*",
       "oneOf": [
         {
-          "description": "Always generate `Object.defineProperty(exports, \"__esModule\", { value: true });` in the CJS and IIFE format. It is similar to other bundlers' behavior.",
-          "type": "string",
+          "description": "True generate `Object.defineProperty(exports, \"__esModule\", { value: true });` in the CJS and IIFE format. It is similar to other bundlers' behavior.",
+          "type": "boolean",
           "enum": [
-            "always"
+            true
           ]
         },
         {
-          "description": "Never generate the synthetic `__esModule` property in the CJS and IIFE format.",
-          "type": "string",
+          "description": "False generate the synthetic `__esModule` property in the CJS and IIFE format.",
+          "type": "boolean",
           "enum": [
-            "never"
+            false
           ]
         },
         {

@@ -216,7 +216,7 @@ export interface BindingOutputOptions {
   assetFileNames?: string
   banner?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   dir?: string
-  esModule?: 'always' | 'never' | 'if-default-prop'
+  esModule?: boolean | 'if-default-prop'
   exports?: 'default' | 'named' | 'none' | 'auto'
   footer?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife'

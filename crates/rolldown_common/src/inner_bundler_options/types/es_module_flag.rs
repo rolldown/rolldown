@@ -53,13 +53,22 @@ pub enum EsModuleFlag {
   IfDefaultProp,
 }
 
+impl From<bool> for EsModuleFlag {
+  fn from(value: bool) -> Self {
+    if value {
+      EsModuleFlag::Always
+    } else {
+      EsModuleFlag::Never
+    }
+  }
+}
+
 impl From<String> for EsModuleFlag {
   fn from(value: String) -> Self {
-    match value.as_str() {
-      "always" => EsModuleFlag::Always,
-      "never" => EsModuleFlag::Never,
-      "if-default-prop" => EsModuleFlag::IfDefaultProp,
-      _ => unreachable!("unknown es module type"),
+    if value == "if-default-prop" {
+      return EsModuleFlag::IfDefaultProp;
     }
+
+    unreachable!("unknown es module type")
   }
 }

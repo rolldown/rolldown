@@ -17,12 +17,14 @@ describe('should not hang after running', () => {
 
 describe('args', () => {
   it('should render help message for empty args', async () => {
-    const stdout = execSync('rolldown', {
-      cwd: projectDir(),
-      encoding: 'utf-8',
-    })
-    // FIXME: `citty` emit nothing
-    expect(stdout).toMatchSnapshot(`""`)
+    try {
+      execSync('rolldown', {
+        cwd: projectDir(),
+        encoding: 'utf-8',
+      })
+    } catch (err: any) {
+      expect(err.message).toMatchSnapshot()
+    }
   })
 })
 

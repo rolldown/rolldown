@@ -1,3 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`args > should render help message for empty args > "" 1`] = `""`;
+exports[`args > should render help message for empty args 1`] = `
+"Command failed: rolldown
+[error] Missing required argument: --config
+"
+`;

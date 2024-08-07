@@ -24,7 +24,7 @@ export default defineTest({
           expect(chunk.isDynamicEntry).toBe(false)
           expect(chunk.facadeModuleId).toBe(entry)
           expect(chunk.exports.length).toBe(0)
-          expect(chunk.imports).length(0)
+          expect(chunk.imports).toStrictEqual(['share.js'])
           expect(chunk.moduleIds).toStrictEqual([entry])
           expect(Object.keys(chunk.modules).length).toBe(1)
           // called bundle.generate()
@@ -33,9 +33,13 @@ export default defineTest({
           chunk.code = 'console.error()'
           // Delete chunk
           delete bundle['index.js']
+          delete bundle['share.js']
         },
       },
     ],
+    output: {
+      chunkFileNames: '[name].js',
+    },
   },
   afterTest: (output) => {
     expect(generateBundleFn).toHaveBeenCalledTimes(1)

@@ -1,11 +1,14 @@
 use crate::options::binding_inject_import::normalize_binding_inject_import;
+use crate::options::ChunkFileNamesOutputOption;
+#[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
   options::plugin::JsPlugin,
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
-use napi::bindgen_prelude::Either;
+use napi::{bindgen_prelude::Either, Env};
 use rolldown::{
-  AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputExports, OutputFormat, Platform,
+  AddonOutputOption, BundlerOptions, ChunkFilenamesOutputOption, IsExternal, ModuleType,
+  OutputExports, OutputFormat, Platform,
 };
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -37,8 +40,29 @@ fn normalize_addon_option(
   })
 }
 
+fn normalize_chunk_file_names_option(
+  env: Env,
+  option: Option<ChunkFileNamesOutputOption>,
+) -> napi::Result<Option<ChunkFilenamesOutputOption>> {
+  option
+    .map(move |value| match value {
+      Either::A(str) => Ok(ChunkFilenamesOutputOption::String(str)),
+      Either::B(func) => {
+        let func =
+          func.borrow_back(&env)?.build_threadsafe_function().callee_handled::<false>().build()?;
+        Ok(ChunkFilenamesOutputOption::Fn(Box::new(move |chunk| {
+          let func = func.clone();
+          let chunk = chunk.clone();
+          Box::pin(async move { func.call_async(chunk.into()).await.map_err(anyhow::Error::from) })
+        })))
+      }
+    })
+    .transpose()
+}
+
 #[allow(clippy::too_many_lines)]
 pub fn normalize_binding_options(
+  env: Env,
   input_options: crate::options::BindingInputOptions,
   output_options: crate::options::BindingOutputOptions,
   #[cfg(not(target_family = "wasm"))] mut parallel_plugins_map: Option<
@@ -115,8 +139,8 @@ pub fn normalize_binding_options(
       .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
     shim_missing_exports: input_options.shim_missing_exports,
     name: output_options.name,
-    entry_filenames: output_options.entry_file_names,
-    chunk_filenames: output_options.chunk_file_names,
+    entry_filenames: normalize_chunk_file_names_option(env, output_options.entry_file_names)?,
+    chunk_filenames: normalize_chunk_file_names_option(env, output_options.chunk_file_names)?,
     asset_filenames: output_options.asset_file_names,
     dir: output_options.dir,
     sourcemap: output_options.sourcemap.map(Into::into),

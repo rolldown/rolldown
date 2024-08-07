@@ -4,11 +4,15 @@ import type {
 } from '../rollup'
 import type { OutputOptions } from './output-options'
 import type { RolldownPlugin } from '../plugin'
-import type { RenderedChunk } from '../binding'
+import type { PreRenderedChunk, RenderedChunk } from '../binding'
 
 export type InternalModuleFormat = 'es' | 'cjs' | 'iife'
 
 type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
+type ChunkFileNamesOption =
+  | string
+  | ((chunk: PreRenderedChunk) => string)
+  | undefined
 
 export interface NormalizedOutputOptions extends OutputOptions {
   plugins: RolldownPlugin[]
@@ -23,8 +27,8 @@ export interface NormalizedOutputOptions extends OutputOptions {
   intro: AddonFunction
   outro: AddonFunction
   esModule: boolean | 'if-default-prop'
-  entryFileNames: string
-  chunkFileNames: string
+  entryFileNames: ChunkFileNamesOption
+  chunkFileNames: ChunkFileNamesOption
   assetFileNames: string
   name: string | undefined
 }

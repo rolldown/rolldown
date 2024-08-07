@@ -1,4 +1,4 @@
-import type { RenderedChunk } from '../binding'
+import type { PreRenderedChunk, RenderedChunk } from '../binding'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
 import { bold, underline } from '../cli/colors'
@@ -19,6 +19,11 @@ const addonFunctionSchema = z
   .function()
   .args(zodExt.phantom<RenderedChunk>())
   .returns(z.string().or(z.promise(z.string())))
+
+const chunkFileNamesFunctionSchema = z
+  .function()
+  .args(zodExt.phantom<PreRenderedChunk>())
+  .returns(z.string())
 
 const outputOptionsSchema = z.strictObject({
   dir: z.string().describe('Output directory, defaults to `dist`.').optional(),
@@ -56,8 +61,8 @@ const outputOptionsSchema = z.strictObject({
     .describe('extend global variable defined by name in IIFE or UMD formats')
     .optional(),
   esModule: z.literal('if-default-prop').or(z.boolean()).optional(),
-  entryFileNames: z.string().optional(),
-  chunkFileNames: z.string().optional(),
+  entryFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
+  chunkFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
   assetFileNames: z.string().optional(),
   minify: z.boolean().describe('minify the bundled file.').optional(),
   name: z.string().describe('name for UMD / IIFE format outputs').optional(),

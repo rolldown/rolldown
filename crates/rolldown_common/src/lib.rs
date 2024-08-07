@@ -21,7 +21,7 @@ pub mod bundler_options {
       normalized_bundler_options::NormalizedBundlerOptions,
       output_exports::OutputExports,
       output_format::OutputFormat,
-      output_option::{AddonFunction, AddonOutputOption},
+      output_option::{AddonFunction, AddonOutputOption, ChunkFilenamesOutputOption},
       platform::Platform,
       resolve_options::ResolveOptions,
       source_map_type::SourceMapType,
@@ -37,8 +37,7 @@ pub mod bundler_options {
 pub use crate::{
   chunk::{
     types::{
-      cross_chunk_import_item::CrossChunkImportItem, pre_renderer_chunk::PreRenderedChunk,
-      preliminary_filename::PreliminaryFilename,
+      cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
     },
     Chunk,
   },
@@ -77,6 +76,7 @@ pub use crate::{
   types::rendered_module::RenderedModule,
   types::resolved_export::ResolvedExport,
   types::resolved_request_info::ResolvedId,
+  types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,
   types::side_effects,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfos},

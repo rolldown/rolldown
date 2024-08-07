@@ -82,14 +82,12 @@ export function transformToRollupOutput(
   output: BindingOutputs | FinalBindingOutputs,
 ): RolldownOutput {
   const { chunks, assets } = output
-  const [firstChunk, ...restChunks] = chunks
   return {
     output: [
-      transformToRollupOutputChunk(firstChunk),
-      ...restChunks.map(transformToRollupOutputChunk),
+      ...chunks.map(transformToRollupOutputChunk),
       ...assets.map(transformToRollupOutputAsset),
     ],
-  }
+  } as RolldownOutput
 }
 
 export function transformToOutputBundle(output: BindingOutputs): OutputBundle {

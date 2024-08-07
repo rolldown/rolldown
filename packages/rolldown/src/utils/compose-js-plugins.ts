@@ -4,19 +4,15 @@ import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'
 
-const unsupportedHooks = new Set([
-  'augmentChunkHash',
-  'banner',
-  'generateBundle',
-  'moduleParsed',
-  'onLog',
-  'options',
-  'outputOptions',
-  'renderError',
-  'renderStart',
-  'resolveDynamicImport',
-  'writeBundle',
-  'resolveId',
+
+// FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
+// we have to bailout all plugins with `resolveId` hook.
+const supportedHooks = new Set([
+  'buildStart',
+  'load',
+  'transform',
+  'buildEnd',
+  'renderChunk'
 ])
 
 function createComposedPlugin(plugins: Plugin[]): Plugin {
@@ -59,14 +55,14 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           }
           break
         }
-        case 'resolveId': {
-          const handlers = batchedHooks.resolveId ?? []
-          batchedHooks.resolveId = handlers
-          if (plugin.resolveId) {
-            handlers.push(plugin.resolveId)
-          }
-          break
-        }
+        // case 'resolveId': {
+        //   const handlers = batchedHooks.resolveId ?? []
+        //   batchedHooks.resolveId = handlers
+        //   if (plugin.resolveId) {
+        //     handlers.push(plugin.resolveId)
+        //   }
+        //   break
+        // }
         case 'buildEnd': {
           const handlers = batchedHooks.buildEnd ?? []
           batchedHooks.buildEnd = handlers
@@ -84,6 +80,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
           break
         }
         case 'augmentChunkHash':
+        case 'resolveId':
         case 'banner':
         case 'footer':
         case 'intro':
@@ -270,12 +267,10 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
   }
 
   if ('resolveId' in plugin) {
-    // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
-    // we have to bailout all plugins with `resolveId` hook.
     return false
   }
 
-  if (Object.keys(plugin).some((k) => unsupportedHooks.has(k))) {
+  if (Object.keys(plugin).every(supportedHooks.has)) {
     return false
   }
 

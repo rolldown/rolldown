@@ -1,5 +1,5 @@
 import process from 'node:process'
-import { defineCommand, runMain,  } from 'citty'
+import { defineCommand, runMain } from 'citty'
 import { bundle } from './commands/bundle'
 import {
   version,

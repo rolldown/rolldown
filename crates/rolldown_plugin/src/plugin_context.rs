@@ -74,6 +74,7 @@ impl PluginContext {
       } else {
         None
       },
+      normalized_extra_options.custom,
     )
     .await
   }

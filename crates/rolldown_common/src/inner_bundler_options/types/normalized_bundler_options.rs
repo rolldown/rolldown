@@ -49,4 +49,5 @@ pub struct NormalizedBundlerOptions {
   pub experimental: ExperimentalOptions,
   pub minify: bool,
   pub extend: bool,
+  pub define: Vec<(/* Target to be replaced */ String, /* Replacement */ String)>,
 }

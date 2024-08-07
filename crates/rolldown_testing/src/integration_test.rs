@@ -265,55 +265,54 @@ impl IntegrationTest {
   }
 
   fn execute_output_assets(bundler: &Bundler) {
-    let mut command = Command::new("node");
-
     let cwd = bundler.options().cwd.clone();
     let dist_folder = cwd.join(&bundler.options().dir);
     let is_output_cjs = matches!(bundler.options().format, OutputFormat::Cjs);
 
     let test_script = if is_output_cjs { cwd.join("_test.cjs") } else { cwd.join("_test.mjs") };
 
-    let compiled_entries = bundler
-      .options()
-      .input
-      .iter()
-      .map(|item| {
-        let name = item.name.clone().expect("inputs must have `name` in `_config.json`");
-        let ext = if is_output_cjs { "cjs" } else { "mjs" };
-        format!("{name}.{ext}",)
-      })
-      .map(|name| dist_folder.join(name))
-      .collect::<Vec<_>>();
-
-    compiled_entries.iter().for_each(|entry| {
-      if is_output_cjs {
-        command.arg("--require");
-      } else {
-        command.arg("--import");
-      }
-      if cfg!(target_os = "windows") && !is_output_cjs {
-        // Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs.
-        command.arg(format!("file://{}", entry.to_str().expect("should be valid utf8")));
-      } else {
-        command.arg(entry);
-      }
-    });
+    let mut node_command = Command::new("node");
 
     if test_script.exists() {
-      command.arg(test_script);
+      node_command.arg(test_script);
     } else {
-      command.arg("--eval");
-      command.arg("\"\"");
+      let compiled_entries = bundler
+        .options()
+        .input
+        .iter()
+        .map(|item| {
+          let name = item.name.clone().expect("inputs must have `name` in `_config.json`");
+          let ext = if is_output_cjs { "cjs" } else { "mjs" };
+          format!("{name}.{ext}",)
+        })
+        .map(|name| dist_folder.join(name))
+        .collect::<Vec<_>>();
+
+      compiled_entries.iter().for_each(|entry| {
+        if is_output_cjs {
+          node_command.arg("--require");
+        } else {
+          node_command.arg("--import");
+        }
+        if cfg!(target_os = "windows") && !is_output_cjs {
+          // Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs.
+          node_command.arg(format!("file://{}", entry.to_str().expect("should be valid utf8")));
+        } else {
+          node_command.arg(entry);
+        }
+        node_command.arg("--eval");
+        node_command.arg("\"\"");
+      });
     }
 
-    let output = command.output().unwrap();
+    let output = node_command.output().unwrap();
 
     #[allow(clippy::print_stdout)]
     if !output.status.success() {
       let stdout_utf8 = std::str::from_utf8(&output.stdout).unwrap();
       let stderr_utf8 = std::str::from_utf8(&output.stderr).unwrap();
 
-      println!("⬇️⬇️ Failed to execute command ⬇️⬇️\n{command:?}\n⬆️⬆️ end  ⬆️⬆️");
+      println!("⬇️⬇️ Failed to execute command ⬇️⬇️\n{node_command:?}\n⬆️⬆️ end  ⬆️⬆️");
       panic!("⬇️⬇️ stderr ⬇️⬇️\n{stderr_utf8}\n⬇️⬇️ stdout ⬇️⬇️\n{stdout_utf8}\n⬆️⬆️ end  ⬆️⬆️",);
     }
   }

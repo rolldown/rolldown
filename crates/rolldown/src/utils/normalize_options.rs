@@ -8,7 +8,7 @@ pub struct NormalizeOptionsReturn {
 
 pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOptionsReturn {
   // Take out resolve options
-
+  let platform = raw_options.platform.unwrap_or(Platform::Browser);
   let raw_resolve = std::mem::take(&mut raw_options.resolve).unwrap_or_default();
 
   let mut loaders = FxHashMap::from(
@@ -46,6 +46,23 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   let globals: FxHashMap<String, String> =
     raw_options.globals.map(|globals| globals.into_iter().collect()).unwrap_or_default();
+
+  let define = {
+    let mut raw = raw_options.define.unwrap_or_default();
+    match platform {
+      // - https://github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/pkg/api/api_impl.go#L637-L642
+      // Esbuild only has this behavior for browser platform. I don't see any particular reason why we shouldn't do this for node platform.
+      Platform::Node | Platform::Browser => {
+        if !raw.contains_key("process.env.NODE_ENV") {
+          if let Ok(node_env) = std::env::var("NODE_ENV") {
+            raw.insert("process.env.NODE_ENV".to_string(), format!("\"{node_env}\""));
+          }
+        }
+      }
+      Platform::Neutral => {}
+    }
+    raw.into_iter().collect()
+  };
 
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
@@ -89,6 +106,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     module_types: loaders,
     experimental: raw_options.experimental.unwrap_or_default(),
     minify: raw_options.minify.unwrap_or(false),
+    define,
     extend: raw_options.extend.unwrap_or(false),
   };
 

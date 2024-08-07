@@ -19,7 +19,7 @@ workspace = true
 anyhow      = { workspace = true }
 base64-simd = { workspace = true }
 futures     = { workspace = true }
-indexmap    = { workspace = true }
+indexmap    = { workspace = true, features = ["serde"] }
 infer       = { workspace = true }
 mime        = { workspace = true }
 oxc         = { workspace = true }

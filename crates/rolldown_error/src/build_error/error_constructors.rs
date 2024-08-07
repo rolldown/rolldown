@@ -8,6 +8,7 @@ use rolldown_resolver::ResolveError;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
+use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -58,6 +59,13 @@ impl BuildDiagnostic {
 
   pub fn unresolved_import(specifier: impl Into<String>, importer: impl Into<PathBuf>) -> Self {
     Self::new_inner(UnresolvedImport { specifier: specifier.into(), importer: importer.into() })
+  }
+  pub fn unloadable_dependency(
+    resolved: ArcStr,
+    context: Option<UnloadableDependencyContext>,
+    reason: ArcStr,
+  ) -> Self {
+    Self::new_inner(UnloadableDependency { resolved, context, reason })
   }
 
   pub fn sourcemap_error(error: oxc::sourcemap::Error) -> Self {

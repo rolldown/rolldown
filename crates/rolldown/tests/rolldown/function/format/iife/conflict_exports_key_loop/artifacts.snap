@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+var module = (function(exports) {
+
+"use strict";
+
+//#region main.js
+const exports$1 = "exports";
+const exports$1$1 = "exports$1";
+
+//#endregion
+Object.defineProperty(exports, 'exports', {
+  enumerable: true,
+  get: function () {
+    return exports$1;
+  }
+});
+Object.defineProperty(exports, 'exports$1', {
+  enumerable: true,
+  get: function () {
+    return exports$1$1;
+  }
+});
+return exports;
+})({});
+```

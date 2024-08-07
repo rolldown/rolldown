@@ -18,6 +18,7 @@ pub mod missing_name_option_for_iife_export;
 pub mod mixed_export;
 pub mod parse_error;
 pub mod sourcemap_error;
+pub mod unloadable_dependency;
 pub mod unresolved_entry;
 pub mod unresolved_import;
 pub mod unresolved_import_treated_as_external;

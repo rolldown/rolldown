@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+
+
+//#region lib.prod.js
+var lib_prod_ns, lib_prod_default;
+var init_lib_prod = __esmMin(() => {
+	lib_prod_ns = {};
+	__export(lib_prod_ns, { default: () => lib_prod_default });
+	lib_prod_default = "prod";
+});
+
+//#endregion
+//#region lib.js
+var require_lib = __commonJSMin((exports, module) => {
+	{
+		module.exports = (init_lib_prod(), __toCommonJS(lib_prod_ns));
+	}
+});
+
+//#endregion
+//#region main.js
+var import_lib = __toESM(require_lib());
+
+//#endregion
+var lib = import_lib.default;
+export { lib };
+```

@@ -106,9 +106,17 @@ impl ScanStage {
         specifier: &'a str,
       }
       let args = Args { specifier: &input_item.import };
-      let resolved =
-        resolve_id(resolver, plugin_driver, args.specifier, None, true, ImportKind::Import, None)
-          .await;
+      let resolved = resolve_id(
+        resolver,
+        plugin_driver,
+        args.specifier,
+        None,
+        true,
+        ImportKind::Import,
+        None,
+        Arc::default(),
+      )
+      .await;
 
       resolved
         .map(|info| (args, info.map(|info| ((input_item.name.clone().map(ArcStr::from)), info))))

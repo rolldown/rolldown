@@ -1406,6 +1406,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - foo~1-!~{003}~.mjs => foo~1-SAQ2emDX.mjs
 - main-!~{000}~.mjs => main-Iuj6QrqP.mjs
 
+# tests/rolldown/dce/conditional_exports
+
+- main-!~{000}~.mjs => main-QSRhG9S4.mjs
+
 # tests/rolldown/errors/ambiguous_external_namespace
 
 - main-!~{000}~.mjs => main-07HwCbF6.mjs
@@ -1434,6 +1438,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 
 # tests/rolldown/errors/unresolved_entry
 
+
+# tests/rolldown/function/define/node_env
+
+- main-!~{000}~.mjs => main-zmFhpGWu.mjs
+
+# tests/rolldown/function/define/patterns
+
+- main-!~{000}~.mjs => main-alEkff5H.mjs
 
 # tests/rolldown/function/dir/should_generate_correct_relative_import_path
 
@@ -1585,6 +1597,10 @@ expression: "snapshot_outputs.join(\"\\n\")"
 - main-!~{000}~.mjs => main-soihLkqo.mjs
 - other-entry-!~{001}~.mjs => other-entry-coajbluq.mjs
 
+# tests/rolldown/function/format/cjs/conflict_exports_key
+
+- main-!~{000}~.cjs => main-MV9F9603.cjs
+
 # tests/rolldown/function/format/cjs/import_export_unicode
 
 - main-!~{000}~.cjs => main-7KKR3ylp.cjs
@@ -1606,6 +1622,14 @@ expression: "snapshot_outputs.join(\"\\n\")"
 # tests/rolldown/function/format/iife/basic
 
 - main-!~{000}~.mjs => main--9MFXZs-.mjs
+
+# tests/rolldown/function/format/iife/conflict_exports_key
+
+- main-!~{000}~.mjs => main-oG2zLm_0.mjs
+
+# tests/rolldown/function/format/iife/conflict_exports_key_loop
+
+- main-!~{000}~.mjs => main-jqeYIu7y.mjs
 
 # tests/rolldown/function/format/iife/external_modules
 

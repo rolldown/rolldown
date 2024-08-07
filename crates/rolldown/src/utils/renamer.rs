@@ -1,12 +1,11 @@
-use std::borrow::Cow;
-use std::collections::hash_map::Entry;
-
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
-use rolldown_common::{EcmaModule, IndexModules, ModuleIdx, SymbolRef};
+use rolldown_common::{EcmaModule, IndexModules, ModuleIdx, OutputFormat, SymbolRef};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
+use std::borrow::Cow;
+use std::collections::hash_map::Entry;
 
 use crate::types::symbols::Symbols;
 
@@ -35,12 +34,19 @@ pub struct Renamer<'name> {
 }
 
 impl<'name> Renamer<'name> {
-  pub fn new(symbols: &'name Symbols, _modules_len: usize) -> Self {
+  pub fn new(symbols: &'name Symbols, _modules_len: usize, format: &OutputFormat) -> Self {
+    // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
+    let manual_reserved = match format {
+      OutputFormat::Esm | OutputFormat::App => vec![],
+      OutputFormat::Cjs => vec!["module", "require", "__filename", "__dirname", "exports"],
+      OutputFormat::Iife => vec!["exports"], // Also for UMD, AMD, but we don't support them yet.
+    };
     Self {
       canonical_names: FxHashMap::default(),
       symbols,
-      used_canonical_names: RESERVED_KEYWORDS
+      used_canonical_names: manual_reserved
         .iter()
+        .chain(RESERVED_KEYWORDS.iter())
         .chain(GLOBAL_OBJECTS.iter())
         .map(|s| (Cow::Owned(Rstr::new(s)), 0))
         .collect(),

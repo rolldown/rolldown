@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.mjs
+
+```js
+import { default as nodeAssert } from "node:assert";
+
+//#region main.js
+const processNodeEnv = "production";
+nodeAssert.strictEqual(processNodeEnv, "production");
+
+//#endregion
+```

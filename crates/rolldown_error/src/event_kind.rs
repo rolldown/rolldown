@@ -18,6 +18,7 @@ pub enum EventKind {
   InvalidExportOption,
   // --- These kinds are rolldown specific
   IllegalReassignment,
+  UnloadableDependency,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // TODO remove following kinds
@@ -31,6 +32,7 @@ impl Display for EventKind {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       // --- Copied from rollup
+      EventKind::UnloadableDependency => write!(f, "UNLOADABLE_DEPENDENCY"),
       EventKind::UnresolvedEntry => write!(f, "UNRESOLVED_ENTRY"),
       EventKind::UnresolvedImport => write!(f, "UNRESOLVED_IMPORT"),
       EventKind::AmbiguousExternalNamespace => write!(f, "AMBIGUOUS_EXTERNAL_NAMESPACES"),

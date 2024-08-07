@@ -1,4 +1,5 @@
 crates/**
 packages/rollup-tests/**
 packages/rolldown/tests/fixtures
+packages/rolldown/src/binding.d.ts
 rollup/**

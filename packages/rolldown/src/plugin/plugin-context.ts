@@ -2,7 +2,12 @@ import type { RollupError, LoggingFunction } from '../rollup'
 import type { BindingPluginContext } from '../binding'
 import { getLogHandler, normalizeLog } from '../log/logHandler'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
-import type { Plugin } from './index'
+import type {
+  CustomPluginOptions,
+  ModuleOptions,
+  Plugin,
+  ResolvedId,
+} from './index'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
 import { AssetSource, bindingAssetSource } from '../utils/asset-source'
@@ -24,7 +29,16 @@ export class PluginContext {
   info: LoggingFunction
   warn: LoggingFunction
   error: (error: RollupError | string) => never
-  resolve: BindingPluginContext['resolve']
+  resolve: (
+    source: string,
+    importer?: string,
+    options?: {
+      // assertions?: Record<string, string>
+      custom?: CustomPluginOptions
+      // isEntry?: boolean
+      skipSelf?: boolean
+    },
+  ) => Promise<ResolvedId | null>
   emitFile: (file: EmittedAsset) => string
   getFileName: (referenceId: string) => string
   getModuleInfo: (id: string) => ModuleInfo | null
@@ -67,7 +81,26 @@ export class PluginContext {
     this.error = (e): never => {
       return error(logPluginError(normalizeLog(e), pluginName))
     }
-    this.resolve = context.resolve.bind(context)
+    this.resolve = async (
+      source: string,
+      importer?: string,
+      options?: {
+        // assertions?: Record<string, string>
+        custom?: CustomPluginOptions
+        // isEntry?: boolean
+        skipSelf?: boolean
+      },
+    ) => {
+      let custom = options?.custom && data.setResolveCustom(options.custom)
+      const res = await context.resolve(source, importer, {
+        custom,
+        skipSelf: options?.skipSelf,
+      })
+      typeof custom === 'number' && data.removeResolveCustom(custom)
+      if (res == null) return null
+      const info = data.getModuleOption(res.id) || ({} as ModuleOptions)
+      return { ...res, ...info }
+    }
     this.emitFile = (file: EmittedAsset): string => {
       if (file.type !== 'asset') {
         return unimplemented(

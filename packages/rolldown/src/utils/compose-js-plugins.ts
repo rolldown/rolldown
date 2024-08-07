@@ -4,9 +4,12 @@ import { normalizeHook } from './normalize-hook'
 import { isNullish } from './misc'
 import { BuiltinPlugin } from '../plugin/builtin-plugin'
 
+// FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
+// we have to bailout all plugins with `resolveId` hook.
 const unsupportedHooks = new Set([
   'augmentChunkHash',
   'banner',
+  'footer',
   'generateBundle',
   'moduleParsed',
   'onLog',
@@ -247,11 +250,10 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
         case 'resolveDynamicImport':
         case 'writeBundle': {
           throw new Error(`Unsupported prop detected: ${hookName}`)
-          break
         }
         default: {
           // All known hooks should be handled above. We allow plugin to have unknown properties and we just ignore them.
-          const _executiveCheck: never = hookName
+          const _exhaustiveCheck: never = hookName
         }
       }
     },
@@ -266,12 +268,6 @@ function isComposablePlugin(plugin: RolldownPlugin): plugin is Plugin {
   }
 
   if ('_parallel' in plugin) {
-    return false
-  }
-
-  if ('resolveId' in plugin) {
-    // FIXME: Conflict with the `skip` option in `PluginContext#resolve`. Since we can't detect it in advance,
-    // we have to bailout all plugins with `resolveId` hook.
     return false
   }
 

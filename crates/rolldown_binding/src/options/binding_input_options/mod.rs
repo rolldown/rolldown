@@ -74,6 +74,7 @@ pub struct BindingInputOptions {
   pub treeshake: Option<treeshake::BindingTreeshake>,
 
   pub module_types: Option<HashMap<String, String>>,
+  pub define: Option<Vec<(/* Target to be replaced */ String, /* Replacement */ String)>>,
 }
 
 pub type BindingOnLog =

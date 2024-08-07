@@ -93,6 +93,7 @@ const inputOptionsSchema = z.strictObject({
       enableComposingJsPlugins: z.boolean().optional(),
     })
     .optional(),
+  define: z.record(z.string()).optional(),
 })
 
 export type InputOption = z.infer<typeof inputOptionSchema>

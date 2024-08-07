@@ -86,6 +86,7 @@ rolldown_plugin                         = { version = "0.1.0", path = "./crates/
 rolldown_plugin_data_url                = { version = "0.1.0", path = "./crates/rolldown_plugin_data_url" }
 rolldown_plugin_dynamic_import_vars     = { version = "0.0.1", path = "./crates/rolldown_plugin_dynamic_import_vars" }
 rolldown_plugin_glob_import             = { version = "0.1.0", path = "./crates/rolldown_plugin_glob_import" }
+rolldown_plugin_load_fallback           = { version = "0.1.0", path = "./crates/rolldown_plugin_load_fallback" }
 rolldown_plugin_manifest                = { version = "0.1.0", path = "./crates/rolldown_plugin_manifest" }
 rolldown_plugin_module_preload_polyfill = { version = "0.1.0", path = "./crates/rolldown_plugin_module_preload_polyfill" }
 rolldown_plugin_wasm                    = { version = "0.1.0", path = "./crates/rolldown_plugin_wasm" }

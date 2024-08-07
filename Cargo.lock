@@ -2198,6 +2198,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_glob_import",
+ "rolldown_plugin_load_fallback",
  "rolldown_plugin_manifest",
  "rolldown_plugin_module_preload_polyfill",
  "rolldown_plugin_wasm",
@@ -2335,6 +2336,14 @@ dependencies = [
  "rolldown_plugin",
  "rustc-hash",
  "sugar_path",
+]
+
+[[package]]
+name = "rolldown_plugin_load_fallback"
+version = "0.1.0"
+dependencies = [
+ "memchr",
+ "rolldown_plugin",
 ]
 
 [[package]]

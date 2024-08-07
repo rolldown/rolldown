@@ -14,7 +14,6 @@ Object.keys(node_path).forEach(function (k) {
     get: function () { return node_path[k]; }
   });
 });
-            
 var node_fs = require("node:fs");
 Object.keys(node_fs).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
@@ -22,7 +21,6 @@ Object.keys(node_fs).forEach(function (k) {
     get: function () { return node_fs[k]; }
   });
 });
-            
 
 require("node:fs");
 require("node:path");

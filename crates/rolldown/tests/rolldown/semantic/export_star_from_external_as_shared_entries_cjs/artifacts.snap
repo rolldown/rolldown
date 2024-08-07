@@ -14,7 +14,6 @@ Object.keys(node_fs).forEach(function (k) {
     get: function () { return node_fs[k]; }
   });
 });
-            
 const require_main = require('./main.cjs');
 
 ```
@@ -29,7 +28,6 @@ Object.keys(node_fs).forEach(function (k) {
     get: function () { return node_fs[k]; }
   });
 });
-            
 const require_main = require('./main.cjs');
 
 ```

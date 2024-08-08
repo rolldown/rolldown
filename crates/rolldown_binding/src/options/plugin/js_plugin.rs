@@ -8,7 +8,7 @@ use std::{borrow::Cow, ops::Deref, sync::Arc};
 use super::{
   binding_transform_context::BindingTransformPluginContext,
   types::binding_hook_resolve_id_extra_options::BindingHookResolveIdExtraOptions,
-  BindingPluginOptions,
+  types::binding_plugin_transform_extra::BindingTransformHookExtra, BindingPluginOptions,
 };
 
 #[derive(Hash, Debug, PartialEq, Eq)]
@@ -136,7 +136,7 @@ impl Plugin for JsPlugin {
           BindingTransformPluginContext::new(unsafe { std::mem::transmute(ctx) }),
           args.code.to_string(),
           args.id.to_string(),
-          args.module_type.to_string(),
+          BindingTransformHookExtra { module_type: args.module_type.to_string() },
         ))
         .await?
         .map(TryInto::try_into)

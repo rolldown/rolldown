@@ -8,11 +8,11 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        transform: function (code, id, module_type) {
+        transform: function (code, id, meta) {
           transformFn()
           if (id.endsWith('foo.js')) {
             expect(code).toStrictEqual('')
-            expect(module_type).toEqual('js')
+            expect(meta.moduleType).toEqual('js')
             return {
               code: `console.log('transformed')`,
             }

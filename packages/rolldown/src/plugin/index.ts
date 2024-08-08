@@ -1,5 +1,6 @@
 import type {
   BindingHookResolveIdExtraOptions,
+  BindingTransformHookExtra,
   RenderedChunk,
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
@@ -24,7 +25,19 @@ import { ParallelPlugin } from './parallel-plugin'
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
 
-export type ModuleType = 'js' | 'jsx' | 'ts' | 'tsx' | 'json' | 'text' | 'base64' | 'dataurl' | 'binary' | 'empty' | (string & {})
+// ref: https://github.com/microsoft/TypeScript/issues/33471#issuecomment-1376364329
+export type ModuleType =
+  | 'js'
+  | 'jsx'
+  | 'ts'
+  | 'tsx'
+  | 'json'
+  | 'text'
+  | 'base64'
+  | 'dataurl'
+  | 'binary'
+  | 'empty'
+  | (string & {})
 
 export type ImportKind = BindingHookResolveIdExtraOptions['kind']
 
@@ -109,7 +122,7 @@ export interface FunctionPluginHooks {
     this: TransformPluginContext,
     code: string,
     id: string,
-    module_type: ModuleType,
+    meta: BindingTransformHookExtra & { moduleType: ModuleType },
   ) => TransformResult
 
   moduleParsed: (this: PluginContext, moduleInfo: ModuleInfo) => void

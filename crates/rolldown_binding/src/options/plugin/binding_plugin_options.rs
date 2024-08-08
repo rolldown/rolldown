@@ -17,6 +17,7 @@ use super::{
     binding_hook_resolve_id_extra_options::BindingHookResolveIdExtraOptions,
     binding_hook_resolve_id_output::BindingHookResolveIdOutput,
     binding_hook_transform_output::BindingHookTransformOutput,
+    binding_plugin_transform_extra::BindingTransformHookExtra,
   },
 };
 
@@ -65,11 +66,11 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx:  BindingTransformPluginContext, id: string, code: string, module_type: string) => MaybePromise<VoidNullable<BindingHookTransformOutput>>"
+    ts_type = "(ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtra) => MaybePromise<VoidNullable<BindingHookTransformOutput>>"
   )]
   pub transform: Option<
     MaybeAsyncJsCallback<
-      (BindingTransformPluginContext, String, String, String),
+      (BindingTransformPluginContext, String, String, BindingTransformHookExtra),
       Option<BindingHookTransformOutput>,
     >,
   >,

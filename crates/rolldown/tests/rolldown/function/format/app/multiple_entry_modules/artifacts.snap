@@ -7,16 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region square.js
-export default function square(x) {
+var __rolldown_default_export__ = function square(x) {
 	return x * x;
-}
+};
 
 //#endregion
 //#region cube.js
 var { default: square } = __static_import("square.js");
-export default function cube(x) {
+var __rolldown_default_export__ = function cube(x) {
 	return square(x) * x;
-}
+};
 
 //#endregion
 ```
@@ -25,9 +25,9 @@ export default function cube(x) {
 ```js
 //#region hyper-cube.js
 var { default: cube } = __static_import("cube.js");
-export default function hyperCube(x) {
+var __rolldown_default_export__ = function hyperCube(x) {
 	return cube(x) * x;
-}
+};
 
 //#endregion
 //#region main.js

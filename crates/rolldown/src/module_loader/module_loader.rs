@@ -85,7 +85,9 @@ impl ModuleLoader {
     let tx_to_runtime_module = tx.clone();
 
     let meta = TaskContextMeta {
-      replace_global_define_config: if !options.define.is_empty() {
+      replace_global_define_config: if options.define.is_empty() {
+        None
+      } else {
         Some(ReplaceGlobalDefinesConfig::new(&options.define).map_err(|errs| {
           // TODO: maybe we should give better diagnostics here. since oxc return
           // `Vec<OxcDiagnostic>`
@@ -95,8 +97,6 @@ impl ModuleLoader {
             errs
           )
         })?)
-      } else {
-        None
       },
     };
     let common_data = Arc::new(TaskContext {

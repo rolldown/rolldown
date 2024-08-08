@@ -86,14 +86,15 @@ impl ModuleLoader {
 
     let meta = TaskContextMeta {
       replace_global_define_config: if !options.define.is_empty() {
-        let define_config = ReplaceGlobalDefinesConfig::new(&options.define).map_err(|errs| {
+        Some(ReplaceGlobalDefinesConfig::new(&options.define).map_err(|errs| {
+          // TODO: maybe we should give better diagnostics here. since oxc return
+          // `Vec<OxcDiagnostic>`
           anyhow::format_err!(
             "Failed to generate defines config from {:?}. Got {:#?}",
             options.define,
             errs
           )
-        })?;
-        Some(define_config)
+        })?)
       } else {
         None
       },

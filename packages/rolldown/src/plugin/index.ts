@@ -1,6 +1,6 @@
 import type {
-  BindingHookResolveIdExtraOptions,
-  BindingTransformHookExtra,
+  BindingHookResolveIdExtraArgs,
+  BindingTransformHookExtraArgs,
   RenderedChunk,
 } from '../binding'
 import type { NormalizedInputOptions } from '../options/normalized-input-options'
@@ -39,7 +39,7 @@ export type ModuleType =
   | 'empty'
   | (string & {})
 
-export type ImportKind = BindingHookResolveIdExtraOptions['kind']
+export type ImportKind = BindingHookResolveIdExtraArgs['kind']
 
 export interface CustomPluginOptions {
   [plugin: string]: any
@@ -122,7 +122,7 @@ export interface FunctionPluginHooks {
     this: TransformPluginContext,
     code: string,
     id: string,
-    meta: BindingTransformHookExtra & { moduleType: ModuleType },
+    meta: BindingTransformHookExtraArgs & { moduleType: ModuleType },
   ) => TransformResult
 
   moduleParsed: (this: PluginContext, moduleInfo: ModuleInfo) => void

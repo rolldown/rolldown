@@ -140,7 +140,7 @@ export interface BindingHookRenderChunkOutput {
   map?: BindingSourcemap
 }
 
-export interface BindingHookResolveIdExtraOptions {
+export interface BindingHookResolveIdExtraArgs {
   custom?: number
   isEntry: boolean
   kind: 'import' | 'dynamic-import' | 'require-call'
@@ -244,10 +244,10 @@ export interface BindingPluginContextResolveOptions {
 export interface BindingPluginOptions {
   name: string
   buildStart?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
-  resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraOptions) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
+  resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   load?: (ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
-  transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtra) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
+  transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   buildEnd?: (ctx: BindingPluginContext, error: Nullable<string>) => MaybePromise<VoidNullable>
   renderChunk?: (ctx: BindingPluginContext, code: string, chunk: RenderedChunk) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
@@ -288,7 +288,7 @@ export interface BindingSourcemap {
   inner: string | BindingJsonSourcemap
 }
 
-export interface BindingTransformHookExtra {
+export interface BindingTransformHookExtraArgs {
   moduleType: string
 }
 

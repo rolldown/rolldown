@@ -1,8 +1,5 @@
 // cSpell:disable
-use crate::{
-  ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, NamedImport, NormalizedBundlerOptions,
-  SymbolRef,
-};
+use crate::{ChunkIdx, ChunkKind, ModuleIdx, NamedImport, RollupPreRenderedChunk, SymbolRef};
 pub mod types;
 
 use arcstr::ArcStr;
@@ -21,6 +18,7 @@ pub struct Chunk {
   pub kind: ChunkKind,
   pub modules: Vec<ModuleIdx>,
   pub name: Option<ArcStr>,
+  pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
   pub css_preliminary_filename: Option<PreliminaryFilename>,
@@ -47,28 +45,6 @@ impl Chunk {
       bits,
       kind,
       ..Self::default()
-    }
-  }
-
-  pub fn filename_template<'a>(
-    &mut self,
-    options: &'a NormalizedBundlerOptions,
-  ) -> &'a FilenameTemplate {
-    if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined) {
-      &options.entry_filenames
-    } else {
-      &options.chunk_filenames
-    }
-  }
-
-  pub fn css_filename_template<'a>(
-    &mut self,
-    options: &'a NormalizedBundlerOptions,
-  ) -> &'a FilenameTemplate {
-    if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined) {
-      &options.css_entry_filenames
-    } else {
-      &options.css_chunk_filenames
     }
   }
 

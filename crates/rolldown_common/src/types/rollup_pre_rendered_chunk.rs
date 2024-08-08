@@ -3,7 +3,7 @@ use arcstr::ArcStr;
 use crate::ModuleId;
 
 #[derive(Debug, Clone)]
-pub struct PreRenderedChunk {
+pub struct RollupPreRenderedChunk {
   pub name: ArcStr,
   pub is_entry: bool,
   pub is_dynamic_entry: bool,

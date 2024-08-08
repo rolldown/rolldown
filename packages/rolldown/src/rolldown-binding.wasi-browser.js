@@ -111,11 +111,12 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingOutputs_impl_76']?.()
   __napiInstance.exports['__napi_register__FinalBindingOutputs_struct_77']?.()
   __napiInstance.exports['__napi_register__FinalBindingOutputs_impl_80']?.()
-  __napiInstance.exports['__napi_register__RenderedChunk_struct_81']?.()
-  __napiInstance.exports['__napi_register__BindingRenderedModule_struct_82']?.()
-  __napiInstance.exports['__napi_register__AliasItem_struct_83']?.()
-  __napiInstance.exports['__napi_register__BindingSourcemap_struct_84']?.()
-  __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_85']?.()
+  __napiInstance.exports['__napi_register__PreRenderedChunk_struct_81']?.()
+  __napiInstance.exports['__napi_register__RenderedChunk_struct_82']?.()
+  __napiInstance.exports['__napi_register__BindingRenderedModule_struct_83']?.()
+  __napiInstance.exports['__napi_register__AliasItem_struct_84']?.()
+  __napiInstance.exports['__napi_register__BindingSourcemap_struct_85']?.()
+  __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_86']?.()
 }
 export const BindingLog = __napiModule.exports.BindingLog
 export const BindingModuleInfo = __napiModule.exports.BindingModuleInfo

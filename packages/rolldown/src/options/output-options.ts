@@ -1,4 +1,4 @@
-import type { RenderedChunk } from '../binding'
+import type { PreRenderedChunk, RenderedChunk } from '../binding'
 import { z } from 'zod'
 import * as zodExt from '../utils/zod-ext'
 
@@ -15,6 +15,11 @@ const addonFunctionSchema = z
   .function()
   .args(zodExt.phantom<RenderedChunk>())
   .returns(z.string().or(z.promise(z.string())))
+
+const chunkFileNamesFunctionSchema = z
+  .function()
+  .args(zodExt.phantom<PreRenderedChunk>())
+  .returns(z.string())
 
 const outputOptionsSchema = z.strictObject({
   dir: z.string().optional(),
@@ -47,8 +52,8 @@ const outputOptionsSchema = z.strictObject({
     .or(z.literal('never'))
     .or(z.boolean())
     .optional(),
-  entryFileNames: z.string().optional(),
-  chunkFileNames: z.string().optional(),
+  entryFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
+  chunkFileNames: z.string().or(chunkFileNamesFunctionSchema).optional(),
   assetFileNames: z.string().optional(),
   minify: z.boolean().optional(),
   name: z.string().optional(),

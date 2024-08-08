@@ -20,7 +20,7 @@ impl BindingOutputs {
   pub fn chunks(&mut self) -> Vec<BindingOutputChunk> {
     let mut chunks: Vec<BindingOutputChunk> = vec![];
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       for (index, o) in inner.iter().enumerate() {
         match o {
           rolldown_common::Output::Chunk(_chunk) => {
@@ -39,7 +39,7 @@ impl BindingOutputs {
     let mut assets: Vec<BindingOutputAsset> = vec![];
 
     self.inner.with_inner(|inner| {
-      let mut inner = inner.lock().unwrap();
+      let mut inner = inner.lock().expect("PoisonError raised");
       inner.iter_mut().for_each(|o| match o {
         rolldown_common::Output::Asset(asset) => {
           assets.push(BindingOutputAsset::new(unsafe { std::mem::transmute(asset.as_mut()) }));
@@ -53,7 +53,7 @@ impl BindingOutputs {
   #[napi]
   pub fn delete(&mut self, file_name: String) {
     self.inner.with_inner(|inner| {
-      let mut inner = inner.lock().unwrap();
+      let mut inner = inner.lock().expect("PoisonError raised");
       if let Some(index) = inner.iter().position(|o| o.filename() == file_name) {
         inner.remove(index);
       }
@@ -78,7 +78,7 @@ impl FinalBindingOutputs {
   pub fn chunks(&mut self) -> Vec<BindingOutputChunk> {
     let mut chunks: Vec<BindingOutputChunk> = vec![];
     self.inner.weak_ref().with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       for (index, o) in inner.iter().enumerate() {
         match o {
           rolldown_common::Output::Chunk(_chunk) => {
@@ -97,7 +97,7 @@ impl FinalBindingOutputs {
     let mut assets: Vec<BindingOutputAsset> = vec![];
 
     self.inner.weak_ref().with_inner(|inner| {
-      let mut inner = inner.lock().unwrap();
+      let mut inner = inner.lock().expect("PoisonError raised");
       inner.iter_mut().for_each(|o| match o {
         rolldown_common::Output::Asset(asset) => {
           assets.push(BindingOutputAsset::new(unsafe { std::mem::transmute(asset.as_mut()) }));

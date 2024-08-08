@@ -20,7 +20,7 @@ impl BindingOutputChunk {
   #[napi(getter)]
   pub fn is_entry(&self) -> bool {
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.is_entry,
         rolldown_common::Output::Asset(_) => unreachable!(),
@@ -31,7 +31,7 @@ impl BindingOutputChunk {
   #[napi(getter)]
   pub fn is_dynamic_entry(&self) -> bool {
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.is_dynamic_entry,
         rolldown_common::Output::Asset(_) => unreachable!(),
@@ -42,7 +42,7 @@ impl BindingOutputChunk {
   #[napi(getter)]
   pub fn facade_module_id(&self) -> Option<String> {
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => {
           chunk.facade_module_id.as_ref().map(|x| x.to_string())
@@ -56,7 +56,7 @@ impl BindingOutputChunk {
   pub fn module_ids(&self) -> Vec<String> {
     // self.inner.module_ids.iter().map(|x| x.to_string()).collect()
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => {
           chunk.module_ids.iter().map(|x| x.to_string()).collect()
@@ -70,7 +70,7 @@ impl BindingOutputChunk {
   pub fn exports(&self) -> Vec<String> {
     // self.inner.exports.clone()
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.exports.clone(),
         rolldown_common::Output::Asset(_) => unreachable!(),
@@ -83,7 +83,7 @@ impl BindingOutputChunk {
   pub fn file_name(&self) -> String {
     // self.inner.filename.to_string()
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.filename.to_string(),
         rolldown_common::Output::Asset(_) => unreachable!(),
@@ -101,7 +101,7 @@ impl BindingOutputChunk {
     //   .map(|(key, value)| (key.to_string(), value.into()))
     //   .collect()
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk
           .modules
@@ -118,7 +118,7 @@ impl BindingOutputChunk {
   pub fn imports(&self) -> Vec<String> {
     // self.inner.imports.iter().map(|x| x.to_string()).collect()
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => {
           chunk.imports.iter().map(|x| x.to_string()).collect()
@@ -132,7 +132,7 @@ impl BindingOutputChunk {
   pub fn set_imports(&mut self, imports: Vec<String>) {
     // self.inner.imports = imports.into_iter().map(Into::into).collect();
     self.inner.try_with_inner(|inner| {
-      let mut inner = inner.lock().unwrap();
+      let mut inner = inner.lock().expect("PoisonError raised");
       match &mut inner[self.index] {
         rolldown_common::Output::Chunk(ref mut chunk) => {
           chunk.imports = imports.into_iter().map(Into::into).collect();
@@ -146,7 +146,7 @@ impl BindingOutputChunk {
   pub fn dynamic_imports(&self) -> Vec<String> {
     // self.inner.dynamic_imports.iter().map(|x| x.to_string()).collect()
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => {
           chunk.dynamic_imports.iter().map(|x| x.to_string()).collect()
@@ -161,7 +161,7 @@ impl BindingOutputChunk {
   pub fn code(&self) -> String {
     // self.inner.code.clone()
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.code.clone(),
         rolldown_common::Output::Asset(_) => unreachable!(),
@@ -173,7 +173,7 @@ impl BindingOutputChunk {
   pub fn set_code(&mut self, code: String) {
     // self.inner.code = code;
     self.inner.try_with_inner(|inner| {
-      let mut inner = inner.lock().unwrap();
+      let mut inner = inner.lock().expect("PoisonError raised");
       match &mut inner[self.index] {
         rolldown_common::Output::Chunk(ref mut chunk) => {
           chunk.code = code;
@@ -187,7 +187,7 @@ impl BindingOutputChunk {
   pub fn map(&self) -> napi::Result<Option<String>> {
     // Ok(self.inner.map.as_ref().map(SourceMap::to_json_string))
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => {
           Ok(chunk.map.as_ref().map(SourceMap::to_json_string))
@@ -204,7 +204,7 @@ impl BindingOutputChunk {
     //     .map_err(|e| napi::Error::from_reason(format!("{e:?}")))?,
     // );
     self.inner.with_inner(|inner| -> napi::Result<()> {
-      let mut inner = inner.lock().unwrap();
+      let mut inner = inner.lock().expect("PoisonError raised");
       match &mut inner[self.index] {
         rolldown_common::Output::Chunk(ref mut chunk) => {
           chunk.map = Some(
@@ -223,7 +223,7 @@ impl BindingOutputChunk {
   pub fn sourcemap_file_name(&self) -> Option<String> {
     // self.inner.sourcemap_filename.clone()
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.sourcemap_filename.clone(),
         rolldown_common::Output::Asset(_) => unreachable!(),
@@ -235,7 +235,7 @@ impl BindingOutputChunk {
   pub fn preliminary_file_name(&self) -> String {
     // self.inner.preliminary_filename.to_string()
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.preliminary_filename.to_string(),
         rolldown_common::Output::Asset(_) => unreachable!(),
@@ -247,7 +247,7 @@ impl BindingOutputChunk {
   pub fn name(&self) -> String {
     // self.inner.name.to_string()
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().unwrap();
+      let inner = inner.lock().expect("PoisonError raised");
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.name.to_string(),
         rolldown_common::Output::Asset(_) => unreachable!(),

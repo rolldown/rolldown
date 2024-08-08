@@ -53,12 +53,17 @@ pub fn render_iife(
 
   concat_source.add_source(Box::new(RawSource::new(format!(
     "{}(function({}) {{\n",
-    if let Some(name) = &ctx.options.name {
-      format!("var {name} = ")
+    // Only IIFEs with exports requires the assignment.
+    if has_exports {
+      if let Some(name) = &ctx.options.name {
+        format!("var {name} = ")
+      } else {
+        ctx
+          .warnings
+          .push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());
+        String::new()
+      }
     } else {
-      ctx
-        .warnings
-        .push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());
       String::new()
     },
     input_args

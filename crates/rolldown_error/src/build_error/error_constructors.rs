@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use super::BuildDiagnostic;
 use arcstr::ArcStr;
@@ -7,6 +8,7 @@ use rolldown_resolver::ResolveError;
 
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
+use crate::events::sourcemap_broken::SourcemapBroken;
 use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
@@ -69,6 +71,10 @@ impl BuildDiagnostic {
 
   pub fn sourcemap_error(error: oxc::sourcemap::Error) -> Self {
     Self::new_inner(SourceMapError { error })
+  }
+
+  pub fn sourcemap_broken(plugin_name: Option<Arc<str>>) -> Self {
+    Self::new_inner(SourcemapBroken { plugin_name })
   }
 
   pub fn circular_dependency(paths: Vec<String>) -> Self {

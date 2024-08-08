@@ -184,6 +184,11 @@ export interface BindingInputOptions {
   define?: Array<[string, string]>
 }
 
+export interface BindingJsonMissingSourcemap {
+  missing: boolean
+  pluginName?: string
+}
+
 export interface BindingJsonSourcemap {
   file?: string
   mappings?: string
@@ -285,7 +290,7 @@ export interface BindingResolveOptions {
 }
 
 export interface BindingSourcemap {
-  inner: string | BindingJsonSourcemap
+  inner: string | BindingJsonSourcemap | BindingJsonMissingSourcemap
 }
 
 export interface BindingTreeshake {

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use rolldown_common::{side_effects::HookSideEffects, ResolvedId};
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookTransformArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
 
@@ -9,6 +10,7 @@ pub async fn transform_source(
   source: String,
   sourcemap_chain: &mut Vec<SourceMap>,
   side_effects: &mut Option<HookSideEffects>,
+  warnings: &mut Vec<BuildDiagnostic>,
 ) -> Result<String> {
   plugin_driver
     .transform(
@@ -16,6 +18,7 @@ pub async fn transform_source(
       sourcemap_chain,
       side_effects,
       &source,
+      warnings,
     )
     .await
 }

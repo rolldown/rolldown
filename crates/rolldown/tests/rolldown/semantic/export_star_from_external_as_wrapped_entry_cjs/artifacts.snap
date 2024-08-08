@@ -22,7 +22,6 @@ Object.keys(node_fs).forEach(function (k) {
     get: function () { return node_fs[k]; }
   });
 });
-            
 
 require("node:fs");
 

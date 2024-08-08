@@ -10,6 +10,7 @@ use rolldown::{
   AddonOutputOption, BundlerOptions, IsExternal, ModuleType, OutputExports, OutputFormat, Platform,
 };
 use rolldown_plugin::__inner::SharedPluginable;
+use rolldown_utils::indexmap::FxIndexMap;
 use std::collections::HashMap;
 use std::path::PathBuf;
 #[cfg(not(target_family = "wasm"))]
@@ -145,8 +146,8 @@ pub fn normalize_binding_options(
     minify: output_options.minify,
     css_entry_filenames: None,
     css_chunk_filenames: None,
-    define: None,
     extend: output_options.extend,
+    define: input_options.define.map(FxIndexMap::from_iter),
   };
 
   #[cfg(not(target_family = "wasm"))]

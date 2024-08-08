@@ -119,10 +119,7 @@ pub fn normalize_binding_options(
     asset_filenames: output_options.asset_file_names,
     dir: output_options.dir,
     sourcemap: output_options.sourcemap.map(Into::into),
-    es_module: output_options.es_module.map(|v| match v {
-      Either::A(a) => a.into(),
-      Either::B(b) => b.into(),
-    }),
+    es_module: output_options.es_module.map(Into::into),
     banner: normalize_addon_option(output_options.banner),
     footer: normalize_addon_option(output_options.footer),
     intro: normalize_addon_option(output_options.intro),

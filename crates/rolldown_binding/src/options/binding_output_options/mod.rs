@@ -5,9 +5,8 @@ use super::super::types::binding_rendered_chunk::RenderedChunk;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use derivative::Derivative;
 use napi::threadsafe_function::ThreadsafeFunction;
-use napi::Either;
 use napi_derive::napi;
-use serde::{de, Deserialize, Deserializer};
+use serde::Deserialize;
 
 pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
 
@@ -33,9 +32,8 @@ pub struct BindingOutputOptions {
   // compact: boolean;
   pub dir: Option<String>,
   // pub entry_file_names: String, // | ((chunkInfo: PreRenderedChunk) => string)
-  #[serde(deserialize_with = "deserialize_es_module")]
-  #[napi(ts_type = "boolean | 'if-default-prop'")]
-  pub es_module: Option<Either<bool, String>>,
+  #[napi(ts_type = "'always' | 'never' | 'if-default-prop'")]
+  pub es_module: Option<String>,
   #[napi(ts_type = "'default' | 'named' | 'none' | 'auto'")]
   pub exports: Option<String>,
   // extend: boolean;
@@ -93,47 +91,4 @@ pub struct BindingOutputOptions {
   // validate: boolean;
   // --- Enhanced options
   pub minify: Option<bool>,
-}
-
-fn deserialize_es_module<'de, D>(deserializer: D) -> Result<Option<Either<bool, String>>, D::Error>
-where
-  D: Deserializer<'de>,
-{
-  struct EitherVisitor;
-
-  impl<'de> de::Visitor<'de> for EitherVisitor {
-    type Value = Either<bool, String>;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-      formatter.write_str("unknown es module type")
-    }
-
-    fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
-    where
-      E: de::Error,
-    {
-      Ok(Either::A(value))
-    }
-
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-    where
-      E: de::Error,
-    {
-      Ok(Either::B(value.to_owned()))
-    }
-
-    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
-    where
-      E: de::Error,
-    {
-      Ok(Either::B(value))
-    }
-  }
-
-  let opt: Option<Either<bool, String>> = match deserializer.deserialize_any(EitherVisitor) {
-    Ok(val) => Ok(Some(val)),
-    Err(_) => Ok(None),
-  }?;
-
-  Ok(opt)
 }

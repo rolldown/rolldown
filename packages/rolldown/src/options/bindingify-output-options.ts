@@ -75,13 +75,18 @@ function bindingifySourcemap(
 function bindingifyEsModule(
   esModule: NormalizedOutputOptions['esModule'],
 ): BindingOutputOptions['esModule'] {
-  if (typeof esModule === 'boolean') {
-    return esModule
-  }
+  switch (esModule) {
+    case true:
+      return 'always'
 
-  if (esModule === undefined || esModule === 'if-default-prop') {
-    return 'if-default-prop'
-  }
+    case false:
+      return 'never'
 
-  throw new Error(`unknown esModule: ${esModule}`)
+    case 'if-default-prop':
+    case undefined:
+      return 'if-default-prop'
+
+    default:
+      throw new Error(`unknown esModule: ${esModule}`)
+  }
 }

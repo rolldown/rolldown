@@ -13,8 +13,8 @@ use std::{
 
 use super::{
   binding_transform_context::BindingTransformPluginContext,
-  types::binding_hook_resolve_id_extra_options::BindingHookResolveIdExtraOptions,
-  BindingPluginOptions,
+  types::binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
+  types::binding_plugin_transform_extra_args::BindingTransformHookExtraArgs, BindingPluginOptions,
 };
 
 #[derive(Hash, Debug, PartialEq, Eq)]
@@ -80,7 +80,7 @@ impl Plugin for JsPlugin {
           Arc::clone(ctx).into(),
           args.specifier.to_string(),
           args.importer.map(str::to_string),
-          BindingHookResolveIdExtraOptions {
+          BindingHookResolveIdExtraArgs {
             is_entry: args.is_entry,
             kind: args.kind.to_string(),
             custom,
@@ -142,6 +142,7 @@ impl Plugin for JsPlugin {
           BindingTransformPluginContext::new(unsafe { std::mem::transmute(ctx) }),
           args.code.to_string(),
           args.id.to_string(),
+          BindingTransformHookExtraArgs { module_type: args.module_type.to_string() },
         ))
         .await?
         .map(TryInto::try_into)

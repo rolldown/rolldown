@@ -14,9 +14,10 @@ use super::{
   types::{
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
-    binding_hook_resolve_id_extra_options::BindingHookResolveIdExtraOptions,
+    binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_hook_resolve_id_output::BindingHookResolveIdOutput,
     binding_hook_transform_output::BindingHookTransformOutput,
+    binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
   },
 };
 
@@ -36,11 +37,11 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraOptions) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
+    ts_type = "(ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
   )]
   pub resolve_id: Option<
     MaybeAsyncJsCallback<
-      (BindingPluginContext, String, Option<String>, BindingHookResolveIdExtraOptions),
+      (BindingPluginContext, String, Option<String>, BindingHookResolveIdExtraArgs),
       Option<BindingHookResolveIdOutput>,
     >,
   >,
@@ -65,11 +66,11 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx:  BindingTransformPluginContext, id: string, code: string) => MaybePromise<VoidNullable<BindingHookTransformOutput>>"
+    ts_type = "(ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>"
   )]
   pub transform: Option<
     MaybeAsyncJsCallback<
-      (BindingTransformPluginContext, String, String),
+      (BindingTransformPluginContext, String, String, BindingTransformHookExtraArgs),
       Option<BindingHookTransformOutput>,
     >,
   >,

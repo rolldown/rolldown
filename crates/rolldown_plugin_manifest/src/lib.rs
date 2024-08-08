@@ -1,5 +1,5 @@
 use rolldown_common::{EmittedAsset, ModuleId, Output, OutputAsset, OutputChunk};
-use rolldown_plugin::{HookNoopReturn, Plugin, SharedPluginContext};
+use rolldown_plugin::{HookGenerateBundleReturn, Plugin, SharedPluginContext};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
 use std::{borrow::Cow, collections::BTreeMap, path::Path, rc::Rc, sync::LazyLock};
@@ -34,9 +34,9 @@ impl Plugin for ManifestPlugin {
   async fn generate_bundle(
     &self,
     ctx: &SharedPluginContext,
-    bundle: &mut Vec<Output>,
+    bundle: Vec<Output>,
     _is_write: bool,
-  ) -> HookNoopReturn {
+  ) -> HookGenerateBundleReturn {
     // Use BTreeMap to make the result sorted
     let mut manifest = BTreeMap::default();
     let mut file_name_to_asset = FxHashMap::default();
@@ -53,11 +53,12 @@ impl Plugin for ManifestPlugin {
       }
     }
 
+    #[allow(clippy::explicit_iter_loop)]
     for file in bundle.iter() {
       match file {
         Output::Chunk(chunk) => {
           let name = self.get_chunk_name(chunk);
-          let chunk_manifest = Rc::new(self.create_chunk(bundle, chunk, name.clone()));
+          let chunk_manifest = Rc::new(self.create_chunk(&bundle, chunk, name.clone()));
           manifest.insert(name.clone(), chunk_manifest);
         }
         Output::Asset(asset) => {
@@ -114,7 +115,7 @@ impl Plugin for ManifestPlugin {
     });
     // }
 
-    Ok(())
+    Ok(bundle)
   }
 }
 

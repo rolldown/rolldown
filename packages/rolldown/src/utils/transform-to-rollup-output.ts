@@ -9,7 +9,6 @@ import type {
   BindingOutputAsset,
   BindingOutputChunk,
   BindingOutputs,
-  FinalBindingOutputs,
 } from '../binding'
 import {
   AssetSource,
@@ -79,7 +78,7 @@ function transformToRollupOutputAsset(
 }
 
 export function transformToRollupOutput(
-  output: BindingOutputs | FinalBindingOutputs,
+  output: BindingOutputs,
 ): RolldownOutput {
   const { chunks, assets } = output
   return {

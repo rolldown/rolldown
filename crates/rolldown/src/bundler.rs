@@ -63,7 +63,7 @@ impl Bundler {
         .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
     }
 
-    self.plugin_driver.write_bundle(&mut output.assets).await?;
+    output.assets = self.plugin_driver.write_bundle(output.assets).await?;
 
     Ok(output)
   }
@@ -160,7 +160,7 @@ impl Bundler {
     // Add additional files from build plugins.
     self.file_emitter.add_additional_files(&mut output.assets);
 
-    self.plugin_driver.generate_bundle(&mut output.assets, is_write).await?;
+    output.assets = self.plugin_driver.generate_bundle(output.assets, is_write).await?;
 
     Ok(output)
   }

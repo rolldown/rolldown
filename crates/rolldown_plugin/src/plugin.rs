@@ -22,6 +22,8 @@ pub type HookNoopReturn = Result<()>;
 pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
 pub type HookAugmentChunkHashReturn = Result<Option<String>>;
 pub type HookInjectionOutputReturn = Result<Option<String>>;
+pub type HookGenerateBundleReturn = Result<Vec<Output>>;
+pub type HookWriteBundleReturn = Result<Vec<Output>>;
 
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn name(&self) -> Cow<'static, str>;
@@ -156,18 +158,18 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn generate_bundle(
     &self,
     _ctx: &SharedPluginContext,
-    _bundle: &mut Vec<Output>,
+    bundle: Vec<Output>,
     _is_write: bool,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+  ) -> impl std::future::Future<Output = HookGenerateBundleReturn> + Send {
+    async { Ok(bundle) }
   }
 
   fn write_bundle(
     &self,
     _ctx: &SharedPluginContext,
-    _bundle: &mut Vec<Output>,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+    bundle: Vec<Output>,
+  ) -> impl std::future::Future<Output = HookWriteBundleReturn> + Send {
+    async { Ok(bundle) }
   }
 
   // --- experimental hooks ---

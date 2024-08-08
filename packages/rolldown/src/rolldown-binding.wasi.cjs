@@ -132,14 +132,12 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingOutputChunk_struct_53']?.()
   __napiInstance.exports['__napi_register__BindingOutputChunk_impl_71']?.()
   __napiInstance.exports['__napi_register__BindingOutputs_struct_72']?.()
-  __napiInstance.exports['__napi_register__BindingOutputs_impl_76']?.()
-  __napiInstance.exports['__napi_register__FinalBindingOutputs_struct_77']?.()
-  __napiInstance.exports['__napi_register__FinalBindingOutputs_impl_80']?.()
-  __napiInstance.exports['__napi_register__RenderedChunk_struct_81']?.()
-  __napiInstance.exports['__napi_register__BindingRenderedModule_struct_82']?.()
-  __napiInstance.exports['__napi_register__AliasItem_struct_83']?.()
-  __napiInstance.exports['__napi_register__BindingSourcemap_struct_84']?.()
-  __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_85']?.()
+  __napiInstance.exports['__napi_register__BindingOutputs_impl_77']?.()
+  __napiInstance.exports['__napi_register__RenderedChunk_struct_78']?.()
+  __napiInstance.exports['__napi_register__BindingRenderedModule_struct_79']?.()
+  __napiInstance.exports['__napi_register__AliasItem_struct_80']?.()
+  __napiInstance.exports['__napi_register__BindingSourcemap_struct_81']?.()
+  __napiInstance.exports['__napi_register__BindingJsonSourcemap_struct_82']?.()
 }
 module.exports.BindingLog = __napiModule.exports.BindingLog
 module.exports.BindingModuleInfo = __napiModule.exports.BindingModuleInfo
@@ -149,7 +147,6 @@ module.exports.BindingOutputs = __napiModule.exports.BindingOutputs
 module.exports.BindingPluginContext = __napiModule.exports.BindingPluginContext
 module.exports.BindingTransformPluginContext = __napiModule.exports.BindingTransformPluginContext
 module.exports.Bundler = __napiModule.exports.Bundler
-module.exports.FinalBindingOutputs = __napiModule.exports.FinalBindingOutputs
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 module.exports.BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects

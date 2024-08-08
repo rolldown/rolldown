@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 #[cfg(not(target_family = "wasm"))]
 use crate::worker_manager::WorkerManager;
@@ -6,8 +6,7 @@ use crate::{
   options::{BindingInputOptions, BindingOnLog, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
   types::{
-    binding_log::BindingLog, binding_log_level::BindingLogLevel,
-    binding_outputs::FinalBindingOutputs,
+    binding_log::BindingLog, binding_log_level::BindingLogLevel, binding_outputs::BindingOutputs,
   },
   utils::{normalize_binding_options::normalize_binding_options, try_init_custom_trace_subscriber},
 };
@@ -73,13 +72,13 @@ impl Bundler {
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn write(&self) -> napi::Result<FinalBindingOutputs> {
+  pub async fn write(&self) -> napi::Result<BindingOutputs> {
     self.write_impl().await
   }
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn generate(&self) -> napi::Result<FinalBindingOutputs> {
+  pub async fn generate(&self) -> napi::Result<BindingOutputs> {
     self.generate_impl().await
   }
 
@@ -112,7 +111,7 @@ impl Bundler {
   }
 
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn write_impl(&self) -> napi::Result<FinalBindingOutputs> {
+  pub async fn write_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
@@ -125,11 +124,13 @@ impl Bundler {
 
     self.handle_warnings(outputs.warnings).await;
 
-    Ok(FinalBindingOutputs::new(outputs.assets))
+    Ok(BindingOutputs::new(Arc::new(std::sync::Mutex::new(std::cell::RefCell::new(
+      outputs.assets,
+    )))))
   }
 
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn generate_impl(&self) -> napi::Result<FinalBindingOutputs> {
+  pub async fn generate_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.try_lock().map_err(|_| {
       napi::Error::from_reason("Failed to lock the bundler. Is another operation in progress?")
     })?;
@@ -142,7 +143,9 @@ impl Bundler {
 
     self.handle_warnings(outputs.warnings).await;
 
-    Ok(FinalBindingOutputs::new(outputs.assets))
+    Ok(BindingOutputs::new(Arc::new(std::sync::Mutex::new(std::cell::RefCell::new(
+      outputs.assets,
+    )))))
   }
 
   fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {

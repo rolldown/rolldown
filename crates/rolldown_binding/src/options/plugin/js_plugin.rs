@@ -3,7 +3,11 @@ use crate::types::{
   js_callback::MaybeAsyncJsCallbackExt,
 };
 use rolldown_plugin::{Plugin, __inner::SharedPluginable, typedmap::TypedMapKey};
-use std::{borrow::Cow, ops::Deref, sync::Arc};
+use std::{
+  borrow::Cow,
+  ops::Deref,
+  sync::{Arc, Mutex},
+};
 
 use super::{
   binding_transform_context::BindingTransformPluginContext,
@@ -291,32 +295,36 @@ impl Plugin for JsPlugin {
   async fn generate_bundle(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    bundle: &mut Vec<rolldown_common::Output>,
+    mut bundle: Vec<rolldown_common::Output>,
     is_write: bool,
-  ) -> rolldown_plugin::HookNoopReturn {
+  ) -> rolldown_plugin::HookGenerateBundleReturn {
     if let Some(cb) = &self.generate_bundle {
-      cb.await_call((
-        Arc::clone(ctx).into(),
-        BindingOutputs::new(unsafe { std::mem::transmute(bundle) }),
-        is_write,
-      ))
-      .await?;
+      let output = Arc::new(Mutex::new(std::cell::RefCell::new(bundle)));
+      cb.await_call((Arc::clone(ctx).into(), BindingOutputs::new(Arc::clone(&output)), is_write))
+        .await?;
+      bundle = Arc::into_inner(output)
+        .expect("bundle should have one reference")
+        .into_inner()
+        .expect("bundle should get inner from lock")
+        .into_inner();
     }
-    Ok(())
+    Ok(bundle)
   }
 
   async fn write_bundle(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    bundle: &mut Vec<rolldown_common::Output>,
-  ) -> rolldown_plugin::HookNoopReturn {
+    mut bundle: Vec<rolldown_common::Output>,
+  ) -> rolldown_plugin::HookWriteBundleReturn {
     if let Some(cb) = &self.write_bundle {
-      cb.await_call((
-        Arc::clone(ctx).into(),
-        BindingOutputs::new(unsafe { std::mem::transmute(bundle) }),
-      ))
-      .await?;
+      let output = Arc::new(Mutex::new(std::cell::RefCell::new(bundle)));
+      cb.await_call((Arc::clone(ctx).into(), BindingOutputs::new(Arc::clone(&output)))).await?;
+      bundle = Arc::into_inner(output)
+        .expect("bundle should have one reference")
+        .into_inner()
+        .expect("bundle should get inner from lock")
+        .into_inner();
     }
-    Ok(())
+    Ok(bundle)
   }
 }

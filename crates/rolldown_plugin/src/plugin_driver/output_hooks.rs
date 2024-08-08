@@ -1,5 +1,8 @@
 use crate::types::hook_render_error::HookRenderErrorArgs;
-use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
+use crate::{
+  HookAugmentChunkHashReturn, HookGenerateBundleReturn, HookNoopReturn, HookRenderChunkArgs,
+  HookWriteBundleReturn,
+};
 use crate::{HookInjectionArgs, PluginDriver};
 use anyhow::{Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk};
@@ -117,19 +120,23 @@ impl PluginDriver {
     Ok(())
   }
 
-  pub async fn generate_bundle(&self, bundle: &mut Vec<Output>, is_write: bool) -> HookNoopReturn {
+  pub async fn generate_bundle(
+    &self,
+    mut bundle: Vec<Output>,
+    is_write: bool,
+  ) -> HookGenerateBundleReturn {
     for (plugin, ctx) in self.iter_plugin_with_context() {
-      plugin.call_generate_bundle(ctx, bundle, is_write).await?;
-      ctx.file_emitter.add_additional_files(bundle);
+      bundle = plugin.call_generate_bundle(ctx, bundle, is_write).await?;
+      ctx.file_emitter.add_additional_files(&mut bundle);
     }
-    Ok(())
+    Ok(bundle)
   }
 
-  pub async fn write_bundle(&self, bundle: &mut Vec<Output>) -> HookNoopReturn {
+  pub async fn write_bundle(&self, mut bundle: Vec<Output>) -> HookWriteBundleReturn {
     for (plugin, ctx) in self.iter_plugin_with_context() {
-      plugin.call_write_bundle(ctx, bundle).await?;
-      ctx.file_emitter.add_additional_files(bundle);
+      bundle = plugin.call_write_bundle(ctx, bundle).await?;
+      ctx.file_emitter.add_additional_files(&mut bundle);
     }
-    Ok(())
+    Ok(bundle)
   }
 }

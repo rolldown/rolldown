@@ -4,8 +4,9 @@ use super::plugin_context::SharedPluginContext;
 use crate::{
   transform_plugin_context::TransformPluginContext,
   types::{hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs},
-  HookBuildEndArgs, HookInjectionArgs, HookInjectionOutputReturn, HookLoadArgs,
-  HookRenderChunkArgs, HookResolveIdArgs, HookTransformArgs, Plugin,
+  HookBuildEndArgs, HookGenerateBundleReturn, HookInjectionArgs, HookInjectionOutputReturn,
+  HookLoadArgs, HookRenderChunkArgs, HookResolveIdArgs, HookTransformArgs, HookWriteBundleReturn,
+  Plugin,
 };
 use rolldown_common::{ModuleInfo, Output, RollupRenderedChunk};
 
@@ -125,15 +126,15 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   async fn call_generate_bundle(
     &self,
     _ctx: &SharedPluginContext,
-    _bundle: &mut Vec<Output>,
+    _bundle: Vec<Output>,
     _is_write: bool,
-  ) -> HookNoopReturn;
+  ) -> HookGenerateBundleReturn;
 
   async fn call_write_bundle(
     &self,
     _ctx: &SharedPluginContext,
-    _bundle: &mut Vec<Output>,
-  ) -> HookNoopReturn;
+    _bundle: Vec<Output>,
+  ) -> HookWriteBundleReturn;
 }
 
 #[async_trait::async_trait]
@@ -254,17 +255,17 @@ impl<T: Plugin> Pluginable for T {
   async fn call_generate_bundle(
     &self,
     ctx: &SharedPluginContext,
-    bundle: &mut Vec<Output>,
+    bundle: Vec<Output>,
     is_write: bool,
-  ) -> HookNoopReturn {
+  ) -> HookGenerateBundleReturn {
     Plugin::generate_bundle(self, ctx, bundle, is_write).await
   }
 
   async fn call_write_bundle(
     &self,
     ctx: &SharedPluginContext,
-    bundle: &mut Vec<Output>,
-  ) -> HookNoopReturn {
+    bundle: Vec<Output>,
+  ) -> HookWriteBundleReturn {
     Plugin::write_bundle(self, ctx, bundle).await
   }
 

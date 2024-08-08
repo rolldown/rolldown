@@ -16,9 +16,9 @@ pub mod __inner {
 
 pub use crate::{
   plugin::{
-    HookAugmentChunkHashReturn, HookInjectionOutputReturn, HookLoadReturn, HookNoopReturn,
-    HookRenderChunkReturn, HookResolveIdReturn, HookTransformAstReturn, HookTransformReturn,
-    Plugin,
+    HookAugmentChunkHashReturn, HookGenerateBundleReturn, HookInjectionOutputReturn,
+    HookLoadReturn, HookNoopReturn, HookRenderChunkReturn, HookResolveIdReturn,
+    HookTransformAstReturn, HookTransformReturn, HookWriteBundleReturn, Plugin,
   },
   plugin_context::{PluginContext, SharedPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},

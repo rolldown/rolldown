@@ -43,11 +43,15 @@ export declare class BindingOutputChunk {
   get name(): string
 }
 
-/** The `BindingOutputs` owner `Vec<Output>` the mutable reference, it avoid `Clone` at call `writeBundle/generateBundle` hook, and make it mutable. */
 export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
   delete(fileName: string): void
+  /**
+   * TODO
+   * The napi look like is not drop the strut after the function call, so we need to call it manually.
+   */
+  drop(): void
 }
 
 export declare class BindingPluginContext {
@@ -64,18 +68,9 @@ export declare class BindingTransformPluginContext {
 
 export declare class Bundler {
   constructor(inputOptions: BindingInputOptions, outputOptions: BindingOutputOptions, parallelPluginsRegistry?: ParallelJsPluginRegistry | undefined | null)
-  write(): Promise<FinalBindingOutputs>
-  generate(): Promise<FinalBindingOutputs>
+  write(): Promise<BindingOutputs>
+  generate(): Promise<BindingOutputs>
   scan(): Promise<void>
-}
-
-/**
- * The `FinalBindingOutputs` is used at `write()` or `generate()`, it is similar to `BindingOutputs`, if using `BindingOutputs` has unexpected behavior.
- * TODO find a way to export it gracefully.
- */
-export declare class FinalBindingOutputs {
-  get chunks(): Array<BindingOutputChunk>
-  get assets(): Array<BindingOutputAsset>
 }
 
 export declare class ParallelJsPluginRegistry {

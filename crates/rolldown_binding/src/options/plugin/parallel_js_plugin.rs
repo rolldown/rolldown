@@ -147,25 +147,23 @@ impl Plugin for ParallelJsPlugin {
   async fn generate_bundle(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    bundle: &mut Vec<rolldown_common::Output>,
+    mut bundle: Vec<rolldown_common::Output>,
     is_write: bool,
-  ) -> rolldown_plugin::HookNoopReturn {
+  ) -> rolldown_plugin::HookGenerateBundleReturn {
     if self.first_plugin().generate_bundle.is_some() {
-      self.run_single(|plugin| plugin.call_generate_bundle(ctx, bundle, is_write)).await
-    } else {
-      Ok(())
+      bundle = self.run_single(|plugin| plugin.call_generate_bundle(ctx, bundle, is_write)).await?;
     }
+    Ok(bundle)
   }
 
   async fn write_bundle(
     &self,
     ctx: &rolldown_plugin::SharedPluginContext,
-    bundle: &mut Vec<rolldown_common::Output>,
-  ) -> rolldown_plugin::HookNoopReturn {
+    mut bundle: Vec<rolldown_common::Output>,
+  ) -> rolldown_plugin::HookWriteBundleReturn {
     if self.first_plugin().write_bundle.is_some() {
-      self.run_single(|plugin| plugin.call_write_bundle(ctx, bundle)).await
-    } else {
-      Ok(())
+      bundle = self.run_single(|plugin| plugin.call_write_bundle(ctx, bundle)).await?;
     }
+    Ok(bundle)
   }
 }

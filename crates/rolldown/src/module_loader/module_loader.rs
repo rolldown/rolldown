@@ -1,5 +1,6 @@
 use super::ecma_module_task::{EcmaModuleTask, EcmaModuleTaskOwner};
 use super::runtime_ecma_module_task::RuntimeEcmaModuleTask;
+use super::task_context::TaskContextMeta;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
 use crate::module_loader::runtime_ecma_module_task::RuntimeEcmaModuleTaskResult;
@@ -9,6 +10,7 @@ use crate::type_alias::IndexEcmaAst;
 use crate::types::symbols::Symbols;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
+use oxc::minifier::ReplaceGlobalDefinesConfig;
 use oxc::span::Span;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
@@ -82,8 +84,29 @@ impl ModuleLoader {
 
     let tx_to_runtime_module = tx.clone();
 
-    let common_data =
-      Arc::new(TaskContext { options: Arc::clone(&options), tx, resolver, fs, plugin_driver });
+    let common_data = Arc::new(TaskContext {
+      options: Arc::clone(&options),
+      tx,
+      resolver,
+      fs,
+      plugin_driver,
+      meta: TaskContextMeta {
+        replace_global_define_config: if !options.define.is_empty() {
+          let define_config = ReplaceGlobalDefinesConfig::new(&options.define)
+            .map_err(|errs| {
+              anyhow::format_err!(
+                "Failed to generate defines config from {:?}. Got {:#?}",
+                options.define,
+                errs
+              )
+            })
+            .unwrap();
+          Some(define_config)
+        } else {
+          None
+        },
+      },
+    });
 
     let mut intermediate_normal_modules = IntermediateNormalModules::new();
     let mut symbols = Symbols::default();

@@ -127,6 +127,7 @@ impl EcmaModuleTask {
         module_type: module_type.clone(),
         resolver: &self.ctx.resolver,
         is_user_defined_entry: self.is_user_defined_entry,
+        replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
       },
       CreateModuleArgs { source, sourcemap_chain, hook_side_effects },
     )

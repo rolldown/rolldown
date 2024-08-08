@@ -52,9 +52,8 @@ pub fn pre_process_ecma_ast(
   }
 
   ast.program.with_mut(|fields| -> anyhow::Result<()> {
-    if let Some(replace_global_define_config) = replace_global_define_config {
-      ReplaceGlobalDefines::new(fields.allocator, replace_global_define_config.clone())
-        .build(fields.program);
+    if  let Some(replace_global_define_config) = replace_global_define_config{
+      ReplaceGlobalDefines::new(fields.allocator, replace_global_define_config).build(fields.program);
     }
     let options = CompressOptions::dead_code_elimination();
     Compressor::new(fields.allocator, options).build(fields.program);

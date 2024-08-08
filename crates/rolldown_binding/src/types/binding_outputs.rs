@@ -23,12 +23,18 @@ impl BindingOutputs {
   pub fn chunks(&mut self) -> Vec<BindingOutputChunk> {
     let mut chunks: Vec<BindingOutputChunk> = vec![];
 
-    self.inner.lock().expect("should have lock").borrow_mut().iter_mut().for_each(|o| match o {
-      rolldown_common::Output::Chunk(chunk) => {
-        chunks.push(BindingOutputChunk::new(unsafe { std::mem::transmute(chunk.as_mut()) }));
-      }
-      rolldown_common::Output::Asset(_) => {}
-    });
+    self
+      .inner
+      .lock()
+      .expect("should hasn't lock at BindingOutputs")
+      .borrow_mut()
+      .iter_mut()
+      .for_each(|o| match o {
+        rolldown_common::Output::Chunk(chunk) => {
+          chunks.push(BindingOutputChunk::new(unsafe { std::mem::transmute(chunk.as_mut()) }));
+        }
+        rolldown_common::Output::Asset(_) => {}
+      });
 
     chunks
   }
@@ -37,18 +43,24 @@ impl BindingOutputs {
   pub fn assets(&mut self) -> Vec<BindingOutputAsset> {
     let mut assets: Vec<BindingOutputAsset> = vec![];
 
-    self.inner.lock().expect("should have lock").borrow_mut().iter_mut().for_each(|o| match o {
-      rolldown_common::Output::Asset(asset) => {
-        assets.push(BindingOutputAsset::new(unsafe { std::mem::transmute(asset.as_mut()) }));
-      }
-      rolldown_common::Output::Chunk(_) => {}
-    });
+    self
+      .inner
+      .lock()
+      .expect("should hasn't lock at BindingOutputs")
+      .borrow_mut()
+      .iter_mut()
+      .for_each(|o| match o {
+        rolldown_common::Output::Asset(asset) => {
+          assets.push(BindingOutputAsset::new(unsafe { std::mem::transmute(asset.as_mut()) }));
+        }
+        rolldown_common::Output::Chunk(_) => {}
+      });
     assets
   }
 
   #[napi]
   pub fn delete(&mut self, file_name: String) {
-    let inner = self.inner.lock().expect("should have lock");
+    let inner = self.inner.lock().expect("should hasn't lock at BindingOutputs");
     let index = { inner.borrow().iter().position(|o| o.filename() == file_name) };
     if let Some(index) = index {
       inner.borrow_mut().remove(index);

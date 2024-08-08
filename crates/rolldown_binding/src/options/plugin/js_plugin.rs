@@ -305,7 +305,7 @@ impl Plugin for JsPlugin {
       bundle = Arc::into_inner(output)
         .expect("bundle should have one reference")
         .into_inner()
-        .expect("bundle should get inner from lock")
+        .expect("bundle should get inner")
         .into_inner();
     }
     Ok(bundle)
@@ -322,7 +322,7 @@ impl Plugin for JsPlugin {
       bundle = Arc::into_inner(output)
         .expect("bundle should have one reference")
         .into_inner()
-        .expect("bundle should get inner from lock")
+        .expect("bundle should get inner")
         .into_inner();
     }
     Ok(bundle)

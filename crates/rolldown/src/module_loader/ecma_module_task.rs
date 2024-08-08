@@ -4,7 +4,7 @@ use rolldown_rstr::Rstr;
 use std::sync::Arc;
 
 use anyhow::Result;
-use rolldown_common::{Module, ModuleIdx, ResolvedId, StrOrBytes};
+use rolldown_common::{Module, ModuleIdx, ModuleType, ResolvedId, StrOrBytes};
 use rolldown_error::{BuildDiagnostic, UnloadableDependencyContext};
 
 use super::{task_context::TaskContext, Msg};
@@ -94,13 +94,6 @@ impl EcmaModuleTask {
       }
     };
 
-    let Some(module_type) = module_type else {
-      return Err(anyhow::format_err!(
-        "[{:?}] is not specified module type, rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
-        self.resolved_id.id
-      ));
-    };
-
     let source = match source {
       StrOrBytes::Str(source) => {
         // Run plugin transform.
@@ -116,6 +109,17 @@ impl EcmaModuleTask {
         source.into()
       }
       StrOrBytes::Bytes(_) => source,
+    };
+
+    // TODO: module type should be able to updated by transform hook, for now we don't impl it.
+    if let ModuleType::Custom(_) = module_type {
+      // TODO: should provide some diagnostics for user how they should handle the module type.
+      // e.g.
+      // sass -> recommended npm install `sass` etc
+      return Err(anyhow::format_err!(
+        "[{:?}] is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
+        self.resolved_id.id
+      ));
     };
 
     let ret = EcmaModuleFactory::create_module(

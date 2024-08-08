@@ -1,5 +1,6 @@
 use super::ecma_module_task::{EcmaModuleTask, EcmaModuleTaskOwner};
 use super::runtime_ecma_module_task::RuntimeEcmaModuleTask;
+use super::task_context::TaskContextMeta;
 use super::task_result::NormalModuleTaskResult;
 use super::Msg;
 use crate::module_loader::runtime_ecma_module_task::RuntimeEcmaModuleTaskResult;
@@ -9,6 +10,7 @@ use crate::type_alias::IndexEcmaAst;
 use crate::types::symbols::Symbols;
 use arcstr::ArcStr;
 use oxc::index::IndexVec;
+use oxc::minifier::ReplaceGlobalDefinesConfig;
 use oxc::span::Span;
 use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
@@ -75,15 +77,36 @@ impl ModuleLoader {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
-  ) -> Self {
+  ) -> anyhow::Result<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
     let (tx, rx) = tokio::sync::mpsc::channel::<Msg>(1024);
 
     let tx_to_runtime_module = tx.clone();
 
-    let common_data =
-      Arc::new(TaskContext { options: Arc::clone(&options), tx, resolver, fs, plugin_driver });
+    let meta = TaskContextMeta {
+      replace_global_define_config: if options.define.is_empty() {
+        None
+      } else {
+        Some(ReplaceGlobalDefinesConfig::new(&options.define).map_err(|errs| {
+          // TODO: maybe we should give better diagnostics here. since oxc return
+          // `Vec<OxcDiagnostic>`
+          anyhow::format_err!(
+            "Failed to generate defines config from {:?}. Got {:#?}",
+            options.define,
+            errs
+          )
+        })?)
+      },
+    };
+    let common_data = Arc::new(TaskContext {
+      options: Arc::clone(&options),
+      tx,
+      resolver,
+      fs,
+      plugin_driver,
+      meta,
+    });
 
     let mut intermediate_normal_modules = IntermediateNormalModules::new();
     let mut symbols = Symbols::default();
@@ -103,7 +126,7 @@ impl ModuleLoader {
       handle.spawn(async { task.run() });
     }
 
-    Self {
+    Ok(Self {
       shared_context: common_data,
       rx,
       options,
@@ -113,7 +136,7 @@ impl ModuleLoader {
       remaining: 1,
       intermediate_normal_modules,
       symbols,
-    }
+    })
   }
 
   fn try_spawn_new_task(

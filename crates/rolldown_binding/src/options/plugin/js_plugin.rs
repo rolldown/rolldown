@@ -3,7 +3,13 @@ use crate::types::{
   js_callback::MaybeAsyncJsCallbackExt,
 };
 use rolldown_plugin::{Plugin, __inner::SharedPluginable, typedmap::TypedMapKey};
-use std::{borrow::Cow, ops::Deref, sync::Arc};
+use rolldown_utils::unique_arc::UniqueArc;
+use std::{
+  borrow::Cow,
+  mem,
+  ops::Deref,
+  sync::{Arc, Mutex},
+};
 
 use super::{
   binding_transform_context::BindingTransformPluginContext,
@@ -295,12 +301,10 @@ impl Plugin for JsPlugin {
     is_write: bool,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.generate_bundle {
-      cb.await_call((
-        Arc::clone(ctx).into(),
-        BindingOutputs::new(unsafe { std::mem::transmute(bundle) }),
-        is_write,
-      ))
-      .await?;
+      let old_bundle = UniqueArc::new(Mutex::new(mem::take(bundle)));
+      cb.await_call((Arc::clone(ctx).into(), BindingOutputs::new(old_bundle.weak_ref()), is_write))
+        .await?;
+      *bundle = old_bundle.into_inner().into_inner()?;
     }
     Ok(())
   }
@@ -311,11 +315,9 @@ impl Plugin for JsPlugin {
     bundle: &mut Vec<rolldown_common::Output>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.write_bundle {
-      cb.await_call((
-        Arc::clone(ctx).into(),
-        BindingOutputs::new(unsafe { std::mem::transmute(bundle) }),
-      ))
-      .await?;
+      let old_bundle = UniqueArc::new(Mutex::new(mem::take(bundle)));
+      cb.await_call((Arc::clone(ctx).into(), BindingOutputs::new(old_bundle.weak_ref()))).await?;
+      *bundle = old_bundle.into_inner().into_inner()?;
     }
     Ok(())
   }

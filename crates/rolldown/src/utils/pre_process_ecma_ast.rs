@@ -6,7 +6,6 @@ use oxc::minifier::{
 use oxc::semantic::{ScopeTree, SymbolTable};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
-use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::EcmaAst;
 
 use crate::types::oxc_parse_type::OxcParseType;
@@ -20,7 +19,6 @@ pub fn pre_process_ecma_ast(
   parse_type: &OxcParseType,
   path: &Path,
   source_type: SourceType,
-  bundle_options: &NormalizedBundlerOptions,
   replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
 ) -> anyhow::Result<(EcmaAst, SymbolTable, ScopeTree)> {
   if !matches!(parse_type, OxcParseType::Js) {

@@ -77,35 +77,34 @@ impl ModuleLoader {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
-  ) -> Self {
+  ) -> anyhow::Result<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
     let (tx, rx) = tokio::sync::mpsc::channel::<Msg>(1024);
 
     let tx_to_runtime_module = tx.clone();
 
+    let meta = TaskContextMeta {
+      replace_global_define_config: if !options.define.is_empty() {
+        let define_config = ReplaceGlobalDefinesConfig::new(&options.define).map_err(|errs| {
+          anyhow::format_err!(
+            "Failed to generate defines config from {:?}. Got {:#?}",
+            options.define,
+            errs
+          )
+        })?;
+        Some(define_config)
+      } else {
+        None
+      },
+    };
     let common_data = Arc::new(TaskContext {
       options: Arc::clone(&options),
       tx,
       resolver,
       fs,
       plugin_driver,
-      meta: TaskContextMeta {
-        replace_global_define_config: if !options.define.is_empty() {
-          let define_config = ReplaceGlobalDefinesConfig::new(&options.define)
-            .map_err(|errs| {
-              anyhow::format_err!(
-                "Failed to generate defines config from {:?}. Got {:#?}",
-                options.define,
-                errs
-              )
-            })
-            .unwrap();
-          Some(define_config)
-        } else {
-          None
-        },
-      },
+      meta,
     });
 
     let mut intermediate_normal_modules = IntermediateNormalModules::new();
@@ -126,7 +125,7 @@ impl ModuleLoader {
       handle.spawn(async { task.run() });
     }
 
-    Self {
+    Ok(Self {
       shared_context: common_data,
       rx,
       options,
@@ -136,7 +135,7 @@ impl ModuleLoader {
       remaining: 1,
       intermediate_normal_modules,
       symbols,
-    }
+    })
   }
 
   fn try_spawn_new_task(

@@ -2364,6 +2364,9 @@ dependencies = [
 name = "rolldown_plugin_transform"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "oxc",
+ "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_plugin",
 ]

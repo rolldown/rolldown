@@ -155,9 +155,10 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
       case 'transform': {
         if (batchedHooks.transform) {
           const batchedHandlers = batchedHooks.transform
-          composed.transform = async function (initialCode, id) {
+          composed.transform = async function (initialCode, id, initModuleType) {
             let code = initialCode
             let moduleSideEffects: ModuleSideEffects | undefined = undefined
+            let moduleType = initModuleType
             // TODO: we should deal with the returned sourcemap too.
             function updateOutput(
               newCode: string,
@@ -168,7 +169,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
             }
             for (const handler of batchedHandlers) {
               const [handlerFn, _handlerOptions] = normalizeHook(handler)
-              const result = await handlerFn.call(this, code, id)
+              const result = await handlerFn.call(this, code, id, moduleType)
               if (!isNullish(result)) {
                 if (typeof result === 'string') {
                   updateOutput(result)

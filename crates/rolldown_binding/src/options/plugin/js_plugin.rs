@@ -136,6 +136,7 @@ impl Plugin for JsPlugin {
           BindingTransformPluginContext::new(unsafe { std::mem::transmute(ctx) }),
           args.code.to_string(),
           args.id.to_string(),
+          args.module_type.to_string(),
         ))
         .await?
         .map(TryInto::try_into)

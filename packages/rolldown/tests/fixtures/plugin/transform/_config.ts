@@ -8,10 +8,11 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        transform: function (code, id) {
+        transform: function (code, id, module_type) {
           transformFn()
           if (id.endsWith('foo.js')) {
             expect(code).toStrictEqual('')
+            expect(module_type).toEqual('js')
             return {
               code: `console.log('transformed')`,
             }
@@ -21,7 +22,7 @@ export default defineTest({
     ],
   },
   afterTest: (output) => {
-    expect.assertions(3)
+    expect.assertions(4)
     expect(transformFn).toHaveBeenCalledTimes(2)
     expect(output.output[0].code).contains('transformed')
   },

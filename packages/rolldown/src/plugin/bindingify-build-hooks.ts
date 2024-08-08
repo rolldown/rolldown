@@ -161,7 +161,7 @@ export function bindingifyTransform(
   }
   const [handler, _optionsIgnoredSofar] = normalizeHook(hook)
 
-  return async (ctx, code, id) => {
+  return async (ctx, code, id, module_type) => {
     const ret = await handler.call(
       new TransformPluginContext(
         options,
@@ -174,6 +174,7 @@ export function bindingifyTransform(
       ),
       code,
       id,
+      module_type
     )
 
     if (ret == null) {

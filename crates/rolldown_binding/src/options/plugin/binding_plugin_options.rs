@@ -65,11 +65,11 @@ pub struct BindingPluginOptions {
 
   #[serde(skip_deserializing)]
   #[napi(
-    ts_type = "(ctx:  BindingTransformPluginContext, id: string, code: string) => MaybePromise<VoidNullable<BindingHookTransformOutput>>"
+    ts_type = "(ctx:  BindingTransformPluginContext, id: string, code: string, module_type: string) => MaybePromise<VoidNullable<BindingHookTransformOutput>>"
   )]
   pub transform: Option<
     MaybeAsyncJsCallback<
-      (BindingTransformPluginContext, String, String),
+      (BindingTransformPluginContext, String, String, String),
       Option<BindingHookTransformOutput>,
     >,
   >,

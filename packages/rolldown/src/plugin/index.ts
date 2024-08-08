@@ -107,6 +107,8 @@ export interface FunctionPluginHooks {
     this: TransformPluginContext,
     code: string,
     id: string,
+    // TODO: better type
+    module_type: string,
   ) => TransformResult
 
   moduleParsed: (this: PluginContext, moduleInfo: ModuleInfo) => void

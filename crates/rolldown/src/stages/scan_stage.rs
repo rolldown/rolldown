@@ -57,7 +57,7 @@ impl ScanStage {
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
-    );
+    )?;
 
     let user_entries = match self.resolve_user_defined_entries().await? {
       Ok(entries) => entries,

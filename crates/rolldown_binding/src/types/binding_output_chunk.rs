@@ -23,7 +23,7 @@ impl BindingOutputChunk {
       let inner = inner.lock().unwrap();
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.is_entry,
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -34,7 +34,7 @@ impl BindingOutputChunk {
       let inner = inner.lock().unwrap();
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.is_dynamic_entry,
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -47,7 +47,7 @@ impl BindingOutputChunk {
         rolldown_common::Output::Chunk(ref chunk) => {
           chunk.facade_module_id.as_ref().map(|x| x.to_string())
         }
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -61,7 +61,7 @@ impl BindingOutputChunk {
         rolldown_common::Output::Chunk(ref chunk) => {
           chunk.module_ids.iter().map(|x| x.to_string()).collect()
         }
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -73,7 +73,7 @@ impl BindingOutputChunk {
       let inner = inner.lock().unwrap();
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.exports.clone(),
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -86,7 +86,7 @@ impl BindingOutputChunk {
       let inner = inner.lock().unwrap();
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.filename.to_string(),
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -109,7 +109,7 @@ impl BindingOutputChunk {
           .into_iter()
           .map(|(key, value)| (key.to_string(), value.into()))
           .collect(),
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -123,7 +123,7 @@ impl BindingOutputChunk {
         rolldown_common::Output::Chunk(ref chunk) => {
           chunk.imports.iter().map(|x| x.to_string()).collect()
         }
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -137,7 +137,7 @@ impl BindingOutputChunk {
         rolldown_common::Output::Chunk(ref mut chunk) => {
           chunk.imports = imports.into_iter().map(Into::into).collect();
         }
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     });
   }
@@ -151,7 +151,7 @@ impl BindingOutputChunk {
         rolldown_common::Output::Chunk(ref chunk) => {
           chunk.dynamic_imports.iter().map(|x| x.to_string()).collect()
         }
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -164,7 +164,7 @@ impl BindingOutputChunk {
       let inner = inner.lock().unwrap();
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.code.clone(),
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -178,7 +178,7 @@ impl BindingOutputChunk {
         rolldown_common::Output::Chunk(ref mut chunk) => {
           chunk.code = code;
         }
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     });
   }
@@ -192,7 +192,7 @@ impl BindingOutputChunk {
         rolldown_common::Output::Chunk(ref chunk) => {
           Ok(chunk.map.as_ref().map(SourceMap::to_json_string))
         }
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -213,7 +213,7 @@ impl BindingOutputChunk {
           );
           Ok(())
         }
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })?;
     Ok(())
@@ -226,7 +226,7 @@ impl BindingOutputChunk {
       let inner = inner.lock().unwrap();
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.sourcemap_filename.clone(),
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -238,7 +238,7 @@ impl BindingOutputChunk {
       let inner = inner.lock().unwrap();
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.preliminary_filename.to_string(),
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }
@@ -250,7 +250,7 @@ impl BindingOutputChunk {
       let inner = inner.lock().unwrap();
       match &inner[self.index] {
         rolldown_common::Output::Chunk(ref chunk) => chunk.name.to_string(),
-        _ => unreachable!(),
+        rolldown_common::Output::Asset(_) => unreachable!(),
       }
     })
   }

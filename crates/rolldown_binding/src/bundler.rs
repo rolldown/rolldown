@@ -125,7 +125,7 @@ impl Bundler {
 
     self.handle_warnings(outputs.warnings).await;
 
-    Ok(FinalBindingOutputs::new(outputs.assets.into()))
+    Ok(FinalBindingOutputs::new(outputs.assets))
   }
 
   #[allow(clippy::significant_drop_tightening)]

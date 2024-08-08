@@ -42,6 +42,6 @@ impl<T> WeakRef<T> {
 
 impl<T> Clone for WeakRef<T> {
   fn clone(&self) -> Self {
-    Self(self.0.clone())
+    Self(Weak::clone(&self.0))
   }
 }

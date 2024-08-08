@@ -20,15 +20,13 @@ impl BindingOutputs {
   pub fn chunks(&mut self) -> Vec<BindingOutputChunk> {
     let mut chunks: Vec<BindingOutputChunk> = vec![];
     self.inner.with_inner(|inner| {
-      let inner = inner.lock().expect("PoisonError raised");
-      for (index, o) in inner.iter().enumerate() {
-        match o {
-          rolldown_common::Output::Chunk(_chunk) => {
-            chunks.push(BindingOutputChunk::new(self.inner.clone(), index));
-          }
-          rolldown_common::Output::Asset(_) => {}
+      let mut inner = inner.lock().expect("PoisonError raised");
+      inner.iter_mut().for_each(|o| match o {
+        rolldown_common::Output::Chunk(chunk) => {
+          chunks.push(BindingOutputChunk::new(unsafe { std::mem::transmute(chunk.as_mut()) }));
         }
-      }
+        rolldown_common::Output::Asset(_) => {}
+      });
     });
 
     chunks
@@ -78,15 +76,13 @@ impl FinalBindingOutputs {
   pub fn chunks(&mut self) -> Vec<BindingOutputChunk> {
     let mut chunks: Vec<BindingOutputChunk> = vec![];
     self.inner.weak_ref().with_inner(|inner| {
-      let inner = inner.lock().expect("PoisonError raised");
-      for (index, o) in inner.iter().enumerate() {
-        match o {
-          rolldown_common::Output::Chunk(_chunk) => {
-            chunks.push(BindingOutputChunk::new(self.inner.weak_ref(), index));
-          }
-          rolldown_common::Output::Asset(_) => {}
+      let mut inner = inner.lock().expect("PoisonError raised");
+      inner.iter_mut().for_each(|o| match o {
+        rolldown_common::Output::Chunk(chunk) => {
+          chunks.push(BindingOutputChunk::new(unsafe { std::mem::transmute(chunk.as_mut()) }));
         }
-      }
+        rolldown_common::Output::Asset(_) => {}
+      });
     });
 
     chunks

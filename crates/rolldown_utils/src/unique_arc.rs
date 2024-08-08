@@ -1,5 +1,7 @@
 use std::sync::{Arc, Weak};
 
+use crate::debug::pretty_type_name;
+
 #[derive(Debug)]
 pub struct UniqueArc<T: ?Sized>(Arc<T>);
 
@@ -11,7 +13,10 @@ impl<T> UniqueArc<T> {
   /// # Panics
   /// - Don't call this method while calling the `WeakRef#with_inner` method.
   pub fn into_inner(self) -> T {
-    Arc::into_inner(self.0).unwrap_or_else(|| panic!("Arc has multiple references"))
+    Arc::into_inner(self.0).unwrap_or_else(|| {
+      let t_name = pretty_type_name::<T>();
+      panic!("UniqueArc<{t_name}> has multiple references")
+    })
   }
 
   pub fn weak_ref(&self) -> WeakRef<T> {
@@ -36,7 +41,12 @@ impl<T> WeakRef<T> {
   where
     F: FnOnce(&T) -> R,
   {
-    self.try_with_inner(f).expect("Upgrade failed. Arc has been dropped.")
+    self.try_with_inner(f).unwrap_or_else(|| {
+      let t_name = pretty_type_name::<T>();
+      panic!(
+        "UniqueArc<{t_name}> is already dropped. You can't access it by this WeakRef<{t_name}>",
+      )
+    })
   }
 }
 

@@ -24,6 +24,8 @@ import { ParallelPlugin } from './parallel-plugin'
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
 
+export type ModuleType = 'js' | 'jsx' | 'ts' | 'tsx' | 'json' | 'text' | 'base64' | 'dataurl' | 'binary' | 'empty' | (string & {})
+
 export type ImportKind = BindingHookResolveIdExtraOptions['kind']
 
 export interface CustomPluginOptions {
@@ -107,8 +109,7 @@ export interface FunctionPluginHooks {
     this: TransformPluginContext,
     code: string,
     id: string,
-    // TODO: better type
-    module_type: string,
+    module_type: ModuleType,
   ) => TransformResult
 
   moduleParsed: (this: PluginContext, moduleInfo: ModuleInfo) => void

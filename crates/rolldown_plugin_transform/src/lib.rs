@@ -130,7 +130,6 @@ impl EcmaTransformPlugin {
     let normalized_path = Path::new(id).relative(ctx.inner.cwd());
     let normalized_id = normalized_path.to_string_lossy();
     for pattern in &self.exclude {
-      dbg!(&pattern, id);
       let v = match pattern {
         StringOrRegex::String(glob) => glob_match(glob.as_str(), &normalized_id),
         StringOrRegex::Regex(re) => re.matches(id),

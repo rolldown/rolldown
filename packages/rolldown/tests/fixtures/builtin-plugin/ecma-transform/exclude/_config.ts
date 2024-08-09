@@ -8,12 +8,12 @@ export default defineTest({
     input: './main.ts',
     plugins: [
       ecmaTransformPlugin({
-        exclude: ['node_modules/**']
+        exclude: ['node_modules/**'],
       }),
       {
         name: 'test',
         transform(_, id, meta) {
-          if (meta.moduleType === "js") {
+          if (meta.moduleType === 'js') {
             transformed.push(id)
           }
           return null
@@ -22,7 +22,9 @@ export default defineTest({
     ],
   },
   async afterTest() {
-    expect(transformed.filter(id => id.includes('node_modules')).length).toBe(0)
+    expect(transformed.filter((id) => id.includes('node_modules')).length).toBe(
+      0,
+    )
     transformed = []
   },
 })

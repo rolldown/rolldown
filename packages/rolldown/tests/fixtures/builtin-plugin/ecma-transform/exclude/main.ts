@@ -1,2 +1,2 @@
-import {test} from 'a'
+import { test } from 'a'
 console.log(test)

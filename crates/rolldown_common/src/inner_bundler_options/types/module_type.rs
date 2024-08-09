@@ -42,10 +42,12 @@ impl ModuleType {
     }
   }
 
-  pub fn from_str(s: &str) -> Self {
+  /// error: method `from_str` can be confused for the standard trait method `std::str::FromStr::from_str`
+  /// to avoid conflicting with std
+  pub fn from_str_with_fallback(s: &str) -> Self {
     match s {
       "js" => Self::Js,
-      "jsx" => (Self::Jsx),
+      "jsx" => Self::Jsx,
       "ts" => Self::Ts,
       "tsx" => Self::Tsx,
       "json" => Self::Json,

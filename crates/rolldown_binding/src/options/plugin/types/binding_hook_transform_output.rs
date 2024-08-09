@@ -20,12 +20,11 @@ impl TryFrom<BindingHookTransformOutput> for rolldown_plugin::HookTransformOutpu
   type Error = anyhow::Error;
 
   fn try_from(value: BindingHookTransformOutput) -> Result<Self, Self::Error> {
-    dbg!(&value);
     Ok(rolldown_plugin::HookTransformOutput {
       code: value.code,
       map: value.map.map(TryInto::try_into).transpose()?,
       side_effects: value.side_effects.map(Into::into),
-      module_type: value.module_type.map(|ty| ModuleType::from_str(ty.as_str())),
+      module_type: value.module_type.map(|ty| ModuleType::from_str_with_fallback(ty.as_str())),
     })
   }
 }

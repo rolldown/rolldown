@@ -28,7 +28,7 @@ export function normalizedEcmaTransformPluginConfig(
       exclude = config.exclude
     }
     normalizedConfig.exclude = []
-    for (let item in exclude) {
+    for (let item of exclude) {
       if (isRegExp(item)) {
         normalizedConfig.exclude.push({ value: item.source, flag: item.flags })
       } else {
@@ -47,7 +47,7 @@ export function normalizedEcmaTransformPluginConfig(
       include = config.include
     }
     normalizedConfig.include = []
-    for (let item in include) {
+    for (let item of include) {
       if (isRegExp(item)) {
         normalizedConfig.include.push({ value: item.source, flag: item.flags })
       } else {

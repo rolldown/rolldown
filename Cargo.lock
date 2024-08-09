@@ -2372,6 +2372,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_plugin",
+ "sugar_path",
 ]
 
 [[package]]

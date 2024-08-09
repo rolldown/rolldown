@@ -9,6 +9,7 @@ use rolldown_ecmascript::EcmaCompiler;
 use rolldown_plugin::Plugin;
 use std::borrow::Cow;
 use std::path::Path;
+use sugar_path::SugarPath;
 
 #[derive(Debug)]
 pub enum StringOrRegex {
@@ -44,10 +45,11 @@ impl Plugin for EcmaTransformPlugin {
 
   async fn transform(
     &self,
-    _ctx: &rolldown_plugin::TransformPluginContext<'_>,
+    ctx: &rolldown_plugin::TransformPluginContext<'_>,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    if !self.filter(args.id, args.module_type) {
+    // Convert to relative path
+    if !self.filter(ctx, args.id, args.module_type) {
       return Ok(None);
     }
     let source_type = {
@@ -109,20 +111,28 @@ impl Plugin for EcmaTransformPlugin {
     Ok(Some(rolldown_plugin::HookTransformOutput {
       code: Some(code),
       map: source_map,
+      module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
   }
 }
 
 impl EcmaTransformPlugin {
-  fn filter(&self, id: &str, module_type: &ModuleType) -> bool {
+  fn filter(
+    &self,
+    ctx: &rolldown_plugin::TransformPluginContext<'_>,
+    id: &str,
+    module_type: &ModuleType,
+  ) -> bool {
     if self.include.is_empty() && self.exclude.is_empty() {
       return matches!(module_type, ModuleType::Jsx | ModuleType::Tsx | ModuleType::Ts);
     }
-
+    let normalized_path = Path::new(id).relative(ctx.inner.cwd());
+    let normalized_id = normalized_path.to_string_lossy();
     for pattern in &self.exclude {
+      dbg!(&pattern, id);
       let v = match pattern {
-        StringOrRegex::String(glob) => glob_match(glob.as_str(), id),
+        StringOrRegex::String(glob) => glob_match(glob.as_str(), &normalized_id),
         StringOrRegex::Regex(re) => re.matches(id),
       };
       if v {
@@ -131,13 +141,13 @@ impl EcmaTransformPlugin {
     }
     for pattern in &self.include {
       let v = match pattern {
-        StringOrRegex::String(glob) => glob_match(glob.as_str(), id),
+        StringOrRegex::String(glob) => glob_match(glob.as_str(), &normalized_id),
         StringOrRegex::Regex(re) => re.matches(id),
       };
       if v {
         return true;
       }
     }
-    false
+    self.include.is_empty()
   }
 }

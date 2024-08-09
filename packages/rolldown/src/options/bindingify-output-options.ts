@@ -78,11 +78,9 @@ function bindingifyEsModule(
   esModule: NormalizedOutputOptions['esModule'],
 ): BindingOutputOptions['esModule'] {
   switch (esModule) {
-    case 'always':
     case true:
       return 'always'
 
-    case 'never':
     case false:
       return 'never'
 

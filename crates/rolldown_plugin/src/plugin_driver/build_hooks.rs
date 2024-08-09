@@ -150,7 +150,7 @@ impl PluginDriver {
       if let Some(r) = plugin
         .call_transform(
           &TransformPluginContext::new(Arc::clone(ctx), sourcemap_chain, original_code, args.id),
-          &HookTransformArgs { id: args.id, code: &code },
+          &HookTransformArgs { id: args.id, code: &code, module_type: args.module_type },
         )
         .await?
       {

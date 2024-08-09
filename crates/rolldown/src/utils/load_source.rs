@@ -12,7 +12,7 @@ pub async fn load_source(
   sourcemap_chain: &mut Vec<SourceMap>,
   side_effects: &mut Option<HookSideEffects>,
   options: &NormalizedBundlerOptions,
-) -> anyhow::Result<(StrOrBytes, Option<ModuleType>)> {
+) -> anyhow::Result<(StrOrBytes, ModuleType)> {
   let (maybe_source, maybe_module_type) = if let Some(load_hook_output) =
     plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await?
   {
@@ -29,25 +29,21 @@ pub async fn load_source(
   };
 
   match (maybe_source, maybe_module_type) {
-    (Some(source), Some(module_type)) => Ok((source.into(), Some(module_type))),
+    (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
     (Some(source), None) => {
       // The `load` hook returns content without specifying the module type, we consider it as `Js` by default.
       // - This makes the behavior consistent with Rollup.
       // - It's also not friendly to make users have to specify the module type in the `load` hook.
       // - Why don't we jump into the guessing logic? Because guessing by extension is not reliable in the rollup's ecosystem.
-      Ok((source.into(), Some(ModuleType::Js)))
+      Ok((source.into(), ModuleType::Js))
     }
     (None, None) => {
-      let guessed = resolved_id
-        .id
-        .as_path()
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .and_then(|ext| options.module_types.get(ext).cloned());
+      let ext = resolved_id.id.as_path().extension().and_then(|ext| ext.to_str());
+      let guessed = ext.and_then(|ext| options.module_types.get(ext).cloned());
       if let Some(guessed) = guessed {
         match &guessed {
           ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => {
-            Ok((StrOrBytes::Bytes(fs.read(resolved_id.id.as_path())?), Some(guessed)))
+            Ok((StrOrBytes::Bytes(fs.read(resolved_id.id.as_path())?), guessed))
           }
           ModuleType::Js
           | ModuleType::Jsx
@@ -57,11 +53,15 @@ pub async fn load_source(
           | ModuleType::Text
           | ModuleType::Empty
           | ModuleType::Custom(_) => {
-            Ok((StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?), Some(guessed)))
+            Ok((StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?), guessed))
           }
         }
       } else {
-        Err(anyhow::format_err!("Fail to guess module type for {:?}. So rolldown could not load this asset correctly. Please use the load hook to load the resource", resolved_id.debug_id(options.cwd.as_path())))
+        Ok((
+          StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?),
+          ModuleType::Custom(ext.map(String::from).unwrap_or_default()),
+        ))
+        // Err(anyhow::format_err!("Fail to guess module type for {:?}. So rolldown could not load this asset correctly. Please use the load hook to load the resource", resolved_id.debug_id(options.cwd.as_path())))
       }
     }
     (None, Some(_)) => unreachable!("Invalid state"),

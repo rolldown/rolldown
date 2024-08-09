@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -37,6 +39,24 @@ impl ModuleType {
       "binary" => Ok(Self::Binary),
       "empty" => Ok(Self::Empty),
       _ => Err(anyhow::format_err!("Unknown module type: {s}")),
+    }
+  }
+}
+
+impl Display for ModuleType {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      ModuleType::Js => write!(f, "js"),
+      ModuleType::Jsx => write!(f, "jsx"),
+      ModuleType::Ts => write!(f, "ts"),
+      ModuleType::Tsx => write!(f, "tsx"),
+      ModuleType::Json => write!(f, "json"),
+      ModuleType::Text => write!(f, "text"),
+      ModuleType::Base64 => write!(f, "base64"),
+      ModuleType::Dataurl => write!(f, "dataurl"),
+      ModuleType::Binary => write!(f, "binary"),
+      ModuleType::Empty => write!(f, "empty"),
+      ModuleType::Custom(custom_type) => write!(f, "{custom_type}"),
     }
   }
 }

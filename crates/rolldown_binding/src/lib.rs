@@ -24,3 +24,4 @@ pub mod types;
 pub mod utils;
 mod worker_manager;
 pub use oxc_transform_napi;
+mod type_aliases;

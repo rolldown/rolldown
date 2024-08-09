@@ -16,15 +16,8 @@ impl HybridRegex {
   }
 
   pub fn with_flags(pattern: &str, flags: &str) -> anyhow::Result<Self> {
-    let mut result = String::new();
-    for c in flags.bytes() {
-      match c {
-        b'i' | b'm' | b's' | b'u' | b'R' | b'U' | b'x' => result.push(c as char),
-        _ => {}
-      }
-    }
+    let regex_pattern = if flags.is_empty() { pattern } else { &format!("(?{flags}){pattern}") };
 
-    let regex_pattern = if result.is_empty() { pattern } else { &format!("(?{result}){pattern}") };
     match regex::Regex::new(regex_pattern).map(HybridRegex::Optimize) {
       Ok(reg) => Ok(reg),
       Err(_) => regress::Regex::with_flags(pattern, flags)

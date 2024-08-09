@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region foo.js
 function foo() {}
-var foo_ns, a, b, c, bar, baz;
+var foo_ns, a, b, c, d, e, g, bar, baz;
 var init_foo = __esmMin(() => {
 	foo_ns = {};
 	__export(foo_ns, {
@@ -18,11 +18,16 @@ var init_foo = __esmMin(() => {
 		b: () => b,
 		bar: () => bar,
 		c: () => c,
+		d: () => d,
 		default: () => baz,
-		foo: () => foo
+		e: () => e,
+		foo: () => foo,
+		g: () => g
 	});
 	[b] = [];
 	[c = 1] = [];
+	({e} = {});
+	({f: g = 1} = {});
 	bar = class {};
 	baz = class {};
 });
@@ -38,28 +43,38 @@ init_foo(), __toCommonJS(foo_ns);
 # Sourcemap Visualizer
 
 - ../foo.js
-(1:7-1:16) " function" --> (27:0-27:9) "\nfunction"
-(1:16-1:22) " foo()" --> (27:9-27:15) " foo()"
-(1:22-1:25) " { " --> (27:15-27:16) " "
-(1:25-0:0) "" --> (27:16-28:0) "{}"
-(0:0-0:15) "export var a, [" --> (28:0-39:2) "\nvar foo_ns, a, b, c, bar, baz;\nvar init_foo = __esmMin(() => {\n\tfoo_ns = {};\n\t__export(foo_ns, {\n\t\ta: () => a,\n\t\tb: () => b,\n\t\tbar: () => bar,\n\t\tc: () => c,\n\t\tdefault: () => baz,\n\t\tfoo: () => foo\n\t});\n\t"
-(0:15-0:0) "export var a, [" --> (39:2-39:4) "[b"
-(0:0-0:20) "export var a, [b] = " --> (39:4-39:7) "] ="
-(0:20-0:22) "[]" --> (39:7-39:9) " ["
-(0:22-0:0) "export var a, [b] = []" --> (39:9-40:0) "];"
-(0:0-0:25) "export var a, [b] = [], [" --> (40:0-40:2) "\n\t"
-(0:25-0:29) "c = " --> (40:2-40:6) "[c ="
-(0:29-0:0) "export var a, [b] = [], [c = " --> (40:6-40:8) " 1"
-(0:0-0:34) "export var a, [b] = [], [c = 1] = " --> (40:8-40:11) "] ="
-(0:34-0:36) "[]" --> (40:11-40:13) " ["
-(0:36-0:0) "export var a, [b] = [], [c = 1] = []" --> (40:13-41:0) "];"
-(0:0-2:7) "export var a, [b] = [], [c = 1] = [];\nexport function foo() { }\nexport" --> (41:0-41:1) "\n"
-(2:7-2:17) " class bar" --> (41:1-41:13) "\tbar = class"
-(2:17-2:20) " { " --> (41:13-41:14) " "
-(2:20-0:0) "" --> (41:14-42:0) "{};"
-(0:0-3:15) "export var a, [b] = [], [c = 1] = [];\nexport function foo() { }\nexport class bar { }\nexport default" --> (42:0-42:1) "\n"
-(3:15-3:25) " class baz" --> (42:1-42:13) "\tbaz = class"
-(3:25-3:28) " { " --> (42:13-42:14) " "
-(3:28-0:0) "" --> (42:14-43:0) "{};"
-(0:0-7:1) "export var a, [b] = [], [c = 1] = [];\nexport function foo() { }\nexport class bar { }\nexport default class baz { }\n\n\nexport { }\n" --> (43:0-47:0) "\n});\n\n//#endregion\n//#region main.js"
-(0:0-1:1) "require('./foo')\n" --> (47:0-50:34) "\ninit_foo(), __toCommonJS(foo_ns);\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"
+(2:7-2:16) " function" --> (27:0-27:9) "\nfunction"
+(2:16-2:22) " foo()" --> (27:9-27:15) " foo()"
+(2:22-2:25) " { " --> (27:15-27:16) " "
+(2:25-0:0) "" --> (27:16-28:0) "{}"
+(0:0-0:15) "export var a, [" --> (28:0-42:2) "\nvar foo_ns, a, b, c, d, e, g, bar, baz;\nvar init_foo = __esmMin(() => {\n\tfoo_ns = {};\n\t__export(foo_ns, {\n\t\ta: () => a,\n\t\tb: () => b,\n\t\tbar: () => bar,\n\t\tc: () => c,\n\t\td: () => d,\n\t\tdefault: () => baz,\n\t\te: () => e,\n\t\tfoo: () => foo,\n\t\tg: () => g\n\t});\n\t"
+(0:15-0:0) "export var a, [" --> (42:2-42:4) "[b"
+(0:0-0:20) "export var a, [b] = " --> (42:4-42:7) "] ="
+(0:20-0:22) "[]" --> (42:7-42:9) " ["
+(0:22-0:0) "export var a, [b] = []" --> (42:9-43:0) "];"
+(0:0-0:25) "export var a, [b] = [], [" --> (43:0-43:2) "\n\t"
+(0:25-0:29) "c = " --> (43:2-43:6) "[c ="
+(0:29-0:0) "export var a, [b] = [], [c = " --> (43:6-43:8) " 1"
+(0:0-0:34) "export var a, [b] = [], [c = 1] = " --> (43:8-43:11) "] ="
+(0:34-0:36) "[]" --> (43:11-43:13) " ["
+(0:36-0:0) "export var a, [b] = [], [c = 1] = []" --> (43:13-44:0) "];"
+(0:0-1:20) "export var a, [b] = [], [c = 1] = [];\nexport var d, {e} =" --> (44:0-44:8) "\n\t({e} ="
+(1:20-1:22) " {" --> (44:8-44:9) " "
+(1:22-0:0) "" --> (44:9-45:0) "{});"
+(0:0-1:25) "export var a, [b] = [], [c = 1] = [];\nexport var d, {e} = {}, " --> (45:0-45:3) "\n\t("
+(1:25-1:28) "{f:" --> (45:3-45:6) "{f:"
+(1:28-1:32) " g =" --> (45:6-45:10) " g ="
+(1:32-0:0) "" --> (45:10-45:12) " 1"
+(0:0-1:37) "export var a, [b] = [], [c = 1] = [];\nexport var d, {e} = {}, {f: g = 1} =" --> (45:12-45:15) "} ="
+(1:37-1:39) " {" --> (45:15-45:16) " "
+(1:39-0:0) "" --> (45:16-46:0) "{});"
+(0:0-3:7) "export var a, [b] = [], [c = 1] = [];\nexport var d, {e} = {}, {f: g = 1} = {};\nexport function foo() { }\nexport" --> (46:0-46:1) "\n"
+(3:7-3:17) " class bar" --> (46:1-46:13) "\tbar = class"
+(3:17-3:20) " { " --> (46:13-46:14) " "
+(3:20-0:0) "" --> (46:14-47:0) "{};"
+(0:0-4:15) "export var a, [b] = [], [c = 1] = [];\nexport var d, {e} = {}, {f: g = 1} = {};\nexport function foo() { }\nexport class bar { }\nexport default" --> (47:0-47:1) "\n"
+(4:15-4:25) " class baz" --> (47:1-47:13) "\tbaz = class"
+(4:25-4:28) " { " --> (47:13-47:14) " "
+(4:28-0:0) "" --> (47:14-48:0) "{};"
+(0:0-8:1) "export var a, [b] = [], [c = 1] = [];\nexport var d, {e} = {}, {f: g = 1} = {};\nexport function foo() { }\nexport class bar { }\nexport default class baz { }\n\n\nexport { }\n" --> (48:0-52:0) "\n});\n\n//#endregion\n//#region main.js"
+(0:0-1:1) "require('./foo')\n" --> (52:0-55:34) "\ninit_foo(), __toCommonJS(foo_ns);\n\n//#endregion\n//# sourceMappingURL=main.mjs.map"

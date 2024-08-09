@@ -301,6 +301,24 @@ impl<'ast> TakeIn<'ast> for ast::ObjectAssignmentTarget<'ast> {
   }
 }
 
+impl<'ast> TakeIn<'ast> for ast::AssignmentTargetPropertyIdentifier<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self { init: TakeIn::dummy(alloc), span: TakeIn::dummy(alloc), binding: TakeIn::dummy(alloc) }
+  }
+}
+
+impl<'ast> TakeIn<'ast> for ast::AssignmentTargetMaybeDefault<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self::AssignmentTargetIdentifier(TakeIn::dummy(alloc))
+  }
+}
+
+impl<'ast> TakeIn<'ast> for ast::AssignmentTargetPropertyProperty<'ast> {
+  fn dummy(alloc: &'ast Allocator) -> Self {
+    Self { name: TakeIn::dummy(alloc), span: TakeIn::dummy(alloc), binding: TakeIn::dummy(alloc) }
+  }
+}
+
 impl<'ast> TakeIn<'ast> for ast::AssignmentTargetWithDefault<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
     Self { span: TakeIn::dummy(alloc), binding: TakeIn::dummy(alloc), init: TakeIn::dummy(alloc) }

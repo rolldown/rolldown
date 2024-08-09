@@ -51,6 +51,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
     ret
   }
 
+  #[allow(clippy::too_many_lines)]
   fn into_assignment_target(mut self, alloc: &'ast Allocator) -> ast::AssignmentTarget<'ast> {
     let left = match &mut self.kind {
       // Turn `var a = 1` into `a = 1`
@@ -58,8 +59,87 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
         AstSnippet::new(alloc).simple_id_assignment_target(&id.name, id.span)
       }
       // Turn `var { a, b = 2 } = ...` to `{a, b = 2} = ...`
-      ast::BindingPatternKind::ObjectPattern(_obj_pat) => {
-        todo!("This should make a good first issue for contributors");
+      ast::BindingPatternKind::ObjectPattern(obj_pat) => {
+        let mut obj_target = ast::ObjectAssignmentTarget {
+          rest: obj_pat.rest.take().map(|rest| ast::AssignmentTargetRest {
+            span: SPAN,
+            target: rest.unbox().argument.into_assignment_target(alloc),
+          }),
+          ..TakeIn::dummy(alloc)
+        };
+
+        obj_pat.properties.take_in(alloc).into_iter().for_each(|binding_prop| {
+          obj_target.properties.push(match binding_prop.value.kind {
+            ast::BindingPatternKind::AssignmentPattern(assign_pat) => {
+              let assign_pat = assign_pat.unbox();
+
+              if binding_prop.shorthand {
+                ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
+                  ast::AssignmentTargetPropertyIdentifier {
+                    binding: ast::IdentifierReference {
+                      name: assign_pat.left.get_identifier().unwrap(),
+                      ..TakeIn::dummy(alloc)
+                    },
+                    init: Some(assign_pat.right),
+                    ..TakeIn::dummy(alloc)
+                  }
+                  .into_in(alloc),
+                )
+              } else {
+                ast::AssignmentTargetProperty::AssignmentTargetPropertyProperty(
+                  ast::AssignmentTargetPropertyProperty {
+                    name: binding_prop.key,
+                    binding: ast::AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
+                      ast::AssignmentTargetWithDefault {
+                        binding: assign_pat.left.into_assignment_target(alloc),
+                        init: assign_pat.right,
+                        ..TakeIn::dummy(alloc)
+                      }
+                      .into_in(alloc),
+                    ),
+                    ..TakeIn::dummy(alloc)
+                  }
+                  .into_in(alloc),
+                )
+                .into_in(alloc)
+              }
+            }
+            ast::BindingPatternKind::BindingIdentifier(ref id) => {
+              if binding_prop.shorthand {
+                ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
+                  ast::AssignmentTargetPropertyIdentifier {
+                    binding: ast::IdentifierReference {
+                      name: id.name.clone(),
+                      ..TakeIn::dummy(alloc)
+                    },
+                    init: None,
+                    ..TakeIn::dummy(alloc)
+                  }
+                  .into_in(alloc),
+                )
+              } else {
+                ast::AssignmentTargetProperty::AssignmentTargetPropertyProperty(
+                  ast::AssignmentTargetPropertyProperty {
+                    name: binding_prop.key,
+                    binding: ast::AssignmentTargetMaybeDefault::from(
+                      binding_prop.value.into_assignment_target(alloc),
+                    ),
+                    ..TakeIn::dummy(alloc)
+                  }
+                  .into_in(alloc),
+                )
+                .into_in(alloc)
+              }
+            }
+            _ => {
+              unreachable!(
+                "The kind of `BindingProperty`'s value should not be `ObjectPattern` and `ArrayPattern`"
+              )
+            }
+          });
+        });
+
+        ast::AssignmentTarget::ObjectAssignmentTarget(obj_target.into_in(alloc))
       }
       // Turn `var [a, ,c = 1] = ...` to `[a, ,c = 1] = ...`
       ast::BindingPatternKind::ArrayPattern(arr_pat) => {

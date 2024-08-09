@@ -4,7 +4,9 @@
 //!    - If it is a namespaced name;
 //!    - If it is a valid identifier;
 //! - The `extend`: whether extends the object or not.
+
 use crate::types::generator::GenerateContext;
+use anyhow::bail;
 use arcstr::ArcStr;
 use rolldown_common::OutputExports;
 use rolldown_error::{BuildDiagnostic, DiagnosableResult};
@@ -115,7 +117,7 @@ pub fn generate_identifier(
 ///
 /// - If the name is not a reserved word and not an invalid identifier, it will generate a caller like `.name`.
 /// - Otherwise, it will generate a caller like `["if"]`.
-fn generate_caller(name: &str) -> String {
+pub fn generate_caller(name: &str) -> String {
   if is_validate_assignee_identifier_name(name) {
     format!(".{name}")
   } else {

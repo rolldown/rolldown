@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.mjs
+
+```js
+import * as m from "react";
+
+
+//#region vite:cjs-external-facadereact
+var require_vite_cjs_external_facadereact = __commonJSMin((exports, module) => {
+	module.exports = m;
+});
+
+//#endregion
+//#region entry.js
+const React = require_vite_cjs_external_facadereact();
+console.log(React.version);
+
+//#endregion
+```

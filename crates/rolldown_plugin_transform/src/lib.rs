@@ -101,3 +101,42 @@ impl Plugin for EcmaTransformPlugin {
     }));
   }
 }
+
+impl EcmaTransformPlugin {
+  fn filter(&self, id: &str) -> bool {
+    let mut include = false;
+    for i in &self.include {
+      match i {
+        StringOrRegex::String => {
+          if id.contains('/') {
+            include = true;
+            break;
+          }
+        }
+        StringOrRegex::Regex(re) => {
+          if re.matches(id) {
+            include = true;
+            break;
+          }
+        }
+      }
+    }
+    if !include {
+      return false;
+    }
+    for e in &self.exclude {
+      match e {
+        StringOrRegex::String => {
+          if id.contains('/') {
+            return false;
+          }
+        }
+        StringOrRegex::Regex(re) => {
+          if re.matches(id) {
+            return false;
+          }
+        }
+      }
+    }
+  }
+}

@@ -36,11 +36,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.ctx.symbols.canonical_name_for(symbol, self.ctx.canonical_names)
   }
 
-  /// Used for member expression access with ambiguous name.
-  pub fn try_canonical_name_for(&self, symbol: SymbolRef) -> Option<&'me Rstr> {
-    self.ctx.canonical_names.get(&symbol)
-  }
-
   pub fn canonical_name_for_runtime(&self, name: &str) -> &Rstr {
     let sym_ref = self.ctx.runtime.resolve_symbol(name);
     self.canonical_name_for(sym_ref)

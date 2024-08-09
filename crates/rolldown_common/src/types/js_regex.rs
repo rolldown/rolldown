@@ -33,3 +33,14 @@ impl HybridRegex {
     }
   }
 }
+
+mod test {
+  #[test]
+  fn with_flags() {
+    let reg = super::HybridRegex::with_flags("a", "i").unwrap();
+    assert!(reg.matches("A"));
+
+    let reg = super::HybridRegex::new("a").unwrap();
+    assert!(!reg.matches("A"));
+  }
+}

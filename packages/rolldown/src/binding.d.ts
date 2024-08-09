@@ -162,6 +162,7 @@ export interface BindingHookTransformOutput {
   code?: string
   sideEffects?: BindingHookSideEffects
   map?: BindingSourcemap
+  moduleType?: string
 }
 
 export interface BindingInputItem {

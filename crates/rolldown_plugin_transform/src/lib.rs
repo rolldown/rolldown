@@ -1,3 +1,4 @@
+use glob_match::glob_match;
 use oxc::ast::ast::TSModuleDeclarationBody;
 use oxc::codegen::{CodeGenerator, CodegenReturn, Gen};
 use oxc::span::SourceType;
@@ -14,16 +15,28 @@ use std::borrow::Cow;
 use std::path::Path;
 
 #[derive(Debug)]
-enum StringOrRegex {
-  String,
+pub enum StringOrRegex {
+  String(String),
   Regex(HybridRegex),
 }
 
-#[derive(Debug)]
+impl StringOrRegex {
+  pub fn new(value: String, flag: Option<String>) -> anyhow::Result<Self> {
+    // TODO: support flag
+    if flag.is_some() {
+      let regex = HybridRegex::new(&value)?;
+      Ok(Self::Regex(regex))
+    } else {
+      Ok(Self::String(value))
+    }
+  }
+}
+
+#[derive(Debug, Default)]
 pub struct EcmaTransformPlugin {
-  include: Vec<StringOrRegex>,
-  exclude: Vec<StringOrRegex>,
-  jsx_inject: Option<String>,
+  pub include: Vec<StringOrRegex>,
+  pub exclude: Vec<StringOrRegex>,
+  pub jsx_inject: Option<String>,
   // TODO: support transform options
 }
 
@@ -38,9 +51,13 @@ impl Plugin for EcmaTransformPlugin {
     ctx: &rolldown_plugin::TransformPluginContext<'_>,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
+    if !self.filter(args.id, args.module_type) {
+      return Ok(None);
+    }
+    dbg!(&args.module_type);
     let source_type = {
-      let default_source_type = SourceType::default();
-      match args.module_type {
+      let mut default_source_type = SourceType::default();
+      default_source_type = match args.module_type {
         ModuleType::Jsx => default_source_type.with_jsx(true),
         ModuleType::Ts => default_source_type.with_typescript(true),
         ModuleType::Tsx => default_source_type.with_typescript(true).with_jsx(true),
@@ -48,6 +65,8 @@ impl Plugin for EcmaTransformPlugin {
       };
       default_source_type
     };
+    println!("{:?}", source_type);
+    println!("{}", args.code);
     let code = args.code;
     let parse_result = EcmaCompiler::parse(args.id, code, source_type);
     let mut ast = match parse_result {
@@ -103,40 +122,29 @@ impl Plugin for EcmaTransformPlugin {
 }
 
 impl EcmaTransformPlugin {
-  fn filter(&self, id: &str) -> bool {
-    let mut include = false;
-    for i in &self.include {
-      match i {
-        StringOrRegex::String => {
-          if id.contains('/') {
-            include = true;
-            break;
-          }
-        }
-        StringOrRegex::Regex(re) => {
-          if re.matches(id) {
-            include = true;
-            break;
-          }
-        }
+  fn filter(&self, id: &str, module_type: &ModuleType) -> bool {
+    if self.include.is_empty() && self.exclude.is_empty() {
+      return matches!(module_type, ModuleType::Jsx | ModuleType::Tsx | ModuleType::Ts);
+    }
+
+    for pattern in &self.exclude {
+      let v = match pattern {
+        StringOrRegex::String(glob) => glob_match(glob.as_str(), id),
+        StringOrRegex::Regex(re) => re.matches(id),
+      };
+      if v {
+        return false;
       }
     }
-    if !include {
-      return false;
-    }
-    for e in &self.exclude {
-      match e {
-        StringOrRegex::String => {
-          if id.contains('/') {
-            return false;
-          }
-        }
-        StringOrRegex::Regex(re) => {
-          if re.matches(id) {
-            return false;
-          }
-        }
+    for pattern in &self.include {
+      let v = match pattern {
+        StringOrRegex::String(glob) => glob_match(glob.as_str(), id),
+        StringOrRegex::Regex(re) => re.matches(id),
+      };
+      if v {
+        return true;
       }
     }
+    false
   }
 }

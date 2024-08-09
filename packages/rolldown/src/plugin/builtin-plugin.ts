@@ -1,9 +1,11 @@
+import { normalizedEcmaTransformPluginConfig, TransformPluginConfig } from '../options/normalized-ecma-transform-plugin-config'
 import {
   BindingBuiltinPluginName,
   BindingGlobImportPluginConfig,
   BindingBuiltinPlugin,
   BindingManifestPluginConfig,
   BindingModulePreloadPolyfillPluginConfig,
+  BindingTransformPluginConfig,
 } from '../binding'
 
 export class BuiltinPlugin {
@@ -46,6 +48,14 @@ export class WasmPlugin extends BuiltinPlugin {
   }
 }
 
+
+export class EcmaTransformPlugin extends BuiltinPlugin {
+  constructor(config?: TransformPluginConfig) {
+    let normalizedConfig = normalizedEcmaTransformPluginConfig(config);
+    super(BindingBuiltinPluginName.EcmaTransformPlugin, normalizedConfig)
+  }
+}
+
 export function modulePreloadPolyfillPlugin(
   config?: BindingModulePreloadPolyfillPluginConfig,
 ) {
@@ -66,6 +76,10 @@ export function manifestPlugin(config?: BindingManifestPluginConfig) {
 
 export function wasmPlugin() {
   return new WasmPlugin()
+}
+
+export function ecmaTransformPlugin(config?: TransformPluginConfig) {
+  return new EcmaTransformPlugin(config)
 }
 
 export function bindingifyBuiltInPlugin(

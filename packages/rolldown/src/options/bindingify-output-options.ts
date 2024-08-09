@@ -44,6 +44,7 @@ export function bindingifyOutputOptions(
     outro,
     extend: outputOptions.extend,
     globals,
+    extend: outputOptions.extend,
     esModule: bindingifyEsModule(esModule),
     name,
     entryFileNames,

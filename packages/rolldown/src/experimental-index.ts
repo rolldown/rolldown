@@ -6,7 +6,7 @@ import {
   globImportPlugin,
   manifestPlugin,
   wasmPlugin,
-  ecmaTransformPlugin
+  ecmaTransformPlugin,
 } from './plugin/builtin-plugin'
 import { transform } from './binding'
 
@@ -19,5 +19,5 @@ export {
   wasmPlugin,
   globImportPlugin,
   manifestPlugin,
-  ecmaTransformPlugin
+  ecmaTransformPlugin,
 }

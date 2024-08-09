@@ -1,4 +1,7 @@
-import { normalizedEcmaTransformPluginConfig, TransformPluginConfig } from '../options/normalized-ecma-transform-plugin-config'
+import {
+  normalizedEcmaTransformPluginConfig,
+  TransformPluginConfig,
+} from '../options/normalized-ecma-transform-plugin-config'
 import {
   BindingBuiltinPluginName,
   BindingGlobImportPluginConfig,
@@ -47,10 +50,9 @@ export class WasmPlugin extends BuiltinPlugin {
   }
 }
 
-
 export class EcmaTransformPlugin extends BuiltinPlugin {
   constructor(config?: TransformPluginConfig) {
-    let normalizedConfig = normalizedEcmaTransformPluginConfig(config);
+    let normalizedConfig = normalizedEcmaTransformPluginConfig(config)
     super(BindingBuiltinPluginName.EcmaTransformPlugin, normalizedConfig)
   }
 }

@@ -1,59 +1,59 @@
-import { isRegExp } from "node:util/types";
-import { BindingTransformPluginConfig } from "../binding";
+import { isRegExp } from 'node:util/types'
+import { BindingTransformPluginConfig } from '../binding'
 
-type TransformPattern = string | RegExp | RegExp[] | string[];
+type TransformPattern = string | RegExp | RegExp[] | string[]
 // A temp config type for giving better user experience
 export type TransformPluginConfig = BindingTransformPluginConfig & {
-	include?: TransformPattern;
-	exclude?: TransformPattern;
-};
+  include?: TransformPattern
+  exclude?: TransformPattern
+}
 
 export function normalizedEcmaTransformPluginConfig(
-	config?: TransformPluginConfig,
+  config?: TransformPluginConfig,
 ): BindingTransformPluginConfig | undefined {
   if (!config) {
-    return undefined;
+    return undefined
   }
-	let normalizedConfig: BindingTransformPluginConfig = {
-		jsxInject: config?.jsxInject,
-	};
+  let normalizedConfig: BindingTransformPluginConfig = {
+    jsxInject: config?.jsxInject,
+  }
 
-	if (config?.exclude) {
-		let exclude: (string | RegExp)[] = [];
-		if (isRegExp(config.exclude)) {
-			exclude = [config.exclude];
-		} else if (typeof config.exclude === "string") {
-			exclude = [config.exclude];
-		} else {
-			exclude = config.exclude;
-		}
-		normalizedConfig.exclude = [];
-		for (let item in exclude) {
-			if (isRegExp(item)) {
-				normalizedConfig.exclude.push({ value: item.source, flag: item.flags });
-			} else {
-				normalizedConfig.exclude.push({ value: item });
-			}
-		}
-	}
+  if (config?.exclude) {
+    let exclude: (string | RegExp)[] = []
+    if (isRegExp(config.exclude)) {
+      exclude = [config.exclude]
+    } else if (typeof config.exclude === 'string') {
+      exclude = [config.exclude]
+    } else {
+      exclude = config.exclude
+    }
+    normalizedConfig.exclude = []
+    for (let item in exclude) {
+      if (isRegExp(item)) {
+        normalizedConfig.exclude.push({ value: item.source, flag: item.flags })
+      } else {
+        normalizedConfig.exclude.push({ value: item })
+      }
+    }
+  }
 
-	if (config?.include) {
-		let include: (string | RegExp)[] = [];
-		if (isRegExp(config.include)) {
-			include = [config.include];
-		} else if (typeof config.include === "string") {
-			include = [config.include];
-		} else {
-			include = config.include;
-		}
-		normalizedConfig.include = [];
-		for (let item in include) {
-			if (isRegExp(item)) {
-				normalizedConfig.include.push({ value: item.source, flag: item.flags });
-			} else {
-				normalizedConfig.include.push({ value: item });
-			}
-		}
-	}
-	return normalizedConfig;
+  if (config?.include) {
+    let include: (string | RegExp)[] = []
+    if (isRegExp(config.include)) {
+      include = [config.include]
+    } else if (typeof config.include === 'string') {
+      include = [config.include]
+    } else {
+      include = config.include
+    }
+    normalizedConfig.include = []
+    for (let item in include) {
+      if (isRegExp(item)) {
+        normalizedConfig.include.push({ value: item.source, flag: item.flags })
+      } else {
+        normalizedConfig.include.push({ value: item })
+      }
+    }
+  }
+  return normalizedConfig
 }

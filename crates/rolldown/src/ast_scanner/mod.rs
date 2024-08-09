@@ -17,7 +17,7 @@ use oxc::{
 use rolldown_common::{
   AstScopes, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport,
   MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier,
-  StmtInfo, StmtInfos, SymbolRef,
+  StmtInfo, StmtInfos, SymbolRef, TempModuleDeclSpan,
 };
 use rolldown_ecmascript::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, CjsExportSpan, UnhandleableResult};
@@ -39,6 +39,7 @@ pub struct ScanResult {
   pub star_exports: Vec<ImportRecordIdx>,
   pub default_export_ref: SymbolRef,
   pub imports: FxHashMap<Span, ImportRecordIdx>,
+  pub module_declarations: FxHashMap<TempModuleDeclSpan, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildDiagnostic>,
   pub has_eval: bool,
@@ -93,6 +94,7 @@ impl<'me> AstScanner<'me> {
         stmt_infos
       },
       import_records: IndexVec::new(),
+      module_declarations: FxHashMap::default(),
       star_exports: Vec::new(),
       default_export_ref: (idx, symbol_id_for_default_export_ref).into(),
       imports: FxHashMap::default(),
@@ -384,7 +386,7 @@ impl<'me> AstScanner<'me> {
       // export * from '...'
       self.result.star_exports.push(id);
     }
-    self.result.imports.insert(decl.span, id);
+    self.result.module_declarations.insert(TempModuleDeclSpan(decl.span), id);
   }
 
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration) {
@@ -399,7 +401,7 @@ impl<'me> AstScanner<'me> {
           spec.local.span(),
         );
       });
-      self.result.imports.insert(decl.span, record_id);
+      self.result.module_declarations.insert(TempModuleDeclSpan(decl.span), record_id);
       // `export {} from '...'`
       if decl.specifiers.is_empty() {
         self.result.import_records[record_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
@@ -479,7 +481,7 @@ impl<'me> AstScanner<'me> {
       ImportKind::Import,
       decl.source.span().start,
     );
-    self.result.imports.insert(decl.span, rec_id);
+    self.result.module_declarations.insert(TempModuleDeclSpan(decl.span), rec_id);
     // // `import '...'` or `import {} from '...'`
     if decl.specifiers.as_ref().map_or(true, |s| s.is_empty()) {
       self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);

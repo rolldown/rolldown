@@ -86,3 +86,7 @@ pub use crate::{
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;
+use oxc::span::Span;
+
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+pub struct TempModuleDeclSpan(pub Span);

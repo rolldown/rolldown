@@ -78,7 +78,7 @@ export type LoadResult = NullValue | string | SourceDescription
 export type TransformResult =
   | NullValue
   | string
-  | (Partial<SourceDescription> & { moduleType?: string })
+  | (Partial<SourceDescription> & { moduleType?: ModuleType })
 
 export interface FunctionPluginHooks {
   onLog: (

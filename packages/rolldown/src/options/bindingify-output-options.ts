@@ -20,6 +20,7 @@ export function bindingifyOutputOptions(
     intro,
     outro,
     esModule,
+    globals,
   } = outputOptions
   return {
     dir,
@@ -41,6 +42,7 @@ export function bindingifyOutputOptions(
     footer,
     intro,
     outro,
+    globals,
     esModule: bindingifyEsModule(esModule),
     name,
     entryFileNames,

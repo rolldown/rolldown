@@ -1,4 +1,7 @@
-use std::sync::{Arc, Weak};
+use std::{
+  sync::{Arc, Weak},
+  vec,
+};
 
 use rolldown_common::{ModuleTable, SharedFileEmitter};
 use rolldown_resolver::Resolver;
@@ -7,7 +10,7 @@ use crate::{
   __inner::SharedPluginable,
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::plugin_idx::PluginIdx,
-  PluginContext, SharedPluginContext,
+  PluginContext, PluginHookMeta, PluginOrder, SharedPluginContext,
 };
 
 mod build_hooks;
@@ -76,19 +79,34 @@ impl PluginDriver {
     })
   }
 
-  pub(crate) fn iter_plugin_with_context(
+  pub fn iter_sorted_plugin_with_context(
     &self,
-  ) -> impl Iterator<Item = (&SharedPluginable, &SharedPluginContext)> {
-    self.plugins.iter().zip(self.contexts.iter())
-  }
-
-  pub(crate) fn iter_enumerated_plugin_with_context(
-    &self,
+    meta_fn: impl Fn(&SharedPluginable) -> Option<PluginHookMeta>,
   ) -> impl Iterator<Item = (PluginIdx, &SharedPluginable, &SharedPluginContext)> {
-    self
+    let mut pre_plugins_with_contexts = vec![];
+    let mut normal_plugins_with_contexts = vec![];
+    let mut post_plugins_with_contexts = vec![];
+
+    for (idx, plugin, context, meta) in self
       .plugins
       .iter_enumerated()
       .zip(self.contexts.iter())
-      .map(|((idx, plugin), ctx)| (idx, plugin, ctx))
+      .map(|((index, plugin), context)| (index, plugin, context, meta_fn(plugin)))
+    {
+      if let Some(meta) = meta {
+        match meta.order {
+          Some(PluginOrder::Pre) => pre_plugins_with_contexts.push((idx, plugin, context)),
+          Some(PluginOrder::Post) => post_plugins_with_contexts.push((idx, plugin, context)),
+          None => normal_plugins_with_contexts.push((idx, plugin, context)),
+        }
+      } else {
+        normal_plugins_with_contexts.push((idx, plugin, context));
+      }
+    }
+
+    pre_plugins_with_contexts
+      .into_iter()
+      .chain(normal_plugins_with_contexts)
+      .chain(post_plugins_with_contexts)
   }
 }

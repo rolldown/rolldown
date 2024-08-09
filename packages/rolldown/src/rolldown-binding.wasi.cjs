@@ -114,6 +114,7 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingHookResolveIdOutput_struct_29']?.()
   __napiInstance.exports['__napi_register__BindingHookSideEffects_30']?.()
   __napiInstance.exports['__napi_register__BindingHookTransformOutput_struct_31']?.()
+<<<<<<< HEAD
   __napiInstance.exports['__napi_register__BindingStringOrRegex_struct_32']?.()
   __napiInstance.exports['__napi_register__BindingPluginContextResolveOptions_struct_33']?.()
   __napiInstance.exports['__napi_register__BindingTransformHookExtraArgs_struct_34']?.()
@@ -123,6 +124,17 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingManifestPluginConfig_struct_38']?.()
   __napiInstance.exports['__napi_register__BindingModulePreloadPolyfillPluginConfig_struct_39']?.()
   __napiInstance.exports['__napi_register__BindingTransformPluginConfig_struct_40']?.()
+=======
+  __napiInstance.exports['__napi_register__BindingPluginContextResolveOptions_struct_32']?.()
+  __napiInstance.exports['__napi_register__BindingTransformHookExtraArgs_struct_33']?.()
+  __napiInstance.exports['__napi_register__BindingBuiltinPlugin_struct_34']?.()
+  __napiInstance.exports['__napi_register__BindingBuiltinPluginName_35']?.()
+  __napiInstance.exports['__napi_register__BindingGlobImportPluginConfig_struct_36']?.()
+  __napiInstance.exports['__napi_register__BindingManifestPluginConfig_struct_37']?.()
+  __napiInstance.exports['__napi_register__BindingModulePreloadPolyfillPluginConfig_struct_38']?.()
+  __napiInstance.exports['__napi_register__BindingPluginOrder_39']?.()
+  __napiInstance.exports['__napi_register__BindingPluginHookMeta_struct_40']?.()
+>>>>>>> f931a944 (feat: support plugin order)
   __napiInstance.exports['__napi_register__ParallelJsPluginRegistry_struct_41']?.()
   __napiInstance.exports['__napi_register__ParallelJsPluginRegistry_impl_43']?.()
   __napiInstance.exports['__napi_register__register_plugins_44']?.()
@@ -157,6 +169,7 @@ module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginR
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 module.exports.BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects
 module.exports.BindingLogLevel = __napiModule.exports.BindingLogLevel
+module.exports.BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 module.exports.isolatedDeclaration = __napiModule.exports.isolatedDeclaration
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
 module.exports.transform = __napiModule.exports.transform

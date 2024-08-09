@@ -115,7 +115,9 @@ export declare enum BindingBuiltinPluginName {
   GlobImportPlugin = 1,
   DynamicImportVarsPlugin = 2,
   ModulePreloadPolyfillPlugin = 3,
-  ManifestPlugin = 4
+  ManifestPlugin = 4,
+  LoadFallbackPlugin = 5,
+  TransformPlugin = 6
 }
 
 export interface BindingEmittedAsset {
@@ -162,6 +164,7 @@ export interface BindingHookTransformOutput {
   code?: string
   sideEffects?: BindingHookSideEffects
   map?: BindingSourcemap
+  moduleType?: string
 }
 
 export interface BindingInputItem {
@@ -289,8 +292,28 @@ export interface BindingSourcemap {
   inner: string | BindingJsonSourcemap
 }
 
+/**
+ * For String, value is the string content, flag is the `None`
+ * For Regex, value is the regular expression, flag is the `Some()`.
+ * Make sure put a `Some("")` in flag even there is no flag in regexp.
+ */
+export interface BindingStringOrRegex {
+  value: string
+  /**
+   * There is a more compact way to represent this, `Option<u8>` with bitflags, but it will be hard
+   * to use(in js side), since construct a `JsRegex` is not used frequently. Optimize it when it is needed.
+   */
+  flag?: string
+}
+
 export interface BindingTransformHookExtraArgs {
   moduleType: string
+}
+
+export interface BindingTransformPluginConfig {
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxInject?: string
 }
 
 export interface BindingTreeshake {

@@ -69,7 +69,7 @@ impl EcmaModuleTask {
     let mut warnings = vec![];
 
     // Run plugin load to get content first, if it is None using read fs as fallback.
-    let (source, module_type) = match load_source(
+    let (source, mut module_type) = match load_source(
       &self.ctx.plugin_driver,
       &self.resolved_id,
       &self.ctx.fs,
@@ -103,7 +103,7 @@ impl EcmaModuleTask {
           source,
           &mut sourcemap_chain,
           &mut hook_side_effects,
-          &module_type,
+          &mut module_type,
         )
         .await?;
         source.into()

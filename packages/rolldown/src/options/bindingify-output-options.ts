@@ -20,6 +20,7 @@ export function bindingifyOutputOptions(
     intro,
     outro,
     esModule,
+    globals,
   } = outputOptions
   return {
     dir,
@@ -42,6 +43,7 @@ export function bindingifyOutputOptions(
     intro,
     outro,
     extend: outputOptions.extend,
+    globals,
     esModule: bindingifyEsModule(esModule),
     name,
     entryFileNames,
@@ -77,11 +79,9 @@ function bindingifyEsModule(
   esModule: NormalizedOutputOptions['esModule'],
 ): BindingOutputOptions['esModule'] {
   switch (esModule) {
-    case 'always':
     case true:
       return 'always'
 
-    case 'never':
     case false:
       return 'never'
 

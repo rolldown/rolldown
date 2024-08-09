@@ -41,6 +41,24 @@ impl ModuleType {
       _ => Err(anyhow::format_err!("Unknown module type: {s}")),
     }
   }
+
+  /// error: method `from_str` can be confused for the standard trait method `std::str::FromStr::from_str`
+  /// to avoid conflicting with std
+  pub fn from_str_with_fallback(s: &str) -> Self {
+    match s {
+      "js" => Self::Js,
+      "jsx" => Self::Jsx,
+      "ts" => Self::Ts,
+      "tsx" => Self::Tsx,
+      "json" => Self::Json,
+      "text" => Self::Text,
+      "base64" => Self::Base64,
+      "dataurl" => Self::Dataurl,
+      "binary" => Self::Binary,
+      "empty" => Self::Empty,
+      _ => Self::Custom(s.to_string()),
+    }
+  }
 }
 
 impl Display for ModuleType {

@@ -1181,6 +1181,7 @@ version = "3.0.0-alpha.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e5a69ce63aa1e68c939c5afa3f7be80d0c37eb3755022b064792dc019f08d8e"
 dependencies = [
+ "anyhow",
  "bitflags 2.6.0",
  "ctor",
  "napi-build",
@@ -2202,8 +2203,10 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_glob_import",
+ "rolldown_plugin_load_fallback",
  "rolldown_plugin_manifest",
  "rolldown_plugin_module_preload_polyfill",
+ "rolldown_plugin_transform",
  "rolldown_plugin_wasm",
  "rolldown_sourcemap",
  "rolldown_tracing",
@@ -2342,6 +2345,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_plugin_load_fallback"
+version = "0.1.0"
+dependencies = [
+ "rolldown_plugin",
+ "rolldown_utils",
+]
+
+[[package]]
 name = "rolldown_plugin_manifest"
 version = "0.1.0"
 dependencies = [
@@ -2358,6 +2369,20 @@ version = "0.1.0"
 dependencies = [
  "rolldown_common",
  "rolldown_plugin",
+]
+
+[[package]]
+name = "rolldown_plugin_transform"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "glob-match",
+ "oxc",
+ "rolldown_common",
+ "rolldown_ecmascript",
+ "rolldown_plugin",
+ "rolldown_utils",
+ "sugar_path",
 ]
 
 [[package]]
@@ -2449,6 +2474,7 @@ dependencies = [
  "futures",
  "indexmap",
  "infer",
+ "memchr",
  "mime",
  "oxc",
  "phf 0.11.2",

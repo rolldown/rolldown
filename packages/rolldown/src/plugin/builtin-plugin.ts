@@ -1,4 +1,8 @@
 import {
+  normalizedEcmaTransformPluginConfig,
+  TransformPluginConfig,
+} from '../options/normalized-ecma-transform-plugin-config'
+import {
   BindingBuiltinPluginName,
   BindingGlobImportPluginConfig,
   BindingBuiltinPlugin,
@@ -46,6 +50,19 @@ export class WasmPlugin extends BuiltinPlugin {
   }
 }
 
+export class LoadFallbackPlugin extends BuiltinPlugin {
+  constructor() {
+    super(BindingBuiltinPluginName.LoadFallbackPlugin)
+  }
+}
+
+export class TransformPlugin extends BuiltinPlugin {
+  constructor(config?: TransformPluginConfig) {
+    let normalizedConfig = normalizedEcmaTransformPluginConfig(config)
+    super(BindingBuiltinPluginName.TransformPlugin, normalizedConfig)
+  }
+}
+
 export function modulePreloadPolyfillPlugin(
   config?: BindingModulePreloadPolyfillPluginConfig,
 ) {
@@ -68,6 +85,13 @@ export function wasmPlugin() {
   return new WasmPlugin()
 }
 
+export function transformPlugin(config?: TransformPluginConfig) {
+  return new TransformPlugin(config)
+}
+
+export function loadFallbackPlugin() {
+  return new LoadFallbackPlugin()
+}
 export function bindingifyBuiltInPlugin(
   plugin: BuiltinPlugin,
 ): BindingBuiltinPlugin {

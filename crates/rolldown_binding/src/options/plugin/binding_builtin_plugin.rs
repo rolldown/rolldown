@@ -7,7 +7,7 @@ use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_glob_import::{GlobImportPlugin, GlobImportPluginConfig};
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
-use rolldown_plugin_transform::{EcmaTransformPlugin, StringOrRegex};
+use rolldown_plugin_transform::{StringOrRegex, TransformPlugin};
 use rolldown_plugin_wasm::WasmPlugin;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -42,7 +42,7 @@ pub enum BindingBuiltinPluginName {
   DynamicImportVarsPlugin,
   ModulePreloadPolyfillPlugin,
   ManifestPlugin,
-  EcmaTransformPlugin,
+  TransformPlugin,
 }
 
 #[napi_derive::napi(object)]
@@ -94,7 +94,7 @@ pub struct BindingTransformPluginConfig {
   pub jsx_inject: Option<String>,
 }
 
-impl TryFrom<BindingTransformPluginConfig> for EcmaTransformPlugin {
+impl TryFrom<BindingTransformPluginConfig> for TransformPlugin {
   type Error = anyhow::Error;
 
   fn try_from(value: BindingTransformPluginConfig) -> Result<Self, Self::Error> {
@@ -116,7 +116,7 @@ impl TryFrom<BindingTransformPluginConfig> for EcmaTransformPlugin {
     } else {
       vec![]
     };
-    Ok(EcmaTransformPlugin {
+    Ok(TransformPlugin {
       include: normalized_include,
       exclude: normalized_exclude,
       jsx_inject: value.jsx_inject,
@@ -156,11 +156,11 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(ManifestPlugin { config })
       }
-      BindingBuiltinPluginName::EcmaTransformPlugin => {
+      BindingBuiltinPluginName::TransformPlugin => {
         let plugin = if let Some(options) = plugin.options {
           BindingTransformPluginConfig::from_unknown(options)?.try_into()?
         } else {
-          EcmaTransformPlugin::default()
+          TransformPlugin::default()
         };
         Arc::new(plugin)
       }

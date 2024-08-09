@@ -30,7 +30,7 @@ impl StringOrRegex {
 }
 
 #[derive(Debug, Default)]
-pub struct EcmaTransformPlugin {
+pub struct TransformPlugin {
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
   pub jsx_inject: Option<String>,
@@ -38,7 +38,7 @@ pub struct EcmaTransformPlugin {
 }
 
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`
-impl Plugin for EcmaTransformPlugin {
+impl Plugin for TransformPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("module_preload_polyfill")
   }
@@ -48,7 +48,6 @@ impl Plugin for EcmaTransformPlugin {
     ctx: &rolldown_plugin::TransformPluginContext<'_>,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    // Convert to relative path
     if !self.filter(ctx, args.id, args.module_type) {
       return Ok(None);
     }
@@ -95,6 +94,7 @@ impl Plugin for EcmaTransformPlugin {
       .build(fields.program)
     });
     if !ret.errors.is_empty() {
+      // TODO: better error handling
       return Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors));
     }
     let CodegenReturn { source_text, source_map } =
@@ -117,7 +117,7 @@ impl Plugin for EcmaTransformPlugin {
   }
 }
 
-impl EcmaTransformPlugin {
+impl TransformPlugin {
   fn filter(
     &self,
     ctx: &rolldown_plugin::TransformPluginContext<'_>,

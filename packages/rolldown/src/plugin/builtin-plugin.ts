@@ -50,10 +50,10 @@ export class WasmPlugin extends BuiltinPlugin {
   }
 }
 
-export class EcmaTransformPlugin extends BuiltinPlugin {
+export class TransformPlugin extends BuiltinPlugin {
   constructor(config?: TransformPluginConfig) {
     let normalizedConfig = normalizedEcmaTransformPluginConfig(config)
-    super(BindingBuiltinPluginName.EcmaTransformPlugin, normalizedConfig)
+    super(BindingBuiltinPluginName.TransformPlugin, normalizedConfig)
   }
 }
 
@@ -79,8 +79,8 @@ export function wasmPlugin() {
   return new WasmPlugin()
 }
 
-export function ecmaTransformPlugin(config?: TransformPluginConfig) {
-  return new EcmaTransformPlugin(config)
+export function transformPlugin(config?: TransformPluginConfig) {
+  return new TransformPlugin(config)
 }
 
 export function bindingifyBuiltInPlugin(

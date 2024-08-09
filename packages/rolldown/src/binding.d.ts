@@ -116,7 +116,7 @@ export declare enum BindingBuiltinPluginName {
   DynamicImportVarsPlugin = 2,
   ModulePreloadPolyfillPlugin = 3,
   ManifestPlugin = 4,
-  EcmaTransformPlugin = 5
+  TransformPlugin = 5
 }
 
 export interface BindingEmittedAsset {

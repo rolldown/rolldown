@@ -50,6 +50,12 @@ export class WasmPlugin extends BuiltinPlugin {
   }
 }
 
+export class LoadFallbackPlugin extends BuiltinPlugin {
+  constructor() {
+    super(BindingBuiltinPluginName.LoadFallbackPlugin)
+  }
+}
+
 export class TransformPlugin extends BuiltinPlugin {
   constructor(config?: TransformPluginConfig) {
     let normalizedConfig = normalizedEcmaTransformPluginConfig(config)
@@ -83,6 +89,9 @@ export function transformPlugin(config?: TransformPluginConfig) {
   return new TransformPlugin(config)
 }
 
+export function loadFallbackPlugin() {
+  return new LoadFallbackPlugin()
+}
 export function bindingifyBuiltInPlugin(
   plugin: BuiltinPlugin,
 ): BindingBuiltinPlugin {

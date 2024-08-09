@@ -22,7 +22,7 @@
 //! 9. The wrapper function ends with `})({output_args});` if `invoke` is true, otherwise, it ends with `})`. (for UMD capability)
 //! 10. Render the footer if it exists.
 
-use crate::ecmascript::format::utils::wrapper::generate_identifier;
+use crate::ecmascript::format::utils::namespace::generate_identifier;
 use crate::utils::chunk::collect_render_chunk_imports::{
   collect_render_chunk_imports, RenderImportDeclarationSpecifier,
 };

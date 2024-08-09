@@ -16,8 +16,11 @@ impl EcmaAst {
     program: &'_ Program<'ast>,
     ty: SourceType,
   ) -> Semantic<'ast> {
-    let semantic = SemanticBuilder::new(source, ty).build(program).semantic;
-    semantic
+    let build_result =
+      SemanticBuilder::new(source, ty).with_check_syntax_error(true).build(program);
+    // TODO: log errors and warnings.
+    println!("BUILD RESULT - {:?}", build_result.errors);
+    build_result.semantic
   }
 
   pub fn make_symbol_table_and_scope_tree(&self) -> (SymbolTable, ScopeTree) {

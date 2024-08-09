@@ -539,6 +539,10 @@ impl<'ast> AstSnippet<'ast> {
     ))
   }
 
+  pub fn app_default_var_decl_stmt(&self, expr: ast::Expression<'ast>) -> ast::Statement<'ast> {
+    self.var_decl_stmt("__rolldown_default_export__", expr)
+  }
+
   /// Promise.resolve().then(function() {})
   pub fn promise_resolve_then_call_expr(
     &self,

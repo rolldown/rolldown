@@ -1,4 +1,4 @@
-use oxc::ast::ast::{self, Statement};
+use oxc::ast::ast::{self, ExportDefaultDeclarationKind, Expression, Statement};
 use oxc::ast::VisitMut;
 use rolldown_common::Module;
 use rolldown_ecmascript::TakeIn;
@@ -9,8 +9,8 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     let original_body = program.body.take_in(self.alloc);
 
-    for stmt in original_body {
-      match &stmt {
+    for mut stmt in original_body {
+      match &mut stmt {
         // // rewrite:
         // - `import { default, a, b as b2 } from 'xxx'` to `const { default, a, b: b2 } = __static_import('xxx')`
         // - `import foo from 'xxx'` to `const { default: foo } = __static_import('xxx')`
@@ -64,8 +64,30 @@ impl<'me, 'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'me, 'ast> {
             Module::External(_) => unimplemented!(),
           }
         }
-        // TODO: rewrite `export default xxx` to `var __rolldown_default_export__ = xxx`
-        ast::Statement::ExportDefaultDeclaration(_default_decl) => {}
+        ast::Statement::ExportDefaultDeclaration(default_decl) => {
+          let expr_option = match &mut default_decl.declaration {
+            decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
+              // "export default foo;"
+              Some(decl.to_expression_mut().take_in(self.alloc))
+            }
+            ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
+              // "export default function() {}"
+              // "export default function foo() {}"
+              Some(Expression::FunctionExpression(func.take_in(self.alloc)))
+            }
+            ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+              // "export default class {}"
+              // "export default class Foo {}"
+              Some(Expression::ClassExpression(class.take_in(self.alloc)))
+            }
+            _ => None,
+          };
+
+          if let Some(expr) = expr_option {
+            program.body.push(self.snippet.app_default_var_decl_stmt(expr));
+            continue;
+          }
+        }
         _ => {}
       }
       program.body.push(stmt);

@@ -3,9 +3,7 @@ import { defineTest } from '@tests'
 
 export default defineTest({
   config: {
-    plugins: [
-      loadFallbackPlugin()
-    ],
+    plugins: [loadFallbackPlugin()],
   },
   async afterTest() {
     await import('./assert.mjs')

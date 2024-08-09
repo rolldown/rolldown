@@ -85,7 +85,6 @@ export function wasmPlugin() {
   return new WasmPlugin()
 }
 
-
 export function transformPlugin(config?: TransformPluginConfig) {
   return new TransformPlugin(config)
 }

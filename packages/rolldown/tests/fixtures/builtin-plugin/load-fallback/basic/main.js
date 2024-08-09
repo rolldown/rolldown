@@ -1,3 +1,3 @@
-import { a } from "./lib?a=10000";
+import { a } from './lib?a=10000'
 
-export { a };
+export { a }

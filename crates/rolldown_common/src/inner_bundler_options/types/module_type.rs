@@ -41,6 +41,22 @@ impl ModuleType {
       _ => Err(anyhow::format_err!("Unknown module type: {s}")),
     }
   }
+
+  pub fn from_str(s: &str) -> Self {
+    match s {
+      "js" => Self::Js,
+      "jsx" => (Self::Jsx),
+      "ts" => Self::Ts,
+      "tsx" => Self::Tsx,
+      "json" => Self::Json,
+      "text" => Self::Text,
+      "base64" => Self::Base64,
+      "dataurl" => Self::Dataurl,
+      "binary" => Self::Binary,
+      "empty" => Self::Empty,
+      _ => Self::Custom(s.to_string()),
+    }
+  }
 }
 
 impl Display for ModuleType {

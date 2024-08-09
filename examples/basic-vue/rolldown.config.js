@@ -8,4 +8,23 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
+  plugins: [
+    {
+      name: 'test',
+      transform(code, id) {
+        return {
+          code: code,
+          map: undefined,
+          moduleType: 'ts'
+        };
+      }
+    },
+    {
+      name: "2",
+      transform(code, id, meta) {
+        console.log(`meta: `, meta)
+        return null;
+      }
+    }
+  ]
 })

@@ -5,6 +5,7 @@ use arcstr::ArcStr;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use rolldown_resolver::ResolveError;
 
+use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
@@ -113,6 +114,10 @@ impl BuildDiagnostic {
 
   pub fn missing_name_option_for_iife_export() -> Self {
     Self::new_inner(MissingNameOptionForIifeExport {})
+  }
+
+  pub fn illegal_identifier_as_name(identifier_name: ArcStr) -> Self {
+    Self::new_inner(IllegalIdentifierAsName { identifier_name })
   }
 
   pub fn invalid_export_option(
